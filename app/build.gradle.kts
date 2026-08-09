@@ -40,6 +40,6 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.github.jan-tennert.supabase:auth-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.4")
-    implementation("androidx.ktor:ktor-client-okhttp:3.0.3")
+    implementation("io.ktor:ktor-client-okhttp:3.0.3")
     testImplementation("junit:junit:4.13.2")
 }
