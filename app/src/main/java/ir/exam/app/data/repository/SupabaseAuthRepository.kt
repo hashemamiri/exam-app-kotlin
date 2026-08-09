@@ -29,7 +29,7 @@ class SupabaseAuthRepository : AuthRepository {
     }
 
     override suspend fun verifyOtp(email: String, code: String): Result<AppUser> = runCatching {
-        auth.verifyEmailOtp(type = io.github.jan.supabase.auth.OtpType.Email, email = email.trim(), token = code.trim())
+        auth.verifyEmailOtp(type = io.github.jan.supabase.auth.OtpType.Email.EMAIL, email = email.trim(), token = code.trim())
         val user = auth.currentUserOrNull() ?: error("کد تأیید نشد")
         AppUser(id = user.id, name = user.email ?: "کاربر", email = user.email, role = UserRole.TEACHER)
             .also { _currentUser.value = it }
