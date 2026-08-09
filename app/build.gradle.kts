@@ -7,15 +7,13 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-
-val nativeLocalProperties = Properties().apply {
-    val propertiesFile = rootProject.file("local.properties")
-    if (propertiesFile.exists()) {
-        propertiesFile.inputStream().use { load(it) }
-    }
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
-val nativeSupabaseUrl = nativeLocalProperties.getProperty("SUPABASE_URL", "")
-val nativeSupabaseAnonKey = nativeLocalProperties.getProperty("SUPABASE_ANON_KEY", "")
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
+val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
 
 android {
     namespace = "ir.exam.app"
@@ -27,16 +25,19 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0-native"
-        buildConfigField("String", "SUPABASE_URL", "\"$nativeSupabaseUrl\"") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$nativeSupabaseAnonKey\"") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
 
-    buildFeatures { compose = true; buildConfig = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 }
 
 kotlin {
@@ -60,6 +61,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.github.jan-tennert.supabase:auth-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.4")
+    implementation("io.github.jan-tennert.supabase:storage-kt:3.1.4")
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
     testImplementation("junit:junit:4.13.2")
 }
