@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** پیاده‌سازی Native ورود با ایمیل/رمز و OTP. نقش در فاز پروفایل از جدول users خوانده می‌شود. */
 class SupabaseAuthRepository : AuthRepository {
-    private val auth = SupabaseProvider.client.auth
+    private val auth get() = SupabaseProvider.client.auth
     private val _currentUser = MutableStateFlow<AppUser?>(null)
     override val currentUser: Flow<AppUser?> = _currentUser.asStateFlow()
 
