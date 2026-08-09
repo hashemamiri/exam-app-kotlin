@@ -1,3 +1,10 @@
 package ir.exam.app.core.update
-/** مقایسهٔ نسخه قابل تست؛ دریافت و نصب در Android installer جدا انجام می‌شود. */
-class UpdateUseCase(private val repo:AppUpdateRepository){suspend fun check(installedCode:Int):Result<RemoteVersion?>=repo.latest().map{if(it.code>installedCode)it else null}}
+
+/** مقایسهٔ نسخهٔ نصب‌شده و نسخهٔ سرور؛ خروجی null یعنی برنامه به‌روز است. */
+class UpdateUseCase(private val repository: AppUpdateRepository) {
+    suspend fun check(installedCode: Int): Result<RemoteVersion?> {
+        return repository.latest().map { remote ->
+            if (remote.code > installedCode) remote else null
+        }
+    }
+}
