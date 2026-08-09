@@ -10,7 +10,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "ir.exam.app"
+        applicationId = "ir.exam.app.native"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
