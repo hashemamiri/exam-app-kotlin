@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+
+val nativeLocalProperties = Properties().apply {
+    val propertiesFile = rootProject.file("local.properties")
+    if (propertiesFile.exists()) {
+        propertiesFile.inputStream().use { load(it) }
+    }
+}
+val nativeSupabaseUrl = nativeLocalProperties.getProperty("SUPABASE_URL", "")
+val nativeSupabaseAnonKey = nativeLocalProperties.getProperty("SUPABASE_ANON_KEY", "")
 
 android {
     namespace = "ir.exam.app"
@@ -15,8 +27,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0-native"
-        buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("SUPABASE_URL") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${project.findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$nativeSupabaseUrl\"") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$nativeSupabaseAnonKey\"") ?: ""}\"")
     }
 
     buildFeatures { compose = true; buildConfig = true }
