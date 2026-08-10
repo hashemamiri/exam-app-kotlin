@@ -16,18 +16,45 @@ if (localPropertiesFile.exists()) {
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
 
+
+val signingProperties = Properties()
+val signingPropertiesFile = rootProject.file("app/keystore.properties")
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.inputStream().use { signingProperties.load(it) }
+}
+
 android {
     namespace = "ir.exam.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "ir.exam.app.native"
+        applicationId = "ir.exam.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0-native"
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFileValue = signingProperties.getProperty("storeFile", "")
+            if (storeFileValue.isNotBlank()) {
+                storeFile = file(storeFileValue)
+                storePassword = signingProperties.getProperty("storePassword")
+                keyAlias = signingProperties.getProperty("keyAlias")
+                keyPassword = signingProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") { applicationIdSuffix = ".native" }
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {

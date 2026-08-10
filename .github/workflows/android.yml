@@ -1,11 +1,10 @@
-name: ساخت و بررسی APK اندروید
+name: ساخت APK آزمایشی و Release Kotlin
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 jobs:
-  test-and-build:
+  test-build-release:
     runs-on: ubuntu-latest
     steps:
       - name: دریافت سورس
@@ -17,7 +16,7 @@ jobs:
           java-version: '17'
       - name: آماده‌سازی Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: آماده‌سازی تنظیمات Supabase
+      - name: آماده‌سازی Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -25,13 +24,30 @@ jobs:
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_ANON_KEY"
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
-
       - name: اجرای تست‌ها
         run: ./gradlew testDebugUnitTest
       - name: ساخت APK آزمایشی
         run: ./gradlew assembleDebug
-      - name: بارگذاری APK
+      - name: آماده‌سازی امضای Release
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KS_PASS }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASS }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$KS_PASS"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASS"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          printf 'storeFile=release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > app/keystore.properties
+      - name: ساخت APK Release امضاشده
+        run: ./gradlew assembleRelease
+      - name: بارگذاری APKها
         uses: actions/upload-artifact@v4
         with:
-          name: exam-app-native-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: exam-app-kotlin-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
