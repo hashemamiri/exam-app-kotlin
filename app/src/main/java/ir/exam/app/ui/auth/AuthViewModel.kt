@@ -48,9 +48,22 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         try {
             action()
         } catch (error: Throwable) {
-            _state.update { it.copy(error = error.message ?: "عملیات ورود ناموفق بود") }
+            _state.update { it.copy(error = safeAuthError(error.message)) }
         } finally {
             _state.update { it.copy(isLoading = false) }
         }
+    }
+}
+
+
+/** جزئیات شبکه و Header نباید هرگز در رابط کاربری نمایش داده شوند. */
+private fun safeAuthError(raw: String?): String {
+    val text = raw.orEmpty().lowercase()
+    return when {
+        "otp_disabled" in text -> "ورود با کد یک‌بارمصرف برای این کاربر فعال نیست. ابتدا وجود کاربر و تنظیمات Email/OTP در Supabase را بررسی کنید."
+        "invalid" in text && "token" in text -> "کد واردشده نادرست است یا اعتبار آن تمام شده است."
+        "email not confirmed" in text -> "ایمیل این حساب هنوز تأیید نشده است."
+        "invalid login credentials" in text -> "ایمیل یا رمز عبور نادرست است."
+        else -> "ورود انجام نشد. اتصال اینترنت و تنظیمات Supabase را بررسی کنید."
     }
 }
