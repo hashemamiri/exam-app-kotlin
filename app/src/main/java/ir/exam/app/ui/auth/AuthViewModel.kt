@@ -56,14 +56,23 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 }
 
 
-/** جزئیات شبکه و Header نباید هرگز در رابط کاربری نمایش داده شوند. */
+/** پیام امن تشخیصی: فقط code و متن کوتاه، هرگز Header یا Token نمایش داده نمی‌شود. */
 private fun safeAuthError(raw: String?): String {
-    val text = raw.orEmpty().lowercase()
+    val clean = raw.orEmpty()
+        .substringBefore("URL:")
+        .substringBefore("Headers:")
+        .replace(Regex("(?i)authorization[^,\n]*"), "")
+        .replace(Regex("(?i)apikey[^,\n]*"), "")
+        .trim()
+        .take(260)
+    val text = clean.lowercase()
     return when {
-        "otp_disabled" in text -> "ورود با کد یک‌بارمصرف ۸ رقمی برای این کاربر فعال نیست. ابتدا وجود کاربر و تنظیمات Email/OTP در Supabase را بررسی کنید."
-        "invalid" in text && "token" in text -> "کد واردشده نادرست است یا اعتبار آن تمام شده است."
-        "email not confirmed" in text -> "ایمیل این حساب هنوز تأیید نشده است."
-        "invalid login credentials" in text -> "ایمیل یا رمز عبور نادرست است."
-        else -> "ورود انجام نشد. اتصال اینترنت و تنظیمات Supabase را بررسی کنید."
+        "otp_disabled" in text -> "کد تشخیصی: otp_disabled — ثبت‌نام یا ورود OTP در تنظیمات Email Supabase غیرفعال است."
+        "signup" in text && "disabled" in text -> "کد تشخیصی: signup_disabled — ثبت‌نام ایمیلی در Supabase غیرفعال است."
+        "invalid" in text && "token" in text -> "کد تشخیصی: invalid_token — کد نادرست یا منقضی است."
+        "email not confirmed" in text -> "کد تشخیصی: email_not_confirmed — ایمیل کاربر تأیید نشده است."
+        "invalid login credentials" in text -> "کد تشخیصی: invalid_credentials — ایمیل یا رمز عبور نادرست است."
+        clean.isNotBlank() -> "کد تشخیصی Supabase: $clean"
+        else -> "کد تشخیصی: unknown_auth_error"
     }
 }
