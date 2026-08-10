@@ -26,7 +26,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     fun setEmail(value: String) { _state.update { it.copy(email = value.trim(), error = null) } }
     fun setPassword(value: String) { _state.update { it.copy(password = value, error = null) } }
-    fun setOtp(value: String) { _state.update { it.copy(otp = value.filter(Char::isDigit).take(6), error = null) } }
+    fun setOtp(value: String) { _state.update { it.copy(otp = value.filter(Char::isDigit).take(8), error = null) } }
 
     fun sendOtp() = request {
         repository.sendOtp(state.value.email).getOrThrow()
@@ -60,7 +60,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 private fun safeAuthError(raw: String?): String {
     val text = raw.orEmpty().lowercase()
     return when {
-        "otp_disabled" in text -> "ورود با کد یک‌بارمصرف برای این کاربر فعال نیست. ابتدا وجود کاربر و تنظیمات Email/OTP در Supabase را بررسی کنید."
+        "otp_disabled" in text -> "ورود با کد یک‌بارمصرف ۸ رقمی برای این کاربر فعال نیست. ابتدا وجود کاربر و تنظیمات Email/OTP در Supabase را بررسی کنید."
         "invalid" in text && "token" in text -> "کد واردشده نادرست است یا اعتبار آن تمام شده است."
         "email not confirmed" in text -> "ایمیل این حساب هنوز تأیید نشده است."
         "invalid login credentials" in text -> "ایمیل یا رمز عبور نادرست است."
