@@ -26,8 +26,6 @@ jobs:
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
       - name: اجرای تست‌ها
         run: ./gradlew testDebugUnitTest
-      - name: ساخت APK آزمایشی
-        run: ./gradlew assembleDebug
       - name: آماده‌سازی امضای Release
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -46,8 +44,6 @@ jobs:
       - name: بارگذاری APKها
         uses: actions/upload-artifact@v4
         with:
-          name: exam-app-kotlin-apks
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/release/app-release.apk
+          name: exam-app-release
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
