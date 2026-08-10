@@ -17,6 +17,15 @@ jobs:
           java-version: '17'
       - name: آماده‌سازی Gradle
         uses: gradle/actions/setup-gradle@v4
+      - name: آماده‌سازی تنظیمات Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_ANON_KEY"
+          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
+
       - name: اجرای تست‌ها
         run: ./gradlew testDebugUnitTest
       - name: ساخت APK آزمایشی
