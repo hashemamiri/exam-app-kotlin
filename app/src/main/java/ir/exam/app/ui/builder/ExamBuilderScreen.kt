@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ir.exam.app.ui.image.QuestionMediaEditor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +70,11 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("نوع: ${question.type}")
             OutlinedTextField(question.text, { viewModel.updateText(question.id, it) }, label = { Text("متن سؤال") }, modifier = Modifier.fillMaxWidth())
+            QuestionMediaEditor(
+                images = question.images,
+                onAdd = { uris -> viewModel.addImages(question.id, uris) },
+                onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) }
+            )
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
                     Row { RadioButton(question.correctIndex == index, onClick = { viewModel.setCorrect(question.id, index) }); OutlinedTextField(option, { viewModel.updateOption(question.id, index, it) }, label = { Text("گزینه ${index + 1}") }) }

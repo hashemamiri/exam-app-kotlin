@@ -28,6 +28,13 @@ class ExamBuilderViewModel(
     fun updateExpectedNumber(id: String, value: String) { update(id) { it.copy(expectedNumber = value.filter { c -> c.isDigit() || c == '.' || c == '-' }) } }
     fun updateTolerance(id: String, value: String) { update(id) { it.copy(tolerance = value.filter { c -> c.isDigit() || c == '.' }) } }
     fun remove(id: String) { _state.update { it.copy(questions = it.questions.filterNot { q -> q.id == id }) } }
+    fun addImages(questionId: String, uris: List<String>) { update(questionId) { q ->
+        q.copy(images = q.images + uris.take(10 - q.images.size).mapIndexed { index, uri -> MediaDraft(uri = uri, xMm = 20f + index * 12f, yMm = 30f + index * 12f) })
+    } }
+    fun moveImage(questionId: String, imageId: String, xMm: Float, yMm: Float) { update(questionId) { q ->
+        q.copy(images = q.images.map { image -> if (image.id == imageId) image.copy(xMm = xMm.coerceIn(0f, 190f), yMm = yMm.coerceIn(0f, 270f)) else image })
+    } }
+    fun removeImage(questionId: String, imageId: String) { update(questionId) { q -> q.copy(images = q.images.filterNot { it.id == imageId }) } }
     private fun update(id: String, change: (QuestionDraft) -> QuestionDraft) { _state.update { s -> s.copy(questions = s.questions.map { q -> if (q.id == id) change(q) else q }) } }
 
     fun save() = viewModelScope.launch {
