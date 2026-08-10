@@ -21,16 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun TeacherDashboardScreen() {
+fun TeacherDashboardScreen(onCreateExam: () -> Unit) {
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.load() }
-
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("داشبورد معلم", style = MaterialTheme.typography.headlineMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = { viewModel.load() }) { Text("به‌روزرسانی") }
-            Button(onClick = { }) { Text("ساخت آزمون جدید") }
+            Button(onClick = viewModel::load) { Text("به‌روزرسانی") }
+            Button(onClick = onCreateExam) { Text("ساخت آزمون جدید") }
         }
         when {
             state.loading -> CircularProgressIndicator()
@@ -45,7 +44,6 @@ fun TeacherDashboardScreen() {
                             Text("کد آزمون: ${exam.code ?: "—"}")
                             Text("مدت: ${exam.duration ?: 0} دقیقه")
                             Text(if (exam.isOpen) "وضعیت: باز" else "وضعیت: بسته")
-                            Button(onClick = { }) { Text("باز کردن آزمون") }
                         }
                     }
                 }

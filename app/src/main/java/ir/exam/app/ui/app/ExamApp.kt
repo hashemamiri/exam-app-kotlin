@@ -4,23 +4,30 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import ir.exam.app.data.repository.SupabaseAuthRepository
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.auth.AuthViewModel
 import ir.exam.app.ui.auth.SignInScreen
+import ir.exam.app.ui.builder.ExamBuilderScreen
+import ir.exam.app.ui.builder.ExamBuilderViewModel
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 
-/** دروازهٔ اصلی برنامه: تا ورود واقعی انجام نشده، فقط صفحه Auth دیده می‌شود. */
+private enum class TeacherPage { DASHBOARD, BUILDER }
+
 @Composable
 fun ExamApp() {
-    val viewModel = remember { AuthViewModel(SupabaseAuthRepository()) }
-    val state by viewModel.state.collectAsState()
-    val user = state.user
+    val authViewModel = remember { AuthViewModel(SupabaseAuthRepository()) }
+    val authState by authViewModel.state.collectAsState()
+    var page by remember { mutableStateOf(TeacherPage.DASHBOARD) }
 
-    when (user?.role) {
-        UserRole.TEACHER -> TeacherDashboardScreen()
-        UserRole.STUDENT -> Text("داشبورد دانش‌آموز — مرحلهٔ بعدی")
-        null -> SignInScreen(viewModel = viewModel)
+    when (authState.user?.role) {
+        UserRole.TEACHER -> when (page) {
+            TeacherPage.DASHBOARD -> TeacherDashboardScreen(onCreateExam = { page = TeacherPage.BUILDER })
+            TeacherPage.BUILDER -> ExamBuilderScreen(viewModel = remember { ExamBuilderViewModel() })
+        }
+        UserRole.STUDENT -> Text("داشبورد دانش‌آموز در پچ دوم فعال می‌شود.")
+        null -> SignInScreen(viewModel = authViewModel)
     }
 }
