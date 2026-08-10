@@ -5,6 +5,8 @@ import io.github.jan.supabase.postgrest.from
 import ir.exam.app.data.dto.ExamWriteDto
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.ui.builder.ExamBuilderState
+import ir.exam.app.ui.builder.QuestionDraft
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
@@ -25,7 +27,7 @@ class SupabaseExamBuilderRepository {
             totalScore = state.questions.sumOf { it.score },
             isOpen = false,
             shuffleQuestions = false,
-            questions = Json.encodeToJsonElement(state.questions)
+            questions = Json.encodeToJsonElement(ListSerializer(QuestionDraft.serializer()), state.questions)
         )
         SupabaseProvider.client.from("exams").insert(dto)
         code
