@@ -20,10 +20,23 @@ class SupabaseAuthRepository : AuthRepository {
     override val currentUser: Flow<AppUser?> = _currentUser.asStateFlow()
 
     private suspend fun currentProfile(): AppUser {
-        val sessionUser = auth.currentUserOrNull() ?: error("نشست ورود پیدا نشد")
-        val profile = SupabaseProvider.client.from("profiles").select {
-            filter { eq("id", sessionUser.id) }
-        }.decodeSingle<ProfileDto>()
+        val sessionUser = auth.currentUserOrNull() ?: error("نشست ورود پیدا نشد. کد را دوباره وارد کنید.")
+        val fallbackName = sessionUser.email?.substringBefore('@').orEmpty().ifBlank { "کاربر" }
+        val profile = runCatching {
+            SupabaseProvider.client.from("profiles").select {
+                filter { eq("id", sessionUser.id) }
+            }.decodeSingle<ProfileDto>()
+        }.getOrElse {
+            // اگر trigger هنوز اجرا نشده باشد، کاربر فقط پروفایل خودش را می‌سازد.
+            val newProfile = ProfileDto(
+                id = sessionUser.id,
+                full_name = fallbackName,
+                role = "student",
+                display_name = fallbackName
+            )
+            SupabaseProvider.client.from("profiles").upsert(newProfile)
+            newProfile
+        }
         val role = if (profile.role.lowercase() == "teacher") UserRole.TEACHER else UserRole.STUDENT
         return AppUser(profile.id, profile.display_name ?: profile.full_name, sessionUser.email, role)
     }
