@@ -34,7 +34,7 @@ class SupabaseAuthRepository : AuthRepository {
     }
 
     override suspend fun sendOtp(email: String): Result<Unit> = runCatching {
-        auth.signInWith(OTP) { this.email = email.trim(); createUser = false }
+        auth.signInWith(OTP) { this.email = email.trim(); createUser = true }
     }
 
     override suspend fun verifyOtp(email: String, code: String): Result<AppUser> = runCatching {

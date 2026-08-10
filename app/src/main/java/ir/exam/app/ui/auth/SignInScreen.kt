@@ -43,13 +43,13 @@ fun SignInScreen(viewModel: AuthViewModel) {
             OutlinedTextField(
                 value = state.otp,
                 onValueChange = viewModel::setOtp,
-                label = { Text("کد یک‌بارمصرف ۸ رقمی") },
+                label = { Text("کد یک‌بارمصرف (۶ تا ۸ رقم)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Button(
                 onClick = viewModel::verifyOtp,
-                enabled = !state.isLoading && state.otp.length >= 8,
+                enabled = !state.isLoading && state.otp.length in 6..8,
                 modifier = Modifier.fillMaxWidth()
             ) { Text("تأیید و ورود") }
             Button(
@@ -75,7 +75,7 @@ fun SignInScreen(viewModel: AuthViewModel) {
                 onClick = viewModel::sendOtp,
                 enabled = !state.isLoading && state.email.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("ورود با کد یک‌بارمصرف ۸ رقمی") }
+            ) { Text("ورود با کد یک‌بارمصرف (۶ تا ۸ رقم)") }
         }
 
         if (state.isLoading) {
