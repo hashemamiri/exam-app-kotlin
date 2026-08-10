@@ -14,6 +14,7 @@ import ir.exam.app.ui.auth.SignInScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
+import ir.exam.app.ui.student.StudentHomeScreen
 
 private enum class TeacherPage { DASHBOARD, BUILDER }
 
@@ -28,7 +29,7 @@ fun ExamApp() {
             TeacherPage.DASHBOARD -> TeacherDashboardScreen(onCreateExam = { page = TeacherPage.BUILDER })
             TeacherPage.BUILDER -> ExamBuilderScreen(viewModel = remember { ExamBuilderViewModel() })
         }
-        UserRole.STUDENT -> Text("داشبورد دانش‌آموز در پچ دوم فعال می‌شود.")
+        UserRole.STUDENT -> StudentHomeScreen()
         null -> SignInScreen(viewModel = authViewModel)
     }
 }
