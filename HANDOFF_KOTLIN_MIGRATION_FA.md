@@ -1683,3 +1683,24 @@ WebView = فقط آرشیو تاریخی و خارج از APK/runtime
 ```
 
 پس از اعمال V11 و موفقیت تست واقعی دستگاه، مهاجرت برنامه‌ریزی‌شده کامل است. تغییرات بعدی feature release یا maintenance عادی هستند، نه ادامه مهاجرت WebView.
+
+---
+
+## ۲۳) Hotfix V11.1 — استخراج امن fingerprint امضای Release
+
+### خطای واقعی GitHub Actions
+
+```text
+apksigner verify: v2=true
+Process completed with exit code 1 پیش از پیام certificate VERIFIED
+```
+
+### علت و اصلاح
+
+- APK واقعاً امضای v2 معتبر داشت.
+- pipeline دارای `awk ... exit` زیر `set -o pipefail` بود و می‌توانست producer را با SIGPIPE متوقف کند.
+- خروجی کامل `apksigner` و `keytool` اکنون ابتدا در متغیر گرفته می‌شود.
+- `awk` بدون خروج زودهنگام fingerprint را در END استخراج می‌کند.
+- هر fingerprint باید دقیقاً ۶۴ نویسه hex باشد.
+- اختلاف واقعی گواهی همچنان Build را متوقف می‌کند و فقط پیام امن چاپ می‌شود.
+- SQL، Kotlin و Edge Function تغییری نکردند.
