@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.4 برای Supabase safeupdate
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V5 ماندگاری نشست ورود
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -248,6 +248,13 @@ C:\Users\Hashem\Downloads\EXAM_APP_KEYSTORE_BASE64.txt
 خواندن profiles پس از ورود
 تشخیص role: teacher / student
 نمایش خطاهای Auth بدون نمایش Header و Token
+ذخیره خودکار session توسط Supabase Auth
+انتظار صریح برای auth.awaitInitialization در شروع سرد
+بازیابی خودکار کاربر پس از بستن/بازکردن و بروزرسانی درجا
+cache محلی فقط برای نمای پروفایل و role، بدون token
+fallback پروفایل cacheشده در قطع موقت اینترنت با تطبیق userId
+صفحه loading برای جلوگیری از نمایش لحظه‌ای فرم ورود
+صفحه retry در خطای موقت بازیابی به‌جای خروج کاذب از حساب
 ```
 
 ### وضعیت فعلی مشکل OTP
@@ -617,6 +624,10 @@ FileProvider و بازکردن نصب‌کننده Android
 آپلود خودکار APK در Supabase Storage
 فعال‌سازی تراکنشی app_version با RPC مدیریتی
 صف انتشار concurrency برای جلوگیری از تداخل Buildها
+ماندگاری نشست ورود Native در restart و update درجا
+بازیابی session بدون flash صفحه ورود
+cache امن نمای پروفایل بدون access/refresh token
+fallback آفلاین پروفایل با تطبیق دقیق userId
 ```
 
 ### قابلیت‌های هنوز کامل نشده یا فقط اسکلت دارند
@@ -802,11 +813,14 @@ Release: ir.exam.app
 - sanitizer پیام قطعی را نشان داد: `DELETE requires a WHERE clause`.
 - علت قطعی، فعال‌بودن `safeupdate` در نشست PostgREST است؛ safeupdate برای DELETE و UPDATE وجود WHERE را الزامی می‌کند.
 - ممیزی همه migrationها چهار DELETE بدون WHERE در توابع انتشار پیدا کرد.
-- V4.4 همه آن‌ها را به `delete ... where version_code is not null` تغییر می‌دهد؛ ستون version_code برابر NOT NULL است.
+- V4.4 همه آن‌ها را به `delete ... where version_code is not null` تغییر داد؛ ستون version_code برابر NOT NULL است.
+- کاربر اعلام کرد Build پس از V4.4 موفق شده است؛ انتشار خودکار بروزرسانی اکنون مسیر نهایی خود را دارد.
 - منطق JSON، advisory lock، تراکنش، ROW_COUNT و rollback نسخه قبلی حفظ شده است.
 - workflow فقط نسخه پاک‌سازی‌شده و کوتاه `code/message/details/hint` را چاپ می‌کند؛ URL، Token، کلید و Header قبل از چاپ حذف می‌شوند.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
-- مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
+- درخواست جدید کاربر: پس از update یا بستن/بازکردن برنامه از حساب خارج نشود.
+- پچ V5 برای `awaitInitialization`، بازیابی session، cache نمای پروفایل و UI loading/retry در حال تحویل است.
+- مهم‌ترین کار بعدی: آزمایش V5 روی restart، force-stop و update درجا با package/signature یکسان.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
 
 ---
@@ -1002,7 +1016,71 @@ DELETE/UPDATE بدون WHERE پس از اصلاح         → صفر مورد
 PostgreSQL 17 integration test              → PASS
 انتشار متوالی versionCodeهای 208800001/2     → PASS
 تعداد نهایی ردیف/active                      → 1 / 1
-آزمایش واقعی Supabase                       → در انتظار اجرای SQL و Push
+GitHub Actions واقعی پس از V4.4             → SUCCESS (اعلام کاربر)
+انتشار خودکار نهایی                         → مسیر workflow کامل بدون failure
+```
+
+---
+
+## ۱۵) ماندگاری نشست ورود — پچ V5
+
+### علت خروج کاذب قبلی
+
+- پلاگین Supabase نشست را ذخیره می‌کرد، اما `AuthViewModel` همیشه با `user=null` شروع می‌شد.
+- UI پیش از تمام‌شدن load از storage فوراً صفحه ورود را نمایش می‌داد.
+- repository هیچ مسیر `restoreSession` و هیچ انتظار `awaitInitialization` نداشت.
+
+### جریان جدید startup
+
+```text
+شروع برنامه
+→ نمایش صفحه «در حال بازیابی نشست ورود»
+→ auth.awaitInitialization()
+→ currentUserOrNull پس از load واقعی storage
+→ تطبیق cache profile با userId نشست
+→ تلاش حداکثر 5 ثانیه برای تازه‌سازی profiles
+→ fallback به cache هم‌هویت در قطع موقت اینترنت
+→ ورود مستقیم به dashboard
+```
+
+### فایل‌های V5
+
+```text
+app/src/main/java/ir/exam/app/data/local/AuthUserCache.kt
+app/src/main/java/ir/exam/app/data/remote/SupabaseProvider.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt
+app/src/main/java/ir/exam/app/domain/repository/AuthRepository.kt
+app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/test/java/ir/exam/app/testing/MainDispatcherRule.kt
+app/src/test/java/ir/exam/app/ui/auth/AuthViewModelTest.kt
+AUTH_SESSION_PERSISTENCE_FA.md
+```
+
+### اصول امنیتی
+
+- access token و refresh token در cache سفارشی نوشته نمی‌شوند؛ مدیریت آن‌ها فقط با Supabase Auth است.
+- cache فقط id، نام، ایمیل، role و avatar را نگه می‌دارد.
+- cache فقط در صورت برابری دقیق userId با نشست Supabase استفاده می‌شود.
+- نبود session معتبر، cache قدیمی را پاک می‌کند.
+- خطای network دیگر به‌عنوان «نبود profile» تفسیر و موجب ساخت student ناخواسته نمی‌شود.
+
+### محدودیت قطعی Android
+
+- Update درجا فقط با package و امضای یکسان داده برنامه را حفظ می‌کند.
+- Release به Release با `ir.exam.app` و keystore اصلی نشست را حفظ می‌کند.
+- Debug با `ir.exam.app.native` و Release با `ir.exam.app` storage جدا دارند.
+- Uninstall، Clear data یا revoke شدن refresh token طبیعتاً ورود مجدد می‌خواهد.
+
+### نتیجه تست V5
+
+```text
+AuthViewModel restore tests                 → 3/3 PASS
+کل تست‌های JVM                             → 8/8 PASS
+./gradlew testDebugUnitTest                 → BUILD SUCCESSFUL
+./gradlew assembleDebug                     → BUILD SUCCESSFUL
+Debug APK                                   → ir.exam.app.native
+APK Signature Scheme v2                     → Verified
 ```
 
 ### قانون دائمی هندآف

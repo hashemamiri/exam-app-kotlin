@@ -7,6 +7,7 @@ import ir.exam.app.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -16,13 +17,49 @@ data class AuthUiState(
     val otp: String = "",
     val otpSent: Boolean = false,
     val isLoading: Boolean = false,
+    val isRestoringSession: Boolean = true,
     val user: AppUser? = null,
-    val error: String? = null
+    val error: String? = null,
+    val restoreError: String? = null
 )
 
 class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
+    private var restoreJob: Job? = null
+
+    init {
+        restoreSession()
+    }
+
+    fun retrySessionRestore() = restoreSession()
+
+    private fun restoreSession() {
+        if (restoreJob?.isActive == true) return
+        restoreJob = viewModelScope.launch {
+            _state.update {
+                it.copy(isRestoringSession = true, restoreError = null, error = null)
+            }
+            repository.restoreSession()
+                .onSuccess { user ->
+                    _state.update {
+                        it.copy(
+                            isRestoringSession = false,
+                            user = user,
+                            restoreError = null
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _state.update {
+                        it.copy(
+                            isRestoringSession = false,
+                            restoreError = safeAuthError(error.message)
+                        )
+                    }
+                }
+        }
+    }
 
     fun setEmail(value: String) { _state.update { it.copy(email = value.trim(), error = null) } }
     fun setPassword(value: String) { _state.update { it.copy(password = value, error = null) } }
@@ -44,7 +81,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     }
 
     private fun request(action: suspend () -> Unit) = viewModelScope.launch {
-        _state.update { it.copy(isLoading = true, error = null) }
+        _state.update { it.copy(isLoading = true, error = null, restoreError = null) }
         try {
             action()
         } catch (error: Throwable) {

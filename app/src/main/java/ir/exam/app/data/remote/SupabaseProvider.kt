@@ -22,6 +22,7 @@ object SupabaseProvider {
             install(Auth) {
                 autoLoadFromStorage = true
                 autoSaveToStorage = true
+                alwaysAutoRefresh = true
             }
             install(Postgrest)
             install(Storage)
