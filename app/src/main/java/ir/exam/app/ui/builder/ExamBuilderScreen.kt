@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -39,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.image.QuestionMediaEditor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +52,7 @@ fun ExamBuilderScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var typeMenu by remember { mutableStateOf(false) }
+    var confirmSave by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     Scaffold(
@@ -95,23 +99,53 @@ fun ExamBuilderScreen(
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "هزینه هر سؤال مشمول: ${PersianDigits.convert("%,d".format(java.util.Locale.US, WalletRules.QUESTION_COST_TOMAN))} تومان؛ محاسبه نهایی و کسر به‌صورت اتمیک در سرور انجام می‌شود.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Button(
-                        onClick = viewModel::save,
+                        onClick = { confirmSave = true },
                         enabled = !state.saving,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (state.examId == null) "ذخیره آزمون" else "ذخیره تغییرات")
+                        Text(if (state.examId == null) "بررسی هزینه و ذخیره آزمون" else "بررسی هزینه و ذخیره تغییرات")
                     }
                     if (state.saving) CircularProgressIndicator()
                     state.uploadProgress?.let { Text(it) }
                     state.savedCode?.let { code ->
                         Text("ذخیره شد. کد آزمون: $code", color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "مبلغ کسرشده: ${state.chargedToman.asToman()} تومان" +
+                                (state.walletBalanceToman?.let { " · مانده: ${it.asToman()} تومان" } ?: ""),
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("بازگشت به آزمون‌ها") }
                     }
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
         }
+    }
+
+    if (confirmSave) {
+        AlertDialog(
+            onDismissRequest = { confirmSave = false },
+            title = { Text(if (state.examId == null) "تأیید ساخت آزمون" else "تأیید ذخیره تغییرات") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (state.examId == null) {
+                        Text("این آزمون ${PersianDigits.convert(state.questions.size)} سؤال دارد و حداکثر ${state.maximumChargeToman.asToman()} تومان کسر می‌شود.")
+                    } else {
+                        Text("سرور فقط سؤال‌های مشمول تغییر را محاسبه می‌کند. سقف این ذخیره ${state.maximumChargeToman.asToman()} تومان است.")
+                    }
+                    Text("ذخیره و کسر موجودی در یک تراکنش انجام می‌شود؛ اگر ذخیره شکست بخورد، مبلغی کم نخواهد شد.")
+                }
+            },
+            confirmButton = {
+                Button(onClick = { confirmSave = false; viewModel.save() }) { Text("تأیید و ذخیره") }
+            },
+            dismissButton = { TextButton(onClick = { confirmSave = false }) { Text("انصراف") } }
+        )
     }
 }
 
@@ -290,6 +324,8 @@ private fun SelectionRow(label: String, selected: Boolean, onToggle: () -> Unit)
         Text(label)
     }
 }
+
+private fun Long.asToman(): String = PersianDigits.convert("%,d".format(java.util.Locale.US, this))
 
 private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.ESSAY -> "تشریحی"

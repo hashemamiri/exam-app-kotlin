@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V8 ارزیابی و گزارش
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V9 تقویم، پروفایل و کیف پول
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -1370,7 +1370,7 @@ V10 WorkManager/صف آفلاین + backup/import/export + چاپ/PDF/فرمول
 V11 نهایی‌سازی parity + hardening امنیت/RLS/grants + تست واقعی نقش‌ها و regression
 ```
 
-بنابراین هنگام درخواست V8، مجموعاً ۴ پچ شامل V8 باقی مانده بود؛ بعد از اعمال موفق V8، ۳ پچ باقی می‌ماند.
+کاربر موفقیت V8 را تأیید کرد. پس از تحویل V9 فقط V10 و V11 باقی می‌مانند.
 
 ### قانون دائمی هندآف
 
@@ -1381,3 +1381,117 @@ HANDOFF_KOTLIN_MIGRATION_FA.md
 ```
 
 هندآف باید حداقل شامل وضعیت قابلیت جدید، فایل‌های تغییرکرده، SQL اجراشده یا باقی‌مانده، نسخه Build و نتیجه build/test باشد.
+
+
+---
+
+## ۱۹) پچ جامع V9 تقویم، پروفایل، تنظیمات و کیف پول
+
+### وضعیت ورودی
+
+```text
+V8 build/install                           → SUCCESS (اعلام کاربر)
+Live schema                                → 31 public table confirmed
+Calendar/wallet/profile legacy source      → audited against main@d82b2feedee1
+Payment API                                → checked against official Zarinpal/IDPay docs
+```
+
+### قابلیت‌های کامل‌شده
+
+```text
+تبدیل Native جلالی Borkowski و شبکه ماه 1400..1500
+تعطیلات رسمی server-driven برای 1403..1405 + جمعه
+پیام روزانه معلم با مخاطب همه/کلاس/دانش‌آموز
+فیلتر قطعی پیام دانش‌آموز در security-definer RPC
+پروفایل، آواتار، نام نمایشی و teacher public badge
+ذخیره استان/شهر/منطقه/مدرسه برای سربرگ
+تم system/light/dark، dynamic color و font scale در DataStore
+موجودی و 50 گردش اخیر کیف پول با واحد تومان
+کسر اتمیک هزینه ساخت/ویرایش/تکثیر آزمون
+محافظ operation_id در برابر double charge هنگام retry
+سفارش پرداخت و credit فقط در Edge Function/service_role
+زرین‌پال، آیدی‌پی و sandbox صریح و کنترل‌شده
+```
+
+### فایل‌های اصلی V9
+
+```text
+app/src/main/java/ir/exam/app/core/calendar/JalaliCalendar.kt
+app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt
+app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt
+app/src/main/java/ir/exam/app/data/dto/CalendarDtos.kt
+app/src/main/java/ir/exam/app/data/dto/NativeProfileDtos.kt
+app/src/main/java/ir/exam/app/data/dto/BillingDtos.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseCalendarRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseBillingRepository.kt
+app/src/main/java/ir/exam/app/domain/model/CalendarModels.kt
+app/src/main/java/ir/exam/app/domain/model/ProfileModels.kt
+app/src/main/java/ir/exam/app/domain/model/BillingModels.kt
+app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt
+app/src/main/java/ir/exam/app/ui/calendar/CalendarViewModel.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsViewModel.kt
+app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt
+app/src/main/java/ir/exam/app/ui/billing/BillingViewModel.kt
+supabase/migrations/20260811_native_calendar_profile_wallet.sql
+supabase/functions/wallet-payment/index.ts
+supabase/config.toml
+supabase/tests/20260811_v9_integration.sql
+COMPREHENSIVE_CALENDAR_PROFILE_WALLET_V9_FA.md
+.github/workflows/android.yml
+```
+
+### SQL و امنیت
+
+- `native_save_exam_v1(jsonb)` ذخیره exam، key، audience و debit را در یک تراکنش انجام می‌دهد.
+- قانون هزینه روی fingerprint سؤال و کلید پاسخ در سرور محاسبه می‌شود.
+- `native_exam_operations.operation_id` نتیجه retry را بدون کسر یا درج دوباره برمی‌گرداند.
+- `native_duplicate_exam_v2(text,uuid)` نیز اتمیک و idempotent است.
+- `native_wallet_snapshot()` فقط کیف پول `auth.uid()` را برمی‌گرداند.
+- `native_create/set/fail/credit_wallet_payment` از authenticated/anon revoke و فقط به service_role داده شده‌اند.
+- `wallet_topup` و `wallet_refund` قدیمی از authenticated revoke شدند؛ APK امکان شارژ رایگان ندارد.
+- callback بانکی عمومی است، ولی شروع سفارش POST در خود تابع با JWT و `auth.getUser` بررسی می‌شود.
+- authority، order id، مبلغ و پاسخ verify در سرور تطبیق می‌شوند.
+- `native_my_profile()` ستون‌های مجاز را برمی‌گرداند و `plain_password` وارد پاسخ Native نمی‌شود.
+- تمام UPDATE/DELETEهای migration دارای WHERE هستند.
+
+### نتیجه تست V9
+
+```text
+Kotlin compile                              → PASS
+JVM tests                                   → 26/26 PASS
+Jalali 1400..1500 full round-trip           → PASS
+PostgreSQL 17 migration                     → PASS
+PostgreSQL second execution                 → PASS
+Calendar teacher/member/non-member          → PASS
+Profile avatar ownership                    → PASS
+Exam create/edit/answered-edit/duplicate    → PASS
+Insufficient wallet atomic rollback         → PASS
+Exam operation idempotency                  → PASS
+Payment credit idempotency                  → PASS
+Function grants audit                       → PASS
+Deno check wallet-payment                   → PASS
+assembleDebug                               → BUILD SUCCESSFUL
+lintDebug                                   → BUILD SUCCESSFUL (0 error)
+APK Signature Scheme v2                     → Verified
+```
+
+### راه‌اندازی خارجی الزامی
+
+```text
+1) اجرای SQL_NATIVE_CALENDAR_PROFILE_WALLET_V9.sql در SQL Editor پروژه اصلی
+2) اعمال Patch V9 در repository Kotlin
+3) deploy تابع wallet-payment با Supabase CLI و --no-verify-jwt
+4) برای تست: PAY_PROVIDER=sandbox + PAY_ALLOW_SANDBOX=true
+5) برای واقعی: merchant/API key فقط در Edge Function Secrets، هرگز Git/Chat/APK
+```
+
+### بدهی‌های باقی‌مانده
+
+```text
+V10: WorkManager/pending_actions، backup/restore، import/export، چاپ رسمی چندصفحه‌ای، فرمول و تحلیل تکمیلی
+V11: parity نهایی، RLS/grants کامل، مهاجرت plain_password، تست واقعی teacher/student، orphan cleanup و regression
+```
+
+پس از موفقیت V9، تعداد پچ‌های جامع باقی‌مانده: **۲ پچ (V10 و V11)**.

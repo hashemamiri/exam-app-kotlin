@@ -50,6 +50,3 @@ data class CalendarEvent(
     val message: String?,
     val createdBy: String
 )
-
-data class Wallet(val userId: String, val balanceRials: Long, val updatedAt: Long)
-data class Subscription(val userId: String, val plan: String, val expiresAt: Long?, val active: Boolean)

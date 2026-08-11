@@ -68,8 +68,18 @@ class SupabaseQuestionImageUploader(context: Context) {
         return uploadAt("answers/$studentId/$examId/$questionId", Uri.parse(uri))
     }
 
-    private suspend fun uploadAt(prefix: String, uri: Uri): String = withContext(Dispatchers.IO) {
-        val bitmap = decodeSampledBitmap(uri, MAX_DIMENSION)
+    /** آواتار با مسیر مالک‌محور و برش مرکزی مربع ذخیره می‌شود. */
+    suspend fun uploadAvatar(userId: String, uri: Uri): String =
+        uploadAt("avatars/$userId", uri, maxDimension = AVATAR_MAX_DIMENSION, quality = AVATAR_QUALITY, forceSquare = true)
+
+    private suspend fun uploadAt(
+        prefix: String,
+        uri: Uri,
+        maxDimension: Int = MAX_DIMENSION,
+        quality: Int = QUALITY,
+        forceSquare: Boolean = false
+    ): String = withContext(Dispatchers.IO) {
+        val bitmap = decodeSampledBitmap(uri, maxDimension, forceSquare)
             ?: error("تصویر انتخاب‌شده قابل خواندن نیست.")
         val stream = ByteArrayOutputStream()
         val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -78,7 +88,7 @@ class SupabaseQuestionImageUploader(context: Context) {
             Bitmap.CompressFormat.JPEG
         }
         val extension = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) "webp" else "jpg"
-        check(bitmap.compress(format, QUALITY, stream)) { "فشرده‌سازی تصویر ناموفق بود." }
+        check(bitmap.compress(format, quality, stream)) { "فشرده‌سازی تصویر ناموفق بود." }
         bitmap.recycle()
         val bytes = stream.toByteArray()
         check(bytes.size <= MAX_UPLOAD_BYTES) { "حجم تصویر پس از فشرده‌سازی بیش از ۸ مگابایت است." }
@@ -89,7 +99,7 @@ class SupabaseQuestionImageUploader(context: Context) {
         bucket.publicUrl(path)
     }
 
-    private fun decodeSampledBitmap(uri: Uri, maxDimension: Int): Bitmap? {
+    private fun decodeSampledBitmap(uri: Uri, maxDimension: Int, forceSquare: Boolean = false): Bitmap? {
         val resolver = appContext.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -116,17 +126,28 @@ class SupabaseQuestionImageUploader(context: Context) {
             Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, Matrix().apply { postRotate(rotation) }, true)
                 .also { if (it !== decoded) decoded.recycle() }
         }
-        val largest = maxOf(oriented.width, oriented.height)
-        if (largest <= maxDimension) return oriented
+        val cropped = if (forceSquare && oriented.width != oriented.height) {
+            val side = minOf(oriented.width, oriented.height)
+            Bitmap.createBitmap(
+                oriented,
+                (oriented.width - side) / 2,
+                (oriented.height - side) / 2,
+                side,
+                side
+            ).also { if (it !== oriented) oriented.recycle() }
+        } else oriented
+
+        val largest = maxOf(cropped.width, cropped.height)
+        if (largest <= maxDimension) return cropped
 
         val scale = maxDimension.toFloat() / largest
         val resized = Bitmap.createScaledBitmap(
-            oriented,
-            (oriented.width * scale).toInt().coerceAtLeast(1),
-            (oriented.height * scale).toInt().coerceAtLeast(1),
+            cropped,
+            (cropped.width * scale).toInt().coerceAtLeast(1),
+            (cropped.height * scale).toInt().coerceAtLeast(1),
             true
         )
-        if (resized !== oriented) oriented.recycle()
+        if (resized !== cropped) cropped.recycle()
         return resized
     }
 
@@ -137,6 +158,8 @@ class SupabaseQuestionImageUploader(context: Context) {
         const val BUCKET = "exam-images"
         const val MAX_DIMENSION = 2200
         const val QUALITY = 90
+        const val AVATAR_MAX_DIMENSION = 1024
+        const val AVATAR_QUALITY = 88
         const val MAX_UPLOAD_BYTES = 8 * 1024 * 1024
     }
 }

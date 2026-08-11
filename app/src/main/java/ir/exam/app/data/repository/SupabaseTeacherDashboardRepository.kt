@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 class SupabaseTeacherDashboardRepository {
@@ -34,10 +35,16 @@ class SupabaseTeacherDashboardRepository {
         rpcObject("native_delete_exam", buildJsonObject { put("p_exam", examId) }).throwIfDashboardError()
     }
 
-    suspend fun duplicateExam(examId: String): Result<String> = runCatching {
-        val raw = rpcObject("native_duplicate_exam", buildJsonObject { put("p_exam", examId) })
-            .throwIfDashboardError()
-        raw["code"]?.jsonPrimitive?.contentOrNull ?: error("کد آزمون کپی‌شده دریافت نشد.")
+    suspend fun duplicateExam(examId: String, operationId: String): Result<DuplicateExamResult> = runCatching {
+        val raw = rpcObject("native_duplicate_exam_v2", buildJsonObject {
+            put("p_exam", examId)
+            put("p_operation", operationId)
+        }).throwIfDashboardError()
+        DuplicateExamResult(
+            code = raw["code"]?.jsonPrimitive?.contentOrNull ?: error("کد آزمون کپی‌شده دریافت نشد."),
+            costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+        )
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
@@ -46,6 +53,8 @@ class SupabaseTeacherDashboardRepository {
     private fun currentTeacherId(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id
         ?: error("نشست ورود پیدا نشد. دوباره وارد شوید.")
 }
+
+data class DuplicateExamResult(val code: String, val costToman: Long, val balanceToman: Long?)
 
 private fun JsonObject.throwIfDashboardError(): JsonObject {
     this["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)

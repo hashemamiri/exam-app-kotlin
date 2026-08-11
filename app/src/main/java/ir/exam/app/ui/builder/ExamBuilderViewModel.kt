@@ -17,6 +17,8 @@ class ExamBuilderViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ExamBuilderState(loading = true, examId = initialExamId))
     val state = _state.asStateFlow()
+    /** در تکرار پس از قطع پاسخ شبکه همان شناسه می‌ماند تا سرور دوباره پول کم نکند. */
+    private var saveOperationId: String = UUID.randomUUID().toString()
 
     init {
         load()
@@ -171,10 +173,19 @@ class ExamBuilderViewModel(
 
     fun save() = viewModelScope.launch {
         _state.update { it.copy(saving = true, error = null, savedCode = null, uploadProgress = null) }
-        repository.save(state.value) { done, total ->
+        repository.save(state.value, saveOperationId) { done, total ->
             _state.update { it.copy(uploadProgress = "آپلود تصویر $done از $total") }
-        }.onSuccess { code ->
-            _state.update { it.copy(saving = false, savedCode = code, uploadProgress = null) }
+        }.onSuccess { result ->
+            saveOperationId = UUID.randomUUID().toString()
+            _state.update {
+                it.copy(
+                    saving = false,
+                    savedCode = result.code,
+                    chargedToman = result.chargedToman,
+                    walletBalanceToman = result.walletBalanceToman,
+                    uploadProgress = null
+                )
+            }
         }.onFailure { error ->
             _state.update { it.copy(saving = false, uploadProgress = null, error = safeBuilderError(error)) }
         }

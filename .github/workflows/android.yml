@@ -24,6 +24,12 @@ jobs:
           java-version: '17'
       - name: آماده‌سازی Gradle
         uses: gradle/actions/setup-gradle@v4
+      - name: آماده‌سازی Deno برای بررسی Edge Function
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: بررسی TypeScript پرداخت
+        run: deno check supabase/functions/wallet-payment/index.ts
       - name: آماده‌سازی Supabase و نسخه خودکار برنامه
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -52,8 +58,8 @@ jobs:
           echo "Supabase profiles status: $STATUS"
           test "$STATUS" = "200"
 
-      - name: اجرای تست‌ها
-        run: ./gradlew testDebugUnitTest
+      - name: اجرای تست‌ها و Lint
+        run: ./gradlew testDebugUnitTest lintDebug
       - name: آماده‌سازی امضای Release
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

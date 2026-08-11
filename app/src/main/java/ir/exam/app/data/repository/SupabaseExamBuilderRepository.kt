@@ -6,8 +6,6 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.dto.ExamDetailDto
 import ir.exam.app.data.dto.ExamKeyDto
-import ir.exam.app.data.dto.ExamUpdateDto
-import ir.exam.app.data.dto.ExamWriteDto
 import ir.exam.app.data.dto.QuestionBankDto
 import ir.exam.app.data.dto.SchoolClassDto
 import ir.exam.app.data.dto.StudentProfileDto
@@ -16,6 +14,7 @@ import ir.exam.app.ui.builder.AudienceClassOption
 import ir.exam.app.ui.builder.AudienceStudentOption
 import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.ExamBuilderState
+import ir.exam.app.ui.builder.ExamSaveResult
 import ir.exam.app.ui.builder.QuestionDraft
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
@@ -25,6 +24,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 class SupabaseExamBuilderRepository(context: Context) {
@@ -85,12 +85,15 @@ class SupabaseExamBuilderRepository(context: Context) {
 
     suspend fun save(
         state: ExamBuilderState,
+        operationId: String,
         onUploadProgress: (done: Int, total: Int) -> Unit
-    ): Result<String> = runCatching {
+    ): Result<ExamSaveResult> = runCatching {
         val teacherId = currentTeacherId()
         require(state.title.trim().isNotEmpty()) { "عنوان آزمون را وارد کنید." }
         require(state.questions.isNotEmpty()) { "حداقل یک سؤال اضافه کنید." }
         require(state.questions.all { it.text.isNotBlank() }) { "متن همه سؤال‌ها را وارد کنید." }
+        require(state.audienceMode != "classes" || state.audienceClasses.isNotEmpty()) { "حداقل یک کلاس انتخاب کنید." }
+        require(state.audienceMode != "students" || state.audienceStudents.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
 
         val examId = state.examId ?: UUID.randomUUID().toString()
         val questionsWithUrls = imageUploader.uploadPending(
@@ -100,62 +103,46 @@ class SupabaseExamBuilderRepository(context: Context) {
             onProgress = onUploadProgress
         )
         val encoded = ExamQuestionCodec.encode(questionsWithUrls)
-        val duration = state.durationMinutes.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        val duration = state.durationMinutes.toIntOrNull()?.coerceIn(0, 1440) ?: 0
         val totalScore = questionsWithUrls.sumOf { it.score }
         val code = state.code ?: generateCode()
-
-        if (state.examId == null) {
-            SupabaseProvider.client.from("exams").insert(
-                ExamWriteDto(
-                    id = examId,
-                    teacherId = teacherId,
-                    title = state.title.trim(),
-                    subject = state.subject.trim(),
-                    duration = duration,
-                    code = code,
-                    totalScore = totalScore,
-                    isOpen = false,
-                    shuffleQuestions = state.shuffleQuestions,
-                    shuffleOptions = state.shuffleOptions,
-                    negativeMarking = state.negativeMarking.toDoubleOrNull() ?: 0.0,
-                    teacherMessage = state.teacherMessage.trim().ifBlank { null },
-                    attemptsAllowed = state.attemptsAllowed.coerceIn(1, 5),
-                    attemptOnTimeout = state.attemptOnTimeout,
-                    gradePolicy = state.gradePolicy,
-                    attemptCooldown = state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0,
-                    questions = encoded.publicQuestions
-                )
-            )
-        } else {
-            SupabaseProvider.client.from("exams").update(
-                ExamUpdateDto(
-                    title = state.title.trim(),
-                    subject = state.subject.trim(),
-                    duration = duration,
-                    totalScore = totalScore,
-                    questions = encoded.publicQuestions,
-                    shuffleQuestions = state.shuffleQuestions,
-                    shuffleOptions = state.shuffleOptions,
-                    negativeMarking = state.negativeMarking.toDoubleOrNull() ?: 0.0,
-                    teacherMessage = state.teacherMessage.trim().ifBlank { null },
-                    attemptsAllowed = state.attemptsAllowed.coerceIn(1, 5),
-                    attemptOnTimeout = state.attemptOnTimeout,
-                    gradePolicy = state.gradePolicy,
-                    attemptCooldown = state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0
-                )
-            ) {
-                filter {
-                    eq("id", examId)
-                    eq("teacher_id", teacherId)
-                }
-            }
+        val payload = buildJsonObject {
+            put("operation_id", operationId)
+            put("id", examId)
+            put("code", code)
+            put("title", state.title.trim())
+            put("subject", state.subject.trim())
+            put("duration", duration)
+            put("total_score", totalScore)
+            put("shuffle_q", state.shuffleQuestions)
+            put("shuffle_opt", state.shuffleOptions)
+            put("neg_marking", state.negativeMarking.toDoubleOrNull() ?: 0.0)
+            put("teacher_message", state.teacherMessage.trim().ifBlank { null })
+            put("attempts_allowed", state.attemptsAllowed.coerceIn(1, 5))
+            put("attempt_on_timeout", state.attemptOnTimeout)
+            put("grade_policy", state.gradePolicy)
+            put("attempt_cooldown", state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0)
+            put("questions", encoded.publicQuestions)
+            put("answer_key", encoded.answerKey)
+            put("audience", state.audienceMode)
+            put("classes", buildJsonArray { state.audienceClasses.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+            put("students", buildJsonArray { state.audienceStudents.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
         }
-
-        SupabaseProvider.client.from("exam_keys").upsert(
-            ExamKeyDto(examId = examId, answers = encoded.answerKey)
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_save_exam_v1",
+            buildJsonObject { put("p_payload", payload) }
+        ).decodeSingle<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
+            val balance = raw["balance"]?.jsonPrimitive?.longOrNull
+            val required = raw["required"]?.jsonPrimitive?.longOrNull
+            if (balance != null && required != null) error("$message؛ موجودی $balance تومان و مبلغ لازم $required تومان است.")
+            error(message)
+        }
+        ExamSaveResult(
+            code = raw["code"]?.jsonPrimitive?.contentOrNull ?: code,
+            chargedToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            walletBalanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
         )
-        saveAudience(examId, state)
-        code
     }
 
     suspend fun refreshBank(): Result<List<BankQuestionOption>> = runCatching { loadBankQuestions() }
@@ -204,19 +191,6 @@ class SupabaseExamBuilderRepository(context: Context) {
         val classes = raw["classes"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
         val students = raw["students"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
         return AudienceValue(mode, classes, students)
-    }
-
-    private suspend fun saveAudience(examId: String, state: ExamBuilderState) {
-        val raw = SupabaseProvider.client.postgrest.rpc(
-            "set_exam_audience",
-            buildJsonObject {
-                put("p_exam", examId)
-                put("p_mode", state.audienceMode)
-                put("p_classes", buildJsonArray { state.audienceClasses.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-                put("p_students", buildJsonArray { state.audienceStudents.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-            }
-        ).decodeSingle<JsonObject>()
-        raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
     }
 
     private fun currentTeacherId(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -22,6 +23,7 @@ class TeacherDashboardViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(TeacherDashboardState())
     val state = _state.asStateFlow()
+    private val duplicateOperations = mutableMapOf<String, String>()
 
     fun load() = viewModelScope.launch {
         _state.update { it.copy(loading = true, error = null) }
@@ -34,8 +36,23 @@ class TeacherDashboardViewModel(
         repository.setOpen(exam.id, !exam.isOpen).getOrThrow()
     }
 
-    fun duplicate(exam: ExamDashboardDto) = action("کپی آزمون ساخته شد.") {
-        repository.duplicateExam(exam.id).getOrThrow()
+    fun duplicate(exam: ExamDashboardDto) = viewModelScope.launch {
+        _state.update { it.copy(actionLoading = true, error = null, message = null) }
+        val operation = duplicateOperations.getOrPut(exam.id) { UUID.randomUUID().toString() }
+        repository.duplicateExam(exam.id, operation)
+            .onSuccess { result ->
+                duplicateOperations.remove(exam.id)
+                val exams = repository.getMyExams().getOrThrow()
+                val balance = result.balanceToman?.let { " · مانده ${formatToman(it)} تومان" }.orEmpty()
+                _state.update {
+                    it.copy(
+                        actionLoading = false,
+                        exams = exams,
+                        message = "کپی با کد ${result.code} ساخته شد · کسر ${formatToman(result.costToman)} تومان$balance"
+                    )
+                }
+            }
+            .onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeDashboardError(error)) } }
     }
 
     fun delete(exam: ExamDashboardDto) = action("آزمون و داده‌های وابسته حذف شد.") {
@@ -54,6 +71,10 @@ class TeacherDashboardViewModel(
             .onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeDashboardError(error)) } }
     }
 }
+
+private fun formatToman(value: Long): String = ir.exam.app.core.calendar.PersianDigits.convert(
+    "%,d".format(java.util.Locale.US, value)
+)
 
 private fun safeDashboardError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("URL:")

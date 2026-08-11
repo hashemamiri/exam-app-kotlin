@@ -1,0 +1,5 @@
+project_id = "exam-app-kotlin"
+
+# Callback بانکی بدون JWT وارد می‌شود؛ خود تابع برای درخواست POST کاربر JWT را با Auth بررسی می‌کند.
+[functions.wallet-payment]
+verify_jwt = false

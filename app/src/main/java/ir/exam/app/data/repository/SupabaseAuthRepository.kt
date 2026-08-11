@@ -7,6 +7,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import ir.exam.app.data.dto.ProfileDto
 import ir.exam.app.data.local.AuthUserCache
 import ir.exam.app.data.remote.SupabaseProvider
@@ -63,7 +64,10 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             ?: error("نشست ورود پیدا نشد. دوباره وارد شوید.")
         val fallbackName = sessionUser.email?.substringBefore('@').orEmpty().ifBlank { "کاربر" }
 
-        val profile = SupabaseProvider.client.from("profiles").select {
+        // انتخاب صریح ستون‌ها: plain_password قدیمی حتی وارد پاسخ شبکه Native نمی‌شود.
+        val profile = SupabaseProvider.client.from("profiles").select(
+            Columns.list("id", "full_name", "role", "display_name", "avatar_url", "avatar_public")
+        ) {
             filter { eq("id", sessionUser.id) }
         }.decodeList<ProfileDto>().firstOrNull() ?: run {
             // فقط نبود واقعی ردیف باعث ساخت پروفایل می‌شود؛ خطای شبکه دیگر با «نبود ردیف» اشتباه نمی‌شود.
@@ -84,9 +88,10 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         }
         return AppUser(
             id = profile.id,
-            name = profile.display_name ?: profile.full_name,
+            name = profile.display_name?.takeIf(String::isNotBlank) ?: profile.full_name,
             email = sessionUser.email,
-            role = role
+            role = role,
+            avatarUrl = profile.avatar_url
         )
     }
 
@@ -107,6 +112,10 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
 
     override suspend fun verifyOtp(email: String, code: String): Result<AppUser> = runCatching {
         auth.verifyEmailOtp(OtpType.Email.EMAIL, email.trim(), code.trim())
+        persistUser(currentProfile())
+    }
+
+    override suspend fun refreshCurrentUser(): Result<AppUser> = runCatching {
         persistUser(currentProfile())
     }
 

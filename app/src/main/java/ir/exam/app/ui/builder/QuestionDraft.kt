@@ -70,5 +70,15 @@ data class ExamBuilderState(
     val bankLoading: Boolean = false,
     val uploadProgress: String? = null,
     val savedCode: String? = null,
+    val chargedToman: Long = 0,
+    val walletBalanceToman: Long? = null,
     val error: String? = null
+) {
+    val maximumChargeToman: Long get() = questions.size * 1_000L
+}
+
+data class ExamSaveResult(
+    val code: String,
+    val chargedToman: Long,
+    val walletBalanceToman: Long?
 )

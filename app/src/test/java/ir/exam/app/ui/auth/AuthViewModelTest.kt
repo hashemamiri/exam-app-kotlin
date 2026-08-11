@@ -96,5 +96,8 @@ private class FakeAuthRepository(
     override suspend fun verifyOtp(email: String, code: String): Result<AppUser> =
         Result.failure(UnsupportedOperationException())
 
+    override suspend fun refreshCurrentUser(): Result<AppUser> =
+        restoreResult.mapCatching { it ?: error("کاربر موجود نیست") }
+
     override suspend fun signOut(): Result<Unit> = Result.success(Unit)
 }

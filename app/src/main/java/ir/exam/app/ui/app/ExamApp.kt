@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Assessment
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Menu
@@ -48,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import ir.exam.app.core.ui.AppearanceSettings
 import ir.exam.app.core.update.ApkUpdateManager
 import ir.exam.app.core.update.UpdateUseCase
 import ir.exam.app.data.repository.SupabaseAppUpdateRepository
@@ -56,11 +60,15 @@ import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.auth.AuthViewModel
 import ir.exam.app.ui.auth.SignInScreen
+import ir.exam.app.ui.billing.WalletScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
+import ir.exam.app.ui.calendar.CalendarScreen
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.grading.GradingScreen
+import ir.exam.app.ui.profile.ProfileAvatar
+import ir.exam.app.ui.profile.ProfileSettingsScreen
 import ir.exam.app.ui.reports.ReportsScreen
 import ir.exam.app.ui.reports.StudentResultsScreen
 import ir.exam.app.ui.student.StudentHomeScreen
@@ -68,10 +76,12 @@ import ir.exam.app.ui.update.AboutScreen
 import ir.exam.app.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
 
-private enum class MainPage { HOME, SCHOOL, GRADING, REPORTS, STUDENT_RESULTS, ABOUT, BUILDER }
+private enum class MainPage {
+    HOME, CALENDAR, SCHOOL, GRADING, REPORTS, STUDENT_RESULTS, WALLET, SETTINGS, ABOUT, BUILDER
+}
 
 @Composable
-fun ExamApp() {
+fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
     val appContext = LocalContext.current.applicationContext
     val authViewModel = remember(appContext) {
         AuthViewModel(SupabaseAuthRepository(appContext))
@@ -104,7 +114,7 @@ fun ExamApp() {
     var showSignOut by remember(user.id) { mutableStateOf(false) }
 
     LaunchedEffect(user.id, user.role) {
-        val teacherOnly = setOf(MainPage.BUILDER, MainPage.SCHOOL, MainPage.GRADING, MainPage.REPORTS)
+        val teacherOnly = setOf(MainPage.BUILDER, MainPage.SCHOOL, MainPage.GRADING, MainPage.REPORTS, MainPage.WALLET)
         if (user.role != UserRole.TEACHER && page in teacherOnly) page = MainPage.HOME
         if (user.role == UserRole.TEACHER && page == MainPage.STUDENT_RESULTS) page = MainPage.HOME
     }
@@ -128,10 +138,13 @@ fun ExamApp() {
         user = user,
         page = page,
         onHome = { page = MainPage.HOME },
+        onCalendar = { page = MainPage.CALENDAR },
         onSchool = { page = MainPage.SCHOOL },
         onGrading = { page = MainPage.GRADING },
         onReports = { page = MainPage.REPORTS },
         onStudentResults = { page = MainPage.STUDENT_RESULTS },
+        onWallet = { page = MainPage.WALLET },
+        onSettings = { page = MainPage.SETTINGS },
         onAbout = { page = MainPage.ABOUT },
         onSignOut = { showSignOut = true }
     ) {
@@ -143,10 +156,13 @@ fun ExamApp() {
                 )
                 UserRole.STUDENT -> StudentHomeScreen()
             }
+            MainPage.CALENDAR -> CalendarScreen(user.role)
             MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) SchoolManagementScreen()
             MainPage.GRADING -> if (user.role == UserRole.TEACHER) GradingScreen()
             MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen()
             MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
+            MainPage.WALLET -> if (user.role == UserRole.TEACHER) WalletScreen()
+            MainPage.SETTINGS -> ProfileSettingsScreen(user, appearance, authViewModel::refreshCurrentUser)
             MainPage.ABOUT -> AboutScreen(updateViewModel, apkUpdateManager)
             MainPage.BUILDER -> Unit
         }
@@ -231,10 +247,13 @@ private fun AuthenticatedDrawer(
     user: AppUser,
     page: MainPage,
     onHome: () -> Unit,
+    onCalendar: () -> Unit,
     onSchool: () -> Unit,
     onGrading: () -> Unit,
     onReports: () -> Unit,
     onStudentResults: () -> Unit,
+    onWallet: () -> Unit,
+    onSettings: () -> Unit,
     onAbout: () -> Unit,
     onSignOut: () -> Unit,
     content: @Composable () -> Unit
@@ -256,11 +275,7 @@ private fun AuthenticatedDrawer(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 24.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.School,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 64)
                     Spacer(Modifier.height(12.dp))
                     Text("سامانه آزمون", style = MaterialTheme.typography.titleLarge)
                     Text(
@@ -281,6 +296,13 @@ private fun AuthenticatedDrawer(
                     selected = page == MainPage.HOME,
                     onClick = { select(onHome) },
                     icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                NavigationDrawerItem(
+                    label = { Text("تقویم و پیام‌ها") },
+                    selected = page == MainPage.CALENDAR,
+                    onClick = { select(onCalendar) },
+                    icon = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
                 if (user.role == UserRole.TEACHER) {
@@ -305,6 +327,13 @@ private fun AuthenticatedDrawer(
                         icon = { Icon(Icons.Outlined.BarChart, contentDescription = null) },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
+                    NavigationDrawerItem(
+                        label = { Text("کیف پول و پرداخت") },
+                        selected = page == MainPage.WALLET,
+                        onClick = { select(onWallet) },
+                        icon = { Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
                 } else {
                     NavigationDrawerItem(
                         label = { Text("نتایج و پاسخ‌های من") },
@@ -314,6 +343,13 @@ private fun AuthenticatedDrawer(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
                 }
+                NavigationDrawerItem(
+                    label = { Text("پروفایل و تنظیمات") },
+                    selected = page == MainPage.SETTINGS,
+                    onClick = { select(onSettings) },
+                    icon = { Icon(Icons.Outlined.ManageAccounts, contentDescription = null) },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
                 NavigationDrawerItem(
                     label = { Text("درباره و بروزرسانی") },
                     selected = page == MainPage.ABOUT,
@@ -336,23 +372,7 @@ private fun AuthenticatedDrawer(
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            if (page == MainPage.ABOUT) {
-                                "درباره و بروزرسانی"
-                            } else if (page == MainPage.SCHOOL) {
-                                "کلاس‌ها و دانش‌آموزان"
-                            } else if (page == MainPage.GRADING) {
-                                "تصحیح و حضور"
-                            } else if (page == MainPage.REPORTS) {
-                                "آمار و گزارش‌ها"
-                            } else if (page == MainPage.STUDENT_RESULTS) {
-                                "نتایج و پاسخ‌های من"
-                            } else if (user.role == UserRole.TEACHER) {
-                                "داشبورد معلم"
-                            } else {
-                                "داشبورد دانش‌آموز"
-                            }
-                        )
+                        Text(page.title(user.role))
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
@@ -371,4 +391,17 @@ private fun AuthenticatedDrawer(
             }
         }
     }
+}
+
+private fun MainPage.title(role: UserRole): String = when (this) {
+    MainPage.HOME -> if (role == UserRole.TEACHER) "داشبورد معلم" else "داشبورد دانش‌آموز"
+    MainPage.CALENDAR -> "تقویم و پیام‌ها"
+    MainPage.SCHOOL -> "کلاس‌ها و دانش‌آموزان"
+    MainPage.GRADING -> "تصحیح و حضور"
+    MainPage.REPORTS -> "آمار و گزارش‌ها"
+    MainPage.STUDENT_RESULTS -> "نتایج و پاسخ‌های من"
+    MainPage.WALLET -> "کیف پول و پرداخت"
+    MainPage.SETTINGS -> "پروفایل و تنظیمات"
+    MainPage.ABOUT -> "درباره و بروزرسانی"
+    MainPage.BUILDER -> "ساخت آزمون"
 }

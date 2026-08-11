@@ -1,0 +1,125 @@
+package ir.exam.app.ui.profile
+
+import android.content.Context
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import ir.exam.app.core.ui.AppearancePreferences
+import ir.exam.app.core.ui.ThemeMode
+import ir.exam.app.data.repository.SupabaseProfileRepository
+import ir.exam.app.domain.model.ExamHeader
+import ir.exam.app.domain.model.NativeProfile
+import ir.exam.app.domain.model.TeacherPublicProfile
+import ir.exam.app.domain.model.UserRole
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class ProfileSettingsState(
+    val profile: NativeProfile? = null,
+    val teacher: TeacherPublicProfile? = null,
+    val loading: Boolean = true,
+    val saving: Boolean = false,
+    val uploadingAvatar: Boolean = false,
+    val savedVersion: Int = 0,
+    val error: String? = null,
+    val message: String? = null
+)
+
+class ProfileSettingsViewModel(
+    context: Context,
+    private val role: UserRole,
+    private val repository: SupabaseProfileRepository = SupabaseProfileRepository(context),
+    private val appearance: AppearancePreferences = AppearancePreferences(context)
+) : ViewModel() {
+    private val _state = MutableStateFlow(ProfileSettingsState())
+    val state = _state.asStateFlow()
+
+    init { load() }
+
+    fun load() = viewModelScope.launch {
+        _state.update { it.copy(loading = true, error = null) }
+        repository.load()
+            .onSuccess { profile ->
+                _state.update { it.copy(loading = false, profile = profile) }
+                if (role == UserRole.STUDENT) loadTeacher()
+            }
+            .onFailure { error -> _state.update { it.copy(loading = false, error = safeProfileError(error)) } }
+    }
+
+    fun setDisplayName(value: String) = updateProfile { it.copy(displayName = value.take(100)) }
+    fun setAvatarPublic(value: Boolean) = updateProfile { it.copy(avatarPublic = value) }
+    fun setProvince(value: String) = updateHeader { it.copy(province = value.take(120)) }
+    fun setCity(value: String) = updateHeader { it.copy(city = value.take(120)) }
+    fun setDistrict(value: String) = updateHeader { it.copy(district = value.take(120)) }
+    fun setSchool(value: String) = updateHeader { it.copy(school = value.take(120)) }
+
+    fun uploadAvatar(uri: Uri) = viewModelScope.launch {
+        val profile = state.value.profile ?: return@launch
+        _state.update { it.copy(uploadingAvatar = true, error = null, message = null) }
+        runCatching {
+            val url = repository.uploadAvatar(uri).getOrThrow()
+            repository.save(profile.copy(avatarUrl = url)).getOrThrow()
+        }
+            .onSuccess { saved -> markSaved(saved, "عکس پروفایل ذخیره شد.") }
+            .onFailure { error -> _state.update { it.copy(uploadingAvatar = false, error = safeProfileError(error)) } }
+    }
+
+    fun removeAvatar() {
+        val profile = state.value.profile ?: return
+        saveProfile(profile.copy(avatarUrl = null), "عکس پروفایل حذف شد.")
+    }
+
+    fun save() {
+        val profile = state.value.profile ?: return
+        saveProfile(profile, "پروفایل و سربرگ ذخیره شد.")
+    }
+
+    fun setTheme(mode: ThemeMode) = viewModelScope.launch { appearance.setTheme(mode) }
+    fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale) }
+    fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled) }
+    fun resetAppearance() = viewModelScope.launch { appearance.reset() }
+
+    private fun saveProfile(profile: NativeProfile, message: String) = viewModelScope.launch {
+        _state.update { it.copy(saving = true, error = null, message = null) }
+        repository.save(profile)
+            .onSuccess { markSaved(it, message) }
+            .onFailure { error -> _state.update { it.copy(saving = false, error = safeProfileError(error)) } }
+    }
+
+    private fun markSaved(profile: NativeProfile, message: String) {
+        _state.update {
+            it.copy(
+                profile = profile,
+                saving = false,
+                uploadingAvatar = false,
+                savedVersion = it.savedVersion + 1,
+                message = message,
+                error = null
+            )
+        }
+    }
+
+    private fun loadTeacher() = viewModelScope.launch {
+        repository.teacherPublicProfile()
+            .onSuccess { teacher -> _state.update { it.copy(teacher = teacher) } }
+            .onFailure { /* نشان معلم فرعی است؛ شکست آن کل پروفایل را از کار نمی‌اندازد. */ }
+    }
+
+    private fun updateProfile(change: (NativeProfile) -> NativeProfile) {
+        _state.update { current -> current.copy(profile = current.profile?.let(change), error = null, message = null) }
+    }
+
+    private fun updateHeader(change: (ExamHeader) -> ExamHeader) = updateProfile { profile ->
+        profile.copy(header = change(profile.header))
+    }
+}
+
+private fun safeProfileError(error: Throwable): String = error.message.orEmpty()
+    .substringBefore("URL:")
+    .substringBefore("Headers:")
+    .replace(Regex("(?i)authorization[^,\n]*"), "")
+    .replace(Regex("(?i)apikey[^,\n]*"), "")
+    .take(260)
+    .ifBlank { "عملیات پروفایل ناموفق بود." }

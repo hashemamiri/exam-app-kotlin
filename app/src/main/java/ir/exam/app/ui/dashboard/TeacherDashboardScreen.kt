@@ -34,6 +34,7 @@ fun TeacherDashboardScreen(
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
     var deleteCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
+    var duplicateCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
 
     LaunchedEffect(Unit) { viewModel.load() }
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -64,7 +65,7 @@ fun TeacherDashboardScreen(
                                 }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { viewModel.duplicate(exam) }) { Text("تکثیر") }
+                                OutlinedButton(onClick = { duplicateCandidate = exam }) { Text("تکثیر با کسر هزینه") }
                                 TextButton(onClick = { deleteCandidate = exam }) { Text("حذف") }
                             }
                         }
@@ -72,6 +73,18 @@ fun TeacherDashboardScreen(
                 }
             }
         }
+    }
+
+    duplicateCandidate?.let { exam ->
+        AlertDialog(
+            onDismissRequest = { duplicateCandidate = null },
+            title = { Text("تکثیر آزمون") },
+            text = { Text("کپی آزمون «${exam.title}» مثل یک آزمون جدید است و هزینه همه سؤال‌های آن با نرخ هر سؤال ۱٬۰۰۰ تومان به‌صورت اتمیک کسر می‌شود. ادامه می‌دهید؟") },
+            confirmButton = {
+                Button(onClick = { viewModel.duplicate(exam); duplicateCandidate = null }) { Text("تأیید و تکثیر") }
+            },
+            dismissButton = { TextButton(onClick = { duplicateCandidate = null }) { Text("انصراف") } }
+        )
     }
 
     deleteCandidate?.let { exam ->
