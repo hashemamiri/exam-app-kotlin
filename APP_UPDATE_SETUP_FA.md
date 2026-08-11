@@ -10,8 +10,11 @@ SQL پایه app_version و bucket app-updates: اجراشده
 ساخت APK و metadata: خودکار
 آپلود APK در Supabase Storage: خودکار و در اجرای واقعی HTTP 200
 بررسی URL عمومی: در اجرای واقعی OK
-فعال‌سازی اولیه app_version: HTTP 409 به‌علت ناسازگاری schema قدیمی
-Hotfix V4.1 سازگاری singleton/id قدیمی: آماده اجرا
+فعال‌سازی اولیه app_version: HTTP 409
+Hotfix V4.1 در دیتابیس تأیید شد: delete/insert=true، on conflict=false
+نتیجه واقعی V4.1: HTTP 400 و SQLSTATE 21000
+وضعیت جدول هنگام خطا: 1 ردیف، 0 ردیف فعال، 0 trigger کاربری
+Hotfix V4.2 حذف مسیر composite/RETURNING تک‌ردیفی: آماده اجرا
 ```
 
 ## ۱) SQL پایه اجراشده
@@ -38,23 +41,29 @@ supabase/migrations/20260811_app_update_auto_publish.sql
 
 این SQL تابع مدیریتی `publish_app_update` را می‌سازد. اجرای آن برای کاربران عادی، anon و authenticated بسته است.
 
-### Hotfix لازم پس از خطای واقعی HTTP 409
+### Hotfix V4.2 پس از SQLSTATE 21000
 
-اولین اجرای واقعی نشان داد آپلود Storage و URL عمومی صحیح است، اما schema قدیمی `app_version` هنگام درج ردیف دوم تعارض یکتا ایجاد می‌کند. فایل زیر را یک‌بار در SQL Editor اجرا کنید:
+Query تشخیصی تأیید کرد که V4.1 واقعاً فعال بوده، منطق قدیمی `ON CONFLICT` وجود نداشته، جدول فقط یک ردیف و هیچ trigger کاربری نداشته است. بنابراین مسیر composite شامل `RETURNING ... INTO` و خروجی `public.app_version` حذف شد.
 
-```text
-supabase/migrations/20260811_app_update_publish_409_hotfix.sql
-```
-
-Hotfix جدول `app_version` را به‌صورت «نسخه جاری» نگه می‌دارد: در یک تراکنش ردیف قبلی حذف و ردیف جدید درج می‌شود. اگر درج جدید شکست بخورد، تراکنش rollback می‌شود و نسخه قبلی باقی می‌ماند. این روش با default ثابت یا singleton قدیمی ستون `id` سازگار است.
-
-پس از اجرای Hotfix، در GitHub Actions روی اجرای ناموفق بزنید و اجرا کنید:
+فایل زیر را یک‌بار در SQL Editor اجرا کنید:
 
 ```text
-Re-run jobs → Re-run all jobs
+supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
 ```
 
-workflow جدید در خطاهای بعدی فقط کد امن دیتابیس مانند `23505` را چاپ می‌کند و جزئیات پاسخ را نشان نمی‌دهد.
+V4.2 تابع قبلی را با همان ورودی‌ها حذف و با خروجی ساده `jsonb` می‌سازد. این تابع:
+
+```text
+هیچ SELECT ... INTO ندارد
+هیچ RETURNING ... INTO ندارد
+از advisory transaction lock استفاده می‌کند
+ردیف نسخه جاری را تراکنشی جایگزین می‌کند
+فقط JSON شامل ok، version_code و version_name برمی‌گرداند
+```
+
+اگر درج جدید شکست بخورد، تراکنش rollback می‌شود و ردیف قبلی باقی می‌ماند. پس از اجرای SQL، Push پچ جدید یک workflow تازه اجرا می‌کند.
+
+workflow فقط SQLSTATE امن را چاپ می‌کند و message/details پاسخ دیتابیس را نمایش نمی‌دهد.
 
 ## ۳) افزودن یک Secret برای انتشار — فقط یک‌بار
 

@@ -4,7 +4,7 @@
 
 begin;
 
--- برای upsert امن هر versionCode فقط یک ردیف می‌تواند داشته باشد.
+-- هر versionCode فقط یک ردیف می‌تواند داشته باشد.
 delete from public.app_version older
 using public.app_version newer
 where older.version_code = newer.version_code
@@ -13,7 +13,11 @@ where older.version_code = newer.version_code
 create unique index if not exists app_version_version_code_uidx
     on public.app_version (version_code);
 
-create or replace function public.publish_app_update(
+drop function if exists public.publish_app_update(
+    integer, text, jsonb, text, text, bigint, boolean
+);
+
+create function public.publish_app_update(
     p_version_code integer,
     p_version_name text,
     p_notes_fa jsonb,
@@ -22,19 +26,21 @@ create or replace function public.publish_app_update(
     p_apk_size_bytes bigint,
     p_is_required boolean default false
 )
-returns public.app_version
+returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-    v_current_code integer;
-    v_release public.app_version;
+    v_inserted_rows integer;
 begin
     if auth.role() <> 'service_role' then
         raise exception 'release publisher role is not allowed'
             using errcode = '42501';
     end if;
+
+    -- از انتشار هم‌زمان دو workflow جلوگیری می‌کند.
+    perform pg_advisory_xact_lock(208585452);
 
     if p_version_code is null or p_version_code <= 0 then
         raise exception 'invalid version code' using errcode = '22023';
@@ -60,19 +66,18 @@ begin
         raise exception 'invalid APK size' using errcode = '22023';
     end if;
 
-    select max(version_code)
-    into v_current_code
-    from public.app_version
-    where is_active = true;
-
-    if v_current_code is not null and p_version_code < v_current_code then
+    if exists (
+        select 1
+        from public.app_version
+        where is_active = true
+          and version_code > p_version_code
+    ) then
         raise exception 'version code must not be lower than active release'
             using errcode = '22023';
     end if;
 
-    -- app_version در این پروژه نقش «نسخه جاری» دارد. حذف و درج در همان
-    -- تراکنش، با schemaهای قدیمی singleton و default ثابت id نیز سازگار است.
-    -- اگر درج شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی باقی می‌ماند.
+    -- app_version فقط نسخه جاری را نگه می‌دارد. کل عملیات تراکنشی است؛
+    -- شکست INSERT باعث بازگشت خودکار DELETE می‌شود.
     delete from public.app_version;
 
     insert into public.app_version (
@@ -95,14 +100,19 @@ begin
         coalesce(p_is_required, false),
         true,
         now()
-    )
-    returning * into v_release;
+    );
 
-    if not found then
-        raise exception 'release activation failed';
+    get diagnostics v_inserted_rows = row_count;
+    if v_inserted_rows <> 1 then
+        raise exception 'unexpected inserted row count'
+            using errcode = 'P0001';
     end if;
 
-    return v_release;
+    return jsonb_build_object(
+        'ok', true,
+        'version_code', p_version_code,
+        'version_name', btrim(p_version_name)
+    );
 end;
 $$;
 

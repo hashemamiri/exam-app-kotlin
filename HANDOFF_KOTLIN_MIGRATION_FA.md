@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.1 تعارض HTTP 409 انتشار
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.2 برای SQLSTATE 21000
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -321,10 +321,13 @@ supabase/migrations/20260811_app_update_auto_publish.sql
 وضعیت: اجراشده پیش از اولین انتشار خودکار V4
 
 supabase/migrations/20260811_app_update_publish_409_hotfix.sql
-وضعیت: Hotfix V4.1؛ باید یک‌بار پس از مشاهده HTTP 409 اجرا شود
+وضعیت: V4.1 اجراشده؛ delete/insert فعال ولی نتیجه واقعی SQLSTATE 21000 بود
+
+supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
+وضعیت: Hotfix V4.2؛ باید یک‌بار پیش از Push بعدی اجرا شود
 ```
 
-SQL دوم تابع `publish_app_update` و دسترسی محدود نقش سروری را می‌سازد. Hotfix سوم تابع را با schema قدیمی singleton/id ثابت سازگار می‌کند. هیچ Secretی داخل SQLها نیست.
+SQL V4.2 تابع را با خروجی `jsonb` بازسازی می‌کند و همه مسیرهای `SELECT/RETURNING ... INTO` تک‌ردیفی را حذف می‌کند. هیچ Secretی داخل SQLها نیست.
 
 ### نکتهٔ مهم SQL
 
@@ -782,11 +785,13 @@ Release: ir.exam.app
 - در V3، GitHub Actions در هر اجرا versionCode و versionName یکتا و بالاتر را از زمان UTC تولید می‌کند.
 - Artifact V3 علاوه بر APK نام‌گذاری‌شده، فایل `update-metadata.txt` شامل نسخه، SHA-256 و اندازه واقعی دارد.
 - پچ V4 اعمال شد؛ اجرای واقعی Storage status `200` و Public APK verification برابر `OK` بود.
-- مرحله RPC فعال‌سازی در اولین اجرای واقعی با HTTP `409` متوقف شد؛ این وضعیت معمولاً تعارض unique/schema قدیمی singleton است.
-- Hotfix V4.1 تابع انتشار را به جای افزودن history، در یک تراکنش ردیف «نسخه جاری» را جایگزین می‌کند تا با id ثابت قدیمی سازگار باشد.
+- مرحله RPC فعال‌سازی در اولین اجرای واقعی با HTTP `409` متوقف شد.
+- V4.1 در دیتابیس تأیید شد: `delete/insert=true`، `old on conflict=false`، جدول یک ردیف، active صفر و trigger کاربری صفر داشت.
+- اجرای واقعی V4.1 به HTTP `400` و SQLSTATE امن `21000` (cardinality violation) رسید.
+- Hotfix V4.2 تابع را drop/recreate می‌کند، خروجی composite را به `jsonb` تغییر می‌دهد و `RETURNING ... INTO` را کاملاً حذف می‌کند.
+- V4.2 از advisory transaction lock، DELETE/INSERT تراکنشی و `GET DIAGNOSTICS ROW_COUNT` استفاده می‌کند.
 - اگر درج جدید شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی حفظ می‌شود.
-- workflow در V4.1 فقط کد امن خطا مثل `23505` را چاپ می‌کند و message/details را نمایش نمی‌دهد.
-- Hotfix باید یک‌بار اجرا و سپس GitHub Actions با `Re-run all jobs` تکرار شود.
+- workflow فقط SQLSTATE امن را چاپ می‌کند و message/details را نمایش نمی‌دهد.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
 - مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
@@ -809,6 +814,7 @@ app/src/main/res/xml/update_file_paths.xml
 supabase/migrations/20260811_app_updates.sql
 supabase/migrations/20260811_app_update_auto_publish.sql
 supabase/migrations/20260811_app_update_publish_409_hotfix.sql
+supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
 APP_UPDATE_SETUP_FA.md
 ```
 
@@ -834,10 +840,12 @@ SQL_APP_UPDATE_V1.sql: اجراشده توسط کاربر
 bucket: app-updates
 SQL انتشار خودکار: 20260811_app_update_auto_publish.sql (اجراشده)
 اولین نتیجه واقعی: Storage=200، Public URL=OK، RPC=409
-Hotfix: 20260811_app_update_publish_409_hotfix.sql (اجرای یک‌باره لازم)
-RPC مدیریتی: publish_app_update
+نتیجه V4.1: Storage=200، Public URL=OK، RPC=400، SQLSTATE=21000
+تشخیص schema: hotfix=true، old_on_conflict=false، rows=1، active=0، triggers=0
+Hotfix بعدی: 20260811_app_update_publish_v42_hotfix.sql (اجرای یک‌باره لازم)
+RPC مدیریتی: publish_app_update با خروجی jsonb
 Secret یک‌باره GitHub: SUPABASE_RELEASE_KEY
-انتشار نسخه فعال پس از Hotfix: خودکار
+انتشار نسخه فعال پس از V4.2: خودکار
 ```
 
 ### قانون نسخه
@@ -906,7 +914,28 @@ Mock مسیر تعارض RPC                        → HTTP 409
 Safe diagnostic code                       → 23505
 عدم چاپ message/details آزمایشی            → Verified
 ریسک ازبین‌رفتن نسخه قبلی هنگام شکست       → ندارد؛ عملیات تراکنشی است
-آزمایش واقعی پس از Hotfix                  → در انتظار Re-run all jobs
+آزمایش واقعی V4.1                          → Storage=200 / Public=OK / RPC=400
+SQLSTATE واقعی V4.1                        → 21000
+```
+
+### نتیجه تأیید Hotfix V4.2
+
+```text
+تابع قبلی با امضای دقیق drop می‌شود         → Verified in SQL
+نوع خروجی جدید                              → jsonb
+SELECT ... INTO                             → حذف کامل
+RETURNING ... INTO                          → حذف کامل
+قفل انتشار هم‌زمان                          → pg_advisory_xact_lock
+کنترل تعداد INSERT                          → GET DIAGNOSTICS ROW_COUNT
+PostgreSQL parser سه migration نهایی         → OK
+PostgreSQL 17 integration test              → PASS
+schema آزمایشی id ثابت/singleton             → PASS
+انتشار متوالی versionCodeهای 208600001/2     → PASS
+نتیجه هر RPC                                → JSON ok=true
+تعداد نهایی ردیف/active                      → 1 / 1
+دسترسی نقش anon                             → permission denied (PASS)
+SQL جدید                                    → 20260811_app_update_publish_v42_hotfix.sql
+آزمایش واقعی Supabase                       → در انتظار اجرای SQL و Push
 ```
 
 ### قانون دائمی هندآف

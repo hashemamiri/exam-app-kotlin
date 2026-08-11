@@ -1,9 +1,10 @@
--- Hotfix انتشار سازگار با HTTP 409 و SQLSTATE 21000
--- جدول app_version به‌عنوان «نسخه جاری» نگهداری می‌شود.
--- تابع نتیجه را JSON برمی‌گرداند و از RETURNING ... INTO استفاده نمی‌کند.
+-- Hotfix V4.2 برای SQLSTATE 21000 (cardinality violation)
+-- تابع قبلی از RETURNING ... INTO یک composite row استفاده می‌کرد.
+-- این نسخه هیچ SELECT/RETURNING تک‌ردیفی ندارد و نتیجه را JSON برمی‌گرداند.
 
 begin;
 
+-- نوع خروجی تابع با CREATE OR REPLACE قابل تغییر نیست؛ ابتدا امضای دقیق حذف می‌شود.
 drop function if exists public.publish_app_update(
     integer, text, jsonb, text, text, bigint, boolean
 );
