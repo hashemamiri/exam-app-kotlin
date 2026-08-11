@@ -11,7 +11,10 @@ data class RemoteVersion(
     val required: Boolean = false
 )
 
-/** منبع نسخه مستقل از UI است تا بررسی نسخه قابل تست بماند. */
+/**
+ * منبع نسخه مستقل از UI است تا بررسی نسخه قابل تست بماند.
+ * مقدار null یعنی هنوز انتشار فعالی ثبت نشده و برنامه باید آن را «به‌روز» در نظر بگیرد.
+ */
 interface AppUpdateRepository {
-    suspend fun latest(): Result<RemoteVersion>
+    suspend fun latest(): Result<RemoteVersion?>
 }

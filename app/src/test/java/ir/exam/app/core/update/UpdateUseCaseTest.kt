@@ -34,6 +34,13 @@ class UpdateUseCaseTest {
     }
 
     @Test
+    fun `empty active release table means app is up to date`() = runBlocking {
+        val result = UpdateUseCase(FakeRepository(Result.success(null))).check(installedCode = 12)
+
+        assertNull(result.getOrThrow())
+    }
+
+    @Test
     fun `repository failure is propagated`() = runBlocking {
         val result = UpdateUseCase(
             FakeRepository(Result.failure(IllegalStateException("backend unavailable")))
@@ -44,7 +51,7 @@ class UpdateUseCaseTest {
 }
 
 private class FakeRepository(
-    private val result: Result<RemoteVersion>
+    private val result: Result<RemoteVersion?>
 ) : AppUpdateRepository {
-    override suspend fun latest(): Result<RemoteVersion> = result
+    override suspend fun latest(): Result<RemoteVersion?> = result
 }

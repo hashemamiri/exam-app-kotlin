@@ -18,11 +18,11 @@ val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
 val appVersionCode = localProperties.getProperty("APP_VERSION_CODE")
     ?.toIntOrNull()
     ?.takeIf { it > 0 }
-    ?: 2
+    ?: 3
 val appVersionName = localProperties.getProperty("APP_VERSION_NAME")
     ?.trim()
     ?.takeIf { it.isNotEmpty() }
-    ?: "1.1.0-native"
+    ?: "1.1.1-native"
 
 val signingProperties = Properties()
 val signingPropertiesFile = rootProject.file("app/keystore.properties")

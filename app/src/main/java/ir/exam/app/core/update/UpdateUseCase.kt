@@ -4,7 +4,7 @@ package ir.exam.app.core.update
 class UpdateUseCase(private val repository: AppUpdateRepository) {
     suspend fun check(installedCode: Int): Result<RemoteVersion?> {
         return repository.latest().map { remote ->
-            if (remote.code > installedCode) remote else null
+            remote?.takeIf { it.code > installedCode }
         }
     }
 }

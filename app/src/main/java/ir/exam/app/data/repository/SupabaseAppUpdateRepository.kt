@@ -17,7 +17,7 @@ import kotlinx.serialization.json.contentOrNull
  * RLS این جدول باید فقط اجازه SELECT ردیف‌های فعال را بدهد.
  */
 class SupabaseAppUpdateRepository : AppUpdateRepository {
-    override suspend fun latest(): Result<RemoteVersion> = runCatching {
+    override suspend fun latest(): Result<RemoteVersion?> = runCatching {
         val latest = SupabaseProvider.client
             .from("app_version")
             .select {
@@ -25,7 +25,7 @@ class SupabaseAppUpdateRepository : AppUpdateRepository {
             }
             .decodeList<AppVersionDto>()
             .maxByOrNull(AppVersionDto::versionCode)
-            ?: error("هیچ نسخه فعالی برای برنامه ثبت نشده است.")
+            ?: return@runCatching null
 
         require(latest.versionCode in 1..Int.MAX_VALUE.toLong()) {
             "version_code نسخه سرور نامعتبر است."
