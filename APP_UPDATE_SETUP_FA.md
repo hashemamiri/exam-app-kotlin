@@ -8,8 +8,10 @@
 SQL پایه app_version و bucket app-updates: اجراشده
 نسخه‌گذاری GitHub Actions: خودکار
 ساخت APK و metadata: خودکار
-آپلود APK در Supabase Storage: خودکار در پچ V4
-فعال‌سازی ردیف app_version: خودکار و تراکنشی در پچ V4
+آپلود APK در Supabase Storage: خودکار و در اجرای واقعی HTTP 200
+بررسی URL عمومی: در اجرای واقعی OK
+فعال‌سازی اولیه app_version: HTTP 409 به‌علت ناسازگاری schema قدیمی
+Hotfix V4.1 سازگاری singleton/id قدیمی: آماده اجرا
 ```
 
 ## ۱) SQL پایه اجراشده
@@ -34,7 +36,25 @@ https://eazwuyrymsvdkwckdpco.supabase.co
 supabase/migrations/20260811_app_update_auto_publish.sql
 ```
 
-این SQL تابع مدیریتی `publish_app_update` را می‌سازد. تابع در یک تراکنش نسخه جدید را ثبت، نسخه قبلی را غیرفعال و نسخه جدید را فعال می‌کند. اجرای آن برای کاربران عادی، anon و authenticated بسته است.
+این SQL تابع مدیریتی `publish_app_update` را می‌سازد. اجرای آن برای کاربران عادی، anon و authenticated بسته است.
+
+### Hotfix لازم پس از خطای واقعی HTTP 409
+
+اولین اجرای واقعی نشان داد آپلود Storage و URL عمومی صحیح است، اما schema قدیمی `app_version` هنگام درج ردیف دوم تعارض یکتا ایجاد می‌کند. فایل زیر را یک‌بار در SQL Editor اجرا کنید:
+
+```text
+supabase/migrations/20260811_app_update_publish_409_hotfix.sql
+```
+
+Hotfix جدول `app_version` را به‌صورت «نسخه جاری» نگه می‌دارد: در یک تراکنش ردیف قبلی حذف و ردیف جدید درج می‌شود. اگر درج جدید شکست بخورد، تراکنش rollback می‌شود و نسخه قبلی باقی می‌ماند. این روش با default ثابت یا singleton قدیمی ستون `id` سازگار است.
+
+پس از اجرای Hotfix، در GitHub Actions روی اجرای ناموفق بزنید و اجرا کنید:
+
+```text
+Re-run jobs → Re-run all jobs
+```
+
+workflow جدید در خطاهای بعدی فقط کد امن دیتابیس مانند `23505` را چاپ می‌کند و جزئیات پاسخ را نشان نمی‌دهد.
 
 ## ۳) افزودن یک Secret برای انتشار — فقط یک‌بار
 
@@ -93,7 +113,7 @@ APP_VERSION_NAME=2026.08.11.042412-native
 → آپلود APK در bucket عمومی app-updates
 → بررسی دانلود عمومی APK
 → فراخوانی امن publish_app_update
-→ غیرفعال‌کردن نسخه قبلی و فعال‌کردن نسخه جدید
+→ جایگزینی تراکنشی ردیف نسخه جاری با نسخه جدید
 ```
 
 Workflowها به‌صورت صف اجرا می‌شوند تا دو انتشار هم‌زمان ترتیب نسخه‌ها را خراب نکنند.

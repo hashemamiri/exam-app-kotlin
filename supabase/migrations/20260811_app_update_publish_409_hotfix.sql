@@ -1,17 +1,8 @@
--- انتشار خودکار و تراکنشی APK از GitHub Actions
--- این فایل را فقط یک‌بار روی پروژه اصلی eazwuyrymsvdkwckdpco اجرا کنید.
--- هیچ کلید یا رمز محرمانه‌ای در این فایل قرار ندهید.
+-- Hotfix V4.1 برای HTTP 409 هنگام فعال‌سازی نسخه
+-- علت سازگاری: بعضی schemaهای قدیمی app_version یک id ثابت/singleton دارند.
+-- این تابع جدول را به‌عنوان «نسخه جاری» نگه می‌دارد و در یک تراکنش جایگزین می‌کند.
 
 begin;
-
--- برای upsert امن هر versionCode فقط یک ردیف می‌تواند داشته باشد.
-delete from public.app_version older
-using public.app_version newer
-where older.version_code = newer.version_code
-  and older.ctid < newer.ctid;
-
-create unique index if not exists app_version_version_code_uidx
-    on public.app_version (version_code);
 
 create or replace function public.publish_app_update(
     p_version_code integer,
@@ -70,9 +61,7 @@ begin
             using errcode = '22023';
     end if;
 
-    -- app_version در این پروژه نقش «نسخه جاری» دارد. حذف و درج در همان
-    -- تراکنش، با schemaهای قدیمی singleton و default ثابت id نیز سازگار است.
-    -- اگر درج شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی باقی می‌ماند.
+    -- اگر INSERT شکست بخورد، DELETE نیز به‌علت تراکنش rollback می‌شود.
     delete from public.app_version;
 
     insert into public.app_version (

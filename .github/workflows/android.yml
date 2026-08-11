@@ -94,6 +94,19 @@ jobs:
           SUPABASE_RELEASE_KEY: ${{ secrets.SUPABASE_RELEASE_KEY }}
         run: |
           set -Eeuo pipefail
+
+          safe_error_code() {
+            python3 - "$1" <<'PY'
+          import json
+          import sys
+          try:
+              value = json.load(open(sys.argv[1], encoding="utf-8"))
+              print(str(value.get("code", "unknown"))[:80])
+          except Exception:
+              print("unavailable")
+          PY
+          }
+
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_RELEASE_KEY"
           SUPABASE_URL="${SUPABASE_URL%/}"
@@ -118,7 +131,11 @@ jobs:
             --data-binary "@release/$APK_FILE")"
           case "$UPLOAD_STATUS" in
             200|201) ;;
-            *) echo "Supabase Storage upload status: $UPLOAD_STATUS"; exit 1 ;;
+            *)
+              echo "Supabase Storage upload status: $UPLOAD_STATUS"
+              echo "Supabase Storage safe error code: $(safe_error_code /tmp/app-update-storage-response.json)"
+              exit 1
+              ;;
           esac
           echo "Supabase Storage upload status: $UPLOAD_STATUS"
 
@@ -176,7 +193,11 @@ jobs:
             --data-binary @release/publish-payload.json)"
           case "$PUBLISH_STATUS" in
             200|201) ;;
-            *) echo "Supabase release activation status: $PUBLISH_STATUS"; exit 1 ;;
+            *)
+              echo "Supabase release activation status: $PUBLISH_STATUS"
+              echo "Supabase release safe error code: $(safe_error_code /tmp/app-update-publish-response.json)"
+              exit 1
+              ;;
           esac
           echo "Supabase release activation status: $PUBLISH_STATUS"
           echo "Automatic app update publication: SUCCESS"

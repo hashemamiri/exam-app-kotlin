@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V4 انتشار خودکار APK در Supabase
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.1 تعارض HTTP 409 انتشار
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -318,10 +318,13 @@ supabase/migrations/20260811_app_updates.sql
 وضعیت: اجراشده توسط کاربر
 
 supabase/migrations/20260811_app_update_auto_publish.sql
-وضعیت: همراه پچ V4؛ باید یک‌بار پیش از اولین انتشار خودکار اجرا شود
+وضعیت: اجراشده پیش از اولین انتشار خودکار V4
+
+supabase/migrations/20260811_app_update_publish_409_hotfix.sql
+وضعیت: Hotfix V4.1؛ باید یک‌بار پس از مشاهده HTTP 409 اجرا شود
 ```
 
-SQL دوم تابع `publish_app_update`، unique index نسخه و دسترسی محدود نقش سروری را می‌سازد. هیچ Secretی داخل SQL نیست.
+SQL دوم تابع `publish_app_update` و دسترسی محدود نقش سروری را می‌سازد. Hotfix سوم تابع را با schema قدیمی singleton/id ثابت سازگار می‌کند. هیچ Secretی داخل SQLها نیست.
 
 ### نکتهٔ مهم SQL
 
@@ -778,8 +781,12 @@ Release: ir.exam.app
 - پچ V3 اعمال و Push شد و GitHub Actions آن با نسخه‌گذاری خودکار با موفقیت Build شد.
 - در V3، GitHub Actions در هر اجرا versionCode و versionName یکتا و بالاتر را از زمان UTC تولید می‌کند.
 - Artifact V3 علاوه بر APK نام‌گذاری‌شده، فایل `update-metadata.txt` شامل نسخه، SHA-256 و اندازه واقعی دارد.
-- پچ V4 آپلود APK، بررسی URL عمومی و فعال‌سازی app_version را نیز خودکار می‌کند.
-- V4 به اجرای یک‌باره SQL `20260811_app_update_auto_publish.sql` و افزودن یک‌باره Secret با نام `SUPABASE_RELEASE_KEY` نیاز دارد.
+- پچ V4 اعمال شد؛ اجرای واقعی Storage status `200` و Public APK verification برابر `OK` بود.
+- مرحله RPC فعال‌سازی در اولین اجرای واقعی با HTTP `409` متوقف شد؛ این وضعیت معمولاً تعارض unique/schema قدیمی singleton است.
+- Hotfix V4.1 تابع انتشار را به جای افزودن history، در یک تراکنش ردیف «نسخه جاری» را جایگزین می‌کند تا با id ثابت قدیمی سازگار باشد.
+- اگر درج جدید شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی حفظ می‌شود.
+- workflow در V4.1 فقط کد امن خطا مثل `23505` را چاپ می‌کند و message/details را نمایش نمی‌دهد.
+- Hotfix باید یک‌بار اجرا و سپس GitHub Actions با `Re-run all jobs` تکرار شود.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
 - مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
@@ -801,6 +808,7 @@ app/src/main/res/xml/update_file_paths.xml
 .github/workflows/android.yml
 supabase/migrations/20260811_app_updates.sql
 supabase/migrations/20260811_app_update_auto_publish.sql
+supabase/migrations/20260811_app_update_publish_409_hotfix.sql
 APP_UPDATE_SETUP_FA.md
 ```
 
@@ -824,10 +832,12 @@ APP_UPDATE_SETUP_FA.md
 SQL_APP_UPDATE_V1.sql: اجراشده توسط کاربر
 جدول: public.app_version
 bucket: app-updates
-SQL انتشار خودکار: 20260811_app_update_auto_publish.sql (اجرای یک‌باره لازم)
+SQL انتشار خودکار: 20260811_app_update_auto_publish.sql (اجراشده)
+اولین نتیجه واقعی: Storage=200، Public URL=OK، RPC=409
+Hotfix: 20260811_app_update_publish_409_hotfix.sql (اجرای یک‌باره لازم)
 RPC مدیریتی: publish_app_update
 Secret یک‌باره GitHub: SUPABASE_RELEASE_KEY
-انتشار نسخه فعال پس از V4: خودکار
+انتشار نسخه فعال پس از Hotfix: خودکار
 ```
 
 ### قانون نسخه
@@ -880,7 +890,23 @@ Mock public APK verification              → OK
 Mock publish_app_update RPC               → HTTP 200
 JSON payload/version/SHA/size              → Verified
 ./gradlew testDebugUnitTest                → BUILD SUCCESSFUL
-انتشار واقعی Supabase                     → پس از SQL و Secret یک‌باره آزمایش شود
+انتشار واقعی Storage                      → HTTP 200
+بررسی واقعی URL عمومی                     → OK
+فعال‌سازی واقعی RPC                       → HTTP 409؛ نیازمند Hotfix V4.1
+```
+
+### نتیجه تأیید Hotfix V4.1
+
+```text
+PostgreSQL parser تابع اصلاح‌شده           → OK
+PostgreSQL parser فایل Hotfix              → OK (6 statements)
+YAML و bash -n workflow                    → OK
+Mock مسیر موفق Storage/Public/RPC          → 200 / OK / 200
+Mock مسیر تعارض RPC                        → HTTP 409
+Safe diagnostic code                       → 23505
+عدم چاپ message/details آزمایشی            → Verified
+ریسک ازبین‌رفتن نسخه قبلی هنگام شکست       → ندارد؛ عملیات تراکنشی است
+آزمایش واقعی پس از Hotfix                  → در انتظار Re-run all jobs
 ```
 
 ### قانون دائمی هندآف
