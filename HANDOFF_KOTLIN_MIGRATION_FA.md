@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V7 رسانه و بانک سؤال
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V8 ارزیابی و گزارش
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -639,6 +639,12 @@ fallback آفلاین پروفایل با تطبیق دقیق userId
 تصویر پاسخ دانش‌آموز + draft Room + upload + submit
 بانک سؤال Native واقعی: list/add/delete
 چرخش EXIF و مجوز پایدار Photo Picker
+تصحیح دستی دانش‌آموزی و نمره امن سروری
+بانک بازخورد و تأیید نمره خودکار
+حضور و غیاب، تمدید زمان و تلاش مجدد
+آمار کلی و گزارش کلاس
+کارنامه دانش‌آموز و خروجی CSV
+چاپ/PDF لیست نمرات با Android PrintManager
 ```
 
 ### قابلیت‌های هنوز کامل نشده یا فقط اسکلت دارند
@@ -649,10 +655,9 @@ OTP اختصاصی 8 رقمی
 crop تعاملی تصویر Native
 حذف امن فایل‌های orphan از Storage
 فونت‌های واقعی res/font
-PDF فارسی کامل و چندصفحه‌ای
-چاپ Android کامل
-تصحیح تشریحی کامل
-گزارش، کارنامه و Excel واقعی
+PDF فارسی چندصفحه‌ای پیشرفته و قالب رسمی کامل
+تصحیح گروهی سؤال‌محور و میان‌برهای پیشرفته
+نمودار و تحلیل دشواری سؤال پیشرفته
 WorkManager و صف آفلاین واقعی
 تقویم و پیام واقعی
 کیف پول و پرداخت واقعی
@@ -1276,6 +1281,7 @@ required response image guard              → PASS
 assembleDebug                               → BUILD SUCCESSFUL
 lintDebug                                   → BUILD SUCCESSFUL
 APK Signature Scheme v2                     → Verified
+GitHub Actions واقعی V7                     → SUCCESS (اعلام کاربر)
 ```
 
 ### محدودیت باقی‌مانده
@@ -1283,6 +1289,88 @@ APK Signature Scheme v2                     → Verified
 - crop تعاملی هنوز به ویرایشگر bitmap متصل نشده؛ EXIF rotate و resize/compress واقعی است.
 - پاک‌سازی orphanهای Storage نیازمند reference counting است.
 - دسته‌بندی پیشرفته بانک سؤال در UI بعدی تکمیل می‌شود؛ افزودن/فهرست/حذف واقعی است.
+
+---
+
+## ۱۸) پچ جامع V8 ارزیابی، حضور، تحلیل و گزارش
+
+### قابلیت‌ها
+
+```text
+فهرست آزمون برای تصحیح
+نمای پاسخ هر دانش‌آموز و هر سؤال
+نمای تصاویر پاسخ
+ثبت نمره سؤال با کنترل بازه
+بازخورد متنی و بانک بازخورد
+تأیید نمره‌های خودکار
+لغو تأیید نمره
+حضور و غیاب آزمون
+وضعیت شروع/ارسال/غیبت/تصحیح
+تمدید زمان دانش‌آموز
+اجازه تلاش مجدد با حفظ کپی
+آمار تعداد آزمون/پاسخ/تصحیح/مانده/میانگین
+گزارش کلاس بر اساس roster واقعی
+انتخاب آزمون‌های گزارش
+لیست نمرات و میانگین درصد
+خروجی CSV سازگار با Excel
+چاپ Android و ذخیره PDF از PrintManager
+صفحه نتایج و نمرات دانش‌آموز
+خروجی CSV کارنامه دانش‌آموز
+تصحیح خودکار MC/TF/Fill/Numeric/Matching
+```
+
+### فایل‌های اصلی V8
+
+```text
+app/src/main/java/ir/exam/app/data/dto/GradingDtos.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseGradingRepository.kt
+app/src/main/java/ir/exam/app/domain/grading/AutoGrader.kt
+app/src/main/java/ir/exam/app/domain/model/GradingModels.kt
+app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt
+app/src/main/java/ir/exam/app/ui/grading/GradingViewModel.kt
+app/src/main/java/ir/exam/app/ui/reports/ReportsScreen.kt
+app/src/main/java/ir/exam/app/ui/reports/ReportsViewModel.kt
+app/src/main/java/ir/exam/app/ui/reports/ReportPrintHelper.kt
+app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt
+app/src/main/java/ir/exam/app/ui/reports/StudentResultsViewModel.kt
+supabase/migrations/20260811_native_grading_reports.sql
+```
+
+### SQL و امنیت
+
+- تنها RPC جدید `native_save_grade(text,jsonb,text)` است.
+- تابع مالکیت آزمون را با `auth.uid()` کنترل می‌کند.
+- تعداد gradeها باید دقیقاً با تعداد سؤال‌ها برابر باشد.
+- هر نمره باید بین صفر و بارم همان سؤال باشد.
+- total_grade در سرور محاسبه می‌شود، نه کلاینت.
+- UPDATE دارای WHERE و سازگار با safeupdate است.
+- بازخورد حداکثر ۲۰۰۰ کاراکتر ذخیره می‌شود.
+
+### نتیجه تست V8
+
+```text
+Kotlin compile                              → PASS
+JVM tests                                   → 19/19 PASS
+AutoGrader tests                            → 2/2 PASS
+PostgreSQL 17 native_save_grade             → PASS
+invalid score rejection                     → PASS
+previous valid grade preservation           → PASS
+safeupdate audit                            → PASS
+assembleDebug                               → BUILD SUCCESSFUL
+lintDebug                                   → BUILD SUCCESSFUL
+```
+
+### نقشه تعداد پچ‌های باقی‌مانده
+
+از زمان تحویل V8، سه پچ جامع دیگر برای رسیدن به parity پایدار برنامه لازم است:
+
+```text
+V9  تقویم جلالی + پیام هدف‌دار + پروفایل/سربرگ + تنظیمات + کیف پول
+V10 WorkManager/صف آفلاین + backup/import/export + چاپ/PDF/فرمول تکمیلی
+V11 نهایی‌سازی parity + hardening امنیت/RLS/grants + تست واقعی نقش‌ها و regression
+```
+
+بنابراین هنگام درخواست V8، مجموعاً ۴ پچ شامل V8 باقی مانده بود؛ بعد از اعمال موفق V8، ۳ پچ باقی می‌ماند.
 
 ### قانون دائمی هندآف
 

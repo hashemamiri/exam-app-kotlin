@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Assessment
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.automirrored.outlined.Logout
@@ -58,12 +60,15 @@ import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
+import ir.exam.app.ui.grading.GradingScreen
+import ir.exam.app.ui.reports.ReportsScreen
+import ir.exam.app.ui.reports.StudentResultsScreen
 import ir.exam.app.ui.student.StudentHomeScreen
 import ir.exam.app.ui.update.AboutScreen
 import ir.exam.app.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
 
-private enum class MainPage { HOME, SCHOOL, ABOUT, BUILDER }
+private enum class MainPage { HOME, SCHOOL, GRADING, REPORTS, STUDENT_RESULTS, ABOUT, BUILDER }
 
 @Composable
 fun ExamApp() {
@@ -99,9 +104,9 @@ fun ExamApp() {
     var showSignOut by remember(user.id) { mutableStateOf(false) }
 
     LaunchedEffect(user.id, user.role) {
-        if (user.role != UserRole.TEACHER && page in setOf(MainPage.BUILDER, MainPage.SCHOOL)) {
-            page = MainPage.HOME
-        }
+        val teacherOnly = setOf(MainPage.BUILDER, MainPage.SCHOOL, MainPage.GRADING, MainPage.REPORTS)
+        if (user.role != UserRole.TEACHER && page in teacherOnly) page = MainPage.HOME
+        if (user.role == UserRole.TEACHER && page == MainPage.STUDENT_RESULTS) page = MainPage.HOME
     }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {
@@ -124,6 +129,9 @@ fun ExamApp() {
         page = page,
         onHome = { page = MainPage.HOME },
         onSchool = { page = MainPage.SCHOOL },
+        onGrading = { page = MainPage.GRADING },
+        onReports = { page = MainPage.REPORTS },
+        onStudentResults = { page = MainPage.STUDENT_RESULTS },
         onAbout = { page = MainPage.ABOUT },
         onSignOut = { showSignOut = true }
     ) {
@@ -136,6 +144,9 @@ fun ExamApp() {
                 UserRole.STUDENT -> StudentHomeScreen()
             }
             MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) SchoolManagementScreen()
+            MainPage.GRADING -> if (user.role == UserRole.TEACHER) GradingScreen()
+            MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen()
+            MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
             MainPage.ABOUT -> AboutScreen(updateViewModel, apkUpdateManager)
             MainPage.BUILDER -> Unit
         }
@@ -221,6 +232,9 @@ private fun AuthenticatedDrawer(
     page: MainPage,
     onHome: () -> Unit,
     onSchool: () -> Unit,
+    onGrading: () -> Unit,
+    onReports: () -> Unit,
+    onStudentResults: () -> Unit,
     onAbout: () -> Unit,
     onSignOut: () -> Unit,
     content: @Composable () -> Unit
@@ -277,6 +291,28 @@ private fun AuthenticatedDrawer(
                         icon = { Icon(Icons.Outlined.Groups, contentDescription = null) },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
+                    NavigationDrawerItem(
+                        label = { Text("تصحیح و حضور") },
+                        selected = page == MainPage.GRADING,
+                        onClick = { select(onGrading) },
+                        icon = { Icon(Icons.Outlined.Assessment, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("آمار و گزارش‌ها") },
+                        selected = page == MainPage.REPORTS,
+                        onClick = { select(onReports) },
+                        icon = { Icon(Icons.Outlined.BarChart, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                } else {
+                    NavigationDrawerItem(
+                        label = { Text("نتایج و پاسخ‌های من") },
+                        selected = page == MainPage.STUDENT_RESULTS,
+                        onClick = { select(onStudentResults) },
+                        icon = { Icon(Icons.Outlined.Assessment, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
                 }
                 NavigationDrawerItem(
                     label = { Text("درباره و بروزرسانی") },
@@ -305,6 +341,12 @@ private fun AuthenticatedDrawer(
                                 "درباره و بروزرسانی"
                             } else if (page == MainPage.SCHOOL) {
                                 "کلاس‌ها و دانش‌آموزان"
+                            } else if (page == MainPage.GRADING) {
+                                "تصحیح و حضور"
+                            } else if (page == MainPage.REPORTS) {
+                                "آمار و گزارش‌ها"
+                            } else if (page == MainPage.STUDENT_RESULTS) {
+                                "نتایج و پاسخ‌های من"
                             } else if (user.role == UserRole.TEACHER) {
                                 "داشبورد معلم"
                             } else {
