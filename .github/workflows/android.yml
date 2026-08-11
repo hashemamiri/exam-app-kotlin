@@ -3,6 +3,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-publisher
+  cancel-in-progress: false
+
 jobs:
   test-build-release:
     runs-on: ubuntu-latest
@@ -74,9 +82,101 @@ jobs:
             "$APP_VERSION_CODE" "$APP_VERSION_NAME" "$APK_FILE" "$APK_SHA256" "$APK_SIZE_BYTES" \
             > release/update-metadata.txt
           cat release/update-metadata.txt
-      - name: بارگذاری APK و مشخصات نسخه
+      - name: بارگذاری APK و مشخصات نسخه در Artifact
         uses: actions/upload-artifact@v4
         with:
           name: exam-app-release-run-${{ github.run_number }}
           path: release/
           if-no-files-found: error
+      - name: انتشار خودکار APK در Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_RELEASE_KEY: ${{ secrets.SUPABASE_RELEASE_KEY }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_RELEASE_KEY"
+          SUPABASE_URL="${SUPABASE_URL%/}"
+
+          source release/update-metadata.txt
+          test -f "release/$APK_FILE"
+          APK_PUBLIC_URL="$SUPABASE_URL/storage/v1/object/public/app-updates/$APK_FILE"
+
+          UPLOAD_STATUS="$(curl -sS \
+            --connect-timeout 20 \
+            --max-time 600 \
+            --retry 3 \
+            --retry-all-errors \
+            -o /tmp/app-update-storage-response.json \
+            -w '%{http_code}' \
+            -X POST \
+            "$SUPABASE_URL/storage/v1/object/app-updates/$APK_FILE" \
+            -H "Authorization: Bearer $SUPABASE_RELEASE_KEY" \
+            -H "apikey: $SUPABASE_RELEASE_KEY" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            -H "x-upsert: true" \
+            --data-binary "@release/$APK_FILE")"
+          case "$UPLOAD_STATUS" in
+            200|201) ;;
+            *) echo "Supabase Storage upload status: $UPLOAD_STATUS"; exit 1 ;;
+          esac
+          echo "Supabase Storage upload status: $UPLOAD_STATUS"
+
+          curl -fsS \
+            --connect-timeout 20 \
+            --max-time 120 \
+            --retry 5 \
+            --retry-all-errors \
+            --range 0-0 \
+            -o /dev/null \
+            "$APK_PUBLIC_URL"
+          echo "Public APK verification: OK"
+
+          export APK_PUBLIC_URL GITHUB_SHA
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          metadata = {}
+          for line in Path("release/update-metadata.txt").read_text().splitlines():
+              key, value = line.split("=", 1)
+              metadata[key] = value
+
+          payload = {
+              "p_version_code": int(metadata["APP_VERSION_CODE"]),
+              "p_version_name": metadata["APP_VERSION_NAME"],
+              "p_notes_fa": [
+                  f"انتشار خودکار نسخه {metadata['APP_VERSION_NAME']}",
+                  f"ساخت GitHub از commit {os.environ['GITHUB_SHA'][:7]}"
+              ],
+              "p_apk_url": os.environ["APK_PUBLIC_URL"],
+              "p_apk_sha256": metadata["APK_SHA256"],
+              "p_apk_size_bytes": int(metadata["APK_SIZE_BYTES"]),
+              "p_is_required": False
+          }
+          Path("release/publish-payload.json").write_text(
+              json.dumps(payload, ensure_ascii=False),
+              encoding="utf-8"
+          )
+          PY
+
+          PUBLISH_STATUS="$(curl -sS \
+            --connect-timeout 20 \
+            --max-time 120 \
+            --retry 3 \
+            --retry-all-errors \
+            -o /tmp/app-update-publish-response.json \
+            -w '%{http_code}' \
+            -X POST \
+            "$SUPABASE_URL/rest/v1/rpc/publish_app_update" \
+            -H "Authorization: Bearer $SUPABASE_RELEASE_KEY" \
+            -H "apikey: $SUPABASE_RELEASE_KEY" \
+            -H "Content-Type: application/json" \
+            --data-binary @release/publish-payload.json)"
+          case "$PUBLISH_STATUS" in
+            200|201) ;;
+            *) echo "Supabase release activation status: $PUBLISH_STATUS"; exit 1 ;;
+          esac
+          echo "Supabase release activation status: $PUBLISH_STATUS"
+          echo "Automatic app update publication: SUCCESS"

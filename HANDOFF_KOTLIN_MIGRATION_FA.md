@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V3 نسخه‌گذاری خودکار GitHub Actions
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V4 انتشار خودکار APK در Supabase
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -84,6 +84,7 @@ niuadepncroqoebrxpqk.supabase.co
 ```text
 SUPABASE_URL
 SUPABASE_ANON_KEY
+SUPABASE_RELEASE_KEY
 ANDROID_KEYSTORE_BASE64
 KS_PASS
 KEY_ALIAS
@@ -182,6 +183,9 @@ workflow فایل زیر است:
 → تغییر نام APK با versionName و versionCode
 → تولید update-metadata.txt شامل SHA-256 و اندازه
 → Artifact شامل APK و metadata
+→ آپلود خودکار APK در bucket app-updates
+→ بررسی URL عمومی دانلود
+→ فعال‌سازی تراکنشی نسخه با RPC publish_app_update
 ```
 
 ---
@@ -306,6 +310,18 @@ bucket exam-images و policyها
 answer_drafts
 indexهای exams / answers / sessions
 ```
+
+### SQLهای بروزرسانی برنامه
+
+```text
+supabase/migrations/20260811_app_updates.sql
+وضعیت: اجراشده توسط کاربر
+
+supabase/migrations/20260811_app_update_auto_publish.sql
+وضعیت: همراه پچ V4؛ باید یک‌بار پیش از اولین انتشار خودکار اجرا شود
+```
+
+SQL دوم تابع `publish_app_update`، unique index نسخه و دسترسی محدود نقش سروری را می‌سازد. هیچ Secretی داخل SQL نیست.
 
 ### نکتهٔ مهم SQL
 
@@ -584,6 +600,11 @@ Release signing workflow
 FileProvider و بازکردن نصب‌کننده Android
 کنترل HTTPS، package، versionCode، امضا، اندازه و SHA-256
 مجوز REQUEST_INSTALL_PACKAGES و هدایت به تنظیمات Android
+نسخه‌گذاری خودکار GitHub Actions بدون Variable دستی
+تولید خودکار Artifact و update-metadata.txt
+آپلود خودکار APK در Supabase Storage
+فعال‌سازی تراکنشی app_version با RPC مدیریتی
+صف انتشار concurrency برای جلوگیری از تداخل Buildها
 ```
 
 ### قابلیت‌های هنوز کامل نشده یا فقط اسکلت دارند
@@ -606,7 +627,7 @@ PDF فارسی کامل و چندصفحه‌ای
 WorkManager و صف آفلاین واقعی
 تقویم و پیام واقعی
 کیف پول و پرداخت واقعی
-انتشار خودکار APK در Storage و فعال‌سازی خودکار metadata نسخه (فعلاً دستی و امن)
+پاک‌سازی دوره‌ای APKهای قدیمی Storage و retention policy
 انتقال نهایی از WebView به Kotlin
 ```
 
@@ -754,10 +775,12 @@ Release: ir.exam.app
 - کاربر فایل `SQL_APP_UPDATE_V1.sql` را در پروژه اصلی Supabase اجرا کرده است.
 - پچ V2 اعمال و Push شده است و رفتار جدول خالی را اصلاح می‌کند: نبود انتشار فعال یعنی «برنامه شما به‌روز است»، نه خطا.
 - کاربر Variableهای `APP_VERSION_CODE=3` و `APP_VERSION_NAME=1.1.1-native` را ساخت، سپس درخواست کرد نسخه‌گذاری کاملاً خودکار شود.
-- پچ V3 وابستگی workflow به آن دو Variable را حذف می‌کند؛ وجود یا حذف آن‌ها اثری روی Build ندارد.
+- پچ V3 اعمال و Push شد و GitHub Actions آن با نسخه‌گذاری خودکار با موفقیت Build شد.
 - در V3، GitHub Actions در هر اجرا versionCode و versionName یکتا و بالاتر را از زمان UTC تولید می‌کند.
 - Artifact V3 علاوه بر APK نام‌گذاری‌شده، فایل `update-metadata.txt` شامل نسخه، SHA-256 و اندازه واقعی دارد.
-- برای بروزرسانی واقعی بعدی باید APK امضاشده در bucket `app-updates` آپلود و metadata آن فعال شود.
+- پچ V4 آپلود APK، بررسی URL عمومی و فعال‌سازی app_version را نیز خودکار می‌کند.
+- V4 به اجرای یک‌باره SQL `20260811_app_update_auto_publish.sql` و افزودن یک‌باره Secret با نام `SUPABASE_RELEASE_KEY` نیاز دارد.
+- مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
 - مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
 
@@ -777,6 +800,7 @@ app/src/main/java/ir/exam/app/ui/update/UpdateViewModel.kt
 app/src/main/res/xml/update_file_paths.xml
 .github/workflows/android.yml
 supabase/migrations/20260811_app_updates.sql
+supabase/migrations/20260811_app_update_auto_publish.sql
 APP_UPDATE_SETUP_FA.md
 ```
 
@@ -800,7 +824,10 @@ APP_UPDATE_SETUP_FA.md
 SQL_APP_UPDATE_V1.sql: اجراشده توسط کاربر
 جدول: public.app_version
 bucket: app-updates
-ثبت ردیف انتشار فعال: هنوز باید برای APK واقعی انجام شود
+SQL انتشار خودکار: 20260811_app_update_auto_publish.sql (اجرای یک‌باره لازم)
+RPC مدیریتی: publish_app_update
+Secret یک‌باره GitHub: SUPABASE_RELEASE_KEY
+انتشار نسخه فعال پس از V4: خودکار
 ```
 
 ### قانون نسخه
@@ -812,6 +839,8 @@ bucket: app-updates
 - Variableهای GitHub با نام `APP_VERSION_CODE` و `APP_VERSION_NAME` دیگر خوانده نمی‌شوند و نیاز به ویرایش ندارند.
 - Build محلی خارج از CI همچنان fallback برابر `3` و `1.1.1-native` دارد.
 - هر Artifact شامل APK با نام نسخه‌دار و فایل `update-metadata.txt` است.
+- `SUPABASE_RELEASE_KEY` فقط در GitHub Actions Secrets نگهداری می‌شود و هرگز نباید echo یا در فایل خروجی نوشته شود.
+- RPC انتشار برای public، anon و authenticated ممنوع و فقط برای نقش سروری مجاز است.
 - نصب بی‌صدا در Android عادی ممکن نیست و تأیید صفحه نصب سیستم الزامی است.
 
 ### نتیجه تأیید پچ V2
@@ -838,6 +867,20 @@ Debug package                      → ir.exam.app.native
 APK Signature Scheme v2            → Verified
 update-metadata.txt در workflow     → تولید خودکار پس از Release
 SQL جدید                           → نیاز ندارد
+```
+
+### نتیجه تأیید پچ V4
+
+```text
+YAML workflow parse                       → OK
+bash -n همه run blockهای workflow         → OK
+PostgreSQL parser برای migration جدید      → OK (8 statements)
+Mock Supabase Storage upload              → HTTP 200
+Mock public APK verification              → OK
+Mock publish_app_update RPC               → HTTP 200
+JSON payload/version/SHA/size              → Verified
+./gradlew testDebugUnitTest                → BUILD SUCCESSFUL
+انتشار واقعی Supabase                     → پس از SQL و Secret یک‌باره آزمایش شود
 ```
 
 ### قانون دائمی هندآف

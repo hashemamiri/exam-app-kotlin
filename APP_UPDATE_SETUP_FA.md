@@ -1,10 +1,20 @@
 # راه‌اندازی بخش «درباره و بروزرسانی»
 
-این قابلیت شامل منوی همبرگری، نمایش نسخه، بررسی نسخه فعال در Supabase، دانلود با DownloadManager، نمایش پیشرفت و بازکردن نصب‌کننده Android است.
+این قابلیت شامل منوی همبرگری، بررسی نسخه فعال در Supabase، دانلود با DownloadManager، کنترل امنیتی APK و بازکردن نصب‌کننده Android است.
 
-## ۱) اجرای SQL فقط یک‌بار
+## وضعیت فعلی
 
-فایل زیر را در SQL Editor پروژه اصلی Supabase اجرا کنید:
+```text
+SQL پایه app_version و bucket app-updates: اجراشده
+نسخه‌گذاری GitHub Actions: خودکار
+ساخت APK و metadata: خودکار
+آپلود APK در Supabase Storage: خودکار در پچ V4
+فعال‌سازی ردیف app_version: خودکار و تراکنشی در پچ V4
+```
+
+## ۱) SQL پایه اجراشده
+
+فایل پایه زیر قبلاً در پروژه اصلی اجرا شده است:
 
 ```text
 supabase/migrations/20260811_app_updates.sql
@@ -16,20 +26,45 @@ supabase/migrations/20260811_app_updates.sql
 https://eazwuyrymsvdkwckdpco.supabase.co
 ```
 
-این SQL جدول `app_version`، RLS فقط‌خواندنی، تابع `check_app_update` و bucket عمومی `app-updates` را آماده می‌کند. این SQL طبق اعلام کاربر اجرا شده است.
+## ۲) اجرای SQL انتشار خودکار فقط یک‌بار
 
-## ۲) نسخه‌گذاری کاملاً خودکار GitHub Actions
+پیش از اولین Build پچ V4، فایل زیر را در SQL Editor همان پروژه اجرا کنید:
 
-از پچ V3 به بعد دیگر ساخت یا ویرایش این Variableها لازم نیست:
+```text
+supabase/migrations/20260811_app_update_auto_publish.sql
+```
+
+این SQL تابع مدیریتی `publish_app_update` را می‌سازد. تابع در یک تراکنش نسخه جدید را ثبت، نسخه قبلی را غیرفعال و نسخه جدید را فعال می‌کند. اجرای آن برای کاربران عادی، anon و authenticated بسته است.
+
+## ۳) افزودن یک Secret برای انتشار — فقط یک‌بار
+
+در Supabase پروژه اصلی، کلید سروری انتشار را از بخش API Keys بردارید. آن را هرگز در گفتگو، فایل پروژه، APK یا commit قرار ندهید.
+
+در GitHub repository وارد مسیر زیر شوید:
+
+```text
+Settings → Secrets and variables → Actions → Secrets
+```
+
+روی `New repository secret` بزنید و وارد کنید:
+
+```text
+Name:  SUPABASE_RELEASE_KEY
+Value: کلید سروری پروژه اصلی Supabase
+```
+
+این کار فقط یک‌بار انجام می‌شود. مقدار Secret را در هیچ پیام یا تصویر قابل مشاهده ارسال نکنید.
+
+Variableهای قدیمی زیر دیگر استفاده نمی‌شوند و می‌توانند باقی بمانند یا حذف شوند:
 
 ```text
 APP_VERSION_CODE
 APP_VERSION_NAME
 ```
 
-اگر قبلاً آن‌ها را ساخته‌اید، می‌توانید نگه دارید یا حذف کنید؛ workflow دیگر آن‌ها را نمی‌خواند.
+## ۴) نسخه‌گذاری خودکار
 
-در هر اجرای جدید GitHub Actions مقادیر به‌صورت خودکار ساخته می‌شوند:
+در هر اجرای GitHub Actions مقادیر به‌صورت خودکار ساخته می‌شوند:
 
 ```text
 versionCode = تعداد ثانیه‌های گذشته از 2020-01-01 UTC
@@ -39,23 +74,31 @@ versionName = تاریخ و ساعت UTC ساخت + native
 نمونه:
 
 ```text
-APP_VERSION_CODE=208843215
-APP_VERSION_NAME=2026.08.11.041335-native
+APP_VERSION_CODE=208585452
+APP_VERSION_NAME=2026.08.11.042412-native
 ```
 
-بنابراین هر Build جدید، بدون ورود دستی مقدار، کد نسخه بالاتری می‌گیرد. اجرای دوباره workflow نیز نسخه جدید خودکار می‌سازد.
+برای Build محلی خارج از CI، fallback فعلی `3` و `1.1.1-native` است.
 
-برای Build محلی که داخل GitHub Actions نیست، fallback فعلی `3` و `1.1.1-native` باقی می‌ماند.
+## ۵) جریان کامل انتشار خودکار V4
 
-اگر جدول `app_version` هنوز ردیف فعال نداشته باشد، برنامه پیام «برنامه شما به‌روز است» نشان می‌دهد؛ خالی‌بودن جدول خطا محسوب نمی‌شود.
-
-## ۳) ساخت Release
-
-پس از هر push، workflow زیر APK امضاشده را می‌سازد:
+پس از هر push موفق به شاخه main:
 
 ```text
-.github/workflows/android.yml
+تولید نسخه یکتا
+→ اجرای تست‌ها
+→ ساخت APK Release با keystore اصلی
+→ محاسبه SHA-256 و اندازه
+→ ذخیره Artifact و update-metadata.txt
+→ آپلود APK در bucket عمومی app-updates
+→ بررسی دانلود عمومی APK
+→ فراخوانی امن publish_app_update
+→ غیرفعال‌کردن نسخه قبلی و فعال‌کردن نسخه جدید
 ```
+
+Workflowها به‌صورت صف اجرا می‌شوند تا دو انتشار هم‌زمان ترتیب نسخه‌ها را خراب نکنند.
+
+## ۶) Artifact قابل نگهداری
 
 Artifact خروجی نامی شبیه مورد زیر دارد:
 
@@ -63,14 +106,14 @@ Artifact خروجی نامی شبیه مورد زیر دارد:
 exam-app-release-run-25
 ```
 
-داخل Artifact دو فایل قرار می‌گیرد:
+داخل آن فایل‌های زیر قرار دارند:
 
 ```text
 exam-app-<versionName>-<versionCode>.apk
 update-metadata.txt
 ```
 
-فایل `update-metadata.txt` به‌صورت خودکار شامل این اطلاعات واقعی است:
+`update-metadata.txt` شامل موارد زیر است:
 
 ```text
 APP_VERSION_CODE
@@ -80,75 +123,43 @@ APK_SHA256
 APK_SIZE_BYTES
 ```
 
-فقط Artifact مربوط به اجرای کاملاً موفق را استفاده کنید. Release باید با همان `release.keystore` اصلی امضا شده باشد.
+حتی اگر مرحله انتشار Supabase خطا بدهد، Artifact پیش از آن ساخته و بارگذاری می‌شود تا فایل Release از دست نرود.
 
-## ۴) آپلود APK
+## ۷) کنترل نتیجه انتشار
 
-در Supabase Dashboard وارد Storage و bucket زیر شوید:
-
-```text
-app-updates
-```
-
-همان APK داخل Artifact را بدون تغییر نام آپلود کنید. نشانی مستقیم به شکل زیر خواهد بود:
+در GitHub Actions این پیام‌ها باید دیده شوند:
 
 ```text
-https://eazwuyrymsvdkwckdpco.supabase.co/storage/v1/object/public/app-updates/<APK_FILE>
+Supabase Storage upload status: 200 یا 201
+Public APK verification: OK
+Supabase release activation status: 200 یا 201
+Automatic app update publication: SUCCESS
 ```
 
-## ۵) دریافت SHA-256 و اندازه
-
-دیگر محاسبه دستی لازم نیست. مقادیر دقیق را از فایل زیر بردارید:
-
-```text
-update-metadata.txt
-```
-
-برای کنترل اختیاری فایل دانلودشده در WSL نیز می‌توانید اجرا کنید:
-
-```bash
-APK=/mnt/c/Users/Hashem/Downloads/نام-واقعی-فایل.apk && \
-sha256sum "$APK" && \
-stat -c 'APK_SIZE_BYTES=%s' "$APK"
-```
-
-## ۶) فعال‌کردن نسخه جدید
-
-در SQL زیر مقادیر را دقیقاً از `update-metadata.txt` و نام فایل آپلودشده جایگزین کنید:
+در Supabase نیز باید دقیقاً یک ردیف فعال وجود داشته باشد:
 
 ```sql
-begin;
-
-update public.app_version
-set is_active = false
-where is_active;
-
-insert into public.app_version (
+select
     version_code,
     version_name,
-    notes_fa,
     apk_url,
     apk_sha256,
     apk_size_bytes,
-    is_required,
-    is_active
-) values (
-    APP_VERSION_CODE_REAL,
-    'APP_VERSION_NAME_REAL',
-    '["بهبود رابط برنامه", "نسخه جدید سامانه آزمون"]'::jsonb,
-    'https://eazwuyrymsvdkwckdpco.supabase.co/storage/v1/object/public/app-updates/APK_FILE_REAL',
-    'APK_SHA256_REAL',
-    APK_SIZE_BYTES_REAL,
-    false,
-    true
-);
-
-commit;
+    is_active,
+    published_at
+from public.app_version
+order by version_code desc;
 ```
 
-اطلاعات جدول باید دقیقاً با خود APK یکسان باشند؛ در غیر این صورت برنامه برای امنیت نصب را متوقف می‌کند.
+## ۸) رفتار خطا و امنیت
 
-آپلود APK و فعال‌کردن ردیف انتشار فعلاً عمداً مدیریتی است. کلید مدیریتی نباید داخل APK، Git یا متن گفتگو قرار بگیرد.
+- اگر Upload ناموفق باشد، نسخه فعال قبلی تغییر نمی‌کند.
+- اگر فعال‌سازی دیتابیس ناموفق باشد، تراکنش rollback می‌شود و نسخه قبلی فعال می‌ماند.
+- فایل آپلودشده اضافی ممکن است باقی بماند، اما تا زمان ثبت موفق در جدول به کاربران پیشنهاد نمی‌شود.
+- Secret انتشار فقط در GitHub Actions مصرف می‌شود و وارد APK یا Artifact نمی‌شود.
+- workflow فقط status امن HTTP را چاپ می‌کند و پاسخ حاوی اطلاعات حساس را نمایش نمی‌دهد.
+- URL فقط باید متعلق به bucket `app-updates` پروژه اصلی باشد.
+- SHA-256 باید دقیقاً ۶۴ کاراکتر hex و اندازه APK مثبت باشد.
 
 ## نکات قطعی Android
 
