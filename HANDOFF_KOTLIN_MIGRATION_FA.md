@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.3 با نام RPC جدید PostgREST
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.4 برای Supabase safeupdate
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -327,10 +327,13 @@ supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
 وضعیت: V4.2 اجراشده و فراخوانی مستقیم SQL آن موفق است
 
 supabase/migrations/20260811_app_update_publish_v43_new_rpc.sql
-وضعیت: V4.3؛ باید یک‌بار پیش از Push بعدی اجرا شود
+وضعیت: V4.3 اجراشده؛ endpoint جدید فعال است
+
+supabase/migrations/20260811_app_update_publish_v44_safe_delete.sql
+وضعیت: V4.4؛ باید یک‌بار پیش از Push بعدی اجرا شود
 ```
 
-V4.3 تابع مستقل `publish_native_app_release_v1` را با نام جدید می‌سازد تا metadata قدیمی PostgREST برای نام قبلی کاملاً دور زده شود. هیچ Secretی داخل SQLها نیست.
+V4.4 بر اساس message واقعی `DELETE requires a WHERE clause` همه DELETEهای تابع انتشار را با شرط `where version_code is not null` سازگار می‌کند. هیچ Secretی داخل SQLها نیست.
 
 ### نکتهٔ مهم SQL
 
@@ -792,14 +795,16 @@ Release: ir.exam.app
 - V4.1 در دیتابیس تأیید شد: `delete/insert=true`، `old on conflict=false`، جدول یک ردیف، active صفر و trigger کاربری صفر داشت.
 - اجرای واقعی V4.1 به HTTP `400` و SQLSTATE امن `21000` (cardinality violation) رسید.
 - V4.2 در دیتابیس فعال است: result=jsonb، returning=false، select_max=false و overload_count=1.
-- فراخوانی مستقیم V4.2 در SQL با `P0001 / DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK` موفقیت کامل را ثابت کرد.
-- بنابراین `21000` فقط در مسیر REST نام قدیمی و metadata کش‌شده PostgREST رخ می‌دهد، نه در بدنه تابع PostgreSQL.
-- V4.3 تابع مستقل `publish_native_app_release_v1` را می‌سازد و workflow endpoint خود را به نام جدید تغییر می‌دهد.
-- V4.3 نوع Secret را بدون چاپ مقدار تشخیص می‌دهد: کلید `sb_secret_*` فقط در `apikey` و JWT قدیمی در `apikey + Authorization` ارسال می‌شود.
-- کلید opaque جدید هرگز به‌اشتباه به‌عنوان Bearer JWT ارسال نمی‌شود.
-- منطق V4.3 همچنان JSON، advisory lock، DELETE/INSERT تراکنشی و ROW_COUNT دارد.
-- اگر درج جدید شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی حفظ می‌شود.
-- workflow در V4.3.1 فقط نسخه پاک‌سازی‌شده و کوتاه `code/message/details/hint` را چاپ می‌کند؛ URL، Token، کلید و Header قبل از چاپ حذف می‌شوند.
+- فراخوانی مستقیم V4.2 در SQL با `P0001 / DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK` موفقیت بدنه تابع در نشست SQL Editor را ثابت کرد.
+- V4.3 تابع مستقل `publish_native_app_release_v1` را ساخت و workflow endpoint خود را به نام جدید تغییر داد.
+- اجرای واقعی V4.3 نشان داد نوع Secret برابر `legacy server JWT`، Storage برابر `200` و Public URL برابر `OK` است.
+- endpoint جدید نیز HTTP `400 / SQLSTATE 21000` داد؛ بنابراین فرض metadata قدیمی رد شد.
+- sanitizer پیام قطعی را نشان داد: `DELETE requires a WHERE clause`.
+- علت قطعی، فعال‌بودن `safeupdate` در نشست PostgREST است؛ safeupdate برای DELETE و UPDATE وجود WHERE را الزامی می‌کند.
+- ممیزی همه migrationها چهار DELETE بدون WHERE در توابع انتشار پیدا کرد.
+- V4.4 همه آن‌ها را به `delete ... where version_code is not null` تغییر می‌دهد؛ ستون version_code برابر NOT NULL است.
+- منطق JSON، advisory lock، تراکنش، ROW_COUNT و rollback نسخه قبلی حفظ شده است.
+- workflow فقط نسخه پاک‌سازی‌شده و کوتاه `code/message/details/hint` را چاپ می‌کند؛ URL، Token، کلید و Header قبل از چاپ حذف می‌شوند.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
 - مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
@@ -824,6 +829,7 @@ supabase/migrations/20260811_app_update_auto_publish.sql
 supabase/migrations/20260811_app_update_publish_409_hotfix.sql
 supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
 supabase/migrations/20260811_app_update_publish_v43_new_rpc.sql
+supabase/migrations/20260811_app_update_publish_v44_safe_delete.sql
 APP_UPDATE_SETUP_FA.md
 ```
 
@@ -852,11 +858,13 @@ SQL انتشار خودکار: 20260811_app_update_auto_publish.sql (اجراش�
 نتیجه V4.1: Storage=200، Public URL=OK، RPC=400، SQLSTATE=21000
 تشخیص schema: result=jsonb، returning=false، select_max=false، overloads=1، rows=1، active=0، rules/triggers=0
 فراخوانی مستقیم SQL: موفق و rollback‌شده با diagnostic P0001
-علت باقی‌مانده: metadata مسیر REST برای نام قدیمی
-Hotfix بعدی: 20260811_app_update_publish_v43_new_rpc.sql (اجرای یک‌باره لازم)
-RPC جدید: publish_native_app_release_v1 با خروجی jsonb
+V4.3 واقعی: key=legacy JWT، Storage=200، Public=OK، endpoint جدید فعال
+پیام خطای قطعی: DELETE requires a WHERE clause
+تنظیم مرتبط: safeupdate.enabled در نشست PostgREST
+Hotfix بعدی: 20260811_app_update_publish_v44_safe_delete.sql (اجرای یک‌باره لازم)
+RPC فعال: publish_native_app_release_v1 با خروجی jsonb
 Secret یک‌باره GitHub: SUPABASE_RELEASE_KEY
-انتشار نسخه فعال پس از V4.3: خودکار
+انتشار نسخه فعال پس از V4.4: خودکار
 ```
 
 ### قانون نسخه
@@ -950,7 +958,7 @@ SQL جدید                                    → 20260811_app_update_publish_
 فراخوانی مستقیم SQL                         → PASS / rollback diagnostic
 safe_sqlstate مستقیم                        → P0001 (موفقیت عمدی تشخیص)
 safe_message مستقیم                         → DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK
-نتیجه قطعی                                  → بدنه PostgreSQL سالم؛ مشکل در مسیر نام قدیمی PostgREST
+نتیجه آن مرحله                              → بدنه PostgreSQL سالم؛ علت REST بعداً با sanitizer تعیین شد
 ```
 
 ### نتیجه تأیید Hotfix V4.3
@@ -974,7 +982,27 @@ Mock کلید opaque با sb_secret_              → PASS (apikey only)
 عدم ارسال sb_secret_ در Authorization       → Verified
 Sanitizer کد/پیام/details/hint               → URL/Token/Key/Header redacted
 پاسخ خام Supabase                           → چاپ نمی‌شود
-آزمایش واقعی Supabase                       → در انتظار Push افزایشی V4.3.1
+آزمایش واقعی key mode                       → legacy server JWT
+آزمایش واقعی Storage/Public                 → 200 / OK
+آزمایش واقعی RPC جدید                       → HTTP 400 / SQLSTATE 21000
+safe_message واقعی                          → DELETE requires a WHERE clause
+```
+
+### نتیجه تأیید Hotfix V4.4
+
+```text
+علت خطا                                     → safeupdate نیازمند WHERE
+ممیزی migrationها                           → 4 DELETE بدون WHERE پیدا شد
+اصلاح همه DELETEها                          → where version_code is not null
+version_code در schema                      → NOT NULL
+منطق تراکنش/advisory lock/ROW_COUNT          → بدون تغییر حفظ شد
+SQL جدید                                    → 20260811_app_update_publish_v44_safe_delete.sql
+ممیزی همه DELETE/UPDATEهای migration         → 8 statement، همگی WHERE دارند
+DELETE/UPDATE بدون WHERE پس از اصلاح         → صفر مورد
+PostgreSQL 17 integration test              → PASS
+انتشار متوالی versionCodeهای 208800001/2     → PASS
+تعداد نهایی ردیف/active                      → 1 / 1
+آزمایش واقعی Supabase                       → در انتظار اجرای SQL و Push
 ```
 
 ### قانون دائمی هندآف

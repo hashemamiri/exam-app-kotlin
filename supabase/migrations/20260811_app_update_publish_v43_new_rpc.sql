@@ -62,7 +62,8 @@ begin
             using errcode = '22023';
     end if;
 
-    delete from public.app_version;
+    delete from public.app_version
+    where version_code is not null;
 
     insert into public.app_version (
         version_code,

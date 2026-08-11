@@ -70,7 +70,8 @@ begin
 
     -- app_version فقط نسخه جاری را نگه می‌دارد. کل عملیات تراکنشی است؛
     -- شکست INSERT باعث بازگشت خودکار DELETE می‌شود.
-    delete from public.app_version;
+    delete from public.app_version
+    where version_code is not null;
 
     insert into public.app_version (
         version_code,

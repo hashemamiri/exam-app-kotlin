@@ -17,7 +17,10 @@ Hotfix V4.1 در دیتابیس تأیید شد: delete/insert=true، on conflic
 Hotfix V4.2 در دیتابیس فعال شد: jsonb، بدون RETURNING/SELECT MAX
 فراخوانی مستقیم SQL تابع V4.2: موفق و rollback‌شده (P0001 تشخیصی)
 مسیر REST نام قدیمی همچنان SQLSTATE 21000: metadata قدیمی PostgREST
-Hotfix V4.3 با نام RPC کاملاً جدید: آماده اجرا
+V4.3 واقعی: legacy JWT، endpoint جدید، Storage=200، Public=OK
+خطای قطعی V4.3: DELETE requires a WHERE clause
+علت قطعی: safeupdate در اتصال PostgREST
+Hotfix V4.4 با DELETE دارای WHERE واقعی: آماده اجرا
 ```
 
 ## ۱) SQL پایه اجراشده
@@ -105,6 +108,32 @@ sb_secret_*       → فقط header امن apikey
 ```
 
 کلیدهای opaque جدید نباید به‌عنوان Bearer JWT ارسال شوند. تابع قدیمی حذف نمی‌شود، اما دیگر توسط workflow استفاده نخواهد شد.
+
+### Hotfix V4.4 برای safeupdate
+
+خروجی پاک‌سازی‌شده workflow علت دقیق را نشان داد:
+
+```text
+safe error code: 21000
+safe error message: DELETE requires a WHERE clause
+```
+
+Supabase در اتصال PostgREST، `safeupdate` را فعال کرده است و UPDATE/DELETE بدون `WHERE` را متوقف می‌کند. تمام migrationها بررسی شدند و چهار DELETE بدون WHERE پیدا و اصلاح شدند.
+
+فایل زیر را یک‌بار در SQL Editor اجرا کنید:
+
+```text
+supabase/migrations/20260811_app_update_publish_v44_safe_delete.sql
+```
+
+تغییر قطعی:
+
+```sql
+delete from public.app_version
+where version_code is not null;
+```
+
+ستون `version_code` در schema برابر `NOT NULL` است؛ بنابراین همه ردیف‌های نسخه جاری حذف می‌شوند، ولی دستور دارای WHERE واقعی و سازگار با safeupdate است. هیچ تغییر دیگری در Secret، Storage یا workflow لازم نیست.
 
 ## ۳) افزودن یک Secret برای انتشار — فقط یک‌بار
 
