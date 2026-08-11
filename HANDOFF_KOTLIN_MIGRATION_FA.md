@@ -1495,3 +1495,12 @@ V11: parity نهایی، RLS/grants کامل، مهاجرت plain_password، ت�
 ```
 
 پس از موفقیت V9، تعداد پچ‌های جامع باقی‌مانده: **۲ پچ (V10 و V11)**.
+
+---
+
+## ۲۰) Hotfix V9.1 — سیاست سن dependency در Deno
+
+- Supabase JS از 2.112.3 به نسخه بالغ‌تر 2.112.2 pin شد.
+- محافظ minimum dependency age خود Deno غیرفعال نشد.
+- SQL و Kotlin تغییری نکردند.
+- wallet-payment پس از اصلاح دوباره deploy شد.
