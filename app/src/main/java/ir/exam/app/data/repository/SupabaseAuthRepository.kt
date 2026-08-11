@@ -2,6 +2,7 @@ package ir.exam.app.data.repository
 
 import android.content.Context
 import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.OTP
@@ -109,10 +110,11 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         persistUser(currentProfile())
     }
 
-    override suspend fun signOut(): Result<Unit> = runCatching {
-        auth.signOut()
+    override suspend fun signOut(): Result<Unit> {
+        val result = runCatching { auth.signOut(SignOutScope.LOCAL) }
         userCache.clear()
         _currentUser.value = null
+        return result
     }
 
     private fun persistUser(user: AppUser): AppUser {

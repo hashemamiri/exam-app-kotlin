@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.School
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,6 +29,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.DrawerValue
@@ -52,13 +56,14 @@ import ir.exam.app.ui.auth.AuthViewModel
 import ir.exam.app.ui.auth.SignInScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
+import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.student.StudentHomeScreen
 import ir.exam.app.ui.update.AboutScreen
 import ir.exam.app.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
 
-private enum class MainPage { HOME, ABOUT, BUILDER }
+private enum class MainPage { HOME, SCHOOL, ABOUT, BUILDER }
 
 @Composable
 fun ExamApp() {
@@ -76,10 +81,7 @@ fun ExamApp() {
             return
         }
         restoreError != null && user == null -> {
-            SessionRestoreErrorScreen(
-                message = restoreError,
-                onRetry = authViewModel::retrySessionRestore
-            )
+            SessionRestoreErrorScreen(message = restoreError, onRetry = authViewModel::retrySessionRestore)
             return
         }
         user == null -> {
@@ -90,29 +92,30 @@ fun ExamApp() {
 
     val apkUpdateManager = remember(appContext) { ApkUpdateManager(appContext) }
     val updateViewModel = remember(user.id) {
-        UpdateViewModel(
-            useCase = UpdateUseCase(SupabaseAppUpdateRepository()),
-            apkUpdateManager = apkUpdateManager
-        )
+        UpdateViewModel(UpdateUseCase(SupabaseAppUpdateRepository()), apkUpdateManager)
     }
-    val builderViewModel = remember(user.id) { ExamBuilderViewModel() }
     var page by remember(user.id) { mutableStateOf(MainPage.HOME) }
+    var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
+    var showSignOut by remember(user.id) { mutableStateOf(false) }
 
     LaunchedEffect(user.id, user.role) {
-        if (user.role != UserRole.TEACHER && page == MainPage.BUILDER) {
+        if (user.role != UserRole.TEACHER && page in setOf(MainPage.BUILDER, MainPage.SCHOOL)) {
             page = MainPage.HOME
         }
     }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {
+        val builderViewModel = remember(user.id, editingExamId) {
+            ExamBuilderViewModel(appContext, editingExamId)
+        }
         ExamBuilderScreen(
             viewModel = builderViewModel,
-            onBack = { page = MainPage.HOME }
+            onBack = { editingExamId = null; page = MainPage.HOME }
         )
         return
     }
 
-    BackHandler(enabled = page == MainPage.ABOUT) {
+    BackHandler(enabled = page != MainPage.HOME) {
         page = MainPage.HOME
     }
 
@@ -120,21 +123,43 @@ fun ExamApp() {
         user = user,
         page = page,
         onHome = { page = MainPage.HOME },
-        onAbout = { page = MainPage.ABOUT }
+        onSchool = { page = MainPage.SCHOOL },
+        onAbout = { page = MainPage.ABOUT },
+        onSignOut = { showSignOut = true }
     ) {
         when (page) {
             MainPage.HOME -> when (user.role) {
                 UserRole.TEACHER -> TeacherDashboardScreen(
-                    onCreateExam = { page = MainPage.BUILDER }
+                    onCreateExam = { editingExamId = null; page = MainPage.BUILDER },
+                    onEditExam = { id -> editingExamId = id; page = MainPage.BUILDER }
                 )
                 UserRole.STUDENT -> StudentHomeScreen()
             }
-            MainPage.ABOUT -> AboutScreen(
-                viewModel = updateViewModel,
-                apkUpdateManager = apkUpdateManager
-            )
+            MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) SchoolManagementScreen()
+            MainPage.ABOUT -> AboutScreen(updateViewModel, apkUpdateManager)
             MainPage.BUILDER -> Unit
         }
+    }
+
+    if (showSignOut) {
+        AlertDialog(
+            onDismissRequest = { if (!authState.isLoading) showSignOut = false },
+            title = { Text("خروج از حساب") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("از حساب فعلی خارج شوید؟ برای ورود دوباره به رمز یا OTP نیاز دارید.")
+                    authState.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                Button(onClick = authViewModel::signOut, enabled = !authState.isLoading) {
+                    Text(if (authState.isLoading) "در حال خروج..." else "خروج")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOut = false }, enabled = !authState.isLoading) { Text("انصراف") }
+            }
+        )
     }
 }
 
@@ -195,7 +220,9 @@ private fun AuthenticatedDrawer(
     user: AppUser,
     page: MainPage,
     onHome: () -> Unit,
+    onSchool: () -> Unit,
     onAbout: () -> Unit,
+    onSignOut: () -> Unit,
     content: @Composable () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -242,11 +269,28 @@ private fun AuthenticatedDrawer(
                     icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
+                if (user.role == UserRole.TEACHER) {
+                    NavigationDrawerItem(
+                        label = { Text("کلاس‌ها و دانش‌آموزان") },
+                        selected = page == MainPage.SCHOOL,
+                        onClick = { select(onSchool) },
+                        icon = { Icon(Icons.Outlined.Groups, contentDescription = null) },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
                 NavigationDrawerItem(
                     label = { Text("درباره و بروزرسانی") },
                     selected = page == MainPage.ABOUT,
                     onClick = { select(onAbout) },
                     icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                NavigationDrawerItem(
+                    label = { Text("خروج و تعویض حساب") },
+                    selected = false,
+                    onClick = { select(onSignOut) },
+                    icon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
             }
@@ -259,6 +303,8 @@ private fun AuthenticatedDrawer(
                         Text(
                             if (page == MainPage.ABOUT) {
                                 "درباره و بروزرسانی"
+                            } else if (page == MainPage.SCHOOL) {
+                                "کلاس‌ها و دانش‌آموزان"
                             } else if (user.role == UserRole.TEACHER) {
                                 "داشبورد معلم"
                             } else {

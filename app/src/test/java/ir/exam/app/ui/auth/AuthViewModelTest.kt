@@ -63,6 +63,20 @@ class AuthViewModelTest {
         assertNull(viewModel.state.value.user)
         assertNotNull(viewModel.state.value.restoreError)
     }
+
+    @Test
+    fun `explicit sign out clears restored user`() = runTest(mainDispatcherRule.dispatcher) {
+        val user = AppUser("u1", "معلم", "t@example.test", UserRole.TEACHER)
+        val viewModel = AuthViewModel(FakeAuthRepository(Result.success(user)))
+        advanceUntilIdle()
+        assertEquals(user, viewModel.state.value.user)
+
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.user)
+        assertFalse(viewModel.state.value.isRestoringSession)
+    }
 }
 
 private class FakeAuthRepository(

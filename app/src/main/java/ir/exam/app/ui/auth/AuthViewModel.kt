@@ -80,6 +80,11 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         _state.update { it.copy(user = user) }
     }
 
+    fun signOut() = request {
+        repository.signOut().getOrThrow()
+        _state.value = AuthUiState(isRestoringSession = false)
+    }
+
     private fun request(action: suspend () -> Unit) = viewModelScope.launch {
         _state.update { it.copy(isLoading = true, error = null, restoreError = null) }
         try {

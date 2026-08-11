@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V5.1 رفع JWT expired در بروزرسانی
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V6 مدیریت Native
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -628,20 +628,24 @@ FileProvider و بازکردن نصب‌کننده Android
 بازیابی session بدون flash صفحه ورود
 cache امن نمای پروفایل بدون access/refresh token
 fallback آفلاین پروفایل با تطبیق دقیق userId
+مدیریت Native ویرایش/حذف/تکثیر/وضعیت آزمون
+مخاطبان کلاس و دانش‌آموز برای آزمون
+کلاس و roster واقعی
+ساخت و فعال‌سازی دانش‌آموز با RPC/Edge Function واقعی
+آپلود و فشرده‌سازی واقعی تصویر سؤال در exam-images
+خروج محلی امن و تعویض حساب
 ```
 
 ### قابلیت‌های هنوز کامل نشده یا فقط اسکلت دارند
 
 ```text
 OTP اختصاصی 8 رقمی
-ویرایش آزمون ذخیره‌شده
-حذف و تکثیر آزمون
-مخاطبان آزمون
-کلاس و دانش‌آموز واقعی
-بانک سؤال واقعی
-آپلود واقعی exam-images
-برش/چرخش/فشرده‌سازی واقعی تصویر
-تصویر پاسخ دانش‌آموز
+بانک سؤال Native کامل
+ویرایش تخصصی سؤال جورکردنی
+آپلود تازه تصویر گزینه
+تصویر و آپلود پاسخ دانش‌آموز
+برش/چرخش تعاملی تصویر Native
+حذف امن فایل‌های orphan از Storage
 فونت‌های واقعی res/font
 PDF فارسی کامل و چندصفحه‌ای
 چاپ Android کامل
@@ -824,7 +828,13 @@ Release: ir.exam.app
 - علت کدی: `SupabaseAppUpdateRepository` از کلاینت Authدار اصلی استفاده می‌کرد و access token منقضی کاربر به درخواست عمومی app_version تزریق می‌شد.
 - V5.1 کلاینت مستقل `PublicUpdateSupabaseProvider` با Postgrest و بدون Auth می‌سازد؛ بررسی نسخه دیگر به JWT کاربر وابسته نیست.
 - V5.1 در startup نیز `refreshCurrentSession()` را پیش از نخستین درخواست profiles اجرا می‌کند.
-- مهم‌ترین کار بعدی: آزمایش V5.1 روی check update، restart، force-stop و update درجا با package/signature یکسان.
+- کاربر اعلام کرد Build V5.1 موفق بوده و پس از بروزرسانی، حساب کاربری حفظ شده و از حساب خارج نشده است.
+- نتیجه واقعی ماندگاری نشست روی دستگاه: PASS.
+- کاربر برای مرحله بعد «پچ جامع و کامل» می‌خواهد؛ انتخاب حدسی ماژول ممنوع است.
+- سورس مرجع WebView با commit `d82b2feedee1` و SHA-256 آرشیو `07efa23ad3ad75a701589de0ba534609b1a9f83b94097df10acd6d1930a864fb` دریافت و بازسازی شد.
+- ۲۰۶ فایل مرجع دریافت شد؛ private key و opaque secret وجود نداشت و تنها JWT موجود متعلق به نقش عمومی anon پروژه اصلی بود.
+- هر ۵۴ لینک موقت paste.rs پس از تطبیق SHA با HTTP 200 حذف شدند.
+- فایل schema زنده Supabase هنوز باید با `SQL_EXPORT_SCHEMA_FOR_COMPREHENSIVE_PATCH.sql` دریافت شود؛ تا قبل از آن نوشتن پچ جامع ممنوع است.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
 
 ---
@@ -1105,8 +1115,99 @@ AuthViewModel restore tests                 → 3/3 PASS
 کل تست‌های JVM                             → 8/8 PASS
 ./gradlew testDebugUnitTest                 → BUILD SUCCESSFUL
 ./gradlew assembleDebug                     → BUILD SUCCESSFUL
+GitHub Actions واقعی V5.1                   → SUCCESS (اعلام کاربر)
+حفظ حساب پس از بروزرسانی روی دستگاه         → PASS (اعلام کاربر)
 SQL جدید                                    → نیاز ندارد
 ```
+
+---
+
+## ۱۶) پچ جامع V6 مدیریت Native
+
+### مبنای قطعی
+
+```text
+Kotlin baseline: V5.1
+WebView reference: main@d82b2feedee1
+Old source archive SHA-256: 07efa23ad3ad75a701589de0ba534609b1a9f83b94097df10acd6d1930a864fb
+Live schema snapshot: 2026-08-11T10:52:42Z
+Public tables: 31
+Storage buckets: apk / app-updates / exam-images
+```
+
+### قابلیت‌های V6
+
+```text
+ویرایش آزمون ذخیره‌شده
+باز/بسته‌کردن آزمون
+تکثیر تراکنشی آزمون
+حذف تراکنشی آزمون و وابستگی‌ها
+جداسازی answer key در exam_keys
+سازگاری JSON سؤال WebView/Native
+مخاطب همه/کلاس/دانش‌آموز
+آپلود واقعی و فشرده‌سازی تصویر سؤال
+فهرست، ساخت، ویرایش و حذف امن کلاس
+نمای roster و افزودن/خروج عضو
+فهرست و جست‌وجوی دانش‌آموز
+فعال/غیرفعال‌کردن دانش‌آموز
+ساخت حساب با manage-student بدون کلید مدیریتی در APK
+خروج محلی امن و تعویض حساب
+```
+
+### فایل‌های اصلی V6
+
+```text
+app/src/main/java/ir/exam/app/data/dto/ExamDetailDto.kt
+app/src/main/java/ir/exam/app/data/dto/SchoolDtos.kt
+app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseExamBuilderRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseTeacherDashboardRepository.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardViewModel.kt
+supabase/migrations/20260811_native_comprehensive_management.sql
+COMPREHENSIVE_NATIVE_PATCH_FA.md
+```
+
+### SQL و امنیت
+
+- `native_delete_exam(text)` و `native_duplicate_exam(text)` تنها RPCهای جدید هستند.
+- مالکیت آزمون با `auth.uid()` کنترل می‌شود.
+- حذف پاسخ‌ها، draft، attempts، audience، sessions، keys و exam در یک تراکنش انجام می‌شود.
+- همه DELETEها WHERE دارند و safeupdate audit صفر مورد ناامن برگرداند.
+- answer key از public questions جداست.
+- DTO Native عمداً ستون `plain_password` را decode یا نمایش نمی‌دهد.
+- حذف کلاس و خروج عضو، حساب دانش‌آموز را حذف نمی‌کند.
+
+### نتیجه تست V6
+
+```text
+Kotlin compile                              → PASS
+JVM tests                                   → 13/13 PASS
+ExamQuestionCodec tests                     → 2/2 PASS
+ClassesViewModel tests                      → 2/2 PASS
+AuthViewModel tests                         → 4/4 PASS
+PostgreSQL 17 integration                   → PASS
+duplicate exam + copied key                 → PASS
+delete exam + answers/sessions cleanup      → PASS
+safeupdate audit                            → PASS
+assembleDebug                               → BUILD SUCCESSFUL
+lintDebug                                   → BUILD SUCCESSFUL
+Debug APK signature v2                      → Verified
+```
+
+### محدودیت ثبت‌شده، نه پنهان
+
+- UI ویرایش تخصصی matching هنوز کامل نیست، ولی داده موجود حفظ می‌شود.
+- آپلود سؤال واقعی است؛ انتخاب تازه تصویر گزینه/پاسخ در مرحله رسانه تکمیل می‌شود.
+- فایل Storage هنگام حذف آزمون پاک نمی‌شود تا URL مشترک آزمون تکثیرشده نشکند.
+- حذف کامل حساب دانش‌آموز از Native عمداً ارائه نشده و نیازمند تأیید امنیتی جداست.
+- schema زنده ستون legacy `plain_password` دارد؛ Native آن را decode/نمایش نمی‌دهد. حذف ستون نیازمند مهاجرت هماهنگ WebView و Edge Function است.
 
 ### قانون دائمی هندآف
 

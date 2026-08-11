@@ -3,6 +3,7 @@ package ir.exam.app.data.remote
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 import io.ktor.client.engine.okhttp.OkHttp
@@ -26,6 +27,7 @@ object SupabaseProvider {
             }
             install(Postgrest)
             install(Storage)
+            install(Functions)
         }
     }
 }

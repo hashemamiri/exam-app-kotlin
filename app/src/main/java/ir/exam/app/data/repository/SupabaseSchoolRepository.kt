@@ -1,0 +1,130 @@
+package ir.exam.app.data.repository
+
+import io.github.jan.supabase.functions.functions
+import io.github.jan.supabase.postgrest.postgrest
+import io.ktor.client.call.body
+import ir.exam.app.data.dto.SchoolClassDto
+import ir.exam.app.data.dto.StudentProfileDto
+import ir.exam.app.data.remote.SupabaseProvider
+import ir.exam.app.domain.model.NewStudentRequest
+import ir.exam.app.domain.model.SchoolClass
+import ir.exam.app.domain.model.StudentCredential
+import ir.exam.app.domain.model.StudentProfile
+import ir.exam.app.domain.repository.SchoolRepository
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+
+class SupabaseSchoolRepository : SchoolRepository {
+    override suspend fun getClasses(): Result<List<SchoolClass>> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("my_classes")
+            .decodeList<SchoolClassDto>()
+            .map(SchoolClassDto::toDomain)
+    }
+
+    override suspend fun createClass(name: String, grade: String): Result<Unit> = runCatching {
+        require(name.trim().isNotEmpty()) { "نام کلاس را وارد کنید." }
+        rpcObject("create_class", buildJsonObject {
+            put("p_name", name.trim())
+            put("p_grade", grade.trim())
+        }).throwIfError()
+    }
+
+    override suspend fun updateClass(id: String, name: String, grade: String): Result<Unit> = runCatching {
+        require(name.trim().isNotEmpty()) { "نام کلاس را وارد کنید." }
+        rpcObject("update_class", buildJsonObject {
+            put("p_class", id)
+            put("p_name", name.trim())
+            put("p_grade", grade.trim())
+        }).throwIfError()
+    }
+
+    override suspend fun deleteClass(id: String): Result<Unit> = runCatching {
+        // این RPC فقط کلاس و عضویت‌ها را حذف می‌کند؛ حساب دانش‌آموزان حفظ می‌شود.
+        rpcObject("delete_class", buildJsonObject { put("p_class", id) }).throwIfError()
+    }
+
+    override suspend fun getStudents(): Result<List<StudentProfile>> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("my_students")
+            .decodeList<StudentProfileDto>()
+            .map(StudentProfileDto::toDomain)
+    }
+
+    override suspend fun getClassRoster(classId: String): Result<List<StudentProfile>> = runCatching {
+        SupabaseProvider.client.postgrest.rpc(
+            "class_roster",
+            buildJsonObject { put("p_class", classId) }
+        ).decodeList<StudentProfileDto>().map(StudentProfileDto::toDomain)
+    }
+
+    override suspend fun addStudentsToClass(classId: String, studentIds: List<String>): Result<Int> = runCatching {
+        require(studentIds.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
+        val raw = rpcObject("add_students_to_class", buildJsonObject {
+            put("p_class", classId)
+            put("p_students", kotlinx.serialization.json.buildJsonArray {
+                studentIds.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) }
+            })
+        }).throwIfError()
+        raw["added"]?.jsonPrimitive?.intOrNull ?: studentIds.size
+    }
+
+    override suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit> = runCatching {
+        rpcObject("remove_student_from_class", buildJsonObject {
+            put("p_class", classId)
+            put("p_student", studentId)
+        }).throwIfError()
+    }
+
+    override suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit> = runCatching {
+        rpcObject("set_student_active", buildJsonObject {
+            put("p_student", studentId)
+            put("p_active", active)
+        }).throwIfError()
+    }
+
+    override suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential> = runCatching {
+        require(request.firstName.trim().isNotEmpty()) { "نام دانش‌آموز را وارد کنید." }
+        require(request.username.matches(Regex("^[a-z0-9_]{4,20}$"))) {
+            "نام کاربری باید ۴ تا ۲۰ کاراکتر انگلیسی، عدد یا _ باشد."
+        }
+        require(request.password.length >= 6) { "رمز عبور حداقل ۶ کاراکتر است." }
+        require(request.gender == "male" || request.gender == "female") { "جنسیت را انتخاب کنید." }
+
+        val body = buildJsonObject {
+            put("action", "create")
+            put("first_name", request.firstName.trim())
+            put("last_name", request.lastName.trim())
+            put("username", request.username.trim().lowercase())
+            put("password", request.password)
+            put("gender", request.gender)
+            put("class_id", request.classId.orEmpty())
+        }
+        val raw = SupabaseProvider.client.functions
+            .invoke("manage-student", body = body)
+            .body<JsonObject>()
+            .throwIfError()
+        val id = raw["id"]?.jsonPrimitive?.contentOrNull
+            ?: error("شناسه دانش‌آموز از سرور دریافت نشد.")
+
+        if (request.fatherName.isNotBlank() || request.grade.isNotBlank()) {
+            rpcObject("save_student_extra", buildJsonObject {
+                put("p_student", id)
+                put("p_username", request.username.trim().lowercase())
+                put("p_father_name", request.fatherName.trim())
+                put("p_grade", request.grade.trim())
+            }).throwIfError()
+        }
+        StudentCredential(id, request.username.trim().lowercase(), request.password)
+    }
+
+    private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
+        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeSingle()
+}
+
+private fun JsonObject.throwIfError(): JsonObject {
+    this["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+    return this
+}

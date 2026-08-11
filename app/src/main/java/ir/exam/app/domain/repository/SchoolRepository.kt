@@ -1,4 +1,19 @@
 package ir.exam.app.domain.repository
-import ir.exam.app.domain.model.*
-import kotlinx.coroutines.flow.Flow
-interface SchoolRepository { fun observeClasses():Flow<List<SchoolClass>>; suspend fun saveClass(item:SchoolClass):Result<Unit>; suspend fun deleteClass(id:String):Result<Unit>; fun observeCalendar(month:String):Flow<List<CalendarEvent>>; suspend fun saveEvent(item:CalendarEvent):Result<Unit> }
+
+import ir.exam.app.domain.model.NewStudentRequest
+import ir.exam.app.domain.model.SchoolClass
+import ir.exam.app.domain.model.StudentCredential
+import ir.exam.app.domain.model.StudentProfile
+
+interface SchoolRepository {
+    suspend fun getClasses(): Result<List<SchoolClass>>
+    suspend fun createClass(name: String, grade: String): Result<Unit>
+    suspend fun updateClass(id: String, name: String, grade: String): Result<Unit>
+    suspend fun deleteClass(id: String): Result<Unit>
+    suspend fun getStudents(): Result<List<StudentProfile>>
+    suspend fun getClassRoster(classId: String): Result<List<StudentProfile>>
+    suspend fun addStudentsToClass(classId: String, studentIds: List<String>): Result<Int>
+    suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit>
+    suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit>
+    suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential>
+}
