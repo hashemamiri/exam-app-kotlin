@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.2 برای SQLSTATE 21000
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — Hotfix V4.3 با نام RPC جدید PostgREST
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -324,10 +324,13 @@ supabase/migrations/20260811_app_update_publish_409_hotfix.sql
 وضعیت: V4.1 اجراشده؛ delete/insert فعال ولی نتیجه واقعی SQLSTATE 21000 بود
 
 supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
-وضعیت: Hotfix V4.2؛ باید یک‌بار پیش از Push بعدی اجرا شود
+وضعیت: V4.2 اجراشده و فراخوانی مستقیم SQL آن موفق است
+
+supabase/migrations/20260811_app_update_publish_v43_new_rpc.sql
+وضعیت: V4.3؛ باید یک‌بار پیش از Push بعدی اجرا شود
 ```
 
-SQL V4.2 تابع را با خروجی `jsonb` بازسازی می‌کند و همه مسیرهای `SELECT/RETURNING ... INTO` تک‌ردیفی را حذف می‌کند. هیچ Secretی داخل SQLها نیست.
+V4.3 تابع مستقل `publish_native_app_release_v1` را با نام جدید می‌سازد تا metadata قدیمی PostgREST برای نام قبلی کاملاً دور زده شود. هیچ Secretی داخل SQLها نیست.
 
 ### نکتهٔ مهم SQL
 
@@ -788,8 +791,11 @@ Release: ir.exam.app
 - مرحله RPC فعال‌سازی در اولین اجرای واقعی با HTTP `409` متوقف شد.
 - V4.1 در دیتابیس تأیید شد: `delete/insert=true`، `old on conflict=false`، جدول یک ردیف، active صفر و trigger کاربری صفر داشت.
 - اجرای واقعی V4.1 به HTTP `400` و SQLSTATE امن `21000` (cardinality violation) رسید.
-- Hotfix V4.2 تابع را drop/recreate می‌کند، خروجی composite را به `jsonb` تغییر می‌دهد و `RETURNING ... INTO` را کاملاً حذف می‌کند.
-- V4.2 از advisory transaction lock، DELETE/INSERT تراکنشی و `GET DIAGNOSTICS ROW_COUNT` استفاده می‌کند.
+- V4.2 در دیتابیس فعال است: result=jsonb، returning=false، select_max=false و overload_count=1.
+- فراخوانی مستقیم V4.2 در SQL با `P0001 / DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK` موفقیت کامل را ثابت کرد.
+- بنابراین `21000` فقط در مسیر REST نام قدیمی و metadata کش‌شده PostgREST رخ می‌دهد، نه در بدنه تابع PostgreSQL.
+- V4.3 تابع مستقل `publish_native_app_release_v1` را می‌سازد و workflow endpoint خود را به نام جدید تغییر می‌دهد.
+- منطق V4.3 همچنان JSON، advisory lock، DELETE/INSERT تراکنشی و ROW_COUNT دارد.
 - اگر درج جدید شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی حفظ می‌شود.
 - workflow فقط SQLSTATE امن را چاپ می‌کند و message/details را نمایش نمی‌دهد.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
@@ -815,6 +821,7 @@ supabase/migrations/20260811_app_updates.sql
 supabase/migrations/20260811_app_update_auto_publish.sql
 supabase/migrations/20260811_app_update_publish_409_hotfix.sql
 supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
+supabase/migrations/20260811_app_update_publish_v43_new_rpc.sql
 APP_UPDATE_SETUP_FA.md
 ```
 
@@ -841,11 +848,13 @@ bucket: app-updates
 SQL انتشار خودکار: 20260811_app_update_auto_publish.sql (اجراشده)
 اولین نتیجه واقعی: Storage=200، Public URL=OK، RPC=409
 نتیجه V4.1: Storage=200، Public URL=OK، RPC=400، SQLSTATE=21000
-تشخیص schema: hotfix=true، old_on_conflict=false، rows=1، active=0، triggers=0
-Hotfix بعدی: 20260811_app_update_publish_v42_hotfix.sql (اجرای یک‌باره لازم)
-RPC مدیریتی: publish_app_update با خروجی jsonb
+تشخیص schema: result=jsonb، returning=false، select_max=false، overloads=1، rows=1، active=0، rules/triggers=0
+فراخوانی مستقیم SQL: موفق و rollback‌شده با diagnostic P0001
+علت باقی‌مانده: metadata مسیر REST برای نام قدیمی
+Hotfix بعدی: 20260811_app_update_publish_v43_new_rpc.sql (اجرای یک‌باره لازم)
+RPC جدید: publish_native_app_release_v1 با خروجی jsonb
 Secret یک‌باره GitHub: SUPABASE_RELEASE_KEY
-انتشار نسخه فعال پس از V4.2: خودکار
+انتشار نسخه فعال پس از V4.3: خودکار
 ```
 
 ### قانون نسخه
@@ -935,6 +944,29 @@ schema آزمایشی id ثابت/singleton             → PASS
 تعداد نهایی ردیف/active                      → 1 / 1
 دسترسی نقش anon                             → permission denied (PASS)
 SQL جدید                                    → 20260811_app_update_publish_v42_hotfix.sql
+آزمایش واقعی REST                           → همچنان SQLSTATE 21000
+فراخوانی مستقیم SQL                         → PASS / rollback diagnostic
+safe_sqlstate مستقیم                        → P0001 (موفقیت عمدی تشخیص)
+safe_message مستقیم                         → DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK
+نتیجه قطعی                                  → بدنه PostgreSQL سالم؛ مشکل در مسیر نام قدیمی PostgREST
+```
+
+### نتیجه تأیید Hotfix V4.3
+
+```text
+نام RPC جدید                                → publish_native_app_release_v1
+وابستگی به تابع قدیمی                       → ندارد
+نوع خروجی                                   → jsonb
+workflow endpoint                           → /rest/v1/rpc/publish_native_app_release_v1
+قفل و جایگزینی تراکنشی                      → حفظ‌شده
+SQL جدید                                    → 20260811_app_update_publish_v43_new_rpc.sql
+PostgreSQL 17 integration test              → PASS
+انتشار متوالی با نام RPC جدید               → PASS (208700001/2)
+نتیجه JSON هر فراخوانی                       → ok=true
+تعداد نهایی ردیف/active                      → 1 / 1
+دسترسی anon                                 → permission denied (PASS)
+workflow YAML و bash -n                     → PASS
+Mock endpoint جدید Storage/Public/RPC       → 200 / OK / 200
 آزمایش واقعی Supabase                       → در انتظار اجرای SQL و Push
 ```
 

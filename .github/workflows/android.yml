@@ -178,6 +178,7 @@ jobs:
           )
           PY
 
+          echo "Release RPC endpoint: publish_native_app_release_v1"
           PUBLISH_STATUS="$(curl -sS \
             --connect-timeout 20 \
             --max-time 120 \
@@ -186,7 +187,7 @@ jobs:
             -o /tmp/app-update-publish-response.json \
             -w '%{http_code}' \
             -X POST \
-            "$SUPABASE_URL/rest/v1/rpc/publish_app_update" \
+            "$SUPABASE_URL/rest/v1/rpc/publish_native_app_release_v1" \
             -H "Authorization: Bearer $SUPABASE_RELEASE_KEY" \
             -H "apikey: $SUPABASE_RELEASE_KEY" \
             -H "Content-Type: application/json" \

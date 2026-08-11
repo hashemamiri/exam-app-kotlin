@@ -14,7 +14,10 @@ SQL پایه app_version و bucket app-updates: اجراشده
 Hotfix V4.1 در دیتابیس تأیید شد: delete/insert=true، on conflict=false
 نتیجه واقعی V4.1: HTTP 400 و SQLSTATE 21000
 وضعیت جدول هنگام خطا: 1 ردیف، 0 ردیف فعال، 0 trigger کاربری
-Hotfix V4.2 حذف مسیر composite/RETURNING تک‌ردیفی: آماده اجرا
+Hotfix V4.2 در دیتابیس فعال شد: jsonb، بدون RETURNING/SELECT MAX
+فراخوانی مستقیم SQL تابع V4.2: موفق و rollback‌شده (P0001 تشخیصی)
+مسیر REST نام قدیمی همچنان SQLSTATE 21000: metadata قدیمی PostgREST
+Hotfix V4.3 با نام RPC کاملاً جدید: آماده اجرا
 ```
 
 ## ۱) SQL پایه اجراشده
@@ -64,6 +67,37 @@ V4.2 تابع قبلی را با همان ورودی‌ها حذف و با خر�
 اگر درج جدید شکست بخورد، تراکنش rollback می‌شود و ردیف قبلی باقی می‌ماند. پس از اجرای SQL، Push پچ جدید یک workflow تازه اجرا می‌کند.
 
 workflow فقط SQLSTATE امن را چاپ می‌کند و message/details پاسخ دیتابیس را نمایش نمی‌دهد.
+
+### Hotfix V4.3 برای metadata قدیمی PostgREST
+
+تشخیص فشرده نتیجه قطعی زیر را داد:
+
+```text
+function_result_type=jsonb
+publish_function_overload_count=1
+safe_sqlstate=P0001
+safe_message=DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK
+```
+
+یعنی خود تابع در PostgreSQL کاملاً موفق است و خطای `21000` فقط در مسیر REST نام قدیمی رخ می‌دهد. برای حذف کامل metadata کش‌شده، V4.3 یک تابع مستقل با نام جدید می‌سازد:
+
+```text
+publish_native_app_release_v1
+```
+
+فایل زیر را یک‌بار در SQL Editor اجرا کنید:
+
+```text
+supabase/migrations/20260811_app_update_publish_v43_new_rpc.sql
+```
+
+workflow نیز از این پس فقط endpoint جدید زیر را صدا می‌زند:
+
+```text
+/rest/v1/rpc/publish_native_app_release_v1
+```
+
+تابع قدیمی حذف نمی‌شود، اما دیگر توسط workflow استفاده نخواهد شد.
 
 ## ۳) افزودن یک Secret برای انتشار — فقط یک‌بار
 
@@ -121,7 +155,7 @@ APP_VERSION_NAME=2026.08.11.042412-native
 → ذخیره Artifact و update-metadata.txt
 → آپلود APK در bucket عمومی app-updates
 → بررسی دانلود عمومی APK
-→ فراخوانی امن publish_app_update
+→ فراخوانی امن publish_native_app_release_v1
 → جایگزینی تراکنشی ردیف نسخه جاری با نسخه جدید
 ```
 
@@ -161,6 +195,7 @@ APK_SIZE_BYTES
 ```text
 Supabase Storage upload status: 200 یا 201
 Public APK verification: OK
+Release RPC endpoint: publish_native_app_release_v1
 Supabase release activation status: 200 یا 201
 Automatic app update publication: SUCCESS
 ```
