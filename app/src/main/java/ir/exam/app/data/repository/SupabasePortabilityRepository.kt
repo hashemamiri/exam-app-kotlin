@@ -1,7 +1,9 @@
 package ir.exam.app.data.repository
 
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.from
+import io.ktor.client.call.body
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.dto.ExamDetailDto
 import ir.exam.app.data.dto.ExamKeyDto
@@ -14,6 +16,7 @@ import ir.exam.app.domain.model.OfficialPrintQuestion
 import ir.exam.app.domain.model.PortableFile
 import ir.exam.app.domain.model.RestoreOptions
 import ir.exam.app.domain.model.RestoreSummary
+import ir.exam.app.domain.model.StorageMaintenanceSummary
 import ir.exam.app.ui.builder.QuestionType
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
@@ -180,6 +183,27 @@ class SupabasePortabilityRepository {
             membershipsMissing = raw["memberships_missing"]?.jsonPrimitive?.intOrNull ?: 0,
             chargedToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
             balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull ?: 0
+        )
+    }
+
+    suspend fun storageMaintenance(dryRun: Boolean): Result<StorageMaintenanceSummary> = runCatching {
+        val raw = SupabaseProvider.client.functions.invoke(
+            "storage-maintenance",
+            body = buildJsonObject {
+                put("dry_run", dryRun)
+                put("grace_days", 7)
+                put("apk_retention", 5)
+            }
+        ).body<JsonObject>()
+        raw.throwPortabilityError()
+        StorageMaintenanceSummary(
+            dryRun = raw["dry_run"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: dryRun,
+            scannedExamObjects = raw["scanned_exam_objects"]?.jsonPrimitive?.intOrNull ?: 0,
+            orphanCandidates = raw["orphan_candidates"]?.jsonPrimitive?.intOrNull ?: 0,
+            scannedApks = raw["scanned_apks"]?.jsonPrimitive?.intOrNull ?: 0,
+            apkCandidates = raw["apk_candidates"]?.jsonPrimitive?.intOrNull ?: 0,
+            deletedObjects = raw["deleted_objects"]?.jsonPrimitive?.intOrNull ?: 0,
+            deletedApks = raw["deleted_apks"]?.jsonPrimitive?.intOrNull ?: 0
         )
     }
 

@@ -6,6 +6,7 @@ import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.domain.model.BackupPreview
 import ir.exam.app.domain.model.PortableFile
 import ir.exam.app.domain.model.RestoreOptions
+import ir.exam.app.domain.model.StorageMaintenanceSummary
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +18,7 @@ data class DataPortabilityState(
     val exportFile: PortableFile? = null,
     val preview: BackupPreview? = null,
     val options: RestoreOptions = RestoreOptions(),
+    val maintenance: StorageMaintenanceSummary? = null,
     val error: String? = null,
     val message: String? = null
 )
@@ -67,6 +69,25 @@ class DataPortabilityViewModel(
                         preview = null,
                         message = "بازیابی شد: ${summary.examsCreated} آزمون، ${summary.classesCreated} کلاس، " +
                             "${summary.membershipsRestored} عضویت؛ هزینه ${summary.chargedToman} تومان."
+                    )
+                }
+            }
+            .onFailure(::fail)
+    }
+
+    fun checkStorage() = runMaintenance(true)
+    fun cleanStorage() = runMaintenance(false)
+
+    private fun runMaintenance(dryRun: Boolean) = viewModelScope.launch {
+        _state.update { it.copy(loading = true, maintenance = null, error = null, message = null) }
+        repository.storageMaintenance(dryRun)
+            .onSuccess { result ->
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        maintenance = result,
+                        message = if (dryRun) "بررسی Storage بدون حذف انجام شد."
+                        else "پاک‌سازی مجاز Storage انجام شد."
                     )
                 }
             }

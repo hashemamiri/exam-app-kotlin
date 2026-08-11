@@ -13,3 +13,4 @@ release/
 .env
 .env.*
 app/keystore.properties
+supabase/.temp/

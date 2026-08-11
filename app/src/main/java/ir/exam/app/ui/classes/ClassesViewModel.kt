@@ -7,6 +7,7 @@ import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
+import ir.exam.app.domain.model.UpdateStudentRequest
 import ir.exam.app.domain.repository.SchoolRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -105,6 +106,23 @@ class ClassesViewModel(
         reloadData()
         request.classId?.let { loadRosterNow(it) }
         _state.update { it.copy(lastCredential = credential) }
+    }
+
+    fun updateStudent(request: UpdateStudentRequest) = action("مشخصات دانش‌آموز ویرایش شد.") {
+        repository.updateStudent(request).getOrThrow()
+        reloadData()
+        state.value.selectedClass?.id?.let { loadRosterNow(it) }
+    }
+
+    fun resetPassword(studentId: String, password: String) = action("رمز دانش‌آموز تغییر کرد؛ فقط همین بار نمایش داده می‌شود.") {
+        val credential = repository.resetStudentPassword(studentId, password).getOrThrow()
+        _state.update { it.copy(lastCredential = credential) }
+    }
+
+    fun deleteStudent(studentId: String) = action("حساب دانش‌آموز و عضویت‌های وابسته حذف شد.") {
+        repository.deleteStudent(studentId).getOrThrow()
+        reloadData()
+        state.value.selectedClass?.id?.let { loadRosterNow(it) }
     }
 
     private fun loadRoster(classId: String) = viewModelScope.launch {

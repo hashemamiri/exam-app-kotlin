@@ -43,6 +43,16 @@ data class StudentCredential(
     val password: String
 )
 
+data class UpdateStudentRequest(
+    val id: String,
+    val firstName: String,
+    val lastName: String,
+    val username: String,
+    val gender: String,
+    val fatherName: String = "",
+    val grade: String = ""
+)
+
 data class CalendarEvent(
     val id: String,
     val title: String,

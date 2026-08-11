@@ -20,7 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +34,7 @@ fun DataPortabilitySection() {
     val context = LocalContext.current
     val viewModel = remember { DataPortabilityViewModel() }
     val state by viewModel.state.collectAsState()
+    var confirmCleanup by remember { mutableStateOf(false) }
     val createFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -83,6 +86,23 @@ fun DataPortabilitySection() {
                 Text("عضویت فقط برای دانش‌آموزانی بازیابی می‌شود که اکنون با همان نام کاربری زیر حساب شما وجود دارند.")
             }
         }
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("نگهداری امن Storage", style = MaterialTheme.typography.titleMedium)
+                Text("ابتدا فقط بررسی کنید. حذف واقعی نیازمند دو Secret مدیریتی و شناسه حساب مجاز در Edge Function است.")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = viewModel::checkStorage, enabled = !state.loading) { Text("بررسی بدون حذف") }
+                    Button(onClick = { confirmCleanup = true }, enabled = !state.loading) { Text("پاک‌سازی مجاز") }
+                }
+                state.maintenance?.let { result ->
+                    Text(
+                        "فایل آزمون اسکن‌شده: ${result.scannedExamObjects} · orphan: ${result.orphanCandidates} · " +
+                            "APK اسکن‌شده: ${result.scannedApks} · قدیمی: ${result.apkCandidates} · " +
+                            "حذف‌شده: ${result.deletedObjects + result.deletedApks}"
+                    )
+                }
+            }
+        }
     }
 
     state.preview?.let { preview ->
@@ -108,6 +128,18 @@ fun DataPortabilitySection() {
                 Button(onClick = viewModel::restore, enabled = !state.loading) { Text("تأیید بازیابی") }
             },
             dismissButton = { TextButton(onClick = viewModel::dismissPreview) { Text("انصراف") } }
+        )
+    }
+
+    if (confirmCleanup) {
+        AlertDialog(
+            onDismissRequest = { confirmCleanup = false },
+            title = { Text("تأیید پاک‌سازی واقعی") },
+            text = { Text("فقط فایل‌های بدون مرجع و قدیمی‌تر از ۷ روز و APKهای خارج از retention حذف می‌شوند. این عملیات برگشت‌پذیر نیست.") },
+            confirmButton = {
+                Button(onClick = { confirmCleanup = false; viewModel.cleanStorage() }) { Text("تأیید حذف") }
+            },
+            dismissButton = { TextButton(onClick = { confirmCleanup = false }) { Text("انصراف") } }
         )
     }
 }

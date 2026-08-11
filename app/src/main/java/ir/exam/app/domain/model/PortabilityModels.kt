@@ -30,3 +30,13 @@ data class RestoreSummary(
     val chargedToman: Long,
     val balanceToman: Long
 )
+
+data class StorageMaintenanceSummary(
+    val dryRun: Boolean,
+    val scannedExamObjects: Int,
+    val orphanCandidates: Int,
+    val scannedApks: Int,
+    val apkCandidates: Int,
+    val deletedObjects: Int,
+    val deletedApks: Int
+)

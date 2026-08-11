@@ -17,6 +17,33 @@ jobs:
     steps:
       - name: دریافت سورس
         uses: actions/checkout@v5
+      - name: اسکن Secret و فایل امضای ناخواسته
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, subprocess, sys
+          files = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          forbidden_files = [p for p in files if re.search(r'(?i)(release[.]keystore|[.]jks$|[.]p12$|keystore[.]properties$|(^|/)[.]env($|[.]))', p)]
+          patterns = {
+              'private_key': re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY'),
+              'jwt': re.compile(r'eyJ[A-Za-z0-9_-]{20,}[.]eyJ[A-Za-z0-9_-]{20,}[.][A-Za-z0-9_-]{10,}'),
+              'supabase_secret': re.compile(r'sb_secret_[A-Za-z0-9_-]{16,}'),
+          }
+          findings = []
+          for name in files:
+              path = pathlib.Path(name)
+              if not path.is_file() or path.stat().st_size > 2_000_000:
+                  continue
+              text = path.read_text(errors='ignore')
+              for label, pattern in patterns.items():
+                  if pattern.search(text): findings.append(f'{label}:{name}')
+          if forbidden_files or findings:
+              print('Forbidden security material detected')
+              print('\n'.join(forbidden_files + findings))
+              sys.exit(1)
+          print(f'Security source scan: PASS ({len(files)} tracked files)')
+          PY
+      - name: بررسی نهایی حذف WebView و hardening
+        run: python3 scripts/verify_native_final.py
       - name: آماده‌سازی Java
         uses: actions/setup-java@v5
         with:
@@ -28,8 +55,8 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: بررسی TypeScript پرداخت
-        run: deno check supabase/functions/wallet-payment/index.ts
+      - name: بررسی TypeScript همه Edge Functionها
+        run: deno check supabase/functions/*/index.ts
       - name: آماده‌سازی Supabase و نسخه خودکار برنامه
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -49,13 +76,18 @@ jobs:
           printf 'APP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$APP_VERSION_CODE" "$APP_VERSION_NAME" >> "$GITHUB_ENV"
           echo "Building automatic version $APP_VERSION_NAME ($APP_VERSION_CODE)"
-      - name: بررسی امن اتصال Supabase
+      - name: بررسی امن اتصال عمومی Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1" -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY")
-          echo "Supabase profiles status: $STATUS"
+          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/check_app_update" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            --data '{"p_current_version_code":0}')
+          echo "Supabase public update RPC status: $STATUS"
           test "$STATUS" = "200"
 
       - name: اجرای تست‌ها و Lint
@@ -75,6 +107,22 @@ jobs:
           printf 'storeFile=release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > app/keystore.properties
       - name: ساخت APK Release امضاشده
         run: ./gradlew assembleRelease
+      - name: تطبیق قطعی گواهی APK با keystore
+        env:
+          KS_PASS: ${{ secrets.KS_PASS }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -Eeuo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          APK_CERT="$($APKSIGNER verify --print-certs "$APK" | awk -F': ' '/certificate SHA-256 digest/{print $2; exit}' | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
+          KEY_CERT="$(keytool -list -v -keystore app/release.keystore -storepass "$KS_PASS" -alias "$KEY_ALIAS" | awk -F': ' '/SHA256:/{print $2; exit}' | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
+          test -n "$APK_CERT"
+          test "$APK_CERT" = "$KEY_CERT"
+          echo "Release APK signing certificate: VERIFIED"
       - name: آماده‌سازی بسته انتشار و مشخصات نسخه
         run: |
           SOURCE_APK="app/build/outputs/apk/release/app-release.apk"
@@ -230,3 +278,44 @@ jobs:
           esac
           echo "Supabase release activation status: $PUBLISH_STATUS"
           echo "Automatic app update publication: SUCCESS"
+
+          # Keep current APK plus four newest previous APKs. Non-APK objects are untouched.
+          LIST_STATUS="$(curl -sS \
+            --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors \
+            -o /tmp/app-update-list.json -w '%{http_code}' \
+            -X POST "$SUPABASE_URL/storage/v1/object/list/app-updates" \
+            "${RELEASE_AUTH_HEADERS[@]}" \
+            -H "Content-Type: application/json" \
+            --data '{"prefix":"","limit":1000,"offset":0,"sortBy":{"column":"created_at","order":"desc"}}')"
+          test "$LIST_STATUS" = "200"
+          export APK_FILE
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          rows = json.loads(Path('/tmp/app-update-list.json').read_text())
+          if not isinstance(rows, list): raise SystemExit('storage list was not an array')
+          names = [str(x.get('name','')) for x in rows]
+          names = [x for x in names if re.fullmatch(r'[A-Za-z0-9._-]+[.]apk', x)]
+          keep = {os.environ['APK_FILE']}
+          for name in names:
+              if len(keep) >= 5: break
+              keep.add(name)
+          delete = [x for x in names if x not in keep]
+          Path('/tmp/app-update-delete.txt').write_text('\n'.join(delete))
+          print(f'APK retention candidates: {len(delete)}')
+          PY
+          RETENTION_DELETED=0
+          while IFS= read -r OLD_APK; do
+            test -n "$OLD_APK" || continue
+            DELETE_STATUS="$(curl -sS -o /tmp/app-update-delete-response.json -w '%{http_code}' \
+              -X DELETE "$SUPABASE_URL/storage/v1/object/app-updates/$OLD_APK" \
+              "${RELEASE_AUTH_HEADERS[@]}")"
+            case "$DELETE_STATUS" in 200|204) RETENTION_DELETED=$((RETENTION_DELETED + 1));; *) exit 1;; esac
+          done < /tmp/app-update-delete.txt
+          echo "APK retention deleted: $RETENTION_DELETED"
+      - name: پاک‌سازی قطعی فایل‌های امضا
+        if: always()
+        run: |
+          rm -f app/release.keystore app/keystore.properties release/publish-payload.json
+          test ! -e app/release.keystore
+          echo "Ephemeral signing files removed"

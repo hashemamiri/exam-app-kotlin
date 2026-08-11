@@ -6,9 +6,8 @@ import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.OTP
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Columns
-import ir.exam.app.data.dto.ProfileDto
+import io.github.jan.supabase.postgrest.postgrest
+import ir.exam.app.data.dto.NativeProfileDto
 import ir.exam.app.data.local.AuthUserCache
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.domain.model.AppUser
@@ -19,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class SupabaseAuthRepository(context: Context) : AuthRepository {
     private val auth get() = SupabaseProvider.client.auth
@@ -64,34 +65,24 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             ?: error("نشست ورود پیدا نشد. دوباره وارد شوید.")
         val fallbackName = sessionUser.email?.substringBefore('@').orEmpty().ifBlank { "کاربر" }
 
-        // انتخاب صریح ستون‌ها: plain_password قدیمی حتی وارد پاسخ شبکه Native نمی‌شود.
-        val profile = SupabaseProvider.client.from("profiles").select(
-            Columns.list("id", "full_name", "role", "display_name", "avatar_url", "avatar_public")
-        ) {
-            filter { eq("id", sessionUser.id) }
-        }.decodeList<ProfileDto>().firstOrNull() ?: run {
-            // فقط نبود واقعی ردیف باعث ساخت پروفایل می‌شود؛ خطای شبکه دیگر با «نبود ردیف» اشتباه نمی‌شود.
-            val newProfile = ProfileDto(
-                id = sessionUser.id,
-                full_name = fallbackName,
-                role = "student",
-                display_name = fallbackName
-            )
-            SupabaseProvider.client.from("profiles").upsert(newProfile)
-            newProfile
-        }
+        // ایجاد/خواندن فقط از RPC مالک‌محور انجام می‌شود؛ جدول profiles دیگر DML مستقیم از APK نمی‌پذیرد.
+        val profile = SupabaseProvider.client.postgrest.rpc(
+            "native_ensure_profile_v1",
+            buildJsonObject { put("p_fallback_name", fallbackName) }
+        ).decodeSingle<NativeProfileDto>()
+        profile.error?.takeIf(String::isNotBlank)?.let(::error)
 
-        val role = if (profile.role.lowercase() == "teacher") {
+        val role = if (profile.role.equals("teacher", true)) {
             UserRole.TEACHER
         } else {
             UserRole.STUDENT
         }
         return AppUser(
-            id = profile.id,
-            name = profile.display_name?.takeIf(String::isNotBlank) ?: profile.full_name,
+            id = profile.id ?: sessionUser.id,
+            name = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty().ifBlank { fallbackName },
             email = sessionUser.email,
             role = role,
-            avatarUrl = profile.avatar_url
+            avatarUrl = profile.avatarUrl
         )
     }
 

@@ -1,7 +1,11 @@
 package ir.exam.app.ui.student
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +27,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +58,11 @@ fun StudentExamContent(
     onDone: () -> Unit
 ) {
     val exam = state.exam ?: return
+    val activity = LocalContext.current.findActivity()
+    DisposableEffect(activity, state.finished) {
+        if (!state.finished) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
     if (state.finished) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
@@ -238,4 +248,10 @@ private fun ResponseImages(
             }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

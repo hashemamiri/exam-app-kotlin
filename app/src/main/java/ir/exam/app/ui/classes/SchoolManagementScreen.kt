@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentProfile
+import ir.exam.app.domain.model.UpdateStudentRequest
 import kotlin.random.Random
 
 @Composable
@@ -49,6 +50,9 @@ fun SchoolManagementScreen(
     var deletingClass by remember { mutableStateOf<SchoolClass?>(null) }
     var showMemberPicker by remember { mutableStateOf(false) }
     var showStudentCreator by remember { mutableStateOf(false) }
+    var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
+    var resettingStudent by remember { mutableStateOf<StudentProfile?>(null) }
+    var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -88,14 +92,20 @@ fun SchoolManagementScreen(
                     onAdd = { showMemberPicker = true },
                     onCreate = { showStudentCreator = true },
                     onRemove = viewModel::removeStudent,
-                    onToggle = viewModel::setStudentActive
+                    onToggle = viewModel::setStudentActive,
+                    onEdit = { editingStudent = it },
+                    onReset = { resettingStudent = it },
+                    onDeleteAccount = { deletingStudent = it }
                 )
                 showStudents -> StudentsContent(
                     students = filteredStudents(state.students, state.query),
                     query = state.query,
                     onQuery = viewModel::setQuery,
                     onCreate = { showStudentCreator = true },
-                    onToggle = viewModel::setStudentActive
+                    onToggle = viewModel::setStudentActive,
+                    onEdit = { editingStudent = it },
+                    onReset = { resettingStudent = it },
+                    onDelete = { deletingStudent = it }
                 )
                 else -> ClassesContent(
                     classes = state.classes,
@@ -151,12 +161,40 @@ fun SchoolManagementScreen(
         )
     }
 
+    editingStudent?.let { student ->
+        StudentEditDialog(
+            student = student,
+            onDismiss = { editingStudent = null },
+            onSave = { request -> viewModel.updateStudent(request); editingStudent = null }
+        )
+    }
+
+    resettingStudent?.let { student ->
+        StudentPasswordResetDialog(
+            student = student,
+            onDismiss = { resettingStudent = null },
+            onReset = { password -> viewModel.resetPassword(student.id, password); resettingStudent = null }
+        )
+    }
+
+    deletingStudent?.let { student ->
+        AlertDialog(
+            onDismissRequest = { deletingStudent = null },
+            title = { Text("حذف کامل حساب دانش‌آموز") },
+            text = { Text("حساب «${student.fullName}» از Auth و پروفایل حذف شود؟ این کار برگشت‌پذیر نیست و با خروج از کلاس فرق دارد.") },
+            confirmButton = {
+                Button(onClick = { viewModel.deleteStudent(student.id); deletingStudent = null }) { Text("حذف کامل") }
+            },
+            dismissButton = { TextButton(onClick = { deletingStudent = null }) { Text("انصراف") } }
+        )
+    }
+
     state.lastCredential?.let { credential ->
         AlertDialog(
             onDismissRequest = viewModel::clearMessage,
             title = { Text("حساب ساخته شد") },
             text = {
-                Text("نام کاربری: ${credential.username}\nرمز عبور: ${credential.password}\nاین اطلاعات را امن به دانش‌آموز بدهید.")
+                Text("نام کاربری: ${credential.username}\nرمز عبور (فقط همین بار نمایش داده می‌شود): ${credential.password}\nاین رمز در دیتابیس ذخیره نمی‌شود؛ همین حالا امن به دانش‌آموز بدهید.")
             },
             confirmButton = { Button(onClick = viewModel::clearMessage) { Text("متوجه شدم") } }
         )
@@ -204,7 +242,10 @@ private fun ClassRosterContent(
     onAdd: () -> Unit,
     onCreate: () -> Unit,
     onRemove: (String) -> Unit,
-    onToggle: (String, Boolean) -> Unit
+    onToggle: (String, Boolean) -> Unit,
+    onEdit: (StudentProfile) -> Unit,
+    onReset: (StudentProfile) -> Unit,
+    onDeleteAccount: (StudentProfile) -> Unit
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -218,7 +259,14 @@ private fun ClassRosterContent(
         if (roster.isEmpty()) Text("این کلاس هنوز عضوی ندارد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(roster, key = StudentProfile::id) { student ->
-                StudentCard(student, onToggle, onRemove = { onRemove(student.id) })
+                StudentCard(
+                    student = student,
+                    onToggle = onToggle,
+                    onRemove = { onRemove(student.id) },
+                    onEdit = { onEdit(student) },
+                    onReset = { onReset(student) },
+                    onDelete = { onDeleteAccount(student) }
+                )
             }
         }
     }
@@ -230,7 +278,10 @@ private fun StudentsContent(
     query: String,
     onQuery: (String) -> Unit,
     onCreate: () -> Unit,
-    onToggle: (String, Boolean) -> Unit
+    onToggle: (String, Boolean) -> Unit,
+    onEdit: (StudentProfile) -> Unit,
+    onReset: (StudentProfile) -> Unit,
+    onDelete: (StudentProfile) -> Unit
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(
@@ -243,7 +294,14 @@ private fun StudentsContent(
         if (students.isEmpty()) Text("دانش‌آموزی یافت نشد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(students, key = StudentProfile::id) { student ->
-                StudentCard(student, onToggle, onRemove = null)
+                StudentCard(
+                    student = student,
+                    onToggle = onToggle,
+                    onRemove = null,
+                    onEdit = { onEdit(student) },
+                    onReset = { onReset(student) },
+                    onDelete = { onDelete(student) }
+                )
             }
         }
     }
@@ -253,7 +311,10 @@ private fun StudentsContent(
 private fun StudentCard(
     student: StudentProfile,
     onToggle: (String, Boolean) -> Unit,
-    onRemove: (() -> Unit)?
+    onRemove: (() -> Unit)?,
+    onEdit: () -> Unit,
+    onReset: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -265,7 +326,12 @@ private fun StudentCard(
                 OutlinedButton(onClick = { onToggle(student.id, !student.active) }) {
                     Text(if (student.active) "غیرفعال" else "فعال")
                 }
+                OutlinedButton(onClick = onEdit) { Text("ویرایش") }
+                OutlinedButton(onClick = onReset) { Text("رمز جدید") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 onRemove?.let { TextButton(onClick = it) { Text("خروج از کلاس") } }
+                TextButton(onClick = onDelete) { Text("حذف کامل حساب") }
             }
         }
     }
@@ -343,7 +409,7 @@ private fun StudentCreatorDialog(
             LazyColumn(Modifier.heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { OutlinedTextField(first, { first = it }, label = { Text("نام") }) }
                 item { OutlinedTextField(last, { last = it }, label = { Text("نام خانوادگی") }) }
-                item { OutlinedTextField(username, { username = it.lowercase().filter { c -> c.isLetterOrDigit() || c == '_' } }, label = { Text("نام کاربری انگلیسی") }) }
+                item { OutlinedTextField(username, { username = it.lowercase().filter { c -> c in 'a'..'z' || c.isDigit() || c == '_' }.take(20) }, label = { Text("نام کاربری انگلیسی") }) }
                 item { OutlinedTextField(password, { password = it }, label = { Text("رمز عبور") }, visualTransformation = PasswordVisualTransformation()) }
                 item { OutlinedTextField(father, { father = it }, label = { Text("نام پدر") }) }
                 item { OutlinedTextField(grade, { grade = it }, label = { Text("پایه") }) }
@@ -357,11 +423,82 @@ private fun StudentCreatorDialog(
         },
         confirmButton = {
             Button(
-                enabled = first.isNotBlank() && username.length >= 4 && password.length >= 6 && gender.isNotBlank(),
+                enabled = first.isNotBlank() && username.length >= 4 && password.length in 8..72 && gender.isNotBlank(),
                 onClick = {
                     onCreate(NewStudentRequest(first, last, username, password, gender, father, grade, classId))
                 }
             ) { Text("ساخت حساب") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
+}
+
+@Composable
+private fun StudentEditDialog(
+    student: StudentProfile,
+    onDismiss: () -> Unit,
+    onSave: (UpdateStudentRequest) -> Unit
+) {
+    var first by remember(student.id) { mutableStateOf(student.firstName.orEmpty().ifBlank { student.fullName.substringBefore(' ') }) }
+    var last by remember(student.id) { mutableStateOf(student.lastName.orEmpty().ifBlank { student.fullName.substringAfter(' ', "") }) }
+    var username by remember(student.id) { mutableStateOf(student.username.orEmpty()) }
+    var gender by remember(student.id) { mutableStateOf(student.gender.orEmpty()) }
+    var fatherName by remember(student.id) { mutableStateOf(student.fatherName.orEmpty()) }
+    var grade by remember(student.id) { mutableStateOf(student.grade.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ویرایش دانش‌آموز") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(first, { first = it.take(100) }, label = { Text("نام") })
+                OutlinedTextField(last, { last = it.take(100) }, label = { Text("نام خانوادگی") })
+                OutlinedTextField(
+                    username,
+                    { username = it.lowercase().filter { c -> c in 'a'..'z' || c.isDigit() || c == '_' }.take(20) },
+                    label = { Text("نام کاربری") }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = gender == "male", onClick = { gender = "male" }, label = { Text("پسر") })
+                    FilterChip(selected = gender == "female", onClick = { gender = "female" }, label = { Text("دختر") })
+                }
+                OutlinedTextField(fatherName, { fatherName = it.take(100) }, label = { Text("نام پدر") })
+                OutlinedTextField(grade, { grade = it.take(100) }, label = { Text("پایه") })
+                Text("رمز در این فرم نمایش یا بازیابی نمی‌شود.")
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = first.isNotBlank() && username.length >= 4 && gender in setOf("male", "female"),
+                onClick = { onSave(UpdateStudentRequest(student.id, first, last, username, gender, fatherName, grade)) }
+            ) { Text("ذخیره") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
+}
+
+@Composable
+private fun StudentPasswordResetDialog(
+    student: StudentProfile,
+    onDismiss: () -> Unit,
+    onReset: (String) -> Unit
+) {
+    var password by remember(student.id) { mutableStateOf(generatePassword(10)) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("تعیین رمز جدید برای ${student.fullName}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it.take(72) },
+                    label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
+                    visualTransformation = PasswordVisualTransformation()
+                )
+                Text("رمز قبلی قابل مشاهده نیست. رمز جدید فقط پس از موفقیت همین عملیات یک بار نمایش داده می‌شود.")
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onReset(password) }, enabled = password.length in 8..72) { Text("تغییر رمز") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )

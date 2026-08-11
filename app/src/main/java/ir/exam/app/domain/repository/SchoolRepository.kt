@@ -4,6 +4,7 @@ import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
+import ir.exam.app.domain.model.UpdateStudentRequest
 
 interface SchoolRepository {
     suspend fun getClasses(): Result<List<SchoolClass>>
@@ -16,4 +17,7 @@ interface SchoolRepository {
     suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit>
     suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit>
     suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential>
+    suspend fun updateStudent(request: UpdateStudentRequest): Result<Unit>
+    suspend fun resetStudentPassword(studentId: String, newPassword: String): Result<StudentCredential>
+    suspend fun deleteStudent(studentId: String): Result<Unit>
 }

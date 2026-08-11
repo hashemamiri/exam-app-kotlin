@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — پچ جامع V10 آفلاین، پشتیبان، چاپ و تحلیل
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V11 نهایی‌سازی امنیت و قطع WebView
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -1601,3 +1601,85 @@ regression کامل و قطع مرجع WebView.
 ```
 
 پس از موفقیت V10 فقط **یک پچ جامع V11** باقی می‌ماند.
+
+
+---
+
+## ۲۲) V11 نهایی — Hardening، نگهداری و پایان مهاجرت
+
+### وضعیت ورودی
+
+```text
+V10 build/release                         → SUCCESS (اعلام کاربر)
+Native capabilities V1..V10               → complete
+V11 baseline                              → Kotlin/Compose only, no android.webkit import
+```
+
+### تغییرات نهایی
+
+```text
+manage-student بدون ذخیره plaintext password
+ویرایش، reset password و حذف کامل حساب دانش‌آموز در Native
+DROP قطعی profiles.plain_password
+RPCهای my_students/class_roster بدون رمز
+native_ensure_profile_v1 و حذف DML مستقیم profiles از APK
+native_set_exam_open_v1 و حذف UPDATE مستقیم exams
+RLS همه جدول‌های public
+revoke کامل DML مستقیم anon/authenticated
+function allowlist و search_path امن برای SECURITY DEFINER
+بازنشانی کامل policyهای حساس و Storage
+آپلود Storage فقط در مسیر auth.uid
+storage-maintenance dry-run/delete-gated
+orphan reference scan برای profile/exam/bank/answer/trash/draft
+APK retention خودکار در publication workflow
+Secret/keystore scan، cert matching و cleanup در CI
+Android allowBackup=false و FLAG_SECURE هنگام آزمون
+FINAL_NATIVE_VERIFY و regression نقش teacher/student
+```
+
+### فایل‌های کلیدی V11
+
+```text
+supabase/functions/manage-student/index.ts
+supabase/functions/storage-maintenance/index.ts
+supabase/config.toml
+supabase/migrations/20260812_native_final_hardening.sql
+supabase/tests/20260812_v11_security_regression.sql
+scripts/verify_native_final.py
+.github/workflows/android.yml
+app/src/main/AndroidManifest.xml
+app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt
+app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt
+FINAL_NATIVE_HARDENING_V11_FA.md
+```
+
+### نتیجه تست
+
+```text
+Kotlin compile                              → PASS
+JVM tests                                   → 39/39 PASS
+Deno check 3 Edge Functions                → PASS
+PostgreSQL migration + second run          → PASS
+V11 teacher/student security regression    → PASS
+plain_password schema/function scan        → PASS
+RLS/direct mutation/function grants        → PASS
+Storage exact policy count                 → PASS
+FINAL_NATIVE_VERIFY                        → PASS
+assembleDebug                              → BUILD SUCCESSFUL
+lintDebug                                  → BUILD SUCCESSFUL (0 error)
+APK Signature Scheme v2                    → Verified
+Secret scan                                → CLEAN
+```
+
+### وضعیت پایان مهاجرت
+
+```text
+Native Android Kotlin + Compose + Room + WorkManager + Supabase = runtime نهایی
+WebView = فقط آرشیو تاریخی و خارج از APK/runtime
+تعداد Patch برنامه‌ریزی‌شده باقی‌مانده = 0
+```
+
+پس از اعمال V11 و موفقیت تست واقعی دستگاه، مهاجرت برنامه‌ریزی‌شده کامل است. تغییرات بعدی feature release یا maintenance عادی هستند، نه ادامه مهاجرت WebView.

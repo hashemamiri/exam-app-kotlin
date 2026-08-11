@@ -4,6 +4,7 @@ import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
+import ir.exam.app.domain.model.UpdateStudentRequest
 import ir.exam.app.domain.repository.SchoolRepository
 import ir.exam.app.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,6 +12,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -41,9 +43,28 @@ class ClassesViewModelTest {
         assertEquals(2, viewModel.state.value.classes.size)
         assertEquals("کلاس ساخته شد.", viewModel.state.value.message)
     }
+
+    @Test
+    fun `student edit reset and delete use hardened one-time credential flow`() = runTest(mainDispatcherRule.dispatcher) {
+        val repository = FakeSchoolRepository()
+        val viewModel = ClassesViewModel(repository)
+        viewModel.updateStudent(UpdateStudentRequest("s1", "علی", "رضایی", "ali_new", "male"))
+        advanceUntilIdle()
+        assertTrue(repository.updated)
+
+        viewModel.resetPassword("s1", "SafePass42")
+        advanceUntilIdle()
+        assertEquals("SafePass42", viewModel.state.value.lastCredential?.password)
+
+        viewModel.deleteStudent("s1")
+        advanceUntilIdle()
+        assertTrue(repository.deleted)
+    }
 }
 
 private class FakeSchoolRepository : SchoolRepository {
+    var updated = false
+    var deleted = false
     private val classes = mutableListOf(SchoolClass("c1", "هفتم الف", "هفتم", total = 1))
     private val students = mutableListOf(StudentProfile("s1", "علی رضایی", username = "alirezaei"))
 
@@ -62,4 +83,14 @@ private class FakeSchoolRepository : SchoolRepository {
     override suspend fun createStudent(request: NewStudentRequest) = Result.success(
         StudentCredential("s2", request.username, request.password)
     )
+    override suspend fun updateStudent(request: UpdateStudentRequest): Result<Unit> {
+        updated = true
+        return Result.success(Unit)
+    }
+    override suspend fun resetStudentPassword(studentId: String, newPassword: String) =
+        Result.success(StudentCredential(studentId, "student", newPassword))
+    override suspend fun deleteStudent(studentId: String): Result<Unit> {
+        deleted = true
+        return Result.success(Unit)
+    }
 }

@@ -10,6 +10,7 @@ import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
+import ir.exam.app.domain.model.UpdateStudentRequest
 import ir.exam.app.domain.repository.SchoolRepository
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -90,7 +91,7 @@ class SupabaseSchoolRepository : SchoolRepository {
         require(request.username.matches(Regex("^[a-z0-9_]{4,20}$"))) {
             "نام کاربری باید ۴ تا ۲۰ کاراکتر انگلیسی، عدد یا _ باشد."
         }
-        require(request.password.length >= 6) { "رمز عبور حداقل ۶ کاراکتر است." }
+        require(request.password.length in 8..72) { "رمز عبور باید بین ۸ تا ۷۲ کاراکتر باشد." }
         require(request.gender == "male" || request.gender == "female") { "جنسیت را انتخاب کنید." }
 
         val body = buildJsonObject {
@@ -118,6 +119,53 @@ class SupabaseSchoolRepository : SchoolRepository {
             }).throwIfError()
         }
         StudentCredential(id, request.username.trim().lowercase(), request.password)
+    }
+
+    override suspend fun updateStudent(request: UpdateStudentRequest): Result<Unit> = runCatching {
+        require(request.id.isNotBlank()) { "شناسه دانش‌آموز نامعتبر است." }
+        require(request.firstName.trim().isNotEmpty()) { "نام دانش‌آموز را وارد کنید." }
+        require(request.username.matches(Regex("^[a-z0-9_]{4,20}$"))) { "نام کاربری نامعتبر است." }
+        require(request.gender == "male" || request.gender == "female") { "جنسیت را انتخاب کنید." }
+        SupabaseProvider.client.functions.invoke(
+            "manage-student",
+            body = buildJsonObject {
+                put("action", "update")
+                put("id", request.id)
+                put("first_name", request.firstName.trim())
+                put("last_name", request.lastName.trim())
+                put("username", request.username.trim().lowercase())
+                put("gender", request.gender)
+                put("password", "")
+            }
+        ).body<JsonObject>().throwIfError()
+        rpcObject("save_student_extra", buildJsonObject {
+            put("p_student", request.id)
+            put("p_username", request.username.trim().lowercase())
+            put("p_father_name", request.fatherName.trim())
+            put("p_grade", request.grade.trim())
+        }).throwIfError()
+    }
+
+    override suspend fun resetStudentPassword(studentId: String, newPassword: String): Result<StudentCredential> = runCatching {
+        require(newPassword.length in 8..72) { "رمز جدید باید بین ۸ تا ۷۲ کاراکتر باشد." }
+        val username = getStudents().getOrThrow().firstOrNull { it.id == studentId }?.username
+            ?: error("دانش‌آموز یافت نشد.")
+        SupabaseProvider.client.functions.invoke(
+            "manage-student",
+            body = buildJsonObject {
+                put("action", "reset_password")
+                put("id", studentId)
+                put("password", newPassword)
+            }
+        ).body<JsonObject>().throwIfError()
+        StudentCredential(studentId, username, newPassword)
+    }
+
+    override suspend fun deleteStudent(studentId: String): Result<Unit> = runCatching {
+        SupabaseProvider.client.functions.invoke(
+            "manage-student",
+            body = buildJsonObject { put("action", "delete"); put("id", studentId) }
+        ).body<JsonObject>().throwIfError()
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =

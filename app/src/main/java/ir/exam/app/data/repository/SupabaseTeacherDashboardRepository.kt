@@ -21,14 +21,10 @@ class SupabaseTeacherDashboardRepository {
     }
 
     suspend fun setOpen(examId: String, open: Boolean): Result<Unit> = runCatching {
-        SupabaseProvider.client.from("exams").update(
-            buildJsonObject { put("is_open", open) }
-        ) {
-            filter {
-                eq("id", examId)
-                eq("teacher_id", currentTeacherId())
-            }
-        }
+        rpcObject(
+            "native_set_exam_open_v1",
+            buildJsonObject { put("p_exam", examId); put("p_open", open) }
+        ).throwIfDashboardError()
     }
 
     suspend fun deleteExam(examId: String): Result<Unit> = runCatching {
