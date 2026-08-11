@@ -795,9 +795,11 @@ Release: ir.exam.app
 - فراخوانی مستقیم V4.2 در SQL با `P0001 / DIAGNOSTIC_CALL_SUCCEEDED_AND_WAS_ROLLED_BACK` موفقیت کامل را ثابت کرد.
 - بنابراین `21000` فقط در مسیر REST نام قدیمی و metadata کش‌شده PostgREST رخ می‌دهد، نه در بدنه تابع PostgreSQL.
 - V4.3 تابع مستقل `publish_native_app_release_v1` را می‌سازد و workflow endpoint خود را به نام جدید تغییر می‌دهد.
+- V4.3 نوع Secret را بدون چاپ مقدار تشخیص می‌دهد: کلید `sb_secret_*` فقط در `apikey` و JWT قدیمی در `apikey + Authorization` ارسال می‌شود.
+- کلید opaque جدید هرگز به‌اشتباه به‌عنوان Bearer JWT ارسال نمی‌شود.
 - منطق V4.3 همچنان JSON، advisory lock، DELETE/INSERT تراکنشی و ROW_COUNT دارد.
 - اگر درج جدید شکست بخورد، DELETE نیز rollback می‌شود و نسخه قبلی حفظ می‌شود.
-- workflow فقط SQLSTATE امن را چاپ می‌کند و message/details را نمایش نمی‌دهد.
+- workflow در V4.3.1 فقط نسخه پاک‌سازی‌شده و کوتاه `code/message/details/hint` را چاپ می‌کند؛ URL، Token، کلید و Header قبل از چاپ حذف می‌شوند.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
 - مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
@@ -967,7 +969,12 @@ PostgreSQL 17 integration test              → PASS
 دسترسی anon                                 → permission denied (PASS)
 workflow YAML و bash -n                     → PASS
 Mock endpoint جدید Storage/Public/RPC       → 200 / OK / 200
-آزمایش واقعی Supabase                       → در انتظار اجرای SQL و Push
+Mock کلید JWT قدیمی                         → PASS (apikey + Bearer)
+Mock کلید opaque با sb_secret_              → PASS (apikey only)
+عدم ارسال sb_secret_ در Authorization       → Verified
+Sanitizer کد/پیام/details/hint               → URL/Token/Key/Header redacted
+پاسخ خام Supabase                           → چاپ نمی‌شود
+آزمایش واقعی Supabase                       → در انتظار Push افزایشی V4.3.1
 ```
 
 ### قانون دائمی هندآف

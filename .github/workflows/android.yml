@@ -95,21 +95,45 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          safe_error_code() {
-            python3 - "$1" <<'PY'
+          safe_error_report() {
+            python3 - "$1" "$2" <<'PY'
           import json
+          import re
           import sys
+
+          path, prefix = sys.argv[1], sys.argv[2]
+
+          def clean(value):
+              text = str(value if value not in (None, "") else "none")
+              text = re.sub(r"https?://\S+", "[URL]", text, flags=re.I)
+              text = re.sub(r"eyJ[A-Za-z0-9_-]{10,}(?:\.[A-Za-z0-9_-]{10,}){1,2}", "[TOKEN]", text)
+              text = re.sub(r"sb_(?:secret|publishable)_[A-Za-z0-9_-]+", "[KEY]", text, flags=re.I)
+              text = re.sub(r"(?i)(authorization|apikey)\s*[:=][^,\n ]+", r"\1=[REDACTED]", text)
+              return text.replace("\n", " ")[:500]
+
           try:
-              value = json.load(open(sys.argv[1], encoding="utf-8"))
-              print(str(value.get("code", "unknown"))[:80])
+              data = json.load(open(path, encoding="utf-8"))
+              if not isinstance(data, dict):
+                  data = {"code": "unknown", "message": "non-object response"}
           except Exception:
-              print("unavailable")
+              data = {"code": "unavailable", "message": "response was not valid JSON"}
+
+          for key in ("code", "message", "details", "hint"):
+              print(f"{prefix} safe error {key}: {clean(data.get(key))}")
           PY
           }
 
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_RELEASE_KEY"
           SUPABASE_URL="${SUPABASE_URL%/}"
+
+          RELEASE_AUTH_HEADERS=(-H "apikey: $SUPABASE_RELEASE_KEY")
+          if [[ "$SUPABASE_RELEASE_KEY" == sb_secret_* ]]; then
+            echo "Release key mode: opaque secret key (apikey header only)"
+          else
+            echo "Release key mode: legacy server JWT"
+            RELEASE_AUTH_HEADERS+=(-H "Authorization: Bearer $SUPABASE_RELEASE_KEY")
+          fi
 
           source release/update-metadata.txt
           test -f "release/$APK_FILE"
@@ -124,8 +148,7 @@ jobs:
             -w '%{http_code}' \
             -X POST \
             "$SUPABASE_URL/storage/v1/object/app-updates/$APK_FILE" \
-            -H "Authorization: Bearer $SUPABASE_RELEASE_KEY" \
-            -H "apikey: $SUPABASE_RELEASE_KEY" \
+            "${RELEASE_AUTH_HEADERS[@]}" \
             -H "Content-Type: application/vnd.android.package-archive" \
             -H "x-upsert: true" \
             --data-binary "@release/$APK_FILE")"
@@ -133,7 +156,7 @@ jobs:
             200|201) ;;
             *)
               echo "Supabase Storage upload status: $UPLOAD_STATUS"
-              echo "Supabase Storage safe error code: $(safe_error_code /tmp/app-update-storage-response.json)"
+              safe_error_report /tmp/app-update-storage-response.json "Supabase Storage"
               exit 1
               ;;
           esac
@@ -188,15 +211,14 @@ jobs:
             -w '%{http_code}' \
             -X POST \
             "$SUPABASE_URL/rest/v1/rpc/publish_native_app_release_v1" \
-            -H "Authorization: Bearer $SUPABASE_RELEASE_KEY" \
-            -H "apikey: $SUPABASE_RELEASE_KEY" \
+            "${RELEASE_AUTH_HEADERS[@]}" \
             -H "Content-Type: application/json" \
             --data-binary @release/publish-payload.json)"
           case "$PUBLISH_STATUS" in
             200|201) ;;
             *)
               echo "Supabase release activation status: $PUBLISH_STATUS"
-              echo "Supabase release safe error code: $(safe_error_code /tmp/app-update-publish-response.json)"
+              safe_error_report /tmp/app-update-publish-response.json "Supabase release"
               exit 1
               ;;
           esac

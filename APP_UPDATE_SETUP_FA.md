@@ -66,7 +66,7 @@ V4.2 تابع قبلی را با همان ورودی‌ها حذف و با خر�
 
 اگر درج جدید شکست بخورد، تراکنش rollback می‌شود و ردیف قبلی باقی می‌ماند. پس از اجرای SQL، Push پچ جدید یک workflow تازه اجرا می‌کند.
 
-workflow فقط SQLSTATE امن را چاپ می‌کند و message/details پاسخ دیتابیس را نمایش نمی‌دهد.
+workflow در صورت خطا، `code/message/details/hint` را پس از حذف URL، Token، کلید و Header و با محدودیت طول چاپ می‌کند؛ پاسخ خام هرگز نمایش داده نمی‌شود.
 
 ### Hotfix V4.3 برای metadata قدیمی PostgREST
 
@@ -97,7 +97,14 @@ workflow نیز از این پس فقط endpoint جدید زیر را صدا م�
 /rest/v1/rpc/publish_native_app_release_v1
 ```
 
-تابع قدیمی حذف نمی‌شود، اما دیگر توسط workflow استفاده نخواهد شد.
+V4.3 نوع کلید انتشار را نیز بدون چاپ مقدار آن تشخیص می‌دهد:
+
+```text
+sb_secret_*       → فقط header امن apikey
+کلید JWT قدیمی    → apikey + Authorization Bearer
+```
+
+کلیدهای opaque جدید نباید به‌عنوان Bearer JWT ارسال شوند. تابع قدیمی حذف نمی‌شود، اما دیگر توسط workflow استفاده نخواهد شد.
 
 ## ۳) افزودن یک Secret برای انتشار — فقط یک‌بار
 
