@@ -28,6 +28,13 @@ data class QuestionDraft(
     val expectedText: String = "",
     val expectedNumber: String = "",
     val tolerance: String = "0",
+    val matchingLeft: List<String> = emptyList(),
+    val matchingRight: List<String> = emptyList(),
+    val matchingPairs: Map<Int, Int> = emptyMap(),
+    val matchingLeftImages: List<String?> = emptyList(),
+    val matchingRightImages: List<String?> = emptyList(),
+    val answerImageMode: String = "no",
+    val maxAnswerImages: Int = 0,
     val images: List<MediaDraft> = emptyList(),
     val rawPublic: JsonObject = JsonObject(emptyMap()),
     val rawAnswer: JsonObject = JsonObject(emptyMap())
@@ -35,6 +42,7 @@ data class QuestionDraft(
 
 data class AudienceClassOption(val id: String, val name: String)
 data class AudienceStudentOption(val id: String, val name: String, val classNames: String? = null)
+data class BankQuestionOption(val id: Long, val subject: String?, val question: QuestionDraft)
 
 data class ExamBuilderState(
     val examId: String? = null,
@@ -57,7 +65,9 @@ data class ExamBuilderState(
     val audienceStudents: Set<String> = emptySet(),
     val availableClasses: List<AudienceClassOption> = emptyList(),
     val availableStudents: List<AudienceStudentOption> = emptyList(),
+    val bankQuestions: List<BankQuestionOption> = emptyList(),
     val saving: Boolean = false,
+    val bankLoading: Boolean = false,
     val uploadProgress: String? = null,
     val savedCode: String? = null,
     val error: String? = null

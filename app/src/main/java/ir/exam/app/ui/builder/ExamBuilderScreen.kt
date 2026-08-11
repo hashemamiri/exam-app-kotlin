@@ -89,6 +89,7 @@ fun ExamBuilderScreen(
         ) {
             item { ExamSettingsCard(state, viewModel) }
             item { AudienceCard(state, viewModel) }
+            item { QuestionBankCard(state, viewModel) }
             items(state.questions, key = { it.id }) { question ->
                 QuestionEditor(question, viewModel)
             }
@@ -172,6 +173,37 @@ private fun AudienceCard(state: ExamBuilderState, viewModel: ExamBuilderViewMode
 }
 
 @Composable
+private fun QuestionBankCard(state: ExamBuilderState, viewModel: ExamBuilderViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("بانک سؤال", style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(onClick = { expanded = !expanded }) {
+                    Text(if (expanded) "بستن" else "نمایش (${state.bankQuestions.size})")
+                }
+            }
+            if (state.bankLoading) CircularProgressIndicator()
+            if (expanded) {
+                if (state.bankQuestions.isEmpty()) Text("بانک سؤال خالی است. از دکمه «ذخیره در بانک» هر سؤال استفاده کنید.")
+                state.bankQuestions.forEach { item ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(item.question.text.ifBlank { "بدون متن" })
+                            Text("${item.subject ?: "بدون درس"} · ${item.question.type.faLabel()}")
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Button(onClick = { viewModel.addFromBank(item.id) }) { Text("افزودن") }
+                                TextButton(onClick = { viewModel.deleteFromBank(item.id) }) { Text("حذف") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -184,16 +216,43 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
                 onRemove = { imageId -> viewModel.removeImage(question.id, imageId) }
             )
+            Text("تصویر پاسخ دانش‌آموز")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("no" to "غیرفعال", "optional" to "اختیاری", "required" to "اجباری").forEach { (mode, label) ->
+                    FilterChip(
+                        selected = question.answerImageMode == mode,
+                        onClick = { viewModel.setAnswerImageMode(question.id, mode) },
+                        label = { Text(label) }
+                    )
+                }
+            }
+            if (question.answerImageMode != "no") {
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    (1..5).forEach { count ->
+                        FilterChip(
+                            selected = question.maxAnswerImages == count,
+                            onClick = { viewModel.setMaxAnswerImages(question.id, count) },
+                            label = { Text(count.toString()) }
+                        )
+                    }
+                }
+            }
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(question.correctIndex == index, onClick = { viewModel.setCorrect(question.id, index) })
-                        OutlinedTextField(
-                            option,
-                            { viewModel.updateOption(question.id, index, it) },
-                            label = { Text("گزینه ${index + 1}") },
-                            modifier = Modifier.weight(1f)
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(question.correctIndex == index, onClick = { viewModel.setCorrect(question.id, index) })
+                            OutlinedTextField(
+                                option,
+                                { viewModel.updateOption(question.id, index, it) },
+                                label = { Text("گزینه ${index + 1}") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        SingleImagePicker(
+                            value = question.optionImages.getOrNull(index),
+                            label = "تصویر گزینه ${index + 1}"
+                        ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                     }
                 }
                 QuestionType.TRUE_FALSE -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -205,10 +264,13 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                     OutlinedTextField(question.expectedNumber, { viewModel.updateExpectedNumber(question.id, it) }, label = { Text("پاسخ عددی") })
                     OutlinedTextField(question.tolerance, { viewModel.updateTolerance(question.id, it) }, label = { Text("تلورانس") })
                 }
-                QuestionType.MATCHING -> Text("داده‌های جورکردنی موجود حفظ می‌شوند؛ ویرایش متن اصلی و بارم فعال است.")
+                QuestionType.MATCHING -> MatchingQuestionEditor(question, viewModel)
                 QuestionType.ESSAY -> Unit
             }
-            TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { viewModel.saveToBank(question.id) }) { Text("ذخیره در بانک") }
+                TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
+            }
         }
     }
 }

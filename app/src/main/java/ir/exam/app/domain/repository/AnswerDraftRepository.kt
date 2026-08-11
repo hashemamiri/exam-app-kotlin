@@ -1,8 +1,10 @@
 package ir.exam.app.domain.repository
-import ir.exam.app.domain.model.StudentAnswer
+
+import ir.exam.app.domain.model.StudentDraft
 import kotlinx.coroutines.flow.Flow
+
 interface AnswerDraftRepository {
-    fun observe(examId:String): Flow<Map<String, StudentAnswer>>
-    suspend fun save(examId:String, answers:Map<String, StudentAnswer>)
-    suspend fun clear(examId:String)
+    fun observe(examId: String): Flow<StudentDraft>
+    suspend fun save(examId: String, draft: StudentDraft)
+    suspend fun clear(examId: String)
 }

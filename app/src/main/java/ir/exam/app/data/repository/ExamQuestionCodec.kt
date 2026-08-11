@@ -44,7 +44,7 @@ internal object ExamQuestionCodec {
                 text = obj["text"]?.asString().orEmpty(),
                 score = obj["score"]?.asDouble() ?: 1.0,
                 options = obj["options"].asArrayOrEmpty().map { it.asString().orEmpty() },
-                optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString() },
+                optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
                 correctIndex = key["correctOption"]?.asInt() ?: obj["correctIndex"]?.asInt(),
                 expectedText = when (type) {
                     QuestionType.TRUE_FALSE -> (key["correctAnswer"]?.asBoolean() ?: false).toString()
@@ -53,6 +53,17 @@ internal object ExamQuestionCodec {
                 },
                 expectedNumber = key["answer"]?.asString() ?: obj["expectedNumber"]?.asString().orEmpty(),
                 tolerance = key["tolerance"]?.asString() ?: obj["tolerance"]?.asString() ?: "0",
+                matchingLeft = obj["leftItems"].asArrayOrEmpty().map { it.asString().orEmpty() },
+                matchingRight = obj["rightItems"].asArrayOrEmpty().map { it.asString().orEmpty() },
+                matchingPairs = (key["matchAnswer"] as? JsonObject)?.mapNotNull { (left, right) ->
+                    val leftIndex = left.toIntOrNull()
+                    val rightIndex = right.asInt()
+                    if (leftIndex != null && rightIndex != null) leftIndex to rightIndex else null
+                }?.toMap().orEmpty(),
+                matchingLeftImages = obj["leftImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
+                matchingRightImages = obj["rightImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
+                answerImageMode = obj["allowImages"]?.asString() ?: "no",
+                maxAnswerImages = obj["maxImages"]?.asInt() ?: 0,
                 images = imageUrls.mapIndexed { imageIndex, url ->
                     val pos = positions.getOrNull(imageIndex) as? JsonObject
                     MediaDraft(
@@ -85,10 +96,22 @@ internal object ExamQuestionCodec {
                     "w" to JsonPrimitive(image.widthMm)
                 ))
             })
+            values["allowImages"] = JsonPrimitive(question.answerImageMode)
+            values["maxImages"] = JsonPrimitive(if (question.answerImageMode == "no") 0 else question.maxAnswerImages.coerceIn(1, 10))
             if (question.type == QuestionType.MULTIPLE_CHOICE) {
                 values["options"] = JsonArray(question.options.map(::JsonPrimitive))
                 values["optionImages"] = JsonArray(question.options.indices.map { index ->
                     question.optionImages.getOrNull(index)?.let(::JsonPrimitive) ?: JsonPrimitive("")
+                })
+            }
+            if (question.type == QuestionType.MATCHING) {
+                values["leftItems"] = JsonArray(question.matchingLeft.map(::JsonPrimitive))
+                values["rightItems"] = JsonArray(question.matchingRight.map(::JsonPrimitive))
+                values["leftImages"] = JsonArray(question.matchingLeft.indices.map { index ->
+                    question.matchingLeftImages.getOrNull(index)?.let(::JsonPrimitive) ?: JsonPrimitive("")
+                })
+                values["rightImages"] = JsonArray(question.matchingRight.indices.map { index ->
+                    question.matchingRightImages.getOrNull(index)?.let(::JsonPrimitive) ?: JsonPrimitive("")
                 })
             }
             JsonObject(values)
@@ -106,6 +129,10 @@ internal object ExamQuestionCodec {
                 QuestionType.NUMERIC -> {
                     values["answer"] = question.expectedNumber.toDoubleOrNull()?.let(::JsonPrimitive) ?: JsonNull
                     values["tolerance"] = JsonPrimitive(question.tolerance.toDoubleOrNull() ?: 0.0)
+                }
+                QuestionType.MATCHING -> {
+                    values["matchAnswer"] = JsonObject(question.matchingPairs.mapKeys { it.key.toString() }
+                        .mapValues { JsonPrimitive(it.value) })
                 }
                 else -> Unit
             }

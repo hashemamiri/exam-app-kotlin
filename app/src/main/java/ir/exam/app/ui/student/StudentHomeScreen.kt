@@ -14,16 +14,36 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import ir.exam.app.data.repository.InMemoryAnswerDraftRepository
+import androidx.room.Room
+import ir.exam.app.data.local.AppDatabase
+import ir.exam.app.data.repository.RoomAnswerDraftRepository
 import ir.exam.app.data.repository.SupabaseStudentExamRepository
 
 @Composable
 fun StudentHomeScreen() {
-    val viewModel = remember { StudentExamViewModel(SupabaseStudentExamRepository(), InMemoryAnswerDraftRepository()) }
+    val appContext = LocalContext.current.applicationContext
+    val database = remember(appContext) {
+        Room.databaseBuilder(appContext, AppDatabase::class.java, "exam-native.db").build()
+    }
+    val viewModel = remember(appContext, database) {
+        StudentExamViewModel(
+            SupabaseStudentExamRepository(appContext),
+            RoomAnswerDraftRepository(database.answerDraftDao())
+        )
+    }
     val state by viewModel.state.collectAsState()
     if (state.exam != null) {
-        StudentExamContent(state, viewModel::answer, { viewModel.goTo(state.questionIndex + 1) }, viewModel::submit)
+        StudentExamContent(
+            state = state,
+            onAnswer = viewModel::answer,
+            onPrevious = { viewModel.goTo(state.questionIndex - 1) },
+            onNext = { viewModel.goTo(state.questionIndex + 1) },
+            onAddImages = viewModel::addResponseImages,
+            onRemoveImage = viewModel::removeResponseImage,
+            onSubmit = viewModel::submit
+        )
         return
     }
     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

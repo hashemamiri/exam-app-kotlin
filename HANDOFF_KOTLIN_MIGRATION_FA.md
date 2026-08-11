@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V6 مدیریت Native
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V7 رسانه و بانک سؤال
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -634,17 +634,19 @@ fallback آفلاین پروفایل با تطبیق دقیق userId
 ساخت و فعال‌سازی دانش‌آموز با RPC/Edge Function واقعی
 آپلود و فشرده‌سازی واقعی تصویر سؤال در exam-images
 خروج محلی امن و تعویض حساب
+ویرایش و پاسخ کامل matching
+تصویر واقعی گزینه و دو طرف matching
+تصویر پاسخ دانش‌آموز + draft Room + upload + submit
+بانک سؤال Native واقعی: list/add/delete
+چرخش EXIF و مجوز پایدار Photo Picker
 ```
 
 ### قابلیت‌های هنوز کامل نشده یا فقط اسکلت دارند
 
 ```text
 OTP اختصاصی 8 رقمی
-بانک سؤال Native کامل
-ویرایش تخصصی سؤال جورکردنی
-آپلود تازه تصویر گزینه
-تصویر و آپلود پاسخ دانش‌آموز
-برش/چرخش تعاملی تصویر Native
+دسته‌بندی پیشرفته و جابه‌جایی بانک سؤال
+crop تعاملی تصویر Native
 حذف امن فایل‌های orphan از Storage
 فونت‌های واقعی res/font
 PDF فارسی کامل و چندصفحه‌ای
@@ -1199,15 +1201,88 @@ safeupdate audit                            → PASS
 assembleDebug                               → BUILD SUCCESSFUL
 lintDebug                                   → BUILD SUCCESSFUL
 Debug APK signature v2                      → Verified
+GitHub Actions واقعی V6                     → SUCCESS (اعلام کاربر)
+آپدیت درون‌برنامه‌ای به V6                  → SUCCESS (اعلام کاربر)
 ```
 
 ### محدودیت ثبت‌شده، نه پنهان
 
-- UI ویرایش تخصصی matching هنوز کامل نیست، ولی داده موجود حفظ می‌شود.
-- آپلود سؤال واقعی است؛ انتخاب تازه تصویر گزینه/پاسخ در مرحله رسانه تکمیل می‌شود.
+- محدودیت matching و تصویر گزینه/پاسخ در V7 رفع شد.
 - فایل Storage هنگام حذف آزمون پاک نمی‌شود تا URL مشترک آزمون تکثیرشده نشکند.
 - حذف کامل حساب دانش‌آموز از Native عمداً ارائه نشده و نیازمند تأیید امنیتی جداست.
 - schema زنده ستون legacy `plain_password` دارد؛ Native آن را decode/نمایش نمی‌دهد. حذف ستون نیازمند مهاجرت هماهنگ WebView و Edge Function است.
+
+---
+
+## ۱۷) پچ جامع V7 رسانه، matching، پاسخ تصویری و بانک سؤال
+
+### قابلیت‌ها
+
+```text
+ویرایش کامل دو ستون matching
+تعیین جفت صحیح هر ردیف matching
+تصویر مستقل برای دو طرف matching
+انتخاب، حذف، فشرده‌سازی و آپلود تصویر گزینه
+تنظیم تصویر پاسخ: غیرفعال/اختیاری/اجباری
+تعداد مجاز تصویر پاسخ 1 تا 10
+انتخاب و پیش‌نمایش تصویر پاسخ در آزمون دانش‌آموز
+ذخیره URI پاسخ تصویری در Room draft
+آپلود پاسخ‌ها در answers/{studentId}/{examId}/{questionId}
+ارسال p_images واقعی به submit_answer
+نمایش تصاویر سؤال و گزینه در آزمون
+رابط پاسخ matching دانش‌آموز
+بانک سؤال واقعی با bank_list/bank_add/bank_del
+ذخیره سؤال همراه answer key در بانک
+افزودن سؤال بانک به آزمون با id جدید
+اصلاح خودکار چرخش EXIF
+مجوز پایدار Photo Picker برای draftهای آفلاین
+```
+
+### فایل‌های اصلی V7
+
+```text
+app/src/main/java/ir/exam/app/domain/model/ExamModels.kt
+app/src/main/java/ir/exam/app/domain/repository/AnswerDraftRepository.kt
+app/src/main/java/ir/exam/app/data/dto/QuestionBankDto.kt
+app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseExamBuilderRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseStudentExamRepository.kt
+app/src/main/java/ir/exam/app/data/repository/RoomAnswerDraftRepository.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt
+app/src/main/java/ir/exam/app/ui/student/StudentExamViewModel.kt
+```
+
+### امنیت و سازگاری
+
+- answer key همچنان فقط در `exam_keys` است.
+- بانک سؤال فقط با RPCهای مالک‌محور موجود کار می‌کند.
+- URL قبلی دوباره آپلود نمی‌شود.
+- URI محلی فقط پس از فشرده‌سازی به Storage می‌رود.
+- تصویر اجباری قبل از submit کنترل می‌شود.
+- Room JSON قدیمی بدون wrapper همچنان decode می‌شود.
+- هیچ SQL یا Secret جدیدی لازم نیست.
+
+### نتیجه تست V7
+
+```text
+Kotlin compile                              → PASS
+JVM tests                                   → 17/17 PASS
+matching codec round-trip                   → PASS
+required response image guard              → PASS
+assembleDebug                               → BUILD SUCCESSFUL
+lintDebug                                   → BUILD SUCCESSFUL
+APK Signature Scheme v2                     → Verified
+```
+
+### محدودیت باقی‌مانده
+
+- crop تعاملی هنوز به ویرایشگر bitmap متصل نشده؛ EXIF rotate و resize/compress واقعی است.
+- پاک‌سازی orphanهای Storage نیازمند reference counting است.
+- دسته‌بندی پیشرفته بانک سؤال در UI بعدی تکمیل می‌شود؛ افزودن/فهرست/حذف واقعی است.
 
 ### قانون دائمی هندآف
 

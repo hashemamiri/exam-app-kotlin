@@ -31,6 +31,27 @@ class ExamQuestionCodecTest {
     }
 
     @Test
+    fun `matching pairs option images and response image policy round trip`() {
+        val source = QuestionDraft(
+            type = QuestionType.MATCHING,
+            text = "وصل کنید",
+            matchingLeft = listOf("الف", "ب"),
+            matchingRight = listOf("۱", "۲"),
+            matchingPairs = mapOf(0 to 1, 1 to 0),
+            matchingLeftImages = listOf("https://example.test/l.webp", null),
+            answerImageMode = "required",
+            maxAnswerImages = 2
+        )
+        val encoded = ExamQuestionCodec.encode(listOf(source))
+        val decoded = ExamQuestionCodec.decode(encoded.publicQuestions, encoded.answerKey).single()
+
+        assertEquals(source.matchingPairs, decoded.matchingPairs)
+        assertEquals("required", decoded.answerImageMode)
+        assertEquals(2, decoded.maxAnswerImages)
+        assertEquals(source.matchingLeftImages, decoded.matchingLeftImages)
+    }
+
+    @Test
     fun `legacy public question and separate key are decoded`() {
         val public = JsonArray(listOf(JsonObject(mapOf(
             "type" to JsonPrimitive("fill"),

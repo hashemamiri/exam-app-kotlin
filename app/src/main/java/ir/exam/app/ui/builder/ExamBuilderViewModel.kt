@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -47,10 +48,21 @@ class ExamBuilderViewModel(
     fun toggleAudienceStudent(id: String) { _state.update { it.copy(audienceStudents = it.audienceStudents.toggle(id)) } }
 
     fun addQuestion(type: QuestionType) {
-        val question = if (type == QuestionType.MULTIPLE_CHOICE) {
-            QuestionDraft(type = type, options = List(4) { "" }, optionImages = List(4) { null })
-        } else {
-            QuestionDraft(type = type)
+        val question = when (type) {
+            QuestionType.MULTIPLE_CHOICE -> QuestionDraft(
+                type = type,
+                options = List(4) { "" },
+                optionImages = List(4) { null }
+            )
+            QuestionType.MATCHING -> QuestionDraft(
+                type = type,
+                matchingLeft = List(3) { "" },
+                matchingRight = List(3) { "" },
+                matchingPairs = mapOf(0 to 0, 1 to 1, 2 to 2),
+                matchingLeftImages = List(3) { null },
+                matchingRightImages = List(3) { null }
+            )
+            else -> QuestionDraft(type = type)
         }
         _state.update { it.copy(questions = it.questions + question) }
     }
@@ -60,7 +72,45 @@ class ExamBuilderViewModel(
     fun updateOption(id: String, index: Int, text: String) { update(id) { question ->
         question.copy(options = question.options.mapIndexed { i, old -> if (i == index) text else old })
     } }
+    fun setOptionImage(id: String, index: Int, uri: String?) { update(id) { question ->
+        val images = question.options.indices.map { i -> if (i == index) uri else question.optionImages.getOrNull(i) }
+        question.copy(optionImages = images)
+    } }
     fun setCorrect(id: String, index: Int) { update(id) { it.copy(correctIndex = index) } }
+
+    fun updateMatchingText(id: String, side: String, index: Int, text: String) { update(id) { question ->
+        if (side == "left") question.copy(matchingLeft = question.matchingLeft.replaceAt(index, text))
+        else question.copy(matchingRight = question.matchingRight.replaceAt(index, text))
+    } }
+    fun setMatchingImage(id: String, side: String, index: Int, uri: String?) { update(id) { question ->
+        if (side == "left") question.copy(matchingLeftImages = question.matchingLeftImages.pad(question.matchingLeft.size).replaceAt(index, uri))
+        else question.copy(matchingRightImages = question.matchingRightImages.pad(question.matchingRight.size).replaceAt(index, uri))
+    } }
+    fun setMatchingPair(id: String, leftIndex: Int, rightIndex: Int) { update(id) { question ->
+        question.copy(matchingPairs = question.matchingPairs + (leftIndex to rightIndex))
+    } }
+    fun addMatchingRow(id: String) { update(id) { question ->
+        val next = minOf(question.matchingLeft.size, question.matchingRight.size)
+        question.copy(
+            matchingLeft = question.matchingLeft + "",
+            matchingRight = question.matchingRight + "",
+            matchingLeftImages = question.matchingLeftImages.pad(question.matchingLeft.size) + null,
+            matchingRightImages = question.matchingRightImages.pad(question.matchingRight.size) + null,
+            matchingPairs = question.matchingPairs + (next to next)
+        )
+    } }
+    fun removeMatchingRow(id: String) { update(id) { question ->
+        if (question.matchingLeft.size <= 2 || question.matchingRight.size <= 2) question else {
+            val last = minOf(question.matchingLeft.lastIndex, question.matchingRight.lastIndex)
+            question.copy(
+                matchingLeft = question.matchingLeft.dropLast(1),
+                matchingRight = question.matchingRight.dropLast(1),
+                matchingLeftImages = question.matchingLeftImages.dropLast(1),
+                matchingRightImages = question.matchingRightImages.dropLast(1),
+                matchingPairs = question.matchingPairs.filterKeys { it != last }.mapValues { (_, right) -> right.coerceAtMost(last - 1) }
+            )
+        }
+    } }
     fun setTrueFalse(id: String, value: Boolean) { update(id) { it.copy(expectedText = value.toString()) } }
     fun updateExpectedText(id: String, value: String) { update(id) { it.copy(expectedText = value) } }
     fun updateExpectedNumber(id: String, value: String) { update(id) { it.copy(expectedNumber = value.filter { c -> c.isDigit() || c == '.' || c == '-' }) } }
@@ -80,9 +130,43 @@ class ExamBuilderViewModel(
     fun removeImage(questionId: String, imageId: String) { update(questionId) { question ->
         question.copy(images = question.images.filterNot { it.id == imageId })
     } }
+    fun setAnswerImageMode(questionId: String, mode: String) { update(questionId) { question ->
+        if (mode !in setOf("no", "optional", "required")) question
+        else question.copy(answerImageMode = mode, maxAnswerImages = if (mode == "no") 0 else question.maxAnswerImages.coerceAtLeast(1))
+    } }
+    fun setMaxAnswerImages(questionId: String, max: Int) { update(questionId) { question ->
+        question.copy(maxAnswerImages = max.coerceIn(1, 10))
+    } }
 
     private fun update(id: String, change: (QuestionDraft) -> QuestionDraft) {
         _state.update { state -> state.copy(questions = state.questions.map { if (it.id == id) change(it) else it }) }
+    }
+
+    fun addFromBank(id: Long) {
+        val item = state.value.bankQuestions.firstOrNull { it.id == id } ?: return
+        _state.update { it.copy(questions = it.questions + item.question.copy(id = UUID.randomUUID().toString())) }
+    }
+
+    fun saveToBank(questionId: String) {
+        val question = state.value.questions.firstOrNull { it.id == questionId } ?: return
+        viewModelScope.launch {
+            _state.update { it.copy(bankLoading = true, error = null) }
+            repository.saveToBank(question, state.value.subject)
+                .onSuccess { refreshBankNow() }
+                .onFailure { error -> _state.update { it.copy(bankLoading = false, error = safeBuilderError(error)) } }
+        }
+    }
+
+    fun deleteFromBank(id: Long) = viewModelScope.launch {
+        _state.update { it.copy(bankLoading = true, error = null) }
+        repository.deleteFromBank(id)
+            .onSuccess { refreshBankNow() }
+            .onFailure { error -> _state.update { it.copy(bankLoading = false, error = safeBuilderError(error)) } }
+    }
+
+    private suspend fun refreshBankNow() {
+        val bank = repository.refreshBank().getOrThrow()
+        _state.update { it.copy(bankQuestions = bank, bankLoading = false) }
     }
 
     fun save() = viewModelScope.launch {
@@ -98,6 +182,8 @@ class ExamBuilderViewModel(
 }
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
+private fun <T> List<T>.replaceAt(index: Int, value: T): List<T> = mapIndexed { i, old -> if (i == index) value else old }
+private fun List<String?>.pad(size: Int): List<String?> = if (this.size >= size) this else this + List(size - this.size) { null }
 
 private fun safeBuilderError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("URL:")

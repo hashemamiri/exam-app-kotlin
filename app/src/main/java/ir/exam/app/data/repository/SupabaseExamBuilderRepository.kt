@@ -8,12 +8,15 @@ import ir.exam.app.data.dto.ExamDetailDto
 import ir.exam.app.data.dto.ExamKeyDto
 import ir.exam.app.data.dto.ExamUpdateDto
 import ir.exam.app.data.dto.ExamWriteDto
+import ir.exam.app.data.dto.QuestionBankDto
 import ir.exam.app.data.dto.SchoolClassDto
 import ir.exam.app.data.dto.StudentProfileDto
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.ui.builder.AudienceClassOption
 import ir.exam.app.ui.builder.AudienceStudentOption
+import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.ExamBuilderState
+import ir.exam.app.ui.builder.QuestionDraft
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -35,11 +38,13 @@ class SupabaseExamBuilderRepository(context: Context) {
         val students = SupabaseProvider.client.postgrest.rpc("my_students_for_pick")
             .decodeList<StudentProfileDto>()
             .map { AudienceStudentOption(it.id, it.fullName, it.classNames) }
+        val bank = loadBankQuestions()
 
         if (examId == null) {
             return@runCatching ExamBuilderState(
                 availableClasses = classes,
-                availableStudents = students
+                availableStudents = students,
+                bankQuestions = bank
             )
         }
 
@@ -73,7 +78,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             audienceClasses = audience.classes,
             audienceStudents = audience.students,
             availableClasses = classes,
-            availableStudents = students
+            availableStudents = students,
+            bankQuestions = bank
         )
     }
 
@@ -151,6 +157,42 @@ class SupabaseExamBuilderRepository(context: Context) {
         saveAudience(examId, state)
         code
     }
+
+    suspend fun refreshBank(): Result<List<BankQuestionOption>> = runCatching { loadBankQuestions() }
+
+    suspend fun saveToBank(question: QuestionDraft, subject: String): Result<Unit> = runCatching {
+        val encoded = ExamQuestionCodec.encode(listOf(question))
+        val public = encoded.publicQuestions.first() as JsonObject
+        val key = encoded.answerKey.first() as JsonObject
+        val combined = JsonObject(public + key - "i")
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "bank_add",
+            buildJsonObject {
+                put("p_question", combined)
+                put("p_subject", subject.trim())
+            }
+        ).decodeSingle<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
+    }
+
+    suspend fun deleteFromBank(id: Long): Result<Unit> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "bank_del",
+            buildJsonObject { put("p_id", id) }
+        ).decodeSingle<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
+    }
+
+    private suspend fun loadBankQuestions(): List<BankQuestionOption> =
+        SupabaseProvider.client.postgrest.rpc("bank_list")
+            .decodeList<QuestionBankDto>()
+            .mapNotNull { row ->
+                val question = ExamQuestionCodec.decode(
+                    JsonArray(listOf(row.question)),
+                    JsonArray(listOf(row.question))
+                ).firstOrNull() ?: return@mapNotNull null
+                BankQuestionOption(row.id, row.subject, question)
+            }
 
     private suspend fun loadAudience(examId: String): AudienceValue {
         val raw = SupabaseProvider.client.postgrest.rpc(
