@@ -3,7 +3,7 @@ package ir.exam.app.data.repository
 import io.github.jan.supabase.postgrest.from
 import ir.exam.app.core.update.AppUpdateRepository
 import ir.exam.app.core.update.RemoteVersion
-import ir.exam.app.data.remote.SupabaseProvider
+import ir.exam.app.data.remote.PublicUpdateSupabaseProvider
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -13,12 +13,13 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
 /**
- * نسخه فعال را از جدول عمومی app_version می‌خواند.
+ * نسخه فعال را با کلاینت anon مستقل از نشست کاربر از جدول عمومی app_version می‌خواند.
+ * بنابراین JWT منقضی کاربر مانع بررسی بروزرسانی نمی‌شود.
  * RLS این جدول باید فقط اجازه SELECT ردیف‌های فعال را بدهد.
  */
 class SupabaseAppUpdateRepository : AppUpdateRepository {
     override suspend fun latest(): Result<RemoteVersion?> = runCatching {
-        val latest = SupabaseProvider.client
+        val latest = PublicUpdateSupabaseProvider.client
             .from("app_version")
             .select {
                 filter { eq("is_active", true) }

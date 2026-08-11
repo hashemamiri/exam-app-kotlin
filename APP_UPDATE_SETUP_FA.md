@@ -8,6 +8,8 @@
 SQL پایه app_version و bucket app-updates: اجراشده
 نسخه‌گذاری GitHub Actions: خودکار
 ساخت APK و metadata: خودکار
+بررسی نسخه داخل اپ: کلاینت anon مستقل از Auth کاربر
+JWT expired کاربر: روی app_version اثر ندارد
 آپلود APK در Supabase Storage: خودکار و در اجرای واقعی HTTP 200
 بررسی URL عمومی: در اجرای واقعی OK
 فعال‌سازی اولیه app_version: HTTP 409
@@ -36,6 +38,10 @@ supabase/migrations/20260811_app_updates.sql
 ```text
 https://eazwuyrymsvdkwckdpco.supabase.co
 ```
+
+### خواندن عمومی نسخه بدون JWT کاربر
+
+RLS جدول `app_version` به anon فقط اجازه SELECT ردیف فعال را می‌دهد. اپ Kotlin از `PublicUpdateSupabaseProvider` استفاده می‌کند که Auth روی آن نصب نیست؛ بنابراین access token منقضی حساب وارد درخواست بررسی نسخه نمی‌شود.
 
 ## ۲) اجرای SQL انتشار خودکار فقط یک‌بار
 

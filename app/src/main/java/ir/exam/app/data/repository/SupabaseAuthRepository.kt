@@ -40,6 +40,8 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         val cachedUser = userCache.read(sessionUser.id)
         val refreshedProfile = withTimeoutOrNull(PROFILE_REFRESH_TIMEOUT_MS) {
             try {
+                // refreshCurrentSession نشست منقضی را پیش از اولین درخواست Postgrest تازه می‌کند.
+                auth.refreshCurrentSession()
                 Result.success(currentProfile())
             } catch (error: CancellationException) {
                 throw error

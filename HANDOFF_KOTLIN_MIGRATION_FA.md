@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V5 ماندگاری نشست ورود
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V5.1 رفع JWT expired در بروزرسانی
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -819,8 +819,12 @@ Release: ir.exam.app
 - workflow فقط نسخه پاک‌سازی‌شده و کوتاه `code/message/details/hint` را چاپ می‌کند؛ URL، Token، کلید و Header قبل از چاپ حذف می‌شوند.
 - مقدار Secret هرگز نباید در چت، Git، APK، Artifact یا لاگ چاپ شود.
 - درخواست جدید کاربر: پس از update یا بستن/بازکردن برنامه از حساب خارج نشود.
-- پچ V5 برای `awaitInitialization`، بازیابی session، cache نمای پروفایل و UI loading/retry در حال تحویل است.
-- مهم‌ترین کار بعدی: آزمایش V5 روی restart، force-stop و update درجا با package/signature یکسان.
+- پچ V5 برای `awaitInitialization`، بازیابی session، cache نمای پروفایل و UI loading/retry اعمال شد و Build آن موفق بود.
+- در آزمایش واقعی صفحه About باز شد، اما بررسی نسخه خطای دقیق `JWT expired` نشان داد.
+- علت کدی: `SupabaseAppUpdateRepository` از کلاینت Authدار اصلی استفاده می‌کرد و access token منقضی کاربر به درخواست عمومی app_version تزریق می‌شد.
+- V5.1 کلاینت مستقل `PublicUpdateSupabaseProvider` با Postgrest و بدون Auth می‌سازد؛ بررسی نسخه دیگر به JWT کاربر وابسته نیست.
+- V5.1 در startup نیز `refreshCurrentSession()` را پیش از نخستین درخواست profiles اجرا می‌کند.
+- مهم‌ترین کار بعدی: آزمایش V5.1 روی check update، restart، force-stop و update درجا با package/signature یکسان.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
 
 ---
@@ -833,6 +837,7 @@ Release: ir.exam.app
 app/src/main/java/ir/exam/app/core/update/AppUpdateRepository.kt
 app/src/main/java/ir/exam/app/core/update/UpdateUseCase.kt
 app/src/main/java/ir/exam/app/core/update/ApkUpdateManager.kt
+app/src/main/java/ir/exam/app/data/remote/PublicUpdateSupabaseProvider.kt
 app/src/main/java/ir/exam/app/data/repository/SupabaseAppUpdateRepository.kt
 app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt
 app/src/main/java/ir/exam/app/ui/update/UpdateViewModel.kt
@@ -852,6 +857,8 @@ APP_UPDATE_SETUP_FA.md
 ```text
 منوی همبرگری → درباره و بروزرسانی
 بررسی app_version با RLS
+کلاینت بررسی نسخه مستقل از Auth و JWT کاربر
+JWT expired کاربر روی check update اثر ندارد
 جدول خالی → برنامه به‌روز است
 نسخه جدید → نمایش نام، کد و یادداشت فارسی
 دانلود مستقیم با DownloadManager
@@ -1022,7 +1029,7 @@ GitHub Actions واقعی پس از V4.4             → SUCCESS (اعلام ک�
 
 ---
 
-## ۱۵) ماندگاری نشست ورود — پچ V5
+## ۱۵) ماندگاری نشست ورود و JWT — پچ V5 / V5.1
 
 ### علت خروج کاذب قبلی
 
@@ -1037,6 +1044,7 @@ GitHub Actions واقعی پس از V4.4             → SUCCESS (اعلام ک�
 → نمایش صفحه «در حال بازیابی نشست ورود»
 → auth.awaitInitialization()
 → currentUserOrNull پس از load واقعی storage
+→ auth.refreshCurrentSession() برای JWT منقضی
 → تطبیق cache profile با userId نشست
 → تلاش حداکثر 5 ثانیه برای تازه‌سازی profiles
 → fallback به cache هم‌هویت در قطع موقت اینترنت
@@ -1048,7 +1056,10 @@ GitHub Actions واقعی پس از V4.4             → SUCCESS (اعلام ک�
 ```text
 app/src/main/java/ir/exam/app/data/local/AuthUserCache.kt
 app/src/main/java/ir/exam/app/data/remote/SupabaseProvider.kt
+app/src/main/java/ir/exam/app/data/remote/PublicUpdateSupabaseProvider.kt
 app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseAppUpdateRepository.kt
+app/src/main/java/ir/exam/app/ui/update/UpdateViewModel.kt
 app/src/main/java/ir/exam/app/domain/repository/AuthRepository.kt
 app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
@@ -1081,6 +1092,20 @@ AuthViewModel restore tests                 → 3/3 PASS
 ./gradlew assembleDebug                     → BUILD SUCCESSFUL
 Debug APK                                   → ir.exam.app.native
 APK Signature Scheme v2                     → Verified
+```
+
+### نتیجه تست V5.1
+
+```text
+خطای واقعی قبل از اصلاح                     → JWT expired در check update
+کلاینت app_version                          → Postgrest-only / بدون Auth
+تزریق access token کاربر                    → حذف‌شده از check update
+refreshCurrentSession در startup             → اضافه و compile شده
+AuthViewModel restore tests                 → 3/3 PASS
+کل تست‌های JVM                             → 8/8 PASS
+./gradlew testDebugUnitTest                 → BUILD SUCCESSFUL
+./gradlew assembleDebug                     → BUILD SUCCESSFUL
+SQL جدید                                    → نیاز ندارد
 ```
 
 ### قانون دائمی هندآف

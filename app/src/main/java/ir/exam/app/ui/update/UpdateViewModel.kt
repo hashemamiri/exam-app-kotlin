@@ -137,6 +137,8 @@ private fun safeUpdateError(error: Throwable): String {
         .take(220)
     val lower = raw.lowercase()
     return when {
+        "jwt expired" in lower ->
+            "نشست شبکه در حال تازه‌سازی است؛ چند لحظه بعد دوباره بررسی کنید."
         "unable to resolve host" in lower || "failed to connect" in lower ->
             "اتصال اینترنت برقرار نیست یا سرور بروزرسانی در دسترس نیست."
         "app_version" in lower && ("404" in lower || "does not exist" in lower) ->
