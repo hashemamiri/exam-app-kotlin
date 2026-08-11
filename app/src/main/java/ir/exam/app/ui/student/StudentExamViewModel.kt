@@ -2,7 +2,10 @@ package ir.exam.app.ui.student
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ir.exam.app.data.repository.PendingActionRepository
 import ir.exam.app.domain.model.Exam
+import ir.exam.app.domain.model.PendingSubmissionStatus
+import ir.exam.app.domain.model.SubmissionOutcome
 import ir.exam.app.domain.model.StudentAnswer
 import ir.exam.app.domain.model.StudentDraft
 import ir.exam.app.domain.model.SubmittedExam
@@ -26,16 +29,32 @@ data class StudentExamUiState(
     val loading: Boolean = false,
     val submitting: Boolean = false,
     val finished: Boolean = false,
+    val queued: Boolean = false,
+    val submissionMessage: String? = null,
+    val pendingSubmissions: List<PendingSubmissionStatus> = emptyList(),
     val error: String? = null
 )
 
 class StudentExamViewModel(
     private val exams: ExamRepository,
-    private val drafts: AnswerDraftRepository
+    private val drafts: AnswerDraftRepository,
+    private val pending: PendingActionRepository? = null,
+    private val ownerUserId: String = ""
 ) : ViewModel() {
     private val _state = MutableStateFlow(StudentExamUiState())
     val state = _state.asStateFlow()
     private var timer: Job? = null
+
+    init {
+        if (pending != null && ownerUserId.isNotBlank()) {
+            pending.schedule()
+            viewModelScope.launch {
+                pending.observeSubmissions(ownerUserId).collect { rows ->
+                    _state.update { it.copy(pendingSubmissions = rows) }
+                }
+            }
+        }
+    }
 
     fun setCode(value: String) { _state.update { it.copy(code = value.trim(), error = null) } }
 
@@ -123,15 +142,56 @@ class StudentExamViewModel(
                 submittedAtEpochMs = System.currentTimeMillis()
             )
             exams.submitAttempt(attempt)
-                .onSuccess {
-                    drafts.clear(exam.id)
+                .onSuccess { outcome ->
                     timer?.cancel()
-                    _state.update { it.copy(submitting = false, finished = true) }
+                    when (outcome) {
+                        is SubmissionOutcome.Sent -> {
+                            drafts.clear(exam.id)
+                            _state.update {
+                                it.copy(
+                                    submitting = false,
+                                    finished = true,
+                                    queued = false,
+                                    submissionMessage = outcome.receipt?.let { receipt -> "کد رهگیری: $receipt" }
+                                )
+                            }
+                        }
+                        is SubmissionOutcome.Queued -> _state.update {
+                            it.copy(
+                                submitting = false,
+                                finished = true,
+                                queued = true,
+                                submissionMessage = "پاسخ در حافظه امن دستگاه صف شد و با اتصال اینترنت خودکار ارسال می‌شود."
+                            )
+                        }
+                    }
                 }
                 .onFailure { error ->
                     _state.update { it.copy(submitting = false, error = error.message ?: "ارسال پاسخ ناموفق بود") }
                 }
         }
+    }
+
+    fun leaveFinishedExam() {
+        if (!state.value.finished) return
+        _state.update {
+            StudentExamUiState(
+                pendingSubmissions = it.pendingSubmissions,
+                submissionMessage = it.submissionMessage
+            )
+        }
+    }
+
+    fun retryPending() {
+        val queue = pending ?: return
+        if (ownerUserId.isBlank()) return
+        viewModelScope.launch { queue.retryAll(ownerUserId) }
+    }
+
+    fun clearFailedPending() {
+        val queue = pending ?: return
+        if (ownerUserId.isBlank()) return
+        viewModelScope.launch { queue.deleteFailed(ownerUserId) }
     }
 
     override fun onCleared() {

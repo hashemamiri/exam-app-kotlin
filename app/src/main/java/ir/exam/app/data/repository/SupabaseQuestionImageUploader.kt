@@ -11,6 +11,9 @@ import io.github.jan.supabase.storage.storage
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.ui.builder.QuestionDraft
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -100,9 +103,8 @@ class SupabaseQuestionImageUploader(context: Context) {
     }
 
     private fun decodeSampledBitmap(uri: Uri, maxDimension: Int, forceSquare: Boolean = false): Bitmap? {
-        val resolver = appContext.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        openInput(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
         var sample = 1
@@ -111,9 +113,9 @@ class SupabaseQuestionImageUploader(context: Context) {
             inSampleSize = sample
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        val decoded = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) } ?: return null
+        val decoded = openInput(uri)?.use { BitmapFactory.decodeStream(it, null, options) } ?: return null
         val rotation = runCatching {
-            resolver.openInputStream(uri)?.use { input ->
+            openInput(uri)?.use { input ->
                 when (ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> 90f
                     ExifInterface.ORIENTATION_ROTATE_180 -> 180f
@@ -149,6 +151,12 @@ class SupabaseQuestionImageUploader(context: Context) {
         )
         if (resized !== cropped) cropped.recycle()
         return resized
+    }
+
+    private fun openInput(uri: Uri): InputStream? = if (uri.scheme.equals("file", true)) {
+        uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
+    } else {
+        appContext.contentResolver.openInputStream(uri)
     }
 
     private fun List<String?>.countPending(): Int = count { !it.isNullOrBlank() && !it.isRemoteUrl() }

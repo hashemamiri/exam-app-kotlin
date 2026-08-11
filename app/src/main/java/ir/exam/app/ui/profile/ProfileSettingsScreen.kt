@@ -57,6 +57,7 @@ import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
+import ir.exam.app.ui.portability.DataPortabilitySection
 
 @Composable
 fun ProfileSettingsScreen(
@@ -90,6 +91,7 @@ fun ProfileSettingsScreen(
             FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("پروفایل") })
             if (user.role == UserRole.TEACHER) {
                 FilterChip(selected = section == 2, onClick = { section = 2 }, label = { Text("سربرگ") })
+                FilterChip(selected = section == 3, onClick = { section = 3 }, label = { Text("داده‌ها") })
             }
         }
 
@@ -107,7 +109,7 @@ fun ProfileSettingsScreen(
                 onRemoveAvatar = { confirmRemove = true },
                 onSave = viewModel::save
             )
-            else -> HeaderSection(
+            section == 2 -> HeaderSection(
                 profile = state.profile!!,
                 state = state,
                 onProvince = viewModel::setProvince,
@@ -116,6 +118,9 @@ fun ProfileSettingsScreen(
                 onSchool = viewModel::setSchool,
                 onSave = viewModel::save
             )
+            else -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                DataPortabilitySection()
+            }
         }
     }
 

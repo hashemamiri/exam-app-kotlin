@@ -39,6 +39,7 @@ import ir.exam.app.domain.model.NumericQuestion
 import ir.exam.app.domain.model.StudentAnswer
 import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.model.TrueFalseQuestion
+import ir.exam.app.ui.math.NativeMathText
 
 @Composable
 fun StudentExamContent(
@@ -48,13 +49,23 @@ fun StudentExamContent(
     onNext: () -> Unit,
     onAddImages: (String, List<String>) -> Unit,
     onRemoveImage: (String, String) -> Unit,
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    onDone: () -> Unit
 ) {
     val exam = state.exam ?: return
     if (state.finished) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("پاسخ شما با موفقیت ثبت شد.", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                if (state.queued) "پاسخ شما در صف امن ارسال است." else "پاسخ شما با موفقیت ثبت شد.",
+                style = MaterialTheme.typography.headlineSmall,
+                color = if (state.queued) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+            )
             Text("کد آزمون: ${exam.code}")
+            state.submissionMessage?.let { Text(it) }
+            if (state.queued) {
+                Text("تا ارسال موفق، پیش‌نویس و تصاویر از دستگاه حذف نمی‌شوند.")
+            }
+            Button(onClick = onDone) { Text("بازگشت به داشبورد") }
         }
         return
     }
@@ -82,7 +93,13 @@ fun StudentExamContent(
         ) {
             item { Text(exam.title, style = MaterialTheme.typography.titleLarge) }
             item { Text("سؤال ${state.questionIndex + 1} از ${exam.questions.size} · بارم ${question.score}") }
-            item { Text(question.text, style = MaterialTheme.typography.titleMedium) }
+            item {
+                NativeMathText(
+                    question.text,
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                    fontWeight = MaterialTheme.typography.titleMedium.fontWeight
+                )
+            }
             items(question.images) { url -> AsyncImage(url, "تصویر سؤال", Modifier.fillMaxWidth()) }
             item {
                 when (question) {
@@ -111,7 +128,7 @@ fun StudentExamContent(
                                         onClick = { onAnswer(ChoiceAnswer(question.id, index)) }
                                     )
                                     Column {
-                                        Text(option)
+                                        NativeMathText(option)
                                         question.optionImages.getOrNull(index)?.let { AsyncImage(it, "تصویر گزینه", Modifier.size(120.dp)) }
                                     }
                                 }
@@ -157,7 +174,7 @@ private fun MatchingStudentAnswer(
         question.leftItems.forEachIndexed { leftIndex, left ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${leftIndex + 1}. $left")
+                    NativeMathText("${leftIndex + 1}. $left")
                     question.leftImages.getOrNull(leftIndex)?.let { AsyncImage(it, "تصویر جورکردنی", Modifier.size(100.dp)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         question.rightItems.indices.forEach { rightIndex ->
@@ -174,7 +191,7 @@ private fun MatchingStudentAnswer(
         Text("ستون راست:")
         question.rightItems.forEachIndexed { index, value ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${index + 1}. $value")
+                NativeMathText("${index + 1}. $value")
                 question.rightImages.getOrNull(index)?.let { AsyncImage(it, "تصویر ستون راست", Modifier.size(80.dp)) }
             }
         }

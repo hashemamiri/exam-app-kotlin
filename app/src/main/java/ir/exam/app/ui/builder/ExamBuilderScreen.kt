@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.image.QuestionMediaEditor
+import ir.exam.app.ui.math.FormulaEditorDialog
+import ir.exam.app.ui.math.NativeMathText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +94,17 @@ fun ExamBuilderScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { ExamSettingsCard(state, viewModel) }
+            state.importedBy?.let { by ->
+                item {
+                    Card(Modifier.fillMaxWidth()) {
+                        Text(
+                            "فایل آزمون وارد شد${by.takeIf(String::isNotBlank)?.let { " · سازنده: $it" } ?: ""}. پیش از ذخیره همه سؤال‌ها را بررسی کنید.",
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+                }
+            }
             item { AudienceCard(state, viewModel) }
             item { QuestionBankCard(state, viewModel) }
             items(state.questions, key = { it.id }) { question ->
@@ -125,6 +138,21 @@ fun ExamBuilderScreen(
                 }
             }
         }
+    }
+
+    state.recoverableDraft?.let { draft ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("پیش‌نویس بازیابی‌نشده") },
+            text = {
+                Text(
+                    "یک پیش‌نویس محلی با عنوان «${draft.title.ifBlank { "بدون عنوان" }}» و " +
+                        "${draft.questions.size} سؤال پیدا شد. بازیابی شود؟"
+                )
+            },
+            confirmButton = { Button(onClick = viewModel::restoreDraft) { Text("بازیابی") } },
+            dismissButton = { TextButton(onClick = viewModel::discardDraft) { Text("حذف پیش‌نویس") } }
+        )
     }
 
     if (confirmSave) {
@@ -237,12 +265,20 @@ private fun QuestionBankCard(state: ExamBuilderState, viewModel: ExamBuilderView
     }
 }
 
+private data class FormulaTarget(val field: String, val index: Int? = null)
+
 @Composable
 private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("نوع: ${question.type.faLabel()}")
             OutlinedTextField(question.text, { viewModel.updateText(question.id, it) }, label = { Text("متن سؤال") }, modifier = Modifier.fillMaxWidth())
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { formulaTarget = FormulaTarget("question") }) { Text("درج فرمول") }
+                if ('$' in question.text) Text("پیش‌نمایش Native:")
+            }
+            if ('$' in question.text) NativeMathText(question.text, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(question.score.toString(), { viewModel.updateScore(question.id, it) }, label = { Text("بارم") })
             QuestionMediaEditor(
                 images = question.images,
@@ -283,6 +319,12 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { formulaTarget = FormulaTarget("option", index) }) {
+                                Text("فرمول گزینه ${index + 1}")
+                            }
+                            if ('$' in option) NativeMathText(option)
+                        }
                         SingleImagePicker(
                             value = question.optionImages.getOrNull(index),
                             label = "تصویر گزینه ${index + 1}"
@@ -306,6 +348,15 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                 TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
             }
         }
+    }
+    formulaTarget?.let { target ->
+        FormulaEditorDialog(
+            onDismiss = { formulaTarget = null },
+            onInsert = { tex ->
+                viewModel.insertFormula(question.id, target.field, target.index, tex)
+                formulaTarget = null
+            }
+        )
     }
 }
 

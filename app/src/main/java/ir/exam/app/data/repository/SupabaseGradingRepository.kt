@@ -12,18 +12,22 @@ import ir.exam.app.data.dto.FeedbackPhraseDto
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.AttendanceRow
+import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.FeedbackPhrase
 import ir.exam.app.domain.model.GradingExam
 import ir.exam.app.domain.model.GradingQuestion
 import ir.exam.app.domain.model.GradingSubmission
+import ir.exam.app.domain.model.QuestionAnalysisRow
 import ir.exam.app.ui.builder.QuestionDraft
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -129,6 +133,61 @@ class SupabaseGradingRepository {
             pendingCount = answers.size - graded,
             averagePercent = percentages.average().takeUnless(Double::isNaN) ?: 0.0
         )
+    }
+
+    suspend fun questionAnalysis(examId: String): Result<ExamQuestionAnalysis> = runCatching {
+        val raw = rpcObject(
+            "native_question_analysis_v1",
+            buildJsonObject { put("p_exam", examId) }
+        ).throwRpcError()
+        val rows = raw["questions"]?.jsonArray.orEmpty().mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            QuestionAnalysisRow(
+                index = item["index"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null,
+                text = item["text"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                maxScore = item["max_score"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                gradedCount = item["graded_count"]?.jsonPrimitive?.intOrNull ?: 0,
+                answeredCount = item["answered_count"]?.jsonPrimitive?.intOrNull ?: 0,
+                averagePercent = item["average_percent"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                omitPercent = item["omit_percent"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                discrimination = item["discrimination"]?.jsonPrimitive?.doubleOrNull,
+                pointBiserial = item["point_biserial"]?.jsonPrimitive?.doubleOrNull,
+                level = item["level"]?.jsonPrimitive?.contentOrNull ?: "balanced"
+            )
+        }
+        ExamQuestionAnalysis(
+            examId = examId,
+            answerCount = raw["answer_count"]?.jsonPrimitive?.intOrNull ?: 0,
+            cronbachAlpha = raw["cronbach_alpha"]?.jsonPrimitive?.doubleOrNull,
+            questions = rows
+        )
+    }
+
+    suspend fun bulkSaveQuestion(
+        examId: String,
+        questionIndex: Int,
+        scores: Map<String, Double>
+    ): Result<Unit> = runCatching {
+        require(scores.isNotEmpty()) { "حداقل یک نمره وارد کنید." }
+        rpcObject(
+            "native_bulk_save_question_grades_v1",
+            buildJsonObject {
+                put("p_exam", examId)
+                put("p_question_index", questionIndex)
+                put("p_items", buildJsonArray {
+                    scores.forEach { (answerId, score) ->
+                        add(buildJsonObject { put("answer_id", answerId); put("score", score) })
+                    }
+                })
+            }
+        ).throwRpcError()
+    }
+
+    suspend fun finalizeBulkGrades(examId: String): Result<Unit> = runCatching {
+        rpcObject(
+            "native_finalize_bulk_grades_v1",
+            buildJsonObject { put("p_exam", examId) }
+        ).throwRpcError()
     }
 
     suspend fun myGrades(): Result<List<JsonObject>> = runCatching {

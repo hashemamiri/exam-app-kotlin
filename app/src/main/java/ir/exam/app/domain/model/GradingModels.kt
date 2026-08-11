@@ -84,3 +84,23 @@ data class ClassGradeRow(
     val scores: Map<String, Double?>,
     val averagePercent: Double?
 )
+
+data class QuestionAnalysisRow(
+    val index: Int,
+    val text: String,
+    val maxScore: Double,
+    val gradedCount: Int,
+    val answeredCount: Int,
+    val averagePercent: Double,
+    val omitPercent: Double,
+    val discrimination: Double?,
+    val pointBiserial: Double?,
+    val level: String
+)
+
+data class ExamQuestionAnalysis(
+    val examId: String,
+    val answerCount: Int,
+    val cronbachAlpha: Double?,
+    val questions: List<QuestionAnalysisRow>
+)

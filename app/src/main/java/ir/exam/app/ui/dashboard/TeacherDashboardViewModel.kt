@@ -3,7 +3,11 @@ package ir.exam.app.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.dto.ExamDashboardDto
+import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
+import ir.exam.app.domain.model.OfficialExamPrintable
+import ir.exam.app.domain.model.PortableFile
+import ir.exam.app.ui.builder.ExamImportDraft
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,12 +18,17 @@ data class TeacherDashboardState(
     val loading: Boolean = true,
     val actionLoading: Boolean = false,
     val exams: List<ExamDashboardDto> = emptyList(),
+    val portabilityLoading: Boolean = false,
+    val exportFile: PortableFile? = null,
+    val importDraft: ExamImportDraft? = null,
+    val printExam: OfficialExamPrintable? = null,
     val error: String? = null,
     val message: String? = null
 )
 
 class TeacherDashboardViewModel(
-    private val repository: SupabaseTeacherDashboardRepository = SupabaseTeacherDashboardRepository()
+    private val repository: SupabaseTeacherDashboardRepository = SupabaseTeacherDashboardRepository(),
+    private val portability: SupabasePortabilityRepository = SupabasePortabilityRepository()
 ) : ViewModel() {
     private val _state = MutableStateFlow(TeacherDashboardState())
     val state = _state.asStateFlow()
@@ -57,6 +66,37 @@ class TeacherDashboardViewModel(
 
     fun delete(exam: ExamDashboardDto) = action("آزمون و داده‌های وابسته حذف شد.") {
         repository.deleteExam(exam.id).getOrThrow()
+    }
+
+    fun exportExam(examId: String) = viewModelScope.launch {
+        _state.update { it.copy(portabilityLoading = true, exportFile = null, error = null) }
+        portability.exportExam(examId)
+            .onSuccess { file -> _state.update { it.copy(portabilityLoading = false, exportFile = file) } }
+            .onFailure { error -> _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) } }
+    }
+
+    fun consumeExport() { _state.update { it.copy(exportFile = null) } }
+
+    fun importExam(raw: String) {
+        _state.update { it.copy(portabilityLoading = true, error = null, importDraft = null) }
+        runCatching { portability.parseExam(raw) }
+            .onSuccess { draft -> _state.update { it.copy(portabilityLoading = false, importDraft = draft) } }
+            .onFailure { error -> _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) } }
+    }
+
+    fun consumeImport() { _state.update { it.copy(importDraft = null) } }
+
+    fun preparePrint(examId: String, includeAnswerKey: Boolean) = viewModelScope.launch {
+        _state.update { it.copy(portabilityLoading = true, printExam = null, error = null) }
+        portability.printableExam(examId, includeAnswerKey)
+            .onSuccess { printable -> _state.update { it.copy(portabilityLoading = false, printExam = printable) } }
+            .onFailure { error -> _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) } }
+    }
+
+    fun consumePrint() { _state.update { it.copy(printExam = null) } }
+
+    fun reportError(error: Throwable) {
+        _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) }
     }
 
     fun clearMessage() { _state.update { it.copy(message = null, error = null) } }

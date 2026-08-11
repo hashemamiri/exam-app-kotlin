@@ -23,10 +23,13 @@ data class GradingUiState(
     val selectedExam: GradingExam? = null,
     val submissions: List<GradingSubmission> = emptyList(),
     val edits: Map<String, GradingEdit> = emptyMap(),
+    val scoreInputs: Map<String, String> = emptyMap(),
+    val scoreErrors: Set<String> = emptySet(),
     val feedbackBank: List<FeedbackPhrase> = emptyList(),
     val attendance: List<AttendanceRow> = emptyList(),
     val liveStatus: JsonObject? = null,
     val mode: String = "grading",
+    val selectedQuestionIndex: Int = 0,
     val error: String? = null,
     val message: String? = null
 )
@@ -52,12 +55,17 @@ class GradingViewModel(
             val grades = exam.questions.indices.map { index -> answer.grades.getOrElse(index) { 0.0 } }
             answer.id to GradingEdit(grades, answer.feedback)
         }
+        val inputs = submissions.flatMap { answer ->
+            exam.questions.indices.map { index -> scoreKey(answer.id, index) to edits.getValue(answer.id).grades[index].toString() }
+        }.toMap()
         _state.update {
             it.copy(
                 actionLoading = false,
                 selectedExam = exam,
                 submissions = submissions,
                 edits = edits,
+                scoreInputs = inputs,
+                scoreErrors = emptySet(),
                 mode = "grading"
             )
         }
@@ -68,17 +76,34 @@ class GradingViewModel(
     }
 
     fun setMode(value: String) {
+        if (value !in setOf("grading", "question", "attendance")) return
         _state.update { it.copy(mode = value) }
         if (value == "attendance") loadAttendance()
     }
 
+    fun moveQuestion(delta: Int) {
+        val last = state.value.selectedExam?.questions?.lastIndex ?: 0
+        _state.update {
+            it.copy(selectedQuestionIndex = (it.selectedQuestionIndex + delta).coerceIn(0, last))
+        }
+    }
+
     fun setScore(answerId: String, questionIndex: Int, raw: String) {
         val max = state.value.selectedExam?.questions?.getOrNull(questionIndex)?.score ?: return
-        val value = raw.toDoubleOrNull()?.coerceIn(0.0, max) ?: 0.0
+        val normalized = ir.exam.app.core.calendar.PersianDigits.latin(raw).trim()
+        val value = normalized.toDoubleOrNull()
+        val key = scoreKey(answerId, questionIndex)
         _state.update { old ->
-            val edit = old.edits[answerId] ?: return@update old
+            val inputs = old.scoreInputs + (key to raw)
+            val invalid = value == null || value < 0.0 || value > max
+            if (invalid) return@update old.copy(scoreInputs = inputs, scoreErrors = old.scoreErrors + key)
+            val edit = old.edits[answerId] ?: return@update old.copy(scoreInputs = inputs)
             val grades = edit.grades.mapIndexed { index, current -> if (index == questionIndex) value else current }
-            old.copy(edits = old.edits + (answerId to edit.copy(grades = grades)))
+            old.copy(
+                edits = old.edits + (answerId to edit.copy(grades = grades)),
+                scoreInputs = inputs,
+                scoreErrors = old.scoreErrors - key
+            )
         }
     }
 
@@ -95,8 +120,30 @@ class GradingViewModel(
     }
 
     fun save(answerId: String) = action("نمره و بازخورد ذخیره شد.") {
+        require(state.value.scoreErrors.none { it.startsWith("$answerId:") }) { "یک یا چند نمره نامعتبر است." }
         val edit = state.value.edits[answerId] ?: error("داده نمره پیدا نشد.")
         repository.saveGrade(answerId, edit.grades, edit.feedback).getOrThrow()
+        reloadSelected()
+    }
+
+    fun saveCurrentQuestionForAll() = action("نمره این سؤال برای همه پاسخ‌ها اتمیک ذخیره شد.") {
+        val exam = state.value.selectedExam ?: error("آزمون انتخاب نشده است.")
+        val index = state.value.selectedQuestionIndex
+        val max = exam.questions.getOrNull(index)?.score ?: error("سؤال انتخاب‌شده معتبر نیست.")
+        require(state.value.scoreErrors.none { it.endsWith(":$index") }) { "یک یا چند نمره این سؤال نامعتبر است؛ هیچ نمره‌ای ذخیره نشد." }
+        val scores = state.value.submissions.associate { submission ->
+            val score = state.value.edits[submission.id]?.grades?.getOrNull(index)
+                ?: error("نمره ${submission.studentName} موجود نیست.")
+            require(score in 0.0..max) { "نمره ${submission.studentName} خارج از بازه است." }
+            submission.id to score
+        }
+        repository.bulkSaveQuestion(exam.id, index, scores).getOrThrow()
+        reloadSelected()
+    }
+
+    fun finalizeAllGrades() = action("نمره‌های گروهی نهایی شدند.") {
+        val examId = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
+        repository.finalizeBulkGrades(examId).getOrThrow()
         reloadSelected()
     }
 
@@ -152,7 +199,12 @@ class GradingViewModel(
                 answer.feedback
             )
         }
-        _state.update { it.copy(submissions = submissions, edits = edits) }
+        val inputs = submissions.flatMap { answer ->
+            exam.questions.indices.map { index -> scoreKey(answer.id, index) to edits.getValue(answer.id).grades[index].toString() }
+        }.toMap()
+        _state.update {
+            it.copy(submissions = submissions, edits = edits, scoreInputs = inputs, scoreErrors = emptySet())
+        }
     }
 
     private fun action(message: String, block: suspend () -> Unit) = viewModelScope.launch {
@@ -166,6 +218,8 @@ class GradingViewModel(
         _state.update { it.copy(loading = false, actionLoading = false, error = safeGradingError(error)) }
     }
 }
+
+private fun scoreKey(answerId: String, questionIndex: Int): String = "$answerId:$questionIndex"
 
 private fun safeGradingError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("URL:").substringBefore("Headers:")

@@ -66,6 +66,8 @@ data class ExamBuilderState(
     val availableClasses: List<AudienceClassOption> = emptyList(),
     val availableStudents: List<AudienceStudentOption> = emptyList(),
     val bankQuestions: List<BankQuestionOption> = emptyList(),
+    val importedBy: String? = null,
+    val recoverableDraft: ir.exam.app.data.repository.ExamBuilderDraftPayload? = null,
     val saving: Boolean = false,
     val bankLoading: Boolean = false,
     val uploadProgress: String? = null,
@@ -81,4 +83,20 @@ data class ExamSaveResult(
     val code: String,
     val chargedToman: Long,
     val walletBalanceToman: Long?
+)
+
+data class ExamImportDraft(
+    val title: String,
+    val subject: String,
+    val durationMinutes: Int,
+    val negativeMarking: Double,
+    val shuffleQuestions: Boolean,
+    val shuffleOptions: Boolean,
+    val teacherMessage: String,
+    val attemptsAllowed: Int,
+    val attemptOnTimeout: Boolean,
+    val gradePolicy: String,
+    val attemptCooldown: Int,
+    val questions: List<QuestionDraft>,
+    val exportedBy: String? = null
 )

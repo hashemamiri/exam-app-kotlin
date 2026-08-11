@@ -3,32 +3,123 @@ package ir.exam.app.ui.builder
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.jan.supabase.auth.auth
+import ir.exam.app.data.local.NativeDatabaseProvider
+import ir.exam.app.data.remote.SupabaseProvider
+import ir.exam.app.data.repository.ExamBuilderDraftStore
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
 import java.util.UUID
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ExamBuilderViewModel(
     context: Context,
     private val initialExamId: String? = null,
+    private val initialImport: ExamImportDraft? = null,
     private val repository: SupabaseExamBuilderRepository = SupabaseExamBuilderRepository(context)
 ) : ViewModel() {
+    private val appContext = context.applicationContext
+    private val ownerUserId = SupabaseProvider.client.auth.currentUserOrNull()?.id.orEmpty()
+    private val draftStore = ExamBuilderDraftStore(
+        NativeDatabaseProvider.get(appContext).examBuilderDraftDao()
+    )
     private val _state = MutableStateFlow(ExamBuilderState(loading = true, examId = initialExamId))
     val state = _state.asStateFlow()
     /** در تکرار پس از قطع پاسخ شبکه همان شناسه می‌ماند تا سرور دوباره پول کم نکند. */
     private var saveOperationId: String = UUID.randomUUID().toString()
+    private var cleanDraftFingerprint: Int? = null
 
     init {
         load()
+        startDraftAutoSave()
     }
 
     fun load() = viewModelScope.launch {
         _state.update { it.copy(loading = true, error = null) }
-        repository.load(initialExamId)
-            .onSuccess { loaded -> _state.value = loaded.copy(loading = false) }
+        repository.load(if (initialImport == null) initialExamId else null)
+            .onSuccess { loaded ->
+                _state.value = initialImport?.let { imported ->
+                    loaded.copy(
+                        loading = false,
+                        examId = null,
+                        code = null,
+                        title = imported.title,
+                        subject = imported.subject,
+                        durationMinutes = imported.durationMinutes.toString(),
+                        negativeMarking = imported.negativeMarking.toString(),
+                        shuffleQuestions = imported.shuffleQuestions,
+                        shuffleOptions = imported.shuffleOptions,
+                        teacherMessage = imported.teacherMessage,
+                        attemptsAllowed = imported.attemptsAllowed,
+                        attemptOnTimeout = imported.attemptOnTimeout,
+                        gradePolicy = imported.gradePolicy,
+                        attemptCooldown = imported.attemptCooldown.toString(),
+                        questions = imported.questions,
+                        importedBy = imported.exportedBy
+                    )
+                } ?: loaded.copy(loading = false)
+                cleanDraftFingerprint = draftFingerprint(_state.value)
+                if (initialImport == null && ownerUserId.isNotBlank()) {
+                    val draft = draftStore.load(ownerUserId)
+                    if (draft != null && draft.examId == initialExamId &&
+                        (draft.title.isNotBlank() || draft.questions.isNotEmpty())) {
+                        _state.update { it.copy(recoverableDraft = draft) }
+                    }
+                }
+            }
             .onFailure { error -> _state.update { it.copy(loading = false, error = safeBuilderError(error)) } }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun startDraftAutoSave() {
+        if (ownerUserId.isBlank()) return
+        viewModelScope.launch {
+            state.drop(1).debounce(900).collect { current ->
+                val fingerprint = draftFingerprint(current)
+                if (!current.loading && !current.saving && current.savedCode == null &&
+                    current.recoverableDraft == null && fingerprint != cleanDraftFingerprint) {
+                    draftStore.save(ownerUserId, current)
+                }
+            }
+        }
+    }
+
+    fun restoreDraft() {
+        val draft = state.value.recoverableDraft ?: return
+        _state.update { current ->
+            current.copy(
+                examId = draft.examId,
+                title = draft.title,
+                subject = draft.subject,
+                durationMinutes = draft.durationMinutes,
+                questions = draft.questions,
+                shuffleQuestions = draft.shuffleQuestions,
+                shuffleOptions = draft.shuffleOptions,
+                negativeMarking = draft.negativeMarking,
+                teacherMessage = draft.teacherMessage,
+                attemptsAllowed = draft.attemptsAllowed,
+                attemptOnTimeout = draft.attemptOnTimeout,
+                gradePolicy = draft.gradePolicy,
+                attemptCooldown = draft.attemptCooldown,
+                audienceMode = draft.audienceMode,
+                audienceClasses = draft.audienceClasses,
+                audienceStudents = draft.audienceStudents,
+                recoverableDraft = null,
+                error = null
+            )
+        }
+    }
+
+    fun discardDraft() = viewModelScope.launch {
+        if (ownerUserId.isNotBlank()) draftStore.clear(ownerUserId)
+        _state.update { it.copy(recoverableDraft = null) }
+        cleanDraftFingerprint = draftFingerprint(_state.value)
     }
 
     fun setTitle(value: String) { _state.update { it.copy(title = value, error = null) } }
@@ -70,6 +161,30 @@ class ExamBuilderViewModel(
     }
 
     fun updateText(id: String, text: String) { update(id) { it.copy(text = text) } }
+    fun insertFormula(id: String, target: String, index: Int?, tex: String) {
+        val wrapped = "${'$'}${tex.trim()}${'$'}"
+        update(id) { question ->
+            when (target) {
+                "question" -> question.copy(text = appendFormula(question.text, wrapped))
+                "option" -> question.copy(
+                    options = question.options.mapIndexed { i, value ->
+                        if (i == index) appendFormula(value, wrapped) else value
+                    }
+                )
+                "matching_left" -> question.copy(
+                    matchingLeft = question.matchingLeft.mapIndexed { i, value ->
+                        if (i == index) appendFormula(value, wrapped) else value
+                    }
+                )
+                "matching_right" -> question.copy(
+                    matchingRight = question.matchingRight.mapIndexed { i, value ->
+                        if (i == index) appendFormula(value, wrapped) else value
+                    }
+                )
+                else -> question
+            }
+        }
+    }
     fun updateScore(id: String, score: String) { update(id) { it.copy(score = score.toDoubleOrNull() ?: 0.0) } }
     fun updateOption(id: String, index: Int, text: String) { update(id) { question ->
         question.copy(options = question.options.mapIndexed { i, old -> if (i == index) text else old })
@@ -176,6 +291,7 @@ class ExamBuilderViewModel(
         repository.save(state.value, saveOperationId) { done, total ->
             _state.update { it.copy(uploadProgress = "آپلود تصویر $done از $total") }
         }.onSuccess { result ->
+            if (ownerUserId.isNotBlank()) draftStore.clear(ownerUserId)
             saveOperationId = UUID.randomUUID().toString()
             _state.update {
                 it.copy(
@@ -186,11 +302,34 @@ class ExamBuilderViewModel(
                     uploadProgress = null
                 )
             }
+            cleanDraftFingerprint = draftFingerprint(_state.value)
         }.onFailure { error ->
             _state.update { it.copy(saving = false, uploadProgress = null, error = safeBuilderError(error)) }
         }
     }
 }
+
+private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
+    state.examId,
+    state.title,
+    state.subject,
+    state.durationMinutes,
+    state.questions,
+    state.shuffleQuestions,
+    state.shuffleOptions,
+    state.negativeMarking,
+    state.teacherMessage,
+    state.attemptsAllowed,
+    state.attemptOnTimeout,
+    state.gradePolicy,
+    state.attemptCooldown,
+    state.audienceMode,
+    state.audienceClasses,
+    state.audienceStudents
+).hashCode()
+
+private fun appendFormula(current: String, formula: String): String =
+    if (current.isBlank()) formula else current.trimEnd() + " " + formula
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 private fun <T> List<T>.replaceAt(index: Int, value: T): List<T> = mapIndexed { i, old -> if (i == index) value else old }

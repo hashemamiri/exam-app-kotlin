@@ -7,6 +7,7 @@ import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.data.repository.SupabaseSchoolRepository
 import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.ClassGradeRow
+import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.SchoolClass
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +22,9 @@ data class ReportsState(
     val selectedClass: SchoolClass? = null,
     val selectedExamIds: Set<String> = emptySet(),
     val rows: List<ClassGradeRow> = emptyList(),
+    val selectedAnalysisExamId: String? = null,
+    val questionAnalysis: ExamQuestionAnalysis? = null,
+    val analysisLoading: Boolean = false,
     val error: String? = null
 )
 
@@ -45,10 +49,21 @@ class ReportsViewModel(
                     analytics = analytics,
                     exams = exams,
                     classes = classes,
-                    selectedExamIds = exams.mapTo(linkedSetOf(), ExamDashboardDto::id)
+                    selectedExamIds = exams.mapTo(linkedSetOf(), ExamDashboardDto::id),
+                    selectedAnalysisExamId = exams.firstOrNull()?.id
                 )
             }
+            exams.firstOrNull()?.let { loadQuestionAnalysis(it.id) }
         }.onFailure(::fail)
+    }
+
+    fun loadQuestionAnalysis(examId: String) = viewModelScope.launch {
+        _state.update {
+            it.copy(selectedAnalysisExamId = examId, analysisLoading = true, questionAnalysis = null, error = null)
+        }
+        grading.questionAnalysis(examId)
+            .onSuccess { analysis -> _state.update { it.copy(analysisLoading = false, questionAnalysis = analysis) } }
+            .onFailure { error -> _state.update { it.copy(analysisLoading = false, error = error.message?.take(240)) } }
     }
 
     fun selectClass(item: SchoolClass) {
@@ -104,6 +119,8 @@ class ReportsViewModel(
     }
 
     private fun csvCell(value: String): String = "\"${value.replace("\"", "\"\"")}\""
+
+    fun reportError(error: Throwable) = fail(error)
 
     private fun fail(error: Throwable) {
         _state.update { it.copy(loading = false, error = error.message?.take(240) ?: "گزارش‌گیری ناموفق بود.") }

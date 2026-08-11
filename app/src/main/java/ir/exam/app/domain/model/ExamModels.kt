@@ -94,3 +94,17 @@ data class SubmittedExam(
     val responseImages: Map<String, List<String>>,
     val submittedAtEpochMs: Long
 )
+
+sealed interface SubmissionOutcome {
+    data class Sent(val receipt: String? = null) : SubmissionOutcome
+    data class Queued(val actionId: String) : SubmissionOutcome
+}
+
+data class PendingSubmissionStatus(
+    val id: String,
+    val examId: String,
+    val state: String,
+    val attempts: Int,
+    val createdAt: Long,
+    val lastError: String?
+)

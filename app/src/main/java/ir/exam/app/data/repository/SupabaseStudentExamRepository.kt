@@ -4,25 +4,21 @@ import android.content.Context
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.remote.SupabaseProvider
-import ir.exam.app.domain.model.BooleanAnswer
-import ir.exam.app.domain.model.ChoiceAnswer
 import ir.exam.app.domain.model.EssayQuestion
 import ir.exam.app.domain.model.Exam
 import ir.exam.app.domain.model.FillBlankQuestion
-import ir.exam.app.domain.model.MatchingAnswer
 import ir.exam.app.domain.model.MatchingQuestion
 import ir.exam.app.domain.model.MultipleChoiceQuestion
 import ir.exam.app.domain.model.NumericQuestion
 import ir.exam.app.domain.model.Question
+import ir.exam.app.domain.model.SubmissionOutcome
 import ir.exam.app.domain.model.SubmittedExam
-import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.model.TrueFalseQuestion
 import ir.exam.app.domain.repository.ExamRepository
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -52,38 +48,52 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
         ).also { activeExam = it }
     }
 
-    override suspend fun submitAttempt(attempt: SubmittedExam): Result<Unit> = runCatching {
+    fun prepareSubmission(attempt: SubmittedExam): PendingSubmissionPayload {
         val exam = activeExam ?: error("آزمون فعال پیدا نشد")
         val studentId = SupabaseProvider.client.auth.currentUserOrNull()?.id
             ?: error("نشست دانش‌آموز پیدا نشد")
+        return PendingSubmissionCodec.fromAttempt(studentId, exam, attempt)
+    }
+
+    suspend fun sendPrepared(payload: PendingSubmissionPayload): SubmissionOutcome.Sent {
+        val studentId = SupabaseProvider.client.auth.currentUserOrNull()?.id
+            ?: error("نشست دانش‌آموز پیدا نشد")
+        require(studentId == payload.ownerUserId) { "صف پاسخ متعلق به حساب دیگری است." }
 
         val uploadedImages = buildMap<String, List<String>> {
-            attempt.responseImages.forEach { (questionId, uris) ->
-                put(questionId, uris.map { uri -> uploader.uploadAnswer(studentId, exam.id, questionId, uri) })
+            payload.responseImages.forEach { (questionId, uris) ->
+                put(
+                    questionId,
+                    uris.map { uri ->
+                        if (uri.startsWith("https://", true)) uri
+                        else uploader.uploadAnswer(studentId, payload.examId, questionId, uri)
+                    }
+                )
             }
         }
-        val responses = buildJsonArray {
-            exam.questions.forEach { question ->
-                add(when (val answer = attempt.answers[question.id]) {
-                    is TextAnswer -> JsonPrimitive(answer.value)
-                    is ChoiceAnswer -> JsonPrimitive(answer.selectedIndex)
-                    is BooleanAnswer -> JsonPrimitive(answer.value)
-                    is MatchingAnswer -> JsonObject(answer.pairs.mapKeys { it.key.toString() }.mapValues { JsonPrimitive(it.value) })
-                    null -> JsonPrimitive("")
+        val imagesJson = JsonObject(
+            uploadedImages.mapValues { (_, urls) -> JsonArray(urls.map(::JsonPrimitive)) }
+        )
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_submit_queued_answer_v1",
+            buildJsonObject {
+                put("p_operation", payload.operationId)
+                put("p_exam", payload.examId)
+                put("p_responses", payload.responses)
+                put("p_images", imagesJson)
+                put("p_meta", buildJsonObject {
+                    put("native", true)
+                    put("queued", true)
+                    put("created_at_epoch_ms", payload.createdAt)
                 })
             }
-        }
-        val imagesJson = JsonObject(uploadedImages.mapValues { (_, urls) -> JsonArray(urls.map(::JsonPrimitive)) })
-        val raw = SupabaseProvider.client.postgrest.rpc(
-            "submit_answer",
-            buildJsonObject {
-                put("p_exam_id", attempt.examId)
-                put("p_responses", responses)
-                put("p_images", imagesJson)
-                put("p_meta", buildJsonObject { put("native", true) })
-            }
         ).decodeSingle<JsonObject>()
-        raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        return SubmissionOutcome.Sent(raw["receipt"]?.jsonPrimitive?.contentOrNull)
+    }
+
+    override suspend fun submitAttempt(attempt: SubmittedExam): Result<SubmissionOutcome> = runCatching {
+        sendPrepared(prepareSubmission(attempt))
     }
 
     private fun parseQuestion(index: Int, obj: JsonObject): Question {

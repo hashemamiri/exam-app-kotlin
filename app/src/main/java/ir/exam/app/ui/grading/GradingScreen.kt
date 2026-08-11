@@ -35,6 +35,7 @@ import ir.exam.app.domain.model.GradingSubmission
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import ir.exam.app.ui.math.NativeMathText
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 
@@ -73,19 +74,30 @@ fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() })
             Text(exam.title, style = MaterialTheme.typography.titleLarge)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = state.mode == "grading", onClick = { viewModel.setMode("grading") }, label = { Text("تصحیح") })
-            FilterChip(selected = state.mode == "attendance", onClick = { viewModel.setMode("attendance") }, label = { Text("حضور و غیاب") })
+            FilterChip(selected = state.mode == "grading", onClick = { viewModel.setMode("grading") }, label = { Text("دانش‌آموزمحور") })
+            FilterChip(selected = state.mode == "question", onClick = { viewModel.setMode("question") }, label = { Text("سؤال‌محور") })
+            FilterChip(selected = state.mode == "attendance", onClick = { viewModel.setMode("attendance") }, label = { Text("حضور") })
             OutlinedButton(onClick = viewModel::approveAutoGrades) { Text("تأیید خودکار") }
             TextButton(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
         }
 
         if (state.mode == "attendance") {
             AttendanceContent(state.attendance, viewModel)
+        } else if (state.mode == "question") {
+            QuestionCentricContent(state, viewModel)
         } else {
             if (state.submissions.isEmpty()) Text("هنوز پاسخی ثبت نشده است.")
             else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.submissions, key = { it.id }) { submission ->
-                    SubmissionCard(exam.questions, submission, state.edits[submission.id], state.feedbackBank.map { it.text }, viewModel)
+                    SubmissionCard(
+                        exam.questions,
+                        submission,
+                        state.edits[submission.id],
+                        state.feedbackBank.map { it.text },
+                        state.scoreInputs,
+                        state.scoreErrors,
+                        viewModel
+                    )
                 }
             }
         }
@@ -111,6 +123,8 @@ private fun SubmissionCard(
     submission: GradingSubmission,
     edit: GradingEdit?,
     feedbackPhrases: List<String>,
+    scoreInputs: Map<String, String>,
+    scoreErrors: Set<String>,
     viewModel: GradingViewModel
 ) {
     if (edit == null) return
@@ -121,14 +135,17 @@ private fun SubmissionCard(
             questions.forEachIndexed { index, question ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("سؤال ${index + 1}: ${question.text}")
+                        NativeMathText("سؤال ${index + 1}: ${question.text}")
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
                         submission.responseImages[question.id].orEmpty().forEach { url ->
                             AsyncImage(url, "تصویر پاسخ", Modifier.size(160.dp))
                         }
+                        val scoreKey = "${submission.id}:$index"
                         OutlinedTextField(
-                            value = edit.grades.getOrElse(index) { 0.0 }.toString(),
+                            value = scoreInputs[scoreKey] ?: edit.grades.getOrElse(index) { 0.0 }.toString(),
                             onValueChange = { viewModel.setScore(submission.id, index, it) },
+                            isError = scoreKey in scoreErrors,
+                            supportingText = if (scoreKey in scoreErrors) ({ Text("نمره باید بین صفر و ${question.score} باشد.") }) else null,
                             label = { Text("نمره از ${question.score}") }
                         )
                     }
@@ -150,6 +167,59 @@ private fun SubmissionCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { viewModel.save(submission.id) }) { Text("ذخیره نمره") }
                 if (submission.graded) TextButton(onClick = { viewModel.unapprove(submission.id) }) { Text("لغو تأیید") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingViewModel) {
+    val exam = state.selectedExam ?: return
+    val index = state.selectedQuestionIndex.coerceIn(0, exam.questions.lastIndex.coerceAtLeast(0))
+    val question = exam.questions.getOrNull(index) ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { viewModel.moveQuestion(-1) }, enabled = index > 0) { Text("سؤال قبل") }
+                    Text("سؤال ${index + 1} از ${exam.questions.size} · بارم ${question.score}")
+                    OutlinedButton(onClick = { viewModel.moveQuestion(1) }, enabled = index < exam.questions.lastIndex) { Text("سؤال بعد") }
+                }
+                NativeMathText(question.text)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = state.submissions.isNotEmpty() && !state.actionLoading,
+                        onClick = viewModel::saveCurrentQuestionForAll
+                    ) { Text("ثبت اتمیک همه نمره‌ها") }
+                    OutlinedButton(
+                        enabled = state.submissions.isNotEmpty() && !state.actionLoading,
+                        onClick = viewModel::finalizeAllGrades
+                    ) { Text("نهایی‌سازی کل آزمون") }
+                }
+                Text("اگر حتی یک نمره نامعتبر باشد، هیچ‌کدام ذخیره نمی‌شود.")
+            }
+        }
+        if (state.submissions.isEmpty()) Text("هنوز پاسخی ثبت نشده است.")
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(state.submissions, key = { it.id }) { submission ->
+                val edit = state.edits[submission.id]
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(submission.studentName, style = MaterialTheme.typography.titleMedium)
+                        Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
+                        submission.responseImages[question.id].orEmpty().forEach { url ->
+                            AsyncImage(url, "تصویر پاسخ", Modifier.size(150.dp))
+                        }
+                        val scoreKey = "${submission.id}:$index"
+                        OutlinedTextField(
+                            value = state.scoreInputs[scoreKey] ?: edit?.grades?.getOrNull(index)?.toString().orEmpty(),
+                            onValueChange = { viewModel.setScore(submission.id, index, it) },
+                            isError = scoreKey in state.scoreErrors,
+                            supportingText = if (scoreKey in state.scoreErrors) ({ Text("نمره نامعتبر است.") }) else null,
+                            label = { Text("نمره از ${question.score}") }
+                        )
+                    }
+                }
             }
         }
     }

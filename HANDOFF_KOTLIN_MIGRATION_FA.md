@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ جامع V9 تقویم، پروفایل و کیف پول
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — پچ جامع V10 آفلاین، پشتیبان، چاپ و تحلیل
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -1504,3 +1504,100 @@ V11: parity نهایی، RLS/grants کامل، مهاجرت plain_password، ت�
 - محافظ minimum dependency age خود Deno غیرفعال نشد.
 - SQL و Kotlin تغییری نکردند.
 - wallet-payment پس از اصلاح دوباره deploy شد.
+
+
+---
+
+## ۲۱) پچ جامع V10 — آفلاین، انتقال داده، چاپ، فرمول و تحلیل
+
+### وضعیت ورودی
+
+```text
+V9 + V9.1 build/release                   → SUCCESS (اعلام کاربر)
+V9 SQL readiness                          → 5/5 true
+wallet-payment deploy + sandbox secrets   → SUCCESS
+V10 reference                             → WebView main@d82b2feedee1 + live schema
+```
+
+### قابلیت‌های V10
+
+```text
+Room pending_actions + WorkManager network constraint/backoff
+کپی تصاویر صف به filesDir خصوصی و پاک‌سازی بعد از رسید
+RPC idempotent برای ثبت پاسخ WorkManager
+نمای صف، retry، blocked-auth و failed برای دانش‌آموز
+پیش‌نویس خودکار Builder و بازیابی پس از process death
+Export/Import آزمون با EXAMPKG1 و .azmoon
+Backup نسخه‌دار بدون password/token/plain_password
+Restore انتخابی، تراکنشی، هزینه‌دار و idempotent
+چاپ/PDF رسمی Native چندصفحه‌ای با سربرگ جلالی
+چاپ آزمون، کلید و گزارش نمرات
+موتور فرمول Native و Formula Editor
+تصحیح سؤال‌محور گروهی با batch اتمیک
+progress guard و finalize کنترل‌شده
+تحلیل دشواری، omission، discrimination، corrected point-biserial و Cronbach alpha
+```
+
+### فایل‌های اصلی V10
+
+```text
+app/src/main/java/ir/exam/app/data/local/PendingActionEntity.kt
+app/src/main/java/ir/exam/app/data/local/PendingActionDao.kt
+app/src/main/java/ir/exam/app/data/local/ExamBuilderDraftEntity.kt
+app/src/main/java/ir/exam/app/data/local/NativeDatabaseProvider.kt
+app/src/main/java/ir/exam/app/data/work/PendingActionWorker.kt
+app/src/main/java/ir/exam/app/data/work/PendingActionScheduler.kt
+app/src/main/java/ir/exam/app/data/repository/PendingSubmissionCodec.kt
+app/src/main/java/ir/exam/app/data/repository/PendingMediaStore.kt
+app/src/main/java/ir/exam/app/data/repository/PendingActionRepository.kt
+app/src/main/java/ir/exam/app/data/repository/ExamBuilderDraftStore.kt
+app/src/main/java/ir/exam/app/data/repository/ExamPackageCodec.kt
+app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt
+app/src/main/java/ir/exam/app/core/math/NativeMathFormatter.kt
+app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt
+app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/core/printing/OfficialPrintController.kt
+app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt
+supabase/migrations/20260811_native_offline_portability_analysis.sql
+supabase/tests/20260811_v10_integration.sql
+COMPREHENSIVE_OFFLINE_PORTABILITY_PRINT_V10_FA.md
+```
+
+### SQL و امنیت
+
+- `native_submit_queued_answer_v1` روی operation UUID قفل advisory می‌گیرد و نتیجه موفق را برای retry نگه می‌دارد.
+- `native_bulk_save_question_grades_v1` کل batch را قبل از اولین UPDATE اعتبارسنجی می‌کند.
+- `native_finalize_bulk_grades_v1` برای پاسخ‌های تصحیح‌نشده progress همه سؤال‌ها را الزام می‌کند.
+- `native_question_analysis_v1` فقط آزمون متعلق به معلم را تحلیل می‌کند.
+- `native_export_backup_v1` هیچ رمز، token یا plain_password برنمی‌گرداند.
+- `native_restore_backup_v1` شناسه‌ها و teacher id ورودی را نادیده می‌گیرد، شناسه تازه می‌سازد و wallet را در همان تراکنش کم می‌کند.
+- همه UPDATE/DELETEها WHERE دارند.
+
+### نتیجه تست V10
+
+```text
+Kotlin compile                              → PASS
+JVM tests                                   → 38/38 PASS
+PostgreSQL 17 migration + second run        → PASS
+queued submit + retry idempotency           → PASS
+bulk grade atomic validation                → PASS
+finalize progress guard                     → PASS
+item analysis and reliability               → PASS
+backup excludes secrets                     → PASS
+paid restore + retry idempotency             → PASS
+safeupdate audit                            → PASS
+assembleDebug                               → BUILD SUCCESSFUL
+lintDebug                                   → BUILD SUCCESSFUL (0 error)
+APK Signature Scheme v2                     → Verified
+```
+
+### باقی‌مانده نهایی
+
+```text
+V11: parity نهایی، hardening کامل RLS/grants، مهاجرت plain_password،
+تست واقعی نقش‌های teacher/student، orphan Storage cleanup، retention APK،
+regression کامل و قطع مرجع WebView.
+```
+
+پس از موفقیت V10 فقط **یک پچ جامع V11** باقی می‌ماند.

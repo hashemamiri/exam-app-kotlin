@@ -63,6 +63,7 @@ import ir.exam.app.ui.auth.SignInScreen
 import ir.exam.app.ui.billing.WalletScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
+import ir.exam.app.ui.builder.ExamImportDraft
 import ir.exam.app.ui.calendar.CalendarScreen
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
@@ -111,6 +112,7 @@ fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
     }
     var page by remember(user.id) { mutableStateOf(MainPage.HOME) }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
+    var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
     var showSignOut by remember(user.id) { mutableStateOf(false) }
 
     LaunchedEffect(user.id, user.role) {
@@ -120,12 +122,12 @@ fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
     }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {
-        val builderViewModel = remember(user.id, editingExamId) {
-            ExamBuilderViewModel(appContext, editingExamId)
+        val builderViewModel = remember(user.id, editingExamId, importedExam) {
+            ExamBuilderViewModel(appContext, editingExamId, importedExam)
         }
         ExamBuilderScreen(
             viewModel = builderViewModel,
-            onBack = { editingExamId = null; page = MainPage.HOME }
+            onBack = { editingExamId = null; importedExam = null; page = MainPage.HOME }
         )
         return
     }
@@ -151,10 +153,11 @@ fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
         when (page) {
             MainPage.HOME -> when (user.role) {
                 UserRole.TEACHER -> TeacherDashboardScreen(
-                    onCreateExam = { editingExamId = null; page = MainPage.BUILDER },
-                    onEditExam = { id -> editingExamId = id; page = MainPage.BUILDER }
+                    onCreateExam = { editingExamId = null; importedExam = null; page = MainPage.BUILDER },
+                    onEditExam = { id -> editingExamId = id; importedExam = null; page = MainPage.BUILDER },
+                    onImportExam = { draft -> editingExamId = null; importedExam = draft; page = MainPage.BUILDER }
                 )
-                UserRole.STUDENT -> StudentHomeScreen()
+                UserRole.STUDENT -> StudentHomeScreen(user.id)
             }
             MainPage.CALENDAR -> CalendarScreen(user.role)
             MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) SchoolManagementScreen()

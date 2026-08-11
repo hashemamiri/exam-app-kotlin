@@ -22,14 +22,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import ir.exam.app.ui.math.NativeMathText
+import kotlinx.coroutines.launch
 
 @Composable
 fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() }) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(viewModel.csv().toByteArray()) }
     }
@@ -54,6 +59,42 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatCard("مانده", analytics.pendingCount.toString(), Modifier.weight(1f))
                     StatCard("میانگین", "%.1f%%".format(analytics.averagePercent), Modifier.weight(1f))
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("تحلیل پیشرفته کیفیت سؤال", style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        state.exams.take(5).forEach { exam ->
+                            FilterChip(
+                                selected = state.selectedAnalysisExamId == exam.id,
+                                onClick = { viewModel.loadQuestionAnalysis(exam.id) },
+                                label = { Text(exam.title.take(18)) }
+                            )
+                        }
+                    }
+                    if (state.analysisLoading) CircularProgressIndicator()
+                    state.questionAnalysis?.let { analysis ->
+                        Text(
+                            "${analysis.answerCount} پاسخ تصحیح‌شده · آلفای کرونباخ: " +
+                                (analysis.cronbachAlpha?.let { "%.3f".format(it) } ?: "داده ناکافی")
+                        )
+                        analysis.questions.forEach { row ->
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    NativeMathText("سؤال ${row.index + 1}: ${row.text}")
+                                    Text(
+                                        "میانگین ${"%.1f".format(row.averagePercent)}٪ · حذف ${"%.1f".format(row.omitPercent)}٪ · " +
+                                            "تمیز ${row.discrimination?.let { "%.3f".format(it) } ?: "—"} · " +
+                                            "همبستگی ${row.pointBiserial?.let { "%.3f".format(it) } ?: "—"}"
+                                    )
+                                    Text(row.level.faAnalysisLevel(), color = row.level.analysisColor())
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -92,12 +133,16 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                     OutlinedButton(
                         enabled = state.rows.isNotEmpty(),
                         onClick = {
-                            ReportPrintHelper.print(
-                                context,
-                                "لیست نمرات ${state.selectedClass?.name.orEmpty()}",
-                                selectedExams,
-                                state.rows
-                            )
+                            scope.launch {
+                                runCatching {
+                                    ReportPrintHelper.print(
+                                        context,
+                                        "لیست نمرات ${state.selectedClass?.name.orEmpty()}",
+                                        selectedExams,
+                                        state.rows
+                                    )
+                                }.onFailure(viewModel::reportError)
+                            }
                         }
                     ) { Text("چاپ / PDF") }
                 }
@@ -136,4 +181,20 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
             Text(label, style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+private fun String.faAnalysisLevel(): String = when (this) {
+    "very_easy" -> "بسیار آسان؛ بازبینی تمایز پیشنهاد می‌شود"
+    "easy" -> "آسان"
+    "hard" -> "دشوار"
+    "very_hard" -> "بسیار دشوار یا احتمالاً مبهم"
+    "weak_discrimination" -> "قدرت تمایز ضعیف؛ سؤال نیازمند بازبینی است"
+    else -> "متعادل"
+}
+
+@Composable
+private fun String.analysisColor(): Color = when (this) {
+    "very_hard", "weak_discrimination" -> MaterialTheme.colorScheme.error
+    "very_easy" -> MaterialTheme.colorScheme.tertiary
+    else -> MaterialTheme.colorScheme.primary
 }
