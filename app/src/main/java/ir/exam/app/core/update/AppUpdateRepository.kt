@@ -1,5 +1,17 @@
 package ir.exam.app.core.update
 
-data class RemoteVersion(val code:Int,val name:String,val notesFa:List<String>,val apkUrl:String)
-/** منبع نسخه از Supabase یا API امن؛ UI فقط مدل RemoteVersion را می‌بیند. */
-interface AppUpdateRepository { suspend fun latest():Result<RemoteVersion> }
+/** اطلاعات انتشار فعال که از Supabase دریافت می‌شود. */
+data class RemoteVersion(
+    val code: Int,
+    val name: String,
+    val notesFa: List<String>,
+    val apkUrl: String,
+    val sha256: String? = null,
+    val sizeBytes: Long? = null,
+    val required: Boolean = false
+)
+
+/** منبع نسخه مستقل از UI است تا بررسی نسخه قابل تست بماند. */
+interface AppUpdateRepository {
+    suspend fun latest(): Result<RemoteVersion>
+}

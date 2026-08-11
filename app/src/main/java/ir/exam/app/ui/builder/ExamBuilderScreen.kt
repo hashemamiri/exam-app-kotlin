@@ -1,5 +1,6 @@
 package ir.exam.app.ui.builder
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -15,6 +18,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -33,11 +38,24 @@ import ir.exam.app.ui.image.QuestionMediaEditor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExamBuilderScreen(viewModel: ExamBuilderViewModel) {
+fun ExamBuilderScreen(
+    viewModel: ExamBuilderViewModel,
+    onBack: () -> Unit
+) {
     val state by viewModel.state.collectAsState()
     var typeMenu by remember { mutableStateOf(false) }
+    BackHandler(onBack = onBack)
     Scaffold(
-        topBar = { TopAppBar(title = { Text("ساخت آزمون") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("ساخت آزمون") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             Box {
                 FloatingActionButton(onClick = { typeMenu = true }) { Text("+") }

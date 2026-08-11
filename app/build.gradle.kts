@@ -15,7 +15,14 @@ if (localPropertiesFile.exists()) {
 }
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
-
+val appVersionCode = localProperties.getProperty("APP_VERSION_CODE")
+    ?.toIntOrNull()
+    ?.takeIf { it > 0 }
+    ?: 2
+val appVersionName = localProperties.getProperty("APP_VERSION_NAME")
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: "1.1.0-native"
 
 val signingProperties = Properties()
 val signingPropertiesFile = rootProject.file("app/keystore.properties")
@@ -31,8 +38,8 @@ android {
         applicationId = "ir.exam.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-native"
+        versionCode = appVersionCode
+        versionName = appVersionName
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }

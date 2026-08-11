@@ -7,6 +7,7 @@ sealed class AppRoute(val value: String) {
     data object Otp : AppRoute("otp")
     data object TeacherDashboard : AppRoute("teacher_dashboard")
     data object StudentDashboard : AppRoute("student_dashboard")
+    data object About : AppRoute("about")
     data object ExamBuilder : AppRoute("exam_builder/{examId}")
     data object StudentExam : AppRoute("student_exam/{examId}")
 }
