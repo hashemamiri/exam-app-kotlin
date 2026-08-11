@@ -16,22 +16,25 @@ jobs:
           java-version: '17'
       - name: آماده‌سازی Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: آماده‌سازی Supabase و نسخه برنامه
+      - name: آماده‌سازی Supabase و نسخه خودکار برنامه
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          APP_VERSION_CODE: ${{ vars.APP_VERSION_CODE }}
-          APP_VERSION_NAME: ${{ vars.APP_VERSION_NAME }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_ANON_KEY"
-          APP_VERSION_CODE="${APP_VERSION_CODE:-3}"
-          APP_VERSION_NAME="${APP_VERSION_NAME:-1.1.1-native}"
+          NOW_UTC="$(date -u +%s)"
+          EPOCH_2020=1577836800
+          APP_VERSION_CODE=$((NOW_UTC - EPOCH_2020))
+          APP_VERSION_NAME="$(date -u +'%Y.%m.%d.%H%M%S')-native"
           test "$APP_VERSION_CODE" -gt 0
+          test "$APP_VERSION_CODE" -le 2100000000
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$APP_VERSION_CODE" "$APP_VERSION_NAME" \
             > local.properties
-          echo "Building version $APP_VERSION_NAME ($APP_VERSION_CODE)"
+          printf 'APP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
+            "$APP_VERSION_CODE" "$APP_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "Building automatic version $APP_VERSION_NAME ($APP_VERSION_CODE)"
       - name: بررسی امن اتصال Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -58,9 +61,22 @@ jobs:
           printf 'storeFile=release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > app/keystore.properties
       - name: ساخت APK Release امضاشده
         run: ./gradlew assembleRelease
-      - name: بارگذاری APKها
+      - name: آماده‌سازی بسته انتشار و مشخصات نسخه
+        run: |
+          SOURCE_APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$SOURCE_APK"
+          mkdir -p release
+          APK_FILE="exam-app-${APP_VERSION_NAME}-${APP_VERSION_CODE}.apk"
+          cp "$SOURCE_APK" "release/$APK_FILE"
+          APK_SHA256="$(sha256sum "release/$APK_FILE" | awk '{print $1}')"
+          APK_SIZE_BYTES="$(stat -c%s "release/$APK_FILE")"
+          printf 'APP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\nAPK_FILE=%s\nAPK_SHA256=%s\nAPK_SIZE_BYTES=%s\n' \
+            "$APP_VERSION_CODE" "$APP_VERSION_NAME" "$APK_FILE" "$APK_SHA256" "$APK_SIZE_BYTES" \
+            > release/update-metadata.txt
+          cat release/update-metadata.txt
+      - name: بارگذاری APK و مشخصات نسخه
         uses: actions/upload-artifact@v4
         with:
-          name: exam-app-release
-          path: app/build/outputs/apk/release/app-release.apk
+          name: exam-app-release-run-${{ github.run_number }}
+          path: release/
           if-no-files-found: error

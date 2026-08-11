@@ -16,49 +16,71 @@ supabase/migrations/20260811_app_updates.sql
 https://eazwuyrymsvdkwckdpco.supabase.co
 ```
 
-این SQL جدول `app_version`، RLS فقط‌خواندنی، تابع `check_app_update` و bucket عمومی `app-updates` را آماده می‌کند. آپلود در bucket عمومی نیست و فقط از Dashboard یا محیط مدیریتی انجام می‌شود.
+این SQL جدول `app_version`، RLS فقط‌خواندنی، تابع `check_app_update` و bucket عمومی `app-updates` را آماده می‌کند. این SQL طبق اعلام کاربر اجرا شده است.
 
-## ۲) تعیین نسخه Build در GitHub
+## ۲) نسخه‌گذاری کاملاً خودکار GitHub Actions
 
-در repository به مسیر زیر بروید:
-
-```text
-Settings → Secrets and variables → Actions → Variables
-```
-
-دو Variable بسازید:
+از پچ V3 به بعد دیگر ساخت یا ویرایش این Variableها لازم نیست:
 
 ```text
 APP_VERSION_CODE
 APP_VERSION_NAME
 ```
 
+اگر قبلاً آن‌ها را ساخته‌اید، می‌توانید نگه دارید یا حذف کنید؛ workflow دیگر آن‌ها را نمی‌خواند.
+
+در هر اجرای جدید GitHub Actions مقادیر به‌صورت خودکار ساخته می‌شوند:
+
+```text
+versionCode = تعداد ثانیه‌های گذشته از 2020-01-01 UTC
+versionName = تاریخ و ساعت UTC ساخت + native
+```
+
 نمونه:
 
 ```text
-APP_VERSION_CODE=20
-APP_VERSION_NAME=2.0.0
+APP_VERSION_CODE=208843215
+APP_VERSION_NAME=2026.08.11.041335-native
 ```
 
-`APP_VERSION_CODE` باید از نسخه نصب‌شده بیشتر باشد. اگر Variable ساخته نشود، مقدارهای پیش‌فرض پچ V2 برابر `3` و `1.1.1-native` هستند.
+بنابراین هر Build جدید، بدون ورود دستی مقدار، کد نسخه بالاتری می‌گیرد. اجرای دوباره workflow نیز نسخه جدید خودکار می‌سازد.
+
+برای Build محلی که داخل GitHub Actions نیست، fallback فعلی `3` و `1.1.1-native` باقی می‌ماند.
 
 اگر جدول `app_version` هنوز ردیف فعال نداشته باشد، برنامه پیام «برنامه شما به‌روز است» نشان می‌دهد؛ خالی‌بودن جدول خطا محسوب نمی‌شود.
 
-برای دیدن versionCode برنامه نصب‌شده، در صورت فعال بودن adb:
-
-```bash
-adb shell dumpsys package ir.exam.app | grep -m1 versionCode
-```
-
 ## ۳) ساخت Release
 
-پس از push، workflow زیر APK امضاشده را می‌سازد:
+پس از هر push، workflow زیر APK امضاشده را می‌سازد:
 
 ```text
 .github/workflows/android.yml
 ```
 
-فقط Artifact مربوط به اجرای کاملاً موفق را دانلود کنید. Release باید با همان `release.keystore` اصلی امضا شده باشد.
+Artifact خروجی نامی شبیه مورد زیر دارد:
+
+```text
+exam-app-release-run-25
+```
+
+داخل Artifact دو فایل قرار می‌گیرد:
+
+```text
+exam-app-<versionName>-<versionCode>.apk
+update-metadata.txt
+```
+
+فایل `update-metadata.txt` به‌صورت خودکار شامل این اطلاعات واقعی است:
+
+```text
+APP_VERSION_CODE
+APP_VERSION_NAME
+APK_FILE
+APK_SHA256
+APK_SIZE_BYTES
+```
+
+فقط Artifact مربوط به اجرای کاملاً موفق را استفاده کنید. Release باید با همان `release.keystore` اصلی امضا شده باشد.
 
 ## ۴) آپلود APK
 
@@ -68,31 +90,31 @@ adb shell dumpsys package ir.exam.app | grep -m1 versionCode
 app-updates
 ```
 
-APK را با نام انگلیسی و بدون فاصله آپلود کنید، برای مثال:
+همان APK داخل Artifact را بدون تغییر نام آپلود کنید. نشانی مستقیم به شکل زیر خواهد بود:
 
 ```text
-exam-app-2.0.0.apk
+https://eazwuyrymsvdkwckdpco.supabase.co/storage/v1/object/public/app-updates/<APK_FILE>
 ```
 
-نشانی مستقیم آن به شکل زیر است:
+## ۵) دریافت SHA-256 و اندازه
+
+دیگر محاسبه دستی لازم نیست. مقادیر دقیق را از فایل زیر بردارید:
 
 ```text
-https://eazwuyrymsvdkwckdpco.supabase.co/storage/v1/object/public/app-updates/exam-app-2.0.0.apk
+update-metadata.txt
 ```
 
-## ۵) محاسبه SHA-256 و اندازه
-
-اگر APK در Downloads ویندوز قرار دارد:
+برای کنترل اختیاری فایل دانلودشده در WSL نیز می‌توانید اجرا کنید:
 
 ```bash
-APK=/mnt/c/Users/Hashem/Downloads/app-release.apk && \
+APK=/mnt/c/Users/Hashem/Downloads/نام-واقعی-فایل.apk && \
 sha256sum "$APK" && \
-stat -c 'SIZE_BYTES=%s' "$APK"
+stat -c 'APK_SIZE_BYTES=%s' "$APK"
 ```
 
 ## ۶) فعال‌کردن نسخه جدید
 
-در SQL زیر همه مقدارهای نمونه را با اطلاعات واقعی APK عوض کنید:
+در SQL زیر مقادیر را دقیقاً از `update-metadata.txt` و نام فایل آپلودشده جایگزین کنید:
 
 ```sql
 begin;
@@ -111,12 +133,12 @@ insert into public.app_version (
     is_required,
     is_active
 ) values (
-    20,
-    '2.0.0',
-    '["بهبود رابط برنامه", "افزودن بروزرسانی مستقیم"]'::jsonb,
-    'https://eazwuyrymsvdkwckdpco.supabase.co/storage/v1/object/public/app-updates/exam-app-2.0.0.apk',
-    'SHA256_REAL_64_HEX',
-    12345678,
+    APP_VERSION_CODE_REAL,
+    'APP_VERSION_NAME_REAL',
+    '["بهبود رابط برنامه", "نسخه جدید سامانه آزمون"]'::jsonb,
+    'https://eazwuyrymsvdkwckdpco.supabase.co/storage/v1/object/public/app-updates/APK_FILE_REAL',
+    'APK_SHA256_REAL',
+    APK_SIZE_BYTES_REAL,
     false,
     true
 );
@@ -124,7 +146,9 @@ insert into public.app_version (
 commit;
 ```
 
-این اطلاعات باید دقیقاً با خود APK یکسان باشند؛ در غیر این صورت برنامه برای امنیت نصب را متوقف می‌کند.
+اطلاعات جدول باید دقیقاً با خود APK یکسان باشند؛ در غیر این صورت برنامه برای امنیت نصب را متوقف می‌کند.
+
+آپلود APK و فعال‌کردن ردیف انتشار فعلاً عمداً مدیریتی است. کلید مدیریتی نباید داخل APK، Git یا متن گفتگو قرار بگیرد.
 
 ## نکات قطعی Android
 

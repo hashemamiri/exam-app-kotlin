@@ -5,6 +5,7 @@
 local.properties
 build/
 app/build/
+release/
 *.jks
 *.keystore
 *.p12

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V2 بروزرسانی درون‌برنامه‌ای
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۱ — پچ V3 نسخه‌گذاری خودکار GitHub Actions
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -172,12 +172,16 @@ workflow فایل زیر است:
 دریافت سورس
 → Java 17
 → Gradle
-→ ساخت local.properties از Secretهای GitHub
+→ تولید خودکار versionCode از ثانیه‌های گذشته از 2020-01-01 UTC
+→ تولید خودکار versionName از تاریخ و ساعت UTC
+→ ساخت local.properties از Secretهای GitHub و نسخه خودکار
 → بررسی HTTP جدول profiles
 → testDebugUnitTest
 → آماده‌سازی keystore Release
 → assembleRelease
-→ Artifact APK Release
+→ تغییر نام APK با versionName و versionCode
+→ تولید update-metadata.txt شامل SHA-256 و اندازه
+→ Artifact شامل APK و metadata
 ```
 
 ---
@@ -748,9 +752,12 @@ Release: ir.exam.app
 - OTP عمومی و ایجاد خودکار profiles در حال تکمیل است.
 - پچ V1 منوی همبرگری و بروزرسانی امن APK اعمال و روی دستگاه اجرا شده است.
 - کاربر فایل `SQL_APP_UPDATE_V1.sql` را در پروژه اصلی Supabase اجرا کرده است.
-- پچ V2 رفتار جدول خالی را اصلاح می‌کند: نبود انتشار فعال یعنی «برنامه شما به‌روز است»، نه خطا.
-- مقدار پیش‌فرض Build در V2 برابر `versionCode=3` و `versionName=1.1.1-native` است؛ GitHub Variables همچنان اولویت دارند.
-- برای بروزرسانی واقعی بعدی باید APK امضاشده با versionCode بالاتر در bucket `app-updates` آپلود و metadata آن فعال شود.
+- پچ V2 اعمال و Push شده است و رفتار جدول خالی را اصلاح می‌کند: نبود انتشار فعال یعنی «برنامه شما به‌روز است»، نه خطا.
+- کاربر Variableهای `APP_VERSION_CODE=3` و `APP_VERSION_NAME=1.1.1-native` را ساخت، سپس درخواست کرد نسخه‌گذاری کاملاً خودکار شود.
+- پچ V3 وابستگی workflow به آن دو Variable را حذف می‌کند؛ وجود یا حذف آن‌ها اثری روی Build ندارد.
+- در V3، GitHub Actions در هر اجرا versionCode و versionName یکتا و بالاتر را از زمان UTC تولید می‌کند.
+- Artifact V3 علاوه بر APK نام‌گذاری‌شده، فایل `update-metadata.txt` شامل نسخه، SHA-256 و اندازه واقعی دارد.
+- برای بروزرسانی واقعی بعدی باید APK امضاشده در bucket `app-updates` آپلود و metadata آن فعال شود.
 - مهم‌ترین کار بعدی: تکمیل ماژول‌های باقی‌مانده به‌صورت واقعی، نه فقط اسکلت.
 - کاربر درخواست کرده قابلیت‌های باقی‌مانده در چهار پچ یکپارچه انجام شوند؛ اما هر پچ باید واقعاً نوشته، build و تست شود تا پچ صوری یا ناقص تحویل نشود.
 
@@ -768,6 +775,7 @@ app/src/main/java/ir/exam/app/data/repository/SupabaseAppUpdateRepository.kt
 app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt
 app/src/main/java/ir/exam/app/ui/update/UpdateViewModel.kt
 app/src/main/res/xml/update_file_paths.xml
+.github/workflows/android.yml
 supabase/migrations/20260811_app_updates.sql
 APP_UPDATE_SETUP_FA.md
 ```
@@ -799,8 +807,11 @@ bucket: app-updates
 
 - نسخه Release اصلی فقط با package `ir.exam.app` و همان keystore قبلی قابل جایگزینی است.
 - `versionCode` APK جدید باید از نسخه نصب‌شده و مقدار ردیف قبلی بیشتر باشد.
-- مقدارهای `APP_VERSION_CODE` و `APP_VERSION_NAME` از GitHub Actions Variables خوانده می‌شوند.
-- اگر Variable تعریف نشده باشد، مقادیر پیش‌فرض فعلی `3` و `1.1.1-native` هستند.
+- در GitHub Actions، `APP_VERSION_CODE` به‌صورت خودکار از تعداد ثانیه‌های گذشته از `2020-01-01 UTC` ساخته می‌شود.
+- در GitHub Actions، `APP_VERSION_NAME` از تاریخ و ساعت UTC ساخت با قالب `YYYY.MM.DD.HHMMSS-native` ساخته می‌شود.
+- Variableهای GitHub با نام `APP_VERSION_CODE` و `APP_VERSION_NAME` دیگر خوانده نمی‌شوند و نیاز به ویرایش ندارند.
+- Build محلی خارج از CI همچنان fallback برابر `3` و `1.1.1-native` دارد.
+- هر Artifact شامل APK با نام نسخه‌دار و فایل `update-metadata.txt` است.
 - نصب بی‌صدا در Android عادی ممکن نیست و تأیید صفحه نصب سیستم الزامی است.
 
 ### نتیجه تأیید پچ V2
@@ -812,6 +823,21 @@ Debug package                    → ir.exam.app.native
 Debug versionCode                → 3
 Debug versionName                → 1.1.1-native
 APK Signature Scheme v2          → Verified
+```
+
+### نتیجه تأیید پچ V3
+
+```text
+YAML workflow parse               → OK
+فرمول نسخه خودکار                 → OK
+./gradlew testDebugUnitTest        → BUILD SUCCESSFUL
+./gradlew assembleDebug            → BUILD SUCCESSFUL
+نسخه خودکار نمونه                 → 2026.08.11.042412-native
+versionCode خودکار نمونه           → 208585452
+Debug package                      → ir.exam.app.native
+APK Signature Scheme v2            → Verified
+update-metadata.txt در workflow     → تولید خودکار پس از Release
+SQL جدید                           → نیاز ندارد
 ```
 
 ### قانون دائمی هندآف
