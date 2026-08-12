@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V12 رفع جامع مسیرهای حیاتی Native
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V13.4 همسان‌سازی کامل مرجع فرمول Native
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -1999,3 +1999,64 @@ APK v2 signature           Verified
 ### نتیجه نقشه سه‌مرحله‌ای V13
 
 پس از Build و تست دستگاه هر سه Patch، فهرست «قابلیت‌های ناقص نسبت به WebView» پوشش داده شده است. WebView، plain_password، نمایش رمز قبلی و نصب silent عمداً بازنمی‌گردند و جزو parity مجاز نیستند.
+
+- هر سه Patch V13.1 تا V13.3 توسط کاربر اعمال و تا commit `a0c5071` با موفقیت Push شدند.
+
+---
+
+## ۲۷) V13.4 — همسان‌سازی دقیق ترتیب و نمادهای فرمول با مرجع کاربر
+
+### ورودی قطعی
+
+```text
+index.html                         SHA-256 7a33056ad2604bdcca2329f3cba15404df0e9c32180ed9315b941fc169d89c9f
+مرجع-کامل-بخش-فرمول.md           SHA-256 b65de8d6285ed60ebc50a1464547a8a268c864cc64083add4ccf5ce5e58e4936
+کد-خام-بخش-فرمول.txt             SHA-256 4986c0dff5781ad907cb286040186f1256f7820448564ba850e5d0105d4ac7ea
+فقط-html-بخش-فرمول.txt           SHA-256 5f9b14573d49756bb554598665da83bd79b90b10129091837cb7152006d35b83
+```
+
+### ترتیب Native
+
+```text
+سه حالت جعبه‌ای / تایپ سریع / آماده
+راهنما
+Undo / Redo / Copy / Paste / A− / A+
+پیش‌نمایش و کادر ساختاری
+دسته‌های اصلی دقیق مرجع
+ردیف اخیر / تبدیل / log / ∫ / ٫٪ / sin
+درج / سطر تازه / abc / کسر / توان / رادیکال
+keypad چهارردیفی دقیق مرجع
+جست‌وجو، کتابخانه و کد فرمول
+تایپ سریع و گالری آماده
+footer درج / پاک / انصراف
+```
+
+### داده مرجع
+
+```text
+گروه اصلی                 8
+دسته                       77
+ورودی دسته‌بندی‌شده       2084
+نماد Unicode               1200
+فرمول گالری                34
+```
+
+- `formula_library_v13.json` از آرایه‌های واقعی مرجع ساخته شد.
+- JavaScript یا WebView وارد runtime نشد؛ خواندن داده با Kotlin Serialization و رندر با Compose/Canvas است.
+- تبدیل طبیعی، ریشه فرجه‌دار، انتگرال چندگانه، فلش‌ها، مجموعه‌ها، یونانی و نمادهای فیزیک/شیمی توسعه یافت.
+
+### تست
+
+```text
+Kotlin compile                    PASS
+JVM tests                         56/56 PASS
+Formula reference asset          PASS
+UI order regression              PASS
+Unicode 1200                      PASS
+FINAL_NATIVE_VERIFY              PASS
+lintDebug                         PASS (0 error)
+assembleDebug                     PASS
+APK v2 signature                 Verified
+```
+
+SQL، Edge Function و Secret جدید لازم نیست.

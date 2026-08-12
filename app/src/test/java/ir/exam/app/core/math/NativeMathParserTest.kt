@@ -11,5 +11,9 @@ class NativeMathParserTest {
   val matrix=NativeMathParser.parse("\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}")
   assertTrue(matrix is MathNode.Matrix);assertEquals(2,(matrix as MathNode.Matrix).rows.size)
   assertTrue(NativeMathParser.parse("\\vec{F}") is MathNode.Accent)
+  val indexedRoot=NativeMathParser.parse("\\sqrt[3]{x}") as MathNode.Radical
+  assertTrue(indexedRoot.index!=null)
+  val symbols=NativeMathParser.parse("\\iint \\rightleftharpoons \\subseteq") as MathNode.Sequence
+  assertTrue(symbols.children.filterIsInstance<MathNode.Symbol>().any{it.value=="∬"})
  }
 }

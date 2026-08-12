@@ -12,8 +12,17 @@ object NativeMathFormatter {
         "\\infty" to "∞", "\\sum" to "∑", "\\prod" to "∏", "\\int" to "∫",
         "\\partial" to "∂", "\\nabla" to "∇", "\\rightarrow" to "→",
         "\\leftarrow" to "←", "\\Rightarrow" to "⇒", "\\in" to "∈",
-        "\\notin" to "∉", "\\subset" to "⊂", "\\cup" to "∪", "\\cap" to "∩",
-        "\\degree" to "°", "\\cdot" to "·"
+        "\\notin" to "∉", "\\subset" to "⊂", "\\subseteq" to "⊆", "\\supset" to "⊃", "\\supseteq" to "⊇",
+        "\\cup" to "∪", "\\cap" to "∩", "\\emptyset" to "∅", "\\forall" to "∀", "\\exists" to "∃",
+        "\\degree" to "°", "\\cdot" to "·", "\\angle" to "∠", "\\perp" to "⊥", "\\parallel" to "∥",
+        "\\equiv" to "≡", "\\simeq" to "≃", "\\therefore" to "∴", "\\propto" to "∝", "\\circ" to "∘",
+        "\\leftrightarrow" to "↔", "\\uparrow" to "↑", "\\downarrow" to "↓", "\\updownarrow" to "↕",
+        "\\Leftarrow" to "⇐", "\\Leftrightarrow" to "⇔", "\\mapsto" to "↦", "\\mapsfrom" to "↤",
+        "\\rightleftharpoons" to "⇌", "\\hookleftarrow" to "↩", "\\hookrightarrow" to "↪",
+        "\\iint" to "∬", "\\iiint" to "∭", "\\oint" to "∮", "\\bigcup" to "⋃", "\\bigcap" to "⋂",
+        "\\hbar" to "ℏ", "\\ldots" to "…", "\\cdots" to "⋯", "\\vdots" to "⋮", "\\ddots" to "⋱",
+        "\\eta" to "η", "\\zeta" to "ζ", "\\iota" to "ι", "\\kappa" to "κ", "\\nu" to "ν", "\\xi" to "ξ",
+        "\\tau" to "τ", "\\upsilon" to "υ", "\\chi" to "χ", "\\psi" to "ψ", "\\Phi" to "Φ", "\\Psi" to "Ψ"
     )
     private val superscript = mapOf(
         '0' to '⁰', '1' to '¹', '2' to '²', '3' to '³', '4' to '⁴',
@@ -82,12 +91,41 @@ object NativeMathFormatter {
     }
 
     fun quickToTex(raw: String): String {
-        var value = raw.trim()
+        var value = normalizeDigits(raw).trim()
         require(value.length <= 2_000) { "ورودی فرمول بیش از حد بلند است." }
-        value = value.replace(Regex("sqrt\\(([^()]*)\\)", RegexOption.IGNORE_CASE), "\\\\sqrt{$1}")
+        val words = linkedMapOf(
+            "بی‌نهایت" to "\\infty ", "بینهایت" to "\\infty ", "رادیکال" to "sqrt",
+            "جذر" to "sqrt", "ریشه" to "sqrt", "پی" to "\\pi ", "تتا" to "\\theta ",
+            "آلفا" to "\\alpha ", "بتا" to "\\beta ", "گاما" to "\\gamma ",
+            "دلتا" to "\\Delta ", "سیگما" to "\\sum ", "انتگرال" to "\\int ", "حد" to "\\lim "
+        )
+        words.forEach { (word, replacement) -> value = value.replace(word, replacement, ignoreCase = true) }
+        value = value.replace(Regex("sqrt\\s*\\(([^()]*)\\)", RegexOption.IGNORE_CASE), "\\\\sqrt{$1}")
+        value = value.replace(Regex("sqrt\\s*([0-9A-Za-z\\u0600-\\u06FF]+)", RegexOption.IGNORE_CASE), "\\\\sqrt{$1}")
+        value = value.replace(Regex("(?i)(?<![A-Za-z])pi(?![A-Za-z])"), "\\\\pi ")
+        value = value.replace(Regex("(?i)(?<![A-Za-z])inf(?:ty)?(?![A-Za-z])"), "\\\\infty ")
         value = value.replace("<=", "\\leq ").replace(">=", "\\geq ").replace("!=", "\\neq ")
-        value = value.replace("*", "\\times ")
+            .replace("+-", "\\pm ").replace("->", "\\to ").replace("=>", "\\Rightarrow ")
+            .replace("~=", "\\approx ").replace("⇌", "\\rightleftharpoons ")
+        value = value.replace("*", "\\times ").replace("÷", "\\div ")
+        if ("\\frac" !in value) value = convertSimpleFraction(value)
         return value.replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun normalizeDigits(value:String):String=value.map { c -> when(c){
+        in '۰'..'۹'->('0'.code+c.code-'۰'.code).toChar()
+        in '٠'..'٩'->('0'.code+c.code-'٠'.code).toChar()
+        else->c
+    }}.joinToString("")
+
+    private fun convertSimpleFraction(input:String):String {
+        val pattern=Regex("(\\([^()]+\\)|[A-Za-z0-9\\u0600-\\u06FF.^_{}+-]+)\\s*/\\s*(\\([^()]+\\)|[A-Za-z0-9\\u0600-\\u06FF.^_{}+-]+)")
+        var value=input
+        repeat(4){value=pattern.replace(value){m->
+            fun clean(v:String)=v.removePrefix("(").removeSuffix(")")
+            "\\frac{${clean(m.groupValues[1])}}{${clean(m.groupValues[2])}}"
+        }}
+        return value
     }
 
     fun isBalanced(tex: String): Boolean {

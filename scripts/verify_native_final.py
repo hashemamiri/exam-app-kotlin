@@ -29,6 +29,8 @@ database_provider = (ROOT / "app/src/main/java/ir/exam/app/data/local/NativeData
 student_results = (ROOT / "app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt").read_text()
 builder_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text()
 student_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt").read_text()
+formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
+formula_library=ROOT/"app/src/main/assets/formula_library_v13.json"
 
 require("android.webkit" not in main_text, "WebView/android.webkit import remains in Native source")
 require(not re.search(r"\b(val|var)\s+plain_password\b", main_text), "plain_password model field remains")
@@ -83,6 +85,11 @@ require((ROOT/"app/src/main/java/ir/exam/app/core/export/XlsxWorkbook.kt").exist
 require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").exists(),"interactive crop editor missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"PIN/device credential app lock missing")
 require((ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt").exists(),"structured native math parser missing")
+require(formula_library.exists() and formula_library.stat().st_size > 100_000,"complete formula reference asset missing")
+formula_markers=("🖱️ جعبه‌ای","⌨️ تایپ سریع","📚 آماده","⭐ موارد پرکاربرد","🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","🔍 همهٔ نمادها","⚙ یونیکد (۱۲۰۰)","🕘 اخیر","✨ تبدیل","FixedFormulaKeypad")
+formula_asset_text=formula_library.read_text(errors="ignore") if formula_library.exists() else ""
+require(all(marker in formula_editor+formula_asset_text for marker in formula_markers),"formula editor order/reference controls incomplete")
+require("۱۲۰۰" in formula_asset_text and "cur-phys-atomic" in formula_asset_text,"formula symbols/library reference incomplete")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 for match in re.finditer(r"(?im)^\s*(delete\s+from|update\s+)([^;]+);", hardening + "\n" + critical + "\n" + parity):
