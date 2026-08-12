@@ -1,5 +1,7 @@
 package ir.exam.app.ui.math
 
+import ir.exam.app.core.math.NativeMathParser
+import ir.exam.app.core.math.NativeMathSvgRenderer
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -31,5 +33,50 @@ class FormulaReferenceAssetTest {
         var position=-1
         markers.forEach{marker->val next=text.indexOf(marker,position+1);assertTrue("missing/order: $marker",next>position);position=next}
         listOf("(",")","7","8","9","⌫","↑","↓","4","5","6","÷","←","→","1","2","3","×","⌨","C","0","=","+","−").forEach{assertTrue(it in text)}
+    }
+
+    @Test fun `every reference tex command is supported by native svg parser`() {
+        val file=listOf(File("src/main/assets/formula_library_v13.json"),File("app/src/main/assets/formula_library_v13.json")).first(File::isFile)
+        val root=Json.parseToJsonElement(file.readText()).jsonObject
+        val formulas=buildList {
+            root["categories"]!!.jsonArray.forEach { category ->
+                category.jsonObject["items"]!!.jsonArray.forEach { entry ->
+                    add(entry.jsonObject["tex"]!!.jsonPrimitive.content)
+                }
+            }
+            root["gallery"]!!.jsonArray.forEach { group ->
+                group.jsonObject["items"]!!.jsonArray.forEach { entry ->
+                    add(entry.jsonObject["tex"]!!.jsonPrimitive.content)
+                }
+            }
+        }
+        val unsupported=formulas.flatMap(NativeMathParser::unsupportedCommands).toSortedSet()
+        assertTrue("unsupported SVG commands: $unsupported",unsupported.isEmpty())
+        assertTrue("reference formulas missing",formulas.size>=2118)
+        formulas.forEachIndexed { index, tex ->
+            val document=NativeMathSvgRenderer.render(tex,20f)
+            assertTrue("invalid SVG at $index: $tex",document.xml.startsWith("<svg")&&document.xml.endsWith("</svg>"))
+            assertTrue("invalid SVG size at $index",document.widthPx>0f&&document.heightPx>0f)
+            assertTrue("raw TeX leaked at $index: $tex",Regex("\\\\[A-Za-z]+").find(document.xml)==null)
+        }
+    }
+
+    @Test fun `formula library buttons and editor use svg instead of raw tex`() {
+        val root=listOf(File("."),File("..")).first { File(it,"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").isFile }
+        val editor=File(root,"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").readText()
+        val view=File(root,"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
+        val mixedText=File(root,"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").readText()
+        val renderer=File(root,"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").readText()
+        val gradle=File(root,"app/build.gradle.kts").readText()
+        assertTrue("NativeFormulaIcon" in editor)
+        assertTrue("SvgFormulaEditorSurface" in editor)
+        assertTrue("BasicTextField" in editor)
+        assertTrue("SvgDecoder.Factory" in view)
+        assertTrue("NativeMathSvgRenderer.render" in view)
+        assertTrue("NativeFormulaView" in mixedText)
+        assertTrue("mathAnnotated" !in mixedText)
+        assertTrue("<svg" in renderer)
+        assertTrue("io.coil-kt:coil-svg:2.7.0" in gradle)
+        assertTrue("Text(entry.tex" !in editor)
     }
 }

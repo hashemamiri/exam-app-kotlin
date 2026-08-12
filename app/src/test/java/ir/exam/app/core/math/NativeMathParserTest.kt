@@ -15,5 +15,8 @@ class NativeMathParserTest {
   assertTrue(indexedRoot.index!=null)
   val symbols=NativeMathParser.parse("\\iint \\rightleftharpoons \\subseteq") as MathNode.Sequence
   assertTrue(symbols.children.filterIsInstance<MathNode.Symbol>().any{it.value=="∬"})
+  assertTrue(NativeMathParser.parse("\\left(x+1\\right)") is MathNode.Delimited)
+  val lines=NativeMathParser.parse("x\\\\y") as MathNode.Sequence
+  assertTrue(lines.children.any{it==MathNode.LineBreak})
  }
 }

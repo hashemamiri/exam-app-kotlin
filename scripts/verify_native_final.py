@@ -30,6 +30,10 @@ student_results = (ROOT / "app/src/main/java/ir/exam/app/ui/reports/StudentResul
 builder_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text()
 student_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
+formula_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
+formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text()
+formula_svg=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").read_text()
+app_gradle=(ROOT/"app/build.gradle.kts").read_text()
 formula_library=ROOT/"app/src/main/assets/formula_library_v13.json"
 
 require("android.webkit" not in main_text, "WebView/android.webkit import remains in Native source")
@@ -90,6 +94,17 @@ formula_markers=("🖱️ جعبه‌ای","⌨️ تایپ سریع","📚 آم
 formula_asset_text=formula_library.read_text(errors="ignore") if formula_library.exists() else ""
 require(all(marker in formula_editor+formula_asset_text for marker in formula_markers),"formula editor order/reference controls incomplete")
 require("۱۲۰۰" in formula_asset_text and "cur-phys-atomic" in formula_asset_text,"formula symbols/library reference incomplete")
+require("io.coil-kt:coil-svg:2.7.0" in app_gradle,"Coil SVG decoder dependency missing")
+require("SvgDecoder.Factory" in formula_view and "NativeMathSvgRenderer.render" in formula_view,
+        "formula UI does not decode generated SVG")
+require("NativeFormulaIcon" in formula_editor and "SvgFormulaEditorSurface" in formula_editor,
+        "formula library/buttons/editor are not all routed through SVG")
+require("segments.forEach" in formula_text and "NativeFormulaView" in formula_text and "mathAnnotated" not in formula_text,
+        "simple question/option math segments can still bypass SVG")
+require("Text(entry.tex" not in formula_editor,
+        "raw TeX is still printed in formula library/menu")
+require("<svg" in formula_svg and "escapeXml" in formula_svg and "sanitizeColor" in formula_svg,
+        "safe self-contained native SVG generator missing")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 for match in re.finditer(r"(?im)^\s*(delete\s+from|update\s+)([^;]+);", hardening + "\n" + critical + "\n" + parity):

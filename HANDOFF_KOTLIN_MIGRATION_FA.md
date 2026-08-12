@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V13.4 همسان‌سازی کامل مرجع فرمول Native
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V13.5 رندر SVG کامل کتابخانه، دکمه‌ها و ویرایشگر فرمول
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2060,3 +2060,77 @@ APK v2 signature                 Verified
 ```
 
 SQL، Edge Function و Secret جدید لازم نیست.
+
+---
+
+## ۲۸) V13.5 — Hotfix رندر SVG کامل فرمول
+
+### علت
+
+پس از V13.4 داده و ترتیب مرجع کامل بود، اما دو مسیر هنوز می‌توانستند ظاهر کد ایجاد کنند:
+
+1. `NativeFormulaView` nodeها را با `Text`های Compose می‌چید و SVG واقعی نبود؛
+2. fallback دستور ناشناخته نام دستور را بدون backslash چاپ می‌کرد و کادر ساختاری نیز TeX را مستقیم نشان می‌داد.
+
+### اصلاح
+
+```text
+TeX داخلی → NativeMathParser → MathNode AST → NativeMathSvgRenderer
+           → SVG مستقل → Coil SvgDecoder / AndroidSVG → Compose
+```
+
+- `NativeMathSvgRenderer.kt` اضافه شد.
+- `coil-svg:2.7.0` هم‌نسخه با Coil موجود اضافه شد.
+- کسر، رادیکال، توان/زیرنویس، ماتریس، دلیمتر و accent با `path`/`line` SVG رسم می‌شوند.
+- glyphهای عددی، حرفی، یونانی و Unicode داخل همان سند SVG قرار دارند.
+- کتابخانه، Unicode 1200، علاقه‌مندی، اخیر، منوهای سریع، keypad، ابزارهای کسر/توان/رادیکال، تایپ سریع و گالری از `NativeFormulaIcon`/`NativeFormulaView` SVG استفاده می‌کنند.
+- کادر فرمول‌نویسی به سطح تصویری SVG تبدیل شد؛ input نامرئی فقط برای دریافت صفحه‌کلید است.
+- TeX فقط در بخش جمع‌شدهٔ حرفه‌ای و پس از انتخاب صریح کاربر قابل مشاهده است.
+- نام کد خام از فهرست فرمول‌های اخیر حذف شد.
+- همهٔ commandهای واقعی asset پوشش داده شدند و unknown command دیگر نام خام خود را نمایش نمی‌دهد.
+- `\\` و `\left ... \right` node ساختاری دارند.
+- نمایش فرمول در سؤال و گزینه، حتی نمادهای سادهٔ `alpha`/`times`، از همان `NativeFormulaView` SVG عبور می‌کند و مسیر AnnotatedString خام حذف شد.
+- چاپ/PDF از همان AST و Canvas برداری امن باقی ماند.
+
+### امنیت SVG
+
+```text
+ورودی XML-escaped
+رنگ محدود به #RRGGBB
+بدون URL خارجی
+بدون href/src
+بدون script
+بدون foreignObject
+بدون JavaScript یا WebView
+memory-only generation
+```
+
+### ممیزی و تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              64/64 PASS
+Reference SVG generation              2118/2118 PASS
+Unicode exact count                   1200 PASS
+Raw unknown command leak                 0 PASS
+SVG XML/security tests                   PASS
+FINAL_NATIVE_VERIFY                      PASS
+lintDebug                        PASS (0 error, 24 warning)
+assembleDebug                            PASS
+APK v2 signature                      Verified
+SvgDecoder + AndroidSVG packaged         PASS
+```
+
+هشدارهای lint خطا نیستند و به کدهای قدیمی/نسخه‌های جدید dependency مربوط‌اند.
+
+### استقرار
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+پیش‌نیاز: V13.4
+```
+
+راهنمای مستقل: `FORMULA_SVG_RENDERING_V13_5_FA.md`.

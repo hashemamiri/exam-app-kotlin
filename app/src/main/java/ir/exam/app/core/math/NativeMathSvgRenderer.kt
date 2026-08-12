@@ -1,0 +1,370 @@
+package ir.exam.app.core.math
+
+import java.security.MessageDigest
+import java.util.Locale
+import kotlin.math.max
+import kotlin.math.round
+
+/** یک سند SVG مستقل، بدون URL خارجی، script، style یا foreignObject. */
+data class MathSvgDocument(
+    val xml: String,
+    val widthPx: Float,
+    val heightPx: Float,
+    val cacheKey: String
+)
+
+/**
+ * AST بومی فرمول را به SVG امن و مستقل تبدیل می‌کند.
+ *
+ * تنها elementهای تولیدشده `svg`، `g`، `text`، `path`، `line` و `circle` هستند.
+ * ورودی کاربر همیشه XML-escape می‌شود و هیچ بخشی از TeX به‌عنوان markup وارد خروجی نمی‌شود.
+ */
+object NativeMathSvgRenderer {
+    private const val MIN_FONT = 8f
+    private const val MAX_FONT = 160f
+    private const val MAX_DIMENSION = 16_384f
+
+    fun render(
+        tex: String,
+        fontSizePx: Float = 32f,
+        color: String = "#111111",
+        opacity: Float = 1f
+    ): MathSvgDocument {
+        val safeFont = fontSizePx.coerceIn(MIN_FONT, MAX_FONT)
+        val safeColor = sanitizeColor(color)
+        val safeOpacity = opacity.coerceIn(0f, 1f)
+        val node = runCatching { NativeMathParser.parse(tex) }.getOrElse { MathNode.Symbol("□") }
+        val layout = layout(node, safeFont)
+        val width = (layout.width + safeFont * .20f).coerceIn(1f, MAX_DIMENSION)
+        val height = (layout.height + safeFont * .16f).coerceIn(1f, MAX_DIMENSION)
+        val body = translate(layout.body, safeFont * .10f, safeFont * .08f)
+        val xml = buildString(body.length + 320) {
+            append("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ")
+            append(number(width)).append(' ').append(number(height))
+            append("\" width=\"").append(number(width)).append("\" height=\"")
+            append(number(height)).append("\" preserveAspectRatio=\"xMinYMid meet\">")
+            append("<title>فرمول ریاضی</title>")
+            append("<g fill=\"").append(safeColor).append("\" stroke=\"").append(safeColor)
+            append("\" fill-opacity=\"").append(number(safeOpacity)).append("\" stroke-opacity=\"")
+            append(number(safeOpacity))
+            append("\" stroke-linecap=\"round\" stroke-linejoin=\"round\">")
+            append(body)
+            append("</g></svg>")
+        }
+        val digest = sha256("$safeFont|$safeColor|$safeOpacity|$tex")
+        return MathSvgDocument(xml, width, height, "native-math-svg-$digest")
+    }
+
+    private data class Layout(
+        val width: Float,
+        val height: Float,
+        val baseline: Float,
+        val body: String
+    )
+
+    private fun layout(node: MathNode, size: Float): Layout = when (node) {
+        is MathNode.Symbol -> symbol(node, size)
+        is MathNode.Sequence -> sequence(node, size)
+        is MathNode.Fraction -> fraction(node, size)
+        is MathNode.Radical -> radical(node, size)
+        is MathNode.Script -> script(node, size)
+        is MathNode.Matrix -> matrix(node, size)
+        is MathNode.Accent -> accent(node, size)
+        is MathNode.Delimited -> delimited(node, size)
+        MathNode.LineBreak -> Layout(0f, size * 1.32f, size, "")
+    }
+
+    private fun symbol(node: MathNode.Symbol, size: Float): Layout {
+        if (node.value.isEmpty()) return Layout(0f, size * 1.2f, size * .90f, "")
+        val width = estimateTextWidth(node.value, size).coerceAtLeast(size * .10f)
+        val baseline = size * .94f
+        val italic = node.value.codePointCount(0, node.value.length) == 1 &&
+            node.value.firstOrNull()?.isLetter() == true && node.value.all { it.code < 128 }
+        val rtl = node.value.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
+        val body = buildString {
+            append("<text x=\"").append(number(if (rtl) width else 0f)).append("\" y=\"")
+            append(number(baseline))
+            append("\" font-family=\"serif\" font-size=\"").append(number(size)).append('"')
+            if (node.bold) append(" font-weight=\"700\"")
+            if (italic) append(" font-style=\"italic\"")
+            if (rtl) append(" text-anchor=\"end\" direction=\"rtl\"")
+            else append(" direction=\"ltr\"")
+            append(" unicode-bidi=\"bidi-override\">")
+            append(escapeXml(node.value)).append("</text>")
+        }
+        return Layout(width, size * 1.24f, baseline, body)
+    }
+
+    private fun sequence(node: MathNode.Sequence, size: Float): Layout {
+        val lines = mutableListOf<MutableList<MathNode>>(mutableListOf())
+        node.children.forEach { child ->
+            if (child == MathNode.LineBreak) lines.add(mutableListOf()) else lines.last().add(child)
+        }
+        val layouts = lines.map { line -> horizontal(line.map { layout(it, size) }, size) }
+        if (layouts.size == 1) return layouts.first()
+        val gap = size * .28f
+        val width = layouts.maxOfOrNull { it.width } ?: size * .2f
+        var y = 0f
+        val body = buildString {
+            layouts.forEach { line ->
+                append(translate(line.body, 0f, y))
+                y += line.height + gap
+            }
+        }
+        return Layout(width, (y - gap).coerceAtLeast(size), layouts.first().baseline, body)
+    }
+
+    private fun horizontal(items: List<Layout>, size: Float): Layout {
+        if (items.isEmpty()) return Layout(size * .2f, size * 1.24f, size * .94f, "")
+        val baseline = items.maxOf { it.baseline }
+        val descent = items.maxOf { it.height - it.baseline }
+        var x = 0f
+        val body = buildString {
+            items.forEach { item ->
+                append(translate(item.body, x, baseline - item.baseline))
+                x += item.width
+            }
+        }
+        return Layout(x, baseline + descent, baseline, body)
+    }
+
+    private fun fraction(node: MathNode.Fraction, size: Float): Layout {
+        val numerator = layout(node.top, size * .76f)
+        val denominator = layout(node.bottom, size * .76f)
+        val padding = size * .18f
+        val gap = size * .10f
+        val width = max(numerator.width, denominator.width) + padding * 2
+        val lineY = numerator.height + gap
+        val bottomY = lineY + gap
+        val height = bottomY + denominator.height
+        val body = buildString {
+            append(translate(numerator.body, (width - numerator.width) / 2f, 0f))
+            append("<line x1=\"").append(number(padding * .25f)).append("\" y1=\"")
+            append(number(lineY)).append("\" x2=\"").append(number(width - padding * .25f))
+            append("\" y2=\"").append(number(lineY)).append("\" stroke-width=\"")
+            append(number(max(1.2f, size * .055f))).append("\"/>")
+            append(translate(denominator.body, (width - denominator.width) / 2f, bottomY))
+        }
+        return Layout(width, height, bottomY + denominator.baseline, body)
+    }
+
+    private fun radical(node: MathNode.Radical, size: Float): Layout {
+        val radicand = layout(node.body, size)
+        val rootIndex = node.index?.let { layout(it, size * .46f) }
+        val indexWidth = rootIndex?.width ?: 0f
+        val hookWidth = size * .72f
+        val topPadding = size * .15f
+        val bodyX = indexWidth + hookWidth
+        val width = bodyX + radicand.width + size * .08f
+        val height = max(radicand.height + topPadding, size * 1.30f)
+        val stroke = max(1.3f, size * .065f)
+        val hookStartX = indexWidth + size * .04f
+        val middleY = topPadding + radicand.height * .58f
+        val lowY = topPadding + radicand.height * .84f
+        val topY = topPadding
+        val body = buildString {
+            rootIndex?.let { append(translate(it.body, 0f, topPadding + size * .22f)) }
+            append("<path d=\"M ").append(number(hookStartX)).append(' ').append(number(middleY))
+            append(" L ").append(number(hookStartX + size * .18f)).append(' ').append(number(middleY))
+            append(" L ").append(number(hookStartX + size * .28f)).append(' ').append(number(lowY))
+            append(" L ").append(number(bodyX - size * .08f)).append(' ').append(number(topY))
+            append(" L ").append(number(width)).append(' ').append(number(topY))
+            append("\" fill=\"none\" stroke-width=\"").append(number(stroke)).append("\"/>")
+            append(translate(radicand.body, bodyX, topPadding + size * .08f))
+        }
+        return Layout(width, height + size * .08f, topPadding + size * .08f + radicand.baseline, body)
+    }
+
+    private fun script(node: MathNode.Script, size: Float): Layout {
+        val base = layout(node.base, size)
+        val upper = node.upper?.let { layout(it, size * .58f) }
+        val lower = node.lower?.let { layout(it, size * .58f) }
+        val upperLift = if (upper != null) max(size * .30f, upper.height * .68f) else 0f
+        val baseY = upperLift
+        val scriptX = base.width + size * .035f
+        val lowerY = baseY + base.baseline + size * .12f
+        val width = base.width + max(upper?.width ?: 0f, lower?.width ?: 0f) + size * .04f
+        val height = max(
+            baseY + base.height,
+            lowerY + (lower?.height ?: 0f)
+        )
+        val body = buildString {
+            append(translate(base.body, 0f, baseY))
+            upper?.let { append(translate(it.body, scriptX, 0f)) }
+            lower?.let { append(translate(it.body, scriptX, lowerY)) }
+        }
+        return Layout(width, height, baseY + base.baseline, body)
+    }
+
+    private fun matrix(node: MathNode.Matrix, size: Float): Layout {
+        val cellSize = size * .72f
+        val rows = node.rows.map { row -> row.map { layout(it, cellSize) } }
+        val columnCount = rows.maxOfOrNull { it.size } ?: 0
+        val columnGap = size * .38f
+        val rowGap = size * .24f
+        val columnWidths = (0 until columnCount).map { column ->
+            rows.maxOfOrNull { row -> row.getOrNull(column)?.width ?: 0f } ?: 0f
+        }
+        val rowHeights = rows.map { row -> row.maxOfOrNull { it.height } ?: cellSize }
+        val sideWidth = if (node.delimiter == ' ') size * .10f else size * .42f
+        val insideWidth = columnWidths.sum() + columnGap * (columnCount - 1).coerceAtLeast(0)
+        val insideHeight = rowHeights.sum() + rowGap * (rows.size - 1).coerceAtLeast(0)
+        val width = insideWidth + sideWidth * 2
+        val height = insideHeight + size * .20f
+        val body = buildString {
+            var y = size * .10f
+            rows.forEachIndexed { rowIndex, row ->
+                var x = sideWidth
+                row.forEachIndexed { columnIndex, cell ->
+                    val cellX = x + (columnWidths[columnIndex] - cell.width) / 2f
+                    val cellY = y + (rowHeights[rowIndex] - cell.height) / 2f
+                    append(translate(cell.body, cellX, cellY))
+                    x += columnWidths[columnIndex] + columnGap
+                }
+                y += rowHeights[rowIndex] + rowGap
+            }
+            if (node.delimiter != ' ') {
+                append(delimiterPath(node.delimiter.toString(), sideWidth, height, true, size))
+                val close = when (node.delimiter) {
+                    '(' -> ")"
+                    '{' -> ""
+                    '|' -> "|"
+                    else -> "]"
+                }
+                if (close.isNotEmpty()) {
+                    append(translate(delimiterPath(close, sideWidth, height, false, size), width - sideWidth, 0f))
+                }
+            }
+        }
+        return Layout(width, height, height * .56f, body)
+    }
+
+    private fun accent(node: MathNode.Accent, size: Float): Layout {
+        val base = layout(node.body, size)
+        val accentHeight = size * .28f
+        val y = accentHeight + size * .08f
+        val width = max(base.width, size * .38f)
+        val center = width / 2f
+        val stroke = max(1.15f, size * .055f)
+        val accent = when (node.mark) {
+            "hat" -> "<path d=\"M ${number(center - size * .22f)} ${number(accentHeight)} L ${number(center)} ${number(size * .04f)} L ${number(center + size * .22f)} ${number(accentHeight)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            "bar" -> "<line x1=\"${number((width - base.width) / 2f)}\" y1=\"${number(accentHeight * .55f)}\" x2=\"${number((width + base.width) / 2f)}\" y2=\"${number(accentHeight * .55f)}\" stroke-width=\"${number(stroke)}\"/>"
+            "vec" -> "<path d=\"M ${number(center - size * .28f)} ${number(accentHeight * .62f)} L ${number(center + size * .28f)} ${number(accentHeight * .62f)} M ${number(center + size * .28f)} ${number(accentHeight * .62f)} L ${number(center + size * .13f)} ${number(accentHeight * .18f)} M ${number(center + size * .28f)} ${number(accentHeight * .62f)} L ${number(center + size * .13f)} ${number(accentHeight)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            "dot" -> "<circle cx=\"${number(center)}\" cy=\"${number(accentHeight * .55f)}\" r=\"${number(max(1.2f, size * .065f))}\" stroke=\"none\"/>"
+            else -> ""
+        }
+        return Layout(
+            width,
+            y + base.height,
+            y + base.baseline,
+            accent + translate(base.body, (width - base.width) / 2f, y)
+        )
+    }
+
+    private fun delimited(node: MathNode.Delimited, size: Float): Layout {
+        val bodyLayout = layout(node.body, size)
+        val sideWidth = max(size * .34f, bodyLayout.height * .20f)
+        val padding = size * .08f
+        val height = max(bodyLayout.height, size * 1.24f)
+        val bodyY = (height - bodyLayout.height) / 2f
+        val width = bodyLayout.width + sideWidth * 2 + padding * 2
+        val body = buildString {
+            if (node.open.isNotEmpty()) append(delimiterPath(node.open, sideWidth, height, true, size))
+            append(translate(bodyLayout.body, sideWidth + padding, bodyY))
+            if (node.close.isNotEmpty()) {
+                append(translate(delimiterPath(node.close, sideWidth, height, false, size), width - sideWidth, 0f))
+            }
+        }
+        return Layout(width, height, bodyY + bodyLayout.baseline, body)
+    }
+
+    private fun delimiterPath(
+        delimiter: String,
+        width: Float,
+        height: Float,
+        left: Boolean,
+        size: Float
+    ): String {
+        val stroke = max(1.15f, size * .052f)
+        val inset = width * .18f
+        val outside = if (left) width - inset else inset
+        val inside = if (left) inset else width - inset
+        return when (delimiter) {
+            "(", ")" -> "<path d=\"M ${number(outside)} ${number(inset)} Q ${number(inside)} ${number(height / 2f)} ${number(outside)} ${number(height - inset)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            "[", "]", "⌊", "⌋", "⌈", "⌉" -> {
+                val top = delimiter !in setOf("⌊", "⌋")
+                val bottom = delimiter !in setOf("⌈", "⌉")
+                buildString {
+                    append("<path d=\"")
+                    if (top) append("M ${number(outside)} ${number(inset)} L ${number(inside)} ${number(inset)} ")
+                    append("M ${number(inside)} ${number(inset)} L ${number(inside)} ${number(height - inset)} ")
+                    if (bottom) append("M ${number(inside)} ${number(height - inset)} L ${number(outside)} ${number(height - inset)}")
+                    append("\" fill=\"none\" stroke-width=\"").append(number(stroke)).append("\"/>")
+                }
+            }
+            "{", "}" -> {
+                val mid = height / 2f
+                "<path d=\"M ${number(outside)} ${number(inset)} Q ${number(inside)} ${number(height * .22f)} ${number(outside)} ${number(mid - inset)} Q ${number(inside)} ${number(mid)} ${number(outside)} ${number(mid + inset)} Q ${number(inside)} ${number(height * .78f)} ${number(outside)} ${number(height - inset)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            }
+            "|" -> "<line x1=\"${number(width / 2f)}\" y1=\"${number(inset)}\" x2=\"${number(width / 2f)}\" y2=\"${number(height - inset)}\" stroke-width=\"${number(stroke)}\"/>"
+            "⟨", "⟩", "<", ">" -> "<path d=\"M ${number(outside)} ${number(inset)} L ${number(inside)} ${number(height / 2f)} L ${number(outside)} ${number(height - inset)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            else -> {
+                val glyph = escapeXml(delimiter)
+                "<text x=\"0\" y=\"${number(height * .78f)}\" font-family=\"serif\" font-size=\"${number(minOf(height * .82f, size * 1.7f))}\">$glyph</text>"
+            }
+        }
+    }
+
+    private fun estimateTextWidth(value: String, size: Float): Float {
+        var width = 0f
+        var index = 0
+        while (index < value.length) {
+            val codePoint = value.codePointAt(index)
+            width += when {
+                Character.getType(codePoint) == Character.NON_SPACING_MARK.toInt() -> 0f
+                Character.isWhitespace(codePoint) -> size * .34f
+                codePoint in '0'.code..'9'.code -> size * .58f
+                codePoint in 'A'.code..'Z'.code -> size * .66f
+                codePoint in 'a'.code..'z'.code -> size * .56f
+                codePoint in 0x0600..0x06FF -> size * .67f
+                codePoint in 0x2200..0x22FF || codePoint in 0x2190..0x21FF -> size * .75f
+                codePoint > 0xFFFF -> size * .90f
+                else -> size * .62f
+            }
+            index += Character.charCount(codePoint)
+        }
+        return width
+    }
+
+    private fun translate(body: String, x: Float, y: Float): String {
+        if (body.isEmpty()) return ""
+        if (x == 0f && y == 0f) return body
+        return "<g transform=\"translate(${number(x)} ${number(y)})\">$body</g>"
+    }
+
+    private fun sanitizeColor(value: String): String =
+        if (Regex("^#[0-9A-Fa-f]{6}$").matches(value)) value.uppercase(Locale.US) else "#111111"
+
+    private fun escapeXml(value: String): String = buildString(value.length) {
+        value.forEach { char ->
+            when (char) {
+                '&' -> append("&amp;")
+                '<' -> append("&lt;")
+                '>' -> append("&gt;")
+                '"' -> append("&quot;")
+                '\'' -> append("&apos;")
+                else -> append(char)
+            }
+        }
+    }
+
+    private fun number(value: Float): String {
+        val rounded = round(value * 100f) / 100f
+        return if (rounded == rounded.toInt().toFloat()) rounded.toInt().toString()
+        else String.format(Locale.US, "%.2f", rounded).trimEnd('0').trimEnd('.')
+    }
+
+    private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> "%02x".format(byte) }
+}
