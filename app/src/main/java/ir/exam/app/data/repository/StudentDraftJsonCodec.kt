@@ -35,7 +35,12 @@ internal object StudentDraftJsonCodec {
             }
         })
         val images = JsonObject(draft.responseImages.mapValues { (_, uris) -> JsonArray(uris.map(::JsonPrimitive)) })
-        return JsonObject(mapOf("answers" to answers, "images" to images)).toString()
+        return JsonObject(mapOf(
+            "answers" to answers,
+            "images" to images,
+            "flagged" to JsonArray(draft.flaggedQuestionIds.sorted().map(::JsonPrimitive)),
+            "last_index" to JsonPrimitive(draft.lastQuestionIndex)
+        )).toString()
     }
 
     fun decode(raw: String): StudentDraft {
@@ -63,6 +68,8 @@ internal object StudentDraftJsonCodec {
         val images = imagesObject.mapValues { (_, element) ->
             (element as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull?.takeIf(String::isNotBlank) }.orEmpty()
         }
-        return StudentDraft(answers, images)
+        val flagged=(root["flagged"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
+        val lastIndex=root["last_index"]?.jsonPrimitive?.intOrNull ?: 0
+        return StudentDraft(answers, images, flagged, lastIndex)
     }
 }

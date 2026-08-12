@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.view.WindowManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -28,12 +30,21 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import ir.exam.app.domain.model.BooleanAnswer
 import ir.exam.app.domain.model.ChoiceAnswer
@@ -46,6 +57,8 @@ import ir.exam.app.domain.model.NumericQuestion
 import ir.exam.app.domain.model.StudentAnswer
 import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.model.TrueFalseQuestion
+import ir.exam.app.core.ui.persianFontFamily
+import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.math.NativeMathText
 
 @Composable
@@ -100,13 +113,19 @@ fun StudentExamContent(
     onAnswer: (StudentAnswer) -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onGoTo: (Int) -> Unit,
+    onToggleFlag: (String) -> Unit,
     onAddImages: (String, List<String>) -> Unit,
     onRemoveImage: (String, String) -> Unit,
     onSubmit: () -> Unit,
+    onConfirmSubmit: () -> Unit,
+    onDismissSubmit: () -> Unit,
     onDone: () -> Unit
 ) {
     val exam = state.exam ?: return
     val activity = LocalContext.current.findActivity()
+    var showExit by remember { mutableStateOf(false) }
+    BackHandler(enabled=!state.finished){showExit=true}
     DisposableEffect(activity, state.finished) {
         if (!state.finished) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
@@ -128,6 +147,7 @@ fun StudentExamContent(
         return
     }
     val question = exam.questions.getOrNull(state.questionIndex) ?: return
+    val presentation=exam.questionPresentation[question.id] ?: ir.exam.app.domain.model.QuestionPresentation()
 
     Scaffold(
         bottomBar = {
@@ -153,15 +173,33 @@ fun StudentExamContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { Text(exam.title, style = MaterialTheme.typography.titleLarge) }
-            item { Text("سؤال ${state.questionIndex + 1} از ${exam.questions.size} · بارم ${question.score}") }
             item {
-                NativeMathText(
-                    question.text,
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                    fontWeight = MaterialTheme.typography.titleMedium.fontWeight
-                )
+                Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    exam.questions.indices.chunked(8).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                        row.forEach { i ->
+                            val q=exam.questions[i];val answered=state.answers.containsKey(q.id)
+                            FilterChip(selected=i==state.questionIndex,onClick={onGoTo(i)},label={Text("${i+1}${if(q.id in state.flaggedQuestionIds)"★" else if(answered)"✓" else ""}")})
+                        }
+                    } }
+                }
             }
-            items(question.images) { url -> AsyncImage(url, "تصویر سؤال", Modifier.fillMaxWidth()) }
+            item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                Text("سؤال ${state.questionIndex + 1} از ${exam.questions.size} · بارم ${question.score}")
+                OutlinedButton(onClick={onToggleFlag(question.id)}){Text(if(question.id in state.flaggedQuestionIds)"برداشتن علامت" else "علامت برای مرور")}
+            } }
+            item {
+                Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    if(presentation.imagePosition=="above") question.images.forEach { AsyncImage(it,"تصویر سؤال",Modifier.fillMaxWidth()) }
+                    NativeMathText(
+                        question.text,modifier=Modifier.fillMaxWidth(),fontSize=presentation.fontSizeSp.sp,
+                        fontWeight=if(presentation.bold)FontWeight.Bold else FontWeight.Normal,
+                        fontStyle=if(presentation.italic)FontStyle.Italic else FontStyle.Normal,
+                        fontFamily=persianFontFamily(presentation.fontFamily),
+                        textAlign=when(presentation.textAlign){"center"->TextAlign.Center;"left"->TextAlign.Left;"justify"->TextAlign.Justify;else->TextAlign.Right}
+                    )
+                    if(presentation.imagePosition!="above") question.images.forEach { AsyncImage(it,"تصویر سؤال",Modifier.fillMaxWidth()) }
+                }
+            }
             item {
                 when (question) {
                     is EssayQuestion -> OutlinedTextField(
@@ -225,6 +263,21 @@ fun StudentExamContent(
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         }
     }
+    if(state.showSubmitReview){
+        val unanswered=exam.questions.mapIndexedNotNull { i,q ->
+            val answer=state.answers[q.id]
+            val answered=when(answer){is TextAnswer->answer.value.isNotBlank();is ChoiceAnswer,is BooleanAnswer->true;is MatchingAnswer->answer.pairs.isNotEmpty();else->false}
+            if(!answered)i+1 else null
+        }
+        AlertDialog(onDismissRequest=onDismissSubmit,title={Text("مرور پیش از ارسال")},text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)){
+            Text("پاسخ‌داده‌شده: ${exam.questions.size-unanswered.size} از ${exam.questions.size}")
+            Text(if(unanswered.isEmpty())"همه سؤال‌ها پاسخ دارند." else "بدون پاسخ: ${unanswered.joinToString("، ")}")
+            val flags=exam.questions.mapIndexedNotNull{i,q->if(q.id in state.flaggedQuestionIds)i+1 else null}
+            if(flags.isNotEmpty())Text("علامت‌گذاری‌شده برای مرور: ${flags.joinToString("، ")}")
+            Text("پس از تأیید، پاسخ نهایی قابل ویرایش نیست.")
+        }},confirmButton={Button(onClick=onConfirmSubmit){Text("تأیید و ارسال نهایی")}},dismissButton={TextButton(onClick=onDismissSubmit){Text("بازگشت و مرور")}})
+    }
+    if(showExit)AlertDialog(onDismissRequest={showExit=false},title={Text("خروج از آزمون")},text={Text("پاسخ‌ها ذخیره شده‌اند و زمان سرور ادامه دارد. برنامه بسته شود؟")},confirmButton={Button(onClick={showExit=false;activity?.finish()}){Text("بستن برنامه")}},dismissButton={TextButton(onClick={showExit=false}){Text("ادامه آزمون")}})
 }
 
 @Composable
@@ -274,20 +327,21 @@ private fun ResponseImages(
     onRemove: (String, String) -> Unit
 ) {
     val context = LocalContext.current
+    var editQueue by remember(questionId){mutableStateOf<List<Uri>>(emptyList())}
     fun persist(uri: Uri) {
         runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
     val singlePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             persist(uri)
-            onAdd(questionId, listOf(uri.toString()))
+            editQueue=listOf(uri)
         }
     }
     val multiplePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(max.coerceAtLeast(2))
     ) { uris ->
         uris.forEach(::persist)
-        onAdd(questionId, uris.map(Uri::toString))
+        editQueue=uris
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("تصاویر پاسخ (${values.size} از $max)")
@@ -305,6 +359,10 @@ private fun ResponseImages(
             }
         }
     }
+    editQueue.firstOrNull()?.let { uri -> InteractiveImageEditorDialog(
+        source=uri,onDismiss={editQueue=editQueue.drop(1)},
+        onDone={edited->onAdd(questionId,listOf(edited.toString()));editQueue=editQueue.drop(1)}
+    ) }
 }
 
 private fun formatRemaining(seconds: Long): String {

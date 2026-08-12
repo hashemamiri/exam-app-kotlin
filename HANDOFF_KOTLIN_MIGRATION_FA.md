@@ -1930,3 +1930,35 @@ APK v2 signature                  Verified
 V13.2 student navigation/review/flags/exit guard/media
 V13.3 bulk students/notes/XLSX/charts/live/feedback
 ```
+
+### V13.2 — تجربه کامل دانش‌آموز
+
+```text
+شبکه ناوبری همه سؤال‌ها
+نشان پاسخ‌داده‌شده و علامت مرور
+ذخیره flags و lastQuestionIndex در Room draft
+مرور بی‌پاسخ‌ها پیش از ارسال
+تأیید صریح ارسال نهایی
+Back/Exit guard با حفظ draft و deadline
+رندر style سؤال از Builder
+crop/rotate تصاویر پاسخ پیش از صف آفلاین
+```
+
+نیاز عملیاتی:
+```text
+SQL جدید: ندارد
+Edge deploy: ندارد
+Secret: ندارد
+پیش‌نیاز: V13.1
+```
+
+تست:
+```text
+Kotlin compile             PASS
+JVM tests                  52/52 PASS
+lintDebug                  PASS (0 error)
+assembleDebug              PASS
+APK v2 signature           Verified
+```
+
+مرحله باقی‌مانده: V13.3 مدیریت/گزارش و Excel واقعی.

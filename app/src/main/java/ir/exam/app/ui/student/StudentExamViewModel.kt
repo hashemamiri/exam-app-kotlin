@@ -25,6 +25,8 @@ data class StudentExamUiState(
     val answers: Map<String, StudentAnswer> = emptyMap(),
     val responseImages: Map<String, List<String>> = emptyMap(),
     val questionIndex: Int = 0,
+    val flaggedQuestionIds: Set<String> = emptySet(),
+    val showSubmitReview: Boolean = false,
     /** مقدار -1 یعنی آزمون بدون محدودیت زمانی است. */
     val remainingSeconds: Long = UNLIMITED_TIME,
     val restoringExam: Boolean = true,
@@ -111,7 +113,9 @@ class StudentExamViewModel(
                 exam = exam,
                 answers = draft.answers,
                 responseImages = draft.responseImages,
-                questionIndex = 0,
+                questionIndex = draft.lastQuestionIndex.coerceIn(0,exam.questions.lastIndex.coerceAtLeast(0)),
+                flaggedQuestionIds = draft.flaggedQuestionIds,
+                showSubmitReview = false,
                 remainingSeconds = remainingFor(exam),
                 restoringExam = false,
                 showPreview = true,
@@ -133,7 +137,11 @@ class StudentExamViewModel(
         draftObserver = viewModelScope.launch {
             drafts.observe(examId).collect { draft ->
                 if (state.value.exam?.id == examId && !state.value.finished) {
-                    _state.update { it.copy(answers = draft.answers, responseImages = draft.responseImages) }
+                    _state.update { it.copy(
+                        answers = draft.answers,
+                        responseImages = draft.responseImages,
+                        flaggedQuestionIds = draft.flaggedQuestionIds
+                    ) }
                 }
             }
         }
@@ -195,13 +203,26 @@ class StudentExamViewModel(
     }
 
     private fun saveDraft(examId: String, answers: Map<String, StudentAnswer>, images: Map<String, List<String>>) {
-        viewModelScope.launch { drafts.save(examId, StudentDraft(answers, images)) }
+        val current=state.value
+        viewModelScope.launch { drafts.save(examId, StudentDraft(answers,images,current.flaggedQuestionIds,current.questionIndex)) }
     }
 
     fun goTo(index: Int) {
-        val max = state.value.exam?.questions?.lastIndex ?: 0
-        _state.update { it.copy(questionIndex = index.coerceIn(0, max), error = null) }
+        val exam=state.value.exam ?: return
+        val next=index.coerceIn(0,exam.questions.lastIndex)
+        _state.update { it.copy(questionIndex = next, error = null) }
+        saveDraft(exam.id,state.value.answers,state.value.responseImages)
     }
+
+    fun toggleFlag(questionId:String){
+        val exam=state.value.exam?:return
+        _state.update{it.copy(flaggedQuestionIds=if(questionId in it.flaggedQuestionIds)it.flaggedQuestionIds-questionId else it.flaggedQuestionIds+questionId)}
+        saveDraft(exam.id,state.value.answers,state.value.responseImages)
+    }
+
+    fun requestSubmitReview(){if(state.value.exam!=null&&!state.value.submitting)_state.update{it.copy(showSubmitReview=true,error=null)}}
+    fun dismissSubmitReview(){_state.update{it.copy(showSubmitReview=false)}}
+    fun confirmSubmit(){_state.update{it.copy(showSubmitReview=false)};submit()}
 
     fun submit() {
         val exam = state.value.exam ?: return

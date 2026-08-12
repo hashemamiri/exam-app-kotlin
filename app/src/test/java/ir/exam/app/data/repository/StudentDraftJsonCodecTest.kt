@@ -15,7 +15,8 @@ class StudentDraftJsonCodecTest {
                 "q1" to TextAnswer("q1", "پاسخ"),
                 "q2" to MatchingAnswer("q2", mapOf(0 to 2, 1 to 0))
             ),
-            responseImages = mapOf("q1" to listOf("content://one", "content://two"))
+            responseImages = mapOf("q1" to listOf("content://one", "content://two")),
+            flaggedQuestionIds=setOf("q2"),lastQuestionIndex=1
         )
         val decoded = StudentDraftJsonCodec.decode(StudentDraftJsonCodec.encode(source))
         assertEquals(source, decoded)

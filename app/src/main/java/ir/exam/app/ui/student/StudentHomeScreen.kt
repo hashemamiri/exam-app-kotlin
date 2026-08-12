@@ -52,9 +52,13 @@ fun StudentHomeScreen(userId: String) {
                 onAnswer = viewModel::answer,
                 onPrevious = { viewModel.goTo(state.questionIndex - 1) },
                 onNext = { viewModel.goTo(state.questionIndex + 1) },
+                onGoTo = viewModel::goTo,
+                onToggleFlag = viewModel::toggleFlag,
                 onAddImages = viewModel::addResponseImages,
                 onRemoveImage = viewModel::removeResponseImage,
-                onSubmit = viewModel::submit,
+                onSubmit = viewModel::requestSubmitReview,
+                onConfirmSubmit = viewModel::confirmSubmit,
+                onDismissSubmit = viewModel::dismissSubmitReview,
                 onDone = viewModel::leaveFinishedExam
             )
         }
