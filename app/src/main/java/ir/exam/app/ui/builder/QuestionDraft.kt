@@ -28,6 +28,7 @@ data class QuestionDraft(
     val expectedText: String = "",
     val expectedNumber: String = "",
     val tolerance: String = "0",
+    val caseSensitive: Boolean = false,
     val matchingLeft: List<String> = emptyList(),
     val matchingRight: List<String> = emptyList(),
     val matchingPairs: Map<Int, Int> = emptyMap(),
@@ -36,13 +37,28 @@ data class QuestionDraft(
     val answerImageMode: String = "no",
     val maxAnswerImages: Int = 0,
     val images: List<MediaDraft> = emptyList(),
+    val textAlign: String = "right",
+    val imagePosition: String = "below",
+    val fontFamily: String = "default",
+    val fontSizeSp: Float = 16f,
+    val bold: Boolean = false,
+    val italic: Boolean = false,
+    val answerLines: Int = 2,
+    val answerLineStyle: String = "lined",
     val rawPublic: JsonObject = JsonObject(emptyMap()),
     val rawAnswer: JsonObject = JsonObject(emptyMap())
 )
 
 data class AudienceClassOption(val id: String, val name: String)
 data class AudienceStudentOption(val id: String, val name: String, val classNames: String? = null)
-data class BankQuestionOption(val id: Long, val subject: String?, val question: QuestionDraft)
+data class BankCategoryOption(val id: Long, val name: String, val count: Int = 0)
+data class BankQuestionOption(
+    val id: Long,
+    val subject: String?,
+    val question: QuestionDraft,
+    val categoryIds: Set<Long> = emptySet(),
+    val categoryNames: List<String> = emptyList()
+)
 
 data class ExamBuilderState(
     val examId: String? = null,
@@ -51,6 +67,8 @@ data class ExamBuilderState(
     val title: String = "",
     val subject: String = "",
     val durationMinutes: String = "",
+    val opensAtIso: String? = null,
+    val closesAtIso: String? = null,
     val questions: List<QuestionDraft> = emptyList(),
     val shuffleQuestions: Boolean = false,
     val shuffleOptions: Boolean = false,
@@ -66,6 +84,9 @@ data class ExamBuilderState(
     val availableClasses: List<AudienceClassOption> = emptyList(),
     val availableStudents: List<AudienceStudentOption> = emptyList(),
     val bankQuestions: List<BankQuestionOption> = emptyList(),
+    val bankCategories: List<BankCategoryOption> = emptyList(),
+    val bankQuery: String = "",
+    val selectedBankCategory: Long? = null,
     val importedBy: String? = null,
     val recoverableDraft: ir.exam.app.data.repository.ExamBuilderDraftPayload? = null,
     val saving: Boolean = false,
@@ -98,5 +119,7 @@ data class ExamImportDraft(
     val gradePolicy: String,
     val attemptCooldown: Int,
     val questions: List<QuestionDraft>,
+    val opensAtIso: String? = null,
+    val closesAtIso: String? = null,
     val exportedBy: String? = null
 )

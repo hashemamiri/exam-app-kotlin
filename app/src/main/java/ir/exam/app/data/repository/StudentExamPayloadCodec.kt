@@ -7,6 +7,8 @@ import ir.exam.app.domain.model.MatchingQuestion
 import ir.exam.app.domain.model.MultipleChoiceQuestion
 import ir.exam.app.domain.model.NumericQuestion
 import ir.exam.app.domain.model.Question
+import ir.exam.app.domain.model.QuestionMediaPresentation
+import ir.exam.app.domain.model.QuestionPresentation
 import ir.exam.app.domain.model.TrueFalseQuestion
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -65,14 +67,19 @@ internal object StudentExamPayloadCodec {
         val examId = raw.text("id") ?: error("شناسه آزمون در پاسخ سرور موجود نیست.")
         val shuffleQuestions = raw.boolean("shuffle_q")
         val shuffleOptions = raw.boolean("shuffle_opt")
-        val parsedQuestions = raw["questions"].arrayOrEmpty().mapIndexed { index, item ->
+        val rawQuestions = raw["questions"].arrayOrEmpty().mapNotNull { it as? JsonObject }
+        val parsedQuestions = rawQuestions.mapIndexed { index, item ->
             parseQuestion(
                 fallbackIndex = index,
-                obj = item.jsonObject,
+                obj = item,
                 shuffleOptions = shuffleOptions,
                 optionSeed = "$studentId:$examId:$index:options"
             )
         }
+        val presentations = rawQuestions.mapIndexed { index, item ->
+            val id = item.text("id") ?: "q-${item.int("i") ?: index}"
+            id to parsePresentation(item)
+        }.toMap()
         val orderedQuestions = if (shuffleQuestions) {
             StableExamShuffle.shuffled(parsedQuestions, "$studentId:$examId:questions")
         } else parsedQuestions
@@ -92,7 +99,8 @@ internal object StudentExamPayloadCodec {
             shuffleOptions = shuffleOptions,
             attemptsAllowed = (raw.int("attempts_allowed") ?: 1).coerceIn(1, 5),
             attemptNumber = raw.int("attempt_no") ?: raw.int("attempt_number"),
-            attemptsRemaining = raw.int("attempts_remaining")
+            attemptsRemaining = raw.int("attempts_remaining"),
+            questionPresentation = presentations
         )
     }
 
@@ -168,6 +176,29 @@ internal object StudentExamPayloadCodec {
                 id, text, score, images, maxAnswerImages, answerImagesRequired, originalIndex
             )
         }
+    }
+
+    private fun parsePresentation(obj: JsonObject): QuestionPresentation {
+        val positions = obj["imgFreePositions"].arrayOrEmpty()
+        val images = obj["images"].arrayOrEmpty()
+        return QuestionPresentation(
+            textAlign = obj.text("align")?.takeIf { it in setOf("right", "center", "left", "justify") } ?: "right",
+            imagePosition = obj.text("imgPos")?.takeIf { it in setOf("above", "below", "right", "left", "free") } ?: "below",
+            fontFamily = obj.text("font").orEmpty().ifBlank { "default" },
+            fontSizeSp = (obj.double("fontSize")?.toFloat() ?: 16f).coerceIn(8f, 40f),
+            bold = obj.boolean("bold"),
+            italic = obj.boolean("italic"),
+            answerLines = (obj.int("answerLines") ?: 2).coerceIn(0, 12),
+            answerLineStyle = obj.text("answerLineStyle")?.takeIf { it in setOf("lined", "blank") } ?: "lined",
+            media = images.indices.map { index ->
+                val pos = positions.getOrNull(index) as? JsonObject
+                QuestionMediaPresentation(
+                    xMm = pos?.double("x")?.toFloat() ?: 20f,
+                    yMm = pos?.double("y")?.toFloat() ?: 30f,
+                    widthMm = pos?.double("w")?.toFloat() ?: 55f
+                )
+            }
+        )
     }
 
     private fun serverDeadline(raw: JsonObject, localNow: Long, durationMinutes: Int): Long? {

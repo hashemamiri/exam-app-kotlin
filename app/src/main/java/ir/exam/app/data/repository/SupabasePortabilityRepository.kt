@@ -61,7 +61,9 @@ class SupabasePortabilityRepository {
                 gradePolicy = exam.gradePolicy,
                 attemptCooldown = exam.attemptCooldown,
                 questions = questions,
-                by = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty()
+                by = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty(),
+                opensAtIso = exam.opensAt,
+                closesAtIso = exam.closesAt
             )
         )
         PortableFile(
@@ -109,7 +111,17 @@ class SupabasePortabilityRepository {
                     score = question.score,
                     options = question.options,
                     answerText = answer,
-                    answerLines = if (question.type == QuestionType.ESSAY) 5 else 2,
+                    answerLines = question.answerLines,
+                    answerLineStyle = question.answerLineStyle,
+                    textAlign = question.textAlign,
+                    imagePosition = question.imagePosition,
+                    fontFamily = question.fontFamily,
+                    fontSizeSp = question.fontSizeSp,
+                    bold = question.bold,
+                    italic = question.italic,
+                    imageWidthsMm = question.images.map { it.widthMm } + question.optionImages.filterNotNull().map { 40f },
+                    imageXmm = question.images.map { it.xMm } + question.optionImages.filterNotNull().map { 20f },
+                    imageYmm = question.images.map { it.yMm } + question.optionImages.filterNotNull().map { 30f },
                     imageUrls = question.images.map { it.uri } + question.optionImages.filterNotNull()
                 )
             }

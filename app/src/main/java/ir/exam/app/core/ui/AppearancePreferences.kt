@@ -13,11 +13,13 @@ import kotlinx.coroutines.flow.map
 private val Context.appearanceDataStore by preferencesDataStore(name = "native_appearance")
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class AppFont { SYSTEM, VAZIRMATN, SHABNAM, SAHEL }
 
 data class AppearanceSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val fontScale: Float = 1f,
-    val dynamicColors: Boolean = true
+    val dynamicColors: Boolean = true,
+    val appFont: AppFont = AppFont.VAZIRMATN
 )
 
 /** تنظیمات ظاهر فقط روی دستگاه ذخیره می‌شوند و هیچ دادهٔ حساب یا token در آن نیست. */
@@ -30,7 +32,9 @@ class AppearancePreferences(context: Context) {
                 themeMode = values[THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                     ?: ThemeMode.SYSTEM,
                 fontScale = (values[FONT_SCALE] ?: 1f).coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE),
-                dynamicColors = values[DYNAMIC_COLORS] ?: true
+                dynamicColors = values[DYNAMIC_COLORS] ?: true,
+                appFont = values[APP_FONT]?.let { runCatching { AppFont.valueOf(it) }.getOrNull() }
+                    ?: AppFont.VAZIRMATN
             )
         }
         .catch { emit(AppearanceSettings()) }
@@ -47,6 +51,10 @@ class AppearancePreferences(context: Context) {
         store.edit { it[DYNAMIC_COLORS] = enabled }
     }
 
+    suspend fun setAppFont(font: AppFont) {
+        store.edit { it[APP_FONT] = font.name }
+    }
+
     suspend fun reset() {
         store.edit { it.clear() }
     }
@@ -57,5 +65,6 @@ class AppearancePreferences(context: Context) {
         private val THEME = stringPreferencesKey("theme")
         private val FONT_SCALE = floatPreferencesKey("font_scale")
         private val DYNAMIC_COLORS = booleanPreferencesKey("dynamic_colors")
+        private val APP_FONT = stringPreferencesKey("app_font")
     }
 }

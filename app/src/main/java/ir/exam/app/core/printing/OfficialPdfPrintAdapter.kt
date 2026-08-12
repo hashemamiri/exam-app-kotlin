@@ -18,8 +18,12 @@ import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
 import ir.exam.app.core.calendar.JalaliCalendar
+import ir.exam.app.core.math.NativeMathCanvasRenderer
 import ir.exam.app.core.math.NativeMathFormatter
+import ir.exam.app.core.math.NativeMathParser
 import ir.exam.app.domain.model.OfficialExamPrintable
+import androidx.core.content.res.ResourcesCompat
+import ir.exam.app.R
 import ir.exam.app.domain.model.OfficialGradeReportPrintable
 import ir.exam.app.domain.model.OfficialPrintable
 import java.io.FileOutputStream
@@ -30,7 +34,7 @@ class OfficialPdfPrintAdapter(
     private val context: Context,
     private val printable: OfficialPrintable
 ) : PrintDocumentAdapter() {
-    private val renderer = OfficialPdfRenderer(printable)
+    private val renderer = OfficialPdfRenderer(context,printable)
 
     override fun onLayout(
         oldAttributes: PrintAttributes?,
@@ -67,12 +71,21 @@ class OfficialPdfPrintAdapter(
     private fun safeJobName(value: String): String = value.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80)
 }
 
-private class OfficialPdfRenderer(private val printable: OfficialPrintable) {
+private class OfficialPdfRenderer(private val context:Context,private val printable: OfficialPrintable) {
+    private val mathRenderer=NativeMathCanvasRenderer()
     private data class RenderBlock(
         val text: String? = null,
+        val formula: String? = null,
         val image: Bitmap? = null,
         val textSize: Float = 11f,
         val bold: Boolean = false,
+        val italic: Boolean = false,
+        val align: String = "right",
+        val fontFamily: String = "default",
+        val imagePosition: String = "below",
+        val imageWidthMm: Float = 80f,
+        val imageXmm: Float = 20f,
+        val imageYmm: Float = 30f,
         val boxed: Boolean = false,
         val spacingAfter: Float = 6f
     )
@@ -129,37 +142,32 @@ private class OfficialPdfRenderer(private val printable: OfficialPrintable) {
     }
 
     private fun examBlocks(exam: OfficialExamPrintable): List<RenderBlock> = buildList {
-        add(RenderBlock(
-            text = "درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",
-            textSize = 11f,
-            bold = true,
-            boxed = true
-        ))
+        add(RenderBlock(text="درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",textSize=11f,bold=true,boxed=true))
         exam.questions.forEach { question ->
-            splitText("سؤال ${question.number} — ${NativeMathFormatter.renderText(question.text)}     (${formatScore(question.score)} نمره)", 700)
-                .forEachIndexed { index, text ->
-                    add(RenderBlock(text = text, textSize = 11f, bold = index == 0, boxed = index == 0))
-                }
+            add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign))
+            NativeMathFormatter.segments(question.text).forEach { segment ->
+                if(segment.math) add(RenderBlock(formula=segment.text,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
+                else splitText(segment.text.replace("\\$","$"),700).forEach { add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily)) }
+            }
             question.options.forEachIndexed { index, option ->
-                splitText("${index + 1}) ${NativeMathFormatter.renderText(option)}", 500)
-                    .forEach { add(RenderBlock(text = it, textSize = 10.5f)) }
-            }
-            question.images.forEach { image -> add(RenderBlock(image = image, boxed = true)) }
-            if (exam.includeAnswerKey && !question.answerText.isNullOrBlank()) {
-                add(RenderBlock(
-                    text = "پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",
-                    textSize = 10.5f,
-                    bold = true
-                ))
-            } else {
-                repeat(question.answerLines.coerceIn(1, 8)) {
-                    add(RenderBlock(
-                        text = "................................................................................................................",
-                        textSize = 9f
-                    ))
+                NativeMathFormatter.segments("${index+1}) $option").forEach { segment ->
+                    if(segment.math)add(RenderBlock(formula=segment.text,textSize=question.fontSizeSp*.9f,fontFamily=question.fontFamily))
+                    else add(RenderBlock(text=segment.text,textSize=question.fontSizeSp*.9f,fontFamily=question.fontFamily))
                 }
             }
-            add(RenderBlock(text = "", spacingAfter = 9f))
+            question.images.forEachIndexed { index,image -> add(RenderBlock(
+                image=image,boxed=true,imagePosition=question.imagePosition,
+                imageWidthMm=question.imageWidthsMm.getOrNull(index)?:80f,
+                imageXmm=question.imageXmm.getOrNull(index)?:20f,imageYmm=question.imageYmm.getOrNull(index)?:30f
+            )) }
+            if(exam.includeAnswerKey&&!question.answerText.isNullOrBlank())add(RenderBlock(text="پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",textSize=10.5f,bold=true,fontFamily=question.fontFamily))
+            else repeat(question.answerLines.coerceIn(0,12)) {
+                add(RenderBlock(
+                    text=if(question.answerLineStyle=="blank") " " else "................................................................................................................",
+                    textSize=9f
+                ))
+            }
+            add(RenderBlock(text="",spacingAfter=9f))
         }
     }
 
@@ -202,9 +210,10 @@ private class OfficialPdfRenderer(private val printable: OfficialPrintable) {
                     }
                 )
             }
-            block.image?.let { drawImage(canvas, it, y, planned.height - block.spacingAfter) }
+            block.image?.let { drawImage(canvas, it, y, planned.height - block.spacingAfter,block) }
+            block.formula?.let { formula -> mathRenderer.draw(canvas,NativeMathParser.parse(formula),MARGIN,y,block.textSize,Color.BLACK) }
             block.text?.takeIf(String::isNotEmpty)?.let { text ->
-                val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt())
+                val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
                 canvas.save()
                 canvas.translate(MARGIN, y)
                 layout.draw(canvas)
@@ -232,34 +241,35 @@ private class OfficialPdfRenderer(private val printable: OfficialPrintable) {
         canvas.drawText("سامانه آزمون Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
     }
 
-    private fun drawImage(canvas: Canvas, bitmap: Bitmap, top: Float, availableHeight: Float) {
-        val maxWidth = CONTENT_WIDTH - 12f
-        val maxHeight = availableHeight.coerceAtMost(170f)
-        val scale = minOf(maxWidth / bitmap.width, maxHeight / bitmap.height, 1f)
-        val width = bitmap.width * scale
-        val height = bitmap.height * scale
-        val left = MARGIN + (CONTENT_WIDTH - width) / 2f
-        canvas.drawBitmap(bitmap, null, android.graphics.RectF(left, top + 3f, left + width, top + 3f + height), null)
+    private fun drawImage(canvas: Canvas, bitmap: Bitmap, top: Float, availableHeight: Float,block:RenderBlock) {
+        val targetWidth=(block.imageWidthMm/210f*PAGE_WIDTH).coerceIn(40f,CONTENT_WIDTH-12f)
+        val maxHeight=availableHeight.coerceAtMost(220f)
+        val scale=minOf(targetWidth/bitmap.width,maxHeight/bitmap.height,1f)
+        val width=bitmap.width*scale;val height=bitmap.height*scale
+        val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm/210f*CONTENT_WIDTH).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
+        val y=if(block.imagePosition=="free")top+(block.imageYmm/297f*80f).coerceAtMost(80f)else top+3f
+        canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
     }
 
     private fun measureBlock(block: RenderBlock): Float {
         block.image?.let { image ->
-            val scale = minOf((CONTENT_WIDTH - 12f) / image.width, 170f / image.height, 1f)
-            return image.height * scale + block.spacingAfter + 8f
+            val targetWidth=(block.imageWidthMm/210f*PAGE_WIDTH).coerceIn(40f,CONTENT_WIDTH-12f)
+            val scale=minOf(targetWidth/image.width,220f/image.height,1f)
+            return image.height*scale+block.spacingAfter+8f
         }
+        block.formula?.let { return mathRenderer.measure(NativeMathParser.parse(it),block.textSize).height+block.spacingAfter+5f }
         val text = block.text.orEmpty()
         if (text.isEmpty()) return block.spacingAfter
-        return textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt()).height + block.spacingAfter + 4f
+        return textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily).height + block.spacingAfter + 4f
     }
 
-    private fun textLayout(text: String, size: Float, bold: Boolean, width: Int): StaticLayout {
-        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
-            textSize = size
-            typeface = Typeface.create("sans", if (bold) Typeface.BOLD else Typeface.NORMAL)
-        }
+    private fun textLayout(text:String,size:Float,bold:Boolean,width:Int,italic:Boolean=false,align:String="right",fontFamily:String="default"):StaticLayout {
+        val base=when(fontFamily.lowercase()){"vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular);"shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular);"sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular);else->Typeface.create("sans",Typeface.NORMAL)}
+        val style=when{bold&&italic->Typeface.BOLD_ITALIC;bold->Typeface.BOLD;italic->Typeface.ITALIC;else->Typeface.NORMAL}
+        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {color=Color.BLACK;textSize=size;typeface=Typeface.create(base,style)}
+        val alignment=when(align){"center"->Layout.Alignment.ALIGN_CENTER;"left"->Layout.Alignment.ALIGN_OPPOSITE;else->Layout.Alignment.ALIGN_NORMAL}
         return StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
-            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setAlignment(alignment)
             .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_RTL)
             .setLineSpacing(2f, 1f)
             .setIncludePad(false)

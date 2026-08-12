@@ -55,12 +55,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearanceSettings
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
+import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.portability.DataPortabilitySection
+import ir.exam.app.ui.security.AppLockSettings
 
 @Composable
 fun ProfileSettingsScreen(
@@ -74,10 +77,11 @@ fun ProfileSettingsScreen(
     val state by viewModel.state.collectAsState()
     var section by remember { mutableIntStateOf(0) }
     var confirmRemove by remember { mutableStateOf(false) }
+    var avatarEditing by remember { mutableStateOf<Uri?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            viewModel.uploadAvatar(uri)
+            avatarEditing=uri
         }
     }
 
@@ -138,6 +142,10 @@ fun ProfileSettingsScreen(
         }
     }
 
+    avatarEditing?.let { uri -> InteractiveImageEditorDialog(
+        source=uri,forceSquare=true,onDismiss={avatarEditing=null},onDone={viewModel.uploadAvatar(it);avatarEditing=null}
+    ) }
+
     if (confirmRemove) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
@@ -183,6 +191,30 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             Switch(settings.dynamicColors, viewModel::setDynamicColors)
                         }
                     }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("قلم فارسی", style = MaterialTheme.typography.titleMedium)
+                    listOf(
+                        AppFont.SYSTEM to "سیستم",
+                        AppFont.VAZIRMATN to "وزیرمتن",
+                        AppFont.SHABNAM to "شبنم",
+                        AppFont.SAHEL to "ساحل"
+                    ).chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { (font, label) ->
+                                FilterChip(
+                                    selected = settings.appFont == font,
+                                    onClick = { viewModel.setAppFont(font) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                    }
+                    Text("سه قلم فارسی همراه برنامه و با مجوز OFL ذخیره شده‌اند.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -381,6 +413,7 @@ private fun AccountSection(
                 }
             }
         }
+        item { AppLockSettings(profile.id) }
         if (state.accountSaving) item { CircularProgressIndicator() }
         state.message?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }

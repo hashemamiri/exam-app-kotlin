@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -28,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,6 +57,8 @@ fun ExamBuilderScreen(
     val state by viewModel.state.collectAsState()
     var typeMenu by remember { mutableStateOf(false) }
     var confirmSave by remember { mutableStateOf(false) }
+    var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
+    var previewAll by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     Scaffold(
@@ -107,11 +111,20 @@ fun ExamBuilderScreen(
             }
             item { AudienceCard(state, viewModel) }
             item { QuestionBankCard(state, viewModel) }
-            items(state.questions, key = { it.id }) { question ->
-                QuestionEditor(question, viewModel)
+            itemsIndexed(state.questions, key = { _, item -> item.id }) { index, question ->
+                QuestionEditor(
+                    question = question,
+                    index = index,
+                    total = state.questions.size,
+                    viewModel = viewModel,
+                    onPreview = { previewQuestion = question }
+                )
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { previewAll = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("پیش‌نمایش کامل A4")
+                    }
                     Text(
                         "هزینه هر سؤال مشمول: ${PersianDigits.convert("%,d".format(java.util.Locale.US, WalletRules.QUESTION_COST_TOMAN))} تومان؛ محاسبه نهایی و کسر به‌صورت اتمیک در سرور انجام می‌شود.",
                         style = MaterialTheme.typography.bodySmall
@@ -155,6 +168,13 @@ fun ExamBuilderScreen(
         )
     }
 
+    previewQuestion?.let { question ->
+        QuestionPrintPreviewDialog(question = question, onDismiss = { previewQuestion = null })
+    }
+    if (previewAll) {
+        ExamPrintPreviewDialog(state = state, onDismiss = { previewAll = false })
+    }
+
     if (confirmSave) {
         AlertDialog(
             onDismissRequest = { confirmSave = false },
@@ -185,6 +205,8 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
             OutlinedTextField(state.title, viewModel::setTitle, label = { Text("عنوان آزمون") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(state.subject, viewModel::setSubject, label = { Text("درس") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(state.durationMinutes, viewModel::setDuration, label = { Text("مدت (دقیقه)") }, modifier = Modifier.fillMaxWidth())
+            JalaliDateTimeField("زمان بازشدن", state.opensAtIso, viewModel::setOpensAt)
+            JalaliDateTimeField("مهلت پایان", state.closesAtIso, viewModel::setClosesAt)
             OutlinedTextField(state.negativeMarking, viewModel::setNegativeMarking, label = { Text("نمره منفی") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(state.teacherMessage, viewModel::setTeacherMessage, label = { Text("پیام معلم") }, modifier = Modifier.fillMaxWidth())
             ToggleRow("تصادفی‌سازی سؤال‌ها", state.shuffleQuestions, viewModel::setShuffleQuestions)
@@ -237,42 +259,102 @@ private fun AudienceCard(state: ExamBuilderState, viewModel: ExamBuilderViewMode
 @Composable
 private fun QuestionBankCard(state: ExamBuilderState, viewModel: ExamBuilderViewModel) {
     var expanded by remember { mutableStateOf(false) }
+    var newCategory by remember { mutableStateOf(false) }
+    var categoryName by remember { mutableStateOf("") }
+    var editItem by remember { mutableStateOf<BankQuestionOption?>(null) }
+    var deleteCategory by remember { mutableStateOf<BankCategoryOption?>(null) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("بانک سؤال", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { expanded = !expanded }) {
-                    Text(if (expanded) "بستن" else "نمایش (${state.bankQuestions.size})")
-                }
+                OutlinedButton(onClick = { expanded = !expanded }) { Text(if (expanded) "بستن" else "مدیریت (${state.bankQuestions.size})") }
             }
             if (state.bankLoading) CircularProgressIndicator()
             if (expanded) {
-                if (state.bankQuestions.isEmpty()) Text("بانک سؤال خالی است. از دکمه «ذخیره در بانک» هر سؤال استفاده کنید.")
-                state.bankQuestions.forEach { item ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(item.question.text.ifBlank { "بدون متن" })
-                            Text("${item.subject ?: "بدون درس"} · ${item.question.type.faLabel()}")
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Button(onClick = { viewModel.addFromBank(item.id) }) { Text("افزودن") }
-                                TextButton(onClick = { viewModel.deleteFromBank(item.id) }) { Text("حذف") }
-                            }
-                        }
+                OutlinedTextField(state.bankQuery,viewModel::setBankQuery,label={Text("جست‌وجوی متن یا درس")},modifier=Modifier.fillMaxWidth())
+                Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                    FilterChip(selected=state.selectedBankCategory==null,onClick={viewModel.selectBankCategory(null)},label={Text("همه")})
+                    OutlinedButton(onClick={newCategory=true}){Text("+ دسته")}
+                }
+                state.bankCategories.chunked(3).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                    row.forEach { cat -> FilterChip(
+                        selected=state.selectedBankCategory==cat.id,
+                        onClick={viewModel.selectBankCategory(cat.id)},
+                        label={Text("${cat.name} (${cat.count})")}
+                    ) }
+                } }
+                state.selectedBankCategory?.let { id ->
+                    state.bankCategories.firstOrNull{it.id==id}?.let { cat ->
+                        TextButton(onClick={deleteCategory=cat}){Text("حذف دسته ${cat.name}")}
                     }
                 }
+                val q=state.bankQuery.trim().lowercase()
+                val shown=state.bankQuestions.filter { item ->
+                    (state.selectedBankCategory==null || state.selectedBankCategory in item.categoryIds) &&
+                    (q.isBlank() || item.question.text.lowercase().contains(q) || item.subject.orEmpty().lowercase().contains(q))
+                }
+                if(shown.isEmpty()) Text("سؤالی با این فیلتر یافت نشد.")
+                shown.forEach { item -> Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text(item.question.text.ifBlank{"بدون متن"})
+                        Text("${item.subject?:"بدون درس"} · ${item.question.type.faLabel()}")
+                        Text(if(item.categoryNames.isEmpty()) "بدون دسته" else item.categoryNames.joinToString("، "))
+                        Row(horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                            Button(onClick={viewModel.addFromBank(item.id)}){Text("افزودن")}
+                            OutlinedButton(onClick={editItem=item}){Text("دسته‌ها")}
+                            TextButton(onClick={viewModel.deleteFromBank(item.id)}){Text("حذف")}
+                        }
+                    }
+                } }
             }
         }
     }
+    if(newCategory) AlertDialog(
+        onDismissRequest={newCategory=false},title={Text("دسته جدید")},
+        text={OutlinedTextField(categoryName,{categoryName=it.take(100)},label={Text("نام دسته")})},
+        confirmButton={Button(onClick={viewModel.addBankCategory(categoryName);newCategory=false;categoryName=""},enabled=categoryName.isNotBlank()){Text("ساخت")}},
+        dismissButton={TextButton(onClick={newCategory=false}){Text("انصراف")}}
+    )
+    editItem?.let { item ->
+        var selected by remember(item.id,item.categoryIds) { mutableStateOf(item.categoryIds) }
+        AlertDialog(
+            onDismissRequest={editItem=null},title={Text("دسته‌های سؤال")},
+            text={Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                if(state.bankCategories.isEmpty()) Text("ابتدا یک دسته بسازید.")
+                state.bankCategories.forEach { cat -> SelectionRow(cat.name,cat.id in selected){selected=if(cat.id in selected)selected-cat.id else selected+cat.id} }
+            }},
+            confirmButton={Button(onClick={viewModel.setBankCategories(item.id,selected);editItem=null}){Text("ذخیره")}},
+            dismissButton={TextButton(onClick={editItem=null}){Text("انصراف")}}
+        )
+    }
+    deleteCategory?.let { cat -> AlertDialog(
+        onDismissRequest={deleteCategory=null},title={Text("حذف دسته")},
+        text={Text("دسته «${cat.name}» حذف شود؟ می‌توانید سؤال‌های فقط همین دسته را نیز حذف کنید.")},
+        confirmButton={Column { Button(onClick={viewModel.deleteBankCategory(cat.id,false);deleteCategory=null}){Text("دسته حذف شود؛ سؤال‌ها بمانند")}; TextButton(onClick={viewModel.deleteBankCategory(cat.id,true);deleteCategory=null}){Text("سؤال‌های بدون دسته دیگر هم حذف شوند")} }},
+        dismissButton={TextButton(onClick={deleteCategory=null}){Text("انصراف")}}
+    ) }
 }
 
 private data class FormulaTarget(val field: String, val index: Int? = null)
 
 @Composable
-private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+private fun QuestionEditor(
+    question: QuestionDraft,
+    index: Int,
+    total: Int,
+    viewModel: ExamBuilderViewModel,
+    onPreview: () -> Unit
+) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("نوع: ${question.type.faLabel()}")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("سؤال ${index + 1} · ${question.type.faLabel()}")
+                Row {
+                    TextButton(onClick={viewModel.moveQuestion(question.id,-1)},enabled=index>0){Text("↑")}
+                    TextButton(onClick={viewModel.moveQuestion(question.id,1)},enabled=index<total-1){Text("↓")}
+                }
+            }
             OutlinedTextField(question.text, { viewModel.updateText(question.id, it) }, label = { Text("متن سؤال") }, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { formulaTarget = FormulaTarget("question") }) { Text("درج فرمول") }
@@ -284,6 +366,7 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                 images = question.images,
                 onAdd = { uris -> viewModel.addImages(question.id, uris) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
+                onResize = { imageId, width -> viewModel.resizeImage(question.id, imageId, width) },
                 onRemove = { imageId -> viewModel.removeImage(question.id, imageId) }
             )
             Text("تصویر پاسخ دانش‌آموز")
@@ -297,18 +380,26 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                 }
             }
             if (question.answerImageMode != "no") {
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    (1..5).forEach { count ->
-                        FilterChip(
-                            selected = question.maxAnswerImages == count,
-                            onClick = { viewModel.setMaxAnswerImages(question.id, count) },
-                            label = { Text(count.toString()) }
-                        )
+                (1..10).chunked(5).forEach { counts ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        counts.forEach { count ->
+                            FilterChip(
+                                selected = question.maxAnswerImages == count,
+                                onClick = { viewModel.setMaxAnswerImages(question.id, count) },
+                                label = { Text(count.toString()) }
+                            )
+                        }
                     }
                 }
             }
             when (question.type) {
-                QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
+                QuestionType.MULTIPLE_CHOICE -> {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("تعداد گزینه: ${question.options.size}")
+                        OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size-1)},enabled=question.options.size>2){Text("−")}
+                        OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size+1)},enabled=question.options.size<10){Text("+")}
+                    }
+                    question.options.forEachIndexed { index, option ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(question.correctIndex == index, onClick = { viewModel.setCorrect(question.id, index) })
@@ -320,6 +411,8 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick={viewModel.moveOption(question.id,index,-1)},enabled=index>0){Text("↑ گزینه")}
+                            TextButton(onClick={viewModel.moveOption(question.id,index,1)},enabled=index<question.options.lastIndex){Text("↓ گزینه")}
                             OutlinedButton(onClick = { formulaTarget = FormulaTarget("option", index) }) {
                                 Text("فرمول گزینه ${index + 1}")
                             }
@@ -331,11 +424,15 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                         ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                     }
                 }
+                }
                 QuestionType.TRUE_FALSE -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = question.expectedText == "true", onClick = { viewModel.setTrueFalse(question.id, true) }, label = { Text("صحیح") })
                     FilterChip(selected = question.expectedText == "false", onClick = { viewModel.setTrueFalse(question.id, false) }, label = { Text("غلط") })
                 }
-                QuestionType.FILL_BLANK -> OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل قبول با |") })
+                QuestionType.FILL_BLANK -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل قبول با |") })
+                    ToggleRow("حساس به حروف بزرگ و کوچک",question.caseSensitive){viewModel.setCaseSensitive(question.id,it)}
+                }
                 QuestionType.NUMERIC -> {
                     OutlinedTextField(question.expectedNumber, { viewModel.updateExpectedNumber(question.id, it) }, label = { Text("پاسخ عددی") })
                     OutlinedTextField(question.tolerance, { viewModel.updateTolerance(question.id, it) }, label = { Text("تلورانس") })
@@ -343,6 +440,7 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                 QuestionType.MATCHING -> MatchingQuestionEditor(question, viewModel)
                 QuestionType.ESSAY -> Unit
             }
+            QuestionStyleControls(question,viewModel,onPreview)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { viewModel.saveToBank(question.id) }) { Text("ذخیره در بانک") }
                 TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
@@ -357,6 +455,45 @@ private fun QuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
                 formulaTarget = null
             }
         )
+    }
+}
+
+@Composable
+private fun QuestionStyleControls(question: QuestionDraft, viewModel: ExamBuilderViewModel, onPreview:()->Unit) {
+    Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        Text("چیدمان و ظاهر چاپ",style=MaterialTheme.typography.titleSmall)
+        Text("تراز متن")
+        Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            listOf("right" to "راست","center" to "وسط","left" to "چپ","justify" to "دوطرفه").forEach { (v,l) ->
+                FilterChip(selected=question.textAlign==v,onClick={viewModel.setQuestionAlign(question.id,v)},label={Text(l)})
+            }
+        }
+        Text("جای تصویر")
+        listOf(listOf("above" to "بالا","below" to "پایین","right" to "راست"),listOf("left" to "چپ","free" to "آزاد")).forEach { row ->
+            Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) { row.forEach { (v,l) ->
+                FilterChip(selected=question.imagePosition==v,onClick={viewModel.setImagePosition(question.id,v)},label={Text(l)})
+            } }
+        }
+        Text("قلم سؤال")
+        Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            listOf("default" to "برنامه","vazirmatn" to "وزیر","shabnam" to "شبنم","sahel" to "ساحل").forEach { (v,l) ->
+                FilterChip(selected=question.fontFamily==v,onClick={viewModel.setQuestionFont(question.id,v)},label={Text(l)})
+            }
+        }
+        Text("اندازه قلم: ${question.fontSizeSp.toInt()}")
+        Slider(value=question.fontSizeSp,onValueChange={viewModel.setQuestionFontSize(question.id,it)},valueRange=8f..40f,steps=31)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected=question.bold,onClick={viewModel.setQuestionBold(question.id,!question.bold)},label={Text("ضخیم")})
+            FilterChip(selected=question.italic,onClick={viewModel.setQuestionItalic(question.id,!question.italic)},label={Text("مورب")})
+        }
+        Text("خط پاسخ: ${question.answerLines}")
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(onClick={viewModel.setAnswerLines(question.id,question.answerLines-1)},enabled=question.answerLines>0){Text("−")}
+            OutlinedButton(onClick={viewModel.setAnswerLines(question.id,question.answerLines+1)},enabled=question.answerLines<12){Text("+")}
+            FilterChip(selected=question.answerLineStyle=="lined",onClick={viewModel.setAnswerLineStyle(question.id,"lined")},label={Text("خط‌دار")})
+            FilterChip(selected=question.answerLineStyle=="blank",onClick={viewModel.setAnswerLineStyle(question.id,"blank")},label={Text("خالی")})
+        }
+        OutlinedButton(onClick=onPreview,modifier=Modifier.fillMaxWidth()){Text("پیش‌نمایش چاپ این سؤال")}
     }
 }
 

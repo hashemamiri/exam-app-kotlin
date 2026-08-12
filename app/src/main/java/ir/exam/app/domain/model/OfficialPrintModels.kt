@@ -33,6 +33,16 @@ data class OfficialPrintQuestion(
     val options: List<String> = emptyList(),
     val answerText: String? = null,
     val answerLines: Int = 2,
+    val answerLineStyle: String = "lined",
+    val textAlign: String = "right",
+    val imagePosition: String = "below",
+    val fontFamily: String = "default",
+    val fontSizeSp: Float = 16f,
+    val bold: Boolean = false,
+    val italic: Boolean = false,
+    val imageWidthsMm: List<Float> = emptyList(),
+    val imageXmm: List<Float> = emptyList(),
+    val imageYmm: List<Float> = emptyList(),
     val imageUrls: List<String> = emptyList(),
     val images: List<Bitmap> = emptyList()
 )

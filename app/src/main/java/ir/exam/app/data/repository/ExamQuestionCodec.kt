@@ -53,6 +53,7 @@ internal object ExamQuestionCodec {
                 },
                 expectedNumber = key["answer"]?.asString() ?: obj["expectedNumber"]?.asString().orEmpty(),
                 tolerance = key["tolerance"]?.asString() ?: obj["tolerance"]?.asString() ?: "0",
+                caseSensitive = key["caseSensitive"]?.asBoolean() ?: obj["caseSensitive"]?.asBoolean() ?: false,
                 matchingLeft = obj["leftItems"].asArrayOrEmpty().map { it.asString().orEmpty() },
                 matchingRight = obj["rightItems"].asArrayOrEmpty().map { it.asString().orEmpty() },
                 matchingPairs = (key["matchAnswer"] as? JsonObject)?.mapNotNull { (left, right) ->
@@ -73,6 +74,14 @@ internal object ExamQuestionCodec {
                         widthMm = pos?.get("w")?.asFloat() ?: obj["imgW"]?.asFloat() ?: 55f
                     )
                 },
+                textAlign = obj["align"]?.asString()?.takeIf { it in setOf("right", "center", "left", "justify") } ?: "right",
+                imagePosition = obj["imgPos"]?.asString()?.takeIf { it in setOf("above", "below", "right", "left", "free") } ?: "below",
+                fontFamily = obj["font"]?.asString().orEmpty().ifBlank { "default" },
+                fontSizeSp = (obj["fontSize"]?.asFloat() ?: 16f).coerceIn(8f, 40f),
+                bold = obj["bold"]?.asBoolean() ?: false,
+                italic = obj["italic"]?.asBoolean() ?: false,
+                answerLines = (obj["answerLines"]?.asInt() ?: if (type == QuestionType.ESSAY) 5 else 2).coerceIn(0, 12),
+                answerLineStyle = obj["answerLineStyle"]?.asString()?.takeIf { it in setOf("lined", "blank") } ?: "lined",
                 rawPublic = obj,
                 rawAnswer = key
             )
@@ -98,6 +107,14 @@ internal object ExamQuestionCodec {
             })
             values["allowImages"] = JsonPrimitive(question.answerImageMode)
             values["maxImages"] = JsonPrimitive(if (question.answerImageMode == "no") 0 else question.maxAnswerImages.coerceIn(1, 10))
+            values["align"] = JsonPrimitive(question.textAlign)
+            values["imgPos"] = JsonPrimitive(question.imagePosition)
+            values["font"] = JsonPrimitive(question.fontFamily)
+            values["fontSize"] = JsonPrimitive(question.fontSizeSp.coerceIn(8f, 40f))
+            values["bold"] = JsonPrimitive(question.bold)
+            values["italic"] = JsonPrimitive(question.italic)
+            values["answerLines"] = JsonPrimitive(question.answerLines.coerceIn(0, 12))
+            values["answerLineStyle"] = JsonPrimitive(question.answerLineStyle)
             if (question.type == QuestionType.MULTIPLE_CHOICE) {
                 values["options"] = JsonArray(question.options.map(::JsonPrimitive))
                 values["optionImages"] = JsonArray(question.options.indices.map { index ->
@@ -123,9 +140,12 @@ internal object ExamQuestionCodec {
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> values["correctOption"] = JsonPrimitive(question.correctIndex ?: 0)
                 QuestionType.TRUE_FALSE -> values["correctAnswer"] = JsonPrimitive(question.expectedText.toBooleanStrictOrNull() ?: false)
-                QuestionType.FILL_BLANK -> values["accept"] = JsonArray(
-                    question.expectedText.split('|').map(String::trim).filter(String::isNotBlank).map(::JsonPrimitive)
-                )
+                QuestionType.FILL_BLANK -> {
+                    values["accept"] = JsonArray(
+                        question.expectedText.split('|').map(String::trim).filter(String::isNotBlank).map(::JsonPrimitive)
+                    )
+                    values["caseSensitive"] = JsonPrimitive(question.caseSensitive)
+                }
                 QuestionType.NUMERIC -> {
                     values["answer"] = question.expectedNumber.toDoubleOrNull()?.let(::JsonPrimitive) ?: JsonNull
                     values["tolerance"] = JsonPrimitive(question.tolerance.toDoubleOrNull() ?: 0.0)
@@ -159,7 +179,7 @@ internal object ExamQuestionCodec {
         QuestionType.MATCHING -> "matching"
     }
 
-    private val ANSWER_FIELDS = setOf("correctOption", "correctAnswer", "accept", "answer", "tolerance", "matchAnswer", "pairs")
+    private val ANSWER_FIELDS = setOf("correctOption", "correctAnswer", "accept", "answer", "tolerance", "caseSensitive", "matchAnswer", "pairs")
 }
 
 private fun JsonElement?.asArrayOrEmpty(): JsonArray = this as? JsonArray ?: JsonArray(emptyList())

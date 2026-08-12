@@ -1883,3 +1883,50 @@ APK Signature Scheme v2                         → Verified
 - پنج مسیر حیاتی گزارش‌شده پوشش داده شدند.
 - قابلیت‌های غیرحیاتیِ parity مثل دسته‌بندی پیشرفته بانک، crop تعاملی، نمودار گرافیکی و Excel واقعی همچنان featureهای بعدی‌اند و داخل V12 نیستند.
 - پایان V12 فقط پس از اجرای SQL، Build موفق GitHub و تست واقعی teacher/student روی دستگاه تأیید می‌شود.
+- Build واقعی V12 توسط کاربر موفق اعلام شد.
+
+---
+
+## ۲۶) V13 برابری کامل با WebView — سه مرحله
+
+کاربر برابری کامل همه موارد، شامل آزمون‌ساز، تصویر، بانک، student UX، مدیریت، Excel، نمودار، قفل، فرمول و چاپ را انتخاب کرد. تحویل به سه Patch مستقل و قابل Build تقسیم شد.
+
+### V13.1 — آزمون‌ساز، رسانه، بانک، فرمول، چاپ، قلم و قفل
+
+قابلیت‌ها:
+```text
+زمان‌بندی جلالی و ذخیره اتمیک native_save_exam_v2
+جابه‌جایی سؤال/گزینه و ۲ تا ۱۰ گزینه
+case-sensitive fill blank
+matching نامساوی و جابه‌جایی مستقل
+تصویر پاسخ ۱ تا ۱۰
+تمام styleهای سؤال و خطوط پاسخ
+پیش‌نمایش سؤال/A4
+crop/rotate/resize واقعی
+بانک چنددسته‌ای با جست‌وجو و duplicate guard
+فرمول Native دوبعدی + editor کامل‌تر + PDF
+فونت‌های واقعی OFL وزیرمتن/شبنم/ساحل
+قفل PIN PBKDF2 و device credential
+```
+
+SQL:
+```text
+SQL_NATIVE_FULL_PARITY_STAGE1_V13.sql
+```
+
+تست:
+```text
+Kotlin clean compile              PASS
+JVM tests                         52/52 PASS
+PostgreSQL 17 migration x2        PASS
+V13_FULL_PARITY_PASS              PASS
+lintDebug                         PASS (0 error)
+assembleDebug                     PASS
+APK v2 signature                  Verified
+```
+
+مرحله‌های بعدی:
+```text
+V13.2 student navigation/review/flags/exit guard/media
+V13.3 bulk students/notes/XLSX/charts/live/feedback
+```

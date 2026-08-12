@@ -75,6 +75,7 @@ import ir.exam.app.ui.profile.ProfileAvatar
 import ir.exam.app.ui.profile.ProfileSettingsScreen
 import ir.exam.app.ui.reports.ReportsScreen
 import ir.exam.app.ui.reports.StudentResultsScreen
+import ir.exam.app.ui.security.AppLockGate
 import ir.exam.app.ui.student.StudentHomeScreen
 import ir.exam.app.ui.update.AboutScreen
 import ir.exam.app.ui.update.UpdateViewModel
@@ -109,6 +110,13 @@ fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
         }
     }
 
+    AppLockGate(user.id) { AuthenticatedExamApp(user,authViewModel,appearance) }
+}
+
+@Composable
+private fun AuthenticatedExamApp(user:AppUser,authViewModel:AuthViewModel,appearance:AppearanceSettings){
+    val appContext=LocalContext.current.applicationContext
+    val authState by authViewModel.state.collectAsState()
     val apkUpdateManager = remember(appContext) { ApkUpdateManager(appContext) }
     val updateViewModel = remember(user.id) {
         UpdateViewModel(UpdateUseCase(SupabaseAppUpdateRepository()), apkUpdateManager)

@@ -52,6 +52,13 @@ class ExamQuestionCodecTest {
     }
 
     @Test
+    fun `print style answer lines and case sensitivity round trip`() {
+        val source=QuestionDraft(type=QuestionType.FILL_BLANK,text="Name",expectedText="Tehran",caseSensitive=true,textAlign="center",imagePosition="free",fontFamily="shabnam",fontSizeSp=21f,bold=true,italic=true,answerLines=7,answerLineStyle="blank")
+        val encoded=ExamQuestionCodec.encode(listOf(source));val decoded=ExamQuestionCodec.decode(encoded.publicQuestions,encoded.answerKey).single()
+        assertTrue(decoded.caseSensitive);assertEquals("center",decoded.textAlign);assertEquals("free",decoded.imagePosition);assertEquals("shabnam",decoded.fontFamily);assertEquals(21f,decoded.fontSizeSp);assertTrue(decoded.bold);assertTrue(decoded.italic);assertEquals(7,decoded.answerLines);assertEquals("blank",decoded.answerLineStyle)
+    }
+
+    @Test
     fun `legacy public question and separate key are decoded`() {
         val public = JsonArray(listOf(JsonObject(mapOf(
             "type" to JsonPrimitive("fill"),

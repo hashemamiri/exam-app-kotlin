@@ -52,6 +52,8 @@ class ExamBuilderViewModel(
                         title = imported.title,
                         subject = imported.subject,
                         durationMinutes = imported.durationMinutes.toString(),
+                        opensAtIso = imported.opensAtIso,
+                        closesAtIso = imported.closesAtIso,
                         negativeMarking = imported.negativeMarking.toString(),
                         shuffleQuestions = imported.shuffleQuestions,
                         shuffleOptions = imported.shuffleOptions,
@@ -98,6 +100,8 @@ class ExamBuilderViewModel(
                 title = draft.title,
                 subject = draft.subject,
                 durationMinutes = draft.durationMinutes,
+                opensAtIso = draft.opensAtIso,
+                closesAtIso = draft.closesAtIso,
                 questions = draft.questions,
                 shuffleQuestions = draft.shuffleQuestions,
                 shuffleOptions = draft.shuffleOptions,
@@ -125,6 +129,8 @@ class ExamBuilderViewModel(
     fun setTitle(value: String) { _state.update { it.copy(title = value, error = null) } }
     fun setSubject(value: String) { _state.update { it.copy(subject = value, error = null) } }
     fun setDuration(value: String) { _state.update { it.copy(durationMinutes = value.filter(Char::isDigit), error = null) } }
+    fun setOpensAt(value: String?) { _state.update { it.copy(opensAtIso = value, error = null) } }
+    fun setClosesAt(value: String?) { _state.update { it.copy(closesAtIso = value, error = null) } }
     fun setNegativeMarking(value: String) { _state.update { it.copy(negativeMarking = value.filter { c -> c.isDigit() || c == '.' }, error = null) } }
     fun setTeacherMessage(value: String) { _state.update { it.copy(teacherMessage = value.take(1000), error = null) } }
     fun setShuffleQuestions(value: Boolean) { _state.update { it.copy(shuffleQuestions = value) } }
@@ -160,6 +166,19 @@ class ExamBuilderViewModel(
         _state.update { it.copy(questions = it.questions + question) }
     }
 
+    fun moveQuestion(id: String, delta: Int) {
+        _state.update { state ->
+            val from = state.questions.indexOfFirst { it.id == id }
+            val to = (from + delta).coerceIn(0, state.questions.lastIndex)
+            if (from < 0 || from == to) state else {
+                val list = state.questions.toMutableList()
+                val item = list.removeAt(from)
+                list.add(to, item)
+                state.copy(questions = list)
+            }
+        }
+    }
+
     fun updateText(id: String, text: String) { update(id) { it.copy(text = text) } }
     fun insertFormula(id: String, target: String, index: Int?, tex: String) {
         val wrapped = "${'$'}${tex.trim()}${'$'}"
@@ -192,6 +211,26 @@ class ExamBuilderViewModel(
     fun setOptionImage(id: String, index: Int, uri: String?) { update(id) { question ->
         val images = question.options.indices.map { i -> if (i == index) uri else question.optionImages.getOrNull(i) }
         question.copy(optionImages = images)
+    } }
+    fun setOptionCount(id: String, count: Int) { update(id) { question ->
+        val size = count.coerceIn(2, 10)
+        val options = question.options.take(size) + List((size - question.options.size).coerceAtLeast(0)) { "" }
+        val images = question.optionImages.take(size) + List((size - question.optionImages.size).coerceAtLeast(0)) { null }
+        question.copy(options = options, optionImages = images, correctIndex = question.correctIndex?.coerceAtMost(size - 1))
+    } }
+    fun moveOption(id: String, index: Int, delta: Int) { update(id) { question ->
+        val to = (index + delta).coerceIn(0, question.options.lastIndex)
+        if (index !in question.options.indices || index == to) question else {
+            val options = question.options.toMutableList().apply { add(to, removeAt(index)) }
+            val images = question.optionImages.pad(question.options.size).toMutableList().apply { add(to, removeAt(index)) }
+            val current = question.correctIndex
+            val correct = when {
+                current == index -> to
+                current != null && current in minOf(index, to)..maxOf(index, to) -> if (index < to) current - 1 else current + 1
+                else -> current
+            }
+            question.copy(options = options, optionImages = images, correctIndex = correct)
+        }
     } }
     fun setCorrect(id: String, index: Int) { update(id) { it.copy(correctIndex = index) } }
 
@@ -228,6 +267,60 @@ class ExamBuilderViewModel(
             )
         }
     } }
+    fun addMatchingSide(id: String, side: String) { update(id) { q ->
+        if (side == "left" && q.matchingLeft.size < 30) q.copy(
+            matchingLeft = q.matchingLeft + "",
+            matchingLeftImages = q.matchingLeftImages.pad(q.matchingLeft.size) + null
+        ) else if (side == "right" && q.matchingRight.size < 30) q.copy(
+            matchingRight = q.matchingRight + "",
+            matchingRightImages = q.matchingRightImages.pad(q.matchingRight.size) + null
+        ) else q
+    } }
+    fun removeMatchingSide(id: String, side: String, index: Int) { update(id) { q ->
+        if (side == "left" && q.matchingLeft.size > 2 && index in q.matchingLeft.indices) {
+            val pairs = q.matchingPairs.mapNotNull { (left, right) ->
+                when { left == index -> null; left > index -> (left - 1) to right; else -> left to right }
+            }.toMap()
+            q.copy(
+                matchingLeft = q.matchingLeft.filterIndexed { i, _ -> i != index },
+                matchingLeftImages = q.matchingLeftImages.pad(q.matchingLeft.size).filterIndexed { i, _ -> i != index },
+                matchingPairs = pairs
+            )
+        } else if (side == "right" && q.matchingRight.size > 2 && index in q.matchingRight.indices) {
+            val pairs = q.matchingPairs.mapNotNull { (left, right) ->
+                when { right == index -> null; right > index -> left to (right - 1); else -> left to right }
+            }.toMap()
+            q.copy(
+                matchingRight = q.matchingRight.filterIndexed { i, _ -> i != index },
+                matchingRightImages = q.matchingRightImages.pad(q.matchingRight.size).filterIndexed { i, _ -> i != index },
+                matchingPairs = pairs
+            )
+        } else q
+    } }
+    fun moveMatchingItem(id: String, side: String, index: Int, delta: Int) { update(id) { q ->
+        val size = if (side == "left") q.matchingLeft.size else q.matchingRight.size
+        val to = (index + delta).coerceIn(0, size - 1)
+        if (index !in 0 until size || index == to) q else if (side == "left") {
+            val values = q.matchingLeft.toMutableList().apply { add(to, removeAt(index)) }
+            val images = q.matchingLeftImages.pad(size).toMutableList().apply { add(to, removeAt(index)) }
+            val pairs = q.matchingPairs.mapKeys { (left, _) -> remapMovedIndex(left, index, to) }
+            q.copy(matchingLeft = values, matchingLeftImages = images, matchingPairs = pairs)
+        } else {
+            val values = q.matchingRight.toMutableList().apply { add(to, removeAt(index)) }
+            val images = q.matchingRightImages.pad(size).toMutableList().apply { add(to, removeAt(index)) }
+            val pairs = q.matchingPairs.mapValues { (_, right) -> remapMovedIndex(right, index, to) }
+            q.copy(matchingRight = values, matchingRightImages = images, matchingPairs = pairs)
+        }
+    } }
+    fun setCaseSensitive(id: String, value: Boolean) { update(id) { it.copy(caseSensitive = value) } }
+    fun setQuestionAlign(id: String, value: String) { if (value in setOf("right","center","left","justify")) update(id) { it.copy(textAlign=value) } }
+    fun setImagePosition(id: String, value: String) { if (value in setOf("above","below","right","left","free")) update(id) { it.copy(imagePosition=value) } }
+    fun setQuestionFont(id: String, value: String) { update(id) { it.copy(fontFamily=value.take(30)) } }
+    fun setQuestionFontSize(id: String, value: Float) { update(id) { it.copy(fontSizeSp=value.coerceIn(8f,40f)) } }
+    fun setQuestionBold(id: String, value: Boolean) { update(id) { it.copy(bold=value) } }
+    fun setQuestionItalic(id: String, value: Boolean) { update(id) { it.copy(italic=value) } }
+    fun setAnswerLines(id: String, value: Int) { update(id) { it.copy(answerLines=value.coerceIn(0,12)) } }
+    fun setAnswerLineStyle(id: String, value: String) { if (value in setOf("lined","blank")) update(id) { it.copy(answerLineStyle=value) } }
     fun setTrueFalse(id: String, value: Boolean) { update(id) { it.copy(expectedText = value.toString()) } }
     fun updateExpectedText(id: String, value: String) { update(id) { it.copy(expectedText = value) } }
     fun updateExpectedNumber(id: String, value: String) { update(id) { it.copy(expectedNumber = value.filter { c -> c.isDigit() || c == '.' || c == '-' }) } }
@@ -242,6 +335,11 @@ class ExamBuilderViewModel(
     fun moveImage(questionId: String, imageId: String, xMm: Float, yMm: Float) { update(questionId) { question ->
         question.copy(images = question.images.map { image ->
             if (image.id == imageId) image.copy(xMm = xMm.coerceIn(0f, 190f), yMm = yMm.coerceIn(0f, 270f)) else image
+        })
+    } }
+    fun resizeImage(questionId: String, imageId: String, widthMm: Float) { update(questionId) { question ->
+        question.copy(images = question.images.map { image ->
+            if (image.id == imageId) image.copy(widthMm = widthMm.coerceIn(20f, 190f)) else image
         })
     } }
     fun removeImage(questionId: String, imageId: String) { update(questionId) { question ->
@@ -264,14 +362,26 @@ class ExamBuilderViewModel(
         _state.update { it.copy(questions = it.questions + item.question.copy(id = UUID.randomUUID().toString())) }
     }
 
-    fun saveToBank(questionId: String) {
+    fun setBankQuery(value: String) { _state.update { it.copy(bankQuery=value.take(100)) } }
+    fun selectBankCategory(id: Long?) { _state.update { it.copy(selectedBankCategory=id) } }
+
+    fun saveToBank(questionId: String, categoryIds: Set<Long> = emptySet()) {
         val question = state.value.questions.firstOrNull { it.id == questionId } ?: return
         viewModelScope.launch {
             _state.update { it.copy(bankLoading = true, error = null) }
-            repository.saveToBank(question, state.value.subject)
+            repository.saveToBank(question, state.value.subject, categoryIds)
                 .onSuccess { refreshBankNow() }
                 .onFailure { error -> _state.update { it.copy(bankLoading = false, error = safeBuilderError(error)) } }
         }
+    }
+
+    fun addBankCategory(name: String) = bankAction { repository.addBankCategory(name).getOrThrow() }
+    fun setBankCategories(questionId: Long, categories: Set<Long>) = bankAction {
+        repository.setBankCategories(questionId,categories).getOrThrow()
+    }
+    fun deleteBankCategory(id: Long, deleteQuestions: Boolean) = bankAction {
+        repository.deleteBankCategory(id,deleteQuestions).getOrThrow()
+        _state.update { it.copy(selectedBankCategory=null) }
     }
 
     fun deleteFromBank(id: Long) = viewModelScope.launch {
@@ -281,9 +391,15 @@ class ExamBuilderViewModel(
             .onFailure { error -> _state.update { it.copy(bankLoading = false, error = safeBuilderError(error)) } }
     }
 
+    private fun bankAction(block: suspend () -> Unit) = viewModelScope.launch {
+        _state.update { it.copy(bankLoading=true,error=null) }
+        runCatching { block(); refreshBankNow() }
+            .onFailure { error -> _state.update { it.copy(bankLoading=false,error=safeBuilderError(error)) } }
+    }
+
     private suspend fun refreshBankNow() {
         val bank = repository.refreshBank().getOrThrow()
-        _state.update { it.copy(bankQuestions = bank, bankLoading = false) }
+        _state.update { it.copy(bankQuestions = bank.questions, bankCategories=bank.categories, bankLoading = false) }
     }
 
     fun save() = viewModelScope.launch {
@@ -314,6 +430,8 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.title,
     state.subject,
     state.durationMinutes,
+    state.opensAtIso,
+    state.closesAtIso,
     state.questions,
     state.shuffleQuestions,
     state.shuffleOptions,
@@ -330,6 +448,13 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
 
 private fun appendFormula(current: String, formula: String): String =
     if (current.isBlank()) formula else current.trimEnd() + " " + formula
+
+private fun remapMovedIndex(value: Int, from: Int, to: Int): Int = when {
+    value == from -> to
+    from < to && value in (from + 1)..to -> value - 1
+    from > to && value in to until from -> value + 1
+    else -> value
+}
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 private fun <T> List<T>.replaceAt(index: Int, value: T): List<T> = mapIndexed { i, old -> if (i == index) value else old }

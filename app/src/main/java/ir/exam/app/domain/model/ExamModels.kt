@@ -14,7 +14,26 @@ data class Exam(
     val shuffleOptions: Boolean = false,
     val attemptsAllowed: Int = 1,
     val attemptNumber: Int? = null,
-    val attemptsRemaining: Int? = null
+    val attemptsRemaining: Int? = null,
+    val questionPresentation: Map<String, QuestionPresentation> = emptyMap()
+)
+
+data class QuestionPresentation(
+    val textAlign: String = "right",
+    val imagePosition: String = "below",
+    val fontFamily: String = "default",
+    val fontSizeSp: Float = 16f,
+    val bold: Boolean = false,
+    val italic: Boolean = false,
+    val answerLines: Int = 2,
+    val answerLineStyle: String = "lined",
+    val media: List<QuestionMediaPresentation> = emptyList()
+)
+
+data class QuestionMediaPresentation(
+    val xMm: Float = 20f,
+    val yMm: Float = 30f,
+    val widthMm: Float = 55f
 )
 
 sealed interface Question {
@@ -106,7 +125,9 @@ data class MatchingAnswer(override val questionId: String, val pairs: Map<Int, I
 
 data class StudentDraft(
     val answers: Map<String, StudentAnswer> = emptyMap(),
-    val responseImages: Map<String, List<String>> = emptyMap()
+    val responseImages: Map<String, List<String>> = emptyMap(),
+    val flaggedQuestionIds: Set<String> = emptySet(),
+    val lastQuestionIndex: Int = 0
 )
 
 data class SubmittedExam(

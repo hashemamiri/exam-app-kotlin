@@ -39,7 +39,9 @@ object ExamPackageCodec {
         val gradePolicy: String,
         val attemptCooldown: Int,
         val questions: List<QuestionDraft>,
-        val by: String
+        val by: String,
+        val opensAtIso: String? = null,
+        val closesAtIso: String? = null
     )
 
     fun encode(source: ExportedExam): String {
@@ -60,6 +62,8 @@ object ExamPackageCodec {
                 put("title", source.title.take(250))
                 put("subject", source.subject.take(250))
                 put("duration", source.duration.coerceIn(0, 1440))
+                put("opens_at", source.opensAtIso)
+                put("closes_at", source.closesAtIso)
                 put("neg_marking", source.negativeMarking.coerceAtLeast(0.0))
                 put("shuffle_q", source.shuffleQuestions)
                 put("shuffle_opt", source.shuffleOptions)
@@ -106,6 +110,8 @@ object ExamPackageCodec {
             gradePolicy = exam["grade_policy"]?.jsonPrimitive?.contentOrNull?.takeIf { it in setOf("last", "best", "all") } ?: "last",
             attemptCooldown = exam["attempt_cooldown"]?.jsonPrimitive?.intOrNull?.coerceIn(0, 1440) ?: 0,
             questions = questions,
+            opensAtIso = exam["opens_at"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),
+            closesAtIso = exam["closes_at"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank),
             exportedBy = root["by"]?.jsonPrimitive?.contentOrNull?.take(120)
         )
     }

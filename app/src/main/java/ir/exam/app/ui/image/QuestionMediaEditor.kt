@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,7 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -36,21 +42,28 @@ fun QuestionMediaEditor(
     images: List<MediaDraft>,
     onAdd: (List<String>) -> Unit,
     onMove: (String, Float, Float) -> Unit,
+    onResize: (String, Float) -> Unit,
     onRemove: (String) -> Unit
 ) {
     val context = LocalContext.current
+    var editQueue by remember { mutableStateOf<List<Uri>>(emptyList()) }
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(10)
     ) { uris ->
         uris.forEach { uri ->
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         }
-        onAdd(uris.map(Uri::toString))
+        editQueue=uris
     }
 
     Button(onClick = {
         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }) { Text("افزودن تصویر") }
+    editQueue.firstOrNull()?.let { uri -> InteractiveImageEditorDialog(
+        source=uri,
+        onDismiss={editQueue=editQueue.drop(1)},
+        onDone={edited->onAdd(listOf(edited.toString()));editQueue=editQueue.drop(1)}
+    ) }
 
     if (images.isEmpty()) return
 
@@ -84,6 +97,12 @@ fun QuestionMediaEditor(
                     modifier = Modifier.align(Alignment.TopEnd).background(Color.White.copy(alpha = 0.8f))
                 ) { Text("✕") }
             }
+        }
+    }
+    images.forEachIndexed { index,image ->
+        Column {
+            Text("اندازه تصویر ${index+1}: ${image.widthMm.toInt()} میلی‌متر")
+            Slider(value=image.widthMm,onValueChange={onResize(image.id,it)},valueRange=20f..190f)
         }
     }
 }

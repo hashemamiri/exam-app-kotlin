@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearancePreferences
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.data.repository.SupabaseProfileRepository
@@ -103,6 +104,7 @@ class ProfileSettingsViewModel(
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { appearance.setTheme(mode) }
     fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale) }
     fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled) }
+    fun setAppFont(font: AppFont) = viewModelScope.launch { appearance.setAppFont(font) }
     fun resetAppearance() = viewModelScope.launch { appearance.reset() }
 
     private fun saveProfile(profile: NativeProfile, message: String) = viewModelScope.launch {
