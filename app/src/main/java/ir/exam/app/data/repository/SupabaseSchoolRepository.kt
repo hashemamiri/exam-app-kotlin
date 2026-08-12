@@ -169,7 +169,7 @@ class SupabaseSchoolRepository : SchoolRepository {
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
-        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeSingle()
+        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeAs()
 }
 
 private fun JsonObject.throwIfError(): JsonObject {

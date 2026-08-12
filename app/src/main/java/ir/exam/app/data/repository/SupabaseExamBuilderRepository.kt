@@ -131,7 +131,7 @@ class SupabaseExamBuilderRepository(context: Context) {
         val raw = SupabaseProvider.client.postgrest.rpc(
             "native_save_exam_v1",
             buildJsonObject { put("p_payload", payload) }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
             val balance = raw["balance"]?.jsonPrimitive?.longOrNull
             val required = raw["required"]?.jsonPrimitive?.longOrNull
@@ -158,7 +158,7 @@ class SupabaseExamBuilderRepository(context: Context) {
                 put("p_question", combined)
                 put("p_subject", subject.trim())
             }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
     }
 
@@ -166,7 +166,7 @@ class SupabaseExamBuilderRepository(context: Context) {
         val raw = SupabaseProvider.client.postgrest.rpc(
             "bank_del",
             buildJsonObject { put("p_id", id) }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
     }
 
@@ -185,7 +185,7 @@ class SupabaseExamBuilderRepository(context: Context) {
         val raw = SupabaseProvider.client.postgrest.rpc(
             "get_exam_audience",
             buildJsonObject { put("p_exam", examId) }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
         val mode = raw["mode"]?.jsonPrimitive?.contentOrNull ?: "all"
         val classes = raw["classes"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()

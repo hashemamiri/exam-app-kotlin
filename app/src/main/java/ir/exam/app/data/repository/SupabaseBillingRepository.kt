@@ -19,7 +19,7 @@ import kotlinx.serialization.json.put
 class SupabaseBillingRepository : BillingRepository {
     override suspend fun wallet(): Result<WalletSnapshot> = runCatching {
         val dto = SupabaseProvider.client.postgrest.rpc("native_wallet_snapshot")
-            .decodeSingle<WalletSnapshotDto>()
+            .decodeAs<WalletSnapshotDto>()
         dto.error?.takeIf(String::isNotBlank)?.let(::error)
         WalletSnapshot(
             balanceToman = dto.balance.coerceAtLeast(0),

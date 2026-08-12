@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Assessment
@@ -275,9 +278,14 @@ private fun AuthenticatedDrawer(
             ModalDrawerSheet {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 24.dp)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 24.dp)
+                    ) {
                     ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 64)
                     Spacer(Modifier.height(12.dp))
                     Text("سامانه آزمون", style = MaterialTheme.typography.titleLarge)
@@ -368,6 +376,7 @@ private fun AuthenticatedDrawer(
                     icon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
+                }
             }
         }
     ) {

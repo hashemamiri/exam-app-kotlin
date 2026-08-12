@@ -195,7 +195,7 @@ class SupabaseGradingRepository {
     }
 
     suspend fun myAnswers(): Result<List<JsonObject>> = runCatching {
-        val raw = SupabaseProvider.client.postgrest.rpc("my_answers").decodeSingle<JsonElement>()
+        val raw = SupabaseProvider.client.postgrest.rpc("my_answers").decodeAs<JsonElement>()
         when (raw) {
             is JsonArray -> raw.mapNotNull { it as? JsonObject }
             is JsonObject -> (raw["items"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
@@ -204,7 +204,7 @@ class SupabaseGradingRepository {
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
-        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeSingle()
+        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeAs()
 
     private fun currentTeacherId(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id
         ?: error("نشست معلم پیدا نشد.")

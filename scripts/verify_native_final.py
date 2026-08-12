@@ -14,6 +14,10 @@ main_files = list((ROOT / "app/src/main/java").rglob("*.kt"))
 main_text = "\n".join(path.read_text(errors="ignore") for path in main_files)
 edge_files = list((ROOT / "supabase/functions").glob("*/index.ts"))
 edge_text = "\n".join(path.read_text(errors="ignore") for path in edge_files)
+repository_text = "\n".join(
+    path.read_text(errors="ignore")
+    for path in (ROOT / "app/src/main/java/ir/exam/app/data/repository").glob("*.kt")
+)
 manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
 workflow = (ROOT / ".github/workflows/android.yml").read_text()
 hardening = (ROOT / "supabase/migrations/20260812_native_final_hardening.sql").read_text()
@@ -22,6 +26,8 @@ require("android.webkit" not in main_text, "WebView/android.webkit import remain
 require(not re.search(r"\b(val|var)\s+plain_password\b", main_text), "plain_password model field remains")
 require(not re.search(r'\.from\("[^"]+"\)\.(?:insert|update|upsert|delete)\b', main_text),
         "direct public-table mutation remains in APK repository")
+require("decodeSingle" not in repository_text,
+        "decodeSingle remains in repository; JSONB RPC objects require decodeAs")
 require("plain_password:" not in edge_text and "plain_password =" not in edge_text,
         "Edge Function still writes/reads plain_password")
 require("npm:@supabase/supabase-js@2.112.2" in edge_text, "Edge dependency is not mature pinned version")

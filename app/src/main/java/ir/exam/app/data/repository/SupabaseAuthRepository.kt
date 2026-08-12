@@ -69,7 +69,7 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         val profile = SupabaseProvider.client.postgrest.rpc(
             "native_ensure_profile_v1",
             buildJsonObject { put("p_fallback_name", fallbackName) }
-        ).decodeSingle<NativeProfileDto>()
+        ).decodeAs<NativeProfileDto>()
         profile.error?.takeIf(String::isNotBlank)?.let(::error)
 
         val role = if (profile.role.equals("teacher", true)) {

@@ -44,7 +44,7 @@ class SupabaseTeacherDashboardRepository {
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
-        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeSingle()
+        SupabaseProvider.client.postgrest.rpc(name, parameters).decodeAs()
 
     private fun currentTeacherId(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id
         ?: error("نشست ورود پیدا نشد. دوباره وارد شوید.")

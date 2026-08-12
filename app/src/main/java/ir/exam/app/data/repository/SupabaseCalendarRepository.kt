@@ -47,7 +47,7 @@ class SupabaseCalendarRepository {
                         put("p_from", from.toString())
                         put("p_to", to.toString())
                     }
-                ).decodeSingle<CalendarMonthResponseDto>()
+                ).decodeAs<CalendarMonthResponseDto>()
             }
             val holidaysRequest = async {
                 SupabaseProvider.client.postgrest.rpc(
@@ -56,7 +56,7 @@ class SupabaseCalendarRepository {
                         put("p_from", from.toString())
                         put("p_to", to.toString())
                     }
-                ).decodeSingle<HolidayResponseDto>()
+                ).decodeAs<HolidayResponseDto>()
             }
 
             val notesResponse = notesRequest.await().also { it.error?.takeIf(String::isNotBlank)?.let(::error) }
@@ -119,7 +119,7 @@ class SupabaseCalendarRepository {
         val response = SupabaseProvider.client.postgrest.rpc(
             "cal_day",
             buildJsonObject { put("p_id", noteId) }
-        ).decodeSingle<CalendarNoteDto>()
+        ).decodeAs<CalendarNoteDto>()
         response.toDomain()
     }
 
@@ -136,7 +136,7 @@ class SupabaseCalendarRepository {
                 put("p_students", JsonArray(editor.studentIds.sorted().map(::JsonPrimitive)))
                 put("p_id", editor.id?.let(::JsonPrimitive) ?: JsonNull)
             }
-        ).decodeSingle<CalendarSaveResponseDto>()
+        ).decodeAs<CalendarSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
         response.id ?: editor.id ?: error("شناسه پیام از سرور دریافت نشد.")
     }
@@ -145,7 +145,7 @@ class SupabaseCalendarRepository {
         val response = SupabaseProvider.client.postgrest.rpc(
             "cal_delete_note",
             buildJsonObject { put("p_id", noteId) }
-        ).decodeSingle<CalendarSaveResponseDto>()
+        ).decodeAs<CalendarSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
     }
 

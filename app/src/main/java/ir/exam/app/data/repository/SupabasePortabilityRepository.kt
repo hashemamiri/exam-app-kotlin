@@ -45,7 +45,7 @@ class SupabasePortabilityRepository {
         val key = SupabaseProvider.client.from("exam_keys").select {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
-        val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeSingle<NativeProfileDto>()
+        val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
         val questions = ExamQuestionCodec.decode(exam.questions, key)
         val content = ExamPackageCodec.encode(
             ExamPackageCodec.ExportedExam(
@@ -79,7 +79,7 @@ class SupabasePortabilityRepository {
         val key = SupabaseProvider.client.from("exam_keys").select {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
-        val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeSingle<NativeProfileDto>()
+        val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
         val questions = ExamQuestionCodec.decode(exam.questions, key)
         OfficialExamPrintable(
             documentTitle = exam.title,
@@ -120,7 +120,7 @@ class SupabasePortabilityRepository {
 
     suspend fun exportBackup(): Result<PortableFile> = runCatching {
         val raw = SupabaseProvider.client.postgrest.rpc("native_export_backup_v1")
-            .decodeSingle<JsonObject>()
+            .decodeAs<JsonObject>()
         raw.throwPortabilityError()
         val content = prettyJson.encodeToString(JsonObject.serializer(), raw)
         check(content.toByteArray(StandardCharsets.UTF_8).size <= MAX_BACKUP_BYTES) {
@@ -174,7 +174,7 @@ class SupabasePortabilityRepository {
                     put("header", options.header)
                 })
             }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw.throwPortabilityError()
         RestoreSummary(
             examsCreated = raw["exams_created"]?.jsonPrimitive?.intOrNull ?: 0,

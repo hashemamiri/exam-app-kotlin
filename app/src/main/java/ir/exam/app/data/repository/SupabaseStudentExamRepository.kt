@@ -36,7 +36,7 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
         val raw = SupabaseProvider.client.postgrest.rpc(
             "get_exam_for_student",
             buildJsonObject { put("p_code", code.trim()) }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.let(::error)
         val questions = raw["questions"]?.jsonArray.orEmpty().mapIndexed { index, item -> parseQuestion(index, item.jsonObject) }
         Exam(
@@ -87,7 +87,7 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
                     put("created_at_epoch_ms", payload.createdAt)
                 })
             }
-        ).decodeSingle<JsonObject>()
+        ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
         return SubmissionOutcome.Sent(raw["receipt"]?.jsonPrimitive?.contentOrNull)
     }

@@ -20,7 +20,7 @@ class SupabaseProfileRepository(context: Context) {
 
     suspend fun load(): Result<NativeProfile> = runCatching {
         val dto = SupabaseProvider.client.postgrest.rpc("native_my_profile")
-            .decodeSingle<NativeProfileDto>()
+            .decodeAs<NativeProfileDto>()
         dto.error?.takeIf(String::isNotBlank)?.let(::error)
         val id = dto.id ?: currentUserId()
         NativeProfile(
@@ -42,7 +42,7 @@ class SupabaseProfileRepository(context: Context) {
 
     suspend fun teacherPublicProfile(): Result<TeacherPublicProfile?> = runCatching {
         val dto = SupabaseProvider.client.postgrest.rpc("teacher_public_profile")
-            .decodeSingle<TeacherPublicProfileDto>()
+            .decodeAs<TeacherPublicProfileDto>()
         dto.error?.takeIf(String::isNotBlank)?.let(::error)
         if (!dto.ok || dto.name.isNullOrBlank()) null else TeacherPublicProfile(dto.name, dto.avatar)
     }
@@ -64,7 +64,7 @@ class SupabaseProfileRepository(context: Context) {
                 put("p_hdr_district", profile.header.district.trim())
                 put("p_hdr_school", profile.header.school.trim())
             }
-        ).decodeSingle<ProfileSaveResponseDto>()
+        ).decodeAs<ProfileSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
         profile.copy(avatarUrl = response.avatarUrl ?: profile.avatarUrl)
     }

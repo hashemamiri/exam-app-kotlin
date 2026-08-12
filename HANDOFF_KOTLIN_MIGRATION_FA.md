@@ -1704,3 +1704,43 @@ Process completed with exit code 1 پیش از پیام certificate VERIFIED
 - هر fingerprint باید دقیقاً ۶۴ نویسه hex باشد.
 - اختلاف واقعی گواهی همچنان Build را متوقف می‌کند و فقط پیام امن چاپ می‌شود.
 - SQL، Kotlin و Edge Function تغییری نکردند.
+
+---
+
+## ۲۴) Hotfix V11.2 — JSONB RPC object و اسکرول Drawer
+
+### خطای واقعی دستگاه
+
+```text
+Unexpected JSON token at offset 0
+Expected start of the array '[' but had '{'
+JSON input: {"ok": true, "notes": []}
+```
+
+### علت قطعی
+
+- `PostgrestResult.decodeSingle<T>()` در supabase-kt ابتدا payload را به `List<T>` decode و سپس عضو اول را برمی‌دارد.
+- RPCهای JSONB سامانه مثل `cal_month` مستقیماً Object برمی‌گردانند، نه آرایهٔ row.
+- بنابراین تمام RPCهای Object/JSONB باید از `decodeAs<T>()` استفاده کنند.
+
+### اصلاح
+
+- `decodeSingle` از همه Repositoryها حذف و با `decodeAs` جایگزین شد.
+- مسیرهای Auth، Calendar، Wallet، Builder، Grading، Profile، School، Student، Backup و Dashboard پوشش داده شدند.
+- تست regression با payload واقعی `{ "ok": true, "notes": [] }` اضافه شد.
+- `FINAL_NATIVE_VERIFY` بازگشت decodeSingle به Repositoryها را ممنوع می‌کند.
+- کل محتوای `ModalDrawerSheet` داخل Column با `fillMaxHeight + verticalScroll` قرار گرفت.
+- SQL، RLS و Edge Function تغییری نکردند.
+
+### نتیجه تست V11.2
+
+```text
+Kotlin compile                       → PASS
+JVM tests                            → 40/40 PASS
+RPC JSON object regression           → PASS
+Drawer scroll Compose build          → PASS
+FINAL_NATIVE_VERIFY                  → PASS
+assembleDebug                        → BUILD SUCCESSFUL
+lintDebug                            → BUILD SUCCESSFUL (0 error)
+APK Signature Scheme v2              → Verified
+```
