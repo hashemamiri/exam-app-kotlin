@@ -25,7 +25,11 @@ data class StudentExamUiState(
     val answers: Map<String, StudentAnswer> = emptyMap(),
     val responseImages: Map<String, List<String>> = emptyMap(),
     val questionIndex: Int = 0,
-    val remainingSeconds: Long = 0,
+    /** مقدار -1 یعنی آزمون بدون محدودیت زمانی است. */
+    val remainingSeconds: Long = UNLIMITED_TIME,
+    val restoringExam: Boolean = true,
+    val showPreview: Boolean = false,
+    val resumedExam: Boolean = false,
     val loading: Boolean = false,
     val submitting: Boolean = false,
     val finished: Boolean = false,
@@ -34,6 +38,8 @@ data class StudentExamUiState(
     val pendingSubmissions: List<PendingSubmissionStatus> = emptyList(),
     val error: String? = null
 )
+
+const val UNLIMITED_TIME = -1L
 
 class StudentExamViewModel(
     private val exams: ExamRepository,
@@ -44,6 +50,7 @@ class StudentExamViewModel(
     private val _state = MutableStateFlow(StudentExamUiState())
     val state = _state.asStateFlow()
     private var timer: Job? = null
+    private var draftObserver: Job? = null
 
     init {
         if (pending != null && ownerUserId.isNotBlank()) {
@@ -54,43 +61,116 @@ class StudentExamViewModel(
                 }
             }
         }
+        restoreActiveExam()
     }
 
-    fun setCode(value: String) { _state.update { it.copy(code = value.trim(), error = null) } }
+    private fun restoreActiveExam() = viewModelScope.launch {
+        _state.update { it.copy(restoringExam = true, error = null) }
+        exams.restoreActiveExam()
+            .onSuccess { exam ->
+                if (exam == null) _state.update { it.copy(restoringExam = false) }
+                else openExam(exam, resumed = true)
+            }
+            .onFailure { error ->
+                _state.update {
+                    it.copy(
+                        restoringExam = false,
+                        error = safeStudentError(error, "بازیابی آزمون فعال ناموفق بود.")
+                    )
+                }
+            }
+    }
+
+    fun setCode(value: String) {
+        _state.update { it.copy(code = value.trim().uppercase(), error = null) }
+    }
 
     fun join() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
+        if (state.value.loading) return@launch
+        _state.update { it.copy(loading = true, error = null, submissionMessage = null) }
         exams.joinByCode(state.value.code)
-            .onSuccess { exam ->
-                _state.update { it.copy(exam = exam, remainingSeconds = exam.durationMinutes * 60L) }
-                startTimer()
-                observeDrafts(exam.id)
+            .onSuccess { exam -> openExam(exam, resumed = false) }
+            .onFailure { error ->
+                _state.update { it.copy(error = safeStudentError(error, "ورود به آزمون ممکن نیست")) }
             }
-            .onFailure { error -> _state.update { it.copy(error = error.message ?: "ورود به آزمون ممکن نیست") } }
-        _state.update { it.copy(loading = false) }
+        _state.update { it.copy(loading = false, restoringExam = false) }
     }
 
-    private fun observeDrafts(examId: String) = viewModelScope.launch {
-        drafts.observe(examId).collect { draft ->
-            _state.update { it.copy(answers = draft.answers, responseImages = draft.responseImages) }
+    fun startExam() {
+        if (state.value.exam == null || state.value.finished) return
+        _state.update { it.copy(showPreview = false, error = null) }
+    }
+
+    private suspend fun openExam(exam: Exam, resumed: Boolean) {
+        timer?.cancel()
+        draftObserver?.cancel()
+        val draft = runCatching { drafts.load(exam.id) }.getOrElse { StudentDraft() }
+        _state.update {
+            it.copy(
+                code = exam.code,
+                exam = exam,
+                answers = draft.answers,
+                responseImages = draft.responseImages,
+                questionIndex = 0,
+                remainingSeconds = remainingFor(exam),
+                restoringExam = false,
+                showPreview = true,
+                resumedExam = resumed,
+                loading = false,
+                submitting = false,
+                finished = false,
+                queued = false,
+                submissionMessage = null,
+                error = null
+            )
+        }
+        observeDrafts(exam.id)
+        startTimer()
+    }
+
+    private fun observeDrafts(examId: String) {
+        draftObserver?.cancel()
+        draftObserver = viewModelScope.launch {
+            drafts.observe(examId).collect { draft ->
+                if (state.value.exam?.id == examId && !state.value.finished) {
+                    _state.update { it.copy(answers = draft.answers, responseImages = draft.responseImages) }
+                }
+            }
         }
     }
 
     private fun startTimer() {
         timer?.cancel()
         timer = viewModelScope.launch {
-            while (state.value.remainingSeconds > 0 && !state.value.finished) {
-                delay(1000)
-                _state.update { it.copy(remainingSeconds = (it.remainingSeconds - 1).coerceAtLeast(0)) }
+            while (!state.value.finished) {
+                val exam = state.value.exam ?: return@launch
+                val remaining = remainingFor(exam)
+                _state.update { it.copy(remainingSeconds = remaining) }
+                if (remaining == UNLIMITED_TIME) return@launch
+                if (remaining <= 0L) {
+                    val refreshed = exams.refreshActiveExam().getOrNull()
+                    if (refreshed != null && remainingFor(refreshed) > 0L) {
+                        _state.update { it.copy(exam = refreshed, remainingSeconds = remainingFor(refreshed)) }
+                        continue
+                    }
+                    submit()
+                    return@launch
+                }
+                delay(1_000L.coerceAtMost(remaining * 1_000L))
             }
-            if (state.value.remainingSeconds == 0L) submit()
         }
+    }
+
+    private fun remainingFor(exam: Exam): Long {
+        val deadline = exam.deadlineEpochMs ?: return UNLIMITED_TIME
+        val millis = deadline - System.currentTimeMillis()
+        return if (millis <= 0L) 0L else (millis + 999L) / 1_000L
     }
 
     fun answer(answer: StudentAnswer) {
         val exam = state.value.exam ?: return
         val answers = state.value.answers + (answer.questionId to answer)
-        _state.update { it.copy(answers = answers) }
+        _state.update { it.copy(answers = answers, error = null) }
         saveDraft(exam.id, answers, state.value.responseImages)
     }
 
@@ -99,9 +179,9 @@ class StudentExamViewModel(
         val max = exam.questions.firstOrNull { it.id == questionId }?.maxAnswerImages ?: 0
         if (max <= 0) return
         val current = state.value.responseImages[questionId].orEmpty()
-        val next = current + uris.take((max - current.size).coerceAtLeast(0))
+        val next = (current + uris.take((max - current.size).coerceAtLeast(0))).distinct()
         val images = state.value.responseImages + (questionId to next)
-        _state.update { it.copy(responseImages = images) }
+        _state.update { it.copy(responseImages = images, error = null) }
         saveDraft(exam.id, state.value.answers, images)
     }
 
@@ -120,7 +200,7 @@ class StudentExamViewModel(
 
     fun goTo(index: Int) {
         val max = state.value.exam?.questions?.lastIndex ?: 0
-        _state.update { it.copy(questionIndex = index.coerceIn(0, max)) }
+        _state.update { it.copy(questionIndex = index.coerceIn(0, max), error = null) }
     }
 
     fun submit() {
@@ -130,11 +210,17 @@ class StudentExamViewModel(
             question.answerImagesRequired && state.value.responseImages[question.id].isNullOrEmpty()
         }
         if (missingImageIndex >= 0) {
-            _state.update { it.copy(questionIndex = missingImageIndex, error = "ارسال تصویر پاسخ برای این سؤال اجباری است.") }
+            _state.update {
+                it.copy(
+                    questionIndex = missingImageIndex,
+                    showPreview = false,
+                    error = "ارسال تصویر پاسخ برای این سؤال اجباری است."
+                )
+            }
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(submitting = true, error = null) }
+            _state.update { it.copy(submitting = true, error = null, showPreview = false) }
             val attempt = SubmittedExam(
                 examId = exam.id,
                 answers = state.value.answers,
@@ -144,6 +230,7 @@ class StudentExamViewModel(
             exams.submitAttempt(attempt)
                 .onSuccess { outcome ->
                     timer?.cancel()
+                    runCatching { exams.clearActiveExam(exam.id).getOrThrow() }
                     when (outcome) {
                         is SubmissionOutcome.Sent -> {
                             drafts.clear(exam.id)
@@ -167,15 +254,22 @@ class StudentExamViewModel(
                     }
                 }
                 .onFailure { error ->
-                    _state.update { it.copy(submitting = false, error = error.message ?: "ارسال پاسخ ناموفق بود") }
+                    _state.update {
+                        it.copy(
+                            submitting = false,
+                            error = safeStudentError(error, "ارسال پاسخ ناموفق بود")
+                        )
+                    }
                 }
         }
     }
 
     fun leaveFinishedExam() {
         if (!state.value.finished) return
+        draftObserver?.cancel()
         _state.update {
             StudentExamUiState(
+                restoringExam = false,
                 pendingSubmissions = it.pendingSubmissions,
                 submissionMessage = it.submissionMessage
             )
@@ -196,5 +290,15 @@ class StudentExamViewModel(
 
     override fun onCleared() {
         timer?.cancel()
+        draftObserver?.cancel()
     }
 }
+
+private fun safeStudentError(error: Throwable, fallback: String): String = error.message.orEmpty()
+    .substringBefore("URL:")
+    .substringBefore("Headers:")
+    .replace(Regex("(?i)authorization[^,\n]*"), "")
+    .replace(Regex("(?i)apikey[^,\n]*"), "")
+    .replace(Regex("https?://\\S+"), "")
+    .take(260)
+    .ifBlank { fallback }

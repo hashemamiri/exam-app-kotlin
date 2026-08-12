@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -45,6 +47,52 @@ import ir.exam.app.domain.model.StudentAnswer
 import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.model.TrueFalseQuestion
 import ir.exam.app.ui.math.NativeMathText
+
+@Composable
+fun StudentExamPreview(state: StudentExamUiState, onStart: () -> Unit) {
+    val exam = state.exam ?: return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            if (state.resumedExam) "ادامه آزمون نیمه‌تمام" else "آماده شروع آزمون",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Text(exam.title, style = MaterialTheme.typography.titleLarge)
+        if (exam.subject.isNotBlank()) Text("درس: ${exam.subject}")
+        Text("تعداد سؤال: ${exam.questions.size}")
+        Text(
+            if (state.remainingSeconds == UNLIMITED_TIME) "زمان: بدون محدودیت"
+            else "زمان باقی‌مانده: ${formatRemaining(state.remainingSeconds)}"
+        )
+        if (exam.attemptsAllowed > 1) {
+            val attempt = exam.attemptNumber?.let { " · تلاش فعلی: $it" }.orEmpty()
+            val remaining = exam.attemptsRemaining?.let { " · باقی‌مانده: $it" }.orEmpty()
+            Text("تلاش مجاز: ${exam.attemptsAllowed}$attempt$remaining")
+        }
+        exam.teacherMessage?.let { message ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("پیام معلم", style = MaterialTheme.typography.titleMedium)
+                    NativeMathText(message)
+                }
+            }
+        }
+        if (state.resumedExam) {
+            Text("پاسخ‌های ذخیره‌شده و همان مهلت قبلی بازیابی شده‌اند. زمان از ابتدا شروع نشده است.")
+        } else if (state.remainingSeconds != UNLIMITED_TIME) {
+            Text("مهلت سرور از زمان ورود با کد محاسبه می‌شود؛ پیش از شروع معطل نکنید.")
+        }
+        Button(onClick = onStart, enabled = !state.submitting, modifier = Modifier.fillMaxWidth()) {
+            Text(if (state.resumedExam) "ادامه پاسخ‌گویی" else "شروع پاسخ‌گویی")
+        }
+        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+}
 
 @Composable
 fun StudentExamContent(
@@ -85,7 +133,10 @@ fun StudentExamContent(
         bottomBar = {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("زمان: ${state.remainingSeconds / 60}:${(state.remainingSeconds % 60).toString().padStart(2, '0')}")
+                    Text(
+                        if (state.remainingSeconds == UNLIMITED_TIME) "زمان: بدون محدودیت"
+                        else "زمان: ${formatRemaining(state.remainingSeconds)}"
+                    )
                     Button(onClick = onSubmit, enabled = !state.submitting) {
                         Text(if (state.submitting) "در حال ارسال..." else "ارسال نهایی")
                     }
@@ -130,16 +181,19 @@ fun StudentExamContent(
                         label = { Text("پاسخ عددی") }
                     )
                     is MultipleChoiceQuestion -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        question.options.forEachIndexed { index, option ->
+                        question.options.forEachIndexed { displayIndex, option ->
+                            val originalIndex = question.optionOriginalIndices.getOrElse(displayIndex) { displayIndex }
                             Card(Modifier.fillMaxWidth()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     RadioButton(
-                                        selected = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex == index,
-                                        onClick = { onAnswer(ChoiceAnswer(question.id, index)) }
+                                        selected = (state.answers[question.id] as? ChoiceAnswer)?.selectedIndex == originalIndex,
+                                        onClick = { onAnswer(ChoiceAnswer(question.id, originalIndex)) }
                                     )
                                     Column {
                                         NativeMathText(option)
-                                        question.optionImages.getOrNull(index)?.let { AsyncImage(it, "تصویر گزینه", Modifier.size(120.dp)) }
+                                        question.optionImages.getOrNull(displayIndex)?.let {
+                                            AsyncImage(it, "تصویر گزینه", Modifier.size(120.dp))
+                                        }
                                     }
                                 }
                             }
@@ -187,11 +241,14 @@ private fun MatchingStudentAnswer(
                     NativeMathText("${leftIndex + 1}. $left")
                     question.leftImages.getOrNull(leftIndex)?.let { AsyncImage(it, "تصویر جورکردنی", Modifier.size(100.dp)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        question.rightItems.indices.forEach { rightIndex ->
+                        question.rightItems.indices.forEach { displayIndex ->
+                            val originalIndex = question.rightOriginalIndices.getOrElse(displayIndex) { displayIndex }
                             FilterChip(
-                                selected = current[leftIndex] == rightIndex,
-                                onClick = { onAnswer(MatchingAnswer(question.id, current + (leftIndex to rightIndex))) },
-                                label = { Text((rightIndex + 1).toString()) }
+                                selected = current[leftIndex] == originalIndex,
+                                onClick = {
+                                    onAnswer(MatchingAnswer(question.id, current + (leftIndex to originalIndex)))
+                                },
+                                label = { Text((displayIndex + 1).toString()) }
                             )
                         }
                     }
@@ -248,6 +305,15 @@ private fun ResponseImages(
             }
         }
     }
+}
+
+private fun formatRemaining(seconds: Long): String {
+    val safe = seconds.coerceAtLeast(0L)
+    val hours = safe / 3_600L
+    val minutes = (safe % 3_600L) / 60L
+    val rest = safe % 60L
+    return if (hours > 0L) "%d:%02d:%02d".format(hours, minutes, rest)
+    else "%d:%02d".format(minutes, rest)
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {

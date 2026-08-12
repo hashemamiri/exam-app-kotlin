@@ -52,6 +52,24 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun `interrupted verified teacher signup resumes setup instead of student dashboard`() = runTest(mainDispatcherRule.dispatcher) {
+        val pending = AppUser(
+            id = "pending-1",
+            name = "معلم نیمه‌تمام",
+            email = "pending@example.test",
+            role = UserRole.STUDENT,
+            username = "pending_teacher",
+            requiresTeacherSetup = true
+        )
+        val viewModel = AuthViewModel(FakeAuthRepository(Result.success(pending)))
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.user)
+        assertEquals(AuthScreen.TEACHER_REGISTER_SETUP, viewModel.state.value.screen)
+        assertEquals("pending_teacher", viewModel.state.value.username)
+    }
+
+    @Test
     fun `restore failure keeps user away from false logged-out screen`() = runTest(mainDispatcherRule.dispatcher) {
         val viewModel = AuthViewModel(
             FakeAuthRepository(Result.failure(IllegalStateException("backend unavailable")))
@@ -77,6 +95,57 @@ class AuthViewModelTest {
         assertNull(viewModel.state.value.user)
         assertFalse(viewModel.state.value.isRestoringSession)
     }
+
+    @Test
+    fun `teacher registration requires otp then profile and password completion`() = runTest(mainDispatcherRule.dispatcher) {
+        val repository = CriticalAuthRepository()
+        val viewModel = AuthViewModel(repository)
+        advanceUntilIdle()
+        viewModel.showTeacherRegistration()
+        viewModel.setFullName("معلم تازه")
+        viewModel.setEmail("teacher@example.test")
+        viewModel.sendTeacherRegistrationOtp()
+        advanceUntilIdle()
+        assertEquals(AuthScreen.TEACHER_REGISTER_OTP, viewModel.state.value.screen)
+
+        viewModel.setOtp("۱۲۳۴۵۶")
+        viewModel.verifyTeacherRegistrationOtp()
+        advanceUntilIdle()
+        assertEquals(AuthScreen.TEACHER_REGISTER_SETUP, viewModel.state.value.screen)
+
+        viewModel.setUsername("teacher_new")
+        viewModel.setNewPassword("safe-pass-123")
+        viewModel.setConfirmPassword("safe-pass-123")
+        viewModel.completeTeacherRegistration()
+        advanceUntilIdle()
+
+        assertEquals(UserRole.TEACHER, viewModel.state.value.user?.role)
+        assertEquals("teacher_new", repository.completedUsername)
+    }
+
+    @Test
+    fun `recovery does not enter dashboard before new password is saved`() = runTest(mainDispatcherRule.dispatcher) {
+        val repository = CriticalAuthRepository()
+        val viewModel = AuthViewModel(repository)
+        advanceUntilIdle()
+        viewModel.showRecovery()
+        viewModel.setEmail("teacher@example.test")
+        viewModel.sendRecoveryOtp()
+        advanceUntilIdle()
+        viewModel.setOtp("123456")
+        viewModel.verifyRecoveryOtp()
+        advanceUntilIdle()
+
+        assertEquals(AuthScreen.RECOVERY_PASSWORD, viewModel.state.value.screen)
+        assertEquals("teacher_name", viewModel.state.value.recoveredUsername)
+        assertNull(viewModel.state.value.user)
+
+        viewModel.setNewPassword("another-safe-pass")
+        viewModel.setConfirmPassword("another-safe-pass")
+        viewModel.saveRecoveredPassword()
+        advanceUntilIdle()
+        assertNotNull(viewModel.state.value.user)
+    }
 }
 
 private class FakeAuthRepository(
@@ -87,17 +156,65 @@ private class FakeAuthRepository(
 
     override suspend fun restoreSession(): Result<AppUser?> = restoreResult
 
-    override suspend fun signInWithPassword(email: String, password: String): Result<AppUser> =
+    override suspend fun signInWithPassword(identifier: String, password: String): Result<AppUser> =
         Result.failure(UnsupportedOperationException())
 
-    override suspend fun sendOtp(email: String): Result<Unit> =
+    override suspend fun sendLoginOtp(email: String): Result<Unit> =
         Result.failure(UnsupportedOperationException())
 
-    override suspend fun verifyOtp(email: String, code: String): Result<AppUser> =
+    override suspend fun verifyLoginOtp(email: String, code: String): Result<AppUser> =
+        Result.failure(UnsupportedOperationException())
+
+    override suspend fun sendTeacherRegistrationOtp(email: String, fullName: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException())
+
+    override suspend fun verifyTeacherRegistrationOtp(email: String, code: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException())
+
+    override suspend fun completeTeacherRegistration(
+        fullName: String,
+        username: String,
+        password: String
+    ): Result<AppUser> = Result.failure(UnsupportedOperationException())
+
+    override suspend fun sendRecoveryOtp(email: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException())
+
+    override suspend fun verifyRecoveryOtp(email: String, code: String): Result<String?> =
+        Result.failure(UnsupportedOperationException())
+
+    override suspend fun changePassword(newPassword: String): Result<AppUser> =
         Result.failure(UnsupportedOperationException())
 
     override suspend fun refreshCurrentUser(): Result<AppUser> =
         restoreResult.mapCatching { it ?: error("کاربر موجود نیست") }
 
     override suspend fun signOut(): Result<Unit> = Result.success(Unit)
+}
+
+private class CriticalAuthRepository : AuthRepository {
+    private val teacher = AppUser("teacher-1", "معلم تازه", "teacher@example.test", UserRole.TEACHER)
+    private val userState = MutableStateFlow<AppUser?>(null)
+    var completedUsername: String? = null
+    override val currentUser: Flow<AppUser?> = userState
+
+    override suspend fun restoreSession(): Result<AppUser?> = Result.success(null)
+    override suspend fun signInWithPassword(identifier: String, password: String) = Result.success(teacher)
+    override suspend fun sendLoginOtp(email: String) = Result.success(Unit)
+    override suspend fun verifyLoginOtp(email: String, code: String) = Result.success(teacher)
+    override suspend fun sendTeacherRegistrationOtp(email: String, fullName: String) = Result.success(Unit)
+    override suspend fun verifyTeacherRegistrationOtp(email: String, code: String) = Result.success(Unit)
+    override suspend fun completeTeacherRegistration(
+        fullName: String,
+        username: String,
+        password: String
+    ): Result<AppUser> {
+        completedUsername = username
+        return Result.success(teacher)
+    }
+    override suspend fun sendRecoveryOtp(email: String) = Result.success(Unit)
+    override suspend fun verifyRecoveryOtp(email: String, code: String) = Result.success("teacher_name")
+    override suspend fun changePassword(newPassword: String) = Result.success(teacher)
+    override suspend fun refreshCurrentUser() = Result.success(teacher)
+    override suspend fun signOut() = Result.success(Unit)
 }

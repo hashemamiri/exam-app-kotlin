@@ -3,6 +3,8 @@ package ir.exam.app.ui.reports
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseGradingRepository
+import ir.exam.app.domain.model.StudentAnswerReview
+import ir.exam.app.domain.model.StudentAnswerSummary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -26,8 +28,10 @@ data class StudentGradeCard(
 
 data class StudentResultsState(
     val loading: Boolean = true,
+    val detailLoading: Boolean = false,
     val grades: List<StudentGradeCard> = emptyList(),
-    val answers: List<JsonObject> = emptyList(),
+    val answers: List<StudentAnswerSummary> = emptyList(),
+    val selectedAnswer: StudentAnswerReview? = null,
     val error: String? = null
 )
 
@@ -41,13 +45,27 @@ class StudentResultsViewModel(
         _state.update { it.copy(loading = true, error = null) }
         runCatching {
             val grades = repository.myGrades().getOrThrow().mapNotNull(::parseGrade)
-            val answers = repository.myAnswers().getOrThrow()
+            val answers = repository.myAnswerSummaries().getOrThrow()
             grades to answers
         }.onSuccess { (grades, answers) ->
             _state.value = StudentResultsState(loading = false, grades = grades, answers = answers)
         }.onFailure { error ->
-            _state.update { it.copy(loading = false, error = error.message?.take(240) ?: "دریافت نتایج ناموفق بود.") }
+            _state.update { it.copy(loading = false, error = safeResultError(error)) }
         }
+    }
+
+    fun openAnswer(answerId: String) = viewModelScope.launch {
+        if (state.value.detailLoading) return@launch
+        _state.update { it.copy(detailLoading = true, selectedAnswer = null, error = null) }
+        repository.myAnswerDetail(answerId)
+            .onSuccess { detail -> _state.update { it.copy(detailLoading = false, selectedAnswer = detail) } }
+            .onFailure { error ->
+                _state.update { it.copy(detailLoading = false, error = safeResultError(error)) }
+            }
+    }
+
+    fun closeAnswer() {
+        _state.update { it.copy(selectedAnswer = null) }
     }
 
     private fun parseGrade(raw: JsonObject): StudentGradeCard? {
@@ -63,6 +81,15 @@ class StudentResultsViewModel(
         )
     }
 }
+
+private fun safeResultError(error: Throwable): String = error.message.orEmpty()
+    .substringBefore("URL:")
+    .substringBefore("Headers:")
+    .replace(Regex("(?i)authorization[^,\n]*"), "")
+    .replace(Regex("(?i)apikey[^,\n]*"), "")
+    .replace(Regex("https?://\\S+"), "")
+    .take(260)
+    .ifBlank { "دریافت نتایج ناموفق بود." }
 
 private fun JsonObject.text(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 private fun JsonObject.number(key: String): Double? = this[key]?.jsonPrimitive?.doubleOrNull

@@ -7,13 +7,30 @@ import ir.exam.app.domain.model.SubmissionOutcome
 import ir.exam.app.domain.model.SubmittedExam
 import ir.exam.app.domain.repository.ExamRepository
 
-/** ارسال مستقیم در اینترنت سالم؛ در خطای شبکه، همان payload در Room و WorkManager صف می‌شود. */
+/**
+ * ورود نخست به آزمون نیازمند سرور است؛ آزمون امنی که قبلاً باز شده در Room قابل ادامه است.
+ * ارسال مستقیم در اینترنت سالم و در خطای شبکه با همان payload در WorkManager صف می‌شود.
+ */
 class QueuedExamRepository(
     private val remote: SupabaseStudentExamRepository,
     private val network: NetworkMonitor,
     private val pending: PendingActionRepository
 ) : ExamRepository {
-    override suspend fun joinByCode(code: String): Result<Exam> = remote.joinByCode(code)
+    override suspend fun joinByCode(code: String): Result<Exam> {
+        if (!network.isOnline()) return cachedOrOfflineError(code)
+        val result = remote.joinByCode(code)
+        val error = result.exceptionOrNull()
+        return if (error != null && NetworkFailureClassifier.isNetworkFailure(error)) {
+            cachedOrOfflineError(code)
+        } else result
+    }
+
+    override suspend fun restoreActiveExam(): Result<Exam?> = remote.restoreActiveExam()
+
+    override suspend fun refreshActiveExam(): Result<Exam?> =
+        if (network.isOnline()) remote.refreshActiveExam() else remote.restoreActiveExam()
+
+    override suspend fun clearActiveExam(examId: String): Result<Unit> = remote.clearActiveExam(examId)
 
     override suspend fun submitAttempt(attempt: SubmittedExam): Result<SubmissionOutcome> = runCatching {
         val payload = remote.prepareSubmission(attempt)
@@ -30,5 +47,11 @@ class QueuedExamRepository(
                 else -> throw error
             }
         }
+    }
+
+    private suspend fun cachedOrOfflineError(code: String): Result<Exam> {
+        val cached = remote.cachedExamByCode(code).getOrElse { return Result.failure(it) }
+        return if (cached != null) Result.success(cached)
+        else Result.failure(IllegalStateException("برای اولین ورود به این آزمون اتصال اینترنت لازم است."))
     }
 }

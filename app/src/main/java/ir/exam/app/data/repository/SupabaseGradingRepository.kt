@@ -18,11 +18,15 @@ import ir.exam.app.domain.model.GradingExam
 import ir.exam.app.domain.model.GradingQuestion
 import ir.exam.app.domain.model.GradingSubmission
 import ir.exam.app.domain.model.QuestionAnalysisRow
+import ir.exam.app.domain.model.StudentAnswerReview
+import ir.exam.app.domain.model.StudentAnswerReviewQuestion
+import ir.exam.app.domain.model.StudentAnswerSummary
 import ir.exam.app.ui.builder.QuestionDraft
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -194,13 +198,69 @@ class SupabaseGradingRepository {
         SupabaseProvider.client.postgrest.rpc("my_grades").decodeList()
     }
 
-    suspend fun myAnswers(): Result<List<JsonObject>> = runCatching {
-        val raw = SupabaseProvider.client.postgrest.rpc("my_answers").decodeAs<JsonElement>()
-        when (raw) {
-            is JsonArray -> raw.mapNotNull { it as? JsonObject }
-            is JsonObject -> (raw["items"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
-            else -> emptyList()
+    suspend fun myAnswerSummaries(): Result<List<StudentAnswerSummary>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_my_answers_v1")
+            .decodeAs<JsonObject>()
+            .throwRpcError()
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { item ->
+            val row = item as? JsonObject ?: return@mapNotNull null
+            val id = row.text("id") ?: return@mapNotNull null
+            StudentAnswerSummary(
+                id = id,
+                examId = row.text("exam_id").orEmpty(),
+                title = row.text("title").orEmpty().ifBlank { "آزمون" },
+                subject = row.text("subject").orEmpty(),
+                submittedAt = row.text("submitted_at"),
+                graded = row.boolean("graded"),
+                totalGrade = row.number("total_grade") ?: 0.0,
+                totalScore = row.number("total_score") ?: 0.0,
+                feedback = row.text("feedback").orEmpty()
+            )
         }
+    }
+
+    suspend fun myAnswerDetail(answerId: String): Result<StudentAnswerReview> = runCatching {
+        val raw = rpcObject(
+            "native_my_answer_detail_v1",
+            buildJsonObject { put("p_answer", answerId) }
+        ).throwRpcError()
+        val graded = raw.boolean("graded")
+        val responses = raw["responses"] as? JsonArray ?: JsonArray(emptyList())
+        val grades = raw["grades"] as? JsonArray ?: JsonArray(emptyList())
+        val responseImages = raw["response_images"] as? JsonObject ?: JsonObject(emptyMap())
+        val questions = (raw["questions"] as? JsonArray).orEmpty().mapIndexedNotNull { index, item ->
+            val question = item as? JsonObject ?: return@mapIndexedNotNull null
+            val questionId = question.text("id") ?: "q-$index"
+            StudentAnswerReviewQuestion(
+                index = index,
+                id = questionId,
+                type = question.text("type").orEmpty().lowercase(),
+                text = question.text("text").orEmpty(),
+                score = question.number("score") ?: 0.0,
+                options = question["options"].strings(),
+                leftItems = question["leftItems"].strings(),
+                rightItems = question["rightItems"].strings(),
+                response = responses.getOrNull(index),
+                responseImages = responseImages[questionId].strings().ifEmpty {
+                    responseImages[index.toString()].strings()
+                },
+                earnedScore = if (graded) grades.getOrNull(index)?.jsonPrimitive?.doubleOrNull else null,
+                correctAnswer = if (graded) question.correctAnswerText() else null,
+                explanation = if (graded) question.text("explanation")?.takeIf(String::isNotBlank) else null
+            )
+        }
+        StudentAnswerReview(
+            id = raw.text("id") ?: answerId,
+            examId = raw.text("exam_id").orEmpty(),
+            title = raw.text("title").orEmpty().ifBlank { "آزمون" },
+            subject = raw.text("subject").orEmpty(),
+            graded = graded,
+            totalGrade = raw.number("total_grade") ?: 0.0,
+            totalScore = raw.number("total_score") ?: 0.0,
+            feedback = raw.text("feedback").orEmpty(),
+            submittedAt = raw.text("submitted_at"),
+            questions = questions
+        )
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
@@ -235,6 +295,35 @@ private fun AttendanceDto.toDomain() = AttendanceRow(
     studentId, fullName, username, status, totalGrade, submittedAt, expiresAt,
     minutesLeft, attempts, attemptsAllowed, abandoned
 )
+
+private fun JsonObject.text(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
+private fun JsonObject.number(key: String): Double? = this[key]?.jsonPrimitive?.doubleOrNull
+private fun JsonObject.boolean(key: String): Boolean = this[key]?.jsonPrimitive?.booleanOrNull ?: false
+private fun JsonElement?.strings(): List<String> =
+    (this as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty()
+
+private fun JsonObject.correctAnswerText(): String? = when (text("type")?.lowercase()) {
+    "multiple", "multiple_choice", "multiplechoice" -> {
+        val index = this["correctOption"]?.jsonPrimitive?.intOrNull
+            ?: this["correctIndex"]?.jsonPrimitive?.intOrNull
+        index?.let { this["options"].strings().getOrNull(it) }
+    }
+    "truefalse", "true_false" -> this["correctAnswer"]?.jsonPrimitive?.booleanOrNull?.let {
+        if (it) "صحیح" else "غلط"
+    }
+    "fill", "fill_blank" -> this["accept"].strings().takeIf(List<String>::isNotEmpty)?.joinToString(" یا ")
+    "numeric", "number" -> this["answer"]?.jsonPrimitive?.contentOrNull?.let { answer ->
+        val tolerance = this["tolerance"]?.jsonPrimitive?.contentOrNull
+        if (tolerance.isNullOrBlank() || tolerance == "0" || tolerance == "0.0") answer else "$answer ± $tolerance"
+    }
+    "matching", "match" -> (this["matchAnswer"] as? JsonObject)?.entries
+        ?.sortedBy { it.key.toIntOrNull() ?: Int.MAX_VALUE }
+        ?.joinToString("، ") { (left, right) ->
+            "${(left.toIntOrNull() ?: 0) + 1} ← ${(right.jsonPrimitive.intOrNull ?: 0) + 1}"
+        }
+        ?.takeIf(String::isNotBlank)
+    else -> null
+}
 
 private fun JsonObject.throwRpcError(): JsonObject {
     this["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)

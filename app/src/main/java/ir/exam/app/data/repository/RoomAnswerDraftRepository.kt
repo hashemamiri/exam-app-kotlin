@@ -13,6 +13,9 @@ class RoomAnswerDraftRepository(private val dao: AnswerDraftDao) : AnswerDraftRe
             entity?.answersJson?.let(StudentDraftJsonCodec::decode) ?: StudentDraft()
         }
 
+    override suspend fun load(examId: String): StudentDraft =
+        dao.find(examId)?.answersJson?.let(StudentDraftJsonCodec::decode) ?: StudentDraft()
+
     override suspend fun save(examId: String, draft: StudentDraft) {
         dao.upsert(
             AnswerDraftEntity(

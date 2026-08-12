@@ -44,20 +44,28 @@ fun StudentHomeScreen(userId: String) {
     }
     val state by viewModel.state.collectAsState()
     if (state.exam != null) {
-        StudentExamContent(
-            state = state,
-            onAnswer = viewModel::answer,
-            onPrevious = { viewModel.goTo(state.questionIndex - 1) },
-            onNext = { viewModel.goTo(state.questionIndex + 1) },
-            onAddImages = viewModel::addResponseImages,
-            onRemoveImage = viewModel::removeResponseImage,
-            onSubmit = viewModel::submit,
-            onDone = viewModel::leaveFinishedExam
-        )
+        if (state.showPreview && !state.finished) {
+            StudentExamPreview(state = state, onStart = viewModel::startExam)
+        } else {
+            StudentExamContent(
+                state = state,
+                onAnswer = viewModel::answer,
+                onPrevious = { viewModel.goTo(state.questionIndex - 1) },
+                onNext = { viewModel.goTo(state.questionIndex + 1) },
+                onAddImages = viewModel::addResponseImages,
+                onRemoveImage = viewModel::removeResponseImage,
+                onSubmit = viewModel::submit,
+                onDone = viewModel::leaveFinishedExam
+            )
+        }
         return
     }
     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("داشبورد دانش‌آموز", style = MaterialTheme.typography.headlineMedium)
+        if (state.restoringExam) {
+            CircularProgressIndicator()
+            Text("در حال بررسی آزمون نیمه‌تمام روی این دستگاه...")
+        }
         if (state.pendingSubmissions.isNotEmpty()) {
             val blocked = state.pendingSubmissions.count { it.state == "blocked_auth" || it.state == "failed" }
             Card(Modifier.fillMaxWidth()) {
@@ -82,7 +90,11 @@ fun StudentHomeScreen(userId: String) {
         }
         Text("کد آزمون را وارد کنید")
         OutlinedTextField(state.code, viewModel::setCode, label = { Text("کد آزمون") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = viewModel::join, enabled = !state.loading && state.code.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("ورود به آزمون") }
+        Button(
+            onClick = viewModel::join,
+            enabled = !state.loading && !state.restoringExam && state.code.isNotBlank(),
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("ورود به آزمون") }
         if (state.loading) CircularProgressIndicator()
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }

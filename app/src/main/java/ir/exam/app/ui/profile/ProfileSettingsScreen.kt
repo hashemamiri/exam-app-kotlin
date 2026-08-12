@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,12 +44,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
@@ -84,14 +87,18 @@ fun ProfileSettingsScreen(
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             FilterChip(selected = section == 0, onClick = { section = 0 }, label = { Text("ظاهر") })
             FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("پروفایل") })
+            FilterChip(selected = section == 2, onClick = { section = 2 }, label = { Text("حساب") })
             if (user.role == UserRole.TEACHER) {
-                FilterChip(selected = section == 2, onClick = { section = 2 }, label = { Text("سربرگ") })
-                FilterChip(selected = section == 3, onClick = { section = 3 }, label = { Text("داده‌ها") })
+                FilterChip(selected = section == 3, onClick = { section = 3 }, label = { Text("سربرگ") })
+                FilterChip(selected = section == 4, onClick = { section = 4 }, label = { Text("داده‌ها") })
             }
         }
 
@@ -109,7 +116,14 @@ fun ProfileSettingsScreen(
                 onRemoveAvatar = { confirmRemove = true },
                 onSave = viewModel::save
             )
-            section == 2 -> HeaderSection(
+            section == 2 -> AccountSection(
+                role = user.role,
+                profile = state.profile!!,
+                state = state,
+                onChangePassword = viewModel::changePassword,
+                onChangeUsername = viewModel::changeTeacherUsername
+            )
+            section == 3 && user.role == UserRole.TEACHER -> HeaderSection(
                 profile = state.profile!!,
                 state = state,
                 onProvince = viewModel::setProvince,
@@ -280,6 +294,96 @@ private fun ProfileSection(
             }
         }
         item { SaveStatus(state, onSave, "ذخیره پروفایل") }
+    }
+}
+
+@Composable
+private fun AccountSection(
+    role: UserRole,
+    profile: NativeProfile,
+    state: ProfileSettingsState,
+    onChangePassword: (String, String) -> Unit,
+    onChangeUsername: (String) -> Unit
+) {
+    var username by remember(profile.username) { mutableStateOf(profile.username) }
+    var password by remember(profile.id) { mutableStateOf("") }
+    var confirmation by remember(profile.id) { mutableStateOf("") }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (role == UserRole.TEACHER) {
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("نام کاربری نمایشی معلم", style = MaterialTheme.typography.titleMedium)
+                        OutlinedTextField(
+                            value = username,
+                            onValueChange = {
+                                username = it.lowercase().filter { char ->
+                                    char in 'a'..'z' || char.isDigit() || char == '_'
+                                }.take(20)
+                            },
+                            label = { Text("نام کاربری انگلیسی") },
+                            supportingText = { Text("ورود معلم همچنان با ایمیل انجام می‌شود.") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            onClick = { onChangeUsername(username) },
+                            enabled = !state.accountSaving && username.length >= 4 && username != profile.username,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("ذخیره نام کاربری") }
+                    }
+                }
+            }
+        } else {
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("نام کاربری دانش‌آموز", style = MaterialTheme.typography.titleMedium)
+                        Text(profile.username.ifBlank { "—" }, fontWeight = FontWeight.Bold)
+                        Text("تغییر نام کاربری دانش‌آموز فقط توسط معلم انجام می‌شود.")
+                    }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("تغییر رمز عبور", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it.take(72) },
+                        label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = confirmation,
+                        onValueChange = { confirmation = it.take(72) },
+                        label = { Text("تکرار رمز جدید") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Button(
+                        onClick = {
+                            onChangePassword(password, confirmation)
+                            password = ""
+                            confirmation = ""
+                        },
+                        enabled = !state.accountSaving && password.length >= 8 && password == confirmation,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("تغییر رمز") }
+                    Text("رمز قبلی قابل مشاهده یا بازیابی نیست.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        if (state.accountSaving) item { CircularProgressIndicator() }
+        state.message?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
+        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
     }
 }
 

@@ -29,7 +29,9 @@ class AuthUserCache(context: Context) {
             name = name,
             email = preferences.getString(KEY_EMAIL, null),
             role = role,
-            avatarUrl = preferences.getString(KEY_AVATAR_URL, null)
+            avatarUrl = preferences.getString(KEY_AVATAR_URL, null),
+            username = preferences.getString(KEY_USERNAME, null),
+            requiresTeacherSetup = preferences.getBoolean(KEY_REQUIRES_TEACHER_SETUP, false)
         )
     }
 
@@ -40,6 +42,8 @@ class AuthUserCache(context: Context) {
             .putString(KEY_EMAIL, user.email)
             .putString(KEY_ROLE, user.role.name)
             .putString(KEY_AVATAR_URL, user.avatarUrl)
+            .putString(KEY_USERNAME, user.username)
+            .putBoolean(KEY_REQUIRES_TEACHER_SETUP, user.requiresTeacherSetup)
             .commit()
     }
 
@@ -54,5 +58,7 @@ class AuthUserCache(context: Context) {
         const val KEY_EMAIL = "email"
         const val KEY_ROLE = "role"
         const val KEY_AVATAR_URL = "avatar_url"
+        const val KEY_USERNAME = "username"
+        const val KEY_REQUIRES_TEACHER_SETUP = "requires_teacher_setup"
     }
 }

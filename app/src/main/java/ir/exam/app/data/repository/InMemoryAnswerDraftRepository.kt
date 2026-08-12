@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.map
 class InMemoryAnswerDraftRepository : AnswerDraftRepository {
     private val data = MutableStateFlow<Map<String, StudentDraft>>(emptyMap())
     override fun observe(examId: String): Flow<StudentDraft> = data.map { it[examId] ?: StudentDraft() }
+    override suspend fun load(examId: String): StudentDraft = data.value[examId] ?: StudentDraft()
     override suspend fun save(examId: String, draft: StudentDraft) { data.value = data.value + (examId to draft) }
     override suspend fun clear(examId: String) { data.value = data.value - examId }
 }

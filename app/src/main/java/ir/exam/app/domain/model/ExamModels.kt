@@ -5,7 +5,16 @@ data class Exam(
     val title: String,
     val code: String,
     val durationMinutes: Int,
-    val questions: List<Question>
+    val questions: List<Question>,
+    val subject: String = "",
+    val teacherMessage: String? = null,
+    /** زمان محلی متناظر با expires_at سرور؛ null یعنی بدون محدودیت. */
+    val deadlineEpochMs: Long? = null,
+    val shuffleQuestions: Boolean = false,
+    val shuffleOptions: Boolean = false,
+    val attemptsAllowed: Int = 1,
+    val attemptNumber: Int? = null,
+    val attemptsRemaining: Int? = null
 )
 
 sealed interface Question {
@@ -15,6 +24,8 @@ sealed interface Question {
     val images: List<String>
     val maxAnswerImages: Int
     val answerImagesRequired: Boolean
+    /** اندیس اصلی سرور؛ پاسخ‌های آرایه‌ای همیشه با این ترتیب ارسال می‌شوند. */
+    val originalIndex: Int
 }
 
 data class EssayQuestion(
@@ -23,7 +34,8 @@ data class EssayQuestion(
     override val score: Double,
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
-    override val answerImagesRequired: Boolean = false
+    override val answerImagesRequired: Boolean = false,
+    override val originalIndex: Int = 0
 ) : Question
 
 data class MultipleChoiceQuestion(
@@ -34,7 +46,10 @@ data class MultipleChoiceQuestion(
     val optionImages: List<String?> = emptyList(),
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
-    override val answerImagesRequired: Boolean = false
+    override val answerImagesRequired: Boolean = false,
+    override val originalIndex: Int = 0,
+    /** هر گزینه نمایشی به کدام اندیس اصلی سرور اشاره می‌کند. */
+    val optionOriginalIndices: List<Int> = options.indices.toList()
 ) : Question
 
 data class TrueFalseQuestion(
@@ -43,7 +58,8 @@ data class TrueFalseQuestion(
     override val score: Double,
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
-    override val answerImagesRequired: Boolean = false
+    override val answerImagesRequired: Boolean = false,
+    override val originalIndex: Int = 0
 ) : Question
 
 data class FillBlankQuestion(
@@ -52,7 +68,8 @@ data class FillBlankQuestion(
     override val score: Double,
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
-    override val answerImagesRequired: Boolean = false
+    override val answerImagesRequired: Boolean = false,
+    override val originalIndex: Int = 0
 ) : Question
 
 data class NumericQuestion(
@@ -61,7 +78,8 @@ data class NumericQuestion(
     override val score: Double,
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
-    override val answerImagesRequired: Boolean = false
+    override val answerImagesRequired: Boolean = false,
+    override val originalIndex: Int = 0
 ) : Question
 
 data class MatchingQuestion(
@@ -74,7 +92,10 @@ data class MatchingQuestion(
     val rightImages: List<String?> = emptyList(),
     override val images: List<String> = emptyList(),
     override val maxAnswerImages: Int = 0,
-    override val answerImagesRequired: Boolean = false
+    override val answerImagesRequired: Boolean = false,
+    override val originalIndex: Int = 0,
+    /** هر عضو نمایشی ستون راست به کدام اندیس اصلی کلید پاسخ اشاره می‌کند. */
+    val rightOriginalIndices: List<Int> = rightItems.indices.toList()
 ) : Question
 
 sealed interface StudentAnswer { val questionId: String }

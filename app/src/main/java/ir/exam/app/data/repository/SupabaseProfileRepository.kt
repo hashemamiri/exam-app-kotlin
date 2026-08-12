@@ -12,7 +12,10 @@ import ir.exam.app.domain.model.ExamHeader
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.TeacherPublicProfile
 import ir.exam.app.domain.model.UserRole
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 class SupabaseProfileRepository(context: Context) {
@@ -67,6 +70,25 @@ class SupabaseProfileRepository(context: Context) {
         ).decodeAs<ProfileSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
         profile.copy(avatarUrl = response.avatarUrl ?: profile.avatarUrl)
+    }
+
+    suspend fun changePassword(newPassword: String): Result<Unit> = runCatching {
+        require(newPassword.length in 8..72) { "رمز عبور باید ۸ تا ۷۲ کاراکتر باشد." }
+        check(SupabaseProvider.client.auth.currentUserOrNull() != null) { "نشست ورود پیدا نشد." }
+        SupabaseProvider.client.auth.updateUser { password = newPassword }
+    }
+
+    suspend fun changeTeacherUsername(username: String): Result<String> = runCatching {
+        val clean = username.trim().lowercase()
+        require(Regex("^[a-z0-9_]{4,20}$").matches(clean)) {
+            "نام کاربری باید ۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط باشد."
+        }
+        val response = SupabaseProvider.client.postgrest.rpc(
+            "native_update_my_username_v1",
+            buildJsonObject { put("p_username", clean) }
+        ).decodeAs<JsonObject>()
+        response["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        response["username"]?.jsonPrimitive?.contentOrNull ?: clean
     }
 
     private fun validate(profile: NativeProfile) {

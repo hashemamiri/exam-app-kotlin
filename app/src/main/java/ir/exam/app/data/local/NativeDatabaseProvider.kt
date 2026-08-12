@@ -13,7 +13,7 @@ object NativeDatabaseProvider {
             context.applicationContext,
             AppDatabase::class.java,
             "exam-native.db"
-        ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
     }
 
     val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -49,6 +49,23 @@ object NativeDatabaseProvider {
                     examId TEXT,
                     payloadJson TEXT NOT NULL,
                     updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS active_exam_sessions (
+                    ownerUserId TEXT NOT NULL PRIMARY KEY,
+                    examId TEXT NOT NULL,
+                    code TEXT NOT NULL,
+                    payloadJson TEXT NOT NULL,
+                    deadlineEpochMs INTEGER,
+                    savedAt INTEGER NOT NULL
                 )
                 """.trimIndent()
             )

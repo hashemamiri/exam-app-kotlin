@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V11 نهایی‌سازی امنیت و قطع WebView
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V12 رفع جامع مسیرهای حیاتی Native
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -1743,4 +1743,143 @@ FINAL_NATIVE_VERIFY                  → PASS
 assembleDebug                        → BUILD SUCCESSFUL
 lintDebug                            → BUILD SUCCESSFUL (0 error)
 APK Signature Scheme v2              → Verified
+GitHub Actions واقعی V11.2           → SUCCESS (اعلام کاربر)
 ```
+
+---
+
+## ۲۵) V12 جامع — رفع مسیرهای حیاتی Native
+
+### علت ایجاد V12
+
+پایان نقشه V1 تا V11 به معنی پایان معماری مهاجرت بود، نه برابری تمام مسیرهای حیاتی. ممیزی مستقیم سورس پس از V11.2 پنج نقص واقعی را نشان داد:
+
+```text
+ورود دانش‌آموز فقط ایمیل می‌پذیرفت و نام کاربری به Auth نگاشت نمی‌شد
+ثبت‌نام/بازیابی/تغییر رمز معلم UI کامل نداشت
+shuffle_q / shuffle_opt / teacher_message / expires_at / server_now مصرف نمی‌شد
+آزمون فعال و deadline پس از process death بازیابی نمی‌شد
+my_answers دریافت می‌شد ولی UI فقط تعداد را نشان می‌داد
+```
+
+V12 هر پنج مورد را در یک Patch واقعی رفع می‌کند.
+
+### حساب و Auth
+
+```text
+نام کاربری دانش‌آموز → نگاشت داخلی قطعی به username@student.exam.local
+ورود OTP موجود       → createUser=false
+ثبت‌نام معلم          → ایمیل + OTP + نام کاربری + رمز + RPC مالک‌محور
+بازیابی رمز معلم      → OTP بدون ساخت حساب + updateUser پس از تأیید
+تغییر رمز             → پروفایل و تنظیمات / حساب
+تغییر نام کاربری معلم → native_update_my_username_v1
+```
+
+- دامنه داخلی دانش‌آموز در UI نمایش داده نمی‌شود.
+- managed student، عضو کلاس و حساب دارای `teacher_id` امکان self-promotion ندارند.
+- `native_my_registration_state_v1` ثبت‌نام قطع‌شده پس از OTP را بازیابی می‌کند تا کاربر اشتباهاً وارد داشبورد دانش‌آموز نشود.
+- رمز فقط به Supabase Auth داده می‌شود و در public، Room، cache یا log ذخیره نمی‌شود.
+
+### آزمون و تایمر
+
+- `StudentExamPayloadCodec` فیلدهای `shuffle_q`, `shuffle_opt`, `teacher_message`, `server_now`, `expires_at` و اطلاعات اختیاری تلاش را مصرف می‌کند.
+- تصادفی‌سازی با seed پایدار student/exam انجام می‌شود.
+- گزینه و matching به اندیس اصلی سرور نگاشت می‌شوند.
+- `PendingSubmissionCodec` پاسخ‌ها را با `originalIndex` به ترتیب اصلی سرور برمی‌گرداند.
+- deadline از اختلاف زمان سرور محاسبه می‌شود؛ ساعت خام گوشی مبنا نیست.
+- در صفرشدن، یک refresh برای دریافت تمدید معلم انجام می‌شود.
+- آزمون بدون مدت دیگر خودکار ارسال نمی‌شود.
+- صفحه پیش از شروع، پیام معلم، زمان، تعداد سؤال و وضعیت بازیابی را نشان می‌دهد.
+
+### Room و process death
+
+```text
+Room version: 2 → 3
+Table: active_exam_sessions
+```
+
+- payload امن بدون answer key، مالک حساب، کد/شناسه و deadline ذخیره می‌شود.
+- اولین join آزمون ناشناخته اینترنت می‌خواهد؛ آزمون قبلاً بازشده و draft آن آفلاین قابل ادامه است.
+- پس از ارسال یا صف‌شدن نهایی، active session پاک می‌شود.
+- draft صف‌شده تا رسید WorkManager حفظ می‌شود.
+
+### جزئیات پاسخ دانش‌آموز
+
+RPCهای جدید:
+
+```text
+native_my_answers_v1()
+native_my_answer_detail_v1(text)
+```
+
+- فقط پاسخ‌های `student_id = auth.uid()` قابل خواندن‌اند.
+- قبل از `graded=true` کلید و explanation هرگز برنمی‌گردند.
+- بعد از تصحیح، پاسخ صحیح، نمره سؤال، بازخورد و تصویر پاسخ نمایش داده می‌شوند.
+- matching قدیمیِ string JSON و matching جدید Object هر دو نمایش داده می‌شوند.
+
+### فایل‌های اصلی V12
+
+```text
+app/src/main/java/ir/exam/app/data/repository/AuthIdentifier.kt
+app/src/main/java/ir/exam/app/data/repository/StudentExamPayloadCodec.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseStudentExamRepository.kt
+app/src/main/java/ir/exam/app/data/local/ActiveExamSessionEntity.kt
+app/src/main/java/ir/exam/app/data/local/ActiveExamSessionDao.kt
+app/src/main/java/ir/exam/app/data/local/NativeDatabaseProvider.kt
+app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt
+app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt
+app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt
+app/src/main/java/ir/exam/app/ui/student/StudentExamViewModel.kt
+app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt
+app/src/main/java/ir/exam/app/ui/reports/StudentResultsViewModel.kt
+supabase/migrations/20260812_native_critical_flows_v12.sql
+supabase/tests/20260812_v12_critical_flows.sql
+CRITICAL_NATIVE_FLOWS_V12_FA.md
+```
+
+### SQL الزامی V12
+
+```text
+SQL_NATIVE_CRITICAL_FLOWS_V12.sql
+```
+
+Readiness باید پنج مقدار true برگرداند:
+
+```text
+teacher_signup_ready
+username_update_ready
+registration_resume_ready
+answer_list_ready
+answer_detail_ready
+```
+
+SQL V9/V10/V11 دوباره اجرا نمی‌شود. Edge Function، Secret یا deploy جدید لازم نیست.
+
+### نتیجه تست V12
+
+```text
+Kotlin compile                                  → PASS
+JVM tests                                       → 50/50 PASS
+student username/Auth-domain regression         → PASS
+teacher signup/recovery/resume regression       → PASS
+stable shuffle + canonical response order       → PASS
+answer-key cache stripping                      → PASS
+process-death exam + draft restore              → PASS
+PostgreSQL 17 migration first + second run      → PASS
+managed-student promotion denial                → PASS
+ungraded answer-key non-disclosure              → PASS
+cross-student detail denial                     → PASS
+function grant/revoke audit                     → PASS
+FINAL_NATIVE_VERIFY                             → PASS
+lintDebug                                       → BUILD SUCCESSFUL (0 error)
+assembleDebug                                   → BUILD SUCCESSFUL
+Debug package                                   → ir.exam.app.native
+APK Signature Scheme v2                         → Verified
+```
+
+### وضعیت پس از V12
+
+- پنج مسیر حیاتی گزارش‌شده پوشش داده شدند.
+- قابلیت‌های غیرحیاتیِ parity مثل دسته‌بندی پیشرفته بانک، crop تعاملی، نمودار گرافیکی و Excel واقعی همچنان featureهای بعدی‌اند و داخل V12 نیستند.
+- پایان V12 فقط پس از اجرای SQL، Build موفق GitHub و تست واقعی teacher/student روی دستگاه تأیید می‌شود.

@@ -21,6 +21,7 @@ data class ProfileSettingsState(
     val teacher: TeacherPublicProfile? = null,
     val loading: Boolean = true,
     val saving: Boolean = false,
+    val accountSaving: Boolean = false,
     val uploadingAvatar: Boolean = false,
     val savedVersion: Int = 0,
     val error: String? = null,
@@ -76,6 +77,29 @@ class ProfileSettingsViewModel(
         saveProfile(profile, "پروفایل و سربرگ ذخیره شد.")
     }
 
+    fun changePassword(password: String, confirmation: String) = accountAction {
+        require(password.length in 8..72) { "رمز عبور باید ۸ تا ۷۲ کاراکتر باشد." }
+        require(password == confirmation) { "تکرار رمز عبور یکسان نیست." }
+        repository.changePassword(password).getOrThrow()
+        "رمز عبور با موفقیت تغییر کرد."
+    }
+
+    fun changeTeacherUsername(username: String) = accountAction {
+        require(role == UserRole.TEACHER) { "تغییر نام کاربری فقط برای حساب معلم مجاز است." }
+        val saved = repository.changeTeacherUsername(username).getOrThrow()
+        _state.update { current ->
+            current.copy(
+                profile = current.profile?.copy(username = saved),
+                savedVersion = current.savedVersion + 1
+            )
+        }
+        "نام کاربری نمایشی تغییر کرد. ورود معلم همچنان با ایمیل انجام می‌شود."
+    }
+
+    fun clearStatus() {
+        _state.update { it.copy(error = null, message = null) }
+    }
+
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { appearance.setTheme(mode) }
     fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale) }
     fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled) }
@@ -86,6 +110,15 @@ class ProfileSettingsViewModel(
         repository.save(profile)
             .onSuccess { markSaved(it, message) }
             .onFailure { error -> _state.update { it.copy(saving = false, error = safeProfileError(error)) } }
+    }
+
+    private fun accountAction(block: suspend () -> String) = viewModelScope.launch {
+        _state.update { it.copy(accountSaving = true, error = null, message = null) }
+        runCatching { block() }
+            .onSuccess { message -> _state.update { it.copy(accountSaving = false, message = message) } }
+            .onFailure { error ->
+                _state.update { it.copy(accountSaving = false, error = safeProfileError(error)) }
+            }
     }
 
     private fun markSaved(profile: NativeProfile, message: String) {

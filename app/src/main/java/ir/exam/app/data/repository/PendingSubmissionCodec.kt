@@ -35,7 +35,11 @@ object PendingSubmissionCodec {
 
     fun fromAttempt(ownerUserId: String, exam: Exam, attempt: SubmittedExam): PendingSubmissionPayload {
         require(attempt.examId == exam.id) { "شناسه آزمون پاسخ با آزمون فعال سازگار نیست." }
-        val responses = JsonArray(exam.questions.map { question ->
+        val originalIndices = exam.questions.map { it.originalIndex }
+        val canonicalQuestions = if (
+            originalIndices.all { it >= 0 } && originalIndices.distinct().size == exam.questions.size
+        ) exam.questions.sortedBy { it.originalIndex } else exam.questions
+        val responses = JsonArray(canonicalQuestions.map { question ->
             when (val answer = attempt.answers[question.id]) {
                 is TextAnswer -> JsonPrimitive(answer.value)
                 is ChoiceAnswer -> JsonPrimitive(answer.selectedIndex)

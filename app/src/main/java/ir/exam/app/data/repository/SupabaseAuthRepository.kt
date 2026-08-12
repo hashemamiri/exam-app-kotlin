@@ -18,7 +18,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 class SupabaseAuthRepository(context: Context) : AuthRepository {
@@ -43,7 +47,6 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         val cachedUser = userCache.read(sessionUser.id)
         val refreshedProfile = withTimeoutOrNull(PROFILE_REFRESH_TIMEOUT_MS) {
             try {
-                // refreshCurrentSession نشست منقضی را پیش از اولین درخواست Postgrest تازه می‌کند.
                 auth.refreshCurrentSession()
                 Result.success(currentProfile())
             } catch (error: CancellationException) {
@@ -65,44 +68,113 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             ?: error("نشست ورود پیدا نشد. دوباره وارد شوید.")
         val fallbackName = sessionUser.email?.substringBefore('@').orEmpty().ifBlank { "کاربر" }
 
-        // ایجاد/خواندن فقط از RPC مالک‌محور انجام می‌شود؛ جدول profiles دیگر DML مستقیم از APK نمی‌پذیرد.
         val profile = SupabaseProvider.client.postgrest.rpc(
             "native_ensure_profile_v1",
             buildJsonObject { put("p_fallback_name", fallbackName) }
         ).decodeAs<NativeProfileDto>()
         profile.error?.takeIf(String::isNotBlank)?.let(::error)
 
-        val role = if (profile.role.equals("teacher", true)) {
-            UserRole.TEACHER
-        } else {
-            UserRole.STUDENT
-        }
+        val role = if (profile.role.equals("teacher", true)) UserRole.TEACHER else UserRole.STUDENT
+        val realEmailStudent = role == UserRole.STUDENT &&
+            !sessionUser.email.orEmpty().endsWith("@student.exam.local", ignoreCase = true)
+        val requiresTeacherSetup = if (realEmailStudent) {
+            val state = SupabaseProvider.client.postgrest.rpc("native_my_registration_state_v1")
+                .decodeAs<JsonObject>()
+            state["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+            state["requires_teacher_setup"]?.jsonPrimitive?.booleanOrNull ?: false
+        } else false
         return AppUser(
             id = profile.id ?: sessionUser.id,
-            name = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty().ifBlank { fallbackName },
+            name = profile.displayName?.takeIf(String::isNotBlank)
+                ?: profile.fullName.orEmpty().ifBlank { fallbackName },
             email = sessionUser.email,
             role = role,
-            avatarUrl = profile.avatarUrl
+            avatarUrl = profile.avatarUrl,
+            username = profile.username,
+            requiresTeacherSetup = requiresTeacherSetup
         )
     }
 
-    override suspend fun signInWithPassword(email: String, password: String): Result<AppUser> = runCatching {
+    override suspend fun signInWithPassword(identifier: String, password: String): Result<AppUser> = runCatching {
+        require(password.isNotBlank()) { "رمز عبور را وارد کنید." }
         auth.signInWith(Email) {
-            this.email = email.trim()
+            email = AuthIdentifier.passwordLoginEmail(identifier)
             this.password = password
         }
         persistUser(currentProfile())
     }
 
-    override suspend fun sendOtp(email: String): Result<Unit> = runCatching {
-        auth.signInWith(OTP) {
-            this.email = email.trim()
-            createUser = true
-        }
+    override suspend fun sendLoginOtp(email: String): Result<Unit> = sendOtp(
+        email = email,
+        createUser = false,
+        fullName = null
+    )
+
+    override suspend fun verifyLoginOtp(email: String, code: String): Result<AppUser> = runCatching {
+        verifyEmailCode(email, code)
+        persistUser(currentProfile())
     }
 
-    override suspend fun verifyOtp(email: String, code: String): Result<AppUser> = runCatching {
-        auth.verifyEmailOtp(OtpType.Email.EMAIL, email.trim(), code.trim())
+    override suspend fun sendTeacherRegistrationOtp(email: String, fullName: String): Result<Unit> {
+        require(fullName.trim().length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
+        return sendOtp(email, createUser = true, fullName = fullName.trim())
+    }
+
+    override suspend fun verifyTeacherRegistrationOtp(email: String, code: String): Result<Unit> = runCatching {
+        verifyEmailCode(email, code)
+    }
+
+    override suspend fun completeTeacherRegistration(
+        fullName: String,
+        username: String,
+        password: String
+    ): Result<AppUser> = runCatching {
+        val name = fullName.trim()
+        val normalizedUsername = username.trim().lowercase()
+        require(name.length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
+        require(AuthIdentifier.validUsername(normalizedUsername)) {
+            "نام کاربری باید ۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط باشد."
+        }
+        validateNewPassword(password)
+        check(auth.currentUserOrNull() != null) { "ابتدا کد ایمیل را تأیید کنید." }
+
+        val response = SupabaseProvider.client.postgrest.rpc(
+            "native_complete_teacher_registration_v1",
+            buildJsonObject {
+                put("p_full_name", name)
+                put("p_username", normalizedUsername)
+            }
+        ).decodeAs<NativeProfileDto>()
+        response.error?.takeIf(String::isNotBlank)?.let(::error)
+        check(response.ok && response.role.equals("teacher", true)) { "تکمیل حساب معلم ناموفق بود." }
+
+        auth.updateUser {
+            this.password = password
+            data {
+                put("full_name", name)
+            }
+        }
+        persistUser(currentProfile())
+    }
+
+    override suspend fun sendRecoveryOtp(email: String): Result<Unit> = sendOtp(
+        email = email,
+        createUser = false,
+        fullName = null
+    )
+
+    override suspend fun verifyRecoveryOtp(email: String, code: String): Result<String?> = runCatching {
+        verifyEmailCode(email, code)
+        val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile")
+            .decodeAs<NativeProfileDto>()
+        profile.error?.takeIf(String::isNotBlank)?.let(::error)
+        profile.username?.takeIf(String::isNotBlank)
+    }
+
+    override suspend fun changePassword(newPassword: String): Result<AppUser> = runCatching {
+        validateNewPassword(newPassword)
+        check(auth.currentUserOrNull() != null) { "نشست ورود پیدا نشد." }
+        auth.updateUser { password = newPassword }
         persistUser(currentProfile())
     }
 
@@ -115,6 +187,27 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         userCache.clear()
         _currentUser.value = null
         return result
+    }
+
+    private suspend fun sendOtp(email: String, createUser: Boolean, fullName: String?): Result<Unit> = runCatching {
+        val normalizedEmail = AuthIdentifier.requireEmail(email)
+        auth.signInWith(OTP) {
+            this.email = normalizedEmail
+            this.createUser = createUser
+            if (!fullName.isNullOrBlank()) {
+                data = buildJsonObject { put("full_name", fullName) }
+            }
+        }
+    }
+
+    private suspend fun verifyEmailCode(email: String, code: String) {
+        val cleanCode = code.filter(Char::isDigit)
+        require(cleanCode.length in 6..8) { "کد یک‌بارمصرف باید ۶ تا ۸ رقم باشد." }
+        auth.verifyEmailOtp(OtpType.Email.EMAIL, AuthIdentifier.requireEmail(email), cleanCode)
+    }
+
+    private fun validateNewPassword(value: String) {
+        require(value.length in 8..72) { "رمز عبور باید ۸ تا ۷۲ کاراکتر باشد." }
     }
 
     private fun persistUser(user: AppUser): AppUser {
