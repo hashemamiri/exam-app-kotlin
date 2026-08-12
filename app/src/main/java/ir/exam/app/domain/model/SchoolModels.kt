@@ -43,6 +43,11 @@ data class StudentCredential(
     val password: String
 )
 
+data class BulkStudentCreateResult(
+    val credentials: List<StudentCredential>,
+    val failures: List<String>
+)
+
 data class UpdateStudentRequest(
     val id: String,
     val firstName: String,

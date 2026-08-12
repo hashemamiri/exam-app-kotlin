@@ -1,8 +1,14 @@
 package ir.exam.app.ui.classes
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.jan.supabase.auth.auth
+import ir.exam.app.data.local.NativeDatabaseProvider
+import ir.exam.app.data.local.StudentNoteEntity
+import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.data.repository.SupabaseSchoolRepository
+import ir.exam.app.domain.model.BulkStudentCreateResult
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
@@ -24,12 +30,17 @@ data class ClassesState(
     val query: String = "",
     val error: String? = null,
     val message: String? = null,
-    val lastCredential: StudentCredential? = null
+    val lastCredential: StudentCredential? = null,
+    val bulkResult: BulkStudentCreateResult? = null,
+    val studentNotes: Map<String,String> = emptyMap()
 )
 
 class ClassesViewModel(
-    private val repository: SchoolRepository = SupabaseSchoolRepository()
+    private val repository: SchoolRepository = SupabaseSchoolRepository(),
+    context:Context?=null
 ) : ViewModel() {
+    private val ownerId=if(context!=null)runCatching{SupabaseProvider.client.auth.currentUserOrNull()?.id.orEmpty()}.getOrDefault("")else ""
+    private val noteDao=context?.applicationContext?.let{NativeDatabaseProvider.get(it).studentNoteDao()}
     private val _state = MutableStateFlow(ClassesState())
     val state = _state.asStateFlow()
 
@@ -37,9 +48,10 @@ class ClassesViewModel(
         _state.update { it.copy(loading = true, error = null) }
         val classes = repository.getClasses().getOrElse { return@launch failLoad(it) }
         val students = repository.getStudents().getOrElse { return@launch failLoad(it) }
+        val notes=if(noteDao!=null&&ownerId.isNotBlank())noteDao.list(ownerId).associate{it.studentId to it.note}else emptyMap()
         _state.update { old ->
             val selected = old.selectedClass?.id?.let { id -> classes.firstOrNull { it.id == id } }
-            old.copy(loading = false, classes = classes, students = students, selectedClass = selected)
+            old.copy(loading = false, classes = classes, students = students, selectedClass = selected,studentNotes=notes)
         }
         state.value.selectedClass?.let { loadRoster(it.id) }
     }
@@ -49,7 +61,7 @@ class ClassesViewModel(
     }
 
     fun clearMessage() {
-        _state.update { it.copy(message = null, error = null, lastCredential = null) }
+        _state.update { it.copy(message = null, error = null, lastCredential = null,bulkResult=null) }
     }
 
     fun selectClass(item: SchoolClass) {
@@ -106,6 +118,17 @@ class ClassesViewModel(
         reloadData()
         request.classId?.let { loadRosterNow(it) }
         _state.update { it.copy(lastCredential = credential) }
+    }
+
+    fun createStudentsBulk(classId:String,requests:List<NewStudentRequest>) = action("ساخت گروهی انجام شد.") {
+        val result=repository.createStudentsBulk(classId,requests).getOrThrow();reloadData();loadRosterNow(classId);_state.update{it.copy(bulkResult=result)}
+    }
+
+    fun saveStudentNote(studentId:String,note:String)=viewModelScope.launch{
+        if(noteDao==null||ownerId.isBlank())return@launch
+        val clean=note.take(4000)
+        if(clean.isBlank())noteDao.delete(ownerId,studentId)else noteDao.upsert(StudentNoteEntity(ownerId,studentId,clean,System.currentTimeMillis()))
+        _state.update{it.copy(studentNotes=if(clean.isBlank())it.studentNotes-studentId else it.studentNotes+(studentId to clean),message="یادداشت خصوصی ذخیره شد.")}
     }
 
     fun updateStudent(request: UpdateStudentRequest) = action("مشخصات دانش‌آموز ویرایش شد.") {

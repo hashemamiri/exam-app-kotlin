@@ -2,6 +2,8 @@ package ir.exam.app.ui.reports
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.data.repository.SupabaseSchoolRepository
@@ -116,6 +118,14 @@ class ReportsViewModel(
             } + (row.averagePercent?.let { "%.2f".format(it) }.orEmpty())
         }
         return "\uFEFF" + lines.joinToString("\n") { row -> row.joinToString(",") { csvCell(it) } }
+    }
+
+    fun xlsx():ByteArray {
+        val selected=state.value.exams.filter{it.id in state.value.selectedExamIds}
+        val rows=mutableListOf<List<Any?>>(listOf("نام دانش‌آموز")+selected.map{it.title}+"میانگین درصد")
+        state.value.rows.forEach { row -> rows+=listOf(row.studentName)+selected.map{row.scores[it.id]}+row.averagePercent }
+        val summary=listOf(listOf("شاخص","مقدار"),listOf("تعداد آزمون",state.value.analytics?.examCount?:0),listOf("تعداد پاسخ",state.value.analytics?.answerCount?:0),listOf("میانگین درصد",state.value.analytics?.averagePercent?:0.0))
+        return XlsxWorkbook.build(listOf(XlsxSheet("لیست نمرات",rows),XlsxSheet("خلاصه",summary)))
     }
 
     private fun csvCell(value: String): String = "\"${value.replace("\"", "\"\"")}\""

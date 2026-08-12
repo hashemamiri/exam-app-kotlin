@@ -81,6 +81,12 @@ class SupabaseGradingRepository {
         require(text.trim().isNotEmpty()) { "متن بازخورد خالی است." }
         rpcObject("fb_add", buildJsonObject { put("p_text", text.trim()) }).throwRpcError()
     }
+    suspend fun updateFeedback(id:Long,text:String):Result<Unit> = runCatching {
+        rpcObject("native_feedback_update_v1",buildJsonObject{put("p_id",id);put("p_text",text.trim())}).throwRpcError()
+    }
+    suspend fun deleteFeedback(id:Long):Result<Unit> = runCatching {
+        rpcObject("native_feedback_delete_v1",buildJsonObject{put("p_id",id)}).throwRpcError()
+    }
 
     suspend fun autoGradeInfo(examId: String): Result<JsonObject> = runCatching {
         rpcObject("exam_autograde_info", buildJsonObject { put("p_exam", examId) }).throwRpcError()

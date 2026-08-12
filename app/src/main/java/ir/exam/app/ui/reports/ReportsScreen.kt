@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.ui.math.NativeMathText
 import kotlinx.coroutines.launch
 
@@ -35,8 +37,8 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(viewModel.csv().toByteArray()) }
+    val xlsxLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
+        if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(viewModel.xlsx()) }
     }
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -61,6 +63,7 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                     StatCard("میانگین", "%.1f%%".format(analytics.averagePercent), Modifier.weight(1f))
                 }
             }
+            item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp)){Text("نمودار وضعیت پاسخ‌ها");NativeBarChart(listOf("پاسخ" to analytics.answerCount.toDouble(),"تصحیح" to analytics.gradedCount.toDouble(),"مانده" to analytics.pendingCount.toDouble()))}} }
         }
         item {
             Card(Modifier.fillMaxWidth()) {
@@ -81,6 +84,7 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                             "${analysis.answerCount} پاسخ تصحیح‌شده · آلفای کرونباخ: " +
                                 (analysis.cronbachAlpha?.let { "%.3f".format(it) } ?: "داده ناکافی")
                         )
+                        NativeLineChart(analysis.questions.map{it.averagePercent})
                         analysis.questions.forEach { row ->
                             Card(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -128,8 +132,8 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         enabled = state.rows.isNotEmpty(),
-                        onClick = { csvLauncher.launch("grade-list-${state.selectedClass?.name.orEmpty()}.csv") }
-                    ) { Text("خروجی Excel/CSV") }
+                        onClick = { xlsxLauncher.launch("grade-list-${state.selectedClass?.name.orEmpty()}.xlsx") }
+                    ) { Text("خروجی Excel واقعی") }
                     OutlinedButton(
                         enabled = state.rows.isNotEmpty(),
                         onClick = {

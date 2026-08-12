@@ -22,10 +22,13 @@ manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text()
 workflow = (ROOT / ".github/workflows/android.yml").read_text()
 hardening = (ROOT / "supabase/migrations/20260812_native_final_hardening.sql").read_text()
 critical = (ROOT / "supabase/migrations/20260812_native_critical_flows_v12.sql").read_text()
+parity = (ROOT / "supabase/migrations/20260812_native_full_parity_v13.sql").read_text()
 auth_identifier = (ROOT / "app/src/main/java/ir/exam/app/data/repository/AuthIdentifier.kt").read_text()
 student_codec = (ROOT / "app/src/main/java/ir/exam/app/data/repository/StudentExamPayloadCodec.kt").read_text()
 database_provider = (ROOT / "app/src/main/java/ir/exam/app/data/local/NativeDatabaseProvider.kt").read_text()
 student_results = (ROOT / "app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt").read_text()
+builder_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text()
+student_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt").read_text()
 
 require("android.webkit" not in main_text, "WebView/android.webkit import remains in Native source")
 require(not re.search(r"\b(val|var)\s+plain_password\b", main_text), "plain_password model field remains")
@@ -72,7 +75,17 @@ for function_name in (
         f"V12 function {function_name} lacks explicit revoke"
     )
 
-for match in re.finditer(r"(?im)^\s*(delete\s+from|update\s+)([^;]+);", hardening + "\n" + critical):
+require(all((ROOT/"app/src/main/res/font"/name).exists() for name in ("vazirmatn_regular.ttf","shabnam_regular.ttf","sahel_regular.ttf")),"bundled Persian fonts missing")
+require("native_save_exam_v2" in parity and "native_bank_snapshot_v1" in parity and "native_feedback_update_v1" in parity,"V13 backend parity RPCs missing")
+require("پیش‌نمایش کامل A4" in builder_screen and "تعداد گزینه" in builder_screen and "حساس به حروف" in builder_screen,"builder parity controls missing")
+require("مرور پیش از ارسال" in student_screen and "علامت برای مرور" in student_screen,"student navigation/review parity missing")
+require((ROOT/"app/src/main/java/ir/exam/app/core/export/XlsxWorkbook.kt").exists(),"real XLSX writer missing")
+require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").exists(),"interactive crop editor missing")
+require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"PIN/device credential app lock missing")
+require((ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt").exists(),"structured native math parser missing")
+require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
+
+for match in re.finditer(r"(?im)^\s*(delete\s+from|update\s+)([^;]+);", hardening + "\n" + critical + "\n" + parity):
     statement = match.group(0)
     if not re.search(r"(?i)\bwhere\b", statement):
         errors.append(f"UPDATE/DELETE without WHERE at line {hardening[:match.start()].count(chr(10))+1}")

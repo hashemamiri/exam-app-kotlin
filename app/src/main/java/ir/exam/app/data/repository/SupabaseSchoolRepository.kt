@@ -6,13 +6,17 @@ import io.ktor.client.call.body
 import ir.exam.app.data.dto.SchoolClassDto
 import ir.exam.app.data.dto.StudentProfileDto
 import ir.exam.app.data.remote.SupabaseProvider
+import ir.exam.app.domain.model.BulkStudentCreateResult
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import ir.exam.app.domain.repository.SchoolRepository
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -119,6 +123,26 @@ class SupabaseSchoolRepository : SchoolRepository {
             }).throwIfError()
         }
         StudentCredential(id, request.username.trim().lowercase(), request.password)
+    }
+
+    override suspend fun createStudentsBulk(classId:String,requests:List<NewStudentRequest>):Result<BulkStudentCreateResult> = runCatching {
+        require(classId.isNotBlank()){ "برای ساخت گروهی یک کلاس انتخاب کنید." }
+        require(requests.size in 1..100){ "تعداد ردیف‌های گروهی باید بین ۱ و ۱۰۰ باشد." }
+        val rows=buildJsonArray { requests.forEach { r ->
+            require(r.firstName.isNotBlank()&&r.username.matches(Regex("^[a-z0-9_]{4,20}$"))&&r.password.length in 8..72&&r.gender in setOf("male","female")){"یک ردیف گروهی نامعتبر است."}
+            add(buildJsonObject { put("first_name",r.firstName.trim());put("last_name",r.lastName.trim());put("username",r.username.lowercase());put("password",r.password);put("gender",r.gender) })
+        } }
+        val raw=SupabaseProvider.client.functions.invoke("manage-student",body=buildJsonObject{put("action","bulk");put("class_id",classId);put("rows",rows)}).body<JsonObject>().throwIfError()
+        val credentials=mutableListOf<StudentCredential>();val failures=mutableListOf<String>()
+        (raw["results"] as? JsonArray).orEmpty().forEach { element ->
+            val row=element as? JsonObject ?: return@forEach;val username=row["username"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            if(row["ok"]?.jsonPrimitive?.booleanOrNull==true){credentials+=StudentCredential(row["id"]?.jsonPrimitive?.contentOrNull.orEmpty(),username,row["password"]?.jsonPrimitive?.contentOrNull.orEmpty())}
+            else failures+="$username: ${row["message"]?.jsonPrimitive?.contentOrNull.orEmpty()}"
+        }
+        credentials.forEach { credential -> requests.firstOrNull{it.username.equals(credential.username,true)}?.let { r ->
+            if(r.fatherName.isNotBlank()||r.grade.isNotBlank())rpcObject("save_student_extra",buildJsonObject{put("p_student",credential.id);put("p_username",credential.username);put("p_father_name",r.fatherName.trim());put("p_grade",r.grade.trim())}).throwIfError()
+        } }
+        BulkStudentCreateResult(credentials,failures)
     }
 
     override suspend fun updateStudent(request: UpdateStudentRequest): Result<Unit> = runCatching {

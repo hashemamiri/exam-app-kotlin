@@ -8,6 +8,8 @@ import ir.exam.app.domain.model.AttendanceRow
 import ir.exam.app.domain.model.FeedbackPhrase
 import ir.exam.app.domain.model.GradingExam
 import ir.exam.app.domain.model.GradingSubmission
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -39,6 +41,7 @@ class GradingViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(GradingUiState())
     val state = _state.asStateFlow()
+    private var liveJob:Job?=null
 
     fun load() = viewModelScope.launch {
         _state.update { it.copy(loading = true, error = null) }
@@ -72,13 +75,14 @@ class GradingViewModel(
     }
 
     fun back() {
+        liveJob?.cancel()
         _state.update { it.copy(selectedExam = null, submissions = emptyList(), attendance = emptyList(), liveStatus = null) }
     }
 
     fun setMode(value: String) {
         if (value !in setOf("grading", "question", "attendance")) return
         _state.update { it.copy(mode = value) }
-        if (value == "attendance") loadAttendance()
+        if (value == "attendance") startLiveRefresh() else liveJob?.cancel()
     }
 
     fun moveQuestion(delta: Int) {
@@ -153,6 +157,13 @@ class GradingViewModel(
         _state.update { it.copy(feedbackBank = phrases) }
     }
 
+    fun updateFeedbackPhrase(id:Long,text:String)=action("بازخورد ویرایش شد."){
+        repository.updateFeedback(id,text).getOrThrow();_state.update{it.copy(feedbackBank=repository.feedbackBank().getOrThrow())}
+    }
+    fun deleteFeedbackPhrase(id:Long)=action("بازخورد حذف شد."){
+        repository.deleteFeedback(id).getOrThrow();_state.update{it.copy(feedbackBank=repository.feedbackBank().getOrThrow())}
+    }
+
     fun approveAutoGrades() = action("نمره‌های خودکار تأیید شدند.") {
         val id = state.value.selectedExam?.id ?: error("آزمون انتخاب نشده است.")
         repository.approveAutoGrades(id).getOrThrow()
@@ -175,6 +186,8 @@ class GradingViewModel(
         repository.resetAttempt(id, studentId).getOrThrow()
         loadAttendanceNow(id)
     }
+
+    private fun startLiveRefresh(){liveJob?.cancel();liveJob=viewModelScope.launch{while(state.value.mode=="attendance"&&state.value.selectedExam!=null){runCatching{loadAttendanceNow(state.value.selectedExam!!.id)};delay(20_000)}}}
 
     private fun loadAttendance() = viewModelScope.launch {
         val id = state.value.selectedExam?.id ?: return@launch
@@ -213,6 +226,8 @@ class GradingViewModel(
             .onSuccess { _state.update { it.copy(actionLoading = false, message = message) } }
             .onFailure(::fail)
     }
+
+    override fun onCleared(){liveJob?.cancel();super.onCleared()}
 
     private fun fail(error: Throwable) {
         _state.update { it.copy(loading = false, actionLoading = false, error = safeGradingError(error)) }

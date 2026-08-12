@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.domain.model.StudentAnswerReview
 import ir.exam.app.domain.model.StudentAnswerReviewQuestion
 import ir.exam.app.ui.math.NativeMathText
@@ -47,23 +49,12 @@ import kotlinx.serialization.json.jsonPrimitive
 fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { StudentResultsViewModel() }) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
         if (uri != null) {
-            val rows = mutableListOf(listOf("آزمون", "درس", "نمره", "از", "درصد", "بازخورد"))
-            state.grades.forEach {
-                rows += listOf(
-                    it.title,
-                    it.subject,
-                    it.grade.toString(),
-                    it.total.toString(),
-                    "%.2f".format(it.percent),
-                    it.feedback
-                )
-            }
-            val csv = "\uFEFF" + rows.joinToString("\n") { row ->
-                row.joinToString(",") { "\"${it.replace("\"", "\"\"")}\"" }
-            }
-            context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) }
+            val rows=mutableListOf<List<Any?>>(listOf("آزمون","درس","نمره","از","درصد","بازخورد"))
+            state.grades.forEach{rows+=listOf(it.title,it.subject,it.grade,it.total,it.percent,it.feedback)}
+            val bytes=XlsxWorkbook.build(listOf(XlsxSheet("کارنامه",rows)))
+            context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
         }
     }
     LaunchedEffect(Unit) { viewModel.load() }
@@ -77,9 +68,10 @@ fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { Student
                 val avg = state.grades.map { it.percent }.average()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("میانگین کل: %.1f%%".format(avg))
-                    Button(onClick = { exporter.launch("my-grades.csv") }) { Text("خروجی Excel/CSV") }
+                    Button(onClick = { exporter.launch("my-grades.xlsx") }) { Text("Excel واقعی") }
                 }
             }
+            item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp)){Text("روند پیشرفت");NativeLineChart(state.grades.sortedBy{it.submittedAt}.map{it.percent})}} }
             items(state.grades, key = { it.examId + it.submittedAt }) { grade ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {

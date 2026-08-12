@@ -1,5 +1,6 @@
 package ir.exam.app.domain.repository
 
+import ir.exam.app.domain.model.BulkStudentCreateResult
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
@@ -17,6 +18,8 @@ interface SchoolRepository {
     suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit>
     suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit>
     suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential>
+    suspend fun createStudentsBulk(classId:String,requests:List<NewStudentRequest>):Result<BulkStudentCreateResult> =
+        Result.failure(UnsupportedOperationException("bulk create not implemented"))
     suspend fun updateStudent(request: UpdateStudentRequest): Result<Unit>
     suspend fun resetStudentPassword(studentId: String, newPassword: String): Result<StudentCredential>
     suspend fun deleteStudent(studentId: String): Result<Unit>

@@ -1,5 +1,7 @@
 package ir.exam.app.ui.classes
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,18 +33,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
+import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import kotlin.random.Random
 
 @Composable
-fun SchoolManagementScreen(
-    viewModel: ClassesViewModel = remember { ClassesViewModel() }
-) {
+fun SchoolManagementScreen() {
+    val context=LocalContext.current
+    val viewModel=remember(context){ClassesViewModel(context=context.applicationContext)}
     val state by viewModel.state.collectAsState()
     var showStudents by remember { mutableStateOf(false) }
     var classEditor by remember { mutableStateOf<SchoolClass?>(null) }
@@ -53,6 +59,10 @@ fun SchoolManagementScreen(
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var resettingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
+    var noteStudent by remember { mutableStateOf<StudentProfile?>(null) }
+    var showBulk by remember { mutableStateOf(false) }
+    var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
+    val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -95,7 +105,10 @@ fun SchoolManagementScreen(
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
                     onReset = { resettingStudent = it },
-                    onDeleteAccount = { deletingStudent = it }
+                    onDeleteAccount = { deletingStudent = it },
+                    notes=state.studentNotes,
+                    onNote={noteStudent=it},
+                    onBulk={showBulk=true}
                 )
                 showStudents -> StudentsContent(
                     students = filteredStudents(state.students, state.query),
@@ -105,7 +118,13 @@ fun SchoolManagementScreen(
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
                     onReset = { resettingStudent = it },
-                    onDelete = { deletingStudent = it }
+                    onDelete = { deletingStudent = it },
+                    notes=state.studentNotes,
+                    onNote={noteStudent=it},
+                    onBulk={showBulk=true},
+                    onExport={
+                        pendingXlsx=studentWorkbook(state.students);xlsxLauncher.launch("students.xlsx")
+                    }
                 )
                 else -> ClassesContent(
                     classes = state.classes,
@@ -189,6 +208,21 @@ fun SchoolManagementScreen(
         )
     }
 
+    noteStudent?.let { student ->
+        var note by remember(student.id){mutableStateOf(state.studentNotes[student.id].orEmpty())}
+        AlertDialog(onDismissRequest={noteStudent=null},title={Text("یادداشت خصوصی ${student.fullName}")},
+            text={OutlinedTextField(note,{note=it.take(4000)},label={Text("یادداشت فقط روی این دستگاه")},minLines=5)},
+            confirmButton={Button(onClick={viewModel.saveStudentNote(student.id,note);noteStudent=null}){Text("ذخیره")}},
+            dismissButton={TextButton(onClick={noteStudent=null}){Text("انصراف")}})
+    }
+    if(showBulk) BulkStudentDialog(
+        classes=state.classes,initialClassId=state.selectedClass?.id,onDismiss={showBulk=false},
+        onCreate={classId,rows->viewModel.createStudentsBulk(classId,rows);showBulk=false}
+    )
+    state.bulkResult?.let { result -> AlertDialog(onDismissRequest=viewModel::clearMessage,title={Text("نتیجه ساخت گروهی")},text={Column{
+        Text("موفق: ${result.credentials.size} · ناموفق: ${result.failures.size}");result.failures.take(10).forEach{Text(it)}
+    }},confirmButton={Button(onClick={pendingXlsx=credentialWorkbook(result.credentials);xlsxLauncher.launch("student-credentials.xlsx")}){Text("ذخیره Excel رمزها")}},dismissButton={TextButton(onClick=viewModel::clearMessage){Text("بستن")}}) }
+
     state.lastCredential?.let { credential ->
         AlertDialog(
             onDismissRequest = viewModel::clearMessage,
@@ -245,7 +279,10 @@ private fun ClassRosterContent(
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
     onReset: (StudentProfile) -> Unit,
-    onDeleteAccount: (StudentProfile) -> Unit
+    onDeleteAccount: (StudentProfile) -> Unit,
+    notes:Map<String,String>,
+    onNote:(StudentProfile)->Unit,
+    onBulk:()->Unit
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -255,6 +292,7 @@ private fun ClassRosterContent(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onAdd) { Text("افزودن موجود") }
             OutlinedButton(onClick = onCreate) { Text("حساب جدید") }
+            OutlinedButton(onClick=onBulk){Text("ساخت گروهی")}
         }
         if (roster.isEmpty()) Text("این کلاس هنوز عضوی ندارد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -265,7 +303,8 @@ private fun ClassRosterContent(
                     onRemove = { onRemove(student.id) },
                     onEdit = { onEdit(student) },
                     onReset = { onReset(student) },
-                    onDelete = { onDeleteAccount(student) }
+                    onDelete = { onDeleteAccount(student) },
+                    note=notes[student.id],onNote={onNote(student)}
                 )
             }
         }
@@ -281,7 +320,11 @@ private fun StudentsContent(
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
     onReset: (StudentProfile) -> Unit,
-    onDelete: (StudentProfile) -> Unit
+    onDelete: (StudentProfile) -> Unit,
+    notes:Map<String,String>,
+    onNote:(StudentProfile)->Unit,
+    onBulk:()->Unit,
+    onExport:()->Unit
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(
@@ -290,7 +333,11 @@ private fun StudentsContent(
             label = { Text("جست‌وجوی نام، نام کاربری، پایه یا پدر") },
             modifier = Modifier.fillMaxWidth()
         )
-        Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("ساخت حساب دانش‌آموز") }
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            Button(onClick=onCreate){Text("حساب جدید")}
+            OutlinedButton(onClick=onBulk){Text("ساخت گروهی")}
+            OutlinedButton(onClick=onExport){Text("Excel")}
+        }
         if (students.isEmpty()) Text("دانش‌آموزی یافت نشد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(students, key = StudentProfile::id) { student ->
@@ -300,7 +347,8 @@ private fun StudentsContent(
                     onRemove = null,
                     onEdit = { onEdit(student) },
                     onReset = { onReset(student) },
-                    onDelete = { onDelete(student) }
+                    onDelete = { onDelete(student) },
+                    note=notes[student.id],onNote={onNote(student)}
                 )
             }
         }
@@ -314,7 +362,9 @@ private fun StudentCard(
     onRemove: (() -> Unit)?,
     onEdit: () -> Unit,
     onReset: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    note:String?,
+    onNote:()->Unit
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -322,12 +372,14 @@ private fun StudentCard(
             Text("نام کاربری: ${student.username ?: "—"}")
             Text("پایه: ${student.grade ?: "—"} · نام پدر: ${student.fatherName ?: "—"}")
             student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
+            note?.takeIf(String::isNotBlank)?.let{Text("یادداشت خصوصی: ${it.take(80)}")}
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedButton(onClick = { onToggle(student.id, !student.active) }) {
                     Text(if (student.active) "غیرفعال" else "فعال")
                 }
                 OutlinedButton(onClick = onEdit) { Text("ویرایش") }
                 OutlinedButton(onClick = onReset) { Text("رمز جدید") }
+                OutlinedButton(onClick=onNote){Text("یادداشت")}
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 onRemove?.let { TextButton(onClick = it) { Text("خروج از کلاس") } }
@@ -503,6 +555,26 @@ private fun StudentPasswordResetDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )
 }
+
+@Composable
+private fun BulkStudentDialog(
+    classes:List<SchoolClass>,initialClassId:String?,onDismiss:()->Unit,onCreate:(String,List<NewStudentRequest>)->Unit
+){
+    var classId by remember{mutableStateOf(initialClassId?:classes.firstOrNull()?.id.orEmpty())}
+    var raw by remember{mutableStateOf("علی,رضایی,ali_reza,pass12345,male,حسن,هفتم")}
+    var error by remember{mutableStateOf<String?>(null)}
+    AlertDialog(onDismissRequest=onDismiss,title={Text("ساخت گروهی دانش‌آموز")},text={LazyColumn(Modifier.heightIn(max=520.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+        item{Text("هر خط: نام،نام خانوادگی،نام کاربری،رمز،male/female،نام پدر،پایه")}
+        item{Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){classes.forEach{c->FilterChip(selected=classId==c.id,onClick={classId=c.id},label={Text(c.name)})}}}
+        item{OutlinedTextField(raw,{raw=it},label={Text("حداکثر ۱۰۰ ردیف")},minLines=10,modifier=Modifier.fillMaxWidth())}
+        error?.let{item{Text(it,color=MaterialTheme.colorScheme.error)}}
+    }},confirmButton={Button(onClick={runCatching{
+        require(classId.isNotBlank()){ "کلاس را انتخاب کنید." };raw.lines().filter{it.isNotBlank()}.map{line->val p=line.split(',').map(String::trim);require(p.size>=5){"هر خط حداقل پنج ستون لازم دارد."};NewStudentRequest(p[0],p.getOrElse(1){""},p[2].lowercase(),p[3],p[4].lowercase(),p.getOrElse(5){""},p.getOrElse(6){""},classId)}.also{require(it.size in 1..100)}
+    }.onSuccess{onCreate(classId,it)}.onFailure{error=it.message}}){Text("ساخت حساب‌ها")}},dismissButton={TextButton(onClick=onDismiss){Text("انصراف")}})
+}
+
+private fun studentWorkbook(students:List<StudentProfile>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان",listOf(listOf("نام","نام کاربری","جنسیت","پایه","نام پدر","کلاس","وضعیت"))+students.map{listOf(it.fullName,it.username.orEmpty(),it.gender.orEmpty(),it.grade.orEmpty(),it.fatherName.orEmpty(),it.classNames.orEmpty(),if(it.active)"فعال" else "غیرفعال") })))
+private fun credentialWorkbook(items:List<StudentCredential>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("حساب‌ها",listOf(listOf("نام کاربری","رمز یک‌بارنمایش"))+items.map{listOf(it.username,it.password)})))
 
 private fun filteredStudents(items: List<StudentProfile>, query: String): List<StudentProfile> {
     val value = query.trim().lowercase()

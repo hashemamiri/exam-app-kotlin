@@ -1962,3 +1962,40 @@ APK v2 signature           Verified
 ```
 
 مرحله باقی‌مانده: V13.3 مدیریت/گزارش و Excel واقعی.
+
+### V13.3 — مدیریت، Excel، نمودار، live و بازخورد
+
+```text
+Room 4 و یادداشت خصوصی student
+ساخت گروهی ۱..۱۰۰ با manage-student موجود
+رمزهای bulk فقط همان بار و XLSX امن
+OOXML واقعی چند Sheet برای دانش‌آموز/نمره/کارنامه
+نمودار خطی و میله‌ای Compose Canvas
+live status با refresh بیست‌ثانیه‌ای
+ویرایش/حذف بانک بازخورد با RPC مالک‌محور
+FINAL_NATIVE_VERIFY کل سه مرحله
+```
+
+نیاز عملیاتی:
+```text
+SQL جدید: ندارد (توابع لازم در SQL V13.1 هستند)
+Edge deploy: ندارد
+Secret: ندارد
+پیش‌نیاز: V13.1 و V13.2
+```
+
+تست نهایی:
+```text
+Kotlin compile             PASS
+JVM tests                  53/53 PASS
+PostgreSQL migration x2    PASS
+V13_FULL_PARITY_PASS       PASS
+FINAL_NATIVE_VERIFY        PASS
+lintDebug                  PASS (0 error)
+assembleDebug              PASS
+APK v2 signature           Verified
+```
+
+### نتیجه نقشه سه‌مرحله‌ای V13
+
+پس از Build و تست دستگاه هر سه Patch، فهرست «قابلیت‌های ناقص نسبت به WebView» پوشش داده شده است. WebView، plain_password، نمایش رمز قبلی و نصب silent عمداً بازنمی‌گردند و جزو parity مجاز نیستند.

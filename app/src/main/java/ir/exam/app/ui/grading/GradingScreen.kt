@@ -38,11 +38,13 @@ import kotlinx.serialization.json.JsonObject
 import ir.exam.app.ui.math.NativeMathText
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
 fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() }) {
     val state by viewModel.state.collectAsState()
     var showFeedbackDialog by remember { mutableStateOf(false) }
+    var editingFeedback by remember { mutableStateOf<ir.exam.app.domain.model.FeedbackPhrase?>(null) }
     LaunchedEffect(Unit) { viewModel.load() }
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -81,8 +83,11 @@ fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() })
             TextButton(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
         }
 
+        if(state.feedbackBank.isNotEmpty()) Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            state.feedbackBank.take(6).forEach { phrase -> FilterChip(selected=false,onClick={editingFeedback=phrase},label={Text(phrase.text.take(18))}) }
+        }
         if (state.mode == "attendance") {
-            AttendanceContent(state.attendance, viewModel)
+            AttendanceContent(state.attendance,state.liveStatus, viewModel)
         } else if (state.mode == "question") {
             QuestionCentricContent(state, viewModel)
         } else {
@@ -103,6 +108,12 @@ fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() })
         }
     }
 
+    editingFeedback?.let { original ->
+        var phrase by remember(original.id){mutableStateOf(original.text)}
+        AlertDialog(onDismissRequest={editingFeedback=null},title={Text("ویرایش بازخورد")},text={OutlinedTextField(phrase,{phrase=it.take(1000)},label={Text("متن")})},
+            confirmButton={Column{Button(onClick={viewModel.updateFeedbackPhrase(original.id,phrase);editingFeedback=null},enabled=phrase.isNotBlank()){Text("ذخیره")};TextButton(onClick={viewModel.deleteFeedbackPhrase(original.id);editingFeedback=null}){Text("حذف عبارت")}}},
+            dismissButton={TextButton(onClick={editingFeedback=null}){Text("انصراف")}})
+    }
     if (showFeedbackDialog) {
         var phrase by remember { mutableStateOf("") }
         AlertDialog(
@@ -226,7 +237,14 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
 }
 
 @Composable
-private fun AttendanceContent(rows: List<AttendanceRow>, viewModel: GradingViewModel) {
+private fun AttendanceContent(rows: List<AttendanceRow>, live:JsonObject?,viewModel: GradingViewModel) {
+    val summary=live?.get("summary") as? JsonObject
+    if(summary!=null) Row(horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+        listOf("in_progress" to "در حال آزمون","submitted" to "تحویل","not_started" to "شروع‌نشده").forEach { (key,label) ->
+            Card(Modifier.weight(1f)){Column(Modifier.padding(7.dp)){Text(summary[key]?.jsonPrimitive?.contentOrNull?:"0");Text(label)}}
+        }
+    }
+    Text("وضعیت زنده هر ۲۰ ثانیه خودکار تازه می‌شود.")
     if (rows.isEmpty()) {
         Text("فهرست حضور خالی است یا مخاطبی برای آزمون تعیین نشده است.")
         return

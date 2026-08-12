@@ -8,9 +8,10 @@ import androidx.room.RoomDatabase
         AnswerDraftEntity::class,
         PendingActionEntity::class,
         ExamBuilderDraftEntity::class,
-        ActiveExamSessionEntity::class
+        ActiveExamSessionEntity::class,
+        StudentNoteEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -18,4 +19,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pendingActionDao(): PendingActionDao
     abstract fun examBuilderDraftDao(): ExamBuilderDraftDao
     abstract fun activeExamSessionDao(): ActiveExamSessionDao
+    abstract fun studentNoteDao(): StudentNoteDao
 }
