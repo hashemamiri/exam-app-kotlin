@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
+import ir.exam.app.ui.math.ExistingFormulaEditor
+import ir.exam.app.ui.math.NativeMathText
 
 @Composable
 fun SingleImagePicker(
@@ -56,7 +58,12 @@ fun SingleImagePicker(
 }
 
 @Composable
-fun MatchingQuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+fun MatchingQuestionEditor(
+    question: QuestionDraft,
+    viewModel: ExamBuilderViewModel,
+    onFormulaEdit: (side: String, index: Int, occurrence: Int?, tex: String) -> Unit = { _, _, _, _ -> },
+    onFormulaDelete: (side: String, index: Int, occurrence: Int) -> Unit = { _, _, _ -> }
+) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("ستون‌های جورکردنی می‌توانند تعداد متفاوت داشته باشند؛ موارد اضافی ستون چپ نقش حواس‌پرت‌کن دارند.")
         Text("ستون چپ", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
@@ -64,6 +71,13 @@ fun MatchingQuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
             Card(Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     OutlinedTextField(value,{viewModel.updateMatchingText(question.id,"left",index,it)},label={Text("چپ ${index+1}")},modifier=Modifier.fillMaxWidth())
+                    OutlinedButton(onClick={onFormulaEdit("left",index,null,"")}){Text("درج فرمول")}
+                    if ('$' in value) NativeMathText(value)
+                    ExistingFormulaEditor(
+                        source=value,
+                        onEdit={occurrence,tex->onFormulaEdit("left",index,occurrence,tex)},
+                        onDelete={occurrence->onFormulaDelete("left",index,occurrence)}
+                    )
                     SingleImagePicker(question.matchingLeftImages.getOrNull(index),"تصویر چپ ${index+1}"){viewModel.setMatchingImage(question.id,"left",index,it)}
                     Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick={viewModel.moveMatchingItem(question.id,"left",index,-1)},enabled=index>0){Text("↑")}
@@ -85,6 +99,13 @@ fun MatchingQuestionEditor(question: QuestionDraft, viewModel: ExamBuilderViewMo
             Card(Modifier.fillMaxWidth()) {
                 Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
                     OutlinedTextField(value,{viewModel.updateMatchingText(question.id,"right",index,it)},label={Text("راست ${index+1}")},modifier=Modifier.fillMaxWidth())
+                    OutlinedButton(onClick={onFormulaEdit("right",index,null,"")}){Text("درج فرمول")}
+                    if ('$' in value) NativeMathText(value)
+                    ExistingFormulaEditor(
+                        source=value,
+                        onEdit={occurrence,tex->onFormulaEdit("right",index,occurrence,tex)},
+                        onDelete={occurrence->onFormulaDelete("right",index,occurrence)}
+                    )
                     SingleImagePicker(question.matchingRightImages.getOrNull(index),"تصویر راست ${index+1}"){viewModel.setMatchingImage(question.id,"right",index,it)}
                     Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick={viewModel.moveMatchingItem(question.id,"right",index,-1)},enabled=index>0){Text("↑")}

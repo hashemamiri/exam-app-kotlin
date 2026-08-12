@@ -404,6 +404,13 @@ object NativeMathSvgRenderer {
 
     private fun accent(node: MathNode.Accent, size: Float): Layout {
         val base = layout(node.body, size)
+        if (node.mark == "underline") {
+            val gap = size * .08f
+            val lineY = base.height + gap
+            val stroke = max(1.15f, size * .05f)
+            val line = "<line x1=\"0\" y1=\"${number(lineY)}\" x2=\"${number(base.width)}\" y2=\"${number(lineY)}\" stroke-width=\"${number(stroke)}\"/>"
+            return Layout(base.width, lineY + stroke, base.baseline, base.body + line, base.boxes, base.radicalBars)
+        }
         val accentHeight = size * .28f
         val y = accentHeight + size * .08f
         val width = max(base.width, size * .38f)

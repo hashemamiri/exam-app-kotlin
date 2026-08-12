@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.jan.supabase.auth.auth
+import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.data.local.NativeDatabaseProvider
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.data.repository.ExamBuilderDraftStore
@@ -180,26 +181,49 @@ class ExamBuilderViewModel(
     }
 
     fun updateText(id: String, text: String) { update(id) { it.copy(text = text) } }
-    fun insertFormula(id: String, target: String, index: Int?, tex: String) {
-        val wrapped = "${'$'}${tex.trim()}${'$'}"
+    fun insertFormula(
+        id: String,
+        target: String,
+        index: Int?,
+        tex: String,
+        occurrenceIndex: Int? = null
+    ) {
         update(id) { question ->
             when (target) {
-                "question" -> question.copy(text = appendFormula(question.text, wrapped))
+                "question" -> question.copy(text = FormulaTextCodec.upsert(question.text, occurrenceIndex, tex))
                 "option" -> question.copy(
                     options = question.options.mapIndexed { i, value ->
-                        if (i == index) appendFormula(value, wrapped) else value
+                        if (i == index) FormulaTextCodec.upsert(value, occurrenceIndex, tex) else value
                     }
                 )
                 "matching_left" -> question.copy(
                     matchingLeft = question.matchingLeft.mapIndexed { i, value ->
-                        if (i == index) appendFormula(value, wrapped) else value
+                        if (i == index) FormulaTextCodec.upsert(value, occurrenceIndex, tex) else value
                     }
                 )
                 "matching_right" -> question.copy(
                     matchingRight = question.matchingRight.mapIndexed { i, value ->
-                        if (i == index) appendFormula(value, wrapped) else value
+                        if (i == index) FormulaTextCodec.upsert(value, occurrenceIndex, tex) else value
                     }
                 )
+                else -> question
+            }
+        }
+    }
+
+    fun deleteFormula(id: String, target: String, index: Int?, occurrenceIndex: Int) {
+        update(id) { question ->
+            when (target) {
+                "question" -> question.copy(text = FormulaTextCodec.delete(question.text, occurrenceIndex))
+                "option" -> question.copy(options = question.options.mapIndexed { i, value ->
+                    if (i == index) FormulaTextCodec.delete(value, occurrenceIndex) else value
+                })
+                "matching_left" -> question.copy(matchingLeft = question.matchingLeft.mapIndexed { i, value ->
+                    if (i == index) FormulaTextCodec.delete(value, occurrenceIndex) else value
+                })
+                "matching_right" -> question.copy(matchingRight = question.matchingRight.mapIndexed { i, value ->
+                    if (i == index) FormulaTextCodec.delete(value, occurrenceIndex) else value
+                })
                 else -> question
             }
         }
@@ -445,9 +469,6 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.audienceClasses,
     state.audienceStudents
 ).hashCode()
-
-private fun appendFormula(current: String, formula: String): String =
-    if (current.isBlank()) formula else current.trimEnd() + " " + formula
 
 private fun remapMovedIndex(value: Int, from: Int, to: Int): Int = when {
     value == from -> to

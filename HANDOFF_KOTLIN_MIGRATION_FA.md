@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۲ — V13.6 ویرایشگر جعبه‌ای لمسی، کتابخانه فعال و رادیکال کش‌پذیر
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V14 برابری کامل همهٔ قابلیت‌های فرمول exam-system.html
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2215,3 +2215,100 @@ Dependency جدید: ندارد
 ```
 
 راهنمای مستقل: `FORMULA_STRUCTURAL_BOXES_V13_6_FA.md`.
+
+---
+
+## ۳۰) V14 — برابری کامل قابلیت‌های فرمول فایل `exam-system.html`
+
+### ورودی ممیزی
+
+```text
+exam-system.html
+SHA-256: 591dd9feffecea45fe423633643cd518c1db9cad547bbfda709ad93f2cd7e6a1
+Size: 1,540,210 bytes / 32,099 lines
+```
+
+ممیزی کامل در `FORMULA_FEATURE_AUDIT_EXAM_SYSTEM_FA.md` ثبت شد. HTML، `math.js` و `mathedit.js` فایل جدید با مرجع قبلی byte-identical بودند، اما قابلیت‌های پنهان و باگ‌های runtime نیز شناسایی شدند.
+
+### دامنهٔ تحویل
+
+- Smart Hub واقعی با trigger؛
+- ۵ درس، ۳۰ قالب، ۸ بسته، ۶ دلیمتر، ۸ کلید درشت؛
+- آخرین فرمول، recent قابل حذف، favorites و recent symbols؛
+- سه mode همیشه قابل دسترسی؛
+- gallery همراه recent؛
+- search و نام نمادها؛
+- تایپ طبیعی کامل و chemistry normalization؛
+- `x^2^3`, fraction grouping, relations, arrows؛
+- اصلاح `⇌ → \rightleftharpoons`؛
+- custom matrix picker ۱..۱۰ و شش environment؛
+- انتخاب جداگانهٔ دلیمتر باز/بسته؛
+- slash-to-fraction و structural IME؛
+- spatial navigation، Tab/Home/End و Ctrl shortcuts؛
+- auto-scroll دوبعدی خانه فعال؛
+- safe clipboard import؛
+- long-press favorites با haptic؛
+- پشتیبانی `sfrac/nicefrac/root/underline/widehat/mbox/quad/qquad`؛
+- استخراج/ویرایش/حذف مستقیم `$...$` در سؤال، option و دو ستون matching؛
+- SVG Native در همهٔ نمایش‌ها و PDF/Canvas AST مشترک.
+
+### اصلاح باگ‌های مرجع
+
+```text
+mode/search/footer hidden              → visible Native controls
+Smart Hub without trigger              → full-screen reachable dialog
+Unicode 1200 showing ~139              → exact 1200 direct entries
+mostly HTML/text math                   → SVG rendering
+1s/2s long-press mismatch              → Android standard + haptic
+broken equilibrium quick conversion    → valid command
+matrix cursor restore bug              → source ranges + geometry
+manual exact $...$ selection           → direct occurrence editor
+fake lazy loading                      → no JS loader
+duplicate JS functions                 → one Kotlin path
+body-wide MutationObserver             → scoped recomposition
+raw unknown command                    → safe visual fallback
+```
+
+### دادهٔ قطعی
+
+```text
+main groups                 8
+category links             75
+categories                 77
+library entries          2084
+Unicode                  1200
+fixed gallery formulas     34
+Smart lessons               5
+Smart templates            30
+Smart packs                 8
+Smart delimiters            6
+Smart big keys              8
+```
+
+### امنیت
+
+- JavaScript/WebView صفر؛
+- SVG memory-only و XML-escaped؛
+- allowlist element؛
+- بدون URL/href/src/script/foreignObject؛
+- بدون SQL/Edge/Secret/Migration/Dependency جدید.
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              88/88 PASS
+Reference SVG + insertion           2118/2118 PASS
+Unicode                              1200 PASS
+Matrix sizes 1..10                    100 PASS
+Smart data/count/link integrity          PASS
+Natural + chemistry converter            PASS
+Inline occurrence edit/delete            PASS
+Structural typing + spatial nav           PASS
+FINAL_NATIVE_VERIFY                      PASS
+lintDebug                     PASS (0 error, 24 warning)
+assembleDebug                            PASS
+APK Signature Scheme v2               Verified
+```
+
+راهنمای مستقل: `FORMULA_COMPLETE_PARITY_V14_FA.md`.

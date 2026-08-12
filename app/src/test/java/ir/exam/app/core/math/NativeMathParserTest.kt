@@ -35,4 +35,13 @@ class NativeMathParserTest {
   val matrixTex="\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"
   assertEquals(listOf("a","b","c","d"),NativeMathParser.editableRanges(matrixTex).map{matrixTex.substring(it.start,it.endExclusive)})
  }
+
+ @Test fun `supports every extra display command in editable native ast`() {
+  assertTrue(NativeMathParser.parse("\\sfrac{1}{2}") is MathNode.Fraction)
+  assertTrue(NativeMathParser.parse("\\nicefrac{1}{2}") is MathNode.Fraction)
+  assertTrue(NativeMathParser.parse("\\root{3}{x}") is MathNode.Radical)
+  assertTrue(NativeMathParser.parse("\\underline{x}") is MathNode.Accent)
+  assertTrue(NativeMathParser.parse("\\widehat{x}") is MathNode.Accent)
+  assertTrue(NativeMathParser.unsupportedCommands("\\sfrac{1}{2} \\root{3}{x} \\underline{x} \\widehat{x} \\quad").isEmpty())
+ }
 }

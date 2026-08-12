@@ -77,9 +77,10 @@ object NativeMathParser {
     )
 
     private val structuralCommands = setOf(
-        "frac", "dfrac", "tfrac", "sqrt", "mathbf", "bold", "boldsymbol",
-        "mathrm", "text", "operatorname", "mathbb", "mathcal", "hat", "bar",
-        "overline", "vec", "dot", "left", "right", "begin", "end"
+        "frac", "dfrac", "tfrac", "sfrac", "nicefrac", "sqrt", "root",
+        "mathbf", "bold", "boldsymbol", "mathrm", "text", "mbox", "operatorname",
+        "mathbb", "mathcal", "hat", "widehat", "bar", "overline", "underline",
+        "vec", "dot", "left", "right", "begin", "end", "quad", "qquad"
     )
 
     val supportedCommands: Set<String> =
@@ -251,13 +252,17 @@ object NativeMathParser {
             while (index < source.length && source[index].isLetter()) index++
             val name = source.substring(nameStart, index)
             return when (name) {
-                "frac", "dfrac", "tfrac" -> MathNode.Fraction(groupOrAtom(), groupOrAtom())
+                "frac", "dfrac", "tfrac", "sfrac", "nicefrac" -> MathNode.Fraction(groupOrAtom(), groupOrAtom())
                 "sqrt" -> parseRadical()
+                "root" -> {
+                    val rootIndex = groupOrAtom()
+                    MathNode.Radical(groupOrAtom(), rootIndex)
+                }
                 "mathbf", "bold", "boldsymbol" -> {
                     val body = groupOrAtom()
                     sourceSymbol(flat(body), slashStart, index, bold = true)
                 }
-                "mathrm", "text", "operatorname" -> {
+                "mathrm", "text", "mbox", "operatorname" -> {
                     val body = groupOrAtom()
                     sourceSymbol(flat(body), slashStart, index)
                 }
@@ -269,10 +274,13 @@ object NativeMathParser {
                     val body = groupOrAtom()
                     sourceSymbol(calligraphic(flat(body)), slashStart, index)
                 }
-                "hat" -> MathNode.Accent(groupOrAtom(), "hat")
+                "hat", "widehat" -> MathNode.Accent(groupOrAtom(), "hat")
                 "bar", "overline" -> MathNode.Accent(groupOrAtom(), "bar")
+                "underline" -> MathNode.Accent(groupOrAtom(), "underline")
                 "vec" -> MathNode.Accent(groupOrAtom(), "vec")
                 "dot" -> MathNode.Accent(groupOrAtom(), "dot")
+                "quad" -> sourceSymbol("  ", slashStart, index, editable = false)
+                "qquad" -> sourceSymbol("    ", slashStart, index, editable = false)
                 "left" -> parseDelimited()
                 "right" -> {
                     readDelimiter()
@@ -370,7 +378,7 @@ object NativeMathParser {
             val bodyStart = index
             val body = source.substring(bodyStart, endAt)
             index = endAt + end.length
-            if (environment in setOf("matrix", "bmatrix", "pmatrix", "vmatrix", "cases", "aligned", "align")) {
+            if (environment in setOf("matrix", "bmatrix", "pmatrix", "vmatrix", "Bmatrix", "Vmatrix", "cases", "aligned", "align")) {
                 val rows = splitSlices(body, "\\\\").map { rowSlice ->
                     val rowText = body.substring(rowSlice.first, rowSlice.last + 1)
                     splitSlices(rowText, "&").map { cellSlice ->
@@ -384,8 +392,8 @@ object NativeMathParser {
                 }
                 val delimiter = when (environment) {
                     "pmatrix" -> '('
-                    "vmatrix" -> '|'
-                    "cases" -> '{'
+                    "vmatrix", "Vmatrix" -> '|'
+                    "Bmatrix", "cases" -> '{'
                     "matrix", "aligned", "align" -> ' '
                     else -> '['
                 }

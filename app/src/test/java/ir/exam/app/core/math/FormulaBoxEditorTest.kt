@@ -68,6 +68,35 @@ class FormulaBoxEditorTest {
     }
 
     @Test
+    fun `structural typing slash scripts multiplication and arrows match reference`() {
+        var edit = FormulaBoxEditor.replaceAll("12")
+        edit = FormulaBoxEditor.typeCharacter(edit.text, 2, 2, "/")
+        assertEquals("\\frac{12}{}", edit.text)
+        edit = FormulaBoxEditor.typeCharacter(edit.text, edit.selectionStart, edit.selectionEnd, "3")
+        assertEquals("\\frac{12}{3}", edit.text)
+        val power = FormulaBoxEditor.typeCharacter("x", 1, 1, "^")
+        assertEquals("x^{}", power.text)
+        val multiply = FormulaBoxEditor.typeCharacter("a", 1, 1, "*")
+        assertEquals("a\\times ", multiply.text)
+        val arrow = FormulaBoxEditor.typeCharacter("x-", 2, 2, ">")
+        assertEquals("x\\to ", arrow.text)
+    }
+
+    @Test
+    fun `spatial navigation moves between fraction numerator and denominator`() {
+        val text = "\\frac{a}{b}"
+        val ranges = NativeMathParser.editableRanges(text)
+        val moved = FormulaBoxEditor.moveSpatialBox(text, ranges.first().start, ranges.first().endExclusive, 1)
+        assertEquals("b", text.substring(moved.selectionStart, moved.selectionEnd))
+    }
+
+    @Test
+    fun `paste imports tex or converts natural input`() {
+        assertEquals("\\frac{7}{8}", FormulaBoxEditor.importText("7/8").text)
+        assertEquals("\\sqrt{x}", FormulaBoxEditor.importText("${'$'}\\sqrt{x}${'$'}").text)
+    }
+
+    @Test
     fun `plain adjacent digits form one editable box`() {
         val ranges = NativeMathParser.editableRanges("123+45")
         assertEquals(

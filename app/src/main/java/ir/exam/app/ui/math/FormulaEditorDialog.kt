@@ -1,6 +1,7 @@
 package ir.exam.app.ui.math
 
-import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,8 +49,19 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
@@ -58,17 +71,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import ir.exam.app.core.math.FormulaBoxEditor
+import ir.exam.app.core.math.FormulaMatrixFactory
 import ir.exam.app.core.math.NativeMathFormatter
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 private const val MODE_BOX = "box"
 private const val MODE_TYPE = "type"
 private const val MODE_GALLERY = "gallery"
 
 @Composable
-fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
+fun FormulaEditorDialog(
+    initialTex: String = "",
+    onDismiss: () -> Unit,
+    onInsert: (String) -> Unit
+) {
     val context = LocalContext.current
     val library = remember { FormulaReferenceLibrary.load(context) }
     val store = remember { FormulaReferenceStore(context) }
@@ -76,7 +91,10 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     var mode by remember { mutableStateOf(MODE_BOX) }
-    var value by remember { mutableStateOf(TextFieldValue("")) }
+    var value by remember(initialTex) {
+        val initial = FormulaBoxEditor.replaceAll(initialTex, activateFirstBox = true)
+        mutableStateOf(TextFieldValue(initial.text, TextRange(initial.selectionStart, initial.selectionEnd)))
+    }
     var natural by remember { mutableStateOf("") }
     var categoryId by remember { mutableStateOf("common") }
     var groupDialog by remember { mutableStateOf<FormulaReferenceGroup?>(null) }
@@ -93,6 +111,16 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
     var recentFormulas by remember { mutableStateOf(store.recentFormulas()) }
     var recentSymbols by remember { mutableStateOf(store.recentSymbols()) }
     var error by remember { mutableStateOf<String?>(null) }
+    var smartHubOpen by remember { mutableStateOf(false) }
+    var recentDialogOpen by remember { mutableStateOf(false) }
+    var matrixPickerOpen by remember { mutableStateOf(false) }
+    var delimiterPickerOpen by remember { mutableStateOf(false) }
+    var customDelimiterOpen by remember { mutableStateOf("(") }
+    var customDelimiterClose by remember { mutableStateOf(")") }
+    var matrixRows by remember { mutableIntStateOf(2) }
+    var matrixColumns by remember { mutableIntStateOf(2) }
+    var expandedLibraryTitle by remember { mutableStateOf<String?>(null) }
+    var expandedLibraryItems by remember { mutableStateOf<List<FormulaReferenceEntry>>(emptyList()) }
     val undo = remember { mutableStateListOf<TextFieldValue>() }
     val redo = remember { mutableStateListOf<TextFieldValue>() }
 
@@ -138,14 +166,12 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
         )
     }
 
+    fun applyEdit(result: ir.exam.app.core.math.FormulaBoxEditResult, rememberUndo: Boolean = true) {
+        setValue(TextFieldValue(result.text, TextRange(result.selectionStart, result.selectionEnd)), rememberUndo)
+    }
+
     fun backspace() {
-        val start = value.selection.min
-        val end = value.selection.max
-        if (start != end) {
-            setValue(TextFieldValue(value.text.removeRange(start, end), TextRange(start)))
-        } else if (start > 0) {
-            setValue(TextFieldValue(value.text.removeRange(start - 1, start), TextRange(start - 1)))
-        }
+        applyEdit(FormulaBoxEditor.backspace(value.text, value.selection.start, value.selection.end))
     }
 
     fun moveActiveBox(delta: Int) {
@@ -158,7 +184,97 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
         value = value.copy(selection = TextRange(moved.selectionStart, moved.selectionEnd))
     }
 
+    fun moveSpatialBox(direction: Int) {
+        val moved = FormulaBoxEditor.moveSpatialBox(value.text, value.selection.start, value.selection.end, direction)
+        value = value.copy(selection = TextRange(moved.selectionStart, moved.selectionEnd))
+    }
+
+    fun moveBoundary(first: Boolean) {
+        val moved = if (first) FormulaBoxEditor.firstBox(value.text) else FormulaBoxEditor.lastBox(value.text)
+        value = value.copy(selection = TextRange(moved.selectionStart, moved.selectionEnd))
+    }
+
+    fun typeKey(character: String) {
+        applyEdit(FormulaBoxEditor.typeCharacter(value.text, value.selection.start, value.selection.end, character))
+    }
+
+    fun importClipboard(text: String) {
+        applyEdit(FormulaBoxEditor.importText(text))
+    }
+
+    fun handleImeChange(next: TextFieldValue) {
+        val old = value
+        val start = old.selection.min.coerceIn(0, old.text.length)
+        val end = old.selection.max.coerceIn(start, old.text.length)
+        val expectedPrefix = old.text.substring(0, start)
+        val expectedSuffix = old.text.substring(end)
+        val inserted = if (next.text.startsWith(expectedPrefix) && next.text.endsWith(expectedSuffix)) {
+            next.text.substring(expectedPrefix.length, next.text.length - expectedSuffix.length)
+        } else null
+        if (inserted != null && inserted.codePointCount(0, inserted.length) == 1 && inserted in setOf("/", "^", "_", "(", ")", "*", "×", "÷", ">", "<")) {
+            typeKey(inserted)
+            return
+        }
+        if (inserted != null && inserted.codePointCount(0, inserted.length) > 1) {
+            if (Regex("\\\\[A-Za-z]+|\\$").containsMatchIn(inserted)) {
+                importClipboard(inserted)
+            } else {
+                var result = ir.exam.app.core.math.FormulaBoxEditResult(old.text, old.selection.start, old.selection.end)
+                inserted.codePoints().forEach { codePoint ->
+                    result = FormulaBoxEditor.typeCharacter(
+                        result.text,
+                        result.selectionStart,
+                        result.selectionEnd,
+                        String(Character.toChars(codePoint))
+                    )
+                }
+                applyEdit(result)
+            }
+            return
+        }
+        if (next.text.length < old.text.length && old.selection.collapsed) {
+            backspace()
+            return
+        }
+        setValue(next)
+    }
+
+    fun undoAction() {
+        if (undo.isNotEmpty()) {
+            redo.add(value)
+            value = undo.removeAt(undo.lastIndex)
+        }
+    }
+
+    fun redoAction() {
+        if (redo.isNotEmpty()) {
+            undo.add(value)
+            value = redo.removeAt(redo.lastIndex)
+        }
+    }
+
+    fun currentTex(): String = when (mode) {
+        MODE_TYPE -> NativeMathFormatter.quickToTex(natural)
+        else -> value.text
+    }.trim()
+
+    fun applyCurrent() {
+        val tex = currentTex()
+        if (tex.isBlank()) { onDismiss(); return }
+        if (!NativeMathFormatter.isBalanced(tex)) {
+            error = "آکولادهای فرمول متوازن نیستند."
+            return
+        }
+        store.addRecentFormula(tex)
+        recentFormulas = store.recentFormulas()
+        onInsert(tex)
+    }
+
     fun useEntry(entry: FormulaReferenceEntry) {
+        if (entry.label.contains("ماتریس دلخواه") || entry.tex == "m\\times n") {
+            matrixPickerOpen = true
+            return
+        }
         // کتابخانه خانهٔ رنگی را جایگزین می‌کند و اولین خانهٔ قالب تازه را فعال نگه می‌دارد.
         insert(
             entry.tex,
@@ -173,11 +289,6 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
         quickMenuTitle = title
         quickMenuItems = entries
     }
-
-    fun currentTex(): String = when (mode) {
-        MODE_TYPE -> NativeMathFormatter.quickToTex(natural)
-        else -> value.text
-    }.trim()
 
     val selectedEntries = remember(categoryId, symbolQuery, uppercase, favorites, recentSymbols, library) {
         val base = when (categoryId) {
@@ -227,6 +338,10 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                         )
                     }
                 }
+                OutlinedButton(
+                    onClick = { smartHubOpen = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("✨ مرکز هوشمند: درس‌ها، قالب‌ها، بسته‌ها و تبدیل شیمی") }
                 HorizontalDivider()
                 Box(Modifier.weight(1f)) {
                     when (mode) {
@@ -244,23 +359,13 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                     item {
                                         OutlinedButton(
-                                            onClick = {
-                                                if (undo.isNotEmpty()) {
-                                                    redo.add(value)
-                                                    value = undo.removeAt(undo.lastIndex)
-                                                }
-                                            },
+                                            onClick = ::undoAction,
                                             enabled = undo.isNotEmpty()
                                         ) { Text("↩ بازگشت") }
                                     }
                                     item {
                                         OutlinedButton(
-                                            onClick = {
-                                                if (redo.isNotEmpty()) {
-                                                    undo.add(value)
-                                                    value = redo.removeAt(redo.lastIndex)
-                                                }
-                                            },
+                                            onClick = ::redoAction,
                                             enabled = redo.isNotEmpty()
                                         ) { Text("↪ جلو") }
                                     }
@@ -270,7 +375,7 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                         }
                                     }
                                     item {
-                                        OutlinedButton(onClick = { clipboard.getText()?.text?.let(::insert) }) {
+                                        OutlinedButton(onClick = { clipboard.getText()?.text?.let(::importClipboard) }) {
                                             Text("📥 پیست")
                                         }
                                     }
@@ -290,11 +395,21 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                 Text("کادر ساختاری فرمول — نمایش SVG", style = MaterialTheme.typography.labelLarge)
                                 SvgFormulaEditorSurface(
                                     value = value,
-                                    onValueChange = { setValue(it) },
+                                    onValueChange = ::handleImeChange,
                                     onSelectionChange = { selection -> value = value.copy(selection = selection) },
                                     focusRequester = focusRequester,
                                     zoom = zoom,
-                                    onRequestKeyboard = { keyboard?.show() }
+                                    onRequestKeyboard = { keyboard?.show() },
+                                    onBackspace = ::backspace,
+                                    onMoveHorizontal = ::moveActiveBox,
+                                    onMoveVertical = ::moveSpatialBox,
+                                    onMoveBoundary = ::moveBoundary,
+                                    onUndo = ::undoAction,
+                                    onRedo = ::redoAction,
+                                    onCopy = { clipboard.setText(AnnotatedString(value.text)) },
+                                    onPaste = { clipboard.getText()?.text?.let(::importClipboard) },
+                                    onApply = ::applyCurrent,
+                                    onDismiss = onDismiss
                                 )
                             }
                             item {
@@ -324,6 +439,12 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                         }
                                     }
                                     item {
+                                        CategoryButton("🕘 نمادهای اخیر", categoryId == "__recent_symbols") {
+                                            categoryId = "__recent_symbols"
+                                            symbolQuery = ""
+                                        }
+                                    }
+                                    item {
                                         CategoryButton("⭐ علاقه‌مندی", categoryId == "__favorites") {
                                             categoryId = "__favorites"
                                             symbolQuery = ""
@@ -333,16 +454,7 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                             }
                             item {
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                    item {
-                                        QuickButton("🕘 اخیر") {
-                                            openMenu(
-                                                "فرمول‌های اخیر",
-                                                recentFormulas.mapIndexed { index, tex ->
-                                                    FormulaReferenceEntry("فرمول اخیر ${index + 1}", tex)
-                                                }
-                                            )
-                                        }
-                                    }
+                                    item { QuickButton("🕘 اخیر") { recentDialogOpen = true } }
                                     item { QuickButton("✨ تبدیل") { quickConvertOpen = !quickConvertOpen } }
                                     item { FormulaSvgButton("\\log", "لگاریتم") { openMenu("لگاریتم", logItems) } }
                                     item { FormulaSvgButton("\\int", "انتگرال") { openMenu("انتگرال", integralItems) } }
@@ -364,7 +476,7 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                             modifier = Modifier.weight(1f)
                                         )
                                         Button(onClick = {
-                                            val converted = NativeMathFormatter.quickToTex(quickConvert)
+                                            val converted = NativeMathFormatter.smartQuickToTex(quickConvert)
                                             if (converted.isNotBlank()) {
                                                 insert(
                                                     converted,
@@ -413,19 +525,23 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                             openMenu("رادیکال", rootItems)
                                         }
                                     }
+                                    item { QuickButton("▦ ماتریس") { matrixPickerOpen = true } }
+                                    item { QuickButton("( ) ▾") { delimiterPickerOpen = true } }
                                 }
                             }
                             item {
                                 FixedFormulaKeypad(
-                                    onInsert = { text -> insert(text) },
+                                    onInsert = ::typeKey,
                                     onBackspace = ::backspace,
-                                    onMove = ::moveActiveBox,
+                                    onMoveHorizontal = ::moveActiveBox,
+                                    onMoveVertical = ::moveSpatialBox,
                                     onKeyboard = {
                                         focusRequester.requestFocus()
                                         keyboard?.show()
                                     },
                                     onClear = { replace("") },
-                                    onParenthesis = { insert(it) }
+                                    onOpenDelimiter = { delimiterPickerOpen = true },
+                                    onCloseDelimiter = { moveActiveBox(1) }
                                 )
                             }
                             item {
@@ -480,13 +596,13 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                             natural,
                             { natural = it },
                             onToBox = {
-                                replace(NativeMathFormatter.quickToTex(natural))
+                                replace(NativeMathFormatter.quickToTex(natural), activateFirstBox = true)
                                 mode = MODE_BOX
                             }
                         )
 
-                        else -> GalleryPane(library, galleryQuery, { galleryQuery = it }) { entry ->
-                            replace(entry.tex)
+                        else -> GalleryPane(library, recentFormulas.take(8), galleryQuery, { galleryQuery = it }) { entry ->
+                            replace(entry.tex, activateFirstBox = true)
                             mode = MODE_BOX
                         }
                     }
@@ -494,20 +610,9 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 HorizontalDivider()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Button(
-                        onClick = {
-                            val tex = currentTex()
-                            if (tex.isBlank()) {
-                                onDismiss()
-                            } else if (!NativeMathFormatter.isBalanced(tex)) {
-                                error = "آکولادهای فرمول متوازن نیستند."
-                            } else {
-                                store.addRecentFormula(tex)
-                                onInsert(tex)
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("✅ درج در سؤال") }
+                    Button(onClick = ::applyCurrent, modifier = Modifier.weight(1f)) {
+                        Text("✅ درج در سؤال")
+                    }
                     OutlinedButton(onClick = { if (mode == MODE_TYPE) natural = "" else replace("") }) {
                         Text("🧹 پاک")
                     }
@@ -577,6 +682,154 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
             confirmButton = { TextButton(onClick = { quickMenuTitle = null }) { Text("بستن") } }
         )
     }
+
+    if (smartHubOpen) {
+        FormulaSmartHubDialog(
+            library = library,
+            currentTex = currentTex(),
+            favorites = favorites,
+            recentFormulas = recentFormulas,
+            lastFormula = store.lastFormula(),
+            onDismiss = { smartHubOpen = false },
+            onInsertAtActive = { entry -> useEntry(entry); mode = MODE_BOX },
+            onReplaceFormula = { tex -> replace(tex, activateFirstBox = true); mode = MODE_BOX },
+            onOpenEntries = { title, entries ->
+                expandedLibraryTitle = title
+                expandedLibraryItems = entries
+            },
+            onDeleteRecent = { tex ->
+                store.removeRecentFormula(tex)
+                recentFormulas = store.recentFormulas()
+            },
+            onBackspace = ::backspace,
+            onNewLine = { insert("\\\\") }
+        )
+    }
+
+    if (recentDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { recentDialogOpen = false },
+            title = { Text("🕘 فرمول‌های اخیر") },
+            text = {
+                if (recentFormulas.isEmpty()) Text("هنوز فرمولی ثبت نشده است.")
+                else LazyColumn {
+                    items(recentFormulas, key = { it }) { tex ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                onClick = {
+                                    replace(tex, activateFirstBox = true)
+                                    recentDialogOpen = false
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                NativeFormulaIcon(tex, Modifier.fillMaxWidth().height(42.dp), 18.sp, contentDescription = "فرمول اخیر")
+                            }
+                            TextButton(onClick = {
+                                store.removeRecentFormula(tex)
+                                recentFormulas = store.recentFormulas()
+                            }) { Text("حذف") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { recentDialogOpen = false }) { Text("بستن") } },
+            dismissButton = {
+                if (recentFormulas.isNotEmpty()) TextButton(onClick = {
+                    store.clearRecentFormulas()
+                    recentFormulas = emptyList()
+                }) { Text("پاک‌کردن همه") }
+            }
+        )
+    }
+
+    if (matrixPickerOpen) {
+        AlertDialog(
+            onDismissRequest = { matrixPickerOpen = false },
+            title = { Text("▦ ماتریس دلخواه ۱ تا ۱۰") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MatrixDimensionRow("سطر", matrixRows, { matrixRows = (matrixRows - 1).coerceAtLeast(1) }, { matrixRows = (matrixRows + 1).coerceAtMost(10) })
+                    MatrixDimensionRow("ستون", matrixColumns, { matrixColumns = (matrixColumns - 1).coerceAtLeast(1) }, { matrixColumns = (matrixColumns + 1).coerceAtMost(10) })
+                    NativeFormulaIcon(FormulaMatrixFactory.create(matrixRows, matrixColumns), Modifier.fillMaxWidth().height(140.dp), 18.sp, contentDescription = "پیش‌نمایش ماتریس")
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    useEntry(FormulaReferenceEntry("ماتریس ${matrixRows}×${matrixColumns}", FormulaMatrixFactory.create(matrixRows, matrixColumns)))
+                    matrixPickerOpen = false
+                }) { Text("درج ماتریس") }
+            },
+            dismissButton = { TextButton(onClick = { matrixPickerOpen = false }) { Text("انصراف") } }
+        )
+    }
+
+    if (delimiterPickerOpen) {
+        AlertDialog(
+            onDismissRequest = { delimiterPickerOpen = false },
+            title = { Text("انتخاب پرانتز و دلیمتر") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("جفت‌های آماده")
+                    LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                        items(FormulaSmartReference.delimiters, key = FormulaDelimiterPreset::label) { preset ->
+                            TextButton(
+                                onClick = {
+                                    useEntry(FormulaReferenceEntry(preset.label, delimiterTex(preset, "x")))
+                                    delimiterPickerOpen = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                NativeFormulaIcon(delimiterTex(preset, "x"), Modifier.width(100.dp).height(40.dp), 19.sp, contentDescription = preset.label)
+                                Text(preset.label)
+                            }
+                        }
+                    }
+                    Text("انتخاب جداگانهٔ باز و بسته")
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(listOf("(", "[", "{", "⌊", "⌈", "|")) { char ->
+                            FilterChip(selected = customDelimiterOpen == char, onClick = { customDelimiterOpen = char }, label = { Text(char) })
+                        }
+                    }
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(listOf(")", "]", "}", "⌋", "⌉", "|")) { char ->
+                            FilterChip(selected = customDelimiterClose == char, onClick = { customDelimiterClose = char }, label = { Text(char) })
+                        }
+                    }
+                    val custom = FormulaDelimiterPreset("دلخواه", customDelimiterOpen, customDelimiterClose)
+                    NativeFormulaView(delimiterTex(custom, "x"), Modifier.fillMaxWidth(), 20.sp, contentDescription = "دلیمتر دلخواه")
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val custom = FormulaDelimiterPreset("دلخواه", customDelimiterOpen, customDelimiterClose)
+                    useEntry(FormulaReferenceEntry("دلیمتر دلخواه", delimiterTex(custom, "x")))
+                    delimiterPickerOpen = false
+                }) { Text("درج دلخواه") }
+            },
+            dismissButton = { TextButton(onClick = { delimiterPickerOpen = false }) { Text("بستن") } }
+        )
+    }
+
+    expandedLibraryTitle?.let { title ->
+        AlertDialog(
+            onDismissRequest = { expandedLibraryTitle = null },
+            title = { Text(title) },
+            text = {
+                Column {
+                    Text("${expandedLibraryItems.size} مورد")
+                    SymbolGrid(
+                        expandedLibraryItems,
+                        onUse = { entry -> useEntry(entry); expandedLibraryTitle = null },
+                        onFavorite = { entry ->
+                            store.toggleFavorite(entry)
+                            favorites = store.favorites()
+                        }
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { expandedLibraryTitle = null }) { Text("بستن") } }
+        )
+    }
 }
 
 @Composable
@@ -586,7 +839,17 @@ private fun SvgFormulaEditorSurface(
     onSelectionChange: (TextRange) -> Unit,
     focusRequester: FocusRequester,
     zoom: Float,
-    onRequestKeyboard: () -> Unit
+    onRequestKeyboard: () -> Unit,
+    onBackspace: () -> Unit,
+    onMoveHorizontal: (Int) -> Unit,
+    onMoveVertical: (Int) -> Unit,
+    onMoveBoundary: (Boolean) -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     Card(Modifier.fillMaxWidth().height(180.dp)) {
         Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
@@ -629,6 +892,21 @@ private fun SvgFormulaEditorSurface(
                     .align(Alignment.BottomStart)
                     .size(1.dp)
                     .focusRequester(focusRequester)
+                    .onPreviewKeyEvent { event ->
+                        handleFormulaKeyEvent(
+                            event,
+                            onBackspace,
+                            onMoveHorizontal,
+                            onMoveVertical,
+                            onMoveBoundary,
+                            onUndo,
+                            onRedo,
+                            onCopy,
+                            onPaste,
+                            onApply,
+                            onDismiss
+                        )
+                    }
                     .graphicsLayer { alpha = .002f },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Transparent),
                 cursorBrush = SolidColor(Color.Transparent),
@@ -643,6 +921,60 @@ private fun SvgFormulaEditorSurface(
         },
         modifier = Modifier.fillMaxWidth()
     ) { Text("⌨️ نوشتن در خانهٔ فعال") }
+}
+
+private fun handleFormulaKeyEvent(
+    event: KeyEvent,
+    onBackspace: () -> Unit,
+    onMoveHorizontal: (Int) -> Unit,
+    onMoveVertical: (Int) -> Unit,
+    onMoveBoundary: (Boolean) -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+    val modifier = event.isCtrlPressed || event.isMetaPressed
+    if (modifier) {
+        return when (event.key) {
+            Key.Z -> { if (event.isShiftPressed) onRedo() else onUndo(); true }
+            Key.Y -> { onRedo(); true }
+            Key.C -> { onCopy(); true }
+            Key.V -> { onPaste(); true }
+            else -> false
+        }
+    }
+    return when (event.key) {
+        Key.Backspace -> { onBackspace(); true }
+        Key.DirectionLeft -> { onMoveHorizontal(-1); true }
+        Key.DirectionRight -> { onMoveHorizontal(1); true }
+        Key.DirectionUp -> { onMoveVertical(-1); true }
+        Key.DirectionDown -> { onMoveVertical(1); true }
+        Key.Tab -> { onMoveHorizontal(if (event.isShiftPressed) -1 else 1); true }
+        Key.MoveHome -> { onMoveBoundary(true); true }
+        Key.MoveEnd -> { onMoveBoundary(false); true }
+        Key.Enter, Key.NumPadEnter -> { onApply(); true }
+        Key.Escape -> { onDismiss(); true }
+        else -> false
+    }
+}
+
+@Composable
+private fun MatrixDimensionRow(
+    label: String,
+    value: Int,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(label, modifier = Modifier.weight(1f))
+        OutlinedButton(onClick = onMinus, enabled = value > 1) { Text("−") }
+        Text(value.toString(), style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(onClick = onPlus, enabled = value < 10) { Text("+") }
+    }
 }
 
 @Composable
@@ -697,6 +1029,7 @@ private fun FormulaSvgButton(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SymbolGrid(
     entries: List<FormulaReferenceEntry>,
@@ -707,6 +1040,7 @@ private fun SymbolGrid(
         Text("موردی پیدا نشد.")
         return
     }
+    val haptic = LocalHapticFeedback.current
     LazyVerticalGrid(
         columns = GridCells.Adaptive(128.dp),
         modifier = Modifier.fillMaxWidth().height(310.dp),
@@ -714,20 +1048,27 @@ private fun SymbolGrid(
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         items(entries, key = { it.label + "¦" + it.tex }) { entry ->
-            Card {
-                Column(Modifier.padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    TextButton(onClick = { onUse(entry) }, modifier = Modifier.fillMaxWidth()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            NativeFormulaIcon(
-                                entry.tex,
-                                Modifier.fillMaxWidth().height(44.dp),
-                                20.sp,
-                                contentDescription = entry.label
-                            )
-                            Text(entry.label.take(35), style = MaterialTheme.typography.labelSmall)
-                        }
+            Card(
+                Modifier.combinedClickable(
+                    onClick = { onUse(entry) },
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onFavorite(entry)
                     }
-                    TextButton(onClick = { onFavorite(entry) }) { Text("☆") }
+                )
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    NativeFormulaIcon(
+                        entry.tex,
+                        Modifier.fillMaxWidth().height(44.dp),
+                        20.sp,
+                        contentDescription = entry.label
+                    )
+                    Text(entry.label.take(35), style = MaterialTheme.typography.labelSmall)
+                    TextButton(onClick = { onFavorite(entry) }) { Text("☆ علاقه‌مندی") }
                 }
             }
         }
@@ -738,10 +1079,12 @@ private fun SymbolGrid(
 private fun FixedFormulaKeypad(
     onInsert: (String) -> Unit,
     onBackspace: () -> Unit,
-    onMove: (Int) -> Unit,
+    onMoveHorizontal: (Int) -> Unit,
+    onMoveVertical: (Int) -> Unit,
     onKeyboard: () -> Unit,
     onClear: () -> Unit,
-    onParenthesis: (String) -> Unit
+    onOpenDelimiter: () -> Unit,
+    onCloseDelimiter: () -> Unit
 ) {
     val rows = listOf(
         listOf("(", ")", "7", "8", "9", "⌫"),
@@ -756,14 +1099,17 @@ private fun FixedFormulaKeypad(
                     OutlinedButton(
                         onClick = {
                             when (key) {
-                                "(", ")" -> onParenthesis(key)
+                                "(" -> onOpenDelimiter()
+                                ")" -> onCloseDelimiter()
                                 "⌫" -> onBackspace()
-                                "↑", "←" -> onMove(-1)
-                                "↓", "→" -> onMove(1)
+                                "↑" -> onMoveVertical(-1)
+                                "↓" -> onMoveVertical(1)
+                                "←" -> onMoveHorizontal(-1)
+                                "→" -> onMoveHorizontal(1)
                                 "⌨" -> onKeyboard()
                                 "C" -> onClear()
-                                "÷" -> onInsert("\\div ")
-                                "×" -> onInsert("\\times ")
+                                "÷" -> onInsert("÷")
+                                "×" -> onInsert("×")
                                 "−" -> onInsert("-")
                                 else -> onInsert(key)
                             }
@@ -771,16 +1117,13 @@ private fun FixedFormulaKeypad(
                         modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                         contentPadding = PaddingValues(2.dp)
                     ) {
-                        if (key in setOf("⌫", "⌨", "C")) {
-                            Text(key)
-                        } else {
-                            NativeFormulaIcon(
-                                key,
-                                Modifier.fillMaxWidth().height(25.dp),
-                                19.sp,
-                                contentDescription = "کلید $key"
-                            )
-                        }
+                        if (key in setOf("⌫", "⌨", "C")) Text(key)
+                        else NativeFormulaIcon(
+                            key,
+                            Modifier.fillMaxWidth().height(25.dp),
+                            19.sp,
+                            contentDescription = "کلید $key"
+                        )
                     }
                 }
             }
@@ -848,6 +1191,7 @@ private fun QuickTypePane(value: String, onChange: (String) -> Unit, onToBox: ()
 @Composable
 private fun GalleryPane(
     library: FormulaReferenceData,
+    recentFormulas: List<String>,
     query: String,
     onQuery: (String) -> Unit,
     onPick: (FormulaReferenceEntry) -> Unit
@@ -861,6 +1205,19 @@ private fun GalleryPane(
                 label = { Text("🔍 جست‌وجو در فرمول‌ها…") },
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+        val shownRecent = recentFormulas.filter {
+            query.isBlank() || it.lowercase().contains(query.lowercase())
+        }
+        if (shownRecent.isNotEmpty()) {
+            item { Text("🕘 اخیراً", style = MaterialTheme.typography.titleMedium) }
+            items(shownRecent, key = { it }) { tex ->
+                Card(Modifier.fillMaxWidth()) {
+                    TextButton(onClick = { onPick(FormulaReferenceEntry("فرمول اخیر", tex)) }, modifier = Modifier.fillMaxWidth()) {
+                        NativeFormulaView(tex, Modifier.fillMaxWidth(), 18.sp, contentDescription = "فرمول اخیر")
+                    }
+                }
+            }
         }
         library.gallery.forEach { group ->
             val shown = group.items.filter {
@@ -885,50 +1242,6 @@ private fun GalleryPane(
                 }
             }
         }
-    }
-}
-
-private class FormulaReferenceStore(context: Context) {
-    private val preferences = context.getSharedPreferences("formula_reference_history", Context.MODE_PRIVATE)
-    private val json = Json
-
-    fun favorites() = readEntries("favorites")
-    fun recentSymbols() = readEntries("recent_symbols")
-    fun recentFormulas() = readStrings("recent_formulas")
-
-    fun toggleFavorite(entry: FormulaReferenceEntry) {
-        val list = favorites().toMutableList()
-        val index = list.indexOfFirst { it.label == entry.label && it.tex == entry.tex }
-        if (index >= 0) list.removeAt(index) else list.add(0, entry)
-        writeEntries("favorites", list.take(60))
-    }
-
-    fun addRecentSymbol(entry: FormulaReferenceEntry) {
-        writeEntries(
-            "recent_symbols",
-            (listOf(entry) + recentSymbols().filterNot { it.tex == entry.tex && it.label == entry.label }).take(24)
-        )
-    }
-
-    fun addRecentFormula(tex: String) {
-        writeStrings("recent_formulas", (listOf(tex) + recentFormulas().filterNot { it == tex }).take(20))
-    }
-
-    private fun readEntries(key: String) = runCatching {
-        val array = json.decodeFromString<List<List<String>>>(preferences.getString(key, "[]") ?: "[]")
-        array.mapNotNull { if (it.size >= 2) FormulaReferenceEntry(it[0], it[1]) else null }
-    }.getOrDefault(emptyList())
-
-    private fun writeEntries(key: String, list: List<FormulaReferenceEntry>) {
-        preferences.edit().putString(key, json.encodeToString(list.map { listOf(it.label, it.tex) })).apply()
-    }
-
-    private fun readStrings(key: String) = runCatching {
-        json.decodeFromString<List<String>>(preferences.getString(key, "[]") ?: "[]")
-    }.getOrDefault(emptyList())
-
-    private fun writeStrings(key: String, list: List<String>) {
-        preferences.edit().putString(key, json.encodeToString(list)).apply()
     }
 }
 

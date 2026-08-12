@@ -90,43 +90,9 @@ object NativeMathFormatter {
         return value.trim()
     }
 
-    fun quickToTex(raw: String): String {
-        var value = normalizeDigits(raw).trim()
-        require(value.length <= 2_000) { "ورودی فرمول بیش از حد بلند است." }
-        val words = linkedMapOf(
-            "بی‌نهایت" to "\\infty ", "بینهایت" to "\\infty ", "رادیکال" to "sqrt",
-            "جذر" to "sqrt", "ریشه" to "sqrt", "پی" to "\\pi ", "تتا" to "\\theta ",
-            "آلفا" to "\\alpha ", "بتا" to "\\beta ", "گاما" to "\\gamma ",
-            "دلتا" to "\\Delta ", "سیگما" to "\\sum ", "انتگرال" to "\\int ", "حد" to "\\lim "
-        )
-        words.forEach { (word, replacement) -> value = value.replace(word, replacement, ignoreCase = true) }
-        value = value.replace(Regex("sqrt\\s*\\(([^()]*)\\)", RegexOption.IGNORE_CASE), "\\\\sqrt{$1}")
-        value = value.replace(Regex("sqrt\\s*([0-9A-Za-z\\u0600-\\u06FF]+)", RegexOption.IGNORE_CASE), "\\\\sqrt{$1}")
-        value = value.replace(Regex("(?i)(?<![A-Za-z])pi(?![A-Za-z])"), "\\\\pi ")
-        value = value.replace(Regex("(?i)(?<![A-Za-z])inf(?:ty)?(?![A-Za-z])"), "\\\\infty ")
-        value = value.replace("<=", "\\leq ").replace(">=", "\\geq ").replace("!=", "\\neq ")
-            .replace("+-", "\\pm ").replace("->", "\\to ").replace("=>", "\\Rightarrow ")
-            .replace("~=", "\\approx ").replace("⇌", "\\rightleftharpoons ")
-        value = value.replace("*", "\\times ").replace("÷", "\\div ")
-        if ("\\frac" !in value) value = convertSimpleFraction(value)
-        return value.replace(Regex("\\s+"), " ").trim()
-    }
+    fun quickToTex(raw: String): String = NativeNaturalMathConverter.toTex(raw)
 
-    private fun normalizeDigits(value:String):String=value.map { c -> when(c){
-        in '۰'..'۹'->('0'.code+c.code-'۰'.code).toChar()
-        in '٠'..'٩'->('0'.code+c.code-'٠'.code).toChar()
-        else->c
-    }}.joinToString("")
-
-    private fun convertSimpleFraction(input:String):String {
-        val pattern=Regex("(\\([^()]+\\)|[A-Za-z0-9\\u0600-\\u06FF.^_{}+-]+)\\s*/\\s*(\\([^()]+\\)|[A-Za-z0-9\\u0600-\\u06FF.^_{}+-]+)")
-        var value=input
-        repeat(4){value=pattern.replace(value){m->
-            fun clean(v:String)=v.removePrefix("(").removeSuffix(")")
-            "\\frac{${clean(m.groupValues[1])}}{${clean(m.groupValues[2])}}"
-        }}
-        return value
-    }
+    fun smartQuickToTex(raw: String): String = NativeNaturalMathConverter.toTex(raw, chemistry = true)
 
     fun isBalanced(tex: String): Boolean {
         var depth = 0

@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.image.QuestionMediaEditor
+import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
 import ir.exam.app.ui.math.NativeMathText
 
@@ -335,7 +336,12 @@ private fun QuestionBankCard(state: ExamBuilderState, viewModel: ExamBuilderView
     ) }
 }
 
-private data class FormulaTarget(val field: String, val index: Int? = null)
+private data class FormulaTarget(
+    val field: String,
+    val index: Int? = null,
+    val occurrenceIndex: Int? = null,
+    val initialTex: String = ""
+)
 
 @Composable
 private fun QuestionEditor(
@@ -361,6 +367,11 @@ private fun QuestionEditor(
                 if ('$' in question.text) Text("پیش‌نمایش Native:")
             }
             if ('$' in question.text) NativeMathText(question.text, modifier = Modifier.fillMaxWidth())
+            ExistingFormulaEditor(
+                source = question.text,
+                onEdit = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
+                onDelete = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) }
+            )
             OutlinedTextField(question.score.toString(), { viewModel.updateScore(question.id, it) }, label = { Text("بارم") })
             QuestionMediaEditor(
                 images = question.images,
@@ -418,6 +429,15 @@ private fun QuestionEditor(
                             }
                             if ('$' in option) NativeMathText(option)
                         }
+                        ExistingFormulaEditor(
+                            source = option,
+                            onEdit = { occurrence, tex ->
+                                formulaTarget = FormulaTarget("option", index, occurrence, tex)
+                            },
+                            onDelete = { occurrence ->
+                                viewModel.deleteFormula(question.id, "option", index, occurrence)
+                            }
+                        )
                         SingleImagePicker(
                             value = question.optionImages.getOrNull(index),
                             label = "تصویر گزینه ${index + 1}"
@@ -437,7 +457,16 @@ private fun QuestionEditor(
                     OutlinedTextField(question.expectedNumber, { viewModel.updateExpectedNumber(question.id, it) }, label = { Text("پاسخ عددی") })
                     OutlinedTextField(question.tolerance, { viewModel.updateTolerance(question.id, it) }, label = { Text("تلورانس") })
                 }
-                QuestionType.MATCHING -> MatchingQuestionEditor(question, viewModel)
+                QuestionType.MATCHING -> MatchingQuestionEditor(
+                    question,
+                    viewModel,
+                    onFormulaEdit = { side, itemIndex, occurrence, tex ->
+                        formulaTarget = FormulaTarget("matching_$side", itemIndex, occurrence, tex)
+                    },
+                    onFormulaDelete = { side, itemIndex, occurrence ->
+                        viewModel.deleteFormula(question.id, "matching_$side", itemIndex, occurrence)
+                    }
+                )
                 QuestionType.ESSAY -> Unit
             }
             QuestionStyleControls(question,viewModel,onPreview)
@@ -449,9 +478,16 @@ private fun QuestionEditor(
     }
     formulaTarget?.let { target ->
         FormulaEditorDialog(
+            initialTex = target.initialTex,
             onDismiss = { formulaTarget = null },
             onInsert = { tex ->
-                viewModel.insertFormula(question.id, target.field, target.index, tex)
+                viewModel.insertFormula(
+                    question.id,
+                    target.field,
+                    target.index,
+                    tex,
+                    target.occurrenceIndex
+                )
                 formulaTarget = null
             }
         )

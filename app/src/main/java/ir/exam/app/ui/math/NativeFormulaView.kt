@@ -2,6 +2,7 @@ package ir.exam.app.ui.math
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,15 +12,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -95,7 +103,10 @@ fun NativeFormulaEditorView(
         rendered = rendered,
         modifier = modifier,
         contentDescription = contentDescription,
-        onBoxTap = onBoxTap
+        onBoxTap = onBoxTap,
+        activeStart = selectionStart,
+        activeEnd = selectionEnd,
+        autoScrollActive = true
     )
 }
 
@@ -109,27 +120,68 @@ private fun NaturalSvgImage(
     rendered: RememberedFormulaSvg,
     modifier: Modifier,
     contentDescription: String,
-    onBoxTap: ((MathSvgEditBox) -> Unit)? = null
+    onBoxTap: ((MathSvgEditBox) -> Unit)? = null,
+    activeStart: Int = -1,
+    activeEnd: Int = activeStart,
+    autoScrollActive: Boolean = false
 ) {
     val density = LocalDensity.current
     val width = with(density) { rendered.document.widthPx.toDp() }.coerceAtLeast(1.dp)
     val height = with(density) { rendered.document.heightPx.toDp() }.coerceAtLeast(1.dp)
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val gestureModifier = if (onBoxTap == null) {
-            Modifier
-        } else {
-            Modifier.pointerInput(rendered.document.cacheKey) {
-                detectTapGestures { point ->
-                    rendered.document.editBoxes
-                        .asReversed()
-                        .firstOrNull { it.contains(point.x, point.y) }
-                        ?.let(onBoxTap)
-                }
+    val gestureModifier = if (onBoxTap == null) {
+        Modifier
+    } else {
+        Modifier.pointerInput(rendered.document.cacheKey) {
+            detectTapGestures { point ->
+                rendered.document.editBoxes
+                    .asReversed()
+                    .firstOrNull { it.contains(point.x, point.y) }
+                    ?.let(onBoxTap)
             }
         }
+    }
+    if (!autoScrollActive) {
+        Row(
+            modifier = modifier.horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = rendered.request,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.FillBounds,
+                modifier = gestureModifier.width(width).height(height)
+            )
+        }
+        return
+    }
+
+    val horizontal = rememberScrollState()
+    val vertical = rememberScrollState()
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val active = rendered.document.editBoxes.firstOrNull {
+        it.sourceStart == minOf(activeStart, activeEnd) && it.sourceEnd == maxOf(activeStart, activeEnd)
+    } ?: rendered.document.editBoxes.firstOrNull {
+        it.sourceStart < maxOf(activeStart, activeEnd) && it.sourceEnd > minOf(activeStart, activeEnd)
+    } ?: rendered.document.editBoxes.lastOrNull { it.sourceEnd == activeEnd }
+
+    LaunchedEffect(active, viewport, rendered.document.cacheKey) {
+        if (active == null || viewport == IntSize.Zero) return@LaunchedEffect
+        withFrameNanos { }
+        val targetX = (active.xPx + active.widthPx / 2f - viewport.width / 2f).toInt()
+            .coerceIn(0, horizontal.maxValue)
+        val targetY = (active.yPx + active.heightPx / 2f - viewport.height / 2f).toInt()
+            .coerceIn(0, vertical.maxValue)
+        horizontal.animateScrollTo(targetX)
+        vertical.animateScrollTo(targetY)
+    }
+
+    Box(
+        modifier
+            .onSizeChanged { viewport = it }
+            .horizontalScroll(horizontal)
+            .verticalScroll(vertical),
+        contentAlignment = Alignment.CenterStart
+    ) {
         AsyncImage(
             model = rendered.request,
             contentDescription = contentDescription,

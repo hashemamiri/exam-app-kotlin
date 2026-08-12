@@ -128,15 +128,20 @@ class NativeMathCanvasRenderer {
         }
         is MathNode.Accent -> {
             val body = measure(node.body, size)
-            val mark = when (node.mark) {
-                "hat" -> "ˆ"
-                "bar" -> "¯"
-                "vec" -> "→"
-                "dot" -> "˙"
-                else -> node.mark
+            if (node.mark == "underline") {
+                draw(canvas, node.body, x, top, size, color)
+                canvas.drawLine(x, top + body.height, x + body.width, top + body.height, paint(1.2f, false, color))
+            } else {
+                val mark = when (node.mark) {
+                    "hat" -> "ˆ"
+                    "bar" -> "¯"
+                    "vec" -> "→"
+                    "dot" -> "˙"
+                    else -> node.mark
+                }
+                canvas.drawText(mark, x + body.width / 2 - size * .2f, top + size * .45f, paint(size * .7f, false, color))
+                draw(canvas, node.body, x, top + size * .35f, size, color)
             }
-            canvas.drawText(mark, x + body.width / 2 - size * .2f, top + size * .45f, paint(size * .7f, false, color))
-            draw(canvas, node.body, x, top + size * .35f, size, color)
             body.width
         }
         is MathNode.Delimited -> {

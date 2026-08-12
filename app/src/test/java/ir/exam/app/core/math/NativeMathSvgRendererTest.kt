@@ -100,6 +100,15 @@ class NativeMathSvgRendererTest {
     }
 
     @Test
+    fun `underline widehat root and spacing render as safe svg`() {
+        val xml = NativeMathSvgRenderer.render("\\underline{x} + \\widehat{y} + \\root{3}{z} \\quad q").xml
+        assertTrue(xml.contains("<line"))
+        assertTrue(xml.contains("<path"))
+        assertFalse(xml.contains("\\underline"))
+        assertFalse(xml.contains("\\root"))
+    }
+
+    @Test
     fun `svg cache key is stable and style sensitive`() {
         val first = NativeMathSvgRenderer.render("x^2", 30f, "#112233")
         val same = NativeMathSvgRenderer.render("x^2", 30f, "#112233")

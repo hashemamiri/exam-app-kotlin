@@ -35,6 +35,11 @@ formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").re
 formula_svg=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").read_text()
 formula_boxes=(ROOT/"app/src/main/java/ir/exam/app/core/math/FormulaBoxEditor.kt").read_text()
 formula_reference_loader=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaReferenceLibrary.kt").read_text()
+formula_smart=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaSmartHubDialog.kt").read_text()
+formula_smart_data=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaSmartReference.kt").read_text()
+formula_natural=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeNaturalMathConverter.kt").read_text()
+formula_text_codec=(ROOT/"app/src/main/java/ir/exam/app/core/math/FormulaTextCodec.kt").read_text()
+matching_builder=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt").read_text()
 app_gradle=(ROOT/"app/build.gradle.kts").read_text()
 formula_library=ROOT/"app/src/main/assets/formula_library_v13.json"
 
@@ -116,6 +121,20 @@ require("replaceActiveBoxWhenCollapsed" in formula_boxes and "moveActiveBox" in 
         "formula libraries do not target the active box safely")
 require("also(::validate)" in formula_reference_loader and "پیوند دسته نامعتبر" in formula_reference_loader,
         "formula library links/content are not validated")
+require(all(marker in formula_smart for marker in ("کتابخانهٔ درس‌به‌درس","قالب‌های آماده","بسته‌های آماده","کلیدهای درشت","فرمول آخر")),
+        "reachable Native Smart Hub is incomplete")
+require(all(marker in formula_smart_data for marker in ("physics","chemistry","FormulaSmartPack","FormulaDelimiterPreset","bigKeyLabels")),
+        "Smart Hub reference datasets are incomplete")
+require("rightleftharpoons" in formula_natural and "normalizeChemistry" in formula_natural and "previousMarker" in formula_natural,
+        "native natural/chemistry converter missing")
+require("FormulaTextCodec" in formula_text_codec and "ExistingFormulaEditor" in builder_screen and "ExistingFormulaEditor" in matching_builder,
+        "direct edit/delete of existing question option matching formulas missing")
+require(all(marker in formula_editor for marker in ("ماتریس دلخواه ۱ تا ۱۰","onPreviewKeyEvent","combinedClickable","نمادهای اخیر","مرکز هوشمند")),
+        "complete formula editor controls are not reachable")
+require("moveSpatialBox" in formula_boxes and "typeCharacter" in formula_boxes and "importText" in formula_boxes,
+        "spatial navigation structural typing or safe paste missing")
+require("animateScrollTo" in formula_view and "verticalScroll" in formula_view,
+        "active formula box auto-scroll missing")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 for match in re.finditer(r"(?im)^\s*(delete\s+from|update\s+)([^;]+);", hardening + "\n" + critical + "\n" + parity):

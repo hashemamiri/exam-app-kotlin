@@ -75,6 +75,20 @@ class FormulaReferenceAssetTest {
         }
     }
 
+    @Test fun `complete reference features are reachable in native ui`() {
+        val root=listOf(File("."),File("..")).first { File(it,"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").isFile }
+        val editor=File(root,"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").readText()
+        val smart=File(root,"app/src/main/java/ir/exam/app/ui/math/FormulaSmartHubDialog.kt").readText()
+        val view=File(root,"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
+        val builder=File(root,"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
+        val matching=File(root,"app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt").readText()
+        listOf("مرکز هوشمند","ماتریس دلخواه ۱ تا ۱۰","recentDialogOpen","delimiterPickerOpen","onPreviewKeyEvent","combinedClickable","smartQuickToTex").forEach{assertTrue("missing $it",it in editor)}
+        listOf("کتابخانهٔ درس‌به‌درس","قالب‌های آماده","بسته‌های آماده","کلیدهای درشت","فرمول آخر","نمایش نهایی").forEach{assertTrue("missing Smart Hub $it",it in smart)}
+        assertTrue("animateScrollTo" in view&&"verticalScroll" in view)
+        assertTrue("ExistingFormulaEditor" in builder&&"occurrenceIndex" in builder)
+        assertTrue("ExistingFormulaEditor" in matching&&"matching_" in builder)
+    }
+
     @Test fun `formula library buttons and editor use svg instead of raw tex`() {
         val root=listOf(File("."),File("..")).first { File(it,"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").isFile }
         val editor=File(root,"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").readText()
