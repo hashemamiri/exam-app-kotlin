@@ -50,7 +50,19 @@ object FormulaReferenceLibrary {
             val item=element as? JsonObject ?: return@galleryLoop
             gallery+=FormulaReferenceGallery(item.text("label"),entries(item["items"]))
         }
-        return FormulaReferenceData(groups,categories,gallery)
+        return FormulaReferenceData(groups,categories,gallery).also(::validate)
     }
+
+    private fun validate(data:FormulaReferenceData) {
+        val ids=data.categories.map(FormulaReferenceCategory::id)
+        require(ids.size==ids.toSet().size){"شناسه تکراری در کتابخانه فرمول"}
+        require(data.groups.map(FormulaReferenceGroup::key).distinct().size==data.groups.size){"گروه تکراری در کتابخانه فرمول"}
+        val known=ids.toSet()
+        require(data.groups.flatMap(FormulaReferenceGroup::categories).all{it.id in known}){"پیوند دسته نامعتبر در کتابخانه فرمول"}
+        require(data.categories.filterNot{it.id=="letters"}.all{it.items.isNotEmpty()}){"دسته خالی در کتابخانه فرمول"}
+        require(data.categories.flatMap(FormulaReferenceCategory::items).all{it.label.isNotBlank()&&it.tex.isNotBlank()}){"نماد ناقص در کتابخانه فرمول"}
+        require(data.gallery.flatMap(FormulaReferenceGallery::items).all{it.label.isNotBlank()&&it.tex.isNotBlank()}){"فرمول ناقص در گالری"}
+    }
+
     private fun JsonObject.text(key:String)=this[key]?.jsonPrimitive?.contentOrNull.orEmpty()
 }

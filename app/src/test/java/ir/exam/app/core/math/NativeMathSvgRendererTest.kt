@@ -68,6 +68,38 @@ class NativeMathSvgRendererTest {
     }
 
     @Test
+    fun `editor svg exposes touch boxes and changes active box color`() {
+        val tex = "\\frac{12}{x}"
+        val numberStart = tex.indexOf("12")
+        val document = NativeMathSvgRenderer.render(
+            tex = tex,
+            showEditBoxes = true,
+            activeStart = numberStart,
+            activeEnd = numberStart + 2,
+            boxColor = "#445566",
+            activeBoxColor = "#FF8800"
+        )
+        assertTrue(document.editBoxes.size >= 2)
+        val active = document.editBoxes.first { it.sourceStart == numberStart && it.sourceEnd == numberStart + 2 }
+        assertTrue(active.contains(active.xPx + active.widthPx / 2f, active.yPx + active.heightPx / 2f))
+        assertTrue(document.xml.contains("<rect"))
+        assertTrue(document.xml.contains("fill=\"#FF8800\""))
+        assertTrue(document.xml.contains("fill=\"#445566\""))
+    }
+
+    @Test
+    fun `radical overbar stretches with every added value`() {
+        val short = NativeMathSvgRenderer.render("\\sqrt{1}", showEditBoxes = true)
+        val long = NativeMathSvgRenderer.render("\\sqrt{123456789}", showEditBoxes = true)
+        val shortBar = short.radicalBars.single()
+        val longBar = long.radicalBars.single()
+        assertTrue(longBar.endXPx - longBar.startXPx > shortBar.endXPx - shortBar.startXPx)
+        assertTrue(long.widthPx > short.widthPx)
+        val longValueBox = long.editBoxes.first { it.sourceEnd - it.sourceStart == 9 }
+        assertTrue(longBar.endXPx >= longValueBox.xPx + longValueBox.widthPx)
+    }
+
+    @Test
     fun `svg cache key is stable and style sensitive`() {
         val first = NativeMathSvgRenderer.render("x^2", 30f, "#112233")
         val same = NativeMathSvgRenderer.render("x^2", 30f, "#112233")

@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import ir.exam.app.core.math.FormulaBoxEditor
 import ir.exam.app.core.math.NativeMathFormatter
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -106,16 +107,35 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
         error = null
     }
 
-    fun replace(text: String) {
-        val safe = text.take(8000)
-        setValue(TextFieldValue(safe, TextRange(safe.length)))
+    fun replace(text: String, activateFirstBox: Boolean = false) {
+        val result = FormulaBoxEditor.replaceAll(text, activateFirstBox)
+        setValue(
+            TextFieldValue(
+                result.text,
+                TextRange(result.selectionStart, result.selectionEnd)
+            )
+        )
     }
 
-    fun insert(text: String) {
-        val start = value.selection.min.coerceIn(0, value.text.length)
-        val end = value.selection.max.coerceIn(start, value.text.length)
-        val next = (value.text.substring(0, start) + text + value.text.substring(end)).take(8000)
-        setValue(TextFieldValue(next, TextRange((start + text.length).coerceAtMost(next.length))))
+    fun insert(
+        text: String,
+        activateFirstBox: Boolean = false,
+        replaceActiveBox: Boolean = false
+    ) {
+        val result = FormulaBoxEditor.insert(
+            current = value.text,
+            selectionStart = value.selection.start,
+            selectionEnd = value.selection.end,
+            insertion = text,
+            activateFirstInsertedBox = activateFirstBox,
+            replaceActiveBoxWhenCollapsed = replaceActiveBox
+        )
+        setValue(
+            TextFieldValue(
+                result.text,
+                TextRange(result.selectionStart, result.selectionEnd)
+            )
+        )
     }
 
     fun backspace() {
@@ -128,13 +148,23 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
         }
     }
 
-    fun moveCursor(delta: Int) {
-        val position = (value.selection.end + delta).coerceIn(0, value.text.length)
-        value = value.copy(selection = TextRange(position))
+    fun moveActiveBox(delta: Int) {
+        val moved = FormulaBoxEditor.moveActiveBox(
+            value.text,
+            value.selection.start,
+            value.selection.end,
+            delta
+        )
+        value = value.copy(selection = TextRange(moved.selectionStart, moved.selectionEnd))
     }
 
     fun useEntry(entry: FormulaReferenceEntry) {
-        insert(entry.tex)
+        // کتابخانه خانهٔ رنگی را جایگزین می‌کند و اولین خانهٔ قالب تازه را فعال نگه می‌دارد.
+        insert(
+            entry.tex,
+            activateFirstBox = true,
+            replaceActiveBox = true
+        )
         store.addRecentSymbol(entry)
         recentSymbols = store.recentSymbols()
     }
@@ -206,7 +236,7 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                         ) {
                             item {
                                 Text(
-                                    "روی کادر SVG بزنید و بنویسید. دکمه‌های ▾ چند حالت دارند؛ کد داخلی فقط در بخش حرفه‌ای قابل مشاهده است.",
+                                    "هر مقدار داخل یک خانه است؛ با لمس خانه رنگ آن عوض می‌شود. عدد، نماد یا کتابخانه دقیقاً در همان خانه درج می‌شود و دکمه‌های ▾ چند حالت دارند.",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -261,6 +291,7 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                 SvgFormulaEditorSurface(
                                     value = value,
                                     onValueChange = { setValue(it) },
+                                    onSelectionChange = { selection -> value = value.copy(selection = selection) },
                                     focusRequester = focusRequester,
                                     zoom = zoom,
                                     onRequestKeyboard = { keyboard?.show() }
@@ -275,7 +306,10 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                         }
                                     }
                                     items(library.groups, key = { it.key }) { group ->
-                                        FormulaCategoryButton(group, false) { groupDialog = group }
+                                        FormulaCategoryButton(
+                                            group,
+                                            selected = group.categories.any { it.id == categoryId }
+                                        ) { groupDialog = group }
                                     }
                                     item {
                                         CategoryButton("🔍 همهٔ نمادها", categoryId == "__all") {
@@ -332,7 +366,11 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                                         Button(onClick = {
                                             val converted = NativeMathFormatter.quickToTex(quickConvert)
                                             if (converted.isNotBlank()) {
-                                                insert(converted)
+                                                insert(
+                                                    converted,
+                                                    activateFirstBox = true,
+                                                    replaceActiveBox = true
+                                                )
                                                 quickConvert = ""
                                                 quickConvertOpen = false
                                             }
@@ -379,9 +417,9 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
                             }
                             item {
                                 FixedFormulaKeypad(
-                                    onInsert = ::insert,
+                                    onInsert = { text -> insert(text) },
                                     onBackspace = ::backspace,
-                                    onMove = ::moveCursor,
+                                    onMove = ::moveActiveBox,
                                     onKeyboard = {
                                         focusRequester.requestFocus()
                                         keyboard?.show()
@@ -486,14 +524,18 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
             text = {
                 LazyColumn {
                     items(group.categories, key = { it.id }) { link ->
-                        TextButton(
+                        val count = if (link.id == "letters") 52
+                        else library.categoryById[link.id]?.items?.size ?: 0
+                        FilterChip(
+                            selected = categoryId == link.id,
                             onClick = {
                                 categoryId = link.id
                                 symbolQuery = ""
                                 groupDialog = null
                             },
+                            label = { Text("${link.label} • $count") },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(link.label) }
+                        )
                     }
                 }
             },
@@ -541,38 +583,51 @@ fun FormulaEditorDialog(onDismiss: () -> Unit, onInsert: (String) -> Unit) {
 private fun SvgFormulaEditorSurface(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
+    onSelectionChange: (TextRange) -> Unit,
     focusRequester: FocusRequester,
     zoom: Float,
     onRequestKeyboard: () -> Unit
 ) {
-    Card(Modifier.fillMaxWidth().height(160.dp)) {
+    Card(Modifier.fillMaxWidth().height(180.dp)) {
         Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+            NativeFormulaEditorView(
+                tex = value.text,
+                selectionStart = value.selection.min,
+                selectionEnd = value.selection.max,
+                onBoxTap = { box ->
+                    onSelectionChange(TextRange(box.sourceStart, box.sourceEnd))
+                    focusRequester.requestFocus()
+                    onRequestKeyboard()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = (22 * zoom).sp,
+                contentDescription = "فرمول جعبه‌ای قابل لمس"
+            )
             if (value.text.isBlank()) {
-                Text("برای نوشتن فرمول این کادر SVG را لمس کنید")
-            } else {
-                NativeFormulaView(
-                    value.text,
-                    Modifier.fillMaxWidth(),
-                    (22 * zoom).sp,
-                    contentDescription = "فرمول در حال ویرایش"
+                Text(
+                    "خانهٔ خالی را لمس کنید",
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
             Surface(
                 modifier = Modifier.align(Alignment.BottomEnd),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .88f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .90f),
                 shape = MaterialTheme.shapes.small
             ) {
                 Text(
-                    "SVG • جایگاه درج ${value.selection.end + 1}",
+                    "خانهٔ فعال رنگی است • لمس برای انتخاب",
                     Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
+            // فقط اتصال امن به IME؛ یک لایهٔ نامرئی بزرگ دیگر روی جعبه‌ها قرار نمی‌گیرد.
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .align(Alignment.BottomStart)
+                    .size(1.dp)
                     .focusRequester(focusRequester)
                     .graphicsLayer { alpha = .002f },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Transparent),
@@ -587,7 +642,7 @@ private fun SvgFormulaEditorSurface(
             onRequestKeyboard()
         },
         modifier = Modifier.fillMaxWidth()
-    ) { Text("⌨️ باز کردن صفحه‌کلید برای ویرایش تصویری") }
+    ) { Text("⌨️ نوشتن در خانهٔ فعال") }
 }
 
 @Composable

@@ -19,4 +19,20 @@ class NativeMathParserTest {
   val lines=NativeMathParser.parse("x\\\\y") as MathNode.Sequence
   assertTrue(lines.children.any{it==MathNode.LineBreak})
  }
+
+ @Test fun `keeps exact source ranges for touchable boxes and supplementary unicode`() {
+  val tex="\\frac{12}{\\sqrt{x}}"
+  val ranges=NativeMathParser.editableRanges(tex)
+  val numberStart=tex.indexOf("12")
+  val xStart=tex.indexOf('x')
+  assertTrue(MathSourceRange(numberStart,numberStart+2) in ranges)
+  assertTrue(MathSourceRange(xStart,xStart+1) in ranges)
+  val supplementary="𝑥"
+  val symbol=NativeMathParser.parse(supplementary) as MathNode.Symbol
+  assertEquals(supplementary,symbol.value)
+  assertEquals(0,symbol.sourceStart)
+  assertEquals(supplementary.length,symbol.sourceEnd)
+  val matrixTex="\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"
+  assertEquals(listOf("a","b","c","d"),NativeMathParser.editableRanges(matrixTex).map{matrixTex.substring(it.start,it.endExclusive)})
+ }
 }

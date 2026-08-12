@@ -1,8 +1,20 @@
 package ir.exam.app.core.math
 
+data class MathSourceRange(val start: Int, val endExclusive: Int) {
+    init {
+        require(start >= 0 && endExclusive >= start)
+    }
+}
+
 sealed interface MathNode {
     data class Sequence(val children: List<MathNode>) : MathNode
-    data class Symbol(val value: String, val bold: Boolean = false) : MathNode
+    data class Symbol(
+        val value: String,
+        val bold: Boolean = false,
+        val sourceStart: Int = -1,
+        val sourceEnd: Int = -1,
+        val editable: Boolean = true
+    ) : MathNode
     data class Fraction(val top: MathNode, val bottom: MathNode) : MathNode
     data class Radical(val body: MathNode, val index: MathNode? = null) : MathNode
     data class Script(val base: MathNode, val upper: MathNode?, val lower: MathNode?) : MathNode
@@ -15,9 +27,9 @@ sealed interface MathNode {
 /**
  * Parser ساختاری و امن فرمول‌های آموزشی.
  *
- * TeX فقط قالب ذخیره/درج است. خروجی این parser یک AST بسته است و هیچ HTML، JavaScript
- * یا WebView تولید نمی‌کند. دستور ناشناخته هرگز به‌صورت نام خام نمایش داده نمی‌شود و به
- * جای آن علامت جایگزین دیداری برمی‌گردد.
+ * علاوه بر AST، هر مقدار قابل‌ویرایش بازهٔ دقیق خود را در متن داخلی نگه می‌دارد. این
+ * بازه‌ها برای جعبه‌های لمسی SVG استفاده می‌شوند و باعث می‌شوند انتخاب کتابخانه دقیقاً
+ * خانهٔ فعال را جایگزین کند. دستور ناشناخته هرگز به‌صورت نام خام نمایش داده نمی‌شود.
  */
 object NativeMathParser {
     private val commandSymbols = mapOf(
@@ -75,7 +87,29 @@ object NativeMathParser {
 
     fun parse(tex: String): MathNode {
         require(tex.length <= 8000) { "فرمول بیش از حد بلند است." }
-        return Parser(tex).parseSequence()
+        return Parser(tex, 0).parseSequence()
+    }
+
+    /** بازه‌های قابل لمس/ویرایش، مرتب بر اساس محل واقعی در TeX داخلی. */
+    fun editableRanges(tex: String): List<MathSourceRange> {
+        val ranges = buildList { collectEditable(parse(tex), this) }
+            .distinct()
+            .sortedWith(compareBy<MathSourceRange> { it.start }.thenBy { it.endExclusive })
+        if (ranges.size < 2) return ranges
+        val merged = mutableListOf<MathSourceRange>()
+        ranges.forEach { range ->
+            val previous = merged.lastOrNull()
+            val combinedIsPlainValue = previous != null &&
+                previous.endExclusive == range.start &&
+                tex.substring(previous.start, range.endExclusive).codePoints()
+                    .allMatch { Character.isLetterOrDigit(it) }
+            if (previous != null && combinedIsPlainValue) {
+                merged[merged.lastIndex] = MathSourceRange(previous.start, range.endExclusive)
+            } else {
+                merged += range
+            }
+        }
+        return merged
     }
 
     /** دستورهای واقعی ناشناخته را بدون اشتباه گرفتن `\\` سطر تازه گزارش می‌کند. */
@@ -104,11 +138,41 @@ object NativeMathParser {
         return result
     }
 
-    private class Parser(private val source: String) {
+    private fun collectEditable(node: MathNode, output: MutableList<MathSourceRange>) {
+        when (node) {
+            is MathNode.Symbol -> if (
+                node.editable && node.sourceStart >= 0 && node.sourceEnd >= node.sourceStart
+            ) output += MathSourceRange(node.sourceStart, node.sourceEnd)
+            is MathNode.Sequence -> node.children.forEach { collectEditable(it, output) }
+            is MathNode.Fraction -> {
+                collectEditable(node.top, output)
+                collectEditable(node.bottom, output)
+            }
+            is MathNode.Radical -> {
+                node.index?.let { collectEditable(it, output) }
+                collectEditable(node.body, output)
+            }
+            is MathNode.Script -> {
+                collectEditable(node.base, output)
+                node.upper?.let { collectEditable(it, output) }
+                node.lower?.let { collectEditable(it, output) }
+            }
+            is MathNode.Matrix -> node.rows.flatten().forEach { collectEditable(it, output) }
+            is MathNode.Accent -> collectEditable(node.body, output)
+            is MathNode.Delimited -> collectEditable(node.body, output)
+            MathNode.LineBreak -> Unit
+        }
+    }
+
+    private class Parser(
+        private val source: String,
+        private val sourceOffset: Int
+    ) {
         private var index = 0
 
         fun parseSequence(stop: Char? = null): MathNode {
             val output = mutableListOf<MathNode>()
+            val emptyPosition = global(index)
             while (index < source.length && (stop == null || source[index] != stop)) {
                 var node = atom()
                 var upper: MathNode? = null
@@ -123,19 +187,37 @@ object NativeMathParser {
             }
             if (stop != null && index < source.length && source[index] == stop) index++
             return when (output.size) {
-                0 -> MathNode.Symbol("")
+                0 -> MathNode.Symbol(
+                    value = "",
+                    sourceStart = emptyPosition,
+                    sourceEnd = emptyPosition,
+                    editable = true
+                )
                 1 -> output.first()
                 else -> MathNode.Sequence(output)
             }
         }
 
         private fun atom(): MathNode {
-            if (index >= source.length) return MathNode.Symbol("")
-            return when (val char = source[index++]) {
-                '{' -> parseSequence('}')
-                '\\' -> command()
-                '~' -> MathNode.Symbol(" ")
-                else -> MathNode.Symbol(char.toString())
+            if (index >= source.length) {
+                val position = global(index)
+                return MathNode.Symbol("", sourceStart = position, sourceEnd = position)
+            }
+            val start = index
+            val codePoint = source.codePointAt(index)
+            val charCount = Character.charCount(codePoint)
+            index += charCount
+            val value = String(Character.toChars(codePoint))
+            return when (value) {
+                "{" -> parseSequence('}')
+                "\\" -> command(start)
+                "~" -> sourceSymbol(" ", start, index, editable = false)
+                else -> sourceSymbol(
+                    value,
+                    start,
+                    index,
+                    editable = !Character.isWhitespace(codePoint)
+                )
             }
         }
 
@@ -149,29 +231,44 @@ object NativeMathParser {
             }
         }
 
-        private fun command(): MathNode {
-            if (index >= source.length) return MathNode.Symbol("□")
+        private fun command(slashStart: Int): MathNode {
+            if (index >= source.length) {
+                return sourceSymbol("□", slashStart, index)
+            }
             val escaped = source[index]
             if (!escaped.isLetter()) {
                 index++
                 return when (escaped) {
                     '\\' -> MathNode.LineBreak
-                    ' ' -> MathNode.Symbol(" ")
-                    '{', '}', '%', '$', '#', '&', '_', '|' -> MathNode.Symbol(escaped.toString())
-                    else -> MathNode.Symbol("□")
+                    ' ' -> sourceSymbol(" ", slashStart, index, editable = false)
+                    '{', '}', '%', '$', '#', '&', '_', '|' ->
+                        sourceSymbol(escaped.toString(), slashStart, index)
+                    else -> sourceSymbol("□", slashStart, index)
                 }
             }
 
-            val start = index
+            val nameStart = index
             while (index < source.length && source[index].isLetter()) index++
-            val name = source.substring(start, index)
+            val name = source.substring(nameStart, index)
             return when (name) {
                 "frac", "dfrac", "tfrac" -> MathNode.Fraction(groupOrAtom(), groupOrAtom())
                 "sqrt" -> parseRadical()
-                "mathbf", "bold", "boldsymbol" -> MathNode.Symbol(flat(groupOrAtom()), bold = true)
-                "mathrm", "text", "operatorname" -> MathNode.Symbol(flat(groupOrAtom()))
-                "mathbb" -> MathNode.Symbol(blackboard(flat(groupOrAtom())))
-                "mathcal" -> MathNode.Symbol(calligraphic(flat(groupOrAtom())))
+                "mathbf", "bold", "boldsymbol" -> {
+                    val body = groupOrAtom()
+                    sourceSymbol(flat(body), slashStart, index, bold = true)
+                }
+                "mathrm", "text", "operatorname" -> {
+                    val body = groupOrAtom()
+                    sourceSymbol(flat(body), slashStart, index)
+                }
+                "mathbb" -> {
+                    val body = groupOrAtom()
+                    sourceSymbol(blackboard(flat(body)), slashStart, index)
+                }
+                "mathcal" -> {
+                    val body = groupOrAtom()
+                    sourceSymbol(calligraphic(flat(body)), slashStart, index)
+                }
                 "hat" -> MathNode.Accent(groupOrAtom(), "hat")
                 "bar", "overline" -> MathNode.Accent(groupOrAtom(), "bar")
                 "vec" -> MathNode.Accent(groupOrAtom(), "vec")
@@ -179,15 +276,15 @@ object NativeMathParser {
                 "left" -> parseDelimited()
                 "right" -> {
                     readDelimiter()
-                    MathNode.Symbol("")
+                    MathNode.Symbol("", editable = false)
                 }
-                "begin" -> parseEnvironment()
+                "begin" -> parseEnvironment(slashStart)
                 "end" -> {
                     groupOrAtom()
-                    MathNode.Symbol("")
+                    MathNode.Symbol("", editable = false)
                 }
-                in namedFunctions -> MathNode.Symbol(name)
-                else -> MathNode.Symbol(commandSymbols[name] ?: "□")
+                in namedFunctions -> sourceSymbol(name, slashStart, index)
+                else -> sourceSymbol(commandSymbols[name] ?: "□", slashStart, index)
             }
         }
 
@@ -223,7 +320,10 @@ object NativeMathParser {
                 if (command == "right") {
                     depth--
                     if (depth == 0) {
-                        val body = parse(source.substring(bodyStart, slash))
+                        val body = Parser(
+                            source.substring(bodyStart, slash),
+                            global(bodyStart)
+                        ).parseSequence()
                         index = cursor
                         val close = readDelimiter()
                         return MathNode.Delimited(open, body, close)
@@ -231,7 +331,8 @@ object NativeMathParser {
                 }
             }
             index = source.length
-            return MathNode.Delimited(open, parse(source.substring(bodyStart)), matchingDelimiter(open))
+            val body = Parser(source.substring(bodyStart), global(bodyStart)).parseSequence()
+            return MathNode.Delimited(open, body, matchingDelimiter(open))
         }
 
         private fun readDelimiter(): String {
@@ -253,22 +354,33 @@ object NativeMathParser {
                     }
                 }
             } else {
-                result = source[index++].toString()
+                val codePoint = source.codePointAt(index)
+                index += Character.charCount(codePoint)
+                result = String(Character.toChars(codePoint))
             }
             if (result == ".") result = ""
             return result
         }
 
-        private fun parseEnvironment(): MathNode {
+        private fun parseEnvironment(commandStart: Int): MathNode {
             val environment = flat(groupOrAtom())
             val end = "\\end{$environment}"
             val endAt = source.indexOf(end, index)
-            if (endAt < 0) return MathNode.Symbol("□")
-            val body = source.substring(index, endAt)
+            if (endAt < 0) return sourceSymbol("□", commandStart, index)
+            val bodyStart = index
+            val body = source.substring(bodyStart, endAt)
             index = endAt + end.length
             if (environment in setOf("matrix", "bmatrix", "pmatrix", "vmatrix", "cases", "aligned", "align")) {
-                val rows = body.split("\\\\").map { row ->
-                    row.split('&').map { cell -> parse(cell.trim()) }
+                val rows = splitSlices(body, "\\\\").map { rowSlice ->
+                    val rowText = body.substring(rowSlice.first, rowSlice.last + 1)
+                    splitSlices(rowText, "&").map { cellSlice ->
+                        val raw = rowText.substring(cellSlice.first, cellSlice.last + 1)
+                        val leading = raw.indexOfFirst { !it.isWhitespace() }.let { if (it < 0) 0 else it }
+                        val trailing = raw.indexOfLast { !it.isWhitespace() }.let { if (it < leading) leading - 1 else it }
+                        val trimmed = if (trailing >= leading) raw.substring(leading, trailing + 1) else ""
+                        val globalStart = global(bodyStart + rowSlice.first + cellSlice.first + leading)
+                        Parser(trimmed, globalStart).parseSequence()
+                    }
                 }
                 val delimiter = when (environment) {
                     "pmatrix" -> '('
@@ -279,12 +391,28 @@ object NativeMathParser {
                 }
                 return MathNode.Matrix(rows, delimiter)
             }
-            return MathNode.Symbol("□")
+            return sourceSymbol("□", commandStart, index)
         }
+
+        private fun sourceSymbol(
+            value: String,
+            localStart: Int,
+            localEnd: Int,
+            bold: Boolean = false,
+            editable: Boolean = true
+        ) = MathNode.Symbol(
+            value = value,
+            bold = bold,
+            sourceStart = global(localStart),
+            sourceEnd = global(localEnd),
+            editable = editable
+        )
 
         private fun skipWhitespace() {
             while (index < source.length && source[index].isWhitespace()) index++
         }
+
+        private fun global(local: Int): Int = sourceOffset + local
 
         private fun flat(node: MathNode): String = when (node) {
             is MathNode.Symbol -> node.value
@@ -293,6 +421,26 @@ object NativeMathParser {
             MathNode.LineBreak -> " "
             else -> ""
         }
+    }
+
+    private fun splitSlices(value: String, delimiter: String): List<IntRange> {
+        if (value.isEmpty()) return listOf(0..-1)
+        val result = mutableListOf<IntRange>()
+        var start = 0
+        while (start <= value.length) {
+            val at = value.indexOf(delimiter, start)
+            if (at < 0) {
+                result += start until value.length
+                break
+            }
+            result += start until at
+            start = at + delimiter.length
+            if (start == value.length) {
+                result += start..(start - 1)
+                break
+            }
+        }
+        return result
     }
 
     private fun matchingDelimiter(open: String): String = when (open) {
