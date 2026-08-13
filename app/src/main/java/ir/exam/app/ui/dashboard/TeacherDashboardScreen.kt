@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeacherDashboardScreen(
+    refreshKey: Int = 0,
     onCreateExam: () -> Unit,
     onEditExam: (String) -> Unit,
     onImportExam: (ExamImportDraft) -> Unit
@@ -69,7 +70,7 @@ fun TeacherDashboardScreen(
     var deleteCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var duplicateCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(refreshKey) { viewModel.load() }
     LaunchedEffect(state.exportFile) {
         state.exportFile?.let { exportLauncher.launch(it.fileName) }
     }

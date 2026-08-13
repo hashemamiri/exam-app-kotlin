@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V16.1 شبکه کارت‌های منو، دکمه + دایره و Pull-to-Refresh
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V17 رفتار کامل Native مرجع design-69
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2581,3 +2581,89 @@ Debug APK SHA-256                     9e5ea5d0276bb833f36cf45c1ce3e9c2ea47e1aca1
 ```
 
 راهنمای مستقل: `NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md`.
+
+---
+
+## ۳۵) V17 — رفتار کامل Native مرجع design-69
+
+### مرجع
+
+```text
+design-69.html
+SHA-256: 8b1970f5317a6736ba20b1c239d6457e8f6739e7222d937a6d384329a95d4ecf
+Size: 61,677 bytes
+Lines: 467
+```
+
+ممیزی کامل HTML/CSS/JavaScript در `DESIGN_69_BEHAVIOR_AUDIT_FA.md` ثبت شد. فایل مرجع Self-contained و فاقد external resource/secret بود، اما فقط مرجع طراحی است و هیچ JavaScript یا WebView آن وارد Runtime نشد.
+
+### تصمیم‌های کاربر
+
+```text
+منوی تمام‌صفحه + برگشت به آخرین صفحه
++ متحرک تا مرکز با عملیات واقعی دانش‌آموز/آزمون/کلاس
+کارت مدیریتی آمار/تصحیح/مانده با swipe چهارجهته
+۱۰ کارت واقعی معلم و ۶ کارت واقعی دانش‌آموز
+AboutScreen واقعی و AlertDialog امن خروج
+ImageVector/Canvas خطی + همه micro-animationهای مرجع
+refresh واقعی روی لمس دوباره مقصد فعال
+```
+
+### قابلیت‌ها
+
+- حذف `ModalNavigationDrawer` و جایگزینی با full-page menu state-preserving؛
+- morph همبرگر به × طی 420ms برای پایین معلم و بالای دانش‌آموز؛
+- کارت پروفایل 148dp و کارت منو 116dp؛
+- grid دو ستونه کامل با stagger 120ms + 40ms؛
+- مجموعه خطی Native برای Wallet/Add/Exams/Cards/Calendar/Classes/Students/Update/Settings/Logout/Reports/Grading/Dashboard/quick actions؛
+- flip کیف پول، bounce آزمون، wiggle کارت، lift/dot فعال و ripple 520ms؛
+- دکمه + دایره 70dp با travel 620ms، rotation 135° و گزینه‌های مثلثی؛
+- صفحه stack کارت‌های مدیریتی با threshold 52dp، چهار جهت، بازگشت لغو، keyboard و مسیر واقعی؛
+- active Wallet/Exams/Cards به‌ترتیب refresh/refresh/cycle؛
+- PullToRefresh داشبورد و حذف دکمه بروزرسانی؛
+- نمایش‌ندادن دامنه داخلی Auth دانش‌آموز؛
+- حفظ تم، پالت، عمق، Builder، Auth، Room، Supabase و همه قابلیت‌های V1..V16.
+
+### فایل‌ها
+
+```text
+DESIGN_69_BEHAVIOR_AUDIT_FA.md
+DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt
+app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
+app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt
+app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
+app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt
+app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+app/src/test/java/ir/exam/app/ui/app/TeacherBottomDockTest.kt
+scripts/verify_native_final.py
+```
+
+### عملیات
+
+```text
+پیش‌نیاز: V16
+V16.1 جداگانه لازم نیست؛ تغییرات آن داخل V17 است.
+SQL/Edge/Secret/Migration/Dependency جدید: ندارد
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              101/101 PASS
+Design69 behavior/source regression    PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 24 warning
+assembleDebug                         PASS
+Debug package                         ir.exam.app.native
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     bab45f4cfdadba570765886ceefb88758585e283eb37cede96717545f8523c92
+```
+
+راهنمای مستقل: `DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md`.

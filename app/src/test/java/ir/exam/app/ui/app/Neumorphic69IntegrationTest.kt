@@ -46,7 +46,7 @@ class Neumorphic69IntegrationTest {
     }
 
     @Test
-    fun `appearance defaults and bounds match reference design`() {
+    fun `appearance defaults and bounds match native design`() {
         val settings = AppearanceSettings()
         assertEquals(NeumorphicPalette.INDIGO_MINT, settings.neumorphicPalette)
         assertEquals(14f, settings.neumorphicDepth)
@@ -56,11 +56,73 @@ class Neumorphic69IntegrationTest {
     }
 
     @Test
-    fun `native shell uses dual shadows without importing demo screens`() {
+    fun `full page menu contract keeps complete real two-column rows`() {
+        assertEquals(2, Design69MenuContract.COLUMNS)
+        assertTrue(Design69MenuContract.PROFILE_HEIGHT_DP > Design69MenuContract.CARD_HEIGHT_DP)
+        assertEquals(10, Design69MenuContract.TEACHER_CARD_COUNT)
+        assertEquals(6, Design69MenuContract.STUDENT_CARD_COUNT)
+        assertTrue(Design69MenuContract.isCompleteGrid(Design69MenuContract.TEACHER_CARD_COUNT))
+        assertTrue(Design69MenuContract.isCompleteGrid(Design69MenuContract.STUDENT_CARD_COUNT))
+        assertFalse(Design69MenuContract.isCompleteGrid(9))
+    }
+
+    @Test
+    fun `quick add and management cards preserve selected real contracts`() {
+        assertEquals(3, Design69QuickAddContract.ACTION_COUNT)
+        assertEquals(135, Design69QuickAddContract.OPEN_ROTATION_DEGREES)
+        assertEquals(3, Design69ManagementCardsContract.CARD_COUNT)
+        assertEquals(52, Design69ManagementCardsContract.DRAG_THRESHOLD_DP)
+    }
+
+    @Test
+    fun `reference navigation motion is native and full page`() {
+        val root = root()
+        val app = File(root, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").readText()
+        val icons = File(root, "app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").readText()
+        val menu = File(root, "app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").readText()
+        val dock = File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").readText()
+
+        assertTrue("Design69MainMenuScreen(" in app)
+        assertTrue("menuOpen = !menuOpen" in app)
+        assertTrue("BackHandler(enabled = menuOpen" in app)
+        assertFalse("side drawer must not remain", "ModalNavigationDrawer" in app)
+        assertTrue("Design69MorphingMenuIcon" in icons)
+        assertTrue("Design69Icons.Wallet" in dock)
+        assertTrue("DockMotion.WALLET" in dock)
+        assertTrue("rippleProgress.animateTo(1f, tween(520))" in dock)
+        assertTrue("slideInHorizontally" in menu)
+        assertTrue("delay = 120 + index * 40" in menu)
+    }
+
+    @Test
+    fun `quick add cards and refresh paths are real and reachable`() {
+        val root = root()
+        val app = File(root, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").readText()
+        val add = File(root, "app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt").readText()
+        val cards = File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt").readText()
+        val dashboard = File(root, "app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").readText()
+        val wallet = File(root, "app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").readText()
+
+        listOf("دانش‌آموز جدید", "آزمون جدید", "کلاس جدید").forEach {
+            assertTrue("missing real add action $it", it in add)
+        }
+        assertTrue("OPEN_ROTATION_DEGREES * travel.value" in add)
+        assertTrue("detectDragGestures" in cards)
+        assertTrue("DRAG_THRESHOLD_DP = 52" in cards)
+        assertTrue("Key.DirectionLeft" in cards && "Key.DirectionDown" in cards)
+        assertTrue("آمار و گزارش‌ها" in cards && "تصحیح" in cards && "مانده" in cards)
+        assertTrue("PullToRefreshBox(" in dashboard)
+        assertTrue("onRefresh = viewModel::load" in dashboard)
+        assertFalse("manual dashboard refresh button returned", "به‌روزرسانی" in dashboard)
+        assertTrue("dashboardRefreshKey += 1" in app)
+        assertTrue("walletRefreshKey += 1" in app)
+        assertTrue("LaunchedEffect(refreshKey)" in wallet)
+    }
+
+    @Test
+    fun `native shell uses dual shadows without demo data or web runtime`() {
         val root = root()
         val design = File(root, "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").readText()
-        val app = File(root, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").readText()
-        val dock = File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").readText()
         val mainSources = File(root, "app/src/main/java").walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .joinToString("\n") { it.readText() }
@@ -68,48 +130,9 @@ class Neumorphic69IntegrationTest {
         listOf("setShadowLayer", "lightShadow", "darkShadow", "pressed", "NeumorphicTopBar").forEach {
             assertTrue("missing native design marker: $it", it in design)
         }
-        assertTrue("Neumorphic69Provider(depth = appearance.neumorphicDepth)" in app)
-        assertTrue("TeacherBottomDock(" in app)
-        assertTrue("ModalBottomSheet" in dock)
         assertFalse("standalone demo package must not enter runtime", "com.example.neumorphic69" in mainSources)
-        assertFalse("standalone fake wallet balance must not enter runtime", "۱۲٬۴۸۰٬۰۰۰" in mainSources)
-    }
-
-    @Test
-    fun `drawer contract has one large profile and complete two-column rows`() {
-        assertEquals(2, NeumorphicDrawerContract.COLUMNS)
-        assertTrue(
-            NeumorphicDrawerContract.PROFILE_HEIGHT_DP >
-                NeumorphicDrawerContract.MENU_CARD_HEIGHT_DP
-        )
-        assertEquals(10, NeumorphicDrawerContract.TEACHER_CARD_COUNT)
-        assertEquals(6, NeumorphicDrawerContract.STUDENT_CARD_COUNT)
-        assertTrue(NeumorphicDrawerContract.hasCompleteRows(NeumorphicDrawerContract.TEACHER_CARD_COUNT))
-        assertTrue(NeumorphicDrawerContract.hasCompleteRows(NeumorphicDrawerContract.STUDENT_CARD_COUNT))
-        assertFalse(NeumorphicDrawerContract.hasCompleteRows(9))
-    }
-
-    @Test
-    fun `drawer grid circular plus and pull refresh are reachable`() {
-        val root = root()
-        val app = File(root, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").readText()
-        val design = File(root, "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").readText()
-        val dock = File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").readText()
-        val dashboard = File(
-            root,
-            "app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt"
-        ).readText()
-
-        assertTrue("NeumorphicDrawerContract.PROFILE_HEIGHT_DP.dp" in app)
-        assertTrue(".chunked(NeumorphicDrawerContract.COLUMNS)" in app)
-        assertTrue("NeumorphicDrawerMenuCard(" in app)
-        assertTrue("NeumorphicDrawerMenuCard(" in design)
-        assertTrue(".size(70.dp)" in dock)
-        assertTrue("shape = CircleShape" in dock)
-        assertTrue("clip = true" in dock)
-        assertTrue("PullToRefreshBox(" in dashboard)
-        assertTrue("onRefresh = viewModel::load" in dashboard)
-        assertFalse("manual refresh button returned", "به‌روزرسانی" in dashboard)
+        assertFalse("fake wallet balance must not enter runtime", "۱۲٬۴۸۰٬۰۰۰" in mainSources)
+        assertFalse("WebView must not enter native runtime", "android.webkit" in mainSources)
     }
 
     @Test

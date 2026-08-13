@@ -3,6 +3,8 @@ package ir.exam.app.ui.billing
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Visibility
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,6 +53,7 @@ import ir.exam.app.core.calendar.JalaliCalendar
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.domain.model.WalletTransaction
+import ir.exam.app.ui.app.Design69Icons
 import ir.exam.app.ui.app.LocalNeumorphic69Depth
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.app.neumorphic69Colors
@@ -57,12 +61,22 @@ import java.time.Instant
 import java.time.ZoneId
 
 @Composable
-fun WalletScreen() {
+fun WalletScreen(refreshKey: Int = 0) {
     val context = LocalContext.current
     val viewModel = remember { BillingViewModel() }
     val state by viewModel.state.collectAsState()
     val neo = neumorphic69Colors
+    val balanceTilt = remember { Animatable(0f) }
     var balanceVisible by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(refreshKey) {
+        if (refreshKey > 0) {
+            viewModel.load()
+            balanceTilt.snapTo(0f)
+            balanceTilt.animateTo(10f, tween(250))
+            balanceTilt.animateTo(0f, tween(270))
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -74,6 +88,10 @@ fun WalletScreen() {
                     .fillMaxWidth()
                     .padding(top = 12.dp)
                     .height(174.dp)
+                    .graphicsLayer {
+                        rotationY = balanceTilt.value
+                        cameraDistance = 12f * density
+                    }
                     .clip(RoundedCornerShape(30.dp))
                     .background(Brush.linearGradient(listOf(neo.accent, neo.accent2)))
                     .padding(20.dp)
@@ -83,7 +101,7 @@ fun WalletScreen() {
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null, tint = Color.White)
+                        Icon(Design69Icons.Wallet, contentDescription = null, tint = Color.White)
                         Text(
                             "موجودی کیف پول",
                             color = Color.White,

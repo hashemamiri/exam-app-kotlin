@@ -32,6 +32,10 @@ student_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamScreen
 teacher_dock=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").read_text()
 app_shell=(ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text()
 neumorphic_design=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").read_text()
+design69_icons=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()
+design69_menu=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text()
+design69_add=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt").read_text()
+design69_cards=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt").read_text()
 appearance_preferences=(ROOT/"app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt").read_text()
 app_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_text()
 profile_settings=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
@@ -104,26 +108,40 @@ require(all((ROOT/"app/src/main/res/font"/name).exists() for name in ("vazirmatn
 require("native_save_exam_v2" in parity and "native_bank_snapshot_v1" in parity and "native_feedback_update_v1" in parity,"V13 backend parity RPCs missing")
 require("پیش‌نمایش کامل A4" in builder_screen and "تعداد گزینه" in builder_screen and "حساس به حروف" in builder_screen,"builder parity controls missing")
 require("مرور پیش از ارسال" in student_screen and "علامت برای مرور" in student_screen,"student navigation/review parity missing")
-require(all(marker in teacher_dock for marker in ("DockItem(\"منو\"","DockItem(\"کیف پول\"","\"افزودن\",","DockItem(\"آزمون‌ها\"","DockItem(\"کارت‌ها\"","دانش‌آموز جدید","آزمون جدید","کلاس جدید","آمار و گزارش‌ها","تصحیح","مانده")),
-        "teacher bottom dock order/actions incomplete")
-require("TeacherBottomDock" in app_shell and all(marker in app_shell for marker in ("onCreateStudent","onCreateExam","onCreateClass","onExams","onStats","onPending")),
-        "teacher bottom dock is not wired to real pages")
+require(all(marker in teacher_dock for marker in ("TeacherDockAction.MENU","TeacherDockAction.WALLET","TeacherDockAction.CREATE","TeacherDockAction.EXAMS","TeacherDockAction.CARDS","Design69MorphingMenuIcon","Design69Icons.Wallet","Design69Icons.Exams","Design69Icons.Cards","rippleProgress.animateTo(1f, tween(520))")),
+        "teacher bottom dock order/vector icons/micro-motion incomplete")
+require("TeacherBottomDock" in app_shell and all(marker in app_shell for marker in ("onToggleMenu","onToggleAdd","onCreateStudent","onCreateExam","onCreateClass","onCards")),
+        "teacher design69 dock is not wired to real pages")
+require(all(marker in design69_icons for marker in ("Design69MorphingMenuIcon","Design69Wallet","Design69Exams","Design69Cards","Design69Calendar","Design69Settings","Design69Logout")),
+        "custom native line-vector icon set or hamburger morph incomplete")
+require(all(marker in design69_menu for marker in ("PROFILE_HEIGHT_DP = 148","CARD_HEIGHT_DP = 116","TEACHER_CARD_COUNT = 10","STUDENT_CARD_COUNT = 6","slideInHorizontally","delay = 120 + index * 40")),
+        "full-page profile/two-column staggered menu incomplete")
+require("Design69MainMenuScreen" in app_shell and "menuOpen = !menuOpen" in app_shell and
+        "BackHandler(enabled = menuOpen" in app_shell and "ModalNavigationDrawer" not in app_shell,
+        "menu is not a full-page reversible state")
+require(all(marker in design69_add for marker in ("OPEN_ROTATION_DEGREES = 135","ACTION_COUNT = 3","دانش‌آموز جدید","آزمون جدید","کلاس جدید","travel.animateTo")),
+        "shared moving plus or three real quick actions incomplete")
+require(all(marker in design69_cards for marker in ("CARD_COUNT = 3","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionDown","آمار و گزارش‌ها","تصحیح","مانده")),
+        "four-direction real management-card stack incomplete")
+require("ModalBottomSheet" not in teacher_dock,
+        "legacy management bottom sheet remains instead of full cards page")
 require("SchoolLaunchAction.CREATE_STUDENT" in school_screen and "SchoolLaunchAction.CREATE_CLASS" in school_screen,
         "teacher quick-create school actions missing")
 require("initialPendingOnly" in grading_screen and "فقط مانده" in grading_screen,
-        "pending grading management card route missing")
-require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicDrawerMenuCard","PROFILE_HEIGHT_DP = 148","MENU_CARD_HEIGHT_DP = 116","COLUMNS = 2")),
-        "Neumorphic 69 native design/profile/grid primitives incomplete")
+        "pending grading management route missing")
+require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicMenuTile")),
+        "Neumorphic 69 native primitives incomplete")
 require("Neumorphic69Provider(depth = appearance.neumorphicDepth)" in app_shell and
-        "widthIn(max = 900.dp)" in app_shell and "NeumorphicTopBar" in app_shell and
-        ".chunked(NeumorphicDrawerContract.COLUMNS)" in app_shell and
-        "NeumorphicDrawerContract.PROFILE_HEIGHT_DP.dp" in app_shell,
-        "Neumorphic 69 authenticated shell/profile/two-column grid is not active/adaptive")
+        "widthIn(max = 900.dp)" in app_shell and "NeumorphicTopBar" in app_shell,
+        "Neumorphic 69 authenticated shell is not active/adaptive")
 require(all(marker in teacher_dock for marker in (".size(70.dp)","shape = CircleShape","clip = true")),
         "center add action is not forced to a perfect circle")
 require("PullToRefreshBox" in teacher_dashboard and "onRefresh = viewModel::load" in teacher_dashboard and
-        "به‌روزرسانی" not in teacher_dashboard,
-        "teacher dashboard pull-to-refresh missing or manual refresh button remains")
+        "به‌روزرسانی" not in teacher_dashboard and "LaunchedEffect(refreshKey)" in teacher_dashboard,
+        "teacher dashboard pull-to-refresh/active-tab refresh missing or manual button remains")
+require("walletRefreshKey += 1" in app_shell and "dashboardRefreshKey += 1" in app_shell and
+        "cardsCycleKey += 1" in app_shell and "LaunchedEffect(refreshKey)" in wallet_screen,
+        "active dock destination secondary real behavior incomplete")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

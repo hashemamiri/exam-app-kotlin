@@ -1,57 +1,33 @@
 package ir.exam.app.ui.app
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Assignment
-import androidx.compose.material.icons.automirrored.outlined.FactCheck
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.GroupAdd
-import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.PendingActions
-import androidx.compose.material.icons.outlined.PersonAdd
-import androidx.compose.material.icons.outlined.PostAdd
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,21 +38,21 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.sin
 
 enum class TeacherDockSection { MENU, WALLET, CREATE, EXAMS, CARDS, NONE }
-
 enum class TeacherDockAction { MENU, WALLET, CREATE, EXAMS, CARDS }
 enum class TeacherQuickCreateAction { STUDENT, EXAM, CLASS }
 enum class TeacherManagementAction { STATS, GRADING, PENDING }
 
-/** قرارداد قابل تست طرح ۶۹؛ ترتیب فیزیکی در RTL از راست به چپ است. */
 object TeacherDockContract {
     val order = listOf(
         TeacherDockAction.MENU,
@@ -97,159 +73,77 @@ object TeacherDockContract {
     )
 }
 
-/** نوار ثابت پنج‌دکمه‌ای معلم با ظاهر نئومورفیک، FAB کمانی و مسیرهای واقعی V15. */
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class DockMotion { MENU, WALLET, EXAMS, CARDS }
+
+/** نوار پنج‌دکمه‌ای طرح ۶۹ با آیکن‌های خطی، ripple و میکروانیمیشن اختصاصی. */
 @Composable
 fun TeacherBottomDock(
     active: TeacherDockSection,
+    menuOpen: Boolean,
+    quickAddOpen: Boolean,
     onMenu: () -> Unit,
     onWallet: () -> Unit,
-    onCreateStudent: () -> Unit,
-    onCreateExam: () -> Unit,
-    onCreateClass: () -> Unit,
+    onAdd: () -> Unit,
     onExams: () -> Unit,
-    onStats: () -> Unit,
-    onGrading: () -> Unit,
-    onPending: () -> Unit
+    onCards: () -> Unit
 ) {
-    var createExpanded by rememberSaveable { mutableStateOf(false) }
-    var cardsOpen by rememberSaveable { mutableStateOf(false) }
     val colors = neumorphic69Colors
-    val height by animateDpAsState(
-        targetValue = if (createExpanded) 232.dp else 102.dp,
-        animationSpec = tween(420, easing = FastOutSlowInEasing),
-        label = "dock-height"
-    )
-    val rotation by animateFloatAsState(
-        targetValue = if (createExpanded) 45f else 0f,
-        animationSpec = tween(380, easing = FastOutSlowInEasing),
-        label = "plus-rotation"
-    )
-
-    BackHandler(enabled = createExpanded) { createExpanded = false }
-
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(height)
+                .height(102.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
-            AnimatedVisibility(
-                visible = createExpanded,
-                modifier = Modifier.align(Alignment.BottomCenter),
-                enter = fadeIn(tween(220)) + scaleIn(tween(360), initialScale = .64f),
-                exit = fadeOut(tween(150)) + scaleOut(tween(220), targetScale = .70f)
+            NeumorphicPanel(
+                modifier = Modifier.fillMaxWidth().height(82.dp),
+                radius = 28.dp,
+                depth = LocalNeumorphic69Depth.current + 2.dp,
+                contentAlignment = Alignment.Center
             ) {
-                Box(Modifier.fillMaxWidth().height(220.dp)) {
-                    ArcAction(
-                        label = "دانش‌آموز جدید",
-                        icon = Icons.Outlined.PersonAdd,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(x = (-108).dp, y = (-84).dp)
-                    ) {
-                        createExpanded = false
-                        onCreateStudent()
-                    }
-                    ArcAction(
-                        label = "آزمون جدید",
-                        icon = Icons.Outlined.PostAdd,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(y = (-140).dp)
-                    ) {
-                        createExpanded = false
-                        onCreateExam()
-                    }
-                    ArcAction(
-                        label = "کلاس جدید",
-                        icon = Icons.Outlined.GroupAdd,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(x = 108.dp, y = (-84).dp)
-                    ) {
-                        createExpanded = false
-                        onCreateClass()
-                    }
-                }
-            }
-
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                NeumorphicPanel(
-                    modifier = Modifier.fillMaxWidth().height(82.dp),
-                    radius = 28.dp,
-                    depth = LocalNeumorphic69Depth.current + 2.dp,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp),
-                    contentAlignment = Alignment.Center
+                Row(
+                    Modifier.fillMaxWidth().height(82.dp).padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        Modifier.fillMaxWidth().height(82.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        DockItem("منو", Icons.Outlined.Menu, active == TeacherDockSection.MENU, Modifier.weight(1f)) {
-                            createExpanded = false
-                            onMenu()
-                        }
-                        DockItem("کیف پول", Icons.Outlined.AccountBalanceWallet, active == TeacherDockSection.WALLET, Modifier.weight(1f)) {
-                            createExpanded = false
-                            onWallet()
-                        }
-                        CenterAction(
-                            label = "افزودن",
-                            expanded = createExpanded,
-                            active = active == TeacherDockSection.CREATE,
-                            rotation = rotation,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            createExpanded = !createExpanded
-                        }
-                        DockItem("آزمون‌ها", Icons.AutoMirrored.Outlined.Assignment, active == TeacherDockSection.EXAMS, Modifier.weight(1f)) {
-                            createExpanded = false
-                            onExams()
-                        }
-                        DockItem("کارت‌ها", Icons.Outlined.Dashboard, active == TeacherDockSection.CARDS, Modifier.weight(1f)) {
-                            createExpanded = false
-                            cardsOpen = true
-                        }
+                    DockItem(
+                        label = "منو",
+                        selected = menuOpen || active == TeacherDockSection.MENU,
+                        motion = DockMotion.MENU,
+                        modifier = Modifier.weight(1f),
+                        onClick = onMenu
+                    ) { tint, iconModifier ->
+                        Design69MorphingMenuIcon(menuOpen, tint, iconModifier)
                     }
-                }
-            }
-        }
-
-        if (cardsOpen) {
-            ModalBottomSheet(
-                onDismissRequest = { cardsOpen = false },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor = colors.background,
-                contentColor = colors.ink,
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                tonalElevation = 0.dp
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text("کارت‌های مدیریتی", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = colors.ink)
-                    Text("یکی از مسیرهای واقعی مدیریت را انتخاب کنید.", style = MaterialTheme.typography.bodySmall, color = colors.muted)
-                    ManagementCard("آمار و گزارش‌ها", "نمودارها، میانگین، تحلیل سؤال و خروجی", Icons.Outlined.BarChart) {
-                        cardsOpen = false
-                        onStats()
-                    }
-                    ManagementCard("تصحیح", "پاسخ‌ها، حضور، بازخورد و تأیید نمره", Icons.AutoMirrored.Outlined.FactCheck) {
-                        cardsOpen = false
-                        onGrading()
-                    }
-                    ManagementCard("مانده", "پاسخ‌های در انتظار تصحیح و پیگیری", Icons.Outlined.PendingActions) {
-                        cardsOpen = false
-                        onPending()
-                    }
-                    Box(Modifier.height(22.dp))
+                    DockItem(
+                        label = "کیف پول",
+                        selected = active == TeacherDockSection.WALLET && !menuOpen,
+                        motion = DockMotion.WALLET,
+                        modifier = Modifier.weight(1f),
+                        onClick = onWallet,
+                        icon = Design69Icons.Wallet
+                    )
+                    CenterAddAction(
+                        expanded = quickAddOpen,
+                        modifier = Modifier.weight(1f),
+                        onClick = onAdd
+                    )
+                    DockItem(
+                        label = "آزمون‌ها",
+                        selected = active == TeacherDockSection.EXAMS && !menuOpen,
+                        motion = DockMotion.EXAMS,
+                        modifier = Modifier.weight(1f),
+                        onClick = onExams,
+                        icon = Design69Icons.Exams
+                    )
+                    DockItem(
+                        label = "کارت‌ها",
+                        selected = active == TeacherDockSection.CARDS && !menuOpen,
+                        motion = DockMotion.CARDS,
+                        modifier = Modifier.weight(1f),
+                        onClick = onCards,
+                        icon = Design69Icons.Cards
+                    )
                 }
             }
         }
@@ -259,186 +153,147 @@ fun TeacherBottomDock(
 @Composable
 private fun DockItem(
     label: String,
-    icon: ImageVector,
     selected: Boolean,
+    motion: DockMotion,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    icon: ImageVector? = null,
+    customIcon: (@Composable (Color, Modifier) -> Unit)? = null
 ) {
     val colors = neumorphic69Colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        if (selected || pressed) 1.12f else 1f,
-        tween(180),
-        label = "dock-$label-scale"
-    )
+    val lift by animateDpAsState(if (selected) (-5).dp else 0.dp, tween(300), label = "dock-lift-$label")
+    val scale by animateFloatAsState(if (pressed) .94f else 1f, tween(120), label = "dock-press-$label")
+    val motionProgress = remember { Animatable(0f) }
+    val rippleProgress = remember { Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    var pulse by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(pulse) {
+        if (pulse > 0) {
+            motionProgress.snapTo(0f)
+            motionProgress.animateTo(1f, tween(if (motion == DockMotion.WALLET) 650 else 620))
+            motionProgress.snapTo(0f)
+        }
+    }
+
+    val p = motionProgress.value
+    val wave = sin(PI.toFloat() * p)
+    val iconModifier = Modifier
+        .size(25.dp)
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            when (motion) {
+                DockMotion.MENU -> Unit
+                DockMotion.WALLET -> rotationY = 180f * wave
+                DockMotion.EXAMS -> translationY = (-4.dp.toPx() * wave) + (2.dp.toPx() * sin(2f * PI.toFloat() * p))
+                DockMotion.CARDS -> {
+                    translationX = 4.dp.toPx() * sin(2f * PI.toFloat() * p)
+                    rotationZ = 7f * sin(2f * PI.toFloat() * p)
+                }
+            }
+        }
+
     Box(
         modifier
-            .height(64.dp)
-            .padding(horizontal = 4.dp, vertical = 5.dp)
+            .offset { IntOffset(0, lift.roundToPx()) }
+            .height(62.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
             .then(
                 if (selected || pressed) Modifier.neumorphic69(colors, 18.dp, 8.dp, pressed = true)
                 else Modifier
             )
             .clip(RoundedCornerShape(18.dp))
-            .semantics { this.selected = selected }
+            .semantics {
+                this.selected = selected
+                contentDescription = label
+            }
             .clickable(
                 interactionSource = interaction,
                 indication = null,
-                role = Role.Button,
-                onClick = onClick
-            ),
+                role = Role.Button
+            ) {
+                pulse += 1
+                scope.launch {
+                    rippleProgress.snapTo(0f)
+                    rippleProgress.animateTo(1f, tween(520))
+                }
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            icon,
-            contentDescription = label,
-            tint = if (selected) colors.accent else colors.muted,
-            modifier = Modifier.size(26.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-        )
+        val ripple = rippleProgress.value
+        if (ripple < 1f) {
+            Canvas(Modifier.fillMaxWidth().height(62.dp)) {
+                drawCircle(
+                    color = colors.accent.copy(alpha = .22f * (1f - ripple)),
+                    radius = size.minDimension * (.12f + .62f * ripple),
+                    center = center
+                )
+            }
+        }
+        when {
+            customIcon != null -> customIcon(if (selected) colors.accent else colors.muted, iconModifier)
+            icon != null -> Icon(
+                icon,
+                contentDescription = label,
+                tint = if (selected) colors.accent else colors.muted,
+                modifier = iconModifier
+            )
+        }
         if (selected) {
             Box(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp)
-                    .width(19.dp)
-                    .height(4.dp)
+                    .padding(bottom = 4.dp)
+                    .size(4.dp)
                     .clip(CircleShape)
-                    .background(Brush.horizontalGradient(listOf(colors.accent, colors.accent2)))
+                    .background(colors.accent)
             )
         }
     }
 }
 
 @Composable
-private fun CenterAction(
-    label: String,
+private fun CenterAddAction(
     expanded: Boolean,
-    active: Boolean,
-    rotation: Float,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     onClick: () -> Unit
 ) {
     val colors = neumorphic69Colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
     Box(modifier.height(82.dp), contentAlignment = Alignment.Center) {
         Box(
-            modifier = Modifier
-                .offset(y = (-16).dp)
-                .size(70.dp)
-                .neumorphic69(colors, 35.dp, if (expanded) 18.dp else 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        shape = CircleShape
-                        clip = true
-                    }
-                    .background(Brush.linearGradient(listOf(colors.accent, colors.accent2)))
-                    .semantics { selected = expanded || active }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        role = Role.Button,
-                        onClick = onClick
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Outlined.Add,
-                    contentDescription = if (expanded) "بستن منوی $label" else "بازکردن منوی $label",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp).graphicsLayer { rotationZ = rotation }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ArcAction(
-    label: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val colors = neumorphic69Colors
-    Column(
-        modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Box(
             Modifier
-                .size(56.dp)
-                .neumorphic69(colors, 28.dp, 13.dp)
-                .clip(CircleShape)
+                .offset(y = (-17).dp)
+                .size(70.dp)
+                .neumorphic69(colors, 35.dp, if (pressed) 9.dp else 14.dp)
+                .graphicsLayer {
+                    shape = CircleShape
+                    clip = true
+                    alpha = if (expanded) 0f else 1f
+                    scaleX = if (pressed) .94f else 1f
+                    scaleY = if (pressed) .94f else 1f
+                }
                 .background(Brush.linearGradient(listOf(colors.accent, colors.accent2)))
-                .clickable(role = Role.Button, onClick = onClick),
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    enabled = !expanded,
+                    role = Role.Button,
+                    onClick = onClick
+                ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(27.dp))
-        }
-        NeumorphicPanel(
-            modifier = Modifier.width(104.dp).height(28.dp),
-            radius = 12.dp,
-            depth = 7.dp,
-            pressed = true,
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                label,
-                modifier = Modifier.padding(horizontal = 4.dp),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            Icon(
+                Design69Icons.Add,
+                contentDescription = "بازکردن افزودن سریع",
+                tint = Color.White,
+                modifier = Modifier.size(31.dp)
             )
-        }
-    }
-}
-
-@Composable
-private fun ManagementCard(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    val colors = neumorphic69Colors
-    NeumorphicPressable(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(82.dp),
-        radius = 22.dp,
-        depth = 11.dp,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp)
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                Modifier
-                    .size(48.dp)
-                    .neumorphic69(colors, 16.dp, 8.dp, pressed = true),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = colors.accent, modifier = Modifier.size(24.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.ink)
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
     }
 }

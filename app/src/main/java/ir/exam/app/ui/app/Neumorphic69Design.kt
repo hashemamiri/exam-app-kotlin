@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,6 +50,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -270,8 +269,9 @@ fun NeumorphicIconButton(
 fun NeumorphicTopBar(
     title: String,
     subtitle: String,
-    navigationIcon: ImageVector?,
-    navigationDescription: String?,
+    navigationIcon: ImageVector? = null,
+    navigationDescription: String? = null,
+    navigationIconContent: (@Composable (Color, Modifier) -> Unit)? = null,
     onNavigation: () -> Unit
 ) {
     val colors = neumorphic69Colors
@@ -290,8 +290,25 @@ fun NeumorphicTopBar(
                     .padding(horizontal = 16.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (navigationIcon != null && navigationDescription != null) {
-                    NeumorphicIconButton(navigationIcon, navigationDescription, onNavigation)
+                if (navigationDescription != null && (navigationIcon != null || navigationIconContent != null)) {
+                    if (navigationIconContent != null) {
+                        NeumorphicPressable(
+                            onClick = onNavigation,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .semantics { contentDescription = navigationDescription },
+                            radius = 16.dp,
+                            depth = 9.dp
+                        ) {
+                            navigationIconContent(colors.muted, Modifier.size(23.dp))
+                        }
+                    } else {
+                        NeumorphicIconButton(
+                            icon = requireNotNull(navigationIcon),
+                            description = navigationDescription,
+                            onClick = onNavigation
+                        )
+                    }
                 } else {
                     Box(
                         Modifier
@@ -300,7 +317,7 @@ fun NeumorphicTopBar(
                             .background(Brush.linearGradient(listOf(colors.accent, colors.accent2))),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Outlined.School, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Design69Icons.Exams, null, tint = Color.White, modifier = Modifier.size(24.dp))
                     }
                 }
                 Spacer(Modifier.width(13.dp))
@@ -333,19 +350,8 @@ fun NeumorphicTopBar(
     }
 }
 
-object NeumorphicDrawerContract {
-    const val COLUMNS = 2
-    const val PROFILE_HEIGHT_DP = 148
-    const val MENU_CARD_HEIGHT_DP = 116
-    const val TEACHER_CARD_COUNT = 10
-    const val STUDENT_CARD_COUNT = 6
-
-    fun hasCompleteRows(cardCount: Int): Boolean = cardCount > 0 && cardCount % COLUMNS == 0
-}
-
-/** کارت دو ستونهٔ Drawer؛ عنوان، توضیح و وضعیت انتخاب را بدون مقصد نمایشی نشان می‌دهد. */
 @Composable
-fun NeumorphicDrawerMenuCard(
+fun NeumorphicMenuTile(
     title: String,
     subtitle: String,
     icon: ImageVector,
@@ -369,7 +375,7 @@ fun NeumorphicDrawerMenuCard(
     }
     Box(
         modifier
-            .height(NeumorphicDrawerContract.MENU_CARD_HEIGHT_DP.dp)
+            .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .neumorphic69(colors, 22.dp, 10.dp, pressed = selected || pressed)
             .clip(RoundedCornerShape(22.dp))
