@@ -36,6 +36,7 @@ appearance_preferences=(ROOT/"app/src/main/java/ir/exam/app/core/ui/AppearancePr
 app_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_text()
 profile_settings=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
 wallet_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").read_text()
+teacher_dashboard=(ROOT/"app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
@@ -111,11 +112,18 @@ require("SchoolLaunchAction.CREATE_STUDENT" in school_screen and "SchoolLaunchAc
         "teacher quick-create school actions missing")
 require("initialPendingOnly" in grading_screen and "فقط مانده" in grading_screen,
         "pending grading management card route missing")
-require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicDrawerItem")),
-        "Neumorphic 69 native design primitives incomplete")
+require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicDrawerMenuCard","PROFILE_HEIGHT_DP = 148","MENU_CARD_HEIGHT_DP = 116","COLUMNS = 2")),
+        "Neumorphic 69 native design/profile/grid primitives incomplete")
 require("Neumorphic69Provider(depth = appearance.neumorphicDepth)" in app_shell and
-        "widthIn(max = 900.dp)" in app_shell and "NeumorphicTopBar" in app_shell,
-        "Neumorphic 69 authenticated shell is not active/adaptive")
+        "widthIn(max = 900.dp)" in app_shell and "NeumorphicTopBar" in app_shell and
+        ".chunked(NeumorphicDrawerContract.COLUMNS)" in app_shell and
+        "NeumorphicDrawerContract.PROFILE_HEIGHT_DP.dp" in app_shell,
+        "Neumorphic 69 authenticated shell/profile/two-column grid is not active/adaptive")
+require(all(marker in teacher_dock for marker in (".size(70.dp)","shape = CircleShape","clip = true")),
+        "center add action is not forced to a perfect circle")
+require("PullToRefreshBox" in teacher_dashboard and "onRefresh = viewModel::load" in teacher_dashboard and
+        "به‌روزرسانی" not in teacher_dashboard,
+        "teacher dashboard pull-to-refresh missing or manual refresh button remains")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

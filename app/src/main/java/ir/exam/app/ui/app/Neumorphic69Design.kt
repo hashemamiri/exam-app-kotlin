@@ -333,9 +333,21 @@ fun NeumorphicTopBar(
     }
 }
 
+object NeumorphicDrawerContract {
+    const val COLUMNS = 2
+    const val PROFILE_HEIGHT_DP = 148
+    const val MENU_CARD_HEIGHT_DP = 116
+    const val TEACHER_CARD_COUNT = 10
+    const val STUDENT_CARD_COUNT = 6
+
+    fun hasCompleteRows(cardCount: Int): Boolean = cardCount > 0 && cardCount % COLUMNS == 0
+}
+
+/** کارت دو ستونهٔ Drawer؛ عنوان، توضیح و وضعیت انتخاب را بدون مقصد نمایشی نشان می‌دهد. */
 @Composable
-fun NeumorphicDrawerItem(
-    label: String,
+fun NeumorphicDrawerMenuCard(
+    title: String,
+    subtitle: String,
     icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
@@ -345,16 +357,22 @@ fun NeumorphicDrawerItem(
     val colors = neumorphic69Colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val shape = RoundedCornerShape(18.dp)
-    Row(
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) .97f else 1f,
+        animationSpec = tween(130),
+        label = "drawer-card-$title"
+    )
+    val tint = when {
+        danger -> colors.danger
+        selected -> colors.accent
+        else -> colors.muted
+    }
+    Box(
         modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .then(
-                if (selected || pressed) Modifier.neumorphic69(colors, 18.dp, 8.dp, pressed = true)
-                else Modifier
-            )
-            .clip(shape)
+            .height(NeumorphicDrawerContract.MENU_CARD_HEIGHT_DP.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .neumorphic69(colors, 22.dp, 10.dp, pressed = selected || pressed)
+            .clip(RoundedCornerShape(22.dp))
             .semantics { this.selected = selected }
             .clickable(
                 interactionSource = interaction,
@@ -362,43 +380,49 @@ fun NeumorphicDrawerItem(
                 role = Role.Button,
                 onClick = onClick
             )
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(13.dp)
     ) {
-        Box(
-            Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(if (selected) colors.accent.copy(alpha = .18f) else Color.Transparent),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = when {
-                    danger -> colors.danger
-                    selected -> colors.accent
-                    else -> colors.muted
-                },
-                modifier = Modifier.size(21.dp)
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    Modifier
+                        .size(38.dp)
+                        .neumorphic69(colors, 13.dp, 7.dp, pressed = true),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(21.dp))
+                }
+                if (selected) {
+                    Box(
+                        Modifier
+                            .width(18.dp)
+                            .height(5.dp)
+                            .clip(CircleShape)
+                            .background(Brush.horizontalGradient(listOf(colors.accent, colors.accent2)))
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                title,
+                color = if (danger) colors.danger else if (selected) colors.accent else colors.ink,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-        }
-        Text(
-            label,
-            modifier = Modifier.weight(1f),
-            color = when {
-                danger -> colors.danger
-                selected -> colors.accent
-                else -> colors.ink
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        if (selected) {
-            Box(Modifier.size(6.dp).clip(CircleShape).background(colors.accent))
+            Spacer(Modifier.height(3.dp))
+            Text(
+                subtitle,
+                color = colors.muted,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -321,28 +322,36 @@ private fun CenterAction(
     val colors = neumorphic69Colors
     Box(modifier.height(82.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier
+            modifier = Modifier
                 .offset(y = (-16).dp)
-                .size(66.dp)
-                .neumorphic69(colors, 33.dp, if (expanded) 18.dp else 12.dp)
-                .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(colors.accent, colors.accent2)))
-                .semantics { selected = expanded || active }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    role = Role.Button,
-                    onClick = onClick
-                )
-                .graphicsLayer { rotationZ = rotation },
+                .size(70.dp)
+                .neumorphic69(colors, 35.dp, if (expanded) 18.dp else 12.dp),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Outlined.Add,
-                contentDescription = if (expanded) "بستن منوی $label" else "بازکردن منوی $label",
-                tint = Color.White,
-                modifier = Modifier.size(31.dp)
-            )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        shape = CircleShape
+                        clip = true
+                    }
+                    .background(Brush.linearGradient(listOf(colors.accent, colors.accent2)))
+                    .semantics { selected = expanded || active }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onClick
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.Add,
+                    contentDescription = if (expanded) "بستن منوی $label" else "بازکردن منوی $label",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp).graphicsLayer { rotationZ = rotation }
+                )
+            }
         }
     }
 }

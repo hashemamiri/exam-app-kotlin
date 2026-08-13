@@ -76,6 +76,43 @@ class Neumorphic69IntegrationTest {
     }
 
     @Test
+    fun `drawer contract has one large profile and complete two-column rows`() {
+        assertEquals(2, NeumorphicDrawerContract.COLUMNS)
+        assertTrue(
+            NeumorphicDrawerContract.PROFILE_HEIGHT_DP >
+                NeumorphicDrawerContract.MENU_CARD_HEIGHT_DP
+        )
+        assertEquals(10, NeumorphicDrawerContract.TEACHER_CARD_COUNT)
+        assertEquals(6, NeumorphicDrawerContract.STUDENT_CARD_COUNT)
+        assertTrue(NeumorphicDrawerContract.hasCompleteRows(NeumorphicDrawerContract.TEACHER_CARD_COUNT))
+        assertTrue(NeumorphicDrawerContract.hasCompleteRows(NeumorphicDrawerContract.STUDENT_CARD_COUNT))
+        assertFalse(NeumorphicDrawerContract.hasCompleteRows(9))
+    }
+
+    @Test
+    fun `drawer grid circular plus and pull refresh are reachable`() {
+        val root = root()
+        val app = File(root, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").readText()
+        val design = File(root, "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").readText()
+        val dock = File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").readText()
+        val dashboard = File(
+            root,
+            "app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt"
+        ).readText()
+
+        assertTrue("NeumorphicDrawerContract.PROFILE_HEIGHT_DP.dp" in app)
+        assertTrue(".chunked(NeumorphicDrawerContract.COLUMNS)" in app)
+        assertTrue("NeumorphicDrawerMenuCard(" in app)
+        assertTrue("NeumorphicDrawerMenuCard(" in design)
+        assertTrue(".size(70.dp)" in dock)
+        assertTrue("shape = CircleShape" in dock)
+        assertTrue("clip = true" in dock)
+        assertTrue("PullToRefreshBox(" in dashboard)
+        assertTrue("onRefresh = viewModel::load" in dashboard)
+        assertFalse("manual refresh button returned", "به‌روزرسانی" in dashboard)
+    }
+
+    @Test
     fun `reference font weights are copied exactly`() {
         val root = root()
         val expected = mapOf(

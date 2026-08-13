@@ -4,16 +4,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +35,7 @@ import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
 import java.io.ByteArrayOutputStream
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeacherDashboardScreen(
     onCreateExam: () -> Unit,
@@ -82,29 +86,54 @@ fun TeacherDashboardScreen(
             viewModel.consumePrint()
         }
     }
-    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("داشبورد معلم", style = MaterialTheme.typography.headlineMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = viewModel::load) { Text("به‌روزرسانی") }
-            Button(onClick = onCreateExam) { Text("ساخت آزمون جدید") }
-            OutlinedButton(
-                enabled = !state.portabilityLoading,
-                onClick = { importLauncher.launch(arrayOf("application/octet-stream", "application/json", "text/plain")) }
-            ) { Text("واردکردن آزمون") }
-        }
-        if (state.actionLoading || state.portabilityLoading) CircularProgressIndicator()
-        state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        when {
-            state.loading -> CircularProgressIndicator()
-            state.exams.isEmpty() -> Text("هنوز آزمونی برای نمایش وجود ندارد.")
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.exams, key = { it.id }) { exam ->
+    PullToRefreshBox(
+        isRefreshing = state.loading,
+        onRefresh = viewModel::load,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text("داشبورد معلم", style = MaterialTheme.typography.headlineMedium)
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(onClick = onCreateExam) { Text("ساخت آزمون جدید") }
+                    OutlinedButton(
+                        enabled = !state.portabilityLoading,
+                        onClick = {
+                            importLauncher.launch(
+                                arrayOf("application/octet-stream", "application/json", "text/plain")
+                            )
+                        }
+                    ) { Text("واردکردن آزمون") }
+                }
+            }
+            if (state.actionLoading || state.portabilityLoading) {
+                item { CircularProgressIndicator() }
+            }
+            state.message?.let { message ->
+                item { Text(message, color = MaterialTheme.colorScheme.primary) }
+            }
+            state.error?.let { error ->
+                item { Text(error, color = MaterialTheme.colorScheme.error) }
+            }
+            when {
+                state.loading && state.exams.isEmpty() -> {
+                    item { Text("در حال دریافت آزمون‌ها…") }
+                }
+                state.exams.isEmpty() -> {
+                    item { Text("هنوز آزمونی برای نمایش وجود ندارد.") }
+                }
+                else -> items(state.exams, key = { it.id }) { exam ->
                     NeumorphicPanel(
                         modifier = Modifier.fillMaxWidth(),
                         radius = 22.dp,
                         depth = 10.dp,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+                        contentPadding = PaddingValues(14.dp)
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(exam.title.ifBlank { "بدون عنوان" }, style = MaterialTheme.typography.titleMedium)
@@ -119,12 +148,20 @@ fun TeacherDashboardScreen(
                                 }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { duplicateCandidate = exam }) { Text("تکثیر با کسر هزینه") }
-                                OutlinedButton(onClick = { viewModel.exportExam(exam.id) }) { Text("صادرکردن") }
+                                OutlinedButton(onClick = { duplicateCandidate = exam }) {
+                                    Text("تکثیر با کسر هزینه")
+                                }
+                                OutlinedButton(onClick = { viewModel.exportExam(exam.id) }) {
+                                    Text("صادرکردن")
+                                }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { viewModel.preparePrint(exam.id, false) }) { Text("چاپ برگه") }
-                                OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true) }) { Text("چاپ با کلید") }
+                                OutlinedButton(onClick = { viewModel.preparePrint(exam.id, false) }) {
+                                    Text("چاپ برگه")
+                                }
+                                OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true) }) {
+                                    Text("چاپ با کلید")
+                                }
                                 TextButton(onClick = { deleteCandidate = exam }) { Text("حذف") }
                             }
                         }

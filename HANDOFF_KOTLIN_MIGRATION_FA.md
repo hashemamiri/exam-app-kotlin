@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V16 ادغام Native و واقعی طرح نئومورفیک ۶۹
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V16.1 شبکه کارت‌های منو، دکمه + دایره و Pull-to-Refresh
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2518,3 +2518,66 @@ Debug APK SHA-256                     975d79e127a749209e1999be03d84e6f28dd92e7df
 ```
 
 راهنمای مستقل: `NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md`.
+
+---
+
+## ۳۴) V16.1 — شبکه کارت‌های Drawer و Pull-to-Refresh
+
+### درخواست دستگاه/کاربر
+
+```text
+پروفایل اولین و بزرگ‌ترین کارت Drawer باشد.
+بقیه کارت‌ها دو ستونه و هر ردیف دقیقاً دو کارت باشد.
+دکمه + دایره کامل شود.
+دکمه بروزرسانی داشبورد حذف و Pull-to-Refresh جایگزین شود.
+```
+
+### پیاده‌سازی
+
+- کارت پروفایل واقعی با ارتفاع ۱۴۸dp، عرض کامل و مسیر مستقیم ProfileSettings؛
+- کارت‌های منو با ارتفاع ۱۱۶dp و شبکه ثابت دو ستونه؛
+- ۱۰ کارت معلم در ۵ ردیف کامل؛
+- ۶ کارت دانش‌آموز در ۳ ردیف کامل؛
+- کارت «آزمون جدید» واقعی برای زوج‌ماندن آخرین ردیف معلم؛
+- همه مسیرهای Dashboard، Calendar، School، Grading، Reports، Wallet، Settings، About، Builder و Sign-out واقعی؛
+- دکمه مرکزی ۷۰×۷۰dp با radius=35dp و لایه داخلی `CircleShape/clip=true`؛
+- حذف کامل دکمه متنی بروزرسانی از داشبورد معلم؛
+- `PullToRefreshBox` متصل مستقیم به `viewModel.load`؛
+- تبدیل داشبورد به یک LazyColumn واحد برای gesture صحیح و جلوگیری از scroll تو در تو.
+
+### فایل‌ها
+
+```text
+NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
+app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+scripts/verify_native_final.py
+```
+
+### عملیات
+
+```text
+SQL/Edge/Secret/Migration/Dependency جدید: ندارد
+پیش‌نیاز: V16
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              99/99 PASS
+Drawer profile/grid contract           PASS
+Perfect circle regression              PASS
+Pull-to-refresh regression             PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 24 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     9e5ea5d0276bb833f36cf45c1ce3e9c2ea47e1aca1fbe4b2ad4ea1f9a84690f9
+```
+
+راهنمای مستقل: `NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md`.

@@ -17,32 +17,30 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Assessment
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.ManageAccounts
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.PostAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
@@ -56,6 +54,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +91,15 @@ import kotlinx.coroutines.launch
 private enum class MainPage {
     HOME, CALENDAR, SCHOOL, GRADING, REPORTS, STUDENT_RESULTS, WALLET, SETTINGS, ABOUT, BUILDER
 }
+
+private data class DrawerCardSpec(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val selected: Boolean = false,
+    val danger: Boolean = false,
+    val action: () -> Unit
+)
 
 @Composable
 fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
@@ -307,6 +315,37 @@ private fun AuthenticatedDrawer(
         scope.launch { drawerState.close() }
     }
 
+    val drawerCards = if (user.role == UserRole.TEACHER) {
+        listOf(
+            DrawerCardSpec("داشبورد معلم", "مدیریت آزمون‌ها", Icons.AutoMirrored.Outlined.Assignment, page == MainPage.HOME) { select(onHome) },
+            DrawerCardSpec("تقویم و پیام‌ها", "رویدادها و پیام‌ها", Icons.Outlined.CalendarMonth, page == MainPage.CALENDAR) { select(onCalendar) },
+            DrawerCardSpec("کلاس و دانش‌آموز", "مدیریت مدرسه", Icons.Outlined.Groups, page == MainPage.SCHOOL) { select(onSchool) },
+            DrawerCardSpec("تصحیح و حضور", "پاسخ‌ها و حضور", Icons.Outlined.Assessment, page == MainPage.GRADING) { select(onGrading) },
+            DrawerCardSpec("آمار و گزارش‌ها", "نمودار و خروجی", Icons.Outlined.BarChart, page == MainPage.REPORTS) { select(onReports) },
+            DrawerCardSpec("کیف پول", "موجودی و پرداخت", Icons.Outlined.AccountBalanceWallet, page == MainPage.WALLET) { select(onWallet) },
+            DrawerCardSpec("تنظیمات", "حساب و ظاهر", Icons.Outlined.ManageAccounts, page == MainPage.SETTINGS) { select(onSettings) },
+            DrawerCardSpec("درباره و بروزرسانی", "نسخه و دریافت APK", Icons.Outlined.Info, page == MainPage.ABOUT) { select(onAbout) },
+            DrawerCardSpec("آزمون جدید", "ورود مستقیم به سازنده", Icons.Outlined.PostAdd) { select(onCreateExam) },
+            DrawerCardSpec("خروج", "خروج و تعویض حساب", Icons.AutoMirrored.Outlined.Logout, danger = true) { select(onSignOut) }
+        )
+    } else {
+        listOf(
+            DrawerCardSpec("داشبورد دانش‌آموز", "ورود و ادامه آزمون", Icons.Outlined.Home, page == MainPage.HOME) { select(onHome) },
+            DrawerCardSpec("تقویم و پیام‌ها", "رویدادها و پیام‌ها", Icons.Outlined.CalendarMonth, page == MainPage.CALENDAR) { select(onCalendar) },
+            DrawerCardSpec("نتایج من", "پاسخ‌ها و کارنامه", Icons.Outlined.Assessment, page == MainPage.STUDENT_RESULTS) { select(onStudentResults) },
+            DrawerCardSpec("تنظیمات", "حساب و ظاهر", Icons.Outlined.ManageAccounts, page == MainPage.SETTINGS) { select(onSettings) },
+            DrawerCardSpec("درباره و بروزرسانی", "نسخه و دریافت APK", Icons.Outlined.Info, page == MainPage.ABOUT) { select(onAbout) },
+            DrawerCardSpec("خروج", "خروج و تعویض حساب", Icons.AutoMirrored.Outlined.Logout, danger = true) { select(onSignOut) }
+        )
+    }
+
+    val expectedDrawerCount = if (user.role == UserRole.TEACHER) {
+        NeumorphicDrawerContract.TEACHER_CARD_COUNT
+    } else {
+        NeumorphicDrawerContract.STUDENT_CARD_COUNT
+    }
+    require(drawerCards.size == expectedDrawerCount && NeumorphicDrawerContract.hasCompleteRows(drawerCards.size))
+
     Neumorphic69Provider(depth = appearance.neumorphicDepth) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val colors = neumorphic69Colors
@@ -322,113 +361,86 @@ private fun AuthenticatedDrawer(
                                 .padding(horizontal = 14.dp, vertical = 18.dp),
                             verticalArrangement = Arrangement.spacedBy(7.dp)
                         ) {
-                            NeumorphicPanel(
-                                modifier = Modifier.fillMaxWidth(),
-                                radius = 28.dp,
-                                depth = LocalNeumorphic69Depth.current + 1.dp,
-                                contentPadding = PaddingValues(17.dp)
+                            NeumorphicPressable(
+                                onClick = { select(onSettings) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(NeumorphicDrawerContract.PROFILE_HEIGHT_DP.dp),
+                                radius = 29.dp,
+                                depth = LocalNeumorphic69Depth.current + 2.dp,
+                                contentPadding = PaddingValues(horizontal = 18.dp),
+                                contentAlignment = Alignment.CenterStart
                             ) {
                                 Row(
                                     Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(15.dp)
                                 ) {
-                                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 68)
+                                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 76)
                                     Column(Modifier.weight(1f)) {
                                         Text(
-                                            "سامانه آزمون",
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = colors.ink
+                                            if (user.role == UserRole.TEACHER) "پروفایل معلم" else "پروفایل دانش‌آموز",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = colors.accent
                                         )
                                         Text(
                                             user.name.ifBlank { "کاربر" },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
                                             color = colors.ink,
-                                            modifier = Modifier.padding(top = 5.dp)
+                                            modifier = Modifier.padding(top = 6.dp)
                                         )
                                         Text(
-                                            if (user.role == UserRole.TEACHER) "حساب معلم" else "حساب دانش‌آموز",
+                                            "مشاهده و ویرایش حساب و تنظیمات",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = colors.muted,
-                                            modifier = Modifier.padding(top = 2.dp)
+                                            modifier = Modifier.padding(top = 8.dp)
                                         )
                                     }
+                                    Icon(
+                                        Icons.Outlined.ChevronLeft,
+                                        contentDescription = "بازکردن پروفایل",
+                                        tint = colors.accent,
+                                        modifier = Modifier.height(28.dp)
+                                    )
                                 }
                             }
-                            Spacer(Modifier.height(8.dp))
-                            HorizontalDivider(color = colors.darkShadow.copy(alpha = .32f))
-                            Spacer(Modifier.height(3.dp))
-
-                            NeumorphicDrawerItem(
-                                label = if (user.role == UserRole.TEACHER) "داشبورد معلم" else "داشبورد دانش‌آموز",
-                                icon = Icons.Outlined.Home,
-                                selected = page == MainPage.HOME,
-                                onClick = { select(onHome) }
-                            )
-                            NeumorphicDrawerItem(
-                                label = "تقویم و پیام‌ها",
-                                icon = Icons.Outlined.CalendarMonth,
-                                selected = page == MainPage.CALENDAR,
-                                onClick = { select(onCalendar) }
-                            )
-                            if (user.role == UserRole.TEACHER) {
-                                NeumorphicDrawerItem(
-                                    label = "کلاس‌ها و دانش‌آموزان",
-                                    icon = Icons.Outlined.Groups,
-                                    selected = page == MainPage.SCHOOL,
-                                    onClick = { select(onSchool) }
-                                )
-                                NeumorphicDrawerItem(
-                                    label = "تصحیح و حضور",
-                                    icon = Icons.Outlined.Assessment,
-                                    selected = page == MainPage.GRADING,
-                                    onClick = { select(onGrading) }
-                                )
-                                NeumorphicDrawerItem(
-                                    label = "آمار و گزارش‌ها",
-                                    icon = Icons.Outlined.BarChart,
-                                    selected = page == MainPage.REPORTS,
-                                    onClick = { select(onReports) }
-                                )
-                                NeumorphicDrawerItem(
-                                    label = "کیف پول و پرداخت",
-                                    icon = Icons.Outlined.AccountBalanceWallet,
-                                    selected = page == MainPage.WALLET,
-                                    onClick = { select(onWallet) }
-                                )
-                            } else {
-                                NeumorphicDrawerItem(
-                                    label = "نتایج و پاسخ‌های من",
-                                    icon = Icons.Outlined.Assessment,
-                                    selected = page == MainPage.STUDENT_RESULTS,
-                                    onClick = { select(onStudentResults) }
-                                )
-                            }
-                            NeumorphicDrawerItem(
-                                label = "پروفایل و تنظیمات",
-                                icon = Icons.Outlined.ManageAccounts,
-                                selected = page == MainPage.SETTINGS,
-                                onClick = { select(onSettings) }
-                            )
-                            NeumorphicDrawerItem(
-                                label = "درباره و بروزرسانی",
-                                icon = Icons.Outlined.Info,
-                                selected = page == MainPage.ABOUT,
-                                onClick = { select(onAbout) }
-                            )
-                            Spacer(Modifier.height(3.dp))
-                            HorizontalDivider(color = colors.darkShadow.copy(alpha = .32f))
-                            Spacer(Modifier.height(3.dp))
-                            NeumorphicDrawerItem(
-                                label = "خروج و تعویض حساب",
-                                icon = Icons.AutoMirrored.Outlined.Logout,
-                                selected = false,
-                                danger = true,
-                                onClick = { select(onSignOut) }
-                            )
                             Spacer(Modifier.height(18.dp))
+                            Text(
+                                "دسترسی سریع",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.ink,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            Spacer(Modifier.height(5.dp))
+                            drawerCards
+                                .chunked(NeumorphicDrawerContract.COLUMNS)
+                                .forEachIndexed { rowIndex, rowCards ->
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        rowCards.forEach { card ->
+                                            NeumorphicDrawerMenuCard(
+                                                title = card.title,
+                                                subtitle = card.subtitle,
+                                                icon = card.icon,
+                                                selected = card.selected,
+                                                danger = card.danger,
+                                                onClick = card.action,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                        if (rowCards.size < NeumorphicDrawerContract.COLUMNS) {
+                                            Spacer(Modifier.weight(1f))
+                                        }
+                                    }
+                                    if (rowIndex != drawerCards.lastIndex / NeumorphicDrawerContract.COLUMNS) {
+                                        Spacer(Modifier.height(12.dp))
+                                    }
+                                }
+                            Spacer(Modifier.height(22.dp))
                         }
                     }
                 }
