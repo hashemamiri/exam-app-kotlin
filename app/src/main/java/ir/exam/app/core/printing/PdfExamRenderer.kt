@@ -30,7 +30,7 @@ class PdfExamRenderer {
                     typeface = Typeface.DEFAULT_BOLD
                     textAlign = Paint.Align.CENTER
                 }
-                canvas.drawText("سامانه آزمون — صفحه ${pageModel.number}", PAGE_WIDTH / 2f, 36f, titlePaint)
+                canvas.drawText("آزمون آنلاین — صفحه ${pageModel.number}", PAGE_WIDTH / 2f, 36f, titlePaint)
                 var y = 58f
                 pageModel.blocks.forEach { block ->
                     if (block is QuestionPrintBlock) {

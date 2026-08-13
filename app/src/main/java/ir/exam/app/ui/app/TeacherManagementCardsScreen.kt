@@ -57,7 +57,6 @@ import androidx.compose.ui.zIndex
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.hypot
 import kotlin.math.sign
 
 object Design69ManagementCardsContract {
@@ -141,7 +140,6 @@ fun TeacherManagementCardsScreen(
     val density = LocalDensity.current
     val threshold = with(density) { Design69ManagementCardsContract.DRAG_THRESHOLD_DP.dp.toPx() }
     val exitHorizontal = with(density) { 520.dp.toPx() }
-    val exitVertical = with(density) { 720.dp.toPx() }
 
     fun changeCard(direction: Int) {
         if (settling) return
@@ -154,22 +152,12 @@ fun TeacherManagementCardsScreen(
         scope.launch {
             val x = dragX.value
             val y = dragY.value
-            val distance = hypot(x, y)
-            val accepted = !cancel && distance > threshold
+            val horizontal = abs(x) >= abs(y)
+            val accepted = !cancel && horizontal && abs(x) > threshold
             if (accepted) {
-                val horizontal = abs(x) >= abs(y)
-                val axis = if (horizontal) x else y
-                val direction = if (axis < 0f) 1 else -1
-                val targetX = if (horizontal) {
-                    (sign(x).takeIf { it != 0f } ?: 1f) * exitHorizontal
-                } else {
-                    x * 1.25f
-                }
-                val targetY = if (horizontal) {
-                    y * 1.20f
-                } else {
-                    (sign(y).takeIf { it != 0f } ?: 1f) * exitVertical
-                }
+                val direction = if (x < 0f) 1 else -1
+                val targetX = (sign(x).takeIf { it != 0f } ?: 1f) * exitHorizontal
+                val targetY = y * 1.20f
                 coroutineScope {
                     launch { dragX.animateTo(targetX, tween(280)) }
                     launch { dragY.animateTo(targetY, tween(280)) }
@@ -195,12 +183,6 @@ fun TeacherManagementCardsScreen(
         Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            "برای تعویض کارت فعال را در هر چهار جهت بکشید.",
-            color = neo.muted,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth()
-        )
         Box(
             Modifier
                 .fillMaxWidth()
@@ -209,11 +191,11 @@ fun TeacherManagementCardsScreen(
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when (event.key) {
-                        Key.DirectionLeft, Key.DirectionUp -> {
+                        Key.DirectionLeft -> {
                             changeCard(1)
                             true
                         }
-                        Key.DirectionRight, Key.DirectionDown -> {
+                        Key.DirectionRight -> {
                             changeCard(-1)
                             true
                         }
@@ -306,7 +288,7 @@ fun TeacherManagementCardsScreen(
                                 ) {
                                     Icon(data.icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
                                 }
-                                Text("سامانه آزمون", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
+                                Text("آزمون آنلاین", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
                             }
                             Spacer(Modifier.weight(1f))
                             Text(
@@ -333,14 +315,6 @@ fun TeacherManagementCardsScreen(
                 )
             }
         }
-        Spacer(Modifier.height(14.dp))
-        Text(
-            "↔  ↕  کارت را بکشید؛ برای ورود، کارت فعال را لمس کنید.",
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            color = neo.muted,
-            style = MaterialTheme.typography.labelSmall
-        )
         Spacer(Modifier.height(16.dp))
         NeumorphicPanel(
             modifier = Modifier.fillMaxWidth(),

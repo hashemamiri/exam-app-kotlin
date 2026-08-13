@@ -1,0 +1,89 @@
+package ir.exam.app.ui.app
+
+import ir.exam.app.ui.classes.PersianUsernameSuggester
+import java.io.File
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class V19InteractionTest {
+    private fun root(): File = listOf(File("."), File("..")).first {
+        File(it, "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").isFile
+    }
+
+    @Test
+    fun `persian names produce editable latin underscore suggestions`() {
+        assertEquals("ali_ahmadi", PersianUsernameSuggester.suggest("علی", "احمدی"))
+        assertEquals("reza_rezaei", PersianUsernameSuggester.suggest("رضا", "رضایی"))
+        assertEquals("ali_ahmadi_02", PersianUsernameSuggester.suggest("علی", "احمدی", 2))
+        assertTrue(PersianUsernameSuggester.suggest("مهدی", "کاظمی").matches(Regex("[a-z0-9_]{4,20}")))
+    }
+
+    @Test
+    fun `builder has synchronized radial eight actions accordion cards and floating save`() {
+        val root = root()
+        val builder = File(root, "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
+        val radial = File(root, "app/src/main/java/ir/exam/app/ui/builder/BuilderRadialMenuOverlay.kt").readText()
+        val viewModel = File(root, "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").readText()
+
+        listOf("تشریحی", "چندگزینه‌ای", "صحیح/غلط", "جای خالی", "عددی", "جورکردنی", "وارد کردن", "بانک سؤال").forEach {
+            assertTrue("missing radial action $it", it in radial)
+        }
+        assertTrue("dottedAlpha" in radial)
+        assertTrue("progress.animateTo(1f, tween(620" in radial)
+        assertTrue("expandedQuestionId" in builder)
+        assertTrue("settingsExpanded" in builder)
+        assertTrue("bottom = 112.dp" in builder)
+        assertTrue("Text(\"✓\"" in builder)
+        assertTrue("fun addQuestion(type: QuestionType): String" in viewModel)
+        assertTrue("fun applyImport" in viewModel)
+    }
+
+    @Test
+    fun `student dialogs are compact structured and pull refresh replaces buttons`() {
+        val root = root()
+        val school = File(root, "app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").readText()
+        val bank = File(root, "app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt").readText()
+        val calendar = File(root, "app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").readText()
+        val wallet = File(root, "app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").readText()
+
+        assertTrue("contentAlignment = Alignment.TopCenter" in school)
+        assertTrue("PersianUsernameSuggester.suggest" in school)
+        assertTrue("BulkStudentDraft" in school)
+        assertTrue("🎲 رمز" in school)
+        listOf(school, bank, calendar, wallet).forEach {
+            assertTrue("PullToRefreshBox" in it)
+            assertFalse("manual refresh text returned", "تازه‌سازی" in it)
+        }
+        assertFalse("cross-tab class chip returned", "همه دانش‌آموزان" in school)
+    }
+
+    @Test
+    fun `formula editor is ltr with active box auto scroll`() {
+        val root = root()
+        val formula = File(root, "app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
+        val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").readText()
+        assertTrue("LocalLayoutDirection provides LayoutDirection.Ltr" in formula)
+        assertTrue("horizontal.animateScrollTo(targetX)" in formula)
+        assertTrue("vertical.animateScrollTo(targetY)" in formula)
+        assertTrue("LocalLayoutDirection provides LayoutDirection.Ltr" in dialog)
+    }
+
+    @Test
+    fun `sandbox credit remains server gated and never direct from apk`() {
+        val root = root()
+        val edge = File(root, "supabase/functions/wallet-payment/index.ts").readText()
+        val billing = File(root, "app/src/main/java/ir/exam/app/ui/billing/BillingViewModel.kt").readText()
+        val main = File(root, "app/src/main/java").walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .joinToString("\n") { it.readText() }
+
+        assertTrue("provider === 'sandbox'" in edge)
+        assertTrue("sandboxAllowed()" in edge)
+        assertTrue("native_credit_wallet_payment" in edge)
+        assertTrue("credited: true" in edge)
+        assertTrue("payment.credited && payment.sandbox" in billing)
+        assertFalse("APK must not call server credit RPC", "native_credit_wallet_payment" in main)
+    }
+}

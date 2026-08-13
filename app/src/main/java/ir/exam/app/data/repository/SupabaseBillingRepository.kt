@@ -45,13 +45,17 @@ class SupabaseBillingRepository : BillingRepository {
         dto.error?.takeIf(String::isNotBlank)?.let { message ->
             error(dto.code?.takeIf(String::isNotBlank)?.let { "$it: $message" } ?: message)
         }
-        val url = dto.url ?: error("نشانی درگاه از سرور دریافت نشد.")
-        requireSafeCheckoutUrl(url)
+        val url = dto.url
+        if (!dto.credited) {
+            requireSafeCheckoutUrl(url ?: error("نشانی درگاه از سرور دریافت نشد."))
+        }
         PaymentLaunch(
             orderId = dto.orderId ?: error("شناسه سفارش از سرور دریافت نشد."),
             checkoutUrl = url,
             provider = dto.provider.orEmpty(),
-            sandbox = dto.sandbox
+            sandbox = dto.sandbox,
+            credited = dto.credited,
+            balanceAfterToman = dto.balance
         )
     }
 

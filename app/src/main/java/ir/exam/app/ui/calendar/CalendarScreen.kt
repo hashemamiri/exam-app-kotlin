@@ -25,12 +25,12 @@ import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +40,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -63,6 +64,7 @@ import ir.exam.app.domain.model.CalendarDay
 import ir.exam.app.domain.model.CalendarNote
 import ir.exam.app.domain.model.UserRole
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(role: UserRole) {
     val viewModel = remember(role) { CalendarViewModel(role) }
@@ -70,6 +72,11 @@ fun CalendarScreen(role: UserRole) {
     var deleteCandidate by remember { mutableStateOf<CalendarNote?>(null) }
     val selectedDay = state.monthData?.days?.firstOrNull { it.jalaliDate == state.selectedDate }
 
+    PullToRefreshBox(
+        isRefreshing = state.loading,
+        onRefresh = viewModel::refresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -78,11 +85,9 @@ fun CalendarScreen(role: UserRole) {
             CalendarHeader(
                 year = state.year,
                 month = state.month,
-                loading = state.loading,
                 onPrevious = viewModel::previousMonth,
                 onNext = viewModel::nextMonth,
-                onToday = viewModel::goToday,
-                onRefresh = viewModel::refresh
+                onToday = viewModel::goToday
             )
         }
         item { WeekdayHeader() }
@@ -123,6 +128,7 @@ fun CalendarScreen(role: UserRole) {
         }
         item { Spacer(Modifier.padding(bottom = 16.dp)) }
     }
+    }
 
     state.editor?.let {
         CalendarEditorDialog(
@@ -157,11 +163,9 @@ fun CalendarScreen(role: UserRole) {
 private fun CalendarHeader(
     year: Int,
     month: Int,
-    loading: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onToday: () -> Unit,
-    onRefresh: () -> Unit
+    onToday: () -> Unit
 ) {
     Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -182,10 +186,6 @@ private fun CalendarHeader(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onToday) { Text("امروز") }
-                IconButton(onClick = onRefresh, enabled = !loading) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = "تازه‌سازی تقویم")
-                }
-                if (loading) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
             }
         }
     }

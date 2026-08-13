@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +28,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -175,19 +178,21 @@ private fun NaturalSvgImage(
         vertical.animateScrollTo(targetY)
     }
 
-    Box(
-        modifier
-            .onSizeChanged { viewport = it }
-            .horizontalScroll(horizontal)
-            .verticalScroll(vertical),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        AsyncImage(
-            model = rendered.request,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.FillBounds,
-            modifier = gestureModifier.width(width).height(height)
-        )
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(
+            modifier
+                .onSizeChanged { viewport = it }
+                .horizontalScroll(horizontal)
+                .verticalScroll(vertical),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            AsyncImage(
+                model = rendered.request,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.FillBounds,
+                modifier = gestureModifier.width(width).height(height)
+            )
+        }
     }
 }
 

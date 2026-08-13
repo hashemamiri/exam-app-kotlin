@@ -109,7 +109,8 @@ class Neumorphic69IntegrationTest {
         assertTrue("OPEN_ROTATION_DEGREES * travel.value" in add)
         assertTrue("detectDragGestures" in cards)
         assertTrue("DRAG_THRESHOLD_DP = 52" in cards)
-        assertTrue("Key.DirectionLeft" in cards && "Key.DirectionDown" in cards)
+        assertTrue("Key.DirectionLeft" in cards && "Key.DirectionRight" in cards)
+        assertFalse("vertical card navigation returned", "Key.DirectionDown" in cards)
         listOf("آمار", "بانک سؤال", "تصحیح", "مانده", "پاسخ").forEach {
             assertTrue("missing management card $it", it in cards)
         }

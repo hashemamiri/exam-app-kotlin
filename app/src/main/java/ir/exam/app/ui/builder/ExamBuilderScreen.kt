@@ -1,13 +1,23 @@
 package ir.exam.app.ui.builder
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -34,20 +44,28 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
 import ir.exam.app.ui.math.NativeMathText
+import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,11 +74,47 @@ fun ExamBuilderScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-    var typeMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var bankDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var settingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
     var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
     var previewAll by remember { mutableStateOf(false) }
-    BackHandler(onBack = onBack)
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use(::readBuilderImportLimited)
+                    ?: error("فایل آزمون خوانده نشد.")
+            }.mapCatching(ExamPackageCodec::decode)
+                .onSuccess { imported ->
+                    viewModel.applyImport(imported)
+                    expandedQuestionId = imported.questions.firstOrNull()?.id
+                }
+                .onFailure(viewModel::reportError)
+        }
+    }
+
+    fun revealQuestion(type: QuestionType) {
+        val id = viewModel.addQuestion(type)
+        expandedQuestionId = id
+        val questionIndex = state.questions.size
+        val prefaceCount = 2 + if (state.importedBy != null) 1 else 0
+        scope.launch { listState.animateScrollToItem(prefaceCount + questionIndex) }
+    }
+
+    LaunchedEffect(state.questions.map { it.id }) {
+        if (state.questions.isNotEmpty() && state.questions.none { it.id == expandedQuestionId }) {
+            expandedQuestionId = state.questions.last().id
+        }
+    }
+
+    BackHandler(enabled = radialMenuOpen) { radialMenuOpen = false }
+    BackHandler(enabled = !radialMenuOpen, onBack = onBack)
 
     Scaffold(
         topBar = {
@@ -74,14 +128,17 @@ fun ExamBuilderScreen(
             )
         },
         floatingActionButton = {
-            if (!state.loading) Box {
-                FloatingActionButton(onClick = { typeMenu = true }) { Text("+") }
-                DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }) {
-                    QuestionType.entries.forEach { type ->
-                        DropdownMenuItem(
-                            text = { Text(type.faLabel()) },
-                            onClick = { viewModel.addQuestion(type); typeMenu = false }
-                        )
+            if (!state.loading) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FloatingActionButton(
+                        onClick = { confirmSave = true },
+                        containerColor = Color(0xFF27A86B),
+                        contentColor = Color.White
+                    ) { Text("✓", style = MaterialTheme.typography.headlineSmall) }
+                    if (!radialMenuOpen) {
+                        FloatingActionButton(onClick = { radialMenuOpen = true }) {
+                            Text("+", style = MaterialTheme.typography.headlineSmall)
+                        }
                     }
                 }
             }
@@ -95,10 +152,26 @@ fun ExamBuilderScreen(
         }
 
         LazyColumn(
-            modifier = Modifier.padding(padding).padding(16.dp),
+            state = listState,
+            modifier = Modifier.padding(padding).padding(horizontal = 16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 10.dp, bottom = 112.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { ExamSettingsCard(state, viewModel) }
+            item {
+                OutlinedButton(
+                    onClick = { settingsExpanded = !settingsExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
+                }
+                AnimatedVisibility(
+                    visible = settingsExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    ExamSettingsCard(state, viewModel)
+                }
+            }
             state.importedBy?.let { by ->
                 item {
                     Card(Modifier.fillMaxWidth()) {
@@ -111,12 +184,13 @@ fun ExamBuilderScreen(
                 }
             }
             item { AudienceCard(state, viewModel) }
-            item { QuestionBankCard(state, viewModel) }
             itemsIndexed(state.questions, key = { _, item -> item.id }) { index, question ->
                 QuestionEditor(
                     question = question,
                     index = index,
                     total = state.questions.size,
+                    expanded = expandedQuestionId == question.id,
+                    onToggle = { expandedQuestionId = question.id },
                     viewModel = viewModel,
                     onPreview = { previewQuestion = question }
                 )
@@ -130,13 +204,6 @@ fun ExamBuilderScreen(
                         "هزینه هر سؤال مشمول: ${PersianDigits.convert("%,d".format(java.util.Locale.US, WalletRules.QUESTION_COST_TOMAN))} تومان؛ محاسبه نهایی و کسر به‌صورت اتمیک در سرور انجام می‌شود.",
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Button(
-                        onClick = { confirmSave = true },
-                        enabled = !state.saving,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (state.examId == null) "بررسی هزینه و ذخیره آزمون" else "بررسی هزینه و ذخیره تغییرات")
-                    }
                     if (state.saving) CircularProgressIndicator()
                     state.uploadProgress?.let { Text(it) }
                     state.savedCode?.let { code ->
@@ -146,12 +213,50 @@ fun ExamBuilderScreen(
                                 (state.walletBalanceToman?.let { " · مانده: ${it.asToman()} تومان" } ?: ""),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("بازگشت به آزمون‌ها") }
+                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                            Text("بازگشت به آزمون‌ها")
+                        }
                     }
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
         }
+    }
+
+    if (radialMenuOpen) {
+        BuilderRadialMenuOverlay(
+            onDismiss = { radialMenuOpen = false },
+            onQuestionType = { type ->
+                radialMenuOpen = false
+                revealQuestion(type)
+            },
+            onImport = {
+                radialMenuOpen = false
+                importLauncher.launch(arrayOf("application/octet-stream", "application/json", "text/plain"))
+            },
+            onBank = {
+                radialMenuOpen = false
+                bankDialogOpen = true
+            }
+        )
+    }
+
+    if (bankDialogOpen) {
+        BuilderQuestionBankDialog(
+            state = state,
+            viewModel = viewModel,
+            onDismiss = { bankDialogOpen = false },
+            onAdd = { id ->
+                viewModel.addFromBank(id)
+                val newId = viewModel.state.value.questions.lastOrNull()?.id
+                expandedQuestionId = newId
+                bankDialogOpen = false
+                scope.launch {
+                    val prefaceCount = 2 + if (state.importedBy != null) 1 else 0
+                    listState.animateScrollToItem(prefaceCount + state.questions.size)
+                }
+            }
+        )
     }
 
     state.recoverableDraft?.let { draft ->
@@ -258,82 +363,68 @@ private fun AudienceCard(state: ExamBuilderState, viewModel: ExamBuilderViewMode
 }
 
 @Composable
-private fun QuestionBankCard(state: ExamBuilderState, viewModel: ExamBuilderViewModel) {
-    var expanded by remember { mutableStateOf(false) }
-    var newCategory by remember { mutableStateOf(false) }
-    var categoryName by remember { mutableStateOf("") }
-    var editItem by remember { mutableStateOf<BankQuestionOption?>(null) }
-    var deleteCategory by remember { mutableStateOf<BankCategoryOption?>(null) }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("بانک سؤال", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { expanded = !expanded }) { Text(if (expanded) "بستن" else "مدیریت (${state.bankQuestions.size})") }
-            }
-            if (state.bankLoading) CircularProgressIndicator()
-            if (expanded) {
-                OutlinedTextField(state.bankQuery,viewModel::setBankQuery,label={Text("جست‌وجوی متن یا درس")},modifier=Modifier.fillMaxWidth())
-                Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                    FilterChip(selected=state.selectedBankCategory==null,onClick={viewModel.selectBankCategory(null)},label={Text("همه")})
-                    OutlinedButton(onClick={newCategory=true}){Text("+ دسته")}
+private fun BuilderQuestionBankDialog(
+    state: ExamBuilderState,
+    viewModel: ExamBuilderViewModel,
+    onDismiss: () -> Unit,
+    onAdd: (Long) -> Unit
+) {
+    val query = state.bankQuery.trim().lowercase()
+    val visible = state.bankQuestions.filter { item ->
+        (state.selectedBankCategory == null || state.selectedBankCategory in item.categoryIds) &&
+            (query.isBlank() || item.question.text.lowercase().contains(query) ||
+                item.subject.orEmpty().lowercase().contains(query))
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("بانک سؤال") },
+        text = {
+            LazyColumn(
+                Modifier.heightIn(max = 560.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                item {
+                    OutlinedTextField(
+                        state.bankQuery,
+                        viewModel::setBankQuery,
+                        label = { Text("جست‌وجوی سؤال یا درس") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
-                state.bankCategories.chunked(3).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                    row.forEach { cat -> FilterChip(
-                        selected=state.selectedBankCategory==cat.id,
-                        onClick={viewModel.selectBankCategory(cat.id)},
-                        label={Text("${cat.name} (${cat.count})")}
-                    ) }
-                } }
-                state.selectedBankCategory?.let { id ->
-                    state.bankCategories.firstOrNull{it.id==id}?.let { cat ->
-                        TextButton(onClick={deleteCategory=cat}){Text("حذف دسته ${cat.name}")}
-                    }
-                }
-                val q=state.bankQuery.trim().lowercase()
-                val shown=state.bankQuestions.filter { item ->
-                    (state.selectedBankCategory==null || state.selectedBankCategory in item.categoryIds) &&
-                    (q.isBlank() || item.question.text.lowercase().contains(q) || item.subject.orEmpty().lowercase().contains(q))
-                }
-                if(shown.isEmpty()) Text("سؤالی با این فیلتر یافت نشد.")
-                shown.forEach { item -> Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Text(item.question.text.ifBlank{"بدون متن"})
-                        Text("${item.subject?:"بدون درس"} · ${item.question.type.faLabel()}")
-                        Text(if(item.categoryNames.isEmpty()) "بدون دسته" else item.categoryNames.joinToString("، "))
-                        Row(horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-                            Button(onClick={viewModel.addFromBank(item.id)}){Text("افزودن")}
-                            OutlinedButton(onClick={editItem=item}){Text("دسته‌ها")}
-                            TextButton(onClick={viewModel.deleteFromBank(item.id)}){Text("حذف")}
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        FilterChip(
+                            selected = state.selectedBankCategory == null,
+                            onClick = { viewModel.selectBankCategory(null) },
+                            label = { Text("همه") }
+                        )
+                        state.bankCategories.take(4).forEach { category ->
+                            FilterChip(
+                                selected = state.selectedBankCategory == category.id,
+                                onClick = { viewModel.selectBankCategory(category.id) },
+                                label = { Text(category.name) }
+                            )
                         }
                     }
-                } }
+                }
+                if (visible.isEmpty()) item { Text("سؤالی یافت نشد.") }
+                items(visible, key = { it.id }) { item ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            NativeMathText(item.question.text.ifBlank { "بدون متن" })
+                            Text(
+                                "${item.subject.orEmpty().ifBlank { "بدون درس" }} · ${item.question.type.faLabel()}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Button(onClick = { onAdd(item.id) }) { Text("افزودن به آزمون") }
+                        }
+                    }
+                }
             }
-        }
-    }
-    if(newCategory) AlertDialog(
-        onDismissRequest={newCategory=false},title={Text("دسته جدید")},
-        text={OutlinedTextField(categoryName,{categoryName=it.take(100)},label={Text("نام دسته")})},
-        confirmButton={Button(onClick={viewModel.addBankCategory(categoryName);newCategory=false;categoryName=""},enabled=categoryName.isNotBlank()){Text("ساخت")}},
-        dismissButton={TextButton(onClick={newCategory=false}){Text("انصراف")}}
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("بستن") } }
     )
-    editItem?.let { item ->
-        var selected by remember(item.id,item.categoryIds) { mutableStateOf(item.categoryIds) }
-        AlertDialog(
-            onDismissRequest={editItem=null},title={Text("دسته‌های سؤال")},
-            text={Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                if(state.bankCategories.isEmpty()) Text("ابتدا یک دسته بسازید.")
-                state.bankCategories.forEach { cat -> SelectionRow(cat.name,cat.id in selected){selected=if(cat.id in selected)selected-cat.id else selected+cat.id} }
-            }},
-            confirmButton={Button(onClick={viewModel.setBankCategories(item.id,selected);editItem=null}){Text("ذخیره")}},
-            dismissButton={TextButton(onClick={editItem=null}){Text("انصراف")}}
-        )
-    }
-    deleteCategory?.let { cat -> AlertDialog(
-        onDismissRequest={deleteCategory=null},title={Text("حذف دسته")},
-        text={Text("دسته «${cat.name}» حذف شود؟ می‌توانید سؤال‌های فقط همین دسته را نیز حذف کنید.")},
-        confirmButton={Column { Button(onClick={viewModel.deleteBankCategory(cat.id,false);deleteCategory=null}){Text("دسته حذف شود؛ سؤال‌ها بمانند")}; TextButton(onClick={viewModel.deleteBankCategory(cat.id,true);deleteCategory=null}){Text("سؤال‌های بدون دسته دیگر هم حذف شوند")} }},
-        dismissButton={TextButton(onClick={deleteCategory=null}){Text("انصراف")}}
-    ) }
 }
 
 private data class FormulaTarget(
@@ -348,11 +439,13 @@ private fun QuestionEditor(
     question: QuestionDraft,
     index: Int,
     total: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
     viewModel: ExamBuilderViewModel,
     onPreview: () -> Unit
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
-    Card(Modifier.fillMaxWidth()) {
+    Card(Modifier.fillMaxWidth().clickable(onClick = onToggle)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("سؤال ${index + 1} · ${question.type.faLabel()}")
@@ -361,6 +454,12 @@ private fun QuestionEditor(
                     TextButton(onClick={viewModel.moveQuestion(question.id,1)},enabled=index<total-1){Text("↓")}
                 }
             }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(question.text, { viewModel.updateText(question.id, it) }, label = { Text("متن سؤال") }, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { formulaTarget = FormulaTarget("question") }) { Text("درج فرمول") }
@@ -474,6 +573,8 @@ private fun QuestionEditor(
                 OutlinedButton(onClick = { viewModel.saveToBank(question.id) }) { Text("ذخیره در بانک") }
                 TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
             }
+                }
+            }
         }
     }
     formulaTarget?.let { target ->
@@ -558,4 +659,18 @@ private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.FILL_BLANK -> "جای خالی"
     QuestionType.NUMERIC -> "عددی"
     QuestionType.MATCHING -> "جورکردنی"
+}
+
+private fun readBuilderImportLimited(input: java.io.InputStream): String {
+    val output = ByteArrayOutputStream()
+    val buffer = ByteArray(8192)
+    var total = 0
+    while (true) {
+        val read = input.read(buffer)
+        if (read < 0) break
+        total += read
+        require(total <= 8 * 1024 * 1024) { "حجم فایل آزمون بیش از ۸ مگابایت است." }
+        output.write(buffer, 0, read)
+    }
+    return output.toString(Charsets.UTF_8.name())
 }

@@ -108,7 +108,7 @@ class UpdateViewModel(
     fun reportPermissionRequired() {
         _state.update {
             it.copy(
-                message = "اجازه «نصب برنامه‌های ناشناس» را برای سامانه آزمون فعال کنید و برگردید.",
+                message = "اجازه «نصب برنامه‌های ناشناس» را برای آزمون آنلاین فعال کنید و برگردید.",
                 error = null
             )
         }

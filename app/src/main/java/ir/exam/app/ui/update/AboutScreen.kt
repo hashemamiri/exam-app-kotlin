@@ -154,7 +154,7 @@ private fun AppIdentityCard() {
                     )
                 }
                 Column {
-                    Text("سامانه آزمون", style = MaterialTheme.typography.headlineSmall)
+                    Text("آزمون آنلاین", style = MaterialTheme.typography.headlineSmall)
                     Text("نسخه بومی Android با Kotlin و Jetpack Compose")
                 }
             }

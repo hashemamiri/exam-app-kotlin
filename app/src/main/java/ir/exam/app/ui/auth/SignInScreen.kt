@@ -37,7 +37,7 @@ fun SignInScreen(viewModel: AuthViewModel) {
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("سامانه آزمون", style = MaterialTheme.typography.headlineMedium)
+        Text("آزمون آنلاین", style = MaterialTheme.typography.headlineMedium)
         when (state.screen) {
             AuthScreen.SIGN_IN -> SignInPane(state, viewModel)
             AuthScreen.LOGIN_OTP -> OtpPane(

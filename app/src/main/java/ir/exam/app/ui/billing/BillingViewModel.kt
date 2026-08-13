@@ -55,12 +55,29 @@ class BillingViewModel(
         _state.update { it.copy(startingPayment = true, payment = null, error = null, message = null) }
         repository.requestTopUp(amount, wallet.balanceToman)
             .onSuccess { payment ->
-                _state.update {
-                    it.copy(
-                        startingPayment = false,
-                        payment = payment,
-                        message = if (payment.sandbox) "درگاه آزمایشی باز می‌شود؛ وجه واقعی کسر نخواهد شد." else "درگاه بانکی آماده است."
-                    )
+                if (payment.credited && payment.sandbox) {
+                    val refreshed = repository.wallet().getOrNull()
+                    _state.update { current ->
+                        val fallback = current.wallet?.let { wallet ->
+                            wallet.copy(
+                                balanceToman = payment.balanceAfterToman ?: wallet.balanceToman
+                            )
+                        }
+                        current.copy(
+                            startingPayment = false,
+                            payment = null,
+                            wallet = refreshed ?: fallback,
+                            message = "اعتبار آزمایشی با تأیید سرور به کیف پول افزوده شد."
+                        )
+                    }
+                } else {
+                    _state.update {
+                        it.copy(
+                            startingPayment = false,
+                            payment = payment,
+                            message = "درگاه بانکی آماده است."
+                        )
+                    }
                 }
             }
             .onFailure { error -> _state.update { it.copy(startingPayment = false, error = safeBillingError(error)) } }

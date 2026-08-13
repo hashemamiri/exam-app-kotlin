@@ -140,6 +140,9 @@ class ExamBuilderViewModel(
     fun setAttemptOnTimeout(value: Boolean) { _state.update { it.copy(attemptOnTimeout = value) } }
     fun setGradePolicy(value: String) { if (value in setOf("last", "best", "all")) _state.update { it.copy(gradePolicy = value) } }
     fun setAttemptCooldown(value: String) { _state.update { it.copy(attemptCooldown = value.filter(Char::isDigit).take(4)) } }
+    fun reportError(error: Throwable) {
+        _state.update { it.copy(error = safeBuilderError(error)) }
+    }
 
     fun setAudienceMode(value: String) {
         if (value in setOf("all", "classes", "students")) _state.update { it.copy(audienceMode = value) }
@@ -147,7 +150,7 @@ class ExamBuilderViewModel(
     fun toggleAudienceClass(id: String) { _state.update { it.copy(audienceClasses = it.audienceClasses.toggle(id)) } }
     fun toggleAudienceStudent(id: String) { _state.update { it.copy(audienceStudents = it.audienceStudents.toggle(id)) } }
 
-    fun addQuestion(type: QuestionType) {
+    fun addQuestion(type: QuestionType): String {
         val question = when (type) {
             QuestionType.MULTIPLE_CHOICE -> QuestionDraft(
                 type = type,
@@ -165,6 +168,33 @@ class ExamBuilderViewModel(
             else -> QuestionDraft(type = type)
         }
         _state.update { it.copy(questions = it.questions + question) }
+        return question.id
+    }
+
+    fun applyImport(imported: ExamImportDraft) {
+        _state.update { current ->
+            current.copy(
+                examId = null,
+                code = null,
+                title = imported.title,
+                subject = imported.subject,
+                durationMinutes = imported.durationMinutes.toString(),
+                opensAtIso = imported.opensAtIso,
+                closesAtIso = imported.closesAtIso,
+                negativeMarking = imported.negativeMarking.toString(),
+                shuffleQuestions = imported.shuffleQuestions,
+                shuffleOptions = imported.shuffleOptions,
+                teacherMessage = imported.teacherMessage,
+                attemptsAllowed = imported.attemptsAllowed,
+                attemptOnTimeout = imported.attemptOnTimeout,
+                gradePolicy = imported.gradePolicy,
+                attemptCooldown = imported.attemptCooldown.toString(),
+                questions = imported.questions.map { it.copy(id = UUID.randomUUID().toString()) },
+                importedBy = imported.exportedBy,
+                savedCode = null,
+                error = null
+            )
+        }
     }
 
     fun moveQuestion(id: String, delta: Int) {

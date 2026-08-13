@@ -60,7 +60,7 @@ class ApkUpdateManager(private val context: Context) {
         val destination = File(updatesDirectory, fileName)
 
         val request = DownloadManager.Request(remote.apkUrl.toSafeHttpsUri()!!)
-            .setTitle("بروزرسانی سامانه آزمون ${remote.name}")
+            .setTitle("بروزرسانی آزمون آنلاین ${remote.name}")
             .setDescription("در حال دریافت نسخه جدید")
             .setMimeType(APK_MIME_TYPE)
             .setAllowedOverMetered(true)
@@ -174,7 +174,7 @@ class ApkUpdateManager(private val context: Context) {
             setOf(appContext.packageName)
         }
         check(archivePackage in allowedPackages) {
-            "نام بسته APK با سامانه آزمون مطابقت ندارد؛ نصب متوقف شد."
+            "نام بسته APK با آزمون آنلاین مطابقت ندارد؛ نصب متوقف شد."
         }
 
         val archiveVersionCode = PackageInfoCompat.getLongVersionCode(packageInfo)

@@ -197,7 +197,7 @@ private fun rememberSystemBiometricPrompt(
 }
 
 private fun systemPromptInfo(): BiometricPrompt.PromptInfo = BiometricPrompt.PromptInfo.Builder()
-    .setTitle("بازکردن سامانه آزمون")
+    .setTitle("بازکردن آزمون آنلاین")
     .setSubtitle("از قفل امن فعال دستگاه استفاده کنید")
     .setAllowedAuthenticators(SYSTEM_AUTHENTICATORS)
     .build()

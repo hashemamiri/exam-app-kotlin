@@ -41,6 +41,9 @@ app_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_te
 profile_settings=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
 wallet_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").read_text()
 teacher_dashboard=(ROOT/"app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").read_text()
+builder_radial=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/BuilderRadialMenuOverlay.kt").read_text()
+username_suggester=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/PersianUsernameSuggester.kt").read_text()
+formula_native_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
 question_bank_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt").read_text()
 app_lock_ui=(ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").read_text()
 profile_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/ProfileModels.kt").read_text()
@@ -128,8 +131,9 @@ require("Design69MainMenuScreen" in app_shell and "menuOpen = !menuOpen" in app_
         "menu is not a full-page reversible state")
 require(all(marker in design69_add for marker in ("OPEN_ROTATION_DEGREES = 135","ACTION_COUNT = 3","دانش‌آموز جدید","آزمون جدید","کلاس جدید","travel.animateTo")),
         "shared moving plus or three real quick actions incomplete")
-require(all(marker in design69_cards for marker in ("CARD_COUNT = 5","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionDown","\"آمار\"","بانک سؤال","\"تصحیح\"","\"مانده\"","\"پاسخ\"","cards[activeIndex].subtitle")),
-        "five-card four-direction management stack/description incomplete")
+require(all(marker in design69_cards for marker in ("CARD_COUNT = 5","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionRight","\"آمار\"","بانک سؤال","\"تصحیح\"","\"مانده\"","\"پاسخ\"","cards[activeIndex].subtitle")) and
+        "Key.DirectionDown" not in design69_cards and "بکشید" not in design69_cards,
+        "five-card horizontal-only management stack/description incomplete")
 require("cards.forEachIndexed" not in design69_cards,
         "management cards are duplicated as buttons below the stack")
 require("ModalBottomSheet" not in teacher_dock,
@@ -175,6 +179,32 @@ require(all(marker in v18_migration for marker in ("hdr_grade","native_save_prof
         v18_sql_copy == v18_migration and "val grade: String" in profile_models and
         "native_export_backup_v2" in portability_repository,
         "server/print/backup header grade migration or SQL copy incomplete")
+require(all(marker in builder_screen for marker in ("expandedQuestionId","settingsExpanded","bottom = 112.dp","Text(\"✓\"","BuilderRadialMenuOverlay","BuilderQuestionBankDialog")) and
+        all(label in builder_radial for label in ("تشریحی","چندگزینه‌ای","صحیح/غلط","جای خالی","عددی","جورکردنی","وارد کردن","بانک سؤال")),
+        "builder accordion/radial eight actions/floating save incomplete")
+require("dottedAlpha" in builder_radial and "progress.animateTo(1f, tween(620" in builder_radial and
+        "fun addQuestion(type: QuestionType): String" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "builder synchronized radial motion or auto-open question contract missing")
+require("PersianUsernameSuggester.suggest" in school_screen and "BulkStudentDraft" in school_screen and
+        "contentAlignment = Alignment.TopCenter" in school_screen and "🎲 رمز" in school_screen,
+        "compact single/bulk student dialogs or username suggestions incomplete")
+require(all("PullToRefreshBox" in text and "تازه‌سازی" not in text for text in (
+            school_screen, question_bank_screen,
+            (ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text(), wallet_screen
+        )), "manual refresh button remains or pull-to-refresh is missing")
+require("LocalLayoutDirection provides LayoutDirection.Ltr" in formula_native_view and
+        "horizontal.animateScrollTo(targetX)" in formula_native_view and
+        "LocalLayoutDirection provides LayoutDirection.Ltr" in formula_editor,
+        "LTR formula editing or automatic active-box scroll missing")
+require("provider === 'sandbox'" in edge_text and "sandboxAllowed()" in edge_text and
+        "native_credit_wallet_payment" in edge_text and "credited: true" in edge_text and
+        "native_credit_wallet_payment" not in main_text,
+        "server-gated sandbox auto-credit missing or direct APK credit introduced")
+require("targetX.roundToPx() * progress" in design69_add and
+        "travel.value - .88f" in design69_add and "actionsVisible" not in design69_add,
+        "quick-add plus/options are not synchronized or dotted lines start too early")
+require('android:label="آزمون آنلاین"' in manifest and "آزمون آنلاین" in main_text,
+        "application branding was not changed to آزمون آنلاین")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

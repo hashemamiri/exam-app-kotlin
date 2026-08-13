@@ -28,6 +28,8 @@ data class PaymentLaunchDto(
     @SerialName("order_id") val orderId: Long? = null,
     val provider: String? = null,
     val sandbox: Boolean = false,
+    val credited: Boolean = false,
+    val balance: Long? = null,
     val error: String? = null,
     val code: String? = null
 )

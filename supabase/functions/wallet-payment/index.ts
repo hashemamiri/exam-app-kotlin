@@ -312,7 +312,31 @@ Deno.serve(async (req) => {
       throw publicError('order_start_failed', 'شروع سفارش ناموفق بود.', 500);
     }
 
-    return json({ ok: true, url: gateway.url, order_id: orderId, provider, sandbox: provider === 'sandbox' });
+    // اعتبار آزمایشی فقط در sandbox مجاز سرور و از همان RPC اتمیک credit می‌شود.
+    // APK هیچ مسیر مستقیمی برای افزایش موجودی ندارد و provider واقعی هرگز وارد این شاخه نمی‌شود.
+    if (provider === 'sandbox') {
+      const refId = `SB-${orderId}-${Date.now()}`;
+      const { data: credit, error: creditError } = await service.rpc('native_credit_wallet_payment', {
+        p_order: orderId,
+        p_ref: refId,
+      });
+      if (creditError || credit?.error) {
+        await service.rpc('native_fail_wallet_payment_order', {
+          p_order: orderId, p_status: 'failed', p_code: 'sandbox_credit_failed',
+        });
+        throw publicError('sandbox_credit_failed', 'ثبت اعتبار آزمایشی کامل نشد.', 500);
+      }
+      return json({
+        ok: true,
+        credited: true,
+        order_id: orderId,
+        provider,
+        sandbox: true,
+        balance: credit?.balance ?? null,
+      });
+    }
+
+    return json({ ok: true, credited: false, url: gateway.url, order_id: orderId, provider, sandbox: false });
   } catch (error) {
     const known = error as Error & { publicCode?: string; publicStatus?: number };
     return json({

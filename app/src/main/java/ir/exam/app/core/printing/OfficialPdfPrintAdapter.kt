@@ -252,7 +252,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 8.5f; textAlign = Paint.Align.RIGHT }
         canvas.drawText(printable.footerNote, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 25f, paint)
         paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("سامانه آزمون Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
+        canvas.drawText("آزمون آنلاین Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
     }
 
     private fun drawImage(canvas: Canvas, bitmap: Bitmap, top: Float, availableHeight: Float,block:RenderBlock) {

@@ -21,17 +21,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.OpenInBrowser
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,6 +61,7 @@ import ir.exam.app.ui.app.neumorphic69Colors
 import java.time.Instant
 import java.time.ZoneId
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(refreshKey: Int = 0) {
     val context = LocalContext.current
@@ -78,7 +80,12 @@ fun WalletScreen(refreshKey: Int = 0) {
         }
     }
 
-    LazyColumn(
+    PullToRefreshBox(
+        isRefreshing = state.loading,
+        onRefresh = viewModel::load,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -114,9 +121,6 @@ fun WalletScreen(refreshKey: Int = 0) {
                                 contentDescription = if (balanceVisible) "مخفی‌کردن موجودی" else "نمایش موجودی",
                                 tint = Color.White
                             )
-                        }
-                        IconButton(onClick = viewModel::load, enabled = !state.loading) {
-                            Icon(Icons.Outlined.Refresh, contentDescription = "تازه‌سازی موجودی", tint = Color.White)
                         }
                     }
                     Spacer(Modifier.height(10.dp))
@@ -178,14 +182,14 @@ fun WalletScreen(refreshKey: Int = 0) {
                         if (state.startingPayment) CircularProgressIndicator(Modifier.padding(end = 8.dp))
                         Text(if (state.startingPayment) "در حال ساخت سفارش..." else "ساخت سفارش پرداخت")
                     }
-                    state.payment?.let { payment ->
+                    state.payment?.checkoutUrl?.let { checkoutUrl ->
                         Button(
                             onClick = {
                                 try {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(payment.checkoutUrl)))
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(checkoutUrl)))
                                     viewModel.paymentOpened()
                                 } catch (_: ActivityNotFoundException) {
-                                    // دکمهٔ تازه‌سازی و پیام عمومی باقی می‌مانند؛ URL حساس در UI چاپ نمی‌شود.
+                                    // پیام عمومی باقی می‌ماند؛ URL حساس در UI چاپ نمی‌شود.
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -196,7 +200,7 @@ fun WalletScreen(refreshKey: Int = 0) {
                     }
                     state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    Text("پس از بازگشت از درگاه، «تازه‌سازی موجودی» را بزنید.", style = MaterialTheme.typography.bodySmall)
+                    Text("پس از بازگشت از درگاه، صفحه را به پایین بکشید تا موجودی بروزرسانی شود.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -206,6 +210,7 @@ fun WalletScreen(refreshKey: Int = 0) {
             item { Text("هنوز تراکنشی ثبت نشده است.") }
         }
         items(transactions, key = { it.id }) { transaction -> TransactionCard(transaction) }
+        }
     }
 }
 

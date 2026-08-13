@@ -13,6 +13,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -21,6 +22,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +40,7 @@ import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.NativeMathText
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestionBankScreen(
     onUseInExam: (BankQuestionOption) -> Unit
@@ -52,6 +55,11 @@ fun QuestionBankScreen(
     var newCategory by remember { mutableStateOf(false) }
     var deleteCategory by remember { mutableStateOf<BankCategoryOption?>(null) }
 
+    PullToRefreshBox(
+        isRefreshing = state.loading || state.actionLoading,
+        onRefresh = viewModel::load,
+        modifier = Modifier.fillMaxSize()
+    ) {
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -72,7 +80,6 @@ fun QuestionBankScreen(
                     label = { Text("همه (${state.questions.size})") }
                 )
                 OutlinedButton(onClick = { newCategory = true }) { Text("دسته جدید") }
-                OutlinedButton(onClick = viewModel::load, enabled = !state.loading) { Text("تازه‌سازی") }
             }
         }
         if (state.categories.isNotEmpty()) {
@@ -133,6 +140,7 @@ fun QuestionBankScreen(
                 }
             }
         }
+    }
     }
 
     if (newCategory) {

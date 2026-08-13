@@ -90,7 +90,7 @@ object ExamPackageCodec {
             else -> decodeBase64(trimmed)
         }
         val root = json.parseToJsonElement(jsonText).jsonObject
-        require(root["_app"]?.jsonPrimitive?.contentOrNull == "exam-system") { "این فایل متعلق به سامانه آزمون نیست." }
+        require(root["_app"]?.jsonPrimitive?.contentOrNull == "exam-system") { "این فایل متعلق به آزمون آنلاین نیست." }
         require(root["_kind"]?.jsonPrimitive?.contentOrNull == "exam") { "نوع فایل، بسته آزمون نیست." }
         val exam = root["exam"]?.jsonObject ?: error("بدنه آزمون در فایل وجود ندارد.")
         val combined = exam["questions"]?.jsonArray ?: JsonArray(emptyList())

@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
-        android:label="سامانه آزمون"
+        android:label="آزمون آنلاین"
         android:icon="@drawable/ic_exam_app"
         android:roundIcon="@drawable/ic_exam_app"
         android:theme="@style/Theme.ExamApp"

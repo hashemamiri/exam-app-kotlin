@@ -71,7 +71,6 @@ fun Design69QuickAddOverlay(
 ) {
     val colors = neumorphic69Colors
     val travel = remember { Animatable(0f) }
-    var actionsVisible by remember { mutableStateOf(false) }
     var closing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -79,8 +78,6 @@ fun Design69QuickAddOverlay(
         if (closing) return
         closing = true
         scope.launch {
-            actionsVisible = false
-            delay(150)
             travel.animateTo(0f, tween(420, easing = FastOutSlowInEasing))
             onDismiss()
             after?.invoke()
@@ -92,8 +89,6 @@ fun Design69QuickAddOverlay(
             1f,
             tween(Design69QuickAddContract.TRAVEL_DURATION_MS, easing = FastOutSlowInEasing)
         )
-        delay(40)
-        actionsVisible = true
     }
 
     BackHandler { close() }
@@ -127,7 +122,7 @@ fun Design69QuickAddOverlay(
                 .align(Alignment.Center)
                 .size(width = 318.dp, height = 330.dp)
         ) {
-            val alpha = if (actionsVisible) .45f else 0f
+            val alpha = .45f * ((travel.value - .88f) / .12f).coerceIn(0f, 1f)
             val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
             val dash = PathEffect.dashPathEffect(floatArrayOf(7.dp.toPx(), 8.dp.toPx()))
             drawLine(
@@ -154,27 +149,30 @@ fun Design69QuickAddOverlay(
         }
 
         QuickAddAction(
-            visible = actionsVisible,
-            delayMillis = 40,
+            progress = travel.value,
             title = "دانش‌آموز جدید",
             icon = Design69Icons.PersonAdd,
-            modifier = Modifier.align(Alignment.Center).offset(y = (-142).dp)
+            targetX = 0.dp,
+            targetY = (-142).dp,
+            modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateStudent) }
 
         QuickAddAction(
-            visible = actionsVisible,
-            delayMillis = 110,
+            progress = travel.value,
             title = "آزمون جدید",
             icon = Design69Icons.ExamAdd,
-            modifier = Modifier.align(Alignment.Center).offset(x = horizontal, y = 88.dp)
+            targetX = horizontal,
+            targetY = 88.dp,
+            modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateExam) }
 
         QuickAddAction(
-            visible = actionsVisible,
-            delayMillis = 180,
+            progress = travel.value,
             title = "کلاس جدید",
             icon = Design69Icons.ClassAdd,
-            modifier = Modifier.align(Alignment.Center).offset(x = -horizontal, y = 88.dp)
+            targetX = -horizontal,
+            targetY = 88.dp,
+            modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateClass) }
 
         Box(
@@ -212,56 +210,49 @@ fun Design69QuickAddOverlay(
             )
         }
 
-        AnimatedVisibility(
-            visible = travel.value > .82f && !actionsVisible,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 135.dp),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Text(
-                "در حال بازکردن عملیات…",
-                color = colors.muted,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
     }
 }
 
 @Composable
 private fun QuickAddAction(
-    visible: Boolean,
-    delayMillis: Int,
+    progress: Float,
     title: String,
     icon: ImageVector,
+    targetX: Dp,
+    targetY: Dp,
     modifier: Modifier,
     onClick: () -> Unit
 ) {
     val colors = neumorphic69Colors
-    AnimatedVisibility(
-        visible = visible,
-        modifier = modifier,
-        enter = fadeIn(tween(260, delayMillis = delayMillis)) +
-            scaleIn(tween(560, delayMillis = delayMillis, easing = FastOutSlowInEasing), initialScale = .25f),
-        exit = fadeOut(tween(120)) + scaleOut(tween(180), targetScale = .40f)
-    ) {
-        NeumorphicPressable(
-            onClick = onClick,
-            modifier = Modifier.size(88.dp),
-            radius = 29.dp,
-            depth = 14.dp
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(icon, contentDescription = title, tint = colors.accent, modifier = Modifier.size(26.dp))
-                Text(
-                    title,
-                    color = colors.muted,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    modifier = Modifier.padding(top = 7.dp)
+    NeumorphicPressable(
+        onClick = { if (progress > .96f) onClick() },
+        modifier = modifier
+            .offset {
+                IntOffset(
+                    (targetX.roundToPx() * progress).roundToInt(),
+                    (targetY.roundToPx() * progress).roundToInt()
                 )
             }
+            .size(88.dp)
+            .graphicsLayer {
+                alpha = progress
+                scaleX = .25f + .75f * progress
+                scaleY = .25f + .75f * progress
+            },
+        radius = 29.dp,
+        depth = 14.dp
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = title, tint = colors.accent, modifier = Modifier.size(26.dp))
+            Text(
+                title,
+                color = colors.muted,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 7.dp)
+            )
         }
     }
 }

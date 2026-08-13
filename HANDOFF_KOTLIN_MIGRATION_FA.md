@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V18 ناوبری، حساب، سربرگ و مدیریت پنج‌کارت
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V19 تعامل هم‌زمان، آزمون‌ساز شعاعی و فرم دانش‌آموز
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2744,3 +2744,88 @@ Debug APK SHA-256                     8812bd60fae6489ece6485f3421a62416444db053f
 ```
 
 راهنمای مستقل: `NAVIGATION_ACCOUNT_MANAGEMENT_V18_FA.md`.
+
+---
+
+## ۳۷) V19 — تعامل هم‌زمان، آزمون‌ساز شعاعی و فرم دانش‌آموز
+
+### قابلیت‌ها
+
+- حرکت هم‌زمان + و سه گزینه واقعی؛ رسیدن هم‌زمان و رسم خط‌چین در ۱۲٪ پایانی؛
+- auto-credit اتمیک و idempotent فقط در sandbox مجاز Edge Function؛
+- هیچ credit RPC در APK؛
+- کارت آزمون فشرده و accordion عملیات؛
+- کارت‌های مدیریتی فقط swipe افقی و بدون متن راهنما؛
+- برند «آزمون آنلاین» در manifest/UI/PDF/update؛
+- Dialog افزودن تکی در بالا با چهار ردیف دو/سه‌ستونه و imePadding؛
+- Dialog گروهی کارت‌بندی‌شده تا ۱۰۰ ردیف؛
+- پیشنهاد `first_last` از نام فارسی و suffix برای تکراری‌ها؛
+- Formula Editor صریح LTR و auto-scroll خانه فعال؛
+- مشخصات آزمون expand/collapse؛
+- + آزمون‌ساز متحرک تا مرکز، × قرمز و ۸ عمل شعاعی؛
+- import فایل و انتخاب بانک سؤال از radial menu؛
+- کارت سؤال accordion؛ همیشه یک کارت باز؛ کارت جدید auto-open و auto-scroll؛
+- تیک شناور برای تأیید هزینه/ذخیره؛ bottom padding برابر 112dp؛
+- حذف refresh دستی از تقویم، کلاس، دانش‌آموز، بانک، کیف پول و آزمون‌ها؛
+- PullToRefreshBox در همه مسیرهای فوق؛
+- جداسازی نمای کلاس و همه دانش‌آموزان از طریق منوی اصلی.
+
+### امنیت sandbox
+
+```text
+PAY_PROVIDER=sandbox
+PAY_ALLOW_SANDBOX=true
+```
+
+فقط در این حالت `wallet-payment` پس از ساخت سفارش و authority آزمایشی، `native_credit_wallet_payment` را سروری اجرا می‌کند. provider واقعی هیچ auto-credit ندارد.
+
+### فایل‌های کلیدی
+
+```text
+INTERACTION_BUILDER_STUDENT_V19_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+supabase/functions/wallet-payment/index.ts
+app/src/main/java/ir/exam/app/ui/builder/BuilderRadialMenuOverlay.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/classes/PersianUsernameSuggester.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt
+app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt
+app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt
+app/src/main/java/ir/exam/app/ui/billing/BillingViewModel.kt
+app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt
+app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Migration جدید: ندارد
+Secret جدید: ندارد
+Dependency Android جدید: ندارد
+Edge deploy: wallet-payment لازم است
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              110/110 PASS
+Persian username regression           PASS
+Builder radial/accordion regression   PASS
+Student compact/bulk regression       PASS
+Formula LTR/auto-scroll regression    PASS
+Sandbox server-credit regression      PASS
+Deno check wallet-payment             PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 22 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     a0e9785ca749cc10f51bb8f4f708d1c3d30359290b0bcb9274bd8c25dc8631e2
+```
+
+راهنمای مستقل: `INTERACTION_BUILDER_STUDENT_V19_FA.md`.

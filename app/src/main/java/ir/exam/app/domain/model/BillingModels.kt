@@ -16,9 +16,11 @@ data class WalletSnapshot(
 
 data class PaymentLaunch(
     val orderId: Long,
-    val checkoutUrl: String,
+    val checkoutUrl: String? = null,
     val provider: String,
-    val sandbox: Boolean
+    val sandbox: Boolean,
+    val credited: Boolean = false,
+    val balanceAfterToman: Long? = null
 )
 
 object WalletRules {
