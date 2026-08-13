@@ -15,6 +15,8 @@ interface SchoolRepository {
     suspend fun getStudents(): Result<List<StudentProfile>>
     suspend fun getClassRoster(classId: String): Result<List<StudentProfile>>
     suspend fun addStudentsToClass(classId: String, studentIds: List<String>): Result<Int>
+    suspend fun addStudentToClasses(studentId: String, classIds: Set<String>): Result<Int> =
+        Result.failure(UnsupportedOperationException("multi-class add not implemented"))
     suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit>
     suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit>
     suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential>

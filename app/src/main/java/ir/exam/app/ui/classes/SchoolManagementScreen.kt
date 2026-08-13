@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.ToggleOff
+import androidx.compose.material.icons.outlined.ToggleOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -85,11 +92,7 @@ fun SchoolManagementScreen(
     var creatingClass by remember { mutableStateOf(false) }
     var deletingClass by remember { mutableStateOf<SchoolClass?>(null) }
     var showMemberPicker by remember { mutableStateOf(false) }
-    var showStudentCreator by remember { mutableStateOf(false) }
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
-    var resettingStudent by remember { mutableStateOf<StudentProfile?>(null) }
-    var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
-    var noteStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var showBulk by remember { mutableStateOf(false) }
     var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
     val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
@@ -110,7 +113,7 @@ fun SchoolManagementScreen(
             SchoolLaunchAction.CREATE_STUDENT -> {
                 showStudents = true
                 viewModel.closeClass()
-                showStudentCreator = true
+                showBulk = true
                 onLaunchActionConsumed()
             }
             SchoolLaunchAction.CREATE_CLASS -> {
@@ -146,15 +149,11 @@ fun SchoolManagementScreen(
                     roster = state.roster,
                     onBack = viewModel::closeClass,
                     onAdd = { showMemberPicker = true },
-                    onCreate = { showStudentCreator = true },
-                    onRemove = viewModel::removeStudent,
+                    onCreate = { showBulk = true },
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
-                    onReset = { resettingStudent = it },
-                    onDeleteAccount = { deletingStudent = it },
-                    notes=state.studentNotes,
-                    onNote={noteStudent=it},
-                    onBulk={showBulk=true}
+                    classes = state.classes,
+                    onAddToClasses = viewModel::addStudentToClasses
                 )
                 showStudents -> StudentsContent(
                     students = filteredStudents(state.students, state.query),
@@ -162,14 +161,13 @@ fun SchoolManagementScreen(
                     onQuery = viewModel::setQuery,
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
-                    onReset = { resettingStudent = it },
-                    onDelete = { deletingStudent = it },
-                    notes=state.studentNotes,
-                    onNote={noteStudent=it},
-                    onBulk={showBulk=true},
-                    onExport={
-                        pendingXlsx=studentWorkbook(state.students);xlsxLauncher.launch("students.xlsx")
-                    }
+                    onBulk = { showBulk = true },
+                    onExport = {
+                        pendingXlsx = studentWorkbook(state.students)
+                        xlsxLauncher.launch("students.xlsx")
+                    },
+                    classes = state.classes,
+                    onAddToClasses = viewModel::addStudentToClasses
                 )
                 else -> ClassesContent(
                     classes = state.classes,
@@ -218,13 +216,6 @@ fun SchoolManagementScreen(
         )
     }
 
-    if (showStudentCreator) {
-        StudentCreatorDialog(
-            classId = state.selectedClass?.id,
-            onDismiss = { showStudentCreator = false },
-            onCreate = { request -> viewModel.createStudent(request); showStudentCreator = false }
-        )
-    }
 
     editingStudent?.let { student ->
         StudentEditDialog(
@@ -234,33 +225,6 @@ fun SchoolManagementScreen(
         )
     }
 
-    resettingStudent?.let { student ->
-        StudentPasswordResetDialog(
-            student = student,
-            onDismiss = { resettingStudent = null },
-            onReset = { password -> viewModel.resetPassword(student.id, password); resettingStudent = null }
-        )
-    }
-
-    deletingStudent?.let { student ->
-        AlertDialog(
-            onDismissRequest = { deletingStudent = null },
-            title = { Text("حذف کامل حساب دانش‌آموز") },
-            text = { Text("حساب «${student.fullName}» از Auth و پروفایل حذف شود؟ این کار برگشت‌پذیر نیست و با خروج از کلاس فرق دارد.") },
-            confirmButton = {
-                Button(onClick = { viewModel.deleteStudent(student.id); deletingStudent = null }) { Text("حذف کامل") }
-            },
-            dismissButton = { TextButton(onClick = { deletingStudent = null }) { Text("انصراف") } }
-        )
-    }
-
-    noteStudent?.let { student ->
-        var note by remember(student.id){mutableStateOf(state.studentNotes[student.id].orEmpty())}
-        AlertDialog(onDismissRequest={noteStudent=null},title={Text("یادداشت خصوصی ${student.fullName}")},
-            text={OutlinedTextField(note,{note=it.take(4000)},label={Text("یادداشت فقط روی این دستگاه")},minLines=5)},
-            confirmButton={Button(onClick={viewModel.saveStudentNote(student.id,note);noteStudent=null}){Text("ذخیره")}},
-            dismissButton={TextButton(onClick={noteStudent=null}){Text("انصراف")}})
-    }
     if(showBulk) BulkStudentDialog(
         classes=state.classes,initialClassId=state.selectedClass?.id,onDismiss={showBulk=false},
         onCreate={classId,rows->viewModel.createStudentsBulk(classId,rows);showBulk=false}
@@ -298,8 +262,14 @@ private fun ClassesContent(
                 items(classes, key = SchoolClass::id) { item ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(item.name, style = MaterialTheme.typography.titleMedium)
-                            Text("پایه: ${item.grade.orEmpty().ifBlank { "—" }}")
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                Text("پایه: ${item.grade.orEmpty().ifBlank { "—" }}")
+                            }
                             Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Button(onClick = { onOpen(item) }) { Text("ورود") }
@@ -321,27 +291,36 @@ private fun ClassRosterContent(
     onBack: () -> Unit,
     onAdd: () -> Unit,
     onCreate: () -> Unit,
-    onRemove: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
-    onReset: (StudentProfile) -> Unit,
-    onDeleteAccount: (StudentProfile) -> Unit,
-    notes:Map<String,String>,
-    onNote:(StudentProfile)->Unit,
-    onBulk:()->Unit
+    classes: List<SchoolClass>,
+    onAddToClasses: (String, Set<String>) -> Unit
 ) {
+    var addMenuOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onBack) { Text("بازگشت") }
             Text(item.name, style = MaterialTheme.typography.titleLarge)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onAdd) { Text("افزودن موجود") }
-            OutlinedButton(onClick = onCreate) { Text("حساب جدید") }
-            OutlinedButton(
-                onClick = onBulk,
-                modifier = Modifier.semantics { contentDescription = "افزودن گروهی دانش‌آموز" }
-            ) { Text("▦") }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Button(onClick = { addMenuOpen = !addMenuOpen }) {
+                Text(if (addMenuOpen) "×" else "+", style = MaterialTheme.typography.titleLarge)
+            }
+            AnimatedVisibility(
+                visible = addMenuOpen,
+                modifier = Modifier.padding(top = 6.dp),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Card(Modifier.clickable { addMenuOpen = false; onAdd() }) {
+                        Text("افزودن موجود", Modifier.padding(14.dp), textAlign = TextAlign.Center)
+                    }
+                    Card(Modifier.clickable { addMenuOpen = false; onCreate() }) {
+                        Text("افزودن جدید", Modifier.padding(14.dp), textAlign = TextAlign.Center)
+                    }
+                }
+            }
         }
         if (roster.isEmpty()) Text("این کلاس هنوز عضوی ندارد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -349,11 +328,9 @@ private fun ClassRosterContent(
                 StudentCard(
                     student = student,
                     onToggle = onToggle,
-                    onRemove = { onRemove(student.id) },
                     onEdit = { onEdit(student) },
-                    onReset = { onReset(student) },
-                    onDelete = { onDeleteAccount(student) },
-                    note=notes[student.id],onNote={onNote(student)}
+                    classes = classes,
+                    onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
                 )
             }
         }
@@ -367,12 +344,10 @@ private fun StudentsContent(
     onQuery: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
-    onReset: (StudentProfile) -> Unit,
-    onDelete: (StudentProfile) -> Unit,
-    notes:Map<String,String>,
-    onNote:(StudentProfile)->Unit,
-    onBulk:()->Unit,
-    onExport:()->Unit
+    onBulk: () -> Unit,
+    onExport: () -> Unit,
+    classes: List<SchoolClass>,
+    onAddToClasses: (String, Set<String>) -> Unit
 ) {
     var searchOpen by remember { mutableStateOf(query.isNotBlank()) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -423,11 +398,9 @@ private fun StudentsContent(
                 StudentCard(
                     student = student,
                     onToggle = onToggle,
-                    onRemove = null,
                     onEdit = { onEdit(student) },
-                    onReset = { onReset(student) },
-                    onDelete = { onDelete(student) },
-                    note=notes[student.id],onNote={onNote(student)}
+                    classes = classes,
+                    onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
                 )
             }
         }
@@ -438,31 +411,99 @@ private fun StudentsContent(
 private fun StudentCard(
     student: StudentProfile,
     onToggle: (String, Boolean) -> Unit,
-    onRemove: (() -> Unit)?,
     onEdit: () -> Unit,
-    onReset: () -> Unit,
-    onDelete: () -> Unit,
-    note:String?,
-    onNote:()->Unit
+    classes: List<SchoolClass>,
+    onAddToClasses: (Set<String>) -> Unit
 ) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(student.fullName.ifBlank { "بدون نام" }, style = MaterialTheme.typography.titleMedium)
-            Text("نام کاربری: ${student.username ?: "—"}")
-            Text("پایه: ${student.grade ?: "—"} · نام پدر: ${student.fatherName ?: "—"}")
-            student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
-            note?.takeIf(String::isNotBlank)?.let{Text("یادداشت خصوصی: ${it.take(80)}")}
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = { onToggle(student.id, !student.active) }) {
-                    Text(if (student.active) "غیرفعال" else "فعال")
-                }
-                OutlinedButton(onClick = onEdit) { Text("ویرایش") }
-                OutlinedButton(onClick = onReset) { Text("رمز جدید") }
-                OutlinedButton(onClick=onNote){Text("یادداشت")}
+    var expanded by remember(student.id) { mutableStateOf(false) }
+    var classPickerOpen by remember(student.id) { mutableStateOf(false) }
+    var selectedClasses by remember(student.id) { mutableStateOf(emptySet<String>()) }
+    val tint = if (student.gender.equals("female", true)) {
+        Color(0xFFFF80AB).copy(alpha = .22f)
+    } else {
+        Color(0xFF64B5F6).copy(alpha = .22f)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+        colors = CardDefaults.cardColors(containerColor = tint)
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    student.fullName.ifBlank { "بدون نام" },
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                onRemove?.let { TextButton(onClick = it) { Text("خروج از کلاس") } }
-                TextButton(onClick = onDelete) { Text("حذف کامل حساب") }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("نام کاربری: ${student.username ?: "—"}")
+                    Text("نام پدر: ${student.fatherName ?: "—"}")
+                    student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { onToggle(student.id, !student.active) }) {
+                            Icon(
+                                imageVector = if (student.active) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff,
+                                contentDescription = if (student.active) "فعال؛ لمس برای غیرفعال" else "غیرفعال؛ لمس برای فعال",
+                                tint = if (student.active) Color(0xFF19945B) else Color(0xFFD63B49)
+                            )
+                        }
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Outlined.Edit, contentDescription = "ویرایش دانش‌آموز")
+                        }
+                        IconButton(onClick = { classPickerOpen = !classPickerOpen }) {
+                            Icon(Icons.Outlined.Add, contentDescription = "افزودن به کلاس‌ها")
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = classPickerOpen,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("انتخاب یک یا چند کلاس")
+                            classes.chunked(3).forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    row.forEach { item ->
+                                        FilterChip(
+                                            selected = item.id in selectedClasses,
+                                            onClick = {
+                                                selectedClasses = if (item.id in selectedClasses) {
+                                                    selectedClasses - item.id
+                                                } else selectedClasses + item.id
+                                            },
+                                            label = { Text(item.name) }
+                                        )
+                                    }
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    onAddToClasses(selectedClasses)
+                                    selectedClasses = emptySet()
+                                    classPickerOpen = false
+                                },
+                                enabled = selectedClasses.isNotEmpty(),
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            ) { Text("افزودن") }
+                        }
+                    }
+                }
             }
         }
     }
@@ -497,125 +538,157 @@ private fun MemberPickerDialog(
     onAdd: (List<String>) -> Unit
 ) {
     val selected = remember { mutableStateListOf<String>() }
+    var gender by remember { mutableStateOf<String?>(null) }
+    var grade by remember { mutableStateOf<String?>(null) }
+    val grades = remember(students) {
+        students.mapNotNull { it.grade?.trim()?.takeIf(String::isNotBlank) }.distinct().sorted()
+    }
+    val visible = students.filter { student ->
+        (gender == null || student.gender == gender) &&
+            (grade == null || student.grade == grade)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("افزودن به کلاس") },
+        title = { Text("افزودن موجود") },
         text = {
-            if (students.isEmpty()) Text("دانش‌آموز آزاد دیگری وجود ندارد.")
-            else LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                items(students, key = StudentProfile::id) { student ->
+            LazyColumn(Modifier.heightIn(max = 480.dp)) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        FilterChip(
+                            selected = gender == null,
+                            onClick = { gender = null },
+                            label = { Text("همه") }
+                        )
+                        FilterChip(
+                            selected = gender == "female",
+                            onClick = { gender = "female" },
+                            label = { Text("دختر") }
+                        )
+                        FilterChip(
+                            selected = gender == "male",
+                            onClick = { gender = "male" },
+                            label = { Text("پسر") }
+                        )
+                    }
+                    if (grades.isNotEmpty()) {
+                        Row(
+                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            FilterChip(
+                                selected = grade == null,
+                                onClick = { grade = null },
+                                label = { Text("همه پایه‌ها") }
+                            )
+                            grades.forEach { item ->
+                                FilterChip(
+                                    selected = grade == item,
+                                    onClick = { grade = item },
+                                    label = { Text(item) }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (visible.isEmpty()) item { Text("دانش‌آموزی با این فیلتر یافت نشد.") }
+                items(visible, key = StudentProfile::id) { student ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = student.id in selected,
-                            onCheckedChange = { checked -> if (checked) selected.add(student.id) else selected.remove(student.id) }
+                            onCheckedChange = { checked ->
+                                if (checked) selected.add(student.id) else selected.remove(student.id)
+                            }
                         )
-                        Text(student.fullName)
+                        Text("${student.fullName} · پایه ${student.grade.orEmpty().ifBlank { "—" }}")
                     }
                 }
             }
         },
-        confirmButton = { Button(onClick = { onAdd(selected.toList()) }, enabled = selected.isNotEmpty()) { Text("افزودن") } },
+        confirmButton = {
+            Button(
+                onClick = { onAdd(selected.toList()) },
+                enabled = selected.isNotEmpty()
+            ) { Text("افزودن") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )
 }
 
-@Composable
-private fun StudentCreatorDialog(
-    classId: String?,
-    onDismiss: () -> Unit,
-    onCreate: (NewStudentRequest) -> Unit
-) {
-    var first by remember { mutableStateOf("") }
-    var last by remember { mutableStateOf("") }
-    var username by remember { mutableStateOf("") }
-    var usernameEdited by remember { mutableStateOf(false) }
-    var password by remember { mutableStateOf(generatePassword(10)) }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var father by remember { mutableStateOf("") }
-    var grade by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("") }
 
-    fun updateSuggestion(newFirst: String = first, newLast: String = last) {
-        if (!usernameEdited) username = PersianUsernameSuggester.suggest(newFirst, newLast)
+@Composable
+private fun StudentEditDialog(
+    student: StudentProfile,
+    onDismiss: () -> Unit,
+    onSave: (UpdateStudentRequest) -> Unit
+) {
+    var first by remember(student.id) {
+        mutableStateOf(student.firstName.orEmpty().ifBlank { student.fullName.substringBefore(' ') })
     }
+    var last by remember(student.id) {
+        mutableStateOf(student.lastName.orEmpty().ifBlank { student.fullName.substringAfter(' ', "") })
+    }
+    var username by remember(student.id) { mutableStateOf(student.username.orEmpty()) }
+    var gender by remember(student.id) { mutableStateOf(student.gender.orEmpty()) }
+    var fatherName by remember(student.id) { mutableStateOf(student.fatherName.orEmpty()) }
+    var grade by remember(student.id) { mutableStateOf(student.grade.orEmpty()) }
+    var newPassword by remember(student.id) { mutableStateOf("") }
+    var passwordVisible by remember(student.id) { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(
-            Modifier
-                .fillMaxSize()
-                .imePadding()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
             contentAlignment = Alignment.TopCenter
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth().widthIn(max = 620.dp),
                 shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 6.dp
             ) {
-                Column(
-                    Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text("حساب دانش‌آموز جدید", style = MaterialTheme.typography.titleLarge)
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("ویرایش دانش‌آموز", style = MaterialTheme.typography.titleLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
-                            first,
-                            {
-                                first = it.take(100)
-                                updateSuggestion(newFirst = first)
-                            },
-                            label = { Text("نام") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            first, { first = it.take(100) }, label = { Text("نام") },
+                            singleLine = true, modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            last,
-                            {
-                                last = it.take(100)
-                                updateSuggestion(newLast = last)
-                            },
-                            label = { Text("نام خانوادگی") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            last, { last = it.take(100) }, label = { Text("نام خانوادگی") },
+                            singleLine = true, modifier = Modifier.weight(1f)
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
-                            father,
-                            { father = it.take(100) },
-                            label = { Text("نام پدر") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            fatherName, { fatherName = it.take(100) }, label = { Text("نام پدر") },
+                            singleLine = true, modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            grade,
-                            { grade = it.take(100) },
-                            label = { Text("پایه") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            grade, { grade = it.take(100) }, label = { Text("پایه") },
+                            singleLine = true, modifier = Modifier.weight(1f)
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             username,
                             {
-                                usernameEdited = true
                                 username = it.lowercase().filter { c ->
                                     c in 'a'..'z' || c.isDigit() || c == '_'
                                 }.take(20)
                             },
-                            label = { Text("نام کاربری پیشنهادی") },
+                            label = { Text("نام کاربری") },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            password,
-                            { password = it.take(72) },
-                            label = { Text("رمز عبور") },
+                            newPassword,
+                            { newPassword = it.take(72) },
+                            label = { Text("رمز جدید اختیاری") },
+                            supportingText = {
+                                Text("رمز قبلی قابل بازیابی نیست؛ خالی بماند تغییر نمی‌کند.")
+                            },
                             visualTransformation = passwordTransformation(passwordVisible),
                             trailingIcon = {
                                 PasswordVisibilityButton(
@@ -629,25 +702,22 @@ private fun StudentCreatorDialog(
                     }
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         FilterChip(
                             selected = gender == "female",
                             onClick = { gender = "female" },
-                            label = { Text("دختر") },
-                            modifier = Modifier.weight(1f)
+                            label = { Text("دختر") }
                         )
                         FilterChip(
                             selected = gender == "male",
                             onClick = { gender = "male" },
                             label = { Text("پسر") },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.padding(horizontal = 8.dp)
                         )
-                        OutlinedButton(
-                            onClick = { password = generatePassword(10) },
-                            modifier = Modifier.weight(1f)
-                        ) { Text("🎲 رمز") }
+                        OutlinedButton(onClick = { newPassword = generatePassword(10) }) {
+                            Text("🎲 رمز")
+                        }
                     }
                     Row(
                         Modifier.fillMaxWidth(),
@@ -658,106 +728,29 @@ private fun StudentCreatorDialog(
                         }
                         Button(
                             enabled = first.isNotBlank() && username.length >= 4 &&
-                                password.length in 8..72 && gender.isNotBlank(),
+                                gender in setOf("male", "female") &&
+                                (newPassword.isBlank() || newPassword.length in 8..72),
                             onClick = {
-                                onCreate(
-                                    NewStudentRequest(
+                                onSave(
+                                    UpdateStudentRequest(
+                                        student.id,
                                         first,
                                         last,
                                         username,
-                                        password,
                                         gender,
-                                        father,
+                                        fatherName,
                                         grade,
-                                        classId
+                                        newPassword.takeIf(String::isNotBlank)
                                     )
                                 )
                             },
                             modifier = Modifier.weight(1f)
-                        ) { Text("ساخت حساب") }
+                        ) { Text("ذخیره") }
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun StudentEditDialog(
-    student: StudentProfile,
-    onDismiss: () -> Unit,
-    onSave: (UpdateStudentRequest) -> Unit
-) {
-    var first by remember(student.id) { mutableStateOf(student.firstName.orEmpty().ifBlank { student.fullName.substringBefore(' ') }) }
-    var last by remember(student.id) { mutableStateOf(student.lastName.orEmpty().ifBlank { student.fullName.substringAfter(' ', "") }) }
-    var username by remember(student.id) { mutableStateOf(student.username.orEmpty()) }
-    var gender by remember(student.id) { mutableStateOf(student.gender.orEmpty()) }
-    var fatherName by remember(student.id) { mutableStateOf(student.fatherName.orEmpty()) }
-    var grade by remember(student.id) { mutableStateOf(student.grade.orEmpty()) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("ویرایش دانش‌آموز") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(first, { first = it.take(100) }, label = { Text("نام") })
-                OutlinedTextField(last, { last = it.take(100) }, label = { Text("نام خانوادگی") })
-                OutlinedTextField(
-                    username,
-                    { username = it.lowercase().filter { c -> c in 'a'..'z' || c.isDigit() || c == '_' }.take(20) },
-                    label = { Text("نام کاربری") }
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = gender == "male", onClick = { gender = "male" }, label = { Text("پسر") })
-                    FilterChip(selected = gender == "female", onClick = { gender = "female" }, label = { Text("دختر") })
-                }
-                OutlinedTextField(fatherName, { fatherName = it.take(100) }, label = { Text("نام پدر") })
-                OutlinedTextField(grade, { grade = it.take(100) }, label = { Text("پایه") })
-                Text("رمز در این فرم نمایش یا بازیابی نمی‌شود.")
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = first.isNotBlank() && username.length >= 4 && gender in setOf("male", "female"),
-                onClick = { onSave(UpdateStudentRequest(student.id, first, last, username, gender, fatherName, grade)) }
-            ) { Text("ذخیره") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
-    )
-}
-
-@Composable
-private fun StudentPasswordResetDialog(
-    student: StudentProfile,
-    onDismiss: () -> Unit,
-    onReset: (String) -> Unit
-) {
-    var password by remember(student.id) { mutableStateOf(generatePassword(10)) }
-    var passwordVisible by remember(student.id) { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("تعیین رمز جدید برای ${student.fullName}") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it.take(72) },
-                    label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
-                    visualTransformation = passwordTransformation(passwordVisible),
-                    trailingIcon = {
-                        PasswordVisibilityButton(
-                            visible = passwordVisible,
-                            onToggle = { passwordVisible = !passwordVisible }
-                        )
-                    }
-                )
-                Text("رمز قبلی قابل مشاهده نیست. رمز جدید فقط پس از موفقیت همین عملیات یک بار نمایش داده می‌شود.")
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onReset(password) }, enabled = password.length in 8..72) { Text("تغییر رمز") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
-    )
 }
 
 private data class BulkStudentDraft(

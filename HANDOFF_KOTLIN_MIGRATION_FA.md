@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V21 نوار دانش‌آموز و اسکرول دقیق سؤال
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V22 منوی کلاس و کارت تعاملی دانش‌آموز
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2933,3 +2933,55 @@ Debug APK SHA-256                     3c563f64d530e6b79d0360d116a425f18879272a06
 ```
 
 SQL/Edge/Secret/Dependency جدید ندارد.
+
+---
+
+## ۴۰) V22 — منوی کلاس و کارت تعاملی دانش‌آموز
+
+### تحویل
+
+```text
+Main + student → BulkStudentDialog
+Class title + grade in one row
+Class + → hanging Existing/New cards
+Existing picker gender + grade filters
+New → bulk dialog, 1..100 rows
+Student card summary name + grade
+Female pink / male blue
+Independent card expand/collapse
+Green/red active toggle + edit pencil + class add
+Atomic multi-class membership RPC
+Secure optional new password; old password never retrievable
+Hamburger: Students / Classes / Calendar
+```
+
+### امنیت رمز
+
+رمز قبلی Supabase Auth قابل بازیابی نیست و `plain_password` بازنمی‌گردد. در ویرایش، رمز جدید اختیاری است؛ خالی یعنی بدون تغییر.
+
+### SQL
+
+```text
+SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql
+supabase/migrations/20260814_native_student_class_membership_v22.sql
+supabase/tests/20260814_v22_integration.sql
+```
+
+Readiness: `student_multi_class_ready=true`.
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              124/124 PASS
+Migration parser                       PASS (6 statements)
+Test SQL parser                        PASS (4 statements)
+Unsafe DML                             0
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 22 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     0ea902fe1eb9f6c42b9f32a82dfc733016583afca8f26ba08994d0e01b538b65
+```
+
+راهنمای مستقل: `CLASS_STUDENT_CARDS_V22_FA.md`.

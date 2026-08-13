@@ -96,6 +96,14 @@ class ClassesViewModel(
         }
     }
 
+    fun addStudentToClasses(studentId: String, classIds: Set<String>) = action(
+        "دانش‌آموز به کلاس‌های انتخاب‌شده اضافه شد."
+    ) {
+        repository.addStudentToClasses(studentId, classIds).getOrThrow()
+        reloadData()
+        state.value.selectedClass?.id?.let { loadRosterNow(it) }
+    }
+
     fun removeStudent(studentId: String) {
         val classId = state.value.selectedClass?.id ?: return
         action("دانش‌آموز از کلاس خارج شد؛ حساب او حفظ شد.") {

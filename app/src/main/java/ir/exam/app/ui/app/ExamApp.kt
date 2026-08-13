@@ -465,8 +465,9 @@ private fun AuthenticatedShell(
     val menuCards = if (user.role == UserRole.TEACHER) {
         listOf(
             Design69MenuCard(
-                "تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar,
-                page == MainPage.CALENDAR, onClick = { select(onCalendar) }
+                "دانش‌آموزان", "فهرست و وضعیت دانش‌آموزان", Design69Icons.Students,
+                page == MainPage.SCHOOL && schoolStudentsSelected,
+                onClick = { select(onStudents) }
             ),
             Design69MenuCard(
                 "کلاس‌ها", "فهرست و مدیریت کلاس‌ها", Design69Icons.Classes,
@@ -474,9 +475,8 @@ private fun AuthenticatedShell(
                 onClick = { select(onClasses) }
             ),
             Design69MenuCard(
-                "دانش‌آموزان", "فهرست و وضعیت دانش‌آموزان", Design69Icons.Students,
-                page == MainPage.SCHOOL && schoolStudentsSelected,
-                onClick = { select(onStudents) }
+                "تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar,
+                page == MainPage.CALENDAR, onClick = { select(onCalendar) }
             ),
             Design69MenuCard(
                 "سربرگ", "اطلاعات رسمی چاپ آزمون", Design69Icons.Header,

@@ -43,7 +43,7 @@ class V20InteractionPolishTest {
         val school = File(root, "app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").readText()
         val formula = File(root, "app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
         assertFalse("bulk title text returned", "Text(\"افزودن گروهی دانش‌آموز\"" in school)
-        assertTrue("Text(\"▦\"" in school)
+        assertFalse("obsolete bulk window icon returned", "Text(\"▦\"" in school)
         assertTrue("Color(0xFF25A86B)" in school)
         assertTrue("Color(0xFFE5484D)" in school)
         assertTrue("Text(\"+\"" in school && "Text(\"×\"" in school)

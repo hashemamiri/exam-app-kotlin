@@ -51,6 +51,9 @@ profile_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/Supabase
 portability_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
 v18_migration=(ROOT/"supabase/migrations/20260813_native_navigation_account_v18.sql").read_text()
 v18_sql_copy=(ROOT/"SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql").read_text()
+v22_migration=(ROOT/"supabase/migrations/20260814_native_student_class_membership_v22.sql").read_text()
+v22_sql_copy=(ROOT/"SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
+school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
@@ -234,6 +237,31 @@ require("suspend fun scrollQuestionToHeader" in builder_screen and builder_scree
 require("contentAlignment: Alignment = Alignment.Center" in neumorphic_design and
         "horizontalArrangement = Arrangement.Center" in students_content,
         "custom/button toolbar content is not centered")
+class_roster=school_screen.split("private fun ClassRosterContent(",1)[1].split("private fun StudentsContent(",1)[0]
+student_card=school_screen.split("private fun StudentCard(",1)[1].split("private fun ClassEditorDialog(",1)[0]
+member_picker=school_screen.split("private fun MemberPickerDialog(",1)[1].split("private fun StudentEditDialog(",1)[0]
+require("showBulk = true" in school_screen.split("SchoolLaunchAction.CREATE_STUDENT ->",1)[1].split("SchoolLaunchAction.CREATE_CLASS",1)[0],
+        "main quick-create student does not open bulk dialog")
+require(all(marker in class_roster for marker in ("addMenuOpen","افزودن موجود","افزودن جدید")) and
+        "حساب جدید" not in class_roster and "ساخت گروهی" not in class_roster,
+        "class hanging add menu is incomplete")
+require(all(marker in member_picker for marker in ("دختر","پسر","همه پایه‌ها")),
+        "existing-student gender/grade filters missing")
+require(all(marker in student_card for marker in ("expanded = !expanded","Color(0xFFFF80AB)","Color(0xFF64B5F6)","Icons.Outlined.ToggleOn","Icons.Outlined.Edit","Icons.Outlined.Add","selectedClasses")),
+        "gender-colored accordion student cards or icon actions incomplete")
+require("رمز جدید اختیاری" in school_screen and "خالی بماند تغییر نمی‌کند" in school_screen and
+        "request.newPassword.orEmpty()" in school_repository and
+        not re.search(r"\b(val|var)\s+plain_password\b", main_text),
+        "secure optional password edit path incomplete or old password storage returned")
+require(v22_sql_copy == v22_migration and all(marker in v22_migration for marker in (
+            "native_add_student_to_classes_v22","teacher_id = auth.uid()","on conflict do nothing","revoke all on function"
+        )) and "native_add_student_to_classes_v22" in school_repository,
+        "atomic owner-scoped multi-class membership migration incomplete")
+teacher_menu=app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else {",1)[0]
+require(teacher_menu.index("دانش‌آموزان") < teacher_menu.index("تقویم و پیام‌ها"),
+        "student/calendar hamburger card positions were not swapped")
+require("requests.size in 1..100" in school_repository,
+        "bulk student creation no longer permits a single row")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),
@@ -299,7 +327,7 @@ require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppData
 
 for match in re.finditer(
     r"(?im)^\s*(delete\s+from|update\s+)([^;]+);",
-    hardening + "\n" + critical + "\n" + parity + "\n" + v18_migration
+    hardening + "\n" + critical + "\n" + parity + "\n" + v18_migration + "\n" + v22_migration
 ):
     statement = match.group(0)
     if not re.search(r"(?i)\bwhere\b", statement):

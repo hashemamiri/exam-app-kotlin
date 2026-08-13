@@ -76,6 +76,21 @@ class SupabaseSchoolRepository : SchoolRepository {
         raw["added"]?.jsonPrimitive?.intOrNull ?: studentIds.size
     }
 
+    override suspend fun addStudentToClasses(
+        studentId: String,
+        classIds: Set<String>
+    ): Result<Int> = runCatching {
+        require(studentId.isNotBlank()) { "دانش‌آموز نامعتبر است." }
+        require(classIds.isNotEmpty()) { "حداقل یک کلاس انتخاب کنید." }
+        val raw = rpcObject("native_add_student_to_classes_v22", buildJsonObject {
+            put("p_student", studentId)
+            put("p_classes", buildJsonArray {
+                classIds.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) }
+            })
+        }).throwIfError()
+        raw["added"]?.jsonPrimitive?.intOrNull ?: 0
+    }
+
     override suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit> = runCatching {
         rpcObject("remove_student_from_class", buildJsonObject {
             put("p_class", classId)
@@ -150,6 +165,9 @@ class SupabaseSchoolRepository : SchoolRepository {
         require(request.firstName.trim().isNotEmpty()) { "نام دانش‌آموز را وارد کنید." }
         require(request.username.matches(Regex("^[a-z0-9_]{4,20}$"))) { "نام کاربری نامعتبر است." }
         require(request.gender == "male" || request.gender == "female") { "جنسیت را انتخاب کنید." }
+        require(request.newPassword == null || request.newPassword.length in 8..72) {
+            "رمز جدید باید ۸ تا ۷۲ کاراکتر باشد."
+        }
         SupabaseProvider.client.functions.invoke(
             "manage-student",
             body = buildJsonObject {
@@ -159,7 +177,7 @@ class SupabaseSchoolRepository : SchoolRepository {
                 put("last_name", request.lastName.trim())
                 put("username", request.username.trim().lowercase())
                 put("gender", request.gender)
-                put("password", "")
+                put("password", request.newPassword.orEmpty())
             }
         ).body<JsonObject>().throwIfError()
         rpcObject("save_student_extra", buildJsonObject {

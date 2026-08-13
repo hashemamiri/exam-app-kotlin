@@ -55,7 +55,8 @@ data class UpdateStudentRequest(
     val username: String,
     val gender: String,
     val fatherName: String = "",
-    val grade: String = ""
+    val grade: String = "",
+    val newPassword: String? = null
 )
 
 data class CalendarEvent(
