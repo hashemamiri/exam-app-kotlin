@@ -61,7 +61,7 @@ import kotlin.math.hypot
 import kotlin.math.sign
 
 object Design69ManagementCardsContract {
-    const val CARD_COUNT = 3
+    const val CARD_COUNT = 5
     const val DRAG_THRESHOLD_DP = 52
 }
 
@@ -78,32 +78,56 @@ private data class ManagementCardSpec(
 fun TeacherManagementCardsScreen(
     cycleKey: Int,
     onStats: () -> Unit,
+    onQuestionBank: () -> Unit,
     onGrading: () -> Unit,
-    onPending: () -> Unit
+    onPending: () -> Unit,
+    onAnswers: () -> Unit
 ) {
     val neo = neumorphic69Colors
-    val cards = remember(onStats, onGrading, onPending, neo.accent, neo.accent2) {
+    val cards = remember(
+        onStats,
+        onQuestionBank,
+        onGrading,
+        onPending,
+        onAnswers,
+        neo.accent,
+        neo.accent2
+    ) {
         listOf(
             ManagementCardSpec(
-                "آمار و گزارش‌ها",
-                "نمودار، میانگین، تحلیل سؤال و خروجی واقعی",
+                "آمار",
+                "نمودارها، میانگین‌ها، تحلیل سؤال و خروجی‌های آزمون را مدیریت می‌کند.",
                 Design69Icons.Reports,
                 listOf(neo.accent, neo.accent2),
                 onStats
             ),
             ManagementCardSpec(
+                "بانک سؤال",
+                "جست‌وجو، دسته‌بندی، مشاهده، ویرایش، حذف و افزودن سؤال به آزمون.",
+                Design69Icons.Exams,
+                listOf(Color(0xFF2878DB), Color(0xFF24B8C8)),
+                onQuestionBank
+            ),
+            ManagementCardSpec(
                 "تصحیح",
-                "پاسخ‌ها، حضور، بازخورد و تأیید نمره",
+                "همه پاسخ‌ها، حضور، بازخورد و ثبت یا اصلاح نمره را باز می‌کند.",
                 Design69Icons.Grading,
                 listOf(Color(0xFF25BFA4), Color(0xFF45D7BD)),
                 onGrading
             ),
             ManagementCardSpec(
                 "مانده",
-                "پاسخ‌های در انتظار تصحیح و پیگیری",
-                Design69Icons.Exams,
-                listOf(Color(0xFF4D5B74), Color(0xFF273247)),
+                "فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.",
+                Design69Icons.Cards,
+                listOf(Color(0xFFE0587F), Color(0xFF7D6CF4)),
                 onPending
+            ),
+            ManagementCardSpec(
+                "پاسخ",
+                "فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.",
+                Design69Icons.Grading,
+                listOf(Color(0xFF4D5B74), Color(0xFF273247)),
+                onAnswers
             )
         )
     }
@@ -285,12 +309,11 @@ fun TeacherManagementCardsScreen(
                                 Text("سامانه آزمون", color = Color.White.copy(alpha = .72f), style = MaterialTheme.typography.labelSmall)
                             }
                             Spacer(Modifier.weight(1f))
-                            Text(data.title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text(
-                                data.subtitle,
-                                color = Color.White.copy(alpha = .76f),
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(top = 8.dp)
+                                data.title,
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -312,39 +335,32 @@ fun TeacherManagementCardsScreen(
         }
         Spacer(Modifier.height(14.dp))
         Text(
-            "↔  ↕  کشیدن، کلیدهای جهت یا دکمه‌های زیر",
+            "↔  ↕  کارت را بکشید؛ برای ورود، کارت فعال را لمس کنید.",
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
             color = neo.muted,
             style = MaterialTheme.typography.labelSmall
         )
-        Spacer(Modifier.height(18.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            cards.forEachIndexed { index, card ->
-                NeumorphicPressable(
-                    onClick = {
-                        if (index == activeIndex) card.action() else activeIndex = index
-                    },
-                    modifier = Modifier.weight(1f).height(76.dp),
-                    radius = 20.dp,
-                    depth = 9.dp
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            card.icon,
-                            contentDescription = card.title,
-                            tint = if (index == activeIndex) neo.accent else neo.muted,
-                            modifier = Modifier.size(23.dp)
-                        )
-                        Text(
-                            card.title,
-                            color = if (index == activeIndex) neo.accent else neo.muted,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )
-                    }
-                }
+        Spacer(Modifier.height(16.dp))
+        NeumorphicPanel(
+            modifier = Modifier.fillMaxWidth(),
+            radius = 22.dp,
+            depth = 9.dp,
+            pressed = true,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    cards[activeIndex].title,
+                    color = neo.ink,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    cards[activeIndex].subtitle,
+                    color = neo.muted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }

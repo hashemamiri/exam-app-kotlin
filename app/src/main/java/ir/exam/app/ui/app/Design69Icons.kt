@@ -112,6 +112,18 @@ object Design69Icons {
         }
     }
 
+    val Header: ImageVector by lazy {
+        vector("Design69Header") {
+            strokePath {
+                moveTo(4f, 4f); lineTo(20f, 4f); lineTo(20f, 20f); lineTo(4f, 20f); close()
+                moveTo(4f, 9f); lineTo(20f, 9f)
+                moveTo(8f, 7f); lineTo(16f, 7f)
+                moveTo(8f, 13f); lineTo(16f, 13f)
+                moveTo(8f, 17f); lineTo(13f, 17f)
+            }
+        }
+    }
+
     val Settings: ImageVector by lazy {
         vector("Design69Settings") {
             strokePath {

@@ -100,7 +100,7 @@ fun Design69QuickAddOverlay(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val horizontal = (maxWidth * .29f).coerceIn(94.dp, 124.dp)
-        val startY = (maxHeight / 2f - 66.dp).coerceAtLeast(220.dp)
+        val startY = (maxHeight / 2f - 49.dp).coerceAtLeast(220.dp)
 
         Box(
             Modifier
@@ -186,12 +186,12 @@ fun Design69QuickAddOverlay(
                         y = (startY.roundToPx() * (1f - travel.value)).roundToInt()
                     )
                 }
-                .size(70.dp)
-                .neumorphic69(colors, 35.dp, 15.dp)
+                .size(58.dp)
+                .neumorphic69(colors, 29.dp, 12.dp)
                 .graphicsLayer {
                     rotationZ = Design69QuickAddContract.OPEN_ROTATION_DEGREES * travel.value
-                    scaleX = 1f + .08f * travel.value
-                    scaleY = 1f + .08f * travel.value
+                    scaleX = 1f + .20f * travel.value
+                    scaleY = 1f + .20f * travel.value
                     shape = CircleShape
                     clip = true
                 }
@@ -208,7 +208,7 @@ fun Design69QuickAddOverlay(
                 Design69Icons.Add,
                 contentDescription = "بستن افزودن سریع",
                 tint = Color.White,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(27.dp)
             )
         }
 

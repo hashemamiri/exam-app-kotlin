@@ -32,6 +32,7 @@ data class GradingUiState(
     val liveStatus: JsonObject? = null,
     val mode: String = "grading",
     val pendingOnly: Boolean = false,
+    val gradedOnly: Boolean = false,
     val selectedQuestionIndex: Int = 0,
     val error: String? = null,
     val message: String? = null
@@ -87,7 +88,24 @@ class GradingViewModel(
     }
 
     fun setPendingOnly(value: Boolean) {
-        _state.update { it.copy(pendingOnly = value, mode = if (value) "grading" else it.mode) }
+        _state.update {
+            it.copy(
+                pendingOnly = value,
+                gradedOnly = if (value) false else it.gradedOnly,
+                mode = if (value) "grading" else it.mode
+            )
+        }
+        if (value) liveJob?.cancel()
+    }
+
+    fun setGradedOnly(value: Boolean) {
+        _state.update {
+            it.copy(
+                gradedOnly = value,
+                pendingOnly = if (value) false else it.pendingOnly,
+                mode = if (value) "grading" else it.mode
+            )
+        }
         if (value) liveJob?.cancel()
     }
 

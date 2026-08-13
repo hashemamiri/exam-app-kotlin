@@ -2,6 +2,7 @@ package ir.exam.app.data.repository
 
 import android.content.Context
 import android.net.Uri
+import android.util.Patterns
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.dto.NativeProfileDto
@@ -37,7 +38,8 @@ class SupabaseProfileRepository(context: Context) {
                 province = dto.headerProvince.orEmpty(),
                 city = dto.headerCity.orEmpty(),
                 district = dto.headerDistrict.orEmpty(),
-                school = dto.headerSchool.orEmpty()
+                school = dto.headerSchool.orEmpty(),
+                grade = dto.headerGrade.orEmpty()
             ),
             role = if (dto.role.equals("teacher", true)) UserRole.TEACHER else UserRole.STUDENT
         )
@@ -66,6 +68,7 @@ class SupabaseProfileRepository(context: Context) {
                 put("p_hdr_city", profile.header.city.trim())
                 put("p_hdr_district", profile.header.district.trim())
                 put("p_hdr_school", profile.header.school.trim())
+                put("p_hdr_grade", profile.header.grade.trim())
             }
         ).decodeAs<ProfileSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
@@ -76,6 +79,17 @@ class SupabaseProfileRepository(context: Context) {
         require(newPassword.length in 8..72) { "رمز عبور باید ۸ تا ۷۲ کاراکتر باشد." }
         check(SupabaseProvider.client.auth.currentUserOrNull() != null) { "نشست ورود پیدا نشد." }
         SupabaseProvider.client.auth.updateUser { password = newPassword }
+    }
+
+    suspend fun changeEmail(newEmail: String): Result<Unit> = runCatching {
+        val clean = newEmail.trim().lowercase()
+        require(Patterns.EMAIL_ADDRESS.matcher(clean).matches() && clean.length <= 254) {
+            "ایمیل جدید معتبر نیست."
+        }
+        val current = SupabaseProvider.client.auth.currentUserOrNull()
+            ?: error("نشست ورود پیدا نشد.")
+        require(!current.email.equals(clean, ignoreCase = true)) { "ایمیل جدید با ایمیل فعلی یکسان است." }
+        SupabaseProvider.client.auth.updateUser { email = clean }
     }
 
     suspend fun changeTeacherUsername(username: String): Result<String> = runCatching {
@@ -97,7 +111,8 @@ class SupabaseProfileRepository(context: Context) {
             "استان" to profile.header.province,
             "شهر" to profile.header.city,
             "منطقه" to profile.header.district,
-            "مدرسه" to profile.header.school
+            "مدرسه" to profile.header.school,
+            "پایه" to profile.header.grade
         ).forEach { (label, value) -> require(value.length <= 120) { "$label حداکثر ۱۲۰ نویسه است." } }
         require(profile.avatarUrl == null || profile.avatarUrl.startsWith("https://")) { "نشانی عکس پروفایل معتبر نیست." }
     }

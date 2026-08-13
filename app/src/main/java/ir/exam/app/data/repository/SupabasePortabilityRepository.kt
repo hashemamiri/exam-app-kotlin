@@ -89,7 +89,8 @@ class SupabasePortabilityRepository {
                 province = profile.headerProvince.orEmpty(),
                 city = profile.headerCity.orEmpty(),
                 district = profile.headerDistrict.orEmpty(),
-                school = profile.headerSchool.orEmpty()
+                school = profile.headerSchool.orEmpty(),
+                grade = profile.headerGrade.orEmpty()
             ),
             subject = exam.subject.orEmpty(),
             durationMinutes = exam.duration ?: 0,
@@ -131,7 +132,7 @@ class SupabasePortabilityRepository {
     fun parseExam(raw: String) = ExamPackageCodec.decode(raw)
 
     suspend fun exportBackup(): Result<PortableFile> = runCatching {
-        val raw = SupabaseProvider.client.postgrest.rpc("native_export_backup_v1")
+        val raw = SupabaseProvider.client.postgrest.rpc("native_export_backup_v2")
             .decodeAs<JsonObject>()
         raw.throwPortabilityError()
         val content = prettyJson.encodeToString(JsonObject.serializer(), raw)
@@ -147,7 +148,7 @@ class SupabasePortabilityRepository {
         val root = prettyJson.parseToJsonElement(raw).jsonObject
         require(root["_app"]?.jsonPrimitive?.contentOrNull == "exam-native") { "فایل پشتیبان متعلق به نسخه Native نیست." }
         require(root["_kind"]?.jsonPrimitive?.contentOrNull == "backup") { "نوع فایل، پشتیبان کامل نیست." }
-        require((root["_version"]?.jsonPrimitive?.intOrNull ?: 0) in 1..2) { "نسخه فایل پشتیبان پشتیبانی نمی‌شود." }
+        require((root["_version"]?.jsonPrimitive?.intOrNull ?: 0) in 1..3) { "نسخه فایل پشتیبان پشتیبانی نمی‌شود." }
         val exams = root["exams"]?.jsonArray ?: JsonArray(emptyList())
         val classes = root["classes"]?.jsonArray ?: JsonArray(emptyList())
         require(exams.size <= 200) { "تعداد آزمون‌های پشتیبان بیش از حد مجاز است." }
@@ -175,7 +176,7 @@ class SupabasePortabilityRepository {
     ): Result<RestoreSummary> = runCatching {
         require(options.exams || options.classes || options.header) { "حداقل یک بخش برای بازیابی انتخاب کنید." }
         val raw = SupabaseProvider.client.postgrest.rpc(
-            "native_restore_backup_v1",
+            "native_restore_backup_v2",
             buildJsonObject {
                 put("p_operation", operationId)
                 put("p_bundle", preview.bundle)

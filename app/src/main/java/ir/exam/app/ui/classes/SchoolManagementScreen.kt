@@ -45,7 +45,7 @@ import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import kotlin.random.Random
 
-enum class SchoolLaunchAction { CREATE_STUDENT, CREATE_CLASS }
+enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CREATE_CLASS }
 
 @Composable
 fun SchoolManagementScreen(
@@ -72,6 +72,16 @@ fun SchoolManagementScreen(
     LaunchedEffect(Unit) { viewModel.load() }
     LaunchedEffect(launchAction) {
         when (launchAction) {
+            SchoolLaunchAction.SHOW_CLASSES -> {
+                showStudents = false
+                viewModel.closeClass()
+                onLaunchActionConsumed()
+            }
+            SchoolLaunchAction.SHOW_STUDENTS -> {
+                showStudents = true
+                viewModel.closeClass()
+                onLaunchActionConsumed()
+            }
             SchoolLaunchAction.CREATE_STUDENT -> {
                 showStudents = true
                 viewModel.closeClass()

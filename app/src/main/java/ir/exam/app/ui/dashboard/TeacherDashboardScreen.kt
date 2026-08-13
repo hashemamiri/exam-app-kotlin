@@ -2,6 +2,12 @@ package ir.exam.app.ui.dashboard
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -69,6 +75,7 @@ fun TeacherDashboardScreen(
     }
     var deleteCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var duplicateCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
+    var expandedExamId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(refreshKey) { viewModel.load() }
     LaunchedEffect(state.exportFile) {
@@ -97,9 +104,6 @@ fun TeacherDashboardScreen(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                Text("داشبورد معلم", style = MaterialTheme.typography.headlineMedium)
-            }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(onClick = onCreateExam) { Text("ساخت آزمون جدید") }
@@ -131,7 +135,11 @@ fun TeacherDashboardScreen(
                 }
                 else -> items(state.exams, key = { it.id }) { exam ->
                     NeumorphicPanel(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expandedExamId = if (expandedExamId == exam.id) null else exam.id
+                            },
                         radius = 22.dp,
                         depth = 10.dp,
                         contentPadding = PaddingValues(14.dp)
@@ -142,28 +150,41 @@ fun TeacherDashboardScreen(
                             Text("کد آزمون: ${exam.code ?: "—"}")
                             Text("مدت: ${exam.duration ?: 0} دقیقه · بارم: ${exam.totalScore}")
                             Text(if (exam.isOpen) "وضعیت: باز" else "وضعیت: بسته")
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Button(onClick = { onEditExam(exam.id) }) { Text("ویرایش") }
-                                OutlinedButton(onClick = { viewModel.setOpen(exam) }) {
-                                    Text(if (exam.isOpen) "بستن" else "بازکردن")
+                            Text(
+                                if (expandedExamId == exam.id) "برای بستن عملیات، کارت را دوباره لمس کنید."
+                                else "برای نمایش عملیات آزمون، کارت را لمس کنید.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            AnimatedVisibility(
+                                visible = expandedExamId == exam.id,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Button(onClick = { onEditExam(exam.id) }) { Text("ویرایش") }
+                                        OutlinedButton(onClick = { viewModel.setOpen(exam) }) {
+                                            Text(if (exam.isOpen) "بستن" else "بازکردن")
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        OutlinedButton(onClick = { duplicateCandidate = exam }) {
+                                            Text("تکثیر با کسر هزینه")
+                                        }
+                                        OutlinedButton(onClick = { viewModel.exportExam(exam.id) }) {
+                                            Text("صادرکردن")
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        OutlinedButton(onClick = { viewModel.preparePrint(exam.id, false) }) {
+                                            Text("چاپ برگه")
+                                        }
+                                        OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true) }) {
+                                            Text("چاپ با کلید")
+                                        }
+                                        TextButton(onClick = { deleteCandidate = exam }) { Text("حذف") }
+                                    }
                                 }
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { duplicateCandidate = exam }) {
-                                    Text("تکثیر با کسر هزینه")
-                                }
-                                OutlinedButton(onClick = { viewModel.exportExam(exam.id) }) {
-                                    Text("صادرکردن")
-                                }
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { viewModel.preparePrint(exam.id, false) }) {
-                                    Text("چاپ برگه")
-                                }
-                                OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true) }) {
-                                    Text("چاپ با کلید")
-                                }
-                                TextButton(onClick = { deleteCandidate = exam }) { Text("حذف") }
                             }
                         }
                     }

@@ -228,7 +228,21 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 1f }
         canvas.drawRect(MARGIN, 25f, PAGE_WIDTH - MARGIN, HEADER_BOTTOM, border)
         val header = printable.header
-        drawRtl(canvas, listOf("استان: ${header.province}", "شهر: ${header.city}", "منطقه: ${header.district}", "مدرسه: ${header.school}").joinToString("\n"), PAGE_WIDTH - MARGIN - 8f, 37f, 9.5f, false, 170)
+        drawRtl(
+            canvas,
+            listOf(
+                "استان: ${header.province}",
+                "شهر: ${header.city}",
+                "منطقه: ${header.district}",
+                "مدرسه: ${header.school}",
+                "پایه: ${header.grade}"
+            ).joinToString("\n"),
+            PAGE_WIDTH - MARGIN - 8f,
+            37f,
+            9.5f,
+            false,
+            170
+        )
         drawCentered(canvas, "بسمه تعالی\n${printable.documentTitle}", PAGE_WIDTH / 2f, 39f, 11.5f, true)
         val date = JalaliCalendar.fromGregorian(LocalDate.now()).display()
         drawRtl(canvas, "تاریخ: $date\nصفحه: $pageNumber از $totalPages", 175f, 40f, 9.5f, false, 130)

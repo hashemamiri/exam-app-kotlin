@@ -73,23 +73,36 @@ import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.portability.DataPortabilitySection
 import ir.exam.app.ui.security.AppLockSettings
 
+enum class ProfileSettingsDestination { PROFILE, HEADER, SETTINGS }
+enum class SettingsSection { APPEARANCE, ACCOUNT, DATA, ABOUT }
+
 @Composable
 fun ProfileSettingsScreen(
     user: AppUser,
     appearance: AppearanceSettings,
-    onProfileUpdated: () -> Unit
+    destination: ProfileSettingsDestination = ProfileSettingsDestination.SETTINGS,
+    initialSettingsSection: SettingsSection = SettingsSection.APPEARANCE,
+    onProfileUpdated: () -> Unit,
+    aboutContent: @Composable () -> Unit = {}
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
     val viewModel = remember(user.id) { ProfileSettingsViewModel(appContext, user.role) }
     val state by viewModel.state.collectAsState()
-    var section by remember { mutableIntStateOf(0) }
+    var settingsSection by remember(destination, initialSettingsSection) {
+        mutableStateOf(initialSettingsSection)
+    }
     var confirmRemove by remember { mutableStateOf(false) }
     var avatarEditing by remember { mutableStateOf<Uri?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            avatarEditing=uri
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            avatarEditing = uri
         }
     }
 
@@ -98,61 +111,93 @@ fun ProfileSettingsScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            FilterChip(selected = section == 0, onClick = { section = 0 }, label = { Text("ظاهر") })
-            FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("پروفایل") })
-            FilterChip(selected = section == 2, onClick = { section = 2 }, label = { Text("حساب") })
-            if (user.role == UserRole.TEACHER) {
-                FilterChip(selected = section == 3, onClick = { section = 3 }, label = { Text("سربرگ") })
-                FilterChip(selected = section == 4, onClick = { section = 4 }, label = { Text("داده‌ها") })
+        if (destination == ProfileSettingsDestination.SETTINGS) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    SettingsSection.APPEARANCE to "ظاهر",
+                    SettingsSection.ACCOUNT to "حساب",
+                    SettingsSection.DATA to "داده‌ها",
+                    SettingsSection.ABOUT to "درباره"
+                ).forEach { (item, label) ->
+                    FilterChip(
+                        selected = settingsSection == item,
+                        onClick = { settingsSection = item },
+                        label = { Text(label) }
+                    )
+                }
             }
         }
 
         when {
-            state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             state.profile == null -> ErrorPanel(state.error ?: "پروفایل دریافت نشد.", viewModel::load)
-            section == 0 -> AppearanceSection(appearance, viewModel)
-            section == 1 -> ProfileSection(
+            destination == ProfileSettingsDestination.PROFILE -> ProfileSection(
                 user = user,
                 profile = state.profile!!,
                 state = state,
                 onDisplayName = viewModel::setDisplayName,
                 onAvatarPublic = viewModel::setAvatarPublic,
-                onPickAvatar = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onPickAvatar = {
+                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
                 onRemoveAvatar = { confirmRemove = true },
                 onSave = viewModel::save
             )
-            section == 2 -> AccountSection(
-                role = user.role,
-                profile = state.profile!!,
-                state = state,
-                onChangePassword = viewModel::changePassword,
-                onChangeUsername = viewModel::changeTeacherUsername
-            )
-            section == 3 && user.role == UserRole.TEACHER -> HeaderSection(
+            destination == ProfileSettingsDestination.HEADER && user.role == UserRole.TEACHER -> HeaderSection(
                 profile = state.profile!!,
                 state = state,
                 onProvince = viewModel::setProvince,
                 onCity = viewModel::setCity,
                 onDistrict = viewModel::setDistrict,
                 onSchool = viewModel::setSchool,
+                onGrade = viewModel::setGrade,
                 onSave = viewModel::save
             )
-            else -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                DataPortabilitySection()
+            destination == ProfileSettingsDestination.HEADER -> ErrorPanel(
+                "سربرگ رسمی فقط برای حساب معلم است.",
+                retry = {}
+            )
+            settingsSection == SettingsSection.APPEARANCE -> AppearanceSection(appearance, viewModel)
+            settingsSection == SettingsSection.ACCOUNT -> AccountSection(
+                user = user,
+                profile = state.profile!!,
+                state = state,
+                onChangePassword = viewModel::changePassword,
+                onChangeUsername = viewModel::changeTeacherUsername,
+                onChangeEmail = viewModel::changeEmail
+            )
+            settingsSection == SettingsSection.DATA -> Column(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp)
+            ) {
+                if (user.role == UserRole.TEACHER) {
+                    DataPortabilitySection()
+                } else {
+                    Text("پشتیبان کامل داده‌ها فقط برای حساب معلم در دسترس است.")
+                }
             }
+            else -> Box(Modifier.fillMaxSize()) { aboutContent() }
         }
     }
 
-    avatarEditing?.let { uri -> InteractiveImageEditorDialog(
-        source=uri,forceSquare=true,onDismiss={avatarEditing=null},onDone={viewModel.uploadAvatar(it);avatarEditing=null}
-    ) }
+    avatarEditing?.let { uri ->
+        InteractiveImageEditorDialog(
+            source = uri,
+            forceSquare = true,
+            onDismiss = { avatarEditing = null },
+            onDone = {
+                viewModel.uploadAvatar(it)
+                avatarEditing = null
+            }
+        )
+    }
 
     if (confirmRemove) {
         AlertDialog(
@@ -380,33 +425,14 @@ private fun ProfileSection(
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("مشخصات حساب", style = MaterialTheme.typography.titleMedium)
-                    LabeledValue("نام", profile.fullName)
-                    if (profile.username.isNotBlank()) LabeledValue("نام کاربری", profile.username)
-                    LabeledValue("نقش", if (user.role == UserRole.TEACHER) "معلم" else "دانش‌آموز")
-                    user.email?.takeIf(String::isNotBlank)?.let { LabeledValue("ایمیل", it) }
-                    if (user.role == UserRole.TEACHER) {
-                        OutlinedTextField(
-                            value = profile.displayName,
-                            onValueChange = onDisplayName,
-                            label = { Text("نام نمایشی برای دانش‌آموزان") },
-                            supportingText = { Text("خالی باشد، نام اصلی نمایش داده می‌شود.") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-        }
-        state.teacher?.let { teacher ->
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        ProfileAvatar(teacher.avatarUrl, teacher.name, 56)
-                        Column(Modifier.padding(start = 12.dp)) {
-                            Text("معلم شما", style = MaterialTheme.typography.bodySmall)
-                            Text(teacher.name, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    Text("نام نمایشی", style = MaterialTheme.typography.titleMedium)
+                    OutlinedTextField(
+                        value = profile.displayName,
+                        onValueChange = onDisplayName,
+                        label = { Text("نام نمایشی") },
+                        supportingText = { Text("خالی باشد، نام اصلی حساب نمایش داده می‌شود.") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -416,24 +442,43 @@ private fun ProfileSection(
 
 @Composable
 private fun AccountSection(
-    role: UserRole,
+    user: AppUser,
     profile: NativeProfile,
     state: ProfileSettingsState,
     onChangePassword: (String, String) -> Unit,
-    onChangeUsername: (String) -> Unit
+    onChangeUsername: (String) -> Unit,
+    onChangeEmail: (String) -> Unit
 ) {
+    val role = user.role
     var username by remember(profile.username) { mutableStateOf(profile.username) }
+    var newEmail by remember(user.email) { mutableStateOf("") }
     var password by remember(profile.id) { mutableStateOf("") }
     var confirmation by remember(profile.id) { mutableStateOf("") }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (role == UserRole.TEACHER) {
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("نام کاربری نمایشی معلم", style = MaterialTheme.typography.titleMedium)
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("مشخصات حساب", style = MaterialTheme.typography.titleMedium)
+                    LabeledValue("نام", profile.fullName)
+                    LabeledValue("نام کاربری", profile.username.ifBlank { "—" })
+                    LabeledValue("نقش", if (role == UserRole.TEACHER) "معلم" else "دانش‌آموز")
+                    LabeledValue(
+                        "ایمیل",
+                        if (role == UserRole.TEACHER) user.email.orEmpty().ifBlank { "—" }
+                        else "حساب مدیریت‌شده توسط معلم"
+                    )
+                }
+            }
+        }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("تغییر نام کاربری", style = MaterialTheme.typography.titleMedium)
+                    if (role == UserRole.TEACHER) {
                         OutlinedTextField(
                             value = username,
                             onValueChange = {
@@ -451,20 +496,43 @@ private fun AccountSection(
                             enabled = !state.accountSaving && username.length >= 4 && username != profile.username,
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("ذخیره نام کاربری") }
-                    }
-                }
-            }
-        } else {
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("نام کاربری دانش‌آموز", style = MaterialTheme.typography.titleMedium)
-                        Text(profile.username.ifBlank { "—" }, fontWeight = FontWeight.Bold)
+                    } else {
                         Text("تغییر نام کاربری دانش‌آموز فقط توسط معلم انجام می‌شود.")
                     }
                 }
             }
         }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("تغییر ایمیل", style = MaterialTheme.typography.titleMedium)
+                    if (role == UserRole.TEACHER) {
+                        OutlinedTextField(
+                            value = newEmail,
+                            onValueChange = { newEmail = it.trim().take(254) },
+                            label = { Text("ایمیل جدید") },
+                            supportingText = {
+                                Text("Supabase پیام تأیید می‌فرستد؛ تا تأیید، ایمیل فعلی معتبر می‌ماند.")
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            onClick = {
+                                onChangeEmail(newEmail)
+                                newEmail = ""
+                            },
+                            enabled = !state.accountSaving && '@' in newEmail && newEmail.length >= 5,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("ارسال تأیید به ایمیل جدید") }
+                    } else {
+                        Text("ایمیل ورود دانش‌آموز توسط سامانه مدیریت می‌شود و در برنامه نمایش داده نمی‌شود.")
+                    }
+                }
+            }
+        }
+
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -513,6 +581,7 @@ private fun HeaderSection(
     onCity: (String) -> Unit,
     onDistrict: (String) -> Unit,
     onSchool: (String) -> Unit,
+    onGrade: (String) -> Unit,
     onSave: () -> Unit
 ) {
     val header = profile.header
@@ -529,6 +598,7 @@ private fun HeaderSection(
                     OutlinedTextField(header.city, onCity, label = { Text("شهر / شهرستان") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.district, onDistrict, label = { Text("منطقه / ناحیه") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.school, onSchool, label = { Text("نام مدرسه") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(header.grade, onGrade, label = { Text("پایه") }, modifier = Modifier.fillMaxWidth())
                 }
             }
         }

@@ -163,7 +163,7 @@ private fun DockItem(
     val colors = neumorphic69Colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val lift by animateDpAsState(if (selected) (-5).dp else 0.dp, tween(300), label = "dock-lift-$label")
+    val lift by animateDpAsState(if (selected) (-3).dp else 0.dp, tween(300), label = "dock-lift-$label")
     val scale by animateFloatAsState(if (pressed) .94f else 1f, tween(120), label = "dock-press-$label")
     val motionProgress = remember { Animatable(0f) }
     val rippleProgress = remember { Animatable(1f) }
@@ -181,14 +181,15 @@ private fun DockItem(
     val p = motionProgress.value
     val wave = sin(PI.toFloat() * p)
     val iconModifier = Modifier
-        .size(25.dp)
+        .size(24.dp)
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
             when (motion) {
                 DockMotion.MENU -> Unit
                 DockMotion.WALLET -> rotationY = 180f * wave
-                DockMotion.EXAMS -> translationY = (-4.dp.toPx() * wave) + (2.dp.toPx() * sin(2f * PI.toFloat() * p))
+                DockMotion.EXAMS -> translationY =
+                    (-4.dp.toPx() * wave) + (2.dp.toPx() * sin(2f * PI.toFloat() * p))
                 DockMotion.CARDS -> {
                     translationX = 4.dp.toPx() * sin(2f * PI.toFloat() * p)
                     rotationZ = 7f * sin(2f * PI.toFloat() * p)
@@ -198,14 +199,7 @@ private fun DockItem(
 
     Box(
         modifier
-            .offset { IntOffset(0, lift.roundToPx()) }
             .height(62.dp)
-            .padding(horizontal = 4.dp, vertical = 4.dp)
-            .then(
-                if (selected || pressed) Modifier.neumorphic69(colors, 18.dp, 8.dp, pressed = true)
-                else Modifier
-            )
-            .clip(RoundedCornerShape(18.dp))
             .semantics {
                 this.selected = selected
                 contentDescription = label
@@ -224,30 +218,46 @@ private fun DockItem(
             },
         contentAlignment = Alignment.Center
     ) {
-        val ripple = rippleProgress.value
-        if (ripple < 1f) {
-            Canvas(Modifier.fillMaxWidth().height(62.dp)) {
-                drawCircle(
-                    color = colors.accent.copy(alpha = .22f * (1f - ripple)),
-                    radius = size.minDimension * (.12f + .62f * ripple),
-                    center = center
+        Box(
+            Modifier
+                .offset { IntOffset(0, lift.roundToPx()) }
+                .size(44.dp)
+                .then(
+                    if (selected || pressed) {
+                        Modifier.neumorphic69(colors, 14.dp, 6.dp, pressed = true)
+                    } else Modifier
+                )
+                .clip(RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            val ripple = rippleProgress.value
+            if (ripple < 1f) {
+                Canvas(Modifier.size(44.dp)) {
+                    drawCircle(
+                        color = colors.accent.copy(alpha = .22f * (1f - ripple)),
+                        radius = size.minDimension * (.12f + .62f * ripple),
+                        center = center
+                    )
+                }
+            }
+            when {
+                customIcon != null -> customIcon(
+                    if (selected) colors.accent else colors.muted,
+                    iconModifier
+                )
+                icon != null -> Icon(
+                    icon,
+                    contentDescription = label,
+                    tint = if (selected) colors.accent else colors.muted,
+                    modifier = iconModifier
                 )
             }
-        }
-        when {
-            customIcon != null -> customIcon(if (selected) colors.accent else colors.muted, iconModifier)
-            icon != null -> Icon(
-                icon,
-                contentDescription = label,
-                tint = if (selected) colors.accent else colors.muted,
-                modifier = iconModifier
-            )
         }
         if (selected) {
             Box(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 4.dp)
+                    .padding(bottom = 2.dp)
                     .size(4.dp)
                     .clip(CircleShape)
                     .background(colors.accent)
@@ -266,34 +276,33 @@ private fun CenterAddAction(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     Box(modifier.height(82.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier
-                .offset(y = (-17).dp)
-                .size(70.dp)
-                .neumorphic69(colors, 35.dp, if (pressed) 9.dp else 14.dp)
-                .graphicsLayer {
-                    shape = CircleShape
-                    clip = true
-                    alpha = if (expanded) 0f else 1f
-                    scaleX = if (pressed) .94f else 1f
-                    scaleY = if (pressed) .94f else 1f
-                }
-                .background(Brush.linearGradient(listOf(colors.accent, colors.accent2)))
-                .clickable(
-                    interactionSource = interaction,
-                    indication = null,
-                    enabled = !expanded,
-                    role = Role.Button,
-                    onClick = onClick
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Design69Icons.Add,
-                contentDescription = "بازکردن افزودن سریع",
-                tint = Color.White,
-                modifier = Modifier.size(31.dp)
-            )
+        if (!expanded) {
+            Box(
+                Modifier
+                    .size(58.dp)
+                    .neumorphic69(colors, 29.dp, if (pressed) 8.dp else 11.dp)
+                    .graphicsLayer {
+                        shape = CircleShape
+                        clip = true
+                        scaleX = if (pressed) .94f else 1f
+                        scaleY = if (pressed) .94f else 1f
+                    }
+                    .background(Brush.linearGradient(listOf(colors.accent, colors.accent2)))
+                    .clickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onClick
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Design69Icons.Add,
+                    contentDescription = "بازکردن افزودن سریع",
+                    tint = Color.White,
+                    modifier = Modifier.size(27.dp)
+                )
+            }
         }
     }
 }

@@ -55,16 +55,20 @@ import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.auth.AuthViewModel
 import ir.exam.app.ui.auth.SignInScreen
+import ir.exam.app.ui.bank.QuestionBankScreen
 import ir.exam.app.ui.billing.WalletScreen
 import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
+import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.ExamImportDraft
 import ir.exam.app.ui.calendar.CalendarScreen
 import ir.exam.app.ui.classes.SchoolLaunchAction
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.grading.GradingScreen
+import ir.exam.app.ui.profile.ProfileSettingsDestination
 import ir.exam.app.ui.profile.ProfileSettingsScreen
+import ir.exam.app.ui.profile.SettingsSection
 import ir.exam.app.ui.reports.ReportsScreen
 import ir.exam.app.ui.reports.StudentResultsScreen
 import ir.exam.app.ui.security.AppLockGate
@@ -73,7 +77,8 @@ import ir.exam.app.ui.update.AboutScreen
 import ir.exam.app.ui.update.UpdateViewModel
 
 private enum class MainPage {
-    HOME, CALENDAR, SCHOOL, GRADING, REPORTS, STUDENT_RESULTS, WALLET, CARDS, SETTINGS, ABOUT, BUILDER
+    HOME, CALENDAR, SCHOOL, QUESTION_BANK, GRADING, REPORTS, STUDENT_RESULTS,
+    WALLET, CARDS, SETTINGS, BUILDER
 }
 
 @Composable
@@ -118,7 +123,7 @@ private fun AuthenticatedExamApp(
     val updateViewModel = remember(user.id) {
         UpdateViewModel(UpdateUseCase(SupabaseAppUpdateRepository()), apkUpdateManager)
     }
-    var page by rememberSaveable(user.id) { mutableStateOf(MainPage.HOME) }
+    var page by rememberSaveable(user.id) { mutableStateOf(MainPage.CALENDAR) }
     var menuOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var quickAddOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
@@ -127,7 +132,15 @@ private fun AuthenticatedExamApp(
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
     var schoolLaunchAction by remember(user.id) { mutableStateOf<SchoolLaunchAction?>(null) }
+    var schoolStudentsSelected by rememberSaveable(user.id) { mutableStateOf(false) }
+    var profileDestination by rememberSaveable(user.id) {
+        mutableStateOf(ProfileSettingsDestination.SETTINGS)
+    }
+    var settingsInitialSection by rememberSaveable(user.id) {
+        mutableStateOf(SettingsSection.APPEARANCE)
+    }
     var gradingPendingOnly by remember(user.id) { mutableStateOf(false) }
+    var gradingGradedOnly by remember(user.id) { mutableStateOf(false) }
     var showSignOut by remember(user.id) { mutableStateOf(false) }
 
     fun closeTransientNavigation() {
@@ -156,6 +169,7 @@ private fun AuthenticatedExamApp(
 
     fun createStudent() {
         closeTransientNavigation()
+        schoolStudentsSelected = true
         schoolLaunchAction = SchoolLaunchAction.CREATE_STUDENT
         page = MainPage.SCHOOL
     }
@@ -169,6 +183,7 @@ private fun AuthenticatedExamApp(
 
     fun createClass() {
         closeTransientNavigation()
+        schoolStudentsSelected = false
         schoolLaunchAction = SchoolLaunchAction.CREATE_CLASS
         page = MainPage.SCHOOL
     }
@@ -177,6 +192,7 @@ private fun AuthenticatedExamApp(
         val teacherOnly = setOf(
             MainPage.BUILDER,
             MainPage.SCHOOL,
+            MainPage.QUESTION_BANK,
             MainPage.GRADING,
             MainPage.REPORTS,
             MainPage.WALLET,
@@ -204,14 +220,16 @@ private fun AuthenticatedExamApp(
     BackHandler(enabled = menuOpen && !quickAddOpen) {
         menuOpen = false
     }
-    BackHandler(enabled = !menuOpen && !quickAddOpen && page != MainPage.HOME) {
-        page = MainPage.HOME
+    BackHandler(enabled = !menuOpen && !quickAddOpen && page != MainPage.CALENDAR) {
+        page = MainPage.CALENDAR
     }
 
     AuthenticatedShell(
         user = user,
         page = page,
         appearance = appearance,
+        profileDestination = profileDestination,
+        schoolStudentsSelected = schoolStudentsSelected,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         onToggleMenu = {
@@ -225,14 +243,37 @@ private fun AuthenticatedExamApp(
         onCloseAdd = { quickAddOpen = false },
         onHome = ::openHome,
         onCalendar = { closeTransientNavigation(); page = MainPage.CALENDAR },
-        onSchool = { closeTransientNavigation(); schoolLaunchAction = null; page = MainPage.SCHOOL },
-        onGrading = { closeTransientNavigation(); gradingPendingOnly = false; page = MainPage.GRADING },
-        onReports = { closeTransientNavigation(); page = MainPage.REPORTS },
+        onClasses = {
+            closeTransientNavigation()
+            schoolStudentsSelected = false
+            schoolLaunchAction = SchoolLaunchAction.SHOW_CLASSES
+            page = MainPage.SCHOOL
+        },
+        onStudents = {
+            closeTransientNavigation()
+            schoolStudentsSelected = true
+            schoolLaunchAction = SchoolLaunchAction.SHOW_STUDENTS
+            page = MainPage.SCHOOL
+        },
         onStudentResults = { closeTransientNavigation(); page = MainPage.STUDENT_RESULTS },
         onWallet = ::openWallet,
         onCards = ::openCards,
-        onSettings = { closeTransientNavigation(); page = MainPage.SETTINGS },
-        onAbout = { closeTransientNavigation(); page = MainPage.ABOUT },
+        onProfile = {
+            closeTransientNavigation()
+            profileDestination = ProfileSettingsDestination.PROFILE
+            page = MainPage.SETTINGS
+        },
+        onHeader = {
+            closeTransientNavigation()
+            profileDestination = ProfileSettingsDestination.HEADER
+            page = MainPage.SETTINGS
+        },
+        onSettings = {
+            closeTransientNavigation()
+            profileDestination = ProfileSettingsDestination.SETTINGS
+            settingsInitialSection = SettingsSection.APPEARANCE
+            page = MainPage.SETTINGS
+        },
         onCreateStudent = ::createStudent,
         onCreateExam = ::createExam,
         onCreateClass = ::createClass,
@@ -277,8 +318,18 @@ private fun AuthenticatedExamApp(
                         onLaunchActionConsumed = { schoolLaunchAction = null }
                     )
                 }
+                MainPage.QUESTION_BANK -> if (user.role == UserRole.TEACHER) {
+                    QuestionBankScreen { item ->
+                        editingExamId = null
+                        importedExam = item.toExamImportDraft()
+                        page = MainPage.BUILDER
+                    }
+                }
                 MainPage.GRADING -> if (user.role == UserRole.TEACHER) {
-                    GradingScreen(initialPendingOnly = gradingPendingOnly)
+                    GradingScreen(
+                        initialPendingOnly = gradingPendingOnly,
+                        initialGradedOnly = gradingGradedOnly
+                    )
                 }
                 MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen()
                 MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
@@ -287,16 +338,32 @@ private fun AuthenticatedExamApp(
                     TeacherManagementCardsScreen(
                         cycleKey = cardsCycleKey,
                         onStats = { page = MainPage.REPORTS },
-                        onGrading = { gradingPendingOnly = false; page = MainPage.GRADING },
-                        onPending = { gradingPendingOnly = true; page = MainPage.GRADING }
+                        onQuestionBank = { page = MainPage.QUESTION_BANK },
+                        onGrading = {
+                            gradingPendingOnly = false
+                            gradingGradedOnly = false
+                            page = MainPage.GRADING
+                        },
+                        onPending = {
+                            gradingPendingOnly = true
+                            gradingGradedOnly = false
+                            page = MainPage.GRADING
+                        },
+                        onAnswers = {
+                            gradingPendingOnly = false
+                            gradingGradedOnly = true
+                            page = MainPage.GRADING
+                        }
                     )
                 }
                 MainPage.SETTINGS -> ProfileSettingsScreen(
-                    user,
-                    appearance,
-                    authViewModel::refreshCurrentUser
+                    user = user,
+                    appearance = appearance,
+                    destination = profileDestination,
+                    initialSettingsSection = settingsInitialSection,
+                    onProfileUpdated = authViewModel::refreshCurrentUser,
+                    aboutContent = { AboutScreen(updateViewModel, apkUpdateManager) }
                 )
-                MainPage.ABOUT -> AboutScreen(updateViewModel, apkUpdateManager)
                 MainPage.BUILDER -> Unit
             }
         }
@@ -370,6 +437,8 @@ private fun AuthenticatedShell(
     user: AppUser,
     page: MainPage,
     appearance: AppearanceSettings,
+    profileDestination: ProfileSettingsDestination,
+    schoolStudentsSelected: Boolean,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
     onToggleMenu: () -> Unit,
@@ -377,14 +446,14 @@ private fun AuthenticatedShell(
     onCloseAdd: () -> Unit,
     onHome: () -> Unit,
     onCalendar: () -> Unit,
-    onSchool: () -> Unit,
-    onGrading: () -> Unit,
-    onReports: () -> Unit,
+    onClasses: () -> Unit,
+    onStudents: () -> Unit,
     onStudentResults: () -> Unit,
     onWallet: () -> Unit,
     onCards: () -> Unit,
+    onProfile: () -> Unit,
+    onHeader: () -> Unit,
     onSettings: () -> Unit,
-    onAbout: () -> Unit,
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
     onCreateClass: () -> Unit,
@@ -395,25 +464,54 @@ private fun AuthenticatedShell(
 
     val menuCards = if (user.role == UserRole.TEACHER) {
         listOf(
-            Design69MenuCard("داشبورد معلم", "مدیریت آزمون‌ها", Design69Icons.Dashboard, page == MainPage.HOME, onClick = { select(onHome) }),
-            Design69MenuCard("تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar, page == MainPage.CALENDAR, onClick = { select(onCalendar) }),
-            Design69MenuCard("کلاس و دانش‌آموز", "مدیریت مدرسه", Design69Icons.Classes, page == MainPage.SCHOOL, onClick = { select(onSchool) }),
-            Design69MenuCard("تصحیح و حضور", "پاسخ‌ها و حضور", Design69Icons.Grading, page == MainPage.GRADING, onClick = { select(onGrading) }),
-            Design69MenuCard("آمار و گزارش‌ها", "نمودار و خروجی", Design69Icons.Reports, page == MainPage.REPORTS, onClick = { select(onReports) }),
-            Design69MenuCard("کیف پول", "موجودی و پرداخت", Design69Icons.Wallet, page == MainPage.WALLET, onClick = { select(onWallet) }),
-            Design69MenuCard("تنظیمات", "حساب و ظاهر", Design69Icons.Settings, page == MainPage.SETTINGS, onClick = { select(onSettings) }),
-            Design69MenuCard("درباره و بروزرسانی", "بررسی و دریافت واقعی APK", Design69Icons.InfoUpdate, page == MainPage.ABOUT, onClick = { select(onAbout) }),
-            Design69MenuCard("آزمون جدید", "ورود مستقیم به سازنده", Design69Icons.ExamAdd, onClick = { select(onCreateExam) }),
-            Design69MenuCard("خروج", "خروج امن و تعویض حساب", Design69Icons.Logout, danger = true, onClick = { select(onSignOut) })
+            Design69MenuCard(
+                "تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar,
+                page == MainPage.CALENDAR, onClick = { select(onCalendar) }
+            ),
+            Design69MenuCard(
+                "کلاس‌ها", "فهرست و مدیریت کلاس‌ها", Design69Icons.Classes,
+                page == MainPage.SCHOOL && !schoolStudentsSelected,
+                onClick = { select(onClasses) }
+            ),
+            Design69MenuCard(
+                "دانش‌آموزان", "فهرست و وضعیت دانش‌آموزان", Design69Icons.Students,
+                page == MainPage.SCHOOL && schoolStudentsSelected,
+                onClick = { select(onStudents) }
+            ),
+            Design69MenuCard(
+                "سربرگ", "اطلاعات رسمی چاپ آزمون", Design69Icons.Header,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.HEADER,
+                onClick = { select(onHeader) }
+            ),
+            Design69MenuCard(
+                "تنظیمات", "ظاهر، حساب، داده‌ها و درباره", Design69Icons.Settings,
+                page == MainPage.SETTINGS &&
+                    profileDestination == ProfileSettingsDestination.SETTINGS,
+                onClick = { select(onSettings) }
+            ),
+            Design69MenuCard(
+                "خروج", "خروج امن و تعویض حساب", Design69Icons.Logout,
+                danger = true, onClick = { select(onSignOut) }
+            )
         )
     } else {
         listOf(
-            Design69MenuCard("داشبورد دانش‌آموز", "ورود و ادامه آزمون", Design69Icons.Dashboard, page == MainPage.HOME, onClick = { select(onHome) }),
-            Design69MenuCard("تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar, page == MainPage.CALENDAR, onClick = { select(onCalendar) }),
-            Design69MenuCard("نتایج من", "پاسخ‌ها و کارنامه", Design69Icons.Reports, page == MainPage.STUDENT_RESULTS, onClick = { select(onStudentResults) }),
-            Design69MenuCard("تنظیمات", "حساب و ظاهر", Design69Icons.Settings, page == MainPage.SETTINGS, onClick = { select(onSettings) }),
-            Design69MenuCard("درباره و بروزرسانی", "بررسی و دریافت واقعی APK", Design69Icons.InfoUpdate, page == MainPage.ABOUT, onClick = { select(onAbout) }),
-            Design69MenuCard("خروج", "خروج امن و تعویض حساب", Design69Icons.Logout, danger = true, onClick = { select(onSignOut) })
+            Design69MenuCard(
+                "تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar,
+                page == MainPage.CALENDAR, onClick = { select(onCalendar) }
+            ),
+            Design69MenuCard(
+                "نتایج من", "پاسخ‌ها و کارنامه", Design69Icons.Reports,
+                page == MainPage.STUDENT_RESULTS, onClick = { select(onStudentResults) }
+            ),
+            Design69MenuCard(
+                "تنظیمات", "ظاهر، حساب، داده‌ها و درباره", Design69Icons.Settings,
+                page == MainPage.SETTINGS, onClick = { select(onSettings) }
+            ),
+            Design69MenuCard(
+                "خروج", "خروج امن و تعویض حساب", Design69Icons.Logout,
+                danger = true, onClick = { select(onSignOut) }
+            )
         )
     }
 
@@ -424,25 +522,12 @@ private fun AuthenticatedShell(
                 Scaffold(
                     containerColor = colors.background,
                     topBar = {
-                        NeumorphicTopBar(
-                            title = when {
-                                quickAddOpen -> "افزودن سریع"
-                                menuOpen -> "منوی اصلی"
-                                else -> page.title(user.role)
-                            },
-                            subtitle = when {
-                                quickAddOpen -> "یک عملیات واقعی جدید بسازید"
-                                menuOpen -> "دسترسی سریع به بخش‌های سامانه"
-                                else -> "${user.name.ifBlank { "کاربر" }} · ${if (user.role == UserRole.TEACHER) "حساب معلم" else "حساب دانش‌آموز"}"
-                            },
-                            navigationDescription = if (user.role == UserRole.STUDENT) {
-                                if (menuOpen) "بستن منو" else "بازکردن منو"
-                            } else null,
-                            navigationIconContent = if (user.role == UserRole.STUDENT) {
-                                { tint, modifier -> Design69MorphingMenuIcon(menuOpen, tint, modifier) }
-                            } else null,
-                            onNavigation = onToggleMenu
-                        )
+                        if (user.role == UserRole.STUDENT) {
+                            NeumorphicCompactMenuBar(
+                                menuOpen = menuOpen,
+                                onToggleMenu = onToggleMenu
+                            )
+                        }
                     },
                     bottomBar = {
                         if (user.role == UserRole.TEACHER) {
@@ -484,7 +569,7 @@ private fun AuthenticatedShell(
                                     Design69MainMenuScreen(
                                         user = user,
                                         cards = menuCards,
-                                        onProfile = onSettings
+                                        onProfile = onProfile
                                     )
                                 }
                             }
@@ -508,20 +593,23 @@ private fun AuthenticatedShell(
 private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {
     MainPage.HOME -> TeacherDockSection.EXAMS
     MainPage.WALLET -> TeacherDockSection.WALLET
-    MainPage.CARDS, MainPage.GRADING, MainPage.REPORTS -> TeacherDockSection.CARDS
+    MainPage.CARDS, MainPage.QUESTION_BANK, MainPage.GRADING, MainPage.REPORTS ->
+        TeacherDockSection.CARDS
     else -> TeacherDockSection.NONE
 }
 
-private fun MainPage.title(role: UserRole): String = when (this) {
-    MainPage.HOME -> if (role == UserRole.TEACHER) "داشبورد معلم" else "داشبورد دانش‌آموز"
-    MainPage.CALENDAR -> "تقویم و پیام‌ها"
-    MainPage.SCHOOL -> "کلاس‌ها و دانش‌آموزان"
-    MainPage.GRADING -> "تصحیح و حضور"
-    MainPage.REPORTS -> "آمار و گزارش‌ها"
-    MainPage.STUDENT_RESULTS -> "نتایج و پاسخ‌های من"
-    MainPage.WALLET -> "کیف پول و پرداخت"
-    MainPage.CARDS -> "کارت‌های مدیریتی"
-    MainPage.SETTINGS -> "پروفایل و تنظیمات"
-    MainPage.ABOUT -> "درباره و بروزرسانی"
-    MainPage.BUILDER -> "ساخت آزمون"
-}
+private fun BankQuestionOption.toExamImportDraft(): ExamImportDraft = ExamImportDraft(
+    title = "آزمون جدید از بانک سؤال",
+    subject = subject.orEmpty(),
+    durationMinutes = 0,
+    negativeMarking = 0.0,
+    shuffleQuestions = false,
+    shuffleOptions = false,
+    teacherMessage = "",
+    attemptsAllowed = 1,
+    attemptOnTimeout = false,
+    gradePolicy = "last",
+    attemptCooldown = 0,
+    questions = listOf(question.copy(id = java.util.UUID.randomUUID().toString())),
+    exportedBy = "بانک سؤال"
+)

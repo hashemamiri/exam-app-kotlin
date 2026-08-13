@@ -350,6 +350,42 @@ fun NeumorphicTopBar(
     }
 }
 
+
+/** نوار فشرده و بدون عنوان برای نقش دانش‌آموز؛ فقط کنترل منو را نگه می‌دارد. */
+@Composable
+fun NeumorphicCompactMenuBar(
+    menuOpen: Boolean,
+    onToggleMenu: () -> Unit
+) {
+    val colors = neumorphic69Colors
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.background)
+            .statusBarsPadding()
+            .height(54.dp)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        NeumorphicPressable(
+            onClick = onToggleMenu,
+            modifier = Modifier
+                .size(42.dp)
+                .semantics {
+                    contentDescription = if (menuOpen) "بستن منو" else "بازکردن منو"
+                },
+            radius = 14.dp,
+            depth = 8.dp
+        ) {
+            Design69MorphingMenuIcon(
+                open = menuOpen,
+                tint = colors.muted,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
 @Composable
 fun NeumorphicMenuTile(
     title: String,

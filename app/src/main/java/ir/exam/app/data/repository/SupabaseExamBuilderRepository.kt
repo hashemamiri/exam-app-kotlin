@@ -170,6 +170,24 @@ class SupabaseExamBuilderRepository(context: Context) {
         })
     }
 
+    suspend fun updateBankQuestion(
+        id: Long,
+        question: QuestionDraft,
+        subject: String,
+        categoryIds: Set<Long>
+    ): Result<Unit> = runCatching {
+        val encoded = ExamQuestionCodec.encode(listOf(question))
+        val public = encoded.publicQuestions.first() as JsonObject
+        val key = encoded.answerKey.first() as JsonObject
+        val combined = JsonObject(public + key - "i")
+        rpcObject("native_bank_update_question_v1", buildJsonObject {
+            put("p_id", id)
+            put("p_question", combined)
+            put("p_subject", subject.trim())
+            put("p_cats", JsonArray(categoryIds.sorted().map { kotlinx.serialization.json.JsonPrimitive(it) }))
+        })
+    }
+
     suspend fun deleteFromBank(id: Long): Result<Unit> = runCatching {
         rpcObject("native_bank_delete_question_v1", buildJsonObject { put("p_id", id) })
     }

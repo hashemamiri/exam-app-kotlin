@@ -27,6 +27,9 @@ class TeacherBottomDockTest {
             "Design69Icons.Cards",
             "rotationY = 180f * wave",
             "rippleProgress.animateTo(1f, tween(520))",
+            ".size(44.dp)",
+            ".size(58.dp)",
+            "if (!expanded)",
             "LayoutDirection.Rtl"
         ).forEach { assertTrue("missing dock behavior $it", it in dock) }
     }
@@ -43,13 +46,15 @@ class TeacherBottomDockTest {
         listOf("onCreateStudent", "onCreateExam", "onCreateClass").forEach {
             assertTrue("quick action not wired: $it", it in add && it in app)
         }
-        listOf("onStats", "onGrading", "onPending").forEach {
+        listOf("onStats", "onQuestionBank", "onGrading", "onPending", "onAnswers").forEach {
             assertTrue("management action not wired: $it", it in cards && it in app)
         }
         assertTrue("SchoolLaunchAction.CREATE_STUDENT" in school)
         assertTrue("SchoolLaunchAction.CREATE_CLASS" in school)
         assertTrue("initialPendingOnly" in grading)
+        assertTrue("initialGradedOnly" in grading)
         assertTrue("فقط مانده" in grading)
+        assertTrue("فقط پاسخ" in grading)
         assertFalse("legacy management bottom sheet remains", "ModalBottomSheet" in File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").readText())
     }
 }

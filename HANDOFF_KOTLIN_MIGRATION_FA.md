@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V17 رفتار کامل Native مرجع design-69
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V18 ناوبری، حساب، سربرگ و مدیریت پنج‌کارت
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2667,3 +2667,80 @@ Debug APK SHA-256                     bab45f4cfdadba570765886ceefb88758585e283eb
 ```
 
 راهنمای مستقل: `DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md`.
+
+---
+
+## ۳۶) V18 — ناوبری، حساب، سربرگ و مدیریت پنج‌کارت
+
+### درخواست
+
+- هاله فعال dock کوچک‌تر، + کوچک و هم‌سطح dock و بدون رد هنگام انتقال؛
+- پنج کارت آمار/بانک سؤال/تصحیح/مانده/پاسخ؛
+- توضیح کارت فعال زیر stack و حذف ردیف دکمه‌های تکراری؛
+- کارت آزمون خلاصه و عملیات expand-on-tap؛
+- حذف عنوان‌های تکراری؛
+- منوی دقیق پروفایل/تقویم/کلاس/دانش‌آموز/سربرگ/تنظیمات/خروج؛
+- تنظیمات ظاهر/حساب/داده‌ها/درباره؛
+- سربرگ دارای پایه؛
+- صفحه پیش‌فرض تقویم؛
+- تفکیک پروفایل و حساب؛
+- تغییر ایمیل تأییدشده؛
+- قفل فقط با روش امن دستگاه.
+
+### تحویل
+
+```text
+Active halo 44dp / plus 58dp centered
+No bottom plus composable while shared add is open
+Management cards 5 / no duplicate buttons
+Standalone QuestionBank manager + owner update RPC
+Grading pendingOnly + gradedOnly
+Exam card accordion actions
+Teacher textual top bar removed
+Student compact 54dp menu-only bar
+Teacher hamburger grid 6 exact destinations
+Default MainPage.CALENDAR
+Profile avatar + display name only
+Header province/city/district/school/grade
+Settings appearance/account/data/about
+Account details/username/email/password/system lock
+BiometricPrompt + DEVICE_CREDENTIAL only
+Backup format v3 with header grade
+```
+
+### SQL
+
+```text
+supabase/migrations/20260813_native_navigation_account_v18.sql
+supabase/tests/20260813_v18_integration.sql
+```
+
+Readiness: پنج مقدار true. SQL فقط روی پروژه اصلی `eazwuyrymsvdkwckdpco` اجرا شود.
+
+### امنیت
+
+- `native_bank_update_question_v1` فقط سؤال متعلق به `auth.uid()` را ویرایش می‌کند.
+- امضای قدیمی `native_save_profile` حذف می‌شود تا PostgREST ambiguity نداشته باشد.
+- email change فقط از Supabase Auth است و confirmation واقعی لازم دارد.
+- PIN/Pattern سفارشی ذخیره نمی‌شود؛ BiometricPrompt رسمی Android روش دستگاه را انتخاب می‌کند.
+- بقایای hash/salt PIN نسخه قبلی پاک می‌شوند.
+- internal student Auth email نمایش داده نمی‌شود.
+- UPDATE/DELETE بدون WHERE صفر.
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              105/105 PASS
+Migration parser                       PASS (23 statements)
+Test SQL parser                        PASS (4 statements)
+Unsafe DML                             0
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 22 warning
+assembleDebug                         PASS
+Biometric packaged                    PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     8812bd60fae6489ece6485f3421a62416444db053f8cbfe20c963780c7374803
+```
+
+راهنمای مستقل: `NAVIGATION_ACCOUNT_MANAGEMENT_V18_FA.md`.

@@ -41,6 +41,13 @@ app_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_te
 profile_settings=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
 wallet_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").read_text()
 teacher_dashboard=(ROOT/"app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").read_text()
+question_bank_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt").read_text()
+app_lock_ui=(ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").read_text()
+profile_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/ProfileModels.kt").read_text()
+profile_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt").read_text()
+portability_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
+v18_migration=(ROOT/"supabase/migrations/20260813_native_navigation_account_v18.sql").read_text()
+v18_sql_copy=(ROOT/"SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
@@ -114,34 +121,60 @@ require("TeacherBottomDock" in app_shell and all(marker in app_shell for marker 
         "teacher design69 dock is not wired to real pages")
 require(all(marker in design69_icons for marker in ("Design69MorphingMenuIcon","Design69Wallet","Design69Exams","Design69Cards","Design69Calendar","Design69Settings","Design69Logout")),
         "custom native line-vector icon set or hamburger morph incomplete")
-require(all(marker in design69_menu for marker in ("PROFILE_HEIGHT_DP = 148","CARD_HEIGHT_DP = 116","TEACHER_CARD_COUNT = 10","STUDENT_CARD_COUNT = 6","slideInHorizontally","delay = 120 + index * 40")),
+require(all(marker in design69_menu for marker in ("PROFILE_HEIGHT_DP = 148","CARD_HEIGHT_DP = 116","TEACHER_CARD_COUNT = 6","STUDENT_CARD_COUNT = 4","slideInHorizontally","delay = 120 + index * 40")),
         "full-page profile/two-column staggered menu incomplete")
 require("Design69MainMenuScreen" in app_shell and "menuOpen = !menuOpen" in app_shell and
         "BackHandler(enabled = menuOpen" in app_shell and "ModalNavigationDrawer" not in app_shell,
         "menu is not a full-page reversible state")
 require(all(marker in design69_add for marker in ("OPEN_ROTATION_DEGREES = 135","ACTION_COUNT = 3","دانش‌آموز جدید","آزمون جدید","کلاس جدید","travel.animateTo")),
         "shared moving plus or three real quick actions incomplete")
-require(all(marker in design69_cards for marker in ("CARD_COUNT = 3","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionDown","آمار و گزارش‌ها","تصحیح","مانده")),
-        "four-direction real management-card stack incomplete")
+require(all(marker in design69_cards for marker in ("CARD_COUNT = 5","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionDown","\"آمار\"","بانک سؤال","\"تصحیح\"","\"مانده\"","\"پاسخ\"","cards[activeIndex].subtitle")),
+        "five-card four-direction management stack/description incomplete")
+require("cards.forEachIndexed" not in design69_cards,
+        "management cards are duplicated as buttons below the stack")
 require("ModalBottomSheet" not in teacher_dock,
         "legacy management bottom sheet remains instead of full cards page")
 require("SchoolLaunchAction.CREATE_STUDENT" in school_screen and "SchoolLaunchAction.CREATE_CLASS" in school_screen,
         "teacher quick-create school actions missing")
-require("initialPendingOnly" in grading_screen and "فقط مانده" in grading_screen,
-        "pending grading management route missing")
+require(all(marker in grading_screen for marker in ("initialPendingOnly","initialGradedOnly","فقط مانده","فقط پاسخ")),
+        "pending/graded answer management routes missing")
 require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicMenuTile")),
         "Neumorphic 69 native primitives incomplete")
 require("Neumorphic69Provider(depth = appearance.neumorphicDepth)" in app_shell and
-        "widthIn(max = 900.dp)" in app_shell and "NeumorphicTopBar" in app_shell,
-        "Neumorphic 69 authenticated shell is not active/adaptive")
-require(all(marker in teacher_dock for marker in (".size(70.dp)","shape = CircleShape","clip = true")),
-        "center add action is not forced to a perfect circle")
+        "widthIn(max = 900.dp)" in app_shell and "NeumorphicCompactMenuBar" in app_shell,
+        "compact/adaptive Neumorphic shell is not active")
+require(all(marker in teacher_dock for marker in (".size(44.dp)",".size(58.dp)","shape = CircleShape","clip = true","if (!expanded)")),
+        "smaller active halo/centered plus/no-trace behavior incomplete")
 require("PullToRefreshBox" in teacher_dashboard and "onRefresh = viewModel::load" in teacher_dashboard and
         "به‌روزرسانی" not in teacher_dashboard and "LaunchedEffect(refreshKey)" in teacher_dashboard,
         "teacher dashboard pull-to-refresh/active-tab refresh missing or manual button remains")
 require("walletRefreshKey += 1" in app_shell and "dashboardRefreshKey += 1" in app_shell and
         "cardsCycleKey += 1" in app_shell and "LaunchedEffect(refreshKey)" in wallet_screen,
         "active dock destination secondary real behavior incomplete")
+require("mutableStateOf(MainPage.CALENDAR)" in app_shell and all(marker in app_shell for marker in ("\"تقویم و پیام‌ها\"","\"کلاس‌ها\"","\"دانش‌آموزان\"","\"سربرگ\"","\"تنظیمات\"","\"خروج\"")),
+        "calendar default or exact hamburger menu order/routes missing")
+require(all(marker not in app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else {",1)[0]
+            for marker in ("داشبورد معلم","تصحیح و حضور","آمار و گزارش‌ها","درباره و بروزرسانی","آزمون جدید")),
+        "removed teacher hamburger cards returned")
+require("expandedExamId" in teacher_dashboard and "AnimatedVisibility" in teacher_dashboard and
+        "داشبورد معلم" not in teacher_dashboard,
+        "collapsible exam cards or compact exams screen missing")
+require(all(marker in profile_settings for marker in ("SettingsSection.APPEARANCE","SettingsSection.ACCOUNT","SettingsSection.DATA","SettingsSection.ABOUT","تغییر ایمیل","AppLockSettings","onGrade")),
+        "profile/header/settings/account separation incomplete")
+require("مشاهده و ویرایش حساب و تنظیمات" not in design69_menu,
+        "removed profile helper sentence returned")
+require(all(marker in question_bank_screen for marker in ("جست‌وجوی متن یا درس","دسته جدید","افزودن به آزمون","ویرایش","حذف")) and
+        "native_bank_update_question_v1" in v18_migration,
+        "standalone full question bank manager missing")
+require(all(marker in app_lock_ui for marker in ("BiometricPrompt","DEVICE_CREDENTIAL","قفل امن دستگاه")) and
+        "پین جدید" not in app_lock_ui and "androidx.biometric:biometric:1.1.0" in app_gradle,
+        "system-only biometric/device credential app lock incomplete")
+require("auth.updateUser { email = clean }" in profile_repository,
+        "verified Supabase email change path missing")
+require(all(marker in v18_migration for marker in ("hdr_grade","native_save_profile","native_bank_update_question_v1","native_export_backup_v2","native_restore_backup_v2")) and
+        v18_sql_copy == v18_migration and "val grade: String" in profile_models and
+        "native_export_backup_v2" in portability_repository,
+        "server/print/backup header grade migration or SQL copy incomplete")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),
@@ -154,7 +187,7 @@ require("com.example.neumorphic69" not in main_text and "۱۲٬۴۸۰٬۰۰۰" n
         "standalone demo package or fake wallet data entered runtime")
 require((ROOT/"app/src/main/java/ir/exam/app/core/export/XlsxWorkbook.kt").exists(),"real XLSX writer missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").exists(),"interactive crop editor missing")
-require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"PIN/device credential app lock missing")
+require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"system credential app lock missing")
 require((ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt").exists(),"structured native math parser missing")
 require(formula_library.exists() and formula_library.stat().st_size > 100_000,"complete formula reference asset missing")
 formula_markers=("🖱️ جعبه‌ای","⌨️ تایپ سریع","📚 آماده","⭐ موارد پرکاربرد","🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","🔍 همهٔ نمادها","⚙ یونیکد (۱۲۰۰)","🕘 اخیر","✨ تبدیل","FixedFormulaKeypad")
@@ -205,7 +238,10 @@ require("animateScrollTo" in formula_view and "verticalScroll" in formula_view,
         "active formula box auto-scroll missing")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
-for match in re.finditer(r"(?im)^\s*(delete\s+from|update\s+)([^;]+);", hardening + "\n" + critical + "\n" + parity):
+for match in re.finditer(
+    r"(?im)^\s*(delete\s+from|update\s+)([^;]+);",
+    hardening + "\n" + critical + "\n" + parity + "\n" + v18_migration
+):
     statement = match.group(0)
     if not re.search(r"(?i)\bwhere\b", statement):
         errors.append(f"UPDATE/DELETE without WHERE at line {hardening[:match.start()].count(chr(10))+1}")

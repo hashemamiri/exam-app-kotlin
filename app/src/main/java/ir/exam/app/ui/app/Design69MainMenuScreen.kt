@@ -56,8 +56,8 @@ object Design69MenuContract {
     const val COLUMNS = 2
     const val PROFILE_HEIGHT_DP = 148
     const val CARD_HEIGHT_DP = 116
-    const val TEACHER_CARD_COUNT = 10
-    const val STUDENT_CARD_COUNT = 6
+    const val TEACHER_CARD_COUNT = 6
+    const val STUDENT_CARD_COUNT = 4
 
     fun isCompleteGrid(count: Int): Boolean = count > 0 && count % COLUMNS == 0
 }
@@ -144,12 +144,7 @@ fun Design69MainMenuScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(top = 6.dp)
                             )
-                            Text(
-                                "مشاهده و ویرایش حساب و تنظیمات",
-                                color = colors.muted,
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(top = 9.dp)
-                            )
+
                         }
                         Icon(
                             Design69Icons.ChevronLeft,

@@ -57,6 +57,7 @@ class ProfileSettingsViewModel(
     fun setCity(value: String) = updateHeader { it.copy(city = value.take(120)) }
     fun setDistrict(value: String) = updateHeader { it.copy(district = value.take(120)) }
     fun setSchool(value: String) = updateHeader { it.copy(school = value.take(120)) }
+    fun setGrade(value: String) = updateHeader { it.copy(grade = value.take(120)) }
 
     fun uploadAvatar(uri: Uri) = viewModelScope.launch {
         val profile = state.value.profile ?: return@launch
@@ -84,6 +85,11 @@ class ProfileSettingsViewModel(
         require(password == confirmation) { "تکرار رمز عبور یکسان نیست." }
         repository.changePassword(password).getOrThrow()
         "رمز عبور با موفقیت تغییر کرد."
+    }
+
+    fun changeEmail(email: String) = accountAction {
+        repository.changeEmail(email).getOrThrow()
+        "پیام تأیید به ایمیل جدید ارسال شد. تا تأیید، ایمیل فعلی معتبر می‌ماند."
     }
 
     fun changeTeacherUsername(username: String) = accountAction {

@@ -1,6 +1,8 @@
 package ir.exam.app.ui.grading
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,13 +45,17 @@ import kotlinx.serialization.json.jsonPrimitive
 @Composable
 fun GradingScreen(
     initialPendingOnly: Boolean = false,
+    initialGradedOnly: Boolean = false,
     viewModel: GradingViewModel = remember { GradingViewModel() }
 ) {
     val state by viewModel.state.collectAsState()
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var editingFeedback by remember { mutableStateOf<ir.exam.app.domain.model.FeedbackPhrase?>(null) }
     LaunchedEffect(Unit) { viewModel.load() }
-    LaunchedEffect(initialPendingOnly) { viewModel.setPendingOnly(initialPendingOnly) }
+    LaunchedEffect(initialPendingOnly, initialGradedOnly) {
+        viewModel.setPendingOnly(initialPendingOnly)
+        viewModel.setGradedOnly(initialGradedOnly)
+    }
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -79,11 +85,15 @@ fun GradingScreen(
             OutlinedButton(onClick = viewModel::back) { Text("بازگشت") }
             Text(exam.title, style = MaterialTheme.typography.titleLarge)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             FilterChip(selected = state.mode == "grading", onClick = { viewModel.setMode("grading") }, label = { Text("دانش‌آموزمحور") })
             FilterChip(selected = state.mode == "question", onClick = { viewModel.setMode("question") }, label = { Text("سؤال‌محور") })
             FilterChip(selected = state.mode == "attendance", onClick = { viewModel.setMode("attendance") }, label = { Text("حضور") })
             FilterChip(selected = state.pendingOnly, onClick = { viewModel.setPendingOnly(!state.pendingOnly) }, label = { Text("فقط مانده") })
+            FilterChip(selected = state.gradedOnly, onClick = { viewModel.setGradedOnly(!state.gradedOnly) }, label = { Text("فقط پاسخ") })
             OutlinedButton(onClick = viewModel::approveAutoGrades) { Text("تأیید خودکار") }
             TextButton(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
         }
@@ -96,8 +106,20 @@ fun GradingScreen(
         } else if (state.mode == "question") {
             QuestionCentricContent(state, viewModel)
         } else {
-            val visibleSubmissions = if (state.pendingOnly) state.submissions.filterNot { it.graded } else state.submissions
-            if (visibleSubmissions.isEmpty()) Text(if (state.pendingOnly) "پاسخ تصحیح‌نشده‌ای باقی نمانده است." else "هنوز پاسخی ثبت نشده است.")
+            val visibleSubmissions = when {
+                state.pendingOnly -> state.submissions.filterNot { it.graded }
+                state.gradedOnly -> state.submissions.filter { it.graded }
+                else -> state.submissions
+            }
+            if (visibleSubmissions.isEmpty()) {
+                Text(
+                    when {
+                        state.pendingOnly -> "پاسخ تصحیح‌نشده‌ای باقی نمانده است."
+                        state.gradedOnly -> "پاسخ تصحیح‌شده‌ای ثبت نشده است."
+                        else -> "هنوز پاسخی ثبت نشده است."
+                    }
+                )
+            }
             else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(visibleSubmissions, key = { it.id }) { submission ->
                     SubmissionCard(
