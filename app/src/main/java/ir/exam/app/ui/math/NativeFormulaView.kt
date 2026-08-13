@@ -170,12 +170,12 @@ private fun NaturalSvgImage(
     LaunchedEffect(active, viewport, rendered.document.cacheKey) {
         if (active == null || viewport == IntSize.Zero) return@LaunchedEffect
         withFrameNanos { }
-        // پیش‌نگر: پیش از رسیدن خانه فعال به لبه، حدود ۱۰٪ عرض جلوتر را نیز نمایان کن.
+        // پیش‌نگر زودهنگام: پیش از نزدیک‌شدن خانه فعال به لبه، فضای تایپ بعدی را نمایان کن.
         val targetX = (
-            active.xPx + active.widthPx + viewport.width * .10f - viewport.width * .72f
+            active.xPx + active.widthPx + viewport.width * .14f - viewport.width * .62f
         ).toInt().coerceIn(0, horizontal.maxValue)
         val targetY = (
-            active.yPx + active.heightPx + viewport.height * .08f - viewport.height * .76f
+            active.yPx + active.heightPx + viewport.height * .12f - viewport.height * .68f
         ).toInt()
             .coerceIn(0, vertical.maxValue)
         horizontal.animateScrollTo(targetX)

@@ -2,6 +2,11 @@ package ir.exam.app.ui.classes
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +21,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -24,6 +32,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -150,7 +160,6 @@ fun SchoolManagementScreen(
                     students = filteredStudents(state.students, state.query),
                     query = state.query,
                     onQuery = viewModel::setQuery,
-                    onCreate = { showStudentCreator = true },
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
                     onReset = { resettingStudent = it },
@@ -356,7 +365,6 @@ private fun StudentsContent(
     students: List<StudentProfile>,
     query: String,
     onQuery: (String) -> Unit,
-    onCreate: () -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
     onReset: (StudentProfile) -> Unit,
@@ -366,20 +374,48 @@ private fun StudentsContent(
     onBulk:()->Unit,
     onExport:()->Unit
 ) {
+    var searchOpen by remember { mutableStateOf(query.isNotBlank()) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQuery,
-            label = { Text("جست‌وجوی نام، نام کاربری، پایه یا پدر") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-            Button(onClick=onCreate){Text("حساب جدید")}
-            OutlinedButton(
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(onClick = onExport) { Text("Excel") }
+            Button(
                 onClick = onBulk,
-                modifier = Modifier.semantics { contentDescription = "افزودن گروهی دانش‌آموز" }
-            ) { Text("▦") }
-            OutlinedButton(onClick=onExport){Text("Excel")}
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .semantics { contentDescription = "افزودن گروهی دانش‌آموز" }
+            ) { Text("+", style = MaterialTheme.typography.titleLarge) }
+            if (!searchOpen) {
+                IconButton(onClick = { searchOpen = true }) {
+                    Icon(Icons.Outlined.Search, contentDescription = "جست‌وجوی دانش‌آموز")
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = searchOpen,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQuery,
+                label = { Text("جست‌وجوی نام، نام کاربری، پایه یا پدر") },
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            onQuery("")
+                            searchOpen = false
+                        }
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = "بستن جست‌وجو")
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
         if (students.isEmpty()) Text("دانش‌آموزی یافت نشد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -763,6 +799,39 @@ private fun BulkStudentDialog(
         }
     }
 
+    fun submitBulk() {
+        runCatching {
+            require(classId.isNotBlank()) { "کلاس را انتخاب کنید." }
+            val requests = rows.map { row ->
+                require(row.first.isNotBlank()) { "نام همه ردیف‌ها لازم است." }
+                require(row.username.length >= 4) {
+                    "نام کاربری همه ردیف‌ها باید حداقل ۴ نویسه باشد."
+                }
+                require(row.password.length in 8..72) {
+                    "رمز همه ردیف‌ها باید ۸ تا ۷۲ نویسه باشد."
+                }
+                require(row.gender in setOf("male", "female")) {
+                    "جنسیت همه ردیف‌ها را انتخاب کنید."
+                }
+                NewStudentRequest(
+                    row.first,
+                    row.last,
+                    row.username,
+                    row.password,
+                    row.gender,
+                    row.father,
+                    row.grade,
+                    classId
+                )
+            }
+            require(requests.map { it.username }.distinct().size == requests.size) {
+                "نام کاربری تکراری در ردیف‌ها وجود دارد."
+            }
+            requests
+        }.onSuccess { onCreate(classId, it) }
+            .onFailure { error = it.message }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -777,12 +846,36 @@ private fun BulkStudentDialog(
                 tonalElevation = 6.dp
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {},
-                        modifier = Modifier.semantics {
-                            contentDescription = "پنجره افزودن گروهی دانش‌آموز"
-                        }
-                    ) { Text("▦", style = MaterialTheme.typography.titleLarge) }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                if (rows.size < 100) {
+                                    rows.add(BulkStudentDraft())
+                                    recomputeSuggestions()
+                                }
+                            },
+                            enabled = rows.size < 100,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25A86B)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "ردیف جدید" }
+                        ) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                        Button(
+                            onClick = ::submitBulk,
+                            modifier = Modifier.weight(2f)
+                        ) { Text("ایجاد") }
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "انصراف" }
+                        ) { Text("×", style = MaterialTheme.typography.titleLarge) }
+                    }
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -915,61 +1008,6 @@ private fun BulkStudentDialog(
                         }
                     }
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                if (rows.size < 100) {
-                                    rows.add(BulkStudentDraft())
-                                    recomputeSuggestions()
-                                }
-                            },
-                            enabled = rows.size < 100,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25A86B)),
-                            modifier = Modifier
-                                .weight(1f)
-                                .semantics { contentDescription = "ردیف جدید" }
-                        ) { Text("+", style = MaterialTheme.typography.titleLarge) }
-                        Button(
-                            onClick = {
-                                runCatching {
-                                    require(classId.isNotBlank()) { "کلاس را انتخاب کنید." }
-                                    val requests = rows.map { row ->
-                                        require(row.first.isNotBlank()) { "نام همه ردیف‌ها لازم است." }
-                                        require(row.username.length >= 4) { "نام کاربری همه ردیف‌ها باید حداقل ۴ نویسه باشد." }
-                                        require(row.password.length in 8..72) { "رمز همه ردیف‌ها باید ۸ تا ۷۲ نویسه باشد." }
-                                        require(row.gender in setOf("male", "female")) { "جنسیت همه ردیف‌ها را انتخاب کنید." }
-                                        NewStudentRequest(
-                                            row.first,
-                                            row.last,
-                                            row.username,
-                                            row.password,
-                                            row.gender,
-                                            row.father,
-                                            row.grade,
-                                            classId
-                                        )
-                                    }
-                                    require(requests.map { it.username }.distinct().size == requests.size) {
-                                        "نام کاربری تکراری در ردیف‌ها وجود دارد."
-                                    }
-                                    requests
-                                }.onSuccess { onCreate(classId, it) }
-                                    .onFailure { error = it.message }
-                            },
-                            modifier = Modifier.weight(2f)
-                        ) { Text("ساخت حساب‌ها") }
-                        Button(
-                            onClick = onDismiss,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
-                            modifier = Modifier
-                                .weight(1f)
-                                .semantics { contentDescription = "انصراف" }
-                        ) { Text("×", style = MaterialTheme.typography.titleLarge) }
-                    }
                 }
             }
         }

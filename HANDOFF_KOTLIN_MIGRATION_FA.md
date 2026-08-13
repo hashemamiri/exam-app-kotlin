@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V20 پالایش تعامل، رمز و اسکرول هوشمند
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V21 نوار دانش‌آموز و اسکرول دقیق سؤال
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2887,3 +2887,49 @@ Debug APK SHA-256                     1613f90adc4b162ac3dde17aba9fb0ca001a2a4364
 ```
 
 راهنمای مستقل: `INTERACTION_POLISH_V20_FA.md`.
+
+---
+
+## ۳۹) V21 — نوار دانش‌آموز و اسکرول دقیق سؤال
+
+### تحویل
+
+```text
+Student toolbar: Excel / + / Search
+Single-account button removed from student list
+Animated search field below toolbar
+Close clears query and restores search icon
+Bulk top controls: green + / centered Create / red ×
+Bulk table/title control removed
+Material/Neumorphic button content centered
+Formula scroll: 14% look-ahead, 62% horizontal target
+Builder FABs at opposite physical sides
+Question opening waits two frames
+Exact animateScrollToItem(index, 0) below TopAppBar
+```
+
+### فایل‌های کلیدی
+
+```text
+STUDENT_LIST_BUILDER_SCROLL_V21_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V21StudentBuilderPolishTest.kt
+scripts/verify_native_final.py
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              119/119 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 22 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     3c563f64d530e6b79d0360d116a425f18879272a063bfb0e274bfd40022a1254
+```
+
+SQL/Edge/Secret/Dependency جدید ندارد.

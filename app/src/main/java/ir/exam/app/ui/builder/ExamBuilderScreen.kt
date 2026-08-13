@@ -101,14 +101,18 @@ fun ExamBuilderScreen(
         }
     }
 
+    suspend fun scrollQuestionToHeader(questionIndex: Int) {
+        // دو frame: یکی برای recomposition و یکی برای اندازه‌گیری ارتفاع کارت بازشده.
+        withFrameNanos { }
+        withFrameNanos { }
+        listState.animateScrollToItem(questionPrefaceCount + questionIndex, 0)
+    }
+
     fun revealQuestion(type: QuestionType) {
         val id = viewModel.addQuestion(type)
         expandedQuestionId = id
         val questionIndex = state.questions.size
-        scope.launch {
-            withFrameNanos { }
-            listState.animateScrollToItem(questionPrefaceCount + questionIndex, 0)
-        }
+        scope.launch { scrollQuestionToHeader(questionIndex) }
     }
 
     LaunchedEffect(state.questions.map { it.id }) {
@@ -201,9 +205,7 @@ fun ExamBuilderScreen(
                             expandedQuestionId = null
                         } else {
                             expandedQuestionId = question.id
-                            scope.launch {
-                                listState.animateScrollToItem(questionPrefaceCount + index, 0)
-                            }
+                            scope.launch { scrollQuestionToHeader(index) }
                         }
                     },
                     viewModel = viewModel,
@@ -262,17 +264,11 @@ fun ExamBuilderScreen(
             viewModel = viewModel,
             onDismiss = { bankDialogOpen = false },
             onAdd = { id ->
+                val questionIndex = state.questions.size
                 viewModel.addFromBank(id)
-                val newId = viewModel.state.value.questions.lastOrNull()?.id
-                expandedQuestionId = newId
+                expandedQuestionId = viewModel.state.value.questions.lastOrNull()?.id
                 bankDialogOpen = false
-                scope.launch {
-                    withFrameNanos { }
-                    listState.animateScrollToItem(
-                        questionPrefaceCount + state.questions.size,
-                        0
-                    )
-                }
+                scope.launch { scrollQuestionToHeader(questionIndex) }
             }
         )
     }

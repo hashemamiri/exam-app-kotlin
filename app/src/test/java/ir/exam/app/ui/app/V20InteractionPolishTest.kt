@@ -47,8 +47,8 @@ class V20InteractionPolishTest {
         assertTrue("Color(0xFF25A86B)" in school)
         assertTrue("Color(0xFFE5484D)" in school)
         assertTrue("Text(\"+\"" in school && "Text(\"×\"" in school)
-        assertTrue("viewport.width * .10f" in formula)
-        assertTrue("viewport.width * .72f" in formula)
+        assertTrue("viewport.width * .14f" in formula)
+        assertTrue("viewport.width * .62f" in formula)
     }
 
     @Test
@@ -58,8 +58,9 @@ class V20InteractionPolishTest {
         assertTrue("Alignment.CenterStart" in builder)
         assertTrue("Alignment.CenterEnd" in builder)
         assertTrue("expandedQuestionId = null" in builder)
-        assertTrue("animateScrollToItem(questionPrefaceCount + index, 0)" in builder)
-        assertTrue("withFrameNanos" in builder)
+        assertTrue("scrollQuestionToHeader(index)" in builder)
+        assertTrue("listState.animateScrollToItem(questionPrefaceCount + questionIndex, 0)" in builder)
+        assertTrue(builder.split("withFrameNanos").size - 1 >= 2)
     }
 
     @Test

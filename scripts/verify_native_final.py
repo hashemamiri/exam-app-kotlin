@@ -214,10 +214,26 @@ require("title = \"آزمون جدید\"" in design69_add and
         "quick-add exam/student positions were not swapped")
 require("Key.DirectionDown" not in design69_cards and "بکشید" not in design69_cards,
         "management cards still support vertical navigation or show drag helper text")
-require(all(marker in builder_screen for marker in ("Alignment.CenterStart","Alignment.CenterEnd","expandedQuestionId = null","animateScrollToItem(questionPrefaceCount + index, 0)","withFrameNanos")),
-        "builder opposite FABs or exact question toggle/scroll behavior missing")
-require("viewport.width * .10f" in formula_native_view and "viewport.width * .72f" in formula_native_view,
-        "predictive formula auto-scroll threshold missing")
+require(all(marker in builder_screen for marker in ("Alignment.CenterStart","Alignment.CenterEnd","expandedQuestionId = null","scrollQuestionToHeader(index)","animateScrollToItem(questionPrefaceCount + questionIndex, 0)")) and
+        builder_screen.count("withFrameNanos") >= 2,
+        "builder opposite FABs or exact post-layout question scroll behavior missing")
+require("viewport.width * .14f" in formula_native_view and "viewport.width * .62f" in formula_native_view and
+        "viewport.height * .12f" in formula_native_view,
+        "earlier predictive formula auto-scroll threshold missing")
+students_content=school_screen.split("private fun StudentsContent(",1)[1].split("private fun StudentCard(",1)[0]
+bulk_content=school_screen.split("private fun BulkStudentDialog(",1)[1].split("private fun studentWorkbook",1)[0]
+require("حساب جدید" not in students_content and all(marker in students_content for marker in (
+            "Text(\"Excel\")","Icons.Outlined.Search","Icons.Outlined.Close","AnimatedVisibility","Arrangement.Center"
+        )), "student list toolbar/search behavior incomplete")
+require("Text(\"▦\"" not in bulk_content and "افزودن گروهی دانش‌آموز" not in bulk_content and
+        all(marker in bulk_content for marker in ("Text(\"ایجاد\")","Color(0xFF25A86B)","Color(0xFFE5484D)","submitBulk")),
+        "bulk top controls or removed title are incorrect")
+require("suspend fun scrollQuestionToHeader" in builder_screen and builder_screen.count("withFrameNanos") >= 2 and
+        "animateScrollToItem(questionPrefaceCount + questionIndex, 0)" in builder_screen,
+        "post-layout exact-under-header question scroll missing")
+require("contentAlignment: Alignment = Alignment.Center" in neumorphic_design and
+        "horizontalArrangement = Arrangement.Center" in students_content,
+        "custom/button toolbar content is not centered")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),
