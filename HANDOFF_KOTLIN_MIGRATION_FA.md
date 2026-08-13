@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V19 تعامل هم‌زمان، آزمون‌ساز شعاعی و فرم دانش‌آموز
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V20 پالایش تعامل، رمز و اسکرول هوشمند
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2829,3 +2829,61 @@ Debug APK SHA-256                     a0e9785ca749cc10f51bb8f4f708d1c3d30359290b
 ```
 
 راهنمای مستقل: `INTERACTION_BUILDER_STUDENT_V19_FA.md`.
+
+---
+
+## ۳۸) V20 — پالایش تعامل، رمز و اسکرول هوشمند
+
+### تحویل
+
+```text
+Quick-add top = exam / right = student / left = class
+Exam cards = exact two-line collapsed summary
+Shared password eye in every password input
+Bulk title removed + window icon
+Bulk footer = green + / centered submit / red ×
+Predictive formula scroll before viewport edge
+Builder + and ✓ on opposite sides
+Question card second tap closes
+Question open scroll = exact item offset 0 below header
+Management cards horizontal-only
+All card drag helper text removed
+```
+
+### فایل‌های کلیدی
+
+```text
+INTERACTION_POLISH_V20_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/ui/common/PasswordVisibility.kt
+app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
+app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V20InteractionPolishTest.kt
+```
+
+### عملیات
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+پیش‌نیاز: V19
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              115/115 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 22 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     1613f90adc4b162ac3dde17aba9fb0ca001a2a4364f60c3bf22410a97816382e
+```
+
+راهنمای مستقل: `INTERACTION_POLISH_V20_FA.md`.

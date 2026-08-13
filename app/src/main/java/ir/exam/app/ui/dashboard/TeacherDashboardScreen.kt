@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.printing.OfficialPrintController
 import ir.exam.app.data.dto.ExamDashboardDto
@@ -140,20 +141,33 @@ fun TeacherDashboardScreen(
                             .clickable {
                                 expandedExamId = if (expandedExamId == exam.id) null else exam.id
                             },
-                        radius = 22.dp,
-                        depth = 10.dp,
-                        contentPadding = PaddingValues(14.dp)
+                        radius = 18.dp,
+                        depth = 8.dp,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(exam.title.ifBlank { "بدون عنوان" }, style = MaterialTheme.typography.titleMedium)
-                            Text("درس: ${exam.subject ?: "بدون درس"}")
-                            Text("کد آزمون: ${exam.code ?: "—"}")
-                            Text("مدت: ${exam.duration ?: 0} دقیقه · بارم: ${exam.totalScore}")
-                            Text(if (exam.isOpen) "وضعیت: باز" else "وضعیت: بسته")
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    exam.title.ifBlank { "بدون عنوان" },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    if (exam.isOpen) "باز" else "بسته",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                             Text(
-                                if (expandedExamId == exam.id) "برای بستن عملیات، کارت را دوباره لمس کنید."
-                                else "برای نمایش عملیات آزمون، کارت را لمس کنید.",
-                                style = MaterialTheme.typography.bodySmall
+                                "${exam.subject ?: "بدون درس"} · ${exam.code ?: "—"} · ${exam.duration ?: 0} دقیقه · بارم ${exam.totalScore}",
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             AnimatedVisibility(
                                 visible = expandedExamId == exam.id,

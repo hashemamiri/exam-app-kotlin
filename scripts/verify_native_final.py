@@ -205,6 +205,19 @@ require("targetX.roundToPx() * progress" in design69_add and
         "quick-add plus/options are not synchronized or dotted lines start too early")
 require('android:label="آزمون آنلاین"' in manifest and "آزمون آنلاین" in main_text,
         "application branding was not changed to آزمون آنلاین")
+password_visibility=(ROOT/"app/src/main/java/ir/exam/app/ui/common/PasswordVisibility.kt").read_text()
+require("PasswordVisibilityButton" in main_text and "نمایش رمز" in password_visibility and
+        len(re.findall(r"PasswordVisualTransformation\(\)", main_text)) == 1,
+        "password show/hide control is not shared by every password input")
+require("title = \"آزمون جدید\"" in design69_add and
+        design69_add.index("title = \"آزمون جدید\"") < design69_add.index("title = \"دانش‌آموز جدید\""),
+        "quick-add exam/student positions were not swapped")
+require("Key.DirectionDown" not in design69_cards and "بکشید" not in design69_cards,
+        "management cards still support vertical navigation or show drag helper text")
+require(all(marker in builder_screen for marker in ("Alignment.CenterStart","Alignment.CenterEnd","expandedQuestionId = null","animateScrollToItem(questionPrefaceCount + index, 0)","withFrameNanos")),
+        "builder opposite FABs or exact question toggle/scroll behavior missing")
+require("viewport.width * .10f" in formula_native_view and "viewport.width * .72f" in formula_native_view,
+        "predictive formula auto-scroll threshold missing")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

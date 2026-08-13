@@ -57,7 +57,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
@@ -69,6 +68,8 @@ import ir.exam.app.core.ui.accentColors
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
+import ir.exam.app.ui.common.PasswordVisibilityButton
+import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.portability.DataPortabilitySection
 import ir.exam.app.ui.security.AppLockSettings
@@ -454,6 +455,8 @@ private fun AccountSection(
     var newEmail by remember(user.email) { mutableStateOf("") }
     var password by remember(profile.id) { mutableStateOf("") }
     var confirmation by remember(profile.id) { mutableStateOf("") }
+    var passwordVisible by remember(profile.id) { mutableStateOf(false) }
+    var confirmationVisible by remember(profile.id) { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -541,7 +544,13 @@ private fun AccountSection(
                         value = password,
                         onValueChange = { password = it.take(72) },
                         label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = passwordTransformation(passwordVisible),
+                        trailingIcon = {
+                            PasswordVisibilityButton(
+                                visible = passwordVisible,
+                                onToggle = { passwordVisible = !passwordVisible }
+                            )
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -549,7 +558,13 @@ private fun AccountSection(
                         value = confirmation,
                         onValueChange = { confirmation = it.take(72) },
                         label = { Text("تکرار رمز جدید") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = passwordTransformation(confirmationVisible),
+                        trailingIcon = {
+                            PasswordVisibilityButton(
+                                visible = confirmationVisible,
+                                onToggle = { confirmationVisible = !confirmationVisible }
+                            )
+                        },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

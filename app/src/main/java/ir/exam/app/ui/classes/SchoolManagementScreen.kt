@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,12 +41,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.ui.common.PasswordVisibilityButton
+import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
@@ -324,7 +329,10 @@ private fun ClassRosterContent(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = onAdd) { Text("افزودن موجود") }
             OutlinedButton(onClick = onCreate) { Text("حساب جدید") }
-            OutlinedButton(onClick=onBulk){Text("ساخت گروهی")}
+            OutlinedButton(
+                onClick = onBulk,
+                modifier = Modifier.semantics { contentDescription = "افزودن گروهی دانش‌آموز" }
+            ) { Text("▦") }
         }
         if (roster.isEmpty()) Text("این کلاس هنوز عضوی ندارد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -367,7 +375,10 @@ private fun StudentsContent(
         )
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
             Button(onClick=onCreate){Text("حساب جدید")}
-            OutlinedButton(onClick=onBulk){Text("ساخت گروهی")}
+            OutlinedButton(
+                onClick = onBulk,
+                modifier = Modifier.semantics { contentDescription = "افزودن گروهی دانش‌آموز" }
+            ) { Text("▦") }
             OutlinedButton(onClick=onExport){Text("Excel")}
         }
         if (students.isEmpty()) Text("دانش‌آموزی یافت نشد.")
@@ -483,6 +494,7 @@ private fun StudentCreatorDialog(
     var username by remember { mutableStateOf("") }
     var usernameEdited by remember { mutableStateOf(false) }
     var password by remember { mutableStateOf(generatePassword(10)) }
+    var passwordVisible by remember { mutableStateOf(false) }
     var father by remember { mutableStateOf("") }
     var grade by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
@@ -568,7 +580,13 @@ private fun StudentCreatorDialog(
                             password,
                             { password = it.take(72) },
                             label = { Text("رمز عبور") },
-                            visualTransformation = PasswordVisualTransformation(),
+                            visualTransformation = passwordTransformation(passwordVisible),
+                            trailingIcon = {
+                                PasswordVisibilityButton(
+                                    visible = passwordVisible,
+                                    onToggle = { passwordVisible = !passwordVisible }
+                                )
+                            },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -678,6 +696,7 @@ private fun StudentPasswordResetDialog(
     onReset: (String) -> Unit
 ) {
     var password by remember(student.id) { mutableStateOf(generatePassword(10)) }
+    var passwordVisible by remember(student.id) { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("تعیین رمز جدید برای ${student.fullName}") },
@@ -687,7 +706,13 @@ private fun StudentPasswordResetDialog(
                     value = password,
                     onValueChange = { password = it.take(72) },
                     label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = passwordTransformation(passwordVisible),
+                    trailingIcon = {
+                        PasswordVisibilityButton(
+                            visible = passwordVisible,
+                            onToggle = { passwordVisible = !passwordVisible }
+                        )
+                    }
                 )
                 Text("رمز قبلی قابل مشاهده نیست. رمز جدید فقط پس از موفقیت همین عملیات یک بار نمایش داده می‌شود.")
             }
@@ -704,6 +729,7 @@ private data class BulkStudentDraft(
     val last: String = "",
     val username: String = "",
     val password: String = generatePassword(10),
+    val passwordVisible: Boolean = false,
     val gender: String = "",
     val father: String = "",
     val grade: String = "",
@@ -751,7 +777,12 @@ private fun BulkStudentDialog(
                 tonalElevation = 6.dp
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("افزودن گروهی دانش‌آموز", style = MaterialTheme.typography.titleLarge)
+                    OutlinedButton(
+                        onClick = {},
+                        modifier = Modifier.semantics {
+                            contentDescription = "پنجره افزودن گروهی دانش‌آموز"
+                        }
+                    ) { Text("▦", style = MaterialTheme.typography.titleLarge) }
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -832,7 +863,17 @@ private fun BulkStudentDialog(
                                             row.password,
                                             { rows[index] = row.copy(password = it.take(72)) },
                                             label = { Text("رمز") },
-                                            visualTransformation = PasswordVisualTransformation(),
+                                            visualTransformation = passwordTransformation(row.passwordVisible),
+                                            trailingIcon = {
+                                                PasswordVisibilityButton(
+                                                    visible = row.passwordVisible,
+                                                    onToggle = {
+                                                        rows[index] = row.copy(
+                                                            passwordVisible = !row.passwordVisible
+                                                        )
+                                                    }
+                                                )
+                                            },
                                             singleLine = true,
                                             modifier = Modifier.weight(1f)
                                         )
@@ -876,9 +917,10 @@ private fun BulkStudentDialog(
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
+                        Button(
                             onClick = {
                                 if (rows.size < 100) {
                                     rows.add(BulkStudentDraft())
@@ -886,11 +928,11 @@ private fun BulkStudentDialog(
                                 }
                             },
                             enabled = rows.size < 100,
-                            modifier = Modifier.weight(1f)
-                        ) { Text("ردیف جدید") }
-                        OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                            Text("انصراف")
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25A86B)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "ردیف جدید" }
+                        ) { Text("+", style = MaterialTheme.typography.titleLarge) }
                         Button(
                             onClick = {
                                 runCatching {
@@ -918,8 +960,15 @@ private fun BulkStudentDialog(
                                 }.onSuccess { onCreate(classId, it) }
                                     .onFailure { error = it.message }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(2f)
                         ) { Text("ساخت حساب‌ها") }
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "انصراف" }
+                        ) { Text("×", style = MaterialTheme.typography.titleLarge) }
                     }
                 }
             }

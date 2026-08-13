@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -84,6 +85,7 @@ fun ExamBuilderScreen(
     var confirmSave by remember { mutableStateOf(false) }
     var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
     var previewAll by remember { mutableStateOf(false) }
+    val questionPrefaceCount = 2 + if (state.importedBy != null) 1 else 0
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -103,13 +105,15 @@ fun ExamBuilderScreen(
         val id = viewModel.addQuestion(type)
         expandedQuestionId = id
         val questionIndex = state.questions.size
-        val prefaceCount = 2 + if (state.importedBy != null) 1 else 0
-        scope.launch { listState.animateScrollToItem(prefaceCount + questionIndex) }
+        scope.launch {
+            withFrameNanos { }
+            listState.animateScrollToItem(questionPrefaceCount + questionIndex, 0)
+        }
     }
 
     LaunchedEffect(state.questions.map { it.id }) {
-        if (state.questions.isNotEmpty() && state.questions.none { it.id == expandedQuestionId }) {
-            expandedQuestionId = state.questions.last().id
+        if (expandedQuestionId != null && state.questions.none { it.id == expandedQuestionId }) {
+            expandedQuestionId = state.questions.lastOrNull()?.id
         }
     }
 
@@ -129,16 +133,18 @@ fun ExamBuilderScreen(
         },
         floatingActionButton = {
             if (!state.loading) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
                     FloatingActionButton(
                         onClick = { confirmSave = true },
+                        modifier = Modifier.align(Alignment.CenterStart),
                         containerColor = Color(0xFF27A86B),
                         contentColor = Color.White
                     ) { Text("✓", style = MaterialTheme.typography.headlineSmall) }
                     if (!radialMenuOpen) {
-                        FloatingActionButton(onClick = { radialMenuOpen = true }) {
-                            Text("+", style = MaterialTheme.typography.headlineSmall)
-                        }
+                        FloatingActionButton(
+                            onClick = { radialMenuOpen = true },
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        ) { Text("+", style = MaterialTheme.typography.headlineSmall) }
                     }
                 }
             }
@@ -190,7 +196,16 @@ fun ExamBuilderScreen(
                     index = index,
                     total = state.questions.size,
                     expanded = expandedQuestionId == question.id,
-                    onToggle = { expandedQuestionId = question.id },
+                    onToggle = {
+                        if (expandedQuestionId == question.id) {
+                            expandedQuestionId = null
+                        } else {
+                            expandedQuestionId = question.id
+                            scope.launch {
+                                listState.animateScrollToItem(questionPrefaceCount + index, 0)
+                            }
+                        }
+                    },
                     viewModel = viewModel,
                     onPreview = { previewQuestion = question }
                 )
@@ -252,8 +267,11 @@ fun ExamBuilderScreen(
                 expandedQuestionId = newId
                 bankDialogOpen = false
                 scope.launch {
-                    val prefaceCount = 2 + if (state.importedBy != null) 1 else 0
-                    listState.animateScrollToItem(prefaceCount + state.questions.size)
+                    withFrameNanos { }
+                    listState.animateScrollToItem(
+                        questionPrefaceCount + state.questions.size,
+                        0
+                    )
                 }
             }
         )

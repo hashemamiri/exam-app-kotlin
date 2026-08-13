@@ -150,21 +150,21 @@ fun Design69QuickAddOverlay(
 
         QuickAddAction(
             progress = travel.value,
-            title = "دانش‌آموز جدید",
-            icon = Design69Icons.PersonAdd,
+            title = "آزمون جدید",
+            icon = Design69Icons.ExamAdd,
             targetX = 0.dp,
             targetY = (-142).dp,
             modifier = Modifier.align(Alignment.Center)
-        ) { close(onCreateStudent) }
+        ) { close(onCreateExam) }
 
         QuickAddAction(
             progress = travel.value,
-            title = "آزمون جدید",
-            icon = Design69Icons.ExamAdd,
+            title = "دانش‌آموز جدید",
+            icon = Design69Icons.PersonAdd,
             targetX = horizontal,
             targetY = 88.dp,
             modifier = Modifier.align(Alignment.Center)
-        ) { close(onCreateExam) }
+        ) { close(onCreateStudent) }
 
         QuickAddAction(
             progress = travel.value,

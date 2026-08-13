@@ -20,10 +20,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import ir.exam.app.ui.common.PasswordVisibilityButton
+import ir.exam.app.ui.common.passwordTransformation
 
 /** ورود، ثبت‌نام معلم و بازیابی رمز؛ هیچ مسیر آزمایشی یا عبور مستقیم ندارد. */
 @Composable
@@ -230,12 +234,16 @@ private fun OtpPane(
 
 @Composable
 private fun PasswordField(label: String, value: String, onChange: (String) -> Unit) {
+    var visible by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
         singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
+        visualTransformation = passwordTransformation(visible),
+        trailingIcon = {
+            PasswordVisibilityButton(visible = visible, onToggle = { visible = !visible })
+        },
         modifier = Modifier.fillMaxWidth()
     )
 }
