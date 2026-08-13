@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -25,6 +24,7 @@ import ir.exam.app.data.repository.PendingActionRepository
 import ir.exam.app.data.repository.QueuedExamRepository
 import ir.exam.app.data.repository.RoomAnswerDraftRepository
 import ir.exam.app.data.repository.SupabaseStudentExamRepository
+import ir.exam.app.ui.app.NeumorphicPanel
 
 @Composable
 fun StudentHomeScreen(userId: String) {
@@ -72,8 +72,13 @@ fun StudentHomeScreen(userId: String) {
         }
         if (state.pendingSubmissions.isNotEmpty()) {
             val blocked = state.pendingSubmissions.count { it.state == "blocked_auth" || it.state == "failed" }
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            NeumorphicPanel(
+                modifier = Modifier.fillMaxWidth(),
+                radius = 22.dp,
+                depth = 10.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(
                         "${state.pendingSubmissions.size} پاسخ در صف ارسال",
                         style = MaterialTheme.typography.titleMedium,
@@ -92,14 +97,28 @@ fun StudentHomeScreen(userId: String) {
                 }
             }
         }
-        Text("کد آزمون را وارد کنید")
-        OutlinedTextField(state.code, viewModel::setCode, label = { Text("کد آزمون") }, modifier = Modifier.fillMaxWidth())
-        Button(
-            onClick = viewModel::join,
-            enabled = !state.loading && !state.restoringExam && state.code.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("ورود به آزمون") }
-        if (state.loading) CircularProgressIndicator()
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        NeumorphicPanel(
+            modifier = Modifier.fillMaxWidth(),
+            radius = 26.dp,
+            depth = 12.dp,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("کد آزمون را وارد کنید", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    state.code,
+                    viewModel::setCode,
+                    label = { Text("کد آزمون") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = viewModel::join,
+                    enabled = !state.loading && !state.restoringExam && state.code.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("ورود به آزمون") }
+                if (state.loading) CircularProgressIndicator()
+                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        }
     }
 }

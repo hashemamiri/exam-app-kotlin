@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V15 نوار ثابت و پویای پایین برنامه برای معلم
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V16 ادغام Native و واقعی طرح نئومورفیک ۶۹
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2415,3 +2415,106 @@ APK v2 signature              Verified
 SQL، Edge Function، Secret، Migration و dependency جدید ندارد.
 
 راهنمای مستقل: `DYNAMIC_TEACHER_BOTTOM_DOCK_V15_FA.md`.
+
+---
+
+## ۳۳) V16 — ادغام Native طرح نئومورفیک ۶۹
+
+### مرجع دریافتی و اعتبارسنجی
+
+```text
+Archive: neumorphic69-compose_all.tar.gz
+SHA-256: 0bb34550506669b4ec3a0f07fdb2e43b6176c66b22fd767133e4488bd35b7fa3
+Size: 270642 bytes
+Files: 20
+Directories: 16
+Unsafe paths: 0
+Kotlin lines: 1502
+```
+
+مرجع یک پروژه Compose مستقل با package آزمایشی و چند صفحه demo بود. ادغام مستقیم پروژه، Gradle، Manifest، داده کیف پول، آزمون‌ها و کارت‌های ساختگی ممنوع شد. فقط زبان طراحی، سایه‌ها، پالت‌ها و وزن‌های واقعی فونت استخراج و به state و routeهای واقعی سامانه متصل شدند.
+
+### تحویل واقعی
+
+```text
+Neumorphic69Design با سایه روشن/تیره Canvas Native
+حالت raised/pressed و انیمیشن لمس
+authenticated shell صریح RTL
+Drawer سمت راست با پروفایل و routeهای واقعی
+سربرگ نئومورفیک و adaptive width تا 900dp
+بازطراحی icon-only نوار V15 بدون تغییر عملکرد
+کمان دانش‌آموز/آزمون/کلاس واقعی
+Sheet نئومورفیک آمار/تصحیح/مانده واقعی
+کارت موجودی گرادیانی با balance واقعی و hide/show
+پنل شارژ و transaction واقعی
+پنل آزمون‌های واقعی معلم
+پنل join و pending queue واقعی دانش‌آموز
+چهار پالت + depth 8..22 ماندگار در DataStore
+تم روشن/تیره/dynamic سازگار
+وزن Medium/Bold واقعی Vazirmatn
+mode اجرایی 100755 برای gradlew
+```
+
+### فایل‌های V16
+
+```text
+NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt
+app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt
+app/src/main/java/ir/exam/app/core/ui/PersianFonts.kt
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt
+app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsViewModel.kt
+app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt
+app/src/main/res/font/vazirmatn_medium.ttf
+app/src/main/res/font/vazirmatn_bold.ttf
+app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+gradlew
+scripts/verify_native_final.py
+```
+
+### مواردی که حفظ شدند
+
+- تمام قابلیت‌های V1 تا V15 و Hotfixهای فرمول؛
+- ترتیب و رفتار واقعی dock V15؛
+- student بدون dock پایین و با menu بالایی؛
+- Builder بدون dock؛
+- Auth، session، Supabase، Room، WorkManager، چاپ و بروزرسانی؛
+- dark/light، dynamic colors، font scale و انتخاب فونت قبلی؛
+- عدم استفاده از WebView/JavaScript؛
+- عدم ورود داده demo یا placeholder به Runtime.
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز Patch: V14.1 + V15
+Build نهایی: GitHub Actions
+```
+
+### تست V16
+
+```text
+Kotlin compile                         PASS
+JVM tests                              97/97 PASS
+Neumorphic design/contract regression PASS
+Reference font SHA regression         PASS
+No demo package/data regression       PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                  PASS — 0 error, 24 warning
+assembleDebug                         PASS
+Debug package                         ir.exam.app.native
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     975d79e127a749209e1999be03d84e6f28dd92e7dfc6d21eba7c106dbd6a37df
+```
+
+راهنمای مستقل: `NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md`.

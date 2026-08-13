@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -29,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.printing.OfficialPrintController
 import ir.exam.app.data.dto.ExamDashboardDto
+import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
 import java.io.ByteArrayOutputStream
 
@@ -100,8 +100,13 @@ fun TeacherDashboardScreen(
             state.exams.isEmpty() -> Text("هنوز آزمونی برای نمایش وجود ندارد.")
             else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(state.exams, key = { it.id }) { exam ->
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    NeumorphicPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        radius = 22.dp,
+                        depth = 10.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(exam.title.ifBlank { "بدون عنوان" }, style = MaterialTheme.typography.titleMedium)
                             Text("درس: ${exam.subject ?: "بدون درس"}")
                             Text("کد آزمون: ${exam.code ?: "—"}")

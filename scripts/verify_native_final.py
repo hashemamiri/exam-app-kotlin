@@ -31,6 +31,11 @@ builder_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen
 student_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt").read_text()
 teacher_dock=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").read_text()
 app_shell=(ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text()
+neumorphic_design=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").read_text()
+appearance_preferences=(ROOT/"app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt").read_text()
+app_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_text()
+profile_settings=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
+wallet_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
@@ -94,7 +99,7 @@ for function_name in (
         f"V12 function {function_name} lacks explicit revoke"
     )
 
-require(all((ROOT/"app/src/main/res/font"/name).exists() for name in ("vazirmatn_regular.ttf","shabnam_regular.ttf","sahel_regular.ttf")),"bundled Persian fonts missing")
+require(all((ROOT/"app/src/main/res/font"/name).exists() for name in ("vazirmatn_regular.ttf","vazirmatn_medium.ttf","vazirmatn_bold.ttf","shabnam_regular.ttf","sahel_regular.ttf")),"bundled Persian fonts/weights missing")
 require("native_save_exam_v2" in parity and "native_bank_snapshot_v1" in parity and "native_feedback_update_v1" in parity,"V13 backend parity RPCs missing")
 require("پیش‌نمایش کامل A4" in builder_screen and "تعداد گزینه" in builder_screen and "حساس به حروف" in builder_screen,"builder parity controls missing")
 require("مرور پیش از ارسال" in student_screen and "علامت برای مرور" in student_screen,"student navigation/review parity missing")
@@ -106,6 +111,21 @@ require("SchoolLaunchAction.CREATE_STUDENT" in school_screen and "SchoolLaunchAc
         "teacher quick-create school actions missing")
 require("initialPendingOnly" in grading_screen and "فقط مانده" in grading_screen,
         "pending grading management card route missing")
+require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicDrawerItem")),
+        "Neumorphic 69 native design primitives incomplete")
+require("Neumorphic69Provider(depth = appearance.neumorphicDepth)" in app_shell and
+        "widthIn(max = 900.dp)" in app_shell and "NeumorphicTopBar" in app_shell,
+        "Neumorphic 69 authenticated shell is not active/adaptive")
+require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
+        "persistent Neumorphic palette/depth settings missing")
+require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),
+        "Neumorphic theme or real Vazirmatn weights incomplete")
+require("ظاهر نئومورفیک ۶۹" in profile_settings and "setNeumorphicPalette" in profile_settings and "setNeumorphicDepth" in profile_settings,
+        "reachable Neumorphic appearance controls missing")
+require("NeumorphicPanel" in wallet_screen and "balanceVisible" in wallet_screen and "۱۲٬۴۸۰٬۰۰۰" not in wallet_screen,
+        "real wallet was not adapted safely to Neumorphic design")
+require("com.example.neumorphic69" not in main_text and "۱۲٬۴۸۰٬۰۰۰" not in main_text,
+        "standalone demo package or fake wallet data entered runtime")
 require((ROOT/"app/src/main/java/ir/exam/app/core/export/XlsxWorkbook.kt").exists(),"real XLSX writer missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").exists(),"interactive crop editor missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"PIN/device credential app lock missing")

@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +16,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.AlertDialog
@@ -48,6 +52,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +63,9 @@ import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearanceSettings
+import ir.exam.app.core.ui.NeumorphicPalette
 import ir.exam.app.core.ui.ThemeMode
+import ir.exam.app.core.ui.accentColors
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
@@ -190,6 +198,83 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             }
                             Switch(settings.dynamicColors, viewModel::setDynamicColors)
                         }
+                    }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("ظاهر نئومورفیک ۶۹", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "پالت و عمق سایه در DataStore دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        listOf(
+                            NeumorphicPalette.INDIGO_MINT to "نیلی و سبز",
+                            NeumorphicPalette.BLUE_CYAN to "آبی و فیروزه‌ای",
+                            NeumorphicPalette.PINK_ORANGE to "صورتی و نارنجی",
+                            NeumorphicPalette.PURPLE_PINK to "بنفش و صورتی"
+                        ).forEach { (palette, label) ->
+                            val (first, second) = palette.accentColors()
+                            val selected = settings.neumorphicPalette == palette
+                            Box(
+                                Modifier
+                                    .size(if (selected) 44.dp else 38.dp)
+                                    .clip(CircleShape)
+                                    .background(Brush.linearGradient(listOf(first, second)))
+                                    .clickable { viewModel.setNeumorphicPalette(palette) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (selected) {
+                                    Icon(
+                                        Icons.Outlined.CheckCircle,
+                                        contentDescription = "پالت انتخاب‌شده: $label",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("عمق سایه")
+                        Text(
+                            PersianDigits.convert(settings.neumorphicDepth.toInt()),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Slider(
+                        value = settings.neumorphicDepth,
+                        onValueChange = viewModel::setNeumorphicDepth,
+                        valueRange = 8f..22f,
+                        steps = 13
+                    )
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    settings.neumorphicPalette.accentColors().let { listOf(it.first, it.second) }
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("پیش‌نمایش پالت", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                    if (settings.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Text(
+                            "رنگ‌های پویای دستگاه اکنون بر پالت ثابت اولویت دارند؛ برای رنگ دقیق انتخابی، آن گزینه را خاموش کنید.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }

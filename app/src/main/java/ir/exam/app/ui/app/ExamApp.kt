@@ -1,15 +1,19 @@
 package ir.exam.app.ui.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -42,6 +46,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,7 +57,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.ui.AppearanceSettings
 import ir.exam.app.core.update.ApkUpdateManager
@@ -153,6 +160,7 @@ private fun AuthenticatedExamApp(user:AppUser,authViewModel:AuthViewModel,appear
     AuthenticatedDrawer(
         user = user,
         page = page,
+        appearance = appearance,
         onHome = { page = MainPage.HOME },
         onCalendar = { page = MainPage.CALENDAR },
         onSchool = { schoolLaunchAction = null; page = MainPage.SCHOOL },
@@ -272,6 +280,7 @@ private fun SessionRestoreErrorScreen(
 private fun AuthenticatedDrawer(
     user: AppUser,
     page: MainPage,
+    appearance: AppearanceSettings,
     onHome: () -> Unit,
     onCalendar: () -> Unit,
     onSchool: () -> Unit,
@@ -298,152 +307,176 @@ private fun AuthenticatedDrawer(
         scope.launch { drawerState.close() }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 24.dp)
-                    ) {
-                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 64)
-                    Spacer(Modifier.height(12.dp))
-                    Text("سامانه آزمون", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        user.name.ifBlank { "کاربر" },
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                    Text(
-                        if (user.role == UserRole.TEACHER) "حساب معلم" else "حساب دانش‌آموز",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                HorizontalDivider()
-                NavigationDrawerItem(
-                    label = {
-                        Text(if (user.role == UserRole.TEACHER) "داشبورد معلم" else "داشبورد دانش‌آموز")
-                    },
-                    selected = page == MainPage.HOME,
-                    onClick = { select(onHome) },
-                    icon = { Icon(Icons.Outlined.Home, contentDescription = null) },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-                NavigationDrawerItem(
-                    label = { Text("تقویم و پیام‌ها") },
-                    selected = page == MainPage.CALENDAR,
-                    onClick = { select(onCalendar) },
-                    icon = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-                if (user.role == UserRole.TEACHER) {
-                    NavigationDrawerItem(
-                        label = { Text("کلاس‌ها و دانش‌آموزان") },
-                        selected = page == MainPage.SCHOOL,
-                        onClick = { select(onSchool) },
-                        icon = { Icon(Icons.Outlined.Groups, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("تصحیح و حضور") },
-                        selected = page == MainPage.GRADING,
-                        onClick = { select(onGrading) },
-                        icon = { Icon(Icons.Outlined.Assessment, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("آمار و گزارش‌ها") },
-                        selected = page == MainPage.REPORTS,
-                        onClick = { select(onReports) },
-                        icon = { Icon(Icons.Outlined.BarChart, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("کیف پول و پرداخت") },
-                        selected = page == MainPage.WALLET,
-                        onClick = { select(onWallet) },
-                        icon = { Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                } else {
-                    NavigationDrawerItem(
-                        label = { Text("نتایج و پاسخ‌های من") },
-                        selected = page == MainPage.STUDENT_RESULTS,
-                        onClick = { select(onStudentResults) },
-                        icon = { Icon(Icons.Outlined.Assessment, contentDescription = null) },
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
-                }
-                NavigationDrawerItem(
-                    label = { Text("پروفایل و تنظیمات") },
-                    selected = page == MainPage.SETTINGS,
-                    onClick = { select(onSettings) },
-                    icon = { Icon(Icons.Outlined.ManageAccounts, contentDescription = null) },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-                NavigationDrawerItem(
-                    label = { Text("درباره و بروزرسانی") },
-                    selected = page == MainPage.ABOUT,
-                    onClick = { select(onAbout) },
-                    icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                NavigationDrawerItem(
-                    label = { Text("خروج و تعویض حساب") },
-                    selected = false,
-                    onClick = { select(onSignOut) },
-                    icon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null) },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-                }
-            }
-        }
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(page.title(user.role))
-                    },
-                    navigationIcon = {
-                        if (user.role != UserRole.TEACHER) {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Outlined.Menu, contentDescription = "بازکردن منو")
+    Neumorphic69Provider(depth = appearance.neumorphicDepth) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            val colors = neumorphic69Colors
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .background(colors.background)
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 14.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            NeumorphicPanel(
+                                modifier = Modifier.fillMaxWidth(),
+                                radius = 28.dp,
+                                depth = LocalNeumorphic69Depth.current + 1.dp,
+                                contentPadding = PaddingValues(17.dp)
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 68)
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            "سامانه آزمون",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.ink
+                                        )
+                                        Text(
+                                            user.name.ifBlank { "کاربر" },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = colors.ink,
+                                            modifier = Modifier.padding(top = 5.dp)
+                                        )
+                                        Text(
+                                            if (user.role == UserRole.TEACHER) "حساب معلم" else "حساب دانش‌آموز",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colors.muted,
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                    }
+                                }
                             }
+                            Spacer(Modifier.height(8.dp))
+                            HorizontalDivider(color = colors.darkShadow.copy(alpha = .32f))
+                            Spacer(Modifier.height(3.dp))
+
+                            NeumorphicDrawerItem(
+                                label = if (user.role == UserRole.TEACHER) "داشبورد معلم" else "داشبورد دانش‌آموز",
+                                icon = Icons.Outlined.Home,
+                                selected = page == MainPage.HOME,
+                                onClick = { select(onHome) }
+                            )
+                            NeumorphicDrawerItem(
+                                label = "تقویم و پیام‌ها",
+                                icon = Icons.Outlined.CalendarMonth,
+                                selected = page == MainPage.CALENDAR,
+                                onClick = { select(onCalendar) }
+                            )
+                            if (user.role == UserRole.TEACHER) {
+                                NeumorphicDrawerItem(
+                                    label = "کلاس‌ها و دانش‌آموزان",
+                                    icon = Icons.Outlined.Groups,
+                                    selected = page == MainPage.SCHOOL,
+                                    onClick = { select(onSchool) }
+                                )
+                                NeumorphicDrawerItem(
+                                    label = "تصحیح و حضور",
+                                    icon = Icons.Outlined.Assessment,
+                                    selected = page == MainPage.GRADING,
+                                    onClick = { select(onGrading) }
+                                )
+                                NeumorphicDrawerItem(
+                                    label = "آمار و گزارش‌ها",
+                                    icon = Icons.Outlined.BarChart,
+                                    selected = page == MainPage.REPORTS,
+                                    onClick = { select(onReports) }
+                                )
+                                NeumorphicDrawerItem(
+                                    label = "کیف پول و پرداخت",
+                                    icon = Icons.Outlined.AccountBalanceWallet,
+                                    selected = page == MainPage.WALLET,
+                                    onClick = { select(onWallet) }
+                                )
+                            } else {
+                                NeumorphicDrawerItem(
+                                    label = "نتایج و پاسخ‌های من",
+                                    icon = Icons.Outlined.Assessment,
+                                    selected = page == MainPage.STUDENT_RESULTS,
+                                    onClick = { select(onStudentResults) }
+                                )
+                            }
+                            NeumorphicDrawerItem(
+                                label = "پروفایل و تنظیمات",
+                                icon = Icons.Outlined.ManageAccounts,
+                                selected = page == MainPage.SETTINGS,
+                                onClick = { select(onSettings) }
+                            )
+                            NeumorphicDrawerItem(
+                                label = "درباره و بروزرسانی",
+                                icon = Icons.Outlined.Info,
+                                selected = page == MainPage.ABOUT,
+                                onClick = { select(onAbout) }
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            HorizontalDivider(color = colors.darkShadow.copy(alpha = .32f))
+                            Spacer(Modifier.height(3.dp))
+                            NeumorphicDrawerItem(
+                                label = "خروج و تعویض حساب",
+                                icon = Icons.AutoMirrored.Outlined.Logout,
+                                selected = false,
+                                danger = true,
+                                onClick = { select(onSignOut) }
+                            )
+                            Spacer(Modifier.height(18.dp))
                         }
                     }
-                )
-            },
-            bottomBar = {
-                if (user.role == UserRole.TEACHER) {
-                    TeacherBottomDock(
-                        active = page.teacherDockSection(),
-                        onMenu = { scope.launch { drawerState.open() } },
-                        onWallet = onWallet,
-                        onCreateStudent = onCreateStudent,
-                        onCreateExam = onCreateExam,
-                        onCreateClass = onCreateClass,
-                        onExams = onExams,
-                        onStats = onStats,
-                        onGrading = onGrading,
-                        onPending = onPending
-                    )
                 }
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
             ) {
-                content()
+                Scaffold(
+                    containerColor = colors.background,
+                    topBar = {
+                        NeumorphicTopBar(
+                            title = page.title(user.role),
+                            subtitle = "${user.name.ifBlank { "کاربر" }} · ${if (user.role == UserRole.TEACHER) "حساب معلم" else "حساب دانش‌آموز"}",
+                            navigationIcon = if (user.role == UserRole.TEACHER) null else Icons.Outlined.Menu,
+                            navigationDescription = if (user.role == UserRole.TEACHER) null else "بازکردن منو",
+                            onNavigation = { scope.launch { drawerState.open() } }
+                        )
+                    },
+                    bottomBar = {
+                        if (user.role == UserRole.TEACHER) {
+                            TeacherBottomDock(
+                                active = page.teacherDockSection(),
+                                onMenu = { scope.launch { drawerState.open() } },
+                                onWallet = onWallet,
+                                onCreateStudent = onCreateStudent,
+                                onCreateExam = onCreateExam,
+                                onCreateClass = onCreateClass,
+                                onExams = onExams,
+                                onStats = onStats,
+                                onGrading = onGrading,
+                                onPending = onPending
+                            )
+                        }
+                    }
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(colors.background)
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .widthIn(max = 900.dp)
+                        ) {
+                            content()
+                        }
+                    }
+                }
             }
         }
     }

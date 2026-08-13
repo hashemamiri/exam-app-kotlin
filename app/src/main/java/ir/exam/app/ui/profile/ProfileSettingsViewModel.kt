@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearancePreferences
+import ir.exam.app.core.ui.NeumorphicPalette
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.data.repository.SupabaseProfileRepository
 import ir.exam.app.domain.model.ExamHeader
@@ -105,6 +106,12 @@ class ProfileSettingsViewModel(
     fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale) }
     fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled) }
     fun setAppFont(font: AppFont) = viewModelScope.launch { appearance.setAppFont(font) }
+    fun setNeumorphicPalette(palette: NeumorphicPalette) = viewModelScope.launch {
+        appearance.setNeumorphicPalette(palette)
+    }
+    fun setNeumorphicDepth(depth: Float) = viewModelScope.launch {
+        appearance.setNeumorphicDepth(depth)
+    }
     fun resetAppearance() = viewModelScope.launch { appearance.reset() }
 
     private fun saveProfile(profile: NativeProfile, message: String) = viewModelScope.launch {

@@ -3,20 +3,27 @@ package ir.exam.app.ui.billing
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -27,9 +34,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,6 +50,9 @@ import ir.exam.app.core.calendar.JalaliCalendar
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.domain.model.WalletTransaction
+import ir.exam.app.ui.app.LocalNeumorphic69Depth
+import ir.exam.app.ui.app.NeumorphicPanel
+import ir.exam.app.ui.app.neumorphic69Colors
 import java.time.Instant
 import java.time.ZoneId
 
@@ -45,34 +61,79 @@ fun WalletScreen() {
     val context = LocalContext.current
     val viewModel = remember { BillingViewModel() }
     val state by viewModel.state.collectAsState()
+    val neo = neumorphic69Colors
+    var balanceVisible by rememberSaveable { mutableStateOf(true) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Card(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text("موجودی کیف پول", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp))
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .height(174.dp)
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(Brush.linearGradient(listOf(neo.accent, neo.accent2)))
+                    .padding(20.dp)
+            ) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Outlined.AccountBalanceWallet, contentDescription = null, tint = Color.White)
+                        Text(
+                            "موجودی کیف پول",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(start = 8.dp).weight(1f)
+                        )
+                        IconButton(onClick = { balanceVisible = !balanceVisible }) {
+                            Icon(
+                                if (balanceVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                                contentDescription = if (balanceVisible) "مخفی‌کردن موجودی" else "نمایش موجودی",
+                                tint = Color.White
+                            )
+                        }
                         IconButton(onClick = viewModel::load, enabled = !state.loading) {
-                            Icon(Icons.Outlined.Refresh, contentDescription = "تازه‌سازی موجودی")
+                            Icon(Icons.Outlined.Refresh, contentDescription = "تازه‌سازی موجودی", tint = Color.White)
                         }
                     }
+                    Spacer(Modifier.height(10.dp))
                     Text(
-                        text = state.wallet?.balanceToman?.let { "${formatToman(it)} تومان" } ?: "—",
+                        text = if (!balanceVisible) "••••••••" else state.wallet?.balanceToman?.let {
+                            "${formatToman(it)} تومان"
+                        } ?: "—",
+                        color = Color.White,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text("هزینه هر سؤال: ${formatToman(WalletRules.QUESTION_COST_TOMAN)} تومان")
-                    if (state.loading) CircularProgressIndicator()
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "هزینه هر سؤال: ${formatToman(WalletRules.QUESTION_COST_TOMAN)} تومان",
+                        color = Color.White.copy(alpha = .80f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (state.loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp).align(Alignment.End),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    }
                 }
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            NeumorphicPanel(
+                modifier = Modifier.fillMaxWidth(),
+                radius = 26.dp,
+                depth = LocalNeumorphic69Depth.current,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("شارژ امن کیف پول", style = MaterialTheme.typography.titleMedium)
                     Text("پرداخت فقط در Edge Function تأیید می‌شود؛ برنامه اجازه شارژ مستقیم موجودی را ندارد.")
                     OutlinedTextField(
@@ -133,8 +194,13 @@ fun WalletScreen() {
 @Composable
 private fun TransactionCard(transaction: WalletTransaction) {
     val positive = transaction.amountToman >= 0
-    Card(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    NeumorphicPanel(
+        modifier = Modifier.fillMaxWidth(),
+        radius = 20.dp,
+        depth = 9.dp,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(transaction.reason.faReason(), fontWeight = FontWeight.SemiBold)
                 Text(formatTransactionDate(transaction.createdAt), style = MaterialTheme.typography.bodySmall)
