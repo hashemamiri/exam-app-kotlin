@@ -68,6 +68,7 @@ import ir.exam.app.ui.builder.ExamBuilderScreen
 import ir.exam.app.ui.builder.ExamBuilderViewModel
 import ir.exam.app.ui.builder.ExamImportDraft
 import ir.exam.app.ui.calendar.CalendarScreen
+import ir.exam.app.ui.classes.SchoolLaunchAction
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.grading.GradingScreen
@@ -124,6 +125,8 @@ private fun AuthenticatedExamApp(user:AppUser,authViewModel:AuthViewModel,appear
     var page by remember(user.id) { mutableStateOf(MainPage.HOME) }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
+    var schoolLaunchAction by remember(user.id) { mutableStateOf<SchoolLaunchAction?>(null) }
+    var gradingPendingOnly by remember(user.id) { mutableStateOf(false) }
     var showSignOut by remember(user.id) { mutableStateOf(false) }
 
     LaunchedEffect(user.id, user.role) {
@@ -152,13 +155,19 @@ private fun AuthenticatedExamApp(user:AppUser,authViewModel:AuthViewModel,appear
         page = page,
         onHome = { page = MainPage.HOME },
         onCalendar = { page = MainPage.CALENDAR },
-        onSchool = { page = MainPage.SCHOOL },
-        onGrading = { page = MainPage.GRADING },
+        onSchool = { schoolLaunchAction = null; page = MainPage.SCHOOL },
+        onGrading = { gradingPendingOnly = false; page = MainPage.GRADING },
         onReports = { page = MainPage.REPORTS },
         onStudentResults = { page = MainPage.STUDENT_RESULTS },
         onWallet = { page = MainPage.WALLET },
         onSettings = { page = MainPage.SETTINGS },
         onAbout = { page = MainPage.ABOUT },
+        onCreateStudent = { schoolLaunchAction = SchoolLaunchAction.CREATE_STUDENT; page = MainPage.SCHOOL },
+        onCreateExam = { editingExamId = null; importedExam = null; page = MainPage.BUILDER },
+        onCreateClass = { schoolLaunchAction = SchoolLaunchAction.CREATE_CLASS; page = MainPage.SCHOOL },
+        onExams = { page = MainPage.HOME },
+        onStats = { page = MainPage.REPORTS },
+        onPending = { gradingPendingOnly = true; page = MainPage.GRADING },
         onSignOut = { showSignOut = true }
     ) {
         when (page) {
@@ -171,8 +180,11 @@ private fun AuthenticatedExamApp(user:AppUser,authViewModel:AuthViewModel,appear
                 UserRole.STUDENT -> StudentHomeScreen(user.id)
             }
             MainPage.CALENDAR -> CalendarScreen(user.role)
-            MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) SchoolManagementScreen()
-            MainPage.GRADING -> if (user.role == UserRole.TEACHER) GradingScreen()
+            MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) SchoolManagementScreen(
+                launchAction = schoolLaunchAction,
+                onLaunchActionConsumed = { schoolLaunchAction = null }
+            )
+            MainPage.GRADING -> if (user.role == UserRole.TEACHER) GradingScreen(initialPendingOnly = gradingPendingOnly)
             MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen()
             MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
             MainPage.WALLET -> if (user.role == UserRole.TEACHER) WalletScreen()
@@ -269,6 +281,12 @@ private fun AuthenticatedDrawer(
     onWallet: () -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onCreateStudent: () -> Unit,
+    onCreateExam: () -> Unit,
+    onCreateClass: () -> Unit,
+    onExams: () -> Unit,
+    onStats: () -> Unit,
+    onPending: () -> Unit,
     onSignOut: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -395,11 +413,29 @@ private fun AuthenticatedDrawer(
                         Text(page.title(user.role))
                     },
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Outlined.Menu, contentDescription = "بازکردن منو")
+                        if (user.role != UserRole.TEACHER) {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Outlined.Menu, contentDescription = "بازکردن منو")
+                            }
                         }
                     }
                 )
+            },
+            bottomBar = {
+                if (user.role == UserRole.TEACHER) {
+                    TeacherBottomDock(
+                        active = page.teacherDockSection(),
+                        onMenu = { scope.launch { drawerState.open() } },
+                        onWallet = onWallet,
+                        onCreateStudent = onCreateStudent,
+                        onCreateExam = onCreateExam,
+                        onCreateClass = onCreateClass,
+                        onExams = onExams,
+                        onStats = onStats,
+                        onGrading = onGrading,
+                        onPending = onPending
+                    )
+                }
             }
         ) { innerPadding ->
             Box(
@@ -411,6 +447,13 @@ private fun AuthenticatedDrawer(
             }
         }
     }
+}
+
+private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {
+    MainPage.HOME -> TeacherDockSection.EXAMS
+    MainPage.WALLET -> TeacherDockSection.WALLET
+    MainPage.GRADING, MainPage.REPORTS -> TeacherDockSection.CARDS
+    else -> TeacherDockSection.MENU
 }
 
 private fun MainPage.title(role: UserRole): String = when (this) {

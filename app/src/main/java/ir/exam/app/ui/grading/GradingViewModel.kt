@@ -31,6 +31,7 @@ data class GradingUiState(
     val attendance: List<AttendanceRow> = emptyList(),
     val liveStatus: JsonObject? = null,
     val mode: String = "grading",
+    val pendingOnly: Boolean = false,
     val selectedQuestionIndex: Int = 0,
     val error: String? = null,
     val message: String? = null
@@ -83,6 +84,11 @@ class GradingViewModel(
         if (value !in setOf("grading", "question", "attendance")) return
         _state.update { it.copy(mode = value) }
         if (value == "attendance") startLiveRefresh() else liveJob?.cancel()
+    }
+
+    fun setPendingOnly(value: Boolean) {
+        _state.update { it.copy(pendingOnly = value, mode = if (value) "grading" else it.mode) }
+        if (value) liveJob?.cancel()
     }
 
     fun moveQuestion(delta: Int) {

@@ -41,11 +41,15 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 @Composable
-fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() }) {
+fun GradingScreen(
+    initialPendingOnly: Boolean = false,
+    viewModel: GradingViewModel = remember { GradingViewModel() }
+) {
     val state by viewModel.state.collectAsState()
     var showFeedbackDialog by remember { mutableStateOf(false) }
     var editingFeedback by remember { mutableStateOf<ir.exam.app.domain.model.FeedbackPhrase?>(null) }
     LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(initialPendingOnly) { viewModel.setPendingOnly(initialPendingOnly) }
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -79,6 +83,7 @@ fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() })
             FilterChip(selected = state.mode == "grading", onClick = { viewModel.setMode("grading") }, label = { Text("دانش‌آموزمحور") })
             FilterChip(selected = state.mode == "question", onClick = { viewModel.setMode("question") }, label = { Text("سؤال‌محور") })
             FilterChip(selected = state.mode == "attendance", onClick = { viewModel.setMode("attendance") }, label = { Text("حضور") })
+            FilterChip(selected = state.pendingOnly, onClick = { viewModel.setPendingOnly(!state.pendingOnly) }, label = { Text("فقط مانده") })
             OutlinedButton(onClick = viewModel::approveAutoGrades) { Text("تأیید خودکار") }
             TextButton(onClick = { showFeedbackDialog = true }) { Text("بازخورد جدید") }
         }
@@ -91,9 +96,10 @@ fun GradingScreen(viewModel: GradingViewModel = remember { GradingViewModel() })
         } else if (state.mode == "question") {
             QuestionCentricContent(state, viewModel)
         } else {
-            if (state.submissions.isEmpty()) Text("هنوز پاسخی ثبت نشده است.")
+            val visibleSubmissions = if (state.pendingOnly) state.submissions.filterNot { it.graded } else state.submissions
+            if (visibleSubmissions.isEmpty()) Text(if (state.pendingOnly) "پاسخ تصحیح‌نشده‌ای باقی نمانده است." else "هنوز پاسخی ثبت نشده است.")
             else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(state.submissions, key = { it.id }) { submission ->
+                items(visibleSubmissions, key = { it.id }) { submission ->
                     SubmissionCard(
                         exam.questions,
                         submission,

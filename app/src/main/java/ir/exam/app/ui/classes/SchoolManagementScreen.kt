@@ -45,8 +45,13 @@ import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import kotlin.random.Random
 
+enum class SchoolLaunchAction { CREATE_STUDENT, CREATE_CLASS }
+
 @Composable
-fun SchoolManagementScreen() {
+fun SchoolManagementScreen(
+    launchAction: SchoolLaunchAction? = null,
+    onLaunchActionConsumed: () -> Unit = {}
+) {
     val context=LocalContext.current
     val viewModel=remember(context){ClassesViewModel(context=context.applicationContext)}
     val state by viewModel.state.collectAsState()
@@ -65,6 +70,23 @@ fun SchoolManagementScreen() {
     val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
 
     LaunchedEffect(Unit) { viewModel.load() }
+    LaunchedEffect(launchAction) {
+        when (launchAction) {
+            SchoolLaunchAction.CREATE_STUDENT -> {
+                showStudents = true
+                viewModel.closeClass()
+                showStudentCreator = true
+                onLaunchActionConsumed()
+            }
+            SchoolLaunchAction.CREATE_CLASS -> {
+                showStudents = false
+                viewModel.closeClass()
+                creatingClass = true
+                onLaunchActionConsumed()
+            }
+            null -> Unit
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),

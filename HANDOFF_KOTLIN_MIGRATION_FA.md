@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V14.1 Hotfix اجرای واقعی کتابخانه‌های فرمول
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V15 نوار ثابت و پویای پایین برنامه برای معلم
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2362,3 +2362,56 @@ APK v2 signature                Verified
 SQL، Edge Function، Secret، Migration یا dependency جدید ندارد.
 
 راهنمای مستقل: `FORMULA_LIBRARY_RUNTIME_HOTFIX_V14_1_FA.md`.
+
+---
+
+## ۳۲) V15 — نوار ثابت پایین معلم
+
+### درخواست
+
+```text
+۵ دکمه راست‌به‌چپ:
+منو / کیف پول / + / آزمون‌ها / کارت‌ها
+
++ → کمان دانش‌آموز جدید / آزمون جدید / کلاس جدید
+کارت‌ها → آمار / تصحیح / مانده
+```
+
+### پیاده‌سازی
+
+- `TeacherBottomDock` کاملاً Native Compose؛
+- RTL صریح؛
+- dock ثابت در Scaffold معلم؛
+- gradient، shadow، active indicator، scale، rotation و arc animation؛
+- drawer واقعی از دکمه راست؛
+- WalletScreen واقعی؛
+- Builder واقعی؛
+- SchoolManagement با `SchoolLaunchAction.CREATE_STUDENT/CREATE_CLASS`؛
+- TeacherDashboard به‌عنوان مدیریت آزمون‌ها؛
+- ModalBottomSheet سه کارت؛
+- ReportsScreen برای آمار؛
+- GradingScreen برای تصحیح؛
+- pending-only filter برای مانده؛
+- دانش‌آموز بدون تغییر و با top hamburger قبلی؛
+- Builder بدون dock برای جلوگیری از مزاحمت.
+
+### تست
+
+```text
+Dock order RTL                    PASS
+Five main actions                 PASS
+Three arc actions                 PASS
+Three management cards            PASS
+Real route wiring                 PASS
+Pending-only grading              PASS
+Kotlin compile                    PASS
+JVM tests                         93/93 PASS
+FINAL_NATIVE_VERIFY              PASS
+lintDebug               PASS (0 error, 24 warning)
+assembleDebug                    PASS
+APK v2 signature              Verified
+```
+
+SQL، Edge Function، Secret، Migration و dependency جدید ندارد.
+
+راهنمای مستقل: `DYNAMIC_TEACHER_BOTTOM_DOCK_V15_FA.md`.

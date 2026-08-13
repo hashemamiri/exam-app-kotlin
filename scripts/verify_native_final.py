@@ -29,6 +29,10 @@ database_provider = (ROOT / "app/src/main/java/ir/exam/app/data/local/NativeData
 student_results = (ROOT / "app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt").read_text()
 builder_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text()
 student_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt").read_text()
+teacher_dock=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt").read_text()
+app_shell=(ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text()
+school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
+grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
 formula_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
 formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text()
@@ -94,6 +98,14 @@ require(all((ROOT/"app/src/main/res/font"/name).exists() for name in ("vazirmatn
 require("native_save_exam_v2" in parity and "native_bank_snapshot_v1" in parity and "native_feedback_update_v1" in parity,"V13 backend parity RPCs missing")
 require("پیش‌نمایش کامل A4" in builder_screen and "تعداد گزینه" in builder_screen and "حساس به حروف" in builder_screen,"builder parity controls missing")
 require("مرور پیش از ارسال" in student_screen and "علامت برای مرور" in student_screen,"student navigation/review parity missing")
+require(all(marker in teacher_dock for marker in ("DockItem(\"منو\"","DockItem(\"کیف پول\"","\"افزودن\",","DockItem(\"آزمون‌ها\"","DockItem(\"کارت‌ها\"","دانش‌آموز جدید","آزمون جدید","کلاس جدید","آمار و گزارش‌ها","تصحیح","مانده")),
+        "teacher bottom dock order/actions incomplete")
+require("TeacherBottomDock" in app_shell and all(marker in app_shell for marker in ("onCreateStudent","onCreateExam","onCreateClass","onExams","onStats","onPending")),
+        "teacher bottom dock is not wired to real pages")
+require("SchoolLaunchAction.CREATE_STUDENT" in school_screen and "SchoolLaunchAction.CREATE_CLASS" in school_screen,
+        "teacher quick-create school actions missing")
+require("initialPendingOnly" in grading_screen and "فقط مانده" in grading_screen,
+        "pending grading management card route missing")
 require((ROOT/"app/src/main/java/ir/exam/app/core/export/XlsxWorkbook.kt").exists(),"real XLSX writer missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").exists(),"interactive crop editor missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"PIN/device credential app lock missing")
