@@ -111,6 +111,7 @@ fun FormulaEditorDialog(
     var recentFormulas by remember { mutableStateOf(store.recentFormulas()) }
     var recentSymbols by remember { mutableStateOf(store.recentSymbols()) }
     var error by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
     var smartHubOpen by remember { mutableStateOf(false) }
     var recentDialogOpen by remember { mutableStateOf(false) }
     var matrixPickerOpen by remember { mutableStateOf(false) }
@@ -283,6 +284,7 @@ fun FormulaEditorDialog(
         )
         store.addRecentSymbol(entry)
         recentSymbols = store.recentSymbols()
+        notice = "✅ ${entry.label} درج شد"
     }
 
     fun openMenu(title: String, entries: List<FormulaReferenceEntry>) {
@@ -290,25 +292,25 @@ fun FormulaEditorDialog(
         quickMenuItems = entries
     }
 
+    fun openLibrary(category: String, title: String? = null) {
+        categoryId = category
+        symbolQuery = ""
+        expandedLibraryTitle = title ?: FormulaLibraryNavigator.categoryTitle(library, category)
+        expandedLibraryItems = FormulaLibraryNavigator.entries(
+            library,
+            category,
+            favorites,
+            recentSymbols,
+            uppercase
+        )
+    }
+
     val selectedEntries = remember(categoryId, symbolQuery, uppercase, favorites, recentSymbols, library) {
-        val base = when (categoryId) {
-            "__all" -> library.allItems
-            "__favorites" -> favorites
-            "__recent_symbols" -> recentSymbols
-            "letters" -> (if (uppercase) 'A'..'Z' else 'a'..'z').map {
-                FormulaReferenceEntry("حرف $it", it.toString())
-            }
-            else -> library.categoryById[categoryId]?.items.orEmpty()
-        }
-        val filtered = if (symbolQuery.isBlank()) {
-            base
+        if (symbolQuery.isBlank()) {
+            FormulaLibraryNavigator.entries(library, categoryId, favorites, recentSymbols, uppercase)
         } else {
-            val query = symbolQuery.trim().lowercase()
-            (library.allItems + library.categoryById["unicode"]?.items.orEmpty()).filter {
-                it.label.lowercase().contains(query) || it.tex.lowercase().contains(query)
-            }
+            FormulaLibraryNavigator.search(library, symbolQuery)
         }
-        filtered.distinctBy { it.label + "¦" + it.tex }
     }
 
     Dialog(
@@ -416,8 +418,7 @@ fun FormulaEditorDialog(
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     item {
                                         CategoryButton("⭐ موارد پرکاربرد", categoryId == "common") {
-                                            categoryId = "common"
-                                            symbolQuery = ""
+                                            openLibrary("common")
                                         }
                                     }
                                     items(library.groups, key = { it.key }) { group ->
@@ -428,26 +429,22 @@ fun FormulaEditorDialog(
                                     }
                                     item {
                                         CategoryButton("🔍 همهٔ نمادها", categoryId == "__all") {
-                                            categoryId = "__all"
-                                            symbolQuery = ""
+                                            openLibrary("__all")
                                         }
                                     }
                                     item {
                                         CategoryButton("⚙ یونیکد (۱۲۰۰)", categoryId == "unicode") {
-                                            categoryId = "unicode"
-                                            symbolQuery = ""
+                                            openLibrary("unicode")
                                         }
                                     }
                                     item {
                                         CategoryButton("🕘 نمادهای اخیر", categoryId == "__recent_symbols") {
-                                            categoryId = "__recent_symbols"
-                                            symbolQuery = ""
+                                            openLibrary("__recent_symbols")
                                         }
                                     }
                                     item {
                                         CategoryButton("⭐ علاقه‌مندی", categoryId == "__favorites") {
-                                            categoryId = "__favorites"
-                                            symbolQuery = ""
+                                            openLibrary("__favorites")
                                         }
                                     }
                                 }
@@ -505,9 +502,8 @@ fun FormulaEditorDialog(
                                     item { QuickButton("↵") { insert("\\\\") } }
                                     item {
                                         QuickButton("abc") {
-                                            categoryId = "letters"
-                                            symbolQuery = ""
                                             uppercase = !uppercase
+                                            openLibrary("letters")
                                         }
                                     }
                                     item {
@@ -608,6 +604,7 @@ fun FormulaEditorDialog(
                     }
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                notice?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                 HorizontalDivider()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Button(onClick = ::applyCurrent, modifier = Modifier.weight(1f)) {
@@ -634,9 +631,8 @@ fun FormulaEditorDialog(
                         FilterChip(
                             selected = categoryId == link.id,
                             onClick = {
-                                categoryId = link.id
-                                symbolQuery = ""
                                 groupDialog = null
+                                openLibrary(link.id, link.label)
                             },
                             label = { Text("${link.label} • $count") },
                             modifier = Modifier.fillMaxWidth()
@@ -811,23 +807,20 @@ fun FormulaEditorDialog(
     }
 
     expandedLibraryTitle?.let { title ->
-        AlertDialog(
-            onDismissRequest = { expandedLibraryTitle = null },
-            title = { Text(title) },
-            text = {
-                Column {
-                    Text("${expandedLibraryItems.size} مورد")
-                    SymbolGrid(
-                        expandedLibraryItems,
-                        onUse = { entry -> useEntry(entry); expandedLibraryTitle = null },
-                        onFavorite = { entry ->
-                            store.toggleFavorite(entry)
-                            favorites = store.favorites()
-                        }
-                    )
-                }
+        FormulaLibraryDialog(
+            title = title,
+            entries = expandedLibraryItems,
+            isFavorite = store::isFavorite,
+            onUse = { entry ->
+                expandedLibraryTitle = null
+                useEntry(entry)
             },
-            confirmButton = { TextButton(onClick = { expandedLibraryTitle = null }) { Text("بستن") } }
+            onToggleFavorite = { entry ->
+                store.toggleFavorite(entry)
+                favorites = store.favorites()
+                if (categoryId == "__favorites") expandedLibraryItems = favorites
+            },
+            onDismiss = { expandedLibraryTitle = null }
         )
     }
 }

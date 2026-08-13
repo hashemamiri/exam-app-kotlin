@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V14 برابری کامل همهٔ قابلیت‌های فرمول exam-system.html
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۳ — V14.1 Hotfix اجرای واقعی کتابخانه‌های فرمول
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2312,3 +2312,53 @@ APK Signature Scheme v2               Verified
 ```
 
 راهنمای مستقل: `FORMULA_COMPLETE_PARITY_V14_FA.md`.
+
+---
+
+## ۳۱) V14.1 — Hotfix کتابخانه‌های فرمول
+
+### گزارش دستگاه
+
+کاربر پس از Build موفق V14 اعلام کرد کتابخانه‌های فرمول کار نمی‌کنند.
+
+### علت
+
+```text
+JSON/library data             سالم
+TeX parser/insertion tests    سالم
+UI visibility route          معیوب
+```
+
+کلیک گروه/دسته فقط state دسته را تغییر می‌داد، اما Grid نمادها پایین‌تر از keypad داخل scroll باقی می‌ماند. هیچ کتابخانه‌ای بلافاصله روی صفحه باز نمی‌شد؛ بنابراین رفتار واقعی دستگاه با تست داده پوشش داده نشده بود.
+
+### اصلاح
+
+- navigator خالص برای تمام routeهای کتابخانه؛
+- Dialog تمام‌صفحه با search و count؛
+- بازشدن فوری common/all/unicode/recent/favorites/letters؛
+- بازشدن فوری همه ۷۵ زیرگروه؛
+- استفاده Smart Hub از همان مسیر؛
+- کارت clickable + دکمهٔ صریح «درج»؛
+- long-press favorite؛
+- پیام موفقیت پس از درج؛
+- empty/error state قابل مشاهده؛
+- decoder مشترک Runtime/Test.
+
+### تست
+
+```text
+Groups                            8/8 PASS
+Category links                  75/75 PASS
+Categories                      77/77 PASS
+Unicode direct route         1200/1200 PASS
+Reference render/insert      2118/2118 PASS
+JVM tests                        91/91 PASS
+FINAL_NATIVE_VERIFY                PASS
+lintDebug             PASS (0 error, 24 warning)
+assembleDebug                      PASS
+APK v2 signature                Verified
+```
+
+SQL، Edge Function، Secret، Migration یا dependency جدید ندارد.
+
+راهنمای مستقل: `FORMULA_LIBRARY_RUNTIME_HOTFIX_V14_1_FA.md`.

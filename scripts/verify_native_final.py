@@ -35,6 +35,8 @@ formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").re
 formula_svg=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").read_text()
 formula_boxes=(ROOT/"app/src/main/java/ir/exam/app/core/math/FormulaBoxEditor.kt").read_text()
 formula_reference_loader=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaReferenceLibrary.kt").read_text()
+formula_library_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaLibraryDialog.kt").read_text()
+formula_library_nav=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaLibraryNavigator.kt").read_text()
 formula_smart=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaSmartHubDialog.kt").read_text()
 formula_smart_data=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaSmartReference.kt").read_text()
 formula_natural=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeNaturalMathConverter.kt").read_text()
@@ -119,8 +121,16 @@ require("NativeFormulaEditorView" in formula_editor and "detectTapGestures" in f
 require("replaceActiveBoxWhenCollapsed" in formula_boxes and "moveActiveBox" in formula_boxes and
         "replaceActiveBox = true" in formula_editor,
         "formula libraries do not target the active box safely")
-require("also(::validate)" in formula_reference_loader and "پیوند دسته نامعتبر" in formula_reference_loader,
+require("also(::validate)" in formula_reference_loader and "پیوند دسته نامعتبر" in formula_reference_loader and
+        "fun decode" in formula_reference_loader,
         "formula library links/content are not validated")
+require("usePlatformDefaultWidth = false" in formula_library_dialog and "LazyVerticalGrid" in formula_library_dialog and
+        "Text(\"درج\")" in formula_library_dialog,
+        "full-screen clickable formula library dialog missing")
+require(all(marker in formula_editor for marker in ("openLibrary(\"common\")","openLibrary(\"__all\")","openLibrary(\"unicode\")","openLibrary(link.id")),
+        "main formula library routes do not open visibly")
+require("fun entries" in formula_library_nav and "fun search" in formula_library_nav,
+        "formula library navigator missing")
 require(all(marker in formula_smart for marker in ("کتابخانهٔ درس‌به‌درس","قالب‌های آماده","بسته‌های آماده","کلیدهای درشت","فرمول آخر")),
         "reachable Native Smart Hub is incomplete")
 require(all(marker in formula_smart_data for marker in ("physics","chemistry","FormulaSmartPack","FormulaDelimiterPreset","bigKeyLabels")),
