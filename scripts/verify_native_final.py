@@ -55,6 +55,7 @@ v22_migration=(ROOT/"supabase/migrations/20260814_native_student_class_membershi
 v22_sql_copy=(ROOT/"SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
 school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
+grade_odometer=(ROOT/"app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
 formula_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
@@ -182,9 +183,9 @@ require(all(marker in v18_migration for marker in ("hdr_grade","native_save_prof
         v18_sql_copy == v18_migration and "val grade: String" in profile_models and
         "native_export_backup_v2" in portability_repository,
         "server/print/backup header grade migration or SQL copy incomplete")
-require(all(marker in builder_screen for marker in ("expandedQuestionId","settingsExpanded","bottom = 112.dp","Text(\"✓\"","BuilderRadialMenuOverlay","BuilderQuestionBankDialog")) and
+require(all(marker in builder_screen for marker in ("expandedQuestionId","settingsExpanded","bottom = 112.dp","FabPosition.Center","Icons.Outlined.Check","BuilderRadialMenuOverlay","BuilderQuestionBankDialog")) and
         all(label in builder_radial for label in ("تشریحی","چندگزینه‌ای","صحیح/غلط","جای خالی","عددی","جورکردنی","وارد کردن","بانک سؤال")),
-        "builder accordion/radial eight actions/floating save incomplete")
+        "builder accordion/radial eight actions/bounded floating save incomplete")
 require("dottedAlpha" in builder_radial and "progress.animateTo(1f, tween(620" in builder_radial and
         "fun addQuestion(type: QuestionType): String" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "builder synchronized radial motion or auto-open question contract missing")
@@ -247,8 +248,38 @@ require(all(marker in class_roster for marker in ("addMenuOpen","افزودن م
         "class hanging add menu is incomplete")
 require(all(marker in member_picker for marker in ("دختر","پسر","همه پایه‌ها")),
         "existing-student gender/grade filters missing")
-require(all(marker in student_card for marker in ("expanded = !expanded","Color(0xFFFF80AB)","Color(0xFF64B5F6)","Icons.Outlined.ToggleOn","Icons.Outlined.Edit","Icons.Outlined.Add","selectedClasses")),
+require(all(marker in student_card for marker in ("expanded = !expanded","Color(0xFFFF80AB)","Color(0xFF64B5F6)","Icons.Outlined.ToggleOn","Icons.Outlined.Edit","Icons.Outlined.Add","Icons.Outlined.ContentCopy","selectedClasses")),
         "gender-colored accordion student cards or icon actions incomplete")
+require(all(marker in builder_screen for marker in (
+            "floatingActionButtonPosition = FabPosition.Center","Icons.Outlined.Check",
+            "Modifier.align(Alignment.CenterStart).size(56.dp)","modifier = Modifier.size(28.dp)"
+        )) and "Text(\"✓\"" not in builder_screen,
+        "builder save check is not centered/bounded or clipped text glyph returned")
+require(all(marker in class_roster for marker in (
+            "modifier = Modifier.align(Alignment.CenterHorizontally)",
+            "Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)",
+            "expandVertically(expandFrom = Alignment.Top)"
+        )), "class plus/hanging actions are not centered")
+require(all(marker in member_picker for marker in (
+            "gender = if (gender == \"female\") null else \"female\"",
+            "gender = if (gender == \"male\") null else \"male\"",
+            "student.gender?.lowercase() == gender","student.grade?.trim() == grade",
+            "GradeOdometerPicker(","includeStandardGrades = false","همه پایه‌ها"
+        )) and "grades.forEach" not in member_picker,
+        "toggle-off gender filters or single grade odometer missing")
+require(school_screen.count("GradeOdometerPicker(") == 4 and
+        profile_settings.count("GradeOdometerPicker(") == 1 and
+        not re.search(r'label\s*=\s*\{\s*Text\("پایه"\)', school_screen + profile_settings),
+        "not every editable school grade uses the shared odometer")
+require(all(marker in grade_odometer for marker in (
+            "rememberSnapFlingBehavior","LazyColumn","snapshotFlow",
+            "Icons.Outlined.Speed","Icons.Outlined.SwapVert",
+            "برای انتخاب به بالا یا پایین پیمایش کنید"
+        )), "vertical analog grade odometer behavior is incomplete")
+require(student_card.count("Modifier.size(58.dp)") >= 4 and
+        "copyStudentInformation(context, student)" in student_card and
+        "قابل بازیابی نیست" in school_screen and "student.password" not in school_screen,
+        "larger student actions or secure profile-copy behavior incomplete")
 require("رمز جدید اختیاری" in school_screen and "خالی بماند تغییر نمی‌کند" in school_screen and
         "request.newPassword.orEmpty()" in school_repository and
         not re.search(r"\b(val|var)\s+plain_password\b", main_text),

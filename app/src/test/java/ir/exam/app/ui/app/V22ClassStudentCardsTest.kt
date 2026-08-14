@@ -38,6 +38,7 @@ class V22ClassStudentCardsTest {
         assertTrue("Icons.Outlined.ToggleOn" in card)
         assertTrue("Icons.Outlined.Edit" in card)
         assertTrue("Icons.Outlined.Add" in card)
+        assertTrue("Icons.Outlined.ContentCopy" in card)
         assertTrue("selectedClasses" in card)
     }
 

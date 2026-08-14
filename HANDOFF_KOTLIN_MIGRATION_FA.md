@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V22 منوی کلاس و کارت تعاملی دانش‌آموز
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V23 اصلاح تیک، مرکزچین کلاس و انتخاب‌گر پایه
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2985,3 +2985,53 @@ Debug APK SHA-256                     0ea902fe1eb9f6c42b9f32a82dfc733016583afca8
 ```
 
 راهنمای مستقل: `CLASS_STUDENT_CARDS_V22_FA.md`.
+
+---
+
+## ۴۱) V23 — اصلاح تیک، مرکزچین کلاس و انتخاب‌گر چرخشی پایه
+
+### تحویل
+
+```text
+Builder save FAB: centered Scaffold slot + bounded native Check icon
+Class card action buttons centered
+Class + and hanging Existing/New actions centered full-width
+Student action touch targets: 58dp; icons: 30/32dp
+Student profile copy icon with explicit non-retrievable password notice
+Female/Male filters toggle back to All on second tap
+Per-grade chips removed from existing-student picker
+Shared vertical snapping GradeOdometerPicker
+Grade odometer in class, member filter, student edit, bulk rows and official header
+Standard preschool..grade 12 order + custom legacy value preservation
+```
+
+### امنیت کپی رمز
+
+Supabase Auth رمز فعلی را hash می‌کند و `plain_password` حذف‌شده بازنمی‌گردد. دکمه کپی کارت همه اطلاعات قابل بازیابی و نام کاربری را کپی می‌کند، اما برای رمز قبلی صریحاً «قابل بازیابی نیست» می‌نویسد. رمز plaintext فقط در جریان یک‌بارنمایش ساخت حساب یا تعیین رمز جدید قابل تحویل است.
+
+### فایل‌های کلیدی
+
+```text
+INTERACTION_GRADE_ODOMETER_V23_FA.md
+app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V23InteractionGradeOdometerTest.kt
+scripts/verify_native_final.py
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              130/130 PASS
+V23 interaction/grade tests            6/6 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                              PASS — 0 error, 22 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     115c9c92bebd69be9f403659558292cb6c82e48e87f25045159be81a32e628a7
+```
+
+SQL/Edge/Secret/Dependency جدید ندارد.

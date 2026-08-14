@@ -1,5 +1,9 @@
 package ir.exam.app.ui.classes
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ToggleOff
@@ -66,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.ui.common.GradeOdometerPicker
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.core.export.XlsxWorkbook
@@ -271,7 +278,11 @@ private fun ClassesContent(
                                 Text("پایه: ${item.grade.orEmpty().ifBlank { "—" }}")
                             }
                             Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Button(onClick = { onOpen(item) }) { Text("ورود") }
                                 OutlinedButton(onClick = { onEdit(item) }) { Text("ویرایش") }
                                 TextButton(onClick = { onDelete(item) }) { Text("حذف") }
@@ -302,17 +313,27 @@ private fun ClassRosterContent(
             OutlinedButton(onClick = onBack) { Text("بازگشت") }
             Text(item.name, style = MaterialTheme.typography.titleLarge)
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Button(onClick = { addMenuOpen = !addMenuOpen }) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Button(
+                onClick = { addMenuOpen = !addMenuOpen },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
                 Text(if (addMenuOpen) "×" else "+", style = MaterialTheme.typography.titleLarge)
             }
             AnimatedVisibility(
                 visible = addMenuOpen,
-                modifier = Modifier.padding(top = 6.dp),
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Card(Modifier.clickable { addMenuOpen = false; onAdd() }) {
                         Text("افزودن موجود", Modifier.padding(14.dp), textAlign = TextAlign.Center)
                     }
@@ -415,6 +436,7 @@ private fun StudentCard(
     classes: List<SchoolClass>,
     onAddToClasses: (Set<String>) -> Unit
 ) {
+    val context = LocalContext.current
     var expanded by remember(student.id) { mutableStateOf(false) }
     var classPickerOpen by remember(student.id) { mutableStateOf(false) }
     var selectedClasses by remember(student.id) { mutableStateOf(emptySet<String>()) }
@@ -453,21 +475,46 @@ private fun StudentCard(
                     student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { onToggle(student.id, !student.active) }) {
+                        IconButton(
+                            onClick = { onToggle(student.id, !student.active) },
+                            modifier = Modifier.size(58.dp)
+                        ) {
                             Icon(
                                 imageVector = if (student.active) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff,
                                 contentDescription = if (student.active) "فعال؛ لمس برای غیرفعال" else "غیرفعال؛ لمس برای فعال",
-                                tint = if (student.active) Color(0xFF19945B) else Color(0xFFD63B49)
+                                tint = if (student.active) Color(0xFF19945B) else Color(0xFFD63B49),
+                                modifier = Modifier.size(32.dp)
                             )
                         }
-                        IconButton(onClick = onEdit) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "ویرایش دانش‌آموز")
+                        IconButton(onClick = onEdit, modifier = Modifier.size(58.dp)) {
+                            Icon(
+                                Icons.Outlined.Edit,
+                                contentDescription = "ویرایش دانش‌آموز",
+                                modifier = Modifier.size(30.dp)
+                            )
                         }
-                        IconButton(onClick = { classPickerOpen = !classPickerOpen }) {
-                            Icon(Icons.Outlined.Add, contentDescription = "افزودن به کلاس‌ها")
+                        IconButton(
+                            onClick = { classPickerOpen = !classPickerOpen },
+                            modifier = Modifier.size(58.dp)
+                        ) {
+                            Icon(
+                                Icons.Outlined.Add,
+                                contentDescription = "افزودن به کلاس‌ها",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { copyStudentInformation(context, student) },
+                            modifier = Modifier.size(58.dp)
+                        ) {
+                            Icon(
+                                Icons.Outlined.ContentCopy,
+                                contentDescription = "کپی اطلاعات دانش‌آموز",
+                                modifier = Modifier.size(30.dp)
+                            )
                         }
                     }
                     AnimatedVisibility(
@@ -523,7 +570,12 @@ private fun ClassEditorDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام کلاس") })
-                OutlinedTextField(grade, { grade = it }, label = { Text("پایه") })
+                GradeOdometerPicker(
+                    value = grade,
+                    onValueChange = { grade = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    emptyLabel = "بدون پایه"
+                )
             }
         },
         confirmButton = { Button(onClick = { onSave(name, grade) }, enabled = name.isNotBlank()) { Text("ذخیره") } },
@@ -544,8 +596,8 @@ private fun MemberPickerDialog(
         students.mapNotNull { it.grade?.trim()?.takeIf(String::isNotBlank) }.distinct().sorted()
     }
     val visible = students.filter { student ->
-        (gender == null || student.gender == gender) &&
-            (grade == null || student.grade == grade)
+        (gender == null || student.gender?.lowercase() == gender) &&
+            (grade == null || student.grade?.trim() == grade)
     }
 
     AlertDialog(
@@ -554,41 +606,41 @@ private fun MemberPickerDialog(
         text = {
             LazyColumn(Modifier.heightIn(max = 480.dp)) {
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         FilterChip(
                             selected = gender == null,
                             onClick = { gender = null },
-                            label = { Text("همه") }
+                            label = { Text("همه") },
+                            modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = gender == "female",
-                            onClick = { gender = "female" },
-                            label = { Text("دختر") }
+                            onClick = {
+                                gender = if (gender == "female") null else "female"
+                            },
+                            label = { Text("دختر") },
+                            modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = gender == "male",
-                            onClick = { gender = "male" },
-                            label = { Text("پسر") }
+                            onClick = {
+                                gender = if (gender == "male") null else "male"
+                            },
+                            label = { Text("پسر") },
+                            modifier = Modifier.weight(1f)
                         )
-                    }
-                    if (grades.isNotEmpty()) {
-                        Row(
-                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            FilterChip(
-                                selected = grade == null,
-                                onClick = { grade = null },
-                                label = { Text("همه پایه‌ها") }
-                            )
-                            grades.forEach { item ->
-                                FilterChip(
-                                    selected = grade == item,
-                                    onClick = { grade = item },
-                                    label = { Text(item) }
-                                )
-                            }
-                        }
+                        GradeOdometerPicker(
+                            value = grade.orEmpty(),
+                            onValueChange = { grade = it.takeIf(String::isNotBlank) },
+                            availableGrades = grades,
+                            includeStandardGrades = false,
+                            emptyLabel = "همه پایه‌ها",
+                            modifier = Modifier.weight(1.45f)
+                        )
                     }
                 }
                 if (visible.isEmpty()) item { Text("دانش‌آموزی با این فیلتر یافت نشد.") }
@@ -665,9 +717,11 @@ private fun StudentEditDialog(
                             fatherName, { fatherName = it.take(100) }, label = { Text("نام پدر") },
                             singleLine = true, modifier = Modifier.weight(1f)
                         )
-                        OutlinedTextField(
-                            grade, { grade = it.take(100) }, label = { Text("پایه") },
-                            singleLine = true, modifier = Modifier.weight(1f)
+                        GradeOdometerPicker(
+                            value = grade,
+                            onValueChange = { grade = it.take(100) },
+                            modifier = Modifier.weight(1f),
+                            emptyLabel = "بدون پایه"
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -922,12 +976,13 @@ private fun BulkStudentDialog(
                                             singleLine = true,
                                             modifier = Modifier.weight(1f)
                                         )
-                                        OutlinedTextField(
-                                            row.grade,
-                                            { rows[index] = row.copy(grade = it.take(100)) },
-                                            label = { Text("پایه") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
+                                        GradeOdometerPicker(
+                                            value = row.grade,
+                                            onValueChange = {
+                                                rows[index] = row.copy(grade = it.take(100))
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            emptyLabel = "بدون پایه"
                                         )
                                     }
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1005,6 +1060,37 @@ private fun BulkStudentDialog(
             }
         }
     }
+}
+
+internal fun studentClipboardText(student: StudentProfile): String = buildList {
+    add("اطلاعات دانش‌آموز")
+    add("نام و نام خانوادگی: ${student.fullName.ifBlank { "—" }}")
+    add("نام: ${student.firstName.orEmpty().ifBlank { "—" }}")
+    add("نام خانوادگی: ${student.lastName.orEmpty().ifBlank { "—" }}")
+    add("نام کاربری: ${student.username.orEmpty().ifBlank { "—" }}")
+    add("رمز عبور: قابل بازیابی نیست؛ فقط هنگام ساخت یا تعیین رمز جدید قابل تحویل است.")
+    add("جنسیت: ${when (student.gender?.lowercase()) { "female" -> "دختر"; "male" -> "پسر"; else -> "—" }}")
+    add("نام پدر: ${student.fatherName.orEmpty().ifBlank { "—" }}")
+    add("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
+    add("کلاس‌ها: ${student.classNames.orEmpty().ifBlank { "—" }}")
+    add("وضعیت: ${if (student.active) "فعال" else "غیرفعال"}")
+    add("شناسه حساب: ${student.id}")
+}.joinToString("\n")
+
+private fun copyStudentInformation(context: Context, student: StudentProfile) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+    if (clipboard == null) {
+        Toast.makeText(context, "حافظه موقت دستگاه در دسترس نیست.", Toast.LENGTH_SHORT).show()
+        return
+    }
+    clipboard.setPrimaryClip(
+        ClipData.newPlainText("اطلاعات دانش‌آموز", studentClipboardText(student))
+    )
+    Toast.makeText(
+        context,
+        "اطلاعات قابل بازیابی کپی شد؛ رمز قبلی در سامانه ذخیره نمی‌شود.",
+        Toast.LENGTH_LONG
+    ).show()
 }
 
 private fun studentWorkbook(students:List<StudentProfile>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان",listOf(listOf("نام","نام کاربری","جنسیت","پایه","نام پدر","کلاس","وضعیت"))+students.map{listOf(it.fullName,it.username.orEmpty(),it.gender.orEmpty(),it.grade.orEmpty(),it.fatherName.orEmpty(),it.classNames.orEmpty(),if(it.active)"فعال" else "غیرفعال") })))

@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -30,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -135,19 +138,26 @@ fun ExamBuilderScreen(
                 }
             )
         },
+        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             if (!state.loading) {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     FloatingActionButton(
                         onClick = { confirmSave = true },
-                        modifier = Modifier.align(Alignment.CenterStart),
+                        modifier = Modifier.align(Alignment.CenterStart).size(56.dp),
                         containerColor = Color(0xFF27A86B),
                         contentColor = Color.White
-                    ) { Text("✓", style = MaterialTheme.typography.headlineSmall) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = "ذخیره آزمون",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                     if (!radialMenuOpen) {
                         FloatingActionButton(
                             onClick = { radialMenuOpen = true },
-                            modifier = Modifier.align(Alignment.CenterEnd)
+                            modifier = Modifier.align(Alignment.CenterEnd).size(56.dp)
                         ) { Text("+", style = MaterialTheme.typography.headlineSmall) }
                     }
                 }

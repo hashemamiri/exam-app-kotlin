@@ -68,6 +68,7 @@ import ir.exam.app.core.ui.accentColors
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
+import ir.exam.app.ui.common.GradeOdometerPicker
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
@@ -613,7 +614,12 @@ private fun HeaderSection(
                     OutlinedTextField(header.city, onCity, label = { Text("شهر / شهرستان") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.district, onDistrict, label = { Text("منطقه / ناحیه") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.school, onSchool, label = { Text("نام مدرسه") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(header.grade, onGrade, label = { Text("پایه") }, modifier = Modifier.fillMaxWidth())
+                    GradeOdometerPicker(
+                        value = header.grade,
+                        onValueChange = onGrade,
+                        modifier = Modifier.fillMaxWidth(),
+                        emptyLabel = "بدون پایه"
+                    )
                 }
             }
         }

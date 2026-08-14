@@ -35,7 +35,8 @@ class V19InteractionTest {
         assertTrue("expandedQuestionId" in builder)
         assertTrue("settingsExpanded" in builder)
         assertTrue("bottom = 112.dp" in builder)
-        assertTrue("Text(\"✓\"" in builder)
+        assertTrue("FabPosition.Center" in builder)
+        assertTrue("Icons.Outlined.Check" in builder)
         assertTrue("fun addQuestion(type: QuestionType): String" in viewModel)
         assertTrue("fun applyImport" in viewModel)
     }
