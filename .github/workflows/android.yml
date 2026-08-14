@@ -250,13 +250,26 @@ jobs:
               key, value = line.split("=", 1)
               metadata[key] = value
 
+          # لیست تغییرات فارسی واقعی از فایل CHANGELOG_FA.txt در ریشهٔ repository؛
+          # هر سطر یک مورد است. اگر فایل نبود یا خالی بود، یادداشت عمومی استفاده می‌شود.
+          payload_notes = []
+          changelog_path = Path("CHANGELOG_FA.txt")
+          if changelog_path.is_file():
+              payload_notes = [
+                  line.strip().removeprefix("-").removeprefix("•").strip()
+                  for line in changelog_path.read_text(encoding="utf-8").splitlines()
+                  if line.strip()
+              ][:12]
+          if not payload_notes:
+              payload_notes = [
+                  f"انتشار خودکار نسخه {metadata['APP_VERSION_NAME']}",
+                  f"ساخت GitHub از commit {os.environ['GITHUB_SHA'][:7]}"
+              ]
+
           payload = {
               "p_version_code": int(metadata["APP_VERSION_CODE"]),
               "p_version_name": metadata["APP_VERSION_NAME"],
-              "p_notes_fa": [
-                  f"انتشار خودکار نسخه {metadata['APP_VERSION_NAME']}",
-                  f"ساخت GitHub از commit {os.environ['GITHUB_SHA'][:7]}"
-              ],
+              "p_notes_fa": payload_notes,
               "p_apk_url": os.environ["APK_PUBLIC_URL"],
               "p_apk_sha256": metadata["APK_SHA256"],
               "p_apk_size_bytes": int(metadata["APK_SIZE_BYTES"]),

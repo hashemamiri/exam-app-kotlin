@@ -62,7 +62,8 @@ class V24ComprehensiveUxTest {
     fun `about page only shows remote Persian notes while downloading`() {
         val about = source("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt")
         assertFalse("local persistent release history returned", "localReleaseNotesFa" in about)
-        assertTrue("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
+        assertTrue("state.update?.takeIf { it.notesFa.isNotEmpty() }" in about)
+        assertFalse("downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
         assertTrue("ChangeListCard" in about)
         assertFalse("old identity card returned", "AppIdentityCard" in about)
         assertFalse("package id prose returned", "شناسه بسته" in about)
@@ -121,7 +122,7 @@ class V24ComprehensiveUxTest {
         assertTrue("LazyRow" in media)
         assertTrue("items(images, key = MediaDraft::id)" in media)
         assertTrue("freePlacement" in media)
-        listOf("RotateLeft", "RotateRight", "Icons.Outlined.Crop", "CropFrame", "CropEdge.LEFT", "CropEdge.RIGHT", "CropEdge.TOP", "CropEdge.BOTTOM").forEach {
+        listOf("RotateLeft", "RotateRight", "Icons.Outlined.Crop", "CropFrame", "CropEdgeKind.LEFT", "CropEdgeKind.RIGHT", "CropEdgeKind.TOP", "CropEdgeKind.BOTTOM").forEach {
             assertTrue("missing crop tool $it", it in editor)
         }
         assertFalse("old crop sliders returned", "Slider(" in editor)

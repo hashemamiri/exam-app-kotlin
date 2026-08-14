@@ -14,11 +14,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
@@ -48,15 +52,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import ir.exam.app.data.repository.LocalImageRepository
-import ir.exam.app.domain.model.CropRect
 import ir.exam.app.domain.model.ImageEditRequest
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +90,9 @@ fun InteractiveImageEditorDialog(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var sourceBytes by remember(source) { mutableStateOf<Long?>(null) }
+    val focusManager = LocalFocusManager.current
+    // با بازشدن ویرایشگر، صفحه‌کلید بسته می‌شود تا دکمه‌های پایین همیشه در دسترس باشند.
+    LaunchedEffect(Unit) { focusManager.clearFocus() }
     LaunchedEffect(source) {
         preparing = true
         error = null
@@ -101,14 +109,18 @@ fun InteractiveImageEditorDialog(
             }
     }
 
+    // ارتفاع پنجره از ۹۲٪ صفحه بیشتر نمی‌شود و محتوا در صورت نیاز اسکرول می‌شود؛
+    // به این ترتیب دکمه‌های تأیید/انصراف هرگز زیر صفحه یا زیر صفحه‌کلید نمی‌مانند.
+    val maxDialogHeight = (LocalConfiguration.current.screenHeightDp * .92f).toInt()
+
     Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().imePadding().heightIn(max = maxDialogHeight.dp),
             shape = RoundedCornerShape(28.dp),
             tonalElevation = 12.dp
         ) {
             Column(
-                Modifier.padding(14.dp),
+                Modifier.padding(14.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -153,11 +165,11 @@ fun InteractiveImageEditorDialog(
                         .background(Color(0xFF17191D), RoundedCornerShape(18.dp))
                         .clipToBounds()
                 ) {
-                    val quarterTurn = rotation % 180 != 0
                     val rawWidth = sourcePixels.width.takeIf { it > 0f } ?: 1f
                     val rawHeight = sourcePixels.height.takeIf { it > 0f } ?: 1f
-                    val rotatedWidth = if (quarterTurn) rawHeight else rawWidth
-                    val rotatedHeight = if (quarterTurn) rawWidth else rawHeight
+                    val (rotatedWidth, rotatedHeight) =
+                        CropGeometry.rotatedSize(rawWidth, rawHeight, rotation)
+                    val quarterTurn = rotatedWidth != rawWidth
                     val targetAspect = rotatedWidth / rotatedHeight
                     val boxAspect = maxWidth.value / maxHeight.value
                     val displayWidth: Dp
@@ -197,14 +209,8 @@ fun InteractiveImageEditorDialog(
                         val side = minDimension * cropSide
                         val sideXFraction = side.value / displayWidth.value
                         val sideYFraction = side.value / displayHeight.value
-                        val safeCenterX = cropCenterX.coerceIn(
-                            sideXFraction / 2f,
-                            1f - sideXFraction / 2f
-                        )
-                        val safeCenterY = cropCenterY.coerceIn(
-                            sideYFraction / 2f,
-                            1f - sideYFraction / 2f
-                        )
+                        val safeCenterX = CropGeometry.clampCenter(cropCenterX, sideXFraction)
+                        val safeCenterY = CropGeometry.clampCenter(cropCenterY, sideYFraction)
                         val frameLeft = displayLeft + displayWidth * safeCenterX - side / 2
                         val frameTop = displayTop + displayHeight * safeCenterY - side / 2
                         val density = LocalDensity.current
@@ -215,25 +221,31 @@ fun InteractiveImageEditorDialog(
                         CropFrame(
                             modifier = Modifier.offset(frameLeft, frameTop).size(side),
                             onMove = { dx, dy ->
-                                cropCenterX = (safeCenterX + dx / displayWidthPx)
-                                    .coerceIn(sideXFraction / 2f, 1f - sideXFraction / 2f)
-                                cropCenterY = (safeCenterY + dy / displayHeightPx)
-                                    .coerceIn(sideYFraction / 2f, 1f - sideYFraction / 2f)
+                                cropCenterX = CropGeometry.clampCenter(
+                                    safeCenterX + dx / displayWidthPx, sideXFraction
+                                )
+                                cropCenterY = CropGeometry.clampCenter(
+                                    safeCenterY + dy / displayHeightPx, sideYFraction
+                                )
                             },
                             onResize = { edge, delta ->
                                 val oldSide = cropSide
                                 val signed = when (edge) {
-                                    CropEdge.LEFT, CropEdge.TOP -> -delta
-                                    CropEdge.RIGHT, CropEdge.BOTTOM -> delta
+                                    CropEdgeKind.LEFT, CropEdgeKind.TOP -> -delta
+                                    CropEdgeKind.RIGHT, CropEdgeKind.BOTTOM -> delta
                                 }
-                                cropSide = (cropSide + signed / minDimensionPx).coerceIn(.20f, .98f)
+                                cropSide = CropGeometry.resizeSide(cropSide, signed, minDimensionPx)
                                 val pixelChange = (cropSide - oldSide) * minDimensionPx
-                                when (edge) {
-                                    CropEdge.LEFT -> cropCenterX -= pixelChange / 2f / displayWidthPx
-                                    CropEdge.RIGHT -> cropCenterX += pixelChange / 2f / displayWidthPx
-                                    CropEdge.TOP -> cropCenterY -= pixelChange / 2f / displayHeightPx
-                                    CropEdge.BOTTOM -> cropCenterY += pixelChange / 2f / displayHeightPx
-                                }
+                                val (newCenterX, newCenterY) = CropGeometry.recenterAfterResize(
+                                    edge,
+                                    pixelChange,
+                                    displayWidthPx,
+                                    displayHeightPx,
+                                    cropCenterX,
+                                    cropCenterY
+                                )
+                                cropCenterX = newCenterX
+                                cropCenterY = newCenterY
                             }
                         )
                     }
@@ -244,13 +256,12 @@ fun InteractiveImageEditorDialog(
 
                 val estimatedBytes = sourceBytes?.let { bytes ->
                     if (!cropActive) bytes else {
-                        val quarterTurn = rotation % 180 != 0
-                        val rawWidth = sourcePixels.width.takeIf { it > 0f } ?: 1f
-                        val rawHeight = sourcePixels.height.takeIf { it > 0f } ?: 1f
-                        val imageWidth = if (quarterTurn) rawHeight else rawWidth
-                        val imageHeight = if (quarterTurn) rawWidth else rawHeight
-                        val shortSide = minOf(imageWidth, imageHeight) * cropSide
-                        val areaFraction = (shortSide / imageWidth) * (shortSide / imageHeight)
+                        val areaFraction = CropGeometry.areaFraction(
+                            cropSide,
+                            sourcePixels.width.takeIf { it > 0f } ?: 1f,
+                            sourcePixels.height.takeIf { it > 0f } ?: 1f,
+                            rotation
+                        )
                         (bytes * areaFraction).toLong().coerceAtLeast(1L)
                     }
                 }
@@ -268,19 +279,13 @@ fun InteractiveImageEditorDialog(
                                 error = null
                                 scope.launch {
                                     val crop = if (cropActive) {
-                                        val quarterTurn = rotation % 180 != 0
-                                        val rawWidth = sourcePixels.width.takeIf { it > 0f } ?: 1f
-                                        val rawHeight = sourcePixels.height.takeIf { it > 0f } ?: 1f
-                                        val imageWidth = if (quarterTurn) rawHeight else rawWidth
-                                        val imageHeight = if (quarterTurn) rawWidth else rawHeight
-                                        val shortSide = minOf(imageWidth, imageHeight) * cropSide
-                                        val widthFraction = shortSide / imageWidth
-                                        val heightFraction = shortSide / imageHeight
-                                        CropRect(
-                                            left = (cropCenterX - widthFraction / 2f).coerceIn(0f, 1f - widthFraction),
-                                            top = (cropCenterY - heightFraction / 2f).coerceIn(0f, 1f - heightFraction),
-                                            width = widthFraction,
-                                            height = heightFraction
+                                        CropGeometry.cropRect(
+                                            cropCenterX,
+                                            cropCenterY,
+                                            cropSide,
+                                            sourcePixels.width.takeIf { it > 0f } ?: 1f,
+                                            sourcePixels.height.takeIf { it > 0f } ?: 1f,
+                                            rotation
                                         )
                                     } else null
                                     repository.prepare(
@@ -345,13 +350,11 @@ private fun ImageToolButton(
     }
 }
 
-private enum class CropEdge { LEFT, RIGHT, TOP, BOTTOM }
-
 @Composable
 private fun CropFrame(
     modifier: Modifier,
     onMove: (Float, Float) -> Unit,
-    onResize: (CropEdge, Float) -> Unit
+    onResize: (CropEdgeKind, Float) -> Unit
 ) {
     Box(
         modifier
@@ -364,22 +367,22 @@ private fun CropFrame(
             }
     ) {
         CropEdgeHandle(
-            edge = CropEdge.TOP,
+            edge = CropEdgeKind.TOP,
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(26.dp),
             onResize = onResize
         )
         CropEdgeHandle(
-            edge = CropEdge.BOTTOM,
+            edge = CropEdgeKind.BOTTOM,
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(26.dp),
             onResize = onResize
         )
         CropEdgeHandle(
-            edge = CropEdge.LEFT,
+            edge = CropEdgeKind.LEFT,
             modifier = Modifier.align(Alignment.CenterStart).width(26.dp).fillMaxHeight(),
             onResize = onResize
         )
         CropEdgeHandle(
-            edge = CropEdge.RIGHT,
+            edge = CropEdgeKind.RIGHT,
             modifier = Modifier.align(Alignment.CenterEnd).width(26.dp).fillMaxHeight(),
             onResize = onResize
         )
@@ -388,15 +391,18 @@ private fun CropFrame(
 
 @Composable
 private fun CropEdgeHandle(
-    edge: CropEdge,
+    edge: CropEdgeKind,
     modifier: Modifier,
-    onResize: (CropEdge, Float) -> Unit
+    onResize: (CropEdgeKind, Float) -> Unit
 ) {
     Box(
         modifier.pointerInput(edge) {
             detectDragGestures { change, drag ->
                 change.consume()
-                onResize(edge, if (edge == CropEdge.LEFT || edge == CropEdge.RIGHT) drag.x else drag.y)
+                onResize(
+                    edge,
+                    if (edge == CropEdgeKind.LEFT || edge == CropEdgeKind.RIGHT) drag.x else drag.y
+                )
             }
         },
         contentAlignment = Alignment.Center
@@ -404,7 +410,7 @@ private fun CropEdgeHandle(
         Box(
             Modifier
                 .then(
-                    if (edge == CropEdge.TOP || edge == CropEdge.BOTTOM) {
+                    if (edge == CropEdgeKind.TOP || edge == CropEdgeKind.BOTTOM) {
                         Modifier.width(34.dp).height(5.dp)
                     } else {
                         Modifier.width(5.dp).height(34.dp)

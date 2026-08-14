@@ -14,7 +14,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
@@ -47,6 +45,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -1060,39 +1060,58 @@ private fun BulkStudentDialog(
                                 .semantics { contentDescription = "انصراف" }
                         ) { Text("×", style = MaterialTheme.typography.titleLarge) }
                     }
-                    Row(
-                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        classes.forEach { item ->
-                            FilterChip(
-                                selected = classId == item.id,
-                                onClick = { classId = item.id },
-                                label = { Text(item.name) }
-                            )
-                        }
-                    }
-                    Row(
-                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "دانش‌آموز ${PersianDigits.convert(activeIndex + 1)} از ${PersianDigits.convert(rows.size)}",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        rows.indices.forEach { index ->
-                            FilterChip(
-                                selected = activeIndex == index,
-                                onClick = { activeIndex = index },
-                                label = {
-                                    Text(
-                                        PersianDigits.convert(index + 1) +
-                                            if (rowComplete(rows[index])) " ✓" else ""
+                    // انتخاب کلاس فقط وقتی از منوی اصلی باز شده باشد؛ از داخل کلاس،
+                    // پنجره هیچ نشانی از کلاس‌ها ندارد.
+                    if (initialClassId.isNullOrBlank() && classes.isNotEmpty()) {
+                        var classMenuOpen by remember { mutableStateOf(false) }
+                        Box(Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { classMenuOpen = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    "کلاس: ${classes.firstOrNull { it.id == classId }?.name ?: "انتخاب کلاس"}"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = classMenuOpen,
+                                onDismissRequest = { classMenuOpen = false }
+                            ) {
+                                classes.forEach { item ->
+                                    DropdownMenuItem(
+                                        text = { Text(item.name) },
+                                        onClick = {
+                                            classId = item.id
+                                            classMenuOpen = false
+                                        }
                                     )
                                 }
-                            )
+                            }
                         }
+                    }
+                    // شمارهٔ کارت در حال ویرایش همیشه و بدون نیاز به اسکرول دیده می‌شود.
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (activeIndex > 0) activeIndex -= 1 },
+                            enabled = activeIndex > 0,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("قبلی") }
+                        Text(
+                            "دانش‌آموز ${PersianDigits.convert(activeIndex + 1)} از ${PersianDigits.convert(rows.size)}" +
+                                if (rowComplete(rows[activeIndex])) " ✓" else "",
+                            modifier = Modifier.weight(2f),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        OutlinedButton(
+                            onClick = { if (activeIndex < rows.lastIndex) activeIndex += 1 },
+                            enabled = activeIndex < rows.lastIndex,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("بعدی") }
                     }
                     val index = activeIndex
                     val row = rows[index]

@@ -62,6 +62,8 @@ v28_migration=(ROOT/"supabase/migrations/20260814_native_field_of_study_v28.sql"
 v28_sql_copy=(ROOT/"SQL_NATIVE_FIELD_OF_STUDY_V28.sql").read_text()
 v28_guide=(ROOT/"REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
 v29_guide=(ROOT/"BUILDER_MEDIA_BULK_V29_FA.md").read_text()
+v30_guide=(ROOT/"SMOOTH_REORDER_CHANGELOG_V30_FA.md").read_text()
+reorder_animation=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt").read_text()
 image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 field_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/common/FieldOfStudyPicker.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
@@ -346,7 +348,8 @@ require(all(marker in profile_settings for marker in (
             "expandedCard = if (expandedCard == card) null else card",
             "Icons.Outlined.ExpandLess","Icons.Outlined.ExpandMore","AnimatedVisibility"
         )), "account cards do not independently expand/collapse")
-require("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about_screen and
+require("state.update?.takeIf { it.notesFa.isNotEmpty() }" in about_screen and
+        "downloadedApkPath == null && it.notesFa.isNotEmpty()" not in about_screen and
         "نسخه نصب‌شده: ${BuildConfig.VERSION_NAME}" in about_screen and
         "ChangeListCard" in about_screen and "localReleaseNotesFa" not in about_screen and
         all(marker not in about_screen for marker in (
@@ -371,7 +374,7 @@ require(all(marker in question_media for marker in (
         )), "question image thumbnails are not laid out side-by-side")
 require(all(marker in image_editor for marker in (
             "Icons.Outlined.RotateLeft","Icons.Outlined.RotateRight","Icons.Outlined.Crop",
-            "CropFrame","CropEdge.LEFT","CropEdge.RIGHT","CropEdge.TOP","CropEdge.BOTTOM",
+            "CropFrame","CropEdgeKind.LEFT","CropEdgeKind.RIGHT","CropEdgeKind.TOP","CropEdgeKind.BOTTOM",
             "حجم تقریبی","Icons.Outlined.Check","Icons.Outlined.Close"
         )) and "Slider(" not in image_editor and "۴:۳" not in image_editor,
         "simplified live-size edge-drag crop editor incomplete")
@@ -469,7 +472,8 @@ require(all(marker in question_model for marker in (
         )) and "ensureEditorIds" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text() and
         "while (abs(accumulated) >= stepPx)" in matching_builder and
         "onMove(dragIndex, delta)" in matching_builder and
-        "key(optionId)" in builder_screen and "key(itemId)" in matching_builder,
+        "AnimatedReorderColumn(" in builder_screen and "AnimatedReorderColumn(" in matching_builder and
+        "key(id) { content(item, index) }" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt").read_text(),
         "live stable-id option/matching reorder is incomplete")
 require("safeUris += it.uri.toString()" in question_media and "editQueue.firstOrNull" not in question_media and
         "onSuccess { editing = Uri.parse(it.uri.toString()) }" in matching_builder and
@@ -584,7 +588,7 @@ require("widthIn(max = 620.dp)" in _bulk and
         "V28 bulk window does not match the single student window")
 require("activeIndex = rows.lastIndex" in _bulk and
         "PersianDigits.convert(activeIndex + 1)" in _bulk and
-        "selected = activeIndex == index" in _bulk and
+        "activeIndex -= 1" in _bulk and
         "val row = rows[index]" in _bulk,
         "V28 bulk plus button does not replace the visible card")
 require("StandardFieldsOfStudy" in field_picker and
@@ -652,11 +656,57 @@ require("fun replaceImage" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/Ex
         "V29 replace-image path missing in builder ViewModel")
 require("activeIndex = rows.lastIndex" in _bulk and
         "rowComplete" in _bulk and
-        "PersianDigits.convert(index + 1)" in _bulk,
-        "V29 bulk single visible card with numbered chips missing")
+        "PersianDigits.convert(activeIndex + 1)" in _bulk and
+        "activeIndex -= 1" in _bulk and
+        "activeIndex += 1" in _bulk,
+        "V29 bulk single visible card with the persistent counter missing")
 require(all(marker in v29_guide for marker in (
             "جابه‌جایی پایدار گزینه","آیکن فرمول","نمایش تمام‌صفحه تصویر","ویرایش پس از انتخاب","پنجره گروهی تک‌کارتی","امنیت رمز دانش‌آموز"
         )), "V29 Persian guide coverage incomplete")
+
+# ---- V30: smooth colored reorder / collapsed settings / Persian changelog / image editor fixes / clean bulk window ----
+require("optionDragId == optionId" in builder_screen and
+        "label = \"option-card-color\"" in builder_screen and
+        "CardDefaults.cardColors(containerColor = optionCardColor)" in builder_screen,
+        "V30 dragged option card is not highlighted like the question card")
+require("dragActiveId == itemId" in matching_builder and
+        "label = \"matching-card-color\"" in matching_builder and
+        "onActiveChanged: (Boolean) -> Unit = {}" in matching_builder,
+        "V30 matching card highlight is missing")
+require("AnimatedReorderColumn(" in builder_screen and
+        "AnimatedReorderColumn(" in matching_builder and
+        "anim.snapTo((previous - y).toFloat())" in reorder_animation and
+        "spring(stiffness = Spring.StiffnessMediumLow)" in reorder_animation and
+        "key(id) { content(item, index) }" in reorder_animation,
+        "V30 option/matching cards do not glide into place like question cards")
+require("var settingsExpanded by rememberSaveable { mutableStateOf(false) }" in builder_screen and
+        "بازکردن کارت سؤال، کارت مشخصات آزمون را می‌بندد." in builder_screen and
+        "settingsExpanded = false" in builder_screen,
+        "V30 exam settings card is not collapsed by default or does not close on question open")
+require("state.update?.takeIf { it.notesFa.isNotEmpty() }" in about_screen and
+        "downloadedApkPath == null && it.notesFa.isNotEmpty()" not in about_screen and
+        "removePrefix(\"•\")" in about_screen and
+        "LaunchedEffect(Unit) { viewModel.check(BuildConfig.VERSION_CODE) }" in about_screen,
+        "V30 about screen still hides the Persian changelog")
+require("CHANGELOG_FA.txt" in workflow and
+        "removeprefix(\"-\")" in workflow and
+        (ROOT/"CHANGELOG_FA.txt").exists(),
+        "V30 CI does not publish real Persian release notes")
+require((ROOT/"app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt").exists() and
+        "CropGeometry.cropRect(" in image_editor and
+        "CropGeometry.resizeSide(" in image_editor and
+        "focusManager.clearFocus()" in image_editor and
+        "verticalScroll(rememberScrollState())" in image_editor and
+        "heightIn(max = maxDialogHeight.dp)" in image_editor,
+        "V30 image editor keyboard/scroll/geometry fixes missing")
+require("selected = classId == item.id" not in _bulk and
+        "horizontalScroll(rememberScrollState())" not in _bulk and
+        "if (initialClassId.isNullOrBlank() && classes.isNotEmpty())" in _bulk and
+        "DropdownMenu(" in _bulk,
+        "V30 bulk window still shows the classes row")
+require(all(marker in v30_guide for marker in (
+            "جابه‌جایی رنگی","مشخصات آزمون","لیست تغییرات","ویرایش تصویر","پنجره گروهی"
+        )), "V30 Persian guide coverage incomplete")
 
 for match in re.finditer(
     r"(?im)^\s*(delete\s+from|update\s+)([^;]+);",

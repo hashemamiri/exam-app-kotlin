@@ -68,6 +68,10 @@ fun AboutScreen(
         }
     }
 
+    // با بازشدن صفحه، بررسی خودکار انجام می‌شود تا لیست تغییرات نسخهٔ جدید
+    // بدون نیاز به لمس دکمه دیده شود.
+    LaunchedEffect(Unit) { viewModel.check(BuildConfig.VERSION_CODE) }
+
     LaunchedEffect(state.autoInstallPending, state.downloadedApkPath) {
         val path = state.downloadedApkPath
         if (state.autoInstallPending && path != null) {
@@ -87,9 +91,8 @@ fun AboutScreen(
                 Text("نسخه نصب‌شده: ${BuildConfig.VERSION_NAME}")
             }
         }
-        state.update?.takeIf {
-            state.downloadedApkPath == null && it.notesFa.isNotEmpty()
-        }?.let { remote ->
+        // لیست تغییرات نسخهٔ جدید همیشه دیده می‌شود؛ چه قبل از دانلود چه بعد از آن.
+        state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
             item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
         }
         item {
@@ -135,7 +138,13 @@ private fun ChangeListCard(version: String, notes: List<String>) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(version, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            notes.forEach { Text("• $it") }
+            notes.forEach { raw ->
+                // پاک‌سازی علائم markdown تا متن فارسی تمیز و راست‌به‌چپ بماند.
+                val clean = raw.trim().removePrefix("-").removePrefix("•").trim().replace("`", "")
+                if (clean.isNotEmpty()) {
+                    Text("• $clean", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
         }
     }
 }

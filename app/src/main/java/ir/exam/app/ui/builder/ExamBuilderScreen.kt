@@ -111,7 +111,7 @@ fun ExamBuilderScreen(
     val scope = rememberCoroutineScope()
     var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
     var bankDialogOpen by rememberSaveable { mutableStateOf(false) }
-    var settingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var settingsExpanded by rememberSaveable { mutableStateOf(false) }
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
@@ -248,11 +248,15 @@ fun ExamBuilderScreen(
                         if (expandedQuestionId == question.id) {
                             expandedQuestionId = null
                         } else {
+                            // بازکردن کارت سؤال، کارت مشخصات آزمون را می‌بندد.
+                            settingsExpanded = false
                             expandedQuestionId = question.id
                             scope.launch { scrollQuestionToHeader(index) }
                         }
                     },
                     onExpand = {
+                        // بازکردن کارت سؤال، کارت مشخصات آزمون را می‌بندد.
+                        settingsExpanded = false
                         expandedQuestionId = question.id
                         scope.launch { scrollQuestionToHeader(index) }
                     },
@@ -570,6 +574,8 @@ private fun QuestionEditor(
     }
     var dragAccumulator by remember(question.id) { mutableFloatStateOf(0f) }
     var dragActive by remember(question.id) { mutableStateOf(false) }
+    // شناسهٔ گزینه‌ای که اکنون در حال درگ است تا کارت همان گزینه رنگی شود.
+    var optionDragId by remember(question.id) { mutableStateOf<String?>(null) }
     // همان آستانهٔ مشترک گزینه/جورکردنی تا رفتار جابه‌جایی‌ها یکسان باشد.
     val dragStepPx = with(LocalDensity.current) { ReorderStepDp.dp.toPx() }
     val neonColor = MaterialTheme.colorScheme.primary
@@ -721,11 +727,28 @@ private fun QuestionEditor(
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size-1)},enabled=question.options.size>2){Text("−")}
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size+1)},enabled=question.options.size<10){Text("+")}
                     }
-                    question.options.forEachIndexed { index, option ->
+                    AnimatedReorderColumn(
+                        items = question.options,
+                        ids = question.options.indices.map { index ->
+                            question.optionIds.getOrElse(index) { "option-$index" }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { option, index ->
                         val optionLabel = persianOptionLetter(index)
                         val optionId = question.optionIds.getOrElse(index) { "option-$index" }
-                        key(optionId) {
-                        Card(Modifier.fillMaxWidth()) {
+                        val optionCardColor by animateColorAsState(
+                            targetValue = if (optionDragId == optionId) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                            animationSpec = tween(170),
+                            label = "option-card-color"
+                        )
+                        Card(
+                            Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = optionCardColor)
+                        ) {
                             Column(
                                 Modifier.padding(9.dp),
                                 verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -762,7 +785,10 @@ private fun QuestionEditor(
                                         itemCount = question.options.size,
                                         onDragStarted = onItemDragStarted,
                                         onDragEnded = onItemDragEnded,
-                                        onDragScroll = onDragScroll
+                                        onDragScroll = onDragScroll,
+                                        onActiveChanged = { active ->
+                                            optionDragId = if (active) optionId else null
+                                        }
                                     ) { from, delta ->
                                         viewModel.moveOption(question.id, from, delta)
                                     }
@@ -784,7 +810,6 @@ private fun QuestionEditor(
                                     }
                                 )
                             }
-                        }
                         }
                     }
                 }

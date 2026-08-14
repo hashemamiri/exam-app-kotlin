@@ -72,9 +72,9 @@ class V25HeaderSafetyPolishTest {
     @Test
     fun `release notes only appear for a real update during download`() {
         val about = source("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt")
-        assertTrue("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
+        assertTrue("state.update?.takeIf { it.notesFa.isNotEmpty() }" in about)
         assertFalse("persistent local history returned", "localReleaseNotesFa" in about)
-        assertFalse("notes shown for every available state", "state.update?.takeIf { it.notesFa.isNotEmpty() }" in about)
+        assertFalse("downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
     }
 
     @Test

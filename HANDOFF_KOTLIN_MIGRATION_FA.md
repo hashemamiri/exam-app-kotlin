@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V29 جابه‌جایی پایدار گزینه، آیکن فرمول، نمایش کامل تصویر و پنجره گروهی تک‌کارتی
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V30 جابه‌جایی رنگی و روان، مشخصات جمع‌شونده، لیست تغییرات، ویرایش تصویر و پنجره گروهی
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3530,3 +3530,110 @@ APK Signature Scheme v2                Verified
 ```
 
 راهنمای مستقل: `BUILDER_MEDIA_BULK_V29_FA.md`.
+
+---
+
+## ۴۸) V30 — جابه‌جایی رنگی و روان، مشخصات آزمون جمع‌شونده، لیست تغییرات، ویرایش تصویر و پنجره گروهی
+
+### وضعیت ورودی
+
+```text
+V29 build/device                        → SUCCESS (اعلام کاربر)
+گزارش دستگاه                           → گزینه‌ها هنگام درگ رنگی نمی‌شوند و جابه‌جایی نرم نیست
+```
+
+### جابه‌جایی گزینه/جورکردنی
+
+```text
+علت: رنگ فعال فقط روی دکمهٔ Drag بود نه کارت؛ و کارت‌ها بدون انیمیشن جابه‌جا می‌شدند.
+اصلاح:
+- کارت گزینه/جورکردنی هنگام درگ primaryContainer می‌شود (animateColorAsState tween 170)
+- رنگ به شناسهٔ پایدار گزینه گره خورده تا وسط درگ گم نشود
+- AnimatedReorderColumn با فنر (snapTo + spring) — همان حرکت کارت سؤال
+- ReorderDragButton پارامتر onActiveChanged گرفت
+```
+
+### کارت مشخصات آزمون
+
+```text
+پیش‌فرض بسته شد (settingsExpanded = false)
+بازکردن کارت سؤال (لمس سربرگ یا دکمهٔ چیدمان) کارت مشخصات را می‌بندد.
+```
+
+### لیست تغییرات درباره
+
+```text
+کارت «تغییرات نسخه …» بعد از دانلود APK هم دیده می‌شود.
+بازشدن صفحهٔ درباره بررسی بروزرسانی را خودکار اجرا می‌کند.
+سطرها تمیز (بدون -، • و backtick) و راست‌به‌چپ نمایش داده می‌شوند.
+CI یادداشت‌های فارسی واقعی را از CHANGELOG_FA.txt می‌خواند و منتشر می‌کند
+(حداکثر ۱۲ سطر؛ اگر فایل نبود یادداشت عمومی می‌رود).
+```
+
+### ویرایش تصویر — تست و اصلاح
+
+```text
+۱) صفحه‌کلید با بازشدن ویرایشگر بسته می‌شود (focusManager.clearFocus)
+۲) ارتفاع پنجره ≤ ۹۲٪ صفحه + verticalScroll + imePadding؛ تأیید/انصراف همیشه دیده می‌شوند
+۳) هندسهٔ برش به CropGeometry خالص منتقل و با تست ریاضی JVM تضمین شد:
+   مربع واقعی در پیکسل برای هر ابعاد/چرخش، clamp مرکز، حداقل/حداکثر ضلع،
+   جابه‌جایی مرکز هنگام کشیدن ضلع، تخمین حجم برابر مساحت واقعی.
+فایل جدید: app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt
+```
+
+### پنجره گروهی
+
+```text
+فهرست کلاس‌ها حذف شد.
+از داخل کلاس: هیچ نشانی از کلاس‌ها نیست.
+از منوی اصلی: فقط یک انتخاب‌گر تک‌خطی کلاس (چون ساخت بدون کلاس ممکن نیست).
+شمارهٔ کارت فعال همیشه بالای کارت: «دانش‌آموز ۲ از ۵ ✓» + دکمه‌های قبلی/بعدی، بدون اسکرول.
+```
+
+### فایل‌های کلیدی V30
+
+```text
+SMOOTH_REORDER_CHANGELOG_V30_FA.md
+CHANGELOG_FA.txt
+HANDOFF_KOTLIN_MIGRATION_FA.md
+.github/workflows/android.yml
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt
+app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt
+app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V30SmoothReorderSettingsChangelogTest.kt
+app/src/test/java/ir/exam/app/ui/app/V29ReorderViewerEditBulkTest.kt
+app/src/test/java/ir/exam/app/ui/app/V28ReorderImageBulkFieldTest.kt
+scripts/verify_native_final.py
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز: V29
+نکته CI: یادداشت‌های نسخه‌های بعدی را در CHANGELOG_FA.txt ویرایش کنید.
+```
+
+### نتیجه تست V30
+
+```text
+Kotlin compile                         PASS
+JVM tests                              216/216 PASS
+V30 reorder/settings/changelog tests     17/17 PASS
+CropGeometry math tests                   5/5 PASS
+FINAL_NATIVE_VERIFY                    PASS
+lintDebug                              PASS — 0 error
+assembleDebug                          PASS
+Debug package                          ir.exam.app.native
+APK Signature Scheme v2                Verified
+```
+
+راهنمای مستقل: `SMOOTH_REORDER_CHANGELOG_V30_FA.md`.

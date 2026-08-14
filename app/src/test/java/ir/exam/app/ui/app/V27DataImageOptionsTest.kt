@@ -34,8 +34,9 @@ class V27DataImageOptionsTest {
         assertTrue("while (abs(accumulated) >= stepPx)" in optionUi)
         assertTrue("onMove(dragIndex, delta)" in optionUi)
         assertTrue("dragIndex = target" in optionUi)
-        assertTrue("key(itemId)" in optionUi)
-        assertTrue("key(optionId)" in builder)
+        assertTrue("AnimatedReorderColumn(" in optionUi)
+        assertTrue("AnimatedReorderColumn(" in builder)
+        assertTrue("key(id) { content(item, index) }" in source("app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt"))
     }
 
     @Test
@@ -68,7 +69,7 @@ class V27DataImageOptionsTest {
     fun `about shows installed version and remote notes until download completes`() {
         val about = source("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt")
         assertTrue("نسخه نصب‌شده: ${'$'}{BuildConfig.VERSION_NAME}" in about)
-        assertTrue("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
+        assertTrue("state.update?.takeIf { it.notesFa.isNotEmpty() }" in about)
         assertTrue("ChangeListCard(\"تغییرات نسخه ${'$'}{remote.name}\"" in about)
         assertFalse("persistent local history returned", "localReleaseNotesFa" in about)
     }

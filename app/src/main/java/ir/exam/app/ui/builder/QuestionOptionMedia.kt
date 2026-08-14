@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -169,6 +170,7 @@ fun ReorderDragButton(
     onDragStarted: () -> Unit = {},
     onDragEnded: () -> Unit = {},
     onDragScroll: (Float) -> Unit = {},
+    onActiveChanged: (Boolean) -> Unit = {},
     onMove: (from: Int, delta: Int) -> Unit
 ) {
     var accumulated by remember { mutableFloatStateOf(0f) }
@@ -192,17 +194,20 @@ fun ReorderDragButton(
                         accumulated = 0f
                         dragIndex = latestIndex
                         active = true
+                        onActiveChanged(true)
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onDragStarted()
                     },
                     onDragCancel = {
                         accumulated = 0f
                         active = false
+                        onActiveChanged(false)
                         onDragEnded()
                     },
                     onDragEnd = {
                         accumulated = 0f
                         active = false
+                        onActiveChanged(false)
                         onDragEnded()
                     },
                     onDrag = { change, amount ->
@@ -252,6 +257,7 @@ private fun MatchingItemTools(
     onDragStarted: () -> Unit,
     onDragEnded: () -> Unit,
     onDragScroll: (Float) -> Unit,
+    onActiveChanged: (Boolean) -> Unit = {},
     onDelete: () -> Unit,
     deleteEnabled: Boolean
 ) {
@@ -272,6 +278,7 @@ private fun MatchingItemTools(
             onDragStarted = onDragStarted,
             onDragEnded = onDragEnded,
             onDragScroll = onDragScroll,
+            onActiveChanged = onActiveChanged,
             onMove = onMove
         )
         TextButton(onClick = onDelete, enabled = deleteEnabled) { Text("حذف") }
@@ -288,16 +295,35 @@ fun MatchingQuestionEditor(
     onItemDragEnded: () -> Unit = {},
     onItemDragScroll: (Float) -> Unit = {}
 ) {
+    // شناسهٔ موردی که اکنون در حال درگ است تا کارت همان مورد رنگی شود.
+    var dragActiveId by remember(question.id) { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("ابتدا موارد ستون راست و سپس موارد ستون چپ را تنظیم کنید.")
 
         Text("ستون راست", style = MaterialTheme.typography.titleSmall)
-        question.matchingRight.forEachIndexed { index, value ->
+        AnimatedReorderColumn(
+            items = question.matchingRight,
+            ids = question.matchingRight.indices.map { i ->
+                question.matchingRightIds.getOrElse(i) { "right-$i" }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { value, index ->
             val label = persianOptionLetter(index)
             val itemId = question.matchingRightIds.getOrElse(index) { "right-$index" }
-            key(itemId) {
-                Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            val itemCardColor by animateColorAsState(
+                targetValue = if (dragActiveId == itemId) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                animationSpec = tween(170),
+                label = "matching-card-color"
+            )
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = itemCardColor)
+            ) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     MatchingItemTools(
                         label = label,
                         image = question.matchingRightImages.getOrNull(index),
@@ -312,6 +338,7 @@ fun MatchingQuestionEditor(
                         onDragStarted = onItemDragStarted,
                         onDragEnded = onItemDragEnded,
                         onDragScroll = onItemDragScroll,
+                        onActiveChanged = { active -> dragActiveId = if (active) itemId else null },
                         onDelete = { viewModel.removeMatchingSide(question.id, "right", index) },
                         deleteEnabled = question.matchingRight.size > 2
                     )
@@ -329,7 +356,6 @@ fun MatchingQuestionEditor(
                     )
                 }
             }
-            }
         }
         TextButton(
             onClick = { viewModel.addMatchingSide(question.id, "right") },
@@ -337,12 +363,29 @@ fun MatchingQuestionEditor(
         ) { Text("افزودن مورد راست") }
 
         Text("ستون چپ", style = MaterialTheme.typography.titleSmall)
-        question.matchingLeft.forEachIndexed { index, value ->
+        AnimatedReorderColumn(
+            items = question.matchingLeft,
+            ids = question.matchingLeft.indices.map { i ->
+                question.matchingLeftIds.getOrElse(i) { "left-$i" }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { value, index ->
             val label = PersianDigits.convert(index + 1)
             val itemId = question.matchingLeftIds.getOrElse(index) { "left-$index" }
-            key(itemId) {
-                Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            val itemCardColor by animateColorAsState(
+                targetValue = if (dragActiveId == itemId) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                animationSpec = tween(170),
+                label = "matching-card-color"
+            )
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = itemCardColor)
+            ) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     MatchingItemTools(
                         label = label,
                         image = question.matchingLeftImages.getOrNull(index),
@@ -357,6 +400,7 @@ fun MatchingQuestionEditor(
                         onDragStarted = onItemDragStarted,
                         onDragEnded = onItemDragEnded,
                         onDragScroll = onItemDragScroll,
+                        onActiveChanged = { active -> dragActiveId = if (active) itemId else null },
                         onDelete = { viewModel.removeMatchingSide(question.id, "left", index) },
                         deleteEnabled = question.matchingLeft.size > 2
                     )
@@ -385,7 +429,6 @@ fun MatchingQuestionEditor(
                         }
                     }
                 }
-            }
             }
         }
         TextButton(
