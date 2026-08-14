@@ -310,7 +310,7 @@ private fun SelectedDayCard(
                 }
             }
             day?.let { selected ->
-                if (selected.isFriday) HolidayRow("جمعه")
+                // جمعه فقط با رنگ قرمز تقویم مشخص می‌شود؛ متن فقط برای مناسبت واقعی است.
                 selected.officialHolidays.forEach { HolidayRow(it.title) }
                 if (selected.notes.isEmpty()) {
                     Text(if (isTeacher) "برای این روز پیامی ثبت نشده است." else "پیامی برای این روز نیست.")

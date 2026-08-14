@@ -90,7 +90,7 @@ fun AppLockGate(userId: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun AppLockSettings(userId: String) {
+fun AppLockSettings(userId: String, embedded: Boolean = false) {
     val context = LocalContext.current
     val manager = remember { AppLockManager(context) }
     var enabled by remember(userId) { mutableStateOf(manager.enabled(userId)) }
@@ -104,9 +104,12 @@ fun AppLockSettings(userId: String) {
         onError = { message = it }
     )
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("قفل برنامه", style = MaterialTheme.typography.titleMedium)
+    val body: @Composable () -> Unit = {
+        Column(
+            modifier = if (embedded) Modifier.fillMaxWidth() else Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (!embedded) Text("قفل برنامه", style = MaterialTheme.typography.titleMedium)
             Text(
                 "برنامه از پنجره رسمی Android استفاده می‌کند و نوع رمز یا داده زیستی را ذخیره نمی‌کند."
             )
@@ -155,6 +158,7 @@ fun AppLockSettings(userId: String) {
             message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         }
     }
+    if (embedded) body() else Card(Modifier.fillMaxWidth()) { body() }
 }
 
 @Composable

@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
@@ -24,6 +26,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DragIndicator
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -50,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,9 +64,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.domain.model.WalletRules
@@ -208,7 +221,6 @@ fun ExamBuilderScreen(
                 QuestionEditor(
                     question = question,
                     index = index,
-                    total = state.questions.size,
                     expanded = expandedQuestionId == question.id,
                     onToggle = {
                         if (expandedQuestionId == question.id) {
@@ -218,6 +230,12 @@ fun ExamBuilderScreen(
                             scope.launch { scrollQuestionToHeader(index) }
                         }
                     },
+                    onExpand = {
+                        expandedQuestionId = question.id
+                        scope.launch { scrollQuestionToHeader(index) }
+                    },
+                    onMove = { delta -> viewModel.moveQuestion(question.id, delta) },
+                    onDragScroll = { delta -> listState.dispatchRawDelta(delta * .35f) },
                     viewModel = viewModel,
                     onPreview = { previewQuestion = question }
                 )
@@ -335,12 +353,36 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
             OutlinedTextField(state.title, viewModel::setTitle, label = { Text("عنوان آزمون") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(state.subject, viewModel::setSubject, label = { Text("درس") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(state.durationMinutes, viewModel::setDuration, label = { Text("مدت (دقیقه)") }, modifier = Modifier.fillMaxWidth())
-            JalaliDateTimeField("زمان بازشدن", state.opensAtIso, viewModel::setOpensAt)
-            JalaliDateTimeField("مهلت پایان", state.closesAtIso, viewModel::setClosesAt)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                JalaliDateTimeField(
+                    "شروع",
+                    state.opensAtIso,
+                    viewModel::setOpensAt,
+                    modifier = Modifier.weight(1f)
+                )
+                JalaliDateTimeField(
+                    "پایان",
+                    state.closesAtIso,
+                    viewModel::setClosesAt,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             OutlinedTextField(state.negativeMarking, viewModel::setNegativeMarking, label = { Text("نمره منفی") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(state.teacherMessage, viewModel::setTeacherMessage, label = { Text("پیام معلم") }, modifier = Modifier.fillMaxWidth())
-            ToggleRow("تصادفی‌سازی سؤال‌ها", state.shuffleQuestions, viewModel::setShuffleQuestions)
-            ToggleRow("تصادفی‌سازی گزینه‌ها", state.shuffleOptions, viewModel::setShuffleOptions)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BoldToggleChip(
+                    label = "تصادفی‌سازی سؤال‌ها",
+                    selected = state.shuffleQuestions,
+                    onClick = { viewModel.setShuffleQuestions(!state.shuffleQuestions) },
+                    modifier = Modifier.weight(1f)
+                )
+                BoldToggleChip(
+                    label = "تصادفی‌سازی گزینه‌ها",
+                    selected = state.shuffleOptions,
+                    onClick = { viewModel.setShuffleOptions(!state.shuffleOptions) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
             ToggleRow("اتمام تلاش در پایان زمان", state.attemptOnTimeout, viewModel::setAttemptOnTimeout)
             Text("تعداد تلاش مجاز")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -462,20 +504,100 @@ private data class FormulaTarget(
 private fun QuestionEditor(
     question: QuestionDraft,
     index: Int,
-    total: Int,
     expanded: Boolean,
     onToggle: () -> Unit,
+    onExpand: () -> Unit,
+    onMove: (Int) -> Unit,
+    onDragScroll: (Float) -> Unit,
     viewModel: ExamBuilderViewModel,
     onPreview: () -> Unit
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
+    var styleExpanded by remember(question.id) { mutableStateOf(false) }
+    var scoreText by remember(question.id) {
+        mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
+    }
+    var dragAccumulator by remember(question.id) { mutableFloatStateOf(0f) }
+    val dragStepPx = with(LocalDensity.current) { 44.dp.toPx() }
+    val neonColor = MaterialTheme.colorScheme.primary
+
     Card(Modifier.fillMaxWidth().clickable(onClick = onToggle)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("سؤال ${index + 1} · ${question.type.faLabel()}")
-                Row {
-                    TextButton(onClick={viewModel.moveQuestion(question.id,-1)},enabled=index>0){Text("↑")}
-                    TextButton(onClick={viewModel.moveQuestion(question.id,1)},enabled=index<total-1){Text("↓")}
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(39.dp)
+                        .drawBehind {
+                            drawCircle(neonColor.copy(alpha = .13f), radius = size.minDimension * .48f)
+                            drawCircle(
+                                neonColor.copy(alpha = .58f),
+                                radius = size.minDimension * .39f,
+                                style = Stroke(width = 2.dp.toPx())
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        PersianDigits.convert(index + 1),
+                        color = neonColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    question.type.faLabel(),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1
+                )
+                OutlinedTextField(
+                    value = scoreText,
+                    onValueChange = { raw ->
+                        scoreText = raw.filter { it.isDigit() || it == '.' }.take(6)
+                        viewModel.updateScore(question.id, scoreText)
+                    },
+                    placeholder = { Text("بارم") },
+                    singleLine = true,
+                    modifier = Modifier.width(72.dp)
+                )
+                IconButton(
+                    onClick = {
+                        styleExpanded = !styleExpanded
+                        if (styleExpanded && !expanded) onExpand()
+                    },
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = if (styleExpanded) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        contentDescription = if (styleExpanded) "بستن چیدمان چاپ" else "بازکردن چیدمان چاپ"
+                    )
+                }
+                IconButton(
+                    onClick = {},
+                    modifier = Modifier
+                        .size(42.dp)
+                        .pointerInput(question.id) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { dragAccumulator = 0f },
+                                onDragCancel = { dragAccumulator = 0f },
+                                onDragEnd = { dragAccumulator = 0f },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    dragAccumulator += amount.y
+                                    onDragScroll(amount.y)
+                                    while (abs(dragAccumulator) >= dragStepPx) {
+                                        val delta = if (dragAccumulator > 0f) 1 else -1
+                                        onMove(delta)
+                                        dragAccumulator -= delta * dragStepPx
+                                    }
+                                }
+                            )
+                        }
+                ) {
+                    Icon(Icons.Outlined.DragIndicator, contentDescription = "نگه‌دارید و سؤال را جابه‌جا کنید")
                 }
             }
             AnimatedVisibility(
@@ -495,9 +617,9 @@ private fun QuestionEditor(
                 onEdit = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
                 onDelete = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) }
             )
-            OutlinedTextField(question.score.toString(), { viewModel.updateScore(question.id, it) }, label = { Text("بارم") })
             QuestionMediaEditor(
                 images = question.images,
+                freePlacement = question.imagePosition == "free",
                 onAdd = { uris -> viewModel.addImages(question.id, uris) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
                 onResize = { imageId, width -> viewModel.resizeImage(question.id, imageId, width) },
@@ -574,7 +696,15 @@ private fun QuestionEditor(
                 }
                 QuestionType.FILL_BLANK -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل قبول با |") })
-                    ToggleRow("حساس به حروف بزرگ و کوچک",question.caseSensitive){viewModel.setCaseSensitive(question.id,it)}
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        BoldToggleChip(
+                            label = "حساس به حروف بزرگ و کوچک",
+                            selected = question.caseSensitive,
+                            onClick = {
+                                viewModel.setCaseSensitive(question.id, !question.caseSensitive)
+                            }
+                        )
+                    }
                 }
                 QuestionType.NUMERIC -> {
                     OutlinedTextField(question.expectedNumber, { viewModel.updateExpectedNumber(question.id, it) }, label = { Text("پاسخ عددی") })
@@ -592,7 +722,13 @@ private fun QuestionEditor(
                 )
                 QuestionType.ESSAY -> Unit
             }
-            QuestionStyleControls(question,viewModel,onPreview)
+            AnimatedVisibility(
+                visible = styleExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                QuestionStyleControls(question, viewModel, onPreview)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { viewModel.saveToBank(question.id) }) { Text("ذخیره در بانک") }
                 TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
@@ -659,6 +795,28 @@ private fun QuestionStyleControls(question: QuestionDraft, viewModel: ExamBuilde
 }
 
 @Composable
+private fun BoldToggleChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        label = {
+            Text(
+                label,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    )
+}
+
+@Composable
 private fun ToggleRow(label: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(label)
@@ -675,6 +833,7 @@ private fun SelectionRow(label: String, selected: Boolean, onToggle: () -> Unit)
 }
 
 private fun Long.asToman(): String = PersianDigits.convert("%,d".format(java.util.Locale.US, this))
+private fun compactScore(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()
 
 private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.ESSAY -> "تشریحی"

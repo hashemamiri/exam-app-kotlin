@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V23 اصلاح تیک، مرکزچین کلاس و انتخاب‌گر پایه
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V24 تقویم، منو، آزمون‌ساز و ویرایش تصویر
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3033,5 +3033,72 @@ assembleDebug                         PASS
 APK Signature Scheme v2               Verified
 Debug APK SHA-256                     115c9c92bebd69be9f403659558292cb6c82e48e87f25045159be81a32e628a7
 ```
+
+SQL/Edge/Secret/Dependency جدید ندارد.
+
+---
+
+## ۴۲) V24 — تقویم، منو، آزمون‌ساز و ویرایش تصویر
+
+### تحویل
+
+```text
+Friday: red-only; no «تعطیل: جمعه» message row
+Fast hamburger: 110ms shell fade / 180ms icon morph / no nested stagger
+Teacher menu 8 cards; student menu 6 cards
+Independent Account and Data destinations
+Account cards independently expand/collapse
+About: Persian V18..V24 changelog + compact update controls
+Compact grade field opens a snapping five-row wheel dialog
+Exam Start/End in one colored row
+Jalali calendar + left hour / right minute + check/now/cancel
+Shuffle question/option bold chips in one row
+Long-press drag question reorder + live numbers
+Neon numeric question badge; type/score/eye/drag in header
+Print-layout controls gated by eye icon
+Centered bold case-sensitive chip
+Question image management LazyRow + non-overlapping initial positions
+Shared image editor: rotate left / square crop / rotate right
+Movable square crop with four draggable edges
+Green check / live estimated size / red close bottom row
+No recoverable old password; successful new password one-time sensitive copy
+```
+
+### امنیت رمز
+
+رمز قبلی Supabase Auth یک hash یک‌طرفه است و قابل نمایش یا بازیابی نیست. `plain_password` بازنگشته است. اگر معلم رمز جدید تعیین کند، پس از موفقیت سرور فقط همان رمز جدید در حافظه نشست نمایش داده و با Clipboard حساس قابل کپی می‌شود؛ بستن پنجره آن را از state حذف می‌کند.
+
+### فایل‌های کلیدی
+
+```text
+COMPREHENSIVE_UX_V24_FA.md
+app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt
+app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt
+app/src/main/java/ir/exam/app/ui/builder/JalaliDateTimePicker.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
+app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
+app/src/test/java/ir/exam/app/ui/app/V24ComprehensiveUxTest.kt
+scripts/verify_native_final.py
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              138/138 PASS
+V24 comprehensive UX tests              8/8 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                              PASS — 0 error, 21 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     1e6b84f426b2395b886ad9d7271547c9273f613e686bf3649e285759c78a3fec
+```
+
+راهنمای مستقل: `COMPREHENSIVE_UX_V24_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.

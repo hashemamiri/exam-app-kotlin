@@ -143,6 +143,12 @@ class ClassesViewModel(
         repository.updateStudent(request).getOrThrow()
         reloadData()
         state.value.selectedClass?.id?.let { loadRosterNow(it) }
+        request.newPassword?.takeIf(String::isNotBlank)?.let { password ->
+            // فقط پس از موفقیت سرور و فقط در حافظه تا بسته‌شدن پنجره نمایش داده می‌شود.
+            _state.update {
+                it.copy(lastCredential = StudentCredential(request.id, request.username, password))
+            }
+        }
     }
 
     fun resetPassword(studentId: String, password: String) = action("رمز دانش‌آموز تغییر کرد؛ فقط همین بار نمایش داده می‌شود.") {

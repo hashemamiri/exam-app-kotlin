@@ -4,6 +4,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -12,6 +17,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -75,8 +83,8 @@ import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.portability.DataPortabilitySection
 import ir.exam.app.ui.security.AppLockSettings
 
-enum class ProfileSettingsDestination { PROFILE, HEADER, SETTINGS }
-enum class SettingsSection { APPEARANCE, ACCOUNT, DATA, ABOUT }
+enum class ProfileSettingsDestination { PROFILE, HEADER, ACCOUNT, DATA, SETTINGS }
+enum class SettingsSection { APPEARANCE, ABOUT }
 
 @Composable
 fun ProfileSettingsScreen(
@@ -123,8 +131,6 @@ fun ProfileSettingsScreen(
             ) {
                 listOf(
                     SettingsSection.APPEARANCE to "ظاهر",
-                    SettingsSection.ACCOUNT to "حساب",
-                    SettingsSection.DATA to "داده‌ها",
                     SettingsSection.ABOUT to "درباره"
                 ).forEach { (item, label) ->
                     FilterChip(
@@ -167,8 +173,7 @@ fun ProfileSettingsScreen(
                 "سربرگ رسمی فقط برای حساب معلم است.",
                 retry = {}
             )
-            settingsSection == SettingsSection.APPEARANCE -> AppearanceSection(appearance, viewModel)
-            settingsSection == SettingsSection.ACCOUNT -> AccountSection(
+            destination == ProfileSettingsDestination.ACCOUNT -> AccountSection(
                 user = user,
                 profile = state.profile!!,
                 state = state,
@@ -176,7 +181,7 @@ fun ProfileSettingsScreen(
                 onChangeUsername = viewModel::changeTeacherUsername,
                 onChangeEmail = viewModel::changeEmail
             )
-            settingsSection == SettingsSection.DATA -> Column(
+            destination == ProfileSettingsDestination.DATA -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
             ) {
                 if (user.role == UserRole.TEACHER) {
@@ -185,6 +190,7 @@ fun ProfileSettingsScreen(
                     Text("پشتیبان کامل داده‌ها فقط برای حساب معلم در دسترس است.")
                 }
             }
+            settingsSection == SettingsSection.APPEARANCE -> AppearanceSection(appearance, viewModel)
             else -> Box(Modifier.fillMaxSize()) { aboutContent() }
         }
     }
@@ -452,140 +458,189 @@ private fun AccountSection(
     onChangeEmail: (String) -> Unit
 ) {
     val role = user.role
+    var expandedCard by remember(profile.id) { mutableStateOf<String?>(null) }
     var username by remember(profile.username) { mutableStateOf(profile.username) }
     var newEmail by remember(user.email) { mutableStateOf("") }
     var password by remember(profile.id) { mutableStateOf("") }
     var confirmation by remember(profile.id) { mutableStateOf("") }
     var passwordVisible by remember(profile.id) { mutableStateOf(false) }
     var confirmationVisible by remember(profile.id) { mutableStateOf(false) }
+
+    fun toggle(card: String) {
+        expandedCard = if (expandedCard == card) null else card
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("مشخصات حساب", style = MaterialTheme.typography.titleMedium)
-                    LabeledValue("نام", profile.fullName)
-                    LabeledValue("نام کاربری", profile.username.ifBlank { "—" })
-                    LabeledValue("نقش", if (role == UserRole.TEACHER) "معلم" else "دانش‌آموز")
-                    LabeledValue(
-                        "ایمیل",
-                        if (role == UserRole.TEACHER) user.email.orEmpty().ifBlank { "—" }
-                        else "حساب مدیریت‌شده توسط معلم"
-                    )
-                }
+            AccountAccordionCard(
+                title = "مشخصات حساب",
+                expanded = expandedCard == "info",
+                onToggle = { toggle("info") }
+            ) {
+                LabeledValue("نام", profile.fullName)
+                LabeledValue("نام کاربری", profile.username.ifBlank { "—" })
+                LabeledValue("نقش", if (role == UserRole.TEACHER) "معلم" else "دانش‌آموز")
+                LabeledValue(
+                    "ایمیل",
+                    if (role == UserRole.TEACHER) user.email.orEmpty().ifBlank { "—" }
+                    else "حساب مدیریت‌شده توسط معلم"
+                )
             }
         }
-
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("تغییر نام کاربری", style = MaterialTheme.typography.titleMedium)
-                    if (role == UserRole.TEACHER) {
-                        OutlinedTextField(
-                            value = username,
-                            onValueChange = {
-                                username = it.lowercase().filter { char ->
-                                    char in 'a'..'z' || char.isDigit() || char == '_'
-                                }.take(20)
-                            },
-                            label = { Text("نام کاربری انگلیسی") },
-                            supportingText = { Text("ورود معلم همچنان با ایمیل انجام می‌شود.") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Button(
-                            onClick = { onChangeUsername(username) },
-                            enabled = !state.accountSaving && username.length >= 4 && username != profile.username,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("ذخیره نام کاربری") }
-                    } else {
-                        Text("تغییر نام کاربری دانش‌آموز فقط توسط معلم انجام می‌شود.")
-                    }
-                }
-            }
-        }
-
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("تغییر ایمیل", style = MaterialTheme.typography.titleMedium)
-                    if (role == UserRole.TEACHER) {
-                        OutlinedTextField(
-                            value = newEmail,
-                            onValueChange = { newEmail = it.trim().take(254) },
-                            label = { Text("ایمیل جدید") },
-                            supportingText = {
-                                Text("Supabase پیام تأیید می‌فرستد؛ تا تأیید، ایمیل فعلی معتبر می‌ماند.")
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Button(
-                            onClick = {
-                                onChangeEmail(newEmail)
-                                newEmail = ""
-                            },
-                            enabled = !state.accountSaving && '@' in newEmail && newEmail.length >= 5,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("ارسال تأیید به ایمیل جدید") }
-                    } else {
-                        Text("ایمیل ورود دانش‌آموز توسط سامانه مدیریت می‌شود و در برنامه نمایش داده نمی‌شود.")
-                    }
-                }
-            }
-        }
-
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("تغییر رمز عبور", style = MaterialTheme.typography.titleMedium)
+            AccountAccordionCard(
+                title = "تغییر نام کاربری",
+                expanded = expandedCard == "username",
+                onToggle = { toggle("username") }
+            ) {
+                if (role == UserRole.TEACHER) {
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it.take(72) },
-                        label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
-                        visualTransformation = passwordTransformation(passwordVisible),
-                        trailingIcon = {
-                            PasswordVisibilityButton(
-                                visible = passwordVisible,
-                                onToggle = { passwordVisible = !passwordVisible }
-                            )
+                        value = username,
+                        onValueChange = {
+                            username = it.lowercase().filter { char ->
+                                char in 'a'..'z' || char.isDigit() || char == '_'
+                            }.take(20)
                         },
+                        label = { Text("نام کاربری انگلیسی") },
+                        supportingText = { Text("ورود معلم همچنان با ایمیل انجام می‌شود.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Button(
+                        onClick = { onChangeUsername(username) },
+                        enabled = !state.accountSaving && username.length >= 4 && username != profile.username,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("ذخیره نام کاربری") }
+                } else {
+                    Text("تغییر نام کاربری دانش‌آموز فقط توسط معلم انجام می‌شود.")
+                }
+            }
+        }
+        item {
+            AccountAccordionCard(
+                title = "تغییر ایمیل",
+                expanded = expandedCard == "email",
+                onToggle = { toggle("email") }
+            ) {
+                if (role == UserRole.TEACHER) {
                     OutlinedTextField(
-                        value = confirmation,
-                        onValueChange = { confirmation = it.take(72) },
-                        label = { Text("تکرار رمز جدید") },
-                        visualTransformation = passwordTransformation(confirmationVisible),
-                        trailingIcon = {
-                            PasswordVisibilityButton(
-                                visible = confirmationVisible,
-                                onToggle = { confirmationVisible = !confirmationVisible }
-                            )
+                        value = newEmail,
+                        onValueChange = { newEmail = it.trim().take(254) },
+                        label = { Text("ایمیل جدید") },
+                        supportingText = {
+                            Text("Supabase پیام تأیید می‌فرستد؛ تا تأیید، ایمیل فعلی معتبر می‌ماند.")
                         },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Button(
                         onClick = {
-                            onChangePassword(password, confirmation)
-                            password = ""
-                            confirmation = ""
+                            onChangeEmail(newEmail)
+                            newEmail = ""
                         },
-                        enabled = !state.accountSaving && password.length >= 8 && password == confirmation,
+                        enabled = !state.accountSaving && '@' in newEmail && newEmail.length >= 5,
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("تغییر رمز") }
-                    Text("رمز قبلی قابل مشاهده یا بازیابی نیست.", style = MaterialTheme.typography.bodySmall)
+                    ) { Text("ارسال تأیید به ایمیل جدید") }
+                } else {
+                    Text("ایمیل ورود دانش‌آموز توسط سامانه مدیریت می‌شود و در برنامه نمایش داده نمی‌شود.")
                 }
             }
         }
-        item { AppLockSettings(profile.id) }
+        item {
+            AccountAccordionCard(
+                title = "تغییر رمز عبور",
+                expanded = expandedCard == "password",
+                onToggle = { toggle("password") }
+            ) {
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it.take(72) },
+                    label = { Text("رمز جدید ۸ تا ۷۲ کاراکتر") },
+                    visualTransformation = passwordTransformation(passwordVisible),
+                    trailingIcon = {
+                        PasswordVisibilityButton(
+                            visible = passwordVisible,
+                            onToggle = { passwordVisible = !passwordVisible }
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmation,
+                    onValueChange = { confirmation = it.take(72) },
+                    label = { Text("تکرار رمز جدید") },
+                    visualTransformation = passwordTransformation(confirmationVisible),
+                    trailingIcon = {
+                        PasswordVisibilityButton(
+                            visible = confirmationVisible,
+                            onToggle = { confirmationVisible = !confirmationVisible }
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = {
+                        onChangePassword(password, confirmation)
+                        password = ""
+                        confirmation = ""
+                    },
+                    enabled = !state.accountSaving && password.length >= 8 && password == confirmation,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("تغییر رمز") }
+                Text("رمز قبلی قابل مشاهده یا بازیابی نیست.", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        item {
+            AccountAccordionCard(
+                title = "قفل برنامه",
+                expanded = expandedCard == "lock",
+                onToggle = { toggle("lock") }
+            ) {
+                AppLockSettings(profile.id, embedded = true)
+            }
+        }
         if (state.accountSaving) item { CircularProgressIndicator() }
         state.message?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+    }
+}
+
+@Composable
+private fun AccountAccordionCard(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "بستن $title" else "بازکردن $title"
+                )
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    content = content
+                )
+            }
+        }
     }
 }
 

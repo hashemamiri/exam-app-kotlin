@@ -59,8 +59,8 @@ class Neumorphic69IntegrationTest {
     fun `full page menu contract keeps complete real two-column rows`() {
         assertEquals(2, Design69MenuContract.COLUMNS)
         assertTrue(Design69MenuContract.PROFILE_HEIGHT_DP > Design69MenuContract.CARD_HEIGHT_DP)
-        assertEquals(6, Design69MenuContract.TEACHER_CARD_COUNT)
-        assertEquals(4, Design69MenuContract.STUDENT_CARD_COUNT)
+        assertEquals(8, Design69MenuContract.TEACHER_CARD_COUNT)
+        assertEquals(6, Design69MenuContract.STUDENT_CARD_COUNT)
         assertTrue(Design69MenuContract.isCompleteGrid(Design69MenuContract.TEACHER_CARD_COUNT))
         assertTrue(Design69MenuContract.isCompleteGrid(Design69MenuContract.STUDENT_CARD_COUNT))
         assertFalse(Design69MenuContract.isCompleteGrid(9))
@@ -90,8 +90,10 @@ class Neumorphic69IntegrationTest {
         assertTrue("Design69Icons.Wallet" in dock)
         assertTrue("DockMotion.WALLET" in dock)
         assertTrue("rippleProgress.animateTo(1f, tween(520))" in dock)
-        assertTrue("slideInHorizontally" in menu)
-        assertTrue("delay = 120 + index * 40" in menu)
+        assertFalse("nested menu slide animation returned", "slideInHorizontally" in menu)
+        assertFalse("slow stagger delay returned", "delay = 120 + index * 40" in menu)
+        assertTrue("enter = fadeIn(tween(110))" in app)
+        assertTrue("animationSpec = tween(180)" in icons)
     }
 
     @Test
@@ -135,7 +137,7 @@ class Neumorphic69IntegrationTest {
         val lock = File(root, "app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").readText()
 
         assertTrue("mutableStateOf(MainPage.CALENDAR)" in app)
-        listOf("تقویم و پیام‌ها", "کلاس‌ها", "دانش‌آموزان", "سربرگ", "تنظیمات", "خروج").forEach {
+        listOf("تقویم و پیام‌ها", "کلاس‌ها", "دانش‌آموزان", "سربرگ", "حساب", "داده‌ها", "تنظیمات", "خروج").forEach {
             assertTrue("missing hamburger item $it", it in app)
         }
         val teacherMenu = app.substringAfter("val menuCards = if (user.role == UserRole.TEACHER)")
@@ -147,9 +149,13 @@ class Neumorphic69IntegrationTest {
         assertTrue(".size(44.dp)" in dock)
         assertTrue(".size(58.dp)" in dock)
         assertTrue("if (!expanded)" in dock)
-        listOf("SettingsSection.APPEARANCE", "SettingsSection.ACCOUNT", "SettingsSection.DATA", "SettingsSection.ABOUT").forEach {
+        listOf("SettingsSection.APPEARANCE", "SettingsSection.ABOUT").forEach {
             assertTrue("missing settings section $it", it in profile)
         }
+        assertFalse("account still nested in settings tabs", "SettingsSection.ACCOUNT" in profile)
+        assertFalse("data still nested in settings tabs", "SettingsSection.DATA" in profile)
+        assertTrue("ProfileSettingsDestination.ACCOUNT" in profile)
+        assertTrue("ProfileSettingsDestination.DATA" in profile)
         assertTrue("تغییر ایمیل" in profile && "AppLockSettings" in profile)
         assertTrue("expandedExamId" in dashboard && "AnimatedVisibility" in dashboard)
         assertTrue("BiometricPrompt" in lock && "OutlinedTextField" !in lock)

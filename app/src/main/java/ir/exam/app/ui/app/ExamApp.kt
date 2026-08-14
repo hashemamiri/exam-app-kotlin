@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -268,6 +267,16 @@ private fun AuthenticatedExamApp(
             profileDestination = ProfileSettingsDestination.HEADER
             page = MainPage.SETTINGS
         },
+        onAccount = {
+            closeTransientNavigation()
+            profileDestination = ProfileSettingsDestination.ACCOUNT
+            page = MainPage.SETTINGS
+        },
+        onData = {
+            closeTransientNavigation()
+            profileDestination = ProfileSettingsDestination.DATA
+            page = MainPage.SETTINGS
+        },
         onSettings = {
             closeTransientNavigation()
             profileDestination = ProfileSettingsDestination.SETTINGS
@@ -453,6 +462,8 @@ private fun AuthenticatedShell(
     onCards: () -> Unit,
     onProfile: () -> Unit,
     onHeader: () -> Unit,
+    onAccount: () -> Unit,
+    onData: () -> Unit,
     onSettings: () -> Unit,
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
@@ -484,9 +495,18 @@ private fun AuthenticatedShell(
                 onClick = { select(onHeader) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر، حساب، داده‌ها و درباره", Design69Icons.Settings,
-                page == MainPage.SETTINGS &&
-                    profileDestination == ProfileSettingsDestination.SETTINGS,
+                "حساب", "مشخصات و امنیت حساب", Design69Icons.Account,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.ACCOUNT,
+                onClick = { select(onAccount) }
+            ),
+            Design69MenuCard(
+                "داده‌ها", "پشتیبان و بازیابی داده‌ها", Design69Icons.Data,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.DATA,
+                onClick = { select(onData) }
+            ),
+            Design69MenuCard(
+                "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),
             Design69MenuCard(
@@ -505,8 +525,19 @@ private fun AuthenticatedShell(
                 page == MainPage.STUDENT_RESULTS, onClick = { select(onStudentResults) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر، حساب، داده‌ها و درباره", Design69Icons.Settings,
-                page == MainPage.SETTINGS, onClick = { select(onSettings) }
+                "حساب", "مشخصات و امنیت حساب", Design69Icons.Account,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.ACCOUNT,
+                onClick = { select(onAccount) }
+            ),
+            Design69MenuCard(
+                "داده‌ها", "دسترسی به داده‌های حساب", Design69Icons.Data,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.DATA,
+                onClick = { select(onData) }
+            ),
+            Design69MenuCard(
+                "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
+                onClick = { select(onSettings) }
             ),
             Design69MenuCard(
                 "خروج", "خروج امن و تعویض حساب", Design69Icons.Logout,
@@ -562,8 +593,8 @@ private fun AuthenticatedShell(
                             AnimatedVisibility(
                                 visible = menuOpen,
                                 modifier = Modifier.fillMaxSize(),
-                                enter = fadeIn(tween(260)) + scaleIn(tween(420), initialScale = .985f),
-                                exit = fadeOut(tween(190)) + scaleOut(tween(220), targetScale = .985f)
+                                enter = fadeIn(tween(110)),
+                                exit = fadeOut(tween(90))
                             ) {
                                 Box(Modifier.fillMaxSize().background(colors.background)) {
                                     Design69MainMenuScreen(

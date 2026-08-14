@@ -131,12 +131,13 @@ class V23InteractionGradeOdometerTest {
         )
         listOf(
             "rememberSnapFlingBehavior",
+            "GradeWheelDialog",
             "LazyColumn",
             "snapshotFlow",
-            "Icons.Outlined.Speed",
-            "Icons.Outlined.SwapVert",
-            "برای انتخاب به بالا یا پایین پیمایش کنید"
-        ).forEach { assertTrue("missing odometer behavior $it", it in odometer) }
+            "Icons.Outlined.UnfoldMore",
+            "فهرست را به بالا یا پایین بکشید"
+        ).forEach { assertTrue("missing redesigned grade wheel behavior $it", it in odometer) }
+        assertFalse("old speedometer icon returned", "Icons.Outlined.Speed" in odometer)
     }
 
     @Test

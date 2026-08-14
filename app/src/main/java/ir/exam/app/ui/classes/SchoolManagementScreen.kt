@@ -3,6 +3,7 @@ package ir.exam.app.ui.classes
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.PersistableBundle
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -241,13 +242,29 @@ fun SchoolManagementScreen(
     }},confirmButton={Button(onClick={pendingXlsx=credentialWorkbook(result.credentials);xlsxLauncher.launch("student-credentials.xlsx")}){Text("ذخیره Excel رمزها")}},dismissButton={TextButton(onClick=viewModel::clearMessage){Text("بستن")}}) }
 
     state.lastCredential?.let { credential ->
+        val credentialStudent = state.students.firstOrNull { it.id == credential.id }
+            ?: state.roster.firstOrNull { it.id == credential.id }
         AlertDialog(
             onDismissRequest = viewModel::clearMessage,
-            title = { Text("حساب ساخته شد") },
+            title = { Text("رمز یک‌بارنمایش آماده است") },
             text = {
-                Text("نام کاربری: ${credential.username}\nرمز عبور (فقط همین بار نمایش داده می‌شود): ${credential.password}\nاین رمز در دیتابیس ذخیره نمی‌شود؛ همین حالا امن به دانش‌آموز بدهید.")
+                Text(
+                    "نام کاربری: ${credential.username}\n" +
+                        "رمز جدید: ${credential.password}\n" +
+                        "رمز فقط در حافظه این نشست است و پس از بستن پنجره قابل بازیابی نیست."
+                )
             },
-            confirmButton = { Button(onClick = viewModel::clearMessage) { Text("متوجه شدم") } }
+            confirmButton = {
+                Button(
+                    onClick = {
+                        copyOneTimeCredential(context, credential, credentialStudent)
+                        viewModel.clearMessage()
+                    }
+                ) { Text("کپی اطلاعات و رمز جدید") }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::clearMessage) { Text("بستن") }
+            }
         )
     }
 }
@@ -741,7 +758,7 @@ private fun StudentEditDialog(
                             { newPassword = it.take(72) },
                             label = { Text("رمز جدید اختیاری") },
                             supportingText = {
-                                Text("رمز قبلی قابل بازیابی نیست؛ خالی بماند تغییر نمی‌کند.")
+                                Text("رمز فعلی hash شده و قابل نمایش نیست؛ خالی بماند تغییر نمی‌کند و رمز جدید پس از ذخیره یک‌بار قابل کپی است.")
                             },
                             visualTransformation = passwordTransformation(passwordVisible),
                             trailingIcon = {
@@ -1062,13 +1079,19 @@ private fun BulkStudentDialog(
     }
 }
 
-internal fun studentClipboardText(student: StudentProfile): String = buildList {
+internal fun studentClipboardText(
+    student: StudentProfile,
+    oneTimePassword: String? = null
+): String = buildList {
     add("اطلاعات دانش‌آموز")
     add("نام و نام خانوادگی: ${student.fullName.ifBlank { "—" }}")
     add("نام: ${student.firstName.orEmpty().ifBlank { "—" }}")
     add("نام خانوادگی: ${student.lastName.orEmpty().ifBlank { "—" }}")
     add("نام کاربری: ${student.username.orEmpty().ifBlank { "—" }}")
-    add("رمز عبور: قابل بازیابی نیست؛ فقط هنگام ساخت یا تعیین رمز جدید قابل تحویل است.")
+    add(
+        oneTimePassword?.let { "رمز جدید یک‌بارنمایش: $it" }
+            ?: "رمز عبور: قابل بازیابی نیست؛ برای دریافت رمز، یک رمز جدید تعیین کنید."
+    )
     add("جنسیت: ${when (student.gender?.lowercase()) { "female" -> "دختر"; "male" -> "پسر"; else -> "—" }}")
     add("نام پدر: ${student.fatherName.orEmpty().ifBlank { "—" }}")
     add("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
@@ -1091,6 +1114,22 @@ private fun copyStudentInformation(context: Context, student: StudentProfile) {
         "اطلاعات قابل بازیابی کپی شد؛ رمز قبلی در سامانه ذخیره نمی‌شود.",
         Toast.LENGTH_LONG
     ).show()
+}
+
+private fun copyOneTimeCredential(
+    context: Context,
+    credential: StudentCredential,
+    student: StudentProfile?
+) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
+    val text = student?.let { studentClipboardText(it, credential.password) }
+        ?: "نام کاربری: ${credential.username}\nرمز جدید یک‌بارنمایش: ${credential.password}"
+    val clip = ClipData.newPlainText("اطلاعات و رمز جدید دانش‌آموز", text)
+    clip.description.extras = PersistableBundle().apply {
+        putBoolean("android.content.extra.IS_SENSITIVE", true)
+    }
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(context, "اطلاعات و رمز جدید به‌صورت حساس کپی شد.", Toast.LENGTH_LONG).show()
 }
 
 private fun studentWorkbook(students:List<StudentProfile>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان",listOf(listOf("نام","نام کاربری","جنسیت","پایه","نام پدر","کلاس","وضعیت"))+students.map{listOf(it.fullName,it.username.orEmpty(),it.gender.orEmpty(),it.grade.orEmpty(),it.fatherName.orEmpty(),it.classNames.orEmpty(),if(it.active)"فعال" else "غیرفعال") })))

@@ -383,7 +383,12 @@ class ExamBuilderViewModel(
 
     fun addImages(questionId: String, uris: List<String>) { update(questionId) { question ->
         question.copy(images = question.images + uris.take(10 - question.images.size).mapIndexed { index, uri ->
-            MediaDraft(uri = uri, xMm = 20f + index * 12f, yMm = 30f + index * 12f)
+            val slot = question.images.size + index
+            MediaDraft(
+                uri = uri,
+                xMm = 8f + (slot % 2) * 85f,
+                yMm = 10f + (slot / 2) * 68f
+            )
         })
     } }
     fun moveImage(questionId: String, imageId: String, xMm: Float, yMm: Float) { update(questionId) { question ->

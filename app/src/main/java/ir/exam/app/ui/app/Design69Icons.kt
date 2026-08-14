@@ -124,6 +124,30 @@ object Design69Icons {
         }
     }
 
+    val Account: ImageVector by lazy {
+        vector("Design69Account") {
+            strokePath {
+                circle(12f, 8f, 3.5f)
+                moveTo(5f, 20f); curveTo(5.8f, 15.3f, 8.1f, 13f, 12f, 13f)
+                curveTo(15.9f, 13f, 18.2f, 15.3f, 19f, 20f)
+                moveTo(18f, 5f); lineTo(20f, 5f); lineTo(20f, 7f)
+            }
+        }
+    }
+
+    val Data: ImageVector by lazy {
+        vector("Design69Data") {
+            strokePath {
+                moveTo(4f, 6f); curveTo(4f, 3.8f, 20f, 3.8f, 20f, 6f)
+                curveTo(20f, 8.2f, 4f, 8.2f, 4f, 6f); close()
+                moveTo(4f, 6f); lineTo(4f, 12f); curveTo(4f, 14.2f, 20f, 14.2f, 20f, 12f)
+                lineTo(20f, 6f)
+                moveTo(4f, 12f); lineTo(4f, 18f); curveTo(4f, 20.2f, 20f, 20.2f, 20f, 18f)
+                lineTo(20f, 12f)
+            }
+        }
+    }
+
     val Settings: ImageVector by lazy {
         vector("Design69Settings") {
             strokePath {
@@ -264,7 +288,7 @@ fun Design69MorphingMenuIcon(
 ) {
     val progress by animateFloatAsState(
         targetValue = if (open) 1f else 0f,
-        animationSpec = tween(420),
+        animationSpec = tween(180),
         label = "design69-menu-morph"
     )
     Canvas(modifier.graphicsLayer { clip = false }) {
