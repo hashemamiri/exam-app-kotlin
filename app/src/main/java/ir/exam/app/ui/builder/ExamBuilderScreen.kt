@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DragIndicator
+import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.foundation.text.BasicTextField
@@ -251,6 +252,7 @@ fun ExamBuilderScreen(
                         scope.launch { scrollQuestionToHeader(index) }
                     },
                     onMove = { delta -> viewModel.moveQuestion(question.id, delta) },
+                    onDragStarted = { expandedQuestionId = null },
                     onDragScroll = { delta -> listState.dispatchRawDelta(delta * .35f) },
                     viewModel = viewModel,
                     onPreview = { previewQuestion = question }
@@ -380,7 +382,8 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                     "پایان",
                     state.closesAtIso,
                     viewModel::setClosesAt,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    minimumIso = state.opensAtIso
                 )
             }
             OutlinedTextField(state.negativeMarking, viewModel::setNegativeMarking, label = { Text("نمره منفی") }, modifier = Modifier.fillMaxWidth())
@@ -546,6 +549,7 @@ private fun QuestionEditor(
     onToggle: () -> Unit,
     onExpand: () -> Unit,
     onMove: (Int) -> Unit,
+    onDragStarted: () -> Unit,
     onDragScroll: (Float) -> Unit,
     viewModel: ExamBuilderViewModel,
     onPreview: () -> Unit
@@ -629,6 +633,7 @@ private fun QuestionEditor(
                                 onDragStart = {
                                     dragAccumulator = 0f
                                     dragActive = true
+                                    onDragStarted()
                                 },
                                 onDragCancel = {
                                     dragAccumulator = 0f
@@ -676,7 +681,6 @@ private fun QuestionEditor(
                 freePlacement = question.imagePosition == "free",
                 onAdd = { uris -> viewModel.addImages(question.id, uris) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
-                onResize = { imageId, width -> viewModel.resizeImage(question.id, imageId, width) },
                 onRemove = { imageId -> viewModel.removeImage(question.id, imageId) }
             )
             Text("تصویر پاسخ دانش‌آموز")
@@ -710,39 +714,63 @@ private fun QuestionEditor(
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size+1)},enabled=question.options.size<10){Text("+")}
                     }
                     question.options.forEachIndexed { index, option ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(question.correctIndex == index, onClick = { viewModel.setCorrect(question.id, index) })
-                            OutlinedTextField(
-                                option,
-                                { viewModel.updateOption(question.id, index, it) },
-                                label = { Text("گزینه ${index + 1}") },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick={viewModel.moveOption(question.id,index,-1)},enabled=index>0){Text("↑ گزینه")}
-                            TextButton(onClick={viewModel.moveOption(question.id,index,1)},enabled=index<question.options.lastIndex){Text("↓ گزینه")}
-                            OutlinedButton(onClick = { formulaTarget = FormulaTarget("option", index) }) {
-                                Text("فرمول گزینه ${index + 1}")
+                        val optionLabel = persianOptionLetter(index)
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(
+                                Modifier.padding(9.dp),
+                                verticalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        optionLabel,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    RadioButton(
+                                        selected = question.correctIndex == index,
+                                        onClick = { viewModel.setCorrect(question.id, index) }
+                                    )
+                                    IconButton(onClick = {
+                                        formulaTarget = FormulaTarget("option", index)
+                                    }) {
+                                        Icon(
+                                            Icons.Outlined.Functions,
+                                            contentDescription = "درج فرمول $optionLabel"
+                                        )
+                                    }
+                                    SingleImagePicker(
+                                        value = question.optionImages.getOrNull(index),
+                                        label = "تصویر $optionLabel"
+                                    ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
+                                    ReorderDragButton(
+                                        description = "نگه‌دارید و $optionLabel را جابه‌جا کنید"
+                                    ) { delta ->
+                                        viewModel.moveOption(question.id, index, delta)
+                                    }
+                                }
+                                OutlinedTextField(
+                                    value = option,
+                                    onValueChange = { viewModel.updateOption(question.id, index, it) },
+                                    placeholder = { Text("متن $optionLabel") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if ('$' in option) NativeMathText(option)
+                                ExistingFormulaEditor(
+                                    source = option,
+                                    onEdit = { occurrence, tex ->
+                                        formulaTarget = FormulaTarget("option", index, occurrence, tex)
+                                    },
+                                    onDelete = { occurrence ->
+                                        viewModel.deleteFormula(question.id, "option", index, occurrence)
+                                    }
+                                )
                             }
-                            if ('$' in option) NativeMathText(option)
                         }
-                        ExistingFormulaEditor(
-                            source = option,
-                            onEdit = { occurrence, tex ->
-                                formulaTarget = FormulaTarget("option", index, occurrence, tex)
-                            },
-                            onDelete = { occurrence ->
-                                viewModel.deleteFormula(question.id, "option", index, occurrence)
-                            }
-                        )
-                        SingleImagePicker(
-                            value = question.optionImages.getOrNull(index),
-                            label = "تصویر گزینه ${index + 1}"
-                        ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                     }
-                }
                 }
                 QuestionType.TRUE_FALSE -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(selected = question.expectedText == "true", onClick = { viewModel.setTrueFalse(question.id, true) }, label = { Text("صحیح") })

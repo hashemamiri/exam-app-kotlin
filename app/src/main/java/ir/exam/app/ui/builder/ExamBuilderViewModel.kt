@@ -9,6 +9,7 @@ import ir.exam.app.data.local.NativeDatabaseProvider
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.data.repository.ExamBuilderDraftStore
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
+import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -130,8 +131,19 @@ class ExamBuilderViewModel(
     fun setTitle(value: String) { _state.update { it.copy(title = value, error = null) } }
     fun setSubject(value: String) { _state.update { it.copy(subject = value, error = null) } }
     fun setDuration(value: String) { _state.update { it.copy(durationMinutes = value.filter(Char::isDigit), error = null) } }
-    fun setOpensAt(value: String?) { _state.update { it.copy(opensAtIso = value, error = null) } }
-    fun setClosesAt(value: String?) { _state.update { it.copy(closesAtIso = value, error = null) } }
+    fun setOpensAt(value: String?) {
+        _state.update { current ->
+            val close = current.closesAtIso?.takeUnless { value != null && instantBefore(it, value) }
+            current.copy(opensAtIso = value, closesAtIso = close, error = null)
+        }
+    }
+    fun setClosesAt(value: String?) {
+        _state.update { current ->
+            if (value != null && current.opensAtIso?.let { instantBefore(value, it) } == true) {
+                current.copy(error = "زمان پایان نمی‌تواند قبل از زمان شروع باشد.")
+            } else current.copy(closesAtIso = value, error = null)
+        }
+    }
     fun setNegativeMarking(value: String) { _state.update { it.copy(negativeMarking = value.filter { c -> c.isDigit() || c == '.' }, error = null) } }
     fun setTeacherMessage(value: String) { _state.update { it.copy(teacherMessage = value.take(1000), error = null) } }
     fun setShuffleQuestions(value: Boolean) { _state.update { it.copy(shuffleQuestions = value) } }
@@ -511,6 +523,10 @@ private fun remapMovedIndex(value: Int, from: Int, to: Int): Int = when {
     from > to && value in to until from -> value + 1
     else -> value
 }
+
+private fun instantBefore(first: String, second: String): Boolean = runCatching {
+    Instant.parse(first).isBefore(Instant.parse(second))
+}.getOrDefault(false)
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 private fun <T> List<T>.replaceAt(index: Int, value: T): List<T> = mapIndexed { i, old -> if (i == index) value else old }

@@ -556,22 +556,24 @@ private fun AuthenticatedShell(
                 Scaffold(
                     containerColor = colors.background,
                     topBar = {
-                        TopAppBar(
-                            title = {
-                                Text(page.sectionTitle(user.role, profileDestination, schoolStudentsSelected))
-                            },
-                            navigationIcon = {
-                                if (user.role == UserRole.STUDENT) {
-                                    IconButton(onClick = onToggleMenu) {
-                                        Design69MorphingMenuIcon(
-                                            open = menuOpen,
-                                            tint = colors.muted,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                        if (!menuOpen) {
+                            TopAppBar(
+                                title = {
+                                    Text(page.sectionTitle(user.role, profileDestination, schoolStudentsSelected))
+                                },
+                                navigationIcon = {
+                                    if (user.role == UserRole.STUDENT) {
+                                        IconButton(onClick = onToggleMenu) {
+                                            Design69MorphingMenuIcon(
+                                                open = false,
+                                                tint = colors.muted,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     },
                     bottomBar = {
                         if (user.role == UserRole.TEACHER) {

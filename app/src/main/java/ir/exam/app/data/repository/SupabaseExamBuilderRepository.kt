@@ -16,6 +16,7 @@ import ir.exam.app.ui.builder.BankQuestionOption
 import ir.exam.app.ui.builder.ExamBuilderState
 import ir.exam.app.ui.builder.ExamSaveResult
 import ir.exam.app.ui.builder.QuestionDraft
+import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -99,6 +100,11 @@ class SupabaseExamBuilderRepository(context: Context) {
         require(state.questions.all { it.text.isNotBlank() }) { "متن همه سؤال‌ها را وارد کنید." }
         require(state.audienceMode != "classes" || state.audienceClasses.isNotEmpty()) { "حداقل یک کلاس انتخاب کنید." }
         require(state.audienceMode != "students" || state.audienceStudents.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
+        if (state.opensAtIso != null && state.closesAtIso != null) {
+            require(!Instant.parse(state.closesAtIso).isBefore(Instant.parse(state.opensAtIso))) {
+                "زمان پایان نمی‌تواند قبل از زمان شروع باشد."
+            }
+        }
 
         val examId = state.examId ?: UUID.randomUUID().toString()
         val questionsWithUrls = imageUploader.uploadPending(

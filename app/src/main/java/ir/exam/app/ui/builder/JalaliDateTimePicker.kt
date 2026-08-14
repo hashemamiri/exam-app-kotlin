@@ -57,7 +57,8 @@ fun JalaliDateTimeField(
     label: String,
     iso: String?,
     onChange: (String?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    minimumIso: String? = null
 ) {
     var open by remember { mutableStateOf(false) }
     val configured = iso != null
@@ -83,6 +84,7 @@ fun JalaliDateTimeField(
     if (open) {
         JalaliDateTimeDialog(
             initialIso = iso,
+            minimumIso = minimumIso,
             title = label,
             canClear = iso != null,
             onDismiss = { open = false },
@@ -101,6 +103,7 @@ fun JalaliDateTimeField(
 @Composable
 private fun JalaliDateTimeDialog(
     initialIso: String?,
+    minimumIso: String?,
     title: String,
     canClear: Boolean,
     onDismiss: () -> Unit,
@@ -108,6 +111,10 @@ private fun JalaliDateTimeDialog(
     onConfirm: (String) -> Unit
 ) {
     val initial = remember(initialIso) { parseInitial(initialIso) }
+    val minimumInstant = remember(minimumIso) { minimumIso?.let { runCatching { Instant.parse(it) }.getOrNull() } }
+    val minimumDate = remember(minimumInstant) {
+        minimumInstant?.atZone(ZoneId.systemDefault())?.toLocalDate()?.let(JalaliCalendar::fromGregorian)
+    }
     var selected by remember(initialIso) { mutableStateOf(initial.first) }
     var visibleYear by remember(initialIso) { mutableStateOf(initial.first.year) }
     var visibleMonth by remember(initialIso) { mutableStateOf(initial.first.month) }
@@ -125,11 +132,14 @@ private fun JalaliDateTimeDialog(
             val h = hour.toInt()
             val m = minute.toInt()
             require(h in 0..23 && m in 0..59) { "ساعت یا دقیقه نامعتبر است." }
-            JalaliCalendar.toGregorian(selected)
+            val candidate = JalaliCalendar.toGregorian(selected)
                 .atTime(h, m)
                 .atZone(ZoneId.systemDefault())
                 .toInstant()
-                .toString()
+            require(minimumInstant == null || !candidate.isBefore(minimumInstant)) {
+                "زمان پایان نمی‌تواند قبل از زمان شروع باشد."
+            }
+            candidate.toString()
         }.onSuccess(onConfirm)
             .onFailure { error = it.message ?: "تاریخ نامعتبر است." }
     }
@@ -171,6 +181,7 @@ private fun JalaliDateTimeDialog(
                     year = visibleYear,
                     month = visibleMonth,
                     selected = selected,
+                    minimumDate = minimumDate,
                     onSelect = { selected = it; error = null }
                 )
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -214,9 +225,15 @@ private fun JalaliDateTimeDialog(
                     OutlinedButton(
                         onClick = {
                             val now = LocalDateTime.now()
+                            val today = JalaliCalendar.fromGregorian(now.toLocalDate())
+                            selected = today
+                            visibleYear = today.year
+                            visibleMonth = today.month
                             hour = now.hour.toString().padStart(2, '0')
                             minute = now.minute.toString().padStart(2, '0')
-                            error = null
+                            error = if (minimumInstant != null && Instant.now().isBefore(minimumInstant)) {
+                                "زمان اکنون قبل از شروع است؛ پایان را بعد از شروع انتخاب کنید."
+                            } else null
                         },
                         shape = RoundedCornerShape(16.dp)
                     ) { Text("اکنون", fontWeight = FontWeight.Bold) }
@@ -265,6 +282,7 @@ private fun DateMonthGrid(
     year: Int,
     month: Int,
     selected: JalaliDate,
+    minimumDate: JalaliDate?,
     onSelect: (JalaliDate) -> Unit
 ) {
     val lead = JalaliCalendar.firstDayOffset(year, month)
@@ -279,8 +297,13 @@ private fun DateMonthGrid(
                         Spacer(Modifier.weight(1f).aspectRatio(1f))
                     } else {
                         val active = date == selected
+                        val enabled = minimumDate == null ||
+                            !JalaliCalendar.toGregorian(date).isBefore(JalaliCalendar.toGregorian(minimumDate))
                         Surface(
-                            modifier = Modifier.weight(1f).aspectRatio(1f).clickable { onSelect(date) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clickable(enabled = enabled) { onSelect(date) },
                             shape = CircleShape,
                             color = when {
                                 active -> MaterialTheme.colorScheme.primary
@@ -295,8 +318,11 @@ private fun DateMonthGrid(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     PersianDigits.convert(date.day),
-                                    color = if (active) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurface,
+                                    color = when {
+                                        active -> MaterialTheme.colorScheme.onPrimary
+                                        enabled -> MaterialTheme.colorScheme.onSurface
+                                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = .28f)
+                                    },
                                     fontWeight = if (active || date == today) FontWeight.Bold else FontWeight.Normal
                                 )
                             }

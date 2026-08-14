@@ -55,6 +55,7 @@ v22_migration=(ROOT/"supabase/migrations/20260814_native_student_class_membershi
 v22_sql_copy=(ROOT/"SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
 v24_guide=(ROOT/"COMPREHENSIVE_UX_V24_FA.md").read_text()
 v25_guide=(ROOT/"HEADER_SAFETY_POLISH_V25_FA.md").read_text()
+v26_guide=(ROOT/"QUESTION_MEDIA_REORDER_V26_FA.md").read_text()
 school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grade_odometer=(ROOT/"app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt").read_text()
@@ -403,6 +404,48 @@ require(all(marker in v25_guide for marker in (
             "هدر سراسری","امنیت رمز دانش‌آموز","پنجره ساخت گروهی","منوی همبرگری",
             "رفع بسته‌شدن بخش تصویر","SQL جدید: ندارد","Edge deploy: ندارد"
         )), "V25 Persian guide/handoff coverage incomplete")
+require("topBar = {\n                        if (!menuOpen)" in app_shell,
+        "shared header does not hide while hamburger menu is open")
+require(all(marker in date_time_picker for marker in (
+            "selected = today","visibleYear = today.year","minimumIso","minimumInstant",
+            "زمان پایان نمی‌تواند قبل از زمان شروع باشد"
+        )) and "minimumIso = state.opensAtIso" in builder_screen and
+        "instantBefore(value, it)" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text() and
+        "!Instant.parse(state.closesAtIso).isBefore(Instant.parse(state.opensAtIso))" in
+            (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseExamBuilderRepository.kt").read_text(),
+        "Now date/time or start-before-end validation is incomplete")
+require("android:windowSoftInputMode=\"adjustResize\"" in manifest and
+        "SOFT_INPUT_ADJUST_RESIZE" in school_screen and "DialogWindowProvider" in school_screen,
+        "bulk dialog does not enforce adjustResize above the device keyboard")
+require(all(marker in image_editor for marker in (
+            "repository.prepare(ImageEditRequest(source))","safeSource = prepared.uri",
+            "model = safeSource","!busy && !preparing && safeSource != null"
+        )), "image editor preflight does not isolate raw camera images")
+require("onDragStarted = { expandedQuestionId = null }" in builder_screen and
+        "onDragStarted()" in builder_screen,
+        "question drag does not close every accordion")
+multiple_choice=builder_screen.split("QuestionType.MULTIPLE_CHOICE ->",1)[1].split("QuestionType.TRUE_FALSE ->",1)[0]
+require(all(marker in multiple_choice for marker in (
+            "persianOptionLetter(index)","Icons.Outlined.Functions","SingleImagePicker(","ReorderDragButton("
+        )) and "↑ گزینه" not in multiple_choice and "↓ گزینه" not in multiple_choice and
+        "گزینه ${index + 1}" not in multiple_choice,
+        "multiple-choice Persian labels/media tools/drag reorder incomplete")
+matching_body=matching_builder.split("fun MatchingQuestionEditor(",1)[1]
+require(matching_body.index("Text(\"ستون راست\"") < matching_body.index("Text(\"ستون چپ\"") and
+        "val label = persianOptionLetter(index)" in matching_body and
+        "val label = PersianDigits.convert(index + 1)" in matching_body and
+        "ReorderDragButton" in matching_builder and "Text(\"↑\")" not in matching_builder and
+        "Text(\"↓\")" not in matching_builder,
+        "matching right-first letters/left-numbers drag layout incomplete")
+require("Icons.Outlined.PhotoCamera" in question_media and "Modifier.size(30.dp)" in question_media and
+        "Card(Modifier.width(156.dp))" not in question_media and "Slider(" not in question_media and
+        "Icons.Outlined.PhotoCamera" in matching_builder and "Modifier.size(30.dp)" in matching_builder and
+        "Modifier.size(72.dp)" not in matching_builder,
+        "compact icon-sized text/option images beside camera incomplete")
+require(all(marker in v26_guide for marker in (
+            "امنیت رمز دانش‌آموز","مسیر امن تصویر","چندگزینه‌ای","جورکردنی",
+            "SQL جدید: ندارد","Edge deploy: ندارد"
+        )), "V26 Persian guide/handoff coverage incomplete")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

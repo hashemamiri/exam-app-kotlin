@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V25 هدر سراسری و پرداخت ایمن رابط
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V26 بازه معتبر، گزینه‌های Drag و تصویر امن
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3161,5 +3161,66 @@ Debug APK SHA-256                     834b671c03df33333d6ccff372dc2198391e3f35cb
 ```
 
 راهنمای مستقل: `HEADER_SAFETY_POLISH_V25_FA.md`.
+
+SQL/Edge/Secret/Dependency جدید ندارد.
+
+---
+
+## ۴۴) V26 — بازه معتبر، گزینه‌های Drag و تصویر امن
+
+### تحویل
+
+```text
+Hide shared TopAppBar while hamburger menu is open
+Old password still non-retrievable; no recoverable vault/plain_password
+Now fills current Jalali date + hour + minute without auto-confirm
+End minimumIso=start + disabled earlier dates + time validation
+ViewModel and repository enforce end >= start
+Activity/Dialog explicit adjustResize + IME-tangent bulk Surface
+Image raw URI preflight to safe sampled local file before preview
+Final image edit runs only on safeSource
+Question drag closes every accordion first
+Multiple choice: Persian letters + formula/camera/thumbnail/drag toolbar
+No multiple-choice direction arrows or numeric option labels
+Matching: right letters first/top; left Persian numbers second/bottom
+No matching direction arrows; per-item formula/camera/drag toolbar
+Text and option image thumbnails compact 30dp beside camera
+```
+
+### امنیت رمز
+
+Supabase Auth رمز قبلی را فقط به‌صورت hash نگه می‌دارد. ذخیره قابل‌بازیابی جدید ساخته نشده و `plain_password` برنگشته است. فقط رمز جدید ثبت‌شده با موفقیت، همان یک‌بار از حافظه نشست قابل کپی است.
+
+### فایل‌های کلیدی
+
+```text
+QUESTION_MEDIA_REORDER_V26_FA.md
+app/src/main/AndroidManifest.xml
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/builder/JalaliDateTimePicker.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
+app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseExamBuilderRepository.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V26QuestionMediaReorderTest.kt
+scripts/verify_native_final.py
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              157/157 PASS
+V26 question/media/reorder tests         9/9 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                              PASS — 0 error, 21 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     a134841c1e433edefacf3181ec0e6339cc06a3fdd012decc5bc6ad0d0810235b
+```
+
+راهنمای مستقل: `QUESTION_MEDIA_REORDER_V26_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.

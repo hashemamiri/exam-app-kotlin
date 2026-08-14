@@ -56,12 +56,14 @@ class V25HeaderSafetyPolishTest {
     }
 
     @Test
-    fun `now only changes clock and trash clears the selected boundary`() {
+    fun `now fills date and clock without auto confirming and trash clears boundary`() {
         val picker = source("app/src/main/java/ir/exam/app/ui/builder/JalaliDateTimePicker.kt")
         assertTrue("val now = LocalDateTime.now()" in picker)
+        assertTrue("val today = JalaliCalendar.fromGregorian(now.toLocalDate())" in picker)
+        assertTrue("selected = today" in picker)
         assertTrue("hour = now.hour.toString()" in picker)
         assertTrue("minute = now.minute.toString()" in picker)
-        assertFalse("now must not confirm boundary", "onConfirm(Instant.now()" in picker)
+        assertFalse("now must not auto confirm boundary", "onConfirm(Instant.now()" in picker)
         assertTrue("onClear" in picker)
         assertTrue("Icons.Outlined.Delete" in picker)
         assertTrue("contentDescription = \"حذف زمان تعیین‌شده\"" in picker)

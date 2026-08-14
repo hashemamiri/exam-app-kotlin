@@ -80,11 +80,25 @@ fun InteractiveImageEditorDialog(
     var cropCenterY by remember(source) { mutableFloatStateOf(.5f) }
     var cropSide by remember(source) { mutableFloatStateOf(.78f) }
     var sourcePixels by remember(source) { mutableStateOf(Size.Unspecified) }
+    var safeSource by remember(source) { mutableStateOf<Uri?>(null) }
+    var preparing by remember(source) { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var sourceBytes by remember(source) { mutableStateOf<Long?>(null) }
     LaunchedEffect(source) {
-        sourceBytes = withContext(Dispatchers.IO) { imageByteSize(context, source) }
+        preparing = true
+        error = null
+        repository.prepare(ImageEditRequest(source))
+            .onSuccess { prepared ->
+                safeSource = prepared.uri
+                sourceBytes = withContext(Dispatchers.IO) { imageByteSize(context, prepared.uri) }
+                preparing = false
+            }
+            .onFailure {
+                safeSource = null
+                error = it.message ?: "آماده‌سازی امن تصویر انجام نشد."
+                preparing = false
+            }
     }
 
     Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
@@ -103,10 +117,19 @@ fun InteractiveImageEditorDialog(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterHorizontally)
                 ) {
-                    ImageToolButton("چرخش به چپ", Icons.Outlined.RotateLeft) {
+                    ImageToolButton(
+                        "چرخش به چپ",
+                        Icons.Outlined.RotateLeft,
+                        enabled = safeSource != null && !preparing
+                    ) {
                         rotation = (rotation + 270) % 360
                     }
-                    ImageToolButton("برش مربعی", Icons.Outlined.Crop, selected = cropActive) {
+                    ImageToolButton(
+                        "برش مربعی",
+                        Icons.Outlined.Crop,
+                        selected = cropActive,
+                        enabled = safeSource != null && !preparing
+                    ) {
                         cropActive = if (forceSquare) true else !cropActive
                         if (cropActive) {
                             cropCenterX = .5f
@@ -114,7 +137,11 @@ fun InteractiveImageEditorDialog(
                             cropSide = .78f
                         }
                     }
-                    ImageToolButton("چرخش به راست", Icons.Outlined.RotateRight) {
+                    ImageToolButton(
+                        "چرخش به راست",
+                        Icons.Outlined.RotateRight,
+                        enabled = safeSource != null && !preparing
+                    ) {
                         rotation = (rotation + 90) % 360
                     }
                 }
@@ -150,8 +177,8 @@ fun InteractiveImageEditorDialog(
                     val layerTop = (maxHeight - layerHeight) / 2
 
                     AsyncImage(
-                        model = source,
-                        contentDescription = "پیش‌نمایش تصویر",
+                        model = safeSource,
+                        contentDescription = "پیش‌نمایش تصویر امن",
                         contentScale = ContentScale.FillBounds,
                         onSuccess = { sourcePixels = it.painter.intrinsicSize },
                         modifier = Modifier
@@ -159,8 +186,13 @@ fun InteractiveImageEditorDialog(
                             .size(layerWidth, layerHeight)
                             .graphicsLayer(rotationZ = rotation.toFloat())
                     )
+                    if (preparing) {
+                        Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
 
-                    if (cropActive) {
+                    if (cropActive && safeSource != null) {
                         val minDimension = minOf(displayWidth, displayHeight)
                         val side = minDimension * cropSide
                         val sideXFraction = side.value / displayWidth.value
@@ -229,8 +261,9 @@ fun InteractiveImageEditorDialog(
                 ) {
                     Surface(color = Color(0xFF19945B), shape = RoundedCornerShape(16.dp)) {
                         IconButton(
-                            enabled = !busy,
+                            enabled = !busy && !preparing && safeSource != null,
                             onClick = {
+                                val preparedSource = safeSource ?: return@IconButton
                                 busy = true
                                 error = null
                                 scope.launch {
@@ -251,7 +284,7 @@ fun InteractiveImageEditorDialog(
                                         )
                                     } else null
                                     repository.prepare(
-                                        ImageEditRequest(source, crop, rotation, forceSquare)
+                                        ImageEditRequest(preparedSource, crop, rotation, forceSquare)
                                     ).onSuccess { onDone(it.uri) }
                                         .onFailure {
                                             error = it.message
@@ -289,6 +322,7 @@ private fun ImageToolButton(
     description: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     selected: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Surface(
@@ -300,8 +334,13 @@ private fun ImageToolButton(
             if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
         )
     ) {
-        IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = description, tint = MaterialTheme.colorScheme.primary)
+        IconButton(onClick = onClick, enabled = enabled) {
+            Icon(
+                icon,
+                contentDescription = description,
+                tint = if (enabled) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = .32f)
+            )
         }
     }
 }
