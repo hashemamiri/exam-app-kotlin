@@ -5,8 +5,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,10 +30,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import ir.exam.app.data.repository.ExamPackageCodec
+import ir.exam.app.ui.builder.ExamImportDraft
 import java.io.ByteArrayOutputStream
 
 @Composable
-fun DataPortabilitySection() {
+fun DataPortabilitySection(onImportExam: (ExamImportDraft) -> Unit = {}) {
     val context = LocalContext.current
     val viewModel = remember { DataPortabilityViewModel() }
     val state by viewModel.state.collectAsState()
@@ -53,11 +58,38 @@ fun DataPortabilitySection() {
                 .onFailure(viewModel::reportError)
         }
     }
+    val importExam = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                val raw = context.contentResolver.openInputStream(uri)
+                    ?.use { readUtf8Limited(it, 8 * 1024 * 1024) }
+                    ?: error("فایل آزمون خوانده نشد.")
+                ExamPackageCodec.decode(raw)
+            }.onSuccess(onImportExam)
+                .onFailure(viewModel::reportError)
+        }
+    }
     LaunchedEffect(state.exportFile) {
         state.exportFile?.let { createFile.launch(it.fileName) }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("وارد کردن آزمون", style = MaterialTheme.typography.titleMedium)
+                Text("فایل استاندارد آزمون را بررسی و مستقیماً در آزمون‌ساز Native باز کنید.")
+                Button(
+                    onClick = {
+                        importExam.launch(arrayOf("application/octet-stream", "application/json", "text/plain"))
+                    },
+                    enabled = !state.loading,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("انتخاب و وارد کردن آزمون") }
+            }
+        }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("پشتیبان کامل Native", style = MaterialTheme.typography.titleMedium)
@@ -90,10 +122,16 @@ fun DataPortabilitySection() {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("نگهداری امن Storage", style = MaterialTheme.typography.titleMedium)
                 Text("ابتدا فقط بررسی کنید. حذف واقعی نیازمند دو Secret مدیریتی و شناسه حساب مجاز در Edge Function است.")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = viewModel::checkStorage, enabled = !state.loading) { Text("بررسی بدون حذف") }
-                    Button(onClick = { confirmCleanup = true }, enabled = !state.loading) { Text("پاک‌سازی مجاز") }
-                }
+                OutlinedButton(
+                    onClick = viewModel::checkStorage,
+                    enabled = !state.loading,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("بررسی بدون حذف") }
+                Button(
+                    onClick = { confirmCleanup = true },
+                    enabled = !state.loading,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("پاک‌سازی مجاز") }
                 state.maintenance?.let { result ->
                     Text(
                         "فایل آزمون اسکن‌شده: ${result.scannedExamObjects} · orphan: ${result.orphanCandidates} · " +

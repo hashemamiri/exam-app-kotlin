@@ -82,9 +82,14 @@ fun AboutScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("بروزرسانی برنامه", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("بروزرسانی برنامه", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("نسخه نصب‌شده: ${BuildConfig.VERSION_NAME}")
+            }
         }
-        state.update?.takeIf { state.downloading && it.notesFa.isNotEmpty() }?.let { remote ->
+        state.update?.takeIf {
+            state.downloadedApkPath == null && it.notesFa.isNotEmpty()
+        }?.let { remote ->
             item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
         }
         item {

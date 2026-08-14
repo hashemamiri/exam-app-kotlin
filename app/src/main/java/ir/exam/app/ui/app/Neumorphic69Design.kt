@@ -415,6 +415,7 @@ fun NeumorphicMenuTile(
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .neumorphic69(colors, 22.dp, 10.dp, pressed = selected || pressed)
             .clip(RoundedCornerShape(22.dp))
+            .background(if (selected) colors.accent.copy(alpha = .14f) else Color.Transparent)
             .semantics { this.selected = selected }
             .clickable(
                 interactionSource = interaction,
@@ -447,15 +448,6 @@ fun NeumorphicMenuTile(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                if (selected) {
-                    Box(
-                        Modifier
-                            .width(18.dp)
-                            .height(5.dp)
-                            .clip(CircleShape)
-                            .background(Brush.horizontalGradient(listOf(colors.accent, colors.accent2)))
-                    )
-                }
             }
             Spacer(Modifier.height(12.dp))
             Text(

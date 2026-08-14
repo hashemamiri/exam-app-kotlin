@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V26 بازه معتبر، گزینه‌های Drag و تصویر امن
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V27 داده، تصویر امن و گزینه‌های زنده
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3222,5 +3222,67 @@ Debug APK SHA-256                     a134841c1e433edefacf3181ec0e6339cc06a3fdd0
 ```
 
 راهنمای مستقل: `QUESTION_MEDIA_REORDER_V26_FA.md`.
+
+SQL/Edge/Secret/Dependency جدید ندارد.
+
+---
+
+## ۴۵) V27 — داده، تصویر امن و گزینه‌های زنده
+
+### تحویل
+
+```text
+Runtime «چهارگزینه‌ای» → «چندگزینه‌ای»
+Stable option/matching editor IDs preserved in local drafts
+Live 46dp-threshold option and matching reorder with key(id)
+Raw image picker never auto-opens editor
+Question/option/profile images preprocess before state/editor
+Bulk Surface opens TopCenter and fills IME-reduced maxHeight
+Installed version visible in About
+Remote Persian notes visible before/during download, hidden after
+Selected hamburger card full accent tint; dash marker removed
+Scrollable Data section
+Full-width Storage check/cleanup controls
+Real 8MB ExamPackageCodec import into Native builder
+Grade wheel Other item + custom text field
+No recoverable old-password storage
+```
+
+### امنیت رمز
+
+رمز قبلی Supabase Auth قابل بازیابی نیست. هیچ Vault قابل‌بازیابی یا `plain_password` ایجاد نشده است. فقط رمز جدیدی که سرور با موفقیت ثبت کرده، همان یک‌بار در حافظه نشست قابل کپی حساس است.
+
+### فایل‌های کلیدی
+
+```text
+DATA_IMAGE_OPTIONS_V27_FA.md
+app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt
+app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
+app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt
+app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt
+app/src/test/java/ir/exam/app/ui/app/V27DataImageOptionsTest.kt
+scripts/verify_native_final.py
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              166/166 PASS
+V27 data/image/options tests             9/9 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                              PASS — 0 error, 21 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     23ba454a550db58422d467f121d9aa8cdb3d429f99315fdaa6088e6fd4db6e4d
+```
+
+راهنمای مستقل: `DATA_IMAGE_OPTIONS_V27_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.

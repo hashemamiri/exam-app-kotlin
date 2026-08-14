@@ -66,6 +66,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -715,6 +716,8 @@ private fun QuestionEditor(
                     }
                     question.options.forEachIndexed { index, option ->
                         val optionLabel = persianOptionLetter(index)
+                        val optionId = question.optionIds.getOrElse(index) { "option-$index" }
+                        key(optionId) {
                         Card(Modifier.fillMaxWidth()) {
                             Column(
                                 Modifier.padding(9.dp),
@@ -747,9 +750,11 @@ private fun QuestionEditor(
                                         label = "تصویر $optionLabel"
                                     ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                                     ReorderDragButton(
-                                        description = "نگه‌دارید و $optionLabel را جابه‌جا کنید"
-                                    ) { delta ->
-                                        viewModel.moveOption(question.id, index, delta)
+                                        description = "نگه‌دارید و $optionLabel را جابه‌جا کنید",
+                                        currentIndex = index,
+                                        itemCount = question.options.size
+                                    ) { from, delta ->
+                                        viewModel.moveOption(question.id, from, delta)
                                     }
                                 }
                                 OutlinedTextField(
@@ -769,6 +774,7 @@ private fun QuestionEditor(
                                     }
                                 )
                             }
+                        }
                         }
                     }
                 }
@@ -955,7 +961,7 @@ private fun compactScore(value: Double): String = if (value % 1.0 == 0.0) value.
 
 private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.ESSAY -> "تشریحی"
-    QuestionType.MULTIPLE_CHOICE -> "چهارگزینه‌ای"
+    QuestionType.MULTIPLE_CHOICE -> "چندگزینه‌ای"
     QuestionType.TRUE_FALSE -> "صحیح/غلط"
     QuestionType.FILL_BLANK -> "جای خالی"
     QuestionType.NUMERIC -> "عددی"

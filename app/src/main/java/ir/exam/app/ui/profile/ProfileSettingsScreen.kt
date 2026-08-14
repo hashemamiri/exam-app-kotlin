@@ -55,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
@@ -73,7 +74,9 @@ import ir.exam.app.core.ui.AppearanceSettings
 import ir.exam.app.core.ui.NeumorphicPalette
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.core.ui.accentColors
+import ir.exam.app.data.repository.LocalImageRepository
 import ir.exam.app.domain.model.AppUser
+import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.common.GradeOdometerPicker
@@ -82,6 +85,7 @@ import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.portability.DataPortabilitySection
 import ir.exam.app.ui.security.AppLockSettings
+import kotlinx.coroutines.launch
 
 enum class ProfileSettingsDestination { PROFILE, HEADER, ACCOUNT, DATA, SETTINGS }
 enum class SettingsSection { APPEARANCE, ABOUT }
@@ -93,10 +97,13 @@ fun ProfileSettingsScreen(
     destination: ProfileSettingsDestination = ProfileSettingsDestination.SETTINGS,
     initialSettingsSection: SettingsSection = SettingsSection.APPEARANCE,
     onProfileUpdated: () -> Unit,
+    onImportExam: (ir.exam.app.ui.builder.ExamImportDraft) -> Unit = {},
     aboutContent: @Composable () -> Unit = {}
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
+    val imageRepository = remember(appContext) { LocalImageRepository(appContext) }
+    val imageScope = rememberCoroutineScope()
     val viewModel = remember(user.id) { ProfileSettingsViewModel(appContext, user.role) }
     val state by viewModel.state.collectAsState()
     var settingsSection by remember(destination, initialSettingsSection) {
@@ -104,6 +111,8 @@ fun ProfileSettingsScreen(
     }
     var confirmRemove by remember { mutableStateOf(false) }
     var avatarEditing by remember { mutableStateOf<Uri?>(null) }
+    var avatarPreparing by remember { mutableStateOf(false) }
+    var avatarPrepareError by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         if (uri != null) {
             runCatching {
@@ -112,7 +121,14 @@ fun ProfileSettingsScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             }
-            avatarEditing = uri
+            avatarPreparing = true
+            avatarPrepareError = null
+            imageScope.launch {
+                imageRepository.prepare(ImageEditRequest(uri))
+                    .onSuccess { avatarEditing = it.uri }
+                    .onFailure { avatarPrepareError = it.message }
+                avatarPreparing = false
+            }
         }
     }
 
@@ -140,6 +156,20 @@ fun ProfileSettingsScreen(
                     )
                 }
             }
+        }
+
+        if (avatarPreparing) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Text("در حال آماده‌سازی امن تصویر...")
+            }
+        }
+        avatarPrepareError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
         }
 
         when {
@@ -185,7 +215,7 @@ fun ProfileSettingsScreen(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
             ) {
                 if (user.role == UserRole.TEACHER) {
-                    DataPortabilitySection()
+                    DataPortabilitySection(onImportExam = onImportExam)
                 } else {
                     Text("پشتیبان کامل داده‌ها فقط برای حساب معلم در دسترس است.")
                 }

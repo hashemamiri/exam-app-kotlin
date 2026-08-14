@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,6 +89,8 @@ fun gradeOdometerValues(
     source.distinct().forEach(::add)
 }
 
+private const val OtherGradeValue = "__other_grade__"
+
 private fun schoolGradeRank(value: String): Int {
     val normalized = value.trim().removePrefix("پایه").trim()
     return StandardSchoolGrades.indexOf(normalized).takeIf { it >= 0 } ?: Int.MAX_VALUE
@@ -110,55 +113,74 @@ fun GradeOdometerPicker(
     val values = remember(value, availableGrades, includeStandardGrades) {
         gradeOdometerValues(value, availableGrades, includeStandardGrades)
     }
+    val wheelValues = remember(values) { values + OtherGradeValue }
     var open by remember { mutableStateOf(false) }
+    var customMode by remember { mutableStateOf(false) }
     val shown = value.trim().ifBlank { emptyLabel }
 
-    Surface(
-        modifier = modifier
-            .height(58.dp)
-            .semantics {
-                contentDescription = "$label: $shown؛ لمس برای بازکردن انتخاب‌گر"
-                stateDescription = shown
-            }
-            .clickable { open = true },
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .58f)),
-        tonalElevation = 1.dp
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp)
+                .semantics {
+                    contentDescription = "$label: $shown؛ لمس برای بازکردن انتخاب‌گر"
+                    stateDescription = shown
+                }
+                .clickable { open = true },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .58f)),
+            tonalElevation = 1.dp
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Text(
-                    shown,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        shown,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    Icons.Outlined.UnfoldMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Icon(
-                Icons.Outlined.UnfoldMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
+        }
+        if (customMode) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                label = { Text("سایر پایه") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
 
     if (open) {
         GradeWheelDialog(
-            values = values,
-            initialValue = value.trim(),
+            values = wheelValues,
+            initialValue = if (customMode) OtherGradeValue else value.trim(),
             emptyLabel = emptyLabel,
             label = label,
             onDismiss = { open = false },
-            onConfirm = {
-                onValueChange(it)
+            onConfirm = { selected ->
+                if (selected == OtherGradeValue) {
+                    customMode = true
+                } else {
+                    customMode = false
+                    onValueChange(selected)
+                }
                 open = false
             }
         )
@@ -244,7 +266,11 @@ private fun GradeWheelDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    item.ifBlank { emptyLabel },
+                                    when (item) {
+                                        OtherGradeValue -> "سایر"
+                                        "" -> emptyLabel
+                                        else -> item
+                                    },
                                     textAlign = TextAlign.Center,
                                     style = if (centered) MaterialTheme.typography.titleMedium
                                     else MaterialTheme.typography.bodyMedium,

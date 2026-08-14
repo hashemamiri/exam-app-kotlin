@@ -374,6 +374,11 @@ private fun AuthenticatedExamApp(
                     destination = profileDestination,
                     initialSettingsSection = settingsInitialSection,
                     onProfileUpdated = authViewModel::refreshCurrentUser,
+                    onImportExam = { draft ->
+                        editingExamId = null
+                        importedExam = draft
+                        page = MainPage.BUILDER
+                    },
                     aboutContent = { AboutScreen(updateViewModel, apkUpdateManager) }
                 )
                 MainPage.BUILDER -> Unit

@@ -62,7 +62,7 @@ class V24ComprehensiveUxTest {
     fun `about page only shows remote Persian notes while downloading`() {
         val about = source("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt")
         assertFalse("local persistent release history returned", "localReleaseNotesFa" in about)
-        assertTrue("state.downloading && it.notesFa.isNotEmpty()" in about)
+        assertTrue("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
         assertTrue("ChangeListCard" in about)
         assertFalse("old identity card returned", "AppIdentityCard" in about)
         assertFalse("package id prose returned", "شناسه بسته" in about)

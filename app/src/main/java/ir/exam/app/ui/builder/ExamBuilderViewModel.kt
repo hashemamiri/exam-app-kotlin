@@ -68,6 +68,9 @@ class ExamBuilderViewModel(
                         importedBy = imported.exportedBy
                     )
                 } ?: loaded.copy(loading = false)
+                _state.update { current ->
+                    current.copy(questions = current.questions.map(QuestionDraft::ensureEditorIds))
+                }
                 cleanDraftFingerprint = draftFingerprint(_state.value)
                 if (initialImport == null && ownerUserId.isNotBlank()) {
                     val draft = draftStore.load(ownerUserId)
@@ -104,7 +107,7 @@ class ExamBuilderViewModel(
                 durationMinutes = draft.durationMinutes,
                 opensAtIso = draft.opensAtIso,
                 closesAtIso = draft.closesAtIso,
-                questions = draft.questions,
+                questions = draft.questions.map(QuestionDraft::ensureEditorIds),
                 shuffleQuestions = draft.shuffleQuestions,
                 shuffleOptions = draft.shuffleOptions,
                 negativeMarking = draft.negativeMarking,
@@ -167,12 +170,15 @@ class ExamBuilderViewModel(
             QuestionType.MULTIPLE_CHOICE -> QuestionDraft(
                 type = type,
                 options = List(4) { "" },
+                optionIds = List(4) { UUID.randomUUID().toString() },
                 optionImages = List(4) { null }
             )
             QuestionType.MATCHING -> QuestionDraft(
                 type = type,
                 matchingLeft = List(3) { "" },
+                matchingLeftIds = List(3) { UUID.randomUUID().toString() },
                 matchingRight = List(3) { "" },
+                matchingRightIds = List(3) { UUID.randomUUID().toString() },
                 matchingPairs = mapOf(0 to 0, 1 to 1, 2 to 2),
                 matchingLeftImages = List(3) { null },
                 matchingRightImages = List(3) { null }
@@ -201,7 +207,9 @@ class ExamBuilderViewModel(
                 attemptOnTimeout = imported.attemptOnTimeout,
                 gradePolicy = imported.gradePolicy,
                 attemptCooldown = imported.attemptCooldown.takeUnless { it == 0 }?.toString().orEmpty(),
-                questions = imported.questions.map { it.copy(id = UUID.randomUUID().toString()) },
+                questions = imported.questions.map {
+                    it.copy(id = UUID.randomUUID().toString()).ensureEditorIds()
+                },
                 importedBy = imported.exportedBy,
                 savedCode = null,
                 error = null
@@ -281,13 +289,22 @@ class ExamBuilderViewModel(
     fun setOptionCount(id: String, count: Int) { update(id) { question ->
         val size = count.coerceIn(2, 10)
         val options = question.options.take(size) + List((size - question.options.size).coerceAtLeast(0)) { "" }
+        val ids = question.optionIds.resizeIds(size)
         val images = question.optionImages.take(size) + List((size - question.optionImages.size).coerceAtLeast(0)) { null }
-        question.copy(options = options, optionImages = images, correctIndex = question.correctIndex?.coerceAtMost(size - 1))
+        question.copy(
+            options = options,
+            optionIds = ids,
+            optionImages = images,
+            correctIndex = question.correctIndex?.coerceAtMost(size - 1)
+        )
     } }
     fun moveOption(id: String, index: Int, delta: Int) { update(id) { question ->
         val to = (index + delta).coerceIn(0, question.options.lastIndex)
         if (index !in question.options.indices || index == to) question else {
             val options = question.options.toMutableList().apply { add(to, removeAt(index)) }
+            val ids = question.optionIds.resizeIds(question.options.size).toMutableList().apply {
+                add(to, removeAt(index))
+            }
             val images = question.optionImages.pad(question.options.size).toMutableList().apply { add(to, removeAt(index)) }
             val current = question.correctIndex
             val correct = when {
@@ -295,7 +312,7 @@ class ExamBuilderViewModel(
                 current != null && current in minOf(index, to)..maxOf(index, to) -> if (index < to) current - 1 else current + 1
                 else -> current
             }
-            question.copy(options = options, optionImages = images, correctIndex = correct)
+            question.copy(options = options, optionIds = ids, optionImages = images, correctIndex = correct)
         }
     } }
     fun setCorrect(id: String, index: Int) { update(id) { it.copy(correctIndex = index) } }
@@ -315,7 +332,9 @@ class ExamBuilderViewModel(
         val next = minOf(question.matchingLeft.size, question.matchingRight.size)
         question.copy(
             matchingLeft = question.matchingLeft + "",
+            matchingLeftIds = question.matchingLeftIds.resizeIds(question.matchingLeft.size) + UUID.randomUUID().toString(),
             matchingRight = question.matchingRight + "",
+            matchingRightIds = question.matchingRightIds.resizeIds(question.matchingRight.size) + UUID.randomUUID().toString(),
             matchingLeftImages = question.matchingLeftImages.pad(question.matchingLeft.size) + null,
             matchingRightImages = question.matchingRightImages.pad(question.matchingRight.size) + null,
             matchingPairs = question.matchingPairs + (next to next)
@@ -326,7 +345,9 @@ class ExamBuilderViewModel(
             val last = minOf(question.matchingLeft.lastIndex, question.matchingRight.lastIndex)
             question.copy(
                 matchingLeft = question.matchingLeft.dropLast(1),
+                matchingLeftIds = question.matchingLeftIds.resizeIds(question.matchingLeft.size).dropLast(1),
                 matchingRight = question.matchingRight.dropLast(1),
+                matchingRightIds = question.matchingRightIds.resizeIds(question.matchingRight.size).dropLast(1),
                 matchingLeftImages = question.matchingLeftImages.dropLast(1),
                 matchingRightImages = question.matchingRightImages.dropLast(1),
                 matchingPairs = question.matchingPairs.filterKeys { it != last }.mapValues { (_, right) -> right.coerceAtMost(last - 1) }
@@ -336,9 +357,11 @@ class ExamBuilderViewModel(
     fun addMatchingSide(id: String, side: String) { update(id) { q ->
         if (side == "left" && q.matchingLeft.size < 30) q.copy(
             matchingLeft = q.matchingLeft + "",
+            matchingLeftIds = q.matchingLeftIds.resizeIds(q.matchingLeft.size) + UUID.randomUUID().toString(),
             matchingLeftImages = q.matchingLeftImages.pad(q.matchingLeft.size) + null
         ) else if (side == "right" && q.matchingRight.size < 30) q.copy(
             matchingRight = q.matchingRight + "",
+            matchingRightIds = q.matchingRightIds.resizeIds(q.matchingRight.size) + UUID.randomUUID().toString(),
             matchingRightImages = q.matchingRightImages.pad(q.matchingRight.size) + null
         ) else q
     } }
@@ -349,6 +372,7 @@ class ExamBuilderViewModel(
             }.toMap()
             q.copy(
                 matchingLeft = q.matchingLeft.filterIndexed { i, _ -> i != index },
+                matchingLeftIds = q.matchingLeftIds.resizeIds(q.matchingLeft.size).filterIndexed { i, _ -> i != index },
                 matchingLeftImages = q.matchingLeftImages.pad(q.matchingLeft.size).filterIndexed { i, _ -> i != index },
                 matchingPairs = pairs
             )
@@ -358,6 +382,7 @@ class ExamBuilderViewModel(
             }.toMap()
             q.copy(
                 matchingRight = q.matchingRight.filterIndexed { i, _ -> i != index },
+                matchingRightIds = q.matchingRightIds.resizeIds(q.matchingRight.size).filterIndexed { i, _ -> i != index },
                 matchingRightImages = q.matchingRightImages.pad(q.matchingRight.size).filterIndexed { i, _ -> i != index },
                 matchingPairs = pairs
             )
@@ -368,14 +393,16 @@ class ExamBuilderViewModel(
         val to = (index + delta).coerceIn(0, size - 1)
         if (index !in 0 until size || index == to) q else if (side == "left") {
             val values = q.matchingLeft.toMutableList().apply { add(to, removeAt(index)) }
+            val ids = q.matchingLeftIds.resizeIds(size).toMutableList().apply { add(to, removeAt(index)) }
             val images = q.matchingLeftImages.pad(size).toMutableList().apply { add(to, removeAt(index)) }
             val pairs = q.matchingPairs.mapKeys { (left, _) -> remapMovedIndex(left, index, to) }
-            q.copy(matchingLeft = values, matchingLeftImages = images, matchingPairs = pairs)
+            q.copy(matchingLeft = values, matchingLeftIds = ids, matchingLeftImages = images, matchingPairs = pairs)
         } else {
             val values = q.matchingRight.toMutableList().apply { add(to, removeAt(index)) }
+            val ids = q.matchingRightIds.resizeIds(size).toMutableList().apply { add(to, removeAt(index)) }
             val images = q.matchingRightImages.pad(size).toMutableList().apply { add(to, removeAt(index)) }
             val pairs = q.matchingPairs.mapValues { (_, right) -> remapMovedIndex(right, index, to) }
-            q.copy(matchingRight = values, matchingRightImages = images, matchingPairs = pairs)
+            q.copy(matchingRight = values, matchingRightIds = ids, matchingRightImages = images, matchingPairs = pairs)
         }
     } }
     fun setCaseSensitive(id: String, value: Boolean) { update(id) { it.copy(caseSensitive = value) } }
@@ -430,7 +457,13 @@ class ExamBuilderViewModel(
 
     fun addFromBank(id: Long) {
         val item = state.value.bankQuestions.firstOrNull { it.id == id } ?: return
-        _state.update { it.copy(questions = it.questions + item.question.copy(id = UUID.randomUUID().toString())) }
+        _state.update {
+            it.copy(
+                questions = it.questions + item.question
+                    .copy(id = UUID.randomUUID().toString())
+                    .ensureEditorIds()
+            )
+        }
     }
 
     fun setBankQuery(value: String) { _state.update { it.copy(bankQuery=value.take(100)) } }
@@ -523,6 +556,15 @@ private fun remapMovedIndex(value: Int, from: Int, to: Int): Int = when {
     from > to && value in to until from -> value + 1
     else -> value
 }
+
+private fun QuestionDraft.ensureEditorIds(): QuestionDraft = copy(
+    optionIds = optionIds.resizeIds(options.size),
+    matchingLeftIds = matchingLeftIds.resizeIds(matchingLeft.size),
+    matchingRightIds = matchingRightIds.resizeIds(matchingRight.size)
+)
+
+private fun List<String>.resizeIds(size: Int): List<String> =
+    take(size) + List((size - this.size).coerceAtLeast(0)) { UUID.randomUUID().toString() }
 
 private fun instantBefore(first: String, second: String): Boolean = runCatching {
     Instant.parse(first).isBefore(Instant.parse(second))

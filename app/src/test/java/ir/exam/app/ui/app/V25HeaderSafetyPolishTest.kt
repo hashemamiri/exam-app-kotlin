@@ -72,7 +72,7 @@ class V25HeaderSafetyPolishTest {
     @Test
     fun `release notes only appear for a real update during download`() {
         val about = source("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt")
-        assertTrue("state.downloading && it.notesFa.isNotEmpty()" in about)
+        assertTrue("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about)
         assertFalse("persistent local history returned", "localReleaseNotesFa" in about)
         assertFalse("notes shown for every available state", "state.update?.takeIf { it.notesFa.isNotEmpty() }" in about)
     }
@@ -83,8 +83,9 @@ class V25HeaderSafetyPolishTest {
         val bulk = school.substringAfter("private fun BulkStudentDialog(").substringBefore("internal fun studentClipboardText")
         assertTrue("BoxWithConstraints" in bulk)
         assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
-        assertTrue("contentAlignment = Alignment.BottomCenter" in bulk)
-        assertTrue("listMaxHeight = (maxHeight - 168.dp)" in bulk)
+        assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
+        assertTrue("height(maxHeight)" in bulk)
+        assertTrue("Modifier.weight(1f)" in bulk)
         assertFalse("bottom gap above keyboard returned", "padding(horizontal = 12.dp, vertical = 8.dp)" in bulk)
     }
 

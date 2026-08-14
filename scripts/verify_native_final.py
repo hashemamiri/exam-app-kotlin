@@ -39,6 +39,7 @@ design69_cards=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherManagementCard
 appearance_preferences=(ROOT/"app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt").read_text()
 app_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_text()
 profile_settings=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
+data_portability=(ROOT/"app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt").read_text()
 wallet_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/billing/WalletScreen.kt").read_text()
 teacher_dashboard=(ROOT/"app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").read_text()
 builder_radial=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/BuilderRadialMenuOverlay.kt").read_text()
@@ -56,6 +57,7 @@ v22_sql_copy=(ROOT/"SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
 v24_guide=(ROOT/"COMPREHENSIVE_UX_V24_FA.md").read_text()
 v25_guide=(ROOT/"HEADER_SAFETY_POLISH_V25_FA.md").read_text()
 v26_guide=(ROOT/"QUESTION_MEDIA_REORDER_V26_FA.md").read_text()
+v27_guide=(ROOT/"DATA_IMAGE_OPTIONS_V27_FA.md").read_text()
 school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grade_odometer=(ROOT/"app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt").read_text()
@@ -334,7 +336,8 @@ require(all(marker in profile_settings for marker in (
             "expandedCard = if (expandedCard == card) null else card",
             "Icons.Outlined.ExpandLess","Icons.Outlined.ExpandMore","AnimatedVisibility"
         )), "account cards do not independently expand/collapse")
-require("state.downloading && it.notesFa.isNotEmpty()" in about_screen and
+require("state.downloadedApkPath == null && it.notesFa.isNotEmpty()" in about_screen and
+        "نسخه نصب‌شده: ${BuildConfig.VERSION_NAME}" in about_screen and
         "ChangeListCard" in about_screen and "localReleaseNotesFa" not in about_screen and
         all(marker not in about_screen for marker in (
             "AppIdentityCard","شناسه بسته","APK فقط از نشانی HTTPS"
@@ -376,9 +379,11 @@ require(all(marker in date_time_picker for marker in (
         )) and "onConfirm(Instant.now().toString())" not in date_time_picker,
         "Now still commits the boundary or clear-time control is missing")
 require(all(marker in school_screen for marker in (
-            "BoxWithConstraints","Alignment.BottomCenter","listMaxHeight = (maxHeight - 168.dp)",
-            "title = { Text(\"حذف دانش‌آموز\") }","viewModel.deleteStudent(student.id)"
-        )), "IME-tangent bulk dialog or confirmed student deletion missing")
+            "BoxWithConstraints","Alignment.TopCenter","height(maxHeight)",
+            "SOFT_INPUT_ADJUST_RESIZE","title = { Text(\"حذف دانش‌آموز\") }",
+            "viewModel.deleteStudent(student.id)"
+        )) and "Alignment.BottomCenter" not in school_screen.split("private fun BulkStudentDialog(",1)[1].split("internal fun studentClipboardText",1)[0],
+        "top IME-tangent bulk dialog or confirmed student deletion missing")
 require(all(marker in builder_screen for marker in (
             "private fun MinimalScoreField","BasicTextField(",
             "Modifier.width(62.dp).height(40.dp)","Modifier.animateItem(",
@@ -446,6 +451,37 @@ require(all(marker in v26_guide for marker in (
             "امنیت رمز دانش‌آموز","مسیر امن تصویر","چندگزینه‌ای","جورکردنی",
             "SQL جدید: ندارد","Edge deploy: ندارد"
         )), "V26 Persian guide/handoff coverage incomplete")
+require("QuestionType.MULTIPLE_CHOICE -> \"چندگزینه‌ای\"" in builder_screen and
+        re.search(r"چهار.?گزینه", main_text) is None,
+        "four-choice wording remains instead of multiple-choice")
+require(all(marker in question_model for marker in (
+            "optionIds","matchingLeftIds","matchingRightIds"
+        )) and "ensureEditorIds" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text() and
+        "while (abs(accumulated) >= stepPx)" in matching_builder and
+        "onMove(dragIndex, delta)" in matching_builder and
+        "key(optionId)" in builder_screen and "key(itemId)" in matching_builder,
+        "live stable-id option/matching reorder is incomplete")
+require("safeUris += it.uri.toString()" in question_media and "editQueue.firstOrNull" not in question_media and
+        "onSuccess { onChange(it.uri.toString()) }" in matching_builder and
+        "onSuccess { avatarEditing = it.uri }" in profile_settings,
+        "raw picker images still reach the editor before safe preprocessing")
+menu_tile=neumorphic_design.split("fun NeumorphicMenuTile(",1)[1].split("/** Morph واقعی",1)[0]
+require("colors.accent.copy(alpha = .14f)" in menu_tile and
+        not (".width(18.dp)" in menu_tile and ".height(5.dp)" in menu_tile),
+        "selected hamburger card color or removed dash marker is incorrect")
+require("fillMaxSize().verticalScroll(rememberScrollState())" in data_portability and
+        "ExamPackageCodec.decode(raw)" in data_portability and "importExam.launch" in data_portability and
+        "onImportExam = onImportExam" in profile_settings and "onImportExam = { draft ->" in app_shell and
+        data_portability.split("Text(\"نگهداری امن Storage\"",1)[1].count("modifier = Modifier.fillMaxWidth()") >= 2,
+        "scrollable complete Storage/data exam import path is incomplete")
+require(all(marker in grade_odometer for marker in (
+            "OtherGradeValue","values + OtherGradeValue","OtherGradeValue -> \"سایر\"",
+            "customMode = true","label = { Text(\"سایر پایه\") }"
+        )), "grade wheel Other/custom text path is incomplete")
+require(all(marker in v27_guide for marker in (
+            "مسیر انتخاب تصویر","داده‌ها و Storage","پایه سایر","امنیت رمز",
+            "SQL جدید: ندارد","Edge deploy: ندارد"
+        )), "V27 Persian guide/handoff coverage incomplete")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

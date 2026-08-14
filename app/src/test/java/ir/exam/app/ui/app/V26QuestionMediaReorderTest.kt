@@ -54,8 +54,9 @@ class V26QuestionMediaReorderTest {
         assertTrue("android:windowSoftInputMode=\"adjustResize\"" in manifest)
         assertTrue("SOFT_INPUT_ADJUST_RESIZE" in bulk)
         assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
-        assertTrue("contentAlignment = Alignment.BottomCenter" in bulk)
-        assertTrue("listMaxHeight = (maxHeight - 168.dp)" in bulk)
+        assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
+        assertTrue("height(maxHeight)" in bulk)
+        assertTrue("Modifier.weight(1f)" in bulk)
     }
 
     @Test

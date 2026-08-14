@@ -961,15 +961,17 @@ private fun BulkStudentDialog(
         }
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp).padding(top = 8.dp),
-            contentAlignment = Alignment.BottomCenter
+            contentAlignment = Alignment.TopCenter
         ) {
-            val listMaxHeight = (maxHeight - 168.dp).coerceAtLeast(150.dp).coerceAtMost(480.dp)
             Surface(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).height(maxHeight),
                 shape = MaterialTheme.shapes.large,
                 tonalElevation = 6.dp
             ) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    Modifier.fillMaxSize().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1013,7 +1015,7 @@ private fun BulkStudentDialog(
                         }
                     }
                     LazyColumn(
-                        Modifier.heightIn(max = listMaxHeight),
+                        Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(rows.size) { index ->

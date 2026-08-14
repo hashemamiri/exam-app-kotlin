@@ -44,6 +44,7 @@ internal object ExamQuestionCodec {
                 text = obj["text"]?.asString().orEmpty(),
                 score = obj["score"]?.asDouble() ?: 1.0,
                 options = obj["options"].asArrayOrEmpty().map { it.asString().orEmpty() },
+                optionIds = List(obj["options"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
                 correctIndex = key["correctOption"]?.asInt() ?: obj["correctIndex"]?.asInt(),
                 expectedText = when (type) {
@@ -55,7 +56,9 @@ internal object ExamQuestionCodec {
                 tolerance = key["tolerance"]?.asString() ?: obj["tolerance"]?.asString() ?: "0",
                 caseSensitive = key["caseSensitive"]?.asBoolean() ?: obj["caseSensitive"]?.asBoolean() ?: false,
                 matchingLeft = obj["leftItems"].asArrayOrEmpty().map { it.asString().orEmpty() },
+                matchingLeftIds = List(obj["leftItems"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 matchingRight = obj["rightItems"].asArrayOrEmpty().map { it.asString().orEmpty() },
+                matchingRightIds = List(obj["rightItems"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 matchingPairs = (key["matchAnswer"] as? JsonObject)?.mapNotNull { (left, right) ->
                     val leftIndex = left.toIntOrNull()
                     val rightIndex = right.asInt()

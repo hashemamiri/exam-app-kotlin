@@ -1,7 +1,6 @@
 package ir.exam.app.ui.image
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,8 +46,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import ir.exam.app.data.repository.LocalImageRepository
+import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.ui.builder.MediaDraft
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /** مدیریت رسانهٔ متن سؤال: دوربین و thumbnailهای آیکنی در یک سطر، بدون کارت جداگانه. */
 @Composable
@@ -58,7 +62,10 @@ fun QuestionMediaEditor(
     onRemove: (String) -> Unit
 ) {
     val context = LocalContext.current
-    var editQueue by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val repository = remember(context) { LocalImageRepository(context) }
+    val scope = rememberCoroutineScope()
+    var processing by remember { mutableStateOf(false) }
+    var imageError by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(10)
     ) { uris ->
@@ -70,7 +77,22 @@ fun QuestionMediaEditor(
                 )
             }
         }
-        editQueue = uris
+        if (uris.isNotEmpty()) {
+            processing = true
+            imageError = null
+            scope.launch {
+                val safeUris = mutableListOf<String>()
+                var firstError: String? = null
+                uris.forEach { uri ->
+                    repository.prepare(ImageEditRequest(uri))
+                        .onSuccess { safeUris += it.uri.toString() }
+                        .onFailure { if (firstError == null) firstError = it.message }
+                }
+                if (safeUris.isNotEmpty()) onAdd(safeUris)
+                imageError = firstError
+                processing = false
+            }
+        }
     }
 
     Row(
@@ -85,6 +107,7 @@ fun QuestionMediaEditor(
         ) {
             Icon(Icons.Outlined.PhotoCamera, contentDescription = "افزودن تصویر متن سؤال")
         }
+        if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
         if (images.isEmpty()) {
             Text("تصویر", style = MaterialTheme.typography.labelSmall)
         } else {
@@ -103,16 +126,7 @@ fun QuestionMediaEditor(
         }
     }
 
-    editQueue.firstOrNull()?.let { uri ->
-        InteractiveImageEditorDialog(
-            source = uri,
-            onDismiss = { editQueue = editQueue.drop(1) },
-            onDone = { edited ->
-                onAdd(listOf(edited.toString()))
-                editQueue = editQueue.drop(1)
-            }
-        )
-    }
+    imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
     if (images.isNotEmpty() && freePlacement) {
         Text("چیدمان آزاد تصاویر", style = MaterialTheme.typography.titleSmall)
