@@ -69,11 +69,12 @@ private class FakeSchoolRepository : SchoolRepository {
     private val students = mutableListOf(StudentProfile("s1", "علی رضایی", username = "alirezaei"))
 
     override suspend fun getClasses() = Result.success(classes.toList())
-    override suspend fun createClass(name: String, grade: String): Result<Unit> {
-        classes += SchoolClass("c${classes.size + 1}", name, grade)
+    override suspend fun createClass(name: String, grade: String, fieldOfStudy: String): Result<Unit> {
+        classes += SchoolClass("c${classes.size + 1}", name, grade, fieldOfStudy.takeIf(String::isNotBlank))
         return Result.success(Unit)
     }
-    override suspend fun updateClass(id: String, name: String, grade: String) = Result.success(Unit)
+    override suspend fun updateClass(id: String, name: String, grade: String, fieldOfStudy: String) =
+        Result.success(Unit)
     override suspend fun deleteClass(id: String) = Result.success(Unit)
     override suspend fun getStudents() = Result.success(students.toList())
     override suspend fun getClassRoster(classId: String) = Result.success(students.toList())

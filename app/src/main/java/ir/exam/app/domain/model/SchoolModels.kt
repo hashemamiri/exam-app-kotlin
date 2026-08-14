@@ -6,6 +6,7 @@ data class SchoolClass(
     val id: String,
     val name: String,
     val grade: String? = null,
+    val fieldOfStudy: String? = null,
     val boys: Int = 0,
     val girls: Int = 0,
     val total: Int = 0,
@@ -23,6 +24,7 @@ data class StudentProfile(
     val classNames: String? = null,
     val fatherName: String? = null,
     val grade: String? = null,
+    val fieldOfStudy: String? = null,
     val avatarUrl: String? = null
 )
 
@@ -34,6 +36,7 @@ data class NewStudentRequest(
     val gender: String,
     val fatherName: String = "",
     val grade: String = "",
+    val fieldOfStudy: String = "",
     val classId: String? = null
 )
 
@@ -56,6 +59,7 @@ data class UpdateStudentRequest(
     val gender: String,
     val fatherName: String = "",
     val grade: String = "",
+    val fieldOfStudy: String = "",
     val newPassword: String? = null
 )
 

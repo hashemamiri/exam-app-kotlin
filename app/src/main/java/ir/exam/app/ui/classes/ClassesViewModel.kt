@@ -73,11 +73,11 @@ class ClassesViewModel(
         _state.update { it.copy(selectedClass = null, roster = emptyList()) }
     }
 
-    fun saveClass(id: String?, name: String, grade: String) = action(
+    fun saveClass(id: String?, name: String, grade: String, fieldOfStudy: String = "") = action(
         successMessage = if (id == null) "کلاس ساخته شد." else "کلاس ویرایش شد."
     ) {
-        if (id == null) repository.createClass(name, grade).getOrThrow()
-        else repository.updateClass(id, name, grade).getOrThrow()
+        if (id == null) repository.createClass(name, grade, fieldOfStudy).getOrThrow()
+        else repository.updateClass(id, name, grade, fieldOfStudy).getOrThrow()
         reloadData()
     }
 

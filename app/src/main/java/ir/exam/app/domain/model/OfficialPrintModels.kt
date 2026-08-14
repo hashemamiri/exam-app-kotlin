@@ -7,7 +7,8 @@ data class OfficialPrintHeader(
     val city: String = "",
     val district: String = "",
     val school: String = "",
-    val grade: String = ""
+    val grade: String = "",
+    val fieldOfStudy: String = ""
 )
 
 sealed interface OfficialPrintable {

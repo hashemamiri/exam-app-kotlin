@@ -58,6 +58,7 @@ class ProfileSettingsViewModel(
     fun setDistrict(value: String) = updateHeader { it.copy(district = value.take(120)) }
     fun setSchool(value: String) = updateHeader { it.copy(school = value.take(120)) }
     fun setGrade(value: String) = updateHeader { it.copy(grade = value.take(120)) }
+    fun setFieldOfStudy(value: String) = updateHeader { it.copy(fieldOfStudy = value.take(120)) }
 
     fun uploadAvatar(uri: Uri) = viewModelScope.launch {
         val profile = state.value.profile ?: return@launch

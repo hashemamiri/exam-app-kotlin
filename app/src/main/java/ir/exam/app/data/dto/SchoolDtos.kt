@@ -10,12 +10,13 @@ data class SchoolClassDto(
     val id: String,
     val name: String,
     val grade: String? = null,
+    @SerialName("field_of_study") val fieldOfStudy: String? = null,
     val boys: Int = 0,
     val girls: Int = 0,
     val total: Int = 0,
     @SerialName("created_at") val createdAt: String? = null
 ) {
-    fun toDomain() = SchoolClass(id, name, grade, boys, girls, total, createdAt)
+    fun toDomain() = SchoolClass(id, name, grade, fieldOfStudy, boys, girls, total, createdAt)
 }
 
 @Serializable
@@ -30,6 +31,7 @@ data class StudentProfileDto(
     @SerialName("class_names") val classNames: String? = null,
     @SerialName("father_name") val fatherName: String? = null,
     val grade: String? = null,
+    @SerialName("field_of_study") val fieldOfStudy: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null
 ) {
     fun toDomain() = StudentProfile(
@@ -43,6 +45,7 @@ data class StudentProfileDto(
         classNames = classNames,
         fatherName = fatherName,
         grade = grade,
+        fieldOfStudy = fieldOfStudy,
         avatarUrl = avatarUrl
     )
 }

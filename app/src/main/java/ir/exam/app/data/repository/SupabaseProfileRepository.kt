@@ -39,7 +39,8 @@ class SupabaseProfileRepository(context: Context) {
                 city = dto.headerCity.orEmpty(),
                 district = dto.headerDistrict.orEmpty(),
                 school = dto.headerSchool.orEmpty(),
-                grade = dto.headerGrade.orEmpty()
+                grade = dto.headerGrade.orEmpty(),
+                fieldOfStudy = dto.headerField.orEmpty()
             ),
             role = if (dto.role.equals("teacher", true)) UserRole.TEACHER else UserRole.STUDENT
         )
@@ -59,7 +60,7 @@ class SupabaseProfileRepository(context: Context) {
     suspend fun save(profile: NativeProfile): Result<NativeProfile> = runCatching {
         validate(profile)
         val response = SupabaseProvider.client.postgrest.rpc(
-            "native_save_profile",
+            "native_save_profile_v28",
             buildJsonObject {
                 put("p_display_name", profile.displayName.trim().ifBlank { null })
                 put("p_avatar_url", profile.avatarUrl)
@@ -69,6 +70,7 @@ class SupabaseProfileRepository(context: Context) {
                 put("p_hdr_district", profile.header.district.trim())
                 put("p_hdr_school", profile.header.school.trim())
                 put("p_hdr_grade", profile.header.grade.trim())
+                put("p_hdr_field", profile.header.fieldOfStudy.trim())
             }
         ).decodeAs<ProfileSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
@@ -112,7 +114,8 @@ class SupabaseProfileRepository(context: Context) {
             "شهر" to profile.header.city,
             "منطقه" to profile.header.district,
             "مدرسه" to profile.header.school,
-            "پایه" to profile.header.grade
+            "پایه" to profile.header.grade,
+            "رشته" to profile.header.fieldOfStudy
         ).forEach { (label, value) -> require(value.length <= 120) { "$label حداکثر ۱۲۰ نویسه است." } }
         require(profile.avatarUrl == null || profile.avatarUrl.startsWith("https://")) { "نشانی عکس پروفایل معتبر نیست." }
     }

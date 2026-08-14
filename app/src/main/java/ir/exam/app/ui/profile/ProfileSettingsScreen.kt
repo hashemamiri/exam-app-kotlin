@@ -79,6 +79,7 @@ import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
+import ir.exam.app.ui.common.FieldOfStudyPicker
 import ir.exam.app.ui.common.GradeOdometerPicker
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
@@ -197,6 +198,7 @@ fun ProfileSettingsScreen(
                 onDistrict = viewModel::setDistrict,
                 onSchool = viewModel::setSchool,
                 onGrade = viewModel::setGrade,
+                onFieldOfStudy = viewModel::setFieldOfStudy,
                 onSave = viewModel::save
             )
             destination == ProfileSettingsDestination.HEADER -> ErrorPanel(
@@ -683,6 +685,7 @@ private fun HeaderSection(
     onDistrict: (String) -> Unit,
     onSchool: (String) -> Unit,
     onGrade: (String) -> Unit,
+    onFieldOfStudy: (String) -> Unit,
     onSave: () -> Unit
 ) {
     val header = profile.header
@@ -699,12 +702,19 @@ private fun HeaderSection(
                     OutlinedTextField(header.city, onCity, label = { Text("شهر / شهرستان") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.district, onDistrict, label = { Text("منطقه / ناحیه") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.school, onSchool, label = { Text("نام مدرسه") }, modifier = Modifier.fillMaxWidth())
-                    GradeOdometerPicker(
-                        value = header.grade,
-                        onValueChange = onGrade,
-                        modifier = Modifier.fillMaxWidth(),
-                        emptyLabel = "بدون پایه"
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GradeOdometerPicker(
+                            value = header.grade,
+                            onValueChange = onGrade,
+                            modifier = Modifier.weight(1f),
+                            emptyLabel = "بدون پایه"
+                        )
+                        FieldOfStudyPicker(
+                            value = header.fieldOfStudy,
+                            onValueChange = onFieldOfStudy,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }

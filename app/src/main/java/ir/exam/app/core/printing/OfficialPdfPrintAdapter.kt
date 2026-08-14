@@ -235,7 +235,8 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                 "شهر: ${header.city}",
                 "منطقه: ${header.district}",
                 "مدرسه: ${header.school}",
-                "پایه: ${header.grade}"
+                "پایه: ${header.grade}" +
+                    header.fieldOfStudy.takeIf(String::isNotBlank)?.let { " · رشته: $it" }.orEmpty()
             ).joinToString("\n"),
             PAGE_WIDTH - MARGIN - 8f,
             37f,

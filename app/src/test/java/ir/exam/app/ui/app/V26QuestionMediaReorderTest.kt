@@ -55,8 +55,8 @@ class V26QuestionMediaReorderTest {
         assertTrue("SOFT_INPUT_ADJUST_RESIZE" in bulk)
         assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
-        assertTrue("height(maxHeight)" in bulk)
-        assertTrue("Modifier.weight(1f)" in bulk)
+        assertTrue("heightIn(max = availableHeight)" in bulk)
+        assertTrue("weight(1f, fill = false)" in bulk)
     }
 
     @Test
@@ -67,7 +67,7 @@ class V26QuestionMediaReorderTest {
         assertTrue("safeSource = prepared.uri" in editor)
         assertTrue("model = safeSource" in editor)
         assertTrue("enabled = !busy && !preparing && safeSource != null" in editor)
-        assertTrue("decodeSampled(request.source)" in repository)
+        assertTrue("decodeSampled(request.source, attempt)" in repository)
         assertTrue("MAX_DECODE_PIXELS = 7_000_000L" in repository)
     }
 

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -67,6 +68,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -80,6 +82,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import ir.exam.app.core.export.XlsxSheet
+import ir.exam.app.ui.common.FieldOfStudyPicker
 import ir.exam.app.ui.common.GradeOdometerPicker
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
@@ -203,8 +206,8 @@ fun SchoolManagementScreen(
         ClassEditorDialog(
             item = classEditor,
             onDismiss = { creatingClass = false; classEditor = null },
-            onSave = { name, grade ->
-                viewModel.saveClass(classEditor?.id, name, grade)
+            onSave = { name, grade, field ->
+                viewModel.saveClass(classEditor?.id, name, grade, field)
                 creatingClass = false
                 classEditor = null
             }
@@ -326,7 +329,10 @@ private fun ClassesContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(item.name, style = MaterialTheme.typography.titleMedium)
-                                Text("پایه: ${item.grade.orEmpty().ifBlank { "—" }}")
+                                Text(
+                                    "پایه: ${item.grade.orEmpty().ifBlank { "—" }}" +
+                                        item.fieldOfStudy?.takeIf(String::isNotBlank)?.let { " · $it" }.orEmpty()
+                                )
                             }
                             Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
                             Row(
@@ -528,6 +534,7 @@ private fun StudentCard(
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("نام کاربری: ${student.username ?: "—"}")
                     Text("نام پدر: ${student.fatherName ?: "—"}")
+                    Text("رشته: ${student.fieldOfStudy.orEmpty().ifBlank { "—" }}")
                     student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
                     Row(
                         Modifier.fillMaxWidth(),
@@ -627,25 +634,38 @@ private fun StudentCard(
 private fun ClassEditorDialog(
     item: SchoolClass?,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String, String) -> Unit
 ) {
     var name by remember(item?.id) { mutableStateOf(item?.name.orEmpty()) }
     var grade by remember(item?.id) { mutableStateOf(item?.grade.orEmpty()) }
+    var field by remember(item?.id) { mutableStateOf(item?.fieldOfStudy.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (item == null) "کلاس جدید" else "ویرایش کلاس") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام کلاس") })
-                GradeOdometerPicker(
-                    value = grade,
-                    onValueChange = { grade = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    emptyLabel = "بدون پایه"
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GradeOdometerPicker(
+                        value = grade,
+                        onValueChange = { grade = it },
+                        modifier = Modifier.weight(1f),
+                        emptyLabel = "بدون پایه"
+                    )
+                    FieldOfStudyPicker(
+                        value = field,
+                        onValueChange = { field = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         },
-        confirmButton = { Button(onClick = { onSave(name, grade) }, enabled = name.isNotBlank()) { Text("ذخیره") } },
+        confirmButton = {
+            Button(
+                onClick = { onSave(name, grade, field) },
+                enabled = name.isNotBlank()
+            ) { Text("ذخیره") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )
 }
@@ -659,12 +679,17 @@ private fun MemberPickerDialog(
     val selected = remember { mutableStateListOf<String>() }
     var gender by remember { mutableStateOf<String?>(null) }
     var grade by remember { mutableStateOf<String?>(null) }
+    var field by remember { mutableStateOf<String?>(null) }
     val grades = remember(students) {
         students.mapNotNull { it.grade?.trim()?.takeIf(String::isNotBlank) }.distinct().sorted()
     }
+    val fields = remember(students) {
+        students.mapNotNull { it.fieldOfStudy?.trim()?.takeIf(String::isNotBlank) }.distinct().sorted()
+    }
     val visible = students.filter { student ->
         (gender == null || student.gender?.lowercase() == gender) &&
-            (grade == null || student.grade?.trim() == grade)
+            (grade == null || student.grade?.trim() == grade) &&
+            (field == null || student.fieldOfStudy?.trim() == field)
     }
 
     AlertDialog(
@@ -710,6 +735,16 @@ private fun MemberPickerDialog(
                         )
                     }
                 }
+                item {
+                    FieldOfStudyPicker(
+                        value = field.orEmpty(),
+                        onValueChange = { field = it.takeIf(String::isNotBlank) },
+                        availableFields = fields,
+                        includeStandardFields = false,
+                        emptyLabel = "همه رشته‌ها",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 if (visible.isEmpty()) item { Text("دانش‌آموزی با این فیلتر یافت نشد.") }
                 items(visible, key = StudentProfile::id) { student ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -719,7 +754,10 @@ private fun MemberPickerDialog(
                                 if (checked) selected.add(student.id) else selected.remove(student.id)
                             }
                         )
-                        Text("${student.fullName} · پایه ${student.grade.orEmpty().ifBlank { "—" }}")
+                        Text(
+                            "${student.fullName} · پایه ${student.grade.orEmpty().ifBlank { "—" }}" +
+                                student.fieldOfStudy?.takeIf(String::isNotBlank)?.let { " · $it" }.orEmpty()
+                        )
                     }
                 }
             }
@@ -751,6 +789,7 @@ private fun StudentEditDialog(
     var gender by remember(student.id) { mutableStateOf(student.gender.orEmpty()) }
     var fatherName by remember(student.id) { mutableStateOf(student.fatherName.orEmpty()) }
     var grade by remember(student.id) { mutableStateOf(student.grade.orEmpty()) }
+    var field by remember(student.id) { mutableStateOf(student.fieldOfStudy.orEmpty()) }
     var newPassword by remember(student.id) { mutableStateOf("") }
     var passwordVisible by remember(student.id) { mutableStateOf(false) }
 
@@ -791,6 +830,11 @@ private fun StudentEditDialog(
                             emptyLabel = "بدون پایه"
                         )
                     }
+                    FieldOfStudyPicker(
+                        value = field,
+                        onValueChange = { field = it.take(100) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             username,
@@ -861,6 +905,7 @@ private fun StudentEditDialog(
                                         gender,
                                         fatherName,
                                         grade,
+                                        field,
                                         newPassword.takeIf(String::isNotBlank)
                                     )
                                 )
@@ -883,6 +928,7 @@ private data class BulkStudentDraft(
     val gender: String = "",
     val father: String = "",
     val grade: String = "",
+    val field: String = "",
     val usernameEdited: Boolean = false
 )
 
@@ -896,6 +942,20 @@ private fun BulkStudentDialog(
     var classId by remember { mutableStateOf(initialClassId ?: classes.firstOrNull()?.id.orEmpty()) }
     val rows = remember { mutableStateListOf(BulkStudentDraft()) }
     var error by remember { mutableStateOf<String?>(null) }
+    val rowsListState = rememberLazyListState()
+    // هر بار «+» زده شود، این شمارنده بالا می‌رود و کارت تازه خودکار دیده می‌شود.
+    var pendingRevealIndex by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(pendingRevealIndex, rows.size) {
+        val target = pendingRevealIndex ?: return@LaunchedEffect
+        if (target in rows.indices) {
+            // دو frame صبر می‌کنیم تا کارت جدید اندازه‌گیری شود و بعد دقیق اسکرول کنیم.
+            withFrameNanos { }
+            withFrameNanos { }
+            rowsListState.animateScrollToItem(target)
+        }
+        pendingRevealIndex = null
+    }
 
     fun recomputeSuggestions() {
         val seen = mutableMapOf<String, Int>()
@@ -935,6 +995,7 @@ private fun BulkStudentDialog(
                     row.gender,
                     row.father,
                     row.grade,
+                    row.field,
                     classId
                 )
             }
@@ -946,6 +1007,8 @@ private fun BulkStudentDialog(
             .onFailure { error = it.message }
     }
 
+    // پنجره گروهی دقیقاً مانند پنجره تکی: هم‌عرض ۶۲۰dp، از بالا، بدون کشیدن به کل ارتفاع.
+    // ارتفاع با محتوا رشد می‌کند و تنها وقتی فضا کم بیاید تا سقف قابل استفاده می‌رسد.
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -960,16 +1023,17 @@ private fun BulkStudentDialog(
             }
         }
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp).padding(top = 8.dp),
+            modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
             contentAlignment = Alignment.TopCenter
         ) {
+            val availableHeight = maxHeight
             Surface(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp).height(maxHeight),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 620.dp).heightIn(max = availableHeight),
                 shape = MaterialTheme.shapes.large,
                 tonalElevation = 6.dp
             ) {
                 Column(
-                    Modifier.fillMaxSize().padding(12.dp),
+                    Modifier.fillMaxWidth().padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
@@ -982,6 +1046,7 @@ private fun BulkStudentDialog(
                                 if (rows.size < 100) {
                                     rows.add(BulkStudentDraft())
                                     recomputeSuggestions()
+                                    pendingRevealIndex = rows.lastIndex
                                 }
                             },
                             enabled = rows.size < 100,
@@ -1015,7 +1080,8 @@ private fun BulkStudentDialog(
                         }
                     }
                     LazyColumn(
-                        Modifier.weight(1f),
+                        state = rowsListState,
+                        modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(rows.size) { index ->
@@ -1064,6 +1130,13 @@ private fun BulkStudentDialog(
                                             emptyLabel = "بدون پایه"
                                         )
                                     }
+                                    FieldOfStudyPicker(
+                                        value = row.field,
+                                        onValueChange = {
+                                            rows[index] = row.copy(field = it.take(100))
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         OutlinedTextField(
                                             row.username,
@@ -1157,6 +1230,7 @@ internal fun studentClipboardText(
     add("جنسیت: ${when (student.gender?.lowercase()) { "female" -> "دختر"; "male" -> "پسر"; else -> "—" }}")
     add("نام پدر: ${student.fatherName.orEmpty().ifBlank { "—" }}")
     add("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
+    add("رشته: ${student.fieldOfStudy.orEmpty().ifBlank { "—" }}")
     add("کلاس‌ها: ${student.classNames.orEmpty().ifBlank { "—" }}")
     add("وضعیت: ${if (student.active) "فعال" else "غیرفعال"}")
     add("شناسه حساب: ${student.id}")
@@ -1194,7 +1268,7 @@ private fun copyOneTimeCredential(
     Toast.makeText(context, "اطلاعات و رمز جدید به‌صورت حساس کپی شد.", Toast.LENGTH_LONG).show()
 }
 
-private fun studentWorkbook(students:List<StudentProfile>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان",listOf(listOf("نام","نام کاربری","جنسیت","پایه","نام پدر","کلاس","وضعیت"))+students.map{listOf(it.fullName,it.username.orEmpty(),it.gender.orEmpty(),it.grade.orEmpty(),it.fatherName.orEmpty(),it.classNames.orEmpty(),if(it.active)"فعال" else "غیرفعال") })))
+private fun studentWorkbook(students:List<StudentProfile>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان",listOf(listOf("نام","نام کاربری","جنسیت","پایه","رشته","نام پدر","کلاس","وضعیت"))+students.map{listOf(it.fullName,it.username.orEmpty(),it.gender.orEmpty(),it.grade.orEmpty(),it.fieldOfStudy.orEmpty(),it.fatherName.orEmpty(),it.classNames.orEmpty(),if(it.active)"فعال" else "غیرفعال") })))
 private fun credentialWorkbook(items:List<StudentCredential>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("حساب‌ها",listOf(listOf("نام کاربری","رمز یک‌بارنمایش"))+items.map{listOf(it.username,it.password)})))
 
 private fun filteredStudents(items: List<StudentProfile>, query: String): List<StudentProfile> {

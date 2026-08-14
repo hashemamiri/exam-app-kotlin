@@ -18,6 +18,7 @@ data class NativeProfileDto(
     @SerialName("hdr_district") val headerDistrict: String? = null,
     @SerialName("hdr_school") val headerSchool: String? = null,
     @SerialName("hdr_grade") val headerGrade: String? = null,
+    @SerialName("hdr_field") val headerField: String? = null,
     val error: String? = null
 )
 

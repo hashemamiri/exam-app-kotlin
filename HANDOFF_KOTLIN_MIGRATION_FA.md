@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V27 داده، تصویر امن و گزینه‌های زنده
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V28 جابه‌جایی گزینه، تصویر امن، پنجره گروهی و رشته
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3286,3 +3286,128 @@ Debug APK SHA-256                     23ba454a550db58422d467f121d9aa8cdb3d429f99
 راهنمای مستقل: `DATA_IMAGE_OPTIONS_V27_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.
+
+---
+
+## ۴۶) V28 — جابه‌جایی گزینه، تصویر امن، پنجره گروهی و رشته تحصیلی
+
+### گزارش دستگاه
+
+```text
+جابه‌جایی گزینه‌های چندگزینه‌ای و جورکردنی مثل کارت سؤال نبود
+پس از انتخاب عکس برای آپلود، برنامه بسته می‌شد
+پنجره گروهی هم‌اندازه پنجره تکی نبود و + اسکرول خودکار نداشت
+قسمت پایه فیلد رشته نداشت
+```
+
+### ۱) جابه‌جایی گزینه‌ها
+
+علت: قرارداد Drag گزینه با کارت سؤال یکی نبود. `pointerInput` به `itemCount` کلید
+می‌خورد و وسط gesture بازنشانی می‌شد؛ اسکرول، رنگ فعال و بازخورد لمسی هم نداشت.
+
+```text
+rememberUpdatedState برای index و itemCount
+pointerInput فقط به description کلید می‌خورد
+animateColorAsState برای حالت فعال
+onDragScroll → dispatchRawDelta مثل کارت سؤال
+HapticFeedback در شروع و هر پرش
+userScrollEnabled فهرست هنگام Drag داخلی خاموش می‌شود
+هر سه مسیر: چندگزینه‌ای، ستون راست و ستون چپ جورکردنی
+```
+
+### ۲) بسته‌شدن برنامه پس از انتخاب تصویر
+
+علت قطعی: `runCatching` فقط `Exception` را می‌گیرد، اما `OutOfMemoryError` یک
+`Error` است و از آن عبور می‌کرد و پروسه را می‌کشت. سقف decode هم ثابت بود و به
+حافظه آزاد واقعی کاری نداشت.
+
+```text
+بودجه پیکسل = حافظه آزاد واقعی JVM ÷ ۴ ÷ ضریب ایمنی
+۴ تلاش؛ هر تلاش بودجه و لبه را نصف می‌کند
+تلاش‌های بعدی RGB_565
+recycle صریح در rotate/crop/scale و finally
+recoverCatching → پیام فارسی به‌جای crash
+```
+
+### ۳) پنجره گروهی
+
+```text
+قبل: widthIn 720dp + height(maxHeight) + padding 12/8
+حالا: widthIn 620dp + heightIn(max = availableHeight) + padding 14/10
+LazyColumn: weight(1f, fill = false) → با محتوا رشد می‌کند
++ → pendingRevealIndex → دو withFrameNanos → animateScrollToItem
+```
+
+اکنون دقیقاً هم‌عرض و هم‌رفتار پنجره تکی است و کارت جدید خودکار ظاهر می‌شود.
+
+### ۴) رشته تحصیلی
+
+ستون‌های واقعی:
+
+```text
+public.profiles.field_of_study
+public.profiles.hdr_field
+public.classes.field_of_study
+```
+
+`FieldOfStudyPicker` از همان چرخ Snapدار پایه استفاده می‌کند؛ گزینه «سایر» و ورودی
+دستی مثل پایه کار می‌کند. چرخ مشترک پارامتری شد ولی پیش‌فرض پایه تغییر نکرد.
+
+محل‌ها: فرم تکی، فرم گروهی، کارت دانش‌آموز، کلاس جدید/ویرایش، کارت کلاس،
+فیلتر اعضا، سربرگ رسمی، چاپ/PDF، XLSX و کپی اطلاعات.
+
+RPCهای جدید:
+
+```text
+native_save_student_extra_v28(uuid,text,text,text,text)
+native_save_class_v28(uuid,text,text,text)
+native_my_classes_v28()
+native_save_profile_v28(... , p_hdr_field)
+native_export_backup_v3()  → پشتیبان نسخه ۴
+native_restore_backup_v3() → نسخه ۱..۴
+my_students() و class_roster() با ستون رشته
+```
+
+RPCهای قدیمی بدون رشته دیگر از APK صدا زده نمی‌شوند.
+
+### SQL الزامی V28
+
+```text
+SQL_NATIVE_FIELD_OF_STUDY_V28.sql
+```
+
+Readiness باید هشت مقدار true بدهد:
+
+```text
+student_field_ready / class_field_ready / header_field_ready
+student_extra_ready / class_save_ready / class_list_ready
+profile_save_ready  / backup_v4_ready
+```
+
+### امنیت رمز
+
+رمز قبلی Supabase Auth hash یک‌طرفه است و قابل بازیابی نیست. ذخیره قابل‌بازیابی
+جدیدی ساخته نشده و `plain_password` همچنان حذف‌شده و ممنوع است.
+
+### نتیجه تست V28
+
+```text
+Kotlin compile                         PASS
+JVM tests                              185/185 PASS
+V28 reorder/image/bulk/field tests       19/19 PASS
+PostgreSQL 17 migration اجرای اول و دوم  PASS
+V28 SQL integration                    12/12 PASS
+cross-teacher student/class denial       PASS
+student header write denial              PASS
+backup v4 round-trip + legacy v3         PASS
+function grants anon/authenticated       PASS
+unsafe DML in V28 migration                 0
+FINAL_NATIVE_VERIFY                    PASS
+lintDebug                              PASS — 0 error
+assembleDebug                          PASS
+APK Signature Scheme v2                Verified
+```
+
+راهنمای مستقل: `REORDER_IMAGE_BULK_FIELD_V28_FA.md`.
+
+Edge/Secret/Dependency جدید ندارد؛ فقط SQL V28 یک‌بار اجرا شود.

@@ -5,7 +5,8 @@ data class ExamHeader(
     val city: String = "",
     val district: String = "",
     val school: String = "",
-    val grade: String = ""
+    val grade: String = "",
+    val fieldOfStudy: String = ""
 )
 
 data class NativeProfile(

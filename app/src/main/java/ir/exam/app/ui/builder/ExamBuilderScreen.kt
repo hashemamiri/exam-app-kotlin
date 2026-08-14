@@ -114,6 +114,9 @@ fun ExamBuilderScreen(
     var settingsExpanded by rememberSaveable { mutableStateOf(true) }
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
+    // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
+    // همان انگشت کنترل کند و کارت سؤال زیر انگشت نلغزد.
+    var innerReorderActive by remember { mutableStateOf(false) }
     var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
     var previewAll by remember { mutableStateOf(false) }
     val questionPrefaceCount = 2 + if (state.importedBy != null) 1 else 0
@@ -201,6 +204,7 @@ fun ExamBuilderScreen(
 
         LazyColumn(
             state = listState,
+            userScrollEnabled = !innerReorderActive,
             modifier = Modifier.padding(padding).padding(horizontal = 16.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 10.dp, bottom = 112.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -255,6 +259,8 @@ fun ExamBuilderScreen(
                     onMove = { delta -> viewModel.moveQuestion(question.id, delta) },
                     onDragStarted = { expandedQuestionId = null },
                     onDragScroll = { delta -> listState.dispatchRawDelta(delta * .35f) },
+                    onItemDragStarted = { innerReorderActive = true },
+                    onItemDragEnded = { innerReorderActive = false },
                     viewModel = viewModel,
                     onPreview = { previewQuestion = question }
                 )
@@ -552,6 +558,8 @@ private fun QuestionEditor(
     onMove: (Int) -> Unit,
     onDragStarted: () -> Unit,
     onDragScroll: (Float) -> Unit,
+    onItemDragStarted: () -> Unit,
+    onItemDragEnded: () -> Unit,
     viewModel: ExamBuilderViewModel,
     onPreview: () -> Unit
 ) {
@@ -752,7 +760,10 @@ private fun QuestionEditor(
                                     ReorderDragButton(
                                         description = "نگه‌دارید و $optionLabel را جابه‌جا کنید",
                                         currentIndex = index,
-                                        itemCount = question.options.size
+                                        itemCount = question.options.size,
+                                        onDragStarted = onItemDragStarted,
+                                        onDragEnded = onItemDragEnded,
+                                        onDragScroll = onDragScroll
                                     ) { from, delta ->
                                         viewModel.moveOption(question.id, from, delta)
                                     }
@@ -806,7 +817,10 @@ private fun QuestionEditor(
                     },
                     onFormulaDelete = { side, itemIndex, occurrence ->
                         viewModel.deleteFormula(question.id, "matching_$side", itemIndex, occurrence)
-                    }
+                    },
+                    onItemDragStarted = onItemDragStarted,
+                    onItemDragEnded = onItemDragEnded,
+                    onItemDragScroll = onDragScroll
                 )
                 QuestionType.ESSAY -> Unit
             }

@@ -9,8 +9,8 @@ import ir.exam.app.domain.model.UpdateStudentRequest
 
 interface SchoolRepository {
     suspend fun getClasses(): Result<List<SchoolClass>>
-    suspend fun createClass(name: String, grade: String): Result<Unit>
-    suspend fun updateClass(id: String, name: String, grade: String): Result<Unit>
+    suspend fun createClass(name: String, grade: String, fieldOfStudy: String = ""): Result<Unit>
+    suspend fun updateClass(id: String, name: String, grade: String, fieldOfStudy: String = ""): Result<Unit>
     suspend fun deleteClass(id: String): Result<Unit>
     suspend fun getStudents(): Result<List<StudentProfile>>
     suspend fun getClassRoster(classId: String): Result<List<StudentProfile>>

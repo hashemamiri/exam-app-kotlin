@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -45,10 +47,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
@@ -135,39 +139,63 @@ fun SingleImagePicker(
     }
 }
 
+/**
+ * جابه‌جایی زندهٔ گزینه/جورکردنی، دقیقاً با همان قرارداد کارت سؤال:
+ * لمس طولانی → فعال‌شدن، هر آستانه یک جابه‌جایی، اسکرول همراه انگشت و
+ * بازخورد لمسی در شروع و هر پرش. index جاری با [rememberUpdatedState] دنبال
+ * می‌شود تا پس از recomposition ناشی از هر onMove، مبدأ بعدی درست بماند.
+ */
 @Composable
 fun ReorderDragButton(
     description: String,
     currentIndex: Int,
     itemCount: Int,
+    onDragStarted: () -> Unit = {},
+    onDragEnded: () -> Unit = {},
+    onDragScroll: (Float) -> Unit = {},
     onMove: (from: Int, delta: Int) -> Unit
 ) {
     var accumulated by remember { mutableFloatStateOf(0f) }
     var active by remember { mutableStateOf(false) }
     var dragIndex by remember { mutableIntStateOf(currentIndex) }
     val latestIndex by rememberUpdatedState(currentIndex)
-    val stepPx = with(LocalDensity.current) { 46.dp.toPx() }
-    Surface(
-        shape = RoundedCornerShape(13.dp),
-        color = if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-    ) {
+    val latestCount by rememberUpdatedState(itemCount)
+    val haptics = LocalHapticFeedback.current
+    val stepPx = with(LocalDensity.current) { ReorderStepDp.dp.toPx() }
+    val background by animateColorAsState(
+        targetValue = if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        animationSpec = tween(170),
+        label = "option-drag-color"
+    )
+    Surface(shape = RoundedCornerShape(13.dp), color = background) {
         IconButton(
             onClick = {},
-            modifier = Modifier.pointerInput(description, itemCount) {
+            modifier = Modifier.pointerInput(description) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         accumulated = 0f
                         dragIndex = latestIndex
                         active = true
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDragStarted()
                     },
-                    onDragCancel = { accumulated = 0f; active = false },
-                    onDragEnd = { accumulated = 0f; active = false },
+                    onDragCancel = {
+                        accumulated = 0f
+                        active = false
+                        onDragEnded()
+                    },
+                    onDragEnd = {
+                        accumulated = 0f
+                        active = false
+                        onDragEnded()
+                    },
                     onDrag = { change, amount ->
                         change.consume()
                         accumulated += amount.y
+                        onDragScroll(amount.y)
                         while (abs(accumulated) >= stepPx) {
                             val delta = if (accumulated > 0f) 1 else -1
-                            val target = (dragIndex + delta).coerceIn(0, itemCount - 1)
+                            val target = (dragIndex + delta).coerceIn(0, latestCount - 1)
                             if (target == dragIndex) {
                                 accumulated = 0f
                                 break
@@ -175,6 +203,7 @@ fun ReorderDragButton(
                             onMove(dragIndex, delta)
                             dragIndex = target
                             accumulated -= delta * stepPx
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     }
                 )
@@ -184,6 +213,9 @@ fun ReorderDragButton(
         }
     }
 }
+
+/** آستانهٔ مشترک جابه‌جایی گزینه و جورکردنی. */
+const val ReorderStepDp: Float = 46f
 
 fun persianOptionLetter(index: Int): String = listOf(
     "الف", "ب", "پ", "ت", "ث", "ج", "چ", "ح", "خ", "د",
@@ -201,6 +233,9 @@ private fun MatchingItemTools(
     currentIndex: Int,
     itemCount: Int,
     onMove: (from: Int, delta: Int) -> Unit,
+    onDragStarted: () -> Unit,
+    onDragEnded: () -> Unit,
+    onDragScroll: (Float) -> Unit,
     onDelete: () -> Unit,
     deleteEnabled: Boolean
 ) {
@@ -218,6 +253,9 @@ private fun MatchingItemTools(
             description = "نگه‌دارید و $label را جابه‌جا کنید",
             currentIndex = currentIndex,
             itemCount = itemCount,
+            onDragStarted = onDragStarted,
+            onDragEnded = onDragEnded,
+            onDragScroll = onDragScroll,
             onMove = onMove
         )
         TextButton(onClick = onDelete, enabled = deleteEnabled) { Text("حذف") }
@@ -229,7 +267,10 @@ fun MatchingQuestionEditor(
     question: QuestionDraft,
     viewModel: ExamBuilderViewModel,
     onFormulaEdit: (side: String, index: Int, occurrence: Int?, tex: String) -> Unit = { _, _, _, _ -> },
-    onFormulaDelete: (side: String, index: Int, occurrence: Int) -> Unit = { _, _, _ -> }
+    onFormulaDelete: (side: String, index: Int, occurrence: Int) -> Unit = { _, _, _ -> },
+    onItemDragStarted: () -> Unit = {},
+    onItemDragEnded: () -> Unit = {},
+    onItemDragScroll: (Float) -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("ابتدا موارد ستون راست و سپس موارد ستون چپ را تنظیم کنید.")
@@ -252,6 +293,9 @@ fun MatchingQuestionEditor(
                         onMove = { from, delta ->
                             viewModel.moveMatchingItem(question.id, "right", from, delta)
                         },
+                        onDragStarted = onItemDragStarted,
+                        onDragEnded = onItemDragEnded,
+                        onDragScroll = onItemDragScroll,
                         onDelete = { viewModel.removeMatchingSide(question.id, "right", index) },
                         deleteEnabled = question.matchingRight.size > 2
                     )
@@ -294,6 +338,9 @@ fun MatchingQuestionEditor(
                         onMove = { from, delta ->
                             viewModel.moveMatchingItem(question.id, "left", from, delta)
                         },
+                        onDragStarted = onItemDragStarted,
+                        onDragEnded = onItemDragEnded,
+                        onDragScroll = onItemDragScroll,
                         onDelete = { viewModel.removeMatchingSide(question.id, "left", index) },
                         deleteEnabled = question.matchingLeft.size > 2
                     )

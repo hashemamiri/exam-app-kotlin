@@ -57,9 +57,10 @@ class V27DataImageOptionsTest {
         val school = source("app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt")
         val bulk = school.substringAfter("private fun BulkStudentDialog(").substringBefore("internal fun studentClipboardText")
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
-        assertTrue("height(maxHeight)" in bulk)
-        assertTrue("Modifier.fillMaxSize().padding(12.dp)" in bulk)
-        assertTrue("Modifier.weight(1f)" in bulk)
+        // V28: هم‌اندازه پنجره تکی؛ محتوا از بالا و بدون کشیدن اجباری تا کف.
+        assertTrue("heightIn(max = availableHeight)" in bulk)
+        assertTrue("Modifier.fillMaxWidth().padding(14.dp)" in bulk)
+        assertTrue("weight(1f, fill = false)" in bulk)
         assertFalse("bottom alignment returned", "Alignment.BottomCenter" in bulk)
     }
 
@@ -114,6 +115,9 @@ class V27DataImageOptionsTest {
         assertTrue("values + OtherGradeValue" in grade)
         assertTrue("OtherGradeValue -> \"سایر\"" in grade)
         assertTrue("customMode = true" in grade)
-        assertTrue("label = { Text(\"سایر پایه\") }" in grade)
+        // V28: برچسب ورودی دستی پارامتری شد تا رشته هم از همین چرخ استفاده کند،
+        // ولی پیش‌فرض پایه دست‌نخورده است.
+        assertTrue("customLabel: String = \"سایر پایه\"" in grade)
+        assertTrue("label = { Text(customLabel) }" in grade)
     }
 }

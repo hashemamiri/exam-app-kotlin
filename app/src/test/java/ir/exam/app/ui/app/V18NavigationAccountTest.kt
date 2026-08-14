@@ -27,8 +27,13 @@ class V18NavigationAccountTest {
         assertTrue("@SerialName(\"hdr_grade\")" in dto)
         assertTrue("put(\"p_hdr_grade\"" in repository)
         assertTrue("پایه: ${'$'}{header.grade}" in print)
-        assertTrue("native_export_backup_v2" in portability)
-        assertTrue("native_restore_backup_v2" in portability)
+        // V28: کلاینت به نسخه ۳ مهاجرت کرد؛ نسخه ۳ در SQL همان v2 را زنجیره می‌کند،
+        // بنابراین قرارداد سربرگ پایه همچنان سرجای خود است.
+        assertTrue("native_export_backup_v3" in portability)
+        assertTrue("native_restore_backup_v3" in portability)
+        val v28Sql = File(root, "supabase/migrations/20260814_native_field_of_study_v28.sql").readText()
+        assertTrue("native_export_backup_v2()" in v28Sql)
+        assertTrue("native_restore_backup_v2(" in v28Sql)
     }
 
     @Test

@@ -25,25 +25,33 @@ import kotlinx.serialization.json.put
 
 class SupabaseSchoolRepository : SchoolRepository {
     override suspend fun getClasses(): Result<List<SchoolClass>> = runCatching {
-        SupabaseProvider.client.postgrest.rpc("my_classes")
+        SupabaseProvider.client.postgrest.rpc("native_my_classes_v28")
             .decodeList<SchoolClassDto>()
             .map(SchoolClassDto::toDomain)
     }
 
-    override suspend fun createClass(name: String, grade: String): Result<Unit> = runCatching {
+    override suspend fun createClass(name: String, grade: String, fieldOfStudy: String): Result<Unit> = runCatching {
         require(name.trim().isNotEmpty()) { "نام کلاس را وارد کنید." }
-        rpcObject("create_class", buildJsonObject {
+        rpcObject("native_save_class_v28", buildJsonObject {
+            put("p_class", null as String?)
             put("p_name", name.trim())
             put("p_grade", grade.trim())
+            put("p_field", fieldOfStudy.trim())
         }).throwIfError()
     }
 
-    override suspend fun updateClass(id: String, name: String, grade: String): Result<Unit> = runCatching {
+    override suspend fun updateClass(
+        id: String,
+        name: String,
+        grade: String,
+        fieldOfStudy: String
+    ): Result<Unit> = runCatching {
         require(name.trim().isNotEmpty()) { "نام کلاس را وارد کنید." }
-        rpcObject("update_class", buildJsonObject {
+        rpcObject("native_save_class_v28", buildJsonObject {
             put("p_class", id)
             put("p_name", name.trim())
             put("p_grade", grade.trim())
+            put("p_field", fieldOfStudy.trim())
         }).throwIfError()
     }
 
@@ -129,12 +137,15 @@ class SupabaseSchoolRepository : SchoolRepository {
         val id = raw["id"]?.jsonPrimitive?.contentOrNull
             ?: error("شناسه دانش‌آموز از سرور دریافت نشد.")
 
-        if (request.fatherName.isNotBlank() || request.grade.isNotBlank()) {
-            rpcObject("save_student_extra", buildJsonObject {
+        if (request.fatherName.isNotBlank() || request.grade.isNotBlank() ||
+            request.fieldOfStudy.isNotBlank()
+        ) {
+            rpcObject("native_save_student_extra_v28", buildJsonObject {
                 put("p_student", id)
                 put("p_username", request.username.trim().lowercase())
                 put("p_father_name", request.fatherName.trim())
                 put("p_grade", request.grade.trim())
+                put("p_field", request.fieldOfStudy.trim())
             }).throwIfError()
         }
         StudentCredential(id, request.username.trim().lowercase(), request.password)
@@ -155,7 +166,7 @@ class SupabaseSchoolRepository : SchoolRepository {
             else failures+="$username: ${row["message"]?.jsonPrimitive?.contentOrNull.orEmpty()}"
         }
         credentials.forEach { credential -> requests.firstOrNull{it.username.equals(credential.username,true)}?.let { r ->
-            if(r.fatherName.isNotBlank()||r.grade.isNotBlank())rpcObject("save_student_extra",buildJsonObject{put("p_student",credential.id);put("p_username",credential.username);put("p_father_name",r.fatherName.trim());put("p_grade",r.grade.trim())}).throwIfError()
+            if(r.fatherName.isNotBlank()||r.grade.isNotBlank()||r.fieldOfStudy.isNotBlank())rpcObject("native_save_student_extra_v28",buildJsonObject{put("p_student",credential.id);put("p_username",credential.username);put("p_father_name",r.fatherName.trim());put("p_grade",r.grade.trim());put("p_field",r.fieldOfStudy.trim())}).throwIfError()
         } }
         BulkStudentCreateResult(credentials,failures)
     }
@@ -180,11 +191,12 @@ class SupabaseSchoolRepository : SchoolRepository {
                 put("password", request.newPassword.orEmpty())
             }
         ).body<JsonObject>().throwIfError()
-        rpcObject("save_student_extra", buildJsonObject {
+        rpcObject("native_save_student_extra_v28", buildJsonObject {
             put("p_student", request.id)
             put("p_username", request.username.trim().lowercase())
             put("p_father_name", request.fatherName.trim())
             put("p_grade", request.grade.trim())
+            put("p_field", request.fieldOfStudy.trim())
         }).throwIfError()
     }
 

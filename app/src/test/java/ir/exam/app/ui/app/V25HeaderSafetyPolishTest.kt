@@ -84,8 +84,10 @@ class V25HeaderSafetyPolishTest {
         assertTrue("BoxWithConstraints" in bulk)
         assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
-        assertTrue("height(maxHeight)" in bulk)
-        assertTrue("Modifier.weight(1f)" in bulk)
+        // V28: پنجره گروهی هم‌اندازه پنجره تکی شد؛ ارتفاع تا سقف فضای بالای IME می‌رود
+        // ولی دیگر آن را به‌زور پر نمی‌کند.
+        assertTrue("heightIn(max = availableHeight)" in bulk)
+        assertTrue("weight(1f, fill = false)" in bulk)
         assertFalse("bottom gap above keyboard returned", "padding(horizontal = 12.dp, vertical = 8.dp)" in bulk)
     }
 
@@ -131,10 +133,10 @@ class V25HeaderSafetyPolishTest {
         assertTrue("title = { Text(\"حذف دانش‌آموز\") }" in school)
         assertTrue("viewModel.deleteStudent(student.id)" in school)
         assertTrue("این عملیات برگشت‌پذیر نیست" in school)
-        assertTrue("decodeSampled(request.source)" in imageRepo)
+        assertTrue("decodeSampled(request.source, attempt)" in imageRepo)
         assertTrue("inJustDecodeBounds = true" in imageRepo)
         assertTrue("inSampleSize = sample" in imageRepo)
         assertTrue("MAX_DECODE_PIXELS = 7_000_000L" in imageRepo)
-        assertTrue("catch (_: OutOfMemoryError)" in imageRepo)
+        assertTrue("catch (oom: OutOfMemoryError)" in imageRepo)
     }
 }

@@ -73,16 +73,17 @@ val StandardSchoolGrades: List<String> = listOf(
 fun gradeOdometerValues(
     current: String,
     availableGrades: List<String> = emptyList(),
-    includeStandardGrades: Boolean = true
+    includeStandardGrades: Boolean = true,
+    standardValues: List<String> = StandardSchoolGrades
 ): List<String> = buildList {
     add("")
     val cleanCurrent = current.trim()
     val cleanAvailable = availableGrades.map(String::trim)
         .filter(String::isNotEmpty)
         .distinct()
-        .sortedWith(compareBy<String>({ schoolGradeRank(it) }, { it }))
+        .sortedWith(compareBy<String>({ schoolGradeRank(it, standardValues) }, { it }))
     val source = buildList {
-        if (includeStandardGrades) addAll(StandardSchoolGrades)
+        if (includeStandardGrades) addAll(standardValues)
         addAll(cleanAvailable)
         if (cleanCurrent.isNotEmpty()) add(cleanCurrent)
     }
@@ -91,9 +92,12 @@ fun gradeOdometerValues(
 
 private const val OtherGradeValue = "__other_grade__"
 
-private fun schoolGradeRank(value: String): Int {
+private fun schoolGradeRank(
+    value: String,
+    standardValues: List<String> = StandardSchoolGrades
+): Int {
     val normalized = value.trim().removePrefix("پایه").trim()
-    return StandardSchoolGrades.indexOf(normalized).takeIf { it >= 0 } ?: Int.MAX_VALUE
+    return standardValues.indexOf(normalized).takeIf { it >= 0 } ?: Int.MAX_VALUE
 }
 
 /**
@@ -108,10 +112,12 @@ fun GradeOdometerPicker(
     availableGrades: List<String> = emptyList(),
     includeStandardGrades: Boolean = true,
     emptyLabel: String = "بدون پایه",
-    label: String = "پایه"
+    label: String = "پایه",
+    standardValues: List<String> = StandardSchoolGrades,
+    customLabel: String = "سایر پایه"
 ) {
-    val values = remember(value, availableGrades, includeStandardGrades) {
-        gradeOdometerValues(value, availableGrades, includeStandardGrades)
+    val values = remember(value, availableGrades, includeStandardGrades, standardValues) {
+        gradeOdometerValues(value, availableGrades, includeStandardGrades, standardValues)
     }
     val wheelValues = remember(values) { values + OtherGradeValue }
     var open by remember { mutableStateOf(false) }
@@ -160,7 +166,7 @@ fun GradeOdometerPicker(
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
-                label = { Text("سایر پایه") },
+                label = { Text(customLabel) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

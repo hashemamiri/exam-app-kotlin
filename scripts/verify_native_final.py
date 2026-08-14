@@ -58,6 +58,13 @@ v24_guide=(ROOT/"COMPREHENSIVE_UX_V24_FA.md").read_text()
 v25_guide=(ROOT/"HEADER_SAFETY_POLISH_V25_FA.md").read_text()
 v26_guide=(ROOT/"QUESTION_MEDIA_REORDER_V26_FA.md").read_text()
 v27_guide=(ROOT/"DATA_IMAGE_OPTIONS_V27_FA.md").read_text()
+v28_migration=(ROOT/"supabase/migrations/20260814_native_field_of_study_v28.sql").read_text()
+v28_sql_copy=(ROOT/"SQL_NATIVE_FIELD_OF_STUDY_V28.sql").read_text()
+v28_guide=(ROOT/"REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
+image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
+field_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/common/FieldOfStudyPicker.kt").read_text()
+school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
+school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grade_odometer=(ROOT/"app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt").read_text()
@@ -209,7 +216,9 @@ require("auth.updateUser { email = clean }" in profile_repository,
         "verified Supabase email change path missing")
 require(all(marker in v18_migration for marker in ("hdr_grade","native_save_profile","native_bank_update_question_v1","native_export_backup_v2","native_restore_backup_v2")) and
         v18_sql_copy == v18_migration and "val grade: String" in profile_models and
-        "native_export_backup_v2" in portability_repository,
+        # V28: کلاینت به v3 مهاجرت کرد و v3 داخل SQL همان v2 را زنجیره می‌کند.
+        "native_export_backup_v3" in portability_repository and
+        "native_export_backup_v2()" in v28_migration,
         "server/print/backup header grade migration or SQL copy incomplete")
 require(all(marker in builder_screen for marker in ("expandedQuestionId","settingsExpanded","bottom = 112.dp","FabPosition.Center","Icons.Outlined.Check","BuilderRadialMenuOverlay","BuilderQuestionBankDialog")) and
         all(label in builder_radial for label in ("تشریحی","چندگزینه‌ای","صحیح/غلط","جای خالی","عددی","جورکردنی","وارد کردن","بانک سؤال")),
@@ -379,7 +388,7 @@ require(all(marker in date_time_picker for marker in (
         )) and "onConfirm(Instant.now().toString())" not in date_time_picker,
         "Now still commits the boundary or clear-time control is missing")
 require(all(marker in school_screen for marker in (
-            "BoxWithConstraints","Alignment.TopCenter","height(maxHeight)",
+            "BoxWithConstraints","Alignment.TopCenter","heightIn(max = availableHeight)",
             "SOFT_INPUT_ADJUST_RESIZE","title = { Text(\"حذف دانش‌آموز\") }",
             "viewModel.deleteStudent(student.id)"
         )) and "Alignment.BottomCenter" not in school_screen.split("private fun BulkStudentDialog(",1)[1].split("internal fun studentClipboardText",1)[0],
@@ -402,8 +411,8 @@ require(all(marker in neumorphic_design for marker in (
         )) and "\"تقویم و پیام‌ها\"" not in app_shell,
         "hamburger icon/title row or compact card labels incomplete")
 require(all(marker in local_image_repository for marker in (
-            "decodeSampled(request.source)","inJustDecodeBounds = true","inSampleSize = sample",
-            "MAX_DECODE_PIXELS = 7_000_000L","catch (_: OutOfMemoryError)"
+            "decodeSampled(request.source, attempt)","inJustDecodeBounds = true","inSampleSize = sample",
+            "MAX_DECODE_PIXELS = 7_000_000L","catch (oom: OutOfMemoryError)"
         )), "large-image sampled decoding crash guard missing")
 require(all(marker in v25_guide for marker in (
             "هدر سراسری","امنیت رمز دانش‌آموز","پنجره ساخت گروهی","منوی همبرگری",
@@ -476,7 +485,7 @@ require("fillMaxSize().verticalScroll(rememberScrollState())" in data_portabilit
         "scrollable complete Storage/data exam import path is incomplete")
 require(all(marker in grade_odometer for marker in (
             "OtherGradeValue","values + OtherGradeValue","OtherGradeValue -> \"سایر\"",
-            "customMode = true","label = { Text(\"سایر پایه\") }"
+            "customMode = true","customLabel: String = \"سایر پایه\"","label = { Text(customLabel) }"
         )), "grade wheel Other/custom text path is incomplete")
 require(all(marker in v27_guide for marker in (
             "مسیر انتخاب تصویر","داده‌ها و Storage","پایه سایر","امنیت رمز",
@@ -545,9 +554,72 @@ require("animateScrollTo" in formula_view and "verticalScroll" in formula_view,
         "active formula box auto-scroll missing")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
+# ---- V28: reorder / image safety / bulk window / field of study ----
+require("rememberUpdatedState(currentIndex)" in matching_builder and
+        "rememberUpdatedState(itemCount)" in matching_builder and
+        "HapticFeedbackType.LongPress" in matching_builder and
+        "onDragScroll(amount.y)" in matching_builder and
+        "animateColorAsState" in matching_builder,
+        "V28 option/matching drag does not match the question-card contract")
+require("userScrollEnabled = !innerReorderActive" in builder_screen and
+        "onItemDragStarted = { innerReorderActive = true }" in builder_screen and
+        "onItemDragEnded = { innerReorderActive = false }" in builder_screen and
+        "onItemDragScroll = onDragScroll" in builder_screen,
+        "V28 inner reorder does not lock the builder list scroll")
+require("catch (oom: OutOfMemoryError)" in image_repository and
+        "is OutOfMemoryError -> IllegalStateException" in image_repository and
+        "while (attempt < MAX_ATTEMPTS)" in image_repository and
+        "runtime.maxMemory()" in image_repository and
+        "Bitmap.Config.RGB_565" in image_repository and
+        "working?.recycle()" in image_repository,
+        "V28 image intake can still kill the process on low memory")
+_bulk = school_screen.split("private fun BulkStudentDialog(", 1)[1].split("internal fun studentClipboardText", 1)[0]
+require("widthIn(max = 620.dp)" in _bulk and
+        "padding(horizontal = 14.dp, vertical = 10.dp)" in _bulk and
+        "heightIn(max = availableHeight)" in _bulk and
+        "height(maxHeight)" not in _bulk and
+        "weight(1f, fill = false)" in _bulk,
+        "V28 bulk window does not match the single student window")
+require("pendingRevealIndex = rows.lastIndex" in _bulk and
+        "rowsListState.animateScrollToItem(target)" in _bulk and
+        "state = rowsListState" in _bulk,
+        "V28 bulk plus button does not reveal the new card")
+require("StandardFieldsOfStudy" in field_picker and
+        "customLabel = \"سایر رشته\"" in field_picker and
+        "standardValues: List<String> = StandardSchoolGrades" in grade_odometer and
+        "customLabel: String = \"سایر پایه\"" in grade_odometer,
+        "V28 field-of-study picker or shared wheel parameters incomplete")
+require(school_screen.count("FieldOfStudyPicker(") >= 4 and
+        "FieldOfStudyPicker" in profile_settings and
+        "onFieldOfStudy" in profile_settings,
+        "V28 field of study is not reachable in every student/class/header form")
+require("native_save_student_extra_v28" in school_repository and
+        "native_save_class_v28" in school_repository and
+        "native_my_classes_v28" in school_repository and
+        '"save_student_extra"' not in school_repository and
+        '"create_class"' not in school_repository and
+        '"update_class"' not in school_repository,
+        "V28 school repository still uses field-less legacy RPCs")
+require("native_save_profile_v28" in profile_repository and
+        'put("p_hdr_field"' in profile_repository and
+        "native_export_backup_v3" in portability_repository and
+        "native_restore_backup_v3" in portability_repository and
+        "in 1..4" in portability_repository,
+        "V28 header field or backup version 4 path incomplete")
+require("field_of_study" in v28_migration and "hdr_field" in v28_migration and
+        "plain_password" not in v28_migration and
+        v28_migration.count("to authenticated") >= 8,
+        "V28 migration columns, grants or password policy incorrect")
+require(v28_sql_copy.strip() == v28_migration.strip(),
+        "SQL_NATIVE_FIELD_OF_STUDY_V28.sql differs from the migration")
+require(all(marker in v28_guide for marker in (
+            "جابه‌جایی گزینه","انتخاب تصویر","پنجره گروهی","رشته تحصیلی","امنیت رمز"
+        )), "V28 Persian guide coverage incomplete")
+
 for match in re.finditer(
     r"(?im)^\s*(delete\s+from|update\s+)([^;]+);",
     hardening + "\n" + critical + "\n" + parity + "\n" + v18_migration + "\n" + v22_migration
+    + "\n" + v28_migration
 ):
     statement = match.group(0)
     if not re.search(r"(?i)\bwhere\b", statement):

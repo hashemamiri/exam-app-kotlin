@@ -24,7 +24,8 @@ object ReportPrintHelper {
                 city = profile.header.city,
                 district = profile.header.district,
                 school = profile.header.school,
-                grade = profile.header.grade
+                grade = profile.header.grade,
+                fieldOfStudy = profile.header.fieldOfStudy
             ),
             examTitles = exams.map { it.title },
             rows = rows.map { row ->
