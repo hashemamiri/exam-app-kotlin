@@ -20,7 +20,7 @@ interface SchoolRepository {
     suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit>
     suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit>
     suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential>
-    suspend fun createStudentsBulk(classId:String,requests:List<NewStudentRequest>):Result<BulkStudentCreateResult> =
+    suspend fun createStudentsBulk(classId:String?,requests:List<NewStudentRequest>):Result<BulkStudentCreateResult> =
         Result.failure(UnsupportedOperationException("bulk create not implemented"))
     suspend fun updateStudent(request: UpdateStudentRequest): Result<Unit>
     suspend fun resetStudentPassword(studentId: String, newPassword: String): Result<StudentCredential>

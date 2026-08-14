@@ -45,8 +45,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -64,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -113,6 +112,11 @@ fun SchoolManagementScreen(
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var showBulk by remember { mutableStateOf(false) }
+    // رمزهای تعیین‌شدهٔ اخیر؛ دکمهٔ کپی روی کارت دانش‌آموز رمز را از همین جعبه برمی‌دارد.
+    val knownPasswords = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(state.lastCredential) {
+        state.lastCredential?.let { knownPasswords[it.username.lowercase()] = it.password }
+    }
     var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
     val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
 
@@ -173,7 +177,8 @@ fun SchoolManagementScreen(
                     onEdit = { editingStudent = it },
                     onDelete = { deletingStudent = it },
                     classes = state.classes,
-                    onAddToClasses = viewModel::addStudentToClasses
+                    onAddToClasses = viewModel::addStudentToClasses,
+                    knownPasswordOf = { username -> knownPasswords[username?.lowercase()] }
                 )
                 showStudents -> StudentsContent(
                     students = filteredStudents(state.students, state.query),
@@ -188,7 +193,8 @@ fun SchoolManagementScreen(
                         xlsxLauncher.launch("students.xlsx")
                     },
                     classes = state.classes,
-                    onAddToClasses = viewModel::addStudentToClasses
+                    onAddToClasses = viewModel::addStudentToClasses,
+                    knownPasswordOf = { username -> knownPasswords[username?.lowercase()] }
                 )
                 else -> ClassesContent(
                     classes = state.classes,
@@ -271,8 +277,11 @@ fun SchoolManagementScreen(
     }
 
     if(showBulk) BulkStudentDialog(
-        classes=state.classes,initialClassId=state.selectedClass?.id,onDismiss={showBulk=false},
-        onCreate={classId,rows->viewModel.createStudentsBulk(classId,rows);showBulk=false}
+        onDismiss={showBulk=false},
+        onCreate={requests->
+            requests.forEach{knownPasswords[it.username.lowercase()]=it.password}
+            viewModel.createStudentsBulk(null,requests);showBulk=false
+        }
     )
     state.bulkResult?.let { result -> AlertDialog(onDismissRequest=viewModel::clearMessage,title={Text("نتیجه ساخت گروهی")},text={Column{
         Text("موفق: ${result.credentials.size} · ناموفق: ${result.failures.size}");result.failures.take(10).forEach{Text(it)}
@@ -363,7 +372,8 @@ private fun ClassRosterContent(
     onEdit: (StudentProfile) -> Unit,
     onDelete: (StudentProfile) -> Unit,
     classes: List<SchoolClass>,
-    onAddToClasses: (String, Set<String>) -> Unit
+    onAddToClasses: (String, Set<String>) -> Unit,
+    knownPasswordOf: (String?) -> String?
 ) {
     var addMenuOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -410,6 +420,7 @@ private fun ClassRosterContent(
                     onEdit = { onEdit(student) },
                     onDelete = { onDelete(student) },
                     classes = classes,
+                    knownPasswordOf = knownPasswordOf,
                     onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
                 )
             }
@@ -428,7 +439,8 @@ private fun StudentsContent(
     onBulk: () -> Unit,
     onExport: () -> Unit,
     classes: List<SchoolClass>,
-    onAddToClasses: (String, Set<String>) -> Unit
+    onAddToClasses: (String, Set<String>) -> Unit,
+    knownPasswordOf: (String?) -> String?
 ) {
     var searchOpen by remember { mutableStateOf(query.isNotBlank()) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -482,7 +494,8 @@ private fun StudentsContent(
                     onEdit = { onEdit(student) },
                     onDelete = { onDelete(student) },
                     classes = classes,
-                    onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
+                    onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) },
+                    knownPasswordOf = knownPasswordOf
                 )
             }
         }
@@ -496,7 +509,8 @@ private fun StudentCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     classes: List<SchoolClass>,
-    onAddToClasses: (Set<String>) -> Unit
+    onAddToClasses: (Set<String>) -> Unit,
+    knownPasswordOf: (String?) -> String? = { null }
 ) {
     val context = LocalContext.current
     var expanded by remember(student.id) { mutableStateOf(false) }
@@ -570,7 +584,13 @@ private fun StudentCard(
                             )
                         }
                         IconButton(
-                            onClick = { copyStudentInformation(context, student) },
+                            onClick = {
+                                copyStudentInformation(
+                                    context,
+                                    student,
+                                    knownPasswordOf(student.username)
+                                )
+                            },
                             modifier = Modifier.weight(1f).height(58.dp)
                         ) {
                             Icon(
@@ -934,16 +954,14 @@ private data class BulkStudentDraft(
 
 @Composable
 private fun BulkStudentDialog(
-    classes: List<SchoolClass>,
-    initialClassId: String?,
     onDismiss: () -> Unit,
-    onCreate: (String, List<NewStudentRequest>) -> Unit
+    onCreate: (List<NewStudentRequest>) -> Unit
 ) {
-    var classId by remember { mutableStateOf(initialClassId ?: classes.firstOrNull()?.id.orEmpty()) }
     val rows = remember { mutableStateListOf(BulkStudentDraft()) }
     var error by remember { mutableStateOf<String?>(null) }
     // فقط یک کارت در هر لحظه دیده می‌شود؛ «+» کارت تازه را جایگزین کارت قبلی
-    // می‌کند و پنجره هرگز بزرگ نمی‌شود. شماره‌های بالا برای بازگشت به ردیف‌های قبل است.
+    // می‌کند و پنجره هرگز بزرگ نمی‌شود. زیر دکمه‌ها فقط شمارهٔ کارت‌ها فهرست می‌شود
+    // و دانش‌آموزها بدون نیاز به انتخاب کلاس ثبت می‌شوند.
     var activeIndex by remember { mutableIntStateOf(0) }
 
     fun rowComplete(row: BulkStudentDraft): Boolean =
@@ -968,7 +986,6 @@ private fun BulkStudentDialog(
 
     fun submitBulk() {
         runCatching {
-            require(classId.isNotBlank()) { "کلاس را انتخاب کنید." }
             val requests = rows.map { row ->
                 require(row.first.isNotBlank()) { "نام همه ردیف‌ها لازم است." }
                 require(row.username.length >= 4) {
@@ -989,19 +1006,18 @@ private fun BulkStudentDialog(
                     row.father,
                     row.grade,
                     row.field,
-                    classId
+                    null
                 )
             }
             require(requests.map { it.username }.distinct().size == requests.size) {
                 "نام کاربری تکراری در ردیف‌ها وجود دارد."
             }
             requests
-        }.onSuccess { onCreate(classId, it) }
+        }.onSuccess { onCreate(it) }
             .onFailure { error = it.message }
     }
 
     // پنجره گروهی دقیقاً مانند پنجره تکی: هم‌عرض ۶۲۰dp، از بالا، بدون کشیدن به کل ارتفاع.
-    // ارتفاع با محتوا رشد می‌کند و تنها وقتی فضا کم بیاید تا سقف قابل استفاده می‌رسد.
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -1060,58 +1076,25 @@ private fun BulkStudentDialog(
                                 .semantics { contentDescription = "انصراف" }
                         ) { Text("×", style = MaterialTheme.typography.titleLarge) }
                     }
-                    // انتخاب کلاس فقط وقتی از منوی اصلی باز شده باشد؛ از داخل کلاس،
-                    // پنجره هیچ نشانی از کلاس‌ها ندارد.
-                    if (initialClassId.isNullOrBlank() && classes.isNotEmpty()) {
-                        var classMenuOpen by remember { mutableStateOf(false) }
-                        Box(Modifier.fillMaxWidth()) {
-                            OutlinedButton(
-                                onClick = { classMenuOpen = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    "کلاس: ${classes.firstOrNull { it.id == classId }?.name ?: "انتخاب کلاس"}"
+                    // زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها؛ بدون اسکرول و بدون کلاس.
+                    rows.indices.chunked(6).forEach { chunk ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
+                        ) {
+                            chunk.forEach { index ->
+                                FilterChip(
+                                    selected = activeIndex == index,
+                                    onClick = { activeIndex = index },
+                                    label = {
+                                        Text(
+                                            PersianDigits.convert(index + 1) +
+                                                if (rowComplete(rows[index])) " ✓" else ""
+                                        )
+                                    }
                                 )
                             }
-                            DropdownMenu(
-                                expanded = classMenuOpen,
-                                onDismissRequest = { classMenuOpen = false }
-                            ) {
-                                classes.forEach { item ->
-                                    DropdownMenuItem(
-                                        text = { Text(item.name) },
-                                        onClick = {
-                                            classId = item.id
-                                            classMenuOpen = false
-                                        }
-                                    )
-                                }
-                            }
                         }
-                    }
-                    // شمارهٔ کارت در حال ویرایش همیشه و بدون نیاز به اسکرول دیده می‌شود.
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { if (activeIndex > 0) activeIndex -= 1 },
-                            enabled = activeIndex > 0,
-                            modifier = Modifier.weight(1f)
-                        ) { Text("قبلی") }
-                        Text(
-                            "دانش‌آموز ${PersianDigits.convert(activeIndex + 1)} از ${PersianDigits.convert(rows.size)}" +
-                                if (rowComplete(rows[activeIndex])) " ✓" else "",
-                            modifier = Modifier.weight(2f),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                        OutlinedButton(
-                            onClick = { if (activeIndex < rows.lastIndex) activeIndex += 1 },
-                            enabled = activeIndex < rows.lastIndex,
-                            modifier = Modifier.weight(1f)
-                        ) { Text("بعدی") }
                     }
                     val index = activeIndex
                     val row = rows[index]
@@ -1120,6 +1103,7 @@ private fun BulkStudentDialog(
                             Modifier.padding(10.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // نام و نام خانوادگی در یک سطر
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedTextField(
                                     row.first,
@@ -1142,6 +1126,7 @@ private fun BulkStudentDialog(
                                     modifier = Modifier.weight(1f)
                                 )
                             }
+                            // نام پدر و نام کاربری در یک سطر
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedTextField(
                                     row.father,
@@ -1150,23 +1135,6 @@ private fun BulkStudentDialog(
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
-                                GradeOdometerPicker(
-                                    value = row.grade,
-                                    onValueChange = {
-                                        rows[index] = row.copy(grade = it.take(100))
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    emptyLabel = "بدون پایه"
-                                )
-                            }
-                            FieldOfStudyPicker(
-                                value = row.field,
-                                onValueChange = {
-                                    rows[index] = row.copy(field = it.take(100))
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedTextField(
                                     row.username,
                                     {
@@ -1181,6 +1149,31 @@ private fun BulkStudentDialog(
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
+                            }
+                            // پایه و رشته در یک سطر
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                GradeOdometerPicker(
+                                    value = row.grade,
+                                    onValueChange = {
+                                        rows[index] = row.copy(grade = it.take(100))
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    emptyLabel = "بدون پایه"
+                                )
+                                FieldOfStudyPicker(
+                                    value = row.field,
+                                    onValueChange = {
+                                        rows[index] = row.copy(field = it.take(100))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // رمز و رمز فعلی در یک سطر؛ رمز فعلی همان رمز تعیین‌شده را
+                            // نگه می‌دارد و با تغییر رمز خودکار به‌روز می‌شود.
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedTextField(
                                     row.password,
                                     { rows[index] = row.copy(password = it.take(72)) },
@@ -1196,6 +1189,14 @@ private fun BulkStudentDialog(
                                             }
                                         )
                                     },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = row.password,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("رمز فعلی") },
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -1244,7 +1245,8 @@ private fun BulkStudentDialog(
 
 internal fun studentClipboardText(
     student: StudentProfile,
-    oneTimePassword: String? = null
+    oneTimePassword: String? = null,
+    currentPassword: String? = null
 ): String = buildList {
     add("اطلاعات دانش‌آموز")
     add("نام و نام خانوادگی: ${student.fullName.ifBlank { "—" }}")
@@ -1253,6 +1255,7 @@ internal fun studentClipboardText(
     add("نام کاربری: ${student.username.orEmpty().ifBlank { "—" }}")
     add(
         oneTimePassword?.let { "رمز جدید یک‌بارنمایش: $it" }
+            ?: currentPassword?.let { "رمز عبور: $it" }
             ?: "رمز عبور: قابل بازیابی نیست؛ برای دریافت رمز، یک رمز جدید تعیین کنید."
     )
     add("جنسیت: ${when (student.gender?.lowercase()) { "female" -> "دختر"; "male" -> "پسر"; else -> "—" }}")
@@ -1264,18 +1267,28 @@ internal fun studentClipboardText(
     add("شناسه حساب: ${student.id}")
 }.joinToString("\n")
 
-private fun copyStudentInformation(context: Context, student: StudentProfile) {
+private fun copyStudentInformation(
+    context: Context,
+    student: StudentProfile,
+    currentPassword: String? = null
+) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
     if (clipboard == null) {
         Toast.makeText(context, "حافظه موقت دستگاه در دسترس نیست.", Toast.LENGTH_SHORT).show()
         return
     }
-    clipboard.setPrimaryClip(
-        ClipData.newPlainText("اطلاعات دانش‌آموز", studentClipboardText(student))
-    )
+    val text = studentClipboardText(student, currentPassword = currentPassword)
+    val clip = ClipData.newPlainText("اطلاعات دانش‌آموز", text)
+    if (currentPassword != null) {
+        clip.description.extras = PersistableBundle().apply {
+            putBoolean("android.content.extra.IS_SENSITIVE", true)
+        }
+    }
+    clipboard.setPrimaryClip(clip)
     Toast.makeText(
         context,
-        "اطلاعات قابل بازیابی کپی شد؛ رمز قبلی در سامانه ذخیره نمی‌شود.",
+        if (currentPassword != null) "اطلاعات و رمز فعلی به‌صورت حساس کپی شد."
+        else "اطلاعات قابل بازیابی کپی شد؛ رمز قبلی در سامانه ذخیره نمی‌شود.",
         Toast.LENGTH_LONG
     ).show()
 }

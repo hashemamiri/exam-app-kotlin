@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V30 جابه‌جایی رنگی و روان، مشخصات جمع‌شونده، لیست تغییرات، ویرایش تصویر و پنجره گروهی
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V31 رفع غیب‌شدن گزینه، مخاطبان در مشخصات، پیغام آپدیت، رفع کرش آپلود و پنجره گروهی بدون کلاس
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3637,3 +3637,98 @@ APK Signature Scheme v2                Verified
 ```
 
 راهنمای مستقل: `SMOOTH_REORDER_CHANGELOG_V30_FA.md`.
+
+---
+
+## ۴۹) V31 — رفع غیب‌شدن گزینه، مخاطبان در مشخصات، پیغام آپدیت، رفع کرش آپلود و پنجره گروهی بدون کلاس
+
+### وضعیت ورودی
+
+```text
+V30 build/device                        → SUCCESS (اعلام کاربر)
+گزارش دستگاه                           → گزینه هنگام جابه‌جایی غیب می‌شود؛ آپلود تصویر کرش می‌کند
+```
+
+### رفع غیب‌شدن گزینه
+
+```text
+علت: انیمیشن سفارشی AnimatedReorderColumn آفست قبلی/جدید کارت را هنگام درگ سریع
+      تداخل می‌انداخت و کارت از دید خارج می‌شد.
+اصلاح: حذف کامل آن؛ بازگشت به ستون کلیدخوردهٔ پایدار key(optionId)/key(itemId)
+      با حفظ رنگ فعال primaryContainer و قرارداد درگ کارت سؤال.
+```
+
+### مخاطبان آزمون
+
+- کارت «مخاطبان آزمون» به داخل «مشخصات آزمون» منتقل شد و با آن باز/بسته می‌شود.
+
+### پیغام آپدیت هنگام ورود
+
+- با ورود به حساب، بررسی بروزرسانی خودکار می‌شود.
+- اگر آپدیت جدید باشد، پنجرهٔ «بروزرسانی جدید» با سه مورد اول تغییرات،
+  دکمهٔ «دریافت نسخه» و «بعداً» ظاهر می‌شود.
+
+### رفع کرش آپلود تصویر
+
+```text
+علت: SupabaseQuestionImageUploader محافظ OOM نداشت؛ تصویر بزرگ با
+      createBitmap/createScaledBitmap OutOfMemoryError می‌داد (Error با runCatching
+      گرفته نمی‌شود) و پروسه کشته می‌شد.
+اصلاح: حلقهٔ MAX_ATTEMPTS=4 با catch صریح OutOfMemoryError، بودجهٔ پیکسل از
+      حافظهٔ آزاد واقعی (سقف ۷ مگاپیکسل)، نصف‌شدن بودجه و RGB_565 در تلاش‌های بعدی،
+      و پیام فارسی به‌جای کرش.
+```
+
+### پنجره گروهی بدون کلاس
+
+```text
+کلاس‌ها کاملاً حذف شدند؛ ثبت گروهی بدون کلاس (Edge موجود کلاس خالی را می‌پذیرد).
+زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها (ردیف‌های شش‌تایی، بدون اسکرول).
+چیدمان کارت: نام/نام خانوادگی، نام پدر/نام کاربری، پایه/رشته، رمز/رمز فعلی.
+کادر «رمز فعلی» رمز تعیین‌شده را نگه می‌دارد و با تغییر رمز خودکار به‌روز می‌شود.
+دکمهٔ کپی روی کارت دانش‌آموز رمز را از همین کادر (در حافظهٔ نشست) به‌صورت حساس
+کپی می‌کند؛ در نبود رمز، پیام «قابل بازیابی نیست» می‌ماند.
+```
+
+### فایل‌های کلیدی V31
+
+```text
+STABLE_REORDER_UPDATE_PROMPT_V31_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt
+app/src/main/java/ir/exam/app/domain/repository/SchoolRepository.kt
+app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V31StableReorderUpdatePromptBulkTest.kt
+scripts/verify_native_final.py
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد (manage-student از قبل کلاس خالی را می‌پذیرد)
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز: V30
+```
+
+### نتیجه تست V31
+
+```text
+Kotlin compile                         PASS
+JVM tests                              226/226 PASS
+V31 regression tests                     10/10 PASS
+FINAL_NATIVE_VERIFY                    PASS
+lintDebug                              PASS — 0 error
+assembleDebug                          PASS
+Debug package                          ir.exam.app.native
+APK Signature Scheme v2                Verified
+```
+
+راهنمای مستقل: `STABLE_REORDER_UPDATE_PROMPT_V31_FA.md`.

@@ -72,8 +72,8 @@ class V28ReorderImageBulkFieldTest {
         assertTrue("onItemDragScroll = onDragScroll" in builder)
         assertTrue("onDragStarted = onItemDragStarted" in optionUi)
         // شناسه پایدار باید همچنان مبنای جابه‌جایی گروه Compose باشد.
-        assertTrue("AnimatedReorderColumn(" in builder)
-        assertTrue("AnimatedReorderColumn(" in optionUi)
+        assertTrue("key(optionId) {" in builder)
+        assertTrue("key(itemId) {" in optionUi)
     }
 
     // ============================================================
@@ -152,9 +152,8 @@ class V28ReorderImageBulkFieldTest {
         val bulk = bulkSection()
         assertTrue("activeIndex = rows.lastIndex" in bulk)
         // کارت تازه همان‌جا جایگزین کارت قبلی می‌شود و پنجره بزرگ نمی‌شود.
-        assertTrue("PersianDigits.convert(activeIndex + 1)" in bulk)
-        assertTrue("activeIndex -= 1" in bulk)
-        assertTrue("activeIndex += 1" in bulk)
+        assertTrue("rows.indices.chunked(6)" in bulk)
+        assertTrue("selected = activeIndex == index" in bulk)
         assertTrue("activeIndex = (index - 1).coerceAtLeast(0)" in bulk)
     }
 

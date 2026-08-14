@@ -63,7 +63,7 @@ v28_sql_copy=(ROOT/"SQL_NATIVE_FIELD_OF_STUDY_V28.sql").read_text()
 v28_guide=(ROOT/"REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
 v29_guide=(ROOT/"BUILDER_MEDIA_BULK_V29_FA.md").read_text()
 v30_guide=(ROOT/"SMOOTH_REORDER_CHANGELOG_V30_FA.md").read_text()
-reorder_animation=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt").read_text()
+v31_guide=(ROOT/"STABLE_REORDER_UPDATE_PROMPT_V31_FA.md").read_text()
 image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 field_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/common/FieldOfStudyPicker.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
@@ -77,6 +77,7 @@ question_model=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt"
 local_image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 question_media=(ROOT/"app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt").read_text()
 image_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").read_text()
+image_uploader=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt").read_text()
 about_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt").read_text()
 classes_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
@@ -317,7 +318,8 @@ require(all(marker in grade_odometer for marker in (
         )) and "Icons.Outlined.Speed" not in grade_odometer,
         "redesigned compact vertical grade wheel is incomplete")
 require(student_card.count("Modifier.weight(1f).height(58.dp)") >= 5 and
-        "copyStudentInformation(context, student)" in student_card and
+        "copyStudentInformation(" in student_card and
+        "knownPasswordOf(student.username)" in student_card and
         "Icons.Outlined.Delete" in student_card and
         "قابل بازیابی نیست" in school_screen and "student.password" not in school_screen,
         "larger student actions or secure profile-copy behavior incomplete")
@@ -472,8 +474,7 @@ require(all(marker in question_model for marker in (
         )) and "ensureEditorIds" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text() and
         "while (abs(accumulated) >= stepPx)" in matching_builder and
         "onMove(dragIndex, delta)" in matching_builder and
-        "AnimatedReorderColumn(" in builder_screen and "AnimatedReorderColumn(" in matching_builder and
-        "key(id) { content(item, index) }" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt").read_text(),
+        "key(optionId) {" in builder_screen and "key(itemId) {" in matching_builder,
         "live stable-id option/matching reorder is incomplete")
 require("safeUris += it.uri.toString()" in question_media and "editQueue.firstOrNull" not in question_media and
         "onSuccess { editing = Uri.parse(it.uri.toString()) }" in matching_builder and
@@ -587,8 +588,7 @@ require("widthIn(max = 620.dp)" in _bulk and
         "weight(1f, fill = false)" not in _bulk,
         "V28 bulk window does not match the single student window")
 require("activeIndex = rows.lastIndex" in _bulk and
-        "PersianDigits.convert(activeIndex + 1)" in _bulk and
-        "activeIndex -= 1" in _bulk and
+        "rows.indices.chunked(6)" in _bulk and
         "val row = rows[index]" in _bulk,
         "V28 bulk plus button does not replace the visible card")
 require("StandardFieldsOfStudy" in field_picker and
@@ -656,10 +656,9 @@ require("fun replaceImage" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/Ex
         "V29 replace-image path missing in builder ViewModel")
 require("activeIndex = rows.lastIndex" in _bulk and
         "rowComplete" in _bulk and
-        "PersianDigits.convert(activeIndex + 1)" in _bulk and
-        "activeIndex -= 1" in _bulk and
-        "activeIndex += 1" in _bulk,
-        "V29 bulk single visible card with the persistent counter missing")
+        "rows.indices.chunked(6)" in _bulk and
+        "selected = activeIndex == index" in _bulk,
+        "V29 bulk single visible card with the numbered chips missing")
 require(all(marker in v29_guide for marker in (
             "جابه‌جایی پایدار گزینه","آیکن فرمول","نمایش تمام‌صفحه تصویر","ویرایش پس از انتخاب","پنجره گروهی تک‌کارتی","امنیت رمز دانش‌آموز"
         )), "V29 Persian guide coverage incomplete")
@@ -673,12 +672,11 @@ require("dragActiveId == itemId" in matching_builder and
         "label = \"matching-card-color\"" in matching_builder and
         "onActiveChanged: (Boolean) -> Unit = {}" in matching_builder,
         "V30 matching card highlight is missing")
-require("AnimatedReorderColumn(" in builder_screen and
-        "AnimatedReorderColumn(" in matching_builder and
-        "anim.snapTo((previous - y).toFloat())" in reorder_animation and
-        "spring(stiffness = Spring.StiffnessMediumLow)" in reorder_animation and
-        "key(id) { content(item, index) }" in reorder_animation,
-        "V30 option/matching cards do not glide into place like question cards")
+require("key(optionId) {" in builder_screen and
+        "key(itemId) {" in matching_builder and
+        "AnimatedReorderColumn(" not in builder_screen and
+        "AnimatedReorderColumn(" not in matching_builder,
+        "V30 option/matching cards lost their stable keyed list")
 require("var settingsExpanded by rememberSaveable { mutableStateOf(false) }" in builder_screen and
         "بازکردن کارت سؤال، کارت مشخصات آزمون را می‌بندد." in builder_screen and
         "settingsExpanded = false" in builder_screen,
@@ -701,12 +699,50 @@ require((ROOT/"app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt").exists()
         "V30 image editor keyboard/scroll/geometry fixes missing")
 require("selected = classId == item.id" not in _bulk and
         "horizontalScroll(rememberScrollState())" not in _bulk and
-        "if (initialClassId.isNullOrBlank() && classes.isNotEmpty())" in _bulk and
-        "DropdownMenu(" in _bulk,
+        "DropdownMenu(" not in _bulk and
+        "classId" not in _bulk,
         "V30 bulk window still shows the classes row")
 require(all(marker in v30_guide for marker in (
             "جابه‌جایی رنگی","مشخصات آزمون","لیست تغییرات","ویرایش تصویر","پنجره گروهی"
         )), "V30 Persian guide coverage incomplete")
+
+# ---- V31: stable reorder / audience in settings / update prompt / upload OOM guard / classless bulk ----
+require("key(optionId) {" in builder_screen and
+        "key(itemId) {" in matching_builder and
+        "AnimatedReorderColumn(" not in builder_screen and
+        "AnimatedReorderColumn(" not in matching_builder and
+        "optionDragId == optionId" in builder_screen,
+        "V31 option reorder is not the stable keyed list with colored cards")
+require("AudienceCard(state, viewModel)" in builder_screen.split(
+    "visible = settingsExpanded", 1)[1].split("AnimatedVisibility(", 1)[0].split("state.importedBy", 1)[0] and
+        "item { AudienceCard(state, viewModel) }" not in builder_screen,
+        "V31 audience section is not inside the exam settings card")
+require("LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_CODE) }" in app_shell and
+        "updatePromptDismissed" in app_shell and
+        "بروزرسانی جدید" in app_shell and
+        "بعداً" in app_shell,
+        "V31 app-entry update prompt missing")
+require("while (attempt < MAX_ATTEMPTS)" in image_uploader and
+        "catch (oom: OutOfMemoryError)" in image_uploader and
+        "maxDimension * 2 shr attempt" in image_uploader and
+        "MAX_DECODE_PIXELS = 7_000_000L" in image_uploader,
+        "V31 upload path can still crash on OutOfMemoryError")
+require("onCreate: (List<NewStudentRequest>) -> Unit" in _bulk and
+        "رمز فعلی" in _bulk and
+        "readOnly = true" in _bulk and
+        "rows.indices.chunked(6)" in _bulk and
+        "classId" not in _bulk,
+        "V31 classless bulk window with current-password box incomplete")
+require("knownPasswords[it.username.lowercase()]=it.password" in school_screen and
+        "knownPasswordOf(student.username)" in school_screen and
+        "رمز عبور: $it" in school_screen,
+        "V31 student-card copy does not read the current-password box")
+require("createStudentsBulk(classId:String?" in school_repository and
+        'put("class_id",classId.orEmpty())' in school_repository,
+        "V31 bulk creation still requires a class")
+require(all(marker in v31_guide for marker in (
+            "غیب‌شدن گزینه","مخاطبان آزمون","پیغام آپدیت","کرش آپلود","پنجره گروهی"
+        )), "V31 Persian guide coverage incomplete")
 
 for match in re.finditer(
     r"(?im)^\s*(delete\s+from|update\s+)([^;]+);",

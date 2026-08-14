@@ -128,8 +128,8 @@ class ClassesViewModel(
         _state.update { it.copy(lastCredential = credential) }
     }
 
-    fun createStudentsBulk(classId:String,requests:List<NewStudentRequest>) = action("ساخت گروهی انجام شد.") {
-        val result=repository.createStudentsBulk(classId,requests).getOrThrow();reloadData();loadRosterNow(classId);_state.update{it.copy(bulkResult=result)}
+    fun createStudentsBulk(classId:String?,requests:List<NewStudentRequest>) = action("ساخت گروهی انجام شد.") {
+        val result=repository.createStudentsBulk(classId,requests).getOrThrow();reloadData();classId?.takeIf(String::isNotBlank)?.let{loadRosterNow(it)};_state.update{it.copy(bulkResult=result)}
     }
 
     fun saveStudentNote(studentId:String,note:String)=viewModelScope.launch{

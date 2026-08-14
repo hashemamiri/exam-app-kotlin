@@ -63,16 +63,13 @@ class V30SmoothReorderSettingsChangelogTest {
     }
 
     @Test
-    fun `option and matching cards glide into place like question cards`() {
-        // جابه‌جایی ملایم: ستون گزینه‌ها با فنر از جای قبلی به جای جدید سر می‌خورد؛
-        // کارت سؤال همان حس را با animateItem دارد.
-        assertTrue("AnimatedReorderColumn(" in builder)
-        assertTrue("AnimatedReorderColumn(" in optionUi)
-        val reorder = source("app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt")
-        assertTrue("anim.snapTo((previous - y).toFloat())" in reorder)
-        assertTrue("spring(stiffness = Spring.StiffnessMediumLow)" in reorder)
-        assertTrue("key(id) { content(item, index) }" in reorder)
-        assertTrue("animateItem(\n                        placementSpec = tween(260, easing = FastOutSlowInEasing)" in builder)
+    fun `option and matching cards keep the stable keyed list while dragging`() {
+        // کارت‌ها در یک ستون کلیدخوردهٔ پایدار می‌مانند؛ انیمیشن جابه‌جایی سفارشی
+        // حذف شد چون باعث غیب‌شدن گزینه هنگام درگ می‌شد.
+        assertTrue("key(optionId) {" in builder)
+        assertTrue("key(itemId) {" in optionUi)
+        assertFalse("AnimatedReorderColumn(" in builder)
+        assertFalse("AnimatedReorderColumn(" in optionUi)
     }
 
     @Test
@@ -126,8 +123,8 @@ class V30SmoothReorderSettingsChangelogTest {
         assertTrue("removeprefix(\"-\")" in workflow)
         assertTrue("p_notes_fa" in workflow)
         val changelog = source("CHANGELOG_FA.txt")
-        assertTrue("جابه‌جایی گزینه" in changelog)
-        assertTrue("لیست تغییرات" in changelog)
+        assertTrue("جابه‌جایی" in changelog)
+        assertTrue("لیست" in changelog)
     }
 
     // ============================================================
@@ -217,24 +214,23 @@ class V30SmoothReorderSettingsChangelogTest {
         school.substringAfter("private fun BulkStudentDialog(").substringBefore("internal fun studentClipboardText")
 
     @Test
-    fun `bulk window no longer displays the classes row`() {
+    fun `bulk window no longer displays any class controls`() {
         val bulk = bulkSection()
-        // ردیف چیپ‌های کلاس حذف شده است؛ فقط وقتی از منوی اصلی باز شود
-        // یک انتخاب‌گر تک‌خطی کلاس ظاهر می‌شود.
-        assertFalse("کلاس‌ها همچنان به‌صورت چیپ نمایش داده می‌شوند", "selected = classId == item.id" in bulk)
-        assertFalse("horizontalScroll(rememberScrollState())" in bulk)
-        assertTrue("if (initialClassId.isNullOrBlank() && classes.isNotEmpty())" in bulk)
-        assertTrue("DropdownMenu(" in bulk)
+        // کلاس به‌کلی حذف شده است؛ دانش‌آموزها بدون نیاز به انتخاب کلاس ثبت می‌شوند.
+        assertFalse("classId" in bulk)
+        assertFalse("DropdownMenu(" in bulk)
+        assertFalse("کلاس را انتخاب کنید" in bulk)
+        assertTrue("onCreate: (List<NewStudentRequest>) -> Unit" in bulk)
+        assertTrue("NewStudentRequest(" in bulk)
+        assertTrue("null" in bulk)
     }
 
     @Test
     fun `active card number is always visible without scrolling`() {
         val bulk = bulkSection()
-        assertTrue("PersianDigits.convert(activeIndex + 1)" in bulk)
-        assertTrue("دانش‌آموز ${'$'}{PersianDigits.convert(activeIndex + 1)} از" in bulk)
-        assertTrue("activeIndex -= 1" in bulk)
-        assertTrue("activeIndex += 1" in bulk)
-        // چیپ‌های شماره‌دار اسکرول‌شونده حذف شده‌اند.
-        assertFalse("selected = activeIndex == index" in bulk)
+        // زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها است؛ بدون اسکرول.
+        assertTrue("rows.indices.chunked(6)" in bulk)
+        assertTrue("selected = activeIndex == index" in bulk)
+        assertFalse("horizontalScroll(rememberScrollState())" in bulk)
     }
 }

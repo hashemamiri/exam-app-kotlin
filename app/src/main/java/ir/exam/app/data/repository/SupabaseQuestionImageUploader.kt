@@ -82,7 +82,35 @@ class SupabaseQuestionImageUploader(context: Context) {
         quality: Int = QUALITY,
         forceSquare: Boolean = false
     ): String = withContext(Dispatchers.IO) {
-        val bitmap = decodeSampledBitmap(uri, maxDimension, forceSquare)
+        // قرارداد حافظه مثل LocalImageRepository: OutOfMemoryError یک Error است و
+        // runCatching آن را نمی‌گیرد؛ باید صریحاً گرفته و با بودجهٔ کمتر دوباره تلاش شود
+        // تا آپلود تصویر بزرگ هرگز برنامه را نکشد.
+        var attempt = 0
+        var lastError: Throwable? = null
+        while (attempt < MAX_ATTEMPTS) {
+            try {
+                return@withContext uploadOnce(prefix, uri, maxDimension, quality, forceSquare, attempt)
+            } catch (oom: OutOfMemoryError) {
+                lastError = oom
+                attempt++
+                System.gc()
+            }
+        }
+        throw IllegalStateException(
+            "حافظه دستگاه برای این تصویر کافی نیست؛ تصویر کوچک‌تری انتخاب کنید.",
+            lastError
+        )
+    }
+
+    private suspend fun uploadOnce(
+        prefix: String,
+        uri: Uri,
+        maxDimension: Int,
+        quality: Int,
+        forceSquare: Boolean,
+        attempt: Int
+    ): String {
+        val bitmap = decodeSampledBitmap(uri, maxDimension, forceSquare, attempt)
             ?: error("تصویر انتخاب‌شده قابل خواندن نیست.")
         val stream = ByteArrayOutputStream()
         val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -99,19 +127,38 @@ class SupabaseQuestionImageUploader(context: Context) {
         val path = "$prefix/${UUID.randomUUID()}.$extension"
         val bucket = SupabaseProvider.client.storage.from(BUCKET)
         bucket.upload(path, bytes) { upsert = false }
-        bucket.publicUrl(path)
+        return bucket.publicUrl(path)
     }
 
-    private fun decodeSampledBitmap(uri: Uri, maxDimension: Int, forceSquare: Boolean = false): Bitmap? {
+    private fun decodeSampledBitmap(
+        uri: Uri,
+        maxDimension: Int,
+        forceSquare: Boolean = false,
+        attempt: Int = 0
+    ): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         openInput(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
+        // بودجهٔ پیکسل بر اساس حافظهٔ آزاد واقعی و تلاش جاری؛ در تلاش‌های بعدی نصف
+        // می‌شود و پیکسل‌ها به RGB_565 تقلیل می‌یابند.
+        val maxEdge = (maxDimension * 2 shr attempt).coerceAtLeast(maxDimension)
+        val runtime = Runtime.getRuntime()
+        val freeBytes = runtime.maxMemory() - (runtime.totalMemory() - runtime.freeMemory())
+        val affordable = (freeBytes / 4 / SAFETY_DIVISOR).coerceAtLeast(MIN_DECODE_PIXELS)
+        val maxPixels = (minOf(MAX_DECODE_PIXELS, affordable) shr attempt).coerceAtLeast(MIN_DECODE_PIXELS)
+
         var sample = 1
-        while (bounds.outWidth / sample > maxDimension * 2 || bounds.outHeight / sample > maxDimension * 2) sample *= 2
+        while (
+            bounds.outWidth / sample > maxEdge ||
+            bounds.outHeight / sample > maxEdge ||
+            bounds.outWidth.toLong() / sample * (bounds.outHeight.toLong() / sample) > maxPixels
+        ) {
+            sample *= 2
+        }
         val options = BitmapFactory.Options().apply {
             inSampleSize = sample
-            inPreferredConfig = Bitmap.Config.ARGB_8888
+            inPreferredConfig = if (attempt == 0) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565
         }
         val decoded = openInput(uri)?.use { BitmapFactory.decodeStream(it, null, options) } ?: return null
         val rotation = runCatching {
@@ -169,5 +216,9 @@ class SupabaseQuestionImageUploader(context: Context) {
         const val AVATAR_MAX_DIMENSION = 1024
         const val AVATAR_QUALITY = 88
         const val MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+        const val MAX_ATTEMPTS = 4
+        const val MAX_DECODE_PIXELS = 7_000_000L
+        const val MIN_DECODE_PIXELS = 480_000L
+        const val SAFETY_DIVISOR = 3L
     }
 }

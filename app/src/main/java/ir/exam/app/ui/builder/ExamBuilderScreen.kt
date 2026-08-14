@@ -221,7 +221,11 @@ fun ExamBuilderScreen(
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    ExamSettingsCard(state, viewModel)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ExamSettingsCard(state, viewModel)
+                        // مخاطبان آزمون داخل مشخصات آزمون است و با آن باز/بسته می‌شود.
+                        AudienceCard(state, viewModel)
+                    }
                 }
             }
             state.importedBy?.let { by ->
@@ -235,7 +239,6 @@ fun ExamBuilderScreen(
                     }
                 }
             }
-            item { AudienceCard(state, viewModel) }
             itemsIndexed(state.questions, key = { _, item -> item.id }) { index, question ->
                 QuestionEditor(
                     modifier = Modifier.animateItem(
@@ -727,15 +730,10 @@ private fun QuestionEditor(
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size-1)},enabled=question.options.size>2){Text("−")}
                         OutlinedButton(onClick={viewModel.setOptionCount(question.id,question.options.size+1)},enabled=question.options.size<10){Text("+")}
                     }
-                    AnimatedReorderColumn(
-                        items = question.options,
-                        ids = question.options.indices.map { index ->
-                            question.optionIds.getOrElse(index) { "option-$index" }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { option, index ->
+                    question.options.forEachIndexed { index, option ->
                         val optionLabel = persianOptionLetter(index)
                         val optionId = question.optionIds.getOrElse(index) { "option-$index" }
+                        key(optionId) {
                         val optionCardColor by animateColorAsState(
                             targetValue = if (optionDragId == optionId) {
                                 MaterialTheme.colorScheme.primaryContainer
@@ -810,6 +808,7 @@ private fun QuestionEditor(
                                     }
                                 )
                             }
+                        }
                         }
                     }
                 }

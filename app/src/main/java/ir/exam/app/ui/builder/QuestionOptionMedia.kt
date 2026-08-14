@@ -301,15 +301,10 @@ fun MatchingQuestionEditor(
         Text("ابتدا موارد ستون راست و سپس موارد ستون چپ را تنظیم کنید.")
 
         Text("ستون راست", style = MaterialTheme.typography.titleSmall)
-        AnimatedReorderColumn(
-            items = question.matchingRight,
-            ids = question.matchingRight.indices.map { i ->
-                question.matchingRightIds.getOrElse(i) { "right-$i" }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) { value, index ->
+        question.matchingRight.forEachIndexed { index, value ->
             val label = persianOptionLetter(index)
             val itemId = question.matchingRightIds.getOrElse(index) { "right-$index" }
+            key(itemId) {
             val itemCardColor by animateColorAsState(
                 targetValue = if (dragActiveId == itemId) {
                     MaterialTheme.colorScheme.primaryContainer
@@ -356,6 +351,7 @@ fun MatchingQuestionEditor(
                     )
                 }
             }
+            }
         }
         TextButton(
             onClick = { viewModel.addMatchingSide(question.id, "right") },
@@ -363,15 +359,10 @@ fun MatchingQuestionEditor(
         ) { Text("افزودن مورد راست") }
 
         Text("ستون چپ", style = MaterialTheme.typography.titleSmall)
-        AnimatedReorderColumn(
-            items = question.matchingLeft,
-            ids = question.matchingLeft.indices.map { i ->
-                question.matchingLeftIds.getOrElse(i) { "left-$i" }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) { value, index ->
+        question.matchingLeft.forEachIndexed { index, value ->
             val label = PersianDigits.convert(index + 1)
             val itemId = question.matchingLeftIds.getOrElse(index) { "left-$index" }
+            key(itemId) {
             val itemCardColor by animateColorAsState(
                 targetValue = if (dragActiveId == itemId) {
                     MaterialTheme.colorScheme.primaryContainer
@@ -429,6 +420,7 @@ fun MatchingQuestionEditor(
                         }
                     }
                 }
+            }
             }
         }
         TextButton(

@@ -34,9 +34,8 @@ class V27DataImageOptionsTest {
         assertTrue("while (abs(accumulated) >= stepPx)" in optionUi)
         assertTrue("onMove(dragIndex, delta)" in optionUi)
         assertTrue("dragIndex = target" in optionUi)
-        assertTrue("AnimatedReorderColumn(" in optionUi)
-        assertTrue("AnimatedReorderColumn(" in builder)
-        assertTrue("key(id) { content(item, index) }" in source("app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt"))
+        assertTrue("key(itemId) {" in optionUi)
+        assertTrue("key(optionId) {" in builder)
     }
 
     @Test

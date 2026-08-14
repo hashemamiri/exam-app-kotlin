@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import ir.exam.app.BuildConfig
 import ir.exam.app.core.ui.AppearanceSettings
 import ir.exam.app.core.update.ApkUpdateManager
 import ir.exam.app.core.update.UpdateUseCase
@@ -406,6 +407,38 @@ private fun AuthenticatedExamApp(
                     onClick = { showSignOut = false },
                     enabled = !authState.isLoading
                 ) { Text("انصراف") }
+            }
+        )
+    }
+
+    // ورود به برنامه: اگر آپدیت جدید موجود باشد، یک پیغام روی صفحه ظاهر می‌شود.
+    val updateState by updateViewModel.state.collectAsState()
+    var updatePromptDismissed by rememberSaveable(user.id) { mutableStateOf(false) }
+    LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_CODE) }
+    updateState.update?.takeIf { remote ->
+        !updatePromptDismissed && updateState.downloadedApkPath == null && !updateState.downloading
+    }?.let { remote ->
+        AlertDialog(
+            onDismissRequest = { updatePromptDismissed = true },
+            title = { Text("بروزرسانی جدید") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("نسخه ${remote.name} آماده دریافت است.")
+                    remote.notesFa.take(3).forEach { note ->
+                        Text("• $note", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        updatePromptDismissed = true
+                        updateViewModel.downloadAndInstall()
+                    }
+                ) { Text("دریافت نسخه") }
+            },
+            dismissButton = {
+                TextButton(onClick = { updatePromptDismissed = true }) { Text("بعداً") }
             }
         )
     }

@@ -158,13 +158,12 @@ class V29ReorderViewerEditBulkTest {
     }
 
     @Test
-    fun `bulk rows stay reachable through the persistent counter with prev and next`() {
+    fun `bulk rows stay reachable through the numbered chips without scrolling`() {
         val bulk = bulkSection()
-        assertTrue("PersianDigits.convert(activeIndex + 1)" in bulk)
-        assertTrue("activeIndex -= 1" in bulk)
-        assertTrue("activeIndex += 1" in bulk)
+        assertTrue("rows.indices.chunked(6)" in bulk)
+        assertTrue("selected = activeIndex == index" in bulk)
         assertTrue("rowComplete" in bulk)
-        assertTrue("rowComplete(rows[activeIndex])" in bulk)
+        assertTrue("rowComplete(rows[index])" in bulk)
     }
 
     @Test
