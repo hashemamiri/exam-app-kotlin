@@ -19,13 +19,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -476,17 +479,17 @@ private fun AuthenticatedShell(
     val menuCards = if (user.role == UserRole.TEACHER) {
         listOf(
             Design69MenuCard(
-                "دانش‌آموزان", "فهرست و وضعیت دانش‌آموزان", Design69Icons.Students,
+                "دانش‌آموزان", "فهرست و وضعیت", Design69Icons.Students,
                 page == MainPage.SCHOOL && schoolStudentsSelected,
                 onClick = { select(onStudents) }
             ),
             Design69MenuCard(
-                "کلاس‌ها", "فهرست و مدیریت کلاس‌ها", Design69Icons.Classes,
+                "کلاس‌ها", "فهرست و مدیریت", Design69Icons.Classes,
                 page == MainPage.SCHOOL && !schoolStudentsSelected,
                 onClick = { select(onClasses) }
             ),
             Design69MenuCard(
-                "تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar,
+                "تقویم", "رویدادها و پیام‌ها", Design69Icons.Calendar,
                 page == MainPage.CALENDAR, onClick = { select(onCalendar) }
             ),
             Design69MenuCard(
@@ -517,7 +520,7 @@ private fun AuthenticatedShell(
     } else {
         listOf(
             Design69MenuCard(
-                "تقویم و پیام‌ها", "رویدادها و پیام‌ها", Design69Icons.Calendar,
+                "تقویم", "رویدادها و پیام‌ها", Design69Icons.Calendar,
                 page == MainPage.CALENDAR, onClick = { select(onCalendar) }
             ),
             Design69MenuCard(
@@ -553,12 +556,22 @@ private fun AuthenticatedShell(
                 Scaffold(
                     containerColor = colors.background,
                     topBar = {
-                        if (user.role == UserRole.STUDENT) {
-                            NeumorphicCompactMenuBar(
-                                menuOpen = menuOpen,
-                                onToggleMenu = onToggleMenu
-                            )
-                        }
+                        TopAppBar(
+                            title = {
+                                Text(page.sectionTitle(user.role, profileDestination, schoolStudentsSelected))
+                            },
+                            navigationIcon = {
+                                if (user.role == UserRole.STUDENT) {
+                                    IconButton(onClick = onToggleMenu) {
+                                        Design69MorphingMenuIcon(
+                                            open = menuOpen,
+                                            tint = colors.muted,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        )
                     },
                     bottomBar = {
                         if (user.role == UserRole.TEACHER) {
@@ -619,6 +632,30 @@ private fun AuthenticatedShell(
             }
         }
     }
+}
+
+private fun MainPage.sectionTitle(
+    role: UserRole,
+    profileDestination: ProfileSettingsDestination,
+    schoolStudentsSelected: Boolean
+): String = when (this) {
+    MainPage.HOME -> if (role == UserRole.TEACHER) "آزمون‌ها" else "خانه دانش‌آموز"
+    MainPage.CALENDAR -> "تقویم"
+    MainPage.SCHOOL -> if (schoolStudentsSelected) "دانش‌آموزان" else "کلاس‌ها"
+    MainPage.QUESTION_BANK -> "بانک سؤال"
+    MainPage.GRADING -> "تصحیح پاسخ‌ها"
+    MainPage.REPORTS -> "گزارش‌ها"
+    MainPage.STUDENT_RESULTS -> "نتایج من"
+    MainPage.WALLET -> "کیف پول"
+    MainPage.CARDS -> "مدیریت"
+    MainPage.SETTINGS -> when (profileDestination) {
+        ProfileSettingsDestination.PROFILE -> "پروفایل"
+        ProfileSettingsDestination.HEADER -> "سربرگ"
+        ProfileSettingsDestination.ACCOUNT -> "حساب"
+        ProfileSettingsDestination.DATA -> "داده‌ها"
+        ProfileSettingsDestination.SETTINGS -> "تنظیمات"
+    }
+    MainPage.BUILDER -> "ساخت آزمون"
 }
 
 private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {

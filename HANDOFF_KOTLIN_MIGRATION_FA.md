@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V24 تقویم، منو، آزمون‌ساز و ویرایش تصویر
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V25 هدر سراسری و پرداخت ایمن رابط
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3100,5 +3100,66 @@ Debug APK SHA-256                     1e6b84f426b2395b886ad9d7271547c9273f613e68
 ```
 
 راهنمای مستقل: `COMPREHENSIVE_UX_V24_FA.md`.
+
+SQL/Edge/Secret/Dependency جدید ندارد.
+
+---
+
+## ۴۳) V25 — هدر سراسری و پرداخت ایمن رابط
+
+### تحویل
+
+```text
+Shared TopAppBar for every authenticated destination
+Old password remains non-retrievable; one-time successful new password only
+Nested hamburger animations restored with compact 20+18ms stagger
+Menu title beside icon; unchanged 116dp card height
+Calendar title / compact student and class subtitles
+Now updates hour/minute only; trash clears selected boundary
+Remote Persian notes only while an actual update is downloading
+Bulk dialog bottom tangent to IME with dynamic list height
+Minimal 62x40 score field
+Blank new-exam negative marking and attempt cooldown
+Centered bold timeout chip / attempts / grade policy
+Drag-active question card color + 260ms animateItem placement
+Confirmed student-account delete icon
+Sampled image decoding: 2600 edge / 7M pixels / OOM guard
+```
+
+### امنیت رمز
+
+رمز قبلی Supabase Auth قابل بازیابی نیست و هیچ ذخیره قابل‌بازیابی جدیدی ساخته نشده است. `plain_password` همچنان ممنوع و حذف‌شده است. تنها رمز جدیدی که سرور با موفقیت ثبت کرده، همان یک‌بار در حافظه نشست و Clipboard حساس قابل تحویل است.
+
+### فایل‌های کلیدی
+
+```text
+HEADER_SAFETY_POLISH_V25_FA.md
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
+app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
+app/src/main/java/ir/exam/app/ui/builder/JalaliDateTimePicker.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt
+app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V25HeaderSafetyPolishTest.kt
+scripts/verify_native_final.py
+```
+
+### تست
+
+```text
+Kotlin compile                         PASS
+JVM tests                              148/148 PASS
+V25 header/safety/polish tests          10/10 PASS
+FINAL_NATIVE_VERIFY                   PASS
+lintDebug                              PASS — 0 error, 21 warning
+assembleDebug                         PASS
+APK Signature Scheme v2               Verified
+Debug APK SHA-256                     834b671c03df33333d6ccff372dc2198391e3f35cb63e3d0f06a0f036f643c1b
+```
+
+راهنمای مستقل: `HEADER_SAFETY_POLISH_V25_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.

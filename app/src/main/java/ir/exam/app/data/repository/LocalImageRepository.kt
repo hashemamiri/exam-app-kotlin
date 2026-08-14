@@ -24,7 +24,7 @@ class LocalImageRepository(context: Context) : ImageRepository {
     override suspend fun prepare(request: ImageEditRequest): Result<PreparedImage> = runCatching {
         withContext(Dispatchers.IO) {
             cleanupOldFiles()
-            val source=open(request.source)?.use(BitmapFactory::decodeStream) ?: error("تصویر قابل خواندن نیست.")
+            val source = decodeSampled(request.source)
             val exifRotation=runCatching { open(request.source)?.use { input ->
                 when(ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL)) {
                     ExifInterface.ORIENTATION_ROTATE_90->90
@@ -54,8 +54,38 @@ class LocalImageRepository(context: Context) : ImageRepository {
     override suspend fun upload(image: PreparedImage, folder: String): Result<String> =
         Result.failure(UnsupportedOperationException("آپلود توسط repository مالک رسانه انجام می‌شود."))
 
+    private fun decodeSampled(uri: Uri): Bitmap {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        val boundsStream = open(uri) ?: error("تصویر قابل خواندن نیست.")
+        boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "ابعاد تصویر نامعتبر است." }
+        var sample = 1
+        while (
+            bounds.outWidth / sample > MAX_DECODE_EDGE ||
+            bounds.outHeight / sample > MAX_DECODE_EDGE ||
+            bounds.outWidth.toLong() / sample * (bounds.outHeight.toLong() / sample) > MAX_DECODE_PIXELS
+        ) {
+            sample *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return try {
+            open(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                ?: error("تصویر قابل خواندن نیست.")
+        } catch (_: OutOfMemoryError) {
+            error("حافظه دستگاه برای این تصویر کافی نیست؛ تصویر کوچک‌تری انتخاب کنید.")
+        }
+    }
+
     private fun open(uri:Uri):InputStream?=if(uri.scheme.equals("file",true))uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)else appContext.contentResolver.openInputStream(uri)
     private fun rotate(bitmap:Bitmap,degrees:Int):Bitmap=if(degrees%360==0)bitmap else Bitmap.createBitmap(bitmap,0,0,bitmap.width,bitmap.height,Matrix().apply{postRotate(degrees.toFloat())},true).also{if(it!==bitmap)bitmap.recycle()}
     private fun centerSquare(bitmap:Bitmap):CropRect=if(bitmap.width>bitmap.height)CropRect((bitmap.width-bitmap.height).toFloat()/bitmap.width/2f,0f,bitmap.height.toFloat()/bitmap.width,1f)else CropRect(0f,(bitmap.height-bitmap.width).toFloat()/bitmap.height/2f,1f,bitmap.width.toFloat()/bitmap.height)
     private fun cleanupOldFiles(){File(appContext.filesDir,"edited-images").listFiles()?.filter{System.currentTimeMillis()-it.lastModified()>14L*24*60*60*1000}?.forEach(File::delete)}
+
+    private companion object {
+        const val MAX_DECODE_EDGE = 2_600
+        const val MAX_DECODE_PIXELS = 7_000_000L
+    }
 }

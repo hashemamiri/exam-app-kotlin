@@ -90,8 +90,9 @@ class Neumorphic69IntegrationTest {
         assertTrue("Design69Icons.Wallet" in dock)
         assertTrue("DockMotion.WALLET" in dock)
         assertTrue("rippleProgress.animateTo(1f, tween(520))" in dock)
-        assertFalse("nested menu slide animation returned", "slideInHorizontally" in menu)
-        assertFalse("slow stagger delay returned", "delay = 120 + index * 40" in menu)
+        assertTrue("nested menu slide animation missing", "slideInHorizontally" in menu)
+        assertTrue("controlled nested stagger missing", "val delay = 20 + index * 18" in menu)
+        assertFalse("old slow stagger returned", "delay = 120 + index * 40" in menu)
         assertTrue("enter = fadeIn(tween(110))" in app)
         assertTrue("animationSpec = tween(180)" in icons)
     }
@@ -137,7 +138,7 @@ class Neumorphic69IntegrationTest {
         val lock = File(root, "app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").readText()
 
         assertTrue("mutableStateOf(MainPage.CALENDAR)" in app)
-        listOf("تقویم و پیام‌ها", "کلاس‌ها", "دانش‌آموزان", "سربرگ", "حساب", "داده‌ها", "تنظیمات", "خروج").forEach {
+        listOf("تقویم", "کلاس‌ها", "دانش‌آموزان", "سربرگ", "حساب", "داده‌ها", "تنظیمات", "خروج").forEach {
             assertTrue("missing hamburger item $it", it in app)
         }
         val teacherMenu = app.substringAfter("val menuCards = if (user.role == UserRole.TEACHER)")

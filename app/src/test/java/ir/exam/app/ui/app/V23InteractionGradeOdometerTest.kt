@@ -59,7 +59,7 @@ class V23InteractionGradeOdometerTest {
             .substringBefore("private fun ClassEditorDialog(")
         assertTrue("Icons.Outlined.ContentCopy" in card)
         assertTrue("copyStudentInformation(context, student)" in card)
-        assertTrue(card.split("Modifier.size(58.dp)").size - 1 >= 4)
+        assertTrue(card.split("Modifier.weight(1f).height(58.dp)").size - 1 >= 5)
         assertTrue("Modifier.size(32.dp)" in card)
         assertTrue("Modifier.size(30.dp)" in card)
 

@@ -1,5 +1,14 @@
 package ir.exam.app.ui.app
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +26,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,10 +59,7 @@ object Design69MenuContract {
     fun isCompleteGrid(count: Int): Boolean = count > 0 && count % COLUMNS == 0
 }
 
-/**
- * صفحه کامل منو بدون انیمیشن‌های تو‌در‌تو و stagger طولانی. گذار سریع فقط در پوسته
- * انجام می‌شود تا لمس همبرگر همیشه فوری و پایدار پاسخ دهد.
- */
+/** صفحه کامل منو با انیمیشن‌های تو‌در‌توی کوتاه و stagger کنترل‌شده. */
 @Composable
 fun Design69MainMenuScreen(
     user: AppUser,
@@ -65,6 +76,8 @@ fun Design69MainMenuScreen(
         }
     )
     val colors = neumorphic69Colors
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { entered = true }
 
     Column(
         modifier
@@ -74,7 +87,14 @@ fun Design69MainMenuScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Column(Modifier.fillMaxWidth().widthIn(max = 560.dp)) {
-            NeumorphicPressable(
+            AnimatedVisibility(
+                visible = entered,
+                enter = fadeIn(tween(150)) +
+                    slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it / 4 } +
+                    scaleIn(tween(220), initialScale = .97f),
+                exit = fadeOut(tween(100)) + scaleOut(tween(120), targetScale = .98f)
+            ) {
+                NeumorphicPressable(
                 onClick = onProfile,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -122,6 +142,7 @@ fun Design69MainMenuScreen(
                     )
                 }
             }
+            }
 
             Spacer(Modifier.height(18.dp))
             cards.chunked(Design69MenuContract.COLUMNS).forEachIndexed { rowIndex, rowCards ->
@@ -129,18 +150,36 @@ fun Design69MainMenuScreen(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
-                    rowCards.forEach { card ->
-                        NeumorphicMenuTile(
-                            title = card.title,
-                            subtitle = card.subtitle,
-                            icon = card.icon,
-                            selected = card.selected,
-                            danger = card.danger,
-                            onClick = card.onClick,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
-                        )
+                    rowCards.forEachIndexed { columnIndex, card ->
+                        val index = rowIndex * Design69MenuContract.COLUMNS + columnIndex
+                        val delay = 20 + index * 18
+                        AnimatedVisibility(
+                            visible = entered,
+                            modifier = Modifier.weight(1f),
+                            enter = fadeIn(tween(160, delayMillis = delay)) +
+                                slideInHorizontally(
+                                    animationSpec = tween(
+                                        durationMillis = 240,
+                                        delayMillis = delay,
+                                        easing = FastOutSlowInEasing
+                                    ),
+                                    initialOffsetX = { width -> if (index % 2 == 0) -width / 3 else width / 3 }
+                                ) +
+                                scaleIn(tween(220, delayMillis = delay), initialScale = .95f),
+                            exit = fadeOut(tween(90)) + scaleOut(tween(110), targetScale = .97f)
+                        ) {
+                            NeumorphicMenuTile(
+                                title = card.title,
+                                subtitle = card.subtitle,
+                                icon = card.icon,
+                                selected = card.selected,
+                                danger = card.danger,
+                                onClick = card.onClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
+                            )
+                        }
                     }
                 }
                 if (rowIndex != cards.lastIndex / Design69MenuContract.COLUMNS) {

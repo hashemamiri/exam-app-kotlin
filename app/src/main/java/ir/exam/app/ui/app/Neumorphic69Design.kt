@@ -428,7 +428,7 @@ fun NeumorphicMenuTile(
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(9.dp)
             ) {
                 Box(
                     Modifier
@@ -438,6 +438,15 @@ fun NeumorphicMenuTile(
                 ) {
                     Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(21.dp))
                 }
+                Text(
+                    title,
+                    color = if (danger) colors.danger else if (selected) colors.accent else colors.ink,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
                 if (selected) {
                     Box(
                         Modifier
@@ -448,16 +457,7 @@ fun NeumorphicMenuTile(
                     )
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                title,
-                color = if (danger) colors.danger else if (selected) colors.accent else colors.ink,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 subtitle,
                 color = colors.muted,

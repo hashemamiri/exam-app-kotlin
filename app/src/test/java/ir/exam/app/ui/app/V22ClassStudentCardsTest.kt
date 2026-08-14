@@ -81,7 +81,7 @@ class V22ClassStudentCardsTest {
         val app = File(root, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").readText()
         val teacherMenu = app.substringAfter("val menuCards = if (user.role == UserRole.TEACHER)")
             .substringBefore("} else {")
-        assertTrue(teacherMenu.indexOf("دانش‌آموزان") < teacherMenu.indexOf("تقویم و پیام‌ها"))
+        assertTrue(teacherMenu.indexOf("دانش‌آموزان") < teacherMenu.indexOf("\"تقویم\""))
         val repository = File(root, "app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").readText()
         assertTrue("requests.size in 1..100" in repository)
     }

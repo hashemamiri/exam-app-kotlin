@@ -54,11 +54,14 @@ v18_sql_copy=(ROOT/"SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql").read_text()
 v22_migration=(ROOT/"supabase/migrations/20260814_native_student_class_membership_v22.sql").read_text()
 v22_sql_copy=(ROOT/"SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
 v24_guide=(ROOT/"COMPREHENSIVE_UX_V24_FA.md").read_text()
+v25_guide=(ROOT/"HEADER_SAFETY_POLISH_V25_FA.md").read_text()
 school_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
 grade_odometer=(ROOT/"app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt").read_text()
 calendar_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text()
 date_time_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/JalaliDateTimePicker.kt").read_text()
+question_model=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()
+local_image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 question_media=(ROOT/"app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt").read_text()
 image_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").read_text()
 about_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt").read_text()
@@ -138,11 +141,13 @@ require(all(marker in design69_icons for marker in ("Design69MorphingMenuIcon","
 require(all(marker in design69_menu for marker in (
             "PROFILE_HEIGHT_DP = 148","CARD_HEIGHT_DP = 116",
             "TEACHER_CARD_COUNT = 8","STUDENT_CARD_COUNT = 6"
-        )) and "slideInHorizontally" not in design69_menu and
+        )) and "slideInHorizontally" in design69_menu and
+        "slideInVertically" in design69_menu and
+        "val delay = 20 + index * 18" in design69_menu and
         "delay = 120 + index * 40" not in design69_menu and
         "enter = fadeIn(tween(110))" in app_shell and
         "animationSpec = tween(180)" in design69_icons,
-        "fast full-page account/data menu contract incomplete")
+        "controlled nested full-page account/data menu contract incomplete")
 require("Design69MainMenuScreen" in app_shell and "menuOpen = !menuOpen" in app_shell and
         "BackHandler(enabled = menuOpen" in app_shell and "ModalNavigationDrawer" not in app_shell,
         "menu is not a full-page reversible state")
@@ -162,8 +167,8 @@ require(all(marker in grading_screen for marker in ("initialPendingOnly","initia
 require(all(marker in neumorphic_design for marker in ("Neumorphic69Provider","setShadowLayer","lightShadow","darkShadow","NeumorphicTopBar","NeumorphicMenuTile")),
         "Neumorphic 69 native primitives incomplete")
 require("Neumorphic69Provider(depth = appearance.neumorphicDepth)" in app_shell and
-        "widthIn(max = 900.dp)" in app_shell and "NeumorphicCompactMenuBar" in app_shell,
-        "compact/adaptive Neumorphic shell is not active")
+        "widthIn(max = 900.dp)" in app_shell and "TopAppBar(" in app_shell,
+        "compact/adaptive Neumorphic shell with shared header is not active")
 require(all(marker in teacher_dock for marker in (".size(44.dp)",".size(58.dp)","shape = CircleShape","clip = true","if (!expanded)")),
         "smaller active halo/centered plus/no-trace behavior incomplete")
 require("PullToRefreshBox" in teacher_dashboard and "onRefresh = viewModel::load" in teacher_dashboard and
@@ -172,8 +177,10 @@ require("PullToRefreshBox" in teacher_dashboard and "onRefresh = viewModel::load
 require("walletRefreshKey += 1" in app_shell and "dashboardRefreshKey += 1" in app_shell and
         "cardsCycleKey += 1" in app_shell and "LaunchedEffect(refreshKey)" in wallet_screen,
         "active dock destination secondary real behavior incomplete")
-require("mutableStateOf(MainPage.CALENDAR)" in app_shell and all(marker in app_shell for marker in ("\"تقویم و پیام‌ها\"","\"کلاس‌ها\"","\"دانش‌آموزان\"","\"سربرگ\"","\"تنظیمات\"","\"خروج\"")),
-        "calendar default or exact hamburger menu order/routes missing")
+require("mutableStateOf(MainPage.CALENDAR)" in app_shell and all(marker in app_shell for marker in (
+            "\"تقویم\"","\"کلاس‌ها\"","\"دانش‌آموزان\"","\"سربرگ\"",
+            "\"حساب\"","\"داده‌ها\"","\"تنظیمات\"","\"خروج\""
+        )), "calendar default or exact hamburger menu order/routes missing")
 require(all(marker not in app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else {",1)[0]
             for marker in ("داشبورد معلم","تصحیح و حضور","آمار و گزارش‌ها","درباره و بروزرسانی","آزمون جدید")),
         "removed teacher hamburger cards returned")
@@ -294,8 +301,9 @@ require(all(marker in grade_odometer for marker in (
             "Icons.Outlined.UnfoldMore","فهرست را به بالا یا پایین بکشید"
         )) and "Icons.Outlined.Speed" not in grade_odometer,
         "redesigned compact vertical grade wheel is incomplete")
-require(student_card.count("Modifier.size(58.dp)") >= 4 and
+require(student_card.count("Modifier.weight(1f).height(58.dp)") >= 5 and
         "copyStudentInformation(context, student)" in student_card and
+        "Icons.Outlined.Delete" in student_card and
         "قابل بازیابی نیست" in school_screen and "student.password" not in school_screen,
         "larger student actions or secure profile-copy behavior incomplete")
 require("رمز جدید اختیاری" in school_screen and "خالی بماند تغییر نمی‌کند" in school_screen and
@@ -310,7 +318,7 @@ require(v22_sql_copy == v22_migration and all(marker in v22_migration for marker
         )) and "native_add_student_to_classes_v22" in school_repository,
         "atomic owner-scoped multi-class membership migration incomplete")
 teacher_menu=app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else {",1)[0]
-require(teacher_menu.index("دانش‌آموزان") < teacher_menu.index("تقویم و پیام‌ها"),
+require(teacher_menu.index("دانش‌آموزان") < teacher_menu.index("\"تقویم\""),
         "student/calendar hamburger card positions were not swapped")
 require("requests.size in 1..100" in school_repository,
         "bulk student creation no longer permits a single row")
@@ -325,16 +333,17 @@ require(all(marker in profile_settings for marker in (
             "expandedCard = if (expandedCard == card) null else card",
             "Icons.Outlined.ExpandLess","Icons.Outlined.ExpandMore","AnimatedVisibility"
         )), "account cards do not independently expand/collapse")
-require(all(marker in about_screen for marker in (
-            "localReleaseNotesFa","فهرست فارسی تغییرات","ChangeListCard"
-        )) and all(marker not in about_screen for marker in (
+require("state.downloading && it.notesFa.isNotEmpty()" in about_screen and
+        "ChangeListCard" in about_screen and "localReleaseNotesFa" not in about_screen and
+        all(marker not in about_screen for marker in (
             "AppIdentityCard","شناسه بسته","APK فقط از نشانی HTTPS"
-        )), "About page still contains extra prose or lacks Persian release lists")
+        )), "release notes are not limited to a real in-progress update")
 require(all(marker in builder_screen for marker in (
             "JalaliDateTimeField(\n                    \"شروع\"",
             "JalaliDateTimeField(\n                    \"پایان\"",
             "BoldToggleChip","detectDragGesturesAfterLongPress","Icons.Outlined.DragIndicator",
-            "PersianDigits.convert(index + 1)","placeholder = { Text(\"بارم\") }",
+            "PersianDigits.convert(index + 1)","MinimalScoreField(",
+            "private fun MinimalScoreField","Modifier.width(62.dp).height(40.dp)",
             "Icons.Outlined.Visibility","visible = styleExpanded"
         )) and "Text(\"↑\")" not in builder_screen and "Text(\"↓\")" not in builder_screen,
         "new exam-window/chip/drag/neon-score/print-eye builder behavior incomplete")
@@ -356,6 +365,44 @@ require(all(marker in v24_guide for marker in (
             "امنیت رمز دانش‌آموز","منوی همبرگری","بازه آزمون","مشخصات و کارت سؤال","تصاویر",
             "SQL جدید: ندارد","Edge deploy: ندارد"
         )), "V24 Persian guide/handoff coverage incomplete")
+require("TopAppBar(" in app_shell and
+        "page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)" in app_shell and
+        "private fun MainPage.sectionTitle" in app_shell,
+        "shared authenticated section headers are incomplete")
+require(all(marker in date_time_picker for marker in (
+            "val now = LocalDateTime.now()","hour = now.hour.toString()",
+            "minute = now.minute.toString()","Icons.Outlined.Delete","onClear"
+        )) and "onConfirm(Instant.now().toString())" not in date_time_picker,
+        "Now still commits the boundary or clear-time control is missing")
+require(all(marker in school_screen for marker in (
+            "BoxWithConstraints","Alignment.BottomCenter","listMaxHeight = (maxHeight - 168.dp)",
+            "title = { Text(\"حذف دانش‌آموز\") }","viewModel.deleteStudent(student.id)"
+        )), "IME-tangent bulk dialog or confirmed student deletion missing")
+require(all(marker in builder_screen for marker in (
+            "private fun MinimalScoreField","BasicTextField(",
+            "Modifier.width(62.dp).height(40.dp)","Modifier.animateItem(",
+            "var dragActive","label = \"question-drag-color\"",
+            "label = \"اتمام تلاش در پایان زمان\""
+        )) and "val negativeMarking: String = \"\"" in question_model and
+        "val attemptCooldown: String = \"\"" in question_model,
+        "minimal score, smooth drag, centered chips, or blank defaults incomplete")
+require(all(marker in neumorphic_design for marker in (
+            "horizontalArrangement = Arrangement.spacedBy(9.dp)",
+            "modifier = Modifier.weight(1f)"
+        )) and all(marker in app_shell for marker in (
+            "\"تقویم\", \"رویدادها و پیام‌ها\"",
+            "\"دانش‌آموزان\", \"فهرست و وضعیت\"",
+            "\"کلاس‌ها\", \"فهرست و مدیریت\""
+        )) and "\"تقویم و پیام‌ها\"" not in app_shell,
+        "hamburger icon/title row or compact card labels incomplete")
+require(all(marker in local_image_repository for marker in (
+            "decodeSampled(request.source)","inJustDecodeBounds = true","inSampleSize = sample",
+            "MAX_DECODE_PIXELS = 7_000_000L","catch (_: OutOfMemoryError)"
+        )), "large-image sampled decoding crash guard missing")
+require(all(marker in v25_guide for marker in (
+            "هدر سراسری","امنیت رمز دانش‌آموز","پنجره ساخت گروهی","منوی همبرگری",
+            "رفع بسته‌شدن بخش تصویر","SQL جدید: ندارد","Edge deploy: ندارد"
+        )), "V25 Persian guide/handoff coverage incomplete")
 require(all(marker in appearance_preferences for marker in ("NeumorphicPalette","neumorphicPalette","neumorphicDepth","MIN_NEO_DEPTH","MAX_NEO_DEPTH")),
         "persistent Neumorphic palette/depth settings missing")
 require(all(marker in app_theme for marker in ("accentColors","neumorphicLightColorScheme","neumorphicDarkColorScheme","vazirmatn_medium","vazirmatn_bold")),

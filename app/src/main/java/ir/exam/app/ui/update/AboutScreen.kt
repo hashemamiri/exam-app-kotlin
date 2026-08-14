@@ -5,11 +5,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.SystemUpdate
@@ -26,71 +24,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ir.exam.app.BuildConfig
 import ir.exam.app.core.update.ApkUpdateManager
-
-private data class PersianReleaseNotes(val version: String, val notes: List<String>)
-
-private val localReleaseNotesFa = listOf(
-    PersianReleaseNotes(
-        "V24",
-        listOf(
-            "تقویم جمعه را فقط با رنگ قرمز نمایش می‌دهد.",
-            "منوی همبرگری سریع‌تر شد و مسیرهای حساب و داده‌ها مستقل شدند.",
-            "کارت‌های حساب باز و بسته می‌شوند.",
-            "انتخاب‌گر پایه، بازه زمانی آزمون و کارت سؤال بازطراحی شدند.",
-            "چیدمان تصاویر و ابزار برش تعاملی اصلاح شد."
-        )
-    ),
-    PersianReleaseNotes(
-        "V23",
-        listOf(
-            "تیک ذخیره آزمون و دکمه‌های کلاس مرکزچین شدند.",
-            "کنترل‌های کارت دانش‌آموز بزرگ‌تر و کپی اطلاعات اضافه شد.",
-            "فیلتر جنسیت با لمس مجدد آزاد می‌شود.",
-            "انتخاب پایه در همه فرم‌ها یکپارچه شد."
-        )
-    ),
-    PersianReleaseNotes(
-        "V22",
-        listOf(
-            "کارت رنگی و بازشونده دانش‌آموز اضافه شد.",
-            "افزودن موجود و جدید در منوی کلاس یکپارچه شد.",
-            "افزودن اتمیک دانش‌آموز به چند کلاس فعال شد."
-        )
-    ),
-    PersianReleaseNotes(
-        "V21",
-        listOf(
-            "نوار دانش‌آموزان و جست‌وجوی بازشونده اصلاح شد.",
-            "اسکرول دقیق سؤال زیر سربرگ پیاده‌سازی شد."
-        )
-    ),
-    PersianReleaseNotes(
-        "V20",
-        listOf(
-            "نمایش و پنهان‌کردن رمزها یکپارچه شد.",
-            "کارت آزمون و اسکرول فرمول بهبود یافت."
-        )
-    ),
-    PersianReleaseNotes(
-        "V19",
-        listOf(
-            "ساخت دانش‌آموز و آزمون‌ساز Native تکمیل شد.",
-            "پرداخت آزمایشی امن سمت سرور اضافه شد."
-        )
-    ),
-    PersianReleaseNotes(
-        "V18",
-        listOf(
-            "ناوبری، حساب، سربرگ رسمی و قفل امن دستگاه تکمیل شد."
-        )
-    )
-)
 
 @Composable
 fun AboutScreen(
@@ -144,14 +82,10 @@ fun AboutScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("فهرست فارسی تغییرات", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("بروزرسانی برنامه", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
-        state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
-            item { ChangeListCard("نسخه ${remote.name}", remote.notesFa) }
-        }
-        items(localReleaseNotesFa.size) { index ->
-            val release = localReleaseNotesFa[index]
-            ChangeListCard(release.version, release.notes)
+        state.update?.takeIf { state.downloading && it.notesFa.isNotEmpty() }?.let { remote ->
+            item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

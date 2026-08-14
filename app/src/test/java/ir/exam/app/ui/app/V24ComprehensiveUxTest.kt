@@ -31,8 +31,9 @@ class V24ComprehensiveUxTest {
         val profile = source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt")
         assertTrue("TEACHER_CARD_COUNT = 8" in menu)
         assertTrue("STUDENT_CARD_COUNT = 6" in menu)
-        assertFalse("slow nested visibility returned", "delay = 120 + index * 40" in menu)
-        assertFalse("nested slide animation returned", "slideInHorizontally" in menu)
+        assertTrue("nested slide animation missing", "slideInHorizontally" in menu)
+        assertTrue("controlled stagger missing", "val delay = 20 + index * 18" in menu)
+        assertFalse("old slow nested visibility returned", "delay = 120 + index * 40" in menu)
         assertTrue("enter = fadeIn(tween(110))" in app)
         assertTrue("animationSpec = tween(180)" in icons)
         listOf("ProfileSettingsDestination.ACCOUNT", "ProfileSettingsDestination.DATA").forEach {
@@ -58,10 +59,10 @@ class V24ComprehensiveUxTest {
     }
 
     @Test
-    fun `about page is a Persian update list without technical identity prose`() {
+    fun `about page only shows remote Persian notes while downloading`() {
         val about = source("app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt")
-        assertTrue("localReleaseNotesFa" in about)
-        assertTrue("فهرست فارسی تغییرات" in about)
+        assertFalse("local persistent release history returned", "localReleaseNotesFa" in about)
+        assertTrue("state.downloading && it.notesFa.isNotEmpty()" in about)
         assertTrue("ChangeListCard" in about)
         assertFalse("old identity card returned", "AppIdentityCard" in about)
         assertFalse("package id prose returned", "شناسه بسته" in about)
@@ -103,7 +104,8 @@ class V24ComprehensiveUxTest {
         assertTrue("PersianDigits.convert(index + 1)" in editor)
         assertFalse("question prefix returned", "Text(\"سؤال ${'$'}{index + 1}" in editor)
         assertTrue("drawCircle" in editor && "Stroke(width = 2.dp.toPx())" in editor)
-        assertTrue("placeholder = { Text(\"بارم\") }" in editor)
+        assertTrue("MinimalScoreField(" in editor)
+        assertTrue("private fun MinimalScoreField" in builder && "\"بارم\"" in builder)
         assertTrue("question.type.faLabel()" in editor)
         assertTrue("Icons.Outlined.Visibility" in editor)
         assertTrue("visible = styleExpanded" in editor)

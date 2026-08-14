@@ -8,10 +8,17 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,9 +36,11 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -48,6 +57,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,8 +76,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -84,7 +97,7 @@ import ir.exam.app.ui.math.NativeMathText
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ExamBuilderScreen(
     viewModel: ExamBuilderViewModel,
@@ -219,6 +232,9 @@ fun ExamBuilderScreen(
             item { AudienceCard(state, viewModel) }
             itemsIndexed(state.questions, key = { _, item -> item.id }) { index, question ->
                 QuestionEditor(
+                    modifier = Modifier.animateItem(
+                        placementSpec = tween(260, easing = FastOutSlowInEasing)
+                    ),
                     question = question,
                     index = index,
                     expanded = expandedQuestionId == question.id,
@@ -383,20 +399,41 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
                     modifier = Modifier.weight(1f)
                 )
             }
-            ToggleRow("اتمام تلاش در پایان زمان", state.attemptOnTimeout, viewModel::setAttemptOnTimeout)
-            Text("تعداد تلاش مجاز")
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                BoldToggleChip(
+                    label = "اتمام تلاش در پایان زمان",
+                    selected = state.attemptOnTimeout,
+                    onClick = { viewModel.setAttemptOnTimeout(!state.attemptOnTimeout) }
+                )
+            }
+            Text("تعداد تلاش مجاز", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+            ) {
                 (1..5).forEach { count ->
-                    FilterChip(selected = state.attemptsAllowed == count, onClick = { viewModel.setAttempts(count) }, label = { Text(count.toString()) })
+                    FilterChip(
+                        selected = state.attemptsAllowed == count,
+                        onClick = { viewModel.setAttempts(count) },
+                        label = { Text(count.toString()) }
+                    )
                 }
             }
-            Text("سیاست نمره")
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("سیاست نمره", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+            ) {
                 listOf("last" to "آخرین", "best" to "بهترین", "all" to "همه").forEach { (value, label) ->
                     FilterChip(selected = state.gradePolicy == value, onClick = { viewModel.setGradePolicy(value) }, label = { Text(label) })
                 }
             }
-            OutlinedTextField(state.attemptCooldown, viewModel::setAttemptCooldown, label = { Text("فاصله تلاش‌ها (دقیقه)") })
+            OutlinedTextField(
+                state.attemptCooldown,
+                viewModel::setAttemptCooldown,
+                label = { Text("فاصله تلاش‌ها (دقیقه)") },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -502,6 +539,7 @@ private data class FormulaTarget(
 
 @Composable
 private fun QuestionEditor(
+    modifier: Modifier = Modifier,
     question: QuestionDraft,
     index: Int,
     expanded: Boolean,
@@ -518,10 +556,20 @@ private fun QuestionEditor(
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
     }
     var dragAccumulator by remember(question.id) { mutableFloatStateOf(0f) }
-    val dragStepPx = with(LocalDensity.current) { 44.dp.toPx() }
+    var dragActive by remember(question.id) { mutableStateOf(false) }
+    val dragStepPx = with(LocalDensity.current) { 52.dp.toPx() }
     val neonColor = MaterialTheme.colorScheme.primary
+    val cardColor by animateColorAsState(
+        targetValue = if (dragActive) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface,
+        animationSpec = tween(170),
+        label = "question-drag-color"
+    )
 
-    Card(Modifier.fillMaxWidth().clickable(onClick = onToggle)) {
+    Card(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onToggle),
+        colors = CardDefaults.cardColors(containerColor = cardColor)
+    ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -553,15 +601,12 @@ private fun QuestionEditor(
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1
                 )
-                OutlinedTextField(
+                MinimalScoreField(
                     value = scoreText,
                     onValueChange = { raw ->
                         scoreText = raw.filter { it.isDigit() || it == '.' }.take(6)
                         viewModel.updateScore(question.id, scoreText)
-                    },
-                    placeholder = { Text("بارم") },
-                    singleLine = true,
-                    modifier = Modifier.width(72.dp)
+                    }
                 )
                 IconButton(
                     onClick = {
@@ -581,9 +626,18 @@ private fun QuestionEditor(
                         .size(42.dp)
                         .pointerInput(question.id) {
                             detectDragGesturesAfterLongPress(
-                                onDragStart = { dragAccumulator = 0f },
-                                onDragCancel = { dragAccumulator = 0f },
-                                onDragEnd = { dragAccumulator = 0f },
+                                onDragStart = {
+                                    dragAccumulator = 0f
+                                    dragActive = true
+                                },
+                                onDragCancel = {
+                                    dragAccumulator = 0f
+                                    dragActive = false
+                                },
+                                onDragEnd = {
+                                    dragAccumulator = 0f
+                                    dragActive = false
+                                },
                                 onDrag = { change, amount ->
                                     change.consume()
                                     dragAccumulator += amount.y
@@ -791,6 +845,42 @@ private fun QuestionStyleControls(question: QuestionDraft, viewModel: ExamBuilde
             FilterChip(selected=question.answerLineStyle=="blank",onClick={viewModel.setAnswerLineStyle(question.id,"blank")},label={Text("خالی")})
         }
         OutlinedButton(onClick=onPreview,modifier=Modifier.fillMaxWidth()){Text("پیش‌نمایش چاپ این سؤال")}
+    }
+}
+
+@Composable
+private fun MinimalScoreField(value: String, onValueChange: (String) -> Unit) {
+    Surface(
+        modifier = Modifier.width(62.dp).height(40.dp),
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .55f))
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.SemiBold
+            ),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 10.dp),
+            decorationBox = { inner ->
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    if (value.isBlank()) {
+                        Text(
+                            "بارم",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    inner()
+                }
+            }
+        )
     }
 }
 

@@ -16,10 +16,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ToggleOff
@@ -101,6 +104,7 @@ fun SchoolManagementScreen(
     var deletingClass by remember { mutableStateOf<SchoolClass?>(null) }
     var showMemberPicker by remember { mutableStateOf(false) }
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
+    var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var showBulk by remember { mutableStateOf(false) }
     var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
     val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
@@ -160,6 +164,7 @@ fun SchoolManagementScreen(
                     onCreate = { showBulk = true },
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
+                    onDelete = { deletingStudent = it },
                     classes = state.classes,
                     onAddToClasses = viewModel::addStudentToClasses
                 )
@@ -169,6 +174,7 @@ fun SchoolManagementScreen(
                     onQuery = viewModel::setQuery,
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
+                    onDelete = { deletingStudent = it },
                     onBulk = { showBulk = true },
                     onExport = {
                         pendingXlsx = studentWorkbook(state.students)
@@ -212,6 +218,30 @@ fun SchoolManagementScreen(
                 }
             },
             dismissButton = { TextButton(onClick = { deletingClass = null }) { Text("انصراف") } }
+        )
+    }
+
+    deletingStudent?.let { student ->
+        AlertDialog(
+            onDismissRequest = { deletingStudent = null },
+            title = { Text("حذف دانش‌آموز") },
+            text = {
+                Text(
+                    "حساب «${student.fullName.ifBlank { student.username.orEmpty() }}» و همه عضویت‌های کلاس او حذف شود؟ این عملیات برگشت‌پذیر نیست."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteStudent(student.id)
+                        deletingStudent = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD63B49))
+                ) { Text("تأیید حذف") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingStudent = null }) { Text("انصراف") }
+            }
         )
     }
 
@@ -321,6 +351,7 @@ private fun ClassRosterContent(
     onCreate: () -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
+    onDelete: (StudentProfile) -> Unit,
     classes: List<SchoolClass>,
     onAddToClasses: (String, Set<String>) -> Unit
 ) {
@@ -367,6 +398,7 @@ private fun ClassRosterContent(
                     student = student,
                     onToggle = onToggle,
                     onEdit = { onEdit(student) },
+                    onDelete = { onDelete(student) },
                     classes = classes,
                     onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
                 )
@@ -382,6 +414,7 @@ private fun StudentsContent(
     onQuery: (String) -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
+    onDelete: (StudentProfile) -> Unit,
     onBulk: () -> Unit,
     onExport: () -> Unit,
     classes: List<SchoolClass>,
@@ -437,6 +470,7 @@ private fun StudentsContent(
                     student = student,
                     onToggle = onToggle,
                     onEdit = { onEdit(student) },
+                    onDelete = { onDelete(student) },
                     classes = classes,
                     onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
                 )
@@ -450,6 +484,7 @@ private fun StudentCard(
     student: StudentProfile,
     onToggle: (String, Boolean) -> Unit,
     onEdit: () -> Unit,
+    onDelete: () -> Unit,
     classes: List<SchoolClass>,
     onAddToClasses: (Set<String>) -> Unit
 ) {
@@ -492,12 +527,12 @@ private fun StudentCard(
                     student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
                             onClick = { onToggle(student.id, !student.active) },
-                            modifier = Modifier.size(58.dp)
+                            modifier = Modifier.weight(1f).height(58.dp)
                         ) {
                             Icon(
                                 imageVector = if (student.active) Icons.Outlined.ToggleOn else Icons.Outlined.ToggleOff,
@@ -506,7 +541,7 @@ private fun StudentCard(
                                 modifier = Modifier.size(32.dp)
                             )
                         }
-                        IconButton(onClick = onEdit, modifier = Modifier.size(58.dp)) {
+                        IconButton(onClick = onEdit, modifier = Modifier.weight(1f).height(58.dp)) {
                             Icon(
                                 Icons.Outlined.Edit,
                                 contentDescription = "ویرایش دانش‌آموز",
@@ -515,7 +550,7 @@ private fun StudentCard(
                         }
                         IconButton(
                             onClick = { classPickerOpen = !classPickerOpen },
-                            modifier = Modifier.size(58.dp)
+                            modifier = Modifier.weight(1f).height(58.dp)
                         ) {
                             Icon(
                                 Icons.Outlined.Add,
@@ -525,11 +560,22 @@ private fun StudentCard(
                         }
                         IconButton(
                             onClick = { copyStudentInformation(context, student) },
-                            modifier = Modifier.size(58.dp)
+                            modifier = Modifier.weight(1f).height(58.dp)
                         ) {
                             Icon(
                                 Icons.Outlined.ContentCopy,
                                 contentDescription = "کپی اطلاعات دانش‌آموز",
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.weight(1f).height(58.dp)
+                        ) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = "حذف دانش‌آموز",
+                                tint = Color(0xFFD63B49),
                                 modifier = Modifier.size(30.dp)
                             )
                         }
@@ -900,10 +946,11 @@ private fun BulkStudentDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(
-            Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp, vertical = 8.dp),
-            contentAlignment = Alignment.TopCenter
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp).padding(top = 8.dp),
+            contentAlignment = Alignment.BottomCenter
         ) {
+            val listMaxHeight = (maxHeight - 168.dp).coerceAtLeast(150.dp).coerceAtMost(480.dp)
             Surface(
                 modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
                 shape = MaterialTheme.shapes.large,
@@ -953,7 +1000,7 @@ private fun BulkStudentDialog(
                         }
                     }
                     LazyColumn(
-                        Modifier.heightIn(max = 480.dp),
+                        Modifier.heightIn(max = listMaxHeight),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(rows.size) { index ->

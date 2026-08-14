@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -83,7 +84,12 @@ fun JalaliDateTimeField(
         JalaliDateTimeDialog(
             initialIso = iso,
             title = label,
+            canClear = iso != null,
             onDismiss = { open = false },
+            onClear = {
+                onChange(null)
+                open = false
+            },
             onConfirm = {
                 onChange(it)
                 open = false
@@ -96,7 +102,9 @@ fun JalaliDateTimeField(
 private fun JalaliDateTimeDialog(
     initialIso: String?,
     title: String,
+    canClear: Boolean,
     onDismiss: () -> Unit,
+    onClear: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
     val initial = remember(initialIso) { parseInitial(initialIso) }
@@ -204,9 +212,27 @@ private fun JalaliDateTimeDialog(
                         }
                     }
                     OutlinedButton(
-                        onClick = { onConfirm(Instant.now().toString()) },
+                        onClick = {
+                            val now = LocalDateTime.now()
+                            hour = now.hour.toString().padStart(2, '0')
+                            minute = now.minute.toString().padStart(2, '0')
+                            error = null
+                        },
                         shape = RoundedCornerShape(16.dp)
                     ) { Text("اکنون", fontWeight = FontWeight.Bold) }
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        IconButton(onClick = onClear, enabled = canClear) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = "حذف زمان تعیین‌شده",
+                                tint = if (canClear) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = .32f)
+                            )
+                        }
+                    }
                     Surface(color = Color(0xFFD63B49), shape = RoundedCornerShape(16.dp)) {
                         IconButton(onClick = onDismiss) {
                             Icon(Icons.Outlined.Close, contentDescription = "انصراف", tint = Color.White)
