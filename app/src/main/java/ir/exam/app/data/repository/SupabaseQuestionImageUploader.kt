@@ -112,22 +112,27 @@ class SupabaseQuestionImageUploader(context: Context) {
     ): String {
         val bitmap = decodeSampledBitmap(uri, maxDimension, forceSquare, attempt)
             ?: error("تصویر انتخاب‌شده قابل خواندن نیست.")
-        val stream = ByteArrayOutputStream()
-        val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Bitmap.CompressFormat.WEBP_LOSSY
-        } else {
-            Bitmap.CompressFormat.JPEG
-        }
-        val extension = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) "webp" else "jpg"
-        check(bitmap.compress(format, quality, stream)) { "فشرده‌سازی تصویر ناموفق بود." }
-        bitmap.recycle()
-        val bytes = stream.toByteArray()
-        check(bytes.size <= MAX_UPLOAD_BYTES) { "حجم تصویر پس از فشرده‌سازی بیش از ۸ مگابایت است." }
+        // bitmap روی هر مسیر (حتی خطا/OutOfMemoryError در مراحل بعدی) آزاد می‌شود
+        // تا تلاش‌های بعدی حلقهٔ retry حافظهٔ کافی داشته باشند.
+        try {
+            val stream = ByteArrayOutputStream()
+            val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Bitmap.CompressFormat.WEBP_LOSSY
+            } else {
+                Bitmap.CompressFormat.JPEG
+            }
+            val extension = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) "webp" else "jpg"
+            check(bitmap.compress(format, quality, stream)) { "فشرده‌سازی تصویر ناموفق بود." }
+            val bytes = stream.toByteArray()
+            check(bytes.size <= MAX_UPLOAD_BYTES) { "حجم تصویر پس از فشرده‌سازی بیش از ۸ مگابایت است." }
 
-        val path = "$prefix/${UUID.randomUUID()}.$extension"
-        val bucket = SupabaseProvider.client.storage.from(BUCKET)
-        bucket.upload(path, bytes) { upsert = false }
-        return bucket.publicUrl(path)
+            val path = "$prefix/${UUID.randomUUID()}.$extension"
+            val bucket = SupabaseProvider.client.storage.from(BUCKET)
+            bucket.upload(path, bytes) { upsert = false }
+            return bucket.publicUrl(path)
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     private fun decodeSampledBitmap(
@@ -141,8 +146,9 @@ class SupabaseQuestionImageUploader(context: Context) {
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
         // بودجهٔ پیکسل بر اساس حافظهٔ آزاد واقعی و تلاش جاری؛ در تلاش‌های بعدی نصف
-        // می‌شود و پیکسل‌ها به RGB_565 تقلیل می‌یابند.
-        val maxEdge = (maxDimension * 2 shr attempt).coerceAtLeast(maxDimension)
+        // می‌شود و پیکسل‌ها به RGB_565 تقلیل می‌یابند. لبهٔ مجاز از همان تلاش اول
+        // از maxDimension بیشتر نمی‌شود تا فشاری بی‌مورد به حافظه نیاید.
+        val maxEdge = (maxDimension shr attempt).coerceAtLeast(MIN_DECODE_EDGE)
         val runtime = Runtime.getRuntime()
         val freeBytes = runtime.maxMemory() - (runtime.totalMemory() - runtime.freeMemory())
         val affordable = (freeBytes / 4 / SAFETY_DIVISOR).coerceAtLeast(MIN_DECODE_PIXELS)
@@ -161,43 +167,53 @@ class SupabaseQuestionImageUploader(context: Context) {
             inPreferredConfig = if (attempt == 0) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565
         }
         val decoded = openInput(uri)?.use { BitmapFactory.decodeStream(it, null, options) } ?: return null
-        val rotation = runCatching {
-            openInput(uri)?.use { input ->
-                when (ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                    else -> 0f
-                }
-            } ?: 0f
-        }.getOrDefault(0f)
-        val oriented = if (rotation == 0f) decoded else {
-            Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, Matrix().apply { postRotate(rotation) }, true)
-                .also { if (it !== decoded) decoded.recycle() }
+        // هر bitmap میانی روی هر خطا (به‌ویژه OutOfMemoryError) بازیافت می‌شود
+        // تا حلقهٔ retry در uploadAt با نشتی حافظه مواجه نشود.
+        var current: Bitmap = decoded
+        try {
+            val rotation = runCatching {
+                openInput(uri)?.use { input ->
+                    when (ExifInterface(input).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                        ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                        ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                        ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                        else -> 0f
+                    }
+                } ?: 0f
+            }.getOrDefault(0f)
+            val oriented = if (rotation == 0f) decoded else {
+                Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, Matrix().apply { postRotate(rotation) }, true)
+                    .also { if (it !== decoded) decoded.recycle() }
+            }
+            current = oriented
+            val cropped = if (forceSquare && oriented.width != oriented.height) {
+                val side = minOf(oriented.width, oriented.height)
+                Bitmap.createBitmap(
+                    oriented,
+                    (oriented.width - side) / 2,
+                    (oriented.height - side) / 2,
+                    side,
+                    side
+                ).also { if (it !== oriented) oriented.recycle() }
+            } else oriented
+            current = cropped
+
+            val largest = maxOf(cropped.width, cropped.height)
+            if (largest <= maxDimension) return cropped
+
+            val scale = maxDimension.toFloat() / largest
+            val resized = Bitmap.createScaledBitmap(
+                cropped,
+                (cropped.width * scale).toInt().coerceAtLeast(1),
+                (cropped.height * scale).toInt().coerceAtLeast(1),
+                true
+            )
+            if (resized !== cropped) cropped.recycle()
+            return resized
+        } catch (t: Throwable) {
+            current.recycle()
+            throw t
         }
-        val cropped = if (forceSquare && oriented.width != oriented.height) {
-            val side = minOf(oriented.width, oriented.height)
-            Bitmap.createBitmap(
-                oriented,
-                (oriented.width - side) / 2,
-                (oriented.height - side) / 2,
-                side,
-                side
-            ).also { if (it !== oriented) oriented.recycle() }
-        } else oriented
-
-        val largest = maxOf(cropped.width, cropped.height)
-        if (largest <= maxDimension) return cropped
-
-        val scale = maxDimension.toFloat() / largest
-        val resized = Bitmap.createScaledBitmap(
-            cropped,
-            (cropped.width * scale).toInt().coerceAtLeast(1),
-            (cropped.height * scale).toInt().coerceAtLeast(1),
-            true
-        )
-        if (resized !== cropped) cropped.recycle()
-        return resized
     }
 
     private fun openInput(uri: Uri): InputStream? = if (uri.scheme.equals("file", true)) {
@@ -217,6 +233,7 @@ class SupabaseQuestionImageUploader(context: Context) {
         const val AVATAR_QUALITY = 88
         const val MAX_UPLOAD_BYTES = 8 * 1024 * 1024
         const val MAX_ATTEMPTS = 4
+        const val MIN_DECODE_EDGE = 640
         const val MAX_DECODE_PIXELS = 7_000_000L
         const val MIN_DECODE_PIXELS = 480_000L
         const val SAFETY_DIVISOR = 3L

@@ -36,7 +36,7 @@ class V21StudentBuilderPolishTest {
         val plus = bulk.indexOf("contentDescription = \"ردیف جدید\"")
         val create = bulk.indexOf("Text(\"ایجاد\")")
         val cancel = bulk.indexOf("contentDescription = \"انصراف\"")
-        val cards = bulk.indexOf("rows.indices.chunked(6)")
+        val cards = bulk.indexOf("rememberLazyListState()")
         // زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها می‌آید؛ کلاس‌ها حذف شده‌اند.
         assertTrue(plus >= 0 && create > plus && cancel > create && cards > cancel)
         assertFalse("classes still shown", "classes.forEach" in bulk)

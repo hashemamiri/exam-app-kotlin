@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V31 رفع غیب‌شدن گزینه، مخاطبان در مشخصات، پیغام آپدیت، رفع کرش آپلود و پنجره گروهی بدون کلاس
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V32 رفع کرش آپلود، اسکرول شماره کارت‌ها، پنجره ویرایش همانند گروهی و کپی رمز بدون اخطار
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -59,6 +59,24 @@ exam-app
 نسخه Kotlin:
 https://github.com/hashemamiri/exam-app-kotlin
 ```
+
+### قانون قطعی خصوصی‌سازی و پاک‌سازی workspace
+
+- ریپوی Kotlin تا این لحظه **عمومی (public)** است؛ کاربر قصد دارد آن را **private** کند.
+- پیش از خصوصی‌شدن، باید **همهٔ سورس لازم برای تغییرات و آپدیت‌های بعدی** یک‌بار
+  کلون و در workspace بازسازی شود تا کار ادامه‌یابد:
+
+```bash
+cd ~
+git clone https://github.com/hashemamiri/exam-app-kotlin.git exam-app-kotlin
+cd exam-app-kotlin && git fetch --unshallow
+```
+
+- workspace باید **همیشه تمیز** بماند: هیچ فایل موقت، لاگ، بخش (part)، آرشیو
+  میانی یا سورس تکراری نباید جا بماند؛ پس از هر تحویل پچ، فقط سورس پروژه،
+  پچ و هندآف باقی بماند.
+- پس از خصوصی‌شدن، دریافت تازهٔ سورس فقط با دسترسی معتبر (token/SSH) ممکن است؛
+  بنابراین کپی محلی/workspace مرجع اصلی ادامهٔ کار است.
 
 ---
 
@@ -3732,3 +3750,105 @@ APK Signature Scheme v2                Verified
 ```
 
 راهنمای مستقل: `STABLE_REORDER_UPDATE_PROMPT_V31_FA.md`.
+
+---
+
+## ۵۰) V32 — رفع کرش آپلود، اسکرول شماره کارت‌ها، ویرایش همانند گروهی و کپی رمز
+
+### وضعیت ورودی
+
+```text
+V31 build/device                         → SUCCESS (اعلام کاربر)
+گزارش دستگاه                            → پس از انتخاب تصویر جهت آپلود، برنامه کرش می‌کند
+```
+
+### ۱) رفع کرش آپلود تصویر
+
+```text
+علت: در SupabaseQuestionImageUploader بودجهٔ لبهٔ decode با
+      «maxDimension * 2 shr attempt» محاسبه می‌شد و در تلاش اول لبهٔ مجاز را
+      به ۴۴۰۰ (دو برابر هدف ۲۲۰۰) می‌رساند؛ در تلاش اول حافظهٔ بی‌مورد صرف
+      می‌شد. از سوی دیگر bitmapهای میانی هنگام OutOfMemoryError بازیافت
+      نمی‌شدند و در تلاش‌های بعدی حلقهٔ retry نشتی حافظه می‌ماند.
+اصلاح:
+- بودجهٔ لبهٔ decode → «maxDimension shr attempt» با کف MIN_DECODE_EDGE=640؛
+  تلاش اول دقیقاً روی هدف ۲۲۰۰ است و هر تلاش نصف می‌شود.
+- uploadOnce کل بدنه را در try/finally گذاشت و bitmap را روی هر مسیر بازیافت می‌کند.
+- decodeSampledBitmap با «var current: Bitmap» و catch (t: Throwable) هر bitmap
+  میانی را هنگام خطا بازیافت می‌کند تا نشتی بین تلاش‌های retry نماند.
+```
+
+### ۲) اسکرول شمارهٔ کارت‌ها در پنجرهٔ گروهی
+
+```text
+قبل: شمارهٔ کارت‌ها با rows.indices.chunked(6) در چند سطر ثابت و بدون اسکرول بودند.
+حالا: یک LazyRow افقی؛ با LaunchedEffect(activeIndex, rows.size) و
+      animateScrollToItem(activeIndex)، شمارهٔ کارت فعال خودکار به دید اسکرول می‌شود.
+```
+
+### ۳) پنجرهٔ ویرایش دانش‌آموز همانند پنجرهٔ گروهی
+
+```text
+StudentEditDialog بازنویسی شد تا دقیقاً مانند BulkStudentDialog باشد:
+- همان wrapper: Dialog + BoxWithConstraints + Surface هم‌عرض ۶۲۰dp + heightIn
+  از بالا + SOFT_INPUT_ADJUST_RESIZE.
+- به‌جای دکمه‌های +/ایجاد/×: دکمهٔ قرمز «انصراف» و دکمهٔ «ذخیره» در بالا.
+- فیلدها پیش‌پر از اطلاعات دانش‌آموز: نام/نام‌خانوادگی، نام پدر/نام کاربری،
+  پایه/رشته، رمز جدید اختیاری/رمز فعلی (غیرقابل بازیابی) و دختر/پسر/🎲.
+- عنوان «ویرایش دانش‌آموز» حذف شد.
+```
+
+### ۴) دکمهٔ کپی روی کارت دانش‌آموز
+
+```text
+- رمز همچنان از کادر رمز فعلی (حافظهٔ نشست knownPasswords) برداشته و به‌صورت
+  حساس کپی می‌شود.
+- اخطار «رمز قبلی در سامانه ذخیره نمی‌شود» از پیام Toast حذف شد؛ در نبود رمز،
+  فقط «اطلاعات دانش‌آموز کپی شد.» نمایش داده می‌شود.
+- متن fallback کلیپ‌بورد «رمز عبور: قابل بازیابی نیست…» حفظ شد (رمز قبلی hash است).
+```
+
+### فایل‌های کلیدی V32
+
+```text
+HANDOFF_KOTLIN_MIGRATION_FA.md
+CHANGELOG_FA.txt
+app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V32EditScrollCopyImageTest.kt
+app/src/test/java/ir/exam/app/ui/app/V31StableReorderUpdatePromptBulkTest.kt
+app/src/test/java/ir/exam/app/ui/app/V21StudentBuilderPolishTest.kt
+app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt
+scripts/verify_native_final.py
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز: V31
+```
+
+### نتیجه تست V32
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS (اجرای محلی اسکریپت)
+V32 upload/bulk/edit/copy source tests  → 7/7 (منبع-اسکریپت)
+رگرسیون V19/V21/V31                     → به‌روزرسانی شد
+lintDebug / assembleDebug               → باید در WSL با gradlew اجرا شود
+```
+
+### نکتهٔ مهم ادامهٔ کار
+
+اگر پس از این پچ باز هم در انتخاب/آپلود تصویر کرش دیدید، **logcat واقعی** همان
+لحظه (بدون فیلتر) لازم است؛ بدون آن حدس‌زدن ممنوع است. دستور دستگاه:
+
+```text
+adb logcat -d AndroidRuntime:E *:S
+```
+
+راهنمای مستقل: `IMAGE_BULK_EDIT_COPY_V32_FA.md`.

@@ -100,7 +100,7 @@ class V31StableReorderUpdatePromptBulkTest {
         assertTrue("while (attempt < MAX_ATTEMPTS)" in uploader)
         assertTrue("catch (oom: OutOfMemoryError)" in uploader)
         assertTrue("System.gc()" in uploader)
-        assertTrue("maxDimension * 2 shr attempt" in uploader)
+        assertTrue("maxDimension shr attempt" in uploader)
         assertTrue("runtime.maxMemory()" in uploader)
         assertTrue("MAX_DECODE_PIXELS = 7_000_000L" in uploader)
         assertTrue("Bitmap.Config.RGB_565" in uploader)
@@ -126,11 +126,13 @@ class V31StableReorderUpdatePromptBulkTest {
     }
 
     @Test
-    fun `only the numbered card list sits below the buttons with no scrolling`() {
+    fun `card numbers scroll horizontally and auto-scroll to the active card`() {
         val bulk = bulkSection()
-        assertTrue("rows.indices.chunked(6)" in bulk)
+        assertTrue("LazyRow(" in bulk)
+        assertTrue("rememberLazyListState()" in bulk)
+        assertTrue("animateScrollToItem(activeIndex)" in bulk)
         assertTrue("selected = activeIndex == index" in bulk)
-        assertFalse("horizontalScroll(rememberScrollState())" in bulk)
+        assertFalse("rows.indices.chunked(6)" in bulk)
     }
 
     @Test

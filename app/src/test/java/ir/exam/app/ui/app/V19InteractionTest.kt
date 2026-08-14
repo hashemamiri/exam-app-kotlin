@@ -52,7 +52,7 @@ class V19InteractionTest {
         assertTrue("contentAlignment = Alignment.TopCenter" in school)
         assertTrue("PersianUsernameSuggester.suggest" in school)
         assertTrue("BulkStudentDraft" in school)
-        assertTrue("🎲 رمز" in school)
+        assertTrue("🎲" in school)
         listOf(school, bank, calendar, wallet).forEach {
             assertTrue("PullToRefreshBox" in it)
             assertFalse("manual refresh text returned", "تازه‌سازی" in it)

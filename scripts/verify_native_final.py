@@ -231,7 +231,7 @@ require("dottedAlpha" in builder_radial and "progress.animateTo(1f, tween(620" i
         "fun addQuestion(type: QuestionType): String" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "builder synchronized radial motion or auto-open question contract missing")
 require("PersianUsernameSuggester.suggest" in school_screen and "BulkStudentDraft" in school_screen and
-        "contentAlignment = Alignment.TopCenter" in school_screen and "🎲 رمز" in school_screen,
+        "contentAlignment = Alignment.TopCenter" in school_screen and "🎲" in school_screen,
         "compact single/bulk student dialogs or username suggestions incomplete")
 require(all("PullToRefreshBox" in text and "تازه‌سازی" not in text for text in (
             school_screen, question_bank_screen,
@@ -588,7 +588,8 @@ require("widthIn(max = 620.dp)" in _bulk and
         "weight(1f, fill = false)" not in _bulk,
         "V28 bulk window does not match the single student window")
 require("activeIndex = rows.lastIndex" in _bulk and
-        "rows.indices.chunked(6)" in _bulk and
+        "rememberLazyListState()" in _bulk and
+        "animateScrollToItem(activeIndex)" in _bulk and
         "val row = rows[index]" in _bulk,
         "V28 bulk plus button does not replace the visible card")
 require("StandardFieldsOfStudy" in field_picker and
@@ -656,7 +657,7 @@ require("fun replaceImage" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/Ex
         "V29 replace-image path missing in builder ViewModel")
 require("activeIndex = rows.lastIndex" in _bulk and
         "rowComplete" in _bulk and
-        "rows.indices.chunked(6)" in _bulk and
+        "rememberLazyListState()" in _bulk and
         "selected = activeIndex == index" in _bulk,
         "V29 bulk single visible card with the numbered chips missing")
 require(all(marker in v29_guide for marker in (
@@ -724,13 +725,13 @@ require("LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_COD
         "V31 app-entry update prompt missing")
 require("while (attempt < MAX_ATTEMPTS)" in image_uploader and
         "catch (oom: OutOfMemoryError)" in image_uploader and
-        "maxDimension * 2 shr attempt" in image_uploader and
+        "maxDimension shr attempt" in image_uploader and
         "MAX_DECODE_PIXELS = 7_000_000L" in image_uploader,
         "V31 upload path can still crash on OutOfMemoryError")
 require("onCreate: (List<NewStudentRequest>) -> Unit" in _bulk and
         "رمز فعلی" in _bulk and
         "readOnly = true" in _bulk and
-        "rows.indices.chunked(6)" in _bulk and
+        "rememberLazyListState()" in _bulk and
         "classId" not in _bulk,
         "V31 classless bulk window with current-password box incomplete")
 require("knownPasswords[it.username.lowercase()]=it.password" in school_screen and

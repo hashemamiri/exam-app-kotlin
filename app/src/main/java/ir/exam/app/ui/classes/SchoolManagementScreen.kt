@@ -28,7 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
@@ -813,104 +815,48 @@ private fun StudentEditDialog(
     var newPassword by remember(student.id) { mutableStateOf("") }
     var passwordVisible by remember(student.id) { mutableStateOf(false) }
 
+    // پنجرهٔ ویرایش دقیقاً مانند پنجرهٔ افزودن گروهی: هم‌عرض ۶۲۰dp، از بالا،
+    // با دکمه‌های انصراف/ذخیره به‌جای +/ایجاد/× و فیلدهای پیش‌پر از اطلاعات
+    // دانش‌آموز؛ بدون عنوان «ویرایش دانش‌آموز».
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(
-            Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
+        val dialogView = LocalView.current
+        DisposableEffect(dialogView) {
+            val window = (dialogView.parent as? DialogWindowProvider)?.window
+            val previousMode = window?.attributes?.softInputMode
+            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            onDispose {
+                if (previousMode != null) window?.setSoftInputMode(previousMode)
+            }
+        }
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize().imePadding().padding(horizontal = 14.dp, vertical = 10.dp),
             contentAlignment = Alignment.TopCenter
         ) {
+            val availableHeight = maxHeight
             Surface(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 620.dp),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 620.dp).heightIn(max = availableHeight),
                 shape = MaterialTheme.shapes.large,
                 tonalElevation = 6.dp
             ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("ویرایش دانش‌آموز", style = MaterialTheme.typography.titleLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            first, { first = it.take(100) }, label = { Text("نام") },
-                            singleLine = true, modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            last, { last = it.take(100) }, label = { Text("نام خانوادگی") },
-                            singleLine = true, modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            fatherName, { fatherName = it.take(100) }, label = { Text("نام پدر") },
-                            singleLine = true, modifier = Modifier.weight(1f)
-                        )
-                        GradeOdometerPicker(
-                            value = grade,
-                            onValueChange = { grade = it.take(100) },
-                            modifier = Modifier.weight(1f),
-                            emptyLabel = "بدون پایه"
-                        )
-                    }
-                    FieldOfStudyPicker(
-                        value = field,
-                        onValueChange = { field = it.take(100) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            username,
-                            {
-                                username = it.lowercase().filter { c ->
-                                    c in 'a'..'z' || c.isDigit() || c == '_'
-                                }.take(20)
-                            },
-                            label = { Text("نام کاربری") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            newPassword,
-                            { newPassword = it.take(72) },
-                            label = { Text("رمز جدید اختیاری") },
-                            supportingText = {
-                                Text("رمز فعلی hash شده و قابل نمایش نیست؛ خالی بماند تغییر نمی‌کند و رمز جدید پس از ذخیره یک‌بار قابل کپی است.")
-                            },
-                            visualTransformation = passwordTransformation(passwordVisible),
-                            trailingIcon = {
-                                PasswordVisibilityButton(
-                                    visible = passwordVisible,
-                                    onToggle = { passwordVisible = !passwordVisible }
-                                )
-                            },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                Column(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FilterChip(
-                            selected = gender == "female",
-                            onClick = { gender = "female" },
-                            label = { Text("دختر") }
-                        )
-                        FilterChip(
-                            selected = gender == "male",
-                            onClick = { gender = "male" },
-                            label = { Text("پسر") },
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                        OutlinedButton(onClick = { newPassword = generatePassword(10) }) {
-                            Text("🎲 رمز")
-                        }
-                    }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                            Text("انصراف")
-                        }
+                        Button(
+                            onClick = onDismiss,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { contentDescription = "انصراف" }
+                        ) { Text("انصراف") }
                         Button(
                             enabled = first.isNotBlank() && username.length >= 4 &&
                                 gender in setOf("male", "female") &&
@@ -930,8 +876,120 @@ private fun StudentEditDialog(
                                     )
                                 )
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(2f)
                         ) { Text("ذخیره") }
+                    }
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // نام و نام خانوادگی در یک سطر
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    first,
+                                    { first = it.take(100) },
+                                    label = { Text("نام") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    last,
+                                    { last = it.take(100) },
+                                    label = { Text("نام خانوادگی") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // نام پدر و نام کاربری در یک سطر
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    fatherName,
+                                    { fatherName = it.take(100) },
+                                    label = { Text("نام پدر") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    username,
+                                    {
+                                        username = it.lowercase().filter { c ->
+                                            c in 'a'..'z' || c.isDigit() || c == '_'
+                                        }.take(20)
+                                    },
+                                    label = { Text("نام کاربری") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // پایه و رشته در یک سطر
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                GradeOdometerPicker(
+                                    value = grade,
+                                    onValueChange = { grade = it.take(100) },
+                                    modifier = Modifier.weight(1f),
+                                    emptyLabel = "بدون پایه"
+                                )
+                                FieldOfStudyPicker(
+                                    value = field,
+                                    onValueChange = { field = it.take(100) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // رمز جدید اختیاری و رمز فعلی در یک سطر؛ رمز قبلی hash شده
+                            // است و قابل بازیابی نیست.
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    newPassword,
+                                    { newPassword = it.take(72) },
+                                    label = { Text("رمز جدید اختیاری") },
+                                    supportingText = {
+                                        Text("رمز فعلی hash شده و قابل نمایش نیست؛ خالی بماند تغییر نمی‌کند و رمز جدید پس از ذخیره یک‌بار قابل کپی است.")
+                                    },
+                                    visualTransformation = passwordTransformation(passwordVisible),
+                                    trailingIcon = {
+                                        PasswordVisibilityButton(
+                                            visible = passwordVisible,
+                                            onToggle = { passwordVisible = !passwordVisible }
+                                        )
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = "قابل بازیابی نیست",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("رمز فعلی") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                FilterChip(
+                                    selected = gender == "female",
+                                    onClick = { gender = "female" },
+                                    label = { Text("دختر") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = gender == "male",
+                                    onClick = { gender = "male" },
+                                    label = { Text("پسر") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    onClick = { newPassword = generatePassword(10) },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("🎲") }
+                            }
+                        }
                     }
                 }
             }
@@ -1076,24 +1134,28 @@ private fun BulkStudentDialog(
                                 .semantics { contentDescription = "انصراف" }
                         ) { Text("×", style = MaterialTheme.typography.titleLarge) }
                     }
-                    // زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها؛ بدون اسکرول و بدون کلاس.
-                    rows.indices.chunked(6).forEach { chunk ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
-                        ) {
-                            chunk.forEach { index ->
-                                FilterChip(
-                                    selected = activeIndex == index,
-                                    onClick = { activeIndex = index },
-                                    label = {
-                                        Text(
-                                            PersianDigits.convert(index + 1) +
-                                                if (rowComplete(rows[index])) " ✓" else ""
-                                        )
-                                    }
-                                )
-                            }
+                    // شمارهٔ کارت‌ها به چپ/راست اسکرول می‌شوند و با اسکرول خودکار،
+                    // شمارهٔ کارت فعال همیشه در دید قرار می‌گیرد؛ بدون کلاس.
+                    val numberListState = rememberLazyListState()
+                    LaunchedEffect(activeIndex, rows.size) {
+                        if (rows.isNotEmpty()) numberListState.animateScrollToItem(activeIndex)
+                    }
+                    LazyRow(
+                        state = numberListState,
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(rows.size) { index ->
+                            FilterChip(
+                                selected = activeIndex == index,
+                                onClick = { activeIndex = index },
+                                label = {
+                                    Text(
+                                        PersianDigits.convert(index + 1) +
+                                            if (rowComplete(rows[index])) " ✓" else ""
+                                    )
+                                }
+                            )
                         }
                     }
                     val index = activeIndex
@@ -1288,7 +1350,7 @@ private fun copyStudentInformation(
     Toast.makeText(
         context,
         if (currentPassword != null) "اطلاعات و رمز فعلی به‌صورت حساس کپی شد."
-        else "اطلاعات قابل بازیابی کپی شد؛ رمز قبلی در سامانه ذخیره نمی‌شود.",
+        else "اطلاعات دانش‌آموز کپی شد.",
         Toast.LENGTH_LONG
     ).show()
 }
