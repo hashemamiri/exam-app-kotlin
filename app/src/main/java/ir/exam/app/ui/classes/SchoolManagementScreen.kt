@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -65,10 +64,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -87,6 +86,7 @@ import ir.exam.app.ui.common.GradeOdometerPicker
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.core.export.XlsxWorkbook
+import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
@@ -942,20 +942,13 @@ private fun BulkStudentDialog(
     var classId by remember { mutableStateOf(initialClassId ?: classes.firstOrNull()?.id.orEmpty()) }
     val rows = remember { mutableStateListOf(BulkStudentDraft()) }
     var error by remember { mutableStateOf<String?>(null) }
-    val rowsListState = rememberLazyListState()
-    // هر بار «+» زده شود، این شمارنده بالا می‌رود و کارت تازه خودکار دیده می‌شود.
-    var pendingRevealIndex by remember { mutableStateOf<Int?>(null) }
+    // فقط یک کارت در هر لحظه دیده می‌شود؛ «+» کارت تازه را جایگزین کارت قبلی
+    // می‌کند و پنجره هرگز بزرگ نمی‌شود. شماره‌های بالا برای بازگشت به ردیف‌های قبل است.
+    var activeIndex by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(pendingRevealIndex, rows.size) {
-        val target = pendingRevealIndex ?: return@LaunchedEffect
-        if (target in rows.indices) {
-            // دو frame صبر می‌کنیم تا کارت جدید اندازه‌گیری شود و بعد دقیق اسکرول کنیم.
-            withFrameNanos { }
-            withFrameNanos { }
-            rowsListState.animateScrollToItem(target)
-        }
-        pendingRevealIndex = null
-    }
+    fun rowComplete(row: BulkStudentDraft): Boolean =
+        row.first.isNotBlank() && row.username.length >= 4 &&
+            row.password.length >= 8 && row.gender in setOf("male", "female")
 
     fun recomputeSuggestions() {
         val seen = mutableMapOf<String, Int>()
@@ -1046,7 +1039,7 @@ private fun BulkStudentDialog(
                                 if (rows.size < 100) {
                                     rows.add(BulkStudentDraft())
                                     recomputeSuggestions()
-                                    pendingRevealIndex = rows.lastIndex
+                                    activeIndex = rows.lastIndex
                                 }
                             },
                             enabled = rows.size < 100,
@@ -1079,130 +1072,146 @@ private fun BulkStudentDialog(
                             )
                         }
                     }
-                    LazyColumn(
-                        state = rowsListState,
-                        modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        items(rows.size) { index ->
-                            val row = rows[index]
-                            Card(Modifier.fillMaxWidth()) {
-                                Column(
-                                    Modifier.padding(10.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        OutlinedTextField(
-                                            row.first,
-                                            {
-                                                rows[index] = row.copy(first = it.take(100))
-                                                recomputeSuggestions()
-                                            },
-                                            label = { Text("نام") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        OutlinedTextField(
-                                            row.last,
-                                            {
-                                                rows[index] = row.copy(last = it.take(100))
-                                                recomputeSuggestions()
-                                            },
-                                            label = { Text("نام خانوادگی") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        OutlinedTextField(
-                                            row.father,
-                                            { rows[index] = row.copy(father = it.take(100)) },
-                                            label = { Text("نام پدر") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        GradeOdometerPicker(
-                                            value = row.grade,
-                                            onValueChange = {
-                                                rows[index] = row.copy(grade = it.take(100))
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            emptyLabel = "بدون پایه"
-                                        )
-                                    }
-                                    FieldOfStudyPicker(
-                                        value = row.field,
-                                        onValueChange = {
-                                            rows[index] = row.copy(field = it.take(100))
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
+                        Text(
+                            "دانش‌آموز ${PersianDigits.convert(activeIndex + 1)} از ${PersianDigits.convert(rows.size)}",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        rows.indices.forEach { index ->
+                            FilterChip(
+                                selected = activeIndex == index,
+                                onClick = { activeIndex = index },
+                                label = {
+                                    Text(
+                                        PersianDigits.convert(index + 1) +
+                                            if (rowComplete(rows[index])) " ✓" else ""
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        OutlinedTextField(
-                                            row.username,
-                                            {
+                                }
+                            )
+                        }
+                    }
+                    val index = activeIndex
+                    val row = rows[index]
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    row.first,
+                                    {
+                                        rows[index] = row.copy(first = it.take(100))
+                                        recomputeSuggestions()
+                                    },
+                                    label = { Text("نام") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    row.last,
+                                    {
+                                        rows[index] = row.copy(last = it.take(100))
+                                        recomputeSuggestions()
+                                    },
+                                    label = { Text("نام خانوادگی") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    row.father,
+                                    { rows[index] = row.copy(father = it.take(100)) },
+                                    label = { Text("نام پدر") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                GradeOdometerPicker(
+                                    value = row.grade,
+                                    onValueChange = {
+                                        rows[index] = row.copy(grade = it.take(100))
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    emptyLabel = "بدون پایه"
+                                )
+                            }
+                            FieldOfStudyPicker(
+                                value = row.field,
+                                onValueChange = {
+                                    rows[index] = row.copy(field = it.take(100))
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedTextField(
+                                    row.username,
+                                    {
+                                        rows[index] = row.copy(
+                                            username = it.lowercase().filter { c ->
+                                                c in 'a'..'z' || c.isDigit() || c == '_'
+                                            }.take(20),
+                                            usernameEdited = true
+                                        )
+                                    },
+                                    label = { Text("نام کاربری") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    row.password,
+                                    { rows[index] = row.copy(password = it.take(72)) },
+                                    label = { Text("رمز") },
+                                    visualTransformation = passwordTransformation(row.passwordVisible),
+                                    trailingIcon = {
+                                        PasswordVisibilityButton(
+                                            visible = row.passwordVisible,
+                                            onToggle = {
                                                 rows[index] = row.copy(
-                                                    username = it.lowercase().filter { c ->
-                                                        c in 'a'..'z' || c.isDigit() || c == '_'
-                                                    }.take(20),
-                                                    usernameEdited = true
+                                                    passwordVisible = !row.passwordVisible
                                                 )
-                                            },
-                                            label = { Text("نام کاربری") },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
+                                            }
                                         )
-                                        OutlinedTextField(
-                                            row.password,
-                                            { rows[index] = row.copy(password = it.take(72)) },
-                                            label = { Text("رمز") },
-                                            visualTransformation = passwordTransformation(row.passwordVisible),
-                                            trailingIcon = {
-                                                PasswordVisibilityButton(
-                                                    visible = row.passwordVisible,
-                                                    onToggle = {
-                                                        rows[index] = row.copy(
-                                                            passwordVisible = !row.passwordVisible
-                                                        )
-                                                    }
-                                                )
-                                            },
-                                            singleLine = true,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                    ) {
-                                        FilterChip(
-                                            selected = row.gender == "female",
-                                            onClick = { rows[index] = row.copy(gender = "female") },
-                                            label = { Text("دختر") },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        FilterChip(
-                                            selected = row.gender == "male",
-                                            onClick = { rows[index] = row.copy(gender = "male") },
-                                            label = { Text("پسر") },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        OutlinedButton(
-                                            onClick = {
-                                                rows[index] = row.copy(password = generatePassword(10))
-                                            },
-                                            modifier = Modifier.weight(1f)
-                                        ) { Text("🎲") }
-                                        if (rows.size > 1) {
-                                            TextButton(
-                                                onClick = {
-                                                    rows.removeAt(index)
-                                                    recomputeSuggestions()
-                                                },
-                                                modifier = Modifier.weight(1f)
-                                            ) { Text("حذف") }
-                                        }
-                                    }
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                FilterChip(
+                                    selected = row.gender == "female",
+                                    onClick = { rows[index] = row.copy(gender = "female") },
+                                    label = { Text("دختر") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = row.gender == "male",
+                                    onClick = { rows[index] = row.copy(gender = "male") },
+                                    label = { Text("پسر") },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(
+                                    onClick = {
+                                        rows[index] = row.copy(password = generatePassword(10))
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) { Text("🎲") }
+                                if (rows.size > 1) {
+                                    TextButton(
+                                        onClick = {
+                                            rows.removeAt(index)
+                                            recomputeSuggestions()
+                                            activeIndex = (index - 1).coerceAtLeast(0)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) { Text("حذف") }
                                 }
                             }
                         }

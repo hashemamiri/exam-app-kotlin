@@ -443,6 +443,9 @@ class ExamBuilderViewModel(
     fun removeImage(questionId: String, imageId: String) { update(questionId) { question ->
         question.copy(images = question.images.filterNot { it.id == imageId })
     } }
+    fun replaceImage(questionId: String, imageId: String, uri: String) { update(questionId) { question ->
+        question.copy(images = question.images.map { if (it.id == imageId) it.copy(uri = uri) else it })
+    } }
     fun setAnswerImageMode(questionId: String, mode: String) { update(questionId) { question ->
         if (mode !in setOf("no", "optional", "required")) question
         else question.copy(answerImageMode = mode, maxAnswerImages = if (mode == "no") 0 else question.maxAnswerImages.coerceAtLeast(1))

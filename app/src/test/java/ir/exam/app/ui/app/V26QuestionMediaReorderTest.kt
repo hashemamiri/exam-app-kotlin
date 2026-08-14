@@ -56,7 +56,9 @@ class V26QuestionMediaReorderTest {
         assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
         assertTrue("heightIn(max = availableHeight)" in bulk)
-        assertTrue("weight(1f, fill = false)" in bulk)
+        // V29: تک‌کارتی؛ افزودن ردیف پنجره را بزرگ نمی‌کند.
+        assertTrue("activeIndex = rows.lastIndex" in bulk)
+        assertFalse("LazyColumn(" in bulk)
     }
 
     @Test

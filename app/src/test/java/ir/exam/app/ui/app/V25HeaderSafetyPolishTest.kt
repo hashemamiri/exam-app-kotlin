@@ -84,10 +84,10 @@ class V25HeaderSafetyPolishTest {
         assertTrue("BoxWithConstraints" in bulk)
         assertTrue("Modifier.fillMaxSize().imePadding()" in bulk)
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
-        // V28: پنجره گروهی هم‌اندازه پنجره تکی شد؛ ارتفاع تا سقف فضای بالای IME می‌رود
-        // ولی دیگر آن را به‌زور پر نمی‌کند.
+        // V29: پنجره گروهی تک‌کارتی است؛ «+» کارت تازه را جایگزین می‌کند و پنجره بزرگ نمی‌شود.
         assertTrue("heightIn(max = availableHeight)" in bulk)
-        assertTrue("weight(1f, fill = false)" in bulk)
+        assertTrue("activeIndex = rows.lastIndex" in bulk)
+        assertFalse("bulk list returned", "LazyColumn(" in bulk)
         assertFalse("bottom gap above keyboard returned", "padding(horizontal = 12.dp, vertical = 8.dp)" in bulk)
     }
 

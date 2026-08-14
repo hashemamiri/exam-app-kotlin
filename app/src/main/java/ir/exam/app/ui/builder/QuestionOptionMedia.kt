@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DragIndicator
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Card
@@ -58,6 +59,7 @@ import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.data.repository.LocalImageRepository
 import ir.exam.app.domain.model.ImageEditRequest
+import ir.exam.app.ui.image.FullScreenImageViewer
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.NativeMathText
@@ -75,6 +77,7 @@ fun SingleImagePicker(
     val repository = remember(context) { LocalImageRepository(context) }
     val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf<Uri?>(null) }
+    var viewing by remember { mutableStateOf<String?>(null) }
     var processing by remember { mutableStateOf(false) }
     var imageError by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
@@ -86,7 +89,7 @@ fun SingleImagePicker(
             imageError = null
             scope.launch {
                 repository.prepare(ImageEditRequest(uri))
-                    .onSuccess { onChange(it.uri.toString()) }
+                    .onSuccess { editing = Uri.parse(it.uri.toString()) }
                     .onFailure { imageError = it.message }
                 processing = false
             }
@@ -106,10 +109,20 @@ fun SingleImagePicker(
         if (!value.isNullOrBlank()) {
             AsyncImage(
                 model = value,
-                contentDescription = label,
+                contentDescription = "بازکردن $label در اندازه کامل",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(30.dp).clickable { editing = Uri.parse(value) }
+                modifier = Modifier.size(30.dp).clickable { viewing = value }
             )
+            IconButton(
+                onClick = { editing = Uri.parse(value) },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Outlined.Edit,
+                    contentDescription = "ویرایش $label",
+                    modifier = Modifier.size(14.dp)
+                )
+            }
             Surface(
                 modifier = Modifier.size(17.dp).clickable { onChange(null) },
                 shape = CircleShape,
@@ -136,6 +149,9 @@ fun SingleImagePicker(
                 editing = null
             }
         )
+    }
+    viewing?.let { uri ->
+        FullScreenImageViewer(uri = uri, onDismiss = { viewing = null })
     }
 }
 
@@ -170,7 +186,7 @@ fun ReorderDragButton(
     Surface(shape = RoundedCornerShape(13.dp), color = background) {
         IconButton(
             onClick = {},
-            modifier = Modifier.pointerInput(description) {
+            modifier = Modifier.pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         accumulated = 0f
@@ -214,8 +230,8 @@ fun ReorderDragButton(
     }
 }
 
-/** آستانهٔ مشترک جابه‌جایی گزینه و جورکردنی. */
-const val ReorderStepDp: Float = 46f
+/** آستانهٔ مشترک جابه‌جایی؛ دقیقاً همان آستانهٔ کارت سؤال تا رفتار یکی باشد. */
+const val ReorderStepDp: Float = 52f
 
 fun persianOptionLetter(index: Int): String = listOf(
     "الف", "ب", "پ", "ت", "ث", "ج", "چ", "ح", "خ", "د",

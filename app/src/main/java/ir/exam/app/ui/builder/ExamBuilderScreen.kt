@@ -570,7 +570,8 @@ private fun QuestionEditor(
     }
     var dragAccumulator by remember(question.id) { mutableFloatStateOf(0f) }
     var dragActive by remember(question.id) { mutableStateOf(false) }
-    val dragStepPx = with(LocalDensity.current) { 52.dp.toPx() }
+    // همان آستانهٔ مشترک گزینه/جورکردنی تا رفتار جابه‌جایی‌ها یکسان باشد.
+    val dragStepPx = with(LocalDensity.current) { ReorderStepDp.dp.toPx() }
     val neonColor = MaterialTheme.colorScheme.primary
     val cardColor by animateColorAsState(
         targetValue = if (dragActive) MaterialTheme.colorScheme.primaryContainer
@@ -675,10 +676,6 @@ private fun QuestionEditor(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(question.text, { viewModel.updateText(question.id, it) }, label = { Text("متن سؤال") }, modifier = Modifier.fillMaxWidth())
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { formulaTarget = FormulaTarget("question") }) { Text("درج فرمول") }
-                if ('$' in question.text) Text("پیش‌نمایش Native:")
-            }
             if ('$' in question.text) NativeMathText(question.text, modifier = Modifier.fillMaxWidth())
             ExistingFormulaEditor(
                 source = question.text,
@@ -689,8 +686,10 @@ private fun QuestionEditor(
                 images = question.images,
                 freePlacement = question.imagePosition == "free",
                 onAdd = { uris -> viewModel.addImages(question.id, uris) },
+                onReplace = { imageId, uri -> viewModel.replaceImage(question.id, imageId, uri) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
-                onRemove = { imageId -> viewModel.removeImage(question.id, imageId) }
+                onRemove = { imageId -> viewModel.removeImage(question.id, imageId) },
+                onFormula = { formulaTarget = FormulaTarget("question") }
             )
             Text("تصویر پاسخ دانش‌آموز")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

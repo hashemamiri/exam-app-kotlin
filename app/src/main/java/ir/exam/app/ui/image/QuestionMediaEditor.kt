@@ -1,6 +1,7 @@
 package ir.exam.app.ui.image
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -52,20 +55,35 @@ import ir.exam.app.ui.builder.MediaDraft
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-/** مدیریت رسانهٔ متن سؤال: دوربین و thumbnailهای آیکنی در یک سطر، بدون کارت جداگانه. */
+/**
+ * مدیریت رسانهٔ متن سؤال: آیکن فرمول و دوربین در یک سطر، thumbnailهای آیکنی
+ * بدون کارت جداگانه. پس از انتخاب عکس، ویرایشگر تصویر باز می‌شود و پس از
+ * تأیید، thumbnail اضافه می‌شود. لمس thumbnail تصویر را تمام‌صفحه با زوم
+ * نشان می‌دهد؛ مداد نیز برای ویرایش دوباره در دسترس است.
+ */
 @Composable
 fun QuestionMediaEditor(
     images: List<MediaDraft>,
     freePlacement: Boolean,
     onAdd: (List<String>) -> Unit,
+    onReplace: (String, String) -> Unit,
     onMove: (String, Float, Float) -> Unit,
-    onRemove: (String) -> Unit
+    onRemove: (String) -> Unit,
+    onFormula: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
     val scope = rememberCoroutineScope()
     var processing by remember { mutableStateOf(false) }
     var imageError by remember { mutableStateOf<String?>(null) }
+    // صف ویرایش پس از انتخاب: هر عکس پیش‌آماده شده یکی‌یکی وارد ویرایشگر می‌شود.
+    var batchQueue by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val batchResults = remember { mutableListOf<String>() }
+    // ویرایش دوبارهٔ یک تصویر موجود با مداد.
+    var reEditTarget by remember { mutableStateOf<Pair<String, Uri>?>(null) }
+    // نمایش تمام‌صفحهٔ تصویر با زوم.
+    var viewerUri by remember { mutableStateOf<String?>(null) }
+
     val picker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(10)
     ) { uris ->
@@ -88,9 +106,12 @@ fun QuestionMediaEditor(
                         .onSuccess { safeUris += it.uri.toString() }
                         .onFailure { if (firstError == null) firstError = it.message }
                 }
-                if (safeUris.isNotEmpty()) onAdd(safeUris)
                 imageError = firstError
                 processing = false
+                if (safeUris.isNotEmpty()) {
+                    batchResults.clear()
+                    batchQueue = safeUris.map(Uri::parse)
+                }
             }
         }
     }
@@ -100,6 +121,9 @@ fun QuestionMediaEditor(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        IconButton(onClick = onFormula) {
+            Icon(Icons.Outlined.Functions, contentDescription = "درج فرمول متن سؤال")
+        }
         IconButton(
             onClick = {
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -119,7 +143,9 @@ fun QuestionMediaEditor(
                     CompactImageThumbnail(
                         uri = image.uri,
                         description = "تصویر متن سؤال",
-                        onRemove = { onRemove(image.id) }
+                        onRemove = { onRemove(image.id) },
+                        onView = { viewerUri = image.uri },
+                        onEdit = { reEditTarget = image.id to Uri.parse(image.uri) }
                     )
                 }
             }
@@ -164,28 +190,69 @@ fun QuestionMediaEditor(
             }
         }
     }
+
+    // ویرایشگر پس از انتخاب عکس؛ هر تصویر صف یکی‌یکی ویرایش می‌شود.
+    batchQueue.firstOrNull()?.let { source ->
+        InteractiveImageEditorDialog(
+            source = source,
+            onDismiss = {
+                batchQueue = emptyList()
+                batchResults.clear()
+            },
+            onDone = { edited ->
+                batchResults += edited.toString()
+                val rest = batchQueue.drop(1)
+                if (rest.isEmpty()) {
+                    batchQueue = emptyList()
+                    onAdd(batchResults.toList())
+                    batchResults.clear()
+                } else {
+                    batchQueue = rest
+                }
+            }
+        )
+    }
+
+    // ویرایش دوبارهٔ تصویر موجود.
+    reEditTarget?.let { (imageId, source) ->
+        InteractiveImageEditorDialog(
+            source = source,
+            onDismiss = { reEditTarget = null },
+            onDone = { edited ->
+                onReplace(imageId, edited.toString())
+                reEditTarget = null
+            }
+        )
+    }
+
+    // نمایش تمام‌صفحه با زوم و ضربدر بستن.
+    viewerUri?.let { uri ->
+        FullScreenImageViewer(uri = uri, onDismiss = { viewerUri = null })
+    }
 }
 
 @Composable
 private fun CompactImageThumbnail(
     uri: String,
     description: String,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onView: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .size(42.dp)
+            .size(44.dp)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
             model = uri,
-            contentDescription = null,
+            contentDescription = "بازکردن $description در اندازه کامل",
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(30.dp)
+            modifier = Modifier.size(30.dp).clickable(onClick = onView)
         )
         Surface(
-            modifier = Modifier.align(Alignment.TopEnd).size(17.dp).clickable(onClick = onRemove),
+            modifier = Modifier.align(Alignment.TopEnd).size(16.dp).clickable(onClick = onRemove),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.error
         ) {
@@ -194,7 +261,21 @@ private fun CompactImageThumbnail(
                     Icons.Outlined.Close,
                     contentDescription = "حذف تصویر",
                     tint = MaterialTheme.colorScheme.onError,
-                    modifier = Modifier.size(11.dp)
+                    modifier = Modifier.size(10.dp)
+                )
+            }
+        }
+        Surface(
+            modifier = Modifier.align(Alignment.BottomEnd).size(16.dp).clickable(onClick = onEdit),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Outlined.Edit,
+                    contentDescription = "ویرایش تصویر",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(10.dp)
                 )
             }
         }

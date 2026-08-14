@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V28 جابه‌جایی گزینه، تصویر امن، پنجره گروهی و رشته
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۴ — V29 جابه‌جایی پایدار گزینه، آیکن فرمول، نمایش کامل تصویر و پنجره گروهی تک‌کارتی
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3411,3 +3411,122 @@ APK Signature Scheme v2                Verified
 راهنمای مستقل: `REORDER_IMAGE_BULK_FIELD_V28_FA.md`.
 
 Edge/Secret/Dependency جدید ندارد؛ فقط SQL V28 یک‌بار اجرا شود.
+
+---
+
+## ۴۷) V29 — جابه‌جایی پایدار گزینه‌ها، آیکن فرمول، نمایش کامل تصویر و پنجره گروهی تک‌کارتی
+
+### وضعیت ورودی
+
+```text
+V28 build/release                     → SUCCESS (اعلام کاربر)
+خطای دستگاه باقی‌مانده               → جابه‌جایی گزینه‌ها هنوز مثل کارت سؤال نبود
+```
+
+### علت قطعی نقص جابه‌جایی V28
+
+`ReorderDragButton` به `pointerInput(description)` کلید می‌خورد و `description`
+شامل برچسب گزینه است. با هر جابه‌جایی، برچسب (الف → ب) عوض می‌شود، کلید
+`pointerInput` تغییر می‌کند و gesture وسط کار لغو می‌شود؛ بنابراین هر پرش
+نیازمند لمس طولانی تازه بود. کارت سؤال به شناسهٔ پایدار کلید می‌خورد و این
+مشکل را نداشت.
+
+### اصلاح جابه‌جایی
+
+```text
+pointerInput(description)   →  pointerInput(Unit)
+آستانه گزینه 46dp           →  ReorderStepDp = 52f (دقیقاً آستانه کارت سؤال)
+کارت سؤال                   →  ReorderStepDp.dp.toPx()
+```
+
+- gesture وسط کار دیگر بازنشانی نمی‌شود و کشیدن پیوسته تا انتها ادامه دارد؛
+- آستانه، رنگ فعال، haptic، rememberUpdatedState و اسکرول زیر انگشت یکسان‌اند؛
+- جورکردنی راست/چپ از همان دکمهٔ مشترک استفاده می‌کنند.
+
+### آیکن فرمول در سطر دوربین
+
+- دکمهٔ متنی «درج فرمول» از بخش متن حذف شد؛
+- آیکن `Functions` اکنون در `QuestionMediaEditor` کنار آیکن دوربین در همان سطر است؛
+- پیش‌نمایش/ویرایش فرمول موجود بدون تغییر ماند.
+
+### نمایش تمام‌صفحه تصویر
+
+```text
+فایل جدید: ui/image/FullScreenImageViewer.kt
+لمس thumbnail → تمام‌صفحه با ContentScale.Fit
+زوم pinch تا ۸ برابر + جابه‌جایی + دوبار لمس
+بستن فقط با ضربدر
+مداد کوچک → ویرایش دوباره تصویر موجود
+```
+
+### ویرایش پس از انتخاب عکس
+
+```text
+SingleImagePicker (گزینه/جورکردنی):
+  prepare امن → InteractiveImageEditorDialog → تأیید = ذخیره، انصراف = دور انداختن
+QuestionMediaEditor (تصویر متن سؤال):
+  هر عکس انتخاب‌شده پس از prepare یکی‌یکی وارد ویرایشگر می‌شود؛
+  پس از آخرین تأیید همه با هم اضافه می‌شوند؛ انصراف کل صف را می‌اندازد.
+ViewModel: replaceImage برای جایگزینی نتیجه ویرایش دوباره.
+```
+
+### پنجره گروهی تک‌کارتی
+
+```text
+فهرست ردیف‌ها حذف شد؛ در هر لحظه فقط یک کارت دیده می‌شود.
+«+» کارت تازه را جایگزین کارت قبلی می‌کند؛ پنجره هرگز بزرگ نمی‌شود.
+شماره‌های بالا هر ردیف را بازمی‌گردانند؛ ردیف کامل «✓» دارد.
+حذف، ردیف فعال را برمی‌دارد و کارت قبلی را نشان می‌دهد.
+ارسال نهایی همچنان همه ردیف‌ها را در بر می‌گیرد (۱..۱۰۰).
+```
+
+### فایل‌های کلیدی V29
+
+```text
+BUILDER_MEDIA_BULK_V29_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt
+app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V29ReorderViewerEditBulkTest.kt
+app/src/test/java/ir/exam/app/ui/app/V28ReorderImageBulkFieldTest.kt
+app/src/test/java/ir/exam/app/ui/app/V27DataImageOptionsTest.kt
+app/src/test/java/ir/exam/app/ui/app/V26QuestionMediaReorderTest.kt
+app/src/test/java/ir/exam/app/ui/app/V25HeaderSafetyPolishTest.kt
+scripts/verify_native_final.py
+```
+
+### امنیت رمز
+
+بدون تغییر: رمز قبلی Supabase Auth غیرقابل بازیابی است، `plain_password`
+بازنمی‌گردد و فقط رمز جدید ثبت‌شده یک‌بار با Clipboard حساس قابل کپی است.
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز: V28 (SQL رشته تحصیلی باید قبلاً اجرا شده باشد)
+```
+
+### نتیجه تست V29
+
+```text
+Kotlin compile                         PASS
+JVM tests                              199/199 PASS
+V29 reorder/viewer/edit/bulk tests       14/14 PASS
+FINAL_NATIVE_VERIFY                    PASS
+lintDebug                              PASS — 0 error
+assembleDebug                          PASS
+Debug package                          ir.exam.app.native
+Debug versionCode                      3 (fallback محلی)
+APK Signature Scheme v2                Verified
+```
+
+راهنمای مستقل: `BUILDER_MEDIA_BULK_V29_FA.md`.

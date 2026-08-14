@@ -61,6 +61,7 @@ v27_guide=(ROOT/"DATA_IMAGE_OPTIONS_V27_FA.md").read_text()
 v28_migration=(ROOT/"supabase/migrations/20260814_native_field_of_study_v28.sql").read_text()
 v28_sql_copy=(ROOT/"SQL_NATIVE_FIELD_OF_STUDY_V28.sql").read_text()
 v28_guide=(ROOT/"REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
+v29_guide=(ROOT/"BUILDER_MEDIA_BULK_V29_FA.md").read_text()
 image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 field_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/common/FieldOfStudyPicker.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
@@ -471,7 +472,7 @@ require(all(marker in question_model for marker in (
         "key(optionId)" in builder_screen and "key(itemId)" in matching_builder,
         "live stable-id option/matching reorder is incomplete")
 require("safeUris += it.uri.toString()" in question_media and "editQueue.firstOrNull" not in question_media and
-        "onSuccess { onChange(it.uri.toString()) }" in matching_builder and
+        "onSuccess { editing = Uri.parse(it.uri.toString()) }" in matching_builder and
         "onSuccess { avatarEditing = it.uri }" in profile_settings,
         "raw picker images still reach the editor before safe preprocessing")
 menu_tile=neumorphic_design.split("fun NeumorphicMenuTile(",1)[1].split("/** Morph واقعی",1)[0]
@@ -578,12 +579,14 @@ require("widthIn(max = 620.dp)" in _bulk and
         "padding(horizontal = 14.dp, vertical = 10.dp)" in _bulk and
         "heightIn(max = availableHeight)" in _bulk and
         "height(maxHeight)" not in _bulk and
-        "weight(1f, fill = false)" in _bulk,
+        "LazyColumn(" not in _bulk and
+        "weight(1f, fill = false)" not in _bulk,
         "V28 bulk window does not match the single student window")
-require("pendingRevealIndex = rows.lastIndex" in _bulk and
-        "rowsListState.animateScrollToItem(target)" in _bulk and
-        "state = rowsListState" in _bulk,
-        "V28 bulk plus button does not reveal the new card")
+require("activeIndex = rows.lastIndex" in _bulk and
+        "PersianDigits.convert(activeIndex + 1)" in _bulk and
+        "selected = activeIndex == index" in _bulk and
+        "val row = rows[index]" in _bulk,
+        "V28 bulk plus button does not replace the visible card")
 require("StandardFieldsOfStudy" in field_picker and
         "customLabel = \"سایر رشته\"" in field_picker and
         "standardValues: List<String> = StandardSchoolGrades" in grade_odometer and
@@ -615,6 +618,45 @@ require(v28_sql_copy.strip() == v28_migration.strip(),
 require(all(marker in v28_guide for marker in (
             "جابه‌جایی گزینه","انتخاب تصویر","پنجره گروهی","رشته تحصیلی","امنیت رمز"
         )), "V28 Persian guide coverage incomplete")
+
+# ---- V29: reorder parity fix / formula+camera row / full-size viewer / edit-after-pick / single-card bulk ----
+require("pointerInput(Unit)" in matching_builder,
+        "V29 option/matching drag is still keyed on a label that changes while dragging")
+require("ReorderStepDp.dp.toPx()" in builder_screen and "const val ReorderStepDp: Float = 52f" in matching_builder,
+        "V29 question-card and option drag thresholds are not the same")
+require("Icons.Outlined.Functions" in question_media and
+        "onFormula" in question_media and
+        "Icons.Outlined.PhotoCamera" in question_media,
+        "V29 formula icon is not in the same row as the camera")
+require("OutlinedButton(onClick = { formulaTarget = FormulaTarget(\"question\") })" not in builder_screen and
+        "درج فرمول متن سؤال" in question_media,
+        "V29 text formula button is not converted to an icon beside the camera")
+full_viewer=(ROOT/"app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt").read_text()
+require("FullScreenImageViewer" in question_media and
+        "detectTransformGestures" in full_viewer and
+        "MAX_ZOOM" in full_viewer and
+        "Icons.Outlined.Close" in full_viewer and
+        "viewerUri" in question_media and
+        "onView" in question_media,
+        "V29 full-size zoomable image viewer is not wired to thumbnails")
+require("FullScreenImageViewer" in matching_builder and
+        "viewing = value" in matching_builder and
+        "Icons.Outlined.Edit" in matching_builder and
+        "reEditTarget" in question_media,
+        "V29 option/thumbnails cannot open the viewer or re-edit")
+require("batchQueue = safeUris.map(Uri::parse)" in question_media and
+        "InteractiveImageEditorDialog(" in question_media and
+        "batchQueue.firstOrNull()" in question_media,
+        "V29 picked images do not open the editor before being added")
+require("fun replaceImage" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "V29 replace-image path missing in builder ViewModel")
+require("activeIndex = rows.lastIndex" in _bulk and
+        "rowComplete" in _bulk and
+        "PersianDigits.convert(index + 1)" in _bulk,
+        "V29 bulk single visible card with numbered chips missing")
+require(all(marker in v29_guide for marker in (
+            "جابه‌جایی پایدار گزینه","آیکن فرمول","نمایش تمام‌صفحه تصویر","ویرایش پس از انتخاب","پنجره گروهی تک‌کارتی","امنیت رمز دانش‌آموز"
+        )), "V29 Persian guide coverage incomplete")
 
 for match in re.finditer(
     r"(?im)^\s*(delete\s+from|update\s+)([^;]+);",

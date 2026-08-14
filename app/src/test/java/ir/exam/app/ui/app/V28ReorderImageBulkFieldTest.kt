@@ -138,20 +138,24 @@ class V28ReorderImageBulkFieldTest {
     }
 
     @Test
-    fun `bulk list grows with content instead of filling the window`() {
+    fun `bulk dialog shows one card and never grows with new rows`() {
         val bulk = bulkSection()
-        assertTrue("weight(1f, fill = false)" in bulk)
+        // یک کارت در هر لحظه؛ ارتفاع با افزودن ردیف تغییر نمی‌کند.
+        assertTrue("val row = rows[index]" in bulk)
+        assertFalse("bulk window still grows its own list", "LazyColumn(" in bulk)
+        assertFalse("list weight kept", "weight(1f, fill = false)" in bulk)
         assertTrue("Modifier.fillMaxWidth().padding(14.dp)" in bulk)
     }
 
     @Test
-    fun `plus button scrolls the new bulk card into view`() {
+    fun `plus button replaces the visible card instead of growing the window`() {
         val bulk = bulkSection()
-        assertTrue("pendingRevealIndex = rows.lastIndex" in bulk)
-        assertTrue("rowsListState.animateScrollToItem(target)" in bulk)
-        // دو frame صبر می‌شود تا کارت تازه اندازه‌گیری شده باشد.
-        assertTrue(Regex("withFrameNanos \\{ \\}\\s*\\n\\s*withFrameNanos \\{ \\}").containsMatchIn(bulk))
-        assertTrue("state = rowsListState" in bulk)
+        assertTrue("activeIndex = rows.lastIndex" in bulk)
+        // کارت تازه همان‌جا جایگزین کارت قبلی می‌شود و پنجره بزرگ نمی‌شود.
+        assertTrue("PersianDigits.convert(activeIndex + 1)" in bulk)
+        assertTrue("rows.indices.forEach { index ->" in bulk)
+        assertTrue("selected = activeIndex == index" in bulk)
+        assertTrue("activeIndex = (index - 1).coerceAtLeast(0)" in bulk)
     }
 
     @Test

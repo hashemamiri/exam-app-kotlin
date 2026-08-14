@@ -48,7 +48,7 @@ class V27DataImageOptionsTest {
         }
         assertFalse("main picker still opens raw editor", "editQueue.firstOrNull" in media)
         assertTrue("safeUris += it.uri.toString()" in media)
-        assertTrue("onSuccess { onChange(it.uri.toString()) }" in option)
+        assertTrue("onSuccess { editing = Uri.parse(it.uri.toString()) }" in option)
         assertTrue("onSuccess { avatarEditing = it.uri }" in profile)
     }
 
@@ -57,10 +57,10 @@ class V27DataImageOptionsTest {
         val school = source("app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt")
         val bulk = school.substringAfter("private fun BulkStudentDialog(").substringBefore("internal fun studentClipboardText")
         assertTrue("contentAlignment = Alignment.TopCenter" in bulk)
-        // V28: هم‌اندازه پنجره تکی؛ محتوا از بالا و بدون کشیدن اجباری تا کف.
+        // V29: فقط یک کارت دیده می‌شود و پنجره با «+» بزرگ نمی‌شود.
         assertTrue("heightIn(max = availableHeight)" in bulk)
         assertTrue("Modifier.fillMaxWidth().padding(14.dp)" in bulk)
-        assertTrue("weight(1f, fill = false)" in bulk)
+        assertTrue("activeIndex = rows.lastIndex" in bulk)
         assertFalse("bottom alignment returned", "Alignment.BottomCenter" in bulk)
     }
 
