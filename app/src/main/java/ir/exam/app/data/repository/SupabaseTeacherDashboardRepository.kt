@@ -12,6 +12,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
+data class ManagerApprovalItem(val id: String, val targetType: String, val action: String, val status: String, val expiresAt: String, val managerName: String)
+
 class SupabaseTeacherDashboardRepository {
     suspend fun getMyExams(): Result<List<ExamDashboardDto>> = runCatching {
         val userId = currentTeacherId()
@@ -41,6 +43,21 @@ class SupabaseTeacherDashboardRepository {
             costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
             balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
         )
+    }
+
+    suspend fun managerRequests(): Result<List<ManagerApprovalItem>> = runCatching {
+        val raw = rpcObject("native_teacher_manager_requests_v41", buildJsonObject { }).throwIfDashboardError()
+        (raw["items"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            fun text(key: String) = item[key]?.jsonPrimitive?.contentOrNull.orEmpty()
+            ManagerApprovalItem(text("id"), text("target_type"), text("action"), text("status"), text("expires_at"), text("manager_name"))
+        }
+    }
+
+    suspend fun decideManagerRequest(id: String, approve: Boolean): Result<Unit> = runCatching {
+        rpcObject("native_teacher_decide_manager_request_v41", buildJsonObject {
+            put("p_request", id); put("p_approve", approve)
+        }).throwIfDashboardError(); Unit
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =

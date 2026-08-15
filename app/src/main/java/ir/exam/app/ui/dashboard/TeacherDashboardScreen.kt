@@ -31,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,9 +39,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.printing.OfficialPrintController
 import ir.exam.app.data.dto.ExamDashboardDto
+import ir.exam.app.data.repository.ManagerApprovalItem
+import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +58,11 @@ fun TeacherDashboardScreen(
     val printController = remember(context.applicationContext) { OfficialPrintController(context.applicationContext) }
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
+    val approvalRepository = remember { SupabaseTeacherDashboardRepository() }
+    val approvalScope = rememberCoroutineScope()
+    var managerRequests by remember { mutableStateOf<List<ManagerApprovalItem>>(emptyList()) }
+    var approvalError by remember { mutableStateOf<String?>(null) }
+    fun loadManagerRequests() { approvalScope.launch { approvalRepository.managerRequests().onSuccess { managerRequests = it; approvalError = null }.onFailure { approvalError = it.message } } }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
@@ -78,7 +87,7 @@ fun TeacherDashboardScreen(
     var duplicateCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var expandedExamId by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(refreshKey) { viewModel.load() }
+    LaunchedEffect(refreshKey) { viewModel.load(); loadManagerRequests() }
     LaunchedEffect(state.exportFile) {
         state.exportFile?.let { exportLauncher.launch(it.fileName) }
     }
@@ -105,6 +114,23 @@ fun TeacherDashboardScreen(
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                NeumorphicPanel(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("درخواست‌های مدیر", style = MaterialTheme.typography.titleLarge)
+                        approvalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                        val pending = managerRequests.filter { it.status == "pending" }
+                        if (pending.isEmpty()) Text("درخواست در انتظار تأیید ندارید.")
+                        pending.forEach { request ->
+                            Text("${request.managerName} · ${if (request.targetType == "class") "کلاس" else "حساب دانش‌آموز"} · ${if (request.action == "delete") "حذف" else "ویرایش"}")
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { approvalScope.launch { approvalRepository.decideManagerRequest(request.id, true).onSuccess { loadManagerRequests() }.onFailure { approvalError = it.message } } }) { Text("تأیید") }
+                                OutlinedButton(onClick = { approvalScope.launch { approvalRepository.decideManagerRequest(request.id, false).onSuccess { loadManagerRequests() }.onFailure { approvalError = it.message } } }) { Text("رد") }
+                            }
+                        }
+                    }
+                }
+            }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(onClick = onCreateExam) { Text("ساخت آزمون جدید") }

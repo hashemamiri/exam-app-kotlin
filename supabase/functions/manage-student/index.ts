@@ -127,6 +127,18 @@ Deno.serve(async (request) => {
       const id = clean(body.id, 64);
       const current = await ownedStudent(id);
       if (!current) return json({ error: 'دانش‌آموز یافت نشد یا دسترسی ندارید' }, 403);
+      const approvalPayload = { kind: 'profile_update', first_name: clean(body.first_name, 100), last_name: clean(body.last_name, 100), gender: clean(body.gender, 12), username: clean(body.username, 20).toLowerCase(), password_changed: !!String(body.password || '') };
+      let approvalId: string | null = null;
+      if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
+        const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'edit').contains('payload', approvalPayload).eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (!approved) {
+          const { data: membership } = await service.from('school_memberships').select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
+          if (!membership?.school_id) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
+          await service.from('manager_approval_requests').insert({ school_id: membership.school_id, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
+          return json({ error: 'درخواست ویرایش برای تأیید معلم ارسال شد' });
+        }
+        approvalId = approved.id;
+      }
       const firstName = clean(body.first_name, 100);
       const lastName = clean(body.last_name, 100);
       const fullName = joinName(firstName, lastName);
@@ -156,7 +168,7 @@ Deno.serve(async (request) => {
         gender: gender || null,
         username,
       };
-      const { error: profileError } = await service.from('profiles').update(profilePatch).eq('id', id).eq('teacher_id', teacherId);
+      const { error: profileError } = await service.from('profiles').update(profilePatch).eq('id', id);
       if (profileError) return json({ error: 'ویرایش پروفایل ناموفق بود' }, 500);
 
       const authPatch: Record<string, unknown> = {
@@ -166,30 +178,58 @@ Deno.serve(async (request) => {
       if (password) authPatch.password = password;
       const { error: updateError } = await service.auth.admin.updateUserById(id, authPatch);
       if (updateError) {
-        await service.from('profiles').update(before).eq('id', id).eq('teacher_id', teacherId);
+        await service.from('profiles').update(before).eq('id', id);
         return json({ error: 'ویرایش حساب Auth ناموفق بود؛ پروفایل بازگردانی شد' }, 502);
       }
-      await audit('update', id, { username_changed: username !== current.username, password_changed: !!password });
+      if (approvalId) await service.from('manager_approval_requests').update({ status: 'executed', executed_at: new Date().toISOString() }).eq('id', approvalId);
+      await audit('update', id, { username_changed: username !== current.username, password_changed: !!password, approval_id: approvalId });
       return json({ ok: true });
     }
 
     if (action === 'reset_password') {
       const id = clean(body.id, 64);
       const password = String(body.password || '');
-      if (!(await ownedStudent(id))) return json({ error: 'دانش‌آموز یافت نشد یا دسترسی ندارید' }, 403);
+      const current = await ownedStudent(id);
+      if (!current) return json({ error: 'دانش‌آموز یافت نشد یا دسترسی ندارید' }, 403);
       if (password.length < 8 || password.length > 72) return json({ error: 'رمز باید بین ۸ تا ۷۲ کاراکتر باشد' }, 400);
+      let approvalId: string | null = null;
+      const approvalPayload = { kind: 'reset_password' };
+      if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
+        const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'edit').contains('payload', approvalPayload).eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (!approved) {
+          const { data: membership } = await service.from('school_memberships').select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
+          if (!membership?.school_id) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
+          await service.from('manager_approval_requests').insert({ school_id: membership.school_id, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'edit', payload: approvalPayload });
+          return json({ error: 'درخواست تغییر رمز برای تأیید معلم ارسال شد' });
+        }
+        approvalId = approved.id;
+      }
       const { error } = await service.auth.admin.updateUserById(id, { password });
       if (error) return json({ error: 'تغییر رمز در Auth ناموفق بود' }, 502);
-      await audit('reset_password', id);
+      if (approvalId) await service.from('manager_approval_requests').update({ status: 'executed', executed_at: new Date().toISOString() }).eq('id', approvalId);
+      await audit('reset_password', id, { approval_id: approvalId });
       return json({ ok: true });
     }
 
     if (action === 'delete') {
       const id = clean(body.id, 64);
-      if (!(await ownedStudent(id))) return json({ error: 'دانش‌آموز یافت نشد یا دسترسی ندارید' }, 403);
+      const current = await ownedStudent(id);
+      if (!current) return json({ error: 'دانش‌آموز یافت نشد یا دسترسی ندارید' }, 403);
+      let approvalId: string | null = null;
+      if (teacher?.role === 'manager' && current.teacher_id !== teacherId) {
+        const { data: approved } = await service.from('manager_approval_requests').select('id').eq('manager_id', teacherId).eq('teacher_id', current.teacher_id).eq('target_type', 'student').eq('target_id', id).eq('action', 'delete').eq('status', 'approved').gt('expires_at', new Date().toISOString()).is('executed_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (!approved) {
+          const { data: membership } = await service.from('school_memberships').select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
+          if (!membership?.school_id) return json({ error: 'دسترسی مدیر معتبر نیست' }, 403);
+          await service.from('manager_approval_requests').insert({ school_id: membership.school_id, manager_id: teacherId, teacher_id: current.teacher_id, target_type: 'student', target_id: id, action: 'delete' });
+          return json({ error: 'درخواست حذف برای تأیید معلم ارسال شد' });
+        }
+        approvalId = approved.id;
+      }
       const { error } = await service.auth.admin.deleteUser(id);
       if (error) return json({ error: 'حذف حساب ناموفق بود' }, 502);
-      await audit('delete', id);
+      if (approvalId) await service.from('manager_approval_requests').update({ status: 'executed', executed_at: new Date().toISOString() }).eq('id', approvalId);
+      await audit('delete', id, { approval_id: approvalId });
       return json({ ok: true });
     }
 

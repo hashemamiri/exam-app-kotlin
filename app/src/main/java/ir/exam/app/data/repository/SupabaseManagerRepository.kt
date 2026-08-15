@@ -106,8 +106,13 @@ internal class SupabaseManagerRepository {
     suspend fun createTeacherClass(teacherId:String,name:String,grade:String,field:String):Result<Unit> = runCatching {
         SupabaseProvider.client.postgrest.rpc("native_manager_save_teacher_class_v40c",buildJsonObject{put("p_teacher",teacherId);put("p_name",name);put("p_grade",grade);put("p_field",field)}).decodeAs<JsonObject>().checked();Unit
     }
+    suspend fun editTeacherClass(classId:String,name:String,grade:String,field:String):Result<Unit> = runCatching {
+        val raw=SupabaseProvider.client.postgrest.rpc("native_manager_change_teacher_class_v41",buildJsonObject{put("p_class",classId);put("p_action","edit");put("p_payload",buildJsonObject{put("name",name);put("grade",grade);put("field",field)})}).decodeAs<JsonObject>().checked()
+        if(raw["approval_required"]?.jsonPrimitive?.booleanOrNull==true) error(raw.text("message")); Unit
+    }
     suspend fun deleteTeacherClass(classId:String):Result<Unit> = runCatching {
-        SupabaseProvider.client.postgrest.rpc("native_manager_delete_teacher_class_v40c",buildJsonObject{put("p_class",classId)}).decodeAs<JsonObject>().checked();Unit
+        val raw=SupabaseProvider.client.postgrest.rpc("native_manager_change_teacher_class_v41",buildJsonObject{put("p_class",classId);put("p_action","delete")}).decodeAs<JsonObject>().checked()
+        if(raw["approval_required"]?.jsonPrimitive?.booleanOrNull==true) error(raw.text("message")); Unit
     }
     suspend fun classRoster(classId:String):Result<ManagerClassRoster> = runCatching {
         val raw=SupabaseProvider.client.postgrest.rpc("native_manager_class_roster_v40c",buildJsonObject{put("p_class",classId)}).decodeAs<JsonObject>().checked()

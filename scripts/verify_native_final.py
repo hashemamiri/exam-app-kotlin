@@ -1035,3 +1035,12 @@ require("teacher?.role === 'manager'" in (ROOT/"supabase/functions/manage-studen
         "V40C manager student mutation is not school scoped")
 
 require(all(marker in manager_foundation for marker in ("delay(1_000)","clockNow","invites = invites.filterNot","FilterChipDefaults.filterChipColors","Modifier.size(34.dp)")) and "managerInviteHeader" in app_shell, "V41A teacher/invite polish incomplete")
+
+# V41B — server-enforced manager approval for teacher-owned data
+v41_sql=(ROOT/'supabase/migrations/20260816_native_manager_teacher_approval_v41.sql').read_text()
+v41_copy=(ROOT/'sql/manual/SQL_NATIVE_MANAGER_TEACHER_APPROVAL_V41.sql').read_text()
+v41_edge=(ROOT/'supabase/functions/manage-student/index.ts').read_text()
+v41_dashboard=(ROOT/'app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt').read_text()
+require(v41_sql==v41_copy and all(x in v41_sql for x in ('manager_approval_requests',"interval '24 hours'",'native_teacher_decide_manager_request_v41','executed_at','security definer')), 'V41 approval SQL/copy incomplete')
+require('manager_approval_requests' in v41_edge and 'current.teacher_id !== teacherId' in v41_edge and 'approval_id: approvalId' in v41_edge, 'V41 student Edge approval enforcement incomplete')
+require('درخواست‌های مدیر' in v41_dashboard and 'decideManagerRequest(request.id, true)' in v41_dashboard and 'decideManagerRequest(request.id, false)' in v41_dashboard, 'V41 teacher approval inbox incomplete')
