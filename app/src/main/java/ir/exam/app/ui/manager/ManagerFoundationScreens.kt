@@ -275,6 +275,6 @@ private fun safeManagerError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("Headers:")
     .replace(Regex("(?i)authorization[^,\n]*"), "")
     .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .replace(Regex("(?i)bearer\s+[A-Za-z0-9._-]+"), "")
+    .replace(Regex("(?i)bearer\\s+[A-Za-z0-9._-]+"), "")
     .take(240)
     .ifBlank { "عملیات مدیریت مدرسه ناموفق بود." }

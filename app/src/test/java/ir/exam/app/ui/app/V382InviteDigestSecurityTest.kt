@@ -24,6 +24,6 @@ class V382InviteDigestSecurityTest {
         assertTrue("substringBefore(\"Headers:\")" in manager)
         assertTrue("authorization" in manager.lowercase())
         assertTrue("apikey" in manager.lowercase())
-        assertTrue("bearer" in manager.lowercase())
+        assertTrue("bearer\\\\s+" in manager.lowercase())
     }
 }

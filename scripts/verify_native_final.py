@@ -932,3 +932,5 @@ require(all(marker in manager_foundation for marker in (
             'substringBefore("URL:")','substringBefore("Headers:")',
             'Regex("(?i)authorization','Regex("(?i)apikey','Regex("(?i)bearer'
         )), "V38.2 manager error redaction missing")
+
+require(r'Regex("(?i)bearer\\s+' in manager_foundation, "V38.3 Bearer regex escape is not Kotlin-safe")

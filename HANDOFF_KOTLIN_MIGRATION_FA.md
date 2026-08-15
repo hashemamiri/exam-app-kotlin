@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38.2 رفع digest دعوت و جلوگیری از نمایش Header/Token
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38.3 اصلاح کامپایل Regex پاک‌سازی Bearer
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4464,3 +4464,23 @@ Edge deploy                             → ندارد
 
 نکته امنیتی: session token موجود در screenshot افشاشده تلقی می‌شود؛ کاربر باید
 فوراً از حساب خارج و sessionهای آن کاربر را در Supabase Auth باطل کند.
+
+## ۶۲) V38.3 — اصلاح کامپایل Regex پاک‌سازی Bearer
+
+### گزارش CI
+
+```text
+compileDebugKotlin → FAILED
+ManagerFoundationScreens.kt:278 → Unsupported escape sequence
+```
+
+در رشتهٔ معمولی Kotlin، `\s` باید در سورس به‌شکل `\\s` نوشته شود. Regex پاک‌سازی
+Bearer اصلاح شد؛ رفتار امنیتی همان حذف token است و SQL/Edge تغییری ندارد.
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
+SQL / Edge / Secret / Dependency        → بدون تغییر
+پیش‌نیاز                                → V38.2
+```
