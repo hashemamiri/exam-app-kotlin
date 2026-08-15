@@ -77,10 +77,13 @@ class V23InteractionGradeOdometerTest {
                 grade = "هفتم"
             )
         )
-        listOf("سارا احمدی", "sara_ahmadi", "رضا", "هفتم", "فعال").forEach {
+        listOf("نام: سارا", "نام خانوادگی: احمدی", "sara_ahmadi", "رضا", "هفتم", "کلاس‌ها: هفتم الف").forEach {
             assertTrue("missing copied profile value $it", it in copied)
         }
-        assertTrue("قابل بازیابی نیست" in copied)
+        assertTrue("رمز: —" in copied)
+        assertFalse("وضعیت:" in copied)
+        assertFalse("شناسه حساب:" in copied)
+        assertFalse("جنسیت:" in copied)
         assertFalse("a fake/retrieved password must not be copied", "plain_password" in school)
         assertFalse("student model must not expose password", "student.password" in school)
     }

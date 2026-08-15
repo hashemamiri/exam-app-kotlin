@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V34.1 اصلاح کامپایل تست شمارش اندازهٔ کادرهای رمز
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V35 رنگ جنسیت، نوار رمز، کپی دقیق، کارت فشرده و crop آزاد
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4111,3 +4111,94 @@ testDebugUnitTest / lintDebug         → باید در WSL/GitHub Actions تک�
 SQL / Edge / Migration / Dependency   → ندارد
 پیش‌نیاز                              → V34
 ```
+
+
+## ۵۵) V35 — رنگ جنسیت، نوار رمز، کپی دقیق، کارت فشرده و crop آزاد
+
+### ورودی
+
+```text
+V34 build                               → SUCCESS (اعلام کاربر)
+جنسیت edit/bulk                         → دختر صورتی، پسر آبی هنگام انتخاب
+edit password                           → بزرگ‌تر، چشم مرکزی، X قرمز و ✓ سبز
+copy card                               → فقط ۸ مشخصهٔ تعیین‌شده + رمز current/Vault
+crop                                    → حرکت آزاد، حذف میله ضلع، resize هم‌جهت
+student card                            → نام+پایه+رشته و پدر+username در دو سطر
+```
+
+### پنجره‌های دانش‌آموز
+
+`genderFilterChipColors` با selected container صورتی `0xFFFF5C9A` و آبی
+`0xFF3B9EFF` در `StudentEditDialog` و `BulkStudentDialog` اعمال شد.
+
+در edit، Buttonهای متنی حذف و نوار آیکنی ساخته شد:
+
+```text
+Surface قرمز + Close(contentDescription="انصراف")
+IconButton مرکزی Visibility/VisibilityOff
+Surface سبز + Check(contentDescription="ذخیره")
+```
+
+یک state به نام `passwordVisible` هر دو کادر را کنترل می‌کند. trailingIconهای داخل
+هر دو فیلد حذف شدند. هر دو فیلد دقیقاً `weight(1f).height(64.dp)` و textStyle برابر
+`titleMedium` دارند.
+
+### Clipboard
+
+`studentClipboardText` فقط خطوط زیر را می‌سازد:
+
+```text
+نام، نام خانوادگی، نام پدر، پایه، رشته، نام کاربری، رمز، کلاس‌ها
+```
+
+عنوان، نام کامل ترکیبی، جنسیت، وضعیت و شناسه حذف شدند. اولویت رمز:
+`oneTimePassword` سپس `currentPassword` است؛ currentPassword کارت از cache پرشده
+توسط `StudentPasswordVault.read(student.id)` می‌آید. در نبود هر دو، «—» نوشته
+می‌شود. علامت Clipboard حساس در صورت وجود رمز حفظ شده است.
+
+### کارت دانش‌آموز
+
+```text
+سطر بسته: fullName + فاصله + grade fieldOfStudy
+سطر باز:  fatherName در یک ستون + username در ستون دیگر
+```
+
+خطوط جدا و تکراری پایه/رشته حذف شدند؛ کلاس‌ها و دکمه‌های عملیات حفظ شدند.
+
+### crop
+
+`CropGeometry.moveCenter` اضافه شد تا حرکت آزاد مرکز مربع و دایره به‌صورت خالص
+و قابل تست انجام و در مرز تصویر clamp شود. Gesture داخلی با `padding(18.dp)` از
+چهار ناحیهٔ resize جداست. نوارهای لمسی اضلاع ۱۸dp و نامرئی هستند؛ Boxهای سفید
+`34×5` و `5×34` حذف شدند. قرارداد `resizeDeltaForEdge` و
+`recenterAfterResize` حفظ و با تست ثابت‌ماندن ضلع مقابل پوشش داده شد.
+
+### فایل‌ها
+
+```text
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt
+app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
+app/src/test/java/ir/exam/app/ui/app/V23InteractionGradeOdometerTest.kt
+app/src/test/java/ir/exam/app/ui/app/V31StableReorderUpdatePromptBulkTest.kt
+app/src/test/java/ir/exam/app/ui/app/V32EditScrollCopyImageTest.kt
+app/src/test/java/ir/exam/app/ui/image/V33ImageEditorPasswordTest.kt
+app/src/test/java/ir/exam/app/ui/app/V34BuilderVaultCropTest.kt
+app/src/test/java/ir/exam/app/ui/app/V35StudentUiCropClipboardTest.kt
+scripts/verify_native_final.py
+CHANGELOG_FA.txt
+STUDENT_UI_CROP_V35_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### بررسی و عملیات
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+V35 pure/source tests                   → اضافه شد
+SQL / Edge / Migration / Dependency     → ندارد
+پیش‌نیاز                                → V34.1
+```
+
+راهنمای مستقل: `STUDENT_UI_CROP_V35_FA.md`.

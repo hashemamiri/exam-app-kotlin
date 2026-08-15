@@ -40,8 +40,9 @@ class V33ImageEditorPasswordTest {
             .substringBefore("private data class BulkStudentDraft")
         assertTrue("currentPassword: String?" in edit)
         assertTrue("value = currentPassword.orEmpty()" in edit)
-        assertTrue("currentPasswordVisible" in edit)
-        assertTrue("passwordTransformation(currentPasswordVisible)" in edit)
+        assertTrue("passwordTransformation(passwordVisible)" in edit)
+        assertTrue("passwordVisible = !passwordVisible" in edit)
+        assertFalse("currentPasswordVisible" in edit)
         assertFalse("رمز فعلی hash شده و قابل نمایش نیست" in edit)
         assertFalse("supportingText" in edit)
     }

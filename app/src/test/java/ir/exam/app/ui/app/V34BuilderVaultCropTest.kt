@@ -61,7 +61,7 @@ class V34BuilderVaultCropTest {
         assertTrue("circular = forceSquare" in editor)
         assertTrue("if (circular) CircleShape" in editor)
         assertTrue("if (forceSquare) \"برش دایره‌ای پروفایل\"" in editor)
-        assertTrue(".fillMaxSize()\n                .padding(26.dp)\n                .pointerInput(Unit)" in editor)
+        assertTrue(".fillMaxSize()\n                .padding(18.dp)\n                .pointerInput(circular)" in editor)
         assertTrue("CropGeometry.resizeDeltaForEdge(edge, delta)" in editor)
     }
 
@@ -85,7 +85,7 @@ class V34BuilderVaultCropTest {
         val school = source("app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt")
         val edit = school.substringAfter("private fun StudentEditDialog(")
             .substringBefore("private data class BulkStudentDraft")
-        val equalSizeMarker = "Modifier.weight(1f).height(56.dp)"
+        val equalSizeMarker = "Modifier.weight(1f).height(64.dp)"
         assertTrue(Regex(Regex.escape(equalSizeMarker)).findAll(edit).count() == 2)
     }
 }

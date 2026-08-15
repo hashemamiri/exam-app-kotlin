@@ -88,10 +88,13 @@ class V32EditScrollCopyImageTest {
     }
 
     @Test
-    fun `edit dialog uses cancel and save instead of plus create and cross`() {
+    fun `edit dialog uses red cancel green save and central password eye`() {
         val edit = editSection()
-        assertTrue("Text(\"انصراف\")" in edit)
-        assertTrue("Text(\"ذخیره\")" in edit)
+        assertTrue("Icons.Outlined.Close" in edit)
+        assertTrue("contentDescription = \"انصراف\"" in edit)
+        assertTrue("Icons.Outlined.Check" in edit)
+        assertTrue("contentDescription = \"ذخیره\"" in edit)
+        assertTrue("Icons.Outlined.Visibility" in edit)
         assertFalse("Text(\"ایجاد\")" in edit)
         assertFalse("Text(\"+\"" in edit)
         assertFalse("Text(\"×\"" in edit)

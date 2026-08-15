@@ -229,12 +229,18 @@ fun InteractiveImageEditorDialog(
                             modifier = Modifier.offset(frameLeft, frameTop).size(side),
                             circular = forceSquare,
                             onMove = { dx, dy ->
-                                cropCenterX = CropGeometry.clampCenter(
-                                    safeCenterX + dx / displayWidthPx, sideXFraction
+                                val (movedX, movedY) = CropGeometry.moveCenter(
+                                    safeCenterX,
+                                    safeCenterY,
+                                    dx,
+                                    dy,
+                                    displayWidthPx,
+                                    displayHeightPx,
+                                    sideXFraction,
+                                    sideYFraction
                                 )
-                                cropCenterY = CropGeometry.clampCenter(
-                                    safeCenterY + dy / displayHeightPx, sideYFraction
-                                )
+                                cropCenterX = movedX
+                                cropCenterY = movedY
                             },
                             onResize = { edge, delta ->
                                 val oldSide = cropSide
@@ -364,14 +370,13 @@ private fun CropFrame(
 ) {
     val frameShape = if (circular) CircleShape else RoundedCornerShape(2.dp)
     Box(modifier.border(2.dp, Color.White, frameShape)) {
-        // حرکت کل کادر فقط از ناحیهٔ میانی انجام می‌شود. در V33 gesture والد روی
-        // دستگیره‌ها هم اجرا می‌شد و همزمان با resize کل کادر را حرکت می‌داد؛
-        // به همین دلیل ضلع دقیقاً در جهت انگشت کشیده نمی‌شد.
+        // مربع و دایره از تمام ناحیهٔ داخلی آزادانه حرکت می‌کنند. تنها نوار لمسی
+        // نامرئی ۱۸dp چهار ضلع برای resize رزرو شده تا move و resize همزمان نشوند.
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(26.dp)
-                .pointerInput(Unit) {
+                .padding(18.dp)
+                .pointerInput(circular) {
                     detectDragGestures { change, drag ->
                         change.consume()
                         onMove(drag.x, drag.y)
@@ -380,22 +385,22 @@ private fun CropFrame(
         )
         CropEdgeHandle(
             edge = CropEdgeKind.TOP,
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(26.dp),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(18.dp),
             onResize = onResize
         )
         CropEdgeHandle(
             edge = CropEdgeKind.BOTTOM,
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(26.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(18.dp),
             onResize = onResize
         )
         CropEdgeHandle(
             edge = CropEdgeKind.LEFT,
-            modifier = Modifier.align(Alignment.CenterStart).width(26.dp).fillMaxHeight(),
+            modifier = Modifier.align(Alignment.CenterStart).width(18.dp).fillMaxHeight(),
             onResize = onResize
         )
         CropEdgeHandle(
             edge = CropEdgeKind.RIGHT,
-            modifier = Modifier.align(Alignment.CenterEnd).width(26.dp).fillMaxHeight(),
+            modifier = Modifier.align(Alignment.CenterEnd).width(18.dp).fillMaxHeight(),
             onResize = onResize
         )
     }
@@ -407,6 +412,7 @@ private fun CropEdgeHandle(
     modifier: Modifier,
     onResize: (CropEdgeKind, Float) -> Unit
 ) {
+    // دستگیرهٔ نامرئی: خطوط/میله‌های روی اضلاع حذف شده‌اند اما سطح لمس باقی است.
     Box(
         modifier.pointerInput(edge) {
             detectDragGestures { change, drag ->
@@ -416,21 +422,8 @@ private fun CropEdgeHandle(
                     if (edge == CropEdgeKind.LEFT || edge == CropEdgeKind.RIGHT) drag.x else drag.y
                 )
             }
-        },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            Modifier
-                .then(
-                    if (edge == CropEdgeKind.TOP || edge == CropEdgeKind.BOTTOM) {
-                        Modifier.width(34.dp).height(5.dp)
-                    } else {
-                        Modifier.width(5.dp).height(34.dp)
-                    }
-                )
-                .background(Color.White, RoundedCornerShape(4.dp))
-        )
-    }
+        }
+    )
 }
 
 /**

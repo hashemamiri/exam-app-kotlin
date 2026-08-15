@@ -162,7 +162,7 @@ class V31StableReorderUpdatePromptBulkTest {
     fun `student card copy reads the password from the current password box`() {
         assertTrue("knownPasswords[it.username.lowercase()]=it.password" in school)
         assertTrue("knownPasswordOf(student.username)" in school)
-        assertTrue("رمز عبور:" in school)
+        assertTrue("add(\"رمز:" in school)
         assertTrue("android.content.extra.IS_SENSITIVE" in school)
         assertTrue("knownPasswordOf = knownPasswordOf" in school)
     }

@@ -323,8 +323,9 @@ require(student_card.count("Modifier.weight(1f).height(58.dp)") >= 5 and
         "copyStudentInformation(" in student_card and
         "knownPasswordOf(student.username)" in student_card and
         "Icons.Outlined.Delete" in student_card and
-        "قابل بازیابی نیست" in school_screen and "student.password" not in school_screen,
-        "larger student actions or secure profile-copy behavior incomplete")
+        "add(\"رمز:" in school_screen and "student.password" not in school_screen and
+        "شناسه حساب:" not in school_screen and "وضعیت:" not in school_screen,
+        "larger student actions or exact secure profile-copy behavior incomplete")
 require("رمز جدید اختیاری" in school_screen and "currentPassword: String?" in school_screen and
         "value = currentPassword.orEmpty()" in school_screen and
         "رمز فعلی hash شده و قابل نمایش نیست" not in school_screen and
@@ -741,7 +742,7 @@ require("onCreate: (List<NewStudentRequest>) -> Unit" in _bulk and
         "V31 classless bulk window with current-password box incomplete")
 require("knownPasswords[it.username.lowercase()]=it.password" in school_screen and
         "knownPasswordOf(student.username)" in school_screen and
-        "رمز عبور: $it" in school_screen,
+        "add(\"رمز:" in school_screen,
         "V31 student-card copy does not read the current-password box")
 require("createStudentsBulk(classId:String?" in school_repository and
         'put("class_id",classId.orEmpty())' in school_repository,
@@ -784,7 +785,7 @@ require(all(marker in _v34_thumb for marker in (
         )), "V34 question image controls are not inline like option images")
 require("resizeDeltaForEdge" in crop_geometry and
         "CropGeometry.resizeDeltaForEdge(edge, delta)" in image_editor and
-        ".padding(26.dp)" in image_editor and "circular = forceSquare" in image_editor and
+        ".padding(18.dp)" in image_editor and "circular = forceSquare" in image_editor and
         "if (circular) CircleShape" in image_editor and "برش دایره‌ای پروفایل" in image_editor,
         "V34 directional crop handles or circular profile frame incomplete")
 require(all(marker in student_password_vault for marker in (
@@ -793,5 +794,37 @@ require(all(marker in student_password_vault for marker in (
         )) and "passwordVault.read(student.id)" in school_screen and
         "passwordVault.write(credential.id, credential.password)" in school_screen and
         'android:allowBackup="false"' in manifest and
-        school_screen.count("Modifier.weight(1f).height(56.dp)") >= 2,
+        school_screen.count("Modifier.weight(1f).height(64.dp)") >= 2,
         "V34 encrypted device password vault or equal password fields incomplete")
+
+# V35 — جنسیت رنگی، نوار آیکنی رمز، clipboard دقیق، crop آزاد و کارت فشرده
+_edit_v35=school_screen.split("private fun StudentEditDialog(",1)[1].split("private data class BulkStudentDraft",1)[0]
+_bulk_v35=school_screen.split("private fun BulkStudentDialog(",1)[1].split("internal fun studentClipboardText",1)[0]
+require(_edit_v35.count("genderFilterChipColors(Color(0xFFFF5C9A))") == 1 and
+        _edit_v35.count("genderFilterChipColors(Color(0xFF3B9EFF))") == 1 and
+        _bulk_v35.count("genderFilterChipColors(Color(0xFFFF5C9A))") == 1 and
+        _bulk_v35.count("genderFilterChipColors(Color(0xFF3B9EFF))") == 1,
+        "V35 selected gender colors are missing in edit or bulk")
+require(all(marker in _edit_v35 for marker in (
+            "Icons.Outlined.Close","Icons.Outlined.Check","Icons.Outlined.Visibility",
+            "passwordVisible = !passwordVisible","Modifier.weight(1f).height(64.dp)",
+            "textStyle = MaterialTheme.typography.titleMedium"
+        )) and "trailingIcon" not in _edit_v35 and "currentPasswordVisible" not in _edit_v35,
+        "V35 password fields or central eye toolbar incomplete")
+_clipboard_v35=school_screen.split("internal fun studentClipboardText(",1)[1].split("private fun copyStudentInformation",1)[0]
+require(all(marker in _clipboard_v35 for marker in (
+            'add("نام:','add("نام خانوادگی:','add("نام پدر:','add("پایه:',
+            'add("رشته:','add("نام کاربری:','add("رمز:','add("کلاس‌ها:'
+        )) and all(marker not in _clipboard_v35 for marker in (
+            "اطلاعات دانش‌آموز","جنسیت:","وضعیت:","شناسه حساب:"
+        )), "V35 clipboard contains extra or missing student fields")
+require("CropGeometry.moveCenter(" in image_editor and ".padding(18.dp)" in image_editor and
+        ".pointerInput(circular)" in image_editor and "خطوط/میله‌های روی اضلاع حذف شده‌اند" in image_editor and
+        "Modifier.width(34.dp).height(5.dp)" not in image_editor and
+        "Modifier.width(5.dp).height(34.dp)" not in image_editor and "fun moveCenter(" in crop_geometry,
+        "V35 free crop movement or invisible resize edges incomplete")
+require(all(marker in student_card for marker in (
+            "listOf(student.grade, student.fieldOfStudy)","joinToString(\\\" \\\")",
+            "نام پدر: ${student.fatherName", "نام کاربری: ${student.username"
+        )) and "رشته: ${student.fieldOfStudy" not in student_card,
+        "V35 compact student card rows incomplete")

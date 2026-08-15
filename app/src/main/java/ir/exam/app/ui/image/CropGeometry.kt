@@ -32,6 +32,20 @@ object CropGeometry {
     fun clampCenter(center: Float, sideFraction: Float): Float =
         center.coerceIn(sideFraction / 2f, 1f - sideFraction / 2f)
 
+    /** جابه‌جایی آزاد مرکز کادر با حفظ کامل آن داخل تصویر. */
+    fun moveCenter(
+        centerX: Float,
+        centerY: Float,
+        dragX: Float,
+        dragY: Float,
+        displayWidthPx: Float,
+        displayHeightPx: Float,
+        sideXFraction: Float,
+        sideYFraction: Float
+    ): Pair<Float, Float> =
+        clampCenter(centerX + dragX / displayWidthPx, sideXFraction) to
+            clampCenter(centerY + dragY / displayHeightPx, sideYFraction)
+
     /**
      * drag هر ضلع را به قرارداد مشترک تبدیل می‌کند: حرکت به بیرون همیشه مثبت
      * (بزرگ‌شدن) و حرکت به داخل همیشه منفی است.

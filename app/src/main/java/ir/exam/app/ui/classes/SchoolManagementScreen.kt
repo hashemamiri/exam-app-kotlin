@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
@@ -40,6 +41,8 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ToggleOff
 import androidx.compose.material.icons.outlined.ToggleOn
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +52,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -570,9 +574,10 @@ private fun StudentCard(
         colors = CardDefaults.cardColors(containerColor = tint)
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            // نام کامل، سپس با کمی فاصله پایه و رشته در همان سطر.
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -580,7 +585,13 @@ private fun StudentCard(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                Text("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
+                Text(
+                    listOf(student.grade, student.fieldOfStudy)
+                        .mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }
+                        .joinToString(" ")
+                        .ifBlank { "—" },
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
             AnimatedVisibility(
@@ -589,9 +600,20 @@ private fun StudentCard(
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("نام کاربری: ${student.username ?: "—"}")
-                    Text("نام پدر: ${student.fatherName ?: "—"}")
-                    Text("رشته: ${student.fieldOfStudy.orEmpty().ifBlank { "—" }}")
+                    // نام پدر و نام کاربری در یک سطر.
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "نام پدر: ${student.fatherName.orEmpty().ifBlank { "—" }}",
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            "نام کاربری: ${student.username.orEmpty().ifBlank { "—" }}",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     student.classNames?.takeIf(String::isNotBlank)?.let { Text("کلاس‌ها: $it") }
                     Row(
                         Modifier.fillMaxWidth(),
@@ -855,12 +877,11 @@ private fun StudentEditDialog(
     var grade by remember(student.id) { mutableStateOf(student.grade.orEmpty()) }
     var field by remember(student.id) { mutableStateOf(student.fieldOfStudy.orEmpty()) }
     var newPassword by remember(student.id) { mutableStateOf("") }
+    // یک چشم مرکزی، هر دو کادر رمز جدید و فعلی را همزمان پیدا/پنهان می‌کند.
     var passwordVisible by remember(student.id) { mutableStateOf(false) }
-    var currentPasswordVisible by remember(student.id) { mutableStateOf(false) }
 
-    // پنجرهٔ ویرایش دقیقاً مانند پنجرهٔ افزودن گروهی: هم‌عرض ۶۲۰dp، از بالا،
-    // با دکمه‌های انصراف/ذخیره به‌جای +/ایجاد/× و فیلدهای پیش‌پر از اطلاعات
-    // دانش‌آموز؛ بدون عنوان «ویرایش دانش‌آموز».
+    // پنجرهٔ ویرایش هم‌عرض پنجرهٔ گروهی و از بالا است؛ نوار بالایی شامل ضربدر
+    // قرمز، چشم مشترک رمزها و تیک سبز است و فیلدها با اطلاعات دانش‌آموز پیش‌پرند.
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -890,37 +911,52 @@ private fun StudentEditDialog(
                 ) {
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = onDismiss,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5484D)),
-                            modifier = Modifier
-                                .weight(1f)
-                                .semantics { contentDescription = "انصراف" }
-                        ) { Text("انصراف") }
-                        Button(
-                            enabled = first.isNotBlank() && username.length >= 4 &&
-                                gender in setOf("male", "female") &&
-                                (newPassword.isBlank() || newPassword.length in 8..72),
-                            onClick = {
-                                onSave(
-                                    UpdateStudentRequest(
-                                        student.id,
-                                        first,
-                                        last,
-                                        username,
-                                        gender,
-                                        fatherName,
-                                        grade,
-                                        field,
-                                        newPassword.takeIf(String::isNotBlank)
-                                    )
+                        Surface(color = Color(0xFFE5484D), shape = MaterialTheme.shapes.medium) {
+                            IconButton(onClick = onDismiss) {
+                                Icon(
+                                    Icons.Outlined.Close,
+                                    contentDescription = "انصراف",
+                                    tint = Color.White
                                 )
-                            },
-                            modifier = Modifier.weight(2f)
-                        ) { Text("ذخیره") }
+                            }
+                        }
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription = if (passwordVisible) "پنهان‌کردن رمزها" else "نمایش رمزها"
+                            )
+                        }
+                        Surface(color = Color(0xFF25A86B), shape = MaterialTheme.shapes.medium) {
+                            IconButton(
+                                enabled = first.isNotBlank() && username.length >= 4 &&
+                                    gender in setOf("male", "female") &&
+                                    (newPassword.isBlank() || newPassword.length in 8..72),
+                                onClick = {
+                                    onSave(
+                                        UpdateStudentRequest(
+                                            student.id,
+                                            first,
+                                            last,
+                                            username,
+                                            gender,
+                                            fatherName,
+                                            grade,
+                                            field,
+                                            newPassword.takeIf(String::isNotBlank)
+                                        )
+                                    )
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Check,
+                                    contentDescription = "ذخیره",
+                                    tint = Color.White
+                                )
+                            }
+                        }
                     }
                     Card(Modifier.fillMaxWidth()) {
                         Column(
@@ -989,29 +1025,19 @@ private fun StudentEditDialog(
                                     { newPassword = it.take(72) },
                                     label = { Text("رمز جدید اختیاری") },
                                     visualTransformation = passwordTransformation(passwordVisible),
-                                    trailingIcon = {
-                                        PasswordVisibilityButton(
-                                            visible = passwordVisible,
-                                            onToggle = { passwordVisible = !passwordVisible }
-                                        )
-                                    },
+                                    textStyle = MaterialTheme.typography.titleMedium,
                                     singleLine = true,
-                                    modifier = Modifier.weight(1f).height(56.dp)
+                                    modifier = Modifier.weight(1f).height(64.dp)
                                 )
                                 OutlinedTextField(
                                     value = currentPassword.orEmpty(),
                                     onValueChange = {},
                                     readOnly = true,
                                     label = { Text("رمز فعلی") },
-                                    visualTransformation = passwordTransformation(currentPasswordVisible),
-                                    trailingIcon = {
-                                        PasswordVisibilityButton(
-                                            visible = currentPasswordVisible,
-                                            onToggle = { currentPasswordVisible = !currentPasswordVisible }
-                                        )
-                                    },
+                                    visualTransformation = passwordTransformation(passwordVisible),
+                                    textStyle = MaterialTheme.typography.titleMedium,
                                     singleLine = true,
-                                    modifier = Modifier.weight(1f).height(56.dp)
+                                    modifier = Modifier.weight(1f).height(64.dp)
                                 )
                             }
                             Row(
@@ -1022,12 +1048,14 @@ private fun StudentEditDialog(
                                     selected = gender == "female",
                                     onClick = { gender = "female" },
                                     label = { Text("دختر") },
+                                    colors = genderFilterChipColors(Color(0xFFFF5C9A)),
                                     modifier = Modifier.weight(1f)
                                 )
                                 FilterChip(
                                     selected = gender == "male",
                                     onClick = { gender = "male" },
                                     label = { Text("پسر") },
+                                    colors = genderFilterChipColors(Color(0xFF3B9EFF)),
                                     modifier = Modifier.weight(1f)
                                 )
                                 OutlinedButton(
@@ -1042,6 +1070,12 @@ private fun StudentEditDialog(
         }
     }
 }
+
+@Composable
+private fun genderFilterChipColors(selectedColor: Color) = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = selectedColor,
+    selectedLabelColor = Color.White
+)
 
 private data class BulkStudentDraft(
     val first: String = "",
@@ -1317,12 +1351,14 @@ private fun BulkStudentDialog(
                                     selected = row.gender == "female",
                                     onClick = { rows[index] = row.copy(gender = "female") },
                                     label = { Text("دختر") },
+                                    colors = genderFilterChipColors(Color(0xFFFF5C9A)),
                                     modifier = Modifier.weight(1f)
                                 )
                                 FilterChip(
                                     selected = row.gender == "male",
                                     onClick = { rows[index] = row.copy(gender = "male") },
                                     label = { Text("پسر") },
+                                    colors = genderFilterChipColors(Color(0xFF3B9EFF)),
                                     modifier = Modifier.weight(1f)
                                 )
                                 OutlinedButton(
@@ -1355,25 +1391,26 @@ internal fun studentClipboardText(
     student: StudentProfile,
     oneTimePassword: String? = null,
     currentPassword: String? = null
-): String = buildList {
-    add("اطلاعات دانش‌آموز")
-    add("نام و نام خانوادگی: ${student.fullName.ifBlank { "—" }}")
-    add("نام: ${student.firstName.orEmpty().ifBlank { "—" }}")
-    add("نام خانوادگی: ${student.lastName.orEmpty().ifBlank { "—" }}")
-    add("نام کاربری: ${student.username.orEmpty().ifBlank { "—" }}")
-    add(
-        oneTimePassword?.let { "رمز جدید یک‌بارنمایش: $it" }
-            ?: currentPassword?.let { "رمز عبور: $it" }
-            ?: "رمز عبور: قابل بازیابی نیست؛ برای دریافت رمز، یک رمز جدید تعیین کنید."
-    )
-    add("جنسیت: ${when (student.gender?.lowercase()) { "female" -> "دختر"; "male" -> "پسر"; else -> "—" }}")
-    add("نام پدر: ${student.fatherName.orEmpty().ifBlank { "—" }}")
-    add("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
-    add("رشته: ${student.fieldOfStudy.orEmpty().ifBlank { "—" }}")
-    add("کلاس‌ها: ${student.classNames.orEmpty().ifBlank { "—" }}")
-    add("وضعیت: ${if (student.active) "فعال" else "غیرفعال"}")
-    add("شناسه حساب: ${student.id}")
-}.joinToString("\n")
+): String {
+    val firstName = student.firstName.orEmpty().ifBlank {
+        student.fullName.substringBefore(' ').ifBlank { "—" }
+    }
+    val lastName = student.lastName.orEmpty().ifBlank {
+        student.fullName.substringAfter(' ', "").ifBlank { "—" }
+    }
+    val password = oneTimePassword ?: currentPassword
+    // قرارداد V35: فقط همین هشت مورد و دقیقاً با همین ترتیب کپی می‌شوند.
+    return buildList {
+        add("نام: $firstName")
+        add("نام خانوادگی: $lastName")
+        add("نام پدر: ${student.fatherName.orEmpty().ifBlank { "—" }}")
+        add("پایه: ${student.grade.orEmpty().ifBlank { "—" }}")
+        add("رشته: ${student.fieldOfStudy.orEmpty().ifBlank { "—" }}")
+        add("نام کاربری: ${student.username.orEmpty().ifBlank { "—" }}")
+        add("رمز: ${password?.takeIf(String::isNotBlank) ?: "—"}")
+        add("کلاس‌ها: ${student.classNames.orEmpty().ifBlank { "—" }}")
+    }.joinToString("\n")
+}
 
 private fun copyStudentInformation(
     context: Context,
