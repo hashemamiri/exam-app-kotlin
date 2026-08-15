@@ -94,7 +94,7 @@ class ProfileSettingsViewModel(
     }
 
     fun changeTeacherUsername(username: String) = accountAction {
-        require(role == UserRole.TEACHER) { "تغییر نام کاربری فقط برای حساب معلم مجاز است." }
+        require(role != UserRole.STUDENT) { "تغییر نام کاربری فقط برای حساب کادر مدرسه مجاز است." }
         val saved = repository.changeTeacherUsername(username).getOrThrow()
         _state.update { current ->
             current.copy(

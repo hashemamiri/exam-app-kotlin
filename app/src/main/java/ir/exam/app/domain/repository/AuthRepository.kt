@@ -17,6 +17,18 @@ interface AuthRepository {
         username: String,
         password: String
     ): Result<AppUser>
+    suspend fun sendManagerRegistrationOtp(email: String, fullName: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("manager registration not implemented"))
+    suspend fun verifyManagerRegistrationOtp(email: String, code: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("manager registration not implemented"))
+    suspend fun completeManagerRegistration(
+        fullName: String,
+        username: String,
+        password: String,
+        schoolName: String,
+        province: String,
+        city: String
+    ): Result<AppUser> = Result.failure(UnsupportedOperationException("manager registration not implemented"))
     suspend fun sendRecoveryOtp(email: String): Result<Unit>
     suspend fun verifyRecoveryOtp(email: String, code: String): Result<String?>
     suspend fun changePassword(newPassword: String): Result<AppUser>

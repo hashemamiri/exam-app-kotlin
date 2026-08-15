@@ -69,6 +69,9 @@ import ir.exam.app.ui.classes.SchoolLaunchAction
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.grading.GradingScreen
+import ir.exam.app.ui.manager.ManagerStatsScreen
+import ir.exam.app.ui.manager.ManagerTeachersScreen
+import ir.exam.app.ui.manager.ManagerWalletFoundationScreen
 import ir.exam.app.ui.profile.ProfileSettingsDestination
 import ir.exam.app.ui.profile.ProfileSettingsScreen
 import ir.exam.app.ui.profile.SettingsSection
@@ -126,11 +129,14 @@ private fun AuthenticatedExamApp(
     val updateViewModel = remember(user.id) {
         UpdateViewModel(UpdateUseCase(SupabaseAppUpdateRepository()), apkUpdateManager)
     }
-    var page by rememberSaveable(user.id) { mutableStateOf(MainPage.CALENDAR) }
+    var page by rememberSaveable(user.id) {
+        mutableStateOf(if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR)
+    }
     var menuOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var quickAddOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
+    var managerNewTeacherKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
@@ -177,6 +183,12 @@ private fun AuthenticatedExamApp(
         page = MainPage.SCHOOL
     }
 
+    fun createManagerTeacher() {
+        closeTransientNavigation()
+        managerNewTeacherKey += 1
+        page = MainPage.HOME
+    }
+
     fun createExam() {
         closeTransientNavigation()
         editingExamId = null
@@ -201,8 +213,13 @@ private fun AuthenticatedExamApp(
             MainPage.WALLET,
             MainPage.CARDS
         )
-        if (user.role != UserRole.TEACHER && page in teacherOnly) page = MainPage.HOME
-        if (user.role == UserRole.TEACHER && page == MainPage.STUDENT_RESULTS) page = MainPage.HOME
+        when (user.role) {
+            UserRole.STUDENT -> if (page in teacherOnly) page = MainPage.HOME
+            UserRole.TEACHER -> if (page == MainPage.STUDENT_RESULTS) page = MainPage.HOME
+            UserRole.MANAGER -> if (page !in setOf(MainPage.HOME, MainPage.WALLET, MainPage.CARDS, MainPage.SETTINGS)) {
+                page = MainPage.HOME
+            }
+        }
     }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {
@@ -223,8 +240,9 @@ private fun AuthenticatedExamApp(
     BackHandler(enabled = menuOpen && !quickAddOpen) {
         menuOpen = false
     }
-    BackHandler(enabled = !menuOpen && !quickAddOpen && page != MainPage.CALENDAR) {
-        page = MainPage.CALENDAR
+    val roleHomePage = if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR
+    BackHandler(enabled = !menuOpen && !quickAddOpen && page != roleHomePage) {
+        page = roleHomePage
     }
 
     AuthenticatedShell(
@@ -240,8 +258,11 @@ private fun AuthenticatedExamApp(
             menuOpen = !menuOpen
         },
         onToggleAdd = {
-            menuOpen = false
-            quickAddOpen = !quickAddOpen
+            if (user.role == UserRole.MANAGER) createManagerTeacher()
+            else {
+                menuOpen = false
+                quickAddOpen = !quickAddOpen
+            }
         },
         onCloseAdd = { quickAddOpen = false },
         onHome = ::openHome,
@@ -323,6 +344,7 @@ private fun AuthenticatedExamApp(
                         }
                     )
                     UserRole.STUDENT -> StudentHomeScreen(user.id)
+                    UserRole.MANAGER -> ManagerTeachersScreen(newTeacherRequested = managerNewTeacherKey)
                 }
                 MainPage.CALENDAR -> CalendarScreen(user.role)
                 MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) {
@@ -346,8 +368,14 @@ private fun AuthenticatedExamApp(
                 }
                 MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen()
                 MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
-                MainPage.WALLET -> if (user.role == UserRole.TEACHER) WalletScreen(refreshKey = walletRefreshKey)
-                MainPage.CARDS -> if (user.role == UserRole.TEACHER) {
+                MainPage.WALLET -> when (user.role) {
+                    UserRole.TEACHER -> WalletScreen(refreshKey = walletRefreshKey)
+                    UserRole.MANAGER -> ManagerWalletFoundationScreen()
+                    UserRole.STUDENT -> Unit
+                }
+                MainPage.CARDS -> if (user.role == UserRole.MANAGER) {
+                    ManagerStatsScreen()
+                } else if (user.role == UserRole.TEACHER) {
                     TeacherManagementCardsScreen(
                         cycleKey = cardsCycleKey,
                         onStats = { page = MainPage.REPORTS },
@@ -555,6 +583,29 @@ private fun AuthenticatedShell(
                 danger = true, onClick = { select(onSignOut) }
             )
         )
+    } else if (user.role == UserRole.MANAGER) {
+        // مدیر/معاون عمداً تقویم و سربرگ ندارد.
+        listOf(
+            Design69MenuCard(
+                "حساب", "مشخصات و امنیت حساب", Design69Icons.Account,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.ACCOUNT,
+                onClick = { select(onAccount) }
+            ),
+            Design69MenuCard(
+                "داده‌ها", "داده‌های مدرسه", Design69Icons.Data,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.DATA,
+                onClick = { select(onData) }
+            ),
+            Design69MenuCard(
+                "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
+                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
+                onClick = { select(onSettings) }
+            ),
+            Design69MenuCard(
+                "خروج", "خروج امن و تعویض حساب", Design69Icons.Logout,
+                danger = true, onClick = { select(onSignOut) }
+            )
+        )
     } else {
         listOf(
             Design69MenuCard(
@@ -614,7 +665,7 @@ private fun AuthenticatedShell(
                         }
                     },
                     bottomBar = {
-                        if (user.role == UserRole.TEACHER) {
+                        if (user.role != UserRole.STUDENT) {
                             TeacherBottomDock(
                                 active = page.teacherDockSection(),
                                 menuOpen = menuOpen,
@@ -623,7 +674,11 @@ private fun AuthenticatedShell(
                                 onWallet = onWallet,
                                 onAdd = onToggleAdd,
                                 onExams = onHome,
-                                onCards = onCards
+                                onCards = onCards,
+                                primaryLabel = if (user.role == UserRole.MANAGER) "معلم‌ها" else "آزمون‌ها",
+                                primaryIcon = if (user.role == UserRole.MANAGER) {
+                                    Design69Icons.Students
+                                } else Design69Icons.Exams
                             )
                         }
                     }
@@ -679,7 +734,11 @@ private fun MainPage.sectionTitle(
     profileDestination: ProfileSettingsDestination,
     schoolStudentsSelected: Boolean
 ): String = when (this) {
-    MainPage.HOME -> if (role == UserRole.TEACHER) "آزمون‌ها" else "خانه دانش‌آموز"
+    MainPage.HOME -> when (role) {
+        UserRole.TEACHER -> "آزمون‌ها"
+        UserRole.MANAGER -> "معلم‌ها"
+        UserRole.STUDENT -> "خانه دانش‌آموز"
+    }
     MainPage.CALENDAR -> "تقویم"
     MainPage.SCHOOL -> if (schoolStudentsSelected) "دانش‌آموزان" else "کلاس‌ها"
     MainPage.QUESTION_BANK -> "بانک سؤال"
@@ -687,7 +746,7 @@ private fun MainPage.sectionTitle(
     MainPage.REPORTS -> "گزارش‌ها"
     MainPage.STUDENT_RESULTS -> "نتایج من"
     MainPage.WALLET -> "کیف پول"
-    MainPage.CARDS -> "مدیریت"
+    MainPage.CARDS -> if (role == UserRole.MANAGER) "آمار مدرسه" else "مدیریت"
     MainPage.SETTINGS -> when (profileDestination) {
         ProfileSettingsDestination.PROFILE -> "پروفایل"
         ProfileSettingsDestination.HEADER -> "سربرگ"

@@ -64,6 +64,11 @@ v28_guide=(ROOT/"REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
 v29_guide=(ROOT/"BUILDER_MEDIA_BULK_V29_FA.md").read_text()
 v30_guide=(ROOT/"SMOOTH_REORDER_CHANGELOG_V30_FA.md").read_text()
 v31_guide=(ROOT/"STABLE_REORDER_UPDATE_PROMPT_V31_FA.md").read_text()
+v36_migration=(ROOT/"supabase/migrations/20260815_native_school_manager_v36.sql").read_text()
+v36_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_MANAGER_V36.sql").read_text()
+manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
+auth_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text()
+sign_in_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt").read_text()
 image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 field_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/common/FieldOfStudyPicker.kt").read_text()
 school_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
@@ -193,11 +198,11 @@ require("PullToRefreshBox" in teacher_dashboard and "onRefresh = viewModel::load
 require("walletRefreshKey += 1" in app_shell and "dashboardRefreshKey += 1" in app_shell and
         "cardsCycleKey += 1" in app_shell and "LaunchedEffect(refreshKey)" in wallet_screen,
         "active dock destination secondary real behavior incomplete")
-require("mutableStateOf(MainPage.CALENDAR)" in app_shell and all(marker in app_shell for marker in (
+require("if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR" in app_shell and all(marker in app_shell for marker in (
             "\"تقویم\"","\"کلاس‌ها\"","\"دانش‌آموزان\"","\"سربرگ\"",
             "\"حساب\"","\"داده‌ها\"","\"تنظیمات\"","\"خروج\""
         )), "calendar default or exact hamburger menu order/routes missing")
-require(all(marker not in app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else {",1)[0]
+require(all(marker not in app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else if (user.role == UserRole.MANAGER)",1)[0]
             for marker in ("داشبورد معلم","تصحیح و حضور","آمار و گزارش‌ها","درباره و بروزرسانی","آزمون جدید")),
         "removed teacher hamburger cards returned")
 require("expandedExamId" in teacher_dashboard and "AnimatedVisibility" in teacher_dashboard and
@@ -338,7 +343,7 @@ require(v22_sql_copy == v22_migration and all(marker in v22_migration for marker
             "native_add_student_to_classes_v22","teacher_id = auth.uid()","on conflict do nothing","revoke all on function"
         )) and "native_add_student_to_classes_v22" in school_repository,
         "atomic owner-scoped multi-class membership migration incomplete")
-teacher_menu=app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else {",1)[0]
+teacher_menu=app_shell.split("val menuCards = if (user.role == UserRole.TEACHER)",1)[1].split("} else if (user.role == UserRole.MANAGER)",1)[0]
 require(teacher_menu.index("دانش‌آموزان") < teacher_menu.index("\"تقویم\""),
         "student/calendar hamburger card positions were not swapped")
 require("requests.size in 1..100" in school_repository,
@@ -828,3 +833,30 @@ require(all(marker in student_card for marker in (
             "نام پدر: ${student.fatherName", "نام کاربری: ${student.username"
         )) and "رشته: ${student.fieldOfStudy" not in student_card,
         "V35 compact student card rows incomplete")
+
+# V36 — نقش مدیر/معاون، مدرسهٔ مستقل و پوستهٔ مرحله‌ای
+require("enum class UserRole { TEACHER, STUDENT, MANAGER }" in
+        (ROOT/"app/src/main/java/ir/exam/app/domain/model/AppUser.kt").read_text(),
+        "V36 manager role missing")
+require(all(marker in sign_in_screen for marker in (
+            "AuthScreen.REGISTRATION_ROLE","Text(\"معلم\")","Text(\"مدیر/معاون\")",
+            "ManagerRegistrationPane","ManagerSetupPane","نام مدرسه","استان","شهر"
+        )) and all(marker in auth_view_model for marker in (
+            "MANAGER_REGISTER_OTP","MANAGER_REGISTER_SETUP","completeManagerRegistration"
+        )), "V36 role-first manager signup incomplete")
+require(v36_migration == v36_sql_copy and all(marker in v36_migration for marker in (
+            "profiles_role_v36_check","public.schools","public.school_memberships",
+            "ux_school_one_active_membership_v36","native_complete_manager_registration_v36",
+            "native_manager_school_summary_v36","enable row level security"
+        )), "V36 school tenant migration/copy incomplete")
+_manager_menu_v36=app_shell.split("} else if (user.role == UserRole.MANAGER) {",1)[1].split("} else {",1)[0]
+require(all(marker in _manager_menu_v36 for marker in ("\"حساب\"","\"داده‌ها\"","\"تنظیمات\"","\"خروج\"")) and
+        "\"تقویم\"" not in _manager_menu_v36 and "\"سربرگ\"" not in _manager_menu_v36,
+        "V36 manager hamburger still exposes calendar/header")
+require(all(marker in app_shell for marker in (
+            "ManagerTeachersScreen","ManagerStatsScreen","ManagerWalletFoundationScreen",
+            "primaryLabel = if (user.role == UserRole.MANAGER) \"معلم‌ها\"","createManagerTeacher"
+        )) and "MANAGER_CARD_COUNT = 4" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
+        "در V37 فعال می‌شود" in manager_foundation and "در V38 فعال می‌شود" in manager_foundation,
+        "V36 manager dock/stats/staged foundation incomplete")

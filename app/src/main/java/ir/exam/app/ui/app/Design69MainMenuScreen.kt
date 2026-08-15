@@ -54,6 +54,7 @@ object Design69MenuContract {
     const val PROFILE_HEIGHT_DP = 148
     const val CARD_HEIGHT_DP = 116
     const val TEACHER_CARD_COUNT = 8
+    const val MANAGER_CARD_COUNT = 4
     const val STUDENT_CARD_COUNT = 6
 
     fun isCompleteGrid(count: Int): Boolean = count > 0 && count % COLUMNS == 0
@@ -69,10 +70,10 @@ fun Design69MainMenuScreen(
 ) {
     require(Design69MenuContract.isCompleteGrid(cards.size))
     require(
-        cards.size == if (user.role == UserRole.TEACHER) {
-            Design69MenuContract.TEACHER_CARD_COUNT
-        } else {
-            Design69MenuContract.STUDENT_CARD_COUNT
+        cards.size == when (user.role) {
+            UserRole.TEACHER -> Design69MenuContract.TEACHER_CARD_COUNT
+            UserRole.MANAGER -> Design69MenuContract.MANAGER_CARD_COUNT
+            UserRole.STUDENT -> Design69MenuContract.STUDENT_CARD_COUNT
         }
     )
     val colors = neumorphic69Colors
@@ -112,7 +113,11 @@ fun Design69MainMenuScreen(
                     ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 76)
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (user.role == UserRole.TEACHER) "پروفایل معلم" else "پروفایل دانش‌آموز",
+                            when (user.role) {
+                                UserRole.TEACHER -> "پروفایل معلم"
+                                UserRole.MANAGER -> "پروفایل مدیر/معاون"
+                                UserRole.STUDENT -> "پروفایل دانش‌آموز"
+                            },
                             color = colors.accent,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -124,10 +129,10 @@ fun Design69MainMenuScreen(
                             modifier = Modifier.padding(top = 6.dp)
                         )
                         Text(
-                            if (user.role == UserRole.TEACHER) {
-                                user.email?.takeIf(String::isNotBlank) ?: "حساب معلم"
-                            } else {
-                                "حساب دانش‌آموز"
+                            when (user.role) {
+                                UserRole.TEACHER -> user.email?.takeIf(String::isNotBlank) ?: "حساب معلم"
+                                UserRole.MANAGER -> user.email?.takeIf(String::isNotBlank) ?: "حساب مدیر/معاون"
+                                UserRole.STUDENT -> "حساب دانش‌آموز"
                             },
                             color = colors.muted,
                             style = MaterialTheme.typography.bodySmall,

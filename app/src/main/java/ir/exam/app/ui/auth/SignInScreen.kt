@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 
-/** ورود، ثبت‌نام معلم و بازیابی رمز؛ هیچ مسیر آزمایشی یا عبور مستقیم ندارد. */
+/** ورود، ثبت‌نام کادر مدرسه و بازیابی رمز؛ هیچ مسیر آزمایشی یا عبور مستقیم ندارد. */
 @Composable
 fun SignInScreen(viewModel: AuthViewModel) {
     val state by viewModel.state.collectAsState()
@@ -44,6 +44,7 @@ fun SignInScreen(viewModel: AuthViewModel) {
         Text("آزمون آنلاین", style = MaterialTheme.typography.headlineMedium)
         when (state.screen) {
             AuthScreen.SIGN_IN -> SignInPane(state, viewModel)
+            AuthScreen.REGISTRATION_ROLE -> RegistrationRolePane(state, viewModel)
             AuthScreen.LOGIN_OTP -> OtpPane(
                 title = "ورود با کد یک‌بارمصرف",
                 hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
@@ -64,6 +65,17 @@ fun SignInScreen(viewModel: AuthViewModel) {
                 viewModel = viewModel
             )
             AuthScreen.TEACHER_REGISTER_SETUP -> TeacherSetupPane(state, viewModel)
+            AuthScreen.MANAGER_REGISTER -> ManagerRegistrationPane(state, viewModel)
+            AuthScreen.MANAGER_REGISTER_OTP -> OtpPane(
+                title = "تأیید ایمیل مدیر/معاون",
+                hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
+                state = state,
+                onVerify = viewModel::verifyManagerRegistrationOtp,
+                onResend = viewModel::sendManagerRegistrationOtp,
+                onBack = viewModel::showManagerRegistration,
+                viewModel = viewModel
+            )
+            AuthScreen.MANAGER_REGISTER_SETUP -> ManagerSetupPane(state, viewModel)
             AuthScreen.RECOVERY -> RecoveryPane(state, viewModel)
             AuthScreen.RECOVERY_OTP -> OtpPane(
                 title = "تأیید بازیابی حساب",
@@ -93,11 +105,11 @@ fun SignInScreen(viewModel: AuthViewModel) {
 
 @Composable
 private fun SignInPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("ورود معلم یا دانش‌آموز")
+    Text("ورود معلم، مدیر/معاون یا دانش‌آموز")
     OutlinedTextField(
         value = state.email,
         onValueChange = viewModel::setEmail,
-        label = { Text("ایمیل معلم یا نام کاربری دانش‌آموز") },
+        label = { Text("ایمیل کادر مدرسه یا نام کاربری دانش‌آموز") },
         supportingText = { Text("دانش‌آموز همان نام کاربری تحویلی از معلم را وارد کند.") },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
@@ -112,11 +124,30 @@ private fun SignInPane(state: AuthUiState, viewModel: AuthViewModel) {
         onClick = viewModel::sendLoginOtp,
         enabled = !state.isLoading && '@' in state.email,
         modifier = Modifier.fillMaxWidth()
-    ) { Text("ورود معلم با کد ایمیل") }
+    ) { Text("ورود کادر مدرسه با کد ایمیل") }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         TextButton(onClick = viewModel::showRecovery, enabled = !state.isLoading) { Text("رمز را فراموش کرده‌ام") }
-        TextButton(onClick = viewModel::showTeacherRegistration, enabled = !state.isLoading) { Text("ثبت‌نام معلم") }
+        TextButton(onClick = viewModel::showRegistrationRole, enabled = !state.isLoading) { Text("ثبت‌نام") }
     }
+}
+
+@Composable
+private fun RegistrationRolePane(state: AuthUiState, viewModel: AuthViewModel) {
+    Text("نوع ثبت‌نام", style = MaterialTheme.typography.titleLarge)
+    Text("نقش حساب را انتخاب کنید.")
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(
+            onClick = viewModel::showTeacherRegistration,
+            enabled = !state.isLoading,
+            modifier = Modifier.weight(1f)
+        ) { Text("معلم") }
+        Button(
+            onClick = viewModel::showManagerRegistration,
+            enabled = !state.isLoading,
+            modifier = Modifier.weight(1f)
+        ) { Text("مدیر/معاون") }
+    }
+    TextButton(onClick = viewModel::showSignIn, enabled = !state.isLoading) { Text("بازگشت به ورود") }
 }
 
 @Composable
@@ -169,8 +200,68 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
 }
 
 @Composable
+private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
+    Text("ثبت‌نام مدیر/معاون", style = MaterialTheme.typography.titleLarge)
+    Text("پس از تأیید ایمیل، یک مدرسهٔ مستقل ایجاد می‌شود.")
+    OutlinedTextField(
+        state.fullName, viewModel::setFullName,
+        label = { Text("نام و نام خانوادگی") }, singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        state.email, viewModel::setEmail,
+        label = { Text("ایمیل مدیر/معاون") }, singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Button(
+        onClick = viewModel::sendManagerRegistrationOtp,
+        enabled = !state.isLoading && state.fullName.trim().length >= 2 && '@' in state.email,
+        modifier = Modifier.fillMaxWidth()
+    ) { Text("ارسال کد تأیید") }
+    TextButton(onClick = viewModel::showRegistrationRole, enabled = !state.isLoading) { Text("بازگشت") }
+}
+
+@Composable
+private fun ManagerSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
+    Text("تکمیل حساب مدیر/معاون", style = MaterialTheme.typography.titleLarge)
+    Text("ایمیل تأیید شد. مدرسه و اطلاعات ورود را تعیین کنید.")
+    OutlinedTextField(
+        state.schoolName, viewModel::setSchoolName,
+        label = { Text("نام مدرسه") }, singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            state.province, viewModel::setProvince,
+            label = { Text("استان") }, singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedTextField(
+            state.city, viewModel::setCity,
+            label = { Text("شهر") }, singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
+    OutlinedTextField(
+        state.username, viewModel::setUsername,
+        label = { Text("نام کاربری انگلیسی") }, singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    PasswordField("رمز جدید ۸ تا ۷۲ کاراکتر", state.newPassword, viewModel::setNewPassword)
+    PasswordField("تکرار رمز جدید", state.confirmPassword, viewModel::setConfirmPassword)
+    Button(
+        onClick = viewModel::completeManagerRegistration,
+        enabled = !state.isLoading && state.schoolName.trim().length >= 2 &&
+            state.username.length >= 4 && state.newPassword.length >= 8 &&
+            state.newPassword == state.confirmPassword,
+        modifier = Modifier.fillMaxWidth()
+    ) { Text("ساخت مدرسه و ورود") }
+    TextButton(onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading) { Text("انصراف و خروج") }
+}
+
+@Composable
 private fun RecoveryPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("بازیابی رمز معلم", style = MaterialTheme.typography.titleLarge)
+    Text("بازیابی رمز کادر مدرسه", style = MaterialTheme.typography.titleLarge)
     Text("کد فقط به ایمیل حساب موجود فرستاده می‌شود و حساب تازه‌ای ساخته نمی‌شود.")
     OutlinedTextField(
         state.email,

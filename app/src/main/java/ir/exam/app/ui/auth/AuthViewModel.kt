@@ -11,12 +11,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class RegistrationKind { TEACHER, MANAGER }
+
 enum class AuthScreen {
     SIGN_IN,
+    REGISTRATION_ROLE,
     LOGIN_OTP,
     TEACHER_REGISTER,
     TEACHER_REGISTER_OTP,
     TEACHER_REGISTER_SETUP,
+    MANAGER_REGISTER,
+    MANAGER_REGISTER_OTP,
+    MANAGER_REGISTER_SETUP,
     RECOVERY,
     RECOVERY_OTP,
     RECOVERY_PASSWORD
@@ -31,6 +37,10 @@ data class AuthUiState(
     val username: String = "",
     val newPassword: String = "",
     val confirmPassword: String = "",
+    val registrationKind: RegistrationKind? = null,
+    val schoolName: String = "",
+    val province: String = "",
+    val city: String = "",
     val recoveredUsername: String? = null,
     val isLoading: Boolean = false,
     val isRestoringSession: Boolean = true,
@@ -92,9 +102,20 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     fun setConfirmPassword(value: String) {
         _state.update { it.copy(confirmPassword = value.take(72), error = null) }
     }
+    fun setSchoolName(value: String) { _state.update { it.copy(schoolName = value.take(160), error = null) } }
+    fun setProvince(value: String) { _state.update { it.copy(province = value.take(100), error = null) } }
+    fun setCity(value: String) { _state.update { it.copy(city = value.take(100), error = null) } }
 
     fun showSignIn() = switchTo(AuthScreen.SIGN_IN)
-    fun showTeacherRegistration() = switchTo(AuthScreen.TEACHER_REGISTER)
+    fun showRegistrationRole() = switchTo(AuthScreen.REGISTRATION_ROLE)
+    fun showTeacherRegistration() {
+        _state.update { it.copy(registrationKind = RegistrationKind.TEACHER) }
+        switchTo(AuthScreen.TEACHER_REGISTER)
+    }
+    fun showManagerRegistration() {
+        _state.update { it.copy(registrationKind = RegistrationKind.MANAGER) }
+        switchTo(AuthScreen.MANAGER_REGISTER)
+    }
     fun showRecovery() = switchTo(AuthScreen.RECOVERY)
 
     fun signIn() = request {
@@ -129,6 +150,29 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             fullName = state.value.fullName,
             username = state.value.username,
             password = state.value.newPassword
+        ).getOrThrow()
+        acceptAuthenticatedUser(user)
+    }
+
+    fun sendManagerRegistrationOtp() = request {
+        repository.sendManagerRegistrationOtp(state.value.email, state.value.fullName).getOrThrow()
+        _state.update { it.copy(screen = AuthScreen.MANAGER_REGISTER_OTP, otp = "") }
+    }
+
+    fun verifyManagerRegistrationOtp() = request {
+        repository.verifyManagerRegistrationOtp(state.value.email, state.value.otp).getOrThrow()
+        _state.update { it.copy(screen = AuthScreen.MANAGER_REGISTER_SETUP, otp = "") }
+    }
+
+    fun completeManagerRegistration() = request {
+        requirePasswordsMatch()
+        val user = repository.completeManagerRegistration(
+            fullName = state.value.fullName,
+            username = state.value.username,
+            password = state.value.newPassword,
+            schoolName = state.value.schoolName,
+            province = state.value.province,
+            city = state.value.city
         ).getOrThrow()
         acceptAuthenticatedUser(user)
     }
@@ -177,7 +221,9 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         if (user.requiresTeacherSetup) {
             _state.update {
                 it.copy(
-                    screen = AuthScreen.TEACHER_REGISTER_SETUP,
+                    screen = if (user.pendingRegistrationRole == ir.exam.app.domain.model.UserRole.MANAGER) {
+                        AuthScreen.MANAGER_REGISTER_SETUP
+                    } else AuthScreen.TEACHER_REGISTER_SETUP,
                     email = user.email.orEmpty(),
                     fullName = user.name,
                     username = user.username.orEmpty(),
@@ -213,6 +259,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     private fun switchTo(screen: AuthScreen) {
         val authenticatedPending = state.value.screen in setOf(
             AuthScreen.TEACHER_REGISTER_SETUP,
+            AuthScreen.MANAGER_REGISTER_SETUP,
             AuthScreen.RECOVERY_PASSWORD
         )
         if (authenticatedPending && screen == AuthScreen.SIGN_IN) {

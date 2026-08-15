@@ -85,7 +85,9 @@ fun TeacherBottomDock(
     onWallet: () -> Unit,
     onAdd: () -> Unit,
     onExams: () -> Unit,
-    onCards: () -> Unit
+    onCards: () -> Unit,
+    primaryLabel: String = "آزمون‌ها",
+    primaryIcon: androidx.compose.ui.graphics.vector.ImageVector = Design69Icons.Exams
 ) {
     val colors = neumorphic69Colors
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -129,12 +131,12 @@ fun TeacherBottomDock(
                         onClick = onAdd
                     )
                     DockItem(
-                        label = "آزمون‌ها",
+                        label = primaryLabel,
                         selected = active == TeacherDockSection.EXAMS && !menuOpen,
                         motion = DockMotion.EXAMS,
                         modifier = Modifier.weight(1f),
                         onClick = onExams,
-                        icon = Design69Icons.Exams
+                        icon = primaryIcon
                     )
                     DockItem(
                         label = "کارت‌ها",

@@ -74,7 +74,11 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         ).decodeAs<NativeProfileDto>()
         profile.error?.takeIf(String::isNotBlank)?.let(::error)
 
-        val role = if (profile.role.equals("teacher", true)) UserRole.TEACHER else UserRole.STUDENT
+        val role = when {
+            profile.role.equals("manager", true) -> UserRole.MANAGER
+            profile.role.equals("teacher", true) -> UserRole.TEACHER
+            else -> UserRole.STUDENT
+        }
         val realEmailStudent = role == UserRole.STUDENT &&
             !sessionUser.email.orEmpty().endsWith("@student.exam.local", ignoreCase = true)
         val requiresTeacherSetup = if (realEmailStudent) {
@@ -83,6 +87,13 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             state["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
             state["requires_teacher_setup"]?.jsonPrimitive?.booleanOrNull ?: false
         } else false
+        val pendingRole = if (requiresTeacherSetup) {
+            val state = SupabaseProvider.client.postgrest.rpc("native_my_registration_state_v1")
+                .decodeAs<JsonObject>()
+            if (state["pending_role"]?.jsonPrimitive?.contentOrNull.equals("manager", true)) {
+                UserRole.MANAGER
+            } else UserRole.TEACHER
+        } else null
         return AppUser(
             id = profile.id ?: sessionUser.id,
             name = profile.displayName?.takeIf(String::isNotBlank)
@@ -91,7 +102,8 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             role = role,
             avatarUrl = profile.avatarUrl,
             username = profile.username,
-            requiresTeacherSetup = requiresTeacherSetup
+            requiresTeacherSetup = requiresTeacherSetup,
+            pendingRegistrationRole = pendingRole
         )
     }
 
@@ -117,7 +129,7 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
 
     override suspend fun sendTeacherRegistrationOtp(email: String, fullName: String): Result<Unit> {
         require(fullName.trim().length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
-        return sendOtp(email, createUser = true, fullName = fullName.trim())
+        return sendOtp(email, createUser = true, fullName = fullName.trim(), registrationRole = "teacher")
     }
 
     override suspend fun verifyTeacherRegistrationOtp(email: String, code: String): Result<Unit> = runCatching {
@@ -157,6 +169,54 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         persistUser(currentProfile())
     }
 
+    override suspend fun sendManagerRegistrationOtp(email: String, fullName: String): Result<Unit> {
+        require(fullName.trim().length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
+        return sendOtp(
+            email = email,
+            createUser = true,
+            fullName = fullName.trim(),
+            registrationRole = "manager"
+        )
+    }
+
+    override suspend fun verifyManagerRegistrationOtp(email: String, code: String): Result<Unit> = runCatching {
+        verifyEmailCode(email, code)
+    }
+
+    override suspend fun completeManagerRegistration(
+        fullName: String,
+        username: String,
+        password: String,
+        schoolName: String,
+        province: String,
+        city: String
+    ): Result<AppUser> = runCatching {
+        val name = fullName.trim()
+        val normalizedUsername = username.trim().lowercase()
+        require(name.length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
+        require(AuthIdentifier.validUsername(normalizedUsername)) { "نام کاربری معتبر نیست." }
+        require(schoolName.trim().length in 2..160) { "نام مدرسه را وارد کنید." }
+        validateNewPassword(password)
+        check(auth.currentUserOrNull() != null) { "ابتدا کد ایمیل را تأیید کنید." }
+        val response = SupabaseProvider.client.postgrest.rpc(
+            "native_complete_manager_registration_v36",
+            buildJsonObject {
+                put("p_full_name", name)
+                put("p_username", normalizedUsername)
+                put("p_school_name", schoolName.trim())
+                put("p_province", province.trim())
+                put("p_city", city.trim())
+            }
+        ).decodeAs<NativeProfileDto>()
+        response.error?.takeIf(String::isNotBlank)?.let(::error)
+        check(response.ok && response.role.equals("manager", true)) { "تکمیل حساب مدیر/معاون ناموفق بود." }
+        auth.updateUser {
+            this.password = password
+            data { put("full_name", name); put("registration_role", "manager") }
+        }
+        persistUser(currentProfile())
+    }
+
     override suspend fun sendRecoveryOtp(email: String): Result<Unit> = sendOtp(
         email = email,
         createUser = false,
@@ -189,13 +249,21 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         return result
     }
 
-    private suspend fun sendOtp(email: String, createUser: Boolean, fullName: String?): Result<Unit> = runCatching {
+    private suspend fun sendOtp(
+        email: String,
+        createUser: Boolean,
+        fullName: String?,
+        registrationRole: String? = null
+    ): Result<Unit> = runCatching {
         val normalizedEmail = AuthIdentifier.requireEmail(email)
         auth.signInWith(OTP) {
             this.email = normalizedEmail
             this.createUser = createUser
             if (!fullName.isNullOrBlank()) {
-                data = buildJsonObject { put("full_name", fullName) }
+                data = buildJsonObject {
+                    put("full_name", fullName)
+                    registrationRole?.let { put("registration_role", it) }
+                }
             }
         }
     }

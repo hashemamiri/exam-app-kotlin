@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V35 رنگ جنسیت، نوار رمز، کپی دقیق، کارت فشرده و crop آزاد
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V36 زیرساخت نقش مدیر/معاون، مدرسهٔ مستقل و پوستهٔ مدیریتی
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4202,3 +4202,80 @@ SQL / Edge / Migration / Dependency     → ندارد
 ```
 
 راهنمای مستقل: `STUDENT_UI_CROP_V35_FA.md`.
+
+
+## ۵۶) V36 — نقش مدیر/معاون، مدرسهٔ مستقل و پوستهٔ مدیریتی
+
+### تصمیم‌های تأییدشده
+
+```text
+روش تحویل                             → سه مرحله V36/V37/V38
+ثبت‌نام مدیر                          → ایمیل + OTP مانند معلم
+tenant                                → هر مدیر یک مدرسهٔ مستقل
+مدیر/معاون                            → یک نقش واحد MANAGER
+افزودن معلم                           → دعوت امن در V37
+کیف پول                               → انتقال تومان از مدیر در V38
+آمار                                  → آمار آموزشی کامل در V38
+```
+
+### V36 تحویل‌شده
+
+- `UserRole.MANAGER` به مدل، cache، auth repository، profile و تمام whenهای
+  exhaustive اضافه شد.
+- دکمهٔ «ثبت‌نام» ابتدا `REGISTRATION_ROLE` را باز می‌کند و دو دکمهٔ معلم و
+  مدیر/معاون نشان می‌دهد.
+- مسیر مدیر شامل فرم اولیه، OTP مستقل و setup مدرسه/نام‌کاربری/رمز است.
+- pending role در metadata Auth، RPC registration-state و cache عمومی پروفایل
+  حفظ می‌شود تا ادامه setup پس از restart اشتباه به فرم معلم نرود.
+- SQL نقش manager، جداول schools/school_memberships، RLS، تکمیل اتمیک ثبت‌نام،
+  تغییر نام کاربری staff و summary پایه را اضافه می‌کند.
+- پوسته مدیر صفحهٔ HOME=معلم‌ها، دکمه پایین «معلم‌ها»، آیکن Students، کارت‌های
+  فقط آمار، و `+` با مقصد معلم جدید دارد.
+- menu مدیر ۴ کارت حساب/داده‌ها/تنظیمات/خروج دارد و تقویم/سربرگ حذف شده‌اند.
+- صفحات V37 و V38 عمداً foundation امن هستند؛ عملیات ناقص منتشر نشده است.
+
+### SQL
+
+```text
+supabase/migrations/20260815_native_school_manager_v36.sql
+SQL_NATIVE_SCHOOL_MANAGER_V36.sql
+ترتیب: پس از تمام migrationهای V35
+اجرای دستی لازم: بله، در SQL Editor پروژه اصلی
+Edge deploy: ندارد
+Secret جدید: ندارد
+```
+
+### فایل‌های کلیدی
+
+```text
+app/src/main/java/ir/exam/app/domain/model/AppUser.kt
+app/src/main/java/ir/exam/app/domain/repository/AuthRepository.kt
+app/src/main/java/ir/exam/app/data/local/AuthUserCache.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt
+app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt
+app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt
+app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt
+app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
+app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
+app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsViewModel.kt
+app/src/test/java/ir/exam/app/ui/app/V36ManagerFoundationTest.kt
+supabase/migrations/20260815_native_school_manager_v36.sql
+SQL_NATIVE_SCHOOL_MANAGER_V36.sql
+SCHOOL_MANAGER_FOUNDATION_V36_FA.md
+```
+
+### نتیجه بررسی
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+V36 manager foundation tests           → اضافه شد
+testDebugUnitTest / lintDebug           → باید در WSL/GitHub Actions اجرا شود
+Dependency / Edge / Secret جدید         → ندارد
+پیش‌نیاز                                → V35
+```
+
+راهنمای مستقل: `SCHOOL_MANAGER_FOUNDATION_V36_FA.md`.

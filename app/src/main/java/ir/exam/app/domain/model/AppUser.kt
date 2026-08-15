@@ -1,6 +1,6 @@
 package ir.exam.app.domain.model
 
-enum class UserRole { TEACHER, STUDENT }
+enum class UserRole { TEACHER, STUDENT, MANAGER }
 
 data class AppUser(
     val id: String,
@@ -9,6 +9,8 @@ data class AppUser(
     val role: UserRole,
     val avatarUrl: String? = null,
     val username: String? = null,
-    /** حساب ایمیلی تأیید شده ولی ثبت‌نام معلم هنوز کامل نشده است. */
-    val requiresTeacherSetup: Boolean = false
+    /** حساب ایمیلی تأیید شده ولی ثبت‌نام staff هنوز کامل نشده است. */
+    val requiresTeacherSetup: Boolean = false,
+    /** نقش انتخاب‌شده پیش از OTP برای ادامهٔ صحیح setup پس از بازشدن دوباره. */
+    val pendingRegistrationRole: UserRole? = null
 )

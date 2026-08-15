@@ -216,10 +216,10 @@ fun ProfileSettingsScreen(
             destination == ProfileSettingsDestination.DATA -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
             ) {
-                if (user.role == UserRole.TEACHER) {
-                    DataPortabilitySection(onImportExam = onImportExam)
-                } else {
-                    Text("پشتیبان کامل داده‌ها فقط برای حساب معلم در دسترس است.")
+                when (user.role) {
+                    UserRole.TEACHER -> DataPortabilitySection(onImportExam = onImportExam)
+                    UserRole.MANAGER -> Text("پشتیبان داده‌های مدرسه در مرحله V37 فعال می‌شود.")
+                    UserRole.STUDENT -> Text("پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.")
                 }
             }
             settingsSection == SettingsSection.APPEARANCE -> AppearanceSection(appearance, viewModel)
@@ -514,10 +514,17 @@ private fun AccountSection(
             ) {
                 LabeledValue("نام", profile.fullName)
                 LabeledValue("نام کاربری", profile.username.ifBlank { "—" })
-                LabeledValue("نقش", if (role == UserRole.TEACHER) "معلم" else "دانش‌آموز")
+                LabeledValue(
+                    "نقش",
+                    when (role) {
+                        UserRole.TEACHER -> "معلم"
+                        UserRole.MANAGER -> "مدیر/معاون"
+                        UserRole.STUDENT -> "دانش‌آموز"
+                    }
+                )
                 LabeledValue(
                     "ایمیل",
-                    if (role == UserRole.TEACHER) user.email.orEmpty().ifBlank { "—" }
+                    if (role != UserRole.STUDENT) user.email.orEmpty().ifBlank { "—" }
                     else "حساب مدیریت‌شده توسط معلم"
                 )
             }
@@ -528,7 +535,7 @@ private fun AccountSection(
                 expanded = expandedCard == "username",
                 onToggle = { toggle("username") }
             ) {
-                if (role == UserRole.TEACHER) {
+                if (role != UserRole.STUDENT) {
                     OutlinedTextField(
                         value = username,
                         onValueChange = {
@@ -557,7 +564,7 @@ private fun AccountSection(
                 expanded = expandedCard == "email",
                 onToggle = { toggle("email") }
             ) {
-                if (role == UserRole.TEACHER) {
+                if (role != UserRole.STUDENT) {
                     OutlinedTextField(
                         value = newEmail,
                         onValueChange = { newEmail = it.trim().take(254) },

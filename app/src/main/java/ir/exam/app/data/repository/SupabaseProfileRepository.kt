@@ -42,7 +42,11 @@ class SupabaseProfileRepository(context: Context) {
                 grade = dto.headerGrade.orEmpty(),
                 fieldOfStudy = dto.headerField.orEmpty()
             ),
-            role = if (dto.role.equals("teacher", true)) UserRole.TEACHER else UserRole.STUDENT
+            role = when {
+                dto.role.equals("manager", true) -> UserRole.MANAGER
+                dto.role.equals("teacher", true) -> UserRole.TEACHER
+                else -> UserRole.STUDENT
+            }
         )
     }
 
