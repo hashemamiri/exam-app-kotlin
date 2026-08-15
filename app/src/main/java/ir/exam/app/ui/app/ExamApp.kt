@@ -263,6 +263,7 @@ private fun AuthenticatedExamApp(
         appearance = appearance,
         profileDestination = profileDestination,
         schoolStudentsSelected = schoolStudentsSelected,
+        managerInviteHeader = managerInviteHeader,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         onToggleMenu = {
@@ -565,6 +566,7 @@ private fun AuthenticatedShell(
     appearance: AppearanceSettings,
     profileDestination: ProfileSettingsDestination,
     schoolStudentsSelected: Boolean,
+    managerInviteHeader: Boolean,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
     onToggleMenu: () -> Unit,

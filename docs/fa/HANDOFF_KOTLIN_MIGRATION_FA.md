@@ -4731,3 +4731,7 @@ SQL/Edge → ندارد
 ## ۷۳) V41A.1 — رفع خطای کامپایل Icon
 
 CI پچ V41A سه پرانتز پایانی جاافتاده در فراخوانی‌های `Icon` مربوط به ورود، کیف پول و حذف معلم را در `ManagerFoundationScreens.kt` آشکار کرد. هر سه فراخوانی اصلاح شدند. پچ V41A.1 یک hotfix افزایشی و فاقد تغییر SQL/Edge است.
+
+## ۷۴) V41A.2 — عبور state عنوان دعوت به Shell
+
+CI پس از عبور از مرحله KSP نشان داد `managerInviteHeader` در scope تابع `AuthenticatedShell` تعریف نشده است. state اکنون به‌صورت پارامتر صریح از `AuthenticatedExamApp` به `AuthenticatedShell` ارسال می‌شود؛ بنابراین عنوان TopAppBar بدون اتکا به scope بیرونی کامپایل می‌شود. این hotfix افزایشی فاقد SQL/Edge است.
