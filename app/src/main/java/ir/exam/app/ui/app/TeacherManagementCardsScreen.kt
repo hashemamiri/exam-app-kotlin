@@ -60,7 +60,7 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 object Design69ManagementCardsContract {
-    const val CARD_COUNT = 5
+    const val CARD_COUNT = 6
     const val DRAG_THRESHOLD_DP = 52
 }
 
@@ -80,7 +80,8 @@ fun TeacherManagementCardsScreen(
     onQuestionBank: () -> Unit,
     onGrading: () -> Unit,
     onPending: () -> Unit,
-    onAnswers: () -> Unit
+    onAnswers: () -> Unit,
+    onRequests: () -> Unit
 ) {
     val neo = neumorphic69Colors
     val cards = remember(
@@ -89,6 +90,7 @@ fun TeacherManagementCardsScreen(
         onGrading,
         onPending,
         onAnswers,
+        onRequests,
         neo.accent,
         neo.accent2
     ) {
@@ -127,6 +129,13 @@ fun TeacherManagementCardsScreen(
                 Design69Icons.Grading,
                 listOf(Color(0xFF4D5B74), Color(0xFF273247)),
                 onAnswers
+            ),
+            ManagementCardSpec(
+                "درخواست‌ها",
+                "درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.",
+                Design69Icons.Cards,
+                listOf(Color(0xFF7D6CF4), Color(0xFFE0587F)),
+                onRequests
             )
         )
     }

@@ -70,7 +70,7 @@ class Neumorphic69IntegrationTest {
     fun `quick add and management cards preserve selected real contracts`() {
         assertEquals(3, Design69QuickAddContract.ACTION_COUNT)
         assertEquals(135, Design69QuickAddContract.OPEN_ROTATION_DEGREES)
-        assertEquals(5, Design69ManagementCardsContract.CARD_COUNT)
+        assertEquals(6, Design69ManagementCardsContract.CARD_COUNT)
         assertEquals(52, Design69ManagementCardsContract.DRAG_THRESHOLD_DP)
     }
 
@@ -114,7 +114,7 @@ class Neumorphic69IntegrationTest {
         assertTrue("DRAG_THRESHOLD_DP = 52" in cards)
         assertTrue("Key.DirectionLeft" in cards && "Key.DirectionRight" in cards)
         assertFalse("vertical card navigation returned", "Key.DirectionDown" in cards)
-        listOf("آمار", "بانک سؤال", "تصحیح", "مانده", "پاسخ").forEach {
+        listOf("آمار", "بانک سؤال", "تصحیح", "مانده", "پاسخ", "درخواست‌ها").forEach {
             assertTrue("missing management card $it", it in cards)
         }
         assertTrue("cards[activeIndex].subtitle" in cards)

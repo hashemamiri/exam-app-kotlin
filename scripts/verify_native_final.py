@@ -193,9 +193,9 @@ require("Design69MainMenuScreen" in app_shell and "menuOpen = !menuOpen" in app_
         "menu is not a full-page reversible state")
 require(all(marker in design69_add for marker in ("OPEN_ROTATION_DEGREES = 135","ACTION_COUNT = 3","دانش‌آموز جدید","آزمون جدید","کلاس جدید","travel.animateTo")),
         "shared moving plus or three real quick actions incomplete")
-require(all(marker in design69_cards for marker in ("CARD_COUNT = 5","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionRight","\"آمار\"","بانک سؤال","\"تصحیح\"","\"مانده\"","\"پاسخ\"","cards[activeIndex].subtitle")) and
+require(all(marker in design69_cards for marker in ("CARD_COUNT = 6","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionRight","\"آمار\"","بانک سؤال","\"تصحیح\"","\"مانده\"","\"پاسخ\"","cards[activeIndex].subtitle")) and
         "Key.DirectionDown" not in design69_cards and "بکشید" not in design69_cards,
-        "five-card horizontal-only management stack/description incomplete")
+        "six-card horizontal-only management stack/description incomplete")
 require("cards.forEachIndexed" not in design69_cards,
         "management cards are duplicated as buttons below the stack")
 require("ModalBottomSheet" not in teacher_dock,
@@ -784,14 +784,6 @@ for match in re.finditer(
     if not re.search(r"(?i)\bwhere\b", statement):
         errors.append(f"UPDATE/DELETE without WHERE at line {hardening[:match.start()].count(chr(10))+1}")
 
-if errors:
-    print("FINAL_NATIVE_VERIFY=FAIL")
-    for error in errors:
-        print(f"- {error}")
-    sys.exit(1)
-
-print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")
-
 # V34 — ترتیب ابزارها، thumbnail هم‌سطری، Vault محلی و برش جهت‌دار/دایره‌ای
 _v34_multiple=builder_screen.split("QuestionType.MULTIPLE_CHOICE ->",1)[1].split("QuestionType.TRUE_FALSE ->",1)[0]
 require(_v34_multiple.index("Icons.Outlined.Functions") < _v34_multiple.index("ReorderDragButton(") <
@@ -848,7 +840,7 @@ require("CropGeometry.moveCenter(" in image_editor and ".padding(18.dp)" in imag
         "Modifier.width(5.dp).height(34.dp)" not in image_editor and "fun moveCenter(" in crop_geometry,
         "V35 free crop movement or invisible resize edges incomplete")
 require(all(marker in student_card for marker in (
-            "listOf(student.grade, student.fieldOfStudy)","joinToString(\\\" \\\")",
+            "listOf(student.grade, student.fieldOfStudy)",'joinToString(" ")',
             "نام پدر: ${student.fatherName", "نام کاربری: ${student.username"
         )) and "رشته: ${student.fieldOfStudy" not in student_card,
         "V35 compact student card rows incomplete")
@@ -1040,7 +1032,23 @@ require(all(marker in manager_foundation for marker in ("delay(1_000)","clockNow
 v41_sql=(ROOT/'supabase/migrations/20260816_native_manager_teacher_approval_v41.sql').read_text()
 v41_copy=(ROOT/'sql/manual/SQL_NATIVE_MANAGER_TEACHER_APPROVAL_V41.sql').read_text()
 v41_edge=(ROOT/'supabase/functions/manage-student/index.ts').read_text()
-v41_dashboard=(ROOT/'app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt').read_text()
+v41_dashboard=(ROOT/'app/src/main/java/ir/exam/app/ui/dashboard/TeacherManagerRequestsScreen.kt').read_text()
 require(v41_sql==v41_copy and all(x in v41_sql for x in ('manager_approval_requests',"interval '24 hours'",'native_teacher_decide_manager_request_v41','executed_at','security definer')), 'V41 approval SQL/copy incomplete')
 require('manager_approval_requests' in v41_edge and 'current.teacher_id !== teacherId' in v41_edge and 'approval_id: approvalId' in v41_edge, 'V41 student Edge approval enforcement incomplete')
-require('درخواست‌های مدیر' in v41_dashboard and 'decideManagerRequest(request.id, true)' in v41_dashboard and 'decideManagerRequest(request.id, false)' in v41_dashboard, 'V41 teacher approval inbox incomplete')
+require('درخواست‌های مدیر' in v41_dashboard and 'decide(request.id, true)' in v41_dashboard and 'decide(request.id, false)' in v41_dashboard, 'V41 teacher approval inbox incomplete')
+
+# V41B.1 — profile/invite grants, live countdown, requests-only card destination
+v41b1_sql=(ROOT/'supabase/migrations/20260816_native_profile_grant_invite_requests_v41b1.sql').read_text()
+v41b1_copy=(ROOT/'sql/manual/SQL_NATIVE_PROFILE_GRANT_INVITE_REQUESTS_V41B1.sql').read_text()
+v41b1_requests=(ROOT/'app/src/main/java/ir/exam/app/ui/dashboard/TeacherManagerRequestsScreen.kt').read_text()
+require(v41b1_sql==v41b1_copy and 'grant execute on function public.native_my_profile() to authenticated' in v41b1_sql and 'native_manager_revoke_invite_v40b(uuid)' in v41b1_sql, 'V41B.1 RPC grants incomplete')
+require('%02d:%02d:%02d' in manager_foundation and manager_foundation.index('invites = invites.filterNot') < manager_foundation.index('repository.revokeInvite'), 'V41B.1 invite countdown/optimistic deletion incomplete')
+require('درخواست‌های مدیر' in v41b1_requests and '"درخواست‌ها"' in design69_cards and 'MainPage.REQUESTS' in app_shell, 'V41B.1 requests card destination incomplete')
+
+if errors:
+    print("FINAL_NATIVE_VERIFY=FAIL")
+    for error in errors:
+        print(f"- {error}")
+    sys.exit(1)
+
+print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

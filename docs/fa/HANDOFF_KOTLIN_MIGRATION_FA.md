@@ -4751,3 +4751,9 @@ CI تمام سورس و تست‌های V41 را کامپایل کرد و از �
 - کلاس پس از تأیید در transaction تابع PostgreSQL اجرا می‌شود؛ حساب دانش‌آموز پس از تأیید با retry مدیر در Edge Function اجرا و `executed_at` ثبت می‌شود.
 - membership کلاس عمداً به RPC V40C مستقل باقی مانده است.
 - SQL canonical و manual copy باید پیش از deploy Edge اجرا شوند.
+
+## ۷۸) V41B.1 — مجوز پروفایل، دعوت و کارت درخواست‌ها
+
+- خطای `permission denied for function native_my_profile` با migration افزایشی grant رفع شد؛ grantهای RPC دعوت نیز برای deploymentهای ناقص تثبیت شدند.
+- کارت دعوت پیش از درخواست شبکه به‌صورت optimistic حذف می‌شود و شمارش معکوس `HH:MM:SS` هر ثانیه به‌روزرسانی می‌شود.
+- inbox درخواست مدیر از داشبورد آزمون حذف و فقط در کارت ششم «درخواست‌ها» و مقصد اختصاصی آن قرار گرفت.

@@ -132,7 +132,7 @@ fun ManagerTeachersScreen(
                         Column(Modifier.weight(1f)) {
                             Text(invite.code, style = MaterialTheme.typography.titleLarge)
                             Text(remaining)
-                            val expired = remaining == "منقضی شده"
+                            val expired = remaining.endsWith("00:00:00")
                             androidx.compose.material3.FilterChip(
                                 selected = true,
                                 onClick = {},
@@ -150,9 +150,10 @@ fun ManagerTeachersScreen(
                         }
                         if (!invite.used && !invite.revoked) {
                             androidx.compose.material3.IconButton(onClick = {
+                                invites = invites.filterNot { it.id == invite.id }
                                 scope.launch {
-                                    repository.revokeInvite(invite.id).onSuccess { invites = invites.filterNot { it.id == invite.id } }
-                                        .onFailure { error = safeManagerError(it) }
+                                    repository.revokeInvite(invite.id)
+                                        .onFailure { error = "کارت حذف شد؛ ابطال سروری ناموفق بود: ${safeManagerError(it)}" }
                                 }
                             }) {
                                 androidx.compose.material3.Icon(
@@ -292,13 +293,18 @@ fun ManagerTeachersScreen(
     }
 }
 
-private fun inviteRemainingText(expiresAt: String, used: Boolean, revoked: Boolean, now: Long): String {
-    if (used) return "مصرف شده"
-    if (revoked) return "حذف شده"
-    val millis = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() - now }.getOrDefault(0)
-    if (millis <= 0) return "منقضی شده"
-    val minutes = millis / 60_000
-    return "زمان باقی‌مانده: ${minutes / 60} ساعت و ${minutes % 60} دقیقه"
+private fun inviteRemainingText(expiresAt: String, _used: Boolean, _revoked: Boolean, now: Long): String {
+    val expiry = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() }
+        .recoverCatching { java.time.OffsetDateTime.parse(expiresAt).toInstant().toEpochMilli() }
+        .recoverCatching { java.time.LocalDateTime.parse(expiresAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }
+        .getOrNull()
+    if (expiry == null) return "زمان انقضا نامعتبر است"
+    val seconds = ((expiry - now) / 1_000).coerceAtLeast(0)
+    if (seconds == 0L) return "زمان باقی‌مانده: 00:00:00"
+    val hours = seconds / 3_600
+    val minutes = (seconds % 3_600) / 60
+    val rest = seconds % 60
+    return "زمان باقی‌مانده: %02d:%02d:%02d".format(hours, minutes, rest)
 }
 
 @Composable

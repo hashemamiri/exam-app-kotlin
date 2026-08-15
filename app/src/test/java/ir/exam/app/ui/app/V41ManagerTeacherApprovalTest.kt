@@ -33,9 +33,9 @@ class V41ManagerTeacherApprovalTest {
     }
 
     @Test fun `teacher dashboard exposes manager request inbox`() {
-        val ui = source("app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt")
+        val ui = source("app/src/main/java/ir/exam/app/ui/dashboard/TeacherManagerRequestsScreen.kt")
         assertTrue("درخواست‌های مدیر" in ui)
-        assertTrue("decideManagerRequest(request.id, true)" in ui)
-        assertTrue("decideManagerRequest(request.id, false)" in ui)
+        assertTrue("decide(request.id, true)" in ui)
+        assertTrue("decide(request.id, false)" in ui)
     }
 }

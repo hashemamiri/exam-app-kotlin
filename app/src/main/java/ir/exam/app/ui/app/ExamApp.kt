@@ -72,6 +72,7 @@ import ir.exam.app.ui.calendar.CalendarScreen
 import ir.exam.app.ui.classes.SchoolLaunchAction
 import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
+import ir.exam.app.ui.dashboard.TeacherManagerRequestsScreen
 import ir.exam.app.ui.grading.GradingScreen
 import ir.exam.app.ui.manager.ManagerStatsScreen
 import ir.exam.app.ui.manager.ManagerTeachersScreen
@@ -88,7 +89,7 @@ import ir.exam.app.ui.update.UpdateViewModel
 
 private enum class MainPage {
     HOME, CALENDAR, SCHOOL, QUESTION_BANK, GRADING, REPORTS, STUDENT_RESULTS,
-    WALLET, CARDS, SETTINGS, BUILDER
+    WALLET, CARDS, REQUESTS, SETTINGS, BUILDER
 }
 
 @Composable
@@ -223,7 +224,8 @@ private fun AuthenticatedExamApp(
             MainPage.GRADING,
             MainPage.REPORTS,
             MainPage.WALLET,
-            MainPage.CARDS
+            MainPage.CARDS,
+            MainPage.REQUESTS
         )
         when (user.role) {
             UserRole.STUDENT -> if (page in teacherOnly) page = MainPage.HOME
@@ -415,9 +417,11 @@ private fun AuthenticatedExamApp(
                             gradingPendingOnly = false
                             gradingGradedOnly = true
                             page = MainPage.GRADING
-                        }
+                        },
+                        onRequests = { page = MainPage.REQUESTS }
                     )
                 }
+                MainPage.REQUESTS -> if (user.role == UserRole.TEACHER) TeacherManagerRequestsScreen()
                 MainPage.SETTINGS -> ProfileSettingsScreen(
                     user = user,
                     appearance = appearance,
@@ -803,6 +807,7 @@ private fun MainPage.sectionTitle(
     MainPage.STUDENT_RESULTS -> "نتایج من"
     MainPage.WALLET -> "کیف پول"
     MainPage.CARDS -> if (role == UserRole.MANAGER) "آمار مدرسه" else "مدیریت"
+    MainPage.REQUESTS -> "درخواست‌ها"
     MainPage.SETTINGS -> when (profileDestination) {
         ProfileSettingsDestination.PROFILE -> "پروفایل"
         ProfileSettingsDestination.HEADER -> "سربرگ"
@@ -816,7 +821,7 @@ private fun MainPage.sectionTitle(
 private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {
     MainPage.HOME -> TeacherDockSection.EXAMS
     MainPage.WALLET -> TeacherDockSection.WALLET
-    MainPage.CARDS, MainPage.QUESTION_BANK, MainPage.GRADING, MainPage.REPORTS ->
+    MainPage.CARDS, MainPage.REQUESTS, MainPage.QUESTION_BANK, MainPage.GRADING, MainPage.REPORTS ->
         TeacherDockSection.CARDS
     else -> TeacherDockSection.NONE
 }
