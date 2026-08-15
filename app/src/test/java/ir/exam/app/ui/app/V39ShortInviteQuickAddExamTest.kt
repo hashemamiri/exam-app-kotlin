@@ -27,7 +27,8 @@ class V39ShortInviteQuickAddExamTest {
             "school_invite_attempts_v39",
             ">=10"
         ).forEach { assertTrue("missing $it", it in sql) }
-        assertTrue("email,null" in sql)
+        assertTrue("school_id,email,token_hash,created_by,expires_at" in sql)
+        assertTrue("values(v_school,null,v_hash,v_uid" in sql)
     }
 
     @Test

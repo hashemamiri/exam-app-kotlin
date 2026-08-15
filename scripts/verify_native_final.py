@@ -963,3 +963,5 @@ require("featuredCard = if (user.role == UserRole.STUDENT)" in app_shell and
         "V39 centered student exam card/dialog/preview flow incomplete")
 
 require("import androidx.compose.material3.IconButton" in profile_settings and "schoolJoinRepository.preview" in profile_settings, "V39.1 school join IconButton import missing")
+
+require("school_id,email,token_hash,created_by,expires_at" in v39_migration and "values(v_school,null,v_hash,v_uid" in v39_migration, "V39.2 short invite null-email SQL contract missing")

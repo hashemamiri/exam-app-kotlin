@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V39.1 اصلاح import دکمه ذره‌بین پیوستن به مدرسه
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V39.2 اصلاح assertion دعوت کوتاه
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4545,4 +4545,26 @@ git diff --check                        → PASS
 testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
 SQL / Edge / Secret / Dependency        → بدون تغییر
 پیش‌نیاز                                → V39
+```
+
+## ۶۵) V39.2 — اصلاح assertion نادرست ستون email دعوت کوتاه
+
+### گزارش CI
+
+```text
+compileDebugKotlin / compileDebugUnitTestKotlin → SUCCESS
+272 tests                                   → 271 PASS / 1 FAIL
+V39ShortInviteQuickAddExamTest.kt:30        → marker اشتباه «email,null»
+```
+
+SQL درست بود و در فهرست ستون‌ها `email` و در بخش VALUES مقدار `null` قرار داشت،
+اما تست به‌اشتباه انتظار داشت این دو در متن SQL کنار هم باشند. تست اکنون فهرست
+ستون و VALUES را جداگانه بررسی می‌کند. کد اجرایی، SQL و Edge تغییری ندارند.
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
+SQL / Edge / Secret / Dependency        → بدون تغییر
+پیش‌نیاز                                → V39.1
 ```
