@@ -4735,3 +4735,7 @@ CI پچ V41A سه پرانتز پایانی جاافتاده در فراخوان
 ## ۷۴) V41A.2 — عبور state عنوان دعوت به Shell
 
 CI پس از عبور از مرحله KSP نشان داد `managerInviteHeader` در scope تابع `AuthenticatedShell` تعریف نشده است. state اکنون به‌صورت پارامتر صریح از `AuthenticatedExamApp` به `AuthenticatedShell` ارسال می‌شود؛ بنابراین عنوان TopAppBar بدون اتکا به scope بیرونی کامپایل می‌شود. این hotfix افزایشی فاقد SQL/Edge است.
+
+## ۷۵) V41A.3 — اصلاح syntax تست V41
+
+CI پس از کامپایل موفق سورس اصلی، خطای quoting در assertionهای تک‌خطی `V41InviteTeacherCardPolishTest` را نشان داد. تست به ساختار چندخطی خوانا بازنویسی شد و شمارش سه آیکن ۳۲dp بدون رشته‌های نقل‌قول‌دار شکننده بررسی می‌شود. این hotfix افزایشی فاقد SQL/Edge است.

@@ -1,13 +1,56 @@
 package ir.exam.app.ui.app
+
 import java.io.File
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-class V41InviteTeacherCardPolishTest{
- private fun root()=listOf(File("."),File("..")).first{File(it,"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile}
- private fun source(p:String)=File(root(),p).readText()
- @Test fun `teacher list removes duplicate titles and aligns details`(){val u=source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt");assertFalse("Text(\"معلم‌ها\", style" in u);assertFalse("summaryState.summary?.let { Text(it.schoolName) }" in u);assertTrue("کد پرسنلی:" in u&&"تلفن:" in u&&"Arrangement.spacedBy(12.dp)" in u)}
- @Test fun `teacher icons are large and active state is colored`(){val u=source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt");assertTrue("Color(0xFF25A86B)" in u);assertTrue("Color(0xFFE5484D)" in u);assertTrue("Modifier.size(34.dp)" in u);assertTrue("Icons.Outlined.Login, "ورود به مدیریت معلم", modifier = Modifier.size(32.dp))" in u);assertTrue("Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول", modifier = Modifier.size(32.dp))" in u);assertTrue("Icons.Outlined.Delete, "حذف معلم", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))" in u)}
- @Test fun `invite timer and chips update live and deletion removes card immediately`(){val u=source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt");assertTrue("delay(1_000)" in u);assertTrue("clockNow" in u);assertTrue("FilterChipDefaults.filterChipColors" in u);assertTrue("استفاده شده" in u&&"منقضی شده" in u);assertTrue("invites = invites.filterNot" in u)}
- @Test fun `invite title belongs to header and teacher dock restores list`(){val a=source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt");assertTrue("managerInviteHeader = managerInviteHeader" in a);assertTrue("managerInviteHeader: Boolean" in a);assertTrue("\"کدهای دعوت معلم\"" in a);assertTrue("if (user.role == UserRole.MANAGER) managerInviteHeader = false" in a)}
+
+class V41InviteTeacherCardPolishTest {
+    private fun root() = listOf(File("."), File("..")).first {
+        File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
+    }
+
+    private fun source(path: String) = File(root(), path).readText()
+
+    @Test
+    fun `teacher list removes duplicate titles and aligns details`() {
+        val ui = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
+        assertFalse("Text(\"معلم‌ها\", style" in ui)
+        assertFalse("summaryState.summary?.let { Text(it.schoolName) }" in ui)
+        assertTrue("کد پرسنلی:" in ui)
+        assertTrue("تلفن:" in ui)
+        assertTrue("Arrangement.spacedBy(12.dp)" in ui)
+    }
+
+    @Test
+    fun `teacher icons are large and active state is colored`() {
+        val ui = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
+        assertTrue("Color(0xFF25A86B)" in ui)
+        assertTrue("Color(0xFFE5484D)" in ui)
+        assertTrue("Modifier.size(34.dp)" in ui)
+        assertTrue(ui.split("Modifier.size(32.dp)").size - 1 >= 3)
+        assertTrue("Icons.Outlined.Login" in ui)
+        assertTrue("Icons.Outlined.AccountBalanceWallet" in ui)
+        assertTrue("Icons.Outlined.Delete" in ui)
+    }
+
+    @Test
+    fun `invite timer chips and immediate removal exist`() {
+        val ui = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
+        assertTrue("delay(1_000)" in ui)
+        assertTrue("clockNow" in ui)
+        assertTrue("FilterChipDefaults.filterChipColors" in ui)
+        assertTrue("استفاده شده" in ui)
+        assertTrue("منقضی شده" in ui)
+        assertTrue("invites = invites.filterNot" in ui)
+    }
+
+    @Test
+    fun `invite title belongs to header and teacher dock restores list`() {
+        val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
+        assertTrue("managerInviteHeader = managerInviteHeader" in app)
+        assertTrue("managerInviteHeader: Boolean" in app)
+        assertTrue("\"کدهای دعوت معلم\"" in app)
+        assertTrue("if (user.role == UserRole.MANAGER) managerInviteHeader = false" in app)
+    }
 }
