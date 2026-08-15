@@ -60,7 +60,8 @@ class V38ManagerWalletStatsTest {
         val repository = source("app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt")
         assertTrue("مبلغ باید مضرب ۱٬۰۰۰ تومان باشد" in manager)
         assertTrue("ManagerWalletRules.isValidTransfer(amount)" in manager)
-        assertTrue("Text(\"شارژ\")" in manager)
+        assertTrue("Icons.Outlined.AccountBalanceWallet" in manager)
+        assertTrue("\"شارژ کیف پول\"" in manager)
         assertTrue("native_manager_transfer_wallet_v38" in repository)
         assertTrue("ManagerWalletRules.validateTransfer" in repository)
     }

@@ -23,7 +23,7 @@ class V37TeacherInvitationTest {
             "expires_at>now()",
             "v_inv.email<>v_email",
             "native_complete_teacher_registration_v37",
-            "native_manager_remove_teacher_v40b",
+            "native_manager_disable_teacher_v37",
             "teacher_membership_disabled"
         ).forEach { assertTrue("missing $it", it in migration) }
         assertFalse("admin.deleteUser" in migration)

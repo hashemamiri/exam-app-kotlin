@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40B کارت معلم و دعوت دسته‌ای ۱ تا ۵
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40B.1 هماهنگ‌سازی تست‌های تاریخی دعوت و شارژ
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4630,3 +4630,27 @@ Edge deploy                             → ندارد
 ```
 
 راهنما: `MANAGER_TEACHER_CARDS_INVITES_V40B_FA.md`.
+
+## ۶۸) V40B.1 — هماهنگ‌سازی دو تست قدیمی با قرارداد V40B
+
+### گزارش CI
+
+```text
+compileDebugKotlin / compileDebugUnitTestKotlin → SUCCESS
+281 tests                                   → 279 PASS / 2 FAIL
+V37TeacherInvitationTest.kt:28              → marker تاریخی V37 ناخواسته به نام RPC V40B تغییر کرده بود
+V38ManagerWalletStatsTest.kt:63              → دکمه متنی شارژ در V40B به آیکن کیف پول تبدیل شده است
+```
+
+تست V37 دوباره migration تاریخی خودش (`native_manager_disable_teacher_v37`) را
+بررسی می‌کند. تست V38 به‌جای `Text("شارژ")`، آیکن AccountBalanceWallet و
+contentDescription «شارژ کیف پول» را بررسی می‌کند. کد اجرایی، SQL و Edge بدون
+تغییرند.
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
+SQL / Edge / Secret / Dependency        → بدون تغییر
+پیش‌نیاز                                → V40B
+```

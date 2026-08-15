@@ -915,7 +915,7 @@ require("role in('teacher','manager')" in v38_migration and
         "V38 manager secure top-up path incomplete")
 require("native_manager_transfer_wallet_v38" in manager_repository and
         all(marker in manager_foundation for marker in (
-            "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد","Text(\"شارژ\")","پاسخ‌ها",
+            "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد","Icons.Outlined.AccountBalanceWallet","شارژ کیف پول","پاسخ‌ها",
             "میانگین نمره","مجموع اعتبار توزیع‌شده","فعالیت معلم‌ها"
         )) and all(marker in v38_migration for marker in (
             "average_percent","distributed_toman","teacher_activity","wallet_balance"
