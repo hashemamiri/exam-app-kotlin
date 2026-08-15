@@ -23,7 +23,7 @@ class V37TeacherInvitationTest {
             "expires_at>now()",
             "v_inv.email<>v_email",
             "native_complete_teacher_registration_v37",
-            "native_manager_disable_teacher_v37",
+            "native_manager_remove_teacher_v40b",
             "teacher_membership_disabled"
         ).forEach { assertTrue("missing $it", it in migration) }
         assertFalse("admin.deleteUser" in migration)
@@ -45,13 +45,13 @@ class V37TeacherInvitationTest {
     fun `manager creates invitation and only disables membership`() {
         val manager = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
         val repo = source("app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt")
-        assertTrue("دعوت معلم جدید" in manager)
         assertTrue("ساخت کد دعوت" in manager)
-        assertTrue("کد دعوت ۶ کاراکتری، یک‌بارمصرف و تا ۲۴ ساعت معتبر است" in manager)
-        assertTrue("قطع عضویت معلم" in manager)
+        assertTrue("ساخت کد دعوت" in manager)
+        assertTrue("زمان باقی‌مانده:" in manager)
+        assertTrue("حذف معلم از مدرسه" in manager)
         assertTrue("native_manager_teachers_v37" in repo)
-        assertTrue("native_manager_create_teacher_invite_v39" in repo)
-        assertTrue("native_manager_disable_teacher_v37" in repo)
+        assertTrue("native_manager_create_teacher_invites_v40b" in repo)
+        assertTrue("native_manager_remove_teacher_v40b" in repo)
         assertFalse("deleteUser" in repo)
     }
 

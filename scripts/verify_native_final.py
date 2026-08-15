@@ -78,6 +78,8 @@ v39_migration=(ROOT/"supabase/migrations/20260815_native_short_school_invite_v39
 v39_sql_copy=(ROOT/"SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql").read_text()
 v40a_migration=(ROOT/"supabase/migrations/20260815_native_teacher_profile_v40a.sql").read_text()
 v40a_sql_copy=(ROOT/"SQL_NATIVE_TEACHER_PROFILE_V40A.sql").read_text()
+v40b_migration=(ROOT/"supabase/migrations/20260815_native_manager_teacher_cards_v40b.sql").read_text()
+v40b_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql").read_text()
 school_join_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolJoinRepository.kt").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
@@ -872,7 +874,7 @@ require(all(marker in app_shell for marker in (
             "primaryLabel = if (user.role == UserRole.MANAGER) \"معلم‌ها\"","createManagerTeacher"
         )) and "MANAGER_CARD_COUNT = 4" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
-        "دعوت معلم جدید" in manager_foundation and "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد" in manager_foundation,
+        "ساخت کد دعوت" in manager_foundation and "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد" in manager_foundation,
         "V36 manager dock/stats/staged foundation incomplete")
 
 # V37 — دعوت امن و مدیریت عضویت معلم
@@ -887,10 +889,10 @@ require("کد دعوت مدرسه (اختیاری)" in sign_in_screen and
             (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt").read_text(),
         "V37 invited teacher registration flow incomplete")
 require(all(marker in manager_foundation for marker in (
-            "دعوت معلم جدید","ساخت کد دعوت","کد دعوت ۶ کاراکتری، یک‌بارمصرف و تا ۲۴ ساعت معتبر است","قطع عضویت معلم"
+            "ساخت کد دعوت","زمان باقی‌مانده:","حذف معلم از مدرسه"
         )) and all(marker in manager_repository for marker in (
-            "native_manager_teachers_v37","native_manager_create_teacher_invite_v39",
-            "native_manager_disable_teacher_v37"
+            "native_manager_teachers_v37","native_manager_create_teacher_invites_v40b",
+            "native_manager_remove_teacher_v40b"
         )) and "deleteUser" not in manager_repository,
         "V37 manager teacher UI/repository incomplete or deletes Auth")
 require((ROOT/"supabase/functions/manage-student/index.ts").read_text().count("native_attach_created_student_v37") == 2,
@@ -989,3 +991,21 @@ require("if (role != UserRole.STUDENT)" in profile_settings and
         "حساب مدیریت‌شده توسط معلم" not in profile_settings and
         "horizontalScroll(rememberScrollState())" not in profile_settings,
         "V40A student credential cards/email or centered settings incomplete")
+
+# V40B — کارت معلم و دعوت دسته‌ای
+require(v40b_migration == v40b_sql_copy and all(marker in v40b_migration for marker in (
+            "p_count not between 1 and 5","for i in 1..p_count","display_code","interval '24 hours'",
+            "native_manager_invites_v40b","native_manager_revoke_invite_v40b",
+            "native_manager_set_teacher_active_v40b","native_manager_remove_teacher_v40b"
+        )), "V40B batch invite/teacher status SQL or copy incomplete")
+require(all(marker in manager_foundation for marker in (
+            "کد پرسنلی:","شماره تلفن:","expandedTeacher == teacher.id","Icons.Outlined.ToggleOn",
+            "Icons.Outlined.Login","Icons.Outlined.AccountBalanceWallet","Icons.Outlined.Delete",
+            "if (inviteMode)","(1..5).forEach","زمان باقی‌مانده:","حذف کد دعوت"
+        )), "V40B teacher card icons or invite-only mode incomplete")
+require(all(marker in manager_repository for marker in (
+            "createInvites(count: Int)","native_manager_create_teacher_invites_v40b",
+            "native_manager_invites_v40b","native_manager_revoke_invite_v40b",
+            "native_manager_set_teacher_active_v40b","native_manager_remove_teacher_v40b"
+        )) and "deleteUser" not in manager_repository,
+        "V40B manager repository incomplete or deletes Auth")

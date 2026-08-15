@@ -1,5 +1,6 @@
 package ir.exam.app.ui.manager
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -8,6 +9,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Login
+import androidx.compose.material.icons.outlined.ToggleOff
+import androidx.compose.material.icons.outlined.ToggleOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -49,76 +57,168 @@ private data class ManagerSummary(
 )
 
 @Composable
-fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
+fun ManagerTeachersScreen(
+    newTeacherRequested: Int = 0,
+    onManageTeacher: (String) -> Unit = {}
+) {
     val summaryState = rememberManagerSummary()
     val repository = remember { ir.exam.app.data.repository.SupabaseManagerRepository() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var teachers by remember { mutableStateOf<List<ir.exam.app.data.repository.SchoolTeacherItem>>(emptyList()) }
-    var invite by remember { mutableStateOf<ir.exam.app.data.repository.TeacherInviteResult?>(null) }
+    var invites by remember { mutableStateOf<List<ir.exam.app.data.repository.ManagerInviteItem>>(emptyList()) }
+    var expandedTeacher by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var loadingTeachers by remember { mutableStateOf(true) }
-    var inviteOpen by remember { mutableStateOf(false) }
-    var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var inviteMode by remember { mutableStateOf(false) }
+    var inviteCountDialog by remember { mutableStateOf(false) }
+    var inviteCount by remember { mutableStateOf(1) }
     var transferTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
     var transferAmount by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
+    var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
 
-    fun reload() {
+    fun reloadTeachers() {
         scope.launch {
-            loadingTeachers = true
+            loading = true
             repository.teachers().onSuccess { teachers = it; error = null }
                 .onFailure { error = safeManagerError(it) }
-            loadingTeachers = false
+            loading = false
         }
     }
-    LaunchedEffect(Unit) { reload() }
-    LaunchedEffect(newTeacherRequested) { if (newTeacherRequested > 0) inviteOpen = true }
+    fun reloadInvites() {
+        scope.launch {
+            loading = true
+            repository.invites().onSuccess { invites = it; error = null }
+                .onFailure { error = safeManagerError(it) }
+            loading = false
+        }
+    }
+    LaunchedEffect(Unit) { reloadTeachers() }
+    LaunchedEffect(newTeacherRequested) {
+        if (newTeacherRequested > 0) { inviteMode = true; reloadInvites() }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("معلم‌ها", style = MaterialTheme.typography.headlineSmall)
-        summaryState.summary?.let { Text(it.schoolName) }
-        androidx.compose.material3.Button(onClick = { inviteOpen = !inviteOpen }) { Text("دعوت معلم جدید") }
-        if (inviteOpen) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.Button(
-                                                onClick = {
-                            scope.launch {
-                                repository.createInvite().onSuccess { invite = it; error = null }
-                                    .onFailure { error = safeManagerError(it) }
+        if (inviteMode) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.IconButton(onClick = { inviteMode = false; reloadTeachers() }) {
+                    androidx.compose.material3.Icon(Icons.Outlined.ArrowBack, "بازگشت")
+                }
+                Text("کدهای دعوت معلم", style = MaterialTheme.typography.headlineSmall)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                androidx.compose.material3.Button(onClick = { inviteCountDialog = true }) { Text("ساخت کد دعوت") }
+            }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+            invites.forEach { invite ->
+                val remaining = inviteRemainingText(invite.expiresAt, invite.used, invite.revoked)
+                Card(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(invite.code, style = MaterialTheme.typography.titleLarge)
+                            Text(remaining)
+                            Text(if (invite.used) "استفاده شده" else "استفاده نشده")
+                        }
+                        if (!invite.used && !invite.revoked) {
+                            androidx.compose.material3.IconButton(onClick = {
+                                scope.launch {
+                                    repository.revokeInvite(invite.id).onSuccess { reloadInvites() }
+                                        .onFailure { error = safeManagerError(it) }
+                                }
+                            }) {
+                                androidx.compose.material3.Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = "حذف کد دعوت",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
-                    ) { Text("ساخت کد دعوت") }
-                    invite?.let {
-                        Text("کد دعوت ۶ کاراکتری، یک‌بارمصرف و تا ۲۴ ساعت معتبر است.")
-                        androidx.compose.foundation.text.selection.SelectionContainer { Text(it.code) }
                     }
                 }
             }
-        }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-        if (loadingTeachers) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-        teachers.forEach { teacher ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+        } else {
+            Text("معلم‌ها", style = MaterialTheme.typography.headlineSmall)
+            summaryState.summary?.let { Text(it.schoolName) }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+            teachers.forEach { teacher ->
+                Card(
+                    Modifier.fillMaxWidth().clickable {
+                        expandedTeacher = if (expandedTeacher == teacher.id) null else teacher.id
+                    }
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(teacher.fullName.ifBlank { teacher.username }, style = MaterialTheme.typography.titleMedium)
-                        Text(teacher.email, style = MaterialTheme.typography.bodySmall)
-                        Text("کیف پول: ${"%,d".format(java.util.Locale.US, teacher.walletBalanceToman)} تومان")
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text(teacher.fullName.ifBlank { "بدون نام" }, style = MaterialTheme.typography.titleMedium)
+                        Text("کد پرسنلی: ${teacher.employeeCode.ifBlank { "—" }}")
+                        Text("شماره تلفن: ${teacher.phone.ifBlank { "—" }}")
+                        androidx.compose.animation.AnimatedVisibility(expandedTeacher == teacher.id) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                androidx.compose.material3.IconButton(onClick = {
+                                    scope.launch {
+                                        repository.setTeacherActive(teacher.id, !teacher.active)
+                                            .onSuccess { reloadTeachers() }
+                                            .onFailure { error = safeManagerError(it) }
+                                    }
+                                }) {
+                                    androidx.compose.material3.Icon(
+                                        if (teacher.active) Icons.Outlined.ToggleOn
+                                        else Icons.Outlined.ToggleOff,
+                                        contentDescription = if (teacher.active) "غیرفعال‌کردن" else "فعال‌کردن"
+                                    )
+                                }
+                                androidx.compose.material3.IconButton(onClick = { onManageTeacher(teacher.id); message = "مدیریت کلاس معلم در V40C تکمیل می‌شود." }) {
+                                    androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم")
+                                }
+                                androidx.compose.material3.IconButton(onClick = { transferTarget = teacher; transferAmount = "" }) {
+                                    androidx.compose.material3.Icon(Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول")
+                                }
+                                androidx.compose.material3.IconButton(onClick = { removeTarget = teacher }) {
+                                    androidx.compose.material3.Icon(Icons.Outlined.Delete, "حذف معلم", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
                     }
-                    androidx.compose.material3.TextButton(onClick = { transferTarget = teacher; transferAmount = "" }) { Text("شارژ") }
-                    androidx.compose.material3.TextButton(onClick = { removeTarget = teacher }) { Text("حذف") }
                 }
             }
         }
+    }
+
+    if (inviteCountDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { inviteCountDialog = false },
+            title = { Text("تعداد کد دعوت") },
+            text = {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (1..5).forEach { count ->
+                        androidx.compose.material3.FilterChip(
+                            selected = inviteCount == count,
+                            onClick = { inviteCount = count },
+                            label = { Text(count.toString()) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(onClick = {
+                    inviteCountDialog = false
+                    scope.launch {
+                        repository.createInvites(inviteCount).onSuccess { reloadInvites() }
+                            .onFailure { error = safeManagerError(it) }
+                    }
+                }) { Text("تأیید") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { inviteCountDialog = false }) { Text("انصراف") } }
+        )
     }
     transferTarget?.let { teacher ->
         androidx.compose.material3.AlertDialog(
@@ -130,8 +230,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
                     androidx.compose.material3.OutlinedTextField(
                         value = transferAmount,
                         onValueChange = { transferAmount = it.filter(Char::isDigit).take(9) },
-                        label = { Text("مبلغ انتقال (تومان)") },
-                        singleLine = true
+                        label = { Text("مبلغ انتقال (تومان)") }, singleLine = true
                     )
                 }
             },
@@ -143,8 +242,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
                         scope.launch {
                             repository.transferWallet(teacher.id, amount ?: 0).onSuccess { result ->
                                 message = "${"%,d".format(java.util.Locale.US, result.amountToman)} تومان منتقل شد."
-                                transferTarget = null
-                                reload()
+                                transferTarget = null; reloadTeachers()
                             }.onFailure { error = safeManagerError(it); transferTarget = null }
                         }
                     }
@@ -153,23 +251,31 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
             dismissButton = { androidx.compose.material3.TextButton(onClick = { transferTarget = null }) { Text("انصراف") } }
         )
     }
-
     removeTarget?.let { teacher ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { removeTarget = null },
-            title = { Text("قطع عضویت معلم") },
-            text = { Text("عضویت ${teacher.fullName} غیرفعال شود؟ حساب و آزمون‌های او حذف نمی‌شوند.") },
+            title = { Text("حذف معلم از مدرسه") },
+            text = { Text("عضویت ${teacher.fullName} حذف شود؟ حساب Auth و آزمون‌های شخصی او باقی می‌مانند.") },
             confirmButton = {
                 androidx.compose.material3.Button(onClick = {
                     scope.launch {
-                        repository.disableTeacher(teacher.id).onSuccess { removeTarget = null; reload() }
+                        repository.removeTeacher(teacher.id).onSuccess { removeTarget = null; reloadTeachers() }
                             .onFailure { error = safeManagerError(it); removeTarget = null }
                     }
-                }) { Text("قطع عضویت") }
+                }) { Text("حذف عضویت") }
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { removeTarget = null }) { Text("انصراف") } }
         )
     }
+}
+
+private fun inviteRemainingText(expiresAt: String, used: Boolean, revoked: Boolean): String {
+    if (used) return "مصرف شده"
+    if (revoked) return "حذف شده"
+    val millis = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() - System.currentTimeMillis() }.getOrDefault(0)
+    if (millis <= 0) return "منقضی شده"
+    val minutes = millis / 60_000
+    return "زمان باقی‌مانده: ${minutes / 60} ساعت و ${minutes % 60} دقیقه"
 }
 
 @Composable

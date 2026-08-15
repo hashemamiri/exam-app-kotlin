@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40A پروفایل معلم و ساده‌سازی حساب/منوی دانش‌آموز
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40B کارت معلم و دعوت دسته‌ای ۱ تا ۵
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4601,3 +4601,32 @@ Edge deploy                             → ندارد
 ```
 
 راهنما: `TEACHER_PROFILE_STUDENT_MENU_V40A_FA.md`.
+
+
+## ۶۷) V40B — کارت معلم و دعوت دسته‌ای
+
+### تغییرات
+
+- ManagerTeachersScreen در حالت عادی فقط کارت معلم دارد؛ دکمه عمومی دعوت حذف شد.
+- کارت از RPC نام، employee_code، phone، status و wallet را می‌گیرد؛ لمس کارت چهار
+  IconButton Toggle/Login/Wallet/Delete را ظاهر می‌کند.
+- Toggle بین active/disabled است. Delete عضویت را removed می‌کند و Auth/آزمون‌ها
+  را حذف نمی‌کند. ورود، نقطه شروع context مدیریت کلاس است که در V40C تکمیل می‌شود.
+- quick-add دعوت، inviteMode جدا باز می‌کند؛ لیست معلم مخفی، ساخت کد وسط‌چین و
+  dialog FilterChipهای ۱..۵ است.
+- هر کد مستقل ۲۴ساعته است؛ display_code برای نمایش مدیریتی کوتاه‌عمر ذخیره می‌شود،
+  verification همچنان با hash است. لیست ۷ روز اخیر، remaining/used/revoked و
+  revoke کد مصرف‌نشده را نشان می‌دهد.
+- status memberships با removed گسترش یافت بدون حذف user.
+
+```text
+SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+SQL copy equality                       → PASS
+Edge deploy                             → ندارد
+پیش‌نیاز                                → V40A
+مرحله بعد                               → V40C مدیریت کلاس و دانش‌آموز
+```
+
+راهنما: `MANAGER_TEACHER_CARDS_INVITES_V40B_FA.md`.
