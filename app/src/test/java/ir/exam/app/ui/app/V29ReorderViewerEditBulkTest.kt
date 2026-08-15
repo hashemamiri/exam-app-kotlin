@@ -158,9 +158,10 @@ class V29ReorderViewerEditBulkTest {
     }
 
     @Test
-    fun `bulk rows stay reachable through the numbered chips without scrolling`() {
+    fun `bulk rows stay reachable through scrollable numbered chips`() {
         val bulk = bulkSection()
-        assertTrue("rows.indices.chunked(6)" in bulk)
+        assertTrue("LazyRow(" in bulk)
+        assertTrue("state = numberListState" in bulk)
         assertTrue("selected = activeIndex == index" in bulk)
         assertTrue("rowComplete" in bulk)
         assertTrue("rowComplete(rows[index])" in bulk)

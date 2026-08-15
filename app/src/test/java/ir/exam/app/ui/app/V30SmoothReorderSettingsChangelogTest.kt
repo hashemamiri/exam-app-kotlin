@@ -226,10 +226,12 @@ class V30SmoothReorderSettingsChangelogTest {
     }
 
     @Test
-    fun `active card number is always visible without scrolling`() {
+    fun `active card number is automatically scrolled into view`() {
         val bulk = bulkSection()
-        // زیر دکمه‌ها فقط لیست شمارهٔ کارت‌ها است؛ بدون اسکرول.
-        assertTrue("rows.indices.chunked(6)" in bulk)
+        // شماره‌ها افقی اسکرول می‌شوند و شمارهٔ کارت فعال خودکار در دید قرار می‌گیرد.
+        assertTrue("rememberLazyListState()" in bulk)
+        assertTrue("LaunchedEffect(activeIndex, rows.size)" in bulk)
+        assertTrue("numberListState.animateScrollToItem(activeIndex)" in bulk)
         assertTrue("selected = activeIndex == index" in bulk)
         assertFalse("horizontalScroll(rememberScrollState())" in bulk)
     }

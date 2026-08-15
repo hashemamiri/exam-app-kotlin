@@ -3852,3 +3852,41 @@ adb logcat -d AndroidRuntime:E *:S
 ```
 
 راهنمای مستقل: `IMAGE_BULK_EDIT_COPY_V32_FA.md`.
+
+## ۵۱) V32.1 — اصلاح تست‌های قدیمی CI پس از اسکرول شمارهٔ کارت‌ها
+
+### علت شکست CI گزارش‌شده
+
+```text
+compileDebugKotlin                       → SUCCESS
+233 unit tests                           → 230 PASS / 3 FAIL
+V28ReorderImageBulkFieldTest             → assertion قدیمی rows.indices.chunked(6)
+V29ReorderViewerEditBulkTest             → assertion قدیمی rows.indices.chunked(6)
+V30SmoothReorderSettingsChangelogTest    → assertion قدیمی rows.indices.chunked(6)
+```
+
+کد اصلی V32 کامپایل شده بود و هر سه شکست فقط از تست‌های منبع‌محور قدیمی بودند
+که هنوز چیدمان بدون اسکرول V28 تا V30 را الزام می‌کردند. تست‌ها با رفتار موردنیاز
+V32 هماهنگ شدند: `LazyRow`، `rememberLazyListState`، اتصال state و
+`animateScrollToItem(activeIndex)`. کد اجرایی برنامه در این اصلاح تغییر نکرد.
+
+### فایل‌ها و عملیات V32.1
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V28ReorderImageBulkFieldTest.kt
+app/src/test/java/ir/exam/app/ui/app/V29ReorderViewerEditBulkTest.kt
+app/src/test/java/ir/exam/app/ui/app/V30SmoothReorderSettingsChangelogTest.kt
+HANDOFF_KOTLIN_MIGRATION_FA.md
+SQL / Edge Function / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V32
+```
+
+### نتیجهٔ بررسی
+
+```text
+گزارش GitHub Actions کاربر: compileDebugKotlin → SUCCESS
+سه assertion ناسازگار شناسایی و اصلاح شدند.
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+testDebugUnitTest / lintDebug           → باید در GitHub Actions یا WSL اجرا شود.
+```

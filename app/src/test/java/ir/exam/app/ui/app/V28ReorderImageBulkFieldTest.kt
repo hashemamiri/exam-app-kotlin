@@ -152,7 +152,8 @@ class V28ReorderImageBulkFieldTest {
         val bulk = bulkSection()
         assertTrue("activeIndex = rows.lastIndex" in bulk)
         // کارت تازه همان‌جا جایگزین کارت قبلی می‌شود و پنجره بزرگ نمی‌شود.
-        assertTrue("rows.indices.chunked(6)" in bulk)
+        assertTrue("LazyRow(" in bulk)
+        assertTrue("rememberLazyListState()" in bulk)
         assertTrue("selected = activeIndex == index" in bulk)
         assertTrue("activeIndex = (index - 1).coerceAtLeast(0)" in bulk)
     }
