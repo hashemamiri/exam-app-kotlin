@@ -76,6 +76,8 @@ v382_migration=(ROOT/"supabase/migrations/20260815_native_invite_digest_v382_hot
 v382_sql_copy=(ROOT/"SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").read_text()
 v39_migration=(ROOT/"supabase/migrations/20260815_native_short_school_invite_v39.sql").read_text()
 v39_sql_copy=(ROOT/"SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql").read_text()
+v40a_migration=(ROOT/"supabase/migrations/20260815_native_teacher_profile_v40a.sql").read_text()
+v40a_sql_copy=(ROOT/"SQL_NATIVE_TEACHER_PROFILE_V40A.sql").read_text()
 school_join_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolJoinRepository.kt").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
@@ -955,13 +957,35 @@ require("primaryTitle: String = \"آزمون جدید\"" in design69_add and
         "teacher?.role !== 'teacher' && teacher?.role !== 'manager'" in
             (ROOT/"supabase/functions/manage-student/index.ts").read_text(),
         "V39 manager/teacher quick-add actions or manager create permission incomplete")
-require("featuredCard = if (user.role == UserRole.STUDENT)" in app_shell and
-        "\"آزمون\", \"ورود با کد آزمون\"" in app_shell and "studentJoinRequestKey += 1" in app_shell and
-        "fillMaxWidth(.52f)" in
-            (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
+require("\"آزمون\", \"ورود با کد آزمون\"" in app_shell and "studentJoinRequestKey += 1" in app_shell and
         "initialJoinCode" in (ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt").read_text(),
-        "V39 centered student exam card/dialog/preview flow incomplete")
+        "V39 student exam card/dialog/preview flow incomplete")
 
 require("import androidx.compose.material3.IconButton" in profile_settings and "schoolJoinRepository.preview" in profile_settings, "V39.1 school join IconButton import missing")
 
 require("school_id,email,token_hash,created_by,expires_at" in v39_migration and "values(v_school,null,v_hash,v_uid" in v39_migration, "V39.2 short invite null-email SQL contract missing")
+
+# V40A — پروفایل معلم و ساده‌سازی منوی دانش‌آموز
+require(v40a_migration == v40a_sql_copy and all(marker in v40a_migration for marker in (
+            "employee_code","phone","native_my_teacher_details_v40","native_save_teacher_details_v40",
+            "id=auth.uid() and role='teacher'","^09[0-9]{9}$"
+        )), "V40A teacher details SQL/copy incomplete")
+require(all(marker in profile_settings for marker in (
+            "نام نمایشی","مشخصات معلم","کد پرسنلی","شماره تلفن",
+            "Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)"
+        )) and all(marker in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsViewModel.kt").read_text()
+            for marker in ("setFirstName","setLastName","setEmployeeCode","setPhone")) and
+        "native_save_teacher_details_v40" in
+            (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt").read_text(),
+        "V40A teacher profile cards/save path incomplete")
+_student_menu_v40a=app_shell.split("// ترتیب دقیق دانش‌آموز:",1)[1].split("Neumorphic69Provider",1)[0]
+require(all(_student_menu_v40a.index(a) < _student_menu_v40a.index(b) for a,b in zip(
+            ("\"آزمون\"","\"نتایج من\"","\"تقویم\"","\"حساب\"","\"تنظیمات\""),
+            ("\"نتایج من\"","\"تقویم\"","\"حساب\"","\"تنظیمات\"","\"خروج\"")
+        )) and "\"داده‌ها\"" not in _student_menu_v40a,
+        "V40A student menu order or data-card removal incomplete")
+require("if (role != UserRole.STUDENT)" in profile_settings and
+        "حساب مدیریت‌شده توسط معلم" not in profile_settings and
+        "horizontalScroll(rememberScrollState())" not in profile_settings,
+        "V40A student credential cards/email or centered settings incomplete")

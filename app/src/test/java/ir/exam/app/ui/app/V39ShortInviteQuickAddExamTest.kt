@@ -57,15 +57,12 @@ class V39ShortInviteQuickAddExamTest {
     }
 
     @Test
-    fun `student hamburger has centered exam card and search dialog`() {
+    fun `student hamburger has exam card and search dialog`() {
         val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
-        val menu = source("app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt")
         val home = source("app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt")
-        assertTrue("featuredCard = if (user.role == UserRole.STUDENT)" in app)
         assertTrue("\"آزمون\", \"ورود با کد آزمون\"" in app)
         assertTrue("Icons.Outlined.Search" in app)
         assertTrue("studentJoinRequestKey += 1" in app)
-        assertTrue("fillMaxWidth(.52f)" in menu)
         assertTrue("initialJoinCode" in home)
         assertTrue("viewModel.join()" in home)
     }

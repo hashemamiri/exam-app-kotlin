@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V39.2 اصلاح assertion دعوت کوتاه
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40A پروفایل معلم و ساده‌سازی حساب/منوی دانش‌آموز
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4568,3 +4568,36 @@ testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شو
 SQL / Edge / Secret / Dependency        → بدون تغییر
 پیش‌نیاز                                → V39.1
 ```
+
+
+## ۶۶) V40A — مشخصات معلم و منوی دانش‌آموز
+
+### دامنه مرحله
+
+```text
+V40A → پروفایل معلم + محدودسازی حساب/منوی دانش‌آموز + مرکز تنظیمات
+V40B → کارت معلم و دعوت دسته‌ای ۱..۵
+V40C → مدیریت کلاس/دانش‌آموز و مجوزهای حذف
+```
+
+### تغییرات
+
+- profiles.employee_code و profiles.phone و دو RPC owner-only معلم اضافه شد.
+- NativeProfile/repository/viewmodel کارت مشخصات معلم را load/save می‌کنند.
+- کد پرسنلی اختیاری با حداکثر ۳۰ حرف انگلیسی/عدد/_/- و تلفن اختیاری با الگوی
+  09 + 9 رقم در app و SQL اعتبارسنجی می‌شوند.
+- دانش‌آموز email را در مشخصات نمی‌بیند و سه کارت تغییر username/email/password
+  در LazyColumn اصلاً compose نمی‌شوند.
+- کارت داده‌ها از menu دانش‌آموز حذف و ترتیب دقیق سه ردیف اعمال شد.
+- Appearance/About بدون horizontalScroll و با CenterHorizontally هستند.
+
+```text
+SQL_NATIVE_TEACHER_PROFILE_V40A.sql
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+SQL copy equality                       → PASS
+Edge deploy                             → ندارد
+پیش‌نیاز                                → V39.2
+```
+
+راهنما: `TEACHER_PROFILE_STUDENT_MENU_V40A_FA.md`.

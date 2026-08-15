@@ -52,6 +52,12 @@ class ProfileSettingsViewModel(
     }
 
     fun setDisplayName(value: String) = updateProfile { it.copy(displayName = value.take(100)) }
+    fun setFirstName(value: String) = updateProfile { it.copy(firstName = value.take(100)) }
+    fun setLastName(value: String) = updateProfile { it.copy(lastName = value.take(100)) }
+    fun setEmployeeCode(value: String) = updateProfile {
+        it.copy(employeeCode = value.uppercase().filter { c -> c in 'A'..'Z' || c.isDigit() || c == '_' || c == '-' }.take(30))
+    }
+    fun setPhone(value: String) = updateProfile { it.copy(phone = value.filter(Char::isDigit).take(11)) }
     fun setAvatarPublic(value: Boolean) = updateProfile { it.copy(avatarPublic = value) }
     fun setProvince(value: String) = updateHeader { it.copy(province = value.take(120)) }
     fun setCity(value: String) = updateHeader { it.copy(city = value.take(120)) }

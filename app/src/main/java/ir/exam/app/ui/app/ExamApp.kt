@@ -644,24 +644,24 @@ private fun AuthenticatedShell(
             )
         )
     } else {
+        // ترتیب دقیق دانش‌آموز: آزمون/نتایج، تقویم/حساب، تنظیمات/خروج؛ بدون داده‌ها.
         listOf(
             Design69MenuCard(
-                "تقویم", "رویدادها و پیام‌ها", Design69Icons.Calendar,
-                page == MainPage.CALENDAR, onClick = { select(onCalendar) }
+                "آزمون", "ورود با کد آزمون", Design69Icons.Exams,
+                onClick = { select(onStudentExamJoin) }
             ),
             Design69MenuCard(
                 "نتایج من", "پاسخ‌ها و کارنامه", Design69Icons.Reports,
                 page == MainPage.STUDENT_RESULTS, onClick = { select(onStudentResults) }
             ),
             Design69MenuCard(
+                "تقویم", "رویدادها و پیام‌ها", Design69Icons.Calendar,
+                page == MainPage.CALENDAR, onClick = { select(onCalendar) }
+            ),
+            Design69MenuCard(
                 "حساب", "مشخصات و امنیت حساب", Design69Icons.Account,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.ACCOUNT,
                 onClick = { select(onAccount) }
-            ),
-            Design69MenuCard(
-                "داده‌ها", "دسترسی به داده‌های حساب", Design69Icons.Data,
-                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.DATA,
-                onClick = { select(onData) }
             ),
             Design69MenuCard(
                 "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
@@ -745,13 +745,7 @@ private fun AuthenticatedShell(
                                     Design69MainMenuScreen(
                                         user = user,
                                         cards = menuCards,
-                                        onProfile = onProfile,
-                                        featuredCard = if (user.role == UserRole.STUDENT) {
-                                            Design69MenuCard(
-                                                "آزمون", "ورود با کد آزمون", Design69Icons.Exams,
-                                                onClick = onStudentExamJoin
-                                            )
-                                        } else null
+                                        onProfile = onProfile
                                     )
                                 }
                             }

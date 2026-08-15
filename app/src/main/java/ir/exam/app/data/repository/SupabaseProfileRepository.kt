@@ -27,9 +27,21 @@ class SupabaseProfileRepository(context: Context) {
             .decodeAs<NativeProfileDto>()
         dto.error?.takeIf(String::isNotBlank)?.let(::error)
         val id = dto.id ?: currentUserId()
+        val role = when {
+            dto.role.equals("manager", true) -> UserRole.MANAGER
+            dto.role.equals("teacher", true) -> UserRole.TEACHER
+            else -> UserRole.STUDENT
+        }
+        val details = if (role == UserRole.TEACHER) {
+            SupabaseProvider.client.postgrest.rpc("native_my_teacher_details_v40").decodeAs<JsonObject>()
+        } else null
         NativeProfile(
             id = id,
             fullName = dto.fullName.orEmpty().ifBlank { "کاربر" },
+            firstName = details.text("first_name").ifBlank { dto.fullName.orEmpty().substringBefore(' ') },
+            lastName = details.text("last_name").ifBlank { dto.fullName.orEmpty().substringAfter(' ', "") },
+            employeeCode = details.text("employee_code"),
+            phone = details.text("phone"),
             displayName = dto.displayName.orEmpty(),
             username = dto.username.orEmpty(),
             avatarUrl = dto.avatarUrl,
@@ -42,11 +54,7 @@ class SupabaseProfileRepository(context: Context) {
                 grade = dto.headerGrade.orEmpty(),
                 fieldOfStudy = dto.headerField.orEmpty()
             ),
-            role = when {
-                dto.role.equals("manager", true) -> UserRole.MANAGER
-                dto.role.equals("teacher", true) -> UserRole.TEACHER
-                else -> UserRole.STUDENT
-            }
+            role = role
         )
     }
 
@@ -78,7 +86,23 @@ class SupabaseProfileRepository(context: Context) {
             }
         ).decodeAs<ProfileSaveResponseDto>()
         response.error?.takeIf(String::isNotBlank)?.let(::error)
-        profile.copy(avatarUrl = response.avatarUrl ?: profile.avatarUrl)
+        if (profile.role == UserRole.TEACHER) {
+            val details = SupabaseProvider.client.postgrest.rpc(
+                "native_save_teacher_details_v40",
+                buildJsonObject {
+                    put("p_first_name", profile.firstName.trim())
+                    put("p_last_name", profile.lastName.trim())
+                    put("p_employee_code", profile.employeeCode.trim())
+                    put("p_phone", profile.phone.trim())
+                }
+            ).decodeAs<JsonObject>()
+            details["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        }
+        profile.copy(
+            fullName = listOf(profile.firstName, profile.lastName).filter(String::isNotBlank)
+                .joinToString(" ").ifBlank { profile.fullName },
+            avatarUrl = response.avatarUrl ?: profile.avatarUrl
+        )
     }
 
     suspend fun changePassword(newPassword: String): Result<Unit> = runCatching {
@@ -113,6 +137,9 @@ class SupabaseProfileRepository(context: Context) {
 
     private fun validate(profile: NativeProfile) {
         require(profile.displayName.length <= 100) { "نام نمایشی حداکثر ۱۰۰ نویسه است." }
+        require(profile.firstName.length <= 100 && profile.lastName.length <= 100) { "نام و نام خانوادگی حداکثر ۱۰۰ نویسه است." }
+        require(profile.employeeCode.isBlank() || Regex("^[A-Za-z0-9_-]{1,30}$").matches(profile.employeeCode)) { "کد پرسنلی معتبر نیست." }
+        require(profile.phone.isBlank() || Regex("^09[0-9]{9}$").matches(profile.phone)) { "شماره تلفن باید ۱۱ رقم و با 09 شروع شود." }
         listOf(
             "استان" to profile.header.province,
             "شهر" to profile.header.city,
@@ -123,6 +150,9 @@ class SupabaseProfileRepository(context: Context) {
         ).forEach { (label, value) -> require(value.length <= 120) { "$label حداکثر ۱۲۰ نویسه است." } }
         require(profile.avatarUrl == null || profile.avatarUrl.startsWith("https://")) { "نشانی عکس پروفایل معتبر نیست." }
     }
+
+    private fun JsonObject?.text(key: String): String =
+        this?.get(key)?.jsonPrimitive?.contentOrNull.orEmpty()
 
     private fun currentUserId(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id
         ?: error("نشست ورود پیدا نشد.")

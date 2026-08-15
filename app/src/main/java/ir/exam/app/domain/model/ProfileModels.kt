@@ -12,6 +12,10 @@ data class ExamHeader(
 data class NativeProfile(
     val id: String,
     val fullName: String,
+    val firstName: String = "",
+    val lastName: String = "",
+    val employeeCode: String = "",
+    val phone: String = "",
     val displayName: String = "",
     val username: String = "",
     val avatarUrl: String? = null,

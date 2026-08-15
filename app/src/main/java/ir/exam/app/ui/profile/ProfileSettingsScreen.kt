@@ -13,7 +13,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,7 +58,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -146,9 +144,8 @@ fun ProfileSettingsScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
             ) {
                 listOf(
                     SettingsSection.APPEARANCE to "ظاهر",
@@ -187,6 +184,10 @@ fun ProfileSettingsScreen(
                 profile = state.profile!!,
                 state = state,
                 onDisplayName = viewModel::setDisplayName,
+                onFirstName = viewModel::setFirstName,
+                onLastName = viewModel::setLastName,
+                onEmployeeCode = viewModel::setEmployeeCode,
+                onPhone = viewModel::setPhone,
                 onAvatarPublic = viewModel::setAvatarPublic,
                 onPickAvatar = {
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -421,6 +422,10 @@ private fun ProfileSection(
     profile: NativeProfile,
     state: ProfileSettingsState,
     onDisplayName: (String) -> Unit,
+    onFirstName: (String) -> Unit,
+    onLastName: (String) -> Unit,
+    onEmployeeCode: (String) -> Unit,
+    onPhone: (String) -> Unit,
     onAvatarPublic: (Boolean) -> Unit,
     onPickAvatar: () -> Unit,
     onRemoveAvatar: () -> Unit,
@@ -480,6 +485,39 @@ private fun ProfileSection(
                 }
             }
         }
+        if (user.role == UserRole.TEACHER) {
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("مشخصات معلم", style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                profile.firstName, onFirstName,
+                                label = { Text("نام") }, singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                profile.lastName, onLastName,
+                                label = { Text("نام خانوادگی") }, singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        OutlinedTextField(
+                            profile.employeeCode, onEmployeeCode,
+                            label = { Text("کد پرسنلی") },
+                            supportingText = { Text("اختیاری؛ حداکثر ۳۰ حرف انگلیسی یا عدد") },
+                            singleLine = true, modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            profile.phone, onPhone,
+                            label = { Text("شماره تلفن") },
+                            supportingText = { Text("اختیاری؛ ۱۱ رقم و با 09 شروع شود") },
+                            singleLine = true, modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        }
         item { SaveStatus(state, onSave, "ذخیره پروفایل") }
     }
 }
@@ -532,11 +570,9 @@ private fun AccountSection(
                         UserRole.STUDENT -> "دانش‌آموز"
                     }
                 )
-                LabeledValue(
-                    "ایمیل",
-                    if (role != UserRole.STUDENT) user.email.orEmpty().ifBlank { "—" }
-                    else "حساب مدیریت‌شده توسط معلم"
-                )
+                if (role != UserRole.STUDENT) {
+                    LabeledValue("ایمیل", user.email.orEmpty().ifBlank { "—" })
+                }
             }
         }
         if (role == UserRole.TEACHER) {
@@ -598,6 +634,7 @@ private fun AccountSection(
                 }
             }
         }
+        if (role != UserRole.STUDENT) {
         item {
             AccountAccordionCard(
                 title = "تغییر نام کاربری",
@@ -702,6 +739,7 @@ private fun AccountSection(
                 ) { Text("تغییر رمز") }
                 Text("رمز قبلی قابل مشاهده یا بازیابی نیست.", style = MaterialTheme.typography.bodySmall)
             }
+        }
         }
         item {
             AccountAccordionCard(
