@@ -175,7 +175,7 @@ fun ManagerTeachersScreen(
                                         contentDescription = if (teacher.active) "غیرفعال‌کردن" else "فعال‌کردن"
                                     )
                                 }
-                                androidx.compose.material3.IconButton(onClick = { onManageTeacher(teacher.id); message = "مدیریت کلاس معلم در V40C تکمیل می‌شود." }) {
+                                androidx.compose.material3.IconButton(onClick = { onManageTeacher(teacher.id) }) {
                                     androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم")
                                 }
                                 androidx.compose.material3.IconButton(onClick = { transferTarget = teacher; transferAmount = "" }) {
@@ -370,7 +370,7 @@ private fun rememberManagerSummary(): ManagerSummaryState {
     return state
 }
 
-private fun safeManagerError(error: Throwable): String = error.message.orEmpty()
+internal fun safeManagerError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("URL:")
     .substringBefore("Headers:")
     .replace(Regex("(?i)authorization[^,\n]*"), "")

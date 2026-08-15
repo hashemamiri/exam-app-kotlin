@@ -80,6 +80,9 @@ v40a_migration=(ROOT/"supabase/migrations/20260815_native_teacher_profile_v40a.s
 v40a_sql_copy=(ROOT/"SQL_NATIVE_TEACHER_PROFILE_V40A.sql").read_text()
 v40b_migration=(ROOT/"supabase/migrations/20260815_native_manager_teacher_cards_v40b.sql").read_text()
 v40b_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql").read_text()
+v40c_migration=(ROOT/"supabase/migrations/20260815_native_manager_class_students_v40c.sql").read_text()
+v40c_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql").read_text()
+manager_class_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerTeacherClassScreen.kt").read_text()
 school_join_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolJoinRepository.kt").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
@@ -1009,3 +1012,24 @@ require(all(marker in manager_repository for marker in (
             "native_manager_set_teacher_active_v40b","native_manager_remove_teacher_v40b"
         )) and "deleteUser" not in manager_repository,
         "V40B manager repository incomplete or deletes Auth")
+
+# V40C — مدیریت کلاس/دانش‌آموز و جداسازی حذف عضویت از حذف حساب
+require(v40c_migration == v40c_sql_copy and all(marker in v40c_migration for marker in (
+            "can_manage boolean","public.school_students","native_manager_teacher_classes_v40c",
+            "native_manager_save_teacher_class_v40c","native_manager_delete_teacher_class_v40c",
+            "native_manager_class_roster_v40c","native_manager_school_students_v40c",
+            "native_manager_set_class_student_v40c"
+        )), "V40C manager class/student SQL or copy incomplete")
+require(all(marker in manager_class_screen for marker in (
+            "کلاس جدید برای معلم","حذف کلاس","دانش‌آموزان کلاس",
+            "افزودن از فهرست دانش‌آموزان مدرسه","حذف از کلاس"
+        )) and "ManagerTeacherClassScreen" in app_shell,
+        "V40C manager teacher context UI incomplete")
+require("onDelete = { viewModel.removeStudent(it.id) }" in school_screen and
+        "membershipOnlyDelete = true" in school_screen and "حذف از کلاس" in school_screen and
+        "حذف حساب دانش‌آموز" in school_screen and "student.canManageAccount" in school_screen,
+        "V40C roster membership-delete/account-delete separation incomplete")
+require("teacher?.role === 'manager'" in (ROOT/"supabase/functions/manage-student/index.ts").read_text() and
+        "school_memberships" in (ROOT/"supabase/functions/manage-student/index.ts").read_text() and
+        "school_students" in (ROOT/"supabase/functions/manage-student/index.ts").read_text(),
+        "V40C manager student mutation is not school scoped")

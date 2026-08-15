@@ -32,7 +32,8 @@ data class StudentProfileDto(
     @SerialName("father_name") val fatherName: String? = null,
     val grade: String? = null,
     @SerialName("field_of_study") val fieldOfStudy: String? = null,
-    @SerialName("avatar_url") val avatarUrl: String? = null
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("can_manage") val canManage: Boolean = true
 ) {
     fun toDomain() = StudentProfile(
         id = id,
@@ -46,6 +47,7 @@ data class StudentProfileDto(
         fatherName = fatherName,
         grade = grade,
         fieldOfStudy = fieldOfStudy,
-        avatarUrl = avatarUrl
+        avatarUrl = avatarUrl,
+        canManageAccount = canManage
     )
 }

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40B.1 هماهنگ‌سازی تست‌های تاریخی دعوت و شارژ
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40C مدیریت کلاس معلم و تفکیک حذف عضویت/حساب
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4654,3 +4654,31 @@ testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شو
 SQL / Edge / Secret / Dependency        → بدون تغییر
 پیش‌نیاز                                → V40B
 ```
+
+
+## ۶۹) V40C — مدیریت کلاس/دانش‌آموز و مجوزهای حذف
+
+- onManageTeacher اکنون ManagerTeacherClassScreen را باز می‌کند؛ session مدیر حفظ
+  می‌شود و impersonation وجود ندارد.
+- RPCهای manager برای list/create/delete class، roster، school students و add/remove
+  membership همگی school_id و membership manager را بررسی می‌کنند.
+- my_students برای staff مدرسه school_students را برمی‌گرداند و can_manage برای
+  مدیر=true و معلم فقط مالک حساب است.
+- StudentProfile/DTO canManageAccount گرفت. global list فقط برای مجازها edit/delete
+  نشان می‌دهد.
+- ClassRoster onDelete به removeStudentFromClass وصل و contentDescription «حذف از
+  کلاس» است. global list «حذف حساب دانش‌آموز» را نگه می‌دارد.
+- delete class فقط public.classes را حذف می‌کند؛ profiles/Auth دست‌نخورده است.
+- Edge manager برای update/delete حساب فقط پس از بررسی manager membership +
+  school_students اجازه می‌دهد.
+
+```text
+SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql
+Edge deploy                             → manage-student الزامی
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+SQL copy equality                       → PASS
+پیش‌نیاز                                → V40B.1
+```
+
+راهنما: `MANAGER_CLASS_STUDENT_PERMISSIONS_V40C_FA.md`.

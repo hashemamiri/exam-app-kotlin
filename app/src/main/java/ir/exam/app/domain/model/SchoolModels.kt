@@ -25,7 +25,8 @@ data class StudentProfile(
     val fatherName: String? = null,
     val grade: String? = null,
     val fieldOfStudy: String? = null,
-    val avatarUrl: String? = null
+    val avatarUrl: String? = null,
+    val canManageAccount: Boolean = true
 )
 
 data class NewStudentRequest(

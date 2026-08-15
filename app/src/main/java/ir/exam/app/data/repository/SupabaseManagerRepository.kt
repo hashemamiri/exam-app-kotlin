@@ -10,6 +10,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 
 internal data class SchoolTeacherItem(
@@ -27,6 +28,12 @@ internal data class TeacherInviteResult(val code: String)
 internal data class ManagerInviteItem(
     val id: String, val code: String, val expiresAt: String, val used: Boolean, val revoked: Boolean
 )
+internal data class ManagerTeacherClass(
+    val id: String, val name: String, val grade: String, val field: String, val total: Int
+)
+internal data class ManagerStudentItem(val id: String, val fullName: String, val username: String)
+internal data class ManagerTeacherClasses(val teacherName: String, val items: List<ManagerTeacherClass>)
+internal data class ManagerClassRoster(val className: String, val items: List<ManagerStudentItem>)
 internal data class WalletTransferResult(
     val amountToman: Long,
     val managerBalanceToman: Long,
@@ -89,6 +96,30 @@ internal class SupabaseManagerRepository {
         )
     }
 
+    suspend fun teacherClasses(teacherId: String): Result<ManagerTeacherClasses> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_manager_teacher_classes_v40c", buildJsonObject { put("p_teacher", teacherId) }).decodeAs<JsonObject>().checked()
+        ManagerTeacherClasses(raw.text("teacher_name"), (raw["items"] as? JsonArray).orEmpty().mapNotNull { e ->
+            val i=e as? JsonObject ?: return@mapNotNull null
+            ManagerTeacherClass(i.text("id"),i.text("name"),i.text("grade"),i.text("field_of_study"),i["total"]?.jsonPrimitive?.intOrNull?:0)
+        })
+    }
+    suspend fun createTeacherClass(teacherId:String,name:String,grade:String,field:String):Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("native_manager_save_teacher_class_v40c",buildJsonObject{put("p_teacher",teacherId);put("p_name",name);put("p_grade",grade);put("p_field",field)}).decodeAs<JsonObject>().checked();Unit
+    }
+    suspend fun deleteTeacherClass(classId:String):Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("native_manager_delete_teacher_class_v40c",buildJsonObject{put("p_class",classId)}).decodeAs<JsonObject>().checked();Unit
+    }
+    suspend fun classRoster(classId:String):Result<ManagerClassRoster> = runCatching {
+        val raw=SupabaseProvider.client.postgrest.rpc("native_manager_class_roster_v40c",buildJsonObject{put("p_class",classId)}).decodeAs<JsonObject>().checked()
+        ManagerClassRoster(raw.text("class_name"),raw.studentItems())
+    }
+    suspend fun schoolStudents():Result<List<ManagerStudentItem>> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("native_manager_school_students_v40c").decodeAs<JsonObject>().checked().studentItems()
+    }
+    suspend fun setClassStudent(classId:String,studentId:String,add:Boolean):Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc("native_manager_set_class_student_v40c",buildJsonObject{put("p_class",classId);put("p_student",studentId);put("p_add",add)}).decodeAs<JsonObject>().checked();Unit
+    }
+
     suspend fun setTeacherActive(id: String, active: Boolean): Result<Unit> = runCatching {
         SupabaseProvider.client.postgrest.rpc(
             "native_manager_set_teacher_active_v40b",
@@ -101,6 +132,9 @@ internal class SupabaseManagerRepository {
             "native_manager_remove_teacher_v40b", buildJsonObject { put("p_teacher", id) }
         ).decodeAs<JsonObject>().checked(); Unit
     }
+
+    private fun JsonObject.studentItems():List<ManagerStudentItem> =
+        (this["items"] as? JsonArray).orEmpty().mapNotNull { e -> val i=e as? JsonObject?:return@mapNotNull null; ManagerStudentItem(i.text("id"),i.text("full_name"),i.text("username")) }
 
     private fun JsonObject.inviteItems(): List<ManagerInviteItem> =
         (this["items"] as? JsonArray).orEmpty().mapNotNull { element ->

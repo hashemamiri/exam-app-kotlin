@@ -49,7 +49,17 @@ Deno.serve(async (request) => {
       const { data } = await service.from('profiles')
         .select('id, teacher_id, username, full_name, first_name, last_name, gender')
         .eq('id', id).eq('role', 'student').maybeSingle();
-      return data?.teacher_id === teacherId ? data : null;
+      if (data?.teacher_id === teacherId) return data;
+      if (teacher?.role === 'manager' && data?.id) {
+        const { data: membership } = await service.from('school_memberships')
+          .select('school_id').eq('user_id', teacherId).eq('staff_role', 'manager').eq('status', 'active').maybeSingle();
+        if (membership?.school_id) {
+          const { data: linked } = await service.from('school_students').select('student_id')
+            .eq('school_id', membership.school_id).eq('student_id', data.id).maybeSingle();
+          if (linked) return data;
+        }
+      }
+      return null;
     };
     const audit = async (event: string, target: string | null, details: Record<string, unknown> = {}) => {
       try {

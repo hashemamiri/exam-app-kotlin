@@ -75,6 +75,7 @@ import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.grading.GradingScreen
 import ir.exam.app.ui.manager.ManagerStatsScreen
 import ir.exam.app.ui.manager.ManagerTeachersScreen
+import ir.exam.app.ui.manager.ManagerTeacherClassScreen
 import ir.exam.app.ui.profile.ProfileSettingsDestination
 import ir.exam.app.ui.profile.ProfileSettingsScreen
 import ir.exam.app.ui.profile.SettingsSection
@@ -140,6 +141,7 @@ private fun AuthenticatedExamApp(
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerNewTeacherKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
+    var managerTeacherId by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
@@ -191,6 +193,7 @@ private fun AuthenticatedExamApp(
 
     fun createManagerTeacher() {
         closeTransientNavigation()
+        managerTeacherId = null
         managerNewTeacherKey += 1
         page = MainPage.HOME
     }
@@ -352,7 +355,12 @@ private fun AuthenticatedExamApp(
                         initialJoinCode = studentExamCode.takeIf(String::isNotBlank),
                         joinRequestKey = studentJoinRequestKey
                     )
-                    UserRole.MANAGER -> ManagerTeachersScreen(newTeacherRequested = managerNewTeacherKey)
+                    UserRole.MANAGER -> managerTeacherId?.let { teacherId ->
+                        ManagerTeacherClassScreen(teacherId = teacherId, onBack = { managerTeacherId = null })
+                    } ?: ManagerTeachersScreen(
+                        newTeacherRequested = managerNewTeacherKey,
+                        onManageTeacher = { managerTeacherId = it }
+                    )
                 }
                 MainPage.CALENDAR -> CalendarScreen(user.role)
                 MainPage.SCHOOL -> if (user.role != UserRole.STUDENT) {

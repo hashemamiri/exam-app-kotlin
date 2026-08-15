@@ -209,8 +209,9 @@ fun SchoolManagementScreen(
                     onCreate = { showBulk = true },
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
-                    onDelete = { deletingStudent = it },
+                    onDelete = { viewModel.removeStudent(it.id) },
                     classes = state.classes,
+                    membershipOnlyDelete = true,
                     onAddToClasses = viewModel::addStudentToClasses,
                     knownPasswordOf = { username -> knownPasswords[username?.lowercase()] }
                 )
@@ -419,6 +420,7 @@ private fun ClassRosterContent(
     onEdit: (StudentProfile) -> Unit,
     onDelete: (StudentProfile) -> Unit,
     classes: List<SchoolClass>,
+    membershipOnlyDelete: Boolean,
     onAddToClasses: (String, Set<String>) -> Unit,
     knownPasswordOf: (String?) -> String?
 ) {
@@ -467,6 +469,7 @@ private fun ClassRosterContent(
                     onEdit = { onEdit(student) },
                     onDelete = { onDelete(student) },
                     classes = classes,
+                    membershipOnlyDelete = membershipOnlyDelete,
                     knownPasswordOf = knownPasswordOf,
                     onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
                 )
@@ -557,7 +560,8 @@ private fun StudentCard(
     onDelete: () -> Unit,
     classes: List<SchoolClass>,
     onAddToClasses: (Set<String>) -> Unit,
-    knownPasswordOf: (String?) -> String? = { null }
+    knownPasswordOf: (String?) -> String? = { null },
+    membershipOnlyDelete: Boolean = false
 ) {
     val context = LocalContext.current
     var expanded by remember(student.id) { mutableStateOf(false) }
@@ -620,6 +624,7 @@ private fun StudentCard(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (!membershipOnlyDelete && student.canManageAccount) {
                         IconButton(
                             onClick = { onToggle(student.id, !student.active) },
                             modifier = Modifier.weight(1f).height(58.dp)
@@ -637,6 +642,7 @@ private fun StudentCard(
                                 contentDescription = "ویرایش دانش‌آموز",
                                 modifier = Modifier.size(30.dp)
                             )
+                        }
                         }
                         IconButton(
                             onClick = { classPickerOpen = !classPickerOpen },
@@ -664,16 +670,18 @@ private fun StudentCard(
                                 modifier = Modifier.size(30.dp)
                             )
                         }
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.weight(1f).height(58.dp)
-                        ) {
-                            Icon(
-                                Icons.Outlined.Delete,
-                                contentDescription = "حذف دانش‌آموز",
-                                tint = Color(0xFFD63B49),
-                                modifier = Modifier.size(30.dp)
-                            )
+                        if (membershipOnlyDelete || student.canManageAccount) {
+                            IconButton(
+                                onClick = onDelete,
+                                modifier = Modifier.weight(1f).height(58.dp)
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = if (membershipOnlyDelete) "حذف از کلاس" else "حذف حساب دانش‌آموز",
+                                    tint = Color(0xFFD63B49),
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
                         }
                     }
                     AnimatedVisibility(
