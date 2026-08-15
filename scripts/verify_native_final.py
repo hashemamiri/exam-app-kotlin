@@ -861,13 +861,13 @@ require(v36_migration == v36_sql_copy and all(marker in v36_migration for marker
             "native_manager_school_summary_v36","enable row level security"
         )), "V36 school tenant migration/copy incomplete")
 _manager_menu_v36=app_shell.split("} else if (user.role == UserRole.MANAGER) {",1)[1].split("} else {",1)[0]
-require(all(marker in _manager_menu_v36 for marker in ("\"حساب\"","\"داده‌ها\"","\"تنظیمات\"","\"خروج\"")) and
+require(all(marker in _manager_menu_v36 for marker in ("\"کلاس‌ها\"","\"دانش‌آموزان\"","onClick = { select(onClasses) }","onClick = { select(onStudents) }","\"حساب\"","\"داده‌ها\"","\"تنظیمات\"","\"خروج\"")) and
         "\"تقویم\"" not in _manager_menu_v36 and "\"سربرگ\"" not in _manager_menu_v36,
         "V36 manager hamburger still exposes calendar/header")
 require(all(marker in app_shell for marker in (
             "ManagerTeachersScreen","ManagerStatsScreen","UserRole.MANAGER -> WalletScreen",
             "primaryLabel = if (user.role == UserRole.MANAGER) \"معلم‌ها\"","createManagerTeacher"
-        )) and "MANAGER_CARD_COUNT = 4" in
+        )) and "MANAGER_CARD_COUNT = 6" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
         "ساخت کد دعوت" in manager_foundation and "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد" in manager_foundation,
         "V36 manager dock/stats/staged foundation incomplete")

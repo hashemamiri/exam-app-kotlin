@@ -642,6 +642,16 @@ private fun AuthenticatedShell(
         // مدیر/معاون عمداً تقویم و سربرگ ندارد.
         listOf(
             Design69MenuCard(
+                "کلاس‌ها", "فهرست و مدیریت کلاس‌های مدرسه", Design69Icons.Classes,
+                page == MainPage.SCHOOL && !schoolStudentsSelected,
+                onClick = { select(onClasses) }
+            ),
+            Design69MenuCard(
+                "دانش‌آموزان", "فهرست و مدیریت دانش‌آموزان مدرسه", Design69Icons.Students,
+                page == MainPage.SCHOOL && schoolStudentsSelected,
+                onClick = { select(onStudents) }
+            ),
+            Design69MenuCard(
                 "حساب", "مشخصات و امنیت حساب", Design69Icons.Account,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.ACCOUNT,
                 onClick = { select(onAccount) }

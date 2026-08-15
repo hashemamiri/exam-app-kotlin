@@ -17,8 +17,18 @@ class V36ManagerFoundationTest {
     @Test
     fun `manager is a first class cached role`() {
         assertTrue(UserRole.MANAGER in UserRole.values())
-        assertEquals(4, Design69MenuContract.MANAGER_CARD_COUNT)
+        assertEquals(6, Design69MenuContract.MANAGER_CARD_COUNT)
         assertTrue(Design69MenuContract.isCompleteGrid(Design69MenuContract.MANAGER_CARD_COUNT))
+    }
+
+    @Test
+    fun `manager hamburger exposes school classes and students`() {
+        val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
+        val managerMenu = app.substringAfter("} else if (user.role == UserRole.MANAGER) {").substringBefore("} else {")
+        assertTrue(""کلاس‌ها"" in managerMenu)
+        assertTrue(""دانش‌آموزان"" in managerMenu)
+        assertTrue("onClick = { select(onClasses) }" in managerMenu)
+        assertTrue("onClick = { select(onStudents) }" in managerMenu)
     }
 
     @Test

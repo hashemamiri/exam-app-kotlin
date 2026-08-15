@@ -54,7 +54,7 @@ object Design69MenuContract {
     const val PROFILE_HEIGHT_DP = 148
     const val CARD_HEIGHT_DP = 116
     const val TEACHER_CARD_COUNT = 8
-    const val MANAGER_CARD_COUNT = 4
+    const val MANAGER_CARD_COUNT = 6
     const val STUDENT_CARD_COUNT = 6
 
     fun isCompleteGrid(count: Int): Boolean = count > 0 && count % COLUMNS == 0
