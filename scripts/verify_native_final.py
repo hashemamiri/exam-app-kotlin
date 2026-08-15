@@ -68,6 +68,8 @@ v36_migration=(ROOT/"supabase/migrations/20260815_native_school_manager_v36.sql"
 v36_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_MANAGER_V36.sql").read_text()
 v37_migration=(ROOT/"supabase/migrations/20260815_native_school_teacher_management_v37.sql").read_text()
 v37_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql").read_text()
+v38_migration=(ROOT/"supabase/migrations/20260815_native_manager_wallet_stats_v38.sql").read_text()
+v38_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
 auth_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text()
@@ -857,11 +859,11 @@ require(all(marker in _manager_menu_v36 for marker in ("\"حساب\"","\"داد�
         "\"تقویم\"" not in _manager_menu_v36 and "\"سربرگ\"" not in _manager_menu_v36,
         "V36 manager hamburger still exposes calendar/header")
 require(all(marker in app_shell for marker in (
-            "ManagerTeachersScreen","ManagerStatsScreen","ManagerWalletFoundationScreen",
+            "ManagerTeachersScreen","ManagerStatsScreen","UserRole.MANAGER -> WalletScreen",
             "primaryLabel = if (user.role == UserRole.MANAGER) \"معلم‌ها\"","createManagerTeacher"
         )) and "MANAGER_CARD_COUNT = 4" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
-        "دعوت معلم جدید" in manager_foundation and "در V38 فعال می‌شود" in manager_foundation,
+        "دعوت معلم جدید" in manager_foundation and "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد" in manager_foundation,
         "V36 manager dock/stats/staged foundation incomplete")
 
 # V37 — دعوت امن و مدیریت عضویت معلم
@@ -884,3 +886,26 @@ require(all(marker in manager_foundation for marker in (
         "V37 manager teacher UI/repository incomplete or deletes Auth")
 require((ROOT/"supabase/functions/manage-student/index.ts").read_text().count("native_attach_created_student_v37") == 2,
         "V37 newly created students are not attached to their school")
+
+# V38 — کیف پول مدیر و آمار کامل
+require("TRANSFER_STEP_TOMAN = 1_000L" in
+        (ROOT/"app/src/main/java/ir/exam/app/domain/model/BillingModels.kt").read_text() and
+        "ManagerWalletRules.validateTransfer" in manager_repository and
+        "ManagerWalletRules.isValidTransfer(amount)" in manager_foundation,
+        "V38 1000-toman transfer rule incomplete")
+require(v38_migration == v38_sql_copy and all(marker in v38_migration for marker in (
+            "native_scope_new_school_row_v38","trg_scope_new_class_v38","trg_scope_new_exam_v38",
+            "manager_wallet_transfers_v38","p_amount_toman%1000<>0","for update",
+            "balance=balance-p_amount_toman","balance=balance+p_amount_toman",
+            "school_transfer_to_teacher","school_transfer_from_manager","already_applied"
+        )), "V38 atomic/idempotent wallet SQL or copy incomplete")
+require("role in('teacher','manager')" in v38_migration and
+        "UserRole.MANAGER -> WalletScreen" in app_shell and "ManagerWalletFoundationScreen" not in app_shell,
+        "V38 manager secure top-up path incomplete")
+require("native_manager_transfer_wallet_v38" in manager_repository and
+        all(marker in manager_foundation for marker in (
+            "مبلغ باید مضرب ۱٬۰۰۰ تومان باشد","Text(\"شارژ\")","پاسخ‌ها",
+            "میانگین نمره","مجموع اعتبار توزیع‌شده","فعالیت معلم‌ها"
+        )) and all(marker in v38_migration for marker in (
+            "average_percent","distributed_toman","teacher_activity","wallet_balance"
+        )), "V38 transfer UI or complete manager statistics missing")

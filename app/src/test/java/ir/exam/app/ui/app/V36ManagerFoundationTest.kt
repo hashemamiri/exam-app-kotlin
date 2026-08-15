@@ -60,7 +60,7 @@ class V36ManagerFoundationTest {
         assertTrue("Design69Icons.Students" in app)
         assertTrue("ManagerTeachersScreen" in app)
         assertTrue("ManagerStatsScreen" in app)
-        assertTrue("ManagerWalletFoundationScreen" in app)
+        assertTrue("UserRole.MANAGER -> WalletScreen" in app)
         assertTrue("createManagerTeacher" in app)
     }
 
@@ -81,7 +81,7 @@ class V36ManagerFoundationTest {
     fun `v37 and v38 actions are not exposed prematurely`() {
         val manager = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
         assertTrue("دعوت معلم جدید" in manager)
-        assertTrue("در V38 فعال می‌شود" in manager)
+        assertTrue("مبلغ باید مضرب ۱٬۰۰۰ تومان باشد" in manager)
         assertFalse("Deno.env.get" in manager)
     }
 }

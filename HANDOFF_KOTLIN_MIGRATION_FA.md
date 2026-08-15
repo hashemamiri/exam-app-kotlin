@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V37 دعوت امن و مدیریت عضویت معلم مدرسه
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38 کیف پول مدیر، انتقال مضرب ۱۰۰۰ و آمار کامل مدرسه
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -2221,6 +2221,8 @@ assembleDebug                            PASS
 APK v2 signature                      Verified
 ```
 
+داده‌های جدید کلاس/آزمون با trigger و دانش‌آموز با school_students به مدرسه scope می‌شوند. داده‌های قدیمی school_id=null باقی می‌مانند و بدون انتخاب مدیر وارد آمار مدرسه نمی‌شوند.
+
 ### عملیات
 
 ```text
@@ -4360,3 +4362,50 @@ SQL copy equality                       → PASS
 ```
 
 راهنما: `SCHOOL_TEACHER_INVITATION_V37_FA.md`.
+
+
+## ۵۹) V38 — انتقال کیف پول مدیر به معلم و آمار مدرسه
+
+### قرارداد مالی تأییدشده
+
+```text
+مبلغ انتقال داخلی                    → دلخواه، مثبت، مضرب ۱٬۰۰۰ تومان
+۲۷٬۰۰۰                                → مجاز
+۲۷٬۵۰۰                                → غیرمجاز
+شارژ بانکی مدیر                       → همان قوانین موجود (حداقل ۱۰۰هزار/گام ۱۰هزار)
+هزینه سؤال                            → ۱٬۰۰۰ تومان
+```
+
+### پیاده‌سازی
+
+- ManagerWalletRules در domain، UI و repository یک قرارداد واحد دارد.
+- مدیر از WalletScreen و Edge پرداخت امن فعلی کیف خودش را شارژ می‌کند؛ RPC سفارش
+  پرداخت role manager را نیز می‌پذیرد.
+- native_manager_transfer_wallet_v38 عضویت هم‌مدرسه‌ای، مبلغ، موجودی و سقف را
+  بررسی و هر دو wallet را FOR UPDATE قفل می‌کند.
+- operation UUID + manager_wallet_transfers_v38 idempotency را تضمین می‌کند.
+- debit مدیر، credit معلم، دو wallet_tx و audit در همان transaction ثبت می‌شوند.
+- کارت معلم موجودی و دکمه شارژ دارد؛ ۲۷۵۰۰ در UI و سرور رد می‌شود.
+- summary مدرسه پاسخ‌ها، میانگین درصد، مبلغ توزیع‌شده و teacher_activity شامل
+  تعداد آزمون/کلاس/دانش‌آموز/موجودی را برمی‌گرداند.
+
+### عملیات
+
+```text
+SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql
+supabase/migrations/20260815_native_manager_wallet_stats_v38.sql
+Edge deploy جدید                         → ندارد
+Secret / Dependency جدید                → ندارد
+پیش‌نیاز                                → V37 + SQL/Edge V37
+```
+
+### بررسی
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+SQL copy equality                       → PASS
+testDebugUnitTest / lintDebug           → باید در WSL/CI اجرا شود
+```
+
+راهنما: `MANAGER_WALLET_STATS_V38_FA.md`.

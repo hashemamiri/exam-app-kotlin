@@ -2,21 +2,29 @@ package ir.exam.app.data.repository
 
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.remote.SupabaseProvider
+import ir.exam.app.domain.model.ManagerWalletRules
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 internal data class SchoolTeacherItem(
     val id: String,
     val fullName: String,
     val username: String,
-    val email: String
+    val email: String,
+    val walletBalanceToman: Long = 0
 )
 
 internal data class TeacherInviteResult(val email: String, val code: String)
+internal data class WalletTransferResult(
+    val amountToman: Long,
+    val managerBalanceToman: Long,
+    val teacherBalanceToman: Long
+)
 
 internal class SupabaseManagerRepository {
     suspend fun teachers(): Result<List<SchoolTeacherItem>> = runCatching {
@@ -27,7 +35,8 @@ internal class SupabaseManagerRepository {
                 id = item.text("id"),
                 fullName = item.text("full_name"),
                 username = item.text("username"),
-                email = item.text("email")
+                email = item.text("email"),
+                walletBalanceToman = item["wallet_balance"]?.jsonPrimitive?.longOrNull ?: 0
             )
         }
     }
@@ -39,6 +48,24 @@ internal class SupabaseManagerRepository {
             buildJsonObject { put("p_email", email.trim().lowercase()) }
         ).decodeAs<JsonObject>().checked()
         TeacherInviteResult(raw.text("email"), raw.text("invite_code"))
+    }
+
+    suspend fun transferWallet(teacherId: String, amountToman: Long): Result<WalletTransferResult> = runCatching {
+        ManagerWalletRules.validateTransfer(amountToman)
+        val operationId = java.util.UUID.randomUUID().toString()
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_manager_transfer_wallet_v38",
+            buildJsonObject {
+                put("p_teacher", teacherId)
+                put("p_amount_toman", amountToman)
+                put("p_operation", operationId)
+            }
+        ).decodeAs<JsonObject>().checked()
+        WalletTransferResult(
+            amountToman = raw["amount"]?.jsonPrimitive?.longOrNull ?: amountToman,
+            managerBalanceToman = raw["manager_balance"]?.jsonPrimitive?.longOrNull ?: 0,
+            teacherBalanceToman = raw["teacher_balance"]?.jsonPrimitive?.longOrNull ?: 0
+        )
     }
 
     suspend fun disableTeacher(id: String): Result<Unit> = runCatching {

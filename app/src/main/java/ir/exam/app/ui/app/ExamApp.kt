@@ -71,7 +71,6 @@ import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.grading.GradingScreen
 import ir.exam.app.ui.manager.ManagerStatsScreen
 import ir.exam.app.ui.manager.ManagerTeachersScreen
-import ir.exam.app.ui.manager.ManagerWalletFoundationScreen
 import ir.exam.app.ui.profile.ProfileSettingsDestination
 import ir.exam.app.ui.profile.ProfileSettingsScreen
 import ir.exam.app.ui.profile.SettingsSection
@@ -370,7 +369,7 @@ private fun AuthenticatedExamApp(
                 MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
                 MainPage.WALLET -> when (user.role) {
                     UserRole.TEACHER -> WalletScreen(refreshKey = walletRefreshKey)
-                    UserRole.MANAGER -> ManagerWalletFoundationScreen()
+                    UserRole.MANAGER -> WalletScreen(refreshKey = walletRefreshKey)
                     UserRole.STUDENT -> Unit
                 }
                 MainPage.CARDS -> if (user.role == UserRole.MANAGER) {

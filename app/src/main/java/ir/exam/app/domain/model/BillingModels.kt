@@ -23,6 +23,15 @@ data class PaymentLaunch(
     val balanceAfterToman: Long? = null
 )
 
+object ManagerWalletRules {
+    const val TRANSFER_STEP_TOMAN = 1_000L
+    fun isValidTransfer(amount: Long?): Boolean =
+        amount != null && amount > 0 && amount % TRANSFER_STEP_TOMAN == 0L
+    fun validateTransfer(amount: Long) {
+        require(isValidTransfer(amount)) { "مبلغ انتقال باید مثبت و مضرب ۱٬۰۰۰ تومان باشد." }
+    }
+}
+
 object WalletRules {
     const val QUESTION_COST_TOMAN = 1_000L
     const val MIN_TOP_UP_TOMAN = 100_000L

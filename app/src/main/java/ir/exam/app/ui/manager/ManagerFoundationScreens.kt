@@ -1,6 +1,8 @@
 package ir.exam.app.ui.manager
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,9 +26,14 @@ import ir.exam.app.data.remote.SupabaseProvider
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.launch
 
+private data class TeacherActivity(
+    val name: String, val exams: Int, val classes: Int, val students: Int, val walletBalance: Long
+)
 private data class ManagerSummary(
     val schoolName: String,
     val province: String,
@@ -34,7 +41,11 @@ private data class ManagerSummary(
     val teachers: Int,
     val students: Int,
     val classes: Int,
-    val exams: Int
+    val exams: Int,
+    val answers: Int = 0,
+    val averagePercent: Double = 0.0,
+    val distributedToman: Long = 0,
+    val teacherActivity: List<TeacherActivity> = emptyList()
 )
 
 @Composable
@@ -49,6 +60,9 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
     var loadingTeachers by remember { mutableStateOf(true) }
     var inviteOpen by remember { mutableStateOf(false) }
     var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
+    var transferTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
+    var transferAmount by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
 
     fun reload() {
         scope.launch {
@@ -61,7 +75,10 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
     LaunchedEffect(Unit) { reload() }
     LaunchedEffect(newTeacherRequested) { if (newTeacherRequested > 0) inviteOpen = true }
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text("معلم‌ها", style = MaterialTheme.typography.headlineSmall)
         summaryState.summary?.let { Text(it.schoolName) }
         androidx.compose.material3.Button(onClick = { inviteOpen = !inviteOpen }) { Text("دعوت معلم جدید") }
@@ -89,6 +106,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
             }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         if (loadingTeachers) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         teachers.forEach { teacher ->
             Card(Modifier.fillMaxWidth()) {
@@ -100,12 +118,48 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
                     Column(Modifier.weight(1f)) {
                         Text(teacher.fullName.ifBlank { teacher.username }, style = MaterialTheme.typography.titleMedium)
                         Text(teacher.email, style = MaterialTheme.typography.bodySmall)
+                        Text("کیف پول: ${"%,d".format(java.util.Locale.US, teacher.walletBalanceToman)} تومان")
                     }
+                    androidx.compose.material3.TextButton(onClick = { transferTarget = teacher; transferAmount = "" }) { Text("شارژ") }
                     androidx.compose.material3.TextButton(onClick = { removeTarget = teacher }) { Text("حذف") }
                 }
             }
         }
     }
+    transferTarget?.let { teacher ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { transferTarget = null },
+            title = { Text("شارژ کیف پول ${teacher.fullName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("مبلغ باید مضرب ۱٬۰۰۰ تومان باشد؛ مانند ۲۷٬۰۰۰ تومان.")
+                    androidx.compose.material3.OutlinedTextField(
+                        value = transferAmount,
+                        onValueChange = { transferAmount = it.filter(Char::isDigit).take(9) },
+                        label = { Text("مبلغ انتقال (تومان)") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                val amount = transferAmount.toLongOrNull()
+                androidx.compose.material3.Button(
+                    enabled = ir.exam.app.domain.model.ManagerWalletRules.isValidTransfer(amount),
+                    onClick = {
+                        scope.launch {
+                            repository.transferWallet(teacher.id, amount ?: 0).onSuccess { result ->
+                                message = "${"%,d".format(java.util.Locale.US, result.amountToman)} تومان منتقل شد."
+                                transferTarget = null
+                                reload()
+                            }.onFailure { error = it.message; transferTarget = null }
+                        }
+                    }
+                ) { Text("انتقال") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { transferTarget = null }) { Text("انصراف") } }
+        )
+    }
+
     removeTarget?.let { teacher ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { removeTarget = null },
@@ -125,26 +179,10 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
 }
 
 @Composable
-fun ManagerWalletFoundationScreen() {
-    Column(
-        Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("کیف پول مدیر/معاون", style = MaterialTheme.typography.headlineSmall)
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("زیرساخت کیف پول مدرسه آماده است.", style = MaterialTheme.typography.titleMedium)
-                Text("شارژ مدیر و انتقال اتمیک تومان به معلم در V38 فعال می‌شود.")
-            }
-        }
-    }
-}
-
-@Composable
 fun ManagerStatsScreen() {
     val state = rememberManagerSummary()
     Column(
-        Modifier.fillMaxSize().padding(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("آمار مدرسه", style = MaterialTheme.typography.headlineSmall)
@@ -170,7 +208,21 @@ fun ManagerStatsScreen() {
                         }
                     }
                 }
-                Text("آمار آزمون‌های برگزارشده، پاسخ‌ها، میانگین نمره و فعالیت معلم‌ها در V38 فعال می‌شود.")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Card(Modifier.weight(1f)) { Column(Modifier.padding(14.dp)) { Text("پاسخ‌ها"); Text(summary.answers.toString(), style = MaterialTheme.typography.titleLarge) } }
+                    Card(Modifier.weight(1f)) { Column(Modifier.padding(14.dp)) { Text("میانگین نمره"); Text("${summary.averagePercent}٪", style = MaterialTheme.typography.titleLarge) } }
+                }
+                Text("مجموع اعتبار توزیع‌شده: ${"%,d".format(java.util.Locale.US, summary.distributedToman)} تومان")
+                Text("فعالیت معلم‌ها", style = MaterialTheme.typography.titleMedium)
+                summary.teacherActivity.forEach { item ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(item.name, style = MaterialTheme.typography.titleSmall)
+                            Text("آزمون ${item.exams} · کلاس ${item.classes} · دانش‌آموز ${item.students}")
+                            Text("کیف پول ${"%,d".format(java.util.Locale.US, item.walletBalance)} تومان")
+                        }
+                    }
+                }
             }
         }
     }
@@ -197,7 +249,20 @@ private fun rememberManagerSummary(): ManagerSummaryState {
                 teachers = raw["teachers"]?.jsonPrimitive?.intOrNull ?: 0,
                 students = raw["students"]?.jsonPrimitive?.intOrNull ?: 0,
                 classes = raw["classes"]?.jsonPrimitive?.intOrNull ?: 0,
-                exams = raw["exams"]?.jsonPrimitive?.intOrNull ?: 0
+                exams = raw["exams"]?.jsonPrimitive?.intOrNull ?: 0,
+                answers = raw["answers"]?.jsonPrimitive?.intOrNull ?: 0,
+                averagePercent = raw["average_percent"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                distributedToman = raw["distributed_toman"]?.jsonPrimitive?.longOrNull ?: 0,
+                teacherActivity = (raw["teacher_activity"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { element ->
+                    val item = element as? JsonObject ?: return@mapNotNull null
+                    TeacherActivity(
+                        name = item["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        exams = item["exams"]?.jsonPrimitive?.intOrNull ?: 0,
+                        classes = item["classes"]?.jsonPrimitive?.intOrNull ?: 0,
+                        students = item["students"]?.jsonPrimitive?.intOrNull ?: 0,
+                        walletBalance = item["wallet_balance"]?.jsonPrimitive?.longOrNull ?: 0
+                    )
+                }
             )
         }.onSuccess { state = ManagerSummaryState(loading = false, summary = it) }
             .onFailure { state = ManagerSummaryState(loading = false, error = it.message ?: "دریافت آمار ناموفق بود.") }
