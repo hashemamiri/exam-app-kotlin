@@ -188,6 +188,14 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
+    OutlinedTextField(
+        state.teacherInviteCode,
+        viewModel::setTeacherInviteCode,
+        label = { Text("کد دعوت مدرسه (اختیاری)") },
+        supportingText = { Text("اگر مدیر مدرسه کد TCH داده است، آن را اینجا وارد کنید.") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
     PasswordField("رمز جدید ۸ تا ۷۲ کاراکتر", state.newPassword, viewModel::setNewPassword)
     PasswordField("تکرار رمز جدید", state.confirmPassword, viewModel::setConfirmPassword)
     Button(

@@ -25,6 +25,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.coroutines.launch
 
 private data class ManagerSummary(
     val schoolName: String,
@@ -38,37 +39,88 @@ private data class ManagerSummary(
 
 @Composable
 fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
-    val state = rememberManagerSummary()
-    Column(
-        Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    val summaryState = rememberManagerSummary()
+    val repository = remember { ir.exam.app.data.repository.SupabaseManagerRepository() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var teachers by remember { mutableStateOf<List<ir.exam.app.data.repository.SchoolTeacherItem>>(emptyList()) }
+    var email by remember { mutableStateOf("") }
+    var invite by remember { mutableStateOf<ir.exam.app.data.repository.TeacherInviteResult?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var loadingTeachers by remember { mutableStateOf(true) }
+    var inviteOpen by remember { mutableStateOf(false) }
+    var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
+
+    fun reload() {
+        scope.launch {
+            loadingTeachers = true
+            repository.teachers().onSuccess { teachers = it; error = null }
+                .onFailure { error = it.message }
+            loadingTeachers = false
+        }
+    }
+    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(newTeacherRequested) { if (newTeacherRequested > 0) inviteOpen = true }
+
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("معلم‌ها", style = MaterialTheme.typography.headlineSmall)
-        when {
-            state.loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
-            state.error != null -> Text(state.error, color = MaterialTheme.colorScheme.error)
-            else -> {
-                Text(
-                    listOf(state.summary?.schoolName, state.summary?.province, state.summary?.city)
-                        .filterNotNull().filter(String::isNotBlank).joinToString(" · ")
-                )
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("مدیریت معلم‌های مدرسه", style = MaterialTheme.typography.titleMedium)
-                        Text("تعداد معلم فعال: ${state.summary?.teachers ?: 0}")
-                        Text("دعوت امن، حذف عضویت و مدیریت کلاس معلم در V37 فعال می‌شود.")
-                    }
-                }
-                if (newTeacherRequested > 0) {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text("معلم جدید", style = MaterialTheme.typography.titleMedium)
-                            Text("درخواست دکمه + دریافت شد؛ فرم دعوت امن در مرحله V37 تکمیل می‌شود.")
+        summaryState.summary?.let { Text(it.schoolName) }
+        androidx.compose.material3.Button(onClick = { inviteOpen = !inviteOpen }) { Text("دعوت معلم جدید") }
+        if (inviteOpen) {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = email, onValueChange = { email = it.trim().take(254) },
+                        label = { Text("ایمیل معلم") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                    )
+                    androidx.compose.material3.Button(
+                        enabled = '@' in email,
+                        onClick = {
+                            scope.launch {
+                                repository.createInvite(email).onSuccess { invite = it; error = null }
+                                    .onFailure { error = it.message }
+                            }
                         }
+                    ) { Text("ساخت کد دعوت") }
+                    invite?.let {
+                        Text("کد دعوت ۷ روز اعتبار دارد و فقط برای ${it.email} قابل استفاده است.")
+                        androidx.compose.foundation.text.selection.SelectionContainer { Text(it.code) }
                     }
                 }
             }
         }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        if (loadingTeachers) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+        teachers.forEach { teacher ->
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(teacher.fullName.ifBlank { teacher.username }, style = MaterialTheme.typography.titleMedium)
+                        Text(teacher.email, style = MaterialTheme.typography.bodySmall)
+                    }
+                    androidx.compose.material3.TextButton(onClick = { removeTarget = teacher }) { Text("حذف") }
+                }
+            }
+        }
+    }
+    removeTarget?.let { teacher ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { removeTarget = null },
+            title = { Text("قطع عضویت معلم") },
+            text = { Text("عضویت ${teacher.fullName} غیرفعال شود؟ حساب و آزمون‌های او حذف نمی‌شوند.") },
+            confirmButton = {
+                androidx.compose.material3.Button(onClick = {
+                    scope.launch {
+                        repository.disableTeacher(teacher.id).onSuccess { removeTarget = null; reload() }
+                            .onFailure { error = it.message; removeTarget = null }
+                    }
+                }) { Text("قطع عضویت") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { removeTarget = null }) { Text("انصراف") } }
+        )
     }
 }
 

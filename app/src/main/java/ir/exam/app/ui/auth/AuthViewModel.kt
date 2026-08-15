@@ -41,6 +41,7 @@ data class AuthUiState(
     val schoolName: String = "",
     val province: String = "",
     val city: String = "",
+    val teacherInviteCode: String = "",
     val recoveredUsername: String? = null,
     val isLoading: Boolean = false,
     val isRestoringSession: Boolean = true,
@@ -105,6 +106,9 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     fun setSchoolName(value: String) { _state.update { it.copy(schoolName = value.take(160), error = null) } }
     fun setProvince(value: String) { _state.update { it.copy(province = value.take(100), error = null) } }
     fun setCity(value: String) { _state.update { it.copy(city = value.take(100), error = null) } }
+    fun setTeacherInviteCode(value: String) {
+        _state.update { it.copy(teacherInviteCode = value.trim().take(80), error = null) }
+    }
 
     fun showSignIn() = switchTo(AuthScreen.SIGN_IN)
     fun showRegistrationRole() = switchTo(AuthScreen.REGISTRATION_ROLE)
@@ -146,11 +150,20 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     fun completeTeacherRegistration() = request {
         requirePasswordsMatch()
-        val user = repository.completeTeacherRegistration(
-            fullName = state.value.fullName,
-            username = state.value.username,
-            password = state.value.newPassword
-        ).getOrThrow()
+        val user = if (state.value.teacherInviteCode.isBlank()) {
+            repository.completeTeacherRegistration(
+                fullName = state.value.fullName,
+                username = state.value.username,
+                password = state.value.newPassword
+            )
+        } else {
+            repository.completeInvitedTeacherRegistration(
+                fullName = state.value.fullName,
+                username = state.value.username,
+                password = state.value.newPassword,
+                inviteCode = state.value.teacherInviteCode
+            )
+        }.getOrThrow()
         acceptAuthenticatedUser(user)
     }
 

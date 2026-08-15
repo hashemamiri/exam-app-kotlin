@@ -169,6 +169,36 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         persistUser(currentProfile())
     }
 
+    override suspend fun completeInvitedTeacherRegistration(
+        fullName: String,
+        username: String,
+        password: String,
+        inviteCode: String
+    ): Result<AppUser> = runCatching {
+        val name = fullName.trim()
+        val normalizedUsername = username.trim().lowercase()
+        require(name.length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
+        require(AuthIdentifier.validUsername(normalizedUsername)) { "نام کاربری معتبر نیست." }
+        require(inviteCode.trim().startsWith("TCH-") && inviteCode.trim().length >= 60) { "کد دعوت معتبر نیست." }
+        validateNewPassword(password)
+        check(auth.currentUserOrNull() != null) { "ابتدا کد ایمیل را تأیید کنید." }
+        val response = SupabaseProvider.client.postgrest.rpc(
+            "native_complete_teacher_registration_v37",
+            buildJsonObject {
+                put("p_full_name", name)
+                put("p_username", normalizedUsername)
+                put("p_invite_code", inviteCode.trim())
+            }
+        ).decodeAs<NativeProfileDto>()
+        response.error?.takeIf(String::isNotBlank)?.let(::error)
+        check(response.ok && response.role.equals("teacher", true)) { "عضویت معلم در مدرسه کامل نشد." }
+        auth.updateUser {
+            this.password = password
+            data { put("full_name", name); put("registration_role", "teacher") }
+        }
+        persistUser(currentProfile())
+    }
+
     override suspend fun sendManagerRegistrationOtp(email: String, fullName: String): Result<Unit> {
         require(fullName.trim().length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
         return sendOtp(

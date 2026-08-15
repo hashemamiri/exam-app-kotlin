@@ -17,6 +17,12 @@ interface AuthRepository {
         username: String,
         password: String
     ): Result<AppUser>
+    suspend fun completeInvitedTeacherRegistration(
+        fullName: String,
+        username: String,
+        password: String,
+        inviteCode: String
+    ): Result<AppUser> = Result.failure(UnsupportedOperationException("invited teacher registration not implemented"))
     suspend fun sendManagerRegistrationOtp(email: String, fullName: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("manager registration not implemented"))
     suspend fun verifyManagerRegistrationOtp(email: String, code: String): Result<Unit> =

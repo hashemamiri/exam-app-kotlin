@@ -108,6 +108,7 @@ Deno.serve(async (request) => {
           return json({ error: 'عضویت کلاس ثبت نشد و حساب بازگردانی شد' }, 500);
         }
       }
+      await service.rpc('native_attach_created_student_v37', { p_actor: teacherId, p_student: studentId });
       await audit('create', studentId, { username, class_id: classId || null });
       return json({ ok: true, id: studentId, username });
     }
@@ -225,6 +226,7 @@ Deno.serve(async (request) => {
             continue;
           }
         }
+        await service.rpc('native_attach_created_student_v37', { p_actor: teacherId, p_student: studentId });
         results.push({ id: studentId, username, password, ok: true });
       }
       await audit('bulk_create', null, { count: rows.length, success: results.filter((x) => x.ok).length });

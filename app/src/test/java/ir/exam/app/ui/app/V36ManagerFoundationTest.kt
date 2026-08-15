@@ -80,7 +80,7 @@ class V36ManagerFoundationTest {
     @Test
     fun `v37 and v38 actions are not exposed prematurely`() {
         val manager = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
-        assertTrue("در V37 فعال می‌شود" in manager)
+        assertTrue("دعوت معلم جدید" in manager)
         assertTrue("در V38 فعال می‌شود" in manager)
         assertFalse("Deno.env.get" in manager)
     }

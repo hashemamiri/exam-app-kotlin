@@ -66,6 +66,9 @@ v30_guide=(ROOT/"SMOOTH_REORDER_CHANGELOG_V30_FA.md").read_text()
 v31_guide=(ROOT/"STABLE_REORDER_UPDATE_PROMPT_V31_FA.md").read_text()
 v36_migration=(ROOT/"supabase/migrations/20260815_native_school_manager_v36.sql").read_text()
 v36_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_MANAGER_V36.sql").read_text()
+v37_migration=(ROOT/"supabase/migrations/20260815_native_school_teacher_management_v37.sql").read_text()
+v37_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql").read_text()
+manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
 auth_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text()
 sign_in_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt").read_text()
@@ -858,5 +861,26 @@ require(all(marker in app_shell for marker in (
             "primaryLabel = if (user.role == UserRole.MANAGER) \"معلم‌ها\"","createManagerTeacher"
         )) and "MANAGER_CARD_COUNT = 4" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
-        "در V37 فعال می‌شود" in manager_foundation and "در V38 فعال می‌شود" in manager_foundation,
+        "دعوت معلم جدید" in manager_foundation and "در V38 فعال می‌شود" in manager_foundation,
         "V36 manager dock/stats/staged foundation incomplete")
+
+# V37 — دعوت امن و مدیریت عضویت معلم
+require(v37_migration == v37_sql_copy and all(marker in v37_migration for marker in (
+            "school_teacher_invites","digest(v_token,'sha256')","expires_at>now()",
+            "native_complete_teacher_registration_v37","native_manager_teachers_v37",
+            "native_manager_disable_teacher_v37","school_students","school_admin_audit_v37"
+        )), "V37 invitation/membership SQL or copy incomplete")
+require("کد دعوت مدرسه (اختیاری)" in sign_in_screen and
+        "teacherInviteCode" in auth_view_model and "completeInvitedTeacherRegistration" in auth_view_model and
+        "native_complete_teacher_registration_v37" in
+            (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt").read_text(),
+        "V37 invited teacher registration flow incomplete")
+require(all(marker in manager_foundation for marker in (
+            "دعوت معلم جدید","ساخت کد دعوت","کد دعوت ۷ روز اعتبار دارد","قطع عضویت معلم"
+        )) and all(marker in manager_repository for marker in (
+            "native_manager_teachers_v37","native_manager_create_teacher_invite_v37",
+            "native_manager_disable_teacher_v37"
+        )) and "deleteUser" not in manager_repository,
+        "V37 manager teacher UI/repository incomplete or deletes Auth")
+require((ROOT/"supabase/functions/manage-student/index.ts").read_text().count("native_attach_created_student_v37") == 2,
+        "V37 newly created students are not attached to their school")
