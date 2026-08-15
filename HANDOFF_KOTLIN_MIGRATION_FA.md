@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V36 زیرساخت نقش مدیر/معاون، مدرسهٔ مستقل و پوستهٔ مدیریتی
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V36.1 هماهنگ‌سازی تست ناوبری قدیمی با صفحه شروع مدیر
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4279,3 +4279,38 @@ Dependency / Edge / Secret جدید         → ندارد
 ```
 
 راهنمای مستقل: `SCHOOL_MANAGER_FOUNDATION_V36_FA.md`.
+
+
+## ۵۷) V36.1 — اصلاح تست قدیمی ناوبری پس از افزودن نقش مدیر
+
+### گزارش واقعی CI
+
+```text
+compileDebugKotlin                      → SUCCESS
+compileDebugUnitTestKotlin              → SUCCESS
+256 tests                               → 255 PASS / 1 FAIL
+Neumorphic69IntegrationTest:140         → assertion قدیمی mutableStateOf(MainPage.CALENDAR)
+```
+
+کد اجرایی V36 کامپایل شده بود. تست V18 هنوز فرض می‌کرد تمام نقش‌ها بدون شرط از
+تقویم شروع می‌شوند و محدودهٔ منوی معلم را تا اولین `else` می‌خواند. در V36:
+
+```text
+MANAGER                                 → MainPage.HOME (معلم‌ها)
+TEACHER / STUDENT                       → MainPage.CALENDAR
+مرز منوی معلم                          → else if (UserRole.MANAGER)
+```
+
+تست با همین قرارداد جدید هماهنگ شد. کد اجرایی، SQL و قابلیت‌های V36 تغییری نکردند.
+
+### فایل و بررسی
+
+```text
+app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+HANDOFF_KOTLIN_MIGRATION_FA.md
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
+SQL / Edge / Secret / Dependency جدید   → ندارد
+پیش‌نیاز                                → V36
+```

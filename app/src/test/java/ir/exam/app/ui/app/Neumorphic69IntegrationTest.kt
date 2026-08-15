@@ -137,12 +137,13 @@ class Neumorphic69IntegrationTest {
         val dashboard = File(root, "app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").readText()
         val lock = File(root, "app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").readText()
 
-        assertTrue("mutableStateOf(MainPage.CALENDAR)" in app)
+        // معلم/دانش‌آموز همچنان از تقویم شروع می‌کنند؛ مدیر طبق V36 از معلم‌ها.
+        assertTrue("if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR" in app)
         listOf("تقویم", "کلاس‌ها", "دانش‌آموزان", "سربرگ", "حساب", "داده‌ها", "تنظیمات", "خروج").forEach {
             assertTrue("missing hamburger item $it", it in app)
         }
         val teacherMenu = app.substringAfter("val menuCards = if (user.role == UserRole.TEACHER)")
-            .substringBefore("} else {")
+            .substringBefore("} else if (user.role == UserRole.MANAGER)")
         listOf("داشبورد معلم", "تصحیح و حضور", "آمار و گزارش‌ها", "درباره و بروزرسانی", "آزمون جدید").forEach {
             assertFalse("removed hamburger item returned: $it", it in teacherMenu)
         }
