@@ -28,7 +28,7 @@ class V26QuestionMediaReorderTest {
             .joinToString("\n") { it.readText() }
         assertFalse(Regex("\\b(val|var)\\s+plain_password\\b").containsMatchIn(main))
         assertFalse("old password retrieval returned", "getPassword(" in main)
-        assertTrue("رمز فعلی hash شده و قابل نمایش نیست" in main)
+        assertTrue("value = currentPassword.orEmpty()" in main)
         assertTrue("android.content.extra.IS_SENSITIVE" in main)
     }
 

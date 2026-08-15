@@ -271,10 +271,21 @@ fun SchoolManagementScreen(
 
 
     editingStudent?.let { student ->
+        val sessionPassword = knownPasswords[student.username?.lowercase()]
         StudentEditDialog(
             student = student,
+            currentPassword = sessionPassword,
             onDismiss = { editingStudent = null },
-            onSave = { request -> viewModel.updateStudent(request); editingStudent = null }
+            onSave = { request ->
+                // اگر فقط نام کاربری عوض شد، رمز شناخته‌شدهٔ همین نشست با نام جدید
+                // نیز در دسترس بماند. رمز جدید فقط پس از موفقیت سرور از
+                // state.lastCredential وارد knownPasswords می‌شود.
+                if (request.newPassword.isNullOrBlank() && !sessionPassword.isNullOrBlank()) {
+                    knownPasswords[request.username.lowercase()] = sessionPassword
+                }
+                viewModel.updateStudent(request)
+                editingStudent = null
+            }
         )
     }
 
@@ -798,6 +809,7 @@ private fun MemberPickerDialog(
 @Composable
 private fun StudentEditDialog(
     student: StudentProfile,
+    currentPassword: String?,
     onDismiss: () -> Unit,
     onSave: (UpdateStudentRequest) -> Unit
 ) {
@@ -814,6 +826,7 @@ private fun StudentEditDialog(
     var field by remember(student.id) { mutableStateOf(student.fieldOfStudy.orEmpty()) }
     var newPassword by remember(student.id) { mutableStateOf("") }
     var passwordVisible by remember(student.id) { mutableStateOf(false) }
+    var currentPasswordVisible by remember(student.id) { mutableStateOf(false) }
 
     // پنجرهٔ ویرایش دقیقاً مانند پنجرهٔ افزودن گروهی: هم‌عرض ۶۲۰dp، از بالا،
     // با دکمه‌های انصراف/ذخیره به‌جای +/ایجاد/× و فیلدهای پیش‌پر از اطلاعات
@@ -939,16 +952,12 @@ private fun StudentEditDialog(
                                     modifier = Modifier.weight(1f)
                                 )
                             }
-                            // رمز جدید اختیاری و رمز فعلی در یک سطر؛ رمز قبلی hash شده
-                            // است و قابل بازیابی نیست.
+                            // رمز جدید اختیاری و رمز فعلی همین نشست در یک سطر.
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedTextField(
                                     newPassword,
                                     { newPassword = it.take(72) },
                                     label = { Text("رمز جدید اختیاری") },
-                                    supportingText = {
-                                        Text("رمز فعلی hash شده و قابل نمایش نیست؛ خالی بماند تغییر نمی‌کند و رمز جدید پس از ذخیره یک‌بار قابل کپی است.")
-                                    },
                                     visualTransformation = passwordTransformation(passwordVisible),
                                     trailingIcon = {
                                         PasswordVisibilityButton(
@@ -960,10 +969,17 @@ private fun StudentEditDialog(
                                     modifier = Modifier.weight(1f)
                                 )
                                 OutlinedTextField(
-                                    value = "قابل بازیابی نیست",
+                                    value = currentPassword.orEmpty(),
                                     onValueChange = {},
                                     readOnly = true,
                                     label = { Text("رمز فعلی") },
+                                    visualTransformation = passwordTransformation(currentPasswordVisible),
+                                    trailingIcon = {
+                                        PasswordVisibilityButton(
+                                            visible = currentPasswordVisible,
+                                            onToggle = { currentPasswordVisible = !currentPasswordVisible }
+                                        )
+                                    },
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )

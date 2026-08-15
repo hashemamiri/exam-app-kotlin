@@ -32,7 +32,7 @@ class V25HeaderSafetyPolishTest {
             .joinToString("\n") { it.readText() }
         assertFalse(Regex("\\b(val|var)\\s+plain_password\\b").containsMatchIn(allMain))
         assertFalse("old-password retrieval returned", "getPassword(" in allMain)
-        assertTrue("رمز فعلی hash شده و قابل نمایش نیست" in school)
+        assertTrue("value = currentPassword.orEmpty()" in school)
         assertTrue("copyOneTimeCredential" in school)
         assertTrue("lastCredential = StudentCredential(request.id, request.username, password)" in viewModel)
     }

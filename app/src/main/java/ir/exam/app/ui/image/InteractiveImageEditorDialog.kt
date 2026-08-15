@@ -109,6 +109,11 @@ fun InteractiveImageEditorDialog(
             }
     }
 
+    // Size.Unspecified اجازهٔ خواندن width/height نمی‌دهد و پیش از اتمام بارگذاری
+    // تصویر IllegalStateException ایجاد می‌کند. اندازهٔ امن در تمام محاسبات preview،
+    // برش و حجم استفاده می‌شود تا اولین composition ویرایشگر هرگز crash نکند.
+    val safePixels = safeImagePixelSize(sourcePixels)
+
     // ارتفاع پنجره از ۹۲٪ صفحه بیشتر نمی‌شود و محتوا در صورت نیاز اسکرول می‌شود؛
     // به این ترتیب دکمه‌های تأیید/انصراف هرگز زیر صفحه یا زیر صفحه‌کلید نمی‌مانند.
     val maxDialogHeight = (LocalConfiguration.current.screenHeightDp * .92f).toInt()
@@ -165,8 +170,8 @@ fun InteractiveImageEditorDialog(
                         .background(Color(0xFF17191D), RoundedCornerShape(18.dp))
                         .clipToBounds()
                 ) {
-                    val rawWidth = sourcePixels.width.takeIf { it > 0f } ?: 1f
-                    val rawHeight = sourcePixels.height.takeIf { it > 0f } ?: 1f
+                    val rawWidth = safePixels.width
+                    val rawHeight = safePixels.height
                     val (rotatedWidth, rotatedHeight) =
                         CropGeometry.rotatedSize(rawWidth, rawHeight, rotation)
                     val quarterTurn = rotatedWidth != rawWidth
@@ -258,8 +263,8 @@ fun InteractiveImageEditorDialog(
                     if (!cropActive) bytes else {
                         val areaFraction = CropGeometry.areaFraction(
                             cropSide,
-                            sourcePixels.width.takeIf { it > 0f } ?: 1f,
-                            sourcePixels.height.takeIf { it > 0f } ?: 1f,
+                            safePixels.width,
+                            safePixels.height,
                             rotation
                         )
                         (bytes * areaFraction).toLong().coerceAtLeast(1L)
@@ -283,8 +288,8 @@ fun InteractiveImageEditorDialog(
                                             cropCenterX,
                                             cropCenterY,
                                             cropSide,
-                                            sourcePixels.width.takeIf { it > 0f } ?: 1f,
-                                            sourcePixels.height.takeIf { it > 0f } ?: 1f,
+                                            safePixels.width,
+                                            safePixels.height,
                                             rotation
                                         )
                                     } else null
@@ -420,6 +425,15 @@ private fun CropEdgeHandle(
         )
     }
 }
+
+/**
+ * [Size.Unspecified] در Compose یک Size عادی با width/height قابل خواندن نیست؛
+ * getterهای آن عمداً IllegalStateException می‌اندازند. این مرز واحد جلوی دسترسی
+ * زودهنگام در اولین composition و هنگام تعویض source را می‌گیرد.
+ */
+internal fun safeImagePixelSize(size: Size): Size =
+    if (size == Size.Unspecified) Size(1f, 1f)
+    else Size(size.width.coerceAtLeast(1f), size.height.coerceAtLeast(1f))
 
 private fun imageByteSize(context: android.content.Context, uri: Uri): Long? {
     if (uri.scheme.equals("file", true)) return uri.path?.let(::File)?.takeIf(File::isFile)?.length()

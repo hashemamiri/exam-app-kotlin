@@ -80,7 +80,7 @@ class V27DataImageOptionsTest {
             .joinToString("\n") { it.readText() }
         assertFalse(Regex("\\b(val|var)\\s+plain_password\\b").containsMatchIn(main))
         assertFalse("password retrieval API returned", "getPassword(" in main)
-        assertTrue("رمز فعلی hash شده و قابل نمایش نیست" in main)
+        assertTrue("value = currentPassword.orEmpty()" in main)
         assertTrue("copyOneTimeCredential" in main)
     }
 

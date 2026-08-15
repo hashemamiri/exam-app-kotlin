@@ -139,8 +139,8 @@ class V24ComprehensiveUxTest {
             .filter { it.isFile && it.extension == "kt" }
             .joinToString("\n") { it.readText() }
         assertFalse("recoverable password storage returned", Regex("\\b(val|var)\\s+plain_password\\b").containsMatchIn(allMain))
-        assertTrue("رمز فعلی hash شده و قابل نمایش نیست" in school)
-        assertTrue("رمز جدید پس از ذخیره یک‌بار قابل کپی است" in school)
+        assertTrue("value = currentPassword.orEmpty()" in school)
+        assertTrue("currentPassword: String?" in school)
         assertTrue("lastCredential = StudentCredential(request.id, request.username, password)" in viewModel)
         assertTrue("copyOneTimeCredential" in school)
         assertTrue("android.content.extra.IS_SENSITIVE" in school)

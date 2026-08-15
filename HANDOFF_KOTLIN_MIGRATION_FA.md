@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V32 رفع کرش آپلود، اسکرول شماره کارت‌ها، پنجره ویرایش همانند گروهی و کپی رمز بدون اخطار
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V33 رفع قطعی کرش Size.Unspecified در ویرایشگر تصویر و نمایش رمز فعلی نشست
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3890,3 +3890,90 @@ FINAL_NATIVE_VERIFY                     → PASS
 git diff --check                        → PASS
 testDebugUnitTest / lintDebug           → باید در GitHub Actions یا WSL اجرا شود.
 ```
+
+
+## ۵۲) V33 — رفع قطعی کرش ویرایشگر تصویر و نمایش رمز فعلی نشست
+
+### ورودی تأییدشده
+
+```text
+V32 build                               → SUCCESS (اعلام کاربر)
+logcat واقعی دستگاه                     → دریافت شد
+Process                                 → ir.exam.app
+Exception                               → java.lang.IllegalStateException: Size is unspecified
+محل                                     → InteractiveImageEditorDialog.kt:168
+Thread                                  → main
+```
+
+### علت قطعی کرش
+
+کرش ربطی به Supabase، شبکه یا مرحلهٔ upload نداشت. پس از انتخاب تصویر، ویرایشگر
+با `sourcePixels = Size.Unspecified` compose می‌شد. عبارت
+`sourcePixels.width.takeIf { ... }` ابتدا getter مربوط به `width` را اجرا می‌کرد؛
+Compose برای `Size.Unspecified` عمداً `IllegalStateException` می‌اندازد. این اتفاق
+پیش از `AsyncImage.onSuccess` و پیش از شروع هر آپلود روی thread اصلی رخ می‌داد.
+
+### اصلاح تصویر و ممیزی کامل
+
+```text
+InteractiveImageEditorDialog:
+- safeImagePixelSize(Size.Unspecified) → Size(1f, 1f)
+- حذف همه دسترسی‌های مستقیم sourcePixels.width/sourcePixels.height
+- استفاده از safePixels در preview، CropGeometry.areaFraction و cropRect
+
+LocalImageRepository:
+- IO dispatch، bounds decode، inSampleSize، بودجه حافظه، retry OOM و recycle بازبینی شد.
+
+SupabaseQuestionImageUploader:
+- مسیرهای سؤال/گزینه/جورکردنی/پاسخ/آواتار، محدودیت 8MB، retry، recycle،
+  bucket exam-images و بازگرداندن خطا بازبینی شد.
+
+Call sites:
+- QuestionMediaEditor، SingleImagePicker، ProfileSettingsScreen و StudentExamScreen
+  از انتخاب URI تا نمایش editor و تحویل URI آماده‌شده بازبینی شدند.
+```
+
+### پنجرهٔ ویرایش دانش‌آموز
+
+```text
+- جملهٔ «رمز فعلی hash شده و قابل نمایش نیست و ...» حذف شد.
+- currentPassword از knownPasswords همان نشست به StudentEditDialog داده می‌شود.
+- کادر «رمز فعلی» مقدار واقعی شناخته‌شدهٔ نشست را read-only نشان می‌دهد.
+- دکمهٔ نمایش/مخفی‌کردن مستقل برای رمز فعلی اضافه شد.
+- در تغییر صرفاً نام کاربری، نگاشت رمز نشست برای نام جدید حفظ می‌شود.
+- رمز قدیمی hash‌شده بازیابی یا به‌صورت دائمی ذخیره نمی‌شود؛ plain_password ممنوع است.
+```
+
+### فایل‌های V33
+
+```text
+app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/test/java/ir/exam/app/ui/image/V33ImageEditorPasswordTest.kt
+app/src/test/java/ir/exam/app/ui/app/V22ClassStudentCardsTest.kt
+app/src/test/java/ir/exam/app/ui/app/V24ComprehensiveUxTest.kt
+app/src/test/java/ir/exam/app/ui/app/V25HeaderSafetyPolishTest.kt
+app/src/test/java/ir/exam/app/ui/app/V26QuestionMediaReorderTest.kt
+app/src/test/java/ir/exam/app/ui/app/V27DataImageOptionsTest.kt
+app/src/test/java/ir/exam/app/ui/app/V28ReorderImageBulkFieldTest.kt
+app/src/test/java/ir/exam/app/ui/app/V32EditScrollCopyImageTest.kt
+scripts/verify_native_final.py
+CHANGELOG_FA.txt
+IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### تست و عملیات
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+stack-trace regression tests            → اضافه شد
+password session regression tests       → اضافه شد
+git diff --check                        → PASS (پیش از بسته‌بندی)
+testDebugUnitTest / lintDebug           → باید در WSL/GitHub Actions اجرا شود
+SQL / Edge / Secret / Migration جدید    → ندارد
+Dependency جدید                         → ندارد
+پیش‌نیاز                                → V32.1
+```
+
+راهنمای مستقل: `IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md`.

@@ -323,8 +323,9 @@ require(student_card.count("Modifier.weight(1f).height(58.dp)") >= 5 and
         "Icons.Outlined.Delete" in student_card and
         "قابل بازیابی نیست" in school_screen and "student.password" not in school_screen,
         "larger student actions or secure profile-copy behavior incomplete")
-require("رمز جدید اختیاری" in school_screen and "خالی بماند تغییر نمی‌کند" in school_screen and
-        "رمز فعلی hash شده و قابل نمایش نیست" in school_screen and
+require("رمز جدید اختیاری" in school_screen and "currentPassword: String?" in school_screen and
+        "value = currentPassword.orEmpty()" in school_screen and
+        "رمز فعلی hash شده و قابل نمایش نیست" not in school_screen and
         "copyOneTimeCredential" in school_screen and "android.content.extra.IS_SENSITIVE" in school_screen and
         "lastCredential = StudentCredential(request.id, request.username, password)" in classes_view_model and
         "request.newPassword.orEmpty()" in school_repository and
@@ -439,8 +440,10 @@ require("android:windowSoftInputMode=\"adjustResize\"" in manifest and
         "bulk dialog does not enforce adjustResize above the device keyboard")
 require(all(marker in image_editor for marker in (
             "repository.prepare(ImageEditRequest(source))","safeSource = prepared.uri",
-            "model = safeSource","!busy && !preparing && safeSource != null"
-        )), "image editor preflight does not isolate raw camera images")
+            "model = safeSource","!busy && !preparing && safeSource != null",
+            "safeImagePixelSize(sourcePixels)","if (size == Size.Unspecified) Size(1f, 1f)"
+        )) and "sourcePixels.width" not in image_editor and "sourcePixels.height" not in image_editor,
+        "image editor preflight or Size.Unspecified crash guard is incomplete")
 require("onDragStarted = { expandedQuestionId = null }" in builder_screen and
         "onDragStarted()" in builder_screen,
         "question drag does not close every accordion")

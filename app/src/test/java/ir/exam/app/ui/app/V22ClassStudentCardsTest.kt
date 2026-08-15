@@ -51,7 +51,7 @@ class V22ClassStudentCardsTest {
             .filter { it.isFile && it.extension == "kt" }
             .joinToString("\n") { it.readText() }
         assertTrue("رمز جدید اختیاری" in school)
-        assertTrue("خالی بماند تغییر نمی‌کند" in school)
+        assertTrue("currentPassword: String?" in school)
         assertTrue("request.newPassword.orEmpty()" in repository)
         assertFalse(
             "plain password field returned",

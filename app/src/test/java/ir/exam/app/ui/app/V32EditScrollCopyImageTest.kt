@@ -84,7 +84,7 @@ class V32EditScrollCopyImageTest {
         assertTrue("// نام و نام خانوادگی در یک سطر" in edit)
         assertTrue("// نام پدر و نام کاربری در یک سطر" in edit)
         assertTrue("// پایه و رشته در یک سطر" in edit)
-        assertTrue("// رمز جدید اختیاری و رمز فعلی در یک سطر" in edit)
+        assertTrue("// رمز جدید اختیاری و رمز فعلی همین نشست در یک سطر" in edit)
     }
 
     @Test
