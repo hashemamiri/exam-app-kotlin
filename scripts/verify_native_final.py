@@ -961,3 +961,5 @@ require("featuredCard = if (user.role == UserRole.STUDENT)" in app_shell and
             (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
         "initialJoinCode" in (ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt").read_text(),
         "V39 centered student exam card/dialog/preview flow incomplete")
+
+require("import androidx.compose.material3.IconButton" in profile_settings and "schoolJoinRepository.preview" in profile_settings, "V39.1 school join IconButton import missing")

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V39 کد کوتاه مدرسه، quick-add نقش‌محور و کارت آزمون دانش‌آموز
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V39.1 اصلاح import دکمه ذره‌بین پیوستن به مدرسه
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4524,3 +4524,25 @@ Secret / Dependency جدید               → ندارد
 ```
 
 راهنما: `SHORT_INVITE_QUICK_EXAM_V39_FA.md`.
+
+## ۶۴) V39.1 — اصلاح import دکمه ذره‌بین پیوستن به مدرسه
+
+### گزارش CI
+
+```text
+compileDebugKotlin → FAILED
+ProfileSettingsScreen.kt:558 → Unresolved reference IconButton
+ProfileSettingsScreen.kt:569 → خطای cascading context Composable
+```
+
+`IconButton` در کارت جدید پیوستن به مدرسه استفاده شده بود اما import مادی آن جا
+افتاده بود. import اضافه شد؛ خط دوم پیام cascading خط اول است. کد اجرایی دیگر،
+SQL و Edge تغییری ندارند.
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
+SQL / Edge / Secret / Dependency        → بدون تغییر
+پیش‌نیاز                                → V39
+```

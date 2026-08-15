@@ -35,6 +35,7 @@ class V39ShortInviteQuickAddExamTest {
         val profile = source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt")
         val repo = source("app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolJoinRepository.kt")
         assertTrue("title = \"پیوستن به مدرسه\"" in profile)
+        assertTrue("import androidx.compose.material3.IconButton" in profile)
         assertTrue("Icons.Outlined.Search" in profile)
         assertTrue("schoolJoinRepository.preview" in profile)
         assertTrue("تأیید و پیوستن" in profile)
