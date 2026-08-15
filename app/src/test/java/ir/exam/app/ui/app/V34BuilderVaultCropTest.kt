@@ -85,6 +85,7 @@ class V34BuilderVaultCropTest {
         val school = source("app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt")
         val edit = school.substringAfter("private fun StudentEditDialog(")
             .substringBefore("private data class BulkStudentDraft")
-        assertTrue(edit.count("Modifier.weight(1f).height(56.dp)") == 2)
+        val equalSizeMarker = "Modifier.weight(1f).height(56.dp)"
+        assertTrue(Regex(Regex.escape(equalSizeMarker)).findAll(edit).count() == 2)
     }
 }

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V34 چیدمان ابزارها، Vault رمزنگاری‌شدهٔ دستگاه و برش جهت‌دار/دایره‌ای
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V34.1 اصلاح کامپایل تست شمارش اندازهٔ کادرهای رمز
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4072,3 +4072,42 @@ Dependency جدید                         → ندارد (Android Keystore پ�
 ```
 
 راهنمای مستقل: `BUILDER_VAULT_CROP_V34_FA.md`.
+
+
+## ۵۴) V34.1 — اصلاح کامپایل تست V34 در GitHub Actions
+
+### گزارش واقعی CI
+
+```text
+compileDebugKotlin                      → SUCCESS
+هشدارهای deprecation                    → غیرمسدودکننده
+compileDebugUnitTestKotlin              → FAILED
+فایل                                    → V34BuilderVaultCropTest.kt:88
+خطا                                     → String.count(String) وجود ندارد؛ count تابع predicate می‌خواهد
+```
+
+کد اجرایی V34 با موفقیت کامپایل شده بود. خطا فقط در تست جدید بررسی هم‌اندازه بودن
+دو کادر رمز بود. عبارت نامعتبر زیر:
+
+```text
+edit.count("Modifier.weight(1f).height(56.dp)")
+```
+
+با شمارش معتبر و literal-safe زیر جایگزین شد:
+
+```text
+Regex(Regex.escape(equalSizeMarker)).findAll(edit).count()
+```
+
+### فایل‌ها و نتیجه
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V34BuilderVaultCropTest.kt
+HANDOFF_KOTLIN_MIGRATION_FA.md
+کد اجرایی برنامه                     → بدون تغییر
+FINAL_NATIVE_VERIFY                   → PASS
+git diff --check                      → PASS
+testDebugUnitTest / lintDebug         → باید در WSL/GitHub Actions تکرار شود
+SQL / Edge / Migration / Dependency   → ندارد
+پیش‌نیاز                              → V34
+```
