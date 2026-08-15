@@ -77,6 +77,8 @@ question_model=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt"
 local_image_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt").read_text()
 question_media=(ROOT/"app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt").read_text()
 image_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").read_text()
+crop_geometry=(ROOT/"app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt").read_text()
+student_password_vault=(ROOT/"app/src/main/java/ir/exam/app/data/local/StudentPasswordVault.kt").read_text()
 image_uploader=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt").read_text()
 about_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt").read_text()
 classes_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
@@ -764,3 +766,32 @@ if errors:
     sys.exit(1)
 
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")
+
+# V34 — ترتیب ابزارها، thumbnail هم‌سطری، Vault محلی و برش جهت‌دار/دایره‌ای
+_v34_multiple=builder_screen.split("QuestionType.MULTIPLE_CHOICE ->",1)[1].split("QuestionType.TRUE_FALSE ->",1)[0]
+require(_v34_multiple.index("Icons.Outlined.Functions") < _v34_multiple.index("ReorderDragButton(") <
+        _v34_multiple.index("SingleImagePicker("),
+        "V34 multiple-choice reorder is not immediately after formula")
+_v34_matching=matching_builder.split("private fun MatchingItemTools(",1)[1].split("fun MatchingQuestionEditor(",1)[0]
+require(_v34_matching.index("Icons.Outlined.Functions") < _v34_matching.index("ReorderDragButton(") <
+        _v34_matching.index("SingleImagePicker("),
+        "V34 matching reorder is not immediately after formula")
+_v34_thumb=question_media.split("private fun CompactImageThumbnail(",1)[1]
+require(all(marker in _v34_thumb for marker in (
+            "Row(","Modifier.size(30.dp).clickable(onClick = onView)",
+            "IconButton(onClick = onEdit, modifier = Modifier.size(24.dp))",
+            "Modifier.size(17.dp).clickable(onClick = onRemove)"
+        )), "V34 question image controls are not inline like option images")
+require("resizeDeltaForEdge" in crop_geometry and
+        "CropGeometry.resizeDeltaForEdge(edge, delta)" in image_editor and
+        ".padding(26.dp)" in image_editor and "circular = forceSquare" in image_editor and
+        "if (circular) CircleShape" in image_editor and "برش دایره‌ای پروفایل" in image_editor,
+        "V34 directional crop handles or circular profile frame incomplete")
+require(all(marker in student_password_vault for marker in (
+            "AndroidKeyStore","AES/GCM/NoPadding","KeyGenParameterSpec.Builder(",
+            "cipher.doFinal","cipher.updateAAD(entry.toByteArray","Base64.encodeToString(cipher.iv"
+        )) and "passwordVault.read(student.id)" in school_screen and
+        "passwordVault.write(credential.id, credential.password)" in school_screen and
+        'android:allowBackup="false"' in manifest and
+        school_screen.count("Modifier.weight(1f).height(56.dp)") >= 2,
+        "V34 encrypted device password vault or equal password fields incomplete")

@@ -270,7 +270,6 @@ private fun MatchingItemTools(
         IconButton(onClick = onFormula) {
             Icon(Icons.Outlined.Functions, contentDescription = "درج فرمول $label")
         }
-        SingleImagePicker(image, imageLabel, onChange = onImage)
         ReorderDragButton(
             description = "نگه‌دارید و $label را جابه‌جا کنید",
             currentIndex = currentIndex,
@@ -281,6 +280,7 @@ private fun MatchingItemTools(
             onActiveChanged = onActiveChanged,
             onMove = onMove
         )
+        SingleImagePicker(image, imageLabel, onChange = onImage)
         TextButton(onClick = onDelete, enabled = deleteEnabled) { Text("حذف") }
     }
 }

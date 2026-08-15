@@ -88,12 +88,15 @@ import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 import ir.exam.app.core.export.XlsxWorkbook
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.data.local.StudentPasswordVault
 import ir.exam.app.domain.model.NewStudentRequest
 import ir.exam.app.domain.model.SchoolClass
 import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import kotlin.random.Random
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CREATE_CLASS }
 
@@ -105,6 +108,7 @@ fun SchoolManagementScreen(
 ) {
     val context=LocalContext.current
     val viewModel=remember(context){ClassesViewModel(context=context.applicationContext)}
+    val passwordVault = remember(context) { StudentPasswordVault(context.applicationContext) }
     val state by viewModel.state.collectAsState()
     var showStudents by remember { mutableStateOf(false) }
     var classEditor by remember { mutableStateOf<SchoolClass?>(null) }
@@ -114,10 +118,34 @@ fun SchoolManagementScreen(
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var showBulk by remember { mutableStateOf(false) }
-    // رمزهای تعیین‌شدهٔ اخیر؛ دکمهٔ کپی روی کارت دانش‌آموز رمز را از همین جعبه برمی‌دارد.
+    // cache زندهٔ رمزها برای UI؛ منبع پایدار آن StudentPasswordVault رمزنگاری‌شده
+    // با Android Keystore است و پس از بازشدن دوبارهٔ برنامه از روی دستگاه پر می‌شود.
     val knownPasswords = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(state.students, state.roster) {
+        val students = (state.students + state.roster).distinctBy(StudentProfile::id)
+        val restored = withContext(Dispatchers.IO) {
+            students.mapNotNull { student ->
+                val username = student.username?.lowercase() ?: return@mapNotNull null
+                passwordVault.read(student.id)?.let { username to it }
+            }
+        }
+        restored.forEach { (username, password) -> knownPasswords[username] = password }
+    }
     LaunchedEffect(state.lastCredential) {
-        state.lastCredential?.let { knownPasswords[it.username.lowercase()] = it.password }
+        state.lastCredential?.let { credential ->
+            knownPasswords[credential.username.lowercase()] = credential.password
+            withContext(Dispatchers.IO) {
+                runCatching { passwordVault.write(credential.id, credential.password) }
+            }
+        }
+    }
+    LaunchedEffect(state.bulkResult) {
+        state.bulkResult?.credentials.orEmpty().forEach { credential ->
+            knownPasswords[credential.username.lowercase()] = credential.password
+            withContext(Dispatchers.IO) {
+                runCatching { passwordVault.write(credential.id, credential.password) }
+            }
+        }
     }
     var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
     val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
@@ -281,6 +309,8 @@ fun SchoolManagementScreen(
                 // نیز در دسترس بماند. رمز جدید فقط پس از موفقیت سرور از
                 // state.lastCredential وارد knownPasswords می‌شود.
                 if (request.newPassword.isNullOrBlank() && !sessionPassword.isNullOrBlank()) {
+                    // Vault با student.id کلید خورده و با تغییر نام کاربری نیاز به
+                    // جابه‌جایی ندارد؛ فقط cache نمایشی نام جدید را نیز می‌گیرد.
                     knownPasswords[request.username.lowercase()] = sessionPassword
                 }
                 viewModel.updateStudent(request)
@@ -966,7 +996,7 @@ private fun StudentEditDialog(
                                         )
                                     },
                                     singleLine = true,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).height(56.dp)
                                 )
                                 OutlinedTextField(
                                     value = currentPassword.orEmpty(),
@@ -981,7 +1011,7 @@ private fun StudentEditDialog(
                                         )
                                     },
                                     singleLine = true,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f).height(56.dp)
                                 )
                             }
                             Row(

@@ -773,10 +773,6 @@ private fun QuestionEditor(
                                             contentDescription = "درج فرمول $optionLabel"
                                         )
                                     }
-                                    SingleImagePicker(
-                                        value = question.optionImages.getOrNull(index),
-                                        label = "تصویر $optionLabel"
-                                    ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                                     ReorderDragButton(
                                         description = "نگه‌دارید و $optionLabel را جابه‌جا کنید",
                                         currentIndex = index,
@@ -790,6 +786,10 @@ private fun QuestionEditor(
                                     ) { from, delta ->
                                         viewModel.moveOption(question.id, from, delta)
                                     }
+                                    SingleImagePicker(
+                                        value = question.optionImages.getOrNull(index),
+                                        label = "تصویر $optionLabel"
+                                    ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                                 }
                                 OutlinedTextField(
                                     value = option,

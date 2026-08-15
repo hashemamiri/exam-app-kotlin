@@ -239,11 +239,11 @@ private fun CompactImageThumbnail(
     onView: () -> Unit,
     onEdit: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center
+    // دقیقاً مانند تصویر گزینه: خود تصویر، مداد و ضربدر کنار هم در یک سطر.
+    Row(
+        modifier = Modifier.semantics { contentDescription = description },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
         AsyncImage(
             model = uri,
@@ -251,8 +251,15 @@ private fun CompactImageThumbnail(
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(30.dp).clickable(onClick = onView)
         )
+        IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
+            Icon(
+                Icons.Outlined.Edit,
+                contentDescription = "ویرایش تصویر",
+                modifier = Modifier.size(14.dp)
+            )
+        }
         Surface(
-            modifier = Modifier.align(Alignment.TopEnd).size(16.dp).clickable(onClick = onRemove),
+            modifier = Modifier.size(17.dp).clickable(onClick = onRemove),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.error
         ) {
@@ -261,21 +268,7 @@ private fun CompactImageThumbnail(
                     Icons.Outlined.Close,
                     contentDescription = "حذف تصویر",
                     tint = MaterialTheme.colorScheme.onError,
-                    modifier = Modifier.size(10.dp)
-                )
-            }
-        }
-        Surface(
-            modifier = Modifier.align(Alignment.BottomEnd).size(16.dp).clickable(onClick = onEdit),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Outlined.Edit,
-                    contentDescription = "ویرایش تصویر",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(10.dp)
+                    modifier = Modifier.size(11.dp)
                 )
             }
         }

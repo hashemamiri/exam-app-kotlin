@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V33 رفع قطعی کرش Size.Unspecified در ویرایشگر تصویر و نمایش رمز فعلی نشست
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V34 چیدمان ابزارها، Vault رمزنگاری‌شدهٔ دستگاه و برش جهت‌دار/دایره‌ای
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -3977,3 +3977,98 @@ Dependency جدید                         → ندارد
 ```
 
 راهنمای مستقل: `IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md`.
+
+
+## ۵۳) V34 — ابزارهای گزینه، Vault رمز دستگاه و برش جهت‌دار/دایره‌ای
+
+### وضعیت ورودی
+
+```text
+V33 build                               → SUCCESS (اعلام کاربر)
+درخواست ۱                               → drag چندگزینه‌ای/جورکردنی کنار فرمول
+درخواست ۲                               → تصویر متن سؤال + مداد + ضربدر در یک سطر مانند گزینه
+درخواست ۳                               → دو کادر رمز هم‌اندازه و حفظ رمز پس از restart
+درخواست ۴                               → ضلع برش در جهت انگشت و قاب دایره‌ای پروفایل
+انتخاب امنیتی کاربر                    → Vault رمزنگاری‌شده فقط روی همین دستگاه
+```
+
+### تغییرات Builder و تصویر متن سؤال
+
+```text
+چندگزینه‌ای: Formula → ReorderDragButton → SingleImagePicker
+جورکردنی:   Formula → ReorderDragButton → SingleImagePicker
+
+CompactImageThumbnail:
+- Row هم‌سطری به‌جای Box با دکمه‌های overlay
+- تصویر 30dp، مداد 24dp، ضربدر 17dp؛ یکسان با SingleImagePicker گزینه‌ها
+```
+
+### Vault رمز دانش‌آموز روی دستگاه
+
+`StudentPasswordVault` اضافه شد. کلید AES غیرقابل‌استخراج با
+`KeyGenParameterSpec` در `AndroidKeyStore` ساخته می‌شود و رمزها با
+`AES/GCM/NoPadding` و IV تصادفی رمز می‌شوند. SharedPreferences تنها
+`Base64(iv).Base64(ciphertext+tag)` را نگه می‌دارد. کل رکورد بر پایهٔ شناسهٔ
+یکتای دانش‌آموز است تا تغییر نام کاربری و حساب‌های مختلف تداخل نکنند.
+
+```text
+پشتیبان‌گیری برنامه                    → android:allowBackup="false"
+ذخیره plaintext در SharedPreferences   → ندارد
+plain_password در مدل/SQL/Edge          → ندارد و همچنان ممنوع
+انتقال به دستگاه دیگر                  → ندارد
+پس از حذف app data/uninstall            → رمزها از بین می‌روند
+رمزهای تاریخی فقط-hash                  → قابل بازیابی نیستند؛ یک‌بار reset لازم است
+```
+
+`knownPasswords` در UI cache زنده باقی ماند، اما پس از بارگیری دانش‌آموزان از
+Vault بر پایهٔ `student.id` پر می‌شود. credential ساخت تکی، ساخت گروهی و تغییر
+رمز موفق در Vault نوشته می‌شوند. دو `OutlinedTextField` رمز هر دو
+`Modifier.weight(1f).height(56.dp)` دارند.
+
+### اصلاح برش
+
+در V33، pointer gesture حرکت کل `CropFrame` روی والد بود و با gesture دستگیره‌ها
+همپوشانی داشت؛ در نتیجه هنگام کشیدن ضلع، کادر هم resize و هم move می‌شد. در V34:
+
+```text
+- gesture حرکت کادر فقط در Box مرکزی با padding(26.dp)
+- دستگیره‌های LEFT/RIGHT/TOP/BOTTOM فقط resize
+- CropGeometry.resizeDeltaForEdge برای علامت صحیح هر چهار جهت
+- recenterAfterResize برای حرکت مرکز به سمت ضلع کشیده‌شده و ثابت‌ماندن ضلع مقابل
+- circular = forceSquare و CircleShape برای قاب پروفایل
+- عنوان پروفایل: «برش دایره‌ای پروفایل»
+```
+
+خروجی آواتار برای سازگاری Storage مربع است و نمایش/راهنمای crop پروفایل دایره‌ای
+است؛ بنابراین گوشه‌های خارج از دایره در UI آواتار دیده نمی‌شوند.
+
+### فایل‌های V34
+
+```text
+app/src/main/java/ir/exam/app/data/local/StudentPasswordVault.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
+app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
+app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt
+app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
+app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
+app/src/test/java/ir/exam/app/ui/app/V34BuilderVaultCropTest.kt
+scripts/verify_native_final.py
+CHANGELOG_FA.txt
+BUILDER_VAULT_CROP_V34_FA.md
+HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### نتیجهٔ بررسی و عملیات
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+V34 source/pure geometry tests          → اضافه شد
+testDebugUnitTest / lintDebug           → باید در WSL/GitHub Actions اجرا شود
+SQL / Edge Function / Migration         → ندارد
+Dependency جدید                         → ندارد (Android Keystore پلتفرم)
+پیش‌نیاز                                → V33
+```
+
+راهنمای مستقل: `BUILDER_VAULT_CROP_V34_FA.md`.

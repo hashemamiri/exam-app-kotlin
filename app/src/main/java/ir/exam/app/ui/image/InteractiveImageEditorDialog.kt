@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -142,7 +144,7 @@ fun InteractiveImageEditorDialog(
                         rotation = (rotation + 270) % 360
                     }
                     ImageToolButton(
-                        "برش مربعی",
+                        if (forceSquare) "برش دایره‌ای پروفایل" else "برش مربعی",
                         Icons.Outlined.Crop,
                         selected = cropActive,
                         enabled = safeSource != null && !preparing
@@ -225,6 +227,7 @@ fun InteractiveImageEditorDialog(
 
                         CropFrame(
                             modifier = Modifier.offset(frameLeft, frameTop).size(side),
+                            circular = forceSquare,
                             onMove = { dx, dy ->
                                 cropCenterX = CropGeometry.clampCenter(
                                     safeCenterX + dx / displayWidthPx, sideXFraction
@@ -235,10 +238,7 @@ fun InteractiveImageEditorDialog(
                             },
                             onResize = { edge, delta ->
                                 val oldSide = cropSide
-                                val signed = when (edge) {
-                                    CropEdgeKind.LEFT, CropEdgeKind.TOP -> -delta
-                                    CropEdgeKind.RIGHT, CropEdgeKind.BOTTOM -> delta
-                                }
+                                val signed = CropGeometry.resizeDeltaForEdge(edge, delta)
                                 cropSide = CropGeometry.resizeSide(cropSide, signed, minDimensionPx)
                                 val pixelChange = (cropSide - oldSide) * minDimensionPx
                                 val (newCenterX, newCenterY) = CropGeometry.recenterAfterResize(
@@ -358,19 +358,26 @@ private fun ImageToolButton(
 @Composable
 private fun CropFrame(
     modifier: Modifier,
+    circular: Boolean,
     onMove: (Float, Float) -> Unit,
     onResize: (CropEdgeKind, Float) -> Unit
 ) {
-    Box(
-        modifier
-            .border(2.dp, Color.White, RoundedCornerShape(2.dp))
-            .pointerInput(Unit) {
-                detectDragGestures { change, drag ->
-                    change.consume()
-                    onMove(drag.x, drag.y)
+    val frameShape = if (circular) CircleShape else RoundedCornerShape(2.dp)
+    Box(modifier.border(2.dp, Color.White, frameShape)) {
+        // حرکت کل کادر فقط از ناحیهٔ میانی انجام می‌شود. در V33 gesture والد روی
+        // دستگیره‌ها هم اجرا می‌شد و همزمان با resize کل کادر را حرکت می‌داد؛
+        // به همین دلیل ضلع دقیقاً در جهت انگشت کشیده نمی‌شد.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(26.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures { change, drag ->
+                        change.consume()
+                        onMove(drag.x, drag.y)
+                    }
                 }
-            }
-    ) {
+        )
         CropEdgeHandle(
             edge = CropEdgeKind.TOP,
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(26.dp),

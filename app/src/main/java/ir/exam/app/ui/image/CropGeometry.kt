@@ -32,6 +32,15 @@ object CropGeometry {
     fun clampCenter(center: Float, sideFraction: Float): Float =
         center.coerceIn(sideFraction / 2f, 1f - sideFraction / 2f)
 
+    /**
+     * drag هر ضلع را به قرارداد مشترک تبدیل می‌کند: حرکت به بیرون همیشه مثبت
+     * (بزرگ‌شدن) و حرکت به داخل همیشه منفی است.
+     */
+    fun resizeDeltaForEdge(edge: CropEdgeKind, dragDeltaPx: Float): Float = when (edge) {
+        CropEdgeKind.LEFT, CropEdgeKind.TOP -> -dragDeltaPx
+        CropEdgeKind.RIGHT, CropEdgeKind.BOTTOM -> dragDeltaPx
+    }
+
     /** تغییر اندازهٔ ضلع؛ delta بر حسب پیکسل و نسبت به ضلع کوتاه نمایشی. */
     fun resizeSide(oldSide: Float, signedDeltaPx: Float, minDimensionPx: Float): Float =
         (oldSide + signedDeltaPx / minDimensionPx).coerceIn(MIN_SIDE, MAX_SIDE)
