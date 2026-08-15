@@ -74,6 +74,9 @@ v381_migration=(ROOT/"supabase/migrations/20260815_native_manager_registration_v
 v381_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").read_text()
 v382_migration=(ROOT/"supabase/migrations/20260815_native_invite_digest_v382_hotfix.sql").read_text()
 v382_sql_copy=(ROOT/"SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").read_text()
+v39_migration=(ROOT/"supabase/migrations/20260815_native_short_school_invite_v39.sql").read_text()
+v39_sql_copy=(ROOT/"SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql").read_text()
+school_join_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolJoinRepository.kt").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
 auth_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text()
@@ -270,8 +273,8 @@ password_visibility=(ROOT/"app/src/main/java/ir/exam/app/ui/common/PasswordVisib
 require("PasswordVisibilityButton" in main_text and "نمایش رمز" in password_visibility and
         len(re.findall(r"PasswordVisualTransformation\(\)", main_text)) == 1,
         "password show/hide control is not shared by every password input")
-require("title = \"آزمون جدید\"" in design69_add and
-        design69_add.index("title = \"آزمون جدید\"") < design69_add.index("title = \"دانش‌آموز جدید\""),
+require("title = primaryTitle" in design69_add and
+        design69_add.index("title = primaryTitle") < design69_add.index("title = \"دانش‌آموز جدید\""),
         "quick-add exam/student positions were not swapped")
 require("Key.DirectionDown" not in design69_cards and "بکشید" not in design69_cards,
         "management cards still support vertical navigation or show drag helper text")
@@ -882,9 +885,9 @@ require("کد دعوت مدرسه (اختیاری)" in sign_in_screen and
             (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt").read_text(),
         "V37 invited teacher registration flow incomplete")
 require(all(marker in manager_foundation for marker in (
-            "دعوت معلم جدید","ساخت کد دعوت","کد دعوت ۷ روز اعتبار دارد","قطع عضویت معلم"
+            "دعوت معلم جدید","ساخت کد دعوت","کد دعوت ۶ کاراکتری، یک‌بارمصرف و تا ۲۴ ساعت معتبر است","قطع عضویت معلم"
         )) and all(marker in manager_repository for marker in (
-            "native_manager_teachers_v37","native_manager_create_teacher_invite_v37",
+            "native_manager_teachers_v37","native_manager_create_teacher_invite_v39",
             "native_manager_disable_teacher_v37"
         )) and "deleteUser" not in manager_repository,
         "V37 manager teacher UI/repository incomplete or deletes Auth")
@@ -934,3 +937,27 @@ require(all(marker in manager_foundation for marker in (
         )), "V38.2 manager error redaction missing")
 
 require(r'Regex("(?i)bearer\\s+' in manager_foundation, "V38.3 Bearer regex escape is not Kotlin-safe")
+
+# V39 — کد کوتاه مدرسه، quick-add نقش‌محور و کارت آزمون دانش‌آموز
+require(v39_migration == v39_sql_copy and all(marker in v39_migration for marker in (
+            "alter column email drop not null","1,6","interval '24 hours'","used_at is null",
+            "native_manager_create_teacher_invite_v39","native_school_invite_preview_v39",
+            "native_join_school_v39","school_invite_attempts_v39",">=10"
+        )), "V39 short no-email invite SQL/copy incomplete")
+require(all(marker in profile_settings for marker in (
+            'title = "پیوستن به مدرسه"',"Icons.Outlined.Search","schoolJoinRepository.preview","تأیید و پیوستن"
+        )) and "native_school_invite_preview_v39" in school_join_repository and
+        "native_join_school_v39" in school_join_repository,
+        "V39 account join-school preview/confirm incomplete")
+require("primaryTitle: String = \"آزمون جدید\"" in design69_add and
+        "primaryTitle = if (user.role == UserRole.MANAGER) \"دعوت معلم\" else \"آزمون جدید\"" in app_shell and
+        "quickAddOpen && user.role != UserRole.STUDENT" in app_shell and
+        "teacher?.role !== 'teacher' && teacher?.role !== 'manager'" in
+            (ROOT/"supabase/functions/manage-student/index.ts").read_text(),
+        "V39 manager/teacher quick-add actions or manager create permission incomplete")
+require("featuredCard = if (user.role == UserRole.STUDENT)" in app_shell and
+        "\"آزمون\", \"ورود با کد آزمون\"" in app_shell and "studentJoinRequestKey += 1" in app_shell and
+        "fillMaxWidth(.52f)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text() and
+        "initialJoinCode" in (ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt").read_text(),
+        "V39 centered student exam card/dialog/preview flow incomplete")

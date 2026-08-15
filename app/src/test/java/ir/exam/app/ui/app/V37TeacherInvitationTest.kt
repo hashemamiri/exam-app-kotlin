@@ -47,10 +47,10 @@ class V37TeacherInvitationTest {
         val repo = source("app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt")
         assertTrue("دعوت معلم جدید" in manager)
         assertTrue("ساخت کد دعوت" in manager)
-        assertTrue("کد دعوت ۷ روز اعتبار دارد" in manager)
+        assertTrue("کد دعوت ۶ کاراکتری، یک‌بارمصرف و تا ۲۴ ساعت معتبر است" in manager)
         assertTrue("قطع عضویت معلم" in manager)
         assertTrue("native_manager_teachers_v37" in repo)
-        assertTrue("native_manager_create_teacher_invite_v37" in repo)
+        assertTrue("native_manager_create_teacher_invite_v39" in repo)
         assertTrue("native_manager_disable_teacher_v37" in repo)
         assertFalse("deleteUser" in repo)
     }

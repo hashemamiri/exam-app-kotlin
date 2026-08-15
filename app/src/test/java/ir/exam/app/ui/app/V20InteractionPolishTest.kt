@@ -15,7 +15,7 @@ class V20InteractionPolishTest {
         val root = root()
         val add = File(root, "app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt").readText()
         val cards = File(root, "app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt").readText()
-        val examTop = add.indexOf("title = \"آزمون جدید\"")
+        val examTop = add.indexOf("title = primaryTitle")
         val student = add.indexOf("title = \"دانش‌آموز جدید\"")
         assertTrue(examTop >= 0 && student > examTop)
         assertTrue("targetX = 0.dp" in add.substring(examTop, student))

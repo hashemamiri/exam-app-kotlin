@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,7 +28,7 @@ import ir.exam.app.data.repository.SupabaseStudentExamRepository
 import ir.exam.app.ui.app.NeumorphicPanel
 
 @Composable
-fun StudentHomeScreen(userId: String) {
+fun StudentHomeScreen(userId: String, initialJoinCode: String? = null, joinRequestKey: Int = 0) {
     val appContext = LocalContext.current.applicationContext
     val database = remember(appContext) { NativeDatabaseProvider.get(appContext) }
     val pending = remember(appContext, database) {
@@ -43,6 +44,12 @@ fun StudentHomeScreen(userId: String) {
         )
     }
     val state by viewModel.state.collectAsState()
+    LaunchedEffect(joinRequestKey, initialJoinCode) {
+        if (joinRequestKey > 0 && !initialJoinCode.isNullOrBlank() && state.exam == null) {
+            viewModel.setCode(initialJoinCode)
+            viewModel.join()
+        }
+    }
     if (state.exam != null) {
         if (state.showPreview && !state.finished) {
             StudentExamPreview(state = state, onStart = viewModel::startExam)

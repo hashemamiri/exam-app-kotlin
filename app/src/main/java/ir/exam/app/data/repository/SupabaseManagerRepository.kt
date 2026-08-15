@@ -19,7 +19,7 @@ internal data class SchoolTeacherItem(
     val walletBalanceToman: Long = 0
 )
 
-internal data class TeacherInviteResult(val email: String, val code: String)
+internal data class TeacherInviteResult(val code: String)
 internal data class WalletTransferResult(
     val amountToman: Long,
     val managerBalanceToman: Long,
@@ -41,13 +41,11 @@ internal class SupabaseManagerRepository {
         }
     }
 
-    suspend fun createInvite(email: String): Result<TeacherInviteResult> = runCatching {
-        require('@' in email) { "ایمیل معلم معتبر نیست." }
+    suspend fun createInvite(): Result<TeacherInviteResult> = runCatching {
         val raw = SupabaseProvider.client.postgrest.rpc(
-            "native_manager_create_teacher_invite_v37",
-            buildJsonObject { put("p_email", email.trim().lowercase()) }
+            "native_manager_create_teacher_invite_v39"
         ).decodeAs<JsonObject>().checked()
-        TeacherInviteResult(raw.text("email"), raw.text("invite_code"))
+        TeacherInviteResult(raw.text("invite_code"))
     }
 
     suspend fun transferWallet(teacherId: String, amountToman: Long): Result<WalletTransferResult> = runCatching {

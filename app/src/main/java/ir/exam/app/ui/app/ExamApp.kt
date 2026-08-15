@@ -25,12 +25,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -150,6 +154,9 @@ private fun AuthenticatedExamApp(
     var gradingPendingOnly by remember(user.id) { mutableStateOf(false) }
     var gradingGradedOnly by remember(user.id) { mutableStateOf(false) }
     var showSignOut by remember(user.id) { mutableStateOf(false) }
+    var studentExamDialog by rememberSaveable(user.id) { mutableStateOf(false) }
+    var studentExamCode by rememberSaveable(user.id) { mutableStateOf("") }
+    var studentJoinRequestKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
 
     fun closeTransientNavigation() {
         menuOpen = false
@@ -215,7 +222,7 @@ private fun AuthenticatedExamApp(
         when (user.role) {
             UserRole.STUDENT -> if (page in teacherOnly) page = MainPage.HOME
             UserRole.TEACHER -> if (page == MainPage.STUDENT_RESULTS) page = MainPage.HOME
-            UserRole.MANAGER -> if (page !in setOf(MainPage.HOME, MainPage.WALLET, MainPage.CARDS, MainPage.SETTINGS)) {
+            UserRole.MANAGER -> if (page !in setOf(MainPage.HOME, MainPage.SCHOOL, MainPage.WALLET, MainPage.CARDS, MainPage.SETTINGS)) {
                 page = MainPage.HOME
             }
         }
@@ -257,11 +264,8 @@ private fun AuthenticatedExamApp(
             menuOpen = !menuOpen
         },
         onToggleAdd = {
-            if (user.role == UserRole.MANAGER) createManagerTeacher()
-            else {
-                menuOpen = false
-                quickAddOpen = !quickAddOpen
-            }
+            menuOpen = false
+            quickAddOpen = !quickAddOpen
         },
         onCloseAdd = { quickAddOpen = false },
         onHome = ::openHome,
@@ -308,8 +312,9 @@ private fun AuthenticatedExamApp(
             page = MainPage.SETTINGS
         },
         onCreateStudent = ::createStudent,
-        onCreateExam = ::createExam,
+        onCreateExam = if (user.role == UserRole.MANAGER) ::createManagerTeacher else ::createExam,
         onCreateClass = ::createClass,
+        onStudentExamJoin = { closeTransientNavigation(); studentExamDialog = true },
         onSignOut = { closeTransientNavigation(); showSignOut = true }
     ) {
         AnimatedContent(
@@ -342,11 +347,15 @@ private fun AuthenticatedExamApp(
                             page = MainPage.BUILDER
                         }
                     )
-                    UserRole.STUDENT -> StudentHomeScreen(user.id)
+                    UserRole.STUDENT -> StudentHomeScreen(
+                        userId = user.id,
+                        initialJoinCode = studentExamCode.takeIf(String::isNotBlank),
+                        joinRequestKey = studentJoinRequestKey
+                    )
                     UserRole.MANAGER -> ManagerTeachersScreen(newTeacherRequested = managerNewTeacherKey)
                 }
                 MainPage.CALENDAR -> CalendarScreen(user.role)
-                MainPage.SCHOOL -> if (user.role == UserRole.TEACHER) {
+                MainPage.SCHOOL -> if (user.role != UserRole.STUDENT) {
                     SchoolManagementScreen(
                         launchAction = schoolLaunchAction,
                         onLaunchActionConsumed = { schoolLaunchAction = null }
@@ -412,6 +421,34 @@ private fun AuthenticatedExamApp(
                 MainPage.BUILDER -> Unit
             }
         }
+    }
+
+    if (studentExamDialog && user.role == UserRole.STUDENT) {
+        AlertDialog(
+            onDismissRequest = { studentExamDialog = false },
+            title = { Text("پیوستن به آزمون") },
+            text = {
+                OutlinedTextField(
+                    value = studentExamCode,
+                    onValueChange = { studentExamCode = it.uppercase().filter { c -> c in 'A'..'Z' || c.isDigit() }.take(12) },
+                    label = { Text("کد آزمون") },
+                    trailingIcon = {
+                        IconButton(
+                            enabled = studentExamCode.length in 4..12,
+                            onClick = {
+                                studentExamDialog = false
+                                menuOpen = false
+                                page = MainPage.HOME
+                                studentJoinRequestKey += 1
+                            }
+                        ) { Icon(Icons.Outlined.Search, contentDescription = "جست‌وجوی آزمون") }
+                    },
+                    singleLine = true
+                )
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { studentExamDialog = false }) { Text("انصراف") } }
+        )
     }
 
     if (showSignOut) {
@@ -536,6 +573,7 @@ private fun AuthenticatedShell(
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
     onCreateClass: () -> Unit,
+    onStudentExamJoin: () -> Unit,
     onSignOut: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -707,7 +745,13 @@ private fun AuthenticatedShell(
                                     Design69MainMenuScreen(
                                         user = user,
                                         cards = menuCards,
-                                        onProfile = onProfile
+                                        onProfile = onProfile,
+                                        featuredCard = if (user.role == UserRole.STUDENT) {
+                                            Design69MenuCard(
+                                                "آزمون", "ورود با کد آزمون", Design69Icons.Exams,
+                                                onClick = onStudentExamJoin
+                                            )
+                                        } else null
                                     )
                                 }
                             }
@@ -715,12 +759,14 @@ private fun AuthenticatedShell(
                     }
                 }
 
-                if (quickAddOpen && user.role == UserRole.TEACHER) {
+                if (quickAddOpen && user.role != UserRole.STUDENT) {
                     Design69QuickAddOverlay(
                         onDismiss = onCloseAdd,
                         onCreateStudent = onCreateStudent,
                         onCreateExam = onCreateExam,
-                        onCreateClass = onCreateClass
+                        onCreateClass = onCreateClass,
+                        primaryTitle = if (user.role == UserRole.MANAGER) "دعوت معلم" else "آزمون جدید",
+                        primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.PersonAdd else Design69Icons.ExamAdd
                     )
                 }
             }

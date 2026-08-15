@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38.3 اصلاح کامپایل Regex پاک‌سازی Bearer
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V39 کد کوتاه مدرسه، quick-add نقش‌محور و کارت آزمون دانش‌آموز
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4484,3 +4484,43 @@ testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شو
 SQL / Edge / Secret / Dependency        → بدون تغییر
 پیش‌نیاز                                → V38.2
 ```
+
+
+## ۶۳) V39 — دعوت کوتاه مدرسه و جریان‌های سریع نقش‌محور
+
+### تصمیم‌ها
+
+```text
+کد دعوت معلم          → بدون ایمیل، ۶ کاراکتر مانند آزمون
+اعتبار                 → یک‌بارمصرف، ۲۴ ساعت
+quick add معلم         → کلاس، دانش‌آموز، آزمون
+quick add مدیر         → کلاس، دانش‌آموز، دعوت معلم
+```
+
+### پیاده‌سازی
+
+- native_manager_create_teacher_invite_v39 بدون پارامتر ایمیل، کد ۶ کاراکتری
+  و hash schema-qualified می‌سازد و دعوت قبلی را revoke می‌کند.
+- preview/join معلم با ۱۰ تلاش در ۱۰ دقیقه، role teacher، کد active و transaction
+  مصرف یک‌باره محافظت شده است.
+- AccountSection معلم کارت پیوستن به مدرسه، Search، preview و تأیید دارد.
+- Design69QuickAddOverlay با primaryTitle/icon نقش‌محور شد؛ مدیر و معلم هر کدام
+  سه عمل صحیح را می‌بینند.
+- manage-student role manager را برای ساخت مستقیم می‌پذیرد و helper/trigger
+  manager را نیز به school scope متصل می‌کند.
+- Design69MainMenuScreen featuredCard وسط‌چین دارد؛ دانش‌آموز کارت آزمون را زیر
+  پروفایل می‌بیند. dialog کد را به StudentHome می‌فرستد و preview قبلی پیش از start
+  حفظ شده است.
+
+### عملیات
+
+```text
+SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql
+supabase/migrations/20260815_native_short_school_invite_v39.sql
+Edge deploy                             → manage-student الزامی
+FINAL_NATIVE_VERIFY                     → PASS
+SQL copy equality                       → PASS
+Secret / Dependency جدید               → ندارد
+```
+
+راهنما: `SHORT_INVITE_QUICK_EXAM_V39_FA.md`.

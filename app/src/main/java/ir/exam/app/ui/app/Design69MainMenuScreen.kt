@@ -66,6 +66,7 @@ fun Design69MainMenuScreen(
     user: AppUser,
     cards: List<Design69MenuCard>,
     onProfile: () -> Unit,
+    featuredCard: Design69MenuCard? = null,
     modifier: Modifier = Modifier
 ) {
     require(Design69MenuContract.isCompleteGrid(cards.size))
@@ -149,6 +150,22 @@ fun Design69MainMenuScreen(
             }
             }
 
+            featuredCard?.let { card ->
+                Spacer(Modifier.height(15.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    NeumorphicMenuTile(
+                        title = card.title,
+                        subtitle = card.subtitle,
+                        icon = card.icon,
+                        selected = card.selected,
+                        danger = card.danger,
+                        onClick = card.onClick,
+                        modifier = Modifier
+                            .fillMaxWidth(.52f)
+                            .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
+                    )
+                }
+            }
             Spacer(Modifier.height(18.dp))
             cards.chunked(Design69MenuContract.COLUMNS).forEachIndexed { rowIndex, rowCards ->
                 Row(

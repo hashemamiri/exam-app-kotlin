@@ -33,7 +33,7 @@ Deno.serve(async (request) => {
     if (authError || !authData.user) return json({ error: 'نشست نامعتبر است' }, 401);
     const teacherId = authData.user.id;
     const { data: teacher } = await service.from('profiles').select('role').eq('id', teacherId).maybeSingle();
-    if (teacher?.role !== 'teacher') return json({ error: 'فقط معلم دسترسی دارد' }, 403);
+    if (teacher?.role !== 'teacher' && teacher?.role !== 'manager') return json({ error: 'فقط کادر مدرسه دسترسی دارد' }, 403);
 
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     if (!body) return json({ error: 'داده درخواست معتبر نیست' }, 400);

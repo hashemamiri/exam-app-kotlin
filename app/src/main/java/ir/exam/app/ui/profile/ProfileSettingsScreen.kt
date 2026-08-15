@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -76,6 +77,8 @@ import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.core.ui.accentColors
 import ir.exam.app.data.repository.LocalImageRepository
 import ir.exam.app.domain.model.AppUser
+import ir.exam.app.data.repository.SchoolInvitePreview
+import ir.exam.app.data.repository.SupabaseSchoolJoinRepository
 import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
@@ -497,6 +500,12 @@ private fun AccountSection(
     var confirmation by remember(profile.id) { mutableStateOf("") }
     var passwordVisible by remember(profile.id) { mutableStateOf(false) }
     var confirmationVisible by remember(profile.id) { mutableStateOf(false) }
+    val schoolJoinRepository = remember { SupabaseSchoolJoinRepository() }
+    val schoolJoinScope = rememberCoroutineScope()
+    var schoolCode by remember(profile.id) { mutableStateOf("") }
+    var schoolPreview by remember(profile.id) { mutableStateOf<SchoolInvitePreview?>(null) }
+    var schoolJoinLoading by remember(profile.id) { mutableStateOf(false) }
+    var schoolJoinMessage by remember(profile.id) { mutableStateOf<String?>(null) }
 
     fun toggle(card: String) {
         expandedCard = if (expandedCard == card) null else card
@@ -527,6 +536,65 @@ private fun AccountSection(
                     if (role != UserRole.STUDENT) user.email.orEmpty().ifBlank { "—" }
                     else "حساب مدیریت‌شده توسط معلم"
                 )
+            }
+        }
+        if (role == UserRole.TEACHER) {
+            item {
+                AccountAccordionCard(
+                    title = "پیوستن به مدرسه",
+                    expanded = expandedCard == "join_school",
+                    onToggle = { toggle("join_school") }
+                ) {
+                    Text("کد دعوت ۶ کاراکتری مدیر/معاون را وارد کنید.")
+                    OutlinedTextField(
+                        value = schoolCode,
+                        onValueChange = {
+                            schoolCode = it.uppercase().filter { char -> char in 'A'..'Z' || char.isDigit() }.take(6)
+                            schoolPreview = null
+                            schoolJoinMessage = null
+                        },
+                        label = { Text("کد دعوت مدرسه") },
+                        trailingIcon = {
+                            IconButton(
+                                enabled = schoolCode.length == 6 && !schoolJoinLoading,
+                                onClick = {
+                                    schoolJoinLoading = true
+                                    schoolJoinScope.launch {
+                                        schoolJoinRepository.preview(schoolCode)
+                                            .onSuccess { schoolPreview = it; schoolJoinMessage = null }
+                                            .onFailure { schoolJoinMessage = it.message.orEmpty().substringBefore("URL:").substringBefore("Headers:") }
+                                        schoolJoinLoading = false
+                                    }
+                                }
+                            ) { Icon(Icons.Outlined.Search, contentDescription = "جست‌وجوی مدرسه") }
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (schoolJoinLoading) CircularProgressIndicator()
+                    schoolPreview?.let { preview ->
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text(preview.schoolName, style = MaterialTheme.typography.titleMedium)
+                                Text(listOf(preview.province, preview.city).filter(String::isNotBlank).joinToString(" · "))
+                            }
+                        }
+                        Button(
+                            onClick = {
+                                schoolJoinLoading = true
+                                schoolJoinScope.launch {
+                                    schoolJoinRepository.join(schoolCode)
+                                        .onSuccess { schoolJoinMessage = "عضویت در مدرسه «$it» انجام شد."; schoolPreview = null }
+                                        .onFailure { schoolJoinMessage = it.message.orEmpty().substringBefore("URL:").substringBefore("Headers:") }
+                                    schoolJoinLoading = false
+                                }
+                            },
+                            enabled = !schoolJoinLoading,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("تأیید و پیوستن") }
+                    }
+                    schoolJoinMessage?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                }
             }
         }
         item {

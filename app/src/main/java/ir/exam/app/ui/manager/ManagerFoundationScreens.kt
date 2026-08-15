@@ -54,7 +54,6 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
     val repository = remember { ir.exam.app.data.repository.SupabaseManagerRepository() }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var teachers by remember { mutableStateOf<List<ir.exam.app.data.repository.SchoolTeacherItem>>(emptyList()) }
-    var email by remember { mutableStateOf("") }
     var invite by remember { mutableStateOf<ir.exam.app.data.repository.TeacherInviteResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loadingTeachers by remember { mutableStateOf(true) }
@@ -85,21 +84,16 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
         if (inviteOpen) {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.OutlinedTextField(
-                        value = email, onValueChange = { email = it.trim().take(254) },
-                        label = { Text("ایمیل معلم") }, singleLine = true, modifier = Modifier.fillMaxWidth()
-                    )
                     androidx.compose.material3.Button(
-                        enabled = '@' in email,
-                        onClick = {
+                                                onClick = {
                             scope.launch {
-                                repository.createInvite(email).onSuccess { invite = it; error = null }
+                                repository.createInvite().onSuccess { invite = it; error = null }
                                     .onFailure { error = safeManagerError(it) }
                             }
                         }
                     ) { Text("ساخت کد دعوت") }
                     invite?.let {
-                        Text("کد دعوت ۷ روز اعتبار دارد و فقط برای ${it.email} قابل استفاده است.")
+                        Text("کد دعوت ۶ کاراکتری، یک‌بارمصرف و تا ۲۴ ساعت معتبر است.")
                         androidx.compose.foundation.text.selection.SelectionContainer { Text(it.code) }
                     }
                 }

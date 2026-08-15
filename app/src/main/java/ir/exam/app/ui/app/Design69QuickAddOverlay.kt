@@ -67,7 +67,9 @@ fun Design69QuickAddOverlay(
     onDismiss: () -> Unit,
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
-    onCreateClass: () -> Unit
+    onCreateClass: () -> Unit,
+    primaryTitle: String = "آزمون جدید",
+    primaryIcon: ImageVector = Design69Icons.ExamAdd
 ) {
     val colors = neumorphic69Colors
     val travel = remember { Animatable(0f) }
@@ -150,8 +152,8 @@ fun Design69QuickAddOverlay(
 
         QuickAddAction(
             progress = travel.value,
-            title = "آزمون جدید",
-            icon = Design69Icons.ExamAdd,
+            title = primaryTitle,
+            icon = primaryIcon,
             targetX = 0.dp,
             targetY = (-142).dp,
             modifier = Modifier.align(Alignment.Center)
