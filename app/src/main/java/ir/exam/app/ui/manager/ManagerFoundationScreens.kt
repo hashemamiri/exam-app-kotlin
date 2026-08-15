@@ -179,7 +179,7 @@ fun ManagerTeachersScreen(
                         Text(teacher.fullName.ifBlank { "بدون نام" }, style = MaterialTheme.typography.titleMedium)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("کد پرسنلی: ${teacher.employeeCode.ifBlank { "—" }}", Modifier.weight(1f))
-                            Text("تلفن: ${teacher.phone.ifBlank { "—" }}", Modifier.weight(1f))
+                            Text("شماره تلفن: ${teacher.phone.ifBlank { "—" }}", Modifier.weight(1f))
                         }
                         androidx.compose.animation.AnimatedVisibility(expandedTeacher == teacher.id) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
