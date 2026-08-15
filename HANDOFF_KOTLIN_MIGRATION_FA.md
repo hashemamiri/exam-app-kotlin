@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38 کیف پول مدیر، انتقال مضرب ۱۰۰۰ و آمار کامل مدرسه
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38.1 رفع امن خطای تبدیل حساب تازه به مدیر/معاون
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4409,3 +4409,32 @@ testDebugUnitTest / lintDebug           → باید در WSL/CI اجرا شود
 ```
 
 راهنما: `MANAGER_WALLET_STATS_V38_FA.md`.
+
+
+## ۶۰) V38.1 — رفع خطای «این حساب قابل تبدیل به مدیر/معاون نیست»
+
+### گزارش و علت
+
+```text
+ایمیل                                 → کاملاً جدید (اعلام کاربر)
+SQL V36/V37/V38                       → همگی اجرا شده‌اند
+خطا                                  → این حساب قابل تبدیل به مدیر/معاون نیست
+شرط مولد خطا                         → role خارج student/manager یا teacher_id غیر null
+علت سازگار با وضعیت                  → trigger قدیمی profile تازه را role=teacher ساخته است
+```
+
+RPC اکنون role موقت teacher را فقط وقتی می‌پذیرد که هیچ کلاس، آزمون، دانش‌آموز،
+عضویت active مدرسه یا عضویت دانش‌آموزی نداشته باشد. حساب معلم واقعی دارای داده
+همچنان با پیام صریح رد می‌شود؛ teacher_id غیر null نیز حساب دانش‌آموز مدیریت‌شده
+محسوب و رد می‌شود.
+
+```text
+SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql
+supabase/migrations/20260815_native_manager_registration_v381_hotfix.sql
+FINAL_NATIVE_VERIFY                     → PASS
+SQL copy equality                       → PASS
+App / Edge / Secret / Dependency        → بدون تغییر
+پیش‌نیاز                                → SQL V36
+```
+
+راهنما: `MANAGER_REGISTRATION_V381_FA.md`.

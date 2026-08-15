@@ -70,6 +70,8 @@ v37_migration=(ROOT/"supabase/migrations/20260815_native_school_teacher_manageme
 v37_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql").read_text()
 v38_migration=(ROOT/"supabase/migrations/20260815_native_manager_wallet_stats_v38.sql").read_text()
 v38_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql").read_text()
+v381_migration=(ROOT/"supabase/migrations/20260815_native_manager_registration_v381_hotfix.sql").read_text()
+v381_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
 auth_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text()
@@ -909,3 +911,11 @@ require("native_manager_transfer_wallet_v38" in manager_repository and
         )) and all(marker in v38_migration for marker in (
             "average_percent","distributed_toman","teacher_activity","wallet_balance"
         )), "V38 transfer UI or complete manager statistics missing")
+
+# V38.1 — profile موقت teacher در ثبت‌نام مدیر
+require(v381_migration == v381_sql_copy and all(marker in v381_migration for marker in (
+            "v_profile.role not in ('student','teacher','manager')","v_profile.role = 'teacher'",
+            "from public.classes c where c.teacher_id = v_uid","from public.exams e where e.teacher_id = v_uid",
+            "s.teacher_id = v_uid and s.role = 'student'","sm.user_id = v_uid and sm.status = 'active'",
+            "این ایمیل قبلاً حساب معلم فعال دارد"
+        )), "V38.1 safe provisional-teacher manager conversion hotfix incomplete")
