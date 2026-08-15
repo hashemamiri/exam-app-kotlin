@@ -68,7 +68,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
         scope.launch {
             loadingTeachers = true
             repository.teachers().onSuccess { teachers = it; error = null }
-                .onFailure { error = it.message }
+                .onFailure { error = safeManagerError(it) }
             loadingTeachers = false
         }
     }
@@ -94,7 +94,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
                         onClick = {
                             scope.launch {
                                 repository.createInvite(email).onSuccess { invite = it; error = null }
-                                    .onFailure { error = it.message }
+                                    .onFailure { error = safeManagerError(it) }
                             }
                         }
                     ) { Text("ساخت کد دعوت") }
@@ -151,7 +151,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
                                 message = "${"%,d".format(java.util.Locale.US, result.amountToman)} تومان منتقل شد."
                                 transferTarget = null
                                 reload()
-                            }.onFailure { error = it.message; transferTarget = null }
+                            }.onFailure { error = safeManagerError(it); transferTarget = null }
                         }
                     }
                 ) { Text("انتقال") }
@@ -169,7 +169,7 @@ fun ManagerTeachersScreen(newTeacherRequested: Int = 0) {
                 androidx.compose.material3.Button(onClick = {
                     scope.launch {
                         repository.disableTeacher(teacher.id).onSuccess { removeTarget = null; reload() }
-                            .onFailure { error = it.message; removeTarget = null }
+                            .onFailure { error = safeManagerError(it); removeTarget = null }
                     }
                 }) { Text("قطع عضویت") }
             },
@@ -265,7 +265,16 @@ private fun rememberManagerSummary(): ManagerSummaryState {
                 }
             )
         }.onSuccess { state = ManagerSummaryState(loading = false, summary = it) }
-            .onFailure { state = ManagerSummaryState(loading = false, error = it.message ?: "دریافت آمار ناموفق بود.") }
+            .onFailure { state = ManagerSummaryState(loading = false, error = safeManagerError(it)) }
     }
     return state
 }
+
+private fun safeManagerError(error: Throwable): String = error.message.orEmpty()
+    .substringBefore("URL:")
+    .substringBefore("Headers:")
+    .replace(Regex("(?i)authorization[^,\n]*"), "")
+    .replace(Regex("(?i)apikey[^,\n]*"), "")
+    .replace(Regex("(?i)bearer\s+[A-Za-z0-9._-]+"), "")
+    .take(240)
+    .ifBlank { "عملیات مدیریت مدرسه ناموفق بود." }

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38.1 رفع امن خطای تبدیل حساب تازه به مدیر/معاون
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V38.2 رفع digest دعوت و جلوگیری از نمایش Header/Token
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4438,3 +4438,29 @@ App / Edge / Secret / Dependency        → بدون تغییر
 ```
 
 راهنما: `MANAGER_REGISTRATION_V381_FA.md`.
+
+
+## ۶۱) V38.2 — رفع خطای digest دعوت و نشت Header در UI
+
+### گزارش واقعی
+
+```text
+خطا                  → function digest(text, unknown) does not exist
+RPC                   → native_manager_create_teacher_invite_v37
+علت                  → pgcrypto در schema extensions + ورودی text بدون cast bytea
+ریسک جانبی screenshot → نمایش URL و Headers شامل Bearer session در UI
+```
+
+هر دو hash ساخت و مصرف دعوت اکنون schema-qualified و bytea هستند:
+`extensions.digest(convert_to(...,'UTF8'),'sha256')`. خطاهای manager UI نیز قبل از
+نمایش در URL/Headers قطع و Authorization/apikey/Bearer حذف می‌شوند.
+
+```text
+SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql
+FINAL_NATIVE_VERIFY                     → PASS
+SQL copy equality                       → PASS
+Edge deploy                             → ندارد
+```
+
+نکته امنیتی: session token موجود در screenshot افشاشده تلقی می‌شود؛ کاربر باید
+فوراً از حساب خارج و sessionهای آن کاربر را در Supabase Auth باطل کند.

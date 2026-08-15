@@ -72,6 +72,8 @@ v38_migration=(ROOT/"supabase/migrations/20260815_native_manager_wallet_stats_v3
 v38_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql").read_text()
 v381_migration=(ROOT/"supabase/migrations/20260815_native_manager_registration_v381_hotfix.sql").read_text()
 v381_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").read_text()
+v382_migration=(ROOT/"supabase/migrations/20260815_native_invite_digest_v382_hotfix.sql").read_text()
+v382_sql_copy=(ROOT/"SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
 manager_foundation=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").read_text()
 auth_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text()
@@ -919,3 +921,14 @@ require(v381_migration == v381_sql_copy and all(marker in v381_migration for mar
             "s.teacher_id = v_uid and s.role = 'student'","sm.user_id = v_uid and sm.status = 'active'",
             "این ایمیل قبلاً حساب معلم فعال دارد"
         )), "V38.1 safe provisional-teacher manager conversion hotfix incomplete")
+
+# V38.2 — digest schema/type + redaction خطای manager
+require(v382_migration == v382_sql_copy and
+        "extensions.digest(convert_to(v_token,'UTF8'),'sha256')" in v382_migration and
+        "extensions.digest(convert_to(btrim(coalesce(p_invite_code,'')),'UTF8'),'sha256')" in v382_migration and
+        "encode(digest(" not in v382_migration,
+        "V38.2 schema-qualified bytea invite digest incomplete")
+require(all(marker in manager_foundation for marker in (
+            'substringBefore("URL:")','substringBefore("Headers:")',
+            'Regex("(?i)authorization','Regex("(?i)apikey','Regex("(?i)bearer'
+        )), "V38.2 manager error redaction missing")
