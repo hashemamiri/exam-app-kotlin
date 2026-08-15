@@ -27,7 +27,7 @@ credit همان Edge امن `wallet-payment` قبلی است؛ Edge یا Secret 
 مجموع تومان توزیع‌شده و فعالیت هر معلم (آزمون/کلاس/دانش‌آموز/موجودی) را نشان می‌دهد.
 
 ```text
-SQL: SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql
+SQL: sql/manual/SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql
 Edge جدید/deploy: ندارد
 Secret/Dependency جدید: ندارد
 پیش‌نیاز: V37 + SQL/Edge V37

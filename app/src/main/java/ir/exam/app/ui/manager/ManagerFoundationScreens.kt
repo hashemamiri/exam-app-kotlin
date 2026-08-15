@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -22,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +40,7 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private data class TeacherActivity(
     val name: String, val exams: Int, val classes: Int, val students: Int, val walletBalance: Long
@@ -59,7 +62,8 @@ private data class ManagerSummary(
 @Composable
 fun ManagerTeachersScreen(
     newTeacherRequested: Int = 0,
-    onManageTeacher: (String) -> Unit = {}
+    onManageTeacher: (String) -> Unit = {},
+    onInviteModeChanged: (Boolean) -> Unit = {}
 ) {
     val summaryState = rememberManagerSummary()
     val repository = remember { ir.exam.app.data.repository.SupabaseManagerRepository() }
@@ -76,6 +80,10 @@ fun ManagerTeachersScreen(
     var transferTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
     var transferAmount by remember { mutableStateOf("") }
     var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
+    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(inviteMode) {
+        while (inviteMode) { clockNow = System.currentTimeMillis(); delay(1_000) }
+    }
 
     fun reloadTeachers() {
         scope.launch {
@@ -95,7 +103,7 @@ fun ManagerTeachersScreen(
     }
     LaunchedEffect(Unit) { reloadTeachers() }
     LaunchedEffect(newTeacherRequested) {
-        if (newTeacherRequested > 0) { inviteMode = true; reloadInvites() }
+        if (newTeacherRequested > 0) { inviteMode = true; onInviteModeChanged(true); reloadInvites() }
     }
 
     Column(
@@ -104,10 +112,9 @@ fun ManagerTeachersScreen(
     ) {
         if (inviteMode) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.IconButton(onClick = { inviteMode = false; reloadTeachers() }) {
+                androidx.compose.material3.IconButton(onClick = { inviteMode = false; onInviteModeChanged(false); reloadTeachers() }) {
                     androidx.compose.material3.Icon(Icons.Outlined.ArrowBack, "بازگشت")
                 }
-                Text("کدهای دعوت معلم", style = MaterialTheme.typography.headlineSmall)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 androidx.compose.material3.Button(onClick = { inviteCountDialog = true }) { Text("ساخت کد دعوت") }
@@ -115,7 +122,7 @@ fun ManagerTeachersScreen(
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             invites.forEach { invite ->
-                val remaining = inviteRemainingText(invite.expiresAt, invite.used, invite.revoked)
+                val remaining = inviteRemainingText(invite.expiresAt, invite.used, invite.revoked, clockNow)
                 Card(Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth().padding(14.dp),
@@ -125,12 +132,26 @@ fun ManagerTeachersScreen(
                         Column(Modifier.weight(1f)) {
                             Text(invite.code, style = MaterialTheme.typography.titleLarge)
                             Text(remaining)
-                            Text(if (invite.used) "استفاده شده" else "استفاده نشده")
+                            val expired = remaining == "منقضی شده"
+                            androidx.compose.material3.FilterChip(
+                                selected = true,
+                                onClick = {},
+                                label = {
+                                    Text(
+                                        when { invite.used -> "استفاده شده"; expired -> "منقضی شده"; else -> "استفاده نشده" },
+                                        fontWeight = if (invite.used || expired) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                    )
+                                },
+                                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = when { invite.used -> androidx.compose.ui.graphics.Color(0xFF25A86B); expired -> androidx.compose.ui.graphics.Color(0xFFE5484D); else -> MaterialTheme.colorScheme.surfaceVariant },
+                                    selectedLabelColor = if (invite.used || expired) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
                         }
                         if (!invite.used && !invite.revoked) {
                             androidx.compose.material3.IconButton(onClick = {
                                 scope.launch {
-                                    repository.revokeInvite(invite.id).onSuccess { reloadInvites() }
+                                    repository.revokeInvite(invite.id).onSuccess { invites = invites.filterNot { it.id == invite.id } }
                                         .onFailure { error = safeManagerError(it) }
                                 }
                             }) {
@@ -145,8 +166,6 @@ fun ManagerTeachersScreen(
                 }
             }
         } else {
-            Text("معلم‌ها", style = MaterialTheme.typography.headlineSmall)
-            summaryState.summary?.let { Text(it.schoolName) }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
@@ -158,8 +177,10 @@ fun ManagerTeachersScreen(
                 ) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Text(teacher.fullName.ifBlank { "بدون نام" }, style = MaterialTheme.typography.titleMedium)
-                        Text("کد پرسنلی: ${teacher.employeeCode.ifBlank { "—" }}")
-                        Text("شماره تلفن: ${teacher.phone.ifBlank { "—" }}")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("کد پرسنلی: ${teacher.employeeCode.ifBlank { "—" }}", Modifier.weight(1f))
+                            Text("تلفن: ${teacher.phone.ifBlank { "—" }}", Modifier.weight(1f))
+                        }
                         androidx.compose.animation.AnimatedVisibility(expandedTeacher == teacher.id) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                                 androidx.compose.material3.IconButton(onClick = {
@@ -172,17 +193,19 @@ fun ManagerTeachersScreen(
                                     androidx.compose.material3.Icon(
                                         if (teacher.active) Icons.Outlined.ToggleOn
                                         else Icons.Outlined.ToggleOff,
-                                        contentDescription = if (teacher.active) "غیرفعال‌کردن" else "فعال‌کردن"
+                                        contentDescription = if (teacher.active) "غیرفعال‌کردن" else "فعال‌کردن",
+                                        tint = if (teacher.active) androidx.compose.ui.graphics.Color(0xFF25A86B) else androidx.compose.ui.graphics.Color(0xFFE5484D),
+                                        modifier = Modifier.size(34.dp)
                                     )
                                 }
                                 androidx.compose.material3.IconButton(onClick = { onManageTeacher(teacher.id) }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم")
+                                    androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم", modifier = Modifier.size(32.dp)
                                 }
                                 androidx.compose.material3.IconButton(onClick = { transferTarget = teacher; transferAmount = "" }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول")
+                                    androidx.compose.material3.Icon(Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول", modifier = Modifier.size(32.dp)
                                 }
                                 androidx.compose.material3.IconButton(onClick = { removeTarget = teacher }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.Delete, "حذف معلم", tint = MaterialTheme.colorScheme.error)
+                                    androidx.compose.material3.Icon(Icons.Outlined.Delete, "حذف معلم", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp)
                                 }
                             }
                         }
@@ -269,10 +292,10 @@ fun ManagerTeachersScreen(
     }
 }
 
-private fun inviteRemainingText(expiresAt: String, used: Boolean, revoked: Boolean): String {
+private fun inviteRemainingText(expiresAt: String, used: Boolean, revoked: Boolean, now: Long): String {
     if (used) return "مصرف شده"
     if (revoked) return "حذف شده"
-    val millis = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() - System.currentTimeMillis() }.getOrDefault(0)
+    val millis = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() - now }.getOrDefault(0)
     if (millis <= 0) return "منقضی شده"
     val minutes = millis / 60_000
     return "زمان باقی‌مانده: ${minutes / 60} ساعت و ${minutes % 60} دقیقه"

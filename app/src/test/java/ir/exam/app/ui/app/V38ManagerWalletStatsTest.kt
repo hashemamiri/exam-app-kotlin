@@ -28,7 +28,7 @@ class V38ManagerWalletStatsTest {
     @Test
     fun `sql transfer is atomic idempotent and double entry`() {
         val migration = source("supabase/migrations/20260815_native_manager_wallet_stats_v38.sql")
-        assertEquals(migration, source("SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql"))
+        assertEquals(migration, source("sql/manual/SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql"))
         listOf(
             "native_scope_new_school_row_v38",
             "trg_scope_new_class_v38",

@@ -38,7 +38,7 @@ class V36ManagerFoundationTest {
     @Test
     fun `manager registration creates one isolated school after verified email`() {
         val migration = source("supabase/migrations/20260815_native_school_manager_v36.sql")
-        val copy = source("SQL_NATIVE_SCHOOL_MANAGER_V36.sql")
+        val copy = source("sql/manual/SQL_NATIVE_SCHOOL_MANAGER_V36.sql")
         assertEquals(migration, copy)
         listOf(
             "profiles_role_v36_check",

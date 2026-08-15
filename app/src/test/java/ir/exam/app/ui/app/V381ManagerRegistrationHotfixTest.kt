@@ -13,7 +13,7 @@ class V381ManagerRegistrationHotfixTest {
     fun `empty provisional teacher may convert but real teacher data blocks conversion`() {
         val root = root()
         val migration = File(root, "supabase/migrations/20260815_native_manager_registration_v381_hotfix.sql").readText()
-        val copy = File(root, "SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").readText()
+        val copy = File(root, "sql/manual/SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").readText()
         assertEquals(migration, copy)
         assertTrue("v_profile.role not in ('student','teacher','manager')" in migration)
         assertTrue("v_profile.role = 'teacher'" in migration)

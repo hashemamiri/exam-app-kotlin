@@ -12,7 +12,7 @@ class V40BManagerTeacherCardsInvitesTest {
 
     @Test fun `batch invite sql creates one to five separate 24 hour codes`() {
         val sql=source("supabase/migrations/20260815_native_manager_teacher_cards_v40b.sql")
-        assertEquals(sql,source("SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql"))
+        assertEquals(sql,source("sql/manual/SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql"))
         listOf("p_count not between 1 and 5","for i in 1..p_count","display_code","interval '24 hours'","native_manager_invites_v40b","native_manager_revoke_invite_v40b").forEach{assertTrue(it in sql)}
     }
 

@@ -26,7 +26,7 @@
 پس از تأیید دانش‌آموز است.
 
 ```text
-SQL: SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql
+SQL: sql/manual/SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql
 Edge deploy: manage-student
 Secret/Dependency جدید: ندارد
 پیش‌نیاز: V38.3 و SQLهای قبلی

@@ -2,7 +2,7 @@
 
 **تاریخ:** ۲۰۲۶-۰۸-۱۴
 **پیش‌نیاز:** V27
-**SQL جدید:** دارد — `SQL_NATIVE_FIELD_OF_STUDY_V28.sql` باید یک‌بار اجرا شود.
+**SQL جدید:** دارد — `sql/manual/SQL_NATIVE_FIELD_OF_STUDY_V28.sql` باید یک‌بار اجرا شود.
 
 ---
 
@@ -186,8 +186,8 @@ RPCهای قدیمی بدون رشته (`save_student_extra`, `create_class`, `u
 ## فایل‌های کلیدی
 
 ```text
-REORDER_IMAGE_BULK_FIELD_V28_FA.md
-SQL_NATIVE_FIELD_OF_STUDY_V28.sql
+docs/fa/REORDER_IMAGE_BULK_FIELD_V28_FA.md
+sql/manual/SQL_NATIVE_FIELD_OF_STUDY_V28.sql
 supabase/migrations/20260814_native_field_of_study_v28.sql
 supabase/tests/20260814_v28_integration.sql
 app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
@@ -219,7 +219,7 @@ scripts/verify_native_final.py
 ## عملیات
 
 ```text
-۱) اجرای SQL_NATIVE_FIELD_OF_STUDY_V28.sql در SQL Editor پروژه اصلی
+۱) اجرای sql/manual/SQL_NATIVE_FIELD_OF_STUDY_V28.sql در SQL Editor پروژه اصلی
    https://eazwuyrymsvdkwckdpco.supabase.co
 ۲) نتیجه باید هشت مقدار true بدهد
 ۳) اعمال Patch و Push به repository Kotlin

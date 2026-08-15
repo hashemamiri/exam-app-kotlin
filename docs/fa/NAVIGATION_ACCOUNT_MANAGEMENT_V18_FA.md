@@ -184,7 +184,7 @@ androidx.biometric:biometric:1.1.0
 
 ```text
 supabase/migrations/20260813_native_navigation_account_v18.sql
-SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql
+sql/manual/SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql
 ```
 
 Readiness مورد انتظار:
@@ -211,9 +211,9 @@ restore_v2_ready         true
 ## فایل‌های اصلی
 
 ```text
-NAVIGATION_ACCOUNT_MANAGEMENT_V18_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
-SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql
+docs/fa/NAVIGATION_ACCOUNT_MANAGEMENT_V18_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+sql/manual/SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql
 app/build.gradle.kts
 app/src/main/java/ir/exam/app/MainActivity.kt
 app/src/main/java/ir/exam/app/core/security/AppLockManager.kt

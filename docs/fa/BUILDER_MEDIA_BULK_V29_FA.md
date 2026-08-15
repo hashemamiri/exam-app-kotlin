@@ -69,8 +69,8 @@ pointerInput(description)  →  pointerInput(Unit)
 ## فایل‌های کلیدی
 
 ```text
-BUILDER_MEDIA_BULK_V29_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/BUILDER_MEDIA_BULK_V29_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt
 app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
 app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt

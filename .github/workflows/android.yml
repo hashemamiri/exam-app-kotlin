@@ -250,10 +250,10 @@ jobs:
               key, value = line.split("=", 1)
               metadata[key] = value
 
-          # لیست تغییرات فارسی واقعی از فایل CHANGELOG_FA.txt در ریشهٔ repository؛
+          # لیست تغییرات فارسی واقعی از فایل text/CHANGELOG_FA.txt در ریشهٔ repository؛
           # هر سطر یک مورد است. اگر فایل نبود یا خالی بود، یادداشت عمومی استفاده می‌شود.
           payload_notes = []
-          changelog_path = Path("CHANGELOG_FA.txt")
+          changelog_path = Path("text/CHANGELOG_FA.txt")
           if changelog_path.is_file():
               payload_notes = [
                   line.strip().removeprefix("-").removeprefix("•").strip()

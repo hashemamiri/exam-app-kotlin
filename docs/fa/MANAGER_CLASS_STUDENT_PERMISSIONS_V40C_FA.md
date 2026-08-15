@@ -7,7 +7,7 @@
 - حذف حساب فقط از فهرست اصلی دانش‌آموزان و فقط با مجوز canManageAccount نمایش داده می‌شود.
 
 ```text
-SQL: SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql
+SQL: sql/manual/SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql
 Edge deploy: manage-student
 پیش‌نیاز: V40B.1
 ```

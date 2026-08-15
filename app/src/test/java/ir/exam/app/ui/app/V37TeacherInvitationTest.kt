@@ -16,7 +16,7 @@ class V37TeacherInvitationTest {
     @Test
     fun `sql copy is exact and invitation is hashed expiring and email bound`() {
         val migration = source("supabase/migrations/20260815_native_school_teacher_management_v37.sql")
-        assertEquals(migration, source("SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql"))
+        assertEquals(migration, source("sql/manual/SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql"))
         listOf(
             "school_teacher_invites",
             "encode(digest(v_token,'sha256'),'hex')",

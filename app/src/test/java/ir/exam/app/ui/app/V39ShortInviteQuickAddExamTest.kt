@@ -15,7 +15,7 @@ class V39ShortInviteQuickAddExamTest {
     @Test
     fun `school invite is six character no email one use and 24 hours`() {
         val sql = source("supabase/migrations/20260815_native_short_school_invite_v39.sql")
-        assertEquals(sql, source("SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql"))
+        assertEquals(sql, source("sql/manual/SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql"))
         listOf(
             "alter column email drop not null",
             "upper(substr(replace(gen_random_uuid()::text,'-',''),1,6))",

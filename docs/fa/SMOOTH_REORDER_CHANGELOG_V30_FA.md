@@ -41,9 +41,9 @@ ReorderDragButton پارامتر onActiveChanged گرفت و شروع/پایان
 با بازشدن صفحهٔ درباره، بررسی بروزرسانی خودکار انجام می‌شود و لیست تغییرات
 بدون نیاز به لمس دکمه نمایش می‌یابد.
 هر سطر تمیز می‌شود (حذف - ، • و backtick) و راست‌به‌چپ فارسی نمایش می‌یابد.
-GitHub Actions یادداشت‌های فارسی واقعی را از CHANGELOG_FA.txt در ریشهٔ repository
+GitHub Actions یادداشت‌های فارسی واقعی را از text/CHANGELOG_FA.txt در ریشهٔ repository
 می‌خواند و با RPC انتشار به Supabase می‌فرستد؛ اگر فایل نبود، یادداشت عمومی می‌رود.
-از این به بعد برای تغییر یادداشت‌های نسخه فقط CHANGELOG_FA.txt را ویرایش کنید
+از این به بعد برای تغییر یادداشت‌های نسخه فقط text/CHANGELOG_FA.txt را ویرایش کنید
 (هر سطر = یک مورد، حداکثر ۱۲ سطر ارسال می‌شود).
 ```
 
@@ -89,9 +89,9 @@ GitHub Actions یادداشت‌های فارسی واقعی را از CHANGELOG
 ## فایل‌های کلیدی
 
 ```text
-SMOOTH_REORDER_CHANGELOG_V30_FA.md
-CHANGELOG_FA.txt
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/SMOOTH_REORDER_CHANGELOG_V30_FA.md
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 .github/workflows/android.yml
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
 app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt

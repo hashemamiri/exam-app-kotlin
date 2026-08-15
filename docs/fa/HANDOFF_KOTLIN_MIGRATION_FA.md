@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V40C مدیریت کلاس معلم و تفکیک حذف عضویت/حساب
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۱۵ — V41A پالایش کارت معلم و دعوت
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -740,7 +740,7 @@ SQL در صورت نیاز
 توضیح فارسی کوتاه
 دستور جامع WSL
 build/test در صورت امکان
-به‌روزرسانی اجباری HANDOFF_KOTLIN_MIGRATION_FA.md در همان پچ
+به‌روزرسانی اجباری docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md در همان پچ
 commit
 آخرین فرمان: git push origin HEAD
 ```
@@ -884,7 +884,7 @@ supabase/migrations/20260811_app_update_publish_409_hotfix.sql
 supabase/migrations/20260811_app_update_publish_v42_hotfix.sql
 supabase/migrations/20260811_app_update_publish_v43_new_rpc.sql
 supabase/migrations/20260811_app_update_publish_v44_safe_delete.sql
-APP_UPDATE_SETUP_FA.md
+docs/fa/APP_UPDATE_SETUP_FA.md
 ```
 
 ### رفتار نهایی
@@ -1100,7 +1100,7 @@ app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 app/src/test/java/ir/exam/app/testing/MainDispatcherRule.kt
 app/src/test/java/ir/exam/app/ui/auth/AuthViewModelTest.kt
-AUTH_SESSION_PERSISTENCE_FA.md
+docs/fa/AUTH_SESSION_PERSISTENCE_FA.md
 ```
 
 ### اصول امنیتی
@@ -1196,7 +1196,7 @@ app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt
 app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
 app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardViewModel.kt
 supabase/migrations/20260811_native_comprehensive_management.sql
-COMPREHENSIVE_NATIVE_PATCH_FA.md
+docs/fa/COMPREHENSIVE_NATIVE_PATCH_FA.md
 ```
 
 ### SQL و امنیت
@@ -1395,7 +1395,7 @@ V11 نهایی‌سازی parity + hardening امنیت/RLS/grants + تست وا
 از این پچ به بعد، هر پچ تحویلی باید فایل زیر را نیز به‌روزرسانی کند:
 
 ```text
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```
 
 هندآف باید حداقل شامل وضعیت قابلیت جدید، فایل‌های تغییرکرده، SQL اجراشده یا باقی‌مانده، نسخه Build و نتیجه build/test باشد.
@@ -1456,7 +1456,7 @@ supabase/migrations/20260811_native_calendar_profile_wallet.sql
 supabase/functions/wallet-payment/index.ts
 supabase/config.toml
 supabase/tests/20260811_v9_integration.sql
-COMPREHENSIVE_CALENDAR_PROFILE_WALLET_V9_FA.md
+docs/fa/COMPREHENSIVE_CALENDAR_PROFILE_WALLET_V9_FA.md
 .github/workflows/android.yml
 ```
 
@@ -1579,7 +1579,7 @@ app/src/main/java/ir/exam/app/core/printing/OfficialPrintController.kt
 app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt
 supabase/migrations/20260811_native_offline_portability_analysis.sql
 supabase/tests/20260811_v10_integration.sql
-COMPREHENSIVE_OFFLINE_PORTABILITY_PRINT_V10_FA.md
+docs/fa/COMPREHENSIVE_OFFLINE_PORTABILITY_PRINT_V10_FA.md
 ```
 
 ### SQL و امنیت
@@ -1671,7 +1671,7 @@ app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolRepository.kt
 app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
 app/src/main/java/ir/exam/app/ui/student/StudentExamScreen.kt
 app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt
-FINAL_NATIVE_HARDENING_V11_FA.md
+docs/fa/FINAL_NATIVE_HARDENING_V11_FA.md
 ```
 
 ### نتیجه تست
@@ -1853,7 +1853,7 @@ app/src/main/java/ir/exam/app/ui/reports/StudentResultsScreen.kt
 app/src/main/java/ir/exam/app/ui/reports/StudentResultsViewModel.kt
 supabase/migrations/20260812_native_critical_flows_v12.sql
 supabase/tests/20260812_v12_critical_flows.sql
-CRITICAL_NATIVE_FLOWS_V12_FA.md
+docs/fa/CRITICAL_NATIVE_FLOWS_V12_FA.md
 ```
 
 ### SQL الزامی V12
@@ -2151,7 +2151,7 @@ Migration جدید: ندارد
 پیش‌نیاز: V13.4
 ```
 
-راهنمای مستقل: `FORMULA_SVG_RENDERING_V13_5_FA.md`.
+راهنمای مستقل: `docs/fa/FORMULA_SVG_RENDERING_V13_5_FA.md`.
 
 ---
 
@@ -2234,7 +2234,7 @@ Dependency جدید: ندارد
 پیش‌نیاز: V13.5
 ```
 
-راهنمای مستقل: `FORMULA_STRUCTURAL_BOXES_V13_6_FA.md`.
+راهنمای مستقل: `docs/fa/FORMULA_STRUCTURAL_BOXES_V13_6_FA.md`.
 
 ---
 
@@ -2248,7 +2248,7 @@ SHA-256: 591dd9feffecea45fe423633643cd518c1db9cad547bbfda709ad93f2cd7e6a1
 Size: 1,540,210 bytes / 32,099 lines
 ```
 
-ممیزی کامل در `FORMULA_FEATURE_AUDIT_EXAM_SYSTEM_FA.md` ثبت شد. HTML، `math.js` و `mathedit.js` فایل جدید با مرجع قبلی byte-identical بودند، اما قابلیت‌های پنهان و باگ‌های runtime نیز شناسایی شدند.
+ممیزی کامل در `docs/fa/FORMULA_FEATURE_AUDIT_EXAM_SYSTEM_FA.md` ثبت شد. HTML، `math.js` و `mathedit.js` فایل جدید با مرجع قبلی byte-identical بودند، اما قابلیت‌های پنهان و باگ‌های runtime نیز شناسایی شدند.
 
 ### دامنهٔ تحویل
 
@@ -2331,7 +2331,7 @@ assembleDebug                            PASS
 APK Signature Scheme v2               Verified
 ```
 
-راهنمای مستقل: `FORMULA_COMPLETE_PARITY_V14_FA.md`.
+راهنمای مستقل: `docs/fa/FORMULA_COMPLETE_PARITY_V14_FA.md`.
 
 ---
 
@@ -2381,7 +2381,7 @@ APK v2 signature                Verified
 
 SQL، Edge Function، Secret، Migration یا dependency جدید ندارد.
 
-راهنمای مستقل: `FORMULA_LIBRARY_RUNTIME_HOTFIX_V14_1_FA.md`.
+راهنمای مستقل: `docs/fa/FORMULA_LIBRARY_RUNTIME_HOTFIX_V14_1_FA.md`.
 
 ---
 
@@ -2434,7 +2434,7 @@ APK v2 signature              Verified
 
 SQL، Edge Function، Secret، Migration و dependency جدید ندارد.
 
-راهنمای مستقل: `DYNAMIC_TEACHER_BOTTOM_DOCK_V15_FA.md`.
+راهنمای مستقل: `docs/fa/DYNAMIC_TEACHER_BOTTOM_DOCK_V15_FA.md`.
 
 ---
 
@@ -2478,8 +2478,8 @@ mode اجرایی 100755 برای gradlew
 ### فایل‌های V16
 
 ```text
-NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt
 app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt
 app/src/main/java/ir/exam/app/core/ui/PersianFonts.kt
@@ -2537,7 +2537,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     975d79e127a749209e1999be03d84e6f28dd92e7dfc6d21eba7c106dbd6a37df
 ```
 
-راهنمای مستقل: `NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md`.
+راهنمای مستقل: `docs/fa/NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md`.
 
 ---
 
@@ -2568,8 +2568,8 @@ Debug APK SHA-256                     975d79e127a749209e1999be03d84e6f28dd92e7df
 ### فایل‌ها
 
 ```text
-NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
 app/src/main/java/ir/exam/app/ui/app/TeacherBottomDock.kt
@@ -2600,7 +2600,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     9e5ea5d0276bb833f36cf45c1ce3e9c2ea47e1aca1fbe4b2ad4ea1f9a84690f9
 ```
 
-راهنمای مستقل: `NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md`.
+راهنمای مستقل: `docs/fa/NEUMORPHIC69_DRAWER_REFRESH_V16_1_FA.md`.
 
 ---
 
@@ -2615,7 +2615,7 @@ Size: 61,677 bytes
 Lines: 467
 ```
 
-ممیزی کامل HTML/CSS/JavaScript در `DESIGN_69_BEHAVIOR_AUDIT_FA.md` ثبت شد. فایل مرجع Self-contained و فاقد external resource/secret بود، اما فقط مرجع طراحی است و هیچ JavaScript یا WebView آن وارد Runtime نشد.
+ممیزی کامل HTML/CSS/JavaScript در `docs/fa/DESIGN_69_BEHAVIOR_AUDIT_FA.md` ثبت شد. فایل مرجع Self-contained و فاقد external resource/secret بود، اما فقط مرجع طراحی است و هیچ JavaScript یا WebView آن وارد Runtime نشد.
 
 ### تصمیم‌های کاربر
 
@@ -2647,9 +2647,9 @@ refresh واقعی روی لمس دوباره مقصد فعال
 ### فایل‌ها
 
 ```text
-DESIGN_69_BEHAVIOR_AUDIT_FA.md
-DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/DESIGN_69_BEHAVIOR_AUDIT_FA.md
+docs/fa/DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt
 app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
 app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt
@@ -2686,7 +2686,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     bab45f4cfdadba570765886ceefb88758585e283eb37cede96717545f8523c92
 ```
 
-راهنمای مستقل: `DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md`.
+راهنمای مستقل: `docs/fa/DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md`.
 
 ---
 
@@ -2763,7 +2763,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     8812bd60fae6489ece6485f3421a62416444db053f8cbfe20c963780c7374803
 ```
 
-راهنمای مستقل: `NAVIGATION_ACCOUNT_MANAGEMENT_V18_FA.md`.
+راهنمای مستقل: `docs/fa/NAVIGATION_ACCOUNT_MANAGEMENT_V18_FA.md`.
 
 ---
 
@@ -2802,8 +2802,8 @@ PAY_ALLOW_SANDBOX=true
 ### فایل‌های کلیدی
 
 ```text
-INTERACTION_BUILDER_STUDENT_V19_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/INTERACTION_BUILDER_STUDENT_V19_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 supabase/functions/wallet-payment/index.ts
 app/src/main/java/ir/exam/app/ui/builder/BuilderRadialMenuOverlay.kt
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
@@ -2848,7 +2848,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     a0e9785ca749cc10f51bb8f4f708d1c3d30359290b0bcb9274bd8c25dc8631e2
 ```
 
-راهنمای مستقل: `INTERACTION_BUILDER_STUDENT_V19_FA.md`.
+راهنمای مستقل: `docs/fa/INTERACTION_BUILDER_STUDENT_V19_FA.md`.
 
 ---
 
@@ -2873,8 +2873,8 @@ All card drag helper text removed
 ### فایل‌های کلیدی
 
 ```text
-INTERACTION_POLISH_V20_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/INTERACTION_POLISH_V20_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/common/PasswordVisibility.kt
 app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt
 app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
@@ -2906,7 +2906,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     1613f90adc4b162ac3dde17aba9fb0ca001a2a4364f60c3bf22410a97816382e
 ```
 
-راهنمای مستقل: `INTERACTION_POLISH_V20_FA.md`.
+راهنمای مستقل: `docs/fa/INTERACTION_POLISH_V20_FA.md`.
 
 ---
 
@@ -2931,8 +2931,8 @@ Exact animateScrollToItem(index, 0) below TopAppBar
 ### فایل‌های کلیدی
 
 ```text
-STUDENT_LIST_BUILDER_SCROLL_V21_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/STUDENT_LIST_BUILDER_SCROLL_V21_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
 app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
@@ -2982,7 +2982,7 @@ Hamburger: Students / Classes / Calendar
 ### SQL
 
 ```text
-SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql
+sql/manual/SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql
 supabase/migrations/20260814_native_student_class_membership_v22.sql
 supabase/tests/20260814_v22_integration.sql
 ```
@@ -3004,7 +3004,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     0ea902fe1eb9f6c42b9f32a82dfc733016583afca8f26ba08994d0e01b538b65
 ```
 
-راهنمای مستقل: `CLASS_STUDENT_CARDS_V22_FA.md`.
+راهنمای مستقل: `docs/fa/CLASS_STUDENT_CARDS_V22_FA.md`.
 
 ---
 
@@ -3032,7 +3032,7 @@ Supabase Auth رمز فعلی را hash می‌کند و `plain_password` حذف
 ### فایل‌های کلیدی
 
 ```text
-INTERACTION_GRADE_ODOMETER_V23_FA.md
+docs/fa/INTERACTION_GRADE_ODOMETER_V23_FA.md
 app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
 app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
@@ -3091,7 +3091,7 @@ No recoverable old password; successful new password one-time sensitive copy
 ### فایل‌های کلیدی
 
 ```text
-COMPREHENSIVE_UX_V24_FA.md
+docs/fa/COMPREHENSIVE_UX_V24_FA.md
 app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
@@ -3119,7 +3119,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     1e6b84f426b2395b886ad9d7271547c9273f613e686bf3649e285759c78a3fec
 ```
 
-راهنمای مستقل: `COMPREHENSIVE_UX_V24_FA.md`.
+راهنمای مستقل: `docs/fa/COMPREHENSIVE_UX_V24_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.
 
@@ -3153,7 +3153,7 @@ Sampled image decoding: 2600 edge / 7M pixels / OOM guard
 ### فایل‌های کلیدی
 
 ```text
-HEADER_SAFETY_POLISH_V25_FA.md
+docs/fa/HEADER_SAFETY_POLISH_V25_FA.md
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
 app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt
@@ -3180,7 +3180,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     834b671c03df33333d6ccff372dc2198391e3f35cb63e3d0f06a0f036f643c1b
 ```
 
-راهنمای مستقل: `HEADER_SAFETY_POLISH_V25_FA.md`.
+راهنمای مستقل: `docs/fa/HEADER_SAFETY_POLISH_V25_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.
 
@@ -3214,7 +3214,7 @@ Supabase Auth رمز قبلی را فقط به‌صورت hash نگه می‌د�
 ### فایل‌های کلیدی
 
 ```text
-QUESTION_MEDIA_REORDER_V26_FA.md
+docs/fa/QUESTION_MEDIA_REORDER_V26_FA.md
 app/src/main/AndroidManifest.xml
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 app/src/main/java/ir/exam/app/ui/builder/JalaliDateTimePicker.kt
@@ -3241,7 +3241,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     a134841c1e433edefacf3181ec0e6339cc06a3fdd012decc5bc6ad0d0810235b
 ```
 
-راهنمای مستقل: `QUESTION_MEDIA_REORDER_V26_FA.md`.
+راهنمای مستقل: `docs/fa/QUESTION_MEDIA_REORDER_V26_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.
 
@@ -3275,7 +3275,7 @@ No recoverable old-password storage
 ### فایل‌های کلیدی
 
 ```text
-DATA_IMAGE_OPTIONS_V27_FA.md
+docs/fa/DATA_IMAGE_OPTIONS_V27_FA.md
 app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
 app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
@@ -3303,7 +3303,7 @@ APK Signature Scheme v2               Verified
 Debug APK SHA-256                     23ba454a550db58422d467f121d9aa8cdb3d429f99315fdaa6088e6fd4db6e4d
 ```
 
-راهنمای مستقل: `DATA_IMAGE_OPTIONS_V27_FA.md`.
+راهنمای مستقل: `docs/fa/DATA_IMAGE_OPTIONS_V27_FA.md`.
 
 SQL/Edge/Secret/Dependency جدید ندارد.
 
@@ -3393,7 +3393,7 @@ RPCهای قدیمی بدون رشته دیگر از APK صدا زده نمی‌
 ### SQL الزامی V28
 
 ```text
-SQL_NATIVE_FIELD_OF_STUDY_V28.sql
+sql/manual/SQL_NATIVE_FIELD_OF_STUDY_V28.sql
 ```
 
 Readiness باید هشت مقدار true بدهد:
@@ -3428,7 +3428,7 @@ assembleDebug                          PASS
 APK Signature Scheme v2                Verified
 ```
 
-راهنمای مستقل: `REORDER_IMAGE_BULK_FIELD_V28_FA.md`.
+راهنمای مستقل: `docs/fa/REORDER_IMAGE_BULK_FIELD_V28_FA.md`.
 
 Edge/Secret/Dependency جدید ندارد؛ فقط SQL V28 یک‌بار اجرا شود.
 
@@ -3503,8 +3503,8 @@ ViewModel: replaceImage برای جایگزینی نتیجه ویرایش دوب
 ### فایل‌های کلیدی V29
 
 ```text
-BUILDER_MEDIA_BULK_V29_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/BUILDER_MEDIA_BULK_V29_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt
 app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
 app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
@@ -3549,7 +3549,7 @@ Debug versionCode                      3 (fallback محلی)
 APK Signature Scheme v2                Verified
 ```
 
-راهنمای مستقل: `BUILDER_MEDIA_BULK_V29_FA.md`.
+راهنمای مستقل: `docs/fa/BUILDER_MEDIA_BULK_V29_FA.md`.
 
 ---
 
@@ -3586,7 +3586,7 @@ V29 build/device                        → SUCCESS (اعلام کاربر)
 کارت «تغییرات نسخه …» بعد از دانلود APK هم دیده می‌شود.
 بازشدن صفحهٔ درباره بررسی بروزرسانی را خودکار اجرا می‌کند.
 سطرها تمیز (بدون -، • و backtick) و راست‌به‌چپ نمایش داده می‌شوند.
-CI یادداشت‌های فارسی واقعی را از CHANGELOG_FA.txt می‌خواند و منتشر می‌کند
+CI یادداشت‌های فارسی واقعی را از text/CHANGELOG_FA.txt می‌خواند و منتشر می‌کند
 (حداکثر ۱۲ سطر؛ اگر فایل نبود یادداشت عمومی می‌رود).
 ```
 
@@ -3613,9 +3613,9 @@ CI یادداشت‌های فارسی واقعی را از CHANGELOG_FA.txt می
 ### فایل‌های کلیدی V30
 
 ```text
-SMOOTH_REORDER_CHANGELOG_V30_FA.md
-CHANGELOG_FA.txt
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/SMOOTH_REORDER_CHANGELOG_V30_FA.md
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 .github/workflows/android.yml
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
 app/src/main/java/ir/exam/app/ui/builder/ReorderAnimation.kt
@@ -3639,7 +3639,7 @@ Secret جدید: ندارد
 Migration جدید: ندارد
 Dependency جدید: ندارد
 پیش‌نیاز: V29
-نکته CI: یادداشت‌های نسخه‌های بعدی را در CHANGELOG_FA.txt ویرایش کنید.
+نکته CI: یادداشت‌های نسخه‌های بعدی را در text/CHANGELOG_FA.txt ویرایش کنید.
 ```
 
 ### نتیجه تست V30
@@ -3656,7 +3656,7 @@ Debug package                          ir.exam.app.native
 APK Signature Scheme v2                Verified
 ```
 
-راهنمای مستقل: `SMOOTH_REORDER_CHANGELOG_V30_FA.md`.
+راهنمای مستقل: `docs/fa/SMOOTH_REORDER_CHANGELOG_V30_FA.md`.
 
 ---
 
@@ -3713,8 +3713,8 @@ V30 build/device                        → SUCCESS (اعلام کاربر)
 ### فایل‌های کلیدی V31
 
 ```text
-STABLE_REORDER_UPDATE_PROMPT_V31_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/STABLE_REORDER_UPDATE_PROMPT_V31_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
 app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
@@ -3751,7 +3751,7 @@ Debug package                          ir.exam.app.native
 APK Signature Scheme v2                Verified
 ```
 
-راهنمای مستقل: `STABLE_REORDER_UPDATE_PROMPT_V31_FA.md`.
+راهنمای مستقل: `docs/fa/STABLE_REORDER_UPDATE_PROMPT_V31_FA.md`.
 
 ---
 
@@ -3813,8 +3813,8 @@ StudentEditDialog بازنویسی شد تا دقیقاً مانند BulkStudent
 ### فایل‌های کلیدی V32
 
 ```text
-HANDOFF_KOTLIN_MIGRATION_FA.md
-CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+text/CHANGELOG_FA.txt
 app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt
 app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt
 app/src/test/java/ir/exam/app/ui/app/V32EditScrollCopyImageTest.kt
@@ -3853,7 +3853,7 @@ lintDebug / assembleDebug               → باید در WSL با gradlew اج�
 adb logcat -d AndroidRuntime:E *:S
 ```
 
-راهنمای مستقل: `IMAGE_BULK_EDIT_COPY_V32_FA.md`.
+راهنمای مستقل: `docs/fa/IMAGE_BULK_EDIT_COPY_V32_FA.md`.
 
 ## ۵۱) V32.1 — اصلاح تست‌های قدیمی CI پس از اسکرول شمارهٔ کارت‌ها
 
@@ -3878,7 +3878,7 @@ V32 هماهنگ شدند: `LazyRow`، `rememberLazyListState`، اتصال stat
 app/src/test/java/ir/exam/app/ui/app/V28ReorderImageBulkFieldTest.kt
 app/src/test/java/ir/exam/app/ui/app/V29ReorderViewerEditBulkTest.kt
 app/src/test/java/ir/exam/app/ui/app/V30SmoothReorderSettingsChangelogTest.kt
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 SQL / Edge Function / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V32
 ```
@@ -3960,9 +3960,9 @@ app/src/test/java/ir/exam/app/ui/app/V27DataImageOptionsTest.kt
 app/src/test/java/ir/exam/app/ui/app/V28ReorderImageBulkFieldTest.kt
 app/src/test/java/ir/exam/app/ui/app/V32EditScrollCopyImageTest.kt
 scripts/verify_native_final.py
-CHANGELOG_FA.txt
-IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+text/CHANGELOG_FA.txt
+docs/fa/IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```
 
 ### تست و عملیات
@@ -3978,7 +3978,7 @@ Dependency جدید                         → ندارد
 پیش‌نیاز                                → V32.1
 ```
 
-راهنمای مستقل: `IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md`.
+راهنمای مستقل: `docs/fa/IMAGE_EDITOR_SESSION_PASSWORD_V33_FA.md`.
 
 
 ## ۵۳) V34 — ابزارهای گزینه، Vault رمز دستگاه و برش جهت‌دار/دایره‌ای
@@ -4056,9 +4056,9 @@ app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt
 app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt
 app/src/test/java/ir/exam/app/ui/app/V34BuilderVaultCropTest.kt
 scripts/verify_native_final.py
-CHANGELOG_FA.txt
-BUILDER_VAULT_CROP_V34_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+text/CHANGELOG_FA.txt
+docs/fa/BUILDER_VAULT_CROP_V34_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```
 
 ### نتیجهٔ بررسی و عملیات
@@ -4073,7 +4073,7 @@ Dependency جدید                         → ندارد (Android Keystore پ�
 پیش‌نیاز                                → V33
 ```
 
-راهنمای مستقل: `BUILDER_VAULT_CROP_V34_FA.md`.
+راهنمای مستقل: `docs/fa/BUILDER_VAULT_CROP_V34_FA.md`.
 
 
 ## ۵۴) V34.1 — اصلاح کامپایل تست V34 در GitHub Actions
@@ -4105,7 +4105,7 @@ Regex(Regex.escape(equalSizeMarker)).findAll(edit).count()
 
 ```text
 app/src/test/java/ir/exam/app/ui/app/V34BuilderVaultCropTest.kt
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 کد اجرایی برنامه                     → بدون تغییر
 FINAL_NATIVE_VERIFY                   → PASS
 git diff --check                      → PASS
@@ -4188,9 +4188,9 @@ app/src/test/java/ir/exam/app/ui/image/V33ImageEditorPasswordTest.kt
 app/src/test/java/ir/exam/app/ui/app/V34BuilderVaultCropTest.kt
 app/src/test/java/ir/exam/app/ui/app/V35StudentUiCropClipboardTest.kt
 scripts/verify_native_final.py
-CHANGELOG_FA.txt
-STUDENT_UI_CROP_V35_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+text/CHANGELOG_FA.txt
+docs/fa/STUDENT_UI_CROP_V35_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```
 
 ### بررسی و عملیات
@@ -4203,7 +4203,7 @@ SQL / Edge / Migration / Dependency     → ندارد
 پیش‌نیاز                                → V34.1
 ```
 
-راهنمای مستقل: `STUDENT_UI_CROP_V35_FA.md`.
+راهنمای مستقل: `docs/fa/STUDENT_UI_CROP_V35_FA.md`.
 
 
 ## ۵۶) V36 — نقش مدیر/معاون، مدرسهٔ مستقل و پوستهٔ مدیریتی
@@ -4240,7 +4240,7 @@ tenant                                → هر مدیر یک مدرسهٔ مست
 
 ```text
 supabase/migrations/20260815_native_school_manager_v36.sql
-SQL_NATIVE_SCHOOL_MANAGER_V36.sql
+sql/manual/SQL_NATIVE_SCHOOL_MANAGER_V36.sql
 ترتیب: پس از تمام migrationهای V35
 اجرای دستی لازم: بله، در SQL Editor پروژه اصلی
 Edge deploy: ندارد
@@ -4265,8 +4265,8 @@ app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt
 app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsViewModel.kt
 app/src/test/java/ir/exam/app/ui/app/V36ManagerFoundationTest.kt
 supabase/migrations/20260815_native_school_manager_v36.sql
-SQL_NATIVE_SCHOOL_MANAGER_V36.sql
-SCHOOL_MANAGER_FOUNDATION_V36_FA.md
+sql/manual/SQL_NATIVE_SCHOOL_MANAGER_V36.sql
+docs/fa/SCHOOL_MANAGER_FOUNDATION_V36_FA.md
 ```
 
 ### نتیجه بررسی
@@ -4280,7 +4280,7 @@ Dependency / Edge / Secret جدید         → ندارد
 پیش‌نیاز                                → V35
 ```
 
-راهنمای مستقل: `SCHOOL_MANAGER_FOUNDATION_V36_FA.md`.
+راهنمای مستقل: `docs/fa/SCHOOL_MANAGER_FOUNDATION_V36_FA.md`.
 
 
 ## ۵۷) V36.1 — اصلاح تست قدیمی ناوبری پس از افزودن نقش مدیر
@@ -4309,7 +4309,7 @@ TEACHER / STUDENT                       → MainPage.CALENDAR
 
 ```text
 app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 FINAL_NATIVE_VERIFY                     → PASS
 git diff --check                        → PASS
 testDebugUnitTest / lintDebug           → باید در CI/WSL تکرار شود
@@ -4344,7 +4344,7 @@ SQL / Edge / Secret / Dependency جدید   → ندارد
 ### عملیات الزامی
 
 ```text
-1) اجرای SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql
+1) اجرای sql/manual/SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql
 2) deploy تابع manage-student از سورس همین نسخه
 3) build/test APK
 Secret جدید: ندارد
@@ -4361,7 +4361,7 @@ SQL copy equality                       → PASS
 پیش‌نیاز                                → V36.1 + SQL V36
 ```
 
-راهنما: `SCHOOL_TEACHER_INVITATION_V37_FA.md`.
+راهنما: `docs/fa/SCHOOL_TEACHER_INVITATION_V37_FA.md`.
 
 
 ## ۵۹) V38 — انتقال کیف پول مدیر به معلم و آمار مدرسه
@@ -4392,7 +4392,7 @@ SQL copy equality                       → PASS
 ### عملیات
 
 ```text
-SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql
+sql/manual/SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql
 supabase/migrations/20260815_native_manager_wallet_stats_v38.sql
 Edge deploy جدید                         → ندارد
 Secret / Dependency جدید                → ندارد
@@ -4408,7 +4408,7 @@ SQL copy equality                       → PASS
 testDebugUnitTest / lintDebug           → باید در WSL/CI اجرا شود
 ```
 
-راهنما: `MANAGER_WALLET_STATS_V38_FA.md`.
+راهنما: `docs/fa/MANAGER_WALLET_STATS_V38_FA.md`.
 
 
 ## ۶۰) V38.1 — رفع خطای «این حساب قابل تبدیل به مدیر/معاون نیست»
@@ -4429,7 +4429,7 @@ RPC اکنون role موقت teacher را فقط وقتی می‌پذیرد که
 محسوب و رد می‌شود.
 
 ```text
-SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql
+sql/manual/SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql
 supabase/migrations/20260815_native_manager_registration_v381_hotfix.sql
 FINAL_NATIVE_VERIFY                     → PASS
 SQL copy equality                       → PASS
@@ -4437,7 +4437,7 @@ App / Edge / Secret / Dependency        → بدون تغییر
 پیش‌نیاز                                → SQL V36
 ```
 
-راهنما: `MANAGER_REGISTRATION_V381_FA.md`.
+راهنما: `docs/fa/MANAGER_REGISTRATION_V381_FA.md`.
 
 
 ## ۶۱) V38.2 — رفع خطای digest دعوت و نشت Header در UI
@@ -4456,7 +4456,7 @@ RPC                   → native_manager_create_teacher_invite_v37
 نمایش در URL/Headers قطع و Authorization/apikey/Bearer حذف می‌شوند.
 
 ```text
-SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql
+sql/manual/SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql
 FINAL_NATIVE_VERIFY                     → PASS
 SQL copy equality                       → PASS
 Edge deploy                             → ندارد
@@ -4515,7 +4515,7 @@ quick add مدیر         → کلاس، دانش‌آموز، دعوت معل�
 ### عملیات
 
 ```text
-SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql
+sql/manual/SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql
 supabase/migrations/20260815_native_short_school_invite_v39.sql
 Edge deploy                             → manage-student الزامی
 FINAL_NATIVE_VERIFY                     → PASS
@@ -4523,7 +4523,7 @@ SQL copy equality                       → PASS
 Secret / Dependency جدید               → ندارد
 ```
 
-راهنما: `SHORT_INVITE_QUICK_EXAM_V39_FA.md`.
+راهنما: `docs/fa/SHORT_INVITE_QUICK_EXAM_V39_FA.md`.
 
 ## ۶۴) V39.1 — اصلاح import دکمه ذره‌بین پیوستن به مدرسه
 
@@ -4592,7 +4592,7 @@ V40C → مدیریت کلاس/دانش‌آموز و مجوزهای حذف
 - Appearance/About بدون horizontalScroll و با CenterHorizontally هستند.
 
 ```text
-SQL_NATIVE_TEACHER_PROFILE_V40A.sql
+sql/manual/SQL_NATIVE_TEACHER_PROFILE_V40A.sql
 FINAL_NATIVE_VERIFY                     → PASS
 git diff --check                        → PASS
 SQL copy equality                       → PASS
@@ -4600,7 +4600,7 @@ Edge deploy                             → ندارد
 پیش‌نیاز                                → V39.2
 ```
 
-راهنما: `TEACHER_PROFILE_STUDENT_MENU_V40A_FA.md`.
+راهنما: `docs/fa/TEACHER_PROFILE_STUDENT_MENU_V40A_FA.md`.
 
 
 ## ۶۷) V40B — کارت معلم و دعوت دسته‌ای
@@ -4620,7 +4620,7 @@ Edge deploy                             → ندارد
 - status memberships با removed گسترش یافت بدون حذف user.
 
 ```text
-SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql
+sql/manual/SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql
 FINAL_NATIVE_VERIFY                     → PASS
 git diff --check                        → PASS
 SQL copy equality                       → PASS
@@ -4629,7 +4629,7 @@ Edge deploy                             → ندارد
 مرحله بعد                               → V40C مدیریت کلاس و دانش‌آموز
 ```
 
-راهنما: `MANAGER_TEACHER_CARDS_INVITES_V40B_FA.md`.
+راهنما: `docs/fa/MANAGER_TEACHER_CARDS_INVITES_V40B_FA.md`.
 
 ## ۶۸) V40B.1 — هماهنگ‌سازی دو تست قدیمی با قرارداد V40B
 
@@ -4673,7 +4673,7 @@ SQL / Edge / Secret / Dependency        → بدون تغییر
   school_students اجازه می‌دهد.
 
 ```text
-SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql
+sql/manual/SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql
 Edge deploy                             → manage-student الزامی
 FINAL_NATIVE_VERIFY                     → PASS
 git diff --check                        → PASS
@@ -4681,4 +4681,49 @@ SQL copy equality                       → PASS
 پیش‌نیاز                                → V40B.1
 ```
 
-راهنما: `MANAGER_CLASS_STUDENT_PERMISSIONS_V40C_FA.md`.
+راهنما: `docs/fa/MANAGER_CLASS_STUDENT_PERMISSIONS_V40C_FA.md`.
+
+## ۷۰) V40C.1 — پوشه‌بندی دائمی مستندات، SQL و فایل‌های انتشار
+
+### ساختار جدید
+
+```text
+docs/fa/*.md             → همه Markdownها و هندآف
+sql/manual/SQL_*.sql     → نسخه‌های دستی SQL
+text/CHANGELOG_FA.txt → changelog مورد استفاده workflow
+```
+
+مهاجرت‌های واقعی در `supabase/migrations` و فایل‌های ضروری Gradle در ریشه باقی
+ماندند. تمام pathهای workflow، verify، unit test و ارجاع‌های مستندات به مسیر جدید
+به‌روزرسانی شدند. راهنما: `docs/fa/WORKSPACE_STRUCTURE_FA.md`.
+
+```text
+FINAL_NATIVE_VERIFY                     → PASS
+git diff --check                        → PASS
+پچ سازمان‌دهی                           → تا build در patches/pending
+SQL / Edge / Secret / Dependency        → بدون تغییر
+پیش‌نیاز                                → V40C
+```
+
+## ۷۱) V41A — پالایش کارت معلم و کدهای دعوت
+
+- عنوان تکراری معلم‌ها و نام مدرسه از body حذف شد.
+- کد پرسنلی/تلفن یک‌سطر، آیکن‌ها بزرگ و toggle سبز/قرمز شد.
+- عنوان دعوت به TopAppBar منتقل و bottom «معلم‌ها» حالت دعوت را می‌بندد.
+- تایمر هر ثانیه، تراشه وضعیت عادی/سبز/قرمز و حذف فوری کارت اضافه شد.
+
+```text
+FINAL_NATIVE_VERIFY → PASS
+SQL/Edge → ندارد
+پچ → pending تا build
+```
+
+## ۷۲) قانون نمایش فایل‌های تحویلی در صفحهٔ اول Workspace
+
+از V41A به بعد این قرارداد برای تمام تحویل‌ها الزامی است:
+
+1. جدیدترین پچ و نسخهٔ قابل مشاهدهٔ `HANDOFF_KOTLIN_MIGRATION_FA.md` ابتدا در ریشهٔ Workspace (`/home/user`) قرار می‌گیرند تا در صفحهٔ اول قابل دسترس باشند.
+2. با درخواست یا تولید پچ جدید، پچ قبلی از ریشهٔ Workspace برداشته و مطابق وضعیت build به `patches/pending/` یا `patches/built/` منتقل می‌شود.
+3. فایل Hand-off همیشه در ریشهٔ Workspace باقی می‌ماند و نسخهٔ آن با فایل canonical مخزن در `docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md` همگام می‌شود.
+4. فایل canonical داخل مخزن در هر پچ به‌روزرسانی می‌شود؛ کپی ریشهٔ Workspace صرفاً برای دسترسی سریع است و جزو سورس Git نیست.
+5. اگر پچ جدید بر پچ قبلی وابسته باشد، دستور تحویل باید پیش‌نیاز را صریح اعلام کند یا یک پچ cumulative سازگار با HEAD کاربر ارائه دهد.

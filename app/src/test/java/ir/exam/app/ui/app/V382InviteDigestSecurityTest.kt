@@ -14,7 +14,7 @@ class V382InviteDigestSecurityTest {
     fun `invite digest is schema qualified bytea and UI strips headers`() {
         val root = root()
         val migration = File(root, "supabase/migrations/20260815_native_invite_digest_v382_hotfix.sql").readText()
-        val copy = File(root, "SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").readText()
+        val copy = File(root, "sql/manual/SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").readText()
         val manager = File(root, "app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt").readText()
         assertEquals(migration, copy)
         assertTrue("extensions.digest(convert_to(v_token,'UTF8'),'sha256')" in migration)

@@ -8,7 +8,7 @@
 و Bearer پاک می‌شوند تا هیچ session token در صفحه یا اسکرین‌شات دیده نشود.
 
 ```text
-SQL: SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql
+SQL: sql/manual/SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql
 Edge deploy: ندارد
 Secret/Dependency: ندارد
 پیش‌نیاز: SQL V37

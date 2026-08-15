@@ -9,7 +9,7 @@
 - دکمه‌های ظاهر و درباره وسط‌چین شدند.
 
 ```text
-SQL: SQL_NATIVE_TEACHER_PROFILE_V40A.sql
+SQL: sql/manual/SQL_NATIVE_TEACHER_PROFILE_V40A.sql
 Edge deploy: ندارد
 پیش‌نیاز: V39.2
 مرحله بعد: V40B کارت معلم و دعوت دسته‌ای

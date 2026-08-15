@@ -34,7 +34,7 @@ SQL:
 
 ```text
 supabase/migrations/20260815_native_school_manager_v36.sql
-SQL_NATIVE_SCHOOL_MANAGER_V36.sql
+sql/manual/SQL_NATIVE_SCHOOL_MANAGER_V36.sql
 ```
 
 جداول:

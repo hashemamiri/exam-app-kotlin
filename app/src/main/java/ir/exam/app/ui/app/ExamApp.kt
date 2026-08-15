@@ -142,6 +142,7 @@ private fun AuthenticatedExamApp(
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerNewTeacherKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerTeacherId by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
+    var managerInviteHeader by rememberSaveable(user.id) { mutableStateOf(false) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
@@ -167,6 +168,7 @@ private fun AuthenticatedExamApp(
 
     fun openHome() {
         closeTransientNavigation()
+        if (user.role == UserRole.MANAGER) managerInviteHeader = false
         if (page == MainPage.HOME && user.role == UserRole.TEACHER) {
             dashboardRefreshKey += 1
         } else {
@@ -194,6 +196,7 @@ private fun AuthenticatedExamApp(
     fun createManagerTeacher() {
         closeTransientNavigation()
         managerTeacherId = null
+        managerInviteHeader = true
         managerNewTeacherKey += 1
         page = MainPage.HOME
     }
@@ -359,7 +362,8 @@ private fun AuthenticatedExamApp(
                         ManagerTeacherClassScreen(teacherId = teacherId, onBack = { managerTeacherId = null })
                     } ?: ManagerTeachersScreen(
                         newTeacherRequested = managerNewTeacherKey,
-                        onManageTeacher = { managerTeacherId = it }
+                        onManageTeacher = { managerTeacherId = it },
+                        onInviteModeChanged = { managerInviteHeader = it }
                     )
                 }
                 MainPage.CALENDAR -> CalendarScreen(user.role)
@@ -693,7 +697,10 @@ private fun AuthenticatedShell(
                         if (!menuOpen) {
                             TopAppBar(
                                 title = {
-                                    Text(page.sectionTitle(user.role, profileDestination, schoolStudentsSelected))
+                                    Text(
+                                        if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
+                                        else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)
+                                    )
                                 },
                                 navigationIcon = {
                                     if (user.role == UserRole.STUDENT) {

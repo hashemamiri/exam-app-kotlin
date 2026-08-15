@@ -19,7 +19,7 @@ profile موقت `teacher` فقط وقتی قابل تبدیل است که کا�
 مدیر تبدیل نمی‌شود.
 
 ```text
-SQL: SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql
+SQL: sql/manual/SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql
 Edge/App/Secret/Dependency جدید: ندارد
 پیش‌نیاز: SQL V36
 ```

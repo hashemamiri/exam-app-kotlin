@@ -15,7 +15,7 @@ class V40ATeacherProfileStudentMenuTest {
     @Test
     fun `teacher details sql is owner only and validates optional fields`() {
         val sql = source("supabase/migrations/20260815_native_teacher_profile_v40a.sql")
-        assertEquals(sql, source("SQL_NATIVE_TEACHER_PROFILE_V40A.sql"))
+        assertEquals(sql, source("sql/manual/SQL_NATIVE_TEACHER_PROFILE_V40A.sql"))
         listOf("employee_code", "phone", "native_my_teacher_details_v40", "native_save_teacher_details_v40", "id=auth.uid() and role='teacher'", "^09[0-9]{9}$").forEach {
             assertTrue("missing $it", it in sql)
         }

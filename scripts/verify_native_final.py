@@ -51,37 +51,37 @@ profile_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/ProfileModels.k
 profile_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt").read_text()
 portability_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
 v18_migration=(ROOT/"supabase/migrations/20260813_native_navigation_account_v18.sql").read_text()
-v18_sql_copy=(ROOT/"SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql").read_text()
+v18_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_NAVIGATION_ACCOUNT_V18.sql").read_text()
 v22_migration=(ROOT/"supabase/migrations/20260814_native_student_class_membership_v22.sql").read_text()
-v22_sql_copy=(ROOT/"SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
-v24_guide=(ROOT/"COMPREHENSIVE_UX_V24_FA.md").read_text()
-v25_guide=(ROOT/"HEADER_SAFETY_POLISH_V25_FA.md").read_text()
-v26_guide=(ROOT/"QUESTION_MEDIA_REORDER_V26_FA.md").read_text()
-v27_guide=(ROOT/"DATA_IMAGE_OPTIONS_V27_FA.md").read_text()
+v22_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql").read_text()
+v24_guide=(ROOT/"docs/fa/COMPREHENSIVE_UX_V24_FA.md").read_text()
+v25_guide=(ROOT/"docs/fa/HEADER_SAFETY_POLISH_V25_FA.md").read_text()
+v26_guide=(ROOT/"docs/fa/QUESTION_MEDIA_REORDER_V26_FA.md").read_text()
+v27_guide=(ROOT/"docs/fa/DATA_IMAGE_OPTIONS_V27_FA.md").read_text()
 v28_migration=(ROOT/"supabase/migrations/20260814_native_field_of_study_v28.sql").read_text()
-v28_sql_copy=(ROOT/"SQL_NATIVE_FIELD_OF_STUDY_V28.sql").read_text()
-v28_guide=(ROOT/"REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
-v29_guide=(ROOT/"BUILDER_MEDIA_BULK_V29_FA.md").read_text()
-v30_guide=(ROOT/"SMOOTH_REORDER_CHANGELOG_V30_FA.md").read_text()
-v31_guide=(ROOT/"STABLE_REORDER_UPDATE_PROMPT_V31_FA.md").read_text()
+v28_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_FIELD_OF_STUDY_V28.sql").read_text()
+v28_guide=(ROOT/"docs/fa/REORDER_IMAGE_BULK_FIELD_V28_FA.md").read_text()
+v29_guide=(ROOT/"docs/fa/BUILDER_MEDIA_BULK_V29_FA.md").read_text()
+v30_guide=(ROOT/"docs/fa/SMOOTH_REORDER_CHANGELOG_V30_FA.md").read_text()
+v31_guide=(ROOT/"docs/fa/STABLE_REORDER_UPDATE_PROMPT_V31_FA.md").read_text()
 v36_migration=(ROOT/"supabase/migrations/20260815_native_school_manager_v36.sql").read_text()
-v36_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_MANAGER_V36.sql").read_text()
+v36_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_SCHOOL_MANAGER_V36.sql").read_text()
 v37_migration=(ROOT/"supabase/migrations/20260815_native_school_teacher_management_v37.sql").read_text()
-v37_sql_copy=(ROOT/"SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql").read_text()
+v37_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql").read_text()
 v38_migration=(ROOT/"supabase/migrations/20260815_native_manager_wallet_stats_v38.sql").read_text()
-v38_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql").read_text()
+v38_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_MANAGER_WALLET_STATS_V38.sql").read_text()
 v381_migration=(ROOT/"supabase/migrations/20260815_native_manager_registration_v381_hotfix.sql").read_text()
-v381_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").read_text()
+v381_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_MANAGER_REGISTRATION_V381_HOTFIX.sql").read_text()
 v382_migration=(ROOT/"supabase/migrations/20260815_native_invite_digest_v382_hotfix.sql").read_text()
-v382_sql_copy=(ROOT/"SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").read_text()
+v382_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_INVITE_DIGEST_V382_HOTFIX.sql").read_text()
 v39_migration=(ROOT/"supabase/migrations/20260815_native_short_school_invite_v39.sql").read_text()
-v39_sql_copy=(ROOT/"SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql").read_text()
+v39_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_SHORT_SCHOOL_INVITE_V39.sql").read_text()
 v40a_migration=(ROOT/"supabase/migrations/20260815_native_teacher_profile_v40a.sql").read_text()
-v40a_sql_copy=(ROOT/"SQL_NATIVE_TEACHER_PROFILE_V40A.sql").read_text()
+v40a_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_TEACHER_PROFILE_V40A.sql").read_text()
 v40b_migration=(ROOT/"supabase/migrations/20260815_native_manager_teacher_cards_v40b.sql").read_text()
-v40b_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql").read_text()
+v40b_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql").read_text()
 v40c_migration=(ROOT/"supabase/migrations/20260815_native_manager_class_students_v40c.sql").read_text()
-v40c_sql_copy=(ROOT/"SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql").read_text()
+v40c_sql_copy=(ROOT/"sql/manual/SQL_NATIVE_MANAGER_CLASS_STUDENTS_V40C.sql").read_text()
 manager_class_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/manager/ManagerTeacherClassScreen.kt").read_text()
 school_join_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseSchoolJoinRepository.kt").read_text()
 manager_repository=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseManagerRepository.kt").read_text()
@@ -649,7 +649,7 @@ require("field_of_study" in v28_migration and "hdr_field" in v28_migration and
         v28_migration.count("to authenticated") >= 8,
         "V28 migration columns, grants or password policy incorrect")
 require(v28_sql_copy.strip() == v28_migration.strip(),
-        "SQL_NATIVE_FIELD_OF_STUDY_V28.sql differs from the migration")
+        "sql/manual/SQL_NATIVE_FIELD_OF_STUDY_V28.sql differs from the migration")
 require(all(marker in v28_guide for marker in (
             "جابه‌جایی گزینه","انتخاب تصویر","پنجره گروهی","رشته تحصیلی","امنیت رمز"
         )), "V28 Persian guide coverage incomplete")
@@ -717,9 +717,9 @@ require("state.update?.takeIf { it.notesFa.isNotEmpty() }" in about_screen and
         "removePrefix(\"•\")" in about_screen and
         "LaunchedEffect(Unit) { viewModel.check(BuildConfig.VERSION_CODE) }" in about_screen,
         "V30 about screen still hides the Persian changelog")
-require("CHANGELOG_FA.txt" in workflow and
+require("text/CHANGELOG_FA.txt" in workflow and
         "removeprefix(\"-\")" in workflow and
-        (ROOT/"CHANGELOG_FA.txt").exists(),
+        (ROOT/"text/CHANGELOG_FA.txt").exists(),
         "V30 CI does not publish real Persian release notes")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/image/CropGeometry.kt").exists() and
         "CropGeometry.cropRect(" in image_editor and
@@ -1033,3 +1033,5 @@ require("teacher?.role === 'manager'" in (ROOT/"supabase/functions/manage-studen
         "school_memberships" in (ROOT/"supabase/functions/manage-student/index.ts").read_text() and
         "school_students" in (ROOT/"supabase/functions/manage-student/index.ts").read_text(),
         "V40C manager student mutation is not school scoped")
+
+require(all(marker in manager_foundation for marker in ("delay(1_000)","clockNow","invites = invites.filterNot","FilterChipDefaults.filterChipColors","Modifier.size(34.dp)")) and "managerInviteHeader" in app_shell, "V41A teacher/invite polish incomplete")

@@ -2,7 +2,7 @@
 
 **تاریخ:** ۲۰۲۶-۰۸-۱۳
 
-**پیش‌نیاز:** V16 (`NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md`)
+**پیش‌نیاز:** V16 (`docs/fa/NEUMORPHIC69_NATIVE_INTEGRATION_V16_FA.md`)
 
 > V17 تغییرات V16.1 را نیز در خود دارد؛ اگر V16.1 هنوز Apply نشده است، فقط V17 اعمال می‌شود.
 
@@ -19,7 +19,7 @@ JavaScript functions: 17
 External resources: 0
 ```
 
-ممیزی کامل خط‌به‌خط در `DESIGN_69_BEHAVIOR_AUDIT_FA.md` ثبت شده است.
+ممیزی کامل خط‌به‌خط در `docs/fa/DESIGN_69_BEHAVIOR_AUDIT_FA.md` ثبت شده است.
 
 ## تصمیم‌های صریح کاربر
 
@@ -186,9 +186,9 @@ Dependency جدید: ندارد
 ## فایل‌های اصلی V17
 
 ```text
-DESIGN_69_BEHAVIOR_AUDIT_FA.md
-DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/DESIGN_69_BEHAVIOR_AUDIT_FA.md
+docs/fa/DESIGN_69_NATIVE_BEHAVIOR_V17_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt
 app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt
 app/src/main/java/ir/exam/app/ui/app/Design69QuickAddOverlay.kt

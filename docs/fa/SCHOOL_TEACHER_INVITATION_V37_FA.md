@@ -26,7 +26,7 @@ OTP ایمیل، RPC عضویت را اتمیک ثبت می‌کند. بدون �
 ## عملیات
 
 ```text
-SQL: SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql
+SQL: sql/manual/SQL_NATIVE_SCHOOL_TEACHER_MANAGEMENT_V37.sql
 Edge deploy: manage-student
 Secret جدید: ندارد
 Dependency جدید: ندارد

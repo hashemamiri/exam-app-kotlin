@@ -9,7 +9,7 @@
 - هر کارت دعوت کد، زمان باقی‌مانده، وضعیت استفاده و حذف/ابطال را نشان می‌دهد.
 
 ```text
-SQL: SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql
+SQL: sql/manual/SQL_NATIVE_MANAGER_TEACHER_CARDS_V40B.sql
 Edge deploy: ندارد
 پیش‌نیاز: V40A
 ```

@@ -55,7 +55,7 @@ Supabase Auth رمز قبلی را hash می‌کند و امکان بازیاب
 SQL جدید:
 
 ```text
-SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql
+sql/manual/SQL_NATIVE_STUDENT_MULTI_CLASS_V22.sql
 native_add_student_to_classes_v22(uuid,jsonb)
 ```
 

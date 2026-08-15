@@ -78,8 +78,8 @@ AnimatedReorderColumn حذف شد.
 ## فایل‌های کلیدی
 
 ```text
-STABLE_REORDER_UPDATE_PROMPT_V31_FA.md
-HANDOFF_KOTLIN_MIGRATION_FA.md
+docs/fa/STABLE_REORDER_UPDATE_PROMPT_V31_FA.md
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
 app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt
 app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
