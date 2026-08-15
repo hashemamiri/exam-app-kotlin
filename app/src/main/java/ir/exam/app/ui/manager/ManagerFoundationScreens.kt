@@ -199,13 +199,13 @@ fun ManagerTeachersScreen(
                                     )
                                 }
                                 androidx.compose.material3.IconButton(onClick = { onManageTeacher(teacher.id) }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم", modifier = Modifier.size(32.dp)
+                                    androidx.compose.material3.Icon(Icons.Outlined.Login, "ورود به مدیریت معلم", modifier = Modifier.size(32.dp))
                                 }
                                 androidx.compose.material3.IconButton(onClick = { transferTarget = teacher; transferAmount = "" }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول", modifier = Modifier.size(32.dp)
+                                    androidx.compose.material3.Icon(Icons.Outlined.AccountBalanceWallet, "شارژ کیف پول", modifier = Modifier.size(32.dp))
                                 }
                                 androidx.compose.material3.IconButton(onClick = { removeTarget = teacher }) {
-                                    androidx.compose.material3.Icon(Icons.Outlined.Delete, "حذف معلم", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp)
+                                    androidx.compose.material3.Icon(Icons.Outlined.Delete, "حذف معلم", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))
                                 }
                             }
                         }
