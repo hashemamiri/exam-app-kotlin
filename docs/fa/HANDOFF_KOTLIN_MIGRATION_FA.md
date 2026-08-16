@@ -4773,3 +4773,7 @@ CI نشان داد دو assertion جدید V36 به‌دلیل escape نشدن �
 ## ۸۱) V42.2 — جداسازی قطعی مقصد «معلم‌ها» از دعوت
 
 ریشهٔ باگ، local بودن `inviteMode` در `ManagerTeachersScreen` بود: لمس bottom dock فقط عنوان Header را reset می‌کرد و state صفحهٔ دعوت باز می‌ماند. اکنون `managerTeacherListKey` از Shell به صفحه ارسال می‌شود؛ هر لمس «معلم‌ها» context مدیریت معلم را null، حالت دعوت را false و فهرست معلمان را reload می‌کند. دکمه `+` همچنان تنها مسیر ورود به دعوت است. این hotfix فاقد SQL/Edge است.
+
+## ۸۲) V42.3 — همگام‌سازی تست Header دعوت با block جدید مدیر
+
+CI سورس اصلی و ۲۹۸ تست را با موفقیت گذراند؛ تنها assertion تاریخی V41 که عبارت تک‌خطی `if (...) managerInviteHeader = false` را الزام می‌کرد، پس از تبدیل منطق مدیر به block چندخطی V42.2 شکست خورد. assertion به بررسی رفتار پایدار `managerInviteHeader = false` و سیگنال `managerTeacherListKey += 1` تغییر کرد. این hotfix فاقد SQL/Edge است.

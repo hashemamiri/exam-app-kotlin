@@ -51,7 +51,8 @@ class V41InviteTeacherCardPolishTest {
         assertTrue("managerInviteHeader = managerInviteHeader" in app)
         assertTrue("managerInviteHeader: Boolean" in app)
         assertTrue("\"کدهای دعوت معلم\"" in app)
-        assertTrue("if (user.role == UserRole.MANAGER) managerInviteHeader = false" in app)
+        assertTrue("managerInviteHeader = false" in app)
+        assertTrue("managerTeacherListKey += 1" in app)
     }
     @Test
     fun `manager teacher dock always closes invite and management contexts`() {
