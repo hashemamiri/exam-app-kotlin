@@ -1045,6 +1045,9 @@ require(v41b1_sql==v41b1_copy and 'grant execute on function public.native_my_pr
 require('%02d:%02d:%02d' in manager_foundation and manager_foundation.index('invites = invites.filterNot') < manager_foundation.index('repository.revokeInvite'), 'V41B.1 invite countdown/optimistic deletion incomplete')
 require('درخواست‌های مدیر' in v41b1_requests and '"درخواست‌ها"' in design69_cards and 'MainPage.REQUESTS' in app_shell, 'V41B.1 requests card destination incomplete')
 
+# V42.2 — manager teacher dock must close invite/teacher contexts
+require(all(marker in app_shell for marker in ('managerTeacherListKey += 1','managerTeacherId = null','teacherListRequested = managerTeacherListKey')) and all(marker in manager_foundation for marker in ('teacherListRequested: Int','LaunchedEffect(teacherListRequested)','inviteMode = false','reloadTeachers()')), 'V42.2 manager teacher dock does not restore teacher list')
+
 if errors:
     print("FINAL_NATIVE_VERIFY=FAIL")
     for error in errors:

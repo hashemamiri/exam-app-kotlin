@@ -62,6 +62,7 @@ private data class ManagerSummary(
 @Composable
 fun ManagerTeachersScreen(
     newTeacherRequested: Int = 0,
+    teacherListRequested: Int = 0,
     onManageTeacher: (String) -> Unit = {},
     onInviteModeChanged: (Boolean) -> Unit = {}
 ) {
@@ -104,6 +105,13 @@ fun ManagerTeachersScreen(
     LaunchedEffect(Unit) { reloadTeachers() }
     LaunchedEffect(newTeacherRequested) {
         if (newTeacherRequested > 0) { inviteMode = true; onInviteModeChanged(true); reloadInvites() }
+    }
+    LaunchedEffect(teacherListRequested) {
+        if (teacherListRequested > 0) {
+            inviteMode = false
+            onInviteModeChanged(false)
+            reloadTeachers()
+        }
     }
 
     Column(

@@ -142,6 +142,7 @@ private fun AuthenticatedExamApp(
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerNewTeacherKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
+    var managerTeacherListKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerTeacherId by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
     var managerInviteHeader by rememberSaveable(user.id) { mutableStateOf(false) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
@@ -169,7 +170,11 @@ private fun AuthenticatedExamApp(
 
     fun openHome() {
         closeTransientNavigation()
-        if (user.role == UserRole.MANAGER) managerInviteHeader = false
+        if (user.role == UserRole.MANAGER) {
+            managerInviteHeader = false
+            managerTeacherId = null
+            managerTeacherListKey += 1
+        }
         if (page == MainPage.HOME && user.role == UserRole.TEACHER) {
             dashboardRefreshKey += 1
         } else {
@@ -365,6 +370,7 @@ private fun AuthenticatedExamApp(
                         ManagerTeacherClassScreen(teacherId = teacherId, onBack = { managerTeacherId = null })
                     } ?: ManagerTeachersScreen(
                         newTeacherRequested = managerNewTeacherKey,
+                        teacherListRequested = managerTeacherListKey,
                         onManageTeacher = { managerTeacherId = it },
                         onInviteModeChanged = { managerInviteHeader = it }
                     )

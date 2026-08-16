@@ -53,4 +53,16 @@ class V41InviteTeacherCardPolishTest {
         assertTrue("\"کدهای دعوت معلم\"" in app)
         assertTrue("if (user.role == UserRole.MANAGER) managerInviteHeader = false" in app)
     }
+    @Test
+    fun `manager teacher dock always closes invite and management contexts`() {
+        val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
+        val ui = source("app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt")
+        assertTrue("managerTeacherListKey += 1" in app)
+        assertTrue("managerTeacherId = null" in app)
+        assertTrue("teacherListRequested = managerTeacherListKey" in app)
+        assertTrue("LaunchedEffect(teacherListRequested)" in ui)
+        assertTrue("inviteMode = false" in ui)
+        assertTrue("reloadTeachers()" in ui)
+    }
+
 }
