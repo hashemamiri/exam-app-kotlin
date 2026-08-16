@@ -371,6 +371,7 @@ private fun AuthenticatedExamApp(
                     } ?: ManagerTeachersScreen(
                         newTeacherRequested = managerNewTeacherKey,
                         teacherListRequested = managerTeacherListKey,
+                        inviteModeRequested = managerInviteHeader,
                         onManageTeacher = { managerTeacherId = it },
                         onInviteModeChanged = { managerInviteHeader = it }
                     )

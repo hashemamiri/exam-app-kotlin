@@ -1046,7 +1046,7 @@ require('%02d:%02d:%02d' in manager_foundation and manager_foundation.index('inv
 require('درخواست‌های مدیر' in v41b1_requests and '"درخواست‌ها"' in design69_cards and 'MainPage.REQUESTS' in app_shell, 'V41B.1 requests card destination incomplete')
 
 # V42.2 — manager teacher dock must close invite/teacher contexts
-require(all(marker in app_shell for marker in ('managerTeacherListKey += 1','managerTeacherId = null','teacherListRequested = managerTeacherListKey')) and all(marker in manager_foundation for marker in ('teacherListRequested: Int','LaunchedEffect(teacherListRequested)','inviteMode = false','reloadTeachers()')), 'V42.2 manager teacher dock does not restore teacher list')
+require(all(marker in app_shell for marker in ('managerTeacherListKey += 1','managerTeacherId = null','teacherListRequested = managerTeacherListKey','inviteModeRequested = managerInviteHeader')) and all(marker in manager_foundation for marker in ('teacherListRequested: Int','inviteModeRequested: Boolean','LaunchedEffect(inviteModeRequested, newTeacherRequested, teacherListRequested)','inviteMode = inviteModeRequested','if (inviteModeRequested) reloadInvites() else reloadTeachers()')), 'V42.2/V42.4 manager teacher/invite routing is not deterministic')
 
 if errors:
     print("FINAL_NATIVE_VERIFY=FAIL")

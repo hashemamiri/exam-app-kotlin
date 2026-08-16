@@ -63,6 +63,7 @@ private data class ManagerSummary(
 fun ManagerTeachersScreen(
     newTeacherRequested: Int = 0,
     teacherListRequested: Int = 0,
+    inviteModeRequested: Boolean = false,
     onManageTeacher: (String) -> Unit = {},
     onInviteModeChanged: (Boolean) -> Unit = {}
 ) {
@@ -102,16 +103,9 @@ fun ManagerTeachersScreen(
             loading = false
         }
     }
-    LaunchedEffect(Unit) { reloadTeachers() }
-    LaunchedEffect(newTeacherRequested) {
-        if (newTeacherRequested > 0) { inviteMode = true; onInviteModeChanged(true); reloadInvites() }
-    }
-    LaunchedEffect(teacherListRequested) {
-        if (teacherListRequested > 0) {
-            inviteMode = false
-            onInviteModeChanged(false)
-            reloadTeachers()
-        }
+    LaunchedEffect(inviteModeRequested, newTeacherRequested, teacherListRequested) {
+        inviteMode = inviteModeRequested
+        if (inviteModeRequested) reloadInvites() else reloadTeachers()
     }
 
     Column(

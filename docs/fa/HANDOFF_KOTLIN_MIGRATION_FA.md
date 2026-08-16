@@ -4777,3 +4777,7 @@ CI نشان داد دو assertion جدید V36 به‌دلیل escape نشدن �
 ## ۸۲) V42.3 — همگام‌سازی تست Header دعوت با block جدید مدیر
 
 CI سورس اصلی و ۲۹۸ تست را با موفقیت گذراند؛ تنها assertion تاریخی V41 که عبارت تک‌خطی `if (...) managerInviteHeader = false` را الزام می‌کرد، پس از تبدیل منطق مدیر به block چندخطی V42.2 شکست خورد. assertion به بررسی رفتار پایدار `managerInviteHeader = false` و سیگنال `managerTeacherListKey += 1` تغییر کرد. این hotfix فاقد SQL/Edge است.
+
+## ۸۳) V42.4 — رفع رقابت state بین + دعوت و دکمه معلم‌ها
+
+علت باگ جدید باقی‌ماندن `teacherListRequested > 0` بود: هنگام ورود مجدد به صفحه با +، دو `LaunchedEffect` مستقل اجرا می‌شدند و effect فهرست پس از effect دعوت، `inviteMode` را false می‌کرد. اکنون تنها یک effect با ورودی authoritative یعنی `inviteModeRequested = managerInviteHeader` وجود دارد. مقدار true از + فقط دعوت‌ها و مقدار false از bottom dock فقط معلم‌ها را load می‌کند. بارگذاری اولیهٔ تکراری نیز حذف شد. فاقد SQL/Edge.

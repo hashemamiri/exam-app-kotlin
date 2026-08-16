@@ -61,9 +61,11 @@ class V41InviteTeacherCardPolishTest {
         assertTrue("managerTeacherListKey += 1" in app)
         assertTrue("managerTeacherId = null" in app)
         assertTrue("teacherListRequested = managerTeacherListKey" in app)
-        assertTrue("LaunchedEffect(teacherListRequested)" in ui)
-        assertTrue("inviteMode = false" in ui)
-        assertTrue("reloadTeachers()" in ui)
+        assertTrue("inviteModeRequested = managerInviteHeader" in app)
+        assertTrue("LaunchedEffect(inviteModeRequested, newTeacherRequested, teacherListRequested)" in ui)
+        assertTrue("inviteMode = inviteModeRequested" in ui)
+        assertTrue("if (inviteModeRequested) reloadInvites() else reloadTeachers()" in ui)
+        assertTrue("managerInviteHeader = true" in app)
     }
 
 }
