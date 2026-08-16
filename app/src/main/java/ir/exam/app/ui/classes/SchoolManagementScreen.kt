@@ -210,6 +210,7 @@ fun SchoolManagementScreen(
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
                     onDelete = { viewModel.removeStudent(it.id) },
+                    onAddToMyList = viewModel::addClassStudentToMyList,
                     classes = state.classes,
                     membershipOnlyDelete = true,
                     onAddToClasses = viewModel::addStudentToClasses,
@@ -419,6 +420,7 @@ private fun ClassRosterContent(
     onToggle: (String, Boolean) -> Unit,
     onEdit: (StudentProfile) -> Unit,
     onDelete: (StudentProfile) -> Unit,
+    onAddToMyList: (String) -> Unit,
     classes: List<SchoolClass>,
     membershipOnlyDelete: Boolean,
     onAddToClasses: (String, Set<String>) -> Unit,
@@ -463,16 +465,23 @@ private fun ClassRosterContent(
         if (roster.isEmpty()) Text("این کلاس هنوز عضوی ندارد.")
         else LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(roster, key = StudentProfile::id) { student ->
-                StudentCard(
-                    student = student,
-                    onToggle = onToggle,
-                    onEdit = { onEdit(student) },
-                    onDelete = { onDelete(student) },
-                    classes = classes,
-                    membershipOnlyDelete = membershipOnlyDelete,
-                    knownPasswordOf = knownPasswordOf,
-                    onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    StudentCard(
+                        student = student,
+                        onToggle = onToggle,
+                        onEdit = { onEdit(student) },
+                        onDelete = { onDelete(student) },
+                        classes = classes,
+                        membershipOnlyDelete = membershipOnlyDelete,
+                        knownPasswordOf = knownPasswordOf,
+                        onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) }
+                    )
+                    if (!student.inMyList) {
+                        OutlinedButton(onClick = { onAddToMyList(student.id) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("افزودن به لیست دانش‌آموزان من")
+                        }
+                    }
+                }
             }
         }
     }

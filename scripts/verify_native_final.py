@@ -1048,6 +1048,13 @@ require('درخواست‌های مدیر' in v41b1_requests and '"درخواس�
 # V42.2 — manager teacher dock must close invite/teacher contexts
 require(all(marker in app_shell for marker in ('managerTeacherListKey += 1','managerTeacherId = null','teacherListRequested = managerTeacherListKey','inviteModeRequested = managerInviteHeader')) and all(marker in manager_foundation for marker in ('teacherListRequested: Int','inviteModeRequested: Boolean','LaunchedEffect(inviteModeRequested, newTeacherRequested, teacherListRequested)','inviteMode = inviteModeRequested','if (inviteModeRequested) reloadInvites() else reloadTeachers()')), 'V42.2/V42.4 manager teacher/invite routing is not deterministic')
 
+# V43 — explicit teacher/student list links without ownership transfer
+v43_sql=(ROOT/'supabase/migrations/20260816_native_teacher_student_links_v43.sql').read_text()
+v43_copy=(ROOT/'sql/manual/SQL_NATIVE_TEACHER_STUDENT_LINKS_V43.sql').read_text()
+v43_school=(ROOT/'app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt').read_text()
+require(v43_sql==v43_copy and all(x in v43_sql for x in ('teacher_student_links','native_teacher_add_class_student_to_list_v43','in_my_list boolean','add_students_to_class')) and 'update profiles set teacher_id' not in v43_sql, 'V43 teacher student-link SQL incomplete or transfers ownership')
+require('!student.inMyList' in v43_school and 'افزودن به لیست دانش‌آموزان من' in v43_school and 'onAddToMyList(student.id)' in v43_school, 'V43 roster add-to-my-list UI incomplete')
+
 if errors:
     print("FINAL_NATIVE_VERIFY=FAIL")
     for error in errors:

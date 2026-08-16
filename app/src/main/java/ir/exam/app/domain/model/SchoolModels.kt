@@ -26,7 +26,8 @@ data class StudentProfile(
     val grade: String? = null,
     val fieldOfStudy: String? = null,
     val avatarUrl: String? = null,
-    val canManageAccount: Boolean = true
+    val canManageAccount: Boolean = true,
+    val inMyList: Boolean = true
 )
 
 data class NewStudentRequest(

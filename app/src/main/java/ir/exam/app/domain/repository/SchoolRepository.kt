@@ -18,6 +18,8 @@ interface SchoolRepository {
     suspend fun addStudentToClasses(studentId: String, classIds: Set<String>): Result<Int> =
         Result.failure(UnsupportedOperationException("multi-class add not implemented"))
     suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit>
+    suspend fun addClassStudentToMyList(classId: String, studentId: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("teacher student link not implemented"))
     suspend fun setStudentActive(studentId: String, active: Boolean): Result<Unit>
     suspend fun createStudent(request: NewStudentRequest): Result<StudentCredential>
     suspend fun createStudentsBulk(classId:String?,requests:List<NewStudentRequest>):Result<BulkStudentCreateResult> =

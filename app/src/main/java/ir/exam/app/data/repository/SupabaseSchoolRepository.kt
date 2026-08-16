@@ -99,6 +99,12 @@ class SupabaseSchoolRepository : SchoolRepository {
         raw["added"]?.jsonPrimitive?.intOrNull ?: 0
     }
 
+    override suspend fun addClassStudentToMyList(classId: String, studentId: String): Result<Unit> = runCatching {
+        rpcObject("native_teacher_add_class_student_to_list_v43", buildJsonObject {
+            put("p_class", classId); put("p_student", studentId)
+        }).throwIfError(); Unit
+    }
+
     override suspend fun removeStudentFromClass(classId: String, studentId: String): Result<Unit> = runCatching {
         rpcObject("remove_student_from_class", buildJsonObject {
             put("p_class", classId)
