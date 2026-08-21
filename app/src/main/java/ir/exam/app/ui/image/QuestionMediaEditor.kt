@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -56,10 +55,11 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
- * مدیریت رسانهٔ متن سؤال: آیکن فرمول و دوربین در یک سطر، thumbnailهای آیکنی
- * بدون کارت جداگانه. پس از انتخاب عکس، ویرایشگر تصویر باز می‌شود و پس از
- * تأیید، thumbnail اضافه می‌شود. لمس thumbnail تصویر را تمام‌صفحه با زوم
- * نشان می‌دهد؛ مداد نیز برای ویرایش دوباره در دسترس است.
+ * مدیریت رسانهٔ متن سؤال: آیکن دوربین و thumbnailهای آیکنی بدون کارت جداگانه.
+ * آیکن فرمول از اینجا حذف شده و فقط زیر کادر متن سؤال (در InlineMathTextEditor)
+ * قرار دارد. پس از انتخاب عکس، ویرایشگر تصویر باز می‌شود و پس از تأیید،
+ * thumbnail اضافه می‌شود. لمس thumbnail تصویر را تمام‌صفحه با زوم نشان می‌دهد؛
+ * مداد نیز برای ویرایش دوباره در دسترس است.
  */
 @Composable
 fun QuestionMediaEditor(
@@ -68,8 +68,7 @@ fun QuestionMediaEditor(
     onAdd: (List<String>) -> Unit,
     onReplace: (String, String) -> Unit,
     onMove: (String, Float, Float) -> Unit,
-    onRemove: (String) -> Unit,
-    onFormula: () -> Unit = {}
+    onRemove: (String) -> Unit
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -121,9 +120,6 @@ fun QuestionMediaEditor(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        IconButton(onClick = onFormula) {
-            Icon(Icons.Outlined.Functions, contentDescription = "درج فرمول متن سؤال")
-        }
         IconButton(
             onClick = {
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))

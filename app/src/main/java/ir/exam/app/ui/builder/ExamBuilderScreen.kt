@@ -90,8 +90,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.domain.model.WalletRules
+import ir.exam.app.ui.figure.FigureKind
+import ir.exam.app.ui.figure.FigurePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
@@ -555,6 +558,12 @@ private data class FormulaTarget(
     val initialTex: String = ""
 )
 
+private data class FigureTarget(
+    val occurrenceIndex: Int? = null,
+    val initialSpec: FigureSpec? = null,
+    val kind: FigureKind = FigureKind.GEOMETRY
+)
+
 @Composable
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
@@ -572,6 +581,7 @@ private fun QuestionEditor(
     onPreview: () -> Unit
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
+    var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
     var styleExpanded by remember(question.id) { mutableStateOf(false) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
@@ -691,6 +701,16 @@ private fun QuestionEditor(
                 onEditFormula = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
                 onInsertFormula = { formulaTarget = FormulaTarget("question") },
                 onDeleteFormula = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) },
+                onInsertFigure = { figureTarget = FigureTarget(kind = FigureKind.GEOMETRY) },
+                onInsertGraph = { figureTarget = FigureTarget(kind = FigureKind.GRAPH) },
+                onEditFigure = { occurrence, spec ->
+                    figureTarget = FigureTarget(
+                        occurrenceIndex = occurrence,
+                        initialSpec = spec,
+                        kind = if (spec.type in setOf("line", "quad", "sine", "exp", "bar", "col", "hbar", "stack")) FigureKind.GRAPH else FigureKind.GEOMETRY
+                    )
+                },
+                onDeleteFigure = { occurrence -> viewModel.deleteFigure(question.id, occurrence) },
                 modifier = Modifier.fillMaxWidth()
             )
             QuestionMediaEditor(
@@ -699,8 +719,7 @@ private fun QuestionEditor(
                 onAdd = { uris -> viewModel.addImages(question.id, uris) },
                 onReplace = { imageId, uri -> viewModel.replaceImage(question.id, imageId, uri) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
-                onRemove = { imageId -> viewModel.removeImage(question.id, imageId) },
-                onFormula = { formulaTarget = FormulaTarget("question") }
+                onRemove = { imageId -> viewModel.removeImage(question.id, imageId) }
             )
             Text("تصویر پاسخ دانش‌آموز")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -877,6 +896,19 @@ private fun QuestionEditor(
                     target.occurrenceIndex
                 )
                 formulaTarget = null
+            }
+        )
+    }
+    figureTarget?.let { target ->
+        FigurePickerDialog(
+            initialSpec = target.initialSpec,
+            initialKind = target.kind,
+            onDismiss = { figureTarget = null },
+            onInsert = { spec ->
+                val occurrence = target.occurrenceIndex
+                if (occurrence == null) viewModel.insertFigure(question.id, spec)
+                else viewModel.updateFigure(question.id, occurrence, spec)
+                figureTarget = null
             }
         )
     }

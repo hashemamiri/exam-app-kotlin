@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.jan.supabase.auth.auth
+import ir.exam.app.core.figure.FigureCodec
+import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.data.local.NativeDatabaseProvider
 import ir.exam.app.data.remote.SupabaseProvider
@@ -277,6 +279,18 @@ class ExamBuilderViewModel(
                 else -> question
             }
         }
+    }
+
+    fun insertFigure(id: String, spec: FigureSpec) {
+        update(id) { it.copy(text = FigureCodec.insert(it.text, spec)) }
+    }
+
+    fun updateFigure(id: String, occurrenceIndex: Int, spec: FigureSpec) {
+        update(id) { it.copy(text = FigureCodec.replace(it.text, occurrenceIndex, spec)) }
+    }
+
+    fun deleteFigure(id: String, occurrenceIndex: Int) {
+        update(id) { it.copy(text = FigureCodec.delete(it.text, occurrenceIndex)) }
     }
     fun updateScore(id: String, score: String) { update(id) { it.copy(score = score.toDoubleOrNull() ?: 0.0) } }
     fun updateOption(id: String, index: Int, text: String) { update(id) { question ->

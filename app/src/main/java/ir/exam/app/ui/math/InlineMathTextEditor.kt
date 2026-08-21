@@ -20,13 +20,16 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Functions
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,14 +37,18 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ir.exam.app.core.math.FormulaTextCodec
+import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.text.RichSegment
+import ir.exam.app.core.text.RichTextSplitter
+import ir.exam.app.ui.figure.InlineFigureView
 
 /**
- * ویرایشگر متن سؤال با فرمول‌های درون‌متنی (شبیه وب‌اپ).
+ * ویرایشگر متن سؤال با فرمول‌ها و شکل‌های درون‌متنی (شبیه وب‌اپ).
  *
- * هر `$...$` داخل متن به‌صورت نماد رندر می‌شود — نه کد — و با لمس همان نماد
- * ویرایشگر فرمول باز می‌شود؛ بنابراین برای نمایش فرمول نیازی به کادر یا
- * فهرست جداگانه نیست. متن عادی نیز به‌صورت درون‌متنی قابل تایپ است.
+ * هر `$...$` به‌صورت نماد و هر `%%FIG:...%%` به‌صورت شکل رندر می‌شود — نه کد —
+ * و با لمس همان نماد/شکل ویرایشگر مربوطه باز می‌شود؛ بنابراین برای نمایش
+ * فرمول یا شکل نیازی به کادر یا فهرست جداگانه نیست. متن عادی نیز به‌صورت
+ * درون‌متنی قابل تایپ است.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -51,11 +58,15 @@ fun InlineMathTextEditor(
     onEditFormula: (occurrenceIndex: Int, tex: String) -> Unit,
     onInsertFormula: () -> Unit,
     onDeleteFormula: (occurrenceIndex: Int) -> Unit,
+    onInsertFigure: () -> Unit = {},
+    onInsertGraph: () -> Unit = {},
+    onEditFigure: (occurrenceIndex: Int, spec: FigureSpec) -> Unit = { _, _ -> },
+    onDeleteFigure: (occurrenceIndex: Int) -> Unit = {},
     modifier: Modifier = Modifier,
     label: String = "متن سؤال",
     placeholder: String = "متن سؤال را بنویسید…"
 ) {
-    val parts = splitParts(source)
+    val parts = RichTextSplitter.split(source)
     val showPlaceholder = source.isBlank()
     Column(modifier) {
         if (label.isNotBlank()) {
@@ -78,11 +89,11 @@ fun InlineMathTextEditor(
             ) {
                 parts.forEachIndexed { index, part ->
                     when (part) {
-                        is Part.Plain -> {
+                        is RichSegment.Text -> {
                             BasicTextField(
                                 value = part.text,
                                 onValueChange = { newText ->
-                                    onSourceChange(rebuild(parts, index, newText))
+                                    onSourceChange(RichTextSplitter.reconstruct(parts, index, newText))
                                 },
                                 modifier = Modifier
                                     .widthIn(min = 48.dp, max = 460.dp)
@@ -114,59 +125,51 @@ fun InlineMathTextEditor(
                                 }
                             )
                         }
-                        is Part.Formula -> FormulaChip(
+                        is RichSegment.Math -> FormulaChip(
                             tex = part.tex,
                             onEdit = { onEditFormula(part.index, part.tex) },
                             onDelete = { onDeleteFormula(part.index) }
                         )
+                        is RichSegment.Figure -> FigureChip(
+                            spec = part.spec,
+                            onEdit = { onEditFigure(part.index, part.spec) },
+                            onDelete = { onDeleteFigure(part.index) }
+                        )
                     }
-                }
-                IconButton(onClick = onInsertFormula, modifier = Modifier.size(34.dp)) {
-                    Icon(
-                        Icons.Outlined.Functions,
-                        contentDescription = "درج فرمول در متن سؤال",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
                 }
             }
         }
-    }
-}
-
-private sealed interface Part {
-    data class Plain(val text: String) : Part
-    data class Formula(val index: Int, val tex: String) : Part
-}
-
-/**
- * متن را به بخش‌های متناوب متن/فرمول می‌شکند؛ همیشه با Plain شروع و پایان
- * می‌یابد تا بتوان قبل و بعد از هر فرمول هم تایپ کرد.
- */
-private fun splitParts(source: String): List<Part> {
-    val occurrences = FormulaTextCodec.occurrences(source)
-    val result = mutableListOf<Part>()
-    var cursor = 0
-    for (occurrence in occurrences) {
-        result += Part.Plain(source.substring(cursor, occurrence.start))
-        result += Part.Formula(occurrence.index, occurrence.tex)
-        cursor = occurrence.endExclusive
-    }
-    result += Part.Plain(source.substring(cursor))
-    return result
-}
-
-/** بازسازی متن کامل با جایگزینی متن بخش ویرایش‌شده و حفظ فرمول‌ها. */
-private fun rebuild(parts: List<Part>, editedIndex: Int, newText: String): String {
-    // حذف `$` از تایپ آزاد تا ساختار `$...$` فقط از مسیر ویرایشگر فرمول ساخته شود.
-    val clean = newText.replace("$", "")
-    val builder = StringBuilder()
-    parts.forEachIndexed { index, part ->
-        when (part) {
-            is Part.Plain -> builder.append(if (index == editedIndex) clean else part.text)
-            is Part.Formula -> builder.append('$').append(part.tex).append('$')
+        // آیکن‌های درج فقط زیر کادر متن سؤال هستند؛ داخل کادر چیزی نیست.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ToolbarButton(Icons.Outlined.Functions, "درج فرمول", onInsertFormula)
+            ToolbarButton(Icons.Outlined.Category, "درج شکل", onInsertFigure)
+            ToolbarButton(Icons.Outlined.Insights, "درج نمودار", onInsertGraph)
         }
     }
-    return builder.toString()
+}
+
+@Composable
+private fun ToolbarButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    TextButton(onClick = onClick) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            label,
+            modifier = Modifier.padding(start = 5.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
 }
 
 @Composable
@@ -199,6 +202,43 @@ private fun FormulaChip(
                 Icon(
                     Icons.Outlined.Close,
                     contentDescription = "حذف فرمول",
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FigureChip(
+    spec: FigureSpec,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(9.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f))
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(120.dp)
+                    .clickable(onClick = onEdit),
+                contentAlignment = Alignment.Center
+            ) {
+                InlineFigureView(
+                    spec,
+                    Modifier.fillMaxSize().padding(4.dp),
+                    contentDescription = "شکل؛ لمس برای ویرایش"
+                )
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
+                Icon(
+                    Icons.Outlined.Close,
+                    contentDescription = "حذف شکل",
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
