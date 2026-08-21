@@ -98,7 +98,10 @@ fun InlineMathTextEditor(
                                 ),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 decorationBox = { inner ->
-                                    Box(Alignment.CenterStart) {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
                                         if (part.text.isEmpty() && showPlaceholder) {
                                             Text(
                                                 placeholder,
