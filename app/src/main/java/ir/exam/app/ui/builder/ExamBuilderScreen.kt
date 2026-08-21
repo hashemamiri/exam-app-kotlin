@@ -95,6 +95,7 @@ import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
+import ir.exam.app.ui.math.InlineMathTextEditor
 import ir.exam.app.ui.math.NativeMathText
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
@@ -684,12 +685,13 @@ private fun QuestionEditor(
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(question.text, { viewModel.updateText(question.id, it) }, label = { Text("متن سؤال") }, modifier = Modifier.fillMaxWidth())
-            if ('$' in question.text) NativeMathText(question.text, modifier = Modifier.fillMaxWidth())
-            ExistingFormulaEditor(
+            InlineMathTextEditor(
                 source = question.text,
-                onEdit = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
-                onDelete = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) }
+                onSourceChange = { viewModel.updateText(question.id, it) },
+                onEditFormula = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
+                onInsertFormula = { formulaTarget = FormulaTarget("question") },
+                onDeleteFormula = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) },
+                modifier = Modifier.fillMaxWidth()
             )
             QuestionMediaEditor(
                 images = question.images,
