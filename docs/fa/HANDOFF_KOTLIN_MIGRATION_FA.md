@@ -4829,3 +4829,15 @@ testDebugUnitTest / lintDebug / assembleDebug → باید در WSL/CI اجرا 
 ```
 
 راهنمای مستقل: `docs/fa/INLINE_MATH_TEXT_EDITOR_V44_FA.md`.
+
+## ۸۶) V44.1 — رفع پر شدن سهمیه Artifact و مسدود نشدن انتشار Supabase
+
+علت: مرحله آپلود Artifact پیش از مرحله انتشار Supabase قرار دارد و شکست آن
+(به‌دلیل پر شدن سهمیه) کل job را متوقف می‌کرد؛ در نتیجه APK هرگز در Supabase
+بارگذاری نمی‌شد. سهمیه گیت‌هاب نیز فقط هر ۶ تا ۱۲ ساعت بازمحاسبه می‌شود.
+
+اصلاح در .github/workflows/android.yml:
+- continue-on-error: true → شکست آپلود Artifact دیگر job را متوقف نمی‌کند
+- retention-days: 1 → artifactها پس از یک روز خودکار پاک می‌شوند
+
+عملیات: SQL/Edge/Secret/Migration/Dependency جدید ندارد. پیش‌نیاز: V44.

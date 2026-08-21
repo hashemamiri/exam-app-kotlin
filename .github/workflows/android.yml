@@ -150,11 +150,13 @@ jobs:
             > release/update-metadata.txt
           cat release/update-metadata.txt
       - name: بارگذاری APK و مشخصات نسخه در Artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: exam-app-release-run-${{ github.run_number }}
           path: release/
           if-no-files-found: error
+          retention-days: 1
       - name: انتشار خودکار APK در Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
