@@ -373,15 +373,24 @@ private fun bootstrapScript(initialTex: String): String {
           var ia = window.mfApply;
           window.mfApply = function(){
             window.__mbApplyInFlight = true;
-            try { ia.apply(window, arguments); } catch (e1) { log('mfApply wrap: ' + e1); }
-            var mm = document.getElementById('qTxt_1');
-            var v = (mm && mm.value != null) ? String(mm.value) : '';
-            AndroidMathBridge.onApplyResult(v);
+            try {
+              ia.apply(window, arguments);
+              var mm = document.getElementById('qTxt_1');
+              var v = (mm && mm.value != null) ? String(mm.value) : '';
+              AndroidMathBridge.onApplyResult(v);
+            } catch (e1) {
+              log('mfApply wrap: ' + e1);
+            } finally {
+              window.__mbApplyInFlight = false;
+            }
           };
           var ic = window.closeMath;
           window.closeMath = function(){
+            // mfApply داخلی در پایان closeMath را صدا می‌زند. این بستن،
+            // «انصراف» نیست و نباید onClosed را زودتر از onApplyResult
+            // به AtomicBoolean پل برساند؛ Compose پس از نتیجه unmount می‌شود.
+            if (window.__mbApplyInFlight) return;
             try { ic.apply(window, arguments); } catch (e2) { log('closeMath wrap: ' + e2); }
-            if (window.__mbApplyInFlight) { window.__mbApplyInFlight = false; return; }
             AndroidMathBridge.onClosed();
           };
           window.__mbAndroidInstalled = true;

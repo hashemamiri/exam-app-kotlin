@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.4.1 هات‌فیکس اسکریپت final-verify برای ویرایشگر فرمول WebView؛ پیش از آن: V45.4 جایگزینی ویرایشگر فرمول بومی با WebView (استخراج کد به کد از 66.html، بدون تغییر)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.8.8 تثبیت ترتیب ثبت/بستن فرمول روی مبنای V45.8.6
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6547,3 +6547,47 @@ FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
 - `app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt`
   — به‌روزرسانی اسیارشن‌ها به‌جای بررسی `__mbForceLayout`.
 - `scripts/verify_native_final.py` — به‌روزرسانی بررسی‌ها.
+
+---
+
+## ۱۰۷) V45.8.8 — تثبیت ترتیب ثبت و بستن فرمول روی مبنای V45.8.6
+
+### مبنای دقیق
+
+```text
+HEAD کاربر: 08bdc09d4bf83d94054b4398e3095a0b8152bfb4
+V45.8.6: واگذاری چیدمان به CSS بومی asset
+```
+
+پچ قدیمی V45.8.7 برای commit `fd8ebc3` ساخته شده بود و به‌درستی روی این HEAD
+اعمال نشد. ممیزی مبنای جدید نشان داد کوتیشن معیوب V45.8.5 قبلاً در V45.8.6
+حذف شده و چیدمان تهاجمی نیز بازنشسته شده است؛ بنابراین V45.8.8 فقط اصلاح لازم
+و سازگار با همین HEAD را تحویل می‌دهد و هیچ override چیدمان قدیمی را برنمی‌گرداند.
+
+### اصلاح پل ثبت
+
+`mfApply` داخلی asset در پایان `closeMath()` را فراخوانی می‌کند. اکنون:
+
+- `__mbApplyInFlight` پیش از ورود به asset فعال می‌شود؛
+- `closeMath` داخلی هنگام ثبت، پیش از اجرای close و `onClosed` بازمی‌گردد؛
+- مقدار نهایی سؤال با `AndroidMathBridge.onApplyResult` تحویل می‌شود؛
+- پرچم در `finally` حتی هنگام exception آزاد می‌شود؛
+- close عادی کاربر همچنان `ic.apply` و سپس `onClosed` را اجرا می‌کند.
+
+این ترتیب مانع می‌شود callback بستن پیش از callback نتیجه، `AtomicBoolean` پل را
+settle کند و فرمول درج‌شده از دست برود.
+
+### تست
+
+```text
+سه script داخلی asset با node --check            → PASS
+bootstrap تزریقی Kotlin با node --check           → PASS
+FINAL_NATIVE_VERIFY                               → PASS
+V45_8_8FormulaBridgeOrderTest                     → اضافه شد
+Patch apply-check روی 08bdc09                     → PASS
+```
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: commit 08bdc09 (V45.8.6)
+```

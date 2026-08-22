@@ -615,6 +615,16 @@ require("mbVarOpen" in formula_editor and "translate(-50%,-50%)" in formula_edit
 # V45.8.5: چیپ‌های V34 باید مستقیم و بدون eval بایند شوند
 require("mb-chip[data-v34" in formula_editor and "mbGroupLibrary(key)" in formula_editor,
         "formula dialog must bind V34 chips directly without eval")
+# V45.8.8: bootstrap باید syntax معتبر داشته باشد و closeMath داخلی mfApply
+# نباید پیش از نتیجه، پل اندروید را settle کند.
+require("*/' +" not in formula_editor,
+        "formula bootstrap contains a dangling quote after a JavaScript comment")
+_apply_guard = formula_editor.index("if (window.__mbApplyInFlight) return;")
+_inner_close = formula_editor.index("ic.apply(window, arguments)", _apply_guard)
+_closed_callback = formula_editor.index("AndroidMathBridge.onClosed();", _apply_guard)
+require("finally {\n              window.__mbApplyInFlight = false;" in formula_editor and
+        _apply_guard < _inner_close < _closed_callback,
+        "formula apply result can lose the race against the internal close callback")
 # بستن دیالوگ باید تضمینی باشد (fallback تایمر برای onDismiss)
 require("DISMISS_FALLBACK_MS" in formula_editor and "dismissOnce" in formula_editor,
         "formula dialog must guarantee dismissal via a timer fallback")
