@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * رگرسیون V29:
  * ۱) جابه‌جایی گزینه/جورکردنی دقیقاً مثل کارت سؤال (gesture وسط کار بازنشانی نمی‌شود)
- * ۲) آیکن فرمول در همان سطر دوربین در بخش متن
+ * ۲) آیکن فرمول زیر کادر متن سؤال و آیکن دوربین در ردیف رسانهٔ سؤال
  * ۳) لمس thumbnail تصویر → نمایش تمام‌صفحه با زوم و ضربدر بستن
  * ۴) پس از انتخاب عکس → بخش ویرایش تصویر باز می‌شود
  * ۵) پنجره گروهی: «+» کارت تازه را جایگزین کارت قبلی می‌کند و پنجره بزرگ نمی‌شود
@@ -31,6 +31,9 @@ class V29ReorderViewerEditBulkTest {
     }
     private val media by lazy {
         source("app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt")
+    }
+    private val inlineMathEditor by lazy {
+        source("app/src/main/java/ir/exam/app/ui/math/InlineMathTextEditor.kt")
     }
     private val viewer by lazy {
         source("app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt")
@@ -68,15 +71,18 @@ class V29ReorderViewerEditBulkTest {
     }
 
     // ============================================================
-    // ۲) آیکن فرمول در سطر دوربین
+    // ۲) آیکن فرمول زیر کادر متن و آیکن دوربین در ردیف رسانه
     // ============================================================
 
     @Test
-    fun `formula icon sits in the same row as the question camera`() {
-        assertTrue("Icons.Outlined.Functions" in media)
+    fun `formula icon sits below question text while camera stays in media row`() {
+        // V45 عمداً آیکن فرمول را از QuestionMediaEditor به نوار زیر کادر متن منتقل کرد.
         assertTrue("Icons.Outlined.PhotoCamera" in media)
-        assertTrue("onFormula: () -> Unit = {}" in media)
-        assertTrue("onFormula = { formulaTarget = FormulaTarget(\"question\") }" in builder)
+        assertFalse("Icons.Outlined.Functions" in media)
+        assertTrue(
+            "ToolbarButton(Icons.Outlined.Functions, \"درج فرمول\", onInsertFormula)" in inlineMathEditor
+        )
+        assertTrue("onInsertFormula = { formulaTarget = FormulaTarget(\"question\") }" in builder)
         assertFalse("OutlinedButton(onClick = { formulaTarget = FormulaTarget(\"question\") })" in builder)
     }
 

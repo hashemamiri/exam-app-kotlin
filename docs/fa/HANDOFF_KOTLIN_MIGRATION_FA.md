@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.2.1 رفع خطای کامپایل دانلود
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.2.2 هماهنگ‌سازی تست‌های رگرسیون قدیمی CI
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5078,3 +5078,72 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 ```
 
 راهنمای مستقل: `docs/fa/COMPILE_HOTFIX_V45_2_1_FA.md`.
+
+---
+
+## ۸۸) V45.2.2 — هماهنگ‌سازی دو تست رگرسیون قدیمی CI
+
+### گزارش واقعی CI
+
+در اجرای `./gradlew testDebugUnitTest lintDebug`، کامپایل Kotlin، پردازش KSP
+و lint تا مرحلهٔ اجرای تست‌ها پیش رفتند، اما دو assertion منبع‌محور قدیمی شکست
+خوردند:
+
+```text
+V29ReorderViewerEditBulkTest > formula icon sits in the same row as the question camera FAILED
+    java.lang.AssertionError at V29ReorderViewerEditBulkTest.kt:76
+
+V31StableReorderUpdatePromptBulkTest > app entry checks for updates and shows a prompt when one exists FAILED
+    java.lang.AssertionError at V31StableReorderUpdatePromptBulkTest.kt:91
+
+313 tests completed, 2 failed
+> Task :app:testDebugUnitTest FAILED
+```
+
+پیام اولیهٔ daemon با `code: 0` علت نهایی نبود؛ daemon دوباره آماده شد و
+تست‌ها اجرا شدند. هشدارهای deprecated نیز خطا نیستند.
+
+### علت قطعی
+
+- تست V29 هنوز وجود `Icons.Outlined.Functions` و `onFormula` را در
+  `QuestionMediaEditor` می‌خواست. طراحی V45 عمداً آیکن فرمول را به
+  `InlineMathTextEditor`، زیر کادر متن سؤال، منتقل کرده و در رسانه فقط دوربین
+  باقی مانده است.
+- تست V31 هنوز فراخوانی مستقیم `updateViewModel.downloadAndInstall()` داخل
+  `onClick` را می‌خواست. طراحی V45.1 این عمل را با callback واقعی دیالوگ وصل
+  می‌کند: `onDownload = updateViewModel::downloadAndInstall`؛ به این ترتیب
+  دیالوگ هنگام دانلود بسته نمی‌شود و پیشرفت/خطا را نمایش می‌دهد.
+
+هر دو شکست assertion منسوخ‌شده بودند و از خطای جدید در کد اجرایی خبر نمی‌دادند.
+
+### اصلاح
+
+```text
+V29ReorderViewerEditBulkTest.kt:
+- بررسی دوربین در QuestionMediaEditor
+- بررسی آیکن فرمول در InlineMathTextEditor و اتصال onInsertFormula در builder
+
+V31StableReorderUpdatePromptBulkTest.kt:
+- بررسی callback واقعی onDownload به‌جای ساختار قدیمی onClick
+
+docs/fa/REGRESSION_TEST_ALIGNMENT_V45_2_2_FA.md:
+- گزارش علت قطعی، دستور WSL و وضعیت عملیات
+```
+
+کد اجرایی برنامه، SQL، Edge Function، Secret، Migration و Dependency جدیدی در
+این اصلاح تغییر نکرده است.
+
+### تست و عملیات
+
+```text
+FINAL_NATIVE_VERIFY                     → باید PASS بماند
+git diff --check                        → باید PASS باشد
+testDebugUnitTest / lintDebug           → پس از اعمال V45.2.2 اجرا شود
+```
+
+پیش‌نیاز اعمال پچ: V45.2.1. فایل پچ:
+`patches/pending/V45_2_2_regression_test_alignment.patch`.
+پس از سبزشدن Actions، مرحلهٔ بعد `assembleRelease`، انتشار APK و آزمایش واقعی
+دانلود و نصب روی دستگاه است.
+
+راهنمای مستقل: `docs/fa/REGRESSION_TEST_ALIGNMENT_V45_2_2_FA.md`.

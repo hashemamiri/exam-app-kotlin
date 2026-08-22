@@ -9,7 +9,7 @@ import org.junit.Test
  * رگرسیون V31:
  * ۱) گزینه‌ها هنگام جابه‌جایی غیب نمی‌شوند (لیست کلیدخوردهٔ پایدار)
  * ۲) مخاطبان آزمون داخل مشخصات آزمون
- * ۳) پیغام آپدیت جدید هنگام ورود به برنامه
+ * ۳) پیغام آپدیت جدید هنگام ورود به برنامه و اتصال امن دکمه دریافت
  * ۴) آپلود تصویر دیگر برنامه را نمی‌کشد (محافظ OOM)
  * ۵) پنجره گروهی بدون کلاس با کادر رمز فعلی و لیست شماره کارت‌ها
  */
@@ -82,13 +82,14 @@ class V31StableReorderUpdatePromptBulkTest {
     // ============================================================
 
     @Test
-    fun `app entry checks for updates and shows a prompt when one exists`() {
+    fun `app entry checks for updates and wires the download action to the prompt`() {
         assertTrue("LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_CODE) }" in appShell)
         assertTrue("var updatePromptDismissed by rememberSaveable(user.id) { mutableStateOf(false) }" in appShell)
         assertTrue("بروزرسانی جدید" in appShell)
         assertTrue("دریافت نسخه" in appShell)
         assertTrue("بعداً" in appShell)
-        assertTrue("updateViewModel.downloadAndInstall()" in appShell)
+        // از V45.1 به بعد، دیالوگ callback را می‌گیرد تا هنگام دانلود بسته نشود.
+        assertTrue("onDownload = updateViewModel::downloadAndInstall" in appShell)
     }
 
     // ============================================================
