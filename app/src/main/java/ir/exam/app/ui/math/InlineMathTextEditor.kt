@@ -95,7 +95,11 @@ fun InlineMathTextEditor(
                                 onValueChange = { newText ->
                                     onSourceChange(RichTextSplitter.reconstruct(parts, index, newText))
                                 },
-                                modifier = Modifier
+                                modifier = (if (showPlaceholder && part.text.isEmpty()) {
+                                    Modifier.fillMaxWidth()
+                                } else {
+                                    Modifier
+                                })
                                     .widthIn(min = 48.dp, max = 460.dp)
                                     .heightIn(min = 40.dp)
                                     .background(
@@ -109,10 +113,7 @@ fun InlineMathTextEditor(
                                 ),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 decorationBox = { inner ->
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.CenterStart
-                                    ) {
+                                    Box(contentAlignment = Alignment.CenterStart) {
                                         if (part.text.isEmpty() && showPlaceholder) {
                                             Text(
                                                 placeholder,

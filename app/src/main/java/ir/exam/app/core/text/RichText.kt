@@ -25,7 +25,9 @@ object RichTextSplitter {
         var cursor = 0
         order.forEach { idx ->
             val (start, end, kind) = items[idx]
-            if (start > cursor) result += RichSegment.Text(source.substring(cursor, start))
+            // حتی بخش خالی را نگه می‌داریم تا ویرایشگر بعد از آخرین فرمول/شکل
+            // یک کادر قابل تایپ داشته باشد و توکن مجبور نشود سطر جداگانه بسازد.
+            if (start >= cursor) result += RichSegment.Text(source.substring(cursor, start))
             if (kind == 0) {
                 val occ = formulas.firstOrNull { it.start == start && it.endExclusive == end }
                 if (occ != null) result += RichSegment.Math(occ.index, occ.tex)
@@ -35,7 +37,8 @@ object RichTextSplitter {
             }
             cursor = end
         }
-        if (cursor < source.length) result += RichSegment.Text(source.substring(cursor))
+        // متن خالی انتهای توکن، محل نوشتن ادامهٔ جمله در همان ردیف است.
+        if (cursor <= source.length) result += RichSegment.Text(source.substring(cursor))
         return result
     }
 

@@ -95,6 +95,7 @@ import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.figure.FigureKind
 import ir.exam.app.ui.figure.FigurePickerDialog
+import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
@@ -561,7 +562,8 @@ private data class FormulaTarget(
 private data class FigureTarget(
     val occurrenceIndex: Int? = null,
     val initialSpec: FigureSpec? = null,
-    val kind: FigureKind = FigureKind.GEOMETRY
+    val kind: FigureKind = FigureKind.GEOMETRY,
+    val chooseType: Boolean = false
 )
 
 @Composable
@@ -701,8 +703,12 @@ private fun QuestionEditor(
                 onEditFormula = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
                 onInsertFormula = { formulaTarget = FormulaTarget("question") },
                 onDeleteFormula = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) },
-                onInsertFigure = { figureTarget = FigureTarget(kind = FigureKind.GEOMETRY) },
-                onInsertGraph = { figureTarget = FigureTarget(kind = FigureKind.GRAPH) },
+                onInsertFigure = {
+                    figureTarget = FigureTarget(kind = FigureKind.GEOMETRY, chooseType = true)
+                },
+                onInsertGraph = {
+                    figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
+                },
                 onEditFigure = { occurrence, spec ->
                     figureTarget = FigureTarget(
                         occurrenceIndex = occurrence,
@@ -900,17 +906,27 @@ private fun QuestionEditor(
         )
     }
     figureTarget?.let { target ->
-        FigurePickerDialog(
-            initialSpec = target.initialSpec,
-            initialKind = target.kind,
-            onDismiss = { figureTarget = null },
-            onInsert = { spec ->
-                val occurrence = target.occurrenceIndex
-                if (occurrence == null) viewModel.insertFigure(question.id, spec)
-                else viewModel.updateFigure(question.id, occurrence, spec)
-                figureTarget = null
-            }
-        )
+        if (target.chooseType) {
+            FigureTypePickerDialog(
+                kind = target.kind,
+                onDismiss = { figureTarget = null },
+                onTypeSelected = { spec ->
+                    figureTarget = target.copy(initialSpec = spec, chooseType = false)
+                }
+            )
+        } else {
+            FigurePickerDialog(
+                initialSpec = target.initialSpec,
+                initialKind = target.kind,
+                onDismiss = { figureTarget = null },
+                onInsert = { spec ->
+                    val occurrence = target.occurrenceIndex
+                    if (occurrence == null) viewModel.insertFigure(question.id, spec)
+                    else viewModel.updateFigure(question.id, occurrence, spec)
+                    figureTarget = null
+                }
+            )
+        }
     }
 }
 

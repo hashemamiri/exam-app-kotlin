@@ -109,6 +109,8 @@ classes_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewMo
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
 inline_math_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/InlineMathTextEditor.kt").read_text()
+rich_text=(ROOT/"app/src/main/java/ir/exam/app/core/text/RichText.kt").read_text()
+figure_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").read_text()
 formula_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
 formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text()
 formula_svg=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").read_text()
@@ -674,6 +676,26 @@ require("Icons.Outlined.PhotoCamera" in question_media and
         "V45 formula icon must not remain in the question media camera row")
 require("OutlinedButton(onClick = { formulaTarget = FormulaTarget(\"question\") })" not in builder_screen,
         "V29 text formula button is not converted to an icon beside the camera")
+# V45.3: keep editable text slots on both sides of an inline token; the trailing
+# empty slot is what lets the user continue typing after inserting a formula.
+require("if (start >= cursor)" in rich_text and
+        "if (cursor <= source.length)" in rich_text and
+        "if (showPlaceholder && part.text.isEmpty())" in inline_math_editor and
+        "Box(contentAlignment = Alignment.CenterStart)" in inline_math_editor,
+        "inline formula editor does not keep editable text slots around tokens")
+# V45.3: figure and graph insertion are separate, type-first flows. The editor
+# no longer exposes a shared shape/graph tab after the type picker.
+require("FigureTypePickerDialog(" in figure_picker and
+        "ابتدا نوع شکل هندسی را انتخاب کنید" in figure_picker and
+        "ابتدا نوع نمودار را انتخاب کنید" in figure_picker and
+        "GeometryEditorPane" in figure_picker and
+        "GraphEditorPane" in figure_picker and
+        "FilterChip(" not in figure_picker and
+        "chooseType: Boolean = false" in builder_screen and
+        "FigureTarget(kind = FigureKind.GEOMETRY, chooseType = true)" in builder_screen and
+        "FigureTarget(kind = FigureKind.GRAPH, chooseType = true)" in builder_screen and
+        "target.copy(initialSpec = spec, chooseType = false)" in builder_screen,
+        "V45.3 type-first figure/graph insertion flow is incomplete")
 full_viewer=(ROOT/"app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt").read_text()
 require("FullScreenImageViewer" in question_media and
         "detectTransformGestures" in full_viewer and
