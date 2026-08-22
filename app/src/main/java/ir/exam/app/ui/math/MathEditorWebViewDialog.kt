@@ -336,6 +336,12 @@ private const val VIEWPORT_FALLBACK_JS = """
       '#mfModal.box-fullscreen #mfPad:not(.mb-library-open):not(.mb-smart-hub){display:none !important;}' +
       '#mfModal.box-fullscreen #mfPad.mb-library-open,#mfModal.box-fullscreen #mfPad.mb-smart-hub{display:flex !important;position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100vw !important;height:100vh !important;max-height:none !important;z-index:12040 !important;overflow:hidden !important;padding:16px !important;background:rgba(0,0,0,.55) !important;align-items:center !important;justify-content:center !important;}' +
       '#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel,#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-library-panel{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
+      /* منوی بازشوی کتابخانه (mbVar) باید همیشه روی مدال و تمام‌صفحه دیده
+         شود و در مرکز صفحه قرار گیرد. در وب‌ویو برخی دستگاه‌ها به‌خاطر
+         stackِ کال‌بیکِ JS، offsetWidth/offsetHeight در لحظهٔ
+         موقعیت‌دهی صفر می‌شد و منو به گوشه پرتاب می‌گشت. */' +
+      '#mbVar.mb-var{display:none !important;position:fixed !important;top:50% !important;left:50% !important;right:auto !important;bottom:auto !important;transform:translate(-50%,-50%) !important;width:min(340px,92vw) !important;max-width:92vw !important;max-height:80vh !important;min-width:240px !important;z-index:2147483646 !important;overflow:auto !important;}' +
+      '#mbVar.mb-var.open{display:block !important;}' +
       'body.math-open .demo-wrap{display:none !important;}';
     var s = document.getElementById('mbAndroidViewportFallback');
     if (!s) { s = document.createElement('style'); s.id = 'mbAndroidViewportFallback'; (document.head||document.documentElement).appendChild(s); }
@@ -437,6 +443,84 @@ private fun bootstrapScript(initialTex: String): String {
             }
             document.body.classList.add('math-open');
           } catch(ePre){}
+
+          // فیکس کتابخانه‌ها/منوها: موقعیت‌دهی پاپ‌آپ mbVar را هر بار
+          // که باز شد به مرکز صفحه می‌بریم (در برخی WebViewها
+          // offsetWidth در لحظهٔ mbVarOpen صفر بود و منو به گوشه
+          // پرتاب می‌شد یا اصلاً دیده نمی‌شد). همچنین اگر تراشه‌های
+          // V34 (school/type/bio) که توسط host-bridge اضافه شده‌اند
+          // کلیک خوردند، مستقیماً نسخهٔ سراسری mbGroupLibrary را
+          // صدا می‌زنیم تا وابسته به eval نباشیم.
+          try {
+            function centerPop(){
+              var p = document.getElementById('mbVar');
+              if (!p) return;
+              if (!p.classList.contains('open')) return;
+              var vw = window.innerWidth || document.documentElement.clientWidth || 0;
+              var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+              p.style.position = 'fixed';
+              p.style.top = '50%';
+              p.style.left = '50%';
+              p.style.right = 'auto';
+              p.style.bottom = 'auto';
+              p.style.transform = 'translate(-50%,-50%)';
+              p.style.zIndex = '2147483646';
+              p.style.maxHeight = Math.round(vh*0.85) + 'px';
+              p.style.width = Math.min(360, Math.round(vw*0.92)) + 'px';
+              p.style.display = 'block';
+            }
+            window.__mbCenterPop = centerPop;
+            var mbv = document.getElementById('mbVar');
+            if (mbv && window.MutationObserver && !mbv.__mbCenterObs) {
+              mbv.__mbCenterObs = true;
+              new MutationObserver(centerPop).observe(mbv, {attributes:true, attributeFilter:['class','style'], childList:true, subtree:true});
+            }
+            // wrapper برای mbVarOpen که هر بار پس از باز شدن، مرکزسازی
+            // را در چند فریم اجرا کند (منوهای دیگری که از
+            // mbOpenSymbolLibrary/mbGroupLibrary می‌آیند هم از همین
+            // مسیر می‌گذرند).
+            if (typeof window.mbVarOpen === 'function' && !window.__mbVarOpenWrapped) {
+              window.__mbVarOpenWrapped = true;
+              var __innerMbVarOpen = window.mbVarOpen;
+              window.mbVarOpen = function(){
+                try {
+                  var r = __innerMbVarOpen.apply(this, arguments);
+                  setTimeout(centerPop, 0);
+                  setTimeout(centerPop, 30);
+                  setTimeout(centerPop, 120);
+                  return r;
+                } catch (eOpen) {
+                  log('mbVarOpen wrap: ' + eOpen);
+                }
+              };
+            }
+            // bind V34 chips (defensively — host-bridge already does this
+            // with eval, but in some WebViews eval inside an @JavascriptInterface
+            // bridge scope does not resolve global const/let)
+            function bindV34Chips(){
+              var scroll = document.querySelector('.mb-chip-scroll');
+              if (!scroll) return;
+              var chips = scroll.querySelectorAll('.mb-chip[data-v34="1"]');
+              for (var i=0;i<chips.length;i++){(function(chip){
+                if (chip.__mbBound) return; chip.__mbBound = true;
+                chip.addEventListener('click', function(ev){
+                  try { ev.stopPropagation(); ev.preventDefault(); } catch(_e){}
+                  var key = chip.textContent.indexOf('کتاب') >= 0 ? 'school'
+                          : chip.textContent.indexOf('تزئین') >= 0 ? 'type'
+                          : chip.textContent.indexOf('زیست') >= 0 ? 'bio' : null;
+                  if (key && typeof window.mbGroupLibrary === 'function') {
+                    try { window.mbGroupLibrary(key); } catch (eGL) { log('mbGroupLibrary: '+eGL); }
+                    setTimeout(centerPop, 0);
+                    setTimeout(centerPop, 50);
+                    setTimeout(centerPop, 200);
+                  }
+                }, true);
+              })(chips[i]);}
+            }
+            bindV34Chips();
+            setTimeout(bindV34Chips, 200);
+            setTimeout(bindV34Chips, 600);
+          } catch(eFix) { log('library fix: ' + eFix); }
 
           try { window.openMath('qTxt_1'); }
           catch (eOpen) { log('openMath threw: ' + eOpen); }

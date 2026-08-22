@@ -6379,3 +6379,63 @@ FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
 بریس/پرانتز MathEditorWebViewDialog.kt: 140/140 و 251/251
 git diff --check → PASS
 ```
+
+---
+
+## ۱۰۵) V45.8.5 — رفع کار نکردن کتابخانه‌ها (پاپ‌آپ و چیپ‌های V34)
+
+### مشکل
+
+با زدن چیپ‌های کتابخانه (مثل «📚 کتاب درسی ریاضی»، «✏ نماد و تزئین»،
+«🧬 زیست و دانشگاه»، یا دسته‌های ۸گانه) هیچ پاپ‌آپی باز نمی‌شد.
+
+### علت‌ها (دو علت جدا)
+
+1. **چیپ‌های V34 به‌صورت event-listener و با `w.eval` در
+   host-bridge بایند می‌شدند.** در WebView اندروید `w === window`
+   است ولی `eval` در یک اسکوپ غیرمستقیم کد را اجرا می‌کند و در
+   برخی ترکیب‌ها `const`/`let` سطح ماژول را روی `window`
+   نمی‌بیند؛ در نتیجه ارجاع به `MB_GROUPS` ممکن بود با
+   ReferenceError شکست بخورد و click بی‌اثر شود.
+2. **موقعیت‌دهی `mbVarOpen` به offsetWidth/offsetHeight در لحظهٔ
+   نمایش وابسته بود.** این مقدار در برخی WebViewها در همان تیک
+   صفر بود (محتوا هنوز رنگ نشده بود) و منو با `left=6, top=6`
+   بیرون دید کاربر قرار می‌گرفت.
+
+### اصلاح
+
+- **CSS تزریقی قوی برای `#mbVar`:**
+  `position:fixed; top:50%; left:50%; transform:translate(-50%,-50%)`
+  با `z-index:2147483646` تا هر جور مقدار inline از توابع
+  داخلی را خنثی کند و منو حتماً وسط صفحه و روی مدال دیده شود.
+- **wrapper روی `mbVarOpen`:** هر بار که منویی باز می‌شود، در
+  ۰، ۳۰ و ۱۲۰ms مرکزسازی دوباره اجرا می‌شود (هم برای پاپ‌آپ
+  اولیه و هم برای انتخاب‌های بعدی که به `mbOpenItemLibrary` با
+  کلاس `mb-library-open` می‌رسند).
+- **بایند مستقیم چیپ‌های V34 بدون eval:** سه چیپ
+  `[data-v34="1"]` پیدا و روی آن‌ها یک listener در فاز capture
+  اضافه می‌شود که مستقیماً
+  `window.mbGroupLibrary('school'|'type'|'bio')` را صدا
+  می‌زند؛ این نسخه از تابع با آرگومان رشته‌ای کار می‌کند و
+  وابسته به eval نیست. در ۰ و ۲۰۰ و ۶۰۰ms برای اطمینان از
+  ساخته شدن چیپ‌ها توسط host-bride دوباره بایند می‌شود.
+- MutationObserver روی `#mbVar` موقعیت و کلاس را در طول عمر
+  دیالوگ تثبیت می‌کند.
+
+### اعتبارسنجی (jsdom)
+
+```text
+پس از کلیک روی «📚 کتاب درسی ریاضی»:
+  mbVar: display=block position=fixed
+         transform=translate(-50%,-50%) width=360px
+  اولین دسته: 📘 ریاضی دهم
+پس از کلیک روی دسته:
+  mfPad className = 'mf-pad mb-library-open'
+  mfPad display  = flex  position = fixed
+  mfPad children = 1
+```
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+بریس/پرانتز MathEditorWebViewDialog.kt: 160/160 و 308/308
+```
