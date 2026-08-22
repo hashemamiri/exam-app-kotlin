@@ -5745,3 +5745,122 @@ To https://github.com/hashemamiri/exam-app-kotlin.git
 - CI run: `#136` روی commit `9e29baf9d`
 - درخت V45.6 معادل درخت V45.4.2 (که CI قبلاً در run #134 سبز کرده بود)
   است؛ تنها والد آن V45.5 است که خودش revert همان تغییرست بوده.
+
+
+---
+
+## ۹۶) V45.7 — تزریق کتابخانهٔ کامل V34 (کتب درسی / نماد و تزئین / زیست و دانشگاه) به WebView
+
+### علت
+
+پس از انتشار V45.6، کاربر گزارش داد که در دیالوگ ویرایشگر فرمولِ APK،
+سه گروه «📚 کتاب درسی ریاضی»، «✏ نماد و تزئین» و «🧬 زیست و دانشگاه»
+وجود ندارند. بررسی سورس `66.html` نشان داد این سه گروه و حدود ۶۰ دستهٔ
+درسی تکمیلی، بخشی از رشتهٔ `MATH_EDITOR_HTML` نیستند؛ بلکه توسط تابع
+**میزبان** صفحه به‌نام `installLibV34(w)` پس از بارگذاری iframe به
+کتابخانه افزوده می‌شدند (خطوط ۱۱۲۵۹ تا ۱۱۴۰۴ فایل `66.html`). چون در
+حالت standalone هیچ میزبانی این تابع را صدا نمی‌زد، `MB_PAD` فقط شامل
+دسته‌های پایه بود (۷ تب اولیه + ۳۲ تب curricular + ۱۰ فیزیک/شیمی + ...).
+
+### ریشهٔ فنی
+
+```text
+در 66.html:
+  <iframe id="mathFrame" srcdoc="...MATH_EDITOR_HTML..."></iframe>
+  سپس تابع میزبان installBridge():
+    installLibV34(contentWindow);
+  که داخل iframe اجرا می‌شود و:
+    - 64 پد v34-* را به MB_PAD.push می‌کند (مجموعهٔ کامل ۱۵۱ تب)
+    - به ۸ گروه موجود، دسته‌های تکمیلی را می‌افزاید
+    - 3 گروه جدید می‌سازد: school / type / bio
+    - سه تراشه با data-v34 به .mb-chip-scroll اضافه می‌کند
+    - توابع M_FUNS/MB_SYM_TEX را برای نمادهای جدید بسط می‌دهد
+    - mbInsertTemplate را با replace‌های یونیکد wrap می‌کند
+```
+
+در standalone، asset `math_editor_standalone.html` بایت‌به‌بایت همان
+چیزی بود که در V45.4 اضافه شد و حاوی کتابخانهٔ پایه بود، اما بدنهٔ
+`installLibV34` در آن وجود نداشت.
+
+### تغییرات
+
+```text
+افزوده:
+  app/src/main/assets/formula/install_lib_v34.js
+    - بدنهٔ کامل تابع installLibV34 (w) استخراج‌شده از 66.html
+      خطوط ۱۱۲۵۹ تا ۱۱۴۰۴ (بدون هیچ تغییری)؛ ۳۷٬۹۳۵ کاراکتر،
+      64 پد v34-*، گارد __libV34 برای idempotence،
+      node --check → SYNTAX OK.
+
+تغییر:
+  app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt
+    - تابع readInstallLibV34() با کش‌گذاری یک‌باره (cachedInstallLibV34)
+      فایل asset را با UTF-8 می‌خواند.
+    - در bootstrapScript (همان IIFE که قبل از openMath اجرا می‌شود):
+        * متن installLibV34 در بالای بلوک قرار می‌گیرد (تعریف تابع در
+          scope جهانیِ eval، یعنی همان lexical scope که MB_PAD و MB_GROUPS
+          به‌صورت const سطح‌بالا در آن تعریف شده‌اند)
+        * installLibV34(window) بلافاصله صدا زده می‌شود
+        * سپس همان منطق قبلی (m.value، setSelectionRange، wrap
+          mfApply/closeMath و openMath('qTxt_1')) اجرا می‌گردد.
+    - asset بایت‌به‌بایت دست‌نخورده باقی ماند (همان قول V45.4)؛
+      تمام محتوای V34 از asset جداگانه تزریق می‌شود.
+
+  app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt
+    - تست جدید: formula editor bootstraps the V34 curricular library
+      school/type/bio
+      * تأیید می‌کند asset وجود دارد و با «function installLibV34(w)» شروع می‌شود
+      * وجود school/type/bio و شناسه‌های کلیدی v34-math10, v34-hesaban1,
+        v34-discrete, v34-accents, v34-arrows, v34-special-let,
+        v34-bio, v34-uni, v34-stats, v34-prob
+      * تأیید می‌کند installLibV34(window) در دیالوگ قبل از
+        window.openMath('qTxt_1') اجرا می‌شود
+      * گارد __libV34 برای جلوگیری از تزریق دوباره
+
+  scripts/verify_native_final.py
+    - بخش V45.7: بررسی وجود و اندازهٔ asset (>30KB)، شروع با
+      «function installLibV34(w)»، وجود __libV34 و ۱۱ نشانهٔ کلیدی،
+      و این که installLibV34(window) در دیالوگ جلوتر از
+      openMath('qTxt_1') آمده باشد.
+```
+
+### اعتبارسنجی
+
+```text
+node --check install_lib_v34.js                → SYNTAX OK
+python3 scripts/verify_native_final.py         → FINAL_NATIVE_VERIFY=PASS
+git diff --check                               → PASS
+jsdom end-to-end (با تقلید از Android evaluateJavascript):
+  - MB_GROUPS: 11 گروه (۸ اصلی + school + type + bio)
+  - MB_PAD: 151 تب
+  - .mb-chip-scroll: 15 تراشه (۱۲ قبلی + ۳ جدید با[data-v34])
+  - school → 10 زیرشاخه (ریاضی دهم/یازدهم/دوازدهم، حسابان ۱/۲، هندسه ۱/۲/۳،
+    گسسته، آمار و احتمال)
+  - type   → 6 زیرشاخه (تزئینات، پیکان‌ها، حروف خاص، کروشه، عملگرها،
+    یونانی کامل)
+  - bio    → 4 زیرشاخه (زیست‌شناسی، دانشگاه، آمار تکمیلی، احتمال تکمیلی)
+  - v34-math10 → 18 آیتم
+  - ۰ خطای JS
+```
+
+### مسیرهای کاربر پس از این پچ
+
+- باز کردن دیالوگ ویرایش فرمول → نوار تراشه‌ها با کشیدن افقی به انتها
+  می‌رسد به «📚 کتاب درسی ریاضی»، «✏ نماد و تزئین»، «🧬 زیست و دانشگاه».
+- کلیک روی هرکدام → منوی شناور زیرشاخه‌ها → انتخاب دسته → پنل مرکزی
+  قالب‌ها → لمس قالب → درج در جعبه.
+- جستجو از طریق «🔍 جست‌وجوی نماد یا نام فارسی» شامل همهٔ ۱۵۱ تب می‌شود
+  (چون `mbSearchSymbols` روی همهٔ `MB_PAD` می‌گردد).
+
+### SQL / Secret / وابستگی
+
+ندارد. هیچ کلیدی وارد/خارج نشد، `applicationId`/keystore دست‌نخورده،
+هیچ وابستگی Gradle جدیدی اضافه نشد. asset جدید فقط متن/داده است (۴۵ کیلوبایت).
+
+### فایل پچ
+
+```text
+/home/user/V45_7_v34_formula_library_injection.patch   (پس از commit ساخته می‌شود)
+```
+
+پیش‌نیاز: V45.6 (درخت نهایی شامل WebView ویرایشگر).

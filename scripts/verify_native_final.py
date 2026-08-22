@@ -574,6 +574,31 @@ require("MathEditorWebViewDialog(" in builder_screen and "MathEditorWebViewDialo
         "FormulaEditorDialog" not in main_text and "FormulaBoxEditor" not in main_text and
         "FormulaLibraryNavigator" not in main_text and "FormulaSmartHubDialog" not in main_text,
         "formula editor is not switched to the WebView dialog or native editor remnants remain")
+
+# ---- V45.7: کتابخانهٔ کامل V34 (کتب درسی / نماد و تزئین / زیست و دانشگاه) ----
+# در نسخهٔ وب (66.html) این دسته‌ها پس از بارگذاری iframe توسط تابع میزبان
+# installLibV34 به MB_PAD/MB_GROUPS افزوده می‌شدند. در standalone WebView باید
+# همان بدنه از asset فرمول خوانده و قبل از openMath eval شود.
+v34_asset = ROOT / "app/src/main/assets/formula/install_lib_v34.js"
+require(v34_asset.exists() and v34_asset.stat().st_size > 30_000,
+        "V34 formula library asset (install_lib_v34.js) missing or truncated")
+v34_text = v34_asset.read_text(encoding="utf-8")
+require(v34_text.startswith("function installLibV34(w)") and "__libV34" in v34_text,
+        "V34 asset is not the installLibV34 host function or lost its idempotency guard")
+for token in (
+    "school", "type", "bio",
+    "v34-math10", "v34-hesaban1", "v34-discrete",
+    "v34-accents", "v34-arrows", "v34-special-let",
+    "v34-bio", "v34-uni",
+):
+    require(token in v34_text, f"V34 library missing token: {token}")
+require("formula/install_lib_v34.js" in formula_editor and "readInstallLibV34" in formula_editor and
+        "installLibV34(window)" in formula_editor,
+        "formula editor dialog does not load/run the V34 library asset")
+_install_idx = formula_editor.find("installLibV34(window)")
+_open_idx = formula_editor.find("window.openMath('qTxt_1')")
+require(0 <= _install_idx < _open_idx,
+        "V34 library must be installed before openMath('qTxt_1')")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 # ---- V28: reorder / image safety / bulk window / field of study ----

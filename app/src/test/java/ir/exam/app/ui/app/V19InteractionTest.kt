@@ -83,6 +83,41 @@ class V19InteractionTest {
     }
 
     @Test
+    fun `formula editor bootstraps the V34 curricular library school type bio`() {
+        // در نسخهٔ وب (66.html) تابع میزبان installLibV34 پس از بارگذاری iframe
+        // سه گروه «کتاب درسی ریاضی»، «نماد و تزئین»، «زیست و دانشگاه» و حدود
+        // ۶۰ دستهٔ درسی تکمیلی را به MB_PAD/MB_GROUPS اضافه می‌کرد. در حالت
+        // standalone باید همان بدنه از asset خوانده و قبل از openMath eval شود.
+        val root = root()
+        val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt").readText()
+        val v34 = File(root, "app/src/main/assets/formula/install_lib_v34.js").readText()
+
+        // 1) asset باید بایت‌به‌بایت بدنهٔ installLibV34 باشد
+        assertTrue("installLibV34 function missing from V34 asset",
+            v34.startsWith("function installLibV34(w)"))
+        listOf(
+            "school", "type", "bio",
+            "v34-math10", "v34-hesaban1", "v34-discrete",
+            "v34-accents", "v34-arrows", "v34-special-let",
+            "v34-bio", "v34-uni", "v34-stats", "v34-prob"
+        ).forEach { token ->
+            assertTrue("V34 asset missing token: $token", token in v34)
+        }
+
+        // 2) دیالوگ باید asset را بخواند و installLibV34(window) را قبل از openMath اجرا کند
+        assertTrue("readInstallLibV34 helper missing", "readInstallLibV34" in dialog)
+        assertTrue("install_lib_v34.js asset path missing", "formula/install_lib_v34.js" in dialog)
+        val installIdx = dialog.indexOf("installLibV34(window)")
+        val openIdx = dialog.indexOf("window.openMath('qTxt_1')")
+        assertTrue("installLibV34(window) call missing", installIdx >= 0)
+        assertTrue("window.openMath('qTxt_1') missing", openIdx >= 0)
+        assertTrue("V34 must install before openMath", installIdx < openIdx)
+
+        // 3) گارد idempotent بودن حفظ شده باشد (جلوگیری از تزریق دوباره)
+        assertTrue("__libV34 idempotency guard missing", "__libV34" in v34)
+    }
+
+    @Test
     fun `sandbox credit remains server gated and never direct from apk`() {
         val root = root()
         val edge = File(root, "supabase/functions/wallet-payment/index.ts").readText()

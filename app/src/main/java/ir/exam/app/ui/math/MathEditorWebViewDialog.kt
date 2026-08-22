@@ -272,10 +272,17 @@ private fun bootstrapScript(initialTex: String): String {
     val wrapped = "\$" + initialTex + "\$"
     val valueLiteral = JSONObject.quote(wrapped)
     val selEnd = wrapped.length
+    val installLibSrc = readInstallLibV34()
     return """
       (function(){
         try{
           if (window.__mbAndroidInstalled) return;
+          /* ---- V34 library (school/type/bio + curricular extensions) ----
+             This is the byte-for-byte body of installLibV34 from 66.html.
+             It is idempotent (guards on w.__libV34) and safe to re-eval. */
+          $installLibSrc
+          try { installLibV34(window); } catch (eLib) {}
+          /* -------------------------------------------------------------- */
           var m = document.getElementById('qTxt_1');
           if (!m) { AndroidMathBridge.onClosed(); return; }
           m.value = $valueLiteral;
@@ -302,6 +309,21 @@ private fun bootstrapScript(initialTex: String): String {
       })();
     """.trimIndent()
 }
+
+/**
+ * محتوای `assets/formula/install_lib_v34.js` را به‌صورت تنبل یک‌بار می‌خواند
+ * تا در زمان ساخت WebView در حافظه نگه دارد. فایل از مخزن و با همان
+ * رمزگذاری UTF-8 خوانده می‌شود و هیچ تغییری در محتوای آن داده نمی‌شود.
+ */
+private fun readInstallLibV34(): String = cachedInstallLibV34 ?: run {
+    val stream = MathEditorWebViewDialog::class.java.classLoader
+        ?.getResourceAsStream("assets/formula/install_lib_v34.js")
+    val src = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+    cachedInstallLibV34 = src
+    src
+}
+
+@Volatile private var cachedInstallLibV34: String? = null
 
 /** `$…$` را باز می‌کند؛ بدون پوشش، همان متن برمی‌گردد. */
 private fun unwrapFormula(raw: String): String {
