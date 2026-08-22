@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.4 جایگزینی ویرایشگر فرمول بومی با WebView (استخراج کد به کد از 66.html، بدون تغییر)؛ پیش از آن: V45.3 اصلاح فرمول درون‌خطی و جریان درج شکل/نمودار
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.4.1 هات‌فیکس اسکریپت final-verify برای ویرایشگر فرمول WebView؛ پیش از آن: V45.4 جایگزینی ویرایشگر فرمول بومی با WebView (استخراج کد به کد از 66.html، بدون تغییر)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5315,3 +5315,48 @@ minSdk 26: WebView همیشه در دسترس است؛ تنظیمات خاصی �
 در PDF همچنان Native است).
 
 راهنمای مستقل: `docs/fa/MATH_EDITOR_WEBVIEW_V45_4_FA.md`.
+
+
+---
+
+## ۹۱) V45.4.1 — هات‌فیکس final-verify پس از جایگزینی ویرایشگر فرمول
+
+### علت
+
+پس از push پچ V45.4، CI روی مرحلهٔ زیر شکست خورد:
+
+```text
+Run python3 scripts/verify_native_final.py
+FileNotFoundError: .../FormulaEditorDialog.kt (فایل حذف‌شده)
+```
+
+`scripts/verify_native_final.py` هنوز به فایل‌های ویرایشگر بومی حذف‌شده
+ارجاع می‌داد و چند بررسی (مثل ممنوعیت `android.webkit`) باید برای معماری
+جدید WebView بازتعریف می‌شد.
+
+### تغییرات اسکریپت
+
+```text
+- formula_editor → MathEditorWebViewDialog.kt
+- حذف readهای فایل‌های حذف‌شده (FormulaBoxEditor / FormulaReferenceLibrary /
+  FormulaLibraryDialog / FormulaLibraryNavigator / FormulaSmartHubDialog /
+  FormulaSmartReference) و حذف بررسی‌های مربوط به آن‌ها
+- formula_library_v13.json → math_editor_standalone.html
+  (اندازه > 500KB + وجود function openMath(targetId) و function mfApply())
+- محدودیت android.webkit: دقیقاً فقط MathEditorWebViewDialog.kt مجاز است
+  (بررسی شمارشی = ۱ فایل با همین نام)
+- بررسی‌های نگه‌داشت رندر Native (SVG/canvas/codec/natural) حفظ شد
+- بررسی‌های جدید V45.4: full-screen WebView + AndroidMathBridge +
+  قرارداد qTxt_1/openMath/mfApply/closeMath + اتصال در ExamBuilderScreen +
+  نبودِ هیچ باقی‌ماندهٔ ویرایشگر بومی در main_text
+- چک LTR ویرایشگر (مربوط به پد بومی) حذف شد؛ LTR نمایشی حفظ شد
+```
+
+### نتیجه
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+python3 scripts/verify_native_final.py → EXIT 0
+```
+
+پیش‌نیاز: V45.4. بعد از push، CI باید سبز شود.
