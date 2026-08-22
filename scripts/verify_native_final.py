@@ -625,6 +625,16 @@ _closed_callback = formula_editor.index("AndroidMathBridge.onClosed();", _apply_
 require("finally {\n              window.__mbApplyInFlight = false;" in formula_editor and
         _apply_guard < _inner_close < _closed_callback,
         "formula apply result can lose the race against the internal close callback")
+# V45.8.9: تم روشن استاتیک hostThemeOverride علت واقعی صفحهٔ سفید بود.
+# asset نباید این تگ را به‌صورت پیش‌فرض داشته باشد؛ اندروید نیز باید از ابتدای
+# بارگذاری در برابر تزریق دوبارهٔ آن دفاع کند.
+_asset_html = _asset_path.read_text()
+require('<style id="hostThemeOverride">' not in _asset_html,
+        "static <style id=hostThemeOverride> must be removed from asset (caused white page)")
+require("EARLY_THEME_STRIP_JS" in formula_editor and
+        "override fun onPageStarted" in formula_editor and
+        "evaluateJavascript(EARLY_THEME_STRIP_JS, null)" in formula_editor,
+        "formula dialog must strip hostThemeOverride early via onPageStarted")
 # بستن دیالوگ باید تضمینی باشد (fallback تایمر برای onDismiss)
 require("DISMISS_FALLBACK_MS" in formula_editor and "dismissOnce" in formula_editor,
         "formula dialog must guarantee dismissal via a timer fallback")

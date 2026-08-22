@@ -187,6 +187,15 @@ private fun configureWebView(wb: WebView, bridge: MathEditorJsBridge) {
             view: WebView?,
             request: WebResourceRequest?
         ): Boolean = true
+
+        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            // پیش از آن که asset بلوک <style id="hostThemeOverride"> (تم
+            // روشنِ میزبان) را پارس کند، یک MutationObserver روی document
+            // نصب کن که آن را به‌محض ورود به DOM حذف کند. در غیر این
+            // صورت یک فلش سفید پیش از آماده‌شدن bootstrap دیده می‌شود.
+            view?.evaluateJavascript(EARLY_THEME_STRIP_JS, null)
+        }
     }
     wb.webChromeClient = object : WebChromeClient() {
         override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
@@ -309,30 +318,32 @@ private fun FailedOverlay(onRetry: () -> Unit) {
 }
 
 /**
- * CSS تزریقی برای رفع مشکلات رندر در WebViewهای قدیمی.
+ * CSS تزریقی برای رفع مشکلات رندر در WebViewهای اندروید.
  *
  * به‌جای بازنویسی گستردهٔ چیدمان (که در نسخه‌های قبلی تداخل ایجاد
  * می‌کرد)، فقط حداقل‌های لازم را تزریق می‌کنیم:
  *  - برای `100dvh` یک `100vh` قبل از آن می‌گذاریم؛
- *  - برای `inset:0` چهارضلع صفر می‌گذاریم؛
- *  - والد .modal از `position:fixed` و چهارضلع صفر استفاده می‌کند تا
- *    کل ویوپورت را بپوشاند؛
- *  - وقتی کتابخانه یا اسمارت‌هاب باز می‌شود، #mfPad باید display:flex
- *    بگیرد (قانون پیش‌فرض asset این را دارد ولی با !important اضافه
- *    می‌کنیم تا هیچ قانون مخفی‌کننده دیگری نتواند آن را پنهان کند)؛
- *  - منوی پاپ‌آپ mbVar در مرکز صفحه پین می‌شود (در برخی WebViewها
- *    اندازه‌گیری اولیه صفر بود و منو به گوشه می‌رفت)؛
+ *  - والد `#mfModal` از `position:fixed` و چهارضلع صفر استفاده می‌کند؛
+ *  - منوی پاپ‌آپ mbVar در مرکز صفحه پین می‌شود؛
  *  - بدنهٔ دموی پشت مدال هنگام باز بودن فرمول پنهان می‌شود.
+ *
+ * حذف بلوک `hostThemeOverride` (که asset را به‌اشتباه به تم روشن
+ * می‌برد و صفحه سفید دیده می‌شد) توسط [EARLY_THEME_STRIP_JS] در
+ * `onPageStarted` انجام می‌شود تا فلش تم روشن هم رخ ندهد.
+ *
+ * هیچ قاعده‌ای روی ردیف‌های گرید سه‌تایی asset (mb-wrap، mb-chip-scroll،
+ * mb-fixed-keypad یا #mfP_box) تحمیل نمی‌شود — چیدمان کاملاً به CSS
+ * بومی asset سپرده می‌شود.
  */
 private const val VIEWPORT_FALLBACK_JS = """
 (function(){
   try{
     var css = '' +
-      'html,body{margin:0 !important;padding:0 !important;height:100% !important;}' +
+      'html,body{margin:0 !important;padding:0 !important;height:100% !important;background:var(--bg1) !important;}' +
       '#mfModal{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;display:none !important;z-index:2147483645 !important;}' +
       '#mfModal.modal.open{display:flex !important;}' +
       '#mfModal.box-fullscreen{padding:0 !important;align-items:stretch !important;background:var(--bg1) !important;}' +
-      '#mfModal.box-fullscreen .mf-box{height:100vh !important;height:100dvh !important;max-height:none !important;max-width:none !important;width:100% !important;margin:0 !important;border:0 !important;border-radius:0 !important;}' +
+      '#mfModal.box-fullscreen .mf-box{height:100vh !important;height:100dvh !important;max-height:none !important;max-width:none !important;width:100% !important;margin:0 !important;border:0 !important;border-radius:0 !important;background:var(--bg1) !important;color:var(--text) !important;}' +
       '#mbVar.mb-var{display:none !important;position:fixed !important;top:50% !important;left:50% !important;right:auto !important;bottom:auto !important;transform:translate(-50%,-50%) !important;width:min(340px,92vw) !important;max-width:92vw !important;max-height:80vh !important;min-width:240px !important;z-index:2147483646 !important;overflow:auto !important;}' +
       '#mbVar.mb-var.open{display:block !important;}' +
       'body.math-open .demo-wrap{display:none !important;}';
@@ -489,6 +500,37 @@ private const val READY_CHECK_JS =
 
 private const val CLOSE_MATH_JS =
     "try{if(window.closeMath)window.closeMath();}catch(e){}"
+
+/**
+ * اسکریپتی که در `onPageStarted` اجرا می‌شود و از همان ابتدای بارگذاری
+ * صفحه، تگ `<style id="hostThemeOverride">` (که تم روشنِ میزبان است) را
+ * به‌محض افزوده‌شدن به DOM حذف می‌کند. این تضمین می‌کند هیچ‌گاه فلش
+ * تم روشن/صفحهٔ سفید قبل از آماده‌شدن bootstrap دیده نشود.
+ *
+ * در `onPageStarted` ممکن است `document.head` هنوز ساخته نشده باشد،
+ * بنابراین MutationObserver را روی `document.documentElement` می‌گذاریم
+ * و یک چک فوری هم برای حالتی که تگ از قبل وجود دارد اجرا می‌کنیم.
+ */
+private const val EARLY_THEME_STRIP_JS = """
+(function(){
+  try{
+    if (window.__mbEarlyStripInstalled) return;
+    window.__mbEarlyStripInstalled = true;
+    function strip(){
+      try{
+        var n = document.getElementById('hostThemeOverride');
+        if (n && n.parentNode) n.parentNode.removeChild(n);
+      }catch(_e){}
+    }
+    strip();
+    if (window.MutationObserver && document.documentElement) {
+      new MutationObserver(strip).observe(document.documentElement, {childList:true, subtree:true});
+    } else if (document.addEventListener) {
+      document.addEventListener('DOMContentLoaded', strip);
+    }
+  }catch(e){}
+})();
+"""
 
 /**
  * اگر پل JS پس از این مدت onClosed را صدا نزند، خودمان دیالوگ را می‌بندیم.

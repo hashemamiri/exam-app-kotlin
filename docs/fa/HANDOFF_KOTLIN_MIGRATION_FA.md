@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.8.8 تثبیت ترتیب ثبت/بستن فرمول روی مبنای V45.8.6
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.8.9 حذف تم روشن استاتیک و رفع صفحهٔ سفید ویرایشگر فرمول روی مبنای V45.8.8
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6591,3 +6591,119 @@ Patch apply-check روی 08bdc09                     → PASS
 SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: commit 08bdc09 (V45.8.6)
 ```
+
+---
+
+## ۱۰۸) V45.8.9 — حذف تم روشن استاتیک و رفع صفحهٔ سفید فرمول روی V45.8.8
+
+### مبنا و خطای واقعی
+
+مبنای الزامی این پچ، HEAD پوش‌شدهٔ کاربر است:
+
+```text
+1a4765d9026602a755f3cbca0944773cad1395cb
+fix(v45.8.8): stabilize formula apply and close ordering
+```
+
+ممیزی مستقیم همین HEAD نشان داد:
+
+```text
+ERROR_STATIC_THEME_PRESENT
+FORCED_LAYOUT_OK
+ERROR_EARLY_STRIP_MISSING
+```
+
+هش SHA-256 فایل asset کاربر نیز با asset مبنای V45.8.6 یکسان بود:
+
+```text
+bf6b07f8895e23d9b958e908bcc83c207678f5b5042fc50886bd5dd538b99f85
+```
+
+بنابراین علت صفحهٔ سفید حدس نیست: داخل asset یک تگ استاتیک
+`<style id="hostThemeOverride">` مانده بود که متغیرهای تم دارک را به رنگ‌های
+روشن و بوم را به سفید بازنویسی می‌کرد. پچ‌های قدیمی V45.8.7 به‌دلیل ساخته‌شدن
+روی تاریخچه‌ای با commit ID متفاوت، روی شاخهٔ واقعی کاربر قابل اعمال نبودند.
+
+### اصلاح V45.8.9
+
+1. بلوک استاتیک ۲۱۷ خطی `hostThemeOverride` از
+   `app/src/main/assets/math_editor_standalone.html` حذف شد. API پویای
+   `window.__mathHostTheme.on()/.off()` دست‌نخورده ماند.
+2. `EARLY_THEME_STRIP_JS` در `onPageStarted` نصب شد تا اگر asset آینده دوباره
+   تگ تم روشن را تزریق کرد، MutationObserver آن را بلافاصله حذف کند.
+3. پس‌زمینهٔ دارک `var(--bg1)` و رنگ `var(--text)` در fallback حداقلی WebView
+   صریح شد، بدون هیچ override روی `#mfP_box` یا سه ردیف گرید asset.
+4. اصلاح ترتیب apply/close در V45.8.8 بدون تغییر حفظ شد؛ تست آن نیز باقی است.
+5. verifier و تست واحد V45.8.9 نبود تگ استاتیک، نصب محافظ زودهنگام و حفظ
+   چیدمان بومی را کنترل می‌کنند.
+
+### اعتبارسنجی انجام‌شده
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+ASSET_EXACT_REMOVAL=PASS (فقط همان style و newline بعدش حذف شد)
+ASSET_NODE_SYNTAX=PASS (هر سه بلوک script)
+KOTLIN_DELIMITER_COUNT=PASS (brace 137/137؛ parenthesis 272/272)
+PATCH_WHITESPACE_CHECK=PASS
+jsdom: hostThemeOverride=false؛ bg1=#0f0c29؛ text=#fff
+jsdom: chips=grid؛ keypad=grid؛ V34 categories=10؛ library panel=true
+```
+
+اجرای Gradle در sandbox واقعاً امتحان شد، اما پیش از کامپایل سورس به‌دلیل
+resolve نشدن plugin زیر از مخازن بیرونی متوقف شد:
+
+```text
+com.google.devtools.ksp:2.0.21-1.0.28 — plugin artifact not found
+```
+
+این محدودیت شبکه/مخزن محیط تست است، نه خطای کامپایل گزارش‌شده از فایل‌های
+V45.8.9؛ به همین دلیل build نهایی باید در WSL/GitHub Actions کاربر اجرا شود.
+
+### فایل‌های پچ
+
+```text
+V45_8_9_white_formula_page_fix_on_1a4765d.patch
+V45_8_9_HANDOFF_FA.md
+```
+
+### اعمال در WSL
+
+پیش از اعمال، دستور اول باید دقیقاً `1a4765d` را نشان دهد:
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin/exam-app-kotlin
+git log --oneline -1
+git status --short --branch
+git am --whitespace=nowarn /mnt/c/Users/Hashem/Downloads/V45_8_9_white_formula_page_fix_on_1a4765d.patch
+git push origin HEAD
+```
+
+اگر HEAD متفاوت بود یا `git am` خطا داد، `--continue`، `--skip` یا reset اجرا
+نشود؛ ابتدا `git am --abort` و خروجی کامل ارسال شود.
+
+### build و test روی سیستم کاربر
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin/exam-app-kotlin
+python3 scripts/verify_native_final.py
+./gradlew --no-daemon :app:testDebugUnitTest
+./gradlew --no-daemon :app:assembleDebug
+```
+
+پذیرش دستی روی دستگاه:
+
+- آیکن فرمول باید ویرایشگر دارک را بدون فلش/صفحهٔ سفید باز کند؛
+- بوم، ریل تراشه‌ها و کیپد هم‌زمان دیده شوند؛
+- سه چیپ V34 و کتابخانه‌هایشان باز شوند؛
+- «ثبت» ابتدا فرمول را تحویل دهد و سپس دیالوگ بسته شود؛
+- «بازگشت/بستن» بدون ثبت، دیالوگ را عادی ببندد.
+
+### وضعیت داده و امنیت
+
+```text
+SQL / Supabase / Edge Function / Migration / Dependency جدید: ندارد
+پروژهٔ Supabase: بدون تغییر
+```
+
+هیچ `SUPABASE_SERVICE_KEY`، کلید `service_role`، فایل `release.keystore`، رمز
+keystore/alias یا `local.properties` در پچ، Git یا APK قرار نگرفته است.
