@@ -6081,3 +6081,78 @@ git diff --check → PASS
    شود.
 4. اگر هنوز صفحه خالی است، logcat با فیلد `chromium|System.err|ConsoleMessage`
    را بفرستید؛ بدون خطای واقعی حدس اضافه نمی‌زنیم.
+
+---
+
+## ۱۰۰) V45.7.5 — تضمین باز شدن مدال و لاگ‌گیری از خطاهای WebView
+
+### علت
+
+پس از V45.7.4 کاربر اسکرین‌شاتی فرستاد که نشان می‌داد به‌جای ویرایشگر،
+**صفحهٔ دمای خود فایل HTML** (سؤال ۱، گزینه ۱ و ۲، سؤال ۲) نمایش داده
+می‌شود و در textareaها متن خام TeX (مثل `حاصل عبارت ...`) بدون رندر
+دیده می‌شود. این یعنی:
+
+1. فایل asset لود شده (صفحه دیده می‌شود).
+2. اما `openMath('qTxt_1')` به‌نحوی مدال را باز نکرده است: نه کلاس
+   `open` روی `#mfModal` و نه `box-fullscreen`.
+3. رویداد `load` صفحه هم احتمالاً یا قبل از فراخوانی آمادگی ما آتش نکرده
+   یا اثرش به جایی نرسیده که `qMathSync` را برای فیلدهای دمو اجرا کند.
+
+در V45.7.3/4 ما فقط ارتفاع جعبه را اصلاح کرده بودیم ولی اگر
+`openMath` در همان ابتدا با یک استثنا متوقف شود (مثلاً تفاوت رفتار
+در WebView قدیمی یا یکی از توابع وابسته)، هیچ fallbackای برای باز
+کردن مستقیم مدال وجود نداشت.
+
+### اصلاح
+
+- **پل تشخیصی**: تابع `AndroidMathBridge.log(msg)` اضافه شد و یک
+  `WebChromeClient` کنسول JS را به logcat (تگ `MathEditorWebView`)
+  هدایت می‌کند. حالا اگر خطایی در صفحه رخ دهد در logcat دیده می‌شود.
+- **باز کردن ایمن مدال**: پس از `openMath('qTxt_1')`، یک بلوک
+  جداگانه با try/catch خودش کلاس‌های `modal open box-fullscreen`
+  را روی `#mfModal` می‌گذارد و `display:flex` را ست می‌کند و
+  `body.math-open` را اضافه می‌کند؛ سپس `mbDraw` و در صورت
+  خالی بودن `#mfTabs` یک‌بار `buildMathPad(MB_PAD_ACTIVE)` را
+  صدا می‌زند. اگر `openMath` درست کار کرده باشد این فراخوانی‌ها
+  بی‌اثر هستند؛ اگر نکرده باشند، کاربر ویرایشگر را می‌بیند.
+- ایزوله کردن کامل خطای V34: بدنهٔ `installLibV34` درون try/catch
+  خودش قرار گرفت تا اگر در WebView خاصی استثنا داد، مانع باز شدن
+  ویرایشگر نشود.
+- `initMathEdit()` صریحاً پیش از openMath صدا زده می‌شود تا پد تب‌دار
+  حتی اگر رویداد load هنوز اجرا نشده باشد، ساخته شود.
+
+### فایل‌ها
+
+```text
+MathEditorWebViewDialog.kt
+  - افزودن WebChromeClient برای هدایت console.* به logcat
+  - متد جدید @JavascriptInterface log روی پل
+  - initMathEdit پیش از openMath
+  - try/catch مجزا برای V34
+  - force-open مدال با کلاس‌ها و buildMathPad
+V19InteractionTest.kt
+  - assertion برای AndroidMathBridge.log، force modal classes و
+    WebChromeClient
+```
+
+### اعتبارسنجی
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=169 edge_functions=3
+git diff --check → PASS
+بریس/پرانتز MathEditorWebViewDialog.kt: 126/126 و 242/242
+```
+
+### اگر هنوز صفحه خالی/دما دیده شد
+
+از کاربر logcat خواسته می‌شود:
+
+```bash
+adb logcat -c
+# باز کردن دیالوگ فرمول
+adb logcat -d | grep -iE "MathEditorWebView|chromium|console" > log.txt
+```
+
+خط‌های `JS[ERROR]` یا `bootstrap ...` دقیقاً محل خطا را نشان می‌دهند و
+بدون حدس می‌توان علت را رفع کرد.

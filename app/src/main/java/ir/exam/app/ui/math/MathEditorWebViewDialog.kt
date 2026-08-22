@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -84,7 +85,8 @@ fun MathEditorWebViewDialog(
                 val tex = unwrapFormula(raw)
                 if (tex.isBlank()) dismissOnce.fire() else onInsert(tex)
             },
-            onClosed = { dismissOnce.fire() }
+            onClosed = { dismissOnce.fire() },
+            onDiagnostic = { msg -> android.util.Log.i("MathEditorWebView", msg) }
         )
     }
 
@@ -197,6 +199,18 @@ private fun configureWebView(wb: WebView, bridge: MathEditorJsBridge) {
             request: WebResourceRequest?
         ): Boolean = true
     }
+    // خطاهای JS کنسول به logcat هدایت می‌شوند تا اگر ویرایشگر در WebView
+    // قدیمی با استثنا مواجه شد، بتوانیم بدون حدس علت را پیدا کنیم.
+    wb.webChromeClient = object : WebChromeClient() {
+        override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+            val m = consoleMessage ?: return false
+            android.util.Log.i(
+                "MathEditorWebView",
+                "JS[${m.messageLevel()}] ${m.sourceId()}:${m.lineNumber()} - ${m.message()}"
+            )
+            return true
+        }
+    }
     wb.loadUrl(ASSET_URL)
 }
 
@@ -245,7 +259,8 @@ private class MathEditorPoller(
 private class MathEditorJsBridge(
     private val settled: AtomicBoolean,
     private val onResult: (String) -> Unit,
-    private val onClosed: () -> Unit
+    private val onClosed: () -> Unit,
+    private val onDiagnostic: (String) -> Unit
 ) {
     @JavascriptInterface
     fun onApplyResult(value: String?) {
@@ -262,6 +277,16 @@ private class MathEditorJsBridge(
             if (!settled.compareAndSet(false, true)) return@post
             onClosed()
         }
+    }
+
+    /**
+     * لاگ تشخیصی از درون صفحهٔ وب. در نسخهٔ انتشار هم باقی می‌ماند تا اگر
+     * روی دستگاه کاربر خطایی رخ داد، logcat آن را نشان دهد.
+     */
+    @JavascriptInterface
+    fun log(msg: String?) {
+        val text = msg ?: "(null)"
+        Handler(Looper.getMainLooper()).post { onDiagnostic(text) }
     }
 }
 
@@ -339,6 +364,13 @@ private const val VIEWPORT_FALLBACK_JS = """
  * پیش از openMath تزریق می‌نماید، و mfApply/closeMath را به پل اندروید وصل
  * می‌کند. [v34Source] محتوای خام فایل `formula/install_lib_v34.js` است که
  * در سطح @Composable از [FormulaV34Library.load] گرفته شده.
+ *
+ * مهم: در نسخه‌های قبلی معلوم شد در برخی WebViewهای قدیمی `openMath` مسیر
+ * کامل را اجرا نمی‌کند (مدال `open`/`box-fullscreen` نمی‌گیرد و کاربر
+ * صفحهٔ دموی پشت آن را می‌بیند). برای همین پس از فراخوانی تابع، خودمان
+ * هم مستقیماً کلاس‌های لازم را روی مدال و body می‌گذاریم و اگر canvas
+ * خالی بود یک‌بار `buildMathPad`/`mfMode('box')` را صدا می‌زنیم. این
+ * تغییر فقط رفتار رندر را تضمین می‌کند و در منطق دست‌نمی‌برد.
  */
 private fun bootstrapScript(initialTex: String, v34Source: String): String {
     val wrapped = "\$" + initialTex + "\$"
@@ -346,50 +378,79 @@ private fun bootstrapScript(initialTex: String, v34Source: String): String {
     val selEnd = wrapped.length
     return VIEWPORT_FALLBACK_JS.trimIndent() + "\n" + """
       (function(){
+        function log(m){ try{ AndroidMathBridge.log(String(m)); }catch(_e){} }
         try{
-          if (window.__mbAndroidInstalled) return;
-          /* ---- V34 library (school/type/bio + curricular extensions) ----
-             Byte-for-byte body of installLibV34 from 66.html, served from
-             app/src/main/assets/formula/install_lib_v34.js. The asset function
-             is idempotent (guards on w.__libV34). In the Kotlin WebView the
-             asset is evaluated once per page load via indirect eval so the
-             function declaration lands in the global lexical scope where the
-             editor's top-level MB_PAD/MB_GROUPS live. We then reach it through
-             window.installLibV34 (the asset assigns nothing on window by
-             itself, so we bind it ourselves). If the asset is missing, the
-             editor falls back to the base library. */
+          if (window.__mbAndroidInstalled) { log('bootstrap already installed'); return; }
+          log('bootstrap start, init=' + (typeof initMathEdit) + ', open=' + (typeof openMath));
+          // اطمینان از ساخته شدن اولیهٔ پد تب‌دار (در صفحهٔ دموی مستقل این
+          // کار در رویداد load انجام می‌شود؛ ما قبل از آن می‌آییم).
+          try {
+            if (typeof initMathEdit === 'function') initMathEdit();
+          } catch(eInit) { log('initMathEdit: ' + eInit); }
+
+          // ---- V34 library (school/type/bio + curricular extensions) ----
+          // بدنه asset در صورت استثنا نباید کل راه‌اندازی را از کار بیندازد.
           if (!window.__mbV34Installed) {
-            $v34Source
             try {
+              $v34Source
               if (typeof installLibV34 === 'function') {
                 window.installLibV34 = installLibV34;
                 installLibV34(window);
               }
-            } catch (eLib) {}
+            } catch (eLib) { log('v34 install: ' + eLib); }
             window.__mbV34Installed = true;
           }
-          /* -------------------------------------------------------------- */
+
           var m = document.getElementById('qTxt_1');
-          if (!m) { AndroidMathBridge.onClosed(); return; }
+          if (!m) { log('qTxt_1 missing'); AndroidMathBridge.onClosed(); return; }
           m.value = $valueLiteral;
-          try { m.setSelectionRange(0, $selEnd); } catch (e) {}
+          try { m.setSelectionRange(0, $selEnd); } catch (eSel) {}
+
           var ia = window.mfApply;
           window.mfApply = function(){
             window.__mbApplyInFlight = true;
-            try { ia.apply(window, arguments); } catch (e1) {}
+            try { ia.apply(window, arguments); } catch (e1) { log('mfApply wrap: ' + e1); }
             var mm = document.getElementById('qTxt_1');
             var v = (mm && mm.value != null) ? String(mm.value) : '';
             AndroidMathBridge.onApplyResult(v);
           };
           var ic = window.closeMath;
           window.closeMath = function(){
-            try { ic.apply(window, arguments); } catch (e2) {}
+            try { ic.apply(window, arguments); } catch (e2) { log('closeMath wrap: ' + e2); }
             if (window.__mbApplyInFlight) { window.__mbApplyInFlight = false; return; }
             AndroidMathBridge.onClosed();
           };
           window.__mbAndroidInstalled = true;
-          window.openMath('qTxt_1');
+
+          // تلاش اول با تابع اصلی صفحه.
+          try {
+            window.openMath('qTxt_1');
+          } catch (eOpen) { log('openMath threw: ' + eOpen); }
+
+          // تضمین رندر: اگر به هر دلیل (استثنا در openMath، تفاوت رفتار
+          // در WebView قدیمی) کلاس‌های مدال اعمال نشده بود، خودمان می‌گذاریم.
+          var modalAfter = null;
+          try {
+            modalAfter = document.getElementById('mfModal');
+            if (modalAfter) {
+              modalAfter.classList.add('modal', 'open', 'box-fullscreen');
+              modalAfter.style.display = 'flex';
+            }
+            document.body.classList.add('math-open');
+            if (typeof mbDraw === 'function') {
+              try { mbDraw(); } catch (eDraw) { log('mbDraw: ' + eDraw); }
+            }
+            if (typeof buildMathPad === 'function' && typeof MB_PAD_ACTIVE !== 'undefined') {
+              var padWrap = document.getElementById('mfTabs');
+              if (padWrap && !padWrap.children.length) {
+                try { buildMathPad(MB_PAD_ACTIVE); } catch(ePad) { log('buildMathPad: ' + ePad); }
+              }
+            }
+          } catch (eForce) { log('force open: ' + eForce); }
+
+          log('bootstrap done; modal classes=' + (modalAfter && modalAfter.className));
         } catch (e) {
+          log('bootstrap fatal: ' + e);
           try { AndroidMathBridge.onClosed(); } catch (e3) {}
         }
       })();

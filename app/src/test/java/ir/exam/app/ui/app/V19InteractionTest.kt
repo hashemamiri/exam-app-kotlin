@@ -134,6 +134,11 @@ class V19InteractionTest {
         // بستن دیالوگ باید حتماً و با timeout ایمن به onDismiss ختم شود
         assertTrue("dismiss safety timeout missing",
                    "DISMISS_FALLBACK_MS" in dialog && "dismissOnce" in dialog)
+        // V45.7.5: اگر openMath در WebView قدیمی کامل اجرا نشد، خودمان
+        // کلاس‌های مدال را force کنیم و خطاها را به logcat بفرستیم
+        assertTrue("diagnostic bridge missing", "AndroidMathBridge.log" in dialog)
+        assertTrue("force modal classes missing", "classList.add('modal', 'open', 'box-fullscreen')" in dialog)
+        assertTrue("WebChromeClient console forward missing", "onConsoleMessage" in dialog)
     }
 
     @Test
