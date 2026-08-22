@@ -30,7 +30,6 @@ private const val DOWNLOAD_STALL_TIMEOUT_MS = 120_000L
 /** دلایل توقف دانلود که مربوط به نبود شبکه‌اند و باید به کاربر اعلام شوند. */
 private val NETWORK_PAUSE_REASONS = setOf(
     DownloadManager.PAUSED_WAITING_FOR_NETWORK,
-    DownloadManager.PAUSED_WAITING_FOR_WIFI,
     DownloadManager.PAUSED_QUEUED_FOR_WIFI
 )
 

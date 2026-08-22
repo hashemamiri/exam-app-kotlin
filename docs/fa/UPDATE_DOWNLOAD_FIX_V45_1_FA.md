@@ -54,7 +54,9 @@
 
 - `ApkDownloadProgress.waitingForNetwork` اضافه شد؛ وضعیت
   `STATUS_PAUSED` با دلیلهای `PAUSED_WAITING_FOR_NETWORK` /
-  `PAUSED_WAITING_FOR_WIFI` / `PAUSED_QUEUED_FOR_WIFI` به UI اعلام میشود.
+  `PAUSED_QUEUED_FOR_WIFI` به UI اعلام میشود. (توجه: ثابت
+  `PAUSED_WAITING_FOR_WIFI` در `DownloadManager` وجود ندارد و هرگز استفاده
+  نشده است.)
 - تشخیص توقف: اگر ۱۲۰ ثانیه هیچ بایتی جلو نرود (`DOWNLOAD_STALL_TIMEOUT_MS`)،
   دانلود لغو و با پیام روشن «دانلود بروزرسانی متوقف شده است؛ اتصال اینترنت را
   بررسی کنید و دوباره تلاش کنید.» خطا داده میشود تا کاربر بینهایت بیصدا

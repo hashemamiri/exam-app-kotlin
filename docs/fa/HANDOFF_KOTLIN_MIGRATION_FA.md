@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.2 رفع 404 بررسی بروزرسانی در CI
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.2.1 رفع خطای کامپایل دانلود
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5027,3 +5027,54 @@ Dependency جدید: ندارد
 ```
 
 راهنمای مستقل: `docs/fa/CI_UPDATE_CHECK_FIX_V45_2_FA.md`.
+
+
+---
+
+## ۸۷) V45.2.1 — رفع خطای کامپایل دانلود بروزرسانی
+
+### گزارش واقعی CI
+
+```text
+e: .../ir/exam/app/core/update/ApkUpdateManager.kt:33:21 Unresolved reference 'PAUSED_WAITING_FOR_WIFI'
+> Task :app:compileDebugKotlin FAILED
+```
+
+### علت
+
+در پچ V45.1 ثابت `PAUSED_WAITING_FOR_WIFI` در `NETWORK_PAUSE_REASONS` استفاده
+شده بود، اما این ثابت در `android.app.DownloadManager` وجود ندارد. دو ثابت
+دیگر همان مجموعه (`PAUSED_WAITING_FOR_NETWORK` و `PAUSED_QUEUED_FOR_WIFI`)
+معتبرند.
+
+### اصلاح
+
+```text
+ApkUpdateManager.kt:
+- حذف PAUSED_WAITING_FOR_WIFI از NETWORK_PAUSE_REASONS؛ رفتار تشخیص
+  «در انتظار شبکه» با دو ثابت معتبر حفظ می‌شود
+
+V45_1UpdateDownloadFixTest:
+- assert معتبر PAUSED_QUEUED_FOR_WIFI + assert منفی عدم وجود
+  PAUSED_WAITING_FOR_WIFI
+
+مستندات و changelog: به‌روزرسانی شدند
+```
+
+### تست
+
+```text
+FINAL_NATIVE_VERIFY                      → PASS
+V45_1 / V45_2 regression tests           → به‌روزرسانی شد
+git diff --check                         → PASS
+testDebugUnitTest / lintDebug            → باید در WSL/GitHub Actions اجرا شود
+```
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V45.2 (شامل V45.1)
+```
+
+راهنمای مستقل: `docs/fa/COMPILE_HOTFIX_V45_2_1_FA.md`.

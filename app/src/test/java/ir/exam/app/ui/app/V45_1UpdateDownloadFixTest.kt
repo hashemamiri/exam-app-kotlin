@@ -98,7 +98,9 @@ class V45_1UpdateDownloadFixTest {
         assertTrue("دانلود بروزرسانی متوقف شده است" in apkManager)
         assertTrue("NETWORK_PAUSE_REASONS" in apkManager)
         assertTrue("PAUSED_WAITING_FOR_NETWORK" in apkManager)
-        assertTrue("PAUSED_WAITING_FOR_WIFI" in apkManager)
+        assertTrue("PAUSED_QUEUED_FOR_WIFI" in apkManager)
+        // PAUSED_WAITING_FOR_WIFI ثابت معتبری در DownloadManager نیست و نباید استفاده شود.
+        assertFalse("PAUSED_WAITING_FOR_WIFI" in apkManager)
     }
 
     @Test
