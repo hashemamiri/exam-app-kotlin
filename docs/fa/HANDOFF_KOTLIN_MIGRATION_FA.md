@@ -6327,3 +6327,55 @@ FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
 بریس/پرانتز MathEditorWebViewDialog.kt: 133/133 و 232/232
 git diff --check → PASS
 ```
+
+---
+
+## ۱۰۴) V45.8.4 — حذف حالت میانی موبایلی و تثبیت بازگشت
+
+### مشکل
+
+کاربر گزارش داد:
+- تصویر ۱: با زدن فرمول، یک نسخهٔ موبایلیِ غیر تمام‌صفحه (bottom-sheet)
+  باز می‌شود که دکمه‌های «درج در سؤال/پاک/انصراف» و نوار ابزار بالا
+  دیده می‌شود (همان ظاهر موبایل بدون `box-fullscreen`).
+- تصویر ۲: با زدن بازگشت، یک نسخهٔ خالی از ویرایشگر در حالت
+  تمام‌صفحه دیده می‌شود و به پنجرهٔ ایجاد آزمون برنمی‌گردد.
+
+### علت
+
+1. در لحظهٔ باز شدن، یک فاصلهٔ کوتاه بین لود HTML و اجرای bootstrap
+   وجود داشت که طی آن asset با ظاهر پایین‌صفحهٔ موبایل دیده می‌شد.
+2. در `onDismissRequest`، ما `closeMath` را اجرا می‌کردیم و سپس با
+   `postDelayed(250ms)` منتظر پل می‌ماندیم. اجرای `closeMath` کلاس
+   `box-fullscreen` را برمی‌داشت و در همان ۲۵۰ms دیالوگ Compose هنوز
+   باز بود؛ نتیجه یک حالت میانی با پس‌زمینهٔ خالی بود.
+3. قانون `.modal.open .modal-box { will-change: transform }` یک
+   استاکینگ کانتکست می‌ساخت که می‌توانست روی `position:fixed` کتابخانه‌ها
+   اثر بگذارد (در حالت تمام‌صفحه اصلاً نباید transform وجود داشته باشد).
+
+### اصلاح
+
+- **حذف تأخیر بستن**: `onDismissRequest` حالا بلافاصله
+  `dismissOnce.fire()` را صدا می‌زند؛ closeMath فقط به‌صورت best-effort
+  برای پاکسازی حالت JS ارسال می‌شود و Compose فوراً بسته می‌شود.
+- **سرکوب closeMath در طول بسته شدن**: پرچم `__mbSuppressClose` باعث
+  می‌شود wrapper ما از فراخوانی inner `closeMath` (که کلاس‌ها را حذف
+  می‌کرد) صرف‌نظر کند.
+- **قفل کلاس با MutationObserver**: بعد از openMath یک
+  `MutationObserver` کلاس‌های `open box-fullscreen` و `math-open` را
+  در صورت حذف، مجدداً برمی‌گرداند تا هیچ‌گاه به حالت میانی سقوط
+  نکنیم.
+- **حذف transform**: در CSS تزریقی برای `.mf-box` و `#mfModal` در حالت
+  تمام‌صفحه، `transform:none !important; will-change:auto !important;`
+  اضافه شد تا استاکینگ کانتکست از بین برود و fixed-position
+  کتابخانه‌ها نسبت به viewport عمل کند.
+- اعمال کلاس‌های fullscreen **پیش از** فراخوانی `openMath` تا حتی
+  قبل از اجرای آن، ظاهر درست باشد.
+
+### اعتبارسنجی
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+بریس/پرانتز MathEditorWebViewDialog.kt: 140/140 و 251/251
+git diff --check → PASS
+```

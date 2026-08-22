@@ -93,13 +93,16 @@ fun MathEditorWebViewDialog(
 
     Dialog(
         onDismissRequest = {
+            // مهم: نباید منتظر پل JS بمانیم. در برخی WebViewها closeMath یا
+            // پل به‌دلیل استثنا/استاکینگ کانتکست اجرا نمی‌شد و دیالوگ Compose
+            // باز می‌ماند. مستقیماً بستن Compose را صدا می‌زنیم؛ cleanup جاوا
+            // اسکریپت به‌صورت best-effort پشت صحنه اجرا می‌شود و WebView
+            // هنگام خروج از Composition به‌هرحال destroy خواهد شد.
             val wb = webViewRef.value
-            if (wb != null && ready) {
+            if (wb != null) {
                 runCatching { wb.evaluateJavascript(CLOSE_MATH_JS, null) }
-                mainHandler.postDelayed({ dismissOnce.fire() }, DISMISS_FALLBACK_MS)
-            } else {
-                dismissOnce.fire()
             }
+            dismissOnce.fire()
         },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -321,8 +324,8 @@ private const val VIEWPORT_FALLBACK_JS = """
   try{
     var css = '' +
       '#mfModal{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;display:flex !important;}' +
-      '#mfModal.box-fullscreen{padding:0 !important;align-items:stretch !important;background:#0f0c29 !important;}' +
-      '#mfModal.box-fullscreen .mf-box{position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;max-width:none !important;max-height:none !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:#0f0c29 !important;box-shadow:none !important;overflow:hidden !important;}' +
+      '#mfModal.box-fullscreen{padding:0 !important;align-items:stretch !important;background:#0f0c29 !important;transform:none !important;will-change:auto !important;}' +
+      '#mfModal.box-fullscreen .mf-box{position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;max-width:none !important;max-height:none !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:#0f0c29 !important;box-shadow:none !important;overflow:hidden !important;transform:none !important;will-change:auto !important;contain:none !important;}' +
       '#mfModal.box-fullscreen #mfP_box{display:flex !important;flex-direction:column !important;position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;min-height:0 !important;overflow:hidden !important;}' +
       '#mfModal.box-fullscreen .mb-wrap{flex:1 1 auto !important;min-height:0 !important;margin:0 !important;padding:14px !important;display:flex !important;overflow:hidden !important;background:#0f0c29 !important;}' +
       '#mfModal.box-fullscreen .mb-canvas{flex:1 1 auto !important;width:100% !important;min-height:0 !important;height:auto !important;display:flex !important;align-items:flex-start !important;justify-content:flex-start !important;overflow:auto !important;}' +
@@ -409,11 +412,31 @@ private fun bootstrapScript(initialTex: String): String {
           };
           var ic = window.closeMath;
           window.closeMath = function(){
+            // اگر سرکوب فعال است (مثلاً در لحظهٔ فشردن بازگشت، قبل از
+            // آن که Compose دیالوگ را کاملاً ببندد)، فقط پل را صدا می‌زنیم
+            // ولی کلاس‌های مدال را حذف نمی‌کنیم تا UI میانی موبایلی
+            // نمایش داده نشود.
+            if (window.__mbSuppressClose) {
+              AndroidMathBridge.onClosed();
+              return;
+            }
             try { ic.apply(window, arguments); } catch (e2) { log('closeMath wrap: ' + e2); }
             if (window.__mbApplyInFlight) { window.__mbApplyInFlight = false; return; }
             AndroidMathBridge.onClosed();
           };
           window.__mbAndroidInstalled = true;
+
+          // قبل از هر چیز، اطمینان حاصل کنیم که مدال در حالت تمام‌صفحه
+          // باز می‌شود. در برخی وب‌ویوها بین زمان فراخوانی openMath و
+          // اعمال CSS یک حالت میانی موبایلی (پایین‌صفحه) دیده می‌شد.
+          try {
+            var modalPre = document.getElementById('mfModal');
+            if (modalPre) {
+              modalPre.classList.add('modal', 'open', 'box-fullscreen');
+              modalPre.style.display = 'flex';
+            }
+            document.body.classList.add('math-open');
+          } catch(ePre){}
 
           try { window.openMath('qTxt_1'); }
           catch (eOpen) { log('openMath threw: ' + eOpen); }
@@ -426,8 +449,29 @@ private fun bootstrapScript(initialTex: String): String {
             if (modal) {
               modal.classList.add('modal', 'open', 'box-fullscreen');
               modal.style.display = 'flex';
+              // جلوگیری از حالت میانی: تا زمانی که دیالوگ Compose باز
+              // است، هیچ‌کس نتواند کلاس box-fullscreen را از مدال بردارد.
+              if (window.MutationObserver && !modal.__mbFsLock) {
+                modal.__mbFsLock = true;
+                new MutationObserver(function(){
+                  if (!modal.classList.contains('box-fullscreen')) {
+                    modal.classList.add('box-fullscreen');
+                    modal.style.display = 'flex';
+                  }
+                  if (!document.body.classList.contains('math-open')) {
+                    document.body.classList.add('math-open');
+                  }
+                }).observe(modal, {attributes:true, attributeFilter:['class','style']});
+              }
             }
             document.body.classList.add('math-open');
+            // wrap داخلی closeMath نباید کلاس‌ها را تا زمان بسته شدن
+            // واقعی حذف کند (در غیر این صورت همان لحظهٔ بین فشردن
+            // بازگشت و بسته شدن Compose، UI میانی موبایلی دیده می‌شود).
+            // تابع فعلی window.closeMath از قبل wrap ماست؛ ما در همان
+            // ابتدا ic (نسخهٔ داخلی) را یادداشت کرده‌ایم؛ اینجا فقط
+            // اطمینان می‌دهیم که حذف کلاس به‌تعویق بیفتد.
+            window.__mbSuppressClose = true;
             window.__mbForceLayout();
             setTimeout(window.__mbForceLayout, 100);
             setTimeout(window.__mbForceLayout, 400);
