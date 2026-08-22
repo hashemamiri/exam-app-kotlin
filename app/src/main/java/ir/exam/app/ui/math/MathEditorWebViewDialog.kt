@@ -273,6 +273,33 @@ private fun FailedOverlay(onRetry: () -> Unit) {
 }
 
 /**
+ * CSS تزریقی برای رفع مشکلات رندر در WebViewهای قدیمی.
+ *
+ *  - `100dvh` در Chrome/WebView قبل از نسخهٔ ۱۰۸ ناشناخته است و چون فقط
+ *    همان مقدار برای ارتفاع جعبهٔ تمام‌صفحه آمده، ارتفاع به صفر می‌افتد و
+ *    به‌نظر می‌رسد پنجره «چیزی نشان نمی‌دهد». یک `100vh` پیش‌فرض قبل از
+ *    `100dvh` اضافه می‌شود تا در مرورگرهای جدید همان مقدار دینامیک بازنویسی
+ *    شود و در قدیمی‌ها 100vh کار کند.
+ *  - چند قانون max-height با تابع `min(84dvh, ...)` نیز fallback می‌گیرند.
+ *
+ * این CSS به انتهای <head> تزریق می‌شود و asset اصلی را تغییر نمی‌دهد.
+ */
+private const val VIEWPORT_FALLBACK_JS = """
+(function(){
+  try{
+    var css = '' +
+      '#mfModal.box-fullscreen .mf-box{height:100vh !important;max-height:100vh !important;height:100dvh !important;max-height:100dvh !important;}' +
+      '#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
+      '#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell{max-height:84vh !important;max-height:min(84dvh,720px) !important;}';
+    var s = document.createElement('style');
+    s.id = 'mbAndroidViewportFallback';
+    s.textContent = css;
+    (document.head || document.documentElement).appendChild(s);
+  }catch(e){}
+})();
+"""
+
+/**
  * فرمول فعلی (یا `$$` برای درج جدید) را seed می‌کند، کتابخانهٔ V34 را
  * پیش از openMath تزریق می‌نماید، و mfApply/closeMath را به پل اندروید وصل
  * می‌کند. [v34Source] محتوای خام فایل `formula/install_lib_v34.js` است که
@@ -282,7 +309,7 @@ private fun bootstrapScript(initialTex: String, v34Source: String): String {
     val wrapped = "\$" + initialTex + "\$"
     val valueLiteral = JSONObject.quote(wrapped)
     val selEnd = wrapped.length
-    return """
+    return VIEWPORT_FALLBACK_JS.trimIndent() + "\n" + """
       (function(){
         try{
           if (window.__mbAndroidInstalled) return;

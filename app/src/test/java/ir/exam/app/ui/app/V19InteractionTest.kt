@@ -121,6 +121,11 @@ class V19InteractionTest {
         // 4) گارد idempotent بودن حفظ شده باشد (جلوگیری از تزریق دوباره)
         assertTrue("__libV34 idempotency guard missing", "__libV34" in v34)
         assertTrue("__mbV34Installed one-shot guard missing", "__mbV34Installed" in dialog)
+
+        // 5) fallback برای WebViewهای قدیمی که 100dvh نمی‌فهمند
+        assertTrue("VIEWPORT_FALLBACK_JS missing", "VIEWPORT_FALLBACK_JS" in dialog)
+        assertTrue("100vh fallback missing", "100vh" in dialog)
+        assertTrue("100dvh target missing", "100dvh" in dialog)
     }
 
     @Test

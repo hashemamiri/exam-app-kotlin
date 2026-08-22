@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
  * فایل از `assets/formula/install_lib_v34.js` یک‌بار و به‌صورت تنبل خوانده و
  * کش می‌شود. این object عمداً فایل جداگانه است تا ارجاع به
  * MathEditorWebViewDialog در توابع کمکی نباشد؛ K2 در کامپایل برخی ترکیب‌های
- * `ُclazz.getResourceAsStream` درون همین فایل را به‌اشتباه به‌عنوان
+ * `clazz.getResourceAsStream` درون همین فایل را به‌اشتباه به‌عنوان
  * فراخوانی @Composable تشخیص می‌داد (به V45.7.1 و V45.7.2 رجوع کنید).
  */
 object FormulaV34Library {

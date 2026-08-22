@@ -601,6 +601,11 @@ _install_idx = formula_editor.find("installLibV34(window)")
 _open_idx = formula_editor.find("window.openMath('qTxt_1')")
 require(0 <= _install_idx < _open_idx,
         "V34 library must be installed before openMath('qTxt_1')")
+
+# V45.7.3: WebViewهای قدیمی 100dvh را نمی‌فهمند و جعبهٔ تمام‌صفحه ارتفاع صفر می‌گیرد
+require("VIEWPORT_FALLBACK_JS" in formula_editor and "100dvh" in formula_editor
+        and "100vh" in formula_editor,
+        "formula dialog must inject a 100vh fallback for 100dvh on old WebViews")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 # ---- V28: reorder / image safety / bulk window / field of study ----

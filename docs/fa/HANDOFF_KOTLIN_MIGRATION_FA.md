@@ -5933,3 +5933,79 @@ jsdom e2e (همان مدل evaluateJavascript):
 `LocalContext.current` یا از طریق یک object مستقل خوانده شود و هرگز نام
 همان تابع composable درون بدنهٔ یک تابع کمکی غیر-composable ظاهر نشود
 (محدودیت K2 در این نسخه).
+
+---
+
+## ۹۸) V45.7.3 — fallback 100vh برای 100dvh در WebViewهای قدیمی
+
+### علت
+
+پس از نصب APK حاوی V45.7.2، کاربر گزارش داد:
+- «پنجرهٔ فرمول چیزی رو نشون نمیده»
+- «پنجرهٔ ایجاد آزمون بهم ریخته»
+
+بررسی jsdom نشان داد منطق و داده‌های V45.7.2 درست کار می‌کنند (مدال باز
+می‌شود، canvas رندر می‌شود، ۱۵۱ تب و ۱۵ تراشه در دسترس‌اند). علت محتمل در
+خود فایل asset بود:
+
+```css
+#mfModal.box-fullscreen .mf-box {
+  height: 100dvh;      /* Chrome/WebView < 108 نمی‌فهمد */
+}
+```
+
+در WebViewهای قدیمی (پیش از Chrome 108، اواخر ۲۰۲۲) واحد `dvh` ناشناخته
+است و چون هیچ `height` پیش‌فرض دیگری برای همان قانون نوشته نشده بود، مقدار
+به `auto` می‌افتاد و جعبه می‌توانست ارتفاع صفر بگیرد. پیامد همان «چیزی
+دیده نمی‌شود» بود.
+
+### اصلاح
+
+ثابت جدید `VIEWPORT_FALLBACK_JS` در `MathEditorWebViewDialog.kt` در
+ابتدای bootstrap پیش از هر چیز یک `<style>` به `<head>` اضافه می‌کند:
+
+```javascript
+#mfModal.box-fullscreen .mf-box{
+  height:100vh !important; max-height:100vh !important;
+  height:100dvh !important; max-height:100dvh !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel{...}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell{...}
+```
+
+در مرورگرهای جدید، `100dvh` دوم `100vh` را بازنویسی می‌کند (همان رفتار
+اصلی)؛ در مرورگرهای قدیمی، `100dvh` ناشناخته رد می‌شود و `100vh` کار
+می‌کند. asset اصلی بایت‌به‌بایت دست‌نخورده ماند.
+
+### فایل‌ها
+
+```text
+MathEditorWebViewDialog.kt
+  - افزودن ثابت VIEWPORT_FALLBACK_JS
+  - bootstrapScript ابتدا این قطعه را پیش از بدنهٔ اصلی برمی‌گرداند
+V19InteractionTest.kt
+  - assertion برای وجود VIEWPORT_FALLBACK_JS و هر دو واحد 100vh/100dvh
+verify_native_final.py
+  - بررسی قراردادی V45.7.3
+FormulaV34Library.kt
+  - اصلاح یک typo در KDoc (ُclazz → clazz)؛ بدون تغییر کد
+```
+
+### اعتبارسنجی
+
+```text
+python3 scripts/verify_native_final.py
+  → FINAL_NATIVE_VERIFY=PASS kotlin_files=169 edge_functions=3
+git diff --check → PASS
+jsdom: مدال باز می‌شود، 151 تب، 15 تراشه، canvas دارای محتوا
+```
+
+### یادآوری برای «پنجرهٔ ایجاد آزمون به‌هم ریخته»
+
+از V45.6 تا V45.7.3 هیچ تغییری در چیدمان `ExamBuilderScreen.kt` داده نشده
+به‌جز خط `import` و فراخوانی `MathEditorWebViewDialog`. این فایل در V45.6
+در CI و آزمون‌های دستی سالم بود. اگر در V45.7.1 یا V45.7 چیدمان به‌هم
+ریخته، محتمل‌ترین علت نصب یک APK از کامیت‌های شکست‌خورده است که فایل‌ها را
+نیمه‌کاره داشته‌اند. پس از نصب APK سبز V45.7.2/V45.7.3 اگر مشکل باقی بود،
+یک اسکرین‌شات یا logcat از همان لحظه لازم است (اصل اول: بدون خطای واقعی
+حدس نمی‌زنیم).
