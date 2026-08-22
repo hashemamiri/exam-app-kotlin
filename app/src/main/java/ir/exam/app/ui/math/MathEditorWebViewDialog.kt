@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -74,7 +75,11 @@ fun MathEditorWebViewDialog(
         )
     }
 
-    val bootstrap = remember(initialTex) { bootstrapScript(initialTex) }
+    val appContext = LocalContext.current.applicationContext
+    val v34Source = remember { FormulaV34Library.load(appContext) }
+    val bootstrap = remember(initialTex, v34Source) {
+        bootstrapScript(initialTex, v34Source)
+    }
 
     Dialog(
         onDismissRequest = {
@@ -267,21 +272,40 @@ private fun FailedOverlay(onRetry: () -> Unit) {
     }
 }
 
-/** فرمول فعلی (یا `$$` برای درج جدید) را در متن ویرایشگر قرار می‌دهد و باز می‌کند. */
-private fun bootstrapScript(initialTex: String): String {
+/**
+ * فرمول فعلی (یا `$$` برای درج جدید) را seed می‌کند، کتابخانهٔ V34 را
+ * پیش از openMath تزریق می‌نماید، و mfApply/closeMath را به پل اندروید وصل
+ * می‌کند. [v34Source] محتوای خام فایل `formula/install_lib_v34.js` است که
+ * در سطح @Composable از [FormulaV34Library.load] گرفته شده.
+ */
+private fun bootstrapScript(initialTex: String, v34Source: String): String {
     val wrapped = "\$" + initialTex + "\$"
     val valueLiteral = JSONObject.quote(wrapped)
     val selEnd = wrapped.length
-    val installLibSrc = readInstallLibV34()
     return """
       (function(){
         try{
           if (window.__mbAndroidInstalled) return;
           /* ---- V34 library (school/type/bio + curricular extensions) ----
-             This is the byte-for-byte body of installLibV34 from 66.html.
-             It is idempotent (guards on w.__libV34) and safe to re-eval. */
-          $installLibSrc
-          try { installLibV34(window); } catch (eLib) {}
+             Byte-for-byte body of installLibV34 from 66.html, served from
+             app/src/main/assets/formula/install_lib_v34.js. The asset function
+             is idempotent (guards on w.__libV34). In the Kotlin WebView the
+             asset is evaluated once per page load via indirect eval so the
+             function declaration lands in the global lexical scope where the
+             editor's top-level MB_PAD/MB_GROUPS live. We then reach it through
+             window.installLibV34 (the asset assigns nothing on window by
+             itself, so we bind it ourselves). If the asset is missing, the
+             editor falls back to the base library. */
+          if (!window.__mbV34Installed) {
+            $v34Source
+            try {
+              if (typeof installLibV34 === 'function') {
+                window.installLibV34 = installLibV34;
+                installLibV34(window);
+              }
+            } catch (eLib) {}
+            window.__mbV34Installed = true;
+          }
           /* -------------------------------------------------------------- */
           var m = document.getElementById('qTxt_1');
           if (!m) { AndroidMathBridge.onClosed(); return; }
@@ -309,30 +333,6 @@ private fun bootstrapScript(initialTex: String): String {
       })();
     """.trimIndent()
 }
-
-/**
- * محتوای `assets/formula/install_lib_v34.js` را به‌صورت تنبل یک‌بار می‌خواند
- * تا در زمان ساخت WebView در حافظه نگه دارد. فایل از مخزن و با همان
- * رمزگذاری UTF-8 خوانده می‌شود و هیچ تغییری در محتوای آن داده نمی‌شود.
- *
- * بدنه به‌جای expression-with-`run` صریحاً با if/else نوشته شده تا کامپایلر
- * K2 اشتباهاً ارجاع `MathEditorWebViewDialog::class.java` را به‌عنوان
- * فراخوانی @Composable تفسیر نکند (گارد کامپایل V45.7).
- */
-private fun readInstallLibV34(): String {
-    val cached = cachedInstallLibV34
-    if (cached != null) return cached
-    val stream = Thread.currentThread().contextClassLoader
-        ?.getResourceAsStream("assets/formula/install_lib_v34.js")
-        ?: MathEditorWebViewDialog::class.java.getResourceAsStream(
-            "/assets/formula/install_lib_v34.js"
-        )
-    val src = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-    cachedInstallLibV34 = src
-    return src
-}
-
-@Volatile private var cachedInstallLibV34: String? = null
 
 /** `$…$` را باز می‌کند؛ بدون پوشش، همان متن برمی‌گردد. */
 private fun unwrapFormula(raw: String): String {

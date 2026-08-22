@@ -91,6 +91,7 @@ class V19InteractionTest {
         val root = root()
         val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt").readText()
         val v34 = File(root, "app/src/main/assets/formula/install_lib_v34.js").readText()
+        val loader = File(root, "app/src/main/java/ir/exam/app/ui/math/FormulaV34Library.kt").readText()
 
         // 1) asset باید بایت‌به‌بایت بدنهٔ installLibV34 باشد
         assertTrue("installLibV34 function missing from V34 asset",
@@ -104,17 +105,22 @@ class V19InteractionTest {
             assertTrue("V34 asset missing token: $token", token in v34)
         }
 
-        // 2) دیالوگ باید asset را بخواند و installLibV34(window) را قبل از openMath اجرا کند
-        assertTrue("readInstallLibV34 helper missing", "readInstallLibV34" in dialog)
-        assertTrue("install_lib_v34.js asset path missing", "formula/install_lib_v34.js" in dialog)
+        // 2) asset باید توسط Android Context در سطح Composable خوانده شود
+        assertTrue("FormulaV34Library.load helper missing", "fun load(context: Context)" in loader)
+        assertTrue("V34 asset path missing", "formula/install_lib_v34.js" in loader)
+        assertTrue("dialog must call FormulaV34Library.load", "FormulaV34Library.load" in dialog)
+        assertTrue("dialog must use LocalContext", "LocalContext.current" in dialog)
+
+        // 3) تزریق باید قبل از openMath اجرا شود
         val installIdx = dialog.indexOf("installLibV34(window)")
         val openIdx = dialog.indexOf("window.openMath('qTxt_1')")
         assertTrue("installLibV34(window) call missing", installIdx >= 0)
         assertTrue("window.openMath('qTxt_1') missing", openIdx >= 0)
         assertTrue("V34 must install before openMath", installIdx < openIdx)
 
-        // 3) گارد idempotent بودن حفظ شده باشد (جلوگیری از تزریق دوباره)
+        // 4) گارد idempotent بودن حفظ شده باشد (جلوگیری از تزریق دوباره)
         assertTrue("__libV34 idempotency guard missing", "__libV34" in v34)
+        assertTrue("__mbV34Installed one-shot guard missing", "__mbV34Installed" in dialog)
     }
 
     @Test

@@ -5864,3 +5864,72 @@ jsdom end-to-end (با تقلید از Android evaluateJavascript):
 ```
 
 پیش‌نیاز: V45.6 (درخت نهایی شامل WebView ویرایشگر).
+
+---
+
+## ۹۷) V45.7.2 — رفع کامپایل K2 با انتقال خواندن asset به Context سطح Composable
+
+### علت
+
+پس از push پچ V45.7، CI روی `compileDebugKotlin` با این خطا شکست خورد:
+
+```text
+e: MathEditorWebViewDialog.kt:318:13 Functions which invoke @Composable
+   functions must be marked with the @Composable annotation
+e: MathEditorWebViewDialog.kt:319:18 @Composable invocations can only happen
+   from the context of a @Composable function
+e: MathEditorWebViewDialog.kt:319:18 Function invocation
+   'MathEditorWebViewDialog(...)' expected.
+```
+
+هات‌فیکس V45.7.1 بدنهٔ تابع را از expression-body با `?: run { ... }` به
+بدنهٔ بلوکی با if/return تغییر داد ولی خطا روی خطوط جدید (۳۲۲ و ۳۲۷) تکرار
+شد. نتیجه: مشکل از `run` یا `elvis` نبود؛ کامپایلر K2 در این نسخه هر بار
+که در یک تابع غیر-@Composable به `MathEditorWebViewDialog::class.java`
+ارجاع داده می‌شد، آن ارجاع را به‌عنوان فراخوانی تابع composable تعبیر
+می‌کرد.
+
+### اصلاح
+
+```text
+- حذف کامل readInstallLibV34 و cachedInstallLibV34 از MathEditorWebViewDialog
+- فایل جدید: app/src/main/java/ir/exam/app/ui/math/FormulaV34Library.kt
+    object FormulaV34Library {
+      fun load(context: Context): String   // assets.open(...).readBytes()
+    }
+  این object هیچ ارجاعی به MathEditorWebViewDialog ندارد.
+- در MathEditorWebViewDialog (سطح @Composable):
+    val appContext = LocalContext.current.applicationContext
+    val v34Source = remember { FormulaV34Library.load(appContext) }
+    val bootstrap = remember(initialTex, v34Source) {
+      bootstrapScript(initialTex, v34Source)
+    }
+  این کد داخل بدنه composable اجرا می‌شود و K2 روی آن اعتراضی ندارد.
+- bootstrapScript اکنون یک پارامتر v34Source می‌گیرد و به‌جای فراخوانی
+  هر بار installLibV34، با گارد window.__mbV34Installed بدنه را فقط یک‌بار
+  در هر بار بارگذاری صفحه eval می‌کند.
+- تست V19 و verify_native_final.py به‌روزرسانی شدند:
+    * وجود FormulaV34Library.load(context: Context)
+    * مسیر asset در object (نه در دیالوگ)
+    * استفاده از LocalContext.current در دیالوگ
+    * ترتیب installLibV34(window) قبل از window.openMath('qTxt_1')
+    * وجود گارد __mbV34Installed
+```
+
+### اعتبارسنجی
+
+```text
+python3 scripts/verify_native_final.py
+  → FINAL_NATIVE_VERIFY=PASS kotlin_files=169 edge_functions=3
+git diff --check                       → PASS
+jsdom e2e (همان مدل evaluateJavascript):
+  groups=11 pads=151 chips=15 v34chips=3
+  بدون خطای JS
+```
+
+### نکتهٔ معماری
+
+از این به بعد هر asset یا منبعی که در @Composable لازم است باید با
+`LocalContext.current` یا از طریق یک object مستقل خوانده شود و هرگز نام
+همان تابع composable درون بدنهٔ یک تابع کمکی غیر-composable ظاهر نشود
+(محدودیت K2 در این نسخه).

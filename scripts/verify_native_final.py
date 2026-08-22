@@ -592,9 +592,11 @@ for token in (
     "v34-bio", "v34-uni",
 ):
     require(token in v34_text, f"V34 library missing token: {token}")
-require("formula/install_lib_v34.js" in formula_editor and "readInstallLibV34" in formula_editor and
-        "installLibV34(window)" in formula_editor,
-        "formula editor dialog does not load/run the V34 library asset")
+require("FormulaV34Library" in formula_editor and "formula/install_lib_v34.js" in formula_editor,
+        "formula editor dialog does not load the V34 library asset through FormulaV34Library")
+require("LocalContext.current.applicationContext" in formula_editor
+        or "LocalContext.current" in formula_editor,
+        "V34 library must be read from a @Composable context, not a non-composable helper")
 _install_idx = formula_editor.find("installLibV34(window)")
 _open_idx = formula_editor.find("window.openMath('qTxt_1')")
 require(0 <= _install_idx < _open_idx,
