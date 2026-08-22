@@ -5495,3 +5495,253 @@ GitHub Actions همان ۲۹۷ تست را سبز کند.
 
 پیش‌نیاز: V45.5 (HEAD `05338d2`). پس از اعمال این پچ، نسخهٔ مؤثر برابر
 V45.4.2 است و هندآف V45.6 این واقعیت را ثبت می‌کند.
+
+
+---
+
+## ۹۴) راهنمای عملی: گرفتن سورس، اعمال پچ و push (برای ماشین توسعه با Git/WSL)
+
+این بخش روش کار ثابتی است که در V45.6 روی همین مخزن تست شد و برای هر پچ
+بعدی هم تکرار می‌شود.
+
+### ۰) پیش‌نیازهای روی ماشین توسعه
+
+```text
+- Git نصب باشد (در WSL: sudo apt install git)
+- دسترسی به GitHub با HTTPS (نیازی به SSH نیست؛ هنگام push، Git از
+  Credential Manager ویندوز یا PAT ذخیره‌شده استفاده می‌کند)
+- در صورت اجرای محلی build/test: JDK 17 و Android SDK (مطابق
+  build.gradle.kts پروژه)
+- quota مخزن: در زمان نگارش این هندآف مخزن عمومی است اما در حال
+  خصوصی‌شدن است؛ بهتر است قبل از خصوصی‌شدن یک‌بار کلون شود.
+```
+
+### ۱) کلون تازه (اگر هنوز پروژه محلی ندارید)
+
+```bash
+# در WSL، پوشه‌ای که می‌خواهید پروژه در آن قرار گیرد
+cd /mnt/c/Users/Hashem/Downloads
+git clone https://github.com/hashemamiri/exam-app-kotlin.git
+cd exam-app-kotlin
+git log --oneline -5        # تأیید آخرین commit
+```
+
+اگر قبلاً کلون دارید و فقط می‌خواهید تازه شود:
+
+```bash
+cd exam-app-kotlin
+git fetch origin
+git switch main
+git pull --ff-only origin main
+```
+
+### ۲) ساخت پچ جدید روی ماشین توسعه‌دهنده (سمت ایجنت)
+
+پچ باید با خودِ Git (نه خروجی `diff` متنی ساده) و در ریشهٔ workspace
+قرار گیرد:
+
+```bash
+# بعد از اعمال همهٔ تغییرات و stage آن‌ها
+git add -A
+git status                                 # مرور فایل‌ها
+
+# اگر پچ یک commit جدید است:
+git commit -m "feat(vXX.Y): ..."
+# یا اگر شامل چند commit است، همه را می‌توان در یک فایل پچ بسته‌بندی کرد.
+
+# تولید فایل پچ از آخرین commit:
+git format-patch -1 HEAD --stdout > /home/user/VXX_Y_topic.patch
+ls -la /home/user/VXX_Y_topic.patch
+```
+
+نکته‌ها:
+- هرگز فایل‌های باینری (`release.keystore`، `*.jks`، `local.properties`،
+  فایل‌های حاوی `SUPABASE_SERVICE_KEY` یا `service_role`) نباید در پچ
+  باشند. این فایل‌ها از قبل در `.gitignore` هستند؛ پوشش را قبل از commit
+  با `git status` و `git diff --cached --stat` بازبینی کنید.
+- هر پچ باید در همان commit، به‌روزرسانی
+  `docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md` را هم داشته باشد (قانون ۴
+  بخش قوانین).
+- اگر پچ SQL دارد، فایل `.sql` آن فقط روی پروژهٔ اصلی
+  `eazwuyrymsvdkwckdpco` اجرا شود؛ هرگز روی
+  `niuadepncroqoebrxpqk` (پروژه ممنوع) اجرا نشود.
+
+### ۳) اعمال پچ روی کلون محلی (سمت کاربر/توسعه)
+
+فایل پچ را (مثلاً `V45_6_webview_formula_editor.patch`) در پوشهٔ
+`Downloads` ویندوز یا هر مسیر در دسترس دیگری قرار دهید، سپس:
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin/exam-app-kotlin
+
+# ۱) اطمینان از تمیز بودن درخت کاری
+git status
+# خروجی باید "nothing to commit, working tree clean" باشد.
+
+# ۲) اطمینان از تازه بودن main
+git pull --ff-only origin main
+
+# ۳) اعمال پچ با git am (تاریخچه/نویسنده حفظ می‌شود)
+git am /mnt/c/Users/Hashem/Downloads/VXX_Y_topic.patch
+```
+
+خروجی موفق:
+
+```text
+Applying: feat(vXX.Y): ...
+```
+
+اگر `git am` با تعارض متوقف شد:
+
+```bash
+# دیدن فایل‌های تعارضی
+git status
+# رفع تعارض در فایل‌ها با ویرایشگر، سپس:
+git add <resolved-files>
+git am --continue
+# یا انصراف کامل:
+git am --abort
+```
+
+روش جایگزین بدون حفظ نویسنده (فقط در صورتی که `git am` جواب نداد):
+
+```bash
+git apply --whitespace=nowarn /mnt/c/Users/Hashem/Downloads/VXX_Y_topic.patch
+git add -A
+git commit -m "feat(vXX.Y): ..."
+```
+
+### ۴) بررسی پیش از push
+
+```bash
+# مرور commit جدید
+git log --oneline -3
+git status -sb          # باید "ahead 1" (یا بیشتر) بگوید
+
+# اسکریپت تأیید نهایی (بدون نیاز به SDK):
+python3 scripts/verify_native_final.py
+# خروجی منتظر:
+#   FINAL_NATIVE_VERIFY=PASS kotlin_files=... edge_functions=...
+
+# بررسی whitespace/پیام خطای ساده:
+git diff --check HEAD~1 HEAD
+```
+
+در صورت دسترسی به JDK 17 و Android SDK (اختیاری، چون CI هم اجرا می‌کند):
+
+```bash
+./gradlew testDebugUnitTest
+./gradlew lintDebug
+./gradlew assembleDebug
+```
+
+### ۵) push به مخزن اصلی
+
+```bash
+git push origin HEAD
+```
+
+خروجی موفق چیزی شبیه:
+
+```text
+Enumerating objects: ... done.
+...
+To https://github.com/hashemamiri/exam-app-kotlin.git
+   05338d2..9e29baf  HEAD -> main
+```
+
+پس از push، GitHub Actions خودش اجرا می‌شود:
+- Workflow: «ساخت APK آزمایشی و Release Kotlin»
+- آدرس: `https://github.com/hashemamiri/exam-app-kotlin/actions`
+- اگر run قرمز شد، لاگ همان مرحله را بگیرید و همراه شمارهٔ run
+  بفرستید؛ بدون لاگ واقعی هیچ حدسی زده نمی‌شود (اصل اول).
+
+### ۶) اگر محیطی که پچ را ساخته نمی‌تواند push کند (مثل sandbox بدون اعتبار)
+
+در این حالت دو فایل در ریشهٔ workspace تحویل داده می‌شود:
+
+| فایل | کاربرد |
+|---|---|
+| `VXX_Y_topic.patch` | `git am` روی کلون دیگر (توصیه‌شده) |
+| `VXX_Y_topic.bundle` | `git fetch <bundle> && git merge --ff-only FETCH_HEAD` |
+
+استفاده از bundle:
+
+```bash
+git fetch /path/to/VXX_Y_topic.bundle HEAD
+git merge --ff-only FETCH_HEAD
+git push origin HEAD
+```
+
+### ۷) بازگرداندن یک push در صورت نیاز
+
+هرگز history را روی `main` با `push --force` بازنویسی نکنید. اگر پچِ
+push‌شده باید خنثی شود، یک commit جدید به‌عنوان revert بسازید:
+
+```bash
+git revert <SHA-commit>
+git push origin HEAD
+```
+
+برای بازگرداندن تغییری که قبلاً خودش revert شده بود (همان الگوی V45.6):
+
+```bash
+git revert --no-edit <SHA-revert-commit>
+git push origin HEAD
+```
+
+### ۸) یادآوری‌های امنیتی (غیرقابل مصالحه)
+
+```text
+- هرگز SUPABASE_SERVICE_KEY یا service_role را در کد، Git، چت،
+  فایل پچ، APK یا local.properties قابل commit قرار ندهید.
+- release.keystore و رمز/alias آن فقط روی ماشین امن توسعه محلی بماند.
+- applicationId برای دیباگ ir.exam.app.native و برای release
+  ir.exam.app است؛ تغییری داده نشود مگر با تصمیم صریح.
+- SQL فقط روی پروژهٔ eazwuyrymsvdkwckdpco اجرا شود؛
+  niuadepncroqoebrxpqk ممنوع است.
+```
+
+### ۹) چک‌لیست کوتاه هر پچ
+
+```text
+[ ] پچ در ریشهٔ /home/user با نام VXX_Y_topic.patch
+[ ] docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md در همان پچ به‌روزرسانی شد
+[ ] SQL در صورت نیاز و فقط روی پروژه اصلی
+[ ] python3 scripts/verify_native_final.py → PASS
+[ ] git diff --check → PASS
+[ ] git status تمیز و فقط فایل‌های لازم staged
+[ ] git am روی کلون محلی موفق (تست اعمال)
+[ ] git push origin HEAD
+[ ] مانیتور کردن run Actions تا سبز شدن
+```
+
+---
+
+## ۹۵) سوابق دستورات V45.6 (نمونهٔ واقعی از همین نسخه)
+
+این خروجی واقعی push در V45.6 است و الگوی مرجع برای پچ‌های بعد است:
+
+```text
+hashem@Hashem:/mnt/c/Users/Hashem/Downloads/exam-app-kotlin/exam-app-kotlin$
+$ git am /mnt/c/Users/Hashem/Downloads/V45_6_webview_formula_editor.patch
+Applying: feat(v45.6): bring back the WebView formula editor with standalone math-editor.html
+
+$ git push origin HEAD
+Enumerating objects: 63, done.
+Counting objects: 100% (63/63), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (23/23), done.
+Writing objects: 100% (36/36), 155.94 KiB | 14.18 MiB/s, done.
+Total 36 (delta 14), reused 21 (delta 5), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (14/14), completed with 14 local objects.
+To https://github.com/hashemamiri/exam-app-kotlin.git
+   05338d2..9e29baf  HEAD -> main
+```
+
+- کامیت محلی ایجنت: `eb267394af10175c9828fd31e39083d3c0812776`
+- کامیت روی GitHub پس از `git am`: `9e29baf9d...` (محتوای درخت یکسان،
+  فقط SHA به‌دلیل متفاوت بودن timestamp/committer بازمحاسبه شد)
+- CI run: `#136` روی commit `9e29baf9d`
+- درخت V45.6 معادل درخت V45.4.2 (که CI قبلاً در run #134 سبز کرده بود)
+  است؛ تنها والد آن V45.5 است که خودش revert همان تغییرست بوده.
