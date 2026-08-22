@@ -83,61 +83,64 @@ class V19InteractionTest {
     }
 
     @Test
-    fun `formula editor bootstraps the V34 curricular library school type bio`() {
-        // در نسخهٔ وب (66.html) تابع میزبان installLibV34 پس از بارگذاری iframe
-        // سه گروه «کتاب درسی ریاضی»، «نماد و تزئین»، «زیست و دانشگاه» و حدود
-        // ۶۰ دستهٔ درسی تکمیلی را به MB_PAD/MB_GROUPS اضافه می‌کرد. در حالت
-        // standalone باید همان بدنه از asset خوانده و قبل از openMath eval شود.
+    fun `formula editor standalone asset is self contained with V34 and host bridge`() {
+        // از V45.8، فایل asset نسخهٔ تک‌فایلی «formula-editor-window» است که
+        // خودش شامل core ویرایشگر، installLibV34 و لایهٔ میزبان می‌باشد.
+        // دیگر نباید فایل جدا برای install_lib_v34 یا helper FormulaV34Library
+        // وجود داشته باشد؛ همه‌چیز در math_editor_standalone.html است.
         val root = root()
+        val asset = File(root, "app/src/main/assets/math_editor_standalone.html").readText()
         val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt").readText()
-        val v34 = File(root, "app/src/main/assets/formula/install_lib_v34.js").readText()
-        val loader = File(root, "app/src/main/java/ir/exam/app/ui/math/FormulaV34Library.kt").readText()
 
-        // 1) asset باید بایت‌به‌بایت بدنهٔ installLibV34 باشد
-        assertTrue("installLibV34 function missing from V34 asset",
-            v34.startsWith("function installLibV34(w)"))
+        // ۱) asset شامل V34 و لایهٔ میزبان است
+        assertTrue("installLibV34 missing from asset", "function installLibV34(w)" in asset)
         listOf(
             "school", "type", "bio",
             "v34-math10", "v34-hesaban1", "v34-discrete",
             "v34-accents", "v34-arrows", "v34-special-let",
             "v34-bio", "v34-uni", "v34-stats", "v34-prob"
         ).forEach { token ->
-            assertTrue("V34 asset missing token: $token", token in v34)
+            assertTrue("V34 token missing from self-contained asset: $token", token in asset)
         }
+        assertTrue("host-bridge script missing", "host-bridge" in asset)
+        // اسکریپت auto-open که در نسخهٔ وب پنجره را دوباره باز می‌کند نباید
+        // در بیلد اندروید باشد (ما باز/بسته شدن را کنترل می‌کنیم).
+        assertFalse("auto-open script must be stripped from Android asset",
+                    "id=\"auto-open\"" in asset)
+        // Cloudflare challenge-platform که هنگام دانلود به انتهای HTML
+        // چسبیده بود نباید در asset بماند.
+        assertFalse("Cloudflare challenge script must be stripped", "cdn-cgi/challenge-platform" in asset)
 
-        // 2) asset باید توسط Android Context در سطح Composable خوانده شود
-        assertTrue("FormulaV34Library.load helper missing", "fun load(context: Context)" in loader)
-        assertTrue("V34 asset path missing", "formula/install_lib_v34.js" in loader)
-        assertTrue("dialog must call FormulaV34Library.load", "FormulaV34Library.load" in dialog)
-        assertTrue("dialog must use LocalContext", "LocalContext.current" in dialog)
+        // ۲) فایل‌های قدیمی حذف شده باشند
+        assertFalse("legacy V34 asset file must be removed",
+                    File(root, "app/src/main/assets/formula/install_lib_v34.js").exists())
+        assertFalse("FormulaV34Library.kt must be removed",
+                    File(root, "app/src/main/java/ir/exam/app/ui/math/FormulaV34Library.kt").exists())
+        assertFalse("dialog must not reference removed FormulaV34Library",
+                    "FormulaV34Library" in dialog)
 
-        // 3) تزریق باید قبل از openMath اجرا شود
-        val installIdx = dialog.indexOf("installLibV34(window)")
+        // ۳) پل اندروید: seed متن، wrap mfApply/closeMath، فراخوانی openMath
+        assertTrue("qTxt_1 seed missing", "qTxt_1" in dialog)
         val openIdx = dialog.indexOf("window.openMath('qTxt_1')")
-        assertTrue("installLibV34(window) call missing", installIdx >= 0)
         assertTrue("window.openMath('qTxt_1') missing", openIdx >= 0)
-        assertTrue("V34 must install before openMath", installIdx < openIdx)
+        assertTrue("AndroidMathBridge.onApplyResult missing", "onApplyResult" in dialog)
+        assertTrue("AndroidMathBridge.onClosed missing", "onClosed" in dialog)
 
-        // 4) گارد idempotent بودن حفظ شده باشد (جلوگیری از تزریق دوباره)
-        assertTrue("__libV34 idempotency guard missing", "__libV34" in v34)
-        assertTrue("__mbV34Installed one-shot guard missing", "__mbV34Installed" in dialog)
-
-        // 5) fallback برای WebViewهای قدیمی که 100dvh نمی‌فهمند
+        // ۴) fallback برای WebViewهای قدیمی که 100dvh نمی‌فهمند
         assertTrue("VIEWPORT_FALLBACK_JS missing", "VIEWPORT_FALLBACK_JS" in dialog)
         assertTrue("100vh fallback missing", "100vh" in dialog)
         assertTrue("100dvh target missing", "100dvh" in dialog)
-        // والد مدال نیز با top/right/bottom/left صفر پین شود (inset:0 در
-        // WebViewهای خیلی قدیمی ممکن است پشتیبانی نشود).
         assertTrue("modal inset fallback missing", "#mfModal{top:0" in dialog)
-        // دموی پشت‌صحنه هنگام باز بودن مدال پنهان شود
         assertTrue("demo-wrap hide rule missing", "body.math-open .demo-wrap" in dialog)
-        // بستن دیالوگ باید حتماً و با timeout ایمن به onDismiss ختم شود
+
+        // ۵) بستن دیالوگ باید حتماً و با timeout ایمن به onDismiss ختم شود
         assertTrue("dismiss safety timeout missing",
                    "DISMISS_FALLBACK_MS" in dialog && "dismissOnce" in dialog)
-        // V45.7.5: اگر openMath در WebView قدیمی کامل اجرا نشد، خودمان
-        // کلاس‌های مدال را force کنیم و خطاها را به logcat بفرستیم
+
+        // ۶) تشخیص: لاگ JS به logcat و force-open مدال
         assertTrue("diagnostic bridge missing", "AndroidMathBridge.log" in dialog)
-        assertTrue("force modal classes missing", "classList.add('modal', 'open', 'box-fullscreen')" in dialog)
+        assertTrue("force modal classes missing",
+                   "classList.add('modal', 'open', 'box-fullscreen')" in dialog)
         assertTrue("WebChromeClient console forward missing", "onConsoleMessage" in dialog)
     }
 

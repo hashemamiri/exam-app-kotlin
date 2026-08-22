@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -37,21 +36,23 @@ import org.json.JSONObject
 /**
  * ویرایشگر فرمول ریاضی داخل WebView.
  *
- * این دیالوگ تمام صفحهٔ ویرایشگر فرمول مستقل (استخراج کد به کد از نسخهٔ وب
- * 66.html — asset/math_editor_standalone.html، بایت‌به‌بایت بدون تغییر) را
- * در یک WebView ایزوله اجرا می‌کند. صفحهٔ وب با پروتکل زیر هدایت می‌شود:
+ * فایل asset `math_editor_standalone.html` نسخهٔ تک‌فایلی ویرایشگر است
+ * (فرمول، V34، و لایهٔ میزبان همگی در همان فایل جاسازی شده‌اند) و در یک
+ * WebView ایزوله اجرا می‌شود. این Composable فقط کارهای زیر را انجام
+ * می‌دهد:
  *
- *  - متن `$…$` (فرمول فعلی یا جفت خالی `$$` برای درج جدید) در textarea پنهان
- *    `qTxt_1` قرار داده می‌شود و کل آن انتخاب می‌شود؛
- *  - `openMath('qTxt_1')` ویرایشگر را باز می‌کند؛
- *  - `mfApply` (دکمهٔ ثبت) کل انتخاب را با `$فرمول جدید$` جایگزین می‌کند و
- *    سپس خودش `closeMath()` را صدا می‌زند؛
- *  - Bridge اندروید مقدار نهایی textarea را از `mfApply` می‌گیرد، `$…$`
- *    را باز می‌کند و نتیجه را به `onInsert` می‌دهد؛ بستن بدون ثبت به
- *    `onDismiss` می‌رسد.
+ *  - متن `$…$` (فرمول فعلی یا جفت خالی `$$` برای درج جدید) را در
+ *    textarea پنهان `qTxt_1` قرار داده و کل آن را انتخاب می‌کند؛
+ *  - `openMath('qTxt_1')` را صدا می‌زند تا ویرایشگر باز شود؛
+ *  - `mfApply` و `closeMath` را wrap می‌کند تا پل اندروید در لحظهٔ
+ *    ثبت/بسته‌شدن مقدار نهایی را دریافت کند؛
+ *  - بستن دیالوگ Compose را با یک timeout تضمین می‌کند تا اگر JS به
+ *    هر دلیلی onClosed را صدا نزد، پنجرهٔ ایجاد آزمون در حالت نیمه‌باز
+ *    گیر نکند.
  *
- * هیچ تغییری در محتوای صفحهٔ ویرایشگر داده نمی‌شود؛ فقط تابع‌های `mfApply` و
- * `closeMath` در لحظهٔ انتها wrap می‌شوند (همان الگوی bridge میزبان در 66.html).
+ * خود فایل HTML (از V45.8 به بعد، با نام «formula-editor-window»)
+ * بایت‌به‌بایت به‌عنوان asset بسته‌بندی می‌شود و این پل تنها نقطهٔ
+ * تماس اندروید با آن است.
  */
 @Composable
 fun MathEditorWebViewDialog(
@@ -66,8 +67,6 @@ fun MathEditorWebViewDialog(
     val settled = remember { AtomicBoolean(false) }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
-    // اطمینان از اینکه onDismiss دقیقاً یک‌بار و حتماً اجرا می‌شود، حتی اگر
-    // JS پل به هر دلیلی (استثنا، خطای صفحه، WebView قدیمی) فراخوانی نشود.
     val dismissOnce = remember {
         object {
             fun fire() {
@@ -90,22 +89,12 @@ fun MathEditorWebViewDialog(
         )
     }
 
-    val appContext = LocalContext.current.applicationContext
-    val v34Source = remember { FormulaV34Library.load(appContext) }
-    val bootstrap = remember(initialTex, v34Source) {
-        bootstrapScript(initialTex, v34Source)
-    }
+    val bootstrap = remember(initialTex) { bootstrapScript(initialTex) }
 
     Dialog(
         onDismissRequest = {
             val wb = webViewRef.value
             if (wb != null && ready) {
-                // به JS فرصت می‌دهیم closeMath را کامل کند و پل onClosed
-                // را صدا بزند؛ اگر تا DISMISS_FALLBACK_MS پل پاسخ نداد
-                // (مثلاً JS یک استثنا در مسیر بستن انداخت یا closeMath
-                // در WebView قدیمی آن‌طور که انتظار می‌رود عمل نکرد)،
-                // خودمان دیالوگ را می‌بندیم تا پنجرهٔ ایجاد آزمون
-                // هرگز در حالت «بهم‌ریخته» گیر نکند.
                 runCatching { wb.evaluateJavascript(CLOSE_MATH_JS, null) }
                 mainHandler.postDelayed({ dismissOnce.fire() }, DISMISS_FALLBACK_MS)
             } else {
@@ -146,7 +135,6 @@ fun MathEditorWebViewDialog(
         }
     }
 
-    // پس از ساخت WebView، منتظر آماده‌شدن صفحهٔ ویرایشگر می‌شویم.
     DisposableEffect(webViewRef.value, attempt) {
         val wb = webViewRef.value ?: return@DisposableEffect onDispose {}
         val poller = MathEditorPoller(
@@ -189,8 +177,6 @@ private fun configureWebView(wb: WebView, bridge: MathEditorJsBridge) {
         loadWithOverviewMode = true
         useWideViewPort = true
     }
-    // رنگ پس‌زمینه تیره با تم ویرایشگر (--bg1) هماهنگ است تا اگر لحظه‌ای
-    // بین لود شدن HTML و آماده شدن، دیالوگ دیده شد، فلاش سفید نزند.
     wb.setBackgroundColor(0xFF0F0C29.toInt())
     wb.addJavascriptInterface(bridge, "AndroidMathBridge")
     wb.webViewClient = object : WebViewClient() {
@@ -199,8 +185,6 @@ private fun configureWebView(wb: WebView, bridge: MathEditorJsBridge) {
             request: WebResourceRequest?
         ): Boolean = true
     }
-    // خطاهای JS کنسول به logcat هدایت می‌شوند تا اگر ویرایشگر در WebView
-    // قدیمی با استثنا مواجه شد، بتوانیم بدون حدس علت را پیدا کنیم.
     wb.webChromeClient = object : WebChromeClient() {
         override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
             val m = consoleMessage ?: return false
@@ -214,7 +198,7 @@ private fun configureWebView(wb: WebView, bridge: MathEditorJsBridge) {
     wb.loadUrl(ASSET_URL)
 }
 
-/** چرخهٔ انتظار برای آماده‌شدن توابع ویرایشگر در صفحهٔ وب (الگوی poll میزبان). */
+/** چرخهٔ انتظار برای آماده‌شدن توابع ویرایشگر در صفحهٔ وب. */
 private class MathEditorPoller(
     private val webView: WebView,
     private val onReady: () -> Unit,
@@ -279,10 +263,7 @@ private class MathEditorJsBridge(
         }
     }
 
-    /**
-     * لاگ تشخیصی از درون صفحهٔ وب. در نسخهٔ انتشار هم باقی می‌ماند تا اگر
-     * روی دستگاه کاربر خطایی رخ داد، logcat آن را نشان دهد.
-     */
+    /** لاگ تشخیصی از درون صفحه برای مشاهده در logcat. */
     @JavascriptInterface
     fun log(msg: String?) {
         val text = msg ?: "(null)"
@@ -316,7 +297,7 @@ private fun FailedOverlay(onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("ویرایشگر فرمول بارگیری نشد.")
-                Button(onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) {
+                Button(onClick = onRetry, modifier = Modifier.padding(top: 12.dp)) {
                     Text("تلاش مجدد")
                 }
             }
@@ -325,21 +306,15 @@ private fun FailedOverlay(onRetry: () -> Unit) {
 }
 
 /**
- * تزریق CSS در لحظه برای رفع مشکلات رندر در WebViewهای قدیمی.
+ * CSS تزریقی برای رفع مشکلات رندر در WebViewهای قدیمی.
  *
- *  - `100dvh` در Chrome/WebView قبل از نسخهٔ ۱۰۸ ناشناخته است و چون تنها
- *    مقدار ارتفاع جعبهٔ تمام‌صفحه است، جعبه به ارتفاع صفر می‌افتد و
- *    «صفحهٔ خالی» دیده می‌شود. راه‌حل استاندارد «مقدار قدیمی قبل از
- *    مقدار مدرن» است: اول `100vh` و بعد `100dvh` با `!important`.
- *    مرورگر جدید مقدار دوم را می‌پذیرد، قدیمی مقدار اول را نگه می‌دارد.
- *  - والد `.modal` نیز به‌جای اتکا به `inset:0` (که در WebViewهای
- *    قدیمی هم ممکن است پشتیبانی نشود) با top/right/bottom/left صفر
- *    پین می‌شود و ارتفاعش به 100vh/100dvh می‌رود تا کل صفحه را بپوشاند.
- *  - بدنهٔ دموی صفحه (`.demo-wrap`) هنگام باز بودن مدال مخفی می‌شود تا
- *    اگر جعبه‌به‌دلیلی کوتاه رندر شد، محتوای دموی پشت‌صحنه دیده نشود.
- *  - چند قانون max-height با تابع `min(84dvh, …)` نیز fallback می‌گیرند.
+ * فایل ویرایشگر از `100dvh` برای ارتفاع جعبهٔ تمام‌صفحه استفاده می‌کند که
+ * در Chrome/WebView قبل از نسخهٔ ۱۰۸ ناشناخته است. راه‌حل استاندارد
+ * «مقدار قدیمی قبل از مقدار مدرن»: اول `100vh` و بعد `100dvh` با
+ * `!important`. مرورگر جدید دومی را می‌پذیرد، قدیمی اولی را نگه می‌دارد.
  *
- * این CSS به <head> تزریق می‌شود و asset اصلی دست‌نخورده باقی می‌ماند.
+ * همچنین والد مدال به‌جای `inset:0` با چهار ضلع صفر پین می‌شود و بدنهٔ
+ * دموی پشت جعبه هنگام باز بودن مدال پنهان می‌شود.
  */
 private const val VIEWPORT_FALLBACK_JS = """
 (function(){
@@ -360,19 +335,12 @@ private const val VIEWPORT_FALLBACK_JS = """
 """
 
 /**
- * فرمول فعلی (یا `$$` برای درج جدید) را seed می‌کند، کتابخانهٔ V34 را
- * پیش از openMath تزریق می‌نماید، و mfApply/closeMath را به پل اندروید وصل
- * می‌کند. [v34Source] محتوای خام فایل `formula/install_lib_v34.js` است که
- * در سطح @Composable از [FormulaV34Library.load] گرفته شده.
- *
- * مهم: در نسخه‌های قبلی معلوم شد در برخی WebViewهای قدیمی `openMath` مسیر
- * کامل را اجرا نمی‌کند (مدال `open`/`box-fullscreen` نمی‌گیرد و کاربر
- * صفحهٔ دموی پشت آن را می‌بیند). برای همین پس از فراخوانی تابع، خودمان
- * هم مستقیماً کلاس‌های لازم را روی مدال و body می‌گذاریم و اگر canvas
- * خالی بود یک‌بار `buildMathPad`/`mfMode('box')` را صدا می‌زنیم. این
- * تغییر فقط رفتار رندر را تضمین می‌کند و در منطق دست‌نمی‌برد.
+ * فرمول را در textarea پنهان seed می‌کند، `mfApply`/`closeMath` را به پل
+ * اندروید وصل می‌کند، و سپس `openMath('qTxt_1')` را اجرا می‌نماید.
+ * کتابخانهٔ V34 و همهٔ لایه‌های میزبان از پیش داخل asset تعبیه شده‌اند و
+ * نیازی به تزریق جاوااسکریپت اضافی نیست.
  */
-private fun bootstrapScript(initialTex: String, v34Source: String): String {
+private fun bootstrapScript(initialTex: String): String {
     val wrapped = "\$" + initialTex + "\$"
     val valueLiteral = JSONObject.quote(wrapped)
     val selEnd = wrapped.length
@@ -380,32 +348,18 @@ private fun bootstrapScript(initialTex: String, v34Source: String): String {
       (function(){
         function log(m){ try{ AndroidMathBridge.log(String(m)); }catch(_e){} }
         try{
-          if (window.__mbAndroidInstalled) { log('bootstrap already installed'); return; }
-          log('bootstrap start, init=' + (typeof initMathEdit) + ', open=' + (typeof openMath));
-          // اطمینان از ساخته شدن اولیهٔ پد تب‌دار (در صفحهٔ دموی مستقل این
-          // کار در رویداد load انجام می‌شود؛ ما قبل از آن می‌آییم).
-          try {
-            if (typeof initMathEdit === 'function') initMathEdit();
-          } catch(eInit) { log('initMathEdit: ' + eInit); }
-
-          // ---- V34 library (school/type/bio + curricular extensions) ----
-          // بدنه asset در صورت استثنا نباید کل راه‌اندازی را از کار بیندازد.
-          if (!window.__mbV34Installed) {
-            try {
-              $v34Source
-              if (typeof installLibV34 === 'function') {
-                window.installLibV34 = installLibV34;
-                installLibV34(window);
-              }
-            } catch (eLib) { log('v34 install: ' + eLib); }
-            window.__mbV34Installed = true;
-          }
+          if (window.__mbAndroidInstalled) return;
 
           var m = document.getElementById('qTxt_1');
           if (!m) { log('qTxt_1 missing'); AndroidMathBridge.onClosed(); return; }
           m.value = $valueLiteral;
           try { m.setSelectionRange(0, $selEnd); } catch (eSel) {}
 
+          // لایهٔ میزبان داخل asset، window.mfApply و window.closeMath را
+          // پیش از ما wrap کرده است (برای ذخیرهٔ فیلد، history، keypad و…).
+          // ما فقط آن‌ها را یک‌لایهٔ نازک دیگر می‌پیچیم تا مقدار را به
+          // اندروید برسانیم؛ زنجیرهٔ wrapها به‌درستی کار می‌کند چون هر
+          // یک تابع قبلی را ذخیره می‌کند.
           var ia = window.mfApply;
           window.mfApply = function(){
             window.__mbApplyInFlight = true;
@@ -422,33 +376,22 @@ private fun bootstrapScript(initialTex: String, v34Source: String): String {
           };
           window.__mbAndroidInstalled = true;
 
-          // تلاش اول با تابع اصلی صفحه.
-          try {
-            window.openMath('qTxt_1');
-          } catch (eOpen) { log('openMath threw: ' + eOpen); }
+          try { window.openMath('qTxt_1'); }
+          catch (eOpen) { log('openMath threw: ' + eOpen); }
 
-          // تضمین رندر: اگر به هر دلیل (استثنا در openMath، تفاوت رفتار
-          // در WebView قدیمی) کلاس‌های مدال اعمال نشده بود، خودمان می‌گذاریم.
-          var modalAfter = null;
+          // تضمین رندر: اگر openMath در WebView خاصی کلاس‌ها را نگذاشت
+          // (مثلاً استثنا در initMathEdit)، خودمان می‌گذاریم. اگر درست
+          // کار کرده باشد این فراخوانی‌ها بی‌اثرند.
           try {
-            modalAfter = document.getElementById('mfModal');
-            if (modalAfter) {
-              modalAfter.classList.add('modal', 'open', 'box-fullscreen');
-              modalAfter.style.display = 'flex';
+            var modal = document.getElementById('mfModal');
+            if (modal) {
+              modal.classList.add('modal', 'open', 'box-fullscreen');
+              modal.style.display = 'flex';
             }
             document.body.classList.add('math-open');
-            if (typeof mbDraw === 'function') {
-              try { mbDraw(); } catch (eDraw) { log('mbDraw: ' + eDraw); }
-            }
-            if (typeof buildMathPad === 'function' && typeof MB_PAD_ACTIVE !== 'undefined') {
-              var padWrap = document.getElementById('mfTabs');
-              if (padWrap && !padWrap.children.length) {
-                try { buildMathPad(MB_PAD_ACTIVE); } catch(ePad) { log('buildMathPad: ' + ePad); }
-              }
-            }
           } catch (eForce) { log('force open: ' + eForce); }
 
-          log('bootstrap done; modal classes=' + (modalAfter && modalAfter.className));
+          log('bootstrap done; modal classes=' + (modal && modal.className));
         } catch (e) {
           log('bootstrap fatal: ' + e);
           try { AndroidMathBridge.onClosed(); } catch (e3) {}
@@ -475,9 +418,6 @@ private const val CLOSE_MATH_JS =
     "try{if(window.closeMath)window.closeMath();}catch(e){}"
 
 /**
- * اگر پل JS در این مدت پس از فشردن دکمهٔ بازگشت onClosed را صدا نزند،
- * خودمان دیالوگ را می‌بندیم. این عدد به‌قدری بزرگ است که اجرای طبیعی
- * closeMath چندین بار فرصت اتمام داشته باشد، و به‌قدری کوچک که کاربر
- * مکث محسوسی نبیند.
+ * اگر پل JS پس از این مدت onClosed را صدا نزند، خودمان دیالوگ را می‌بندیم.
  */
 private const val DISMISS_FALLBACK_MS = 250L

@@ -575,37 +575,46 @@ require("MathEditorWebViewDialog(" in builder_screen and "MathEditorWebViewDialo
         "FormulaLibraryNavigator" not in main_text and "FormulaSmartHubDialog" not in main_text,
         "formula editor is not switched to the WebView dialog or native editor remnants remain")
 
-# ---- V45.7: کتابخانهٔ کامل V34 (کتب درسی / نماد و تزئین / زیست و دانشگاه) ----
-# در نسخهٔ وب (66.html) این دسته‌ها پس از بارگذاری iframe توسط تابع میزبان
-# installLibV34 به MB_PAD/MB_GROUPS افزوده می‌شدند. در standalone WebView باید
-# همان بدنه از asset فرمول خوانده و قبل از openMath eval شود.
-v34_asset = ROOT / "app/src/main/assets/formula/install_lib_v34.js"
-require(v34_asset.exists() and v34_asset.stat().st_size > 30_000,
-        "V34 formula library asset (install_lib_v34.js) missing or truncated")
-v34_text = v34_asset.read_text(encoding="utf-8")
-require(v34_text.startswith("function installLibV34(w)") and "__libV34" in v34_text,
-        "V34 asset is not the installLibV34 host function or lost its idempotency guard")
+# ---- V45.8: فایل تک‌فایلی formula-editor-window (همه‌چیز داخل asset است) ----
+# از این نسخه به بعد، ویرایشگر شامل هسته، V34 و لایهٔ میزبان در یک فایل
+# math_editor_standalone.html بسته می‌شود. فایل قدیمی install_lib_v34.js و
+# helper مربوطه (FormulaV34Library.kt) نباید وجود داشته باشند.
+_asset_path = ROOT / "app/src/main/assets/math_editor_standalone.html"
+require(_asset_path.exists() and _asset_path.stat().st_size > 500_000,
+        "self-contained formula editor asset (math_editor_standalone.html) missing or truncated")
+_asset_text = _asset_path.read_text(encoding="utf-8")
+require("function installLibV34(w)" in _asset_text,
+        "self-contained editor must embed installLibV34 directly")
 for token in (
     "school", "type", "bio",
     "v34-math10", "v34-hesaban1", "v34-discrete",
     "v34-accents", "v34-arrows", "v34-special-let",
     "v34-bio", "v34-uni",
 ):
-    require(token in v34_text, f"V34 library missing token: {token}")
-require("FormulaV34Library" in formula_editor and "formula/install_lib_v34.js" in formula_editor,
-        "formula editor dialog does not load the V34 library asset through FormulaV34Library")
-require("LocalContext.current.applicationContext" in formula_editor
-        or "LocalContext.current" in formula_editor,
-        "V34 library must be read from a @Composable context, not a non-composable helper")
-_install_idx = formula_editor.find("installLibV34(window)")
-_open_idx = formula_editor.find("window.openMath('qTxt_1')")
-require(0 <= _install_idx < _open_idx,
-        "V34 library must be installed before openMath('qTxt_1')")
+    require(token in _asset_text, f"self-contained editor missing V34 token: {token}")
+require('id="host-bridge"' in _asset_text,
+        "self-contained editor must include the host-bridge script block")
+require('id="auto-open"' not in _asset_text,
+        "auto-open script must be stripped from the Android asset")
+require("cdn-cgi/challenge-platform" not in _asset_text,
+        "Cloudflare challenge script must be stripped from the Android asset")
+require(not (ROOT / "app/src/main/assets/formula/install_lib_v34.js").exists(),
+        "legacy V34 asset file must be removed after switching to self-contained editor")
+require(not (ROOT / "app/src/main/java/ir/exam/app/ui/math/FormulaV34Library.kt").exists(),
+        "FormulaV34Library.kt helper must be removed after switching to self-contained editor")
+require("FormulaV34Library" not in formula_editor,
+        "dialog must not reference the removed FormulaV34Library")
 
 # V45.7.3: WebViewهای قدیمی 100dvh را نمی‌فهمند و جعبهٔ تمام‌صفحه ارتفاع صفر می‌گیرد
 require("VIEWPORT_FALLBACK_JS" in formula_editor and "100dvh" in formula_editor
         and "100vh" in formula_editor,
         "formula dialog must inject a 100vh fallback for 100dvh on old WebViews")
+# بستن دیالوگ باید تضمینی باشد (fallback تایمر برای onDismiss)
+require("DISMISS_FALLBACK_MS" in formula_editor and "dismissOnce" in formula_editor,
+        "formula dialog must guarantee dismissal via a timer fallback")
+# پل تشخیصی برای لاگ JS در logcat
+require("AndroidMathBridge.log" in formula_editor and "onConsoleMessage" in formula_editor,
+        "formula dialog must forward JS console/diagnostic logs to logcat")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 # ---- V28: reorder / image safety / bulk window / field of study ----

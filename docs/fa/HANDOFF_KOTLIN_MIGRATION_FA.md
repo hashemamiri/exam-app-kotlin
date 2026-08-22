@@ -6156,3 +6156,74 @@ adb logcat -d | grep -iE "MathEditorWebView|chromium|console" > log.txt
 
 خط‌های `JS[ERROR]` یا `bootstrap ...` دقیقاً محل خطا را نشان می‌دهند و
 بدون حدس می‌توان علت را رفع کرد.
+
+---
+
+## ۱۰۱) V45.8 — جایگزینی asset با نسخهٔ تک‌فایلی formula-editor-window
+
+### زمینه
+
+پس از چندین تلاش (V45.7 تا V45.7.5) برای رندر درست پنجرهٔ فرمول روی
+برخی WebViewها، کاربر یک فایل جدید به نام `formula-editor-window.html`
+ارائه داد که «نسخهٔ پنجره‌ای» ویرایشگر است. این نسخه:
+- هستهٔ ویرایشگر و CSS را دارد
+- کتابخانهٔ V34 (`installLibV34` و `installLibV34Direct`) را به‌صورت
+  درون‌ساخت داخل خودش دارد
+- یک `<script id="host-bridge">` دارد که همهٔ وصله‌های رفتاری میزبان
+  را اعمال می‌کند (wrap پنجره، keypad، autoGrow، theme، V34 و …)
+- یک `<script id="auto-open">` در انتهای فایل بود که در نسخهٔ وب
+  باعث می‌شد با باز شدن فایل پنجرهٔ ویرایشگر باز شود و اگر بسته شد
+  دوباره باز شود — این رفتار برای اندروید مزاحم است و حذف شد
+- یک اسکریپت چالش Cloudflare به انتهای فایل چسبیده بود که هنگام دانلود
+  با مرورگر به HTML تزریق شده بود؛ حذف شد
+
+### تغییرات
+
+1. **جایگزینی asset**: `app/src/main/assets/math_editor_standalone.html`
+   با فایل جدید (پس از حذف auto-open و Cloudflare) بازنویسی شد.
+2. **MathEditorWebViewDialog ساده شد**:
+   - ارجاع به `FormulaV34Library` و `LocalContext` برای لود asset
+     حذف شد (V34 داخل خود فایل است).
+   - تزریق بدنه `install_lib_v34.js` و گارد `__mbV34Installed` حذف شد.
+   - فقط seed متن، wrap `mfApply`/`closeMath`، فراخوانی
+     `openMath('qTxt_1')` و force-open کلاس‌ها باقی ماند.
+   - `VIEWPORT_FALLBACK_JS`، `dismissOnce`، تایمر
+     `DISMISS_FALLBACK_MS` و پل تشخیصی `AndroidMathBridge.log` حفظ
+     شدند (همان بهسازی‌های V45.7.3/4/5).
+3. **فایل‌های حذف‌شده**:
+   - `app/src/main/java/ir/exam/app/ui/math/FormulaV34Library.kt`
+   - پوشهٔ `app/src/main/assets/formula/` (شامل install_lib_v34.js)
+4. **آزمون‌ها و تأییدها به‌روزرسانی شدند**:
+   - V19InteractionTest حالا بررسی می‌کند که asset تک‌فایلی شامل
+     installLibV34، host-bridge، توکن‌های V34 باشد و auto-open و
+     Cloudflare در آن نباشد؛ فایل‌های قدیمی حذف شده باشند.
+   - verify_native_final.py به‌جای چک کردن فایل جدا، درون asset
+     جدید دنبال installLibV34 می‌گردد و حذف فایل‌های قدیمی را هم
+     تأیید می‌کند.
+
+### اعتبارسنجی
+
+```text
+python3 scripts/verify_native_final.py
+  → FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+node --check روی هر سه <script> جداگانه در asset → OK
+jsdom (host-bridge فعال):
+  openMath/closeMath/mfApply = function
+  installLibV34 = function
+  hostBuildTag: v36 · V34: ✓ 64
+  پس از openMath: mfModal className = modal open box-fullscreen
+  canvas children = 1
+  خطا = ۰
+```
+
+### یادداشت‌های سازگاری
+
+- فایل جدید از `100dvh` استفاده می‌کند (سه مورد)؛ `VIEWPORT_FALLBACK_JS`
+  همچنان `100vh` را قبل از آن تزریق می‌کند، پس WebViewهای قدیمی
+  سازگار می‌مانند.
+- برخلاف نسخهٔ قبلی، در این فایل V34 به‌صورت خودکار توسط host-bridge
+  با setInterval تا ۲۰ بار تلاش (هر ۱۲۰ms) نصب می‌شود؛ حتی اگر
+  آماده‌سازی صفحه دیر انجام شود، در نهایت وصل می‌شود.
+- چون auto-open حذف شد، باز کردن پنجره کاملاً توسط پل اندروید کنترل
+  می‌شود (یک‌بار openMath در bootstrap) و دکمهٔ بازگشت به‌درستی به
+  پنجرهٔ ایجاد آزمون برمی‌گردد.
