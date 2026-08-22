@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.8.9 حذف تم روشن استاتیک و رفع صفحهٔ سفید ویرایشگر فرمول روی مبنای V45.8.8
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.8.10 رفع false positive تست V19 پس از اصلاح تم ویرایشگر فرمول
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6707,3 +6707,112 @@ SQL / Supabase / Edge Function / Migration / Dependency جدید: ندارد
 
 هیچ `SUPABASE_SERVICE_KEY`، کلید `service_role`، فایل `release.keystore`، رمز
 keystore/alias یا `local.properties` در پچ، Git یا APK قرار نگرفته است.
+
+---
+
+## ۱۰۹) V45.8.10 — رفع false positive تست V19 در CI
+
+### گزارش واقعی CI
+
+GitHub Actions سورس اصلی و تست‌ها را با موفقیت کامپایل کرد و از ۳۰۲ تست، فقط
+این تست شکست خورد:
+
+```text
+V19InteractionTest > formula editor standalone asset is self contained with V34 and host bridge FAILED
+java.lang.AssertionError at V19InteractionTest.kt:141
+302 tests completed, 1 failed
+```
+
+هشدارهای deprecation گزارش‌شده خطا نیستند. `compileDebugKotlin`،
+`compileDebugUnitTestKotlin` و پردازش منابع همگی موفق بودند.
+
+### علت دقیق
+
+کد production واقعاً `display:flex` را روی `#mfP_box` اعمال نمی‌کند. assertion
+قدیمی تست از **اولین متن `mfP_box` در کل فایل Kotlin** شروع می‌کرد:
+
+```kotlin
+dialog.substringAfter("mfP_box").substringBefore("};")
+```
+
+در V45.8.9 واژهٔ `#mfP_box` برای توضیح عدم دست‌کاری گرید وارد KDoc شد. پس
+substring از همان comment آغاز شد و کمی بعد به قانون قانونی زیر برای خود modal
+رسید:
+
+```css
+#mfModal.modal.open{display:flex !important;}
+```
+
+تست این `display:flex` را اشتباهاً به `#mfP_box` نسبت داد. بنابراین شکست CI یک
+**false positive تست** بود، نه بازگشت باگ چیدمان یا تم.
+
+### اصلاح
+
+- `V19InteractionTest` اکنون محدودهٔ دقیق raw-string ثابت
+  `VIEWPORT_FALLBACK_JS` را استخراج می‌کند.
+- assertion فقط بررسی می‌کند selector ممنوع `#mfP_box` در CSS تزریقی fallback
+  وجود نداشته باشد.
+- بررسی شکنندهٔ `substringAfter("mfP_box")` حذف شد.
+- `verify_native_final.py` نیز مانع بازگشت assertion شکننده می‌شود.
+- هیچ فایل production، asset، SQL یا dependency در V45.8.10 تغییر نکرده است؛
+  اصلاحات دارک V45.8.9 و ترتیب apply/close در V45.8.8 عیناً حفظ می‌شوند.
+
+### اعتبارسنجی اصلاح
+
+```text
+OLD_FALSE_POSITIVE_REPRODUCED=true
+FALLBACK_LENGTH=1553
+HAS_MF_P_BOX=false
+HAS_MODAL_FLEX=true
+V19_SCOPED_ASSERTION=PASS
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+PATCH_WHITESPACE_CHECK=PASS
+```
+
+یعنی قانون flex لازمِ modal همچنان وجود دارد، اما selector `#mfP_box` واقعاً در
+fallback نیست و assertion جدید به محدودهٔ درست نگاه می‌کند. اجرای کامل Gradle
+در sandbox همچنان پیش از کامپایل به‌علت resolve نشدن KSP از مخزن خارجی ممکن
+نیست؛ اجرای قبلی GitHub Actions کاربر خود سورس و تست‌ها را کامپایل کرده و تنها
+شکست همان assertion قدیمی را ثبت کرده است.
+
+### فایل پچ
+
+```text
+V45_8_10_v19_ci_false_positive_fix.patch
+```
+
+### اعمال در WSL
+
+HEAD باید commit نسخهٔ V45.8.9 با subject زیر باشد:
+
+```text
+fix(v45.8.9): remove static light theme from formula editor
+```
+
+سپس:
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin/exam-app-kotlin
+git status --short --branch
+git am --whitespace=nowarn /mnt/c/Users/Hashem/Downloads/V45_8_10_v19_ci_false_positive_fix.patch
+git push origin HEAD
+```
+
+### test و build
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin/exam-app-kotlin
+python3 scripts/verify_native_final.py
+./gradlew --no-daemon :app:testDebugUnitTest
+./gradlew --no-daemon :app:lintDebug
+./gradlew --no-daemon :app:assembleDebug
+```
+
+### SQL و امنیت
+
+```text
+SQL / Supabase / Edge Function / Migration / Dependency جدید: ندارد
+```
+
+هیچ secret، `service_role`، keystore، رمز keystore/alias یا `local.properties`
+در پچ قرار نگرفته است.

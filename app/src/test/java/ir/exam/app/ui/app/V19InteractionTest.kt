@@ -132,14 +132,17 @@ class V19InteractionTest {
         assertTrue("100dvh target missing", "100dvh" in dialog)
         assertTrue("modal pinning fallback missing", "#mfModal{" in dialog && "top:0" in dialog)
         assertTrue("demo-wrap hide rule missing", "body.math-open .demo-wrap" in dialog)
-        // V45.8.6: چیدمان را به CSS بومی asset واگذار می‌کنیم و تزریق
-        // تهاجمی position:absolute/display:flex روی #mfP_box را حذف کرده‌ایم
-        // (این قواعد گرید بومی دارِ سه‌ردیفهٔ asset را می‌شکستند و صفحه
-        // تمام‌صفحه تیره می‌شد).
-        assertFalse("must not force absolute position on mfP_box",
-                    "mfP_box" in dialog && "position:absolute" in dialog.substringAfter("mfP_box").substringBefore("};"))
-        assertFalse("must not force flex on mfP_box",
-                    "mfP_box" in dialog && "display:flex" in dialog.substringAfter("mfP_box").substringBefore("};"))
+        // V45.8.10: فقط متن خود raw-string مربوط به fallback را بررسی کن.
+        // جست‌وجوی قبلی از اولین واژهٔ mfP_box در کل فایل شروع می‌شد؛ پس از
+        // اضافه‌شدن همین واژه به KDoc نسخهٔ V45.8.9، display:flex قانونیِ
+        // #mfModal را اشتباهاً به #mfP_box نسبت می‌داد و CI false positive داشت.
+        val fallbackMarker = "private const val VIEWPORT_FALLBACK_JS = \"\"\""
+        val fallbackStart = dialog.indexOf(fallbackMarker)
+        assertTrue("VIEWPORT_FALLBACK_JS raw string missing", fallbackStart >= 0)
+        val viewportFallback = dialog
+            .substring(fallbackStart + fallbackMarker.length)
+            .substringBefore("\"\"\"")
+        assertFalse("viewport fallback must not target mfP_box", "#mfP_box" in viewportFallback)
 
         // V45.8.5: چیپ‌های V34 باید مستقیم بایند شوند و پاپ‌آپ mbVar مرکزصفحه
         assertTrue("V34 chip binding missing", "mb-chip[data-v34" in dialog && "mbGroupLibrary" in dialog)

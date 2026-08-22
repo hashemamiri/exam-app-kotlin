@@ -108,6 +108,7 @@ about_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt").rea
 classes_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt").read_text()
+v19_interaction_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt").read_text()
 inline_math_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/InlineMathTextEditor.kt").read_text()
 rich_text=(ROOT/"app/src/main/java/ir/exam/app/core/text/RichText.kt").read_text()
 figure_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").read_text()
@@ -635,6 +636,12 @@ require("EARLY_THEME_STRIP_JS" in formula_editor and
         "override fun onPageStarted" in formula_editor and
         "evaluateJavascript(EARLY_THEME_STRIP_JS, null)" in formula_editor,
         "formula dialog must strip hostThemeOverride early via onPageStarted")
+# V45.8.10: تست V19 باید فقط raw-string مربوط به fallback را بررسی کند؛
+# substringAfter روی اولین mfP_box در کل فایل با KDoc نسخهٔ 8.9 false positive داشت.
+require("val fallbackMarker" in v19_interaction_test and
+        "viewport fallback must not target mfP_box" in v19_interaction_test and
+        'dialog.substringAfter("mfP_box")' not in v19_interaction_test,
+        "V19 formula-layout test still scans from a KDoc token and can false-positive")
 # بستن دیالوگ باید تضمینی باشد (fallback تایمر برای onDismiss)
 require("DISMISS_FALLBACK_MS" in formula_editor and "dismissOnce" in formula_editor,
         "formula dialog must guarantee dismissal via a timer fallback")
