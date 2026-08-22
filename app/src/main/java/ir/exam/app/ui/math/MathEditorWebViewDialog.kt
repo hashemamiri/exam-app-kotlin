@@ -314,13 +314,22 @@ private fun bootstrapScript(initialTex: String): String {
  * محتوای `assets/formula/install_lib_v34.js` را به‌صورت تنبل یک‌بار می‌خواند
  * تا در زمان ساخت WebView در حافظه نگه دارد. فایل از مخزن و با همان
  * رمزگذاری UTF-8 خوانده می‌شود و هیچ تغییری در محتوای آن داده نمی‌شود.
+ *
+ * بدنه به‌جای expression-with-`run` صریحاً با if/else نوشته شده تا کامپایلر
+ * K2 اشتباهاً ارجاع `MathEditorWebViewDialog::class.java` را به‌عنوان
+ * فراخوانی @Composable تفسیر نکند (گارد کامپایل V45.7).
  */
-private fun readInstallLibV34(): String = cachedInstallLibV34 ?: run {
-    val stream = MathEditorWebViewDialog::class.java.classLoader
+private fun readInstallLibV34(): String {
+    val cached = cachedInstallLibV34
+    if (cached != null) return cached
+    val stream = Thread.currentThread().contextClassLoader
         ?.getResourceAsStream("assets/formula/install_lib_v34.js")
+        ?: MathEditorWebViewDialog::class.java.getResourceAsStream(
+            "/assets/formula/install_lib_v34.js"
+        )
     val src = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
     cachedInstallLibV34 = src
-    src
+    return src
 }
 
 @Volatile private var cachedInstallLibV34: String? = null
