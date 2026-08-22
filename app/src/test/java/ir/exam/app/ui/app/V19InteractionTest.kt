@@ -64,22 +64,11 @@ class V19InteractionTest {
     fun `formula editor is ltr with active box auto scroll`() {
         val root = root()
         val formula = File(root, "app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
+        val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").readText()
         assertTrue("LocalLayoutDirection provides LayoutDirection.Ltr" in formula)
         assertTrue("horizontal.animateScrollTo(targetX)" in formula)
         assertTrue("vertical.animateScrollTo(targetY)" in formula)
-    }
-
-    @Test
-    fun `formula editor dialog hosts the standalone web editor untouched`() {
-        val root = root()
-        val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt").readText()
-        val asset = File(root, "app/src/main/assets/math_editor_standalone.html").readText()
-        assertTrue("math_editor_standalone.html" in dialog)
-        assertTrue("AndroidMathBridge" in dialog)
-        assertTrue("javaScriptEnabled" in dialog)
-        assertTrue("openMath('qTxt_1')" in dialog)
-        assertTrue("function openMath(targetId)" in asset)
-        assertTrue("function mfApply()" in asset)
+        assertTrue("LocalLayoutDirection provides LayoutDirection.Ltr" in dialog)
     }
 
     @Test

@@ -167,24 +167,16 @@ class Neumorphic69IntegrationTest {
     fun `native shell uses dual shadows without demo data or web runtime`() {
         val root = root()
         val design = File(root, "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").readText()
-        val mainKotlinFiles = File(root, "app/src/main/java").walkTopDown()
+        val mainSources = File(root, "app/src/main/java").walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
-            .toList()
-        val mainSources = mainKotlinFiles.joinToString("\n") { it.readText() }
+            .joinToString("\n") { it.readText() }
 
         listOf("setShadowLayer", "lightShadow", "darkShadow", "pressed", "NeumorphicTopBar").forEach {
             assertTrue("missing native design marker: $it", it in design)
         }
         assertFalse("standalone demo package must not enter runtime", "com.example.neumorphic69" in mainSources)
         assertFalse("fake wallet balance must not enter runtime", "۱۲٬۴۸۰٬۰۰۰" in mainSources)
-        // V45.4: تنها استفاده‌ی مجاز از WebView دیالوگ ویرایشگر فرمول است که
-        // صفحه‌ی وب 66.html را دست‌نخورده میزبانی می‌کند؛ بقیه‌ی اپ نیتیو می‌ماند.
-        val webViewFiles = mainKotlinFiles.filter { "android.webkit" in it.readText() }
-        assertEquals(
-            "only the formula editor dialog may use WebView, found: ${webViewFiles.map { it.name }}",
-            listOf("MathEditorWebViewDialog.kt"),
-            webViewFiles.map { it.name }
-        )
+        assertFalse("WebView must not enter native runtime", "android.webkit" in mainSources)
     }
 
     @Test

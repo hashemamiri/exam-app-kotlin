@@ -5401,3 +5401,50 @@ git diff --check → PASS
 
 پیش‌نیاز: V45.4 و V45.4.1. بعد از push، انتظار می‌رود CI کاملاً سبز شود
 (تنها تست شکست‌خورده همین بود؛ ۲۹۶ تست دیگر سبز بودند).
+
+## ۹۳) V45.5 — بازگردانی کامل ویرایشگر فرمول به نسخهٔ بومی (revert پچ‌های V45.4 تا V45.4.2)
+
+### علت
+
+پس از نصب APK حاوی ویرایشگر WebView (پچ‌های V45.4/V45.4.1/V45.4.2)، کاربر
+گزارش داد: «ویرایشگر باگ دارد؛ هیچ چیز نشان نمی‌دهد» (صفحهٔ خالی روی دستگاه
+واقعی). به تصمیم کاربر، همهٔ تغییرات این مسیر برگردانده شد و ویرایشگر
+فرمول بومی همان نسخهٔ v45.3 (کامیت `4f1757a`) دوباره برقرار است.
+
+### چه چیزهایی برگشت (دقیقاً وضعیت v45.3)
+
+```text
+بازگردانده شد:
+- ui/math/FormulaEditorDialog.kt / FormulaSmartHubDialog.kt /
+  FormulaLibraryDialog.kt / FormulaLibraryNavigator.kt /
+  FormulaReferenceLibrary.kt / FormulaReferenceStore.kt /
+  FormulaSmartReference.kt
+- core/math/FormulaBoxEditor.kt / FormulaMatrixFactory.kt
+- assets/formula_library_v13.json
+- ۵ تست حذف‌شده (FormulaBoxEditorTest، FormulaMatrixFactoryTest،
+  FormulaReferenceAssetTest، FormulaLibraryNavigatorTest،
+  FormulaSmartReferenceTest)
+- ExamBuilderScreen.kt (اتصال دوباره به FormulaEditorDialog)
+- V19InteractionTest.kt و Neumorphic69IntegrationTest.kt (نسخهٔ v45.3)
+- scripts/verify_native_final.py (نسخهٔ v45.3 — بدون استثنای WebView)
+
+حذف شد:
+- app/src/main/assets/math_editor_standalone.html
+- ui/math/MathEditorWebViewDialog.kt
+- .gitattributes
+- docs/fa/MATH_EDITOR_WEBVIEW_V45_4_FA.md
+```
+
+تنها تفاوت درخت با `4f1757a` همین سند هندآف است (بخش‌های ۹۰ تا ۹۳ برای
+سابقه نگه داشته شده‌اند؛ SHA-256 asset و پروتکل bridge در بخش ۹۰ ثبت است
+تا در صورت تلاش دوباره در آینده قابل استفاده باشد).
+
+### نتیجه
+
+```text
+python3 scripts/verify_native_final.py → FINAL_NATIVE_VERIFY=PASS (EXIT 0)
+git diff --check → PASS
+```
+
+پس از push، CI باید مانند v45.3 سبز شود و اپ همان ویرایشگر فرمول بومی
+قبلی را داشته باشد.
