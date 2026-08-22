@@ -107,26 +107,22 @@ image_uploader=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseQues
 about_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt").read_text()
 classes_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
-formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
+formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt").read_text()
 inline_math_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/InlineMathTextEditor.kt").read_text()
 rich_text=(ROOT/"app/src/main/java/ir/exam/app/core/text/RichText.kt").read_text()
 figure_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").read_text()
 formula_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
 formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text()
 formula_svg=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").read_text()
-formula_boxes=(ROOT/"app/src/main/java/ir/exam/app/core/math/FormulaBoxEditor.kt").read_text()
-formula_reference_loader=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaReferenceLibrary.kt").read_text()
-formula_library_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaLibraryDialog.kt").read_text()
-formula_library_nav=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaLibraryNavigator.kt").read_text()
-formula_smart=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaSmartHubDialog.kt").read_text()
-formula_smart_data=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaSmartReference.kt").read_text()
 formula_natural=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeNaturalMathConverter.kt").read_text()
 formula_text_codec=(ROOT/"app/src/main/java/ir/exam/app/core/math/FormulaTextCodec.kt").read_text()
 matching_builder=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt").read_text()
 app_gradle=(ROOT/"app/build.gradle.kts").read_text()
-formula_library=ROOT/"app/src/main/assets/formula_library_v13.json"
+math_editor_asset=ROOT/"app/src/main/assets/math_editor_standalone.html"
 
-require("android.webkit" not in main_text, "WebView/android.webkit import remains in Native source")
+webview_files=[path for path in main_files if "android.webkit" in path.read_text(errors="ignore")]
+require(len(webview_files) == 1 and webview_files[0].name == "MathEditorWebViewDialog.kt",
+        "WebView/android.webkit import remains outside the isolated MathEditorWebViewDialog")
 require(not re.search(r"\b(val|var)\s+plain_password\b", main_text), "plain_password model field remains")
 require(not re.search(r'\.from\("[^"]+"\)\.(?:insert|update|upsert|delete)\b', main_text),
         "direct public-table mutation remains in APK repository")
@@ -271,9 +267,8 @@ require(all("PullToRefreshBox" in text and "تازه‌سازی" not in text for
             (ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text(), wallet_screen
         )), "manual refresh button remains or pull-to-refresh is missing")
 require("LocalLayoutDirection provides LayoutDirection.Ltr" in formula_native_view and
-        "horizontal.animateScrollTo(targetX)" in formula_native_view and
-        "LocalLayoutDirection provides LayoutDirection.Ltr" in formula_editor,
-        "LTR formula editing or automatic active-box scroll missing")
+        "horizontal.animateScrollTo(targetX)" in formula_native_view,
+        "LTR formula rendering or automatic active-box scroll missing")
 require("provider === 'sandbox'" in edge_text and "sandboxAllowed()" in edge_text and
         "native_credit_wallet_payment" in edge_text and "credited: true" in edge_text and
         "native_credit_wallet_payment" not in main_text,
@@ -548,53 +543,37 @@ require((ROOT/"app/src/main/java/ir/exam/app/core/export/XlsxWorkbook.kt").exist
 require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt").exists(),"interactive crop editor missing")
 require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"system credential app lock missing")
 require((ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt").exists(),"structured native math parser missing")
-require(formula_library.exists() and formula_library.stat().st_size > 100_000,"complete formula reference asset missing")
-formula_markers=("🖱️ جعبه‌ای","⌨️ تایپ سریع","📚 آماده","⭐ موارد پرکاربرد","🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","🔍 همهٔ نمادها","⚙ یونیکد (۱۲۰۰)","🕘 اخیر","✨ تبدیل","FixedFormulaKeypad")
-formula_asset_text=formula_library.read_text(errors="ignore") if formula_library.exists() else ""
-require(all(marker in formula_editor+formula_asset_text for marker in formula_markers),"formula editor order/reference controls incomplete")
-require("۱۲۰۰" in formula_asset_text and "cur-phys-atomic" in formula_asset_text,"formula symbols/library reference incomplete")
+require(math_editor_asset.exists() and math_editor_asset.stat().st_size > 500_000,
+        "standalone math editor asset missing")
+math_editor_text=math_editor_asset.read_text(errors="ignore")
+require("function openMath(targetId)" in math_editor_text and "function mfApply()" in math_editor_text,
+        "standalone math editor page lost its host contract functions")
 require("io.coil-kt:coil-svg:2.7.0" in app_gradle,"Coil SVG decoder dependency missing")
 require("SvgDecoder.Factory" in formula_view and "NativeMathSvgRenderer.render" in formula_view,
         "formula UI does not decode generated SVG")
-require("NativeFormulaIcon" in formula_editor and "SvgFormulaEditorSurface" in formula_editor,
-        "formula library/buttons/editor are not all routed through SVG")
 require("segments.forEach" in formula_text and "NativeFormulaView" in formula_text and "mathAnnotated" not in formula_text,
         "simple question/option math segments can still bypass SVG")
-require("Text(entry.tex" not in formula_editor,
-        "raw TeX is still printed in formula library/menu")
 require("<svg" in formula_svg and "escapeXml" in formula_svg and "sanitizeColor" in formula_svg,
         "safe self-contained native SVG generator missing")
 require(all(marker in formula_svg for marker in ("MathSvgEditBox","<rect","activeBoxColor","radicalBars")),
         "touchable/color-active SVG boxes or stretchable radical metadata missing")
-require("NativeFormulaEditorView" in formula_editor and "detectTapGestures" in formula_view and ".size(1.dp)" in formula_editor,
-        "interactive box hit-testing is missing or blocked by the hidden input")
-require("replaceActiveBoxWhenCollapsed" in formula_boxes and "moveActiveBox" in formula_boxes and
-        "replaceActiveBox = true" in formula_editor,
-        "formula libraries do not target the active box safely")
-require("also(::validate)" in formula_reference_loader and "پیوند دسته نامعتبر" in formula_reference_loader and
-        "fun decode" in formula_reference_loader,
-        "formula library links/content are not validated")
-require("usePlatformDefaultWidth = false" in formula_library_dialog and "LazyVerticalGrid" in formula_library_dialog and
-        "Text(\"درج\")" in formula_library_dialog,
-        "full-screen clickable formula library dialog missing")
-require(all(marker in formula_editor for marker in ("openLibrary(\"common\")","openLibrary(\"__all\")","openLibrary(\"unicode\")","openLibrary(link.id")),
-        "main formula library routes do not open visibly")
-require("fun entries" in formula_library_nav and "fun search" in formula_library_nav,
-        "formula library navigator missing")
-require(all(marker in formula_smart for marker in ("کتابخانهٔ درس‌به‌درس","قالب‌های آماده","بسته‌های آماده","کلیدهای درشت","فرمول آخر")),
-        "reachable Native Smart Hub is incomplete")
-require(all(marker in formula_smart_data for marker in ("physics","chemistry","FormulaSmartPack","FormulaDelimiterPreset","bigKeyLabels")),
-        "Smart Hub reference datasets are incomplete")
+require("detectTapGestures" in formula_view and "animateScrollTo" in formula_view and "verticalScroll" in formula_view,
+        "interactive box hit-testing or active formula box auto-scroll missing")
 require("rightleftharpoons" in formula_natural and "normalizeChemistry" in formula_natural and "previousMarker" in formula_natural,
         "native natural/chemistry converter missing")
 require("FormulaTextCodec" in formula_text_codec and "ExistingFormulaEditor" in builder_screen and "ExistingFormulaEditor" in matching_builder,
         "direct edit/delete of existing question option matching formulas missing")
-require(all(marker in formula_editor for marker in ("ماتریس دلخواه ۱ تا ۱۰","onPreviewKeyEvent","combinedClickable","نمادهای اخیر","مرکز هوشمند")),
-        "complete formula editor controls are not reachable")
-require("moveSpatialBox" in formula_boxes and "typeCharacter" in formula_boxes and "importText" in formula_boxes,
-        "spatial navigation structural typing or safe paste missing")
-require("animateScrollTo" in formula_view and "verticalScroll" in formula_view,
-        "active formula box auto-scroll missing")
+require("math_editor_standalone.html" in formula_editor and "file:///android_asset" in formula_editor and
+        "AndroidMathBridge" in formula_editor and "addJavascriptInterface" in formula_editor and
+        "usePlatformDefaultWidth = false" in formula_editor and "AndroidView" in formula_editor,
+        "web formula editor dialog is not a full-screen WebView with an Android bridge")
+require("openMath('qTxt_1')" in formula_editor and "window.mfApply" in formula_editor and "window.closeMath" in formula_editor and
+        "AndroidMathBridge.onApplyResult" in formula_editor and "AndroidMathBridge.onClosed" in formula_editor,
+        "web formula editor bridge does not follow the qTxt_1 openMath/mfApply/closeMath contract")
+require("MathEditorWebViewDialog(" in builder_screen and "MathEditorWebViewDialog" in builder_screen and
+        "FormulaEditorDialog" not in main_text and "FormulaBoxEditor" not in main_text and
+        "FormulaLibraryNavigator" not in main_text and "FormulaSmartHubDialog" not in main_text,
+        "formula editor is not switched to the WebView dialog or native editor remnants remain")
 require("version = 4" in (ROOT/"app/src/main/java/ir/exam/app/data/local/AppDatabase.kt").read_text(),"Room V4 student notes migration missing")
 
 # ---- V28: reorder / image safety / bulk window / field of study ----

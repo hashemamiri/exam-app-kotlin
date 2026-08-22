@@ -98,8 +98,8 @@ import ir.exam.app.ui.figure.FigurePickerDialog
 import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
-import ir.exam.app.ui.math.FormulaEditorDialog
 import ir.exam.app.ui.math.InlineMathTextEditor
+import ir.exam.app.ui.math.MathEditorWebViewDialog
 import ir.exam.app.ui.math.NativeMathText
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
@@ -890,7 +890,7 @@ private fun QuestionEditor(
         }
     }
     formulaTarget?.let { target ->
-        FormulaEditorDialog(
+        MathEditorWebViewDialog(
             initialTex = target.initialTex,
             onDismiss = { formulaTarget = null },
             onInsert = { tex ->

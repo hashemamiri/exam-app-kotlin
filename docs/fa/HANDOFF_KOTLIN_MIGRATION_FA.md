@@ -5402,49 +5402,96 @@ git diff --check → PASS
 پیش‌نیاز: V45.4 و V45.4.1. بعد از push، انتظار می‌رود CI کاملاً سبز شود
 (تنها تست شکست‌خورده همین بود؛ ۲۹۶ تست دیگر سبز بودند).
 
-## ۹۳) V45.5 — بازگردانی کامل ویرایشگر فرمول به نسخهٔ بومی (revert پچ‌های V45.4 تا V45.4.2)
+
+---
+
+## ۹۳) V45.6 — بازگرداندن ویرایشگر فرمول WebView پس از revert V45.5
 
 ### علت
 
-پس از نصب APK حاوی ویرایشگر WebView (پچ‌های V45.4/V45.4.1/V45.4.2)، کاربر
-گزارش داد: «ویرایشگر باگ دارد؛ هیچ چیز نشان نمی‌دهد» (صفحهٔ خالی روی دستگاه
-واقعی). به تصمیم کاربر، همهٔ تغییرات این مسیر برگردانده شد و ویرایشگر
-فرمول بومی همان نسخهٔ v45.3 (کامیت `4f1757a`) دوباره برقرار است.
+پس از انتشار V45.5 (revert مجموعه V45.4 تا V45.4.2 و بازگشت به ویرایشگر
+فرمول بومی Compose)، درخواست کاربر این بود که همان `math-editor.html`
+مستقل (۶۲۴٬۲۰۹ بایت) دوباره به‌عنوان ویرایشگر فرمول در برنامه جایگزین شود.
+SHA-256 این فایل با asset ثبت‌شده در V45.4
+(`aae5777f9fb8705ccb2ed4a7c52e426e44ab45c7280055f936ed0aff4e917ceb`)
+بایت‌به‌بایت برابر بود؛ بنابراین به‌جای بازنویسی، همان تغییرست با
+`git revert 05338d2` (بدون commit) روی HEAD فعلی اعمال شد.
 
-### چه چیزهایی برگشت (دقیقاً وضعیت v45.3)
+### دامنهٔ تغییرات (همان V45.4 + V45.4.1 + V45.4.2)
 
 ```text
-بازگردانده شد:
-- ui/math/FormulaEditorDialog.kt / FormulaSmartHubDialog.kt /
-  FormulaLibraryDialog.kt / FormulaLibraryNavigator.kt /
-  FormulaReferenceLibrary.kt / FormulaReferenceStore.kt /
-  FormulaSmartReference.kt
-- core/math/FormulaBoxEditor.kt / FormulaMatrixFactory.kt
-- assets/formula_library_v13.json
-- ۵ تست حذف‌شده (FormulaBoxEditorTest، FormulaMatrixFactoryTest،
-  FormulaReferenceAssetTest، FormulaLibraryNavigatorTest،
-  FormulaSmartReferenceTest)
-- ExamBuilderScreen.kt (اتصال دوباره به FormulaEditorDialog)
-- V19InteractionTest.kt و Neumorphic69IntegrationTest.kt (نسخهٔ v45.3)
-- scripts/verify_native_final.py (نسخهٔ v45.3 — بدون استثنای WebView)
+افزوده:
+  app/src/main/assets/math_editor_standalone.html     (624,209 بایت)
+  app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt
+  docs/fa/MATH_EDITOR_WEBVIEW_V45_4_FA.md
+  .gitattributes (علامت‌گذاری asset به‌عنوان binary)
 
-حذف شد:
-- app/src/main/assets/math_editor_standalone.html
-- ui/math/MathEditorWebViewDialog.kt
-- .gitattributes
-- docs/fa/MATH_EDITOR_WEBVIEW_V45_4_FA.md
+حذف:
+  app/src/main/java/ir/exam/app/core/math/FormulaBoxEditor.kt
+  app/src/main/java/ir/exam/app/core/math/FormulaMatrixFactory.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaLibraryDialog.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaLibraryNavigator.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaReferenceLibrary.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaReferenceStore.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaSmartHubDialog.kt
+  app/src/main/java/ir/exam/app/ui/math/FormulaSmartReference.kt
+  app/src/main/assets/formula_library_v13.json
+  تست‌های متناظر در app/src/test/...
+
+تغییر:
+  app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+    (import و فراخوانی FormulaEditorDialog → MathEditorWebViewDialog)
+  app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+    (شمارش فایل‌های مجاز android.webkit)
+  app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt
+    (تست به MathEditorWebViewDialog و asset منتقل شد)
+  scripts/verify_native_final.py
+    (همان قوانین V45.4.1)
 ```
 
-تنها تفاوت درخت با `4f1757a` همین سند هندآف است (بخش‌های ۹۰ تا ۹۳ برای
-سابقه نگه داشته شده‌اند؛ SHA-256 asset و پروتکل bridge در بخش ۹۰ ثبت است
-تا در صورت تلاش دوباره در آینده قابل استفاده باشد).
+نمایش و چاپ فرمول (NativeMathAst / NativeMathSvgRenderer /
+NativeMathCanvasRenderer / NativeMathFormatter / NativeNaturalMathConverter /
+FormulaTextCodec / OfficialPdfPrintAdapter / PdfExamRenderer) دست‌نخورده
+باقی ماند؛ فقط ورودی/ویرایش از طریق WebView است.
 
-### نتیجه
+### قرارداد bridge (بدون تغییر در asset)
 
 ```text
-python3 scripts/verify_native_final.py → FINAL_NATIVE_VERIFY=PASS (EXIT 0)
+1) بارگذاری file:///android_asset/math_editor_standalone.html
+2) آماده‌بودن با poll تابع openMath (80ms تا 8s)
+3) seed ورودی qTxt_1 با $tex$ یا $$tex$$ و select
+4) openMath('qTxt_1')
+5) wrap mfApply → ارسال APPLY با tex به پل → onInsert(tex)
+6) closeMath → ارسال CLOSED → onDismiss
+دکمهٔ بازگشت Android نیز closeMath را صدا می‌زند.
+```
+
+### تست و تحویل
+
+```text
+python3 scripts/verify_native_final.py
+  → FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3 (EXIT 0)
 git diff --check → PASS
+sha256sum asset → aae5777f... (مطابق V45.4)
 ```
 
-پس از push، CI باید مانند v45.3 سبز شود و اپ همان ویرایشگر فرمول بومی
-قبلی را داشته باشد.
+تست واحد (`./gradlew testDebugUnitTest lintDebug`) در این محیط به‌دلیل
+در دسترس نبودن Android SDK اجرا نشد؛ اما کد بایت‌به‌بایت همان ترکیبی است
+که در V45.4.2 قبلاً CI سبز را گذرانده بود و فقط با یک
+`git revert --no-commit` بازسازی شده است. انتظار می‌رود پس از push،
+GitHub Actions همان ۲۹۷ تست را سبز کند.
+
+### SQL / Secret / وابستگی جدید
+
+ندارد. از `SUPABASE_SERVICE_KEY` یا `service_role` استفاده نشده است. هیچ
+تغییری در `applicationId`، امضا، یا `release.keystore` اعمال نشد.
+
+### فایل پچ
+
+```text
+/home/user/V45_6_webview_formula_editor.patch   (۵۳۴٬۸۰۵ بایت، در ریشه)
+```
+
+پیش‌نیاز: V45.5 (HEAD `05338d2`). پس از اعمال این پچ، نسخهٔ مؤثر برابر
+V45.4.2 است و هندآف V45.6 این واقعیت را ثبت می‌کند.
