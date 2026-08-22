@@ -320,19 +320,25 @@ private const val VIEWPORT_FALLBACK_JS = """
 (function(){
   try{
     var css = '' +
-      '#mfModal{top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;height:100vh !important;height:100dvh !important;}' +
-      '#mfModal.box-fullscreen .mf-box{height:100vh !important;max-height:none !important;height:100dvh !important;}' +
-      '#mfModal.box-fullscreen #mfP_box{height:100% !important;}' +
-      '#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
-      '#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
+      '#mfModal{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;display:flex !important;}' +
+      '#mfModal.box-fullscreen{padding:0 !important;align-items:stretch !important;background:#0f0c29 !important;}' +
+      '#mfModal.box-fullscreen .mf-box{position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;max-width:none !important;max-height:none !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:#0f0c29 !important;box-shadow:none !important;overflow:hidden !important;}' +
+      '#mfModal.box-fullscreen #mfP_box{display:flex !important;flex-direction:column !important;position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;min-height:0 !important;overflow:hidden !important;}' +
+      '#mfModal.box-fullscreen .mb-wrap{flex:1 1 auto !important;min-height:0 !important;margin:0 !important;padding:14px !important;display:flex !important;overflow:hidden !important;background:#0f0c29 !important;}' +
+      '#mfModal.box-fullscreen .mb-canvas{flex:1 1 auto !important;width:100% !important;min-height:0 !important;height:auto !important;display:flex !important;align-items:flex-start !important;justify-content:flex-start !important;overflow:auto !important;}' +
+      '#mfModal.box-fullscreen .mb-chip-scroll{flex:0 0 auto !important;display:grid !important;grid-template-rows:repeat(2,54px) !important;grid-auto-flow:column !important;grid-auto-columns:max-content !important;gap:10px 12px !important;overflow-x:auto !important;overflow-y:hidden !important;padding:12px 16px !important;background:#24243e !important;}' +
+      '#mfModal.box-fullscreen .mb-key-section{flex:0 0 auto !important;display:flex !important;flex-direction:column !important;background:#302b63 !important;}' +
+      '#mfModal.box-fullscreen .mb-fixed-keypad{display:grid !important;grid-template-columns:repeat(6,1fr) !important;gap:6px !important;padding:6px 8px 8px !important;background:transparent !important;}' +
+      '#mfModal.box-fullscreen .card-header,#mfModal.box-fullscreen .mf-modes,#mfModal.box-fullscreen .mf-help,#mfModal.box-fullscreen .mb-tools,#mfModal.box-fullscreen .mb-quick,#mfModal.box-fullscreen .mb-symbol-search,#mfModal.box-fullscreen #mfTabs,#mfModal.box-fullscreen #mfPad,#mfModal.box-fullscreen .mf-code,#mfModal.box-fullscreen .mf-act{display:none !important;}' +
       'body.math-open .demo-wrap{display:none !important;}';
-    var s = document.createElement('style');
-    s.id = 'mbAndroidViewportFallback';
+    var s = document.getElementById('mbAndroidViewportFallback');
+    if (!s) { s = document.createElement('style'); s.id = 'mbAndroidViewportFallback'; (document.head||document.documentElement).appendChild(s); }
     s.textContent = css;
-    (document.head || document.documentElement).appendChild(s);
   }catch(e){}
 })();
 """
+
+
 
 /**
  * فرمول را در textarea پنهان seed می‌کند، `mfApply`/`closeMath` را به پل
@@ -347,6 +353,36 @@ private fun bootstrapScript(initialTex: String): String {
     return VIEWPORT_FALLBACK_JS.trimIndent() + "\n" + """
       (function(){
         function log(m){ try{ AndroidMathBridge.log(String(m)); }catch(_e){} }
+
+        // فیکس چیدمان با ابعاد واقعی viewport — به‌صورت گلوبال تعریف
+        // می‌شود تا هم همین‌جا و هم در صورت نیاز در زمان‌های دیگر
+        // قابل فراخوانی باشد.
+        window.__mbForceLayout = function(){
+          try{
+            var h = (window.innerHeight || document.documentElement.clientHeight || 0) + 'px';
+            var w = (window.innerWidth || document.documentElement.clientWidth || 0) + 'px';
+            function set(id, vals){
+              var el = document.getElementById(id);
+              if (!el) return;
+              for (var k in vals) { try { el.style[k] = vals[k]; } catch(_e){} }
+            }
+            set('mfModal', {position:'fixed',top:'0',left:'0',right:'0',bottom:'0',width:w,height:h,display:'flex',padding:'0',margin:'0',zIndex:'2147483646'});
+            var box = document.querySelector('#mfModal .mf-box');
+            if (box) {
+              box.style.position='absolute'; box.style.top='0'; box.style.left='0';
+              box.style.right='0'; box.style.bottom='0';
+              box.style.width='100%'; box.style.height=h;
+              box.style.maxWidth='none'; box.style.maxHeight='none';
+              box.style.margin='0'; box.style.padding='0';
+              box.style.borderRadius='0'; box.style.border='0'; box.style.overflow='hidden';
+            }
+            set('mfP_box', {position:'absolute',top:'0',left:'0',right:'0',bottom:'0',width:'100%',height:h,display:'flex',flexDirection:'column',minHeight:'0',overflow:'hidden',margin:'0',padding:'0'});
+            if (typeof window.mbDraw === 'function') {
+              try { window.mbDraw(); } catch (eD) {}
+            }
+          }catch(e){ log('force layout: ' + e); }
+        };
+
         try{
           if (window.__mbAndroidInstalled) return;
 
@@ -389,6 +425,9 @@ private fun bootstrapScript(initialTex: String): String {
               modal.style.display = 'flex';
             }
             document.body.classList.add('math-open');
+            window.__mbForceLayout();
+            setTimeout(window.__mbForceLayout, 100);
+            setTimeout(window.__mbForceLayout, 400);
           } catch (eForce) { log('force open: ' + eForce); }
 
           log('bootstrap done; modal classes=' + (modal && modal.className));

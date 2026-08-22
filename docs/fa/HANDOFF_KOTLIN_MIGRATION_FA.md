@@ -6227,3 +6227,62 @@ jsdom (host-bridge فعال):
 - چون auto-open حذف شد، باز کردن پنجره کاملاً توسط پل اندروید کنترل
   می‌شود (یک‌بار openMath در bootstrap) و دکمهٔ بازگشت به‌درستی به
   پنجرهٔ ایجاد آزمون برمی‌گردد.
+
+---
+
+## ۱۰۲) V45.8.2 — فیکس چیدمان با ابعاد پیکسلی واقعی
+
+### علت
+
+پس از V45.8 کاربر گزارش داد روی شبیه‌ساز با زدن آیکن فرمول، صفحهٔ
+تمام‌تیره‌ای ظاهر می‌شود که فقط برچسب `v36 · V34: ✓ 64` در پایین آن
+دیده می‌شود. این برچسب توسط host-bridge به `document.body` افزوده
+می‌شود و دیدنش یعنی JS اجرا شده؛ اما خود مدال و فرزندانش رندر
+نمی‌شوند.
+
+محتمل‌ترین علت: تکیهٔ CSS به `100dvh` (و قبل‌تر `inset:0`) در
+برخی WebViewهای قدیمی یا حالت‌های خاص شبیه‌ساز، یا رفتار grid با
+`minmax(0,1fr)` در یک والد با ارتفاع درصدی/غیرصریح. تزریق قبلی فقط
+یک `height:100vh` قبل از `100dvh` می‌گذاشت ولی اگر WebView حتی
+`100vh` را در زنجیرهٔ والد/فرزند به‌درستی منتشر نکند، نتیجه صفر
+می‌شود.
+
+### اصلاح
+
+۱. **CSS تزریقی قوی‌تر** در `VIEWPORT_FALLBACK_JS`:
+   - مدال با `position:fixed` و چهارضلع صفر و عرض/ارتفاع ۱۰۰٪
+   - `.mf-box` با `position:absolute` و چهارضلع صفر
+   - `#mfP_box` با `position:absolute`، چهارضلع صفر، و
+     `display:flex; flex-direction:column` (جایگزین grid)
+   - `.mb-wrap` با `flex:1 1 auto` و `min-height:0`
+   - `.mb-canvas` با `flex:1 1 auto`
+   - `.mb-chip-scroll` و `.mb-key-section` و `.mb-fixed-keypad`
+     با `flex:0 0 auto` و display صریح
+   - همه با `!important` تا قوانین `100dvh` asset را خنثی کنند.
+
+۲. **فیکس پیکسلی با JS** در تابع جدید `window.__mbForceLayout`:
+   - ارتفاع و عرض واقعی viewport را با `innerHeight/clientHeight`
+     می‌خواند و همان مقدار پیکسلی را به‌صورت inline روی mfModal،
+     mf-box و mfP_box می‌گذارد.
+   - بلافاصله پس از openMath و در ۱۰۰ms و ۴۰۰ms دوباره اجرا
+     می‌شود تا اگر چیدمان در ابتدا صفر بود، در نهایت اعمال شود.
+   - یک `mbDraw()` نیز صدا می‌زند تا اگر رندر اولیه به‌خاطر ابعاد
+     صفر، خروجی خالی داده بود دوباره رسم کند.
+
+این اصلاح به‌عنوان تضمین دوم پشت سر CSSِ تزریقی عمل می‌کند؛ در
+مرورگرهای جدید قوانین `!important` حرف اول را می‌زنند و در
+WebViewهای مشکل‌دار، JS پیکسل‌های صریح را اعمال می‌کند.
+
+### اعتبارسنجی
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+jsdom با همان CSS/JS تزریقی:
+  #mfModal        display=flex position=fixed   100%
+  .mf-box         display=block position=absolute 100%
+  #mfP_box        display=flex position=absolute 100%
+  .mb-wrap        display=flex  flex=1 1 auto
+  .mb-canvas      display=flex  flex=1 1 auto  (canvas populated)
+  .mb-chip-scroll display=grid  flex=0 0 auto
+  .mb-key-section display=flex  flex=0 0 auto
+```
