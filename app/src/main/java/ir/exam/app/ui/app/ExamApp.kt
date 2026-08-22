@@ -1,6 +1,11 @@
 package ir.exam.app.ui.app
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -18,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -27,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -43,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -500,36 +508,137 @@ private fun AuthenticatedExamApp(
     }
 
     // ورود به برنامه: اگر آپدیت جدید موجود باشد، یک پیغام روی صفحه ظاهر می‌شود.
+    // این پنجره برخلاف نسخه قدیمی، هنگام دانلود باز می‌ماند و پیشرفت، «در انتظار
+    // شبکه» و خطای واقعی را نشان می‌دهد؛ پس از دریافت هم نصب‌کننده خودکار باز می‌شود.
     val updateState by updateViewModel.state.collectAsState()
     var updatePromptDismissed by rememberSaveable(user.id) { mutableStateOf(false) }
     LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_CODE) }
+
+    val latestApkPath by rememberUpdatedState(updateState.downloadedApkPath)
+    fun openInstaller(path: String) {
+        apkUpdateManager.launchInstaller(path)
+            .onSuccess { updateViewModel.reportInstallerOpened() }
+            .onFailure(updateViewModel::reportInstallError)
+    }
+    val updateInstallLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        val path = latestApkPath
+        if (path != null && apkUpdateManager.canRequestPackageInstalls()) {
+            openInstaller(path)
+        } else if (path != null) {
+            updateViewModel.reportPermissionRequired()
+        }
+    }
+    fun requestInstaller(path: String) {
+        if (apkUpdateManager.canRequestPackageInstalls()) {
+            openInstaller(path)
+        } else {
+            updateViewModel.reportPermissionRequired()
+            try {
+                updateInstallLauncher.launch(apkUpdateManager.unknownSourcesSettingsIntent())
+            } catch (error: ActivityNotFoundException) {
+                updateViewModel.reportInstallError(error)
+            }
+        }
+    }
+
+    // دانلود کامل شد → نصب‌کننده را خودکار باز کن (همان رفتار صفحه «درباره»).
+    LaunchedEffect(updateState.autoInstallPending, updateState.downloadedApkPath) {
+        val path = updateState.downloadedApkPath
+        if (updateState.autoInstallPending && path != null) {
+            updateViewModel.markAutoInstallHandled()
+            requestInstaller(path)
+        }
+    }
+
     updateState.update?.takeIf { remote ->
-        !updatePromptDismissed && updateState.downloadedApkPath == null && !updateState.downloading
+        !updatePromptDismissed && updateState.downloadedApkPath == null
     }?.let { remote ->
-        AlertDialog(
-            onDismissRequest = { updatePromptDismissed = true },
-            title = { Text("بروزرسانی جدید") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("نسخه ${remote.name} آماده دریافت است.")
-                    remote.notesFa.take(3).forEach { note ->
-                        Text("• $note", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        updatePromptDismissed = true
-                        updateViewModel.downloadAndInstall()
-                    }
-                ) { Text("دریافت نسخه") }
-            },
-            dismissButton = {
-                TextButton(onClick = { updatePromptDismissed = true }) { Text("بعداً") }
+        UpdatePromptDialog(
+            remoteName = remote.name,
+            notes = remote.notesFa.take(3),
+            downloading = updateState.downloading,
+            downloadFraction = updateState.downloadFraction,
+            progressText = updateState.progressText,
+            message = updateState.message,
+            error = updateState.error,
+            onDownload = updateViewModel::downloadAndInstall,
+            onDismiss = { updatePromptDismissed = true },
+            onBrowserFallback = {
+                updatePromptDismissed = true
+                appContext.openUrlSafely(remote.apkUrl, onFailure = updateViewModel::reportInstallError)
             }
         )
     }
+}
+
+/**
+ * پنجره دریافت نسخه جدید با سه حالت:
+ * ۱) آماده دریافت → دکمه «دریافت نسخه» + «بعداً»
+ * ۲) در حال دانلود → نوار پیشرفت/متن «در انتظار اتصال اینترنت…» + «پنهان‌کردن»
+ * ۳) خطا → متن خطای واقعی + «تلاش دوباره» + «دریافت با مرورگر»
+ */
+@Composable
+private fun UpdatePromptDialog(
+    remoteName: String,
+    notes: List<String>,
+    downloading: Boolean,
+    downloadFraction: Float?,
+    progressText: String?,
+    message: String?,
+    error: String?,
+    onDownload: () -> Unit,
+    onDismiss: () -> Unit,
+    onBrowserFallback: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { if (!downloading) onDismiss() },
+        title = {
+            Text(if (downloading) "در حال دریافت نسخه $remoteName" else "بروزرسانی جدید")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!downloading) {
+                    Text("نسخه $remoteName آماده دریافت است.")
+                    notes.forEach { note ->
+                        Text("• $note", style = MaterialTheme.typography.bodySmall)
+                    }
+                } else {
+                    downloadFraction?.let {
+                        LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth())
+                    } ?: LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    progressText?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                }
+                message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            when {
+                downloading -> TextButton(onClick = onDismiss) { Text("پنهان‌کردن") }
+                error != null -> Button(onClick = onDownload) { Text("تلاش دوباره") }
+                else -> Button(onClick = onDownload) { Text("دریافت نسخه") }
+            }
+        },
+        dismissButton = {
+            when {
+                downloading -> Unit
+                error != null -> TextButton(onClick = onBrowserFallback) { Text("دریافت با مرورگر") }
+                else -> TextButton(onClick = onDismiss) { Text("بعداً") }
+            }
+        }
+    )
+}
+
+/** بازکردن امن نشانی در مرورگر به‌عنوان مسیر جایگزین وقتی دانلودکننده سیستم ناموفق است. */
+private fun android.content.Context.openUrlSafely(url: String, onFailure: (Throwable) -> Unit) {
+    runCatching {
+        startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }.onFailure(onFailure)
 }
 
 @Composable

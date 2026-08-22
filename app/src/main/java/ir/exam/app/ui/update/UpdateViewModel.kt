@@ -19,6 +19,7 @@ data class UpdateState(
     val downloading: Boolean = false,
     val downloadedBytes: Long = 0L,
     val totalBytes: Long? = null,
+    val waitingForNetwork: Boolean = false,
     val downloadedApkPath: String? = null,
     val autoInstallPending: Boolean = false
 ) {
@@ -26,6 +27,14 @@ data class UpdateState(
         get() = totalBytes
             ?.takeIf { it > 0L }
             ?.let { (downloadedBytes.toDouble() / it.toDouble()).coerceIn(0.0, 1.0).toFloat() }
+
+    /** متن پیشرفت دانلود آماده نمایش؛ «در انتظار شبکه» را هم پوشش می‌دهد. */
+    val progressText: String?
+        get() = when {
+            waitingForNetwork -> "در انتظار اتصال اینترنت…"
+            totalBytes == null -> readableBytes(downloadedBytes)
+            else -> "${readableBytes(downloadedBytes)} از ${readableBytes(totalBytes)}"
+        }
 }
 
 class UpdateViewModel(
@@ -65,6 +74,7 @@ class UpdateViewModel(
                     downloading = true,
                     downloadedBytes = 0L,
                     totalBytes = remote.sizeBytes,
+                    waitingForNetwork = false,
                     downloadedApkPath = null,
                     autoInstallPending = false
                 )
@@ -74,7 +84,8 @@ class UpdateViewModel(
                 _state.update {
                     it.copy(
                         downloadedBytes = progress.downloadedBytes,
-                        totalBytes = progress.totalBytes ?: remote.sizeBytes
+                        totalBytes = progress.totalBytes ?: remote.sizeBytes,
+                        waitingForNetwork = progress.waitingForNetwork
                     )
                 }
             }.onSuccess { apk ->
@@ -83,6 +94,7 @@ class UpdateViewModel(
                         downloading = false,
                         downloadedBytes = apk.length(),
                         totalBytes = apk.length(),
+                        waitingForNetwork = false,
                         downloadedApkPath = apk.absolutePath,
                         autoInstallPending = true,
                         message = "دانلود و بررسی امنیتی کامل شد."
@@ -92,6 +104,7 @@ class UpdateViewModel(
                 _state.update {
                     it.copy(
                         downloading = false,
+                        waitingForNetwork = false,
                         error = safeUpdateError(error),
                         downloadedApkPath = null,
                         autoInstallPending = false
@@ -123,6 +136,12 @@ class UpdateViewModel(
     fun reportInstallError(error: Throwable) {
         _state.update { it.copy(error = safeUpdateError(error)) }
     }
+}
+
+private fun readableBytes(bytes: Long): String = when {
+    bytes >= 1024L * 1024L -> "%.1f مگابایت".format(bytes / (1024.0 * 1024.0))
+    bytes >= 1024L -> "%.1f کیلوبایت".format(bytes / 1024.0)
+    else -> "$bytes بایت"
 }
 
 /** Header، URL، کلید و Token هیچ‌وقت در رابط کاربر نمایش داده نمی‌شوند. */

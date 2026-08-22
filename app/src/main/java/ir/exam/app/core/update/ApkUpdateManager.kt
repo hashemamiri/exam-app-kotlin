@@ -21,10 +21,24 @@ import kotlinx.coroutines.withContext
 
 private const val APK_MIME_TYPE = "application/vnd.android.package-archive"
 
+/**
+ * اگر DownloadManager در این مدت هیچ بایتی جلو نرود، دانلود «متوقف» تلقی می‌شود و
+ * با پیام روشن لغو می‌شود تا کاربر بی‌نهایت در حالت بی‌صدا منتظر نماند.
+ */
+private const val DOWNLOAD_STALL_TIMEOUT_MS = 120_000L
+
+/** دلایل توقف دانلود که مربوط به نبود شبکه‌اند و باید به کاربر اعلام شوند. */
+private val NETWORK_PAUSE_REASONS = setOf(
+    DownloadManager.PAUSED_WAITING_FOR_NETWORK,
+    DownloadManager.PAUSED_WAITING_FOR_WIFI,
+    DownloadManager.PAUSED_QUEUED_FOR_WIFI
+)
+
 /** پیشرفت دانلود مستقل از UI. totalBytes در بعضی سرورها تا چند لحظه نامشخص است. */
 data class ApkDownloadProgress(
     val downloadedBytes: Long,
-    val totalBytes: Long?
+    val totalBytes: Long?,
+    val waitingForNetwork: Boolean = false
 )
 
 /**
@@ -120,6 +134,8 @@ class ApkUpdateManager(private val context: Context) {
         destination: File,
         onProgress: (ApkDownloadProgress) -> Unit
     ) = withContext(Dispatchers.IO) {
+        var lastBytes = 0L
+        var lastProgressAtMs = System.currentTimeMillis()
         while (true) {
             val query = DownloadManager.Query().setFilterById(downloadId)
             downloadManager.query(query).use { cursor ->
@@ -132,7 +148,22 @@ class ApkUpdateManager(private val context: Context) {
                     .coerceAtLeast(0L)
                 val total = cursor.longValue(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
                     .takeIf { it > 0L }
-                onProgress(ApkDownloadProgress(downloaded, total))
+                val waitingForNetwork = status == DownloadManager.STATUS_PAUSED &&
+                    cursor.longValue(DownloadManager.COLUMN_REASON).toInt() in NETWORK_PAUSE_REASONS
+                onProgress(ApkDownloadProgress(downloaded, total, waitingForNetwork))
+
+                if (downloaded != lastBytes) {
+                    lastBytes = downloaded
+                    lastProgressAtMs = System.currentTimeMillis()
+                } else if (
+                    status != DownloadManager.STATUS_SUCCESSFUL &&
+                    System.currentTimeMillis() - lastProgressAtMs >= DOWNLOAD_STALL_TIMEOUT_MS
+                ) {
+                    // DownloadManager بعضی مواقع بی‌صدا در PAUSED/در انتظار شبکه می‌ماند؛
+                    // بدون این کنترل کاربر هیچ پیامی نمی‌دید.
+                    downloadManager.remove(downloadId)
+                    error("دانلود بروزرسانی متوقف شده است؛ اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.")
+                }
 
                 when (status) {
                     DownloadManager.STATUS_SUCCESSFUL -> {

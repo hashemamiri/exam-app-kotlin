@@ -1,6 +1,8 @@
 package ir.exam.app.ui.update
 
 import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ir.exam.app.BuildConfig
@@ -35,6 +38,7 @@ fun AboutScreen(
     viewModel: UpdateViewModel,
     apkUpdateManager: ApkUpdateManager
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     val latestApkPath by rememberUpdatedState(state.downloadedApkPath)
 
@@ -110,7 +114,7 @@ fun AboutScreen(
                     if (state.downloading) {
                         state.downloadFraction?.let { LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth()) }
                             ?: LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Text("${readableBytes(state.downloadedBytes)}${state.totalBytes?.let { " از ${readableBytes(it)}" }.orEmpty()}")
+                        state.progressText?.let { Text(it) }
                     } else if (state.downloadedApkPath == null) {
                         Button(onClick = viewModel::downloadAndInstall, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Outlined.Download, contentDescription = null)
@@ -127,7 +131,27 @@ fun AboutScreen(
                     }
                 }
                 state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                state.error?.let { error ->
+                    Text(error, color = MaterialTheme.colorScheme.error)
+                    // مسیر جایگزین وقتی DownloadManager سیستم ناموفق است؛ بازکردن صریح در مرورگر.
+                    val url = state.update?.apkUrl
+                    if (url != null) {
+                        OutlinedButton(
+                            onClick = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                }.onFailure(viewModel::reportInstallError)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Outlined.Download, contentDescription = null)
+                            Text("دریافت با مرورگر")
+                        }
+                    }
+                }
             }
         }
     }
@@ -147,10 +171,4 @@ private fun ChangeListCard(version: String, notes: List<String>) {
             }
         }
     }
-}
-
-private fun readableBytes(bytes: Long): String = when {
-    bytes >= 1024L * 1024L -> "%.1f مگابایت".format(bytes / (1024.0 * 1024.0))
-    bytes >= 1024L -> "%.1f کیلوبایت".format(bytes / 1024.0)
-    else -> "$bytes بایت"
 }

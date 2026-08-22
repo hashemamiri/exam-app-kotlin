@@ -108,6 +108,7 @@ about_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/update/AboutScreen.kt").rea
 classes_view_model=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
 grading_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt").read_text()
 formula_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").read_text()
+inline_math_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/math/InlineMathTextEditor.kt").read_text()
 formula_view=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").read_text()
 formula_text=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text()
 formula_svg=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt").read_text()
@@ -659,12 +660,15 @@ require("pointerInput(Unit)" in matching_builder,
         "V29 option/matching drag is still keyed on a label that changes while dragging")
 require("ReorderStepDp.dp.toPx()" in builder_screen and "const val ReorderStepDp: Float = 52f" in matching_builder,
         "V29 question-card and option drag thresholds are not the same")
-require("Icons.Outlined.Functions" in question_media and
-        "onFormula" in question_media and
-        "Icons.Outlined.PhotoCamera" in question_media,
-        "V29 formula icon is not in the same row as the camera")
-require("OutlinedButton(onClick = { formulaTarget = FormulaTarget(\"question\") })" not in builder_screen and
-        "درج فرمول متن سؤال" in question_media,
+# V45 طراحی عمدی: آیکن فرمول از سطر دوربین به زیر کادر متن سؤال (InlineMathTextEditor)
+# منتقل شد؛ قرارداد V29 با طراحی V45 هماهنگ شده است.
+require("Icons.Outlined.Functions" in inline_math_editor and
+        "onInsertFormula" in inline_math_editor,
+        "V45 formula icon is not below the text box in the inline math editor")
+require("Icons.Outlined.PhotoCamera" in question_media and
+        "Icons.Outlined.Functions" not in question_media,
+        "V45 formula icon must not remain in the question media camera row")
+require("OutlinedButton(onClick = { formulaTarget = FormulaTarget(\"question\") })" not in builder_screen,
         "V29 text formula button is not converted to an icon beside the camera")
 full_viewer=(ROOT/"app/src/main/java/ir/exam/app/ui/image/FullScreenImageViewer.kt").read_text()
 require("FullScreenImageViewer" in question_media and
