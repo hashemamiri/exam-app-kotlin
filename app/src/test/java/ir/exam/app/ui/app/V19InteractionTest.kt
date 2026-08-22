@@ -132,19 +132,25 @@ class V19InteractionTest {
         assertTrue("100dvh target missing", "100dvh" in dialog)
         assertTrue("modal pinning fallback missing", "#mfModal{" in dialog && "top:0" in dialog)
         assertTrue("demo-wrap hide rule missing", "body.math-open .demo-wrap" in dialog)
-        // V45.8.2: علاوه بر CSS، باید ارتفاع/عرض را با پیکسل واقعی viewport
-        // روی مدال و فرزندانش ست کند.
-        assertTrue("pixel layout force missing", "__mbForceLayout" in dialog)
-        assertTrue("layout must read viewport height", "innerHeight" in dialog)
+        // V45.8.6: چیدمان را به CSS بومی asset واگذار می‌کنیم و تزریق
+        // تهاجمی position:absolute/display:flex روی #mfP_box را حذف کرده‌ایم
+        // (این قواعد گرید بومی دارِ سه‌ردیفهٔ asset را می‌شکستند و صفحه
+        // تمام‌صفحه تیره می‌شد).
+        assertFalse("must not force absolute position on mfP_box",
+                    "mfP_box" in dialog && "position:absolute" in dialog.substringAfter("mfP_box").substringBefore("};"))
+        assertFalse("must not force flex on mfP_box",
+                    "mfP_box" in dialog && "display:flex" in dialog.substringAfter("mfP_box").substringBefore("};"))
+
+        // V45.8.5: چیپ‌های V34 باید مستقیم بایند شوند و پاپ‌آپ mbVar مرکزصفحه
+        assertTrue("V34 chip binding missing", "mb-chip[data-v34" in dialog && "mbGroupLibrary" in dialog)
+        assertTrue("mbVar centering missing", "translate(-50%,-50%)" in dialog && "mbVarOpen" in dialog)
 
         // ۵) بستن دیالوگ باید حتماً و با timeout ایمن به onDismiss ختم شود
         assertTrue("dismiss safety timeout missing",
                    "DISMISS_FALLBACK_MS" in dialog && "dismissOnce" in dialog)
 
-        // ۶) تشخیص: لاگ JS به logcat و force-open مدال
+        // ۶) تشخیص: لاگ JS به logcat
         assertTrue("diagnostic bridge missing", "AndroidMathBridge.log" in dialog)
-        assertTrue("force modal classes missing",
-                   "classList.add('modal', 'open', 'box-fullscreen')" in dialog)
         assertTrue("WebChromeClient console forward missing", "onConsoleMessage" in dialog)
     }
 

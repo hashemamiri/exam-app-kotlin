@@ -311,35 +311,28 @@ private fun FailedOverlay(onRetry: () -> Unit) {
 /**
  * CSS تزریقی برای رفع مشکلات رندر در WebViewهای قدیمی.
  *
- * فایل ویرایشگر از `100dvh` برای ارتفاع جعبهٔ تمام‌صفحه استفاده می‌کند که
- * در Chrome/WebView قبل از نسخهٔ ۱۰۸ ناشناخته است. راه‌حل استاندارد
- * «مقدار قدیمی قبل از مقدار مدرن»: اول `100vh` و بعد `100dvh` با
- * `!important`. مرورگر جدید دومی را می‌پذیرد، قدیمی اولی را نگه می‌دارد.
- *
- * همچنین والد مدال به‌جای `inset:0` با چهار ضلع صفر پین می‌شود و بدنهٔ
- * دموی پشت جعبه هنگام باز بودن مدال پنهان می‌شود.
+ * به‌جای بازنویسی گستردهٔ چیدمان (که در نسخه‌های قبلی تداخل ایجاد
+ * می‌کرد)، فقط حداقل‌های لازم را تزریق می‌کنیم:
+ *  - برای `100dvh` یک `100vh` قبل از آن می‌گذاریم؛
+ *  - برای `inset:0` چهارضلع صفر می‌گذاریم؛
+ *  - والد .modal از `position:fixed` و چهارضلع صفر استفاده می‌کند تا
+ *    کل ویوپورت را بپوشاند؛
+ *  - وقتی کتابخانه یا اسمارت‌هاب باز می‌شود، #mfPad باید display:flex
+ *    بگیرد (قانون پیش‌فرض asset این را دارد ولی با !important اضافه
+ *    می‌کنیم تا هیچ قانون مخفی‌کننده دیگری نتواند آن را پنهان کند)؛
+ *  - منوی پاپ‌آپ mbVar در مرکز صفحه پین می‌شود (در برخی WebViewها
+ *    اندازه‌گیری اولیه صفر بود و منو به گوشه می‌رفت)؛
+ *  - بدنهٔ دموی پشت مدال هنگام باز بودن فرمول پنهان می‌شود.
  */
 private const val VIEWPORT_FALLBACK_JS = """
 (function(){
   try{
     var css = '' +
-      '#mfModal{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;display:flex !important;}' +
-      '#mfModal.box-fullscreen{padding:0 !important;align-items:stretch !important;background:#0f0c29 !important;transform:none !important;will-change:auto !important;}' +
-      '#mfModal.box-fullscreen .mf-box{position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;max-width:none !important;max-height:none !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:#0f0c29 !important;box-shadow:none !important;overflow:hidden !important;transform:none !important;will-change:auto !important;contain:none !important;}' +
-      '#mfModal.box-fullscreen #mfP_box{display:flex !important;flex-direction:column !important;position:absolute !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100% !important;height:100% !important;min-height:0 !important;overflow:hidden !important;}' +
-      '#mfModal.box-fullscreen .mb-wrap{flex:1 1 auto !important;min-height:0 !important;margin:0 !important;padding:14px !important;display:flex !important;overflow:hidden !important;background:#0f0c29 !important;}' +
-      '#mfModal.box-fullscreen .mb-canvas{flex:1 1 auto !important;width:100% !important;min-height:0 !important;height:auto !important;display:flex !important;align-items:flex-start !important;justify-content:flex-start !important;overflow:auto !important;}' +
-      '#mfModal.box-fullscreen .mb-chip-scroll{flex:0 0 auto !important;display:grid !important;grid-template-rows:repeat(2,54px) !important;grid-auto-flow:column !important;grid-auto-columns:max-content !important;gap:10px 12px !important;overflow-x:auto !important;overflow-y:hidden !important;padding:12px 16px !important;background:#24243e !important;}' +
-      '#mfModal.box-fullscreen .mb-key-section{flex:0 0 auto !important;display:flex !important;flex-direction:column !important;background:#302b63 !important;}' +
-      '#mfModal.box-fullscreen .mb-fixed-keypad{display:grid !important;grid-template-columns:repeat(6,1fr) !important;gap:6px !important;padding:6px 8px 8px !important;background:transparent !important;}' +
-      '#mfModal.box-fullscreen .card-header,#mfModal.box-fullscreen .mf-modes,#mfModal.box-fullscreen .mf-help,#mfModal.box-fullscreen .mb-tools,#mfModal.box-fullscreen .mb-quick,#mfModal.box-fullscreen .mb-symbol-search,#mfModal.box-fullscreen .mf-code,#mfModal.box-fullscreen .mf-act{display:none !important;}' +
-      '#mfModal.box-fullscreen #mfPad:not(.mb-library-open):not(.mb-smart-hub){display:none !important;}' +
-      '#mfModal.box-fullscreen #mfPad.mb-library-open,#mfModal.box-fullscreen #mfPad.mb-smart-hub{display:flex !important;position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;width:100vw !important;height:100vh !important;max-height:none !important;z-index:12040 !important;overflow:hidden !important;padding:16px !important;background:rgba(0,0,0,.55) !important;align-items:center !important;justify-content:center !important;}' +
-      '#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel,#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-library-panel{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
-      /* منوی بازشوی کتابخانه (mbVar) باید همیشه روی مدال و تمام‌صفحه دیده
-         شود و در مرکز صفحه قرار گیرد. در وب‌ویو برخی دستگاه‌ها به‌خاطر
-         stackِ کال‌بیکِ JS، offsetWidth/offsetHeight در لحظهٔ
-         موقعیت‌دهی صفر می‌شد و منو به گوشه پرتاب می‌گشت. */' +
+      'html,body{margin:0 !important;padding:0 !important;height:100% !important;}' +
+      '#mfModal{position:fixed !important;top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;display:none !important;z-index:2147483645 !important;}' +
+      '#mfModal.modal.open{display:flex !important;}' +
+      '#mfModal.box-fullscreen{padding:0 !important;align-items:stretch !important;background:var(--bg1) !important;}' +
+      '#mfModal.box-fullscreen .mf-box{height:100vh !important;height:100dvh !important;max-height:none !important;max-width:none !important;width:100% !important;margin:0 !important;border:0 !important;border-radius:0 !important;}' +
       '#mbVar.mb-var{display:none !important;position:fixed !important;top:50% !important;left:50% !important;right:auto !important;bottom:auto !important;transform:translate(-50%,-50%) !important;width:min(340px,92vw) !important;max-width:92vw !important;max-height:80vh !important;min-width:240px !important;z-index:2147483646 !important;overflow:auto !important;}' +
       '#mbVar.mb-var.open{display:block !important;}' +
       'body.math-open .demo-wrap{display:none !important;}';
@@ -366,35 +359,6 @@ private fun bootstrapScript(initialTex: String): String {
       (function(){
         function log(m){ try{ AndroidMathBridge.log(String(m)); }catch(_e){} }
 
-        // فیکس چیدمان با ابعاد واقعی viewport — به‌صورت گلوبال تعریف
-        // می‌شود تا هم همین‌جا و هم در صورت نیاز در زمان‌های دیگر
-        // قابل فراخوانی باشد.
-        window.__mbForceLayout = function(){
-          try{
-            var h = (window.innerHeight || document.documentElement.clientHeight || 0) + 'px';
-            var w = (window.innerWidth || document.documentElement.clientWidth || 0) + 'px';
-            function set(id, vals){
-              var el = document.getElementById(id);
-              if (!el) return;
-              for (var k in vals) { try { el.style[k] = vals[k]; } catch(_e){} }
-            }
-            set('mfModal', {position:'fixed',top:'0',left:'0',right:'0',bottom:'0',width:w,height:h,display:'flex',padding:'0',margin:'0',zIndex:'2147483646'});
-            var box = document.querySelector('#mfModal .mf-box');
-            if (box) {
-              box.style.position='absolute'; box.style.top='0'; box.style.left='0';
-              box.style.right='0'; box.style.bottom='0';
-              box.style.width='100%'; box.style.height=h;
-              box.style.maxWidth='none'; box.style.maxHeight='none';
-              box.style.margin='0'; box.style.padding='0';
-              box.style.borderRadius='0'; box.style.border='0'; box.style.overflow='hidden';
-            }
-            set('mfP_box', {position:'absolute',top:'0',left:'0',right:'0',bottom:'0',width:'100%',height:h,display:'flex',flexDirection:'column',minHeight:'0',overflow:'hidden',margin:'0',padding:'0'});
-            if (typeof window.mbDraw === 'function') {
-              try { window.mbDraw(); } catch (eD) {}
-            }
-          }catch(e){ log('force layout: ' + e); }
-        };
-
         try{
           if (window.__mbAndroidInstalled) return;
 
@@ -404,10 +368,8 @@ private fun bootstrapScript(initialTex: String): String {
           try { m.setSelectionRange(0, $selEnd); } catch (eSel) {}
 
           // لایهٔ میزبان داخل asset، window.mfApply و window.closeMath را
-          // پیش از ما wrap کرده است (برای ذخیرهٔ فیلد، history، keypad و…).
-          // ما فقط آن‌ها را یک‌لایهٔ نازک دیگر می‌پیچیم تا مقدار را به
-          // اندروید برسانیم؛ زنجیرهٔ wrapها به‌درستی کار می‌کند چون هر
-          // یک تابع قبلی را ذخیره می‌کند.
+          // پیش از ما wrap کرده است. ما فقط یک‌لایهٔ نازک اضافه می‌کنیم تا
+          // مقدار را به اندروید برسانیم.
           var ia = window.mfApply;
           window.mfApply = function(){
             window.__mbApplyInFlight = true;
@@ -418,44 +380,23 @@ private fun bootstrapScript(initialTex: String): String {
           };
           var ic = window.closeMath;
           window.closeMath = function(){
-            // اگر سرکوب فعال است (مثلاً در لحظهٔ فشردن بازگشت، قبل از
-            // آن که Compose دیالوگ را کاملاً ببندد)، فقط پل را صدا می‌زنیم
-            // ولی کلاس‌های مدال را حذف نمی‌کنیم تا UI میانی موبایلی
-            // نمایش داده نشود.
-            if (window.__mbSuppressClose) {
-              AndroidMathBridge.onClosed();
-              return;
-            }
             try { ic.apply(window, arguments); } catch (e2) { log('closeMath wrap: ' + e2); }
             if (window.__mbApplyInFlight) { window.__mbApplyInFlight = false; return; }
             AndroidMathBridge.onClosed();
           };
           window.__mbAndroidInstalled = true;
 
-          // قبل از هر چیز، اطمینان حاصل کنیم که مدال در حالت تمام‌صفحه
-          // باز می‌شود. در برخی وب‌ویوها بین زمان فراخوانی openMath و
-          // اعمال CSS یک حالت میانی موبایلی (پایین‌صفحه) دیده می‌شد.
-          try {
-            var modalPre = document.getElementById('mfModal');
-            if (modalPre) {
-              modalPre.classList.add('modal', 'open', 'box-fullscreen');
-              modalPre.style.display = 'flex';
-            }
-            document.body.classList.add('math-open');
-          } catch(ePre){}
-
-          // فیکس کتابخانه‌ها/منوها: موقعیت‌دهی پاپ‌آپ mbVar را هر بار
-          // که باز شد به مرکز صفحه می‌بریم (در برخی WebViewها
-          // offsetWidth در لحظهٔ mbVarOpen صفر بود و منو به گوشه
-          // پرتاب می‌شد یا اصلاً دیده نمی‌شد). همچنین اگر تراشه‌های
-          // V34 (school/type/bio) که توسط host-bridge اضافه شده‌اند
-          // کلیک خوردند، مستقیماً نسخهٔ سراسری mbGroupLibrary را
-          // صدا می‌زنیم تا وابسته به eval نباشیم.
-          try {
-            function centerPop(){
+          // ---- تضمین باز شدن کتابخانه‌ها (بدون بازنویسی چیدمان) ----
+          // host-bridge داخل asset چیپ‌های V34 را با w.eval بایند می‌کند
+          // که در برخی WebViewهای اندرویدی به‌خاطر تفاوت محدودهٔ
+          // const/let سطح‌بالا ممکن است بی‌اثر باشد. ما مستقیم و بدون
+          // eval می‌بندیم تا کلیک همیشه روی mbGroupLibrary برسد. ضمناً
+          // پاپ‌آپ mbVar را پس از هر باز شدن در مرکز صفحه می‌نشانیم
+          // چون اندازه‌گیری اولیهٔ offsetWidth در برخی WebViewها صفر بود.
+          function centerPop(){
+            try {
               var p = document.getElementById('mbVar');
-              if (!p) return;
-              if (!p.classList.contains('open')) return;
+              if (!p || !p.classList.contains('open')) return;
               var vw = window.innerWidth || document.documentElement.clientWidth || 0;
               var vh = window.innerHeight || document.documentElement.clientHeight || 0;
               p.style.position = 'fixed';
@@ -468,100 +409,53 @@ private fun bootstrapScript(initialTex: String): String {
               p.style.maxHeight = Math.round(vh*0.85) + 'px';
               p.style.width = Math.min(360, Math.round(vw*0.92)) + 'px';
               p.style.display = 'block';
-            }
-            window.__mbCenterPop = centerPop;
-            var mbv = document.getElementById('mbVar');
-            if (mbv && window.MutationObserver && !mbv.__mbCenterObs) {
-              mbv.__mbCenterObs = true;
-              new MutationObserver(centerPop).observe(mbv, {attributes:true, attributeFilter:['class','style'], childList:true, subtree:true});
-            }
-            // wrapper برای mbVarOpen که هر بار پس از باز شدن، مرکزسازی
-            // را در چند فریم اجرا کند (منوهای دیگری که از
-            // mbOpenSymbolLibrary/mbGroupLibrary می‌آیند هم از همین
-            // مسیر می‌گذرند).
-            if (typeof window.mbVarOpen === 'function' && !window.__mbVarOpenWrapped) {
-              window.__mbVarOpenWrapped = true;
-              var __innerMbVarOpen = window.mbVarOpen;
-              window.mbVarOpen = function(){
-                try {
-                  var r = __innerMbVarOpen.apply(this, arguments);
-                  setTimeout(centerPop, 0);
-                  setTimeout(centerPop, 30);
-                  setTimeout(centerPop, 120);
-                  return r;
-                } catch (eOpen) {
-                  log('mbVarOpen wrap: ' + eOpen);
-                }
-              };
-            }
-            // bind V34 chips (defensively — host-bridge already does this
-            // with eval, but in some WebViews eval inside an @JavascriptInterface
-            // bridge scope does not resolve global const/let)
-            function bindV34Chips(){
+            } catch(_e) {}
+          }
+          if (typeof window.mbVarOpen === 'function' && !window.__mbVarOpenWrapped) {
+            window.__mbVarOpenWrapped = true;
+            var __innerMbVarOpen = window.mbVarOpen;
+            window.mbVarOpen = function(){
+              try {
+                var r = __innerMbVarOpen.apply(this, arguments);
+                setTimeout(centerPop, 0);
+                setTimeout(centerPop, 50);
+                setTimeout(centerPop, 200);
+                return r;
+              } catch (eOpen) { log('mbVarOpen wrap: ' + eOpen); }
+            };
+          }
+          function bindV34Chips(){
+            try {
               var scroll = document.querySelector('.mb-chip-scroll');
               if (!scroll) return;
               var chips = scroll.querySelectorAll('.mb-chip[data-v34="1"]');
-              for (var i=0;i<chips.length;i++){(function(chip){
+              for (var i=0;i<chips.length;i++) {(function(chip){
                 if (chip.__mbBound) return; chip.__mbBound = true;
                 chip.addEventListener('click', function(ev){
                   try { ev.stopPropagation(); ev.preventDefault(); } catch(_e){}
-                  var key = chip.textContent.indexOf('کتاب') >= 0 ? 'school'
-                          : chip.textContent.indexOf('تزئین') >= 0 ? 'type'
-                          : chip.textContent.indexOf('زیست') >= 0 ? 'bio' : null;
+                  var txt = chip.textContent || '';
+                  var key = txt.indexOf('کتاب') >= 0 ? 'school'
+                          : txt.indexOf('تزئین') >= 0 ? 'type'
+                          : txt.indexOf('زیست') >= 0 ? 'bio' : null;
                   if (key && typeof window.mbGroupLibrary === 'function') {
-                    try { window.mbGroupLibrary(key); } catch (eGL) { log('mbGroupLibrary: '+eGL); }
+                    try { window.mbGroupLibrary(key); } catch (eGL){ log('mbGroupLibrary: '+eGL); }
                     setTimeout(centerPop, 0);
                     setTimeout(centerPop, 50);
                     setTimeout(centerPop, 200);
                   }
                 }, true);
               })(chips[i]);}
-            }
-            bindV34Chips();
-            setTimeout(bindV34Chips, 200);
-            setTimeout(bindV34Chips, 600);
-          } catch(eFix) { log('library fix: ' + eFix); }
+            } catch (eBind) { log('bindV34Chips: ' + eBind); }
+          }
+          bindV34Chips();
+          setTimeout(bindV34Chips, 200);
+          setTimeout(bindV34Chips, 600);
 
+          // openMath باید پس از نصب همه‌چیز صدا زده شود.
           try { window.openMath('qTxt_1'); }
           catch (eOpen) { log('openMath threw: ' + eOpen); }
 
-          // تضمین رندر: اگر openMath در WebView خاصی کلاس‌ها را نگذاشت
-          // (مثلاً استثنا در initMathEdit)، خودمان می‌گذاریم. اگر درست
-          // کار کرده باشد این فراخوانی‌ها بی‌اثرند.
-          try {
-            var modal = document.getElementById('mfModal');
-            if (modal) {
-              modal.classList.add('modal', 'open', 'box-fullscreen');
-              modal.style.display = 'flex';
-              // جلوگیری از حالت میانی: تا زمانی که دیالوگ Compose باز
-              // است، هیچ‌کس نتواند کلاس box-fullscreen را از مدال بردارد.
-              if (window.MutationObserver && !modal.__mbFsLock) {
-                modal.__mbFsLock = true;
-                new MutationObserver(function(){
-                  if (!modal.classList.contains('box-fullscreen')) {
-                    modal.classList.add('box-fullscreen');
-                    modal.style.display = 'flex';
-                  }
-                  if (!document.body.classList.contains('math-open')) {
-                    document.body.classList.add('math-open');
-                  }
-                }).observe(modal, {attributes:true, attributeFilter:['class','style']});
-              }
-            }
-            document.body.classList.add('math-open');
-            // wrap داخلی closeMath نباید کلاس‌ها را تا زمان بسته شدن
-            // واقعی حذف کند (در غیر این صورت همان لحظهٔ بین فشردن
-            // بازگشت و بسته شدن Compose، UI میانی موبایلی دیده می‌شود).
-            // تابع فعلی window.closeMath از قبل wrap ماست؛ ما در همان
-            // ابتدا ic (نسخهٔ داخلی) را یادداشت کرده‌ایم؛ اینجا فقط
-            // اطمینان می‌دهیم که حذف کلاس به‌تعویق بیفتد.
-            window.__mbSuppressClose = true;
-            window.__mbForceLayout();
-            setTimeout(window.__mbForceLayout, 100);
-            setTimeout(window.__mbForceLayout, 400);
-          } catch (eForce) { log('force open: ' + eForce); }
-
-          log('bootstrap done; modal classes=' + (modal && modal.className));
+          log('bootstrap done');
         } catch (e) {
           log('bootstrap fatal: ' + e);
           try { AndroidMathBridge.onClosed(); } catch (e3) {}

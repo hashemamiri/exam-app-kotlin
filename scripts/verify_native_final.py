@@ -609,9 +609,12 @@ require("FormulaV34Library" not in formula_editor,
 require("VIEWPORT_FALLBACK_JS" in formula_editor and "100dvh" in formula_editor
         and ("100vh" in formula_editor or "height:100%" in formula_editor),
         "formula dialog must inject a height fallback for 100dvh on old WebViews")
-# V45.8.2: فیکس چیدمان با ابعاد پیکسلی واقعی viewport
-require("__mbForceLayout" in formula_editor and "innerHeight" in formula_editor,
-        "formula dialog must force pixel layout via __mbForceLayout")
+# V45.8.5: پاپ‌آپ کتابخانه (mbVar) باید در مرکز صفحه پین شود
+require("mbVarOpen" in formula_editor and "translate(-50%,-50%)" in formula_editor,
+        "formula dialog must center mbVar popups via mbVarOpen wrapper")
+# V45.8.5: چیپ‌های V34 باید مستقیم و بدون eval بایند شوند
+require("mb-chip[data-v34" in formula_editor and "mbGroupLibrary(key)" in formula_editor,
+        "formula dialog must bind V34 chips directly without eval")
 # بستن دیالوگ باید تضمینی باشد (fallback تایمر برای onDismiss)
 require("DISMISS_FALLBACK_MS" in formula_editor and "dismissOnce" in formula_editor,
         "formula dialog must guarantee dismissal via a timer fallback")

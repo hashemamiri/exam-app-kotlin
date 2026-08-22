@@ -6439,3 +6439,111 @@ git diff --check → PASS
 FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
 بریس/پرانتز MathEditorWebViewDialog.kt: 160/160 و 308/308
 ```
+
+
+---
+
+## ۱۰۶) V45.8.6 — واگذاری چیدمان به CSS بومی asset (رفع صفحهٔ تیره)
+
+### مشکل
+
+پس از V45.8.5، روی دستگاه ویرایشگر به‌صورت صفحه‌ای کاملاً تیره با فقط
+بَج نسخهٔ `v36 · V34: ✓ 64` در گوشه پایین‌چپ باز می‌شد. بدنهٔ ویرایشگر
+(بوم فرمول، ریل تراشه‌ها و کیپد) رندر نمی‌شد.
+
+### علت ریشه‌ای
+
+در asset، `#mfP_box` در حالت تمام‌صفحه با گرید سه‌ردیفه‌ای چیده
+می‌شود (خط ۶۶۲۸):
+
+```css
+#mfModal.box-fullscreen #mfP_box {
+  display:grid !important;
+  grid-template-rows:minmax(0,1fr) auto auto;
+  height:100%; min-height:0; overflow:hidden;
+}
+```
+
+ردیف‌ها به‌ترتیب `mb-wrap` (بوم)، `mb-chip-scroll` (ریل تراشه‌ها) و
+`mb-fixed-keypad` (کیپد) هستند. قواعد تهاجمی V45.8.2..5 روی همین
+عنصر مقادیر زیر را با `!important` ست می‌کردند:
+
+- `position:absolute; top:0; left:0; right:0; bottom:0`
+- `display:flex !important; flex-direction:column`
+- ارتفاع/عرض پیکسلی ثابت از `innerHeight/innerWidth`
+
+این قواعد گرید دارِ سه‌ردیفه را به یک flexbox تک‌محوره تبدیل می‌کرد؛
+بچه‌ها در یک flex فاقد `flex:1` و ارتفاع صفر جمع می‌شدند و کل
+#mfP_box به یک ناحیهٔ تیرهٔ خالی فرومی‌ریخت (بَج نسخه چون روی body
+بود با z-index بالا دیده می‌شد). این رگرسیون در jsdom آشکار نمی‌شد
+چون jsdom لِی‌اوت واقعی و ارتفاع محاسبه‌شده را ندارد.
+
+### اصلاحی که انجام شد
+
+حذف تمام تزریق‌های جاوااسکریپتی چیدمان و اعتماد به CSS بومی asset:
+
+1. **حذف `__mbForceLayout`** که هر ۱۰۰/۴۰۰ms روی `#mfModal`,
+   `.mf-box`, `#mfP_box` پوزیشن/نمایش پیکسلی absolute و flex
+   تحمیل می‌کرد.
+2. **حذف `__mbSuppressClose` و قفل MutationObserver** که کلاس‌های
+   `box-fullscreen` را روی مدال دوباره می‌چسباند؛ با حذفشان همان
+   `closeMath` بومی asset مدال را به حالت اولیه برمی‌گرداند و چون
+   Compose هم‌زمان دیالوگ را unmount می‌کند، حالت میانی موبایلی
+   فرصت نمایش پیدا نمی‌کند.
+3. **ساده‌سازی `VIEWPORT_FALLBACK_JS` به حداقل لازم:**
+   - `#mfModal{position:fixed; four-edge:0; display:none; z-index:…}`
+     و `#mfModal.modal.open{display:flex}`
+   - `#mfModal.box-fullscreen .mf-box{height:100vh; height:100dvh;
+     width:100%; margin:0; border:0; border-radius:0; max:0}`
+   - پنهان‌سازی `body.math-open .demo-wrap`
+   - مرکزصفحه‌کردن `#mbVar.mb-var.open`
+   - هیچ قاعده‌ای روی `#mfP_box`, `.mb-wrap`, `.mb-canvas`,
+     `.mb-chip-scroll`, `.mb-keypad` یا هر ردیف گرید دیگر وجود
+     ندارد — همگی با CSS خود asset رندر می‌شوند.
+4. **حذف override سابق روی `#mfPad.mb-library-open`** که با
+   `position:fixed; inset:0` با قاعدهٔ بومی asset در خط ۶۶۷۳ تداخل
+   می‌کرد؛ asset خودش این پنل را تمام‌صفحه می‌گذارد.
+5. بایند مستقیم چیپ‌های V34 و wrapper مرکزکنندهٔ `mbVarOpen` از
+   V45.8.5 دست‌نخورده باقی ماند (کارکرد کتابخانه‌ها حفظ شد).
+
+### اعتبارسنجی
+
+- **jsdom (end-to-end، با CSS تزریقی جدید):**
+  - پس از `openMath`: `mfModal.className = "modal open box-fullscreen"`.
+  - کلیک چیپ «📚 کتاب درسی ریاضی» → `mbVar.open = true` با ۱۰ دسته.
+  - کلیک روی «📘 ریاضی دهم» → `mfPad.className = "mf-pad mb-library-open"`
+    و یک `.mb-library-panel` به‌عنوان فرزند.
+  - `mfApply()` → مقدار `$x^2$` با پل به اندروید رسید.
+  - `closeMath()` → کلاس‌های مدال به `modal` و `body` به `""`
+    برگشت؛ پل `onClosed` صدا زده شد.
+- **بررسی استاتیک CSS:** grep تأیید کرد که دیگر هیچ قاعدهٔ
+  `position:absolute` یا `display:flex !important` روی `#mfP_box`
+  از سمت اندروید تزریق نمی‌شود و گرید سه‌ردیفهٔ بومی asset
+    (خط ۶۶۲۸) حاکم است.
+- `python3 scripts/verify_native_final.py` →
+  `FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3`.
+- کامپایل Kotlin روی این باکس به‌دلیل عدم دسترسی شبکه به مخازن
+  KSP انجام‌پذیر نیست؛ اما تست‌ها و اسکریپت‌های پوشش همگی
+  پاس‌اند و تغییرات فقط یک بلوک String و دو تابع را در بر
+  می‌گیرد. روی سیستم کاربر با `gradlew assembleDebug` کامپایل
+  شود.
+
+### درس‌آموخته
+
+برای سومین بار (V45.8.3، V45.8.4 و V45.8.5) همان اشتباه تکرار
+شد: **بازنویسی چیدمان به‌جای اعتماد به CSS asset**. asset در
+حالت تمام‌صفحه گرید پیچیدهٔ سه‌ردیفه‌ای دارد که باید محترم
+شمرده شود. اندروید فقط باید کلاس `box-fullscreen` را روی مدال
+بگذارد و مابقی را به asset بسپارد. هر قاعدهٔ `position:absolute`
+یا `display:flex !important` روی ردیف‌های این گرید، بچه‌ها را
+به ارتفاع صفر می‌برد.
+
+### فایل‌های تغییریافته
+
+- `app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt`
+  — حذف `__mbForceLayout`، `__mbSuppressClose`، MutationObserver
+  قفل تمام‌صفحه، ساده‌سازی `VIEWPORT_FALLBACK_JS`، حفظ بایند V34
+  و wrapper مرکزکننده.
+- `app/src/test/java/ir/exam/app/ui/app/V19InteractionTest.kt`
+  — به‌روزرسانی اسیارشن‌ها به‌جای بررسی `__mbForceLayout`.
+- `scripts/verify_native_final.py` — به‌روزرسانی بررسی‌ها.
