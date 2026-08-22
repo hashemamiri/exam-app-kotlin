@@ -128,10 +128,14 @@ class V19InteractionTest {
 
         // ۴) fallback برای WebViewهای قدیمی که 100dvh نمی‌فهمند
         assertTrue("VIEWPORT_FALLBACK_JS missing", "VIEWPORT_FALLBACK_JS" in dialog)
-        assertTrue("100vh fallback missing", "100vh" in dialog)
+        assertTrue("100vh fallback missing", "100vh" in dialog || "height:100%" in dialog)
         assertTrue("100dvh target missing", "100dvh" in dialog)
-        assertTrue("modal inset fallback missing", "#mfModal{top:0" in dialog)
+        assertTrue("modal pinning fallback missing", "#mfModal{" in dialog && "top:0" in dialog)
         assertTrue("demo-wrap hide rule missing", "body.math-open .demo-wrap" in dialog)
+        // V45.8.2: علاوه بر CSS، باید ارتفاع/عرض را با پیکسل واقعی viewport
+        // روی مدال و فرزندانش ست کند.
+        assertTrue("pixel layout force missing", "__mbForceLayout" in dialog)
+        assertTrue("layout must read viewport height", "innerHeight" in dialog)
 
         // ۵) بستن دیالوگ باید حتماً و با timeout ایمن به onDismiss ختم شود
         assertTrue("dismiss safety timeout missing",

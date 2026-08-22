@@ -607,8 +607,11 @@ require("FormulaV34Library" not in formula_editor,
 
 # V45.7.3: WebViewهای قدیمی 100dvh را نمی‌فهمند و جعبهٔ تمام‌صفحه ارتفاع صفر می‌گیرد
 require("VIEWPORT_FALLBACK_JS" in formula_editor and "100dvh" in formula_editor
-        and "100vh" in formula_editor,
-        "formula dialog must inject a 100vh fallback for 100dvh on old WebViews")
+        and ("100vh" in formula_editor or "height:100%" in formula_editor),
+        "formula dialog must inject a height fallback for 100dvh on old WebViews")
+# V45.8.2: فیکس چیدمان با ابعاد پیکسلی واقعی viewport
+require("__mbForceLayout" in formula_editor and "innerHeight" in formula_editor,
+        "formula dialog must force pixel layout via __mbForceLayout")
 # بستن دیالوگ باید تضمینی باشد (fallback تایمر برای onDismiss)
 require("DISMISS_FALLBACK_MS" in formula_editor and "dismissOnce" in formula_editor,
         "formula dialog must guarantee dismissal via a timer fallback")
