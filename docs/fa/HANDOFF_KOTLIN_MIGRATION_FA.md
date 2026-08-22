@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.1 رفع دانلود بروزرسانی
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.2 رفع 404 بررسی بروزرسانی در CI
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4956,3 +4956,74 @@ Dependency جدید: ندارد
 ```
 
 راهنمای مستقل: `docs/fa/UPDATE_DOWNLOAD_FIX_V45_1_FA.md`.
+
+---
+
+## ۸۶) V45.2 — رفع 404 بررسی بروزرسانی در GitHub Actions
+
+### گزارش واقعی
+
+```text
+Supabase public update RPC status: 404
+Error: Process completed with exit code 1.
+```
+
+مرحله «بررسی امن اتصال عمومی Supabase» در CI با 404 متوقف می‌شود و APK ساخته
+و منتشر نمی‌شود.
+
+### علت
+
+- از V11 به بعد این مرحله RPC `check_app_update` را صدا می‌زند؛ 404 یعنی
+  تابع در پروژه‌ای که `SUPABASE_URL` اشاره می‌کند وجود ندارد.
+- برنامه Kotlin از این RPC استفاده نمی‌کند؛ مستقیماً جدول `app_version` را
+  با کلید anon و RLS می‌خواند. تابع فقط «سازگار برای کلاینت‌های دیگر» است و
+  نباید CI را بلاک کند.
+
+### تغییرات
+
+```text
+.github/workflows/android.yml:
+- بررسی اتصال عمومی حالا مسیر واقعی برنامه را تست می‌کند:
+  GET /rest/v1/app_version?select=version_code&is_active=eq.true&limit=1
+- RPC جانبی check_app_update فقط به‌صورت اطلاعاتی چاپ می‌شود و بلاک نمی‌کند
+
+sql/manual/SQL_NATIVE_RESTORE_CHECK_APP_UPDATE_V452.sql (جدید):
+- تشخیص وجود تابع/جدول + بازسازی امن idempotent تابع برای کلاینت‌های دیگر
+
+scripts/verify_native_final.py:
+- دو require جدید: بررسی CI باید مسیر app_version را تست کند و RPC جانبی
+  نباید بلاک‌کننده باشد
+
+V45_2CiUpdateCheckFixTest (جدید):
+- رگرسیون سه‌گانه: مسیر app_version، اطلاعاتی‌بودن RPC، فایل بازسازی SQL
+```
+
+### تست
+
+```text
+FINAL_NATIVE_VERIFY                      → PASS
+V45_2CiUpdateCheckFixTest                → اضافه شد
+git diff --check                         → PASS
+testDebugUnitTest / lintDebug            → باید در WSL/GitHub Actions اجرا شود
+```
+
+### عملیات برای کاربر
+
+1) اجرای `sql/manual/SQL_NATIVE_RESTORE_CHECK_APP_UPDATE_V452.sql` در SQL
+Editor پروژه اصلی و بررسی خروجی تشخیصی (وجود تابع و جدول).
+2) اگر `app_version_table` هم null بود، `SUPABASE_URL` در GitHub Secrets با
+پروژه اصلی `eazwuyrymsvdkwckdpco` مقایسه شود.
+3) اعمال پچ V45.2، commit و push، اجرای دوباره GitHub Actions.
+
+### عملیات
+
+```text
+SQL جدید: sql/manual/SQL_NATIVE_RESTORE_CHECK_APP_UPDATE_V452.sql (اجرای دستی)
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز: V45 (یا V45.1)
+```
+
+راهنمای مستقل: `docs/fa/CI_UPDATE_CHECK_FIX_V45_2_FA.md`.

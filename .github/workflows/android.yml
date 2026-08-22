@@ -81,14 +81,22 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
+          # مسیر واقعی برنامه Kotlin: خواندن جدول app_version با کلید anon (RLS).
+          # اگر این مسیر 200 بدهد، بررسی نسخه داخل برنامه هم کار می‌کند.
           STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/app_version?select=version_code&is_active=eq.true&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "Supabase app_version public status: $STATUS"
+          test "$STATUS" = "200"
+          # RPC جانبی check_app_update فقط برای کلاینت‌های دیگر است و نباید CI را بلاک کند.
+          RPC_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
             -X POST "$SUPABASE_URL/rest/v1/rpc/check_app_update" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
             -H "Content-Type: application/json" \
             --data '{"p_current_version_code":0}')
-          echo "Supabase public update RPC status: $STATUS"
-          test "$STATUS" = "200"
+          echo "check_app_update RPC status (informational): $RPC_STATUS"
 
       - name: اجرای تست‌ها و Lint
         run: ./gradlew testDebugUnitTest lintDebug

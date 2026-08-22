@@ -138,6 +138,10 @@ require('android:allowBackup="false"' in manifest, "Android backup is not disabl
 require('android:usesCleartextTraffic="false"' in manifest, "Cleartext traffic is enabled")
 require("APK retention deleted" in workflow, "APK retention step missing")
 require("Release APK signing certificate: VERIFIED" in workflow, "release certificate verification missing")
+require("app_version?select=version_code" in workflow and "is_active=eq.true" in workflow,
+        "CI update check must test the app_version public read path")
+require("check_app_update RPC status (informational)" in workflow,
+        "CI must not be blocked by the optional check_app_update RPC")
 require("v11_authenticated_upload_exam_images" in hardening, "Storage owner-prefix policy missing")
 require("drop column if exists plain_password" in hardening.lower(), "plain_password DROP missing")
 
