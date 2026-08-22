@@ -152,3 +152,11 @@ CI روی `scripts/verify_native_final.py` شکست (ارجاع به `FormulaEdi
 اسکریپت هماهنگ شد: بررسی‌های ویرایشگر بومی حذف، `android.webkit` فقط برای
 `MathEditorWebViewDialog.kt` مجاز و بررسی‌های جدید asset/bridge افزوده شد.
 نتیجه: `FINAL_NATIVE_VERIFY=PASS` — بخش ۹۱ هندآف را ببینید.
+
+## هات‌فیکس V45.4.2
+
+بعد از سبز شدن verify، تست قدیمی `Neumorphic69IntegrationTest`
+(«native shell uses dual shadows without demo data or web runtime»)
+به‌خاطر قانون منسوخ «ممنوعیت مطلق android.webkit» شکست. تست با معماری
+V45.4 هماهنگ شد: فقط `MathEditorWebViewDialog.kt` مجاز به استفاده از
+WebView است (همان قانون verify). بخش ۹۲ هندآف را ببینید.

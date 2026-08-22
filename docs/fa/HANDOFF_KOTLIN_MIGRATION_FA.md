@@ -5360,3 +5360,44 @@ python3 scripts/verify_native_final.py → EXIT 0
 ```
 
 پیش‌نیاز: V45.4. بعد از push، CI باید سبز شود.
+
+## ۹۲) V45.4.2 — هماهنگ‌سازی تست رگرسیون Neumorphic69 با WebView ویرایشگر
+
+### علت
+
+پس از push پچ‌های V45.4 و V45.4.1، مرحلهٔ verify سبز شد اما
+`testDebugUnitTest` روی یک تست قدیمی شکست:
+
+```text
+Neumorphic69IntegrationTest > native shell uses dual shadows without demo data or web runtime FAILED
+    java.lang.AssertionError at Neumorphic69IntegrationTest.kt:179
+297 tests completed, 1 failed
+```
+
+خط ۱۷۹ هنوز قانون قدیمی «هیچ فایلی در main نباید `android.webkit` داشته
+باشد» را چک می‌کرد؛ در حالی که از V45.4 دقیقاً یک فایل مجاز
+(`MathEditorWebViewDialog.kt`) میزبان WebView ویرایشگر فرمول است.
+
+### تغییر (فقط همان یک assert)
+
+فایل: `app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt`
+
+```text
+- assertFalse("WebView must not enter native runtime", "android.webkit" in mainSources)
++ فایل‌های دارای "android.webkit" شمارش می‌شوند و باید دقیقاً برابر
++ [MathEditorWebViewDialog.kt] باشند (همان قانونی که در V45.4.1 به
++ scripts/verify_native_final.py اضافه شد).
+```
+
+بقیهٔ بررسی‌های تست (نئومورفیک، بستهٔ دمو، موجودی جعلی کیف پول) دست‌نخورده
+ماند. هیچ فایل دیگری تغییر نکرد.
+
+### نتیجه
+
+```text
+python3 scripts/verify_native_final.py → FINAL_NATIVE_VERIFY=PASS (EXIT 0)
+git diff --check → PASS
+```
+
+پیش‌نیاز: V45.4 و V45.4.1. بعد از push، انتظار می‌رود CI کاملاً سبز شود
+(تنها تست شکست‌خورده همین بود؛ ۲۹۶ تست دیگر سبز بودند).
