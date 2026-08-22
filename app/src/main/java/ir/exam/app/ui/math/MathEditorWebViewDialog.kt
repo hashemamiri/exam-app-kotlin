@@ -297,7 +297,7 @@ private fun FailedOverlay(onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("ویرایشگر فرمول بارگیری نشد.")
-                Button(onClick = onRetry, modifier = Modifier.padding(top: 12.dp)) {
+                Button(onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) {
                     Text("تلاش مجدد")
                 }
             }
