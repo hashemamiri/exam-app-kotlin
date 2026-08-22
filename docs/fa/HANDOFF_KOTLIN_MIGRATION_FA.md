@@ -6286,3 +6286,44 @@ jsdom با همان CSS/JS تزریقی:
   .mb-chip-scroll display=grid  flex=0 0 auto
   .mb-key-section display=flex  flex=0 0 auto
 ```
+
+---
+
+## ۱۰۳) V45.8.3 — رفع باز نشدن کتابخانه‌ها/پنل‌های فرمول
+
+### علت
+
+پس از تثبیت چیدمان اصلی فرمول، کاربر گزارش داد «کتابخانه‌ها کار نمی‌کنند».
+بررسی CSS نشان داد در فیکس V45.8.2 این قانون تزریقی وجود داشت:
+
+```css
+#mfModal.box-fullscreen #mfPad { display:none !important; }
+```
+
+در حالی که خود asset برای کتابخانه و اسمارت‌هاب از همین عنصر `#mfPad`
+با کلاس‌های `mb-library-open` و `mb-smart-hub` استفاده می‌کند و قانون
+اصلی asset می‌خواست آن‌ها را با `display:flex !important` نشان دهد.
+به‌خاطر یکسان بودن specificity، ترتیب منبع باعث می‌شد قانون مخفی‌کنندهٔ
+ما برنده شود و پنل کتابخانه هرگز نمایش داده نشود.
+
+همچنین پنل‌های کتابخانه از `position:fixed; inset:0` استفاده می‌کردند
+که در WebView قدیمی ممکن بود مانند مشکل قبلی ارتفاع صفر بگیرد.
+
+### اصلاح
+
+- قانون مخفی‌سازی فقط وقتی `#mfPad` را پنهان می‌کند که نه
+  `mb-library-open` و نه `mb-smart-hub` داشته باشد:
+  `#mfPad:not(.mb-library-open):not(.mb-smart-hub)`.
+- برای حالت‌های باز، مستقیم `display:flex` و موقعیت fixed با
+  `top/right/bottom/left:0`، `100vw/100vh`، `z-index:12040` و
+  پس‌زمینه نیمه‌شفاف ست شد تا حتی اگر `inset` یا `100dvh` پشتیبانی
+  نشود، پنل کل صفحه را بپوشاند.
+- پنل داخلی هم `max-height:84vh` قبل از `min(84dvh,...)` گرفت.
+
+### اعتبارسنجی
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=168 edge_functions=3
+بریس/پرانتز MathEditorWebViewDialog.kt: 133/133 و 232/232
+git diff --check → PASS
+```
