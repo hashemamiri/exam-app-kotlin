@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.3 اصلاح فرمول درون‌خطی و جریان درج شکل/نمودار
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.4 جایگزینی ویرایشگر فرمول بومی با WebView (استخراج کد به کد از 66.html، بدون تغییر)؛ پیش از آن: V45.3 اصلاح فرمول درون‌خطی و جریان درج شکل/نمودار
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -4988,7 +4988,8 @@ Error: Process completed with exit code 1.
 - RPC جانبی check_app_update فقط به‌صورت اطلاعاتی چاپ می‌شود و بلاک نمی‌کند
 
 sql/manual/SQL_NATIVE_RESTORE_CHECK_APP_UPDATE_V452.sql (جدید):
-- تشخیص وجود تابع/جدول + بازسازی امن idempotent تابع برای کلاینت‌های دیگر
+- تشخیص وجود تابع/جدول + drop-first تابع قدیمی WebView (حل 42P13) و بازسازی
+  استاندارد تابع برای کلاینت‌های دیگر
 
 scripts/verify_native_final.py:
 - دو require جدید: بررسی CI باید مسیر app_version را تست کند و RPC جانبی
@@ -5207,3 +5208,110 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 `assembleRelease` و آزمایش دستی کادر متن و هر دو جریان درج انجام شود.
 
 راهنمای مستقل: `docs/fa/INLINE_FORMULA_FIGURE_FLOW_V45_3_FA.md`.
+
+---
+
+## ۹۰) V45.4 — جایگزینی ویرایشگر فرمول بومی با WebView (استخراج کد به کد از 66.html)
+
+### هدف
+
+حذف کامل ویرایشگر فرمول بومی (Compose) و جایگزینی آن با **همان صفحهٔ ویرایشگر
+فرمول نسخهٔ وب 66.html**، به‌صورت «بدون تغییر و کد به کد» — یعنی asset استخراج‌شده
+بایت‌به‌بایت با رشتهٔ `MATH_EDITOR_HTML` در 66.html یکسان است و هیچ خطی از آن
+ویرایش نشده است. نمایش فرمول‌ها در متن سؤال/گزینه/تصحیح/گزارش/چاپ PDF
+**Native می‌ماند** (تغییری نکرده است)؛ فقط ورودی/ویرایش فرمول WebView شده است.
+
+### استخراج و تأیید asset
+
+```text
+مبدأ: رشتهٔ MATH_EDITOR_HTML در 66.html (اسکریپت math-host-script)
+خروجی: app/src/main/assets/math_editor_standalone.html
+اندازه: 624,209 بایت
+SHA-256: aae5777f9fb8705ccb2ed4a7c52e426e44ab45c7280055f936ed0aff4e917ceb
+تأیید: استخراج با دو مفسر مستقل (Python + Node.js) — خروجی یکسان (identical=true)
+منابع خارجی در صفحه: ندارد (کاملاً آفلاین؛ فقط localStorage برای فرمول‌های اخیر)
+```
+
+### حذف‌شده (ویرایشگر بومی و فقط وابستگی‌های خودش)
+
+```text
+app/src/main/java/ir/exam/app/ui/math/:
+  FormulaEditorDialog.kt      (دیالوگ/پد ویرایشگر بومی، 1296 خط)
+  FormulaSmartHubDialog.kt
+  FormulaLibraryDialog.kt
+  FormulaLibraryNavigator.kt
+  FormulaReferenceLibrary.kt
+  FormulaReferenceStore.kt
+  FormulaSmartReference.kt
+app/src/main/java/ir/exam/app/core/math/:
+  FormulaBoxEditor.kt         (محدود به ویرایشگر)
+  FormulaMatrixFactory.kt     (محدود به ویرایشگر)
+app/src/main/assets/formula_library_v13.json  (کتابخانهٔ بومی؛ صفحهٔ وب کتابخانهٔ خودش را دارد)
+app/src/test/.../FormulaBoxEditorTest.kt, FormulaMatrixFactoryTest.kt,
+  ui/math/FormulaReferenceAssetTest.kt, FormulaLibraryNavigatorTest.kt,
+  FormulaSmartReferenceTest.kt
+```
+
+### نگه‌داشته‌شده (نمایش/چاپ — طبق تصمیم «editor_only»)
+
+```text
+- NativeFormulaView.kt / NativeMathText.kt          → رندر فرمول در نمایش
+- NativeMathAst.kt / NativeMathSvgRenderer.kt / NativeMathCanvasRenderer.kt
+- NativeMathFormatter.kt / NativeNaturalMathConverter.kt / FormulaTextCodec.kt
+- چاپ PDF (OfficialPdfPrintAdapter.kt / PdfExamRenderer.kt) — بدون تغییر
+- ExistingFormulaEditor (FormulaInlineEditor.kt) — چیپ‌های ویرایش/حذف فرمول موجود
+- InlineMathTextEditor.kt — کادر متن سؤال با چیپ فرمول‌ها
+```
+
+### فایل جدید
+
+```text
+app/src/main/java/ir/exam/app/ui/math/MathEditorWebViewDialog.kt
+اجرای صفحهٔ ویرایشگر مستقل در WebView ایزوله + Bridge اندروید
+امضای کاملاً سازگار با FormulaEditorDialog قدیمی:
+  MathEditorWebViewDialog(initialTex, onDismiss, onInsert)
+نقطهٔ اتصال: ExamBuilderScreen.kt — فقط import و نام دیالوگ عوض شد؛
+  FormulaTarget و viewModel.insertFormula بدون هیچ تغییری
+```
+
+### پروتکل هدایت صفحهٔ وب (بدون تغییر در خود صفحه)
+
+```text
+1) qTxt_1.value = "$initialTex$"  (برای درج جدید: "$$") و انتخاب یک‌سرهٔ آن
+2) openMath('qTxt_1')  → ویرایشگر با همان فرمول قبلی باز می‌شود
+3) mfApply (ثبت): کل انتخاب را با "$tex$" جایگزین می‌کند و خودش closeMath می‌زند
+   → Bridge مقدار نهایی را می‌گیرد، $…$ را باز می‌کند → onInsert(tex)
+4) closeMath (بدون ثبت) → onDismiss
+تزریق: فقط wrap کردن mfApply/closeMath در لحظهٔ انتها (همان الگوی bridge
+میزبان در 66.html)؛ هیچ تغییری در فایل asset داده نشده است.
+```
+
+### ویژگی‌های WebView
+
+```text
+- javaScriptEnabled + domStorageEnabled (فرمول‌های اخیر localStorage صفحه)
+- allowFileAccess برای asset محلی؛ هیچ دسترسی شبکه/محتوا داده نمی‌شود
+- all navigations مسدود (shouldOverrideUrlLoading → true)
+- آماده‌بودن صفحه با poll (80ms تا 8s) مثل میزبان 66.html
+- دکمهٔ بازگشت Android → closeMath → بستن بدون ثبت
+- پیام خطا + «تلاش مجدد» اگر صفحه بارگیری نشود
+```
+
+### تست و عملیات
+
+```text
+V19InteractionTest:
+  - تست قبلی «FormulaEditorDialog.kt» به MathEditorWebViewDialog.kt منتقل شد
+    (بررسی asset، آدرس صفحه، پل و openMath('qTxt_1'))
+  - تأیید وجود function openMath(targetId) و function mfApply() در asset
+git diff --check    → PASS
+SQL / Edge Function / Secret / Migration / Dependency جدید: ندارد
+minSdk 26: WebView همیشه در دسترس است؛ تنظیمات خاصی لازم نیست
+```
+
+پیش‌نیاز: V45.3. بعد از اجرای CI انتظار `testDebugUnitTest lintDebug` سبز است.
+آزمایش دستی: ساخت آزمون → متن سؤال → «∑ فرمول» → ویرایش فرمول موجود، درج
+فرمول جدید، فرمول‌های اخیر، بستن با دکمهٔ بازگشت، و چاپ/پیش‌نمایش (نمایش فرمول
+در PDF همچنان Native است).
+
+راهنمای مستقل: `docs/fa/MATH_EDITOR_WEBVIEW_V45_4_FA.md`.
