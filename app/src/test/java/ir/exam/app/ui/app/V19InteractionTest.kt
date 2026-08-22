@@ -126,6 +126,14 @@ class V19InteractionTest {
         assertTrue("VIEWPORT_FALLBACK_JS missing", "VIEWPORT_FALLBACK_JS" in dialog)
         assertTrue("100vh fallback missing", "100vh" in dialog)
         assertTrue("100dvh target missing", "100dvh" in dialog)
+        // والد مدال نیز با top/right/bottom/left صفر پین شود (inset:0 در
+        // WebViewهای خیلی قدیمی ممکن است پشتیبانی نشود).
+        assertTrue("modal inset fallback missing", "#mfModal{top:0" in dialog)
+        // دموی پشت‌صحنه هنگام باز بودن مدال پنهان شود
+        assertTrue("demo-wrap hide rule missing", "body.math-open .demo-wrap" in dialog)
+        // بستن دیالوگ باید حتماً و با timeout ایمن به onDismiss ختم شود
+        assertTrue("dismiss safety timeout missing",
+                   "DISMISS_FALLBACK_MS" in dialog && "dismissOnce" in dialog)
     }
 
     @Test

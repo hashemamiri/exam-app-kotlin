@@ -6009,3 +6009,75 @@ jsdom: مدال باز می‌شود، 151 تب، 15 تراشه، canvas دار�
 نیمه‌کاره داشته‌اند. پس از نصب APK سبز V45.7.2/V45.7.3 اگر مشکل باقی بود،
 یک اسکرین‌شات یا logcat از همان لحظه لازم است (اصل اول: بدون خطای واقعی
 حدس نمی‌زنیم).
+
+---
+
+## ۹۹) V45.7.4 — بستن ایمن دیالوگ و تثبیت پین والد مدال
+
+### علت
+
+پس از V45.7.3 کاربر گزارش داد:
+- «پس از کلیک روی آیکن فرمول یک صفحه خالی نمایش داده می‌شود»
+- «با برگشتن، پنجرهٔ ایجاد آزمون بهم می‌ریزد»
+
+بررسی مسیر `onDismissRequest` نشان داد دو نقطه‌ضعف داشت:
+
+1. بعد از `evaluateJavascript(CLOSE_MATH_JS, ...)`، بستن دیالوگ کاملاً
+   وابسته به این بود که `closeMath()` در JS پل `onClosed` را صدا بزند.
+   اگر در WebView قدیمی یک استثنا در مسیر `closeMath` می‌افتاد یا پل
+   تحویل نمی‌شد، دیالوگ باز می‌ماند و Compose زیر آن در یک حالت
+   نیمه‌مخرب رندر می‌شد (همان «بهم ریختن»).
+2. والد `#mfModal` در CSS اصلی فقط با `inset:0` پین شده بود که در
+   WebViewهای بسیار قدیمی ممکن است ناشناخته باشد؛ جعبه با `height:100dvh`
+   بود ولی والد می‌توانست ارتفاع کامل نگیرد.
+
+### اصلاح
+
+- `dismissOnce.fire()` با `AtomicBoolean` تضمین می‌کند `onDismiss` فقط
+  یک‌بار و حتماً اجرا شود (پل یا تایمر، هرکدام اول شد).
+- در `onDismissRequest` پس از ارسال `CLOSE_MATH_JS`، یک `postDelayed`
+  با `DISMISS_FALLBACK_MS = 250ms` دیالوگ را در صورت سکوت پل می‌بندد.
+  در حالت طبیعی پل خیلی زودتر آتش می‌شود و `AtomicBoolean` جلو تکرار
+  را می‌گیرد.
+- `mainHandler.removeCallbacksAndMessages(null)` در `onDispose` اضافه
+  شد تا پیام معلق به یک هندلر/کانتکست ازبین‌رفته نرسد.
+- رنگ پس‌زمینهٔ WebView با تم تیره ویرایشگر (0xFF0F0C29) هماهنگ شد تا
+  اگر لحظه‌ای بین لود HTML و آماده شدن دیده شد، فلاش سفید نزند.
+- CSS تزریقی گسترش یافت:
+  - `#mfModal{top:0;right:0;bottom:0;left:0;height:100vh;height:100dvh}`
+  - `#mfModal.box-fullscreen #mfP_box{height:100%!important}`
+  - `body.math-open .demo-wrap{display:none!important}` تا محتوای دموی
+    پشت جعبه دیده نشود.
+
+### فایل‌ها
+
+```text
+MathEditorWebViewDialog.kt
+  - dismissOnce با AtomicBoolean
+  - postDelayed به‌عنوان fallback بستن
+  - removeCallbacksAndMessages در onDispose
+  - پس‌زمینهٔ تیرهٔ WebView
+  - گسترش VIEWPORT_FALLBACK_JS
+V19InteractionTest.kt
+  - assertion برای والد پین‌شده، پنهان‌سازی demo-wrap و fallback بستن
+```
+
+### اعتبارسنجی
+
+```text
+python3 scripts/verify_native_final.py
+  → FINAL_NATIVE_VERIFY=PASS kotlin_files=169 edge_functions=3
+git diff --check → PASS
+بریس/پرانتز MathEditorWebViewDialog.kt: 99/99 و 189/189
+```
+
+### توصیه برای تست دستی
+
+1. روی دستگاه/شبیه‌ساز با WebView قدیمی (مثلاً Android 8/9) پنجرهٔ فرمول
+   را باز کنید — باید canvas فرمول و نوار تراشه‌ها دیده شوند.
+2. دکمهٔ بازگشت دستگاه را بزنید — باید فوراً به پنجرهٔ ایجاد آزمون
+   برگردید و چیدمان سالم باشد.
+3. روی ثبت فرمول بزنید — باید متن `$...$` در فیلد درج شود و پنجره بسته
+   شود.
+4. اگر هنوز صفحه خالی است، logcat با فیلد `chromium|System.err|ConsoleMessage`
+   را بفرستید؛ بدون خطای واقعی حدس اضافه نمی‌زنیم.

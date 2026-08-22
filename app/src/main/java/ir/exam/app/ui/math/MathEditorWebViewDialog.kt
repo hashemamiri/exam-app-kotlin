@@ -63,15 +63,28 @@ fun MathEditorWebViewDialog(
     var attempt by remember { mutableIntStateOf(0) }
     val webViewRef = remember { mutableStateOf<WebView?>(null) }
     val settled = remember { AtomicBoolean(false) }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+
+    // اطمینان از اینکه onDismiss دقیقاً یک‌بار و حتماً اجرا می‌شود، حتی اگر
+    // JS پل به هر دلیلی (استثنا، خطای صفحه، WebView قدیمی) فراخوانی نشود.
+    val dismissOnce = remember {
+        object {
+            fun fire() {
+                if (settled.compareAndSet(false, true)) {
+                    onDismiss()
+                }
+            }
+        }
+    }
 
     val settledBridge = remember(settled) {
         MathEditorJsBridge(
             settled = settled,
             onResult = { raw ->
                 val tex = unwrapFormula(raw)
-                if (tex.isBlank()) onDismiss() else onInsert(tex)
+                if (tex.isBlank()) dismissOnce.fire() else onInsert(tex)
             },
-            onClosed = { onDismiss() }
+            onClosed = { dismissOnce.fire() }
         )
     }
 
@@ -85,9 +98,16 @@ fun MathEditorWebViewDialog(
         onDismissRequest = {
             val wb = webViewRef.value
             if (wb != null && ready) {
-                wb.evaluateJavascript(CLOSE_MATH_JS, null)
+                // به JS فرصت می‌دهیم closeMath را کامل کند و پل onClosed
+                // را صدا بزند؛ اگر تا DISMISS_FALLBACK_MS پل پاسخ نداد
+                // (مثلاً JS یک استثنا در مسیر بستن انداخت یا closeMath
+                // در WebView قدیمی آن‌طور که انتظار می‌رود عمل نکرد)،
+                // خودمان دیالوگ را می‌بندیم تا پنجرهٔ ایجاد آزمون
+                // هرگز در حالت «بهم‌ریخته» گیر نکند.
+                runCatching { wb.evaluateJavascript(CLOSE_MATH_JS, null) }
+                mainHandler.postDelayed({ dismissOnce.fire() }, DISMISS_FALLBACK_MS)
             } else {
-                onDismiss()
+                dismissOnce.fire()
             }
         },
         properties = DialogProperties(
@@ -136,15 +156,20 @@ fun MathEditorWebViewDialog(
             onFailed = { failed = true }
         )
         poller.start()
-        onDispose { poller.cancel() }
+        onDispose {
+            poller.cancel()
+            mainHandler.removeCallbacksAndMessages(null)
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
+            mainHandler.removeCallbacksAndMessages(null)
             webViewRef.value?.let { wb ->
                 runCatching { wb.removeJavascriptInterface("AndroidMathBridge") }
                 runCatching { wb.destroy() }
             }
+            webViewRef.value = null
         }
     }
 }
@@ -162,7 +187,9 @@ private fun configureWebView(wb: WebView, bridge: MathEditorJsBridge) {
         loadWithOverviewMode = true
         useWideViewPort = true
     }
-    wb.setBackgroundColor(0xFFEEF2F7.toInt())
+    // رنگ پس‌زمینه تیره با تم ویرایشگر (--bg1) هماهنگ است تا اگر لحظه‌ای
+    // بین لود شدن HTML و آماده شدن، دیالوگ دیده شد، فلاش سفید نزند.
+    wb.setBackgroundColor(0xFF0F0C29.toInt())
     wb.addJavascriptInterface(bridge, "AndroidMathBridge")
     wb.webViewClient = object : WebViewClient() {
         override fun shouldOverrideUrlLoading(
@@ -273,24 +300,32 @@ private fun FailedOverlay(onRetry: () -> Unit) {
 }
 
 /**
- * CSS تزریقی برای رفع مشکلات رندر در WebViewهای قدیمی.
+ * تزریق CSS در لحظه برای رفع مشکلات رندر در WebViewهای قدیمی.
  *
- *  - `100dvh` در Chrome/WebView قبل از نسخهٔ ۱۰۸ ناشناخته است و چون فقط
- *    همان مقدار برای ارتفاع جعبهٔ تمام‌صفحه آمده، ارتفاع به صفر می‌افتد و
- *    به‌نظر می‌رسد پنجره «چیزی نشان نمی‌دهد». یک `100vh` پیش‌فرض قبل از
- *    `100dvh` اضافه می‌شود تا در مرورگرهای جدید همان مقدار دینامیک بازنویسی
- *    شود و در قدیمی‌ها 100vh کار کند.
- *  - چند قانون max-height با تابع `min(84dvh, ...)` نیز fallback می‌گیرند.
+ *  - `100dvh` در Chrome/WebView قبل از نسخهٔ ۱۰۸ ناشناخته است و چون تنها
+ *    مقدار ارتفاع جعبهٔ تمام‌صفحه است، جعبه به ارتفاع صفر می‌افتد و
+ *    «صفحهٔ خالی» دیده می‌شود. راه‌حل استاندارد «مقدار قدیمی قبل از
+ *    مقدار مدرن» است: اول `100vh` و بعد `100dvh` با `!important`.
+ *    مرورگر جدید مقدار دوم را می‌پذیرد، قدیمی مقدار اول را نگه می‌دارد.
+ *  - والد `.modal` نیز به‌جای اتکا به `inset:0` (که در WebViewهای
+ *    قدیمی هم ممکن است پشتیبانی نشود) با top/right/bottom/left صفر
+ *    پین می‌شود و ارتفاعش به 100vh/100dvh می‌رود تا کل صفحه را بپوشاند.
+ *  - بدنهٔ دموی صفحه (`.demo-wrap`) هنگام باز بودن مدال مخفی می‌شود تا
+ *    اگر جعبه‌به‌دلیلی کوتاه رندر شد، محتوای دموی پشت‌صحنه دیده نشود.
+ *  - چند قانون max-height با تابع `min(84dvh, …)` نیز fallback می‌گیرند.
  *
- * این CSS به انتهای <head> تزریق می‌شود و asset اصلی را تغییر نمی‌دهد.
+ * این CSS به <head> تزریق می‌شود و asset اصلی دست‌نخورده باقی می‌ماند.
  */
 private const val VIEWPORT_FALLBACK_JS = """
 (function(){
   try{
     var css = '' +
-      '#mfModal.box-fullscreen .mf-box{height:100vh !important;max-height:100vh !important;height:100dvh !important;max-height:100dvh !important;}' +
+      '#mfModal{top:0 !important;right:0 !important;bottom:0 !important;left:0 !important;height:100vh !important;height:100dvh !important;}' +
+      '#mfModal.box-fullscreen .mf-box{height:100vh !important;max-height:none !important;height:100dvh !important;}' +
+      '#mfModal.box-fullscreen #mfP_box{height:100% !important;}' +
       '#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
-      '#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell{max-height:84vh !important;max-height:min(84dvh,720px) !important;}';
+      '#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell{max-height:84vh !important;max-height:min(84dvh,720px) !important;}' +
+      'body.math-open .demo-wrap{display:none !important;}';
     var s = document.createElement('style');
     s.id = 'mbAndroidViewportFallback';
     s.textContent = css;
@@ -377,3 +412,11 @@ private const val READY_CHECK_JS =
 
 private const val CLOSE_MATH_JS =
     "try{if(window.closeMath)window.closeMath();}catch(e){}"
+
+/**
+ * اگر پل JS در این مدت پس از فشردن دکمهٔ بازگشت onClosed را صدا نزند،
+ * خودمان دیالوگ را می‌بندیم. این عدد به‌قدری بزرگ است که اجرای طبیعی
+ * closeMath چندین بار فرصت اتمام داشته باشد، و به‌قدری کوچک که کاربر
+ * مکث محسوسی نبیند.
+ */
+private const val DISMISS_FALLBACK_MS = 250L
