@@ -754,7 +754,14 @@ private fun SvgFormulaEditorSurface(
         androidx.compose.runtime.LaunchedEffect(Unit) {
             focusRequester.requestFocus()
         }
-        Card(Modifier.fillMaxWidth().height(180.dp)) {
+        Card(
+            Modifier.fillMaxWidth().height(180.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
             Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
                 NativeFormulaEditorView(
                     tex = value.text,
