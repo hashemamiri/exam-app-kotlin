@@ -339,9 +339,11 @@ fun FormulaEditorDialog(
                 ) {
                     item {
                         FormulaCanvasWebView(
-                            initialTex = initialTex,
+                            tex = value.text,
                             onFormulaChange = { nextTex ->
-                                value = TextFieldValue(nextTex, TextRange(nextTex.length))
+                                if (nextTex != value.text) {
+                                    value = TextFieldValue(nextTex, TextRange(nextTex.length))
+                                }
                             },
                             zoom = zoom,
                             onWebViewReady = { webViewInstance = it },
@@ -733,7 +735,7 @@ fun FormulaEditorDialog(
 
 @Composable
 fun FormulaCanvasWebView(
-    initialTex: String,
+    tex: String,
     onFormulaChange: (String) -> Unit,
     zoom: Float,
     onWebViewReady: (WebView) -> Unit,
@@ -744,20 +746,23 @@ fun FormulaCanvasWebView(
             WebView(ctx).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
                 setBackgroundColor(0)
                 addJavascriptInterface(object {
                     @JavascriptInterface
-                    fun onFormulaChange(tex: String) {
-                        post { onFormulaChange(tex) }
+                    fun onFormulaChange(newTex: String) {
+                        post { onFormulaChange(newTex) }
                     }
                 }, "AndroidCanvas")
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        val safe = initialTex.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
-                        view?.evaluateJavascript("window.setFormula(\"" + safe + "\");", null)
+                        val safe = tex.replace("\", "\\").replace("\"", "\\"").replace("
+", " ")
+                        view?.evaluateJavascript("window.__lastTex = \"$safe\"; window.setFormula(\"$safe\");", null)
                         view?.evaluateJavascript("window.setZoom($zoom);", null)
                     }
                 }
@@ -766,6 +771,9 @@ fun FormulaCanvasWebView(
             }
         },
         update = { webView ->
+            val safe = tex.replace("\", "\\").replace("\"", "\\"").replace("
+", " ")
+            webView.evaluateJavascript("if (window.__lastTex !== \"$safe\") { window.__lastTex = \"$safe\"; window.setFormula(\"$safe\"); }", null)
             webView.evaluateJavascript("window.setZoom($zoom);", null)
         },
         modifier = modifier
