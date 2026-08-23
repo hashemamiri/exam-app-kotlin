@@ -5584,3 +5584,42 @@ V53.3 → آناتومی + فیزیک/شیمی Native (اطلس asset + ویرا
 ```
 
 راهنمای مستقل: `docs/fa/WEB_FIELD_NATIVE_TOOLS_TABLE_V53_1_FA.md`.
+
+
+## ۱۲۵) V53.1.1 — هماهنگ‌سازی دو تست با طراحی قطعی V53.1
+
+### گزارش واقعی CI
+
+```text
+compileDebugKotlin / compileDebugUnitTestKotlin → SUCCESS
+332 tests                                       → 330 PASS / 2 FAIL
+V29ReorderViewerEditBulkTest.kt:85              → assertion قدیمی InlineMathTextEditor/FormulaTarget("question")
+V53WebFieldNativeToolsTableTest.kt:104          → کلمات href/foreignObject در «کامنت مستندات» TableSvgRenderer
+                                                   با جست‌وجوی متنی ساده برخورد می‌کردند
+```
+
+کد اجرایی V53.1 سالم کامپایل شده بود؛ هر دو شکست فقط تستی بودند:
+
+۱) تست V29 هنوز الزام می‌کرد فرمول از نوار InlineMathTextEditor با
+`FormulaTarget("question")` باز شود؛ در طراحی قطعی V53.1 نوار زیر کادر متن،
+`QuestionTextWebSection` است و فرمول با `controller.openTool("formula")` داخل
+همان WebView باز می‌شود. assertion با همین قرارداد جدید هماهنگ شد.
+
+۲) تست V53 وجود واژه‌های `href` و `foreignObject` را در کل فایل ممنوع کرده بود،
+اما این واژه‌ها فقط در کامنت مستندات فارسی فایل بودند نه markup تولیدی.
+assertion به بررسی tag/attr واقعی (`href=`، `<foreignObject`، `<style`، `<script`)
+دقیق شد.
+
+### فایل‌ها و عملیات
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V29ReorderViewerEditBulkTest.kt
+app/src/test/java/ir/exam/app/ui/app/V53WebFieldNativeToolsTableTest.kt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+کد اجرایی برنامه                      → بدون تغییر
+SQL / Edge / Secret / Dependency      → ندارد
+پیش‌نیاز                              → V53.1 (اعمال‌شده روی HEAD کاربر)
+FINAL_NATIVE_VERIFY                   → PASS
+git diff --check                      → PASS
+testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```

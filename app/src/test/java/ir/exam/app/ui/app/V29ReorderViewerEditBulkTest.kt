@@ -79,10 +79,13 @@ class V29ReorderViewerEditBulkTest {
         // V45 عمداً آیکن فرمول را از QuestionMediaEditor به نوار زیر کادر متن منتقل کرد.
         assertTrue("Icons.Outlined.PhotoCamera" in media)
         assertFalse("Icons.Outlined.Functions" in media)
+        // V53.1 — نوار زیر کادر متن اکنون QuestionTextWebSection است و فرمول از
+        // فرمان Native همان کادر WebView باز می‌شود؛ نه FormulaTarget قدیمی Builder.
+        val webSection = source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt")
         assertTrue(
-            "ToolbarButton(Icons.Outlined.Functions, \"درج فرمول\", onInsertFormula)" in inlineMathEditor
+            "NativeToolButton(QuestionToolIcons.Formula, \"درج فرمول\") { controller.openTool(\"formula\") }" in webSection
         )
-        assertTrue("onInsertFormula = { formulaTarget = FormulaTarget(\"question\") }" in builder)
+        assertTrue("QuestionTextWebSection(" in builder)
         assertFalse("OutlinedButton(onClick = { formulaTarget = FormulaTarget(\"question\") })" in builder)
     }
 

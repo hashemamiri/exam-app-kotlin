@@ -98,10 +98,12 @@ class V53WebFieldNativeToolsTableTest {
         assertTrue("RichTextSplitter.split(question.text)" in pdfAdapter)
         assertTrue("figureBitmap" in pdfAdapter)
         assertTrue("com.caverock.androidsvg.SVG" in pdfAdapter)
-        // امنیت SVG جدول: بدون اسکریپت/URL خارجی.
+        // امنیت SVG جدول: markup تولیدی بدون اسکریپت/URL خارجی است.
+        // (خود واژه‌ها در کامنت مستندات فایل مجازند؛ فقط tag/attr واقعی ممنوع است.)
         assertFalse("<script" in tableRenderer)
-        assertFalse("href" in tableRenderer)
-        assertFalse("foreignObject" in tableRenderer)
+        assertFalse("href=" in tableRenderer)
+        assertFalse("<foreignObject" in tableRenderer)
+        assertFalse("<style" in tableRenderer)
     }
 
     @Test
