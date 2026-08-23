@@ -105,6 +105,7 @@ fun FormulaEditorDialog(
     var quickConvertOpen by remember { mutableStateOf(false) }
     var quickConvert by remember { mutableStateOf("") }
     var zoom by remember { mutableFloatStateOf(1f) }
+    var boxesRevealed by remember { mutableStateOf(false) }
     var uppercase by remember { mutableStateOf(false) }
     var favorites by remember { mutableStateOf(store.favorites()) }
     var recentFormulas by remember { mutableStateOf(store.recentFormulas()) }
@@ -333,9 +334,13 @@ fun FormulaEditorDialog(
                         SvgFormulaEditorSurface(
                             value = value,
                             onValueChange = ::handleImeChange,
-                            onSelectionChange = { selection -> value = value.copy(selection = selection) },
+                            onSelectionChange = { selection ->
+                                boxesRevealed = true
+                                value = value.copy(selection = selection)
+                            },
                             focusRequester = focusRequester,
                             zoom = zoom,
+                            showBoxes = boxesRevealed,
                             onRequestKeyboard = { keyboard?.show() },
                             onBackspace = ::backspace,
                             onMoveHorizontal = ::moveActiveBox,
@@ -738,6 +743,7 @@ private fun SvgFormulaEditorSurface(
     onSelectionChange: (TextRange) -> Unit,
     focusRequester: FocusRequester,
     zoom: Float,
+    showBoxes: Boolean,
     onRequestKeyboard: () -> Unit,
     onBackspace: () -> Unit,
     onMoveHorizontal: (Int) -> Unit,
@@ -767,7 +773,8 @@ private fun SvgFormulaEditorSurface(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     fontSize = (22 * zoom).sp,
-                    contentDescription = "فرمول جعبه‌ای قابل لمس"
+                    contentDescription = "فرمول جعبه‌ای قابل لمس",
+                    showBoxes = showBoxes
                 )
                 if (value.text.isBlank()) {
                     Text(

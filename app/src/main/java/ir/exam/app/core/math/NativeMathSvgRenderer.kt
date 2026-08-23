@@ -57,7 +57,8 @@ object NativeMathSvgRenderer {
         activeStart: Int = -1,
         activeEnd: Int = activeStart,
         boxColor: String = "#78909C",
-        activeBoxColor: String = "#FF8F00"
+        activeBoxColor: String = "#FF8F00",
+        showOnlyActiveBox: Boolean = false
     ): MathSvgDocument {
         val safeFont = fontSizePx.coerceIn(MIN_FONT, MAX_FONT)
         val safeColor = sanitizeColor(color)
@@ -82,7 +83,14 @@ object NativeMathSvgRenderer {
         }
         val activeIndex = activeBoxIndex(editBoxes, activeStart, activeEnd)
         val boxLayer = if (showEditBoxes) {
-            renderBoxLayer(editBoxes, activeIndex, safeBoxColor, safeActiveColor, safeFont)
+            renderBoxLayer(
+                boxes = editBoxes,
+                activeIndex = activeIndex,
+                boxColor = safeBoxColor,
+                activeColor = safeActiveColor,
+                size = safeFont,
+                onlyActive = showOnlyActiveBox
+            )
         } else {
             ""
         }
@@ -102,7 +110,7 @@ object NativeMathSvgRenderer {
         }
         val digest = sha256(
             "$safeFont|$safeColor|$safeOpacity|$showEditBoxes|$activeStart|$activeEnd|" +
-                "$safeBoxColor|$safeActiveColor|$tex"
+                "$safeBoxColor|$safeActiveColor|$showOnlyActiveBox|$tex"
         )
         return MathSvgDocument(
             xml = xml,
@@ -468,10 +476,12 @@ object NativeMathSvgRenderer {
         activeIndex: Int,
         boxColor: String,
         activeColor: String,
-        size: Float
+        size: Float,
+        onlyActive: Boolean
     ): String = buildString(boxes.size * 150) {
         append("<g>")
         boxes.forEachIndexed { index, box ->
+            if (onlyActive && index != activeIndex) return@forEachIndexed
             val active = index == activeIndex
             val color = if (active) activeColor else boxColor
             append("<rect x=\"").append(number(box.xPx)).append("\" y=\"")

@@ -85,6 +85,7 @@ fun NativeFormulaEditorView(
     selectionStart: Int,
     selectionEnd: Int,
     onBoxTap: (MathSvgEditBox) -> Unit,
+    showBoxes: Boolean = false,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 22.sp,
     color: Color = LocalContentColor.current,
@@ -96,7 +97,8 @@ fun NativeFormulaEditorView(
         tex = tex,
         fontSize = fontSize,
         color = color,
-        showEditBoxes = true,
+        showEditBoxes = showBoxes || tex.isBlank(),
+        showOnlyActiveBox = showBoxes && tex.isNotBlank(),
         activeStart = selectionStart,
         activeEnd = selectionEnd,
         boxColor = outlineColor,
@@ -208,6 +210,7 @@ private fun rememberFormulaSvg(
     showEditBoxes: Boolean = false,
     activeStart: Int = -1,
     activeEnd: Int = activeStart,
+    showOnlyActiveBox: Boolean = false,
     boxColor: Color = Color.Gray,
     activeBoxColor: Color = Color(0xFFFF8F00)
 ): RememberedFormulaSvg {
@@ -236,7 +239,8 @@ private fun rememberFormulaSvg(
             activeStart = activeStart,
             activeEnd = activeEnd,
             boxColor = boxStyle.hex,
-            activeBoxColor = activeStyle.hex
+            activeBoxColor = activeStyle.hex,
+            showOnlyActiveBox = showOnlyActiveBox
         )
     }
     val bytes = remember(document.cacheKey) { document.xml.toByteArray(Charsets.UTF_8) }
