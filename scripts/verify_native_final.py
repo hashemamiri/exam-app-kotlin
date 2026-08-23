@@ -1209,4 +1209,17 @@ require("<script" not in chart_renderer and "href=" not in chart_renderer
         and "<foreignObject" not in chart_renderer,
         "V54.1 chart SVG renderer contains unsafe markup")
 
+
+# ---- V54.2: chart library stage 2 (14 more native chart types) ----
+chart_stage2=(ROOT/"app/src/main/java/ir/exam/app/core/figure/ChartSvgRendererStage2.kt").read_text()
+_v542_types=["box","ohlc","fall","ctrl","venn","tree","sun","waff","pict","heat","hmap","bull","pyra","mekko"]
+for _t in _v542_types:
+    require(f'"{_t}"' in chart_stage2, f"V54.2 stage2 renderer missing type: {_t}")
+    require(f'FigureTemplate("{_t}"' in figure_gallery, f"V54.2 gallery missing type: {_t}")
+require("SUPPORTED: Set<String> = STAGE1 + ChartSvgRendererStage2.SUPPORTED" in chart_renderer,
+        "V54.2 stage2 types are not merged into the shared supported set")
+require("<script" not in chart_stage2 and "href=" not in chart_stage2
+        and "<foreignObject" not in chart_stage2,
+        "V54.2 stage2 SVG renderer contains unsafe markup")
+
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

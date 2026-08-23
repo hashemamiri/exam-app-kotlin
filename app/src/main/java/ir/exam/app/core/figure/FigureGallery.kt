@@ -85,5 +85,20 @@ val GRAPH_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("radar", "راداری", """{"t":"radar","X":{"labs":"A,B,C,D,E","vals":"4,7,3,6,5"}}"""),
     FigureTemplate("combo", "ترکیبی", """{"t":"combo","X":{"labs":"A,B,C,D","vals":"4,7,3,6","vals2":"5,4,6,2"}}"""),
     FigureTemplate("lolli", "لولی‌پاپ", """{"t":"lolli","X":{"labs":"A,B,C,D","vals":"4,7,3,6"}}"""),
-    FigureTemplate("funn", "قیفی", """{"t":"funn","X":{"labs":"بازدید,ثبت‌نام,خرید","vals":"9,5,2"}}""")
+    FigureTemplate("funn", "قیفی", """{"t":"funn","X":{"labs":"بازدید,ثبت‌نام,خرید","vals":"9,5,2"}}"""),
+    // V54.2 — ۱۴ نوع مرحلهٔ دوم؛ شناسه‌ها و کلیدهای X دقیقاً مطابق مرجع.
+    FigureTemplate("box", "جعبه‌ای", """{"t":"box","X":{"labs":"A,B,C,D","mins":"2,3,1,2","q1s":"3,4,2,3","meds":"4,5,3,4","q3s":"5,6,4,5","maxs":"7,8,5,6"}}"""),
+    FigureTemplate("ohlc", "سهام", """{"t":"ohlc","X":{"labs":"فر,ارد,خرد,تیر","opens":"3,5,4,6","highs":"6,7,6,8","lows":"2,4,3,5","closes":"5,4,6,7"}}"""),
+    FigureTemplate("fall", "آبشاری", """{"t":"fall","X":{"labs":"شروع,فروش,هزینه,پایان","vals":"4,3,-2,1"}}"""),
+    FigureTemplate("ctrl", "کنترلی", """{"t":"ctrl","X":{"labs":"۱,۲,۳,۴,۵,۶","vals":"4,7,3,6,5,4"}}"""),
+    FigureTemplate("venn", "ون", """{"t":"venn","X":{"n":"3","s1":"A","s2":"B","s3":"C","ab":"۳","ac":"۲","bc":"۲","abc":"۱"}}"""),
+    FigureTemplate("tree", "نقشه درختی", """{"t":"tree","X":{"labs":"A,B,C,D","vals":"4,7,3,6"}}"""),
+    FigureTemplate("sun", "خورشیدی", """{"t":"sun","X":{"labs":"A,B,C","vals":"4,7,3","labs2":"A1,A2,B1,B2,C1","vals2":"2,2,4,3,3"}}"""),
+    FigureTemplate("waff", "وافل", """{"t":"waff","X":{"labs":"A,B,C,D","vals":"4,7,3,6"}}"""),
+    FigureTemplate("pict", "پیکتوگرام", """{"t":"pict","X":{"labs":"A,B,C,D","vals":"4,7,3,6","unit":"1"}}"""),
+    FigureTemplate("heat", "کانتور", """{"t":"heat","X":{"rows":"A,B,C","cols":"۱,۲,۳,۴","vals":"1,2,3,4,5,6,7,8,9,10,11,12"}}"""),
+    FigureTemplate("hmap", "حرارتی", """{"t":"hmap","X":{"rows":"A,B,C","cols":"۱,۲,۳,۴","vals":"1,2,3,4,5,6,7,8,9,10,11,12"}}"""),
+    FigureTemplate("bull", "گلوله‌ای", """{"t":"bull","X":{"labs":"A,B,C,D","vals":"4,7,3,6","vals2":"5,4,6,2"}}"""),
+    FigureTemplate("pyra", "هرم جمعیت", """{"t":"pyra","X":{"labs":"۰-۱۴,۱۵-۲۹,۳۰-۴۴,۴۵-۵۹,۶۰+","vals":"4,7,6,5,3","vals2":"4,6,7,5,4","s1":"مرد","s2":"زن"}}"""),
+    FigureTemplate("mekko", "مکّو", """{"t":"mekko","X":{"labs":"A,B,C,D","vals":"4,7,3,6","vals2":"5,4,6,2","vals3":"1,2,2,1"}}""")
 )

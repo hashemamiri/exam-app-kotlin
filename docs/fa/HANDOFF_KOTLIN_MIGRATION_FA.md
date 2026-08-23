@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.1 مرحلهٔ اول تکمیل کتابخانهٔ نمودار Native (۲۰ نوع جدید)؛ پیش از آن: V53.4/V53.4.1 (build موفق اعلام کاربر — پایان نقشه V53)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.2 مرحلهٔ دوم کتابخانهٔ نمودار Native (۱۴ نوع جدید؛ مجموع ۳۹)؛ پیش از آن: V54.1 (build موفق اعلام کاربر)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5940,6 +5940,61 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V54.1: هر ۲۰ نوع در
                                           رندرگر و گالری، مسیر مشترک، SVG امن)
 V54_1ChartLibraryStage1Test            → ۴ تست منبع‌محور جدید؛ شبیه‌سازی PASS
+git diff --check                       → PASS
+testDebugUnitTest / lintDebug          → باید در CI اجرا شود
+```
+
+
+## ۱۳۲) V54.2 — مرحلهٔ دوم کتابخانهٔ نمودار Native
+
+### وضعیت ورودی
+
+```text
+V54.1 build/device                      → SUCCESS (اعلام کاربر)
+پوشش نمودار پس از V54.1                 → ۲۵ نوع از ۶۱ نوع مرجع
+```
+
+### تحویل V54.2 — ۱۴ نوع جدید (مجموع ۳۹)
+
+```text
+ChartSvgRendererStage2.kt (جدید) → box جعبه‌ای / ohlc سهام / fall آبشاری /
+                                    ctrl کنترلی (mean/UCL/LCL خودکار یا دستی) /
+                                    venn ون ۲و۳تایی / tree نقشه درختی /
+                                    sun خورشیدی دوحلقه / waff وافل ۱۰×۱۰ /
+                                    pict پیکتوگرام با unit / heat کانتور /
+                                    hmap حرارتی / bull گلوله‌ای با هدف /
+                                    pyra هرم جمعیت / mekko مکّو
+قرارداد داده                     → کلیدهای X مرجع: mins/q1s/meds/q3s/maxs،
+                                    opens/highs/lows/closes، mean/ucl/lcl،
+                                    n/ab/ac/bc/abc، labs2/vals2، rows/cols، unit
+اعداد فارسی                      → faFloat: ارقام ۰..۹ فارسی و ممیز ٫ مرجع
+مسیر مشترک                       → SUPPORTED = STAGE1 + Stage2 → دانش‌آموز/PDF/
+                                    dblclick خودکار
+گالری                            → از ۲۵ به ۳۹ قالب با نام فارسی مرجع
+ویرایشگر                         → paramFields مرحلهٔ دوم با برچسب‌های fieldsFor
+                                    مرجع؛ کلیدهای چندمقداری متنی ذخیره می‌شوند
+```
+
+### باقی‌ماندهٔ نقشه V54
+
+```text
+V54.3 → flow/gantt/time/dumb/slope/spark/stream/viol/strip/stem/rose/word/
+        map/surf/smat/dend/sank/chrd/netw/bmap/calh/plot (۲۲ نوع پایانی)
+        + رگرسیون کل نقشه V54
+```
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V54.1
+```
+
+### تست V54.2
+
+```text
+FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V54.2)
+V54_2ChartLibraryStage2Test            → ۴ تست منبع‌محور جدید؛ شبیه‌سازی PASS
 git diff --check                       → PASS
 testDebugUnitTest / lintDebug          → باید در CI اجرا شود
 ```

@@ -381,11 +381,51 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
         "labs" to "برچسب‌ها", "vals" to "ستون‌ها", "vals2" to "خط",
         "s1" to "نام ستون", "s2" to "نام خط"
     )
+    // V54.2 — فیلدهای فارسی مرجع برای ۱۴ نوع مرحلهٔ دوم.
+    "box" -> listOf(
+        "labs" to "گروه‌ها", "mins" to "حداقل", "q1s" to "چارک ۱",
+        "meds" to "میانه", "q3s" to "چارک ۳", "maxs" to "حداکثر"
+    )
+    "ohlc" -> listOf(
+        "labs" to "دوره‌ها", "opens" to "باز", "highs" to "بیشینه",
+        "lows" to "کمینه", "closes" to "بسته"
+    )
+    "fall" -> listOf("labs" to "برچسب‌ها", "vals" to "مقدارها (منفی مجاز)")
+    "ctrl" -> listOf(
+        "labs" to "نمونه‌ها", "vals" to "مقدارها",
+        "mean" to "میانگین (خالی=خودکار)", "ucl" to "UCL (خالی=خودکار)", "lcl" to "LCL (خالی=خودکار)"
+    )
+    "venn" -> listOf(
+        "n" to "تعداد مجموعه (۲ یا ۳)", "s1" to "مجموعه A", "s2" to "مجموعه B", "s3" to "مجموعه C",
+        "ab" to "A∩B", "ac" to "A∩C", "bc" to "B∩C", "abc" to "A∩B∩C"
+    )
+    "tree" -> listOf("labs" to "بخش‌ها", "vals" to "مقدارها")
+    "sun" -> listOf(
+        "labs" to "حلقهٔ داخلی", "vals" to "مقدار داخلی",
+        "labs2" to "حلقهٔ بیرونی", "vals2" to "مقدار بیرونی"
+    )
+    "pict" -> listOf("labs" to "برچسب‌ها", "vals" to "مقدارها", "unit" to "هر نماد برابر است با")
+    "heat", "hmap" -> listOf("rows" to "ردیف‌ها", "cols" to "ستون‌ها", "vals" to "مقدارها سطری")
+    "bull" -> listOf("labs" to "شاخص‌ها", "vals" to "مقدار واقعی", "vals2" to "هدف")
+    "pyra" -> listOf(
+        "labs" to "گروه‌های سنی", "vals" to "سمت چپ", "vals2" to "سمت راست",
+        "s1" to "نام چپ", "s2" to "نام راست"
+    )
+    "mekko" -> listOf(
+        "labs" to "دسته‌ها (پهنای ستون)", "vals" to "سری ۱ + پهنا", "vals2" to "سری ۲", "vals3" to "سری ۳",
+        "s1" to "نام سری ۱", "s2" to "نام سری ۲", "s3" to "نام سری ۳"
+    )
     else -> listOf("labs" to "برچسب‌ها", "vals" to "مقدارها")
 }
 
 /** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
-private val TEXT_PARAM_KEYS = setOf("labs", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3")
+private val TEXT_PARAM_KEYS = setOf(
+    "labs", "labs2", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3",
+    // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
+    // (همان قرارداد رشته‌ای مرجع).
+    "mins", "q1s", "meds", "q3s", "maxs", "opens", "highs", "lows", "closes",
+    "rows", "cols", "mean", "ucl", "lcl", "unit", "n", "ab", "ac", "bc", "abc"
+)
 
 private fun paramKeys(type: String): List<String> = paramFields(type).map { it.first }
 

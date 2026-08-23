@@ -20,11 +20,14 @@ import kotlin.math.sin
  */
 object ChartSvgRenderer {
 
-    val SUPPORTED: Set<String> = setOf(
+    private val STAGE1: Set<String> = setOf(
         "pie", "donut", "lchr", "area", "sarea", "hbar", "cmp", "hcmp",
         "stack", "st100", "scat", "bub", "hist", "pareto", "gauge",
         "radar", "combo", "step", "lolli", "funn"
     )
+
+    /** V54.2 — مرحلهٔ دوم به مجموعهٔ پشتیبانی اضافه شد. */
+    val SUPPORTED: Set<String> = STAGE1 + ChartSvgRendererStage2.SUPPORTED
 
     fun supports(type: String): Boolean = type in SUPPORTED
 
@@ -68,6 +71,8 @@ object ChartSvgRenderer {
             "combo" -> combo(spec)
             "lolli" -> lollipop(spec)
             "funn" -> funnel(spec)
+            // V54.2 — انواع مرحلهٔ دوم.
+            in ChartSvgRendererStage2.SUPPORTED -> ChartSvgRendererStage2.body(spec)
             else -> ""
         }
     }
