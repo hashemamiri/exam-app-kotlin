@@ -9627,7 +9627,12 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
       try {
         var st = document.createElement('style');
         st.id = 'nativeToolbarHide';
-        st.textContent = '.q-tools{display:none !important;}';
+        st.textContent = '.q-tools{display:none !important;}' +
+          /* V53.4 — قاب و برچسب داخلی HTML حذف می‌شود تا فقط قاب Native دیده شود */
+          '.field>span{display:none !important;}' +
+          '.exam-question-editor-shell{padding:0 !important;}' +
+          '.exam-question-editor-shell .input{border:0 !important;background:transparent !important;box-shadow:none !important;}' +
+          '.exam-question-editor-shell .qmf-surface.input{border:0 !important;background:transparent !important;}';
         (document.head || document.documentElement).appendChild(st);
       } catch (e) {}
     }
@@ -9678,6 +9683,25 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
       }
     };
     if (nativeTools) {
+      /* V53.4 — فرمول دیگر داخل همین WebView کوچک باز نمی‌شود؛ متن و محدودهٔ انتخاب
+         (شامل محدودهٔ فرمول در حال ویرایش) به Native می‌رود تا پنجرهٔ تمام‌صفحهٔ
+         WebView فرمول باز شود. */
+      window.__openMathEditor = function () {
+        var t = field();
+        if (!t) return;
+        try { if (window.QMF) QMF.prepareOpen(t); } catch (e) {}
+        var s = t.selectionStart || 0;
+        var en = t.selectionEnd != null ? t.selectionEnd : s;
+        try {
+          var pe = t._qmfPending;
+          if (pe && typeof pe.tex === 'string' && pe.end > pe.start) { s = pe.start; en = pe.end; }
+        } catch (e) {}
+        try {
+          if (window.ExamEditorNative && typeof ExamEditorNative.onOpenFormula === 'function') {
+            ExamEditorNative.onOpenFormula(t.value || '', s, en);
+          }
+        } catch (e) {}
+      };
       /* V53.3 — دوبار-کلیک توکن‌های جدول/تناوبی/آناتومی/علوم را به ویرایشگر Native
          می‌فرستد؛ هندسه/نمودار و سایر رفتارها دست‌نخورده به ابزار مرجع می‌روند. */
       document.addEventListener('dblclick', function (e) {
@@ -9701,6 +9725,27 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
           }
         } catch (err) {}
       }, true);
+    }
+    /* V53.4 — حالت میزبان تمام‌صفحهٔ فرمول: پوسته مخفی است و ویرایشگر مرجع
+       با متن و محدودهٔ انتخاب دریافتی از Native باز می‌شود. */
+    var formulaHost = /[?&]formulaHost=1/.test(location.search);
+    if (formulaHost) {
+      try {
+        var st3 = document.createElement('style');
+        st3.textContent = '.exam-question-editor-shell{visibility:hidden;}';
+        (document.head || document.documentElement).appendChild(st3);
+      } catch (e) {}
+      window.ExamEditorFormula = {
+        begin: function (text, s, e) {
+          var t = field();
+          if (!t) return;
+          t.value = (text == null ? '' : String(text));
+          try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (err) {}
+          try { if (typeof qMathSync === 'function') qMathSync(t.id); } catch (err) {}
+          try { t.focus(); t.setSelectionRange(s | 0, e | 0); } catch (err) {}
+          try { if (typeof window.__openMathEditor === 'function') window.__openMathEditor(); } catch (err) {}
+        }
+      };
     }
     function overlayOpen() {
       var ids = ['gfOverlay', 'grOverlay', 'tbOverlay', 'anOverlay', 'ptOverlay', 'scOverlay'];

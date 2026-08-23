@@ -103,9 +103,10 @@ import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.ui.figure.AtlasEditorDialog
 import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
+import ir.exam.app.ui.math.FormulaHostDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.NativeMathText
-import ir.exam.app.ui.math.QuestionEditorWebViewDialog
+import ir.exam.app.core.math.FormulaTextCodec
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
 
@@ -584,6 +585,13 @@ private data class AtlasTarget(
     val initialSpec: FigureSpec? = null
 )
 
+/** V53.4 — متن و محدودهٔ انتخاب برای پنجرهٔ تمام‌صفحهٔ فرمول WebView. */
+private data class FormulaHostTarget(
+    val text: String,
+    val selStart: Int,
+    val selEnd: Int
+)
+
 @Composable
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
@@ -611,6 +619,8 @@ private fun QuestionEditor(
     var atlasTarget by remember(question.id) { mutableStateOf<AtlasTarget?>(null) }
     // V53.3 — وقتی true، خروجی ویرایشگر جایگزین توکن dblclick می‌شود نه درج تازه.
     var editingWebToken by remember(question.id) { mutableStateOf(false) }
+    // V53.4 — پنجرهٔ تمام‌صفحهٔ فرمول WebView برای متن سؤال.
+    var formulaHost by remember(question.id) { mutableStateOf<FormulaHostTarget?>(null) }
     var styleExpanded by remember(question.id) { mutableStateOf(false) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
@@ -742,6 +752,9 @@ private fun QuestionEditor(
                 onInsertAnatomy = { atlasTarget = AtlasTarget(kind = "a") },
                 onInsertPhysics = { atlasTarget = AtlasTarget(kind = "s", domain = "phys") },
                 onInsertChemistry = { atlasTarget = AtlasTarget(kind = "s", domain = "chem") },
+                onOpenFormula = { text, selStart, selEnd ->
+                    formulaHost = FormulaHostTarget(text, selStart, selEnd)
+                },
                 onEditFigureToken = { rawJson ->
                     // V53.3 — دوبار-کلیک توکن داخل WebView: بازکردن ویرایشگر Native همان نوع.
                     FigureSpec.parse(rawJson)?.let { spec ->
@@ -932,18 +945,32 @@ private fun QuestionEditor(
         }
     }
     formulaTarget?.let { target ->
-        QuestionEditorWebViewDialog(
-            initialValue = target.initialTex,
+        // V53.4 — فرمول گزینه/جورکردنی هم با همان پنجرهٔ تمام‌صفحهٔ WebView باز
+        // می‌شود (انتخاب صریح کاربر). متن کامل فیلد + محدودهٔ فرمول (برای ویرایش)
+        // یا انتهای متن (برای درج) به ویرایشگر مرجع داده می‌شود.
+        val sourceText = when (target.field) {
+            "option" -> question.options.getOrNull(target.index ?: -1).orEmpty()
+            "matching_left" -> question.matchingLeft.getOrNull(target.index ?: -1).orEmpty()
+            "matching_right" -> question.matchingRight.getOrNull(target.index ?: -1).orEmpty()
+            else -> question.text
+        }
+        val occurrence = target.occurrenceIndex?.let { occ ->
+            FormulaTextCodec.occurrences(sourceText).getOrNull(occ)
+        }
+        FormulaHostDialog(
+            initialText = sourceText,
+            selectionStart = occurrence?.start ?: sourceText.length,
+            selectionEnd = occurrence?.endExclusive ?: sourceText.length,
             onDismiss = { formulaTarget = null },
-            onApply = { tex ->
-                viewModel.insertFormula(
-                    question.id,
-                    target.field,
-                    target.index,
-                    tex,
-                    target.occurrenceIndex
-                )
-                formulaTarget = null
+            onResult = { newText ->
+                if (newText != sourceText) {
+                    when (target.field) {
+                        "option" -> target.index?.let { viewModel.updateOption(question.id, it, newText) }
+                        "matching_left" -> target.index?.let { viewModel.updateMatchingText(question.id, "left", it, newText) }
+                        "matching_right" -> target.index?.let { viewModel.updateMatchingText(question.id, "right", it, newText) }
+                        else -> viewModel.updateText(question.id, newText)
+                    }
+                }
             }
         )
     }
@@ -1013,6 +1040,20 @@ private fun QuestionEditor(
             onInsert = { spec ->
                 deliverFigure(spec, target.occurrenceIndex)
                 periodicTarget = null
+            }
+        )
+    }
+    formulaHost?.let { target ->
+        FormulaHostDialog(
+            initialText = target.text,
+            selectionStart = target.selStart,
+            selectionEnd = target.selEnd,
+            onDismiss = { formulaHost = null },
+            onResult = { newText ->
+                if (newText != target.text) {
+                    viewModel.updateText(question.id, newText)
+                    questionFieldController.setValue(newText)
+                }
             }
         )
     }

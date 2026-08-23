@@ -51,6 +51,7 @@ fun QuestionTextWebSection(
     onInsertPhysics: () -> Unit,
     onInsertChemistry: () -> Unit,
     onEditFigureToken: (String) -> Unit = {},
+    onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var overlayOpen by remember { mutableStateOf(false) }
@@ -79,6 +80,7 @@ fun QuestionTextWebSection(
                 onValueChanged = onTextChanged,
                 onOverlayChanged = { overlayOpen = it },
                 onEditFigureToken = onEditFigureToken,
+                onOpenFormula = onOpenFormula,
                 onError = { loadError = true },
                 modifier = Modifier
                     .fillMaxWidth()

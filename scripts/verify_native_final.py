@@ -138,6 +138,7 @@ approved_webview_files = {
     "QuestionEditorWebView.kt",
     "QuestionEditorWebViewDialog.kt",
     "QuestionTextFieldWebView.kt",
+    "FormulaHostDialog.kt",
 }
 require(
     webview_files <= approved_webview_files,
@@ -1180,5 +1181,17 @@ require("onEditFigure" in editor_asset and "applyEditedToken" in editor_asset,
         "V53.3 dblclick native-edit bridge missing from asset")
 require("marks.size < 12" in atlas_editor and "nextMarkNumber" in atlas_editor,
         "V53.3 atlas editor mark limits do not match the reference")
+
+
+# ---- V53.4: full-screen WebView formula window + single native frame ----
+formula_host=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt").read_text()
+require("formulaHost=1" in formula_host and "usePlatformDefaultWidth = false" in formula_host,
+        "V53.4 formula host dialog is not full-screen or does not use the host asset mode")
+require("onOpenFormula" in editor_asset and "ExamEditorFormula" in editor_asset,
+        "V53.4 asset bridge for the formula host is missing")
+require("FormulaHostDialog(" in builder_screen and "QuestionEditorWebViewDialog(" not in builder_screen,
+        "V53.4 builder must open the full-screen formula window everywhere")
+require("nativeToolbarHide" in editor_asset and ".field>span{display:none !important;}" in editor_asset,
+        "V53.4 inner HTML frame/label must be hidden in nativeTools mode")
 
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V53.3 آناتومی + فیزیک/شیمی Native و ویرایش دوبار-کلیک (پایان نقشه V53)؛ پیش از آن: V53.2 جدول تناوبی Native (build موفق اعلام کاربر)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V53.4 پنجره فرمول تمام‌صفحه WebView و رفع کادر دوم/تاریکی صفحه؛ پیش از آن: V53.3/V53.3.1 (build موفق اعلام کاربر)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5788,4 +5788,74 @@ SQL / Edge / Secret / Dependency      → ندارد
 FINAL_NATIVE_VERIFY                   → PASS
 git diff --check                      → PASS
 testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```
+
+
+## ۱۲۹) V53.4 — پنجرهٔ فرمول تمام‌صفحهٔ WebView و رفع سه اشکال دستگاه
+
+### گزارش واقعی دستگاه (پس از V53.3)
+
+```text
+۱) در کادر متن سؤال، یک کادر دیگر (قاب/برچسب HTML) داخل قاب Native دیده می‌شد
+۲) با زدن آیکن فرمول صفحه تاریک می‌شد و ویرایشگر باز نمی‌شد
+۳) درخواست کاربر: پنجرهٔ فرمول همه‌جا کاملاً WebView (تمام‌صفحه) باشد
+۴) کتابخانهٔ نمودار Native فقط ۵ نوع دارد؛ مرجع ۶۱ نوع
+```
+
+### علت قطعی اشکال ۲
+
+iframe داخلی `mathEditorFrame` مرجع با `position:fixed; inset:0` نسبت به viewport
+همان WebView کوچک ۳۰۰dp باز می‌شد؛ boot ویرایشگر داخل آن قاب کوچک عملاً فقط
+پس‌زمینهٔ تیره را نشان می‌داد. راه‌حل: در حالت `nativeTools=1`، تابع
+`__openMathEditor` بازتعریف شد تا متن + محدودهٔ انتخاب (شامل محدودهٔ فرمول در
+حال ویرایش از `_qmfPending`) با `ExamEditorNative.onOpenFormula` به Native برود.
+
+### تحویل
+
+```text
+FormulaHostDialog (WebView مصوب جدید)   → Dialog تمام‌صفحه با asset محلی و حالت
+                                           ?formulaHost=1: پوستهٔ صفحه مخفی و
+                                           ویرایشگر فرمول مرجع مستقیم باز می‌شود؛
+                                           ExamEditorFormula.begin(text,selStart,selEnd)
+پایان کار                               → بسته‌شدن ویرایشگر مرجع (overlay=false پس
+                                           از باز شدن) متن نهایی را به Native برمی‌گرداند
+متن سؤال                                → onOpenFormula → FormulaHostTarget →
+                                           updateText + sync کادر WebView
+گزینه‌ها و جورکردنی                     → همان پنجرهٔ تمام‌صفحه (انتخاب کاربر:
+                                           «همه‌جا»)؛ متن کامل فیلد + محدودهٔ
+                                           occurrence فرمول برای ویرایش/درج؛
+                                           AlertDialog کوچک V45.4 از Builder حذف شد
+کادر دوم                                → قاب/برچسب/padding داخلی HTML در حالت
+                                           nativeTools با CSS تزریقی مخفی شد؛ فقط
+                                           قاب Native می‌ماند
+verify                                  → FormulaHostDialog.kt به فهرست WebView مجاز
+                                           اضافه شد + قرارداد V53.4
+```
+
+### تصمیم کاربر دربارهٔ نمودار
+
+تکمیل کتابخانهٔ نمودار (۶۱ نوع مرجع در برابر ۵ نوع Native فعلی) به‌صورت
+«همه Native در چند پچ» انتخاب شد → نقشهٔ V54 (چندمرحله‌ای) پس از build این پچ.
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V53.3 + V53.3.1
+کد مرجع HTML: دست‌نخورده؛ فقط بلوک‌های افزودهٔ nativeTools/formulaHost
+```
+
+### تست V53.4
+
+```text
+FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V53.4)
+V53_4FormulaHostFrameTest              → ۴ تست منبع‌محور جدید؛ شبیه‌سازی PASS
+git diff --check                       → PASS
+testDebugUnitTest / lintDebug          → باید در CI اجرا شود
+```
+
+### باقی‌مانده
+
+```text
+V54 (چندمرحله‌ای) → تکمیل Native کتابخانهٔ نمودار تا ۶۱ نوع مرجع
 ```

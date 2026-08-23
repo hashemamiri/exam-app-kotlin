@@ -75,6 +75,7 @@ fun QuestionTextFieldWebView(
     onValueChanged: (String) -> Unit,
     onOverlayChanged: (Boolean) -> Unit = {},
     onEditFigureToken: (String) -> Unit = {},
+    onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
     onError: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -94,7 +95,7 @@ fun QuestionTextFieldWebView(
                 settings.allowUniversalAccessFromFileURLs = false
                 settings.setSupportZoom(false)
                 addJavascriptInterface(
-                    FieldBridge(controller, onValueChanged, onOverlayChanged, onEditFigureToken, onError),
+                    FieldBridge(controller, onValueChanged, onOverlayChanged, onEditFigureToken, onOpenFormula, onError),
                     "ExamEditorNative"
                 )
                 webViewClient = object : WebViewClient() {
@@ -138,6 +139,7 @@ private class FieldBridge(
     private val onValueChanged: (String) -> Unit,
     private val onOverlayChanged: (Boolean) -> Unit,
     private val onEditFigureToken: (String) -> Unit,
+    private val onOpenFormula: (String, Int, Int) -> Unit,
     private val onError: (String) -> Unit
 ) {
     @JavascriptInterface
@@ -154,6 +156,12 @@ private class FieldBridge(
     @JavascriptInterface
     fun onEditFigure(specJson: String?) {
         specJson?.takeIf { it.isNotBlank() }?.let(onEditFigureToken)
+    }
+
+    /** V53.4 — درخواست بازکردن پنجرهٔ تمام‌صفحهٔ فرمول با متن و محدودهٔ انتخاب. */
+    @JavascriptInterface
+    fun onOpenFormula(text: String?, selStart: Int, selEnd: Int) {
+        onOpenFormula.invoke(text.orEmpty(), selStart, selEnd)
     }
 
     @JavascriptInterface
