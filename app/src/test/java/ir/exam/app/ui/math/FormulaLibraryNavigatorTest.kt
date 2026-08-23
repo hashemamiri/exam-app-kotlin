@@ -49,7 +49,11 @@ class FormulaLibraryNavigatorTest {
         }
         assertTrue("usePlatformDefaultWidth = false" in dialog)
         assertTrue("LazyVerticalGrid" in dialog)
-        assertTrue("onClick = { onUse(entry) }" in dialog)
-        assertTrue("Text(\"درج\")" in dialog)
+        assertTrue("awaitEachGesture" in dialog)
+        assertTrue("withTimeoutOrNull(2000L)" in dialog)
+        assertTrue("onToggleFavorite(entry)" in dialog)
+        assertFalse("جست‌وجوی نام یا نماد" in dialog)
+        assertFalse("Text(\"درج\")" in dialog)
+        assertFalse("Text(if (isFavorite(entry))" in dialog)
     }
 }
