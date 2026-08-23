@@ -17,7 +17,7 @@ class FormulaReferenceAssetTest {
         val file=listOf(File("src/main/assets/formula_library_v13.json"),File("app/src/main/assets/formula_library_v13.json")).first(File::isFile)
         val root=Json.parseToJsonElement(file.readText()).jsonObject
         val groups=root["groups"]!!.jsonArray
-        assertEquals(listOf("🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی"),groups.map{it.jsonObject["label"]!!.jsonPrimitive.content})
+        assertEquals(listOf("🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","📚 کتب درسی و تکمیلی"),groups.map{it.jsonObject["label"]!!.jsonPrimitive.content})
         val categories=root["categories"]!!.jsonArray
         assertTrue(categories.size>=77)
         val categoryIds=categories.map{it.jsonObject["id"]!!.jsonPrimitive.content}

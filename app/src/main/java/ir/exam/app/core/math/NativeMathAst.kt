@@ -67,7 +67,11 @@ object NativeMathParser {
         "circ" to "∘", "hbar" to "ℏ", "prime" to "′", "ldots" to "…",
         "cdots" to "⋯", "vdots" to "⋮", "ddots" to "⋱", "langle" to "⟨",
         "rangle" to "⟩", "lfloor" to "⌊", "rfloor" to "⌋", "lceil" to "⌈",
-        "rceil" to "⌉", "lvert" to "|", "rvert" to "|", "vert" to "|"
+        "rceil" to "⌉", "lvert" to "|", "rvert" to "|", "vert" to "|",
+        "bot" to "⊥", "top" to "⊤", "vdash" to "⊢", "models" to "⊨",
+        "neg" to "¬", "mid" to "∣", "nmid" to "∤", "setminus" to "∖",
+        "subsetneq" to "⊊", "nsubseteq" to "⊈", "vee" to "∨", "wedge" to "∧",
+        "triangle" to "△", "ell" to "ℓ"
     )
 
     private val namedFunctions = setOf(
@@ -80,7 +84,10 @@ object NativeMathParser {
         "frac", "dfrac", "tfrac", "sfrac", "nicefrac", "sqrt", "root",
         "mathbf", "bold", "boldsymbol", "mathrm", "text", "mbox", "operatorname",
         "mathbb", "mathcal", "hat", "widehat", "bar", "overline", "underline",
-        "vec", "dot", "left", "right", "begin", "end", "quad", "qquad"
+        "vec", "dot", "ddot", "tilde", "overbrace", "underbrace",
+        "overleftarrow", "overrightarrow", "overleftrightarrow",
+        "overset", "underset", "xrightarrow", "binom", "pmod",
+        "left", "right", "begin", "end", "quad", "qquad"
     )
 
     val supportedCommands: Set<String> =
@@ -277,8 +284,35 @@ object NativeMathParser {
                 "hat", "widehat" -> MathNode.Accent(groupOrAtom(), "hat")
                 "bar", "overline" -> MathNode.Accent(groupOrAtom(), "bar")
                 "underline" -> MathNode.Accent(groupOrAtom(), "underline")
-                "vec" -> MathNode.Accent(groupOrAtom(), "vec")
+                "vec", "overrightarrow", "overleftarrow", "overleftrightarrow" -> MathNode.Accent(groupOrAtom(), "vec")
                 "dot" -> MathNode.Accent(groupOrAtom(), "dot")
+                "ddot" -> MathNode.Accent(groupOrAtom(), "ddot")
+                "tilde" -> MathNode.Accent(groupOrAtom(), "tilde")
+                "overbrace" -> MathNode.Accent(groupOrAtom(), "overbrace")
+                "underbrace" -> MathNode.Accent(groupOrAtom(), "underbrace")
+                "overset" -> {
+                    val over = groupOrAtom()
+                    val base = groupOrAtom()
+                    MathNode.Script(base, over, null)
+                }
+                "underset" -> {
+                    val under = groupOrAtom()
+                    val base = groupOrAtom()
+                    MathNode.Script(base, null, under)
+                }
+                "xrightarrow" -> {
+                    val over = groupOrAtom()
+                    MathNode.Script(MathNode.Symbol("→"), over, null)
+                }
+                "binom" -> {
+                    val top = groupOrAtom()
+                    val bottom = groupOrAtom()
+                    MathNode.Delimited("(", MathNode.Matrix(listOf(listOf(top), listOf(bottom)), '('), ")")
+                }
+                "pmod" -> {
+                    val arg = groupOrAtom()
+                    MathNode.Sequence(listOf(MathNode.Symbol(" (mod "), arg, MathNode.Symbol(")")))
+                }
                 "quad" -> sourceSymbol("  ", slashStart, index, editable = false)
                 "qquad" -> sourceSymbol("    ", slashStart, index, editable = false)
                 "left" -> parseDelimited()

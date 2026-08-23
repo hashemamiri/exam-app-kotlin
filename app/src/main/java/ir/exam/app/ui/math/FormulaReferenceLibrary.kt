@@ -69,7 +69,7 @@ object FormulaReferenceLibrary {
     }
 
     private fun validate(data: FormulaReferenceData) {
-        require(data.groups.size == 8) { "تعداد گروه‌های کتابخانه فرمول ناقص است" }
+        require(data.groups.size >= 8) { "تعداد گروه‌های کتابخانه فرمول ناقص است" }
         require(data.categories.size >= 77) { "تعداد دسته‌های کتابخانه فرمول ناقص است" }
         val ids = data.categories.map(FormulaReferenceCategory::id)
         require(ids.size == ids.toSet().size) { "شناسه تکراری در کتابخانه فرمول" }
