@@ -1,5 +1,7 @@
 package ir.exam.app.ui.math
 
+// verify_native: 🔍 همهٔ نمادها | 🕘 نمادهای اخیر | ⭐ موارد پرکاربرد
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
