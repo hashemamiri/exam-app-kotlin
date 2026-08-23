@@ -104,7 +104,16 @@ fun QuestionTextFieldWebView(
                     "ExamEditorNative"
                 )
                 webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        // V54.5 — فقط ناوبری خارجی «صفحهٔ اصلی» مسدود می‌شود. WebView برخلاف
+                        // مرورگر دسکتاپ، ناوبری داخلی iframe ویرایشگر فرمول (about:blank /
+                        // document.open) را هم از این مسیر عبور می‌دهد؛ true برگرداندن برای آن،
+                        // boot ویرایشگر مرجع را بی‌صدا می‌شکست.
+                        if (!request.isForMainFrame) return false
+                        val url = request.url
+                        val isLocal = url.host == "exam-editor.local" || url.scheme == "about"
+                        return !isLocal
+                    }
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                         val path = request.url.path ?: return emptyResponse()
                         // V54.4 — هر مسیر خارج از asset محلی (مثل favicon خودکار)

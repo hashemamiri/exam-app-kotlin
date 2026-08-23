@@ -9,8 +9,11 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -47,6 +51,8 @@ fun FormulaHostDialog(
     var latestText by remember { mutableStateOf(initialText) }
     var editorOpened by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
+    // V54.5 — خطای واقعی JS (پاک‌سازی‌شده در asset؛ بدون URL/Token) برای نمایش امن.
+    var jsError by remember { mutableStateOf<String?>(null) }
 
     Dialog(
         onDismissRequest = { onResult(latestText); onDismiss() },
@@ -75,6 +81,7 @@ fun FormulaHostDialog(
                             addJavascriptInterface(
                                 FormulaHostBridge(
                                     onText = { latestText = it },
+                                    onJsError = { message -> post { jsError = message; loading = false } },
                                     onOverlay = { open ->
                                         if (open) {
                                             editorOpened = true
@@ -88,7 +95,16 @@ fun FormulaHostDialog(
                                 "ExamEditorNative"
                             )
                             webViewClient = object : WebViewClient() {
-                                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+                                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                                    // V54.5 — فقط ناوبری خارجی «صفحهٔ اصلی» مسدود می‌شود. WebView برخلاف
+                                    // مرورگر دسکتاپ، ناوبری داخلی iframe ویرایشگر فرمول (about:blank /
+                                    // document.open) را هم از این مسیر عبور می‌دهد؛ true برگرداندن برای آن،
+                                    // boot ویرایشگر مرجع را بی‌صدا می‌شکست.
+                                    if (!request.isForMainFrame) return false
+                                    val url = request.url
+                                    val isLocal = url.host == "exam-editor.local" || url.scheme == "about"
+                                    return !isLocal
+                                }
                                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                                     val path = request.url.path ?: return emptyResponse()
                                     // V54.4 — مسیرهای خارج از asset محلی پاسخ خالی امن می‌گیرند.
@@ -118,12 +134,31 @@ fun FormulaHostDialog(
                                     )
                                 }
                             }
+                            // V54.5 — WebChromeClient خطاهای console را امن گزارش می‌کند؛
+                            // نبودن آن، خطاهای boot ویرایشگر را بی‌صدا گم می‌کرد.
+                            webChromeClient = object : android.webkit.WebChromeClient() {
+                                override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
+                                    if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                                        val safe = message.message().replace(Regex("https?://\\S+"), "[url]").take(300)
+                                        post { jsError = "CONSOLE: $safe"; loading = false }
+                                    }
+                                    return true
+                                }
+                            }
                             loadUrl("https://exam-editor.local/question-editor/question_editor.html?formulaHost=1")
                         }
                     }
                 )
                 if (loading) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
+                }
+                jsError?.let { message ->
+                    Text(
+                        "خطای ویرایشگر: $message",
+                        color = ComposeColor(0xFFB3261E),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(10.dp)
+                    )
                 }
             }
         }
@@ -132,6 +167,7 @@ fun FormulaHostDialog(
 
 private class FormulaHostBridge(
     private val onText: (String) -> Unit,
+    private val onJsError: (String) -> Unit,
     private val onOverlay: (Boolean) -> Unit
 ) {
     @JavascriptInterface
@@ -144,5 +180,7 @@ private class FormulaHostBridge(
     fun onReady() = Unit
 
     @JavascriptInterface
-    fun onError(code: String?) = Unit
+    fun onError(code: String?) {
+        code?.takeIf { it.isNotBlank() }?.let(onJsError)
+    }
 }

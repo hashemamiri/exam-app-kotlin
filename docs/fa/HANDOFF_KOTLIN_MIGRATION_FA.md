@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.4 برابری بایت‌به‌بایت کادر متن سؤال و پنجرهٔ فرمول با مرجع + رفع پیام کاذب بارگیری؛ پیش از آن: V54.3/V54.3.1 (build موفق — پایان کتابخانهٔ نمودار ۶۱/۶۱)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.5 رفع boot نشدن ویرایشگر فرمول (ناوبری iframe) و تشخیص امن خطای JS؛ پیش از آن: V54.4 (ظاهر مرجع کادر متن تأیید دستگاه)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6170,4 +6170,56 @@ FINAL_NATIVE_VERIFY (با enforcement کامل)  → PASS, EXIT=0
 V54_4ReferenceParityFixTest                → ۵ تست جدید؛ شبیه‌سازی PASS
 git diff --check                           → PASS
 testDebugUnitTest / lintDebug              → باید در CI اجرا شود
+```
+
+
+## ۱۳۶) V54.5 — رفع boot نشدن ویرایشگر فرمول و تشخیص امن خطای JS
+
+### گزارش واقعی دستگاه (دو اسکرین‌شات پس از V54.4)
+
+```text
+کارت سؤال: ظاهر مرجع کادر متن درست شد (برچسب/قاب مرجع، بدون قاب تکراری) ✔
+آیکن فرمول: پنجرهٔ تمام‌صفحه باز می‌شود و پوستهٔ مرجع را سالم نشان می‌دهد،
+            اما ویرایشگر فرمول boot نمی‌شود و صفحه بی‌واکنش می‌ماند
+```
+
+### علت قطعی
+
+`shouldOverrideUrlLoading` در هر دو WebView برای «همهٔ» ناوبری‌ها true
+برمی‌گرداند. برخلاف مرورگر دسکتاپ، WebView اندروید ناوبری فریم‌های فرعی
+(iframe `mathEditorFrame` مرجع هنگام `document.open/write`) را هم از همین مسیر
+عبور می‌دهد؛ true برگرداندن برای فریم فرعی، بارگذاری سند ویرایشگر را بی‌صدا
+لغو می‌کرد — بدون هیچ خطایی، چون همهٔ فراخوانی‌ها در try/catch بی‌صدا بودند و
+WebChromeClient هم وجود نداشت که console را نشان دهد.
+
+### اصلاح
+
+```text
+هر دو WebView: فریم فرعی هرگز مسدود نمی‌شود (return false)؛ برای main frame
+فقط مقصدهای غیر از exam-editor.local/about مسدود می‌مانند (امنیت حفظ شد).
+asset: گیرندهٔ سراسری error/unhandledrejection با پیام پاک‌سازی‌شده (URL حذف)،
+گزارش به ExamEditorNative.onError؛ begin بدون catch بی‌صدا؛ نگهبان ۷ثانیه‌ای
+FORMULA_BOOT_TIMEOUT اگر iframe نمایان نشود.
+FormulaHostDialog: WebChromeClient برای خطاهای console (سطح ERROR، پاک‌سازی
+URL) + نمایش امن «خطای ویرایشگر: …» پایین پنجره به‌جای صفحهٔ بی‌واکنش.
+```
+
+اگر پس از این پچ باز هم ویرایشگر باز نشد، پیام قرمز پایین پنجره خطای واقعی
+را نشان می‌دهد و اصلاح بعدی بر اساس همان پیام خواهد بود، نه حدس.
+
+### فایل‌ها و عملیات
+
+```text
+app/src/main/assets/question_editor/question_editor.html
+app/src/main/assets/question_editor/version.txt
+app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt
+app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt
+app/src/test/java/ir/exam/app/ui/app/V54_5FormulaBootDiagnosticsTest.kt (جدید)
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+کد مرجع HTML: دست‌نخورده؛ فقط بلوک پل افزوده
+پیش‌نیاز: V54.4
+FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
+testDebugUnitTest / lintDebug → باید در CI اجرا شود
 ```

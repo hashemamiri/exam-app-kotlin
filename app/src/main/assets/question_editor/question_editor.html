@@ -9620,6 +9620,28 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
      iframe مرجع (mathEditorFrame) داخل همین صفحه باز می‌شود. */
   (function () {
     var nativeTools = /[?&]nativeTools=1/.test(location.search);
+    /* V54.5 — گزارش خطای واقعی JS به Native؛ پیام کوتاه و بدون URL/Token. */
+    var lastError = '';
+    function sanitizeErr(msg) {
+      return String(msg == null ? '' : msg)
+        .replace(/https?:\/\/[^\s"']+/g, '[url]')
+        .slice(0, 300);
+    }
+    function reportError(msg) {
+      lastError = sanitizeErr(msg);
+      try {
+        if (window.ExamEditorNative && typeof ExamEditorNative.onError === 'function') {
+          ExamEditorNative.onError(lastError);
+        }
+      } catch (e) {}
+    }
+    window.addEventListener('error', function (ev) {
+      reportError('JS: ' + (ev && ev.message ? ev.message : 'unknown') +
+        ' @' + (ev && ev.lineno ? ev.lineno : '?'));
+    }, true);
+    window.addEventListener('unhandledrejection', function (ev) {
+      reportError('PROMISE: ' + (ev && ev.reason ? ev.reason : 'unknown'));
+    });
     if (nativeTools) {
       try {
         var st = document.createElement('style');
@@ -9750,12 +9772,26 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
       window.ExamEditorFormula = {
         begin: function (text, s, e) {
           var t = field();
-          if (!t) return;
+          if (!t) { reportError('BEGIN: qTxt_main not found'); return; }
           t.value = (text == null ? '' : String(text));
           try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (err) {}
           try { if (typeof qMathSync === 'function') qMathSync(t.id); } catch (err) {}
           try { t.focus(); t.setSelectionRange(s | 0, e | 0); } catch (err) {}
-          try { if (typeof window.__openMathEditor === 'function') window.__openMathEditor(); } catch (err) {}
+          if (typeof window.__openMathEditor !== 'function') {
+            reportError('BEGIN: __openMathEditor missing');
+            return;
+          }
+          try { window.__openMathEditor(); }
+          catch (err) { reportError('OPEN_MATH: ' + (err && err.message ? err.message : err)); }
+          /* نگهبان boot: اگر تا ۷ ثانیه iframe ویرایشگر نمایان نشد، خطا گزارش شود. */
+          setTimeout(function () {
+            try {
+              var fEl = document.getElementById('mathEditorFrame');
+              if (!fEl || fEl.style.display !== 'block') {
+                reportError('FORMULA_BOOT_TIMEOUT' + (lastError ? ' | ' + lastError : ''));
+              }
+            } catch (err) {}
+          }, 7000);
         }
       };
     }
