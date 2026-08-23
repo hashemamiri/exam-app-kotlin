@@ -99,6 +99,8 @@ import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
+import ir.exam.app.core.figure.AtlasCatalog
+import ir.exam.app.ui.figure.AtlasEditorDialog
 import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
@@ -575,6 +577,13 @@ private data class TableTarget(
     val initialSpec: FigureSpec? = null
 )
 
+/** V53.3 — هدف ویرایشگر Native آناتومی/فیزیک/شیمی. */
+private data class AtlasTarget(
+    val kind: String, // "a" | "s"
+    val domain: String = "phys", // فقط برای k='s'
+    val initialSpec: FigureSpec? = null
+)
+
 @Composable
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
@@ -598,6 +607,10 @@ private fun QuestionEditor(
     var tableTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
     // V53.2 — هدف ویرایشگر Native جدول تناوبی.
     var periodicTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
+    // V53.3 — هدف ویرایشگر Native آناتومی/فیزیک/شیمی.
+    var atlasTarget by remember(question.id) { mutableStateOf<AtlasTarget?>(null) }
+    // V53.3 — وقتی true، خروجی ویرایشگر جایگزین توکن dblclick می‌شود نه درج تازه.
+    var editingWebToken by remember(question.id) { mutableStateOf(false) }
     var styleExpanded by remember(question.id) { mutableStateOf(false) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
@@ -726,6 +739,26 @@ private fun QuestionEditor(
                 },
                 onInsertTable = { tableTarget = TableTarget() },
                 onInsertPeriodic = { periodicTarget = TableTarget() },
+                onInsertAnatomy = { atlasTarget = AtlasTarget(kind = "a") },
+                onInsertPhysics = { atlasTarget = AtlasTarget(kind = "s", domain = "phys") },
+                onInsertChemistry = { atlasTarget = AtlasTarget(kind = "s", domain = "chem") },
+                onEditFigureToken = { rawJson ->
+                    // V53.3 — دوبار-کلیک توکن داخل WebView: بازکردن ویرایشگر Native همان نوع.
+                    FigureSpec.parse(rawJson)?.let { spec ->
+                        editingWebToken = true
+                        when (spec.kind) {
+                            "t" -> tableTarget = TableTarget(initialSpec = spec)
+                            "p" -> periodicTarget = TableTarget(initialSpec = spec)
+                            "a" -> atlasTarget = AtlasTarget(kind = "a", initialSpec = spec)
+                            "s" -> atlasTarget = AtlasTarget(
+                                kind = "s",
+                                domain = AtlasCatalog.scienceDomain(spec.type),
+                                initialSpec = spec
+                            )
+                            else -> editingWebToken = false
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
             QuestionMediaEditor(
@@ -942,17 +975,33 @@ private fun QuestionEditor(
             )
         }
     }
+    // V53.3 — تحویل خروجی ویرایشگرهای Native به WebView:
+    // درج تازه در محل مکان‌نما یا جایگزینی توکن dblclick.
+    fun deliverFigure(spec: FigureSpec, occurrenceIndex: Int?) {
+        when {
+            occurrenceIndex != null -> viewModel.updateFigure(question.id, occurrenceIndex, spec)
+            editingWebToken -> {
+                if (!questionFieldController.applyEditedFigureJson(spec.toJson())) {
+                    viewModel.insertFigure(question.id, spec)
+                }
+                editingWebToken = false
+            }
+            questionFieldController.insertFigureJson(spec.toJson()) -> Unit
+            else -> viewModel.insertFigure(question.id, spec)
+        }
+    }
+    fun cancelFigureEditing() {
+        if (editingWebToken) {
+            questionFieldController.cancelEditFigure()
+            editingWebToken = false
+        }
+    }
     tableTarget?.let { target ->
         TableEditorDialog(
             initialSpec = target.initialSpec,
-            onDismiss = { tableTarget = null },
+            onDismiss = { cancelFigureEditing(); tableTarget = null },
             onInsert = { spec ->
-                val occurrence = target.occurrenceIndex
-                when {
-                    occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
-                    questionFieldController.insertFigureJson(spec.toJson()) -> Unit
-                    else -> viewModel.insertFigure(question.id, spec)
-                }
+                deliverFigure(spec, target.occurrenceIndex)
                 tableTarget = null
             }
         )
@@ -960,15 +1009,22 @@ private fun QuestionEditor(
     periodicTarget?.let { target ->
         PeriodicEditorDialog(
             initialSpec = target.initialSpec,
-            onDismiss = { periodicTarget = null },
+            onDismiss = { cancelFigureEditing(); periodicTarget = null },
             onInsert = { spec ->
-                val occurrence = target.occurrenceIndex
-                when {
-                    occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
-                    questionFieldController.insertFigureJson(spec.toJson()) -> Unit
-                    else -> viewModel.insertFigure(question.id, spec)
-                }
+                deliverFigure(spec, target.occurrenceIndex)
                 periodicTarget = null
+            }
+        )
+    }
+    atlasTarget?.let { target ->
+        AtlasEditorDialog(
+            kind = target.kind,
+            domain = target.domain,
+            initialSpec = target.initialSpec,
+            onDismiss = { cancelFigureEditing(); atlasTarget = null },
+            onInsert = { spec ->
+                deliverFigure(spec, null)
+                atlasTarget = null
             }
         )
     }

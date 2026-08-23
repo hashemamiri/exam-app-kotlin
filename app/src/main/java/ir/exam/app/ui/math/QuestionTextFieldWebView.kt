@@ -45,6 +45,19 @@ class QuestionEditorFieldController {
         return true
     }
 
+    /** V53.3 — جایگزینی توکن در حال ویرایش (dblclick) با خروجی ویرایشگر Native. */
+    fun applyEditedFigureJson(specJson: String): Boolean {
+        val view = webView ?: return false
+        val quoted = JSONObject.quote(specJson)
+        view.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.applyEditedToken($quoted);", null)
+        return true
+    }
+
+    /** V53.3 — انصراف از ویرایش توکن dblclick. */
+    fun cancelEditFigure() {
+        webView?.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.cancelEditToken();", null)
+    }
+
     /** همگام‌سازی متن از سمت Native (مثلاً افزودن سؤال از بانک) به کادر WebView. */
     fun setValue(text: String) {
         val view = webView ?: return
@@ -61,6 +74,7 @@ fun QuestionTextFieldWebView(
     initialValue: String,
     onValueChanged: (String) -> Unit,
     onOverlayChanged: (Boolean) -> Unit = {},
+    onEditFigureToken: (String) -> Unit = {},
     onError: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -80,7 +94,7 @@ fun QuestionTextFieldWebView(
                 settings.allowUniversalAccessFromFileURLs = false
                 settings.setSupportZoom(false)
                 addJavascriptInterface(
-                    FieldBridge(controller, onValueChanged, onOverlayChanged, onError),
+                    FieldBridge(controller, onValueChanged, onOverlayChanged, onEditFigureToken, onError),
                     "ExamEditorNative"
                 )
                 webViewClient = object : WebViewClient() {
@@ -123,6 +137,7 @@ private class FieldBridge(
     private val controller: QuestionEditorFieldController,
     private val onValueChanged: (String) -> Unit,
     private val onOverlayChanged: (Boolean) -> Unit,
+    private val onEditFigureToken: (String) -> Unit,
     private val onError: (String) -> Unit
 ) {
     @JavascriptInterface
@@ -134,6 +149,12 @@ private class FieldBridge(
 
     @JavascriptInterface
     fun onOverlayChanged(open: Boolean) { onOverlayChanged.invoke(open) }
+
+    /** V53.3 — دوبار-کلیک روی توکن جدول/تناوبی/آناتومی/علوم داخل WebView. */
+    @JavascriptInterface
+    fun onEditFigure(specJson: String?) {
+        specJson?.takeIf { it.isNotBlank() }?.let(onEditFigureToken)
+    }
 
     @JavascriptInterface
     fun onReady() = Unit

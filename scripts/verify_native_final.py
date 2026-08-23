@@ -1153,4 +1153,32 @@ require("<script" not in periodic_renderer and "href=" not in periodic_renderer
         and "<foreignObject" not in periodic_renderer,
         "V53.2 periodic SVG renderer contains unsafe markup")
 
+
+# ---- V53.3: native anatomy + physics/chemistry atlas + dblclick native editing ----
+atlas_catalog=(ROOT/"app/src/main/java/ir/exam/app/core/figure/AtlasCatalog.kt").read_text()
+atlas_view=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/AtlasFigureView.kt").read_text()
+atlas_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/AtlasEditorDialog.kt").read_text()
+atlas_bitmap=(ROOT/"app/src/main/java/ir/exam/app/core/figure/AtlasBitmapRenderer.kt").read_text()
+require(len(re.findall(r'AtlasType\("[A-Za-z0-9_]+", "[a-z0-9]+", "[^"]+", "[^"]*"\),', atlas_catalog)) == 67,
+        "V53.3 anatomy catalog must contain exactly 67 types")
+require(len(re.findall(r'AtlasType\("[A-Za-z0-9_]+", "[a-z0-9]+", "[^"]+"\),', atlas_catalog)) == 70,
+        "V53.3 science catalog must contain exactly 70 types")
+require(len(list((ROOT/"app/src/main/assets/figure_atlas/anatomy").glob("*"))) == 67,
+        "V53.3 anatomy atlas assets incomplete")
+require(len(list((ROOT/"app/src/main/assets/figure_atlas/science").glob("*"))) == 70,
+        "V53.3 science atlas assets incomplete")
+require("android.webkit" not in atlas_view and "android.webkit" not in atlas_editor
+        and "android.webkit" not in atlas_bitmap,
+        "V53.3 atlas view/editor/renderer must be fully native")
+require("AtlasFigureView(" in (ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text(),
+        "V53.3 student view does not render atlas figures natively")
+require("AtlasBitmapRenderer.render(context, spec)" in (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text(),
+        "V53.3 PDF path does not render atlas figures natively")
+for _bad in ['openTool("anatomy")','openTool("physics")','openTool("chemistry")','openTool("periodic")']:
+    require(_bad not in web_section, f"V53.3 webview tool still wired: {_bad}")
+require("onEditFigure" in editor_asset and "applyEditedToken" in editor_asset,
+        "V53.3 dblclick native-edit bridge missing from asset")
+require("marks.size < 12" in atlas_editor and "nextMarkNumber" in atlas_editor,
+        "V53.3 atlas editor mark limits do not match the reference")
+
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

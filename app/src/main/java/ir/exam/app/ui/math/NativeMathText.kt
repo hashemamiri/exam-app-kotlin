@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.text.RichSegment
 import ir.exam.app.core.text.RichTextSplitter
+import ir.exam.app.ui.figure.AtlasFigureView
 import ir.exam.app.ui.figure.InlineFigureView
 
 /**
@@ -74,16 +75,25 @@ fun NativeMathText(
                     color = color,
                     contentDescription = "فرمول ریاضی"
                 )
-                is RichSegment.Figure -> Box(
-                    modifier = Modifier.fillMaxWidth().height(150.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    InlineFigureView(
-                        spec = segment.spec,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentDescription = "شکل"
-                    )
-                }
+                is RichSegment.Figure ->
+                    // V53.3 — آناتومی/فیزیک/شیمی تصویر اطلس + نشانه‌های Native دارند؛
+                    // سایر انواع (هندسه/نمودار/جدول/تناوبی) از مسیر SVG مشترک.
+                    if (segment.spec.kind in setOf("a", "s")) {
+                        AtlasFigureView(
+                            spec = segment.spec,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentDescription = "شکل"
+                        )
+                    } else Box(
+                        modifier = Modifier.fillMaxWidth().height(150.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        InlineFigureView(
+                            spec = segment.spec,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentDescription = "شکل"
+                        )
+                    }
                 is RichSegment.Text -> if (segment.text.isNotEmpty()) {
                     Text(
                         text = segment.text.replace("\\$", "$"),

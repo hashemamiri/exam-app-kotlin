@@ -18,6 +18,7 @@ import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
 import ir.exam.app.core.calendar.JalaliCalendar
+import ir.exam.app.core.figure.AtlasBitmapRenderer
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureSvgRenderer
 import ir.exam.app.core.math.NativeMathCanvasRenderer
@@ -346,6 +347,10 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
 
     /** V53.1 — رندر برداری شکل/نمودار/جدول به bitmap برای PDF (AndroidSVG، بدون WebView). */
     private fun figureBitmap(spec: FigureSpec): Bitmap? = runCatching {
+        // V53.3 — آناتومی/فیزیک/شیمی از تصویر اطلس + نشانه‌های Native رندر می‌شوند.
+        if (spec.kind in setOf("a", "s")) {
+            return AtlasBitmapRenderer.render(context, spec)
+        }
         val document = FigureSvgRenderer.render(spec)
         val svg = com.caverock.androidsvg.SVG.getFromString(document.xml)
         val scale = 2f

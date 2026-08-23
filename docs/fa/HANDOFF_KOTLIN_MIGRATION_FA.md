@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V53.2 جدول تناوبی کاملاً Native؛ پیش از آن: V53.1/V53.1.1 کادر متن سؤال WebView + نوار ۸ آیکن Native + جدول Native (build موفق اعلام کاربر)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V53.3 آناتومی + فیزیک/شیمی Native و ویرایش دوبار-کلیک (پایان نقشه V53)؛ پیش از آن: V53.2 جدول تناوبی Native (build موفق اعلام کاربر)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5689,3 +5689,71 @@ V53.3 → آناتومی + فیزیک/شیمی Native + ویرایش دوبار-
 ```
 
 راهنمای مستقل: `docs/fa/PERIODIC_NATIVE_V53_2_FA.md`.
+
+
+## ۱۲۷) V53.3 — آناتومی + فیزیک/شیمی Native و ویرایش دوبار-کلیک (پایان V53)
+
+### وضعیت ورودی
+
+```text
+V53.2 build/device                      → SUCCESS (اعلام کاربر)
+باقی‌مانده از نقشه V53                  → آناتومی/فیزیک/شیمی + ویرایش dblclick
+```
+
+### تحویل
+
+```text
+اطلس تصاویر asset          → استخراج برنامه‌ای ۶۷ تصویر آناتومی + ۷۰ تصویر علوم از
+                              base64 مرجع به assets/figure_atlas (~2.3MB)
+AtlasCatalog               → ۶۷ نوع آناتومی + کپشن + ۱۵ دسته؛ ۷۰ نوع علوم +
+                              ۸ دسته فیزیک + ۶ دسته شیمی؛ ۷۷ نگاشت فایل با aliasها؛
+                              scienceDomain همان inferDomain مرجع
+AtlasEditorDialog          → ویرایشگر Native: دسته‌بندی، thumbnail، نشانه‌گذاری
+                              لمسی شماره‌دار (سقف ۱۲ مثل مرجع، شمارهٔ آزاد بعدی)،
+                              برچسب/حذف نشانه، سوییچ‌های عنوان/جای پاسخ/نمایش نام‌ها،
+                              پیش‌فرض‌های مرجع bodyF/cSim/beak
+AtlasFigureView            → نمای دانش‌آموز/Builder: تصویر + Canvas فلش‌ها + جای پاسخ
+AtlasBitmapRenderer        → چاپ/PDF بدون WebView
+AtlasMarkPainter           → هندسهٔ خالص فلش/ارقام فارسی (تست‌پذیر JVM)
+FigureSpec                 → marks()/buildAtlas/AtlasMark با قرارداد درصدی مرجع
+ویرایش دوبار-کلیک          → dblclick توکن k∈{t,p,a,s} در WebView (فقط nativeTools=1)
+                              → ExamEditorNative.onEditFigure → ویرایشگر Native همان نوع
+                              → applyEditedToken جایگزینی همان توکن / cancelEditToken
+آیکن‌ها                    → آناتومی/فیزیک/شیمی هم اکنون Native؛ هیچ openTool ابزار
+                              مرجع در نوار نمانده (فرمول WebView مصوب است)
+```
+
+### سازگاری داده
+
+قرارداد `{k:'a'|'s', t, X:{title,lab,blank,mkName,marks[]}}` مرجع بدون تغییر؛
+توکن‌های قدیمی WebView در Native رندر/ویرایش می‌شوند و برعکس. هندسه/نمودار
+(k خالی) عمداً همان مسیر مرجع GeoFig را در dblclick نگه داشتند.
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V53.2
+حجم APK: ~2.3MB بیشتر (تصاویر اطلس asset)
+```
+
+### تست V53.3
+
+```text
+FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V53.3: شمارش دقیق ۶۷/۷۰
+                                          نوع و ۶۷/۷۰ فایل asset، بدون webkit در
+                                          اجزای اطلس، مسیر dblclick کامل)
+V53_3AtlasNativeTest                   → ۶ تست منبع‌محور جدید؛ شبیه‌سازی محلی PASS
+git diff --check                       → PASS
+testDebugUnitTest / lintDebug          → باید در CI اجرا شود
+```
+
+### وضعیت نقشه V53
+
+```text
+V53.1 ✔ / V53.2 ✔ / V53.3 ← این پچ
+پس از build موفق این پچ، نقشهٔ V53 کامل است؛ هر ۸ ابزار متن سؤال Native
+(به‌جز فرمول و کادر متن که به انتخاب صریح کاربر WebView هستند).
+```
+
+راهنمای مستقل: `docs/fa/ATLAS_NATIVE_V53_3_FA.md`.

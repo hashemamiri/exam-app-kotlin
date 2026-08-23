@@ -47,6 +47,10 @@ fun QuestionTextWebSection(
     onInsertGraph: () -> Unit,
     onInsertTable: () -> Unit,
     onInsertPeriodic: () -> Unit,
+    onInsertAnatomy: () -> Unit,
+    onInsertPhysics: () -> Unit,
+    onInsertChemistry: () -> Unit,
+    onEditFigureToken: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var overlayOpen by remember { mutableStateOf(false) }
@@ -74,6 +78,7 @@ fun QuestionTextWebSection(
                 initialValue = text,
                 onValueChanged = onTextChanged,
                 onOverlayChanged = { overlayOpen = it },
+                onEditFigureToken = onEditFigureToken,
                 onError = { loadError = true },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,10 +104,10 @@ fun QuestionTextWebSection(
             NativeToolButton(QuestionToolIcons.Figure, "درج شکل", onInsertFigure)
             NativeToolButton(QuestionToolIcons.Graph, "درج نمودار", onInsertGraph)
             NativeToolButton(QuestionToolIcons.Table, "درج جدول", onInsertTable)
-            NativeToolButton(QuestionToolIcons.Anatomy, "درج آناتومی بدن") { controller.openTool("anatomy") }
+            NativeToolButton(QuestionToolIcons.Anatomy, "درج آناتومی بدن", onInsertAnatomy)
             NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی", onInsertPeriodic)
-            NativeToolButton(QuestionToolIcons.Physics, "درج فیزیک") { controller.openTool("physics") }
-            NativeToolButton(QuestionToolIcons.Chemistry, "درج شیمی") { controller.openTool("chemistry") }
+            NativeToolButton(QuestionToolIcons.Physics, "درج فیزیک", onInsertPhysics)
+            NativeToolButton(QuestionToolIcons.Chemistry, "درج شیمی", onInsertChemistry)
         }
     }
 }

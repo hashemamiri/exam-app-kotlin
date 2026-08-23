@@ -9645,11 +9645,28 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
       try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
       try { if (typeof qMathSync === 'function') qMathSync(t.id); } catch (e) {}
     }
+    var pendingEditJson = null;
     window.ExamEditorTools = {
       insertToken: function (specJson) {
         if (specJson == null || String(specJson) === '') return;
         insertRaw('%%FIG:' + String(specJson) + '%%');
       },
+      /* V53.3 — جایگزینی توکن در حال ویرایش (dblclick) با نسخهٔ ویرایش‌شدهٔ Native. */
+      applyEditedToken: function (newJson) {
+        var t = field();
+        if (!t || pendingEditJson == null) { pendingEditJson = null; return; }
+        var oldTok = '%%FIG:' + pendingEditJson + '%%';
+        var newTok = '%%FIG:' + String(newJson) + '%%';
+        var v = t.value || '';
+        var at = v.indexOf(oldTok);
+        if (at >= 0) {
+          t.value = v.slice(0, at) + newTok + v.slice(at + oldTok.length);
+          try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+          try { if (typeof qMathSync === 'function') qMathSync(t.id); } catch (e) {}
+        }
+        pendingEditJson = null;
+      },
+      cancelEditToken: function () { pendingEditJson = null; },
       openTool: function (name) {
         try {
           if (name === 'formula' && typeof window.__openMathEditor === 'function') return window.__openMathEditor();
@@ -9660,6 +9677,31 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
         } catch (e) {}
       }
     };
+    if (nativeTools) {
+      /* V53.3 — دوبار-کلیک توکن‌های جدول/تناوبی/آناتومی/علوم را به ویرایشگر Native
+         می‌فرستد؛ هندسه/نمودار و سایر رفتارها دست‌نخورده به ابزار مرجع می‌روند. */
+      document.addEventListener('dblclick', function (e) {
+        var n = e.target;
+        while (n && n !== document) {
+          if (n.classList && n.classList.contains('qmf-fig')) break;
+          n = n.parentNode || n.parentElement;
+        }
+        if (!n || n === document) return;
+        var raw = n.getAttribute('data-fig') || (n.dataset && n.dataset.fig) || '';
+        if (!raw) return;
+        var kind = '';
+        try { kind = (JSON.parse(raw) || {}).k || ''; } catch (err) { return; }
+        if (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's') return;
+        e.preventDefault();
+        e.stopPropagation();
+        pendingEditJson = raw;
+        try {
+          if (window.ExamEditorNative && typeof ExamEditorNative.onEditFigure === 'function') {
+            ExamEditorNative.onEditFigure(raw);
+          }
+        } catch (err) {}
+      }, true);
+    }
     function overlayOpen() {
       var ids = ['gfOverlay', 'grOverlay', 'tbOverlay', 'anOverlay', 'ptOverlay', 'scOverlay'];
       for (var i = 0; i < ids.length; i++) {

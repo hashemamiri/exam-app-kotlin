@@ -41,6 +41,26 @@ data class FigureSpec(val raw: JsonObject) {
             ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.toIntOrNull() }
             ?: emptyList()
 
+    /**
+     * نشانه‌های شماره‌دار آناتومی/علوم (`X.marks` مرجع): مختصات درصدی ۰..۱۰۰
+     * نسبت به قاب تصویر، شمارهٔ `n` و برچسب اختیاری `lbl`.
+     */
+    fun marks(): List<AtlasMark> =
+        ((raw["X"] as? JsonObject)?.get("marks") as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { item ->
+                val obj = item as? JsonObject ?: return@mapNotNull null
+                fun num(key: String): Float? =
+                    (obj[key] as? JsonPrimitive)?.contentOrNull?.toFloatOrNull()
+                AtlasMark(
+                    x1 = num("x1") ?: return@mapNotNull null,
+                    y1 = num("y1") ?: return@mapNotNull null,
+                    x2 = num("x2") ?: return@mapNotNull null,
+                    y2 = num("y2") ?: return@mapNotNull null,
+                    n = (obj["n"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0,
+                    label = (obj["lbl"] as? JsonPrimitive)?.contentOrNull ?: ""
+                )
+            } ?: emptyList()
+
     /** خانه‌های جدول (`C` مرجع): آرایهٔ سطرها؛ هر سطر آرایه‌ای از رشته‌ها. */
     fun tableCells(): List<List<String>> =
         (raw["C"] as? kotlinx.serialization.json.JsonArray)?.map { row ->
@@ -110,6 +130,51 @@ data class FigureSpec(val raw: JsonObject) {
             )
         }
 
+        /**
+         * ساخت spec آناتومی (`k='a'`) یا فیزیک/شیمی (`k='s'`) با قالب مرجع:
+         * `{k, t:نوع, X:{title, lab, blank, mkName, marks[]}}`.
+         */
+        fun buildAtlas(
+            kind: String,
+            type: String,
+            title: String,
+            showLabel: Boolean,
+            showBlanks: Boolean,
+            showMarkNames: Boolean,
+            marks: List<AtlasMark>
+        ): FigureSpec {
+            val marksJson = kotlinx.serialization.json.JsonArray(
+                marks.map { m ->
+                    JsonObject(
+                        mapOf(
+                            "x1" to JsonPrimitive(m.x1),
+                            "y1" to JsonPrimitive(m.y1),
+                            "x2" to JsonPrimitive(m.x2),
+                            "y2" to JsonPrimitive(m.y2),
+                            "n" to JsonPrimitive(m.n),
+                            "lbl" to JsonPrimitive(m.label)
+                        )
+                    )
+                }
+            )
+            val x = mutableMapOf<String, JsonElement>(
+                "title" to JsonPrimitive(title),
+                "lab" to JsonPrimitive(if (showLabel) "1" else "0"),
+                "blank" to JsonPrimitive(if (showBlanks) "1" else "0"),
+                "mkName" to JsonPrimitive(if (showMarkNames) "1" else "0"),
+                "marks" to marksJson
+            )
+            return FigureSpec(
+                JsonObject(
+                    mapOf(
+                        "k" to JsonPrimitive(kind),
+                        "t" to JsonPrimitive(type),
+                        "X" to JsonObject(x)
+                    )
+                )
+            )
+        }
+
         /** ساخت spec جدول با همان قالب مرجع: `{k:'t', t:سبک, X:{title}, C:[[...]]}`. */
         fun buildTable(
             style: String,
@@ -127,6 +192,16 @@ data class FigureSpec(val raw: JsonObject) {
         }
     }
 }
+
+/** یک نشانهٔ شماره‌دار روی تصویر اطلس؛ مختصات درصدی ۰..۱۰۰ همان قرارداد مرجع. */
+data class AtlasMark(
+    val x1: Float,
+    val y1: Float,
+    val x2: Float,
+    val y2: Float,
+    val n: Int,
+    val label: String = ""
+)
 
 private fun strOf(el: JsonElement?): String = (el as? JsonPrimitive)?.contentOrNull ?: ""
 
