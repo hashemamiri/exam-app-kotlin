@@ -1134,4 +1134,23 @@ require("android.webkit" not in table_editor and "buildTable" in (ROOT/"app/src/
 require("figureBitmap" in (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text(),
         "V53.1 PDF path does not rasterize %%FIG%% tokens")
 
+
+# ---- V53.2: native periodic table (data + renderer + editor + wiring) ----
+periodic_data=(ROOT/"app/src/main/java/ir/exam/app/core/figure/PeriodicElements.kt").read_text()
+periodic_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/PeriodicSvgRenderer.kt").read_text()
+periodic_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt").read_text()
+require(len(re.findall(r"E\(\d+, ", periodic_data)) == 118,
+        "V53.2 periodic data must contain exactly 118 elements")
+require('if (spec.kind == "p") return PeriodicSvgRenderer.render(spec)' in figure_renderer,
+        "V53.2 periodic tokens do not render through the shared SVG path")
+require("android.webkit" not in periodic_editor and "WebView" not in periodic_editor,
+        "V53.2 periodic editor must be fully native")
+for _lbl in ["کامل","گروه اصلی","بدون f","بدون عدد اتمی","حذف عنصر","حذف عدد اتمی","بازگردانی همه"]:
+    require(_lbl in periodic_editor, f"V53.2 periodic editor is missing: {_lbl}")
+require('openTool("periodic")' not in web_section and "onInsertPeriodic" in web_section,
+        "V53.2 periodic icon must open the native editor")
+require("<script" not in periodic_renderer and "href=" not in periodic_renderer
+        and "<foreignObject" not in periodic_renderer,
+        "V53.2 periodic SVG renderer contains unsafe markup")
+
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

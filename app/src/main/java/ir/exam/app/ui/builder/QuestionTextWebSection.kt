@@ -33,10 +33,10 @@ import ir.exam.app.ui.math.QuestionToolIcons
  *
  * ترتیب آیکن‌ها مطابق مرجع: فرمول، شکل، نمودار، جدول، آناتومی بدن، جدول تناوبی،
  * فیزیک، شیمی. همهٔ آیکن‌ها Native (ImageVector) هستند؛ فقط «کادر متن سؤال» و
- * «ویرایشگر فرمول» WebView می‌مانند (استثنای صریح کاربر). جدول ویرایشگر کاملاً
- * Native دارد؛ شکل/نمودار ویرایشگرهای Native موجود V45.3 را باز می‌کنند؛
- * آناتومی/تناوبی/فیزیک/شیمی تا تحویل V53.2/V53.3 ابزار مرجع داخل همین صفحه را
- * باز می‌کنند.
+ * «ویرایشگر فرمول» WebView می‌مانند (استثنای صریح کاربر). جدول (V53.1) و جدول
+ * تناوبی (V53.2) ویرایشگر کاملاً Native دارند؛ شکل/نمودار ویرایشگرهای Native
+ * موجود V45.3 را باز می‌کنند؛ آناتومی/فیزیک/شیمی تا تحویل V53.3 ابزار مرجع
+ * داخل همین صفحه را باز می‌کنند.
  */
 @Composable
 fun QuestionTextWebSection(
@@ -46,6 +46,7 @@ fun QuestionTextWebSection(
     onInsertFigure: () -> Unit,
     onInsertGraph: () -> Unit,
     onInsertTable: () -> Unit,
+    onInsertPeriodic: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var overlayOpen by remember { mutableStateOf(false) }
@@ -99,7 +100,7 @@ fun QuestionTextWebSection(
             NativeToolButton(QuestionToolIcons.Graph, "درج نمودار", onInsertGraph)
             NativeToolButton(QuestionToolIcons.Table, "درج جدول", onInsertTable)
             NativeToolButton(QuestionToolIcons.Anatomy, "درج آناتومی بدن") { controller.openTool("anatomy") }
-            NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { controller.openTool("periodic") }
+            NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی", onInsertPeriodic)
             NativeToolButton(QuestionToolIcons.Physics, "درج فیزیک") { controller.openTool("physics") }
             NativeToolButton(QuestionToolIcons.Chemistry, "درج شیمی") { controller.openTool("chemistry") }
         }

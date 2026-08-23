@@ -70,9 +70,11 @@ object FigureSvgRenderer {
         // V53.1 — توکن‌های جدول (`k='t'`) مسیر رندر اختصاصی خود را دارند تا
         // در همهٔ نمایش‌ها (Builder/دانش‌آموز/چاپ) بدون تغییر فراخوان‌ها کار کنند.
         if (spec.isTable) return TableSvgRenderer.render(spec)
-        // V53.1 — آناتومی/تناوبی/فیزیک/شیمی تا تحویل رندر Native (V53.2/V53.3)
+        // V53.2 — جدول تناوبی (`k='p'`) رندر Native کامل دارد.
+        if (spec.kind == "p") return PeriodicSvgRenderer.render(spec)
+        // V53.1 — آناتومی/فیزیک/شیمی تا تحویل رندر Native (V53.3)
         // پلاک عنوان‌دار امن می‌گیرند؛ نه JSON خام و نه هندسهٔ نامربوط.
-        if (spec.kind in setOf("a", "p", "s")) return renderKindPlate(spec)
+        if (spec.kind in setOf("a", "s")) return renderKindPlate(spec)
         val body = renderBody(spec)
         val viewBox = if (spec.type == "parll") "0 0 380 280" else "0 0 360 280"
         val xml = wrap(body, viewBox)
@@ -87,11 +89,10 @@ object FigureSvgRenderer {
 
     fun isGeometry(spec: FigureSpec): Boolean = spec.type !in setOf("line", "quad", "sine", "exp", "bar", "col", "hbar", "stack")
 
-    /** پلاک موقت انواع مرجع (a/p/s) تا رندر Native کامل V53.2/V53.3. */
+    /** پلاک موقت انواع مرجع (a/s) تا رندر Native کامل V53.3. */
     private fun renderKindPlate(spec: FigureSpec): MathSvgDocument {
         val label = when (spec.kind) {
             "a" -> "آناتومی"
-            "p" -> "جدول تناوبی"
             else -> "فیزیک/شیمی"
         }
         val title = spec.xStr("title").ifBlank { label }

@@ -35,6 +35,12 @@ data class FigureSpec(val raw: JsonObject) {
 
     fun xList(key: String, default: String = ""): List<String> = splitList(xStr(key, default))
 
+    /** آرایهٔ عددی داخل X (مثل hid/hidZ/hideCols/hideRows جدول تناوبی مرجع). */
+    fun xIntList(key: String): List<Int> =
+        ((raw["X"] as? JsonObject)?.get(key) as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.toIntOrNull() }
+            ?: emptyList()
+
     /** خانه‌های جدول (`C` مرجع): آرایهٔ سطرها؛ هر سطر آرایه‌ای از رشته‌ها. */
     fun tableCells(): List<List<String>> =
         (raw["C"] as? kotlinx.serialization.json.JsonArray)?.map { row ->
@@ -66,6 +72,42 @@ data class FigureSpec(val raw: JsonObject) {
             if (angles.isNotEmpty()) map["A"] = JsonObject(angles.mapValues { JsonPrimitive(it.value) })
             if (extra.isNotEmpty()) map["X"] = JsonObject(extra)
             return FigureSpec(JsonObject(map))
+        }
+
+        /**
+         * ساخت spec جدول تناوبی با همان قالب مرجع:
+         * `{k:'p', t:preset, X:{title, Z, hid, hidZ, hideCols, hideRows, hideF}}`.
+         */
+        fun buildPeriodic(
+            preset: String,
+            title: String,
+            showZ: Boolean,
+            hideF: Boolean,
+            hiddenElements: List<Int>,
+            hiddenZ: List<Int>,
+            hiddenGroups: List<Int>,
+            hiddenPeriods: List<Int>
+        ): FigureSpec {
+            fun ints(values: List<Int>) =
+                kotlinx.serialization.json.JsonArray(values.sorted().map { JsonPrimitive(it) })
+            val x = mutableMapOf<String, JsonElement>(
+                "title" to JsonPrimitive(title),
+                "Z" to JsonPrimitive(if (showZ) "1" else "0"),
+                "hideF" to JsonPrimitive(if (hideF) "1" else "0"),
+                "hid" to ints(hiddenElements),
+                "hidZ" to ints(hiddenZ),
+                "hideCols" to ints(hiddenGroups),
+                "hideRows" to ints(hiddenPeriods)
+            )
+            return FigureSpec(
+                JsonObject(
+                    mapOf(
+                        "k" to JsonPrimitive("p"),
+                        "t" to JsonPrimitive(preset),
+                        "X" to JsonObject(x)
+                    )
+                )
+            )
         }
 
         /** ساخت spec جدول با همان قالب مرجع: `{k:'t', t:سبک, X:{title}, C:[[...]]}`. */

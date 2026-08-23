@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۳ — V53.1 کادر متن سؤال WebView + نوار ۸ آیکن Native + ویرایشگر جدول Native؛ پیش از آن: V52 پالایش ویرایشگر فرمول
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V53.2 جدول تناوبی کاملاً Native؛ پیش از آن: V53.1/V53.1.1 کادر متن سؤال WebView + نوار ۸ آیکن Native + جدول Native (build موفق اعلام کاربر)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5623,3 +5623,69 @@ FINAL_NATIVE_VERIFY                   → PASS
 git diff --check                      → PASS
 testDebugUnitTest / lintDebug         → باید در CI تکرار شود
 ```
+
+
+## ۱۲۶) V53.2 — جدول تناوبی کاملاً Native
+
+### وضعیت ورودی
+
+```text
+V53.1 + V53.1.1 build/device            → SUCCESS (اعلام کاربر)
+آیکن تناوبی                             → از V53.1 نیتیو بود؛ عملکرد هنوز ابزار WebView مرجع بود
+```
+
+### تحویل
+
+```text
+PeriodicElements.kt        → استخراج برنامه‌ای ۱۱۸ عنصر مرجع (نماد/نام فارسی/گروه/دوره/دسته)
+                             + ۱۱ دسته رنگی CATS و نام فارسی CN
+PeriodicSvgRenderer.kt     → SVG امن (svg/rect/text): شبکه ۱۸×۷، ارقام فارسی،
+                             ستاره‌های */** گروه ۳ دوره ۶/۷، بلوک جدا لانتانید/اکتینید،
+                             احترام کامل به X مرجع: Z/hid/hidZ/hideCols/hideRows/hideF/title
+PeriodicEditorDialog.kt    → ویرایشگر کاملاً Native: ۴ حالت مرجع (کامل/گروه اصلی/بدون f/
+                             بدون عدد اتمی)، دو حالت لمس (حذف عنصر/حذف عدد اتمی)،
+                             لمس سرستون/دوره برای حذف ستون/سطر، chipهای بازگردانی،
+                             بازگردانی همه، عنوان
+FigureSpec                 → buildPeriodic + xIntList؛ قرارداد {k:'p',...} مرجع بدون تغییر
+FigureSvgRenderer          → k='p' به رندر Native؛ پلاک موقت فقط برای k∈{a,s}
+QuestionTextWebSection     → آیکن تناوبی به ویرایشگر Native (onInsertPeriodic)؛
+                             openTool("periodic") حذف شد
+ExamBuilderScreen          → periodicTarget + درج در محل مکان‌نمای WebView با fallback
+رندر دانش‌آموز/PDF          → خودکار از مسیر مشترک V53.1 (NativeMathText / figureBitmap)
+```
+
+### سازگاری داده
+
+توکن‌های k='p' ساخته‌شده با WebView قدیمی در Native رندر می‌شوند و برعکس؛
+هیچ مهاجرت داده‌ای لازم نیست.
+
+### محدودیت ثبت‌شده
+
+ویرایش دوبار-کلیک توکن موجود داخل WebView هنوز ابزار مرجع را باز می‌کند؛
+اتصال آن به ویرایشگرهای Native در V53.3 تحویل می‌شود.
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V53.1 + V53.1.1
+```
+
+### تست V53.2
+
+```text
+FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V53.2: دقیقاً ۱۱۸ عنصر،
+                                          مسیر مشترک k='p'، ویرایشگر بدون WebView،
+                                          برچسب‌های مرجع، SVG امن)
+V53_2PeriodicNativeTest                → ۵ تست منبع‌محور جدید؛ شبیه‌سازی محلی PASS
+git diff --check                       → PASS
+testDebugUnitTest / lintDebug          → باید در CI اجرا شود
+```
+
+### باقی‌مانده
+
+```text
+V53.3 → آناتومی + فیزیک/شیمی Native + ویرایش دوبار-کلیک Native + رگرسیون کل
+```
+
+راهنمای مستقل: `docs/fa/PERIODIC_NATIVE_V53_2_FA.md`.

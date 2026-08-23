@@ -99,6 +99,7 @@ import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
+import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.NativeMathText
@@ -595,6 +596,8 @@ private fun QuestionEditor(
     // V53.1 — کنترلر کادر متن سؤال WebView و هدف ویرایشگر Native جدول.
     val questionFieldController = remember(question.id) { QuestionEditorFieldController() }
     var tableTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
+    // V53.2 — هدف ویرایشگر Native جدول تناوبی.
+    var periodicTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
     var styleExpanded by remember(question.id) { mutableStateOf(false) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
@@ -722,6 +725,7 @@ private fun QuestionEditor(
                     figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
                 },
                 onInsertTable = { tableTarget = TableTarget() },
+                onInsertPeriodic = { periodicTarget = TableTarget() },
                 modifier = Modifier.fillMaxWidth()
             )
             QuestionMediaEditor(
@@ -950,6 +954,21 @@ private fun QuestionEditor(
                     else -> viewModel.insertFigure(question.id, spec)
                 }
                 tableTarget = null
+            }
+        )
+    }
+    periodicTarget?.let { target ->
+        PeriodicEditorDialog(
+            initialSpec = target.initialSpec,
+            onDismiss = { periodicTarget = null },
+            onInsert = { spec ->
+                val occurrence = target.occurrenceIndex
+                when {
+                    occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
+                    questionFieldController.insertFigureJson(spec.toJson()) -> Unit
+                    else -> viewModel.insertFigure(question.id, spec)
+                }
+                periodicTarget = null
             }
         )
     }
