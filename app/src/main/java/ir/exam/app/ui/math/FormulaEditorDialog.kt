@@ -1,5 +1,7 @@
 package ir.exam.app.ui.math
 
+import android.webkit.WebView
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -94,6 +96,7 @@ fun FormulaEditorDialog(
     val clipboard = LocalClipboardManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var value by remember(initialTex) {
         val initial = FormulaBoxEditor.replaceAll(initialTex, activateFirstBox = true)
         mutableStateOf(TextFieldValue(initial.text, TextRange(initial.selectionStart, initial.selectionEnd)))
@@ -482,22 +485,9 @@ fun FormulaEditorDialog(
                             onMoveHorizontal = ::moveActiveBox,
                             onMoveVertical = ::moveSpatialBox,
                             onKeyboard = {
-                                webViewInstance?.let { webView ->
-                                    webView.requestFocus()
-                                    webView.evaluateJavascript(
-                                        "window.focusCanvas && window.focusCanvas();",
-                                        null
-                                    )
-                                    webView.postDelayed({
-                                        val manager =
-                                            context.getSystemService(
-                                                android.content.Context.INPUT_METHOD_SERVICE
-                                            ) as? android.view.inputmethod.InputMethodManager
-                                        manager?.showSoftInput(
-                                            webView,
-                                            android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT
-                                        )
-                                    }, 120L)
+                                focusRequester.requestFocus()
+                                keyboard?.show()
+                            }, 120L)
                                 } ?: run {
                                     focusRequester.requestFocus()
                                     keyboard?.show()
