@@ -12,227 +12,2661 @@ html, body {
   user-select: none; -webkit-user-select: none;
 }
 .mb-wrap {
-  margin: 0; padding: 6px; width: 100%; height: 100%;
-  display: flex; box-sizing: border-box; background: transparent;
+  margin: 0 !important; padding: 6px !important; width: 100% !important; height: 100% !important;
+  display: flex !important; box-sizing: border-box !important; background: transparent !important;
 }
 .mb-canvas {
-  width: 100%; height: 100%; min-height: 120px; margin: 0;
-  border-radius: 16px; background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
-  color: #ffffff; font-size: calc(1.55rem * var(--mbfs, 1));
-  display: flex; align-items: center; justify-content: flex-start;
-  padding: 16px 20px; overflow-x: auto; overflow-y: hidden;
-  direction: ltr; text-align: left; white-space: nowrap; outline: none;
+      min-height: 100px; padding: 20px; border-radius: 16px;
+      background: #fff; color: #111; border: 3px solid transparent;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+      font-size: calc(1.5rem * var(--mbfs, 1)); overflow-x: auto; overflow-y: hidden;
+      display: flex; align-items: center; justify-content: center; cursor: text;
+      direction: ltr; transition: border-color 0.2s, box-shadow 0.2s;
+      user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    }
+
+.mb-canvas:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.2); outline: none; }
+
+.mb-key {
+      position: absolute; inset-inline-start: 0; top: 0; width: 1px; height: 1px;
+      opacity: 0; border: none; padding: 0; background: 0 0; font-size: 16px;
+    }
+
+.mb-slot { display: inline-block; min-width: 12px; min-height: 1em; padding: 0 1px; }
+
+.mb-slot.mb-root { min-width: 40px; }
+
+.mb-ph {
+      display: inline-block; width: 15px; height: 19px;
+      border: 1.6px dashed #7aa7d8; border-radius: 4px; background: #eff6ff; vertical-align: middle;
+    }
+
+.mb-cur { display: inline-block; width: 2px; height: 1.05em; background: #0a7; vertical-align: middle; animation: 1s step-end infinite mbBlink; }
+
+.mb-c, .mb-n { display: inline-block; }
+
+.mb-canvas .mden > .mb-slot, .mb-canvas .mnum > .mb-slot,
+    .mb-canvas .mrad > .mb-slot, .mb-canvas .msub > .mb-slot,
+    .mb-canvas .msup > .mb-slot { min-width: 16px; }
+
+.mb-slot.mb-act > .mb-ph { border-color: #0a7; background: #e8fff6; }
+
+.mb-slot.mb-act { background: rgba(16,185,129,.16); border-radius: 6px; box-shadow: 0 0 0 1.5px #16a34a; }
+
+.mfk.mfk-case { font-weight: 700; color: #0a7; background: #f0fdf6; }
+
+.mfk.mfk-hv { position: relative; }
+
+.mfk.mfk-hv::after { content: '▾'; position: absolute; top: 1px; inset-inline-start: 3px; font-size: .55em; color: var(--accent2); line-height: 1; }
+
+.mb-var {
+      position: fixed; z-index: 12050; background: #1e1e38; border: 1px solid var(--card-brd);
+      border-radius: 12px; padding: 8px; display: none; box-shadow: 0 8px 30px rgba(0,0,0,.55);
+      min-width: 220px; max-width: min(320px, 92vw); max-height: 62vh; overflow-y: auto;
+    }
+
+.mb-var.open { display: block; }
+
+.mbv-title { font-size: .68rem; color: var(--muted); margin-bottom: 6px; }
+
+.mbv-i, .mbv-cat { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: none; background: transparent; color: #fff; border-radius: 8px; cursor: pointer; font-family: inherit; }
+
+.mbv-i:hover, .mbv-cat:hover { background: rgba(0,210,255,.12); }
+
+.mbv-l { font-size: .72rem; color: var(--soft); flex: 0 0 auto; }
+
+.mbv-f { flex: 1; display: flex; align-items: center; justify-content: center; background: #fff; color: #000; border-radius: 6px; padding: 5px 6px; min-height: 28px; overflow-x: auto; font-size: 1rem; }
+
+.mbv-row { display: flex; gap: 5px; align-items: center; margin: 7px 0; flex-wrap: wrap; }
+
+.mbv-rt { font-size: .68rem; color: var(--muted); flex: 0 0 auto; }
+
+.mbv-q, .mbv-o, .mbv-c { min-width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff; font-size: 1.02rem; cursor: pointer; font-family: inherit; touch-action: manipulation; }
+
+.mbv-q:hover, .mbv-o:hover, .mbv-c:hover { border-color: var(--accent); background: rgba(255,255,255,0.15); }
+
+.mbv-o.sel, .mbv-c.sel { outline: 2px solid var(--ok); background: #e6fff4; }
+
+.mbv-hint { font-size: .66rem; color: var(--warn); margin-top: 6px; line-height: 1.6; }
+
+@keyframes mbBlink { 50% { opacity: 0; } }
+
+.mb-quick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 15px; background: var(--panel); padding: 12px; border-radius: 14px; border: 1px solid var(--card-brd); }
+
+.mb-quick button {
+      flex: none; min-width: 0; min-height: 60px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      border-radius: 12px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff;
+      cursor: pointer; font-size: 1.1rem; padding: 6px;
+      transition: all 0.2s; touch-action: manipulation;
+    }
+
+.mb-quick button:hover { border-color: var(--accent); background: rgba(0, 210, 255, 0.15); transform: translateY(-2px); }
+
+.mb-quick button:active { transform: scale(0.95); }
+
+.mb-quick button .qk-l { font-size: .65rem; color: var(--soft); font-weight: bold; }
+
+.mb-quick button .qk-m { font-family: 'Courier New', monospace; color: var(--accent); font-size: 0.9rem; }
+
+.mb-quick .mb-chip { background: linear-gradient(135deg, var(--info), #6366f1); color: #fff; border: none; font-size: 0.8rem; flex-direction: row; font-weight: bold; }
+
+.mb-quick .mb-chip:hover { background: linear-gradient(135deg, #a855f7, #818cf8); border: none; color: #fff; }
+
+.nat-tips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.nat-t { display: flex; align-items: center; gap: 6px; background: var(--input-bg); border: 1px solid var(--input-brd); border-radius: 8px; padding: 4px 8px; font-size: .68rem; color: var(--soft); }
+
+.nat-t code { direction: ltr; font-family: 'Courier New', monospace; color: var(--accent); }
+
+.mf-gal { max-height: 46vh; overflow-y: auto; }
+
+.gal-g { margin-bottom: 14px; }
+
+.gal-h { font-size: .75rem; color: var(--accent); font-weight: 700; margin-bottom: 7px; }
+
+.gal-l { display: flex; flex-direction: column; gap: 6px; }
+
+.gal-i {
+      display: flex; align-items: center; gap: 10px; padding: 9px 11px;
+      border-radius: 10px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff;
+      cursor: pointer; text-align: right; width: 100%;
+      touch-action: manipulation;
+    }
+
+.gal-i:hover { border-color: var(--accent); background: rgba(255,255,255,0.15); }
+
+.gal-n { font-size: .75rem; color: #eee; flex: 0 0 108px; font-family: inherit; }
+
+.gal-n { flex: 0 0 88px; font-size: .6875rem; }
+
+.gal-f { flex: 1; overflow-x: auto; font-size: 1rem; }
+
+.mf-code { margin-top: 10px; }
+
+.mf-code > summary { font-size: .6875rem; color: var(--muted); cursor: pointer; padding: 5px 0; }
+
+.mf-code code {
+      display: block; margin-top: 6px; padding: 8px 10px; border-radius: 8px;
+      background: var(--panel); color: var(--soft); direction: ltr; text-align: left;
+      font-size: .6875rem; word-break: break-all;
+    }
+
+@media (max-width: 560px) {
+      body { padding: 12px; }
+      .demo-container { padding: 16px; }
+      .modal { padding: 8px; }
+      .modal-box { padding: 14px; }
+      .mf-modes .mfm { font-size: .75rem; }
+      .mb-quick { grid-template-columns: repeat(3, 1fr); }
+      .mb-quick button { min-height: 46px; }
+      .mf-pad { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+      .mf-tabs .mft { font-size: .75rem; }
+
+      /* پوستهٔ موبایلیِ حالت جعبه‌ای */
+      #mfModal.modal.open { align-items: flex-end; padding: 0; background: rgba(0,0,0,0.5); }
+      #mfModal .mf-box {
+        width: 100%; max-width: none; max-height: 85vh; overflow: hidden;
+        padding: 16px 0 0; border: 0; border-radius: 26px 26px 0 0;
+        background: var(--bg2); color: #fff; box-shadow: 0 -8px 28px rgba(0,0,0,.3);
+      }
+      #mfModal .card-header { display: none; }
+      #mfModal .mf-modes, #mfModal .mf-help, #mfModal .mb-quick,
+      #mfModal .mf-code { display: none; }
+      #mfModal .mb-tools { padding: 0 14px 9px; margin: 0; flex-wrap: nowrap; overflow-x: auto; }
+      #mfModal .mb-tools .btn { flex: 0 0 auto; border-radius: 18px; font-size: .68rem; }
+      #mfModal .mb-wrap { margin: 0 12px 9px; }
+      #mfModal .mb-canvas { min-height: 58px; padding: 10px; border: 1px solid var(--input-brd); border-radius: 10px; background: rgba(0,0,0,0.2); font-size: 1.18rem; color: #fff; }
+      #mfModal .mb-symbol-search { margin: 0 12px 8px; }
+      #mfModal .mb-symbol-search input { padding: 8px 11px; background: rgba(255,255,255,0.1); border: 1px solid var(--input-brd); border-radius: 18px; color: #fff; }
+      #mfModal .mf-tabs { padding: 0 8px 9px; margin: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      #mfModal .mf-tabs::-webkit-scrollbar { display: none; }
+      #mfModal .mf-tabs .mft { flex: 0 0 auto; min-width: auto; padding: 8px 16px; border-radius: 22px; color: #fff; background: var(--input-bg); border-color: var(--input-brd); font-size: .72rem; }
+      #mfModal .mf-tabs .mft.on { background: linear-gradient(135deg, var(--info), #6366f1); border-color: transparent; color: #fff; }
+      #mfModal .mf-pad { max-height: 34vh; padding: 0; gap: 0; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--input-brd); border-radius: 0; background: transparent; }
+      #mfModal .mfk { min-height: 74px; border: 0; border-left: 1px solid var(--input-brd); border-bottom: 1px solid var(--input-brd); border-radius: 0; background: var(--input-bg); color: #fff; font-size: 1.55rem; }
+      #mfModal .mfk:hover, #mfModal .mfk:active { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+      #mfModal .mfk-n { display: none; }
+      #mfModal .mf-act { margin: 0; padding: 9px 12px calc(9px + env(safe-area-inset-bottom)); background: var(--bg2); }
+      #mfModal .mf-act .btn { border-radius: 18px; }
+    }
+
+#mfModal.modal.box-fullscreen { padding: 0; background: var(--bg1); align-items: stretch; }
+
+#mfModal.box-fullscreen .mf-box { width: 100%; max-width: none; height: 100dvh; max-height: none; padding: 0; border: 0; border-radius: 0; background: var(--bg1); color: #fff; box-shadow: none; }
+
+#mfModal.box-fullscreen .card-header, #mfModal.box-fullscreen .mf-modes,
+    #mfModal.box-fullscreen .mf-help, #mfModal.box-fullscreen .mb-tools,
+    #mfModal.box-fullscreen .mb-quick, #mfModal.box-fullscreen .mb-symbol-search,
+    #mfModal.box-fullscreen #mfTabs, #mfModal.box-fullscreen #mfPad,
+    #mfModal.box-fullscreen .mf-code, #mfModal.box-fullscreen .mf-act { display:none !important; }
+
+#mfModal.box-fullscreen #mfP_box { display:grid !important; grid-template-rows:minmax(0,1fr) auto auto; height:100%; min-height:0; overflow:hidden; }
+
+#mfModal.box-fullscreen .mb-wrap { grid-row: 1; min-height: 0; margin: 0; padding: 20px; display: flex; overflow: hidden; background: var(--bg1); }
+
+#mfModal.box-fullscreen .mb-canvas { width: 100%; flex: 1 1 auto; min-height: 0; border: 1px solid var(--card-brd); border-radius: 20px; background: var(--bg2); color: #fff; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); font-size: calc(1.5rem * var(--mbfs, 1)); align-items: flex-start; justify-content: flex-start; padding: 30px; overflow: auto; overscroll-behavior: contain; direction: ltr; }
+
+#mfModal.box-fullscreen .mb-ph { display:none; }
+
+#mfModal.box-fullscreen .mb-slot.mb-root,
+    #mfModal.box-fullscreen .mb-slot.mb-root.mb-act { background:transparent; box-shadow:none; border:0; }
+
+#mfModal.box-fullscreen .mb-slot:not(.mb-root) { min-width: 28px; min-height: 30px; padding: 3px 6px; background: rgba(255,255,255,0.1); border: 1px dashed var(--input-brd); border-radius: 8px; vertical-align: middle; color: #fff; }
+
+#mfModal.box-fullscreen .mb-slot.mb-filled:not(.mb-act):not(.mb-root) { min-width: 0; min-height: 0; padding: 0 1px; background: transparent; border-color: transparent; box-shadow: none; color: #fff; }
+
+#mfModal.box-fullscreen .mb-slot.mb-filled.mb-act:not(.mb-root) { background: rgba(0, 210, 255, 0.2); border: 1px solid var(--accent); color: #fff; }
+
+#mfModal.box-fullscreen .msup .mb-slot,
+    #mfModal.box-fullscreen .msub .mb-slot,
+    #mfModal.box-fullscreen .mrootidx .mb-slot { min-width: 19px; min-height: 21px; padding: 1px 4px; border-radius: 5px; font-size: .75em; }
+
+#mfModal.box-fullscreen .mb-slot.mb-act:not(.mb-root) { background: rgba(0, 210, 255, 0.2); border: 1px solid var(--accent); box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.3); }
+
+#mfModal.box-fullscreen .mb-chip-scroll { grid-row: 2; width: 100%; min-width: 0; display: grid; grid-template-rows: repeat(2, 54px); grid-auto-flow: column; grid-auto-columns: max-content; align-content: center; gap: 10px 12px; overflow-x: auto; overflow-y: hidden; padding: 16px 20px; background: var(--bg3); border-top: 1px solid var(--card-brd); scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; direction: rtl; }
+
+#mfModal.box-fullscreen .mb-chip-scroll::after { content: ''; width: 8px; display: block; grid-row: 1 / -1; }
+
+#mfModal.box-fullscreen .mb-chip-scroll::-webkit-scrollbar { display: none; }
+
+@media (min-width: 561px) {
+      #mfModal.box-fullscreen .mb-chip-scroll { scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
+      #mfModal.box-fullscreen .mb-chip-scroll::-webkit-scrollbar { display: block; height: 8px; }
+      #mfModal.box-fullscreen .mb-chip-scroll::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+    }
+
+#mfModal.box-fullscreen .mb-chip { flex: 0 0 max-content; min-width: 80px; height: 54px; border: 1px solid var(--input-brd); border-radius: 27px; background: var(--input-bg); color: #fff; font: 600 1rem 'Vazirmatn', Tahoma, sans-serif; padding: 0 20px; white-space: nowrap; direction: rtl; scroll-snap-align: start; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; }
+
+#mfModal.box-fullscreen .mb-chip:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 210, 255, 0.2); }
+
+#mfModal.box-fullscreen .mb-chip:active { transform: scale(0.95); box-shadow: none; }
+
+#mfModal.box-fullscreen .mb-chip-group { background: linear-gradient(135deg, var(--info), #6366f1); border: none; font-weight: bold; color: #fff; }
+
+#mfModal.box-fullscreen .mb-chip-group:hover { background: linear-gradient(135deg, #a855f7, #818cf8); }
+
+#mfModal.box-fullscreen #mfPad.mb-library-open { display: flex !important; justify-content: center; align-items: center; position: fixed; z-index: 12040 !important; inset: 0; max-height: none; padding: 16px; overflow: hidden; background: rgba(0,0,0,.55); }
+/* کتابخانه به‌جای تمام‌صفحه: پنل شناورِ مرکزی */
+#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; align-items: flex-start; gap: 10px; width: min(94vw, 640px); max-width: calc(100vw - 24px); max-height: min(84vh, 720px); max-height: min(84dvh, 720px); overflow-y: auto; overscroll-behavior: contain; padding: 56px 14px 18px; background: var(--bg2); border: 1px solid var(--card-brd); border-radius: 20px; box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-panel > :not(.mfk):not(.mb-library-close) { flex: 1 1 100%; width: 100%; }
+
+#mfModal.box-fullscreen #mfPad.mb-library-open .mfk { flex: 0 0 auto; min-height: 44px; width: auto; max-width: 100%; padding: 7px 13px; border: 1px solid var(--input-brd); border-radius: 22px; background: var(--input-bg); color: #fff; flex-direction: row; gap: 7px; font-size: 1.05rem; }
+
+#mfModal.box-fullscreen #mfPad.mb-library-open .mfk:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+
+#mfModal.box-fullscreen #mfPad.mb-library-open .mfk-p { display: inline-flex; align-items: center; justify-content: center; }
+
+#mfModal.box-fullscreen #mfPad.mb-library-open .mfk-n { display: none !important; }
+
+#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-close { position: sticky; top: 6px; z-index: 3; align-self: flex-start; padding: 8px 14px; border: 0; border-radius: 18px; background: var(--input-bg); border: 1px solid var(--input-brd); color: #fff; font-family: inherit; cursor: pointer; }
+
+.mb-fixed-keypad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; background: var(--panel); padding: 10px; border-radius: 12px; border: 1px solid var(--card-brd); direction: ltr; unicode-bidi: isolate; margin-top: 15px; margin-bottom: 10px; }
+
+.mb-fixed-keypad button { height: 48px; border: 1px solid var(--input-brd); border-radius: 10px; background: var(--input-bg); color: #fff; font: 600 1.25rem 'Vazirmatn', Tahoma, sans-serif; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+
+.mb-fixed-keypad button:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+
+.mb-fixed-keypad button:active { transform: scale(0.95); }
+
+.mb-fixed-keypad .mb-opkey { background: rgba(0, 210, 255, 0.1); color: var(--accent); border-color: rgba(0, 210, 255, 0.3); }
+
+.mb-fixed-keypad .mb-keyboard { background: linear-gradient(135deg, var(--info), #6366f1); color: #fff; border: none; }
+
+.mb-fixed-keypad .mb-clearall { background: rgba(255, 107, 107, 0.15); color: var(--err); border-color: rgba(255, 107, 107, 0.3); font-size: 0.8rem; }
+
+#mfModal.box-fullscreen .mb-fixed-keypad { grid-row: 3; margin: 0; border-radius: 0; border: none; border-top: 1px solid var(--card-brd); padding: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); background: var(--bg2); gap: 6px; }
+
+#mfModal.box-fullscreen .mb-fixed-keypad button { height: 56px; border-radius: 12px; font-size: 1.4rem; }
+
+@media (min-width: 561px) { #mfModal.box-fullscreen .mb-fixed-keypad { max-width: 680px; width: 100%; margin: auto; } }
+
+.mfk { position: relative; }
+
+.mfk-star {
+      position: absolute; top: 3px; right: 3px; z-index: 3;
+      font-size: .85em; line-height: 1; cursor: pointer; color: #d4a017;
+      background: rgba(255,255,255,.8); border-radius: 50%;
+      width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+    }
+
+.mfk-star:hover { transform: scale(1.18); }
+/* <<< v9.60 <<< */
+
+/* >>> v9.61 >>>  MF_BAR_V961
+   نوار ابزار بالای صفحه‌کلید فرمول + مخفی‌سازی FAB هنگام math-open */
+body.math-open #qFab,
+body.math-open #saveFab {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* بخش سوم = نوار ابزار + صفحه‌کلید */
+#mfModal.box-fullscreen #mfP_box {
+  grid-template-rows: minmax(0,1fr) auto auto !important;
+}
+#mfModal.box-fullscreen .mb-key-section {
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--card-brd);
+}
+.mb-top-six {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 8px 4px;
+  background: transparent;
+}
+.mb-top-six-btn {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 6px;
+  border-radius: 12px;
+  border: 1px solid var(--input-brd);
+  background: var(--input-bg);
+  color: #fff;
+  font: 700 0.8rem Vazirmatn, Tahoma, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.mb-top-six-btn:hover {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.15);
+}
+.mb-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.mb-recent-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.mb-recent-use,
+.mb-recent-del {
+  border: 1px solid var(--input-brd);
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+.mb-recent-use {
+  padding: 10px 12px;
+  text-align: right;
+}
+.mb-recent-del {
+  min-width: 72px;
+  padding: 0 12px;
+  background: rgba(255,107,107,.16);
+  border-color: rgba(255,107,107,.35);
+}
+.mb-recent-preview {
+  display: block;
+  font-size: 1rem;
+  overflow-x: auto;
+}
+.mb-recent-name {
+  display: block;
+  margin-top: 6px;
+  font-size: .7rem;
+  color: var(--muted);
+  direction: ltr;
+  text-align: left;
+}
+@media (max-width: 560px) {
+  .mb-top-six {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mb-top-six-btn {
+    min-height: 42px;
+    font-size: .74rem;
+  }
+  .mb-recent-row {
+    grid-template-columns: 1fr;
+  }
+  .mb-recent-del {
+    min-height: 40px;
+  }
+}
+#mfModal.box-fullscreen .mb-fixed-keypad {
+  grid-row: auto;
+  border-top: none;
+  margin: 0;
+  padding-top: 6px;
+}
+
+.mb-key-tools {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 8px 10px 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  direction: rtl;
+}
+.mb-key-tools::-webkit-scrollbar { display: none; }
+.mb-kt {
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--input-brd);
+  background: var(--input-bg);
+  color: #fff;
+  font: 700 0.85rem 'Vazirmatn', Tahoma, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.mb-kt:active { transform: scale(0.96); }
+.mb-kt-apply {
+  background: linear-gradient(135deg, #11998e, var(--ok, #38ef7d));
+  border-color: transparent;
+  color: #fff;
+  min-width: 64px;
+  font-size: 0.9rem;
+}
+.mb-kt-quick {
+  background: rgba(0, 210, 255, 0.12);
+  border-color: rgba(0, 210, 255, 0.35);
+  color: var(--accent, #00d2ff);
+  font-family: 'Times New Roman', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+#mfModal.box-fullscreen .mb-kt { height: 44px; border-radius: 14px; }
+#mfModal.box-fullscreen .mb-br,
+.mb-br {
+  display: block;
+  height: 0.55em;
+  content: '';
+}
+/* <<< v9.61 <<< */
+
+/* MF_BAR strengthen */
+body.role-teacher.tab-createExam.math-open #qFab,
+body.role-teacher.tab-createExam.math-open #saveFab,
+body.math-open #saveFabCancel {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+#mfModal.box-fullscreen .mb-key-tools { display: flex !important; }
+
+/* >>> v9.62 >>>  MF_FIX_V962
+   ۱) منوی بخش۲ روی مودال بیاید (قبلاً z-index:3000 پشت modal:9000 بود)
+   ۲) کتابخانهٔ تمام‌صفحه هم بالاتر از FAB
+   ۳) دکمه‌های نوار بخش۳ هم‌سبک با صفحه‌کلید */
+.mb-var {
+  z-index: 12050 !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-library-open {
+  z-index: 12040 !important;
+  display: flex !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-close {
+  z-index: 12045 !important;
+}
+
+/* بخش۳: نوار ابزار یک‌دست با کلیدها */
+#mfModal.box-fullscreen .mb-key-section {
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg2);
+  border-top: 1px solid var(--card-brd);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+#mfModal.box-fullscreen .mb-fixed-keypad {
+  grid-row: auto !important;
+  border-top: none !important;
+  margin: 0 !important;
+  padding: 6px 8px 8px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+#mfModal.box-fullscreen .mb-key-tools {
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 8px 8px 4px;
+  direction: ltr;
+  overflow: visible;
+}
+#mfModal.box-fullscreen .mb-kt {
+  min-width: 0;
+  width: 100%;
+  height: 48px;
+  padding: 0 4px;
+  border-radius: 12px;
+  border: 1px solid var(--input-brd);
+  background: var(--input-bg);
+  color: #fff;
+  font: 600 0.95rem Vazirmatn, Tahoma, sans-serif;
+  box-shadow: none;
+}
+#mfModal.box-fullscreen .mb-kt-apply {
+  background: linear-gradient(135deg, #11998e, var(--ok, #38ef7d));
+  border-color: transparent;
+  color: #fff;
+  font-weight: 800;
+}
+#mfModal.box-fullscreen .mb-kt-quick {
+  background: rgba(0, 210, 255, 0.1);
+  border-color: rgba(0, 210, 255, 0.3);
+  color: var(--accent, #00d2ff);
+  font-family: "Times New Roman", serif;
+  font-size: 1.15rem;
+}
+#mfModal.box-fullscreen .mb-fixed-keypad button {
+  height: 48px;
+  font-size: 1.25rem;
+  border-radius: 12px;
+}
+/* تراشهٔ بخش۲: لمس مطمئن‌تر */
+#mfModal.box-fullscreen .mb-chip-scroll {
+  touch-action: pan-x;
+}
+#mfModal.box-fullscreen .mb-chip {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* مخفی FAB — تقویت */
+body.math-open #qFab,
+body.math-open #saveFab,
+body.math-open #saveFabCancel,
+body.role-teacher.tab-createExam.math-open #qFab,
+body.role-teacher.tab-createExam.math-open #saveFab {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+/* <<< v9.62 <<< */
+
+/* >>> v9.64 >>>  MF_UX_V964 */
+.q-math-prev {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--card-brd);
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  direction: rtl;
+}
+.q-math-prev:empty { display: none !important; }
+.q-math-prev .mathx {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+  color: var(--text);
+}
+html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
+
+#mfModal.box-fullscreen .mb-kt-enter {
+  font-size: 1.6rem !important;
+  font-weight: 800;
+}
+.mb-kt-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.mb-kt-pow {
+  font-family: "Times New Roman", serif;
+  font-size: 1.15rem;
+}
+.mb-kt-pow sup { font-size: .7em; }
+.mb-kt-rad {
+  font-family: "Times New Roman", serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.mb-kt-frac {
+  width: 22px;
+  height: 28px;
+  position: relative;
+  display: inline-block;
+}
+.mb-kt-frac::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 16px; height: 2px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+.mb-kt-frac i {
+  position: absolute; inset: 0;
+  font-style: normal;
+}
+.mb-kt-frac i::before,
+.mb-kt-frac i::after {
+  content: '▢';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+  color: currentColor;
+}
+.mb-kt-frac i::before { top: 1px; }
+.mb-kt-frac i::after { bottom: 1px; }
+
+.mb-fav-tip {
+  width: 100%;
+  flex: 0 0 100%;
+  order: -1;
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0,210,255,.10);
+  border: 1px solid rgba(0,210,255,.28);
+  color: #fff;
+  font-size: .82rem;
+  line-height: 1.75;
+  text-align: right;
+  direction: rtl;
+}
+.mfk-star { display: none !important; }
+
+.mb-par .mdelim,
+.mathx .mdelim,
+.mathx .msym {
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+.mb-canvas,
+.mb-canvas .mathx,
+.mathx {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}
+/* <<< v9.64 <<< */
+
+/* MF_SMART_V989 — همهٔ ۱۰ پیشنهاد داخل یک دکمهٔ بخش دوم */
+#mfModal.box-fullscreen #mfPad.mb-smart-hub {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 12040 !important;
+  background: rgba(0,0,0,.55) !important;
+  overflow: hidden !important;
+  padding: 16px !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-library-panel {
+  display: block !important;
+  width: min(94vw, 760px) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: min(84vh, 720px) !important;
+  max-height: min(84dvh, 720px) !important;
+  overflow-y: auto !important;
+  padding: 0 !important;
+  background: var(--bg2) !important;
+  border: 1px solid var(--card-brd) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.45) !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell { min-height: 0; padding: 16px 12px 18px; }
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell {
+  min-height: 100%;
+  padding: 64px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-head,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-section,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview-box {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 12px;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-head {
+  background: linear-gradient(135deg, rgba(0,210,255,.14), rgba(58,123,213,.14));
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-head-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-title {
+  font-size: .9rem;
+  font-weight: 800;
+  color: #fff;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-sub {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .74rem;
+  line-height: 1.9;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-close,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-ghost,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-chip,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-tab,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-pack,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-bracket,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-key,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-recent {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--input-brd);
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: #fff;
+  font-family: inherit;
+  font-size: .78rem;
+  cursor: pointer;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-close {
+  min-width: 82px;
+  font-weight: 800;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-ghost.active,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-tab.active,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-chip.active,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-pack.active,
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-bracket.active {
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  border-color: transparent;
+  font-weight: 800;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-label {
+  font-size: .72rem;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-scroll::-webkit-scrollbar { display: none; }
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-convert {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-convert input {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--input-brd);
+  background: rgba(0,0,0,.18);
+  color: #fff;
+  font-family: inherit;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-convert button {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 0;
+  background: linear-gradient(135deg, #11998e, var(--ok));
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-bracket {
+  min-width: 44px;
+  text-align: center;
+  direction: ltr;
+  font-size: 1rem;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview {
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.20);
+  color: #fff;
+  overflow: auto;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview.render { font-size: 1.18rem; }
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview.raw {
+  direction: ltr;
+  text-align: left;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: .78rem;
+  line-height: 1.9;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview .mathx {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-empty {
+  color: var(--muted);
+  font-size: .78rem;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-bigkeys {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-key {
+  min-height: 56px;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-key.special {
+  background: rgba(0,210,255,.12);
+  border-color: rgba(0,210,255,.26);
+  color: var(--accent);
+}
+#mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-key.apply {
+  background: linear-gradient(135deg, #11998e, var(--ok));
+  border-color: transparent;
+  color: #fff;
+}
+@media (max-width: 560px) {
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-shell {
+    padding: 62px 8px 14px;
+  }
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-head,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-section,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-preview-box {
+    padding: 10px;
+    border-radius: 14px;
+  }
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-close,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-ghost,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-chip,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-tab,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-pack,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-bracket,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-key,
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-recent {
+    min-height: 38px;
+    font-size: .74rem;
+    padding: 8px 10px;
+  }
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-convert input {
+    flex-basis: 100%;
+  }
+  #mfModal.box-fullscreen #mfPad.mb-smart-hub .mb-smart-bigkeys {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* >>> v9.65 >>>  MF_FIX_V965 */
+/* فرمول داخل فیلد سوال — نه کادر جدا */
+.q-math-prev { display: none !important; }
+.form-group.q-math-field,
+.q-math-field {
+  position: relative;
+}
+.q-math-field textarea.q-math-hide-text {
+  color: inherit !important;
+  caret-color: var(--accent, #00d2ff);
+  -webkit-text-fill-color: currentColor !important;
+}
+.q-math-field textarea.q-math-hide-text::selection {
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  background: rgba(0,210,255,.20);
+}
+.q-math-view {
+  display: none;
+  margin-top: 8px;
+  min-height: 0;
+  max-height: calc(1.9em * 5 + 26px);
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px dashed var(--input-brd);
+  border-radius: 10px;
+  pointer-events: auto;
+  z-index: 1;
+  line-height: 1.9;
+  font-size: 1rem;
+  color: var(--text);
+  direction: rtl;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+  background: rgba(255,255,255,.03);
+}
+.q-math-view.show {
+  display: block;
+}
+.q-math-view .q-math-scroll {
+  display: inline-block;
+  min-width: max-content;
+  width: max-content;
+  max-width: none;
+}
+.q-math-view.show:empty {
+  display: none;
+}
+.q-math-view .mathx {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+  color: var(--text);
+  max-width: none;
+}
+.q-math-field > textarea {
+  position: relative;
+  z-index: 1;
+}
+
+/* رادیکال نوار ابزار شبیه کتابخانه */
+.mb-kt-rad {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+.mb-kt-surd {
+  display: block;
+  width: 22px;
+  height: 28px;
+  overflow: visible;
+}
+.mb-kt-surd path {
+  fill: none;
+  stroke: currentColor;
+}
+
+/* کتابخانه حروف/علاقه‌مندی روی fullscreen */
+#mfModal.box-fullscreen #mfPad.mb-library-open {
+  display: flex !important;
+  z-index: 12040 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-library-open .mfk {
+  pointer-events: auto !important;
+}
+#mfModal.box-fullscreen #mfPad.mb-library-open .mb-library-close {
+  z-index: 12050 !important;
+}
+
+/* پرانتز کشیده */
+.mb-par > .mdelim,
+.mathx .mdelim {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  unicode-bidi: isolate;
+  direction: ltr;
+  min-width: .45em;
+  padding: 0 .03em;
+}
+.mdelim-glyph {
+  display: inline-block;
+  line-height: .82;
+  font-size: 1.35em;
+  font-weight: 300;
+  font-family: 'Cambria Math','STIX Two Math','Times New Roman',serif;
+  transform: scaleY(var(--mds,1));
+  transform-origin: center center;
+}
+.mb-canvas, .mb-canvas .mathx {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+}
+/* <<< v9.65 <<< */
+
+/* M_DELIM2_V976 — دلیمتر SVG نازک و کش‌پذیر */
+.mb-delim-svg { display: block; }
+.mb-delim-svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+
+/* MF_TOPROW_V993 — یکدست‌سازی نهایی ردیف ۶ دکمه‌ای فرمول */
+.mb-top-six {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  padding: 8px 8px 4px !important;
+  background: transparent !important;
+}
+.mb-top-six-btn,
+.mb-top-six-input-btn {
+  min-width: 0 !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  padding: 0 6px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--input-brd) !important;
+  background: var(--input-bg) !important;
+  color: #fff !important;
+  font: 600 0.95rem Vazirmatn, Tahoma, sans-serif !important;
+  cursor: pointer !important;
+  touch-action: manipulation !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+.mb-top-six-btn:hover,
+.mb-top-six-input-btn:hover {
+  border-color: var(--accent) !important;
+  background: rgba(255,255,255,0.15) !important;
+}
+.mb-top-six-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 84px;
+  gap: 6px;
+  padding: 0 8px 6px;
+}
+.mb-top-six-input input {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--input-brd);
+  background: var(--input-bg);
+  color: #fff;
+  font: 600 0.92rem Vazirmatn, Tahoma, sans-serif;
+}
+.mb-top-six-input-btn.ghost {
+  background: rgba(255,255,255,.08) !important;
+}
+@media (max-width: 560px) {
+  .mb-top-six {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+  .mb-top-six-btn,
+  .mb-top-six-input-btn {
+    min-height: 46px !important;
+    font-size: .74rem !important;
+    padding: 0 2px !important;
+  }
+  .mb-top-six-input {
+    grid-template-columns: minmax(0, 1fr) 82px 74px;
+  }
+  .mb-top-six-input input {
+    min-height: 46px;
+    font-size: .8rem;
+    padding: 0 10px;
+  }
+}
+
+
+
+
+/* v1094: ورودی ساده و قابل‌اعتماد OTP برای Android WebView */
+#otpDigits .otp-digit{position:static!important;display:block!important;width:42px!important;height:50px!important;flex:0 0 42px!important;padding:0!important;z-index:auto!important;font-size:1.5rem!important;line-height:1!important;text-align:center!important;color:var(--text,#fff)!important;-webkit-text-fill-color:var(--text,#fff)!important;caret-color:var(--accent)!important;-webkit-text-security:none!important;text-security:none!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;background-image:none!important;-webkit-appearance:none!important;appearance:none!important}
+#otpDigits .otp-visible{display:none!important}
+#otpDigits .otp-digit-wrap{display:contents!important}
+#otpDigits .otp-digit::-webkit-inner-spin-button,#otpDigits .otp-digit::-webkit-outer-spin-button,#otpDigits .otp-digit::-webkit-clear-button{display:none!important;-webkit-appearance:none!important}
+@media(max-width:420px){#otpDigits .otp-digit{width:36px!important;height:45px!important;flex-basis:36px!important;font-size:1.25rem!important}}
+
+/* v1096: تصویر آزاد روی پیش‌نمایش و برگه */
+.qfree-stage{position:relative;min-height:180px;padding:8px;overflow:hidden;border:1px dashed var(--input-brd);border-radius:10px;text-align:inherit}
+.qfree-text{position:relative;z-index:1;white-space:normal;line-height:1.9}
+.qfree-img{position:absolute;z-index:3;display:block;transform:translate(-50%,-50%);width:auto;height:auto;max-height:90%;object-fit:contain;cursor:move;touch-action:none;user-select:none;-webkit-user-drag:none;border:2px solid transparent;border-radius:6px}
+.qfree-img.dragging{z-index:8}
+.qfree-img:hover,.qfree-img.dragging{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,210,255,.2)}
+.qpv-paper .qfree-stage{min-height:230px;background:#fff;color:#000}
+@media print{.qfree-stage{border:0;min-height:180px}.qfree-img{border:0;box-shadow:none}}
+
+/* v1100: فرم متن سوال و کنترل‌های پیش‌نمایش */
+#questionsContainer textarea[id^="qTxt_"]{min-height:9.5em;max-height:9.5em;overflow-y:auto;resize:vertical;line-height:1.9}
+.qpv-tools{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:8px}
+.qpv-align-tools,.qpv-lines-tools{border:1px solid var(--card-brd);border-radius:10px;padding:6px;background:var(--panel)}
+.qpv-tools .btn{min-width:42px;white-space:nowrap}
+.qpv-tools .btn-primary{box-shadow:0 0 0 2px rgba(0,210,255,.2)}
+
+/* v1106: بوم ثابت برای تصویرهای آزاد و پیش‌نمایش واقعی A4 */
+.qpv-paper{width:210mm;min-height:297mm;box-sizing:border-box;margin:0 auto;padding:10mm;overflow:hidden}
+.qpv-paper .qfree-stage{height:185mm;min-height:185mm;box-sizing:border-box;overflow:hidden}
+.qfree-stage .qfree-img{pointer-events:auto}
+@media(max-width:760px){.qpv-paper{width:100%;min-height:0;padding:10px}.qpv-paper .qfree-stage{height:560px;min-height:560px}}
+@media print{.qpv-paper{width:210mm;min-height:297mm;padding:10mm;border:0;border-radius:0}.qpv-paper .qfree-stage{height:185mm;min-height:185mm}}
+
+
+
+.mb-canvas {
+  width: 100% !important; height: 100% !important; min-height: 120px !important; margin: 0 !important;
+  border-radius: 16px !important; background: #1e1e38 !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important; font-size: calc(1.5rem * var(--mbfs, 1)) !important;
+  display: flex !important; align-items: center !important; justify-content: flex-start !important;
+  padding: 16px 20px !important; overflow-x: auto !important; overflow-y: hidden !important;
+  direction: ltr !important; text-align: left !important; white-space: nowrap !important; outline: none !important;
 }
 .mb-canvas:focus-within {
-  border-color: #10B981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+  border-color: #10B981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3) !important;
 }
-.mb-slot {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 1.15em; min-height: 1.35em; padding: 1px 5px; margin: 0 3px;
-  border: 1.6px dashed rgba(255, 255, 255, 0.45); border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08); color: #ffffff;
-  cursor: pointer; transition: all 0.15s ease; vertical-align: middle;
+.mb-ph {
+  border: 1.6px dashed rgba(255, 255, 255, 0.45) !important;
+  border-radius: 4px !important; background: rgba(255, 255, 255, 0.08) !important;
 }
-.mb-slot.active {
-  border: 2px solid #10B981 !important;
-  background: rgba(16, 185, 129, 0.28) !important;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+.mb-slot.mb-act > .mb-ph {
+  border-color: #10B981 !important;
+  background: rgba(16, 185, 129, 0.25) !important;
 }
-.mb-cursor {
-  display: inline-block; width: 2px; height: 1.15em;
-  background: #10B981; animation: mbBlink 1s infinite;
-  vertical-align: middle; margin: 0 1px;
+.mb-slot.mb-act {
+  background: rgba(16, 185, 129, 0.2) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 0 0 1.5px #10B981 !important;
 }
-@keyframes mbBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.math-frac {
-  display: inline-flex; flex-direction: column; vertical-align: middle;
-  margin: 0 4px; align-items: center; text-align: center; font-size: 0.9em;
-}
-.math-num, .math-den {
-  padding: 1px 4px; display: inline-flex; justify-content: center; align-items: center; min-height: 1.1em;
-}
-.math-frac-line {
-  width: 100%; height: 2px; background: #ffffff; margin: 2px 0; border-radius: 1px;
-}
-.math-sqrt {
-  display: inline-flex; align-items: center; vertical-align: middle; margin: 0 3px;
-}
-.math-radical {
-  font-size: 1.35em; line-height: 1; margin-right: 1px;
-}
-.math-sqrt-body {
-  border-top: 2px solid #ffffff; padding: 2px 4px 1px 4px; display: inline-flex; align-items: center; min-height: 1.1em;
-}
-.math-sup {
-  font-size: 0.72em; vertical-align: super; margin-left: 1px; display: inline-flex;
-}
-.math-sub {
-  font-size: 0.72em; vertical-align: sub; margin-left: 1px; display: inline-flex;
-}
-.math-sym {
-  display: inline-block; margin: 0 2px;
+.mb-cur {
+  background: #10B981 !important;
 }
 </style>
 </head>
 <body>
-<div class="mb-wrap">
-  <div class="mb-canvas" id="canvas" tabindex="0" onclick="handleCanvasClick(event)"></div>
+<div class="mb-wrap" onclick="mbClick(event)">
+  <div id="mbCanvas" class="mb-canvas"></div>
+  <input id="mbKey" class="mb-key" inputmode="text" enterkeyhint="done"
+         autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+         oninput="mbKeyInput(event)" onkeydown="mbKeyDown(event)" onpaste="mbKeyPaste(event)">
 </div>
 <script>
-var canvas = document.getElementById("canvas");
-var currentTex = "";
-var activeIdx = 0;
-var slots = [];
+function el(id) { return document.getElementById(id); }
+function notify(msg, type) { console.log("[Canvas Notify]", type, msg); }
 
-function renderFormula(t) {
-  currentTex = t || "";
-  canvas.innerHTML = "";
-  slots = [];
-  
-  if (!t || !t.trim()) {
-    var s = mkSlot(0, "");
-    canvas.appendChild(s);
-    slots = [s];
-    setAct(0);
-    return;
-  }
-  
-  canvas.innerHTML = toHtml(t);
-  slots = Array.from(canvas.querySelectorAll(".mb-slot"));
-  slots.forEach(function(el, i) {
-    el.onclick = function(e) {
-      e.stopPropagation();
-      setAct(i);
-    };
-  });
-  
-  if (slots.length > 0) {
-    setAct(Math.min(activeIdx, slots.length - 1));
-  }
-}
-
-function mkSlot(i, c) {
-  var s = document.createElement("span");
-  s.className = "mb-slot";
-  s.innerHTML = c || "";
-  s.onclick = function(e) {
-    e.stopPropagation();
-    setAct(i);
+const MB_SYM_TEX = {
+    '×': '\\times ', '÷': '\\div ', '±': '\\pm ', '≠': '\\ne ', '≤': '\\le ', '≥': '\\ge ',
+    '≈': '\\approx ', '°': '\\degree ', '∞': '\\infty ', '→': '\\to ', '⇒': '\\Rightarrow ',
+    '⇔': '\\Leftrightarrow ', '∈': '\\in ', '∉': '\\notin ', '⊂': '\\subset ', '⊆': '\\subseteq ',
+    /* M_DIRSYM_V973 — نمادهای جهت‌دار با فرمان TeX یکتا (فلش چپ واقعاً چپ بماند) */
+    '←': '\\leftarrow ', '↑': '\\uparrow ', '↓': '\\downarrow ', '↔': '\\leftrightarrow ',
+    '↕': '\\updownarrow ', '⇐': '\\Leftarrow ', '↦': '\\mapsto ', '↤': '\\mapsfrom ',
+    '⇌': '\\rightleftharpoons ', '↩': '\\hookleftarrow ', '↪': '\\hookrightarrow ',
+    '⟨': '\\langle ', '⟩': '\\rangle ',
+    '∪': '\\cup ', '∩': '\\cap ', '∅': '\\emptyset ', '∀': '\\forall ', '∃': '\\exists ',
+    '∠': '\\angle ', '⊥': '\\perp ', '∥': '\\parallel ', '≡': '\\equiv ', '…': '\\ldots ',
+    '∴': '\\therefore ', '·': '\\cdot ', 'α': '\\alpha ', 'β': '\\beta ', 'γ': '\\gamma ',
+    'δ': '\\delta ', 'ε': '\\epsilon ', 'θ': '\\theta ', 'λ': '\\lambda ', 'μ': '\\mu ',
+    'π': '\\pi ', 'ρ': '\\rho ', 'σ': '\\sigma ', 'τ': '\\tau ', 'φ': '\\phi ', 'ω': '\\omega ',
+    'Δ': '\\Delta ', 'Σ': '\\Sigma ', 'Ω': '\\Omega ', 'Π': '\\Pi ', '∂': '\\partial ', '∇': '\\nabla ',
+    '∖': '\\setminus ', '∧': '\\wedge ', '∨': '\\vee ', '∋': '\\ni ', '⊇': '\\supseteq ',
+    '⊊': '\\subsetneq ', '⊈': '\\nsubseteq ', '⊄': '\\not\\subset ', '⊃': '\\supset ',
+    '−': '-', '≃': '\\simeq ', '≒': '\\fallingdotseq ', '%': '\\%'
   };
-  return s;
-}
+const MB_OP_TEX = { '∑': 'sum', '∏': 'prod', '∫': 'int', '∬': 'iint', '∮': 'oint', '⋃': 'bigcup', '⋂': 'bigcap', 'lim': 'lim', 'max': 'max', 'min': 'min' };
+function MathParser(s) { this.s = String(s || ''); this.i = 0; }
 
-function setAct(i) {
-  if (i < 0 || i >= slots.length) return;
-  slots.forEach(function(s, idx) {
-    if (idx === i) {
-      s.classList.add("active");
-      if (!s.querySelector(".mb-cursor")) {
-        var c = document.createElement("span");
-        c.className = "mb-cursor";
-        s.appendChild(c);
+  MathParser.prototype.eof = function () { return this.i >= this.s.length; };
+  MathParser.prototype.peek = function () { return this.s[this.i]; };
+  MathParser.prototype.skipWs = function () {
+    while (!this.eof() && this.s[this.i] === ' ') this.i++;
+  };
+  MathParser.prototype.readCmd = function () {
+    let r = '';
+    while (!this.eof() && /[a-zA-Z]/.test(this.s[this.i])) r += this.s[this.i++];
+    return r;
+  };
+  MathParser.prototype.readDelimToken = function () {
+    this.skipWs();
+    if (this.eof()) return '';
+    let d = this.s[this.i++] || '';
+    if (d === '\\') {
+      const p = this.peek();
+      if (p && /[{}|.\[\]()]/.test(p)) d = this.s[this.i++] || '';
+      else {
+        const c = this.readCmd();
+        d = ({ lbrace: '{', rbrace: '}', lfloor: '⌊', rfloor: '⌋', lceil: '⌈', rceil: '⌉', lvert: '|', rvert: '|', langle: '⟨', rangle: '⟩' })[c] || d;
       }
-    } else {
-      s.classList.remove("active");
-      var c = s.querySelector(".mb-cursor");
-      if (c) c.remove();
     }
-  });
-  activeIdx = i;
-}
-
-function toHtml(t) {
-  var s = String(t || "");
-  var cnt = 0;
-  
-  function sl(c) {
-    return "<span class=\"mb-slot\" data-idx=\"" + (cnt++) + "\">" + (c || "") + "</span>";
-  }
-  
-  s = s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, function(_, n, d) {
-    return "<span class=\"math-frac\"><span class=\"math-num\">" + (n.trim() ? toHtml(n) : sl("")) + "</span><span class=\"math-frac-line\"></span><span class=\"math-den\">" + (d.trim() ? toHtml(d) : sl("")) + "</span></span>";
-  });
-  
-  s = s.replace(/\\sqrt(?:\[([^{}]*)\])?\{([^{}]*)\}/g, function(_, g, b) {
-    return "<span class=\"math-sqrt\">" + (g ? "<span class=\"math-sup\">" + g + "</span>" : "") + "<span class=\"math-radical\">√</span><span class=\"math-sqrt-body\">" + (b.trim() ? toHtml(b) : sl("")) + "</span></span>";
-  });
-  
-  s = s.replace(/\^\{([^{}]*)\}|\^([a-zA-Z0-9])/g, function(_, a, b) {
-    return "<span class=\"math-sup\">" + (a || b ? toHtml(a || b) : sl("")) + "</span>";
-  });
-  
-  s = s.replace(/_\{([^{}]*)\}|_([a-zA-Z0-9])/g, function(_, a, b) {
-    return "<span class=\"math-sub\">" + (a || b ? toHtml(a || b) : sl("")) + "</span>";
-  });
-  
-  s = s.replace(/\\square|\\placeholder|□/g, function() {
-    return sl("");
-  });
-  
-  var syms = {
-    "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ", "\\theta": "θ",
-    "\\pi": "π", "\\sigma": "σ", "\\lambda": "λ", "\\omega": "ω", "\\infty": "∞",
-    "\\pm": "±", "\\times": "×", "\\div": "÷", "\\neq": "≠", "\\leq": "≤", "\\geq": "≥",
-    "\\approx": "≈", "\\in": "∈", "\\notin": "∉", "\\subset": "⊂", "\\subseteq": "⊆",
-    "\\cup": "∪", "\\cap": "∩", "\\int": "∫", "\\sum": "∑", "\\prod": "∏", "\\partial": "∂",
-    "\\nabla": "∇", "\\to": "→", "\\leftarrow": "←", "\\rightarrow": "→", "\\leftrightarrow": "↔",
-    "\\cdot": "·", "\\circ": "∘", "\\forall": "∀", "\\exists": "∃", "\\land": "∧", "\\lor": "∨"
+    return d === '.' ? '' : d;
   };
+  MathParser.prototype.delimKind = function (o, c) {
+    const a = String(o || ''), b = String(c || '');
+    if (a === '⌊' || b === '⌋') return 'floor';
+    if (a === '⌈' || b === '⌉') return 'ceil';
+    if (a === '{' || b === '}') return 'brace';
+    if (a === '[' || b === ']') return 'bracket';
+    if (a === '|' || b === '|') return 'abs';
+    return 'paren';
+  };
+  MathParser.prototype.makeDelimWrap = function (o, c, inner) {
+    const kind = this.delimKind(o, c);
+    if (kind === 'floor' || kind === 'ceil') {
+      return '<span class="mbrk-box mbrk-' + kind + '"><span class="mbrk mbrk-l"></span><span class="mpar-body">' + (inner || '') + '</span><span class="mbrk mbrk-r"></span></span>';
+    }
+    return '<span class="mparbox" data-kind="' + mEsc(kind) + '"><span class="mdelim" data-delim="' + mEsc(o) + '"><span class="mdelim-glyph">' + mEsc(o) + '</span></span><span class="mpar-body">' + (inner || '') + '</span><span class="mdelim" data-delim="' + mEsc(c) + '"><span class="mdelim-glyph">' + mEsc(c) + '</span></span></span>';
+  };
+  MathParser.prototype.readUntilCloseCmd = function (closeCmd) {
+    let out = '', pending = '';
+    const flush = () => { out += pending; pending = ''; };
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (ch === '^' || ch === '_') {
+        this.i++;
+        const unit = this.readUnit();
+        const tag = ch === '^' ? 'sup' : 'sub';
+        if (pending && pending.indexOf('data-big=\"1\"') >= 0) pending = this.attachLimit(pending, unit, ch === '^');
+        else pending = (pending || '') + '<' + tag + ' class=\"m' + tag + '\">' + unit + '</' + tag + '>';
+        continue;
+      }
+      flush();
+      if (ch !== '\\') {
+        if (ch === '{') { this.i++; const inner = this.parseSeq('}'); if (this.peek() === '}') this.i++; pending = '<span class=\"mgrp\">' + inner + '</span>'; continue; }
+        if (ch === '}') break;
+        this.i++;
+        pending = (ch !== ' ' && ch !== '~') ? this.atomText(ch) : ' ';
+        continue;
+      }
+      this.i++;
+      if (!this.eof() && /[{}\\$%&#_,;:! ]/.test(this.peek())) {
+        const c2 = this.s[this.i++];
+        if (c2 === ',') pending = '<span class="mspace1"></span>';
+        else if (c2 === ';') pending = '<span class="mspace15"></span>';
+        else if (c2 === ':') pending = '<span class="mspace1"></span>';
+        else if (c2 === '!') pending = '';
+        else pending = (c2 === '\\') ? '<br>' : mEsc(c2);
+        continue;
+      }
+      const cmd = this.readCmd();
+      if (cmd === closeCmd) { flush(); return { html: out, closed: true }; }
+      if (cmd === 'left') {
+        const o = this.readDelimToken();
+        const pair = this.readLeftRight();
+        pending = this.makeDelimWrap(o, pair.close, pair.html);
+        continue;
+      }
+      pending = this.doCmd(cmd);
+    }
+    flush();
+    return { html: out, closed: false };
+  };
+  MathParser.prototype.readLeftRight = function () {
+    let out = '', pending = '';
+    const flush = () => { out += pending; pending = ''; };
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (ch === '^' || ch === '_') {
+        this.i++;
+        const unit = this.readUnit();
+        const tag = ch === '^' ? 'sup' : 'sub';
+        if (pending && pending.indexOf('data-big="1"') >= 0) pending = this.attachLimit(pending, unit, ch === '^');
+        else pending = (pending || '') + '<' + tag + ' class="m' + tag + '">' + unit + '</' + tag + '>';
+        continue;
+      }
+      flush();
+      if (ch !== '\\') {
+        if (ch === '{') { this.i++; const inner = this.parseSeq('}'); if (this.peek() === '}') this.i++; pending = '<span class="mgrp">' + inner + '</span>'; continue; }
+        if (ch === '}') break;
+        this.i++;
+        pending = (ch !== ' ' && ch !== '~') ? this.atomText(ch) : ' ';
+        continue;
+      }
+      this.i++;
+      if (!this.eof() && /[{}\\$%&#_,;:! ]/.test(this.peek())) {
+        const c2 = this.s[this.i++];
+        if (c2 === ',') pending = '<span class="mspace1"></span>';
+        else if (c2 === ';') pending = '<span class="mspace15"></span>';
+        else if (c2 === ':') pending = '<span class="mspace1"></span>';
+        else if (c2 === '!') pending = '';
+        else pending = (c2 === '\\') ? '<br>' : mEsc(c2);
+        continue;
+      }
+      const cmd = this.readCmd();
+      if (cmd === 'right') {
+        flush();
+        return { html: out, close: this.readDelimToken() };
+      }
+      if (cmd === 'left') {
+        const o = this.readDelimToken();
+        const pair = this.readLeftRight();
+        pending = this.makeDelimWrap(o, pair.close, pair.html);
+        continue;
+      }
+      pending = this.doCmd(cmd);
+    }
+    flush();
+    return { html: out, close: '' };
+  };
+  MathParser.prototype.atomText = function (c) {
+    return /[a-zA-Z]/.test(c) ? '<i class="mvar">' + mEsc(c) + '</i>' : mEsc(c);
+  };
+  MathParser.prototype.readUnit = function () {
+    this.skipWs();
+    if (this.eof()) return '';
+    if (this.peek() === '{') { this.i++; const inner = this.parseSeq('}'); if (this.peek() === '}') this.i++; return inner; }
+    if (this.peek() === '\\') {
+      this.i++;
+      if (!this.eof() && /[{}\\$%&#_,;:! ]/.test(this.peek())) {
+        const c2 = this.s[this.i++];
+        if (c2 === ',') return '<span class="mspace1"></span>';
+        if (c2 === ';') return '<span class="mspace15"></span>';
+        if (c2 === ':') return '<span class="mspace1"></span>';
+        if (c2 === '!') return '';
+        return (c2 === '\\') ? '<br>' : mEsc(c2);
+      }
+      return this.doCmd(this.readCmd());
+    }
+    const c = this.s[this.i++];
+    return this.atomText(c);
+  };
+  MathParser.prototype.parseSeq = function (stop) {
+    let out = '', pending = '';
+    const flush = () => { out += pending; pending = ''; };
+    while (!this.eof()) {
+      const ch = this.peek();
+      if (stop && ch === stop) break;
+      if (ch === '^' || ch === '_') {
+        this.i++;
+        const unit = this.readUnit();
+        const tag = ch === '^' ? 'sup' : 'sub';
+        if (pending && pending.indexOf('data-big="1"') >= 0) pending = this.attachLimit(pending, unit, ch === '^');
+        else pending = (pending || '') + '<' + tag + ' class="m' + tag + '">' + unit + '</' + tag + '>';
+        continue;
+      }
+      flush();
+      if (ch !== '\\') {
+        if (ch === '{') { this.i++; const inner = this.parseSeq('}'); if (this.peek() === '}') this.i++; pending = '<span class="mgrp">' + inner + '</span>'; continue; }
+        if (ch === '}') break;
+        this.i++;
+        pending = (ch !== ' ' && ch !== '~') ? this.atomText(ch) : ' ';
+      } else {
+        this.i++;
+        if (!this.eof() && /[{}\\\\$%&#_,;:! ]/.test(this.peek())) {
+          const c2 = this.s[this.i++];
+          if (c2 === ',') pending = '<span class="mspace1"></span>';
+          else if (c2 === ';') pending = '<span class="mspace15"></span>';
+          else if (c2 === ':') pending = '<span class="mspace1"></span>';
+          else if (c2 === '!') pending = '';
+          else pending = (c2 === '\\') ? '<br>' : mEsc(c2);
+        } else {
+          pending = this.doCmd(this.readCmd());
+        }
+      }
+    }
+    flush();
+    return out;
+  };
+  MathParser.prototype.attachLimit = function (str, arg, isSup) {
+    const re = new RegExp('(<span class="' + (isSup ? 'mover' : 'munder') + '">)(.*?)(</span>)');
+    return re.test(str) ? str.replace(re, '$1' + arg + '$3') : str;
+  };
+  MathParser.prototype.doCmd = function (cmd) {
+    if (cmd === 'begin') {
+      this.skipWs();
+      let env = 'matrix';
+      if (this.peek() === '{') {
+        this.i++;
+        let e = '';
+        while (!this.eof() && this.peek() !== '}') e += this.s[this.i++];
+        if (this.peek() === '}') this.i++;
+        env = e.trim() || 'matrix';
+      }
+      this.skipWs();
+      if (env === 'array' && this.peek() === '{') {
+        this.i++;
+        while (!this.eof() && this.peek() !== '}') this.i++;
+        if (this.peek() === '}') this.i++;
+        this.skipWs();
+      }
+      const rows = []; let row = [], cell = '';
+      while (!this.eof()) {
+        this.skipWs();
+        if (this.s.startsWith('\\end', this.i)) {
+          this.i += 4; this.skipWs();
+          if (this.peek() === '{') { this.i++; while (!this.eof() && this.peek() !== '}') this.i++; if (this.peek() === '}') this.i++; }
+          if (cell.length || row.length) { row.push(cell); rows.push(row); }
+          break;
+        }
+        if (this.peek() === '&') { this.i++; row.push(cell); cell = ''; continue; }
+        if (this.peek() === '\\') {
+          this.i++;
+          if (this.peek() === '\\') { this.i++; this.skipWs(); row.push(cell); cell = ''; rows.push(row); row = []; continue; }
+          cell += '\\'; continue;
+        }
+        cell += this.s[this.i++];
+      }
+      let cols = 0; rows.forEach(r => { cols = Math.max(cols, r.length); });
+      const DEL = { pmatrix: ['(', ')'], bmatrix: ['[', ']'], Bmatrix: ['{', '}'], vmatrix: ['|', '|'], Vmatrix: ['‖', '‖'], smallmatrix: ['(', ')'], cases: ['{', ''], matrix: ['', ''], array: ['', ''], aligned: ['', ''], alignedat: ['', ''], gathered: ['', ''], split: ['', ''] };
+      const d = DEL[env] || ['[', ']'];
+      const L = d[0] ? '<span class="mmatrix-g">' + d[0] + '</span>' : '';
+      const R = d[1] ? '<span class="mmatrix-g">' + d[1] + '</span>' : '';
+      if (!rows.length || !cols) return '<span class="mmatrix">' + L + '<span class="mmatrix-empty"></span>' + R + '</span>';
+      let h = '<span class="mmatrix">' + L + '<table>';
+      rows.forEach(r => {
+        h += '<tr>';
+        for (let c = 0; c < cols; c++) h += '<td>' + new MathParser(r[c] || '').parseSeq(null) + '</td>';
+        h += '</tr>';
+      });
+      return h + '</table>' + R + '</span>';
+    }
+    if (cmd === 'frac' || cmd === 'dfrac' || cmd === 'tfrac')
+      return '<span class="mfrac"><span class="mnum">' + this.readUnit() + '</span><span class="mden">' + this.readUnit() + '</span></span>';
+    if (cmd === 'sfrac' || cmd === 'nicefrac')
+      return '<span class="msfrac">' + this.readUnit() + '<span class="mslash">/</span>' + this.readUnit() + '</span>';
+    if (cmd === 'sqrt') {
+      this.skipWs();
+      let idx = '';
+      if (this.peek() === '[') { this.i++; idx = this.parseSeq(']'); if (this.peek() === ']') this.i++; }
+      const body = this.readUnit() || '<span class="mrad-empty">​</span>';
+      return '<span class="msqrt">' + (idx ? '<span class="mrootidx">' + idx + '</span>' : '') +
+        '<span class="msurd">' + SURD_HTML + '</span><span class="mrad">' + body + '</span></span>';
+    }
+    if (cmd === 'root') {
+      const idx = this.readUnit();
+      this.skipWs();
+      if (this.peek() === '\\') {
+        const save = this.i; this.i++;
+        if (this.readCmd() === 'of') this.skipWs(); else this.i = save;
+      }
+      const body = this.readUnit();
+      return '<span class="msqrt"><span class="mrootidx">' + idx + '</span>' +
+        '<span class="msurd">' + SURD_HTML + '</span><span class="mrad">' + body + '</span></span>';
+    }
+    if (cmd === 'left') {
+      const o = this.readDelimToken();
+      const pair = this.readLeftRight();
+      return this.makeDelimWrap(o, pair.close, pair.html);
+    }
+    if (cmd === 'right') {
+      this.readDelimToken();
+      return '';
+    }
+    if (cmd === 'lfloor') {
+      const pair = this.readUntilCloseCmd('rfloor');
+      return pair.closed ? this.makeDelimWrap('⌊', '⌋', pair.html) : '<span class="msym">⌊</span>';
+    }
+    if (cmd === 'lceil') {
+      const pair = this.readUntilCloseCmd('rceil');
+      return pair.closed ? this.makeDelimWrap('⌈', '⌉', pair.html) : '<span class="msym">⌈</span>';
+    }
+    if (cmd === 'lbrace') {
+      const pair = this.readUntilCloseCmd('rbrace');
+      return pair.closed ? this.makeDelimWrap('{', '}', pair.html) : '<span class="msym">{</span>';
+    }
+    if (cmd === 'overline' || cmd === 'bar') return '<span class="mover-line">' + this.readUnit() + '</span>';
+    if (cmd === 'underline') return '<span class="munder-line">' + this.readUnit() + '</span>';
+    if (cmd === 'vec') return '<span class="mvec">' + this.readUnit() + '</span>';
+    if (cmd === 'hat' || cmd === 'widehat') return '<span class="mhat">' + this.readUnit() + '</span>';
+    if (cmd === 'tilde' || cmd === 'widetilde') return '<span class="mtilde">' + this.readUnit() + '</span>';
+    if (cmd === 'xrightarrow') return '<span class="moverset"><span class="moverset-t">' + this.readUnit() + '</span><span class="moverset-b">→</span></span>';
+    if (cmd === 'not') {
+      this.skipWs();
+      if (this.peek() === '\\') {
+        this.i++;
+        const n2 = this.readCmd();
+        const neg = { subset: '⊄', subseteq: '⊈', in: '∉', ni: '∌', supset: '⊅', supseteq: '⊉', equiv: '≢', sim: '≁' };
+        if (neg[n2]) return '<span class="msym">' + neg[n2] + '</span>';
+        return '<span class="msym">¬</span>' + this.doCmd(n2);
+      }
+      return '<span class="msym">¬</span>';
+    }
+    if (cmd === 'text' || cmd === 'mathrm' || cmd === 'mbox') return '<span class="mtext">' + this.readUnit() + '</span>';
+    if (cmd === 'mathbf' || cmd === 'bold') return '<b>' + this.readUnit() + '</b>';
+    if (M_BIG[cmd])
+      return '<span class="mbigop" data-big="1"><span class="mover"></span><span class="mbigsym' +
+        (cmd === 'lim' || cmd === 'max' || cmd === 'min' || cmd === 'sup' || cmd === 'inf' || cmd === 'limsup' || cmd === 'liminf' ? ' mword' : '') + '">' + M_BIG[cmd] +
+        '</span><span class="munder"></span></span>';
+    if (M_FUN.indexOf(cmd) >= 0) return '<span class="mfun">' + cmd + '</span>';
+    if (M_SYM[cmd]) return '<span class="msym">' + M_SYM[cmd] + '</span>';
+    if (cmd === 'overrightarrow') return '<span class="mvec-l">' + this.readUnit() + '</span>';
+    if (cmd === 'overleftarrow') return '<span class="mvec-l arr-l">' + this.readUnit() + '</span>';
+    if (cmd === 'overleftrightarrow') return '<span class="mvec-l arr-b">' + this.readUnit() + '</span>';
+    if (cmd === 'binom' || cmd === 'dbinom' || cmd === 'tbinom') return '<span class="mbino">' + this.readUnit() + this.readUnit() + '</span>';
+    if (cmd === 'dot') return '<span class="mdot">' + this.readUnit() + '</span>';
+    if (cmd === 'ddot') return '<span class="mddot">' + this.readUnit() + '</span>';
+    if (cmd === 'underbrace' || cmd === 'overbrace') {
+      let body = this.readUnit();
+      let sub = '';
+      this.skipWs();
+      if (this.peek() === '_') { this.i++; sub = this.readUnit(); }
+      const ov = cmd === 'overbrace';
+      const brace = '<span class="mubrace-brace"></span>';
+      return '<span class="mubrace' + (ov ? ' ov' : '') + '">' + (ov ? brace : '') + '<span class="mubrace-body">' + body + '</span>' + (ov ? '' : brace) + (sub ? '<span class="mubrace-sub">' + sub + '</span>' : '') + '</span>';
+    }
+    if (cmd === 'overset') return '<span class="moverset"><span class="moverset-t">' + this.readUnit() + '</span><span class="moverset-b">' + this.readUnit() + '</span></span>';
+    if (cmd === 'underset') return '<span class="moverset"><span class="moverset-b">' + this.readUnit() + '</span><span class="moverset-t">' + this.readUnit() + '</span></span>';
+    if (cmd === 'pmod') return '<span class="mtext"> (mod&nbsp;' + this.readUnit() + ')</span>';
+    if (cmd === 'bmod' || cmd === 'mod') return '<span class="mtext">&nbsp;mod&nbsp;</span>';
+    if (cmd === 'operatorname') return '<span class="mfun">' + this.readUnit() + '</span>';
+    if (cmd === 'mathbb') {
+      const MBB = { N: 'ℕ', Z: 'ℤ', Q: 'ℚ', R: 'ℝ', C: 'ℂ', P: 'ℙ', H: 'ℍ' };
+      const u = this.readUnit();
+      const plain = String(u).replace(/<[^>]+>/g, '');
+      return MBB[plain] ? '<span class="mbb">' + MBB[plain] + '</span>' : '<span class="mbb">' + u + '</span>';
+    }
+    if (cmd === 'mathcal' || cmd === 'mathscr' || cmd === 'mathfrak') return '<span class="mcal">' + this.readUnit() + '</span>';
+    if (cmd === 'hspace' || cmd === 'hspace*') {
+      this.skipWs();
+      if (this.peek() === '{') {
+        this.i++;
+        let s = '';
+        while (!this.eof() && this.peek() !== '}') s += this.s[this.i++];
+        if (this.peek() === '}') this.i++;
+        const m = String(s).trim().match(/^([\d.]+)\s*(em|ex|pt|px)?$/);
+        if (m) {
+          const n = parseFloat(m[1]);
+          const px = m[2] === 'em' ? n * 16 : m[2] === 'ex' ? n * 8 : m[2] === 'pt' ? n * 1.333 : m[2] === 'px' ? n : n * 16;
+          return '<span class="mhspace" style="width:' + px.toFixed(2) + 'px"></span>';
+        }
+      }
+      return '';
+    }
+    if (cmd === 'cfrac') return '<span class="mfrac"><span class="mnum">' + this.readUnit() + '</span><span class="mden">' + this.readUnit() + '</span></span>';
+    if (cmd === 'boldsymbol') return '<b>' + this.readUnit() + '</b>';
+    if (cmd === 'displaystyle' || cmd === 'textstyle' || cmd === 'scriptstyle' || cmd === 'scriptscriptstyle' || cmd === 'limits' || cmd === 'nolimits' || cmd === 'relax' || cmd === 'allowbreak') return '';
+    if (cmd === 'quad') return '<span class="mspace2"></span>';
+    if (cmd === 'qquad') return '<span class="mspace4"></span>';
+    if (cmd === ',' || cmd === ';' || cmd === ':') return '<span class="mspace1"></span>';
+    return '<span class="munk">\\' + mEsc(cmd) + '</span>';
+  };
+
+  function mathToHtml(src) {
+    try {
+      src = String(src == null ? '' : src)
+        .replace(/\\not\\subseteq/g, '⊈')
+        .replace(/\\not\\subset/g, '⊄')
+        .replace(/\\nsubseteq/g, '⊈')
+        .replace(/\\nsubset(?!eq)/g, '⊄')
+        .replace(/\\subsetneq/g, '⊊');
+      return '<span class="mathx">' + new MathParser(src).parseSeq(null) + '</span>';
+    }
+    catch (err) { return '<span class="munk">' + mEsc(src) + '</span>'; }
+  }
+
+  /** تبدیل متن دارای $...$ به HTML */
   
-  Object.keys(syms).forEach(function(k) {
-    var re = new RegExp(k.replace(/\\/g, "\\\\"), "g");
-    s = s.replace(re, "<span class=\"math-sym\">" + syms[k] + "</span>");
-  });
-  
-  s = s.replace(/\\left|\\right/g, "");
-  s = s.replace(/\\([a-zA-Z]+)/g, "<span class=\"math-sym\">$1</span>");
-  
-  return cnt === 0 ? sl(s) : s;
+/* ---------- ابزارهای کمکی: el/esc/notify از core.js ---------- */
+/* mEsc مخصوص فرمول */
+function mEsc(e) {
+  return String(e == null ? '' : e).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function notify() {
-  if (window.AndroidCanvas && window.AndroidCanvas.onFormulaChange) {
-    window.AndroidCanvas.onFormulaChange(currentTex);
-  }
-}
+/* ---------- ۳) مدل حالت جعبه‌ای ---------- */
+  const MB = {
+    root: [],          // آرایهٔ گره‌های ریشه
+    cur: null,         // مکان نما: {arr, i}
+    reg: {},           // شناسهٔ جعبه → آرایه
+    info: {},          // شناسهٔ جعبه → {node, parentArr, parentIdx}
+    order: [],         // همهٔ شناسه‌ها به ترتیب ساخت
+    tab: [],           // ترتیب پیمایش با Tab
+    rects: {},         // مختصات جعبه‌ها (برای ناوبری ↑↓)
+    seq: 0,            // شمارندهٔ شناسهٔ گره
+    hist: [],          // تاریخچه (برای بازگشت)
+    future: [],        // تاریخچهٔ جلو (برای Redo)
+    zoom: 1            // بزرگ‌نمایی فرمول
+  };
 
-function handleCanvasClick(e) {
-  if (slots.length > 0 && e.target === canvas) {
-    setAct(slots.length - 1);
-  }
-}
+  function mbId() { return 'b' + ++MB.seq; }
+  function mbChar(v) { return { id: mbId(), t: 'c', v: v }; }
+  function mbFrac() { return { id: mbId(), t: 'frac', a: [], b: [] }; }
+  function mbSup() { return { id: mbId(), t: 'sup', a: [] }; }
+  function mbSub() { return { id: mbId(), t: 'sub', a: [] }; }
+  function mbSqrt(n) { const s = { id: mbId(), t: 'sqrt', a: [] }; if (n) s.n = []; return s; }
+  function mbPar(o, c, k) { return { id: mbId(), t: 'par', o: o || '(', c: c || ')', k: k || 'norm', a: [] }; }
+  function mbMixed() { return { id: mbId(), t: 'mixed', w: [], a: [], b: [] }; }
+  function mbOp(v, w) { return { id: mbId(), t: 'op', v: v, w: !!w, from: [], to: [] }; }
+  function mbFn(v) { return { id: mbId(), t: 'fn', v: v }; }
+  function mbSym(v) { return { id: mbId(), t: 'sym', v: v }; }
+  function mbAcc(t) { return { id: mbId(), t: t, a: [] }; }
+  function mbText(v) { return { id: mbId(), t: 'text', v: v }; }
+  // فاکتوریل: یک خانهٔ قابل‌ویرایش در سمت چپ علامت !
+  function mbFact() { return { id:mbId(), t:'fact', a:[] }; }
+  function mbMatrix(rows, cols) { const cells=[]; for(let r=0;r<rows;r++) { const row=[]; for(let c=0;c<cols;c++) row.push([]); cells.push(row); } return { id:mbId(), t:'matrix', rows:rows, cols:cols, cells:cells }; }
 
-window.setFormula = function(t) { renderFormula(t); };
-window.insertFormula = function(f) {
-  if (slots[activeIdx]) {
-    slots[activeIdx].innerHTML += f;
-    notify();
-  }
-};
-window.typeCharacter = function(c) {
-  if (slots[activeIdx]) {
-    slots[activeIdx].innerHTML += c;
-    notify();
-  }
-};
-window.backspace = function() {
-  if (slots[activeIdx]) {
-    var cur = slots[activeIdx];
-    var tx = cur.innerText || cur.textContent;
-    if (tx.length > 0) {
-      cur.innerText = tx.slice(0, -1);
-      notify();
-    } else if (activeIdx > 0) {
-      setAct(activeIdx - 1);
+  /* ---------- ۴) رندر و ناوبری جعبه‌ای ---------- */
+  let MB_SCROLL_T1 = 0, MB_SCROLL_T2 = 0;
+  function mbEnsureCursorVisible() {
+    const cv = el('mbCanvas');
+    if (!cv || !cv.querySelector) return;
+    const cur = cv.querySelector('.mb-act .mb-cur') || cv.querySelector('.mb-slot.mb-act');
+    if (!cur || !cur.getBoundingClientRect) return;
+    const box = cv.getBoundingClientRect();
+    const rc  = cur.getBoundingClientRect();
+    if (!box.width || !box.height || !rc.width && !rc.height) return;
+
+    /* بازگشت به رفتار ساده‌ترِ اسکرول خودکار:
+       - سمت راست کمی فضا خالی می‌ماند، ولی نه به اندازهٔ نسخهٔ هوشمندتر.
+       - بالا و پایین با یک حاشیهٔ مشترک تنظیم می‌شوند.
+       - فقط دو پاس انجام می‌شود تا اسکرول اضافه نداشته باشیم. */
+    const padL = Math.max(28, Math.round(box.width  * 0.18));
+    const padR = Math.max(90, Math.round(box.width  * 0.34));
+    const padY = Math.max(22, Math.round(box.height * 0.16));
+
+    let nextLeft = cv.scrollLeft;
+    let nextTop  = cv.scrollTop;
+
+    if (rc.right > box.right - padR) {
+      nextLeft += rc.right - (box.right - padR);
+    } else if (rc.left < box.left + padL) {
+      nextLeft += rc.left - (box.left + padL);
+    }
+
+    if (rc.bottom > box.bottom - padY) {
+      nextTop += rc.bottom - (box.bottom - padY);
+    } else if (rc.top < box.top + padY) {
+      nextTop += rc.top - (box.top + padY);
+    }
+
+    nextLeft = Math.max(0, Math.round(nextLeft));
+    nextTop  = Math.max(0, Math.round(nextTop));
+
+    const dx = Math.abs(nextLeft - cv.scrollLeft);
+    const dy = Math.abs(nextTop  - cv.scrollTop);
+    if (dx < 2 && dy < 2) return;
+
+    try {
+      cv.scrollTo({ left: nextLeft, top: nextTop, behavior: 'smooth' });
+    } catch (e) {
+      cv.scrollLeft = nextLeft;
+      cv.scrollTop  = nextTop;
     }
   }
+  function mbScheduleEnsureCursor() {
+    if (MB_SCROLL_T1) cancelAnimationFrame(MB_SCROLL_T1);
+    if (MB_SCROLL_T2) clearTimeout(MB_SCROLL_T2);
+    MB_SCROLL_T1 = requestAnimationFrame(function () {
+      mbEnsureCursorVisible();
+      /* یک‌بار دیگر بعد از جاافتادن اندازهٔ رادیکال/دلیمتر و wrap */
+      MB_SCROLL_T2 = setTimeout(mbEnsureCursorVisible, 90);
+    });
+  }
+
+  function mbSlotHtml(arr, id, cls) {
+    MB.reg[id] = arr;
+    MB.order.push(id);
+    let s = '';
+    const active = MB.cur && MB.cur.arr === arr;
+    for (let i = 0; i <= arr.length; i++) {
+      if (active && MB.cur.i === i) s += '<i class="mb-cur"></i>';
+      if (i < arr.length) s += mbNodeHtml(arr[i], arr, i);
+    }
+    if (!arr.length) s += '<i class="mb-ph"></i>';
+    const filled = arr && arr.length ? ' mb-filled' : '';
+    return '<span class="mb-slot' + (active ? ' mb-act' : '') + filled + ' ' + (cls || '') + '" data-slot="' + id + '">' + s + '</span>';
+  }
+
+  function mbNodeHtml(node, parentArr, parentIdx) {
+    const slot = (childArr, field) => {
+      const sid = node.id + '.' + field;
+      MB.info[sid] = { node: node, parentArr: parentArr, parentIdx: parentIdx };
+      return mbSlotHtml(childArr, sid);
+    };
+    switch (node.t) {
+      case 'c':
+        return '<span class="mb-c" data-p="' + parentIdx + '">' +
+          (/[a-zA-Z]/.test(node.v) ? '<i class="mvar">' + mEsc(node.v) + '</i>' : mEsc(node.v)) + '</span>';
+      case 'sym': return '<span class="mb-c msym" dir="ltr" style="unicode-bidi:isolate" data-p="' + parentIdx + '">' + mEsc(node.v) + '</span>';
+      case 'fn': return '<span class="mb-c mfun" data-p="' + parentIdx + '">' + mEsc(node.v) + '</span>';
+      case 'frac':
+        return '<span class="mfrac mb-n"><span class="mnum">' + slot(node.a, 'a') + '</span><span class="mden">' + slot(node.b, 'b') + '</span></span>';
+      case 'sup': return '<sup class="msup mb-n">' + slot(node.a, 'a') + '</sup>';
+      case 'sub': return '<sub class="msub mb-n">' + slot(node.a, 'a') + '</sub>';
+      case 'sqrt':
+        return '<span class="msqrt mb-n">' +
+          (node.n ? '<span class="mrootidx">' + slot(node.n, 'n') + '</span>' : '') +
+          '<span class="msurd">' + SURD_HTML + '</span><span class="mrad">' + slot(node.a, 'a') + '</span></span>';
+      case 'par':
+        if (node.k === 'floor' || node.k === 'ceil')
+          return '<span class="mb-n mbrk-box mbrk-' + (node.k === 'floor' ? 'floor' : 'ceil') + '">' +
+            '<span class="mbrk mbrk-l"></span>' + slot(node.a, 'a') + '<span class="mbrk mbrk-r"></span></span>';
+        return '<span class="mb-n mb-par" dir="ltr" style="unicode-bidi:isolate">' +
+          '<span class="mdelim" dir="ltr" data-dch="' + mEsc(node.o) + '">' + mEsc(node.o) + '</span>' +
+          slot(node.a, 'a') + '<span class="mdelim" dir="ltr" data-dch="' + mEsc(node.c) + '">' + mEsc(node.c) + '</span></span>';
+      case 'mixed':
+        return '<span class="mb-n mmixed"><span class="mm-w">' + slot(node.w, 'w') + '</span>' +
+          '<span class="mfrac mb-n"><span class="mnum">' + slot(node.a, 'a') + '</span><span class="mden">' + slot(node.b, 'b') + '</span></span></span>';
+      case 'op':
+        return '<span class="mbigop mb-n"><span class="mover">' + slot(node.to, 'to') + '</span>' +
+          '<span class="mbigsym' + (node.w ? ' mword' : '') + '">' + mEsc(node.v) + '</span>' +
+          '<span class="munder">' + slot(node.from, 'from') + '</span></span>';
+      case 'vec': return '<span class="mvec mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'bar': return '<span class="mover-line mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'hat': return '<span class="mhat mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'tilde': return '<span class="mtilde mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'dot': return '<span class="mdot mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'ddot': return '<span class="mddot mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'ovec': return '<span class="mvec-l mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'ovecL': return '<span class="mvec-l arr-l mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'ovecB': return '<span class="mvec-l arr-b mb-n">' + slot(node.a, 'a') + '</span>';
+      case 'ubrace': {
+        const ov = !!node.ov;
+        const brace = '<span class="mubrace-brace"></span>';
+        return '<span class="mubrace' + (ov ? ' ov' : '') + ' mb-n">' +
+          (ov ? brace : '') + '<span class="mubrace-body">' + slot(node.a, 'a') + '</span>' +
+          (ov ? '' : brace) + '<span class="mubrace-sub">' + slot(node.b, 'b') + '</span></span>';
+      }
+      case 'xacc':
+        if (node.k === 'underset')
+          return '<span class="moverset mb-n"><span class="moverset-b">' + slot(node.a, 'a') + '</span><span class="moverset-t">' + slot(node.b, 'b') + '</span></span>';
+        return '<span class="moverset mb-n"><span class="moverset-t">' + slot(node.b, 'b') + '</span><span class="moverset-b">' + slot(node.a, 'a') + '</span></span>';
+      case 'matrix': {
+        let h='<span class="mmatrix mb-n"><span class="mmatrix-l">[</span><table>';
+        for(let r=0;r<node.rows;r++) { h+='<tr>'; for(let c=0;c<node.cols;c++) h+='<td>'+slot(node.cells[r][c], 'm'+r+'_'+c)+'</td>'; h+='</tr>'; }
+        return h+'</table><span class="mmatrix-r">]</span></span>';
+      }
+      case 'br': return '<br class="mb-br" data-p="' + parentIdx + '">';
+      case 'fact': return '<span class="mb-n mfact">' + slot(node.a, 'a') + '<span class="mfact-mark">!</span></span>';
+      case 'text': return '<span class="mtext mb-n">' + mEsc(node.v) + '</span>';
+      default: return '';
+    }
+  }
+
+  function mbDraw() {
+    MB.reg = {}; MB.info = {}; MB.order = [];
+    const cv = el('mbCanvas');
+    if (!cv) return;
+    const html = '<span class="mathx">' + mbSlotHtml(MB.root, 'r', 'mb-root') + '</span>';
+    // بهینه‌سازی: اگر خروجی تغییر نکرده، DOM را بازنویسی نکن
+    if (cv._lastHtml !== html) { cv.innerHTML = html; cv._lastHtml = html; }
+    MB.tab = mbTabOrder(MB.root, 'r');
+    mbCalcRects(cv);
+    try { cv.setAttribute('dir','ltr'); cv.style.direction='ltr'; cv.style.unicodeBidi='isolate'; } catch(e) {}
+    mbFitAllSurds(cv);
+    if (typeof mbFitAllDelims === 'function') { mbFitAllDelims(cv); if (typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ mbFitAllDelims(cv); }); }
+    if (typeof requestAnimationFrame === 'function') mbScheduleEnsureCursor();
+    mfSyncTex();
+    if (typeof mfSmartSyncPreview === 'function') mfSmartSyncPreview();
+    mbSyncBtns();
+  }
+
+  /* ---------- تنظیم خودکار اندازهٔ علامت رادیکال ---------- */
+  /** یک √ را طوری اندازه کن که از خط بالا تا پایین محتوا برسد */
+  /* محل اتصال: بالای «تیک» باید دقیقاً زیر خط بالا (بار) بنشیند تا اتصال طبیعی باشد.
+     چون ارتفاع رادیکال متغیر است، مختصاتِ نقطهٔ اتصال بر اساس ارتفاع واقعی محاسبه می‌شود. */
+  const SURD_BAR_PX = 2.8;   // ضخامت خط بالا (دقیقاً هم‌ضخامت stroke علامت √)
+  const SURD_CAP_PX = 1.4;   // نصف ضخامت ضربه (stroke 2.8) — شعاعِ کلاهک گرد
+  function mbFitSurd(svg) {
+    const msqrt = svg.closest('.msqrt');
+    const msurd = svg && svg.parentNode;
+    if (!msqrt || !svg || !msurd) return;
+    const H = msqrt.getBoundingClientRect().height;
+    if (H <= 2) return;
+    const W = H * 0.5;                       // نسبت viewBox 50:100 → عرض نصف ارتفاع
+    svg.style.height = H.toFixed(1) + 'px';
+    svg.style.width = W.toFixed(1) + 'px';
+    msurd.style.width = W.toFixed(1) + 'px'; // فاصلهٔ مکان نما/محتوا از علامت √
+    // مرکز انتهای SVG دقیقاً روی مرکز border-top قرار می‌گیرد.
+    // امتداد تا x=70 کمی روی خطِ بالای محتوا هم‌پوشانی دارد؛ بنابراین هیچ شکافی دیده نمی‌شود.
+    const yUnit = Math.min(18, Math.max(2, (SURD_BAR_PX / 2) * 100 / H));
+    const p = svg.querySelector('path');
+    // همان هندسهٔ نمونه: یک خط کوتاه، تیک پایین و شیب صعودیِ متصل به خط بالا
+    if (p) p.setAttribute('d', 'M 3 48 L 10 48 L 15 76 L 24 ' + yUnit.toFixed(1) + ' L 70 ' + yUnit.toFixed(1));
+  }
+
+  
+  /* M_DELIM3_V978 — دلیمترها با نویسهٔ یونیکدِ واقعی (شکل طبیعی خودشان)
+     + فونت نازک + اندازهٔ داینامیک.
+     🔴 راه‌حلِ قبلی (SVG کش‌پذیر با viewBox ثابت و preserveAspectRatio=none)
+        همهٔ دلیمترها را به یک شکل مخدوش می‌کرد (پرانتز/کروشه/آکولاد
+        یک‌شکل می‌شدند). حالا هر دلیمتر نویسهٔ خودش را دارد:
+        پرانتز ( خمیده، کروشه [ گوشه‌دار، آکولاد { دندانه‌دار.
+     وقتی Enter سطر تازه می‌سازد، محتوا بلندتر می‌شود و font-sizeِ دلیمتر
+     هم بلندتر می‌شود تا با آن کشیده شود — ولی ضخامت (font-weight:300)
+     نازک می‌ماند. */
+  function mbDelimStyle(ch, H) {
+    return { text: ch, fs: Math.max(1.0, Math.round(H * 0.92) / 16) + 'em' };
+  }
+  function mbFitAllDelims(root) {
+    const r = root || el('mbCanvas') || document;
+    if (!r || !r.querySelectorAll) return;
+    const ds = r.querySelectorAll('.mdelim');
+    for (let i = 0; i < ds.length; i++) {
+      const d = ds[i];
+      if (!d.querySelector('.mdelim-glyph')) {
+        const raw = d.getAttribute('data-dch') || d.textContent || d.getAttribute('data-delim') || '';
+        d.textContent = '';
+        const g = document.createElement('span');
+        g.className = 'mdelim-glyph';
+        g.textContent = raw;
+        d.appendChild(g);
+      }
+      const glyph = d.querySelector('.mdelim-glyph');
+      if (!glyph) continue;
+      const host = d.parentElement || d;
+      let h = 0;
+      try { h = host.getBoundingClientRect().height || 0; } catch (e) { h = 0; }
+      if (h < 18) h = 18;
+      const scale = Math.max(1, Math.min(4.6, h / 22));
+      d.style.display = 'inline-flex';
+      d.style.alignItems = 'center';
+      d.style.justifyContent = 'center';
+      d.style.verticalAlign = 'middle';
+      d.style.minWidth = '.45em';
+      d.style.padding = '0 .03em';
+      glyph.style.display = 'inline-block';
+      glyph.style.lineHeight = '.82';
+      glyph.style.fontSize = '1.35em';
+      glyph.style.fontWeight = '300';
+      glyph.style.fontFamily = "'Cambria Math','STIX Two Math','Times New Roman',serif";
+      glyph.style.transform = 'scaleY(' + scale.toFixed(3) + ')';
+      glyph.style.transformOrigin = 'center center';
+    }
+  }
+
+  function mbFitAllSurds(root) {
+    const items = (root || document).querySelectorAll('.msqrt .msurd .surd-svg');
+    for (let i = 0; i < items.length; i++) mbFitSurd(items[i]);
+  }
+
+  /* پیش‌نمایش‌ها و هر جایی که فرمول رندر می‌شود را هم تنظیم کن */
+  let _fitTimer = null;
+  (function initSurdWatcher() {
+    if (!window.MutationObserver || !document.body) return;
+    const mo = new MutationObserver(function () {
+      clearTimeout(_fitTimer);
+      _fitTimer = setTimeout(function () { mbFitAllSurds(document.body); }, 0);
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+  })();
+
+  function mbTabOrder(nodes, id) {
+    const list = [id];
+    (nodes || []).forEach(node => {
+      if (node.t === 'matrix') {
+        for(let r=0;r<node.rows;r++) for(let c=0;c<node.cols;c++) mbTabOrder(node.cells[r][c], node.id + '.m' + r + '_' + c).forEach(x => list.push(x));
+        return;
+      }
+      const fields = (node.t === 'op') ? ['from', 'to'] : (node.t === 'sqrt') ? ['n', 'a']
+        : (node.t === 'mixed') ? ['w', 'a', 'b'] : ['a', 'b'];
+      fields.forEach(f => {
+        if (node[f]) mbTabOrder(node[f], node.id + '.' + f).forEach(x => list.push(x));
+      });
+    });
+    return list;
+  }
+
+  function mbCalcRects(cv) {
+    MB.rects = {};
+    const nodes = cv.querySelectorAll ? cv.querySelectorAll('[data-slot]') : [];
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      const id = n.getAttribute('data-slot');
+      const r = n.getBoundingClientRect();
+      MB.rects[id] = { l: r.left, r: r.right, t: r.top, b: r.bottom, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2 };
+    }
+  }
+
+  /** ناوبری مکانی: dir=-1 یعنی ↑ و dir=+1 یعنی ↓ */
+  function mbSpatial(dir) {
+    const curSlot = mbFindSlot(MB.cur ? MB.cur.arr : MB.root);
+    const cur = curSlot && MB.rects[curSlot];
+    if (!cur || !MB.rects) return false;
+    let bestId = null, bestD = Infinity;
+    for (const id in MB.rects) {
+      if (id === curSlot) continue;
+      const r = MB.rects[id];
+      if (!r) continue;
+      const ok = dir < 0 ? (r.b <= cur.cy && r.t < cur.b) : (r.t >= cur.cy && r.b > cur.t);
+      if (!ok) continue;
+      const d = Math.abs(r.cx - cur.cx);
+      if (d < bestD) { bestD = d; bestId = id; }
+    }
+    if (bestId && MB.reg[bestId]) {
+      const arr = MB.reg[bestId];
+      MB.cur = { arr: arr, i: dir < 0 ? arr.length : 0 };
+      mbDraw(); mbFocus();
+      return true;
+    }
+    return false;
+  }
+
+  /* ---------- ۵) تاریخچه: بازگشت و جلو ---------- */
+  function mbClone(x) { return JSON.parse(JSON.stringify(x)); }
+
+  /** مسیر ساختاری مکان نما از ریشه تا آرایهٔ فعلی (برای بازیابی بعد از Undo) */
+  function mbCurPath() {
+    if (!MB.cur) return null;
+    let arr = MB.cur.arr, steps = [];
+    while (arr !== MB.root) {
+      const sid = mbFindSlot(arr);
+      if (!sid) break;
+      const info = MB.info[sid];
+      if (!info || !info.parentArr) break;
+      steps.push({ field: sid.slice(sid.lastIndexOf('.') + 1), i: info.parentIdx });
+      arr = info.parentArr;
+    }
+    steps.reverse();
+    return { steps: steps, i: MB.cur.i };
+  }
+
+  function mbRestorePath(p) {
+    if (!p) { MB.cur = { arr: MB.root, i: MB.root.length }; return; }
+    let arr = MB.root, ok = true;
+    for (const s of p.steps) {
+      const node = arr[s.i];
+      if (!node || !node[s.field]) { ok = false; break; }
+      arr = node[s.field];
+    }
+    if (!ok) { MB.cur = { arr: MB.root, i: MB.root.length }; return; }
+    MB.cur = { arr: arr, i: Math.min(p.i, arr.length) };
+  }
+
+  /** قبل از هر تغییر ساختار صدا بزنید */
+  function mbPush() {
+    MB.hist.push({ root: mbClone(MB.root), path: mbCurPath() });
+    if (MB.hist.length > 80) MB.hist.shift();
+    MB.future = [];
+    mbSyncBtns();
+  }
+
+  function mbUndo() {
+    if (!MB.hist.length) { notify('چیزی برای بازگشت نیست', 'warn'); return; }
+    MB.future.push({ root: mbClone(MB.root), path: mbCurPath() });
+    const h = MB.hist.pop();
+    MB.root = h.root;
+    mbRestorePath(h.path);
+    mbDraw(); mbFocus();
+  }
+
+  function mbRedo() {
+    if (!MB.future.length) { notify('چیزی برای جلو نیست', 'warn'); return; }
+    MB.hist.push({ root: mbClone(MB.root), path: mbCurPath() });
+    const f = MB.future.pop();
+    MB.root = f.root;
+    mbRestorePath(f.path);
+    mbDraw(); mbFocus();
+  }
+
+  function mbSyncBtns() {
+    const u = el('mbUndoBtn'), r = el('mbRedoBtn');
+    if (u) u.classList.toggle('off', !MB.hist.length);
+    if (r) r.classList.toggle('off', !MB.future.length);
+  }
+
+  /* ---------- ۶) کلیپ‌بورد ---------- */
+  function fallbackCopy(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (err) { /* ignore */ }
+  }
+
+  function copyText(text) {
+    return new Promise(res => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(res).catch(() => { fallbackCopy(text); res(); });
+      } else { fallbackCopy(text); res(); }
+    });
+  }
+
+  function mbCopy() {
+    const tex = mbTex(MB.root) || '';
+    if (!tex) { notify('فرمول خالی است', 'warn'); return; }
+    copyText(tex).then(() => notify('کد فرمول کپی شد', 'success'));
+  }
+
+  function mbPaste() {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(txt => {
+        if (txt) mbImportText(txt);
+        else notify('کلیپ‌بورد خالی است', 'info');
+      }).catch(() => notify('دسترسی به کلیپ‌بورد ممکن نیست؛ از دکمهٔ کپی مرورگر استفاده کنید', 'warn'));
+    } else {
+      notify('این مرورگر خواندن کلیپ‌بورد را پشتیبانی نمی‌کند', 'warn');
+    }
+  }
+
+  /** وارد کردن متن (TeX یا طبیعی) به حالت جعبه‌ای */
+  function mbImportText(raw) {
+    const txt = String(raw || '').trim();
+    if (!txt) return;
+    mbPush();
+    let tex = txt.replace(/^\$+|\$+$/g, '');
+    // اگر دستوری مثل \frac ندارد، اول از مبدل «طبیعی» عبور بده
+    if (!/\\[a-zA-Z]/.test(tex)) tex = natToTex(tex);
+    try {
+      MB.root = mbParse(tex);
+      MB.cur = { arr: MB.root, i: MB.root.length };
+      mbDraw(); mbFocus();
+      notify('✅ فرمول پیست شد', 'success');
+    } catch (err) {
+      notify('فرمت پیست‌شده قابل خواندن نبود', 'err');
+    }
+  }
+
+  /** پیست مستقیم در ورودی مخفی (کار در موبایل با نگه‌داشتن انگشت) */
+  function mbKeyPaste(ev) {
+    const txt = (ev.clipboardData || window.clipboardData || {}).getData
+      ? (ev.clipboardData || window.clipboardData).getData('text') : '';
+    if (!txt) return;
+    // اگر محتوای TeX یا $ بود خودمان مدیریت می‌کنیم؛
+    // وگرنه همان رفتار تایپ حرف‌به‌حرف نتیجهٔ خوبی می‌دهد (مثل 7/8 یا x^2)
+    if (/\\[a-zA-Z]|\$/.test(txt)) { ev.preventDefault(); mbImportText(txt); }
+  }
+
+  /* ---------- ۷) تایپ و کلیدهای میانبر ---------- */
+  function mbFocus(force) {
+    // در نمای تمام‌صفحه، فقط درخواست صریح کاربر باید کیبورد دستگاه را باز کند.
+    if (!force && el('mfModal') && el('mfModal').classList.contains('box-fullscreen')) return;
+    const k = el('mbKey');
+    if (k) { try { k.focus({ preventScroll: true }); } catch (e) { k.focus(); } }
+  }
+  function mbShowDeviceKeyboard() { mbFocus(true); }
+
+  function mbClick(ev) {
+    const t = ev.target.closest ? ev.target.closest('[data-slot]') : null;
+    if (!t) return mbEnd();
+    const sid = t.getAttribute('data-slot');
+    const arr = MB.reg[sid];
+    if (!arr) return mbEnd();
+    const kids = [].slice.call(t.children).filter(c => c.classList.contains('mb-c') || c.classList.contains('mb-n'));
+    let idx = arr.length;
+    for (let k = 0; k < kids.length; k++) {
+      const r = kids[k].getBoundingClientRect();
+      if (ev.clientX < r.left + r.width / 2) { idx = k; break; }
+    }
+    MB.cur = { arr: arr, i: Math.min(idx, arr.length) };
+    mbDraw(); mbFocus();
+    ev.stopPropagation();
+  }
+
+  function mbEnd() {
+    MB.cur = { arr: MB.root, i: MB.root.length };
+    mbDraw(); mbFocus();
+  }
+
+  /** ابتدای «عدد/حرف» قبل از مکان نما — برای تبدیل / به کسر */
+  function mbAtomStart(arr, i) {
+    if (i <= 0) return i;
+    const prev = arr[i - 1];
+    if (!prev) return i;
+    if (prev.t === 'sym' || prev.t === 'fn' || prev.t === 'op') return i;
+    if (prev.t === 'c' && /[\s+\-=<>,;:*×÷]/.test(prev.v)) return i;
+    if (prev.t !== 'c') return i - 1;
+    const isAtom = c => /[0-9\u06F0-\u06F9\u0660-\u0669a-zA-Z.]/.test(c);
+    if (!isAtom(prev.v)) return i;
+    let j = i - 1;
+    while (j > 0 && arr[j - 1].t === 'c' && isAtom(arr[j - 1].v)) j--;
+    return j;
+  }
+
+  function mbType(ch) {
+    if (!MB.cur) mbEnd();
+    const { arr, i } = MB.cur;
+    if ((ch === '>' || ch === '<') && i > 0) {
+      const prev = arr[i - 1];
+      if (prev && prev.t === 'c' && prev.v === '-') {
+        mbPush();
+        arr.splice(i - 1, 1, mbSym(ch === '>' ? '→' : '←'));
+        MB.cur = { arr: arr, i: i };
+        mbDraw();
+        return;
+      }
+    }
+    if (ch === '/') {
+      mbPush();
+      const start = mbAtomStart(arr, i);
+      const parts = arr.splice(start, i - start);
+      const f = mbFrac();
+      f.a = parts;
+      arr.splice(start, 0, f);
+      MB.cur = { arr: f.b, i: 0 };
+      mbDraw();
+      return;
+    }
+    if (ch === '^') return mbInsert('sup');
+    if (ch === '_') return mbInsert('sub');
+    if (ch === '(') return mbInsert('par');
+    if (ch === ')') return mbOut(1);
+    mbPush();
+    const isMul = (ch === '*');
+    const node = isMul ? mbSym('×') : mbChar(isMul ? '×' : ch);
+    arr.splice(i, 0, node);
+    MB.cur = { arr: arr, i: i + 1 };
+    mbDraw();
+  }
+
+  function mbInsert(kind, arg) {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const { arr, i } = MB.cur;
+    let node, into;
+    switch (kind) {
+      case 'frac': {
+        const start = mbAtomStart(arr, i);
+        node = mbFrac();
+        node.a = arr.splice(start, i - start);
+        arr.splice(start, 0, node);
+        into = node.a.length ? node.b : node.a;
+        break;
+      }
+      case 'sup': case 'sub':
+        node = (kind === 'sup') ? mbSup() : mbSub();
+        arr.splice(i, 0, node);
+        into = node.a;
+        break;
+      case 'sqrt': case 'sqrtn':
+        node = mbSqrt(kind === 'sqrtn');
+        arr.splice(i, 0, node);
+        into = (kind === 'sqrtn') ? node.n : node.a;
+        break;
+      case 'par':
+        node = mbPar((arg && arg.o) || '(', (arg && arg.c) || ')', (arg && arg.k) || 'norm');
+        arr.splice(i, 0, node);
+        into = node.a;
+        break;
+      case 'mixed':
+        node = mbMixed();
+        arr.splice(i, 0, node);
+        into = node.w;
+        break;
+      case 'matrix':
+        node = mbMatrix((arg && arg.rows) || 2, (arg && arg.cols) || 2);
+        arr.splice(i, 0, node);
+        into = node.cells[0][0];
+        break;
+      case 'fact':
+        node = mbFact();
+        arr.splice(i, 0, node);
+        into = node.a;
+        break;
+      case 'op':
+        node = mbOp(arg.v, arg.w);
+        arr.splice(i, 0, node);
+        into = node.from;
+        break;
+      case 'fn':
+        node = mbFn(arg);
+        arr.splice(i, 0, node);
+        MB.cur = { arr: arr, i: i + 1 };
+        mbDraw();
+        return;
+      case 'sym':
+        node = mbSym(arg);
+        arr.splice(i, 0, node);
+        MB.cur = { arr: arr, i: i + 1 };
+        mbDraw();
+        return;
+      case 'vec': case 'bar': case 'hat':
+        node = mbAcc(kind);
+        arr.splice(i, 0, node);
+        into = node.a;
+        break;
+      default:
+        return;
+    }
+    MB.cur = { arr: into, i: into.length };
+    mbDraw(); mbFocus();
+  }
+
+  /** درج یک الگوی TeX/طبیعی به مدل جعبه‌ای؛ توان‌ها به ساختار واقعی تبدیل می‌شوند. */
+  function mbInsertTemplate(tex) {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const arr=MB.cur.arr, i=MB.cur.i;
+    const nodes=mbParse(tex);
+    arr.splice(i,0,...nodes);
+    MB.cur={arr:arr,i:i+nodes.length};
+    mbDraw();
+  }
+
+  /** انتخاب آیتم: دقیقاً همان پیش‌نمایش دکمه در کادر فرمول ساخته می‌شود. */
+  function mbSelectLibraryItem(item) {
+    const action=item[2] || [];
+    let shown=String(item[1] == null ? '' : item[1])
+      .replace(/⁰/g,'^0').replace(/¹/g,'^1').replace(/²/g,'^2').replace(/³/g,'^3')
+      .replace(/⁴/g,'^4').replace(/⁵/g,'^5').replace(/⁶/g,'^6').replace(/⁷/g,'^7')
+      .replace(/⁸/g,'^8').replace(/⁹/g,'^9').replace(/ⁿ/g,'^n')
+      .replace(/₀/g,'_0').replace(/₁/g,'_1').replace(/₂/g,'_2').replace(/₃/g,'_3')
+      .replace(/₄/g,'_4').replace(/₅/g,'_5').replace(/₆/g,'_6').replace(/₇/g,'_7')
+      .replace(/₈/g,'_8').replace(/₉/g,'_9');
+    mbCloseSymbolLibrary();
+    // ساختارهای دارای خانهٔ اختصاصی با همان ظاهر طبیعی خود درج می‌شوند.
+    if (action[0]==='sqrt') { mbInsertTemplate('\\sqrt{x}'); return; }
+    if (action[0]==='sqrt3') { mbInsertTemplate('\\sqrt[3]{x}'); return; }
+    if (action[0]==='sqrt4') { mbInsertTemplate('\\sqrt[4]{x}'); return; }
+    if (action[0]==='sqrtn') { mbInsertTemplate('\\sqrt[n]{x}'); return; }
+    if (action[0]==='frac') { mbInsertTemplate('\\frac{a}{b}'); return; }
+    if (action[0]==='matrix') { mbInsertPresetMatrix(action[1].rows,action[1].cols); return; }
+    if (action[0]==='matrixcustom') { mbInsertCustomMatrix(); return; }
+    // ساختارهای دارای خانهٔ اختصاصی باید با مدل جعبه‌ای خودشان ساخته شوند.
+    if (action[0]==='par') { mbInsertPresetPar(action[1], 'x'); return; }
+    if (['sup','sub','vec','bar','hat','mixed','fact','lim','sqrt4'].includes(action[0])) { mbPadDo(action); return; }
+    // برای عملگرها، توابع و عبارت‌های نمادی، خود پیش‌نمایش به مدل قابل‌ویرایش تبدیل می‌شود.
+    mbInsertTemplate(shown);
+  }
+
+  /** درج پرانتز/کروشهٔ کتابخانه همراه با مقدار اولیهٔ قابل‌ویرایش. */
+  function mbInsertPresetPar(spec, value) {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const arr=MB.cur.arr, i=MB.cur.i;
+    const o = Array.isArray(spec) ? spec[0] : (spec && spec.o);
+    const c = Array.isArray(spec) ? spec[1] : (spec && spec.c);
+    const k = Array.isArray(spec) ? (spec[2] || 'norm') : ((spec && spec.k) || 'norm');
+    const node=mbPar(o || '(', c || ')', k);
+    node.a=mbParse(value || 'x');
+    arr.splice(i,0,node);
+    MB.cur={arr:node.a,i:node.a.length};
+    mbDraw();
+  }
+
+  /** درج ماتریس آماده با همان مقدارهای نمایش داده‌شده روی دکمه. */
+  function mbInsertPresetMatrix(rows, cols) { 
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const arr=MB.cur.arr, i=MB.cur.i, m=mbMatrix(rows,cols);
+    const letters='abcdefghijklmnopqrstuvwxyz'; let n=0;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) m.cells[r][c]=[mbChar(letters[n++] || 'x')];
+    arr.splice(i,0,m);
+    MB.cur={arr:m.cells[0][0],i:m.cells[0][0].length};
+    mbDraw();
+  }
+
+  /** ساخت ماتریس با ابعاد دلخواه؛ کروشه‌ها هنگام رندر با ارتفاع آن تنظیم می‌شوند. */
+  let MB_MATRIX_DIM = { r: 2, c: 2 };
+  function mbMatrixStep(dr, dc) {
+    const d = MB_MATRIX_DIM || { r: 2, c: 2 };
+    d.r = Math.min(10, Math.max(1, d.r + dr));
+    d.c = Math.min(10, Math.max(1, d.c + dc));
+    MB_MATRIX_DIM = d;
+    mbMatrixPicker();
+  }
+  function mbMatrixConfirm() {
+    const d = MB_MATRIX_DIM || { r: 2, c: 2 };
+    mbVarClose();
+    mbInsert('matrix', { rows: d.r, cols: d.c });
+  }
+  /* انتخابگر ابعاد ماتریس داخل پاپ‌آپ؛ جایگزین prompt (در iframe مسدود است) */
+  function mbMatrixPicker() {
+    const pop = el('mbVar');
+    if (!pop) return;
+    const d = MB_MATRIX_DIM || { r: 2, c: 2 };
+    const bStyle = 'min-width:46px;height:38px;border-radius:8px;border:1px solid var(--input-brd);background:var(--input-bg);color:#fff;font-size:1.05rem;cursor:pointer;touch-action:manipulation';
+    const rowBtn = (label, call, title) =>
+      '<button type="button" style="' + bStyle + '" onclick="' + call + '" title="' + title + '">' + label + '</button>';
+    const val = v => '<span class="mbv-rt" style="min-width:2.2em;text-align:center;font-size:1rem;color:#fff">' + v + '</span>';
+    pop.innerHTML =
+      '<div class="mbv-title">ابعاد ماتریس را انتخاب کنید (۱ تا ۱۰):</div>' +
+      '<div class="mbv-row"><span class="mbv-rt">سطر</span>' +
+      rowBtn('−', 'mbMatrixStep(-1,0)', 'کمتر') + val(d.r) +
+      rowBtn('+', 'mbMatrixStep(1,0)', 'بیشتر') + '</div>' +
+      '<div class="mbv-row"><span class="mbv-rt">ستون</span>' +
+      rowBtn('−', 'mbMatrixStep(0,-1)', 'کمتر') + val(d.c) +
+      rowBtn('+', 'mbMatrixStep(0,1)', 'بیشتر') + '</div>' +
+      '<div class="mbv-row" style="margin-top:10px">' +
+      '<button type="button" style="' + bStyle + ';background:linear-gradient(135deg,#11998e,var(--ok));color:#fff;border:0;font-family:inherit;font-weight:bold" onclick="mbMatrixConfirm()">✅ درج ماتریس</button></div>' +
+      '<div class="mbv-hint">با +/− اندازه را تنظیم کنید و «درج ماتریس» را بزنید.</div>';
+    mbVarOpen(pop, null);
+  }
+  function mbInsertCustomMatrix() {
+    mbMatrixPicker();
+  }
+
+  /* درج سریع: حرف، پیش‌پر شده‌ها، کسر مخلوط، حد کامل، جفت پرانتز */
+  function mbNewLine() {
+    /* MF_BAR_V961: سطر تازه در فرمول (\\ در TeX) */
+    if (!MB.cur) mbEnd();
+    mbPush();
+    var arr = MB.cur.arr, i = MB.cur.i;
+    arr.splice(i, 0, { id: mbId(), t: 'br' });
+    MB.cur = { arr: arr, i: i + 1 };
+    mbDraw();
+  }
+  window.mbNewLine = mbNewLine;
+window.mbGroupLibrary = mbGroupLibrary;
+window.mbShowSymbolCategory = mbShowSymbolCategory;
+window.mbOpenSymbolLibrary = mbOpenSymbolLibrary;
+window.mbOpenUnicodeLibrary = mbOpenUnicodeLibrary;
+window.mbOpenFavorites = mbOpenFavorites;
+window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
+
+  function mbInsChar(ch) {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const { arr, i } = MB.cur;
+    arr.splice(i, 0, mbChar(ch));
+    MB.cur = { arr: arr, i: i + 1 };
+    mbDraw();
+  }
+
+  function mbInsPrefillSup(ch) {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const { arr, i } = MB.cur;
+    const n = mbSup(); n.a = [mbChar(ch)];
+    arr.splice(i, 0, n);
+    MB.cur = { arr: arr, i: i }; // مکان‌نما می‌ماند تا پایه را بنویسید؛ بعد با Tab داخل توان بروید
+    mbDraw(); mbFocus();
+  }
+
+  function mbInsPrefillSqrtN(ch) {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const { arr, i } = MB.cur;
+    const n = mbSqrt(true); n.n = [mbChar(ch)];
+    arr.splice(i, 0, n);
+    MB.cur = { arr: arr, i: i };
+    mbDraw(); mbFocus();
+  }
+
+  function mbInsertLim() {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    const { arr, i } = MB.cur;
+    const n = mbOp('lim', true);
+    n.from = [mbChar('x'), mbSym('→')];
+    arr.splice(i, 0, n);
+    MB.cur = { arr: n.from, i: n.from.length }; // مکان‌نما بعد از فلش، آمادهٔ عدد حد
+    mbDraw(); mbFocus();
+  }
+
+  function mbInsertParPair(o, c) {
+    mbCloseSymbolLibrary();
+    const k = (o === '⌊' || o === '⌋') ? 'floor' : (o === '⌈' || o === '⌉') ? 'ceil' : 'norm';
+    mbInsert('par', { o: o, c: c, k: k });
+  }
+
+  function mbBack() {
+    if (!MB.cur) return;
+    mbPush();
+    const { arr, i } = MB.cur;
+    if (i > 0) {
+      const node = arr[i - 1];
+      if (node.t !== 'c' && node.t !== 'sym' && node.t !== 'fn') {
+        const slots = mbSlotsOf(node);
+        const last = slots[slots.length - 1];
+        if (last && last.length) {
+          MB.cur = { arr: last, i: last.length };
+          mbDraw();
+          return;
+        }
+      }
+      arr.splice(i - 1, 1);
+      MB.cur = { arr: arr, i: i - 1 };
+      mbDraw();
+      return;
+    }
+    // ابتدای یک جعبه: «باز کردن» گرهٔ والد و بیرون آمدن
+    const sid = mbFindSlot(arr);
+    if (!sid) return;
+    const info = MB.info[sid];
+    if (!info) return;
+    const { node, parentArr, parentIdx } = info;
+    const flat = [].concat.apply([], mbSlotsOf(node));
+    parentArr.splice(parentIdx, 1, ...flat);
+    MB.cur = { arr: parentArr, i: parentIdx };
+    mbDraw();
+  }
+
+  function mbSlotsOf(node) {
+    const out = [];
+    ['n', 'w', 'a', 'b', 'from', 'to'].forEach(f => { if (node[f]) out.push(node[f]); });
+    return out;
+  }
+
+  function mbFindSlot(arr) {
+    for (const id in MB.reg) if (MB.reg[id] === arr) return id;
+    return null;
+  }
+
+  function mbMove(dir) {
+    if (!MB.cur) return mbEnd();
+    const { arr, i } = MB.cur;
+    const j = i + dir;
+    if (j >= 0 && j <= arr.length) {
+      const node = dir > 0 ? arr[i] : arr[i - 1];
+      if (node && node.t !== 'c' && node.t !== 'sym' && node.t !== 'fn') {
+        const slots = mbSlotsOf(node);
+        const target = dir > 0 ? slots[0] : slots[slots.length - 1];
+        if (target) {
+          MB.cur = { arr: target, i: dir > 0 ? 0 : target.length };
+          mbDraw();
+          return;
+        }
+      }
+      MB.cur = { arr: arr, i: j };
+      mbDraw();
+      return;
+    }
+    mbOut(dir);
+  }
+
+  function mbOut(dir) {
+    const sid = mbFindSlot(MB.cur.arr);
+    const info = sid && MB.info[sid];
+    if (info) {
+      MB.cur = { arr: info.parentArr, i: info.parentIdx + ((dir || 1) > 0 ? 1 : 0) };
+      mbDraw();
+    }
+  }
+
+  function mbTab(back) {
+    const curSid = mbFindSlot(MB.cur ? MB.cur.arr : MB.root);
+    const order = (MB.tab && MB.tab.length) ? MB.tab : MB.order.slice();
+    let idx = order.indexOf(curSid);
+    if (idx < 0) idx = 0;
+    idx = back ? (idx - 1 + order.length) % order.length : (idx + 1) % order.length;
+    const arr = MB.reg[order[idx]];
+    if (arr) { MB.cur = { arr: arr, i: arr.length }; mbDraw(); mbFocus(); }
+  }
+
+  function mbKeyDown(ev) {
+    const k = ev.key;
+    const mod = ev.ctrlKey || ev.metaKey;
+    if (mod && k === 'z' || mod && k === 'Z') { ev.preventDefault(); ev._mbHandled = true; ev.shiftKey ? mbRedo() : mbUndo(); return; }
+    if (mod && (k === 'y' || k === 'Y')) { ev.preventDefault(); ev._mbHandled = true; mbRedo(); return; }
+    if (mod && (k === 'c' || k === 'C')) { ev.preventDefault(); ev._mbHandled = true; mbCopy(); return; }
+    // Ctrl+V مدیریت نمی‌شود تا ورودی مخفی رویداد paste بگیرد (سازگار با همهٔ مرورگرها)
+    switch (k) {
+      case 'Backspace': ev.preventDefault(); mbBack(); break;
+      case 'ArrowLeft': ev.preventDefault(); mbMove(-1); break;
+      case 'ArrowRight': ev.preventDefault(); mbMove(1); break;
+      case 'ArrowUp': ev.preventDefault(); if (!mbSpatial(-1)) mbTab(true); break;
+      case 'ArrowDown': ev.preventDefault(); if (!mbSpatial(1)) mbTab(false); break;
+      case 'Tab': ev.preventDefault(); mbTab(ev.shiftKey); break;
+      case 'Enter': ev.preventDefault(); mfApply(); break;
+      case 'Home': ev.preventDefault(); if (MB.cur) { MB.cur = { arr: MB.cur.arr, i: 0 }; mbDraw(); } break;
+      case 'End': ev.preventDefault(); if (MB.cur) { MB.cur = { arr: MB.cur.arr, i: MB.cur.arr.length }; mbDraw(); } break;
+    }
+  }
+
+  function mbKeyInput(inp) {
+    const v = inp.value;
+    inp.value = '';
+    if (v) { for (const ch of v) mbType(ch); }
+  }
+
+  function mbZoom(delta) {
+    MB.zoom = Math.min(1.7, Math.max(0.7, Math.round(((MB.zoom || 1) + delta) * 10) / 10));
+    const modal = el('mfModal');
+    if (modal) modal.style.setProperty('--mbfs', MB.zoom);
+    mbFitAllSurds(el('mbCanvas')); // بعد از تغییر اندازه، √ را دوباره تنظیم کن
+  }
+
+  /* کلیدهای سراسری وقتی مودال باز است: Esc برای بستن + میانبرهای حالت جعبه‌ای */
+  window.addEventListener && window.addEventListener('keydown', function (ev) {
+    const modal = el('mfModal');
+    if (!modal || !modal.classList.contains('open')) return;
+    if (ev.key === 'Escape') {
+      const p = el('mbVar');
+      if (p && p.classList.contains('open')) { mbVarClose(); return; } // اول منو بسته شود
+      
+      ev.preventDefault(); closeMath(); return;
+    }
+    if (ev._mbHandled) return;
+    if (MF_MODE !== 'box') return;
+    const mod = ev.ctrlKey || ev.metaKey;
+    const k = ev.key.toLowerCase();
+    if (mod && k === 'z') { ev.preventDefault(); ev.shiftKey ? mbRedo() : mbUndo(); }
+    else if (mod && k === 'y') { ev.preventDefault(); mbRedo(); }
+    else if (mod && k === 'c') { ev.preventDefault(); mbCopy(); }
+  });
+
+  /* اسکرول افقی با چرخ ماوس روی تراشه‌های بخش دوم — برای لپ‌تاپ/دسکتاپ */
+  (function initChipWheelScroll() {
+    document.addEventListener && document.addEventListener('wheel', function (ev) {
+      if (Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return; // فقط چرخ عمودی
+      const t = ev.target;
+      const wrap = (t && t.closest) ? t.closest('.mb-chip-scroll') : null;
+      if (!wrap) return;
+      if (wrap.scrollWidth <= wrap.clientWidth + 4) return; // چیزی برای اسکرول نیست
+      ev.preventDefault();
+      wrap.scrollLeft += ev.deltaY;
+    }, { passive: false });
+  })();
+
+  
+function mbTex(nodes) {
+    const grp = a => mbTex(a).trim(); // داخل آکولاد: فاصله‌های اضافه را حذف کن
+    return (nodes || []).map(node => {
+      switch (node.t) {
+        case 'br': return '\\\\';
+        case 'c': { const c = node.v; return (c === '%') ? '\\%' : (c === '#') ? '\\#' : (c === '&') ? '\\&' : c; }
+        case 'sym': return (MB_SYM_TEX[node.v] || node.v).trim();
+        case 'fn': return '\\' + node.v;
+        case 'text': return '\\text{' + node.v + '}';
+        case 'frac': return '\\frac{' + grp(node.a) + '}{' + grp(node.b) + '}';
+        case 'sup': return '^{' + grp(node.a) + '}';
+        case 'sub': return '_{' + grp(node.a) + '}';
+        case 'sqrt': return node.n ? '\\sqrt[' + grp(node.n) + ']{' + grp(node.a) + '}' : '\\sqrt{' + grp(node.a) + '}';
+        case 'par':
+          if (node.k === 'floor') return '\\lfloor ' + grp(node.a) + ' \\rfloor';
+          if (node.k === 'ceil') return '\\lceil ' + grp(node.a) + ' \\rceil';
+          return '\\left' + texDelim(node.o) + ' ' + grp(node.a) + ' \\right' + texDelim(node.c);
+        case 'mixed': return grp(node.w) + '\\frac{' + grp(node.a) + '}{' + grp(node.b) + '}';
+        case 'op': {
+          let s = '\\' + (MB_OP_TEX[node.v] || 'sum');
+          if (node.from && node.from.length) s += '_{' + grp(node.from) + '}';
+          if (node.to && node.to.length) s += '^{' + grp(node.to) + '}';
+          return s;
+        }
+        case 'vec': return '\\vec{' + grp(node.a) + '}';
+        case 'bar': return '\\overline{' + grp(node.a) + '}';
+        case 'hat': return '\\hat{' + grp(node.a) + '}';
+        case 'tilde': return '\\tilde{' + grp(node.a) + '}';
+        case 'dot': return '\\dot{' + grp(node.a) + '}';
+        case 'ddot': return '\\ddot{' + grp(node.a) + '}';
+        case 'ovec': return '\\overrightarrow{' + grp(node.a) + '}';
+        case 'ovecL': return '\\overleftarrow{' + grp(node.a) + '}';
+        case 'ovecB': return '\\overleftrightarrow{' + grp(node.a) + '}';
+        case 'ubrace': return (node.ov ? '\\overbrace{' : '\\underbrace{') + grp(node.a) + '}' +
+          (node.b && node.b.length ? (node.ov ? '^{' : '_{') + grp(node.b) + '}' : '');
+        case 'xacc': return '\\' + (node.k || 'overset') + '{' + grp(node.b) + '}{' + grp(node.a) + '}';
+        case 'fact': return grp(node.a) + '!';
+        case 'matrix': return '\\begin{matrix}' + node.cells.map(row => row.map(cell => grp(cell)).join(' & ')).join(' \\\\ ') + '\\end{matrix}';
+        default: return '';
+      }
+    }).join('');
+  }
+
+  /** تبدیل کد TeX به مدل جعبه‌ای */
+  
+function mbParse(src) {
+    const t = String(src || '')
+      .replace(/\\not\\subseteq/g, '⊈')
+      .replace(/\\not\\subset/g, '⊄')
+      .replace(/\\nsubseteq/g, '⊈')
+      .replace(/\\nsubset(?!eq)/g, '⊄')
+      .replace(/\\subsetneq/g, '⊊');
+    let n = 0;
+    const symToTex = {};
+    Object.keys(MB_SYM_TEX).forEach(k => { symToTex[MB_SYM_TEX[k].trim()] = k; });
+    // نام‌های مستعار نمادهایی که در MB_SYM_TEX نبودند (برای قالب‌های فیزیک/شیمی)
+    const MB_SYM_ALIAS = {
+      '\\rightarrow':'→','\\leftarrow':'←','\\leftrightarrow':'↔','\\uparrow':'↑','\\downarrow':'↓','\\updownarrow':'↕',
+      '\\rightleftharpoons':'⇌','\\hbar':'ℏ','\\propto':'∝','\\mp':'∓','\\circ':'∘',
+      '\\eta':'η','\\Phi':'Φ','\\varepsilon':'ϵ',
+      '\\setminus':'∖','\\wedge':'∧','\\vee':'∨','\\land':'∧','\\lor':'∨',
+      '\\ni':'∋','\\supseteq':'⊇','\\subsetneq':'⊊','\\nsubseteq':'⊈','\\nsubset':'⊄'
+    };
+    Object.keys(MB_SYM_ALIAS).forEach(k => { symToTex[k] = MB_SYM_ALIAS[k]; });
+    const opToTex = {};
+    Object.keys(MB_OP_TEX).forEach(k => { opToTex['\\' + MB_OP_TEX[k]] = k; });
+
+    function skipWs() { while (n < t.length && t[n] === ' ') n++; }
+
+    function readUnit() {
+      skipWs();
+      if (t[n] === '{') { n++; const arr = parseList('}'); if (t[n] === '}') n++; return arr; }
+      if (t[n] === '[') { n++; const arr = parseList(']'); if (t[n] === ']') n++; return arr; }
+      if (t[n] === '\\') return readCmd();
+      return n < t.length ? [mbChar(t[n++])] : [];
+    }
+
+function notifyNative() {
+  try {
+    var tex = mbTex(MB.root);
+    if (window.AndroidCanvas && window.AndroidCanvas.onFormulaChange) {
+      window.AndroidCanvas.onFormulaChange(tex);
+    }
+  } catch(e) {}
+}
+
+window.setFormula = function(tex) {
+  try {
+    MB.root = mbParse(tex || "");
+    MB.cur = { arr: MB.root, i: MB.root.length };
+    mbDraw();
+    mbFocus();
+  } catch(e) {
+    console.error("setFormula error:", e);
+  }
 };
-window.moveCursor = function(d) { setAct(activeIdx + d); };
-window.moveSpatial = function(d) { setAct(activeIdx + d); };
-window.setZoom = function(z) { document.documentElement.style.setProperty("--mbfs", z); };
-window.focusCanvas = function() { canvas.focus(); };
+
+window.insertFormula = function(tex) {
+  try {
+    if (!MB.cur) mbEnd();
+    mbPush();
+    var arr = MB.cur.arr, i = MB.cur.i;
+    var nodes = mbParse(tex);
+    arr.splice(i, 0, ...nodes);
+    MB.cur = { arr: arr, i: i + nodes.length };
+    mbDraw();
+    mbFocus();
+    notifyNative();
+  } catch(e) {
+    console.error("insertFormula error:", e);
+  }
+};
+
+window.typeCharacter = function(c) {
+  try {
+    mbType(c);
+    notifyNative();
+  } catch(e) {}
+};
+
+window.backspace = function() {
+  try {
+    mbBack();
+    notifyNative();
+  } catch(e) {}
+};
+
+window.moveCursor = function(delta) {
+  try {
+    mbMove(delta);
+  } catch(e) {}
+};
+
+window.moveSpatial = function(dir) {
+  try {
+    mbSpatial(dir);
+  } catch(e) {}
+};
+
+window.setZoom = function(z) {
+  try {
+    mbZoom(z);
+  } catch(e) {}
+};
+
+window.focusCanvas = function() {
+  try {
+    mbFocus();
+  } catch(e) {}
+};
+
+document.addEventListener("DOMContentLoaded", function() {
+  try {
+    mbDraw();
+  } catch(e) {}
+});
 </script>
 </body>
 </html>
