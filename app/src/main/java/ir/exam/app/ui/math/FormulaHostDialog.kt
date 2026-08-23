@@ -9,15 +9,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -62,7 +55,8 @@ fun FormulaHostDialog(
             dismissOnClickOutside = false
         )
     ) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        // پس‌زمینه همان رنگ صفحهٔ مرجع تا هیچ فریم سفید/ناهماهنگی دیده نشود.
+        Surface(Modifier.fillMaxSize(), color = ComposeColor(0xFFE9EEF5)) {
             Box(Modifier.fillMaxSize()) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -96,9 +90,11 @@ fun FormulaHostDialog(
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
                                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                                    val path = request.url.path ?: return null
+                                    val path = request.url.path ?: return emptyResponse()
+                                    // V54.4 — مسیرهای خارج از asset محلی پاسخ خالی امن می‌گیرند.
+                                    if (!path.startsWith("/question-editor/")) return emptyResponse()
                                     val assetPath = path.removePrefix("/question-editor/")
-                                    if (assetPath.isBlank() || assetPath.contains("..")) return null
+                                    if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
                                     return try {
                                         val stream = view.context.assets.open("question_editor/$assetPath")
                                         val mime = when {
@@ -109,8 +105,11 @@ fun FormulaHostDialog(
                                             else -> "application/octet-stream"
                                         }
                                         WebResourceResponse(mime, "UTF-8", stream)
-                                    } catch (_: IOException) { null }
+                                    } catch (_: IOException) { emptyResponse() }
                                 }
+
+                                private fun emptyResponse(): WebResourceResponse =
+                                    WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
                                 override fun onPageFinished(view: WebView, url: String) {
                                     val text = JSONObject.quote(initialText)
                                     view.evaluateJavascript(
@@ -125,12 +124,6 @@ fun FormulaHostDialog(
                 )
                 if (loading) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
-                }
-                IconButton(
-                    onClick = { onResult(latestText); onDismiss() },
-                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).size(40.dp)
-                ) {
-                    Icon(Icons.Outlined.Close, contentDescription = "بستن ویرایشگر فرمول")
                 }
             }
         }

@@ -58,6 +58,11 @@ class QuestionEditorFieldController {
         webView?.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.cancelEditToken();", null)
     }
 
+    /** V54.4 — بستن لایه‌های تمام‌صفحهٔ مرجع (ابزارها) با دکمهٔ بازگشت سیستم. */
+    fun closeOverlays() {
+        webView?.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.closeOverlays();", null)
+    }
+
     /** همگام‌سازی متن از سمت Native (مثلاً افزودن سؤال از بانک) به کادر WebView. */
     fun setValue(text: String) {
         val view = webView ?: return
@@ -101,9 +106,12 @@ fun QuestionTextFieldWebView(
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                        val path = request.url.path ?: return null
+                        val path = request.url.path ?: return emptyResponse()
+                        // V54.4 — هر مسیر خارج از asset محلی (مثل favicon خودکار)
+                        // پاسخ خالی امن می‌گیرد تا WebView سراغ شبکهٔ ناموجود نرود.
+                        if (!path.startsWith("/question-editor/")) return emptyResponse()
                         val assetPath = path.removePrefix("/question-editor/")
-                        if (assetPath.isBlank() || assetPath.contains("..")) return null
+                        if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
                         return try {
                             val stream = view.context.assets.open("question_editor/$assetPath")
                             val mime = when {
@@ -114,10 +122,16 @@ fun QuestionTextFieldWebView(
                                 else -> "application/octet-stream"
                             }
                             WebResourceResponse(mime, "UTF-8", stream)
-                        } catch (_: IOException) { null }
+                        } catch (_: IOException) { emptyResponse() }
                     }
+
+                    private fun emptyResponse(): WebResourceResponse =
+                        WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
                     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
-                        onError("EDITOR_LOAD_FAILED")
+                        // V54.4 — فقط شکست «صفحهٔ اصلی» خطای واقعی است؛ خطای
+                        // subresourceهای فرعی (مثل favicon خودکار مرورگر روی دامنهٔ
+                        // محلی بدون DNS) پیام کاذب «بارگیری نشد» می‌ساخت.
+                        if (request.isForMainFrame) onError("EDITOR_LOAD_FAILED")
                     }
                     override fun onPageFinished(view: WebView, url: String) {
                         controller.lastJsValue = initialValue

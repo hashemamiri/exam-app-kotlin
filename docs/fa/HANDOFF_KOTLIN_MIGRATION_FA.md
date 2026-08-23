@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.3 مرحلهٔ پایانی کتابخانهٔ نمودار Native (پوشش کامل ۶۱/۶۱ نوع مرجع — پایان نقشه V54)؛ پیش از آن: V54.2 (build موفق اعلام کاربر)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.4 برابری بایت‌به‌بایت کادر متن سؤال و پنجرهٔ فرمول با مرجع + رفع پیام کاذب بارگیری؛ پیش از آن: V54.3/V54.3.1 (build موفق — پایان کتابخانهٔ نمودار ۶۱/۶۱)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6095,4 +6095,79 @@ SQL / Edge / Secret / Dependency      → ندارد
 FINAL_NATIVE_VERIFY                   → PASS با enforcement کامل (EXIT=0)
 git diff --check                      → PASS
 testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```
+
+
+## ۱۳۵) V54.4 — برابری بایت‌به‌بایت کادر متن سؤال و پنجرهٔ فرمول با مرجع
+
+### گزارش واقعی دستگاه (پس از build موفق V54.3.1)
+
+```text
+۱) کادر متن سؤال «وب‌ویو به‌نظر نمی‌رسید»
+۲) آیکن فرمول → صفحهٔ سفید؛ بازگشت → پیام «ویرایشگر متن سؤال بارگیری نشد»
+۳) درخواست صریح: پنجرهٔ فرمول و کادر متن دقیقاً و بایت‌به‌بایت مانند
+   question_editor.html باشند
+```
+
+### سه علت قطعی و اصلاح
+
+```text
+۱) ظاهر غیرمرجع کادر:
+   CSS تزریقی V53.4 برچسب/قاب/padding مرجع را حذف می‌کرد و Compose قاب و برچسب
+   خودش را می‌کشید — نتیجه شبیه کادر Native بود نه صفحهٔ مرجع.
+   → حذف کامل CSS دستکاری قاب از asset و حذف قاب/برچسب Compose؛ اکنون markup و
+     استایل مرجع بایت‌به‌بایت رندر می‌شود؛ تنها استثنا مخفی‌کردن نوار ابزار
+     داخلی است (آیکن‌ها در Compose هستند).
+
+۲) پیام کاذب «بارگیری نشد» و صفحهٔ سفید:
+   onReceivedError برای خطای «هر subresource» شلیک می‌شد — از جمله favicon
+   خودکار مرورگر روی دامنهٔ محلی بدون DNS — نه فقط صفحهٔ اصلی. در پنجرهٔ فرمول
+   نیز پوستهٔ میزبان visibility:hidden بود و تا boot ویرایشگر فقط سفیدی دیده می‌شد.
+   → onError فقط برای request.isForMainFrame؛ مسیرهای خارج از /question-editor/
+     پاسخ خالی امن (نه null) می‌گیرند؛ مخفی‌سازی پوستهٔ میزبان حذف شد و پس‌زمینهٔ
+     Dialog همان رنگ صفحهٔ مرجع (#e9eef5) شد.
+
+۳) پنجرهٔ فرمول غیرمرجع:
+   X شناور Compose روی پنجره اضافه بود.
+   → حذف X و هر عنصر Compose؛ پنجره WebView خالص تمام‌صفحه است؛ بستن با
+     دکمه‌های خود ویرایشگر مرجع (رویداد overlay=false) یا Back سیستم که متن
+     نهایی را برمی‌گرداند.
+```
+
+### سایر تحویل‌ها
+
+```text
+بازنویسی تمیز بلوک پل asset (exam-editor-native-tools) با حفظ کامل قراردادهای
+V53.1..V53.4: درج توکن مکان‌نما، dblclick چهار نوع، applyEditedToken،
+onOpenFormula، ExamEditorFormula.begin و onOverlayChanged
+closeOverlays جدید: Back سیستم لایه‌های تمام‌صفحهٔ مرجع (فرمول/ابزارها) داخل
+WebView کادر متن را می‌بندد (BackHandler وقتی overlay باز است)
+هماهنگی تست V53.4 و قرارداد verify با طراحی قطعی V54.4
+```
+
+### فایل‌ها
+
+```text
+app/src/main/assets/question_editor/question_editor.html   (بازنویسی بلوک پل)
+app/src/main/assets/question_editor/version.txt
+app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt
+app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt
+app/src/test/java/ir/exam/app/ui/app/V54_4ReferenceParityFixTest.kt   (جدید)
+app/src/test/java/ir/exam/app/ui/app/V53_4FormulaHostFrameTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+کد مرجع HTML: دست‌نخورده؛ فقط بلوک افزودهٔ پل بازنویسی شد
+پیش‌نیاز: V54.3.1
+FINAL_NATIVE_VERIFY (با enforcement کامل)  → PASS, EXIT=0
+V54_4ReferenceParityFixTest                → ۵ تست جدید؛ شبیه‌سازی PASS
+git diff --check                           → PASS
+testDebugUnitTest / lintDebug              → باید در CI اجرا شود
 ```

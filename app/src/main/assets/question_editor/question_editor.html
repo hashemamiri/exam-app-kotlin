@@ -9614,25 +9614,17 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
 
 
 <script id="exam-editor-native-tools">
-  /* V53.1 — پل ابزارهای Native (افزودهٔ Native؛ هیچ کد مرجع تغییر نکرده است)
-     ۱) نوار ابزار داخلی HTML مخفی می‌شود؛ آیکن‌ها در Compose رسم می‌شوند.
-     ۲) درج توکن شکل/نمودار/جدول ساخته‌شده در ویرایشگرهای Native در محل مکان‌نما.
-     ۳) بازکردن ابزارهای مرجع (فرمول/آناتومی/تناوبی/فیزیک/شیمی) با فرمان Native.
-     ۴) گزارش باز/بسته‌شدن لایه‌های تمام‌صفحه برای تنظیم ارتفاع WebView. */
+  /* V54.4 — پل Native (افزودهٔ Native؛ هیچ کد مرجع تغییر نکرده است).
+     ظاهر و رفتار صفحه بایت‌به‌بایت مرجع می‌ماند؛ در حالت nativeTools فقط نوار
+     ابزار داخلی مخفی می‌شود چون آیکن‌ها در Compose رسم می‌شوند. فرمول با همان
+     iframe مرجع (mathEditorFrame) داخل همین صفحه باز می‌شود. */
   (function () {
-    /* فقط وقتی Native صریحاً بخواهد (کادر متن سؤال V53.1) toolbar داخلی مخفی می‌شود؛
-       دیالوگ فرمول گزینه‌ها همان صفحه را بدون این پارامتر باز می‌کند و دست‌نخورده می‌ماند. */
     var nativeTools = /[?&]nativeTools=1/.test(location.search);
     if (nativeTools) {
       try {
         var st = document.createElement('style');
         st.id = 'nativeToolbarHide';
-        st.textContent = '.q-tools{display:none !important;}' +
-          /* V53.4 — قاب و برچسب داخلی HTML حذف می‌شود تا فقط قاب Native دیده شود */
-          '.field>span{display:none !important;}' +
-          '.exam-question-editor-shell{padding:0 !important;}' +
-          '.exam-question-editor-shell .input{border:0 !important;background:transparent !important;box-shadow:none !important;}' +
-          '.exam-question-editor-shell .qmf-surface.input{border:0 !important;background:transparent !important;}';
+        st.textContent = '.q-tools{display:none !important;}';
         (document.head || document.documentElement).appendChild(st);
       } catch (e) {}
     }
@@ -9656,7 +9648,6 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
         if (specJson == null || String(specJson) === '') return;
         insertRaw('%%FIG:' + String(specJson) + '%%');
       },
-      /* V53.3 — جایگزینی توکن در حال ویرایش (dblclick) با نسخهٔ ویرایش‌شدهٔ Native. */
       applyEditedToken: function (newJson) {
         var t = field();
         if (!t || pendingEditJson == null) { pendingEditJson = null; return; }
@@ -9680,12 +9671,38 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
           if (name === 'physics' && window.ScienceFig) return ScienceFig.open(null, null, 'phys');
           if (name === 'chemistry' && window.ScienceFig) return ScienceFig.open(null, null, 'chem');
         } catch (e) {}
+      },
+      /* V54.4 — بستن همهٔ لایه‌های تمام‌صفحهٔ مرجع از سمت Native (دکمهٔ بازگشت). */
+      closeOverlays: function () {
+        try {
+          var fEl = document.getElementById('mathEditorFrame');
+          if (fEl && fEl.style.display === 'block') {
+            var closed = false;
+            try {
+              if (fEl.contentWindow && typeof fEl.contentWindow.closeMath === 'function') {
+                fEl.contentWindow.closeMath();
+                closed = true;
+              }
+            } catch (e) {}
+            if (!closed) {
+              fEl.style.display = 'none';
+              document.documentElement.style.overflow = '';
+              document.body.style.overflow = '';
+            }
+          }
+        } catch (e) {}
+        ['gfOverlay', 'grOverlay', 'tbOverlay', 'anOverlay', 'ptOverlay', 'scOverlay'].forEach(function (id) {
+          try {
+            var n = document.getElementById(id);
+            if (n && n.classList) n.classList.remove('open');
+          } catch (e) {}
+        });
       }
     };
     if (nativeTools) {
-      /* V53.4 — فرمول دیگر داخل همین WebView کوچک باز نمی‌شود؛ متن و محدودهٔ انتخاب
-         (شامل محدودهٔ فرمول در حال ویرایش) به Native می‌رود تا پنجرهٔ تمام‌صفحهٔ
-         WebView فرمول باز شود. */
+      /* V54.4 — فرمول در WebView کوچک کادر متن جا نمی‌شود؛ متن و محدودهٔ انتخاب
+         (شامل محدودهٔ فرمول در حال ویرایش) به Native می‌رود تا همین صفحه در
+         پنجرهٔ تمام‌صفحه با ویرایشگر مرجع باز شود. */
       window.__openMathEditor = function () {
         var t = field();
         if (!t) return;
@@ -9702,8 +9719,8 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
           }
         } catch (e) {}
       };
-      /* V53.3 — دوبار-کلیک توکن‌های جدول/تناوبی/آناتومی/علوم را به ویرایشگر Native
-         می‌فرستد؛ هندسه/نمودار و سایر رفتارها دست‌نخورده به ابزار مرجع می‌روند. */
+      /* V53.3 — دوبار-کلیک توکن‌های جدول/تناوبی/آناتومی/علوم به ویرایشگر Native؛
+         هندسه/نمودار و سایر رفتارها دست‌نخورده به ابزار مرجع می‌روند. */
       document.addEventListener('dblclick', function (e) {
         var n = e.target;
         while (n && n !== document) {
@@ -9726,15 +9743,10 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
         } catch (err) {}
       }, true);
     }
-    /* V53.4 — حالت میزبان تمام‌صفحهٔ فرمول: پوسته مخفی است و ویرایشگر مرجع
-       با متن و محدودهٔ انتخاب دریافتی از Native باز می‌شود. */
+    /* V54.4 — میزبان فرمول گزینه/جورکردنی: صفحهٔ مرجع «قابل مشاهده» می‌ماند
+       (بدون hidden) و ویرایشگر فرمول مرجع بلافاصله روی آن باز می‌شود. */
     var formulaHost = /[?&]formulaHost=1/.test(location.search);
     if (formulaHost) {
-      try {
-        var st3 = document.createElement('style');
-        st3.textContent = '.exam-question-editor-shell{visibility:hidden;}';
-        (document.head || document.documentElement).appendChild(st3);
-      } catch (e) {}
       window.ExamEditorFormula = {
         begin: function (text, s, e) {
           var t = field();
@@ -9772,7 +9784,7 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
           }
         } catch (e) {}
       }
-    }, 300);
+    }, 250);
   })();
 </script>
 

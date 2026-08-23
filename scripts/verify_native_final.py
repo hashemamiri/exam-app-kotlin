@@ -1191,8 +1191,8 @@ require("onOpenFormula" in editor_asset and "ExamEditorFormula" in editor_asset,
         "V53.4 asset bridge for the formula host is missing")
 require("FormulaHostDialog(" in builder_screen and "QuestionEditorWebViewDialog(" not in builder_screen,
         "V53.4 builder must open the full-screen formula window everywhere")
-require("nativeToolbarHide" in editor_asset and ".field>span{display:none !important;}" in editor_asset,
-        "V53.4 inner HTML frame/label must be hidden in nativeTools mode")
+require("nativeToolbarHide" in editor_asset and ".field>span{display:none" not in editor_asset,
+        "V54.4 reference frame/label must stay byte-identical; only the toolbar is hidden")
 
 
 # ---- V54.1: chart library stage 1 (20 new native chart types) ----
@@ -1243,6 +1243,20 @@ require(len(_gr_types) >= 60 and not _missing,
 require("<script" not in chart_stage3 and "href=" not in chart_stage3
         and "<foreignObject" not in chart_stage3,
         "V54.3 stage3 SVG renderer contains unsafe markup")
+
+# ---- V54.4: reference-parity question field + formula window fixes ----
+require('if (request.isForMainFrame) onError("EDITOR_LOAD_FAILED")' in web_field,
+        "V54.4 load error must fire for the main frame only")
+require('!path.startsWith("/question-editor/")' in web_field and "emptyResponse()" in web_field,
+        "V54.4 foreign paths must get safe empty responses in the field webview")
+require('"متن سؤال"' not in web_section and "BorderStroke" not in web_section,
+        "V54.4 compose must not draw a duplicate frame/label around the webview")
+require("Icons.Outlined.Close" not in formula_host and "0xFFE9EEF5" in formula_host,
+        "V54.4 formula window must be pure reference webview without a compose close button")
+require("closeOverlays" in web_field and "closeOverlays: function ()" in editor_asset,
+        "V54.4 back-button overlay close bridge is missing")
+require("ExamEditorNative.onOpenFormula" in editor_asset and "window.ExamEditorFormula" in editor_asset,
+        "V54.4 formula host bridges are missing from the asset")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

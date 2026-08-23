@@ -1,7 +1,7 @@
 package ir.exam.app.ui.builder
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,38 +55,31 @@ fun QuestionTextWebSection(
     var overlayOpen by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf(false) }
 
+    // V54.4 — دکمهٔ بازگشت سیستم ابتدا لایهٔ تمام‌صفحهٔ باز مرجع را می‌بندد.
+    BackHandler(enabled = overlayOpen) { controller.closeOverlays() }
+
     // همگام‌سازی تغییرهای بیرونی (مثلاً افزودن از بانک سؤال) به WebView بدون echo.
     LaunchedEffect(text) {
         if (text != controller.lastJsValue) controller.setValue(text)
     }
 
     Column(modifier.animateContentSize()) {
-        Text(
-            "متن سؤال",
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        // V54.4 — هیچ قاب/برچسب Compose دور WebView نیست؛ برچسب «متن سؤال» و
+        // قاب کادر همان markup و CSS بایت‌به‌بایت مرجع داخل خود HTML است.
+        QuestionTextFieldWebView(
+            controller = controller,
+            initialValue = text,
+            onValueChanged = onTextChanged,
+            onOverlayChanged = { overlayOpen = it },
+            onEditFigureToken = onEditFigureToken,
+            onOpenFormula = onOpenFormula,
+            onError = { loadError = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                // ابزارهای تمام‌صفحهٔ مرجع (آناتومی/تناوبی/فیزیک/شیمی) داخل همین
+                // WebView باز می‌شوند؛ هنگام بازبودن، ارتفاع بیشتر می‌شود.
+                .height(if (overlayOpen) 560.dp else 320.dp)
         )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)
-        ) {
-            QuestionTextFieldWebView(
-                controller = controller,
-                initialValue = text,
-                onValueChanged = onTextChanged,
-                onOverlayChanged = { overlayOpen = it },
-                onEditFigureToken = onEditFigureToken,
-                onOpenFormula = onOpenFormula,
-                onError = { loadError = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // ابزارهای تمام‌صفحهٔ مرجع (فرمول/آناتومی/تناوبی/فیزیک/شیمی)
-                    // داخل همین WebView باز می‌شوند؛ هنگام بازبودن، ارتفاع بیشتر می‌شود.
-                    .height(if (overlayOpen) 560.dp else 300.dp)
-            )
-        }
         if (loadError) {
             Text(
                 "ویرایشگر متن سؤال بارگیری نشد؛ دستگاه را دوباره امتحان کنید.",

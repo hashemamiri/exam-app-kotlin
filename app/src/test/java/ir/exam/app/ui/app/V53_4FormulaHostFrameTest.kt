@@ -27,10 +27,14 @@ class V53_4FormulaHostFrameTest {
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
 
     @Test
-    fun `inner html frame and label are hidden so only the native frame shows`() {
-        assertTrue(".field>span{display:none !important;}" in asset)
-        assertTrue(".exam-question-editor-shell .input{border:0 !important" in asset)
-        assertTrue(".exam-question-editor-shell{padding:0 !important;}" in asset)
+    fun `reference frame and label render byte identical with no compose duplicate`() {
+        // V54.4 — قاب/برچسب مرجع داخل HTML دست‌نخورده می‌ماند؛ CSS دستکاری قاب حذف شد.
+        assertFalse(".field>span{display:none" in asset)
+        assertFalse(".exam-question-editor-shell{padding:0 !important" in asset)
+        // Compose هیچ برچسب/قاب تکراری دور WebView نمی‌کشد.
+        val webSection = source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt")
+        assertFalse("\"متن سؤال\"" in webSection)
+        assertFalse("BorderStroke" in webSection)
     }
 
     @Test
@@ -52,10 +56,9 @@ class V53_4FormulaHostFrameTest {
         assertTrue("ExamEditorFormula.begin(" in host)
         // پایان کار با بسته‌شدن ویرایشگر مرجع (رویداد overlay=false پس از باز شدن).
         assertTrue("onResult(latestText)" in host)
-        // حالت میزبان asset: پوسته مخفی + شروع صریح
+        // حالت میزبان asset: صفحهٔ مرجع قابل مشاهده می‌ماند و ویرایشگر فوراً باز می‌شود.
         assertTrue("formulaHost = /[?&]formulaHost=1/" in asset)
         assertTrue("window.ExamEditorFormula" in asset)
-        assertTrue("visibility:hidden" in asset)
     }
 
     @Test
