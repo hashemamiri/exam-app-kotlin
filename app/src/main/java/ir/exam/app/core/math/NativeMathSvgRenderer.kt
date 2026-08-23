@@ -473,7 +473,7 @@ object NativeMathSvgRenderer {
         append("<g>")
         boxes.forEachIndexed { index, box ->
             val active = index == activeIndex
-            val color = if (active) "#10B981" else "#7AA7D8"
+            val color = if (active) activeColor else boxColor
             val isEmptyBox = box.sourceStart == box.sourceEnd
             val dashArray = if (!active && isEmptyBox) " stroke-dasharray=\"3,2\"" else ""
             append("<rect x=\"").append(number(box.xPx)).append("\" y=\"")
