@@ -1,10 +1,5 @@
 package ir.exam.app.ui.math
 
-import android.webkit.JavascriptInterface
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.ui.viewinterop.AndroidView
-
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -99,7 +94,6 @@ fun FormulaEditorDialog(
     val clipboard = LocalClipboardManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
-    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var value by remember(initialTex) {
         val initial = FormulaBoxEditor.replaceAll(initialTex, activateFirstBox = true)
         mutableStateOf(TextFieldValue(initial.text, TextRange(initial.selectionStart, initial.selectionEnd)))
@@ -143,8 +137,6 @@ fun FormulaEditorDialog(
     }
 
     fun replace(text: String, activateFirstBox: Boolean = false) {
-        val safe = text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
-        webViewInstance?.evaluateJavascript("window.setFormula(\"" + safe + "\");", null)
         val result = FormulaBoxEditor.replaceAll(text, activateFirstBox)
         setValue(
             TextFieldValue(
@@ -338,15 +330,16 @@ fun FormulaEditorDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
-                        FormulaCanvasWebView(
+                        NativeMathCanvasEditorView(
                             tex = value.text,
-                            onFormulaChange = { nextTex ->
-                                if (nextTex != value.text) {
-                                    value = TextFieldValue(nextTex, TextRange(nextTex.length))
-                                }
-                            },
+                            selectionStart = value.selection.min,
+                            selectionEnd = value.selection.max,
                             zoom = zoom,
-                            onWebViewReady = { webViewInstance = it },
+                            onBoxTap = { box ->
+                                value = value.copy(selection = TextRange(box.start, box.endExclusive))
+                                focusRequester.requestFocus()
+                                keyboard?.show()
+                            },
                             modifier = Modifier.fillMaxWidth().height(180.dp)
                         )
                     }
@@ -736,59 +729,6 @@ fun FormulaEditorDialog(
 
 
 
-
-private fun escapeForJs(text: String): String {
-    return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", "")
-}
-
-@Composable
-fun FormulaCanvasWebView(
-    tex: String,
-    onFormulaChange: (String) -> Unit,
-    zoom: Float,
-    onWebViewReady: (WebView) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                layoutParams = android.view.ViewGroup.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                settings.allowContentAccess = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                setBackgroundColor(android.graphics.Color.parseColor("#1e1e38"))
-                addJavascriptInterface(object {
-                    @JavascriptInterface
-                    fun onFormulaChange(newTex: String) {
-                        post { onFormulaChange(newTex) }
-                    }
-                }, "AndroidCanvas")
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        val safe = escapeForJs(tex)
-                        view?.evaluateJavascript("window.setFormula(\"$safe\");", null)
-                        view?.evaluateJavascript("window.setZoom($zoom);", null)
-                    }
-                }
-                loadUrl("file:///android_asset/formula_canvas_frame.html")
-                onWebViewReady(this)
-            }
-        },
-        update = { webView ->
-            val safe = escapeForJs(tex)
-            webView.evaluateJavascript("window.setFormula(\"$safe\");", null)
-            webView.evaluateJavascript("window.setZoom($zoom);", null)
-        },
-        modifier = modifier
-    )
-}
 
 @Composable
 private fun SvgFormulaEditorSurface(
