@@ -131,11 +131,13 @@ webview_files = {
     for f in (ROOT / "app/src/main/java").rglob("*.kt")
     if "android.webkit" in f.read_text(errors="ignore")
 }
-# Hybrid migration: WebView is allowed only inside the local formula editor adapter.
+# Hybrid migration: WebView is allowed only inside the local formula editor adapter
+# and (V53.1, user-approved) the local question text field surface.
 approved_webview_files = {
     "FormulaEditorDialog.kt",
     "QuestionEditorWebView.kt",
     "QuestionEditorWebViewDialog.kt",
+    "QuestionTextFieldWebView.kt",
 }
 require(
     webview_files <= approved_webview_files,
@@ -1107,5 +1109,29 @@ if errors:
     for error in errors:
         print(f"- {error}")
     sys.exit(1)
+
+
+# ---- V53.1: WebView question text field + native tool icons + native table editor ----
+web_section=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").read_text()
+web_field=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text()
+tool_icons=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionToolIcons.kt").read_text()
+table_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/TableEditorDialog.kt").read_text()
+table_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/TableSvgRenderer.kt").read_text()
+figure_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureSvgRenderer.kt").read_text()
+editor_asset=(ROOT/"app/src/main/assets/question_editor/question_editor.html").read_text(errors="ignore")
+require("QuestionTextWebSection(" in builder_screen and "InlineMathTextEditor(" not in builder_screen.split("import ",1)[1],
+        "V53.1 question card does not use the WebView text field")
+for _lbl in ["درج فرمول","درج شکل","درج نمودار","درج جدول","درج آناتومی بدن","درج جدول تناوبی","درج فیزیک","درج شیمی"]:
+    require(_lbl in web_section, f"V53.1 native toolbar is missing: {_lbl}")
+require("QuestionToolIcons" in web_section and "ImageVector" in tool_icons,
+        "V53.1 toolbar icons are not native ImageVectors")
+require("nativeTools=1" in web_field and "nativeToolbarHide" in editor_asset and "exam-editor-native-tools" in editor_asset,
+        "V53.1 HTML toolbar hiding bridge is missing")
+require("if (spec.isTable) return TableSvgRenderer.render(spec)" in figure_renderer,
+        "V53.1 table tokens do not render through the shared SVG path")
+require("android.webkit" not in table_editor and "buildTable" in (ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureSpec.kt").read_text(),
+        "V53.1 table editor is not fully native")
+require("figureBitmap" in (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text(),
+        "V53.1 PDF path does not rasterize %%FIG%% tokens")
 
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

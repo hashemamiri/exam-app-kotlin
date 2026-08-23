@@ -15,6 +15,14 @@ import kotlinx.serialization.json.jsonPrimitive
 data class FigureSpec(val raw: JsonObject) {
     val type: String get() = (raw["t"] as? JsonPrimitive)?.contentOrNull ?: "tri"
 
+    /**
+     * کد ماژول وب‌اپ: خالی=هندسه/نمودار، `t`=جدول، `a`=آناتومی، `p`=جدول تناوبی،
+     * `s`=فیزیک/شیمی. همان فیلد `k` مرجع است.
+     */
+    val kind: String get() = (raw["k"] as? JsonPrimitive)?.contentOrNull ?: ""
+
+    val isTable: Boolean get() = kind == "t"
+
     fun vertex(key: String): String = strOf((raw["V"] as? JsonObject)?.get(key))
     fun side(key: String): String = strOf((raw["S"] as? JsonObject)?.get(key))
     fun angle(key: String): String = strOf((raw["A"] as? JsonObject)?.get(key))
@@ -26,6 +34,14 @@ data class FigureSpec(val raw: JsonObject) {
         ((raw["X"] as? JsonObject)?.get(key) as? JsonPrimitive)?.contentOrNull?.toFloatOrNull() ?: default
 
     fun xList(key: String, default: String = ""): List<String> = splitList(xStr(key, default))
+
+    /** خانه‌های جدول (`C` مرجع): آرایهٔ سطرها؛ هر سطر آرایه‌ای از رشته‌ها. */
+    fun tableCells(): List<List<String>> =
+        (raw["C"] as? kotlinx.serialization.json.JsonArray)?.map { row ->
+            (row as? kotlinx.serialization.json.JsonArray)?.map { cell ->
+                (cell as? JsonPrimitive)?.contentOrNull ?: ""
+            } ?: emptyList()
+        } ?: emptyList()
 
     fun toJson(): String = raw.toString()
 
@@ -49,6 +65,22 @@ data class FigureSpec(val raw: JsonObject) {
             if (sides.isNotEmpty()) map["S"] = JsonObject(sides.mapValues { JsonPrimitive(it.value) })
             if (angles.isNotEmpty()) map["A"] = JsonObject(angles.mapValues { JsonPrimitive(it.value) })
             if (extra.isNotEmpty()) map["X"] = JsonObject(extra)
+            return FigureSpec(JsonObject(map))
+        }
+
+        /** ساخت spec جدول با همان قالب مرجع: `{k:'t', t:سبک, X:{title}, C:[[...]]}`. */
+        fun buildTable(
+            style: String,
+            title: String,
+            cells: List<List<String>>
+        ): FigureSpec {
+            val map = mutableMapOf<String, JsonElement>()
+            map["k"] = JsonPrimitive("t")
+            map["t"] = JsonPrimitive(style)
+            map["X"] = JsonObject(mapOf("title" to JsonPrimitive(title)))
+            map["C"] = kotlinx.serialization.json.JsonArray(
+                cells.map { row -> kotlinx.serialization.json.JsonArray(row.map { JsonPrimitive(it) }) }
+            )
             return FigureSpec(JsonObject(map))
         }
     }

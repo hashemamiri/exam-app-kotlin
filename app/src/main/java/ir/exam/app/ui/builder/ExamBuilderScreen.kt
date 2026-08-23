@@ -99,7 +99,8 @@ import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
-import ir.exam.app.ui.math.InlineMathTextEditor
+import ir.exam.app.ui.figure.TableEditorDialog
+import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.ui.math.QuestionEditorWebViewDialog
 import java.io.ByteArrayOutputStream
@@ -567,6 +568,12 @@ private data class FigureTarget(
     val chooseType: Boolean = false
 )
 
+/** V53.1 — هدف ویرایشگر Native جدول؛ occurrence null یعنی درج جدید. */
+private data class TableTarget(
+    val occurrenceIndex: Int? = null,
+    val initialSpec: FigureSpec? = null
+)
+
 @Composable
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
@@ -585,6 +592,9 @@ private fun QuestionEditor(
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
+    // V53.1 — کنترلر کادر متن سؤال WebView و هدف ویرایشگر Native جدول.
+    val questionFieldController = remember(question.id) { QuestionEditorFieldController() }
+    var tableTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
     var styleExpanded by remember(question.id) { mutableStateOf(false) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
@@ -698,26 +708,20 @@ private fun QuestionEditor(
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            InlineMathTextEditor(
-                source = question.text,
-                onSourceChange = { viewModel.updateText(question.id, it) },
-                onEditFormula = { occurrence, tex -> formulaTarget = FormulaTarget("question", occurrenceIndex = occurrence, initialTex = tex) },
-                onInsertFormula = { formulaTarget = FormulaTarget("question") },
-                onDeleteFormula = { occurrence -> viewModel.deleteFormula(question.id, "question", null, occurrence) },
+            // V53.1 — کادر متن سؤال WebView به‌جای کادر Native قبلی؛ فرمول و
+            // ابزارهای مرجع (آناتومی/تناوبی/فیزیک/شیمی) داخل همان WebView باز
+            // می‌شوند و شکل/نمودار/جدول ویرایشگر Native دارند.
+            QuestionTextWebSection(
+                text = question.text,
+                controller = questionFieldController,
+                onTextChanged = { viewModel.updateText(question.id, it) },
                 onInsertFigure = {
                     figureTarget = FigureTarget(kind = FigureKind.GEOMETRY, chooseType = true)
                 },
                 onInsertGraph = {
                     figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
                 },
-                onEditFigure = { occurrence, spec ->
-                    figureTarget = FigureTarget(
-                        occurrenceIndex = occurrence,
-                        initialSpec = spec,
-                        kind = if (spec.type in setOf("line", "quad", "sine", "exp", "bar", "col", "hbar", "stack")) FigureKind.GRAPH else FigureKind.GEOMETRY
-                    )
-                },
-                onDeleteFigure = { occurrence -> viewModel.deleteFigure(question.id, occurrence) },
+                onInsertTable = { tableTarget = TableTarget() },
                 modifier = Modifier.fillMaxWidth()
             )
             QuestionMediaEditor(
@@ -922,12 +926,32 @@ private fun QuestionEditor(
                 onDismiss = { figureTarget = null },
                 onInsert = { spec ->
                     val occurrence = target.occurrenceIndex
-                    if (occurrence == null) viewModel.insertFigure(question.id, spec)
-                    else viewModel.updateFigure(question.id, occurrence, spec)
+                    when {
+                        occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
+                        // V53.1 — درج در محل مکان‌نمای کادر WebView؛ متن از رویداد
+                        // onTextChanged همان WebView به ViewModel برمی‌گردد.
+                        questionFieldController.insertFigureJson(spec.toJson()) -> Unit
+                        else -> viewModel.insertFigure(question.id, spec)
+                    }
                     figureTarget = null
                 }
             )
         }
+    }
+    tableTarget?.let { target ->
+        TableEditorDialog(
+            initialSpec = target.initialSpec,
+            onDismiss = { tableTarget = null },
+            onInsert = { spec ->
+                val occurrence = target.occurrenceIndex
+                when {
+                    occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
+                    questionFieldController.insertFigureJson(spec.toJson()) -> Unit
+                    else -> viewModel.insertFigure(question.id, spec)
+                }
+                tableTarget = null
+            }
+        )
     }
 }
 

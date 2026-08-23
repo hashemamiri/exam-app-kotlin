@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۲ — V45.4.1 هات‌فیکس اسکریپت final-verify برای ویرایشگر فرمول WebView؛ پیش از آن: V45.4 جایگزینی ویرایشگر فرمول بومی با WebView (استخراج کد به کد از 66.html، بدون تغییر)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۳ — V53.1 کادر متن سؤال WebView + نوار ۸ آیکن Native + ویرایشگر جدول Native؛ پیش از آن: V52 پالایش ویرایشگر فرمول
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5504,3 +5504,83 @@ FINAL_NATIVE_VERIFY → PASS
 SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V45.3
 ```
+
+
+## ۱۲۴) V53.1 — کادر متن سؤال WebView، نوار ۸ آیکن Native و جدول Native
+
+### درخواست و تصمیم‌ها
+
+```text
+درخواست: متن سؤال جدید جایگزین قبلی؛ آیکن‌های جدول/آناتومی/تناوبی/فیزیک/شیمی
+         کنار فرمول/شکل/نمودار؛ همهٔ آیکن‌ها Native به‌جز فرمول و متن سؤال.
+تأیید کاربر: ویرایشگر کاملاً Native برای ۵ ابزار (سه مرحله V53.1..V53.3)،
+             کادر متن سؤال WebView، رندر دانش‌آموز/PDF در همین نقشه.
+فایل ارسالی question_editor.html: جایگزین نشد — با asset مخزن یکسان بود و فقط
+             یک اسکریپت tracking Cloudflare اضافه داشت؛ asset مخزن تمیزتر است.
+پچ pending قبلی (V50_0_revert_to_v45_3.patch): طبق انتخاب کاربر دست‌نخورده ماند.
+```
+
+### تحویل V53.1
+
+```text
+QuestionTextFieldWebView + QuestionEditorFieldController   → کادر متن سؤال WebView محلی و امن
+اسکریپت افزودهٔ exam-editor-native-tools در asset           → درج توکن در مکان‌نما /
+                                                              openTool / onOverlayChanged
+پرچم ?nativeTools=1                                         → مخفی‌سازی toolbar داخلی HTML
+                                                              فقط برای کادر متن سؤال
+QuestionToolIcons (ImageVector خالص از SVGهای مرجع)          → ۸ آیکن Native با ترتیب مرجع:
+                                فرمول، شکل، نمودار، جدول، آناتومی، تناوبی، فیزیک، شیمی
+QuestionTextWebSection                                      → جایگزین InlineMathTextEditor
+                                                              در کارت سؤال Builder
+TableEditorDialog (کاملاً Native)                            → ۱۸ سبک مرجع، ۱..۱۵×۱..۱۰،
+                                عنوان، ویرایش خانه‌ها، پیش‌نمایش زنده، نمونهٔ هر سبک
+TableSvgRenderer                                            → SVG امن با قواعد isHead/sample مرجع
+FigureSpec.buildTable/tableCells/kind/isTable               → همان قرارداد {k:'t',t,X,C} مرجع
+FigureSvgRenderer                                           → k='t' به TableSvgRenderer؛
+                                k∈{a,p,s} پلاک عنوان‌دار امن تا V53.2/V53.3
+OfficialPdfPrintAdapter                                     → %%FIG%% با AndroidSVG به تصویر
+                                برداری در PDF (قبلاً JSON خام چاپ می‌شد)
+شکل/نمودار                                                  → همان ویرایشگرهای Native V45.3؛
+                                خروجی در محل مکان‌نمای WebView درج می‌شود
+آناتومی/تناوبی/فیزیک/شیمی                                   → آیکن Native از الان؛ ابزار مرجع
+                                داخل WebView تا تحویل V53.2/V53.3
+```
+
+### امنیت
+
+```text
+WebView مجاز: FormulaEditorDialog / QuestionEditorWebView /
+              QuestionEditorWebViewDialog / QuestionTextFieldWebView (فهرست verify)
+ناوبری خارجی مسدود، دسترسی فایل خاموش، Secret/token صفر
+SVG جدول: XML-escaped، بدون script/href/foreignObject
+کد مرجع HTML دست‌نخورده؛ فقط بلوک پل افزوده شد
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency: androidsvg-aar:1.4 (صریح‌سازی وابستگی transitive موجود coil-svg)
+پیش‌نیاز: V52
+```
+
+### تست V53.1
+
+```text
+FINAL_NATIVE_VERIFY                    → PASS (اجرای محلی + قرارداد جدید V53.1)
+V53WebFieldNativeToolsTableTest        → 6 تست منبع‌محور اضافه شد
+Neumorphic69IntegrationTest            → فهرست WebView مجاز به‌روزرسانی شد
+testDebugUnitTest / lintDebug / build  → باید در WSL/GitHub Actions اجرا شود
+```
+
+### باقی‌مانده
+
+```text
+V53.2 → جدول تناوبی Native (۱۱۸ عنصر فارسی + ویرایشگر + رندر دانش‌آموز/PDF)
+V53.3 → آناتومی + فیزیک/شیمی Native (اطلس asset + ویرایشگر + رندر) + رگرسیون کل
+```
+
+راهنمای مستقل: `docs/fa/WEB_FIELD_NATIVE_TOOLS_TABLE_V53_1_FA.md`.

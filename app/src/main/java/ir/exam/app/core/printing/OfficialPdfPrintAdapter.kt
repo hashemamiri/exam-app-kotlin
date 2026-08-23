@@ -18,9 +18,13 @@ import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
 import ir.exam.app.core.calendar.JalaliCalendar
+import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.figure.FigureSvgRenderer
 import ir.exam.app.core.math.NativeMathCanvasRenderer
 import ir.exam.app.core.math.NativeMathFormatter
 import ir.exam.app.core.math.NativeMathParser
+import ir.exam.app.core.text.RichSegment
+import ir.exam.app.core.text.RichTextSplitter
 import ir.exam.app.domain.model.OfficialExamPrintable
 import androidx.core.content.res.ResourcesCompat
 import ir.exam.app.R
@@ -145,9 +149,18 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         add(RenderBlock(text="درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",textSize=11f,bold=true,boxed=true))
         exam.questions.forEach { question ->
             add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign))
-            NativeMathFormatter.segments(question.text).forEach { segment ->
-                if(segment.math) add(RenderBlock(formula=segment.text,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
-                else splitText(segment.text.replace("\\$","$"),700).forEach { add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily)) }
+            // V53.1 — شکل/نمودار/جدول درون‌متنی (%%FIG%%) به‌جای JSON خام،
+            // به‌صورت تصویر برداری در PDF رندر می‌شوند؛ فرمول‌ها مثل قبل.
+            RichTextSplitter.split(question.text).forEach { rich ->
+                when (rich) {
+                    is RichSegment.Math -> add(RenderBlock(formula=rich.tex,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
+                    is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
+                        add(RenderBlock(image=bmp,imageWidthMm=95f))
+                    } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
+                    is RichSegment.Text -> if (rich.text.isNotBlank()) {
+                        splitText(rich.text.replace("\\$","$"),700).forEach { add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily)) }
+                    }
+                }
             }
             question.options.forEachIndexed { index, option ->
                 NativeMathFormatter.segments("${index+1}) $option").forEach { segment ->
@@ -330,6 +343,22 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
 
     private fun splitText(value: String, chunk: Int): List<String> =
         if (value.length <= chunk) listOf(value) else value.chunked(chunk)
+
+    /** V53.1 — رندر برداری شکل/نمودار/جدول به bitmap برای PDF (AndroidSVG، بدون WebView). */
+    private fun figureBitmap(spec: FigureSpec): Bitmap? = runCatching {
+        val document = FigureSvgRenderer.render(spec)
+        val svg = com.caverock.androidsvg.SVG.getFromString(document.xml)
+        val scale = 2f
+        val width = (document.widthPx * scale).roundToInt().coerceAtLeast(1)
+        val height = (document.heightPx * scale).roundToInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(Color.WHITE)
+        svg.documentWidth = width.toFloat()
+        svg.documentHeight = height.toFloat()
+        svg.renderToCanvas(canvas)
+        bitmap
+    }.getOrNull()
 
     private fun formatScore(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value)
 

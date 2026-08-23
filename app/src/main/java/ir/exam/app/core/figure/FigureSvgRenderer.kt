@@ -67,6 +67,12 @@ object FigureSvgRenderer {
     )
 
     fun render(spec: FigureSpec): MathSvgDocument {
+        // V53.1 — توکن‌های جدول (`k='t'`) مسیر رندر اختصاصی خود را دارند تا
+        // در همهٔ نمایش‌ها (Builder/دانش‌آموز/چاپ) بدون تغییر فراخوان‌ها کار کنند.
+        if (spec.isTable) return TableSvgRenderer.render(spec)
+        // V53.1 — آناتومی/تناوبی/فیزیک/شیمی تا تحویل رندر Native (V53.2/V53.3)
+        // پلاک عنوان‌دار امن می‌گیرند؛ نه JSON خام و نه هندسهٔ نامربوط.
+        if (spec.kind in setOf("a", "p", "s")) return renderKindPlate(spec)
         val body = renderBody(spec)
         val viewBox = if (spec.type == "parll") "0 0 380 280" else "0 0 360 280"
         val xml = wrap(body, viewBox)
@@ -80,6 +86,27 @@ object FigureSvgRenderer {
     }
 
     fun isGeometry(spec: FigureSpec): Boolean = spec.type !in setOf("line", "quad", "sine", "exp", "bar", "col", "hbar", "stack")
+
+    /** پلاک موقت انواع مرجع (a/p/s) تا رندر Native کامل V53.2/V53.3. */
+    private fun renderKindPlate(spec: FigureSpec): MathSvgDocument {
+        val label = when (spec.kind) {
+            "a" -> "آناتومی"
+            "p" -> "جدول تناوبی"
+            else -> "فیزیک/شیمی"
+        }
+        val title = spec.xStr("title").ifBlank { label }
+        val body = "<rect x=\"8\" y=\"8\" width=\"304\" height=\"104\" rx=\"12\" fill=\"rgba(108,99,245,.07)\" stroke=\"#6c63f5\" stroke-width=\"1.6\"/>" +
+            txt(160f, 52f, title, "#263142", "middle", size = 15) +
+            txt(160f, 84f, label, "#5b52e0", "middle", size = 12)
+        val xml = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 320 120\" width=\"320\" height=\"120\" overflow=\"hidden\">$body</svg>"
+        return MathSvgDocument(
+            xml = xml,
+            widthPx = 320f,
+            heightPx = 120f,
+            cacheKey = "figure-plate-${sha256(spec.toJson())}",
+            editBoxes = emptyList()
+        )
+    }
 
     // ------------------------------------------------------------------ core
 
