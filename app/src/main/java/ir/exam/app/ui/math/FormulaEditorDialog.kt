@@ -294,8 +294,11 @@ fun FormulaEditorDialog(
                 Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("🧮 نوشتن فرمول", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -485,16 +488,6 @@ fun FormulaEditorDialog(
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 notice?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                HorizontalDivider()
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Button(onClick = ::applyCurrent, modifier = Modifier.weight(1f)) {
-                        Text("✅ درج در سؤال")
-                    }
-                    OutlinedButton(onClick = { replace("") }) {
-                        Text("🧹 پاک")
-                    }
-                    TextButton(onClick = onDismiss) { Text("انصراف") }
-                }
             }
         }
     }
@@ -758,6 +751,9 @@ private fun SvgFormulaEditorSurface(
     onDismiss: () -> Unit
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+        }
         Card(Modifier.fillMaxWidth().height(180.dp)) {
             Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
                 NativeFormulaEditorView(

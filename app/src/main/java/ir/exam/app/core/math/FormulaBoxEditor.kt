@@ -67,18 +67,33 @@ object FormulaBoxEditor {
     ): FormulaBoxEditResult {
         val ranges = NativeMathParser.editableRanges(text)
         if (ranges.isEmpty()) {
-            val position = selectionEnd.coerceIn(0, text.length)
-            return FormulaBoxEditResult(text, position, position)
+            val nextPos = (selectionEnd + delta).coerceIn(0, text.length)
+            return FormulaBoxEditResult(text, nextPos, nextPos)
         }
         val active = activeRange(text, selectionStart, selectionEnd)
         val currentIndex = active?.let { selected ->
             ranges.indexOfFirst { it == selected }.takeIf { it >= 0 }
                 ?: ranges.indexOfFirst {
+                    it.start <= selected.start && it.endExclusive >= selected.endExclusive
+                }.takeIf { it >= 0 }
+                ?: ranges.indexOfFirst {
                     it.start < selected.endExclusive && it.endExclusive > selected.start
                 }.takeIf { it >= 0 }
-        } ?: 0
-        val target = ranges[(currentIndex + delta).coerceIn(0, ranges.lastIndex)]
-        return FormulaBoxEditResult(text, target.start, target.endExclusive)
+        }
+        if (currentIndex != null && currentIndex >= 0) {
+            val nextIndex = currentIndex + delta
+            if (nextIndex in ranges.indices) {
+                val target = ranges[nextIndex]
+                return FormulaBoxEditResult(text, target.start, target.endExclusive)
+            }
+        }
+        val nextPos = (selectionEnd + delta).coerceIn(0, text.length)
+        val matchingRange = ranges.firstOrNull { nextPos >= it.start && nextPos < it.endExclusive }
+        return if (matchingRange != null) {
+            FormulaBoxEditResult(text, matchingRange.start, matchingRange.endExclusive)
+        } else {
+            FormulaBoxEditResult(text, nextPos, nextPos)
+        }
     }
 
     fun moveSpatialBox(
@@ -87,25 +102,30 @@ object FormulaBoxEditor {
         selectionEnd: Int,
         direction: Int
     ): FormulaBoxEditResult {
+        if (text.isBlank()) return FormulaBoxEditResult(text, 0, 0)
         val document = NativeMathSvgRenderer.render(text, 32f, showEditBoxes = true)
         val boxes = document.editBoxes
         if (boxes.isEmpty()) return moveActiveBox(text, selectionStart, selectionEnd, direction)
         val active = activeRange(text, selectionStart, selectionEnd)
         val current = active?.let { selected ->
             boxes.firstOrNull { it.sourceStart == selected.start && it.sourceEnd == selected.endExclusive }
+                ?: boxes.firstOrNull { it.sourceStart <= selected.start && it.sourceEnd >= selected.endExclusive }
                 ?: boxes.firstOrNull { it.sourceStart < selected.endExclusive && it.sourceEnd > selected.start }
         } ?: boxes.first()
         val currentX = current.xPx + current.widthPx / 2f
         val currentY = current.yPx + current.heightPx / 2f
         val candidate = boxes.asSequence().filter { it !== current }.filter { box ->
             val centerY = box.yPx + box.heightPx / 2f
-            if (direction < 0) centerY < currentY - 1f else centerY > currentY + 1f
+            if (direction < 0) centerY < currentY - 0.5f else centerY > currentY + 0.5f
         }.minByOrNull { box ->
             val centerX = box.xPx + box.widthPx / 2f
             val centerY = box.yPx + box.heightPx / 2f
             kotlin.math.abs(centerY - currentY) * 4f + kotlin.math.abs(centerX - currentX)
-        } ?: return moveActiveBox(text, selectionStart, selectionEnd, direction)
-        return FormulaBoxEditResult(text, candidate.sourceStart, candidate.sourceEnd)
+        }
+        if (candidate != null) {
+            return FormulaBoxEditResult(text, candidate.sourceStart, candidate.sourceEnd)
+        }
+        return moveActiveBox(text, selectionStart, selectionEnd, if (direction < 0) -1 else 1)
     }
 
     fun firstBox(text: String): FormulaBoxEditResult {
