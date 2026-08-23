@@ -5757,3 +5757,35 @@ V53.1 ✔ / V53.2 ✔ / V53.3 ← این پچ
 ```
 
 راهنمای مستقل: `docs/fa/ATLAS_NATIVE_V53_3_FA.md`.
+
+
+## ۱۲۸) V53.3.1 — هماهنگ‌سازی تست V53.2 با مسیر متمرکز deliverFigure
+
+### گزارش واقعی CI
+
+```text
+compileDebugKotlin / compileDebugUnitTestKotlin → SUCCESS
+343 tests                                       → 342 PASS / 1 FAIL
+V53_2PeriodicNativeTest.kt:96                   → assertion به متن inline قدیمی V53.2 وابسته بود
+```
+
+کد اجرایی V53.3 سالم کامپایل شد. علت شکست: V53.3 منطق درج/ویرایش هر چهار
+ابزار را عمداً در تابع متمرکز `deliverFigure` گذاشت (برای پشتیبانی جایگزینی
+توکن dblclick)؛ تست V53.2 هنوز متن inline قدیمی
+`insertFigureJson(spec.toJson())` را مستقیم داخل بلوک `periodicTarget?.let`
+الزام می‌کرد. assertion اکنون قرارداد جدید را بررسی می‌کند: عبور بلوک از
+`deliverFigure(spec, target.occurrenceIndex)` و وجود درج مکان‌نما + fallback
+داخل خود `deliverFigure`. اسکن سایر تست‌های V53 الگوی کهنهٔ مشابه پیدا نکرد.
+
+### فایل‌ها و عملیات
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V53_2PeriodicNativeTest.kt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+کد اجرایی برنامه                      → بدون تغییر
+SQL / Edge / Secret / Dependency      → ندارد
+پیش‌نیاز                              → V53.3 (اعمال‌شده روی HEAD کاربر)
+FINAL_NATIVE_VERIFY                   → PASS
+git diff --check                      → PASS
+testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```

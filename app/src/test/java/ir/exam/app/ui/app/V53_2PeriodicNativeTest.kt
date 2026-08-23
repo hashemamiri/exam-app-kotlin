@@ -91,8 +91,12 @@ class V53_2PeriodicNativeTest {
         assertFalse("openTool(\"periodic\")" in webSection)
         assertTrue("PeriodicEditorDialog(" in builder)
         assertTrue("onInsertPeriodic = { periodicTarget = TableTarget() }" in builder)
-        // درج در محل مکان‌نمای WebView با همان fallback جدول.
+        // V53.3 — درج/ویرایش هر چهار ابزار از مسیر متمرکز deliverFigure می‌گذرد؛
+        // همان درج در محل مکان‌نمای WebView با fallback به ViewModel.
         val block = builder.substringAfter("periodicTarget?.let")
-        assertTrue("insertFigureJson(spec.toJson())" in block)
+        assertTrue("deliverFigure(spec, target.occurrenceIndex)" in block)
+        val deliver = builder.substringAfter("fun deliverFigure")
+        assertTrue("insertFigureJson(spec.toJson())" in deliver)
+        assertTrue("viewModel.insertFigure(question.id, spec)" in deliver)
     }
 }
