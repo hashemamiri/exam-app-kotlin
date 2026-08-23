@@ -35,7 +35,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 /** کتابخانهٔ تمام‌صفحه؛ بازشدن دسته دیگر به scroll مخفی پایین صفحه وابسته نیست. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FormulaLibraryDialog(
     title: String,
