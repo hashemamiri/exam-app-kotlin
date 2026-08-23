@@ -1,7 +1,10 @@
 package ir.exam.app.ui.math
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -43,14 +47,8 @@ fun FormulaLibraryDialog(
     onToggleFavorite: (FormulaReferenceEntry) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var query by remember(title, entries) { mutableStateOf("") }
-    val filtered = remember(entries, query) {
-        val normalized = query.trim().lowercase()
-        if (normalized.isEmpty()) entries else entries.filter {
-            it.label.lowercase().contains(normalized) || it.tex.lowercase().contains(normalized)
-        }
-    }
     val haptic = LocalHapticFeedback.current
+
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -64,20 +62,13 @@ fun FormulaLibraryDialog(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(title, style = MaterialTheme.typography.titleLarge)
-                        Text("${filtered.size} از ${entries.size} مورد", style = MaterialTheme.typography.bodySmall)
+                        Text("${entries.size} مورد", style = MaterialTheme.typography.bodySmall)
                     }
                     TextButton(onClick = onDismiss) { Text("✕ بستن") }
                 }
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it.take(120) },
-                    label = { Text("جست‌وجوی نام یا نماد…") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (filtered.isEmpty()) {
+                if (entries.isEmpty()) {
                     Text(
-                        if (entries.isEmpty()) "این کتابخانه هنوز موردی ندارد." else "نتیجه‌ای پیدا نشد.",
+                        "این کتابخانه هنوز موردی ندارد.",
                         modifier = Modifier.padding(16.dp)
                     )
                 } else {
@@ -87,38 +78,29 @@ fun FormulaLibraryDialog(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(filtered, key = { it.label + "¦" + it.tex }) { entry ->
+                        items(entries, key = { it.label + "¦" + it.tex }) { entry ->
                             Card(
-                                Modifier.combinedClickable(
-                                    onClick = { onUse(entry) },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onToggleFavorite(entry)
-                                    }
-                                )
-                            ) {
-                                Column(
-                                    Modifier.fillMaxWidth().padding(7.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    NativeFormulaIcon(
-                                        tex = entry.tex,
-                                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                                        fontSize = 20.sp,
-                                        contentDescription = entry.label
-                                    )
-                                    Text(
-                                        entry.label.take(45),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 2
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        TextButton(onClick = { onUse(entry) }) { Text("درج") }
-                                        TextButton(onClick = { onToggleFavorite(entry) }) {
-                                            Text(if (isFavorite(entry)) "★" else "☆")
+                                Modifier.pointerInput(entry.label + "¦" + entry.tex) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        val releasedEarly = withTimeoutOrNull(2000L) {
+                                            waitForUpOrCancellation()
+                                        }
+                                        if (releasedEarly == null) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            onToggleFavorite(entry)
+                                        } else {
+                                            onUse(entry)
                                         }
                                     }
                                 }
+                            ) {
+                                NativeFormulaIcon(
+                                    tex = entry.tex,
+                                    modifier = Modifier.fillMaxWidth().height(64.dp).padding(7.dp),
+                                    fontSize = 20.sp,
+                                    contentDescription = "فرمول"
+                                )
                             }
                         }
                     }

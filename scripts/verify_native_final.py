@@ -582,9 +582,12 @@ require("replaceActiveBoxWhenCollapsed" in formula_boxes and "moveActiveBox" in 
 require("also(::validate)" in formula_reference_loader and "پیوند دسته نامعتبر" in formula_reference_loader and
         "fun decode" in formula_reference_loader,
         "formula library links/content are not validated")
-require("usePlatformDefaultWidth = false" in formula_library_dialog and "LazyVerticalGrid" in formula_library_dialog and
-        "Text(\"درج\")" in formula_library_dialog,
-        "full-screen clickable formula library dialog missing")
+require("usePlatformDefaultWidth = false" in formula_library_dialog and
+        "LazyVerticalGrid" in formula_library_dialog and
+        "awaitEachGesture" in formula_library_dialog and
+        "withTimeoutOrNull(2000L)" in formula_library_dialog and
+        "onToggleFavorite(entry)" in formula_library_dialog,
+        "full-screen long-press formula library dialog missing")
 require(all(marker in formula_editor for marker in ("openLibrary(\"common\")","openLibrary(\"__all\")","openLibrary(\"unicode\")","openLibrary(link.id")),
         "main formula library routes do not open visibly")
 require("fun entries" in formula_library_nav and "fun search" in formula_library_nav,
