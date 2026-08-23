@@ -1170,7 +1170,7 @@
         },
         {
           "label": "رادیکال",
-          "tex": "√"
+          "tex": "\\sqrt{□}"
         }
       ]
     },
@@ -1382,15 +1382,15 @@
         },
         {
           "label": "جذر",
-          "tex": "√x"
+          "tex": "\\sqrt{x}"
         },
         {
           "label": "ریشه سوم",
-          "tex": "∛x"
+          "tex": "\\sqrt[3]{x}"
         },
         {
           "label": "فرجه دلخواه",
-          "tex": "ⁿ√x"
+          "tex": "\\sqrt[n]{x}"
         },
         {
           "label": "نماد علمی",
@@ -1620,7 +1620,7 @@
       "items": [
         {
           "label": "فاصله",
-          "tex": "√((x₂−x₁)²+(y₂−y₁)²)"
+          "tex": "\\sqrt{(x₂−x₁)²+(y₂−y₁)²}"
         },
         {
           "label": "شیب",
@@ -5240,15 +5240,15 @@
         },
         {
           "label": "SQUARE ROOT",
-          "tex": "√"
+          "tex": "\\sqrt{□}"
         },
         {
           "label": "CUBE ROOT",
-          "tex": "∛"
+          "tex": "\\sqrt[3]{□}"
         },
         {
           "label": "FOURTH ROOT",
-          "tex": "∜"
+          "tex": "\\sqrt[4]{□}"
         },
         {
           "label": "LEFT CEILING",
