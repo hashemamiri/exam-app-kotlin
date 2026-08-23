@@ -1,65 +1,238 @@
 <!doctype html>
-<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent!important;font-family:Tahoma,sans-serif;user-select:none}
-.mb-wrap{margin:0;padding:4px;width:100%;height:100%;display:flex}
-.mb-canvas{width:100%;height:100%;border-radius:16px;background:#1e1e38;border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-size:calc(1.4rem * var(--mbfs,1));display:flex;align-items:center;padding:12px 16px;overflow-x:auto;direction:ltr;white-space:nowrap;outline:none}
-.mb-canvas:focus-within{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,0.3)}
-.mb-slot{display:inline-flex;align-items:center;justify-content:center;min-width:1.1em;min-height:1.3em;padding:1px 4px;margin:0 2px;border:1.5px dashed rgba(255,255,255,0.4);border-radius:6px;background:rgba(255,255,255,0.06);color:#fff;cursor:pointer}
-.mb-slot.active{border:2px solid #10B981!important;background:rgba(16,185,129,0.25)!important;box-shadow:0 0 8px rgba(16,185,129,0.4)}
-.mb-cursor{display:inline-block;width:2px;height:1.15em;background:#10B981;animation:b 1s infinite;vertical-align:middle;margin:0 1px}
-@keyframes b{0%,100%{opacity:1}50%{opacity:0}}
-.math-frac{display:inline-flex;flex-direction:column;vertical-align:middle;margin:0 4px;align-items:center}
-.math-frac-line{width:100%;height:1.8px;background:#fff;margin:2px 0}
-.math-sqrt{display:inline-flex;align-items:center;vertical-align:middle;margin:0 3px}
-.math-radical{font-size:1.3em;line-height:1}
-.math-sqrt-body{border-top:1.8px solid #fff;padding:2px 4px 1px 4px;display:inline-flex;align-items:center}
-.math-sup{font-size:0.7em;vertical-align:super;margin-left:1px}
-.math-sub{font-size:0.7em;vertical-align:sub;margin-left:1px}
-.math-sym{display:inline-block;margin:0 2px}
-</style></head>
-<body><div class="mb-wrap"><div class="mb-canvas" id="canvas" tabindex="0"></div></div>
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+  background: #1e1e38 !important; color: #ffffff !important;
+  font-family: "Vazirmatn", "Vazir", Tahoma, Arial, sans-serif;
+  user-select: none; -webkit-user-select: none;
+}
+.mb-wrap {
+  margin: 0; padding: 6px; width: 100%; height: 100%;
+  display: flex; box-sizing: border-box; background: transparent;
+}
+.mb-canvas {
+  width: 100%; height: 100%; min-height: 120px; margin: 0;
+  border-radius: 16px; background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff; font-size: calc(1.55rem * var(--mbfs, 1));
+  display: flex; align-items: center; justify-content: flex-start;
+  padding: 16px 20px; overflow-x: auto; overflow-y: hidden;
+  direction: ltr; text-align: left; white-space: nowrap; outline: none;
+}
+.mb-canvas:focus-within {
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+.mb-slot {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.15em; min-height: 1.35em; padding: 1px 5px; margin: 0 3px;
+  border: 1.6px dashed rgba(255, 255, 255, 0.45); border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08); color: #ffffff;
+  cursor: pointer; transition: all 0.15s ease; vertical-align: middle;
+}
+.mb-slot.active {
+  border: 2px solid #10B981 !important;
+  background: rgba(16, 185, 129, 0.28) !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+}
+.mb-cursor {
+  display: inline-block; width: 2px; height: 1.15em;
+  background: #10B981; animation: mbBlink 1s infinite;
+  vertical-align: middle; margin: 0 1px;
+}
+@keyframes mbBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.math-frac {
+  display: inline-flex; flex-direction: column; vertical-align: middle;
+  margin: 0 4px; align-items: center; text-align: center; font-size: 0.9em;
+}
+.math-num, .math-den {
+  padding: 1px 4px; display: inline-flex; justify-content: center; align-items: center; min-height: 1.1em;
+}
+.math-frac-line {
+  width: 100%; height: 2px; background: #ffffff; margin: 2px 0; border-radius: 1px;
+}
+.math-sqrt {
+  display: inline-flex; align-items: center; vertical-align: middle; margin: 0 3px;
+}
+.math-radical {
+  font-size: 1.35em; line-height: 1; margin-right: 1px;
+}
+.math-sqrt-body {
+  border-top: 2px solid #ffffff; padding: 2px 4px 1px 4px; display: inline-flex; align-items: center; min-height: 1.1em;
+}
+.math-sup {
+  font-size: 0.72em; vertical-align: super; margin-left: 1px; display: inline-flex;
+}
+.math-sub {
+  font-size: 0.72em; vertical-align: sub; margin-left: 1px; display: inline-flex;
+}
+.math-sym {
+  display: inline-block; margin: 0 2px;
+}
+</style>
+</head>
+<body>
+<div class="mb-wrap">
+  <div class="mb-canvas" id="canvas" tabindex="0" onclick="handleCanvasClick(event)"></div>
+</div>
 <script>
-var canvas=document.getElementById("canvas"),currentTex="",activeIdx=0,slots=[];
-function renderFormula(t){
-  currentTex=t||"";canvas.innerHTML="";slots=[];
-  if(!t||!t.trim()){var s=mkSlot(0,"");canvas.appendChild(s);slots=[s];setAct(0);return;}
-  canvas.innerHTML=toHtml(t);
-  slots=Array.from(canvas.querySelectorAll(".mb-slot"));
-  slots.forEach(function(el,i){el.onclick=function(e){e.stopPropagation();setAct(i);};});
-  if(slots.length>0)setAct(Math.min(activeIdx,slots.length-1));
-}
-function mkSlot(i,c){var s=document.createElement("span");s.className="mb-slot";s.innerHTML=c||"";s.onclick=function(e){e.stopPropagation();setAct(i);};return s;}
-function setAct(i){
-  if(i<0||i>=slots.length)return;
-  slots.forEach(function(s,idx){
-    if(idx===i){s.classList.add("active");if(!s.querySelector(".mb-cursor")){var c=document.createElement("span");c.className="mb-cursor";s.appendChild(c);}}
-    else{s.classList.remove("active");var c=s.querySelector(".mb-cursor");if(c)c.remove();}
+var canvas = document.getElementById("canvas");
+var currentTex = "";
+var activeIdx = 0;
+var slots = [];
+
+function renderFormula(t) {
+  currentTex = t || "";
+  canvas.innerHTML = "";
+  slots = [];
+  
+  if (!t || !t.trim()) {
+    var s = mkSlot(0, "");
+    canvas.appendChild(s);
+    slots = [s];
+    setAct(0);
+    return;
+  }
+  
+  canvas.innerHTML = toHtml(t);
+  slots = Array.from(canvas.querySelectorAll(".mb-slot"));
+  slots.forEach(function(el, i) {
+    el.onclick = function(e) {
+      e.stopPropagation();
+      setAct(i);
+    };
   });
-  activeIdx=i;
+  
+  if (slots.length > 0) {
+    setAct(Math.min(activeIdx, slots.length - 1));
+  }
 }
-function toHtml(t){
-  var s=String(t||""),cnt=0;
-  function sl(c){return "<span class=\"mb-slot\" data-idx=\""+(cnt++)+"\">"+(c||"")+"</span>";}
-  s=s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g,function(_,n,d){return "<span class=\"math-frac\"><span>"+(n.trim()?toHtml(n):sl(""))+"</span><span class=\"math-frac-line\"></span><span>"+(d.trim()?toHtml(d):sl(""))+"</span></span>";});
-  s=s.replace(/\\sqrt(?:\[([^{}]*)\])?\{([^{}]*)\}/g,function(_,g,b){return "<span class=\"math-sqrt\">"+(g?"<span class=\"math-sup\">"+g+"</span>":"")+"<span class=\"math-radical\">√</span><span class=\"math-sqrt-body\">"+(b.trim()?toHtml(b):sl(""))+"</span></span>";});
-  s=s.replace(/\^\{([^{}]*)\}|\^([a-zA-Z0-9])/g,function(_,a,b){return "<span class=\"math-sup\">"+(a||b?toHtml(a||b):sl(""))+"</span>";});
-  s=s.replace(/_\{([^{}]*)\}|_([a-zA-Z0-9])/g,function(_,a,b){return "<span class=\"math-sub\">"+(a||b?toHtml(a||b):sl(""))+"</span>";});
-  s=s.replace(/\\square|\\placeholder|□/g,function(){return sl("");});
-  var syms={"\\alpha":"α","\\beta":"β","\\pi":"π","\\theta":"θ","\\int":"∫","\\sum":"∑","\\infty":"∞","\\pm":"±","\\times":"×","\\div":"÷","\\neq":"≠","\\leq":"≤","\\geq":"≥","\\to":"→"};
-  Object.keys(syms).forEach(function(k){s=s.replace(new RegExp(k.replace(/\\/g,"\\\\"),"g"),"<span class=\"math-sym\">"+syms[k]+"</span>");});
-  s=s.replace(/\\left|\\right/g,"").replace(/\\([a-zA-Z]+)/g,"<span class=\"math-sym\">$1</span>");
-  return cnt===0?sl(s):s;
+
+function mkSlot(i, c) {
+  var s = document.createElement("span");
+  s.className = "mb-slot";
+  s.innerHTML = c || "";
+  s.onclick = function(e) {
+    e.stopPropagation();
+    setAct(i);
+  };
+  return s;
 }
-function notify(){if(window.AndroidCanvas&&window.AndroidCanvas.onFormulaChange)window.AndroidCanvas.onFormulaChange(currentTex);}
-window.setFormula=function(t){renderFormula(t);};
-window.insertFormula=function(f){if(slots[activeIdx]){slots[activeIdx].innerHTML+=f;notify();}};
-window.typeCharacter=function(c){if(slots[activeIdx]){slots[activeIdx].innerHTML+=c;notify();}};
-window.backspace=function(){if(slots[activeIdx]){var cur=slots[activeIdx],tx=cur.innerText||cur.textContent;if(tx.length>0){cur.innerText=tx.slice(0,-1);notify();}else if(activeIdx>0){setAct(activeIdx-1);}}};
-window.moveCursor=function(d){setAct(activeIdx+d);};
-window.moveSpatial=function(d){setAct(activeIdx+d);};
-window.setZoom=function(z){document.documentElement.style.setProperty("--mbfs",z);};
-window.focusCanvas=function(){canvas.focus();};
-</script></body></html>
+
+function setAct(i) {
+  if (i < 0 || i >= slots.length) return;
+  slots.forEach(function(s, idx) {
+    if (idx === i) {
+      s.classList.add("active");
+      if (!s.querySelector(".mb-cursor")) {
+        var c = document.createElement("span");
+        c.className = "mb-cursor";
+        s.appendChild(c);
+      }
+    } else {
+      s.classList.remove("active");
+      var c = s.querySelector(".mb-cursor");
+      if (c) c.remove();
+    }
+  });
+  activeIdx = i;
+}
+
+function toHtml(t) {
+  var s = String(t || "");
+  var cnt = 0;
+  
+  function sl(c) {
+    return "<span class=\"mb-slot\" data-idx=\"" + (cnt++) + "\">" + (c || "") + "</span>";
+  }
+  
+  s = s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, function(_, n, d) {
+    return "<span class=\"math-frac\"><span class=\"math-num\">" + (n.trim() ? toHtml(n) : sl("")) + "</span><span class=\"math-frac-line\"></span><span class=\"math-den\">" + (d.trim() ? toHtml(d) : sl("")) + "</span></span>";
+  });
+  
+  s = s.replace(/\\sqrt(?:\[([^{}]*)\])?\{([^{}]*)\}/g, function(_, g, b) {
+    return "<span class=\"math-sqrt\">" + (g ? "<span class=\"math-sup\">" + g + "</span>" : "") + "<span class=\"math-radical\">√</span><span class=\"math-sqrt-body\">" + (b.trim() ? toHtml(b) : sl("")) + "</span></span>";
+  });
+  
+  s = s.replace(/\^\{([^{}]*)\}|\^([a-zA-Z0-9])/g, function(_, a, b) {
+    return "<span class=\"math-sup\">" + (a || b ? toHtml(a || b) : sl("")) + "</span>";
+  });
+  
+  s = s.replace(/_\{([^{}]*)\}|_([a-zA-Z0-9])/g, function(_, a, b) {
+    return "<span class=\"math-sub\">" + (a || b ? toHtml(a || b) : sl("")) + "</span>";
+  });
+  
+  s = s.replace(/\\square|\\placeholder|□/g, function() {
+    return sl("");
+  });
+  
+  var syms = {
+    "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ", "\\theta": "θ",
+    "\\pi": "π", "\\sigma": "σ", "\\lambda": "λ", "\\omega": "ω", "\\infty": "∞",
+    "\\pm": "±", "\\times": "×", "\\div": "÷", "\\neq": "≠", "\\leq": "≤", "\\geq": "≥",
+    "\\approx": "≈", "\\in": "∈", "\\notin": "∉", "\\subset": "⊂", "\\subseteq": "⊆",
+    "\\cup": "∪", "\\cap": "∩", "\\int": "∫", "\\sum": "∑", "\\prod": "∏", "\\partial": "∂",
+    "\\nabla": "∇", "\\to": "→", "\\leftarrow": "←", "\\rightarrow": "→", "\\leftrightarrow": "↔",
+    "\\cdot": "·", "\\circ": "∘", "\\forall": "∀", "\\exists": "∃", "\\land": "∧", "\\lor": "∨"
+  };
+  
+  Object.keys(syms).forEach(function(k) {
+    var re = new RegExp(k.replace(/\\/g, "\\\\"), "g");
+    s = s.replace(re, "<span class=\"math-sym\">" + syms[k] + "</span>");
+  });
+  
+  s = s.replace(/\\left|\\right/g, "");
+  s = s.replace(/\\([a-zA-Z]+)/g, "<span class=\"math-sym\">$1</span>");
+  
+  return cnt === 0 ? sl(s) : s;
+}
+
+function notify() {
+  if (window.AndroidCanvas && window.AndroidCanvas.onFormulaChange) {
+    window.AndroidCanvas.onFormulaChange(currentTex);
+  }
+}
+
+function handleCanvasClick(e) {
+  if (slots.length > 0 && e.target === canvas) {
+    setAct(slots.length - 1);
+  }
+}
+
+window.setFormula = function(t) { renderFormula(t); };
+window.insertFormula = function(f) {
+  if (slots[activeIdx]) {
+    slots[activeIdx].innerHTML += f;
+    notify();
+  }
+};
+window.typeCharacter = function(c) {
+  if (slots[activeIdx]) {
+    slots[activeIdx].innerHTML += c;
+    notify();
+  }
+};
+window.backspace = function() {
+  if (slots[activeIdx]) {
+    var cur = slots[activeIdx];
+    var tx = cur.innerText || cur.textContent;
+    if (tx.length > 0) {
+      cur.innerText = tx.slice(0, -1);
+      notify();
+    } else if (activeIdx > 0) {
+      setAct(activeIdx - 1);
+    }
+  }
+};
+window.moveCursor = function(d) { setAct(activeIdx + d); };
+window.moveSpatial = function(d) { setAct(activeIdx + d); };
+window.setZoom = function(z) { document.documentElement.style.setProperty("--mbfs", z); };
+window.focusCanvas = function() { canvas.focus(); };
+</script>
+</body>
+</html>

@@ -735,6 +735,8 @@ fun FormulaEditorDialog(
 
 
 
+
+
 private fun escapeForJs(text: String): String {
     return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", "")
 }
@@ -750,13 +752,17 @@ fun FormulaCanvasWebView(
     AndroidView(
         factory = { ctx ->
             WebView(ctx).apply {
+                layoutParams = android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                )
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
                 settings.allowContentAccess = true
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
-                setBackgroundColor(0)
+                setBackgroundColor(android.graphics.Color.parseColor("#1e1e38"))
                 addJavascriptInterface(object {
                     @JavascriptInterface
                     fun onFormulaChange(newTex: String) {
@@ -767,7 +773,7 @@ fun FormulaCanvasWebView(
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
                         val safe = escapeForJs(tex)
-                        view?.evaluateJavascript("window.__lastTex = \"$safe\"; window.setFormula(\"$safe\");", null)
+                        view?.evaluateJavascript("window.setFormula(\"$safe\");", null)
                         view?.evaluateJavascript("window.setZoom($zoom);", null)
                     }
                 }
@@ -777,7 +783,7 @@ fun FormulaCanvasWebView(
         },
         update = { webView ->
             val safe = escapeForJs(tex)
-            webView.evaluateJavascript("if (window.__lastTex !== \"$safe\") { window.__lastTex = \"$safe\"; window.setFormula(\"$safe\"); }", null)
+            webView.evaluateJavascript("window.setFormula(\"$safe\");", null)
             webView.evaluateJavascript("window.setZoom($zoom);", null)
         },
         modifier = modifier
