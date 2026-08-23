@@ -469,22 +469,20 @@ object NativeMathSvgRenderer {
         boxColor: String,
         activeColor: String,
         size: Float
-    ): String = buildString(boxes.size * 180) {
+    ): String = buildString(boxes.size * 150) {
         append("<g>")
         boxes.forEachIndexed { index, box ->
             val active = index == activeIndex
             val color = if (active) activeColor else boxColor
-            val isEmptyBox = box.sourceStart == box.sourceEnd
-            val dashArray = if (!active && isEmptyBox) " stroke-dasharray=\"3,2\"" else ""
             append("<rect x=\"").append(number(box.xPx)).append("\" y=\"")
             append(number(box.yPx)).append("\" width=\"").append(number(box.widthPx))
             append("\" height=\"").append(number(box.heightPx)).append("\" rx=\"")
-            append(number(size * .12f)).append("\" fill=\"").append(color)
-            append("\" fill-opacity=\"").append(if (active) ".22" else if (isEmptyBox) ".12" else ".06")
+            append(number(size * .11f)).append("\" fill=\"").append(color)
+            append("\" fill-opacity=\"").append(if (active) ".28" else ".09")
             append("\" stroke=\"").append(color).append("\" stroke-opacity=\"")
-            append(if (active) "1" else ".75").append("\" stroke-width=\"")
-            append(number(if (active) max(2f, size * .08f) else max(1.2f, size * .045f)))
-            append("\"").append(dashArray).append("/>")
+            append(if (active) ".95" else ".62").append("\" stroke-width=\"")
+            append(number(if (active) max(2f, size * .075f) else max(1f, size * .04f)))
+            append("\"/>")
         }
         append("</g>")
     }

@@ -176,8 +176,7 @@ class Neumorphic69IntegrationTest {
         }
         assertFalse("standalone demo package must not enter runtime", "com.example.neumorphic69" in mainSources)
         assertFalse("fake wallet balance must not enter runtime", "۱۲٬۴۸۰٬۰۰۰" in mainSources)
-        val nonCanvasSources = File(root, "app/src/main/java").walkTopDown().filter { it.isFile && it.extension == "kt" && it.name != "FormulaEditorDialog.kt" }.joinToString("\n") { it.readText() }
-        assertFalse("WebView must not enter general native app screens", "android.webkit" in nonCanvasSources)
+        assertFalse("WebView must not enter native runtime", "android.webkit" in mainSources)
     }
 
     @Test

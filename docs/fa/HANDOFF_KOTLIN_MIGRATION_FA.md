@@ -5471,13 +5471,3 @@ git diff --check → PASS
    - تست کامل AST، رندر برداری SVG، صحت تمام ۲٬۸۳۷ فرمول و پاس شدن `FINAL_NATIVE_VERIFY=PASS`.
 
 >>>>>>> 5f6bd91
-
-
-## V50.16 — کادر ساختاری Canvas صددرصد نیتیو
-
-- ویرایشگر ساختاری فرمول از WebView/HTML/JavaScript جدا شد و اکنون با `NativeMathParser`، `NativeMathCanvasRenderer` و `NativeMathCanvasEditorView` مستقیماً روی Android Canvas رسم می‌شود.
-- hit-test خانه‌های قابل ویرایش در Compose انجام می‌شود و بازهٔ واقعی متن را به `FormulaBoxEditor`/کیپد برمی‌گرداند.
-- asset `app/src/main/assets/formula_canvas_frame.html` و تمام `android.webkit`/bridge/`evaluateJavascript` مربوط به این مسیر حذف شد.
-- SQL، Edge Function، Secret و dependency جدید لازم نیست.
-- `python3 scripts/verify_native_final.py` → `FINAL_NATIVE_VERIFY=PASS`.
-- Build کامل Gradle در این محیط به‌دلیل resolve نشدن plugin `com.google.devtools.ksp:2.0.21-1.0.28` قابل اجرا نشد و باید در CI/محیط دارای cache dependency تکرار شود.

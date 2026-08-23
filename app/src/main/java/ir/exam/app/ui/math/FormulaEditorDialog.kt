@@ -330,17 +330,23 @@ fun FormulaEditorDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
-                        NativeMathCanvasEditorView(
-                            tex = value.text,
-                            selectionStart = value.selection.min,
-                            selectionEnd = value.selection.max,
+                        SvgFormulaEditorSurface(
+                            value = value,
+                            onValueChange = ::handleImeChange,
+                            onSelectionChange = { selection -> value = value.copy(selection = selection) },
+                            focusRequester = focusRequester,
                             zoom = zoom,
-                            onBoxTap = { box ->
-                                value = value.copy(selection = TextRange(box.start, box.endExclusive))
-                                focusRequester.requestFocus()
-                                keyboard?.show()
-                            },
-                            modifier = Modifier.fillMaxWidth().height(180.dp)
+                            onRequestKeyboard = { keyboard?.show() },
+                            onBackspace = ::backspace,
+                            onMoveHorizontal = ::moveActiveBox,
+                            onMoveVertical = ::moveSpatialBox,
+                            onMoveBoundary = ::moveBoundary,
+                            onUndo = ::undoAction,
+                            onRedo = ::redoAction,
+                            onCopy = { clipboard.setText(AnnotatedString(value.text)) },
+                            onPaste = { clipboard.getText()?.text?.let(::importClipboard) },
+                            onApply = ::applyCurrent,
+                            onDismiss = onDismiss
                         )
                     }
                     item {
@@ -725,11 +731,6 @@ fun FormulaEditorDialog(
     }
 }
 
-
-
-
-
-
 @Composable
 private fun SvgFormulaEditorSurface(
     value: TextFieldValue,
@@ -753,14 +754,7 @@ private fun SvgFormulaEditorSurface(
         androidx.compose.runtime.LaunchedEffect(Unit) {
             focusRequester.requestFocus()
         }
-        Card(
-            Modifier.fillMaxWidth().height(180.dp),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-            colors = androidx.compose.material3.CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-            ),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
+        Card(Modifier.fillMaxWidth().height(180.dp)) {
             Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
                 NativeFormulaEditorView(
                     tex = value.text,
