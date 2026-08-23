@@ -890,10 +890,10 @@ private fun QuestionEditor(
         }
     }
     formulaTarget?.let { target ->
-        FormulaEditorDialog(
-            initialTex = target.initialTex,
+        QuestionEditorWebViewDialog(
+            initialValue = target.initialTex,
             onDismiss = { formulaTarget = null },
-            onInsert = { tex ->
+            onApply = { tex ->
                 viewModel.insertFormula(
                     question.id,
                     target.field,
