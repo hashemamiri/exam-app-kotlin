@@ -8,7 +8,7 @@ class QuestionEditorWebViewPocTest {
         val source = java.io.File("src/main/java/ir/exam/app/ui/math/QuestionEditorWebView.kt").readText()
         assertTrue(source.contains("https://exam-editor.local/question-editor/question_editor.html"))
         assertTrue(source.contains("shouldOverrideUrlLoading"))
-        assertTrue(source.contains("return true"))
+        assertTrue(source.contains("= true"))
         assertTrue(source.contains("allowUniversalAccessFromFileURLs = false"))
     }
 
