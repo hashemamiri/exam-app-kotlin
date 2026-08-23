@@ -158,17 +158,12 @@ private fun ToolbarButton(
     label: String,
     onClick: () -> Unit
 ) {
-    TextButton(onClick = onClick) {
+    IconButton(onClick = onClick) {
         Icon(
             icon,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            contentDescription = label,
+            modifier = Modifier.size(22.dp),
             tint = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            label,
-            modifier = Modifier.padding(start = 5.dp),
-            color = MaterialTheme.colorScheme.primary
         )
     }
 }

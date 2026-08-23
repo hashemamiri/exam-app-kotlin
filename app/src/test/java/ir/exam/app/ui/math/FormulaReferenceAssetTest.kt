@@ -35,7 +35,7 @@ class FormulaReferenceAssetTest {
     @Test fun `native editor keeps the requested visual section order`() {
         val file=listOf(File("src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt"),File("app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt")).first(File::isFile)
         val text=file.readText()
-        val markers=listOf("↩ بازگشت","⭐ موارد پرکاربرد","🕘 اخیر","درج\")","FixedFormulaKeypad","جست‌وجوی نماد","کد فرمول")
+        val markers=listOf("Icons.AutoMirrored.Outlined.Undo","⭐ موارد پرکاربرد","🕘 اخیر","درج\")","FixedFormulaKeypad")
         var position=-1
         markers.forEach{marker->val next=text.indexOf(marker,position+1);assertTrue("missing/order: $marker",next>position);position=next}
         listOf("(",")","7","8","9","⌫","↑","↓","4","5","6","÷","←","→","1","2","3","×","⌨","C","0","=","+","−").forEach{assertTrue(it in text)}
@@ -82,7 +82,7 @@ class FormulaReferenceAssetTest {
         val view=File(root,"app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
         val builder=File(root,"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
         val matching=File(root,"app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt").readText()
-        listOf("مرکز هوشمند","ماتریس دلخواه ۱ تا ۱۰","recentDialogOpen","delimiterPickerOpen","onPreviewKeyEvent","combinedClickable","smartQuickToTex").forEach{assertTrue("missing $it",it in editor)}
+        listOf("ماتریس دلخواه ۱ تا ۱۰","recentDialogOpen","delimiterPickerOpen","onPreviewKeyEvent","smartQuickToTex").forEach{assertTrue("missing $it",it in editor)}
         listOf("کتابخانهٔ درس‌به‌درس","قالب‌های آماده","بسته‌های آماده","کلیدهای درشت","فرمول آخر","نمایش نهایی").forEach{assertTrue("missing Smart Hub $it",it in smart)}
         assertTrue("animateScrollTo" in view&&"verticalScroll" in view)
         assertTrue("ExistingFormulaEditor" in builder&&"occurrenceIndex" in builder)

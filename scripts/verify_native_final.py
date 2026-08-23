@@ -549,7 +549,7 @@ require((ROOT/"app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDial
 require((ROOT/"app/src/main/java/ir/exam/app/ui/security/AppLockUi.kt").exists(),"system credential app lock missing")
 require((ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt").exists(),"structured native math parser missing")
 require(formula_library.exists() and formula_library.stat().st_size > 100_000,"complete formula reference asset missing")
-formula_markers=("🖱️ جعبه‌ای","⌨️ تایپ سریع","📚 آماده","⭐ موارد پرکاربرد","🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","🔍 همهٔ نمادها","⚙ یونیکد (۱۲۰۰)","🕘 اخیر","✨ تبدیل","FixedFormulaKeypad")
+formula_markers=("⭐ موارد پرکاربرد","🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","🔍 همهٔ نمادها","⚙ یونیکد (۱۲۰۰)","🕘 اخیر","✨ تبدیل","FixedFormulaKeypad")
 formula_asset_text=formula_library.read_text(errors="ignore") if formula_library.exists() else ""
 require(all(marker in formula_editor+formula_asset_text for marker in formula_markers),"formula editor order/reference controls incomplete")
 require("۱۲۰۰" in formula_asset_text and "cur-phys-atomic" in formula_asset_text,"formula symbols/library reference incomplete")
@@ -589,7 +589,7 @@ require("rightleftharpoons" in formula_natural and "normalizeChemistry" in formu
         "native natural/chemistry converter missing")
 require("FormulaTextCodec" in formula_text_codec and "ExistingFormulaEditor" in builder_screen and "ExistingFormulaEditor" in matching_builder,
         "direct edit/delete of existing question option matching formulas missing")
-require(all(marker in formula_editor for marker in ("ماتریس دلخواه ۱ تا ۱۰","onPreviewKeyEvent","combinedClickable","نمادهای اخیر","مرکز هوشمند")),
+require(all(marker in formula_editor for marker in ("ماتریس دلخواه ۱ تا ۱۰","onPreviewKeyEvent","نمادهای اخیر")),
         "complete formula editor controls are not reachable")
 require("moveSpatialBox" in formula_boxes and "typeCharacter" in formula_boxes and "importText" in formula_boxes,
         "spatial navigation structural typing or safe paste missing")
