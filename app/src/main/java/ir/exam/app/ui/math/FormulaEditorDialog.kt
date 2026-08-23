@@ -363,6 +363,7 @@ fun FormulaEditorDialog(
                         )
                     }
                     item {
+                                                // visual section order: ⭐ موارد پرکاربرد
                         SpecializedCategoryGrid(
                             library = library,
                             categoryId = categoryId,
