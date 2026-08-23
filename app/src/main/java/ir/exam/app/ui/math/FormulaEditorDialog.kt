@@ -338,23 +338,14 @@ fun FormulaEditorDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
-                        SvgFormulaEditorSurface(
-                            value = value,
-                            onValueChange = ::handleImeChange,
-                            onSelectionChange = { selection -> value = value.copy(selection = selection) },
-                            focusRequester = focusRequester,
+                        FormulaCanvasWebView(
+                            initialTex = initialTex,
+                            onFormulaChange = { nextTex ->
+                                value = TextFieldValue(nextTex, TextRange(nextTex.length))
+                            },
                             zoom = zoom,
-                            onRequestKeyboard = { keyboard?.show() },
-                            onBackspace = ::backspace,
-                            onMoveHorizontal = ::moveActiveBox,
-                            onMoveVertical = ::moveSpatialBox,
-                            onMoveBoundary = ::moveBoundary,
-                            onUndo = ::undoAction,
-                            onRedo = ::redoAction,
-                            onCopy = { clipboard.setText(AnnotatedString(value.text)) },
-                            onPaste = { clipboard.getText()?.text?.let(::importClipboard) },
-                            onApply = ::applyCurrent,
-                            onDismiss = onDismiss
+                            onWebViewReady = { webViewInstance = it },
+                            modifier = Modifier.fillMaxWidth().height(180.dp)
                         )
                     }
                     item {
