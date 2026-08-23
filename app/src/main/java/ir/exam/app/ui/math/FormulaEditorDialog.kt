@@ -733,6 +733,12 @@ fun FormulaEditorDialog(
 }
 
 
+
+
+private fun escapeForJs(text: String): String {
+    return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ").replace("\r", "")
+}
+
 @Composable
 fun FormulaCanvasWebView(
     tex: String,
@@ -760,8 +766,7 @@ fun FormulaCanvasWebView(
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        val safe = tex.replace("\", "\\").replace("\"", "\\"").replace("
-", " ")
+                        val safe = escapeForJs(tex)
                         view?.evaluateJavascript("window.__lastTex = \"$safe\"; window.setFormula(\"$safe\");", null)
                         view?.evaluateJavascript("window.setZoom($zoom);", null)
                     }
@@ -771,8 +776,7 @@ fun FormulaCanvasWebView(
             }
         },
         update = { webView ->
-            val safe = tex.replace("\", "\\").replace("\"", "\\"").replace("
-", " ")
+            val safe = escapeForJs(tex)
             webView.evaluateJavascript("if (window.__lastTex !== \"$safe\") { window.__lastTex = \"$safe\"; window.setFormula(\"$safe\"); }", null)
             webView.evaluateJavascript("window.setZoom($zoom);", null)
         },
