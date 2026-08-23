@@ -5859,3 +5859,33 @@ testDebugUnitTest / lintDebug          → باید در CI اجرا شود
 ```text
 V54 (چندمرحله‌ای) → تکمیل Native کتابخانهٔ نمودار تا ۶۱ نوع مرجع
 ```
+
+
+## ۱۳۰) V53.4.1 — افزودن FormulaHostDialog به فهرست WebView مجاز تست Neumorphic
+
+### گزارش واقعی CI
+
+```text
+compileDebugKotlin / compileDebugUnitTestKotlin → SUCCESS
+347 tests                                       → 346 PASS / 1 FAIL
+Neumorphic69IntegrationTest.kt:180              → «WebView must not enter native runtime»
+```
+
+کد اجرایی V53.4 سالم کامپایل شد. علت شکست: تست Neumorphic فهرست استثنای WebView
+مخصوص به خود را دارد و در V53.4 فقط فهرست `verify_native_final.py` به‌روزرسانی
+شده بود؛ `FormulaHostDialog.kt` (WebView مصوب پنجرهٔ تمام‌صفحهٔ فرمول) به فهرست
+تست اضافه نشده بود. اکنون هر دو فهرست هم‌ارز هستند. اسکن شبیه‌سازی‌شده:
+هیچ `android.webkit` خارج از فهرست مجاز وجود ندارد.
+
+### فایل‌ها و عملیات
+
+```text
+app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+کد اجرایی برنامه                      → بدون تغییر
+SQL / Edge / Secret / Dependency      → ندارد
+پیش‌نیاز                              → V53.4 (اعمال‌شده روی HEAD کاربر)
+FINAL_NATIVE_VERIFY                   → PASS
+git diff --check                      → PASS
+testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```
