@@ -87,7 +87,9 @@ object FigureSvgRenderer {
         )
     }
 
-    fun isGeometry(spec: FigureSpec): Boolean = spec.type !in setOf("line", "quad", "sine", "exp", "bar", "col", "hbar", "stack")
+    fun isGeometry(spec: FigureSpec): Boolean =
+        spec.type !in setOf("line", "quad", "sine", "exp", "bar", "col") &&
+            !ChartSvgRenderer.supports(spec.type)
 
     /** پلاک موقت انواع مرجع (a/s) تا رندر Native کامل V53.3. */
     private fun renderKindPlate(spec: FigureSpec): MathSvgDocument {
@@ -113,6 +115,8 @@ object FigureSvgRenderer {
 
     private fun renderBody(spec: FigureSpec): String = when (spec.type) {
         "line", "quad", "sine", "exp", "bar", "col" -> renderGraph(spec)
+        // V54.1 — ۲۰ نوع نمودار جدید Native با کلیدهای X مرجع.
+        in ChartSvgRenderer.SUPPORTED -> ChartSvgRenderer.body(spec)
         else -> renderGeometry(spec)
     }
 

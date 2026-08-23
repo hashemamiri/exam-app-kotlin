@@ -332,7 +332,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
             OutlinedTextField(
                 value = params[key] ?: "",
                 onValueChange = { value -> params = params + (key to value) },
-                label = { Text(key) },
+                label = { Text(paramLabel(graphType, key)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -357,23 +357,50 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
     }
 }
 
-private fun paramKeys(type: String): List<String> = when (type) {
-    "line" -> listOf("m", "b")
-    "quad" -> listOf("a", "b", "c")
-    "sine" -> listOf("A", "w", "ph")
-    "exp" -> listOf("a", "b")
-    else -> listOf("labs", "vals")
+/**
+ * V54.1 — فیلدهای هر نوع نمودار با برچسب فارسی مرجع (`fieldsFor` ماژول
+ * graph-fig-js). کلیدهای متنی (labs/vals/xs/...) رشته می‌مانند و بقیه عددی.
+ */
+private fun paramFields(type: String): List<Pair<String, String>> = when (type) {
+    "line" -> listOf("m" to "شیب m", "b" to "عرض از مبدأ b")
+    "quad" -> listOf("a" to "a", "b" to "b", "c" to "c")
+    "sine" -> listOf("A" to "دامنه A", "w" to "ω", "ph" to "فاز")
+    "exp" -> listOf("a" to "ضریب a", "b" to "نرخ b")
+    "scat" -> listOf("xs" to "مقدارهای x", "ys" to "مقدارهای y")
+    "bub" -> listOf("xs" to "مقدارهای x", "ys" to "مقدارهای y", "zs" to "اندازه حباب‌ها")
+    "gauge" -> listOf("val" to "مقدار عقربه", "vmin" to "حداقل", "vmax" to "حداکثر")
+    "cmp", "hcmp" -> listOf(
+        "labs" to "برچسب‌ها", "vals" to "سری ۱", "vals2" to "سری ۲",
+        "s1" to "نام سری ۱", "s2" to "نام سری ۲"
+    )
+    "stack", "st100", "sarea" -> listOf(
+        "labs" to "برچسب‌ها", "vals" to "سری ۱", "vals2" to "سری ۲", "vals3" to "سری ۳",
+        "s1" to "نام سری ۱", "s2" to "نام سری ۲", "s3" to "نام سری ۳"
+    )
+    "combo" -> listOf(
+        "labs" to "برچسب‌ها", "vals" to "ستون‌ها", "vals2" to "خط",
+        "s1" to "نام ستون", "s2" to "نام خط"
+    )
+    else -> listOf("labs" to "برچسب‌ها", "vals" to "مقدارها")
 }
 
+/** کلیدهایی که مقدار متنی (فهرست با ویرگول یا نام سری) دارند نه عدد. */
+private val TEXT_PARAM_KEYS = setOf("labs", "vals", "vals2", "vals3", "xs", "ys", "zs", "s1", "s2", "s3")
+
+private fun paramKeys(type: String): List<String> = paramFields(type).map { it.first }
+
+internal fun paramLabel(type: String, key: String): String =
+    paramFields(type).firstOrNull { it.first == key }?.second ?: key
+
 private fun initialParams(template: FigureTemplate, initialSpec: FigureSpec): Map<String, String> {
+    val defaults = FigureSpec.parse(template.specJson)
     return paramKeys(template.id).associateWith { key ->
-        when (key) {
-            "labs" -> initialSpec.xStr("labs", "A,B,C,D")
-            "vals" -> initialSpec.xStr("vals", "4,7,3,6")
-            else -> {
-                val n = initialSpec.xNum(key, Float.NaN)
-                if (n.isNaN()) "" else trimNum(n)
-            }
+        if (key in TEXT_PARAM_KEYS) {
+            initialSpec.xStr(key).ifBlank { defaults?.xStr(key).orEmpty() }
+        } else {
+            val n = initialSpec.xNum(key, Float.NaN)
+            if (!n.isNaN()) trimNum(n)
+            else defaults?.xNum(key, Float.NaN)?.takeIf { !it.isNaN() }?.let { trimNum(it) }.orEmpty()
         }
     }
 }
@@ -391,7 +418,7 @@ private fun buildGraphSpec(
         val value = params[key].orEmpty().trim()
         if (value.isBlank()) {
             extra.remove(key)
-        } else if (key == "labs" || key == "vals") {
+        } else if (key in TEXT_PARAM_KEYS) {
             extra[key] = JsonPrimitive(value)
         } else {
             value.toFloatOrNull()?.let { extra[key] = JsonPrimitive(it) }

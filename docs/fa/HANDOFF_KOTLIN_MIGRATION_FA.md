@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V53.4 پنجره فرمول تمام‌صفحه WebView و رفع کادر دوم/تاریکی صفحه؛ پیش از آن: V53.3/V53.3.1 (build موفق اعلام کاربر)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.1 مرحلهٔ اول تکمیل کتابخانهٔ نمودار Native (۲۰ نوع جدید)؛ پیش از آن: V53.4/V53.4.1 (build موفق اعلام کاربر — پایان نقشه V53)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -5888,4 +5888,58 @@ SQL / Edge / Secret / Dependency      → ندارد
 FINAL_NATIVE_VERIFY                   → PASS
 git diff --check                      → PASS
 testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```
+
+
+## ۱۳۱) V54.1 — مرحلهٔ اول تکمیل کتابخانهٔ نمودار Native
+
+### وضعیت ورودی
+
+```text
+V53.4 + V53.4.1 build/device            → SUCCESS (اعلام کاربر) — نقشه V53 کامل شد
+کتابخانهٔ نمودار مرجع                   → ۶۱ نوع؛ Native تا این پچ فقط ۵ نوع
+تصمیم کاربر                             → تکمیل کامل Native در چند پچ (نقشه V54)
+```
+
+### تحویل V54.1 — ۲۰ نوع جدید
+
+```text
+ChartSvgRenderer.kt (جدید)  → pie / donut / lchr / area / step / sarea / hbar /
+                               cmp / hcmp / stack / st100 / scat / bub / hist /
+                               pareto / gauge / radar / combo / lolli / funn
+قرارداد داده                → همان کلیدهای X مرجع: labs/vals/vals2/vals3/s1..s3/
+                               xs/ys/zs/val/vmin/vmax؛ توکن‌های WebView قدیمی
+                               بدون مهاجرت رندر می‌شوند
+مسیر مشترک                  → FigureSvgRenderer به ChartSvgRenderer مسیر می‌دهد؛
+                               isGeometry انواع جدید را نمودار می‌شناسد →
+                               دانش‌آموز/چاپ/PDF/ویرایش دوبار-کلیک خودکار
+گالری                       → FigureGallery از ۵ به ۲۵ قالب با نام فارسی مرجع
+ویرایشگر                    → paramFields با برچسب فارسی fieldsFor مرجع؛
+                               تفکیک کلیدهای متنی/عددی (TEXT_PARAM_KEYS)؛
+                               پیش‌فرض‌های قالب در فرم initialParams
+```
+
+### باقی‌ماندهٔ نقشه V54 (ثبت‌شده، نه پنهان)
+
+```text
+V54.2 → box/ohlc/fall/ctrl/venn/tree/sun/waff/pict/heat/hmap/bull/pyra/mekko
+V54.3 → flow/gantt/time/dumb/slope/spark/stream/viol/strip/stem/rose/word +
+        map/surf/smat/dend/sank/chrd/netw/bmap/calh/plot و رگرسیون کل نقشه
+```
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V53.4.1
+```
+
+### تست V54.1
+
+```text
+FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V54.1: هر ۲۰ نوع در
+                                          رندرگر و گالری، مسیر مشترک، SVG امن)
+V54_1ChartLibraryStage1Test            → ۴ تست منبع‌محور جدید؛ شبیه‌سازی PASS
+git diff --check                       → PASS
+testDebugUnitTest / lintDebug          → باید در CI اجرا شود
 ```

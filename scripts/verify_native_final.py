@@ -1194,4 +1194,19 @@ require("FormulaHostDialog(" in builder_screen and "QuestionEditorWebViewDialog(
 require("nativeToolbarHide" in editor_asset and ".field>span{display:none !important;}" in editor_asset,
         "V53.4 inner HTML frame/label must be hidden in nativeTools mode")
 
+
+# ---- V54.1: chart library stage 1 (20 new native chart types) ----
+chart_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/ChartSvgRenderer.kt").read_text()
+figure_gallery=(ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt").read_text()
+_v54_types=["pie","donut","lchr","area","sarea","hbar","cmp","hcmp","stack","st100",
+            "scat","bub","hist","pareto","gauge","radar","combo","step","lolli","funn"]
+for _t in _v54_types:
+    require(f'"{_t}"' in chart_renderer, f"V54.1 chart renderer missing type: {_t}")
+    require(f'FigureTemplate("{_t}"' in figure_gallery, f"V54.1 gallery missing type: {_t}")
+require("in ChartSvgRenderer.SUPPORTED -> ChartSvgRenderer.body(spec)" in figure_renderer,
+        "V54.1 new chart types are not routed through the shared SVG path")
+require("<script" not in chart_renderer and "href=" not in chart_renderer
+        and "<foreignObject" not in chart_renderer,
+        "V54.1 chart SVG renderer contains unsafe markup")
+
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")
