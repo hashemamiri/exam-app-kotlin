@@ -1,7 +1,7 @@
 package ir.exam.app.ui.math
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.pointerInput
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
