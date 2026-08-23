@@ -1222,4 +1222,26 @@ require("<script" not in chart_stage2 and "href=" not in chart_stage2
         and "<foreignObject" not in chart_stage2,
         "V54.2 stage2 SVG renderer contains unsafe markup")
 
+
+# ---- V54.3: chart library final stage (22 types) + full 61/61 reference coverage ----
+chart_stage3=(ROOT/"app/src/main/java/ir/exam/app/core/figure/ChartSvgRendererStage3.kt").read_text()
+_v543_types=["plot","flow","gantt","time","dumb","slope","spark","stream","viol","strip",
+             "stem","smat","dend","sank","chrd","netw","map","bmap","surf","calh","rose","word"]
+for _t in _v543_types:
+    require(f'"{_t}"' in chart_stage3, f"V54.3 stage3 renderer missing type: {_t}")
+    require(f'FigureTemplate("{_t}"' in figure_gallery, f"V54.3 gallery missing type: {_t}")
+require("STAGE1 + ChartSvgRendererStage2.SUPPORTED + ChartSvgRendererStage3.SUPPORTED" in chart_renderer,
+        "V54.3 stage3 types are not merged into the shared supported set")
+_gr_module=editor_asset.split("graph-fig-js",1)[1].split("window.GraphFig",1)[0]
+_gr_types=re.findall(r"\{ id: '([A-Za-z0-9_]+)', name: '", _gr_module.split("var TYPES = [",1)[1].split("];",1)[0])
+_flat_gallery=re.sub(r"\s+"," ",figure_gallery)
+_missing=[i for i in _gr_types
+          if f'FigureTemplate( "{i}"' not in _flat_gallery
+          and f'FigureTemplate("{i}"' not in _flat_gallery and i != "col"]
+require(len(_gr_types) >= 60 and not _missing,
+        f"V54.3 native gallery does not cover all reference graph types: {_missing}")
+require("<script" not in chart_stage3 and "href=" not in chart_stage3
+        and "<foreignObject" not in chart_stage3,
+        "V54.3 stage3 SVG renderer contains unsafe markup")
+
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

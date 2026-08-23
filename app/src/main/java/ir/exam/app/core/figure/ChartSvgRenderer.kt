@@ -26,8 +26,9 @@ object ChartSvgRenderer {
         "radar", "combo", "step", "lolli", "funn"
     )
 
-    /** V54.2 — مرحلهٔ دوم به مجموعهٔ پشتیبانی اضافه شد. */
-    val SUPPORTED: Set<String> = STAGE1 + ChartSvgRendererStage2.SUPPORTED
+    /** V54.2/V54.3 — مرحله‌های دوم و سوم به مجموعهٔ پشتیبانی اضافه شدند. */
+    val SUPPORTED: Set<String> =
+        STAGE1 + ChartSvgRendererStage2.SUPPORTED + ChartSvgRendererStage3.SUPPORTED
 
     fun supports(type: String): Boolean = type in SUPPORTED
 
@@ -73,6 +74,8 @@ object ChartSvgRenderer {
             "funn" -> funnel(spec)
             // V54.2 — انواع مرحلهٔ دوم.
             in ChartSvgRendererStage2.SUPPORTED -> ChartSvgRendererStage2.body(spec)
+            // V54.3 — انواع مرحلهٔ پایانی.
+            in ChartSvgRendererStage3.SUPPORTED -> ChartSvgRendererStage3.body(spec)
             else -> ""
         }
     }

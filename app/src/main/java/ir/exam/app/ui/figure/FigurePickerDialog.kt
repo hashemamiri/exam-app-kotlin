@@ -415,6 +415,37 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
         "labs" to "دسته‌ها (پهنای ستون)", "vals" to "سری ۱ + پهنا", "vals2" to "سری ۲", "vals3" to "سری ۳",
         "s1" to "نام سری ۱", "s2" to "نام سری ۲", "s3" to "نام سری ۳"
     )
+    // V54.3 — فیلدهای فارسی مرجع برای ۲۲ نوع مرحلهٔ پایانی.
+    "plot" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max")
+    "flow" -> listOf("labs" to "مراحل (با ویرگول)")
+    "gantt" -> listOf("labs" to "فعالیت‌ها", "vals" to "شروع", "vals2" to "مدت")
+    "time" -> listOf("labs" to "رویدادها", "vals" to "تاریخ / مقدار")
+    "dumb", "slope" -> listOf(
+        "labs" to "برچسب‌ها", "vals" to "مقدار شروع / قبل", "vals2" to "مقدار پایان / بعد",
+        "s1" to "نام سری ۱", "s2" to "نام سری ۲"
+    )
+    "stream" -> listOf(
+        "labs" to "برچسب‌ها", "vals" to "سری ۱", "vals2" to "سری ۲", "vals3" to "سری ۳",
+        "s1" to "نام سری ۱", "s2" to "نام سری ۲", "s3" to "نام سری ۳"
+    )
+    "viol", "strip" -> listOf(
+        "labs" to "گروه‌ها", "mins" to "حداقل", "q1s" to "چارک ۱",
+        "meds" to "میانه", "q3s" to "چارک ۳", "maxs" to "حداکثر"
+    )
+    "stem" -> listOf("vals" to "عددها (با ویرگول)")
+    "smat" -> listOf(
+        "xs" to "متغیر X", "ys" to "متغیر Y", "zs" to "متغیر Z",
+        "s1" to "نام X", "s2" to "نام Y", "s3" to "نام Z"
+    )
+    "dend" -> listOf("labs" to "برگ‌ها / نام‌ها")
+    "sank" -> listOf("vals" to "جریان‌ها (مثل A-C:8,B-D:5)")
+    "chrd" -> listOf("labs" to "گره‌ها", "vals" to "ماتریس سطری")
+    "netw" -> listOf("labs" to "گره‌ها", "vals" to "یال‌ها (مثل A-B,B-C)")
+    "map" -> listOf("labs" to "نام مناطق", "vals" to "مقدار هر منطقه")
+    "bmap" -> listOf("labs" to "نام مناطق", "vals" to "اندازه حباب")
+    "surf" -> listOf("nrows" to "تعداد ردیف", "ncols" to "تعداد ستون", "vals" to "ارتفاع‌ها (سطری)")
+    "calh" -> listOf("vals" to "مقدار روزها (از شنبه، سطری)")
+    "word" -> listOf("labs" to "واژه‌ها", "vals" to "وزن / فراوانی")
     else -> listOf("labs" to "برچسب‌ها", "vals" to "مقدارها")
 }
 
@@ -424,7 +455,9 @@ private val TEXT_PARAM_KEYS = setOf(
     // V54.2 — فهرست‌های عددی چندتایی و مقادیر آزاد مرحلهٔ دوم متنی ذخیره می‌شوند
     // (همان قرارداد رشته‌ای مرجع).
     "mins", "q1s", "meds", "q3s", "maxs", "opens", "highs", "lows", "closes",
-    "rows", "cols", "mean", "ucl", "lcl", "unit", "n", "ab", "ac", "bc", "abc"
+    "rows", "cols", "mean", "ucl", "lcl", "unit", "n", "ab", "ac", "bc", "abc",
+    // V54.3 — کلیدهای متنی مرحلهٔ پایانی.
+    "nrows", "ncols"
 )
 
 private fun paramKeys(type: String): List<String> = paramFields(type).map { it.first }
