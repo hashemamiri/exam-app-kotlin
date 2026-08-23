@@ -279,7 +279,7 @@ object NativeMathSvgRenderer {
         return Layout(
             width,
             height,
-            bottomY + denominator.baseline,
+            lineY + size * .35f,
             body,
             numerator.boxes.map { it.moved(topX, 0f) } + denominator.boxes.map { it.moved(bottomX, bottomY) },
             numerator.radicalBars.map { it.moved(topX, 0f) } +
@@ -399,7 +399,7 @@ object NativeMathSvgRenderer {
                 }
             }
         }
-        return Layout(width, height, height * .56f, body, boxes, bars)
+        return Layout(width, height, height / 2f + size * .35f, body, boxes, bars)
     }
 
     private fun accent(node: MathNode.Accent, size: Float): Layout {
