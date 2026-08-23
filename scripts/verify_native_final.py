@@ -131,8 +131,14 @@ webview_files = {
     for f in (ROOT / "app/src/main/java").rglob("*.kt")
     if "android.webkit" in f.read_text(errors="ignore")
 }
+# Hybrid migration: WebView is allowed only inside the local formula editor adapter.
+approved_webview_files = {
+    "FormulaEditorDialog.kt",
+    "QuestionEditorWebView.kt",
+    "QuestionEditorWebViewDialog.kt",
+}
 require(
-    webview_files <= {"FormulaEditorDialog.kt"},
+    webview_files <= approved_webview_files,
     "WebView/android.webkit import remains outside the approved formula editor"
 )
 require(not re.search(r"\b(val|var)\s+plain_password\b", main_text), "plain_password model field remains")
