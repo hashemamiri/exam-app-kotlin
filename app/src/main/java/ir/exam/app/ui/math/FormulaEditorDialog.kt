@@ -123,6 +123,8 @@ fun FormulaEditorDialog(
     var customDelimiterClose by remember { mutableStateOf(")") }
     var matrixRows by remember { mutableIntStateOf(2) }
     var matrixColumns by remember { mutableIntStateOf(2) }
+    var curricularBooksDialogOpen by remember { mutableStateOf(false) }
+    var topicFormulasDialogOpen by remember { mutableStateOf(false) }
     var expandedLibraryTitle by remember { mutableStateOf<String?>(null) }
     var expandedLibraryItems by remember { mutableStateOf<List<FormulaReferenceEntry>>(emptyList()) }
     val undo = remember { mutableStateListOf<TextFieldValue>() }
@@ -424,6 +426,16 @@ fun FormulaEditorDialog(
                                             openLibrary("common")
                                         }
                                     }
+                                    item {
+                                        CategoryButton("📘 کتب درسی (۲۶ کتاب)", curricularBookCategoryIds.any { it.first == categoryId }) {
+                                            curricularBooksDialogOpen = true
+                                        }
+                                    }
+                                    item {
+                                        CategoryButton("📐 مباحث موضوعی (۳۸ مبحث)", topicFormulaCategoryIds.any { it.first == categoryId }) {
+                                            topicFormulasDialogOpen = true
+                                        }
+                                    }
                                     items(library.groups, key = { it.key }) { group ->
                                         FormulaCategoryButton(
                                             group,
@@ -644,6 +656,54 @@ fun FormulaEditorDialog(
                 }
             },
             confirmButton = { TextButton(onClick = { groupDialog = null }) { Text("بستن") } }
+        )
+    }
+
+    if (curricularBooksDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { curricularBooksDialogOpen = false },
+            title = { Text("📘 کتابخانه کتب درسی مدارس (۲۶ بخش)") },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(curricularBookCategoryIds, key = { it.first }) { (id, label) ->
+                        val count = library.categoryById[id]?.items?.size ?: 0
+                        FilterChip(
+                            selected = categoryId == id,
+                            onClick = {
+                                curricularBooksDialogOpen = false
+                                openLibrary(id, label)
+                            },
+                            label = { Text("$label • $count فرمول") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { curricularBooksDialogOpen = false }) { Text("بستن") } }
+        )
+    }
+
+    if (topicFormulasDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { topicFormulasDialogOpen = false },
+            title = { Text("📐 فرمول‌های موضوعی و تحلیلی (۳۸ مبحث)") },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(topicFormulaCategoryIds, key = { it.first }) { (id, label) ->
+                        val count = library.categoryById[id]?.items?.size ?: 0
+                        FilterChip(
+                            selected = categoryId == id,
+                            onClick = {
+                                topicFormulasDialogOpen = false
+                                openLibrary(id, label)
+                            },
+                            label = { Text("$label • $count فرمول") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { topicFormulasDialogOpen = false }) { Text("بستن") } }
         )
     }
 
@@ -1186,6 +1246,76 @@ private fun QuickTypePane(value: String, onChange: (String) -> Unit, onToBox: ()
     }
 }
 
+private val curricularBookCategoryIds = listOf(
+    "v34-math10" to "📘 ریاضی دهم",
+    "v34-math11e" to "📗 ریاضی یازدهم تجربی",
+    "v34-math12e" to "📕 ریاضی دوازدهم تجربی",
+    "v34-hesaban1" to "📘 حسابان ۱",
+    "v34-hesaban2" to "📕 حسابان ۲",
+    "v34-geo1" to "📐 هندسه ۱",
+    "v34-geo2" to "📗 هندسه ۲",
+    "v34-geo3" to "📕 هندسه ۳",
+    "v34-discrete" to "🔗 ریاضیات گسسته",
+    "v34-stats11" to "📊 آمار و احتمال یازدهم",
+    "v34-human" to "📗 ریاضی و آمار انسانی",
+    "v34-phys-measure" to "📏 فیزیک: اندازه‌گیری",
+    "v34-phys-matter" to "💧 فیزیک: ویژگی‌های ماده",
+    "v34-phys-thermo" to "🔥 فیزیک: کار و گرما",
+    "v34-phys-kine" to "🏃 فیزیک: حرکت‌شناسی",
+    "v34-phys-dyn" to "⚙ فیزیک: دینامیک",
+    "v34-phys-ac" to "∿ فیزیک: جریان متناوب",
+    "v34-phys-lens" to "🔎 فیزیک: عدسی و آینه",
+    "v34-phys-doppler" to "🔊 فیزیک: صوت و موج",
+    "v34-phys-atomic" to "⚛ فیزیک: اتمی و هسته‌ای",
+    "v34-chem-react" to "⚗ شیمی: نماد و واکنش",
+    "v34-chem10x" to "📘 شیمی دهم تکمیلی",
+    "v34-chem11x" to "📗 شیمی یازدهم تکمیلی",
+    "v34-chem12x" to "📕 شیمی دوازدهم تکمیلی",
+    "v34-bio" to "🧬 زیست‌شناسی کنکور",
+    "v34-uni" to "🎓 فرمول‌های دانشگاهی"
+)
+
+private val topicFormulaCategoryIds = listOf(
+    "v34-sets-num" to "ℕ مجموعه‌های اعداد",
+    "v34-sets-ops" to "∩ عملیات مجموعه",
+    "v34-interval" to "⟷ بازه‌ها",
+    "v34-seq-extra" to "… الگو و دنباله تکمیلی",
+    "v34-trig-id" to "∿ اتحادهای مثلثاتی",
+    "v34-trig-laws" to "△ قوانین مثلث",
+    "v34-trig-eq" to "∿ معادلهٔ مثلثاتی",
+    "v34-power-laws" to "ⁿ قوانین توان و رادیکال",
+    "v34-identities" to "𝑥 اتحادها و تجزیه",
+    "v34-equations" to "= معادلات تکمیلی",
+    "v34-ineq" to "≤ نامعادله و تعیین علامت",
+    "v34-functions" to "f(x) تابع دبیرستان",
+    "v34-fn-special" to "⊞ توابع خاص",
+    "v34-explog" to "eˣ نمایی و لگاریتم",
+    "v34-limit" to "lim حد و همارزی",
+    "v34-deriv" to "∂ مشتق تکمیلی",
+    "v34-integ" to "∫ انتگرال حسابان",
+    "v34-count" to "n! شمارش تکمیلی",
+    "v34-prob" to "P احتمال تکمیلی",
+    "v34-stats" to "σ آمار تکمیلی",
+    "v34-geo-base" to "📐 فرمول‌های هندسهٔ پایه",
+    "v34-thales" to "⊿ تالس و تشابه",
+    "v34-circle" to "○ دایره",
+    "v34-transform" to "⟳ تبدیل‌های هندسی",
+    "v34-analytic" to "📈 هندسهٔ تحلیلی تکمیلی",
+    "v34-conic" to "⬭ مقاطع مخروطی",
+    "v34-solid" to "◼ فضای سه‌بعدی",
+    "v34-numberth" to "🔐 نظریهٔ اعداد",
+    "v34-graph" to "🔗 گراف و مدل‌سازی",
+    "v34-logic-extra" to "⊢ منطق تکمیلی",
+    "v34-matrix-extra" to "▦ ماتریس تکمیلی",
+    "v34-greek-full" to "π یونانی کامل",
+    "v34-accents" to "ˆ تزئینات و لهجه‌ها",
+    "v34-arrows" to "→ پیکان‌ها",
+    "v34-relations" to "≟ روابط و نقیض",
+    "v34-ops" to "∗ عملگرهای بیشتر",
+    "v34-special-let" to "ℵ حروف خاص",
+    "v34-delims" to "⟮ کروشه‌های بیشتر"
+)
+
 @Composable
 private fun GalleryPane(
     library: FormulaReferenceData,
@@ -1194,18 +1324,53 @@ private fun GalleryPane(
     onQuery: (String) -> Unit,
     onPick: (FormulaReferenceEntry) -> Unit
 ) {
+    var selectedFilter by remember { mutableStateOf("all") }
+    val normalizedQuery = query.trim().lowercase()
+
+    val allGroups = remember(library) {
+        val baseGallery = library.gallery.map { it.label to it.items }
+        val curricularGroups = curricularBookCategoryIds.mapNotNull { (id, label) ->
+            library.categoryById[id]?.let { label to it.items }
+        }
+        val topicGroups = topicFormulaCategoryIds.mapNotNull { (id, label) ->
+            library.categoryById[id]?.let { label to it.items }
+        }
+        mapOf(
+            "gallery" to baseGallery,
+            "school" to curricularGroups,
+            "topic" to topicGroups
+        )
+    }
+
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Text("یکی را انتخاب کنید؛ همهٔ پیش‌نمایش‌ها SVG هستند و سپس می‌توانید عددهایش را تغییر دهید.") }
         item {
             OutlinedTextField(
                 query,
                 onQuery,
-                label = { Text("🔍 جست‌وجو در فرمول‌ها…") },
-                modifier = Modifier.fillMaxWidth()
+                label = { Text("🔍 جست‌وجو در ۲٬۸۳۷ فرمول و ۶۴ کتاب درسی…") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
         }
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(
+                    "all" to "همهٔ بخش‌ها (۶۴ کتاب و مبحث)",
+                    "school" to "📘 کتب درسی دبیرستان (۲۶ کتاب)",
+                    "topic" to "📐 مباحث موضوعی (۳۸ مبحث)",
+                    "gallery" to "⭐ گالری پایه (۵ بخش)"
+                ).forEach { (filterKey, filterLabel) ->
+                    FilterChip(
+                        selected = selectedFilter == filterKey,
+                        onClick = { selectedFilter = filterKey },
+                        label = { Text(filterLabel) }
+                    )
+                }
+            }
+        }
         val shownRecent = recentFormulas.filter {
-            query.isBlank() || it.lowercase().contains(query.lowercase())
+            normalizedQuery.isBlank() || it.lowercase().contains(normalizedQuery)
         }
         if (shownRecent.isNotEmpty()) {
             item { Text("🕘 اخیراً", style = MaterialTheme.typography.titleMedium) }
@@ -1217,17 +1382,28 @@ private fun GalleryPane(
                 }
             }
         }
-        library.gallery.forEach { group ->
-            val shown = group.items.filter {
-                query.isBlank() || (it.label + " " + it.tex).lowercase().contains(query.lowercase())
+        val sectionsToDisplay = when (selectedFilter) {
+            "school" -> allGroups["school"].orEmpty()
+            "topic" -> allGroups["topic"].orEmpty()
+            "gallery" -> allGroups["gallery"].orEmpty()
+            else -> allGroups["school"].orEmpty() + allGroups["topic"].orEmpty() + allGroups["gallery"].orEmpty()
+        }
+        sectionsToDisplay.forEach { (sectionTitle, items) ->
+            val filteredItems = items.filter {
+                normalizedQuery.isBlank() || (it.label + " " + it.tex).lowercase().contains(normalizedQuery)
             }
-            if (shown.isNotEmpty()) {
-                item { Text(group.label, style = MaterialTheme.typography.titleMedium) }
-                items(shown, key = { it.label + "¦" + it.tex }) { entry ->
+            if (filteredItems.isNotEmpty()) {
+                item {
+                    Text(
+                        "$sectionTitle • ${filteredItems.size} فرمول",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+                items(filteredItems, key = { sectionTitle + "¦" + it.label + "¦" + it.tex }) { entry ->
                     Card(Modifier.fillMaxWidth()) {
                         TextButton(onClick = { onPick(entry) }, modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.fillMaxWidth()) {
-                                Text(entry.label)
+                            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                                Text(entry.label, style = MaterialTheme.typography.labelMedium)
                                 NativeFormulaView(
                                     entry.tex,
                                     Modifier.fillMaxWidth(),
