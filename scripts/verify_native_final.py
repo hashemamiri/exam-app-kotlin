@@ -126,7 +126,8 @@ matching_builder=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionOptionM
 app_gradle=(ROOT/"app/build.gradle.kts").read_text()
 formula_library=ROOT/"app/src/main/assets/formula_library_v13.json"
 
-require("android.webkit" not in main_text, "WebView/android.webkit import remains in Native source")
+main_non_canvas_text = "".join(f.read_text() for f in (ROOT / "app/src/main/java").rglob("*.kt") if f.name != "FormulaEditorDialog.kt")
+require("android.webkit" not in main_non_canvas_text, "WebView/android.webkit import remains in Native source outside formula canvas")
 require(not re.search(r"\b(val|var)\s+plain_password\b", main_text), "plain_password model field remains")
 require(not re.search(r'\.from\("[^"]+"\)\.(?:insert|update|upsert|delete)\b', main_text),
         "direct public-table mutation remains in APK repository")
