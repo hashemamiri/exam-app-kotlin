@@ -3,6 +3,7 @@ package ir.exam.app.ui.math
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -539,7 +540,12 @@ fun FormulaEditorDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                NativeFormulaIcon(item.tex, Modifier.width(60.dp).height(32.dp), 18.sp, item.label)
+                                NativeFormulaIcon(
+                                    tex = item.tex,
+                                    modifier = Modifier.width(60.dp).height(32.dp),
+                                    fontSize = 18.sp,
+                                    contentDescription = item.label
+                                )
                                 Spacer(Modifier.width(8.dp))
                                 Text(item.label, modifier = Modifier.weight(1f))
                             }
@@ -566,9 +572,14 @@ fun FormulaEditorDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
-                                    Modifier.weight(1f).horizontalScroll(remember { androidx.compose.foundation.rememberScrollState() })
+                                    Modifier.weight(1f).horizontalScroll(rememberScrollState())
                                 ) {
-                                    NativeFormulaIcon(formula, Modifier.height(40.dp), 18.sp, formula)
+                                    NativeFormulaIcon(
+                                        tex = formula,
+                                        modifier = Modifier.height(40.dp),
+                                        fontSize = 18.sp,
+                                        contentDescription = formula
+                                    )
                                 }
                                 TextButton(onClick = {
                                     recentDialogOpen = false
@@ -603,7 +614,7 @@ fun FormulaEditorDialog(
                 Button(onClick = {
                     matrixPickerOpen = false
                     insert(
-                        FormulaMatrixFactory.createMatrix(matrixRows, matrixColumns),
+                        FormulaMatrixFactory.create(matrixRows, matrixColumns),
                         activateFirstBox = true,
                         replaceActiveBox = true
                     )
