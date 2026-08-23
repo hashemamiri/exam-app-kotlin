@@ -66,10 +66,13 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -95,9 +98,19 @@ fun FormulaEditorDialog(
     val store = remember { FormulaReferenceStore(context) }
     val clipboard = LocalClipboardManager.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val hostView = LocalView.current
     val focusRequester = remember { FocusRequester() }
+    fun requestSoftKeyboard() {
+        runCatching { focusRequester.requestFocus() }
+        runCatching {
+            if (!hostView.isAttachedToWindow) return@runCatching
+            keyboard?.show()
+            val imm = hostView.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.showSoftInput(hostView, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
     var value by remember(initialTex) {
-        val initial = FormulaBoxEditor.replaceAll(initialTex, activateFirstBox = true)
+        val initial = FormulaBoxEditor.replaceAll(initialTex, activateFirstBox = false)
         mutableStateOf(TextFieldValue(initial.text, TextRange(initial.selectionStart, initial.selectionEnd)))
     }
     var categoryId by remember { mutableStateOf("common") }
@@ -265,7 +278,7 @@ fun FormulaEditorDialog(
         insert(
             entry.tex,
             activateFirstBox = false,
-            replaceActiveBox = true
+            replaceActiveBox = false
         )
         formulaOpaque = false
         store.addRecentSymbol(entry)
@@ -344,12 +357,9 @@ fun FormulaEditorDialog(
                             },
                             focusRequester = focusRequester,
                             zoom = zoom,
-                            showBoxes = true,
+                            showBoxes = false,
                             formulaOpaque = formulaOpaque,
-                            onRequestKeyboard = {
-                                runCatching { focusRequester.requestFocus() }
-                                keyboard?.show()
-                            },
+                            onRequestKeyboard = { requestSoftKeyboard() },
                             onBackspace = ::backspace,
                             onMoveHorizontal = ::moveActiveBox,
                             onMoveVertical = ::moveSpatialBox,
@@ -363,7 +373,7 @@ fun FormulaEditorDialog(
                         )
                     }
                     item {
-                                                // visual section order: ⭐ موارد پرکاربرد
+                        // visual section order: ⭐ موارد پرکاربرد
                         SpecializedCategoryGrid(
                             library = library,
                             categoryId = categoryId,
@@ -455,10 +465,7 @@ fun FormulaEditorDialog(
                             onBackspace = ::backspace,
                             onMoveHorizontal = ::moveActiveBox,
                             onMoveVertical = ::moveSpatialBox,
-                            onKeyboard = {
-                                runCatching { focusRequester.requestFocus() }
-                                keyboard?.show()
-                            },
+                            onKeyboard = { requestSoftKeyboard() },
                             onClear = { replace("") },
                             onOpenDelimiter = { parenPickerOpen = true },
                             onCloseDelimiter = { moveActiveBox(1) }
@@ -604,12 +611,23 @@ fun FormulaEditorDialog(
                     listOf(
                         "چپ (" to "(",
                         "راست )" to ")",
-                        "جفت ( )" to "\\left( □ \\right)"
+                        "جفت ( )" to "\\left( □ \\right)",
+                        "چپ [" to "[",
+                        "راست ]" to "]",
+                        "جفت [ ]" to "\\left[ □ \\right]",
+                        "چپ {" to "\\{",
+                        "راست }" to "\\}",
+                        "جفت { }" to "\\left\\{ □ \\right\\}",
+                        "چپ |" to "|",
+                        "راست |" to "|",
+                        "جفت | |" to "\\left| □ \\right|",
+                        "جفت || ||" to "\\left\\| □ \\right\\|",
+                        "جفت ⟨ ⟩" to "\\left\\langle □ \\right\\rangle"
                     ).forEach { (label, tex) ->
                         TextButton(
                             onClick = {
                                 parenPickerOpen = false
-                                if (tex == ")") moveActiveBox(1)
+                                if (tex == ")" || label.startsWith("راست")) moveActiveBox(1)
                                 else insert(
                                     tex,
                                     activateFirstBox = tex.contains("□"),
@@ -776,6 +794,12 @@ private fun SvgFormulaEditorSurface(
                         runCatching { focusRequester.requestFocus() }
                         onRequestKeyboard()
                     },
+                    onEmptyTap = {
+                        onSelectionChange(TextRange(value.text.length, value.text.length))
+                        runCatching { focusRequester.requestFocus() }
+                        onRequestKeyboard()
+                    },
+                    showCaret = true,
                     modifier = Modifier.fillMaxWidth().graphicsLayer {
                         alpha = if (!formulaOpaque && value.text.isNotBlank()) .42f else 1f
                     },
@@ -881,10 +905,10 @@ private fun SpecializedCategoryGrid(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            item { CategoryButton("⭐ پرکاربرد", categoryId == "common") { onOpen("common", null) } }
-            item { CategoryButton("🔍 همه", categoryId == "__all") { onOpen("__all", null) } }
-            item { CategoryButton("⚙ یونیکد", categoryId == "unicode") { onOpen("unicode", null) } }
-            item { CategoryButton("🕘 اخیر", categoryId == "__recent_symbols") { onOpen("__recent_symbols", null) } }
+            item { CategoryButton("⭐ موارد پرکاربرد", categoryId == "common") { onOpen("common", null) } }
+            item { CategoryButton("🔍 همهٔ نمادها", categoryId == "__all") { onOpen("__all", null) } }
+            item { CategoryButton("⚙ یونیکد (۱۲۰۰)", categoryId == "unicode") { onOpen("unicode", null) } }
+            item { CategoryButton("🕘 نمادهای اخیر", categoryId == "__recent_symbols") { onOpen("__recent_symbols", null) } }
             item { CategoryButton("❤ علاقه‌مندی", categoryId == "__favorites") { onOpen("__favorites", null) } }
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1098,8 +1122,8 @@ private val logItems = listOf(
     FormulaReferenceEntry("10^x", "10^{x}")
 )
 private val integralItems = listOf(
-    FormulaReferenceEntry("انتگرال ساده", "\\int f(x) dx"),
-    FormulaReferenceEntry("انتگرال معین", "\\int_{a}^{b} f(x) dx"),
+    FormulaReferenceEntry("انتگرال ساده", "\\int_{}^{} f(x)\\,dx"),
+    FormulaReferenceEntry("انتگرال معین", "\\int_{a}^{b} f(x)\\,dx"),
     FormulaReferenceEntry("انتگرال دوگانه", "\\iint"),
     FormulaReferenceEntry("انتگرال سه‌گانه", "\\iiint"),
     FormulaReferenceEntry("انتگرال بسته", "\\oint")
@@ -1166,7 +1190,7 @@ private fun FixedFormulaKeypad(
                         modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                         contentPadding = PaddingValues(2.dp)
                     ) {
-                        if (key in setOf("⌫", "⌨", "C")) Text(key)
+                        if (key in setOf("⌫", "⌨", "C", "␠")) Text(if (key == "␠") "␣" else key)
                         else NativeFormulaIcon(
                             key,
                             Modifier.fillMaxWidth().height(25.dp),

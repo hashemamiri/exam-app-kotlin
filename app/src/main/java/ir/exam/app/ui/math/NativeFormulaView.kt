@@ -85,7 +85,9 @@ fun NativeFormulaEditorView(
     selectionStart: Int,
     selectionEnd: Int,
     onBoxTap: (MathSvgEditBox) -> Unit,
+    onEmptyTap: (() -> Unit)? = null,
     showBoxes: Boolean = false,
+    showCaret: Boolean = true,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 22.sp,
     color: Color = LocalContentColor.current,
@@ -97,8 +99,9 @@ fun NativeFormulaEditorView(
         tex = tex,
         fontSize = fontSize,
         color = color,
-        showEditBoxes = showBoxes || tex.isBlank(),
-        showOnlyActiveBox = showBoxes && tex.isNotBlank(),
+        showEditBoxes = showBoxes,
+        showOnlyActiveBox = false,
+        showCaret = showCaret,
         activeStart = selectionStart,
         activeEnd = selectionEnd,
         boxColor = outlineColor,
@@ -109,6 +112,7 @@ fun NativeFormulaEditorView(
         modifier = modifier,
         contentDescription = contentDescription,
         onBoxTap = onBoxTap,
+        onEmptyTap = onEmptyTap,
         activeStart = selectionStart,
         activeEnd = selectionEnd,
         autoScrollActive = true
@@ -126,6 +130,7 @@ private fun NaturalSvgImage(
     modifier: Modifier,
     contentDescription: String,
     onBoxTap: ((MathSvgEditBox) -> Unit)? = null,
+    onEmptyTap: (() -> Unit)? = null,
     activeStart: Int = -1,
     activeEnd: Int = activeStart,
     autoScrollActive: Boolean = false
@@ -138,10 +143,10 @@ private fun NaturalSvgImage(
     } else {
         Modifier.pointerInput(rendered.document.cacheKey) {
             detectTapGestures { point ->
-                rendered.document.editBoxes
+                val hit = rendered.document.editBoxes
                     .asReversed()
                     .firstOrNull { it.contains(point.x, point.y) }
-                    ?.let(onBoxTap)
+                if (hit != null) onBoxTap(hit) else onEmptyTap?.invoke()
             }
         }
     }
@@ -211,6 +216,7 @@ private fun rememberFormulaSvg(
     activeStart: Int = -1,
     activeEnd: Int = activeStart,
     showOnlyActiveBox: Boolean = false,
+    showCaret: Boolean = false,
     boxColor: Color = Color.Gray,
     activeBoxColor: Color = Color(0xFFFF8F00)
 ): RememberedFormulaSvg {
@@ -225,6 +231,7 @@ private fun rememberFormulaSvg(
         fontSizePx,
         formulaStyle,
         showEditBoxes,
+        showCaret,
         activeStart,
         activeEnd,
         boxStyle,
@@ -240,7 +247,8 @@ private fun rememberFormulaSvg(
             activeEnd = activeEnd,
             boxColor = boxStyle.hex,
             activeBoxColor = activeStyle.hex,
-            showOnlyActiveBox = showOnlyActiveBox
+            showOnlyActiveBox = showOnlyActiveBox,
+            showCaret = showCaret
         )
     }
     val bytes = remember(document.cacheKey) { document.xml.toByteArray(Charsets.UTF_8) }

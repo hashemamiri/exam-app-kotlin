@@ -65,6 +65,10 @@ object FormulaBoxEditor {
         selectionEnd: Int,
         delta: Int
     ): FormulaBoxEditResult {
+        if (selectionStart == selectionEnd) {
+            val nextPos = (selectionEnd + delta).coerceIn(0, text.length)
+            return FormulaBoxEditResult(text, nextPos, nextPos)
+        }
         val ranges = NativeMathParser.editableRanges(text)
         if (ranges.isEmpty()) {
             val nextPos = (selectionEnd + delta).coerceIn(0, text.length)
@@ -137,14 +141,12 @@ object FormulaBoxEditor {
     }
 
     fun firstBox(text: String): FormulaBoxEditResult {
-        val range = NativeMathParser.editableRanges(text).firstOrNull()
-        return FormulaBoxEditResult(text, range?.start ?: 0, range?.endExclusive ?: 0)
+        return FormulaBoxEditResult(text, 0, 0)
     }
 
     fun lastBox(text: String): FormulaBoxEditResult {
-        val range = NativeMathParser.editableRanges(text).lastOrNull()
         val end = text.length
-        return FormulaBoxEditResult(text, range?.start ?: end, range?.endExclusive ?: end)
+        return FormulaBoxEditResult(text, end, end)
     }
 
     fun backspace(text: String, selectionStart: Int, selectionEnd: Int): FormulaBoxEditResult {
@@ -220,10 +222,10 @@ object FormulaBoxEditor {
     }
 
     fun importText(raw: String): FormulaBoxEditResult {
-        val stripped = raw.trim().removeSurrounding("${'$'}")
+        val stripped = raw.trim().removeSurrounding("$")
         val tex = if (Regex("\\\\[A-Za-z]+").containsMatchIn(stripped)) stripped
         else NativeNaturalMathConverter.toTex(stripped)
-        return replaceAll(tex, activateFirstBox = true)
+        return replaceAll(tex, activateFirstBox = false)
     }
 
     fun replaceAll(text: String, activateFirstBox: Boolean = false): FormulaBoxEditResult {
@@ -234,5 +236,10 @@ object FormulaBoxEditor {
             first?.start ?: safe.length,
             first?.endExclusive ?: safe.length
         )
+    }
+
+    fun caretAtEnd(text: String): FormulaBoxEditResult {
+        val end = text.take(MAX_LENGTH).length
+        return FormulaBoxEditResult(text.take(MAX_LENGTH), end, end)
     }
 }
