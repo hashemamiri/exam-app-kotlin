@@ -6055,3 +6055,44 @@ V54_3ChartLibraryFinalTest             → ۵ تست منبع‌محور جدی�
 git diff --check                       → PASS
 testDebugUnitTest / lintDebug          → باید در CI اجرا شود
 ```
+
+
+## ۱۳۴) V54.3.1 — هماهنگ‌سازی تست V54.2 و رفع باگ enforcement اسکریپت verify
+
+### گزارش واقعی CI
+
+```text
+compileDebugKotlin / compileDebugUnitTestKotlin → SUCCESS
+360 tests                                       → 359 PASS / 1 FAIL
+V54_2ChartLibraryStage2Test.kt:43               → needle تک‌خطی قدیمی SUPPORTED
+```
+
+### دو علت قطعی
+
+۱) تست V54.2 متن تک‌خطی `SUPPORTED = STAGE1 + Stage2.SUPPORTED` را الزام می‌کرد؛
+V54.3 عمداً این تعریف را چندخطی سه‌مرحله‌ای کرد (`STAGE1 + Stage2 + Stage3`).
+assertion اکنون قرارداد پایدار را بررسی می‌کند: وجود `Stage2.SUPPORTED` داخل
+تعریف `val SUPPORTED` (بدون حساسیت به شکستن خط یا افزودن مرحله‌های بعدی).
+
+۲) باگ ساختاری کشف‌شده در `verify_native_final.py`: بلوک
+`if errors: FAIL/sys.exit(1)` فقط یک‌بار در میانهٔ فایل (پیش از بلوک‌های الحاقی
+V53.x/V54.x) اجرا می‌شد؛ بنابراین همهٔ requireهای بلوک‌های جدید فقط به
+`errors` اضافه می‌شدند و هرگز enforce نمی‌شدند — verify محلی همیشه PASS چاپ
+می‌کرد حتی وقتی قرارداد کهنهٔ V54.2 واقعاً شکسته بود (به همین دلیل شکست فقط در
+CI دیده شد). بررسی نهایی `errors` پیش از چاپ PASS اضافه شد؛ از این پس همهٔ
+قراردادهای V53.1 تا V54.3 واقعاً اجرا می‌شوند. needle کهنهٔ V54.2 نیز در خود
+verify به بررسی declaration پایدار اصلاح شد.
+
+### فایل‌ها و عملیات
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V54_2ChartLibraryStage2Test.kt
+scripts/verify_native_final.py
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+کد اجرایی برنامه                      → بدون تغییر
+SQL / Edge / Secret / Dependency      → ندارد
+پیش‌نیاز                              → V54.3 (اعمال‌شده روی HEAD کاربر)
+FINAL_NATIVE_VERIFY                   → PASS با enforcement کامل (EXIT=0)
+git diff --check                      → PASS
+testDebugUnitTest / lintDebug         → باید در CI تکرار شود
+```

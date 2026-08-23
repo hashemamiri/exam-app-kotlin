@@ -1216,7 +1216,7 @@ _v542_types=["box","ohlc","fall","ctrl","venn","tree","sun","waff","pict","heat"
 for _t in _v542_types:
     require(f'"{_t}"' in chart_stage2, f"V54.2 stage2 renderer missing type: {_t}")
     require(f'FigureTemplate("{_t}"' in figure_gallery, f"V54.2 gallery missing type: {_t}")
-require("SUPPORTED: Set<String> = STAGE1 + ChartSvgRendererStage2.SUPPORTED" in chart_renderer,
+require("ChartSvgRendererStage2.SUPPORTED" in chart_renderer.split("val SUPPORTED",1)[1].split("fun supports",1)[0],
         "V54.2 stage2 types are not merged into the shared supported set")
 require("<script" not in chart_stage2 and "href=" not in chart_stage2
         and "<foreignObject" not in chart_stage2,
@@ -1243,5 +1243,13 @@ require(len(_gr_types) >= 60 and not _missing,
 require("<script" not in chart_stage3 and "href=" not in chart_stage3
         and "<foreignObject" not in chart_stage3,
         "V54.3 stage3 SVG renderer contains unsafe markup")
+
+# V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
+# اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
+if errors:
+    print("FINAL_NATIVE_VERIFY=FAIL")
+    for error in errors:
+        print(f"- {error}")
+    sys.exit(1)
 
 print(f"FINAL_NATIVE_VERIFY=PASS kotlin_files={len(main_files)} edge_functions={len(edge_files)}")

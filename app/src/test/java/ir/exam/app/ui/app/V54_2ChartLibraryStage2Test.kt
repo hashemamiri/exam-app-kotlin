@@ -40,7 +40,10 @@ class V54_2ChartLibraryStage2Test {
 
     @Test
     fun `stage two routes through the shared supported set`() {
-        assertTrue("SUPPORTED: Set<String> = STAGE1 + ChartSvgRendererStage2.SUPPORTED" in stage1)
+        // V54.3 عمداً SUPPORTED را چندمرحله‌ای کرد؛ قرارداد پایدار این است که
+        // مجموعهٔ مرحلهٔ دوم داخل تعریف SUPPORTED ادغام شده باشد.
+        val supportedDecl = stage1.substringAfter("val SUPPORTED").substringBefore("fun supports")
+        assertTrue("ChartSvgRendererStage2.SUPPORTED" in supportedDecl)
         assertTrue("in ChartSvgRendererStage2.SUPPORTED -> ChartSvgRendererStage2.body(spec)" in stage1)
     }
 
