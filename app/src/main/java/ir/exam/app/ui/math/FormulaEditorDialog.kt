@@ -485,9 +485,22 @@ fun FormulaEditorDialog(
                             onMoveHorizontal = ::moveActiveBox,
                             onMoveVertical = ::moveSpatialBox,
                             onKeyboard = {
-                                focusRequester.requestFocus()
-                                keyboard?.show()
-                            }, 120L)
+                                webViewInstance?.let { webView ->
+                                    webView.requestFocus()
+                                    webView.evaluateJavascript(
+                                        "window.focusCanvas && window.focusCanvas();",
+                                        null
+                                    )
+                                    webView.postDelayed({
+                                        val manager =
+                                            context.getSystemService(
+                                                android.content.Context.INPUT_METHOD_SERVICE
+                                            ) as? android.view.inputmethod.InputMethodManager
+                                        manager?.showSoftInput(
+                                            webView,
+                                            android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT
+                                        )
+                                    }, 120L)
                                 } ?: run {
                                     focusRequester.requestFocus()
                                     keyboard?.show()
