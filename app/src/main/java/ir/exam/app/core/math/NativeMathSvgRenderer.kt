@@ -58,7 +58,8 @@ object NativeMathSvgRenderer {
         activeEnd: Int = activeStart,
         boxColor: String = "#78909C",
         activeBoxColor: String = "#FF8F00",
-        showOnlyActiveBox: Boolean = false
+        showOnlyActiveBox: Boolean = false,
+        showCaret: Boolean = false
     ): MathSvgDocument {
         val safeFont = fontSizePx.coerceIn(MIN_FONT, MAX_FONT)
         val safeColor = sanitizeColor(color)
@@ -94,13 +95,28 @@ object NativeMathSvgRenderer {
         } else {
             ""
         }
-        val xml = buildString(body.length + boxLayer.length + 360) {
+        val caretLayer = if (showCaret && activeStart >= 0 && activeStart == activeEnd) {
+            renderCaret(
+                boxes = editBoxes,
+                cursor = activeStart,
+                color = safeActiveColor,
+                size = safeFont,
+                canvasWidth = width,
+                canvasHeight = height,
+                paddingX = paddingX,
+                paddingY = paddingY
+            )
+        } else {
+            ""
+        }
+        val xml = buildString(body.length + boxLayer.length + caretLayer.length + 360) {
             append("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ")
             append(number(width)).append(' ').append(number(height))
             append("\" width=\"").append(number(width)).append("\" height=\"")
             append(number(height)).append("\" preserveAspectRatio=\"xMinYMid meet\">")
             append("<title>فرمول ریاضی</title>")
             append(boxLayer)
+            append(caretLayer)
             append("<g fill=\"").append(safeColor).append("\" stroke=\"").append(safeColor)
             append("\" fill-opacity=\"").append(number(safeOpacity)).append("\" stroke-opacity=\"")
             append(number(safeOpacity))
@@ -109,7 +125,7 @@ object NativeMathSvgRenderer {
             append("</g></svg>")
         }
         val digest = sha256(
-            "$safeFont|$safeColor|$safeOpacity|$showEditBoxes|$activeStart|$activeEnd|" +
+            "$safeFont|$safeColor|$safeOpacity|$showEditBoxes|$showCaret|$activeStart|$activeEnd|" +
                 "$safeBoxColor|$safeActiveColor|$showOnlyActiveBox|$tex"
         )
         return MathSvgDocument(
