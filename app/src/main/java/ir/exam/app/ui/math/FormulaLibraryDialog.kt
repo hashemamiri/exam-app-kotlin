@@ -1,6 +1,5 @@
 package ir.exam.app.ui.math
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -17,7 +16,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,11 +57,7 @@ fun FormulaLibraryDialog(
                 Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(title, style = MaterialTheme.typography.titleLarge)
-                        Text("${entries.size} مورد", style = MaterialTheme.typography.bodySmall)
-                    }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("✕ بستن") }
                 }
                 if (entries.isEmpty()) {

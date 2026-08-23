@@ -38,7 +38,7 @@ class FormulaReferenceAssetTest {
         val markers=listOf("Icons.AutoMirrored.Outlined.Undo","⭐ موارد پرکاربرد","🕘 اخیر","درج\")","FixedFormulaKeypad")
         var position=-1
         markers.forEach{marker->val next=text.indexOf(marker,position+1);assertTrue("missing/order: $marker",next>position);position=next}
-        listOf("(",")","7","8","9","⌫","↑","↓","4","5","6","÷","←","→","1","2","3","×","⌨","C","0","=","+","−").forEach{assertTrue(it in text)}
+        listOf("( )","7","8","9","⌫","␠","↑","↓","4","5","6","÷","←","→","1","2","3","×","⌨","C","0","=","+","−").forEach{assertTrue(it in text)}
     }
 
     @Test fun `every reference tex command is supported by native svg parser`() {

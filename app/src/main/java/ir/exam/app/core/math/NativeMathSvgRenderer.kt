@@ -334,10 +334,45 @@ object NativeMathSvgRenderer {
         )
     }
 
+    private fun isDisplayOperator(node: MathNode): Boolean {
+        val value = (node as? MathNode.Symbol)?.value ?: return false
+        return value in setOf("lim", "max", "min", "∑", "∏", "∐", "∫", "∬", "∭", "∮", "⋃", "⋂")
+    }
+
     private fun script(node: MathNode.Script, size: Float): Layout {
-        val base = layout(node.base, size)
-        val upper = node.upper?.let { layout(it, size * .58f) }
-        val lower = node.lower?.let { layout(it, size * .58f) }
+        val operator = isDisplayOperator(node.base)
+        val base = layout(node.base, if (operator) size * 1.12f else size)
+        val scriptScale = if (operator) .52f else .58f
+        val upper = node.upper?.let { layout(it, size * scriptScale) }
+        val lower = node.lower?.let { layout(it, size * scriptScale) }
+        if (operator) {
+            val gap = size * .06f
+            val width = max(base.width, max(upper?.width ?: 0f, lower?.width ?: 0f)) + size * .08f
+            val upperY = 0f
+            val baseY = (upper?.height ?: 0f) + if (upper != null) gap else 0f
+            val lowerY = baseY + base.height + if (lower != null) gap else 0f
+            val height = lowerY + (lower?.height ?: 0f)
+            val baseX = (width - base.width) / 2f
+            val upperX = (width - (upper?.width ?: 0f)) / 2f
+            val lowerX = (width - (lower?.width ?: 0f)) / 2f
+            val body = buildString {
+                upper?.let { append(translate(it.body, upperX, upperY)) }
+                append(translate(base.body, baseX, baseY))
+                lower?.let { append(translate(it.body, lowerX, lowerY)) }
+            }
+            return Layout(
+                width,
+                height,
+                baseY + base.baseline,
+                body,
+                base.boxes.map { it.moved(baseX, baseY) } +
+                    upper?.boxes.orEmpty().map { it.moved(upperX, upperY) } +
+                    lower?.boxes.orEmpty().map { it.moved(lowerX, lowerY) },
+                base.radicalBars.map { it.moved(baseX, baseY) } +
+                    upper?.radicalBars.orEmpty().map { it.moved(upperX, upperY) } +
+                    lower?.radicalBars.orEmpty().map { it.moved(lowerX, lowerY) }
+            )
+        }
         val upperLift = if (upper != null) max(size * .30f, upper.height * .68f) else 0f
         val baseY = upperLift
         val scriptX = base.width + size * .035f
@@ -469,6 +504,33 @@ object NativeMathSvgRenderer {
             bodyLayout.boxes.map { it.moved(bodyX, bodyY) },
             bodyLayout.radicalBars.map { it.moved(bodyX, bodyY) }
         )
+    }
+
+    private fun renderCaret(
+        boxes: List<MathSvgEditBox>,
+        cursor: Int,
+        color: String,
+        size: Float,
+        canvasWidth: Float,
+        @Suppress("UNUSED_PARAMETER") canvasHeight: Float,
+        paddingX: Float,
+        paddingY: Float
+    ): String {
+        val host = boxes.firstOrNull { cursor >= it.sourceStart && cursor <= it.sourceEnd }
+            ?: boxes.lastOrNull { it.sourceEnd <= cursor }
+        val x = when {
+            host == null -> paddingX
+            cursor <= host.sourceStart -> host.xPx
+            cursor >= host.sourceEnd -> host.xPx + host.widthPx
+            host.sourceEnd == host.sourceStart -> host.xPx + host.widthPx / 2f
+            else -> {
+                val span = (host.sourceEnd - host.sourceStart).coerceAtLeast(1)
+                host.xPx + host.widthPx * ((cursor - host.sourceStart).toFloat() / span)
+            }
+        }
+        val y = host?.yPx ?: paddingY
+        val h = host?.heightPx ?: (size * 1.05f)
+        return "<rect x=\"${number(x)}\" y=\"${number(y)}\" width=\"${number(max(1.6f, size * .07f))}\" height=\"${number(h)}\" fill=\"$color\" fill-opacity=\".92\"/>"
     }
 
     private fun renderBoxLayer(

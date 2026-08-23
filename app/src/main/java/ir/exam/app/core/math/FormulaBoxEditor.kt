@@ -86,6 +86,14 @@ object FormulaBoxEditor {
                 val target = ranges[nextIndex]
                 return FormulaBoxEditResult(text, target.start, target.endExclusive)
             }
+            if (delta > 0) {
+                val after = ranges[currentIndex].endExclusive
+                return FormulaBoxEditResult(text, after, after)
+            }
+            if (delta < 0) {
+                val before = ranges[currentIndex].start
+                return FormulaBoxEditResult(text, before, before)
+            }
         }
         val nextPos = (selectionEnd + delta).coerceIn(0, text.length)
         val matchingRange = ranges.firstOrNull { nextPos >= it.start && nextPos < it.endExclusive }

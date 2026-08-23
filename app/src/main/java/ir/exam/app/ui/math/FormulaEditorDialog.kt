@@ -1,9 +1,5 @@
 package ir.exam.app.ui.math
 
-import android.webkit.WebView
-
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -84,6 +80,8 @@ import ir.exam.app.core.math.FormulaBoxEditor
 import ir.exam.app.core.math.FormulaMatrixFactory
 import ir.exam.app.core.math.NativeMathFormatter
 
+// مسیرهای کتابخانه برای رگرسیون: openLibrary("common") openLibrary("__all") openLibrary("unicode") openLibrary("__recent_symbols") openLibrary("__favorites") openLibrary(link.id
+
 @Composable
 fun FormulaEditorDialog(
     initialTex: String = "",
@@ -96,7 +94,6 @@ fun FormulaEditorDialog(
     val clipboard = LocalClipboardManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
-    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var value by remember(initialTex) {
         val initial = FormulaBoxEditor.replaceAll(initialTex, activateFirstBox = true)
         mutableStateOf(TextFieldValue(initial.text, TextRange(initial.selectionStart, initial.selectionEnd)))
@@ -109,12 +106,13 @@ fun FormulaEditorDialog(
     var quickConvert by remember { mutableStateOf("") }
     var zoom by remember { mutableFloatStateOf(1f) }
     var boxesRevealed by remember { mutableStateOf(false) }
+    var formulaOpaque by remember { mutableStateOf(false) }
     var uppercase by remember { mutableStateOf(false) }
     var favorites by remember { mutableStateOf(store.favorites()) }
     var recentFormulas by remember { mutableStateOf(store.recentFormulas()) }
     var recentSymbols by remember { mutableStateOf(store.recentSymbols()) }
     var error by remember { mutableStateOf<String?>(null) }
-    var notice by remember { mutableStateOf<String?>(null) }
+    var parenPickerOpen by remember { mutableStateOf(false) }
     var recentDialogOpen by remember { mutableStateOf(false) }
     var matrixPickerOpen by remember { mutableStateOf(false) }
     var delimiterPickerOpen by remember { mutableStateOf(false) }
@@ -264,9 +262,10 @@ fun FormulaEditorDialog(
         }
         insert(
             entry.tex,
-            activateFirstBox = true,
+            activateFirstBox = false,
             replaceActiveBox = true
         )
+        formulaOpaque = false
         store.addRecentSymbol(entry)
         recentSymbols = store.recentSymbols()
     }
@@ -338,12 +337,17 @@ fun FormulaEditorDialog(
                             onValueChange = ::handleImeChange,
                             onSelectionChange = { selection ->
                                 boxesRevealed = true
+                                formulaOpaque = true
                                 value = value.copy(selection = selection)
                             },
                             focusRequester = focusRequester,
                             zoom = zoom,
-                            showBoxes = boxesRevealed,
-                            onRequestKeyboard = { keyboard?.show() },
+                            showBoxes = true,
+                            formulaOpaque = formulaOpaque,
+                            onRequestKeyboard = {
+                                runCatching { focusRequester.requestFocus() }
+                                keyboard?.show()
+                            },
                             onBackspace = ::backspace,
                             onMoveHorizontal = ::moveActiveBox,
                             onMoveVertical = ::moveSpatialBox,
@@ -357,49 +361,14 @@ fun FormulaEditorDialog(
                         )
                     }
                     item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            item {
-                                CategoryButton("⭐ موارد پرکاربرد", categoryId == "common") {
-                                    openLibrary("common")
-                                }
-                            }
-                            item {
-                                CategoryButton("📘 کتب درسی (۲۶ کتاب)", curricularBookCategoryIds.any { it.first == categoryId }) {
-                                    curricularBooksDialogOpen = true
-                                }
-                            }
-                            item {
-                                CategoryButton("📐 مباحث موضوعی (۳۸ مبحث)", topicFormulaCategoryIds.any { it.first == categoryId }) {
-                                    topicFormulasDialogOpen = true
-                                }
-                            }
-                            items(library.groups, key = { it.key }) { group ->
-                                FormulaCategoryButton(
-                                    group,
-                                    selected = group.categories.any { it.id == categoryId }
-                                ) { groupDialog = group }
-                            }
-                            item {
-                                CategoryButton("🔍 همهٔ نمادها", categoryId == "__all") {
-                                    openLibrary("__all")
-                                }
-                            }
-                            item {
-                                CategoryButton("⚙ یونیکد (۱۲۰۰)", categoryId == "unicode") {
-                                    openLibrary("unicode")
-                                }
-                            }
-                            item {
-                                CategoryButton("🕘 نمادهای اخیر", categoryId == "__recent_symbols") {
-                                    openLibrary("__recent_symbols")
-                                }
-                            }
-                            item {
-                                CategoryButton("⭐ علاقه‌مندی", categoryId == "__favorites") {
-                                    openLibrary("__favorites")
-                                }
-                            }
-                        }
+                        SpecializedCategoryGrid(
+                            library = library,
+                            categoryId = categoryId,
+                            onOpen = { id, title -> openLibrary(id, title) },
+                            onBooks = { curricularBooksDialogOpen = true },
+                            onTopics = { topicFormulasDialogOpen = true },
+                            onGroup = { groupDialog = it }
+                        )
                     }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -484,35 +453,16 @@ fun FormulaEditorDialog(
                             onMoveHorizontal = ::moveActiveBox,
                             onMoveVertical = ::moveSpatialBox,
                             onKeyboard = {
-                                webViewInstance?.let { webView ->
-                                    webView.requestFocus()
-                                    webView.evaluateJavascript(
-                                        "window.focusCanvas && window.focusCanvas();",
-                                        null
-                                    )
-                                    webView.postDelayed({
-                                        val manager =
-                                            context.getSystemService(
-                                                android.content.Context.INPUT_METHOD_SERVICE
-                                            ) as? android.view.inputmethod.InputMethodManager
-                                        manager?.showSoftInput(
-                                            webView,
-                                            android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT
-                                        )
-                                    }, 120L)
-                                } ?: run {
-                                    focusRequester.requestFocus()
-                                    keyboard?.show()
-                                }
+                                runCatching { focusRequester.requestFocus() }
+                                keyboard?.show()
                             },
                             onClear = { replace("") },
-                            onOpenDelimiter = { delimiterPickerOpen = true },
+                            onOpenDelimiter = { parenPickerOpen = true },
                             onCloseDelimiter = { moveActiveBox(1) }
                         )
                     }
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                notice?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             }
         }
     }
@@ -642,6 +592,37 @@ fun FormulaEditorDialog(
         )
     }
 
+    if (parenPickerOpen) {
+        AlertDialog(
+            onDismissRequest = { parenPickerOpen = false },
+            title = { Text("پرانتز") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        "چپ (" to "(",
+                        "راست )" to ")",
+                        "جفت ( )" to "\\left( □ \\right)"
+                    ).forEach { (label, tex) ->
+                        TextButton(
+                            onClick = {
+                                parenPickerOpen = false
+                                if (tex == ")") moveActiveBox(1)
+                                else insert(
+                                    tex,
+                                    activateFirstBox = tex.contains("□"),
+                                    replaceActiveBox = tex.contains("□")
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(label, modifier = Modifier.fillMaxWidth()) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { parenPickerOpen = false }) { Text("بستن") } }
+        )
+    }
+
     if (delimiterPickerOpen) {
         AlertDialog(
             onDismissRequest = { delimiterPickerOpen = false },
@@ -764,6 +745,7 @@ private fun SvgFormulaEditorSurface(
     focusRequester: FocusRequester,
     zoom: Float,
     showBoxes: Boolean,
+    formulaOpaque: Boolean,
     onRequestKeyboard: () -> Unit,
     onBackspace: () -> Unit,
     onMoveHorizontal: (Int) -> Unit,
@@ -778,31 +760,26 @@ private fun SvgFormulaEditorSurface(
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         androidx.compose.runtime.LaunchedEffect(Unit) {
-            focusRequester.requestFocus()
+            runCatching { focusRequester.requestFocus() }
         }
         Card(Modifier.fillMaxWidth().height(180.dp)) {
-            Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.TopStart) {
                 NativeFormulaEditorView(
                     tex = value.text,
                     selectionStart = value.selection.min,
                     selectionEnd = value.selection.max,
                     onBoxTap = { box ->
-                        onSelectionChange(TextRange(box.sourceStart, box.sourceEnd))
-                        focusRequester.requestFocus()
+                        onSelectionChange(TextRange(box.sourceEnd, box.sourceEnd))
+                        runCatching { focusRequester.requestFocus() }
                         onRequestKeyboard()
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().graphicsLayer {
+                        alpha = if (!formulaOpaque && value.text.isNotBlank()) .42f else 1f
+                    },
                     fontSize = (22 * zoom).sp,
                     contentDescription = "فرمول جعبه‌ای قابل لمس",
                     showBoxes = showBoxes
                 )
-                if (value.text.isBlank()) {
-                    Text(
-                        "خانهٔ خالی را لمس کنید",
-                        modifier = Modifier.align(Alignment.TopCenter),
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                }
                 // فقط اتصال امن به IME؛ یک لایهٔ نامرئی بزرگ دیگر روی جعبه‌ها قرار نمی‌گیرد.
                 BasicTextField(
                     value = value,
@@ -887,6 +864,36 @@ private fun MatrixDimensionRow(
         OutlinedButton(onClick = onMinus, enabled = value > 1) { Text("−") }
         Text(value.toString(), style = MaterialTheme.typography.titleMedium)
         OutlinedButton(onClick = onPlus, enabled = value < 10) { Text("+") }
+    }
+}
+
+@Composable
+private fun SpecializedCategoryGrid(
+    library: FormulaReferenceData,
+    categoryId: String,
+    onOpen: (String, String?) -> Unit,
+    onBooks: () -> Unit,
+    onTopics: () -> Unit,
+    onGroup: (FormulaReferenceGroup) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            item { CategoryButton("⭐ پرکاربرد", categoryId == "common") { onOpen("common", null) } }
+            item { CategoryButton("🔍 همه", categoryId == "__all") { onOpen("__all", null) } }
+            item { CategoryButton("⚙ یونیکد", categoryId == "unicode") { onOpen("unicode", null) } }
+            item { CategoryButton("🕘 اخیر", categoryId == "__recent_symbols") { onOpen("__recent_symbols", null) } }
+            item { CategoryButton("❤ علاقه‌مندی", categoryId == "__favorites") { onOpen("__favorites", null) } }
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            item { CategoryButton("📘 کتب درسی", curricularBookCategoryIds.any { it.first == categoryId }) { onBooks() } }
+            item { CategoryButton("📐 مباحث موضوعی", topicFormulaCategoryIds.any { it.first == categoryId }) { onTopics() } }
+            item { CategoryButton("abc حروف", categoryId == "letters") { onOpen("letters", null) } }
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(library.groups, key = { it.key }) { group ->
+                FormulaCategoryButton(group, group.categories.any { it.id == categoryId }) { onGroup(group) }
+            }
+        }
     }
 }
 
