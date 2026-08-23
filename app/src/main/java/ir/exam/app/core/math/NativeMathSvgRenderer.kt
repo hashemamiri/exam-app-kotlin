@@ -279,7 +279,7 @@ object NativeMathSvgRenderer {
         return Layout(
             width,
             height,
-            bottomY + denominator.baseline,
+            lineY + size * .35f,
             body,
             numerator.boxes.map { it.moved(topX, 0f) } + denominator.boxes.map { it.moved(bottomX, bottomY) },
             numerator.radicalBars.map { it.moved(topX, 0f) } +
@@ -399,7 +399,7 @@ object NativeMathSvgRenderer {
                 }
             }
         }
-        return Layout(width, height, height * .56f, body, boxes, bars)
+        return Layout(width, height, height / 2f + size * .35f, body, boxes, bars)
     }
 
     private fun accent(node: MathNode.Accent, size: Float): Layout {
@@ -422,6 +422,10 @@ object NativeMathSvgRenderer {
             "bar" -> "<line x1=\"${number(baseX)}\" y1=\"${number(accentHeight * .55f)}\" x2=\"${number(baseX + base.width)}\" y2=\"${number(accentHeight * .55f)}\" stroke-width=\"${number(stroke)}\"/>"
             "vec" -> "<path d=\"M ${number(center - size * .28f)} ${number(accentHeight * .62f)} L ${number(center + size * .28f)} ${number(accentHeight * .62f)} M ${number(center + size * .28f)} ${number(accentHeight * .62f)} L ${number(center + size * .13f)} ${number(accentHeight * .18f)} M ${number(center + size * .28f)} ${number(accentHeight * .62f)} L ${number(center + size * .13f)} ${number(accentHeight)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
             "dot" -> "<circle cx=\"${number(center)}\" cy=\"${number(accentHeight * .55f)}\" r=\"${number(max(1.2f, size * .065f))}\" stroke=\"none\"/>"
+            "ddot" -> "<circle cx=\"${number(center - size * .14f)}\" cy=\"${number(accentHeight * .55f)}\" r=\"${number(max(1.1f, size * .055f))}\" stroke=\"none\"/><circle cx=\"${number(center + size * .14f)}\" cy=\"${number(accentHeight * .55f)}\" r=\"${number(max(1.1f, size * .055f))}\" stroke=\"none\"/>"
+            "tilde" -> "<path d=\"M ${number(center - size * .22f)} ${number(accentHeight * .6f)} Q ${number(center - size * .11f)} ${number(accentHeight * .2f)} ${number(center)} ${number(accentHeight * .6f)} T ${number(center + size * .22f)} ${number(accentHeight * .6f)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            "overbrace" -> "<path d=\"M ${number(baseX)} ${number(accentHeight)} Q ${number(baseX)} ${number(size * .08f)} ${number(center - size * .1f)} ${number(size * .08f)} L ${number(center)} 0 L ${number(center + size * .1f)} ${number(size * .08f)} Q ${number(baseX + base.width)} ${number(size * .08f)} ${number(baseX + base.width)} ${number(accentHeight)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
+            "underbrace" -> "<path d=\"M ${number(baseX)} 0 Q ${number(baseX)} ${number(accentHeight * .92f)} ${number(center - size * .1f)} ${number(accentHeight * .92f)} L ${number(center)} ${number(accentHeight)} L ${number(center + size * .1f)} ${number(accentHeight * .92f)} Q ${number(baseX + base.width)} ${number(accentHeight * .92f)} ${number(baseX + base.width)} 0\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
             else -> ""
         }
         return Layout(
