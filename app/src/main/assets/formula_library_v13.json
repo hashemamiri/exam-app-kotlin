@@ -4586,15 +4586,15 @@
       "items": [
         {
           "label": "ماتریس ۲×۲",
-          "tex": "\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"
+          "tex": "\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}"
         },
         {
           "label": "ماتریس ۳×۳",
-          "tex": "\\begin{bmatrix}a&b&c\\\\d&e&f\\\\g&h&i\\end{bmatrix}"
+          "tex": "\\begin{bmatrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{bmatrix}"
         },
         {
           "label": "ماتریس دلخواه",
-          "tex": "\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"
+          "tex": "\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}"
         }
       ]
     },
@@ -9410,31 +9410,31 @@
       "items": [
         {
           "label": "اعداد طبیعی",
-          "tex": "\\\\mathbb{N}"
+          "tex": "\\mathbb{N}"
         },
         {
           "label": "اعداد صحیح",
-          "tex": "\\\\mathbb{Z}"
+          "tex": "\\mathbb{Z}"
         },
         {
           "label": "اعداد گویا",
-          "tex": "\\\\mathbb{Q}"
+          "tex": "\\mathbb{Q}"
         },
         {
           "label": "اعداد حقیقی",
-          "tex": "\\\\mathbb{R}"
+          "tex": "\\mathbb{R}"
         },
         {
           "label": "اعداد مختلط",
-          "tex": "\\\\mathbb{C}"
+          "tex": "\\mathbb{C}"
         },
         {
           "label": "اعداد اول",
-          "tex": "\\\\mathbb{P}"
+          "tex": "\\mathbb{P}"
         },
         {
           "label": "چهارگان",
-          "tex": "\\\\mathbb{H}"
+          "tex": "\\mathbb{H}"
         },
         {
           "label": "طبیعی",
@@ -9458,7 +9458,7 @@
         },
         {
           "label": "تهی",
-          "tex": "\\\\emptyset"
+          "tex": "\\emptyset"
         },
         {
           "label": "مجموعهٔ جهانی",
@@ -9492,19 +9492,19 @@
         },
         {
           "label": "تفاضل",
-          "tex": "A \\\\setminus B"
+          "tex": "A \\setminus B"
         },
         {
           "label": "تفاضل متقارن",
-          "tex": "A \\\\Delta B"
+          "tex": "A \\Delta B"
         },
         {
           "label": "زیرمجموعهٔ نابرابر",
-          "tex": "A \\\\subsetneq B"
+          "tex": "A \\subsetneq B"
         },
         {
           "label": "زیرمجموعه نیست",
-          "tex": "A \\\\nsubseteq B"
+          "tex": "A \\nsubseteq B"
         },
         {
           "label": "زیرمجموعهٔ اکید نیست",
@@ -9512,23 +9512,23 @@
         },
         {
           "label": "ابرم مجموعه",
-          "tex": "A \\\\supseteq B"
+          "tex": "A \\supseteq B"
         },
         {
           "label": "عضو نیست",
-          "tex": "x \\\\notin A"
+          "tex": "x \\notin A"
         },
         {
           "label": "شامل است",
-          "tex": "A \\\\ni x"
+          "tex": "A \\ni x"
         },
         {
           "label": "متناهی",
-          "tex": "|A| < \\\\infty"
+          "tex": "|A| < \\infty"
         },
         {
           "label": "نامتناهی",
-          "tex": "|A| = \\\\infty"
+          "tex": "|A| = \\infty"
         }
       ]
     },
@@ -9554,15 +9554,15 @@
         },
         {
           "label": "بی‌نهایت مثبت",
-          "tex": "(a,+\\\\infty)"
+          "tex": "(a,+\\infty)"
         },
         {
           "label": "بی‌نهایت منفی",
-          "tex": "(-\\\\infty,b]"
+          "tex": "(-\\infty,b]"
         },
         {
           "label": "محور حقیقی",
-          "tex": "(-\\\\infty,+\\\\infty)"
+          "tex": "(-\\infty,+\\infty)"
         }
       ]
     },
@@ -9576,23 +9576,23 @@
         },
         {
           "label": "تفاضل",
-          "tex": "\\\\Delta a_n = a_{n+1}-a_n"
+          "tex": "\\Delta a_n = a_{n+1}-a_n"
         },
         {
           "label": "نسبت",
-          "tex": "r = \\\\frac{a_{n+1}}{a_n}"
+          "tex": "r = \\frac{a_{n+1}}{a_n}"
         },
         {
           "label": "مجموع جزئی",
-          "tex": "S_n = \\\\sum_{k=1}^{n} a_k"
+          "tex": "S_n = \\sum_{k=1}^{n} a_k"
         },
         {
           "label": "همگرایی",
-          "tex": "\\\\lim_{n \\\\to \\\\infty} a_n = L"
+          "tex": "\\lim_{n \\to \\infty} a_n = L"
         },
         {
           "label": "میل دنباله",
-          "tex": "a_n \\\\to L"
+          "tex": "a_n \\to L"
         },
         {
           "label": "فیبوناچی",
@@ -9608,15 +9608,15 @@
         },
         {
           "label": "مجموع حسابی",
-          "tex": "S_n = \\\\frac{n}{2}(2a_1+(n-1)d)"
+          "tex": "S_n = \\frac{n}{2}(2a_1+(n-1)d)"
         },
         {
           "label": "مجموع هندسی",
-          "tex": "S_n = a_1 \\\\frac{1-r^{n}}{1-r}"
+          "tex": "S_n = a_1 \\frac{1-r^{n}}{1-r}"
         },
         {
           "label": "هندسی بی‌نهایت",
-          "tex": "S_{\\\\infty} = \\\\frac{a_1}{1-r}"
+          "tex": "S_{\\infty} = \\frac{a_1}{1-r}"
         }
       ]
     },
@@ -9626,83 +9626,83 @@
       "items": [
         {
           "label": "اصلی",
-          "tex": "\\\\sin^{2}\\\\theta+\\\\cos^{2}\\\\theta=1"
+          "tex": "\\sin^{2}\\theta+\\cos^{2}\\theta=1"
         },
         {
           "label": "۱+تانژانت",
-          "tex": "1+\\\\tan^{2}\\\\theta=\\\\sec^{2}\\\\theta"
+          "tex": "1+\\tan^{2}\\theta=\\sec^{2}\\theta"
         },
         {
           "label": "۱+کتانژانت",
-          "tex": "1+\\\\cot^{2}\\\\theta=\\\\csc^{2}\\\\theta"
+          "tex": "1+\\cot^{2}\\theta=\\csc^{2}\\theta"
         },
         {
           "label": "سینوس جمع",
-          "tex": "\\\\sin(a+b)=\\\\sin a\\\\cos b+\\\\cos a\\\\sin b"
+          "tex": "\\sin(a+b)=\\sin a\\cos b+\\cos a\\sin b"
         },
         {
           "label": "سینوس تفریق",
-          "tex": "\\\\sin(a-b)=\\\\sin a\\\\cos b-\\\\cos a\\\\sin b"
+          "tex": "\\sin(a-b)=\\sin a\\cos b-\\cos a\\sin b"
         },
         {
           "label": "کسینوس جمع",
-          "tex": "\\\\cos(a+b)=\\\\cos a\\\\cos b-\\\\sin a\\\\sin b"
+          "tex": "\\cos(a+b)=\\cos a\\cos b-\\sin a\\sin b"
         },
         {
           "label": "کسینوس تفریق",
-          "tex": "\\\\cos(a-b)=\\\\cos a\\\\cos b+\\\\sin a\\\\sin b"
+          "tex": "\\cos(a-b)=\\cos a\\cos b+\\sin a\\sin b"
         },
         {
           "label": "تانژانت جمع",
-          "tex": "\\\\tan(a+b)=\\\\frac{\\\\tan a+\\\\tan b}{1-\\\\tan a\\\\tan b}"
+          "tex": "\\tan(a+b)=\\frac{\\tan a+\\tan b}{1-\\tan a\\tan b}"
         },
         {
           "label": "سینوس ۲ برابر",
-          "tex": "\\\\sin 2x=2\\\\sin x\\\\cos x"
+          "tex": "\\sin 2x=2\\sin x\\cos x"
         },
         {
           "label": "کسینوس ۲ برابر",
-          "tex": "\\\\cos 2x=\\\\cos^{2}x-\\\\sin^{2}x"
+          "tex": "\\cos 2x=\\cos^{2}x-\\sin^{2}x"
         },
         {
           "label": "کسینوس ۲ برابر ۲",
-          "tex": "\\\\cos 2x=2\\\\cos^{2}x-1"
+          "tex": "\\cos 2x=2\\cos^{2}x-1"
         },
         {
           "label": "کسینوس ۲ برابر ۳",
-          "tex": "\\\\cos 2x=1-2\\\\sin^{2}x"
+          "tex": "\\cos 2x=1-2\\sin^{2}x"
         },
         {
           "label": "تانژانت ۲ برابر",
-          "tex": "\\\\tan 2x=\\\\frac{2\\\\tan x}{1-\\\\tan^{2}x}"
+          "tex": "\\tan 2x=\\frac{2\\tan x}{1-\\tan^{2}x}"
         },
         {
           "label": "سینوس نیم",
-          "tex": "\\\\sin\\\\frac{x}{2}=\\\\pm\\\\sqrt{\\\\frac{1-\\\\cos x}{2}}"
+          "tex": "\\sin\\frac{x}{2}=\\pm\\sqrt{\\frac{1-\\cos x}{2}}"
         },
         {
           "label": "کسینوس نیم",
-          "tex": "\\\\cos\\\\frac{x}{2}=\\\\pm\\\\sqrt{\\\\frac{1+\\\\cos x}{2}}"
+          "tex": "\\cos\\frac{x}{2}=\\pm\\sqrt{\\frac{1+\\cos x}{2}}"
         },
         {
           "label": "تبدیل رادیان",
-          "tex": "\\\\theta^{\\\\circ}=\\\\theta\\\\cdot\\\\frac{\\\\pi}{180}"
+          "tex": "\\theta^{\\circ}=\\theta\\cdot\\frac{\\pi}{180}"
         },
         {
           "label": "π رادیان",
-          "tex": "\\\\pi\\\\ \\\\mathrm{rad}=180^{\\\\circ}"
+          "tex": "\\pi \\mathrm{rad}=180^{\\circ}"
         },
         {
           "label": "دوره",
-          "tex": "T=\\\\frac{2\\\\pi}{|\\\\omega|}"
+          "tex": "T=\\frac{2\\pi}{|\\omega|}"
         },
         {
           "label": "sin(۱۸۰−θ)",
-          "tex": "\\\\sin(180^{\\\\circ}-\\\\theta)=\\\\sin\\\\theta"
+          "tex": "\\sin(180^{\\circ}-\\theta)=\\sin\\theta"
         },
         {
           "label": "cos(۱۸۰−θ)",
-          "tex": "\\\\cos(180^{\\\\circ}-\\\\theta)=-\\\\cos\\\\theta"
+          "tex": "\\cos(180^{\\circ}-\\theta)=-\\cos\\theta"
         }
       ]
     },
@@ -9716,27 +9716,27 @@
         },
         {
           "label": "قانون سینوس",
-          "tex": "\\\\frac{a}{\\\\sin A}=\\\\frac{b}{\\\\sin B}=\\\\frac{c}{\\\\sin C}=2R"
+          "tex": "\\frac{a}{\\sin A}=\\frac{b}{\\sin B}=\\frac{c}{\\sin C}=2R"
         },
         {
           "label": "قانون کسینوس",
-          "tex": "c^{2}=a^{2}+b^{2}-2ab\\\\cos C"
+          "tex": "c^{2}=a^{2}+b^{2}-2ab\\cos C"
         },
         {
           "label": "مساحت سینوس",
-          "tex": "S=\\\\frac{1}{2}ab\\\\sin C"
+          "tex": "S=\\frac{1}{2}ab\\sin C"
         },
         {
           "label": "هرون",
-          "tex": "S=\\\\sqrt{s(s-a)(s-b)(s-c)}"
+          "tex": "S=\\sqrt{s(s-a)(s-b)(s-c)}"
         },
         {
           "label": "نصف محیط",
-          "tex": "s=\\\\frac{a+b+c}{2}"
+          "tex": "s=\\frac{a+b+c}{2}"
         },
         {
           "label": "مساحت شعاع محیطی",
-          "tex": "S=\\\\frac{abc}{4R}"
+          "tex": "S=\\frac{abc}{4R}"
         },
         {
           "label": "مساحت شعاع محاطی",
@@ -9744,15 +9744,15 @@
         },
         {
           "label": "sin مقابل/وتر",
-          "tex": "\\\\sin\\\\theta=\\\\frac{مقابل}{وتر}"
+          "tex": "\\sin\\theta=\\frac{مقابل}{وتر}"
         },
         {
           "label": "cos مجاور/وتر",
-          "tex": "\\\\cos\\\\theta=\\\\frac{مجاور}{وتر}"
+          "tex": "\\cos\\theta=\\frac{مجاور}{وتر}"
         },
         {
           "label": "tan مقابل/مجاور",
-          "tex": "\\\\tan\\\\theta=\\\\frac{مقابل}{مجاور}"
+          "tex": "\\tan\\theta=\\frac{مقابل}{مجاور}"
         }
       ]
     },
@@ -9762,27 +9762,27 @@
       "items": [
         {
           "label": "سینوس",
-          "tex": "\\\\sin x=\\\\sin\\\\alpha"
+          "tex": "\\sin x=\\sin\\alpha"
         },
         {
           "label": "کسینوس",
-          "tex": "\\\\cos x=\\\\cos\\\\alpha"
+          "tex": "\\cos x=\\cos\\alpha"
         },
         {
           "label": "تانژانت",
-          "tex": "\\\\tan x=\\\\tan\\\\alpha"
+          "tex": "\\tan x=\\tan\\alpha"
         },
         {
           "label": "جواب سینوس",
-          "tex": "x=k\\\\pi+(-1)^{k}\\\\alpha"
+          "tex": "x=k\\pi+(-1)^{k}\\alpha"
         },
         {
           "label": "جواب کسینوس",
-          "tex": "x=2k\\\\pi\\\\pm\\\\alpha"
+          "tex": "x=2k\\pi\\pm\\alpha"
         },
         {
           "label": "جواب تانژانت",
-          "tex": "x=k\\\\pi+\\\\alpha"
+          "tex": "x=k\\pi+\\alpha"
         },
         {
           "label": "arccot",
@@ -9820,7 +9820,7 @@
         },
         {
           "label": "تقسیم توان",
-          "tex": "\\\\frac{a^{m}}{a^{n}}=a^{m-n}"
+          "tex": "\\frac{a^{m}}{a^{n}}=a^{m-n}"
         },
         {
           "label": "توان توان",
@@ -9832,11 +9832,11 @@
         },
         {
           "label": "توان کسر",
-          "tex": "(\\\\frac{a}{b})^{n}=\\\\frac{a^{n}}{b^{n}}"
+          "tex": "(\\frac{a}{b})^{n}=\\frac{a^{n}}{b^{n}}"
         },
         {
           "label": "توان منفی",
-          "tex": "a^{-n}=\\\\frac{1}{a^{n}}"
+          "tex": "a^{-n}=\\frac{1}{a^{n}}"
         },
         {
           "label": "توان صفر",
@@ -9844,19 +9844,19 @@
         },
         {
           "label": "توان گویا",
-          "tex": "a^{m/n}=\\\\sqrt[n]{a^{m}}"
+          "tex": "a^{m/n}=\\sqrt[n]{a^{m}}"
         },
         {
           "label": "گویا کردن ساده",
-          "tex": "\\\\frac{1}{\\\\sqrt{a}}=\\\\frac{\\\\sqrt{a}}{a}"
+          "tex": "\\frac{1}{\\sqrt{a}}=\\frac{\\sqrt{a}}{a}"
         },
         {
           "label": "گویا کردن مزدوج",
-          "tex": "\\\\frac{1}{\\\\sqrt{a}-\\\\sqrt{b}}=\\\\frac{\\\\sqrt{a}+\\\\sqrt{b}}{a-b}"
+          "tex": "\\frac{1}{\\sqrt{a}-\\sqrt{b}}=\\frac{\\sqrt{a}+\\sqrt{b}}{a-b}"
         },
         {
           "label": "نماد علمی",
-          "tex": "a\\\\times 10^{n}"
+          "tex": "a\\times 10^{n}"
         }
       ]
     },
@@ -9906,7 +9906,7 @@
         },
         {
           "label": "دوجمله‌ای",
-          "tex": "(a+b)^{n}=\\\\sum_{k=0}^{n}\\\\binom{n}{k}a^{n-k}b^{k}"
+          "tex": "(a+b)^{n}=\\sum_{k=0}^{n}\\binom{n}{k}a^{n-k}b^{k}"
         }
       ]
     },
@@ -9916,23 +9916,23 @@
       "items": [
         {
           "label": "دلتا",
-          "tex": "\\\\Delta=b^{2}-4ac"
+          "tex": "\\Delta=b^{2}-4ac"
         },
         {
           "label": "ریشه‌های درجه۲",
-          "tex": "x=\\\\frac{-b\\\\pm\\\\sqrt{\\\\Delta}}{2a}"
+          "tex": "x=\\frac{-b\\pm\\sqrt{\\Delta}}{2a}"
         },
         {
           "label": "جمع ریشه‌ها",
-          "tex": "S=-\\\\frac{b}{a}"
+          "tex": "S=-\\frac{b}{a}"
         },
         {
           "label": "ضرب ریشه‌ها",
-          "tex": "P=\\\\frac{c}{a}"
+          "tex": "P=\\frac{c}{a}"
         },
         {
           "label": "رأس سهمی",
-          "tex": "x=-\\\\frac{b}{2a}"
+          "tex": "x=-\\frac{b}{2a}"
         },
         {
           "label": "شکل رأس",
@@ -9940,15 +9940,15 @@
         },
         {
           "label": "کرامر x",
-          "tex": "x=\\\\frac{\\\\Delta_x}{\\\\Delta}"
+          "tex": "x=\\frac{\\Delta_x}{\\Delta}"
         },
         {
           "label": "کرامر y",
-          "tex": "y=\\\\frac{\\\\Delta_y}{\\\\Delta}"
+          "tex": "y=\\frac{\\Delta_y}{\\Delta}"
         },
         {
           "label": "دستگاه خطی",
-          "tex": "\\\\begin{matrix}a_1 x+b_1 y=c_1 \\\\\\\\ a_2 x+b_2 y=c_2\\\\end{matrix}"
+          "tex": "\\begin{matrix} a_1 x+b_1 y=c_1 \\\\ a_2 x+b_2 y=c_2 \\end{matrix}"
         },
         {
           "label": "معادلهٔ نمایی",
@@ -9956,7 +9956,7 @@
         },
         {
           "label": "معادلهٔ لگاریتمی",
-          "tex": "\\\\log_{a} x=k"
+          "tex": "\\log_{a} x=k"
         },
         {
           "label": "قدرمطلقی",
@@ -9964,11 +9964,11 @@
         },
         {
           "label": "رادیکالی",
-          "tex": "\\\\sqrt{f(x)}=g(x)"
+          "tex": "\\sqrt{f(x)}=g(x)"
         },
         {
           "label": "گویا",
-          "tex": "\\\\frac{P(x)}{Q(x)}=0"
+          "tex": "\\frac{P(x)}{Q(x)}=0"
         }
       ]
     },
@@ -9982,7 +9982,7 @@
         },
         {
           "label": "نامعادلهٔ درجه۲",
-          "tex": "ax^{2}+bx+c\\\\ge 0"
+          "tex": "ax^{2}+bx+c\\ge 0"
         },
         {
           "label": "قدرمطلقی",
@@ -9994,11 +9994,11 @@
         },
         {
           "label": "گویا",
-          "tex": "\\\\frac{P(x)}{Q(x)}>0"
+          "tex": "\\frac{P(x)}{Q(x)}>0"
         },
         {
           "label": "تعیین علامت",
-          "tex": "x\\\\in (-\\\\infty,r_1)\\\\cup(r_2,+\\\\infty)"
+          "tex": "x\\in (-\\infty,r_1)\\cup(r_2,+\\infty)"
         }
       ]
     },
@@ -10008,11 +10008,11 @@
       "items": [
         {
           "label": "تعریف",
-          "tex": "f:A\\\\to B"
+          "tex": "f:A\\to B"
         },
         {
           "label": "نگاشت",
-          "tex": "x\\\\mapsto f(x)"
+          "tex": "x\\mapsto f(x)"
         },
         {
           "label": "زوج",
@@ -10028,11 +10028,11 @@
         },
         {
           "label": "ترکیب",
-          "tex": "(f\\\\circ g)(x)=f(g(x))"
+          "tex": "(f\\circ g)(x)=f(g(x))"
         },
         {
           "label": "وارون ترکیب",
-          "tex": "(f\\\\circ f^{-1})(x)=x"
+          "tex": "(f\\circ f^{-1})(x)=x"
         },
         {
           "label": "جمع توابع",
@@ -10044,7 +10044,7 @@
         },
         {
           "label": "خارج‌قسمت",
-          "tex": "(\\\\frac{f}{g})(x)=\\\\frac{f(x)}{g(x)}"
+          "tex": "(\\frac{f}{g})(x)=\\frac{f(x)}{g(x)}"
         },
         {
           "label": "انتقال افقی",
@@ -10068,7 +10068,7 @@
         },
         {
           "label": "همانی",
-          "tex": "\\\\mathrm{id}(x)=x"
+          "tex": "\\mathrm{id}(x)=x"
         },
         {
           "label": "ثابت",
@@ -10076,15 +10076,15 @@
         },
         {
           "label": "هموگرافیک",
-          "tex": "f(x)=\\\\frac{ax+b}{cx+d}"
+          "tex": "f(x)=\\frac{ax+b}{cx+d}"
         },
         {
           "label": "یک‌به‌یک",
-          "tex": "f(x_1)=f(x_2)\\\\Rightarrow x_1=x_2"
+          "tex": "f(x_1)=f(x_2)\\Rightarrow x_1=x_2"
         },
         {
           "label": "صعودی",
-          "tex": "x_1<x_2\\\\Rightarrow f(x_1)\\\\le f(x_2)"
+          "tex": "x_1<x_2\\Rightarrow f(x_1)\\le f(x_2)"
         }
       ]
     },
@@ -10102,27 +10102,27 @@
         },
         {
           "label": "کف",
-          "tex": "\\\\lfloor x\\\\rfloor"
+          "tex": "\\lfloor x\\rfloor"
         },
         {
           "label": "سقف",
-          "tex": "\\\\lceil x\\\\rceil"
+          "tex": "\\lceil x\\rceil"
         },
         {
           "label": "جزء کسری",
-          "tex": "\\\\{x\\\\}=x-[x]"
+          "tex": "\\{x\\}=x-[x]"
         },
         {
           "label": "علامت",
-          "tex": "\\\\mathrm{sgn}(x)"
+          "tex": "\\mathrm{sgn}(x)"
         },
         {
           "label": "چندضابطه‌ای",
-          "tex": "f(x)=\\\\begin{matrix}x & x\\\\ge 0 \\\\\\\\ -x & x<0\\\\end{matrix}"
+          "tex": "f(x)=\\begin{matrix} x & x\\ge 0 \\\\ -x & x<0 \\end{matrix}"
         },
         {
           "label": "قدرمطلق ضابطه‌ای",
-          "tex": "|x|=\\\\begin{matrix}x & x\\\\ge 0 \\\\\\\\ -x & x<0\\\\end{matrix}"
+          "tex": "|x|=\\begin{matrix} x & x\\ge 0 \\\\ -x & x<0 \\end{matrix}"
         }
       ]
     },
@@ -10132,43 +10132,43 @@
       "items": [
         {
           "label": "لگاریتم ضرب",
-          "tex": "\\\\log_{a}(xy)=\\\\log_{a}x+\\\\log_{a}y"
+          "tex": "\\log_{a}(xy)=\\log_{a}x+\\log_{a}y"
         },
         {
           "label": "لگاریتم تقسیم",
-          "tex": "\\\\log_{a}\\\\frac{x}{y}=\\\\log_{a}x-\\\\log_{a}y"
+          "tex": "\\log_{a}\\frac{x}{y}=\\log_{a}x-\\log_{a}y"
         },
         {
           "label": "لگاریتم توان",
-          "tex": "\\\\log_{a}(x^{n})=n\\\\log_{a}x"
+          "tex": "\\log_{a}(x^{n})=n\\log_{a}x"
         },
         {
           "label": "تغییر مبنا",
-          "tex": "\\\\log_{a}b=\\\\frac{\\\\log_{c}b}{\\\\log_{c}a}"
+          "tex": "\\log_{a}b=\\frac{\\log_{c}b}{\\log_{c}a}"
         },
         {
           "label": "تغییر به ln",
-          "tex": "\\\\log_{a}b=\\\\frac{\\\\ln b}{\\\\ln a}"
+          "tex": "\\log_{a}b=\\frac{\\ln b}{\\ln a}"
         },
         {
           "label": "a به توان لاگ",
-          "tex": "a^{\\\\log_{a}x}=x"
+          "tex": "a^{\\log_{a}x}=x"
         },
         {
           "label": "ln نمایی",
-          "tex": "\\\\ln e^{x}=x"
+          "tex": "\\ln e^{x}=x"
         },
         {
           "label": "e به توان ln",
-          "tex": "e^{\\\\ln x}=x"
+          "tex": "e^{\\ln x}=x"
         },
         {
           "label": "لاگ ۱",
-          "tex": "\\\\log_{a}1=0"
+          "tex": "\\log_{a}1=0"
         },
         {
           "label": "لاگ خود مبنا",
-          "tex": "\\\\log_{a}a=1"
+          "tex": "\\log_{a}a=1"
         },
         {
           "label": "تابع نمایی",
@@ -10176,7 +10176,7 @@
         },
         {
           "label": "تابع لگاریتمی",
-          "tex": "y=\\\\log_{a}x"
+          "tex": "y=\\log_{a}x"
         },
         {
           "label": "lg",
@@ -10194,59 +10194,59 @@
       "items": [
         {
           "label": "حد چپ",
-          "tex": "\\\\lim_{x \\\\to a^{-}} f(x)"
+          "tex": "\\lim_{x \\to a^{-}} f(x)"
         },
         {
           "label": "حد راست",
-          "tex": "\\\\lim_{x \\\\to a^{+}} f(x)"
+          "tex": "\\lim_{x \\to a^{+}} f(x)"
         },
         {
           "label": "حد در +∞",
-          "tex": "\\\\lim_{x \\\\to +\\\\infty} f(x)"
+          "tex": "\\lim_{x \\to +\\infty} f(x)"
         },
         {
           "label": "حد در −∞",
-          "tex": "\\\\lim_{x \\\\to -\\\\infty} f(x)"
+          "tex": "\\lim_{x \\to -\\infty} f(x)"
         },
         {
           "label": "حد بی‌نهایت",
-          "tex": "\\\\lim_{x \\\\to a} f(x)=+\\\\infty"
+          "tex": "\\lim_{x \\to a} f(x)=+\\infty"
         },
         {
           "label": "همارزی سینوس",
-          "tex": "\\\\sin x \\\\sim x"
+          "tex": "\\sin x \\sim x"
         },
         {
           "label": "همارزی تانژانت",
-          "tex": "\\\\tan x \\\\sim x"
+          "tex": "\\tan x \\sim x"
         },
         {
           "label": "همارزی ۱−کسینوس",
-          "tex": "1-\\\\cos x \\\\sim \\\\frac{x^{2}}{2}"
+          "tex": "1-\\cos x \\sim \\frac{x^{2}}{2}"
         },
         {
           "label": "همارزی ln",
-          "tex": "\\\\ln(1+x) \\\\sim x"
+          "tex": "\\ln(1+x) \\sim x"
         },
         {
           "label": "همارزی نمایی",
-          "tex": "e^{x}-1 \\\\sim x"
+          "tex": "e^{x}-1 \\sim x"
         },
         {
           "label": "ابهام ۰/۰",
-          "tex": "\\\\frac{0}{0}"
+          "tex": "\\frac{0}{0}"
         },
         {
           "label": "ابهام ∞/∞",
-          "tex": "\\\\frac{\\\\infty}{\\\\infty}"
+          "tex": "\\frac{\\infty}{\\infty}"
         },
         {
           "label": "پیوستگی",
-          "tex": "\\\\lim_{x \\\\to a} f(x)=f(a)"
+          "tex": "\\lim_{x \\to a} f(x)=f(a)"
         },
         {
           "label": "هوپیتال",
-          "tex": "\\\\lim\\\\frac{f}{g}=\\\\lim\\\\frac{f\\"
+          "tex": "\\lim\\frac{f}{g}=\\lim\\frac{f\\"
         }
       ]
     },
@@ -10260,11 +10260,11 @@
         },
         {
           "label": "نماد لایب‌نیتس",
-          "tex": "\\\\frac{dy}{dx}"
+          "tex": "\\frac{dy}{dx}"
         },
         {
           "label": "عملگر",
-          "tex": "\\\\frac{d}{dx}"
+          "tex": "\\frac{d}{dx}"
         },
         {
           "label": "مشتق دوم",
@@ -10280,19 +10280,19 @@
         },
         {
           "label": "خارج‌قسمت",
-          "tex": "(\\\\frac{u}{v})\\"
+          "tex": "(\\frac{u}{v})\\"
         },
         {
           "label": "زنجیره‌ای",
-          "tex": "(f\\\\circ g)\\"
+          "tex": "(f\\circ g)\\"
         },
         {
           "label": "آهنگ متوسط",
-          "tex": "\\\\frac{\\\\Delta y}{\\\\Delta x}"
+          "tex": "\\frac{\\Delta y}{\\Delta x}"
         },
         {
           "label": "آهنگ لحظه‌ای",
-          "tex": "\\\\frac{dy}{dt}"
+          "tex": "\\frac{dy}{dt}"
         },
         {
           "label": "اکسترمم",
@@ -10316,15 +10316,15 @@
         },
         {
           "label": "مشتق cot",
-          "tex": "\\\\frac{d}{dx}\\\\cot x=-\\\\csc^{2}x"
+          "tex": "\\frac{d}{dx}\\cot x=-\\csc^{2}x"
         },
         {
           "label": "مشتق sec",
-          "tex": "\\\\frac{d}{dx}\\\\sec x=\\\\sec x\\\\tan x"
+          "tex": "\\frac{d}{dx}\\sec x=\\sec x\\tan x"
         },
         {
           "label": "مشتق csc",
-          "tex": "\\\\frac{d}{dx}\\\\csc x=-\\\\csc x\\\\cot x"
+          "tex": "\\frac{d}{dx}\\csc x=-\\csc x\\cot x"
         }
       ]
     },
@@ -10334,39 +10334,39 @@
       "items": [
         {
           "label": "نامعین",
-          "tex": "\\\\int f(x)\\\\,dx=F(x)+C"
+          "tex": "\\int f(x)\\,dx=F(x)+C"
         },
         {
           "label": "معین",
-          "tex": "\\\\int_{a}^{b} f(x)\\\\,dx=F(b)-F(a)"
+          "tex": "\\int_{a}^{b} f(x)\\,dx=F(b)-F(a)"
         },
         {
           "label": "قضیهٔ اساسی",
-          "tex": "\\\\frac{d}{dx}\\\\int_{a}^{x} f(t)\\\\,dt=f(x)"
+          "tex": "\\frac{d}{dx}\\int_{a}^{x} f(t)\\,dt=f(x)"
         },
         {
           "label": "جزءبه‌جزء",
-          "tex": "\\\\int u\\\\,dv=uv-\\\\int v\\\\,du"
+          "tex": "\\int u\\,dv=uv-\\int v\\,du"
         },
         {
           "label": "جانشانی",
-          "tex": "\\\\int f(g(x))g\\"
+          "tex": "\\int f(g(x))g\\"
         },
         {
           "label": "انتگرال سه‌گانه",
-          "tex": "\\\\iiint"
+          "tex": "\\iiint"
         },
         {
           "label": "سطح زیر منحنی",
-          "tex": "S=\\\\int_{a}^{b}|f(x)|\\\\,dx"
+          "tex": "S=\\int_{a}^{b}|f(x)|\\,dx"
         },
         {
           "label": "حجم دیسک",
-          "tex": "V=\\\\pi\\\\int_{a}^{b}[f(x)]^{2}\\\\,dx"
+          "tex": "V=\\pi\\int_{a}^{b}[f(x)]^{2}\\,dx"
         },
         {
           "label": "متوسط مقدار",
-          "tex": "\\\\frac{1}{b-a}\\\\int_{a}^{b}f(x)\\\\,dx"
+          "tex": "\\frac{1}{b-a}\\int_{a}^{b}f(x)\\,dx"
         }
       ]
     },
@@ -10376,7 +10376,7 @@
       "items": [
         {
           "label": "اصل ضرب",
-          "tex": "n_1\\\\cdot n_2\\\\cdots n_k"
+          "tex": "n_1\\cdot n_2\\cdots n_k"
         },
         {
           "label": "اصل جمع",
@@ -10384,35 +10384,35 @@
         },
         {
           "label": "اصل متمم",
-          "tex": "n(\\\\bar A)=n(S)-n(A)"
+          "tex": "n(\\bar A)=n(S)-n(A)"
         },
         {
           "label": "جایگشت با تکرار",
-          "tex": "\\\\frac{n!}{n_1! n_2! \\\\cdots}"
+          "tex": "\\frac{n!}{n_1! n_2! \\cdots}"
         },
         {
           "label": "ترکیب",
-          "tex": "\\\\binom{n}{k}=\\\\frac{n!}{k!(n-k)!}"
+          "tex": "\\binom{n}{k}=\\frac{n!}{k!(n-k)!}"
         },
         {
           "label": "ترکیب با تکرار",
-          "tex": "\\\\binom{n+r-1}{r}"
+          "tex": "\\binom{n+r-1}{r}"
         },
         {
           "label": "دوجمله‌ای جمله",
-          "tex": "\\\\binom{n}{k}a^{n-k}b^{k}"
+          "tex": "\\binom{n}{k}a^{n-k}b^{k}"
         },
         {
           "label": "لانه کبوتری",
-          "tex": "n+1 \\\\to 2"
+          "tex": "n+1 \\to 2"
         },
         {
           "label": "شمول دو مجموعه",
-          "tex": "|A\\\\cup B|=|A|+|B|-|A\\\\cap B|"
+          "tex": "|A\\cup B|=|A|+|B|-|A\\cap B|"
         },
         {
           "label": "شمول سه مجموعه",
-          "tex": "|A\\\\cup B\\\\cup C|=|A|+|B|+|C|-|A\\\\cap B|-|A\\\\cap C|-|B\\\\cap C|+|A\\\\cap B\\\\cap C|"
+          "tex": "|A\\cup B\\cup C|=|A|+|B|+|C|-|A\\cap B|-|A\\cap C|-|B\\cap C|+|A\\cap B\\cap C|"
         }
       ]
     },
@@ -10422,27 +10422,27 @@
       "items": [
         {
           "label": "شرطی",
-          "tex": "P(A|B)=\\\\frac{P(A\\\\cap B)}{P(B)}"
+          "tex": "P(A|B)=\\frac{P(A\\cap B)}{P(B)}"
         },
         {
           "label": "قانون ضرب",
-          "tex": "P(A\\\\cap B)=P(A)P(B|A)"
+          "tex": "P(A\\cap B)=P(A)P(B|A)"
         },
         {
           "label": "احتمال کل",
-          "tex": "P(B)=\\\\sum P(A_i)P(B|A_i)"
+          "tex": "P(B)=\\sum P(A_i)P(B|A_i)"
         },
         {
           "label": "بیز",
-          "tex": "P(A_i|B)=\\\\frac{P(A_i)P(B|A_i)}{P(B)}"
+          "tex": "P(A_i|B)=\\frac{P(A_i)P(B|A_i)}{P(B)}"
         },
         {
           "label": "مستقل",
-          "tex": "P(A\\\\cap B)=P(A)P(B)"
+          "tex": "P(A\\cap B)=P(A)P(B)"
         },
         {
           "label": "ناسازگار",
-          "tex": "P(A\\\\cup B)=P(A)+P(B)"
+          "tex": "P(A\\cup B)=P(A)+P(B)"
         },
         {
           "label": "متمم",
@@ -10450,7 +10450,7 @@
         },
         {
           "label": "دوجمله‌ای",
-          "tex": "P(X=k)=\\\\binom{n}{k}p^{k}(1-p)^{n-k}"
+          "tex": "P(X=k)=\\binom{n}{k}p^{k}(1-p)^{n-k}"
         },
         {
           "label": "امید دوجمله‌ای",
@@ -10458,7 +10458,7 @@
         },
         {
           "label": "واریانس دوجمله‌ای",
-          "tex": "\\\\mathrm{Var}(X)=np(1-p)"
+          "tex": "\\mathrm{Var}(X)=np(1-p)"
         }
       ]
     },
@@ -10480,7 +10480,7 @@
         },
         {
           "label": "دامنه",
-          "tex": "R=x_{\\\\max}-x_{\\\\min}"
+          "tex": "R=x_{\\max}-x_{\\min}"
         },
         {
           "label": "دامنهٔ میان‌چارکی",
@@ -10488,23 +10488,23 @@
         },
         {
           "label": "ضریب تغییرات",
-          "tex": "CV=\\\\frac{\\\\sigma}{\\\\bar x}"
+          "tex": "CV=\\frac{\\sigma}{\\bar x}"
         },
         {
           "label": "میانگین جامعه",
-          "tex": "\\\\mu"
+          "tex": "\\mu"
         },
         {
           "label": "واریانس نمونه",
-          "tex": "s^{2}=\\\\frac{\\\\sum(x_i-\\\\bar x)^{2}}{n-1}"
+          "tex": "s^{2}=\\frac{\\sum(x_i-\\bar x)^{2}}{n-1}"
         },
         {
           "label": "فراوانی نسبی",
-          "tex": "f_i=\\\\frac{n_i}{n}"
+          "tex": "f_i=\\frac{n_i}{n}"
         },
         {
           "label": "نسبت نمونه‌ای",
-          "tex": "\\\\hat p"
+          "tex": "\\hat p"
         }
       ]
     },
@@ -10530,7 +10530,7 @@
         },
         {
           "label": "مساحت لوزی",
-          "tex": "S=\\\\frac{d_1 d_2}{2}"
+          "tex": "S=\\frac{d_1 d_2}{2}"
         },
         {
           "label": "مساحت متوازی",
@@ -10538,31 +10538,31 @@
         },
         {
           "label": "مساحت ذوزنقه",
-          "tex": "S=\\\\frac{(a+b)h}{2}"
+          "tex": "S=\\frac{(a+b)h}{2}"
         },
         {
           "label": "مساحت مثلث",
-          "tex": "S=\\\\frac{1}{2}ah"
+          "tex": "S=\\frac{1}{2}ah"
         },
         {
           "label": "شش‌ضلعی منتظم",
-          "tex": "S=\\\\frac{3\\\\sqrt{3}}{2}a^{2}"
+          "tex": "S=\\frac{3\\sqrt{3}}{2}a^{2}"
         },
         {
           "label": "محیط دایره",
-          "tex": "C=2\\\\pi r"
+          "tex": "C=2\\pi r"
         },
         {
           "label": "مساحت دایره",
-          "tex": "S=\\\\pi r^{2}"
+          "tex": "S=\\pi r^{2}"
         },
         {
           "label": "مساحت قطاع",
-          "tex": "S=\\\\frac{\\\\theta}{360}\\\\pi r^{2}"
+          "tex": "S=\\frac{\\theta}{360}\\pi r^{2}"
         },
         {
           "label": "طول کمان",
-          "tex": "\\\\ell=\\\\frac{\\\\theta}{360}2\\\\pi r"
+          "tex": "\\ell=\\frac{\\theta}{360}2\\pi r"
         }
       ]
     },
@@ -10572,23 +10572,23 @@
       "items": [
         {
           "label": "تالس",
-          "tex": "\\\\frac{DE}{BC}=\\\\frac{AD}{AB}"
+          "tex": "\\frac{DE}{BC}=\\frac{AD}{AB}"
         },
         {
           "label": "تالس جزءبه‌کل",
-          "tex": "\\\\frac{AE}{AC}=\\\\frac{AD}{AB}"
+          "tex": "\\frac{AE}{AC}=\\frac{AD}{AB}"
         },
         {
           "label": "تشابه",
-          "tex": "\\\\triangle ABC \\\\sim \\\\triangle A\\"
+          "tex": "\\triangle ABC \\sim \\triangle A\\"
         },
         {
           "label": "نسبت تشابه",
-          "tex": "k=\\\\frac{AB}{A\\"
+          "tex": "k=\\frac{AB}{A\\"
         },
         {
           "label": "نسبت مساحت",
-          "tex": "\\\\frac{S}{S\\"
+          "tex": "\\frac{S}{S\\"
         },
         {
           "label": "زاویه-زاویه",
@@ -10610,27 +10610,27 @@
       "items": [
         {
           "label": "زاویهٔ مرکزی",
-          "tex": "\\\\angle AOB=\\\\widehat{AB}"
+          "tex": "\\angle AOB=\\widehat{AB}"
         },
         {
           "label": "زاویهٔ محاطی",
-          "tex": "\\\\angle ACB=\\\\frac{1}{2}\\\\widehat{AB}"
+          "tex": "\\angle ACB=\\frac{1}{2}\\widehat{AB}"
         },
         {
           "label": "زاویهٔ ظلی",
-          "tex": "\\\\angle=\\\\frac{1}{2}\\\\widehat{AB}"
+          "tex": "\\angle=\\frac{1}{2}\\widehat{AB}"
         },
         {
           "label": "دو وتر متقاطع",
-          "tex": "PA\\\\cdot PB=PC\\\\cdot PD"
+          "tex": "PA\\cdot PB=PC\\cdot PD"
         },
         {
           "label": "قاطع و مماس",
-          "tex": "PT^{2}=PA\\\\cdot PB"
+          "tex": "PT^{2}=PA\\cdot PB"
         },
         {
           "label": "وتر و فاصله از مرکز",
-          "tex": "d^{2}+\\\\left(\\\\frac{c}{2}\\\\right)^{2}=r^{2}"
+          "tex": "d^{2}+\\left(\\frac{c}{2}\\right)^{2}=r^{2}"
         },
         {
           "label": "معادلهٔ دایره",
@@ -10648,31 +10648,31 @@
       "items": [
         {
           "label": "انتقال",
-          "tex": "T_{\\\\vec v}(x,y)=(x+a,y+b)"
+          "tex": "T_{\\vec v}(x,y)=(x+a,y+b)"
         },
         {
           "label": "تقارن محوری x",
-          "tex": "(x,y)\\\\mapsto(x,-y)"
+          "tex": "(x,y)\\mapsto(x,-y)"
         },
         {
           "label": "تقارن محوری y",
-          "tex": "(x,y)\\\\mapsto(-x,y)"
+          "tex": "(x,y)\\mapsto(-x,y)"
         },
         {
           "label": "تقارن مرکزی مبدأ",
-          "tex": "(x,y)\\\\mapsto(-x,-y)"
+          "tex": "(x,y)\\mapsto(-x,-y)"
         },
         {
           "label": "دوران ۹۰°",
-          "tex": "(x,y)\\\\mapsto(-y,x)"
+          "tex": "(x,y)\\mapsto(-y,x)"
         },
         {
           "label": "دوران ۱۸۰°",
-          "tex": "(x,y)\\\\mapsto(-x,-y)"
+          "tex": "(x,y)\\mapsto(-x,-y)"
         },
         {
           "label": "تجانس",
-          "tex": "H(O,k):(x,y)\\\\mapsto(kx,ky)"
+          "tex": "H(O,k):(x,y)\\mapsto(kx,ky)"
         },
         {
           "label": "ایزومتری",
@@ -10686,19 +10686,19 @@
       "items": [
         {
           "label": "وسط پاره",
-          "tex": "M=\\\\left(\\\\frac{x_1+x_2}{2},\\\\frac{y_1+y_2}{2}\\\\right)"
+          "tex": "M=\\left(\\frac{x_1+x_2}{2},\\frac{y_1+y_2}{2}\\right)"
         },
         {
           "label": "تقسیم m:n",
-          "tex": "\\\\left(\\\\frac{mx_2+nx_1}{m+n},\\\\frac{my_2+ny_1}{m+n}\\\\right)"
+          "tex": "\\left(\\frac{mx_2+nx_1}{m+n},\\frac{my_2+ny_1}{m+n}\\right)"
         },
         {
           "label": "فاصلهٔ نقطه تا خط",
-          "tex": "d=\\\\frac{|ax_0+by_0+c|}{\\\\sqrt{a^{2}+b^{2}}}"
+          "tex": "d=\\frac{|ax_0+by_0+c|}{\\sqrt{a^{2}+b^{2}}}"
         },
         {
           "label": "زاویهٔ دو خط",
-          "tex": "\\\\tan\\\\alpha=\\\\left|\\\\frac{m_1-m_2}{1+m_1 m_2}\\\\right|"
+          "tex": "\\tan\\alpha=\\left|\\frac{m_1-m_2}{1+m_1 m_2}\\right|"
         },
         {
           "label": "خط نقطه-شیب",
@@ -10710,7 +10710,7 @@
         },
         {
           "label": "قطعه‌ای",
-          "tex": "\\\\frac{x}{a}+\\\\frac{y}{b}=1"
+          "tex": "\\frac{x}{a}+\\frac{y}{b}=1"
         },
         {
           "label": "کلی",
@@ -10740,11 +10740,11 @@
         },
         {
           "label": "بیضی افقی",
-          "tex": "\\\\frac{(x-h)^{2}}{a^{2}}+\\\\frac{(y-k)^{2}}{b^{2}}=1"
+          "tex": "\\frac{(x-h)^{2}}{a^{2}}+\\frac{(y-k)^{2}}{b^{2}}=1"
         },
         {
           "label": "خروج از مرکز بیضی",
-          "tex": "e=\\\\frac{c}{a}"
+          "tex": "e=\\frac{c}{a}"
         },
         {
           "label": "رابطهٔ بیضی",
@@ -10752,15 +10752,15 @@
         },
         {
           "label": "هذلولی افقی",
-          "tex": "\\\\frac{x^{2}}{a^{2}}-\\\\frac{y^{2}}{b^{2}}=1"
+          "tex": "\\frac{x^{2}}{a^{2}}-\\frac{y^{2}}{b^{2}}=1"
         },
         {
           "label": "هذلولی قائم",
-          "tex": "\\\\frac{y^{2}}{a^{2}}-\\\\frac{x^{2}}{b^{2}}=1"
+          "tex": "\\frac{y^{2}}{a^{2}}-\\frac{x^{2}}{b^{2}}=1"
         },
         {
           "label": "مجانب هذلولی",
-          "tex": "y=\\\\pm\\\\frac{b}{a}x"
+          "tex": "y=\\pm\\frac{b}{a}x"
         },
         {
           "label": "رابطهٔ هذلولی",
@@ -10782,19 +10782,19 @@
         },
         {
           "label": "حجم هرم",
-          "tex": "V=\\\\frac{1}{3}Sh"
+          "tex": "V=\\frac{1}{3}Sh"
         },
         {
           "label": "مساحت کره",
-          "tex": "S=4\\\\pi r^{2}"
+          "tex": "S=4\\pi r^{2}"
         },
         {
           "label": "فاصله در فضا",
-          "tex": "d=\\\\sqrt{(x_2-x_1)^{2}+(y_2-y_1)^{2}+(z_2-z_1)^{2}}"
+          "tex": "d=\\sqrt{(x_2-x_1)^{2}+(y_2-y_1)^{2}+(z_2-z_1)^{2}}"
         },
         {
           "label": "وسط در فضا",
-          "tex": "\\\\left(\\\\frac{x_1+x_2}{2},\\\\frac{y_1+y_2}{2},\\\\frac{z_1+z_2}{2}\\\\right)"
+          "tex": "\\left(\\frac{x_1+x_2}{2},\\frac{y_1+y_2}{2},\\frac{z_1+z_2}{2}\\right)"
         },
         {
           "label": "معادلهٔ صفحه",
@@ -10812,15 +10812,15 @@
       "items": [
         {
           "label": "عاد می‌کند",
-          "tex": "a \\\\mid b"
+          "tex": "a \\mid b"
         },
         {
           "label": "عاد نمی‌کند",
-          "tex": "a \\\\nmid b"
+          "tex": "a \\nmid b"
         },
         {
           "label": "الگوریتم تقسیم",
-          "tex": "a=bq+r,\\\\ 0\\\\le r<b"
+          "tex": "a=bq+r, 0\\le r<b"
         },
         {
           "label": "ب.م.م",
@@ -10832,7 +10832,7 @@
         },
         {
           "label": "رابطهٔ ب.م.م و ک.م.م",
-          "tex": "(a,b)\\\\cdot[a,b]=|ab|"
+          "tex": "(a,b)\\cdot[a,b]=|ab|"
         },
         {
           "label": "بزو",
@@ -10840,27 +10840,27 @@
         },
         {
           "label": "هم‌نهشتی",
-          "tex": "a\\\\equiv b\\\\pmod{n}"
+          "tex": "a\\equiv b\\pmod{n}"
         },
         {
           "label": "هم‌نهشتی جمع",
-          "tex": "a\\\\equiv b\\\\pmod{n}\\\\Rightarrow a+c\\\\equiv b+c\\\\pmod{n}"
+          "tex": "a\\equiv b\\pmod{n}\\Rightarrow a+c\\equiv b+c\\pmod{n}"
         },
         {
           "label": "باقیماندهٔ فرما",
-          "tex": "a^{p-1}\\\\equiv 1\\\\pmod{p}"
+          "tex": "a^{p-1}\\equiv 1\\pmod{p}"
         },
         {
           "label": "فی اویلر",
-          "tex": "\\\\varphi(n)"
+          "tex": "\\varphi(n)"
         },
         {
           "label": "نمایش مبنا",
-          "tex": "(a_k\\\\ldots a_0)_b"
+          "tex": "(a_k\\ldots a_0)_b"
         },
         {
           "label": "قضیهٔ اساسی",
-          "tex": "n=p_1^{\\\\alpha_1}\\\\cdots p_k^{\\\\alpha_k}"
+          "tex": "n=p_1^{\\alpha_1}\\cdots p_k^{\\alpha_k}"
         }
       ]
     },
@@ -10882,11 +10882,11 @@
         },
         {
           "label": "درجه",
-          "tex": "\\\\deg(v)"
+          "tex": "\\deg(v)"
         },
         {
           "label": "مجموع درجات",
-          "tex": "\\\\sum\\\\deg(v)=2m"
+          "tex": "\\sum\\deg(v)=2m"
         },
         {
           "label": "گراف کامل",
@@ -10894,7 +10894,7 @@
         },
         {
           "label": "یال کامل",
-          "tex": "m=\\\\frac{n(n-1)}{2}"
+          "tex": "m=\\frac{n(n-1)}{2}"
         },
         {
           "label": "دوقسمتی کامل",
@@ -10914,7 +10914,7 @@
         },
         {
           "label": "همبند",
-          "tex": "\\\\kappa"
+          "tex": "\\kappa"
         }
       ]
     },
@@ -10924,11 +10924,11 @@
       "items": [
         {
           "label": "نقیض سور همه",
-          "tex": "\\\\neg\\\\forall x\\\\,P(x)\\\\equiv\\\\exists x\\\\,\\\\neg P(x)"
+          "tex": "\\neg\\forall x\\,P(x)\\equiv\\exists x\\,\\neg P(x)"
         },
         {
           "label": "نقیض سور وجود",
-          "tex": "\\\\neg\\\\exists x\\\\,P(x)\\\\equiv\\\\forall x\\\\,\\\\neg P(x)"
+          "tex": "\\neg\\exists x\\,P(x)\\equiv\\forall x\\,\\neg P(x)"
         },
         {
           "label": "وجود ندارد",
@@ -10936,31 +10936,31 @@
         },
         {
           "label": "عکس",
-          "tex": "q\\\\Rightarrow p"
+          "tex": "q\\Rightarrow p"
         },
         {
           "label": "عکس نقیض",
-          "tex": "\\\\neg q\\\\Rightarrow\\\\neg p"
+          "tex": "\\neg q\\Rightarrow\\neg p"
         },
         {
           "label": "استنتاج",
-          "tex": "p\\\\vdash q"
+          "tex": "p\\vdash q"
         },
         {
           "label": "ارضا",
-          "tex": "p\\\\models q"
+          "tex": "p\\models q"
         },
         {
           "label": "درست",
-          "tex": "\\\\top"
+          "tex": "\\top"
         },
         {
           "label": "نادرست",
-          "tex": "\\\\bot"
+          "tex": "\\bot"
         },
         {
           "label": "سور دوگانه",
-          "tex": "\\\\forall x\\\\,\\\\exists y\\\\,P(x,y)"
+          "tex": "\\forall x\\,\\exists y\\,P(x,y)"
         }
       ]
     },
@@ -10970,19 +10970,19 @@
       "items": [
         {
           "label": "ماتریس پرانتزی",
-          "tex": "\\\\begin{matrix}a & b \\\\\\\\ c & d\\\\end{matrix}"
+          "tex": "\\begin{matrix} a & b \\\\ c & d \\end{matrix}"
         },
         {
           "label": "۳×۳",
-          "tex": "\\\\begin{matrix}a & b & c \\\\\\\\ d & e & f \\\\\\\\ g & h & i\\\\end{matrix}"
+          "tex": "\\begin{matrix} a & b & c \\\\ d & e & f \\\\ g & h & i \\end{matrix}"
         },
         {
           "label": "همانی ۲×۲",
-          "tex": "I=\\\\begin{matrix}1 & 0 \\\\\\\\ 0 & 1\\\\end{matrix}"
+          "tex": "I=\\begin{matrix} 1 & 0 \\\\ 0 & 1 \\end{matrix}"
         },
         {
           "label": "وارون ۲×۲",
-          "tex": "A^{-1}=\\\\frac{1}{ad-bc}\\\\begin{matrix}d & -b \\\\\\\\ -c & a\\\\end{matrix}"
+          "tex": "A^{-1}=\\frac{1}{ad-bc}\\begin{matrix} d & -b \\\\ -c & a \\end{matrix}"
         },
         {
           "label": "ترانهاده",
@@ -10990,7 +10990,7 @@
         },
         {
           "label": "اثر",
-          "tex": "\\\\mathrm{tr}(A)"
+          "tex": "\\mathrm{tr}(A)"
         },
         {
           "label": "دستگاه ماتریسی",
@@ -11002,7 +11002,7 @@
         },
         {
           "label": "دترمینان ۲×۲",
-          "tex": "\\\\det\\\\begin{matrix}a & b \\\\\\\\ c & d\\\\end{matrix}=ad-bc"
+          "tex": "\\det\\begin{matrix} a & b \\\\ c & d \\end{matrix}=ad-bc"
         }
       ]
     },
@@ -11092,23 +11092,23 @@
         },
         {
           "label": "زتا TeX",
-          "tex": "\\\\zeta"
+          "tex": "\\zeta"
         },
         {
           "label": "اتا TeX",
-          "tex": "\\\\eta"
+          "tex": "\\eta"
         },
         {
           "label": "کسی TeX",
-          "tex": "\\\\xi"
+          "tex": "\\xi"
         },
         {
           "label": "خی TeX",
-          "tex": "\\\\chi"
+          "tex": "\\chi"
         },
         {
           "label": "پسی TeX",
-          "tex": "\\\\psi"
+          "tex": "\\psi"
         }
       ]
     },
@@ -11118,59 +11118,59 @@
       "items": [
         {
           "label": "کلاه",
-          "tex": "\\\\hat{a}"
+          "tex": "\\hat{a}"
         },
         {
           "label": "بردار",
-          "tex": "\\\\vec{a}"
+          "tex": "\\vec{a}"
         },
         {
           "label": "خط بالا",
-          "tex": "\\\\overline{AB}"
+          "tex": "\\overline{AB}"
         },
         {
           "label": "بار",
-          "tex": "\\\\bar{a}"
+          "tex": "\\bar{a}"
         },
         {
           "label": "نقطه",
-          "tex": "\\\\dot{a}"
+          "tex": "\\dot{a}"
         },
         {
           "label": "دو نقطه",
-          "tex": "\\\\ddot{a}"
+          "tex": "\\ddot{a}"
         },
         {
           "label": "تیلدا",
-          "tex": "\\\\tilde{a}"
+          "tex": "\\tilde{a}"
         },
         {
           "label": "پیکان رو",
-          "tex": "\\\\overrightarrow{AB}"
+          "tex": "\\overrightarrow{AB}"
         },
         {
           "label": "پیکان چپ",
-          "tex": "\\\\overleftarrow{AB}"
+          "tex": "\\overleftarrow{AB}"
         },
         {
           "label": "دوسویه",
-          "tex": "\\\\overleftrightarrow{AB}"
+          "tex": "\\overleftrightarrow{AB}"
         },
         {
           "label": "زیرآکولاد",
-          "tex": "\\\\underbrace{a+b+c}_{s}"
+          "tex": "\\underbrace{a+b+c}_{s}"
         },
         {
           "label": "روآکولاد",
-          "tex": "\\\\overbrace{a+b+c}^{s}"
+          "tex": "\\overbrace{a+b+c}^{s}"
         },
         {
           "label": "روی‌گذاری",
-          "tex": "\\\\overset{\\\\Delta}{=}"
+          "tex": "\\overset{\\Delta}{=}"
         },
         {
           "label": "زیرگذاری",
-          "tex": "\\\\underset{x\\\\to 0}{\\\\lim}"
+          "tex": "\\underset{x\\to 0}{\\lim}"
         }
       ]
     },
@@ -11252,15 +11252,15 @@
         },
         {
           "label": "mapsto",
-          "tex": "x\\\\mapsto f(x)"
+          "tex": "x\\mapsto f(x)"
         },
         {
           "label": "ایمپلای",
-          "tex": "p\\\\Rightarrow q"
+          "tex": "p\\Rightarrow q"
         },
         {
           "label": "اگر و تنها اگر",
-          "tex": "p\\\\Leftrightarrow q"
+          "tex": "p\\Leftrightarrow q"
         }
       ]
     },
@@ -11330,7 +11330,7 @@
         },
         {
           "label": "هم‌نهشتی",
-          "tex": "a\\\\equiv b"
+          "tex": "a\\equiv b"
         },
         {
           "label": "تعریف",
@@ -11392,11 +11392,11 @@
         },
         {
           "label": "ترکیب توابع",
-          "tex": "f\\\\circ g"
+          "tex": "f\\circ g"
         },
         {
           "label": "ضرب داخلی",
-          "tex": "u\\\\cdot v"
+          "tex": "u\\cdot v"
         }
       ]
     },
@@ -11434,23 +11434,23 @@
         },
         {
           "label": "حقیقی",
-          "tex": "\\\\mathrm{Re}(z)"
+          "tex": "\\mathrm{Re}(z)"
         },
         {
           "label": "موهومی",
-          "tex": "\\\\mathrm{Im}(z)"
+          "tex": "\\mathrm{Im}(z)"
         },
         {
           "label": "لاپلاس",
-          "tex": "\\\\mathcal{L}"
+          "tex": "\\mathcal{L}"
         },
         {
           "label": "فوریه",
-          "tex": "\\\\mathcal{F}"
+          "tex": "\\mathcal{F}"
         },
         {
           "label": "پیچیدگی",
-          "tex": "\\\\mathcal{O}"
+          "tex": "\\mathcal{O}"
         },
         {
           "label": "inf",
@@ -11496,19 +11496,19 @@
       "items": [
         {
           "label": "گوشه",
-          "tex": "\\\\langle x\\\\rangle"
+          "tex": "\\langle x\\rangle"
         },
         {
           "label": "نرم",
-          "tex": "\\\\|v\\\\|"
+          "tex": "\\|v\\|"
         },
         {
           "label": "نرم ۲",
-          "tex": "\\\\|v\\\\|_2"
+          "tex": "\\|v\\|_2"
         },
         {
           "label": "قدرمطلق مضاعف",
-          "tex": "\\\\left\\\\| A \\\\right\\\\|"
+          "tex": "\\left\\| A \\right\\|"
         },
         {
           "label": "گوشه چپ",
@@ -11534,7 +11534,7 @@
       "items": [
         {
           "label": "مجموعهٔ متناهی",
-          "tex": "|A|<\\\\infty"
+          "tex": "|A|<\\infty"
         },
         {
           "label": "متمم",
@@ -11550,15 +11550,15 @@
         },
         {
           "label": "نسبت مثلثاتی",
-          "tex": "\\\\sin\\\\theta=\\\\frac{y}{r}"
+          "tex": "\\sin\\theta=\\frac{y}{r}"
         },
         {
           "label": "دایرهٔ مثلثاتی",
-          "tex": "x=\\\\cos\\\\theta,\\\\ y=\\\\sin\\\\theta"
+          "tex": "x=\\cos\\theta, y=\\sin\\theta"
         },
         {
           "label": "ریشهٔ nام",
-          "tex": "\\\\sqrt[n]{a}=a^{1/n}"
+          "tex": "\\sqrt[n]{a}=a^{1/n}"
         },
         {
           "label": "توان گویا",
@@ -11570,7 +11570,7 @@
         },
         {
           "label": "دلتا دهم",
-          "tex": "\\\\Delta=b^{2}-4ac"
+          "tex": "\\Delta=b^{2}-4ac"
         },
         {
           "label": "سهمی",
@@ -11578,7 +11578,7 @@
         },
         {
           "label": "تابع",
-          "tex": "f:A\\\\to B"
+          "tex": "f:A\\to B"
         },
         {
           "label": "دامنه",
@@ -11590,15 +11590,15 @@
         },
         {
           "label": "جایگشت",
-          "tex": "P(n,r)=\\\\frac{n!}{(n-r)!}"
+          "tex": "P(n,r)=\\frac{n!}{(n-r)!}"
         },
         {
           "label": "ترکیب",
-          "tex": "\\\\binom{n}{r}"
+          "tex": "\\binom{n}{r}"
         },
         {
           "label": "احتمال کلاسیک",
-          "tex": "P(A)=\\\\frac{n(A)}{n(S)}"
+          "tex": "P(A)=\\frac{n(A)}{n(S)}"
         }
       ]
     },
@@ -11608,11 +11608,11 @@
       "items": [
         {
           "label": "فاصله",
-          "tex": "d=\\\\sqrt{(x_2-x_1)^{2}+(y_2-y_1)^{2}}"
+          "tex": "d=\\sqrt{(x_2-x_1)^{2}+(y_2-y_1)^{2}}"
         },
         {
           "label": "شیب",
-          "tex": "m=\\\\frac{y_2-y_1}{x_2-x_1}"
+          "tex": "m=\\frac{y_2-y_1}{x_2-x_1}"
         },
         {
           "label": "معادلهٔ خط",
@@ -11628,7 +11628,7 @@
         },
         {
           "label": "اعمال توابع",
-          "tex": "(f\\\\pm g)(x)"
+          "tex": "(f\\pm g)(x)"
         },
         {
           "label": "وارون",
@@ -11636,7 +11636,7 @@
         },
         {
           "label": "ترکیب",
-          "tex": "f\\\\circ g"
+          "tex": "f\\circ g"
         },
         {
           "label": "نمایی",
@@ -11644,15 +11644,15 @@
         },
         {
           "label": "لگاریتم",
-          "tex": "y=\\\\log_{a}x"
+          "tex": "y=\\log_{a}x"
         },
         {
           "label": "حد",
-          "tex": "\\\\lim_{x\\\\to a}f(x)=L"
+          "tex": "\\lim_{x\\to a}f(x)=L"
         },
         {
           "label": "پیوستگی",
-          "tex": "\\\\lim_{x\\\\to a}f(x)=f(a)"
+          "tex": "\\lim_{x\\to a}f(x)=f(a)"
         }
       ]
     },
@@ -11662,7 +11662,7 @@
       "items": [
         {
           "label": "ترکیب توابع",
-          "tex": "(f\\\\circ g)(x)=f(g(x))"
+          "tex": "(f\\circ g)(x)=f(g(x))"
         },
         {
           "label": "تابع وارون",
@@ -11670,7 +11670,7 @@
         },
         {
           "label": "صعودی نزولی",
-          "tex": "x_1<x_2\\\\Rightarrow f(x_1)<f(x_2)"
+          "tex": "x_1<x_2\\Rightarrow f(x_1)<f(x_2)"
         },
         {
           "label": "تناوب",
@@ -11678,15 +11678,15 @@
         },
         {
           "label": "معادلهٔ مثلثاتی",
-          "tex": "\\\\sin x=\\\\sin\\\\alpha"
+          "tex": "\\sin x=\\sin\\alpha"
         },
         {
           "label": "حد بی‌نهایت",
-          "tex": "\\\\lim_{x\\\\to a}f(x)=+\\\\infty"
+          "tex": "\\lim_{x\\to a}f(x)=+\\infty"
         },
         {
           "label": "حد در بی‌نهایت",
-          "tex": "\\\\lim_{x\\\\to+\\\\infty}f(x)"
+          "tex": "\\lim_{x\\to+\\infty}f(x)"
         },
         {
           "label": "تعریف مشتق",
@@ -11694,7 +11694,7 @@
         },
         {
           "label": "آهنگ تغییر",
-          "tex": "\\\\frac{\\\\Delta y}{\\\\Delta t}"
+          "tex": "\\frac{\\Delta y}{\\Delta t}"
         },
         {
           "label": "اکسترمم",
@@ -11702,7 +11702,7 @@
         },
         {
           "label": "بهینه‌سازی",
-          "tex": "\\\\max/\\\\min"
+          "tex": "\\max/\\min"
         },
         {
           "label": "دایره",
@@ -11710,7 +11710,7 @@
         },
         {
           "label": "احتمال کل",
-          "tex": "P(B)=\\\\sum P(A_i)P(B|A_i)"
+          "tex": "P(B)=\\sum P(A_i)P(B|A_i)"
         }
       ]
     },
@@ -11720,11 +11720,11 @@
       "items": [
         {
           "label": "قدرمطلق ضابطه‌ای",
-          "tex": "|x|=\\\\begin{matrix}x & x\\\\ge 0 \\\\\\\\ -x & x<0\\\\end{matrix}"
+          "tex": "|x|=\\begin{matrix} x & x\\ge 0 \\\\ -x & x<0 \\end{matrix}"
         },
         {
           "label": "جزء صحیح",
-          "tex": "[x]\\\\le x<[x]+1"
+          "tex": "[x]\\le x<[x]+1"
         },
         {
           "label": "معادلهٔ قدرمطلق",
@@ -11744,19 +11744,19 @@
         },
         {
           "label": "لگاریتم",
-          "tex": "\\\\log_{a}(xy)=\\\\log_{a}x+\\\\log_{a}y"
+          "tex": "\\log_{a}(xy)=\\log_{a}x+\\log_{a}y"
         },
         {
           "label": "حد",
-          "tex": "\\\\lim_{x\\\\to a}f(x)"
+          "tex": "\\lim_{x\\to a}f(x)"
         },
         {
           "label": "پیوستگی روی بازه",
-          "tex": "f\\\\ \\\\mathrm{پیوسته\\\\ روی}\\\\ [a,b]"
+          "tex": "f \\mathrm{پیوسته روی} [a,b]"
         },
         {
           "label": "حد نامتناهی",
-          "tex": "\\\\lim_{x\\\\to a^{+}}f(x)=+\\\\infty"
+          "tex": "\\lim_{x\\to a^{+}}f(x)=+\\infty"
         }
       ]
     },
@@ -11770,7 +11770,7 @@
         },
         {
           "label": "قاعدهٔ زنجیره‌ای",
-          "tex": "\\\\frac{dy}{dx}=\\\\frac{dy}{du}\\\\frac{du}{dx}"
+          "tex": "\\frac{dy}{dx}=\\frac{dy}{du}\\frac{du}{dx}"
         },
         {
           "label": "کاربرد اکسترمم",
@@ -11778,7 +11778,7 @@
         },
         {
           "label": "بهینه‌سازی",
-          "tex": "A=xy,\\\\ P=2x+2y"
+          "tex": "A=xy, P=2x+2y"
         },
         {
           "label": "مجانب مایل",
@@ -11786,19 +11786,19 @@
         },
         {
           "label": "انتگرال نامعین",
-          "tex": "\\\\int f(x)\\\\,dx=F(x)+C"
+          "tex": "\\int f(x)\\,dx=F(x)+C"
         },
         {
           "label": "انتگرال معین",
-          "tex": "\\\\int_{a}^{b}f=F(b)-F(a)"
+          "tex": "\\int_{a}^{b}f=F(b)-F(a)"
         },
         {
           "label": "قضیهٔ اساسی",
-          "tex": "\\\\frac{d}{dx}\\\\int_{a}^{x}f(t)\\\\,dt=f(x)"
+          "tex": "\\frac{d}{dx}\\int_{a}^{x}f(t)\\,dt=f(x)"
         },
         {
           "label": "جزءبه‌جزء",
-          "tex": "\\\\int u dv=uv-\\\\int v du"
+          "tex": "\\int u dv=uv-\\int v du"
         }
       ]
     },
@@ -11808,15 +11808,15 @@
       "items": [
         {
           "label": "تالس",
-          "tex": "\\\\frac{DE}{BC}=\\\\frac{AD}{AB}"
+          "tex": "\\frac{DE}{BC}=\\frac{AD}{AB}"
         },
         {
           "label": "تشابه",
-          "tex": "\\\\triangle ABC\\\\sim\\\\triangle A\\"
+          "tex": "\\triangle ABC\\sim\\triangle A\\"
         },
         {
           "label": "نسبت تشابه",
-          "tex": "k=\\\\frac{AB}{A\\"
+          "tex": "k=\\frac{AB}{A\\"
         },
         {
           "label": "فیثاغورس",
@@ -11838,15 +11838,15 @@
       "items": [
         {
           "label": "زاویهٔ محاطی",
-          "tex": "\\\\angle=\\\\frac12\\\\widehat{AB}"
+          "tex": "\\angle=\\frac12\\widehat{AB}"
         },
         {
           "label": "دو وتر",
-          "tex": "PA\\\\cdot PB=PC\\\\cdot PD"
+          "tex": "PA\\cdot PB=PC\\cdot PD"
         },
         {
           "label": "مماس قاطع",
-          "tex": "PT^{2}=PA\\\\cdot PB"
+          "tex": "PT^{2}=PA\\cdot PB"
         },
         {
           "label": "انتقال",
@@ -11854,23 +11854,23 @@
         },
         {
           "label": "دوران ۹۰",
-          "tex": "(x,y)\\\\to(-y,x)"
+          "tex": "(x,y)\\to(-y,x)"
         },
         {
           "label": "تجانس",
-          "tex": "(x,y)\\\\to(kx,ky)"
+          "tex": "(x,y)\\to(kx,ky)"
         },
         {
           "label": "قانون سینوس",
-          "tex": "\\\\frac{a}{\\\\sin A}=2R"
+          "tex": "\\frac{a}{\\sin A}=2R"
         },
         {
           "label": "قانون کسینوس",
-          "tex": "c^{2}=a^{2}+b^{2}-2ab\\\\cos C"
+          "tex": "c^{2}=a^{2}+b^{2}-2ab\\cos C"
         },
         {
           "label": "مساحت سینوس",
-          "tex": "S=\\\\frac12 ab\\\\sin C"
+          "tex": "S=\\frac12 ab\\sin C"
         }
       ]
     },
@@ -11880,15 +11880,15 @@
       "items": [
         {
           "label": "ماتریس تبدیل",
-          "tex": "\\\\begin{matrix}a & b \\\\\\\\ c & d\\\\end{matrix}"
+          "tex": "\\begin{matrix} a & b \\\\ c & d \\end{matrix}"
         },
         {
           "label": "بیضی",
-          "tex": "\\\\frac{x^{2}}{a^{2}}+\\\\frac{y^{2}}{b^{2}}=1"
+          "tex": "\\frac{x^{2}}{a^{2}}+\\frac{y^{2}}{b^{2}}=1"
         },
         {
           "label": "هذلولی",
-          "tex": "\\\\frac{x^{2}}{a^{2}}-\\\\frac{y^{2}}{b^{2}}=1"
+          "tex": "\\frac{x^{2}}{a^{2}}-\\frac{y^{2}}{b^{2}}=1"
         },
         {
           "label": "سهمی",
@@ -11896,15 +11896,15 @@
         },
         {
           "label": "بردار فضا",
-          "tex": "\\\\vec v=(x,y,z)"
+          "tex": "\\vec v=(x,y,z)"
         },
         {
           "label": "ضرب داخلی",
-          "tex": "\\\\vec u\\\\cdot\\\\vec v=|\\\\vec u||\\\\vec v|\\\\cos\\\\theta"
+          "tex": "\\vec u\\cdot\\vec v=|\\vec u||\\vec v|\\cos\\theta"
         },
         {
           "label": "ضرب خارجی اندازه",
-          "tex": "|\\\\vec u\\\\times\\\\vec v|=|\\\\vec u||\\\\vec v|\\\\sin\\\\theta"
+          "tex": "|\\vec u\\times\\vec v|=|\\vec u||\\vec v|\\sin\\theta"
         },
         {
           "label": "صفحه",
@@ -11912,7 +11912,7 @@
         },
         {
           "label": "فاصلهٔ فضا",
-          "tex": "d=\\\\sqrt{(x_2-x_1)^{2}+(y_2-y_1)^{2}+(z_2-z_1)^{2}}"
+          "tex": "d=\\sqrt{(x_2-x_1)^{2}+(y_2-y_1)^{2}+(z_2-z_1)^{2}}"
         }
       ]
     },
@@ -11922,11 +11922,11 @@
       "items": [
         {
           "label": "هم‌نهشتی",
-          "tex": "a\\\\equiv b\\\\pmod{n}"
+          "tex": "a\\equiv b\\pmod{n}"
         },
         {
           "label": "عاد کردن",
-          "tex": "a\\\\mid b"
+          "tex": "a\\mid b"
         },
         {
           "label": "بزو",
@@ -11938,7 +11938,7 @@
         },
         {
           "label": "مجموع درجات",
-          "tex": "\\\\sum\\\\deg=2m"
+          "tex": "\\sum\\deg=2m"
         },
         {
           "label": "کامل",
@@ -11950,15 +11950,15 @@
         },
         {
           "label": "ترکیب",
-          "tex": "\\\\binom{n}{k}"
+          "tex": "\\binom{n}{k}"
         },
         {
           "label": "شمول و عدم",
-          "tex": "|A\\\\cup B|=|A|+|B|-|A\\\\cap B|"
+          "tex": "|A\\cup B|=|A|+|B|-|A\\cap B|"
         },
         {
           "label": "لانه کبوتری",
-          "tex": "n\\\\ \\\\mathrm{کبوتر},\\\\ n-1\\\\ \\\\mathrm{لانه}"
+          "tex": "n \\mathrm{کبوتر}, n-1 \\mathrm{لانه}"
         }
       ]
     },
@@ -11968,23 +11968,23 @@
       "items": [
         {
           "label": "گزاره",
-          "tex": "p\\\\vee q"
+          "tex": "p\\vee q"
         },
         {
           "label": "ترکیب شرطی",
-          "tex": "p\\\\Rightarrow q"
+          "tex": "p\\Rightarrow q"
         },
         {
           "label": "جدول ارزش",
-          "tex": "p\\\\wedge q"
+          "tex": "p\\wedge q"
         },
         {
           "label": "میانگین",
-          "tex": "\\\\bar x=\\\\frac{\\\\sum x_i}{n}"
+          "tex": "\\bar x=\\frac{\\sum x_i}{n}"
         },
         {
           "label": "واریانس",
-          "tex": "\\\\sigma^{2}=\\\\frac{\\\\sum(x_i-\\\\bar x)^{2}}{n}"
+          "tex": "\\sigma^{2}=\\frac{\\sum(x_i-\\bar x)^{2}}{n}"
         },
         {
           "label": "احتمال شرطی",
@@ -11992,7 +11992,7 @@
         },
         {
           "label": "بیز",
-          "tex": "P(A|B)=\\\\frac{P(B|A)P(A)}{P(B)}"
+          "tex": "P(A|B)=\\frac{P(B|A)P(A)}{P(B)}"
         },
         {
           "label": "نمونه",
@@ -12014,7 +12014,7 @@
         },
         {
           "label": "عبارت گویا",
-          "tex": "\\\\frac{P(x)}{Q(x)}"
+          "tex": "\\frac{P(x)}{Q(x)}"
         },
         {
           "label": "درجهٔ دوم",
@@ -12022,7 +12022,7 @@
         },
         {
           "label": "دلتا",
-          "tex": "\\\\Delta=b^{2}-4ac"
+          "tex": "\\Delta=b^{2}-4ac"
         },
         {
           "label": "تابع درجه۲",
@@ -12030,11 +12030,11 @@
         },
         {
           "label": "معیار پراکندگی",
-          "tex": "\\\\sigma"
+          "tex": "\\sigma"
         },
         {
           "label": "گزاره",
-          "tex": "p\\\\wedge q"
+          "tex": "p\\wedge q"
         },
         {
           "label": "دنبالهٔ حسابی",
@@ -12046,7 +12046,7 @@
         },
         {
           "label": "احتمال",
-          "tex": "P(A)=\\\\frac{n(A)}{n(S)}"
+          "tex": "P(A)=\\frac{n(A)}{n(S)}"
         },
         {
           "label": "شمارش",
@@ -12060,43 +12060,43 @@
       "items": [
         {
           "label": "نماد علمی",
-          "tex": "a\\\\times 10^{n}"
+          "tex": "a\\times 10^{n}"
         },
         {
           "label": "پیشوند میلی",
-          "tex": "\\\\mathrm{m}=10^{-3}"
+          "tex": "\\mathrm{m}=10^{-3}"
         },
         {
           "label": "پیشوند میکرو",
-          "tex": "\\\\mu=10^{-6}"
+          "tex": "\\mu=10^{-6}"
         },
         {
           "label": "پیشوند نانو",
-          "tex": "\\\\mathrm{n}=10^{-9}"
+          "tex": "\\mathrm{n}=10^{-9}"
         },
         {
           "label": "پیشوند کیلو",
-          "tex": "\\\\mathrm{k}=10^{3}"
+          "tex": "\\mathrm{k}=10^{3}"
         },
         {
           "label": "پیشوند مگا",
-          "tex": "\\\\mathrm{M}=10^{6}"
+          "tex": "\\mathrm{M}=10^{6}"
         },
         {
           "label": "پیشوند گیگا",
-          "tex": "\\\\mathrm{G}=10^{9}"
+          "tex": "\\mathrm{G}=10^{9}"
         },
         {
           "label": "خطا",
-          "tex": "\\\\Delta x"
+          "tex": "\\Delta x"
         },
         {
           "label": "خطای نسبی",
-          "tex": "\\\\frac{\\\\Delta x}{x}"
+          "tex": "\\frac{\\Delta x}{x}"
         },
         {
           "label": "چگالی",
-          "tex": "\\\\rho=\\\\frac{m}{V}"
+          "tex": "\\rho=\\frac{m}{V}"
         }
       ]
     },
@@ -12106,23 +12106,23 @@
       "items": [
         {
           "label": "فشار",
-          "tex": "P=\\\\frac{F}{A}"
+          "tex": "P=\\frac{F}{A}"
         },
         {
           "label": "فشار مایع",
-          "tex": "P=\\\\rho gh"
+          "tex": "P=\\rho gh"
         },
         {
           "label": "فشار کل",
-          "tex": "P=P_0+\\\\rho gh"
+          "tex": "P=P_0+\\rho gh"
         },
         {
           "label": "آرشمیدس",
-          "tex": "F_b=\\\\rho V g"
+          "tex": "F_b=\\rho V g"
         },
         {
           "label": "برنولی",
-          "tex": "P+\\\\frac12\\\\rho v^{2}+\\\\rho gh=\\\\mathrm{const}"
+          "tex": "P+\\frac12\\rho v^{2}+\\rho gh=\\mathrm{const}"
         },
         {
           "label": "پیوستگی",
@@ -12130,11 +12130,11 @@
         },
         {
           "label": "کشش سطحی",
-          "tex": "F=\\\\gamma L"
+          "tex": "F=\\gamma L"
         },
         {
           "label": "گرانروی",
-          "tex": "F=\\\\eta A\\\\frac{v}{d}"
+          "tex": "F=\\eta A\\frac{v}{d}"
         }
       ]
     },
@@ -12144,27 +12144,27 @@
       "items": [
         {
           "label": "قانون اول",
-          "tex": "\\\\Delta U=Q-W"
+          "tex": "\\Delta U=Q-W"
         },
         {
           "label": "کار هم فشار",
-          "tex": "W=P\\\\Delta V"
+          "tex": "W=P\\Delta V"
         },
         {
           "label": "بازده",
-          "tex": "\\\\eta=\\\\frac{W}{Q_h}"
+          "tex": "\\eta=\\frac{W}{Q_h}"
         },
         {
           "label": "کارنو",
-          "tex": "\\\\eta=1-\\\\frac{T_c}{T_h}"
+          "tex": "\\eta=1-\\frac{T_c}{T_h}"
         },
         {
           "label": "ظرفیت گرمایی",
-          "tex": "C=\\\\frac{Q}{\\\\Delta T}"
+          "tex": "C=\\frac{Q}{\\Delta T}"
         },
         {
           "label": "گرمای ویژه",
-          "tex": "Q=mc\\\\Delta T"
+          "tex": "Q=mc\\Delta T"
         },
         {
           "label": "نهان",
@@ -12172,11 +12172,11 @@
         },
         {
           "label": "انبساط خطی",
-          "tex": "\\\\Delta L=L\\\\alpha\\\\Delta T"
+          "tex": "\\Delta L=L\\alpha\\Delta T"
         },
         {
           "label": "انبساط حجمی",
-          "tex": "\\\\Delta V=V\\\\gamma\\\\Delta T"
+          "tex": "\\Delta V=V\\gamma\\Delta T"
         },
         {
           "label": "گاز کامل",
@@ -12190,11 +12190,11 @@
       "items": [
         {
           "label": "سرعت متوسط",
-          "tex": "\\\\bar v=\\\\frac{\\\\Delta x}{\\\\Delta t}"
+          "tex": "\\bar v=\\frac{\\Delta x}{\\Delta t}"
         },
         {
           "label": "شتاب متوسط",
-          "tex": "\\\\bar a=\\\\frac{\\\\Delta v}{\\\\Delta t}"
+          "tex": "\\bar a=\\frac{\\Delta v}{\\Delta t}"
         },
         {
           "label": "سرعت",
@@ -12202,11 +12202,11 @@
         },
         {
           "label": "مکان",
-          "tex": "x=x_0+v_0 t+\\\\frac12 at^{2}"
+          "tex": "x=x_0+v_0 t+\\frac12 at^{2}"
         },
         {
           "label": "بدون زمان",
-          "tex": "v^{2}=v_0^{2}+2a\\\\Delta x"
+          "tex": "v^{2}=v_0^{2}+2a\\Delta x"
         },
         {
           "label": "سقوط",
@@ -12214,7 +12214,7 @@
         },
         {
           "label": "سقوط مکان",
-          "tex": "h=\\\\frac12 gt^{2}"
+          "tex": "h=\\frac12 gt^{2}"
         },
         {
           "label": "حرکت نسبی",
@@ -12228,7 +12228,7 @@
       "items": [
         {
           "label": "نیوتون ۲",
-          "tex": "\\\\sum F=ma"
+          "tex": "\\sum F=ma"
         },
         {
           "label": "وزن",
@@ -12236,23 +12236,23 @@
         },
         {
           "label": "اصطکاک ایستا",
-          "tex": "f_s\\\\le\\\\mu_s N"
+          "tex": "f_s\\le\\mu_s N"
         },
         {
           "label": "اصطکاک جنبشی",
-          "tex": "f_k=\\\\mu_k N"
+          "tex": "f_k=\\mu_k N"
         },
         {
           "label": "سطح شیب‌دار",
-          "tex": "a=g\\\\sin\\\\theta"
+          "tex": "a=g\\sin\\theta"
         },
         {
           "label": "مرکزگرا",
-          "tex": "a_c=\\\\frac{v^{2}}{r}"
+          "tex": "a_c=\\frac{v^{2}}{r}"
         },
         {
           "label": "نیروی مرکزگرا",
-          "tex": "F_c=\\\\frac{mv^{2}}{r}"
+          "tex": "F_c=\\frac{mv^{2}}{r}"
         },
         {
           "label": "تکانه",
@@ -12260,7 +12260,7 @@
         },
         {
           "label": "ضربه",
-          "tex": "J=\\\\Delta p=F\\\\Delta t"
+          "tex": "J=\\Delta p=F\\Delta t"
         },
         {
           "label": "پایستگی تکانه",
@@ -12274,43 +12274,43 @@
       "items": [
         {
           "label": "ولتاژ متناوب",
-          "tex": "V=V_m\\\\sin\\\\omega t"
+          "tex": "V=V_m\\sin\\omega t"
         },
         {
           "label": "جریان متناوب",
-          "tex": "I=I_m\\\\sin\\\\omega t"
+          "tex": "I=I_m\\sin\\omega t"
         },
         {
           "label": "راکتانس القایی",
-          "tex": "X_L=L\\\\omega"
+          "tex": "X_L=L\\omega"
         },
         {
           "label": "راکتانس خازنی",
-          "tex": "X_C=\\\\frac{1}{C\\\\omega}"
+          "tex": "X_C=\\frac{1}{C\\omega}"
         },
         {
           "label": "امپدانس",
-          "tex": "Z=\\\\sqrt{R^{2}+(X_L-X_C)^{2}}"
+          "tex": "Z=\\sqrt{R^{2}+(X_L-X_C)^{2}}"
         },
         {
           "label": "توان متوسط",
-          "tex": "P=\\\\frac12 V_m I_m\\\\cos\\\\phi"
+          "tex": "P=\\frac12 V_m I_m\\cos\\phi"
         },
         {
           "label": "فرکانس زاویه‌ای",
-          "tex": "\\\\omega=2\\\\pi f"
+          "tex": "\\omega=2\\pi f"
         },
         {
           "label": "کیرشهف جریان",
-          "tex": "\\\\sum I=0"
+          "tex": "\\sum I=0"
         },
         {
           "label": "کیرشهف ولتاژ",
-          "tex": "\\\\sum V=0"
+          "tex": "\\sum V=0"
         },
         {
           "label": "توان مقاومت",
-          "tex": "P=RI^{2}=\\\\frac{V^{2}}{R}"
+          "tex": "P=RI^{2}=\\frac{V^{2}}{R}"
         }
       ]
     },
@@ -12320,15 +12320,15 @@
       "items": [
         {
           "label": "آینه / عدسی",
-          "tex": "\\\\frac{1}{f}=\\\\frac{1}{p}+\\\\frac{1}{q}"
+          "tex": "\\frac{1}{f}=\\frac{1}{p}+\\frac{1}{q}"
         },
         {
           "label": "بزرگنمایی",
-          "tex": "m=-\\\\frac{q}{p}"
+          "tex": "m=-\\frac{q}{p}"
         },
         {
           "label": "توان عدسی",
-          "tex": "D=\\\\frac{1}{f}"
+          "tex": "D=\\frac{1}{f}"
         },
         {
           "label": "عدسی‌های کنار هم",
@@ -12336,15 +12336,15 @@
         },
         {
           "label": "شکست",
-          "tex": "n_1\\\\sin\\\\theta_1=n_2\\\\sin\\\\theta_2"
+          "tex": "n_1\\sin\\theta_1=n_2\\sin\\theta_2"
         },
         {
           "label": "زاویهٔ حد",
-          "tex": "\\\\sin\\\\theta_c=\\\\frac{n_2}{n_1}"
+          "tex": "\\sin\\theta_c=\\frac{n_2}{n_1}"
         },
         {
           "label": "ضریب شکست",
-          "tex": "n=\\\\frac{c}{v}"
+          "tex": "n=\\frac{c}{v}"
         }
       ]
     },
@@ -12358,23 +12358,23 @@
         },
         {
           "label": "تراز شدت",
-          "tex": "\\\\beta=10\\\\log\\\\frac{I}{I_0}"
+          "tex": "\\beta=10\\log\\frac{I}{I_0}"
         },
         {
           "label": "شدت",
-          "tex": "I=\\\\frac{P}{4\\\\pi r^{2}}"
+          "tex": "I=\\frac{P}{4\\pi r^{2}}"
         },
         {
           "label": "طول موج",
-          "tex": "v=\\\\lambda f"
+          "tex": "v=\\lambda f"
         },
         {
           "label": "سیم دو سر بسته",
-          "tex": "\\\\lambda=\\\\frac{2L}{n}"
+          "tex": "\\lambda=\\frac{2L}{n}"
         },
         {
           "label": "لولهٔ بسته",
-          "tex": "\\\\lambda=\\\\frac{4L}{2n-1}"
+          "tex": "\\lambda=\\frac{4L}{2n-1}"
         }
       ]
     },
@@ -12384,35 +12384,35 @@
       "items": [
         {
           "label": "ریدبرگ",
-          "tex": "\\\\frac{1}{\\\\lambda}=R\\\\left(\\\\frac{1}{n_1^{2}}-\\\\frac{1}{n_2^{2}}\\\\right)"
+          "tex": "\\frac{1}{\\lambda}=R\\left(\\frac{1}{n_1^{2}}-\\frac{1}{n_2^{2}}\\right)"
         },
         {
           "label": "فوتوالکتریک",
-          "tex": "K_{\\\\max}=hf-W"
+          "tex": "K_{\\max}=hf-W"
         },
         {
           "label": "بسامد آستانه",
-          "tex": "f_0=\\\\frac{W}{h}"
+          "tex": "f_0=\\frac{W}{h}"
         },
         {
           "label": "نقص جرم",
-          "tex": "E=\\\\Delta m c^{2}"
+          "tex": "E=\\Delta m c^{2}"
         },
         {
           "label": "فعالیت",
-          "tex": "A=\\\\lambda N"
+          "tex": "A=\\lambda N"
         },
         {
           "label": "واپاشی",
-          "tex": "N=N_0 e^{-\\\\lambda t}"
+          "tex": "N=N_0 e^{-\\lambda t}"
         },
         {
           "label": "نیمه‌عمر",
-          "tex": "T_{1/2}=\\\\frac{\\\\ln 2}{\\\\lambda}"
+          "tex": "T_{1/2}=\\frac{\\ln 2}{\\lambda}"
         },
         {
           "label": "انرژی تراز",
-          "tex": "E_n=-\\\\frac{13.6}{n^{2}}\\\\,\\\\mathrm{eV}"
+          "tex": "E_n=-\\frac{13.6}{n^{2}}\\,\\mathrm{eV}"
         }
       ]
     },
@@ -12422,43 +12422,43 @@
       "items": [
         {
           "label": "جامد",
-          "tex": "\\\\mathrm{(s)}"
+          "tex": "\\mathrm{(s)}"
         },
         {
           "label": "مایع",
-          "tex": "\\\\mathrm{(l)}"
+          "tex": "\\mathrm{(l)}"
         },
         {
           "label": "گاز",
-          "tex": "\\\\mathrm{(g)}"
+          "tex": "\\mathrm{(g)}"
         },
         {
           "label": "محلول",
-          "tex": "\\\\mathrm{(aq)}"
+          "tex": "\\mathrm{(aq)}"
         },
         {
           "label": "واکنش",
-          "tex": "A+B\\\\rightarrow C+D"
+          "tex": "A+B\\rightarrow C+D"
         },
         {
           "label": "تعادل",
-          "tex": "A+B\\\\rightleftharpoons C+D"
+          "tex": "A+B\\rightleftharpoons C+D"
         },
         {
           "label": "گرما",
-          "tex": "A\\\\xrightarrow{\\\\Delta} B"
+          "tex": "A\\xrightarrow{\\Delta} B"
         },
         {
           "label": "رسوب",
-          "tex": "BaSO_4\\\\downarrow"
+          "tex": "BaSO_4\\downarrow"
         },
         {
           "label": "گاز متصاعد",
-          "tex": "H_2\\\\uparrow"
+          "tex": "H_2\\uparrow"
         },
         {
           "label": "ایزوتوپ",
-          "tex": "{}^{A}_{Z}\\\\mathrm{X}"
+          "tex": "{}^{A}_{Z}\\mathrm{X}"
         },
         {
           "label": "یون سولفات",
@@ -12488,23 +12488,23 @@
       "items": [
         {
           "label": "آووگادرو",
-          "tex": "N_A=6.022\\\\times 10^{23}"
+          "tex": "N_A=6.022\\times 10^{23}"
         },
         {
           "label": "مول",
-          "tex": "n=\\\\frac{N}{N_A}"
+          "tex": "n=\\frac{N}{N_A}"
         },
         {
           "label": "جرم مولی",
-          "tex": "n=\\\\frac{m}{M}"
+          "tex": "n=\\frac{m}{M}"
         },
         {
           "label": "درصد خلوص",
-          "tex": "\\\\%=\\\\frac{m_{\\\\mathrm{خالص}}}{m_{\\\\mathrm{نمونه}}}\\\\times 100"
+          "tex": "\\%=\\frac{m_{\\mathrm{خالص}}}{m_{\\mathrm{نمونه}}}\\times 100"
         },
         {
           "label": "بازده",
-          "tex": "\\\\%=\\\\frac{m_{\\\\mathrm{عملی}}}{m_{\\\\mathrm{نظری}}}\\\\times 100"
+          "tex": "\\%=\\frac{m_{\\mathrm{عملی}}}{m_{\\mathrm{نظری}}}\\times 100"
         },
         {
           "label": "رقیق‌سازی",
@@ -12512,15 +12512,15 @@
         },
         {
           "label": "کسر مولی",
-          "tex": "x_i=\\\\frac{n_i}{n_{\\\\mathrm{کل}}}"
+          "tex": "x_i=\\frac{n_i}{n_{\\mathrm{کل}}}"
         },
         {
           "label": "ppb",
-          "tex": "\\\\mathrm{ppb}=10^{9}\\\\times\\\\frac{m}{m_{\\\\mathrm{محلول}}}"
+          "tex": "\\mathrm{ppb}=10^{9}\\times\\frac{m}{m_{\\mathrm{محلول}}}"
         },
         {
           "label": "چگالی محلول",
-          "tex": "\\\\rho=\\\\frac{m}{V}"
+          "tex": "\\rho=\\frac{m}{V}"
         }
       ]
     },
@@ -12530,15 +12530,15 @@
       "items": [
         {
           "label": "هس",
-          "tex": "\\\\Delta H=\\\\sum\\\\Delta H_i"
+          "tex": "\\Delta H=\\sum\\Delta H_i"
         },
         {
           "label": "آنتالپی پیوند",
-          "tex": "\\\\Delta H=\\\\sum H_{\\\\mathrm{شکست}}-\\\\sum H_{\\\\mathrm{تشکیل}}"
+          "tex": "\\Delta H=\\sum H_{\\mathrm{شکست}}-\\sum H_{\\mathrm{تشکیل}}"
         },
         {
           "label": "ظرفیت گرمایی",
-          "tex": "q=mc\\\\Delta T"
+          "tex": "q=mc\\Delta T"
         },
         {
           "label": "آرنیوس",
@@ -12546,11 +12546,11 @@
         },
         {
           "label": "ایزومر cis",
-          "tex": "\\\\mathrm{cis}"
+          "tex": "\\mathrm{cis}"
         },
         {
           "label": "ایزومر trans",
-          "tex": "\\\\mathrm{trans}"
+          "tex": "\\mathrm{trans}"
         },
         {
           "label": "آلکان نام",
@@ -12568,7 +12568,7 @@
         },
         {
           "label": "pOH",
-          "tex": "pOH=-\\\\log[OH^{-}]"
+          "tex": "pOH=-\\log[OH^{-}]"
         },
         {
           "label": "رابطهٔ pH",
@@ -12576,7 +12576,7 @@
         },
         {
           "label": "Ka Kb",
-          "tex": "K_a\\\\cdot K_b=K_w"
+          "tex": "K_a\\cdot K_b=K_w"
         }
       ]
     },
@@ -12594,19 +12594,19 @@
         },
         {
           "label": "رشد لجستیک",
-          "tex": "\\\\frac{dN}{dt}=rN\\\\left(1-\\\\frac{N}{K}\\\\right)"
+          "tex": "\\frac{dN}{dt}=rN\\left(1-\\frac{N}{K}\\right)"
         },
         {
           "label": "نیمه‌عمر دارو",
-          "tex": "C=C_0\\\\left(\\\\frac12\\\\right)^{t/T}"
+          "tex": "C=C_0\\left(\\frac12\\right)^{t/T}"
         },
         {
           "label": "فتوسنتز",
-          "tex": "6CO_2+6H_2O\\\\rightarrow C_6H_{12}O_6+6O_2"
+          "tex": "6CO_2+6H_2O\\rightarrow C_6H_{12}O_6+6O_2"
         },
         {
           "label": "تنفس",
-          "tex": "C_6H_{12}O_6+6O_2\\\\rightarrow 6CO_2+6H_2O"
+          "tex": "C_6H_{12}O_6+6O_2\\rightarrow 6CO_2+6H_2O"
         },
         {
           "label": "نسبت مندلی",
@@ -12624,43 +12624,43 @@
       "items": [
         {
           "label": "اویلر",
-          "tex": "e^{i\\\\theta}=\\\\cos\\\\theta+i\\\\sin\\\\theta"
+          "tex": "e^{i\\theta}=\\cos\\theta+i\\sin\\theta"
         },
         {
           "label": "دموآور",
-          "tex": "(\\\\cos\\\\theta+i\\\\sin\\\\theta)^{n}=\\\\cos n\\\\theta+i\\\\sin n\\\\theta"
+          "tex": "(\\cos\\theta+i\\sin\\theta)^{n}=\\cos n\\theta+i\\sin n\\theta"
         },
         {
           "label": "نرمال",
-          "tex": "X\\\\sim\\\\mathcal{N}(\\\\mu,\\\\sigma^{2})"
+          "tex": "X\\sim\\mathcal{N}(\\mu,\\sigma^{2})"
         },
         {
           "label": "امید",
-          "tex": "E(X)=\\\\sum x_i p_i"
+          "tex": "E(X)=\\sum x_i p_i"
         },
         {
           "label": "لاگرانژی",
-          "tex": "\\\\mathcal{L}=T-V"
+          "tex": "\\mathcal{L}=T-V"
         },
         {
           "label": "شرودینگر",
-          "tex": "\\\\hat H\\\\psi=E\\\\psi"
+          "tex": "\\hat H\\psi=E\\psi"
         },
         {
           "label": "گرین",
-          "tex": "\\\\oint P\\\\,dx+Q\\\\,dy=\\\\iint\\\\left(\\\\frac{\\\\partial Q}{\\\\partial x}-\\\\frac{\\\\partial P}{\\\\partial y}\\\\right)dA"
+          "tex": "\\oint P\\,dx+Q\\,dy=\\iint\\left(\\frac{\\partial Q}{\\partial x}-\\frac{\\partial P}{\\partial y}\\right)dA"
         },
         {
           "label": "دیورژانس",
-          "tex": "\\\\nabla\\\\cdot\\\\vec F"
+          "tex": "\\nabla\\cdot\\vec F"
         },
         {
           "label": "کرل",
-          "tex": "\\\\nabla\\\\times\\\\vec F"
+          "tex": "\\nabla\\times\\vec F"
         },
         {
           "label": "گرادیان",
-          "tex": "\\\\nabla f"
+          "tex": "\\nabla f"
         }
       ]
     }
