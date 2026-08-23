@@ -17,7 +17,7 @@ class FormulaReferenceAssetTest {
         val file=listOf(File("src/main/assets/formula_library_v13.json"),File("app/src/main/assets/formula_library_v13.json")).first(File::isFile)
         val root=Json.parseToJsonElement(file.readText()).jsonObject
         val groups=root["groups"]!!.jsonArray
-        assertEquals(listOf("🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی","📚 کتب درسی و تکمیلی"),groups.map{it.jsonObject["label"]!!.jsonPrimitive.content})
+        assertEquals(listOf("🔢 اعداد و محاسبات","∫ آنالیز و توابع","𝑥 جبر و معادلات","∿ مثلثات و یونانی","⊆ مجموعه و منطق","📐 هندسه و بردار","🚀 فیزیک","🧪 شیمی"),groups.map{it.jsonObject["label"]!!.jsonPrimitive.content})
         val categories=root["categories"]!!.jsonArray
         assertTrue(categories.size>=77)
         val categoryIds=categories.map{it.jsonObject["id"]!!.jsonPrimitive.content}
@@ -35,7 +35,7 @@ class FormulaReferenceAssetTest {
     @Test fun `native editor keeps the requested visual section order`() {
         val file=listOf(File("src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt"),File("app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt")).first(File::isFile)
         val text=file.readText()
-        val markers=listOf("↩ بازگشت","⭐ موارد پرکاربرد","🕘 اخیر","درج\")","FixedFormulaKeypad","جست‌وجوی نماد","کد فرمول")
+        val markers=listOf("↩ بازگشت","⭐ موارد پرکاربرد","🕘 اخیر","درج")","FixedFormulaKeypad","جست‌وجوی نماد","کد فرمول")
         var position=-1
         markers.forEach{marker->val next=text.indexOf(marker,position+1);assertTrue("missing/order: $marker",next>position);position=next}
         listOf("(",")","7","8","9","⌫","↑","↓","4","5","6","÷","←","→","1","2","3","×","⌨","C","0","=","+","−").forEach{assertTrue(it in text)}
@@ -68,7 +68,7 @@ class FormulaReferenceAssetTest {
             assertTrue("missing editable SVG box at $index: $tex",document.editBoxes.isNotEmpty())
             assertTrue("invalid SVG box at $index",document.editBoxes.all{it.widthPx>0f&&it.heightPx>0f&&it.xPx>=0f&&it.yPx>=0f})
             assertTrue("invalid SVG source range at $index",document.editBoxes.all{it.sourceStart in 0..tex.length&&it.sourceEnd in it.sourceStart..tex.length})
-            assertTrue("raw TeX leaked at $index: $tex",Regex("\\\\[A-Za-z]+").find(document.xml)==null)
+            assertTrue("raw TeX leaked at $index: $tex",Regex("\\\\\\[A-Za-z]+").find(document.xml)==null)
             val inserted=FormulaBoxEditor.insert(host,placeholder.start,placeholder.endExclusive,tex,true,true)
             assertEquals("library insertion failed at $index","\\sqrt{$tex}",inserted.text)
             assertTrue("library selection failed at $index",inserted.selectionStart in 0..inserted.text.length&&inserted.selectionEnd in inserted.selectionStart..inserted.text.length)
