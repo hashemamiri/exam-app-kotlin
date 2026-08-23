@@ -1355,12 +1355,15 @@ private fun GalleryPane(
         }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(
-                    "all" to "همهٔ بخش‌ها (۶۴ کتاب و مبحث)",
-                    "school" to "📘 کتب درسی دبیرستان (۲۶ کتاب)",
-                    "topic" to "📐 مباحث موضوعی (۳۸ مبحث)",
-                    "gallery" to "⭐ گالری پایه (۵ بخش)"
-                ).forEach { (filterKey, filterLabel) ->
+                items(
+                    listOf(
+                        "all" to "همهٔ بخش‌ها (۶۴ کتاب و مبحث)",
+                        "school" to "📘 کتب درسی دبیرستان (۲۶ کتاب)",
+                        "topic" to "📐 مباحث موضوعی (۳۸ مبحث)",
+                        "gallery" to "⭐ گالری پایه (۵ بخش)"
+                    ),
+                    key = { it.first }
+                ) { (filterKey, filterLabel) ->
                     FilterChip(
                         selected = selectedFilter == filterKey,
                         onClick = { selectedFilter = filterKey },
