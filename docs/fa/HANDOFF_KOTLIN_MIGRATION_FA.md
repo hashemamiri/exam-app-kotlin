@@ -7778,3 +7778,71 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.17
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۶۱) V55.18.1 — هات‌فیکس: کشیدن به راست کارت‌ها تک‌فاز و بدون پرش
+
+### گزارش دستگاه (پس از V55.18)
+
+```text
+«همچنان اسکرول کارت‌های مانده، پاسخ و تصحیح و... به چپ نرم انجام می‌شود اما
+به راست نرم نیست.»
+```
+
+### ریشه (با شبیه‌سازی فریم‌به‌فریم اثبات شد)
+
+```text
+راه‌حل V55.18 دوفازی بود:
+فاز۱: کارت فعال با tween(280) به بیرون صفحه می‌رفت (translationX=+520dp)
+فاز۲: activeIndex عوض می‌شد؛ در کشیدن به راست کارت قدیمی هنوز مرئی است
+      (relative=1 در پشته) اما translation فقط روی کارت «فعال» اعمال
+      می‌شود → همان کارت از بیرون صفحه به جایگاه پشته «تلپورت» می‌کرد.
+به‌علاوه کل حرکت ۲۸۰+۳۰۰=۵۸۰ms بود در برابر یک فاز ۲۸۰ms جهت چپ.
+(در کشیدن به چپ کارت قدیمی relative=7 می‌شود و اصلاً رندر نمی‌شود؛ برای
+همین تلپورت آن هرگز دیده نمی‌شد و چپ همیشه نرم بود.)
+```
+
+### راه‌حل
+
+```text
+کشیدن به راست تک‌فاز و هم‌زمان شد:
+- state جدید: returningIndex + returnX/returnY (Animatable)
+- در settle شاخهٔ direction == -1: returningIndex=activeIndex،
+  returnX.snapTo(x) و returnY.snapTo(y) (نقطهٔ رهاشدن انگشت)،
+  dragX.snapTo(targetX) (کارت واردشونده بیرون صفحه)، تغییر activeIndex،
+  سپس هم‌زمان returnX/returnY→0 و dragX→0 با tween(300, FastOutSlowIn)؛
+  در پایان returningIndex=-1.
+- graphicsLayer: کارت index==returningIndex && !active حالا
+  translationX/Y = returnX/returnY.value می‌گیرد (به‌جای 0f تلپورتی).
+- شاخهٔ چپ (else) دقیقاً رفتار قبلی: خروج انیمیت‌شده + snapTo(0f).
+```
+
+### تأیید
+
+```text
+جدید: V55_18_1SmoothRightReturnHotfixTest (۳ تست: state برگشت / تک‌فازبودن
+شاخهٔ راست و دست‌نخوردگی چپ / اعمال translation کارت برگشتی در graphicsLayer)
+verify: require جدید V55.18.1 (requireهای V55.18 هم برقرار می‌مانند چون
+dragX.animateTo(0f, tween(300, ...)) و if (direction == -1) { هنوز در کدند)
+شبیه‌سازی python: پیوستگی مکان هر دو کارت در ۵ فریم، بدون تلپورت، تک‌فاز
+FINAL_NATIVE_VERIFY=PASS EXIT=0 · تست V55_18 قدیمی همچنان سبز
+```
+
+### راهنمای تست دستگاه
+
+```text
+کارت‌های مدیریت معلم (آمار/بانک/تصحیح/مانده/پاسخ/درخواست‌ها):
+- کشیدن به راست: کارت زیر انگشت نرم به پشته برگردد و «هم‌زمان» کارت قبلی
+  از راست وارد شود؛ یک حرکت پیوستهٔ ~۳۰۰ms مثل جهت چپ، بدون هیچ پرشی.
+- کشیدن به چپ: مثل قبل.
+```
+
+### عملیات
+
+```text
+فایل‌ها: TeacherManagementCardsScreen.kt (returningIndex/returnX/returnY +
+graphicsLayer) / V55_18_1SmoothRightReturnHotfixTest.kt (جدید) /
+verify (require V55.18.1) / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.18
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

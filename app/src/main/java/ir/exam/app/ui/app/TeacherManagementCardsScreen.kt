@@ -145,6 +145,12 @@ fun TeacherManagementCardsScreen(
     var settling by remember { mutableStateOf(false) }
     val dragX = remember { Animatable(0f) }
     val dragY = remember { Animatable(0f) }
+    // V55.18.1 — کارت در حال «برگشت به پشته» هنگام کشیدن به راست: بعد از تغییر
+    // activeIndex کارت قبلی هنوز مرئی است (relative=1) و بدون این state از زیر
+    // انگشت به جایگاه پشته تلپورت می‌کرد.
+    var returningIndex by remember { mutableIntStateOf(-1) }
+    val returnX = remember { Animatable(0f) }
+    val returnY = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val threshold = with(density) { Design69ManagementCardsContract.DRAG_THRESHOLD_DP.dp.toPx() }
@@ -167,24 +173,32 @@ fun TeacherManagementCardsScreen(
                 val direction = if (x < 0f) 1 else -1
                 val targetX = (sign(x).takeIf { it != 0f } ?: 1f) * exitHorizontal
                 val targetY = y * 1.20f
-                coroutineScope {
-                    launch { dragX.animateTo(targetX, tween(280)) }
-                    launch { dragY.animateTo(targetY, tween(280)) }
-                }
-                // V55.18 — گزارش دستگاه: «به راست نرم نیست». در کشیدن به راست
-                // (direction=-1) کارت فعالِ جدید = کارت قبلی پشته است و چون
-                // translation فقط روی کارت فعال اعمال می‌شود، snap فوری صفر
-                // باعث «پرش» ورود آن می‌شد. اکنون کارت جدید از همان سمت خروج
-                // (targetX) وارد و نرم به مرکز می‌آید؛ کشیدن به چپ مثل قبل.
+                // V55.18.1 — گزارش دستگاه: «به راست هنوز نرم نیست». علت پرش در
+                // V55.18 دو فازِ پشت‌سرهم بود: اول کارت فعال ۲۸۰ میلی‌ثانیه بیرون
+                // می‌رفت، بعد activeIndex عوض می‌شد و همان کارت (که حالا در پشته
+                // relative=1 و مرئی است اما translation فقط روی کارت فعال اعمال
+                // می‌شود) از بیرون صفحه به جایگاه پشته تلپورت می‌کرد. حالا کشیدن
+                // به راست تک‌فاز و هم‌زمان است: کارت فعلی با returnX/returnY از
+                // نقطهٔ رهاشدن نرم به جایگاه پشته برمی‌گردد و هم‌زمان کارت قبلی
+                // از سمت راست وارد می‌شود؛ کشیدن به چپ مثل قبل.
                 if (direction == -1) {
+                    returningIndex = activeIndex
+                    returnX.snapTo(x)
+                    returnY.snapTo(y)
                     dragX.snapTo(targetX)
-                    dragY.snapTo(targetY)
+                    dragY.snapTo(0f)
                     activeIndex = (activeIndex + direction + cards.size) % cards.size
                     coroutineScope {
+                        launch { returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
+                        launch { returnY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
                         launch { dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                        launch { dragY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
                     }
+                    returningIndex = -1
                 } else {
+                    coroutineScope {
+                        launch { dragX.animateTo(targetX, tween(280)) }
+                        launch { dragY.animateTo(targetY, tween(280)) }
+                    }
                     activeIndex = (activeIndex + direction + cards.size) % cards.size
                     dragX.snapTo(0f)
                     dragY.snapTo(0f)
@@ -280,8 +294,19 @@ fun TeacherManagementCardsScreen(
                                 scaleX = stackScale
                                 scaleY = stackScale
                                 alpha = stackAlpha
-                                translationX = if (active) dragX.value else 0f
-                                translationY = if (active) dragY.value else 0f
+                                // V55.18.1: کارت در حال برگشت به پشته (کشیدن به راست)
+                                // از نقطهٔ رهاشدن نرم به جایگاهش می‌رود، نه تلپورت.
+                                val returning = index == returningIndex && !active
+                                translationX = when {
+                                    active -> dragX.value
+                                    returning -> returnX.value
+                                    else -> 0f
+                                }
+                                translationY = when {
+                                    active -> dragY.value
+                                    returning -> returnY.value
+                                    else -> 0f
+                                }
                                 rotationZ = if (active) {
                                     stackRotation + dragX.value / 42f + dragY.value / 75f
                                 } else stackRotation

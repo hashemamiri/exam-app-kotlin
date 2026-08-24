@@ -1424,6 +1424,10 @@ _mgmt_cards=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsSc
 require("if (direction == -1) {" in _mgmt_cards
         and "dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in _mgmt_cards,
         "V55.18 smooth rightward card entrance is missing")
+require("returningIndex = activeIndex" in _mgmt_cards
+        and "returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in _mgmt_cards
+        and "returning -> returnX.value" in _mgmt_cards,
+        "V55.18.1 single-phase rightward swipe with returning-card animation is missing")
 require("پیش‌نمایش کامل A4" in builder_screen and "previewMenuOpen" in builder_screen
         and "onPreviewAll = { previewAll = true }" in builder_screen,
         "V55.18 eye preview menu (question + full A4) is missing")
