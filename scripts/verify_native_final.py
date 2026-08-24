@@ -1462,6 +1462,26 @@ _figure_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog
 require("if (tabletPicker) GridCells.Fixed(3) else GridCells.Fixed(2)" in _figure_picker,
         "V56.2 tablet figure picker grid is missing")
 
+# ---- V57.0: student row-faithful text, zoomable figures, typed atlas blanks ----
+_zoom_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text()
+_blank_codec=(ROOT/"app/src/main/java/ir/exam/app/core/figure/AtlasBlankAnswerCodec.kt").read_text()
+require("fun splitRows(source: String): List<List<RichSegment>>" in rich_text,
+        "V57.0 row splitting for teacher line breaks is missing")
+require("RichTextSplitter.splitRows(source)" in formula_text
+        and "zoomableFigures: Boolean = false" in formula_text,
+        "V57.0 NativeMathText row rendering/zoom flag is missing")
+require("detectTransformGestures" in _zoom_dialog and "نمایش افقی" in _zoom_dialog
+        and "rotationZ = 90f" in _zoom_dialog,
+        "V57.0 zoom dialog with landscape periodic table is missing")
+require("blankAnswers: Map<Int, String>? = null" in atlas_view
+        and "OutlinedTextField(" in atlas_view,
+        "V57.0 typed atlas naming boxes are missing")
+require("AtlasBlankAnswerCodec.merge(" in student_screen
+        and "zoomableFigures = true" in student_screen,
+        "V57.0 student screen wiring (zoom + atlas answers) is missing")
+require("fun merge(blanks: Map<Int, String>, free: String): String" in _blank_codec,
+        "V57.0 atlas blank answer codec is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

@@ -1,6 +1,7 @@
 package ir.exam.app.ui.figure
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -39,7 +41,13 @@ fun AtlasFigureView(
     spec: FigureSpec,
     modifier: Modifier = Modifier,
     contentDescription: String = "شکل",
-    showBlanks: Boolean = true
+    showBlanks: Boolean = true,
+    // V57.0 — سمت دانش‌آموز: به‌جای جای خالی «…………»، کادر قابل تایپ برای هر
+    // نشانهٔ شماره‌دار. null یعنی حالت فقط‌نمایشی قبلی (معلم/چاپ/پیش‌نمایش).
+    blankAnswers: Map<Int, String>? = null,
+    onBlankAnswer: ((Int, String) -> Unit)? = null,
+    // V57.0 — زوم: فقط لمس خود تصویر (نه کادرهای تایپ) پنجرهٔ بزرگ‌نمایی را باز کند.
+    onImageTap: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val assetPath = AtlasCatalog.assetPath(spec) ?: return
@@ -58,7 +66,12 @@ fun AtlasFigureView(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp)
             )
         }
-        Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(4f / 3f)
+                .then(if (onImageTap != null) Modifier.clickable { onImageTap() } else Modifier)
+        ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data("file:///android_asset/$assetPath")
@@ -117,7 +130,18 @@ fun AtlasFigureView(
         }
         if (blanks) {
             marks.sortedBy { it.n }.forEach { mark ->
-                Text(
+                val editable = onBlankAnswer != null &&
+                    !(markNames && mark.label.isNotBlank())
+                if (editable) {
+                    // V57.0 — کادر تایپ پاسخ نامگذاری برای دانش‌آموز.
+                    OutlinedTextField(
+                        value = blankAnswers?.get(mark.n).orEmpty(),
+                        onValueChange = { onBlankAnswer?.invoke(mark.n, it) },
+                        label = { Text("نام بخش ${AtlasMarkPainter.faNum(mark.n)}") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    )
+                } else Text(
                     buildString {
                         append(AtlasMarkPainter.faNum(mark.n)).append(") ")
                         append(if (markNames && mark.label.isNotBlank()) mark.label else "…………………")

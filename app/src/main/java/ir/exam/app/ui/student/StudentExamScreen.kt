@@ -10,6 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import ir.exam.app.core.figure.AtlasBlankAnswerCodec
 import ir.exam.app.domain.model.BooleanAnswer
 import ir.exam.app.domain.model.ChoiceAnswer
 import ir.exam.app.domain.model.EssayQuestion
@@ -58,6 +60,7 @@ import ir.exam.app.domain.model.StudentAnswer
 import ir.exam.app.domain.model.TextAnswer
 import ir.exam.app.domain.model.TrueFalseQuestion
 import ir.exam.app.core.ui.persianFontFamily
+import ir.exam.app.ui.figure.ZoomableFigureDialog
 import ir.exam.app.ui.image.InteractiveImageEditorDialog
 import ir.exam.app.ui.math.NativeMathText
 
@@ -188,26 +191,53 @@ fun StudentExamContent(
                 OutlinedButton(onClick={onToggleFlag(question.id)}){Text(if(question.id in state.flaggedQuestionIds)"برداشتن علامت" else "علامت برای مرور")}
             } }
             item {
+                // V57.0 — تصاویر سؤال با لمس زوم می‌شوند؛ متن سؤال سطر به سطر و
+                // شکل‌ها زوم‌پذیر؛ کادرهای نامگذاری اطلس داخل TextAnswer ذخیره می‌شوند.
+                var zoomImage by remember(question.id) { mutableStateOf<String?>(null) }
+                val answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    if(presentation.imagePosition=="above") question.images.forEach { AsyncImage(it,"تصویر سؤال",Modifier.fillMaxWidth()) }
+                    if(presentation.imagePosition=="above") question.images.forEach { img ->
+                        AsyncImage(img,"تصویر سؤال",Modifier.fillMaxWidth().clickable { zoomImage = img })
+                    }
                     NativeMathText(
                         question.text,modifier=Modifier.fillMaxWidth(),fontSize=presentation.fontSizeSp.sp,
                         fontWeight=if(presentation.bold)FontWeight.Bold else FontWeight.Normal,
                         fontStyle=if(presentation.italic)FontStyle.Italic else FontStyle.Normal,
                         fontFamily=persianFontFamily(presentation.fontFamily),
-                        textAlign=when(presentation.textAlign){"center"->TextAlign.Center;"left"->TextAlign.Left;"justify"->TextAlign.Justify;else->TextAlign.Right}
+                        textAlign=when(presentation.textAlign){"center"->TextAlign.Center;"left"->TextAlign.Left;"justify"->TextAlign.Justify;else->TextAlign.Right},
+                        zoomableFigures = true,
+                        atlasBlankAnswers = AtlasBlankAnswerCodec.parse(answerText),
+                        onAtlasBlankAnswer = { n, value ->
+                            val blanks = AtlasBlankAnswerCodec.parse(answerText).toMutableMap()
+                            blanks[n] = value
+                            onAnswer(TextAnswer(question.id, AtlasBlankAnswerCodec.merge(blanks, AtlasBlankAnswerCodec.freeText(answerText))))
+                        }
                     )
-                    if(presentation.imagePosition!="above") question.images.forEach { AsyncImage(it,"تصویر سؤال",Modifier.fillMaxWidth()) }
+                    if(presentation.imagePosition!="above") question.images.forEach { img ->
+                        AsyncImage(img,"تصویر سؤال",Modifier.fillMaxWidth().clickable { zoomImage = img })
+                    }
+                }
+                zoomImage?.let { img ->
+                    ZoomableFigureDialog(onDismiss = { zoomImage = null }, title = "تصویر سؤال") {
+                        AsyncImage(img, "تصویر سؤال بزرگ", Modifier.fillMaxWidth())
+                    }
                 }
             }
             item {
                 when (question) {
-                    is EssayQuestion -> OutlinedTextField(
-                        value = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
-                        onValueChange = { onAnswer(TextAnswer(question.id, it)) },
-                        label = { Text("پاسخ شما") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    is EssayQuestion -> {
+                        // V57.0 — بخش آزاد پاسخ جدا از خطوط نامگذاری اطلس نگه‌داری
+                        // می‌شود تا تایپ در کادر «پاسخ شما» پاسخ کادرهای شکل را پاک نکند.
+                        val whole = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
+                        OutlinedTextField(
+                            value = AtlasBlankAnswerCodec.freeText(whole),
+                            onValueChange = {
+                                onAnswer(TextAnswer(question.id, AtlasBlankAnswerCodec.merge(AtlasBlankAnswerCodec.parse(whole), it)))
+                            },
+                            label = { Text("پاسخ شما") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     is FillBlankQuestion -> OutlinedTextField(
                         value = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
                         onValueChange = { onAnswer(TextAnswer(question.id, it)) },
@@ -228,9 +258,14 @@ fun StudentExamContent(
                                         onClick = { onAnswer(ChoiceAnswer(question.id, originalIndex)) }
                                     )
                                     Column {
-                                        NativeMathText(option)
-                                        question.optionImages.getOrNull(displayIndex)?.let {
-                                            AsyncImage(it, "تصویر گزینه", Modifier.size(120.dp))
+                                        // V57.0 — گزینه هم سطر به سطر و شکل‌هایش زوم‌پذیر.
+                                        NativeMathText(option, zoomableFigures = true)
+                                        question.optionImages.getOrNull(displayIndex)?.let { img ->
+                                            var zoomOption by remember(question.id, displayIndex) { mutableStateOf(false) }
+                                            AsyncImage(img, "تصویر گزینه", Modifier.size(120.dp).clickable { zoomOption = true })
+                                            if (zoomOption) ZoomableFigureDialog(onDismiss = { zoomOption = false }, title = "تصویر گزینه") {
+                                                AsyncImage(img, "تصویر گزینه بزرگ", Modifier.fillMaxWidth())
+                                            }
                                         }
                                     }
                                 }

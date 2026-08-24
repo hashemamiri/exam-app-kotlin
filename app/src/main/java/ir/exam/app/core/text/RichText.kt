@@ -42,6 +42,40 @@ object RichTextSplitter {
         return result
     }
 
+    /**
+     * V57.0 — سطربندی نمایش: هر `\n` که معلم تایپ کرده یک سطر جدید برای
+     * دانش‌آموز است و هر شکل/نمودار اگر در سطرش محتوای دیگری باشد به سطر
+     * خودش منتقل می‌شود تا کامل و تمام‌عرض دیده شود؛ فرمول‌ها داخل سطر
+     * می‌مانند. سطرهای خالی میانی (اینتر پشت‌سرهم) حفظ می‌شوند.
+     */
+    fun splitRows(source: String): List<List<RichSegment>> {
+        val rows = mutableListOf(mutableListOf<RichSegment>())
+        split(source).forEach { seg ->
+            when (seg) {
+                is RichSegment.Text -> seg.text.split('\n').forEachIndexed { i, part ->
+                    if (i > 0) rows += mutableListOf<RichSegment>()
+                    if (part.isNotEmpty()) rows.last() += RichSegment.Text(part)
+                }
+                is RichSegment.Figure -> {
+                    if (rows.last().isNotEmpty()) rows += mutableListOf<RichSegment>()
+                    rows.last() += seg
+                    rows += mutableListOf<RichSegment>()
+                }
+                is RichSegment.Math -> rows.last() += seg
+            }
+        }
+        while (rows.size > 1 && rows.last().isEmpty()) rows.removeAt(rows.lastIndex)
+        // ویرایشگر معلم بعد از هر توکن شکل خودش '\n' می‌گذارد؛ سطر خالیِ بلافاصله
+        // بعد از شکل، فاصلهٔ ناخواسته است و حذف می‌شود (سطرهای خالی عمدی متن می‌مانند).
+        val cleaned = mutableListOf<List<RichSegment>>()
+        rows.forEachIndexed { i, row ->
+            val afterFigure = i > 0 && rows[i - 1].singleOrNull() is RichSegment.Figure
+            if (row.isEmpty() && afterFigure) return@forEachIndexed
+            cleaned += row
+        }
+        return cleaned
+    }
+
     /** بازسازی متن کامل پس از ویرایش بخش متن عادی؛ فرمول‌ها و شکل‌ها حفظ می‌شوند. */
     fun reconstruct(segments: List<RichSegment>, editedIndex: Int, newText: String): String {
         val clean = newText.replace("$", "")

@@ -7937,3 +7937,80 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.18.1 — ترتیب اعمال: پچ ۱ ← پچ ۲ ← پچ ۳
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۶۵) V57.0 — نمایش سطربندی‌شده، زوم شکل‌ها، تناوبی افقی، کادرهای نامگذاری
+
+### درخواست‌های کاربر
+
+```text
+۱) «کادر متن سؤال و گزینه‌ها سطر سطر باشد؛ اینتر معلم برای دانش‌آموز هم سطر
+   جدید باشد و به هم نریزد»
+۲) «تصاویر/نمودارها/شکل‌ها برای دانش‌آموز زوم داشته باشند و اگر در سطرشان
+   چیز دیگری نوشته شده، به سطر پایین‌تر بیایند و کامل نمایش داده شوند»
+۳) «جدول تناوبی برای دانش‌آموز قابلیت بازشدن افقی داشته باشد»
+۴) «نشانه‌های پیکان‌دار آناتومی/فیزیک/شیمی: دانش‌آموز بتواند در کادرهای
+   ایجادشده تایپ کند»
+```
+
+### طراحی و تحویل
+
+```text
+۱) RichTextSplitter.splitRows (RichText.kt): '\n' → سطر جدید؛ شکل همیشه سطر
+   تمام‌عرض خودش (اگر سطرش محتوا داشته باشد به سطر بعد می‌رود)؛ فرمول inline
+   می‌ماند؛ سطر خالیِ خودکارِ بعد از توکن شکل (که ویرایشگر معلم می‌گذارد)
+   حذف؛ سطرهای خالی عمدی معلم حفظ. NativeMathText حالا Column از سطرهاست
+   (نام پارامتر حلقهٔ سطر عمداً segments ماند — needle قدیمی verify
+   «segments.forEach»). امضای NativeMathText سازگار است؛ همهٔ ۱۱ مصرف‌کنندهٔ
+   قبلی بدون تغییر (پیش‌فرض‌ها) همان رفتار را دارند و سطربندی خودکار می‌گیرند.
+۲) ZoomableFigureDialog جدید: تمام‌صفحه، detectTransformGestures با
+   coerceIn(1f,6f) + pan + دوضربه بازنشانی؛ در NativeMathText با
+   zoomableFigures=true (فقط StudentExamScreen — متن سؤال و گزینه‌ها) لمس
+   شکل آن را باز می‌کند؛ تصاویر سؤال/گزینه هم با clickable همین دیالوگ.
+۳) kind=='p' → rotatable=true؛ چیپ «نمایش افقی» با requiredSize(maxH,maxW)
+   + rotationZ=90f؛ پیش‌فرض افقی باز می‌شود.
+۴) AtlasFigureView: پارامترهای blankAnswers/onBlankAnswer؛ در حالت
+   دانش‌آموز هر نشانه (که برچسب معلم‌داده ندارد) OutlinedTextField
+   «نام بخش n» دارد؛ زوم اطلس فقط با لمس خود تصویر (onImageTap) تا کادرها
+   آزاد باشند. ذخیره: AtlasBlankAnswerCodec (جدید) پاسخ‌ها را به‌صورت خطوط
+   «n) پاسخ» بالای متن آزاد در همان TextAnswer ادغام می‌کند —
+   format/parse/freeText/merge؛ قرارداد سرور و draft و تصحیح تغییری ندارد و
+   معلم همین خطوط را در تصحیح می‌بیند. کادر «پاسخ شما» فقط بخش آزاد را
+   ویرایش می‌کند و خطوط نامگذاری را پاک نمی‌کند.
+```
+
+### تأیید
+
+```text
+جدید: V57_0StudentRichViewTest — ۳ تست اجرایی JVM (splitRows دو سناریو +
+round-trip کدک) و ۳ تست اتصال UI. شبیه‌سازی python وفادار splitRows و کدک
+سبز. verify: ۶ require جدید V57.0؛ needle قدیمی «segments.forEach» در
+NativeMathText حفظ شد؛ V53_3AtlasNativeTest («AtlasFigureView(» در mathText،
+بدون android.webkit) همچنان سبز. FINAL_NATIVE_VERIFY=PASS EXIT=0
+kotlin_files=200 (ZoomableFigureDialog + AtlasBlankAnswerCodec جدید).
+```
+
+### راهنمای تست دستگاه
+
+```text
+معلم: سؤالی چندسطری با اینتر + شکل وسط سطر + فرمول وسط جمله بسازد.
+دانش‌آموز:
+۱) سطربندی دقیقاً مثل معلم؛ شکل وسط سطر → سطر مستقل تمام‌عرض.
+۲) لمس شکل/نمودار/تصویر → پنجرهٔ زوم؛ دو انگشت بزرگ‌نمایی، دوضربه بازنشانی.
+۳) جدول تناوبی → بازشدن افقی (چیپ «نمایش افقی» برای برگرداندن).
+۴) سؤال آناتومی/فیزیک/شیمی با پیکان‌های بی‌برچسب → زیر تصویر برای هر شماره
+   کادر «نام بخش n»؛ تایپ و رفتن به سؤال بعد و برگشت → پاسخ‌ها بمانند؛
+   در تصحیح معلم پاسخ‌ها به‌صورت «1) ...» دیده شوند.
+```
+
+### عملیات
+
+```text
+پچ: V57_0_student_rows_zoom_atlas_blanks — فایل‌ها: RichText.kt (splitRows) /
+NativeMathText.kt (بازنویسی سطری + zoomableFigures + atlasBlankAnswers) /
+ZoomableFigureDialog.kt (جدید) / AtlasBlankAnswerCodec.kt (جدید) /
+AtlasFigureView.kt (کادرهای تایپ + onImageTap) / StudentExamScreen.kt
+(اتصال زوم و کدک) / V57_0StudentRichViewTest.kt (جدید) / verify / changelog
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V56.2
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```
