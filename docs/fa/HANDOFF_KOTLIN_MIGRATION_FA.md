@@ -6571,3 +6571,41 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.2
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۴۳) V55.3.1 — hotfix تست: needle نادرست در V55_3PaintFixTest
+
+### گزارش CI کاربر
+
+```text
+V55_3PaintFixTest > blank layout diagnostic ... FAILED at :53
+381 tests completed, 1 failed — کد اصلی SUCCESS (الگوی همیشگی: فقط تست).
+```
+
+### علت (اشتباه خودم در V55.3، نه کد اصلی)
+
+```text
+assertion خط ۵۳ می‌خواست «Chrome» در ۶۰۰ کاراکترِ «بعد از» marker
+FORMULA_BLANK_LAYOUT باشد؛ ولی در asset، نسخهٔ Chrome قبل از رشتهٔ خطا
+استخراج می‌شود (var ua = ...match(/Chrome\/[\d.]+/)... چند خط قبل از
+ExamEditorNative.onError) و بعد از marker فقط + ua می‌آید.
+اسکن سراسری قبلی این را نگرفت چون فقط الگوی سادهٔ «"needle" in var» را
+می‌بیند، نه substringAfter/take.
+```
+
+### رفع
+
+```text
+assertion به دو چک قطعی تبدیل شد:
+- الگوی «Chrome\/[\d.]+» در کل asset (همان regex استخراج نسخهٔ Chrome)
+- «window.innerWidth» در ۶۰۰ کاراکتر بعد از marker (واقعاً آنجاست)
+شبیه‌سازی python هر ۱۱ assertion هر ۳ تست V55_3 → همه True.
+اسکن سراسری ۴۰ needle در ۱۸ تست → صفر mismatch. verify → PASS EXIT=0.
+هیچ فایل غیرتستی تغییر نکرد.
+```
+
+### عملیات
+
+```text
+فایل‌ها: V55_3PaintFixTest.kt / هندآف
+پیش‌نیاز: V55.3 | نتیجهٔ تست دستگاه V55.3 هنوز نامشخص (منتظر گزارش N55.3)
+```

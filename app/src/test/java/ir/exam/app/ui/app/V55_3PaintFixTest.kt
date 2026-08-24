@@ -50,6 +50,9 @@ class V55_3PaintFixTest {
         assertTrue("FORMULA_BLANK_LAYOUT" in asset)
         assertTrue("getBoundingClientRect" in asset)
         assertTrue("layoutCheck()" in asset)
-        assertTrue("Chrome" in asset.substringAfter("FORMULA_BLANK_LAYOUT").take(600))
+        // V55.3.1 — نسخهٔ Chrome «قبل از» رشتهٔ خطا استخراج می‌شود (var ua = ...)؛
+        // پس کل بلوک تشخیص بررسی می‌شود، نه فقط متن بعد از marker.
+        assertTrue("Chrome\\/[\\d.]+" in asset)
+        assertTrue("window.innerWidth" in asset.substringAfter("FORMULA_BLANK_LAYOUT").take(600))
     }
 }
