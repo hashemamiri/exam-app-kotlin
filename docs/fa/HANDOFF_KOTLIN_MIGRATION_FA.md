@@ -7099,3 +7099,104 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.9
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۵۱) 📌 مرجع دائمی: قالب پچ، هات‌فیکس و دستور جامع اعمال/پوش
+
+این بخش «قرارداد رسمی» تحویل پچ در این پروژه است؛ هر تحویل باید دقیقاً همین
+قالب را داشته باشد.
+
+### ۱۵۱.۱) نام‌گذاری فایل پچ
+
+```text
+پچ اصلی:      V<نسخه>_<زیرنسخه>_<توضیح-کوتاه-انگلیسی>.patch
+              مثال: V55_10_select_delete_type_scroll.patch
+هات‌فیکس:     V<نسخه>_<زیرنسخه>_<شماره>_<توضیح>_hotfix.patch
+              مثال: V55_3_1_test_needle_hotfix.patch
+              (هات‌فیکس = فقط رفع شکست CI/تست همان نسخه؛ بدون قابلیت جدید)
+قواعد نام:    بدون علامت ? و فاصله و حروف فارسی در نام فایل؛ فقط حروف انگلیسی،
+              عدد و زیرخط. پچ در مسیر دانلود ویندوز تحویل می‌شود:
+              C:\Users\Hashem\Downloads  (در WSL: /mnt/c/Users/Hashem/Downloads)
+```
+
+### ۱۵۱.۲) محتوای اجباری هر پچ (چک‌لیست سازنده)
+
+```text
+□ کد اصلی تغییر (asset/Kotlin) — WebView فقط در فهرست مجاز ۵ فایلی
+□ تست منبع جدید V<نسخه>Test.kt برای همین تغییر
+□ هماهنگ‌سازی تست‌های قدیمی ناسازگارشده (اسکن سراسری needle قبل از تحویل)
+□ require های جدید در scripts/verify_native_final.py (و اجرای آن: PASS EXIT=0)
+□ یک خط فارسی کاربرپسند بالای text/CHANGELOG_FA.txt (هات‌فیکسِ فقط-تست: لازم نیست)
+□ بخش جدید در docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md (همیشه؛ حتی هات‌فیکس)
+□ به‌روزرسانی version.txt asset تغییرکرده
+□ هرگز: secret/token/URL خصوصی در پچ یا چت
+□ ساخت پچ روی «وضعیت بازسازی‌شدهٔ کاربر»: clone تمیز HEAD کاربر + اعمال
+  ترتیبی همهٔ patches/built/ + پچ pending ریشه → کپی فایل‌ها → git diff
+  (--binary اگر باینری هست) → git apply --check باید OK بدهد
+```
+
+### ۱۵۱.۳) قالب تحویل در چت
+
+```text
+۱) توضیح فارسی ساده: چه مشکلی بود، ریشه چه بود (با مدرک، نه حدس)، چه شد
+۲) فایل پچ در ریشهٔ workspace (کاربر همان را در Downloads ویندوز می‌گذارد)
+۳) «دستور جامع» طبق ۱۵۱.۴ — آماده برای کپی یک‌جا در WSL
+۴) راهنمای تست دستگاه: چه چیزی را چک کند و اگر خراب بود چه پیامی را بفرستد
+```
+
+### ۱۵۱.۴) دستور جامع اعمال و پوش (قالب استاندارد)
+
+جای `<PATCH>` نام فایل پچ و جای `<پیام>` پیام commit را بگذارید؛ بقیه ثابت است:
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin
+git apply --check /mnt/c/Users/Hashem/Downloads/<PATCH>.patch && echo "OK"
+git apply /mnt/c/Users/Hashem/Downloads/<PATCH>.patch
+git add -A
+git --no-pager diff --cached --stat
+git commit -m "<پیام>"
+git push origin HEAD
+```
+
+نمونهٔ واقعی (V55.10):
+
+```bash
+cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin
+git apply --check /mnt/c/Users/Hashem/Downloads/V55_10_select_delete_type_scroll.patch && echo "OK"
+git apply /mnt/c/Users/Hashem/Downloads/V55_10_select_delete_type_scroll.patch
+git add -A
+git --no-pager diff --cached --stat
+git commit -m "feat: token select/delete/edit clicks, free typing around tokens, inner scroll unlock V55.10"
+git push origin HEAD
+```
+
+```text
+نکته‌های ثابت این دستور:
+- خط دوم فقط «آزمایش» است؛ اگر OK چاپ نشد ادامه نده و خروجی خطا را بفرست.
+- همیشه «git --no-pager diff» (بدون no-pager یک‌بار کاربر در pager گیر کرد).
+- پیام commit: انگلیسی، با پیشوند feat:/fix:/test:/docs: و شمارهٔ نسخه در انتها.
+- آخرین فرمان همیشه git push origin HEAD است؛ CI خودکار اجرا می‌شود.
+- پچ‌ها وابسته به ترتیب‌اند: اگر پچ قبلی هنوز اعمال نشده، اول همان را بزن.
+```
+
+### ۱۵۱.۵) پس از اعمال — چرخهٔ گزارش
+
+```text
+۱) نتیجهٔ CI (سبز/قرمز + متن شکست) را در چت بگذار.
+   قرمزِ فقط-تست → هات‌فیکس V<x>_<y>_<z>_hotfix می‌گیرد (الگوی رایج).
+۲) نتیجهٔ تست دستگاه را طبق «راهنمای تست دستگاه» همان پچ گزارش بده؛
+   اگر پیام قرمز تشخیصی دیدی، متن کاملش را بفرست (اساس قانون «حدس ممنوع»).
+۳) پس از build سبز + تأیید دستگاه، پچ از ریشهٔ workspace به patches/built/
+   منتقل و هندآف sync می‌شود (کار سازندهٔ پچ، نه کاربر).
+```
+
+### ۱۵۱.۶) ترتیب کامل زنجیرهٔ پچ‌ها (تا این لحظه)
+
+```text
+patches/built/ (به ترتیب اعمال):
+V53_1 → V53_1_1 → V53_2 → V53_3 → V53_3_1 → V53_4 → V53_4_1 →
+V54_1 → V54_2 → V54_3 → V54_3_1 → V54_4 → V54_5 → V54_6 → V54_7 →
+V55 → V55_1 → V55_2 → V55_3 → V55_3_1 → V55_4 → V55_5 → V55_6 →
+V55_7 → V55_8 → V55_9
+pending ریشهٔ workspace: V55_10_select_delete_type_scroll.patch
+دست‌نخورده طبق انتخاب کاربر: patches/pending/V50_0_revert_to_v45_3.patch
+```
