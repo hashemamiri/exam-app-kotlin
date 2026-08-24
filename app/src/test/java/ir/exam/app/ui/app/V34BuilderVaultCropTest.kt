@@ -61,8 +61,11 @@ class V34BuilderVaultCropTest {
         assertTrue("circular = forceSquare" in editor)
         assertTrue("if (circular) CircleShape" in editor)
         assertTrue("if (forceSquare) \"برش دایره‌ای پروفایل\"" in editor)
-        assertTrue(".fillMaxSize()\n                .padding(18.dp)\n                .pointerInput(circular)" in editor)
-        assertTrue("CropGeometry.resizeDeltaForEdge(edge, delta)" in editor)
+        // V55.14 — ناحیهٔ حرکت آزاد داخلی حفظ شد (padding بزرگ‌تر برای دستگیره‌های مرئی)؛
+        // resize اکنون بردار (dx,dy) می‌گیرد و گوشه‌ها را هم پشتیبانی می‌کند.
+        assertTrue(".pointerInput(circular)" in editor)
+        assertTrue("CropGeometry.resizeDeltaForEdge(edge, dx)" in editor)
+        assertTrue("CropGeometry.resizeDeltaForCorner(edge, dx, dy)" in editor)
     }
 
     @Test

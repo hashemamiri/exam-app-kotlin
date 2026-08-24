@@ -125,10 +125,11 @@ class V35StudentUiCropClipboardTest {
     fun `crop frame has invisible resize zones and no edge bars`() {
         val editor = source("app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt")
         assertTrue("CropGeometry.moveCenter(" in editor)
-        assertTrue(".padding(18.dp)" in editor)
+        // V55.14 — کاربر صریحاً دستگیره‌های «مرئی» و گوشه‌ها را خواست؛ حرکت آزاد
+        // داخلی حفظ شد و دستگیره‌های میله‌ای/مربعی جدید جایگزین ناحیهٔ نامرئی شدند.
         assertTrue(".pointerInput(circular)" in editor)
-        assertFalse("Modifier.width(34.dp).height(5.dp)" in editor)
-        assertFalse("Modifier.width(5.dp).height(34.dp)" in editor)
+        assertTrue("CropHandle(CropEdgeKind.TOP_LEFT" in editor)
+        assertTrue("CropHandle(CropEdgeKind.BOTTOM_RIGHT" in editor)
     }
 
     @Test

@@ -242,9 +242,16 @@ fun InteractiveImageEditorDialog(
                                 cropCenterX = movedX
                                 cropCenterY = movedY
                             },
-                            onResize = { edge, delta ->
+                            onResize = { edge, dx, dy ->
                                 val oldSide = cropSide
-                                val signed = CropGeometry.resizeDeltaForEdge(edge, delta)
+                                // V55.14 — ضلع: مؤلفهٔ عمود بر لبه؛ گوشه: بردار قطری.
+                                val signed = when (edge) {
+                                    CropEdgeKind.LEFT, CropEdgeKind.RIGHT ->
+                                        CropGeometry.resizeDeltaForEdge(edge, dx)
+                                    CropEdgeKind.TOP, CropEdgeKind.BOTTOM ->
+                                        CropGeometry.resizeDeltaForEdge(edge, dy)
+                                    else -> CropGeometry.resizeDeltaForCorner(edge, dx, dy)
+                                }
                                 cropSide = CropGeometry.resizeSide(cropSide, signed, minDimensionPx)
                                 val pixelChange = (cropSide - oldSide) * minDimensionPx
                                 val (newCenterX, newCenterY) = CropGeometry.recenterAfterResize(
@@ -366,16 +373,18 @@ private fun CropFrame(
     modifier: Modifier,
     circular: Boolean,
     onMove: (Float, Float) -> Unit,
-    onResize: (CropEdgeKind, Float) -> Unit
+    onResize: (CropEdgeKind, Float, Float) -> Unit
 ) {
     val frameShape = if (circular) CircleShape else RoundedCornerShape(2.dp)
+    // V55.14 — گزارش دستگاه: «اضلاع قابل جابه‌جایی نیست». دستگیره‌ها نامرئی
+    // بودند و ناحیهٔ ۱۸dp کنارِ درست همان لبه، عملاً پیدا/لمس نمی‌شد. اکنون:
+    // میله‌های سفید مرئی وسط اضلاع + مربع‌های سفید مرئی گوشه‌ها با سطح لمس
+    // بزرگ (۳۲dp)؛ حرکت آزاد کل کادر از ناحیهٔ داخلی حفظ شده است.
     Box(modifier.border(2.dp, Color.White, frameShape)) {
-        // مربع و دایره از تمام ناحیهٔ داخلی آزادانه حرکت می‌کنند. تنها نوار لمسی
-        // نامرئی ۱۸dp چهار ضلع برای resize رزرو شده تا move و resize همزمان نشوند.
         Box(
             Modifier
                 .fillMaxSize()
-                .padding(18.dp)
+                .padding(22.dp)
                 .pointerInput(circular) {
                     detectDragGestures { change, drag ->
                         change.consume()
@@ -383,47 +392,49 @@ private fun CropFrame(
                     }
                 }
         )
-        CropEdgeHandle(
-            edge = CropEdgeKind.TOP,
-            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().height(18.dp),
-            onResize = onResize
-        )
-        CropEdgeHandle(
-            edge = CropEdgeKind.BOTTOM,
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(18.dp),
-            onResize = onResize
-        )
-        CropEdgeHandle(
-            edge = CropEdgeKind.LEFT,
-            modifier = Modifier.align(Alignment.CenterStart).width(18.dp).fillMaxHeight(),
-            onResize = onResize
-        )
-        CropEdgeHandle(
-            edge = CropEdgeKind.RIGHT,
-            modifier = Modifier.align(Alignment.CenterEnd).width(18.dp).fillMaxHeight(),
-            onResize = onResize
-        )
+        // اضلاع
+        CropHandle(CropEdgeKind.TOP, Modifier.align(Alignment.TopCenter), onResize, bar = true, horizontal = true)
+        CropHandle(CropEdgeKind.BOTTOM, Modifier.align(Alignment.BottomCenter), onResize, bar = true, horizontal = true)
+        CropHandle(CropEdgeKind.LEFT, Modifier.align(Alignment.CenterStart), onResize, bar = true, horizontal = false)
+        CropHandle(CropEdgeKind.RIGHT, Modifier.align(Alignment.CenterEnd), onResize, bar = true, horizontal = false)
+        // گوشه‌ها (درخواست کاربر: تغییر سایز از گوشه‌ها)
+        CropHandle(CropEdgeKind.TOP_LEFT, Modifier.align(Alignment.TopStart), onResize)
+        CropHandle(CropEdgeKind.TOP_RIGHT, Modifier.align(Alignment.TopEnd), onResize)
+        CropHandle(CropEdgeKind.BOTTOM_LEFT, Modifier.align(Alignment.BottomStart), onResize)
+        CropHandle(CropEdgeKind.BOTTOM_RIGHT, Modifier.align(Alignment.BottomEnd), onResize)
     }
 }
 
 @Composable
-private fun CropEdgeHandle(
+private fun CropHandle(
     edge: CropEdgeKind,
     modifier: Modifier,
-    onResize: (CropEdgeKind, Float) -> Unit
+    onResize: (CropEdgeKind, Float, Float) -> Unit,
+    bar: Boolean = false,
+    horizontal: Boolean = false
 ) {
-    // دستگیرهٔ نامرئی: خطوط/میله‌های روی اضلاع حذف شده‌اند اما سطح لمس باقی است.
     Box(
-        modifier.pointerInput(edge) {
-            detectDragGestures { change, drag ->
-                change.consume()
-                onResize(
-                    edge,
-                    if (edge == CropEdgeKind.LEFT || edge == CropEdgeKind.RIGHT) drag.x else drag.y
-                )
-            }
+        modifier
+            .size(32.dp)
+            .pointerInput(edge) {
+                detectDragGestures { change, drag ->
+                    change.consume()
+                    onResize(edge, drag.x, drag.y)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // نشانگر مرئی: میله برای اضلاع، مربع کوچک برای گوشه‌ها.
+        if (bar) {
+            Box(
+                Modifier
+                    .size(width = if (horizontal) 26.dp else 5.dp, height = if (horizontal) 5.dp else 26.dp)
+                    .background(Color.White, RoundedCornerShape(3.dp))
+            )
+        } else {
+            Box(Modifier.size(13.dp).background(Color.White, RoundedCornerShape(3.dp)))
         }
-    )
+    }
 }
 
 /**

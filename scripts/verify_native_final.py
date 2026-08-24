@@ -849,11 +849,14 @@ require(all(marker in _v34_thumb for marker in (
             "IconButton(onClick = onEdit, modifier = Modifier.size(24.dp))",
             "Modifier.size(17.dp).clickable(onClick = onRemove)"
         )), "V34 question image controls are not inline like option images")
+# V55.14 — دستگیره‌های مرئی ضلع+گوشه جایگزین نوار نامرئی ۱۸dp شد.
 require("resizeDeltaForEdge" in crop_geometry and
-        "CropGeometry.resizeDeltaForEdge(edge, delta)" in image_editor and
-        ".padding(18.dp)" in image_editor and "circular = forceSquare" in image_editor and
+        "resizeDeltaForCorner" in crop_geometry and
+        "CropGeometry.resizeDeltaForEdge(edge, dx)" in image_editor and
+        "CropGeometry.resizeDeltaForCorner(edge, dx, dy)" in image_editor and
+        "circular = forceSquare" in image_editor and
         "if (circular) CircleShape" in image_editor and "برش دایره‌ای پروفایل" in image_editor,
-        "V34 directional crop handles or circular profile frame incomplete")
+        "V34/V55.14 directional crop handles or circular profile frame incomplete")
 require(all(marker in student_password_vault for marker in (
             "AndroidKeyStore","AES/GCM/NoPadding","KeyGenParameterSpec.Builder(",
             "cipher.doFinal","cipher.updateAAD(entry.toByteArray","Base64.encodeToString(cipher.iv"
@@ -884,11 +887,12 @@ require(all(marker in _clipboard_v35 for marker in (
         )) and all(marker not in _clipboard_v35 for marker in (
             "اطلاعات دانش‌آموز","جنسیت:","وضعیت:","شناسه حساب:"
         )), "V35 clipboard contains extra or missing student fields")
-require("CropGeometry.moveCenter(" in image_editor and ".padding(18.dp)" in image_editor and
-        ".pointerInput(circular)" in image_editor and "خطوط/میله‌های روی اضلاع حذف شده‌اند" in image_editor and
-        "Modifier.width(34.dp).height(5.dp)" not in image_editor and
-        "Modifier.width(5.dp).height(34.dp)" not in image_editor and "fun moveCenter(" in crop_geometry,
-        "V35 free crop movement or invisible resize edges incomplete")
+# V55.14 — به درخواست کاربر، دستگیره‌های «مرئی» ضلع+گوشه برگشتند (نامرئی قابل‌کشف نبود).
+require("CropGeometry.moveCenter(" in image_editor and
+        ".pointerInput(circular)" in image_editor and
+        "CropHandle(CropEdgeKind.TOP_LEFT" in image_editor and
+        "fun moveCenter(" in crop_geometry,
+        "V35/V55.14 free crop movement or visible resize handles incomplete")
 require(all(marker in student_card for marker in (
             "listOf(student.grade, student.fieldOfStudy)",'joinToString(" ")',
             "نام پدر: ${student.fatherName", "نام کاربری: ${student.username"
@@ -1374,6 +1378,14 @@ require("kind !== 'g'" in editor_asset
 require("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt").read_text(),
         "V55.13 periodic touch grid must be forced LTR")
+
+# ---- V55.14: trash delete + cuboid/box split + visible crop handles ----
+require("Icons.Outlined.Delete" in builder_screen and "برای همیشه حذف شود؟" in builder_screen,
+        "V55.14 trash-icon question delete with confirmation is missing")
+require('FigureTemplate("cuboid", "مکعب‌مستطیل"' in
+            (ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt").read_text()
+        and "if (t === 'cuboid') t = 'box';" in editor_asset,
+        "V55.14 cuboid/box identifier split is missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

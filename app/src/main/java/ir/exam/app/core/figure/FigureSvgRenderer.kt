@@ -406,7 +406,9 @@ object FigureSvgRenderer {
                 }
                 html
             }
-            "cube", "box" -> {
+            // V55.14 — مکعب‌مستطیل هندسه اکنون cuboid است؛ «box» به نمودار جعبه‌ای
+            // تعلق دارد (فقط اگر دادهٔ نمودار نداشته باشد به‌عنوان هندسهٔ قدیمی اینجا می‌افتد).
+            "cube", "cuboid", "box" -> {
                 fun iso(x: Float, y: Float, z: Float): Pt = Pt(180f + (x - z) * 0.86f, 168f - y * 0.92f + (x + z) * 0.32f)
                 val l = if (t == "cube") 88f else 108f
                 val w = if (t == "cube") 88f else 70f

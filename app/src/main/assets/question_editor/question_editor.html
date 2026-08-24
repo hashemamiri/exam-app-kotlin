@@ -1343,6 +1343,8 @@ html{background:#eef2f5;color-scheme:light}.final-compact{--bg:#eef2f5;--surface
   function svgOf(spec) {
     spec = spec || {};
     var t = spec.t || 'tri';
+    /* V55.14 — cuboid نام جدید مکعب‌مستطیل هندسه است (box به نمودار جعبه‌ای رفت) */
+    if (t === 'cuboid') t = 'box';
     var V = spec.V || {};
     var S = spec.S || {};
     var Ang = spec.A || {};

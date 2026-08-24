@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.Visibility
@@ -632,6 +633,8 @@ private fun QuestionEditor(
     }
     var dragAccumulator by remember(question.id) { mutableFloatStateOf(0f) }
     var dragActive by remember(question.id) { mutableStateOf(false) }
+    // V55.14 — تأیید حذف سؤال با سطل زبالهٔ کنار بارم.
+    var confirmDelete by remember(question.id) { mutableStateOf(false) }
     // شناسهٔ گزینه‌ای که اکنون در حال درگ است تا کارت همان گزینه رنگی شود.
     var optionDragId by remember(question.id) { mutableStateOf<String?>(null) }
     // همان آستانهٔ مشترک گزینه/جورکردنی تا رفتار جابه‌جایی‌ها یکسان باشد.
@@ -686,6 +689,14 @@ private fun QuestionEditor(
                         viewModel.updateScore(question.id, scoreText)
                     }
                 )
+                // V55.14 — درخواست کاربر: حذف سؤال با آیکن سطل زباله کنار بارم + تأیید.
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(42.dp)) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = "حذف سؤال",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
                 IconButton(
                     onClick = {
                         styleExpanded = !styleExpanded
@@ -948,13 +959,27 @@ private fun QuestionEditor(
             ) {
                 QuestionStyleControls(question, viewModel, onPreview)
             }
+            // V55.14 — «حذف سؤال» متنی حذف شد؛ حذف با سطل زبالهٔ کنار بارم است.
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { viewModel.saveToBank(question.id) }) { Text("ذخیره در بانک") }
-                TextButton(onClick = { viewModel.remove(question.id) }) { Text("حذف سؤال") }
             }
                 }
             }
         }
+    }
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("حذف سؤال") },
+            text = { Text("سؤال ${index + 1} برای همیشه حذف شود؟") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    viewModel.remove(question.id)
+                }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("انصراف") } }
+        )
     }
     formulaTarget?.let { target ->
         // V53.4 — فرمول گزینه/جورکردنی هم با همان پنجرهٔ تمام‌صفحهٔ WebView باز

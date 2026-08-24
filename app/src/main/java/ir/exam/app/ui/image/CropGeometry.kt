@@ -53,13 +53,35 @@ object CropGeometry {
     fun resizeDeltaForEdge(edge: CropEdgeKind, dragDeltaPx: Float): Float = when (edge) {
         CropEdgeKind.LEFT, CropEdgeKind.TOP -> -dragDeltaPx
         CropEdgeKind.RIGHT, CropEdgeKind.BOTTOM -> dragDeltaPx
+        // V55.14 — گوشه‌ها: مؤلفهٔ غالبِ کشش قبلاً به‌صورت جدا (x,y) به
+        // resizeDeltaForCorner داده می‌شود؛ اینجا صدا زده نمی‌شوند.
+        else -> dragDeltaPx
+    }
+
+    /**
+     * V55.14 — کشش از «گوشه»: بردار (dx,dy) به دلتای بزرگ/کوچک‌شدن تبدیل
+     * می‌شود؛ کشیدن به سمت بیرونِ همان گوشه = بزرگ‌شدن.
+     */
+    fun resizeDeltaForCorner(corner: CropEdgeKind, dragXPx: Float, dragYPx: Float): Float {
+        val sx = when (corner) {
+            CropEdgeKind.TOP_LEFT, CropEdgeKind.BOTTOM_LEFT -> -dragXPx
+            CropEdgeKind.TOP_RIGHT, CropEdgeKind.BOTTOM_RIGHT -> dragXPx
+            else -> 0f
+        }
+        val sy = when (corner) {
+            CropEdgeKind.TOP_LEFT, CropEdgeKind.TOP_RIGHT -> -dragYPx
+            CropEdgeKind.BOTTOM_LEFT, CropEdgeKind.BOTTOM_RIGHT -> dragYPx
+            else -> 0f
+        }
+        // مؤلفهٔ بزرگ‌تر تعیین‌کننده است تا حرکت قطری طبیعی حس شود.
+        return if (kotlin.math.abs(sx) >= kotlin.math.abs(sy)) sx else sy
     }
 
     /** تغییر اندازهٔ ضلع؛ delta بر حسب پیکسل و نسبت به ضلع کوتاه نمایشی. */
     fun resizeSide(oldSide: Float, signedDeltaPx: Float, minDimensionPx: Float): Float =
         (oldSide + signedDeltaPx / minDimensionPx).coerceIn(MIN_SIDE, MAX_SIDE)
 
-    /** بعد از تغییر اندازه، مرکز باید جابه‌جا شود تا لبهٔ کشیده‌شده ثابت بماند. */
+    /** بعد از تغییر اندازه، مرکز باید جابه‌جا شود تا لبه/گوشهٔ مقابل ثابت بماند. */
     fun recenterAfterResize(
         edge: CropEdgeKind,
         pixelChangePx: Float,
@@ -75,6 +97,11 @@ object CropGeometry {
             CropEdgeKind.RIGHT -> (centerX + halfX) to centerY
             CropEdgeKind.TOP -> centerX to (centerY - halfY)
             CropEdgeKind.BOTTOM -> centerX to (centerY + halfY)
+            // V55.14 — گوشه‌ها: هر دو محور جابه‌جا می‌شوند تا گوشهٔ مقابل ثابت بماند.
+            CropEdgeKind.TOP_LEFT -> (centerX - halfX) to (centerY - halfY)
+            CropEdgeKind.TOP_RIGHT -> (centerX + halfX) to (centerY - halfY)
+            CropEdgeKind.BOTTOM_LEFT -> (centerX - halfX) to (centerY + halfY)
+            CropEdgeKind.BOTTOM_RIGHT -> (centerX + halfX) to (centerY + halfY)
         }
     }
 
@@ -107,4 +134,8 @@ object CropGeometry {
     }
 }
 
-enum class CropEdgeKind { LEFT, RIGHT, TOP, BOTTOM }
+enum class CropEdgeKind {
+    LEFT, RIGHT, TOP, BOTTOM,
+    // V55.14 — کشش از گوشه‌ها هم ممکن شد.
+    TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
+}

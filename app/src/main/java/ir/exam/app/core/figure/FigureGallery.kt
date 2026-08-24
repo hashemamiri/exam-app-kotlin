@@ -35,7 +35,11 @@ val GEOMETRY_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("hex", "شش‌ضلعی", """{"t":"hex"}"""),
     FigureTemplate("star", "ستاره پنج‌پر", """{"t":"star"}"""),
     FigureTemplate("cube", "مکعب", """{"t":"cube"}"""),
-    FigureTemplate("box", "مکعب‌مستطیل", """{"t":"box"}"""),
+    // V55.14 — رفع تداخل شناسه: «box» هم مکعب‌مستطیل هندسه بود هم نمودار جعبه‌ای؛
+    // چون ChartSvgRenderer در renderBody مقدم است، مکعب‌مستطیل درج‌شده به‌شکل
+    // نمودار جعبه‌ای رندر می‌شد (گزارش دستگاه). شناسهٔ هندسه cuboid شد؛
+    // toSpec این قالب همان t=cuboid را می‌سازد و رندر هندسه هر دو نام را می‌فهمد.
+    FigureTemplate("cuboid", "مکعب‌مستطیل", """{"t":"cuboid"}"""),
     FigureTemplate("cyl", "استوانه", """{"t":"cyl"}"""),
     FigureTemplate("cone", "مخروط", """{"t":"cone"}"""),
     FigureTemplate("sph", "کره", """{"t":"sph"}"""),
