@@ -1283,6 +1283,14 @@ require("FORMULA_BLANK_LAYOUT" in formula_asset and "getBoundingClientRect" in f
 require('Color.parseColor("#E9EEF5")' in formula_host and "Color.TRANSPARENT" not in formula_host,
         "V55.3 formula webview must use an opaque theme background, not transparent")
 
+# ---- V55.4: larger library windows only inside the app ----
+require("nativeLibrarySize" in formula_asset
+        and ".mb-var{min-width:min(340px,88vw) !important" in formula_asset
+        and "width:min(96vw,720px) !important" in formula_asset,
+        "V55.4 in-app library size boost is missing from formula.html")
+require("min-width: 220px; max-width: min(320px, 92vw); max-height: 62vh;" in formula_asset,
+        "V55.4 must not edit the reference library CSS itself (in-app override only)")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
