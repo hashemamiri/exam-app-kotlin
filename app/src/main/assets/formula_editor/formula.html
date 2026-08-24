@@ -14412,6 +14412,107 @@ try {
         (document.head || document.documentElement).appendChild(st);
       } catch (e) {}
     })();
+    /* V55.5 — اجرای «قطعی» اندازهٔ منوی دسته‌ها و پنل کتابخانه با style مستقیم
+       (گزارش دستگاه + عکس N55.4: منوی «اعداد و محاسبات» همچنان نوار باریک
+       یک‌ردیفه بود؛ ارتفاع ردیف ~۲۹px یعنی CSS تزریقی V55.4 روی آن WebView اثر
+       نکرده، درحالی‌که در Chromium همان فایل درست است). Style مستقیم روی خود
+       عنصر از هر cascade/تزریقی قوی‌تر است و به پشتیبانی min()/dvh هم وابسته
+       نیست. اگر باز هم کوچک ماند، MENU_RECT با ابعاد واقعی گزارش می‌شود. */
+    (function nativeMenuEnforce() {
+      try {
+        if (!window.ExamEditorNative) return;
+        if (window.__nativeMenuEnforce) return;
+        window.__nativeMenuEnforce = true;
+        function px(n) { return Math.round(n) + 'px'; }
+        function setImp(el2, map) {
+          for (var k in map) { try { el2.style.setProperty(k, map[k], 'important'); } catch (e) {} }
+        }
+        function enforceMenu(pop) {
+          var vw = window.innerWidth, vh = window.innerHeight;
+          var w = Math.min(480, Math.round(vw * 0.94));
+          var maxH = Math.round(vh * 0.80);
+          setImp(pop, {
+            'box-sizing': 'border-box', 'width': px(w), 'min-width': '0', 'max-width': 'none',
+            'max-height': px(maxH), 'overflow-y': 'auto', 'padding': '12px',
+            'border-radius': '16px', 'z-index': '2147483000', 'visibility': 'visible', 'opacity': '1'
+          });
+          var cats = pop.querySelectorAll('.mbv-cat');
+          for (var i = 0; i < cats.length; i++) {
+            setImp(cats[i], {
+              'display': 'flex', 'align-items': 'center', 'width': '100%',
+              'min-height': '48px', 'padding': '11px 12px', 'font-size': '1.05rem', 'border-radius': '10px'
+            });
+          }
+          var t = pop.querySelector('.mbv-title');
+          if (t) setImp(t, { 'font-size': '.85rem', 'margin-bottom': '10px' });
+          /* وسط‌چین واقعی بر اساس ارتفاع نهایی محتوا */
+          var h = Math.min(pop.scrollHeight + 4, maxH);
+          setImp(pop, {
+            'left': px(Math.max(6, (vw - w) / 2)),
+            'top': px(Math.max(8, (vh - h) / 2 - 30))
+          });
+        }
+        function enforcePanel(pad) {
+          var panel = pad.querySelector('.mb-library-panel');
+          if (!panel) return;
+          var vw = window.innerWidth, vh = window.innerHeight;
+          setImp(panel, {
+            'width': px(Math.min(720, Math.round(vw * 0.96))),
+            'max-width': px(vw - 16),
+            'max-height': px(Math.round(vh * 0.92))
+          });
+        }
+        function report(kind, el2) {
+          try {
+            if (!window.ExamEditorNative || typeof ExamEditorNative.onError !== 'function') return;
+            var r = el2.getBoundingClientRect();
+            if (r.height >= 180 && r.width >= 220) return; /* اندازه سالم است */
+            var c1 = el2.querySelector('.mbv-cat, .mfk');
+            var cr = c1 ? c1.getBoundingClientRect() : null;
+            var ua = ((navigator.userAgent || '').match(/Chrome\/[\d.]+/) || ['Chrome/?'])[0];
+            ExamEditorNative.onError(kind + ' ' + Math.round(r.width) + 'x' + Math.round(r.height)
+              + '@' + Math.round(r.top) + ' kids=' + el2.children.length
+              + ' kid0=' + (cr ? Math.round(cr.width) + 'x' + Math.round(cr.height) : 'null')
+              + ' inner=' + window.innerWidth + 'x' + window.innerHeight + ' ' + ua);
+          } catch (e) {}
+        }
+        /* پاک‌سازی styleهای inline پس از بستن؛ وگرنه منوهای کوچک variants که
+           همین #mbVar را دوباره استفاده می‌کنند بزرگ می‌ماندند. */
+        var SIZE_PROPS = ['box-sizing','width','min-width','max-width','max-height',
+          'overflow-y','padding','border-radius','visibility','opacity'];
+        function unsize(pop) {
+          for (var i = 0; i < SIZE_PROPS.length; i++) {
+            try { pop.style.removeProperty(SIZE_PROPS[i]); } catch (e) {}
+          }
+        }
+        setInterval(function () {
+          try {
+            var pop = document.getElementById('mbVar');
+            if (pop) {
+              if (!pop.classList.contains('open')) {
+                if (pop.__nativeSized) { pop.__nativeSized = false; unsize(pop); }
+              }
+              else if (pop.querySelector('.mbv-cat') && !pop.__nativeSized) {
+                /* فقط منوی انتخاب دسته؛ منوهای کوچک variants (mbv-i) دست‌نخورده */
+                pop.__nativeSized = true;
+                enforceMenu(pop);
+                setTimeout(function () { if (pop.classList.contains('open')) report('MENU_RECT', pop); }, 500);
+              }
+            }
+            var pad = document.getElementById('mfPad');
+            if (pad) {
+              if (!pad.classList.contains('mb-library-open')) { pad.__nativeSized = false; }
+              else if (!pad.__nativeSized) {
+                pad.__nativeSized = true;
+                enforcePanel(pad);
+                var panel = pad.querySelector('.mb-library-panel');
+                if (panel) setTimeout(function () { if (pad.classList.contains('mb-library-open')) report('PANEL_RECT', panel); }, 500);
+              }
+            }
+          } catch (e) {}
+        }, 250);
+      } catch (e) {}
+    })();
     /* V55.3 — اندازه‌گیری واقعی layout پس از باز شدن مودال: اگر بازهم چیزی
        دیده نشد، به‌جای حدس، ابعاد/مختصات واقعی + نسخهٔ Chrome دستگاه گزارش شود. */
     function rectOf(id) {
@@ -14477,7 +14578,7 @@ try {
           if (document.getElementById('nativeBridgeTag') || !document.body) return;
           var bt = document.createElement('div');
           bt.id = 'nativeBridgeTag';
-          bt.textContent = 'N55.4';
+          bt.textContent = 'N55.5';
           bt.setAttribute('style', 'position:fixed;right:8px;bottom:8px;z-index:2147483600;direction:ltr;'
             + 'font:11px/1.5 monospace;color:#2f7d5f;background:rgba(255,255,255,.7);'
             + 'border:1px solid rgba(38,49,66,.18);border-radius:7px;padding:1px 7px;'

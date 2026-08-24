@@ -1291,6 +1291,14 @@ require("nativeLibrarySize" in formula_asset
 require("min-width: 220px; max-width: min(320px, 92vw); max-height: 62vh;" in formula_asset,
         "V55.4 must not edit the reference library CSS itself (in-app override only)")
 
+# ---- V55.5: inline-style enforcement for the category menu / library panel ----
+require("nativeMenuEnforce" in formula_asset
+        and "setProperty(k, map[k], 'important')" in formula_asset
+        and "MENU_RECT" in formula_asset and "PANEL_RECT" in formula_asset,
+        "V55.5 inline menu-size enforcement or its diagnostics are missing")
+require("unsize(pop)" in formula_asset,
+        "V55.5 must restore reference sizes for small variant menus after close")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
