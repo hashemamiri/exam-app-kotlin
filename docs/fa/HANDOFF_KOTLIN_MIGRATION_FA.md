@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.5 رفع boot نشدن ویرایشگر فرمول (ناوبری iframe) و تشخیص امن خطای JS؛ پیش از آن: V54.4 (ظاهر مرجع کادر متن تأیید دستگاه)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.6 رفع بازگشت بی‌نهایت پل exam-editor-bridge (Maximum call stack)؛ پیش از آن: V54.5 (تشخیص خطای واقعی JS روی دستگاه موفق بود)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6220,6 +6220,60 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 کد مرجع HTML: دست‌نخورده؛ فقط بلوک پل افزوده
 پیش‌نیاز: V54.4
+FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
+testDebugUnitTest / lintDebug → باید در CI اجرا شود
+```
+
+
+## ۱۳۷) V54.6 — رفع بازگشت بی‌نهایت پل exam-editor-bridge
+
+### گزارش واقعی دستگاه (اسکرین‌شات پس از V54.5)
+
+```text
+پنجرهٔ فرمول باز می‌شود اما به‌جای ویرایشگر، صفحهٔ متن سؤال دیده می‌شود و
+پایین صفحه پیام تشخیصی جدید V54.5 خطای واقعی را نشان می‌دهد:
+CONSOLE: Uncaught RangeError: Maximum call stack size exceeded
+```
+
+یعنی زیرساخت تشخیص V54.5 دقیقاً کار خودش را کرد و خطای واقعی را آشکار کرد.
+
+### علت قطعی
+
+زنجیرهٔ بازگشت بی‌نهایت در پل «افزودهٔ» exam-editor-bridge (از دورهٔ V45.4؛
+کد مرجع سالم است):
+
+```text
+input روی qTxt_main
+→ listener پل: emit()
+→ value(): QMF.syncFromSurface(t)
+→ writeSrc مرجع: dispatchEvent('input')   ← رویداد مصنوعی
+→ دوباره listener پل: emit() → ... تا سقف پشته
+```
+
+در صفحهٔ formulaHost که begin() بلافاصله رویداد input واقعی می‌فرستد، این
+چرخه فوراً منفجر می‌شد و کل JS صفحه — از جمله boot ویرایشگر فرمول — می‌مرد.
+در حالت کادر کوچک متن سؤال هم همین چرخه با هر تایپ در کمین بود.
+
+### اصلاح (فقط در بلوک افزودهٔ پل؛ کد مرجع دست‌نخورده)
+
+```text
+۱) قفل reentry برای emit (var emitting)
+۲) احترام به پرچم مرجع _qmfFromSurface: در رویداد مصنوعی writeSrc دوباره
+   syncFromSurface صدا نمی‌شود؛ مقدار همان لحظه گزارش می‌شود
+۳) حذف qMathSync تکراری از listener پل (خود مرجع در upgrade به input گوش
+   می‌دهد و رندر می‌کند)
+```
+
+### فایل‌ها و عملیات
+
+```text
+app/src/main/assets/question_editor/question_editor.html   (فقط بلوک پل bridge)
+app/src/main/assets/question_editor/version.txt
+app/src/test/java/ir/exam/app/ui/app/V54_6BridgeRecursionFixTest.kt (جدید)
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V54.5
 FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
 testDebugUnitTest / lintDebug → باید در CI اجرا شود
 ```

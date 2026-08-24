@@ -9572,13 +9572,25 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
 </script>
 
 <script id="exam-editor-bridge">
-  /* پل ارتباطی WebView <-> Kotlin (افزودهٔ Native؛ هیچ کد مرجع تغییر نکرده است) */
+  /* پل ارتباطی WebView <-> Kotlin (افزودهٔ Native؛ هیچ کد مرجع تغییر نکرده است).
+     V54.6 — رفع بازگشت بی‌نهایت: emit → syncFromSurface → writeSrc →
+     dispatch('input') → دوباره listener → emit → ... که با
+     «Maximum call stack size exceeded» کل صفحه (و boot ویرایشگر فرمول) را
+     می‌کشت. اکنون:
+     ۱) در رویداد مصنوعی writeSrc (پرچم مرجع _qmfFromSurface) دوباره sync
+        نمی‌کنیم؛ فقط مقدار فعلی گزارش می‌شود؛
+     ۲) قفل reentry برای emit؛
+     ۳) qMathSync داخل listener لازم نیست (خود مرجع در upgrade به input گوش
+        می‌دهد) و حذف آن دوباره‌کاری را هم می‌بندد. */
   (function () {
     function field() { return document.getElementById('qTxt_main'); }
+    var emitting = false;
     function value() {
       var t = field();
       if (!t) return '';
-      try { if (window.QMF && t._qmfSurface) QMF.syncFromSurface(t); } catch (e) {}
+      try {
+        if (window.QMF && t._qmfSurface && !t._qmfFromSurface) QMF.syncFromSurface(t);
+      } catch (e) {}
       return t.value || '';
     }
     function setValue(v) {
@@ -9594,18 +9606,20 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
       focus: function () { var t = field(); if (t) { try { t.focus(); } catch (e) {} } }
     };
     function emit() {
-      var v = value();
+      if (emitting) return;
+      emitting = true;
       try {
+        var v = value();
         if (window.ExamEditorNative && typeof ExamEditorNative.onTextChanged === 'function') {
           ExamEditorNative.onTextChanged(v);
         }
-      } catch (e) {}
+      } catch (e) {} finally { emitting = false; }
     }
     function wire() {
       var t = field();
       if (!t || t.__bridgeWired) return;
       t.__bridgeWired = true;
-      t.addEventListener('input', function () { try { if (typeof qMathSync === 'function') qMathSync(t.id); } catch (e) {} emit(); });
+      t.addEventListener('input', function () { emit(); });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
     else wire();
