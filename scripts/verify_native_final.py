@@ -1299,6 +1299,14 @@ require("nativeMenuEnforce" in formula_asset
 require("unsize(pop)" in formula_asset,
         "V55.5 must restore reference sizes for small variant menus after close")
 
+# ---- V55.6: no on-screen version badges + instant open + formula fit ----
+require("bt.id = 'nativeBridgeTag'" not in formula_asset
+        and "__nativeBridgeVersion" in formula_asset and "hideBadges" in formula_asset,
+        "V55.6 on-screen version badges must be gone (flag + in-app hide only)")
+require("wrapNow('mbGroupLibrary', afterMenu)" in formula_asset
+        and "fitLibraryItems" in formula_asset,
+        "V55.6 instant library enforcement or formula fit is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

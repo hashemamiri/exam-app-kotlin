@@ -137,7 +137,7 @@ fun FormulaHostDialog(
                                                 attempts < 67 -> view.postDelayed({ tryBegin() }, 150)
                                                 // V55.2 — پل هرگز تعریف نشد: خطای صریح به‌جای سکوت.
                                                 else -> post {
-                                                    jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.3 not loaded?)"
+                                                    jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.6 not loaded?)"
                                                     loading = false
                                                 }
                                             }

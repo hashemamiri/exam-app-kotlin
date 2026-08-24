@@ -6746,3 +6746,71 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.4
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۴۶) V55.6 — حذف برچسب‌ها، بازشدن فوری، جاشدن فرمول‌ها در کادر
+
+### گزارش دستگاه (عکس photo_2026-08-24_10-17-31.jpg، N55.5)
+
+```text
+V55.5 موفق: پنل کتابخانه بزرگ و درست باز می‌شود ✅. سه درخواست جدید:
+۱) برچسب N55.5 و «v36 · V34: ✓ 64» حذف شود
+۲) بازشدن پنجره‌های کتابخانه تأخیر دارد
+۳) فرمول‌های پهن (در عکس: دترمینان ۳×۳) از کادر بیرون می‌زنند
+```
+
+### تحویل V55.6 (همه فقط داخل برنامه؛ مرجع در مرورگر دست‌نخورده)
+
+```text
+۱) برچسب‌ها: کد ساخت برچسب سبز N55.x کلاً حذف شد؛ نسخهٔ پل فقط پرچم
+   window.__nativeBridgeVersion='N55.6' (برای پیام‌های خطا). badge مرجع
+   «v36 · V34» با hideBadges فقط وقتی ExamEditorNative هست مخفی می‌شود
+   (display:none important + چند بار retry چون مرجع دیر می‌سازدش).
+۲) تأخیر: علت، polling ۲۵۰ms بود. حالا wrapper مستقیم روی چهار تابع بازکنندهٔ
+   مرجع (mbGroupLibrary/mbOpenSymbolLibrary/mbShowSymbolCategory/
+   mbOpenItemLibrary) enforce را «بلافاصله» اجرا می‌کند (اندازه‌گیری: ~۱۱ms).
+   نصب wrapper دوباره پس از load (کتابخانهٔ V34/Word توابع را بازتعریف می‌کنند).
+   polling ۲۵۰ms به‌عنوان پشتیبان مسیرهای فرعی ماند.
+۳) فرمول‌های پهن: fitLibraryItems پس از هر بازشدن پنل، هر آیتم .mfk که
+   scrollWidth > clientWidth دارد را با گام ×۰.۸۸ (حداکثر ۸ گام، کف 9px)
+   کوچک می‌کند تا کامل جا شود؛ فونت آیتم‌های عادی دست نمی‌خورد.
+version.txt: v55.6-clean-badges-fit | پیام BRIDGE_NOT_READY → asset v55.6
+```
+
+### تست‌ها
+
+```text
+Chromium (playwright):
+- داخل برنامه: هر دو برچسب غایب ✓ · منو فوری (~۱۱ms) با ابعاد کامل ✓ ·
+  ۷ دستهٔ سنگین (ماتریس‌ها/مشتقات/انتگرال‌ها/اتحادهای مثلثاتی/تبدیل‌ها/اتحادها):
+  صفر آیتم سرریز؛ دترمینان ۳×۳ با فونت جمع‌شده داخل کادر ✓ (اسکرین‌شات) ·
+  جریان کامل درج نماد پس از کتابخانه سالم ✓
+- مرورگر عادی (بدون پل): badge مرجع نمایان (block)، منو اندازهٔ مرجع،
+  enforce نصب نشده ✓ — یعنی فایل برای استفادهٔ مستقل تغییری نکرده.
+تست منبع جدید: V55_6CleanBadgesFitTest (۳ تست) · V55_2 test هماهنگ شد
+(برچسب → پرچم نسخه + hideBadges؛ دقت: bt.textContent مرجعِ badge خودش می‌ماند،
+پس needle حذف باید «bt.id = 'nativeBridgeTag'» باشد نه bt.textContent).
+verify: دو require جدید V55.6 · اسکن سراسری ۶۳ needle در ۲۱ تست + ده چک
+بلوک‌محور → صفر mismatch · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+(برچسبی دیگر روی صفحه نیست؛ نسخه را از این پس از پیام‌های خطا یا
+version.txt داخل APK تشخیص می‌دهیم)
+۱) پایین صفحه هیچ برچسبی نباشد
+۲) «اعداد و محاسبات» → منو باید بدون مکث محسوس بزرگ باز شود
+۳) دسته «ماتریس/دترمینان» → فرمول دترمینان ۳×۳ باید کامل داخل کادر باشد
+```
+
+### عملیات
+
+```text
+فایل‌ها: formula.html (hideBadges + wrappers فوری + fitLibraryItems؛ حذف
+tagBridge) / version.txt / FormulaHostDialog.kt (پیام v55.6) /
+V55_6CleanBadgesFitTest.kt (جدید) / V55_2 test هماهنگ / verify (۲ require) /
+changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.5
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

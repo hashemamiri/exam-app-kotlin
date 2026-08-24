@@ -14461,7 +14461,67 @@ try {
             'max-width': px(vw - 16),
             'max-height': px(Math.round(vh * 0.92))
           });
+          fitLibraryItems(pad);
         }
+        /* V55.6 — درخواست کاربر (عکس N55.5: دترمینان ۳×۳ از کادر بیرون زد):
+           هر فرمولی که پهن‌تر از کادر خودش است، فونت پیش‌نمایشش گام‌به‌گام
+           کوچک می‌شود تا کامل داخل کادر جا شود (حداقل 9px). */
+        function fitLibraryItems(pad) {
+          try {
+            var items = pad.querySelectorAll('.mfk');
+            for (var i = 0; i < items.length; i++) {
+              var b = items[i];
+              var p = b.querySelector('.mfk-p') || b;
+              try { p.style.removeProperty('font-size'); } catch (e) {}
+              setImp(b, { 'max-width': '100%', 'overflow': 'hidden' });
+              var guard = 0;
+              while (guard++ < 8 && b.scrollWidth > b.clientWidth + 1) {
+                var cur = parseFloat(getComputedStyle(p).fontSize) || 16;
+                if (cur <= 9) break;
+                try { p.style.setProperty('font-size', (cur * 0.88).toFixed(1) + 'px', 'important'); } catch (e) {}
+              }
+            }
+          } catch (e) {}
+        }
+        /* V55.6 — رفع تأخیر بازشدن: به‌جای انتظار برای polling، بلافاصله پس از
+           خودِ توابع بازکنندهٔ مرجع اجرا می‌شویم. polling پایین فقط پشتیبان
+           مسیرهای فرعی می‌ماند. */
+        function afterMenu() {
+          var pop = document.getElementById('mbVar');
+          if (pop && pop.classList.contains('open') && pop.querySelector('.mbv-cat')) {
+            pop.__nativeSized = true;
+            enforceMenu(pop);
+          }
+        }
+        function afterPanel() {
+          var pad = document.getElementById('mfPad');
+          if (pad && pad.classList.contains('mb-library-open')) {
+            pad.__nativeSized = true;
+            enforcePanel(pad);
+          }
+        }
+        function wrapNow(name, after) {
+          try {
+            var fn = window[name];
+            if (typeof fn !== 'function' || fn.__nativeWrapped2) return;
+            var w2 = function () {
+              var r = fn.apply(window, arguments);
+              try { after(); } catch (e) {}
+              return r;
+            };
+            w2.__nativeWrapped2 = true;
+            window[name] = w2;
+          } catch (e) {}
+        }
+        function installWrappers() {
+          wrapNow('mbGroupLibrary', afterMenu);
+          wrapNow('mbOpenSymbolLibrary', afterMenu);
+          wrapNow('mbShowSymbolCategory', afterPanel);
+          wrapNow('mbOpenItemLibrary', afterPanel);
+        }
+        installWrappers();
+        /* برخی توابع بعداً (کتابخانهٔ V34/Word) دوباره روی window ست می‌شوند. */
+        window.addEventListener('load', function () { setTimeout(installWrappers, 200); });
         function report(kind, el2) {
           try {
             if (!window.ExamEditorNative || typeof ExamEditorNative.onError !== 'function') return;
@@ -14571,24 +14631,26 @@ try {
     };
     /* Kotlin برای اطمینان از آماده‌بودن پل، این پرچم را می‌خواند. */
     window.__examFormulaHostReady = true;
-    /* V55.2 — برچسب نسخهٔ پل کنار badge مرجع تا نسخهٔ asset روی دستگاه قطعی شود. */
-    (function tagBridge() {
-      function put() {
+    /* V55.6 — درخواست کاربر: هیچ برچسب نسخه‌ای روی صفحه نباشد (نقش تشخیصی
+       N55.x تمام شد). نسخهٔ پل از این پس فقط در پرچم زیر است و Kotlin در
+       پیام‌های خطا از آن استفاده می‌کند؛ badge مرجع (v36 · V34) هم فقط داخل
+       برنامه مخفی می‌شود — فایل در مرورگر عادی دست‌نخورده است. */
+    window.__nativeBridgeVersion = 'N55.6';
+    (function hideBadges() {
+      function hide() {
         try {
-          if (document.getElementById('nativeBridgeTag') || !document.body) return;
-          var bt = document.createElement('div');
-          bt.id = 'nativeBridgeTag';
-          bt.textContent = 'N55.5';
-          bt.setAttribute('style', 'position:fixed;right:8px;bottom:8px;z-index:2147483600;direction:ltr;'
-            + 'font:11px/1.5 monospace;color:#2f7d5f;background:rgba(255,255,255,.7);'
-            + 'border:1px solid rgba(38,49,66,.18);border-radius:7px;padding:1px 7px;'
-            + 'pointer-events:none;user-select:none;');
-          document.body.appendChild(bt);
+          if (!window.ExamEditorNative) return;
+          var bt = document.getElementById('nativeBridgeTag');
+          if (bt) bt.remove();
+          var hb = document.getElementById('hostBuildTag');
+          if (hb) hb.style.setProperty('display', 'none', 'important');
         } catch (e) {}
       }
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put);
-      else put();
-      setTimeout(put, 800);
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hide);
+      else hide();
+      /* badge مرجع دیر ساخته می‌شود (setTimeout مرجع)؛ چند بار چک می‌کنیم. */
+      var n = 0;
+      var t = setInterval(function () { hide(); if (++n > 12) clearInterval(t); }, 400);
     })();
     /* خنثی‌سازی «بازگشایی خودکار» مرجع: آخرین override زنجیرهٔ closeMath
        می‌شویم؛ بستن واقعی انجام می‌شود ولی به‌جای bootOpen دوباره، نتیجه به

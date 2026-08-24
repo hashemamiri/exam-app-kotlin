@@ -27,9 +27,14 @@ class V55_2BridgeDiagnosticsTest {
 
     @Test
     fun `bridge version tag is visible on device`() {
-        assertTrue("nativeBridgeTag" in asset)
-        // V55.3 — متن برچسب با هر نسخهٔ پل جلو می‌رود؛ الگوی N<major>.<minor> کافی است.
-        assertTrue(Regex("""bt\.textContent = 'N\d+\.\d+'""").containsMatchIn(asset))
+        // V55.6 — درخواست کاربر: برچسب روی صفحه حذف شد؛ نسخهٔ پل اکنون فقط
+        // پرچم JS است (نقش تشخیصی حفظ شده، نمایش حذف شده). badge مرجع هم فقط
+        // داخل برنامه مخفی می‌شود.
+        assertTrue(Regex("""__nativeBridgeVersion = 'N\d+\.\d+'""").containsMatchIn(asset))
+        assertTrue("hideBadges" in asset)
+        // کد «ساخت» برچسب سبز باید حذف شده باشد (فقط remove آن مانده)؛
+        // bt.textContent مرجع (badge v36·V34) سر جای خودش است و دست نمی‌خورد.
+        assertTrue("bt.id = 'nativeBridgeTag'" !in asset)
     }
 
     @Test
