@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -58,9 +59,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
@@ -166,6 +169,10 @@ fun InteractiveImageEditorDialog(
                     }
                 }
 
+                // V55.17 — گزارش دستگاه: «حرکت آزادانه در جهت مخالف». برنامه RTL است و
+                // Modifier.offset(x) جهت‌آگاه است (در RTL مثبت x به چپ اعمال می‌شود)؛
+                // محاسبات کادر برش برای LTR نوشته شده‌اند؛ کل بوم برش LTR اجباری می‌شود.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 BoxWithConstraints(
                     Modifier
                         .fillMaxWidth()
@@ -268,6 +275,7 @@ fun InteractiveImageEditorDialog(
                             }
                         )
                     }
+                }
                 }
 
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

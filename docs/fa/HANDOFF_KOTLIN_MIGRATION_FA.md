@@ -7644,3 +7644,68 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.15
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۵۹) V55.17 — آیکن بانک، تراشهٔ نمایش توکن‌ها، رفع حرکت معکوس برش
+
+### گزارش دستگاه (عکس photo_2026-08-24_20-38-47.jpg — V55.16 روی دستگاه است)
+
+```text
+۱) «دکمهٔ ذخیره در بانک حذف؛ کنار سطل زباله آیکن ذخیره در بانک»
+۲) «با درج چیز در گزینه‌ها، کادر متن گزینه پر از کد می‌شود» (عکس: JSON خام
+   توکن %%FIG%% داخل کادر گزینهٔ الف؛ پیش‌نمایش زیر آن درست است)
+۳) «حرکت آزادانهٔ مربع برش در جهت مخالف حرکت می‌کند»
+```
+
+### تشخیص و تحویل
+
+```text
+۱) OutlinedButton متنی «ذخیره در بانک» حذف؛ IconButton با
+   Icons.Outlined.BookmarkAdd (رنگ primary) کنار سطل زباله در ردیف بارم.
+   (هیچ تست/verify به دکمهٔ متنی وابسته نبود؛ آیکن‌های extended موجودند.)
+۲) طراحی: مقدار واقعی فیلد همان توکن می‌ماند (منبع حقیقت). فایل جدید
+   FigTokenVisuals.kt: VisualTransformation که هر %%FIG:{json}%% را در
+   «نمایش» به تراشهٔ ⟦نوع⟧ (جدول/جدول تناوبی/آناتومی/فیزیک-شیمی/عنوان نمودار)
+   با رنگ primary تبدیل می‌کند؛ نگاشت offset اتمی: caret داخل توکن به مرز
+   انتهای تراشه می‌چسبد؛ یکنواختی نگاشت با شبیه‌سازی python و «تست اجرایی
+   JVM واقعی» (filter + originalToTransformed/transformedToOriginal روی
+   متن دو-توکنه) اثبات شد. به سه کادر (گزینه + راست/چپ جورکردنی) وصل شد.
+۳) ریشه: برنامه RTL است و Modifier.offset «جهت‌آگاه» است — x مثبت در RTL به
+   چپ اعمال می‌شود؛ هندسهٔ برش (frameLeft/moveCenter) برای LTR نوشته شده.
+   کل بوم برش (BoxWithConstraints تا CropFrame) داخل
+   CompositionLocalProvider(LayoutDirection.Ltr) پیچیده شد؛ همان الگوی
+   V55.13 جدول تناوبی. (drag.x خام لمس بود و درست؛ فقط اعمال offset آینه می‌شد.)
+```
+
+### تست‌ها
+
+```text
+جدید: V55_17BankIconChipRtlCropTest (۴ تست؛ شامل تست اجرایی JVM یکنواختی
+نگاشت تراشه) · verify: ۳ require جدید V55.17 · شبیه‌سازی ۸ چک دقیق + اسکن
+سراسری ۵۴۲ needle → صفر mismatch · تراز آکولاد (بدون رشته/کامنت) صفر ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+یادآوری: تست‌های JVM از androidx.compose.ui.text استفاده می‌کنند (مثل
+سایر تست‌ها که کلاس‌های Compose را import می‌کنند؛ unit test با کلاس‌های
+JVMِ کتابخانهٔ ui-text مشکلی ندارد).
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) ردیف بارم: آیکن بانک (نشان + بوک‌مارک) کنار سطل زباله؛ لمس → سؤال در
+   بانک ذخیره شود (دکمهٔ متنی پایین کارت دیگر نیست)
+۲) درج جدول/آناتومی در گزینه → داخل کادر فقط «⟦جدول⟧/⟦آناتومی⟧» رنگی دیده
+   شود نه JSON؛ پیش‌نمایش واقعی زیر کادر بماند؛ تایپ قبل/بعد تراشه سالم
+۳) ویرایش تصویر → برش: کادر دقیقاً هم‌جهت انگشت حرکت کند
+```
+
+### عملیات
+
+```text
+فایل‌ها: ExamBuilderScreen.kt (آیکن بانک + حذف دکمهٔ متنی + vt گزینه) /
+QuestionOptionMedia.kt (vt جورکردنی) / FigTokenVisuals.kt (جدید) /
+InteractiveImageEditorDialog.kt (بوم LTR) / V55_17BankIconChipRtlCropTest.kt
+(جدید) / verify (۳ require) / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.16
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

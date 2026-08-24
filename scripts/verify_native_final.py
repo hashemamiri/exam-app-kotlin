@@ -1409,6 +1409,16 @@ require("fun appendTokenToField(ref: InsertMenuRef, spec: FigureSpec)" in builde
         and 'shape = RoundedCornerShape(14.dp)' in matching_builder,
         "V55.16 field-token delivery or question-box-like styling is missing")
 
+# ---- V55.17: bank icon, chip display for FIG tokens, LTR crop canvas ----
+require("Icons.Outlined.BookmarkAdd" in builder_screen
+        and "OutlinedButton(onClick = { viewModel.saveToBank" not in builder_screen,
+        "V55.17 bank-save icon next to the trash icon is missing")
+require("FigTokenVisuals.transformation" in builder_screen
+        and matching_builder.count("FigTokenVisuals.transformation") == 2,
+        "V55.17 chip display for FIG tokens is missing from option/matching fields")
+require("LocalLayoutDirection provides LayoutDirection.Ltr" in image_editor,
+        "V55.17 crop canvas must be forced LTR so dragging follows the finger")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

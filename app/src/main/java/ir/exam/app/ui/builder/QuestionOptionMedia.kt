@@ -341,6 +341,8 @@ fun MatchingQuestionEditor(
                         { viewModel.updateMatchingText(question.id, "right", index, it) },
                         placeholder = { Text("متن $label") },
                         shape = RoundedCornerShape(14.dp),
+                        // V55.17 — توکن‌های %%FIG%% به تراشهٔ کوتاه ⟦نوع⟧ نمایش داده می‌شوند.
+                        visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
                         modifier = Modifier.fillMaxWidth()
                     )
                     if ('$' in value || "%%FIG:" in value) NativeMathText(value)
@@ -401,6 +403,8 @@ fun MatchingQuestionEditor(
                         { viewModel.updateMatchingText(question.id, "left", index, it) },
                         placeholder = { Text("متن مورد $label") },
                         shape = RoundedCornerShape(14.dp),
+                        // V55.17 — توکن‌های %%FIG%% به تراشهٔ کوتاه ⟦نوع⟧ نمایش داده می‌شوند.
+                        visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
                         modifier = Modifier.fillMaxWidth()
                     )
                     if ('$' in value || "%%FIG:" in value) NativeMathText(value)

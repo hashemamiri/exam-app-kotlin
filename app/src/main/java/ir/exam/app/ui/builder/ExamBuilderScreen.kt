@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Visibility
@@ -700,6 +701,14 @@ private fun QuestionEditor(
                         viewModel.updateScore(question.id, scoreText)
                     }
                 )
+                // V55.17 — درخواست کاربر: ذخیره در بانک با آیکن کنار سطل زباله.
+                IconButton(onClick = { viewModel.saveToBank(question.id) }, modifier = Modifier.size(42.dp)) {
+                    Icon(
+                        Icons.Outlined.BookmarkAdd,
+                        contentDescription = "ذخیره سؤال در بانک",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
                 // V55.14 — درخواست کاربر: حذف سؤال با آیکن سطل زباله کنار بارم + تأیید.
                 IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(42.dp)) {
                     Icon(
@@ -910,6 +919,9 @@ private fun QuestionEditor(
                                     onValueChange = { viewModel.updateOption(question.id, index, it) },
                                     placeholder = { Text("متن $optionLabel") },
                                     shape = RoundedCornerShape(14.dp),
+                                    // V55.17 — توکن‌های %%FIG%% داخل کادر به تراشهٔ کوتاه ⟦نوع⟧
+                                    // نمایش داده می‌شوند؛ مقدار واقعی دست نمی‌خورد.
+                                    visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 if ('$' in option || "%%FIG:" in option) NativeMathText(option)
@@ -976,10 +988,8 @@ private fun QuestionEditor(
             ) {
                 QuestionStyleControls(question, viewModel, onPreview)
             }
-            // V55.14 — «حذف سؤال» متنی حذف شد؛ حذف با سطل زبالهٔ کنار بارم است.
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { viewModel.saveToBank(question.id) }) { Text("ذخیره در بانک") }
-            }
+            // V55.14/V55.17 — «حذف سؤال» و «ذخیره در بانک» متنی حذف شدند؛ هر دو
+            // اکنون آیکن‌های کنار بارم روی سربرگ کارت سؤال هستند.
                 }
             }
         }
