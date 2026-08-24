@@ -1,6 +1,5 @@
 package ir.exam.app.ui.figure
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -15,14 +14,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +51,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import ir.exam.app.core.figure.AtlasCatalog
@@ -65,11 +69,88 @@ import ir.exam.app.core.figure.FigureSpec
  * - برچسب اختیاری هر نشانه + سوییچ‌های عنوان/جای پاسخ/نمایش نام‌ها؛
  * - خروجی همان `{k, t, X:{title, lab, blank, mkName, marks[]}}` مرجع.
  */
+/**
+ * V55.12 — مرحلهٔ اول (درخواست کاربر: مثل «درج شکل»): پنجرهٔ انتخاب نوع
+ * آناتومی/فیزیک/شیمی با دسته‌ها؛ با انتخاب نوع، پنجرهٔ ویرایش باز می‌شود و
+ * دیگر داخل ویرایش، انتخاب نوع نمایش داده نمی‌شود.
+ */
+@Composable
+fun AtlasTypePickerDialog(
+    kind: String, // "a" | "s"
+    domain: String = "phys",
+    onDismiss: () -> Unit,
+    onTypeSelected: (String) -> Unit
+) {
+    val isAnatomy = kind == "a"
+    val allTypes = if (isAnatomy) AtlasCatalog.ANATOMY_TYPES else AtlasCatalog.SCIENCE_TYPES
+    val cats = when {
+        isAnatomy -> AtlasCatalog.ANATOMY_CATS
+        domain == "chem" -> AtlasCatalog.CHEM_CATS
+        else -> AtlasCatalog.PHYS_CATS
+    }
+    val domainTypes = if (isAnatomy) allTypes else allTypes.filter {
+        AtlasCatalog.scienceDomain(it.id) == domain
+    }
+    var category by remember { mutableStateOf("all") }
+    val pickerTitle = when {
+        isAnatomy -> "آناتومی بدن انسان"
+        domain == "chem" -> "شیمی"
+        else -> "فیزیک"
+    }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("درج $pickerTitle", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismiss) { Text("✕") }
+                }
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    cats.forEach { cat ->
+                        FilterChip(
+                            selected = category == cat.id,
+                            onClick = { category = cat.id },
+                            label = { Text(cat.name) }
+                        )
+                    }
+                }
+                val visible = domainTypes.filter { category == "all" || it.cat == category }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(visible, key = { it.id }) { t ->
+                        Card(Modifier.fillMaxWidth().clickable { onTypeSelected(t.id) }) {
+                            Column(
+                                Modifier.fillMaxWidth().padding(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                AtlasThumb(kind, t.id, Modifier.fillMaxWidth().height(96.dp))
+                                Text(t.name, style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun AtlasEditorDialog(
     kind: String, // "a" | "s"
     domain: String = "phys", // فقط برای k='s': "phys" | "chem"
     initialSpec: FigureSpec? = null,
+    // V55.12 — نوعِ ازپیش‌انتخاب‌شده در پنجرهٔ اول؛ ویرایش، انتخاب نوع ندارد.
+    presetType: String? = null,
     onDismiss: () -> Unit,
     onInsert: (FigureSpec) -> Unit
 ) {
@@ -80,23 +161,15 @@ fun AtlasEditorDialog(
         initialSpec != null -> AtlasCatalog.scienceDomain(initialSpec.type)
         else -> domain
     }
-    val cats = when {
-        isAnatomy -> AtlasCatalog.ANATOMY_CATS
-        effectiveDomain == "chem" -> AtlasCatalog.CHEM_CATS
-        else -> AtlasCatalog.PHYS_CATS
-    }
-    val domainTypes = if (isAnatomy) allTypes else allTypes.filter {
-        AtlasCatalog.scienceDomain(it.id) == effectiveDomain
-    }
     val defaultType = when {
         initialSpec != null -> initialSpec.type
+        presetType != null -> presetType
         isAnatomy -> "bodyF"
         effectiveDomain == "chem" -> "beak"
         else -> "cSim"
     }
 
-    var typeId by remember { mutableStateOf(defaultType) }
-    var category by remember { mutableStateOf("all") }
+    val typeId by remember { mutableStateOf(defaultType) }
     var title by remember {
         mutableStateOf(
             initialSpec?.xStr("title")
@@ -138,50 +211,8 @@ fun AtlasEditorDialog(
                 Modifier.fillMaxWidth().heightIn(max = 580.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // دسته‌ها
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    cats.forEach { cat ->
-                        FilterChip(
-                            selected = category == cat.id,
-                            onClick = { category = cat.id },
-                            label = { Text(cat.name) }
-                        )
-                    }
-                }
-                // انواع دستهٔ انتخابی
-                val visible = domainTypes.filter { category == "all" || it.cat == category }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(visible, key = { it.id }) { t ->
-                        val selected = typeId == t.id
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            border = if (selected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
-                            modifier = Modifier.clickable {
-                                typeId = t.id
-                                if (title.isBlank() || allTypes.any { it.name == title.trim() }) title = t.name
-                                marks = emptyList()
-                            }
-                        ) {
-                            Column(
-                                Modifier.padding(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                AtlasThumb(kind, t.id)
-                                Text(
-                                    t.name,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (selected) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
+                // V55.12 — انتخاب نوع در پنجرهٔ اول (AtlasTypePickerDialog) انجام
+                // شده است؛ اینجا فقط ویرایش همان نوع.
                 // کپشن آموزشی آناتومی
                 if (isAnatomy) {
                     AtlasCatalog.anatomyType(typeId)?.caption?.takeIf { it.isNotBlank() }?.let {
@@ -216,36 +247,40 @@ fun AtlasEditorDialog(
                     marks = marks,
                     onAddMark = { mark -> if (marks.size < 12) marks = marks + mark }
                 )
-                // فهرست نشانه‌ها با برچسب و حذف
-                marks.sortedBy { it.n }.forEach { mark ->
+                // V55.12 — درخواست کاربر: کادرهای برچسب تصاویر نمایش داده نشود؛
+                // فقط ردیف فشردهٔ شماره + دکمهٔ حذف هر نشانه.
+                if (marks.isNotEmpty()) {
                     Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            AtlasMarkPainter.faNum(mark.n) + ")",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        OutlinedTextField(
-                            value = mark.label,
-                            onValueChange = { newLabel ->
-                                marks = marks.map { if (it.n == mark.n) it.copy(label = newLabel) else it }
-                            },
-                            placeholder = { Text("برچسب/پاسخ نشانه ${AtlasMarkPainter.faNum(mark.n)}") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        IconButton(
-                            onClick = { marks = marks.filterNot { it.n == mark.n } },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Icon(
-                                Icons.Outlined.Close,
-                                contentDescription = "حذف نشانه ${AtlasMarkPainter.faNum(mark.n)}",
-                                modifier = Modifier.size(17.dp),
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                        marks.sortedBy { it.n }.forEach { mark ->
+                            Surface(
+                                shape = RoundedCornerShape(9.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            ) {
+                                Row(
+                                    Modifier.padding(start = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        AtlasMarkPainter.faNum(mark.n),
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                    IconButton(
+                                        onClick = { marks = marks.filterNot { it.n == mark.n } },
+                                        modifier = Modifier.size(30.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.Close,
+                                            contentDescription = "حذف نشانه ${AtlasMarkPainter.faNum(mark.n)}",
+                                            modifier = Modifier.size(15.dp),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -268,7 +303,7 @@ internal fun nextMarkNumber(marks: List<AtlasMark>): Int {
 }
 
 @Composable
-private fun AtlasThumb(kind: String, typeId: String) {
+private fun AtlasThumb(kind: String, typeId: String, modifier: Modifier = Modifier.size(52.dp)) {
     val context = LocalContext.current
     val path = AtlasCatalog.assetPath(
         FigureSpec.buildAtlas(kind, typeId, "", showLabel = false, showBlanks = false, showMarkNames = false, marks = emptyList())
@@ -279,8 +314,8 @@ private fun AtlasThumb(kind: String, typeId: String) {
             .crossfade(false)
             .build(),
         contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.size(52.dp)
+        contentScale = ContentScale.Fit,
+        modifier = modifier
     )
 }
 
@@ -359,9 +394,10 @@ private fun MarkingCanvas(
                     )
                 }
                 if (n != null) {
+                    // V55.12 — درخواست کاربر: شماره در «انتهای» پیکان (کنار سر فلش).
                     val radius = size.minDimension * 0.040f
-                    drawCircle(color, radius, start)
-                    drawCircle(Color.White, radius * 0.78f, start)
+                    drawCircle(color, radius, end)
+                    drawCircle(Color.White, radius * 0.78f, end)
                     drawContext.canvas.nativeCanvas.apply {
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                             this.color = android.graphics.Color.parseColor("#C23B17")
@@ -369,7 +405,7 @@ private fun MarkingCanvas(
                             textAlign = android.graphics.Paint.Align.CENTER
                             isFakeBoldText = true
                         }
-                        drawText(AtlasMarkPainter.faNum(n), start.x, start.y + radius * 0.40f, paint)
+                        drawText(AtlasMarkPainter.faNum(n), end.x, end.y + radius * 0.40f, paint)
                     }
                 }
             }

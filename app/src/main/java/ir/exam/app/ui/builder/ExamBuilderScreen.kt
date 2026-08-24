@@ -101,6 +101,7 @@ import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.ui.math.FormulaEditorDialog
 import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.ui.figure.AtlasEditorDialog
+import ir.exam.app.ui.figure.AtlasTypePickerDialog
 import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.FormulaHostDialog
@@ -578,11 +579,14 @@ private data class TableTarget(
     val initialSpec: FigureSpec? = null
 )
 
-/** V53.3 — هدف ویرایشگر Native آناتومی/فیزیک/شیمی. */
+/** V53.3 — هدف ویرایشگر Native آناتومی/فیزیک/شیمی.
+ *  V55.12 — chooseType: مثل «درج شکل» اول پنجرهٔ انتخاب نوع باز می‌شود. */
 private data class AtlasTarget(
     val kind: String, // "a" | "s"
     val domain: String = "phys", // فقط برای k='s'
-    val initialSpec: FigureSpec? = null
+    val initialSpec: FigureSpec? = null,
+    val chooseType: Boolean = false,
+    val presetType: String? = null
 )
 
 /** V53.4 — متن و محدودهٔ انتخاب برای پنجرهٔ تمام‌صفحهٔ فرمول WebView. */
@@ -749,9 +753,9 @@ private fun QuestionEditor(
                 },
                 onInsertTable = { tableTarget = TableTarget() },
                 onInsertPeriodic = { periodicTarget = TableTarget() },
-                onInsertAnatomy = { atlasTarget = AtlasTarget(kind = "a") },
-                onInsertPhysics = { atlasTarget = AtlasTarget(kind = "s", domain = "phys") },
-                onInsertChemistry = { atlasTarget = AtlasTarget(kind = "s", domain = "chem") },
+                onInsertAnatomy = { atlasTarget = AtlasTarget(kind = "a", chooseType = true) },
+                onInsertPhysics = { atlasTarget = AtlasTarget(kind = "s", domain = "phys", chooseType = true) },
+                onInsertChemistry = { atlasTarget = AtlasTarget(kind = "s", domain = "chem", chooseType = true) },
                 onOpenFormula = { text, selStart, selEnd ->
                     formulaHost = FormulaHostTarget(text, selStart, selEnd)
                 },
@@ -1058,16 +1062,29 @@ private fun QuestionEditor(
         )
     }
     atlasTarget?.let { target ->
-        AtlasEditorDialog(
-            kind = target.kind,
-            domain = target.domain,
-            initialSpec = target.initialSpec,
-            onDismiss = { cancelFigureEditing(); atlasTarget = null },
-            onInsert = { spec ->
-                deliverFigure(spec, null)
-                atlasTarget = null
-            }
-        )
+        if (target.chooseType) {
+            // V55.12 — مثل «درج شکل»: اول انتخاب نوع، بعد پنجرهٔ ویرایش بدون انتخاب نوع.
+            AtlasTypePickerDialog(
+                kind = target.kind,
+                domain = target.domain,
+                onDismiss = { atlasTarget = null },
+                onTypeSelected = { typeId ->
+                    atlasTarget = target.copy(chooseType = false, presetType = typeId)
+                }
+            )
+        } else {
+            AtlasEditorDialog(
+                kind = target.kind,
+                domain = target.domain,
+                initialSpec = target.initialSpec,
+                presetType = target.presetType,
+                onDismiss = { cancelFigureEditing(); atlasTarget = null },
+                onInsert = { spec ->
+                    deliverFigure(spec, null)
+                    atlasTarget = null
+                }
+            )
+        }
     }
 }
 

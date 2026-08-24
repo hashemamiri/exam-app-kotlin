@@ -75,11 +75,12 @@ object AtlasBitmapRenderer {
                 }
                 canvas.drawPath(path, fillAccent)
             }
+            // V55.12 — شماره در «انتهای» پیکان (چاپ/PDF هم‌رفتار با نمایش).
             val radius = imgW * 0.026f
-            canvas.drawCircle(x1, y1, radius, fillAccent)
-            canvas.drawCircle(x1, y1, radius * 0.78f, fillWhite)
+            canvas.drawCircle(x2, y2, radius, fillAccent)
+            canvas.drawCircle(x2, y2, radius * 0.78f, fillWhite)
             numberPaint.textSize = radius * 1.15f
-            canvas.drawText(AtlasMarkPainter.faNum(mark.n), x1, y1 + radius * 0.40f, numberPaint)
+            canvas.drawText(AtlasMarkPainter.faNum(mark.n), x2, y2 + radius * 0.40f, numberPaint)
         }
 
         if (showBlanks) {

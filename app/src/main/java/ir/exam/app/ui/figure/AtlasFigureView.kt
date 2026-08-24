@@ -93,10 +93,10 @@ fun AtlasFigureView(
                                 color = Color(0xFFE4572E)
                             )
                         }
-                        // دایرهٔ شماره در ابتدا
+                        // V55.12 — دایرهٔ شماره در «انتهای» پیکان (درخواست کاربر).
                         val radius = size.minDimension * 0.040f
-                        drawCircle(Color(0xFFE4572E), radius, start)
-                        drawCircle(Color.White, radius * 0.78f, start)
+                        drawCircle(Color(0xFFE4572E), radius, end)
+                        drawCircle(Color.White, radius * 0.78f, end)
                         drawContext.canvas.nativeCanvas.apply {
                             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                                 color = android.graphics.Color.parseColor("#C23B17")
@@ -106,8 +106,8 @@ fun AtlasFigureView(
                             }
                             drawText(
                                 AtlasMarkPainter.faNum(mark.n),
-                                start.x,
-                                start.y + radius * 0.40f,
+                                end.x,
+                                end.y + radius * 0.40f,
                                 paint
                             )
                         }

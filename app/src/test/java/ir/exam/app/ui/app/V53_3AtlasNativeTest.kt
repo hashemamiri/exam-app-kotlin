@@ -109,7 +109,9 @@ class V53_3AtlasNativeTest {
         assertFalse("openTool(\"physics\")" in webSection)
         assertFalse("openTool(\"chemistry\")" in webSection)
         assertTrue("AtlasEditorDialog(" in builder)
-        assertTrue("AtlasTarget(kind = \"s\", domain = \"chem\")" in builder)
+        // V55.12 — جریان دومرحله‌ای مثل «درج شکل»: اول انتخاب نوع.
+        assertTrue("AtlasTarget(kind = \"s\", domain = \"chem\", chooseType = true)" in builder)
+        assertTrue("AtlasTypePickerDialog(" in builder)
     }
 
     @Test

@@ -87,9 +87,12 @@ fun FigureTypePickerDialog(
                         }
                     }
                 } else {
-                    LazyColumn(
+                    // V55.12 — درخواست کاربر: نمودارها در پنجرهٔ انتخاب «هر سطر ۲ تا».
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
                         modifier = Modifier.weight(1f).fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         items(GRAPH_FIGURES, key = { it.id }) { template ->
                             GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
@@ -120,21 +123,19 @@ private fun GeometryTypeCell(template: FigureTemplate, onClick: () -> Unit) {
 
 @Composable
 private fun GraphTypeCell(template: FigureTemplate, onClick: () -> Unit) {
+    // V55.12 — سلول فشردهٔ شبکهٔ ۲ستونه؛ جملهٔ راهنمای اضافی زیر نام حذف شد.
     Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Row(
-            Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Column(
+            Modifier.fillMaxWidth().padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             InlineFigureView(
                 template.toSpec(),
-                Modifier.width(150.dp).height(112.dp),
+                Modifier.fillMaxWidth().height(96.dp),
                 contentDescription = template.label
             )
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(template.label, style = MaterialTheme.typography.titleMedium)
-                Text("برای ویرایش انتخاب کنید", style = MaterialTheme.typography.bodySmall)
-            }
+            Text(template.label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

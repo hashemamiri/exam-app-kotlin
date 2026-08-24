@@ -1349,6 +1349,24 @@ require("function attachX(el2)" in editor_asset
 require("caretRangeFromPoint" in editor_asset,
         "V55.11 surface caret/focus fix is missing")
 
+# ---- V55.12: two-stage atlas flow, arrow-end numbers, no label boxes, 2-col graphs ----
+require("fun AtlasTypePickerDialog(" in atlas_editor
+        and "presetType: String? = null" in atlas_editor
+        and "LazyRow" not in atlas_editor,
+        "V55.12 atlas type-first flow or editor type-selection removal is missing")
+require('AtlasTarget(kind = "a", chooseType = true)' in builder_screen
+        and "AtlasTypePickerDialog(" in builder_screen,
+        "V55.12 atlas two-stage wiring is missing from the builder")
+require("drawCircle(color, radius, end)" in atlas_editor
+        and "canvas.drawCircle(x2, y2, radius, fillAccent)" in
+            (ROOT/"app/src/main/java/ir/exam/app/core/figure/AtlasBitmapRenderer.kt").read_text(),
+        "V55.12 mark number must sit at the arrow end in every renderer")
+require("برچسب/پاسخ نشانه" not in atlas_editor,
+        "V55.12 label boxes must be gone from the atlas editor")
+require("GridCells.Fixed(2)" in figure_picker
+        and "برای ویرایش انتخاب کنید" not in figure_picker,
+        "V55.12 two-column graph picker without the edit hint is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
