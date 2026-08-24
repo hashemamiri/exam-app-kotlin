@@ -1273,6 +1273,16 @@ require('!path.startsWith("/formula-editor/")' in formula_host
 require("onClosed" in formula_host and "ExamFormulaHost.begin(" in formula_host,
         "V55 dialog is not wired to the standalone bridge events")
 
+# ---- V55.3: paint fix + blank-layout diagnostic ----
+require("nativePaintFix" in formula_asset
+        and "backdrop-filter:none !important" in formula_asset
+        and "will-change:auto !important" in formula_asset,
+        "V55.3 in-app compositing paint fix is missing from formula.html")
+require("FORMULA_BLANK_LAYOUT" in formula_asset and "getBoundingClientRect" in formula_asset,
+        "V55.3 blank-layout diagnostic is missing from formula.html")
+require('Color.parseColor("#E9EEF5")' in formula_host and "Color.TRANSPARENT" not in formula_host,
+        "V55.3 formula webview must use an opaque theme background, not transparent")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

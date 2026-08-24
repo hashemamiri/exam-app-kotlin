@@ -28,7 +28,8 @@ class V55_2BridgeDiagnosticsTest {
     @Test
     fun `bridge version tag is visible on device`() {
         assertTrue("nativeBridgeTag" in asset)
-        assertTrue("N55.2" in asset)
+        // V55.3 — متن برچسب با هر نسخهٔ پل جلو می‌رود؛ الگوی N<major>.<minor> کافی است.
+        assertTrue(Regex("""bt\.textContent = 'N\d+\.\d+'""").containsMatchIn(asset))
     }
 
     @Test

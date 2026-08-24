@@ -14364,6 +14364,50 @@ try {
         }
       } catch (e) {}
     }, true);
+    /* V55.3 — رفع «صفحهٔ سفید با مودالِ باز» (عکس N55.2: بدنهٔ روشن + هر دو badge،
+       بدون هیچ خطای قرمز؛ یعنی مودال کلاس open را گرفته وگرنه FORMULA_OPEN_TIMEOUT
+       می‌آمد، ولی محتوایش paint نمی‌شود). روی WebView برخی دستگاه‌ها ترکیب
+       backdrop-filter روی .modal با will-change:transform روی .modal-box لایهٔ
+       کامپوزیت «خالی» می‌سازد و بچه‌های مودال رسم نمی‌شوند. در حالت تمام‌صفحه
+       پس‌زمینهٔ مودال مات است و blur عملاً دیده نمی‌شود؛ پس این override فقط
+       داخل برنامه (وجود ExamEditorNative) تزریق می‌شود و از نظر بصری بی‌اثر است. */
+    (function nativePaintFix() {
+      try {
+        if (!window.ExamEditorNative) return;
+        if (document.getElementById('nativePaintFix')) return;
+        var st = document.createElement('style');
+        st.id = 'nativePaintFix';
+        st.textContent =
+          '#mfModal{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}' +
+          '.modal.open .modal-box{will-change:auto !important;}' +
+          '#mfModal.box-fullscreen .mf-box{min-height:100%;}';
+        (document.head || document.documentElement).appendChild(st);
+      } catch (e) {}
+    })();
+    /* V55.3 — اندازه‌گیری واقعی layout پس از باز شدن مودال: اگر بازهم چیزی
+       دیده نشد، به‌جای حدس، ابعاد/مختصات واقعی + نسخهٔ Chrome دستگاه گزارش شود. */
+    function rectOf(id) {
+      try {
+        var n = document.getElementById(id);
+        if (!n) return id + '=null';
+        var r = n.getBoundingClientRect();
+        return id + '=' + Math.round(r.width) + 'x' + Math.round(r.height) + '@' + Math.round(r.top);
+      } catch (e) { return id + '=err'; }
+    }
+    function layoutCheck() {
+      setTimeout(function () {
+        try {
+          var cv = document.getElementById('mbCanvas');
+          var r = cv ? cv.getBoundingClientRect() : null;
+          var bad = !r || r.width < 10 || r.height < 10 || r.top >= window.innerHeight || r.bottom <= 0;
+          if (bad && window.ExamEditorNative && typeof ExamEditorNative.onError === 'function') {
+            var ua = ((navigator.userAgent || '').match(/Chrome\/[\d.]+/) || ['Chrome/?'])[0];
+            ExamEditorNative.onError('FORMULA_BLANK_LAYOUT ' + rectOf('mfModal') + ' ' + rectOf('mfP_box')
+              + ' ' + rectOf('mbCanvas') + ' inner=' + window.innerWidth + 'x' + window.innerHeight + ' ' + ua);
+          }
+        } catch (e) {}
+      }, 1300);
+    }
     window.ExamFormulaHost = {
       begin: function (text, s, e) {
         var t = field();
@@ -14379,7 +14423,7 @@ try {
           tries++;
           try {
             var modal = document.getElementById('mfModal');
-            if (modal && modal.classList.contains('open')) { clearInterval(opener); return; }
+            if (modal && modal.classList.contains('open')) { clearInterval(opener); layoutCheck(); return; }
             if (typeof window.openMath === 'function') window.openMath('qTxt_1');
           } catch (err) {}
           if (tries > 80) {
@@ -14405,7 +14449,7 @@ try {
           if (document.getElementById('nativeBridgeTag') || !document.body) return;
           var bt = document.createElement('div');
           bt.id = 'nativeBridgeTag';
-          bt.textContent = 'N55.2';
+          bt.textContent = 'N55.3';
           bt.setAttribute('style', 'position:fixed;right:8px;bottom:8px;z-index:2147483600;direction:ltr;'
             + 'font:11px/1.5 monospace;color:#2f7d5f;background:rgba(255,255,255,.7);'
             + 'border:1px solid rgba(38,49,66,.18);border-radius:7px;padding:1px 7px;'

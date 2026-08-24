@@ -6502,3 +6502,72 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.1
 FINAL_NATIVE_VERIFY → PASS, EXIT=0 | سازگاری needle سراسری → صفر mismatch
 ```
+
+## ۱۴۲) V55.3 — رفع «صفحهٔ خالی با مودالِ باز» (باگ رسم WebView)
+
+### تحلیل عکس سوم (photo_2026-08-24_08-09-17.jpg) — این بار قطعی
+
+```text
+۱) برچسب سبز N55.2 دیده می‌شود → asset جدید قطعاً روی دستگاه اجراست
+   (فرضیهٔ «بیلد قدیمی» برای همیشه رد شد).
+۲) هیچ پیام قرمز FORMULA_OPEN_TIMEOUT یا BRIDGE_NOT_READY نیست →
+   begin اجرا شده و مودال ظرف ۱۰ ثانیه کلاس open را گرفته
+   (وگرنه V55.2 حتماً خطا چاپ می‌کرد).
+۳) رنگ کل صفحه در عکس دقیقاً #E9EEF4 است = خودِ --bg1 تم روشن؛ یعنی
+   پس‌زمینهٔ مودال تمام‌صفحه «رسم می‌شود» ولی بچه‌هایش (بوم، تراشه‌ها،
+   کلیدها) paint نمی‌شوند.
+۴) دایرهٔ خاکستری لبهٔ راست عکس حباب سیستم/اپ دیگری است، ربطی به برنامه ندارد.
+جمع شواهد = باگ compositing کلاسیک WebView اندروید:
+WebView شفاف (setBackgroundColor TRANSPARENT) + backdrop-filter:blur(5px)
+روی .modal مرجع + will-change:transform روی .modal.open .modal-box (خط ~۳۳۰۹)
+→ لایهٔ کامپوزیت خالی. jsdom این را نمی‌بیند چون paint ندارد.
+```
+
+### تحویل V55.3 — سه لایه
+
+```text
+۱) asset: بلوک nativePaintFix فقط وقتی window.ExamEditorNative هست تزریق
+   می‌شود (مرورگر عادی دست‌نخورده): backdrop-filter مودال none،
+   will-change مودال‌باکس auto، min-height مودال تمام‌صفحه. در حالت
+   تمام‌صفحه پس‌زمینهٔ مودال مات است پس این تغییر بصری ندارد.
+۲) Kotlin: پس‌زمینهٔ WebView مات #E9EEF5 (همان --bg1) به‌جای TRANSPARENT.
+۳) تشخیص FORMULA_BLANK_LAYOUT: ۱.۳ ثانیه پس از بازشدن واقعی مودال،
+   ابعاد getBoundingClientRect عناصر mfModal/mfP_box/mbCanvas + اندازهٔ
+   viewport + نسخهٔ Chrome دستگاه اندازه‌گیری و اگر بوم عملاً نامرئی بود
+   قرمز گزارش می‌شود — اگر paint-fix کافی نبود، دیگر داده داریم نه حدس.
+برچسب پل: N55.3 | version.txt: v55.3-paint-fix
+```
+
+### تست‌ها
+
+```text
+jsdom (بازسازی): تزریق nativePaintFix ✓ · begin→open ✓ · تایپ سریع
+«1/2 + x^2» → درج «$\frac{1}{2} + x^{2}$» + onEditorClosed ✓ · عدم reopen ✓ ·
+جلسهٔ دوم ✓ · FORMULA_BLANK_LAYOUT در jsdom (ابعاد صفر) عمداً فعال شد ✓ =
+اثبات اجرای detector پس از open.
+تست منبع جدید: V55_3PaintFixTest · هماهنگی: V55_2 (برچسب regex نسخه‌مستقل).
+verify: سه require جدید V55.3 · اسکن needle سراسری با نگاشت متغیر→فایل:
+صفر mismatch در ۱۸ تست · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+گوشهٔ پایین باید «N55.3» باشد (نه N55.2).
+- N55.3 هست + پنجره کامل دیده می‌شود → حل شد؛ V55_3 به patches/built برود.
+- N55.3 هست + باز هم خالی → پیام قرمز FORMULA_BLANK_LAYOUT پایین صفحه
+  ظاهر می‌شود؛ همان متن را کامل بفرست (ابعاد واقعی + نسخهٔ Chrome داخلش است).
+- N55.3 نیست → پچ روی بیلد اعمال نشده.
+```
+
+### عملیات
+
+```text
+فایل‌ها: formula.html (nativePaintFix + layoutCheck + برچسب N55.3) /
+version.txt / FormulaHostDialog.kt (پس‌زمینهٔ مات) /
+V55_3PaintFixTest.kt (جدید) / V55_2 test هماهنگ / verify (۳ require جدید) /
+changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.2
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -67,7 +67,10 @@ fun FormulaHostDialog(
                     modifier = Modifier.fillMaxSize(),
                     factory = { context ->
                         WebView(context).apply {
-                            setBackgroundColor(Color.TRANSPARENT)
+                            // V55.3 — پس‌زمینهٔ «مات» به‌جای شفاف: WebView شفاف + backdrop-filter
+                            // فایل مرجع روی برخی دستگاه‌ها لایهٔ کامپوزیت خالی می‌سازد (مودال باز
+                            // ولی محتوا paint نمی‌شود — همان «صفحهٔ سفید» N55.2). رنگ همان --bg1 است.
+                            setBackgroundColor(Color.parseColor("#E9EEF5"))
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
                             settings.allowFileAccess = false
@@ -134,7 +137,7 @@ fun FormulaHostDialog(
                                                 attempts < 67 -> view.postDelayed({ tryBegin() }, 150)
                                                 // V55.2 — پل هرگز تعریف نشد: خطای صریح به‌جای سکوت.
                                                 else -> post {
-                                                    jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.2 not loaded?)"
+                                                    jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.3 not loaded?)"
                                                     loading = false
                                                 }
                                             }
