@@ -49,7 +49,6 @@ fun FormulaHostDialog(
     onResult: (String) -> Unit
 ) {
     var latestText by remember { mutableStateOf(initialText) }
-    var editorOpened by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     // V54.5 — خطای واقعی JS (پاک‌سازی‌شده در asset؛ بدون URL/Token) برای نمایش امن.
     var jsError by remember { mutableStateOf<String?>(null) }
@@ -82,15 +81,9 @@ fun FormulaHostDialog(
                                 FormulaHostBridge(
                                     onText = { latestText = it },
                                     onJsError = { message -> post { jsError = message; loading = false } },
-                                    onOverlay = { open ->
-                                        if (open) {
-                                            editorOpened = true
-                                            loading = false
-                                        } else if (editorOpened) {
-                                            // بسته‌شدن ویرایشگر مرجع (تأیید/انصراف خودش) = پایان کار.
-                                            post { onResult(latestText); onDismiss() }
-                                        }
-                                    }
+                                    // V55 — فایل مستقل رویداد صریح onEditorClosed دارد؛
+                                    // بستن (✕ یا درج فرمول) متن نهایی را برمی‌گرداند.
+                                    onClosed = { post { onResult(latestText); onDismiss() } }
                                 ),
                                 "ExamEditorNative"
                             )
@@ -107,12 +100,12 @@ fun FormulaHostDialog(
                                 }
                                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                                     val path = request.url.path ?: return emptyResponse()
-                                    // V54.4 — مسیرهای خارج از asset محلی پاسخ خالی امن می‌گیرند.
-                                    if (!path.startsWith("/question-editor/")) return emptyResponse()
-                                    val assetPath = path.removePrefix("/question-editor/")
+                                    // V54.4/V55 — فقط asset محلی ویرایشگر فرمول؛ بقیه پاسخ خالی امن.
+                                    if (!path.startsWith("/formula-editor/")) return emptyResponse()
+                                    val assetPath = path.removePrefix("/formula-editor/")
                                     if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
                                     return try {
-                                        val stream = view.context.assets.open("question_editor/$assetPath")
+                                        val stream = view.context.assets.open("formula_editor/$assetPath")
                                         val mime = when {
                                             assetPath.endsWith(".html") -> "text/html"
                                             assetPath.endsWith(".css") -> "text/css"
@@ -129,9 +122,10 @@ fun FormulaHostDialog(
                                 override fun onPageFinished(view: WebView, url: String) {
                                     val text = JSONObject.quote(initialText)
                                     view.evaluateJavascript(
-                                        "window.ExamEditorFormula && ExamEditorFormula.begin($text, $selectionStart, $selectionEnd);",
+                                        "window.ExamFormulaHost && ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);",
                                         null
                                     )
+                                    post { loading = false }
                                 }
                             }
                             // V54.5 — WebChromeClient خطاهای console را امن گزارش می‌کند؛
@@ -145,7 +139,9 @@ fun FormulaHostDialog(
                                     return true
                                 }
                             }
-                            loadUrl("https://exam-editor.local/question-editor/question_editor.html?formulaHost=1")
+                            // V55 — پنجرهٔ فرمول اکنون فایل مستقل formula.html (انتخاب کاربر) است؛
+                            // نه صفحهٔ کامل question_editor. auto-open مرجع خودش پنجره را باز می‌کند.
+                            loadUrl("https://exam-editor.local/formula-editor/formula.html")
                         }
                     }
                 )
@@ -168,13 +164,17 @@ fun FormulaHostDialog(
 private class FormulaHostBridge(
     private val onText: (String) -> Unit,
     private val onJsError: (String) -> Unit,
-    private val onOverlay: (Boolean) -> Unit
+    private val onClosed: () -> Unit
 ) {
     @JavascriptInterface
     fun onTextChanged(value: String?) { onText(value.orEmpty()) }
 
+    /** V55 — فایل مستقل فرمول پس از هر بستن (✕/درج) این رویداد را می‌فرستد. */
     @JavascriptInterface
-    fun onOverlayChanged(open: Boolean) { onOverlay(open) }
+    fun onEditorClosed() { onClosed() }
+
+    @JavascriptInterface
+    fun onOverlayChanged(open: Boolean) = Unit
 
     @JavascriptInterface
     fun onReady() = Unit

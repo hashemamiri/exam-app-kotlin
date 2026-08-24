@@ -50,7 +50,8 @@ class V54_4ReferenceParityFixTest {
         assertTrue("emptyResponse()" in webField)
         assertTrue("!path.startsWith(\"/question-editor/\")" in webField)
         assertTrue("emptyResponse()" in host)
-        assertTrue("!path.startsWith(\"/question-editor/\")" in host)
+        // V55 — پنجرهٔ فرمول اکنون پوشهٔ formula_editor را سرو می‌کند.
+        assertTrue("!path.startsWith(\"/formula-editor/\")" in host)
     }
 
     @Test
@@ -62,7 +63,7 @@ class V54_4ReferenceParityFixTest {
         // پس‌زمینه همان رنگ صفحهٔ مرجع است تا فریم سفید دیده نشود.
         assertTrue("0xFFE9EEF5" in host)
         // بستن با دکمه‌های خود ویرایشگر مرجع (overlay=false) یا Back سیستم.
-        assertTrue("else if (editorOpened)" in host)
+        assertTrue("onEditorClosed" in host)
         assertTrue("onDismissRequest = { onResult(latestText); onDismiss() }" in host)
     }
 

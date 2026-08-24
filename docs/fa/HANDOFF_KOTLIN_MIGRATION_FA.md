@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.7 مسیر جایگزین srcdoc برای boot ویرایشگر فرمول در WebView (تأییدشده با تست اجرایی jsdom)؛ پیش از آن: V54.6 رفع بازگشت بی‌نهایت پل
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V55 پنجرهٔ فرمول = فایل مستقل formula.html کاربر (تست اجرایی jsdom: درج واقعی فرمول PASS)؛ پیش از آن: V54.7
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6340,4 +6340,73 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V54.6
 FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
+```
+
+
+## ۱۳۹) V55 — پنجرهٔ فرمول: فایل مستقل formula.html کاربر
+
+### ورودی
+
+```text
+کاربر فایل formula.html (نسخهٔ standalone ویرایشگر فرمول، 840KB) را فرستاد:
+«با لمس آیکن فرمول، این فایل در برنامه باز شود»
+تصمیم‌های کاربر: بلوک پل افزوده مجاز / بستن = برگشت به برنامه /
+همه‌جا (متن سؤال + گزینه‌ها + جورکردنی) / tracking کلادفلر دست نخورد
+```
+
+### ساختار فایل کاربر (ممیزی)
+
+```text
+همان ویرایشگر مرجع اما standalone: textarea مخفی qTxt_1 + mfModal +
+بلوک auto-open (باز شدن خودکار پنجره + بازگشایی خودکار پس از هر بستن)
+mfApply: درج $tex$ در qTxt_1 و closeMath
+دو بلوک tracking کلادفلر انتهای فایل (بی‌اثر در برنامه؛ شبکهٔ خارجی مسدود)
+```
+
+### تحویل
+
+```text
+asset جدید: app/src/main/assets/formula_editor/formula.html
+  = فایل کاربر + یک بلوک پل افزوده (exam-formula-native-bridge) قبل از auto-open:
+  - ExamFormulaHost.begin(text, selStart, selEnd): متن فیلد مقصد در qTxt_1 +
+    ریست پرچم جلسه؛ auto-open مرجع خودش پنجره را باز می‌کند
+  - wrapper بیرونی closeMath: بستن واقعی + گزارش متن نهایی
+    (onTextChanged) + onEditorClosed به Native
+  - خنثی‌سازی بازگشایی خودکار مرجع فقط پس از بستن (پرچم __aoNativeClosing)؛
+    با begin بعدی ریست می‌شود
+  - گیرندهٔ خطای JS با پیام پاک‌سازی‌شده (بدون URL)
+FormulaHostDialog: بارگیری formula-editor/formula.html؛ سرو فقط پوشهٔ
+  formula_editor؛ پایان کار با رویداد صریح onEditorClosed (نه polling)
+دامنهٔ اعمال: متن سؤال + گزینه‌ها + جورکردنی (مسیر واحد FormulaHostDialog از V53.4)
+مسیر srcdoc-fallback V54.7 در question_editor برای dblclick فرمول داخل کادر
+  متن بدون تغییر ماند (آن مسیر جدا است و آسیبی ندیده)
+```
+
+### تست اجرایی jsdom (نه فقط تحلیل متن)
+
+```text
+begin('متن اولیه ',10,10)            → mfModal open=true
+حالت تایپ سریع «1/2 + x^2» + mfApply → متن نهایی: «پیش $\frac{1}{2} + x^{2}$»
+پس از درج                            → پنجره بسته می‌ماند (بازگشایی خودکار خنثی)
+رویدادها به Native                   → onTextChanged + onEditorClosed
+جلسهٔ دوم begin                      → پنجره دوباره باز می‌شود (ریست پرچم)
+```
+
+### هماهنگی تست/verify
+
+```text
+V53_4 / V54_4 needles → قرارداد V55 (ExamFormulaHost / onEditorClosed / پوشهٔ جدید)
+verify: قرارداد V55 + به‌روزرسانی سه needle قدیمی host
+اسکن سراسری سازگاری needle تست‌ها با سورس: صفر mismatch
+V55StandaloneFormulaTest: ۳ تست جدید
+```
+
+### عملیات
+
+```text
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+حجم APK: ~0.8MB بیشتر (asset فرمول مستقل)
+پیش‌نیاز: V54.7
+FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
+testDebugUnitTest / lintDebug → باید در CI اجرا شود
 ```

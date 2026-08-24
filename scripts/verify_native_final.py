@@ -1185,10 +1185,12 @@ require("marks.size < 12" in atlas_editor and "nextMarkNumber" in atlas_editor,
 
 # ---- V53.4: full-screen WebView formula window + single native frame ----
 formula_host=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt").read_text()
-require("formulaHost=1" in formula_host and "usePlatformDefaultWidth = false" in formula_host,
-        "V53.4 formula host dialog is not full-screen or does not use the host asset mode")
-require("onOpenFormula" in editor_asset and "ExamEditorFormula" in editor_asset,
-        "V53.4 asset bridge for the formula host is missing")
+require("formula-editor/formula.html" in formula_host and "usePlatformDefaultWidth = false" in formula_host,
+        "V55 formula host dialog is not full-screen or does not load the standalone formula asset")
+formula_asset=(ROOT/"app/src/main/assets/formula_editor/formula.html").read_text(errors="ignore")
+require("onOpenFormula" in editor_asset and "ExamFormulaHost" in formula_asset
+        and "onEditorClosed" in formula_asset,
+        "V55 formula bridges are missing (question field or standalone formula asset)")
 require("FormulaHostDialog(" in builder_screen and "QuestionEditorWebViewDialog(" not in builder_screen,
         "V53.4 builder must open the full-screen formula window everywhere")
 require("nativeToolbarHide" in editor_asset and ".field>span{display:none" not in editor_asset,
@@ -1255,8 +1257,21 @@ require("Icons.Outlined.Close" not in formula_host and "0xFFE9EEF5" in formula_h
         "V54.4 formula window must be pure reference webview without a compose close button")
 require("closeOverlays" in web_field and "closeOverlays: function ()" in editor_asset,
         "V54.4 back-button overlay close bridge is missing")
-require("ExamEditorNative.onOpenFormula" in editor_asset and "window.ExamEditorFormula" in editor_asset,
-        "V54.4 formula host bridges are missing from the asset")
+require("ExamEditorNative.onOpenFormula" in editor_asset and "window.ExamFormulaHost" in formula_asset,
+        "V55 formula host bridges are missing from the assets")
+
+# ---- V55: standalone formula.html as the formula window ----
+require(len(formula_asset) > 500000 and "auto-open" in formula_asset,
+        "V55 standalone formula asset is missing or truncated")
+require("exam-formula-native-bridge" in formula_asset
+        and "__aoNativeClosing" in formula_asset
+        and "window.__aoNativeClosing = false" in formula_asset,
+        "V55 native bridge or reopen-suppression/reset is missing from formula.html")
+require('!path.startsWith("/formula-editor/")' in formula_host
+        and 'assets.open("formula_editor/$assetPath")' in formula_host,
+        "V55 formula dialog does not serve the formula_editor asset folder")
+require("onClosed" in formula_host and "ExamFormulaHost.begin(" in formula_host,
+        "V55 dialog is not wired to the standalone bridge events")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

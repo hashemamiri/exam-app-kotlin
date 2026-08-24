@@ -50,10 +50,11 @@ class V53_4FormulaHostFrameTest {
 
     @Test
     fun `formula host is a full screen webview dialog`() {
-        assertTrue("formulaHost=1" in host)
+        assertTrue("formula-editor/formula.html" in host)
         assertTrue("usePlatformDefaultWidth = false" in host)
         assertTrue("Modifier.fillMaxSize()" in host)
-        assertTrue("ExamEditorFormula.begin(" in host)
+        // V55 — پنجرهٔ فرمول فایل مستقل formula.html با پل ExamFormulaHost است.
+        assertTrue("ExamFormulaHost.begin(" in host)
         // پایان کار با بسته‌شدن ویرایشگر مرجع (رویداد overlay=false پس از باز شدن).
         assertTrue("onResult(latestText)" in host)
         // حالت میزبان asset: صفحهٔ مرجع قابل مشاهده می‌ماند و ویرایشگر فوراً باز می‌شود.
