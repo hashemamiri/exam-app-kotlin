@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V55 پنجرهٔ فرمول = فایل مستقل formula.html کاربر (تست اجرایی jsdom: درج واقعی فرمول PASS)؛ پیش از آن: V54.7
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V55.1 رفع صفحهٔ سفید پنجرهٔ فرمول (retry دوطرفهٔ باز شدن مودال)؛ پیش از آن: V55 فایل مستقل formula.html
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6409,4 +6409,47 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V54.7
 FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
 testDebugUnitTest / lintDebug → باید در CI اجرا شود
+```
+
+
+## ۱۴۰) V55.1 — رفع صفحهٔ سفید پنجرهٔ فرمول (race زمان‌بندی WebView)
+
+### گزارش دستگاه (پس از V55)
+
+```text
+با زدن دکمهٔ فرمول فقط صفحهٔ سفید باز می‌شود.
+سرنخ قطعی اسکرین‌شات: badge «v36 · V34: ✓ 64» خود فایل در گوشهٔ صفحه دیده
+می‌شود → JS فایل کامل اجرا شده؛ فقط مودال باز نشده است.
+```
+
+### علت قطعی
+
+race زمان‌بندی WebView: `onPageFinished` می‌تواند قبل از پایان parse اسکریپت
+بزرگ (840KB) برسد → `ExamFormulaHost.begin` وقتی هنوز undefined بود صدا می‌شد
+و هیچ اتفاقی نمی‌افتاد؛ auto-open مرجع هم به رویداد load وابسته است که در
+سند intercepted ممکن است دیر بیاید یا قبل از begin رفته باشد.
+
+### رفع دوطرفه (تأییدشده با تست اجرایی jsdom با شبیه‌سازی race)
+
+```text
+JS (بلوک پل): begin تا «بازشدن واقعی مودال» هر ۱۲۰ms تلاش می‌کند (سقف ۱۰
+ثانیه، سپس خطای تشخیصی FORMULA_OPEN_TIMEOUT به Native)؛ پرچم
+__examFormulaHostReady برای هم‌قدمی Kotlin.
+Kotlin: فراخوانی begin با callback نتیجه؛ تا وقتی پل تعریف نشده هر 150ms
+تکرار (سقف ~۱۰ ثانیه).
+تست اجرایی: openMath عمداً دزدیده و ۶۰۰ms بعد برگردانده شد → مودال باز شد،
+بدون خطا؛ سناریوهای V55 (درج/بستن/جلسهٔ دوم) همچنان سالم.
+```
+
+### فایل‌ها و عملیات
+
+```text
+app/src/main/assets/formula_editor/formula.html (بلوک پل)
+app/src/main/assets/formula_editor/version.txt
+app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt
+app/src/test/java/ir/exam/app/ui/app/V55_1FormulaOpenRetryTest.kt (جدید)
+text/CHANGELOG_FA.txt | docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55
+FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
 ```

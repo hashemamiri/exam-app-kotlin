@@ -14371,10 +14371,30 @@ try {
         window.__aoNativeClosing = false; /* اجازهٔ بازشدن برای جلسهٔ جدید */
         t.value = (text == null ? '' : String(text));
         try { t.setSelectionRange(s | 0, e | 0); } catch (err) {}
-        /* auto-open مرجع پنجره را باز می‌کند؛ اگر load قبلاً رد شده، مستقیم: */
-        try { if (typeof window.openMath === 'function') window.openMath('qTxt_1'); } catch (err) {}
+        /* V55.1 — در WebView رویداد load سند intercepted ممکن است دیر بیاید یا
+           onPageFinished قبل از پایان parse برسد؛ تا آماده‌شدن openMath و باز شدن
+           واقعی مودال، هر ۱۲۰ms تلاش می‌کنیم (حداکثر ۱۰ ثانیه). */
+        var tries = 0;
+        var opener = setInterval(function () {
+          tries++;
+          try {
+            var modal = document.getElementById('mfModal');
+            if (modal && modal.classList.contains('open')) { clearInterval(opener); return; }
+            if (typeof window.openMath === 'function') window.openMath('qTxt_1');
+          } catch (err) {}
+          if (tries > 80) {
+            clearInterval(opener);
+            try {
+              if (window.ExamEditorNative && typeof ExamEditorNative.onError === 'function') {
+                ExamEditorNative.onError('FORMULA_OPEN_TIMEOUT openMath=' + (typeof window.openMath));
+              }
+            } catch (err) {}
+          }
+        }, 120);
       }
     };
+    /* Kotlin برای اطمینان از آماده‌بودن پل، این پرچم را می‌خواند. */
+    window.__examFormulaHostReady = true;
     /* خنثی‌سازی «بازگشایی خودکار» مرجع: آخرین override زنجیرهٔ closeMath
        می‌شویم؛ بستن واقعی انجام می‌شود ولی به‌جای bootOpen دوباره، نتیجه به
        Native برمی‌گردد. (auto-open مرجع پس از این بلوک تعریف شده و روی load

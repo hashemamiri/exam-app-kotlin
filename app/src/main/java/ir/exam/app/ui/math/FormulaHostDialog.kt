@@ -120,11 +120,21 @@ fun FormulaHostDialog(
                                 private fun emptyResponse(): WebResourceResponse =
                                     WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
                                 override fun onPageFinished(view: WebView, url: String) {
+                                    // V55.1 — onPageFinished در WebView می‌تواند قبل از پایان parse
+                                    // اسکریپت بزرگ برسد؛ تا تعریف‌شدن پل، begin هر 150ms تکرار می‌شود.
                                     val text = JSONObject.quote(initialText)
-                                    view.evaluateJavascript(
-                                        "window.ExamFormulaHost && ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);",
-                                        null
-                                    )
+                                    var attempts = 0
+                                    fun tryBegin() {
+                                        attempts++
+                                        view.evaluateJavascript(
+                                            "(function(){if(window.ExamFormulaHost){ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
+                                        ) { result ->
+                                            if (result?.contains("ok") != true && attempts < 67) {
+                                                view.postDelayed({ tryBegin() }, 150)
+                                            }
+                                        }
+                                    }
+                                    tryBegin()
                                     post { loading = false }
                                 }
                             }
