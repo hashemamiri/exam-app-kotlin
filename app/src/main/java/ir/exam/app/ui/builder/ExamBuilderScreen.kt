@@ -971,7 +971,9 @@ private fun QuestionEditor(
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("حذف سؤال") },
-            text = { Text("سؤال ${index + 1} برای همیشه حذف شود؟") },
+            // V55.14.1 — تست V24 پیشوند شماره‌دار سؤال را در این تابع ممنوع کرده؛
+            // متن تأیید بدون آن الگو نوشته می‌شود.
+            text = { Text("این سؤال برای همیشه حذف شود؟") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
