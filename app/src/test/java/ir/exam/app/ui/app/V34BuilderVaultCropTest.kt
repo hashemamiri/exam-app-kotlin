@@ -20,13 +20,14 @@ class V34BuilderVaultCropTest {
         val builder = source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt")
         val multiple = builder.substringAfter("QuestionType.MULTIPLE_CHOICE ->")
             .substringBefore("QuestionType.TRUE_FALSE ->")
-        assertTrue(multiple.indexOf("Icons.Outlined.Functions") < multiple.indexOf("ReorderDragButton("))
+        // V55.16 — دکمهٔ + (OptionInsertButton) جایگزین آیکن فرمول شد؛ ترتیب حفظ است.
+        assertTrue(multiple.indexOf("OptionInsertButton(") < multiple.indexOf("ReorderDragButton("))
         assertTrue(multiple.indexOf("ReorderDragButton(") < multiple.indexOf("SingleImagePicker("))
 
         val tools = source("app/src/main/java/ir/exam/app/ui/builder/QuestionOptionMedia.kt")
             .substringAfter("private fun MatchingItemTools(")
             .substringBefore("fun MatchingQuestionEditor(")
-        assertTrue(tools.indexOf("Icons.Outlined.Functions") < tools.indexOf("ReorderDragButton("))
+        assertTrue(tools.indexOf("OptionInsertButton(") < tools.indexOf("ReorderDragButton("))
         assertTrue(tools.indexOf("ReorderDragButton(") < tools.indexOf("SingleImagePicker("))
     }
 

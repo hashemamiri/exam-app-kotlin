@@ -500,7 +500,7 @@ require("onDragStarted = { expandedQuestionId = null }" in builder_screen and
         "question drag does not close every accordion")
 multiple_choice=builder_screen.split("QuestionType.MULTIPLE_CHOICE ->",1)[1].split("QuestionType.TRUE_FALSE ->",1)[0]
 require(all(marker in multiple_choice for marker in (
-            "persianOptionLetter(index)","Icons.Outlined.Functions","SingleImagePicker(","ReorderDragButton("
+            "persianOptionLetter(index)","OptionInsertButton(","SingleImagePicker(","ReorderDragButton("
         )) and "↑ گزینه" not in multiple_choice and "↓ گزینه" not in multiple_choice and
         "گزینه ${index + 1}" not in multiple_choice,
         "multiple-choice Persian labels/media tools/drag reorder incomplete")
@@ -836,13 +836,14 @@ for match in re.finditer(
 
 # V34 — ترتیب ابزارها، thumbnail هم‌سطری، Vault محلی و برش جهت‌دار/دایره‌ای
 _v34_multiple=builder_screen.split("QuestionType.MULTIPLE_CHOICE ->",1)[1].split("QuestionType.TRUE_FALSE ->",1)[0]
-require(_v34_multiple.index("Icons.Outlined.Functions") < _v34_multiple.index("ReorderDragButton(") <
+# V55.16 — آیکن فرمول گزینه/جورکردنی با دکمهٔ + (OptionInsertButton) جایگزین شد.
+require(_v34_multiple.index("OptionInsertButton(") < _v34_multiple.index("ReorderDragButton(") <
         _v34_multiple.index("SingleImagePicker("),
-        "V34 multiple-choice reorder is not immediately after formula")
+        "V34/V55.16 multiple-choice reorder is not immediately after the insert button")
 _v34_matching=matching_builder.split("private fun MatchingItemTools(",1)[1].split("fun MatchingQuestionEditor(",1)[0]
-require(_v34_matching.index("Icons.Outlined.Functions") < _v34_matching.index("ReorderDragButton(") <
+require(_v34_matching.index("OptionInsertButton(") < _v34_matching.index("ReorderDragButton(") <
         _v34_matching.index("SingleImagePicker("),
-        "V34 matching reorder is not immediately after formula")
+        "V34/V55.16 matching reorder is not immediately after the insert button")
 _v34_thumb=question_media.split("private fun CompactImageThumbnail(",1)[1]
 require(all(marker in _v34_thumb for marker in (
             "Row(","Modifier.size(30.dp).clickable(onClick = onView)",
@@ -1393,6 +1394,20 @@ require("rememberUpdatedState(onMove)" in image_editor
         "V55.15 crop stale-lambda fix is missing")
 require('root["k"] = JsonPrimitive("g")' in figure_picker,
         "V55.15 graph specs must carry k='g' for the reference chart module")
+
+# ---- V55.16: option/matching boxes like the question box + plus tool menu ----
+_option_tools=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/OptionInsertTools.kt").read_text()
+require("fun OptionInsertButton(" in _option_tools
+        and "fun OptionInsertToolsDialog(" in _option_tools
+        and "Icons.Outlined.Add" in _option_tools,
+        "V55.16 plus button / eight-tool dialog is missing")
+require("Icons.Outlined.Functions" not in builder_screen
+        and "Icons.Outlined.Functions" not in matching_builder,
+        "V55.16 old option formula icon must be replaced by the plus button")
+require("fun appendTokenToField(ref: InsertMenuRef, spec: FigureSpec)" in builder_screen
+        and 'shape = RoundedCornerShape(14.dp)' in builder_screen
+        and 'shape = RoundedCornerShape(14.dp)' in matching_builder,
+        "V55.16 field-token delivery or question-box-like styling is missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

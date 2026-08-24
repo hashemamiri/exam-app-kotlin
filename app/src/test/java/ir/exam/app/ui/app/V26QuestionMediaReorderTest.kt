@@ -86,7 +86,8 @@ class V26QuestionMediaReorderTest {
         val multiple = builder.substringAfter("QuestionType.MULTIPLE_CHOICE ->")
             .substringBefore("QuestionType.TRUE_FALSE ->")
         assertTrue("val optionLabel = persianOptionLetter(index)" in multiple)
-        assertTrue("Icons.Outlined.Functions" in multiple)
+        // V55.16 — آیکن فرمول گزینه با دکمهٔ + (پنجرهٔ ۸ ابزار) جایگزین شد.
+        assertTrue("OptionInsertButton(" in multiple)
         assertTrue("SingleImagePicker(" in multiple)
         assertTrue("ReorderDragButton(" in multiple)
         assertFalse("option direction arrows returned", "↑ گزینه" in multiple || "↓ گزینه" in multiple)
@@ -108,7 +109,8 @@ class V26QuestionMediaReorderTest {
         assertTrue("MatchingItemTools(" in right && "MatchingItemTools(" in left)
         assertTrue("ReorderDragButton" in matching)
         assertFalse("matching direction arrows returned", "Text(\"↑\")" in matching || "Text(\"↓\")" in matching)
-        assertTrue("Icons.Outlined.Functions" in matching)
+        // V55.16 — دکمهٔ + جایگزین آیکن فرمول جورکردنی شد.
+        assertTrue("OptionInsertButton(" in matching)
         assertTrue("Icons.Outlined.PhotoCamera" in matching)
     }
 

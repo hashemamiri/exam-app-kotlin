@@ -7573,3 +7573,74 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.14.1
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۵۸) V55.16 — کادر گزینه‌ها شبیه کادر سؤال + دکمهٔ + با پنجرهٔ ۸ ابزار
+
+پچ دوم تحویل دومرحله‌ای (بخش ۱۵۵). انتخاب‌های ask_user قبلی: کادر «سریع Native
+با پیش‌نمایش زیر آن» (نه WebView سنگین برای هر گزینه).
+
+### درخواست‌ها و تحویل
+
+```text
+۱) «کادر متن گزینه‌های چندگزینه‌ای و جورکردنی شبیه کادر متن سؤال شود»:
+   - OutlinedTextField ها گرد شدند (RoundedCornerShape(14.dp)) مثل حس کادر سؤال؛
+   - پیش‌نمایش زندهٔ NativeMathText اکنون علاوه بر '$' با "%%FIG:" هم فعال
+     می‌شود → شکل/نمودار/جدول/تناوبی/اطلس درج‌شده در گزینه هم زیر کادر رندر
+     زنده دارد (NativeMathText از قبل توکن FIG را می‌فهمید؛ فقط شرط نمایش
+     ناقص بود).
+۲) «به‌جای آیکن فرمول، دکمهٔ + با پنجرهٔ ۸ آیکن»:
+   - فایل جدید OptionInsertTools.kt: OptionInsertButton (آیکن + با tint
+     primary) و OptionInsertToolsDialog (AlertDialog با LazyVerticalGrid
+     Fixed(4) — ۸ ابزار با آیکن‌های QuestionToolIcons و برچسب فارسی).
+   - چندگزینه‌ای: دکمهٔ + → insertMenuFor=InsertMenuRef("option", index, label).
+   - جورکردنی: MatchingItemTools همان callback قدیمی onFormula را به دکمهٔ +
+     داد؛ در builder، درجِ تازه (occurrence=null و tex خالی) به پنجرهٔ ۸ ابزار
+     می‌رود و «ویرایش فرمول موجود» (ExistingFormulaEditor) مسیر قبلی می‌ماند.
+   - مسیریابی ابزارها: FORMULA → FormulaTarget همان فیلد (FormulaHostDialog)؛
+     بقیه → fieldInsertTarget=ref + همان targetهای موجود (figure/table/
+     periodic/atlas با chooseType). خروجی: appendTokenToField توکن
+     %%FIG:json%% را به انتهای متن همان فیلد (updateOption/updateMatchingText)
+     اضافه می‌کند؛ deliverFigure و onInsert مسیر شکل/نمودار شاخهٔ fieldRef
+     گرفتند. انصراف در همهٔ مسیرها (cancelFigureEditing، dismiss دو picker)
+     fieldInsertTarget را پاک می‌کند تا درج بعدی متن سؤال به گزینه نرود.
+```
+
+### هماهنگی‌های اجباری (needleهای قدیمی Icons.Outlined.Functions)
+
+```text
+- V26QuestionMediaReorderTest: دو needle → OptionInsertButton(
+- V34BuilderVaultCropTest: ترتیب ابزارها با OptionInsertButton( سنجیده می‌شود
+- verify بند ۵۰۳ (multiple_choice) و بندهای V34 → OptionInsertButton(
+- Icons.Outlined.Functions فقط در InlineMathTextEditor (بند V45) می‌ماند.
+```
+
+### تست‌ها
+
+```text
+جدید: V55_16OptionInsertToolsTest (۳ تست) · verify: ۳ require جدید V55.16 ·
+شبیه‌سازی ۲۰ چک دقیق + اسکن سراسری ۵۳۷ needle → صفر mismatch · تراز آکولاد
+۳ فایل صفر · FINAL_NATIVE_VERIFY=PASS EXIT=0 · Kotlin 2.0.21 → enum.entries OK
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) سؤال چندگزینه‌ای: روی کارت هر گزینه دکمهٔ + (به‌جای آیکن فرمول) → پنجرهٔ
+   ۸ ابزار؛ فرمول → پنجرهٔ فرمول همان گزینه؛ جدول/شکل/... → ویرایشگر Native و
+   پس از درج، پیش‌نمایش زیر کادر همان گزینه دیده شود
+۲) جورکردنی: همین رفتار در موردهای راست/چپ
+۳) کادرهای متن گزینه/جورکردنی گرد و شبیه کادر سؤال
+۴) رگرسیون: درج از آیکن‌های زیر کادر متن سؤال همچنان به متن سؤال برود
+```
+
+### عملیات
+
+```text
+فایل‌ها: OptionInsertTools.kt (جدید) / ExamBuilderScreen.kt (منو+مسیریابی+
+appendTokenToField+پاک‌سازی هدف) / QuestionOptionMedia.kt (+، کادر گرد،
+پیش‌نمایش FIG) / V55_16OptionInsertToolsTest.kt (جدید) / V26+V34 tests هماهنگ /
+verify (بندهای V34/۵۰۳ به‌روز + ۳ require جدید) / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.15
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

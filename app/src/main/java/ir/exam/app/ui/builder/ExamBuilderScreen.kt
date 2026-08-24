@@ -12,6 +12,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -35,7 +36,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
-import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.foundation.text.BasicTextField
@@ -598,6 +598,13 @@ private data class FormulaHostTarget(
     val selEnd: Int
 )
 
+/** V55.16 — فیلد هدف پنجرهٔ ۸ ابزار درج: option / matching_left / matching_right. */
+private data class InsertMenuRef(
+    val field: String,
+    val index: Int,
+    val label: String
+)
+
 @Composable
 private fun QuestionEditor(
     modifier: Modifier = Modifier,
@@ -635,6 +642,10 @@ private fun QuestionEditor(
     var dragActive by remember(question.id) { mutableStateOf(false) }
     // V55.14 — تأیید حذف سؤال با سطل زبالهٔ کنار بارم.
     var confirmDelete by remember(question.id) { mutableStateOf(false) }
+    // V55.16 — دکمهٔ + گزینه/جورکردنی: پنجرهٔ ۸ ابزار برای کدام فیلد باز است؟
+    var insertMenuFor by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
+    // V55.16 — خروجی ویرایشگر ابزار بعدی به‌جای متن سؤال، در این فیلد درج شود.
+    var fieldInsertTarget by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
     // شناسهٔ گزینه‌ای که اکنون در حال درگ است تا کارت همان گزینه رنگی شود.
     var optionDragId by remember(question.id) { mutableStateOf<String?>(null) }
     // همان آستانهٔ مشترک گزینه/جورکردنی تا رفتار جابه‌جایی‌ها یکسان باشد.
@@ -870,13 +881,9 @@ private fun QuestionEditor(
                                         selected = question.correctIndex == index,
                                         onClick = { viewModel.setCorrect(question.id, index) }
                                     )
-                                    IconButton(onClick = {
-                                        formulaTarget = FormulaTarget("option", index)
-                                    }) {
-                                        Icon(
-                                            Icons.Outlined.Functions,
-                                            contentDescription = "درج فرمول $optionLabel"
-                                        )
+                                    // V55.16 — دکمهٔ + به‌جای آیکن فرمول: پنجرهٔ ۸ ابزار درج.
+                                    OptionInsertButton(optionLabel) {
+                                        insertMenuFor = InsertMenuRef("option", index, optionLabel)
                                     }
                                     ReorderDragButton(
                                         description = "نگه‌دارید و $optionLabel را جابه‌جا کنید",
@@ -896,13 +903,16 @@ private fun QuestionEditor(
                                         label = "تصویر $optionLabel"
                                     ) { uri -> viewModel.setOptionImage(question.id, index, uri) }
                                 }
+                                // V55.16 — شبیه کادر متن سؤال: کادر گرد با پیش‌نمایش
+                                // زندهٔ فرمول و شکل/نمودار/جدول (توکن %%FIG%%) زیر آن.
                                 OutlinedTextField(
                                     value = option,
                                     onValueChange = { viewModel.updateOption(question.id, index, it) },
                                     placeholder = { Text("متن $optionLabel") },
+                                    shape = RoundedCornerShape(14.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                if ('$' in option) NativeMathText(option)
+                                if ('$' in option || "%%FIG:" in option) NativeMathText(option)
                                 ExistingFormulaEditor(
                                     source = option,
                                     onEdit = { occurrence, tex ->
@@ -941,7 +951,14 @@ private fun QuestionEditor(
                     question,
                     viewModel,
                     onFormulaEdit = { side, itemIndex, occurrence, tex ->
-                        formulaTarget = FormulaTarget("matching_$side", itemIndex, occurrence, tex)
+                        // V55.16 — دکمهٔ + (درج تازه: بدون occurrence و tex) پنجرهٔ
+                        // ۸ ابزار را باز می‌کند؛ ویرایش فرمول موجود مسیر قبلی است.
+                        if (occurrence == null && tex.isBlank()) {
+                            val label = if (side == "right") "مورد راست ${itemIndex + 1}" else "مورد چپ ${itemIndex + 1}"
+                            insertMenuFor = InsertMenuRef("matching_$side", itemIndex, label)
+                        } else {
+                            formulaTarget = FormulaTarget("matching_$side", itemIndex, occurrence, tex)
+                        }
                     },
                     onFormulaDelete = { side, itemIndex, occurrence ->
                         viewModel.deleteFormula(question.id, "matching_$side", itemIndex, occurrence)
@@ -966,6 +983,48 @@ private fun QuestionEditor(
                 }
             }
         }
+    }
+    // V55.16 — پنجرهٔ ۸ ابزار درج برای گزینه/جورکردنی.
+    insertMenuFor?.let { ref ->
+        OptionInsertToolsDialog(
+            fieldLabel = ref.label,
+            onDismiss = { insertMenuFor = null },
+            onToolSelected = { tool ->
+                insertMenuFor = null
+                when (tool) {
+                    OptionInsertTool.FORMULA ->
+                        formulaTarget = FormulaTarget(ref.field, ref.index)
+                    OptionInsertTool.FIGURE -> {
+                        fieldInsertTarget = ref
+                        figureTarget = FigureTarget(kind = FigureKind.GEOMETRY, chooseType = true)
+                    }
+                    OptionInsertTool.GRAPH -> {
+                        fieldInsertTarget = ref
+                        figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
+                    }
+                    OptionInsertTool.TABLE -> {
+                        fieldInsertTarget = ref
+                        tableTarget = TableTarget()
+                    }
+                    OptionInsertTool.PERIODIC -> {
+                        fieldInsertTarget = ref
+                        periodicTarget = TableTarget()
+                    }
+                    OptionInsertTool.ANATOMY -> {
+                        fieldInsertTarget = ref
+                        atlasTarget = AtlasTarget(kind = "a", chooseType = true)
+                    }
+                    OptionInsertTool.PHYSICS -> {
+                        fieldInsertTarget = ref
+                        atlasTarget = AtlasTarget(kind = "s", domain = "phys", chooseType = true)
+                    }
+                    OptionInsertTool.CHEMISTRY -> {
+                        fieldInsertTarget = ref
+                        atlasTarget = AtlasTarget(kind = "s", domain = "chem", chooseType = true)
+                    }
+                }
+            }
+        )
     }
     if (confirmDelete) {
         AlertDialog(
@@ -1013,11 +1072,27 @@ private fun QuestionEditor(
             }
         )
     }
+    // V55.16 — درج خروجی ابزار در «فیلد» گزینه/جورکردنی (توکن به انتهای متن فیلد).
+    fun appendTokenToField(ref: InsertMenuRef, spec: FigureSpec) {
+        val token = "%%FIG:${spec.toJson()}%%"
+        fun joined(old: String) = if (old.isBlank()) token else old.trimEnd() + "\n" + token
+        when (ref.field) {
+            "option" -> question.options.getOrNull(ref.index)?.let {
+                viewModel.updateOption(question.id, ref.index, joined(it))
+            }
+            "matching_left" -> question.matchingLeft.getOrNull(ref.index)?.let {
+                viewModel.updateMatchingText(question.id, "left", ref.index, joined(it))
+            }
+            "matching_right" -> question.matchingRight.getOrNull(ref.index)?.let {
+                viewModel.updateMatchingText(question.id, "right", ref.index, joined(it))
+            }
+        }
+    }
     figureTarget?.let { target ->
         if (target.chooseType) {
             FigureTypePickerDialog(
                 kind = target.kind,
-                onDismiss = { figureTarget = null },
+                onDismiss = { fieldInsertTarget = null; figureTarget = null },
                 onTypeSelected = { spec ->
                     figureTarget = target.copy(initialSpec = spec, chooseType = false)
                 }
@@ -1032,11 +1107,19 @@ private fun QuestionEditor(
                         questionFieldController.cancelEditFigure()
                         editingWebToken = false
                     }
+                    // V55.16 — انصراف: هدف فیلد گزینه/جورکردنی هم پاک شود.
+                    fieldInsertTarget = null
                     figureTarget = null
                 },
                 onInsert = { spec ->
                     val occurrence = target.occurrenceIndex
+                    val fieldRef = fieldInsertTarget
                     when {
+                        // V55.16 — درج از پنجرهٔ + گزینه/جورکردنی: توکن به همان فیلد.
+                        fieldRef != null -> {
+                            appendTokenToField(fieldRef, spec)
+                            fieldInsertTarget = null
+                        }
                         occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
                         // V55.13 — ویرایش توکن هندسه/نمودار موجود: جایگزینی همان توکن.
                         editingWebToken -> {
@@ -1058,7 +1141,13 @@ private fun QuestionEditor(
     // V53.3 — تحویل خروجی ویرایشگرهای Native به WebView:
     // درج تازه در محل مکان‌نما یا جایگزینی توکن dblclick.
     fun deliverFigure(spec: FigureSpec, occurrenceIndex: Int?) {
+        val fieldRef = fieldInsertTarget
         when {
+            // V55.16 — ابزار از پنجرهٔ + گزینه/جورکردنی باز شده بود.
+            fieldRef != null -> {
+                appendTokenToField(fieldRef, spec)
+                fieldInsertTarget = null
+            }
             occurrenceIndex != null -> viewModel.updateFigure(question.id, occurrenceIndex, spec)
             editingWebToken -> {
                 if (!questionFieldController.applyEditedFigureJson(spec.toJson())) {
@@ -1075,6 +1164,9 @@ private fun QuestionEditor(
             questionFieldController.cancelEditFigure()
             editingWebToken = false
         }
+        // V55.16 — انصراف از ابزارِ بازشده از پنجرهٔ +: هدف فیلد پاک شود تا درج
+        // بعدیِ متن سؤال اشتباهی به گزینه نرود.
+        fieldInsertTarget = null
     }
     tableTarget?.let { target ->
         TableEditorDialog(
@@ -1116,7 +1208,7 @@ private fun QuestionEditor(
             AtlasTypePickerDialog(
                 kind = target.kind,
                 domain = target.domain,
-                onDismiss = { atlasTarget = null },
+                onDismiss = { fieldInsertTarget = null; atlasTarget = null },
                 onTypeSelected = { typeId ->
                     atlasTarget = target.copy(chooseType = false, presetType = typeId)
                 }

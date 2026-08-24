@@ -23,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -267,9 +266,8 @@ private fun MatchingItemTools(
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        IconButton(onClick = onFormula) {
-            Icon(Icons.Outlined.Functions, contentDescription = "درج فرمول $label")
-        }
+        // V55.16 — دکمهٔ + به‌جای آیکن فرمول؛ پنجرهٔ ۸ ابزار درج را باز می‌کند.
+        OptionInsertButton(label, onClick = onFormula)
         ReorderDragButton(
             description = "نگه‌دارید و $label را جابه‌جا کنید",
             currentIndex = currentIndex,
@@ -337,13 +335,15 @@ fun MatchingQuestionEditor(
                         onDelete = { viewModel.removeMatchingSide(question.id, "right", index) },
                         deleteEnabled = question.matchingRight.size > 2
                     )
+                    // V55.16 — شبیه کادر متن سؤال: کادر گرد + پیش‌نمایش زندهٔ فرمول/توکن.
                     OutlinedTextField(
                         value,
                         { viewModel.updateMatchingText(question.id, "right", index, it) },
                         placeholder = { Text("متن $label") },
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if ('$' in value) NativeMathText(value)
+                    if ('$' in value || "%%FIG:" in value) NativeMathText(value)
                     ExistingFormulaEditor(
                         source = value,
                         onEdit = { occurrence, tex -> onFormulaEdit("right", index, occurrence, tex) },
@@ -395,13 +395,15 @@ fun MatchingQuestionEditor(
                         onDelete = { viewModel.removeMatchingSide(question.id, "left", index) },
                         deleteEnabled = question.matchingLeft.size > 2
                     )
+                    // V55.16 — شبیه کادر متن سؤال: کادر گرد + پیش‌نمایش زندهٔ فرمول/توکن.
                     OutlinedTextField(
                         value,
                         { viewModel.updateMatchingText(question.id, "left", index, it) },
                         placeholder = { Text("متن مورد $label") },
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if ('$' in value) NativeMathText(value)
+                    if ('$' in value || "%%FIG:" in value) NativeMathText(value)
                     ExistingFormulaEditor(
                         source = value,
                         onEdit = { occurrence, tex -> onFormulaEdit("left", index, occurrence, tex) },
