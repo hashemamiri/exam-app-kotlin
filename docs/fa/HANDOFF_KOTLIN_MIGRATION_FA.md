@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.6 رفع بازگشت بی‌نهایت پل exam-editor-bridge (Maximum call stack)؛ پیش از آن: V54.5 (تشخیص خطای واقعی JS روی دستگاه موفق بود)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V54.7 مسیر جایگزین srcdoc برای boot ویرایشگر فرمول در WebView (تأییدشده با تست اجرایی jsdom)؛ پیش از آن: V54.6 رفع بازگشت بی‌نهایت پل
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -6276,4 +6276,68 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V54.5
 FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
 testDebugUnitTest / lintDebug → باید در CI اجرا شود
+```
+
+
+## ۱۳۸) V54.7 — مسیر جایگزین srcdoc برای boot ویرایشگر فرمول در WebView
+
+### گزارش دستگاه (پس از V54.6)
+
+```text
+recursion رفع شد (خطای قرمز نیست، placeholder سالم است)
+اما آیکن فرمول هنوز فقط «نمای کلی صفحه» را نشان می‌دهد؛ ویرایشگر باز نمی‌شود
+درخواست کاربر: تست و بررسی کن
+```
+
+### تست اجرایی واقعی (نه فقط تحلیل متن)
+
+برای اولین بار صفحه با jsdom (مرورگر استاندارد headless) واقعاً اجرا شد:
+
+```text
+حالت عادی (doc.write سالم):
+  ExamEditorFormula.begin() → frame display=block ، mfModal=«modal open
+  box-fullscreen» ، openMath/mfApply آماده ، overlay=true به Native
+  → مسیر مرجع در مرورگر استاندارد ۱۰۰٪ سالم است
+حالت شبیه‌سازی WebView معیوب (document.write خنثی):
+  دقیقاً همان علامت دستگاه: display هرگز block نمی‌شود
+```
+
+نتیجهٔ قطعی: شکست دستگاه مخصوص رفتار `document.write` روی iframe در WebView
+اندروید است (سند intercepted از دامنهٔ مجازی)؛ کد مرجع بی‌گناه است.
+
+### اصلاح (بلوک افزودهٔ ExamEditorFormula؛ کد مرجع دست‌نخورده)
+
+```text
+پس از __openMathEditor، اگر تا ۲.۵ ثانیه openMath/mfApply/closeMath داخل iframe
+نیامد: iframe با srcdoc = همان MATH_EDITOR_HTML مرجع بازسازی می‌شود (Android
+WebView srcdoc را از 4.4 کامل اجرا می‌کند) و پس از آماده‌شدن، دوباره
+__openMathEditor «مرجع» صدا زده می‌شود. چون ready مرجع هنوز false است، boot
+مرجع poll تازه روی iframe جدید می‌سازد؛ installBridge ، تم میزبان و کل ادامهٔ
+مسیر ۱۰۰٪ همان کد مرجع است. مسیر عادی دست‌نخورده و fallback فقط در نبود
+ویرایشگر فعال می‌شود (در مرورگر استاندارد هرگز).
+تشخیص‌های مرحله‌بندی‌شده: FALLBACK_UNAVAILABLE / SRCDOC_BOOT_TIMEOUT /
+OPEN_MATH_RETRY / FORMULA_BOOT_TIMEOUT (۱۲ثانیه).
+```
+
+### صحت‌سنجی fallback با تست اجرایی
+
+```text
+جایگزینی iframe                         → PASS (nf !== f)
+srcdoc = MATH_EDITOR_HTML کامل (579KB)  → PASS (شامل openMath و </script> سالم)
+عدم فعال‌شدن fallback در مسیر سالم      → PASS (srcdoc=false در حالت عادی)
+محدودیت jsdom: srcdoc را اجرا نمی‌کند؛ اجرای نهایی srcdoc فقط روی دستگاه
+قابل تأیید است — به همین دلیل تشخیص‌های مرحله‌بندی‌شده حفظ شدند.
+```
+
+### فایل‌ها و عملیات
+
+```text
+app/src/main/assets/question_editor/question_editor.html (بلوک ExamEditorFormula)
+app/src/main/assets/question_editor/version.txt
+app/src/test/java/ir/exam/app/ui/app/V54_7SrcdocFallbackTest.kt (جدید)
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V54.6
+FINAL_NATIVE_VERIFY → PASS, EXIT=0 | git diff --check → PASS
 ```

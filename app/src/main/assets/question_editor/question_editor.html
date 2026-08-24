@@ -9797,7 +9797,51 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
           }
           try { window.__openMathEditor(); }
           catch (err) { reportError('OPEN_MATH: ' + (err && err.message ? err.message : err)); }
-          /* نگهبان boot: اگر تا ۷ ثانیه iframe ویرایشگر نمایان نشد، خطا گزارش شود. */
+          /* V54.7 — fallback مخصوص WebView: در برخی WebViewها document.write روی
+             iframe خالیِ صفحهٔ intercepted بی‌صدا سند را نمی‌سازد (در مرورگر
+             استاندارد همین مسیر سالم است؛ با jsdom تأیید شد). اگر تا ۲.۵ ثانیه
+             openMath داخل iframe نیامد، iframe را با srcdoc از همان
+             MATH_EDITOR_HTML مرجع بازسازی می‌کنیم و دوباره __openMathEditor
+             مرجع را صدا می‌زنیم؛ poll مرجع ویرایشگر آماده را می‌بیند و ادامهٔ
+             مسیر ۱۰۰٪ همان کد مرجع است. */
+          var iframeReady = function () {
+            try {
+              var fEl = document.getElementById('mathEditorFrame');
+              var cw = fEl && fEl.contentWindow;
+              return !!(cw && cw.openMath && cw.mfApply && cw.closeMath);
+            } catch (err) { return false; }
+          };
+          setTimeout(function () {
+            if (iframeReady()) return;
+            try {
+              var fEl = document.getElementById('mathEditorFrame');
+              if (!fEl || typeof MATH_EDITOR_HTML !== 'string' || !MATH_EDITOR_HTML.length) {
+                reportError('FALLBACK_UNAVAILABLE frame=' + !!fEl);
+                return;
+              }
+              var fresh = document.createElement('iframe');
+              fresh.id = 'mathEditorFrame';
+              fresh.title = fEl.title || 'ویرایشگر فرمول ریاضی';
+              fresh.srcdoc = MATH_EDITOR_HTML;
+              fEl.parentNode.replaceChild(fresh, fEl);
+              var tries = 0;
+              var wait = setInterval(function () {
+                tries++;
+                if (iframeReady()) {
+                  clearInterval(wait);
+                  try { if (window.__mathHostTheme) window.__mathHostTheme.on(); } catch (err) {}
+                  try { window.__openMathEditor(); }
+                  catch (err) { reportError('OPEN_MATH_RETRY: ' + (err && err.message ? err.message : err)); }
+                } else if (tries > 80) {
+                  clearInterval(wait);
+                  reportError('SRCDOC_BOOT_TIMEOUT' + (lastError ? ' | ' + lastError : ''));
+                }
+              }, 100);
+            } catch (err) {
+              reportError('FALLBACK: ' + (err && err.message ? err.message : err));
+            }
+          }, 2500);
+          /* نگهبان نهایی: اگر تا ۱۲ ثانیه iframe نمایان نشد، خطا گزارش شود. */
           setTimeout(function () {
             try {
               var fEl = document.getElementById('mathEditorFrame');
@@ -9805,7 +9849,7 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
                 reportError('FORMULA_BOOT_TIMEOUT' + (lastError ? ' | ' + lastError : ''));
               }
             } catch (err) {}
-          }, 7000);
+          }, 12000);
         }
       };
     }
