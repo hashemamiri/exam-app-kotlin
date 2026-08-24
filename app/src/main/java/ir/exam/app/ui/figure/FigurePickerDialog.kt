@@ -487,6 +487,9 @@ private fun buildGraphSpec(
 ): FigureSpec {
     val root = base.raw.toMutableMap()
     root["t"] = JsonPrimitive(type)
+    // V55.15 — مرجع، توکن بدون k را «هندسه» می‌گیرد؛ نمودار باید k='g' داشته
+    // باشد وگرنه box جعبه‌ای در کادر متن به‌شکل مکعب‌مستطیل هندسه رندر می‌شود.
+    root["k"] = JsonPrimitive("g")
     val extra = (root["X"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
     paramKeys(type).forEach { key ->
         val value = params[key].orEmpty().trim()

@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -376,6 +377,11 @@ private fun CropFrame(
     onResize: (CropEdgeKind, Float, Float) -> Unit
 ) {
     val frameShape = if (circular) CircleShape else RoundedCornerShape(2.dp)
+    // V55.15 — رفع «حرکت آزاد ندارد»: pointerInput(circular) هرگز restart نمی‌شود
+    // و closure قدیمی onMove مرکزِ کهنه (safeCenterX اولین composition) را نگه
+    // می‌داشت؛ هر رویداد drag از همان مرکز اولیه حساب می‌شد و کادر قفل می‌ماند.
+    // rememberUpdatedState همیشه آخرین lambda (با مرکز تازه) را صدا می‌زند.
+    val currentOnMove by rememberUpdatedState(onMove)
     // V55.14 — گزارش دستگاه: «اضلاع قابل جابه‌جایی نیست». دستگیره‌ها نامرئی
     // بودند و ناحیهٔ ۱۸dp کنارِ درست همان لبه، عملاً پیدا/لمس نمی‌شد. اکنون:
     // میله‌های سفید مرئی وسط اضلاع + مربع‌های سفید مرئی گوشه‌ها با سطح لمس
@@ -388,7 +394,7 @@ private fun CropFrame(
                 .pointerInput(circular) {
                     detectDragGestures { change, drag ->
                         change.consume()
-                        onMove(drag.x, drag.y)
+                        currentOnMove(drag.x, drag.y)
                     }
                 }
         )
@@ -413,13 +419,16 @@ private fun CropHandle(
     bar: Boolean = false,
     horizontal: Boolean = false
 ) {
+    // V55.15 — همان رفع stale-lambda برای resize؛ وگرنه ضلع/گوشه پس از اولین
+    // تغییر، از اندازه/مرکز کهنه ادامه می‌داد.
+    val currentOnResize by rememberUpdatedState(onResize)
     Box(
         modifier
             .size(32.dp)
             .pointerInput(edge) {
                 detectDragGestures { change, drag ->
                     change.consume()
-                    onResize(edge, drag.x, drag.y)
+                    currentOnResize(edge, drag.x, drag.y)
                 }
             },
         contentAlignment = Alignment.Center

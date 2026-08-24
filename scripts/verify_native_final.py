@@ -1387,6 +1387,13 @@ require('FigureTemplate("cuboid", "مکعب‌مستطیل"' in
         and "if (t === 'cuboid') t = 'box';" in editor_asset,
         "V55.14 cuboid/box identifier split is missing")
 
+# ---- V55.15: fresh crop callbacks + graph tokens tagged k='g' ----
+require("rememberUpdatedState(onMove)" in image_editor
+        and "rememberUpdatedState(onResize)" in image_editor,
+        "V55.15 crop stale-lambda fix is missing")
+require('root["k"] = JsonPrimitive("g")' in figure_picker,
+        "V55.15 graph specs must carry k='g' for the reference chart module")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

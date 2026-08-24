@@ -7509,3 +7509,67 @@ require های verify دست‌نخورده سبز (needle آن‌ها «برا�
 فایل‌ها: ExamBuilderScreen.kt (فقط متن تأیید) / هندآف
 پیش‌نیاز: V55.14 | تست دستگاه V55.14 طبق راهنمای بخش ۱۵۵
 ```
+
+## ۱۵۷) V55.15 — رفع قفل کادر برش (stale lambda) + نمودار جعبه‌ای مکعب‌نما
+
+### گزارش دستگاه (پس از build موفق V55.14/V55.14.1)
+
+```text
+۱) «مربع برش حرکت آزادانه ندارد»
+۲) «نمودار جعبه‌ای در متن سؤال به شکل مکعب است» (قرینهٔ باگ V55.14!)
+```
+
+### تشخیص
+
+```text
+۱) stale-lambda کلاسیک Compose: pointerInput(circular) با کلید ثابت هرگز
+   restart نمی‌شود؛ closure اولین composition مرکز کهنه (safeCenterX/Y همان
+   لحظه) را نگه می‌دارد → هر drag از مرکز اولیه حساب و clamp می‌شود و کادر
+   عملاً قفل می‌ماند. resize هم دقیقاً همین مشکل را داشت (بعد از اولین تغییر
+   از اندازهٔ کهنه ادامه می‌داد).
+۲) buildGraphSpec خروجی «بدون k» می‌ساخت. مرجعِ کادر متن توکن بدون k را به
+   ماژول هندسه می‌دهد (GeoFig)؛ و چون svgOf هندسه از V55.14 نگاشت cuboid→box
+   دارد و خودش هم t='box' هندسی را می‌فهمد، نمودار جعبه‌ای مکعب‌مستطیل رندر
+   می‌شد. بازتولید Chromium: توکن بدون k → polygon مکعب؛ k='g' → نمودار.
+```
+
+### تحویل V55.15
+
+```text
+۱) CropFrame/CropHandle: rememberUpdatedState(onMove/onResize) و فراخوانی
+   نسخهٔ همیشه-تازه (currentOnMove/currentOnResize) داخل pointerInput.
+۲) buildGraphSpec: root["k"]=JsonPrimitive("g") — همهٔ specهای نمودار ساخته/
+   ویرایش‌شده در FigurePickerDialog با برچسب ماژول نمودار مرجع درج می‌شوند.
+   (specهای جعبه‌ایِ قبلاً درج‌شدهٔ بدون k پس از یک بار ویرایش درست می‌شوند.)
+تأیید Chromium: k='g',t=box → ۵ مستطیل نمودار بدون polygon؛ cuboid با/بی k
+→ polygon مکعب‌مستطیل ✓
+```
+
+### تست‌ها
+
+```text
+جدید: V55_15CropMoveBoxChartTest (۲ تست) · هماهنگ: V55_14 (needleهای
+onMove/onResize → currentOnMove/currentOnResize) · verify: دو require جدید ·
+اسکن سراسری ۵۲۲ needle → صفر mismatch · شبیه‌سازی خط ۱۰۶ V24 → سالم ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) ویرایش تصویر → برش: کادر با کشیدن وسطش «پیوسته» جابه‌جا شود (نه فقط یک
+   تکان)؛ اضلاع/گوشه‌ها هم پیوسته resize کنند
+۲) درج نمودار → جعبه‌ای → در متن سؤال، نمودار جعبه‌ای واقعی (مستطیل‌های
+   چارک با whisker) دیده شود؛ مکعب‌مستطیل هندسه هم همچنان مکعب باشد
+```
+
+### عملیات
+
+```text
+فایل‌ها: InteractiveImageEditorDialog.kt (rememberUpdatedState) /
+FigurePickerDialog.kt (k='g') / V55_15CropMoveBoxChartTest.kt (جدید) /
+V55_14 test هماهنگ / verify (۲ require) / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.14.1
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

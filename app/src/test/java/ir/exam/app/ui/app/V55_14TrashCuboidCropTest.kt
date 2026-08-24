@@ -72,8 +72,9 @@ class V55_14TrashCuboidCropTest {
         assertTrue("CropHandle(CropEdgeKind.TOP_LEFT" in editor)
         assertTrue("CropHandle(CropEdgeKind.BOTTOM_RIGHT" in editor)
         assertTrue("bar = true" in editor)
-        assertTrue("onResize(edge, drag.x, drag.y)" in editor)
+        // V55.15 — callbacks از rememberUpdatedState می‌آیند تا stale نشوند.
+        assertTrue("currentOnResize(edge, drag.x, drag.y)" in editor)
         // حرکت آزاد کل کادر از ناحیهٔ داخلی.
-        assertTrue("onMove(drag.x, drag.y)" in editor)
+        assertTrue("currentOnMove(drag.x, drag.y)" in editor)
     }
 }
