@@ -38,7 +38,6 @@ import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -284,7 +283,8 @@ fun ExamBuilderScreen(
                     onItemDragStarted = { innerReorderActive = true },
                     onItemDragEnded = { innerReorderActive = false },
                     viewModel = viewModel,
-                    onPreview = { previewQuestion = question }
+                    onPreview = { previewQuestion = question },
+                    onPreviewAll = { previewAll = true }
                 )
             }
             item {
@@ -620,7 +620,9 @@ private fun QuestionEditor(
     onItemDragStarted: () -> Unit,
     onItemDragEnded: () -> Unit,
     viewModel: ExamBuilderViewModel,
-    onPreview: () -> Unit
+    onPreview: () -> Unit,
+    // V55.18 — آیکن چشم علاوه بر پیش‌نمایش همین سؤال، پیش‌نمایش کامل A4 را هم باز می‌کند.
+    onPreviewAll: () -> Unit
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
@@ -643,6 +645,8 @@ private fun QuestionEditor(
     var dragActive by remember(question.id) { mutableStateOf(false) }
     // V55.14 — تأیید حذف سؤال با سطل زبالهٔ کنار بارم.
     var confirmDelete by remember(question.id) { mutableStateOf(false) }
+    // V55.18 — منوی آیکن چشم (پیش‌نمایش سؤال/A4/چیدمان چاپ).
+    var previewMenuOpen by remember(question.id) { mutableStateOf(false) }
     // V55.16 — دکمهٔ + گزینه/جورکردنی: پنجرهٔ ۸ ابزار برای کدام فیلد باز است؟
     var insertMenuFor by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
     // V55.16 — خروجی ویرایشگر ابزار بعدی به‌جای متن سؤال، در این فیلد درج شود.
@@ -666,12 +670,13 @@ private fun QuestionEditor(
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                // V55.18 — فاصلهٔ کمتر آیکن‌ها تا نوع سؤال کامل نمایش داده شود.
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(39.dp)
+                        .size(37.dp)
                         .drawBehind {
                             drawCircle(neonColor.copy(alpha = .13f), radius = size.minDimension * .48f)
                             drawCircle(
@@ -689,7 +694,8 @@ private fun QuestionEditor(
                     )
                 }
                 Text(
-                    question.type.faLabel(),
+                    // V55.18 — برچسب فشرده: صحیح/غلط روی کارت «ص/غ» تا نوع سؤال کامل جا شود.
+                    if (question.type == QuestionType.TRUE_FALSE) "ص/غ" else question.type.faLabel(),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1
@@ -702,7 +708,7 @@ private fun QuestionEditor(
                     }
                 )
                 // V55.17 — درخواست کاربر: ذخیره در بانک با آیکن کنار سطل زباله.
-                IconButton(onClick = { viewModel.saveToBank(question.id) }, modifier = Modifier.size(42.dp)) {
+                IconButton(onClick = { viewModel.saveToBank(question.id) }, modifier = Modifier.size(38.dp)) {
                     Icon(
                         Icons.Outlined.BookmarkAdd,
                         contentDescription = "ذخیره سؤال در بانک",
@@ -710,29 +716,50 @@ private fun QuestionEditor(
                     )
                 }
                 // V55.14 — درخواست کاربر: حذف سؤال با آیکن سطل زباله کنار بارم + تأیید.
-                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(42.dp)) {
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(38.dp)) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "حذف سؤال",
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
-                IconButton(
-                    onClick = {
-                        styleExpanded = !styleExpanded
-                        if (styleExpanded && !expanded) onExpand()
-                    },
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Icon(
-                        imageVector = if (styleExpanded) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (styleExpanded) "بستن چیدمان چاپ" else "بازکردن چیدمان چاپ"
-                    )
+                // V55.18 — درخواست کاربر: آیکن چشم هر دو پیش‌نمایش را در دسترس کند
+                // (پیش‌نمایش چاپ همین سؤال + پیش‌نمایش کامل A4)؛ هر کدام مستقل بسته
+                // می‌شوند و بستن یکی، دیگری را باز نمی‌کند. تنظیمات چیدمان چاپ هم
+                // از همین منو باز می‌شود.
+                Box {
+                    IconButton(
+                        onClick = { previewMenuOpen = true },
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Visibility,
+                            contentDescription = "پیش‌نمایش سؤال و آزمون"
+                        )
+                    }
+                    DropdownMenu(expanded = previewMenuOpen, onDismissRequest = { previewMenuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("پیش‌نمایش چاپ این سؤال") },
+                            onClick = { previewMenuOpen = false; onPreview() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("پیش‌نمایش کامل A4") },
+                            onClick = { previewMenuOpen = false; onPreviewAll() }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (styleExpanded) "بستن چیدمان چاپ" else "چیدمان و ظاهر چاپ") },
+                            onClick = {
+                                previewMenuOpen = false
+                                styleExpanded = !styleExpanded
+                                if (styleExpanded && !expanded) onExpand()
+                            }
+                        )
+                    }
                 }
                 IconButton(
                     onClick = {},
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(38.dp)
                         .pointerInput(question.id) {
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
@@ -1363,6 +1390,7 @@ private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.NUMERIC -> "عددی"
     QuestionType.MATCHING -> "جورکردنی"
 }
+
 
 private fun readBuilderImportLimited(input: java.io.InputStream): String {
     val output = ByteArrayOutputStream()

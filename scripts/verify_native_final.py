@@ -1419,6 +1419,17 @@ require("FigTokenVisuals.transformation" in builder_screen
 require("LocalLayoutDirection provides LayoutDirection.Ltr" in image_editor,
         "V55.17 crop canvas must be forced LTR so dragging follows the finger")
 
+# ---- V55.18: smooth right swipe, eye preview menu, compact card header ----
+_mgmt_cards=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt").read_text()
+require("if (direction == -1) {" in _mgmt_cards
+        and "dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in _mgmt_cards,
+        "V55.18 smooth rightward card entrance is missing")
+require("پیش‌نمایش کامل A4" in builder_screen and "previewMenuOpen" in builder_screen
+        and "onPreviewAll = { previewAll = true }" in builder_screen,
+        "V55.18 eye preview menu (question + full A4) is missing")
+require('"ص/غ"' in builder_screen and "Arrangement.spacedBy(2.dp)" in builder_screen,
+        "V55.18 compact card header with short true/false label is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

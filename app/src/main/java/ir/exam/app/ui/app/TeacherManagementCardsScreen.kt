@@ -171,9 +171,24 @@ fun TeacherManagementCardsScreen(
                     launch { dragX.animateTo(targetX, tween(280)) }
                     launch { dragY.animateTo(targetY, tween(280)) }
                 }
-                activeIndex = (activeIndex + direction + cards.size) % cards.size
-                dragX.snapTo(0f)
-                dragY.snapTo(0f)
+                // V55.18 — گزارش دستگاه: «به راست نرم نیست». در کشیدن به راست
+                // (direction=-1) کارت فعالِ جدید = کارت قبلی پشته است و چون
+                // translation فقط روی کارت فعال اعمال می‌شود، snap فوری صفر
+                // باعث «پرش» ورود آن می‌شد. اکنون کارت جدید از همان سمت خروج
+                // (targetX) وارد و نرم به مرکز می‌آید؛ کشیدن به چپ مثل قبل.
+                if (direction == -1) {
+                    dragX.snapTo(targetX)
+                    dragY.snapTo(targetY)
+                    activeIndex = (activeIndex + direction + cards.size) % cards.size
+                    coroutineScope {
+                        launch { dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
+                        launch { dragY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
+                    }
+                } else {
+                    activeIndex = (activeIndex + direction + cards.size) % cards.size
+                    dragX.snapTo(0f)
+                    dragY.snapTo(0f)
+                }
             } else {
                 coroutineScope {
                     launch { dragX.animateTo(0f, tween(280)) }
