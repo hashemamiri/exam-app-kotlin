@@ -129,8 +129,14 @@ fun FormulaHostDialog(
                                         view.evaluateJavascript(
                                             "(function(){if(window.ExamFormulaHost){ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
                                         ) { result ->
-                                            if (result?.contains("ok") != true && attempts < 67) {
-                                                view.postDelayed({ tryBegin() }, 150)
+                                            when {
+                                                result?.contains("ok") == true -> Unit
+                                                attempts < 67 -> view.postDelayed({ tryBegin() }, 150)
+                                                // V55.2 — پل هرگز تعریف نشد: خطای صریح به‌جای سکوت.
+                                                else -> post {
+                                                    jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.2 not loaded?)"
+                                                    loading = false
+                                                }
                                             }
                                         }
                                     }

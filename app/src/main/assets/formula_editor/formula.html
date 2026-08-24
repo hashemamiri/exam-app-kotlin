@@ -14386,7 +14386,10 @@ try {
             clearInterval(opener);
             try {
               if (window.ExamEditorNative && typeof ExamEditorNative.onError === 'function') {
-                ExamEditorNative.onError('FORMULA_OPEN_TIMEOUT openMath=' + (typeof window.openMath));
+                var md = document.getElementById('mfModal');
+                ExamEditorNative.onError('FORMULA_OPEN_TIMEOUT openMath=' + (typeof window.openMath)
+                  + ' modal=' + (md ? md.className : 'null')
+                  + ' qTxt=' + !!document.getElementById('qTxt_1'));
               }
             } catch (err) {}
           }
@@ -14395,6 +14398,25 @@ try {
     };
     /* Kotlin برای اطمینان از آماده‌بودن پل، این پرچم را می‌خواند. */
     window.__examFormulaHostReady = true;
+    /* V55.2 — برچسب نسخهٔ پل کنار badge مرجع تا نسخهٔ asset روی دستگاه قطعی شود. */
+    (function tagBridge() {
+      function put() {
+        try {
+          if (document.getElementById('nativeBridgeTag') || !document.body) return;
+          var bt = document.createElement('div');
+          bt.id = 'nativeBridgeTag';
+          bt.textContent = 'N55.2';
+          bt.setAttribute('style', 'position:fixed;right:8px;bottom:8px;z-index:2147483600;direction:ltr;'
+            + 'font:11px/1.5 monospace;color:#2f7d5f;background:rgba(255,255,255,.7);'
+            + 'border:1px solid rgba(38,49,66,.18);border-radius:7px;padding:1px 7px;'
+            + 'pointer-events:none;user-select:none;');
+          document.body.appendChild(bt);
+        } catch (e) {}
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', put);
+      else put();
+      setTimeout(put, 800);
+    })();
     /* خنثی‌سازی «بازگشایی خودکار» مرجع: آخرین override زنجیرهٔ closeMath
        می‌شویم؛ بستن واقعی انجام می‌شود ولی به‌جای bootOpen دوباره، نتیجه به
        Native برمی‌گردد. (auto-open مرجع پس از این بلوک تعریف شده و روی load

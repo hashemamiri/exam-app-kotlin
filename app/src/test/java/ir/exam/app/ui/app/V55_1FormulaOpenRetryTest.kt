@@ -39,7 +39,8 @@ class V55_1FormulaOpenRetryTest {
     @Test
     fun `kotlin retries begin until the bridge exists`() {
         assertTrue("fun tryBegin()" in host)
-        assertTrue("if (result?.contains(\"ok\") != true" in host)
+        // V55.2 — retry به when با شاخهٔ خطای صریح BRIDGE_NOT_READY ارتقا یافت.
+        assertTrue("result?.contains(\"ok\") == true" in host)
         assertTrue("postDelayed({ tryBegin() }, 150)" in host)
     }
 }
