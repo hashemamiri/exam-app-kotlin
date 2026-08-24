@@ -168,8 +168,13 @@
           var kind = '';
           try { kind = (JSON.parse(raw) || {}).k || ''; } catch (err) { kind = ''; }
           clearSel();
-          /* t/p/a/s ویرایشگر Native دارند (needle مرجع تست‌ها حفظ شده): */
-          var refKind = (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's');
+          /* t/p/a/s ویرایشگر Native دارند (needle مرجع تست‌ها حفظ شده):
+             V55.13 — هندسه/نمودار (k='g' یا خالی) هم ویرایشگر Native دارند
+             (FigurePickerDialog از V45.3)؛ گزارش دستگاه: refEdit آن‌ها ویرایشگر
+             مرجع را داخل WebView کوچک باز می‌کرد = «کادر خاکستری». حالا همهٔ
+             انواع به Native می‌روند و refEdit فقط پشتیبان انواع ناشناخته است. */
+          var refKind = (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's'
+            && kind !== 'g' && kind !== '');
           if (!refKind && typeof window.__nativeFigEdit === 'function') window.__nativeFigEdit(raw);
           else refEdit(fig);
         } catch (err) {}

@@ -1367,6 +1367,14 @@ require("GridCells.Fixed(2)" in figure_picker
         and "برای ویرایش انتخاب کنید" not in figure_picker,
         "V55.12 two-column graph picker without the edit hint is missing")
 
+# ---- V55.13: geometry/graph tokens edit natively + LTR periodic grid ----
+require("kind !== 'g'" in editor_asset
+        and '"g", "" -> figureTarget = FigureTarget(' in builder_screen,
+        "V55.13 geometry/graph tokens must route to the native editor")
+require("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt").read_text(),
+        "V55.13 periodic touch grid must be forced LTR")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

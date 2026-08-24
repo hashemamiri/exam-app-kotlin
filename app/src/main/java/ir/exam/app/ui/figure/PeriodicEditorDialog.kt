@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureSpec
@@ -222,6 +225,10 @@ private fun PeriodicTouchGrid(
 ) {
     val groups = (1..18).filter { it !in hiddenGroups }
     val periods = (1..7).filter { it !in hiddenPeriods }
+    // V55.13 — گزارش دستگاه: در برنامهٔ RTL، ردیف‌های Compose از راست چیده
+    // می‌شدند و جدول تناوبی برعکس (گروه ۱ سمت راست) دیده می‌شد؛ جدول تناوبی
+    // استاندارد همیشه LTR است (مثل .ptb مرجع با direction:ltr).
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
     Column(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -263,6 +270,7 @@ private fun PeriodicTouchGrid(
                 }
             }
         }
+    }
     }
 }
 

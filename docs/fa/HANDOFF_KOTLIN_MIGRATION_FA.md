@@ -7344,3 +7344,68 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.11
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۵۴) V55.13 — ویرایش Native هندسه/نمودار با کلیک دوم + جدول تناوبی LTR
+
+### گزارش دستگاه (عکس‌های photo_2026-08-24_14-24-*.jpg، پس از V55.11)
+
+```text
+۱) «با کلیک اول انتخاب می‌شود و ضربدر می‌آید و کار می‌کند اما با کلیک دوم
+   کادر خاکستری می‌آید» (عکس: توکن هندسهٔ مربع + overlay خاکستری مرجع)
+۲) «جدول تناوبی از راست به چپ است که باید از چپ به راست باشد»
+```
+
+### تشخیص
+
+```text
+۱) کلیک دوم توکن‌های k='g' (هندسه/نمودار) و kind خالی طبق طراحی V55.10 به
+   refEdit → ویرایشگر «مرجع» می‌رفت که داخل WebView کوچک همان کادر خاکستری
+   است؛ درحالی‌که این انواع از V45.3 ویرایشگر Native دارند (FigurePickerDialog).
+۲) برنامه RTL است؛ Rowهای Compose در PeriodicTouchGrid (شبکهٔ لمسی ویرایشگر
+   تناوبی) از راست چیده می‌شدند → گروه ۱ سمت راست. مرجع خودش .ptb را
+   direction:ltr می‌کند؛ رندر SVG (دانش‌آموز/چاپ) مختصات مطلق دارد و سالم بود.
+```
+
+### تحویل V55.13
+
+```text
+۱) asset (بلوک boot): کلیک دومِ k='g' و '' هم به __nativeFigEdit می‌رود؛
+   refEdit فقط پشتیبان انواع ناشناخته. Kotlin (ExamBuilderScreen):
+   onEditFigureToken شاخهٔ "g", "" → FigureTarget با تشخیص GEOMETRY/GRAPH از
+   GRAPH_FIGURES؛ onInsert مسیر editingWebToken → applyEditedFigureJson
+   (جایگزینی همان توکن) و onDismiss → cancelEditFigure.
+۲) PeriodicEditorDialog: CompositionLocalProvider(LayoutDirection.Ltr) دور
+   PeriodicTouchGrid — گروه ۱ سمت چپ مثل جدول تناوبی استاندارد.
+version.txt: v55.13-geo-native-ltr
+```
+
+### تست‌ها
+
+```text
+Chromium: کلیک اول هندسه → انتخاب+✕، صفر overlay ✓ · کلیک دوم هندسه و نمودار
+→ onEditFigure('g') دو بار و صفر overlay مرجع ✓
+تست منبع جدید: V55_13GeoNativeLtrTest (۲ تست) · verify: دو require جدید ·
+اسکن سراسری ۵۰۳ needle → صفر mismatch · تراز آکولاد (بدون رشته‌ها) صفر ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) شکل هندسی درج کن → کلیک اول انتخاب؛ کلیک دوم → پنجرهٔ «ویرایش شکل» برنامه
+   (نه کادر خاکستری)؛ تغییر بده و اعمال کن → همان توکن به‌روز شود
+۲) همین را با نمودار تست کن → پنجرهٔ «ویرایش نمودار»
+۳) آیکن جدول تناوبی → شبکهٔ ویرایشگر از چپ به راست (گروه ۱ چپ) باشد
+```
+
+### عملیات
+
+```text
+فایل‌ها: question_editor.html (مسیر کلیک دوم g/'') / version.txt /
+ExamBuilderScreen.kt (route g/'' + جایگزینی توکن) / PeriodicEditorDialog.kt
+(LTR) / V55_13GeoNativeLtrTest.kt (جدید) / verify (۲ require) / changelog /
+هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.12
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

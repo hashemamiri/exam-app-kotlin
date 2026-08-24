@@ -91,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.ui.figure.FigureKind
@@ -772,6 +773,13 @@ private fun QuestionEditor(
                                 domain = AtlasCatalog.scienceDomain(spec.type),
                                 initialSpec = spec
                             )
+                            // V55.13 — هندسه/نمودار (k='g' یا خالی) هم ویرایشگر Native
+                            // دارند؛ قبلاً به ویرایشگر مرجع (کادر خاکستری) می‌رفتند.
+                            "g", "" -> figureTarget = FigureTarget(
+                                initialSpec = spec,
+                                kind = if (GRAPH_FIGURES.any { it.id == spec.type }) FigureKind.GRAPH
+                                else FigureKind.GEOMETRY
+                            )
                             else -> editingWebToken = false
                         }
                     }
@@ -991,11 +999,25 @@ private fun QuestionEditor(
             FigurePickerDialog(
                 initialSpec = target.initialSpec,
                 initialKind = target.kind,
-                onDismiss = { figureTarget = null },
+                onDismiss = {
+                    // V55.13 — اگر از مسیر کلیک روی توکن آمده بودیم، ویرایش لغو شود.
+                    if (editingWebToken) {
+                        questionFieldController.cancelEditFigure()
+                        editingWebToken = false
+                    }
+                    figureTarget = null
+                },
                 onInsert = { spec ->
                     val occurrence = target.occurrenceIndex
                     when {
                         occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
+                        // V55.13 — ویرایش توکن هندسه/نمودار موجود: جایگزینی همان توکن.
+                        editingWebToken -> {
+                            if (!questionFieldController.applyEditedFigureJson(spec.toJson())) {
+                                viewModel.insertFigure(question.id, spec)
+                            }
+                            editingWebToken = false
+                        }
                         // V53.1 — درج در محل مکان‌نمای کادر WebView؛ متن از رویداد
                         // onTextChanged همان WebView به ViewModel برمی‌گردد.
                         questionFieldController.insertFigureJson(spec.toJson()) -> Unit
