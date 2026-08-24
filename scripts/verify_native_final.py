@@ -1307,6 +1307,15 @@ require("wrapNow('mbGroupLibrary', afterMenu)" in formula_asset
         and "fitLibraryItems" in formula_asset,
         "V55.6 instant library enforcement or formula fit is missing")
 
+# ---- V55.7: question field auto-grows with content (no inner scroll/fixed height) ----
+require("ExamEditorNative.onContentHeight" in editor_asset
+        and "max-height:none !important" in editor_asset
+        and "html,body{background:transparent !important;}" in editor_asset,
+        "V55.7 native-mode auto-grow/transparent background is missing from question_editor.html")
+require("fun onContentHeight(height: Int)" in web_field
+        and "contentHeightDp.coerceIn(150, 4000).dp" in web_section,
+        "V55.7 dynamic field height wiring is missing from Kotlin")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

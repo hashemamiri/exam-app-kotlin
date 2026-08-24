@@ -6814,3 +6814,73 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.5
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۴۷) V55.7 — کشیده‌شدن کادر متن سؤال با محتوا
+
+### گزارش دستگاه (عکس photo_2026-08-24_10-38-03.jpg)
+
+```text
+«کادر متن سوال وب ویو نیست. با افزودن فرمول یا درج شکل کادر کشیده نمی‌شود و
+اندازه کادر تعداد مشخصی سطر است. قابل اسکرول نیست. خود کادر درون یک پس‌زمینه
+است. ظاهراً دارد تمام question_editor.html را رندر می‌کند. تست کن.»
+```
+
+### تشخیص (اندازه‌گیری Chromium با viewport دقیقاً هم‌اندازهٔ WebView برنامه)
+
+```text
+- فرضیهٔ «کل فایل رندر می‌شود» رد شد: در حالت nativeTools فقط برچسب «متن سؤال»
+  + سطح تایپ qmf-surface visible است (۲ عنصر). WebView هست ولی ارتفاعش ثابت
+  320dp بود درحالی‌که محتوای صفحه فقط ~۱۲۱px است → ~۲۰۰dp پس‌زمینهٔ خاکستری
+  مرجع (bg #e9eef5) زیر کادر دیده می‌شد = همان «کادر درون یک پس‌زمینه».
+- «کشیده نشدن»: سطح تایپ مرجع max-height:min(56vh,460px) دارد؛ در WebView
+  320dp یعنی سقف ~179px، بعد اسکرول داخلی (که در WebView تو در توی Compose
+  عملاً غیرقابل استفاده است) → حس «تعداد ثابت سطر + غیرقابل اسکرول».
+```
+
+### تحویل V55.7 (سه قسمت؛ همه فقط حالت nativeTools — مرجع در مرورگر دست‌نخورده)
+
+```text
+۱) HTML: در nativeToolbarHide سه قاعده اضافه شد: qmf-surface بدون سقف/اسکرول
+   داخلی؛ textarea بدون سقف؛ پس‌زمینهٔ html/body شفاف.
+۲) HTML: reportHeight — ResizeObserver روی shell/body + رویداد input +
+   interval 400ms؛ ارتفاع واقعی shell → ExamEditorNative.onContentHeight.
+۳) Kotlin: FieldBridge.onContentHeight(41..20000) → QuestionTextWebSection
+   ارتفاع پویا contentHeightDp.coerceIn(150,4000).dp به‌جای 320dp ثابت
+   (overlay باز: همان 560dp). اسکرول = صفحهٔ اصلی برنامه.
+version.txt (question_editor): v55.7-autogrow-field
+```
+
+### تست‌ها (همه Chromium واقعی)
+
+```text
+- setValue ۸ سطری از Native → گزارش ارتفاع 130→261 ✓
+- درج جدول → 307 ✓ · متن طولانی → 526 ✓ · اسکرول داخلی surface پس از
+  همگام‌سازی ارتفاع: ندارد ✓ (اسکرین‌شات‌ها)
+- پل فرمول (openTool('formula') → onOpenFormula len/sel درست) ✓ ·
+  onTextChanged پس از درج ✓ · بدون هیچ خطای JS ✓
+- مرورگر عادی بدون پل: maxH=448px مرجع، پس‌زمینهٔ خاکستری مرجع، بدون گزارشگر ✓
+تست منبع جدید: V55_7AutoGrowFieldTest (۳ تست) · verify: دو require جدید V55.7 ·
+اسکن سراسری ۷۳ needle در ۲۲ تست → صفر mismatch · هیچ تستی به 320dp وابسته
+نبود · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) کادر متن سؤال باید بدون حاشیهٔ خاکستری اضافه، هم‌اندازهٔ محتوا باشد
+۲) چند سطر متن بنویس/جدول درج کن → کادر باید بلند شود و صفحهٔ «ساخت آزمون»
+   (نه داخل کادر) اسکرول بخورد
+۳) فرمول ∑ همچنان پنجرهٔ تمام‌صفحه را باز کند
+```
+
+### عملیات
+
+```text
+فایل‌ها: question_editor.html (nativeToolbarHide گسترده + reportHeight) /
+version.txt (question_editor) / QuestionTextFieldWebView.kt (onContentHeight) /
+QuestionTextWebSection.kt (ارتفاع پویا) / V55_7AutoGrowFieldTest.kt (جدید) /
+verify (۲ require) / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.6
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -54,6 +54,9 @@ fun QuestionTextWebSection(
 ) {
     var overlayOpen by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf(false) }
+    // V55.7 — ارتفاع واقعی محتوا از HTML (px CSS = dp). کادر با درج فرمول/شکل
+    // «کشیده» می‌شود و اسکرول با صفحهٔ اصلی برنامه است، نه داخل WebView.
+    var contentHeightDp by remember { mutableStateOf(150) }
 
     // V54.4 — دکمهٔ بازگشت سیستم ابتدا لایهٔ تمام‌صفحهٔ باز مرجع را می‌بندد.
     BackHandler(enabled = overlayOpen) { controller.closeOverlays() }
@@ -74,11 +77,12 @@ fun QuestionTextWebSection(
             onEditFigureToken = onEditFigureToken,
             onOpenFormula = onOpenFormula,
             onError = { loadError = true },
+            onContentHeight = { contentHeightDp = it },
             modifier = Modifier
                 .fillMaxWidth()
-                // ابزارهای تمام‌صفحهٔ مرجع (آناتومی/تناوبی/فیزیک/شیمی) داخل همین
-                // WebView باز می‌شوند؛ هنگام بازبودن، ارتفاع بیشتر می‌شود.
-                .height(if (overlayOpen) 560.dp else 320.dp)
+                // V55.7 — ارتفاع کادر = ارتفاع واقعی محتوا (کشیده‌شدن با درج)؛
+                // فقط هنگام بازبودن ابزارهای تمام‌صفحهٔ مرجع، ارتفاع ثابت بزرگ.
+                .height(if (overlayOpen) 560.dp else contentHeightDp.coerceIn(150, 4000).dp)
         )
         if (loadError) {
             Text(

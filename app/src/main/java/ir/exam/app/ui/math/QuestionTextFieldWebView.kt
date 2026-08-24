@@ -82,6 +82,9 @@ fun QuestionTextFieldWebView(
     onEditFigureToken: (String) -> Unit = {},
     onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
     onError: (String) -> Unit = {},
+    // V55.7 — ارتفاع واقعی محتوا (px CSS) از HTML گزارش می‌شود تا کادر با درج
+    // فرمول/شکل کشیده شود و اسکرول به صفحهٔ اصلی برنامه منتقل شود.
+    onContentHeight: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     DisposableEffect(controller) {
@@ -100,7 +103,7 @@ fun QuestionTextFieldWebView(
                 settings.allowUniversalAccessFromFileURLs = false
                 settings.setSupportZoom(false)
                 addJavascriptInterface(
-                    FieldBridge(controller, onValueChanged, onOverlayChanged, onEditFigureToken, onOpenFormula, onError),
+                    FieldBridge(controller, onValueChanged, onOverlayChanged, onEditFigureToken, onOpenFormula, onError, onContentHeight),
                     "ExamEditorNative"
                 )
                 webViewClient = object : WebViewClient() {
@@ -163,7 +166,8 @@ private class FieldBridge(
     private val onOverlayChanged: (Boolean) -> Unit,
     private val onEditFigureToken: (String) -> Unit,
     private val onOpenFormula: (String, Int, Int) -> Unit,
-    private val onError: (String) -> Unit
+    private val onError: (String) -> Unit,
+    private val onContentHeight: (Int) -> Unit
 ) {
     @JavascriptInterface
     fun onTextChanged(value: String?) {
@@ -185,6 +189,12 @@ private class FieldBridge(
     @JavascriptInterface
     fun onOpenFormula(text: String?, selStart: Int, selEnd: Int) {
         onOpenFormula.invoke(text.orEmpty(), selStart, selEnd)
+    }
+
+    /** V55.7 — ارتفاع واقعی محتوای صفحه (px CSS)؛ Compose ارتفاع کادر را هماهنگ می‌کند. */
+    @JavascriptInterface
+    fun onContentHeight(height: Int) {
+        if (height in 41..20000) onContentHeight.invoke(height)
     }
 
     @JavascriptInterface

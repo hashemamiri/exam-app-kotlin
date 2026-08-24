@@ -9660,9 +9660,46 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
       try {
         var st = document.createElement('style');
         st.id = 'nativeToolbarHide';
-        st.textContent = '.q-tools{display:none !important;}';
+        st.textContent = '.q-tools{display:none !important;}'
+          /* V55.7 — داخل برنامه، ارتفاع WebView از Compose با ارتفاع محتوا هماهنگ
+             می‌شود؛ پس سقف ارتفاع و اسکرول داخلی سطح تایپ برداشته می‌شود تا کادر
+             با درج فرمول/شکل «کشیده» شود و اسکرول با صفحهٔ اصلی برنامه باشد.
+             پس‌زمینهٔ صفحه هم شفاف می‌شود تا کادر مستقیم روی زمینهٔ برنامه بنشیند. */
+          + '.qmf-surface.input{max-height:none !important;overflow:visible !important;}'
+          + 'textarea.input{max-height:none !important;}'
+          + 'html,body{background:transparent !important;}';
         (document.head || document.documentElement).appendChild(st);
       } catch (e) {}
+      /* V55.7 — گزارش ارتفاع واقعی محتوا به Native تا Compose ارتفاع WebView را
+         هم‌اندازهٔ محتوا کند (نه ثابت ۳۲۰dp که پس‌زمینهٔ خالی می‌ساخت). */
+      (function reportHeight() {
+        var lastH = 0;
+        function measure() {
+          try {
+            var shell = document.querySelector('.exam-question-editor-shell');
+            var h = Math.ceil((shell || document.body).getBoundingClientRect().height) + 8;
+            if (h > 40 && Math.abs(h - lastH) > 2) {
+              lastH = h;
+              if (window.ExamEditorNative && typeof ExamEditorNative.onContentHeight === 'function') {
+                ExamEditorNative.onContentHeight(h);
+              }
+            }
+          } catch (e) {}
+        }
+        try {
+          if (typeof ResizeObserver === 'function') {
+            var ro = new ResizeObserver(measure);
+            var sh = document.querySelector('.exam-question-editor-shell');
+            if (sh) ro.observe(sh);
+            ro.observe(document.body);
+          }
+        } catch (e) {}
+        document.addEventListener('input', function () { setTimeout(measure, 60); }, true);
+        setInterval(measure, 400);
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', measure);
+        else measure();
+        window.addEventListener('load', function () { setTimeout(measure, 120); });
+      })();
     }
     function field() { return document.getElementById('qTxt_main'); }
     function insertRaw(token) {
