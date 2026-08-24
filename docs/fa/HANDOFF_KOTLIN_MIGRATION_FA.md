@@ -6954,3 +6954,78 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.7
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۴۹) V55.9 — قطع overlay مرجع با کلیک روی توکن + جداسازی WebView هر سؤال
+
+### گزارش دستگاه (عکس photo_2026-08-24_11-43-36.jpg، پس از V55.8)
+
+```text
+۱) «کادر خاکستری هنوز وجود دارد» (عکس: توکن آناتومی داخل کادر + پس‌زمینهٔ
+   خاکستری بزرگ زیر آن)
+۲) «با کلیک روی آناتومی درج‌شده برای ویرایش، کل کادر انتخاب می‌شود و کادر
+   خاکستری ظاهر می‌شود»
+۳) «اگر در کادر متن سؤال ۱ چیزی بنویسم/درج کنم در کادر متن تمام سؤالات
+   ظاهر می‌شود»
+```
+
+### تشخیص (بازتولید در Chromium)
+
+```text
+۱و۲) کلیک «تکی» روی توکن آناتومی → anOverlay مرجع (ویرایشگر تمام‌صفحهٔ
+   خاکستری) داخل همان WebView کوچک باز می‌شود؛ polling ما آن را overlayOpen
+   می‌بیند و Compose ارتفاع را 560dp می‌کند = «کادر خاکستری بزرگ». شنوندهٔ
+   قبلی ما فقط dblclick بود و چون دیر ثبت می‌شد، شنونده‌های click مرجع
+   (openFromEl) جلوتر اجرا می‌شدند.
+۳) مسیر HTML/localStorage تبرئه شد (دو صفحهٔ هم‌context در Chromium: متن منتقل
+   نشد؛ کلیدهای localStorage فقط مربوط به فرمول‌های اخیر است). ریشه در Compose
+   است: در LazyColumn با بازیافت composition، AndroidView (WebView) یک سؤال
+   با closureهای factory سؤال قبلی (bridge/onValueChanged) برای سؤال دیگر
+   نگه داشته می‌شود → تایپ در یک کادر به state سؤال‌های دیگر می‌رود.
+```
+
+### تحویل V55.9
+
+```text
+۱) asset (بلوک boot در head — فاز capture مقدم بر همهٔ شنونده‌های مرجع):
+   گیرندهٔ click+dblclick برای .qmf-fig با kind∈{t,p,a,s} — preventDefault +
+   stopImmediatePropagation و تحویل به __nativeFigEdit (پنجرهٔ ضدتکرار ۷۰۰ms
+   برای click,click,dblclick). سایر انواع (هندسه/نمودار مرجع) دست‌نخورده.
+   بلوک اصلی: window.__nativeFigEdit → pendingEditJson + onEditFigure (شنوندهٔ
+   dblclick قدیمی حذف شد — منطق تحویل همان V53.3 است).
+۲) Kotlin: key(controller) دور AndroidView در QuestionTextFieldWebView —
+   هر سؤال WebView مخصوص خودش؛ با بازیافت، WebView سؤال قبلی dispose می‌شود.
+version.txt: v55.9-native-fig-edit
+```
+
+### تست‌ها (Chromium واقعی)
+
+```text
+- کلیک تکی آناتومی: هیچ overlay مرجع باز نشد؛ onEditFigure=1 ✓
+- click,click,dblclick واقعی = فقط ۱ ویرایش؛ ویرایش دوم پس از مکث = ۲ ✓
+- رویداد کاذب onOverlayChanged(true) دیگر صادر نمی‌شود ✓
+- توکن هندسه (مرجع): dblclick → gfOverlay مرجع همچنان باز می‌شود ✓
+- تراز آکولاد/پرانتز فایل Kotlin پس از key() سالم ✓
+تست منبع جدید: V55_9NativeFigEditIsolationTest (۳ تست) · verify: دو require
+جدید V55.9 · اسکن سراسری ۹۱ needle در ۲۴ تست → صفر mismatch · PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) آناتومی درج کن → یک کلیک روی آن → مستقیم ویرایشگر Native آناتومی باز شود؛
+   هیچ کادر خاکستری‌ای ظاهر نشود
+۲) دو سؤال بساز؛ در سؤال ۱ تایپ کن → متن فقط در سؤال ۱ بماند (اسکرول بالا/پایین
+   هم تست شود چون بازیافت LazyColumn با اسکرول رخ می‌دهد)
+```
+
+### عملیات
+
+```text
+فایل‌ها: question_editor.html (click-capture در boot + __nativeFigEdit؛ حذف
+شنوندهٔ dblclick قدیمی) / version.txt / QuestionTextFieldWebView.kt (key) /
+V55_9NativeFigEditIsolationTest.kt (جدید) / verify (۲ require) / changelog /
+هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.8
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

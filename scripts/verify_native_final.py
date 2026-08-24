@@ -1328,6 +1328,12 @@ require("wrapNow('mbVarShow', afterMenu)" in formula_asset
         and "'.mbv-cat, .mbv-i, .mbv-q'" in formula_asset,
         "V55.8 keypad variant/paren menu enlargement is missing")
 
+# ---- V55.9: single-click capture for native tokens + per-question webview ----
+require("__nativeFigEdit" in editor_asset and "stopImmediatePropagation" in editor_asset,
+        "V55.9 click capture for native token kinds is missing")
+require("key(controller)" in web_field,
+        "V55.9 per-question webview isolation (key) is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

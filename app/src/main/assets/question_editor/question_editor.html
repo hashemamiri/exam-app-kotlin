@@ -20,6 +20,37 @@
     setTimeout(function () {
       try { var b = document.getElementById('nativeBootHide'); if (b) b.remove(); } catch (e) {}
     }, 6000);
+    /* V55.9 — گزارش دستگاه: کلیک تکی روی توکن آناتومی، ویرایشگر مرجع (overlay
+       خاکستری) را داخل همین WebView کوچک باز می‌کرد (در Chromium بازتولید شد:
+       click → anOverlay.open). چون این listener در head ثبت می‌شود، در فاز
+       capture «قبل از همهٔ» شنونده‌های مرجع اجراست؛ برای توکن‌های دارای
+       ویرایشگر Native (t/p/a/s) مسیر مرجع کاملاً قطع و ویرایش به Native
+       سپرده می‌شود. بقیهٔ انواع (مثل هندسه) دست‌نخورده به مرجع می‌روند. */
+    var lastFigEdit = 0;
+    ['click', 'dblclick'].forEach(function (type) {
+      document.addEventListener(type, function (e) {
+        try {
+          var n = e.target;
+          while (n && n !== document) {
+            if (n.classList && n.classList.contains('qmf-fig')) break;
+            n = n.parentNode || n.parentElement;
+          }
+          if (!n || n === document) return;
+          var raw = n.getAttribute('data-fig') || (n.dataset && n.dataset.fig) || '';
+          if (!raw) return;
+          var kind = '';
+          try { kind = (JSON.parse(raw) || {}).k || ''; } catch (err) { return; }
+          if (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's') return;
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+          var now = Date.now();
+          if (now - lastFigEdit < 700) return; /* click+dblclick = یک ویرایش */
+          lastFigEdit = now;
+          if (typeof window.__nativeFigEdit === 'function') window.__nativeFigEdit(raw);
+        } catch (err) {}
+      }, true);
+    });
   } catch (e) {}
 })();
 </script>
@@ -9828,29 +9859,18 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
           }
         } catch (e) {}
       };
-      /* V53.3 — دوبار-کلیک توکن‌های جدول/تناوبی/آناتومی/علوم به ویرایشگر Native؛
-         هندسه/نمودار و سایر رفتارها دست‌نخورده به ابزار مرجع می‌روند. */
-      document.addEventListener('dblclick', function (e) {
-        var n = e.target;
-        while (n && n !== document) {
-          if (n.classList && n.classList.contains('qmf-fig')) break;
-          n = n.parentNode || n.parentElement;
-        }
-        if (!n || n === document) return;
-        var raw = n.getAttribute('data-fig') || (n.dataset && n.dataset.fig) || '';
-        if (!raw) return;
-        var kind = '';
-        try { kind = (JSON.parse(raw) || {}).k || ''; } catch (err) { return; }
-        if (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's') return;
-        e.preventDefault();
-        e.stopPropagation();
+      /* V53.3/V55.9 — ویرایش توکن‌های جدول/تناوبی/آناتومی/علوم در ویرایشگر
+         Native. گیرندهٔ رویداد اکنون در بلوک boot ابتدای head است (فاز capture،
+         قبل از شنونده‌های مرجع؛ کلیک تکی هم پوشش دارد تا overlay مرجع داخل
+         WebView کوچک باز نشود). اینجا فقط تحویل به پل Kotlin انجام می‌شود. */
+      window.__nativeFigEdit = function (raw) {
         pendingEditJson = raw;
         try {
           if (window.ExamEditorNative && typeof ExamEditorNative.onEditFigure === 'function') {
             ExamEditorNative.onEditFigure(raw);
           }
         } catch (err) {}
-      }, true);
+      };
     }
     /* V54.4 — میزبان فرمول گزینه/جورکردنی: صفحهٔ مرجع «قابل مشاهده» می‌ماند
        (بدون hidden) و ویرایشگر فرمول مرجع بلافاصله روی آن باز می‌شود. */

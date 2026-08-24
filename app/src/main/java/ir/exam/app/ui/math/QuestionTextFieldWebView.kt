@@ -9,6 +9,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.IOException
@@ -90,6 +91,13 @@ fun QuestionTextFieldWebView(
     DisposableEffect(controller) {
         onDispose { controller.webView = null }
     }
+    // V55.9 — گزارش دستگاه: «متن سؤال ۱ در کادر همهٔ سؤال‌ها ظاهر می‌شود».
+    // در LazyColumn، بازیافت composition می‌تواند AndroidView را با closureهای
+    // factory قدیمی (bridge/initialValue سؤال قبلی) برای سؤال دیگری نگه دارد.
+    // key(controller) تضمین می‌کند با تغییر سؤال (controller هر سؤال یکتاست)
+    // WebView قبلی کاملاً دور انداخته و factory از نو با bindings همان سؤال
+    // اجرا شود؛ هیچ WebViewی بین سؤال‌ها مشترک نمی‌ماند.
+    key(controller) {
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -158,6 +166,7 @@ fun QuestionTextFieldWebView(
             }
         }
     )
+    }
 }
 
 private class FieldBridge(
