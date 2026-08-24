@@ -1342,6 +1342,13 @@ require("onScrollableChanged" in editor_asset
         and "requestDisallowInterceptTouchEvent(true)" in web_field,
         "V55.10 inner-scroll gesture unlock is missing")
 
+# ---- V55.11: unclipped delete button (incl. formulas) + caret fix ----
+require("function attachX(el2)" in editor_asset
+        and "'.qmf-atom.is-on, .qmf-fig.is-on'" in editor_asset,
+        "V55.11 unified delete button for figures and formulas is missing")
+require("caretRangeFromPoint" in editor_asset,
+        "V55.11 surface caret/focus fix is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

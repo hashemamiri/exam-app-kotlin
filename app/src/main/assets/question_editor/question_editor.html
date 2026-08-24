@@ -57,22 +57,80 @@
       clearSel();
       sel.fig = fig;
       try { fig.classList.add('is-on'); } catch (e) {}
-      try {
-        fig.style.position = 'relative';
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'native-fig-x';
-        b.setAttribute('contenteditable', 'false');
-        b.setAttribute('aria-label', 'حذف');
-        b.textContent = '✕';
-        b.setAttribute('style', 'position:absolute;top:-8px;left:-8px;width:28px;height:28px;'
-          + 'border-radius:14px;border:2px solid #fff;background:#e5484d;color:#fff;'
-          + 'font:700 13px/24px sans-serif;text-align:center;padding:0;z-index:6;'
-          + 'box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;');
-        fig.appendChild(b);
-        sel.btn = b;
-      } catch (e) {}
+      try { sel.btn = attachX(fig); } catch (e) {}
     }
+    /* V55.11 — ✕ برای «همهٔ» درج‌شده‌ها (شکل .qmf-fig و فرمول .qmf-atom):
+       داخل مرز توکن (بریده نمی‌شود؛ گزارش دستگاه: «ضربدر نصفه است») و با
+       خنثی‌سازی zoom کوچک‌سازی V55.8 تا اندازهٔ لمس واقعی بماند. */
+    function attachX(el2) {
+      var old = el2.querySelector('.native-fig-x');
+      if (old) return old;
+      el2.style.position = 'relative';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'native-fig-x';
+      b.setAttribute('contenteditable', 'false');
+      b.setAttribute('aria-label', 'حذف');
+      b.textContent = '✕';
+      var z = 1;
+      try { z = parseFloat(getComputedStyle(el2).zoom) || 1; } catch (e) {}
+      b.setAttribute('style', 'position:absolute;top:2px;left:2px;width:26px;height:26px;'
+        + 'border-radius:13px;border:2px solid #fff;background:#e5484d;color:#fff;'
+        + 'font:700 12px/22px sans-serif;text-align:center;padding:0;z-index:6;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;zoom:' + (1 / z) + ';');
+      /* فرمول‌ها: حذف از مسیر مرجع (Backspace روی اتم انتخاب‌شده) تا منبع
+         دقیقاً همان‌طور که مرجع می‌فهمد اصلاح شود. */
+      if (el2.classList.contains('qmf-atom')) {
+        b.addEventListener('click', function (ev) {
+          ev.preventDefault(); ev.stopPropagation();
+          if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
+          try {
+            var surf = document.querySelector('.qmf-surface.input');
+            if (surf) surf.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+          } catch (e) {}
+          try { b.remove(); } catch (e) {}
+        }, true);
+      }
+      el2.appendChild(b);
+      return b;
+    }
+    /* V55.11 — فرمول‌ها (qmf-atom): انتخاب/ویرایش با خود مرجع است (کلیک اول
+       انتخاب، کلیک دوم ویرایشگر فرمول)؛ این ناظر فقط ✕ را روی اتم انتخاب‌شده
+       می‌گذارد/برمی‌دارد و اگر رندر مجدد سطح ✕ شکل انتخاب‌شده را پاک کرد،
+       دوباره می‌چسباند. */
+    setInterval(function () {
+      try {
+        var on = document.querySelector('.qmf-atom.is-on, .qmf-fig.is-on');
+        var xs = document.querySelectorAll('.native-fig-x');
+        for (var i = 0; i < xs.length; i++) {
+          if (!on || xs[i].parentNode !== on) { try { xs[i].remove(); } catch (e) {} }
+        }
+        if (on && !on.querySelector('.native-fig-x')) attachX(on);
+      } catch (e) {}
+    }, 300);
+    /* V55.11 — رفع «مکان‌نما نمی‌نشیند» (اندازه‌گیری Chromium: تپ روی سطح تایپ،
+       فوکوس را به textarea مخفی می‌برد چون کل کادر داخل <label> مرجع است و
+       label کلیک را به کنترل خودش هدیه می‌دهد). preventDefault در فاز حباب،
+       فقط «هدیهٔ فوکوس label» را لغو می‌کند (caret در mousedown/touch قبلاً
+       نشسته)؛ اگر فوکوس هنوز روی سطح نبود، از نقطهٔ لمس caret می‌گذاریم. */
+    document.addEventListener('click', function (e) {
+      try {
+        var surf = e.target && e.target.closest ? e.target.closest('.qmf-surface') : null;
+        if (!surf) return;
+        e.preventDefault();
+        if (document.activeElement !== surf) {
+          try { surf.focus({ preventScroll: true }); } catch (err) { try { surf.focus(); } catch (e2) {} }
+          try {
+            var r = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
+            if (r && surf.contains(r.startContainer)) {
+              var s2 = window.getSelection();
+              s2.removeAllRanges();
+              s2.addRange(r);
+            }
+          } catch (err) {}
+        }
+      } catch (err) {}
+    }, false);
     function refEdit(fig) {
       try {
         var ev2 = new MouseEvent('dblclick', { bubbles: true, cancelable: true });
@@ -101,7 +159,8 @@
           e.stopPropagation();
           if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
           if (type === 'dblclick') return; /* توالی click,click,dblclick قبلاً هدایت شده */
-          if (xBtn && sel.fig === fig) { removeToken(fig); return; }
+          /* V55.11 — ✕ ممکن است توسط ناظر (بدون sel.fig) چسبیده باشد؛ حذف قطعی. */
+          if (xBtn) { removeToken(fig); return; }
           if (sel.fig !== fig) { selectFig(fig); return; } /* کلیک اول: انتخاب */
           /* کلیک دوم روی توکن انتخاب‌شده: ویرایش */
           var raw = fig.getAttribute('data-fig') || (fig.dataset && fig.dataset.fig) || '';
