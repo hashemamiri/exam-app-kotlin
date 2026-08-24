@@ -1434,6 +1434,34 @@ require("پیش‌نمایش کامل A4" in builder_screen and "previewMenuOpen
 require('"ص/غ"' in builder_screen and "Arrangement.spacedBy(2.dp)" in builder_screen,
         "V55.18 compact card header with short true/false label is missing")
 
+# ---- V56.0: tablet optimization foundation (device layout mode) ----
+_prefs=(ROOT/"app/src/main/java/ir/exam/app/core/ui/AppearancePreferences.kt").read_text()
+_device_layout=(ROOT/"app/src/main/java/ir/exam/app/core/ui/DeviceLayout.kt").read_text()
+_theme=(ROOT/"app/src/main/java/ir/exam/app/core/ui/ExamAppTheme.kt").read_text()
+_settings_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
+require("enum class DeviceLayoutMode { AUTO, PHONE, TABLET }" in _prefs
+        and 'stringPreferencesKey("device_layout")' in _prefs,
+        "V56.0 persisted device layout mode is missing")
+require("const val TABLET_MIN_SMALLEST_WIDTH_DP = 600" in _device_layout
+        and "LocalTabletLayout provides tabletLayout" in _theme,
+        "V56.0 tablet layout detection/provider is missing")
+require("چیدمان دستگاه" in _settings_screen
+        and 'DeviceLayoutMode.AUTO to "خودکار"' in _settings_screen,
+        "V56.0 appearance section device layout picker is missing")
+
+# ---- V56.1: tablet layouts for the main screens ----
+_menu=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69MainMenuScreen.kt").read_text()
+require("const val TABLET_COLUMNS = 3" in _menu
+        and "cards.chunked(columns)" in _menu,
+        "V56.1 tablet main menu columns are missing")
+require("widthIn(max = 760.dp)" in builder_screen,
+        "V56.1 tablet width cap for exam builder is missing")
+
+# ---- V56.2: tablet grids for the picker dialogs ----
+_figure_picker=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt").read_text()
+require("if (tabletPicker) GridCells.Fixed(3) else GridCells.Fixed(2)" in _figure_picker,
+        "V56.2 tablet figure picker grid is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

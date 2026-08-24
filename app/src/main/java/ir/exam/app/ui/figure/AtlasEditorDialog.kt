@@ -57,6 +57,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.core.figure.AtlasMark
+import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.core.figure.AtlasMarkPainter
 import ir.exam.app.core.figure.FigureSpec
 
@@ -120,8 +121,10 @@ fun AtlasTypePickerDialog(
                     }
                 }
                 val visible = domainTypes.filter { category == "all" || it.cat == category }
+                // V56.2 — تبلت: شبکهٔ انتخاب نوع ۳ستونه؛ گوشی مثل قبل GridCells.Fixed(2).
+                val tabletAtlas = LocalTabletLayout.current
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = if (tabletAtlas) GridCells.Fixed(3) else GridCells.Fixed(2),
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)

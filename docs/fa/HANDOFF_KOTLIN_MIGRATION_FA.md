@@ -7846,3 +7846,94 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.18
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۶۲) V56.0 — بهینه‌سازی تبلت، پچ ۱ از ۳: زیرساخت + انتخاب چیدمان در ظاهر
+
+### درخواست کاربر
+
+```text
+«برنامه رو برای تبلت بهینه کن. در بخش ظاهر یک قسمت حالت انتخاب خودکار تبلت
+و گوشی بذار. در حالت تبلت چینش تغییر کند و اگر لازم است در ۳ پچ بده.»
+```
+
+### تحویل پچ ۱
+
+```text
+- DeviceLayoutMode جدید (AUTO/PHONE/TABLET) در AppearancePreferences با کلید
+  DataStore «device_layout»؛ پیش‌فرض AUTO؛ مقدار نامعتبر → AUTO.
+- فایل جدید core/ui/DeviceLayout.kt:
+  LocalTabletLayout (staticCompositionLocalOf { false })،
+  TABLET_MIN_SMALLEST_WIDTH_DP=600 (استاندارد اندروید)،
+  isTabletDevice() از LocalConfiguration.smallestScreenWidthDp،
+  resolveTabletLayout(mode) برای ترکیب انتخاب کاربر + تشخیص خودکار.
+- ExamAppTheme: LocalTabletLayout provides tabletLayout برای کل درخت UI.
+- بخش «ظاهر»: کارت «چیدمان دستگاه» با ۳ چیپ خودکار/گوشی/تبلت + متن
+  «چیدمان فعلی: تبلت/گوشی» + setDeviceLayoutMode در ViewModel.
+- «بازگردانی تنظیمات ظاهری» (reset) این تنظیم را هم به خودکار برمی‌گرداند
+  (store.clear همان قبلی است، کد جدید لازم نداشت).
+```
+
+## ۱۶۳) V56.1 — بهینه‌سازی تبلت، پچ ۲ از ۳: چیدمان صفحه‌های اصلی
+
+```text
+- منوی اصلی Design69MainMenuScreen: در تبلت ۳ ستون (TABLET_COLUMNS=3) و
+  سقف پهنای TABLET_MAX_WIDTH_DP=840dp؛ گوشی مثل قبل COLUMNS=2 و 560dp
+  (قرارداد Neumorphic69IntegrationTest دست‌نخورده: COLUMNS==2). ردیف ناقص
+  تبلت (۸ کارت معلم = ۳+۳+۲) با Spacer(weight) پر می‌شود.
+- کارت‌های مدیریت TeacherManagementCardsScreen: پشته در تبلت سقف 620dp.
+- سازندهٔ آزمون ExamBuilderScreen: LazyColumn در تبلت وسط با سقف 760dp
+  (wrapContentWidth(CenterHorizontally) + widthIn)؛ گوشی بدون Modifier اضافه.
+- داشبورد معلم 760dp، بانک سؤال 760dp، بخش ظاهر تنظیمات 680dp — همه فقط
+  در تبلت؛ در گوشی شاخهٔ else Modifier (بدون تغییر رفتار).
+```
+
+## ۱۶۴) V56.2 — بهینه‌سازی تبلت، پچ ۳ از ۳: شبکه‌های پنجره‌های انتخاب
+
+```text
+- FigurePickerDialog: هندسه Adaptive(104dp→140dp در تبلت)؛ نمودار
+  Fixed(2→3 در تبلت). رشتهٔ «GridCells.Fixed(2)» عمداً در کد ماند چون
+  needle تست V55_12AtlasFlowArrowTest است (درس تکراری needleها).
+- AtlasEditorDialog (انتخاب نوع آناتومی/فیزیک/شیمی): Fixed(2→3 در تبلت).
+```
+
+### تأیید V56.x
+
+```text
+جدید: V56_0TabletLayoutFoundationTest (۴ تست)، V56_1TabletScreensLayoutTest
+(۳ تست)، V56_2TabletDialogGridsTest (۲ تست) · verify: ۶ require جدید V56.x ·
+شبیه‌سازی python همهٔ assertionهای جدید + قراردادهای قدیمی (V55_12 Fixed(2)
+در segment FigureTypePickerDialog، V19 bottom=112dp، V25 بارم 62x40،
+Neumorphic69 COLUMNS=2) سبز · اسکن سراسری ۵۹۹ needle → فقط همان هشدار کاذب
+شناخته‌شدهٔ V55_16 (\$ escape) · اسکن assertFalse در فایل‌های تغییرکرده →
+همهٔ ۵۴ مورد بررسی شد: متغیر تست از فایل/سگمنت دیگری خوانده می‌شود، تداخلی
+نیست · تراز آکولاد صفر در هر ۱۲ فایل · FINAL_NATIVE_VERIFY=PASS EXIT=0
+kotlin_files=198 (DeviceLayout.kt جدید)
+```
+
+### راهنمای تست دستگاه
+
+```text
+گوشی (بدون تغییر رفتار): منو ۲ستونه، همهٔ صفحه‌ها مثل قبل.
+تنظیمات → ظاهر → «چیدمان دستگاه»:
+۱) خودکار: روی تبلت (صفحهٔ ≥600dp) چیدمان تبلت، روی گوشی چیدمان گوشی.
+۲) تبلت (حتی روی گوشی برای آزمایش): منوی اصلی ۳ستونه و پهن‌تر؛ کارت‌های
+   مدیریت با پهنای محدود وسط؛ سازندهٔ آزمون/داشبورد/بانک سؤال ستون وسط؛
+   پنجره‌های درج شکل/نمودار/آناتومی ۳ستونه.
+۳) گوشی: همه‌جا چیدمان گوشی حتی روی تبلت.
+تنظیم بعد از بستن برنامه باقی بماند؛ «بازگردانی تنظیمات ظاهری» → خودکار.
+```
+
+### عملیات
+
+```text
+پچ ۱ (V56_0_tablet_layout_foundation): AppearancePreferences/DeviceLayout(جدید)/
+ExamAppTheme/ProfileSettingsScreen/ProfileSettingsViewModel + تست V56_0
+پچ ۲ (V56_1_tablet_screens_layout): Design69MainMenuScreen/
+TeacherManagementCardsScreen/ExamBuilderScreen/TeacherDashboardScreen/
+QuestionBankScreen/ProfileSettingsScreen + تست V56_1
+پچ ۳ (V56_2_tablet_dialog_grids): FigurePickerDialog/AtlasEditorDialog +
+تست V56_2 + verify(۶ require) + changelog + هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.18.1 — ترتیب اعمال: پچ ۱ ← پچ ۲ ← پچ ۳
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

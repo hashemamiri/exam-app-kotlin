@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearancePreferences
+import ir.exam.app.core.ui.DeviceLayoutMode
 import ir.exam.app.core.ui.NeumorphicPalette
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.data.repository.SupabaseProfileRepository
@@ -124,6 +125,9 @@ class ProfileSettingsViewModel(
     }
     fun setNeumorphicDepth(depth: Float) = viewModelScope.launch {
         appearance.setNeumorphicDepth(depth)
+    }
+    fun setDeviceLayoutMode(mode: DeviceLayoutMode) = viewModelScope.launch {
+        appearance.setDeviceLayoutMode(mode)
     }
     fun resetAppearance() = viewModelScope.launch { appearance.reset() }
 

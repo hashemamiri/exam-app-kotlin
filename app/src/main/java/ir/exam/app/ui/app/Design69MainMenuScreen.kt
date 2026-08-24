@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.profile.ProfileAvatar
@@ -57,7 +58,14 @@ object Design69MenuContract {
     const val MANAGER_CARD_COUNT = 6
     const val STUDENT_CARD_COUNT = 6
 
+    // V56.0 — چیدمان تبلت: ستون‌های بیشتر و پهنای بزرگ‌تر؛ ردیف آخر ناقص مجاز
+    // است و با weight خالی پر می‌شود.
+    const val TABLET_COLUMNS = 3
+    const val TABLET_MAX_WIDTH_DP = 840
+
     fun isCompleteGrid(count: Int): Boolean = count > 0 && count % COLUMNS == 0
+
+    fun columnsFor(tablet: Boolean): Int = if (tablet) TABLET_COLUMNS else COLUMNS
 }
 
 /** صفحه کامل منو با انیمیشن‌های تو‌در‌توی کوتاه و stagger کنترل‌شده. */
@@ -80,6 +88,10 @@ fun Design69MainMenuScreen(
     val colors = neumorphic69Colors
     var entered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { entered = true }
+    // V56.0 — تبلت: منو ۳ستونه و پهن‌تر؛ گوشی مثل قبل ۲ستونه.
+    val tablet = LocalTabletLayout.current
+    val columns = Design69MenuContract.columnsFor(tablet)
+    val maxWidth = if (tablet) Design69MenuContract.TABLET_MAX_WIDTH_DP.dp else 560.dp
 
     Column(
         modifier
@@ -88,7 +100,7 @@ fun Design69MainMenuScreen(
             .padding(horizontal = 18.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(Modifier.fillMaxWidth().widthIn(max = 560.dp)) {
+        Column(Modifier.fillMaxWidth().widthIn(max = maxWidth)) {
             AnimatedVisibility(
                 visible = entered,
                 enter = fadeIn(tween(150)) +
@@ -167,13 +179,13 @@ fun Design69MainMenuScreen(
                 }
             }
             Spacer(Modifier.height(18.dp))
-            cards.chunked(Design69MenuContract.COLUMNS).forEachIndexed { rowIndex, rowCards ->
+            cards.chunked(columns).forEachIndexed { rowIndex, rowCards ->
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(15.dp)
                 ) {
                     rowCards.forEachIndexed { columnIndex, card ->
-                        val index = rowIndex * Design69MenuContract.COLUMNS + columnIndex
+                        val index = rowIndex * columns + columnIndex
                         val delay = 20 + index * 18
                         AnimatedVisibility(
                             visible = entered,
@@ -203,8 +215,13 @@ fun Design69MainMenuScreen(
                             )
                         }
                     }
+                    // V56.0: در تبلت ردیف آخر ممکن است ناقص باشد؛ جای خالی با
+                    // weight پر می‌شود تا کارت‌ها کش نیایند.
+                    repeat(columns - rowCards.size) {
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
-                if (rowIndex != cards.lastIndex / Design69MenuContract.COLUMNS) {
+                if (rowIndex != cards.lastIndex / columns) {
                     Spacer(Modifier.height(15.dp))
                 }
             }

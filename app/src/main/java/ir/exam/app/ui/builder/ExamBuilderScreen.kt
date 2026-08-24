@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -216,10 +218,19 @@ fun ExamBuilderScreen(
             return@Scaffold
         }
 
+        // V56.1 — تبلت: ستون محتوا وسط صفحه با سقف 760dp تا کارت‌های سؤال روی
+        // صفحهٔ پهن کش نیایند؛ گوشی مثل قبل تمام‌پهنا.
+        val tabletBuilder = ir.exam.app.core.ui.LocalTabletLayout.current
         LazyColumn(
             state = listState,
             userScrollEnabled = !innerReorderActive,
-            modifier = Modifier.padding(padding).padding(horizontal = 16.dp),
+            modifier = Modifier
+                .padding(padding)
+                .then(
+                    if (tabletBuilder) Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 760.dp)
+                    else Modifier
+                )
+                .padding(horizontal = 16.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 10.dp, bottom = 112.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

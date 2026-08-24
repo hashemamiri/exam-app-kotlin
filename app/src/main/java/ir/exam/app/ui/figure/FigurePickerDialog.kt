@@ -35,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureTemplate
+import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.core.figure.GEOMETRY_FIGURES
 import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.ui.figure.FigureKind.GEOMETRY
@@ -75,9 +76,11 @@ fun FigureTypePickerDialog(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 HorizontalDivider()
+                // V56.2 — تبلت: ستون‌های بیشتر در پنجره‌های انتخاب.
+                val tabletPicker = LocalTabletLayout.current
                 if (geometry) {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(104.dp),
+                        columns = if (tabletPicker) GridCells.Adaptive(140.dp) else GridCells.Adaptive(104.dp),
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -87,9 +90,10 @@ fun FigureTypePickerDialog(
                         }
                     }
                 } else {
-                    // V55.12 — درخواست کاربر: نمودارها در پنجرهٔ انتخاب «هر سطر ۲ تا».
+                    // V55.12 — درخواست کاربر: نمودارها در پنجرهٔ انتخاب «هر سطر ۲ تا»؛
+                    // V56.2 — در تبلت ۳ تا.
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = if (tabletPicker) GridCells.Fixed(3) else GridCells.Fixed(2),
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)

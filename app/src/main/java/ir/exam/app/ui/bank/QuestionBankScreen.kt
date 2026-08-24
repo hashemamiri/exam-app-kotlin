@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -60,8 +62,16 @@ fun QuestionBankScreen(
         onRefresh = viewModel::load,
         modifier = Modifier.fillMaxSize()
     ) {
+    // V56.1 — تبلت: فهرست بانک سؤال وسط صفحه با سقف پهنا.
+    val tabletBank = ir.exam.app.core.ui.LocalTabletLayout.current
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        Modifier
+            .fillMaxSize()
+            .then(
+                if (tabletBank) Modifier.wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 760.dp)
+                else Modifier
+            )
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {

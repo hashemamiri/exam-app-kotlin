@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -71,9 +73,11 @@ import coil.compose.AsyncImage
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearanceSettings
+import ir.exam.app.core.ui.DeviceLayoutMode
 import ir.exam.app.core.ui.NeumorphicPalette
 import ir.exam.app.core.ui.ThemeMode
 import ir.exam.app.core.ui.accentColors
+import ir.exam.app.core.ui.resolveTabletLayout
 import ir.exam.app.data.repository.LocalImageRepository
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.data.repository.SchoolInvitePreview
@@ -259,8 +263,16 @@ fun ProfileSettingsScreen(
 
 @Composable
 private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSettingsViewModel) {
+    // V56.1 — تبلت: کارت‌های تنظیمات ظاهر وسط صفحه با سقف پهنا.
+    val tabletAppearance = ir.exam.app.core.ui.LocalTabletLayout.current
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .then(
+                if (tabletAppearance) Modifier.wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 680.dp)
+                else Modifier
+            )
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
@@ -289,6 +301,37 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             Switch(settings.dynamicColors, viewModel::setDynamicColors)
                         }
                     }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("چیدمان دستگاه", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "در حالت خودکار، برنامه از روی اندازهٔ صفحه تشخیص می‌دهد که چیدمان گوشی یا تبلت را نمایش دهد.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(
+                            DeviceLayoutMode.AUTO to "خودکار",
+                            DeviceLayoutMode.PHONE to "گوشی",
+                            DeviceLayoutMode.TABLET to "تبلت"
+                        ).forEach { (mode, label) ->
+                            FilterChip(
+                                selected = settings.deviceLayoutMode == mode,
+                                onClick = { viewModel.setDeviceLayoutMode(mode) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    val tabletNow = resolveTabletLayout(settings.deviceLayoutMode)
+                    Text(
+                        if (tabletNow) "چیدمان فعلی: تبلت — ستون‌های بیشتر و پهنای بهینه"
+                        else "چیدمان فعلی: گوشی",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

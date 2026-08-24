@@ -71,7 +71,13 @@ fun ExamAppTheme(
         AppFont.SAHEL -> FontFamily(Font(R.font.sahel_regular))
     }
 
-    CompositionLocalProvider(LocalDensity provides scaledDensity) {
+    // V56.0: چیدمان تبلت/گوشی طبق انتخاب کاربر (یا تشخیص خودکار از اندازهٔ صفحه)
+    // برای کل درخت UI فراهم می‌شود.
+    val tabletLayout = resolveTabletLayout(appearance.deviceLayoutMode)
+    CompositionLocalProvider(
+        LocalDensity provides scaledDensity,
+        LocalTabletLayout provides tabletLayout
+    ) {
         MaterialTheme(
             colorScheme = colors,
             typography = appTypography(fontFamily),

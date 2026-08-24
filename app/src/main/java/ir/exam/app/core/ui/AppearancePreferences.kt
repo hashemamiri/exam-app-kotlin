@@ -15,6 +15,9 @@ private val Context.appearanceDataStore by preferencesDataStore(name = "native_a
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class AppFont { SYSTEM, VAZIRMATN, SHABNAM, SAHEL }
 
+/** V56.0 — حالت چیدمان دستگاه: خودکار (تشخیص از اندازهٔ صفحه)، گوشی یا تبلت. */
+enum class DeviceLayoutMode { AUTO, PHONE, TABLET }
+
 /** چهار پالت اصلی طرح Native نئومورفیک ۶۹. */
 enum class NeumorphicPalette { INDIGO_MINT, BLUE_CYAN, PINK_ORANGE, PURPLE_PINK }
 
@@ -24,7 +27,8 @@ data class AppearanceSettings(
     val dynamicColors: Boolean = true,
     val appFont: AppFont = AppFont.VAZIRMATN,
     val neumorphicPalette: NeumorphicPalette = NeumorphicPalette.INDIGO_MINT,
-    val neumorphicDepth: Float = 14f
+    val neumorphicDepth: Float = 14f,
+    val deviceLayoutMode: DeviceLayoutMode = DeviceLayoutMode.AUTO
 )
 
 /** تنظیمات ظاهر فقط روی دستگاه ذخیره می‌شوند و هیچ دادهٔ حساب یا token در آن نیست. */
@@ -44,7 +48,10 @@ class AppearancePreferences(context: Context) {
                     runCatching { NeumorphicPalette.valueOf(it) }.getOrNull()
                 } ?: NeumorphicPalette.INDIGO_MINT,
                 neumorphicDepth = (values[NEUMORPHIC_DEPTH] ?: DEFAULT_NEO_DEPTH)
-                    .coerceIn(MIN_NEO_DEPTH, MAX_NEO_DEPTH)
+                    .coerceIn(MIN_NEO_DEPTH, MAX_NEO_DEPTH),
+                deviceLayoutMode = values[DEVICE_LAYOUT]?.let {
+                    runCatching { DeviceLayoutMode.valueOf(it) }.getOrNull()
+                } ?: DeviceLayoutMode.AUTO
             )
         }
         .catch { emit(AppearanceSettings()) }
@@ -73,6 +80,10 @@ class AppearancePreferences(context: Context) {
         store.edit { it[NEUMORPHIC_DEPTH] = depth.coerceIn(MIN_NEO_DEPTH, MAX_NEO_DEPTH) }
     }
 
+    suspend fun setDeviceLayoutMode(mode: DeviceLayoutMode) {
+        store.edit { it[DEVICE_LAYOUT] = mode.name }
+    }
+
     suspend fun reset() {
         store.edit { it.clear() }
     }
@@ -89,5 +100,6 @@ class AppearancePreferences(context: Context) {
         private val APP_FONT = stringPreferencesKey("app_font")
         private val NEUMORPHIC_PALETTE = stringPreferencesKey("neumorphic_palette")
         private val NEUMORPHIC_DEPTH = floatPreferencesKey("neumorphic_depth")
+        private val DEVICE_LAYOUT = stringPreferencesKey("device_layout")
     }
 }

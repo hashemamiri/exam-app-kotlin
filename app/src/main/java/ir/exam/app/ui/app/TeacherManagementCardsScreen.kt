@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -52,8 +53,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import ir.exam.app.core.ui.LocalTabletLayout
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -217,6 +220,9 @@ fun TeacherManagementCardsScreen(
         if (cycleKey > 0) changeCard(1)
     }
 
+    // V56.1 — تبلت: پشتهٔ کارت‌ها وسط صفحه با سقف پهنا تا کارت‌ها بیش از حد
+    // کشیده و بدقواره نشوند؛ گوشی مثل قبل تمام‌پهنا.
+    val tabletCards = LocalTabletLayout.current
     Column(
         Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -224,6 +230,7 @@ fun TeacherManagementCardsScreen(
         Box(
             Modifier
                 .fillMaxWidth()
+                .widthIn(max = if (tabletCards) 620.dp else Dp.Unspecified)
                 .height(300.dp)
                 .focusable()
                 .onPreviewKeyEvent { event ->
