@@ -20,34 +20,99 @@
     setTimeout(function () {
       try { var b = document.getElementById('nativeBootHide'); if (b) b.remove(); } catch (e) {}
     }, 6000);
-    /* V55.9 — گزارش دستگاه: کلیک تکی روی توکن آناتومی، ویرایشگر مرجع (overlay
-       خاکستری) را داخل همین WebView کوچک باز می‌کرد (در Chromium بازتولید شد:
-       click → anOverlay.open). چون این listener در head ثبت می‌شود، در فاز
-       capture «قبل از همهٔ» شنونده‌های مرجع اجراست؛ برای توکن‌های دارای
-       ویرایشگر Native (t/p/a/s) مسیر مرجع کاملاً قطع و ویرایش به Native
-       سپرده می‌شود. بقیهٔ انواع (مثل هندسه) دست‌نخورده به مرجع می‌روند. */
-    var lastFigEdit = 0;
+    /* V55.10 — رفتار جدید توکن‌ها (درخواست صریح کاربر):
+       کلیک اول = فقط «انتخاب» + دکمهٔ ✕ حذف گوشهٔ توکن؛
+       کلیک دوم (روی توکن انتخاب‌شده) = رفتن به ویرایشگر
+       (t/p/a/s → ویرایشگر Native؛ بقیه مثل هندسه/نمودار → ویرایشگر مرجع)؛
+       کلیک بیرون = لغو انتخاب (رویداد عبور می‌کند تا caret برای تایپ قبل/بعد
+       توکن سر جای خودش بنشیند). این گیرنده در فاز capture مقدم بر همهٔ
+       شنونده‌های مرجع است؛ رویدادهای synthetic با پرچم __nativeAllow برای
+       ویرایشگر مرجع عبور داده می‌شوند. */
+    var sel = { fig: null, btn: null };
+    function clearSel() {
+      try { if (sel.btn && sel.btn.parentNode) sel.btn.parentNode.removeChild(sel.btn); } catch (e) {}
+      try { if (sel.fig && sel.fig.classList) sel.fig.classList.remove('is-on'); } catch (e) {}
+      sel.fig = null; sel.btn = null;
+    }
+    function removeToken(fig) {
+      try {
+        var raw = fig.getAttribute('data-fig') || (fig.dataset && fig.dataset.fig) || '';
+        var t = document.getElementById('qTxt_main');
+        if (t && raw) {
+          var tok = '%%FIG:' + raw + '%%';
+          var v = t.value || '';
+          var at = v.indexOf(tok);
+          if (at >= 0) {
+            var end = at + tok.length;
+            if (v.charAt(end) === '\n') end++;
+            t.value = v.slice(0, at) + v.slice(end);
+            try { t.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+            try { if (typeof qMathSync === 'function') qMathSync(t.id); } catch (e) {}
+          }
+        }
+      } catch (e) {}
+      clearSel();
+    }
+    function selectFig(fig) {
+      clearSel();
+      sel.fig = fig;
+      try { fig.classList.add('is-on'); } catch (e) {}
+      try {
+        fig.style.position = 'relative';
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'native-fig-x';
+        b.setAttribute('contenteditable', 'false');
+        b.setAttribute('aria-label', 'حذف');
+        b.textContent = '✕';
+        b.setAttribute('style', 'position:absolute;top:-8px;left:-8px;width:28px;height:28px;'
+          + 'border-radius:14px;border:2px solid #fff;background:#e5484d;color:#fff;'
+          + 'font:700 13px/24px sans-serif;text-align:center;padding:0;z-index:6;'
+          + 'box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;');
+        fig.appendChild(b);
+        sel.btn = b;
+      } catch (e) {}
+    }
+    function refEdit(fig) {
+      try {
+        var ev2 = new MouseEvent('dblclick', { bubbles: true, cancelable: true });
+        ev2.__nativeAllow = true;
+        fig.dispatchEvent(ev2);
+      } catch (e) {}
+    }
     ['click', 'dblclick'].forEach(function (type) {
       document.addEventListener(type, function (e) {
         try {
+          if (e.__nativeAllow) return; /* synthetic برای ویرایشگر مرجع */
           var n = e.target;
+          var xBtn = null;
           while (n && n !== document) {
+            if (n.classList && n.classList.contains('native-fig-x')) xBtn = n;
             if (n.classList && n.classList.contains('qmf-fig')) break;
             n = n.parentNode || n.parentElement;
           }
-          if (!n || n === document) return;
-          var raw = n.getAttribute('data-fig') || (n.dataset && n.dataset.fig) || '';
-          if (!raw) return;
-          var kind = '';
-          try { kind = (JSON.parse(raw) || {}).k || ''; } catch (err) { return; }
-          if (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's') return;
+          if (!n || n === document) {
+            /* کلیک بیرون از توکن: لغو انتخاب؛ بدون block تا caret تایپ بنشیند. */
+            if (type === 'click' && sel.fig) clearSel();
+            return;
+          }
+          var fig = n;
           e.preventDefault();
           e.stopPropagation();
           if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-          var now = Date.now();
-          if (now - lastFigEdit < 700) return; /* click+dblclick = یک ویرایش */
-          lastFigEdit = now;
-          if (typeof window.__nativeFigEdit === 'function') window.__nativeFigEdit(raw);
+          if (type === 'dblclick') return; /* توالی click,click,dblclick قبلاً هدایت شده */
+          if (xBtn && sel.fig === fig) { removeToken(fig); return; }
+          if (sel.fig !== fig) { selectFig(fig); return; } /* کلیک اول: انتخاب */
+          /* کلیک دوم روی توکن انتخاب‌شده: ویرایش */
+          var raw = fig.getAttribute('data-fig') || (fig.dataset && fig.dataset.fig) || '';
+          if (!raw) { clearSel(); return; }
+          var kind = '';
+          try { kind = (JSON.parse(raw) || {}).k || ''; } catch (err) { kind = ''; }
+          clearSel();
+          /* t/p/a/s ویرایشگر Native دارند (needle مرجع تست‌ها حفظ شده): */
+          var refKind = (kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's');
+          if (!refKind && typeof window.__nativeFigEdit === 'function') window.__nativeFigEdit(raw);
+          else refEdit(fig);
         } catch (err) {}
       }, true);
     });
@@ -9741,6 +9806,7 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
          سقف می‌گیرد؛ اسکرول محتوا داخل خود کادر است. */
       (function reportHeight() {
         var lastH = 0;
+        var lastScrollable = null;
         function measure() {
           try {
             var shell = document.querySelector('.exam-question-editor-shell');
@@ -9749,6 +9815,17 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
               lastH = h;
               if (window.ExamEditorNative && typeof ExamEditorNative.onContentHeight === 'function') {
                 ExamEditorNative.onContentHeight(h);
+              }
+            }
+            /* V55.10 — گزارش دستگاه: «کادر اسکرول‌پذیر نیست». لیست Compose ژست
+               عمودی را از WebView می‌قاپد؛ Kotlin با این پرچم، هنگام لمس از
+               ربودن لمس توسط والد جلوگیری می‌کند تا اسکرول داخلی کادر کار کند. */
+            var surf = document.querySelector('.qmf-surface.input');
+            var scrollable = !!(surf && surf.scrollHeight > surf.clientHeight + 2);
+            if (scrollable !== lastScrollable) {
+              lastScrollable = scrollable;
+              if (window.ExamEditorNative && typeof ExamEditorNative.onScrollableChanged === 'function') {
+                ExamEditorNative.onScrollableChanged(scrollable);
               }
             }
           } catch (e) {}

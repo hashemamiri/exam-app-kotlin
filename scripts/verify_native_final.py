@@ -1334,6 +1334,14 @@ require("__nativeFigEdit" in editor_asset and "stopImmediatePropagation" in edit
 require("key(controller)" in web_field,
         "V55.9 per-question webview isolation (key) is missing")
 
+# ---- V55.10: select-then-edit tokens with delete button + inner scroll unlock ----
+require("native-fig-x" in editor_asset and "removeToken(fig)" in editor_asset
+        and "__nativeAllow" in editor_asset,
+        "V55.10 token select/delete behaviour is missing")
+require("onScrollableChanged" in editor_asset
+        and "requestDisallowInterceptTouchEvent(true)" in web_field,
+        "V55.10 inner-scroll gesture unlock is missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

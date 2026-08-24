@@ -7029,3 +7029,73 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.8
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۵۰) V55.10 — انتخاب/حذف/ویرایش توکن‌ها با کلیک + آزادسازی اسکرول کادر
+
+### درخواست‌های کاربر (پس از V55.9، پیش از build آن)
+
+```text
+۱) هر چیز درج‌شده با «یک کلیک انتخاب» شود و با «کلیک دوم به ویرایشگر» برود
+۲) با کلیک اول «ضربدر» گوشهٔ توکن بیاید تا قابل حذف باشد
+۳) قبل و بعد توکن‌ها بتوان تایپ کرد
+۴) «کادر متن سؤال اسکرول‌پذیر نیست»
+```
+
+### تحویل V55.10
+
+```text
+۱و۲) گیرندهٔ capture بلوک boot (بازنویسی V55.9) برای «همهٔ» توکن‌های .qmf-fig:
+   - کلیک اول: selectFig → کلاس is-on مرجع + دکمهٔ ✕ قرمز (native-fig-x)
+     گوشهٔ توکن؛ هیچ ویرایشگری باز نمی‌شود.
+   - کلیک روی ✕: removeToken → حذف «%%FIG:raw%%» (+ \n بعدی) از textarea +
+     dispatch input واقعی → sync مرجع و onTextChanged به Native.
+   - کلیک دوم روی توکن انتخاب‌شده: t/p/a/s → __nativeFigEdit (ویرایشگر
+     Native)؛ بقیه (هندسه/نمودار) → dblclick synthetic با پرچم __nativeAllow
+     که از گیرندهٔ ما عبور و به ویرایشگر مرجع می‌رسد.
+   - dblclick واقعی کاربر بلعیده می‌شود (توالی click,click خودش کار را کرده).
+۳) کلیک بیرون توکن: فقط clearSel بدون بلعیدن رویداد → caret مرجع برای تایپ
+   قبل/بعد توکن می‌نشیند (تایپ دور توکن تست شد؛ توکن حفظ می‌شود).
+۴) اسکرول: ریشه = LazyColumn ژست عمودی WebView را می‌قاپد. HTML در reportHeight
+   پرچم onScrollableChanged(surf.scrollHeight>clientHeight) می‌فرستد؛
+   controller.innerScrollable در Kotlin ست می‌شود و WebView سفارشی در
+   onTouchEvent با requestDisallowInterceptTouchEvent(true) در ACTION_DOWN
+   (و آزادسازی در UP/CANCEL) والد را کنار می‌زند.
+version.txt: v55.10-select-delete-type
+```
+
+### تست‌ها (Chromium واقعی — ۷ سناریو در یک صفحه)
+
+```text
+S1 کلیک اول آناتومی: is-on + ✕، صفر overlay ✓
+S2 کلیک دوم: onEditFigure('a') و لغو انتخاب ✓
+S3 هندسه: کلیک اول انتخاب؛ کلیک دوم gfOverlay مرجع ✓
+S4 حذف با ✕: توکن از متن textarea حذف شد (figCount 2→1) ✓
+S5 کلیک بیرون: انتخاب و ✕ پاک شدند ✓
+S6 تایپ قبل/بعد: متن دور توکن، توکن سالم ✓
+S7 پرچم اسکرول: onScrollableChanged(true) پس از متن بلند ✓
+تست منبع جدید: V55_10SelectDeleteTypeTest (۳ تست) · V55_9 test هماهنگ شد
+(ضدتکرار زمانی lastFigEdit → بلعیدن dblclick) · verify: دو require جدید ·
+اسکن سراسری ۹۵ needle → صفر mismatch · تراز آکولاد Kotlin سالم · PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) جدول/آناتومی درج کن → کلیک اول: هالهٔ انتخاب + ✕ قرمز گوشهٔ توکن
+۲) کلیک دوم → ویرایشگر Native همان نوع
+۳) ✕ → توکن حذف شود
+۴) کلیک قبل/بعد توکن → تایپ همان‌جا بنشیند
+۵) متن بلند → اسکرول داخل کادر با انگشت کار کند (لیست سؤال‌ها ندزددش)
+```
+
+### عملیات
+
+```text
+فایل‌ها: question_editor.html (select/delete/edit + پرچم اسکرول) / version.txt /
+QuestionTextFieldWebView.kt (innerScrollable + onTouchEvent) /
+V55_10SelectDeleteTypeTest.kt (جدید) / V55_9 test هماهنگ / verify (۲ require) /
+changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.9
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

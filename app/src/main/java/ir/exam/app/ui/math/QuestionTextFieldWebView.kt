@@ -30,6 +30,11 @@ class QuestionEditorFieldController {
     var lastJsValue: String = ""
         internal set
 
+    /** V55.10 — آیا محتوای کادر داخل خودش اسکرول دارد؟ (گزارش از HTML). */
+    @Volatile
+    var innerScrollable: Boolean = false
+        internal set
+
     /** بازکردن ابزارهای مرجع داخل WebView: formula / anatomy / periodic / physics / chemistry. */
     fun openTool(name: String): Boolean {
         val view = webView ?: return false
@@ -101,7 +106,23 @@ fun QuestionTextFieldWebView(
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            WebView(context).apply {
+            // V55.10 — گزارش دستگاه: «کادر متن سؤال اسکرول‌پذیر نیست». WebView داخل
+            // LazyColumn است و لیست، ژست عمودی را می‌قاپد؛ وقتی محتوای کادر واقعاً
+            // اسکرول دارد (پرچم از HTML)، هنگام لمس از والد می‌خواهیم دخالت نکند.
+            object : WebView(context) {
+                override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
+                    if (controller.innerScrollable) {
+                        when (event.actionMasked) {
+                            android.view.MotionEvent.ACTION_DOWN ->
+                                parent?.requestDisallowInterceptTouchEvent(true)
+                            android.view.MotionEvent.ACTION_UP,
+                            android.view.MotionEvent.ACTION_CANCEL ->
+                                parent?.requestDisallowInterceptTouchEvent(false)
+                        }
+                    }
+                    return super.onTouchEvent(event)
+                }
+            }.apply {
                 setBackgroundColor(Color.TRANSPARENT)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
@@ -204,6 +225,12 @@ private class FieldBridge(
     @JavascriptInterface
     fun onContentHeight(height: Int) {
         if (height in 41..20000) onContentHeight.invoke(height)
+    }
+
+    /** V55.10 — وضعیت اسکرول داخلی کادر؛ برای آزادسازی ژست لمس از لیست والد. */
+    @JavascriptInterface
+    fun onScrollableChanged(scrollable: Boolean) {
+        controller.innerScrollable = scrollable
     }
 
     @JavascriptInterface

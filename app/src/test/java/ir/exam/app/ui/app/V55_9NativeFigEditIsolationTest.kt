@@ -45,8 +45,9 @@ class V55_9NativeFigEditIsolationTest {
         assertTrue("__nativeFigEdit" in boot)
         // فقط انواع دارای ویرایشگر Native؛ بقیه به مرجع می‌روند.
         assertTrue("kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's'" in boot)
-        // پنجرهٔ ضد تکرار click+dblclick
-        assertTrue("lastFigEdit < 700" in boot.replace("now - lastFigEdit < 700", "lastFigEdit < 700"))
+        // V55.10 — ضدتکرار زمانی جایگزین شد: dblclick کاربر بلعیده می‌شود چون
+        // توالی click,click خودش انتخاب→ویرایش را انجام داده است.
+        assertTrue("if (type === 'dblclick') return;" in boot)
     }
 
     @Test
