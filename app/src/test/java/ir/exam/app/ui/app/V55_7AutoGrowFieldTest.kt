@@ -40,7 +40,10 @@ class V55_7AutoGrowFieldTest {
 
     @Test
     fun `native mode removes inner caps and page background`() {
-        assertTrue("max-height:none !important" in editorAsset)
+        // V55.8 — انتخاب صریح کاربر: کادر ارتفاع ثابت (سقف 260px) و اسکرول
+        // «داخل خود کادر»؛ سقف نامحدود V55.7 جایگزین شد.
+        assertTrue("max-height:260px !important" in editorAsset)
+        assertTrue("overflow-y:auto !important" in editorAsset)
         assertTrue("html,body{background:transparent !important;}" in editorAsset)
         // فقط در حالت nativeTools؛ CSS مرجع خود فایل دست‌نخورده است.
         assertTrue("max-height:min(56vh,460px)" in editorAsset)

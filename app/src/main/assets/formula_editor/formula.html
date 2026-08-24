@@ -14443,6 +14443,19 @@ try {
               'min-height': '48px', 'padding': '11px 12px', 'font-size': '1.05rem', 'border-radius': '10px'
             });
           }
+          /* V55.8 — گزارش کاربر: «پنجره‌های دکمه‌های کیپد هنوز باریک هستند».
+             منوهای حالت‌ها (variants) و انتخاب پرانتز هم بزرگ و لمس‌پذیر می‌شوند. */
+          var vars2 = pop.querySelectorAll('.mbv-i');
+          for (var j = 0; j < vars2.length; j++) {
+            setImp(vars2[j], {
+              'display': 'flex', 'align-items': 'center', 'width': '100%',
+              'min-height': '52px', 'padding': '10px 12px', 'font-size': '1.05rem', 'border-radius': '10px'
+            });
+          }
+          var qs = pop.querySelectorAll('.mbv-q, .mbv-o, .mbv-c');
+          for (var q = 0; q < qs.length; q++) {
+            setImp(qs[q], { 'min-width': '46px', 'height': '46px', 'font-size': '1.15rem' });
+          }
           var t = pop.querySelector('.mbv-title');
           if (t) setImp(t, { 'font-size': '.85rem', 'margin-bottom': '10px' });
           /* وسط‌چین واقعی بر اساس ارتفاع نهایی محتوا */
@@ -14488,7 +14501,8 @@ try {
            مسیرهای فرعی می‌ماند. */
         function afterMenu() {
           var pop = document.getElementById('mbVar');
-          if (pop && pop.classList.contains('open') && pop.querySelector('.mbv-cat')) {
+          /* V55.8 — همهٔ منوهای شناور (دسته‌ها + حالت‌های کیپد + پرانتزها) */
+          if (pop && pop.classList.contains('open') && pop.querySelector('.mbv-cat, .mbv-i, .mbv-q')) {
             pop.__nativeSized = true;
             enforceMenu(pop);
           }
@@ -14518,6 +14532,13 @@ try {
           wrapNow('mbOpenSymbolLibrary', afterMenu);
           wrapNow('mbShowSymbolCategory', afterPanel);
           wrapNow('mbOpenItemLibrary', afterPanel);
+          /* V55.8 — منوهای حالت‌های دکمه‌های کیپد و انتخاب پرانتز */
+          wrapNow('mbVarShow', afterMenu);
+          wrapNow('mbParPicker', afterMenu);
+          wrapNow('mbLogMenu', afterMenu);
+          wrapNow('mbIntegralMenu', afterMenu);
+          wrapNow('mbPercentMenu', afterMenu);
+          wrapNow('mbTrigMenu', afterMenu);
         }
         installWrappers();
         /* برخی توابع بعداً (کتابخانهٔ V34/Word) دوباره روی window ست می‌شوند. */
@@ -14552,7 +14573,7 @@ try {
               if (!pop.classList.contains('open')) {
                 if (pop.__nativeSized) { pop.__nativeSized = false; unsize(pop); }
               }
-              else if (pop.querySelector('.mbv-cat') && !pop.__nativeSized) {
+              else if (pop.querySelector('.mbv-cat, .mbv-i, .mbv-q') && !pop.__nativeSized) {
                 /* فقط منوی انتخاب دسته؛ منوهای کوچک variants (mbv-i) دست‌نخورده */
                 pop.__nativeSized = true;
                 enforceMenu(pop);

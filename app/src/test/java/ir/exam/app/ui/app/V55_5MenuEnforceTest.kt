@@ -35,8 +35,9 @@ class V55_5MenuEnforceTest {
         val block = asset.substringAfter("nativeMenuEnforce()").substringBefore("V55.3")
         assertTrue("if (!window.ExamEditorNative) return;" in block)
         assertTrue("setProperty(k, map[k], 'important')" in block)
-        // فقط منوی دسته‌ها؛ منوهای واریانت مرجع دست‌نخورده.
-        assertTrue("querySelector('.mbv-cat') && !pop.__nativeSized" in block)
+        // V55.8 — به درخواست کاربر، منوهای حالت‌های کیپد (mbv-i) و پرانتز (mbv-q)
+        // هم بزرگ می‌شوند؛ پس از بستن، unsize اندازهٔ مرجع را برمی‌گرداند.
+        assertTrue("querySelector('.mbv-cat, .mbv-i, .mbv-q') && !pop.__nativeSized" in block)
         assertTrue("unsize(pop)" in block)
     }
 

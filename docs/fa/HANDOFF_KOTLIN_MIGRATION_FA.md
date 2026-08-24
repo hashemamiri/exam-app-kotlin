@@ -6884,3 +6884,73 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V55.6
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۴۸) V55.8 — کادر ثابت با اسکرول داخلی، کوچک‌سازی درج‌ها، رفع فلاش boot، منوهای کیپد
+
+### گزارش دستگاه (پس از V55.7) + پاسخ‌های ask_user
+
+```text
+۱) «خود کادر متن سوال اسکرول می‌شود و نه داخل کادر» → پرسیدم؛ انتخاب صریح:
+   «داخل خود کادر اسکرول شود» (رفتار V55.7 برعکس خواسته بود).
+۲) «فرمول‌ها و شکل‌ها و هر چیز درج‌شده کوچک‌تر شود» → انتخاب: ~۶۰٪.
+۳) «برای یک لحظه فایل question_editor.html رندر می‌شود و سپس غیب می‌شود»
+۴) «پنجره‌های دکمه‌های کیپد فرمول هنوز باریک هستند»
+```
+
+### تحویل V55.8 (همه فقط داخل برنامه)
+
+```text
+۱) کادر ثابت: در nativeToolbarHide سقف min-height:150px/max-height:260px +
+   overflow-y:auto + ‎-webkit-overflow-scrolling:touch جایگزین «بدون سقف» V55.7
+   شد؛ گزارش ارتفاع (onContentHeight) و ارتفاع پویای Compose سر جایشان ماندند —
+   با سقف 260 خودکار کادر کوتاه/ثابت می‌شود و متنِ زیاد داخل کادر اسکرول می‌خورد.
+۲) کوچک‌سازی درج‌ها: .qmf-fig با zoom:.6 (شکل/نمودار/جدول/تناوبی/اطلس) و
+   .qmf-atom با zoom:.75 (فرمول‌ها) — فقط پیش‌نمایش؛ توکن/TeX واقعی دست‌نخورده.
+۳) فلاش صفحهٔ مرجع: علت، اجرای بلوک Native در «انتهای» فایل ~5MB بود؛ تا آن
+   لحظه صفحهٔ کامل مرجع دیده می‌شد. بلوک جدید exam-editor-native-boot در
+   ابتدای head (فقط nativeTools): body مخفی + پس‌زمینه شفاف؛ بلوک انتهایی
+   پرده (nativeBootHide) را برمی‌دارد؛ پشتیبان ۶ ثانیه‌ای هم دارد.
+۴) منوهای کیپد فرمول: wrapper های enforce به mbVarShow/mbParPicker/mbLogMenu/
+   mbIntegralMenu/mbPercentMenu/mbTrigMenu وصل شد؛ selector پشتیبان polling هم
+   '.mbv-cat, .mbv-i, .mbv-q' شد؛ آیتم‌های mbv-i → 52px و mbv-q/o/c → 46px.
+   (تست V55_5 با selector جدید هماهنگ شد؛ unsize پس از بستن سر جای خود.)
+version.txt ها: question_editor=v55.8-fixed-box-shrink،
+formula_editor=v55.8-keypad-menus
+```
+
+### تست‌ها (Chromium واقعی)
+
+```text
+- پردهٔ boot هنگام load دیده شد (body hidden) و پس از پایان راه‌اندازی برداشته
+  شد (bootGone=true, bodyVisible=true) ✓
+- سقف کادر 260px/min 150px/اسکرول داخلی فعال با محتوای بلند ✓ (اسکرین‌شات:
+  دو جدول کوچک‌شده + فرمول + متن؛ innerScroll=true)
+- zoom درج‌ها: fig=0.6، atom=0.75 ✓
+- منوی log کیپد: عرض 387، آیتم 52px ✓ · منوی پرانتز: دکمه‌های 46x46 ✓
+- مرورگر عادی (بدون پل): پرده تزریق نمی‌شود، body visible، سقف مرجع 448px،
+  منوی کیپد همان 220px مرجع ✓
+تست منبع جدید: V55_8FixedBoxShrinkTest (۴ تست) · V55_7 و V55_5 tests هماهنگ ·
+verify: سه require جدید V55.8 (و به‌روزرسانی require V55.7) · اسکن سراسری
+۸۷ needle در ۲۳ تست + ۱۱ چک بلوک‌محور → صفر mismatch · PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) باز کردن «ساخت آزمون»: هیچ فلاش صفحهٔ مرجع دیده نشود
+۲) متن بلند بنویس → کادر حداکثر ~۲۶۰ نقطه بلند می‌شود و داخلش اسکرول می‌خورد
+۳) جدول/شکل درج کن → پیش‌نمایش جمع‌وجور (~۶۰٪) و جا برای متن باز
+۴) در پنجرهٔ فرمول: لمس دکمه‌های کیپد که منو دارند (log، انتگرال، ٪، مثلثات،
+   پرانتز) → منوی بزرگ وسط صفحه
+```
+
+### عملیات
+
+```text
+فایل‌ها: question_editor.html (boot curtain + سقف ثابت + zoom درج‌ها) /
+formula.html (منوهای کیپد) / هر دو version.txt / V55_8FixedBoxShrinkTest.kt
+(جدید) / V55_7 و V55_5 tests هماهنگ / verify / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V55.7
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

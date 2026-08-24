@@ -1307,14 +1307,26 @@ require("wrapNow('mbGroupLibrary', afterMenu)" in formula_asset
         and "fitLibraryItems" in formula_asset,
         "V55.6 instant library enforcement or formula fit is missing")
 
-# ---- V55.7: question field auto-grows with content (no inner scroll/fixed height) ----
+# ---- V55.7/V55.8: question field reports height; fixed cap with inner scroll ----
 require("ExamEditorNative.onContentHeight" in editor_asset
-        and "max-height:none !important" in editor_asset
+        and "max-height:260px !important" in editor_asset
+        and "overflow-y:auto !important" in editor_asset
         and "html,body{background:transparent !important;}" in editor_asset,
-        "V55.7 native-mode auto-grow/transparent background is missing from question_editor.html")
+        "V55.8 fixed-cap inner-scroll field or transparent background is missing")
 require("fun onContentHeight(height: Int)" in web_field
         and "contentHeightDp.coerceIn(150, 4000).dp" in web_section,
         "V55.7 dynamic field height wiring is missing from Kotlin")
+
+# ---- V55.8: boot curtain, 60% inserted previews, keypad menus enlarged ----
+require("exam-editor-native-boot" in editor_asset and "nativeBootHide" in editor_asset,
+        "V55.8 boot curtain against reference-page flash is missing")
+require(".qmf-surface.input .qmf-fig{zoom:.6" in editor_asset
+        and ".qmf-surface.input .qmf-atom{zoom:.75" in editor_asset,
+        "V55.8 inserted figure/formula shrink is missing")
+require("wrapNow('mbVarShow', afterMenu)" in formula_asset
+        and "wrapNow('mbParPicker', afterMenu)" in formula_asset
+        and "'.mbv-cat, .mbv-i, .mbv-q'" in formula_asset,
+        "V55.8 keypad variant/paren menu enlargement is missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
