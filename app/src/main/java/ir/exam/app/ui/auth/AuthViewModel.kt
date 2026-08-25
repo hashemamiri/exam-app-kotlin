@@ -2,6 +2,7 @@ package ir.exam.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.repository.AuthRepository
 import kotlinx.coroutines.Job
@@ -290,6 +291,28 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
                 error = null
             )
         }
+    }
+
+    /**
+     * V60.0 — پس از موفقیت ورود/ثبت‌نام گوگل: نقش انتخابی (معلم/مدیر) روی
+     * metadata ثبت می‌شود و state حساب تازه می‌شود؛ اگر حساب تازه باشد،
+     * requires_teacher_setup جریان «تکمیل ثبت‌نام» موجود را باز می‌کند.
+     */
+    fun completeGoogleRegistration(role: String) = request {
+        runCatching {
+            ir.exam.app.data.remote.SupabaseProvider.client.postgrest.rpc(
+                "native_set_registration_role_v1",
+                kotlinx.serialization.json.buildJsonObject {
+                    put("p_role", kotlinx.serialization.json.JsonPrimitive(role))
+                }
+            )
+        } // خطای ثبت نقش مانع refresh نمی‌شود؛ نقش پیش‌فرض teacher است.
+        repository.refreshCurrentUser().getOrThrow()
+    }
+
+    /** V60.0 — نمایش خطای جریان گوگل (بستن توسط کاربر خطا نیست). */
+    fun reportGoogleError(message: String) {
+        _state.update { it.copy(error = safeAuthError(message)) }
     }
 
     private fun request(action: suspend () -> Unit) = viewModelScope.launch {

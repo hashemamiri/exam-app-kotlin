@@ -8568,3 +8568,63 @@ V59_3 تست/V59_1 تست هماهنگ/verify/changelog/هندآف
 پیش‌نیاز: V59.2.1 — Edge deploy جدید: ندارد
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۸) V60.0 — ورود کادر با نام کاربری + ثبت‌نام با گوگل
+
+### گزارش‌ها و ریشه‌ها
+
+```text
+۱) «معلم/مدیر نمی‌توانند با نام کاربری وارد شوند» (عکس 15-36-06): ریشه —
+   AuthIdentifier.passwordLoginEmail هر شناسهٔ بدون @ را به
+   username@student.exam.local می‌بَرد؛ برای کادر مدرسه چنین کاربری در Auth
+   نیست → «ورود ناموفق». رفع: RPC جدید native_staff_login_email_v1
+   (نگاشت username کادر → ایمیل واقعی auth.users؛ برای نام ناموجود همان
+   پیام خنثی ورود ناموفق تا شمارش نام کاربری ممکن نشود؛ grant به anon چون
+   پیش از ورود لازم است) + signInWithPassword اول این نگاشت را امتحان
+   می‌کند و در نبود، مسیر دانش‌آموز قبلی.
+۲) «ثبت‌نام با گوگل»: پلاگین رسمی compose-auth 3.1.4 (همان BOM supabase-kt)
+   با googleNativeLogin (Credential Manager — انتخاب جیمیل‌های روی گوشی).
+   GOOGLE_WEB_CLIENT_ID از local.properties (مثل SUPABASE_URL؛ secret در
+   کد/گیت نیست — verify هم الگوی googleusercontent.com را در سورس ممنوع
+   کرد). دکمهٔ GoogleRegisterButton با آیکن در هر دو پنل ثبت‌نام معلم/مدیر؛
+   بدون کلید پیام راهنما می‌دهد (نه کرش). جریان: startFlow → Success →
+   completeGoogleRegistration(role): ثبت نقش با
+   native_set_registration_role_v1 روی metadata → refreshCurrentUser →
+   منطق موجود v12 (requires_teacher_setup + pending_role) کاربر تازه را به
+   جریان «تکمیل ثبت‌نام» موجود (نام کاربری/رمز/مدرسه) می‌برد.
+```
+
+### اقدام‌های کاربر (الزامی برای گوگل)
+
+```text
+۱) SQL جدید: V60_0_staff_login_google.sql در SQL Editor.
+۲) Google Cloud Console → دو OAuth Client:
+   - Web application با redirect: https://<PROJECT>.supabase.co/auth/v1/callback
+   - Android با package name برنامه + SHA-1 (از gradlew signingReport)
+۳) Supabase Dashboard → Auth → Providers → Google: فعال + Web client id/secret؛
+   Android client id به Authorized Client IDs اضافه شود.
+۴) local.properties (کنار SUPABASE_URL):
+   GOOGLE_WEB_CLIENT_ID=<Web client id>
+   (بدون آن build سالم است ولی دکمه پیام راهنما نشان می‌دهد.)
+```
+
+### تأیید
+
+```text
+جدید: V60_0StaffLoginGoogleTest (۴ تست) · verify: ۴ require جدید (شامل
+گارد ضد هاردکد client id) · اسکن سراسری ۸۴۷ needle → فقط هشدار کاذب V55_16؛
+۳ هشدار کاذب دیگر (V37: دو val repo هم‌نام در دو تست) دستی رد شد ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### عملیات
+
+```text
+پچ: V60_0_staff_login_google — فایل‌ها: SupabaseAuthRepository/SignInScreen/
+AuthViewModel/SupabaseProvider/app+build.gradle.kts/SQL جدید
+20260825_native_staff_login_google_v60.sql/V60_0 تست/verify/changelog/هندآف
+SQL: بله · Edge deploy: ندارد · Secret: GOOGLE_WEB_CLIENT_ID فقط در
+local.properties · Dependency جدید: compose-auth 3.1.4
+پیش‌نیاز: V59.3
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -15,6 +15,7 @@ if (localPropertiesFile.exists()) {
 }
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY", "")
+val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")
 val appVersionCode = localProperties.getProperty("APP_VERSION_CODE")
     ?.toIntOrNull()
     ?.takeIf { it > 0 }
@@ -42,6 +43,7 @@ android {
         versionName = appVersionName
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     signingConfigs {
@@ -105,6 +107,8 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:storage-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:functions-kt:3.1.4")
+    // V60.0 — ثبت‌نام/ورود Native گوگل (Credential Manager) با Supabase.
+    implementation("io.github.jan-tennert.supabase:compose-auth:3.1.4")
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")

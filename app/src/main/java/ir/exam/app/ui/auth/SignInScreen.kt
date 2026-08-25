@@ -8,10 +8,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -19,6 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import io.github.jan.supabase.compose.auth.composable.NativeSignInResult
+import io.github.jan.supabase.compose.auth.composable.rememberSignInWithGoogle
+import io.github.jan.supabase.compose.auth.composeAuth
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -173,6 +181,8 @@ private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
         enabled = !state.isLoading && state.fullName.trim().length >= 2 && '@' in state.email,
         modifier = Modifier.fillMaxWidth()
     ) { Text("ارسال کد تأیید") }
+    // V60.0 — ثبت‌نام با گوگل: انتخاب جیمیل ثبت‌شده روی گوشی (Credential Manager).
+    GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher")
     TextButton(onClick = viewModel::showSignIn, enabled = !state.isLoading) { Text("بازگشت به ورود") }
 }
 
@@ -226,6 +236,8 @@ private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
         enabled = !state.isLoading && state.fullName.trim().length >= 2 && '@' in state.email,
         modifier = Modifier.fillMaxWidth()
     ) { Text("ارسال کد تأیید") }
+    // V60.0 — ثبت‌نام با گوگل برای مدیر/معاون.
+    GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager")
     TextButton(onClick = viewModel::showRegistrationRole, enabled = !state.isLoading) { Text("بازگشت") }
 }
 
@@ -346,3 +358,46 @@ private fun PasswordField(label: String, value: String, onChange: (String) -> Un
         modifier = Modifier.fillMaxWidth()
     )
 }
+
+/**
+ * V60.0 — «ثبت‌نام با گوگل»: با Credential Manager یکی از جیمیل‌های گوشی
+ * انتخاب و وارد Supabase می‌شود؛ سپس نقش انتخابی ثبت و جریان تکمیل ثبت‌نام
+ * موجود (نام کاربری/رمز/مدرسه) ادامه می‌یابد. اگر GOOGLE_WEB_CLIENT_ID در
+ * local.properties نباشد پیام راهنما نشان داده می‌شود.
+ */
+@Composable
+private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, role: String) {
+    if (ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
+        Text(
+            "ثبت‌نام با گوگل: کلید GOOGLE_WEB_CLIENT_ID در local.properties تنظیم نشده است.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error
+        )
+        return
+    }
+    val action = ir.exam.app.data.remote.SupabaseProvider.client.composeAuth.rememberSignInWithGoogle(
+        onResult = { result ->
+            when (result) {
+                is NativeSignInResult.Success -> viewModel.completeGoogleRegistration(role)
+                is NativeSignInResult.Error -> viewModel.reportGoogleError(result.message)
+                is NativeSignInResult.NetworkError -> viewModel.reportGoogleError("اتصال اینترنت برقرار نیست.")
+                NativeSignInResult.ClosedByUser -> Unit
+            }
+        }
+    )
+    OutlinedButton(
+        onClick = { action.startFlow() },
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // آیکن رسمی G گوگل به‌صورت وکتور ساده (بدون وابستگی جدید).
+        Icon(
+            imageVector = Icons.Outlined.AccountCircle,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text("ثبت‌نام با گوگل")
+    }
+}
+

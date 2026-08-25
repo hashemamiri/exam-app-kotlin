@@ -1602,6 +1602,21 @@ require("v59_owner_delete_exam_images" in _storage_sql
 require("StorageImageCleaner.removeByPublicUrls" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "V59.3 question deletion storage cleanup is missing")
 
+# ---- V60.0: staff username login + Google registration ----
+_auth_repo=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseAuthRepository.kt").read_text()
+_sign_in=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt").read_text()
+_provider=(ROOT/"app/src/main/java/ir/exam/app/data/remote/SupabaseProvider.kt").read_text()
+require("native_staff_login_email_v1" in _auth_repo,
+        "V60.0 staff username login mapping is missing")
+require('GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher")' in _sign_in
+        and 'GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager")' in _sign_in,
+        "V60.0 Google registration buttons are missing")
+require("googleNativeLogin(serverClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID)" in _provider,
+        "V60.0 ComposeAuth google plugin is missing")
+# secret نباید هاردکد شود: مقدار واقعی client id (الگوی apps.googleusercontent.com) در سورس ممنوع
+require("googleusercontent.com" not in _provider and "googleusercontent.com" not in _sign_in,
+        "V60.0 google client id must come from local.properties, never hardcoded")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

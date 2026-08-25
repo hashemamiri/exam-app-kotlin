@@ -109,12 +109,29 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
 
     override suspend fun signInWithPassword(identifier: String, password: String): Result<AppUser> = runCatching {
         require(password.isNotBlank()) { "رمز عبور را وارد کنید." }
+        // V60.0 — نام کاربری بدون @: اول نگاشت کادر مدرسه (معلم/مدیر) از سرور؛
+        // اگر نبود، همان مسیر دانش‌آموز (username@student.exam.local).
+        val clean = identifier.trim().lowercase()
+        val loginEmail = if ('@' !in clean && AuthIdentifier.validUsername(clean)) {
+            staffLoginEmail(clean) ?: AuthIdentifier.passwordLoginEmail(clean)
+        } else {
+            AuthIdentifier.passwordLoginEmail(identifier)
+        }
         auth.signInWith(Email) {
-            email = AuthIdentifier.passwordLoginEmail(identifier)
+            email = loginEmail
             this.password = password
         }
         persistUser(currentProfile())
     }
+
+    /** V60.0 — ایمیل ورود معلم/مدیر از روی نام کاربری؛ null اگر کادر نبود. */
+    private suspend fun staffLoginEmail(username: String): String? = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_staff_login_email_v1",
+            buildJsonObject { put("p_username", username) }
+        ).decodeAs<JsonObject>()
+        raw["email"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+    }.getOrNull()
 
     override suspend fun sendLoginOtp(email: String): Result<Unit> = sendOtp(
         email = email,
