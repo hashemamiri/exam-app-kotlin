@@ -1,5 +1,6 @@
 package ir.exam.app.ui.student
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -26,6 +30,7 @@ import ir.exam.app.data.repository.QueuedExamRepository
 import ir.exam.app.data.repository.RoomAnswerDraftRepository
 import ir.exam.app.data.repository.SupabaseStudentExamRepository
 import ir.exam.app.ui.app.NeumorphicPanel
+import kotlinx.coroutines.launch
 
 @Composable
 fun StudentHomeScreen(
@@ -84,11 +89,61 @@ fun StudentHomeScreen(
         }
         return
     }
+    // V59.2 — اعلان «پیام جدید دارید»: پیام‌های دیده‌نشدهٔ تقویم معلم.
+    val calendarRepo = remember { ir.exam.app.data.repository.SupabaseCalendarRepository() }
+    var unseenNotes by remember { mutableStateOf<List<ir.exam.app.domain.model.CalendarNote>>(emptyList()) }
+    var openedNote by remember { mutableStateOf<ir.exam.app.domain.model.CalendarNote?>(null) }
+    val noteScope = rememberCoroutineScope()
+    LaunchedEffect(userId, state.exam) {
+        if (state.exam == null) {
+            unseenNotes = calendarRepo.unseenNotes().getOrDefault(emptyList())
+        }
+    }
     Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("داشبورد دانش‌آموز", style = MaterialTheme.typography.headlineMedium)
+        if (unseenNotes.isNotEmpty()) {
+            NeumorphicPanel(
+                modifier = Modifier.fillMaxWidth(),
+                radius = 22.dp,
+                depth = 10.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.clickable { openedNote = unseenNotes.firstOrNull() }
+                ) {
+                    Text(
+                        "پیام جدید دارید",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        if (unseenNotes.size == 1) unseenNotes.first().title
+                        else "${unseenNotes.size} پیام خوانده‌نشده — برای مشاهده لمس کنید"
+                    )
+                }
+            }
+        }
         if (state.restoringExam) {
             CircularProgressIndicator()
             Text("در حال بررسی آزمون نیمه‌تمام روی این دستگاه...")
+        }
+        if (state.resumableExamAvailable && !state.restoringExam) {
+            // V59.2 — پیام آزمون نیمه‌کاره: پاسخ‌های قبلی ذخیره‌اند؛ با یک دکمه ادامه بده.
+            NeumorphicPanel(
+                modifier = Modifier.fillMaxWidth(),
+                radius = 22.dp,
+                depth = 10.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("آزمون نیمه‌تمام دارید", style = MaterialTheme.typography.titleMedium)
+                    Text("پاسخ‌های قبلی شما ذخیره شده‌اند و زمان سرور ادامه دارد.")
+                    Button(onClick = viewModel::rejoinActiveExam, enabled = !state.loading) {
+                        Text("پیوستن به آزمون")
+                    }
+                }
+            }
         }
         if (state.pendingSubmissions.isNotEmpty()) {
             val blocked = state.pendingSubmissions.count { it.state == "blocked_auth" || it.state == "failed" }
@@ -140,5 +195,29 @@ fun StudentHomeScreen(
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         }
+    }
+
+    openedNote?.let { note ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { openedNote = null },
+            title = { Text(note.title) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (note.body.isNotBlank()) Text(note.body)
+                    Text(
+                        "تاریخ: ${note.date}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val id = note.id
+                    openedNote = null
+                    unseenNotes = unseenNotes.filterNot { it.id == id }
+                    noteScope.launch { calendarRepo.markSeen(id) }
+                }) { Text("خواندم") }
+            }
+        )
     }
 }

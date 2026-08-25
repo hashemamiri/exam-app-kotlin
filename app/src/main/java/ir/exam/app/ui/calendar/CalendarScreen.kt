@@ -295,6 +295,9 @@ private fun SelectedDayCard(
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // V59.2 — برای روزهای گذشته ساخت/ویرایش پیام ممکن نیست (فقط حذف).
+            val dayIsPast = day != null &&
+                day.gregorianDate.isBefore(java.time.LocalDate.now())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     day?.jalaliDate?.longDisplay() ?: "یک روز را انتخاب کنید",
@@ -302,7 +305,7 @@ private fun SelectedDayCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                if (isTeacher && day != null) {
+                if (isTeacher && day != null && !dayIsPast) {
                     Button(onClick = onNew, enabled = !busy) {
                         Icon(Icons.Outlined.Add, contentDescription = null)
                         Text("پیام")
@@ -325,7 +328,8 @@ private fun SelectedDayCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(note.title, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                 if (isTeacher) {
-                                    IconButton(onClick = { onEdit(note) }, enabled = !busy) {
+                                    // V59.2 — ویرایش فقط برای امروز/آینده؛ حذف همیشه هست.
+                                    if (!dayIsPast) IconButton(onClick = { onEdit(note) }, enabled = !busy) {
                                         Icon(Icons.Outlined.Edit, contentDescription = "ویرایش پیام")
                                     }
                                     IconButton(onClick = { onDelete(note) }, enabled = !busy) {

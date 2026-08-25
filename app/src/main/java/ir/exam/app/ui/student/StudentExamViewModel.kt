@@ -32,6 +32,8 @@ data class StudentExamUiState(
     val restoringExam: Boolean = true,
     val showPreview: Boolean = false,
     val resumedExam: Boolean = false,
+    /** V59.2 — بعد از خروج از صفحهٔ آزمون، پیشنهاد پیوستن دوباره در داشبورد. */
+    val resumableExamAvailable: Boolean = false,
     /** V58.0 — تایمر فقط پس از «شروع پاسخ‌گویی» راه می‌افتد. */
     val started: Boolean = false,
     /** V58.0 — کل ثانیه‌های مهلت برای رنگ تدریجی زمان‌سنج (سبز→قرمز). */
@@ -456,9 +458,27 @@ class StudentExamViewModel(
         _state.update {
             StudentExamUiState(
                 restoringExam = false,
-                pendingSubmissions = it.pendingSubmissions
+                pendingSubmissions = it.pendingSubmissions,
+                // V59.2 — آزمون نیمه‌تمام برای دکمهٔ «پیوستن به آزمون» در داشبورد.
+                resumableExamAvailable = true
             )
         }
+    }
+
+    /** V59.2 — پیوستن دوباره به آزمون نیمه‌تمام (پاسخ‌ها از draft برمی‌گردند). */
+    fun rejoinActiveExam() = viewModelScope.launch {
+        if (state.value.loading) return@launch
+        _state.update { it.copy(loading = true, error = null) }
+        exams.restoreActiveExam()
+            .onSuccess { exam ->
+                if (exam == null) _state.update {
+                    it.copy(loading = false, resumableExamAvailable = false,
+                        error = "آزمون فعالی پیدا نشد؛ با کد آزمون وارد شوید.")
+                } else openExam(exam, resumed = true)
+            }
+            .onFailure { error ->
+                _state.update { it.copy(loading = false, error = safeStudentError(error, "پیوستن به آزمون ناموفق بود.")) }
+            }
     }
 
     fun leaveFinishedExam() {

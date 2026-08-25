@@ -131,12 +131,28 @@ class SupabaseProfileRepository(context: Context) {
      * و در پایان خود حساب پاک و نشست باطل می‌شود.
      */
     suspend fun deleteAccount(): Result<Unit> = runCatching {
-        val raw = SupabaseProvider.client.functions.invoke(
-            "manage-student",
-            body = buildJsonObject { put("action", "delete_account") }
-        ).body<JsonObject>()
+        val raw = try {
+            SupabaseProvider.client.functions.invoke(
+                "manage-student",
+                body = buildJsonObject { put("action", "delete_account") }
+            ).body<JsonObject>()
+        } catch (error: Throwable) {
+            // V59.2 — پاسخ‌های غیر ۲۰۰ (بدنهٔ JSON خام) اینجا استثنا می‌شوند؛
+            // «عملیات ناشناخته» یعنی نسخهٔ سرور تابع هنوز به‌روز نشده است.
+            val message = error.message.orEmpty()
+            if ("عملیات ناشناخته" in message) {
+                error("نسخهٔ سرور به‌روز نیست؛ تابع manage-student باید دوباره منتشر (deploy) شود.")
+            }
+            Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(message)?.groupValues?.get(1)?.let(::error)
+            throw error
+        }
         (raw["error"] as? JsonPrimitive)?.contentOrNull
-            ?.takeIf(String::isNotBlank)?.let(::error)
+            ?.takeIf(String::isNotBlank)?.let { serverError ->
+                if ("عملیات ناشناخته" in serverError) {
+                    error("نسخهٔ سرور به‌روز نیست؛ تابع manage-student باید دوباره منتشر (deploy) شود.")
+                }
+                error(serverError)
+            }
         runCatching { SupabaseProvider.client.auth.signOut() }
         Unit
     }

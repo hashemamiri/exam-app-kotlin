@@ -8385,3 +8385,81 @@ SQL: پچ ۲ (20260825_native_delete_account_v59.sql) · Edge deploy: پچ ۲
 پیش‌نیاز: V58.0.4 — ترتیب: پچ ۱ ← پچ ۲
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۵) V59.2 — رفع خطای حذف حساب + تقویم/اعلان + پیوستن دوباره
+
+### گزارش‌ها و ریشه‌ها
+
+```text
+۱) «حذف حساب ارور می‌دهد {"error":"عملیات ناشناخته است"}» (عکس 12-39-04):
+   ریشه = تابع Edge سرور هنوز نسخهٔ قدیمی است (deploy نشده) و اکشن
+   delete_account را نمی‌شناسد. سمت کلاینت هم JSON خام نمایش می‌داد.
+   رفع کلاینتی: deleteAccount حالا try/catch دارد؛ «عملیات ناشناخته» →
+   پیام «نسخهٔ سرور به‌روز نیست؛ تابع manage-student باید دوباره منتشر
+   شود»؛ سایر خطاها با Regex از JSON استخراج می‌شوند.
+   ⚠ اقدام کاربر: supabase functions deploy manage-student (الزامی).
+۲) جملهٔ «هزینه هر سؤال مشمول...» حذف شد (کامنت جایگزین بدون needle خطرناک).
+۳) «آزمون نیمه‌کاره»: restore خودکار پس از kill از قبل بود؛ حالا پس از
+   «خروج از صفحهٔ آزمون» هم state.resumableExamAvailable ست می‌شود و
+   داشبورد کارت «آزمون نیمه‌تمام دارید» + دکمهٔ «پیوستن به آزمون»
+   (rejoinActiveExam → restoreActiveExam → openExam(resumed=true)) دارد.
+۴) آفلاین: زنجیرهٔ موجود تأیید و با تست قفل شد — پاسخ آفلاین →
+   enqueueSubmission → WorkManager با NetworkType.CONNECTED (با بسته‌بودن
+   برنامه هم پس از اتصال ارسال می‌شود).
+۵) «پیام تقویم برای دانش‌آموز نمایش داده نمی‌شود»: cal_month برای دانش‌آموز
+   فقط n.teacher_id = profiles.teacher_id (مالک) را می‌دید؛ دانش‌آموزِ
+   افزوده به لیست معلم دیگر (teacher_student_links) هیچ پیامی از آن معلم
+   نمی‌گرفت → شرط با OR لینک‌ها گسترش یافت (در cal_unseen هم).
+۶) قفل گذشته: cal_save_note بازنویسی شد (همان اعتبارسنجی‌های اصلی +
+   updated_at) با دو گارد p_date < current_date و on_date قدیمی در ویرایش؛
+   حذف آزاد. UI: dayIsPast در سطح Column؛ دکمهٔ «پیام» و آیکن ویرایش برای
+   گذشته مخفی؛ سطل حذف می‌ماند. اعتبارسنجی دانش‌آموز مخاطب حالا لینک‌ها را
+   هم می‌پذیرد (سازگار با V43).
+۷) بنر «پیام جدید دارید»: جدول native_calendar_seen (RLS خود دانش‌آموز) +
+   cal_unseen_v59 (۱۴ روز اخیر، دیده‌نشده، همان قواعد مخاطب) +
+   cal_mark_seen_v59. کلاینت: unseenNotes/markSeen در CalendarRepository؛
+   بنر در داشبورد دانش‌آموز (نه وسط آزمون)؛ لمس → AlertDialog پیام →
+   «خواندم» → markSeen و حذف از فهرست.
+```
+
+### تأیید
+
+```text
+جدید: V59_2CalendarNotifyFixesTest (۷ تست) · verify: ۵ require جدید ·
+شبیه‌سازی python همهٔ ~۳۰ assertion سبز · needleهای محلی V24(calendar) و
+V39(home) پس از تغییر فایل‌ها دستی شبیه‌سازی شد (درس V58.0.4) · اسکن سراسری
+۸۰۳ needle → فقط هشدار کاذب V55_16 · تراز آکولاد صفر ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۰) اول: supabase functions deploy manage-student و اجرای SQL جدید
+   (20260825_native_calendar_notify_v59.sql) در Supabase.
+۱) حذف حساب → دیگر JSON خام نبیند؛ اگر deploy نشده باشد پیام راهنما.
+۲) سازندهٔ آزمون → جملهٔ هزینه نباشد.
+۳) وسط آزمون «خروج» → داشبورد کارت «آزمون نیمه‌تمام دارید» → پیوستن →
+   ادامه از همان‌جا با پاسخ‌های قبلی؛ همچنین kill برنامه → باز کردن →
+   «ادامه پاسخ‌گویی».
+۴) حالت هواپیما وسط آزمون → پاسخ‌دادن و ارسال نهایی → «در صف امن» →
+   بستن برنامه → وصل اینترنت → ارسال خودکار (گزارش معلم برسد).
+۵) معلم پیام برای «همه» بگذارد → دانش‌آموز (مالک یا لینک‌شده) در تقویم
+   ببیند + بنر «پیام جدید دارید» در داشبورد + باز شدن با لمس + «خواندم».
+۶) روز گذشته در تقویم معلم: دکمهٔ «پیام» و آیکن ویرایش نباشد؛ حذف باشد.
+```
+
+### عملیات
+
+```text
+پچ: V59_2_calendar_notify_fixes — فایل‌ها: SupabaseProfileRepository (خطای
+تمیز) / ExamBuilderScreen (حذف جمله) / StudentExamViewModel (resumable+
+rejoin) / StudentHomeScreen (کارت پیوستن + بنر پیام + دیالوگ) /
+CalendarScreen (قفل گذشته UI) / SupabaseCalendarRepository (unseen/markSeen)
+/ SQL جدید 20260825_native_calendar_notify_v59.sql / V59_2 تست / verify /
+changelog / هندآف
+SQL: بله (فایل بالا) · Edge deploy: manage-student (برای رفع خطای حذف حساب
+از V59.1 — کد Edge در این پچ تغییری ندارد) · Secret جدید: ندارد
+پیش‌نیاز: V59.1
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -312,10 +312,7 @@ fun ExamBuilderScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // V59.0 — دکمهٔ «پیش‌نمایش کامل A4» زیر کارت‌ها حذف شد؛ همان
                     // گزینه از منوی چشم کارت سؤال باز می‌شود (V55.18).
-                    Text(
-                        "هزینه هر سؤال مشمول: ${PersianDigits.convert("%,d".format(java.util.Locale.US, WalletRules.QUESTION_COST_TOMAN))} تومان؛ محاسبه نهایی و کسر به‌صورت اتمیک در سرور انجام می‌شود.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    // V59.2 — جملهٔ اطلاع‌رسانی هزینهٔ سؤال‌ها به درخواست کاربر حذف شد.
                     if (state.saving) CircularProgressIndicator()
                     state.uploadProgress?.let { Text(it) }
                     state.savedCode?.let { code ->

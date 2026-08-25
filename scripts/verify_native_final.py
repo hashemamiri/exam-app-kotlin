@@ -1561,6 +1561,22 @@ require("action === 'delete_account'" in _edge_manage
         and "await service.auth.admin.deleteUser(teacherId)" in _edge_manage,
         "V59.1 edge delete_account action is missing")
 
+# ---- V59.2: calendar notify + rejoin + cleanups ----
+_cal_sql=(ROOT/"supabase/migrations/20260825_native_calendar_notify_v59.sql").read_text()
+_home=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt").read_text()
+_cal_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text()
+require("هزینه هر سؤال مشمول" not in builder_screen,
+        "V59.2 the per-question cost sentence must stay removed")
+require("fun rejoinActiveExam()" in _student_vm and "آزمون نیمه‌تمام دارید" in _home,
+        "V59.2 rejoin half-finished exam flow is missing")
+require("l.student_id = v_uid and l.teacher_id = n.teacher_id" in _cal_sql,
+        "V59.2 linked-teacher calendar visibility is missing")
+require("برای روزهای گذشته فقط حذف پیام ممکن است" in _cal_sql
+        and "if (isTeacher && day != null && !dayIsPast) {" in _cal_screen,
+        "V59.2 past-day calendar lock is missing")
+require("پیام جدید دارید" in _home and "cal_mark_seen_v59" in _cal_sql,
+        "V59.2 student new-message banner is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

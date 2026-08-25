@@ -149,6 +149,35 @@ class SupabaseCalendarRepository {
         response.error?.takeIf(String::isNotBlank)?.let(::error)
     }
 
+    /** V59.2 — پیام‌های دیده‌نشدهٔ دانش‌آموز (۱۴ روز اخیر) برای بنر «پیام جدید دارید». */
+    suspend fun unseenNotes(): Result<List<CalendarNote>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("cal_unseen_v59")
+            .decodeAs<kotlinx.serialization.json.JsonObject>()
+        (raw["error"] as? JsonPrimitive)?.content
+            ?.takeIf(String::isNotBlank)?.let(::error)
+        ((raw["notes"] as? JsonArray) ?: JsonArray(emptyList())).mapNotNull { element ->
+            val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val id = (obj["id"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+            val date = (obj["on_date"] as? JsonPrimitive)?.content
+                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+            CalendarNote(
+                id = id,
+                date = date,
+                title = (obj["title"] as? JsonPrimitive)?.content.orEmpty(),
+                body = (obj["body"] as? JsonPrimitive)?.content.orEmpty()
+            )
+        }
+    }
+
+    /** V59.2 — علامت‌زدن پیام به عنوان دیده‌شده. */
+    suspend fun markSeen(noteId: String): Result<Unit> = runCatching {
+        SupabaseProvider.client.postgrest.rpc(
+            "cal_mark_seen_v59",
+            buildJsonObject { put("p_note", noteId) }
+        ).decodeAs<kotlinx.serialization.json.JsonObject>()
+        Unit
+    }
+
     private fun validate(editor: CalendarEditor) {
         require(editor.title.trim().isNotEmpty()) { "عنوان پیام را وارد کنید." }
         require(editor.title.trim().length <= 120) { "عنوان پیام حداکثر ۱۲۰ نویسه است." }
