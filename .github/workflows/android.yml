@@ -61,6 +61,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_ANON_KEY"
@@ -73,6 +74,10 @@ jobs:
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$APP_VERSION_CODE" "$APP_VERSION_NAME" \
             > local.properties
+          # V60.0.1 — کلید وب گوگل برای دکمهٔ «ثبت‌نام با گوگل»؛ نبودنش build را نمی‌شکند.
+          if [ -n "$GOOGLE_WEB_CLIENT_ID" ]; then
+            printf 'GOOGLE_WEB_CLIENT_ID=%s\n' "$GOOGLE_WEB_CLIENT_ID" >> local.properties
+          fi
           printf 'APP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$APP_VERSION_CODE" "$APP_VERSION_NAME" >> "$GITHUB_ENV"
           echo "Building automatic version $APP_VERSION_NAME ($APP_VERSION_CODE)"
