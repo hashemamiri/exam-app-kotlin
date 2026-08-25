@@ -2,6 +2,9 @@ package ir.exam.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.repository.AuthRepository
@@ -298,6 +301,29 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
      * metadata ثبت می‌شود و state حساب تازه می‌شود؛ اگر حساب تازه باشد،
      * requires_teacher_setup جریان «تکمیل ثبت‌نام» موجود را باز می‌کند.
      */
+    /**
+     * V60.1 — ورود با idToken گوگل (Credential Manager مستقیم). کل جریان داخل
+     * request است تا isLoading/error درست مدیریت شود و پس از موفقیت user در
+     * state بنشیند (AuthGate خودکار وارد برنامه می‌شود).
+     */
+    fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String) = request {
+        ir.exam.app.data.remote.SupabaseProvider.client.auth.signInWith(IDToken) {
+            this.idToken = idToken
+            provider = Google
+            nonce = rawNonce
+        }
+        runCatching {
+            ir.exam.app.data.remote.SupabaseProvider.client.postgrest.rpc(
+                "native_set_registration_role_v1",
+                kotlinx.serialization.json.buildJsonObject {
+                    put("p_role", kotlinx.serialization.json.JsonPrimitive(role))
+                }
+            )
+        }
+        val user = repository.refreshCurrentUser().getOrThrow()
+        _state.update { it.copy(user = user) }
+    }
+
     fun completeGoogleRegistration(role: String) = request {
         runCatching {
             ir.exam.app.data.remote.SupabaseProvider.client.postgrest.rpc(
@@ -307,7 +333,10 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
                 }
             )
         } // خطای ثبت نقش مانع refresh نمی‌شود؛ نقش پیش‌فرض teacher است.
-        repository.refreshCurrentUser().getOrThrow()
+        // V60.1 — باگ: user فقط getOrThrow می‌شد و در state نمی‌نشست؛ AuthGate
+        // همچنان صفحهٔ ورود را نشان می‌داد («اتفاقی نمی‌افتد»).
+        val user = repository.refreshCurrentUser().getOrThrow()
+        _state.update { it.copy(user = user) }
     }
 
     /** V60.0 — نمایش خطای جریان گوگل (بستن توسط کاربر خطا نیست). */

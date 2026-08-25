@@ -45,26 +45,30 @@ class V60_0StaffLoginGoogleTest {
     fun `google registration button exists on both staff panes`() {
         assertTrue("GoogleRegisterButton(state = state, viewModel = viewModel, role = \"teacher\")" in signIn)
         assertTrue("GoogleRegisterButton(state = state, viewModel = viewModel, role = \"manager\")" in signIn)
-        assertTrue("rememberSignInWithGoogle" in signIn)
+        // V60.1: مسیر Credential Manager مستقیم جایگزین پلاگین شد.
+        assertTrue("CredentialManager.create(context)" in signIn)
         assertTrue("Text(\"ثبت‌نام با گوگل\")" in signIn)
         // آیکن دارد و بستن توسط کاربر خطا نیست
         assertTrue("Icons.Outlined.AccountCircle" in signIn)
-        assertTrue("NativeSignInResult.ClosedByUser -> Unit" in signIn)
+        assertTrue("GetCredentialCancellationException" in signIn)
     }
 
     @Test
     fun `google flow registers the chosen role then refreshes the account`() {
-        assertTrue("fun completeGoogleRegistration(role: String)" in authVm)
+        assertTrue("fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String)" in authVm)
         assertTrue("native_set_registration_role_v1" in authVm)
-        assertTrue("repository.refreshCurrentUser().getOrThrow()" in authVm)
+        // V60.1 — user باید در state بنشیند تا AuthGate وارد برنامه شود.
+        assertTrue("val user = repository.refreshCurrentUser().getOrThrow()" in authVm)
+        assertTrue("_state.update { it.copy(user = user) }" in authVm)
         assertTrue("registration_role" in migration)
     }
 
     @Test
     fun `compose auth plugin is installed with a properties-based client id`() {
-        assertTrue("io.github.jan-tennert.supabase:compose-auth:3.1.4" in gradle)
+        assertTrue("androidx.credentials:credentials-play-services-auth" in gradle)
+        assertTrue("com.google.android.libraries.identity.googleid:googleid" in gradle)
         assertTrue("GOOGLE_WEB_CLIENT_ID" in gradle)
-        assertTrue("googleNativeLogin(serverClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID)" in provider)
+        assertTrue("setServerClientId(ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID)" in signIn)
         // بدون کلید، پیام راهنما به‌جای کرش
         assertTrue("GOOGLE_WEB_CLIENT_ID در local.properties تنظیم نشده است" in signIn)
     }

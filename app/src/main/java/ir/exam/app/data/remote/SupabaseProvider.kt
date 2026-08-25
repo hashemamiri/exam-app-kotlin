@@ -3,8 +3,6 @@ package ir.exam.app.data.remote
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.compose.auth.ComposeAuth
-import io.github.jan.supabase.compose.auth.googleNativeLogin
 import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
@@ -30,13 +28,6 @@ object SupabaseProvider {
             install(Postgrest)
             install(Storage)
             install(Functions)
-            // V60.0 — ثبت‌نام/ورود Native گوگل؛ اگر GOOGLE_WEB_CLIENT_ID خالی
-            // باشد پلاگین نصب می‌شود ولی startFlow به fallback (بی‌اثر) می‌رود.
-            install(ComposeAuth) {
-                if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()) {
-                    googleNativeLogin(serverClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID)
-                }
-            }
         }
     }
 }

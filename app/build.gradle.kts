@@ -107,8 +107,11 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:storage-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:functions-kt:3.1.4")
-    // V60.0 — ثبت‌نام/ورود Native گوگل (Credential Manager) با Supabase.
-    implementation("io.github.jan-tennert.supabase:compose-auth:3.1.4")
+    // V60.1 — ثبت‌نام/ورود گوگل با Credential Manager مستقیم (مسیر رسمی مستندات
+    // Supabase؛ پلاگین قبلی روی برخی دستگاه‌ها callback را گم می‌کرد).
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")

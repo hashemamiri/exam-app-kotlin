@@ -1611,8 +1611,13 @@ require("native_staff_login_email_v1" in _auth_repo,
 require('GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher")' in _sign_in
         and 'GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager")' in _sign_in,
         "V60.0 Google registration buttons are missing")
-require("googleNativeLogin(serverClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID)" in _provider,
-        "V60.0 ComposeAuth google plugin is missing")
+# V60.1 — پلاگین compose-auth با Credential Manager مستقیم جایگزین شد
+# (callback گم می‌شد)؛ ورود با IDToken در ViewModel انجام می‌شود.
+require("CredentialManager.create(context)" in _sign_in
+        and "GoogleIdTokenCredential" in _sign_in,
+        "V60.1 direct Credential Manager google flow is missing")
+require("fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String)" in (ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text(),
+        "V60.1 IDToken sign-in is missing")
 # secret نباید هاردکد شود: مقدار واقعی client id (الگوی apps.googleusercontent.com) در سورس ممنوع
 require("googleusercontent.com" not in _provider and "googleusercontent.com" not in _sign_in,
         "V60.0 google client id must come from local.properties, never hardcoded")

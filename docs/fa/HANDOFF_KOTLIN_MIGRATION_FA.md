@@ -8628,3 +8628,55 @@ local.properties · Dependency جدید: compose-auth 3.1.4
 پیش‌نیاز: V59.3
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۹) V60.1 — هات‌فیکس: «پس از انتخاب جیمیل اتفاقی نمی‌افتد»
+
+### ریشه‌ها (با مدرک از کد)
+
+```text
+۱) completeGoogleRegistration فقط refreshCurrentUser().getOrThrow() می‌کرد و
+   user را در state نمی‌نشاند → حتی با ورود موفق، AuthGate (که به
+   authState.user نگاه می‌کند) همچنان SignInScreen را نشان می‌داد.
+۲) پلاگین compose-auth روی برخی دستگاه‌ها بعد از انتخاب جیمیل callback
+   Success را گم می‌کرد (مشکل شناخته‌شده).
+```
+
+### راه‌حل (مسیر رسمی مستندات Supabase)
+
+```text
+- حذف کامل وابستگی/نصب compose-auth؛ به‌جایش:
+  androidx.credentials:credentials(+play-services-auth) 1.3.0 و googleid 1.1.1.
+- GoogleRegisterButton: nonce خام UUID → hash SHA-256 به GetGoogleIdOption؛
+  CredentialManager.getCredential → GoogleIdTokenCredential.createFrom؛
+  GetCredentialCancellationException = لغو بی‌صدا.
+- AuthViewModel.signInWithGoogleIdToken(idToken, rawNonce, role):
+  auth.signInWith(IDToken){provider=Google; nonce=rawNonce} → ثبت نقش
+  (native_set_registration_role_v1، best-effort) → user در state
+  (_state.update(copy(user=user))) → ورود خودکار؛ حساب تازه با
+  requires_teacher_setup به جریان تکمیل ثبت‌نام می‌رود.
+- completeGoogleRegistration قدیمی هم همین نشاندن user را گرفت.
+- verify و تست V60_0 با معماری جدید هماهنگ شدند؛ کامنت gradle خنثی شد
+  (درس needleها — compose-auth در assertFalse تست جدید است).
+```
+
+### تأیید
+
+```text
+جدید: V60_1GoogleCredentialHotfixTest (۳ تست) · هماهنگی: V60_0 تست + verify
+(بند پلاگین → بند Credential Manager) · اسکن سراسری ۸۶۵ needle → فقط هشدار
+کاذب V55_16 · تراز آکولاد صفر · FINAL_NATIVE_VERIFY=PASS EXIT=0
+نکته: تنظیمات Google Cloud/Supabase/Secret کاربر همان قبلی است و دست
+نمی‌خورد؛ GOOGLE_WEB_CLIENT_ID همچنان از local.properties/CI می‌آید.
+```
+
+### عملیات
+
+```text
+پچ: V60_1_google_credential_hotfix — فایل‌ها: app/build.gradle.kts/
+SupabaseProvider/SignInScreen/AuthViewModel/V60_1 تست جدید/V60_0 تست هماهنگ/
+verify/changelog/هندآف
+SQL / Edge / Secret جدید: ندارد · Dependency: credentials 1.3.0 + googleid
+1.1.1 (جایگزین compose-auth)
+پیش‌نیاز: V60.0 (+ پچ CI V60_0_2)
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

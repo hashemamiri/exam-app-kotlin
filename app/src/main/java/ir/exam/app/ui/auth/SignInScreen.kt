@@ -24,16 +24,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import io.github.jan.supabase.compose.auth.composable.NativeSignInResult
-import io.github.jan.supabase.compose.auth.composable.rememberSignInWithGoogle
-import io.github.jan.supabase.compose.auth.composeAuth
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 
@@ -360,10 +360,11 @@ private fun PasswordField(label: String, value: String, onChange: (String) -> Un
 }
 
 /**
- * V60.0 — «ثبت‌نام با گوگل»: با Credential Manager یکی از جیمیل‌های گوشی
- * انتخاب و وارد Supabase می‌شود؛ سپس نقش انتخابی ثبت و جریان تکمیل ثبت‌نام
- * موجود (نام کاربری/رمز/مدرسه) ادامه می‌یابد. اگر GOOGLE_WEB_CLIENT_ID در
- * local.properties نباشد پیام راهنما نشان داده می‌شود.
+ * V60.1 — «ثبت‌نام با گوگل» با Credential Manager مستقیم (مسیر رسمی مستندات
+ * Supabase): پنجرهٔ انتخاب جیمیل‌های گوشی → idToken → ورود IDToken به
+ * Supabase → ثبت نقش → نشستن user در state (ورود خودکار به برنامه).
+ * V60.0 با پلاگین compose-auth بود که روی برخی دستگاه‌ها پس از انتخاب جیمیل
+ * callback را گم می‌کرد («اتفاقی نمی‌افتد»).
  */
 @Composable
 private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, role: String) {
@@ -375,22 +376,41 @@ private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, r
         )
         return
     }
-    val action = ir.exam.app.data.remote.SupabaseProvider.client.composeAuth.rememberSignInWithGoogle(
-        onResult = { result ->
-            when (result) {
-                is NativeSignInResult.Success -> viewModel.completeGoogleRegistration(role)
-                is NativeSignInResult.Error -> viewModel.reportGoogleError(result.message)
-                is NativeSignInResult.NetworkError -> viewModel.reportGoogleError("اتصال اینترنت برقرار نیست.")
-                NativeSignInResult.ClosedByUser -> Unit
-            }
-        }
-    )
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     OutlinedButton(
-        onClick = { action.startFlow() },
+        onClick = {
+            scope.launch {
+                try {
+                    val rawNonce = java.util.UUID.randomUUID().toString()
+                    val digest = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(rawNonce.toByteArray())
+                    val hashedNonce = digest.joinToString("") { "%02x".format(it) }
+                    val googleIdOption =
+                        com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                            .setFilterByAuthorizedAccounts(false)
+                            .setServerClientId(ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                            .setNonce(hashedNonce)
+                            .build()
+                    val request = androidx.credentials.GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+                    val credentialManager = androidx.credentials.CredentialManager.create(context)
+                    val result = credentialManager.getCredential(request = request, context = context)
+                    val googleCredential =
+                        com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+                            .createFrom(result.credential.data)
+                    viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)
+                } catch (cancel: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                    // بستن پنجره توسط کاربر خطا نیست.
+                } catch (error: Throwable) {
+                    viewModel.reportGoogleError(error.message ?: "ورود گوگل ناموفق بود.")
+                }
+            }
+        },
         enabled = !state.isLoading,
         modifier = Modifier.fillMaxWidth()
     ) {
-        // آیکن رسمی G گوگل به‌صورت وکتور ساده (بدون وابستگی جدید).
         Icon(
             imageVector = Icons.Outlined.AccountCircle,
             contentDescription = null,
