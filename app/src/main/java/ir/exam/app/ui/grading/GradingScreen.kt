@@ -335,7 +335,11 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
         text = {
             val rows = (reports?.get("rows") as? JsonArray).orEmpty()
             if (rows.isEmpty()) {
-                Text("هنوز گزارشی برای این آزمون ثبت نشده است.")
+                Text(
+                    "هنوز گزارشی برای این آزمون ثبت نشده است.\n" +
+                        "گزارش از زمان شرکت دانش‌آموز با نسخهٔ جدید برنامه ساخته می‌شود؛ " +
+                        "آزمون‌هایی که پیش از این نسخه برگزار شده‌اند گزارش ندارند."
+                )
             } else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(rows.size) { index ->
                     val row = rows[index] as? JsonObject ?: return@items

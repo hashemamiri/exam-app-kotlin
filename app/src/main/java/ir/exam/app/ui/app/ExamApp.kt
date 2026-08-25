@@ -146,6 +146,8 @@ private fun AuthenticatedExamApp(
         mutableStateOf(if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR)
     }
     var menuOpen by rememberSaveable(user.id) { mutableStateOf(false) }
+    // V58.0.2 — آزمون فعال دانش‌آموز: هدر و منوی همبرگری پنهان می‌شوند.
+    var studentExamActive by rememberSaveable(user.id) { mutableStateOf(false) }
     var quickAddOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var walletRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var dashboardRefreshKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
@@ -281,6 +283,7 @@ private fun AuthenticatedExamApp(
         managerInviteHeader = managerInviteHeader,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
+        studentExamActive = studentExamActive,
         onToggleMenu = {
             if (quickAddOpen) quickAddOpen = false
             menuOpen = !menuOpen
@@ -372,7 +375,8 @@ private fun AuthenticatedExamApp(
                     UserRole.STUDENT -> StudentHomeScreen(
                         userId = user.id,
                         initialJoinCode = studentExamCode.takeIf(String::isNotBlank),
-                        joinRequestKey = studentJoinRequestKey
+                        joinRequestKey = studentJoinRequestKey,
+                        onExamActiveChanged = { studentExamActive = it }
                     )
                     UserRole.MANAGER -> managerTeacherId?.let { teacherId ->
                         ManagerTeacherClassScreen(teacherId = teacherId, onBack = { managerTeacherId = null })
@@ -689,6 +693,7 @@ private fun AuthenticatedShell(
     managerInviteHeader: Boolean,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
+    studentExamActive: Boolean = false,
     onToggleMenu: () -> Unit,
     onToggleAdd: () -> Unit,
     onCloseAdd: () -> Unit,
@@ -826,7 +831,9 @@ private fun AuthenticatedShell(
                 Scaffold(
                     containerColor = colors.background,
                     topBar = {
-                        if (!menuOpen) {
+                        // V58.0.2 — در حین آزمون دانش‌آموز، هدر «خانه دانش‌آموز» و
+                        // دکمهٔ منوی همبرگری حذف می‌شوند (درخواست کاربر).
+                        if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive)) {
                             TopAppBar(
                                 title = {
                                     Text(

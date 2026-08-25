@@ -8175,3 +8175,71 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V58.2 (هر سه پچ V58 اعمال شده)
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۰) V58.0.2 — هات‌فیکس ۹ گزارش دستگاه صفحهٔ آزمون
+
+### گزارش‌ها و ریشه‌ها (همه با مدرک از کد)
+
+```text
+۱) هدر «خانه دانش‌آموز» + همبرگری در آزمون: TopAppBar پوستهٔ ExamApp برای
+   دانش‌آموز همیشه رندر می‌شد → state جدید studentExamActive از
+   StudentHomeScreen (exam!=null && !showPreview && !finished) بالا می‌آید و
+   topBar با آن پنهان می‌شود.
+۲) خروج: دیالوگ قبلی activity?.finish() می‌کرد → exitExamScreen جدید در
+   ViewModel: تایمرها/ناظرها cancel و state ریست؛ draft می‌ماند.
+۳) آیکن قبلی/بعدی: Icons.AutoMirrored در RTL خودش آینه می‌شود و جهت را
+   برعکس نشان می‌داد → نسخهٔ غیر AutoMirrored.
+۴) پیام کاذب «معلم ویرایش کرد»: serverDeadline در هر refresh با ساعتِ
+   محلی «الان» دوباره ساخته می‌شود (localNow+remaining) و چند ثانیه فرق
+   دارد؛ diffExams هر تفاوت deadline را گزارش می‌کرد → فقط اختلاف > ۲
+   دقیقه گزارش می‌شود.
+۵) سؤال تکراری بانک (native_bank_add_v2 → 'این سؤال از قبل در بانک وجود
+   دارد'): در onFailure به notice (همان Snackbar سبز V58.0) تبدیل شد.
+۶) «برخی آزمون‌ها گزارش ندارند»: upsert گزارش فقط در recordSecurityEvent
+   بود؛ اگر هیچ رویداد امنیتی رخ نمی‌داد ردیفی ساخته نمی‌شد → گزارش پایه
+   در startExam و submit هم upsert می‌شود + متن دیالوگ توضیح می‌دهد که
+   آزمون‌های قبل از این نسخه گزارش ندارند.
+۷) long-press علامت مرور: FilterChip خودش clickable دارد و لمس را
+   می‌بلعد؛ combinedClickable روی Box بیرونی هرگز longClick نمی‌گرفت →
+   چیپ دست‌ساز (Surface+Text) با combinedClickable مستقیم.
+۸) کادر/جای خالی نامگذاری: خواستهٔ کاربر «تصویر مثل پنل معلم + فقط
+   فیلدهای تایپ دانش‌آموز» → AtlasFigureView شرط blanks حالا
+   onBlankAnswer != null هم دارد؛ جای خالی «…………» از همهٔ نمایش‌ها حذف
+   (چاپ PDF مسیر AtlasBitmapRenderer جداست و دست‌نخورده).
+۹) «دانش‌آموز نمی‌تواند نمودار ایجاد کند»: کاربر چیپ معلم را فعال نکرده
+   بود → اگر متن سؤال توکن نمودار (kind=='g') داشته باشد، رسم نمودار
+   پاسخ برای دانش‌آموز خودکار فعال می‌شود (چیپ هم سر جایش است).
+```
+
+### تأیید
+
+```text
+جدید: V58_0_2StudentExamFixesHotfixTest (۹ تست) · هماهنگی: V58_0 (آیکن‌های
+غیرآینه‌ای)، V58_2 (شرط allowAnswerGraph||questionHasGraph) · verify: بند
+هدر → شرط جدید، بند V58.2 → شرط جدید + ۵ require جدید V58.0.2 · شبیه‌سازی
+python همهٔ ۳۰ assertion سبز · اسکن سراسری ۷۲۸ needle → فقط هشدار کاذب
+V55_16 · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+۱) وسط آزمون: بالای صفحه هیچ هدر/همبرگری نباشد. ۲) خروج → تأیید → صفحهٔ
+ورود کد؛ با کد دوباره ادامه از همان‌جا. ۳) آیکن سمت راست سطر شماره‌ها =
+قبلی (فلش راست)، چپ = بعدی. ۴) بدون ویرایش معلم پیام ویرایش نیاید؛ با
+ویرایش واقعی متن سؤال بیاید و بگوید کدام سؤال. ۵) ذخیرهٔ تکراری در بانک →
+پیام گذرا، نه خطای قرمز. ۶) بعد از شرکت هر دانش‌آموز (نسخهٔ جدید) گزارش
+باشد. ۷) نگه‌داشتن شمارهٔ سؤال → ★. ۸) زیر تصویر اطلس فقط کادرهای تایپ.
+۹) سؤال دارای نمودار → دکمهٔ «رسم نمودار پاسخ» بدون نیاز به چیپ.
+```
+
+### عملیات
+
+```text
+پچ: V58_0_2_student_exam_fixes_hotfix — فایل‌ها: ExamApp/StudentHomeScreen/
+StudentExamScreen/StudentExamViewModel/AtlasFigureView/ExamBuilderViewModel/
+GradingScreen/V58_0_2 تست جدید/V58_0+V58_2 تست هماهنگ/verify/changelog/هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V58.0.1
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -26,8 +26,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -136,7 +136,8 @@ fun StudentExamContent(
     onDismissSubmit: () -> Unit,
     onDone: () -> Unit,
     onDismissExamChanges: () -> Unit = {},
-    onSecurityEvent: (String) -> Unit = {}
+    onSecurityEvent: (String) -> Unit = {},
+    onExitExam: () -> Unit = {}
 ) {
     val exam = state.exam ?: return
     val context = LocalContext.current
@@ -241,8 +242,10 @@ fun StudentExamContent(
             // با آیکن قبلی/بعدی در دو سر؛ نگه‌داشتن ۲ ثانیه‌ای = علامت برای مرور.
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    // V58.0.2 — آیکن‌های AutoMirrored در RTL برعکس رندر می‌شدند؛
+                    // نسخهٔ غیرآینه‌ای: قبلی = فلش رو به راست، بعدی = رو به چپ.
                     IconButton(onClick = onPrevious, enabled = state.questionIndex > 0) {
-                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = "سؤال قبلی")
+                        Icon(Icons.Outlined.KeyboardArrowRight, contentDescription = "سؤال قبلی")
                     }
                     Row(
                         Modifier
@@ -253,23 +256,33 @@ fun StudentExamContent(
                         exam.questions.indices.forEach { i ->
                             val q = exam.questions[i]
                             val answered = state.answers.containsKey(q.id)
-                            Box(
-                                Modifier.combinedClickable(
+                            // V58.0.2 — FilterChip لمس را می‌بلعید و onLongClick
+                            // بیرونی هرگز نمی‌رسید؛ چیپ با Surface دست‌ساز و
+                            // combinedClickable مستقیم جایگزین شد.
+                            val flagged = q.id in state.flaggedQuestionIds
+                            val selectedChip = i == state.questionIndex
+                            androidx.compose.material3.Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = if (selectedChip) MaterialTheme.colorScheme.secondaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.combinedClickable(
                                     onClick = { onGoTo(i) },
-                                    // نگه‌داشتن ۲ ثانیه‌ای شمارهٔ سؤال = علامت/برداشتن علامت مرور
+                                    // نگه‌داشتن شمارهٔ سؤال = علامت/برداشتن علامت مرور
                                     onLongClick = { onToggleFlag(q.id) }
                                 )
                             ) {
-                                FilterChip(
-                                    selected = i == state.questionIndex,
-                                    onClick = { onGoTo(i) },
-                                    label = { Text("${i + 1}${if (q.id in state.flaggedQuestionIds) "★" else if (answered) "✓" else ""}") }
+                                Text(
+                                    "${i + 1}${if (flagged) "★" else if (answered) "✓" else ""}",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    color = if (flagged) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = if (selectedChip) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                         }
                     }
                     IconButton(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex) {
-                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = "سؤال بعدی")
+                        Icon(Icons.Outlined.KeyboardArrowLeft, contentDescription = "سؤال بعدی")
                     }
                 }
             }
@@ -381,7 +394,15 @@ fun StudentExamContent(
                     )
                 }
             }
-            if (presentation.allowAnswerGraph) {
+            // V58.0.2 — گزارش کاربر: «دانش‌آموز نمی‌تواند نمودار ایجاد کند» چون
+            // چیپ معلم پیدا/فعال نشده بود. حالا اگر خود سؤال نمودار داشته باشد
+            // (توکن k='g') رسم نمودار پاسخ خودکار فعال است؛ چیپ معلم برای
+            // سؤال‌های بدون نمودار همچنان کار می‌کند.
+            val questionHasGraph = remember(question.id, question.text) {
+                ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
+                    .any { it.spec.kind == "g" }
+            }
+            if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {
                     // V58.0 — معلم اجازه داده: دانش‌آموز نمودار پاسخ رسم/ویرایش کند
                     // (مثلاً سهمی یک تابع). توکن %%FIG:...%% داخل همان TextAnswer
@@ -409,7 +430,8 @@ fun StudentExamContent(
             Text("پس از تأیید، پاسخ نهایی قابل ویرایش نیست.")
         }},confirmButton={Button(onClick=onConfirmSubmit){Text("تأیید و ارسال نهایی")}},dismissButton={TextButton(onClick=onDismissSubmit){Text("بازگشت و مرور")}})
     }
-    if(showExit)AlertDialog(onDismissRequest={showExit=false},title={Text("خروج از آزمون")},text={Text("پاسخ‌ها ذخیره شده‌اند و زمان سرور ادامه دارد. برنامه بسته شود؟")},confirmButton={Button(onClick={showExit=false;activity?.finish()}){Text("بستن برنامه")}},dismissButton={TextButton(onClick={showExit=false}){Text("ادامه آزمون")}})
+    // V58.0.2 — درخواست کاربر: تأیید خروج = خروج از «صفحهٔ آزمون» (نه بستن برنامه).
+    if(showExit)AlertDialog(onDismissRequest={showExit=false},title={Text("خروج از آزمون")},text={Text("پاسخ‌ها ذخیره شده‌اند و زمان سرور ادامه دارد. از صفحهٔ آزمون خارج شوید؟")},confirmButton={Button(onClick={showExit=false;onExitExam()}){Text("خروج از آزمون")}},dismissButton={TextButton(onClick={showExit=false}){Text("ادامه آزمون")}})
     // V58.0 — معلم وسط آزمون ویرایش کرد: نمایش موارد؛ تا بستن، تایمر مکث است.
     if (state.examChangeNotes.isNotEmpty()) {
         AlertDialog(

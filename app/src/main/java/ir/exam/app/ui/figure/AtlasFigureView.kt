@@ -55,7 +55,11 @@ fun AtlasFigureView(
     val showLabel = spec.xStr("lab", "1") != "0"
     val title = spec.xStr("title").ifBlank { AtlasCatalog.displayName(spec) }
     val markNames = spec.xStr("mkName", "0") == "1"
-    val blanks = showBlanks && spec.xStr("blank", "1") != "0" && marks.isNotEmpty()
+    // V58.0.2 — درخواست کاربر: جای خالی‌های نمایشی «…………» لازم نیست؛ فقط
+    // کادرهای تایپ دانش‌آموز (onBlankAnswer != null) زیر تصویر می‌آیند و
+    // تصویر برای معلم دقیقاً مثل پنل خودش نمایش داده می‌شود.
+    val blanks = showBlanks && onBlankAnswer != null &&
+        spec.xStr("blank", "1") != "0" && marks.isNotEmpty()
 
     Column(modifier) {
         if (showLabel && title.isNotBlank()) {

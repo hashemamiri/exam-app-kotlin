@@ -45,7 +45,8 @@ class V58_2StudentAnswerGraphTest {
 
     @Test
     fun `student draws and edits the graph through the native flow`() {
-        assertTrue("if (presentation.allowAnswerGraph)" in student)
+        // V58.0.2: علاوه بر چیپ معلم، نمودار داخل متن سؤال هم فعال‌ساز است.
+        assertTrue("if (presentation.allowAnswerGraph || questionHasGraph)" in student)
         assertTrue("fun StudentAnswerGraph(" in student)
         assertTrue("Text(\"رسم نمودار پاسخ\")" in student)
         assertTrue("FigureTypePickerDialog(" in student)

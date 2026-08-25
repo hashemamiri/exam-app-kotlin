@@ -111,6 +111,13 @@ class StudentExamViewModel(
         _state.update { it.copy(showPreview = false, started = true, error = null) }
         examEnteredAtEpochMs = System.currentTimeMillis()
         markQuestionEnter(state.value.questionIndex)
+        // V58.0.2 — ثبت گزارش پایه در همان شروع؛ پیش‌تر فقط رویداد امنیتی گزارش
+        // upsert می‌کرد و «برخی آزمون‌ها گزارش نداشتند».
+        state.value.exam?.id?.let { examId ->
+            viewModelScope.launch {
+                runCatching { exams.reportMonitor(examId, monitorReport().toString()) }
+            }
+        }
         startTimer()
         watchExamChanges()
     }
@@ -232,7 +239,14 @@ class StudentExamViewModel(
         old.questions.forEach { q ->
             if (new.questions.none { it.id == q.id }) notes += "یک سؤال حذف شد"
         }
-        if (old.deadlineEpochMs != new.deadlineEpochMs) notes += "مهلت آزمون تغییر کرد"
+        // V58.0.2 — deadline از serverDeadline هر بار با ساعت محلی دوباره ساخته
+        // می‌شود و چند ثانیه جابه‌جا است؛ مقایسهٔ آن دیالوگ کاذب «معلم ویرایش
+        // کرد» می‌داد. تغییر مهلت فقط اگر بیش از ۲ دقیقه باشد گزارش می‌شود.
+        val oldDeadline = old.deadlineEpochMs
+        val newDeadline = new.deadlineEpochMs
+        if (oldDeadline != null && newDeadline != null &&
+            kotlin.math.abs(newDeadline - oldDeadline) > 120_000L
+        ) notes += "مهلت آزمون تغییر کرد"
         return notes
     }
 
@@ -392,6 +406,7 @@ class StudentExamViewModel(
                 submittedAtEpochMs = System.currentTimeMillis(),
                 monitorReportJson = monitorReport().toString()
             )
+            runCatching { exams.reportMonitor(exam.id, monitorReport().toString()) }
             exams.submitAttempt(attempt)
                 .onSuccess { outcome ->
                     timer?.cancel()
@@ -426,6 +441,23 @@ class StudentExamViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    /**
+     * V58.0.2 — «خروج» وسط آزمون: بازگشت به صفحهٔ ورود کد؛ پاسخ‌ها در draft
+     * ذخیره‌اند و با کد دوباره/بازیابی خودکار ادامه می‌یابد؛ زمان سرور ادامه دارد.
+     */
+    fun exitExamScreen() {
+        if (state.value.exam == null || state.value.finished) return
+        timer?.cancel()
+        changeWatcher?.cancel()
+        draftObserver?.cancel()
+        _state.update {
+            StudentExamUiState(
+                restoringExam = false,
+                pendingSubmissions = it.pendingSubmissions
+            )
         }
     }
 

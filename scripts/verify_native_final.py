@@ -478,7 +478,8 @@ require(all(marker in v25_guide for marker in (
             "هدر سراسری","امنیت رمز دانش‌آموز","پنجره ساخت گروهی","منوی همبرگری",
             "رفع بسته‌شدن بخش تصویر","SQL جدید: ندارد","Edge deploy: ندارد"
         )), "V25 Persian guide/handoff coverage incomplete")
-require("topBar = {\n                        if (!menuOpen)" in app_shell,
+# V58.0.2 — هدر با منوی باز «و» هنگام آزمون فعال دانش‌آموز پنهان می‌شود.
+require("if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive))" in app_shell,
         "shared header does not hide while hamburger menu is open")
 require(all(marker in date_time_picker for marker in (
             "selected = today","visibleYear = today.year","minimumIso","minimumInstant",
@@ -1513,10 +1514,24 @@ require("student_id = auth.uid()" in _monitor_sql and "e.teacher_id = v_uid" in 
 
 # ---- V58.2: student answer graph with teacher permission ----
 require("fun StudentAnswerGraph(" in student_screen
-        and "if (presentation.allowAnswerGraph)" in student_screen,
+        and "if (presentation.allowAnswerGraph || questionHasGraph)" in student_screen,
         "V58.2 student answer graph flow is missing")
 require('values["allowAnswerGraph"] = JsonPrimitive(question.allowAnswerGraph)' in (ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").read_text(),
         "V58.2 allowAnswerGraph persistence is missing")
+
+# ---- V58.0.2: student exam device-report fixes ----
+require("fun exitExamScreen()" in _student_vm
+        and "kotlin.math.abs(newDeadline - oldDeadline) > 120_000L" in _student_vm,
+        "V58.0.2 exit-to-screen / drift-safe teacher-edit diff is missing")
+require("Icons.Outlined.KeyboardArrowRight" in student_screen
+        and "Icons.AutoMirrored.Outlined.KeyboardArrowRight" not in student_screen,
+        "V58.0.2 non-mirrored strip icons are missing")
+require("questionHasGraph" in student_screen,
+        "V58.0.2 automatic answer-graph unlock is missing")
+require("این سؤال از قبل در بانک سؤال موجود است" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "V58.0.2 duplicate bank notice is missing")
+require("onBlankAnswer != null &&" in atlas_view,
+        "V58.0.2 atlas blanks must only render as student typing boxes")
 
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),

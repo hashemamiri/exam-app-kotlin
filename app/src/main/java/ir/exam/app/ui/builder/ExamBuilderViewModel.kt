@@ -500,7 +500,15 @@ class ExamBuilderViewModel(
                     _state.update { it.copy(notice = "به بانک سؤال اضافه شد") }
                     refreshBankNow()
                 }
-                .onFailure { error -> _state.update { it.copy(bankLoading = false, error = safeBuilderError(error)) } }
+                .onFailure { error ->
+                    // V58.0.2 — سؤال تکراری خطای قرمز نیست؛ پیام گذرا (Snackbar).
+                    val message = safeBuilderError(error)
+                    if ("از قبل در بانک" in message) {
+                        _state.update { it.copy(bankLoading = false, notice = "این سؤال از قبل در بانک سؤال موجود است") }
+                    } else {
+                        _state.update { it.copy(bankLoading = false, error = message) }
+                    }
+                }
         }
     }
 

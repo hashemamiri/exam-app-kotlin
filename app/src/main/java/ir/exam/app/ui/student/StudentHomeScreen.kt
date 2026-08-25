@@ -28,7 +28,14 @@ import ir.exam.app.data.repository.SupabaseStudentExamRepository
 import ir.exam.app.ui.app.NeumorphicPanel
 
 @Composable
-fun StudentHomeScreen(userId: String, initialJoinCode: String? = null, joinRequestKey: Int = 0) {
+fun StudentHomeScreen(
+    userId: String,
+    initialJoinCode: String? = null,
+    joinRequestKey: Int = 0,
+    // V58.0.2 — گزارش «داخل آزمون بودن» به پوسته تا هدر و منوی همبرگری
+    // در حین آزمون حذف شوند.
+    onExamActiveChanged: (Boolean) -> Unit = {}
+) {
     val appContext = LocalContext.current.applicationContext
     val database = remember(appContext) { NativeDatabaseProvider.get(appContext) }
     val pending = remember(appContext, database) {
@@ -44,6 +51,9 @@ fun StudentHomeScreen(userId: String, initialJoinCode: String? = null, joinReque
         )
     }
     val state by viewModel.state.collectAsState()
+    // آزمون فعال (بعد از شروع و پیش از پایان) → هدر پوسته پنهان شود.
+    val examActive = state.exam != null && !state.showPreview && !state.finished
+    LaunchedEffect(examActive) { onExamActiveChanged(examActive) }
     LaunchedEffect(joinRequestKey, initialJoinCode) {
         if (joinRequestKey > 0 && !initialJoinCode.isNullOrBlank() && state.exam == null) {
             viewModel.setCode(initialJoinCode)
@@ -68,7 +78,8 @@ fun StudentHomeScreen(userId: String, initialJoinCode: String? = null, joinReque
                 onDismissSubmit = viewModel::dismissSubmitReview,
                 onDone = viewModel::leaveFinishedExam,
                 onDismissExamChanges = viewModel::dismissExamChanges,
-                onSecurityEvent = viewModel::recordSecurityEvent
+                onSecurityEvent = viewModel::recordSecurityEvent,
+                onExitExam = viewModel::exitExamScreen
             )
         }
         return

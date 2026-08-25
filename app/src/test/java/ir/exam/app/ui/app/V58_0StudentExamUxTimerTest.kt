@@ -49,8 +49,10 @@ class V58_0StudentExamUxTimerTest {
         assertFalse("Text(exam.title, style = MaterialTheme.typography.titleLarge)" in content)
         // سطر اسکرول‌شونده با آیکن قبلی/بعدی دو سر
         assertTrue("horizontalScroll(rememberScrollState())" in student)
-        assertTrue("Icons.AutoMirrored.Outlined.KeyboardArrowRight" in student)
-        assertTrue("Icons.AutoMirrored.Outlined.KeyboardArrowLeft" in student)
+        // V58.0.2 — نسخهٔ AutoMirrored در RTL برعکس رندر می‌شد؛ غیرآینه‌ای شد.
+        assertTrue("Icons.Outlined.KeyboardArrowRight" in student)
+        assertTrue("Icons.Outlined.KeyboardArrowLeft" in student)
+        assertFalse("Icons.AutoMirrored.Outlined.KeyboardArrowRight" in student)
         // دکمه‌های متنی قبلی/بعدی پایین حذف شدند
         assertFalse("{ Text(\"قبلی\") }" in student)
         assertFalse("{ Text(\"بعدی\") }" in student)
