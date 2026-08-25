@@ -144,6 +144,8 @@ jobs:
             exit 1
           fi
           echo "Release APK signing certificate: VERIFIED"
+          # V60.0.1 - چاپ SHA-1 گواهی برای ثبت در Google Cloud (اثرانگشت محرمانه نیست).
+          printf '%s\n' "$KEY_CERT_REPORT" | grep -E 'SHA-?1:' | head -n 1 | sed 's/^[[:space:]]*/GOOGLE_SHA1_FOR_OAUTH => /'
       - name: آماده‌سازی بسته انتشار و مشخصات نسخه
         run: |
           SOURCE_APK="app/build/outputs/apk/release/app-release.apk"
