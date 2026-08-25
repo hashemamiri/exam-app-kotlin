@@ -8243,3 +8243,41 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V58.0.1
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۱) V58.0.3 — هات‌فیکس: remember خارج از متن Composable
+
+### گزارش CI
+
+```text
+e: StudentExamScreen.kt:401 @Composable invocations can only happen from
+the context of a @Composable function → compileDebugKotlin FAILED
+```
+
+### ریشه و راه‌حل
+
+```text
+V58.0.2 محاسبهٔ questionHasGraph (شامل remember که تابع @Composable است) را
+مستقیم داخل بدنهٔ LazyColumn گذاشته بود؛ بدنهٔ LazyColumn از نوع
+LazyListScope است و فراخوان Composable فقط داخل item {} مجاز است.
+راه‌حل: انتقال اعلان به بدنهٔ StudentExamContent (بعد از question/
+presentation و قبل از Scaffold). رفتار بدون تغییر؛ فقط جای اعلان.
+```
+
+### تأیید
+
+```text
+جدید: V58_0_3RememberScopeHotfixTest (۲ تست: جایگاه اعلان قبل از Scaffold +
+اسکن اجرایی «remember مستقیم در LazyListScope» کل فایل) · verify: require
+ترتیبی جدید · شبیه‌سازی python: needleهای V58_0_2/V58_2 همچنان سبز، تراز
+آکولاد صفر، اسکن remember خارج item خالی · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### عملیات
+
+```text
+پچ: V58_0_3_remember_scope_hotfix — فایل‌ها: StudentExamScreen.kt (جابه‌جایی
+اعلان) / V58_0_3RememberScopeHotfixTest.kt (جدید) / verify / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V58.0.2
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

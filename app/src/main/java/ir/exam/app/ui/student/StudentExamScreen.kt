@@ -214,6 +214,14 @@ fun StudentExamContent(
     }
     val question = exam.questions.getOrNull(state.questionIndex) ?: return
     val presentation=exam.questionPresentation[question.id] ?: ir.exam.app.domain.model.QuestionPresentation()
+    // V58.0.3 — remember فقط در متن Composable مجاز است؛ داخل بدنهٔ LazyColumn
+    // (LazyListScope) خطای کامپایل می‌داد و به اینجا منتقل شد.
+    // V58.0.2 — اگر خود سؤال نمودار داشته باشد (توکن k='g') رسم نمودار پاسخ
+    // بدون نیاز به چیپ معلم فعال است.
+    val questionHasGraph = remember(question.id, question.text) {
+        ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
+            .any { it.spec.kind == "g" }
+    }
 
     Scaffold(
         bottomBar = {
@@ -393,14 +401,6 @@ fun StudentExamContent(
                         onRemove = onRemoveImage
                     )
                 }
-            }
-            // V58.0.2 — گزارش کاربر: «دانش‌آموز نمی‌تواند نمودار ایجاد کند» چون
-            // چیپ معلم پیدا/فعال نشده بود. حالا اگر خود سؤال نمودار داشته باشد
-            // (توکن k='g') رسم نمودار پاسخ خودکار فعال است؛ چیپ معلم برای
-            // سؤال‌های بدون نمودار همچنان کار می‌کند.
-            val questionHasGraph = remember(question.id, question.text) {
-                ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
-                    .any { it.spec.kind == "g" }
             }
             if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {

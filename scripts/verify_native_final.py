@@ -1528,6 +1528,10 @@ require("Icons.Outlined.KeyboardArrowRight" in student_screen
         "V58.0.2 non-mirrored strip icons are missing")
 require("questionHasGraph" in student_screen,
         "V58.0.2 automatic answer-graph unlock is missing")
+# V58.0.3 — remember باید در متن Composable باشد نه LazyListScope.
+require(student_screen.index("val questionHasGraph = remember(question.id, question.text)")
+        < student_screen.index("    Scaffold("),
+        "V58.0.3 questionHasGraph remember must stay in composable scope")
 require("این سؤال از قبل در بانک سؤال موجود است" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "V58.0.2 duplicate bank notice is missing")
 require("onBlankAnswer != null &&" in atlas_view,
