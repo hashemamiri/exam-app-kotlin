@@ -8281,3 +8281,36 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V58.0.2
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۲) V58.0.4 — هات‌فیکس تست: needle چندخطی V26 روی هدر
+
+### گزارش CI
+
+```text
+473 tests completed, 1 failed
+V26QuestionMediaReorderTest > hamburger hides the shared header FAILED
+(کد اصلی compileDebugKotlin SUCCESS — فقط تست)
+```
+
+### ریشه و راه‌حل
+
+```text
+تست V26 (بند «hamburger hides the shared header») needle چندخطی
+"topBar = {\n                        if (!menuOpen)" داشت؛ V58.0.2 آن شرط را به
+if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive))
+گسترش داد و needle نمی‌خورد. verify در V58.0.2 هماهنگ شده بود ولی این تست
+از قلم افتاد — علت: needle چندخطی با متغیر محلی (val app = source(...)) که
+اسکنر سراسری فقط lazyها را می‌فهمد؛ «درس needleها» تکرار شد (بار پنجم).
+راه‌حل: needle تست V26 به شرط جدید به‌روزرسانی شد (کد اصلی تغییری نکرد).
+needleهای دیگر ExamApp (menuOpen = !menuOpen و BackHandler) بررسی و سبزند.
+```
+
+### عملیات
+
+```text
+پچ: V58_0_4_v26_header_needle_hotfix — فایل‌ها: V26QuestionMediaReorderTest.kt
+(فقط needle) / changelog / هندآف — کد اصلی و verify دست‌نخورده
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V58.0.3
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

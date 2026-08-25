@@ -17,7 +17,8 @@ class V26QuestionMediaReorderTest {
     @Test
     fun `hamburger hides the shared header`() {
         val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
-        assertTrue("topBar = {\n                        if (!menuOpen)" in app)
+        // V58.0.2 — شرط پنهان‌شدن هدر گسترده شد: منوی باز «یا» آزمون فعال دانش‌آموز.
+        assertTrue("if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive))" in app)
         assertTrue("TopAppBar(" in app)
     }
 
