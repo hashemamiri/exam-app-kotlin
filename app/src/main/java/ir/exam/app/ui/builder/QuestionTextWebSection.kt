@@ -1,12 +1,12 @@
 package ir.exam.app.ui.builder
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -57,6 +57,9 @@ fun QuestionTextWebSection(
     // V55.7 — ارتفاع واقعی محتوا از HTML (px CSS = dp). کادر با درج فرمول/شکل
     // «کشیده» می‌شود و اسکرول با صفحهٔ اصلی برنامه است، نه داخل WebView.
     var contentHeightDp by remember { mutableStateOf(150) }
+    // V59.2.1 — رفع لگ/پرش بازشدن کادر: تا اولین گزارش ارتفاع از HTML، کادر با
+    // ارتفاع ثابت و محو (alpha) نمایش داده می‌شود؛ بعد یک‌باره ظاهر می‌شود.
+    var webReady by remember { mutableStateOf(false) }
 
     // V54.4 — دکمهٔ بازگشت سیستم ابتدا لایهٔ تمام‌صفحهٔ باز مرجع را می‌بندد.
     BackHandler(enabled = overlayOpen) { controller.closeOverlays() }
@@ -66,7 +69,9 @@ fun QuestionTextWebSection(
         if (text != controller.lastJsValue) controller.setValue(text)
     }
 
-    Column(modifier.animateContentSize()) {
+    // V59.2.1 — انیمیشن اندازهٔ داخلی Column حذف شد؛ با ارتفاع متغیر WebView دو انیمیشن
+    // تو در تو (expandVertically بیرونی + این) باعث پرش می‌شد.
+    Column(modifier) {
         // V54.4 — هیچ قاب/برچسب Compose دور WebView نیست؛ برچسب «متن سؤال» و
         // قاب کادر همان markup و CSS بایت‌به‌بایت مرجع داخل خود HTML است.
         QuestionTextFieldWebView(
@@ -77,12 +82,17 @@ fun QuestionTextWebSection(
             onEditFigureToken = onEditFigureToken,
             onOpenFormula = onOpenFormula,
             onError = { loadError = true },
-            onContentHeight = { contentHeightDp = it },
+            onContentHeight = {
+                contentHeightDp = it
+                webReady = true
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 // V55.7 — ارتفاع کادر = ارتفاع واقعی محتوا (کشیده‌شدن با درج)؛
                 // فقط هنگام بازبودن ابزارهای تمام‌صفحهٔ مرجع، ارتفاع ثابت بزرگ.
                 .height(if (overlayOpen) 560.dp else contentHeightDp.coerceIn(150, 4000).dp)
+                // V59.2.1 — تا آماده‌شدن HTML، محو تا فلاش سفید/پرش دیده نشود.
+                .graphicsLayer { alpha = if (webReady || overlayOpen) 1f else 0f }
         )
         if (loadError) {
             Text(

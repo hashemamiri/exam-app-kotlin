@@ -43,12 +43,17 @@ begin
             ) as item
             from public.calendar_notes n
             where n.on_date between p_from and p_to
-              -- V59.2: مالک یا هر معلمِ لینک‌شده به این دانش‌آموز
+              -- V59.2: مالک، معلمِ لینک‌شده، یا معلمِ کلاسی که دانش‌آموز عضو آن است
               and (
                 n.teacher_id = v_teacher
                 or exists (
                     select 1 from public.teacher_student_links l
                     where l.student_id = v_uid and l.teacher_id = n.teacher_id
+                )
+                or exists (
+                    select 1 from public.class_members m
+                    join public.classes c on c.id = m.class_id
+                    where m.student_id = v_uid and c.teacher_id = n.teacher_id
                 )
               )
               and (
@@ -211,6 +216,11 @@ begin
         or exists (
             select 1 from public.teacher_student_links l
             where l.student_id = v_uid and l.teacher_id = n.teacher_id
+        )
+        or exists (
+            select 1 from public.class_members m
+            join public.classes c on c.id = m.class_id
+            where m.student_id = v_uid and c.teacher_id = n.teacher_id
         )
       )
       and (

@@ -306,7 +306,10 @@ Deno.serve(async (request) => {
         students_removed: removed,
       });
       const { error: selfError } = await service.auth.admin.deleteUser(teacherId);
-      if (selfError) return json({ error: 'حذف حساب اصلی ناموفق بود؛ دانش‌آموزان پردازش شدند' }, 502);
+      if (selfError) {
+        // V59.2.1 — علت دقیق برای عیب‌یابی (مثلاً FK بلاک‌کننده) برگردانده شود.
+        return json({ error: `حذف حساب اصلی ناموفق بود: ${selfError.message ?? 'خطای auth'}` }, 502);
+      }
       return json({ ok: true, transferred: prepBody?.transferred ?? 0, students_removed: removed });
     }
 

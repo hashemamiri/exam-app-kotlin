@@ -60,6 +60,34 @@ begin
     where cm.class_id = c.id and c.teacher_id = v_uid;
     delete from public.classes where teacher_id = v_uid;
 
+    -- ۴) V59.2.1 — پاک‌سازی ارجاع‌های بدون cascade به auth.users که حذف حساب
+    --    را بلاک می‌کردند (گزارش دستگاه: «حذف حساب اصلی ناموفق بود»):
+    --    school_students.created_by و schools.created_by با on delete restrict؛
+    --    invites/audit/transfers بدون قاعدهٔ حذف.
+    delete from public.school_teacher_invites where created_by = v_uid;
+    delete from public.school_admin_audit_v37 where actor_id = v_uid or target_id = v_uid;
+    delete from public.manager_wallet_transfers_v38 where manager_id = v_uid or teacher_id = v_uid;
+    delete from public.manager_approval_requests where manager_id = v_uid or teacher_id = v_uid;
+    -- ردیف‌های school_students که این حساب ثبت کرده (خود دانش‌آموزها قبلاً
+    -- منتقل/حذف‌شدنی شده‌اند؛ ردیف عضویت مدرسه مانع حذف نماند).
+    delete from public.school_students where created_by = v_uid;
+    -- مدرسه‌های ساختهٔ مدیر متقاضی: اگر مدیر فعال دیگری دارد به او منتقل،
+    -- وگرنه حذف کامل مدرسه (cascade عضویت‌ها/دانش‌آموزها/دعوت‌ها).
+    update public.schools s
+    set created_by = (
+        select m.user_id from public.school_memberships m
+        where m.school_id = s.id and m.staff_role = 'manager'
+          and m.status = 'active' and m.user_id <> v_uid
+        order by m.joined_at asc limit 1
+    )
+    where s.created_by = v_uid
+      and exists (
+        select 1 from public.school_memberships m
+        where m.school_id = s.id and m.staff_role = 'manager'
+          and m.status = 'active' and m.user_id <> v_uid
+      );
+    delete from public.schools where created_by = v_uid;
+
     return jsonb_build_object(
         'ok', true,
         'transferred', v_transferred,

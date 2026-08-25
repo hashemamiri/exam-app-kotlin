@@ -1577,6 +1577,18 @@ require("برای روزهای گذشته فقط حذف پیام ممکن است
 require("پیام جدید دارید" in _home and "cal_mark_seen_v59" in _cal_sql,
         "V59.2 student new-message banner is missing")
 
+# ---- V59.2.1: delete-account FK cleanup + calendar class coverage + web field lag ----
+_del_sql2=(ROOT/"supabase/migrations/20260825_native_delete_account_v59.sql").read_text()
+_web_section=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").read_text()
+require("delete from public.schools where created_by = v_uid" in _del_sql2
+        and "delete from public.school_students where created_by = v_uid" in _del_sql2,
+        "V59.2.1 non-cascading auth reference cleanup is missing")
+require("join public.classes c on c.id = m.class_id" in _cal_sql,
+        "V59.2.1 class-membership calendar coverage is missing")
+require("animateContentSize" not in _web_section
+        and "alpha = if (webReady || overlayOpen) 1f else 0f" in _web_section,
+        "V59.2.1 question web field lag fix is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

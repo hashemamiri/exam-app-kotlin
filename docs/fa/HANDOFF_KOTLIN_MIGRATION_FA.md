@@ -8463,3 +8463,56 @@ SQL: بله (فایل بالا) · Edge deploy: manage-student (برای رفع 
 پیش‌نیاز: V59.1
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۶) V59.2.1 — هات‌فیکس: حذف حساب، دید تقویم، لگ کادر متن
+
+### گزارش‌ها و ریشه‌ها (با مدرک)
+
+```text
+۱) «حذف حساب اصلی ناموفق بود؛ دانش‌آموزان پردازش شدند» (عکس 13-54-01):
+   deploy انجام شده بود (پیام از کد جدید Edge است) و prepare هم موفق؛
+   deleteUser(teacherId) شکست می‌خورد. ریشه: FKهای بدون cascade به
+   auth.users — schools.created_by و school_students.created_by با
+   on delete restrict؛ school_teacher_invites.created_by،
+   school_admin_audit_v37.actor_id/target_id،
+   manager_wallet_transfers_v38.manager_id/teacher_id و
+   manager_approval_requests (به profiles) بدون قاعدهٔ حذف.
+   رفع: native_prepare_account_deletion_v1 حالا قبل از حذف auth همهٔ این
+   ردیف‌ها را پاک می‌کند؛ مدرسهٔ ساختهٔ مدیر اگر مدیر فعال دیگری دارد به او
+   منتقل و وگرنه حذف می‌شود. Edge هم علت دقیق selfError.message را
+   برمی‌گرداند. ⚠ SQL باید «دوباره» اجرا شود + deploy دوباره manage-student.
+۲) «پیام تقویم دیده نمی‌شود» (ادامهٔ گزارش): سناریوی جامانده = دانش‌آموزی
+   که مالکش مدیر است و لینک ندارد ولی «عضو کلاس معلم» است. پوشش cal_month
+   و cal_unseen_v59 با OR سوم (class_members→classes.teacher_id) کامل شد.
+   دقت: SQL نسخهٔ V59.2 هنوز روی سرور اجرا نشده بود — فایل به‌روز همان
+   نام را دارد و یک‌بار اجرای کامل کافی است.
+۳) «کادر متن سؤال با تاخیر/پرش باز می‌شود»: WebView فقط هنگام بازشدن
+   accordion ساخته می‌شود (AnimatedVisibility). دو انیمیشن تو در تو
+   (expandVertically بیرونی + انیمیشن اندازهٔ Column داخلی) روی ارتفاع
+   متغیر (۱۵۰dp → ارتفاع HTML) پرش دومرحله‌ای می‌ساخت. رفع: انیمیشن اندازهٔ
+   داخلی حذف؛ WebView تا اولین onContentHeight با alpha=0 (بی‌فلاش) و بعد
+   یک‌باره ظاهر می‌شود (webReady). تست V55_7 قدیمی هماهنگ شد (لامبدای
+   onContentHeight چندخطی شد — درس needleها بار ششم).
+```
+
+### تأیید
+
+```text
+جدید: V59_2_1DeleteCalendarLagHotfixTest (۳ تست) · هماهنگی: V55_7 (needle
+لامبدا) · verify: ۳ require جدید · اسکن سراسری ۸۱۵ needle → یک mismatch
+واقعی V55_7 پیدا و هماهنگ شد؛ باقی فقط هشدار کاذب V55_16 · شبیه‌سازی همهٔ
+assertionها سبز · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### عملیات
+
+```text
+پچ: V59_2_1_delete_calendar_lag_hotfix — فایل‌ها: دو SQL (به‌روزشده در جا)/
+manage-student(index.ts)/QuestionTextWebSection.kt/V59_2_1 تست/V55_7 تست/
+verify/changelog/هندآف
+اقدام سرور (الزامی): ۱) اجرای دوبارهٔ V59_1_delete_account.sql (نسخهٔ
+به‌روز) ۲) اجرای V59_2_calendar_notify.sql (نسخهٔ به‌روز) ۳) deploy دوبارهٔ
+manage-student
+پیش‌نیاز: V59.2
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```
