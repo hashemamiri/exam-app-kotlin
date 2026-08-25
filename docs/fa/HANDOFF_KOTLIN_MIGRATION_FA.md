@@ -8132,3 +8132,46 @@ SQL: فقط پچ ۲ (20260825_native_exam_monitor_v58.sql — باید در Supa
 پیش‌نیاز: V57.0 — ترتیب: پچ ۱ ← پچ ۲ ← پچ ۳
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۶۹) V58.0.1 — هات‌فیکس: خطای کامپایل import داخلی weight
+
+### گزارش CI
+
+```text
+e: ZoomableFigureDialog.kt:13:43 Cannot access
+'val RowColumnParentData?.weight: Float': it is internal in file.
+> Task :app:compileDebugKotlin FAILED
+```
+
+### ریشه و راه‌حل
+
+```text
+پچ V58.0 هنگام بازنویسی ZoomableFigureDialog (جداکردن نوار بالا از محتوای
+چرخان) به‌اشتباه import سطح‌بالای
+androidx.compose.foundation.layout.weight را اضافه کرد. weight فقط عضو
+RowScope/ColumnScope است؛ آن import به property داخلیِ
+RowColumnParentData.weight resolve می‌شود و کامپایل می‌شکند.
+راه‌حل: حذف همان یک خط import. هر دو استفادهٔ weight فایل داخل scope
+درست‌اند (Text داخل Row سطر بالا؛ BoxWithConstraints داخل Column) و بدون
+import کامپایل می‌شوند. اسکن سراسری: هیچ فایل دیگری این import را ندارد
+(StudentExamScreen weight دارد ولی import اشتباه ندارد — داخل RowScope).
+```
+
+### تأیید
+
+```text
+جدید: V58_0_1WeightImportHotfixTest (۲ تست: حذف import در همین فایل + اسکن
+اجرایی کل سورس برای import های scoped ممنوع weight/align) · verify: require
+جدید V58.0.1 · تست‌های V58_0/V57_0 (needleهای weight ندارند) دست‌نخورده سبز ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### عملیات
+
+```text
+پچ: V58_0_1_weight_import_hotfix — فایل‌ها: ZoomableFigureDialog.kt (حذف ۱
+import) / V58_0_1WeightImportHotfixTest.kt (جدید) / verify / changelog / هندآف
+SQL / Edge / Secret / Migration / Dependency جدید: ندارد
+پیش‌نیاز: V58.2 (هر سه پچ V58 اعمال شده)
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

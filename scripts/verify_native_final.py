@@ -1518,6 +1518,10 @@ require("fun StudentAnswerGraph(" in student_screen
 require('values["allowAnswerGraph"] = JsonPrimitive(question.allowAnswerGraph)' in (ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").read_text(),
         "V58.2 allowAnswerGraph persistence is missing")
 
+# ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
+require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
+        "V58.0.1 internal weight import returned to ZoomableFigureDialog")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
