@@ -116,6 +116,24 @@ class ProfileSettingsViewModel(
         _state.update { it.copy(error = null, message = null) }
     }
 
+    /**
+     * V59.1 — حذف کامل حساب (فقط کادر مدرسه): دانش‌آموزان مشترک منتقل، بقیه و
+     * کلاس‌ها حذف، سپس خود حساب پاک و نشست باطل می‌شود؛ AuthGate خودکار به
+     * صفحهٔ ورود برمی‌گردد.
+     */
+    fun deleteAccount(onDone: () -> Unit) = viewModelScope.launch {
+        if (role == UserRole.STUDENT) return@launch
+        _state.update { it.copy(accountSaving = true, error = null, message = null) }
+        repository.deleteAccount()
+            .onSuccess {
+                _state.update { it.copy(accountSaving = false) }
+                onDone()
+            }
+            .onFailure { error ->
+                _state.update { it.copy(accountSaving = false, error = safeProfileError(error)) }
+            }
+    }
+
     fun setTheme(mode: ThemeMode) = viewModelScope.launch { appearance.setTheme(mode) }
     fun setFontScale(scale: Float) = viewModelScope.launch { appearance.setFontScale(scale) }
     fun setDynamicColors(enabled: Boolean) = viewModelScope.launch { appearance.setDynamicColors(enabled) }

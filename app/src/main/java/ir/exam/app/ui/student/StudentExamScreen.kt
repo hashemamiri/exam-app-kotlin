@@ -25,6 +25,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
@@ -255,38 +257,24 @@ fun StudentExamContent(
                     IconButton(onClick = onPrevious, enabled = state.questionIndex > 0) {
                         Icon(Icons.Outlined.KeyboardArrowRight, contentDescription = "سؤال قبلی")
                     }
-                    Row(
-                        Modifier
-                            .weight(1f)
-                            .horizontalScroll(rememberScrollState()),
+                    // V59.0 — شمارهٔ سؤال جاری همیشه خودکار به دید اسکرول می‌شود.
+                    val stripState = rememberLazyListState()
+                    LaunchedEffect(state.questionIndex) {
+                        stripState.animateScrollToItem(state.questionIndex.coerceAtLeast(0))
+                    }
+                    androidx.compose.foundation.lazy.LazyRow(
+                        state = stripState,
+                        modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        exam.questions.indices.forEach { i ->
-                            val q = exam.questions[i]
-                            val answered = state.answers.containsKey(q.id)
-                            // V58.0.2 — FilterChip لمس را می‌بلعید و onLongClick
-                            // بیرونی هرگز نمی‌رسید؛ چیپ با Surface دست‌ساز و
-                            // combinedClickable مستقیم جایگزین شد.
-                            val flagged = q.id in state.flaggedQuestionIds
-                            val selectedChip = i == state.questionIndex
-                            androidx.compose.material3.Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = if (selectedChip) MaterialTheme.colorScheme.secondaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier.combinedClickable(
-                                    onClick = { onGoTo(i) },
-                                    // نگه‌داشتن شمارهٔ سؤال = علامت/برداشتن علامت مرور
-                                    onLongClick = { onToggleFlag(q.id) }
-                                )
-                            ) {
-                                Text(
-                                    "${i + 1}${if (flagged) "★" else if (answered) "✓" else ""}",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    color = if (flagged) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (selectedChip) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
+                        items(exam.questions.size) { i ->
+                            StripChipCell(
+                                index = i,
+                                state = state,
+                                exam = exam,
+                                onGoTo = onGoTo,
+                                onToggleFlag = onToggleFlag
+                            )
                         }
                     }
                     IconButton(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex) {
@@ -535,6 +523,43 @@ private fun ResponseImages(
         source=uri,onDismiss={editQueue=editQueue.drop(1)},
         onDone={edited->onAdd(questionId,listOf(edited.toString()));editQueue=editQueue.drop(1)}
     ) }
+}
+
+/**
+ * V59.0 — چیپ شمارهٔ سؤال در سطر اسکرول‌شونده (LazyRow با اسکرول خودکار به
+ * سؤال جاری). V58.0.2: چیپ دست‌ساز تا نگه‌داشتن (علامت مرور) کار کند.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun StripChipCell(
+    index: Int,
+    state: StudentExamUiState,
+    exam: ir.exam.app.domain.model.Exam,
+    onGoTo: (Int) -> Unit,
+    onToggleFlag: (String) -> Unit
+) {
+    val q = exam.questions[index]
+    val answered = state.answers.containsKey(q.id)
+    val flagged = q.id in state.flaggedQuestionIds
+    val selectedChip = index == state.questionIndex
+    androidx.compose.material3.Surface(
+        shape = MaterialTheme.shapes.small,
+        color = if (selectedChip) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.combinedClickable(
+            onClick = { onGoTo(index) },
+            // نگه‌داشتن شمارهٔ سؤال = علامت/برداشتن علامت مرور
+            onLongClick = { onToggleFlag(q.id) }
+        )
+    ) {
+        Text(
+            "${index + 1}${if (flagged) "★" else if (answered) "✓" else ""}",
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            color = if (flagged) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (selectedChip) FontWeight.Bold else FontWeight.Normal
+        )
+    }
 }
 
 /**

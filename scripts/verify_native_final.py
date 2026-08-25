@@ -1487,7 +1487,8 @@ require("fun merge(blanks: Map<Int, String>, free: String): String" in _blank_co
 
 # ---- V58.0: student exam UX + timer start/pause + colored countdown ----
 _student_vm=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamViewModel.kt").read_text()
-require("horizontalScroll(rememberScrollState())" in student_screen
+# V59.0 — سطر شماره‌ها LazyRow با اسکرول خودکار به سؤال جاری شد.
+require("animateScrollToItem(state.questionIndex" in student_screen
         and "ExamCountdownText(" in student_screen
         and 'OutlinedButton(onClick = { showExit = true }) { Text("خروج") }' in student_screen,
         "V58.0 student exam scrollable strip/bottom bar is missing")
@@ -1536,6 +1537,29 @@ require("این سؤال از قبل در بانک سؤال موجود است" i
         "V58.0.2 duplicate bank notice is missing")
 require("onBlankAnswer != null &&" in atlas_view,
         "V58.0.2 atlas blanks must only render as student typing boxes")
+
+# ---- V59.0: exam UX polish + colored monitor cards ----
+require("OutlinedButton(onClick = { previewAll = true }, modifier = Modifier.fillMaxWidth())" not in builder_screen
+        and "onPreviewAll = { previewAll = true }" in builder_screen,
+        "V59.0 standalone A4 preview button must be gone while the eye menu path stays")
+require("stripState.animateScrollToItem(state.questionIndex" in student_screen,
+        "V59.0 auto-scroll to the current question chip is missing")
+require("fun monitorSeverityColor(score: Int): Color" in grading_screen
+        and "clickable { selected = index }" in grading_screen,
+        "V59.0 colored monitor report cards are missing")
+
+# ---- V59.1: guarded staff account deletion ----
+_delete_sql=(ROOT/"supabase/migrations/20260825_native_delete_account_v59.sql").read_text()
+_edge_manage=(ROOT/"supabase/functions/manage-student/index.ts").read_text()
+_settings_screen2=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
+require('title = "حذف حساب"' in _settings_screen2 and "بله، حساب حذف شود" in _settings_screen2,
+        "V59.1 delete-account card/confirmation is missing")
+require("set teacher_id = s.new_owner" in _delete_sql
+        and "grant execute on function public.native_prepare_account_deletion_v1(uuid) to service_role" in _delete_sql,
+        "V59.1 ownership transfer or service-role-only grant is missing")
+require("action === 'delete_account'" in _edge_manage
+        and "await service.auth.admin.deleteUser(teacherId)" in _edge_manage,
+        "V59.1 edge delete_account action is missing")
 
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),

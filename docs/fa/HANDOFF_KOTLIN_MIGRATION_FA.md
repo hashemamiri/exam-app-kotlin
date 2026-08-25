@@ -8314,3 +8314,74 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V58.0.3
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۳) V59.0 — پیرایش UX آزمون + کارت‌های رنگی گزارش (پچ ۱ از ۲)
+
+```text
+۱) دکمهٔ تمام‌عرض «پیش‌نمایش کامل A4» زیر کارت‌های سؤال حذف شد؛ رشتهٔ
+   «پیش‌نمایش کامل A4» و onPreviewAll در منوی چشم ماند (قرارداد V55.18 و
+   بند parity در verify سالم).
+۲) سطر شماره‌های سؤال: Row+horizontalScroll → LazyRow با rememberLazyListState
+   و LaunchedEffect(questionIndex) → animateScrollToItem؛ چیپ دست‌ساز به
+   کامپوزبل StripChipCell منتقل شد (long-press مرور V58.0.2 سالم).
+   هماهنگی: verify بند V58.0 (سطر اسکرول) + تست‌های V58_0/V58_0_2.
+۳) گزارش‌ها دومرحله‌ای شد: کارت‌های رنگی دانش‌آموزان (monitorViolationScore =
+   مجموع شمارنده‌های events؛ رنگ: ۰=سبز 2E7D32، ۱-۲=زرد F9A825، ۳-۵=نارنجی
+   EF6C00، >۵=قرمز C62828) → لمس کارت = گزارش کامل + «بازگشت به لیست».
+```
+
+## ۱۷۴) V59.1 — حذف کامل حساب معلم/مدیر (پچ ۲ از ۲)
+
+```text
+- UI: کارت «حذف حساب» در بخش حساب (آکاردئون، فقط نقش != STUDENT) + توضیح
+  عواقب + دیالوگ تأیید «بله، حساب حذف شود» + deleteAccount در ViewModel.
+- کلاینت: SupabaseProfileRepository.deleteAccount → Edge manage-student با
+  action=delete_account؛ سپس signOut (AuthGate به ورود برمی‌گردد).
+- SQL جدید 20260825_native_delete_account_v59.sql:
+  native_prepare_account_deletion_v1(p_actor uuid) — اتمیک:
+  ۱) دانش‌آموزانِ p.teacher_id=v_uid که لینک teacher_student_links به حساب
+     دیگری دارند → مالکیت به قدیمی‌ترین لینک منتقل (set teacher_id=new_owner)
+     — کنترل رمز خودبه‌خود منتقل می‌شود چون مسیر manage-student با
+     profiles.teacher_id مالکیت را می‌سنجد؛
+  ۲) لینک‌های متقاضی پاک؛ ۳) باقی‌مانده = تک‌مالکه = deletable_students؛
+  ۴) class_members و classes متقاضی حذف. اجرا فقط با service_role
+  (Edge با p_actor=teacherId؛ revoke از authenticated).
+- Edge: اکشن جدید delete_account — rpc آماده‌سازی، حذف auth دانش‌آموزان
+  تک‌مالکه (سقف ۵۰۰۰)، audit، حذف auth خود متقاضی.
+- آزمون‌ها/سایر داده‌های متقاضی با cascade های موجود auth.users پاک می‌شوند.
+```
+
+### تأیید V59.x
+
+```text
+جدید: V59_0ExamUxColoredReportsTest (۴ تست)، V59_1DeleteAccountTest (۴ تست) ·
+verify: ۶ require جدید + هماهنگی بند V58.0 · هماهنگی تست‌های V58_0/V58_0_2 ·
+شبیه‌سازی python همهٔ ~۵۰ assertion سبز · segment-سیم V40A (AccountSection)
+پس از افزودن کارت حذف دستی شبیه‌سازی شد و سبز است · اسکن سراسری ۷۷۵ needle →
+فقط هشدار کاذب V55_16 · تراز آکولاد صفر · FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### راهنمای تست دستگاه
+
+```text
+پچ ۱: زیر کارت‌ها دکمهٔ A4 نباشد (چشم → منو باشد)؛ رفتن بین سؤال‌ها →
+شمارهٔ جاری همیشه در دید؛ گزارش‌ها → کارت‌های رنگی، لمس کارت → گزارش کامل.
+پچ ۲ (اول SQL در Supabase + deploy تابع manage-student):
+- معلم آزمایشی با: دانش‌آموز الف (فقط خودش) + دانش‌آموز ب (لینک‌شده به
+  معلم دیگر) + یک کلاس بسازید؛ حساب را حذف کنید.
+- انتظار: خروج خودکار؛ الف حذف؛ ب سالم و در پنل معلم دوم با کنترل کامل
+  (تغییر رمز از مدیریت دانش‌آموزان)؛ کلاس حذف.
+```
+
+### عملیات
+
+```text
+پچ ۱ (V59_0_exam_ux_colored_reports): ExamBuilderScreen/StudentExamScreen/
+GradingScreen + V59_0 تست + هماهنگی V58_0،V58_0_2 + verify
+پچ ۲ (V59_1_delete_account): ProfileSettingsScreen/ProfileSettingsViewModel/
+SupabaseProfileRepository/manage-student(index.ts)/SQL جدید + V59_1 تست + verify
+SQL: پچ ۲ (20260825_native_delete_account_v59.sql) · Edge deploy: پچ ۲
+(supabase functions deploy manage-student) · Secret جدید: ندارد
+پیش‌نیاز: V58.0.4 — ترتیب: پچ ۱ ← پچ ۲
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -48,7 +48,9 @@ class V58_0StudentExamUxTimerTest {
         val content = student.substringAfter("fun StudentExamContent(")
         assertFalse("Text(exam.title, style = MaterialTheme.typography.titleLarge)" in content)
         // سطر اسکرول‌شونده با آیکن قبلی/بعدی دو سر
-        assertTrue("horizontalScroll(rememberScrollState())" in student)
+        // V59.0: سطر شماره‌ها LazyRow با اسکرول خودکار شد.
+        assertTrue("LazyRow(" in student)
+        assertTrue("animateScrollToItem(state.questionIndex" in student)
         // V58.0.2 — نسخهٔ AutoMirrored در RTL برعکس رندر می‌شد؛ غیرآینه‌ای شد.
         assertTrue("Icons.Outlined.KeyboardArrowRight" in student)
         assertTrue("Icons.Outlined.KeyboardArrowLeft" in student)

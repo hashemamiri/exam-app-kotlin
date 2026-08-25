@@ -283,6 +283,33 @@ Deno.serve(async (request) => {
       return json({ ok: true, results });
     }
 
+    if (action === 'delete_account') {
+      // V59.1 — حذف کامل حساب معلم/مدیر متقاضی:
+      // ۱) آماده‌سازی اتمیک در SQL: انتقال مالکیت دانش‌آموزان مشترک به لیست
+      //    دیگر (کنترل کامل شامل رمز از همین مسیر manage-student دنبال
+      //    profiles.teacher_id می‌آید) + حذف کلاس‌ها + فهرست حذف‌شدنی‌ها.
+      // ۲) حذف auth دانش‌آموزان تک‌مالکه و سپس خود متقاضی.
+      const { data: prep, error: prepError } = await service.rpc('native_prepare_account_deletion_v1', { p_actor: teacherId });
+      if (prepError) return json({ error: 'آماده‌سازی حذف حساب ناموفق بود' }, 502);
+      const prepBody = prep as Record<string, unknown> | null;
+      if (prepBody && typeof prepBody.error === 'string' && prepBody.error) return json({ error: prepBody.error }, 403);
+      const deletable = Array.isArray(prepBody?.deletable_students)
+        ? (prepBody!.deletable_students as unknown[]).map((x) => String(x)).slice(0, 5000)
+        : [];
+      let removed = 0;
+      for (const studentId of deletable) {
+        const { error } = await service.auth.admin.deleteUser(studentId);
+        if (!error) removed++;
+      }
+      await audit('delete_account', teacherId, {
+        transferred: prepBody?.transferred ?? 0,
+        students_removed: removed,
+      });
+      const { error: selfError } = await service.auth.admin.deleteUser(teacherId);
+      if (selfError) return json({ error: 'حذف حساب اصلی ناموفق بود؛ دانش‌آموزان پردازش شدند' }, 502);
+      return json({ ok: true, transferred: prepBody?.transferred ?? 0, students_removed: removed });
+    }
+
     return json({ error: 'عملیات ناشناخته است' }, 400);
   } catch {
     return json({ error: 'خطای داخلی مدیریت دانش‌آموز' }, 500);

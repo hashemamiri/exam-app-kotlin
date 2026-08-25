@@ -1,5 +1,6 @@
 package ir.exam.app.ui.grading
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +29,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import ir.exam.app.domain.model.AttendanceRow
@@ -340,38 +343,76 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
                         "گزارش از زمان شرکت دانش‌آموز با نسخهٔ جدید برنامه ساخته می‌شود؛ " +
                         "آزمون‌هایی که پیش از این نسخه برگزار شده‌اند گزارش ندارند."
                 )
-            } else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(rows.size) { index ->
-                    val row = rows[index] as? JsonObject ?: return@items
-                    val report = row["report"] as? JsonObject
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                (row["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            val events = report?.get("events") as? JsonObject
-                            if (events.isNullOrEmpty()) {
-                                Text("رویداد مشکوکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
-                            } else events.forEach { (kind, count) ->
-                                Text(
-                                    "${kind.faMonitorEvent()}: ${(count as? JsonPrimitive)?.contentOrNull ?: "?"} بار",
-                                    style = MaterialTheme.typography.bodySmall
+            } else {
+                // V59.0 — ابتدا کارت‌های رنگی دانش‌آموزان (سبز→زرد→نارنجی→قرمز بر
+                // اساس شدت تخلف)؛ با لمس هر کارت گزارش کامل همان دانش‌آموز باز می‌شود.
+                var selected by remember { mutableStateOf<Int?>(null) }
+                val selectedRow = selected?.let { rows.getOrNull(it) as? JsonObject }
+                if (selectedRow == null) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(rows.size) { index ->
+                            val row = rows[index] as? JsonObject ?: return@items
+                            val report = row["report"] as? JsonObject
+                            val score = monitorViolationScore(report)
+                            Card(
+                                Modifier.fillMaxWidth().clickable { selected = index },
+                                colors = androidx.compose.material3.CardDefaults.cardColors(
+                                    containerColor = monitorSeverityColor(score)
                                 )
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            (row["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            if (score == 0) "بدون تخلف" else "$score رویداد مشکوک",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White
+                                        )
+                                    }
+                                    Text("مشاهده ‹", color = Color.White)
+                                }
                             }
-                            (report?.get("entered_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
-                                ?.toLongOrNull()?.takeIf { it > 0 }?.let {
-                                    Text("زمان ورود: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
-                                }
-                            (report?.get("left_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
-                                ?.toLongOrNull()?.takeIf { it > 0 }?.let {
-                                    Text("زمان خروج: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
-                                }
-                            val times = report?.get("question_time_ms") as? JsonObject
-                            val visits = report?.get("question_visits") as? JsonObject
-                            if (!times.isNullOrEmpty()) {
-                                Text("مدت پاسخ‌گویی هر سؤال:", style = MaterialTheme.typography.bodySmall)
-                                times.entries.forEachIndexed { qIndex, (qid, ms) ->
+                        }
+                    }
+                } else {
+                    val report = selectedRow["report"] as? JsonObject
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { selected = null }) { Text("→ بازگشت به لیست") }
+                        Text(
+                            (selectedRow["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        val events = report?.get("events") as? JsonObject
+                        if (events.isNullOrEmpty()) {
+                            Text("رویداد مشکوکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                        } else events.forEach { (kind, count) ->
+                            Text(
+                                "${kind.faMonitorEvent()}: ${(count as? JsonPrimitive)?.contentOrNull ?: "?"} بار",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        (report?.get("entered_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
+                            ?.toLongOrNull()?.takeIf { it > 0 }?.let {
+                                Text("زمان ورود: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
+                            }
+                        (report?.get("left_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
+                            ?.toLongOrNull()?.takeIf { it > 0 }?.let {
+                                Text("زمان خروج: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
+                            }
+                        val times = report?.get("question_time_ms") as? JsonObject
+                        val visits = report?.get("question_visits") as? JsonObject
+                        if (!times.isNullOrEmpty()) {
+                            Text("مدت پاسخ‌گویی هر سؤال:", style = MaterialTheme.typography.bodySmall)
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                items(times.entries.toList().size) { qIndex ->
+                                    val (qid, ms) = times.entries.toList()[qIndex]
                                     val seconds = ((ms as? JsonPrimitive)?.contentOrNull?.toLongOrNull() ?: 0L) / 1000L
                                     val visitCount = (visits?.get(qid) as? JsonPrimitive)?.contentOrNull ?: "1"
                                     Text(
@@ -386,6 +427,20 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
             }
         }
     )
+}
+
+/** V59.0 — مجموع رویدادهای مشکوک برای رنگ‌بندی کارت. */
+private fun monitorViolationScore(report: JsonObject?): Int {
+    val events = report?.get("events") as? JsonObject ?: return 0
+    return events.values.sumOf { (it as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0 }
+}
+
+/** V59.0 — رنگ کارت: ۰=سبز، ۱-۲=زرد، ۳-۵=نارنجی، بیشتر=قرمز. */
+private fun monitorSeverityColor(score: Int): Color = when {
+    score == 0 -> Color(0xFF2E7D32)
+    score <= 2 -> Color(0xFFF9A825)
+    score <= 5 -> Color(0xFFEF6C00)
+    else -> Color(0xFFC62828)
 }
 
 private fun String.faMonitorEvent(): String = when (this) {

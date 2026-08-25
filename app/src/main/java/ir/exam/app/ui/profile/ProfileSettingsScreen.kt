@@ -220,7 +220,8 @@ fun ProfileSettingsScreen(
                 state = state,
                 onChangePassword = viewModel::changePassword,
                 onChangeUsername = viewModel::changeTeacherUsername,
-                onChangeEmail = viewModel::changeEmail
+                onChangeEmail = viewModel::changeEmail,
+                onDeleteAccount = { viewModel.deleteAccount(onDone = onProfileUpdated) }
             )
             destination == ProfileSettingsDestination.DATA -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
@@ -572,7 +573,8 @@ private fun AccountSection(
     state: ProfileSettingsState,
     onChangePassword: (String, String) -> Unit,
     onChangeUsername: (String) -> Unit,
-    onChangeEmail: (String) -> Unit
+    onChangeEmail: (String) -> Unit,
+    onDeleteAccount: () -> Unit = {}
 ) {
     val role = user.role
     var expandedCard by remember(profile.id) { mutableStateOf<String?>(null) }
@@ -588,6 +590,7 @@ private fun AccountSection(
     var schoolPreview by remember(profile.id) { mutableStateOf<SchoolInvitePreview?>(null) }
     var schoolJoinLoading by remember(profile.id) { mutableStateOf(false) }
     var schoolJoinMessage by remember(profile.id) { mutableStateOf<String?>(null) }
+    var confirmDeleteAccount by remember(profile.id) { mutableStateOf(false) }
 
     fun toggle(card: String) {
         expandedCard = if (expandedCard == card) null else card
@@ -793,9 +796,53 @@ private fun AccountSection(
                 AppLockSettings(profile.id, embedded = true)
             }
         }
+        if (role != UserRole.STUDENT) item {
+            // V59.1 — حذف کامل حساب معلم/مدیر با تأیید دومرحله‌ای.
+            AccountAccordionCard(
+                title = "حذف حساب",
+                expanded = expandedCard == "delete",
+                onToggle = { toggle("delete") }
+            ) {
+                Text(
+                    "با حذف حساب، کلاس‌ها و دانش‌آموزانی که فقط با این حساب ساخته شده‌اند برای همیشه حذف می‌شوند. " +
+                        "دانش‌آموزی که به لیست حساب دیگری هم اضافه شده باشد حذف نمی‌شود و کنترل کامل حسابش " +
+                        "(شامل مدیریت رمز) به آن حساب منتقل می‌شود. این عمل بازگشت‌ناپذیر است.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Button(
+                    onClick = { confirmDeleteAccount = true },
+                    enabled = !state.accountSaving,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("حذف حساب") }
+            }
+        }
         if (state.accountSaving) item { CircularProgressIndicator() }
         state.message?.let { item { Text(it, color = MaterialTheme.colorScheme.primary) } }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+    }
+    if (confirmDeleteAccount) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteAccount = false },
+            title = { Text("حذف کامل حساب") },
+            text = {
+                Text(
+                    "آیا مطمئن هستید؟ همهٔ کلاس‌ها و دانش‌آموزانِ فقط-متعلق-به-شما حذف می‌شوند و " +
+                        "دانش‌آموزان مشترک به حساب دیگر منتقل می‌شوند. این عمل قابل بازگشت نیست."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { confirmDeleteAccount = false; onDeleteAccount() },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text("بله، حساب حذف شود") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDeleteAccount = false }) { Text("انصراف") } }
+        )
     }
 }
 

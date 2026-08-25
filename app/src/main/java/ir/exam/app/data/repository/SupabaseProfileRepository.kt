@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.util.Patterns
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.postgrest
+import io.ktor.client.call.body
 import ir.exam.app.data.dto.NativeProfileDto
 import ir.exam.app.data.dto.ProfileSaveResponseDto
 import ir.exam.app.data.dto.TeacherPublicProfileDto
@@ -14,6 +16,7 @@ import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.TeacherPublicProfile
 import ir.exam.app.domain.model.UserRole
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -120,6 +123,22 @@ class SupabaseProfileRepository(context: Context) {
             ?: error("نشست ورود پیدا نشد.")
         require(!current.email.equals(clean, ignoreCase = true)) { "ایمیل جدید با ایمیل فعلی یکسان است." }
         SupabaseProvider.client.auth.updateUser { email = clean }
+    }
+
+    /**
+     * V59.1 — حذف کامل حساب معلم/مدیر: Edge function manage-student با اکشن
+     * delete_account؛ دانش‌آموزان مشترک به لیست دیگر منتقل و بقیه حذف می‌شوند
+     * و در پایان خود حساب پاک و نشست باطل می‌شود.
+     */
+    suspend fun deleteAccount(): Result<Unit> = runCatching {
+        val raw = SupabaseProvider.client.functions.invoke(
+            "manage-student",
+            body = buildJsonObject { put("action", "delete_account") }
+        ).body<JsonObject>()
+        (raw["error"] as? JsonPrimitive)?.contentOrNull
+            ?.takeIf(String::isNotBlank)?.let(::error)
+        runCatching { SupabaseProvider.client.auth.signOut() }
+        Unit
     }
 
     suspend fun changeTeacherUsername(username: String): Result<String> = runCatching {

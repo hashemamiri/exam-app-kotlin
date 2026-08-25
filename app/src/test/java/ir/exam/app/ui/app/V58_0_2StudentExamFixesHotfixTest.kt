@@ -90,8 +90,9 @@ class V58_0_2StudentExamFixesHotfixTest {
     @Test
     fun `long press review flag works with a hand made chip`() {
         // چیپ سطر شماره‌ها دیگر FilterChip نیست تا combinedClickable لمس را بگیرد.
-        val strip = student.substringAfter("horizontalScroll(rememberScrollState())")
-            .substringBefore("IconButton(onClick = onNext")
+        // V59.0: چیپ‌ها به StripChipCell منتقل شدند.
+        val strip = student.substringAfter("private fun StripChipCell(")
+            .substringBefore("private fun StudentAnswerGraph(")
         assertFalse("FilterChip(" in strip)
         assertTrue("combinedClickable(" in strip)
         assertTrue("onLongClick = { onToggleFlag(q.id) }" in strip)
