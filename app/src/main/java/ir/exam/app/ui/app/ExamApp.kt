@@ -447,6 +447,9 @@ private fun AuthenticatedExamApp(
                     destination = profileDestination,
                     initialSettingsSection = settingsInitialSection,
                     onProfileUpdated = authViewModel::refreshCurrentUser,
+                    // V59.3 — refreshCurrentUser برای حساب حذف‌شده شکست می‌خورد و
+                    // کاربر پشت صفحهٔ مرده می‌ماند؛ خروج محلی صفحهٔ ورود را می‌آورد.
+                    onAccountDeleted = authViewModel::signOut,
                     onImportExam = { draft ->
                         editingExamId = null
                         importedExam = draft

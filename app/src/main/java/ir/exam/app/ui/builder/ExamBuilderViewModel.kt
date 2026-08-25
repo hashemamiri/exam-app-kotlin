@@ -432,7 +432,20 @@ class ExamBuilderViewModel(
     fun updateExpectedText(id: String, value: String) { update(id) { it.copy(expectedText = value) } }
     fun updateExpectedNumber(id: String, value: String) { update(id) { it.copy(expectedNumber = value.filter { c -> c.isDigit() || c == '.' || c == '-' }) } }
     fun updateTolerance(id: String, value: String) { update(id) { it.copy(tolerance = value.filter { c -> c.isDigit() || c == '.' }) } }
-    fun remove(id: String) { _state.update { it.copy(questions = it.questions.filterNot { q -> q.id == id }) } }
+    fun remove(id: String) {
+        // V59.3 — تصاویر آپلودشدهٔ سؤال از استوریج پاک می‌شوند (best-effort).
+        val doomed = state.value.questions.firstOrNull { it.id == id }
+        _state.update { it.copy(questions = it.questions.filterNot { q -> q.id == id }) }
+        if (doomed != null) viewModelScope.launch {
+            val urls = buildList {
+                doomed.images.forEach { add(it.uri) }
+                doomed.optionImages.forEach { it?.let(::add) }
+                doomed.matchingLeftImages.forEach { it?.let(::add) }
+                doomed.matchingRightImages.forEach { it?.let(::add) }
+            }.filter { it.startsWith("https://", ignoreCase = true) }
+            ir.exam.app.data.repository.StorageImageCleaner.removeByPublicUrls(urls)
+        }
+    }
 
     fun addImages(questionId: String, uris: List<String>) { update(questionId) { question ->
         question.copy(images = question.images + uris.take(10 - question.images.size).mapIndexed { index, uri ->

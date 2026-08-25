@@ -37,7 +37,8 @@ class V59_1DeleteAccountTest {
         assertTrue("confirmDeleteAccount = true" in settings)
         assertTrue("بله، حساب حذف شود" in settings)
         assertTrue("این عمل قابل بازگشت نیست" in settings)
-        assertTrue("onDeleteAccount = { viewModel.deleteAccount(onDone = onProfileUpdated) }" in settings)
+        // V59.3: onDone حالا onAccountDeleted است (خروج محلی به صفحهٔ ورود).
+        assertTrue("onDeleteAccount = { viewModel.deleteAccount(onDone = onAccountDeleted) }" in settings)
         assertTrue("if (role == UserRole.STUDENT) return@launch" in settingsVm)
     }
 
@@ -45,7 +46,8 @@ class V59_1DeleteAccountTest {
     fun `client calls the delete account edge action and signs out`() {
         assertTrue("suspend fun deleteAccount(): Result<Unit>" in repo)
         assertTrue("put(\"action\", \"delete_account\")" in repo)
-        assertTrue("SupabaseProvider.client.auth.signOut()" in repo)
+        // V59.3: خروج محلی — سروری برای کاربر حذف‌شده 403 می‌داد.
+        assertTrue("SignOutScope.LOCAL" in repo)
     }
 
     @Test

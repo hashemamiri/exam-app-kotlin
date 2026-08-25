@@ -30,6 +30,14 @@ class SupabaseTeacherDashboardRepository {
     }
 
     suspend fun deleteExam(examId: String): Result<Unit> = runCatching {
+        // V59.3 — قبل از حذف آزمون، تصاویر آن از استوریج پاک می‌شوند
+        // (best-effort؛ شکست پاک‌سازی حذف آزمون را بلاک نمی‌کند).
+        runCatching {
+            val raw = rpcObject("native_exam_image_paths_v59", buildJsonObject { put("p_exam", examId) })
+            val urls = (raw["urls"] as? kotlinx.serialization.json.JsonArray).orEmpty()
+                .mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
+            StorageImageCleaner.removeByPublicUrls(urls)
+        }
         rpcObject("native_delete_exam", buildJsonObject { put("p_exam", examId) }).throwIfDashboardError()
     }
 

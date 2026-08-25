@@ -262,3 +262,7 @@ revoke all on function public.cal_unseen_v59() from public, anon;
 grant execute on function public.cal_unseen_v59() to authenticated;
 revoke all on function public.cal_mark_seen_v59(uuid) from public, anon;
 grant execute on function public.cal_mark_seen_v59(uuid) to authenticated;
+
+
+-- سلامت‌سنجی پس از اجرا: این کوئری باید true بدهد (پوشش کلاس فعال است):
+-- select position('class_members' in pg_get_functiondef('public.cal_month(date,date)'::regprocedure)) > 0;

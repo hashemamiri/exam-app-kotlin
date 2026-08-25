@@ -104,6 +104,8 @@ fun ProfileSettingsScreen(
     destination: ProfileSettingsDestination = ProfileSettingsDestination.SETTINGS,
     initialSettingsSection: SettingsSection = SettingsSection.APPEARANCE,
     onProfileUpdated: () -> Unit,
+    // V59.3 — پس از حذف موفق حساب: خروج محلی و بازگشت به صفحهٔ ورود/ثبت‌نام.
+    onAccountDeleted: () -> Unit = {},
     onImportExam: (ir.exam.app.ui.builder.ExamImportDraft) -> Unit = {},
     aboutContent: @Composable () -> Unit = {}
 ) {
@@ -221,7 +223,7 @@ fun ProfileSettingsScreen(
                 onChangePassword = viewModel::changePassword,
                 onChangeUsername = viewModel::changeTeacherUsername,
                 onChangeEmail = viewModel::changeEmail,
-                onDeleteAccount = { viewModel.deleteAccount(onDone = onProfileUpdated) }
+                onDeleteAccount = { viewModel.deleteAccount(onDone = onAccountDeleted) }
             )
             destination == ProfileSettingsDestination.DATA -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)

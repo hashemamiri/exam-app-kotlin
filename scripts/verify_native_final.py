@@ -1589,6 +1589,19 @@ require("animateContentSize" not in _web_section
         and "alpha = if (webReady || overlayOpen) 1f else 0f" in _web_section,
         "V59.2.1 question web field lag fix is missing")
 
+# ---- V59.3: post-deletion signout + storage image cleanup ----
+_storage_sql=(ROOT/"supabase/migrations/20260825_native_storage_cleanup_v59.sql").read_text()
+_cleaner=(ROOT/"app/src/main/java/ir/exam/app/data/repository/StorageImageCleaner.kt").read_text()
+require("onAccountDeleted = authViewModel::signOut" in (ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text(),
+        "V59.3 post-deletion local signout wiring is missing")
+require("SignOutScope.LOCAL" in (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt").read_text(),
+        "V59.3 delete-account local signout is missing")
+require("v59_owner_delete_exam_images" in _storage_sql
+        and "delete(*paths.toTypedArray())" in _cleaner,
+        "V59.3 storage image cleanup is missing")
+require("StorageImageCleaner.removeByPublicUrls" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "V59.3 question deletion storage cleanup is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

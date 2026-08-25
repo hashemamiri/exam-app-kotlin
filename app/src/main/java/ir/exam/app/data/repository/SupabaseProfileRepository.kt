@@ -153,7 +153,11 @@ class SupabaseProfileRepository(context: Context) {
                 }
                 error(serverError)
             }
-        runCatching { SupabaseProvider.client.auth.signOut() }
+        // V59.3 — نشست سروری با حذف حساب باطل شده؛ فقط پاک‌سازی محلی لازم است
+        // (signOut سروری برای کاربر حذف‌شده 403 می‌دهد و session محلی می‌ماند).
+        runCatching {
+            SupabaseProvider.client.auth.signOut(io.github.jan.supabase.auth.SignOutScope.LOCAL)
+        }
         Unit
     }
 

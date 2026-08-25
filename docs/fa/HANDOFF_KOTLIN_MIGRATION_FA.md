@@ -8516,3 +8516,55 @@ manage-student
 پیش‌نیاز: V59.2
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۷۷) V59.3 — خروج پس از حذف حساب + پاک‌سازی استوریج + تشخیص تقویم
+
+### گزارش‌ها و ریشه‌ها
+
+```text
+۱) «حساب حذف شد ولی صفحه رفرش نشد»: دو ریشه — الف) onDone حذف حساب به
+   onProfileUpdated (refreshCurrentUser) وصل بود که برای حساب حذف‌شده
+   شکست می‌خورد؛ ب) signOut داخل deleteAccount سروری بود و برای کاربر
+   حذف‌شده 403 می‌داد و نشست محلی می‌ماند. رفع: پارامتر جدید
+   onAccountDeleted → authViewModel::signOut (repo با SignOutScope.LOCAL +
+   پاک‌سازی state → AuthGate به ورود/ثبت‌نام می‌رود) و signOut داخل
+   deleteAccount هم LOCAL شد. تست V59_1 هماهنگ شد (۲ needle).
+۲) «پیام تقویم هنوز برای دانش‌آموزِ افزودهٔ مدیر نمی‌آید»: پوشش کلاس در
+   SQL V59.2.1 دقیقاً همین سناریو است (class_members ← مدیر با
+   native_manager_set_class_student_v40c اضافه می‌کند و classes.teacher_id
+   = معلم). جمع‌بندی: SQL به‌روز روی سرور اجرا نشده. فایل SQL حالا کوئری
+   «سلامت‌سنجی پس از اجرا» دارد و فایل جدید V59_3_calendar_debug.sql تابع
+   تشخیصی native_calendar_debug_v59 (فقط service_role) می‌دهد که برای یک
+   دانش‌آموز مالک/لینک‌ها/معلم‌های کلاس/پیام‌های قابل‌دید را برمی‌گرداند.
+۳) «حذف تصاویر استوریج همراه حذف»: policy جدید v59_owner_delete_exam_images
+   (حذف فقط پوشهٔ خود کاربر — همان قرارداد آپلود) + RPC
+   native_exam_image_paths_v59 (URLهای تصاویر آزمونِ خود معلم) +
+   StorageImageCleaner (objectPath از URL عمومی، حذف vararg، همه
+   best-effort). اتصال‌ها: deleteExam (داشبورد)، remove سؤال (builder،
+   شامل گزینه/جورکردنی)، removeAvatar (پروفایل). GC دوره‌ای
+   storage-maintenance پشتیبان نهایی برای orphanها است.
+```
+
+### تأیید
+
+```text
+جدید: V59_3SignoutStorageCleanupTest (۴ تست؛ یکی اجرایی objectPath) ·
+هماهنگی: V59_1 (۲ needle) · verify: ۴ require جدید · اسکن سراسری ۸۲۸
+needle → ۲ mismatch واقعی V59_1 پیدا و هماهنگ شد · اسکن needleهای val
+محلی فایل‌های تغییرکرده سبز · FINAL_NATIVE_VERIFY=PASS EXIT=0
+kotlin_files=201 (StorageImageCleaner جدید)
+```
+
+### عملیات
+
+```text
+پچ: V59_3_signout_storage_cleanup — فایل‌ها: ExamApp/ProfileSettingsScreen/
+SupabaseProfileRepository/StorageImageCleaner(جدید)/
+SupabaseTeacherDashboardRepository/ExamBuilderViewModel/
+ProfileSettingsViewModel/SQL جدید 20260825_native_storage_cleanup_v59.sql/
+V59_3 تست/V59_1 تست هماهنگ/verify/changelog/هندآف
+اقدام سرور: ۱) V59_2_calendar_notify.sql (اگر هنوز اجرا نشده — کلید مورد
+تقویم!) ۲) V59_3_storage_cleanup.sql ۳) اختیاری: V59_3_calendar_debug.sql
+پیش‌نیاز: V59.2.1 — Edge deploy جدید: ندارد
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -80,7 +80,12 @@ class ProfileSettingsViewModel(
 
     fun removeAvatar() {
         val profile = state.value.profile ?: return
+        // V59.3 — فایل عکس قبلی از استوریج هم پاک می‌شود (best-effort).
+        val oldUrl = profile.avatarUrl
         saveProfile(profile.copy(avatarUrl = null), "عکس پروفایل حذف شد.")
+        if (!oldUrl.isNullOrBlank()) viewModelScope.launch {
+            ir.exam.app.data.repository.StorageImageCleaner.removeByPublicUrls(listOf(oldUrl))
+        }
     }
 
     fun save() {
