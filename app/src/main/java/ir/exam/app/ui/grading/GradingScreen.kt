@@ -57,6 +57,14 @@ fun GradingScreen(
         viewModel.setGradedOnly(initialGradedOnly)
     }
 
+    // V58.0 — پنجرهٔ گزارش‌های نظارتی آزمون (لیست دانش‌آموزان + رویدادها).
+    if (state.monitorExamId != null) {
+        MonitorReportsDialog(
+            reports = state.monitorReports,
+            onDismiss = viewModel::closeMonitorReports
+        )
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
@@ -73,7 +81,11 @@ fun GradingScreen(
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(item.title, style = MaterialTheme.typography.titleMedium)
                             Text("${item.subject ?: "بدون درس"} · کد ${item.code ?: "—"}")
-                            Button(onClick = { viewModel.selectExam(item.id) }) { Text("ورود به تصحیح") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { viewModel.selectExam(item.id) }) { Text("ورود به تصحیح") }
+                                // V58.0 — گزارش‌های نظارتی: رویدادهای امنیتی و زمان‌بندی هر دانش‌آموز.
+                                OutlinedButton(onClick = { viewModel.openMonitorReports(item.id) }) { Text("گزارش‌ها") }
+                            }
                         }
                     }
                 }
@@ -307,4 +319,81 @@ private fun String.faStatus(): String = when (lowercase()) {
     "graded" -> "تصحیح‌شده"
     "absent" -> "غایب"
     else -> this
+}
+
+/**
+ * V58.0 — پنجرهٔ گزارش‌های نظارتی آزمون: هر دانش‌آموز با رویدادهای امنیتی
+ * (تلاش اسکرین‌شات/ضبط، خروج از برنامه و...)، زمان ورود/خروج، مدت پاسخ‌گویی
+ * به هر سؤال و تعداد بازدید سؤال‌ها.
+ */
+@Composable
+private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("گزارش‌های آزمون") },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } },
+        text = {
+            val rows = (reports?.get("rows") as? JsonArray).orEmpty()
+            if (rows.isEmpty()) {
+                Text("هنوز گزارشی برای این آزمون ثبت نشده است.")
+            } else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(rows.size) { index ->
+                    val row = rows[index] as? JsonObject ?: return@items
+                    val report = row["report"] as? JsonObject
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                (row["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            val events = report?.get("events") as? JsonObject
+                            if (events.isNullOrEmpty()) {
+                                Text("رویداد مشکوکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                            } else events.forEach { (kind, count) ->
+                                Text(
+                                    "${kind.faMonitorEvent()}: ${(count as? JsonPrimitive)?.contentOrNull ?: "?"} بار",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            (report?.get("entered_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
+                                ?.toLongOrNull()?.takeIf { it > 0 }?.let {
+                                    Text("زمان ورود: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            (report?.get("left_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
+                                ?.toLongOrNull()?.takeIf { it > 0 }?.let {
+                                    Text("زمان خروج: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            val times = report?.get("question_time_ms") as? JsonObject
+                            val visits = report?.get("question_visits") as? JsonObject
+                            if (!times.isNullOrEmpty()) {
+                                Text("مدت پاسخ‌گویی هر سؤال:", style = MaterialTheme.typography.bodySmall)
+                                times.entries.forEachIndexed { qIndex, (qid, ms) ->
+                                    val seconds = ((ms as? JsonPrimitive)?.contentOrNull?.toLongOrNull() ?: 0L) / 1000L
+                                    val visitCount = (visits?.get(qid) as? JsonPrimitive)?.contentOrNull ?: "1"
+                                    Text(
+                                        "سؤال ${qIndex + 1}: $seconds ثانیه · $visitCount بازدید",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+private fun String.faMonitorEvent(): String = when (this) {
+    "screenshot_attempt" -> "تلاش برای اسکرین‌شات"
+    "screen_record_attempt" -> "تلاش برای ضبط صفحه"
+    "app_leave" -> "خارج شدن از برنامه"
+    "app_close" -> "بستن برنامه"
+    "exam_screen_leave" -> "خارج شدن از صفحه آزمون"
+    else -> this
+}
+
+private fun Long.faClock(): String {
+    val formatter = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+    return formatter.format(java.util.Date(this))
 }

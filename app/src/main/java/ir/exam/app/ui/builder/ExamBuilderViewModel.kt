@@ -467,6 +467,10 @@ class ExamBuilderViewModel(
     fun setMaxAnswerImages(questionId: String, max: Int) { update(questionId) { question ->
         question.copy(maxAnswerImages = max.coerceIn(1, 10))
     } }
+    /** V58.0 — اجازهٔ رسم نمودار پاسخ توسط دانش‌آموز. */
+    fun setAllowAnswerGraph(questionId: String, allowed: Boolean) { update(questionId) { question ->
+        question.copy(allowAnswerGraph = allowed)
+    } }
 
     private fun update(id: String, change: (QuestionDraft) -> QuestionDraft) {
         _state.update { state -> state.copy(questions = state.questions.map { if (it.id == id) change(it) else it }) }
@@ -491,7 +495,11 @@ class ExamBuilderViewModel(
         viewModelScope.launch {
             _state.update { it.copy(bankLoading = true, error = null) }
             repository.saveToBank(question, state.value.subject, categoryIds)
-                .onSuccess { refreshBankNow() }
+                .onSuccess {
+                    // V58.0 — پیام گذرا روی صفحه: «به بانک سؤال اضافه شد».
+                    _state.update { it.copy(notice = "به بانک سؤال اضافه شد") }
+                    refreshBankNow()
+                }
                 .onFailure { error -> _state.update { it.copy(bankLoading = false, error = safeBuilderError(error)) } }
         }
     }
@@ -517,6 +525,9 @@ class ExamBuilderViewModel(
         runCatching { block(); refreshBankNow() }
             .onFailure { error -> _state.update { it.copy(bankLoading=false,error=safeBuilderError(error)) } }
     }
+
+    /** V58.0 — پاک‌کردن پیام گذرا پس از نمایش. */
+    fun clearNotice() { _state.update { it.copy(notice = null) } }
 
     private suspend fun refreshBankNow() {
         val bank = repository.refreshBank().getOrThrow()

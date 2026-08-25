@@ -124,6 +124,9 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
                     put("native", true)
                     put("queued", true)
                     put("created_at_epoch_ms", payload.createdAt)
+                    // V58.0 — گزارش نظارتی (رویدادهای امنیتی/زمان سؤال‌ها) فقط
+                    // در متادیتای پاسخ ذخیره می‌شود و معلم آن را می‌بیند.
+                    payload.monitorReport?.let { put("monitor_report", it) }
                 })
             }
         ).decodeAs<JsonObject>()
@@ -133,6 +136,22 @@ class SupabaseStudentExamRepository(context: Context) : ExamRepository {
 
     override suspend fun submitAttempt(attempt: SubmittedExam): Result<SubmissionOutcome> = runCatching {
         sendPrepared(prepareSubmission(attempt))
+    }
+
+    /** V58.0 — ثبت گزارش نظارتی؛ فقط معلمِ همان آزمون آن را می‌خواند. */
+    override suspend fun reportMonitor(examId: String, reportJson: String): Result<Unit> = runCatching {
+        val report = runCatching {
+            kotlinx.serialization.json.Json.parseToJsonElement(reportJson) as? JsonObject
+        }.getOrNull() ?: error("گزارش نامعتبر")
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_monitor_upsert_v1",
+            buildJsonObject {
+                put("p_exam", examId)
+                put("p_report", report)
+            }
+        ).decodeAs<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        Unit
     }
 
     private fun currentStudentId(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id

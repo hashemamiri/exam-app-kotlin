@@ -10,4 +10,7 @@ interface ExamRepository {
     suspend fun refreshActiveExam(): Result<Exam?> = Result.success(null)
     suspend fun clearActiveExam(examId: String): Result<Unit> = Result.success(Unit)
     suspend fun submitAttempt(attempt: SubmittedExam): Result<SubmissionOutcome>
+
+    /** V58.0 — ثبت گزارش نظارتی آزمون (best-effort؛ فقط معلم می‌خواند). */
+    suspend fun reportMonitor(examId: String, reportJson: String): Result<Unit> = Result.success(Unit)
 }

@@ -71,6 +71,16 @@ class SupabaseGradingRepository {
         }).throwRpcError()
     }
 
+    /** V58.0 — گزارش‌های نظارتی آزمون: لیست دانش‌آموزان + رویدادها (فقط مالک). */
+    suspend fun monitorReports(examId: String): Result<JsonObject> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_monitor_list_v1",
+            buildJsonObject { put("p_exam", examId) }
+        ).decodeAs<JsonObject>()
+        (raw["error"] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        raw
+    }
+
     suspend fun feedbackBank(): Result<List<FeedbackPhrase>> = runCatching {
         SupabaseProvider.client.postgrest.rpc("fb_list")
             .decodeList<FeedbackPhraseDto>()

@@ -174,7 +174,17 @@ fun ExamBuilderScreen(
     BackHandler(enabled = radialMenuOpen) { radialMenuOpen = false }
     BackHandler(enabled = !radialMenuOpen, onBack = onBack)
 
+    // V58.0 — پیام گذرای «به بانک سؤال اضافه شد» با Snackbar.
+    val noticeSnackbar = remember { androidx.compose.material3.SnackbarHostState() }
+    LaunchedEffect(state.notice) {
+        state.notice?.let { message ->
+            noticeSnackbar.showSnackbar(message)
+            viewModel.clearNotice()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(noticeSnackbar) },
         topBar = {
             androidx.compose.material3.TopAppBar(
                 title = { Text(if (state.examId == null) "ساخت آزمون" else "ویرایش آزمون") },
@@ -886,6 +896,15 @@ private fun QuestionEditor(
                     }
                 }
             }
+            // V58.0 — اجازهٔ رسم نمودار پاسخ توسط دانش‌آموز (مثلاً رسم سهمی تابع).
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("نمودار پاسخ دانش‌آموز")
+                FilterChip(
+                    selected = question.allowAnswerGraph,
+                    onClick = { viewModel.setAllowAnswerGraph(question.id, !question.allowAnswerGraph) },
+                    label = { Text(if (question.allowAnswerGraph) "فعال" else "غیرفعال") }
+                )
+            }
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -962,7 +981,7 @@ private fun QuestionEditor(
                                     visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                if ('$' in option || "%%FIG:" in option) NativeMathText(option)
+                                if ('$' in option || "%%FIG:" in option) NativeMathText(option, showAtlasBlanks = false)
                                 ExistingFormulaEditor(
                                     source = option,
                                     onEdit = { occurrence, tex ->

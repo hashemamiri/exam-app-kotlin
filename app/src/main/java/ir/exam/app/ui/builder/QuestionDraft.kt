@@ -39,6 +39,8 @@ data class QuestionDraft(
     val matchingRightImages: List<String?> = emptyList(),
     val answerImageMode: String = "no",
     val maxAnswerImages: Int = 0,
+    /** V58.0 — اجازهٔ رسم نمودار پاسخ توسط دانش‌آموز. */
+    val allowAnswerGraph: Boolean = false,
     val images: List<MediaDraft> = emptyList(),
     val textAlign: String = "right",
     val imagePosition: String = "below",
@@ -98,7 +100,9 @@ data class ExamBuilderState(
     val savedCode: String? = null,
     val chargedToman: Long = 0,
     val walletBalanceToman: Long? = null,
-    val error: String? = null
+    val error: String? = null,
+    /** V58.0 — پیام گذرای موفقیت (مثلاً «به بانک سؤال اضافه شد»). */
+    val notice: String? = null
 ) {
     val maximumChargeToman: Long get() = questions.size * 1_000L
 }

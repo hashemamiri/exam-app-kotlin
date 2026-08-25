@@ -9856,7 +9856,11 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
              (توکن/TeX) دست نمی‌خورد؛ فقط پیش‌نمایش داخل کادر فشرده می‌شود. */
           + '.qmf-surface.input .qmf-fig{zoom:.6;margin:4px 2px !important;padding:6px 8px !important;}'
           + '.qmf-surface.input .qmf-atom{zoom:.75;}'
-          + '.qmf-surface.input .qmf-atom .mathx{font-size:1em !important;}';
+          + '.qmf-surface.input .qmf-atom .mathx{font-size:1em !important;}'
+          /* V58.0 — درخواست کاربر: کادرهای نامگذاری اطلس (an-af) در کادر متن
+             سؤال پنل معلم لازم نیست؛ دانش‌آموز کادر تایپ خودش را دارد و چاپ
+             هم جای خالی خودش را می‌سازد. فقط نمایش معلم پاک می‌شود. */
+          + '.qmf-surface.input .an-af{display:none !important;}';
         (document.head || document.documentElement).appendChild(st);
       } catch (e) {}
       /* V55.8 — پایان راه‌اندازی Native: پردهٔ boot (exam-editor-native-boot در

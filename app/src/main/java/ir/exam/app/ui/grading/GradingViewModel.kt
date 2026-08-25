@@ -35,7 +35,10 @@ data class GradingUiState(
     val gradedOnly: Boolean = false,
     val selectedQuestionIndex: Int = 0,
     val error: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    /** V58.0 — گزارش‌های نظارتی آزمون انتخاب‌شده (rows از native_monitor_list_v1). */
+    val monitorExamId: String? = null,
+    val monitorReports: JsonObject? = null
 )
 
 class GradingViewModel(
@@ -50,6 +53,22 @@ class GradingViewModel(
         val exams = repository.getExams().getOrElse { return@launch fail(it) }
         val feedback = repository.feedbackBank().getOrDefault(emptyList())
         _state.update { it.copy(loading = false, exams = exams, feedbackBank = feedback) }
+    }
+
+    /** V58.0 — بازکردن گزارش‌های نظارتی آزمون از روی کارت (کنار ورود به تصحیح). */
+    fun openMonitorReports(examId: String) = viewModelScope.launch {
+        _state.update { it.copy(actionLoading = true, error = null) }
+        repository.monitorReports(examId)
+            .onSuccess { raw ->
+                _state.update {
+                    it.copy(actionLoading = false, monitorExamId = examId, monitorReports = raw)
+                }
+            }
+            .onFailure { fail(it) }
+    }
+
+    fun closeMonitorReports() {
+        _state.update { it.copy(monitorExamId = null, monitorReports = null) }
     }
 
     fun selectExam(id: String) = viewModelScope.launch {

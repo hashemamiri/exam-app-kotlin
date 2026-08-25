@@ -67,6 +67,7 @@ internal object ExamQuestionCodec {
                 matchingLeftImages = obj["leftImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
                 matchingRightImages = obj["rightImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
                 answerImageMode = obj["allowImages"]?.asString() ?: "no",
+                allowAnswerGraph = obj["allowAnswerGraph"]?.asBoolean() ?: false,
                 maxAnswerImages = obj["maxImages"]?.asInt() ?: 0,
                 images = imageUrls.mapIndexed { imageIndex, url ->
                     val pos = positions.getOrNull(imageIndex) as? JsonObject
@@ -109,6 +110,7 @@ internal object ExamQuestionCodec {
                 ))
             })
             values["allowImages"] = JsonPrimitive(question.answerImageMode)
+            values["allowAnswerGraph"] = JsonPrimitive(question.allowAnswerGraph)
             values["maxImages"] = JsonPrimitive(if (question.answerImageMode == "no") 0 else question.maxAnswerImages.coerceIn(1, 10))
             values["align"] = JsonPrimitive(question.textAlign)
             values["imgPos"] = JsonPrimitive(question.imagePosition)

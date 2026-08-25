@@ -32,6 +32,13 @@ data class StudentExamUiState(
     val restoringExam: Boolean = true,
     val showPreview: Boolean = false,
     val resumedExam: Boolean = false,
+    /** V58.0 — تایمر فقط پس از «شروع پاسخ‌گویی» راه می‌افتد. */
+    val started: Boolean = false,
+    /** V58.0 — کل ثانیه‌های مهلت برای رنگ تدریجی زمان‌سنج (سبز→قرمز). */
+    val totalSeconds: Long = UNLIMITED_TIME,
+    /** V58.0 — تغییرات ویرایش معلم وسط آزمون؛ تا بسته‌شدن پنجره تایمر مکث می‌کند. */
+    val examChangeNotes: List<String> = emptyList(),
+    val timerPaused: Boolean = false,
     val loading: Boolean = false,
     val submitting: Boolean = false,
     val finished: Boolean = false,
@@ -100,7 +107,133 @@ class StudentExamViewModel(
 
     fun startExam() {
         if (state.value.exam == null || state.value.finished) return
-        _state.update { it.copy(showPreview = false, error = null) }
+        // V58.0 — تایمر فقط از این لحظه شروع می‌شود، نه از بازشدن پیش‌نمایش.
+        _state.update { it.copy(showPreview = false, started = true, error = null) }
+        examEnteredAtEpochMs = System.currentTimeMillis()
+        markQuestionEnter(state.value.questionIndex)
+        startTimer()
+        watchExamChanges()
+    }
+
+    /** V58.0 — پنجرهٔ «آزمون ویرایش شد» بسته شد؛ تایمر ادامه می‌یابد. */
+    private var pausedAtEpochMs: Long = 0L
+    private var pausedTotalMs: Long = 0L
+    fun dismissExamChanges() {
+        if (pausedAtEpochMs > 0L) {
+            pausedTotalMs += System.currentTimeMillis() - pausedAtEpochMs
+            pausedAtEpochMs = 0L
+        }
+        _state.update { it.copy(examChangeNotes = emptyList(), timerPaused = false) }
+    }
+
+    /**
+     * V58.0 — رصد دوره‌ای ویرایش معلم وسط آزمون: هر ۲۰ ثانیه نسخهٔ تازهٔ
+     * آزمون گرفته و با نسخهٔ فعلی مقایسه می‌شود؛ اگر فرقی بود پنجرهٔ تغییرات
+     * باز و تایمر تا بستن آن مکث می‌کند (زمان مکث به مهلت اضافه می‌شود).
+     */
+    private var changeWatcher: Job? = null
+    private fun watchExamChanges() {
+        changeWatcher?.cancel()
+        changeWatcher = viewModelScope.launch {
+            while (!state.value.finished) {
+                delay(20_000L)
+                if (state.value.finished || !state.value.started) continue
+                val current = state.value.exam ?: continue
+                val refreshed = exams.refreshActiveExam().getOrNull() ?: continue
+                if (refreshed.id != current.id) continue
+                val notes = diffExams(current, refreshed)
+                if (notes.isNotEmpty()) {
+                    pausedAtEpochMs = System.currentTimeMillis()
+                    _state.update {
+                        it.copy(exam = refreshed, examChangeNotes = notes, timerPaused = true)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * V58.0 — گزارش نظارتی آزمون (فقط برای معلم): رویدادهای امنیتی/رفتاری
+     * شمارش و همراه ارسال نهایی در p_meta فرستاده می‌شوند؛ چیزی از آن به
+     * دانش‌آموز نمایش داده نمی‌شود و داده حساس ندارد.
+     */
+    private val securityEvents = linkedMapOf<String, Int>()
+    private var examEnteredAtEpochMs: Long = 0L
+    private val questionEnterEpochMs = mutableMapOf<Int, Long>()
+    private val questionTimeSpentMs = mutableMapOf<String, Long>()
+    private val questionVisits = mutableMapOf<String, Int>()
+
+    fun recordSecurityEvent(kind: String) {
+        val key = kind.trim().take(40)
+        if (key.isEmpty()) return
+        securityEvents[key] = (securityEvents[key] ?: 0) + 1
+        // ثبت فوری روی سرور (best-effort؛ خطا آزمون را مختل نمی‌کند)
+        val examId = state.value.exam?.id ?: return
+        viewModelScope.launch {
+            runCatching { exams.reportMonitor(examId, monitorReport().toString()) }
+        }
+    }
+
+    private fun markQuestionEnter(index: Int) {
+        val exam = state.value.exam ?: return
+        val now = System.currentTimeMillis()
+        // بستن بازهٔ سؤال قبلی
+        questionEnterEpochMs.remove(state.value.questionIndex)?.let { enteredAt ->
+            val prev = exam.questions.getOrNull(state.value.questionIndex) ?: return@let
+            questionTimeSpentMs[prev.id] = (questionTimeSpentMs[prev.id] ?: 0L) + (now - enteredAt)
+        }
+        questionEnterEpochMs[index] = now
+        exam.questions.getOrNull(index)?.let { q ->
+            questionVisits[q.id] = (questionVisits[q.id] ?: 0) + 1
+        }
+    }
+
+    internal fun monitorReport(): kotlinx.serialization.json.JsonObject {
+        val exam = state.value.exam
+        // بستن بازهٔ سؤال جاری پیش از گزارش
+        if (exam != null) {
+            val now = System.currentTimeMillis()
+            questionEnterEpochMs.remove(state.value.questionIndex)?.let { enteredAt ->
+                exam.questions.getOrNull(state.value.questionIndex)?.let { q ->
+                    questionTimeSpentMs[q.id] = (questionTimeSpentMs[q.id] ?: 0L) + (now - enteredAt)
+                }
+            }
+        }
+        return kotlinx.serialization.json.buildJsonObject {
+            put("entered_at_epoch_ms", kotlinx.serialization.json.JsonPrimitive(examEnteredAtEpochMs))
+            put("left_at_epoch_ms", kotlinx.serialization.json.JsonPrimitive(System.currentTimeMillis()))
+            put("events", kotlinx.serialization.json.JsonObject(
+                securityEvents.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
+            ))
+            put("question_time_ms", kotlinx.serialization.json.JsonObject(
+                questionTimeSpentMs.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
+            ))
+            put("question_visits", kotlinx.serialization.json.JsonObject(
+                questionVisits.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
+            ))
+        }
+    }
+
+    internal fun diffExams(old: Exam, new: Exam): List<String> {
+        val notes = mutableListOf<String>()
+        if (old.title != new.title) notes += "عنوان آزمون تغییر کرد: ${new.title}"
+        if (old.questions.size != new.questions.size) {
+            notes += "تعداد سؤال‌ها از ${old.questions.size} به ${new.questions.size} تغییر کرد"
+        }
+        val oldById = old.questions.associateBy { it.id }
+        new.questions.forEachIndexed { index, q ->
+            val prev = oldById[q.id] ?: run {
+                notes += "سؤال ${index + 1} جدید اضافه شد"
+                return@forEachIndexed
+            }
+            if (prev.text != q.text) notes += "متن سؤال ${index + 1} ویرایش شد"
+            if (prev.score != q.score) notes += "بارم سؤال ${index + 1} از ${prev.score} به ${q.score} تغییر کرد"
+        }
+        old.questions.forEach { q ->
+            if (new.questions.none { it.id == q.id }) notes += "یک سؤال حذف شد"
+        }
+        if (old.deadlineEpochMs != new.deadlineEpochMs) notes += "مهلت آزمون تغییر کرد"
+        return notes
     }
 
     private suspend fun openExam(exam: Exam, resumed: Boolean) {
@@ -129,7 +262,9 @@ class StudentExamViewModel(
             )
         }
         observeDrafts(exam.id)
-        startTimer()
+        // V58.0 — تایمر اینجا شروع نمی‌شود؛ startExam (دکمهٔ شروع پاسخ‌گویی) آن
+        // را راه می‌اندازد. فقط نمایش زمان باقی‌مانده در پیش‌نمایش تازه می‌شود.
+        _state.update { it.copy(totalSeconds = remainingFor(exam)) }
     }
 
     private fun observeDrafts(examId: String) {
@@ -151,6 +286,11 @@ class StudentExamViewModel(
         timer?.cancel()
         timer = viewModelScope.launch {
             while (!state.value.finished) {
+                // V58.0 — هنگام نمایش پنجرهٔ تغییرات معلم، تایمر مکث می‌کند.
+                if (state.value.timerPaused) {
+                    delay(500L)
+                    continue
+                }
                 val exam = state.value.exam ?: return@launch
                 val remaining = remainingFor(exam)
                 _state.update { it.copy(remainingSeconds = remaining) }
@@ -171,7 +311,8 @@ class StudentExamViewModel(
 
     private fun remainingFor(exam: Exam): Long {
         val deadline = exam.deadlineEpochMs ?: return UNLIMITED_TIME
-        val millis = deadline - System.currentTimeMillis()
+        // V58.0 — زمان مکث (پنجرهٔ تغییرات معلم) به مهلت افزوده می‌شود.
+        val millis = deadline + pausedTotalMs - System.currentTimeMillis()
         return if (millis <= 0L) 0L else (millis + 999L) / 1_000L
     }
 
@@ -210,6 +351,8 @@ class StudentExamViewModel(
     fun goTo(index: Int) {
         val exam=state.value.exam ?: return
         val next=index.coerceIn(0,exam.questions.lastIndex)
+        // V58.0 — گزارش نظارتی: مدت پاسخ‌گویی و تعداد بازدید هر سؤال.
+        if (next != state.value.questionIndex) markQuestionEnter(next)
         _state.update { it.copy(questionIndex = next, error = null) }
         saveDraft(exam.id,state.value.answers,state.value.responseImages)
     }
@@ -246,7 +389,8 @@ class StudentExamViewModel(
                 examId = exam.id,
                 answers = state.value.answers,
                 responseImages = state.value.responseImages,
-                submittedAtEpochMs = System.currentTimeMillis()
+                submittedAtEpochMs = System.currentTimeMillis(),
+                monitorReportJson = monitorReport().toString()
             )
             exams.submitAttempt(attempt)
                 .onSuccess { outcome ->

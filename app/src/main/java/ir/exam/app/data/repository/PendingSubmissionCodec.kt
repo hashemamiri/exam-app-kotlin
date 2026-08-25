@@ -23,7 +23,9 @@ data class PendingSubmissionPayload(
     @SerialName("exam_id") val examId: String,
     val responses: JsonArray,
     @SerialName("response_images") val responseImages: Map<String, List<String>>,
-    @SerialName("created_at") val createdAt: Long
+    @SerialName("created_at") val createdAt: Long,
+    /** V58.0 — گزارش نظارتی آزمون (رویدادها/زمان هر سؤال) فقط برای معلم. */
+    @SerialName("monitor_report") val monitorReport: JsonObject? = null
 )
 
 object PendingSubmissionCodec {
@@ -55,7 +57,10 @@ object PendingSubmissionCodec {
             examId = exam.id,
             responses = responses,
             responseImages = attempt.responseImages,
-            createdAt = attempt.submittedAtEpochMs
+            createdAt = attempt.submittedAtEpochMs,
+            monitorReport = attempt.monitorReportJson?.let {
+                runCatching { json.decodeFromString<JsonObject>(it) }.getOrNull()
+            }
         )
     }
 

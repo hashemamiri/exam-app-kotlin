@@ -27,7 +27,9 @@ data class QuestionPresentation(
     val italic: Boolean = false,
     val answerLines: Int = 2,
     val answerLineStyle: String = "lined",
-    val media: List<QuestionMediaPresentation> = emptyList()
+    val media: List<QuestionMediaPresentation> = emptyList(),
+    /** V58.0 — اجازهٔ معلم: دانش‌آموز بتواند نمودار پاسخ رسم/ویرایش کند. */
+    val allowAnswerGraph: Boolean = false
 )
 
 data class QuestionMediaPresentation(
@@ -134,7 +136,9 @@ data class SubmittedExam(
     val examId: String,
     val answers: Map<String, StudentAnswer>,
     val responseImages: Map<String, List<String>>,
-    val submittedAtEpochMs: Long
+    val submittedAtEpochMs: Long,
+    /** V58.0 — گزارش نظارتی JSON (رویدادهای امنیتی/زمان سؤال‌ها) فقط برای معلم. */
+    val monitorReportJson: String? = null
 )
 
 sealed interface SubmissionOutcome {

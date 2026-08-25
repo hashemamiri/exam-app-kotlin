@@ -10,8 +10,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,10 +25,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -110,6 +120,7 @@ fun StudentExamPreview(state: StudentExamUiState, onStart: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StudentExamContent(
     state: StudentExamUiState,
@@ -123,15 +134,66 @@ fun StudentExamContent(
     onSubmit: () -> Unit,
     onConfirmSubmit: () -> Unit,
     onDismissSubmit: () -> Unit,
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    onDismissExamChanges: () -> Unit = {},
+    onSecurityEvent: (String) -> Unit = {}
 ) {
     val exam = state.exam ?: return
-    val activity = LocalContext.current.findActivity()
+    val context = LocalContext.current
+    val activity = context.findActivity()
     var showExit by remember { mutableStateOf(false) }
     BackHandler(enabled=!state.finished){showExit=true}
     DisposableEffect(activity, state.finished) {
         if (!state.finished) activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+    }
+    // V58.0 — نظارت آزمون (گزارش فقط برای معلم):
+    // ۱) تشخیص تلاش اسکرین‌شات (اندروید ۱۴+ با کال‌بک رسمی؛ خود تصویر با
+    //    FLAG_SECURE سیاه است)، ۲) تشخیص ضبط صفحه (اندروید ۱۵+)،
+    // ۳) خروج از برنامه/بستن برنامه با lifecycle.
+    if (android.os.Build.VERSION.SDK_INT >= 34) {
+        DisposableEffect(activity, state.finished) {
+            val cb = android.app.Activity.ScreenCaptureCallback {
+                onSecurityEvent("screenshot_attempt")
+            }
+            if (!state.finished && activity != null) {
+                runCatching {
+                    activity.registerScreenCaptureCallback(context.mainExecutor, cb)
+                }
+            }
+            onDispose { runCatching { activity?.unregisterScreenCaptureCallback(cb) } }
+        }
+    }
+    if (android.os.Build.VERSION.SDK_INT >= 35) {
+        DisposableEffect(activity, state.finished) {
+            val consumer = java.util.function.Consumer<Int> { recording ->
+                if (recording == android.view.WindowManager.SCREEN_RECORDING_STATE_VISIBLE) {
+                    onSecurityEvent("screen_record_attempt")
+                }
+            }
+            if (!state.finished && activity != null) {
+                runCatching {
+                    activity.windowManager.addScreenRecordingCallback(context.mainExecutor, consumer)
+                }
+            }
+            onDispose { runCatching { activity?.windowManager?.removeScreenRecordingCallback(consumer) } }
+        }
+    }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, state.finished) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (!state.finished) when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> onSecurityEvent("app_leave")
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> onSecurityEvent("app_close")
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            // خروج از صفحهٔ آزمون داخل برنامه (وسط آزمون)
+            if (!state.finished) onSecurityEvent("exam_screen_leave")
+        }
     }
     if (state.finished) {
         Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -154,19 +216,19 @@ fun StudentExamContent(
 
     Scaffold(
         bottomBar = {
-            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(
-                        if (state.remainingSeconds == UNLIMITED_TIME) "زمان: بدون محدودیت"
-                        else "زمان: ${formatRemaining(state.remainingSeconds)}"
-                    )
-                    Button(onClick = onSubmit, enabled = !state.submitting) {
-                        Text(if (state.submitting) "در حال ارسال..." else "ارسال نهایی")
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    OutlinedButton(onClick = onPrevious, enabled = state.questionIndex > 0) { Text("قبلی") }
-                    Button(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex) { Text("بعدی") }
+            // V58.0 — نوار پایین: خروج | زمان‌سنج رنگی وسط | ارسال نهایی.
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                OutlinedButton(onClick = { showExit = true }) { Text("خروج") }
+                ExamCountdownText(
+                    remainingSeconds = state.remainingSeconds,
+                    totalSeconds = state.totalSeconds
+                )
+                Button(onClick = onSubmit, enabled = !state.submitting) {
+                    Text(if (state.submitting) "در حال ارسال..." else "ارسال نهایی")
                 }
             }
         }
@@ -175,21 +237,45 @@ fun StudentExamContent(
             modifier = Modifier.padding(padding).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { Text(exam.title, style = MaterialTheme.typography.titleLarge) }
+            // V58.0 — هدر و نام آزمون حذف شد؛ شماره سؤال‌ها در یک سطر اسکرول‌شونده
+            // با آیکن قبلی/بعدی در دو سر؛ نگه‌داشتن ۲ ثانیه‌ای = علامت برای مرور.
             item {
-                Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    exam.questions.indices.chunked(8).forEach { row -> Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                        row.forEach { i ->
-                            val q=exam.questions[i];val answered=state.answers.containsKey(q.id)
-                            FilterChip(selected=i==state.questionIndex,onClick={onGoTo(i)},label={Text("${i+1}${if(q.id in state.flaggedQuestionIds)"★" else if(answered)"✓" else ""}")})
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onPrevious, enabled = state.questionIndex > 0) {
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = "سؤال قبلی")
+                    }
+                    Row(
+                        Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        exam.questions.indices.forEach { i ->
+                            val q = exam.questions[i]
+                            val answered = state.answers.containsKey(q.id)
+                            Box(
+                                Modifier.combinedClickable(
+                                    onClick = { onGoTo(i) },
+                                    // نگه‌داشتن ۲ ثانیه‌ای شمارهٔ سؤال = علامت/برداشتن علامت مرور
+                                    onLongClick = { onToggleFlag(q.id) }
+                                )
+                            ) {
+                                FilterChip(
+                                    selected = i == state.questionIndex,
+                                    onClick = { onGoTo(i) },
+                                    label = { Text("${i + 1}${if (q.id in state.flaggedQuestionIds) "★" else if (answered) "✓" else ""}") }
+                                )
+                            }
                         }
-                    } }
+                    }
+                    IconButton(onClick = onNext, enabled = state.questionIndex < exam.questions.lastIndex) {
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = "سؤال بعدی")
+                    }
                 }
             }
-            item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+            item {
                 Text("سؤال ${state.questionIndex + 1} از ${exam.questions.size} · بارم ${question.score}")
-                OutlinedButton(onClick={onToggleFlag(question.id)}){Text(if(question.id in state.flaggedQuestionIds)"برداشتن علامت" else "علامت برای مرور")}
-            } }
+            }
             item {
                 // V57.0 — تصاویر سؤال با لمس زوم می‌شوند؛ متن سؤال سطر به سطر و
                 // شکل‌ها زوم‌پذیر؛ کادرهای نامگذاری اطلس داخل TextAnswer ذخیره می‌شوند.
@@ -295,6 +381,17 @@ fun StudentExamContent(
                     )
                 }
             }
+            if (presentation.allowAnswerGraph) {
+                item {
+                    // V58.0 — معلم اجازه داده: دانش‌آموز نمودار پاسخ رسم/ویرایش کند
+                    // (مثلاً سهمی یک تابع). توکن %%FIG:...%% داخل همان TextAnswer
+                    // ذخیره می‌شود و معلم در تصحیح همان نمودار را می‌بیند.
+                    StudentAnswerGraph(
+                        answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
+                        onAnswerText = { onAnswer(TextAnswer(question.id, it)) }
+                    )
+                }
+            }
             state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         }
     }
@@ -313,6 +410,24 @@ fun StudentExamContent(
         }},confirmButton={Button(onClick=onConfirmSubmit){Text("تأیید و ارسال نهایی")}},dismissButton={TextButton(onClick=onDismissSubmit){Text("بازگشت و مرور")}})
     }
     if(showExit)AlertDialog(onDismissRequest={showExit=false},title={Text("خروج از آزمون")},text={Text("پاسخ‌ها ذخیره شده‌اند و زمان سرور ادامه دارد. برنامه بسته شود؟")},confirmButton={Button(onClick={showExit=false;activity?.finish()}){Text("بستن برنامه")}},dismissButton={TextButton(onClick={showExit=false}){Text("ادامه آزمون")}})
+    // V58.0 — معلم وسط آزمون ویرایش کرد: نمایش موارد؛ تا بستن، تایمر مکث است.
+    if (state.examChangeNotes.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = onDismissExamChanges,
+            title = { Text("آزمون توسط معلم ویرایش شد") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    state.examChangeNotes.forEach { note -> Text("• $note") }
+                    Text(
+                        "زمان‌سنج تا بستن این پنجره متوقف است.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            confirmButton = { Button(onClick = onDismissExamChanges) { Text("متوجه شدم") } }
+        )
+    }
 }
 
 @Composable
@@ -398,6 +513,89 @@ private fun ResponseImages(
         source=uri,onDismiss={editQueue=editQueue.drop(1)},
         onDone={edited->onAdd(questionId,listOf(edited.toString()));editQueue=editQueue.drop(1)}
     ) }
+}
+
+/**
+ * V58.0 — نمودار پاسخ دانش‌آموز: با اجازهٔ معلم، دانش‌آموز از همان کتابخانهٔ
+ * ۶۱ نمودار Native یکی را انتخاب و پارامترهایش را ویرایش می‌کند (مثلاً سهمی
+ * y=ax²+bx+c). توکن %%FIG:...%% داخل TextAnswer ذخیره می‌شود.
+ */
+@Composable
+private fun StudentAnswerGraph(
+    answerText: String,
+    onAnswerText: (String) -> Unit
+) {
+    var pickerOpen by remember { mutableStateOf(false) }
+    var editorSpec by remember { mutableStateOf<ir.exam.app.core.figure.FigureSpec?>(null) }
+    val existing = ir.exam.app.core.figure.FigureCodec.occurrences(answerText)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("نمودار پاسخ شما")
+        if (existing.isEmpty()) {
+            Button(onClick = { pickerOpen = true }) { Text("رسم نمودار پاسخ") }
+        } else {
+            NativeMathText(answerText, zoomableFigures = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { editorSpec = existing.first().spec }) { Text("ویرایش نمودار") }
+                OutlinedButton(onClick = {
+                    // حذف توکن نمودار از پاسخ؛ متن آزاد دست‌نخورده می‌ماند.
+                    val occ = existing.first()
+                    onAnswerText(answerText.removeRange(occ.start, occ.endExclusive))
+                }) { Text("حذف نمودار") }
+            }
+        }
+    }
+    if (pickerOpen) {
+        ir.exam.app.ui.figure.FigureTypePickerDialog(
+            kind = ir.exam.app.ui.figure.FigureKind.GRAPH,
+            onDismiss = { pickerOpen = false },
+            onTypeSelected = { spec ->
+                pickerOpen = false
+                editorSpec = spec
+            }
+        )
+    }
+    editorSpec?.let { spec ->
+        ir.exam.app.ui.figure.FigurePickerDialog(
+            initialSpec = spec,
+            initialKind = ir.exam.app.ui.figure.FigureKind.GRAPH,
+            onDismiss = { editorSpec = null },
+            onInsert = { edited ->
+                editorSpec = null
+                val token = "%%FIG:" + edited.toJson() + "%%"
+                val occ = ir.exam.app.core.figure.FigureCodec.occurrences(answerText).firstOrNull()
+                onAnswerText(
+                    if (occ != null) answerText.replaceRange(occ.start, occ.endExclusive, token)
+                    else if (answerText.isBlank()) token
+                    else answerText + "\n" + token
+                )
+            }
+        )
+    }
+}
+
+/**
+ * V58.0 — زمان‌سنج رنگی: از سبز شروع می‌شود، با گذشت زمان به نارنجی و در
+ * دقایق پایانی (کمتر از ۱۵٪ مهلت یا ۵ دقیقه) قرمز می‌شود.
+ */
+@Composable
+fun ExamCountdownText(remainingSeconds: Long, totalSeconds: Long) {
+    if (remainingSeconds == UNLIMITED_TIME) {
+        Text("بدون محدودیت", fontWeight = FontWeight.Bold)
+        return
+    }
+    val fraction = if (totalSeconds > 0L) remainingSeconds.toFloat() / totalSeconds else 1f
+    val nearEnd = remainingSeconds <= 300L || fraction <= .15f
+    val color = when {
+        nearEnd -> Color(0xFFD32F2F)
+        fraction <= .5f -> Color(0xFFF57C00)
+        else -> Color(0xFF2E7D32)
+    }
+    Text(
+        formatRemaining(remainingSeconds),
+        color = color,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleMedium
+    )
 }
 
 private fun formatRemaining(seconds: Long): String {

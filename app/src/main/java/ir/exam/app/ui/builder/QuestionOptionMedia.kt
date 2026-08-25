@@ -345,7 +345,7 @@ fun MatchingQuestionEditor(
                         visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if ('$' in value || "%%FIG:" in value) NativeMathText(value)
+                    if ('$' in value || "%%FIG:" in value) NativeMathText(value, showAtlasBlanks = false)
                     ExistingFormulaEditor(
                         source = value,
                         onEdit = { occurrence, tex -> onFormulaEdit("right", index, occurrence, tex) },
@@ -407,7 +407,7 @@ fun MatchingQuestionEditor(
                         visualTransformation = FigTokenVisuals.transformation(MaterialTheme.colorScheme.primary),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if ('$' in value || "%%FIG:" in value) NativeMathText(value)
+                    if ('$' in value || "%%FIG:" in value) NativeMathText(value, showAtlasBlanks = false)
                     ExistingFormulaEditor(
                         source = value,
                         onEdit = { occurrence, tex -> onFormulaEdit("left", index, occurrence, tex) },

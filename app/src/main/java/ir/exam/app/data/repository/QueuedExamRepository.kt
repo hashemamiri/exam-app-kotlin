@@ -32,6 +32,9 @@ class QueuedExamRepository(
 
     override suspend fun clearActiveExam(examId: String): Result<Unit> = remote.clearActiveExam(examId)
 
+    override suspend fun reportMonitor(examId: String, reportJson: String): Result<Unit> =
+        if (network.isOnline()) remote.reportMonitor(examId, reportJson) else Result.success(Unit)
+
     override suspend fun submitAttempt(attempt: SubmittedExam): Result<SubmissionOutcome> = runCatching {
         val payload = remote.prepareSubmission(attempt)
         if (!network.isOnline()) {

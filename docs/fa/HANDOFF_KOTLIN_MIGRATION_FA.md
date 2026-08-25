@@ -8014,3 +8014,121 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 پیش‌نیاز: V56.2
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۶۶) V58.0 — بازطراحی صفحهٔ آزمون دانش‌آموز + تایمر هوشمند (پچ ۱ از ۳)
+
+### درخواست‌های کاربر و تحویل
+
+```text
+۱) «نوار بالای پنجرهٔ زوم روی جدول تناوبی افقی می‌افتد»: ZoomableFigureDialog
+   به Column تبدیل شد؛ نوار بالا جدا و چرخش در BoxWithConstraints(weight=1)
+   زیر آن — requiredSize(maxH,maxW) از محدودهٔ زیر نوار محاسبه می‌شود.
+۲) «حذف هدر/نام آزمون + سطر اسکرول شماره سؤال‌ها با آیکن قبلی/بعدی دو سر +
+   حذف دکمه‌های قبلی/بعدی پایین + نوار پایین: خروج|زمان‌سنج|ارسال»: در
+   StudentExamContent سطر Row با horizontalScroll و IconButtonهای
+   KeyboardArrowRight/Left؛ bottomBar = خروج + ExamCountdownText + ارسال.
+۳) «تایمر تا شروع پاسخ‌گویی شروع نشود»: startTimer از openExam حذف و به
+   startExam منتقل شد (started=true).
+۴) «ویرایش وسط آزمون → پنجرهٔ موارد + توقف تایمر»: watchExamChanges هر ۲۰
+   ثانیه refreshActiveExam و diffExams (عنوان/تعداد/متن/بارم/مهلت/حذف)؛
+   examChangeNotes → AlertDialog؛ timerPaused تا بستن؛ زمان مکث با
+   pausedTotalMs به مهلت اضافه می‌شود (deadline + pausedTotalMs - now).
+۵) «پیام به بانک سؤال اضافه شد»: state.notice جدید + Snackbar در builder.
+۶) «زمان‌سنج رنگی»: ExamCountdownText سبز→نارنجی(<۵۰٪)→قرمز(<۱۵٪ یا ۵ دقیقه).
+۷) «علامت مرور با نگه‌داشتن ۲ ثانیه»: combinedClickable(onLongClick=toggleFlag)
+   روی چیپ شماره؛ دکمهٔ متنی حذف؛ بند verify قدیمی به‌روز شد.
+۸) «کادر نامگذاری در پنل معلم لازم نیست»: CSS بلوک nativeToolbarHide حالا
+   .an-af را پنهان می‌کند + showAtlasBlanks=false در پیش‌نمایش‌های builder؛
+   version.txt کادر → v58.0-teacher-no-blanks.
+```
+
+## ۱۶۷) V58.1 — نظارت آزمون + گزارش‌ها برای معلم (پچ ۲ از ۳)
+
+```text
+- تشخیص‌ها (فقط ثبت؛ FLAG_SECURE همچنان جلوی تصویر را می‌گیرد):
+  اسکرین‌شات: Activity.ScreenCaptureCallback (API 34+) + مجوز مانیفست
+  DETECT_SCREEN_CAPTURE؛ ضبط صفحه: addScreenRecordingCallback (API 35+) +
+  DETECT_SCREEN_RECORDING؛ خروج از برنامه (ON_PAUSE=app_leave،
+  ON_STOP=app_close) و خروج از صفحهٔ آزمون (onDispose=exam_screen_leave).
+- ViewModel: recordSecurityEvent (ثبت فوری best-effort با
+  native_monitor_upsert_v1) + markQuestionEnter/questionTimeSpentMs/
+  questionVisits + monitorReport() = {entered_at, left_at, events,
+  question_time_ms, question_visits}؛ همراه submit در
+  p_meta.monitor_report هم می‌رود.
+- زنجیره: ExamRepository.reportMonitor (پیش‌فرض خالی) → Queued (فقط آنلاین)
+  → Supabase RPC. SubmittedExam.monitorReportJson +
+  PendingSubmissionPayload.monitor_report (سازگار عقب‌رو، nullable).
+- معلم: دکمهٔ «گزارش‌ها» کنار «ورود به تصحیح» روی کارت آزمون → 
+  MonitorReportsDialog: هر دانش‌آموز با برچسب فارسی رویدادها + زمان
+  ورود/خروج + مدت پاسخ‌گویی/بازدید هر سؤال.
+- SQL جدید supabase/migrations/20260825_native_exam_monitor_v58.sql:
+  جدول native_exam_monitor (PK exam+student، RLS مالک) +
+  native_monitor_upsert_v1 (ادغام ||) + native_monitor_list_v1 (فقط
+  e.teacher_id = v_uid؛ نام از profiles).
+```
+
+## ۱۶۸) V58.2 — نمودار پاسخ دانش‌آموز با اجازهٔ معلم (پچ ۳ از ۳)
+
+```text
+- معلم: چیپ «نمودار پاسخ دانش‌آموز» فعال/غیرفعال در کارت سؤال (کنار تصویر
+  پاسخ)؛ QuestionDraft.allowAnswerGraph؛ ExamQuestionCodec کلید
+  allowAnswerGraph در JSON سؤال؛ StudentExamPayloadCodec →
+  QuestionPresentation.allowAnswerGraph.
+- دانش‌آموز: StudentAnswerGraph زیر پاسخ — «رسم نمودار پاسخ» → همان جریان
+  دومرحله‌ای معلم (FigureTypePickerDialog(GRAPH) → FigurePickerDialog با
+  پارامترها مثل سهمی)؛ توکن %%FIG:...%% در «همان TextAnswer» (جایگزینی
+  بازهٔ توکن قبلی/افزودن به انتها/حذف فقط بازهٔ توکن) — قرارداد سرور
+  دست‌نخورده و معلم در تصحیح همان نمودار را با NativeMathText می‌بیند.
+- نمایش زندهٔ نمودار پاسخ با zoomableFigures=true.
+```
+
+### تأیید V58.x
+
+```text
+جدید: V58_0StudentExamUxTimerTest (۶ تست)، V58_1ExamMonitorReportsTest
+(۵ تست)، V58_2StudentAnswerGraphTest (۳ تست) · verify: بند قدیمی «علامت
+برای مرور» → onLongClick + ۱۰ require جدید V58.x · شبیه‌سازی python همهٔ
+assertionها (پس از اصلاح ۲ needle بخش‌محور) سبز · اسکن سراسری ۷۰۰ needle →
+فقط هشدار کاذب شناخته‌شدهٔ V55_16 · اسکن assertFalse فایل‌های تغییرکرده →
+۲۰ مورد بررسی شد؛ همه از فایل/سگمنت دیگر می‌خوانند · تراز آکولاد/پرانتز
+(خارج رشته‌ها) صفر · FINAL_NATIVE_VERIFY=PASS EXIT=0 kotlin_files=200
+نکته: تست ViewModel قدیمی (StudentExamViewModelTest) به تایمر وابسته نیست؛
+submit بدون startExam همچنان کار می‌کند (رفتار حفظ شد).
+```
+
+### راهنمای تست دستگاه
+
+```text
+پچ ۱: زوم تناوبی → نوار روی جدول نیفتد؛ صفحهٔ آزمون بدون هدر؛ سطر شماره‌ها
+اسکرول + آیکن دو سر؛ پایین: خروج|زمان‌سنج|ارسال؛ تایمر فقط بعد «شروع
+پاسخ‌گویی»؛ ویرایش آزمون توسط معلم وسط آزمون → پنجرهٔ موارد + توقف تایمر؛
+آیکن بانک → پیام «به بانک سؤال اضافه شد»؛ رنگ تایمر سبز→نارنجی→قرمز؛
+نگه‌داشتن شمارهٔ سؤال ~۲ ثانیه → ★؛ کادر متن معلم بدون کادرهای نامگذاری.
+پچ ۲ (اول SQL را در Supabase اجرا کنید): تلاش اسکرین‌شات (اندروید ۱۴+)/ضبط
+(۱۵+)/رفتن به Home وسط آزمون → بعد از ارسال، معلم: تصحیح و نظارت → کارت
+آزمون → «گزارش‌ها».
+پچ ۳: معلم چیپ «نمودار پاسخ دانش‌آموز» را فعال کند → دانش‌آموز «رسم نمودار
+پاسخ» → انتخاب مثلا سهمی → پارامترها → درج؛ ویرایش/حذف؛ معلم در تصحیح
+نمودار را ببیند.
+```
+
+### عملیات
+
+```text
+پچ ۱ (V58_0_student_exam_ux_timer): ZoomableFigureDialog/StudentExamScreen/
+StudentExamViewModel/StudentHomeScreen/ExamBuilderScreen/ExamBuilderViewModel/
+QuestionDraft(notice)/NativeMathText(showAtlasBlanks)/QuestionOptionMedia/
+question_editor.html+version.txt/V58_0 تست/verify/changelog/هندآف
+پچ ۲ (V58_1_exam_monitor_reports): AndroidManifest(دو مجوز DETECT)/
+StudentExamScreen(callbackها)/StudentExamViewModel(گزارش)/ExamRepository/
+QueuedExamRepository/SupabaseStudentExamRepository/PendingSubmissionCodec/
+ExamModels(monitorReportJson)/SupabaseGradingRepository/GradingViewModel/
+GradingScreen(دکمه+دیالوگ)/SQL migration جدید/V58_1 تست
+پچ ۳ (V58_2_student_answer_graph): QuestionDraft/ExamQuestionCodec/
+ExamModels(QuestionPresentation)/StudentExamPayloadCodec/ExamBuilderScreen/
+ExamBuilderViewModel/StudentExamScreen(StudentAnswerGraph)/V58_2 تست
+SQL: فقط پچ ۲ (20260825_native_exam_monitor_v58.sql — باید در Supabase اجرا
+شود) · Edge/Secret/Dependency جدید: ندارد
+پیش‌نیاز: V57.0 — ترتیب: پچ ۱ ← پچ ۲ ← پچ ۳
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

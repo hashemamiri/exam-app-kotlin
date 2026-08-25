@@ -190,6 +190,7 @@ internal object StudentExamPayloadCodec {
             italic = obj.boolean("italic"),
             answerLines = (obj.int("answerLines") ?: 2).coerceIn(0, 12),
             answerLineStyle = obj.text("answerLineStyle")?.takeIf { it in setOf("lined", "blank") } ?: "lined",
+            allowAnswerGraph = obj.boolean("allowAnswerGraph"),
             media = images.indices.map { index ->
                 val pos = positions.getOrNull(index) as? JsonObject
                 QuestionMediaPresentation(

@@ -195,7 +195,9 @@ for function_name in (
 require(all((ROOT/"app/src/main/res/font"/name).exists() for name in ("vazirmatn_regular.ttf","vazirmatn_medium.ttf","vazirmatn_bold.ttf","shabnam_regular.ttf","sahel_regular.ttf")),"bundled Persian fonts/weights missing")
 require("native_save_exam_v2" in parity and "native_bank_snapshot_v1" in parity and "native_feedback_update_v1" in parity,"V13 backend parity RPCs missing")
 require("پیش‌نمایش کامل A4" in builder_screen and "تعداد گزینه" in builder_screen and "حساس به حروف" in builder_screen,"builder parity controls missing")
-require("مرور پیش از ارسال" in student_screen and "علامت برای مرور" in student_screen,"student navigation/review parity missing")
+# V58.0 — دکمهٔ متنی «علامت برای مرور» عمداً حذف شد؛ نگه‌داشتن ۲ ثانیه‌ای
+# شمارهٔ سؤال جایگزین است (onLongClick → onToggleFlag).
+require("مرور پیش از ارسال" in student_screen and "onLongClick = { onToggleFlag(q.id) }" in student_screen,"student navigation/review parity missing")
 require(all(marker in teacher_dock for marker in ("TeacherDockAction.MENU","TeacherDockAction.WALLET","TeacherDockAction.CREATE","TeacherDockAction.EXAMS","TeacherDockAction.CARDS","Design69MorphingMenuIcon","Design69Icons.Wallet","Design69Icons.Exams","Design69Icons.Cards","rippleProgress.animateTo(1f, tween(520))")),
         "teacher bottom dock order/vector icons/micro-motion incomplete")
 require("TeacherBottomDock" in app_shell and all(marker in app_shell for marker in ("onToggleMenu","onToggleAdd","onCreateStudent","onCreateExam","onCreateClass","onCards")),
@@ -1481,6 +1483,40 @@ require("AtlasBlankAnswerCodec.merge(" in student_screen
         "V57.0 student screen wiring (zoom + atlas answers) is missing")
 require("fun merge(blanks: Map<Int, String>, free: String): String" in _blank_codec,
         "V57.0 atlas blank answer codec is missing")
+
+# ---- V58.0: student exam UX + timer start/pause + colored countdown ----
+_student_vm=(ROOT/"app/src/main/java/ir/exam/app/ui/student/StudentExamViewModel.kt").read_text()
+require("horizontalScroll(rememberScrollState())" in student_screen
+        and "ExamCountdownText(" in student_screen
+        and 'OutlinedButton(onClick = { showExit = true }) { Text("خروج") }' in student_screen,
+        "V58.0 student exam scrollable strip/bottom bar is missing")
+require("started = true" in _student_vm and "if (state.value.timerPaused)" in _student_vm
+        and "deadline + pausedTotalMs - System.currentTimeMillis()" in _student_vm,
+        "V58.0 start-gated timer with teacher-edit pause is missing")
+require("آزمون توسط معلم ویرایش شد" in student_screen,
+        "V58.0 teacher-edit notification dialog is missing")
+require('notice = "به بانک سؤال اضافه شد"' in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "V58.0 bank save confirmation message is missing")
+require(".qmf-surface.input .an-af{display:none !important;}" in editor_asset,
+        "V58.0 teacher editor must hide atlas naming boxes")
+
+# ---- V58.1: exam monitor (security events + teacher reports) ----
+_monitor_sql=(ROOT/"supabase/migrations/20260825_native_exam_monitor_v58.sql").read_text()
+require("ScreenCaptureCallback" in student_screen and "screenshot_attempt" in student_screen,
+        "V58.1 screenshot attempt detection is missing")
+require("fun monitorReport()" in _student_vm and "native_monitor_upsert_v1" in (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseStudentExamRepository.kt").read_text(),
+        "V58.1 monitor report pipeline is missing")
+require('Text("گزارش‌ها")' in grading_screen and "MonitorReportsDialog(" in grading_screen,
+        "V58.1 teacher reports button/dialog is missing")
+require("student_id = auth.uid()" in _monitor_sql and "e.teacher_id = v_uid" in _monitor_sql,
+        "V58.1 monitor RLS/ownership is missing")
+
+# ---- V58.2: student answer graph with teacher permission ----
+require("fun StudentAnswerGraph(" in student_screen
+        and "if (presentation.allowAnswerGraph)" in student_screen,
+        "V58.2 student answer graph flow is missing")
+require('values["allowAnswerGraph"] = JsonPrimitive(question.allowAnswerGraph)' in (ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").read_text(),
+        "V58.2 allowAnswerGraph persistence is missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

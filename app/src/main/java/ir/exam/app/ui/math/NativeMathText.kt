@@ -61,7 +61,9 @@ fun NativeMathText(
     zoomableFigures: Boolean = false,
     // V57.0 — پاسخ‌های نامگذاری اطلس (سمت دانش‌آموز): کلید = شمارهٔ نشانه.
     atlasBlankAnswers: Map<Int, String>? = null,
-    onAtlasBlankAnswer: ((Int, String) -> Unit)? = null
+    onAtlasBlankAnswer: ((Int, String) -> Unit)? = null,
+    // V58.0 — پنل معلم به جای خالی/کادر نامگذاری نیاز ندارد؛ چاپ و دانش‌آموز دارند.
+    showAtlasBlanks: Boolean = true
 ) {
     val rows = RichTextSplitter.splitRows(source)
     val effectiveSize = if (fontSize == TextUnit.Unspecified) 18.sp else fontSize
@@ -97,6 +99,7 @@ fun NativeMathText(
                         spec = figure.spec,
                         modifier = Modifier.fillMaxWidth(),
                         contentDescription = "شکل",
+                        showBlanks = showAtlasBlanks,
                         blankAnswers = atlasBlankAnswers,
                         onBlankAnswer = onAtlasBlankAnswer,
                         // زوم فقط با لمس خود تصویر؛ کادرهای تایپ آزاد می‌مانند.

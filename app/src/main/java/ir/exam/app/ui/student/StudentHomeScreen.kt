@@ -66,7 +66,9 @@ fun StudentHomeScreen(userId: String, initialJoinCode: String? = null, joinReque
                 onSubmit = viewModel::requestSubmitReview,
                 onConfirmSubmit = viewModel::confirmSubmit,
                 onDismissSubmit = viewModel::dismissSubmitReview,
-                onDone = viewModel::leaveFinishedExam
+                onDone = viewModel::leaveFinishedExam,
+                onDismissExamChanges = viewModel::dismissExamChanges,
+                onSecurityEvent = viewModel::recordSecurityEvent
             )
         }
         return
