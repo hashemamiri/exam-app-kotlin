@@ -200,7 +200,7 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
         state.teacherInviteCode,
         viewModel::setTeacherInviteCode,
         label = { Text("کد دعوت مدرسه (اختیاری)") },
-        supportingText = { Text("اگر مدیر مدرسه کد TCH داده است، آن را اینجا وارد کنید.") },
+        supportingText = { Text("اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده است، آن را اینجا وارد کنید.") },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )

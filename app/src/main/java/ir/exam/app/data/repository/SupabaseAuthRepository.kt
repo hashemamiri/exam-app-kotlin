@@ -203,19 +203,45 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         val normalizedUsername = username.trim().lowercase()
         require(name.length in 2..200) { "نام و نام خانوادگی را کامل وارد کنید." }
         require(AuthIdentifier.validUsername(normalizedUsername)) { "نام کاربری معتبر نیست." }
-        require(inviteCode.trim().startsWith("TCH-") && inviteCode.trim().length >= 60) { "کد دعوت معتبر نیست." }
+        // V60.4 — مدیر از V40B فقط کد کوتاه ۶ حرفی می‌سازد ولی این مسیر فقط کد
+        // بلند TCH- قدیمی (V37) را می‌پذیرفت و ثبت‌نام با «کد دعوت معتبر نیست.»
+        // می‌شکست. حالا هر دو نوع کد پذیرفته می‌شود.
+        val code = inviteCode.trim()
+        val shortCode = code.uppercase()
+        val isShortCode = shortCode.matches(Regex("^[A-Z0-9]{6}$"))
+        require(isShortCode || (code.startsWith("TCH-") && code.length >= 60)) { "کد دعوت معتبر نیست." }
         validateNewPassword(password)
         check(auth.currentUserOrNull() != null) { "ابتدا کد ایمیل را تأیید کنید." }
-        val response = SupabaseProvider.client.postgrest.rpc(
-            "native_complete_teacher_registration_v37",
-            buildJsonObject {
-                put("p_full_name", name)
-                put("p_username", normalizedUsername)
-                put("p_invite_code", inviteCode.trim())
-            }
-        ).decodeAs<NativeProfileDto>()
-        response.error?.takeIf(String::isNotBlank)?.let(::error)
-        check(response.ok && response.role.equals("teacher", true)) { "عضویت معلم در مدرسه کامل نشد." }
+        if (isShortCode) {
+            // کد کوتاه: اول تکمیل حساب معلم (v1)، سپس پیوستن به مدرسه (v39؛ همان
+            // مسیری که از داخل پنل کار می‌کند). اگر پیوستن شکست بخورد، حساب کامل
+            // شده و خطای کد به کاربر نشان داده می‌شود تا با کد درست دوباره بزند.
+            val completion = SupabaseProvider.client.postgrest.rpc(
+                "native_complete_teacher_registration_v1",
+                buildJsonObject {
+                    put("p_full_name", name)
+                    put("p_username", normalizedUsername)
+                }
+            ).decodeAs<NativeProfileDto>()
+            completion.error?.takeIf(String::isNotBlank)?.let(::error)
+            check(completion.ok && completion.role.equals("teacher", true)) { "تکمیل حساب معلم ناموفق بود." }
+            val join = SupabaseProvider.client.postgrest.rpc(
+                "native_join_school_v39",
+                buildJsonObject { put("p_code", shortCode) }
+            ).decodeAs<JsonObject>()
+            join["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        } else {
+            val response = SupabaseProvider.client.postgrest.rpc(
+                "native_complete_teacher_registration_v37",
+                buildJsonObject {
+                    put("p_full_name", name)
+                    put("p_username", normalizedUsername)
+                    put("p_invite_code", code)
+                }
+            ).decodeAs<NativeProfileDto>()
+            response.error?.takeIf(String::isNotBlank)?.let(::error)
+            check(response.ok && response.role.equals("teacher", true)) { "عضویت معلم در مدرسه کامل نشد." }
+        }
         auth.updateUser {
             this.password = password
             data { put("full_name", name); put("registration_role", "teacher") }

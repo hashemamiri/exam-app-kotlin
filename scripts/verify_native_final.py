@@ -1648,6 +1648,15 @@ require("val setupCandidate = role == UserRole.STUDENT ||" in _auth_repo
         and "if (realEmailAccount && setupCandidate)" in _auth_repo,
         "V60.3.1 client-side setup candidate check is missing")
 
+# ---- V60.4: registration must accept the six-character manager invite code ----
+# مدیر از V40B فقط کد کوتاه ۶ حرفی می‌سازد؛ مسیر ثبت‌نام فقط TCH- می‌پذیرفت.
+require("if (isShortCode) {" in _auth_repo
+        and '"native_join_school_v39"' in _auth_repo
+        and "native_complete_teacher_registration_v37" in _auth_repo,
+        "V60.4 short invite code registration path is missing")
+require("اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده است، آن را اینجا وارد کنید." in _sign_in,
+        "V60.4 invite field hint is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

@@ -8822,3 +8822,54 @@ SupabaseAuthRepository.kt / تست جدید / verify / changelog / هندآف
 نیازمند build جدید (تغییر کلاینت) + پیش‌نیاز: SQL V60_3 اجرا شده باشد
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۸۳) V60.4 — کد دعوت ۶ حرفی مدیر در ثبت‌نام معلم پذیرفته می‌شود
+
+### ریشه (با مدرک از عکس دستگاه + کد)
+
+```text
+گزارش (با عکس): «پیوستن به مدرسه با کد دعوت از داخل پنل معلم کار می‌کند
+اما هنگام ایجاد حساب، خطای "کد دعوت معتبر نیست." می‌دهد» — کد واردشده در
+عکس: 4A71F3 (۶ حرفی). ریشه: مدیر از V40B فقط کد کوتاه ۶ حرفی می‌سازد
+(native_manager_create_teacher_invites_v40b)؛ ولی مسیر ثبت‌نامِ با کد دعوت
+(completeInvitedTeacherRegistration در SupabaseAuthRepository) از V37 فقط
+کد بلند TCH- (طول ≥۶۰) را می‌پذیرفت:
+require(startsWith("TCH-") && length >= 60). پیوستن از داخل پنل سالم بود
+چون از SupabaseSchoolJoinRepository → native_join_school_v39 می‌رود.
+```
+
+### راه‌حل (فقط کلاینت — بدون SQL جدید)
+
+```text
+completeInvitedTeacherRegistration حالا دو نوع کد می‌پذیرد:
+- کد کوتاه ^[A-Z0-9]{6}$ (با uppercase؛ حروف کوچک هم قبول): اول
+  native_complete_teacher_registration_v1 (تکمیل حساب معلم؛ همان مسیر
+  بدون کد) و سپس native_join_school_v39 (پیوستن؛ همان RPC مسیر سالم).
+  اگر پیوستن شکست بخورد حساب کامل شده و خطای سرورِ کد نمایش داده می‌شود؛
+  کاربر می‌تواند بعداً از داخل پنل با کد درست بپیوندد.
+- کد بلند TCH- قدیمی: مثل قبل native_complete_teacher_registration_v37.
+راهنمای فیلد در SignInScreen: «اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده
+است، آن را اینجا وارد کنید.»
+هر دو RPC از قبل grant به authenticated دارند (v12 و V39) — SQL لازم نیست.
+```
+
+### تأیید
+
+```text
+جدید: V60_4ShortInviteRegistrationTest (۲ تست) · verify: دو require جدید
+V60.4 · شبیه‌سازی سبز · FINAL_NATIVE_VERIFY=PASS EXIT=0
+سناریوها: کد ۶ حرفی درست → حساب کامل + عضو مدرسه؛ کد ۶ حرفی غلط/منقضی →
+حساب کامل + خطای سرور («کد دعوت نامعتبر، مصرف‌شده یا منقضی است»)؛ کد
+TCH- قدیمی → مسیر V37 بدون تغییر؛ بدون کد → مسیر v1 بدون تغییر.
+نکته: تست V37TeacherInvitationTest رشتهٔ 'startsWith("TCH-")' را می‌خواهد
+که حفظ شده است (شاخهٔ کد بلند).
+```
+
+### عملیات
+
+```text
+پچ: V60_4_short_invite_registration — فایل‌ها: SupabaseAuthRepository.kt /
+SignInScreen.kt / تست جدید / verify / changelog / هندآف
+نیازمند build جدید؛ SQL لازم ندارد
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```
