@@ -8776,3 +8776,49 @@ changelog/هندآف — کد کلاینت تغییر ندارد
 پیش‌نیاز: V60.2 (جدول native_registration_roles باید موجود باشد)
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۸۲) V60.3.1 — هات‌فیکس: کلاینت اصلاً state سرور را نمی‌پرسید
+
+### ریشه (با مدرک از کد کلاینت)
+
+```text
+گزارش دستگاه پس از اجرای SQL V60.3: «هنوز از مسیر مدیر/معاون با گوگل
+مستقیم وارد پنل معلم می‌شود». بازخوانی SupabaseAuthRepository.currentProfile
+نشان داد گارد realEmailStudent فقط وقتی role==STUDENT بود rpc
+native_my_registration_state_v1 را صدا می‌زد. چون trigger قدیمی وب‌اپ
+profile حساب گوگلی تازه را با role='teacher' می‌سازد، شرط کلاینت false
+می‌شد و منطق سروری V60.3 (معلم خالی → نیازمند setup) هرگز خوانده نمی‌شد؛
+پس SQL درست بود ولی هیچ‌وقت اجرا نمی‌شد. رفع V60.3 لازم اما ناکافی بود.
+```
+
+### راه‌حل (فقط کلاینت — SQL V60.3 باید اجرا شده باشد)
+
+```text
+SupabaseAuthRepository: گارد جدید setupCandidate = role==STUDENT یا
+(role==TEACHER و username خالی)؛ realEmailAccount مثل قبل حساب‌های
+@student.exam.local را حذف می‌کند. برای کاندیداها rpc state صدا زده می‌شود
+و تصمیم نهایی با سرور است (V60.3: معلمِ واقعاً خالی + ردیف نقش انتخابی).
+معلم واقعی username دارد → کاندیدا نیست → هیچ rpc اضافه‌ای در ورودهای
+عادی معلم/مدیر انجام نمی‌شود. معلم بدون username ولی با کلاس/آزمون/
+دانش‌آموز/عضویت: سرور false برمی‌گرداند → فقط یک rpc اضافه، بدون تغییر رفتار.
+```
+
+### تأیید
+
+```text
+جدید: V60_3_1GoogleTeacherStateClientHotfixTest (۱ تست ۵ بندی) · verify:
+require جدید V60.3.1 · شبیه‌سازی سبز · FINAL_NATIVE_VERIFY=PASS EXIT=0
+سناریوها: گوگل مدیر جدید → state سرور خوانده می‌شود → requires_teacher_setup
+=true + pending_role=manager → صفحهٔ تکمیل مدیر؛ گوگل معلم جدید → صفحهٔ
+تکمیل معلم؛ ورود معلم/مدیر کامل → username دارد → بدون rpc اضافه؛
+دانش‌آموز محلی → realEmailAccount=false → مثل قبل.
+```
+
+### عملیات
+
+```text
+پچ: V60_3_1_google_teacher_state_client_hotfix — فایل‌ها:
+SupabaseAuthRepository.kt / تست جدید / verify / changelog / هندآف
+نیازمند build جدید (تغییر کلاینت) + پیش‌نیاز: SQL V60_3 اجرا شده باشد
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

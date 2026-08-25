@@ -1640,6 +1640,14 @@ require("coalesce(p.username, '') = ''" in _state_sql
         and "from public.native_registration_roles r" in _state_sql,
         "V60.3 empty-teacher setup detection is missing")
 
+# ---- V60.3.1: the client must also ask the server for teacher profiles ----
+# گارد قدیمی realEmailStudent فقط نقش student را می‌پرسید؛ trigger قدیمی نقش
+# teacher می‌سازد پس منطق سروری V60.3 هرگز خوانده نمی‌شد.
+require("val setupCandidate = role == UserRole.STUDENT ||" in _auth_repo
+        and "(role == UserRole.TEACHER && profile.username.isNullOrBlank())" in _auth_repo
+        and "if (realEmailAccount && setupCandidate)" in _auth_repo,
+        "V60.3.1 client-side setup candidate check is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

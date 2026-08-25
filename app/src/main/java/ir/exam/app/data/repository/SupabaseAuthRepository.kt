@@ -79,9 +79,16 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
             profile.role.equals("teacher", true) -> UserRole.TEACHER
             else -> UserRole.STUDENT
         }
-        val realEmailStudent = role == UserRole.STUDENT &&
+        // V60.3.1 — گارد قدیمی فقط نقش student را از سرور می‌پرسید؛ ولی trigger
+        // قدیمی وب‌اپ profile حساب گوگلی تازه را با نقش teacher می‌سازد، پس
+        // state سرور (V60.3) هرگز خوانده نمی‌شد و ثبت‌نام مدیر مستقیم وارد پنل
+        // معلم می‌شد. حالا «معلم بدون نام کاربری» هم پرسیده می‌شود؛ تشخیص نهایی
+        // (معلمِ واقعاً خالی با نقش انتخابی ثبت‌نام) با خود سرور است.
+        val realEmailAccount =
             !sessionUser.email.orEmpty().endsWith("@student.exam.local", ignoreCase = true)
-        val requiresTeacherSetup = if (realEmailStudent) {
+        val setupCandidate = role == UserRole.STUDENT ||
+            (role == UserRole.TEACHER && profile.username.isNullOrBlank())
+        val requiresTeacherSetup = if (realEmailAccount && setupCandidate) {
             val state = SupabaseProvider.client.postgrest.rpc("native_my_registration_state_v1")
                 .decodeAs<JsonObject>()
             state["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
