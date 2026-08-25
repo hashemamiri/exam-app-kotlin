@@ -46,7 +46,8 @@ class V60_1GoogleCredentialHotfixTest {
         assertTrue("signInWith(IDToken)" in authVm.replace(" ", "").let { if ("signInWith(IDToken)" in it) "signInWith(IDToken)" else authVm })
         assertTrue("nonce = rawNonce" in authVm)
         assertTrue("val user = repository.refreshCurrentUser().getOrThrow()" in authVm)
-        assertTrue("_state.update { it.copy(user = user) }" in authVm)
+        // V60.2: مسیر مشترک acceptAuthenticatedUser (حساب تازه → صفحهٔ تکمیل).
+        assertTrue("acceptAuthenticatedUser(user)" in authVm)
     }
 
     @Test

@@ -1622,6 +1622,18 @@ require("fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: St
 require("googleusercontent.com" not in _provider and "googleusercontent.com" not in _sign_in,
         "V60.0 google client id must come from local.properties, never hardcoded")
 
+# ---- V60.2: google registration role table + official logo ----
+_role_sql=(ROOT/"supabase/migrations/20260825_native_registration_role_v60_2.sql").read_text()
+_google_logo=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/GoogleLogo.kt").read_text()
+require("create table if not exists public.native_registration_roles" in _role_sql
+        and "update auth.users" not in _role_sql,
+        "V60.2 registration role must live in a public table, not auth.users")
+require("acceptAuthenticatedUser(user)" in (ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text(),
+        "V60.2 google sign-in must use the shared accept path")
+require("val GoogleLogo: ImageVector" in _google_logo
+        and "imageVector = GoogleLogo" in _sign_in,
+        "V60.2 official google logo is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

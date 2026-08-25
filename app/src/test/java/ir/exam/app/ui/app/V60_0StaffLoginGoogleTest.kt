@@ -49,7 +49,8 @@ class V60_0StaffLoginGoogleTest {
         assertTrue("CredentialManager.create(context)" in signIn)
         assertTrue("Text(\"ثبت‌نام با گوگل\")" in signIn)
         // آیکن دارد و بستن توسط کاربر خطا نیست
-        assertTrue("Icons.Outlined.AccountCircle" in signIn)
+        // V60.2: لوگوی رسمی گوگل جایگزین شد.
+        assertTrue("GoogleLogo" in signIn)
         assertTrue("GetCredentialCancellationException" in signIn)
     }
 

@@ -312,31 +312,22 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             provider = Google
             nonce = rawNonce
         }
-        runCatching {
+        // V60.2 — ثبت نقش «قبل از» خواندن state؛ خطای بدنهٔ RPC هم بررسی می‌شود
+        // (پیش‌تر بلعیده می‌شد و ثبت‌نام مدیر با گوگل حساب معلم می‌ساخت).
+        val roleResult = runCatching {
             ir.exam.app.data.remote.SupabaseProvider.client.postgrest.rpc(
                 "native_set_registration_role_v1",
                 kotlinx.serialization.json.buildJsonObject {
                     put("p_role", kotlinx.serialization.json.JsonPrimitive(role))
                 }
-            )
-        }
+            ).decodeAs<kotlinx.serialization.json.JsonObject>()
+        }.getOrNull()
+        (roleResult?.get("error") as? kotlinx.serialization.json.JsonPrimitive)
+            ?.content?.takeIf(String::isNotBlank)?.let(::error)
         val user = repository.refreshCurrentUser().getOrThrow()
-        _state.update { it.copy(user = user) }
-    }
-
-    fun completeGoogleRegistration(role: String) = request {
-        runCatching {
-            ir.exam.app.data.remote.SupabaseProvider.client.postgrest.rpc(
-                "native_set_registration_role_v1",
-                kotlinx.serialization.json.buildJsonObject {
-                    put("p_role", kotlinx.serialization.json.JsonPrimitive(role))
-                }
-            )
-        } // خطای ثبت نقش مانع refresh نمی‌شود؛ نقش پیش‌فرض teacher است.
-        // V60.1 — باگ: user فقط getOrThrow می‌شد و در state نمی‌نشست؛ AuthGate
-        // همچنان صفحهٔ ورود را نشان می‌داد («اتفاقی نمی‌افتد»).
-        val user = repository.refreshCurrentUser().getOrThrow()
-        _state.update { it.copy(user = user) }
+        // V60.2 — مسیر مشترک: حساب تازه به صفحهٔ تکمیل ثبت‌نام (معلم/مدیر بر
+        // اساس pendingRegistrationRole) می‌رود؛ حساب کامل مستقیم وارد می‌شود.
+        acceptAuthenticatedUser(user)
     }
 
     /** V60.0 — نمایش خطای جریان گوگل (بستن توسط کاربر خطا نیست). */

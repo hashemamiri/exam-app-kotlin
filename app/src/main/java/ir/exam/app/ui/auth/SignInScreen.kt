@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -411,9 +409,11 @@ private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, r
         enabled = !state.isLoading,
         modifier = Modifier.fillMaxWidth()
     ) {
+        // V60.2 — لوگوی رسمی چهاررنگ گوگل؛ tint خنثی تا رنگ‌ها حفظ شوند.
         Icon(
-            imageVector = Icons.Outlined.AccountCircle,
+            imageVector = GoogleLogo,
             contentDescription = null,
+            tint = androidx.compose.ui.graphics.Color.Unspecified,
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(8.dp))

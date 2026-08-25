@@ -8680,3 +8680,51 @@ SQL / Edge / Secret جدید: ندارد · Dependency: credentials 1.3.0 + goog
 پیش‌نیاز: V60.0 (+ پچ CI V60_0_2)
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۸۰) V60.2 — هات‌فیکس: نقش مدیر در ثبت‌نام گوگل + لوگوی رسمی
+
+### ریشه‌ها
+
+```text
+۱) «گوگل از قسمت مدیر حساب معلم می‌سازد»: الف) native_set_registration_role_v1
+   قبلی روی auth.users UPDATE می‌زد؛ مالک توابع security definer در Supabase
+   اجازهٔ UPDATE روی auth.users را ندارد → خطا در «بدنهٔ» RPC برمی‌گشت و
+   runCatching کلاینت آن را می‌بلعید → registration_role هرگز ثبت نمی‌شد →
+   pending_role پیش‌فرض teacher. ب) signInWithGoogleIdToken به‌جای مسیر
+   مشترک acceptAuthenticatedUser مستقیم user را می‌نشاند.
+۲) آیکن دکمه AccountCircle عمومی بود.
+```
+
+### راه‌حل
+
+```text
+- SQL جدید 20260825_native_registration_role_v60_2.sql: جدول
+  native_registration_roles (PK user_id، RLS خود کاربر، upsert) + بازنویسی
+  native_set_registration_role_v1 (insert on conflict به‌جای update
+  auth.users) + native_my_registration_state_v1: pending_role اول از جدول
+  ما، بعد metadata (سازگاری عقب‌رو با ثبت‌نام OTP قدیمی).
+- AuthViewModel: بررسی error بدنهٔ RPC (دیگر بلعیده نمی‌شود) +
+  acceptAuthenticatedUser(user) به‌جای نشاندن مستقیم (حساب تازه →
+  MANAGER_REGISTER_SETUP/TEACHER_REGISTER_SETUP درست)؛ تابع مردهٔ
+  completeGoogleRegistration حذف شد.
+- GoogleLogo.kt جدید: وکتور G چهاررنگ رسمی (4285F4/34A853/FBBC05/EA4335)
+  با tint=Unspecified؛ AccountCircle حذف.
+```
+
+### تأیید
+
+```text
+جدید: V60_2GoogleRoleLogoHotfixTest (۳ تست) · هماهنگی: V60_0 (لوگو)، V60_1
+(accept مسیر مشترک) · verify: ۳ require جدید · اسکن ۸۷۸ needle → فقط هشدار
+کاذب V55_16 · FINAL_NATIVE_VERIFY=PASS EXIT=0 kotlin_files=202
+```
+
+### عملیات
+
+```text
+پچ: V60_2_google_role_logo_hotfix — فایل‌ها: AuthViewModel/SignInScreen/
+GoogleLogo(جدید)/SQL جدید/V60_2 تست/V60_0+V60_1 تست هماهنگ/verify/changelog
+اقدام سرور (الزامی): اجرای V60_2_registration_role.sql در SQL Editor
+پیش‌نیاز: V60.1
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```
