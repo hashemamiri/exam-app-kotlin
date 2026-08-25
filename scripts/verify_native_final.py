@@ -1634,6 +1634,12 @@ require("val GoogleLogo: ImageVector" in _google_logo
         and "imageVector = GoogleLogo" in _sign_in,
         "V60.2 official google logo is missing")
 
+# ---- V60.3: empty trigger-made teachers must still enter setup ----
+_state_sql=(ROOT/"supabase/migrations/20260825_native_google_role_state_v60_3.sql").read_text()
+require("coalesce(p.username, '') = ''" in _state_sql
+        and "from public.native_registration_roles r" in _state_sql,
+        "V60.3 empty-teacher setup detection is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

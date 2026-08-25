@@ -8728,3 +8728,51 @@ GoogleLogo(جدید)/SQL جدید/V60_2 تست/V60_0+V60_1 تست هماهنگ/v
 پیش‌نیاز: V60.1
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۸۱) V60.3 — هات‌فیکس: گوگلِ مدیر مستقیم وارد پنل معلم می‌شد
+
+### ریشه (با مدرک از V38.1)
+
+```text
+گزارش: «جیمیل کاملاً جدید از مسیر مدیر → مستقیم پنل معلم». ask_user تأیید
+کرد: بدون صفحهٔ تکمیل. ریشه: trigger قدیمی وب‌اپ (روی خود سرور، خارج از
+ریپو) profile هر حساب ایمیلی تازه را با role='teacher' می‌سازد — همان که
+کامنت V38.1 مستند کرده و مسیر OTP مدیر را با «پذیرش معلم خالی» دور زده
+بود. requires_teacher_setup فقط role='student' را چک می‌کرد → برای کاربر
+گوگلی تازه false → acceptAuthenticatedUser مستقیم وارد پنل معلم می‌کرد و
+اصلاً به rpc نقش/صفحهٔ تکمیل نمی‌رسید.
+```
+
+### راه‌حل (فقط SQL — کلاینت سازگار است)
+
+```text
+20260825_native_google_role_state_v60_3.sql: بازنویسی
+native_my_registration_state_v1 — requires_teacher_setup=true اگر:
+(الف) حالت قدیمی: role='student' و بدون مالک؛ یا
+(ب) V60.3: role='teacher' با username خالی + وجود ردیف در
+native_registration_roles (یعنی ثبت‌نام گوگل شروع شده) + هیچ کلاس/آزمون/
+دانش‌آموز/عضویت فعال (همان گاردهای V38.1؛ معلم واقعی هرگز به setup
+برنمی‌گردد). pending_role همچنان اول از جدول نقش‌ها. توابع تکمیل v37/v38.1
+از قبل profile معلم خالی را می‌پذیرند؛ تغییر کلاینتی لازم نبود.
+```
+
+### تأیید
+
+```text
+جدید: V60_3GoogleEmptyTeacherStateHotfixTest (۱ تست ۹ بندی) · verify: require
+جدید · شبیه‌سازی سبز · FINAL_NATIVE_VERIFY=PASS EXIT=0
+سناریوهای بازبینی‌شده: معلم واقعی (کلاس/آزمون/عضویت دارد) → setup نمی‌رود؛
+کاربر گوگلی معلم → setup معلم؛ کاربر گوگلی مدیر → setup مدیر؛ OTP قدیمی →
+بدون تغییر (native_registration_roles ندارد → شرط ب فعال نمی‌شود؛ مسیر
+metadata قبلی سالم).
+```
+
+### عملیات
+
+```text
+پچ: V60_3_google_role_state_hotfix — فایل‌ها: SQL جدید/V60_3 تست/verify/
+changelog/هندآف — کد کلاینت تغییر ندارد
+اقدام سرور (الزامی): اجرای V60_3_google_role_state.sql
+پیش‌نیاز: V60.2 (جدول native_registration_roles باید موجود باشد)
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```
