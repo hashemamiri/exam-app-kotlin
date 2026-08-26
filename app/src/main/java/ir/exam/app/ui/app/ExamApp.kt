@@ -231,6 +231,14 @@ private fun AuthenticatedExamApp(
         page = MainPage.SCHOOL
     }
 
+    // V61.5 — «مدرسه جدید» از +: مدیر ساخت مدرسه؛ معلم عضویت با کد دعوت.
+    fun createSchool() {
+        closeTransientNavigation()
+        schoolStudentsSelected = false
+        schoolLaunchAction = SchoolLaunchAction.CREATE_SCHOOL
+        page = MainPage.SCHOOL
+    }
+
     LaunchedEffect(user.id, user.role) {
         val teacherOnly = setOf(
             MainPage.BUILDER,
@@ -339,6 +347,7 @@ private fun AuthenticatedExamApp(
         onCreateStudent = ::createStudent,
         onCreateExam = if (user.role == UserRole.MANAGER) ::createManagerTeacher else ::createExam,
         onCreateClass = ::createClass,
+        onCreateSchool = ::createSchool,
         onStudentExamJoin = { closeTransientNavigation(); studentExamDialog = true },
         onSignOut = { closeTransientNavigation(); showSignOut = true }
     ) {
@@ -730,6 +739,7 @@ private fun AuthenticatedShell(
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
     onCreateClass: () -> Unit,
+    onCreateSchool: () -> Unit,
     onStudentExamJoin: () -> Unit,
     onSignOut: () -> Unit,
     content: @Composable () -> Unit
@@ -939,6 +949,7 @@ private fun AuthenticatedShell(
                         onCreateStudent = onCreateStudent,
                         onCreateExam = onCreateExam,
                         onCreateClass = onCreateClass,
+                        onCreateSchool = onCreateSchool,
                         primaryTitle = if (user.role == UserRole.MANAGER) "دعوت معلم" else "آزمون جدید",
                         primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.PersonAdd else Design69Icons.ExamAdd
                     )

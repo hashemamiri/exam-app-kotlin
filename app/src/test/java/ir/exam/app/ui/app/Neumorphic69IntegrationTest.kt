@@ -68,7 +68,8 @@ class Neumorphic69IntegrationTest {
 
     @Test
     fun `quick add and management cards preserve selected real contracts`() {
-        assertEquals(3, Design69QuickAddContract.ACTION_COUNT)
+        // V61.5 — عمل چهارم «مدرسه جدید» به پنجرهٔ + اضافه شد.
+        assertEquals(4, Design69QuickAddContract.ACTION_COUNT)
         assertEquals(135, Design69QuickAddContract.OPEN_ROTATION_DEGREES)
         assertEquals(6, Design69ManagementCardsContract.CARD_COUNT)
         assertEquals(52, Design69ManagementCardsContract.DRAG_THRESHOLD_DP)

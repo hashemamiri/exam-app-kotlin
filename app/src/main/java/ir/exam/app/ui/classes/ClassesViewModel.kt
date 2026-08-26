@@ -49,11 +49,35 @@ data class ClassesState(
     val selectedSchool: TeacherSchoolItem? = null,
     val schoolClasses: List<SchoolClass> = emptyList(),
     // V61.0 — فقط برای مدیر: معلم‌های مدرسه برای انتخاب معلمِ کلاس جدید.
-    val schoolTeachers: List<SchoolTeacherPick> = emptyList()
+    val schoolTeachers: List<SchoolTeacherPick> = emptyList(),
+    // V61.5 — فیلتر لیست دانش‌آموزان + متادادهٔ فیلتر (معلم/عضویت مدرسه).
+    val studentFilter: StudentListFilter = StudentListFilter(),
+    val filterMeta: Map<String, StudentFilterMeta> = emptyMap()
 )
 
 /** V61.0 — معلم قابل انتخاب هنگام ساخت کلاس توسط مدیر. */
 data class SchoolTeacherPick(val id: String, val name: String)
+
+/** V61.5 — متادادهٔ فیلتر هر دانش‌آموز: معلم مالک و عضویت مدرسه. */
+data class StudentFilterMeta(
+    val teacherId: String = "",
+    val teacherName: String = "",
+    val inSchool: Boolean = false
+)
+
+/** V61.5 — فیلترهای فعال لیست دانش‌آموزان؛ همه با هم قابل ترکیب‌اند. */
+data class StudentListFilter(
+    val grade: String? = null,
+    val classId: String? = null,
+    val gender: String? = null,
+    val unassigned: Boolean = false,
+    val inSchool: Boolean = false,
+    val teacherId: String? = null
+) {
+    val isActive: Boolean
+        get() = grade != null || classId != null || gender != null ||
+            unassigned || inSchool || teacherId != null
+}
 
 class ClassesViewModel(
     private val repository: SchoolRepository = SupabaseSchoolRepository(),
@@ -121,6 +145,31 @@ class ClassesViewModel(
             else -> repository.updateClass(id, name, grade, fieldOfStudy).getOrThrow()
         }
         reloadData()
+    }
+
+    /** V61.5 — تنظیم فیلترهای لیست دانش‌آموزان. */
+    fun setStudentFilter(filter: StudentListFilter) {
+        _state.update { it.copy(studentFilter = filter) }
+    }
+
+    /** V61.5 — متادادهٔ فیلتر (معلم مالک/عضویت مدرسه)؛ نبودن SQL بی‌صدا خالی می‌ماند. */
+    fun loadFilterMeta() = viewModelScope.launch {
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc("native_student_filter_meta_v61")
+                .decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?.takeIf(String::isNotBlank)?.let(::error)
+            ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+                val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+                id to StudentFilterMeta(
+                    teacherId = (obj["teacher_id"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
+                    teacherName = (obj["teacher_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
+                    inSchool = (obj["in_school"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true"
+                )
+            }.toMap()
+        }.onSuccess { meta -> _state.update { it.copy(filterMeta = meta) } }
+            .onFailure { }
     }
 
     /** V61.1 — مدیر مدرسهٔ جدید می‌سازد؛ لیست مدارس تازه می‌شود. */

@@ -38,6 +38,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ToggleOff
 import androidx.compose.material.icons.outlined.ToggleOn
@@ -55,6 +56,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -72,6 +74,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,9 +103,10 @@ import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CREATE_CLASS }
+enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CREATE_CLASS, CREATE_SCHOOL }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,6 +125,8 @@ fun SchoolManagementScreen(
     var creatingClass by remember { mutableStateOf(false) }
     // V61.1 — پنجرهٔ ساخت مدرسهٔ جدید (فقط مدیر).
     var creatingSchool by remember { mutableStateOf(false) }
+    // V61.5 — پنجرهٔ عضویت معلم در مدرسهٔ جدید با کد دعوت.
+    var joiningSchool by remember { mutableStateOf(false) }
     var deletingClass by remember { mutableStateOf<SchoolClass?>(null) }
     var showMemberPicker by remember { mutableStateOf(false) }
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
@@ -184,6 +190,15 @@ fun SchoolManagementScreen(
                 creatingClass = true
                 onLaunchActionConsumed()
             }
+            // V61.5 — «مدرسه جدید» از دکمهٔ +: مدیر دیالوگ ساخت مدرسه؛ معلم
+            // دیالوگ عضویت با کد دعوت (joiningSchool).
+            SchoolLaunchAction.CREATE_SCHOOL -> {
+                showStudents = false
+                viewModel.closeClass()
+                viewModel.openSchools()
+                if (managerTeacherPicker) creatingSchool = true else joiningSchool = true
+                onLaunchActionConsumed()
+            }
             null -> Unit
         }
     }
@@ -222,7 +237,11 @@ fun SchoolManagementScreen(
                     knownPasswordOf = { username -> knownPasswords[username?.lowercase()] }
                 )
                 showStudents -> StudentsContent(
-                    students = filteredStudents(state.students, state.query),
+                    // V61.5 — اول فیلتر، بعد جست‌وجو (جست‌وجو فقط داخل نتیجهٔ فیلتر).
+                    students = filteredStudents(
+                        applyStudentFilter(state.students, state.studentFilter, state.classes, state.filterMeta),
+                        state.query
+                    ),
                     query = state.query,
                     onQuery = viewModel::setQuery,
                     onToggle = viewModel::setStudentActive,
@@ -235,7 +254,12 @@ fun SchoolManagementScreen(
                     },
                     classes = state.classes,
                     onAddToClasses = viewModel::addStudentToClasses,
-                    knownPasswordOf = { username -> knownPasswords[username?.lowercase()] }
+                    knownPasswordOf = { username -> knownPasswords[username?.lowercase()] },
+                    filter = state.studentFilter,
+                    onFilter = viewModel::setStudentFilter,
+                    filterMeta = state.filterMeta,
+                    onLoadFilterMeta = viewModel::loadFilterMeta,
+                    showTeacherFilter = managerTeacherPicker
                 )
                 // V61.0 — نمای «مدارس» بخش کلاس‌ها: مدرسه → کلاس‌های مدرسه → roster.
                 state.schoolsOpen && state.selectedSchool != null -> SchoolClassesContent(
@@ -305,6 +329,58 @@ fun SchoolManagementScreen(
                 ) { Text("ساخت مدرسه") }
             },
             dismissButton = { TextButton(onClick = { creatingSchool = false }) { Text("انصراف") } }
+        )
+    }
+
+    if (joiningSchool) {
+        // V61.5 — عضویت معلم در مدرسهٔ جدید با کد دعوت ۶ حرفی (همان مسیر V39).
+        val joinRepository = remember { ir.exam.app.data.repository.SupabaseSchoolJoinRepository() }
+        val joinScope = rememberCoroutineScope()
+        var joinCode by remember { mutableStateOf("") }
+        var joinLoading by remember { mutableStateOf(false) }
+        var joinMessage by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { if (!joinLoading) joiningSchool = false },
+            title = { Text("عضویت در مدرسه جدید") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("کد دعوت ۶ حرفی مدیر مدرسه را وارد کنید.")
+                    OutlinedTextField(
+                        value = joinCode,
+                        onValueChange = {
+                            joinCode = it.uppercase().filter { char -> char in 'A'..'Z' || char.isDigit() }.take(6)
+                            joinMessage = null
+                        },
+                        label = { Text("کد دعوت مدرسه") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    joinMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = joinCode.length == 6 && !joinLoading,
+                    onClick = {
+                        joinLoading = true
+                        joinScope.launch {
+                            joinRepository.join(joinCode)
+                                .onSuccess { schoolName ->
+                                    joinLoading = false
+                                    joiningSchool = false
+                                    viewModel.openSchools()
+                                }
+                                .onFailure { error ->
+                                    joinLoading = false
+                                    joinMessage = error.message ?: "عضویت ناموفق بود."
+                                }
+                        }
+                    }
+                ) { Text(if (joinLoading) "در حال عضویت..." else "عضویت") }
+            },
+            dismissButton = {
+                TextButton(onClick = { joiningSchool = false }, enabled = !joinLoading) { Text("انصراف") }
+            }
         )
     }
 
@@ -667,9 +743,16 @@ private fun StudentsContent(
     onExport: () -> Unit,
     classes: List<SchoolClass>,
     onAddToClasses: (String, Set<String>) -> Unit,
-    knownPasswordOf: (String?) -> String?
+    knownPasswordOf: (String?) -> String?,
+    // V61.5 — فیلتر ترکیبی لیست دانش‌آموزان.
+    filter: StudentListFilter = StudentListFilter(),
+    onFilter: (StudentListFilter) -> Unit = {},
+    filterMeta: Map<String, StudentFilterMeta> = emptyMap(),
+    onLoadFilterMeta: () -> Unit = {},
+    showTeacherFilter: Boolean = false
 ) {
     var searchOpen by remember { mutableStateOf(query.isNotBlank()) }
+    var filterOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             Modifier.fillMaxWidth(),
@@ -688,6 +771,25 @@ private fun StudentsContent(
                     Icon(Icons.Outlined.Search, contentDescription = "جست‌وجوی دانش‌آموز")
                 }
             }
+            // V61.5 — آیکن فیلتر کنار جست‌وجو؛ رنگ فعال یعنی فیلتری اعمال شده.
+            IconButton(onClick = { onLoadFilterMeta(); filterOpen = true }) {
+                Icon(
+                    Icons.Outlined.FilterList,
+                    contentDescription = "فیلتر دانش‌آموزان",
+                    tint = if (filter.isActive) MaterialTheme.colorScheme.primary
+                    else LocalContentColor.current
+                )
+            }
+        }
+        if (filterOpen) {
+            StudentFilterDialog(
+                filter = filter,
+                classes = classes,
+                filterMeta = filterMeta,
+                showTeacherFilter = showTeacherFilter,
+                onDismiss = { filterOpen = false },
+                onApply = { onFilter(it); filterOpen = false }
+            )
         }
         AnimatedVisibility(
             visible = searchOpen,
@@ -727,6 +829,113 @@ private fun StudentsContent(
             }
         }
     }
+}
+
+/**
+ * V61.5 — پنجرهٔ فیلتر لیست دانش‌آموزان؛ گزینه‌ها تکی یا با هم قابل انتخاب‌اند:
+ * پایه، کلاس، دختر/پسر، عضو نشده، مدرسه و (فقط مدیر) معلم.
+ */
+@Composable
+private fun StudentFilterDialog(
+    filter: StudentListFilter,
+    classes: List<SchoolClass>,
+    filterMeta: Map<String, StudentFilterMeta>,
+    showTeacherFilter: Boolean,
+    onDismiss: () -> Unit,
+    onApply: (StudentListFilter) -> Unit
+) {
+    var draft by remember(filter) { mutableStateOf(filter) }
+    val teachers = remember(filterMeta) {
+        filterMeta.values
+            .filter { it.teacherId.isNotBlank() }
+            .distinctBy { it.teacherId }
+            .sortedBy { it.teacherName }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("فیلتر دانش‌آموزان") },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    Text("پایه", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    GradeOdometerPicker(
+                        value = draft.grade.orEmpty(),
+                        onValueChange = { draft = draft.copy(grade = it.trim().takeIf(String::isNotBlank)) },
+                        emptyLabel = "همه پایه‌ها",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                item {
+                    Text("کلاس", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        classes.forEach { item ->
+                            FilterChip(
+                                selected = draft.classId == item.id,
+                                onClick = {
+                                    draft = draft.copy(
+                                        classId = if (draft.classId == item.id) null else item.id,
+                                        unassigned = false
+                                    )
+                                },
+                                label = { Text(item.name) }
+                            )
+                        }
+                    }
+                }
+                item {
+                    Text("جنسیت و عضویت", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        FilterChip(
+                            selected = draft.gender == "female",
+                            onClick = { draft = draft.copy(gender = if (draft.gender == "female") null else "female") },
+                            label = { Text("دختر") }
+                        )
+                        FilterChip(
+                            selected = draft.gender == "male",
+                            onClick = { draft = draft.copy(gender = if (draft.gender == "male") null else "male") },
+                            label = { Text("پسر") }
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        FilterChip(
+                            selected = draft.unassigned,
+                            onClick = { draft = draft.copy(unassigned = !draft.unassigned, classId = null) },
+                            label = { Text("عضو نشده") }
+                        )
+                        FilterChip(
+                            selected = draft.inSchool,
+                            onClick = { draft = draft.copy(inSchool = !draft.inSchool) },
+                            label = { Text("مدرسه") }
+                        )
+                    }
+                }
+                if (showTeacherFilter) {
+                    item { Text("معلم", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+                    items(teachers.size) { index ->
+                        val teacher = teachers[index]
+                        FilterChip(
+                            selected = draft.teacherId == teacher.teacherId,
+                            onClick = {
+                                draft = draft.copy(
+                                    teacherId = if (draft.teacherId == teacher.teacherId) null else teacher.teacherId
+                                )
+                            },
+                            label = { Text(teacher.teacherName.ifBlank { "معلم" }) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onApply(draft) }) { Text("اعمال فیلتر") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { onApply(StudentListFilter()) }) { Text("حذف فیلترها") }
+                TextButton(onClick = onDismiss) { Text("انصراف") }
+            }
+        }
+    )
 }
 
 @Composable
@@ -1703,6 +1912,28 @@ private fun filteredStudents(items: List<StudentProfile>, query: String): List<S
             student.fatherName,
             student.classNames
         ).any { it?.lowercase()?.contains(value) == true }
+    }
+}
+
+/**
+ * V61.5 — اعمال فیلترهای ترکیبی لیست دانش‌آموزان «قبل از» جست‌وجو:
+ * اگر فیلتری فعال باشد، جست‌وجو فقط داخل نتیجهٔ فیلتر انجام می‌شود.
+ */
+internal fun applyStudentFilter(
+    items: List<StudentProfile>,
+    filter: StudentListFilter,
+    classes: List<SchoolClass>,
+    meta: Map<String, StudentFilterMeta>
+): List<StudentProfile> {
+    if (!filter.isActive) return items
+    val className = filter.classId?.let { id -> classes.firstOrNull { it.id == id }?.name }
+    return items.filter { student ->
+        (filter.grade == null || student.grade?.trim() == filter.grade) &&
+            (filter.gender == null || student.gender?.lowercase() == filter.gender) &&
+            (className == null || student.classNames.orEmpty().contains(className)) &&
+            (!filter.unassigned || student.classNames.isNullOrBlank()) &&
+            (!filter.inSchool || meta[student.id]?.inSchool == true) &&
+            (filter.teacherId == null || meta[student.id]?.teacherId == filter.teacherId)
     }
 }
 

@@ -217,8 +217,9 @@ require(all(marker in design69_menu for marker in (
 require("Design69MainMenuScreen" in app_shell and "menuOpen = !menuOpen" in app_shell and
         "BackHandler(enabled = menuOpen" in app_shell and "ModalNavigationDrawer" not in app_shell,
         "menu is not a full-page reversible state")
-require(all(marker in design69_add for marker in ("OPEN_ROTATION_DEGREES = 135","ACTION_COUNT = 3","دانش‌آموز جدید","آزمون جدید","کلاس جدید","travel.animateTo")),
-        "shared moving plus or three real quick actions incomplete")
+# V61.5 — عمل چهارم «مدرسه جدید» اضافه شد (ACTION_COUNT = 4).
+require(all(marker in design69_add for marker in ("OPEN_ROTATION_DEGREES = 135","ACTION_COUNT = 4","دانش‌آموز جدید","آزمون جدید","کلاس جدید","مدرسه جدید","travel.animateTo")),
+        "shared moving plus or four real quick actions incomplete")
 require(all(marker in design69_cards for marker in ("CARD_COUNT = 6","DRAG_THRESHOLD_DP = 52","detectDragGestures","Key.DirectionLeft","Key.DirectionRight","\"آمار\"","بانک سؤال","\"تصحیح\"","\"مانده\"","\"پاسخ\"","cards[activeIndex].subtitle")) and
         "Key.DirectionDown" not in design69_cards and "بکشید" not in design69_cards,
         "six-card horizontal-only management stack/description incomplete")
@@ -360,8 +361,10 @@ require(all(marker in member_picker for marker in (
             "GradeOdometerPicker(","includeStandardGrades = false","همه پایه‌ها"
         )) and "grades.forEach" not in member_picker,
         "toggle-off gender filters or single grade odometer missing")
-require(school_screen.count("GradeOdometerPicker(") == 4 and
-        profile_settings.count("GradeOdometerPicker(") == 1 and
+# V61.5 — یکی برای فیلتر دانش‌آموزان (school 5) و یکی برای نام مدرسهٔ سربرگ
+# (profile 2) به چرخ مشترک اضافه شد.
+require(school_screen.count("GradeOdometerPicker(") == 5 and
+        profile_settings.count("GradeOdometerPicker(") == 2 and
         not re.search(r'label\s*=\s*\{\s*Text\("پایه"\)', school_screen + profile_settings),
         "not every editable school grade uses the shared odometer")
 require(all(marker in grade_odometer for marker in (

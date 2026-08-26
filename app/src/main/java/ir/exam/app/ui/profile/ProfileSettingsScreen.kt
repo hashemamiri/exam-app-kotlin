@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.core.ui.AppFont
 import ir.exam.app.core.ui.AppearanceSettings
@@ -230,7 +231,10 @@ fun ProfileSettingsScreen(
             ) {
                 when (user.role) {
                     UserRole.TEACHER -> DataPortabilitySection(onImportExam = onImportExam)
-                    UserRole.MANAGER -> Text("پشتیبان داده‌های مدرسه در مرحله V37 فعال می‌شود.")
+                    // V61.5 — متن قدیمی «مرحله V37» حذف شد؛ توضیح واقعی وضعیت.
+                    UserRole.MANAGER -> Text(
+                        "داده‌های مدرسه (معلم‌ها، کلاس‌ها و دانش‌آموزان) به‌صورت امن روی سرور نگهداری می‌شود و نیازی به پشتیبان‌گیری دستی نیست."
+                    )
                     UserRole.STUDENT -> Text("پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.")
                 }
             }
@@ -907,7 +911,32 @@ private fun HeaderSection(
                     OutlinedTextField(header.province, onProvince, label = { Text("استان") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.city, onCity, label = { Text("شهر / شهرستان") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(header.district, onDistrict, label = { Text("منطقه / ناحیه") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(header.school, onSchool, label = { Text("نام مدرسه") }, modifier = Modifier.fillMaxWidth())
+                    // V61.5 — نام مدرسه از لیست مدارس عضو انتخاب می‌شود؛ «سایر» همان
+                    // فیلد را قابل تایپ می‌کند (چرخ مشترک پایه با دادهٔ مدارس).
+                    val memberSchools = remember { mutableStateOf<List<String>>(emptyList()) }
+                    LaunchedEffect(Unit) {
+                        runCatching {
+                            val raw = ir.exam.app.data.remote.SupabaseProvider.client
+                                .postgrest.rpc("native_teacher_schools_v61")
+                                .decodeAs<kotlinx.serialization.json.JsonObject>()
+                            ((raw["items"] as? kotlinx.serialization.json.JsonArray)
+                                ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+                                ((element as? kotlinx.serialization.json.JsonObject)
+                                    ?.get("name") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                            }.filter(String::isNotBlank)
+                        }.onSuccess { memberSchools.value = it }
+                    }
+                    GradeOdometerPicker(
+                        value = header.school,
+                        onValueChange = onSchool,
+                        modifier = Modifier.fillMaxWidth(),
+                        availableGrades = memberSchools.value,
+                        includeStandardGrades = false,
+                        emptyLabel = "بدون مدرسه",
+                        label = "نام مدرسه",
+                        standardValues = emptyList(),
+                        customLabel = "سایر مدرسه"
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         GradeOdometerPicker(
                             value = header.grade,

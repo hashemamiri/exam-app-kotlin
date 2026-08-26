@@ -150,12 +150,20 @@ fun ManagerTeachersScreen(
                                 )
                             )
                         }
-                        if (!invite.used && !invite.revoked) {
+                        // V61.5 — سطل زباله روی همهٔ کارت‌ها؛ کد استفاده‌نشده بلافاصله
+                        // منقضی می‌شود و پیام حذف همین را می‌گوید.
+                        run {
+                            val wasUnused = !invite.used && !invite.revoked
                             androidx.compose.material3.IconButton(onClick = {
                                 invites = invites.filterNot { it.id == invite.id }
+                                message = if (wasUnused) {
+                                    "کارت حذف شد و کد استفاده‌نشده بلافاصله منقضی شد."
+                                } else "کارت حذف شد."
                                 scope.launch {
-                                    repository.revokeInvite(invite.id)
-                                        .onFailure { error = "کارت حذف شد؛ ابطال سروری ناموفق بود: ${safeManagerError(it)}" }
+                                    if (wasUnused) {
+                                        repository.revokeInvite(invite.id)
+                                            .onFailure { error = "کارت حذف شد؛ ابطال سروری ناموفق بود: ${safeManagerError(it)}" }
+                                    }
                                 }
                             }) {
                                 androidx.compose.material3.Icon(
@@ -295,7 +303,10 @@ fun ManagerTeachersScreen(
     }
 }
 
-private fun inviteRemainingText(expiresAt: String, _used: Boolean, _revoked: Boolean, now: Long): String {
+private fun inviteRemainingText(expiresAt: String, used: Boolean, revoked: Boolean, now: Long): String {
+    // V61.5 — کدِ استفاده‌شده زمان‌سنج ندارد؛ شمارش همان لحظه متوقف می‌شود.
+    if (used) return "کد استفاده شد؛ زمان‌سنج متوقف شد."
+    if (revoked) return "کد باطل شده است."
     val expiry = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() }
         .recoverCatching { java.time.OffsetDateTime.parse(expiresAt).toInstant().toEpochMilli() }
         .recoverCatching { java.time.LocalDateTime.parse(expiresAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }

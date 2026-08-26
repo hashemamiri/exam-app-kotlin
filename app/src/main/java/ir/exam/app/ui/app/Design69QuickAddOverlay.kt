@@ -56,7 +56,8 @@ import kotlin.math.roundToInt
 object Design69QuickAddContract {
     const val TRAVEL_DURATION_MS = 620
     const val OPEN_ROTATION_DEGREES = 135
-    const val ACTION_COUNT = 3
+    // V61.5 — عمل چهارم «مدرسه جدید» (مدیر: ساخت مدرسه؛ معلم: عضویت با کد دعوت).
+    const val ACTION_COUNT = 4
 }
 
 /**
@@ -68,6 +69,8 @@ fun Design69QuickAddOverlay(
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
     onCreateClass: () -> Unit,
+    // V61.5 — «مدرسه جدید»: مدیر مدرسه می‌سازد؛ معلم با کد دعوت عضو می‌شود.
+    onCreateSchool: () -> Unit = {},
     primaryTitle: String = "آزمون جدید",
     primaryIcon: ImageVector = Design69Icons.ExamAdd
 ) {
@@ -176,6 +179,16 @@ fun Design69QuickAddOverlay(
             targetY = 88.dp,
             modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateClass) }
+
+        // V61.5 — عمل چهارم پایینِ مثلث: مدرسه جدید.
+        QuickAddAction(
+            progress = travel.value,
+            title = "مدرسه جدید",
+            icon = Design69Icons.Data,
+            targetX = 0.dp,
+            targetY = 180.dp,
+            modifier = Modifier.align(Alignment.Center)
+        ) { close(onCreateSchool) }
 
         Box(
             Modifier

@@ -9056,3 +9056,65 @@ changelog/هندآف.
 سلامت‌سنجی: select to_regprocedure('public.native_add_student_to_classes_v22(uuid,jsonb)') is null;
 نیازمند build جدید.
 ```
+
+## ۱۸۷) V61.5 — مدرسه جدید در +، فیلتر دانش‌آموزان، کارت‌های دعوت، سربرگ مدرسه
+
+### قرارداد جدید ورک‌اسپیس (الزامی برای پچ‌های بعدی)
+
+```text
+ریشهٔ /home/user فقط فایل‌های «درخواست جاری» را دارد. دو پوشهٔ ثابت:
+- /home/user/sql   → همهٔ فایل‌های V*.sql تحویلی قبلی
+- /home/user/patch → همهٔ فایل‌های V*.patch تحویلی قبلی
+با شروع هر درخواست جدید، فایل‌های ریشه (پچ/SQL درخواست قبلی) به این دو
+پوشه منتقل می‌شوند و خروجی‌های جدید در ریشه ساخته می‌شوند. (حذف تصاویر
+uploads هم انجام شد — طبق خواستهٔ کاربر در هندآف نمی‌آید جز همین اشاره.)
+```
+
+### درخواست‌ها و پیاده‌سازی
+
+```text
+۱) متن کارت «داده‌ها»ی مدیر (عکس: «پشتیبان داده‌های مدرسه در مرحله V37 فعال
+می‌شود») → ProfileSettingsScreen: توضیح واقعی (دادهٔ سروری؛ پشتیبان دستی
+لازم نیست).
+۲) پنجرهٔ + هر دو نقش: عمل چهارم «مدرسه جدید» (ACTION_COUNT=4، پایین مثلث
+targetY=180dp، آیکن Data). ExamApp: createSchool() →
+SchoolLaunchAction.CREATE_SCHOOL → SchoolManagementScreen: مدیر دیالوگ
+creatingSchool (V61.1)؛ معلم دیالوگ joiningSchool جدید (کد ۶ حرفی →
+SupabaseSchoolJoinRepository.join → openSchools). تست Neumorphic69 (3→4)
+و بند verify «سه عمل» هماهنگ شد.
+۳) کارت‌های کد دعوت: سطل زباله حالا روی «همه» است (بلوک if برداشته شد؛
+run{} برای حفظ ساختار). حذف کد استفاده‌نشده: پیام «کارت حذف شد و کد
+استفاده‌نشده بلافاصله منقضی شد.» + revoke سروری؛ استفاده‌شده/منقضی فقط
+حذف محلی از لیست. زمان‌سنج: inviteRemainingText حالا used → «کد استفاده
+شد؛ زمان‌سنج متوقف شد.» و revoked → «کد باطل شده است.» (پارامترهای _used/
+_revoked قبلاً بی‌استفاده بودند — از V40B).
+۴) فیلتر لیست دانش‌آموزان (پنل معلم و مدیر): آیکن FilterList کنار جست‌وجو
+(رنگ primary وقتی فعال). StudentFilterDialog: پایه (چرخ مشترک)، کلاس
+(چیپ تکی)، دختر/پسر، «عضو نشده» (classNames خالی)، «مدرسه» (عضو
+school_students مدرسه‌های کاربر)، «معلم» فقط مدیر (teacher_id مالک).
+ترکیبی با هم؛ applyStudentFilter قبل از filteredStudents اجرا می‌شود پس
+جست‌وجو فقط داخل نتیجهٔ فیلتر است. متادادهٔ معلم/مدرسه از SQL جدید
+native_student_filter_meta_v61 (فایل 20260826_native_student_filter_meta_v61_5.sql)
+— لود lazy هنگام بازکردن دیالوگ؛ نبودن SQL فقط دو فیلتر مدرسه/معلم را
+بی‌اثر می‌کند.
+۵) سربرگ معلم: فیلد «نام مدرسه» با GradeOdometerPicker (بدون مقادیر
+استاندارد، availableGrades = نام مدارس عضو از native_teacher_schools_v61،
+customLabel «سایر مدرسه» → تایپ در همان فیلد V61.3). بند verify شمار
+odometer به school=5/profile=2 به‌روز شد.
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_5QuickSchoolFilterInviteTest (۴ تست) · هماهنگی:
+Neumorphic69IntegrationTest (ACTION_COUNT=4) و دو بند verify · شبیه‌سازی
+V61_5 + needleهای V20/V33/V39/V40B/V41B1 سبز · اسکن سراسری ۱۱۴۵ needle:
+صفر خطای واقعی · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_5_quick_school_filter_invite — فایل‌ها: Design69QuickAddOverlay/
+ExamApp/SchoolManagementScreen/ClassesViewModel/ManagerFoundationScreens/
+ProfileSettingsScreen + SQL جدید + تست جدید + Neumorphic69 هماهنگ +
+verify/changelog/هندآف.
+اقدام سرور (الزامی): اجرای V61_5_student_filter_meta.sql؛ سلامت‌سنجی:
+select to_regprocedure('public.native_student_filter_meta_v61()') is not null;
+نیازمند build جدید.
+```
