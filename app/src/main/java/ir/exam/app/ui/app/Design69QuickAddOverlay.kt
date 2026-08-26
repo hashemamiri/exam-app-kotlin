@@ -107,8 +107,10 @@ fun Design69QuickAddOverlay(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(top = 74.dp, bottom = 102.dp)
-                .background(colors.background)
-        )
+        ) {
+            // V62.4 — پوشانندهٔ محتوای زیر پنجرهٔ + با همان پس‌زمینهٔ یخی بدون موج.
+            ir.exam.app.ui.auth.IceAppBackdrop(Modifier.fillMaxSize(), waves = false)
+        }
 
         NeumorphicPanel(
             modifier = Modifier

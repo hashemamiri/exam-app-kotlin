@@ -9791,3 +9791,65 @@ kotlin_files=203.
 تغییر وضعیت + پیام؛ لغو → سوییچ برگردد و وضعیت عوض نشود؛ رفتار در هر
 دو جهت (فعال→غیرفعال و برعکس)؛ قفل هنگام بازگشت به برنامه مثل قبل.
 ```
+
+
+## ۲۰۲) V62.4 — پس‌زمینهٔ یخی سراسری، قفل خودکار و اسپینر ساده
+
+### درخواست‌های کاربر (با اسکرین‌شات V62.2)
+
+```text
+۱) «صفحهٔ قفل برنامه پس‌زمینهٔ یخی بگیرد و بدون نیاز به کلیک روی دکمه،
+   پنجرهٔ قفل باز شود؛ اما دکمهٔ تأیید با قفل امن دستگاه همچنان باشد.»
+۲) «اسپینر نئونی از حالت نئونی خارج شود و کمی بزرگ‌تر شود.»
+۳) «تمام برنامه پس‌زمینهٔ یخی بدون موج‌های پایین بگیرد؛ صفحات لاگین و
+   بازیابی نشست و قفل برنامه پس‌زمینهٔ یخی با موج باشند.»
+```
+
+### پیاده‌سازی
+
+```text
+AuthIceComponents.kt:
+- IceBackdrop(waves: Boolean = true): با waves=false موج‌ها کشیده
+  نمی‌شوند (if (!waves) return@Canvas) و «انیمیشن بی‌نهایت هم ساخته
+  نمی‌شود» تا پس‌زمینهٔ سراسری هر فریم invalidate نشود. چون waves در
+  طول عمر هر نمونه ثابت است، شرطی بودن rememberInfiniteTransition
+  امن است.
+- IceAppBackdrop(waves=false) عمومی (public): گارد تم تیره —
+  scheme.background.luminance() < .42f (همان آستانهٔ Neumorphic69Provider)
+  → در تاریک همان پس‌زمینهٔ تم؛ در روشن IceBackdrop.
+- NeonIceSpinner → IceSpinner: هاله‌های نئونی سه‌لایه و هستهٔ نبض‌دار
+  حذف؛ دو کمان ناهم‌جهت با sweepGradient ماند؛ ۷۲→۹۶dp و stroke ۷→۹dp.
+ExamApp.kt (AuthenticatedShell):
+- زیر Box ریشه: IceAppBackdrop(waves=false)؛ Scaffold containerColor =
+  Transparent؛ TopAppBar با topAppBarColors(Transparent)؛ Box محتوای
+  innerPadding بدون background؛ لایهٔ منوی همبرگری هم IceAppBackdrop.
+  Box ریشه background(colors.background) را نگه داشت (زیر لایهٔ یخی؛
+  fallback تیره/کیبورد).
+Design69QuickAddOverlay.kt: پوشانندهٔ پشت پنجرهٔ + (همان Box با padding
+74/102) حالا IceAppBackdrop بدون موج می‌کشد.
+AppLockUi.kt (AppLockGate):
+- Box + IceAppBackdrop(waves=true) پشت ستون «برنامه قفل است».
+- LaunchedEffect(locked, prompt): با نمایش صفحهٔ قفل، authenticate
+  خودکار صدا می‌شود (بدون کلیک)؛ پس از لغو، دکمهٔ دستی برای تلاش دوباره
+  می‌ماند (LaunchedEffect دوباره اجرا نمی‌شود چون کلیدها عوض نمی‌شوند —
+  رفتار خواسته‌شده).
+دست‌نخورده: NeumorphicTopBar/CompactMenuBar (استفاده‌نشده)، داک پایین،
+ExamBuilder/StudentExam (Scaffold های خودشان)، SessionRestoreError.
+```
+
+### تست/verify
+
+```text
+جدید: V62_4IceAppBackdropTest (۲ تست: پس‌زمینهٔ سراسری بدون موج +
+شفاف‌سازی لایه‌ها + ورود موج‌دار؛ صفحهٔ قفل موج‌دار با پنجرهٔ خودکار فقط
+در Gate). هماهنگ: V62_2NeonSessionLoadingTest بازنویسی (IceSpinner،
+size(96.dp)، نبود glow/pulse؛ برش تا fun IceAppBackdrop). verify: بند
+V62.2 به‌روز + دو require جدید V62.4 (شل و قفل). شبیه‌سازی کامل + اسکن
+import (بلااستفاده‌های ExamApp/Overlay از قبل بودند و به پچ ربطی
+ندارند): سبز؛ FINAL_NATIVE_VERIFY=PASS kotlin_files=203.
+پچ: V62_4_ice_app_backdrop — بدون SQL؛ نیازمند build جدید.
+چک‌لیست دستگاه: کل برنامه (لیست‌ها/منو/پنجرهٔ +) گرادیان یخی بدون موج؛
+ورود/بازیابی نشست/قفل با موج؛ ورود به برنامه با قفل فعال → پنجرهٔ قفل
+خودکار باز شود؛ لغو → دکمهٔ دستی کار کند؛ اسپینر سادهٔ بزرگ‌تر؛ تم تیره
+خراب نشود (پس‌زمینهٔ تیرهٔ خودش).
+```

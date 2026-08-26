@@ -1778,12 +1778,24 @@ require("androidx.compose.runtime.key(selectedTab) {" in _sign_in_v61
 _roletabs_v62=_ice.split("internal fun RoleTabs(",1)[1].split("internal fun OtpBoxes(",1)[0]
 require("indication = null" in _roletabs_v62,
         "V62.1.4 role tab ripple must be disabled")
-# V62.2 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر نئونی چندلایه.
-require("internal fun NeonIceSpinner(" in _ice
+# V62.2/V62.4 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر دو کمانهٔ
+# بزرگ (V62.4: بدون هالهٔ نئونی و هستهٔ نبض‌دار).
+require("internal fun IceSpinner(" in _ice
         and "fun IceSessionLoading(message: String)" in _ice
         and "Brush.sweepGradient(" in _ice
+        and "modifier.size(96.dp)" in _ice
         and 'IceSessionLoading(message = "در حال بازیابی نشست ورود...")' in app_shell,
-        "V62.2 neon ice session-loading screen is missing")
+        "V62.2 ice session-loading screen is missing")
+# V62.4 — پس‌زمینهٔ یخی سراسری: پوستهٔ اصلی و منو بدون موج؛ قفل برنامه با
+# موج و باز شدن خودکار پنجرهٔ قفل امن دستگاه.
+require("fun IceAppBackdrop(modifier: Modifier = Modifier, waves: Boolean = false)" in _ice
+        and "IceAppBackdrop(Modifier.fillMaxSize(), waves = false)" in app_shell
+        and "containerColor = androidx.compose.ui.graphics.Color.Transparent" in app_shell,
+        "V62.4 app-wide waveless ice backdrop is missing")
+require("IceAppBackdrop(Modifier.fillMaxSize(), waves = true)" in app_lock_ui
+        and "LaunchedEffect(locked, prompt)" in app_lock_ui
+        and 'Text("تأیید با قفل امن دستگاه")' in app_lock_ui,
+        "V62.4 auto-prompting icy app-lock screen is missing")
 # V62.3 — تغییر وضعیت قفل برنامه فقط پس از تأیید قفل امن دستگاه ذخیره می‌شود.
 require("prompt?.authenticate(togglePromptInfo(target))" in app_lock_ui
         and "private fun togglePromptInfo(enable: Boolean)" in app_lock_ui

@@ -39,6 +39,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -65,6 +66,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -104,95 +106,59 @@ internal val IceDisabledText = Color(0xFF9AB4C6)
 internal fun faNum(n: Int): String = n.toString().map { "۰۱۲۳۴۵۶۷۸۹"[it - '0'] }.joinToString("")
 
 /**
- * V62.2 — اسپینر نئونی صفحهٔ «در حال بازیابی نشست ورود»: دو کمان چرخان
- * ناهم‌جهت با گرادیان sweep آبی یخی + هالهٔ نئونی (لایه‌های پهن کم‌آلفا)
- * و هستهٔ سفید نبض‌دار. جایگزین CircularProgressIndicator ساده.
+ * V62.2/V62.4 — اسپینر صفحهٔ «در حال بازیابی نشست ورود»: دو کمان چرخان
+ * ناهم‌جهت با گرادیان sweep آبی یخی. V62.4 به درخواست کاربر از حالت نئونی
+ * خارج شد (هاله‌ها و هستهٔ نبض‌دار حذف) و بزرگ‌تر شد (۷۲ → ۹۶dp).
  */
 @Composable
-internal fun NeonIceSpinner(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "neon-spinner")
+internal fun IceSpinner(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "ice-spinner")
     val angle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing)),
-        label = "neon-angle"
+        label = "ice-spinner-angle"
     )
-    val pulse by transition.animateFloat(
-        initialValue = .82f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(700, easing = FastOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "neon-pulse"
-    )
-    Canvas(modifier.size(72.dp)) {
-        val stroke = 7.dp.toPx()
-        val glow = 16.dp.toPx()
-        val inset = glow / 2f + stroke
+    Canvas(modifier.size(96.dp)) {
+        val stroke = 9.dp.toPx()
+        val inset = stroke
         val arcSize = androidx.compose.ui.geometry.Size(size.width - 2 * inset, size.height - 2 * inset)
         val topLeft = Offset(inset, inset)
         val sweepBrush = Brush.sweepGradient(
             listOf(
                 Color.Transparent,
-                IceDisc.copy(alpha = .35f),
+                IceDisc.copy(alpha = .45f),
                 IceAccentLight,
                 IceAccent,
                 Color.Transparent
             )
         )
-        // کمان بیرونی + هالهٔ نئونی (سه لایه از پهنِ کم‌رنگ به باریکِ پررنگ)
+        // کمان بیرونی با گرادیان چرخشی
         rotate(angle) {
             drawArc(
-                color = IceAccentLight.copy(alpha = .16f * pulse),
-                startAngle = 30f, sweepAngle = 260f, useCenter = false,
-                topLeft = topLeft, size = arcSize,
-                style = Stroke(width = stroke + glow, cap = StrokeCap.Round)
-            )
-            drawArc(
-                color = IceAccentLight.copy(alpha = .35f * pulse),
-                startAngle = 30f, sweepAngle = 260f, useCenter = false,
-                topLeft = topLeft, size = arcSize,
-                style = Stroke(width = stroke + glow / 2f, cap = StrokeCap.Round)
-            )
-            drawArc(
                 brush = sweepBrush,
-                startAngle = 30f, sweepAngle = 260f, useCenter = false,
+                startAngle = 20f, sweepAngle = 280f, useCenter = false,
                 topLeft = topLeft, size = arcSize,
                 style = Stroke(width = stroke, cap = StrokeCap.Round)
             )
         }
         // کمان داخلی ناهم‌جهت
-        val innerInset = inset + 12.dp.toPx()
+        val innerInset = inset + 16.dp.toPx()
         val innerSize = androidx.compose.ui.geometry.Size(size.width - 2 * innerInset, size.height - 2 * innerInset)
         rotate(-angle * 1.4f) {
-            drawArc(
-                color = IceDisc.copy(alpha = .30f * pulse),
-                startAngle = 200f, sweepAngle = 140f, useCenter = false,
-                topLeft = Offset(innerInset, innerInset), size = innerSize,
-                style = Stroke(width = stroke * .55f + 6.dp.toPx(), cap = StrokeCap.Round)
-            )
             drawArc(
                 color = Color.White,
                 startAngle = 200f, sweepAngle = 140f, useCenter = false,
                 topLeft = Offset(innerInset, innerInset), size = innerSize,
-                style = Stroke(width = stroke * .55f, cap = StrokeCap.Round)
+                style = Stroke(width = stroke * .6f, cap = StrokeCap.Round)
             )
         }
-        // هستهٔ نبض‌دار
-        drawCircle(
-            Brush.radialGradient(
-                listOf(Color.White.copy(alpha = .9f * pulse), IceAccentLight.copy(alpha = 0f))
-            ),
-            radius = 9.dp.toPx() * pulse,
-            center = center
-        )
     }
 }
 
 /**
  * V62.2 — صفحهٔ انتظار بازیابی نشست با همان پس‌زمینهٔ یخی صفحهٔ ورود
- * (گرادیان + هاله + موج سه‌لایه) و اسپینر نئونی؛ متن با رنگ IceInk.
+ * (گرادیان + هاله + موج سه‌لایه) و اسپینر یخی؛ متن با رنگ IceInk.
  */
 @Composable
 fun IceSessionLoading(message: String) {
@@ -202,22 +168,49 @@ fun IceSessionLoading(message: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            NeonIceSpinner()
+            IceSpinner()
             Text(message, color = IceInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-/** پس‌زمینهٔ یخی ماژول: گرادیان آسمان + هالهٔ دایرهٔ بزرگ + موج سه‌لایهٔ متحرک پایین. */
+/**
+ * V62.4 — پس‌زمینهٔ یخی سراسری برنامه: صفحات ورود/بازیابی نشست/قفل برنامه
+ * با موج و بقیهٔ برنامه بدون موج. در تم تیره گرادیان روشن یخی معنا ندارد و
+ * همان پس‌زمینهٔ تم کشیده می‌شود تا حالت تاریک کاربر خراب نشود.
+ */
 @Composable
-internal fun IceBackdrop(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "ice-waves")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
-        label = "ice-wave-phase"
-    )
+fun IceAppBackdrop(modifier: Modifier = Modifier, waves: Boolean = false) {
+    val scheme = MaterialTheme.colorScheme
+    if (scheme.background.luminance() < .42f) {
+        Box(modifier.background(scheme.background))
+    } else {
+        IceBackdrop(modifier, waves = waves)
+    }
+}
+
+/**
+ * پس‌زمینهٔ یخی ماژول: گرادیان آسمان + هالهٔ دایرهٔ بزرگ + موج سه‌لایهٔ متحرک پایین.
+ * V62.4 — پارامتر waves: صفحات ورود/بازیابی نشست/قفل برنامه با موج؛ بقیهٔ
+ * برنامه (پشت Scaffold) بدون موج تا زیر داک و منوها شلوغ نشود.
+ */
+@Composable
+internal fun IceBackdrop(modifier: Modifier = Modifier, waves: Boolean = true) {
+    // بدون موج، انیمیشن بی‌نهایت هم ساخته نمی‌شود تا پس‌زمینهٔ سراسری برنامه
+    // هر فریم دوباره کشیده نشود (waves در طول عمر هر نمونه ثابت است).
+    val phase: Float
+    if (waves) {
+        val transition = rememberInfiniteTransition(label = "ice-waves")
+        val animated by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
+            label = "ice-wave-phase"
+        )
+        phase = animated
+    } else {
+        phase = 0f
+    }
     Canvas(modifier) {
         drawRect(Brush.verticalGradient(listOf(IceBgTop, IceBgMid, IceBgBottom)))
         // هالهٔ دایرهٔ پشت کارت
@@ -231,6 +224,7 @@ internal fun IceBackdrop(modifier: Modifier = Modifier) {
             center = Offset(size.width / 2f, size.height * 0.60f)
         )
         // موج‌های سه‌لایهٔ پایین (ارتفاع ~۱۵۰dp مطابق ماژول)
+        if (!waves) return@Canvas
         val h = 150.dp.toPx().coerceAtMost(size.height)
         val top = size.height - h
         val w = size.width

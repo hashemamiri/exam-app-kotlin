@@ -7,6 +7,7 @@ import android.provider.Settings
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import ir.exam.app.core.security.AppLockManager
+import ir.exam.app.ui.auth.IceAppBackdrop
 
 private const val SYSTEM_AUTHENTICATORS =
     BiometricManager.Authenticators.BIOMETRIC_STRONG or
@@ -65,27 +68,40 @@ fun AppLockGate(userId: String, content: @Composable () -> Unit) {
         return
     }
 
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("برنامه قفل است", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "با روش امن فعال دستگاه—اثر انگشت، چهره، الگو، PIN یا رمز دستگاه—هویت خود را تأیید کنید.",
-            modifier = Modifier.padding(vertical = 12.dp)
-        )
-        Button(
-            onClick = {
-                error = null
-                prompt?.authenticate(systemPromptInfo())
-                    ?: run { error = "این صفحه باید در Activity امن برنامه باز شود." }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("تأیید با قفل امن دستگاه")
+    // V62.4 — به محض نمایش صفحهٔ قفل، پنجرهٔ قفل امن دستگاه خودکار باز
+    // می‌شود (بدون نیاز به لمس دکمه)؛ دکمه برای تلاش دوباره می‌ماند.
+    LaunchedEffect(locked, prompt) {
+        if (locked && prompt != null) {
+            error = null
+            prompt.authenticate(systemPromptInfo())
         }
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        // V62.4 — پس‌زمینهٔ یخی با موج، مثل صفحات ورود و بازیابی نشست.
+        IceAppBackdrop(Modifier.fillMaxSize(), waves = true)
+        Column(
+            Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("برنامه قفل است", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                "با روش امن فعال دستگاه—اثر انگشت، چهره، الگو، PIN یا رمز دستگاه—هویت خود را تأیید کنید.",
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+            Button(
+                onClick = {
+                    error = null
+                    prompt?.authenticate(systemPromptInfo())
+                        ?: run { error = "این صفحه باید در Activity امن برنامه باز شود." }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("تأیید با قفل امن دستگاه")
+            }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
 }
 

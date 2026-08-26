@@ -882,13 +882,20 @@ private fun AuthenticatedShell(
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val colors = neumorphic69Colors
             Box(Modifier.fillMaxSize().background(colors.background)) {
+                // V62.4 — پس‌زمینهٔ یخی سراسری برنامه (بدون موج)؛ در تم تیره
+                // خود IceAppBackdrop همان پس‌زمینهٔ تم را می‌کشد.
+                ir.exam.app.ui.auth.IceAppBackdrop(Modifier.fillMaxSize(), waves = false)
                 Scaffold(
-                    containerColor = colors.background,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     topBar = {
                         // V58.0.2 — در حین آزمون دانش‌آموز، هدر «خانه دانش‌آموز» و
                         // دکمهٔ منوی همبرگری حذف می‌شوند (درخواست کاربر).
                         if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive)) {
                             TopAppBar(
+                                // V62.4 — سربرگ شفاف تا پس‌زمینهٔ یخی سراسری دیده شود.
+                                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                                ),
                                 title = {
                                     Text(
                                         if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
@@ -933,7 +940,6 @@ private fun AuthenticatedShell(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(colors.background)
                             .padding(innerPadding),
                         contentAlignment = Alignment.TopCenter
                     ) {
@@ -951,7 +957,9 @@ private fun AuthenticatedShell(
                                 enter = fadeIn(tween(110)),
                                 exit = fadeOut(tween(90))
                             ) {
-                                Box(Modifier.fillMaxSize().background(colors.background)) {
+                                Box(Modifier.fillMaxSize()) {
+                                    // V62.4 — منوی همبرگری هم روی پس‌زمینهٔ یخی بدون موج.
+                                    ir.exam.app.ui.auth.IceAppBackdrop(Modifier.fillMaxSize(), waves = false)
                                     Design69MainMenuScreen(
                                         user = user,
                                         cards = menuCards,
