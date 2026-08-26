@@ -507,7 +507,9 @@ grant execute on function public.native_save_exam_v2(jsonb) to authenticated;
 create or replace function public.native_exam_audience_schools_v61(p_exam text)
 returns jsonb language sql stable security definer set search_path=public,pg_temp as $$
     select jsonb_build_object('ok',true,'schools',coalesce((
-        select jsonb_agg(school_id::text)
+        -- V61.0.1: پیشوند s لازم است؛ exams هم از V38 ستون school_id دارد و
+        -- بدون پیشوند PostgreSQL خطای «column reference is ambiguous» می‌دهد.
+        select jsonb_agg(s.school_id::text)
         from public.exam_audience_schools s
         join public.exams e on e.id = s.exam_id and e.teacher_id = auth.uid()
         where s.exam_id = p_exam

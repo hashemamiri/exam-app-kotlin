@@ -1681,6 +1681,11 @@ require("native_teacher_schools_v61" in _v61_sql
         and "calendar_note_schools" in _v61_sql
         and "exam_audience_schools" in _v61_sql,
         "V61.1 schools audience SQL is missing")
+# V61.0.1 — exams از V38 ستون school_id دارد؛ در join حتماً پیشوند s لازم است
+# وگرنه PostgreSQL خطای «column reference is ambiguous» می‌دهد.
+require("jsonb_agg(s.school_id::text)" in _v61_sql
+        and "select jsonb_agg(school_id::text)" not in _v61_sql,
+        "V61.0.1 ambiguous school_id column returned to the V61 SQL")
 require('"schools" to "مدارس"' in builder_screen
         and "CalendarAudience.SCHOOLS" in (ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text(),
         "V61.1 schools audience UI is missing")

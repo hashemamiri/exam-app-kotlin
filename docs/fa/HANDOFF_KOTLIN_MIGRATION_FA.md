@@ -8964,3 +8964,39 @@ changelog + هندآف
 نیازمند build جدید
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۸۵) V61.0.1 — هات‌فیکس SQL: ستون مبهم school_id
+
+### ریشه (با مدرک)
+
+```text
+گزارش کاربر هنگام اجرای V61_0_schools_audience.sql:
+ERROR: 42702: column reference "school_id" is ambiguous (خط ۵۱۰).
+ریشه: exams از V38 ستون school_id دارد
+(20260815_native_manager_wallet_stats_v38.sql خط ۶:
+alter table public.exams add column if not exists school_id ...).
+در native_exam_audience_schools_v61 کوئری join دوجدولی
+exam_audience_schools + exams بود و jsonb_agg(school_id::text) بدون پیشوند؛
+PostgreSQL نمی‌داند کدام جدول. چون فایل یک تراکنش begin/commit است هیچ
+بخشی اعمال نشده بود.
+```
+
+### راه‌حل
+
+```text
+jsonb_agg(s.school_id::text) با پیشوند صریح. اسکن سیستماتیک بقیهٔ فایل
+(python روی همهٔ ستون‌های بی‌پیشوند در school_id/note_id/exam_id/student_id/
+class_id): بقیه یا زیرکوئری تک‌جدولی‌اند یا ستون فقط در یک جدول scope وجود
+دارد (policyها روی خود جدول‌اند) — ابهام دیگری نیست.
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_0_1SqlAmbiguousSchoolIdHotfixTest · verify: require جدید V61.0.1
+(وجود s.school_id و نبود نسخهٔ بی‌پیشوند) · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_0_1_sql_ambiguous_school_id_hotfix — فقط SQL/تست/verify/changelog/
+هندآف؛ کد کلاینت تغییر ندارد. اگر کاربر پچ V61.0 را هنوز push نکرده باشد
+فقط SQL به‌روز را اجرا می‌کند؛ فایل کاربر /home/user/V61_0_schools_audience.sql
+جایگزین شد (کل فایل باید دوباره اجرا شود — تراکنش قبلی چیزی اعمال نکرده).
+```
