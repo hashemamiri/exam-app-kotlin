@@ -181,7 +181,7 @@ fun Design69QuickAddOverlay(
         QuickAddAction(
             progress = travel.value,
             title = "مدرسه جدید",
-            icon = Design69Icons.Data,
+            icon = Design69Icons.SchoolAdd,
             targetX = -horizontal,
             targetY = cornerY,
             modifier = Modifier.align(Alignment.Center)

@@ -60,13 +60,15 @@ class V61_6SchoolsHeaderPastelCardsTest {
 
     @Test
     fun `manager stats dock opens three cards first`() {
-        assertTrue("fun ManagerCardsScreen(" in manager)
-        for (needle in listOf("Triple(\"مدارس\"", "Triple(\"کارنامه\"", "Triple(\"وضعیت\"")) {
-            assertTrue(needle, needle in manager)
+        // V61.9 — کارت‌های مدیر با پشتهٔ کارتی مشترک معلم.
+        val stack = source("app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt")
+        assertTrue("fun ManagerManagementCardsScreen(" in stack)
+        for (needle in listOf("\"مدارس\"", "\"کارنامه\"", "\"وضعیت\"")) {
+            assertTrue(needle, needle in stack)
         }
         assertTrue("when (managerCardsSection) {" in app)
         assertTrue("SchoolLaunchAction.SHOW_SCHOOLS" in app && "SHOW_SCHOOLS" in school)
-        // بازکردن دوباره از کارت‌ها شروع می‌شود
+        // دکمهٔ آمار داک از کارت‌ها شروع می‌شود
         assertTrue("managerCardsSection = null" in app)
     }
 

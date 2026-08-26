@@ -209,12 +209,23 @@ object Design69Icons {
         }
     }
 
+    // V61.9 — آیکن‌های حرفه‌ای پنجرهٔ +: نشانِ افزودن یکدست (دایرهٔ کوچک با +
+    // در گوشهٔ پایین-چپ بوم) و فرم‌های تمیزتر برای هر عمل.
+    private fun PathBuilder.addBadge(cx: Float = 18.6f, cy: Float = 17.2f) {
+        circle(cx, cy, 4.1f)
+        moveTo(cx, cy - 2.1f); lineTo(cx, cy + 2.1f)
+        moveTo(cx - 2.1f, cy); lineTo(cx + 2.1f, cy)
+    }
+
     val PersonAdd: ImageVector by lazy {
         vector("Design69PersonAdd") {
             strokePath {
-                circle(9f, 8f, 3.5f)
-                moveTo(3f, 20f); curveTo(3.7f, 15.5f, 5.8f, 13.2f, 9f, 13.2f); curveTo(12.2f, 13.2f, 14.3f, 15.5f, 15f, 20f)
-                moveTo(18f, 8f); lineTo(18f, 16f); moveTo(14f, 12f); lineTo(22f, 12f)
+                // دانش‌آموز: سر و شانه‌های نرم + نشان افزودن.
+                circle(9f, 7.6f, 3.4f)
+                moveTo(3.4f, 19.6f)
+                curveTo(4.2f, 15.6f, 6.3f, 13.6f, 9f, 13.6f)
+                curveTo(11.1f, 13.6f, 12.8f, 14.8f, 13.9f, 17f)
+                addBadge()
             }
         }
     }
@@ -222,9 +233,14 @@ object Design69Icons {
     val ClassAdd: ImageVector by lazy {
         vector("Design69ClassAdd") {
             strokePath {
-                moveTo(3f, 5f); lineTo(15f, 5f); lineTo(15f, 18f); lineTo(3f, 18f); close()
-                moveTo(7f, 21f); lineTo(13f, 21f); moveTo(10f, 18f); lineTo(10f, 21f)
-                moveTo(19f, 8f); lineTo(19f, 16f); moveTo(15f, 12f); lineTo(23f, 12f)
+                // کلاس: تختهٔ ارائه با آویز و پایه‌ها + نشان افزودن.
+                moveTo(10f, 3f); lineTo(10f, 4.6f)
+                moveTo(3.6f, 4.6f); lineTo(16.4f, 4.6f)
+                lineTo(16.4f, 13.6f); lineTo(3.6f, 13.6f); close()
+                moveTo(6.4f, 7.6f); lineTo(13.6f, 7.6f)
+                moveTo(6.4f, 10.4f); lineTo(11.2f, 10.4f)
+                moveTo(7.6f, 17.2f); lineTo(10f, 13.6f); lineTo(12.4f, 17.2f)
+                addBadge()
             }
         }
     }
@@ -232,9 +248,46 @@ object Design69Icons {
     val ExamAdd: ImageVector by lazy {
         vector("Design69ExamAdd") {
             strokePath {
-                moveTo(5f, 3f); lineTo(15f, 3f); lineTo(15f, 21f); lineTo(5f, 21f); close()
-                moveTo(8f, 8f); lineTo(12f, 8f); moveTo(8f, 12f); lineTo(12f, 12f); moveTo(8f, 16f); lineTo(11f, 16f)
-                moveTo(19f, 8f); lineTo(19f, 16f); moveTo(15f, 12f); lineTo(23f, 12f)
+                // آزمون: برگهٔ تاخورده با سطرها و تیک + نشان افزودن.
+                moveTo(4.6f, 3f); lineTo(12.4f, 3f); lineTo(15.8f, 6.4f)
+                lineTo(15.8f, 20.6f); lineTo(4.6f, 20.6f); close()
+                moveTo(12.4f, 3f); lineTo(12.4f, 6.4f); lineTo(15.8f, 6.4f)
+                moveTo(7f, 10.2f); lineTo(13.4f, 10.2f)
+                moveTo(7f, 13.4f); lineTo(12.2f, 13.4f)
+                moveTo(7f, 16.8f); lineTo(8.6f, 18.2f); lineTo(11.4f, 15.4f)
+                addBadge()
+            }
+        }
+    }
+
+    /** V61.9 — مدرسه جدید: ساختمان با سقف شیب‌دار، پرچم و در + نشان افزودن. */
+    val SchoolAdd: ImageVector by lazy {
+        vector("Design69SchoolAdd") {
+            strokePath {
+                moveTo(3.4f, 10.8f); lineTo(10f, 5.2f); lineTo(16.6f, 10.8f)
+                moveTo(10f, 5.2f); lineTo(10f, 2.8f); lineTo(13.2f, 2.8f)
+                lineTo(13.2f, 4.4f); lineTo(10f, 4.4f)
+                moveTo(5f, 10.8f); lineTo(5f, 19.6f); lineTo(15f, 19.6f); lineTo(15f, 10.8f)
+                moveTo(8.4f, 19.6f); lineTo(8.4f, 15.4f)
+                curveTo(8.4f, 13.6f, 11.6f, 13.6f, 11.6f, 15.4f)
+                lineTo(11.6f, 19.6f)
+                addBadge(19f, 16.8f)
+            }
+        }
+    }
+
+    /** V61.9 — دعوت معلم: معلم + پاکت دعوت‌نامه. */
+    val TeacherInvite: ImageVector by lazy {
+        vector("Design69TeacherInvite") {
+            strokePath {
+                circle(8.6f, 7.8f, 3.3f)
+                moveTo(3.2f, 19.8f)
+                curveTo(4f, 15.9f, 6f, 14f, 8.6f, 14f)
+                curveTo(10.6f, 14f, 12.2f, 15.1f, 13.3f, 17.2f)
+                // پاکت دعوت
+                moveTo(14.4f, 13.8f); lineTo(21.6f, 13.8f); lineTo(21.6f, 19.4f)
+                lineTo(14.4f, 19.4f); close()
+                moveTo(14.4f, 14.2f); lineTo(18f, 16.9f); lineTo(21.6f, 14.2f)
             }
         }
     }

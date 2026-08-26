@@ -62,8 +62,7 @@ class V61_8InviteDeleteFilterSchoolsTest {
 
     @Test
     fun `school filter lists schools and red icons`() {
-        // بخش مدرسه: لیست مدارس + «هر مدرسه»
-        assertTrue("label = { Text(\"هر مدرسه (همهٔ دانش‌آموزان عضو مدرسه)\") }" in school)
+        // بخش مدرسه: فقط لیست مدارس (V61.9: گزینهٔ «هر مدرسه» حذف شد)
         assertTrue("schoolId = if (draft.schoolId == item.id) null else item.id" in school)
         assertTrue("val schoolId: String? = null" in classesVm)
         assertTrue("schoolIds = " in classesVm)

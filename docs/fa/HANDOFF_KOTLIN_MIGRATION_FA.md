@@ -9325,3 +9325,46 @@ select to_regprocedure('public.native_manager_delete_invite_v61(uuid)') is not n
 استفاده‌شده/باطل‌شده فقط با تابع حذف واقعاً از لیست می‌رود.
 نیازمند build جدید.
 ```
+
+## ۱۹۳) V61.9 — آیکن‌های حرفه‌ای، داشبورد پیش‌فرض مدیر، کارت‌های پشته‌ای مدیر
+
+### درخواست‌ها و پیاده‌سازی
+
+```text
+۱) آیکن‌های پنجرهٔ +: بازطراحی در Design69Icons —
+addBadge (نشان + داخل دایرهٔ کوچک، مشترک همهٔ آیکن‌های افزودن)،
+PersonAdd (سر و شانهٔ نرم)، ClassAdd (تختهٔ ارائه با آویز و پایه)،
+ExamAdd (برگهٔ تاخورده با سطرها و تیک)، SchoolAdd جدید (ساختمان مدرسه با
+سقف شیب‌دار، پرچم و در) و TeacherInvite جدید (معلم + پاکت دعوت‌نامه).
+اتصال: «مدرسه جدید» → SchoolAdd (به‌جای Data) و primaryIcon مدیر →
+TeacherInvite (به‌جای PersonAdd).
+۲) پنل مدیر: صفحهٔ پیش‌فرض حالا MainPage.CARDS با
+managerCardsSection="status" (داشبورد = ManagerStatsScreen با پنل سریع).
+دکمهٔ آمار داک (openCards) کارت‌ها را باز می‌کند: managerCardsSection=null
+→ ManagerManagementCardsScreen جدید — «همان پشتهٔ کارتی معلم» (drag/کلید/
+نقطه‌ها) با سه کارت مدارس/کارنامه/وضعیت. refactor: بدنهٔ پشته به
+ManagementCardsStack مشترک منتقل شد؛ require(CARD_COUNT=6) فقط در تابع
+معلم ماند (مدیر ۳ کارت دارد). کارت «داشبورد» منوی همبرگری حالا مستقیم
+openManagerDashboard (status) را باز می‌کند نه کارت‌ها.
+ManagerCardsScreen سادهٔ V61.6 حذف شد (تست V61_6 هماهنگ شد).
+۳) فیلتر: بخش «مدرسه» فقط لیست مدارس (چیپ «هر مدرسه» حذف؛ فیلد inSchool
+در مدل ماند ولی از UI تنظیم نمی‌شود) و بخش «عضو نشده» به انتهای لیست
+منتقل شد (ترتیب: پایه/کلاس/جنسیت/مدرسه/معلم/عضونشده).
+درس دهم: رشتهٔ «حذف‌شده» حتی در «کامنت فارسی» همان فایل هم ممنوع است —
+بند verify جدید «هر مدرسه» را در بخش دیالوگ ممنوع کرد و کامنت خودم آن را
+داشت؛ اول FAIL شد و کامنت بازنویسی شد.
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_9IconsDashboardCardsFilterTest (۳ تست) · هماهنگی: V61_6 (پشتهٔ
+مدیر) و V61_8 (حذف چیپ «هر مدرسه») · verify: بلوک V61.9 (۵ require) ·
+شبیه‌سازی V61_6/8/9 + قرارداد require پشته (مدیر بدون require) سبز ·
+اسکن سراسری ۱۳۲۸ needle و شمارشی + ترتیب‌های indexOf (V20/V41B1): صفر
+خطای واقعی · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_9_icons_dashboard_cards_filter — بدون SQL؛ نیازمند build جدید.
+فایل‌ها: Design69Icons/Design69QuickAddOverlay/ExamApp/
+TeacherManagementCardsScreen/ManagerFoundationScreens/
+SchoolManagementScreen + تست جدید + دو تست هماهنگ + verify/changelog/هندآف.
+```

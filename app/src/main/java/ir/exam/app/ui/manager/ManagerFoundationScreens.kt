@@ -371,35 +371,9 @@ private fun inviteRemainingText(
     return "زمان باقی‌مانده: %02d:%02d:%02d".format(hours, minutes, rest)
 }
 
-/**
- * V61.6 — دکمهٔ «آمار» داک مدیر به‌جای آمار مستقیم، سه کارت باز می‌کند:
- * «مدارس» (نمای مدارس بخش کلاس‌ها)، «کارنامه» (آمار و نمرات مدرسه) و
- * «وضعیت» (داشبورد با پنل سریع).
- */
-@Composable
-fun ManagerCardsScreen(
-    onSchools: () -> Unit,
-    onReport: () -> Unit,
-    onStatus: () -> Unit
-) {
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        listOf(
-            Triple("مدارس", "لیست مدرسه‌ها، ساخت مدرسه جدید و کلاس‌های هر مدرسه", onSchools),
-            Triple("کارنامه", "آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌ها", onReport),
-            Triple("وضعیت", "داشبورد مدرسه و پنل سریع بخش‌ها", onStatus)
-        ).forEach { (title, subtitle, onClick) ->
-            Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleLarge)
-                    Text(subtitle, style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-    }
-}
+// V61.9 — ManagerCardsScreen سادهٔ V61.6 حذف شد؛ کارت‌های مدیر حالا با پشتهٔ
+// کارتی مشترک معلم (ManagerManagementCardsScreen در TeacherManagementCardsScreen.kt)
+// نمایش داده می‌شوند: مدارس، کارنامه، وضعیت.
 
 @Composable
 fun ManagerStatsScreen(

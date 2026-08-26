@@ -82,7 +82,6 @@ import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.dashboard.TeacherManagerRequestsScreen
 import ir.exam.app.ui.grading.GradingScreen
-import ir.exam.app.ui.manager.ManagerCardsScreen
 import ir.exam.app.ui.manager.ManagerStatsScreen
 import ir.exam.app.ui.manager.ManagerTeachersScreen
 import ir.exam.app.ui.manager.ManagerTeacherClassScreen
@@ -144,7 +143,8 @@ private fun AuthenticatedExamApp(
         UpdateViewModel(UpdateUseCase(SupabaseAppUpdateRepository()), apkUpdateManager)
     }
     var page by rememberSaveable(user.id) {
-        mutableStateOf(if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR)
+        // V61.9 — پنل مدیر به‌صورت پیش‌فرض «داشبورد» را باز می‌کند.
+        mutableStateOf(if (user.role == UserRole.MANAGER) MainPage.CARDS else MainPage.CALENDAR)
     }
     var menuOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     // V58.0.2 — آزمون فعال دانش‌آموز: هدر و منوی همبرگری پنهان می‌شوند.
@@ -158,7 +158,8 @@ private fun AuthenticatedExamApp(
     var managerInviteHeader by rememberSaveable(user.id) { mutableStateOf(false) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     // V61.6 — بخش فعال کارت‌های مدیر (null=کارت‌ها، report=کارنامه، status=وضعیت).
-    var managerCardsSection by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
+    // V61.9 — پیش‌فرض «status» (داشبورد)؛ دکمهٔ آمار داک آن را null (کارت‌ها) می‌کند.
+    var managerCardsSection by rememberSaveable(user.id) { mutableStateOf<String?>("status") }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
     var schoolLaunchAction by remember(user.id) { mutableStateOf<SchoolLaunchAction?>(null) }
@@ -204,9 +205,17 @@ private fun AuthenticatedExamApp(
 
     fun openCards() {
         closeTransientNavigation()
-        // V61.6 — بازکردن دوبارهٔ آمار مدیر همیشه از کارت‌ها شروع می‌شود.
+        // V61.6/V61.9 — دکمهٔ آمار داک همیشه «کارت‌ها» را باز می‌کند؛ داشبورد
+        // پیش‌فرض ورود مدیر است و از کارت «وضعیت» یا منو باز می‌شود.
         managerCardsSection = null
         if (page == MainPage.CARDS) cardsCycleKey += 1 else page = MainPage.CARDS
+    }
+
+    // V61.9 — داشبورد مدیر (صفحهٔ پیش‌فرض و کارت منوی همبرگری).
+    fun openManagerDashboard() {
+        closeTransientNavigation()
+        managerCardsSection = "status"
+        page = MainPage.CARDS
     }
 
     fun createStudent() {
@@ -326,6 +335,7 @@ private fun AuthenticatedExamApp(
         onStudentResults = { closeTransientNavigation(); page = MainPage.STUDENT_RESULTS },
         onWallet = ::openWallet,
         onCards = ::openCards,
+        onManagerDashboard = ::openManagerDashboard,
         onProfile = {
             closeTransientNavigation()
             profileDestination = ProfileSettingsDestination.PROFILE
@@ -435,9 +445,11 @@ private fun AuthenticatedExamApp(
                     UserRole.STUDENT -> Unit
                 }
                 MainPage.CARDS -> if (user.role == UserRole.MANAGER) {
-                    // V61.6 — دکمهٔ آمار داک: اول کارت‌های مدارس/کارنامه/وضعیت.
+                    // V61.9 — دکمهٔ آمار داک: پشتهٔ کارتی مثل معلم (مدارس/کارنامه/
+                    // وضعیت)؛ داشبورد (status) صفحهٔ پیش‌فرض و جدا از کارت‌هاست.
                     when (managerCardsSection) {
-                        null -> ManagerCardsScreen(
+                        null -> ManagerManagementCardsScreen(
+                            cycleKey = cardsCycleKey,
                             onSchools = {
                                 schoolStudentsSelected = false
                                 schoolLaunchAction = SchoolLaunchAction.SHOW_SCHOOLS
@@ -752,6 +764,7 @@ private fun AuthenticatedShell(
     onStudentResults: () -> Unit,
     onWallet: () -> Unit,
     onCards: () -> Unit,
+    onManagerDashboard: () -> Unit = {},
     onProfile: () -> Unit,
     onHeader: () -> Unit,
     onAccount: () -> Unit,
@@ -956,7 +969,8 @@ private fun AuthenticatedShell(
                                             Design69MenuCard(
                                                 "داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,
                                                 page == MainPage.CARDS,
-                                                onClick = { select(onCards) }
+                                                // V61.9 — کارت منو مستقیم داشبورد (وضعیت) را باز می‌کند.
+                                                onClick = { select(onManagerDashboard) }
                                             )
                                         } else null
                                     )
@@ -974,7 +988,8 @@ private fun AuthenticatedShell(
                         onCreateClass = onCreateClass,
                         onCreateSchool = onCreateSchool,
                         primaryTitle = if (user.role == UserRole.MANAGER) "دعوت معلم" else "آزمون جدید",
-                        primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.PersonAdd else Design69Icons.ExamAdd
+                        // V61.9 — آیکن حرفه‌ای «دعوت معلم» (معلم + پاکت دعوت).
+                        primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.TeacherInvite else Design69Icons.ExamAdd
                     )
                 }
             }

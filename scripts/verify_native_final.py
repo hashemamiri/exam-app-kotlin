@@ -1739,6 +1739,29 @@ require("shape = RoundedCornerShape(22.dp)" in builder_radial
         and "scaleX = .6f + .4f * p" in builder_radial,
         "V61.7/V61.8 rounded-square builder radial buttons are missing")
 
+# ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
+_icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()
+_stack_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt").read_text()
+require("private fun PathBuilder.addBadge(" in _icons_v61
+        and "val SchoolAdd: ImageVector by lazy" in _icons_v61
+        and "val TeacherInvite: ImageVector by lazy" in _icons_v61,
+        "V61.9 professional quick-add icons are missing")
+require("icon = Design69Icons.SchoolAdd" in design69_add
+        and "Design69Icons.TeacherInvite else Design69Icons.ExamAdd" in app_shell,
+        "V61.9 quick-add icon wiring is missing")
+require("mutableStateOf(if (user.role == UserRole.MANAGER) MainPage.CARDS else MainPage.CALENDAR)" in app_shell
+        and 'mutableStateOf<String?>("status")' in app_shell
+        and "fun openManagerDashboard()" in app_shell,
+        "V61.9 manager default dashboard is missing")
+require("fun ManagerManagementCardsScreen(" in _stack_v61
+        and "private fun ManagementCardsStack(" in _stack_v61
+        and "fun ManagerCardsScreen(" not in manager_foundation,
+        "V61.9 teacher-style manager cards are missing")
+_filter_dialog_v61=school_screen.split("private fun StudentFilterDialog(",1)[1].split("private fun StudentCard(",1)[0]
+require("هر مدرسه" not in _filter_dialog_v61
+        and _filter_dialog_v61.index('key = "school"') < _filter_dialog_v61.index('key = "unassigned"'),
+        "V61.9 filter school list / unassigned-last ordering is missing")
+
 # ---- V61.2: manager dashboard + class teacher picker ----
 require('"داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,' in app_shell
         and "featuredCard = if (user.role == UserRole.MANAGER) {" in app_shell,

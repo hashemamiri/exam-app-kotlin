@@ -1005,41 +1005,16 @@ private fun StudentFilterDialog(
                     }
                 }
                 item {
-                    FilterSectionCard(
-                        key = "unassigned",
-                        title = "عضو نشده",
-                        active = draft.unassigned,
-                        value = if (draft.unassigned) "فعال" else "غیرفعال"
-                    ) {
-                        FilterChip(
-                            selected = draft.unassigned,
-                            onClick = { draft = draft.copy(unassigned = !draft.unassigned, classId = null) },
-                            label = { Text("فقط دانش‌آموزانی که عضو هیچ کلاسی نیستند") }
-                        )
-                    }
-                }
-                item {
-                    // V61.8 — بخش مدرسه: لیست مدارس برای انتخاب مدرسهٔ خاص +
-                    // گزینهٔ «هر مدرسه» (فقط عضوهای مدرسه).
+                    // V61.9 — بخش مدرسه: فقط لیست مدارس (چیپ عمومی قبلی حذف شد).
                     FilterSectionCard(
                         key = "school",
                         title = "مدرسه",
-                        active = draft.inSchool || draft.schoolId != null,
-                        value = when {
-                            draft.schoolId != null ->
-                                schools.firstOrNull { it.id == draft.schoolId }?.name ?: "مدرسه"
-                            draft.inSchool -> "هر مدرسه"
-                            else -> "همه"
-                        }
+                        active = draft.schoolId != null,
+                        value = draft.schoolId?.let { id ->
+                            schools.firstOrNull { it.id == id }?.name ?: "مدرسه"
+                        } ?: "همه"
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            FilterChip(
-                                selected = draft.inSchool && draft.schoolId == null,
-                                onClick = {
-                                    draft = draft.copy(inSchool = !draft.inSchool, schoolId = null)
-                                },
-                                label = { Text("هر مدرسه (همهٔ دانش‌آموزان عضو مدرسه)") }
-                            )
                             if (schools.isEmpty()) Text("مدرسه‌ای یافت نشد.")
                             schools.forEach { item ->
                                 FilterChip(
@@ -1079,6 +1054,21 @@ private fun StudentFilterDialog(
                                 }
                             }
                         }
+                    }
+                }
+                item {
+                    // V61.9 — «عضو نشده» پایین‌تر از همهٔ بخش‌ها.
+                    FilterSectionCard(
+                        key = "unassigned",
+                        title = "عضو نشده",
+                        active = draft.unassigned,
+                        value = if (draft.unassigned) "فعال" else "غیرفعال"
+                    ) {
+                        FilterChip(
+                            selected = draft.unassigned,
+                            onClick = { draft = draft.copy(unassigned = !draft.unassigned, classId = null) },
+                            label = { Text("فقط دانش‌آموزانی که عضو هیچ کلاسی نیستند") }
+                        )
                     }
                 }
             }

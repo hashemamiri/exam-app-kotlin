@@ -143,7 +143,53 @@ fun TeacherManagementCardsScreen(
         )
     }
     require(cards.size == Design69ManagementCardsContract.CARD_COUNT)
+    ManagementCardsStack(cycleKey = cycleKey, cards = cards)
+}
 
+/**
+ * V61.9 — کارت‌های مدیر با همان پشتهٔ کارتی معلم؛ سه کارت:
+ * «مدارس»، «کارنامه» و «وضعیت» (داشبورد).
+ */
+@Composable
+fun ManagerManagementCardsScreen(
+    cycleKey: Int,
+    onSchools: () -> Unit,
+    onReport: () -> Unit,
+    onStatus: () -> Unit
+) {
+    val neo = neumorphic69Colors
+    val cards = remember(onSchools, onReport, onStatus, neo.accent, neo.accent2) {
+        listOf(
+            ManagementCardSpec(
+                "مدارس",
+                "لیست مدرسه‌ها، ساخت مدرسه جدید و کلاس‌های هر مدرسه را باز می‌کند.",
+                Design69Icons.SchoolAdd,
+                listOf(neo.accent, neo.accent2),
+                onSchools
+            ),
+            ManagementCardSpec(
+                "کارنامه",
+                "آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌های مدرسه.",
+                Design69Icons.Reports,
+                listOf(Color(0xFF2878DB), Color(0xFF24B8C8)),
+                onReport
+            ),
+            ManagementCardSpec(
+                "وضعیت",
+                "داشبورد مدرسه با اطلاعات، آمار کلی و پنل سریع بخش‌ها.",
+                Design69Icons.Dashboard,
+                listOf(Color(0xFF25BFA4), Color(0xFF45D7BD)),
+                onStatus
+            )
+        )
+    }
+    ManagementCardsStack(cycleKey = cycleKey, cards = cards)
+}
+
+/** V61.9 — پشتهٔ مشترک کارت‌ها (drag/کلید/نقطه‌ها) برای معلم و مدیر. */
+@Composable
+private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>) {
+    val neo = neumorphic69Colors
     var activeIndex by rememberSaveable { mutableIntStateOf(0) }
     var settling by remember { mutableStateOf(false) }
     val dragX = remember { Animatable(0f) }
