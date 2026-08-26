@@ -485,7 +485,14 @@ internal fun RoleTabs(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clickable { onSelect(index) },
+                        // V62.1.4 — گزارش دستگاه: قبل از رسیدن نشانگر سفید،
+                        // کادر خاکستری روی تب مقصد ظاهر می‌شد. آن کادر ریپل
+                        // پیش‌فرض متریالِ clickable است؛ چون نشانگر لغزان خودش
+                        // بازخورد انتخاب است، ریپل حذف شد (مثل OtpBoxes).
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onSelect(index) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(

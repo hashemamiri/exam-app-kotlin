@@ -79,6 +79,10 @@ class V62_1IceModuleParityTest {
         // V62.1.3 — کارت مات بدون سایه: هالهٔ سایه مثل کادر دوم دیده می‌شد
         assertTrue(".background(Color.White)" in components)
         assertTrue("border(1.dp, IceStroke, RoundedCornerShape(24.dp))" in components)
+        // V62.1.4 — ریپل خاکستری کلیک تب حذف شد (نشانگر لغزان خودش بازخورد است)
+        val tabs = components.substringAfter("internal fun RoleTabs(")
+            .substringBefore("internal fun OtpBoxes(")
+        assertTrue("indication = null" in tabs)
         // مغز همان است: گوگل Credential Manager و قواعد سرور
         assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)
         assertTrue("state.newPassword.length >= 8" in signIn)

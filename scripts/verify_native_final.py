@@ -1774,6 +1774,10 @@ require("androidx.compose.runtime.key(selectedTab) {" in _sign_in_v61
         and "androidx.compose.runtime.key(managerTab) {" in _sign_in_v61
         and "border(1.dp, IceStroke, RoundedCornerShape(24.dp))" in _ice,
         "V62.1.3 tab remount keys or opaque shadow-free card are missing")
+# V62.1.4 — ریپل خاکستری clickable تب‌ها حذف (کادر خاکستری قبل از نشانگر).
+_roletabs_v62=_ice.split("internal fun RoleTabs(",1)[1].split("internal fun OtpBoxes(",1)[0]
+require("indication = null" in _roletabs_v62,
+        "V62.1.4 role tab ripple must be disabled")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()
