@@ -1778,6 +1778,12 @@ require("androidx.compose.runtime.key(selectedTab) {" in _sign_in_v61
 _roletabs_v62=_ice.split("internal fun RoleTabs(",1)[1].split("internal fun OtpBoxes(",1)[0]
 require("indication = null" in _roletabs_v62,
         "V62.1.4 role tab ripple must be disabled")
+# V62.2 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر نئونی چندلایه.
+require("internal fun NeonIceSpinner(" in _ice
+        and "fun IceSessionLoading(message: String)" in _ice
+        and "Brush.sweepGradient(" in _ice
+        and 'IceSessionLoading(message = "در حال بازیابی نشست ورود...")' in app_shell,
+        "V62.2 neon ice session-loading screen is missing")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()

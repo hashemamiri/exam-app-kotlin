@@ -9697,3 +9697,53 @@ kotlin_files=203.
 چک‌لیست دستگاه: لمس هر تب در ورود و ثبت‌نام هیچ کادر خاکستری ندهد؛
 فقط نشانگر سفید بلغزد؛ کلیک تب همچنان کار کند (ناحیهٔ لمس عوض نشده).
 ```
+
+
+## ۲۰۰) V62.2 — پس‌زمینهٔ یخی و اسپینر نئونی صفحهٔ بازیابی نشست
+
+### درخواست کاربر (با اسکرین‌شات)
+
+```text
+۱) «پس‌زمینهٔ کادر در حال بازیابی نشست ورود همانند صفحهٔ لاگین شود.»
+   (صفحهٔ انتظار خاکستری ساده بود — SessionLoadingScreen در ExamApp با
+   CircularProgressIndicator پیش‌فرض متریال.)
+۲) «نوار دایره‌ای که بالای در حال بازیابی نشست ورود می‌چرخد رو نئونی و
+   زیبا کن و طرحش رو عوض کن.»
+```
+
+### پیاده‌سازی
+
+```text
+AuthIceComponents.kt دو کامپوننت جدید:
+- NeonIceSpinner (internal): Canvas ۷۲dp با دو کمان چرخان ناهم‌جهت —
+  کمان بیرونی ۲۶۰° با Brush.sweepGradient (شفاف→IceDisc→AccentLight→
+  Accent→شفاف) و هالهٔ نئونی سه‌لایه (stroke+glow با آلفای ۱۶٪، نصف glow
+  با ۳۵٪، خط اصلی ۷dp)؛ کمان داخلی ۱۴۰° سفید با هالهٔ IceDisc و چرخش
+  معکوس ×۱.۴؛ هستهٔ radialGradient سفید نبض‌دار (pulse .82→1 با
+  RepeatMode.Reverse در ۷۰۰ms؛ چرخش ۱۱۰۰ms خطی). import جدید:
+  drawscope.rotate.
+- IceSessionLoading(message) (public چون از ExamApp صدا می‌شود):
+  Box با IceBackdrop تمام‌صفحه (همان گرادیان+هاله+موج سه‌لایهٔ لاگین) +
+  NeonIceSpinner + متن IceInk بولد.
+ExamApp.kt: بدنهٔ SessionLoadingScreen فقط delegate به
+ir.exam.app.ui.auth.IceSessionLoading(message = "در حال بازیابی نشست
+ورود...")؛ import بلااستفادهٔ CircularProgressIndicator حذف
+(FastOutSlowInEasing جای دیگر ExamApp استفاده می‌شود و ماند).
+صفحهٔ خطای SessionRestoreErrorScreen عمداً دست نخورد (درخواست فقط
+صفحهٔ انتظار بود).
+```
+
+### تست/verify
+
+```text
+جدید: V62_2NeonSessionLoadingTest (۲ تست: پس‌زمینهٔ یخی + اتصال ExamApp؛
+طرح نئونی چندلایه + نبود CircularProgressIndicator در برش
+SessionLoadingScreen). verify: بند V62.2 (NeonIceSpinner +
+IceSessionLoading + sweepGradient در _ice + سیم‌کشی در app_shell).
+شبیه‌سازی همهٔ needleهای جدید + رگرسیون V62.x روی هر دو فایل: سبز؛
+FINAL_NATIVE_VERIFY=PASS kotlin_files=203.
+پچ: V62_2_neon_session_loading — بدون SQL؛ نیازمند build جدید.
+چک‌لیست دستگاه: هنگام باز شدن اپ با نشست ذخیره‌شده، صفحهٔ انتظار
+پس‌زمینهٔ یخی با موج داشته باشد؛ اسپینر دو کمان چرخان با هالهٔ نئونی و
+هستهٔ نبض‌دار نشان دهد؛ پس از بازیابی، ورود عادی ادامه یابد.
+```

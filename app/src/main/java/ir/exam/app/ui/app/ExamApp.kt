@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -706,15 +705,8 @@ private fun android.content.Context.openUrlSafely(url: String, onFailure: (Throw
 
 @Composable
 private fun SessionLoadingScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            CircularProgressIndicator()
-            Text("در حال بازیابی نشست ورود...")
-        }
-    }
+    // V62.2 — همان پس‌زمینهٔ یخی صفحهٔ ورود + اسپینر نئونی به‌جای چرخ سادهٔ متریال.
+    ir.exam.app.ui.auth.IceSessionLoading(message = "در حال بازیابی نشست ورود...")
 }
 
 @Composable

@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -101,6 +102,111 @@ internal val IceDisabledText = Color(0xFF9AB4C6)
 
 /** تبدیل عدد به ارقام فارسی (مثل ماژول). */
 internal fun faNum(n: Int): String = n.toString().map { "۰۱۲۳۴۵۶۷۸۹"[it - '0'] }.joinToString("")
+
+/**
+ * V62.2 — اسپینر نئونی صفحهٔ «در حال بازیابی نشست ورود»: دو کمان چرخان
+ * ناهم‌جهت با گرادیان sweep آبی یخی + هالهٔ نئونی (لایه‌های پهن کم‌آلفا)
+ * و هستهٔ سفید نبض‌دار. جایگزین CircularProgressIndicator ساده.
+ */
+@Composable
+internal fun NeonIceSpinner(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "neon-spinner")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing)),
+        label = "neon-angle"
+    )
+    val pulse by transition.animateFloat(
+        initialValue = .82f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            tween(700, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "neon-pulse"
+    )
+    Canvas(modifier.size(72.dp)) {
+        val stroke = 7.dp.toPx()
+        val glow = 16.dp.toPx()
+        val inset = glow / 2f + stroke
+        val arcSize = androidx.compose.ui.geometry.Size(size.width - 2 * inset, size.height - 2 * inset)
+        val topLeft = Offset(inset, inset)
+        val sweepBrush = Brush.sweepGradient(
+            listOf(
+                Color.Transparent,
+                IceDisc.copy(alpha = .35f),
+                IceAccentLight,
+                IceAccent,
+                Color.Transparent
+            )
+        )
+        // کمان بیرونی + هالهٔ نئونی (سه لایه از پهنِ کم‌رنگ به باریکِ پررنگ)
+        rotate(angle) {
+            drawArc(
+                color = IceAccentLight.copy(alpha = .16f * pulse),
+                startAngle = 30f, sweepAngle = 260f, useCenter = false,
+                topLeft = topLeft, size = arcSize,
+                style = Stroke(width = stroke + glow, cap = StrokeCap.Round)
+            )
+            drawArc(
+                color = IceAccentLight.copy(alpha = .35f * pulse),
+                startAngle = 30f, sweepAngle = 260f, useCenter = false,
+                topLeft = topLeft, size = arcSize,
+                style = Stroke(width = stroke + glow / 2f, cap = StrokeCap.Round)
+            )
+            drawArc(
+                brush = sweepBrush,
+                startAngle = 30f, sweepAngle = 260f, useCenter = false,
+                topLeft = topLeft, size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+        }
+        // کمان داخلی ناهم‌جهت
+        val innerInset = inset + 12.dp.toPx()
+        val innerSize = androidx.compose.ui.geometry.Size(size.width - 2 * innerInset, size.height - 2 * innerInset)
+        rotate(-angle * 1.4f) {
+            drawArc(
+                color = IceDisc.copy(alpha = .30f * pulse),
+                startAngle = 200f, sweepAngle = 140f, useCenter = false,
+                topLeft = Offset(innerInset, innerInset), size = innerSize,
+                style = Stroke(width = stroke * .55f + 6.dp.toPx(), cap = StrokeCap.Round)
+            )
+            drawArc(
+                color = Color.White,
+                startAngle = 200f, sweepAngle = 140f, useCenter = false,
+                topLeft = Offset(innerInset, innerInset), size = innerSize,
+                style = Stroke(width = stroke * .55f, cap = StrokeCap.Round)
+            )
+        }
+        // هستهٔ نبض‌دار
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color.White.copy(alpha = .9f * pulse), IceAccentLight.copy(alpha = 0f))
+            ),
+            radius = 9.dp.toPx() * pulse,
+            center = center
+        )
+    }
+}
+
+/**
+ * V62.2 — صفحهٔ انتظار بازیابی نشست با همان پس‌زمینهٔ یخی صفحهٔ ورود
+ * (گرادیان + هاله + موج سه‌لایه) و اسپینر نئونی؛ متن با رنگ IceInk.
+ */
+@Composable
+fun IceSessionLoading(message: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        IceBackdrop(Modifier.fillMaxSize())
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            NeonIceSpinner()
+            Text(message, color = IceInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
 /** پس‌زمینهٔ یخی ماژول: گرادیان آسمان + هالهٔ دایرهٔ بزرگ + موج سه‌لایهٔ متحرک پایین. */
 @Composable
