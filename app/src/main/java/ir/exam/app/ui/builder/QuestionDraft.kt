@@ -7,6 +7,21 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 enum class QuestionType { ESSAY, MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK, NUMERIC, MATCHING }
 
+/**
+ * V61.6 — رنگ پاستلی اختصاصی هر نوع سؤال (درخواست کاربر):
+ * تشریحی=صورتی #FFD1DC، چندگزینه‌ای=آبی #AEC6CF، صحیح/غلط=سبز #B4EEB4،
+ * جای خالی=زرد #FDFD96، عددی=بنفش #C3B1E1، جورکردنی=هلویی #FFDAB9؛
+ * (نعنایی #98FF98 و لاوندر #E6E6FA برای «وارد کردن» و «بانک سؤال» منوی +).
+ */
+fun QuestionType.pastelColor(): Long = when (this) {
+    QuestionType.ESSAY -> 0xFFFFD1DC
+    QuestionType.MULTIPLE_CHOICE -> 0xFFAEC6CF
+    QuestionType.TRUE_FALSE -> 0xFFB4EEB4
+    QuestionType.FILL_BLANK -> 0xFFFDFD96
+    QuestionType.NUMERIC -> 0xFFC3B1E1
+    QuestionType.MATCHING -> 0xFFFFDAB9
+}
+
 @Serializable
 data class MediaDraft(
     val id: String = UUID.randomUUID().toString(),

@@ -82,6 +82,7 @@ import ir.exam.app.ui.classes.SchoolManagementScreen
 import ir.exam.app.ui.dashboard.TeacherDashboardScreen
 import ir.exam.app.ui.dashboard.TeacherManagerRequestsScreen
 import ir.exam.app.ui.grading.GradingScreen
+import ir.exam.app.ui.manager.ManagerCardsScreen
 import ir.exam.app.ui.manager.ManagerStatsScreen
 import ir.exam.app.ui.manager.ManagerTeachersScreen
 import ir.exam.app.ui.manager.ManagerTeacherClassScreen
@@ -156,10 +157,14 @@ private fun AuthenticatedExamApp(
     var managerTeacherId by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
     var managerInviteHeader by rememberSaveable(user.id) { mutableStateOf(false) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
+    // V61.6 — بخش فعال کارت‌های مدیر (null=کارت‌ها، report=کارنامه، status=وضعیت).
+    var managerCardsSection by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
     var schoolLaunchAction by remember(user.id) { mutableStateOf<SchoolLaunchAction?>(null) }
     var schoolStudentsSelected by rememberSaveable(user.id) { mutableStateOf(false) }
+    // V61.6 — نمای مدارس باز است؟ (هدر «مدرسه من» به‌جای «کلاس‌ها»)
+    var schoolsViewOpen by rememberSaveable(user.id) { mutableStateOf(false) }
     var profileDestination by rememberSaveable(user.id) {
         mutableStateOf(ProfileSettingsDestination.SETTINGS)
     }
@@ -199,6 +204,8 @@ private fun AuthenticatedExamApp(
 
     fun openCards() {
         closeTransientNavigation()
+        // V61.6 — بازکردن دوبارهٔ آمار مدیر همیشه از کارت‌ها شروع می‌شود.
+        managerCardsSection = null
         if (page == MainPage.CARDS) cardsCycleKey += 1 else page = MainPage.CARDS
     }
 
@@ -288,6 +295,7 @@ private fun AuthenticatedExamApp(
         appearance = appearance,
         profileDestination = profileDestination,
         schoolStudentsSelected = schoolStudentsSelected,
+        schoolsViewOpen = schoolsViewOpen,
         managerInviteHeader = managerInviteHeader,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
@@ -402,7 +410,8 @@ private fun AuthenticatedExamApp(
                     SchoolManagementScreen(
                         launchAction = schoolLaunchAction,
                         onLaunchActionConsumed = { schoolLaunchAction = null },
-                        managerTeacherPicker = user.role == UserRole.MANAGER
+                        managerTeacherPicker = user.role == UserRole.MANAGER,
+                        onSchoolsOpenChanged = { schoolsViewOpen = it }
                     )
                 }
                 MainPage.QUESTION_BANK -> if (user.role == UserRole.TEACHER) {
@@ -426,8 +435,18 @@ private fun AuthenticatedExamApp(
                     UserRole.STUDENT -> Unit
                 }
                 MainPage.CARDS -> if (user.role == UserRole.MANAGER) {
-                    // V61.0 — داشبورد با پنل سریع.
-                    ManagerStatsScreen(
+                    // V61.6 — دکمهٔ آمار داک: اول کارت‌های مدارس/کارنامه/وضعیت.
+                    when (managerCardsSection) {
+                        null -> ManagerCardsScreen(
+                            onSchools = {
+                                schoolStudentsSelected = false
+                                schoolLaunchAction = SchoolLaunchAction.SHOW_SCHOOLS
+                                page = MainPage.SCHOOL
+                            },
+                            onReport = { managerCardsSection = "report" },
+                            onStatus = { managerCardsSection = "status" }
+                        )
+                        else -> ManagerStatsScreen(
                         onQuickTeachers = { managerTeacherId = null; page = MainPage.HOME },
                         onQuickClasses = {
                             schoolStudentsSelected = false
@@ -440,7 +459,8 @@ private fun AuthenticatedExamApp(
                             page = MainPage.SCHOOL
                         },
                         onQuickWallet = { page = MainPage.WALLET }
-                    )
+                        )
+                    }
                 } else if (user.role == UserRole.TEACHER) {
                     TeacherManagementCardsScreen(
                         cycleKey = cardsCycleKey,
@@ -717,6 +737,7 @@ private fun AuthenticatedShell(
     appearance: AppearanceSettings,
     profileDestination: ProfileSettingsDestination,
     schoolStudentsSelected: Boolean,
+    schoolsViewOpen: Boolean = false,
     managerInviteHeader: Boolean,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
@@ -866,6 +887,8 @@ private fun AuthenticatedShell(
                                 title = {
                                     Text(
                                         if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
+                                        // V61.6 — نمای مدارس: هدر «مدرسه من» به‌جای «کلاس‌ها».
+                                        else if (page == MainPage.SCHOOL && schoolsViewOpen && !schoolStudentsSelected) "مدرسه من"
                                         else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)
                                     )
                                 },

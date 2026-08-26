@@ -45,6 +45,8 @@ import kotlinx.coroutines.launch
 private data class BuilderRadialAction(
     val title: String,
     val symbol: String,
+    // V61.6 — رنگ پاستلی اختصاصی هر نوع سؤال (پس‌زمینهٔ دکمهٔ منوی +).
+    val background: Long? = null,
     val onClick: () -> Unit
 )
 
@@ -61,14 +63,15 @@ fun BuilderRadialMenuOverlay(
     val scope = rememberCoroutineScope()
     val actions = remember(onQuestionType, onImport, onBank) {
         listOf(
-            BuilderRadialAction("تشریحی", "✎") { onQuestionType(QuestionType.ESSAY) },
-            BuilderRadialAction("چندگزینه‌ای", "◉") { onQuestionType(QuestionType.MULTIPLE_CHOICE) },
-            BuilderRadialAction("صحیح/غلط", "✓") { onQuestionType(QuestionType.TRUE_FALSE) },
-            BuilderRadialAction("جای خالی", "＿") { onQuestionType(QuestionType.FILL_BLANK) },
-            BuilderRadialAction("عددی", "۱۲") { onQuestionType(QuestionType.NUMERIC) },
-            BuilderRadialAction("جورکردنی", "↔") { onQuestionType(QuestionType.MATCHING) },
-            BuilderRadialAction("وارد کردن", "⇩", onImport),
-            BuilderRadialAction("بانک سؤال", "▤", onBank)
+            // V61.6 — هر نوع سؤال با رنگ پاستلی خودش (هماهنگ با کارت سؤال).
+            BuilderRadialAction("تشریحی", "✎", QuestionType.ESSAY.pastelColor()) { onQuestionType(QuestionType.ESSAY) },
+            BuilderRadialAction("چندگزینه‌ای", "◉", QuestionType.MULTIPLE_CHOICE.pastelColor()) { onQuestionType(QuestionType.MULTIPLE_CHOICE) },
+            BuilderRadialAction("صحیح/غلط", "✓", QuestionType.TRUE_FALSE.pastelColor()) { onQuestionType(QuestionType.TRUE_FALSE) },
+            BuilderRadialAction("جای خالی", "＿", QuestionType.FILL_BLANK.pastelColor()) { onQuestionType(QuestionType.FILL_BLANK) },
+            BuilderRadialAction("عددی", "۱۲", QuestionType.NUMERIC.pastelColor()) { onQuestionType(QuestionType.NUMERIC) },
+            BuilderRadialAction("جورکردنی", "↔", QuestionType.MATCHING.pastelColor()) { onQuestionType(QuestionType.MATCHING) },
+            BuilderRadialAction("وارد کردن", "⇩", 0xFF98FF98, onImport),
+            BuilderRadialAction("بانک سؤال", "▤", 0xFFE6E6FA, onBank)
         )
     }
 
@@ -135,7 +138,8 @@ fun BuilderRadialMenuOverlay(
                     }
                     .neumorphic69(colors, 22.dp, 10.dp)
                     .clip(CircleShape)
-                    .background(colors.surface)
+                    // V61.6 — پس‌زمینهٔ پاستلی اختصاصی نوع؛ متن تیره برای خوانایی.
+                    .background(action.background?.let(::Color) ?: colors.surface)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -147,13 +151,14 @@ fun BuilderRadialMenuOverlay(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         action.symbol,
-                        color = colors.accent,
+                        // V61.6 — روی پس‌زمینهٔ پاستلی متن تیرهٔ ثابت خواناتر است.
+                        color = if (action.background != null) Color(0xFF37474F) else colors.accent,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         action.title,
-                        color = colors.ink,
+                        color = if (action.background != null) Color(0xFF37474F) else colors.ink,
                         style = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
                         maxLines = 1

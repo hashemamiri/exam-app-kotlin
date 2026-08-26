@@ -106,7 +106,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CREATE_CLASS, CREATE_SCHOOL }
+enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CREATE_CLASS, CREATE_SCHOOL, SHOW_SCHOOLS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,7 +114,9 @@ fun SchoolManagementScreen(
     launchAction: SchoolLaunchAction? = null,
     onLaunchActionConsumed: () -> Unit = {},
     // V61.0 — مدیر هنگام ساخت کلاس، معلم را از لیست معلم‌های مدرسه انتخاب می‌کند.
-    managerTeacherPicker: Boolean = false
+    managerTeacherPicker: Boolean = false,
+    // V61.6 — بازبودن نمای مدارس به ExamApp می‌رسد تا هدر «مدرسه من» شود.
+    onSchoolsOpenChanged: (Boolean) -> Unit = {}
 ) {
     val context=LocalContext.current
     val viewModel=remember(context){ClassesViewModel(context=context.applicationContext)}
@@ -135,6 +137,8 @@ fun SchoolManagementScreen(
     // cache زندهٔ رمزها برای UI؛ منبع پایدار آن StudentPasswordVault رمزنگاری‌شده
     // با Android Keystore است و پس از بازشدن دوبارهٔ برنامه از روی دستگاه پر می‌شود.
     val knownPasswords = remember { mutableStateMapOf<String, String>() }
+    // V61.6 — گزارش بازبودن نمای مدارس برای هدر «مدرسه من».
+    LaunchedEffect(state.schoolsOpen) { onSchoolsOpenChanged(state.schoolsOpen) }
     LaunchedEffect(state.students, state.roster) {
         val students = (state.students + state.roster).distinctBy(StudentProfile::id)
         val restored = withContext(Dispatchers.IO) {
@@ -197,6 +201,13 @@ fun SchoolManagementScreen(
                 viewModel.closeClass()
                 viewModel.openSchools()
                 if (managerTeacherPicker) creatingSchool = true else joiningSchool = true
+                onLaunchActionConsumed()
+            }
+            // V61.6 — کارت «مدارس» داک مدیر مستقیم نمای مدارس را باز می‌کند.
+            SchoolLaunchAction.SHOW_SCHOOLS -> {
+                showStudents = false
+                viewModel.closeClass()
+                viewModel.openSchools()
                 onLaunchActionConsumed()
             }
             null -> Unit
@@ -275,6 +286,10 @@ fun SchoolManagementScreen(
                     // V61.1 — فقط مدیر: ساخت مدرسهٔ جدید (مدیر چند مدرسه دارد).
                     onCreateSchool = if (managerTeacherPicker) {
                         { creatingSchool = true }
+                    } else null,
+                    // V61.6 — فقط معلم: پیوستن به مدرسه با کد دعوت.
+                    onJoinSchool = if (!managerTeacherPicker) {
+                        { joiningSchool = true }
                     } else null
                 )
                 else -> ClassesContent(
@@ -570,19 +585,25 @@ private fun SchoolsContent(
     schools: List<TeacherSchoolItem>,
     onBack: () -> Unit,
     onOpen: (TeacherSchoolItem) -> Unit,
-    onCreateSchool: (() -> Unit)? = null
+    onCreateSchool: (() -> Unit)? = null,
+    // V61.6 — معلم: دکمهٔ «پیوستن به مدرسه» در ردیف بازگشت.
+    onJoinSchool: (() -> Unit)? = null
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // V61.6 — عنوان داخلی «مدارس من» حذف شد (هدر صفحه «مدرسه من» است)؛
+        // دکمهٔ ساخت/پیوستن هم‌ردیف بازگشت به کلاس‌ها.
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("مدارس من", style = MaterialTheme.typography.titleMedium)
+            onCreateSchool?.let { create ->
+                Button(onClick = create) { Text("ساخت مدرسه جدید") }
+            }
+            onJoinSchool?.let { join ->
+                Button(onClick = join) { Text("پیوستن به مدرسه") }
+            }
             TextButton(onClick = onBack) { Text("بازگشت به کلاس‌ها") }
-        }
-        onCreateSchool?.let { create ->
-            Button(onClick = create, modifier = Modifier.fillMaxWidth()) { Text("ساخت مدرسه جدید") }
         }
         if (schools.isEmpty()) {
             Text(
@@ -1501,7 +1522,8 @@ private fun StudentEditDialog(
                                     colors = genderFilterChipColors(Color(0xFF3B9EFF)),
                                     modifier = Modifier.weight(1f)
                                 )
-                                OutlinedButton(
+                                // V61.6 — تاس مثل آیکن چشم بدون کادر.
+                                IconButton(
                                     onClick = { newPassword = generatePassword(10) },
                                     modifier = Modifier.weight(1f)
                                 ) { Text("🎲") }
@@ -1805,7 +1827,8 @@ private fun BulkStudentDialog(
                                     colors = genderFilterChipColors(Color(0xFFFF5C9A)),
                                     modifier = Modifier.weight(1f)
                                 )
-                                OutlinedButton(
+                                // V61.6 — تاس مثل آیکن چشم بدون کادر.
+                                IconButton(
                                     onClick = {
                                         rows[index] = row.copy(password = generatePassword(10))
                                     },

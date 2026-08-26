@@ -9148,3 +9148,47 @@ FINAL_NATIVE_VERIFY=PASS EXIT=0.
 پچ: V61_5_1_v23_odometer_count_hotfix — فقط همین تست + هندآف.
 بدون SQL؛ نیازمند build (فقط برای سبز شدن CI).
 ```
+
+## ۱۸۹) V61.6 — هدر مدرسه من، کارت‌های مدیر، رنگ پاستلی انواع سؤال
+
+### درخواست‌ها و پیاده‌سازی
+
+```text
+۱) نمای مدارس (معلم و مدیر): عنوان داخلی «مدارس من» حذف شد؛ هدر صفحه
+(TopAppBar در ExamApp) هنگام بازبودن نمای مدارس «مدرسه من» می‌شود:
+SchoolManagementScreen پارامتر جدید onSchoolsOpenChanged دارد که
+state.schoolsOpen را به ExamApp می‌رساند (schoolsViewOpen) و شرط جدید قبل
+از sectionTitle: page==SCHOOL && schoolsViewOpen && !schoolStudentsSelected.
+۲) در ردیف «بازگشت به کلاس‌ها»: مدیر دکمهٔ «ساخت مدرسه جدید» و معلم دکمهٔ
+جدید «پیوستن به مدرسه» (onJoinSchool → همان دیالوگ joiningSchool مبتنی بر
+V39). دکمهٔ تمام‌عرض قبلی ساخت مدرسه حذف شد.
+۳) تاس فرم دانش‌آموز (ویرایش تکی + گروهی): OutlinedButton → IconButton
+بدون کادر مثل چشم؛ رشتهٔ Text("🎲") حفظ شد (needle V19).
+۴) دکمهٔ «آمار» داک مدیر: MainPage.CARDS حالا اول ManagerCardsScreen را
+نشان می‌دهد — سه کارت «مدارس» (SchoolLaunchAction.SHOW_SCHOOLS → نمای
+مدارس)، «کارنامه» و «وضعیت» (هر دو فعلاً ManagerStatsScreen).
+state جدید managerCardsSection (null=کارت‌ها) و openCards همیشه null می‌کند.
+۵) مخاطبان تقویم: Column وسط‌چین → Row یک‌سطری وسط‌چین
+(spacedBy(6.dp, CenterHorizontally))؛ بند verify V61.4 و تست V61_4 هماهنگ شد.
+۶) رنگ پاستلی هر نوع سؤال: تابع QuestionType.pastelColor() در QuestionDraft
+(تشریحی #FFD1DC صورتی، چندگزینه‌ای #AEC6CF آبی، ص/غ #B4EEB4 سبز، جای خالی
+#FDFD96 زرد، عددی #C3B1E1 بنفش، جورکردنی #FFDAB9 هلویی) + نعنایی #98FF98
+«وارد کردن» و لاوندر #E6E6FA «بانک سؤال» در منوی + سازنده
+(BuilderRadialAction.background + متن تیرهٔ 0xFF37474F). کارت سؤال
+(QuestionEditor) با همان رنگ نوع خودش با alpha=.38 (حالت درگ همچنان
+primaryContainer؛ needle «question-drag-color» حفظ).
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_6SchoolsHeaderPastelCardsTest (۵ تست) · هماهنگی: V61_4 (سطر
+تقویم) و بند verify V61.4→V61.6 · شبیه‌سازی V61_1/4/5/6 سبز · اسکن سراسری
+۱۲۹۸ needle: تنها fail جدید V18 کاذب بود (متغیر repository در آن تست به
+چند فایل map می‌شود و updateBankQuestion در repository واقعاً هست) · اسکن
+شمارشی (درس ۸): چهار الگو همه OK · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_6_schools_header_pastel_cards — بدون SQL؛ نیازمند build جدید.
+فایل‌ها: ExamApp/SchoolManagementScreen/ManagerFoundationScreens/
+CalendarScreen/BuilderRadialMenuOverlay/ExamBuilderScreen/QuestionDraft +
+تست جدید + V61_4 تست + verify/changelog/هندآف.
+```

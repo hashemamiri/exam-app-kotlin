@@ -41,7 +41,8 @@ class V61_4MultiSchoolCenterAudienceTest {
         // تقویم: وسط‌چین + فقط سه گزینه
         val calAudience = calendar.substringAfter("// V61.1 — مخاطبان و دکمه‌ها وسط‌چین")
             .substringBefore("if (editor.audience == CalendarAudience.SCHOOLS)")
-        assertTrue("horizontalAlignment = Alignment.CenterHorizontally" in calAudience)
+        // V61.6 — سه دکمه در یک سطر وسط‌چین (Row).
+        assertTrue("Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)" in calAudience)
         assertFalse("CalendarAudience.STUDENTS" in calAudience)
         // آزمون: وسط‌چین + فقط سه چیپ
         val builderAudience = builder.substringAfter("// V61.1 — عنوان و دکمه‌ها وسط‌چین")

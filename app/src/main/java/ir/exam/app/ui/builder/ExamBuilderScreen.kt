@@ -694,7 +694,8 @@ private fun QuestionEditor(
     val neonColor = MaterialTheme.colorScheme.primary
     val cardColor by animateColorAsState(
         targetValue = if (dragActive) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surface,
+        // V61.6 — کارت سؤال به رنگ پاستلی اختصاصی نوع خودش (کمی شفاف تا متن‌ها خوانا بمانند).
+        else Color(question.type.pastelColor()).copy(alpha = .38f),
         animationSpec = tween(170),
         label = "question-drag-color"
     )

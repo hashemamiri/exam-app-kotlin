@@ -412,10 +412,10 @@ private fun CalendarEditorDialog(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Column(
+                    // V61.6 — سه دکمه در «یک سطر» وسط‌چین.
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
                     ) {
                         listOf(
                             CalendarAudience.ALL,

@@ -1701,9 +1701,10 @@ require("drop function if exists public.native_add_student_to_classes_v22(uuid, 
         "V61.4 multi-school SQL (overload drop / membership / create school) is missing")
 _cal_audience=(ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text().split(
     "// V61.1 — مخاطبان و دکمه‌ها وسط‌چین",1)[1].split("if (editor.audience == CalendarAudience.SCHOOLS)",1)[0]
-require("horizontalAlignment = Alignment.CenterHorizontally" in _cal_audience
+# V61.6 — سه دکمه در «یک سطر» وسط‌چین (Row با spacedBy CenterHorizontally).
+require("Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)" in _cal_audience
         and "CalendarAudience.STUDENTS" not in _cal_audience,
-        "V61.4 calendar audience must be centered without the students chip")
+        "V61.4/V61.6 calendar audience must be one centered row without the students chip")
 _builder_audience=builder_screen.split("// V61.1 — عنوان و دکمه‌ها وسط‌چین",1)[1].split(
     'if (state.audienceMode == "schools")',1)[0]
 require("Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)" in _builder_audience
