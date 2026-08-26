@@ -1690,6 +1690,26 @@ require('"schools" to "مدارس"' in builder_screen
         and "CalendarAudience.SCHOOLS" in (ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text(),
         "V61.1 schools audience UI is missing")
 
+# ---- V61.4: multi-school + centered audience + duplicate v22 overload drop ----
+_v61_1_sql=(ROOT/"supabase/migrations/20260826_native_multi_school_v61_1.sql").read_text()
+require("drop function if exists public.native_add_student_to_classes_v22(uuid, jsonb);" in _v61_1_sql
+        and "drop index if exists public.ux_school_one_active_membership_v36;" in _v61_1_sql
+        and "native_manager_create_school_v61" in _v61_1_sql,
+        "V61.4 multi-school SQL (overload drop / membership / create school) is missing")
+_cal_audience=(ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text().split(
+    "// V61.1 — مخاطبان و دکمه‌ها وسط‌چین",1)[1].split("if (editor.audience == CalendarAudience.SCHOOLS)",1)[0]
+require("horizontalAlignment = Alignment.CenterHorizontally" in _cal_audience
+        and "CalendarAudience.STUDENTS" not in _cal_audience,
+        "V61.4 calendar audience must be centered without the students chip")
+_builder_audience=builder_screen.split("// V61.1 — عنوان و دکمه‌ها وسط‌چین",1)[1].split(
+    'if (state.audienceMode == "schools")',1)[0]
+require("Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)" in _builder_audience
+        and '"students" to' not in _builder_audience,
+        "V61.4 exam audience must be centered without the students chip")
+require('Text("ساخت مدرسه جدید")' in (ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
+        and "native_manager_create_school_v61" in (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text(),
+        "V61.4 manager create-school flow is missing")
+
 # ---- V61.2: manager dashboard + class teacher picker ----
 require('"داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,' in app_shell
         and "featuredCard = if (user.role == UserRole.MANAGER) {" in app_shell,

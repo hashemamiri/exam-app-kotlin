@@ -9000,3 +9000,59 @@ class_id): بقیه یا زیرکوئری تک‌جدولی‌اند یا ستو
 فقط SQL به‌روز را اجرا می‌کند؛ فایل کاربر /home/user/V61_0_schools_audience.sql
 جایگزین شد (کل فایل باید دوباره اجرا شود — تراکنش قبلی چیزی اعمال نکرده).
 ```
+
+## ۱۸۶) V61.4 — چندمدرسه‌ای، مخاطبان وسط‌چین، رفع تداخل تابع v22
+
+### ریشهٔ خطای عکس کاربر (با مدرک)
+
+```text
+گزارش (عکس): «Could not choose the best candidate function between:
+native_add_student_to_classes_v22(uuid, jsonb) و (uuid, uuid[])».
+ریشه: V22 تابع را با p_classes jsonb ساخت؛ V40C نسخهٔ جدید را با
+p_classes uuid[] «بدون drop قبلی» ساخت → دو overload هم‌نام. کلاینت آرایهٔ
+JSON می‌فرستد که PostgREST نمی‌تواند بین jsonb و uuid[] انتخاب کند و کل
+عملیات «افزودن دانش‌آموز به کلاس» می‌شکست. این خطا از V40C پنهان بود چون
+هر دو امضا فقط بعد از اجرای هر دو migration روی سرور همزمان وجود دارند.
+رفع: drop نسخهٔ jsonb (منطق V40C جدیدتر و مدرسه‌آگاه است؛ آرایهٔ JSON
+بدون ابهام به uuid[] cast می‌شود).
+```
+
+### تغییرات دیگر (درخواست کاربر)
+
+```text
+مخاطبان پیام تقویم و مشخصات آزمون: فقط «همه، مدارس، کلاس‌ها»؛ عنوان و
+دکمه‌ها وسط‌چین (تقویم Column با CenterHorizontally؛ آزمون Row با
+spacedBy(6.dp, Alignment.CenterHorizontally)). دکمهٔ «دانش‌آموزان» حذف شد
+ولی مسیر دادهٔ students (نمایش/ویرایش پیام‌ها و آزمون‌های قدیمی + گسترش
+سروری مدرسه→students) عمداً پابرجاست؛ setAudienceMode مقدار students را
+هم می‌پذیرد چون آزمون قدیمی با آن load می‌شود.
+چندمدرسه‌ای: SQL جدید 20260826_native_multi_school_v61_1.sql —
+حذف ux_school_one_active_membership_v36، بازنویسی native_join_school_v39
+(گارد تک‌مدرسه‌ای → فقط «قبلاً عضو همین مدرسه هستید»)،
+native_manager_create_school_v61 (فقط نقش manager؛ عضویت مدیری همان مدرسه
+upsert)، native_teacher_schools_v61 حالا مدارس مدیر (created_by یا عضویت)
+را هم می‌دهد و شمار کلاس‌ها برای مدیر کل مدرسه است؛
+native_teacher_school_classes_v61 برای مدیر همهٔ کلاس‌های مدرسه.
+UI: نمای «مدارس» مدیر دکمهٔ «ساخت مدرسه جدید» + دیالوگ نام/استان/شهر
+(createSchool در ClassesViewModel → native_manager_create_school_v61 →
+تازه‌سازی لیست). برای معلم همان لیست عضویت‌ها بدون دکمه.
+هشدار طراحی: چندعضویتی شدن ممکن است روی توابعی که «یک مدرسه» فرض می‌کنند
+(select school_id ... limit 1 در V40C/V38/V43) اثر بگذارد — رفتار فعلی:
+اولین عضویت فعال انتخاب می‌شود؛ اگر کاربر چندمدرسه‌ای شد و داده جابه‌جا
+دیده شد، این توابع باید مدرسه‌آگاه بازنویسی شوند (کار آینده).
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_4MultiSchoolCenterAudienceTest (۳ تست) · verify: بلوک V61.4
+(drop overload/index، وسط‌چین بدون students در هر دو مخاطب، جریان ساخت
+مدرسه) · شبیه‌سازی V61_1/V61_4/V19 سبز · اسکن سراسری ۱۱۲۵ needle فقط
+هشدارهای کاذب شناخته · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_4_multi_school_center_audience — SQL جدید + CalendarScreen/
+ExamBuilderScreen/SchoolManagementScreen/ClassesViewModel + تست/verify/
+changelog/هندآف.
+اقدام سرور (الزامی): اجرای V61_1_multi_school.sql (پس از V61_0)؛
+سلامت‌سنجی: select to_regprocedure('public.native_add_student_to_classes_v22(uuid,jsonb)') is null;
+نیازمند build جدید.
+```

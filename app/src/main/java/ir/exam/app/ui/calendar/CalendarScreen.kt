@@ -404,14 +404,23 @@ private fun CalendarEditorDialog(
                     )
                 }
                 item {
-                    Text("مخاطبان", fontWeight = FontWeight.Bold)
-                    // V61.0 — ترتیب درخواستی: «همه»، «مدارس»، «کلاس‌ها»، «دانش‌آموزان».
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // V61.1 — مخاطبان و دکمه‌ها وسط‌چین؛ دکمهٔ «دانش‌آموزان» حذف شد
+                    // (پیام‌های قدیمی دانش‌آموزی همچنان نمایش/ویرایش می‌شوند).
+                    Text(
+                        "مخاطبان",
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         listOf(
                             CalendarAudience.ALL,
                             CalendarAudience.SCHOOLS,
-                            CalendarAudience.CLASSES,
-                            CalendarAudience.STUDENTS
+                            CalendarAudience.CLASSES
                         ).forEach { audience ->
                             FilterChip(
                                 selected = editor.audience == audience,

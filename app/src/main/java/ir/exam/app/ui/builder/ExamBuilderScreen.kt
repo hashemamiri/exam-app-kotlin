@@ -491,10 +491,19 @@ private fun ExamSettingsCard(state: ExamBuilderState, viewModel: ExamBuilderView
 private fun AudienceCard(state: ExamBuilderState, viewModel: ExamBuilderViewModel) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("مخاطبان آزمون", style = MaterialTheme.typography.titleMedium)
-            // V61.0 — ترتیب درخواستی: همه، مدارس، کلاس‌ها؛ دانش‌آموزان مثل قبل.
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("all" to "همه", "schools" to "مدارس", "classes" to "کلاس‌ها", "students" to "دانش‌آموزان").forEach { (value, label) ->
+            // V61.1 — عنوان و دکمه‌ها وسط‌چین؛ دکمهٔ «دانش‌آموزان» حذف شد
+            // (آزمون قدیمی با مخاطب دانش‌آموزی همچنان قابل ویرایش است).
+            Text(
+                "مخاطبان آزمون",
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+            ) {
+                listOf("all" to "همه", "schools" to "مدارس", "classes" to "کلاس‌ها").forEach { (value, label) ->
                     FilterChip(selected = state.audienceMode == value, onClick = { viewModel.setAudienceMode(value) }, label = { Text(label) })
                 }
             }

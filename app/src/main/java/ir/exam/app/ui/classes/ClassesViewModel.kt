@@ -123,6 +123,28 @@ class ClassesViewModel(
         reloadData()
     }
 
+    /** V61.1 — مدیر مدرسهٔ جدید می‌سازد؛ لیست مدارس تازه می‌شود. */
+    fun createSchool(name: String, province: String, city: String) = viewModelScope.launch {
+        _state.update { it.copy(actionLoading = true, error = null, message = null) }
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc(
+                "native_manager_create_school_v61",
+                kotlinx.serialization.json.buildJsonObject {
+                    put("p_name", kotlinx.serialization.json.JsonPrimitive(name.trim()))
+                    put("p_province", kotlinx.serialization.json.JsonPrimitive(province.trim()))
+                    put("p_city", kotlinx.serialization.json.JsonPrimitive(city.trim()))
+                }
+            ).decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?.takeIf(String::isNotBlank)?.let(::error)
+        }.onSuccess {
+            _state.update { it.copy(actionLoading = false, message = "مدرسه ساخته شد.") }
+            loadSchoolsNow()
+        }.onFailure { error ->
+            _state.update { it.copy(actionLoading = false, error = safeSchoolError(error)) }
+        }
+    }
+
     /** V61.0 — معلم‌های مدرسه برای انتخاب در ساخت کلاس؛ غیرمدیر بی‌صدا خالی می‌ماند. */
     fun loadSchoolTeachers() = viewModelScope.launch {
         runCatching {

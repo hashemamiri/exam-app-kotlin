@@ -119,6 +119,8 @@ fun SchoolManagementScreen(
     var showStudents by remember { mutableStateOf(false) }
     var classEditor by remember { mutableStateOf<SchoolClass?>(null) }
     var creatingClass by remember { mutableStateOf(false) }
+    // V61.1 — پنجرهٔ ساخت مدرسهٔ جدید (فقط مدیر).
+    var creatingSchool by remember { mutableStateOf(false) }
     var deletingClass by remember { mutableStateOf<SchoolClass?>(null) }
     var showMemberPicker by remember { mutableStateOf(false) }
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
@@ -245,7 +247,11 @@ fun SchoolManagementScreen(
                 state.schoolsOpen -> SchoolsContent(
                     schools = state.schools,
                     onBack = viewModel::closeSchools,
-                    onOpen = viewModel::selectSchool
+                    onOpen = viewModel::selectSchool,
+                    // V61.1 — فقط مدیر: ساخت مدرسهٔ جدید (مدیر چند مدرسه دارد).
+                    onCreateSchool = if (managerTeacherPicker) {
+                        { creatingSchool = true }
+                    } else null
                 )
                 else -> ClassesContent(
                     classes = state.classes,
@@ -258,6 +264,48 @@ fun SchoolManagementScreen(
             }
         }
     }
+    }
+
+    if (creatingSchool) {
+        // V61.1 — ساخت مدرسهٔ جدید توسط مدیر: نام + استان/شهر اختیاری.
+        var schoolName by remember { mutableStateOf("") }
+        var schoolProvince by remember { mutableStateOf("") }
+        var schoolCity by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { creatingSchool = false },
+            title = { Text("ساخت مدرسه جدید") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        schoolName, { schoolName = it.take(160) },
+                        label = { Text("نام مدرسه") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            schoolProvince, { schoolProvince = it.take(100) },
+                            label = { Text("استان") }, singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            schoolCity, { schoolCity = it.take(100) },
+                            label = { Text("شهر") }, singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.createSchool(schoolName, schoolProvince, schoolCity)
+                        creatingSchool = false
+                    },
+                    enabled = schoolName.trim().length >= 2
+                ) { Text("ساخت مدرسه") }
+            },
+            dismissButton = { TextButton(onClick = { creatingSchool = false }) { Text("انصراف") } }
+        )
     }
 
     if (creatingClass || classEditor != null) {
@@ -436,12 +484,17 @@ private fun ClassesContent(
     }
 }
 
-/** V61.0 — لیست مدرسه‌های عضو معلم به‌صورت کارت؛ لمس کارت = کلاس‌های آن مدرسه. */
+/**
+ * V61.0 — لیست مدرسه‌ها به‌صورت کارت؛ لمس کارت = کلاس‌های آن مدرسه.
+ * V61.1 — معلم عضویت نامحدود دارد؛ مدیر مدارس ساخته‌شدهٔ خودش را می‌بیند و
+ * می‌تواند مدرسهٔ جدید بسازد (onCreateSchool فقط برای مدیر پاس می‌شود).
+ */
 @Composable
 private fun SchoolsContent(
     schools: List<TeacherSchoolItem>,
     onBack: () -> Unit,
-    onOpen: (TeacherSchoolItem) -> Unit
+    onOpen: (TeacherSchoolItem) -> Unit,
+    onCreateSchool: (() -> Unit)? = null
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
@@ -452,8 +505,14 @@ private fun SchoolsContent(
             Text("مدارس من", style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = onBack) { Text("بازگشت به کلاس‌ها") }
         }
+        onCreateSchool?.let { create ->
+            Button(onClick = create, modifier = Modifier.fillMaxWidth()) { Text("ساخت مدرسه جدید") }
+        }
         if (schools.isEmpty()) {
-            Text("هنوز عضو مدرسه‌ای نیستید. با کد دعوت مدیر به مدرسه بپیوندید.")
+            Text(
+                if (onCreateSchool != null) "هنوز مدرسه‌ای نساخته‌اید."
+                else "هنوز عضو مدرسه‌ای نیستید. با کد دعوت مدیر به مدرسه بپیوندید."
+            )
         } else {
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(schools, key = TeacherSchoolItem::id) { item ->
