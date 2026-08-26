@@ -63,7 +63,8 @@ class V55_18SmoothCardsEyeMenuTest {
             .substringBefore("private fun QuestionStyleControls(")
         assertTrue("\"ص/غ\"" in editor)
         assertTrue("Arrangement.spacedBy(2.dp)" in editor)
-        assertTrue(".size(38.dp)" in editor)
+        // V62.5 — آیکن‌های سربرگ ۳۸→۳۰dp تا برچسب «چندگزینه‌ای» کامل دیده شود.
+        assertTrue(".size(30.dp)" in editor)
         // قرارداد V25: فیلد بارم دست‌نخورده.
         assertTrue("Modifier.width(62.dp).height(40.dp)" in builder)
     }

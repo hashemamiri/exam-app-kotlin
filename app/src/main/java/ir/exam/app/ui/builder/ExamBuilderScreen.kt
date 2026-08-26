@@ -745,7 +745,7 @@ private fun QuestionEditor(
                     }
                 )
                 // V55.17 — درخواست کاربر: ذخیره در بانک با آیکن کنار سطل زباله.
-                IconButton(onClick = { viewModel.saveToBank(question.id) }, modifier = Modifier.size(38.dp)) {
+                IconButton(onClick = { viewModel.saveToBank(question.id) }, modifier = Modifier.size(30.dp)) {
                     Icon(
                         Icons.Outlined.BookmarkAdd,
                         contentDescription = "ذخیره سؤال در بانک",
@@ -753,7 +753,7 @@ private fun QuestionEditor(
                     )
                 }
                 // V55.14 — درخواست کاربر: حذف سؤال با آیکن سطل زباله کنار بارم + تأیید.
-                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(38.dp)) {
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(30.dp)) {
                     Icon(
                         Icons.Outlined.Delete,
                         contentDescription = "حذف سؤال",
@@ -767,7 +767,7 @@ private fun QuestionEditor(
                 Box {
                     IconButton(
                         onClick = { previewMenuOpen = true },
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Visibility,
@@ -796,7 +796,7 @@ private fun QuestionEditor(
                 IconButton(
                     onClick = {},
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(30.dp)
                         .pointerInput(question.id) {
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {

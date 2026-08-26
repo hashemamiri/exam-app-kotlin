@@ -93,11 +93,29 @@ class ProfileSettingsViewModel(
         saveProfile(profile, "پروفایل و سربرگ ذخیره شد.")
     }
 
-    fun changePassword(password: String, confirmation: String) = accountAction {
+    // V62.5 — تغییر رمز نیازمند رمز فعلی است؛ در صورت فراموشی مسیر بازیابی
+    // با کد ایمیل (sendPasswordRecoveryOtp/recoverPassword) استفاده می‌شود.
+    fun changePassword(currentPassword: String, password: String, confirmation: String) = accountAction {
         require(password.length in 8..72) { "رمز عبور باید ۸ تا ۷۲ کاراکتر باشد." }
         require(password == confirmation) { "تکرار رمز عبور یکسان نیست." }
+        repository.verifyCurrentPassword(currentPassword).getOrThrow()
         repository.changePassword(password).getOrThrow()
         "رمز عبور با موفقیت تغییر کرد."
+    }
+
+    /** V62.5 — فراموشی رمز فعلی: ارسال کد بازیابی به ایمیل حساب. */
+    fun sendPasswordRecoveryOtp(email: String) = accountAction {
+        repository.sendPasswordRecoveryOtp(email).getOrThrow()
+        "کد بازیابی به ایمیل حساب ارسال شد."
+    }
+
+    /** V62.5 — تأیید کد بازیابی و ثبت رمز تازه بدون نیاز به رمز قبلی. */
+    fun recoverPassword(email: String, code: String, password: String, confirmation: String) = accountAction {
+        require(password.length in 8..72) { "رمز عبور باید ۸ تا ۷۲ کاراکتر باشد." }
+        require(password == confirmation) { "تکرار رمز عبور یکسان نیست." }
+        repository.verifyPasswordRecoveryOtp(email, code).getOrThrow()
+        repository.changePassword(password).getOrThrow()
+        "رمز عبور با موفقیت بازیابی و تغییر کرد."
     }
 
     fun changeEmail(email: String) = accountAction {

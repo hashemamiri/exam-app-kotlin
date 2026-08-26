@@ -167,6 +167,9 @@ fun SchoolManagementScreen(
     }
     var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
     val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
+    // V62.5 — خروجی اکسل دومرحله‌ای: مرحلهٔ ۱ انتخاب گروه (فیلتر)، مرحلهٔ ۲ انتخاب ستون‌ها.
+    var exportStep by remember { mutableStateOf(0) }
+    var exportFilter by remember { mutableStateOf(StudentListFilter()) }
 
     LaunchedEffect(Unit) { viewModel.load() }
     LaunchedEffect(launchAction) {
@@ -260,8 +263,11 @@ fun SchoolManagementScreen(
                     onDelete = { deletingStudent = it },
                     onBulk = { showBulk = true },
                     onExport = {
-                        pendingXlsx = studentWorkbook(state.students)
-                        xlsxLauncher.launch("students.xlsx")
+                        // V62.5 — به‌جای خروجی فوری، جریان دومرحله‌ای باز می‌شود.
+                        viewModel.loadFilterMeta()
+                        viewModel.refreshSchoolList()
+                        exportFilter = StudentListFilter()
+                        exportStep = 1
                     },
                     classes = state.classes,
                     onAddToClasses = viewModel::addStudentToClasses,
@@ -497,6 +503,47 @@ fun SchoolManagementScreen(
             viewModel.createStudentsBulk(null,requests);showBulk=false
         }
     )
+
+    // V62.5 — مرحلهٔ ۱ خروجی اکسل: انتخاب گروه با همان پنجرهٔ فیلتر دانش‌آموزان.
+    if (exportStep == 1) {
+        StudentFilterDialog(
+            filter = exportFilter,
+            classes = state.classes,
+            filterMeta = state.filterMeta,
+            schools = state.schools,
+            showTeacherFilter = managerTeacherPicker,
+            onDismiss = { exportStep = 0 },
+            onApply = { selected ->
+                exportFilter = selected
+                exportStep = 2
+            }
+        )
+    }
+    // V62.5 — مرحلهٔ ۲: انتخاب ستون‌های اکسل؛ ستون رمز فقط برای دانش‌آموزانی
+    // فعال است که حساب‌شان را همین پنل ساخته و رمزشان در Vault همین دستگاه است.
+    if (exportStep == 2) {
+        val exportStudents = applyStudentFilter(
+            state.students, exportFilter, state.classes, state.filterMeta
+        )
+        StudentExportColumnsDialog(
+            students = exportStudents,
+            knownPasswordOf = { username -> knownPasswords[username?.lowercase()] },
+            onDismiss = { exportStep = 0 },
+            onExport = { columns, includePasswords ->
+                pendingXlsx = studentWorkbook(
+                    students = exportStudents,
+                    columns = columns,
+                    passwordOf = if (includePasswords) {
+                        { student -> knownPasswords[student.username?.lowercase()] }
+                    } else {
+                        { null }
+                    }
+                )
+                exportStep = 0
+                xlsxLauncher.launch("students.xlsx")
+            }
+        )
+    }
     state.bulkResult?.let { result -> AlertDialog(onDismissRequest=viewModel::clearMessage,title={Text("نتیجه ساخت گروهی")},text={Column{
         Text("موفق: ${result.credentials.size} · ناموفق: ${result.failures.size}");result.failures.take(10).forEach{Text(it)}
     }},confirmButton={Button(onClick={pendingXlsx=credentialWorkbook(result.credentials);xlsxLauncher.launch("student-credentials.xlsx")}){Text("ذخیره Excel رمزها")}},dismissButton={TextButton(onClick=viewModel::clearMessage){Text("بستن")}}) }
@@ -2040,7 +2087,108 @@ private fun copyOneTimeCredential(
     Toast.makeText(context, "اطلاعات و رمز جدید به‌صورت حساس کپی شد.", Toast.LENGTH_LONG).show()
 }
 
-private fun studentWorkbook(students:List<StudentProfile>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان",listOf(listOf("نام","نام کاربری","جنسیت","پایه","رشته","نام پدر","کلاس","وضعیت"))+students.map{listOf(it.fullName,it.username.orEmpty(),it.gender.orEmpty(),it.grade.orEmpty(),it.fieldOfStudy.orEmpty(),it.fatherName.orEmpty(),it.classNames.orEmpty(),if(it.active)"فعال" else "غیرفعال") })))
+/** V62.5 — ستون‌های قابل‌انتخاب خروجی اکسل دانش‌آموزان (ترتیب ثابت شیت). */
+internal val StudentExportColumns: List<Pair<String, (StudentProfile) -> String>> = listOf(
+    "نام" to { s -> s.fullName },
+    "نام کاربری" to { s -> s.username.orEmpty() },
+    "جنسیت" to { s -> when (s.gender?.lowercase()) { "female" -> "دختر"; "male" -> "پسر"; else -> s.gender.orEmpty() } },
+    "پایه" to { s -> s.grade.orEmpty() },
+    "رشته" to { s -> s.fieldOfStudy.orEmpty() },
+    "نام پدر" to { s -> s.fatherName.orEmpty() },
+    "کلاس" to { s -> s.classNames.orEmpty() },
+    "وضعیت" to { s -> if (s.active) "فعال" else "غیرفعال" }
+)
+
+// V62.5 — خروجی با ستون‌های انتخابی؛ ستون «رمز» فقط رمزهای شناخته‌شدهٔ Vault
+// همین دستگاه (حساب‌هایی که همین پنل ساخته) را می‌نویسد و برای بقیه خالی می‌ماند.
+private fun studentWorkbook(
+    students: List<StudentProfile>,
+    columns: List<String> = StudentExportColumns.map { it.first },
+    passwordOf: (StudentProfile) -> String? = { null }
+): ByteArray {
+    val active = StudentExportColumns.filter { it.first in columns }
+    val includePassword = "رمز" in columns
+    val header = active.map { it.first } + if (includePassword) listOf("رمز") else emptyList()
+    val rows = students.map { student ->
+        active.map { it.second(student) } +
+            if (includePassword) listOf(passwordOf(student).orEmpty()) else emptyList()
+    }
+    return XlsxWorkbook.build(listOf(XlsxSheet("دانش‌آموزان", listOf(header) + rows)))
+}
+
+/**
+ * V62.5 — مرحلهٔ ۲ خروجی اکسل: انتخاب اطلاعات هر دانش‌آموز. اگر حتی یک رمز
+ * شناخته‌شده در این پنل باشد، گزینهٔ «رمز حساب» هم نمایش داده می‌شود
+ * (رمز فقط برای حساب‌هایی که همین پنل ساخته در Vault دستگاه موجود است).
+ */
+@Composable
+private fun StudentExportColumnsDialog(
+    students: List<StudentProfile>,
+    knownPasswordOf: (String?) -> String?,
+    onDismiss: () -> Unit,
+    onExport: (columns: List<String>, includePasswords: Boolean) -> Unit
+) {
+    var selected by remember { mutableStateOf(StudentExportColumns.map { it.first }.toSet()) }
+    var includePasswords by remember { mutableStateOf(false) }
+    val passwordCount = remember(students) {
+        students.count { !knownPasswordOf(it.username).isNullOrBlank() }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("اطلاعات ورودی اکسل") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("تعداد دانش‌آموزان گروه انتخابی: ${students.size}")
+                StudentExportColumns.forEach { (name, _) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            selected = if (name in selected) selected - name else selected + name
+                        },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = name in selected,
+                            onCheckedChange = {
+                                selected = if (name in selected) selected - name else selected + name
+                            }
+                        )
+                        Text(name)
+                    }
+                }
+                if (passwordCount > 0) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { includePasswords = !includePasswords },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = includePasswords,
+                            onCheckedChange = { includePasswords = it }
+                        )
+                        Text("رمز حساب ($passwordCount حساب ساخته‌شده در این پنل)")
+                    }
+                    if (includePasswords) {
+                        Text(
+                            "رمز فقط برای حساب‌هایی که در این پنل ساخته شده‌اند موجود است؛ فایل را امن نگه دارید.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = selected.isNotEmpty() || includePasswords,
+                onClick = {
+                    val columns = StudentExportColumns.map { it.first }.filter { it in selected } +
+                        if (includePasswords) listOf("رمز") else emptyList()
+                    onExport(columns, includePasswords)
+                }
+            ) { Text("ذخیره Excel") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
+}
 private fun credentialWorkbook(items:List<StudentCredential>):ByteArray=XlsxWorkbook.build(listOf(XlsxSheet("حساب‌ها",listOf(listOf("نام کاربری","رمز یک‌بارنمایش"))+items.map{listOf(it.username,it.password)})))
 
 private fun filteredStudents(items: List<StudentProfile>, query: String): List<StudentProfile> {

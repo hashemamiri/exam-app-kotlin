@@ -1778,6 +1778,26 @@ require("androidx.compose.runtime.key(selectedTab) {" in _sign_in_v61
 _roletabs_v62=_ice.split("internal fun RoleTabs(",1)[1].split("internal fun OtpBoxes(",1)[0]
 require("indication = null" in _roletabs_v62,
         "V62.1.4 role tab ripple must be disabled")
+# V62.5 — اکسل دومرحله‌ای (گروه با فیلتر + انتخاب ستون‌ها + رمز Vault)،
+# تغییر رمز با رمز فعلی/بازیابی ایمیلی، داک مدیر در داشبورد خاموش،
+# آیکن‌های فشرده‌تر سربرگ کارت سؤال.
+require("StudentExportColumnsDialog(" in school_screen
+        and "internal val StudentExportColumns" in school_screen
+        and "exportStep = 2" in school_screen,
+        "V62.5 two-step student excel export is missing")
+_profile_vm_v62=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsViewModel.kt").read_text()
+_profile_repo_v62=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabaseProfileRepository.kt").read_text()
+_profile_ui_v62=(ROOT/"app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt").read_text()
+require("repository.verifyCurrentPassword(currentPassword).getOrThrow()" in _profile_vm_v62
+        and "رمز فعلی نادرست است." in _profile_repo_v62
+        and "کد بازیابی فقط به ایمیل همین حساب ارسال می‌شود." in _profile_repo_v62
+        and 'Text("رمز فعلی")' in _profile_ui_v62,
+        "V62.5 current-password gate with email recovery is missing")
+require("if (managerDashboardActive) TeacherDockSection.NONE" in app_shell,
+        "V62.5 manager dashboard must keep the dock stats button unselected")
+_editor_v62=builder_screen.split("private fun QuestionEditor(",1)[1].split("private fun QuestionStyleControls(",1)[0]
+require(".size(30.dp)" in _editor_v62 and ".size(38.dp)" not in _editor_v62,
+        "V62.5 tighter question-card header icons are missing")
 # V62.2/V62.4 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر دو کمانهٔ
 # بزرگ (V62.4: بدون هالهٔ نئونی و هستهٔ نبض‌دار).
 require("internal fun IceSpinner(" in _ice

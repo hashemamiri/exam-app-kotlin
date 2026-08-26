@@ -224,7 +224,10 @@ fun ProfileSettingsScreen(
                 onChangePassword = viewModel::changePassword,
                 onChangeUsername = viewModel::changeTeacherUsername,
                 onChangeEmail = viewModel::changeEmail,
-                onDeleteAccount = { viewModel.deleteAccount(onDone = onAccountDeleted) }
+                onDeleteAccount = { viewModel.deleteAccount(onDone = onAccountDeleted) },
+                // V62.5 — بازیابی رمز فعلی با کد ایمیل.
+                onSendRecoveryCode = viewModel::sendPasswordRecoveryOtp,
+                onRecoverPassword = viewModel::recoverPassword
             )
             destination == ProfileSettingsDestination.DATA -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
@@ -575,10 +578,13 @@ private fun AccountSection(
     user: AppUser,
     profile: NativeProfile,
     state: ProfileSettingsState,
-    onChangePassword: (String, String) -> Unit,
+    onChangePassword: (String, String, String) -> Unit,
     onChangeUsername: (String) -> Unit,
     onChangeEmail: (String) -> Unit,
-    onDeleteAccount: () -> Unit = {}
+    onDeleteAccount: () -> Unit = {},
+    // V62.5 — بازیابی رمز فعلی با کد ایمیل.
+    onSendRecoveryCode: (String) -> Unit = {},
+    onRecoverPassword: (String, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
     val role = user.role
     var expandedCard by remember(profile.id) { mutableStateOf<String?>(null) }
@@ -588,6 +594,11 @@ private fun AccountSection(
     var confirmation by remember(profile.id) { mutableStateOf("") }
     var passwordVisible by remember(profile.id) { mutableStateOf(false) }
     var confirmationVisible by remember(profile.id) { mutableStateOf(false) }
+    // V62.5 — رمز فعلی برای تغییر رمز + حالت بازیابی با کد ایمیل.
+    var currentPassword by remember(profile.id) { mutableStateOf("") }
+    var currentVisible by remember(profile.id) { mutableStateOf(false) }
+    var recoveryMode by remember(profile.id) { mutableStateOf(false) }
+    var recoveryCode by remember(profile.id) { mutableStateOf("") }
     val schoolJoinRepository = remember { SupabaseSchoolJoinRepository() }
     val schoolJoinScope = rememberCoroutineScope()
     var schoolCode by remember(profile.id) { mutableStateOf("") }
@@ -750,6 +761,38 @@ private fun AccountSection(
                 expanded = expandedCard == "password",
                 onToggle = { toggle("password") }
             ) {
+                // V62.5 — تغییر رمز نیازمند رمز فعلی است؛ «رمز را فراموش کرده‌ام»
+                // مسیر بازیابی با کد ایمیل را باز می‌کند.
+                if (!recoveryMode) {
+                    OutlinedTextField(
+                        value = currentPassword,
+                        onValueChange = { currentPassword = it.take(72) },
+                        label = { Text("رمز فعلی") },
+                        visualTransformation = passwordTransformation(currentVisible),
+                        trailingIcon = {
+                            PasswordVisibilityButton(
+                                visible = currentVisible,
+                                onToggle = { currentVisible = !currentVisible }
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Text("کد بازیابی به ایمیل حساب ارسال می‌شود و بدون رمز قبلی رمز تازه ثبت می‌شود.")
+                    Button(
+                        onClick = { onSendRecoveryCode(user.email.orEmpty()) },
+                        enabled = !state.accountSaving && !user.email.isNullOrBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("ارسال کد بازیابی به ایمیل") }
+                    OutlinedTextField(
+                        value = recoveryCode,
+                        onValueChange = { recoveryCode = it.filter(Char::isDigit).take(8) },
+                        label = { Text("کد بازیابی ۶ تا ۸ رقم") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it.take(72) },
@@ -780,14 +823,24 @@ private fun AccountSection(
                 )
                 Button(
                     onClick = {
-                        onChangePassword(password, confirmation)
+                        if (recoveryMode) {
+                            onRecoverPassword(user.email.orEmpty(), recoveryCode, password, confirmation)
+                        } else {
+                            onChangePassword(currentPassword, password, confirmation)
+                        }
+                        currentPassword = ""
+                        recoveryCode = ""
                         password = ""
                         confirmation = ""
                     },
-                    enabled = !state.accountSaving && password.length >= 8 && password == confirmation,
+                    enabled = !state.accountSaving && password.length >= 8 && password == confirmation &&
+                        (if (recoveryMode) recoveryCode.length in 6..8 else currentPassword.isNotBlank()),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("تغییر رمز") }
-                Text("رمز قبلی قابل مشاهده یا بازیابی نیست.", style = MaterialTheme.typography.bodySmall)
+                ) { Text(if (recoveryMode) "تأیید کد و تغییر رمز" else "تغییر رمز") }
+                TextButton(
+                    onClick = { recoveryMode = !recoveryMode },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (recoveryMode) "بازگشت به تغییر رمز با رمز فعلی" else "رمز فعلی را فراموش کرده‌ام") }
             }
         }
         }

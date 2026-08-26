@@ -308,6 +308,9 @@ private fun AuthenticatedExamApp(
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         studentExamActive = studentExamActive,
+        // V62.5 — داشبورد مدیر باز است؟ (دکمهٔ آمار داک خاموش بماند)
+        managerDashboardActive = user.role == UserRole.MANAGER &&
+            page == MainPage.CARDS && managerCardsSection == "status",
         onToggleMenu = {
             if (quickAddOpen) quickAddOpen = false
             menuOpen = !menuOpen
@@ -746,6 +749,9 @@ private fun AuthenticatedShell(
     menuOpen: Boolean,
     quickAddOpen: Boolean,
     studentExamActive: Boolean = false,
+    // V62.5 — داشبورد پیش‌فرض مدیر صفحهٔ CARDS است ولی دکمهٔ آمار داک نباید
+    // در حالت انتخاب دیده شود؛ فقط وقتی خود کارت‌ها باز است روشن می‌شود.
+    managerDashboardActive: Boolean = false,
     onToggleMenu: () -> Unit,
     onToggleAdd: () -> Unit,
     onCloseAdd: () -> Unit,
@@ -921,7 +927,8 @@ private fun AuthenticatedShell(
                     bottomBar = {
                         if (user.role != UserRole.STUDENT) {
                             TeacherBottomDock(
-                                active = page.teacherDockSection(),
+                                active = if (managerDashboardActive) TeacherDockSection.NONE
+                                else page.teacherDockSection(),
                                 menuOpen = menuOpen,
                                 quickAddOpen = quickAddOpen,
                                 onMenu = onToggleMenu,

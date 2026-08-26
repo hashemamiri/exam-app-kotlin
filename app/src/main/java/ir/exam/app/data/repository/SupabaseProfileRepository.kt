@@ -114,6 +114,47 @@ class SupabaseProfileRepository(context: Context) {
         SupabaseProvider.client.auth.updateUser { password = newPassword }
     }
 
+    /**
+     * V62.5 — تأیید رمز فعلی پیش از تغییر رمز: با ایمیل نشست فعلی و رمز
+     * واردشده دوباره signIn می‌شود؛ رمز اشتباه = خطای سوپابیس. چیزی ذخیره
+     * نمی‌شود و نشست همان کاربر می‌ماند.
+     */
+    suspend fun verifyCurrentPassword(currentPassword: String): Result<Unit> = runCatching {
+        require(currentPassword.isNotBlank()) { "رمز فعلی را وارد کنید." }
+        val email = SupabaseProvider.client.auth.currentUserOrNull()?.email
+            ?.takeIf(String::isNotBlank) ?: error("نشست ورود پیدا نشد.")
+        runCatching {
+            SupabaseProvider.client.auth.signInWith(io.github.jan.supabase.auth.providers.builtin.Email) {
+                this.email = email
+                this.password = currentPassword
+            }
+        }.getOrElse { error("رمز فعلی نادرست است.") }
+    }
+
+    /** V62.5 — فراموشی رمز فعلی: کد ۶ تا ۸ رقمی فقط به ایمیل خود حساب می‌رود. */
+    suspend fun sendPasswordRecoveryOtp(email: String): Result<Unit> = runCatching {
+        val sessionEmail = SupabaseProvider.client.auth.currentUserOrNull()?.email
+            ?.takeIf(String::isNotBlank) ?: error("نشست ورود پیدا نشد.")
+        require(sessionEmail.equals(email.trim(), ignoreCase = true)) {
+            "کد بازیابی فقط به ایمیل همین حساب ارسال می‌شود."
+        }
+        SupabaseProvider.client.auth.signInWith(io.github.jan.supabase.auth.providers.builtin.OTP) {
+            this.email = sessionEmail
+            createUser = false
+        }
+    }
+
+    /** V62.5 — تأیید کد بازیابی؛ پس از موفقیت، changePassword بدون رمز قبلی مجاز است. */
+    suspend fun verifyPasswordRecoveryOtp(email: String, code: String): Result<Unit> = runCatching {
+        val clean = code.filter(Char::isDigit)
+        require(clean.length in 6..8) { "کد بازیابی ۶ تا ۸ رقم است." }
+        SupabaseProvider.client.auth.verifyEmailOtp(
+            io.github.jan.supabase.auth.OtpType.Email.EMAIL,
+            email.trim().lowercase(),
+            clean
+        )
+    }
+
     suspend fun changeEmail(newEmail: String): Result<Unit> = runCatching {
         val clean = newEmail.trim().lowercase()
         require(Patterns.EMAIL_ADDRESS.matcher(clean).matches() && clean.length <= 254) {
