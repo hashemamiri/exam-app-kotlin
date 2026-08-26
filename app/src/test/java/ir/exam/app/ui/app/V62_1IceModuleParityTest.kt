@@ -50,10 +50,11 @@ class V62_1IceModuleParityTest {
 
     @Test
     fun `role tabs slide correctly in rtl and welcome matches the module`() {
-        // RTL: نشانگر از سمت راست شروع می‌شود (فرمول ماژول)
-        assertTrue("LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset" in components)
-        // V62.1.1 — Int*Dp در کاتلین وجود ندارد و CI را می‌شکست؛ ضرب از سمت Dp.
-        assertTrue("val logicalOffset = itemWidth * selected" in components)
+        // V62.1.2 — گزارش دستگاه: نشانگر روی تب قرینه می‌نشست. ریشه:
+        // Modifier.offset(x) خودش RTL-آگاه است؛ آینه‌سازی دستی ماژول جبران
+        // دوباره می‌شد. offset منطقی مستقیم (Dp*Int به‌خاطر V62.1.1).
+        assertTrue("targetValue = itemWidth * selected" in components)
+        assertTrue("maxWidth - itemWidth - logicalOffset" !in components)
         // خوش‌آمد: ترتیب دکمه‌ها و یادآوری دانش‌آموز
         val landing = signIn.substringAfter("private fun LandingPane(")
             .substringBefore("private fun LoginPane(")
@@ -69,8 +70,9 @@ class V62_1IceModuleParityTest {
         assertTrue("AuthScreen.LOGIN_STUDENT -> LoginPane(state, viewModel)" in signIn)
         // ثبت‌نام: معلم اول (ترتیب ماژول)
         assertTrue("labels = listOf(\"معلم\", \"مدیر/معاون\")" in signIn)
-        // جابه‌جایی تب کل کارت را دوباره محو نمی‌کند (کلید گروهی)
-        assertTrue("StaggeredEntrance(key = entranceKey)" in signIn)
+        // V62.1.2 — ورود پلکانی آیتم‌به‌آیتم ماژول (StaggeredItem) در فرم‌ها
+        assertTrue("StaggeredItem(0) { Brand() }" in signIn)
+        assertTrue("StaggeredItem(1) {" in signIn)
         // مغز همان است: گوگل Credential Manager و قواعد سرور
         assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)
         assertTrue("state.newPassword.length >= 8" in signIn)

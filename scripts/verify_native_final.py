@@ -1749,22 +1749,25 @@ require("internal fun IceBackdrop(" in _ice and "internal fun OtpBoxes(" in _ice
         and "internal fun StepIndicator(" in _ice and "maxLength: Int = 8" in _ice,
         "V62.0 ice auth components are missing")
 # V62.1 — هم‌ترازی کامل با ماژول: تب‌های لغزان RoleTabs، خوش‌آمد BrandHero،
-# نوار مراحل با برچسب‌های ماژول و کلید ورود پلکانی گروهی.
+# نوار مراحل با برچسب‌های ماژول؛ V62.1.2: ورود پلکانی آیتم‌به‌آیتم ماژول.
 require("IceBackdrop(Modifier.fillMaxSize())" in _sign_in_v61
-        and "StaggeredEntrance(key = entranceKey)" in _sign_in_v61
+        and "StaggeredItem(0) { Brand() }" in _sign_in_v61
         and "state.otp.length in 6..8" in _sign_in_v61,
         "V62.0 ice shell wiring or 6..8 otp rule is missing")
 require("internal fun RoleTabs(" in _ice
-        and "LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset" in _ice
         and "internal fun BrandHero()" in _ice
-        and "internal fun ScreenHeader(" in _ice,
+        and "internal fun ScreenHeader(" in _ice
+        and "internal fun StaggeredItem(" in _ice,
         "V62.1 module role tabs / welcome hero are missing")
 require('private val RecoverySteps = listOf("ایمیل", "کد بازیابی", "رمز جدید")' in _sign_in_v61
         and "steps = RecoverySteps" in _sign_in_v61,
         "V62.1 module recovery step labels are missing")
 # V62.1.1 — Int*Dp کامپایل نمی‌شود (CI شکست)؛ ضرب باید از سمت Dp باشد.
-require("val logicalOffset = itemWidth * selected" in _ice,
-        "V62.1.1 RoleTabs offset must multiply Dp by Int (Int*Dp breaks compile)")
+# V62.1.2 — offset(x) خودش RTL-آگاه است؛ آینه‌سازی دستی نشانگر را قرینه
+# می‌گذاشت (گزارش دستگاه) و حذف شد.
+require("targetValue = itemWidth * selected" in _ice
+        and "maxWidth - itemWidth - logicalOffset" not in _ice,
+        "V62.1.2 RoleTabs must use the logical Dp*Int offset without manual RTL mirroring")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()

@@ -10,7 +10,7 @@ import org.junit.Test
  * ثبت‌نام، قواعد رمز ۸-۷۲) همان مسیر تست‌شدهٔ AuthViewModel/Supabase می‌ماند.
  * اجزا: IceBackdrop (گرادیان+هاله+موج)، Snowfall فقط در بازیابی رمز،
  * IceAuthCard شیشه‌ای، OtpBoxes با فیلد مخفی (کد ۶ تا ۸ رقمی سوپابیس)،
- * StepIndicator سه‌مرحله‌ای بازیابی، StaggeredEntrance ورود پلکانی فرم.
+ * StepIndicator سه‌مرحله‌ای بازیابی، StaggeredItem ورود پلکانی آیتم‌ها.
  */
 class V62_0IceAuthShellTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -30,7 +30,9 @@ class V62_0IceAuthShellTest {
             "internal fun IceAuthCard(",
             "internal fun OtpBoxes(",
             "internal fun StepIndicator(",
-            "internal fun StaggeredEntrance("
+            // V62.1.2 — StaggeredEntranceِ یک‌جا با StaggeredItem آیتم‌به‌آیتم
+            // ماژول جایگزین شد (روی دستگاه نامحسوس بود).
+            "internal fun StaggeredItem("
         )) assertTrue(needle, needle in components)
         // کد سوپابیس ۶ تا ۸ رقمی: باکس‌ها منعطف‌اند و فیلد مخفی Paste را می‌گیرد
         assertTrue("maxLength: Int = 8" in components)
@@ -43,13 +45,14 @@ class V62_0IceAuthShellTest {
         assertTrue("IceBackdrop(Modifier.fillMaxSize())" in signIn)
         assertTrue("if (recoveryFlow) Snowfall(Modifier.fillMaxSize())" in signIn)
         assertTrue("IceAuthCard {" in signIn)
-        // V62.1 — کلید ورود پلکانی گروهی شد تا جابه‌جایی تب کارت را محو نکند.
-        assertTrue("StaggeredEntrance(key = entranceKey)" in signIn)
+        // V62.1.2 — ورود پلکانی آیتم‌به‌آیتم ماژول در همهٔ پنجره‌ها.
+        assertTrue("StaggeredItem(0) { Brand() }" in signIn)
         // نوار مراحل فقط در جریان بازیابی (برچسب‌های ماژول)
         assertTrue("private val RecoverySteps = listOf(\"ایمیل\", \"کد بازیابی\", \"رمز جدید\")" in signIn)
         assertTrue("steps = RecoverySteps" in signIn)
         // OTP باکسی به ViewModel موجود وصل است و طول ۶..۸ حفظ شده
-        assertTrue("OtpBoxes(\n        value = state.otp,\n        onValueChange = viewModel::setOtp," in signIn)
+        // V62.1.2 — داخل StaggeredItem؛ تورفتگی یک سطح بیشتر شد.
+        assertTrue("OtpBoxes(\n            value = state.otp,\n            onValueChange = viewModel::setOtp," in signIn)
         assertTrue("state.otp.length in 6..8" in signIn)
         // منطق گوگل/دعوت دست‌نخورده (اسپات‌چک؛ needleهای کامل در تست‌های V60/V61)
         assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)

@@ -66,14 +66,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.sin
@@ -224,24 +222,12 @@ internal fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
 }
 
 /**
- * ورود پلکانی محتوای هر پنجره: با هر تغییر صفحه، فرم با محو/بالاآمدن کوتاه
- * وارد می‌شود (نسخهٔ سبک stagger طراحی یخی).
+ * کارت شیشه‌ای مرکزی همهٔ صفحه‌ها (گوشهٔ ۲۴ ماژول).
+ * V62.1.2 — رفع «کادر مستطیلی داخل کارت»: سایهٔ elevation اندروید از پشت
+ * سطح نیمه‌شفاف دیده می‌شود؛ با سفید ۶۵٪ + سایهٔ ۲۴dp ماژول، هالهٔ سایه
+ * مثل یک مستطیل داخل کارت به چشم می‌آمد. مقادیر امن V62.0 (تست‌شده روی
+ * دستگاه) برگشت: سطح تقریباً مات ۹۲٪ و سایهٔ ملایم ۶dp.
  */
-@Composable
-internal fun StaggeredEntrance(key: Any?, content: @Composable () -> Unit) {
-    val progress = remember(key) { androidx.compose.animation.core.Animatable(0f) }
-    androidx.compose.runtime.LaunchedEffect(key) {
-        progress.snapTo(0f)
-        progress.animateTo(1f, tween(360))
-    }
-    Box(
-        Modifier
-            .alpha(.35f + .65f * progress.value)
-            .padding(top = ((1f - progress.value) * 10).dp)
-    ) { content() }
-}
-
-/** کارت شیشه‌ای مرکزی همهٔ صفحه‌ها (مقادیر ماژول: گوشهٔ ۲۴، سفید ۶۵٪). */
 @Composable
 internal fun IceAuthCard(
     modifier: Modifier = Modifier,
@@ -250,40 +236,26 @@ internal fun IceAuthCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(24.dp, RoundedCornerShape(24.dp))
+            .shadow(6.dp, RoundedCornerShape(24.dp))
             .clip(RoundedCornerShape(24.dp))
-            .background(Color.White.copy(alpha = 0.65f))
-            .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.92f))
+            .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(24.dp))
             .padding(horizontal = 22.dp, vertical = 24.dp),
         content = content
     )
 }
 
-/** لوگو + نام اپ (سربرگ کارت‌های ورود/ثبت‌نام مثل ماژول). */
+/** نام اپ در سربرگ کارت‌ها؛ V62.1.2: آیکن کنار عنوان به درخواست کاربر حذف شد. */
 @Composable
 internal fun Brand() {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(Brush.linearGradient(listOf(IceAccent, IceAccentLight))),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Filled.School,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(23.dp)
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        Text("آزمون آنلاین", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = IceInk)
-    }
+    Text(
+        "آزمون آنلاین",
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold,
+        color = IceInk,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 /** لوگوی بزرگ صفحهٔ خوش‌آمد (۸۴dp با گرادیان، مثل WelcomeScreen ماژول). */
@@ -479,7 +451,6 @@ internal fun RoleTabs(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val direction = LocalLayoutDirection.current
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
@@ -490,13 +461,13 @@ internal fun RoleTabs(
         val itemWidth = maxWidth / labels.size
         // V62.1.1 — رفع خطای کامپایل CI: «Int * Dp» در کاتلین تعریف نشده؛
         // ترتیب ضرب برعکس شد تا از عملگر عضو Dp.times(Int) استفاده شود.
-        val logicalOffset = itemWidth * selected
-        val visualOffset = when (direction) {
-            LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset
-            else -> logicalOffset
-        }
+        // V62.1.2 — رفع باگ دستگاه: Modifier.offset(x) خودش RTL-آگاه است
+        // (مثبت = به سمت انتهای چیدمان) و مبدأ فرزند Box هم topStart است؛
+        // آینه‌سازی دستی ماژول جبران دوباره می‌شد و نشانگر سفید دقیقاً روی
+        // تب قرینه می‌نشست (عکس کاربر: عنوان «ورود مدیر/معاون» ولی نشانگر
+        // روی «دانش‌آموز»). offset منطقی مستقیم استفاده می‌شود.
         val animated by animateDpAsState(
-            targetValue = visualOffset,
+            targetValue = itemWidth * selected,
             animationSpec = tween(280),
             label = "tabOffset"
         )
