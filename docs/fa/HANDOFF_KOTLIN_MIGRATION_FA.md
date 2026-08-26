@@ -9118,3 +9118,33 @@ verify/changelog/هندآف.
 select to_regprocedure('public.native_student_filter_meta_v61()') is not null;
 نیازمند build جدید.
 ```
+
+## ۱۸۸) V61.5.1 — هات‌فیکس تست: شمارش odometer در V23
+
+### ریشه (درس هشتم needleها: assertهای «شمارشی»)
+
+```text
+CI: V23InteractionGradeOdometerTest خط ۱۲۵ FAILED (529 تست، ۱ شکست).
+ریشه: V61.5 دو GradeOdometerPicker جدید اضافه کرد (فیلتر دانش‌آموزان در
+school و نام مدرسهٔ سربرگ در profile). بند مشابه در verify به‌روز شد ولی
+تست V23 با «Regex شمارشی» چک می‌کند:
+assertEquals(4, Regex("GradeOdometerPicker\\(").findAll(school).count())
+و این الگو را نه اسکنر سراسری needle می‌گیرد و نه بند verify — چون رشتهٔ
+ثابت نیست، شمارش است.
+درس ۸: بعد از هر تغییری که «تعداد» تکرار یک الگو را در فایلی عوض می‌کند
+(اضافه/حذف Composable/Chips/Fields)، الگوهای شمارشی را جدا اسکن کن:
+assertEquals(N, Regex(...).findAll(x).count()) و x.split("...").size - 1.
+اسکریپت این اسکن در بخش تأیید همین نسخه است و باید در ساخت پچ‌های بعدی
+اجرا شود.
+```
+
+### رفع و تأیید
+
+```text
+V23 به ۵ (school) و ۲ (profile) با کامنت V61.5 به‌روز شد. اسکن شمارشی
+سراسری روی همهٔ فایل‌های تغییرکردهٔ V61.5: چهار assert شمارشی پیدا شد و
+همه OK (V23 دوتا، V28 FieldOfStudyPicker>=4 با actual=4، V41 size32>=3).
+FINAL_NATIVE_VERIFY=PASS EXIT=0.
+پچ: V61_5_1_v23_odometer_count_hotfix — فقط همین تست + هندآف.
+بدون SQL؛ نیازمند build (فقط برای سبز شدن CI).
+```

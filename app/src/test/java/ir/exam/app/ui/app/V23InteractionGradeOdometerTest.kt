@@ -122,8 +122,10 @@ class V23InteractionGradeOdometerTest {
             "app/src/main/java/ir/exam/app/ui/common/GradeOdometerPicker.kt"
         ).readText()
 
-        assertEquals(4, Regex("GradeOdometerPicker\\(").findAll(school).count())
-        assertEquals(1, Regex("GradeOdometerPicker\\(").findAll(profile).count())
+        // V61.5 — یکی برای فیلتر دانش‌آموزان (school) و یکی برای نام مدرسهٔ
+        // سربرگ (profile) به چرخ مشترک اضافه شد؛ شمار جدید ۵ و ۲ است.
+        assertEquals(5, Regex("GradeOdometerPicker\\(").findAll(school).count())
+        assertEquals(2, Regex("GradeOdometerPicker\\(").findAll(profile).count())
         assertFalse(
             "free-text grade input remains in school UI",
             Regex("label\\s*=\\s*\\{\\s*Text\\(\"پایه\"\\)").containsMatchIn(school)
