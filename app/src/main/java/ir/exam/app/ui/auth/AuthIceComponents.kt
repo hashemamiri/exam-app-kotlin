@@ -1,6 +1,8 @@
 package ir.exam.app.ui.auth
 
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -13,119 +15,212 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
- * V62.0 — کامپوننت‌های بصری «یخی قطبی» صفحهٔ ورود (برگرفته از ماژول پیشنهادی
- * کاربر azmoon-auth-compose): فقط پوستهٔ UI؛ تمام منطق احراز هویت همان
+ * V62.0/V62.1 — کامپوننت‌های بصری «یخی قطبی» صفحهٔ ورود، مطابق ماژول پیشنهادی
+ * کاربر (azmoon-auth-compose): فقط پوستهٔ UI؛ تمام منطق احراز هویت همان
  * AuthViewModel/SupabaseAuthRepository تست‌شدهٔ فعلی می‌ماند.
+ * V62.1 — پالت و اجزای ماژول عیناً وارد شد: RoleTabs سگمنتی لغزان، Brand،
+ * ScreenHeader، فیلد/دکمه‌های یخی، موج سه‌لایه، برف هاله‌دار و StaggeredItem.
  */
-internal val IceInk = Color(0xFF0F2E4C)
-internal val IceAccent = Color(0xFF2E9BD6)
-internal val IceStroke = Color(0xFFBBD9EE)
+internal val IceInk = Color(0xFF0C3D5C)
+internal val IceTextSecondary = Color(0xFF5F8AA8)
+internal val IceHint = Color(0xFF8FB4CC)
+internal val IceAccent = Color(0xFF0284C7)
+internal val IceAccentLight = Color(0xFF38BDF8)
+internal val IceDisc = Color(0xFF7DD3FC)
+internal val IceStroke = Color(0x220284C7)
+internal val IceFieldBg = Color(0xC0FFFFFF)
+internal val IceBgTop = Color(0xFFE8F6FB)
+internal val IceBgMid = Color(0xFFD0EBF7)
+internal val IceBgBottom = Color(0xFFBFE3F5)
+internal val IceDisabledBg = Color(0xFFDCE9F2)
+internal val IceDisabledText = Color(0xFF9AB4C6)
 
-/** پس‌زمینهٔ یخی: گرادیان آسمان + هالهٔ دایره + دو موج متحرک پایین. */
+/** تبدیل عدد به ارقام فارسی (مثل ماژول). */
+internal fun faNum(n: Int): String = n.toString().map { "۰۱۲۳۴۵۶۷۸۹"[it - '0'] }.joinToString("")
+
+/** پس‌زمینهٔ یخی ماژول: گرادیان آسمان + هالهٔ دایرهٔ بزرگ + موج سه‌لایهٔ متحرک پایین. */
 @Composable
 internal fun IceBackdrop(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "ice-waves")
     val phase by transition.animateFloat(
         initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing)),
         label = "ice-wave-phase"
     )
     Canvas(modifier) {
-        drawRect(
-            Brush.verticalGradient(
-                listOf(Color(0xFFEAF6FF), Color(0xFFD9ECFC), Color(0xFFC9E4F9))
-            )
-        )
-        // هالهٔ دایره پشت کارت
+        drawRect(Brush.verticalGradient(listOf(IceBgTop, IceBgMid, IceBgBottom)))
+        // هالهٔ دایرهٔ پشت کارت
         drawCircle(
-            Brush.radialGradient(
-                listOf(Color.White.copy(alpha = .75f), Color.White.copy(alpha = 0f)),
-                center = Offset(size.width / 2f, size.height * .30f),
-                radius = size.width * .58f
+            brush = Brush.radialGradient(
+                colors = listOf(IceDisc.copy(alpha = 0.40f), Color.Transparent),
+                center = Offset(size.width / 2f, size.height * 0.60f),
+                radius = size.width * 0.95f
             ),
-            radius = size.width * .58f,
-            center = Offset(size.width / 2f, size.height * .30f)
+            radius = size.width * 0.95f,
+            center = Offset(size.width / 2f, size.height * 0.60f)
         )
-        // دو موج پایین
-        fun wave(amplitude: Float, baseY: Float, shift: Float, color: Color) {
+        // موج‌های سه‌لایهٔ پایین (ارتفاع ~۱۵۰dp مطابق ماژول)
+        val h = 150.dp.toPx().coerceAtMost(size.height)
+        val top = size.height - h
+        val w = size.width
+        val lambda = w / 2.5f
+        val colors = listOf(
+            IceAccent.copy(alpha = 0.28f),
+            IceAccentLight.copy(alpha = 0.20f),
+            IceDisc.copy(alpha = 0.30f)
+        )
+        colors.forEachIndexed { i, color ->
+            val shift = ((phase + i * 0.33f) % 1f) * lambda
             val path = Path()
-            path.moveTo(0f, size.height)
-            var x = 0f
-            while (x <= size.width) {
-                val y = baseY + amplitude * sin((x / size.width) * 4f * Math.PI.toFloat() + phase + shift)
-                path.lineTo(x, y)
-                x += 24f
+            var x = -lambda * 2f + shift
+            path.moveTo(x, top + h * 0.62f)
+            var up = true
+            while (x < w + lambda * 2f) {
+                path.quadraticBezierTo(
+                    x + lambda / 2f,
+                    top + h * (if (up) 0.18f else 1.05f),
+                    x + lambda,
+                    top + h * 0.62f
+                )
+                x += lambda
+                up = !up
             }
-            path.lineTo(size.width, size.height)
+            path.lineTo(x, size.height + 10f)
+            path.lineTo(-lambda * 2f + shift, size.height + 10f)
             path.close()
             drawPath(path, color)
         }
-        wave(14f, size.height * .90f, 0f, Color(0xFFB7DCF6).copy(alpha = .55f))
-        wave(18f, size.height * .94f, 1.6f, Color(0xFF9FCFF2).copy(alpha = .45f))
     }
 }
 
-/** بارش برف سبک (فقط جریان بازیابی رمز، مطابق طراحی یخی). */
+/** یک دانه برف با پارامترهای تصادفی (مثل ماژول). */
+private data class SnowFlake(
+    val x: Float,
+    val radius: Float,
+    val speed: Float,
+    val offset: Float,
+    val phase: Float,
+    val sway: Float
+)
+
+/** بارش برف یخی هاله‌دار — فقط در جریان بازیابی رمز نمایش داده می‌شود. */
 @Composable
-internal fun Snowfall(modifier: Modifier = Modifier, flakeCount: Int = 34) {
-    val flakes = remember {
-        List(flakeCount) {
-            Triple(Random.nextFloat(), Random.nextFloat(), .35f + Random.nextFloat() * .65f)
-        }
-    }
+internal fun Snowfall(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "snow")
     val t by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(11000, easing = LinearEasing)),
+        animationSpec = infiniteRepeatable(tween(14000, easing = LinearEasing)),
         label = "snow-progress"
     )
-    Canvas(modifier.alpha(.8f)) {
-        flakes.forEach { (seedX, seedY, speed) ->
-            val y = ((seedY + t * speed) % 1f) * size.height
-            val x = (seedX + .04f * sin(y / 90f + seedX * 8f)) * size.width
-            drawCircle(Color.White.copy(alpha = .38f + .4f * speed), radius = 2.2f + 2.6f * speed, center = Offset(x, y))
+    val flakes = remember {
+        List(16) {
+            SnowFlake(
+                x = Random.nextFloat(),
+                radius = 0.004f + Random.nextFloat() * 0.004f,
+                speed = 0.5f + Random.nextFloat() * 0.8f,
+                offset = Random.nextFloat(),
+                phase = Random.nextFloat() * 6.28f,
+                sway = 0.01f + Random.nextFloat() * 0.02f
+            )
         }
     }
+    Canvas(modifier.fillMaxSize()) {
+        flakes.forEach { f ->
+            val progress = (t * f.speed + f.offset) % 1f
+            val y = progress * size.height * 1.1f
+            val x = (f.x + sin((t * 4f + f.phase).toDouble()).toFloat() * f.sway) * size.width
+            val r = f.radius * size.width
+            drawCircle(Color.White.copy(alpha = 0.35f), radius = r * 2.2f, center = Offset(x, y))
+            drawCircle(Color.White.copy(alpha = 0.9f), radius = r, center = Offset(x, y))
+        }
+    }
+}
+
+/** انیمیشن ورود پلکانی هر آیتم (stagger) — معادل نسخهٔ ماژول. */
+@Composable
+internal fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
+    val alphaAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+    val offsetAnim = remember { androidx.compose.animation.core.Animatable(48f) }
+    LaunchedEffect(Unit) {
+        delay(index * 55L)
+        launch { alphaAnim.animateTo(1f, tween(480, easing = FastOutSlowInEasing)) }
+        launch { offsetAnim.animateTo(0f, tween(480, easing = FastOutSlowInEasing)) }
+    }
+    Box(
+        Modifier.graphicsLayer {
+            this.alpha = alphaAnim.value
+            this.translationY = offsetAnim.value
+        }
+    ) { content() }
 }
 
 /**
@@ -146,26 +241,298 @@ internal fun StaggeredEntrance(key: Any?, content: @Composable () -> Unit) {
     ) { content() }
 }
 
-/** کارت شیشه‌ای گرد میزبان فرم‌ها. */
+/** کارت شیشه‌ای مرکزی همهٔ صفحه‌ها (مقادیر ماژول: گوشهٔ ۲۴، سفید ۶۵٪). */
 @Composable
-internal fun IceAuthCard(content: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier
+internal fun IceAuthCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(28.dp)),
-        shape = RoundedCornerShape(28.dp),
-        color = Color.White.copy(alpha = .88f),
-        tonalElevation = 2.dp,
-        shadowElevation = 6.dp
+            .shadow(24.dp, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.65f))
+            .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(24.dp))
+            .padding(horizontal = 22.dp, vertical = 24.dp),
+        content = content
+    )
+}
+
+/** لوگو + نام اپ (سربرگ کارت‌های ورود/ثبت‌نام مثل ماژول). */
+@Composable
+internal fun Brand() {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.padding(18.dp)) { content() }
+        Box(
+            Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(Brush.linearGradient(listOf(IceAccent, IceAccentLight))),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Filled.School,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(23.dp)
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text("آزمون آنلاین", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = IceInk)
+    }
+}
+
+/** لوگوی بزرگ صفحهٔ خوش‌آمد (۸۴dp با گرادیان، مثل WelcomeScreen ماژول). */
+@Composable
+internal fun BrandHero() {
+    Box(
+        Modifier
+            .size(84.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(IceAccent, IceAccentLight))),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Filled.School,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(38.dp)
+        )
+    }
+}
+
+/** سربرگ صفحه: آیکون دایره‌ای + عنوان + توضیح (مثل ماژول). */
+@Composable
+internal fun ScreenHeader(icon: ImageVector, title: String, subtitle: String? = null) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(IceAccent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = IceAccent, modifier = Modifier.size(28.dp))
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            title,
+            fontSize = 21.sp,
+            fontWeight = FontWeight.Bold,
+            color = IceInk,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (subtitle != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                subtitle,
+                fontSize = 13.sp,
+                color = IceTextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                lineHeight = 22.sp
+            )
+        }
+    }
+}
+
+/** رنگ‌های فیلد یخی (Outlined + پس‌زمینهٔ نیم‌شفاف). */
+@Composable
+internal fun iceFieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = IceAccent,
+    unfocusedBorderColor = IceStroke,
+    disabledBorderColor = IceStroke,
+    focusedContainerColor = IceFieldBg,
+    unfocusedContainerColor = IceFieldBg,
+    disabledContainerColor = IceFieldBg.copy(alpha = 0.5f),
+    cursorColor = IceAccent
+)
+
+/** فیلد ورودی استاندارد ماژول (گوشهٔ ۱۴ + hint داخل فیلد). */
+@Composable
+internal fun IceField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    hint: String,
+    modifier: Modifier = Modifier,
+    supporting: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        singleLine = true,
+        shape = RoundedCornerShape(14.dp),
+        placeholder = { Text(hint, color = IceHint, fontSize = 14.sp) },
+        supportingText = supporting?.let { { Text(it, color = IceTextSecondary) } },
+        visualTransformation = visualTransformation,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        trailingIcon = trailingIcon,
+        colors = iceFieldColors(),
+        textStyle = LocalTextStyle.current.copy(color = IceInk, fontSize = 14.sp)
+    )
+}
+
+/** دکمهٔ اصلی ماژول (پر از رنگ اکسنت، ۵۲dp) با حالت Loading. */
+@Composable
+internal fun IceButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !loading,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = IceAccent,
+            contentColor = Color.White,
+            disabledContainerColor = IceDisabledBg,
+            disabledContentColor = IceDisabledText
+        )
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = Color.White,
+                strokeWidth = 2.5.dp
+            )
+        } else {
+            Text(text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** دکمهٔ ثانویهٔ ماژول (سفید خط‌دار) با جای آیکون. */
+@Composable
+internal fun IceOutlinedButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leading: (@Composable () -> Unit)? = null
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.White,
+            contentColor = IceInk,
+            disabledContainerColor = Color.White,
+            disabledContentColor = IceDisabledText
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, IceStroke)
+    ) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(10.dp))
+        }
+        Text(text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** لینک متنی ماژول. */
+@Composable
+internal fun LinkTextButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    gray: Boolean = false
+) {
+    TextButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text,
+            color = if (gray) IceTextSecondary else IceAccent,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
+ * تب‌های سگمنتی نقش‌ها با نشانگر لغزان (از ماژول؛ سازگار با RTL —
+ * نشانگر از سمت راست شروع می‌شود).
+ */
+@Composable
+internal fun RoleTabs(
+    labels: List<String>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val direction = LocalLayoutDirection.current
+    BoxWithConstraints(
+        modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .clip(RoundedCornerShape(50))
+            .background(IceStroke.copy(alpha = 0.5f))
+    ) {
+        val itemWidth = maxWidth / labels.size
+        val logicalOffset = selected * itemWidth
+        val visualOffset = when (direction) {
+            LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset
+            else -> logicalOffset
+        }
+        val animated by animateDpAsState(
+            targetValue = visualOffset,
+            animationSpec = tween(280),
+            label = "tabOffset"
+        )
+        Box(
+            Modifier
+                .offset(x = animated)
+                .width(itemWidth)
+                .fillMaxHeight()
+                .padding(4.dp)
+                .clip(RoundedCornerShape(50))
+                .background(Color.White)
+        )
+        Row(Modifier.fillMaxWidth()) {
+            labels.forEachIndexed { index, label ->
+                val isSelected = index == selected
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable { onSelect(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) IceAccent else IceTextSecondary
+                    )
+                }
+            }
+        }
     }
 }
 
 /**
  * باکس‌های کد یک‌بارمصرف: ورودی از یک فیلد مخفی گرفته می‌شود تا Paste و
  * Backspace طبیعی کار کنند. کد سوپابیس ما ۶ تا ۸ رقمی است؛ تعداد باکس‌ها
- * با طول کد (حداکثر ۸) تطبیق می‌یابد.
+ * با طول کد (حداکثر ۸) تطبیق می‌یابد. V62.1: ابعاد/فوکوس خودکار مثل ماژول.
  */
 @Composable
 internal fun OtpBoxes(
@@ -175,6 +542,11 @@ internal fun OtpBoxes(
     maxLength: Int = 8
 ) {
     val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+        keyboard?.show()
+    }
     val boxCount = maxOf(6, value.length.coerceAtMost(maxLength))
     Box(modifier.fillMaxWidth()) {
         BasicTextField(
@@ -184,7 +556,7 @@ internal fun OtpBoxes(
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             textStyle = TextStyle(color = Color.Transparent, fontSize = 1.sp),
-            cursorBrush = Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)),
+            cursorBrush = SolidColor(Color.Transparent),
             modifier = Modifier
                 .size(1.dp)
                 .alpha(0f)
@@ -197,29 +569,29 @@ internal fun OtpBoxes(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) { focusRequester.requestFocus() },
-            horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)
+            horizontalArrangement = Arrangement.spacedBy(9.dp, Alignment.CenterHorizontally)
         ) {
             repeat(boxCount) { index ->
                 val char = value.getOrNull(index)?.toString().orEmpty()
                 val activeBox = index == value.length.coerceAtMost(boxCount - 1) && value.length < maxLength
                 Box(
                     Modifier
-                        .width(42.dp)
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(13.dp))
+                        .width(44.dp)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
                         .border(
                             width = if (activeBox || char.isNotEmpty()) 2.dp else 1.dp,
                             color = if (activeBox) IceAccent else if (char.isNotEmpty()) IceAccent.copy(alpha = .55f) else IceStroke,
-                            shape = RoundedCornerShape(13.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         char,
                         color = IceInk,
+                        fontSize = 21.sp,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -229,8 +601,9 @@ internal fun OtpBoxes(
 }
 
 /**
- * نوار مراحل سه‌گانهٔ بازیابی رمز؛ مرحلهٔ کامل‌شده تیک انیمیشنی (Canvas)
- * می‌گیرد — همان AnimatedCheck طراحی یخی، ادغام‌شده در نشانگر مراحل.
+ * نوار مراحل سه‌گانهٔ بازیابی رمز به سبک ماژول: دایره با گرادیان برای مرحلهٔ
+ * فعال (با انیمیشن مقیاس)، تیک انیمیشنی Canvas برای مرحلهٔ کامل‌شده و
+ * ارقام فارسی برای مراحل بعدی.
  */
 @Composable
 internal fun StepIndicator(
@@ -240,7 +613,7 @@ internal fun StepIndicator(
 ) {
     Row(
         modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.Center
     ) {
         steps.forEachIndexed { index, label ->
@@ -251,13 +624,28 @@ internal fun StepIndicator(
                 animationSpec = tween(420),
                 label = "step-check-$index"
             )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val scaleAnim by animateFloatAsState(
+                targetValue = if (active) 1.08f else 1f,
+                animationSpec = tween(300),
+                label = "step-scale-$index"
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
                 Box(
                     Modifier
                         .size(30.dp)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(if (done || active) IceAccent else Color.White)
-                        .border(2.dp, if (done || active) IceAccent else IceStroke, RoundedCornerShape(15.dp)),
+                        .scale(scaleAnim)
+                        .clip(CircleShape)
+                        .background(
+                            when {
+                                active -> Brush.linearGradient(listOf(IceAccent, IceAccentLight))
+                                done -> SolidColor(IceAccent)
+                                else -> SolidColor(IceFieldBg)
+                            }
+                        )
+                        .then(
+                            if (!done && !active) Modifier.border(1.5.dp, IceStroke, CircleShape)
+                            else Modifier
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     if (done) {
@@ -276,29 +664,35 @@ internal fun StepIndicator(
                         }
                     } else {
                         Text(
-                            (index + 1).toString(),
-                            color = if (active) Color.White else IceInk.copy(alpha = .55f),
-                            style = MaterialTheme.typography.labelLarge,
+                            faNum(index + 1),
+                            color = if (active) Color.White else IceTextSecondary,
+                            fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
+                Spacer(Modifier.height(5.dp))
                 Text(
                     label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (done || active) IceInk else IceInk.copy(alpha = .5f)
+                    fontSize = 10.5.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                    color = when {
+                        active -> IceInk
+                        done -> IceAccent
+                        else -> IceTextSecondary
+                    }
                 )
             }
             if (index != steps.lastIndex) {
                 Box(
                     Modifier
-                        .padding(horizontal = 6.dp)
-                        .width(26.dp)
+                        .padding(top = 14.dp)
+                        .width(20.dp)
                         .height(2.dp)
+                        .clip(RoundedCornerShape(2.dp))
                         .background(if (index < current) IceAccent else IceStroke)
                 )
             }
         }
     }
 }
-

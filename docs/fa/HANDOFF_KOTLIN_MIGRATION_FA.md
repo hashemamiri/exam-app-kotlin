@@ -9418,3 +9418,99 @@ changelog / هندآف.
 یادآوری طراحی: تم یخی فقط صفحهٔ ورود است (پیش از ورود)؛ داخل اپ همان
 Neumorphic69 می‌ماند — تمایز عمدی و تأییدشده توسط کاربر.
 ```
+
+## ۱۹۵) V62.1 — هم‌ترازی کامل صفحات ورود با ماژول یخی کاربر
+
+### زمینه
+
+```text
+پس از V62.0 (پوستهٔ یخی روی ساختار V61.0) کاربر گفت: «همه چیز مثل چیزی
+که آپلود کردم بشه» و در ask_user تأیید کرد: (۱) V62.0 اعمال/بیلد/تست
+دستگاه سبز بود؛ (۲) دامنه = «دقیقاً مثل ماژول» شامل ساختار صفحات، نه فقط
+ظاهر. یعنی به‌جای «انتخاب نقش → پنجرهٔ جدا»، ورود هر سه نقش در یک کارت
+با تب‌های سگمنتی لغزان (مثل LoginScreen ماژول) و ثبت‌نام دو نقش با تب
+(معلم اول، مثل SignupScreen ماژول) و خوش‌آمد مثل WelcomeScreen.
+```
+
+### پیاده‌سازی
+
+```text
+AuthIceComponents.kt — بازنویسی با اجزای «عین ماژول»:
+- پالت کامل ماژول: IceAccent=0284C7، IceInk(=IceText ماژول)=0C3D5C،
+  AccentLight=38BDF8، Disc=7DD3FC، Stroke=0x220284C7 (آلفای ۱۳٪)،
+  FieldBg=0xC0FFFFFF، BgTop/Mid/Bottom=E8F6FB/D0EBF7/BFE3F5،
+  DisabledBg/Text. IceInk نگه داشته شد چون تست/verify به آن اشاره دارند.
+- IceBackdrop: گرادیان + هاله (IceDisc آلفا ۴۰٪ مرکز ۶۰٪ ارتفاع، شعاع
+  ۹۵٪ عرض) + موج «سه‌لایه» با quadraticBezierTo (لاندا=w/2.5، فاز ۹s) در
+  ۱۵۰dp پایین — جایگزین دو موج sin قبلی.
+- Snowfall: ۱۶ دانهٔ کلاس SnowFlake با هالهٔ دور دانه (r*2.2f آلفا ۳۵٪ +
+  هستهٔ ۹۰٪)، چرخهٔ ۱۴s — جایگزین ۳۴ دانهٔ ساده.
+- StaggeredItem(index): ورود پلکانی هر آیتم با delay(index*55L) و
+  tween(480, FastOutSlowInEasing) — عین Common.kt ماژول. StaggeredEntrance
+  گروهی V62.0 هم مانده (برای کل کارت).
+- IceAuthCard: حالا ColumnScope با گوشهٔ ۲۴ و سفید ۶۵٪ + سایهٔ ۲۴dp
+  (مقادیر AuthCard ماژول؛ قبلاً ۲۸/۸۸٪).
+- Brand (لوگو ۴۲dp + «آزمون آنلاین»)، BrandHero (۸۴dp خوش‌آمد)،
+  ScreenHeader (آیکون دایره‌ای ۶۴dp + عنوان + زیرنویس)، IceField
+  (placeholder داخل فیلد + گوشهٔ ۱۴ + رنگ‌های ماژول + supporting)،
+  IceButton (۵۲dp پر، Loading با CircularProgressIndicator سفید)،
+  IceOutlinedButton (سفید خط‌دار + slot آیکون leading)، LinkTextButton.
+- RoleTabs: سگمنتی لغزان عین ماژول؛ فرمول RTL:
+  LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset.
+- OtpBoxes: ابعاد ماژول (۴۴×۵۴، گوشهٔ ۱۲، فاصلهٔ ۹) + فوکوس/کیبورد
+  خودکار (LaunchedEffect + keyboard?.show)؛ منطق ۶..۸ رقمی V62.0 حفظ
+  (maxLength=8، boxCount=maxOf(6, len)).
+- StepIndicator: دایره + گرادیان مرحلهٔ فعال با scale 1.08، تیک Canvas
+  انیمیشنی مرحلهٔ کامل، «ارقام فارسی» faNum(index+1)، خط رابط ۲۰dp.
+- faNum داخل همین فایل (internal؛ faNumهای دیگر متدهای object جدا هستند
+  و تداخل ندارند).
+
+SignInScreen.kt — ساختار ماژول:
+- SIGN_IN → LandingPane «بدون کارت» روی پس‌زمینه (مثل WelcomeScreen):
+  BrandHero + نام اپ + «به سامانهٔ آزمون و ارزشیابی خوش آمدید» + «ورود به
+  حساب» + «ساخت حساب جدید» + یادآوری «حساب دانش‌آموز را معلم می‌سازد...».
+  «ساخت حساب جدید» مستقیم به showTeacherRegistration می‌رود (تب معلم).
+- ورود: چهار AuthScreen (LOGIN_ROLE/MANAGER/TEACHER/STUDENT) همگی →
+  LoginPane تک‌کارتی: Brand + RoleTabs(«مدیر/معاون، معلم، دانش‌آموز») که
+  فقط showXxxLogin() را صدا می‌زند (LOGIN_ROLE = تب مدیر). محتوای تب از
+  همان StaffLoginPane/StudentLoginPane V61.0 (ایمیل/نام کاربری + رمز +
+  «ورود با رمز عبور» + «ورود با کد ایمیل» + گوگل + فراموشی).
+- ثبت‌نام: REGISTRATION_ROLE/TEACHER_REGISTER → تب معلم؛ MANAGER_REGISTER
+  → تب مدیر (RegisterPane با RoleTabs «معلم، مدیر/معاون»).
+- entranceKey گروهی: صفحات ورود یک گروه "login" و ثبت‌نام "register" تا
+  جابه‌جایی تب کل کارت را دوباره fade نکند (فقط نشانگر بلغزد).
+- بازیابی: StepIndicator «داخل کارت» (مثل ماژول) با RecoverySteps =
+  «ایمیل، کد بازیابی، رمز جدید»؛ RECOVERY=۰، RECOVERY_OTP=۱ (needle
+  recoverySteps=true در OtpPane)، RECOVERY_PASSWORD=۲. ScreenHeader قفل/
+  پاکت در همهٔ فرم‌های بازیابی/OTP. عنوان بیرونی «آزمون آنلاین» حذف شد
+  (ماژول Brand داخل کارت دارد)؛ needle «آزمون آنلاین» main_text (بند
+  V13) از LandingPane تأمین می‌شود.
+- PasswordField → IceField با passwordTransformation مشترک (شمارش
+  PasswordVisualTransformation() در کل main همان ۱ ماند — قرارداد V20).
+- GoogleAuthButton: همان منطق V60.1؛ فقط ظاهر OutlinedButton یخی ۵۲dp.
+- خطا: متن قرمز وسط‌چین زیر کارت. isLoading دیگر Progress جدا ندارد؛
+  IceButton خودش Loading می‌شود (مثل ماژول).
+عمداً وارد نشد: AuthRepository شبیه‌سازی ماژول، قواعد متضاد (رمز ≥۴،
+شناسه ≥۳)، SuccessScreen (AuthGate بعد از ورود مستقیم وارد اپ می‌شود)،
+تایمر ارسال مجدد ۳۰ ثانیه (سوپابیس خودش rate-limit دارد؛ در صورت درخواست
+کاربر بعداً)، AuthMainActivity/AuthTheme.
+```
+
+### تست/verify
+
+```text
+جدید: V62_1IceModuleParityTest (۴ تست: پالت/اجزا، RTL تب‌ها + خوش‌آمد،
+تک‌کارتی‌های تب‌دار روی منطق دست‌نخورده، مراحل بازیابی با ارقام فارسی).
+هماهنگ: V61_0AuthLandingRedesignTest بازنویسی (تب به‌جای دکمه‌های عمودی؛
+LoginPane/RegisterPane)؛ V36 (needle نقش‌ها → labels تب)؛ V62_0 (کلید
+entranceKey + RecoverySteps).
+verify: بند V36 (labels تب)، بند V61.0 (LoginPane تب‌دار)، بند V62.0/62.1
+(RoleTabs/BrandHero/ScreenHeader + برچسب‌های مراحل). شبیه‌سازی همهٔ
+needleهای V36/V37/V60x/V61.0/V62.0/V62.1 + اسکن سراسری needle/شمارشی +
+PVT==1 و GradeOdometerPicker=5/2: سبز. FINAL_NATIVE_VERIFY=PASS
+kotlin_files=203 (شمارش فقط main است؛ تست جدید آن را تغییر نمی‌دهد).
+پچ: V62_1_ice_module_parity — بدون SQL؛ نیازمند build جدید.
+چک‌لیست تست دستگاه: خوش‌آمد مثل ماژول؛ لغزش نشانگر تب‌ها در RTL (مدیر
+راست، دانش‌آموز چپ)؛ ورود هر سه نقش + گوگل + کد ایمیل؛ ثبت‌نام هر دو تب؛
+بازیابی سه‌مرحله‌ای با تیک‌ها و برف؛ Paste کد ۶ و ۸ رقمی در باکس‌ها.
+```

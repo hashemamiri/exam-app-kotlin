@@ -1,6 +1,7 @@
 package ir.exam.app.ui.auth
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,15 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,404 +31,464 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import ir.exam.app.ui.common.PasswordVisibilityButton
 import ir.exam.app.ui.common.passwordTransformation
 
-/** ورود، ثبت‌نام کادر مدرسه و بازیابی رمز؛ هیچ مسیر آزمایشی یا عبور مستقیم ندارد. */
+/** برچسب مراحل بازیابی رمز (عیناً از ماژول یخی). */
+private val RecoverySteps = listOf("ایمیل", "کد بازیابی", "رمز جدید")
+
+/**
+ * ورود، ثبت‌نام کادر مدرسه و بازیابی رمز؛ هیچ مسیر آزمایشی یا عبور مستقیم ندارد.
+ *
+ * V62.1 — چیدمان عیناً مثل ماژول azmoon-auth-compose شد:
+ * - صفحهٔ خوش‌آمد با لوگوی گرادیانی بزرگ و «ورود به حساب» / «ساخت حساب جدید».
+ * - ورود هر سه نقش در یک کارت با تب‌های سگمنتی لغزان (مدیر/معاون، معلم، دانش‌آموز).
+ * - ثبت‌نام معلم و مدیر/معاون در یک کارت با تب (معلم اول، مثل ماژول).
+ * - بازیابی رمز: نوار مراحل با تیک انیمیشنی داخل کارت + برف؛ کد در باکس‌های OtpBoxes.
+ * تمام منطق (گوگل Credential Manager، نام کاربری کادر، کد دعوت ۶ حرفی/TCH،
+ * قواعد رمز ۸ تا ۷۲، کد ۶ تا ۸ رقمی سوپابیس) همان مسیر تست‌شدهٔ
+ * AuthViewModel/SupabaseAuthRepository است؛ فقط پوسته عوض شده است.
+ */
 @Composable
 fun SignInScreen(viewModel: AuthViewModel) {
     val state by viewModel.state.collectAsState()
 
-    // V62.0 — پوستهٔ «یخی قطبی» (طرح پیشنهادی کاربر): پس‌زمینهٔ گرادیان با هاله
-    // و موج، کارت شیشه‌ای فرم، برف در جریان بازیابی رمز. منطق دست‌نخورده است.
+    // V62.0 — پوستهٔ «یخی قطبی»: گرادیان با هاله و موج سه‌لایه، کارت شیشه‌ای،
+    // برف در جریان بازیابی رمز.
     val recoveryFlow = state.screen in setOf(
         AuthScreen.RECOVERY, AuthScreen.RECOVERY_OTP, AuthScreen.RECOVERY_PASSWORD
     )
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+    // V62.1 — کلید ورود پلکانی: تب‌های یک صفحه (ورود/ثبت‌نام) یک گروه‌اند تا
+    // جابه‌جایی تب فقط نشانگر لغزان را حرکت دهد و کل کارت دوباره محو نشود.
+    val entranceKey: Any = when (state.screen) {
+        AuthScreen.LOGIN_ROLE, AuthScreen.LOGIN_MANAGER,
+        AuthScreen.LOGIN_TEACHER, AuthScreen.LOGIN_STUDENT -> "login"
+        AuthScreen.REGISTRATION_ROLE, AuthScreen.TEACHER_REGISTER,
+        AuthScreen.MANAGER_REGISTER -> "register"
+        else -> state.screen
+    }
+    Box(Modifier.fillMaxSize()) {
         IceBackdrop(Modifier.fillMaxSize())
         if (recoveryFlow) Snowfall(Modifier.fillMaxSize())
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.Center
         ) {
-        // V61.0 — عنوان همیشه وسط‌چین بالای صفحه.
-        Text(
-            "آزمون آنلاین",
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            color = IceInk,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth()
-        )
-        // V62.0 — نوار مراحل سه‌گانهٔ بازیابی رمز (ایمیل ← کد ← رمز جدید).
-        if (recoveryFlow) {
-            StepIndicator(
-                steps = listOf("ایمیل", "کد", "رمز جدید"),
-                current = when (state.screen) {
-                    AuthScreen.RECOVERY -> 0
-                    AuthScreen.RECOVERY_OTP -> 1
-                    else -> 2
+            when (state.screen) {
+                // خوش‌آمد ماژول: لوگو و دکمه‌ها مستقیم روی پس‌زمینه (مثل WelcomeScreen).
+                AuthScreen.SIGN_IN -> LandingPane(state, viewModel)
+                else -> IceAuthCard {
+                    // V62.0 — ورود پلکانی فرم با هر تغییر صفحه.
+                    StaggeredEntrance(key = entranceKey) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            when (state.screen) {
+                                AuthScreen.SIGN_IN -> Unit
+                                AuthScreen.LOGIN_ROLE,
+                                AuthScreen.LOGIN_MANAGER,
+                                AuthScreen.LOGIN_TEACHER,
+                                AuthScreen.LOGIN_STUDENT -> LoginPane(state, viewModel)
+                                AuthScreen.REGISTRATION_ROLE,
+                                AuthScreen.TEACHER_REGISTER,
+                                AuthScreen.MANAGER_REGISTER -> RegisterPane(state, viewModel)
+                                AuthScreen.LOGIN_OTP -> OtpPane(
+                                    title = "ورود با کد یک‌بارمصرف",
+                                    hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
+                                    state = state,
+                                    onVerify = viewModel::verifyLoginOtp,
+                                    onResend = viewModel::sendLoginOtp,
+                                    onBack = viewModel::showLoginRole,
+                                    viewModel = viewModel
+                                )
+                                AuthScreen.TEACHER_REGISTER_OTP -> OtpPane(
+                                    title = "تأیید ایمیل معلم",
+                                    hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
+                                    state = state,
+                                    onVerify = viewModel::verifyTeacherRegistrationOtp,
+                                    onResend = viewModel::sendTeacherRegistrationOtp,
+                                    onBack = viewModel::showTeacherRegistration,
+                                    viewModel = viewModel
+                                )
+                                AuthScreen.TEACHER_REGISTER_SETUP -> TeacherSetupPane(state, viewModel)
+                                AuthScreen.MANAGER_REGISTER_OTP -> OtpPane(
+                                    title = "تأیید ایمیل مدیر/معاون",
+                                    hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
+                                    state = state,
+                                    onVerify = viewModel::verifyManagerRegistrationOtp,
+                                    onResend = viewModel::sendManagerRegistrationOtp,
+                                    onBack = viewModel::showManagerRegistration,
+                                    viewModel = viewModel
+                                )
+                                AuthScreen.MANAGER_REGISTER_SETUP -> ManagerSetupPane(state, viewModel)
+                                AuthScreen.RECOVERY -> RecoveryPane(state, viewModel)
+                                AuthScreen.RECOVERY_OTP -> OtpPane(
+                                    title = "بررسی کد بازیابی",
+                                    hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
+                                    state = state,
+                                    onVerify = viewModel::verifyRecoveryOtp,
+                                    onResend = viewModel::sendRecoveryOtp,
+                                    onBack = viewModel::showRecovery,
+                                    viewModel = viewModel,
+                                    recoverySteps = true
+                                )
+                                AuthScreen.RECOVERY_PASSWORD -> RecoveryPasswordPane(state, viewModel)
+                            }
+                        }
+                    }
                 }
-            )
-        }
-        IceAuthCard {
-        // V62.0 — ورود پلکانی فرم با هر تغییر صفحه.
-        StaggeredEntrance(key = state.screen) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        when (state.screen) {
-            AuthScreen.SIGN_IN -> LandingPane(state, viewModel)
-            AuthScreen.LOGIN_ROLE -> LoginRolePane(state, viewModel)
-            AuthScreen.LOGIN_MANAGER -> StaffLoginPane(state, viewModel, managerRole = true)
-            AuthScreen.LOGIN_TEACHER -> StaffLoginPane(state, viewModel, managerRole = false)
-            AuthScreen.LOGIN_STUDENT -> StudentLoginPane(state, viewModel)
-            AuthScreen.REGISTRATION_ROLE -> RegistrationRolePane(state, viewModel)
-            AuthScreen.LOGIN_OTP -> OtpPane(
-                title = "ورود با کد یک‌بارمصرف",
-                hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
-                state = state,
-                onVerify = viewModel::verifyLoginOtp,
-                onResend = viewModel::sendLoginOtp,
-                onBack = viewModel::showLoginRole,
-                viewModel = viewModel
-            )
-            AuthScreen.TEACHER_REGISTER -> TeacherRegistrationPane(state, viewModel)
-            AuthScreen.TEACHER_REGISTER_OTP -> OtpPane(
-                title = "تأیید ایمیل معلم",
-                hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
-                state = state,
-                onVerify = viewModel::verifyTeacherRegistrationOtp,
-                onResend = viewModel::sendTeacherRegistrationOtp,
-                onBack = viewModel::showTeacherRegistration,
-                viewModel = viewModel
-            )
-            AuthScreen.TEACHER_REGISTER_SETUP -> TeacherSetupPane(state, viewModel)
-            AuthScreen.MANAGER_REGISTER -> ManagerRegistrationPane(state, viewModel)
-            AuthScreen.MANAGER_REGISTER_OTP -> OtpPane(
-                title = "تأیید ایمیل مدیر/معاون",
-                hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
-                state = state,
-                onVerify = viewModel::verifyManagerRegistrationOtp,
-                onResend = viewModel::sendManagerRegistrationOtp,
-                onBack = viewModel::showManagerRegistration,
-                viewModel = viewModel
-            )
-            AuthScreen.MANAGER_REGISTER_SETUP -> ManagerSetupPane(state, viewModel)
-            AuthScreen.RECOVERY -> RecoveryPane(state, viewModel)
-            AuthScreen.RECOVERY_OTP -> OtpPane(
-                title = "تأیید بازیابی حساب",
-                hint = "کد ارسال‌شده به ${state.email} را وارد کنید.",
-                state = state,
-                onVerify = viewModel::verifyRecoveryOtp,
-                onResend = viewModel::sendRecoveryOtp,
-                onBack = viewModel::showRecovery,
-                viewModel = viewModel
-            )
-            AuthScreen.RECOVERY_PASSWORD -> RecoveryPasswordPane(state, viewModel)
-        }
-        }
-        }
-        }
-
-        if (state.isLoading) {
-            Spacer(Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CircularProgressIndicator()
             }
-        }
-        state.error?.let { Text("خطا: $it", color = MaterialTheme.colorScheme.error) }
+            state.error?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "خطا: $it",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
 
 /**
- * V61.0 — صفحهٔ آغازین: فقط دو دکمهٔ بزرگ «ورود» بالا و «ثبت‌نام» پایین آن.
+ * V62.1 — صفحهٔ خوش‌آمد عیناً مثل WelcomeScreen ماژول: لوگوی گرادیانی بزرگ،
+ * نام اپ، پیام خوش‌آمد، «ورود به حساب» و «ساخت حساب جدید» و یادآوری دانش‌آموز.
  */
 @Composable
 private fun LandingPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Spacer(Modifier.height(48.dp))
-    Button(
-        onClick = viewModel::showLoginRole,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("ورود") }
-    Spacer(Modifier.height(10.dp))
-    Button(
-        onClick = viewModel::showRegistrationRole,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("ثبت‌نام") }
+    Column(
+        Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        StaggeredItem(0) { BrandHero() }
+        Spacer(Modifier.height(12.dp))
+        StaggeredItem(1) {
+            Text("آزمون آنلاین", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = IceInk)
+        }
+        StaggeredItem(2) {
+            Text(
+                "به سامانهٔ آزمون و ارزشیابی خوش آمدید",
+                fontSize = 13.sp,
+                color = IceTextSecondary
+            )
+        }
+        Spacer(Modifier.height(26.dp))
+        StaggeredItem(3) {
+            IceButton(
+                text = "ورود به حساب",
+                enabled = !state.isLoading,
+                onClick = viewModel::showLoginRole
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        StaggeredItem(4) {
+            IceOutlinedButton(
+                text = "ساخت حساب جدید",
+                enabled = !state.isLoading,
+                onClick = viewModel::showTeacherRegistration
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        StaggeredItem(5) {
+            Text(
+                "حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.",
+                fontSize = 11.5.sp,
+                color = IceTextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+                lineHeight = 20.sp
+            )
+        }
+    }
 }
 
 /**
- * V61.0 — انتخاب نقش ورود: مدیر/معاون بالا، معلم وسط، دانش‌آموز پایین؛
- * هر دکمه پنجرهٔ اختصاصی ورود همان نقش را باز می‌کند.
+ * V62.1 — ورود سه‌نقشه در یک کارت مثل LoginScreen ماژول: Brand + تب‌های
+ * سگمنتی لغزان؛ هر تب همان پنجرهٔ اختصاصی نقش (منطق V61.0) را نشان می‌دهد و
+ * جابه‌جایی تب فقط صفحهٔ ViewModel را عوض می‌کند (LOGIN_ROLE = تب مدیر/معاون).
  */
 @Composable
-private fun LoginRolePane(state: AuthUiState, viewModel: AuthViewModel) {
-    Spacer(Modifier.height(32.dp))
-    Button(
-        onClick = viewModel::showManagerLogin,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("مدیر/معاون") }
-    Button(
-        onClick = viewModel::showTeacherLogin,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("معلم") }
-    Button(
-        onClick = viewModel::showStudentLogin,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("دانش‌آموز") }
+private fun LoginPane(state: AuthUiState, viewModel: AuthViewModel) {
+    val selectedTab = when (state.screen) {
+        AuthScreen.LOGIN_TEACHER -> 1
+        AuthScreen.LOGIN_STUDENT -> 2
+        else -> 0
+    }
+    StaggeredItem(0) { Brand() }
+    StaggeredItem(1) {
+        RoleTabs(
+            labels = listOf("مدیر/معاون", "معلم", "دانش‌آموز"),
+            selected = selectedTab,
+            onSelect = { index ->
+                when (index) {
+                    0 -> viewModel.showManagerLogin()
+                    1 -> viewModel.showTeacherLogin()
+                    else -> viewModel.showStudentLogin()
+                }
+            }
+        )
+    }
+    if (selectedTab == 2) {
+        StudentLoginPane(state, viewModel)
+    } else {
+        StaffLoginPane(state, viewModel, managerRole = selectedTab == 0)
+    }
     BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading)
 }
 
 /**
- * V61.0 — پنجرهٔ اختصاصی ورود معلم یا مدیر/معاون + «ورود با گوگل» برای
+ * V61.0/V62.1 — محتوای ورود معلم یا مدیر/معاون + «ورود با گوگل» برای
  * حساب‌هایی که قبلاً با جیمیل ثبت‌نام کرده‌اند (جیمیل جدید به تکمیل ثبت‌نام می‌رود).
  */
 @Composable
 private fun StaffLoginPane(state: AuthUiState, viewModel: AuthViewModel, managerRole: Boolean) {
-    Text(if (managerRole) "ورود مدیر/معاون" else "ورود معلم", style = MaterialTheme.typography.titleLarge)
-    OutlinedTextField(
+    Text(
+        if (managerRole) "ورود مدیر/معاون" else "ورود معلم",
+        fontSize = 21.sp,
+        fontWeight = FontWeight.Bold,
+        color = IceInk
+    )
+    IceField(
         value = state.email,
         onValueChange = viewModel::setEmail,
-        label = { Text("ایمیل یا نام کاربری") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        hint = "ایمیل یا نام کاربری",
+        keyboardType = KeyboardType.Email
     )
     PasswordField("رمز عبور", state.password, viewModel::setPassword)
-    Button(
+    IceButton(
+        text = "ورود با رمز عبور",
         onClick = viewModel::signIn,
-        enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank(),
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ورود با رمز عبور") }
-    OutlinedButton(
+        enabled = state.email.isNotBlank() && state.password.isNotBlank(),
+        loading = state.isLoading
+    )
+    IceOutlinedButton(
+        text = "ورود با کد ایمیل",
         onClick = viewModel::sendLoginOtp,
-        enabled = !state.isLoading && '@' in state.email,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ورود با کد ایمیل") }
+        enabled = !state.isLoading && '@' in state.email
+    )
     // V61.0 — ورود با گوگل؛ همان جریان Credential Manager ثبت‌نام (idToken).
     GoogleAuthButton(
         state = state,
         viewModel = viewModel,
         role = if (managerRole) "manager" else "teacher"
     ) { Text("ورود با گوگل") }
-    TextButton(onClick = viewModel::showRecovery, enabled = !state.isLoading) { Text("رمز را فراموش کرده‌ام") }
-    BackButtonRow(onBack = viewModel::showLoginRole, enabled = !state.isLoading)
+    LinkTextButton("رمز را فراموش کرده‌ام", onClick = viewModel::showRecovery, enabled = !state.isLoading)
 }
 
-/** V61.0 — پنجرهٔ اختصاصی ورود دانش‌آموز با نام کاربری تحویلی معلم. */
+/** V61.0/V62.1 — محتوای ورود دانش‌آموز با نام کاربری تحویلی معلم. */
 @Composable
 private fun StudentLoginPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("ورود دانش‌آموز", style = MaterialTheme.typography.titleLarge)
-    OutlinedTextField(
+    Text("ورود دانش‌آموز", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+    IceField(
         value = state.email,
         onValueChange = viewModel::setEmail,
-        label = { Text("نام کاربری دانش‌آموز") },
-        supportingText = { Text("همان نام کاربری تحویلی از معلم را وارد کنید.") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        hint = "نام کاربری دانش‌آموز",
+        supporting = "همان نام کاربری تحویلی از معلم را وارد کنید."
     )
     PasswordField("رمز عبور", state.password, viewModel::setPassword)
-    Button(
+    IceButton(
+        text = "ورود",
         onClick = viewModel::signIn,
-        enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank(),
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ورود") }
-    BackButtonRow(onBack = viewModel::showLoginRole, enabled = !state.isLoading)
+        enabled = state.email.isNotBlank() && state.password.isNotBlank(),
+        loading = state.isLoading
+    )
 }
 
-/** V61.0 — دکمهٔ بازگشت وسط‌چین پایین همهٔ پنجره‌های ورود/ثبت‌نام. */
+/** V61.0/V62.1 — دکمهٔ بازگشت وسط‌چین پایین همهٔ پنجره‌ها (لینک خاکستری ماژول). */
 @Composable
 private fun BackButtonRow(onBack: () -> Unit, enabled: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-        TextButton(onClick = onBack, enabled = enabled) { Text("بازگشت") }
+        LinkTextButton("بازگشت", onClick = onBack, enabled = enabled, gray = true)
     }
 }
 
+/**
+ * V62.1 — ثبت‌نام دو نقش در یک کارت مثل SignupScreen ماژول: تب معلم اول و
+ * مدیر/معاون دوم؛ حساب دانش‌آموز را معلم می‌سازد.
+ */
 @Composable
-private fun RegistrationRolePane(state: AuthUiState, viewModel: AuthViewModel) {
-    // V61.0 — نقش‌ها عمودی: مدیر/معاون بالا و معلم پایین آن.
-    Spacer(Modifier.height(32.dp))
-    Button(
-        onClick = viewModel::showManagerRegistration,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("مدیر/معاون") }
-    Button(
-        onClick = viewModel::showTeacherRegistration,
-        enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth().height(54.dp)
-    ) { Text("معلم") }
-    BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading)
+private fun RegisterPane(state: AuthUiState, viewModel: AuthViewModel) {
+    val managerTab = state.screen == AuthScreen.MANAGER_REGISTER
+    StaggeredItem(0) { Brand() }
+    StaggeredItem(1) {
+        RoleTabs(
+            labels = listOf("معلم", "مدیر/معاون"),
+            selected = if (managerTab) 1 else 0,
+            onSelect = { index ->
+                if (index == 0) viewModel.showTeacherRegistration()
+                else viewModel.showManagerRegistration()
+            }
+        )
+    }
+    if (managerTab) ManagerRegistrationPane(state, viewModel)
+    else TeacherRegistrationPane(state, viewModel)
 }
 
 @Composable
 private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("ثبت‌نام معلم", style = MaterialTheme.typography.titleLarge)
-    Text("دانش‌آموز نباید از این بخش ثبت‌نام کند؛ حساب دانش‌آموز را معلم می‌سازد.")
-    OutlinedTextField(
-        state.fullName,
-        viewModel::setFullName,
-        label = { Text("نام و نام خانوادگی") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+    Text("ثبت‌نام معلم", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+    Text(
+        "دانش‌آموز نباید از این بخش ثبت‌نام کند؛ حساب دانش‌آموز را معلم می‌سازد.",
+        fontSize = 13.sp,
+        color = IceTextSecondary,
+        lineHeight = 22.sp
     )
-    OutlinedTextField(
-        state.email,
-        viewModel::setEmail,
-        label = { Text("ایمیل معلم") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
-    )
-    Button(
+    IceField(state.fullName, viewModel::setFullName, hint = "نام و نام خانوادگی")
+    IceField(state.email, viewModel::setEmail, hint = "ایمیل معلم", keyboardType = KeyboardType.Email)
+    IceButton(
+        text = "ارسال کد تأیید",
         onClick = viewModel::sendTeacherRegistrationOtp,
-        enabled = !state.isLoading && state.fullName.trim().length >= 2 && '@' in state.email,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ارسال کد تأیید") }
+        enabled = state.fullName.trim().length >= 2 && '@' in state.email,
+        loading = state.isLoading
+    )
     // V60.0 — ثبت‌نام با گوگل: انتخاب جیمیل ثبت‌شده روی گوشی (Credential Manager).
     GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher")
-    BackButtonRow(onBack = viewModel::showRegistrationRole, enabled = !state.isLoading)
+    BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading)
 }
 
 @Composable
 private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("تکمیل حساب معلم", style = MaterialTheme.typography.titleLarge)
-    Text("ایمیل تأیید شد. نام کاربری نمایشی و رمز ورود را تعیین کنید.")
-    OutlinedTextField(
+    Text("تکمیل حساب معلم", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+    Text(
+        "ایمیل تأیید شد. نام کاربری نمایشی و رمز ورود را تعیین کنید.",
+        fontSize = 13.sp,
+        color = IceTextSecondary,
+        lineHeight = 22.sp
+    )
+    IceField(
         state.username,
         viewModel::setUsername,
-        label = { Text("نام کاربری انگلیسی") },
-        supportingText = { Text("۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط؛ ورود معلم همچنان با ایمیل انجام می‌شود.") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        hint = "نام کاربری انگلیسی",
+        supporting = "۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط؛ ورود معلم همچنان با ایمیل انجام می‌شود."
     )
-    OutlinedTextField(
+    IceField(
         state.teacherInviteCode,
         viewModel::setTeacherInviteCode,
-        label = { Text("کد دعوت مدرسه (اختیاری)") },
-        supportingText = { Text("اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده است، آن را اینجا وارد کنید.") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        hint = "کد دعوت مدرسه (اختیاری)",
+        supporting = "اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده است، آن را اینجا وارد کنید."
     )
     PasswordField("رمز جدید ۸ تا ۷۲ کاراکتر", state.newPassword, viewModel::setNewPassword)
     PasswordField("تکرار رمز جدید", state.confirmPassword, viewModel::setConfirmPassword)
-    Button(
+    IceButton(
+        text = "تکمیل ثبت‌نام و ورود",
         onClick = viewModel::completeTeacherRegistration,
-        enabled = !state.isLoading && state.username.length >= 4 &&
+        enabled = state.username.length >= 4 &&
             state.newPassword.length >= 8 && state.newPassword == state.confirmPassword,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("تکمیل ثبت‌نام و ورود") }
-    TextButton(onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading) { Text("انصراف و خروج") }
+        loading = state.isLoading
+    )
+    LinkTextButton("انصراف و خروج", onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading, gray = true)
 }
 
 @Composable
 private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("ثبت‌نام مدیر/معاون", style = MaterialTheme.typography.titleLarge)
-    Text("پس از تأیید ایمیل، یک مدرسهٔ مستقل ایجاد می‌شود.")
-    OutlinedTextField(
-        state.fullName, viewModel::setFullName,
-        label = { Text("نام و نام خانوادگی") }, singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+    Text("ثبت‌نام مدیر/معاون", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+    Text(
+        "پس از تأیید ایمیل، یک مدرسهٔ مستقل ایجاد می‌شود.",
+        fontSize = 13.sp,
+        color = IceTextSecondary,
+        lineHeight = 22.sp
     )
-    OutlinedTextField(
-        state.email, viewModel::setEmail,
-        label = { Text("ایمیل مدیر/معاون") }, singleLine = true,
-        modifier = Modifier.fillMaxWidth()
-    )
-    Button(
+    IceField(state.fullName, viewModel::setFullName, hint = "نام و نام خانوادگی")
+    IceField(state.email, viewModel::setEmail, hint = "ایمیل مدیر/معاون", keyboardType = KeyboardType.Email)
+    IceButton(
+        text = "ارسال کد تأیید",
         onClick = viewModel::sendManagerRegistrationOtp,
-        enabled = !state.isLoading && state.fullName.trim().length >= 2 && '@' in state.email,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ارسال کد تأیید") }
+        enabled = state.fullName.trim().length >= 2 && '@' in state.email,
+        loading = state.isLoading
+    )
     // V60.0 — ثبت‌نام با گوگل برای مدیر/معاون.
     GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager")
-    BackButtonRow(onBack = viewModel::showRegistrationRole, enabled = !state.isLoading)
+    BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading)
 }
 
 @Composable
 private fun ManagerSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("تکمیل حساب مدیر/معاون", style = MaterialTheme.typography.titleLarge)
-    Text("ایمیل تأیید شد. مدرسه و اطلاعات ورود را تعیین کنید.")
-    OutlinedTextField(
-        state.schoolName, viewModel::setSchoolName,
-        label = { Text("نام مدرسه") }, singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+    Text("تکمیل حساب مدیر/معاون", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = IceInk)
+    Text(
+        "ایمیل تأیید شد. مدرسه و اطلاعات ورود را تعیین کنید.",
+        fontSize = 13.sp,
+        color = IceTextSecondary,
+        lineHeight = 22.sp
     )
+    IceField(state.schoolName, viewModel::setSchoolName, hint = "نام مدرسه")
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            state.province, viewModel::setProvince,
-            label = { Text("استان") }, singleLine = true,
+        IceField(
+            state.province, viewModel::setProvince, hint = "استان",
             modifier = Modifier.weight(1f)
         )
-        OutlinedTextField(
-            state.city, viewModel::setCity,
-            label = { Text("شهر") }, singleLine = true,
+        IceField(
+            state.city, viewModel::setCity, hint = "شهر",
             modifier = Modifier.weight(1f)
         )
     }
-    OutlinedTextField(
-        state.username, viewModel::setUsername,
-        label = { Text("نام کاربری انگلیسی") }, singleLine = true,
-        modifier = Modifier.fillMaxWidth()
-    )
+    IceField(state.username, viewModel::setUsername, hint = "نام کاربری انگلیسی")
     PasswordField("رمز جدید ۸ تا ۷۲ کاراکتر", state.newPassword, viewModel::setNewPassword)
     PasswordField("تکرار رمز جدید", state.confirmPassword, viewModel::setConfirmPassword)
-    Button(
+    IceButton(
+        text = "ساخت مدرسه و ورود",
         onClick = viewModel::completeManagerRegistration,
-        enabled = !state.isLoading && state.schoolName.trim().length >= 2 &&
+        enabled = state.schoolName.trim().length >= 2 &&
             state.username.length >= 4 && state.newPassword.length >= 8 &&
             state.newPassword == state.confirmPassword,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ساخت مدرسه و ورود") }
-    TextButton(onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading) { Text("انصراف و خروج") }
+        loading = state.isLoading
+    )
+    LinkTextButton("انصراف و خروج", onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading, gray = true)
 }
 
 @Composable
 private fun RecoveryPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("بازیابی رمز کادر مدرسه", style = MaterialTheme.typography.titleLarge)
-    Text("کد فقط به ایمیل حساب موجود فرستاده می‌شود و حساب تازه‌ای ساخته نمی‌شود.")
-    OutlinedTextField(
+    // V62.1 — نوار مراحل داخل کارت مثل ForgotScreen ماژول (مرحلهٔ ۱: ایمیل).
+    StaggeredItem(0) { StepIndicator(steps = RecoverySteps, current = 0) }
+    ScreenHeader(
+        icon = Icons.Filled.Lock,
+        title = "بازیابی رمز عبور",
+        subtitle = "ایمیل حساب خود را وارد کنید تا کد بازیابی برایتان ارسال شود. " +
+            "کد فقط به ایمیل حساب موجود فرستاده می‌شود و حساب تازه‌ای ساخته نمی‌شود."
+    )
+    IceField(
         state.email,
         viewModel::setEmail,
-        label = { Text("ایمیل حساب") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        hint = "ایمیل حساب",
+        keyboardType = KeyboardType.Email
     )
-    Button(
+    IceButton(
+        text = "ارسال کد بازیابی",
         onClick = viewModel::sendRecoveryOtp,
-        enabled = !state.isLoading && '@' in state.email,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ارسال کد بازیابی") }
+        enabled = '@' in state.email,
+        loading = state.isLoading
+    )
     BackButtonRow(onBack = viewModel::showLoginRole, enabled = !state.isLoading)
 }
 
 @Composable
 private fun RecoveryPasswordPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("تعیین رمز تازه", style = MaterialTheme.typography.titleLarge)
-    state.recoveredUsername?.let { Text("نام کاربری حساب: $it") }
+    // V62.1 — مرحلهٔ ۳: رمز جدید؛ دو مرحلهٔ قبلی تیک انیمیشنی می‌گیرند.
+    StaggeredItem(0) { StepIndicator(steps = RecoverySteps, current = 2) }
+    ScreenHeader(
+        icon = Icons.Filled.Lock,
+        title = "تعیین رمز تازه",
+        subtitle = state.recoveredUsername?.let { "نام کاربری حساب: $it" }
+    )
     PasswordField("رمز جدید ۸ تا ۷۲ کاراکتر", state.newPassword, viewModel::setNewPassword)
     PasswordField("تکرار رمز جدید", state.confirmPassword, viewModel::setConfirmPassword)
-    Button(
+    IceButton(
+        text = "ذخیره رمز و ورود",
         onClick = viewModel::saveRecoveredPassword,
-        enabled = !state.isLoading && state.newPassword.length >= 8 &&
-            state.newPassword == state.confirmPassword,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("ذخیره رمز و ورود") }
-    TextButton(onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading) { Text("انصراف و خروج") }
+        enabled = state.newPassword.length >= 8 && state.newPassword == state.confirmPassword,
+        loading = state.isLoading
+    )
+    LinkTextButton("انصراف و خروج", onClick = viewModel::cancelVerifiedFlow, enabled = !state.isLoading, gray = true)
 }
 
 @Composable
@@ -437,42 +499,48 @@ private fun OtpPane(
     onVerify: () -> Unit,
     onResend: () -> Unit,
     onBack: () -> Unit,
-    viewModel: AuthViewModel
+    viewModel: AuthViewModel,
+    recoverySteps: Boolean = false
 ) {
-    Text(title, style = MaterialTheme.typography.titleLarge)
-    Text(hint)
+    // V62.1 — در جریان بازیابی، مرحلهٔ «کد بازیابی» فعال است (مثل VerifyCodeScreen ماژول).
+    if (recoverySteps) StaggeredItem(0) { StepIndicator(steps = RecoverySteps, current = 1) }
+    ScreenHeader(icon = Icons.Filled.MailOutline, title = title, subtitle = hint)
     // V62.0 — باکس‌های کد با Paste و Backspace طبیعی (فیلد مخفی)؛ کد سوپابیس
     // ۶ تا ۸ رقمی است و باکس‌ها با طول کد گسترده می‌شوند.
-    Text("کد یک‌بارمصرف ۶ تا ۸ رقم", style = MaterialTheme.typography.labelMedium)
+    Text(
+        "کد یک‌بارمصرف ۶ تا ۸ رقم",
+        fontSize = 11.5.sp,
+        color = IceTextSecondary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
     OtpBoxes(
         value = state.otp,
         onValueChange = viewModel::setOtp,
         modifier = Modifier.fillMaxWidth()
     )
-    Button(
+    IceButton(
+        text = "تأیید کد",
         onClick = onVerify,
-        enabled = !state.isLoading && state.otp.length in 6..8,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text("تأیید کد") }
-    OutlinedButton(onClick = onResend, enabled = !state.isLoading, modifier = Modifier.fillMaxWidth()) {
-        Text("ارسال دوباره کد")
-    }
+        enabled = state.otp.length in 6..8,
+        loading = state.isLoading
+    )
+    IceOutlinedButton(text = "ارسال دوباره کد", onClick = onResend, enabled = !state.isLoading)
     BackButtonRow(onBack = onBack, enabled = !state.isLoading)
 }
 
 @Composable
 private fun PasswordField(label: String, value: String, onChange: (String) -> Unit) {
     var visible by remember { mutableStateOf(false) }
-    OutlinedTextField(
+    IceField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
-        singleLine = true,
+        hint = label,
+        keyboardType = KeyboardType.Password,
         visualTransformation = passwordTransformation(visible),
         trailingIcon = {
             PasswordVisibilityButton(visible = visible, onToggle = { visible = !visible })
-        },
-        modifier = Modifier.fillMaxWidth()
+        }
     )
 }
 
@@ -493,7 +561,7 @@ private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, r
 /**
  * V61.0 — دکمهٔ مشترک گوگل برای ثبت‌نام و ورود؛ متن دکمه از بیرون می‌آید و
  * جریان Credential Manager یکی است (حساب موجود مستقیم وارد می‌شود و حساب
- * تازه به صفحهٔ تکمیل ثبت‌نام همان نقش می‌رود).
+ * تازه به صفحهٔ تکمیل ثبت‌نام همان نقش می‌رود). V62.1: ظاهر یخی ماژول.
  */
 @Composable
 private fun GoogleAuthButton(
@@ -543,7 +611,15 @@ private fun GoogleAuthButton(
             }
         },
         enabled = !state.isLoading,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().height(52.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.White,
+            contentColor = IceInk,
+            disabledContainerColor = Color.White,
+            disabledContentColor = IceDisabledText
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, IceStroke)
     ) {
         // V60.2 — لوگوی رسمی چهاررنگ گوگل؛ tint خنثی تا رنگ‌ها حفظ شوند.
         Icon(
@@ -556,4 +632,3 @@ private fun GoogleAuthButton(
         label()
     }
 }
-

@@ -910,8 +910,9 @@ require(all(marker in student_card for marker in (
 require("enum class UserRole { TEACHER, STUDENT, MANAGER }" in
         (ROOT/"app/src/main/java/ir/exam/app/domain/model/AppUser.kt").read_text(),
         "V36 manager role missing")
+# V62.1 — نقش‌های ثبت‌نام تب سگمنتی ماژول یخی شدند (معلم اول).
 require(all(marker in sign_in_screen for marker in (
-            "AuthScreen.REGISTRATION_ROLE","Text(\"معلم\")","Text(\"مدیر/معاون\")",
+            "AuthScreen.REGISTRATION_ROLE","labels = listOf(\"معلم\", \"مدیر/معاون\")",
             "ManagerRegistrationPane","ManagerSetupPane","نام مدرسه","استان","شهر"
         )) and all(marker in auth_view_model for marker in (
             "MANAGER_REGISTER_OTP","MANAGER_REGISTER_SETUP","completeManagerRegistration"
@@ -1663,9 +1664,12 @@ require("اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده اس
 
 # ---- V61.0: auth landing redesign ----
 _sign_in_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt").read_text()
+# V62.1 — ورود سه‌نقشه در یک کارت با تب سگمنتی ماژول؛ پنجره‌های اختصاصی
+# StaffLoginPane/StudentLoginPane از داخل LoginPane انتخاب می‌شوند.
 require("AuthScreen.SIGN_IN -> LandingPane(state, viewModel)" in _sign_in_v61
-        and "AuthScreen.LOGIN_MANAGER -> StaffLoginPane(state, viewModel, managerRole = true)" in _sign_in_v61
-        and "AuthScreen.LOGIN_STUDENT -> StudentLoginPane(state, viewModel)" in _sign_in_v61
+        and "AuthScreen.LOGIN_STUDENT -> LoginPane(state, viewModel)" in _sign_in_v61
+        and 'labels = listOf("مدیر/معاون", "معلم", "دانش‌آموز")' in _sign_in_v61
+        and "StaffLoginPane(state, viewModel, managerRole = selectedTab == 0)" in _sign_in_v61
         and 'Text("ورود با گوگل")' in _sign_in_v61
         and "private fun BackButtonRow(" in _sign_in_v61,
         "V61.0 auth landing/login-role redesign is missing")
@@ -1744,10 +1748,20 @@ _ice=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthIceComponents.kt").read_te
 require("internal fun IceBackdrop(" in _ice and "internal fun OtpBoxes(" in _ice
         and "internal fun StepIndicator(" in _ice and "maxLength: Int = 8" in _ice,
         "V62.0 ice auth components are missing")
+# V62.1 — هم‌ترازی کامل با ماژول: تب‌های لغزان RoleTabs، خوش‌آمد BrandHero،
+# نوار مراحل با برچسب‌های ماژول و کلید ورود پلکانی گروهی.
 require("IceBackdrop(Modifier.fillMaxSize())" in _sign_in_v61
-        and "StaggeredEntrance(key = state.screen)" in _sign_in_v61
+        and "StaggeredEntrance(key = entranceKey)" in _sign_in_v61
         and "state.otp.length in 6..8" in _sign_in_v61,
         "V62.0 ice shell wiring or 6..8 otp rule is missing")
+require("internal fun RoleTabs(" in _ice
+        and "LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset" in _ice
+        and "internal fun BrandHero()" in _ice
+        and "internal fun ScreenHeader(" in _ice,
+        "V62.1 module role tabs / welcome hero are missing")
+require('private val RecoverySteps = listOf("ایمیل", "کد بازیابی", "رمز جدید")' in _sign_in_v61
+        and "steps = RecoverySteps" in _sign_in_v61,
+        "V62.1 module recovery step labels are missing")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()

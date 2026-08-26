@@ -43,9 +43,11 @@ class V62_0IceAuthShellTest {
         assertTrue("IceBackdrop(Modifier.fillMaxSize())" in signIn)
         assertTrue("if (recoveryFlow) Snowfall(Modifier.fillMaxSize())" in signIn)
         assertTrue("IceAuthCard {" in signIn)
-        assertTrue("StaggeredEntrance(key = state.screen)" in signIn)
-        // نوار مراحل فقط در جریان بازیابی
-        assertTrue("steps = listOf(\"ایمیل\", \"کد\", \"رمز جدید\")" in signIn)
+        // V62.1 — کلید ورود پلکانی گروهی شد تا جابه‌جایی تب کارت را محو نکند.
+        assertTrue("StaggeredEntrance(key = entranceKey)" in signIn)
+        // نوار مراحل فقط در جریان بازیابی (برچسب‌های ماژول)
+        assertTrue("private val RecoverySteps = listOf(\"ایمیل\", \"کد بازیابی\", \"رمز جدید\")" in signIn)
+        assertTrue("steps = RecoverySteps" in signIn)
         // OTP باکسی به ViewModel موجود وصل است و طول ۶..۸ حفظ شده
         assertTrue("OtpBoxes(\n        value = state.otp,\n        onValueChange = viewModel::setOtp," in signIn)
         assertTrue("state.otp.length in 6..8" in signIn)

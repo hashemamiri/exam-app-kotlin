@@ -36,8 +36,8 @@ class V36ManagerFoundationTest {
         val screen = source("app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt")
         val viewModel = source("app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt")
         assertTrue("AuthScreen.REGISTRATION_ROLE" in screen)
-        assertTrue("Text(\"معلم\")" in screen)
-        assertTrue("Text(\"مدیر/معاون\")" in screen)
+        // V62.1 — نقش‌های ثبت‌نام حالا تب سگمنتی ماژول یخی‌اند (معلم اول).
+        assertTrue("labels = listOf(\"معلم\", \"مدیر/معاون\")" in screen)
         assertTrue("ManagerRegistrationPane" in screen)
         assertTrue("ManagerSetupPane" in screen)
         assertTrue("نام مدرسه" in screen && "استان" in screen && "شهر" in screen)
