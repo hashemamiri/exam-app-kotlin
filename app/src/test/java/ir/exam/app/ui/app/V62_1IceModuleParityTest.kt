@@ -73,6 +73,12 @@ class V62_1IceModuleParityTest {
         // V62.1.2 — ورود پلکانی آیتم‌به‌آیتم ماژول (StaggeredItem) در فرم‌ها
         assertTrue("StaggeredItem(0) { Brand() }" in signIn)
         assertTrue("StaggeredItem(1) {" in signIn)
+        // V62.1.3 — تعویض تب بدون remount انیمیشن نمی‌داد؛ key هویت را عوض می‌کند
+        assertTrue("androidx.compose.runtime.key(selectedTab) {" in signIn)
+        assertTrue("androidx.compose.runtime.key(managerTab) {" in signIn)
+        // V62.1.3 — کارت مات بدون سایه: هالهٔ سایه مثل کادر دوم دیده می‌شد
+        assertTrue(".background(Color.White)" in components)
+        assertTrue("border(1.dp, IceStroke, RoundedCornerShape(24.dp))" in components)
         // مغز همان است: گوگل Credential Manager و قواعد سرور
         assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)
         assertTrue("state.newPassword.length >= 8" in signIn)

@@ -54,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -222,11 +221,11 @@ internal fun StaggeredItem(index: Int, content: @Composable () -> Unit) {
 }
 
 /**
- * کارت شیشه‌ای مرکزی همهٔ صفحه‌ها (گوشهٔ ۲۴ ماژول).
- * V62.1.2 — رفع «کادر مستطیلی داخل کارت»: سایهٔ elevation اندروید از پشت
- * سطح نیمه‌شفاف دیده می‌شود؛ با سفید ۶۵٪ + سایهٔ ۲۴dp ماژول، هالهٔ سایه
- * مثل یک مستطیل داخل کارت به چشم می‌آمد. مقادیر امن V62.0 (تست‌شده روی
- * دستگاه) برگشت: سطح تقریباً مات ۹۲٪ و سایهٔ ملایم ۶dp.
+ * کارت مرکزی همهٔ صفحه‌ها (گوشهٔ ۲۴ ماژول).
+ * V62.1.3 — گزارش دستگاه: «یک کادر سفید در پس‌زمینهٔ کادر اصلی». ریشه با
+ * تحلیل پیکسلی اسکرین‌شات: هالهٔ سایهٔ الویشن دور و زیر لبهٔ کارت از پشت
+ * سطح نیمه‌شفاف ۹۲٪ مثل کارت دومی دیده می‌شد. سایه حذف و سطح کاملاً مات
+ * شد؛ خط دور ظریف آبی یخی مرز کارت را روی پس‌زمینه نگه می‌دارد.
  */
 @Composable
 internal fun IceAuthCard(
@@ -236,10 +235,9 @@ internal fun IceAuthCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(24.dp))
             .clip(RoundedCornerShape(24.dp))
-            .background(Color.White.copy(alpha = 0.92f))
-            .border(1.dp, Color.White.copy(alpha = 0.9f), RoundedCornerShape(24.dp))
+            .background(Color.White)
+            .border(1.dp, IceStroke, RoundedCornerShape(24.dp))
             .padding(horizontal = 22.dp, vertical = 24.dp),
         content = content
     )

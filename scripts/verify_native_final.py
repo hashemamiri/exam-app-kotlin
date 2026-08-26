@@ -1768,6 +1768,12 @@ require('private val RecoverySteps = listOf("ایمیل", "کد بازیابی",
 require("targetValue = itemWidth * selected" in _ice
         and "maxWidth - itemWidth - logicalOffset" not in _ice,
         "V62.1.2 RoleTabs must use the logical Dp*Int offset without manual RTL mirroring")
+# V62.1.3 — تعویض تب باید stagger را از نو اجرا کند و کارت مات بدون سایه باشد
+# (هالهٔ سایه پشت سطح نیمه‌شفاف مثل کادر سفید دوم دیده می‌شد).
+require("androidx.compose.runtime.key(selectedTab) {" in _sign_in_v61
+        and "androidx.compose.runtime.key(managerTab) {" in _sign_in_v61
+        and "border(1.dp, IceStroke, RoundedCornerShape(24.dp))" in _ice,
+        "V62.1.3 tab remount keys or opaque shadow-free card are missing")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()

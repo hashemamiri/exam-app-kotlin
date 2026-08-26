@@ -228,10 +228,16 @@ private fun LoginPane(state: AuthUiState, viewModel: AuthViewModel) {
             }
         )
     }
-    if (selectedTab == 2) {
-        StudentLoginPane(state, viewModel)
-    } else {
-        StaffLoginPane(state, viewModel, managerRole = selectedTab == 0)
+    // V62.1.3 — گزارش دستگاه: بین مدیر↔معلم انیمیشن اجرا نمی‌شد. ریشه:
+    // هر دو تب همان StaffLoginPane هستند و Compose آن را remount نمی‌کند؛
+    // LaunchedEffect(Unit) داخل StaggeredItem هم فقط بار اول می‌دود. با
+    // key(selectedTab) هویت محتوا با هر تب عوض و stagger از نو اجرا می‌شود.
+    androidx.compose.runtime.key(selectedTab) {
+        if (selectedTab == 2) {
+            StudentLoginPane(state, viewModel)
+        } else {
+            StaffLoginPane(state, viewModel, managerRole = selectedTab == 0)
+        }
     }
     StaggeredItem(9) { BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading) }
 }
@@ -338,8 +344,11 @@ private fun RegisterPane(state: AuthUiState, viewModel: AuthViewModel) {
             }
         )
     }
-    if (managerTab) ManagerRegistrationPane(state, viewModel)
-    else TeacherRegistrationPane(state, viewModel)
+    // V62.1.3 — مثل تب‌های ورود: بازاجرای stagger با هر تعویض تب.
+    androidx.compose.runtime.key(managerTab) {
+        if (managerTab) ManagerRegistrationPane(state, viewModel)
+        else TeacherRegistrationPane(state, viewModel)
+    }
 }
 
 @Composable
