@@ -59,8 +59,8 @@ class V61_5QuickSchoolFilterInviteTest {
         assertTrue("Icons.Outlined.FilterList" in school)
         // ترتیب: اول فیلتر بعد جست‌وجو
         assertTrue("filteredStudents(\n                        applyStudentFilter(state.students, state.studentFilter, state.classes, state.filterMeta),\n                        state.query\n                    )" in school)
-        // گزینه‌ها
-        for (needle in listOf("Text(\"عضو نشده\")", "Text(\"مدرسه\")", "showTeacherFilter")) {
+        // گزینه‌ها (V61.7: چیپ‌ها به کارت‌های بازشونده با title تبدیل شدند)
+        for (needle in listOf("title = \"عضو نشده\"", "title = \"مدرسه\"", "showTeacherFilter")) {
             assertTrue(needle, needle in school)
         }
         assertTrue("data class StudentListFilter(" in classesVm)
