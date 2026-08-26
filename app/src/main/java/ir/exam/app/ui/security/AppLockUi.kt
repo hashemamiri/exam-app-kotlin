@@ -95,13 +95,29 @@ fun AppLockSettings(userId: String, embedded: Boolean = false) {
     val manager = remember { AppLockManager(context) }
     var enabled by remember(userId) { mutableStateOf(manager.enabled(userId)) }
     var message by remember { mutableStateOf<String?>(null) }
+    // V62.3 — درخواست کاربر: فعال/غیرفعال کردن قفل باید خودش قفل امن دستگاه
+    // را طلب کند؛ وضعیت هدف تا تأیید موفق اینجا نگه داشته می‌شود.
+    var pendingToggle by remember { mutableStateOf<Boolean?>(null) }
     val available = remember(context) {
         BiometricManager.from(context).canAuthenticate(SYSTEM_AUTHENTICATORS) ==
             BiometricManager.BIOMETRIC_SUCCESS
     }
     val prompt = rememberSystemBiometricPrompt(
-        onSuccess = { message = "قفل امن دستگاه با موفقیت تأیید شد." },
-        onError = { message = it }
+        onSuccess = {
+            val target = pendingToggle
+            if (target != null) {
+                manager.setEnabled(userId, target)
+                enabled = target
+                pendingToggle = null
+                message = if (target) "قفل برنامه فعال شد." else "قفل برنامه غیرفعال شد."
+            } else {
+                message = "قفل امن دستگاه با موفقیت تأیید شد."
+            }
+        },
+        onError = {
+            pendingToggle = null
+            message = it
+        }
     )
 
     val body: @Composable () -> Unit = {
@@ -125,10 +141,14 @@ fun AppLockSettings(userId: String, embedded: Boolean = false) {
                 Switch(
                     checked = enabled,
                     enabled = available,
-                    onCheckedChange = {
-                        enabled = it
-                        manager.setEnabled(userId, it)
-                        message = if (it) "قفل برنامه فعال شد." else "قفل برنامه غیرفعال شد."
+                    onCheckedChange = { target ->
+                        // V62.3 — تغییر وضعیت فقط پس از تأیید قفل امن دستگاه اعمال می‌شود.
+                        message = null
+                        pendingToggle = target
+                        prompt?.authenticate(togglePromptInfo(target)) ?: run {
+                            pendingToggle = null
+                            message = "این صفحه باید در Activity امن برنامه باز شود."
+                        }
                     }
                 )
             }
@@ -205,6 +225,14 @@ private fun systemPromptInfo(): BiometricPrompt.PromptInfo = BiometricPrompt.Pro
     .setSubtitle("از قفل امن فعال دستگاه استفاده کنید")
     .setAllowedAuthenticators(SYSTEM_AUTHENTICATORS)
     .build()
+
+/** V62.3 — پنجرهٔ تأیید هویت مخصوص فعال/غیرفعال کردن قفل برنامه. */
+private fun togglePromptInfo(enable: Boolean): BiometricPrompt.PromptInfo =
+    BiometricPrompt.PromptInfo.Builder()
+        .setTitle(if (enable) "فعال‌سازی قفل برنامه" else "غیرفعال‌سازی قفل برنامه")
+        .setSubtitle("برای تغییر وضعیت قفل، هویت خود را با قفل امن دستگاه تأیید کنید")
+        .setAllowedAuthenticators(SYSTEM_AUTHENTICATORS)
+        .build()
 
 private tailrec fun Context.findFragmentActivity(): FragmentActivity? = when (this) {
     is FragmentActivity -> this

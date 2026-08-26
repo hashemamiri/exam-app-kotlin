@@ -1784,6 +1784,11 @@ require("internal fun NeonIceSpinner(" in _ice
         and "Brush.sweepGradient(" in _ice
         and 'IceSessionLoading(message = "در حال بازیابی نشست ورود...")' in app_shell,
         "V62.2 neon ice session-loading screen is missing")
+# V62.3 — تغییر وضعیت قفل برنامه فقط پس از تأیید قفل امن دستگاه ذخیره می‌شود.
+require("prompt?.authenticate(togglePromptInfo(target))" in app_lock_ui
+        and "private fun togglePromptInfo(enable: Boolean)" in app_lock_ui
+        and "pendingToggle = target" in app_lock_ui,
+        "V62.3 device-credential gate on the app-lock toggle is missing")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()

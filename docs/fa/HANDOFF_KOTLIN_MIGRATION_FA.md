@@ -9747,3 +9747,47 @@ FINAL_NATIVE_VERIFY=PASS kotlin_files=203.
 پس‌زمینهٔ یخی با موج داشته باشد؛ اسپینر دو کمان چرخان با هالهٔ نئونی و
 هستهٔ نبض‌دار نشان دهد؛ پس از بازیابی، ورود عادی ادامه یابد.
 ```
+
+
+## ۲۰۱) V62.3 — طلب قفل دستگاه هنگام فعال/غیرفعال کردن قفل برنامه
+
+### درخواست کاربر
+
+```text
+«در کارت حساب بخش قفل برنامه، هنگام فعال/غیرفعال کردن قفل دستگاه را
+طلب کند.» — قبلاً Switch بلافاصله setEnabled را صدا می‌زد؛ یعنی هر کسی
+که گوشی باز را در دست داشت می‌توانست قفل برنامه را بی‌تأیید خاموش کند.
+```
+
+### پیاده‌سازی (AppLockUi.kt — فقط AppLockSettings)
+
+```text
+- state جدید pendingToggle: Boolean? — وضعیت هدف تا تأیید موفق.
+- onCheckedChange دیگر ذخیره نمی‌کند: pendingToggle = target سپس
+  prompt?.authenticate(togglePromptInfo(target))؛ اگر Activity امن نبود
+  همان پیام قبلی و پاک شدن pending.
+- onSuccess مشترک prompt: اگر pendingToggle != null → setEnabled +
+  enabled = target + پیام «قفل برنامه فعال/غیرفعال شد»؛ وگرنه همان
+  رفتار قبلی «آزمایش قفل» (پیام تأیید).
+- onError: pendingToggle = null و نمایش خطا — سوییچ چون state آن فقط در
+  onSuccess عوض می‌شود، با لغو/خطا سر جای قبلی می‌ماند.
+- togglePromptInfo(enable): عنوان «فعال‌سازی/غیرفعال‌سازی قفل برنامه» با
+  همان SYSTEM_AUTHENTICATORS (BIOMETRIC_STRONG | DEVICE_CREDENTIAL).
+- AppLockGate و دکمهٔ «آزمایش قفل امن دستگاه» دست‌نخورده.
+```
+
+### تست/verify
+
+```text
+جدید: V62_3LockToggleAuthTest (۲ تست: ذخیره فقط در onSuccess با برش‌های
+settings/success/error/switch + PromptInfo رسمی و پابرجایی قرارداد بدون
+PIN/فیلد متنی V18/Neumorphic69). verify: بند V62.3 (سه needle روی
+app_lock_ui موجود در سطر ۴۹). رگرسیون needleهای قدیمی همین فایل
+(BiometricPrompt/DEVICE_CREDENTIAL/قفل امن دستگاه/نبود «پین جدید» و
+OutlinedTextField) شبیه‌سازی و سبز؛ FINAL_NATIVE_VERIFY=PASS
+kotlin_files=203.
+پچ: V62_3_lock_toggle_device_auth — بدون SQL؛ نیازمند build جدید.
+چک‌لیست دستگاه: لمس سوییچ قفل در کارت حساب → پنجرهٔ قفل دستگاه؛ تأیید →
+تغییر وضعیت + پیام؛ لغو → سوییچ برگردد و وضعیت عوض نشود؛ رفتار در هر
+دو جهت (فعال→غیرفعال و برعکس)؛ قفل هنگام بازگشت به برنامه مثل قبل.
+```
