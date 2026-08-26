@@ -9514,3 +9514,35 @@ kotlin_files=203 (شمارش فقط main است؛ تست جدید آن را تغ
 راست، دانش‌آموز چپ)؛ ورود هر سه نقش + گوگل + کد ایمیل؛ ثبت‌نام هر دو تب؛
 بازیابی سه‌مرحله‌ای با تیک‌ها و برف؛ Paste کد ۶ و ۸ رقمی در باکس‌ها.
 ```
+
+## ۱۹۶) V62.1.1 — هات‌فیکس خطای کامپایل CI تب‌های لغزان (Int*Dp)
+
+### ریشه (با مدرک از لاگ CI)
+
+```text
+CI پس از push V62.1 شکست: compileDebugKotlin خطا در
+AuthIceComponents.kt:491 — «None of the following candidates is
+applicable: fun times(other: Byte/Double/Float/Int/Long/Short)».
+خط ۴۹۱: val logicalOffset = selected * itemWidth
+selected از نوع Int و itemWidth از نوع Dp است. در کاتلین Int.times فقط
+برای انواع عددی تعریف شده و «عملگر الحاقی Int*Dp» در compose-ui وجود
+ندارد؛ برعکسش (Dp.times(Int)) عملگر عضو کلاس Dp است و سالم است. کد
+ماژول کاربر همین خط را داشت و چون ماژول جایی build نشده بود، خطا فقط
+در CI ما ظاهر شد. (این تنها خطای گزارش‌شدهٔ لاگ بود؛ بقیهٔ فایل‌ها تا
+kspDebugKotlin پیش رفتند.)
+```
+
+### راه‌حل
+
+```text
+AuthIceComponents.kt (RoleTabs): ترتیب ضرب برعکس شد —
+val logicalOffset = itemWidth * selected
+فرمول RTL (maxWidth - itemWidth - logicalOffset) دست‌نخورده ماند.
+اسکن الگوی مشابه «Int * Dp» در هر دو فایل V62.1: مورد دیگری نبود
+(radius * size.width هر دو Float هستند و سالم‌اند).
+تست/verify: needle جدید «val logicalOffset = itemWidth * selected» در
+V62_1IceModuleParityTest و require بند V62.1.1 در verify؛ شبیه‌سازی
+تمام needleهای V62.0/V62.1 پس از edit: سبز. FINAL_NATIVE_VERIFY=PASS.
+پچ: V62_1_1_roletabs_dp_multiply_hotfix — بدون SQL؛ فقط ۴ فایل
+(کامپوننت + تست + verify + changelog + هندآف).
+```

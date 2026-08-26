@@ -488,7 +488,9 @@ internal fun RoleTabs(
             .background(IceStroke.copy(alpha = 0.5f))
     ) {
         val itemWidth = maxWidth / labels.size
-        val logicalOffset = selected * itemWidth
+        // V62.1.1 — رفع خطای کامپایل CI: «Int * Dp» در کاتلین تعریف نشده؛
+        // ترتیب ضرب برعکس شد تا از عملگر عضو Dp.times(Int) استفاده شود.
+        val logicalOffset = itemWidth * selected
         val visualOffset = when (direction) {
             LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset
             else -> logicalOffset

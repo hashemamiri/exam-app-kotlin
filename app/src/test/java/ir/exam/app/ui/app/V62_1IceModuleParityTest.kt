@@ -52,6 +52,8 @@ class V62_1IceModuleParityTest {
     fun `role tabs slide correctly in rtl and welcome matches the module`() {
         // RTL: نشانگر از سمت راست شروع می‌شود (فرمول ماژول)
         assertTrue("LayoutDirection.Rtl -> maxWidth - itemWidth - logicalOffset" in components)
+        // V62.1.1 — Int*Dp در کاتلین وجود ندارد و CI را می‌شکست؛ ضرب از سمت Dp.
+        assertTrue("val logicalOffset = itemWidth * selected" in components)
         // خوش‌آمد: ترتیب دکمه‌ها و یادآوری دانش‌آموز
         val landing = signIn.substringAfter("private fun LandingPane(")
             .substringBefore("private fun LoginPane(")

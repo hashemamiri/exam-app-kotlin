@@ -1762,6 +1762,9 @@ require("internal fun RoleTabs(" in _ice
 require('private val RecoverySteps = listOf("ایمیل", "کد بازیابی", "رمز جدید")' in _sign_in_v61
         and "steps = RecoverySteps" in _sign_in_v61,
         "V62.1 module recovery step labels are missing")
+# V62.1.1 — Int*Dp کامپایل نمی‌شود (CI شکست)؛ ضرب باید از سمت Dp باشد.
+require("val logicalOffset = itemWidth * selected" in _ice,
+        "V62.1.1 RoleTabs offset must multiply Dp by Int (Int*Dp breaks compile)")
 
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()
