@@ -85,9 +85,10 @@ class V61_7BackupCrossFilterCardsTest {
 
     @Test
     fun `builder radial buttons are rounded squares`() {
-        assertTrue(".clip(RoundedCornerShape(22.dp))" in radial)
-        // دایره فقط برای دکمهٔ مرکزی + مانده است
+        // V61.8 — کلیپ داخل graphicsLayer تا کل انیمیشن مربع گوشه‌گرد بماند.
         val action = radial.substringAfter("actions.forEachIndexed").substringBefore("val startX")
+        assertTrue("shape = RoundedCornerShape(22.dp)" in action)
+        assertTrue("clip = true" in action)
         assertFalse(".clip(CircleShape)" in action)
     }
 }

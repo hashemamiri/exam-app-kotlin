@@ -9267,3 +9267,61 @@ V61_5 هماهنگ شد: needleها → title = "عضو نشده" / title = "م�
 V61.7. شبیه‌سازی کامل هر ۴ تست V61_5 سبز. FINAL_NATIVE_VERIFY=PASS EXIT=0.
 پچ: V61_7_1_filter_needle_hotfix — فقط همین تست + هندآف. بدون SQL.
 ```
+
+## ۱۹۲) V61.8 — حذف واقعی کارت دعوت، زمان‌سنج منجمد، فیلتر مدرسه با لیست
+
+### ریشه‌های دو باگ گزارش دستگاه (با مدرک)
+
+```text
+۱) «کارت کد دعوت حذف نمی‌شود»: حذف V61.7 خوش‌بینانه از state محلی بود +
+revoke سروری؛ ولی native_manager_invites_v40b کارت‌های revoke شده را هم
+برمی‌گرداند (فیلترش فقط created_at>now()-7days است) → با هر reload کارت
+برمی‌گشت. بعلاوه revoke قدیمی V40B فقط «اولین» عضویت مدیر را می‌دید
+(select school_id ... limit-like) که با چندمدرسه‌ای V61.4 می‌شکند، و only
+used_at is null را باطل می‌کرد (کارت استفاده‌شده اصلاً قابل حذف نبود).
+رفع: native_manager_delete_invite_v61 — حذف واقعی سطر با گارد عضویت مدیری
+همان مدرسه (چندمدرسه‌ای)؛ کلاینت repository.deleteInvite با fallback به
+revoke قدیمی اگر تابع deploy نشده باشد.
+۲) «زمان‌سنج فریزشده نمایش داده نمی‌شود»: used_at از SQL V61.7 با
+::text پستگرس می‌آمد («2026-08-26 07:15:00+00») که هر سه parser جاوا
+(Instant/OffsetDateTime/LocalDateTime) شکست می‌خورند (فاصله به‌جای T و
+آفست دورقمی +00) → مسیر fallback متن ساده نمایش می‌داد و کاربر «هیچ
+زمان‌سنجی» نمی‌دید چون SQL هم شاید اجرا نشده بود. رفع دولایه:
+parseInviteInstant نرمال‌سازی می‌کند (فاصله→T و +00→+00:00) و SQL جدید
+used_at را با to_char(... 'YYYY-MM-DD"T"HH24:MI:SS"Z"') می‌دهد.
+شبیه‌سازی چهار فرمت واقعی پستگرس انجام و سبز شد.
+۳) «دکمه‌های منوی + اول دایره بعد مربع»: clip(RoundedCornerShape) خارج از
+graphicsLayer بود؛ در ابتدای انیمیشن (scale=.22) گوشهٔ گرد 22dp نسبت به
+اندازهٔ کوچک دکمه عملاً دایره دیده می‌شد. رفع: shape/clip داخل
+graphicsLayer + شروع scale از .6f (شکل از اول مربع گوشه‌گرد).
+```
+
+### تکمیل فیلتر (درخواست‌های تکراری کاربر — این بار با لیست)
+
+```text
+بخش «مدرسه»: چیپ «هر مدرسه (همهٔ دانش‌آموزان عضو مدرسه)» + لیست مدارس
+(state.schools که با بازکردن فیلتر refreshSchoolList می‌شود) برای انتخاب
+مدرسهٔ خاص (StudentListFilter.schoolId جدید)؛ متادادهٔ سرور حالا آرایهٔ
+schools هر دانش‌آموز را می‌دهد (native_student_filter_meta_v61 بازنویسی).
+بخش «معلم» از V61.7 لیست معلم‌ها را داشت. آیکن فیلتر کنار جستجو حالا
+قرمز 0xFFD32F2F (به‌جای primary) وقتی فیلتری فعال است؛ دکمهٔ انصراف
+دیالوگ = IconButton ضربدر قرمز.
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_8InviteDeleteFilterSchoolsTest (۴ تست) · هماهنگی: V41B1
+(revokeInvite→deleteInvite در ترتیب خوش‌بینانه) + بند verify V41B.1 و
+V61.7/8 radial · شبیه‌سازی کامل V61_5/7/8 + V41B1/V40B/V19 سبز (درس ۹) ·
+اسکن سراسری ۱۳۲۹ needle و شمارشی: صفر خطای واقعی · شبیه‌سازی پایتونی
+پارس چهار فرمت timestamp سبز · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_8_invite_delete_filter_schools — SQL جدید
+20260826_native_invite_delete_filter_schools_v61_8.sql (کپی کاربر:
+V61_8_invite_delete_filter_schools.sql).
+اقدام سرور (الزامی): اجرای SQL؛ سلامت‌سنجی:
+select to_regprocedure('public.native_manager_delete_invite_v61(uuid)') is not null;
+نکته: بدون SQL هم حذف کارت حالا کار می‌کند (fallback revoke) ولی کارت
+استفاده‌شده/باطل‌شده فقط با تابع حذف واقعاً از لیست می‌رود.
+نیازمند build جدید.
+```

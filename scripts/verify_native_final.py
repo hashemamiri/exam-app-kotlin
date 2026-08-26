@@ -1103,7 +1103,8 @@ v41b1_sql=(ROOT/'supabase/migrations/20260816_native_profile_grant_invite_reques
 v41b1_copy=(ROOT/'sql/manual/SQL_NATIVE_PROFILE_GRANT_INVITE_REQUESTS_V41B1.sql').read_text()
 v41b1_requests=(ROOT/'app/src/main/java/ir/exam/app/ui/dashboard/TeacherManagerRequestsScreen.kt').read_text()
 require(v41b1_sql==v41b1_copy and 'grant execute on function public.native_my_profile() to authenticated' in v41b1_sql and 'native_manager_revoke_invite_v40b(uuid)' in v41b1_sql, 'V41B.1 RPC grants incomplete')
-require('%02d:%02d:%02d' in manager_foundation and manager_foundation.index('invites = invites.filterNot') < manager_foundation.index('repository.revokeInvite'), 'V41B.1 invite countdown/optimistic deletion incomplete')
+# V61.8 — حذف سروری از revokeInvite به deleteInvite تغییر کرد (حذف واقعی سطر).
+require('%02d:%02d:%02d' in manager_foundation and manager_foundation.index('invites = invites.filterNot') < manager_foundation.index('repository.deleteInvite'), 'V41B.1 invite countdown/optimistic deletion incomplete')
 require('درخواست‌های مدیر' in v41b1_requests and '"درخواست‌ها"' in design69_cards and 'MainPage.REQUESTS' in app_shell, 'V41B.1 requests card destination incomplete')
 
 # V42.2 — manager teacher dock must close invite/teacher contexts
@@ -1733,8 +1734,10 @@ require("fun FilterSectionCard(" in school_screen
         and "tint = if (active) Color(0xFFD32F2F) else LocalContentColor.current" in school_screen
         and 'TextButton(onClick = { draft = StudentListFilter() }) { Text("حذف فیلترها") }' in school_screen,
         "V61.7 filter section cards / sticky clear are missing")
-require(".clip(RoundedCornerShape(22.dp))" in builder_radial,
-        "V61.7 rounded-square builder radial buttons are missing")
+# V61.8 — شکل داخل graphicsLayer تا کل انیمیشن مربع گوشه‌گرد باشد.
+require("shape = RoundedCornerShape(22.dp)" in builder_radial
+        and "scaleX = .6f + .4f * p" in builder_radial,
+        "V61.7/V61.8 rounded-square builder radial buttons are missing")
 
 # ---- V61.2: manager dashboard + class teacher picker ----
 require('"داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,' in app_shell

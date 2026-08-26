@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -132,14 +131,19 @@ fun BuilderRadialMenuOverlay(
                         )
                     }
                     .size(66.dp)
+                    // V61.8 — شکل داخل خود لایهٔ انیمیشن clip می‌شود تا در کل
+                    // مسیر باز شدن «مربع گوشه‌گرد» بماند (قبلاً کلیپ جدا بود و
+                    // ابتدای انیمیشن دایره‌ای دیده می‌شد).
                     .graphicsLayer {
                         alpha = p
-                        scaleX = .22f + .78f * p
-                        scaleY = .22f + .78f * p
+                        // V61.8 — شروع از .6 (نه .22): دکمهٔ خیلی کوچک با گوشهٔ گرد
+                        // «دایره» دیده می‌شد؛ حالا از ابتدا مربع گوشه‌گرد است.
+                        scaleX = .6f + .4f * p
+                        scaleY = .6f + .4f * p
+                        shape = RoundedCornerShape(22.dp)
+                        clip = true
                     }
                     .neumorphic69(colors, 22.dp, 10.dp)
-                    // V61.7 — دکمه‌ها مربع با گوشه‌های گرد (نه دایره).
-                    .clip(RoundedCornerShape(22.dp))
                     // V61.6 — پس‌زمینهٔ پاستلی اختصاصی نوع؛ متن تیره برای خوانایی.
                     .background(action.background?.let(::Color) ?: colors.surface)
                     .clickable(

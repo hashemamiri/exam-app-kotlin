@@ -58,25 +58,29 @@ data class ClassesState(
 /** V61.0 — معلم قابل انتخاب هنگام ساخت کلاس توسط مدیر. */
 data class SchoolTeacherPick(val id: String, val name: String)
 
-/** V61.5 — متادادهٔ فیلتر هر دانش‌آموز: معلم مالک و عضویت مدرسه. */
+/** V61.5 — متادادهٔ فیلتر هر دانش‌آموز: معلم مالک و عضویت مدرسه.
+ *  V61.8 — schoolIds: مدرسه‌های دانش‌آموز برای فیلتر مدرسهٔ خاص. */
 data class StudentFilterMeta(
     val teacherId: String = "",
     val teacherName: String = "",
-    val inSchool: Boolean = false
+    val inSchool: Boolean = false,
+    val schoolIds: Set<String> = emptySet()
 )
 
-/** V61.5 — فیلترهای فعال لیست دانش‌آموزان؛ همه با هم قابل ترکیب‌اند. */
+/** V61.5 — فیلترهای فعال لیست دانش‌آموزان؛ همه با هم قابل ترکیب‌اند.
+ *  V61.8 — schoolId: مدرسهٔ خاص انتخابی از لیست مدارس. */
 data class StudentListFilter(
     val grade: String? = null,
     val classId: String? = null,
     val gender: String? = null,
     val unassigned: Boolean = false,
     val inSchool: Boolean = false,
+    val schoolId: String? = null,
     val teacherId: String? = null
 ) {
     val isActive: Boolean
         get() = grade != null || classId != null || gender != null ||
-            unassigned || inSchool || teacherId != null
+            unassigned || inSchool || schoolId != null || teacherId != null
 }
 
 class ClassesViewModel(
@@ -165,7 +169,11 @@ class ClassesViewModel(
                 id to StudentFilterMeta(
                     teacherId = (obj["teacher_id"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
                     teacherName = (obj["teacher_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
-                    inSchool = (obj["in_school"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true"
+                    inSchool = (obj["in_school"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true",
+                    schoolIds = ((obj["schools"] as? kotlinx.serialization.json.JsonArray)
+                        ?: kotlinx.serialization.json.JsonArray(emptyList()))
+                        .mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+                        .toSet()
                 )
             }.toMap()
         }.onSuccess { meta -> _state.update { it.copy(filterMeta = meta) } }
@@ -320,6 +328,9 @@ class ClassesViewModel(
     fun closeSchools() {
         _state.update { it.copy(schoolsOpen = false, selectedSchool = null, schoolClasses = emptyList()) }
     }
+
+    /** V61.8 — لیست مدارس بدون بازکردن نما (برای بخش «مدرسه» فیلتر). */
+    fun refreshSchoolList() = viewModelScope.launch { loadSchoolsNow() }
 
     fun selectSchool(item: TeacherSchoolItem) = viewModelScope.launch {
         _state.update { it.copy(selectedSchool = item, schoolClasses = emptyList(), error = null) }

@@ -310,10 +310,12 @@ fun ManagerTeachersScreen(
                         "کارت حذف شد و کد استفاده‌نشده بلافاصله منقضی شد."
                     } else "کارت حذف شد."
                     scope.launch {
-                        if (wasUnused) {
-                            repository.revokeInvite(invite.id)
-                                .onFailure { error = "کارت حذف شد؛ ابطال سروری ناموفق بود: ${safeManagerError(it)}" }
-                        }
+                        // V61.8 — ریشهٔ «کارت حذف نمی‌شود»: revoke فقط کد را باطل
+                        // می‌کرد و لیست سرور کارت را برمی‌گرداند؛ حالا سطر واقعاً
+                        // حذف می‌شود (برای همهٔ کارت‌ها) و اگر تابع حذف نبود،
+                        // repository.revokeInvite حداقل کد را باطل می‌کند.
+                        repository.deleteInvite(invite.id)
+                            .onFailure { error = "کارت حذف شد؛ حذف سروری ناموفق بود: ${safeManagerError(it)}" }
                     }
                 }) { Text("بله، حذف شود") }
             },
@@ -324,11 +326,18 @@ fun ManagerTeachersScreen(
     }
 }
 
-private fun parseInviteInstant(value: String): Long? =
-    runCatching { java.time.Instant.parse(value).toEpochMilli() }
-        .recoverCatching { java.time.OffsetDateTime.parse(value).toInstant().toEpochMilli() }
-        .recoverCatching { java.time.LocalDateTime.parse(value.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }
+private fun parseInviteInstant(value: String): Long? {
+    // V61.8 — used_at پستگرس با «فاصله» می‌آید (2026-08-26 07:15:00+00) و
+    // هر سه parser قبلی شکست می‌خوردند → زمان‌سنج منجمد نمایش داده نمی‌شد.
+    // نرمال‌سازی: فاصله→T و offset بدون دقیقه (+00) → +00:00.
+    val clean = value.trim().replace(' ', 'T').let {
+        if (Regex("[+-]\\d{2}$").containsMatchIn(it)) "$it:00" else it
+    }
+    return runCatching { java.time.Instant.parse(clean).toEpochMilli() }
+        .recoverCatching { java.time.OffsetDateTime.parse(clean).toInstant().toEpochMilli() }
+        .recoverCatching { java.time.LocalDateTime.parse(clean).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }
         .getOrNull()
+}
 
 private fun inviteRemainingText(
     expiresAt: String,

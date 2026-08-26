@@ -269,7 +269,12 @@ fun SchoolManagementScreen(
                     filter = state.studentFilter,
                     onFilter = viewModel::setStudentFilter,
                     filterMeta = state.filterMeta,
-                    onLoadFilterMeta = viewModel::loadFilterMeta,
+                    onLoadFilterMeta = {
+                        viewModel.loadFilterMeta()
+                        // V61.8 — لیست مدارس برای بخش «مدرسه» فیلتر.
+                        viewModel.refreshSchoolList()
+                    },
+                    schools = state.schools,
                     showTeacherFilter = managerTeacherPicker
                 )
                 // V61.0 — نمای «مدارس» بخش کلاس‌ها: مدرسه → کلاس‌های مدرسه → roster.
@@ -770,6 +775,8 @@ private fun StudentsContent(
     onFilter: (StudentListFilter) -> Unit = {},
     filterMeta: Map<String, StudentFilterMeta> = emptyMap(),
     onLoadFilterMeta: () -> Unit = {},
+    // V61.8 — لیست مدارس برای بخش «مدرسه» فیلتر.
+    schools: List<TeacherSchoolItem> = emptyList(),
     showTeacherFilter: Boolean = false
 ) {
     var searchOpen by remember { mutableStateOf(query.isNotBlank()) }
@@ -792,12 +799,12 @@ private fun StudentsContent(
                     Icon(Icons.Outlined.Search, contentDescription = "جست‌وجوی دانش‌آموز")
                 }
             }
-            // V61.5 — آیکن فیلتر کنار جست‌وجو؛ رنگ فعال یعنی فیلتری اعمال شده.
+            // V61.5 — آیکن فیلتر کنار جست‌وجو؛ V61.8 — فیلتر فعال = قرمز.
             IconButton(onClick = { onLoadFilterMeta(); filterOpen = true }) {
                 Icon(
                     Icons.Outlined.FilterList,
                     contentDescription = "فیلتر دانش‌آموزان",
-                    tint = if (filter.isActive) MaterialTheme.colorScheme.primary
+                    tint = if (filter.isActive) Color(0xFFD32F2F)
                     else LocalContentColor.current
                 )
             }
@@ -807,6 +814,7 @@ private fun StudentsContent(
                 filter = filter,
                 classes = classes,
                 filterMeta = filterMeta,
+                schools = schools,
                 showTeacherFilter = showTeacherFilter,
                 onDismiss = { filterOpen = false },
                 onApply = { onFilter(it); filterOpen = false }
@@ -864,6 +872,7 @@ private fun StudentFilterDialog(
     filter: StudentListFilter,
     classes: List<SchoolClass>,
     filterMeta: Map<String, StudentFilterMeta>,
+    schools: List<TeacherSchoolItem> = emptyList(),
     showTeacherFilter: Boolean,
     onDismiss: () -> Unit,
     onApply: (StudentListFilter) -> Unit
@@ -924,7 +933,14 @@ private fun StudentFilterDialog(
             ) {
                 TextButton(onClick = { draft = StudentListFilter() }) { Text("حذف فیلترها") }
                 Button(onClick = { onApply(draft) }) { Text("اعمال فیلتر") }
-                TextButton(onClick = onDismiss) { Text("انصراف") }
+                // V61.8 — انصراف با آیکن ضربدر قرمز.
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = "انصراف",
+                        tint = Color(0xFFD32F2F)
+                    )
+                }
             }
         },
         text = {
@@ -1003,17 +1019,41 @@ private fun StudentFilterDialog(
                     }
                 }
                 item {
+                    // V61.8 — بخش مدرسه: لیست مدارس برای انتخاب مدرسهٔ خاص +
+                    // گزینهٔ «هر مدرسه» (فقط عضوهای مدرسه).
                     FilterSectionCard(
                         key = "school",
                         title = "مدرسه",
-                        active = draft.inSchool,
-                        value = if (draft.inSchool) "فعال" else "غیرفعال"
+                        active = draft.inSchool || draft.schoolId != null,
+                        value = when {
+                            draft.schoolId != null ->
+                                schools.firstOrNull { it.id == draft.schoolId }?.name ?: "مدرسه"
+                            draft.inSchool -> "هر مدرسه"
+                            else -> "همه"
+                        }
                     ) {
-                        FilterChip(
-                            selected = draft.inSchool,
-                            onClick = { draft = draft.copy(inSchool = !draft.inSchool) },
-                            label = { Text("فقط دانش‌آموزان ثبت‌شده در مدرسه") }
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            FilterChip(
+                                selected = draft.inSchool && draft.schoolId == null,
+                                onClick = {
+                                    draft = draft.copy(inSchool = !draft.inSchool, schoolId = null)
+                                },
+                                label = { Text("هر مدرسه (همهٔ دانش‌آموزان عضو مدرسه)") }
+                            )
+                            if (schools.isEmpty()) Text("مدرسه‌ای یافت نشد.")
+                            schools.forEach { item ->
+                                FilterChip(
+                                    selected = draft.schoolId == item.id,
+                                    onClick = {
+                                        draft = draft.copy(
+                                            schoolId = if (draft.schoolId == item.id) null else item.id,
+                                            inSchool = false
+                                        )
+                                    },
+                                    label = { Text(item.name.ifBlank { "مدرسه" }) }
+                                )
+                            }
+                        }
                     }
                 }
                 if (showTeacherFilter) {
@@ -2045,6 +2085,8 @@ internal fun applyStudentFilter(
             (className == null || student.classNames.orEmpty().contains(className)) &&
             (!filter.unassigned || student.classNames.isNullOrBlank()) &&
             (!filter.inSchool || meta[student.id]?.inSchool == true) &&
+            // V61.8 — مدرسهٔ خاص انتخابی از لیست مدارس.
+            (filter.schoolId == null || meta[student.id]?.schoolIds?.contains(filter.schoolId) == true) &&
             (filter.teacherId == null || meta[student.id]?.teacherId == filter.teacherId)
     }
 }

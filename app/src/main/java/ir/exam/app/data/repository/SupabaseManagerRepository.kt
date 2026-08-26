@@ -80,6 +80,26 @@ internal class SupabaseManagerRepository {
         ).decodeAs<JsonObject>().checked(); Unit
     }
 
+    /**
+     * V61.8 — حذف پایدار کارت کد دعوت: revoke قدیمی فقط سطر را باطل می‌کرد و
+     * لیست سرور همچنان کارت را برمی‌گرداند (کارت پس از refresh «برمی‌گشت»).
+     * حذف واقعی سطر = ابطال فوری کد استفاده‌نشده. اگر تابع v61 هنوز deploy
+     * نشده بود، به revoke قدیمی برمی‌گردیم تا کد لااقل باطل شود.
+     */
+    suspend fun deleteInvite(id: String): Result<Unit> = runCatching {
+        val result = runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_manager_delete_invite_v61", buildJsonObject { put("p_invite", id) }
+            ).decodeAs<JsonObject>().checked()
+        }
+        if (result.isFailure) {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_manager_revoke_invite_v40b", buildJsonObject { put("p_invite", id) }
+            ).decodeAs<JsonObject>().checked()
+        }
+        Unit
+    }
+
     suspend fun transferWallet(teacherId: String, amountToman: Long): Result<WalletTransferResult> = runCatching {
         ManagerWalletRules.validateTransfer(amountToman)
         val operationId = java.util.UUID.randomUUID().toString()
