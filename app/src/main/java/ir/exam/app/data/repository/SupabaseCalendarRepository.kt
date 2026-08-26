@@ -115,6 +115,20 @@ class SupabaseCalendarRepository {
             }
         }
 
+    /** V61.0 — مدرسه‌های عضو معلم برای مخاطب «مدارس» (پیام/آزمون) و دکمهٔ مدارس. */
+    suspend fun loadSchoolOptions(): Result<List<CalendarAudienceOption>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_teacher_schools_v61")
+            .decodeAs<kotlinx.serialization.json.JsonObject>()
+        (raw["error"] as? JsonPrimitive)?.content?.takeIf(String::isNotBlank)?.let(::error)
+        ((raw["items"] as? JsonArray) ?: JsonArray(emptyList())).mapNotNull { element ->
+            val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val id = (obj["id"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+            val name = (obj["name"] as? JsonPrimitive)?.content.orEmpty()
+            val city = (obj["city"] as? JsonPrimitive)?.content.orEmpty()
+            CalendarAudienceOption(id, name, city.takeIf(String::isNotBlank))
+        }
+    }
+
     suspend fun loadNote(noteId: String): Result<CalendarNote> = runCatching {
         val response = SupabaseProvider.client.postgrest.rpc(
             "cal_day",
@@ -134,6 +148,8 @@ class SupabaseCalendarRepository {
                 put("p_audience", editor.audience.wireValue)
                 put("p_classes", JsonArray(editor.classIds.sorted().map(::JsonPrimitive)))
                 put("p_students", JsonArray(editor.studentIds.sorted().map(::JsonPrimitive)))
+                // V61.0 — مدرسه‌های مخاطب.
+                put("p_schools", JsonArray(editor.schoolIds.sorted().map(::JsonPrimitive)))
                 put("p_id", editor.id?.let(::JsonPrimitive) ?: JsonNull)
             }
         ).decodeAs<CalendarSaveResponseDto>()
@@ -188,6 +204,9 @@ class SupabaseCalendarRepository {
         if (editor.audience == CalendarAudience.STUDENTS) {
             require(editor.studentIds.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
         }
+        if (editor.audience == CalendarAudience.SCHOOLS) {
+            require(editor.schoolIds.isNotEmpty()) { "حداقل یک مدرسه انتخاب کنید." }
+        }
     }
 }
 
@@ -201,6 +220,7 @@ private fun CalendarNoteDto.toDomain(): CalendarNote {
     body = body.orEmpty(),
     audience = CalendarAudience.fromWire(audience),
     classIds = classes.toSet(),
-        studentIds = students.toSet()
+        studentIds = students.toSet(),
+        schoolIds = schools.toSet()
     )
 }

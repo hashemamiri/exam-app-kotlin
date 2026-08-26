@@ -492,9 +492,19 @@ private fun AudienceCard(state: ExamBuilderState, viewModel: ExamBuilderViewMode
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("مخاطبان آزمون", style = MaterialTheme.typography.titleMedium)
+            // V61.0 — ترتیب درخواستی: همه، مدارس، کلاس‌ها؛ دانش‌آموزان مثل قبل.
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("all" to "همه", "classes" to "کلاس‌ها", "students" to "دانش‌آموزان").forEach { (value, label) ->
+                listOf("all" to "همه", "schools" to "مدارس", "classes" to "کلاس‌ها", "students" to "دانش‌آموزان").forEach { (value, label) ->
                     FilterChip(selected = state.audienceMode == value, onClick = { viewModel.setAudienceMode(value) }, label = { Text(label) })
+                }
+            }
+            if (state.audienceMode == "schools") {
+                if (state.availableSchools.isEmpty()) Text("عضو مدرسه‌ای نیستید.")
+                state.availableSchools.forEach { item ->
+                    SelectionRow(
+                        label = item.name + (item.city?.let { " · $it" } ?: ""),
+                        selected = item.id in state.audienceSchools
+                    ) { viewModel.toggleAudienceSchool(item.id) }
                 }
             }
             if (state.audienceMode == "classes") {

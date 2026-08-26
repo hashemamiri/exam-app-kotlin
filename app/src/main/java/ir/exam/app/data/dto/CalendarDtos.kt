@@ -13,6 +13,8 @@ data class CalendarNoteDto(
     val audience: String? = null,
     val classes: List<String> = emptyList(),
     val students: List<String> = emptyList(),
+    // V61.0 — مدرسه‌های مخاطب پیام.
+    val schools: List<String> = emptyList(),
     val error: String? = null
 )
 

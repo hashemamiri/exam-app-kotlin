@@ -125,51 +125,63 @@ fun GradeOdometerPicker(
     val shown = value.trim().ifBlank { emptyLabel }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(58.dp)
-                .semantics {
-                    contentDescription = "$label: $shown؛ لمس برای بازکردن انتخاب‌گر"
-                    stateDescription = shown
-                }
-                .clickable { open = true },
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .58f)),
-            tonalElevation = 1.dp
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 11.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        shown,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Icon(
-                    Icons.Outlined.UnfoldMore,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-        }
+        // V61.0 — «سایر» دیگر فیلد جداگانه باز نمی‌کند: همان فیلد اصلی جای خود
+        // به یک OutlinedTextField قابل تایپ می‌دهد و مقدار در همان فیلد می‌ماند.
         if (customMode) {
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
                 label = { Text(customLabel) },
                 singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { open = true }) {
+                        Icon(
+                            Icons.Outlined.UnfoldMore,
+                            contentDescription = "بازکردن انتخاب‌گر $label",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
+        } else {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .semantics {
+                        contentDescription = "$label: $shown؛ لمس برای بازکردن انتخاب‌گر"
+                        stateDescription = shown
+                    }
+                    .clickable { open = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .58f)),
+                tonalElevation = 1.dp
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            shown,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(
+                        Icons.Outlined.UnfoldMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
         }
     }
 

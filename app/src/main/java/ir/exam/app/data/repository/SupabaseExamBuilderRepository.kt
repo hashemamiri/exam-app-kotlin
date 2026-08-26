@@ -10,6 +10,7 @@ import ir.exam.app.data.dto.SchoolClassDto
 import ir.exam.app.data.dto.StudentProfileDto
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.ui.builder.AudienceClassOption
+import ir.exam.app.ui.builder.AudienceSchoolOption
 import ir.exam.app.ui.builder.AudienceStudentOption
 import ir.exam.app.ui.builder.BankCategoryOption
 import ir.exam.app.ui.builder.BankQuestionOption
@@ -40,12 +41,15 @@ class SupabaseExamBuilderRepository(context: Context) {
         val students = SupabaseProvider.client.postgrest.rpc("my_students_for_pick")
             .decodeList<StudentProfileDto>()
             .map { AudienceStudentOption(it.id, it.fullName, it.classNames) }
+        // V61.0 — مدرسه‌های معلم برای مخاطب «مدارس»؛ نبودن تابع نباید سازنده را بشکند.
+        val schools = loadSchoolOptions()
         val bank = loadBankSnapshot()
 
         if (examId == null) {
             return@runCatching ExamBuilderState(
                 availableClasses = classes,
                 availableStudents = students,
+                availableSchools = schools,
                 bankQuestions = bank.questions,
                 bankCategories = bank.categories
             )
@@ -61,6 +65,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
         val audience = loadAudience(examId)
+        // V61.0 — اگر مدرسه ذخیره شده باشد، حالت «مدارس» بازیابی می‌شود.
+        val audienceSchools = loadAudienceSchools(examId)
 
         ExamBuilderState(
             examId = exam.id,
@@ -79,11 +85,13 @@ class SupabaseExamBuilderRepository(context: Context) {
             attemptOnTimeout = exam.attemptOnTimeout,
             gradePolicy = exam.gradePolicy,
             attemptCooldown = exam.attemptCooldown.toString(),
-            audienceMode = audience.mode,
+            audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
             audienceClasses = audience.classes,
-            audienceStudents = audience.students,
+            audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
+            audienceSchools = audienceSchools,
             availableClasses = classes,
             availableStudents = students,
+            availableSchools = schools,
             bankQuestions = bank.questions,
             bankCategories = bank.categories
         )
@@ -100,6 +108,7 @@ class SupabaseExamBuilderRepository(context: Context) {
         require(state.questions.all { it.text.isNotBlank() }) { "متن همه سؤال‌ها را وارد کنید." }
         require(state.audienceMode != "classes" || state.audienceClasses.isNotEmpty()) { "حداقل یک کلاس انتخاب کنید." }
         require(state.audienceMode != "students" || state.audienceStudents.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
+        require(state.audienceMode != "schools" || state.audienceSchools.isNotEmpty()) { "حداقل یک مدرسه انتخاب کنید." }
         if (state.opensAtIso != null && state.closesAtIso != null) {
             require(!Instant.parse(state.closesAtIso).isBefore(Instant.parse(state.opensAtIso))) {
                 "زمان پایان نمی‌تواند قبل از زمان شروع باشد."
@@ -140,6 +149,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             put("audience", state.audienceMode)
             put("classes", buildJsonArray { state.audienceClasses.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
             put("students", buildJsonArray { state.audienceStudents.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+            // V61.0 — سرور مدرسه‌ها را به دانش‌آموزان ثبت‌شدهٔ همان مدرسه‌ها گسترش می‌دهد.
+            put("schools", buildJsonArray { state.audienceSchools.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
         }
         val raw = SupabaseProvider.client.postgrest.rpc(
             "native_save_exam_v2",
@@ -242,6 +253,31 @@ class SupabaseExamBuilderRepository(context: Context) {
         }
         return BankSnapshot(questions, categories)
     }
+
+    /** V61.0 — مدرسه‌های عضو معلم؛ اگر SQL هنوز اجرا نشده باشد لیست خالی. */
+    private suspend fun loadSchoolOptions(): List<AudienceSchoolOption> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_teacher_schools_v61")
+            .decodeAs<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let(::error)
+        (raw["items"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { element ->
+            val obj = element as? JsonObject ?: return@mapNotNull null
+            val id = obj["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            AudienceSchoolOption(
+                id = id,
+                name = obj["name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                city = obj["city"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+            )
+        }
+    }.getOrDefault(emptyList())
+
+    /** V61.0 — مدرسه‌های ذخیره‌شدهٔ آزمون برای بازیابی حالت «مدارس» در ویرایش. */
+    private suspend fun loadAudienceSchools(examId: String): Set<String> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_exam_audience_schools_v61",
+            buildJsonObject { put("p_exam", examId) }
+        ).decodeAs<JsonObject>()
+        raw["schools"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toSet().orEmpty()
+    }.getOrDefault(emptySet())
 
     private suspend fun loadAudience(examId: String): AudienceValue {
         val raw = SupabaseProvider.client.postgrest.rpc(

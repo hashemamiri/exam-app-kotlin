@@ -392,7 +392,8 @@ private fun AuthenticatedExamApp(
                 MainPage.SCHOOL -> if (user.role != UserRole.STUDENT) {
                     SchoolManagementScreen(
                         launchAction = schoolLaunchAction,
-                        onLaunchActionConsumed = { schoolLaunchAction = null }
+                        onLaunchActionConsumed = { schoolLaunchAction = null },
+                        managerTeacherPicker = user.role == UserRole.MANAGER
                     )
                 }
                 MainPage.QUESTION_BANK -> if (user.role == UserRole.TEACHER) {
@@ -416,7 +417,21 @@ private fun AuthenticatedExamApp(
                     UserRole.STUDENT -> Unit
                 }
                 MainPage.CARDS -> if (user.role == UserRole.MANAGER) {
-                    ManagerStatsScreen()
+                    // V61.0 — داشبورد با پنل سریع.
+                    ManagerStatsScreen(
+                        onQuickTeachers = { managerTeacherId = null; page = MainPage.HOME },
+                        onQuickClasses = {
+                            schoolStudentsSelected = false
+                            schoolLaunchAction = SchoolLaunchAction.SHOW_CLASSES
+                            page = MainPage.SCHOOL
+                        },
+                        onQuickStudents = {
+                            schoolStudentsSelected = true
+                            schoolLaunchAction = SchoolLaunchAction.SHOW_STUDENTS
+                            page = MainPage.SCHOOL
+                        },
+                        onQuickWallet = { page = MainPage.WALLET }
+                    )
                 } else if (user.role == UserRole.TEACHER) {
                     TeacherManagementCardsScreen(
                         cycleKey = cardsCycleKey,
@@ -766,12 +781,12 @@ private fun AuthenticatedShell(
         // مدیر/معاون عمداً تقویم و سربرگ ندارد.
         listOf(
             Design69MenuCard(
-                "کلاس‌ها", "فهرست و مدیریت کلاس‌های مدرسه", Design69Icons.Classes,
+                "کلاس‌ها", "فهرست و مدیریت", Design69Icons.Classes,
                 page == MainPage.SCHOOL && !schoolStudentsSelected,
                 onClick = { select(onClasses) }
             ),
             Design69MenuCard(
-                "دانش‌آموزان", "فهرست و مدیریت دانش‌آموزان مدرسه", Design69Icons.Students,
+                "دانش‌آموزان", "فهرست و مدیریت", Design69Icons.Students,
                 page == MainPage.SCHOOL && schoolStudentsSelected,
                 onClick = { select(onStudents) }
             ),
@@ -902,7 +917,15 @@ private fun AuthenticatedShell(
                                     Design69MainMenuScreen(
                                         user = user,
                                         cards = menuCards,
-                                        onProfile = onProfile
+                                        onProfile = onProfile,
+                                        // V61.0 — کارت وسط‌چین «داشبورد» زیر پروفایل مدیر/معاون.
+                                        featuredCard = if (user.role == UserRole.MANAGER) {
+                                            Design69MenuCard(
+                                                "داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,
+                                                page == MainPage.CARDS,
+                                                onClick = { select(onCards) }
+                                            )
+                                        } else null
                                     )
                                 }
                             }

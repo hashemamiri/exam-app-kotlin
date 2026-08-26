@@ -139,6 +139,7 @@ fun CalendarScreen(role: UserRole) {
             onAudience = viewModel::setAudience,
             onToggleClass = viewModel::toggleClass,
             onToggleStudent = viewModel::toggleStudent,
+            onToggleSchool = viewModel::toggleSchool,
             onSave = viewModel::saveEditor
         )
     }
@@ -370,6 +371,7 @@ private fun CalendarEditorDialog(
     onAudience: (CalendarAudience) -> Unit,
     onToggleClass: (String) -> Unit,
     onToggleStudent: (String) -> Unit,
+    onToggleSchool: (String) -> Unit,
     onSave: () -> Unit
 ) {
     val editor = state.editor ?: return
@@ -403,14 +405,27 @@ private fun CalendarEditorDialog(
                 }
                 item {
                     Text("مخاطبان", fontWeight = FontWeight.Bold)
+                    // V61.0 — ترتیب درخواستی: «همه»، «مدارس»، «کلاس‌ها»، «دانش‌آموزان».
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        CalendarAudience.entries.forEach { audience ->
+                        listOf(
+                            CalendarAudience.ALL,
+                            CalendarAudience.SCHOOLS,
+                            CalendarAudience.CLASSES,
+                            CalendarAudience.STUDENTS
+                        ).forEach { audience ->
                             FilterChip(
                                 selected = editor.audience == audience,
                                 onClick = { onAudience(audience) },
                                 label = { Text(audience.faLabel()) }
                             )
                         }
+                    }
+                }
+                if (editor.audience == CalendarAudience.SCHOOLS) {
+                    item { Text("مدارس", fontWeight = FontWeight.Bold) }
+                    if (state.schools.isEmpty()) item { Text("عضو مدرسه‌ای نیستید.") }
+                    items(state.schools, key = { "school-${it.id}" }) { option ->
+                        AudienceCheck(option, option.id in editor.schoolIds) { onToggleSchool(option.id) }
                     }
                 }
                 if (editor.audience == CalendarAudience.CLASSES) {
@@ -455,7 +470,8 @@ private fun AudienceCheck(option: CalendarAudienceOption, checked: Boolean, onTo
 }
 
 private fun CalendarAudience.faLabel(): String = when (this) {
-    CalendarAudience.ALL -> "همه دانش‌آموزان"
-    CalendarAudience.CLASSES -> "کلاس‌های انتخابی"
-    CalendarAudience.STUDENTS -> "دانش‌آموزان انتخابی"
+    CalendarAudience.ALL -> "همه"
+    CalendarAudience.SCHOOLS -> "مدارس"
+    CalendarAudience.CLASSES -> "کلاس‌ها"
+    CalendarAudience.STUDENTS -> "دانش‌آموزان"
 }

@@ -8873,3 +8873,94 @@ SignInScreen.kt / تست جدید / verify / changelog / هندآف
 نیازمند build جدید؛ SQL لازم ندارد
 FINAL_NATIVE_VERIFY → PASS, EXIT=0
 ```
+
+## ۱۸۴) V61.0 — بازطراحی صفحهٔ ورود/ثبت‌نام + مدارس + داشبورد مدیر + فرم دانش‌آموز
+
+### درخواست کاربر (شش بخش)
+
+```text
+۱) پنل معلم/کلاس‌ها: دکمهٔ «مدارس» کنار «ساخت کلاس جدید» → کارت مدرسه‌ها →
+   کلاس‌های معلم در آن مدرسه → با لمس کلاس، مدیریت دانش‌آموزان (همان roster).
+۲) پیام تقویم: مخاطبان به ترتیب «همه»، «مدارس»، «کلاس‌ها» (دانش‌آموزان ماند).
+۳) مشخصات آزمون: مخاطبان همه/مدارس/کلاس‌ها (+ دانش‌آموزان قبلی).
+   ask_user: انتخاب مدرسه = «همهٔ دانش‌آموزان ثبت‌شده در آن مدرسه» حتی بدون کلاس.
+۴) صفحهٔ آغازین: «آزمون آنلاین» وسط‌چین بالا؛ «ورود» و زیر آن «ثبت‌نام».
+   ورود → مدیر/معاون، معلم، دانش‌آموز (هر یک پنجرهٔ اختصاصی).
+   ورود معلم/مدیر دکمهٔ «ورود با گوگل» دارد (ask_user: جیمیل ثبت‌نام‌نشده →
+   صفحهٔ تکمیل ثبت‌نام مثل مسیر ثبت‌نام گوگل).
+   ثبت‌نام → مدیر/معاون بالا، معلم پایین. همهٔ پنجره‌ها دکمهٔ بازگشت وسط‌چین.
+۵) پنل مدیر: کارت وسط‌چین «داشبورد» زیر کارت پروفایل (featuredCard موجود
+   Design69MainMenuScreen) با اطلاعات مدرسه/آمار/پنل سریع؛ روی کارت‌های
+   کلاس‌ها و دانش‌آموزان «فهرست و مدیریت»؛ در ساخت کلاس جدید کادر وسط‌چین
+   «معلم» → لیست معلم‌های مدرسه (native_manager_teachers_v37 →
+   native_manager_save_teacher_class_v40c).
+۶) فرم ایجاد دانش‌آموز (گروهی): زیر کادرهای رمز/رمز فعلی دکمه‌های وسط‌چین
+   چشم، پسر، دختر، تاس؛ «سایر» پایه/رشته فیلد جداگانه باز نمی‌کند — همان
+   فیلد قابل تایپ می‌شود (GradeOdometerPicker حالت customMode جایگزین Surface).
+```
+
+### پیاده‌سازی
+
+```text
+Auth: AuthScreen جدید LOGIN_ROLE/LOGIN_MANAGER/LOGIN_TEACHER/LOGIN_STUDENT؛
+LandingPane/LoginRolePane/StaffLoginPane/StudentLoginPane/BackButtonRow در
+SignInScreen؛ GoogleRegisterButton → wrapper روی GoogleAuthButton مشترک
+(متن دکمه از بیرون؛ همان جریان Credential Manager V60.1—needleهای V60.x حفظ).
+RECOVERY و LOGIN_OTP حالا به LOGIN_ROLE برمی‌گردند.
+مدارس: SQL جدید 20260826_native_schools_audience_v61.sql —
+native_teacher_schools_v61 (لیست مدرسه‌های عضو + شمار کلاس‌های معلم)،
+native_teacher_school_classes_v61 (کلاس‌های معلم در مدرسه؛ خروجی همان قالب
+native_my_classes_v28)؛ ClassesViewModel: schoolsOpen/schools/selectedSchool/
+schoolClasses + openSchools/selectSchool/closeSchool(s)؛
+SchoolsContent/SchoolClassesContent در SchoolManagementScreen؛ کلاس مدرسه با
+selectClass همان roster موجود را باز می‌کند.
+مخاطب schools: calendar_notes check + جدول calendar_note_schools + بازنویسی
+cal_save_note (امضای ۸پارامتری p_schools؛ نسخهٔ ۷پارامتری drop شد) +
+cal_month/cal_unseen_v59 (mode=schools از school_students می‌بیند؛ مستقل از
+مالکیت/لینک/کلاس) + cal_day برمی‌گرداند schools.
+آزمون: exam_audience_schools + native_exam_school_students_v61 (گسترش
+مدرسه→دانش‌آموزان ثبت‌شده) + native_exam_audience_students_ok_v61 (پذیرش
+دانش‌آموز هم‌مدرسه‌ای/لینک‌شده) + بازنویسی native_save_exam_v2: mode=schools
+→ گسترش به students، درج مخاطبان بعد از v1 (چون v1 فقط مالک را می‌پذیرد؛
+به v1 با audience=all و students=[] می‌رود و بعد update)؛ کلاینت:
+audienceSchools در State/draft/fingerprint/payload + چیپ «مدارس» +
+native_exam_audience_schools_v61 برای بازیابی حالت در ویرایش.
+داشبورد: featuredCard منوی مدیر → MainPage.CARDS (ManagerStatsScreen ارتقا:
+کارت مدرسه + پنل سریع معلم‌ها/کلاس‌ها/دانش‌آموزان/کیف پول + آمار قبلی).
+عنوان صفحه از «آمار مدرسه» به «داشبورد».
+فرم دانش‌آموز: BulkStudentDialog — چشم مشترک (PasswordVisibilityButton) +
+پسر/دختر/تاس وسط‌چین؛ رمز فعلی هم با همان چشم نمایان می‌شود؛ trailingIcon
+از فیلد رمز حذف شد (بیرون از بلوک V33/V35 StudentEditDialog است — آن دو
+تست فقط StudentEditDialog را می‌خوانند و دست‌نخورده ماند).
+GradeOdometerPicker: حالت customMode حالا «به‌جای» Surface همان فیلد را
+OutlinedTextField می‌کند (تایپ مستقیم؛ آیکن UnfoldMore برای بازگشت به چرخ)؛
+needleهای V27/V28 (OtherGradeValue/customMode = true/customLabel) حفظ شدند.
+```
+
+### تأیید
+
+```text
+جدید: V61_0AuthLandingRedesignTest (۴ تست)، V61_1TeacherSchoolsAudienceTest
+(۳ تست)، V61_2ManagerDashboardClassTeacherTest (۳ تست)،
+V61_3StudentFormGradeFieldTest (۲ تست) · verify: چهار بلوک require جدید
+V61.0..V61.3 · شبیه‌سازی همهٔ تست‌های جدید و بلوک‌های V19/V23/V24/V27/V28/
+V31/V33/V35/V36/V37/V59.2/V60.x سبز · اسکن سراسری ۱۰۷۵ needle: فقط
+هشدارهای کاذب شناختهٔ substring (V24/V26/V37 متغیرهای محلی block) ·
+FINAL_NATIVE_VERIFY=PASS EXIT=0
+```
+
+### عملیات
+
+```text
+پچ: V61_0_landing_schools_dashboard_forms — فایل‌ها: SignInScreen/
+AuthViewModel/SchoolManagementScreen/ClassesViewModel/CalendarScreen/
+CalendarViewModel/CalendarModels/CalendarDtos/SupabaseCalendarRepository/
+ExamBuilderScreen/ExamBuilderViewModel/QuestionDraft/
+SupabaseExamBuilderRepository/ExamBuilderDraftStore/ExamApp/
+ManagerFoundationScreens/GradeOdometerPicker + SQL جدید + ۴ تست + verify +
+changelog + هندآف
+اقدام سرور (الزامی): اجرای V61_0_schools_audience.sql در Supabase
+(پیش‌نیاز: V59.2 اجرا شده باشد چون cal_save_note بازنویسی می‌شود)
+نیازمند build جدید
+FINAL_NATIVE_VERIFY → PASS, EXIT=0
+```

@@ -56,6 +56,7 @@ data class QuestionDraft(
 
 data class AudienceClassOption(val id: String, val name: String)
 data class AudienceStudentOption(val id: String, val name: String, val classNames: String? = null)
+data class AudienceSchoolOption(val id: String, val name: String, val city: String? = null)
 data class BankCategoryOption(val id: Long, val name: String, val count: Int = 0)
 data class BankQuestionOption(
     val id: Long,
@@ -86,8 +87,11 @@ data class ExamBuilderState(
     val audienceMode: String = "all",
     val audienceClasses: Set<String> = emptySet(),
     val audienceStudents: Set<String> = emptySet(),
+    // V61.0 — مخاطب «مدارس»: همهٔ دانش‌آموزان ثبت‌شده در مدرسه‌های انتخابی.
+    val audienceSchools: Set<String> = emptySet(),
     val availableClasses: List<AudienceClassOption> = emptyList(),
     val availableStudents: List<AudienceStudentOption> = emptyList(),
+    val availableSchools: List<AudienceSchoolOption> = emptyList(),
     val bankQuestions: List<BankQuestionOption> = emptyList(),
     val bankCategories: List<BankCategoryOption> = emptyList(),
     val bankQuery: String = "",

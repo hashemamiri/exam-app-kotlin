@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import ir.exam.app.ui.common.PasswordVisibilityButton
@@ -47,9 +48,19 @@ fun SignInScreen(viewModel: AuthViewModel) {
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("آزمون آنلاین", style = MaterialTheme.typography.headlineMedium)
+        // V61.0 — عنوان همیشه وسط‌چین بالای صفحه.
+        Text(
+            "آزمون آنلاین",
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
         when (state.screen) {
-            AuthScreen.SIGN_IN -> SignInPane(state, viewModel)
+            AuthScreen.SIGN_IN -> LandingPane(state, viewModel)
+            AuthScreen.LOGIN_ROLE -> LoginRolePane(state, viewModel)
+            AuthScreen.LOGIN_MANAGER -> StaffLoginPane(state, viewModel, managerRole = true)
+            AuthScreen.LOGIN_TEACHER -> StaffLoginPane(state, viewModel, managerRole = false)
+            AuthScreen.LOGIN_STUDENT -> StudentLoginPane(state, viewModel)
             AuthScreen.REGISTRATION_ROLE -> RegistrationRolePane(state, viewModel)
             AuthScreen.LOGIN_OTP -> OtpPane(
                 title = "ورود با کد یک‌بارمصرف",
@@ -57,7 +68,7 @@ fun SignInScreen(viewModel: AuthViewModel) {
                 state = state,
                 onVerify = viewModel::verifyLoginOtp,
                 onResend = viewModel::sendLoginOtp,
-                onBack = viewModel::showSignIn,
+                onBack = viewModel::showLoginRole,
                 viewModel = viewModel
             )
             AuthScreen.TEACHER_REGISTER -> TeacherRegistrationPane(state, viewModel)
@@ -109,14 +120,61 @@ fun SignInScreen(viewModel: AuthViewModel) {
     }
 }
 
+/**
+ * V61.0 — صفحهٔ آغازین: فقط دو دکمهٔ بزرگ «ورود» بالا و «ثبت‌نام» پایین آن.
+ */
 @Composable
-private fun SignInPane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("ورود معلم، مدیر/معاون یا دانش‌آموز")
+private fun LandingPane(state: AuthUiState, viewModel: AuthViewModel) {
+    Spacer(Modifier.height(48.dp))
+    Button(
+        onClick = viewModel::showLoginRole,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("ورود") }
+    Spacer(Modifier.height(10.dp))
+    Button(
+        onClick = viewModel::showRegistrationRole,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("ثبت‌نام") }
+}
+
+/**
+ * V61.0 — انتخاب نقش ورود: مدیر/معاون بالا، معلم وسط، دانش‌آموز پایین؛
+ * هر دکمه پنجرهٔ اختصاصی ورود همان نقش را باز می‌کند.
+ */
+@Composable
+private fun LoginRolePane(state: AuthUiState, viewModel: AuthViewModel) {
+    Spacer(Modifier.height(32.dp))
+    Button(
+        onClick = viewModel::showManagerLogin,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("مدیر/معاون") }
+    Button(
+        onClick = viewModel::showTeacherLogin,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("معلم") }
+    Button(
+        onClick = viewModel::showStudentLogin,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("دانش‌آموز") }
+    BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading)
+}
+
+/**
+ * V61.0 — پنجرهٔ اختصاصی ورود معلم یا مدیر/معاون + «ورود با گوگل» برای
+ * حساب‌هایی که قبلاً با جیمیل ثبت‌نام کرده‌اند (جیمیل جدید به تکمیل ثبت‌نام می‌رود).
+ */
+@Composable
+private fun StaffLoginPane(state: AuthUiState, viewModel: AuthViewModel, managerRole: Boolean) {
+    Text(if (managerRole) "ورود مدیر/معاون" else "ورود معلم", style = MaterialTheme.typography.titleLarge)
     OutlinedTextField(
         value = state.email,
         onValueChange = viewModel::setEmail,
-        label = { Text("ایمیل کادر مدرسه یا نام کاربری دانش‌آموز") },
-        supportingText = { Text("دانش‌آموز همان نام کاربری تحویلی از معلم را وارد کند.") },
+        label = { Text("ایمیل یا نام کاربری") },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
@@ -130,30 +188,61 @@ private fun SignInPane(state: AuthUiState, viewModel: AuthViewModel) {
         onClick = viewModel::sendLoginOtp,
         enabled = !state.isLoading && '@' in state.email,
         modifier = Modifier.fillMaxWidth()
-    ) { Text("ورود کادر مدرسه با کد ایمیل") }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        TextButton(onClick = viewModel::showRecovery, enabled = !state.isLoading) { Text("رمز را فراموش کرده‌ام") }
-        TextButton(onClick = viewModel::showRegistrationRole, enabled = !state.isLoading) { Text("ثبت‌نام") }
+    ) { Text("ورود با کد ایمیل") }
+    // V61.0 — ورود با گوگل؛ همان جریان Credential Manager ثبت‌نام (idToken).
+    GoogleAuthButton(
+        state = state,
+        viewModel = viewModel,
+        role = if (managerRole) "manager" else "teacher"
+    ) { Text("ورود با گوگل") }
+    TextButton(onClick = viewModel::showRecovery, enabled = !state.isLoading) { Text("رمز را فراموش کرده‌ام") }
+    BackButtonRow(onBack = viewModel::showLoginRole, enabled = !state.isLoading)
+}
+
+/** V61.0 — پنجرهٔ اختصاصی ورود دانش‌آموز با نام کاربری تحویلی معلم. */
+@Composable
+private fun StudentLoginPane(state: AuthUiState, viewModel: AuthViewModel) {
+    Text("ورود دانش‌آموز", style = MaterialTheme.typography.titleLarge)
+    OutlinedTextField(
+        value = state.email,
+        onValueChange = viewModel::setEmail,
+        label = { Text("نام کاربری دانش‌آموز") },
+        supportingText = { Text("همان نام کاربری تحویلی از معلم را وارد کنید.") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    PasswordField("رمز عبور", state.password, viewModel::setPassword)
+    Button(
+        onClick = viewModel::signIn,
+        enabled = !state.isLoading && state.email.isNotBlank() && state.password.isNotBlank(),
+        modifier = Modifier.fillMaxWidth()
+    ) { Text("ورود") }
+    BackButtonRow(onBack = viewModel::showLoginRole, enabled = !state.isLoading)
+}
+
+/** V61.0 — دکمهٔ بازگشت وسط‌چین پایین همهٔ پنجره‌های ورود/ثبت‌نام. */
+@Composable
+private fun BackButtonRow(onBack: () -> Unit, enabled: Boolean) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        TextButton(onClick = onBack, enabled = enabled) { Text("بازگشت") }
     }
 }
 
 @Composable
 private fun RegistrationRolePane(state: AuthUiState, viewModel: AuthViewModel) {
-    Text("نوع ثبت‌نام", style = MaterialTheme.typography.titleLarge)
-    Text("نقش حساب را انتخاب کنید.")
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Button(
-            onClick = viewModel::showTeacherRegistration,
-            enabled = !state.isLoading,
-            modifier = Modifier.weight(1f)
-        ) { Text("معلم") }
-        Button(
-            onClick = viewModel::showManagerRegistration,
-            enabled = !state.isLoading,
-            modifier = Modifier.weight(1f)
-        ) { Text("مدیر/معاون") }
-    }
-    TextButton(onClick = viewModel::showSignIn, enabled = !state.isLoading) { Text("بازگشت به ورود") }
+    // V61.0 — نقش‌ها عمودی: مدیر/معاون بالا و معلم پایین آن.
+    Spacer(Modifier.height(32.dp))
+    Button(
+        onClick = viewModel::showManagerRegistration,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("مدیر/معاون") }
+    Button(
+        onClick = viewModel::showTeacherRegistration,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp)
+    ) { Text("معلم") }
+    BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading)
 }
 
 @Composable
@@ -181,7 +270,7 @@ private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
     ) { Text("ارسال کد تأیید") }
     // V60.0 — ثبت‌نام با گوگل: انتخاب جیمیل ثبت‌شده روی گوشی (Credential Manager).
     GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher")
-    TextButton(onClick = viewModel::showSignIn, enabled = !state.isLoading) { Text("بازگشت به ورود") }
+    BackButtonRow(onBack = viewModel::showRegistrationRole, enabled = !state.isLoading)
 }
 
 @Composable
@@ -236,7 +325,7 @@ private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
     ) { Text("ارسال کد تأیید") }
     // V60.0 — ثبت‌نام با گوگل برای مدیر/معاون.
     GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager")
-    TextButton(onClick = viewModel::showRegistrationRole, enabled = !state.isLoading) { Text("بازگشت") }
+    BackButtonRow(onBack = viewModel::showRegistrationRole, enabled = !state.isLoading)
 }
 
 @Composable
@@ -293,7 +382,7 @@ private fun RecoveryPane(state: AuthUiState, viewModel: AuthViewModel) {
         enabled = !state.isLoading && '@' in state.email,
         modifier = Modifier.fillMaxWidth()
     ) { Text("ارسال کد بازیابی") }
-    TextButton(onClick = viewModel::showSignIn, enabled = !state.isLoading) { Text("بازگشت به ورود") }
+    BackButtonRow(onBack = viewModel::showLoginRole, enabled = !state.isLoading)
 }
 
 @Composable
@@ -338,7 +427,7 @@ private fun OtpPane(
     OutlinedButton(onClick = onResend, enabled = !state.isLoading, modifier = Modifier.fillMaxWidth()) {
         Text("ارسال دوباره کد")
     }
-    TextButton(onClick = onBack, enabled = !state.isLoading) { Text("بازگشت") }
+    BackButtonRow(onBack = onBack, enabled = !state.isLoading)
 }
 
 @Composable
@@ -366,6 +455,23 @@ private fun PasswordField(label: String, value: String, onChange: (String) -> Un
  */
 @Composable
 private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, role: String) {
+    GoogleAuthButton(state = state, viewModel = viewModel, role = role) {
+        Text("ثبت‌نام با گوگل")
+    }
+}
+
+/**
+ * V61.0 — دکمهٔ مشترک گوگل برای ثبت‌نام و ورود؛ متن دکمه از بیرون می‌آید و
+ * جریان Credential Manager یکی است (حساب موجود مستقیم وارد می‌شود و حساب
+ * تازه به صفحهٔ تکمیل ثبت‌نام همان نقش می‌رود).
+ */
+@Composable
+private fun GoogleAuthButton(
+    state: AuthUiState,
+    viewModel: AuthViewModel,
+    role: String,
+    label: @Composable () -> Unit
+) {
     if (ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
         Text(
             "ثبت‌نام با گوگل: کلید GOOGLE_WEB_CLIENT_ID در local.properties تنظیم نشده است.",
@@ -417,7 +523,7 @@ private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, r
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(8.dp))
-        Text("ثبت‌نام با گوگل")
+        label()
     }
 }
 

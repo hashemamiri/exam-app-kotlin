@@ -19,6 +19,11 @@ enum class RegistrationKind { TEACHER, MANAGER }
 
 enum class AuthScreen {
     SIGN_IN,
+    // V61.0 — انتخاب نقش ورود و پنجره‌های اختصاصی ورود هر نقش.
+    LOGIN_ROLE,
+    LOGIN_MANAGER,
+    LOGIN_TEACHER,
+    LOGIN_STUDENT,
     REGISTRATION_ROLE,
     LOGIN_OTP,
     TEACHER_REGISTER,
@@ -115,6 +120,11 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     }
 
     fun showSignIn() = switchTo(AuthScreen.SIGN_IN)
+    // V61.0 — ناوبری صفحهٔ آغازین: انتخاب نقش ورود و پنجره‌های اختصاصی.
+    fun showLoginRole() = switchTo(AuthScreen.LOGIN_ROLE)
+    fun showManagerLogin() = switchTo(AuthScreen.LOGIN_MANAGER)
+    fun showTeacherLogin() = switchTo(AuthScreen.LOGIN_TEACHER)
+    fun showStudentLogin() = switchTo(AuthScreen.LOGIN_STUDENT)
     fun showRegistrationRole() = switchTo(AuthScreen.REGISTRATION_ROLE)
     fun showTeacherRegistration() {
         _state.update { it.copy(registrationKind = RegistrationKind.TEACHER) }

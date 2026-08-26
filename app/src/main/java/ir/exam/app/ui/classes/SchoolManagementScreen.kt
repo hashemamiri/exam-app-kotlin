@@ -108,7 +108,9 @@ enum class SchoolLaunchAction { SHOW_CLASSES, SHOW_STUDENTS, CREATE_STUDENT, CRE
 @Composable
 fun SchoolManagementScreen(
     launchAction: SchoolLaunchAction? = null,
-    onLaunchActionConsumed: () -> Unit = {}
+    onLaunchActionConsumed: () -> Unit = {},
+    // V61.0 — مدیر هنگام ساخت کلاس، معلم را از لیست معلم‌های مدرسه انتخاب می‌کند.
+    managerTeacherPicker: Boolean = false
 ) {
     val context=LocalContext.current
     val viewModel=remember(context){ClassesViewModel(context=context.applicationContext)}
@@ -160,6 +162,7 @@ fun SchoolManagementScreen(
             SchoolLaunchAction.SHOW_CLASSES -> {
                 showStudents = false
                 viewModel.closeClass()
+                viewModel.closeSchools()
                 onLaunchActionConsumed()
             }
             SchoolLaunchAction.SHOW_STUDENTS -> {
@@ -232,10 +235,23 @@ fun SchoolManagementScreen(
                     onAddToClasses = viewModel::addStudentToClasses,
                     knownPasswordOf = { username -> knownPasswords[username?.lowercase()] }
                 )
+                // V61.0 — نمای «مدارس» بخش کلاس‌ها: مدرسه → کلاس‌های مدرسه → roster.
+                state.schoolsOpen && state.selectedSchool != null -> SchoolClassesContent(
+                    school = state.selectedSchool!!,
+                    classes = state.schoolClasses,
+                    onBack = viewModel::closeSchool,
+                    onOpen = viewModel::selectClass
+                )
+                state.schoolsOpen -> SchoolsContent(
+                    schools = state.schools,
+                    onBack = viewModel::closeSchools,
+                    onOpen = viewModel::selectSchool
+                )
                 else -> ClassesContent(
                     classes = state.classes,
                     onOpen = viewModel::selectClass,
                     onCreate = { creatingClass = true },
+                    onSchools = viewModel::openSchools,
                     onEdit = { classEditor = it },
                     onDelete = { deletingClass = it }
                 )
@@ -245,11 +261,16 @@ fun SchoolManagementScreen(
     }
 
     if (creatingClass || classEditor != null) {
+        // V61.0 — مدیر: پیش از باز شدن پنجره، معلم‌های مدرسه بارگیری می‌شوند.
+        LaunchedEffect(creatingClass, managerTeacherPicker) {
+            if (creatingClass && managerTeacherPicker) viewModel.loadSchoolTeachers()
+        }
         ClassEditorDialog(
             item = classEditor,
+            teachers = if (creatingClass && managerTeacherPicker) state.schoolTeachers else emptyList(),
             onDismiss = { creatingClass = false; classEditor = null },
-            onSave = { name, grade, field ->
-                viewModel.saveClass(classEditor?.id, name, grade, field)
+            onSave = { name, grade, field, teacherId ->
+                viewModel.saveClass(classEditor?.id, name, grade, field, teacherId)
                 creatingClass = false
                 classEditor = null
             }
@@ -369,11 +390,16 @@ private fun ClassesContent(
     classes: List<SchoolClass>,
     onOpen: (SchoolClass) -> Unit,
     onCreate: () -> Unit,
+    onSchools: () -> Unit,
     onEdit: (SchoolClass) -> Unit,
     onDelete: (SchoolClass) -> Unit
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("ساخت کلاس جدید") }
+        // V61.0 — دکمهٔ «مدارس» کنار ساخت کلاس جدید.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onCreate, modifier = Modifier.weight(2f)) { Text("ساخت کلاس جدید") }
+            OutlinedButton(onClick = onSchools, modifier = Modifier.weight(1f)) { Text("مدارس") }
+        }
         if (classes.isEmpty()) {
             Text("هنوز کلاسی ساخته نشده است.")
         } else {
@@ -402,6 +428,89 @@ private fun ClassesContent(
                                 OutlinedButton(onClick = { onEdit(item) }) { Text("ویرایش") }
                                 TextButton(onClick = { onDelete(item) }) { Text("حذف") }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** V61.0 — لیست مدرسه‌های عضو معلم به‌صورت کارت؛ لمس کارت = کلاس‌های آن مدرسه. */
+@Composable
+private fun SchoolsContent(
+    schools: List<TeacherSchoolItem>,
+    onBack: () -> Unit,
+    onOpen: (TeacherSchoolItem) -> Unit
+) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("مدارس من", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onBack) { Text("بازگشت به کلاس‌ها") }
+        }
+        if (schools.isEmpty()) {
+            Text("هنوز عضو مدرسه‌ای نیستید. با کد دعوت مدیر به مدرسه بپیوندید.")
+        } else {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(schools, key = TeacherSchoolItem::id) { item ->
+                    Card(Modifier.fillMaxWidth().clickable { onOpen(item) }) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(item.name.ifBlank { "مدرسه" }, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                listOf(item.province, item.city)
+                                    .filter(String::isNotBlank)
+                                    .joinToString(" · ")
+                                    .ifBlank { "—" }
+                            )
+                            Text("کلاس‌های من در این مدرسه: ${PersianDigits.convert(item.classCount)}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** V61.0 — کلاس‌های معلم در مدرسهٔ انتخابی؛ لمس کلاس = مدیریت دانش‌آموزان همان roster. */
+@Composable
+private fun SchoolClassesContent(
+    school: TeacherSchoolItem,
+    classes: List<SchoolClass>,
+    onBack: () -> Unit,
+    onOpen: (SchoolClass) -> Unit
+) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("کلاس‌های ${school.name}", style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = onBack) { Text("بازگشت به مدارس") }
+        }
+        if (classes.isEmpty()) {
+            Text("در این مدرسه کلاسی ندارید.")
+        } else {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(classes, key = SchoolClass::id) { item ->
+                    Card(Modifier.fillMaxWidth().clickable { onOpen(item) }) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(item.name, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "پایه: ${item.grade.orEmpty().ifBlank { "—" }}" +
+                                        item.fieldOfStudy?.takeIf(String::isNotBlank)?.let { " · $it" }.orEmpty()
+                                )
+                            }
+                            Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
                         }
                     }
                 }
@@ -735,18 +844,40 @@ private fun StudentCard(
 @Composable
 private fun ClassEditorDialog(
     item: SchoolClass?,
+    teachers: List<SchoolTeacherPick> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit
+    onSave: (String, String, String, String?) -> Unit
 ) {
     var name by remember(item?.id) { mutableStateOf(item?.name.orEmpty()) }
     var grade by remember(item?.id) { mutableStateOf(item?.grade.orEmpty()) }
     var field by remember(item?.id) { mutableStateOf(item?.fieldOfStudy.orEmpty()) }
+    // V61.0 — انتخاب معلم (فقط مدیر هنگام ساخت کلاس).
+    var teacherId by remember(item?.id) { mutableStateOf<String?>(null) }
+    var teacherPickerOpen by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (item == null) "کلاس جدید" else "ویرایش کلاس") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام کلاس") })
+                if (teachers.isNotEmpty()) {
+                    // کادر وسط‌چین «معلم»: لمس آن لیست معلم‌های عضو مدرسه را باز می‌کند.
+                    Card(
+                        Modifier.fillMaxWidth().clickable { teacherPickerOpen = true }
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("معلم", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                teachers.firstOrNull { it.id == teacherId }?.name
+                                    ?: "انتخاب معلم کلاس",
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GradeOdometerPicker(
                         value = grade,
@@ -764,12 +895,39 @@ private fun ClassEditorDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onSave(name, grade, field) },
-                enabled = name.isNotBlank()
+                onClick = { onSave(name, grade, field, teacherId) },
+                enabled = name.isNotBlank() && (teachers.isEmpty() || teacherId != null)
             ) { Text("ذخیره") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )
+    if (teacherPickerOpen) {
+        AlertDialog(
+            onDismissRequest = { teacherPickerOpen = false },
+            title = { Text("انتخاب معلم") },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 420.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (teachers.isEmpty()) item { Text("معلمی در مدرسه نیست.") }
+                    items(teachers, key = SchoolTeacherPick::id) { teacher ->
+                        Card(
+                            Modifier.fillMaxWidth().clickable {
+                                teacherId = teacher.id
+                                teacherPickerOpen = false
+                            }
+                        ) {
+                            Text(
+                                teacher.name.ifBlank { "معلم" },
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { teacherPickerOpen = false }) { Text("انصراف") } }
+        )
+    }
 }
 
 @Composable
@@ -1338,16 +1496,6 @@ private fun BulkStudentDialog(
                                     { rows[index] = row.copy(password = it.take(72)) },
                                     label = { Text("رمز") },
                                     visualTransformation = passwordTransformation(row.passwordVisible),
-                                    trailingIcon = {
-                                        PasswordVisibilityButton(
-                                            visible = row.passwordVisible,
-                                            onToggle = {
-                                                rows[index] = row.copy(
-                                                    passwordVisible = !row.passwordVisible
-                                                )
-                                            }
-                                        )
-                                    },
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -1356,26 +1504,37 @@ private fun BulkStudentDialog(
                                     onValueChange = {},
                                     readOnly = true,
                                     label = { Text("رمز فعلی") },
+                                    visualTransformation = passwordTransformation(row.passwordVisible),
                                     singleLine = true,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
+                            // V61.0 — ترتیب درخواستی وسط‌چین: چشم، پسر، دختر، تاس.
                             Row(
                                 Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilterChip(
-                                    selected = row.gender == "female",
-                                    onClick = { rows[index] = row.copy(gender = "female") },
-                                    label = { Text("دختر") },
-                                    colors = genderFilterChipColors(Color(0xFFFF5C9A)),
-                                    modifier = Modifier.weight(1f)
+                                PasswordVisibilityButton(
+                                    visible = row.passwordVisible,
+                                    onToggle = {
+                                        rows[index] = row.copy(
+                                            passwordVisible = !row.passwordVisible
+                                        )
+                                    }
                                 )
                                 FilterChip(
                                     selected = row.gender == "male",
                                     onClick = { rows[index] = row.copy(gender = "male") },
                                     label = { Text("پسر") },
                                     colors = genderFilterChipColors(Color(0xFF3B9EFF)),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                FilterChip(
+                                    selected = row.gender == "female",
+                                    onClick = { rows[index] = row.copy(gender = "female") },
+                                    label = { Text("دختر") },
+                                    colors = genderFilterChipColors(Color(0xFFFF5C9A)),
                                     modifier = Modifier.weight(1f)
                                 )
                                 OutlinedButton(

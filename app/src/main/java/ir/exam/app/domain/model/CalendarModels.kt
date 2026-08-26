@@ -5,7 +5,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 
 enum class CalendarAudience(val wireValue: String) {
-    ALL("all"), CLASSES("classes"), STUDENTS("students");
+    // V61.0 — مخاطب «مدارس»: همهٔ دانش‌آموزان ثبت‌شده در مدرسه‌های انتخابی.
+    ALL("all"), SCHOOLS("schools"), CLASSES("classes"), STUDENTS("students");
 
     companion object {
         fun fromWire(value: String?): CalendarAudience = entries.firstOrNull { it.wireValue == value } ?: ALL
@@ -19,7 +20,8 @@ data class CalendarNote(
     val body: String = "",
     val audience: CalendarAudience = CalendarAudience.ALL,
     val classIds: Set<String> = emptySet(),
-    val studentIds: Set<String> = emptySet()
+    val studentIds: Set<String> = emptySet(),
+    val schoolIds: Set<String> = emptySet()
 )
 
 data class OfficialHoliday(
@@ -56,5 +58,6 @@ data class CalendarEditor(
     val body: String = "",
     val audience: CalendarAudience = CalendarAudience.ALL,
     val classIds: Set<String> = emptySet(),
-    val studentIds: Set<String> = emptySet()
+    val studentIds: Set<String> = emptySet(),
+    val schoolIds: Set<String> = emptySet()
 )

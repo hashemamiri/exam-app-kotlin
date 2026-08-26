@@ -121,6 +121,7 @@ class ExamBuilderViewModel(
                 audienceMode = draft.audienceMode,
                 audienceClasses = draft.audienceClasses,
                 audienceStudents = draft.audienceStudents,
+                audienceSchools = draft.audienceSchools,
                 recoverableDraft = null,
                 error = null
             )
@@ -162,10 +163,11 @@ class ExamBuilderViewModel(
     }
 
     fun setAudienceMode(value: String) {
-        if (value in setOf("all", "classes", "students")) _state.update { it.copy(audienceMode = value) }
+        if (value in setOf("all", "schools", "classes", "students")) _state.update { it.copy(audienceMode = value) }
     }
     fun toggleAudienceClass(id: String) { _state.update { it.copy(audienceClasses = it.audienceClasses.toggle(id)) } }
     fun toggleAudienceStudent(id: String) { _state.update { it.copy(audienceStudents = it.audienceStudents.toggle(id)) } }
+    fun toggleAudienceSchool(id: String) { _state.update { it.copy(audienceSchools = it.audienceSchools.toggle(id)) } }
 
     fun addQuestion(type: QuestionType): String {
         val question = when (type) {
@@ -596,7 +598,8 @@ private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.attemptCooldown,
     state.audienceMode,
     state.audienceClasses,
-    state.audienceStudents
+    state.audienceStudents,
+    state.audienceSchools
 ).hashCode()
 
 private fun remapMovedIndex(value: Int, from: Int, to: Int): Int = when {

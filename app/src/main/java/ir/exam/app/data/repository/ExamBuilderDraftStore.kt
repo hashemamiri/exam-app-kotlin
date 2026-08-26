@@ -28,6 +28,8 @@ data class ExamBuilderDraftPayload(
     val audienceMode: String,
     val audienceClasses: Set<String>,
     val audienceStudents: Set<String>,
+    // V61.0 — مدرسه‌های مخاطب؛ default برای سازگاری با پیش‌نویس‌های قدیمی.
+    val audienceSchools: Set<String> = emptySet(),
     val savedAt: Long
 )
 
@@ -63,6 +65,7 @@ class ExamBuilderDraftStore(private val dao: ExamBuilderDraftDao) {
             audienceMode = state.audienceMode,
             audienceClasses = state.audienceClasses,
             audienceStudents = state.audienceStudents,
+            audienceSchools = state.audienceSchools,
             savedAt = now
         )
         dao.upsert(

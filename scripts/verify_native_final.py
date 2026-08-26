@@ -1657,6 +1657,55 @@ require("if (isShortCode) {" in _auth_repo
 require("اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده است، آن را اینجا وارد کنید." in _sign_in,
         "V60.4 invite field hint is missing")
 
+# ---- V61.0: auth landing redesign ----
+_sign_in_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/SignInScreen.kt").read_text()
+require("AuthScreen.SIGN_IN -> LandingPane(state, viewModel)" in _sign_in_v61
+        and "AuthScreen.LOGIN_MANAGER -> StaffLoginPane(state, viewModel, managerRole = true)" in _sign_in_v61
+        and "AuthScreen.LOGIN_STUDENT -> StudentLoginPane(state, viewModel)" in _sign_in_v61
+        and 'Text("ورود با گوگل")' in _sign_in_v61
+        and "private fun BackButtonRow(" in _sign_in_v61,
+        "V61.0 auth landing/login-role redesign is missing")
+require("fun showLoginRole() = switchTo(AuthScreen.LOGIN_ROLE)" in
+        (ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthViewModel.kt").read_text(),
+        "V61.0 login role navigation is missing")
+
+# ---- V61.1: teacher schools view + schools audience ----
+_school_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").read_text()
+_v61_sql=(ROOT/"supabase/migrations/20260826_native_schools_audience_v61.sql").read_text()
+require('OutlinedButton(onClick = onSchools, modifier = Modifier.weight(1f)) { Text("مدارس") }' in _school_v61
+        and "private fun SchoolsContent(" in _school_v61
+        and "private fun SchoolClassesContent(" in _school_v61,
+        "V61.1 teacher schools drill-down is missing")
+require("native_teacher_schools_v61" in _v61_sql
+        and "native_exam_school_students_v61" in _v61_sql
+        and "calendar_note_schools" in _v61_sql
+        and "exam_audience_schools" in _v61_sql,
+        "V61.1 schools audience SQL is missing")
+require('"schools" to "مدارس"' in builder_screen
+        and "CalendarAudience.SCHOOLS" in (ROOT/"app/src/main/java/ir/exam/app/ui/calendar/CalendarScreen.kt").read_text(),
+        "V61.1 schools audience UI is missing")
+
+# ---- V61.2: manager dashboard + class teacher picker ----
+require('"داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,' in app_shell
+        and "featuredCard = if (user.role == UserRole.MANAGER) {" in app_shell,
+        "V61.2 manager dashboard card is missing")
+require('Text("پنل سریع", style = MaterialTheme.typography.titleMedium)' in manager_foundation
+        and "private fun QuickPanelCard(" in manager_foundation,
+        "V61.2 dashboard quick panel is missing")
+require("native_manager_save_teacher_class_v40c" in
+        (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
+        and "managerTeacherPicker = user.role == UserRole.MANAGER" in app_shell,
+        "V61.2 manager class teacher picker is missing")
+
+# ---- V61.3: bulk form order + direct-typing custom grade field ----
+_bulk_v61=_school_v61.split("private fun BulkStudentDialog(",1)[1].split("internal fun studentClipboardText",1)[0]
+require("// V61.0 — ترتیب درخواستی وسط‌چین: چشم، پسر، دختر، تاس." in _bulk_v61
+        and _bulk_v61.count("passwordTransformation(row.passwordVisible)") == 2,
+        "V61.3 bulk create centered eye/boy/girl/dice row is missing")
+require("if (customMode) {" in grade_odometer
+        and "بازکردن انتخاب‌گر" in grade_odometer,
+        "V61.3 direct-typing custom grade field is missing")
+
 # ---- V58.0.1: the top-level layout.weight import is internal and must never appear ----
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")

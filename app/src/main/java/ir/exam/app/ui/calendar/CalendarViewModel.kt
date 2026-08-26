@@ -24,6 +24,7 @@ data class CalendarState(
     val monthData: CalendarMonth? = null,
     val classes: List<CalendarAudienceOption> = emptyList(),
     val students: List<CalendarAudienceOption> = emptyList(),
+    val schools: List<CalendarAudienceOption> = emptyList(),
     val editor: CalendarEditor? = null,
     val loading: Boolean = true,
     val editorLoading: Boolean = false,
@@ -96,7 +97,8 @@ class CalendarViewModel(
                                 body = full.body,
                                 audience = full.audience,
                                 classIds = full.classIds,
-                                studentIds = full.studentIds
+                                studentIds = full.studentIds,
+                                schoolIds = full.schoolIds
                             ),
                             editorLoading = false
                         )
@@ -118,11 +120,13 @@ class CalendarViewModel(
         editor.copy(
             audience = value,
             classIds = if (value == CalendarAudience.CLASSES) editor.classIds else emptySet(),
-            studentIds = if (value == CalendarAudience.STUDENTS) editor.studentIds else emptySet()
+            studentIds = if (value == CalendarAudience.STUDENTS) editor.studentIds else emptySet(),
+            schoolIds = if (value == CalendarAudience.SCHOOLS) editor.schoolIds else emptySet()
         )
     }
     fun toggleClass(id: String) = updateEditor { it.copy(classIds = it.classIds.toggle(id)) }
     fun toggleStudent(id: String) = updateEditor { it.copy(studentIds = it.studentIds.toggle(id)) }
+    fun toggleSchool(id: String) = updateEditor { it.copy(schoolIds = it.schoolIds.toggle(id)) }
 
     fun saveEditor() {
         val editor = state.value.editor ?: return
@@ -189,6 +193,12 @@ class CalendarViewModel(
                     _state.update { it.copy(classes = classes, students = students) }
                 }
                 .onFailure { error -> _state.update { it.copy(error = safeCalendarError(error)) } }
+        }
+        // V61.0 — مدرسه‌های معلم برای مخاطب «مدارس»؛ خطا فقط لاگ حالت می‌شود.
+        viewModelScope.launch {
+            repository.loadSchoolOptions()
+                .onSuccess { schools -> _state.update { it.copy(schools = schools) } }
+                .onFailure { }
         }
     }
 

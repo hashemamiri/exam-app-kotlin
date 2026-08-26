@@ -310,18 +310,47 @@ private fun inviteRemainingText(expiresAt: String, _used: Boolean, _revoked: Boo
 }
 
 @Composable
-fun ManagerStatsScreen() {
+fun ManagerStatsScreen(
+    onQuickTeachers: (() -> Unit)? = null,
+    onQuickClasses: (() -> Unit)? = null,
+    onQuickStudents: (() -> Unit)? = null,
+    onQuickWallet: (() -> Unit)? = null
+) {
     val state = rememberManagerSummary()
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("آمار مدرسه", style = MaterialTheme.typography.headlineSmall)
+        // V61.0 — داشبورد مدیر/معاون: اطلاعات مدرسه، آمار و پنل سریع.
+        Text("داشبورد", style = MaterialTheme.typography.headlineSmall)
         when {
             state.loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             state.error != null -> Text(state.error, color = MaterialTheme.colorScheme.error)
             else -> {
                 val summary = checkNotNull(state.summary)
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(summary.schoolName.ifBlank { "مدرسه" }, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            listOf(summary.province, summary.city)
+                                .filter(String::isNotBlank)
+                                .joinToString(" · ")
+                                .ifBlank { "—" }
+                        )
+                    }
+                }
+                // پنل سریع: میان‌بر بخش‌های پرکاربرد.
+                if (onQuickTeachers != null || onQuickClasses != null || onQuickStudents != null || onQuickWallet != null) {
+                    Text("پنل سریع", style = MaterialTheme.typography.titleMedium)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        onQuickTeachers?.let { QuickPanelCard("معلم‌ها", it, Modifier.weight(1f)) }
+                        onQuickClasses?.let { QuickPanelCard("کلاس‌ها", it, Modifier.weight(1f)) }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        onQuickStudents?.let { QuickPanelCard("دانش‌آموزان", it, Modifier.weight(1f)) }
+                        onQuickWallet?.let { QuickPanelCard("کیف پول", it, Modifier.weight(1f)) }
+                    }
+                }
                 listOf(
                     "معلم" to summary.teachers,
                     "دانش‌آموز" to summary.students,
@@ -356,6 +385,17 @@ fun ManagerStatsScreen() {
                 }
             }
         }
+    }
+}
+
+/** V61.0 — کارت میان‌بر پنل سریع داشبورد. */
+@Composable
+private fun QuickPanelCard(title: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(modifier.clickable(onClick = onClick)) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) { Text(title, style = MaterialTheme.typography.titleSmall) }
     }
 }
 

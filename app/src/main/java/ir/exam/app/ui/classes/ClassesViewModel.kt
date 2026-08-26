@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.local.NativeDatabaseProvider
 import ir.exam.app.data.local.StudentNoteEntity
 import ir.exam.app.data.remote.SupabaseProvider
@@ -20,6 +21,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** V61.0 — مدرسهٔ عضو معلم برای نمای «مدارس» بخش کلاس‌ها. */
+data class TeacherSchoolItem(
+    val id: String,
+    val name: String,
+    val province: String = "",
+    val city: String = "",
+    val classCount: Int = 0
+)
+
 data class ClassesState(
     val loading: Boolean = true,
     val actionLoading: Boolean = false,
@@ -32,8 +42,18 @@ data class ClassesState(
     val message: String? = null,
     val lastCredential: StudentCredential? = null,
     val bulkResult: BulkStudentCreateResult? = null,
-    val studentNotes: Map<String,String> = emptyMap()
+    val studentNotes: Map<String,String> = emptyMap(),
+    // V61.0 — نمای مدارس: لیست مدرسه‌ها، مدرسهٔ باز و کلاس‌های معلم در آن.
+    val schoolsOpen: Boolean = false,
+    val schools: List<TeacherSchoolItem> = emptyList(),
+    val selectedSchool: TeacherSchoolItem? = null,
+    val schoolClasses: List<SchoolClass> = emptyList(),
+    // V61.0 — فقط برای مدیر: معلم‌های مدرسه برای انتخاب معلمِ کلاس جدید.
+    val schoolTeachers: List<SchoolTeacherPick> = emptyList()
 )
+
+/** V61.0 — معلم قابل انتخاب هنگام ساخت کلاس توسط مدیر. */
+data class SchoolTeacherPick(val id: String, val name: String)
 
 class ClassesViewModel(
     private val repository: SchoolRepository = SupabaseSchoolRepository(),
@@ -73,12 +93,50 @@ class ClassesViewModel(
         _state.update { it.copy(selectedClass = null, roster = emptyList()) }
     }
 
-    fun saveClass(id: String?, name: String, grade: String, fieldOfStudy: String = "") = action(
+    fun saveClass(
+        id: String?,
+        name: String,
+        grade: String,
+        fieldOfStudy: String = "",
+        teacherId: String? = null
+    ) = action(
         successMessage = if (id == null) "کلاس ساخته شد." else "کلاس ویرایش شد."
     ) {
-        if (id == null) repository.createClass(name, grade, fieldOfStudy).getOrThrow()
-        else repository.updateClass(id, name, grade, fieldOfStudy).getOrThrow()
+        when {
+            // V61.0 — مدیر: ساخت کلاس برای معلم انتخابی از لیست معلم‌های مدرسه.
+            id == null && !teacherId.isNullOrBlank() -> {
+                val raw = SupabaseProvider.client.postgrest.rpc(
+                    "native_manager_save_teacher_class_v40c",
+                    kotlinx.serialization.json.buildJsonObject {
+                        put("p_teacher", kotlinx.serialization.json.JsonPrimitive(teacherId))
+                        put("p_name", kotlinx.serialization.json.JsonPrimitive(name.trim()))
+                        put("p_grade", kotlinx.serialization.json.JsonPrimitive(grade.trim()))
+                        put("p_field", kotlinx.serialization.json.JsonPrimitive(fieldOfStudy.trim()))
+                    }
+                ).decodeAs<kotlinx.serialization.json.JsonObject>()
+                (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                    ?.takeIf(String::isNotBlank)?.let(::error)
+            }
+            id == null -> repository.createClass(name, grade, fieldOfStudy).getOrThrow()
+            else -> repository.updateClass(id, name, grade, fieldOfStudy).getOrThrow()
+        }
         reloadData()
+    }
+
+    /** V61.0 — معلم‌های مدرسه برای انتخاب در ساخت کلاس؛ غیرمدیر بی‌صدا خالی می‌ماند. */
+    fun loadSchoolTeachers() = viewModelScope.launch {
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc("native_manager_teachers_v37")
+                .decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?.takeIf(String::isNotBlank)?.let(::error)
+            ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+                val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+                SchoolTeacherPick(id, (obj["full_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty())
+            }
+        }.onSuccess { list -> _state.update { it.copy(schoolTeachers = list) } }
+            .onFailure { _state.update { it.copy(schoolTeachers = emptyList()) } }
     }
 
     fun deleteClass(id: String) = action("کلاس حذف شد؛ حساب دانش‌آموزان حفظ شد.") {
@@ -180,6 +238,54 @@ class ClassesViewModel(
     private suspend fun loadRosterNow(classId: String) {
         val roster = repository.getClassRoster(classId).getOrThrow()
         _state.update { it.copy(roster = roster) }
+    }
+
+    // V61.0 — نمای «مدارس»: لیست مدرسه‌های عضو، کلاس‌های معلم در مدرسهٔ انتخابی.
+    fun openSchools() = viewModelScope.launch {
+        _state.update { it.copy(schoolsOpen = true, selectedSchool = null, schoolClasses = emptyList(), error = null) }
+        loadSchoolsNow()
+    }
+
+    fun closeSchools() {
+        _state.update { it.copy(schoolsOpen = false, selectedSchool = null, schoolClasses = emptyList()) }
+    }
+
+    fun selectSchool(item: TeacherSchoolItem) = viewModelScope.launch {
+        _state.update { it.copy(selectedSchool = item, schoolClasses = emptyList(), error = null) }
+        runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_teacher_school_classes_v61",
+                kotlinx.serialization.json.buildJsonObject {
+                    put("p_school", kotlinx.serialization.json.JsonPrimitive(item.id))
+                }
+            ).decodeList<ir.exam.app.data.dto.SchoolClassDto>().map(ir.exam.app.data.dto.SchoolClassDto::toDomain)
+        }.onSuccess { list -> _state.update { it.copy(schoolClasses = list) } }
+            .onFailure { error -> _state.update { it.copy(error = safeSchoolError(error)) } }
+    }
+
+    fun closeSchool() {
+        _state.update { it.copy(selectedSchool = null, schoolClasses = emptyList()) }
+    }
+
+    private suspend fun loadSchoolsNow() {
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc("native_teacher_schools_v61")
+                .decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?.takeIf(String::isNotBlank)?.let(::error)
+            ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+                val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+                TeacherSchoolItem(
+                    id = id,
+                    name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
+                    province = (obj["province"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
+                    city = (obj["city"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
+                    classCount = (obj["classes"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 0
+                )
+            }
+        }.onSuccess { list -> _state.update { it.copy(schools = list) } }
+            .onFailure { error -> _state.update { it.copy(error = safeSchoolError(error)) } }
     }
 
     private suspend fun reloadData() {
