@@ -231,10 +231,8 @@ fun ProfileSettingsScreen(
             ) {
                 when (user.role) {
                     UserRole.TEACHER -> DataPortabilitySection(onImportExam = onImportExam)
-                    // V61.5 — متن قدیمی «مرحله V37» حذف شد؛ توضیح واقعی وضعیت.
-                    UserRole.MANAGER -> Text(
-                        "داده‌های مدرسه (معلم‌ها، کلاس‌ها و دانش‌آموزان) به‌صورت امن روی سرور نگهداری می‌شود و نیازی به پشتیبان‌گیری دستی نیست."
-                    )
+                    // V61.7 — پشتیبان‌گیری مدیر: خروجی JSON مدارس/معلم‌ها/کلاس‌ها/دانش‌آموزان.
+                    UserRole.MANAGER -> ManagerBackupSection()
                     UserRole.STUDENT -> Text("پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.")
                 }
             }
@@ -1012,5 +1010,71 @@ private fun ErrorPanel(message: String, retry: () -> Unit) {
         Text(message, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.padding(6.dp))
         Button(onClick = retry) { Text("تلاش دوباره") }
+    }
+}
+
+/**
+ * V61.7 — پشتیبان‌گیری مدیر/معاون از کارت «داده‌ها»: خروجی JSON مدارس،
+ * معلم‌ها، کلاس‌ها و دانش‌آموزان مدرسه (بدون رمز/توکن) با SAF ذخیره می‌شود.
+ */
+@Composable
+private fun ManagerBackupSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var loading by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var pendingJson by remember { mutableStateOf<String?>(null) }
+    val createFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val content = pendingJson
+        if (uri != null && content != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)
+                    ?.bufferedWriter(Charsets.UTF_8)?.use { it.write(content) }
+            }.onSuccess { message = "پشتیبان مدرسه ذخیره شد." }
+                .onFailure { error = "ذخیره فایل ناموفق بود." }
+        }
+        pendingJson = null
+    }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Text("پشتیبان داده‌های مدرسه", style = MaterialTheme.typography.titleMedium)
+            Text("مدرسه‌ها، معلم‌ها، کلاس‌ها و دانش‌آموزان در یک فایل JSON ذخیره می‌شوند.")
+            Text(
+                "رمز دانش‌آموز، token و کلیدها عمداً وارد فایل نمی‌شوند.",
+                color = MaterialTheme.colorScheme.primary
+            )
+            Button(
+                enabled = !loading,
+                onClick = {
+                    loading = true
+                    error = null
+                    message = null
+                    scope.launch {
+                        runCatching {
+                            val raw = ir.exam.app.data.remote.SupabaseProvider.client
+                                .postgrest.rpc("native_manager_export_backup_v61")
+                                .decodeAs<kotlinx.serialization.json.JsonObject>()
+                            ((raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content)
+                                ?.takeIf(String::isNotBlank)?.let { throw IllegalStateException(it) }
+                            raw.toString()
+                        }.onSuccess { json ->
+                            loading = false
+                            pendingJson = json
+                            createFile.launch("school-backup.json")
+                        }.onFailure { throwable ->
+                            loading = false
+                            error = throwable.message?.take(200) ?: "ساخت پشتیبان ناموفق بود."
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("ساخت پشتیبان مدرسه") }
+            if (loading) CircularProgressIndicator()
+            message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
 }

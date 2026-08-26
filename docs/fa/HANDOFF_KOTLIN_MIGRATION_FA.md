@@ -9192,3 +9192,52 @@ primaryContainer؛ needle «question-drag-color» حفظ).
 CalendarScreen/BuilderRadialMenuOverlay/ExamBuilderScreen/QuestionDraft +
 تست جدید + V61_4 تست + verify/changelog/هندآف.
 ```
+
+## ۱۹۰) V61.7 — پشتیبان مدیر، چیدمان ضربدری +، فیلتر کارتی، زمان‌سنج منجمد
+
+### درخواست‌ها و پیاده‌سازی
+
+```text
+۱) کارت «داده‌ها»ی مدیر: ManagerBackupSection جدید در ProfileSettingsScreen —
+دکمهٔ «ساخت پشتیبان مدرسه» → rpc جدید native_manager_export_backup_v61
+(JSON مدارس/معلم‌ها/کلاس‌ها/دانش‌آموزان مدرسه؛ بدون رمز/توکن؛ فقط نقش
+manager) → ذخیره با SAF به‌نام school-backup.json. تست V61_5 که متن قبلی
+اطلاع‌رسانی را می‌خواست هماهنگ شد (→ ManagerBackupSection).
+۲) پنجرهٔ + (هر دو نقش): چیدمان مثلث+پایین به «ضربدر» تغییر کرد — چهار
+کارت در چهار گوشهٔ مربع فرضی (targetX=±horizontal، targetY=±cornerY=108dp)
+و چهار خط‌چین از مرکز به گوشه‌ها (حلقهٔ forEach روی چهار Offset).
+تست V20 (targetX = 0.dp بین primary و student) → targetY = -cornerY.
+۳) کد دعوت استفاده‌شده: زمان‌سنج «منجمد» — SQL used_at را به
+native_manager_invites_v40b اضافه کرد؛ کلاینت ManagerInviteItem.usedAt و
+inviteRemainingText حالا برای used زمان باقی‌مانده در لحظهٔ استفاده را
+با «زمان‌سنج متوقف شد: HH:MM:SS» نشان می‌دهد (بدون شمارش). اگر used_at
+نبود (SQL اجرا نشده) همان پیام متنی V61.5. تست V61_5 (if (used) return →
+if (used) {) هماهنگ شد.
+۴) حذف کارت دعوت: دیالوگ تأیید deleteInviteTarget — متن برای کد
+استفاده‌نشده «...با حذف، بلافاصله منقضی می‌شود»؛ تأیید «بله، حذف شود» همان
+منطق حذف خوش‌بینانه + revoke سروری قبلی را اجرا می‌کند (ترتیب filterNot <
+revokeInvite برای V41B.1 حفظ شد).
+۵) فیلتر دانش‌آموزان: بازنویسی StudentFilterDialog — شش کارت بازشونده
+(FilterSectionCard با key: grade/class/gender/unassigned/school/teacher)،
+آیکن FilterList هر بخش قرمز 0xFFD32F2F وقتی فیلتر همان بخش فعال است،
+مقدار فعلی کنار عنوان. هدر متنی حذف؛ سطر وسط‌چین «حذف فیلترها / اعمال
+فیلتر / انصراف» در slot title. «حذف فیلترها» فقط draft را خالی می‌کند و
+پنجره باز می‌ماند (بدون onApply).
+۶) دکمه‌های منوی + سازندهٔ آزمون: clip(CircleShape) → RoundedCornerShape(22dp)
+(مربع گوشه‌گرد)؛ رنگ پاستلی V61.6 حفظ؛ دکمهٔ مرکزی + همچنان دایره.
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V61_7BackupCrossFilterCardsTest (۵ تست) · هماهنگی: V20 (targetY)،
+V61_5 (ManagerBackupSection + if (used) {) · verify: بلوک V61.7 (۶ require)
+· شبیه‌سازی V61_5/6/7 + V19/V40B/V41B1 سبز · اسکن سراسری ۱۳۱۳ needle و
+اسکن شمارشی: صفر خطای واقعی · FINAL_NATIVE_VERIFY=PASS EXIT=0
+پچ: V61_7_backup_cross_filter_cards — SQL جدید
+20260826_native_manager_backup_invite_freeze_v61_7.sql (کپی کاربر:
+V61_7_manager_backup_invite_freeze.sql).
+اقدام سرور (الزامی برای پشتیبان مدیر و زمان‌سنج منجمد): اجرای SQL؛
+سلامت‌سنجی: select to_regprocedure('public.native_manager_export_backup_v61()') is not null;
+نیازمند build جدید.
+```

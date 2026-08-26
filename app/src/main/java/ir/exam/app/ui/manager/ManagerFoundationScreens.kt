@@ -72,6 +72,8 @@ fun ManagerTeachersScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var teachers by remember { mutableStateOf<List<ir.exam.app.data.repository.SchoolTeacherItem>>(emptyList()) }
     var invites by remember { mutableStateOf<List<ir.exam.app.data.repository.ManagerInviteItem>>(emptyList()) }
+    // V61.7 — کارت دعوتی که منتظر تأیید حذف است.
+    var deleteInviteTarget by remember { mutableStateOf<ir.exam.app.data.repository.ManagerInviteItem?>(null) }
     var expandedTeacher by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -124,7 +126,7 @@ fun ManagerTeachersScreen(
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             invites.forEach { invite ->
-                val remaining = inviteRemainingText(invite.expiresAt, invite.used, invite.revoked, clockNow)
+                val remaining = inviteRemainingText(invite.expiresAt, invite.used, invite.revoked, clockNow, invite.usedAt)
                 Card(Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth().padding(14.dp),
@@ -150,28 +152,14 @@ fun ManagerTeachersScreen(
                                 )
                             )
                         }
-                        // V61.5 — سطل زباله روی همهٔ کارت‌ها؛ کد استفاده‌نشده بلافاصله
-                        // منقضی می‌شود و پیام حذف همین را می‌گوید.
-                        run {
-                            val wasUnused = !invite.used && !invite.revoked
-                            androidx.compose.material3.IconButton(onClick = {
-                                invites = invites.filterNot { it.id == invite.id }
-                                message = if (wasUnused) {
-                                    "کارت حذف شد و کد استفاده‌نشده بلافاصله منقضی شد."
-                                } else "کارت حذف شد."
-                                scope.launch {
-                                    if (wasUnused) {
-                                        repository.revokeInvite(invite.id)
-                                            .onFailure { error = "کارت حذف شد؛ ابطال سروری ناموفق بود: ${safeManagerError(it)}" }
-                                    }
-                                }
-                            }) {
-                                androidx.compose.material3.Icon(
-                                    Icons.Outlined.Delete,
-                                    contentDescription = "حذف کد دعوت",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
+                        // V61.5 — سطل زباله روی همهٔ کارت‌ها؛ V61.7 — قبل از حذف
+                        // دیالوگ تأیید باز می‌شود (deleteInviteTarget).
+                        androidx.compose.material3.IconButton(onClick = { deleteInviteTarget = invite }) {
+                            androidx.compose.material3.Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = "حذف کد دعوت",
+                                tint = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
@@ -301,16 +289,70 @@ fun ManagerTeachersScreen(
             dismissButton = { androidx.compose.material3.TextButton(onClick = { removeTarget = null }) { Text("انصراف") } }
         )
     }
+    // V61.7 — تأیید حذف کارت کد دعوت؛ کد استفاده‌نشده با حذف بلافاصله باطل می‌شود.
+    deleteInviteTarget?.let { invite ->
+        val wasUnused = !invite.used && !invite.revoked
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deleteInviteTarget = null },
+            title = { Text("حذف کارت کد دعوت") },
+            text = {
+                Text(
+                    if (wasUnused) {
+                        "کارت «${invite.code}» حذف شود؟ این کد استفاده نشده و با حذف، بلافاصله منقضی می‌شود."
+                    } else "کارت «${invite.code}» از لیست حذف شود؟"
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(onClick = {
+                    deleteInviteTarget = null
+                    invites = invites.filterNot { it.id == invite.id }
+                    message = if (wasUnused) {
+                        "کارت حذف شد و کد استفاده‌نشده بلافاصله منقضی شد."
+                    } else "کارت حذف شد."
+                    scope.launch {
+                        if (wasUnused) {
+                            repository.revokeInvite(invite.id)
+                                .onFailure { error = "کارت حذف شد؛ ابطال سروری ناموفق بود: ${safeManagerError(it)}" }
+                        }
+                    }
+                }) { Text("بله، حذف شود") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { deleteInviteTarget = null }) { Text("انصراف") }
+            }
+        )
+    }
 }
 
-private fun inviteRemainingText(expiresAt: String, used: Boolean, revoked: Boolean, now: Long): String {
-    // V61.5 — کدِ استفاده‌شده زمان‌سنج ندارد؛ شمارش همان لحظه متوقف می‌شود.
-    if (used) return "کد استفاده شد؛ زمان‌سنج متوقف شد."
-    if (revoked) return "کد باطل شده است."
-    val expiry = runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() }
-        .recoverCatching { java.time.OffsetDateTime.parse(expiresAt).toInstant().toEpochMilli() }
-        .recoverCatching { java.time.LocalDateTime.parse(expiresAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }
+private fun parseInviteInstant(value: String): Long? =
+    runCatching { java.time.Instant.parse(value).toEpochMilli() }
+        .recoverCatching { java.time.OffsetDateTime.parse(value).toInstant().toEpochMilli() }
+        .recoverCatching { java.time.LocalDateTime.parse(value.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }
         .getOrNull()
+
+private fun inviteRemainingText(
+    expiresAt: String,
+    used: Boolean,
+    revoked: Boolean,
+    now: Long,
+    usedAt: String = ""
+): String {
+    // V61.7 — کدِ استفاده‌شده زمان‌سنجِ «منجمد» را نشان می‌دهد: زمان باقی‌مانده
+    // در لحظهٔ استفاده، بدون ادامهٔ شمارش.
+    if (used) {
+        val expiry = parseInviteInstant(expiresAt)
+        val usedMoment = parseInviteInstant(usedAt)
+        if (expiry != null && usedMoment != null) {
+            val seconds = ((expiry - usedMoment) / 1_000).coerceAtLeast(0)
+            val hours = seconds / 3_600
+            val minutes = (seconds % 3_600) / 60
+            val rest = seconds % 60
+            return "زمان‌سنج متوقف شد: %02d:%02d:%02d".format(hours, minutes, rest)
+        }
+        return "کد استفاده شد؛ زمان‌سنج متوقف شد."
+    }
+    if (revoked) return "کد باطل شده است."
+    val expiry = parseInviteInstant(expiresAt)
     if (expiry == null) return "زمان انقضا نامعتبر است"
     val seconds = ((expiry - now) / 1_000).coerceAtLeast(0)
     if (seconds == 0L) return "زمان باقی‌مانده: 00:00:00"

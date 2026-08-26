@@ -43,12 +43,13 @@ class V61_5QuickSchoolFilterInviteTest {
 
     @Test
     fun `manager data card text is real and invite cards behave as requested`() {
-        assertTrue("نیازی به پشتیبان‌گیری دستی نیست" in profile)
+        // V61.7 — متن اطلاع‌رسانی جای خود را به پشتیبان‌گیری واقعی مدیر داد.
+        assertTrue("ManagerBackupSection" in profile)
         // سطل زباله همهٔ کارت‌ها + پیام ابطال فوری کد استفاده‌نشده
         assertTrue("کارت حذف شد و کد استفاده‌نشده بلافاصله منقضی شد." in manager)
-        // زمان‌سنج کد استفاده‌شده متوقف است
+        // زمان‌سنج کد استفاده‌شده متوقف است (V61.7: زمان منجمد لحظهٔ استفاده)
         assertTrue("کد استفاده شد؛ زمان‌سنج متوقف شد." in manager)
-        assertTrue("if (used) return" in manager)
+        assertTrue("if (used) {" in manager)
     }
 
     @Test

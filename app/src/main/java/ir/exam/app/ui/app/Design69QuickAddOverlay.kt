@@ -122,6 +122,9 @@ fun Design69QuickAddOverlay(
             pressed = true
         ) {}
 
+        // V61.7 — چیدمان ضربدری: چهار کارت در چهار گوشهٔ مربع فرضی و هر چهار
+        // خط‌چین از مرکز (دکمهٔ ضربدر) به گوشه‌ها.
+        val cornerY = 108.dp
         Canvas(
             Modifier
                 .align(Alignment.Center)
@@ -130,35 +133,29 @@ fun Design69QuickAddOverlay(
             val alpha = .45f * ((travel.value - .88f) / .12f).coerceIn(0f, 1f)
             val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
             val dash = PathEffect.dashPathEffect(floatArrayOf(7.dp.toPx(), 8.dp.toPx()))
-            drawLine(
-                colors.accent.copy(alpha = alpha),
-                center,
-                center + androidx.compose.ui.geometry.Offset(0f, (-142).dp.toPx()),
-                strokeWidth = 2.dp.toPx(),
-                pathEffect = dash
-            )
-            drawLine(
-                colors.accent.copy(alpha = alpha),
-                center,
-                center + androidx.compose.ui.geometry.Offset(horizontal.toPx(), 88.dp.toPx()),
-                strokeWidth = 2.dp.toPx(),
-                pathEffect = dash
-            )
-            drawLine(
-                colors.accent.copy(alpha = alpha),
-                center,
-                center + androidx.compose.ui.geometry.Offset(-horizontal.toPx(), 88.dp.toPx()),
-                strokeWidth = 2.dp.toPx(),
-                pathEffect = dash
-            )
+            listOf(
+                androidx.compose.ui.geometry.Offset(-horizontal.toPx(), -cornerY.toPx()),
+                androidx.compose.ui.geometry.Offset(horizontal.toPx(), -cornerY.toPx()),
+                androidx.compose.ui.geometry.Offset(-horizontal.toPx(), cornerY.toPx()),
+                androidx.compose.ui.geometry.Offset(horizontal.toPx(), cornerY.toPx())
+            ).forEach { corner ->
+                drawLine(
+                    colors.accent.copy(alpha = alpha),
+                    center,
+                    center + corner,
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = dash
+                )
+            }
         }
 
         QuickAddAction(
             progress = travel.value,
             title = primaryTitle,
             icon = primaryIcon,
-            targetX = 0.dp,
-            targetY = (-142).dp,
+            // targetX = 0.dp حذف شد: گوشهٔ بالا-راست مربع (RTL: راست = -x نیست؛ offset مطلق است).
+            targetX = horizontal,
+            targetY = -cornerY,
             modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateExam) }
 
@@ -166,8 +163,8 @@ fun Design69QuickAddOverlay(
             progress = travel.value,
             title = "دانش‌آموز جدید",
             icon = Design69Icons.PersonAdd,
-            targetX = horizontal,
-            targetY = 88.dp,
+            targetX = -horizontal,
+            targetY = -cornerY,
             modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateStudent) }
 
@@ -175,18 +172,18 @@ fun Design69QuickAddOverlay(
             progress = travel.value,
             title = "کلاس جدید",
             icon = Design69Icons.ClassAdd,
-            targetX = -horizontal,
-            targetY = 88.dp,
+            targetX = horizontal,
+            targetY = cornerY,
             modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateClass) }
 
-        // V61.5 — عمل چهارم پایینِ مثلث: مدرسه جدید.
+        // V61.5 — عمل چهارم: مدرسه جدید (گوشهٔ چهارم ضربدر).
         QuickAddAction(
             progress = travel.value,
             title = "مدرسه جدید",
             icon = Design69Icons.Data,
-            targetX = 0.dp,
-            targetY = 180.dp,
+            targetX = -horizontal,
+            targetY = cornerY,
             modifier = Modifier.align(Alignment.Center)
         ) { close(onCreateSchool) }
 

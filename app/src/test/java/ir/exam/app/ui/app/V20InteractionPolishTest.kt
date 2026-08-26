@@ -18,7 +18,8 @@ class V20InteractionPolishTest {
         val examTop = add.indexOf("title = primaryTitle")
         val student = add.indexOf("title = \"دانش‌آموز جدید\"")
         assertTrue(examTop >= 0 && student > examTop)
-        assertTrue("targetX = 0.dp" in add.substring(examTop, student))
+        // V61.7 — چیدمان ضربدری: عمل اصلی در گوشهٔ مربع است، نه ستون وسط.
+        assertTrue("targetY = -cornerY" in add.substring(examTop, student))
         assertTrue("Key.DirectionLeft" in cards && "Key.DirectionRight" in cards)
         assertFalse("vertical key navigation returned", "Key.DirectionDown" in cards)
         assertFalse("card drag helper text returned", "بکشید" in cards)

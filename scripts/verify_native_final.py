@@ -1714,6 +1714,28 @@ require('Text("ساخت مدرسه جدید")' in (ROOT/"app/src/main/java/ir/ex
         and "native_manager_create_school_v61" in (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text(),
         "V61.4 manager create-school flow is missing")
 
+# ---- V61.7: manager backup + cross quick-add + invite confirm/freeze + filter cards ----
+_v61_7_sql=(ROOT/"supabase/migrations/20260826_native_manager_backup_invite_freeze_v61_7.sql").read_text()
+require("native_manager_export_backup_v61" in _v61_7_sql
+        and "'used_at',coalesce(i.used_at::text,'')" in _v61_7_sql,
+        "V61.7 manager backup / frozen invite timer SQL is missing")
+require("private fun ManagerBackupSection()" in profile_settings
+        and "native_manager_export_backup_v61" in profile_settings,
+        "V61.7 manager backup card is missing")
+require("targetY = -cornerY" in design69_add and "targetY = cornerY" in design69_add
+        and ".forEach { corner ->" in design69_add,
+        "V61.7 cross quick-add layout is missing")
+require("زمان‌سنج متوقف شد: %02d:%02d:%02d" in manager_foundation
+        and "deleteInviteTarget = invite" in manager_foundation
+        and "بله، حذف شود" in manager_foundation,
+        "V61.7 frozen invite timer or delete confirmation is missing")
+require("fun FilterSectionCard(" in school_screen
+        and "tint = if (active) Color(0xFFD32F2F) else LocalContentColor.current" in school_screen
+        and 'TextButton(onClick = { draft = StudentListFilter() }) { Text("حذف فیلترها") }' in school_screen,
+        "V61.7 filter section cards / sticky clear are missing")
+require(".clip(RoundedCornerShape(22.dp))" in builder_radial,
+        "V61.7 rounded-square builder radial buttons are missing")
+
 # ---- V61.2: manager dashboard + class teacher picker ----
 require('"داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,' in app_shell
         and "featuredCard = if (user.role == UserRole.MANAGER) {" in app_shell,

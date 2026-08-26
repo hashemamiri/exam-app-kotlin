@@ -26,7 +26,9 @@ internal data class SchoolTeacherItem(
 
 internal data class TeacherInviteResult(val code: String)
 internal data class ManagerInviteItem(
-    val id: String, val code: String, val expiresAt: String, val used: Boolean, val revoked: Boolean
+    val id: String, val code: String, val expiresAt: String, val used: Boolean, val revoked: Boolean,
+    // V61.7 — لحظهٔ استفاده برای نمایش زمان‌سنج «منجمد» کد استفاده‌شده.
+    val usedAt: String = ""
 )
 internal data class ManagerTeacherClass(
     val id: String, val name: String, val grade: String, val field: String, val total: Int
@@ -147,7 +149,8 @@ internal class SupabaseManagerRepository {
             ManagerInviteItem(
                 id = item.text("id"), code = item.text("code"), expiresAt = item.text("expires_at"),
                 used = item["used"]?.jsonPrimitive?.booleanOrNull ?: false,
-                revoked = item["revoked"]?.jsonPrimitive?.booleanOrNull ?: false
+                revoked = item["revoked"]?.jsonPrimitive?.booleanOrNull ?: false,
+                usedAt = item.text("used_at")
             )
         }
 

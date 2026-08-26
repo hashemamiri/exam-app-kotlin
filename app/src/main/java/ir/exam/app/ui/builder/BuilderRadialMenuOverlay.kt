@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -137,7 +138,8 @@ fun BuilderRadialMenuOverlay(
                         scaleY = .22f + .78f * p
                     }
                     .neumorphic69(colors, 22.dp, 10.dp)
-                    .clip(CircleShape)
+                    // V61.7 — دکمه‌ها مربع با گوشه‌های گرد (نه دایره).
+                    .clip(RoundedCornerShape(22.dp))
                     // V61.6 — پس‌زمینهٔ پاستلی اختصاصی نوع؛ متن تیره برای خوانایی.
                     .background(action.background?.let(::Color) ?: colors.surface)
                     .clickable(

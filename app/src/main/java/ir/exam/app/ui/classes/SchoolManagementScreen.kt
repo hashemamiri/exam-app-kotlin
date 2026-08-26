@@ -853,8 +853,11 @@ private fun StudentsContent(
 }
 
 /**
- * V61.5 — پنجرهٔ فیلتر لیست دانش‌آموزان؛ گزینه‌ها تکی یا با هم قابل انتخاب‌اند:
- * پایه، کلاس، دختر/پسر، عضو نشده، مدرسه و (فقط مدیر) معلم.
+ * V61.5 — پنجرهٔ فیلتر لیست دانش‌آموزان؛ V61.7 — بازطراحی:
+ * هر بخش (پایه/کلاس/جنسیت/عضو نشده/مدرسه/معلم) یک کارت بازشونده است؛ اگر
+ * فیلتری از آن بخش فعال باشد آیکن فیلترش قرمز می‌شود. دکمه‌های «حذف
+ * فیلترها / اعمال فیلتر / انصراف» یک سطر وسط‌چین بالای پنجره‌اند (بدون هدر)؛
+ * حذف فیلترها فقط انتخاب‌ها را پاک می‌کند و پنجره باز می‌ماند.
  */
 @Composable
 private fun StudentFilterDialog(
@@ -866,96 +869,182 @@ private fun StudentFilterDialog(
     onApply: (StudentListFilter) -> Unit
 ) {
     var draft by remember(filter) { mutableStateOf(filter) }
+    var expandedSection by remember { mutableStateOf<String?>(null) }
     val teachers = remember(filterMeta) {
         filterMeta.values
             .filter { it.teacherId.isNotBlank() }
             .distinctBy { it.teacherId }
             .sortedBy { it.teacherName }
     }
+
+    @Composable
+    fun FilterSectionCard(
+        key: String,
+        title: String,
+        active: Boolean,
+        value: String,
+        content: @Composable () -> Unit
+    ) {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        expandedSection = if (expandedSection == key) null else key
+                    },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // آیکن فیلتر بخش: قرمز اگر فیلتری از این بخش فعال باشد.
+                        Icon(
+                            Icons.Outlined.FilterList,
+                            contentDescription = null,
+                            tint = if (active) Color(0xFFD32F2F) else LocalContentColor.current
+                        )
+                        Text(title, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                    Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+                if (expandedSection == key) content()
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("فیلتر دانش‌آموزان") },
+        // V61.7 — بدون هدر؛ دکمه‌ها یک سطر وسط‌چین بالا.
+        title = {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { draft = StudentListFilter() }) { Text("حذف فیلترها") }
+                Button(onClick = { onApply(draft) }) { Text("اعمال فیلتر") }
+                TextButton(onClick = onDismiss) { Text("انصراف") }
+            }
+        },
         text = {
             LazyColumn(Modifier.heightIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Text("پایه", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                    GradeOdometerPicker(
-                        value = draft.grade.orEmpty(),
-                        onValueChange = { draft = draft.copy(grade = it.trim().takeIf(String::isNotBlank)) },
-                        emptyLabel = "همه پایه‌ها",
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    FilterSectionCard(
+                        key = "grade",
+                        title = "پایه",
+                        active = draft.grade != null,
+                        value = draft.grade ?: "همه"
+                    ) {
+                        GradeOdometerPicker(
+                            value = draft.grade.orEmpty(),
+                            onValueChange = { draft = draft.copy(grade = it.trim().takeIf(String::isNotBlank)) },
+                            emptyLabel = "همه پایه‌ها",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 item {
-                    Text("کلاس", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        classes.forEach { item ->
+                    FilterSectionCard(
+                        key = "class",
+                        title = "کلاس",
+                        active = draft.classId != null,
+                        value = classes.firstOrNull { it.id == draft.classId }?.name ?: "همه"
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            classes.forEach { item ->
+                                FilterChip(
+                                    selected = draft.classId == item.id,
+                                    onClick = {
+                                        draft = draft.copy(
+                                            classId = if (draft.classId == item.id) null else item.id,
+                                            unassigned = false
+                                        )
+                                    },
+                                    label = { Text(item.name) }
+                                )
+                            }
+                        }
+                    }
+                }
+                item {
+                    FilterSectionCard(
+                        key = "gender",
+                        title = "جنسیت",
+                        active = draft.gender != null,
+                        value = when (draft.gender) { "female" -> "دختر"; "male" -> "پسر"; else -> "همه" }
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                             FilterChip(
-                                selected = draft.classId == item.id,
-                                onClick = {
-                                    draft = draft.copy(
-                                        classId = if (draft.classId == item.id) null else item.id,
-                                        unassigned = false
-                                    )
-                                },
-                                label = { Text(item.name) }
+                                selected = draft.gender == "female",
+                                onClick = { draft = draft.copy(gender = if (draft.gender == "female") null else "female") },
+                                label = { Text("دختر") }
+                            )
+                            FilterChip(
+                                selected = draft.gender == "male",
+                                onClick = { draft = draft.copy(gender = if (draft.gender == "male") null else "male") },
+                                label = { Text("پسر") }
                             )
                         }
                     }
                 }
                 item {
-                    Text("جنسیت و عضویت", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        FilterChip(
-                            selected = draft.gender == "female",
-                            onClick = { draft = draft.copy(gender = if (draft.gender == "female") null else "female") },
-                            label = { Text("دختر") }
-                        )
-                        FilterChip(
-                            selected = draft.gender == "male",
-                            onClick = { draft = draft.copy(gender = if (draft.gender == "male") null else "male") },
-                            label = { Text("پسر") }
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    FilterSectionCard(
+                        key = "unassigned",
+                        title = "عضو نشده",
+                        active = draft.unassigned,
+                        value = if (draft.unassigned) "فعال" else "غیرفعال"
+                    ) {
                         FilterChip(
                             selected = draft.unassigned,
                             onClick = { draft = draft.copy(unassigned = !draft.unassigned, classId = null) },
-                            label = { Text("عضو نشده") }
+                            label = { Text("فقط دانش‌آموزانی که عضو هیچ کلاسی نیستند") }
                         )
+                    }
+                }
+                item {
+                    FilterSectionCard(
+                        key = "school",
+                        title = "مدرسه",
+                        active = draft.inSchool,
+                        value = if (draft.inSchool) "فعال" else "غیرفعال"
+                    ) {
                         FilterChip(
                             selected = draft.inSchool,
                             onClick = { draft = draft.copy(inSchool = !draft.inSchool) },
-                            label = { Text("مدرسه") }
+                            label = { Text("فقط دانش‌آموزان ثبت‌شده در مدرسه") }
                         )
                     }
                 }
                 if (showTeacherFilter) {
-                    item { Text("معلم", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-                    items(teachers.size) { index ->
-                        val teacher = teachers[index]
-                        FilterChip(
-                            selected = draft.teacherId == teacher.teacherId,
-                            onClick = {
-                                draft = draft.copy(
-                                    teacherId = if (draft.teacherId == teacher.teacherId) null else teacher.teacherId
-                                )
-                            },
-                            label = { Text(teacher.teacherName.ifBlank { "معلم" }) }
-                        )
+                    item {
+                        FilterSectionCard(
+                            key = "teacher",
+                            title = "معلم",
+                            active = draft.teacherId != null,
+                            value = teachers.firstOrNull { it.teacherId == draft.teacherId }
+                                ?.teacherName?.ifBlank { "معلم" } ?: "همه"
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                teachers.forEach { teacher ->
+                                    FilterChip(
+                                        selected = draft.teacherId == teacher.teacherId,
+                                        onClick = {
+                                            draft = draft.copy(
+                                                teacherId = if (draft.teacherId == teacher.teacherId) null else teacher.teacherId
+                                            )
+                                        },
+                                        label = { Text(teacher.teacherName.ifBlank { "معلم" }) }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         },
-        confirmButton = {
-            Button(onClick = { onApply(draft) }) { Text("اعمال فیلتر") }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = { onApply(StudentListFilter()) }) { Text("حذف فیلترها") }
-                TextButton(onClick = onDismiss) { Text("انصراف") }
-            }
-        }
+        confirmButton = {},
+        dismissButton = {}
     )
 }
 
