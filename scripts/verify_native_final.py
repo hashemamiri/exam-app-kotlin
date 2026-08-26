@@ -1739,6 +1739,16 @@ require("shape = RoundedCornerShape(22.dp)" in builder_radial
         and "scaleX = .6f + .4f * p" in builder_radial,
         "V61.7/V61.8 rounded-square builder radial buttons are missing")
 
+# ---- V62.0: ice auth shell (UI only; auth logic untouched) ----
+_ice=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthIceComponents.kt").read_text()
+require("internal fun IceBackdrop(" in _ice and "internal fun OtpBoxes(" in _ice
+        and "internal fun StepIndicator(" in _ice and "maxLength: Int = 8" in _ice,
+        "V62.0 ice auth components are missing")
+require("IceBackdrop(Modifier.fillMaxSize())" in _sign_in_v61
+        and "StaggeredEntrance(key = state.screen)" in _sign_in_v61
+        and "state.otp.length in 6..8" in _sign_in_v61,
+        "V62.0 ice shell wiring or 6..8 otp rule is missing")
+
 # ---- V61.9: pro icons + manager default dashboard + teacher-style cards + filter order ----
 _icons_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/Design69Icons.kt").read_text()
 _stack_v61=(ROOT/"app/src/main/java/ir/exam/app/ui/app/TeacherManagementCardsScreen.kt").read_text()

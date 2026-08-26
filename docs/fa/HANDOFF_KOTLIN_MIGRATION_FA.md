@@ -9368,3 +9368,53 @@ ManagerCardsScreen سادهٔ V61.6 حذف شد (تست V61_6 هماهنگ شد)
 TeacherManagementCardsScreen/ManagerFoundationScreens/
 SchoolManagementScreen + تست جدید + دو تست هماهنگ + verify/changelog/هندآف.
 ```
+
+## ۱۹۴) V62.0 — پوستهٔ «یخی قطبی» صفحهٔ ورود (UI از ماژول کاربر، مغز فعلی)
+
+### زمینه
+
+```text
+کاربر دو ماژول آمادهٔ صفحات ورود فرستاد (نسخهٔ XML و نسخهٔ Compose با تم
+«یخی قطبی» — فایل‌های azmoon-auth-compose در uploads). تحلیل: UI خوب ولی
+بک‌اند شبیه‌سازی (login هر رمزی را می‌پذیرد، verifyCode هر ۶ رقمی، گوگل
+Stub) و قواعدش با سرور ما در تضاد (رمز ≥۴ به‌جای ۸-۷۲). تصمیم توافقی:
+فقط پوستهٔ UI وارد شود؛ منطق همان AuthViewModel/SupabaseAuthRepository
+تست‌شده بماند. Activity جدید ماژول عمداً وارد نشد.
+```
+
+### پیاده‌سازی
+
+```text
+فایل جدید ui/auth/AuthIceComponents.kt (کامپوننت‌های internal):
+- IceBackdrop: گرادیان آسمان یخی + هالهٔ دایره + دو موج متحرک (sin + phase
+  بی‌نهایت ۹ ثانیه).
+- Snowfall: بارش برف Canvas؛ «فقط» در جریان بازیابی رمز (recoveryFlow).
+- IceAuthCard: کارت شیشه‌ای گرد (سطح سفید ۸۸٪ + حاشیهٔ سفید).
+- OtpBoxes: باکس‌های کد با «فیلد مخفی» (BasicTextField آلفا صفر) تا Paste و
+  Backspace طبیعی باشند؛ چون OTP سوپابیس ۶ تا ۸ رقمی است maxLength=8 و
+  boxCount = maxOf(6, len) — کد ۷/۸ رقمی باکس اضافه باز می‌کند.
+- StepIndicator: نوار مراحل ۳گانهٔ بازیابی (ایمیل←کد←رمز جدید) با تیک
+  انیمیشنی Canvas برای مرحلهٔ کامل‌شده (AnimatedCheck ادغام‌شده).
+- StaggeredEntrance: ورود پلکانی فرم با هر تغییر state.screen.
+SignInScreen: بدنه در Box(IceBackdrop + Snowfall شرطی) پیچیده شد؛ عنوان
+با IceInk بولد؛ StepIndicator بالای کارت در recoveryFlow؛ کل when داخل
+IceAuthCard + StaggeredEntrance. OtpPane: OutlinedTextField کد → OtpBoxes
+(همان viewModel::setOtp و همان قاعدهٔ otp.length in 6..8).
+هیچ تغییری در Paneها/GoogleAuthButton/قواعد اعتبارسنجی داده نشد — همهٔ
+needleهای V36/V37/V60.x/V61.0 حفظ شدند (شبیه‌سازی کامل ۴۳ needle سبز).
+```
+
+### تأیید و عملیات
+
+```text
+جدید: V62_0IceAuthShellTest (۲ تست) · verify: بلوک V62.0 (کامپوننت‌ها +
+سیم‌کشی + قاعدهٔ ۶..۸) · شبیه‌سازی کامل needleهای SignInScreen (۴۳ مورد از
+همهٔ تست‌ها) + توازن براکت هر دو فایل + چک import + شمارش
+PasswordVisualTransformation()==1 (بند verify قدیمی) سبز ·
+FINAL_NATIVE_VERIFY=PASS kotlin_files=203 EXIT=0
+پچ: V62_0_ice_auth_shell — بدون SQL؛ نیازمند build جدید. فایل‌ها:
+AuthIceComponents.kt (جدید) / SignInScreen.kt / تست جدید / verify /
+changelog / هندآف.
+یادآوری طراحی: تم یخی فقط صفحهٔ ورود است (پیش از ورود)؛ داخل اپ همان
+Neumorphic69 می‌ماند — تمایز عمدی و تأییدشده توسط کاربر.
+```

@@ -41,20 +41,45 @@ import ir.exam.app.ui.common.passwordTransformation
 fun SignInScreen(viewModel: AuthViewModel) {
     val state by viewModel.state.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    // V62.0 — پوستهٔ «یخی قطبی» (طرح پیشنهادی کاربر): پس‌زمینهٔ گرادیان با هاله
+    // و موج، کارت شیشه‌ای فرم، برف در جریان بازیابی رمز. منطق دست‌نخورده است.
+    val recoveryFlow = state.screen in setOf(
+        AuthScreen.RECOVERY, AuthScreen.RECOVERY_OTP, AuthScreen.RECOVERY_PASSWORD
+    )
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+        IceBackdrop(Modifier.fillMaxSize())
+        if (recoveryFlow) Snowfall(Modifier.fillMaxSize())
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         // V61.0 — عنوان همیشه وسط‌چین بالای صفحه.
         Text(
             "آزمون آنلاین",
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
+            color = IceInk,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             modifier = Modifier.fillMaxWidth()
         )
+        // V62.0 — نوار مراحل سه‌گانهٔ بازیابی رمز (ایمیل ← کد ← رمز جدید).
+        if (recoveryFlow) {
+            StepIndicator(
+                steps = listOf("ایمیل", "کد", "رمز جدید"),
+                current = when (state.screen) {
+                    AuthScreen.RECOVERY -> 0
+                    AuthScreen.RECOVERY_OTP -> 1
+                    else -> 2
+                }
+            )
+        }
+        IceAuthCard {
+        // V62.0 — ورود پلکانی فرم با هر تغییر صفحه.
+        StaggeredEntrance(key = state.screen) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (state.screen) {
             AuthScreen.SIGN_IN -> LandingPane(state, viewModel)
             AuthScreen.LOGIN_ROLE -> LoginRolePane(state, viewModel)
@@ -105,6 +130,9 @@ fun SignInScreen(viewModel: AuthViewModel) {
             )
             AuthScreen.RECOVERY_PASSWORD -> RecoveryPasswordPane(state, viewModel)
         }
+        }
+        }
+        }
 
         if (state.isLoading) {
             Spacer(Modifier.height(4.dp))
@@ -117,6 +145,7 @@ fun SignInScreen(viewModel: AuthViewModel) {
             }
         }
         state.error?.let { Text("خطا: $it", color = MaterialTheme.colorScheme.error) }
+        }
     }
 }
 
@@ -412,11 +441,12 @@ private fun OtpPane(
 ) {
     Text(title, style = MaterialTheme.typography.titleLarge)
     Text(hint)
-    OutlinedTextField(
+    // V62.0 — باکس‌های کد با Paste و Backspace طبیعی (فیلد مخفی)؛ کد سوپابیس
+    // ۶ تا ۸ رقمی است و باکس‌ها با طول کد گسترده می‌شوند.
+    Text("کد یک‌بارمصرف ۶ تا ۸ رقم", style = MaterialTheme.typography.labelMedium)
+    OtpBoxes(
         value = state.otp,
         onValueChange = viewModel::setOtp,
-        label = { Text("کد یک‌بارمصرف ۶ تا ۸ رقم") },
-        singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
     Button(
