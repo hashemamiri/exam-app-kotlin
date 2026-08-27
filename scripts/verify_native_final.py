@@ -2018,12 +2018,25 @@ require("class V63_1DocObjectDragResizeTest" in _v63_1_test
         "V63.1 drag/resize tests are missing")
 # ---- V63.2: نوار قالب متن (اندازه/بولد/ایتالیک/تراز) + ترتیب سؤال‌ها ----
 _v63_2_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_2DocFormatReorderTest.kt").read_text()
-require("fun QuestionFormatBar(" in _doc_editor_v63
-        and "builder.setQuestionFontSize(question.id, it)" in _doc_editor_v63
-        and "builder.moveQuestion(question.id, delta)" in _doc_editor_v63
+# V63.3 — نوار واحد DocumentToolbar جایگزین QuestionFormatBar شد.
+require("fun DocumentToolbar(" in _doc_editor_v63
+        and "builder.setQuestionFontSize(it.id, it.fontSizeSp + delta)" in _doc_editor_v63
+        and "builder.moveQuestion(it.id, delta)" in _doc_editor_v63
         and ".clickable(onClick = onSelect)" in _doc_editor_v63
         and "var textDialogQuestionId by remember" in _doc_editor_v63,
-        "V63.2 word-like format bar / reorder is missing from the document editor")
+        "V63.2/63.3 format toolbar / reorder is missing from the document editor")
+require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
+        and "Icons.Outlined.ZoomIn" in _doc_editor_v63
+        and "Icons.Outlined.ZoomOut" in _doc_editor_v63
+        and "Icons.Outlined.OpenWith" in _doc_editor_v63
+        and "var selectedImage by remember" in _doc_editor_v63
+        and "var selectedFigure by remember" in _doc_editor_v63
+        and "fun resizeFigureBy(" in _doc_editor_v63
+        and "QuestionFormatBar" not in _doc_editor_v63,
+        "V63.3 unified scrollable toolbar with object selection is missing")
+require('contentDescription = "ویرایش آزمون"' in _print_center_v62
+        and 'Text("ویرایش سند")' not in _print_center_v62,
+        "V63.3 pencil-only edit icon on the print-center exam card is missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

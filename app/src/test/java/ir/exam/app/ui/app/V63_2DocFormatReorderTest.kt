@@ -28,11 +28,12 @@ class V63_2DocFormatReorderTest {
 
     @Test
     fun `tapping a question opens the format bar with size bold italic align and reorder`() {
-        assertTrue("fun QuestionFormatBar(" in editor)
+        // V63.3 — نوار واحد DocumentToolbar جایگزین QuestionFormatBar شد.
+        assertTrue("fun DocumentToolbar(" in editor)
         assertTrue(".clickable(onClick = onSelect)" in editor)
         // اندازه با گام ۲
-        assertTrue("onFontSize(question.fontSizeSp - 2f)" in editor)
-        assertTrue("onFontSize(question.fontSizeSp + 2f)" in editor)
+        assertTrue("onFontSize(+2f)" in editor)
+        assertTrue("onFontSize(-2f)" in editor)
         // بولد/ایتالیک/تراز/ترتیب
         assertTrue("Icons.Outlined.FormatBold" in editor)
         assertTrue("Icons.Outlined.FormatItalic" in editor)
@@ -43,11 +44,11 @@ class V63_2DocFormatReorderTest {
 
     @Test
     fun `format actions persist through the builder view-model used by print`() {
-        assertTrue("builder.setQuestionFontSize(question.id, it)" in editor)
-        assertTrue("builder.setQuestionBold(question.id, it)" in editor)
-        assertTrue("builder.setQuestionItalic(question.id, it)" in editor)
-        assertTrue("builder.setQuestionAlign(question.id, it)" in editor)
-        assertTrue("builder.moveQuestion(question.id, delta)" in editor)
+        assertTrue("builder.setQuestionFontSize(it.id, it.fontSizeSp + delta)" in editor)
+        assertTrue("builder.setQuestionBold(it.id, !it.bold)" in editor)
+        assertTrue("builder.setQuestionItalic(it.id, !it.italic)" in editor)
+        assertTrue("builder.setQuestionAlign(it.id, value)" in editor)
+        assertTrue("builder.moveQuestion(it.id, delta)" in editor)
         // ویومدل clamp و ترتیب امن دارد
         assertTrue("fontSizeSp=value.coerceIn(8f,40f)" in builderVm)
         assertTrue("(from + delta).coerceIn(0, state.questions.lastIndex)" in builderVm)

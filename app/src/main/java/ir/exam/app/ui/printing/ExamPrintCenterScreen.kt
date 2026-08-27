@@ -143,9 +143,13 @@ fun ExamPrintCenterScreen(
                             }
                             // V63.0 — مداد ویرایش آزمون: سند Word-مانند (همهٔ سؤال‌ها
                             // پشت‌سرهم، اندازهٔ واقعی A4 و صفحه‌بندی) را باز می‌کند.
-                            OutlinedButton(onClick = { onEditExamDocument(exam.id) }) {
-                                Icon(Icons.Outlined.Edit, contentDescription = "ویرایش آزمون")
-                                Text("ویرایش سند")
+                            // V63.3 — فقط آیکن مداد، بدون متن و کادر.
+                            androidx.compose.material3.IconButton(onClick = { onEditExamDocument(exam.id) }) {
+                                Icon(
+                                    Icons.Outlined.Edit,
+                                    contentDescription = "ویرایش آزمون",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                             }
                         }
                     }

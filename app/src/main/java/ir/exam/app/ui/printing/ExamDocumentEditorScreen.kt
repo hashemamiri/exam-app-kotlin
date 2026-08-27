@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,7 +34,10 @@ import androidx.compose.material.icons.outlined.FormatBold
 import androidx.compose.material.icons.outlined.FormatItalic
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material.icons.outlined.ZoomIn
+import androidx.compose.material.icons.outlined.ZoomOut
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -92,6 +97,9 @@ fun ExamDocumentEditorScreen(
     var editingQuestionId by remember { mutableStateOf<String?>(null) }
     // V63.2 — دیالوگ متن (مداد) جدا از انتخاب برای نوار قالب.
     var textDialogQuestionId by remember { mutableStateOf<String?>(null) }
+    // V63.3 — شیء انتخاب‌شده برای +/− و آیکن جابجایی نوار ابزار.
+    var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
 
     val document = remember(state.questions) { WordPageLayout.documentOf(state.questions) }
@@ -103,26 +111,49 @@ fun ExamDocumentEditorScreen(
             title = state.title.ifBlank { "آزمون" },
             questionCount = state.questions.size,
             pageCount = document.pageCount,
-            zoom = zoom,
             saving = state.saving,
-            onZoomOut = { zoom = (zoom - 0.2f).coerceIn(0.6f, 3f) },
-            onZoomIn = { zoom = (zoom + 0.2f).coerceIn(0.6f, 3f) },
             onSave = { confirmSave = true },
             onBack = onBack
         )
 
-        // V63.2 — نوار قالب Word-مانند: با لمس کارت سؤال باز می‌شود.
-        editing?.let { question ->
-            QuestionFormatBar(
-                question = question,
-                onFontSize = { builder.setQuestionFontSize(question.id, it) },
-                onBold = { builder.setQuestionBold(question.id, it) },
-                onItalic = { builder.setQuestionItalic(question.id, it) },
-                onAlign = { builder.setQuestionAlign(question.id, it) },
-                onMove = { delta -> builder.moveQuestion(question.id, delta) },
-                onClose = { editingQuestionId = null }
-            )
-        }
+        // V63.3 — نوار ابزار واحد همیشگی با اسکرول افقی: +/− شیء، جابجایی،
+        // آ+/آ−، تراز، بولد/ایتالیک، ذره‌بین +/− صفحه. ابزارهای متن روی
+        // سؤال انتخابی و +/−/جابجایی روی شیء انتخابی اثر می‌کنند.
+        DocumentToolbar(
+            question = editing,
+            hasObject = selectedImage != null || selectedFigure != null,
+            freeMoveHint = selectedImage != null,
+            onObjectGrow = {
+                selectedImage?.let { (questionId, imageId) ->
+                    val media = state.questions.firstOrNull { it.id == questionId }
+                        ?.images?.firstOrNull { it.id == imageId }
+                    if (media != null) builder.resizeImage(questionId, imageId, media.widthMm + 10f)
+                }
+                selectedFigure?.let { (questionId, occurrenceIndex) ->
+                    resizeFigureBy(builder, state.questions, questionId, occurrenceIndex, +10f)
+                }
+            },
+            onObjectShrink = {
+                selectedImage?.let { (questionId, imageId) ->
+                    val media = state.questions.firstOrNull { it.id == questionId }
+                        ?.images?.firstOrNull { it.id == imageId }
+                    if (media != null) builder.resizeImage(questionId, imageId, media.widthMm - 10f)
+                }
+                selectedFigure?.let { (questionId, occurrenceIndex) ->
+                    resizeFigureBy(builder, state.questions, questionId, occurrenceIndex, -10f)
+                }
+            },
+            onFontSize = { delta ->
+                editing?.let { builder.setQuestionFontSize(it.id, it.fontSizeSp + delta) }
+            },
+            onBold = { editing?.let { builder.setQuestionBold(it.id, !it.bold) } },
+            onItalic = { editing?.let { builder.setQuestionItalic(it.id, !it.italic) } },
+            onAlign = { value -> editing?.let { builder.setQuestionAlign(it.id, value) } },
+            onMoveQuestion = { delta -> editing?.let { builder.moveQuestion(it.id, delta) } },
+            onZoomOut = { zoom = (zoom - 0.2f).coerceIn(0.6f, 3f) },
+            onZoomIn = { zoom = (zoom + 0.2f).coerceIn(0.6f, 3f) },
+            zoom = zoom
+        )
 
         state.error?.let {
             Text(
@@ -165,8 +196,21 @@ fun ExamDocumentEditorScreen(
                         editingQuestionId = editingQuestionId,
                         onSelectQuestion = { id ->
                             editingQuestionId = if (editingQuestionId == id) null else id
+                            selectedImage = null; selectedFigure = null
                         },
                         onEditQuestion = { textDialogQuestionId = it },
+                        selectedImageId = selectedImage?.second,
+                        selectedFigure = selectedFigure,
+                        onSelectImage = { questionId, imageId ->
+                            selectedImage = if (selectedImage == questionId to imageId) null
+                                else questionId to imageId
+                            selectedFigure = null
+                        },
+                        onSelectFigure = { questionId, occurrenceIndex ->
+                            selectedFigure = if (selectedFigure == questionId to occurrenceIndex) null
+                                else questionId to occurrenceIndex
+                            selectedImage = null
+                        },
                         // V63.1 — درگ/ریسایز مستقیم اشیا روی برگه (فقط خروجی چاپ).
                         onMoveImage = builder::moveImage,
                         onResizeImage = builder::resizeImage,
@@ -225,10 +269,7 @@ private fun DocumentEditorTopBar(
     title: String,
     questionCount: Int,
     pageCount: Int,
-    zoom: Float,
     saving: Boolean,
-    onZoomOut: () -> Unit,
-    onZoomIn: () -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -249,15 +290,6 @@ private fun DocumentEditorTopBar(
                 )
             }
             if (saving) CircularProgressIndicator(Modifier.height(18.dp).width(18.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onZoomOut) {
-                    Icon(Icons.Outlined.Remove, contentDescription = "کوچک‌نمایی")
-                }
-                Text("${(zoom * 100).toInt()}٪", style = MaterialTheme.typography.bodySmall)
-                IconButton(onClick = onZoomIn) {
-                    Icon(Icons.Outlined.Add, contentDescription = "بزرگ‌نمایی")
-                }
-            }
             Button(onClick = onSave) { Text("ذخیره") }
         }
     }
@@ -273,6 +305,10 @@ private fun WordPageView(
     editingQuestionId: String?,
     onSelectQuestion: (String) -> Unit,
     onEditQuestion: (String) -> Unit,
+    selectedImageId: String?,
+    selectedFigure: Pair<String, Int>?,
+    onSelectImage: (String, String) -> Unit,
+    onSelectFigure: (String, Int) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
     onResizeFigure: (String, Int, Float) -> Unit
@@ -314,6 +350,10 @@ private fun WordPageView(
                         highlighted = editingQuestionId == question.id,
                         onSelect = { onSelectQuestion(question.id) },
                         onEdit = { onEditQuestion(question.id) },
+                        selectedImageId = selectedImageId,
+                        selectedFigureIndex = selectedFigure?.takeIf { it.first == question.id }?.second,
+                        onSelectImage = { imageId -> onSelectImage(question.id, imageId) },
+                        onSelectFigure = { occurrenceIndex -> onSelectFigure(question.id, occurrenceIndex) },
                         onMoveImage = { imageId, xMm, yMm -> onMoveImage(question.id, imageId, xMm, yMm) },
                         onResizeImage = { imageId, widthMm -> onResizeImage(question.id, imageId, widthMm) },
                         onResizeFigure = { occurrenceIndex, widthMm -> onResizeFigure(question.id, occurrenceIndex, widthMm) }
@@ -342,6 +382,10 @@ private fun WordQuestionBlock(
     highlighted: Boolean,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
+    selectedImageId: String?,
+    selectedFigureIndex: Int?,
+    onSelectImage: (String) -> Unit,
+    onSelectFigure: (Int) -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
     onResizeFigure: (Int, Float) -> Unit
@@ -401,6 +445,8 @@ private fun WordQuestionBlock(
             ResizableFigure(
                 spec = occ.spec,
                 zoom = zoom,
+                selected = selectedFigureIndex == occurrenceIndex,
+                onSelect = { onSelectFigure(occurrenceIndex) },
                 onResized = { widthMm -> onResizeFigure(occurrenceIndex, widthMm) }
             )
         }
@@ -448,6 +494,8 @@ private fun WordQuestionBlock(
                 media = media,
                 zoom = zoom,
                 freePlacement = question.imagePosition == "free",
+                selected = selectedImageId == media.id,
+                onSelect = { onSelectImage(media.id) },
                 onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) },
                 onResized = { widthMm -> onResizeImage(media.id, widthMm) }
             )
@@ -508,75 +556,119 @@ private fun QuestionTextEditorDialog(
 }
 
 /**
- * V63.2 — نوار قالب Word-مانند: با لمس کارت سؤال باز می‌شود؛ اندازهٔ متن
- * (آ- / آ+)، بولد/ایتالیک، تراز راست/وسط/چپ و جابه‌جایی ترتیب سؤال
- * (بالا/پایین). همه با توابع موجود ExamBuilderViewModel ذخیره می‌شوند و
- * چاپ رسمی همان‌ها را می‌خواند؛ صفحه‌بندی خودکار به‌روز می‌شود.
+ * V63.3 — نوار ابزار واحد ویرایشگر سند (درخواست کاربر): همیشه دیده می‌شود و
+ * به چپ/راست اسکرول می‌شود. ترتیب آیکن‌ها: + و − (بزرگ/کوچک‌کردن شیء
+ * انتخابی)، جابجایی (راهنمای درگ شیء)، آ+/آ− (متن سؤال انتخابی)، تراز
+ * راست/وسط/چپ، بولد/ایتالیک، فلش ترتیب سؤال و ذره‌بین +/− (زوم صفحه).
+ * ابزار بدون هدفِ انتخاب‌شده خاموش (غیرفعال) است — همه نماد، بدون متن/کد.
  */
 @Composable
-private fun QuestionFormatBar(
-    question: QuestionDraft,
+private fun DocumentToolbar(
+    question: QuestionDraft?,
+    hasObject: Boolean,
+    freeMoveHint: Boolean,
+    onObjectGrow: () -> Unit,
+    onObjectShrink: () -> Unit,
     onFontSize: (Float) -> Unit,
-    onBold: (Boolean) -> Unit,
-    onItalic: (Boolean) -> Unit,
+    onBold: () -> Unit,
+    onItalic: () -> Unit,
     onAlign: (String) -> Unit,
-    onMove: (Int) -> Unit,
-    onClose: () -> Unit
+    onMoveQuestion: (Int) -> Unit,
+    onZoomOut: () -> Unit,
+    onZoomIn: () -> Unit,
+    zoom: Float
 ) {
     Row(
         Modifier
             .fillMaxWidth()
             .background(Color(0xFFF2F6FA))
+            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, contentDescription = "بستن قالب") }
-        Text(
-            "${question.fontSizeSp.toInt()}",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(horizontal = 2.dp)
+        // + و − : اندازهٔ شیء انتخابی (تصویر/شکل/نمودار/جدول)
+        IconButton(onClick = onObjectGrow, enabled = hasObject) {
+            Icon(Icons.Outlined.Add, contentDescription = "بزرگ‌کردن شیء",
+                tint = if (hasObject) Color(0xFF0B72B8) else Color(0xFFB2BDC6))
+        }
+        IconButton(onClick = onObjectShrink, enabled = hasObject) {
+            Icon(Icons.Outlined.Remove, contentDescription = "کوچک‌کردن شیء",
+                tint = if (hasObject) Color(0xFF0B72B8) else Color(0xFFB2BDC6))
+        }
+        // آیکن جابجایی: وقتی شیء آزاد انتخاب است روشن — خود جابجایی با درگ.
+        Icon(
+            Icons.Outlined.OpenWith,
+            contentDescription = "جابجایی شیء با کشیدن",
+            tint = if (freeMoveHint) Color(0xFF0B72B8) else Color(0xFFB2BDC6),
+            modifier = Modifier.padding(horizontal = 6.dp)
         )
-        TextButton(onClick = { onFontSize(question.fontSizeSp - 2f) }) { Text("آ-") }
-        TextButton(onClick = { onFontSize(question.fontSizeSp + 2f) }) { Text("آ+") }
+        val hasQuestion = question != null
+        TextButton(onClick = { onFontSize(+2f) }, enabled = hasQuestion) { Text("آ+") }
+        TextButton(onClick = { onFontSize(-2f) }, enabled = hasQuestion) { Text("آ-") }
         FormatToggle(
-            selected = question.bold,
-            icon = Icons.Outlined.FormatBold,
-            description = "بولد",
-            onClick = { onBold(!question.bold) }
-        )
-        FormatToggle(
-            selected = question.italic,
-            icon = Icons.Outlined.FormatItalic,
-            description = "ایتالیک",
-            onClick = { onItalic(!question.italic) }
-        )
-        FormatToggle(
-            selected = question.textAlign == "right",
+            selected = question?.textAlign == "right",
             icon = Icons.Outlined.FormatAlignRight,
             description = "تراز راست",
             onClick = { onAlign("right") }
         )
         FormatToggle(
-            selected = question.textAlign == "center",
+            selected = question?.textAlign == "center",
             icon = Icons.Outlined.FormatAlignCenter,
             description = "تراز وسط",
             onClick = { onAlign("center") }
         )
         FormatToggle(
-            selected = question.textAlign == "left",
+            selected = question?.textAlign == "left",
             icon = Icons.Outlined.FormatAlignLeft,
             description = "تراز چپ",
             onClick = { onAlign("left") }
         )
-        Spacer(Modifier.weight(1f))
-        IconButton(onClick = { onMove(-1) }) {
-            Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "سؤال بالاتر")
+        FormatToggle(
+            selected = question?.bold == true,
+            icon = Icons.Outlined.FormatBold,
+            description = "بولد",
+            onClick = onBold
+        )
+        FormatToggle(
+            selected = question?.italic == true,
+            icon = Icons.Outlined.FormatItalic,
+            description = "ایتالیک",
+            onClick = onItalic
+        )
+        IconButton(onClick = { onMoveQuestion(-1) }, enabled = hasQuestion) {
+            Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "سؤال بالاتر",
+                tint = if (hasQuestion) Color(0xFF44505A) else Color(0xFFB2BDC6))
         }
-        IconButton(onClick = { onMove(1) }) {
-            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "سؤال پایین‌تر")
+        IconButton(onClick = { onMoveQuestion(1) }, enabled = hasQuestion) {
+            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "سؤال پایین‌تر",
+                tint = if (hasQuestion) Color(0xFF44505A) else Color(0xFFB2BDC6))
+        }
+        // ذره‌بین ±: زوم صفحهٔ سؤال‌ها
+        IconButton(onClick = onZoomIn) {
+            Icon(Icons.Outlined.ZoomIn, contentDescription = "بزرگ‌نمایی صفحه", tint = Color(0xFF44505A))
+        }
+        Text("${(zoom * 100).toInt()}٪", style = MaterialTheme.typography.bodySmall)
+        IconButton(onClick = onZoomOut) {
+            Icon(Icons.Outlined.ZoomOut, contentDescription = "کوچک‌نمایی صفحه", tint = Color(0xFF44505A))
         }
     }
+}
+
+/** V63.3 — تغییر اندازهٔ شکل انتخابی با گام میلی‌متری از نوار ابزار. */
+private fun resizeFigureBy(
+    builder: ExamBuilderViewModel,
+    questions: List<QuestionDraft>,
+    questionId: String,
+    occurrenceIndex: Int,
+    deltaMm: Float
+) {
+    val question = questions.firstOrNull { it.id == questionId } ?: return
+    val occ = FigureCodec.occurrences(question.text).getOrNull(occurrenceIndex) ?: return
+    builder.updateFigure(
+        questionId, occurrenceIndex,
+        WordPageLayout.withFigureWidthMm(occ.spec, WordPageLayout.figureWidthMm(occ.spec) + deltaMm)
+    )
 }
 
 /** دکمهٔ قالب با پس‌زمینهٔ آبی وقتی فعال است. */
@@ -605,6 +697,8 @@ private fun DraggableQuestionImage(
     media: ir.exam.app.ui.builder.MediaDraft,
     zoom: Float,
     freePlacement: Boolean,
+    selected: Boolean,
+    onSelect: () -> Unit,
     onMoved: (Float, Float) -> Unit,
     onResized: (Float) -> Unit
 ) {
@@ -627,7 +721,8 @@ private fun DraggableQuestionImage(
             .offset { IntOffset((baseXmm * pxPerMm).roundToInt(), (baseYmm * pxPerMm).roundToInt()) }
             .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
             .height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
-            .border(1.dp, Color(0x5527A5F2))
+            .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFF0B72B8) else Color(0x5527A5F2))
+            .pointerInput(media.id) { detectTapGestures(onTap = { onSelect() }) }
             .then(
                 if (freePlacement) Modifier.pointerInput(media.id, zoom) {
                     detectDragGestures(
@@ -672,6 +767,8 @@ private fun DraggableQuestionImage(
 private fun ResizableFigure(
     spec: ir.exam.app.core.figure.FigureSpec,
     zoom: Float,
+    selected: Boolean,
+    onSelect: () -> Unit,
     onResized: (Float) -> Unit
 ) {
     val widthMm = WordPageLayout.figureWidthMm(spec)
@@ -682,7 +779,8 @@ private fun ResizableFigure(
         Modifier
             .padding(top = WordPageLayout.mmToDp(1.5f, zoom).dp)
             .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
-            .border(1.dp, Color(0x5527A5F2))
+            .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFF0B72B8) else Color(0x5527A5F2))
+            .pointerInput(spec.raw) { detectTapGestures(onTap = { onSelect() }) }
     ) {
         InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
         ResizeHandle(

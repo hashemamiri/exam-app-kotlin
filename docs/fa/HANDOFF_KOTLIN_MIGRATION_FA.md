@@ -10503,3 +10503,54 @@ import تمیز (آیکن‌های Format* و FontStyle و clickable import شد
 fontFamily در QuestionDraft هست و PDF می‌خواند؛ UI انتخاب فونت در
 سازنده است)، ذخیرهٔ سربرگ چاپ در پروفایل.
 ```
+
+## ۲۱۳) V63.3 — مداد تنها + نوار ابزار واحد اسکرول‌شونده با انتخاب اشیا
+
+### درخواست کاربر (عین متن خلاصه)
+
+```text
+دکمهٔ ویرایش کارت آزمون در «چاپ آزمون» فقط آیکن مداد باشد. لمس آن پنجرهٔ
+تمام‌صفحه با نواری در بالا: +/− (بزرگ/کوچک‌کردن)، آیکن جابجایی، آ+/آ−،
+ترازها، بولد/ایتالیک و ذره‌بین +/− برای زوم صفحهٔ سؤالات؛ نوار اسکرول
+چپ/راست داشته باشد. صفحه سؤال‌ها پشت‌سرهم مثل چاپ و اسکرول‌شونده؛ با
+انتخاب هر شیء جابجایی/ریسایز؛ همه‌چیز نماد/تصویر/نمودار باشد نه کد.
+```
+
+### چه شد
+
+```text
+- ExamPrintCenterScreen: OutlinedButton «ویرایش سند» → IconButton مداد
+  تنها (contentDescription «ویرایش آزمون» حفظ شد چون needle تست V63_0
+  است).
+- DocumentToolbar جدید (جایگزین QuestionFormatBar): Row با
+  horizontalScroll(rememberScrollState())، همیشه دیده می‌شود؛ ترتیب:
+  +/− شیء انتخابی (تصویر با resizeImage، شکل با resizeFigureBy گام
+  10mm)، آیکن OpenWith (راهنمای جابجایی: روشن وقتی تصویر انتخاب شده؛
+  خود جابجایی همان درگ V63.1 است)، آ+/آ− (گام 2)، تراز راست/وسط/چپ،
+  بولد/ایتالیک (FormatToggle قبلی)، فلش‌های ترتیب سؤال، ZoomIn/ZoomOut
+  + درصد = زوم صفحه (از تاپ‌بار به نوار منتقل شد؛ تاپ‌بار حالا فقط
+  بستن/عنوان/ذخیره).
+- انتخاب شیء: state جدید selectedImage: Pair<qid,imageId> و
+  selectedFigure: Pair<qid,occurrenceIndex>؛ detectTapGestures روی
+  تصویر/شکل انتخاب toggle می‌کند (کادر آبی پررنگ 2dp)؛ انتخاب سؤال
+  (clickable بدنه) انتخاب شیء را پاک می‌کند و برعکس. ابزارهای بدون
+  هدف انتخابی خاکستری/غیرفعال‌اند.
+- helper جدید resizeFigureBy(builder, questions, qid, occIdx, delta).
+```
+
+### هماهنگی‌های تست/verify
+
+```text
+V63_2DocFormatReorderTest: needleهای QuestionFormatBar و
+setQuestionXxx(question.id, it) → DocumentToolbar و لامبداهای جدید
+(it.id, ...). verify: بند V63.2 بازنویسی + بند V63.3 (اسکرول افقی،
+آیکن‌های Zoom/OpenWith، stateهای انتخاب، «QuestionFormatBar» not in،
+مداد بدون Text «ویرایش سند»). شبیه‌سازی سراسری = 0 FAIL؛ بالانس آکولاد
+179/179؛ اسکن import تمیز (horizontalScroll، detectTapGestures،
+OpenWith، ZoomIn/ZoomOut اضافه شدند).
+پچ: V63_3_pencil_unified_toolbar — بدون SQL.
+چک‌لیست دستگاه: کارت آزمون چاپ فقط مداد؛ ویرایشگر: نوار بالا با کشیدن
+انگشت چپ/راست اسکرول شود؛ لمس تصویر/شکل = کادر آبی و +/− نوار همان را
+بزرگ/کوچک کند؛ لمس سؤال = ابزارهای متن روشن؛ ذره‌بین‌ها کل صفحه را زوم
+کنند؛ ذخیره → چاپ همان نتیجه.
+```
