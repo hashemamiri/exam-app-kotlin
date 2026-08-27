@@ -1,7 +1,10 @@
 package ir.exam.app.core.printing
 
 import ir.exam.app.core.figure.FigureCodec
+import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.math.FormulaTextCodec
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
@@ -45,6 +48,15 @@ object WordPageLayout {
 
     /** ارتفاع نمایش شکل/نمودار/جدول؛ دقیقاً همان ارتفاع رندر در NativeMathText. */
     const val FIGURE_BLOCK_HEIGHT_MM: Float = 42f
+    // V63.1 — درگ/ریسایز اشیا: عرض چاپ شیء درون‌متنی داخل X خود توکن %%FIG%%
+    // ذخیره می‌شود تا با همان JSON سؤال ماندگار شود (فقط خروجی چاپ).
+    const val DEFAULT_FIGURE_WIDTH_MM: Float = 95f
+    const val FIGURE_MIN_WIDTH_MM: Float = 40f
+    const val FIGURE_MAX_WIDTH_MM: Float = 180f
+    const val IMAGE_MIN_WIDTH_MM: Float = 20f
+    const val IMAGE_MAX_WIDTH_MM: Float = 190f
+    /** کلید عرض چاپ شیء درون‌متنی (میلی‌متر) در X توکن. */
+    const val FIGURE_WIDTH_KEY: String = "wmm"
     const val MEDIA_GAP_MM: Float = 4f
     const val ANSWER_LINE_HEIGHT_MM: Float = 8f
     const val MATCHING_ROW_HEIGHT_MM: Float = 9f
@@ -118,15 +130,41 @@ object WordPageLayout {
     /** تعداد شکل‌های درج‌شده در یک متن (هرکدام یک سطر کامل). */
     fun figureCount(source: String): Int = FigureCodec.occurrences(source).size
 
+    /** ارتفاع تقریبی تصویر سؤال؛ همان نسبت ۰٫۶ پیش‌نمایش ویرایشگر. */
     fun mediaHeightMm(image: MediaDraft): Float =
-        image.widthMm.coerceIn(5f, USABLE_WIDTH_MM) + MEDIA_GAP_MM
+        image.widthMm.coerceIn(IMAGE_MIN_WIDTH_MM, IMAGE_MAX_WIDTH_MM) * 0.6f + MEDIA_GAP_MM
+
+    /** عرض چاپ یک شکل/نمودار/جدول (پیش‌فرض ۹۵ میلی‌متر مثل قبل). */
+    fun figureWidthMm(spec: FigureSpec): Float =
+        spec.xNum(FIGURE_WIDTH_KEY, DEFAULT_FIGURE_WIDTH_MM).coerceIn(FIGURE_MIN_WIDTH_MM, FIGURE_MAX_WIDTH_MM)
+
+    /** ارتفاع متناسب با عرض؛ برای توکن بدون wmm دقیقاً همان 42mm قبلی. */
+    fun figureHeightMm(spec: FigureSpec): Float =
+        FIGURE_BLOCK_HEIGHT_MM * (figureWidthMm(spec) / DEFAULT_FIGURE_WIDTH_MM)
+
+    /** نسخهٔ جدید spec با عرض چاپ ذخیره‌شده در X.wmm (بقیهٔ کلیدها دست‌نخورده). */
+    fun withFigureWidthMm(spec: FigureSpec, widthMm: Float): FigureSpec {
+        val clamped = widthMm.coerceIn(FIGURE_MIN_WIDTH_MM, FIGURE_MAX_WIDTH_MM)
+        val extras = ((spec.raw["X"] as? JsonObject)?.toMutableMap() ?: mutableMapOf())
+        extras[FIGURE_WIDTH_KEY] = JsonPrimitive(clamped.toInt().toString())
+        val raw = spec.raw.toMutableMap()
+        raw["X"] = JsonObject(extras)
+        return FigureSpec(JsonObject(raw))
+    }
+
+    /** جای افقی تصویر آزاد همیشه داخل ناحیهٔ چاپ می‌ماند. */
+    fun clampImageXmm(xMm: Float, widthMm: Float): Float =
+        xMm.coerceIn(0f, (USABLE_WIDTH_MM - widthMm).coerceAtLeast(0f))
+
+    /** برآورد جای عمودی حالت آزاد در پیش‌نمایش (هم‌ارز سقف 80pt چاپ). */
+    fun freePreviewYmm(yMm: Float): Float = (yMm / PAGE_HEIGHT_MM * 28f).coerceAtMost(28f)
 
     /** ارتفاع تقریبی یک سؤال کامل بر حسب میلی‌متر (سرصفحه + متن + گزینه/جورکردنی + تصویر + خطوط پاسخ). */
     fun questionHeightMm(question: QuestionDraft): Float {
         val fontSizePt = question.fontSizeSp.coerceIn(8f, 30f)
         var height = QUESTION_HEADER_MM
         height += textHeightMm(question.text, fontSizePt)
-        height += figureCount(question.text) * FIGURE_BLOCK_HEIGHT_MM
+        FigureCodec.occurrences(question.text).forEach { height += figureHeightMm(it.spec) }
         when (question.type) {
             QuestionType.MULTIPLE_CHOICE -> question.options.forEach { option ->
                 height += textHeightMm(option, fontSizePt) + 1.5f

@@ -136,6 +136,7 @@ class V63_0WordDocumentEditorTest {
         assertTrue(WordPageLayout.visibleLength(figureToken) < figureToken.length)
         val withFigure = WordPageLayout.questionHeightMm(essay("f", text = figureToken))
         val withoutFigure = WordPageLayout.questionHeightMm(essay("f"))
+        // V63.1 — بدون wmm ارتفاع همان 42mm قبلی است (عرض پیش‌فرض 95mm).
         assertEquals(WordPageLayout.FIGURE_BLOCK_HEIGHT_MM, withFigure - withoutFigure, 0.5f)
     }
 

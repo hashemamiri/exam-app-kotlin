@@ -2,6 +2,7 @@ package ir.exam.app.ui.printing
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -40,13 +44,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.printing.WordPageLayout
+import ir.exam.app.ui.figure.InlineFigureView
+import kotlin.math.roundToInt
 import ir.exam.app.ui.builder.ExamBuilderViewModel
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
@@ -129,7 +138,18 @@ fun ExamDocumentEditorScreen(
                         zoom = zoom,
                         questions = state.questions,
                         editingQuestionId = editingQuestionId,
-                        onEditQuestion = { editingQuestionId = it }
+                        onEditQuestion = { editingQuestionId = it },
+                        // V63.1 — درگ/ریسایز مستقیم اشیا روی برگه (فقط خروجی چاپ).
+                        onMoveImage = builder::moveImage,
+                        onResizeImage = builder::resizeImage,
+                        onResizeFigure = { questionId, occurrenceIndex, widthMm ->
+                            val question = state.questions.firstOrNull { it.id == questionId }
+                            val occ = question?.let { FigureCodec.occurrences(it.text).getOrNull(occurrenceIndex) }
+                            if (occ != null) builder.updateFigure(
+                                questionId, occurrenceIndex,
+                                WordPageLayout.withFigureWidthMm(occ.spec, widthMm)
+                            )
+                        }
                     )
                 }
             }
@@ -223,7 +243,10 @@ private fun WordPageView(
     zoom: Float,
     questions: List<QuestionDraft>,
     editingQuestionId: String?,
-    onEditQuestion: (String) -> Unit
+    onEditQuestion: (String) -> Unit,
+    onMoveImage: (String, String, Float, Float) -> Unit,
+    onResizeImage: (String, String, Float) -> Unit,
+    onResizeFigure: (String, Int, Float) -> Unit
 ) {
     Card(
         Modifier
@@ -260,7 +283,10 @@ private fun WordPageView(
                         question = question,
                         zoom = zoom,
                         highlighted = editingQuestionId == question.id,
-                        onEdit = { onEditQuestion(question.id) }
+                        onEdit = { onEditQuestion(question.id) },
+                        onMoveImage = { imageId, xMm, yMm -> onMoveImage(question.id, imageId, xMm, yMm) },
+                        onResizeImage = { imageId, widthMm -> onResizeImage(question.id, imageId, widthMm) },
+                        onResizeFigure = { occurrenceIndex, widthMm -> onResizeFigure(question.id, occurrenceIndex, widthMm) }
                     )
                 }
             }
@@ -284,7 +310,10 @@ private fun WordQuestionBlock(
     question: QuestionDraft,
     zoom: Float,
     highlighted: Boolean,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onMoveImage: (String, Float, Float) -> Unit,
+    onResizeImage: (String, Float) -> Unit,
+    onResizeFigure: (Int, Float) -> Unit
 ) {
     val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * zoom * 0.75f).sp
     Column(
@@ -313,12 +342,26 @@ private fun WordQuestionBlock(
             }
         }
 
-        NativeMathText(
-            source = question.text,
+        // V63.1 — شکل/نمودار/جدول درون‌متنی جدا رندر می‌شوند تا دستگیرهٔ
+        // تغییر اندازه بگیرند؛ متن/فرمول باقی با NativeMathText قبلی.
+        val figureOccurrences = FigureCodec.occurrences(question.text)
+        var textOnly = question.text
+        figureOccurrences.asReversed().forEach { occ ->
+            textOnly = textOnly.removeRange(occ.start, occ.endExclusive)
+        }
+        if (textOnly.isNotBlank() || figureOccurrences.isEmpty()) NativeMathText(
+            source = textOnly,
             fontSize = fontSize,
             textAlign = TextAlign.Right,
             modifier = Modifier.fillMaxWidth()
         )
+        figureOccurrences.forEachIndexed { occurrenceIndex, occ ->
+            ResizableFigure(
+                spec = occ.spec,
+                zoom = zoom,
+                onResized = { widthMm -> onResizeFigure(occurrenceIndex, widthMm) }
+            )
+        }
 
         when (question.type) {
             QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
@@ -359,13 +402,12 @@ private fun WordQuestionBlock(
         }
 
         question.images.forEach { media ->
-            AsyncImage(
-                model = media.uri,
-                contentDescription = "تصویر سؤال",
-                modifier = Modifier
-                    .width(WordPageLayout.mmToDp(media.widthMm.coerceIn(5f, 182f), zoom).dp)
-                    .height(WordPageLayout.mmToDp(media.widthMm.coerceIn(5f, 182f) * 0.6f, zoom).dp)
-                    .padding(top = WordPageLayout.mmToDp(WordPageLayout.MEDIA_GAP_MM / 2f, zoom).dp)
+            DraggableQuestionImage(
+                media = media,
+                zoom = zoom,
+                freePlacement = question.imagePosition == "free",
+                onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) },
+                onResized = { widthMm -> onResizeImage(media.id, widthMm) }
             )
         }
 
@@ -420,6 +462,135 @@ private fun QuestionTextEditorDialog(
         },
         confirmButton = { Button(onClick = { onApply(text, score) }) { Text("اعمال") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
+}
+
+/**
+ * V63.1 — تصویر سؤال روی برگه: کشیدن بدنه جابه‌جا می‌کند (فقط حالت «آزاد»؛
+ * حالت‌های سطری فقط اندازه)، کشیدن دستگیرهٔ گوشه اندازه را عوض می‌کند.
+ * مقادیر همیشه میلی‌متر ذخیره می‌شوند و مستقیم به چاپ می‌روند.
+ */
+@Composable
+private fun DraggableQuestionImage(
+    media: ir.exam.app.ui.builder.MediaDraft,
+    zoom: Float,
+    freePlacement: Boolean,
+    onMoved: (Float, Float) -> Unit,
+    onResized: (Float) -> Unit
+) {
+    val widthMm = media.widthMm.coerceIn(WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM)
+    val heightMm = widthMm * 0.6f
+    val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
+        WordPageLayout.mmToDp(1f, zoom).dp.toPx()
+    }
+    // آفست زندهٔ حین درگ (میلی‌متر)؛ با رها شدن انگشت commit می‌شود.
+    var dragXmm by remember(media.id) { mutableStateOf(0f) }
+    var dragYmm by remember(media.id) { mutableStateOf(0f) }
+    var resizeMm by remember(media.id) { mutableStateOf(0f) }
+    val liveWidthMm = (widthMm + resizeMm).coerceIn(WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM)
+    val baseXmm = if (freePlacement) WordPageLayout.clampImageXmm(media.xMm + dragXmm, liveWidthMm) else 0f
+    val baseYmm = if (freePlacement) WordPageLayout.freePreviewYmm((media.yMm + dragYmm).coerceIn(0f, 270f)) else 0f
+
+    Box(
+        Modifier
+            .padding(top = WordPageLayout.mmToDp(WordPageLayout.MEDIA_GAP_MM / 2f, zoom).dp)
+            .offset { IntOffset((baseXmm * pxPerMm).roundToInt(), (baseYmm * pxPerMm).roundToInt()) }
+            .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
+            .height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
+            .border(1.dp, Color(0x5527A5F2))
+            .then(
+                if (freePlacement) Modifier.pointerInput(media.id, zoom) {
+                    detectDragGestures(
+                        onDrag = { change, drag ->
+                            change.consume()
+                            dragXmm += drag.x / pxPerMm
+                            dragYmm += drag.y / pxPerMm
+                        },
+                        onDragEnd = {
+                            onMoved(
+                                (media.xMm + dragXmm).coerceIn(0f, 190f),
+                                (media.yMm + dragYmm).coerceIn(0f, 270f)
+                            )
+                            dragXmm = 0f; dragYmm = 0f
+                        }
+                    )
+                } else Modifier
+            )
+    ) {
+        AsyncImage(
+            model = media.uri,
+            contentDescription = "تصویر سؤال",
+            modifier = Modifier.fillMaxWidth().height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
+        )
+        ResizeHandle(
+            zoom = zoom,
+            onDelta = { deltaMm -> resizeMm += deltaMm },
+            onDone = {
+                onResized(liveWidthMm)
+                resizeMm = 0f
+            },
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+    }
+}
+
+/**
+ * V63.1 — شکل/نمودار/جدول درون‌متنی با دستگیرهٔ تغییر اندازه؛ عرض جدید داخل
+ * X.wmm همان توکن %%FIG%% ذخیره می‌شود و چاپ رسمی همان را می‌خواند.
+ */
+@Composable
+private fun ResizableFigure(
+    spec: ir.exam.app.core.figure.FigureSpec,
+    zoom: Float,
+    onResized: (Float) -> Unit
+) {
+    val widthMm = WordPageLayout.figureWidthMm(spec)
+    var resizeMm by remember(spec.raw) { mutableStateOf(0f) }
+    val liveWidthMm = (widthMm + resizeMm)
+        .coerceIn(WordPageLayout.FIGURE_MIN_WIDTH_MM, WordPageLayout.FIGURE_MAX_WIDTH_MM)
+    Box(
+        Modifier
+            .padding(top = WordPageLayout.mmToDp(1.5f, zoom).dp)
+            .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
+            .border(1.dp, Color(0x5527A5F2))
+    ) {
+        InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
+        ResizeHandle(
+            zoom = zoom,
+            onDelta = { deltaMm -> resizeMm += deltaMm },
+            onDone = {
+                onResized(liveWidthMm)
+                resizeMm = 0f
+            },
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+    }
+}
+
+/** دستگیرهٔ گوشهٔ پایین-چپ: کشیدن به چپ = بزرگ‌تر (RTL چاپ از راست می‌چیند). */
+@Composable
+private fun ResizeHandle(
+    zoom: Float,
+    onDelta: (Float) -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
+        WordPageLayout.mmToDp(1f, zoom).dp.toPx()
+    }
+    Box(
+        modifier
+            .size(20.dp)
+            .background(Color(0xCC27A5F2), RoundedCornerShape(topEnd = 8.dp))
+            .pointerInput(zoom) {
+                detectDragGestures(
+                    onDrag = { change, drag ->
+                        change.consume()
+                        onDelta(-drag.x / pxPerMm)
+                    },
+                    onDragEnd = onDone
+                )
+            }
     )
 }
 

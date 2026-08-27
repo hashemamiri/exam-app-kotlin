@@ -10319,3 +10319,143 @@ V63.0.1 بازگشت needle کهنه را ممنوع کرد؛ حذف A/Compilati
 Word-مانند (اندازه/بولد/ایتالیک/تراز per-question موجود است؛ per-range
 نیاز به مدل جدید دارد) + جابجایی ترتیب سؤال‌ها + ذخیرهٔ چیدمان چاپ.
 ```
+
+## ۲۱۰) V63.1 — ویرایشگر سند (مرحلهٔ ۲): درگ/ریسایز تصویر و شکل/نمودار/جدول
+
+### چه شد
+
+```text
+- تصویر سؤال روی برگهٔ A4: کشیدن بدنه (فقط حالت imagePosition="free")
+  جابه‌جا می‌کند؛ دستگیرهٔ آبی گوشهٔ پایین-چپ همیشه اندازه را عوض می‌کند.
+  مقادیر میلی‌متری با moveImage/resizeImage موجودِ ExamBuilderViewModel
+  ذخیره می‌شوند (همان مسیر ذخیرهٔ JSON سؤال + چاپ).
+- شکل/نمودار/جدول درون‌متنی (%%FIG%%): در ویرایشگر جدا از متن رندر
+  می‌شوند (InlineFigureView) با دستگیرهٔ اندازه؛ عرض جدید داخل X.wmm
+  «خود توکن» ذخیره می‌شود (WordPageLayout.withFigureWidthMm →
+  builder.updateFigure) پس با متن سؤال ماندگار است.
+- چاپ رسمی: OfficialPdfPrintAdapter به‌جای 95f ثابت،
+  WordPageLayout.figureWidthMm(rich.spec) را می‌خواند؛ توکن بدون wmm
+  دقیقاً مثل قبل 95mm چاپ می‌شود (سازگاری عقب‌رو).
+- صفحه‌بندی: questionHeightMm حالا ارتفاع هر شکل را از عرضش می‌گیرد
+  (figureHeightMm = 42 × w/95) و ارتفاع تصویر نسبت 0.6 پیش‌نمایش را
+  دارد — بلوک بزرگ‌تر = جای بیشتر در صفحه.
+- ثابت‌های جدید WordPageLayout: DEFAULT_FIGURE_WIDTH_MM=95،
+  FIGURE_MIN/MAX=40/180، IMAGE_MIN/MAX=20/190، FIGURE_WIDTH_KEY="wmm"،
+  clampImageXmm، freePreviewYmm.
+- درگ زنده با state محلی (dragXmm/resizeMm) و commit در onDragEnd —
+  یعنی هنگام کشیدن، ویومدل فقط یک بار در پایان آپدیت می‌شود.
+```
+
+### تست/verify
+
+```text
+جدید: V63_1DocObjectDragResizeTest — ۲ تست قرارداد منبع + ۳ تست اجرایی
+JVM واقعی (clamp عرض توکن، رشد ارتفاع بلوک، clamp X تصویر آزاد).
+هماهنگ: V63_0 (بند شکل کامنت گرفت؛ منطق همان چون پیش‌فرض 95 است).
+verify: ۳ require جدید V63.1 (کنترل‌ها، X.wmm، تست).
+شبیه‌سازی: همهٔ assertهای رشته‌ای تست‌های خوانندهٔ ۳ فایل تغییرکرده
+(اسکریپت regex با معناشناسی substringAfter/Before) = 0 FAIL؛ تست‌های
+اجرایی با python بازمحاسبه شدند. اسکن import: دو غایب
+(RoundedCornerShape، layout.size) قبل از commit پیدا و اضافه شدند.
+پچ: V63_1_doc_object_drag_resize — بدون SQL.
+چک‌لیست دستگاه: چاپ آزمون → ویرایش سند → تصویر با حالت «آزاد» با انگشت
+جابه‌جا شود؛ دستگیرهٔ آبی تصویر/شکل اندازه را عوض کند؛ ذخیره → چاپ برگه
+همان اندازه/جای جدید را چاپ کند؛ توکن بدون wmm مثل قبل چاپ شود.
+```
+
+## ۲۱۱) راهنمای کامل ساخت پچ برای ایجنت (چت جدید اینجا شروع کند)
+
+### نقش‌ها و گردش کار
+
+```text
+کاربر غیربرنامه‌نویس است. گردش ثابت: ایجنت پچ می‌سازد → کاربر در WSL
+اعمال/commit/push می‌کند → GitHub Actions (android.yml) بیلد می‌کند →
+کاربر APK را روی دستگاه تست و نتیجه (متن لاگ یا اسکرین‌شات) را
+می‌فرستد. ایجنت gradle ندارد؛ «تأیید» یعنی: verify PASS + شبیه‌سازی
+python همهٔ assertهای تست‌ها + اسکن import + git apply --check.
+مسیرهای کاربر: ویندوز C:\Users\Hashem\Downloads\exam-app-kotlin،
+WSL /mnt/c/Users/Hashem/Downloads/exam-app-kotlin، فایل پچ در
+/mnt/c/Users/Hashem/Downloads/. ریپو:
+https://github.com/hashemamiri/exam-app-kotlin (public؛ clone بدون
+توکن ممکن است). زبان گفتگو فارسی؛ پیام commit انگلیسی.
+```
+
+### گام‌های ساخت هر پچ (به همین ترتیب)
+
+```text
+۱) همگام‌سازی: git clone تازه از GitHub در /tmp (یا fetch+reset --hard
+   origin/main در clone ورک‌اسپیس). همیشه اول log را ببین — کاربر گاهی
+   خودش کامیت push کرده (V63.0 را از ابزار دیگر push کرد و فایل‌های
+   زائد A/Compilation/Get/Run + خود پچ را هم commit کرده بود).
+۲) شناخت: قبل از هر تغییر، کد فعلی را grep/sed کن؛ حدس ممنوع. اگر
+   چیزی مبهم است از کاربر با ask_user بپرس (جواب‌ها کوتاه و گزینه‌ای).
+۳) ویرایش با python (str.replace با assert روی رشتهٔ لنگر) روی clone
+   /tmp؛ نه ویرایش دستی حجیم. لنگر باید یکتا باشد.
+۴) برای هر قابلیت: تست جدید V<maj>_<min>...Test.kt در
+   app/src/test/java/ir/exam/app/ui/app/ (قرارداد منبع + در صورت امکان
+   تست اجرایی JVM واقعی؛ مثل WordPageLayout که عمداً بدون اندروید است).
+۵) تست‌های قدیمی: هر فایل main که تغییر کرد، «همهٔ» تست‌هایی که آن را
+   می‌خوانند شبیه‌سازی شود (این پرتکرارترین علت CI قرمز بود: V62.7،
+   V62.8، V63.0). اسکریپت شبیه‌سازی: needleها را با معناشناسی کاتلین
+   unescape کن (\" و ${'"'"'$'"'"'} و \n)، substringAfter/Before کاتلین =
+   find اول (نه rfind).
+۶) اسکن import: در فایل‌های تغییرکرده هر نماد Capitalized یا modifier
+   (verticalScroll، size، RoundedCornerShape...) یا import داشته باشد
+   یا fully-qualified باشد. دو بار این خطا CI را قرمز کرد (V62.8.1 و
+   نزدیک بود V63.1).
+۷) verify (scripts/verify_native_final.py): برای هر پچ require جدید +
+   در صورت نیاز require «ضد بازگشت» needle کهنه. FAIL واقعاً exit 1
+   می‌دهد و CI را می‌شکند.
+۸) یک خط فارسی بالای text/CHANGELOG_FA.txt (workflow آن را به‌عنوان
+   نکات نسخه منتشر می‌کند؛ V30 تست دارد که «جابه‌جایی» و «لیست» در کل
+   فایل باشند — خط‌های قدیمی را حذف نکن).
+۹) بخش جدید هندآف (همین فایل) با شمارهٔ بعدی: چه شد/ریشه/تست/چک‌لیست.
+۱۰) commit در clone /tmp → git diff HEAD~1 HEAD > پچ (اگر باینری هست
+    --binary) → روی clone «تمیز دیگر» git apply --check و apply و
+    verify و شبیه‌سازی post-patch → کپی پچ به /home/user و فایل‌های
+    تغییرکرده به clone ورک‌اسپیس.
+۱۱) تحویل: پچ با present_file + بلوک دستورهای WSL ثابت:
+    git apply --check <پچ> && echo OK؛ git apply؛ git add -A؛
+    git --no-pager diff --cached --stat؛ git commit -m "..."؛
+    git push origin HEAD. اگر ریموت جلوتر است اول git pull origin main.
+```
+
+### دام‌های شناخته‌شده (تکرار نشود)
+
+```text
+- رشتهٔ needle یک assertFalse حتی داخل «کامنت فارسی» فایل main هم
+  شکست می‌دهد («چاپ برگه» در کامنت TeacherDashboardScreen).
+- IconButton( شامل زیررشتهٔ Button( است؛ needle منفی باید چندخطی و
+  با تورفتگی دقیق باشد. FlowRow خودش fillMaxWidth دارد.
+- BulkStudentDialog باید private بماند (۱۷ needle وابسته).
+- GradeOdometerPicker: دقیقاً ۵ بار در SchoolManagementScreen و ۲ بار
+  در ProfileSettingsScreen (V23 با Regex count می‌شمارد).
+- PasswordVisualTransformation() فقط ۱ بار در کل main (V20).
+- الگوهای شمارشی (split(...).size-1، Regex.findAll.count) را جدا از
+  اسکن in/!in بررسی کن — لیست تست‌های شمارشی در بخش‌های قبل.
+- secret هرگز در چت/گیت/APK؛ verify الگوی googleusercontent.com را در
+  SignInScreen/SupabaseProvider ممنوع کرده.
+- فایل با حرف بزرگ در res/ بیلد را می‌شکند؛ فونت‌ها assets/fonts/
+  (bnazanin.ttf و bnazanin_bold.ttf موجودند).
+- workflow: on push به main + concurrency صف؛ گاهی رویداد push تا ۲۰
+  دقیقه دیر می‌شود. لاگ کامل CI با API بدون admin نمی‌آید؛ از annotations
+  و پیام کاربر استفاده کن.
+- کاربر گاهی «ادامه بده» می‌فرستد: کار را تا تحویل پچ ادامه بده و اگر
+  چت قطع شد از همین هندآف وضعیت را بازسازی کن.
+- SQLها: dual-write در supabase/migrations/ + sql/manual/ (verify
+  برابری متن را چک می‌کند). SQLهای معوق کاربر: V62_6 (اشتراک/دعوت) و
+  V62_7 (خلاصهٔ چندمدرسه‌ای) — اگر خطای «تابع پیدا نشد» یا subquery
+  دید، یادآوری کن در Supabase اجرا کند.
+```
+
+### وضعیت لحظهٔ نوشتن این بخش
+
+```text
+ریموت f11744a (V63.0.1) سبز (ران 314). پچ تحویلی جدید:
+V63_1_doc_object_drag_resize (این بخش). نقشهٔ باقی‌مانده از پاسخ‌های
+ask_user کاربر برای ویرایشگر Word-مانند: پچ ۳ = اندازه/بولد/ایتالیک/
+تراز متن per-question از داخل ویرایشگر + جابه‌جایی ترتیب سؤال‌ها +
+(در صورت درخواست) ذخیرهٔ چیدمان header چاپ. تصمیم‌های کاربر: تغییرات
+فقط روی خروجی چاپ (نمایش دانش‌آموز در اپ دست‌نخورده)، چیدمان ذخیره
+شود، بولد/ایتالیک/تراز و ترتیب سؤال‌ها در برنامه باشد.
+```

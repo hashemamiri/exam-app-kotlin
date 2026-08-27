@@ -1999,6 +1999,23 @@ require("class V63_0WordDocumentEditorTest" in _v63_test
         and "WordPageLayout.documentOf(" in _v63_test
         and "an oversized question occupies its own page" in _v63_test,
         "V63.0 document-editor tests are missing")
+# ---- V63.1: درگ/ریسایز اشیا در ویرایشگر سند؛ عرض شکل داخل توکن %%FIG%% ----
+_v63_1_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_1DocObjectDragResizeTest.kt").read_text()
+require("fun DraggableQuestionImage(" in _doc_editor_v63
+        and "fun ResizableFigure(" in _doc_editor_v63
+        and "fun ResizeHandle(" in _doc_editor_v63
+        and "onMoveImage = builder::moveImage" in _doc_editor_v63
+        and "WordPageLayout.withFigureWidthMm(occ.spec, widthMm)" in _doc_editor_v63,
+        "V63.1 drag/resize object controls are missing from the document editor")
+require("fun withFigureWidthMm(spec: FigureSpec, widthMm: Float): FigureSpec" in _word_layout_v63
+        and "fun figureWidthMm(spec: FigureSpec): Float" in _word_layout_v63
+        and 'const val FIGURE_WIDTH_KEY: String = "wmm"' in _word_layout_v63
+        and "WordPageLayout.figureWidthMm(rich.spec)" in _pdf_v62
+        and "imageWidthMm=95f" not in _pdf_v62,
+        "V63.1 persisted figure width (X.wmm) is missing from layout/print")
+require("class V63_1DocObjectDragResizeTest" in _v63_1_test
+        and "bigger objects really grow the paginated block" in _v63_1_test,
+        "V63.1 drag/resize tests are missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

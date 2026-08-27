@@ -156,7 +156,8 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                 when (rich) {
                     is RichSegment.Math -> add(RenderBlock(formula=rich.tex,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
                     is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
-                        add(RenderBlock(image=bmp,imageWidthMm=95f))
+                        // V63.1 — عرض ذخیره‌شده در خود توکن؛ بدون wmm همان ۹۵ قبلی.
+                        add(RenderBlock(image=bmp,imageWidthMm=WordPageLayout.figureWidthMm(rich.spec)))
                     } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                     is RichSegment.Text -> if (rich.text.isNotBlank()) {
                         splitText(rich.text.replace("\\$","$"),700).forEach { add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily)) }
