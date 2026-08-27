@@ -74,8 +74,8 @@ class V63_0WordDocumentEditorTest {
         assertTrue("editable = editingQuestionId == question.id" in editor)
         // این صفحه سازندهٔ آزمون نیست: هیچ پردهٔ سازنده اینجا نیست
         assertTrue("ExamBuilderScreen(" !in editor)
-        // شمارهٔ صفحه در پاصفحهٔ سند
-        assertTrue("صفحهٔ \$pageNumber از \$pageCount" in editor)
+        // V63.8 — هدر/فوتر از ویرایشگر حذف شد؛ شمارهٔ صفحه فقط در تاپ‌بار.
+        assertTrue("fun WordPaperChrome()" in editor)
     }
 
     @Test

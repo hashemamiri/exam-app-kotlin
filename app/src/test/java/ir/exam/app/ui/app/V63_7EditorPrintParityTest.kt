@@ -6,13 +6,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V63.7 — ویرایشگر سند «همانند برگهٔ چاپ» (اسکرین‌شات‌های کاربر):
- * ۱) بالای هر صفحهٔ A4 همان سربرگ رسمی ۵سطری چاپ (HeaderPreview مشترک با
- *    پنجرهٔ سربرگ) + در صفحهٔ اول سطر «درس/مدت/بارم» داخل کادر.
- * ۲) عنوان سادهٔ بالای کاغذ حذف؛ پاصفحه مثل PDF: امضای دبیر/مدیر +
- *    «صفحهٔ N از M».
- * ۳) سربرگ از پروفایل معلم می‌آید (profilePrintHeader جدید) و درس/مدت از
- *    state خود آزمون.
+ * V63.8 — بازنگری V63.7 به درخواست کاربر (این فایل بازنویسی شد):
+ * ۱) سربرگ رسمی «فقط» بالای صفحهٔ اول خروجی چاپ؛ در ویرایشگر هیچ سربرگی
+ *    نیست. ۲) امضای دبیر/مدیر فقط پایان صفحهٔ آخر چاپ؛ در ویرایشگر نیست.
+ * ۳) هدر/فوتر ویرایشگر حذف؛ هر سؤال سطر «سؤال N (بارم نمره)» بالای متن
+ *    خودش دارد. ۴) هم‌مقیاسی سطر ویرایش و چاپ (ضریب عرض ۵۱۹pt چاپ).
+ * ۵) بدون لکه/دستگیرهٔ آبی؛ لمس = انتخاب، کشیدن شیء انتخابی = جابجایی
+ *    آزاد (تصویر خودکار حالت free می‌گیرد).
  */
 class V63_7EditorPrintParityTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -22,34 +22,41 @@ class V63_7EditorPrintParityTest {
     private fun source(path: String) = File(root(), path).readText()
 
     private val editor by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt") }
-    private val portability by lazy { source("app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt") }
+    private val pdfAdapter by lazy { source("app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt") }
 
     @Test
-    fun `every page starts with the official five-row header like print`() {
-        assertTrue("HeaderPreview(header)" in editor)
-        assertTrue("fun headerFor(pageIndex: Int)" in editor)
-        assertTrue("val pageHeader = if (pageIndex == 0) firstHeader else headerFor(pageIndex)" in editor)
-        // سطر مشخصات فقط صفحهٔ اول و داخل کادر مثل چاپ
-        assertTrue("infoLine" in editor)
-        assertTrue("\"درس: \" + state.subject.ifBlank { \"—\" }" in editor)
-        // صفحه‌بندی جای سربرگ را کم می‌کند
-        assertTrue("var used = firstHeader.height + gapPx" in editor)
-        assertTrue("used = firstHeader.height + gapPx" in editor)
+    fun `print header only on page one and signatures only on the last page`() {
+        assertTrue("if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)" in pdfAdapter)
+        assertTrue("var y = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP" in pdfAdapter)
+        assertTrue("if (pageNumber == totalPages) canvas.drawText(printable.footerNote" in pdfAdapter)
+        // ظرفیت صفحات بدون سربرگ بیشتر است
+        assertTrue("CONTENT_BOTTOM - LATER_CONTENT_TOP" in pdfAdapter)
     }
 
     @Test
-    fun `paper chrome mirrors the pdf footer instead of a plain title`() {
-        assertTrue("نام و امضای دبیر:            نام و امضای مدیر:" in editor)
-        assertTrue("صفحهٔ \$pageNumber از \$pageCount" in editor)
-        // عنوان وسط‌چین قدیمی بالای کاغذ حذف شد
-        assertFalse("fontSize = (11 * zoom).sp" in editor)
+    fun `editor pages are bare paper with per-question number and score lines`() {
+        assertTrue("fun WordPaperChrome()" in editor)
+        assertFalse("HeaderPreview(header)" in editor)
+        assertFalse("نام و امضای دبیر" in editor)
+        assertFalse("headerFor" in editor)
+        // سطر شماره/بارم بالای متن هر سؤال (از V63.4 درجا هم ویرایش می‌شود)
+        assertTrue("\"سؤال \$row     (\"" in editor)
     }
 
     @Test
-    fun `profile header feeds the editor preview`() {
-        assertTrue("suspend fun profilePrintHeader(): Result<OfficialPrintHeader>" in portability)
-        assertTrue("SupabasePortabilityRepository().profilePrintHeader()" in editor)
-        assertTrue("printHeader.copy(" in editor)
-        assertTrue("subject = state.subject" in editor)
+    fun `editor line width matches the printed line width`() {
+        // چاپ: عرض محتوا 595-2x38=519pt؛ ویرایشگر همان نسبت را اعمال می‌کند
+        assertTrue("/ 519f" in editor)
+        assertTrue("val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * printScale).sp" in editor)
+        assertFalse("* zoom * 0.75f" in editor)
+    }
+
+    @Test
+    fun `objects select on tap and drag freely without blue handles`() {
+        assertFalse("fun ResizeHandle(" in editor)
+        assertTrue("detectTapGestures(onTap = { onSelect() })" in editor)
+        assertTrue("if (selected) Modifier.pointerInput(media.id, zoom)" in editor)
+        assertTrue("onFreeMove()" in editor)
+        assertTrue("builder.setImagePosition(questionId, \"free\")" in editor)
     }
 }

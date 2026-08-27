@@ -39,7 +39,9 @@ class V63_1DocObjectDragResizeTest {
         assertTrue("onResizeImage = builder::resizeImage" in editor)
         // جابه‌جایی بدنه فقط در حالت آزاد؛ ریسایز همیشه
         assertTrue("freePlacement = question.imagePosition == \"free\"" in editor)
-        assertTrue("fun ResizeHandle(" in editor)
+        // V63.8 — دستگیره/لکهٔ آبی حذف شد؛ اندازه با +/− نوار ابزار است.
+        assertTrue("fun ResizeHandle(" !in editor)
+        assertTrue("detectTapGestures(onTap = { onSelect() })" in editor)
         // رندر ثابت قدیمی تصویر حذف شد
         assertFalse("contentDescription = \"تصویر سؤال\",\n                modifier = Modifier\n                    .width(WordPageLayout.mmToDp(media.widthMm.coerceIn(5f, 182f), zoom).dp)" in editor)
     }

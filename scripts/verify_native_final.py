@@ -1981,7 +1981,7 @@ require("fun ExamDocumentEditorScreen(" in _doc_editor_v63
         and "fun WordFlowDocument(" in _doc_editor_v63
         and "editable = editingQuestionId == question.id" in _doc_editor_v63
         and "ExamBuilderScreen(" not in _doc_editor_v63
-        and "صفحهٔ $pageNumber از $pageCount" in _doc_editor_v63,
+        and "fun WordPaperChrome()" in _doc_editor_v63,
         "V63.0 word-like document editor screen is missing")
 require("onEditExamDocument: (String) -> Unit" in _print_center_v62
         and "Icons.Outlined.Edit" in _print_center_v62
@@ -2003,7 +2003,6 @@ require("class V63_0WordDocumentEditorTest" in _v63_test
 _v63_1_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_1DocObjectDragResizeTest.kt").read_text()
 require("fun DraggableQuestionImage(" in _doc_editor_v63
         and "fun ResizableFigure(" in _doc_editor_v63
-        and "fun ResizeHandle(" in _doc_editor_v63
         and "onMoveImage = builder::moveImage" in _doc_editor_v63
         and "WordPageLayout.withFigureWidthMm(occ.spec, widthMm)" in _doc_editor_v63,
         "V63.1 drag/resize object controls are missing from the document editor")
@@ -2064,13 +2063,19 @@ require("SubcomposeLayout(" in _doc_editor_v63
         and "WordPageView" not in _doc_editor_v63
         and "block.heightMm" not in _doc_editor_v63,
         "V63.6 real-measured continuous word document is missing")
-# ---- V63.7: ویرایشگر = برگهٔ چاپ (سربرگ رسمی هر صفحه + پاصفحهٔ امضا) ----
-require("HeaderPreview(header)" in _doc_editor_v63
-        and "fun headerFor(pageIndex: Int)" in _doc_editor_v63
-        and "نام و امضای دبیر:            نام و امضای مدیر:" in _doc_editor_v63
-        and "suspend fun profilePrintHeader(): Result<OfficialPrintHeader>" in
-            (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text(),
-        "V63.7 editor/print parity header-footer is missing")
+# ---- V63.8 (بازنگری V63.7): سربرگ فقط صفحهٔ ۱ چاپ، امضا فقط صفحهٔ آخر،
+# ویرایشگر کاغذ خالی هم‌مقیاس چاپ، بدون دستگیرهٔ آبی، درگ آزاد با انتخاب ----
+require("if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)" in _pdf_v62
+        and "if (pageNumber == totalPages) canvas.drawText(printable.footerNote" in _pdf_v62
+        and "const val LATER_CONTENT_TOP = 50f" in _pdf_v62,
+        "V63.8 first-page-only header / last-page-only signatures are missing from print")
+require("fun WordPaperChrome()" in _doc_editor_v63
+        and "/ 519f" in _doc_editor_v63
+        and "fun ResizeHandle(" not in _doc_editor_v63
+        and "HeaderPreview(header)" not in _doc_editor_v63
+        and "نام و امضای دبیر" not in _doc_editor_v63
+        and 'builder.setImagePosition(questionId, "free")' in _doc_editor_v63,
+        "V63.8 bare print-scaled editor with tap-select free drag is missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

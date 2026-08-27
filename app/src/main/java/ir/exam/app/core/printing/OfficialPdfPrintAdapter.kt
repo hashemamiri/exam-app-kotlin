@@ -133,8 +133,11 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         var current = mutableListOf<PlannedBlock>()
         var used = 0f
         blocks.forEach { block ->
-            val height = measureBlock(block).coerceAtMost(CONTENT_HEIGHT)
-            if (used + height > CONTENT_HEIGHT && current.isNotEmpty()) {
+            // V63.8 — ظرفیت صفحهٔ اول با سربرگ، صفحات بعدی بدون سربرگ.
+            val capacity = if (result.isEmpty()) CONTENT_HEIGHT
+                else CONTENT_BOTTOM - LATER_CONTENT_TOP
+            val height = measureBlock(block).coerceAtMost(capacity)
+            if (used + height > capacity && current.isNotEmpty()) {
                 result += PlannedPage(current)
                 current = mutableListOf()
                 used = 0f
@@ -211,8 +214,9 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
 
     private fun drawPage(canvas: Canvas, page: PlannedPage, pageNumber: Int, totalPages: Int) {
         canvas.drawColor(Color.WHITE)
-        drawHeader(canvas, pageNumber, totalPages)
-        var y = CONTENT_TOP
+        // V63.8 — سربرگ رسمی فقط بالای صفحهٔ اول (درخواست کاربر).
+        if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)
+        var y = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP
         page.blocks.forEach { planned ->
             val block = planned.block
             if (block.boxed) {
@@ -330,7 +334,8 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
 
     private fun drawFooter(canvas: Canvas, pageNumber: Int, totalPages: Int) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 8.5f; textAlign = Paint.Align.RIGHT }
-        canvas.drawText(printable.footerNote, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 25f, paint)
+        // V63.8 — امضای دبیر/مدیر فقط پایان صفحهٔ آخر (درخواست کاربر).
+        if (pageNumber == totalPages) canvas.drawText(printable.footerNote, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 25f, paint)
         paint.textAlign = Paint.Align.LEFT
         canvas.drawText("آزمون آنلاین Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
     }
@@ -438,6 +443,8 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         const val MARGIN = 38f
         const val HEADER_BOTTOM = 112f
         const val CONTENT_TOP = 125f
+        // V63.8 — سربرگ فقط صفحهٔ اول است؛ صفحات بعدی از بالاتر شروع می‌شوند.
+        const val LATER_CONTENT_TOP = 50f
         // V62.7 — عرض ثابت سه ستون سربرگ رسمی (راست/وسط/چپ) + ارتفاع سطر.
         const val SIDE_COL_WIDTH = 130f
         const val CENTER_COL_WIDTH = 235f

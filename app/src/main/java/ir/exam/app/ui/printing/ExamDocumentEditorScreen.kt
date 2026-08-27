@@ -68,8 +68,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import ir.exam.app.data.local.PrintLayoutStore
-import ir.exam.app.data.repository.SupabasePortabilityRepository
-import ir.exam.app.domain.model.OfficialPrintHeader
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.printing.WordPageLayout
 import ir.exam.app.ui.figure.InlineFigureView
@@ -109,12 +107,6 @@ fun ExamDocumentEditorScreen(
         }
     }
     var savedTick by remember(examId) { mutableStateOf(false) }
-    // V63.7 — سربرگ رسمی برای بالای صفحهٔ اول (مثل خروجی چاپ).
-    var printHeader by remember(examId) { mutableStateOf(OfficialPrintHeader()) }
-    LaunchedEffect(examId) {
-        SupabasePortabilityRepository().profilePrintHeader()
-            .onSuccess { printHeader = it.copy(subject = "", examDate = "", examDuration = "") }
-    }
     // V63.5 — دکمهٔ برگشت گوشی: خروج از ویرایشگر به «چاپ آزمون»، نه از برنامه.
     BackHandler(onBack = onBack)
     var zoom by remember { mutableStateOf(1.6f) }
@@ -203,14 +195,6 @@ fun ExamDocumentEditorScreen(
                 Text("این آزمون هنوز سؤالی ندارد.")
             }
             else -> WordFlowDocument(
-                title = state.title.ifBlank { "آزمون" },
-                header = printHeader.copy(
-                    subject = state.subject,
-                    examDuration = state.durationMinutes.filter(Char::isDigit)
-                ),
-                infoLine = "درس: " + state.subject.ifBlank { "—" } +
-                    "     مدت: " + state.durationMinutes.ifBlank { "—" } + " دقیقه" +
-                    "     بارم: " + state.questions.sumOf { it.score },
                 questions = state.questions,
                 zoom = zoom,
                 editingQuestionId = editingQuestionId,
@@ -233,6 +217,7 @@ fun ExamDocumentEditorScreen(
                         else questionId to occurrenceIndex
                     selectedImage = null
                 },
+                onImageFreeMove = { questionId -> builder.setImagePosition(questionId, "free") },
                 onMoveImage = builder::moveImage,
                 onResizeImage = builder::resizeImage,
                 onResizeFigure = { questionId, occurrenceIndex, widthMm ->
@@ -288,9 +273,6 @@ private fun DocumentEditorTopBar(
  */
 @Composable
 private fun WordFlowDocument(
-    title: String,
-    header: OfficialPrintHeader,
-    infoLine: String,
     questions: List<QuestionDraft>,
     zoom: Float,
     editingQuestionId: String?,
@@ -302,6 +284,7 @@ private fun WordFlowDocument(
     selectedFigure: Pair<String, Int>?,
     onSelectImage: (String, String) -> Unit,
     onSelectFigure: (String, Int) -> Unit,
+    onImageFreeMove: (String) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
     onResizeFigure: (String, Int, Float) -> Unit
@@ -315,34 +298,12 @@ private fun WordFlowDocument(
             val pageWidthPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM, zoom).dp.roundToPx()
             val pageHeightPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_HEIGHT_MM, zoom).dp.roundToPx()
             val marginPx = WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp.roundToPx()
-            val headerPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_HEADER_MM, zoom).dp.roundToPx()
-            val footerPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_FOOTER_MM, zoom).dp.roundToPx()
+
             val gapPx = WordPageLayout.mmToDp(WordPageLayout.BLOCK_GAP_MM, zoom).dp.roundToPx()
             val pageGapPx = 14.dp.roundToPx()
             val contentWidth = pageWidthPx - marginPx * 2
-            val contentHeight = pageHeightPx - marginPx * 2 - headerPx - footerPx
+            val contentHeight = pageHeightPx - marginPx * 2
             val blockConstraints = Constraints(maxWidth = contentWidth)
-
-            // V63.7 — سربرگ رسمی ۵سطری (مثل چاپ در «هر» صفحه تکرار می‌شود) +
-            // سطر درس/مدت/بارم فقط در صفحهٔ اول.
-            fun headerFor(pageIndex: Int) = subcompose("official-header-$pageIndex") {
-                Column {
-                    HeaderPreview(header)
-                    if (pageIndex == 0) {
-                        Spacer(Modifier.height(WordPageLayout.mmToDp(2f, zoom).dp))
-                        Text(
-                            infoLine,
-                            fontSize = (10 * zoom).sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, Color(0xFF787878), RoundedCornerShape(3.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }.first().measure(blockConstraints)
-            val firstHeader = headerFor(0)
 
             // ۱) اندازه‌گیری واقعی هر سؤال با عرض محتوا
             val placeables = questions.mapIndexed { index, question ->
@@ -360,6 +321,7 @@ private fun WordFlowDocument(
                         selectedFigureIndex = selectedFigure?.takeIf { it.first == question.id }?.second,
                         onSelectImage = { imageId -> onSelectImage(question.id, imageId) },
                         onSelectFigure = { occ -> onSelectFigure(question.id, occ) },
+                        onImageFreeMove = { onImageFreeMove(question.id) },
                         onMoveImage = { imageId, x, y -> onMoveImage(question.id, imageId, x, y) },
                         onResizeImage = { imageId, w -> onResizeImage(question.id, imageId, w) },
                         onResizeFigure = { occ, w -> onResizeFigure(question.id, occ, w) }
@@ -369,13 +331,12 @@ private fun WordFlowDocument(
 
             // ۲) صفحه‌بندی با ارتفاع واقعی: مثل ورد صفحهٔ بعدی فقط پس از پر شدن
             val pages = mutableListOf<MutableList<Int>>(mutableListOf())
-            // سربرگ صفحات بعدی کوتاه‌تر است (بدون سطر مشخصات) — تقریب امن: همان اول.
-            var used = firstHeader.height + gapPx
+            var used = 0
             placeables.forEachIndexed { index, placeable ->
                 val gap = if (pages.last().isEmpty()) 0 else gapPx
                 if (used + gap + placeable.height > contentHeight && pages.last().isNotEmpty()) {
                     pages += mutableListOf<Int>()
-                    used = firstHeader.height + gapPx
+                    used = 0
                 }
                 pages.last() += index
                 used += (if (pages.last().size == 1) 0 else gapPx) + placeable.height
@@ -384,25 +345,15 @@ private fun WordFlowDocument(
 
             // ۳) زمینهٔ کاغذها + سرصفحه/پاصفحهٔ هر صفحه
             val chrome = pages.mapIndexed { pageIndex, _ ->
-                subcompose("page-$pageIndex") {
-                    WordPaperChrome(
-                        title = title,
-                        pageNumber = pageIndex + 1,
-                        pageCount = pages.size,
-                        zoom = zoom
-                    )
-                }.first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
+                subcompose("page-$pageIndex") { WordPaperChrome() }
+                    .first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
             }
-
             val totalHeight = pages.size * pageHeightPx + (pages.size - 1) * pageGapPx
             layout(pageWidthPx, totalHeight) {
                 var pageTop = 0
                 pages.forEachIndexed { pageIndex, blockIndexes ->
                     chrome[pageIndex].place(0, pageTop)
-                    var y = pageTop + marginPx + headerPx
-                    val pageHeader = if (pageIndex == 0) firstHeader else headerFor(pageIndex)
-                    pageHeader.place(marginPx, y)
-                    y += pageHeader.height + gapPx
+                    var y = pageTop + marginPx
                     blockIndexes.forEachIndexed { position, blockIndex ->
                         if (position > 0) y += gapPx
                         placeables[blockIndex].place(marginPx, y)
@@ -417,31 +368,15 @@ private fun WordFlowDocument(
 
 /** کاغذ سفید A4 با سایه + عنوان بالا و شمارهٔ صفحه پایین (پشت سؤال‌ها). */
 @Composable
-private fun WordPaperChrome(title: String, pageNumber: Int, pageCount: Int, zoom: Float) {
-    // V63.7 — مثل برگهٔ چاپ: بالای کاغذ خالی (سربرگ رسمی جدا چیده می‌شود)؛
-    // پایین، سطر امضا + شمارهٔ صفحه شبیه پاصفحهٔ PDF.
-    Column(
+private fun WordPaperChrome() {
+    // V63.8 — کاغذ سفید خالی: بدون سرصفحه/پاصفحه (درخواست کاربر؛ سربرگ و
+    // امضا فقط در خروجی چاپ‌اند).
+    Box(
         Modifier
             .fillMaxSize()
             .shadow(3.dp)
             .background(Color.White)
-            .padding(WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp)
-    ) {
-        Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "$title · صفحهٔ $pageNumber از $pageCount",
-                fontSize = (8.5f * zoom).sp,
-                color = Color(0xFF666666)
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                "نام و امضای دبیر:            نام و امضای مدیر:",
-                fontSize = (8.5f * zoom).sp,
-                color = Color(0xFF444444)
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -458,11 +393,16 @@ private fun WordQuestionBlock(
     selectedFigureIndex: Int?,
     onSelectImage: (String) -> Unit,
     onSelectFigure: (Int) -> Unit,
+    onImageFreeMove: () -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
     onResizeFigure: (Int, Float) -> Unit
 ) {
-    val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * zoom * 0.75f).sp
+    // V63.8 — هم‌مقیاسی دقیق با چاپ: چاپ متن را با textSize=fontSizeSp پوینت
+    // روی عرض ۵۱۹pt می‌چیند (595-2×38). اینجا همان نسبت روی عرض واقعی صفحه
+    // اعمال می‌شود تا «تعداد کلمات هر سطر» در ویرایش و چاپ یکی باشد.
+    val printScale = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM - 2f * WordPageLayout.MARGIN_MM, zoom) / 519f
+    val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * printScale).sp
     // V63.2 — بولد/ایتالیک/تراز سؤال روی برگه هم مثل چاپ دیده می‌شوند.
     val weight = if (question.bold) FontWeight.Bold else null
     val style = if (question.italic) FontStyle.Italic else null
@@ -607,8 +547,9 @@ private fun WordQuestionBlock(
                 freePlacement = question.imagePosition == "free",
                 selected = selectedImageId == media.id,
                 onSelect = { onSelectImage(media.id) },
-                onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) },
-                onResized = { widthMm -> onResizeImage(media.id, widthMm) }
+                // V63.8 — با اولین کشیدن، تصویر خودکار «آزاد» می‌شود.
+                onFreeMove = onImageFreeMove,
+                onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) }
             )
         }
 
@@ -765,8 +706,8 @@ private fun DraggableQuestionImage(
     freePlacement: Boolean,
     selected: Boolean,
     onSelect: () -> Unit,
-    onMoved: (Float, Float) -> Unit,
-    onResized: (Float) -> Unit
+    onFreeMove: () -> Unit,
+    onMoved: (Float, Float) -> Unit
 ) {
     val widthMm = media.widthMm.coerceIn(WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM)
     val heightMm = widthMm * 0.6f
@@ -776,21 +717,24 @@ private fun DraggableQuestionImage(
     // آفست زندهٔ حین درگ (میلی‌متر)؛ با رها شدن انگشت commit می‌شود.
     var dragXmm by remember(media.id) { mutableStateOf(0f) }
     var dragYmm by remember(media.id) { mutableStateOf(0f) }
-    var resizeMm by remember(media.id) { mutableStateOf(0f) }
-    val liveWidthMm = (widthMm + resizeMm).coerceIn(WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM)
+    val liveWidthMm = widthMm
     val baseXmm = if (freePlacement) WordPageLayout.clampImageXmm(media.xMm + dragXmm, liveWidthMm) else 0f
     val baseYmm = if (freePlacement) WordPageLayout.freePreviewYmm((media.yMm + dragYmm).coerceIn(0f, 270f)) else 0f
 
+    // V63.8 — بدون لکهٔ آبی: لمس = انتخاب؛ شیء انتخاب‌شده با کشیدن انگشت
+    // آزادانه جابه‌جا می‌شود (+/− نوار ابزار اندازه را عوض می‌کند).
     Box(
         Modifier
             .padding(top = WordPageLayout.mmToDp(WordPageLayout.MEDIA_GAP_MM / 2f, zoom).dp)
             .offset { IntOffset((baseXmm * pxPerMm).roundToInt(), (baseYmm * pxPerMm).roundToInt()) }
             .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
             .height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
-            .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFF0B72B8) else Color(0x5527A5F2))
+            .then(
+                if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier
+            )
             .pointerInput(media.id) { detectTapGestures(onTap = { onSelect() }) }
             .then(
-                if (freePlacement) Modifier.pointerInput(media.id, zoom) {
+                if (selected) Modifier.pointerInput(media.id, zoom) {
                     detectDragGestures(
                         onDrag = { change, drag ->
                             change.consume()
@@ -798,6 +742,7 @@ private fun DraggableQuestionImage(
                             dragYmm += drag.y / pxPerMm
                         },
                         onDragEnd = {
+                            onFreeMove()
                             onMoved(
                                 (media.xMm + dragXmm).coerceIn(0f, 190f),
                                 (media.yMm + dragYmm).coerceIn(0f, 270f)
@@ -812,15 +757,6 @@ private fun DraggableQuestionImage(
             model = media.uri,
             contentDescription = "تصویر سؤال",
             modifier = Modifier.fillMaxWidth().height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
-        )
-        ResizeHandle(
-            zoom = zoom,
-            onDelta = { deltaMm -> resizeMm += deltaMm },
-            onDone = {
-                onResized(liveWidthMm)
-                resizeMm = 0f
-            },
-            modifier = Modifier.align(Alignment.BottomStart)
         )
     }
 }
@@ -837,55 +773,20 @@ private fun ResizableFigure(
     onSelect: () -> Unit,
     onResized: (Float) -> Unit
 ) {
+    // V63.8 — بدون دستگیره/لکهٔ آبی: لمس = انتخاب (کادر آبی)؛ اندازه با
+    // +/− نوار ابزار (onResized از آنجا صدا می‌خورد).
     val widthMm = WordPageLayout.figureWidthMm(spec)
-    var resizeMm by remember(spec.raw) { mutableStateOf(0f) }
-    val liveWidthMm = (widthMm + resizeMm)
-        .coerceIn(WordPageLayout.FIGURE_MIN_WIDTH_MM, WordPageLayout.FIGURE_MAX_WIDTH_MM)
     Box(
         Modifier
             .padding(top = WordPageLayout.mmToDp(1.5f, zoom).dp)
-            .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
-            .border(if (selected) 2.dp else 1.dp, if (selected) Color(0xFF0B72B8) else Color(0x5527A5F2))
+            .width(WordPageLayout.mmToDp(widthMm, zoom).dp)
+            .then(
+                if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier
+            )
             .pointerInput(spec.raw) { detectTapGestures(onTap = { onSelect() }) }
     ) {
         InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
-        ResizeHandle(
-            zoom = zoom,
-            onDelta = { deltaMm -> resizeMm += deltaMm },
-            onDone = {
-                onResized(liveWidthMm)
-                resizeMm = 0f
-            },
-            modifier = Modifier.align(Alignment.BottomStart)
-        )
     }
-}
-
-/** دستگیرهٔ گوشهٔ پایین-چپ: کشیدن به چپ = بزرگ‌تر (RTL چاپ از راست می‌چیند). */
-@Composable
-private fun ResizeHandle(
-    zoom: Float,
-    onDelta: (Float) -> Unit,
-    onDone: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
-        WordPageLayout.mmToDp(1f, zoom).dp.toPx()
-    }
-    Box(
-        modifier
-            .size(20.dp)
-            .background(Color(0xCC27A5F2), RoundedCornerShape(topEnd = 8.dp))
-            .pointerInput(zoom) {
-                detectDragGestures(
-                    onDrag = { change, drag ->
-                        change.consume()
-                        onDelta(-drag.x / pxPerMm)
-                    },
-                    onDragEnd = onDone
-                )
-            }
-    )
 }
 
 /** بارم بدون نقطهٔ اضافی: ۲ یا ۱٫۵ */
