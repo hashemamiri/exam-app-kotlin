@@ -101,7 +101,9 @@ private enum class MainPage {
     HOME, CALENDAR, SCHOOL, QUESTION_BANK, GRADING, REPORTS, STUDENT_RESULTS,
     WALLET, CARDS, REQUESTS, SETTINGS, BUILDER,
     // V62.7 — صفحهٔ «چاپ آزمون» (جایگزین کارت سربرگ منوی معلم).
-    PRINT
+    PRINT,
+    // V63.0 — ویرایشگر سند آزمون (Word-مانند)؛ از مداد کارت سؤال در صفحهٔ چاپ.
+    DOC_EDITOR
 }
 
 @Composable
@@ -168,6 +170,8 @@ private fun AuthenticatedExamApp(
     var managerCardsSection by rememberSaveable(user.id) { mutableStateOf<String?>("status") }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
+    // V63.0 — آزمون در حال ویرایش در «ویرایشگر سند» Word-مانند (از صفحهٔ چاپ آزمون).
+    var editingDocumentExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var schoolLaunchAction by remember(user.id) { mutableStateOf<SchoolLaunchAction?>(null) }
     var schoolStudentsSelected by rememberSaveable(user.id) { mutableStateOf(false) }
     // V61.6 — نمای مدارس باز است؟ (هدر «مدرسه من» به‌جای «کلاس‌ها»)
@@ -266,6 +270,7 @@ private fun AuthenticatedExamApp(
     LaunchedEffect(user.id, user.role) {
         val teacherOnly = setOf(
             MainPage.BUILDER,
+            MainPage.DOC_EDITOR,
             MainPage.SCHOOL,
             MainPage.QUESTION_BANK,
             MainPage.GRADING,
@@ -281,6 +286,22 @@ private fun AuthenticatedExamApp(
                 page = MainPage.HOME
             }
         }
+    }
+
+    // V63.0 — ویرایشگر سند Word-مانند: تمام‌صفحه، بیرون از Scaffold (مثل سازنده).
+    // از مداد کارت سؤال در «چاپ آزمون» باز می‌شود و صفحهٔ «ایجاد آزمون» نیست.
+    if (page == MainPage.DOC_EDITOR && user.role == UserRole.TEACHER && editingDocumentExamId != null) {
+        val documentViewModel = remember(user.id, editingDocumentExamId) {
+            ExamBuilderViewModel(appContext, editingDocumentExamId)
+        }
+        ir.exam.app.ui.printing.ExamDocumentEditorScreen(
+            builder = documentViewModel,
+            onBack = {
+                editingDocumentExamId = null
+                page = MainPage.PRINT
+            }
+        )
+        return
     }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {
@@ -538,8 +559,14 @@ private fun AuthenticatedExamApp(
                 }
                 MainPage.REQUESTS -> if (user.role == UserRole.TEACHER) TeacherManagerRequestsScreen()
                 // V62.7 — صفحهٔ چاپ آزمون: لیست آزمون‌ها + سربرگ رسمی.
+                // V63.0 — مداد روی کارت هر آزمون، ویرایشگر سند Word-مانند را باز می‌کند.
                 MainPage.PRINT -> if (user.role == UserRole.TEACHER) {
-                    ir.exam.app.ui.printing.ExamPrintCenterScreen()
+                    ir.exam.app.ui.printing.ExamPrintCenterScreen(
+                        onEditExamDocument = { examId ->
+                            editingDocumentExamId = examId
+                            page = MainPage.DOC_EDITOR
+                        }
+                    )
                 }
                 MainPage.SETTINGS -> ProfileSettingsScreen(
                     user = user,
@@ -1081,6 +1108,8 @@ private fun MainPage.sectionTitle(
     MainPage.BUILDER -> "ساخت آزمون"
     // V62.7 — عنوان صفحهٔ چاپ آزمون.
     MainPage.PRINT -> "چاپ آزمون"
+    // V63.0 — عنوان ویرایشگر سند Word-مانند.
+    MainPage.DOC_EDITOR -> "ویرایش آزمون"
 }
 
 private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {

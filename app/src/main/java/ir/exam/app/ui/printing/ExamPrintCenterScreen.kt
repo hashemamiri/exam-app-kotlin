@@ -18,11 +18,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -65,7 +68,10 @@ import ir.exam.app.ui.dashboard.TeacherDashboardViewModel
  * شمسی) و مدت امتحان؛ پس از تأیید، پیش‌نمایش سربرگ کامل نشان داده می‌شود.
  */
 @Composable
-fun ExamPrintCenterScreen() {
+fun ExamPrintCenterScreen(
+    // V63.0 — مداد روی کارت هر آزمون: ویرایشگر سند Word-مانند را باز می‌کند.
+    onEditExamDocument: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     val printController = remember(context.applicationContext) { OfficialPrintController(context.applicationContext) }
     val viewModel = remember { TeacherDashboardViewModel() }
@@ -134,6 +140,12 @@ fun ExamPrintCenterScreen() {
                             }
                             OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true, header) }) {
                                 Text("چاپ با کلید")
+                            }
+                            // V63.0 — مداد ویرایش آزمون: سند Word-مانند (همهٔ سؤال‌ها
+                            // پشت‌سرهم، اندازهٔ واقعی A4 و صفحه‌بندی) را باز می‌کند.
+                            OutlinedButton(onClick = { onEditExamDocument(exam.id) }) {
+                                Icon(Icons.Outlined.Edit, contentDescription = "ویرایش آزمون")
+                                Text("ویرایش سند")
                             }
                         }
                     }

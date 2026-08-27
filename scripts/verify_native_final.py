@@ -1964,6 +1964,39 @@ require("if (customMode) {" in grade_odometer
 require("import androidx.compose.foundation.layout.weight" not in (ROOT/"app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt").read_text(),
         "V58.0.1 internal weight import returned to ZoomableFigureDialog")
 
+# ---- V63.0: word-like document editor (patch 1 of 3) + pencil in print center ----
+_word_layout_v63=(ROOT/"app/src/main/java/ir/exam/app/core/printing/WordPageLayout.kt").read_text()
+_doc_editor_v63=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt").read_text()
+_v63_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_0WordDocumentEditorTest.kt").read_text()
+require("const val PAGE_WIDTH_MM: Float = 210f" in _word_layout_v63
+        and "const val PAGE_HEIGHT_MM: Float = 297f" in _word_layout_v63
+        and "fun paginate(blocks: List<WordBlock>" in _word_layout_v63
+        and "fun questionHeightMm(question: QuestionDraft): Float" in _word_layout_v63
+        and "android." not in _word_layout_v63 and "androidx." not in _word_layout_v63,
+        "V63.0 A4 word-layout engine is missing or android-dependent")
+require("fun ExamDocumentEditorScreen(" in _doc_editor_v63
+        and "WordPageLayout.documentOf(state.questions)" in _doc_editor_v63
+        and "contentDescription = \"ویرایش سؤال ${block.row}\"" in _doc_editor_v63
+        and "ExamBuilderScreen(" not in _doc_editor_v63
+        and "صفحهٔ ${page.number} از $pageCount" in _doc_editor_v63,
+        "V63.0 word-like document editor screen is missing")
+require("onEditExamDocument: (String) -> Unit" in _print_center_v62
+        and "Icons.Outlined.Edit" in _print_center_v62
+        and "ویرایش آزمون" in _print_center_v62
+        and "onEditExamDocument(exam.id)" in _print_center_v62
+        and "Text(\"چاپ برگه\")" in _print_center_v62,
+        "V63.0 edit pencil on print-center exam card is missing")
+require("DOC_EDITOR" in app_shell
+        and "editingDocumentExamId" in app_shell
+        and "ExamDocumentEditorScreen(" in app_shell
+        and "onEditExamDocument = { examId ->" in app_shell
+        and "MainPage.DOC_EDITOR -> \"ویرایش آزمون\"" in app_shell,
+        "V63.0 app-shell routing to the document editor is missing")
+require("class V63_0WordDocumentEditorTest" in _v63_test
+        and "WordPageLayout.documentOf(" in _v63_test
+        and "an oversized question occupies its own page" in _v63_test,
+        "V63.0 document-editor tests are missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
