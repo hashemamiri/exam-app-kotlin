@@ -37,7 +37,6 @@ import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material.icons.outlined.ZoomOut
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +64,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import ir.exam.app.data.local.PrintLayoutStore
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.printing.WordPageLayout
 import ir.exam.app.ui.figure.InlineFigureView
@@ -89,15 +92,28 @@ import ir.exam.app.ui.math.NativeMathText
 @Composable
 fun ExamDocumentEditorScreen(
     builder: ExamBuilderViewModel,
+    examId: String,
     onBack: () -> Unit
 ) {
     val state by builder.state.collectAsState()
+    // V63.5 — چیدمان چاپی جدا از خود آزمون: بارگیری در ورود، ذخیرهٔ محلی.
+    val context = LocalContext.current
+    val layoutStore = remember(context.applicationContext) { PrintLayoutStore(context.applicationContext) }
+    var layoutLoaded by remember(examId) { mutableStateOf(false) }
+    LaunchedEffect(examId, state.loading) {
+        if (!state.loading && !layoutLoaded && state.questions.isNotEmpty()) {
+            layoutStore.read(examId)?.let(builder::overridePrintLayout)
+            layoutLoaded = true
+        }
+    }
+    var savedTick by remember(examId) { mutableStateOf(false) }
+    // V63.5 — دکمهٔ برگشت گوشی: خروج از ویرایشگر به «چاپ آزمون»، نه از برنامه.
+    BackHandler(onBack = onBack)
     var zoom by remember { mutableStateOf(1.6f) }
     var editingQuestionId by remember { mutableStateOf<String?>(null) }
     // V63.3 — شیء انتخاب‌شده برای +/− و آیکن جابجایی نوار ابزار.
     var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
-    var confirmSave by remember { mutableStateOf(false) }
 
     val document = remember(state.questions) { WordPageLayout.documentOf(state.questions) }
     val editing = state.questions.firstOrNull { it.id == editingQuestionId }
@@ -108,7 +124,10 @@ fun ExamDocumentEditorScreen(
             questionCount = state.questions.size,
             pageCount = document.pageCount,
             saving = state.saving,
-            onSave = { confirmSave = true },
+            onSave = {
+                layoutStore.write(examId, state.questions)
+                savedTick = true
+            },
             onBack = onBack
         )
 
@@ -161,13 +180,11 @@ fun ExamDocumentEditorScreen(
         state.uploadProgress?.let {
             Text(it, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
-        state.savedCode?.let { code ->
-            Text(
-                "تغییرات ذخیره شد. کد آزمون: $code",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-        }
+        if (savedTick) Text(
+            "چیدمان چاپ ذخیره شد؛ فقط در چاپ همین آزمون اعمال می‌شود.",
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
 
         when {
             state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -226,26 +243,6 @@ fun ExamDocumentEditorScreen(
         }
     }
 
-    if (confirmSave) {
-        AlertDialog(
-            onDismissRequest = { confirmSave = false },
-            title = { Text("تأیید ذخیره تغییرات") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("همهٔ تغییرات این سند روی همان آزمون ذخیره می‌شود.")
-                    Text(
-                        "سرور فقط سؤال‌های مشمول تغییر را محاسبه می‌کند. سقف این ذخیره " +
-                            state.maximumChargeToman.toTomanText() + " تومان است."
-                    )
-                    Text("ذخیره و کسر موجودی در یک تراکنش انجام می‌شود؛ اگر ذخیره شکست بخورد، مبلغی کم نخواهد شد.")
-                }
-            },
-            confirmButton = {
-                Button(onClick = { confirmSave = false; builder.save() }) { Text("تأیید و ذخیره") }
-            },
-            dismissButton = { TextButton(onClick = { confirmSave = false }) { Text("انصراف") } }
-        )
-    }
 }
 
 @Composable
@@ -810,4 +807,3 @@ private fun ResizeHandle(
 private fun scoreText(score: Double): String =
     if (score % 1.0 == 0.0) score.toInt().toString() else score.toString()
 
-private fun Long.toTomanText(): String = "%,d".format(java.util.Locale.US, this)

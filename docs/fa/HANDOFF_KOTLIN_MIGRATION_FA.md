@@ -10608,3 +10608,50 @@ V63.0/V63.2-3 جایگزین + بند جدید V63.4 (BasicTextField، ممنو�
 سؤال دیگر = سؤال قبلی دوباره رندر واقعی، آ+/بولد/تراز نوار حین ویرایش
 اثر زنده داشته باشد، ذخیره → چاپ درست.
 ```
+
+## ۲۱۵) V63.5 — چیدمان چاپی محلی (فقط چاپ) و برگشت سخت‌افزاری
+
+### درخواست کاربر
+
+```text
+۱) ویرایش بخش چاپ آزمون ارتباطی به بخش‌های دیگر نداشته باشد و فقط در
+   بخش چاپ ذخیره/اعمال شود. ۲) دکمهٔ برگشت گوشی در چاپ آزمون به صفحات
+   قبل برگردد و از برنامه خارج نشود.
+```
+
+### ریشه و راه‌حل
+
+```text
+مشکل ۱: دکمهٔ «ذخیره» ویرایشگر builder.save() سروری را صدا می‌زد که
+خود آزمون (و نمایش دانش‌آموز) را بازنویسی می‌کرد — مغایر تصمیم قبلی
+کاربر (فقط چاپ). راه‌حل: data/local/PrintLayoutStore.kt جدید
+(SharedPreferences با کلید layout_<examId>؛ serialize با همان
+ExamQuestionCodec.encode/decode — internal ولی هم‌ماژول). ویرایشگر:
+ورود → read و builder.overridePrintLayout (تابع جدید ویومدل، فقط
+state محلی)؛ ذخیره → write + پیام «چیدمان چاپ ذخیره شد؛ فقط در چاپ
+همین آزمون اعمال می‌شود.»؛ دیالوگ هزینه/confirmSave/builder.save حذف.
+مسیر چاپ: preparePrint و printableExam پارامتر questionsOverride
+گرفتند (questionsOverride ?: decode سرور) و ExamPrintCenterScreen در
+هر دو دکمهٔ چاپ layoutStore.read(exam.id) را پاس می‌دهد.
+مشکل ۲: BackHandler سراسری ExamApp صفحهٔ PRINT را پوشش می‌دهد (به
+home برمی‌گردد) ولی DOC_EDITOR بیرون از Scaffold رندر می‌شود و قبل از
+رسیدن به آن BackHandler «return» می‌کند → back = خروج از برنامه.
+راه‌حل: BackHandler(onBack = onBack) داخل خود ویرایشگر (الگوی
+StudentExamScreen) + عبور examId از ExamApp (editingDocumentExamId!!).
+```
+
+### تست/verify
+
+```text
+جدید: V63_5PrintOnlyLayoutBackTest (۳ تست: ذخیرهٔ محلی به‌جای سرور،
+مسیر چاپ با override، برگشت سخت‌افزاری). verify: ۲ require جدید V63.5
+(شامل ممنوعیت بازگشت builder.save/confirmSave به ویرایشگر).
+شبیه‌سازی سراسری = 0 FAIL؛ kotlin_files=208 (PrintLayoutStore جدید)؛
+importهای LaunchedEffect اضافه و AlertDialog/toTomanText حذف شدند.
+پچ: V63_5_print_only_layout_back — بدون SQL.
+چک‌لیست دستگاه: ویرایش سند → تغییر متن/اندازه → ذخیره → پیام محلی؛
+خروج و ورود دوبارهٔ ویرایشگر همان چیدمان را بیاورد؛ «چاپ برگه» چیدمان
+ویرایش‌شده را چاپ کند ولی سؤال دانش‌آموز در اپ/آزمون آنلاین تغییر
+نکرده باشد؛ دکمهٔ برگشت گوشی در ویرایشگر → چاپ آزمون؛ در چاپ آزمون →
+صفحهٔ قبلی (رفتار سراسری موجود) — نه خروج از برنامه.
+```

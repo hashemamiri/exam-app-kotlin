@@ -77,7 +77,9 @@ class SupabasePortabilityRepository {
     suspend fun printableExam(
         examId: String,
         includeAnswerKey: Boolean,
-        headerOverride: OfficialPrintHeader? = null
+        headerOverride: OfficialPrintHeader? = null,
+        // V63.5 — سؤال‌های ویرایش‌شدهٔ مخصوص چاپ (PrintLayoutStore).
+        questionsOverride: List<ir.exam.app.ui.builder.QuestionDraft>? = null
     ): Result<OfficialExamPrintable> = runCatching {
         val uid = currentUserId()
         val exam = SupabaseProvider.client.from("exams").select {
@@ -87,7 +89,7 @@ class SupabasePortabilityRepository {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
         val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
-        val questions = ExamQuestionCodec.decode(exam.questions, key)
+        val questions = questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)
         OfficialExamPrintable(
             documentTitle = exam.title,
             header = headerOverride ?: OfficialPrintHeader(

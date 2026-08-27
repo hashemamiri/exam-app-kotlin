@@ -2044,6 +2044,18 @@ require("BasicTextField(" in _doc_editor_v63
         and "textDialogQuestionId" not in _doc_editor_v63
         and 'contentDescription = "ویرایش سؤال' not in _doc_editor_v63,
         "V63.4 in-place question editing is missing or the old dialog returned")
+# ---- V63.5: چیدمان چاپی محلی (فقط چاپ) + برگشت سخت‌افزاری ویرایشگر ----
+_layout_store_v63=(ROOT/"app/src/main/java/ir/exam/app/data/local/PrintLayoutStore.kt").read_text()
+require("class PrintLayoutStore(" in _layout_store_v63
+        and "layoutStore.write(examId, state.questions)" in _doc_editor_v63
+        and "BackHandler(onBack = onBack)" in _doc_editor_v63
+        and "builder.save()" not in _doc_editor_v63
+        and "confirmSave" not in _doc_editor_v63,
+        "V63.5 local print layout store / hardware back is missing")
+require("questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)" in
+            (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
+        and "layoutStore.read(exam.id)" in _print_center_v62,
+        "V63.5 print path does not read the local layout override")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

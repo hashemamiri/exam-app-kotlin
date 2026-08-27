@@ -296,6 +296,7 @@ private fun AuthenticatedExamApp(
         }
         ir.exam.app.ui.printing.ExamDocumentEditorScreen(
             builder = documentViewModel,
+            examId = editingDocumentExamId!!,
             onBack = {
                 editingDocumentExamId = null
                 page = MainPage.PRINT

@@ -221,6 +221,11 @@ class ExamBuilderViewModel(
         }
     }
 
+    /** V63.5 — جایگزینی سؤال‌ها با چیدمان چاپی ذخیره‌شده (فقط ویرایشگر سند). */
+    fun overridePrintLayout(questions: List<QuestionDraft>) {
+        _state.update { it.copy(questions = questions) }
+    }
+
     fun moveQuestion(id: String, delta: Int) {
         _state.update { state ->
             val from = state.questions.indexOfFirst { it.id == id }

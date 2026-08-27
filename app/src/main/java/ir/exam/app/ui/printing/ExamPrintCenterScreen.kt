@@ -74,6 +74,7 @@ fun ExamPrintCenterScreen(
 ) {
     val context = LocalContext.current
     val printController = remember(context.applicationContext) { OfficialPrintController(context.applicationContext) }
+    val layoutStore = remember(context.applicationContext) { ir.exam.app.data.local.PrintLayoutStore(context.applicationContext) }
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
     var headerOpen by remember { mutableStateOf(false) }
@@ -135,10 +136,15 @@ fun ExamPrintCenterScreen(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
                         ) {
-                            Button(onClick = { viewModel.preparePrint(exam.id, false, header) }) {
+                            // V63.5 — چیدمان چاپی محلی (ویرایشگر سند) فقط اینجا اعمال می‌شود.
+                            Button(onClick = {
+                                viewModel.preparePrint(exam.id, false, header, layoutStore.read(exam.id))
+                            }) {
                                 Text("چاپ برگه")
                             }
-                            OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true, header) }) {
+                            OutlinedButton(onClick = {
+                                viewModel.preparePrint(exam.id, true, header, layoutStore.read(exam.id))
+                            }) {
                                 Text("چاپ با کلید")
                             }
                             // V63.0 — مداد ویرایش آزمون: سند Word-مانند (همهٔ سؤال‌ها
