@@ -1978,10 +1978,10 @@ require("const val PAGE_WIDTH_MM: Float = 210f" in _word_layout_v63
         and "android." not in _word_layout_v63 and "androidx." not in _word_layout_v63,
         "V63.0 A4 word-layout engine is missing or android-dependent")
 require("fun ExamDocumentEditorScreen(" in _doc_editor_v63
-        and "WordPageLayout.documentOf(state.questions)" in _doc_editor_v63
+        and "fun WordFlowDocument(" in _doc_editor_v63
         and "editable = editingQuestionId == question.id" in _doc_editor_v63
         and "ExamBuilderScreen(" not in _doc_editor_v63
-        and "صفحهٔ ${page.number} از $pageCount" in _doc_editor_v63,
+        and "صفحهٔ $pageNumber از $pageCount" in _doc_editor_v63,
         "V63.0 word-like document editor screen is missing")
 require("onEditExamDocument: (String) -> Unit" in _print_center_v62
         and "Icons.Outlined.Edit" in _print_center_v62
@@ -2056,6 +2056,14 @@ require("questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)" in
             (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
         and "layoutStore.read(exam.id)" in _print_center_v62,
         "V63.5 print path does not read the local layout override")
+# ---- V63.6: سند پیوستهٔ Word-واقعی — صفحه‌بندی با ارتفاع واقعی رندر ----
+require("SubcomposeLayout(" in _doc_editor_v63
+        and "fun WordPaperChrome(" in _doc_editor_v63
+        and "if (used + gap + placeable.height > contentHeight && pages.last().isNotEmpty())" in _doc_editor_v63
+        and "onPageCount(pages.size)" in _doc_editor_v63
+        and "WordPageView" not in _doc_editor_v63
+        and "block.heightMm" not in _doc_editor_v63,
+        "V63.6 real-measured continuous word document is missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

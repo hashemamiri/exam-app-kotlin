@@ -18,9 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -38,8 +37,6 @@ import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material.icons.outlined.ZoomOut
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +52,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
@@ -115,14 +115,15 @@ fun ExamDocumentEditorScreen(
     var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
-    val document = remember(state.questions) { WordPageLayout.documentOf(state.questions) }
+    // V63.6 — تعداد صفحه از صفحه‌بندی با ارتفاع «واقعی رندر» (مثل ورد).
+    var measuredPageCount by remember { mutableStateOf(1) }
     val editing = state.questions.firstOrNull { it.id == editingQuestionId }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFECEFF3))) {
         DocumentEditorTopBar(
             title = state.title.ifBlank { "آزمون" },
             questionCount = state.questions.size,
-            pageCount = document.pageCount,
+            pageCount = measuredPageCount,
             saving = state.saving,
             onSave = {
                 layoutStore.write(examId, state.questions)
@@ -193,53 +194,41 @@ fun ExamDocumentEditorScreen(
             state.questions.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("این آزمون هنوز سؤالی ندارد.")
             }
-            else -> LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                items(document.pages, key = { it.number }) { page ->
-                    WordPageView(
-                        title = state.title.ifBlank { "آزمون" },
-                        page = page,
-                        pageCount = document.pageCount,
-                        zoom = zoom,
-                        questions = state.questions,
-                        editingQuestionId = editingQuestionId,
-                        onSelectQuestion = { id ->
-                            editingQuestionId = if (editingQuestionId == id) null else id
-                            selectedImage = null; selectedFigure = null
-                        },
-                        // V63.4 — ویرایش درجا: بدون مداد و پنجرهٔ جدا.
-                        onTextChange = builder::updateText,
-                        onScoreChange = builder::updateScore,
-                        selectedImageId = selectedImage?.second,
-                        selectedFigure = selectedFigure,
-                        onSelectImage = { questionId, imageId ->
-                            selectedImage = if (selectedImage == questionId to imageId) null
-                                else questionId to imageId
-                            selectedFigure = null
-                        },
-                        onSelectFigure = { questionId, occurrenceIndex ->
-                            selectedFigure = if (selectedFigure == questionId to occurrenceIndex) null
-                                else questionId to occurrenceIndex
-                            selectedImage = null
-                        },
-                        // V63.1 — درگ/ریسایز مستقیم اشیا روی برگه (فقط خروجی چاپ).
-                        onMoveImage = builder::moveImage,
-                        onResizeImage = builder::resizeImage,
-                        onResizeFigure = { questionId, occurrenceIndex, widthMm ->
-                            val question = state.questions.firstOrNull { it.id == questionId }
-                            val occ = question?.let { FigureCodec.occurrences(it.text).getOrNull(occurrenceIndex) }
-                            if (occ != null) builder.updateFigure(
-                                questionId, occurrenceIndex,
-                                WordPageLayout.withFigureWidthMm(occ.spec, widthMm)
-                            )
-                        }
+            else -> WordFlowDocument(
+                title = state.title.ifBlank { "آزمون" },
+                questions = state.questions,
+                zoom = zoom,
+                editingQuestionId = editingQuestionId,
+                onPageCount = { measuredPageCount = it },
+                onSelectQuestion = { id ->
+                    editingQuestionId = if (editingQuestionId == id) null else id
+                    selectedImage = null; selectedFigure = null
+                },
+                onTextChange = builder::updateText,
+                onScoreChange = builder::updateScore,
+                selectedImageId = selectedImage?.second,
+                selectedFigure = selectedFigure,
+                onSelectImage = { questionId, imageId ->
+                    selectedImage = if (selectedImage == questionId to imageId) null
+                        else questionId to imageId
+                    selectedFigure = null
+                },
+                onSelectFigure = { questionId, occurrenceIndex ->
+                    selectedFigure = if (selectedFigure == questionId to occurrenceIndex) null
+                        else questionId to occurrenceIndex
+                    selectedImage = null
+                },
+                onMoveImage = builder::moveImage,
+                onResizeImage = builder::resizeImage,
+                onResizeFigure = { questionId, occurrenceIndex, widthMm ->
+                    val question = state.questions.firstOrNull { it.id == questionId }
+                    val occ = question?.let { FigureCodec.occurrences(it.text).getOrNull(occurrenceIndex) }
+                    if (occ != null) builder.updateFigure(
+                        questionId, occurrenceIndex,
+                        WordPageLayout.withFigureWidthMm(occ.spec, widthMm)
                     )
                 }
-            }
+            )
         }
     }
 
@@ -276,14 +265,19 @@ private fun DocumentEditorTopBar(
     }
 }
 
+/**
+ * V63.6 — سند پیوستهٔ Word-واقعی: هر سؤال یک‌بار با عرض واقعی صفحه
+ * اندازه‌گیری می‌شود (SubcomposeLayout) و سپس مثل ورد پشت‌سرهم در صفحه‌های
+ * A4 چیده می‌شود؛ صفحهٔ بعدی فقط وقتی صفحهٔ قبلی «واقعاً» پر شد ساخته
+ * می‌شود. سؤالی که از صفحه بلندتر است تنها در صفحهٔ خودش می‌آید.
+ */
 @Composable
-private fun WordPageView(
+private fun WordFlowDocument(
     title: String,
-    page: WordPageLayout.WordPage,
-    pageCount: Int,
-    zoom: Float,
     questions: List<QuestionDraft>,
+    zoom: Float,
     editingQuestionId: String?,
+    onPageCount: (Int) -> Unit,
     onSelectQuestion: (String) -> Unit,
     onTextChange: (String, String) -> Unit,
     onScoreChange: (String, String) -> Unit,
@@ -295,38 +289,28 @@ private fun WordPageView(
     onResizeImage: (String, String, Float) -> Unit,
     onResizeFigure: (String, Int, Float) -> Unit
 ) {
-    Card(
-        Modifier
-            .width(WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM, zoom).dp)
-            .height(WordPageLayout.mmToDp(WordPageLayout.PAGE_HEIGHT_MM, zoom).dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    val scroll = rememberScrollState()
+    Column(
+        Modifier.fillMaxSize().verticalScroll(scroll).padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp)
-        ) {
-            // سرصفحهٔ سند
-            Text(
-                title,
-                fontSize = (11 * zoom).sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(WordPageLayout.mmToDp(3f, zoom).dp))
-            androidx.compose.material3.HorizontalDivider()
-            Spacer(Modifier.height(WordPageLayout.mmToDp(3f, zoom).dp))
+        SubcomposeLayout(Modifier) { constraints ->
+            val pageWidthPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM, zoom).dp.roundToPx()
+            val pageHeightPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_HEIGHT_MM, zoom).dp.roundToPx()
+            val marginPx = WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp.roundToPx()
+            val headerPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_HEADER_MM, zoom).dp.roundToPx()
+            val footerPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_FOOTER_MM, zoom).dp.roundToPx()
+            val gapPx = WordPageLayout.mmToDp(WordPageLayout.BLOCK_GAP_MM, zoom).dp.roundToPx()
+            val pageGapPx = 14.dp.roundToPx()
+            val contentWidth = pageWidthPx - marginPx * 2
+            val contentHeight = pageHeightPx - marginPx * 2 - headerPx - footerPx
+            val blockConstraints = Constraints(maxWidth = contentWidth)
 
-            Column(
-                Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(WordPageLayout.mmToDp(WordPageLayout.BLOCK_GAP_MM, zoom).dp)
-            ) {
-                page.blocks.forEach { block ->
-                    val question = questions.firstOrNull { it.id == block.questionId } ?: return@forEach
+            // ۱) اندازه‌گیری واقعی هر سؤال با عرض محتوا
+            val placeables = questions.mapIndexed { index, question ->
+                subcompose("q-${question.id}") {
                     WordQuestionBlock(
-                        block = block,
+                        row = index + 1,
                         question = question,
                         zoom = zoom,
                         highlighted = editingQuestionId == question.id,
@@ -337,30 +321,92 @@ private fun WordPageView(
                         selectedImageId = selectedImageId,
                         selectedFigureIndex = selectedFigure?.takeIf { it.first == question.id }?.second,
                         onSelectImage = { imageId -> onSelectImage(question.id, imageId) },
-                        onSelectFigure = { occurrenceIndex -> onSelectFigure(question.id, occurrenceIndex) },
-                        onMoveImage = { imageId, xMm, yMm -> onMoveImage(question.id, imageId, xMm, yMm) },
-                        onResizeImage = { imageId, widthMm -> onResizeImage(question.id, imageId, widthMm) },
-                        onResizeFigure = { occurrenceIndex, widthMm -> onResizeFigure(question.id, occurrenceIndex, widthMm) }
+                        onSelectFigure = { occ -> onSelectFigure(question.id, occ) },
+                        onMoveImage = { imageId, x, y -> onMoveImage(question.id, imageId, x, y) },
+                        onResizeImage = { imageId, w -> onResizeImage(question.id, imageId, w) },
+                        onResizeFigure = { occ, w -> onResizeFigure(question.id, occ, w) }
                     )
-                }
+                }.first().measure(blockConstraints)
             }
 
-            // پاصفحهٔ سند
-            androidx.compose.material3.HorizontalDivider()
-            Text(
-                "صفحهٔ ${page.number} از $pageCount",
-                fontSize = (9 * zoom).sp,
-                textAlign = TextAlign.Center,
-                color = Color(0xFF666666),
-                modifier = Modifier.fillMaxWidth()
-            )
+            // ۲) صفحه‌بندی با ارتفاع واقعی: مثل ورد صفحهٔ بعدی فقط پس از پر شدن
+            val pages = mutableListOf<MutableList<Int>>(mutableListOf())
+            var used = 0
+            placeables.forEachIndexed { index, placeable ->
+                val gap = if (pages.last().isEmpty()) 0 else gapPx
+                if (used + gap + placeable.height > contentHeight && pages.last().isNotEmpty()) {
+                    pages += mutableListOf<Int>()
+                    used = 0
+                }
+                pages.last() += index
+                used += (if (pages.last().size == 1) 0 else gapPx) + placeable.height
+            }
+            onPageCount(pages.size)
+
+            // ۳) زمینهٔ کاغذها + سرصفحه/پاصفحهٔ هر صفحه
+            val chrome = pages.mapIndexed { pageIndex, _ ->
+                subcompose("page-$pageIndex") {
+                    WordPaperChrome(
+                        title = title,
+                        pageNumber = pageIndex + 1,
+                        pageCount = pages.size,
+                        zoom = zoom
+                    )
+                }.first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
+            }
+
+            val totalHeight = pages.size * pageHeightPx + (pages.size - 1) * pageGapPx
+            layout(pageWidthPx, totalHeight) {
+                var pageTop = 0
+                pages.forEachIndexed { pageIndex, blockIndexes ->
+                    chrome[pageIndex].place(0, pageTop)
+                    var y = pageTop + marginPx + headerPx
+                    blockIndexes.forEachIndexed { position, blockIndex ->
+                        if (position > 0) y += gapPx
+                        placeables[blockIndex].place(marginPx, y)
+                        y += placeables[blockIndex].height
+                    }
+                    pageTop += pageHeightPx + pageGapPx
+                }
+            }
         }
+    }
+}
+
+/** کاغذ سفید A4 با سایه + عنوان بالا و شمارهٔ صفحه پایین (پشت سؤال‌ها). */
+@Composable
+private fun WordPaperChrome(title: String, pageNumber: Int, pageCount: Int, zoom: Float) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .shadow(3.dp)
+            .background(Color.White)
+            .padding(WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp)
+    ) {
+        Text(
+            title,
+            fontSize = (11 * zoom).sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(WordPageLayout.mmToDp(2f, zoom).dp))
+        androidx.compose.material3.HorizontalDivider()
+        Spacer(Modifier.weight(1f))
+        androidx.compose.material3.HorizontalDivider()
+        Text(
+            "صفحهٔ $pageNumber از $pageCount",
+            fontSize = (9 * zoom).sp,
+            textAlign = TextAlign.Center,
+            color = Color(0xFF666666),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
 private fun WordQuestionBlock(
-    block: WordPageLayout.WordBlock,
+    row: Int,
     question: QuestionDraft,
     zoom: Float,
     highlighted: Boolean,
@@ -388,7 +434,6 @@ private fun WordQuestionBlock(
     Column(
         Modifier
             .fillMaxWidth()
-            .height(WordPageLayout.mmToDp(block.heightMm, zoom).dp)
             .then(
                 if (highlighted) {
                     Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
@@ -399,7 +444,7 @@ private fun WordQuestionBlock(
         // V63.4 — بدون مداد: انتخاب سؤال، بارم را هم درجا ویرایش‌پذیر می‌کند.
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "سؤال ${block.row}     (",
+                "سؤال $row     (",
                 fontSize = fontSize,
                 fontWeight = FontWeight.Bold
             )

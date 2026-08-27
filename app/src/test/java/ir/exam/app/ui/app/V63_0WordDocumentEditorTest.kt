@@ -63,7 +63,10 @@ class V63_0WordDocumentEditorTest {
     fun `document editor is a word-like paged view with a pencil on every question card`() {
         assertTrue("fun ExamDocumentEditorScreen(" in editor)
         // صفحه‌بندی واقعی A4 از موتور مشترک
-        assertTrue("WordPageLayout.documentOf(state.questions)" in editor)
+        // V63.6 — صفحه‌بندی ویرایشگر با اندازه‌گیری واقعی رندر (SubcomposeLayout)؛
+        // موتور میلی‌متری WordPageLayout برای تخمین/تست چاپ باقی است.
+        assertTrue("SubcomposeLayout" in editor)
+        assertTrue("fun WordFlowDocument(" in editor)
         assertTrue("WordPageLayout.PAGE_WIDTH_MM" in editor)
         assertTrue("WordPageLayout.PAGE_HEIGHT_MM" in editor)
         // V63.4 — مداد هر سؤال حذف شد؛ ویرایش درجا با انتخاب سؤال.
@@ -72,7 +75,7 @@ class V63_0WordDocumentEditorTest {
         // این صفحه سازندهٔ آزمون نیست: هیچ پردهٔ سازنده اینجا نیست
         assertTrue("ExamBuilderScreen(" !in editor)
         // شمارهٔ صفحه در پاصفحهٔ سند
-        assertTrue("صفحهٔ \${page.number} از \$pageCount" in editor)
+        assertTrue("صفحهٔ \$pageNumber از \$pageCount" in editor)
     }
 
     @Test

@@ -10655,3 +10655,49 @@ importهای LaunchedEffect اضافه و AlertDialog/toTomanText حذف شدن�
 نکرده باشد؛ دکمهٔ برگشت گوشی در ویرایشگر → چاپ آزمون؛ در چاپ آزمون →
 صفحهٔ قبلی (رفتار سراسری موجود) — نه خروج از برنامه.
 ```
+
+## ۲۱۶) V63.6 — سند پیوستهٔ Word-واقعی: صفحه‌بندی با ارتفاع واقعی رندر
+
+### درخواست کاربر
+
+```text
+سؤالات در پنجره‌های جداگانه نباشند؛ همه در یک صفحه، جدول‌بندی‌شده در
+اندازهٔ واقعی A4 که پس از پر شدن صفحهٔ اول صفحات بعدی اضافه شوند —
+دقیقاً مثل ورد.
+```
+
+### ریشه و راه‌حل
+
+```text
+ریشه: تا V63.5 هر سؤال داخل قابی با ارتفاع «تخمینی میلی‌متری»
+(WordPageLayout.questionHeightMm) قفل می‌شد (.height(block.heightMm))؛
+تخمین با رندر واقعی (فونت واقعی، پیچش خط، ارتفاع شکل‌ها) اختلاف داشت →
+سؤال‌ها بریده/جدا از هم دیده می‌شدند، مثل پنجره‌های مستقل.
+راه‌حل: WordFlowDocument جدید با SubcomposeLayout:
+۱) هر سؤال یک‌بار با عرض واقعی محتوا (پهنای A4 منهای حاشیه) اندازه
+   می‌شود (placeable.height = ارتفاع واقعی رندر، بدون قید ارتفاع).
+۲) صفحه‌بندی روی همین ارتفاع‌های واقعی: صفحهٔ بعدی فقط وقتی صفحهٔ قبلی
+   واقعاً پر شد (used+gap+height > contentHeight)؛ سؤال بلندتر از صفحه
+   تنها در صفحهٔ خودش (همان قرارداد ورد).
+۳) WordPaperChrome پشت هر صفحه: کاغذ سفید سایه‌دار + عنوان/Divider بالا
+   و «صفحهٔ N از M» پایین؛ سؤال‌ها با place روی کاغذ می‌نشینند.
+- WordPageView و LazyColumn(صفحات) حذف؛ کل سند در یک verticalScroll.
+- WordQuestionBlock حالا row: Int می‌گیرد و ارتفاع آزاد دارد.
+- measuredPageCount از onPageCount(pages.size) برای تاپ‌بار.
+- WordPageLayout میلی‌متری سر جایش است (تخمین چاپ + تست‌های JVM).
+```
+
+### تست/verify
+
+```text
+هماهنگ: V63_0 (needle documentOf(state.questions) → SubcomposeLayout/
+WordFlowDocument؛ needle پاصفحه → $pageNumber)؛ verify همان دو needle +
+بند جدید V63.6 (شرط سرریز واقعی، WordPaperChrome، onPageCount،
+ممنوعیت WordPageView/block.heightMm). شبیه‌سازی سراسری = 0 FAIL؛
+بالانس آکولاد؛ importهای جدید SubcomposeLayout/Constraints/shadow/
+verticalScroll و حذف LazyColumn/Card بلااستفاده.
+پچ: V63_6_real_word_flow_pagination — بدون SQL.
+چک‌لیست دستگاه: سؤال‌ها پیوسته و بدون قاب/برش روی کاغذ A4؛ با بزرگ
+کردن متن (آ+) سرریز خودکار به صفحهٔ بعد؛ شمارهٔ «صفحهٔ N از M» درست؛
+ویرایش درجا/درگ/ریسایز مثل قبل؛ اسکرول عمودی روان کل سند.
+```
