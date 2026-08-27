@@ -75,7 +75,8 @@ class V62_7PrintCenterStudentPreviewTest {
         // کارت منو: چاپ آزمون به‌جای سربرگ؛ صفحهٔ PRINT
         assertTrue("\"چاپ آزمون\", \"اطلاعات رسمی چاپ آزمون\"" in appShell)
         assertTrue("MainPage.PRINT" in appShell)
-        assertTrue("ExamPrintCenterScreen()" in appShell)
+        // V63.0.1 — صفحهٔ چاپ حالا پارامتر مداد ویرایش سند دارد.
+        assertTrue("ExamPrintCenterScreen(" in appShell)
         // دکمهٔ سربرگ وسط‌چین مثل مشخصات آزمون
         assertTrue("horizontalArrangement = Arrangement.Center" in printCenter)
         assertTrue("if (headerOpen) \"بستن سربرگ\" else \"سربرگ\"" in printCenter)

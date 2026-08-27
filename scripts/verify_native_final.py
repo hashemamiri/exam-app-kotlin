@@ -1887,6 +1887,9 @@ _v62_7_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentP
 require("مدت آزمون: \\${header.examDuration}" not in _v62_7_test
         and 'Text(\\"ادامه و ساخت دانش‌آموز\\")' not in _v62_7_test,
         "V62.8.2 stale V62.7 needles are back")
+# V63.0.1 — needle قدیمی امضای بی‌پارامتر صفحهٔ چاپ ممنوع (V63.0 پارامتر مداد داد).
+require('"ExamPrintCenterScreen()" in appShell' not in _v62_7_test,
+        "V63.0.1 stale print-center signature needle is back")
 require("fonts/bnazanin.ttf" in _pdf_v62
         and "$" + "it دقیقه" in _pdf_v62
         and ".imePadding().verticalScroll(" in _print_center_v62
