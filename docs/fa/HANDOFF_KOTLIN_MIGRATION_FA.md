@@ -9923,3 +9923,99 @@ FINAL_NATIVE_VERIFY=PASS kotlin_files=203.
 دکمهٔ آمار داک خاموش؛ لمس آمار → کارت‌ها + روشن شدن دکمه. کارت سؤال:
 «چندگزینه‌ای» کامل دیده شود.
 ```
+
+
+## ۲۰۴) V62.6 — حریم خصوصی معلم و ۸ اصلاح UX پنل مدیر
+
+### درخواست‌های کاربر (۸ مورد)
+
+```text
+۱) دانش‌آموزان/کلاس‌های ساختهٔ معلم برای مدیر پنهان باشند مگر با تأیید
+   معلم؛ و این قابل تغییر باشد.
+۲) کلاس در پنل مدیر: فقط لیست اعضا؛ بخش «افزودن از فهرست» حذف؛ دکمهٔ +
+   با پنجرهٔ «افزودن جدید/افزودن موجود»؛ موجود = فهرست با فیلتر.
+۳) هدر: «کلاس‌های نام معلم» و داخل کلاس نام کلاس (به‌جای «معلم‌ها»).
+۴) کادر خاکستری لمس کارت معلم حذف شود.
+۵) هنگام ساخت کد دعوت، انتخاب مدرسهٔ مقصد.
+۶) باگ فیلتر مدیر: بخش کلاس‌ها باز نمی‌شد (لیست خالی).
+۷) کارت مدارس داک بدون «بازگشت به کلاس‌ها»؛ کارنامه و وضعیت منوی مستقل.
+۸) بازگشت از پنجرهٔ کد دعوت → داشبورد.
+```
+
+### ریشه‌ها/طراحی (با مدرک)
+
+```text
+۱) SQL جدید 20260827_native_teacher_privacy_invite_school_v62_6.sql (+کپی
+   sql/manual/SQL_NATIVE_TEACHER_PRIVACY_INVITE_SCHOOL_V62_6.sql):
+   - ستون shared_with_manager (default false) روی classes و school_students.
+   - native_teacher_share_class_v62 / native_teacher_share_student_v62:
+     سوییچ اشتراک توسط خود معلم (قابل برگشت).
+   - قاعدهٔ دید مدیر: «اشتراکی معلم یا مدیرساخته» —
+     c.shared_with_manager or coalesce(c.created_by,c.teacher_id)<>c.teacher_id
+     (کلاس مدیرساخته created_by=مدیر دارد؛ V40C). دانش‌آموز: ss.shared یا
+     ss.created_by مدیر یا عضو کلاس قابل‌مشاهده.
+   - بازنویسی my_students (ستون جدید shared_with_manager + گارد مدیر)،
+     native_my_classes_v28 (ستون shared برای سوییچ)، توابع v40c
+     (teacher_classes/class_roster/school_students) با همان گارد.
+   - native_manager_school_classes_v62: کلاس‌های قابل‌مشاهدهٔ مدیر برای فیلتر.
+   - native_manager_create_teacher_invites_v62(p_count,p_school): کد دعوت
+     با مدرسهٔ انتخابی (گارد عضویت مدیر در همان مدرسه).
+   کلاینت: SchoolClass/SchoolClassDto ستون sharedWithManager؛
+   setClassShared/setStudentShared در SchoolRepository/Supabase؛ سوییچ
+   «قابل مشاهده برای مدیر مدرسه / پنهان از مدیر مدرسه» روی کارت کلاس معلم
+   (فقط وقتی managerTeacherPicker=false).
+۲) ManagerTeacherClassScreen بازنویسی: داخل کلاس فقط اعضا + FAB «+»؛
+   AlertDialog دو دکمه‌ای؛ «افزودن موجود» = دیالوگ با OutlinedTextField
+   فیلتر + LazyColumn کاندیدها؛ «افزودن جدید» → onCreateStudent
+   (::createStudent در ExamApp → فرم دانش‌آموز). متن قدیمی «افزودن از
+   فهرست دانش‌آموزان مدرسه» به‌عنوان توضیح گزینهٔ موجود ماند (قرارداد V40C).
+۳) state جدید managerClassHeader در ExamApp + پارامتر در AuthenticatedShell؛
+   TopAppBar اول آن را چک می‌کند؛ ManagerTeacherClassScreen با
+   onTitleChanged گزارش می‌دهد؛ ریست در openHome/createManagerTeacher/
+   onQuickTeachers/onBack.
+۴) ریپل clickable کارت معلم حذف (همان الگوی V62.1.4: interactionSource +
+   indication = null).
+۵) دیالوگ «تعداد کد دعوت»: چیپ‌های مدرسه (repository.managerSchools از
+   native_teacher_schools_v61) + createInvites(count, schoolId) → RPC v62؛
+   بدون schoolId مسیر قدیمی V40B (سازگاری عقب‌رو). needle verify V40B از
+   «createInvites(count: Int)» به امضای جدید به‌روز شد (اول FAIL شد).
+۶) ریشهٔ باگ فیلتر مدیر: StudentFilterDialog با state.classes پر می‌شد که
+   برای مدیر همیشه خالی است (native_my_classes فقط کلاس‌های خود کاربر).
+   کارت «کلاس» باز می‌شد ولی هیچ چیپی نداشت («باز نمی‌شود» از دید کاربر).
+   رفع: loadManagerFilterClasses (RPC v62) + state.managerFilterClasses؛
+   applyStudentFilter در هر دو محل با classes + managerFilterClasses.
+۷) SchoolsContent پارامتر showBackToClasses؛ ورود از کارت مدارس داک
+   (SHOW_SCHOOLS، schoolsFromDock=true) دکمه را حذف می‌کند؛ ورود از دکمهٔ
+   «مدارس» کلاس‌ها مثل قبل. ManagerStatsScreen پارامتر section گرفت:
+   status = داشبورد (اطلاعات مدرسه + پنل سریع + آمار شمارشی + میان‌بر
+   کارنامه)؛ report = «کارنامه مدرسه» با پنل کارنامه (داشبورد/معلم‌ها) +
+   پاسخ‌ها/میانگین/اعتبار/فعالیت معلم‌ها. عنوان‌ها جدا شدند.
+۸) ManagerTeachersScreen پارامتر onInviteBack؛ بازگشت پنجرهٔ دعوت
+   onInviteBack (=openManagerDashboard) صدا می‌شود.
+```
+
+### تست/verify
+
+```text
+جدید: V62_6TeacherPrivacyManagerUxTest (۴ تست جامع). هماهنگ:
+V61_2 (عنوان بخش‌بندی‌شده)، V61_5 (applyStudentFilter با classes+manager)،
+verify بند V40B (امضای createInvites). verify: ۶ require جدید V62.6.
+شبیه‌سازی کامل needleهای V40B/V40C/V61.2/V61.5/V61.6/V62.5/V62.6 پس از
+آخرین edit + اسکن معکوس ۱۰ فایل تغییرکرده در برابر V62.5: صفر شکستگی؛
+اسکن import: فقط بلااستفاده‌های از قبل موجود. Switch به importهای
+SchoolManagementScreen اضافه شد. FINAL_NATIVE_VERIFY=PASS kotlin_files=203.
+پچ: V62_6_teacher_privacy_manager_ux — «با SQL»: کاربر باید
+V62_6_teacher_privacy_invite_school.sql (کپی در ریشهٔ ورک‌اسپیس) را در
+Supabase SQL Editor اجرا کند، وگرنه سوییچ اشتراک/فیلتر کلاس مدیر/کد دعوت
+مدرسه‌دار خطای «تابع پیدا نشد» می‌دهند.
+نکته: پیش‌فرض false یعنی پس از اجرای SQL، کلاس‌ها/دانش‌آموزان قدیمی
+معلم‌ساخته از دید مدیر پنهان می‌شوند تا معلم اشتراک را روشن کند (خواستهٔ
+صریح کاربر). ساخته‌های مدیر با created_by تشخیص داده می‌شوند و همیشه
+دیده می‌شوند.
+چک‌لیست دستگاه: (۱) کلاس معلم‌ساخته بدون سوییچ روشن در پنل مدیر نیاید؛
+روشن کردن سوییچ → بیاید؛ خاموش → برود. (۲) کلاس مدیر: + → جدید/موجود؛
+موجود با فیلتر. (۳) هدرها. (۴) لمس کارت معلم بدون کادر خاکستری.
+(۵) ساخت کد دعوت با انتخاب مدرسه و پیوستن معلم به همان مدرسه.
+(۶) فیلتر مدیر بخش کلاس چیپ داشته باشد. (۷) کارت مدارس بدون «بازگشت به
+کلاس‌ها»؛ کارنامه منوی خودش. (۸) بازگشت از دعوت → داشبورد.
+```

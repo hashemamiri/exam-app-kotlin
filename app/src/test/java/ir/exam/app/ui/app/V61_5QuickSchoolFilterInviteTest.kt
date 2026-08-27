@@ -58,7 +58,9 @@ class V61_5QuickSchoolFilterInviteTest {
         assertTrue("private fun StudentFilterDialog(" in school)
         assertTrue("Icons.Outlined.FilterList" in school)
         // ترتیب: اول فیلتر بعد جست‌وجو
-        assertTrue("filteredStudents(\n                        applyStudentFilter(state.students, state.studentFilter, state.classes, state.filterMeta),\n                        state.query\n                    )" in school)
+        // V62.6 — کلاس‌های فیلتر مدیر هم به نگاشت classId→نام اضافه شد.
+        assertTrue("applyStudentFilter(state.students, state.studentFilter, state.classes + state.managerFilterClasses, state.filterMeta)" in school)
+        assertTrue("state.query\n                    )" in school)
         // گزینه‌ها (V61.7: چیپ‌ها به کارت‌های بازشونده با title تبدیل شدند)
         for (needle in listOf("title = \"عضو نشده\"", "title = \"مدرسه\"", "showTeacherFilter")) {
             assertTrue(needle, needle in school)

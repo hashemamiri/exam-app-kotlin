@@ -52,7 +52,10 @@ data class ClassesState(
     val schoolTeachers: List<SchoolTeacherPick> = emptyList(),
     // V61.5 — فیلتر لیست دانش‌آموزان + متادادهٔ فیلتر (معلم/عضویت مدرسه).
     val studentFilter: StudentListFilter = StudentListFilter(),
-    val filterMeta: Map<String, StudentFilterMeta> = emptyMap()
+    val filterMeta: Map<String, StudentFilterMeta> = emptyMap(),
+    // V62.6 — کلاس‌های قابل‌مشاهدهٔ مدیر برای بخش «کلاس» پنجرهٔ فیلتر
+    // (state.classes مدیر خالی است چون native_my_classes فقط کلاس‌های خود کاربر است).
+    val managerFilterClasses: List<SchoolClass> = emptyList()
 )
 
 /** V61.0 — معلم قابل انتخاب هنگام ساخت کلاس توسط مدیر. */
@@ -180,6 +183,26 @@ class ClassesViewModel(
             .onFailure { }
     }
 
+    /**
+     * V62.6 — رفع باگ فیلتر پنل مدیر: بخش «کلاس» خالی باز می‌شد چون
+     * state.classes مدیر از native_my_classes فقط کلاس‌های خودش است.
+     * این تابع کلاس‌های قابل‌مشاهدهٔ مدرسه را برای فیلتر می‌آورد.
+     */
+    fun loadManagerFilterClasses() = viewModelScope.launch {
+        runCatching {
+            val raw = SupabaseProvider.client.postgrest.rpc("native_manager_school_classes_v62")
+                .decodeAs<kotlinx.serialization.json.JsonObject>()
+            (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                ?.takeIf(String::isNotBlank)?.let(::error)
+            ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+                val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+                SchoolClass(id = id, name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty())
+            }
+        }.onSuccess { list -> _state.update { it.copy(managerFilterClasses = list) } }
+            .onFailure { }
+    }
+
     /** V61.1 — مدیر مدرسهٔ جدید می‌سازد؛ لیست مدارس تازه می‌شود. */
     fun createSchool(name: String, province: String, city: String) = viewModelScope.launch {
         _state.update { it.copy(actionLoading = true, error = null, message = null) }
@@ -221,6 +244,14 @@ class ClassesViewModel(
     fun deleteClass(id: String) = action("کلاس حذف شد؛ حساب دانش‌آموزان حفظ شد.") {
         repository.deleteClass(id).getOrThrow()
         _state.update { it.copy(selectedClass = null, roster = emptyList()) }
+        reloadData()
+    }
+
+    // V62.6 — اشتراک کلاس با مدیر مدرسه؛ قابل روشن/خاموش شدن در هر زمان.
+    fun setClassShared(id: String, shared: Boolean) = action(
+        if (shared) "کلاس برای مدیر قابل مشاهده شد." else "کلاس از دید مدیر پنهان شد."
+    ) {
+        repository.setClassShared(id, shared).getOrThrow()
         reloadData()
     }
 

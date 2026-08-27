@@ -61,6 +61,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -123,6 +124,8 @@ fun SchoolManagementScreen(
     val passwordVault = remember(context) { StudentPasswordVault(context.applicationContext) }
     val state by viewModel.state.collectAsState()
     var showStudents by remember { mutableStateOf(false) }
+    // V62.6 — ورود از کارت «مدارس» داک: بدون دکمهٔ «بازگشت به کلاس‌ها».
+    var schoolsFromDock by remember { mutableStateOf(false) }
     var classEditor by remember { mutableStateOf<SchoolClass?>(null) }
     var creatingClass by remember { mutableStateOf(false) }
     // V61.1 — پنجرهٔ ساخت مدرسهٔ جدید (فقط مدیر).
@@ -170,12 +173,17 @@ fun SchoolManagementScreen(
     // V62.5 — خروجی اکسل دومرحله‌ای: مرحلهٔ ۱ انتخاب گروه (فیلتر)، مرحلهٔ ۲ انتخاب ستون‌ها.
     var exportStep by remember { mutableStateOf(0) }
     var exportFilter by remember { mutableStateOf(StudentListFilter()) }
+    // V62.6 — مرحلهٔ ۱ اکسل هم برای مدیر به کلاس‌های مدرسه نیاز دارد.
+    LaunchedEffect(exportStep) {
+        if (exportStep == 1 && managerTeacherPicker) viewModel.loadManagerFilterClasses()
+    }
 
     LaunchedEffect(Unit) { viewModel.load() }
     LaunchedEffect(launchAction) {
         when (launchAction) {
             SchoolLaunchAction.SHOW_CLASSES -> {
                 showStudents = false
+                schoolsFromDock = false
                 viewModel.closeClass()
                 viewModel.closeSchools()
                 onLaunchActionConsumed()
@@ -209,6 +217,7 @@ fun SchoolManagementScreen(
             // V61.6 — کارت «مدارس» داک مدیر مستقیم نمای مدارس را باز می‌کند.
             SchoolLaunchAction.SHOW_SCHOOLS -> {
                 showStudents = false
+                schoolsFromDock = true
                 viewModel.closeClass()
                 viewModel.openSchools()
                 onLaunchActionConsumed()
@@ -253,7 +262,8 @@ fun SchoolManagementScreen(
                 showStudents -> StudentsContent(
                     // V61.5 — اول فیلتر، بعد جست‌وجو (جست‌وجو فقط داخل نتیجهٔ فیلتر).
                     students = filteredStudents(
-                        applyStudentFilter(state.students, state.studentFilter, state.classes, state.filterMeta),
+                        // V62.6 — کلاس‌های فیلتر مدیر هم در نگاشت classId→نام لحاظ شود.
+                        applyStudentFilter(state.students, state.studentFilter, state.classes + state.managerFilterClasses, state.filterMeta),
                         state.query
                     ),
                     query = state.query,
@@ -269,7 +279,9 @@ fun SchoolManagementScreen(
                         exportFilter = StudentListFilter()
                         exportStep = 1
                     },
-                    classes = state.classes,
+                    // V62.6 — رفع باگ فیلتر پنل مدیر: کلاس‌های بخش «کلاس» فیلتر
+                    // برای مدیر از RPC مدرسه می‌آید (state.classes مدیر خالی است).
+                    classes = if (managerTeacherPicker) state.managerFilterClasses else state.classes,
                     onAddToClasses = viewModel::addStudentToClasses,
                     knownPasswordOf = { username -> knownPasswords[username?.lowercase()] },
                     filter = state.studentFilter,
@@ -279,6 +291,8 @@ fun SchoolManagementScreen(
                         viewModel.loadFilterMeta()
                         // V61.8 — لیست مدارس برای بخش «مدرسه» فیلتر.
                         viewModel.refreshSchoolList()
+                        // V62.6 — کلاس‌های قابل‌مشاهدهٔ مدیر برای بخش «کلاس».
+                        if (managerTeacherPicker) viewModel.loadManagerFilterClasses()
                     },
                     schools = state.schools,
                     showTeacherFilter = managerTeacherPicker
@@ -298,6 +312,8 @@ fun SchoolManagementScreen(
                     onCreateSchool = if (managerTeacherPicker) {
                         { creatingSchool = true }
                     } else null,
+                    // V62.6 — از داک مدیر: بدون «بازگشت به کلاس‌ها».
+                    showBackToClasses = !(schoolsFromDock && managerTeacherPicker),
                     // V61.6 — فقط معلم: پیوستن به مدرسه با کد دعوت.
                     onJoinSchool = if (!managerTeacherPicker) {
                         { joiningSchool = true }
@@ -309,7 +325,11 @@ fun SchoolManagementScreen(
                     onCreate = { creatingClass = true },
                     onSchools = viewModel::openSchools,
                     onEdit = { classEditor = it },
-                    onDelete = { deletingClass = it }
+                    onDelete = { deletingClass = it },
+                    // V62.6 — سوییچ «قابل مشاهده برای مدیر» فقط برای معلم.
+                    onShareChanged = if (!managerTeacherPicker) {
+                        { item, shared -> viewModel.setClassShared(item.id, shared) }
+                    } else null
                 )
             }
         }
@@ -508,7 +528,7 @@ fun SchoolManagementScreen(
     if (exportStep == 1) {
         StudentFilterDialog(
             filter = exportFilter,
-            classes = state.classes,
+            classes = if (managerTeacherPicker) state.managerFilterClasses else state.classes,
             filterMeta = state.filterMeta,
             schools = state.schools,
             showTeacherFilter = managerTeacherPicker,
@@ -523,7 +543,7 @@ fun SchoolManagementScreen(
     // فعال است که حساب‌شان را همین پنل ساخته و رمزشان در Vault همین دستگاه است.
     if (exportStep == 2) {
         val exportStudents = applyStudentFilter(
-            state.students, exportFilter, state.classes, state.filterMeta
+            state.students, exportFilter, state.classes + state.managerFilterClasses, state.filterMeta
         )
         StudentExportColumnsDialog(
             students = exportStudents,
@@ -583,7 +603,9 @@ private fun ClassesContent(
     onCreate: () -> Unit,
     onSchools: () -> Unit,
     onEdit: (SchoolClass) -> Unit,
-    onDelete: (SchoolClass) -> Unit
+    onDelete: (SchoolClass) -> Unit,
+    // V62.6 — سوییچ اشتراک کلاس با مدیر (فقط برای معلم پاس می‌شود).
+    onShareChanged: ((SchoolClass, Boolean) -> Unit)? = null
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // V61.0 — دکمهٔ «مدارس» کنار ساخت کلاس جدید.
@@ -610,6 +632,24 @@ private fun ClassesContent(
                                 )
                             }
                             Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
+                            // V62.6 — اشتراک با مدیر: پیش‌فرض پنهان؛ هر لحظه قابل تغییر.
+                            onShareChanged?.let { share ->
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        if (item.sharedWithManager) "قابل مشاهده برای مدیر مدرسه"
+                                        else "پنهان از مدیر مدرسه",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Switch(
+                                        checked = item.sharedWithManager,
+                                        onCheckedChange = { share(item, it) }
+                                    )
+                                }
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
@@ -639,7 +679,9 @@ private fun SchoolsContent(
     onOpen: (TeacherSchoolItem) -> Unit,
     onCreateSchool: (() -> Unit)? = null,
     // V61.6 — معلم: دکمهٔ «پیوستن به مدرسه» در ردیف بازگشت.
-    onJoinSchool: (() -> Unit)? = null
+    onJoinSchool: (() -> Unit)? = null,
+    // V62.6 — کارت «مدارس» داک مدیر بدون دکمهٔ بازگشت به کلاس‌ها.
+    showBackToClasses: Boolean = true
 ) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // V61.6 — عنوان داخلی «مدارس من» حذف شد (هدر صفحه «مدرسه من» است)؛
@@ -655,7 +697,8 @@ private fun SchoolsContent(
             onJoinSchool?.let { join ->
                 Button(onClick = join) { Text("پیوستن به مدرسه") }
             }
-            TextButton(onClick = onBack) { Text("بازگشت به کلاس‌ها") }
+            // V62.6 — از کارت مدارس داک مدیر، «بازگشت به کلاس‌ها» حذف شد.
+            if (showBackToClasses) TextButton(onClick = onBack) { Text("بازگشت به کلاس‌ها") }
         }
         if (schools.isEmpty()) {
             Text(

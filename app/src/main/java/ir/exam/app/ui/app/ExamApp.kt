@@ -155,6 +155,8 @@ private fun AuthenticatedExamApp(
     var managerTeacherListKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     var managerTeacherId by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
     var managerInviteHeader by rememberSaveable(user.id) { mutableStateOf(false) }
+    // V62.6 — هدر پویا در مدیریت معلم: «کلاس‌های نام معلم» یا نام کلاس باز.
+    var managerClassHeader by rememberSaveable(user.id) { mutableStateOf<String?>(null) }
     var cardsCycleKey by rememberSaveable(user.id) { mutableIntStateOf(0) }
     // V61.6 — بخش فعال کارت‌های مدیر (null=کارت‌ها، report=کارنامه، status=وضعیت).
     // V61.9 — پیش‌فرض «status» (داشبورد)؛ دکمهٔ آمار داک آن را null (کارت‌ها) می‌کند.
@@ -188,6 +190,7 @@ private fun AuthenticatedExamApp(
         if (user.role == UserRole.MANAGER) {
             managerInviteHeader = false
             managerTeacherId = null
+            managerClassHeader = null
             managerTeacherListKey += 1
         }
         if (page == MainPage.HOME && user.role == UserRole.TEACHER) {
@@ -227,6 +230,7 @@ private fun AuthenticatedExamApp(
     fun createManagerTeacher() {
         closeTransientNavigation()
         managerTeacherId = null
+        managerClassHeader = null
         managerInviteHeader = true
         managerNewTeacherKey += 1
         page = MainPage.HOME
@@ -305,6 +309,8 @@ private fun AuthenticatedExamApp(
         schoolStudentsSelected = schoolStudentsSelected,
         schoolsViewOpen = schoolsViewOpen,
         managerInviteHeader = managerInviteHeader,
+        // V62.6 — هدر پویا «کلاس‌های نام معلم / نام کلاس» به‌جای «معلم‌ها».
+        managerClassHeader = managerClassHeader,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         studentExamActive = studentExamActive,
@@ -408,13 +414,22 @@ private fun AuthenticatedExamApp(
                         onExamActiveChanged = { studentExamActive = it }
                     )
                     UserRole.MANAGER -> managerTeacherId?.let { teacherId ->
-                        ManagerTeacherClassScreen(teacherId = teacherId, onBack = { managerTeacherId = null })
+                        ManagerTeacherClassScreen(
+                            teacherId = teacherId,
+                            onBack = { managerTeacherId = null; managerClassHeader = null },
+                            // V62.6 — هدر بالا: «کلاس‌های نام معلم» و داخل کلاس نام کلاس.
+                            onTitleChanged = { managerClassHeader = it },
+                            // V62.6 — «افزودن جدید» پنجرهٔ +: فرم ساخت دانش‌آموز.
+                            onCreateStudent = ::createStudent
+                        )
                     } ?: ManagerTeachersScreen(
                         newTeacherRequested = managerNewTeacherKey,
                         teacherListRequested = managerTeacherListKey,
                         inviteModeRequested = managerInviteHeader,
                         onManageTeacher = { managerTeacherId = it },
-                        onInviteModeChanged = { managerInviteHeader = it }
+                        onInviteModeChanged = { managerInviteHeader = it },
+                        // V62.6 — بازگشت از پنجرهٔ کد دعوت: داشبورد باز شود.
+                        onInviteBack = ::openManagerDashboard
                     )
                 }
                 MainPage.CALENDAR -> CalendarScreen(user.role)
@@ -461,7 +476,10 @@ private fun AuthenticatedExamApp(
                             onStatus = { managerCardsSection = "status" }
                         )
                         else -> ManagerStatsScreen(
-                        onQuickTeachers = { managerTeacherId = null; page = MainPage.HOME },
+                        // V62.6 — کارنامه و وضعیت هر کدام منوی اختصاصی خود را
+                        // دارند؛ پنل سریع داشبورد فقط در حالت وضعیت است.
+                        section = managerCardsSection ?: "status",
+                        onQuickTeachers = { managerTeacherId = null; managerClassHeader = null; page = MainPage.HOME },
                         onQuickClasses = {
                             schoolStudentsSelected = false
                             schoolLaunchAction = SchoolLaunchAction.SHOW_CLASSES
@@ -472,7 +490,10 @@ private fun AuthenticatedExamApp(
                             schoolLaunchAction = SchoolLaunchAction.SHOW_STUDENTS
                             page = MainPage.SCHOOL
                         },
-                        onQuickWallet = { page = MainPage.WALLET }
+                        onQuickWallet = { page = MainPage.WALLET },
+                        // V62.6 — منوی اختصاصی کارنامه: میان‌برهای گزارش.
+                        onOpenStatus = { managerCardsSection = "status" },
+                        onOpenReport = { managerCardsSection = "report" }
                         )
                     }
                 } else if (user.role == UserRole.TEACHER) {
@@ -746,6 +767,8 @@ private fun AuthenticatedShell(
     schoolStudentsSelected: Boolean,
     schoolsViewOpen: Boolean = false,
     managerInviteHeader: Boolean,
+    // V62.6 — هدر پویا در صفحهٔ مدیریت معلم (کلاس‌ها/نام کلاس).
+    managerClassHeader: String? = null,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
     studentExamActive: Boolean = false,
@@ -904,7 +927,9 @@ private fun AuthenticatedShell(
                                 ),
                                 title = {
                                     Text(
-                                        if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
+                                        // V62.6 — داخل مدیریت معلم: «کلاس‌های نام معلم» یا نام کلاس.
+                                        if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerClassHeader != null) managerClassHeader
+                                        else if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
                                         // V61.6 — نمای مدارس: هدر «مدرسه من» به‌جای «کلاس‌ها».
                                         else if (page == MainPage.SCHOOL && schoolsViewOpen && !schoolStudentsSelected) "مدرسه من"
                                         else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)

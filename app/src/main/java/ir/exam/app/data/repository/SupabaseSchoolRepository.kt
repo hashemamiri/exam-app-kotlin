@@ -227,6 +227,21 @@ class SupabaseSchoolRepository : SchoolRepository {
         ).body<JsonObject>().throwIfError()
     }
 
+    // V62.6 — اشتراک کلاس/دانش‌آموز معلم با مدیر (قابل تغییر از UI کلاس‌ها).
+    override suspend fun setClassShared(classId: String, shared: Boolean): Result<Unit> = runCatching {
+        rpcObject("native_teacher_share_class_v62", buildJsonObject {
+            put("p_class", classId)
+            put("p_share", shared)
+        }).throwIfError()
+    }
+
+    override suspend fun setStudentShared(studentId: String, shared: Boolean): Result<Unit> = runCatching {
+        rpcObject("native_teacher_share_student_v62", buildJsonObject {
+            put("p_student", studentId)
+            put("p_share", shared)
+        }).throwIfError()
+    }
+
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =
         SupabaseProvider.client.postgrest.rpc(name, parameters).decodeAs()
 }

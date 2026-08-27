@@ -14,9 +14,11 @@ data class SchoolClassDto(
     val boys: Int = 0,
     val girls: Int = 0,
     val total: Int = 0,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    // V62.6 — وضعیت اشتراک کلاس با مدیر.
+    @SerialName("shared_with_manager") val sharedWithManager: Boolean = false
 ) {
-    fun toDomain() = SchoolClass(id, name, grade, fieldOfStudy, boys, girls, total, createdAt)
+    fun toDomain() = SchoolClass(id, name, grade, fieldOfStudy, boys, girls, total, createdAt, sharedWithManager)
 }
 
 @Serializable

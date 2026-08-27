@@ -10,7 +10,9 @@ data class SchoolClass(
     val boys: Int = 0,
     val girls: Int = 0,
     val total: Int = 0,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    // V62.6 — اشتراک کلاس معلم با مدیر (پیش‌فرض پنهان؛ قابل تغییر).
+    val sharedWithManager: Boolean = false
 )
 
 data class StudentProfile(

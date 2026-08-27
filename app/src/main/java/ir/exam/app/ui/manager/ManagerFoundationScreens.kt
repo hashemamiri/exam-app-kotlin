@@ -65,7 +65,9 @@ fun ManagerTeachersScreen(
     teacherListRequested: Int = 0,
     inviteModeRequested: Boolean = false,
     onManageTeacher: (String) -> Unit = {},
-    onInviteModeChanged: (Boolean) -> Unit = {}
+    onInviteModeChanged: (Boolean) -> Unit = {},
+    // V62.6 — بازگشت از پنجرهٔ کد دعوت به داشبورد (به‌جای لیست معلم‌ها).
+    onInviteBack: (() -> Unit)? = null
 ) {
     val summaryState = rememberManagerSummary()
     val repository = remember { ir.exam.app.data.repository.SupabaseManagerRepository() }
@@ -81,6 +83,9 @@ fun ManagerTeachersScreen(
     var inviteMode by remember { mutableStateOf(false) }
     var inviteCountDialog by remember { mutableStateOf(false) }
     var inviteCount by remember { mutableStateOf(1) }
+    // V62.6 — انتخاب مدرسهٔ مقصد کد دعوت (مدیر چندمدرسه‌ای).
+    var inviteSchools by remember { mutableStateOf<List<ir.exam.app.data.repository.ManagerSchoolOption>>(emptyList()) }
+    var inviteSchoolId by remember { mutableStateOf<String?>(null) }
     var transferTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
     var transferAmount by remember { mutableStateOf("") }
     var removeTarget by remember { mutableStateOf<ir.exam.app.data.repository.SchoolTeacherItem?>(null) }
@@ -116,12 +121,26 @@ fun ManagerTeachersScreen(
     ) {
         if (inviteMode) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.IconButton(onClick = { inviteMode = false; onInviteModeChanged(false); reloadTeachers() }) {
+                androidx.compose.material3.IconButton(onClick = {
+                    inviteMode = false
+                    onInviteModeChanged(false)
+                    // V62.6 — بازگشت از کد دعوت: داشبورد باز شود.
+                    onInviteBack?.invoke() ?: reloadTeachers()
+                }) {
                     androidx.compose.material3.Icon(Icons.Outlined.ArrowBack, "بازگشت")
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                androidx.compose.material3.Button(onClick = { inviteCountDialog = true }) { Text("ساخت کد دعوت") }
+                androidx.compose.material3.Button(onClick = {
+                    // V62.6 — قبل از ساخت، لیست مدارس مدیر برای انتخاب مقصد.
+                    scope.launch {
+                        repository.managerSchools().onSuccess { list ->
+                            inviteSchools = list
+                            inviteSchoolId = list.firstOrNull()?.id
+                        }.onFailure { error = safeManagerError(it) }
+                    }
+                    inviteCountDialog = true
+                }) { Text("ساخت کد دعوت") }
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
@@ -170,7 +189,12 @@ fun ManagerTeachersScreen(
             if (loading) CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             teachers.forEach { teacher ->
                 Card(
-                    Modifier.fillMaxWidth().clickable {
+                    // V62.6 — گزارش دستگاه: کادر خاکستری با لمس کارت معلم؛ ریپل
+                    // پیش‌فرض clickable حذف شد (همان الگوی تب‌های V62.1.4).
+                    Modifier.fillMaxWidth().clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) {
                         expandedTeacher = if (expandedTeacher == teacher.id) null else teacher.id
                     }
                 ) {
@@ -219,25 +243,41 @@ fun ManagerTeachersScreen(
             onDismissRequest = { inviteCountDialog = false },
             title = { Text("تعداد کد دعوت") },
             text = {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    (1..5).forEach { count ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (1..5).forEach { count ->
+                            androidx.compose.material3.FilterChip(
+                                selected = inviteCount == count,
+                                onClick = { inviteCount = count },
+                                label = { Text(count.toString()) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    // V62.6 — انتخاب مدرسهٔ مقصد: معلم با این کد عضو کدام مدرسه شود؟
+                    Text("معلم به کدام مدرسه بپیوندد؟")
+                    if (inviteSchools.isEmpty()) Text("مدرسه‌ای یافت نشد.")
+                    inviteSchools.forEach { school ->
                         androidx.compose.material3.FilterChip(
-                            selected = inviteCount == count,
-                            onClick = { inviteCount = count },
-                            label = { Text(count.toString()) },
-                            modifier = Modifier.weight(1f)
+                            selected = inviteSchoolId == school.id,
+                            onClick = { inviteSchoolId = school.id },
+                            label = { Text(school.name.ifBlank { "مدرسه" }) },
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             },
             confirmButton = {
-                androidx.compose.material3.Button(onClick = {
-                    inviteCountDialog = false
-                    scope.launch {
-                        repository.createInvites(inviteCount).onSuccess { reloadInvites() }
-                            .onFailure { error = safeManagerError(it) }
+                androidx.compose.material3.Button(
+                    enabled = inviteSchoolId != null,
+                    onClick = {
+                        inviteCountDialog = false
+                        scope.launch {
+                            repository.createInvites(inviteCount, inviteSchoolId).onSuccess { reloadInvites() }
+                                .onFailure { error = safeManagerError(it) }
+                        }
                     }
-                }) { Text("تأیید") }
+                ) { Text("تأیید") }
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { inviteCountDialog = false }) { Text("انصراف") } }
         )
@@ -377,23 +417,31 @@ private fun inviteRemainingText(
 
 @Composable
 fun ManagerStatsScreen(
+    // V62.6 — دو منوی مستقل: "status" داشبورد با پنل سریع، "report" کارنامه
+    // با میان‌برهای گزارش خودش (قبلاً هر دو یک صفحه بودند).
+    section: String = "status",
     onQuickTeachers: (() -> Unit)? = null,
     onQuickClasses: (() -> Unit)? = null,
     onQuickStudents: (() -> Unit)? = null,
-    onQuickWallet: (() -> Unit)? = null
+    onQuickWallet: (() -> Unit)? = null,
+    onOpenStatus: (() -> Unit)? = null,
+    onOpenReport: (() -> Unit)? = null
 ) {
     val state = rememberManagerSummary()
+    val reportMode = section == "report"
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // V61.0 — داشبورد مدیر/معاون: اطلاعات مدرسه، آمار و پنل سریع.
-        Text("داشبورد", style = MaterialTheme.typography.headlineSmall)
+        // V62.6 — عنوان و منوی هر بخش جدا شد.
+        Text(if (reportMode) "کارنامه مدرسه" else "داشبورد", style = MaterialTheme.typography.headlineSmall)
         when {
             state.loading -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
             state.error != null -> Text(state.error, color = MaterialTheme.colorScheme.error)
             else -> {
                 val summary = checkNotNull(state.summary)
+                if (!reportMode) {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(summary.schoolName.ifBlank { "مدرسه" }, style = MaterialTheme.typography.titleMedium)
@@ -405,7 +453,7 @@ fun ManagerStatsScreen(
                         )
                     }
                 }
-                // پنل سریع: میان‌بر بخش‌های پرکاربرد.
+                // پنل سریع: میان‌بر بخش‌های پرکاربرد (منوی اختصاصی داشبورد).
                 if (onQuickTeachers != null || onQuickClasses != null || onQuickStudents != null || onQuickWallet != null) {
                     Text("پنل سریع", style = MaterialTheme.typography.titleMedium)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -434,6 +482,15 @@ fun ManagerStatsScreen(
                         }
                     }
                 }
+                // میان‌بر به کارنامه از داشبورد.
+                onOpenReport?.let { QuickPanelCard("مشاهده کارنامه مدرسه", it, Modifier.fillMaxWidth()) }
+                } else {
+                // V62.6 — منوی اختصاصی کارنامه: میان‌برهای مرتبط با گزارش.
+                Text("پنل کارنامه", style = MaterialTheme.typography.titleMedium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    onOpenStatus?.let { QuickPanelCard("داشبورد", it, Modifier.weight(1f)) }
+                    onQuickTeachers?.let { QuickPanelCard("معلم‌ها", it, Modifier.weight(1f)) }
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Card(Modifier.weight(1f)) { Column(Modifier.padding(14.dp)) { Text("پاسخ‌ها"); Text(summary.answers.toString(), style = MaterialTheme.typography.titleLarge) } }
                     Card(Modifier.weight(1f)) { Column(Modifier.padding(14.dp)) { Text("میانگین نمره"); Text("${summary.averagePercent}٪", style = MaterialTheme.typography.titleLarge) } }
@@ -448,6 +505,7 @@ fun ManagerStatsScreen(
                             Text("کیف پول ${"%,d".format(java.util.Locale.US, item.walletBalance)} تومان")
                         }
                     }
+                }
                 }
             }
         }

@@ -1061,7 +1061,8 @@ require(all(marker in manager_foundation for marker in (
             "if (inviteMode)","(1..5).forEach","زمان باقی‌مانده:","حذف کد دعوت"
         )), "V40B teacher card icons or invite-only mode incomplete")
 require(all(marker in manager_repository for marker in (
-            "createInvites(count: Int)","native_manager_create_teacher_invites_v40b",
+            # V62.6 — امضا مدرسهٔ مقصد اختیاری گرفت؛ بدون مدرسه همان مسیر V40B.
+            "createInvites(count: Int, schoolId: String? = null)","native_manager_create_teacher_invites_v40b",
             "native_manager_invites_v40b","native_manager_revoke_invite_v40b",
             "native_manager_set_teacher_active_v40b","native_manager_remove_teacher_v40b"
         )) and "deleteUser" not in manager_repository,
@@ -1798,6 +1799,34 @@ require("if (managerDashboardActive) TeacherDockSection.NONE" in app_shell,
 _editor_v62=builder_screen.split("private fun QuestionEditor(",1)[1].split("private fun QuestionStyleControls(",1)[0]
 require(".size(30.dp)" in _editor_v62 and ".size(38.dp)" not in _editor_v62,
         "V62.5 tighter question-card header icons are missing")
+# V62.6 — حریم خصوصی معلم + UX مدیر: اشتراک کلاس/دانش‌آموز با تأیید معلم،
+# پنجرهٔ + کلاس مدیر، هدر پویا، کد دعوت با مدرسه، فیلتر کلاس مدیر،
+# کارت مدارس بدون بازگشت، منوی مستقل کارنامه/وضعیت، بازگشت دعوت→داشبورد.
+_v62_6_sql=(ROOT/"supabase/migrations/20260827_native_teacher_privacy_invite_school_v62_6.sql").read_text()
+require(_v62_6_sql == (ROOT/"sql/manual/SQL_NATIVE_TEACHER_PRIVACY_INVITE_SCHOOL_V62_6.sql").read_text()
+        and all(marker in _v62_6_sql for marker in (
+            "shared_with_manager boolean not null default false",
+            "native_teacher_share_class_v62","native_teacher_share_student_v62",
+            "native_manager_create_teacher_invites_v62","native_manager_school_classes_v62"
+        )), "V62.6 teacher privacy SQL or copy incomplete")
+require("fun setClassShared(id: String, shared: Boolean)" in
+        (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
+        and "قابل مشاهده برای مدیر مدرسه" in school_screen,
+        "V62.6 teacher share switch is missing")
+require('Text("افزودن جدید")' in manager_class_screen
+        and 'Text("افزودن موجود")' in manager_class_screen
+        and "FloatingActionButton(" in manager_class_screen,
+        "V62.6 manager class plus dialog is missing")
+require("managerClassHeader != null) managerClassHeader" in app_shell
+        and "onInviteBack = ::openManagerDashboard" in app_shell
+        and 'section = managerCardsSection ?: "status"' in app_shell,
+        "V62.6 dynamic manager header / invite-back / stats sections are missing")
+require("معلم به کدام مدرسه بپیوندد؟" in manager_foundation
+        and 'val reportMode = section == "report"' in manager_foundation,
+        "V62.6 invite school picker / report menu are missing")
+require("if (managerTeacherPicker) state.managerFilterClasses else state.classes" in school_screen
+        and "showBackToClasses = !(schoolsFromDock && managerTeacherPicker)" in school_screen,
+        "V62.6 manager filter classes / dock schools back removal are missing")
 # V62.2/V62.4 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر دو کمانهٔ
 # بزرگ (V62.4: بدون هالهٔ نئونی و هستهٔ نبض‌دار).
 require("internal fun IceSpinner(" in _ice

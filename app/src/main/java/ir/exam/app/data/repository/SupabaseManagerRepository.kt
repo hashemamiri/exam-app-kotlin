@@ -34,6 +34,8 @@ internal data class ManagerTeacherClass(
     val id: String, val name: String, val grade: String, val field: String, val total: Int
 )
 internal data class ManagerStudentItem(val id: String, val fullName: String, val username: String)
+// V62.6 — مدرسهٔ قابل انتخاب برای مقصد کد دعوت.
+internal data class ManagerSchoolOption(val id: String, val name: String)
 internal data class ManagerTeacherClasses(val teacherName: String, val items: List<ManagerTeacherClass>)
 internal data class ManagerClassRoster(val className: String, val items: List<ManagerStudentItem>)
 internal data class WalletTransferResult(
@@ -60,13 +62,31 @@ internal class SupabaseManagerRepository {
         }
     }
 
-    suspend fun createInvites(count: Int): Result<List<ManagerInviteItem>> = runCatching {
+    // V62.6 — کد دعوت با مدرسهٔ مقصد انتخابی؛ بدون مدرسه = مسیر قدیمی V40B.
+    suspend fun createInvites(count: Int, schoolId: String? = null): Result<List<ManagerInviteItem>> = runCatching {
         require(count in 1..5) { "تعداد کد باید بین ۱ تا ۵ باشد." }
-        val raw = SupabaseProvider.client.postgrest.rpc(
-            "native_manager_create_teacher_invites_v40b",
-            buildJsonObject { put("p_count", count) }
-        ).decodeAs<JsonObject>().checked()
+        val raw = if (schoolId != null) {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_manager_create_teacher_invites_v62",
+                buildJsonObject { put("p_count", count); put("p_school", schoolId) }
+            ).decodeAs<JsonObject>().checked()
+        } else {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_manager_create_teacher_invites_v40b",
+                buildJsonObject { put("p_count", count) }
+            ).decodeAs<JsonObject>().checked()
+        }
         raw.inviteItems()
+    }
+
+    // V62.6 — مدرسه‌های مدیر برای انتخاب مقصد کد دعوت (همان RPC مدارس V61).
+    suspend fun managerSchools(): Result<List<ManagerSchoolOption>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc("native_teacher_schools_v61")
+            .decodeAs<JsonObject>().checked()
+        (raw["items"] as? JsonArray).orEmpty().mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            ManagerSchoolOption(item.text("id"), item.text("name"))
+        }
     }
 
     suspend fun invites(): Result<List<ManagerInviteItem>> = runCatching {

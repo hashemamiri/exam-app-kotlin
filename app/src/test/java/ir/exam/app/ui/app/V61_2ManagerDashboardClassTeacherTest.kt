@@ -37,7 +37,8 @@ class V61_2ManagerDashboardClassTeacherTest {
 
     @Test
     fun `dashboard shows school info and quick panel`() {
-        assertTrue("Text(\"داشبورد\", style = MaterialTheme.typography.headlineSmall)" in manager)
+        // V62.6 — عنوان بخش‌بندی شد: «داشبورد» یا «کارنامه مدرسه».
+        assertTrue("Text(if (reportMode) \"کارنامه مدرسه\" else \"داشبورد\", style = MaterialTheme.typography.headlineSmall)" in manager)
         assertTrue("summary.schoolName.ifBlank { \"مدرسه\" }" in manager)
         assertTrue("Text(\"پنل سریع\", style = MaterialTheme.typography.titleMedium)" in manager)
         assertTrue("private fun QuickPanelCard(" in manager)
