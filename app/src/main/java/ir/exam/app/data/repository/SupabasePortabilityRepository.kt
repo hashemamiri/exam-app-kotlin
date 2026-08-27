@@ -98,7 +98,8 @@ class SupabasePortabilityRepository {
                 grade = profile.headerGrade.orEmpty(),
                 fieldOfStudy = profile.headerField.orEmpty(),
                 subject = exam.subject.orEmpty(),
-                examDuration = (exam.duration ?: 0).takeIf { it > 0 }?.let { "$it دقیقه" }.orEmpty()
+                // V62.8 — فقط عدد؛ پسوند «دقیقه» را خود سربرگ اضافه می‌کند.
+                examDuration = (exam.duration ?: 0).takeIf { it > 0 }?.toString().orEmpty()
             ),
             subject = exam.subject.orEmpty(),
             durationMinutes = exam.duration ?: 0,

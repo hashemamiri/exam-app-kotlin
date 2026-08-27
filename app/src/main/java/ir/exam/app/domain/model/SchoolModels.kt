@@ -29,7 +29,9 @@ data class StudentProfile(
     val fieldOfStudy: String? = null,
     val avatarUrl: String? = null,
     val canManageAccount: Boolean = true,
-    val inMyList: Boolean = true
+    val inMyList: Boolean = true,
+    // V62.8 — اشتراک دانش‌آموز معلم‌ساخته با مدیر (چشم روی کارت؛ قابل تغییر).
+    val sharedWithManager: Boolean = false
 )
 
 data class NewStudentRequest(

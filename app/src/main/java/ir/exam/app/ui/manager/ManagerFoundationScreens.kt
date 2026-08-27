@@ -59,6 +59,8 @@ private data class ManagerSummary(
     val teacherActivity: List<TeacherActivity> = emptyList()
 )
 
+// V62.8 — FlowRow چیپ‌های منعطف نام مدرسه در دیالوگ کد دعوت.
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ManagerTeachersScreen(
     newTeacherRequested: Int = 0,
@@ -257,13 +259,19 @@ fun ManagerTeachersScreen(
                     // V62.6 — انتخاب مدرسهٔ مقصد: معلم با این کد عضو کدام مدرسه شود؟
                     Text("معلم به کدام مدرسه بپیوندد؟")
                     if (inviteSchools.isEmpty()) Text("مدرسه‌ای یافت نشد.")
-                    inviteSchools.forEach { school ->
-                        androidx.compose.material3.FilterChip(
-                            selected = inviteSchoolId == school.id,
-                            onClick = { inviteSchoolId = school.id },
-                            label = { Text(school.name.ifBlank { "مدرسه" }) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    // V62.8 — دکمه‌های منعطف: هر چیپ به اندازهٔ نام مدرسه و
+                    // ردیف‌ها وسط‌چین (FlowRow به‌جای چیپ‌های تمام‌عرض).
+                    androidx.compose.foundation.layout.FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                    ) {
+                        inviteSchools.forEach { school ->
+                            androidx.compose.material3.FilterChip(
+                                selected = inviteSchoolId == school.id,
+                                onClick = { inviteSchoolId = school.id },
+                                label = { Text(school.name.ifBlank { "مدرسه" }) }
+                            )
+                        }
                     }
                 }
             },

@@ -10113,3 +10113,81 @@ V62_7_manager_summary_multischool.sql باید در Supabase اجرا شود و�
 معلم باشد؛ + کلاس معلم وسط‌چین؛ داشبورد/وضعیت/کارنامهٔ مدیر پس از
 اجرای SQL بدون خطا.
 ```
+
+
+## ۲۰۶) V62.8 — چشم اشتراک، فرم یکسان دانش‌آموز و صیقل سربرگ چاپ
+
+### درخواست‌های کاربر (۷ مورد)
+
+```text
+۱) اشتراک با مدیر با «آیکن چشم» روی کارت دانش‌آموز/کلاس + پیام روی صفحه.
+۲) + کلاس معلم در پنل مدیر: افزودن جدید دقیقاً فرم پنل معلم؛ ساخته‌شده به
+   همان کلاس و لیست دانش‌آموزان اضافه شود؛ لیست دانش‌آموزان باز نشود و
+   roster کلاس نمایش بماند.
+۳) چیپ‌های نام مدرسه در کد دعوت منعطف (به اندازهٔ نام) و وسط‌چین.
+۴) + داک مدیر: انتخاب معلم/کلاس اختیاری (ساخت بدون کلاس مجاز)؛ پس از
+   ساخت با کلاس، پنجرهٔ لیست اعضای همان کلاس باز شود.
+۵) + کنار جستجوی مدیر: مستقیم فرم ایجاد؛ بدون پس‌زمینه و کادر.
+۶) فونت سربرگ چاپ B Nazanin؛ تاریخ بدون ساعت/دقیقه؛ «مدت آزمون: 120 دقیقه».
+۷) پنجره‌های بلند (سربرگ و مشابه) با کیبورد بالا کشیده و اسکرول شوند.
+```
+
+### پیاده‌سازی
+
+```text
+۱) StudentProfile/StudentProfileDto ستون sharedWithManager (از my_students
+   V62.6 که shared_with_manager را برمی‌گرداند). ClassesViewModel.
+   setStudentShared با پیام‌های موفقیت. StudentCard پارامتر onShareChanged
+   + IconButton چشم (Visibility سبز 0xFF25A86B=قابل مشاهده /
+   VisibilityOff=پنهان) کنار سطل حذف؛ StudentsContent پارامتر
+   onStudentShareChanged که فقط در پنل معلم پاس می‌شود. کارت کلاس: سوییچ
+   V62.6 حذف و همان چشم به سطر دکمه‌های ورود/ویرایش/حذف اضافه شد؛ import
+   بلااستفادهٔ Switch حذف. needle verify بند V62.6 از «قابل مشاهده برای
+   مدیر مدرسه» به «نمایش کلاس/دانش‌آموز به مدیر» به‌روز شد (اول FAIL شد).
+۲) BulkStudentDialog با پوستهٔ عمومی ManagerStudentCreateDialog صادر شد
+   (خودش private ماند چون ۱۷ needle تست/verify به «private fun
+   BulkStudentDialog(» وابسته‌اند). ManagerTeacherClassScreen: state
+   createStudentOpen؛ «افزودن جدید» دیگر onCreateStudent (خروج به فرم
+   عمومی) را صدا نمی‌زند بلکه همین فرم را داخل کلاس باز می‌کند؛ پارامتر
+   جدید onCreateStudents(requests, onCreated) در ExamApp با
+   SupabaseSchoolRepository.createStudentsBulk سیم‌کشی شد و idهای
+   ساخته‌شده با repo.setClassStudent عضو همین کلاس شده و loadRoster
+   می‌شود (roster باز می‌ماند).
+۳) دیالوگ کد دعوت: چیپ‌های مدرسه داخل FlowRow (ExperimentalLayoutApi
+   opt-in) با spacedBy(6, CenterHorizontally)؛ چیپ تمام‌عرض حذف.
+۴) دکمهٔ تأیید پنجرهٔ «انتخاب معلم و کلاس» دیگر disabled نیست: بدون
+   انتخاب کلاس «ساخت بدون کلاس» (فقط لیست خود مدیر)؛ با کلاس «ادامه و
+   ساخت دانش‌آموز». پس از ساخت با کلاس، managerClassRoster (RPC v40c)
+   با تأخیر ۱.۲ثانیه (تا edge بنویسد) خوانده و دیالوگ «دانش‌آموزان کلاس
+   …» با اعضا باز می‌شود.
+۵) onBulk (+ کنار جستجو) در هر دو پنل مستقیم showBulk=true (بدون picker)؛
+   دکمهٔ + از Button به IconButton بدون کادر تبدیل شد.
+۶) OfficialPdfPrintAdapter.persianTypeface: اول assets/fonts/bnazanin.ttf
+   (فونت تجاری در ریپو نیست؛ کاربر فایل مجاز خودش را بگذارد) وگرنه
+   وزیرمتن. ردیف مدت سربرگ: «مدت آزمون: N دقیقه» (پسوند خودکار)؛
+   printableExam فقط عدد می‌دهد؛ فیلد مدت صفحهٔ چاپ فقط رقم می‌پذیرد
+   (راهنما: عدد دقیقه؛ مثال: 120). تاریخ: substringBefore(" ") چون
+   خروجی jalaliDisplay «تاریخ فاصله ساعت» است.
+۷) PrintHeaderDialog: imePadding + verticalScroll (الگوی موجود
+   BulkStudentDialog)؛ لیست «افزودن موجود» کلاس مدیر هم imePadding گرفت.
+```
+
+### تست/verify
+
+```text
+جدید: V62_8ShareEyeFlexHeaderTest (۵ تست). هماهنگ: V62_6 (needle چشم
+به‌جای سوییچ) و verify بند V62.6. verify: ۴ require جدید V62.8.
+دو needle اولیهٔ تست خودم دقیق نبود (FlowRow خودش fillMaxWidth دارد؛
+IconButton( شامل Button( است) و با برش/رشتهٔ دقیق‌تر اصلاح شد — شبیه‌سازی
+با معناشناسی substringAfter/Before سبز. اسکن import: فقط بلااستفادهٔ
+قدیمی ExamApp. FINAL_NATIVE_VERIFY=PASS kotlin_files=205.
+پچ: V62_8_share_eye_flex_header — بدون SQL (ستون‌ها از V62.6 موجودند).
+نکته: برای فونت نازنین، کاربر باید bnazanin.ttf مجاز خود را در
+app/src/main/assets/fonts/ بگذارد؛ بدون آن وزیرمتن چاپ می‌شود.
+چک‌لیست دستگاه: چشم کارت دانش‌آموز/کلاس معلم + پیام + دیده‌شدن/نشدن در
+پنل مدیر؛ + کلاس مدیر → افزودن جدید = فرم معلم → عضو کلاس + roster
+بماند؛ چیپ‌های مدرسهٔ دعوت جمع‌وجور و وسط؛ + داک مدیر بدون انتخاب هم
+بسازد و با کلاس در پایان لیست اعضا را نشان دهد؛ + کنار جستجو مستقیم و
+بی‌کادر؛ PDF: تاریخ بدون ساعت، «مدت آزمون: 120 دقیقه»، فونت نازنین (در
+صورت وجود فایل)؛ پنجرهٔ سربرگ با کیبورد اسکرول شود.
+```

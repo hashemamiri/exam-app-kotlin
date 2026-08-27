@@ -49,7 +49,8 @@ class V62_6TeacherPrivacyManagerUxTest {
         assertTrue("fun setClassShared(id: String, shared: Boolean)" in classesVm)
         assertTrue("native_teacher_share_class_v62" in schoolRepo)
         assertTrue("native_teacher_share_student_v62" in schoolRepo)
-        assertTrue("قابل مشاهده برای مدیر مدرسه" in school)
+        // V62.8 — سوییچ به آیکن چشم تبدیل شد؛ منطق اشتراک همان است.
+        assertTrue("نمایش کلاس به مدیر" in school)
         assertTrue("onShareChanged = if (!managerTeacherPicker) {" in school)
     }
 

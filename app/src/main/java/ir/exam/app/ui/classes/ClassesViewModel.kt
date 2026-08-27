@@ -223,6 +223,28 @@ class ClassesViewModel(
         }
     }.getOrDefault(emptyList())
 
+    /**
+     * V62.8 — لیست اعضای کلاس معلم برای نمایش پس از ساخت دانش‌آموز
+     * (جریان + داک مدیر: در پایان، لیست همان کلاس نشان داده می‌شود).
+     */
+    suspend fun managerClassRoster(classId: String): Pair<String, List<String>> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_manager_class_roster_v40c",
+            kotlinx.serialization.json.buildJsonObject {
+                put("p_class", kotlinx.serialization.json.JsonPrimitive(classId))
+            }
+        ).decodeAs<kotlinx.serialization.json.JsonObject>()
+        (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+            ?.takeIf(String::isNotBlank)?.let(::error)
+        val name = (raw["class_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty()
+        val items = ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+            val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            ((obj["full_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty())
+                .ifBlank { (obj["username"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty() }
+        }
+        name to items
+    }.getOrDefault("" to emptyList())
+
     /** V61.1 — مدیر مدرسهٔ جدید می‌سازد؛ لیست مدارس تازه می‌شود. */
     fun createSchool(name: String, province: String, city: String) = viewModelScope.launch {
         _state.update { it.copy(actionLoading = true, error = null, message = null) }
@@ -272,6 +294,14 @@ class ClassesViewModel(
         if (shared) "کلاس برای مدیر قابل مشاهده شد." else "کلاس از دید مدیر پنهان شد."
     ) {
         repository.setClassShared(id, shared).getOrThrow()
+        reloadData()
+    }
+
+    // V62.8 — چشم روی کارت دانش‌آموز: اشتراک با مدیر + پیام روی صفحه.
+    fun setStudentShared(id: String, shared: Boolean) = action(
+        if (shared) "دانش‌آموز برای مدیر قابل مشاهده شد." else "دانش‌آموز از دید مدیر پنهان شد."
+    ) {
+        repository.setStudentShared(id, shared).getOrThrow()
         reloadData()
     }
 

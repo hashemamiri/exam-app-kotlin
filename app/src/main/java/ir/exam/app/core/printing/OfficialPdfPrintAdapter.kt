@@ -267,7 +267,12 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val leftColRight = MARGIN + LEFT_COL_WIDTH + 6f
         val rows = listOf(
             Triple("نام:", "وزارت آموزش و پرورش جمهوری اسلامی ایران", "تاریخ آزمون: ${header.examDate}"),
-            Triple("نام خانوادگی:", "اداره کل آموزش و پرورش استان ${header.province}", "مدت آزمون: ${header.examDuration}"),
+            // V62.8 — مدت همیشه با پسوند «دقیقه» (مثلاً: مدت آزمون: 120 دقیقه).
+            Triple(
+                "نام خانوادگی:",
+                "اداره کل آموزش و پرورش استان ${header.province}",
+                "مدت آزمون: " + header.examDuration.takeIf(String::isNotBlank)?.let { "$it دقیقه" }.orEmpty()
+            ),
             Triple(
                 "نام پدر:",
                 "مدیریت آموزش و پرورش شهر/شهرستان ${header.city}" +
@@ -299,11 +304,22 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         canvas.drawText(clipped, x, top, paint)
     }
 
+    /**
+     * V62.8 — فونت سربرگ: B Nazanin (درخواست کاربر). چون فونت تجاری است و
+     * در ریپو نیست، اگر کاربر فایل مجاز خود را در assets/fonts/bnazanin.ttf
+     * بگذارد استفاده می‌شود؛ در غیر این صورت وزیرمتن جایگزین می‌ماند.
+     */
     private fun persianTypeface(bold: Boolean): Typeface {
-        val base = ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
+        val nazanin = nazaninCache ?: runCatching {
+            Typeface.createFromAsset(context.assets, "fonts/bnazanin.ttf")
+        }.getOrNull()?.also { nazaninCache = it }
+        val base = nazanin
+            ?: ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
             ?: Typeface.create("sans", Typeface.NORMAL)
         return Typeface.create(base, if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
+
+    private var nazaninCache: Typeface? = null
 
     private fun emblemBitmap(): Bitmap? = emblemCache ?: runCatching {
         context.assets.open("print/emblem.png").use(android.graphics.BitmapFactory::decodeStream)

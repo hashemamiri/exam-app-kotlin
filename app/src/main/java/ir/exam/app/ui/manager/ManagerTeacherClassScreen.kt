@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -58,7 +59,10 @@ fun ManagerTeacherClassScreen(
     teacherId: String,
     onBack: () -> Unit,
     onTitleChanged: (String?) -> Unit = {},
-    onCreateStudent: () -> Unit = {}
+    onCreateStudent: () -> Unit = {},
+    // V62.8 — ساخت دانش‌آموز با فرم پنل معلم؛ callback شناسهٔ ساخته‌شده‌ها را
+    // برمی‌گرداند تا عضو همین کلاس شوند (لیست دانش‌آموزان باز نمی‌شود).
+    onCreateStudents: (List<ir.exam.app.domain.model.NewStudentRequest>, (List<String>) -> Unit) -> Unit = { _, _ -> }
 ) {
  val repo=remember{SupabaseManagerRepository()};val scope=rememberCoroutineScope()
  var teacherName by remember{mutableStateOf("")};var classes by remember{mutableStateOf<List<ManagerTeacherClass>>(emptyList())}
@@ -69,6 +73,8 @@ fun ManagerTeacherClassScreen(
  var addMenuOpen by remember{mutableStateOf(false)}
  var pickExistingOpen by remember{mutableStateOf(false)}
  var pickQuery by remember{mutableStateOf("")}
+ // V62.8 — فرم دانش‌آموز جدید (همان فرم پنل معلم) داخل کلاس مدیر.
+ var createStudentOpen by remember{mutableStateOf(false)}
  fun loadClasses(){scope.launch{loading=true;repo.teacherClasses(teacherId).onSuccess{teacherName=it.teacherName;classes=it.items;error=null}.onFailure{error=safeManagerError(it)};loading=false}}
  fun loadRoster(item:ManagerTeacherClass){scope.launch{loading=true;repo.classRoster(item.id).onSuccess{roster=it;selected=item}.onFailure{error=safeManagerError(it)};repo.schoolStudents().onSuccess{schoolStudents=it}.onFailure{error=safeManagerError(it)};loading=false}}
  LaunchedEffect(teacherId){loadClasses()}
@@ -107,13 +113,34 @@ fun ManagerTeacherClassScreen(
    title={Text("افزودن دانش‌آموز")},
    text={
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-     Button(onClick={addMenuOpen=false;onCreateStudent()},modifier=Modifier.fillMaxWidth()){Text("افزودن جدید")}
+     // V62.8 — افزودن جدید: همان فرم پنل معلم همین‌جا باز می‌شود و
+     // ساخته‌شده مستقیم عضو همین کلاس شده و roster نمایش داده می‌شود.
+     Button(onClick={addMenuOpen=false;createStudentOpen=true},modifier=Modifier.fillMaxWidth()){Text("افزودن جدید")}
      Button(onClick={addMenuOpen=false;pickQuery="";pickExistingOpen=true},modifier=Modifier.fillMaxWidth()){Text("افزودن موجود")}
      Text("افزودن از فهرست دانش‌آموزان مدرسه با جست‌وجو و فیلتر",style=MaterialTheme.typography.bodySmall)
     }
    },
    confirmButton={},
    dismissButton={TextButton(onClick={addMenuOpen=false}){Text("انصراف")}}
+  )
+ }
+ // V62.8 — فرم «دانش‌آموز جدید» (همان فرم پنل معلم): ساخت با edge موجود،
+ // سپس عضویت در همین کلاس با RPC مدیر و تازه‌سازی roster (لیست باز نمی‌شود).
+ if(createStudentOpen&&selected!=null){
+  ir.exam.app.ui.classes.ManagerStudentCreateDialog(
+   onDismiss={createStudentOpen=false},
+   onCreate={requests->
+    createStudentOpen=false
+    onCreateStudents(requests){created->
+     scope.launch{
+      created.forEach{studentId->
+       repo.setClassStudent(selected!!.id,studentId,true)
+        .onFailure{error=safeManagerError(it)}
+      }
+      loadRoster(selected!!)
+     }
+    }
+   }
   )
  }
  // فهرست دانش‌آموزان مدرسه با فیلتر متنی برای انتخاب.
@@ -128,7 +155,8 @@ fun ManagerTeacherClassScreen(
     Column(verticalArrangement=Arrangement.spacedBy(7.dp)){
      OutlinedTextField(pickQuery,{pickQuery=it.take(80)},label={Text("فیلتر نام یا نام کاربری")},singleLine=true,modifier=Modifier.fillMaxWidth())
      if(candidates.isEmpty())Text("دانش‌آموزی مطابق فیلتر پیدا نشد.")
-     LazyColumn(Modifier.heightIn(max=380.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
+     // V62.8 — با کیبورد باز، لیست بالا کشیده و اسکرول‌پذیر می‌ماند.
+     LazyColumn(Modifier.heightIn(max=380.dp).imePadding(),verticalArrangement=Arrangement.spacedBy(5.dp)){
       items(candidates.size){index->
        val st=candidates[index]
        Card(Modifier.fillMaxWidth()){Row(Modifier.fillMaxWidth().padding(9.dp),verticalAlignment=Alignment.CenterVertically){Text(st.fullName.ifBlank{st.username},Modifier.weight(1f));Checkbox(false,onCheckedChange={scope.launch{repo.setClassStudent(selected!!.id,st.id,true).onSuccess{loadRoster(selected!!)}.onFailure{error=safeManagerError(it)}}})}}

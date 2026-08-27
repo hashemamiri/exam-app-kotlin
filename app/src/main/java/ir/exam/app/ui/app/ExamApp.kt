@@ -63,8 +63,11 @@ import ir.exam.app.BuildConfig
 import ir.exam.app.core.ui.AppearanceSettings
 import ir.exam.app.core.update.ApkUpdateManager
 import ir.exam.app.core.update.UpdateUseCase
+import androidx.compose.runtime.rememberCoroutineScope
 import ir.exam.app.data.repository.SupabaseAppUpdateRepository
 import ir.exam.app.data.repository.SupabaseAuthRepository
+import ir.exam.app.data.repository.SupabaseSchoolRepository
+import kotlinx.coroutines.launch
 import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.ui.auth.AuthViewModel
@@ -416,13 +419,25 @@ private fun AuthenticatedExamApp(
                         onExamActiveChanged = { studentExamActive = it }
                     )
                     UserRole.MANAGER -> managerTeacherId?.let { teacherId ->
+                        // V62.8 — ساخت دانش‌آموز داخل کلاس معلم: همان فرم پنل معلم؛
+                        // پس از ساخت، شناسه‌ها به کلاس اضافه و roster تازه می‌شود.
+                        val managerClassScope = rememberCoroutineScope()
+                        val managerSchoolRepository = remember { SupabaseSchoolRepository() }
                         ManagerTeacherClassScreen(
                             teacherId = teacherId,
                             onBack = { managerTeacherId = null; managerClassHeader = null },
                             // V62.6 — هدر بالا: «کلاس‌های نام معلم» و داخل کلاس نام کلاس.
                             onTitleChanged = { managerClassHeader = it },
                             // V62.6 — «افزودن جدید» پنجرهٔ +: فرم ساخت دانش‌آموز.
-                            onCreateStudent = ::createStudent
+                            onCreateStudent = ::createStudent,
+                            onCreateStudents = { requests, onCreated ->
+                                managerClassScope.launch {
+                                    val created = managerSchoolRepository
+                                        .createStudentsBulk(null, requests)
+                                        .getOrNull()?.credentials?.map { it.id }.orEmpty()
+                                    onCreated(created)
+                                }
+                            }
                         )
                     } ?: ManagerTeachersScreen(
                         newTeacherRequested = managerNewTeacherKey,

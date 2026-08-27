@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -168,7 +169,8 @@ private fun PrintHeaderDialog(
         title = { Text("سربرگ رسمی آزمون") },
         text = {
             Column(
-                Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+                // V62.8 — با باز شدن کیبورد پنجره بالا کشیده و اسکرول‌پذیر می‌ماند.
+                Modifier.fillMaxWidth().heightIn(max = 560.dp).imePadding().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
@@ -226,13 +228,17 @@ private fun PrintHeaderDialog(
                     iso = examDateIso,
                     onChange = { iso ->
                         examDateIso = iso
-                        draft = draft.copy(examDate = iso?.let { jalaliDisplay(it).substringBefore(" ساعت") }.orEmpty())
+                        // V62.8 — فقط تاریخ؛ ساعت و دقیقه حذف می‌شود.
+                        draft = draft.copy(examDate = iso?.let { jalaliDisplay(it).substringBefore(" ") }.orEmpty())
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
+                // V62.8 — فقط عدد دقیقه؛ «دقیقه» خودکار به سربرگ اضافه می‌شود.
                 OutlinedTextField(
-                    draft.examDuration, { draft = draft.copy(examDuration = it.take(40)) },
-                    label = { Text("مدت امتحان") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                    draft.examDuration, { draft = draft.copy(examDuration = it.filter(Char::isDigit).take(4)) },
+                    label = { Text("مدت امتحان") },
+                    supportingText = { Text("عدد دقیقه؛ مثال: 120") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 // پیش‌نمایش سربرگ کامل‌شده (همان چیدمان چاپ).
                 Text("پیش‌نمایش سربرگ", style = MaterialTheme.typography.labelLarge)
@@ -267,7 +273,12 @@ fun HeaderPreview(header: OfficialPrintHeader) {
             )
         }
         HeaderPreviewRow("نام:", "وزارت آموزش و پرورش جمهوری اسلامی ایران", "تاریخ آزمون: ${header.examDate}")
-        HeaderPreviewRow("نام خانوادگی:", "اداره کل آموزش و پرورش استان ${header.province}", "مدت آزمون: ${header.examDuration}")
+        // V62.8 — مدت با پسوند «دقیقه» (مثل: مدت آزمون: 120 دقیقه).
+        HeaderPreviewRow(
+            "نام خانوادگی:",
+            "اداره کل آموزش و پرورش استان ${header.province}",
+            "مدت آزمون: " + header.examDuration.takeIf(String::isNotBlank)?.let { "$it دقیقه" }.orEmpty()
+        )
         HeaderPreviewRow(
             "نام پدر:",
             "مدیریت آموزش و پرورش شهر/شهرستان ${header.city}" +

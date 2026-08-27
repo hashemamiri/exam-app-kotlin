@@ -1811,9 +1811,11 @@ require(_v62_6_sql == (ROOT/"sql/manual/SQL_NATIVE_TEACHER_PRIVACY_INVITE_SCHOOL
             "native_teacher_share_class_v62","native_teacher_share_student_v62",
             "native_manager_create_teacher_invites_v62","native_manager_school_classes_v62"
         )), "V62.6 teacher privacy SQL or copy incomplete")
+# V62.8 — سوییچ اشتراک به آیکن چشم روی کارت کلاس/دانش‌آموز تبدیل شد.
 require("fun setClassShared(id: String, shared: Boolean)" in
         (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text()
-        and "قابل مشاهده برای مدیر مدرسه" in school_screen,
+        and "نمایش کلاس به مدیر" in school_screen
+        and "نمایش دانش‌آموز به مدیر" in school_screen,
         "V62.6 teacher share switch is missing")
 require('Text("افزودن جدید")' in manager_class_screen
         and 'Text("افزودن موجود")' in manager_class_screen
@@ -1861,6 +1863,26 @@ require("managerCreatePickerOpen = true" in school_screen
 require(_summary_sql_v62 == (ROOT/"sql/manual/SQL_NATIVE_MANAGER_SUMMARY_MULTISCHOOL_V62_7.sql").read_text()
         and "school_id in(select school_id from mine)" in _summary_sql_v62,
         "V62.7 multischool manager summary SQL or copy incomplete")
+# V62.8 — چشم اشتراک، فرم معلم داخل کلاس مدیر، چیپ منعطف، انتخاب اختیاری،
+# + مستقیم بدون کادر، فونت/فرمت سربرگ، دیالوگ کیبوردپذیر.
+require("نمایش دانش‌آموز به مدیر" in school_screen
+        and "fun setStudentShared(id: String, shared: Boolean)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text(),
+        "V62.8 student share eye is missing")
+require("fun ManagerStudentCreateDialog(" in school_screen
+        and "ManagerStudentCreateDialog(" in manager_class_screen
+        and "repo.setClassStudent(selected!!.id,studentId,true)" in manager_class_screen,
+        "V62.8 teacher-form student creation inside manager class is missing")
+require("FlowRow(" in manager_foundation
+        and 'else "ساخت بدون کلاس"' in school_screen
+        and "suspend fun managerClassRoster(classId: String)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text(),
+        "V62.8 flexible invite chips / optional class flow are missing")
+require("fonts/bnazanin.ttf" in _pdf_v62
+        and "$" + "it دقیقه" in _pdf_v62
+        and ".imePadding().verticalScroll(" in _print_center_v62
+        and 'jalaliDisplay(it).substringBefore(" ")' in _print_center_v62,
+        "V62.8 nazanin header font / minute suffix / ime-aware dialog are missing")
 # V62.2/V62.4 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر دو کمانهٔ
 # بزرگ (V62.4: بدون هالهٔ نئونی و هستهٔ نبض‌دار).
 require("internal fun IceSpinner(" in _ice

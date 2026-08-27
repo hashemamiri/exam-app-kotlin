@@ -36,7 +36,9 @@ data class StudentProfileDto(
     @SerialName("field_of_study") val fieldOfStudy: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("can_manage") val canManage: Boolean = true,
-    @SerialName("in_my_list") val inMyList: Boolean = true
+    @SerialName("in_my_list") val inMyList: Boolean = true,
+    // V62.8 — وضعیت اشتراک با مدیر از my_students (ستون V62.6).
+    @SerialName("shared_with_manager") val sharedWithManager: Boolean = false
 ) {
     fun toDomain() = StudentProfile(
         id = id,
@@ -52,6 +54,7 @@ data class StudentProfileDto(
         fieldOfStudy = fieldOfStudy,
         avatarUrl = avatarUrl,
         canManageAccount = canManage,
-        inMyList = inMyList
+        inMyList = inMyList,
+        sharedWithManager = sharedWithManager
     )
 }

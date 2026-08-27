@@ -61,7 +61,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -143,6 +142,8 @@ fun SchoolManagementScreen(
     var managerCreateTeacher by remember { mutableStateOf<SchoolTeacherPick?>(null) }
     var managerCreateClasses by remember { mutableStateOf<List<SchoolClass>>(emptyList()) }
     var managerCreateClassId by remember { mutableStateOf<String?>(null) }
+    // V62.8 — لیست اعضای کلاس پس از ساخت (نام کلاس + اعضا).
+    var managerCreatedRoster by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
     // cache زندهٔ رمزها برای UI؛ منبع پایدار آن StudentPasswordVault رمزنگاری‌شده
     // با Android Keystore است و پس از بازشدن دوبارهٔ برنامه از روی دستگاه پر می‌شود.
     val knownPasswords = remember { mutableStateMapOf<String, String>() }
@@ -286,14 +287,9 @@ fun SchoolManagementScreen(
                     onDelete = { deletingStudent = it },
                     // V62.7 — دکمهٔ + مدیر همان جریان داک را اجرا می‌کند
                     // (اول انتخاب معلم/کلاس، بعد فرم دانش‌آموز).
-                    onBulk = {
-                        if (managerTeacherPicker) {
-                            viewModel.loadSchoolTeachers()
-                            managerCreatePickerOpen = true
-                        } else {
-                            showBulk = true
-                        }
-                    },
+                    // V62.8 — + کنار جستجو در هر دو پنل «مستقیم» فرم ایجاد
+                    // دانش‌آموز را باز می‌کند (انتخاب معلم/کلاس فقط از + داک).
+                    onBulk = { managerCreateClassId = null; showBulk = true },
                     onExport = {
                         // V62.5 — به‌جای خروجی فوری، جریان دومرحله‌ای باز می‌شود.
                         viewModel.loadFilterMeta()
@@ -317,7 +313,11 @@ fun SchoolManagementScreen(
                         if (managerTeacherPicker) viewModel.loadManagerFilterClasses()
                     },
                     schools = state.schools,
-                    showTeacherFilter = managerTeacherPicker
+                    showTeacherFilter = managerTeacherPicker,
+                    // V62.8 — چشم اشتراک فقط در پنل معلم نمایش داده می‌شود.
+                    onStudentShareChanged = if (!managerTeacherPicker) {
+                        { student, shared -> viewModel.setStudentShared(student.id, shared) }
+                    } else null
                 )
                 // V61.0 — نمای «مدارس» بخش کلاس‌ها: مدرسه → کلاس‌های مدرسه → roster.
                 state.schoolsOpen && state.selectedSchool != null -> SchoolClassesContent(
@@ -544,11 +544,35 @@ fun SchoolManagementScreen(
             requests.forEach{knownPasswords[it.username.lowercase()]=it.password}
             // V62.7 — مدیر: افزودن به کلاس معلم انتخابی؛ معلم: مسیر قبلی.
             val target=managerCreateClassId
-            if(managerTeacherPicker&&target!=null)viewModel.createStudentsBulkForManagerClass(target,requests)
-            else viewModel.createStudentsBulk(null,requests)
+            if(managerTeacherPicker&&target!=null){
+                viewModel.createStudentsBulkForManagerClass(target,requests)
+                // V62.8 — در پایان، لیست دانش‌آموزان همان کلاس نمایش داده شود.
+                pickerScope.launch{
+                    kotlinx.coroutines.delay(1200)
+                    managerCreatedRoster=viewModel.managerClassRoster(target)
+                }
+            } else viewModel.createStudentsBulk(null,requests)
             managerCreateClassId=null;showBulk=false
         }
     )
+
+    // V62.8 — پنجرهٔ لیست اعضای کلاس پس از ساخت دانش‌آموز (جریان + داک مدیر).
+    managerCreatedRoster?.let { (className, members) ->
+        AlertDialog(
+            onDismissRequest = { managerCreatedRoster = null },
+            title = { Text("دانش‌آموزان کلاس ${className.ifBlank { "" }}") },
+            text = {
+                Column(
+                    Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    if (members.isEmpty()) Text("این کلاس هنوز عضوی ندارد.")
+                    members.forEach { name -> Card(Modifier.fillMaxWidth()) { Text(name, Modifier.padding(9.dp)) } }
+                }
+            },
+            confirmButton = { Button(onClick = { managerCreatedRoster = null }) { Text("بستن") } }
+        )
+    }
 
     // V62.7 — پنجرهٔ انتخاب معلم و کلاس قبل از فرم دانش‌آموز جدید (پنل مدیر).
     if (managerCreatePickerOpen) {
@@ -589,10 +613,16 @@ fun SchoolManagementScreen(
                 }
             },
             confirmButton = {
+                // V62.8 — انتخاب معلم/کلاس اختیاری است: بدون انتخاب،
+                // دانش‌آموز فقط به لیست خود مدیر اضافه می‌شود.
                 Button(
-                    enabled = managerCreateClassId != null,
                     onClick = { managerCreatePickerOpen = false; showBulk = true }
-                ) { Text("ادامه و ساخت دانش‌آموز") }
+                ) {
+                    Text(
+                        if (managerCreateClassId != null) "ادامه و ساخت دانش‌آموز"
+                        else "ساخت بدون کلاس"
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = { managerCreatePickerOpen = false }) { Text("انصراف") }
@@ -708,29 +738,26 @@ private fun ClassesContent(
                                 )
                             }
                             Text("اعضا: ${item.total} نفر · پسر: ${item.boys} · دختر: ${item.girls}")
-                            // V62.6 — اشتراک با مدیر: پیش‌فرض پنهان؛ هر لحظه قابل تغییر.
-                            onShareChanged?.let { share ->
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        if (item.sharedWithManager) "قابل مشاهده برای مدیر مدرسه"
-                                        else "پنهان از مدیر مدرسه",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    Switch(
-                                        checked = item.sharedWithManager,
-                                        onCheckedChange = { share(item, it) }
-                                    )
-                                }
-                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // V62.8 — آیکن چشم به‌جای سوییچ: فعال = کلاس با
+                                // اعضایش برای مدیر قابل مشاهده؛ پیام از ViewModel.
+                                onShareChanged?.let { share ->
+                                    IconButton(onClick = { share(item, !item.sharedWithManager) }) {
+                                        Icon(
+                                            if (item.sharedWithManager) Icons.Outlined.Visibility
+                                            else Icons.Outlined.VisibilityOff,
+                                            contentDescription = if (item.sharedWithManager) {
+                                                "پنهان‌کردن کلاس از مدیر"
+                                            } else "نمایش کلاس به مدیر",
+                                            tint = if (item.sharedWithManager) Color(0xFF25A86B)
+                                            else LocalContentColor.current
+                                        )
+                                    }
+                                }
                                 Button(onClick = { onOpen(item) }) { Text("ورود") }
                                 OutlinedButton(onClick = { onEdit(item) }) { Text("ویرایش") }
                                 TextButton(onClick = { onDelete(item) }) { Text("حذف") }
@@ -943,7 +970,9 @@ private fun StudentsContent(
     onLoadFilterMeta: () -> Unit = {},
     // V61.8 — لیست مدارس برای بخش «مدرسه» فیلتر.
     schools: List<TeacherSchoolItem> = emptyList(),
-    showTeacherFilter: Boolean = false
+    showTeacherFilter: Boolean = false,
+    // V62.8 — چشم اشتراک با مدیر روی کارت دانش‌آموز (فقط پنل معلم).
+    onStudentShareChanged: ((StudentProfile, Boolean) -> Unit)? = null
 ) {
     var searchOpen by remember { mutableStateOf(query.isNotBlank()) }
     var filterOpen by remember { mutableStateOf(false) }
@@ -954,7 +983,9 @@ private fun StudentsContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedButton(onClick = onExport) { Text("Excel") }
-            Button(
+            // V62.8 — دکمهٔ + بدون کادر و پس‌زمینه (مثل آیکن جستجو)؛ در پنل
+            // مدیر مستقیم فرم ایجاد دانش‌آموز را باز می‌کند.
+            IconButton(
                 onClick = onBulk,
                 modifier = Modifier
                     .padding(horizontal = 8.dp)
@@ -1019,7 +1050,8 @@ private fun StudentsContent(
                     onDelete = { onDelete(student) },
                     classes = classes,
                     onAddToClasses = { classIds -> onAddToClasses(student.id, classIds) },
-                    knownPasswordOf = knownPasswordOf
+                    knownPasswordOf = knownPasswordOf,
+                    onShareChanged = onStudentShareChanged
                 )
             }
         }
@@ -1253,7 +1285,9 @@ private fun StudentCard(
     classes: List<SchoolClass>,
     onAddToClasses: (Set<String>) -> Unit,
     knownPasswordOf: (String?) -> String? = { null },
-    membershipOnlyDelete: Boolean = false
+    membershipOnlyDelete: Boolean = false,
+    // V62.8 — چشم اشتراک با مدیر روی کارت دانش‌آموز (فقط پنل معلم).
+    onShareChanged: ((StudentProfile, Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var expanded by remember(student.id) { mutableStateOf(false) }
@@ -1371,6 +1405,24 @@ private fun StudentCard(
                                     Icons.Outlined.Delete,
                                     contentDescription = if (membershipOnlyDelete) "حذف از کلاس" else "حذف حساب دانش‌آموز",
                                     tint = Color(0xFFD63B49),
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+                        }
+                        // V62.8 — چشم اشتراک با مدیر: فعال=قابل مشاهده؛ پیام روی صفحه.
+                        onShareChanged?.let { share ->
+                            IconButton(
+                                onClick = { share(student, !student.sharedWithManager) },
+                                modifier = Modifier.weight(1f).height(58.dp)
+                            ) {
+                                Icon(
+                                    if (student.sharedWithManager) Icons.Outlined.Visibility
+                                    else Icons.Outlined.VisibilityOff,
+                                    contentDescription = if (student.sharedWithManager) {
+                                        "پنهان‌کردن دانش‌آموز از مدیر"
+                                    } else "نمایش دانش‌آموز به مدیر",
+                                    tint = if (student.sharedWithManager) Color(0xFF25A86B)
+                                    else LocalContentColor.current,
                                     modifier = Modifier.size(30.dp)
                                 )
                             }
@@ -1839,6 +1891,16 @@ private data class BulkStudentDraft(
     val field: String = "",
     val usernameEdited: Boolean = false
 )
+
+/**
+ * V62.8 — پوستهٔ عمومی همان فرم «دانش‌آموز جدید» پنل معلم؛ کلاس معلم در
+ * پنل مدیر دقیقاً همین پنجره را باز می‌کند (بدون تغییر needleهای V21/V25).
+ */
+@Composable
+fun ManagerStudentCreateDialog(
+    onDismiss: () -> Unit,
+    onCreate: (List<NewStudentRequest>) -> Unit
+) = BulkStudentDialog(onDismiss = onDismiss, onCreate = onCreate)
 
 @Composable
 private fun BulkStudentDialog(
