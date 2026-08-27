@@ -77,6 +77,9 @@ class V62_8ShareEyeFlexHeaderTest {
         assertTrue("Text(\n                        if (managerCreateClassId != null) \"ادامه و ساخت دانش‌آموز\"\n                        else \"ساخت بدون کلاس\"\n                    )" in school)
         // پس از ساخت با کلاس، لیست اعضای همان کلاس باز می‌شود
         assertTrue("managerCreatedRoster=viewModel.managerClassRoster(target)" in school)
+        // V62.8.1 — پنجرهٔ لیست اعضا اسکرول دارد و importهای آن حاضرند (رفع خطای CI).
+        assertTrue("import androidx.compose.foundation.verticalScroll" in school)
+        assertTrue("import androidx.compose.foundation.rememberScrollState" in school)
         assertTrue("suspend fun managerClassRoster(classId: String)" in classesVm)
         assertTrue("دانش‌آموزان کلاس \${className.ifBlank { \"\" }}" in school)
         // + کنار جستجو: مستقیم فرم و بدون کادر (IconButton به‌جای Button)

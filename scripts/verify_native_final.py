@@ -1878,6 +1878,10 @@ require("FlowRow(" in manager_foundation
         and "suspend fun managerClassRoster(classId: String)" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text(),
         "V62.8 flexible invite chips / optional class flow are missing")
+# V62.8.1 — رفع خطای CI: importهای اسکرول پنجرهٔ لیست اعضای کلاس.
+require("import androidx.compose.foundation.verticalScroll" in school_screen
+        and "import androidx.compose.foundation.rememberScrollState" in school_screen,
+        "V62.8.1 scroll imports for manager roster dialog are missing")
 require("fonts/bnazanin.ttf" in _pdf_v62
         and "$" + "it دقیقه" in _pdf_v62
         and ".imePadding().verticalScroll(" in _print_center_v62

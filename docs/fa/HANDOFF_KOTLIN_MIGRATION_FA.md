@@ -10191,3 +10191,39 @@ app/src/main/assets/fonts/ بگذارد؛ بدون آن وزیرمتن چاپ م
 بی‌کادر؛ PDF: تاریخ بدون ساعت، «مدت آزمون: 120 دقیقه»، فونت نازنین (در
 صورت وجود فایل)؛ پنجرهٔ سربرگ با کیبورد اسکرول شود.
 ```
+
+## ۲۰۷) V62.8.1 — هات‌فیکس خطای بیلد CI (import اسکرول)
+
+### مشکل
+
+```text
+CI ران V62.8 قرمز شد:
+SchoolManagementScreen.kt:566: Unresolved reference 'verticalScroll'
+SchoolManagementScreen.kt:566: Unresolved reference 'rememberScrollState'
+ریشه: پنجرهٔ «دانش‌آموزان کلاس X» (V62.8) از verticalScroll(rememberScrollState())
+استفاده می‌کند ولی دو import مربوطه به فایل اضافه نشده بود. بقیهٔ فایل‌های
+تغییرکرده اسکن شدند (FlowRow/IconButton/rememberCoroutineScope در
+ManagerFoundationScreens fully-qualified بودند؛ ExamPrintCenterScreen
+imePadding را import داشت) — فقط همین دو مورد ناقص بود.
+```
+
+### راه‌حل
+
+```text
+دو import به SchoolManagementScreen.kt اضافه شد:
+androidx.compose.foundation.verticalScroll و
+androidx.compose.foundation.rememberScrollState.
+درس: اسکن importها باید «فقط خطوط افزوده‌شدهٔ دیف» را هم جدا بررسی کند،
+نه صرفاً grep کل فایل — استفادهٔ fully-qualified در بقیهٔ فایل، غیبت
+import در فایل دیگر را پنهان می‌کند.
+```
+
+### تست/verify
+
+```text
+تست V62_8 دو assert جدید import گرفت؛ verify یک require جدید V62.8.1.
+پچ: V62_8_1_scroll_imports_hotfix — بدون SQL.
+نکتهٔ فونت: فایل کاربر در res/font/BNazanin.ttf است؛ نام با حرف بزرگ در
+res منبع نامعتبر است (aapt خطا می‌دهد) و کد از assets می‌خواند — فایل باید
+به app/src/main/assets/fonts/bnazanin.ttf منتقل/تغییرنام شود.
+```
