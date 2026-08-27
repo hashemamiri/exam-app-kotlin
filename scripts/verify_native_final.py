@@ -2016,6 +2016,20 @@ require("fun withFigureWidthMm(spec: FigureSpec, widthMm: Float): FigureSpec" in
 require("class V63_1DocObjectDragResizeTest" in _v63_1_test
         and "bigger objects really grow the paginated block" in _v63_1_test,
         "V63.1 drag/resize tests are missing")
+# ---- V63.2: نوار قالب متن (اندازه/بولد/ایتالیک/تراز) + ترتیب سؤال‌ها ----
+_v63_2_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_2DocFormatReorderTest.kt").read_text()
+require("fun QuestionFormatBar(" in _doc_editor_v63
+        and "builder.setQuestionFontSize(question.id, it)" in _doc_editor_v63
+        and "builder.moveQuestion(question.id, delta)" in _doc_editor_v63
+        and ".clickable(onClick = onSelect)" in _doc_editor_v63
+        and "var textDialogQuestionId by remember" in _doc_editor_v63,
+        "V63.2 word-like format bar / reorder is missing from the document editor")
+require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
+        and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
+        "V63.2 on-page style mirroring is missing")
+require("class V63_2DocFormatReorderTest" in _v63_2_test
+        and "format actions persist through the builder view-model used by print" in _v63_2_test,
+        "V63.2 format/reorder tests are missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

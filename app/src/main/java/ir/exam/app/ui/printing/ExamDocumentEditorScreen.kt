@@ -2,6 +2,7 @@ package ir.exam.app.ui.printing
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FormatAlignCenter
+import androidx.compose.material.icons.outlined.FormatAlignLeft
+import androidx.compose.material.icons.outlined.FormatAlignRight
+import androidx.compose.material.icons.outlined.FormatBold
+import androidx.compose.material.icons.outlined.FormatItalic
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -47,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,10 +90,13 @@ fun ExamDocumentEditorScreen(
     val state by builder.state.collectAsState()
     var zoom by remember { mutableStateOf(1.6f) }
     var editingQuestionId by remember { mutableStateOf<String?>(null) }
+    // V63.2 — دیالوگ متن (مداد) جدا از انتخاب برای نوار قالب.
+    var textDialogQuestionId by remember { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
 
     val document = remember(state.questions) { WordPageLayout.documentOf(state.questions) }
     val editing = state.questions.firstOrNull { it.id == editingQuestionId }
+    val textEditing = state.questions.firstOrNull { it.id == textDialogQuestionId }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFECEFF3))) {
         DocumentEditorTopBar(
@@ -98,6 +110,19 @@ fun ExamDocumentEditorScreen(
             onSave = { confirmSave = true },
             onBack = onBack
         )
+
+        // V63.2 — نوار قالب Word-مانند: با لمس کارت سؤال باز می‌شود.
+        editing?.let { question ->
+            QuestionFormatBar(
+                question = question,
+                onFontSize = { builder.setQuestionFontSize(question.id, it) },
+                onBold = { builder.setQuestionBold(question.id, it) },
+                onItalic = { builder.setQuestionItalic(question.id, it) },
+                onAlign = { builder.setQuestionAlign(question.id, it) },
+                onMove = { delta -> builder.moveQuestion(question.id, delta) },
+                onClose = { editingQuestionId = null }
+            )
+        }
 
         state.error?.let {
             Text(
@@ -138,7 +163,10 @@ fun ExamDocumentEditorScreen(
                         zoom = zoom,
                         questions = state.questions,
                         editingQuestionId = editingQuestionId,
-                        onEditQuestion = { editingQuestionId = it },
+                        onSelectQuestion = { id ->
+                            editingQuestionId = if (editingQuestionId == id) null else id
+                        },
+                        onEditQuestion = { textDialogQuestionId = it },
                         // V63.1 — درگ/ریسایز مستقیم اشیا روی برگه (فقط خروجی چاپ).
                         onMoveImage = builder::moveImage,
                         onResizeImage = builder::resizeImage,
@@ -156,16 +184,16 @@ fun ExamDocumentEditorScreen(
         }
     }
 
-    editing?.let { question ->
+    textEditing?.let { question ->
         QuestionTextEditorDialog(
             question = question,
             row = document.pages.flatMap { page -> page.blocks }
                 .firstOrNull { it.questionId == question.id }?.row ?: 1,
-            onDismiss = { editingQuestionId = null },
+            onDismiss = { textDialogQuestionId = null },
             onApply = { text, score ->
                 builder.updateText(question.id, text)
                 builder.updateScore(question.id, score)
-                editingQuestionId = null
+                textDialogQuestionId = null
             }
         )
     }
@@ -243,6 +271,7 @@ private fun WordPageView(
     zoom: Float,
     questions: List<QuestionDraft>,
     editingQuestionId: String?,
+    onSelectQuestion: (String) -> Unit,
     onEditQuestion: (String) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
@@ -283,6 +312,7 @@ private fun WordPageView(
                         question = question,
                         zoom = zoom,
                         highlighted = editingQuestionId == question.id,
+                        onSelect = { onSelectQuestion(question.id) },
                         onEdit = { onEditQuestion(question.id) },
                         onMoveImage = { imageId, xMm, yMm -> onMoveImage(question.id, imageId, xMm, yMm) },
                         onResizeImage = { imageId, widthMm -> onResizeImage(question.id, imageId, widthMm) },
@@ -310,12 +340,21 @@ private fun WordQuestionBlock(
     question: QuestionDraft,
     zoom: Float,
     highlighted: Boolean,
+    onSelect: () -> Unit,
     onEdit: () -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
     onResizeFigure: (Int, Float) -> Unit
 ) {
     val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * zoom * 0.75f).sp
+    // V63.2 — بولد/ایتالیک/تراز سؤال روی برگه هم مثل چاپ دیده می‌شوند.
+    val weight = if (question.bold) FontWeight.Bold else null
+    val style = if (question.italic) FontStyle.Italic else null
+    val align = when (question.textAlign) {
+        "center" -> TextAlign.Center
+        "left" -> TextAlign.Left
+        else -> TextAlign.Right
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -325,6 +364,7 @@ private fun WordQuestionBlock(
                     Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
                 } else Modifier
             )
+            .clickable(onClick = onSelect)
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -352,7 +392,9 @@ private fun WordQuestionBlock(
         if (textOnly.isNotBlank() || figureOccurrences.isEmpty()) NativeMathText(
             source = textOnly,
             fontSize = fontSize,
-            textAlign = TextAlign.Right,
+            fontWeight = weight,
+            fontStyle = style,
+            textAlign = align,
             modifier = Modifier.fillMaxWidth()
         )
         figureOccurrences.forEachIndexed { occurrenceIndex, occ ->
@@ -367,7 +409,7 @@ private fun WordQuestionBlock(
             QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
                 Row(Modifier.fillMaxWidth().padding(top = (1 * zoom).dp)) {
                     Text("${index + 1}) ", fontSize = fontSize, fontWeight = FontWeight.Bold)
-                    NativeMathText(source = option, fontSize = fontSize, textAlign = TextAlign.Right)
+                    NativeMathText(source = option, fontSize = fontSize, fontWeight = weight, fontStyle = style, textAlign = align)
                 }
             }
             QuestionType.TRUE_FALSE -> Row(
@@ -463,6 +505,94 @@ private fun QuestionTextEditorDialog(
         confirmButton = { Button(onClick = { onApply(text, score) }) { Text("اعمال") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )
+}
+
+/**
+ * V63.2 — نوار قالب Word-مانند: با لمس کارت سؤال باز می‌شود؛ اندازهٔ متن
+ * (آ- / آ+)، بولد/ایتالیک، تراز راست/وسط/چپ و جابه‌جایی ترتیب سؤال
+ * (بالا/پایین). همه با توابع موجود ExamBuilderViewModel ذخیره می‌شوند و
+ * چاپ رسمی همان‌ها را می‌خواند؛ صفحه‌بندی خودکار به‌روز می‌شود.
+ */
+@Composable
+private fun QuestionFormatBar(
+    question: QuestionDraft,
+    onFontSize: (Float) -> Unit,
+    onBold: (Boolean) -> Unit,
+    onItalic: (Boolean) -> Unit,
+    onAlign: (String) -> Unit,
+    onMove: (Int) -> Unit,
+    onClose: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFF2F6FA))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, contentDescription = "بستن قالب") }
+        Text(
+            "${question.fontSizeSp.toInt()}",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = 2.dp)
+        )
+        TextButton(onClick = { onFontSize(question.fontSizeSp - 2f) }) { Text("آ-") }
+        TextButton(onClick = { onFontSize(question.fontSizeSp + 2f) }) { Text("آ+") }
+        FormatToggle(
+            selected = question.bold,
+            icon = Icons.Outlined.FormatBold,
+            description = "بولد",
+            onClick = { onBold(!question.bold) }
+        )
+        FormatToggle(
+            selected = question.italic,
+            icon = Icons.Outlined.FormatItalic,
+            description = "ایتالیک",
+            onClick = { onItalic(!question.italic) }
+        )
+        FormatToggle(
+            selected = question.textAlign == "right",
+            icon = Icons.Outlined.FormatAlignRight,
+            description = "تراز راست",
+            onClick = { onAlign("right") }
+        )
+        FormatToggle(
+            selected = question.textAlign == "center",
+            icon = Icons.Outlined.FormatAlignCenter,
+            description = "تراز وسط",
+            onClick = { onAlign("center") }
+        )
+        FormatToggle(
+            selected = question.textAlign == "left",
+            icon = Icons.Outlined.FormatAlignLeft,
+            description = "تراز چپ",
+            onClick = { onAlign("left") }
+        )
+        Spacer(Modifier.weight(1f))
+        IconButton(onClick = { onMove(-1) }) {
+            Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "سؤال بالاتر")
+        }
+        IconButton(onClick = { onMove(1) }) {
+            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "سؤال پایین‌تر")
+        }
+    }
+}
+
+/** دکمهٔ قالب با پس‌زمینهٔ آبی وقتی فعال است. */
+@Composable
+private fun FormatToggle(
+    selected: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = if (selected) Modifier.background(Color(0x3327A5F2), RoundedCornerShape(8.dp)) else Modifier
+    ) {
+        Icon(icon, contentDescription = description, tint = if (selected) Color(0xFF0B72B8) else Color(0xFF44505A))
+    }
 }
 
 /**
