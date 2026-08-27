@@ -194,7 +194,7 @@ index 0000000..eed0024
 +    fun mmToDp(mm: Float, zoom: Float): Float = mm * zoom
 +}
 diff --git a/app/src/main/java/ir/exam/app/ui/app/ExamApp.kt b/app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
-index 2094854..69d9322 100644
+index 2094854..83b186f 100644
 --- a/app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 +++ b/app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
 @@ -101,7 +101,9 @@ private enum class MainPage {
@@ -264,7 +264,15 @@ index 2094854..69d9322 100644
                  }
                  MainPage.SETTINGS -> ProfileSettingsScreen(
                      user = user,
-@@ -1081,6 +1108,8 @@ private fun MainPage.sectionTitle(
+@@ -558,6 +585,7 @@ private fun AuthenticatedExamApp(
+                     aboutContent = { AboutScreen(updateViewModel, apkUpdateManager) }
+                 )
+                 MainPage.BUILDER -> Unit
++                MainPage.DOC_EDITOR -> Unit
+             }
+         }
+     }
+@@ -1081,6 +1109,8 @@ private fun MainPage.sectionTitle(
      MainPage.BUILDER -> "ساخت آزمون"
      // V62.7 — عنوان صفحهٔ چاپ آزمون.
      MainPage.PRINT -> "چاپ آزمون"
