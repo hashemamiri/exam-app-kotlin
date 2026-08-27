@@ -1882,6 +1882,11 @@ require("FlowRow(" in manager_foundation
 require("import androidx.compose.foundation.verticalScroll" in school_screen
         and "import androidx.compose.foundation.rememberScrollState" in school_screen,
         "V62.8.1 scroll imports for manager roster dialog are missing")
+# V62.8.2 — تست V62.7 با کد V62.8 هماهنگ ماند (مدت با پسوند، دکمهٔ شرطی).
+_v62_7_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentPreviewTest.kt").read_text()
+require("مدت آزمون: \\${header.examDuration}" not in _v62_7_test
+        and 'Text(\\"ادامه و ساخت دانش‌آموز\\")' not in _v62_7_test,
+        "V62.8.2 stale V62.7 needles are back")
 require("fonts/bnazanin.ttf" in _pdf_v62
         and "$" + "it دقیقه" in _pdf_v62
         and ".imePadding().verticalScroll(" in _print_center_v62

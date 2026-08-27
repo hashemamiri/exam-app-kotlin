@@ -100,7 +100,8 @@ class V62_7PrintCenterStudentPreviewTest {
             "اداره کل آموزش و پرورش استان \${header.province}",
             "مدیریت آموزش و پرورش شهر/شهرستان \${header.city}",
             "تاریخ آزمون: \${header.examDate}",
-            "مدت آزمون: \${header.examDuration}",
+            // V62.8.2 — مدت حالا با پسوند «دقیقه» ساخته می‌شود (الحاق رشته).
+            "\"مدت آزمون: \" + header.examDuration",
             "پایه: \${header.grade}"
         )) assertTrue(needle, needle in pdfAdapter)
         // سربرگ override از صفحهٔ چاپ به مسیر چاپ می‌رسد
@@ -114,7 +115,8 @@ class V62_7PrintCenterStudentPreviewTest {
         // داک + و دکمهٔ + کنار جستجو هر دو اول پنجرهٔ انتخاب معلم/کلاس
         assertTrue("managerCreatePickerOpen = true" in school)
         assertTrue("Text(\"انتخاب معلم و کلاس\")" in school)
-        assertTrue("Text(\"ادامه و ساخت دانش‌آموز\")" in school)
+        // V62.8.2 — دکمه حالا شرطی است («ادامه و ساخت» یا «ساخت بدون کلاس»).
+        assertTrue("ادامه و ساخت دانش‌آموز" in school)
         assertTrue("teacherClassesForPicker" in classesVm)
         // ساخت + عضویت کلاس معلم با RPC مدیر؛ دانش‌آموز به لیست هم اضافه می‌شود
         assertTrue("fun createStudentsBulkForManagerClass(" in classesVm)
