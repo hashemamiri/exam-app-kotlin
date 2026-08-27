@@ -761,6 +761,19 @@ index a49bd2d..be219b1 100644
                          }
                      }
                  }
+diff --git a/app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentPreviewTest.kt b/app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentPreviewTest.kt
+index 9eafbff..924d7b9 100644
+--- a/app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentPreviewTest.kt
++++ b/app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentPreviewTest.kt
+@@ -75,7 +75,7 @@ class V62_7PrintCenterStudentPreviewTest {
+         // کارت منو: چاپ آزمون به‌جای سربرگ؛ صفحهٔ PRINT
+         assertTrue("\"چاپ آزمون\", \"اطلاعات رسمی چاپ آزمون\"" in appShell)
+         assertTrue("MainPage.PRINT" in appShell)
+-        assertTrue("ExamPrintCenterScreen()" in appShell)
++        assertTrue("ExamPrintCenterScreen(" in appShell)
+         // دکمهٔ سربرگ وسط‌چین مثل مشخصات آزمون
+         assertTrue("horizontalArrangement = Arrangement.Center" in printCenter)
+         assertTrue("if (headerOpen) \"بستن سربرگ\" else \"سربرگ\"" in printCenter)
 diff --git a/app/src/test/java/ir/exam/app/ui/app/V63_0WordDocumentEditorTest.kt b/app/src/test/java/ir/exam/app/ui/app/V63_0WordDocumentEditorTest.kt
 new file mode 100644
 index 0000000..f2b3cba
