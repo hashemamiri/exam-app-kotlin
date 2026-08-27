@@ -65,9 +65,9 @@ class V63_2DocFormatReorderTest {
         assertTrue("fontStyle = style" in editor)
         // متن دیگر همیشه راست‌چین hardcode نیست
         assertFalse("source = textOnly,\n            fontSize = fontSize,\n            textAlign = TextAlign.Right" in editor)
-        // state دیالوگ متن جدا از انتخاب نوار قالب
-        assertTrue("var textDialogQuestionId by remember" in editor)
-        assertTrue("onEditQuestion = { textDialogQuestionId = it }" in editor)
+        // V63.4 — پنجرهٔ جدا حذف شد؛ ویرایش متن/بارم درجا روی خود برگه.
+        assertTrue("onTextChange = builder::updateText" in editor)
+        assertTrue("onScoreChange = builder::updateScore" in editor)
         assertTrue("editingQuestionId = if (editingQuestionId == id) null else id" in editor)
     }
 }

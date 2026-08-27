@@ -1979,7 +1979,7 @@ require("const val PAGE_WIDTH_MM: Float = 210f" in _word_layout_v63
         "V63.0 A4 word-layout engine is missing or android-dependent")
 require("fun ExamDocumentEditorScreen(" in _doc_editor_v63
         and "WordPageLayout.documentOf(state.questions)" in _doc_editor_v63
-        and "contentDescription = \"ویرایش سؤال ${block.row}\"" in _doc_editor_v63
+        and "editable = editingQuestionId == question.id" in _doc_editor_v63
         and "ExamBuilderScreen(" not in _doc_editor_v63
         and "صفحهٔ ${page.number} از $pageCount" in _doc_editor_v63,
         "V63.0 word-like document editor screen is missing")
@@ -2023,7 +2023,7 @@ require("fun DocumentToolbar(" in _doc_editor_v63
         and "builder.setQuestionFontSize(it.id, it.fontSizeSp + delta)" in _doc_editor_v63
         and "builder.moveQuestion(it.id, delta)" in _doc_editor_v63
         and ".clickable(onClick = onSelect)" in _doc_editor_v63
-        and "var textDialogQuestionId by remember" in _doc_editor_v63,
+        and "onTextChange = builder::updateText" in _doc_editor_v63,
         "V63.2/63.3 format toolbar / reorder is missing from the document editor")
 require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
         and "Icons.Outlined.ZoomIn" in _doc_editor_v63
@@ -2037,6 +2037,13 @@ require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
 require('contentDescription = "ویرایش آزمون"' in _print_center_v62
         and 'Text("ویرایش سند")' not in _print_center_v62,
         "V63.3 pencil-only edit icon on the print-center exam card is missing")
+# ---- V63.4: ویرایش درجا — بدون پنجرهٔ جدا و بدون مداد هر سؤال ----
+require("BasicTextField(" in _doc_editor_v63
+        and "onScoreChange = builder::updateScore" in _doc_editor_v63
+        and "QuestionTextEditorDialog" not in _doc_editor_v63
+        and "textDialogQuestionId" not in _doc_editor_v63
+        and 'contentDescription = "ویرایش سؤال' not in _doc_editor_v63,
+        "V63.4 in-place question editing is missing or the old dialog returned")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

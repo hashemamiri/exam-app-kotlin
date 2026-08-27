@@ -66,8 +66,9 @@ class V63_0WordDocumentEditorTest {
         assertTrue("WordPageLayout.documentOf(state.questions)" in editor)
         assertTrue("WordPageLayout.PAGE_WIDTH_MM" in editor)
         assertTrue("WordPageLayout.PAGE_HEIGHT_MM" in editor)
-        // مداد روی کارت هر سؤال
-        assertTrue("contentDescription = \"ویرایش سؤال \${block.row}\"" in editor)
+        // V63.4 — مداد هر سؤال حذف شد؛ ویرایش درجا با انتخاب سؤال.
+        assertTrue("BasicTextField(" in editor)
+        assertTrue("editable = editingQuestionId == question.id" in editor)
         // این صفحه سازندهٔ آزمون نیست: هیچ پردهٔ سازنده اینجا نیست
         assertTrue("ExamBuilderScreen(" !in editor)
         // شمارهٔ صفحه در پاصفحهٔ سند

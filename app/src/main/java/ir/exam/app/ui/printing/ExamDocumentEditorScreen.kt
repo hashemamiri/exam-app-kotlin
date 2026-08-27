@@ -22,11 +22,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FormatAlignCenter
 import androidx.compose.material.icons.outlined.FormatAlignLeft
 import androidx.compose.material.icons.outlined.FormatAlignRight
@@ -46,7 +45,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,8 +94,6 @@ fun ExamDocumentEditorScreen(
     val state by builder.state.collectAsState()
     var zoom by remember { mutableStateOf(1.6f) }
     var editingQuestionId by remember { mutableStateOf<String?>(null) }
-    // V63.2 — دیالوگ متن (مداد) جدا از انتخاب برای نوار قالب.
-    var textDialogQuestionId by remember { mutableStateOf<String?>(null) }
     // V63.3 — شیء انتخاب‌شده برای +/− و آیکن جابجایی نوار ابزار.
     var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
@@ -104,7 +101,6 @@ fun ExamDocumentEditorScreen(
 
     val document = remember(state.questions) { WordPageLayout.documentOf(state.questions) }
     val editing = state.questions.firstOrNull { it.id == editingQuestionId }
-    val textEditing = state.questions.firstOrNull { it.id == textDialogQuestionId }
 
     Column(Modifier.fillMaxSize().background(Color(0xFFECEFF3))) {
         DocumentEditorTopBar(
@@ -198,7 +194,9 @@ fun ExamDocumentEditorScreen(
                             editingQuestionId = if (editingQuestionId == id) null else id
                             selectedImage = null; selectedFigure = null
                         },
-                        onEditQuestion = { textDialogQuestionId = it },
+                        // V63.4 — ویرایش درجا: بدون مداد و پنجرهٔ جدا.
+                        onTextChange = builder::updateText,
+                        onScoreChange = builder::updateScore,
                         selectedImageId = selectedImage?.second,
                         selectedFigure = selectedFigure,
                         onSelectImage = { questionId, imageId ->
@@ -226,20 +224,6 @@ fun ExamDocumentEditorScreen(
                 }
             }
         }
-    }
-
-    textEditing?.let { question ->
-        QuestionTextEditorDialog(
-            question = question,
-            row = document.pages.flatMap { page -> page.blocks }
-                .firstOrNull { it.questionId == question.id }?.row ?: 1,
-            onDismiss = { textDialogQuestionId = null },
-            onApply = { text, score ->
-                builder.updateText(question.id, text)
-                builder.updateScore(question.id, score)
-                textDialogQuestionId = null
-            }
-        )
     }
 
     if (confirmSave) {
@@ -304,7 +288,8 @@ private fun WordPageView(
     questions: List<QuestionDraft>,
     editingQuestionId: String?,
     onSelectQuestion: (String) -> Unit,
-    onEditQuestion: (String) -> Unit,
+    onTextChange: (String, String) -> Unit,
+    onScoreChange: (String, String) -> Unit,
     selectedImageId: String?,
     selectedFigure: Pair<String, Int>?,
     onSelectImage: (String, String) -> Unit,
@@ -349,7 +334,9 @@ private fun WordPageView(
                         zoom = zoom,
                         highlighted = editingQuestionId == question.id,
                         onSelect = { onSelectQuestion(question.id) },
-                        onEdit = { onEditQuestion(question.id) },
+                        editable = editingQuestionId == question.id,
+                        onTextChange = { onTextChange(question.id, it) },
+                        onScoreChange = { onScoreChange(question.id, it) },
                         selectedImageId = selectedImageId,
                         selectedFigureIndex = selectedFigure?.takeIf { it.first == question.id }?.second,
                         onSelectImage = { imageId -> onSelectImage(question.id, imageId) },
@@ -381,7 +368,9 @@ private fun WordQuestionBlock(
     zoom: Float,
     highlighted: Boolean,
     onSelect: () -> Unit,
-    onEdit: () -> Unit,
+    editable: Boolean,
+    onTextChange: (String) -> Unit,
+    onScoreChange: (String) -> Unit,
     selectedImageId: String?,
     selectedFigureIndex: Int?,
     onSelectImage: (String) -> Unit,
@@ -410,20 +399,42 @@ private fun WordQuestionBlock(
             )
             .clickable(onClick = onSelect)
     ) {
+        // V63.4 — بدون مداد: انتخاب سؤال، بارم را هم درجا ویرایش‌پذیر می‌کند.
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "سؤال ${block.row}     (${scoreText(question.score)} نمره)",
+                "سؤال ${block.row}     (",
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold
+            )
+            if (editable) {
+                var scoreDraft by remember(question.id) { mutableStateOf(scoreText(question.score)) }
+                BasicTextField(
+                    value = scoreDraft,
+                    onValueChange = { value ->
+                        scoreDraft = value.filter { it.isDigit() || it == '.' }
+                        onScoreChange(scoreDraft)
+                    },
+                    textStyle = TextStyle(
+                        fontSize = fontSize,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0B72B8)
+                    ),
+                    singleLine = true,
+                    modifier = Modifier
+                        .width(WordPageLayout.mmToDp(14f, zoom).dp)
+                        .background(Color(0x1427A5F2))
+                )
+            } else Text(
+                scoreText(question.score),
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                " نمره)",
                 fontSize = fontSize,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = onEdit) {
-                Icon(
-                    Icons.Outlined.Edit,
-                    contentDescription = "ویرایش سؤال ${block.row}",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
         }
 
         // V63.1 — شکل/نمودار/جدول درون‌متنی جدا رندر می‌شوند تا دستگیرهٔ
@@ -433,7 +444,25 @@ private fun WordQuestionBlock(
         figureOccurrences.asReversed().forEach { occ ->
             textOnly = textOnly.removeRange(occ.start, occ.endExclusive)
         }
-        if (textOnly.isNotBlank() || figureOccurrences.isEmpty()) NativeMathText(
+        // V63.4 — ویرایش درجا: سؤال انتخابی همان‌جا تایپ می‌شود (فرمول/شکل به
+        // صورت توکن متنی حفظ می‌شوند)؛ سؤال‌های دیگر رندر واقعی نماد/شکل.
+        if (editable) {
+            var textDraft by remember(question.id) { mutableStateOf(question.text) }
+            BasicTextField(
+                value = textDraft,
+                onValueChange = { value ->
+                    textDraft = value
+                    onTextChange(value)
+                },
+                textStyle = TextStyle(
+                    fontSize = fontSize,
+                    fontWeight = weight ?: FontWeight.Normal,
+                    fontStyle = style ?: FontStyle.Normal,
+                    textAlign = align
+                ),
+                modifier = Modifier.fillMaxWidth().background(Color(0x0F27A5F2))
+            )
+        } else if (textOnly.isNotBlank() || figureOccurrences.isEmpty()) NativeMathText(
             source = textOnly,
             fontSize = fontSize,
             fontWeight = weight,
@@ -508,51 +537,6 @@ private fun WordQuestionBlock(
             }
         }
     }
-}
-
-@Composable
-private fun QuestionTextEditorDialog(
-    question: QuestionDraft,
-    row: Int,
-    onDismiss: () -> Unit,
-    onApply: (text: String, score: String) -> Unit
-) {
-    var text by remember(question.id, question.text) { mutableStateOf(question.text) }
-    var score by remember(question.id, question.score) { mutableStateOf(scoreText(question.score)) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("ویرایش سؤال $row") },
-        text = {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("متن سؤال") },
-                    minLines = 4,
-                    maxLines = 12,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = score,
-                    onValueChange = { value -> score = value.filter { it.isDigit() || it == '.' } },
-                    label = { Text("بارم") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    "فرمول‌های \$...\$ و توکن‌های %%FIG:...%% بدون تغییر حفظ می‌شوند. " +
-                        "در پچ‌های بعدی جابه‌جایی/تغییر اندازهٔ شکل‌ها و اندازهٔ بخشی از متن هم اضافه می‌شود.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = { Button(onClick = { onApply(text, score) }) { Text("اعمال") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
-    )
 }
 
 /**
