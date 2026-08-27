@@ -2064,6 +2064,13 @@ require("SubcomposeLayout(" in _doc_editor_v63
         and "WordPageView" not in _doc_editor_v63
         and "block.heightMm" not in _doc_editor_v63,
         "V63.6 real-measured continuous word document is missing")
+# ---- V63.7: ویرایشگر = برگهٔ چاپ (سربرگ رسمی هر صفحه + پاصفحهٔ امضا) ----
+require("HeaderPreview(header)" in _doc_editor_v63
+        and "fun headerFor(pageIndex: Int)" in _doc_editor_v63
+        and "نام و امضای دبیر:            نام و امضای مدیر:" in _doc_editor_v63
+        and "suspend fun profilePrintHeader(): Result<OfficialPrintHeader>" in
+            (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text(),
+        "V63.7 editor/print parity header-footer is missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

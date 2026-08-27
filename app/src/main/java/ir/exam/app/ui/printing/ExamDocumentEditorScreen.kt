@@ -68,6 +68,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import ir.exam.app.data.local.PrintLayoutStore
+import ir.exam.app.data.repository.SupabasePortabilityRepository
+import ir.exam.app.domain.model.OfficialPrintHeader
 import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.printing.WordPageLayout
 import ir.exam.app.ui.figure.InlineFigureView
@@ -107,6 +109,12 @@ fun ExamDocumentEditorScreen(
         }
     }
     var savedTick by remember(examId) { mutableStateOf(false) }
+    // V63.7 — سربرگ رسمی برای بالای صفحهٔ اول (مثل خروجی چاپ).
+    var printHeader by remember(examId) { mutableStateOf(OfficialPrintHeader()) }
+    LaunchedEffect(examId) {
+        SupabasePortabilityRepository().profilePrintHeader()
+            .onSuccess { printHeader = it.copy(subject = "", examDate = "", examDuration = "") }
+    }
     // V63.5 — دکمهٔ برگشت گوشی: خروج از ویرایشگر به «چاپ آزمون»، نه از برنامه.
     BackHandler(onBack = onBack)
     var zoom by remember { mutableStateOf(1.6f) }
@@ -196,6 +204,13 @@ fun ExamDocumentEditorScreen(
             }
             else -> WordFlowDocument(
                 title = state.title.ifBlank { "آزمون" },
+                header = printHeader.copy(
+                    subject = state.subject,
+                    examDuration = state.durationMinutes.filter(Char::isDigit)
+                ),
+                infoLine = "درس: " + state.subject.ifBlank { "—" } +
+                    "     مدت: " + state.durationMinutes.ifBlank { "—" } + " دقیقه" +
+                    "     بارم: " + state.questions.sumOf { it.score },
                 questions = state.questions,
                 zoom = zoom,
                 editingQuestionId = editingQuestionId,
@@ -274,6 +289,8 @@ private fun DocumentEditorTopBar(
 @Composable
 private fun WordFlowDocument(
     title: String,
+    header: OfficialPrintHeader,
+    infoLine: String,
     questions: List<QuestionDraft>,
     zoom: Float,
     editingQuestionId: String?,
@@ -306,6 +323,27 @@ private fun WordFlowDocument(
             val contentHeight = pageHeightPx - marginPx * 2 - headerPx - footerPx
             val blockConstraints = Constraints(maxWidth = contentWidth)
 
+            // V63.7 — سربرگ رسمی ۵سطری (مثل چاپ در «هر» صفحه تکرار می‌شود) +
+            // سطر درس/مدت/بارم فقط در صفحهٔ اول.
+            fun headerFor(pageIndex: Int) = subcompose("official-header-$pageIndex") {
+                Column {
+                    HeaderPreview(header)
+                    if (pageIndex == 0) {
+                        Spacer(Modifier.height(WordPageLayout.mmToDp(2f, zoom).dp))
+                        Text(
+                            infoLine,
+                            fontSize = (10 * zoom).sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, Color(0xFF787878), RoundedCornerShape(3.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }.first().measure(blockConstraints)
+            val firstHeader = headerFor(0)
+
             // ۱) اندازه‌گیری واقعی هر سؤال با عرض محتوا
             val placeables = questions.mapIndexed { index, question ->
                 subcompose("q-${question.id}") {
@@ -331,12 +369,13 @@ private fun WordFlowDocument(
 
             // ۲) صفحه‌بندی با ارتفاع واقعی: مثل ورد صفحهٔ بعدی فقط پس از پر شدن
             val pages = mutableListOf<MutableList<Int>>(mutableListOf())
-            var used = 0
+            // سربرگ صفحات بعدی کوتاه‌تر است (بدون سطر مشخصات) — تقریب امن: همان اول.
+            var used = firstHeader.height + gapPx
             placeables.forEachIndexed { index, placeable ->
                 val gap = if (pages.last().isEmpty()) 0 else gapPx
                 if (used + gap + placeable.height > contentHeight && pages.last().isNotEmpty()) {
                     pages += mutableListOf<Int>()
-                    used = 0
+                    used = firstHeader.height + gapPx
                 }
                 pages.last() += index
                 used += (if (pages.last().size == 1) 0 else gapPx) + placeable.height
@@ -361,6 +400,9 @@ private fun WordFlowDocument(
                 pages.forEachIndexed { pageIndex, blockIndexes ->
                     chrome[pageIndex].place(0, pageTop)
                     var y = pageTop + marginPx + headerPx
+                    val pageHeader = if (pageIndex == 0) firstHeader else headerFor(pageIndex)
+                    pageHeader.place(marginPx, y)
+                    y += pageHeader.height + gapPx
                     blockIndexes.forEachIndexed { position, blockIndex ->
                         if (position > 0) y += gapPx
                         placeables[blockIndex].place(marginPx, y)
@@ -376,6 +418,8 @@ private fun WordFlowDocument(
 /** کاغذ سفید A4 با سایه + عنوان بالا و شمارهٔ صفحه پایین (پشت سؤال‌ها). */
 @Composable
 private fun WordPaperChrome(title: String, pageNumber: Int, pageCount: Int, zoom: Float) {
+    // V63.7 — مثل برگهٔ چاپ: بالای کاغذ خالی (سربرگ رسمی جدا چیده می‌شود)؛
+    // پایین، سطر امضا + شمارهٔ صفحه شبیه پاصفحهٔ PDF.
     Column(
         Modifier
             .fillMaxSize()
@@ -383,24 +427,20 @@ private fun WordPaperChrome(title: String, pageNumber: Int, pageCount: Int, zoom
             .background(Color.White)
             .padding(WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp)
     ) {
-        Text(
-            title,
-            fontSize = (11 * zoom).sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(WordPageLayout.mmToDp(2f, zoom).dp))
-        androidx.compose.material3.HorizontalDivider()
         Spacer(Modifier.weight(1f))
-        androidx.compose.material3.HorizontalDivider()
-        Text(
-            "صفحهٔ $pageNumber از $pageCount",
-            fontSize = (9 * zoom).sp,
-            textAlign = TextAlign.Center,
-            color = Color(0xFF666666),
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "$title · صفحهٔ $pageNumber از $pageCount",
+                fontSize = (8.5f * zoom).sp,
+                color = Color(0xFF666666)
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "نام و امضای دبیر:            نام و امضای مدیر:",
+                fontSize = (8.5f * zoom).sp,
+                color = Color(0xFF444444)
+            )
+        }
     }
 }
 

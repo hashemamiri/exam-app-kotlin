@@ -73,6 +73,19 @@ class SupabasePortabilityRepository {
         )
     }
 
+    // V63.7 — سربرگ پیش‌فرض پروفایل برای پیش‌نمایش Word-مانند ویرایشگر سند.
+    suspend fun profilePrintHeader(): Result<OfficialPrintHeader> = runCatching {
+        val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
+        OfficialPrintHeader(
+            province = profile.headerProvince.orEmpty(),
+            city = profile.headerCity.orEmpty(),
+            district = profile.headerDistrict.orEmpty(),
+            school = profile.headerSchool.orEmpty(),
+            grade = profile.headerGrade.orEmpty(),
+            fieldOfStudy = profile.headerField.orEmpty()
+        )
+    }
+
     // V62.7 — headerOverride: سربرگ صفحهٔ «چاپ آزمون» جایگزین سربرگ پروفایل می‌شود.
     suspend fun printableExam(
         examId: String,
