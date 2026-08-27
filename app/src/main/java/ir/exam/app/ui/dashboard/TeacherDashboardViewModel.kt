@@ -86,9 +86,14 @@ class TeacherDashboardViewModel(
 
     fun consumeImport() { _state.update { it.copy(importDraft = null) } }
 
-    fun preparePrint(examId: String, includeAnswerKey: Boolean) = viewModelScope.launch {
+    // V62.7 — headerOverride: سربرگ تنظیم‌شده در صفحهٔ «چاپ آزمون».
+    fun preparePrint(
+        examId: String,
+        includeAnswerKey: Boolean,
+        headerOverride: ir.exam.app.domain.model.OfficialPrintHeader? = null
+    ) = viewModelScope.launch {
         _state.update { it.copy(portabilityLoading = true, printExam = null, error = null) }
-        portability.printableExam(examId, includeAnswerKey)
+        portability.printableExam(examId, includeAnswerKey, headerOverride)
             .onSuccess { printable -> _state.update { it.copy(portabilityLoading = false, printExam = printable) } }
             .onFailure { error -> _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) } }
     }

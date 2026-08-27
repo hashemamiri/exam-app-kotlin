@@ -1437,7 +1437,9 @@ require("returningIndex = activeIndex" in _mgmt_cards
         and "returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in _mgmt_cards
         and "returning -> returnX.value" in _mgmt_cards,
         "V55.18.1 single-phase rightward swipe with returning-card animation is missing")
-require("پیش‌نمایش کامل A4" in builder_screen and "previewMenuOpen" in builder_screen
+# V62.7 — منوی چشم حذف شد؛ چشم فقط پیش‌نمایش دانش‌آموزی سؤال را باز می‌کند و
+# «پیش‌نمایش چاپ این سؤال» داخل چیدمان چاپ کارت ماند.
+require("پیش‌نمایش کامل A4" in builder_screen and "onStudentPreview" in builder_screen
         and "onPreviewAll = { previewAll = true }" in builder_screen,
         "V55.18 eye preview menu (question + full A4) is missing")
 require('"ص/غ"' in builder_screen and "Arrangement.spacedBy(2.dp)" in builder_screen,
@@ -1827,6 +1829,38 @@ require("معلم به کدام مدرسه بپیوندد؟" in manager_foundati
 require("if (managerTeacherPicker) state.managerFilterClasses else state.classes" in school_screen
         and "showBackToClasses = !(schoolsFromDock && managerTeacherPicker)" in school_screen,
         "V62.6 manager filter classes / dock schools back removal are missing")
+# V62.7 — چشم=پیش‌نمایش دانش‌آموزی، دکمه‌های وسط‌چین کارت آزمون بدون چاپ،
+# صفحهٔ چاپ آزمون با سربرگ رسمی ۵سطری سه‌ستونه + آرم، جریان معلم/کلاس مدیر،
+# SQL خلاصهٔ چندمدرسه‌ای.
+_preview_v62=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/StudentQuestionPreview.kt").read_text()
+_print_center_v62=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text()
+_pdf_v62=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+_summary_sql_v62=(ROOT/"supabase/migrations/20260827_native_manager_summary_multischool_v62_7.sql").read_text()
+require("fun StudentQuestionPreviewDialog(" in _preview_v62
+        and "پیش‌نمایش دانش‌آموزی سؤال" in builder_screen
+        and "StudentQuestionPreviewDialog(" in builder_screen,
+        "V62.7 student-view eye preview is missing")
+require('Text("چاپ برگه")' in _print_center_v62
+        and 'Text("چاپ با کلید")' in _print_center_v62
+        and "چاپ برگه" not in teacher_dashboard,
+        "V62.7 print actions must live only in the print center")
+require('"چاپ آزمون", "اطلاعات رسمی چاپ آزمون"' in app_shell
+        and "MainPage.PRINT" in app_shell
+        and 'if (headerOpen) "بستن سربرگ" else "سربرگ"' in _print_center_v62
+        and "fun HeaderPreview(" in _print_center_v62,
+        "V62.7 print center with centered header dialog is missing")
+require("print/emblem.png" in _pdf_v62
+        and "drawHeaderCell(" in _pdf_v62
+        and "وزارت آموزش و پرورش جمهوری اسلامی ایران" in _pdf_v62
+        and (ROOT/"app/src/main/assets/print/emblem.png").exists(),
+        "V62.7 official five-row emblem header is missing")
+require("managerCreatePickerOpen = true" in school_screen
+        and "fun createStudentsBulkForManagerClass(" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/classes/ClassesViewModel.kt").read_text(),
+        "V62.7 manager teacher/class-first student creation is missing")
+require(_summary_sql_v62 == (ROOT/"sql/manual/SQL_NATIVE_MANAGER_SUMMARY_MULTISCHOOL_V62_7.sql").read_text()
+        and "school_id in(select school_id from mine)" in _summary_sql_v62,
+        "V62.7 multischool manager summary SQL or copy incomplete")
 # V62.2/V62.4 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر دو کمانهٔ
 # بزرگ (V62.4: بدون هالهٔ نئونی و هستهٔ نبض‌دار).
 require("internal fun IceSpinner(" in _ice

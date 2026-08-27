@@ -93,9 +93,10 @@ fun ManagerTeacherClassScreen(
  }
  // V62.6 — دکمهٔ شناور + فقط داخل کلاس.
  if(selected!=null){
+  // V62.7 — دکمهٔ + وسط‌چین پایین (درخواست کاربر).
   FloatingActionButton(
    onClick={addMenuOpen=true},
-   modifier=Modifier.align(Alignment.BottomStart).padding(18.dp)
+   modifier=Modifier.align(Alignment.BottomCenter).padding(18.dp)
   ){Icon(Icons.Outlined.Add,"افزودن دانش‌آموز به کلاس")}
  }
  }

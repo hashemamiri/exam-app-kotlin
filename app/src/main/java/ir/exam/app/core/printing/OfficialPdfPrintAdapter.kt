@@ -238,30 +238,78 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         drawFooter(canvas, pageNumber, totalPages)
     }
 
+    /**
+     * V62.7 — سربرگ رسمی سه‌ستونه طبق طرح کاربر (هر مورد در یک سطر):
+     * ۱) فقط آرم وسط، بالاتر از همه.
+     * ۲) نام | وزارت آموزش و پرورش جمهوری اسلامی ایران | تاریخ آزمون
+     * ۳) نام خانوادگی | اداره کل آموزش و پرورش استان … | مدت آزمون
+     * ۴) نام پدر | مدیریت آموزش و پرورش شهر/شهرستان …(…) | پایه
+     * ۵) نام درس | نام مدرسه | رشته
+     * قالب با هر طول متنی ثابت می‌ماند: سه ستون با عرض ثابت و ellipsize.
+     */
     private fun drawHeader(canvas: Canvas, pageNumber: Int, totalPages: Int) {
         val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 1f }
-        canvas.drawRect(MARGIN, 25f, PAGE_WIDTH - MARGIN, HEADER_BOTTOM, border)
+        canvas.drawRect(MARGIN, 22f, PAGE_WIDTH - MARGIN, HEADER_BOTTOM, border)
         val header = printable.header
-        drawRtl(
-            canvas,
-            listOf(
-                "استان: ${header.province}",
-                "شهر: ${header.city}",
-                "منطقه: ${header.district}",
-                "مدرسه: ${header.school}",
-                "پایه: ${header.grade}" +
-                    header.fieldOfStudy.takeIf(String::isNotBlank)?.let { " · رشته: $it" }.orEmpty()
-            ).joinToString("\n"),
-            PAGE_WIDTH - MARGIN - 8f,
-            37f,
-            9.5f,
-            false,
-            170
+        // سطر ۱ — آرم وسط.
+        emblemBitmap()?.let { emblem ->
+            val size = 30f
+            canvas.drawBitmap(
+                emblem, null,
+                android.graphics.RectF(
+                    PAGE_WIDTH / 2f - size / 2f, 25f,
+                    PAGE_WIDTH / 2f + size / 2f, 25f + size
+                ),
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            )
+        }
+        val rightX = PAGE_WIDTH - MARGIN - 6f
+        val leftColRight = MARGIN + LEFT_COL_WIDTH + 6f
+        val rows = listOf(
+            Triple("نام:", "وزارت آموزش و پرورش جمهوری اسلامی ایران", "تاریخ آزمون: ${header.examDate}"),
+            Triple("نام خانوادگی:", "اداره کل آموزش و پرورش استان ${header.province}", "مدت آزمون: ${header.examDuration}"),
+            Triple(
+                "نام پدر:",
+                "مدیریت آموزش و پرورش شهر/شهرستان ${header.city}" +
+                    header.district.takeIf(String::isNotBlank)?.let { " ($it)" }.orEmpty(),
+                "پایه: ${header.grade}"
+            ),
+            Triple("نام درس: ${header.subject}", header.school, "رشته: ${header.fieldOfStudy}")
         )
-        drawCentered(canvas, "بسمه تعالی\n${printable.documentTitle}", PAGE_WIDTH / 2f, 39f, 11.5f, true)
+        var rowTop = 58f
+        rows.forEach { (right, center, left) ->
+            drawHeaderCell(canvas, right, rightX, rowTop, Paint.Align.RIGHT, SIDE_COL_WIDTH)
+            drawHeaderCell(canvas, center, PAGE_WIDTH / 2f, rowTop, Paint.Align.CENTER, CENTER_COL_WIDTH)
+            drawHeaderCell(canvas, left, leftColRight, rowTop, Paint.Align.RIGHT, LEFT_COL_WIDTH)
+            rowTop += HEADER_ROW_HEIGHT
+        }
         val date = JalaliCalendar.fromGregorian(LocalDate.now()).display()
-        drawRtl(canvas, "تاریخ: $date\nصفحه: $pageNumber از $totalPages", 175f, 40f, 9.5f, false, 130)
+        drawRtl(canvas, "$date · صفحه $pageNumber از $totalPages", 175f, 25f, 7.5f, false, 130)
     }
+
+    /** یک سلول سربرگ: تک‌سطری با برش انتها تا قالب سه‌ستونه هرگز بهم نریزد. */
+    private fun drawHeaderCell(canvas: Canvas, text: String, x: Float, top: Float, align: Paint.Align, width: Float) {
+        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 8.6f
+            textAlign = align
+            typeface = persianTypeface(true)
+        }
+        val clipped = android.text.TextUtils.ellipsize(text, paint, width, android.text.TextUtils.TruncateAt.END).toString()
+        canvas.drawText(clipped, x, top, paint)
+    }
+
+    private fun persianTypeface(bold: Boolean): Typeface {
+        val base = ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
+            ?: Typeface.create("sans", Typeface.NORMAL)
+        return Typeface.create(base, if (bold) Typeface.BOLD else Typeface.NORMAL)
+    }
+
+    private fun emblemBitmap(): Bitmap? = emblemCache ?: runCatching {
+        context.assets.open("print/emblem.png").use(android.graphics.BitmapFactory::decodeStream)
+    }.getOrNull()?.also { emblemCache = it }
+
+    private var emblemCache: Bitmap? = null
 
     private fun drawFooter(canvas: Canvas, pageNumber: Int, totalPages: Int) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 8.5f; textAlign = Paint.Align.RIGHT }
@@ -373,6 +421,11 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         const val MARGIN = 38f
         const val HEADER_BOTTOM = 112f
         const val CONTENT_TOP = 125f
+        // V62.7 — عرض ثابت سه ستون سربرگ رسمی (راست/وسط/چپ) + ارتفاع سطر.
+        const val SIDE_COL_WIDTH = 130f
+        const val CENTER_COL_WIDTH = 235f
+        const val LEFT_COL_WIDTH = 130f
+        const val HEADER_ROW_HEIGHT = 13f
         const val CONTENT_BOTTOM = 795f
         const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
         const val CONTENT_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP

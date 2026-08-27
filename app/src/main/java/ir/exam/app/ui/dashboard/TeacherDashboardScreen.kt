@@ -18,10 +18,14 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -184,29 +188,38 @@ fun TeacherDashboardScreen(
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
+                                // V62.7 — چیدمان جدید دکمه‌ها (درخواست کاربر):
+                                // سطر ۱ وسط‌چین: ویرایش، بازکردن/بستن، سطل زبالهٔ حذف.
+                                // سطر ۲ وسط‌چین: تکثیر و صادرکردن. دکمه‌های چاپ به
+                                // صفحهٔ اختصاصی خودش منتقل شدند.
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Button(onClick = { onEditExam(exam.id) }) { Text("ویرایش") }
                                         OutlinedButton(onClick = { viewModel.setOpen(exam) }) {
                                             Text(if (exam.isOpen) "بستن" else "بازکردن")
                                         }
+                                        IconButton(onClick = { deleteCandidate = exam }) {
+                                            Icon(
+                                                Icons.Outlined.Delete,
+                                                contentDescription = "حذف آزمون",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                                    ) {
                                         OutlinedButton(onClick = { duplicateCandidate = exam }) {
                                             Text("تکثیر با کسر هزینه")
                                         }
                                         OutlinedButton(onClick = { viewModel.exportExam(exam.id) }) {
                                             Text("صادرکردن")
                                         }
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        OutlinedButton(onClick = { viewModel.preparePrint(exam.id, false) }) {
-                                            Text("چاپ برگه")
-                                        }
-                                        OutlinedButton(onClick = { viewModel.preparePrint(exam.id, true) }) {
-                                            Text("چاپ با کلید")
-                                        }
-                                        TextButton(onClick = { deleteCandidate = exam }) { Text("حذف") }
                                     }
                                 }
                             }

@@ -203,6 +203,26 @@ class ClassesViewModel(
             .onFailure { }
     }
 
+    /**
+     * V62.7 — کلاس‌های یک معلم برای جریان «دانش‌آموز جدید» مدیر (اول انتخاب
+     * معلم و کلاس، بعد فرم)؛ از همان RPC مدیریت کلاس معلم استفاده می‌شود.
+     */
+    suspend fun teacherClassesForPicker(teacherId: String): List<SchoolClass> = runCatching {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_manager_teacher_classes_v40c",
+            kotlinx.serialization.json.buildJsonObject {
+                put("p_teacher", kotlinx.serialization.json.JsonPrimitive(teacherId))
+            }
+        ).decodeAs<kotlinx.serialization.json.JsonObject>()
+        (raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+            ?.takeIf(String::isNotBlank)?.let(::error)
+        ((raw["items"] as? kotlinx.serialization.json.JsonArray) ?: kotlinx.serialization.json.JsonArray(emptyList())).mapNotNull { element ->
+            val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+            SchoolClass(id = id, name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty())
+        }
+    }.getOrDefault(emptyList())
+
     /** V61.1 — مدیر مدرسهٔ جدید می‌سازد؛ لیست مدارس تازه می‌شود. */
     fun createSchool(name: String, province: String, city: String) = viewModelScope.launch {
         _state.update { it.copy(actionLoading = true, error = null, message = null) }
@@ -307,6 +327,32 @@ class ClassesViewModel(
     fun createStudentsBulk(classId:String?,requests:List<NewStudentRequest>) = action("ساخت گروهی انجام شد.") {
         val result=repository.createStudentsBulk(classId,requests).getOrThrow();reloadData();classId?.takeIf(String::isNotBlank)?.let{loadRosterNow(it)};_state.update{it.copy(bulkResult=result)}
     }
+
+    /**
+     * V62.7 — دانش‌آموز جدید مدیر: ساخت حساب (بدون کلاس در مسیر معلمی) و سپس
+     * افزودن به کلاسِ معلمِ انتخابی با RPC مدیر (کلاس متعلق به مدیر نیست و
+     * مسیر عادی class_id آن را رد می‌کند). دانش‌آموز به لیست هم اضافه می‌شود.
+     */
+    fun createStudentsBulkForManagerClass(classId: String?, requests: List<NewStudentRequest>) =
+        action("دانش‌آموز ساخته و به کلاس اضافه شد.") {
+            val result = repository.createStudentsBulk(null, requests).getOrThrow()
+            if (!classId.isNullOrBlank()) {
+                result.credentials.forEach { credential ->
+                    runCatching {
+                        SupabaseProvider.client.postgrest.rpc(
+                            "native_manager_set_class_student_v40c",
+                            kotlinx.serialization.json.buildJsonObject {
+                                put("p_class", kotlinx.serialization.json.JsonPrimitive(classId))
+                                put("p_student", kotlinx.serialization.json.JsonPrimitive(credential.id))
+                                put("p_add", kotlinx.serialization.json.JsonPrimitive(true))
+                            }
+                        ).decodeAs<kotlinx.serialization.json.JsonObject>()
+                    }
+                }
+            }
+            reloadData()
+            _state.update { it.copy(bulkResult = result) }
+        }
 
     fun saveStudentNote(studentId:String,note:String)=viewModelScope.launch{
         if(noteDao==null||ownerId.isBlank())return@launch

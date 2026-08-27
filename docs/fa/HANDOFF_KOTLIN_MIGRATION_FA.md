@@ -10019,3 +10019,97 @@ Supabase SQL Editor اجرا کند، وگرنه سوییچ اشتراک/فیل�
 (۶) فیلتر مدیر بخش کلاس چیپ داشته باشد. (۷) کارت مدارس بدون «بازگشت به
 کلاس‌ها»؛ کارنامه منوی خودش. (۸) بازگشت از دعوت → داشبورد.
 ```
+
+
+## ۲۰۵) V62.7 — چاپ آزمون با سربرگ رسمی، پیش‌نمایش دانش‌آموزی و جریان دانش‌آموز مدیر
+
+### درخواست‌های کاربر (۱۰+ مورد + دو تصویر: خطای داشبورد و آرم)
+
+```text
+۱) چشم کارت سؤال: فقط پیش‌نمایش دانش‌آموزی (شکلی که دانش‌آموز می‌بیند)؛
+   بقیهٔ موارد منو حذف.
+۲) دکمه‌های کارت آزمون: سطر ۱ وسط‌چین (ویرایش/بازکردن-بستن/سطل حذف)،
+   سطر ۲ وسط‌چین (تکثیر با کسر هزینه/صادرکردن)؛ چاپ‌ها فقط در فهرست چاپ.
+۳) کارت «چاپ آزمون» به‌جای کارت سربرگ منوی معلم: لیست آزمون‌ها + دکمهٔ
+   وسط‌چین «سربرگ» (مثل مشخصات آزمون) با فرم: استان/شهر/منطقه/مدرسه
+   (از مدارس عضو یا سایر)/پایه-رشته (چرخ فرم دانش‌آموز)/نام درس/تاریخ
+   شمسی/مدت + پیش‌نمایش سربرگ کامل پس از ورود اطلاعات.
+۴) سربرگ چاپ ۵ سطری سه‌ستونه با آرم آپلودی (1.png):
+   آرم وسط | نام-وزارت-تاریخ | نام خانوادگی-اداره کل استان…-مدت |
+   نام پدر-مدیریت شهر…(ناحیه)-پایه | نام درس-مدرسه-رشته؛ قالب با هر
+   متنی ثابت بماند.
+۵) + داک مدیر و + کنار جستجوی دانش‌آموزان مدیر: اول انتخاب معلم و کلاس،
+   بعد فرم دانش‌آموز (همان فرم معلم) و عضویت در کلاس همان معلم.
+۶) همهٔ ساخته‌های مدیر/معلم به لیست دانش‌آموزان اضافه شوند (school_students
+   از قبل با native_attach انجام می‌شود؛ حفظ شد).
+۷) + کلاس معلم در پنل مدیر وسط‌چین شود.
+۸) خطای داشبورد/وضعیت/کارنامهٔ مدیر (عکس):
+   «more than one row returned by a subquery used as an expression».
+```
+
+### ریشه/پیاده‌سازی
+
+```text
+۸) ریشهٔ خطای SQL: native_manager_school_summary_v36 (بازنویسی V38) با
+   CTE mine «تک‌مدرسه‌ای» و «from mine join schools» نوشته شده بود؛ از
+   V61.1 مدیر چندمدرسه‌ای شد و زیرپرس‌وجو چند سطر برگرداند. SQL جدید
+   20260827_native_manager_summary_multischool_v62_7.sql (+کپی manual)
+   همهٔ آمار را روی in(select school_id from mine) جمع می‌زند؛ نام
+   مدارس با string_agg. کاربر باید در Supabase اجرا کند.
+۱) StudentQuestionPreview.kt جدید: دیالوگ «پیش‌نمایش دانش‌آموز» با رندر
+   غیرفعال همهٔ انواع (گزینه با RadioButton، ص/غ چیپ، جای خالی/عددی
+   فیلد، جورکردنی چیپ الف-ب-پ، تشریحی جعبهٔ پاسخ) + یادداشت عکس/نمودار.
+   ExamBuilderScreen: state جدید studentPreview؛ چشم مستقیم آن را باز
+   می‌کند؛ منوی DropdownMenu چشم حذف؛ «چیدمان و ظاهر چاپ» به دکمهٔ متنی
+   داخل کارتِ باز منتقل شد (پیش‌نمایش چاپ سؤال داخل همان چیدمان بود و
+   ماند). importهای DropdownMenu حذف.
+۲) TeacherDashboardScreen: دو Row وسط‌چین (CenterHorizontally)؛ حذف با
+   IconButton سطل قرمز؛ دکمه‌های چاپ حذف شدند. کامنت بدون رشتهٔ ممنوع
+   (درس ۱۰: «چاپ برگه» در کامنت برش تست FAIL می‌داد و بازنویسی شد).
+۳) ExamPrintCenterScreen.kt جدید (ui/printing): لیست آزمون‌ها با «چاپ
+   برگه/چاپ با کلید» + دکمهٔ وسط‌چین «سربرگ» + PrintHeaderDialog با
+   همهٔ فیلدهای خواسته‌شده و HeaderPreview (همان ۵ سطر چاپ). مدارس از
+   native_teacher_schools_v61. state سربرگ در صفحه می‌ماند و به
+   preparePrint(examId, key, header) پاس می‌شود.
+   ExamApp: MainPage.PRINT جدید؛ کارت منوی «سربرگ» معلم → «چاپ آزمون»
+   (onHeader حالا PRINT را باز می‌کند)؛ عنوان صفحه «چاپ آزمون». مسیر
+   سربرگ پروفایل (ProfileSettingsDestination.HEADER) دست‌نخورده ماند.
+۴) OfficialPrintModels: OfficialPrintHeader فیلدهای subject/examDate/
+   examDuration گرفت. SupabasePortabilityRepository.printableExam
+   پارامتر headerOverride. OfficialPdfPrintAdapter.drawHeader بازنویسی:
+   آرم assets/print/emblem.png (کپی 1.png کاربر) وسط، ۴ ردیف سه‌سلولی
+   با drawHeaderCell (عرض ثابت SIDE/CENTER/LEFT_COL_WIDTH + ellipsize
+   تا قالب هرگز بهم نریزد)؛ needleهای V18 «پایه: ${header.grade}» و
+   V28 «رشته: » حفظ شدند. persianTypeface جدید (وزیرمتن).
+۵) SchoolManagementScreen: state جدید managerCreatePicker*(Open/Teacher/
+   Classes/ClassId)؛ CREATE_STUDENT داک برای مدیر اول دیالوگ «انتخاب
+   معلم و کلاس» (چیپ معلم‌ها از loadSchoolTeachers + کلاس‌ها از
+   teacherClassesForPicker جدید در ClassesViewModel با RPC v40c) و بعد
+   همان BulkStudentDialog؛ onBulk (+ کنار جستجو) مدیر هم همین جریان.
+   ClassesViewModel.createStudentsBulkForManagerClass: ساخت با مسیر
+   موجود (بدون class_id چون کلاس مال معلم است و edge آن را رد می‌کند)
+   سپس native_manager_set_class_student_v40c برای عضویت هر ساخته‌شده.
+۷) ManagerTeacherClassScreen: FAB از BottomStart به BottomCenter.
+```
+
+### تست/verify
+
+```text
+جدید: V62_7PrintCenterStudentPreviewTest (۶ تست). هماهنگ: V55_18 (چشم
+بدون منو + دکمهٔ چاپ سؤال در builder) و verify بند V55.18 (needle
+onStudentPreview به‌جای previewMenuOpen). verify: ۶ require جدید V62.7.
+درس ۱۰ دوباره تکرار شد: «چاپ برگه» در کامنت کارت آزمون برش t2 را
+می‌شکست — کامنت بازنویسی شد. شبیه‌سازی substringAfter/Before دقیق کاتلین
++ رگرسیون V18/V28/V55.18/V59.0/Neumorphic69: سبز.
+FINAL_NATIVE_VERIFY=PASS kotlin_files=205 (دو فایل جدید).
+پچ: V62_7_print_center_student_preview — «با SQL»:
+V62_7_manager_summary_multischool.sql باید در Supabase اجرا شود وگرنه
+خطای داشبورد مدیر می‌ماند.
+چک‌لیست دستگاه: چشم کارت سؤال فقط پیش‌نمایش دانش‌آموزی؛ کارت آزمون دو
+سطر وسط‌چین + سطل حذف؛ منوی معلم کارت «چاپ آزمون» (سربرگ قبلی نباشد)؛
+سربرگ: فرم کامل + انتخاب مدرسه/پایه/رشته/تاریخ شمسی + پیش‌نمایش ۵ سطری
+با آرم؛ چاپ برگه/با کلید از همین صفحه با سربرگ واردشده؛ + مدیر (داک و
+کنار جستجو) اول معلم/کلاس بعد فرم؛ دانش‌آموز ساخته‌شده در لیست و کلاس
+معلم باشد؛ + کلاس معلم وسط‌چین؛ داشبورد/وضعیت/کارنامهٔ مدیر پس از
+اجرای SQL بدون خطا.
+```

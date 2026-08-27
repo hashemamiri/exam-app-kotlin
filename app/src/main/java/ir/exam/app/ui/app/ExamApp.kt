@@ -96,7 +96,9 @@ import ir.exam.app.ui.update.UpdateViewModel
 
 private enum class MainPage {
     HOME, CALENDAR, SCHOOL, QUESTION_BANK, GRADING, REPORTS, STUDENT_RESULTS,
-    WALLET, CARDS, REQUESTS, SETTINGS, BUILDER
+    WALLET, CARDS, REQUESTS, SETTINGS, BUILDER,
+    // V62.7 — صفحهٔ «چاپ آزمون» (جایگزین کارت سربرگ منوی معلم).
+    PRINT
 }
 
 @Composable
@@ -351,8 +353,8 @@ private fun AuthenticatedExamApp(
         },
         onHeader = {
             closeTransientNavigation()
-            profileDestination = ProfileSettingsDestination.HEADER
-            page = MainPage.SETTINGS
+            // V62.7 — کارت «چاپ آزمون»: لیست آزمون‌ها با دکمهٔ سربرگ وسط‌چین.
+            page = MainPage.PRINT
         },
         onAccount = {
             closeTransientNavigation()
@@ -520,6 +522,10 @@ private fun AuthenticatedExamApp(
                     )
                 }
                 MainPage.REQUESTS -> if (user.role == UserRole.TEACHER) TeacherManagerRequestsScreen()
+                // V62.7 — صفحهٔ چاپ آزمون: لیست آزمون‌ها + سربرگ رسمی.
+                MainPage.PRINT -> if (user.role == UserRole.TEACHER) {
+                    ir.exam.app.ui.printing.ExamPrintCenterScreen()
+                }
                 MainPage.SETTINGS -> ProfileSettingsScreen(
                     user = user,
                     appearance = appearance,
@@ -817,9 +823,11 @@ private fun AuthenticatedShell(
                 "تقویم", "رویدادها و پیام‌ها", Design69Icons.Calendar,
                 page == MainPage.CALENDAR, onClick = { select(onCalendar) }
             ),
+            // V62.7 — کارت «چاپ آزمون» جایگزین کارت سربرگ شد؛ سربرگ داخل
+            // خود صفحهٔ چاپ با دکمهٔ وسط‌چین باز می‌شود.
             Design69MenuCard(
-                "سربرگ", "اطلاعات رسمی چاپ آزمون", Design69Icons.Header,
-                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.HEADER,
+                "چاپ آزمون", "اطلاعات رسمی چاپ آزمون", Design69Icons.Header,
+                page == MainPage.PRINT,
                 onClick = { select(onHeader) }
             ),
             Design69MenuCard(
@@ -1056,6 +1064,8 @@ private fun MainPage.sectionTitle(
         ProfileSettingsDestination.SETTINGS -> "تنظیمات"
     }
     MainPage.BUILDER -> "ساخت آزمون"
+    // V62.7 — عنوان صفحهٔ چاپ آزمون.
+    MainPage.PRINT -> "چاپ آزمون"
 }
 
 private fun MainPage.teacherDockSection(): TeacherDockSection = when (this) {

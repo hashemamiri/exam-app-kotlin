@@ -8,7 +8,11 @@ data class OfficialPrintHeader(
     val district: String = "",
     val school: String = "",
     val grade: String = "",
-    val fieldOfStudy: String = ""
+    val fieldOfStudy: String = "",
+    // V62.7 — سربرگ رسمی چاپ: نام درس/تاریخ/مدت از منوی سربرگ صفحهٔ چاپ.
+    val subject: String = "",
+    val examDate: String = "",
+    val examDuration: String = ""
 )
 
 sealed interface OfficialPrintable {

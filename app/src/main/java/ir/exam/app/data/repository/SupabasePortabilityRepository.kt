@@ -73,7 +73,12 @@ class SupabasePortabilityRepository {
         )
     }
 
-    suspend fun printableExam(examId: String, includeAnswerKey: Boolean): Result<OfficialExamPrintable> = runCatching {
+    // V62.7 — headerOverride: سربرگ صفحهٔ «چاپ آزمون» جایگزین سربرگ پروفایل می‌شود.
+    suspend fun printableExam(
+        examId: String,
+        includeAnswerKey: Boolean,
+        headerOverride: OfficialPrintHeader? = null
+    ): Result<OfficialExamPrintable> = runCatching {
         val uid = currentUserId()
         val exam = SupabaseProvider.client.from("exams").select {
             filter { eq("id", examId); eq("teacher_id", uid) }
@@ -85,13 +90,15 @@ class SupabasePortabilityRepository {
         val questions = ExamQuestionCodec.decode(exam.questions, key)
         OfficialExamPrintable(
             documentTitle = exam.title,
-            header = OfficialPrintHeader(
+            header = headerOverride ?: OfficialPrintHeader(
                 province = profile.headerProvince.orEmpty(),
                 city = profile.headerCity.orEmpty(),
                 district = profile.headerDistrict.orEmpty(),
                 school = profile.headerSchool.orEmpty(),
                 grade = profile.headerGrade.orEmpty(),
-                fieldOfStudy = profile.headerField.orEmpty()
+                fieldOfStudy = profile.headerField.orEmpty(),
+                subject = exam.subject.orEmpty(),
+                examDuration = (exam.duration ?: 0).takeIf { it > 0 }?.let { "$it دقیقه" }.orEmpty()
             ),
             subject = exam.subject.orEmpty(),
             durationMinutes = exam.duration ?: 0,

@@ -137,6 +137,12 @@ fun SchoolManagementScreen(
     var editingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var deletingStudent by remember { mutableStateOf<StudentProfile?>(null) }
     var showBulk by remember { mutableStateOf(false) }
+    // V62.7 — جریان دانش‌آموز جدید مدیر: اول انتخاب معلم/کلاس، بعد فرم.
+    val pickerScope = rememberCoroutineScope()
+    var managerCreatePickerOpen by remember { mutableStateOf(false) }
+    var managerCreateTeacher by remember { mutableStateOf<SchoolTeacherPick?>(null) }
+    var managerCreateClasses by remember { mutableStateOf<List<SchoolClass>>(emptyList()) }
+    var managerCreateClassId by remember { mutableStateOf<String?>(null) }
     // cache زندهٔ رمزها برای UI؛ منبع پایدار آن StudentPasswordVault رمزنگاری‌شده
     // با Android Keystore است و پس از بازشدن دوبارهٔ برنامه از روی دستگاه پر می‌شود.
     val knownPasswords = remember { mutableStateMapOf<String, String>() }
@@ -196,7 +202,14 @@ fun SchoolManagementScreen(
             SchoolLaunchAction.CREATE_STUDENT -> {
                 showStudents = true
                 viewModel.closeClass()
-                showBulk = true
+                // V62.7 — مدیر: اول انتخاب معلم و کلاس، بعد فرم دانش‌آموز؛
+                // معلم مثل قبل مستقیم فرم را می‌بیند.
+                if (managerTeacherPicker) {
+                    viewModel.loadSchoolTeachers()
+                    managerCreatePickerOpen = true
+                } else {
+                    showBulk = true
+                }
                 onLaunchActionConsumed()
             }
             SchoolLaunchAction.CREATE_CLASS -> {
@@ -271,7 +284,16 @@ fun SchoolManagementScreen(
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
                     onDelete = { deletingStudent = it },
-                    onBulk = { showBulk = true },
+                    // V62.7 — دکمهٔ + مدیر همان جریان داک را اجرا می‌کند
+                    // (اول انتخاب معلم/کلاس، بعد فرم دانش‌آموز).
+                    onBulk = {
+                        if (managerTeacherPicker) {
+                            viewModel.loadSchoolTeachers()
+                            managerCreatePickerOpen = true
+                        } else {
+                            showBulk = true
+                        }
+                    },
                     onExport = {
                         // V62.5 — به‌جای خروجی فوری، جریان دومرحله‌ای باز می‌شود.
                         viewModel.loadFilterMeta()
@@ -517,12 +539,66 @@ fun SchoolManagementScreen(
     }
 
     if(showBulk) BulkStudentDialog(
-        onDismiss={showBulk=false},
+        onDismiss={showBulk=false;managerCreateClassId=null},
         onCreate={requests->
             requests.forEach{knownPasswords[it.username.lowercase()]=it.password}
-            viewModel.createStudentsBulk(null,requests);showBulk=false
+            // V62.7 — مدیر: افزودن به کلاس معلم انتخابی؛ معلم: مسیر قبلی.
+            val target=managerCreateClassId
+            if(managerTeacherPicker&&target!=null)viewModel.createStudentsBulkForManagerClass(target,requests)
+            else viewModel.createStudentsBulk(null,requests)
+            managerCreateClassId=null;showBulk=false
         }
     )
+
+    // V62.7 — پنجرهٔ انتخاب معلم و کلاس قبل از فرم دانش‌آموز جدید (پنل مدیر).
+    if (managerCreatePickerOpen) {
+        AlertDialog(
+            onDismissRequest = { managerCreatePickerOpen = false },
+            title = { Text("انتخاب معلم و کلاس") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("دانش‌آموز جدید به کلاس کدام معلم اضافه شود؟")
+                    if (state.schoolTeachers.isEmpty()) Text("معلمی در مدرسه یافت نشد.")
+                    state.schoolTeachers.forEach { teacher ->
+                        FilterChip(
+                            selected = managerCreateTeacher?.id == teacher.id,
+                            onClick = {
+                                managerCreateTeacher = teacher
+                                managerCreateClassId = null
+                                managerCreateClasses = emptyList()
+                                pickerScope.launch {
+                                    managerCreateClasses = viewModel.teacherClassesForPicker(teacher.id)
+                                }
+                            },
+                            label = { Text(teacher.name.ifBlank { "معلم" }) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (managerCreateTeacher != null) {
+                        Text("کلاس معلم:")
+                        if (managerCreateClasses.isEmpty()) Text("کلاس قابل مشاهده‌ای ندارد.")
+                        managerCreateClasses.forEach { item ->
+                            FilterChip(
+                                selected = managerCreateClassId == item.id,
+                                onClick = { managerCreateClassId = item.id },
+                                label = { Text(item.name.ifBlank { "کلاس" }) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = managerCreateClassId != null,
+                    onClick = { managerCreatePickerOpen = false; showBulk = true }
+                ) { Text("ادامه و ساخت دانش‌آموز") }
+            },
+            dismissButton = {
+                TextButton(onClick = { managerCreatePickerOpen = false }) { Text("انصراف") }
+            }
+        )
+    }
 
     // V62.5 — مرحلهٔ ۱ خروجی اکسل: انتخاب گروه با همان پنجرهٔ فیلتر دانش‌آموزان.
     if (exportStep == 1) {

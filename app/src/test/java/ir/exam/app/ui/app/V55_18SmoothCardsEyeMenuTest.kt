@@ -45,10 +45,12 @@ class V55_18SmoothCardsEyeMenuTest {
     fun `eye icon opens both previews independently via a menu`() {
         val editor = builder.substringAfter("private fun QuestionEditor(")
             .substringBefore("private fun QuestionStyleControls(")
-        assertTrue("previewMenuOpen" in editor)
-        assertTrue("DropdownMenuItem(" in editor)
-        assertTrue("پیش‌نمایش چاپ این سؤال" in editor)
-        assertTrue("پیش‌نمایش کامل A4" in editor)
+        // V62.7 — منوی چشم حذف شد: چشم فقط پیش‌نمایش دانش‌آموزی را باز می‌کند؛
+        // «پیش‌نمایش چاپ این سؤال» به چیدمان چاپ داخل کارت منتقل شد.
+        assertTrue("onStudentPreview" in editor)
+        assertTrue("پیش‌نمایش دانش‌آموزی سؤال" in editor)
+        assertTrue("پیش‌نمایش چاپ این سؤال" in builder)
+        assertTrue("پیش‌نمایش کامل A4" in builder)
         assertTrue("onPreviewAll: () -> Unit" in builder)
         assertTrue("onPreviewAll = { previewAll = true }" in builder)
         // دو پیش‌نمایش state مستقل دارند؛ بستن یکی دیگری را باز نمی‌کند.

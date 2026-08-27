@@ -47,8 +47,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FilterChip
@@ -135,6 +133,8 @@ fun ExamBuilderScreen(
     var innerReorderActive by remember { mutableStateOf(false) }
     var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
     var previewAll by remember { mutableStateOf(false) }
+    // V62.7 — پیش‌نمایش دانش‌آموزی سؤال (شماره + سؤال) از آیکن چشم.
+    var studentPreview by remember { mutableStateOf<Pair<Int, QuestionDraft>?>(null) }
     val questionPrefaceCount = 2 + if (state.importedBy != null) 1 else 0
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -305,7 +305,9 @@ fun ExamBuilderScreen(
                     onItemDragEnded = { innerReorderActive = false },
                     viewModel = viewModel,
                     onPreview = { previewQuestion = question },
-                    onPreviewAll = { previewAll = true }
+                    onPreviewAll = { previewAll = true },
+                    // V62.7 — چشم: پیش‌نمایش دانش‌آموزی همین سؤال.
+                    onStudentPreview = { studentPreview = index to question }
                 )
             }
             item {
@@ -382,6 +384,14 @@ fun ExamBuilderScreen(
 
     previewQuestion?.let { question ->
         QuestionPrintPreviewDialog(question = question, onDismiss = { previewQuestion = null })
+    }
+    // V62.7 — پیش‌نمایش دانش‌آموزی از آیکن چشم کارت سؤال.
+    studentPreview?.let { (index, question) ->
+        StudentQuestionPreviewDialog(
+            question = question,
+            number = index + 1,
+            onDismiss = { studentPreview = null }
+        )
     }
     if (previewAll) {
         ExamPrintPreviewDialog(state = state, onDismiss = { previewAll = false })
@@ -658,7 +668,9 @@ private fun QuestionEditor(
     viewModel: ExamBuilderViewModel,
     onPreview: () -> Unit,
     // V55.18 — آیکن چشم علاوه بر پیش‌نمایش همین سؤال، پیش‌نمایش کامل A4 را هم باز می‌کند.
-    onPreviewAll: () -> Unit
+    onPreviewAll: () -> Unit,
+    // V62.7 — چشم فقط پیش‌نمایش دانش‌آموزی سؤال را باز می‌کند.
+    onStudentPreview: () -> Unit = {}
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
@@ -682,7 +694,8 @@ private fun QuestionEditor(
     // V55.14 — تأیید حذف سؤال با سطل زبالهٔ کنار بارم.
     var confirmDelete by remember(question.id) { mutableStateOf(false) }
     // V55.18 — منوی آیکن چشم (پیش‌نمایش سؤال/A4/چیدمان چاپ).
-    var previewMenuOpen by remember(question.id) { mutableStateOf(false) }
+    // V62.7 — منوی چشم حذف شد؛ چشم مستقیم پیش‌نمایش دانش‌آموزی را باز می‌کند
+    // و «چیدمان و ظاهر چاپ» با دکمهٔ متنی داخل کارت باز باز/بسته می‌شود.
     // V55.16 — دکمهٔ + گزینه/جورکردنی: پنجرهٔ ۸ ابزار برای کدام فیلد باز است؟
     var insertMenuFor by remember(question.id) { mutableStateOf<InsertMenuRef?>(null) }
     // V55.16 — خروجی ویرایشگر ابزار بعدی به‌جای متن سؤال، در این فیلد درج شود.
@@ -760,38 +773,17 @@ private fun QuestionEditor(
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
-                // V55.18 — درخواست کاربر: آیکن چشم هر دو پیش‌نمایش را در دسترس کند
-                // (پیش‌نمایش چاپ همین سؤال + پیش‌نمایش کامل A4)؛ هر کدام مستقل بسته
-                // می‌شوند و بستن یکی، دیگری را باز نمی‌کند. تنظیمات چیدمان چاپ هم
-                // از همین منو باز می‌شود.
-                Box {
-                    IconButton(
-                        onClick = { previewMenuOpen = true },
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Visibility,
-                            contentDescription = "پیش‌نمایش سؤال و آزمون"
-                        )
-                    }
-                    DropdownMenu(expanded = previewMenuOpen, onDismissRequest = { previewMenuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text("پیش‌نمایش چاپ این سؤال") },
-                            onClick = { previewMenuOpen = false; onPreview() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("پیش‌نمایش کامل A4") },
-                            onClick = { previewMenuOpen = false; onPreviewAll() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (styleExpanded) "بستن چیدمان چاپ" else "چیدمان و ظاهر چاپ") },
-                            onClick = {
-                                previewMenuOpen = false
-                                styleExpanded = !styleExpanded
-                                if (styleExpanded && !expanded) onExpand()
-                            }
-                        )
-                    }
+                // V62.7 — درخواست کاربر: چشم «فقط» پیش‌نمایش دانش‌آموزی سؤال را
+                // باز می‌کند (همان شکلی که دانش‌آموز در آزمون می‌بیند)؛ منوی
+                // چندگزینه‌ای قبلی حذف شد. چیدمان چاپ با دکمهٔ داخل کارت باز است.
+                IconButton(
+                    onClick = onStudentPreview,
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Visibility,
+                        contentDescription = "پیش‌نمایش دانش‌آموزی سؤال"
+                    )
                 }
                 IconButton(
                     onClick = {},
@@ -1053,6 +1045,14 @@ private fun QuestionEditor(
                     onItemDragScroll = onDragScroll
                 )
                 QuestionType.ESSAY -> Unit
+            }
+            // V62.7 — «چیدمان و ظاهر چاپ» از منوی چشم به این دکمهٔ داخل کارت
+            // باز منتقل شد (چشم فقط پیش‌نمایش دانش‌آموزی است).
+            if (expanded) {
+                TextButton(
+                    onClick = { styleExpanded = !styleExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(if (styleExpanded) "بستن چیدمان چاپ" else "چیدمان و ظاهر چاپ") }
             }
             AnimatedVisibility(
                 visible = styleExpanded,
