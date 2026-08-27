@@ -585,6 +585,7 @@ private fun AuthenticatedExamApp(
                     aboutContent = { AboutScreen(updateViewModel, apkUpdateManager) }
                 )
                 MainPage.BUILDER -> Unit
+                MainPage.DOC_EDITOR -> Unit
             }
         }
     }
