@@ -36,8 +36,9 @@ class V53WebFieldNativeToolsTableTest {
         assertTrue("QuestionTextWebSection(" in builder)
         assertTrue("questionFieldController" in builder)
         assertFalse("InlineMathTextEditor(" in builder.substringAfter("import"))
-        assertTrue("QuestionTextFieldWebView(" in webSection)
-        // درج شکل/نمودار/جدول در محل مکان‌نمای WebView انجام می‌شود.
+        assertTrue("RichTextSplitter.split" in webSection)
+        assertTrue("BasicTextField(" in webSection)
+        assertFalse("QuestionTextFieldWebView(" in webSection)
         assertTrue("insertFigureJson" in builder)
     }
 
