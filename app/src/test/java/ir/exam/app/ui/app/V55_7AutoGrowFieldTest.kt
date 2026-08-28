@@ -59,9 +59,7 @@ class V55_7AutoGrowFieldTest {
     @Test
     fun `compose grows the webview with content instead of fixed height`() {
         assertTrue("fun onContentHeight(height: Int)" in webField)
-        // V59.2.1: لامبدا چندخطی شد (contentHeightDp + webReady برای رفع پرش).
-        assertTrue("contentHeightDp = it" in webSection)
-        assertTrue("contentHeightDp.coerceIn(150, 4000).dp" in webSection)
+        assertTrue("heightIn(min = 120.dp)" in webSection)
         assertTrue("else 320.dp" !in webSection)
     }
 }

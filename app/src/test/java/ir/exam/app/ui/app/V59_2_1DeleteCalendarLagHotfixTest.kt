@@ -60,8 +60,7 @@ class V59_2_1DeleteCalendarLagHotfixTest {
     @Test
     fun `question text field opens without nested animations or flashes`() {
         assertFalse("animateContentSize" in webSection)
-        assertTrue("var webReady by remember { mutableStateOf(false) }" in webSection)
-        assertTrue("webReady = true" in webSection)
-        assertTrue("alpha = if (webReady || overlayOpen) 1f else 0f" in webSection)
+        assertFalse("webReady" in webSection)
+        assertTrue("BasicTextField(" in webSection)
     }
 }
