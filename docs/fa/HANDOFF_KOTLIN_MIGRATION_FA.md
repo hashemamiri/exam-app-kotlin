@@ -11688,3 +11688,16 @@ SQL/Edge Function/وابستگی جدید: ندارد
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 9d6f4d4
 ```
+
+
+## ۲۴۰) V66.9 — پایدارسازی درخواست تصاویر صفحهٔ دانش‌آموز
+
+```text
+تصاویر سؤال، گزینه، جورکردنی و پاسخ دانش‌آموز از StudentCachedImage استفاده
+می‌کنند. ImageRequest برای هر URI با remember پایدار، memoryCacheKey مشخص و
+crossfade خاموش ساخته می‌شود تا بازترکیب صفحه درخواست/انیمیشن تکراری ایجاد نکند.
+
+پچ: V66_9_stabilize_student_image_requests.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 412fee4
+```

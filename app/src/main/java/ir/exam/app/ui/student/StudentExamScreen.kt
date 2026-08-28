@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import ir.exam.app.core.figure.AtlasBlankAnswerCodec
 import ir.exam.app.domain.model.BooleanAnswer
@@ -294,7 +295,7 @@ fun StudentExamContent(
                 val answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     if(presentation.imagePosition=="above") question.images.forEach { img ->
-                        AsyncImage(img,"تصویر سؤال",Modifier.fillMaxWidth().clickable { zoomImage = img })
+                        StudentCachedImage(img, "تصویر سؤال", Modifier.fillMaxWidth().clickable { zoomImage = img })
                     }
                     NativeMathText(
                         question.text,modifier=Modifier.fillMaxWidth(),fontSize=presentation.fontSizeSp.sp,
@@ -311,12 +312,12 @@ fun StudentExamContent(
                         }
                     )
                     if(presentation.imagePosition!="above") question.images.forEach { img ->
-                        AsyncImage(img,"تصویر سؤال",Modifier.fillMaxWidth().clickable { zoomImage = img })
+                        StudentCachedImage(img, "تصویر سؤال", Modifier.fillMaxWidth().clickable { zoomImage = img })
                     }
                 }
                 zoomImage?.let { img ->
                     ZoomableFigureDialog(onDismiss = { zoomImage = null }, title = "تصویر سؤال") {
-                        AsyncImage(img, "تصویر سؤال بزرگ", Modifier.fillMaxWidth())
+                        StudentCachedImage(img, "تصویر سؤال بزرگ", Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -359,9 +360,9 @@ fun StudentExamContent(
                                         NativeMathText(option, zoomableFigures = true)
                                         question.optionImages.getOrNull(displayIndex)?.let { img ->
                                             var zoomOption by remember(question.id, displayIndex) { mutableStateOf(false) }
-                                            AsyncImage(img, "تصویر گزینه", Modifier.size(120.dp).clickable { zoomOption = true })
+                                            StudentCachedImage(img, "تصویر گزینه", Modifier.size(120.dp).clickable { zoomOption = true })
                                             if (zoomOption) ZoomableFigureDialog(onDismiss = { zoomOption = false }, title = "تصویر گزینه") {
-                                                AsyncImage(img, "تصویر گزینه بزرگ", Modifier.fillMaxWidth())
+                                                StudentCachedImage(img, "تصویر گزینه بزرگ", Modifier.fillMaxWidth())
                                             }
                                         }
                                     }
@@ -454,7 +455,7 @@ private fun MatchingStudentAnswer(
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     NativeMathText("${leftIndex + 1}. $left")
-                    question.leftImages.getOrNull(leftIndex)?.let { AsyncImage(it, "تصویر جورکردنی", Modifier.size(100.dp)) }
+                    question.leftImages.getOrNull(leftIndex)?.let { StudentCachedImage(it, "تصویر جورکردنی", Modifier.size(100.dp)) }
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         question.rightItems.indices.forEach { displayIndex ->
                             val originalIndex = question.rightOriginalIndices.getOrElse(displayIndex) { displayIndex }
@@ -474,7 +475,7 @@ private fun MatchingStudentAnswer(
         question.rightItems.forEachIndexed { index, value ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NativeMathText("${index + 1}. $value")
-                question.rightImages.getOrNull(index)?.let { AsyncImage(it, "تصویر ستون راست", Modifier.size(80.dp)) }
+                question.rightImages.getOrNull(index)?.let { StudentCachedImage(it, "تصویر ستون راست", Modifier.size(80.dp)) }
             }
         }
     }
@@ -516,7 +517,7 @@ private fun ResponseImages(
         ) { Text("افزودن تصویر پاسخ") }
         values.forEach { uri ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(uri, "تصویر پاسخ", Modifier.size(100.dp))
+                StudentCachedImage(uri, "تصویر پاسخ", Modifier.size(100.dp))
                 OutlinedButton(onClick = { onRemove(questionId, uri) }) { Text("حذف") }
             }
         }
@@ -620,6 +621,24 @@ private fun StudentAnswerGraph(
             }
         )
     }
+}
+
+/** تصویر شبکه‌ای با ImageRequest پایدار و بدون crossfade در بازترکیب‌های صفحهٔ آزمون. */
+@Composable
+private fun StudentCachedImage(uri: String, description: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val request = remember(uri) {
+        ImageRequest.Builder(context)
+            .data(uri)
+            .memoryCacheKey("student-exam:$uri")
+            .crossfade(false)
+            .build()
+    }
+    AsyncImage(
+        model = request,
+        contentDescription = description,
+        modifier = modifier
+    )
 }
 
 /**
