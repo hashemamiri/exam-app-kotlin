@@ -52,6 +52,8 @@ data class StudentExamUiState(
 
 const val UNLIMITED_TIME = -1L
 
+private const val EXAM_CHANGE_POLL_INTERVAL_MS = 60_000L
+
 class StudentExamViewModel(
     private val exams: ExamRepository,
     private val drafts: AnswerDraftRepository,
@@ -146,7 +148,9 @@ class StudentExamViewModel(
         changeWatcher?.cancel()
         changeWatcher = viewModelScope.launch {
             while (!state.value.finished) {
-                delay(20_000L)
+                // تغییرات معلم ضروری است، اما poll هر ۲۰ ثانیه در آزمون‌های
+                // طولانی مصرف شبکه و باتری غیرضروری ایجاد می‌کند.
+                delay(EXAM_CHANGE_POLL_INTERVAL_MS)
                 if (state.value.finished || !state.value.started) continue
                 val current = state.value.exam ?: continue
                 val refreshed = exams.refreshActiveExam().getOrNull() ?: continue
