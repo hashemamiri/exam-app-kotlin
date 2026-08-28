@@ -17,7 +17,7 @@ import java.util.UUID
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
@@ -43,6 +43,7 @@ class ExamBuilderViewModel(
     /** در تکرار پس از قطع پاسخ شبکه همان شناسه می‌ماند تا سرور دوباره پول کم نکند. */
     private var saveOperationId: String = UUID.randomUUID().toString()
     private var cleanDraftFingerprint: Int? = null
+    private var savedDraftFingerprint: Int? = null
 
     init {
         load()
@@ -94,11 +95,13 @@ class ExamBuilderViewModel(
     private fun startDraftAutoSave() {
         if (ownerUserId.isBlank()) return
         viewModelScope.launch {
-            state.drop(1).debounce(900).collect { current ->
+            state.drop(1).debounce(900).collectLatest { current ->
                 val fingerprint = draftFingerprint(current)
                 if (!current.loading && !current.saving && current.savedCode == null &&
-                    current.recoverableDraft == null && fingerprint != cleanDraftFingerprint) {
+                    current.recoverableDraft == null && fingerprint != cleanDraftFingerprint &&
+                    fingerprint != savedDraftFingerprint) {
                     draftStore.save(ownerUserId, current)
+                    savedDraftFingerprint = fingerprint
                 }
             }
         }
@@ -550,7 +553,14 @@ class ExamBuilderViewModel(
     } }
 
     private fun update(id: String, change: (QuestionDraft) -> QuestionDraft) {
-        _state.update { state -> state.copy(questions = state.questions.map { if (it.id == id) change(it) else it }) }
+        _state.update { state ->
+            val index = state.questions.indexOfFirst { it.id == id }
+            if (index < 0) state else {
+                val questions = state.questions.toMutableList()
+                questions[index] = change(questions[index])
+                state.copy(questions = questions)
+            }
+        }
     }
 
     fun addFromBank(id: Long) {

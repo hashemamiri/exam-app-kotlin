@@ -11582,3 +11582,17 @@ SQL/Edge Function/وابستگی جدید: ندارد
 پچ: V66_1_1_restore_exam_save_validation.patch
 پایه: commit 6c9fb18
 ```
+
+
+## ۲۳۳) V66.2 — بهینه‌سازی ورودی و autosave آزمونساز
+
+```text
+RichTextSplitter به‌جای firstOrNull تکراری از map محدوده استفاده می‌کند؛
+کلید پایدار برای قطعه‌های کادر Native اضافه شد؛ update سؤال فقط عنصر هدف
+را جایگزین می‌کند؛ autosave آزمونساز collectLatest و fingerprint آخرین ذخیره
+را نگه می‌دارد تا ذخیرهٔ تکراری ایجاد نشود.
+
+پچ: V66_2_input_and_autosave.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 132cdd5
+```

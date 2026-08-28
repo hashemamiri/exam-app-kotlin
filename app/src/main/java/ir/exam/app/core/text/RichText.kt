@@ -27,6 +27,8 @@ object RichTextSplitter {
         val items = mutableListOf<Triple<Int, Int, Int>>() // start, end, kind (0=math,1=figure)
         formulas.forEach { items += Triple(it.start, it.endExclusive, 0) }
         figures.forEach { items += Triple(it.start, it.endExclusive, 1) }
+        val formulaByRange = formulas.associateBy { it.start to it.endExclusive }
+        val figureByRange = figures.associateBy { it.start to it.endExclusive }
 
         val order = items.indices.sortedBy { items[it].first }
         val result = mutableListOf<RichSegment>()
@@ -37,10 +39,10 @@ object RichTextSplitter {
             // یک کادر قابل تایپ داشته باشد و توکن مجبور نشود سطر جداگانه بسازد.
             if (start >= cursor) result += RichSegment.Text(source.substring(cursor, start))
             if (kind == 0) {
-                val occ = formulas.firstOrNull { it.start == start && it.endExclusive == end }
+                val occ = formulaByRange[start to end]
                 if (occ != null) result += RichSegment.Math(occ.index, occ.tex)
             } else {
-                val occ = figures.firstOrNull { it.start == start && it.endExclusive == end }
+                val occ = figureByRange[start to end]
                 if (occ != null) result += RichSegment.Figure(occ.index, occ.spec)
             }
             cursor = end

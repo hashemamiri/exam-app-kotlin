@@ -22,6 +22,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -116,6 +117,8 @@ fun QuestionTextWebSection(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             parts.forEachIndexed { index, part ->
+                // key پایدار مانع جابه‌جایی فوکوس BasicTextFieldها هنگام تغییر متن می‌شود.
+                key(index) {
                 when (part) {
                     is RichSegment.Text -> {
                         BasicTextField(
@@ -179,6 +182,7 @@ fun QuestionTextWebSection(
                             }
                         }
                     }
+                }
                 }
             }
         }
