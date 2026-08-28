@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import coil.compose.rememberConstraintsSizeResolver
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import ir.exam.app.core.figure.AtlasCatalog
@@ -52,7 +51,6 @@ fun AtlasFigureView(
     onImageTap: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val sizeResolver = rememberConstraintsSizeResolver()
     val assetPath = AtlasCatalog.assetPath(spec) ?: return
     val marks = remember(spec) { spec.marks() }
     // درخواست تصویر اطلس بین بازترکیب‌ها پایدار بماند؛ ساختن ImageRequest
@@ -60,7 +58,6 @@ fun AtlasFigureView(
     val assetRequest = remember(context, assetPath) {
         ImageRequest.Builder(context)
             .data("file:///android_asset/$assetPath")
-            .size(sizeResolver)
             .memoryCacheKey("atlas:$assetPath")
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.DISABLED)
@@ -96,7 +93,7 @@ fun AtlasFigureView(
                 model = assetRequest,
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().then(sizeResolver)
+                modifier = Modifier.fillMaxSize()
             )
             if (marks.isNotEmpty()) {
                 Canvas(Modifier.fillMaxSize()) {

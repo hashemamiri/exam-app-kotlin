@@ -11756,3 +11756,16 @@ V66.12 از rememberConstraintsSizeResolver استفاده کرده بود، ا�
 پچ: V66_12_1_fix_coil_api_compatibility.patch
 پایه: commit aadb11e
 ```
+
+
+## ۲۴۳.۲) V66.12.2 — hotfix واقعی ناسازگاری API کویل
+
+```text
+در V66.12.1 فقط مستندات تغییر کرده بود و سه فایل دارای API ناسازگار باقی
+مانده بودند. اکنون import و استفاده‌های rememberConstraintsSizeResolver و
+size(sizeResolver) از AtlasFigureView، InlineFigureView و StudentExamScreen
+حذف شدند؛ cacheهای قبلی و split cache حفظ شدند.
+
+پچ: V66_12_2_remove_unsupported_coil_resolver.patch
+پایه: commit d43ff03
+```

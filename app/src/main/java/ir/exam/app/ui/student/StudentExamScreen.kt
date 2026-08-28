@@ -60,7 +60,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.compose.rememberConstraintsSizeResolver
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 import ir.exam.app.core.figure.AtlasBlankAnswerCodec
@@ -628,11 +627,9 @@ private fun StudentAnswerGraph(
 @Composable
 private fun StudentCachedImage(uri: String, description: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val sizeResolver = rememberConstraintsSizeResolver()
-    val request = remember(uri, sizeResolver) {
+    val request = remember(uri) {
         ImageRequest.Builder(context)
             .data(uri)
-            .size(sizeResolver)
             .memoryCacheKey("student-exam:$uri")
             .crossfade(false)
             .build()
@@ -640,7 +637,7 @@ private fun StudentCachedImage(uri: String, description: String, modifier: Modif
     AsyncImage(
         model = request,
         contentDescription = description,
-        modifier = modifier.then(sizeResolver)
+        modifier = modifier
     )
 }
 
