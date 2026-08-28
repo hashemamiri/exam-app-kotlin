@@ -376,6 +376,18 @@ class ExamBuilderViewModel(
     } }
     fun setCorrect(id: String, index: Int) { update(id) { it.copy(correctIndex = index) } }
 
+    // V64.5 — استایل مستقل سمت جورکردنی؛ null = ارث از سؤال.
+    fun setMatchingStyle(id: String, side: String, index: Int, change: (OptionStyle) -> OptionStyle) { update(id) { q ->
+        if (side == "left" && index in q.matchingLeft.indices) {
+            val styles = q.matchingLeftStyles.padStyles(q.matchingLeft.size).toMutableList()
+            styles[index] = change(styles[index] ?: OptionStyle())
+            q.copy(matchingLeftStyles = styles)
+        } else if (side == "right" && index in q.matchingRight.indices) {
+            val styles = q.matchingRightStyles.padStyles(q.matchingRight.size).toMutableList()
+            styles[index] = change(styles[index] ?: OptionStyle())
+            q.copy(matchingRightStyles = styles)
+        } else q
+    } }
     fun updateMatchingText(id: String, side: String, index: Int, text: String) { update(id) { question ->
         if (side == "left") question.copy(matchingLeft = question.matchingLeft.replaceAt(index, text))
         else question.copy(matchingRight = question.matchingRight.replaceAt(index, text))
@@ -433,6 +445,7 @@ class ExamBuilderViewModel(
                 matchingLeft = q.matchingLeft.filterIndexed { i, _ -> i != index },
                 matchingLeftIds = q.matchingLeftIds.resizeIds(q.matchingLeft.size).filterIndexed { i, _ -> i != index },
                 matchingLeftImages = q.matchingLeftImages.pad(q.matchingLeft.size).filterIndexed { i, _ -> i != index },
+                matchingLeftStyles = q.matchingLeftStyles.padStyles(q.matchingLeft.size).filterIndexed { i, _ -> i != index },
                 matchingPairs = pairs
             )
         } else if (side == "right" && q.matchingRight.size > 2 && index in q.matchingRight.indices) {
@@ -443,6 +456,7 @@ class ExamBuilderViewModel(
                 matchingRight = q.matchingRight.filterIndexed { i, _ -> i != index },
                 matchingRightIds = q.matchingRightIds.resizeIds(q.matchingRight.size).filterIndexed { i, _ -> i != index },
                 matchingRightImages = q.matchingRightImages.pad(q.matchingRight.size).filterIndexed { i, _ -> i != index },
+                matchingRightStyles = q.matchingRightStyles.padStyles(q.matchingRight.size).filterIndexed { i, _ -> i != index },
                 matchingPairs = pairs
             )
         } else q

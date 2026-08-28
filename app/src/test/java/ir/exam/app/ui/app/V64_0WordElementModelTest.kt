@@ -36,7 +36,8 @@ class V64_0WordElementModelTest {
         assertTrue("selected = selectedElement == (\"mR\" to index)" in editor)
         // کلیک اول انتخاب، کلیک دوم ویرایش درجا
         // V64.3 — ویرایش کنترل‌شده از بالا (onStartEdit).
-        assertTrue("if (selected) onStartEdit() else onSelect()" in editor)
+        // V64.5 — مثل ورد: یک کلیک = مکان‌نما (انتخاب + ویرایش با هم).
+        assertTrue("onSelect()\n                        onStartEdit()" in editor)
         // ذخیره از توابع موجود ویومدل
         assertTrue("builder.updateOption(questionId, index, text)" in editor)
         assertTrue("builder.updateMatchingText(questionId, \"left\", index, text)" in editor)

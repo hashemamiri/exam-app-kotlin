@@ -53,6 +53,9 @@ data class QuestionDraft(
     val optionImages: List<String?> = emptyList(),
     // V64.4 — هم‌تراز با options؛ ورودی‌های قدیمی بدون این فیلد = همه null.
     val optionStyles: List<OptionStyle?> = emptyList(),
+    // V64.5 — استایل مستقل هر سمت جورکردنی (هم‌تراز matchingLeft/Right).
+    val matchingLeftStyles: List<OptionStyle?> = emptyList(),
+    val matchingRightStyles: List<OptionStyle?> = emptyList(),
     val correctIndex: Int? = null,
     val expectedText: String = "",
     val expectedNumber: String = "",

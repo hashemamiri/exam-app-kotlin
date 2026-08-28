@@ -2091,7 +2091,7 @@ require("RichTextSplitter.split(question.text)" in _doc_editor_v63
 # ---- V64.0: مدل عنصر Word-مانند — گزینه/جورکردنی مستقل؛ بدون نقطه‌چین ----
 _v64_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_0WordElementModelTest.kt").read_text()
 require("fun WordElement(" in _doc_editor_v63
-        and "if (selected) onStartEdit() else onSelect()" in _doc_editor_v63
+        and "onStartEdit()" in _doc_editor_v63
         and "var selectedElement by remember" in _doc_editor_v63
         and 'answerLineStyle == "lined"' not in _doc_editor_v63,
         "V64.0 independent word-element model is missing from the editor")
@@ -2134,16 +2134,27 @@ require("data class OptionStyle(" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()
         and "fun setOptionStyle(id: String, index: Int, change: (OptionStyle) -> OptionStyle)" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
-        and 'if (question.optionStyles.any { it != null })' in _codec_v64
+        and "encodeStyles(question.optionStyles, question.options.size)" in _codec_v64
         and "takeIf { it.isNotEmpty() }" in _codec_v64,
         "V64.4 per-option style model/codec is missing")
-require('if (element != null && element.second == "opt")' in _doc_editor_v63
+require("applyElementStyle(builder, element)" in _doc_editor_v63
         and "val optionStyle = question.optionStyles.getOrNull(index)" in
             (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text(),
         "V64.4 element-aware toolbar / print styles are missing")
 require("class V64_4OptionStyleTest" in
         (ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_4OptionStyleTest.kt").read_text(),
         "V64.4 option-style tests are missing")
+# ---- V64.5: کلیک = مکان‌نمای ورد (بدون جعبه) + استایل مستقل جفت‌های جورکردنی ----
+require("cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8))" in _doc_editor_v63
+        and ".background(Color(0x0F27A5F2))" not in _doc_editor_v63
+        and ".background(Color(0x1427A5F2))" not in _doc_editor_v63
+        and "fun applyElementStyle(" in _doc_editor_v63
+        and "fun setMatchingStyle(id: String, side: String, index: Int" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
+        and "fun JsonElement?.decodeStyles()" in _codec_v64
+        and "matchingLeftStyles" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text(),
+        "V64.5 word caret / matching styles are missing")
 # V64.4.1 — درج کلاس جدید annotation کلاس بعدی را ندزدد (لاگ CI: Serializer
 # has not been found for QuestionDraft).
 _draft_v64=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()

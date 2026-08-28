@@ -200,28 +200,32 @@ fun ExamDocumentEditorScreen(
             },
             // V64.4 — Word-مانند: اگر «عنصری» انتخاب است قالب روی همان عنصر
             // اعمال می‌شود (استایل per-option)؛ وگرنه مثل قبل روی کل سؤال.
+            // V64.5 — قالب عنصر برای هر سه نوع (گزینه و دو سمت جورکردنی).
             onFontSize = { delta ->
                 val element = selectedElement
-                if (element != null && element.second == "opt") {
+                if (element != null) {
                     val question = state.questions.firstOrNull { it.id == element.first }
-                    val base = question?.optionStyles?.getOrNull(element.third)?.fontSizeSp
+                    val styles = when (element.second) {
+                        "opt" -> question?.optionStyles
+                        "mL" -> question?.matchingLeftStyles
+                        else -> question?.matchingRightStyles
+                    }
+                    val base = styles?.getOrNull(element.third)?.fontSizeSp
                         ?: question?.fontSizeSp ?: 16f
-                    builder.setOptionStyle(element.first, element.third) {
+                    applyElementStyle(builder, element) {
                         it.copy(fontSizeSp = (base + delta).coerceIn(8f, 40f))
                     }
                 } else editing?.let { builder.setQuestionFontSize(it.id, it.fontSizeSp + delta) }
             },
             onBold = {
                 val element = selectedElement
-                if (element != null && element.second == "opt") {
-                    builder.setOptionStyle(element.first, element.third) { it.copy(bold = !it.bold) }
-                } else editing?.let { builder.setQuestionBold(it.id, !it.bold) }
+                if (element != null) applyElementStyle(builder, element) { it.copy(bold = !it.bold) }
+                else editing?.let { builder.setQuestionBold(it.id, !it.bold) }
             },
             onItalic = {
                 val element = selectedElement
-                if (element != null && element.second == "opt") {
-                    builder.setOptionStyle(element.first, element.third) { it.copy(italic = !it.italic) }
-                } else editing?.let { builder.setQuestionItalic(it.id, !it.italic) }
+                if (element != null) applyElementStyle(builder, element) { it.copy(italic = !it.italic) }
+                else editing?.let { builder.setQuestionItalic(it.id, !it.italic) }
             },
             onAlign = { value -> editing?.let { builder.setQuestionAlign(it.id, value) } },
             onMoveQuestion = { delta -> editing?.let { builder.moveQuestion(it.id, delta) } },
@@ -555,9 +559,8 @@ private fun WordQuestionBlock(
                         color = Color(0xFF0B72B8)
                     ),
                     singleLine = true,
-                    modifier = Modifier
-                        .width(WordPageLayout.mmToDp(14f, zoom).dp)
-                        .background(Color(0x1427A5F2))
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
+                    modifier = Modifier.width(WordPageLayout.mmToDp(14f, zoom).dp)
                 )
             } else Text(
                 scoreText(question.score),
@@ -620,7 +623,9 @@ private fun WordQuestionBlock(
                                 fontStyle = style ?: FontStyle.Normal,
                                 textAlign = align
                             ),
-                            modifier = Modifier.fillMaxWidth().background(Color(0x0F27A5F2))
+                            // V64.5 — مثل ورد: بدون جعبه/پس‌زمینه؛ فقط مکان‌نما.
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -685,9 +690,10 @@ private fun WordQuestionBlock(
                     ) {
                         WordElement(
                             text = question.matchingRight.getOrNull(index).orEmpty(),
-                            fontSize = fontSize,
-                            weight = weight,
-                            style = style,
+                            fontSize = question.matchingRightStyles.getOrNull(index)?.fontSizeSp
+                                ?.let { (it.coerceIn(8f, 30f) * printScale).sp } ?: fontSize,
+                            weight = if (question.matchingRightStyles.getOrNull(index)?.bold == true) FontWeight.Bold else weight,
+                            style = if (question.matchingRightStyles.getOrNull(index)?.italic == true) FontStyle.Italic else style,
                             align = align,
                             selected = selectedElement == ("mR" to index),
                             editing = editingElement == ("mR" to index),
@@ -700,9 +706,10 @@ private fun WordQuestionBlock(
                         Text("↔", fontSize = fontSize)
                         WordElement(
                             text = question.matchingLeft.getOrNull(index).orEmpty(),
-                            fontSize = fontSize,
-                            weight = weight,
-                            style = style,
+                            fontSize = question.matchingLeftStyles.getOrNull(index)?.fontSizeSp
+                                ?.let { (it.coerceIn(8f, 30f) * printScale).sp } ?: fontSize,
+                            weight = if (question.matchingLeftStyles.getOrNull(index)?.bold == true) FontWeight.Bold else weight,
+                            style = if (question.matchingLeftStyles.getOrNull(index)?.italic == true) FontStyle.Italic else style,
                             align = align,
                             selected = selectedElement == ("mL" to index),
                             editing = editingElement == ("mL" to index),
@@ -1037,9 +1044,9 @@ private fun WordElement(
                 fontStyle = style ?: FontStyle.Normal,
                 textAlign = align
             ),
+            // V64.5 — مثل ورد: کادر و پس‌زمینه حذف؛ فقط مکان‌نمای چشمک‌زن.
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
             modifier = modifier
-                .background(Color(0x0F27A5F2))
-                .border(2.dp, Color(0xFF0B72B8))
         )
     } else {
         Box(
@@ -1047,7 +1054,9 @@ private fun WordElement(
                 .then(if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier)
                 .pointerInput(selected) {
                     detectTapGestures(onTap = {
-                        if (selected) onStartEdit() else onSelect()
+                        // V64.5 — مثل ورد: یک کلیک روی متن = مکان‌نما (انتخاب+ویرایش).
+                        onSelect()
+                        onStartEdit()
                     })
                 }
         ) {
@@ -1060,6 +1069,19 @@ private fun WordElement(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+/** V64.5 — اعمال استایل روی عنصر انتخابی: گزینه یا سمت جورکردنی. */
+private fun applyElementStyle(
+    builder: ExamBuilderViewModel,
+    element: Triple<String, String, Int>,
+    change: (ir.exam.app.ui.builder.OptionStyle) -> ir.exam.app.ui.builder.OptionStyle
+) {
+    when (element.second) {
+        "opt" -> builder.setOptionStyle(element.first, element.third, change)
+        "mL" -> builder.setMatchingStyle(element.first, "left", element.third, change)
+        "mR" -> builder.setMatchingStyle(element.first, "right", element.third, change)
     }
 }
 

@@ -33,7 +33,8 @@ class V64_3HoistedEditReconstructTest {
     fun `element editing is hoisted and explicit`() {
         assertTrue("var editingElement by remember" in editor)
         assertTrue("onStartEditElement: (String, String, Int) -> Unit" in editor)
-        assertTrue("if (selected) onStartEdit() else onSelect()" in editor)
+        // V64.5 — کلیک واحد ورد-مانند.
+        assertTrue("onSelect()\n                        onStartEdit()" in editor)
         // Enter عنصر جدید را مستقیم در حالت ویرایش می‌گذارد
         assertTrue("editingElement = Triple(questionId, \"opt\", index + 1)" in editor)
         // state محلیِ ریست‌شونده حذف شد

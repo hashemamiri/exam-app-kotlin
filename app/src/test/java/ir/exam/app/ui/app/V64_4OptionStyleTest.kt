@@ -42,8 +42,9 @@ class V64_4OptionStyleTest {
     @Test
     fun `toolbar formats the selected element instead of the whole question`() {
         assertTrue("fun setOptionStyle(id: String, index: Int, change: (OptionStyle) -> OptionStyle)" in builderVm)
-        assertTrue("if (element != null && element.second == \"opt\")" in editor)
-        assertTrue("builder.setOptionStyle(element.first, element.third) { it.copy(bold = !it.bold) }" in editor)
+        // V64.5 — قالب عنصر برای هر سه نوع از مسیر مشترک applyElementStyle.
+        assertTrue("applyElementStyle(builder, element) { it.copy(bold = !it.bold) }" in editor)
+        assertTrue("\"opt\" -> builder.setOptionStyle(element.first, element.third, change)" in editor)
         assertTrue("val hasQuestion = question != null || hasElement" in editor)
         // رندر ویرایشگر استایل عنصر را نشان می‌دهد
         assertTrue("question.optionStyles.getOrNull(index)?.bold == true" in editor)

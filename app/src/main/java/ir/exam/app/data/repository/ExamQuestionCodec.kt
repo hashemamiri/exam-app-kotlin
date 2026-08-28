@@ -25,6 +25,29 @@ internal data class EncodedQuestions(
 )
 
 internal object ExamQuestionCodec {
+    // V64.5 — استایل عنصر (گزینه/سمت جورکردنی): آبجکت خالی = null (بدون استایل).
+    private fun JsonElement?.decodeStyles(): List<OptionStyle?> =
+        this.asArrayOrEmpty().map { element ->
+            (element as? JsonObject)?.takeIf { it.isNotEmpty() }?.let { styleObj ->
+                OptionStyle(
+                    bold = styleObj["b"]?.asBoolean() ?: false,
+                    italic = styleObj["i"]?.asBoolean() ?: false,
+                    fontSizeSp = styleObj["s"]?.asDouble()?.toFloat()
+                )
+            }
+        }
+
+    private fun encodeStyles(styles: List<OptionStyle?>, size: Int): JsonArray? =
+        if (styles.none { it != null }) null else JsonArray(List(size) { index ->
+            styles.getOrNull(index)?.let { style ->
+                JsonObject(buildMap {
+                    put("b", JsonPrimitive(style.bold))
+                    put("i", JsonPrimitive(style.italic))
+                    style.fontSizeSp?.let { put("s", JsonPrimitive(it)) }
+                })
+            } ?: JsonObject(emptyMap())
+        })
+
     fun decode(publicQuestions: JsonElement, answerKey: JsonElement?): List<QuestionDraft> {
         val keys = answerKey.asArrayOrEmpty().mapIndexedNotNull { index, element ->
             val obj = element as? JsonObject ?: return@mapIndexedNotNull null
@@ -48,16 +71,9 @@ internal object ExamQuestionCodec {
                 optionIds = List(obj["options"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
                 // V64.4 — استایل هر گزینه؛ JSON قدیمی بدون optionStyles = همه null.
-                optionStyles = obj["optionStyles"].asArrayOrEmpty().map { element ->
-                    // آبجکت خالی = گزینهٔ بدون استایل (null)؛ فقط آبجکت غیرخالی OptionStyle می‌شود.
-                    (element as? JsonObject)?.takeIf { it.isNotEmpty() }?.let { styleObj ->
-                        OptionStyle(
-                            bold = styleObj["b"]?.asBoolean() ?: false,
-                            italic = styleObj["i"]?.asBoolean() ?: false,
-                            fontSizeSp = styleObj["s"]?.asDouble()?.toFloat()
-                        )
-                    }
-                },
+                optionStyles = obj["optionStyles"].decodeStyles(),
+                matchingLeftStyles = obj["leftStyles"].decodeStyles(),
+                matchingRightStyles = obj["rightStyles"].decodeStyles(),
                 correctIndex = key["correctOption"]?.asInt() ?: obj["correctIndex"]?.asInt(),
                 expectedText = when (type) {
                     QuestionType.TRUE_FALSE -> (key["correctAnswer"]?.asBoolean() ?: false).toString()
@@ -138,21 +154,20 @@ internal object ExamQuestionCodec {
                     question.optionImages.getOrNull(index)?.let(::JsonPrimitive) ?: JsonPrimitive("")
                 })
                 // V64.4 — فقط وقتی استایلی هست بنویس تا JSON قدیمی دست‌نخورده بماند.
-                if (question.optionStyles.any { it != null }) {
-                    values["optionStyles"] = JsonArray(question.options.indices.map { index ->
-                        question.optionStyles.getOrNull(index)?.let { style ->
-                            JsonObject(buildMap {
-                                put("b", JsonPrimitive(style.bold))
-                                put("i", JsonPrimitive(style.italic))
-                                style.fontSizeSp?.let { put("s", JsonPrimitive(it)) }
-                            })
-                        } ?: JsonObject(emptyMap())
-                    })
+                encodeStyles(question.optionStyles, question.options.size)?.let {
+                    values["optionStyles"] = it
                 }
             }
             if (question.type == QuestionType.MATCHING) {
                 values["leftItems"] = JsonArray(question.matchingLeft.map(::JsonPrimitive))
                 values["rightItems"] = JsonArray(question.matchingRight.map(::JsonPrimitive))
+                // V64.5 — استایل مستقل سمت‌ها؛ فقط وقتی استایلی هست.
+                encodeStyles(question.matchingLeftStyles, question.matchingLeft.size)?.let {
+                    values["leftStyles"] = it
+                }
+                encodeStyles(question.matchingRightStyles, question.matchingRight.size)?.let {
+                    values["rightStyles"] = it
+                }
                 values["leftImages"] = JsonArray(question.matchingLeft.indices.map { index ->
                     question.matchingLeftImages.getOrNull(index)?.let(::JsonPrimitive) ?: JsonPrimitive("")
                 })
