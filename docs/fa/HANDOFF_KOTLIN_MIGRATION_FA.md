@@ -11743,3 +11743,16 @@ ImageRequest اندازهٔ واقعی مقصد را می‌گیرد و تصوی
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 42c1fa0
 ```
+
+
+## ۲۴۳.۱) V66.12.1 — سازگاری Coil با نسخهٔ پروژه
+
+```text
+V66.12 از rememberConstraintsSizeResolver استفاده کرده بود، اما Coil Compose
+نسخهٔ موجود پروژه این API و ImageRequest.size(SizeResolver) را ندارد. سه
+استفادهٔ این API حذف و cacheهای پایدار قبلی حفظ شدند تا کامپایل پروژه با
+نسخهٔ فعلی Coil سازگار بماند. RichTextSplitter cache همچنان باقی است.
+
+پچ: V66_12_1_fix_coil_api_compatibility.patch
+پایه: commit aadb11e
+```
