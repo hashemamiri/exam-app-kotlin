@@ -237,7 +237,7 @@ fun StudentExamContent(
             ) {
                 OutlinedButton(onClick = { showExit = true }) { Text("خروج") }
                 ExamCountdownText(
-                    remainingSeconds = state.remainingSeconds,
+                    initialRemainingSeconds = state.remainingSeconds,
                     totalSeconds = state.totalSeconds
                 )
                 Button(onClick = onSubmit, enabled = !state.submitting) {

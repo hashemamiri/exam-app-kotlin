@@ -11624,3 +11624,15 @@ WordQuestionBlock نیز occurrenceهای شکل و قطعه‌های متن ف�
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit fcd3fc9
 ```
+
+
+## ۲۳۴.۱) V66.3.2 — اصلاح نام پارامتر فراخوانی زمان‌سنج
+
+```text
+پس از تغییر نام پارامتر ExamCountdownText به initialRemainingSeconds،
+فراخوانی نام‌دار در StudentExamContent هنوز remainingSeconds بود و کامپایل
+را متوقف کرد. نام آرگومان فراخوانی هماهنگ شد؛ منطق زمان‌سنج تغییری نکرد.
+
+پچ: V66_3_2_fix_countdown_named_argument.patch
+پایه: commit 86c559c
+```
