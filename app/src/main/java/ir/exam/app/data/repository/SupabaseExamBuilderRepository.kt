@@ -29,24 +29,88 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 class SupabaseExamBuilderRepository(context: Context) {
     private val imageUploader = SupabaseQuestionImageUploader(context)
 
     suspend fun load(examId: String?): Result<ExamBuilderState> = runCatching {
-        val teacherId = currentTeacherId()
-        val classes = SupabaseProvider.client.postgrest.rpc("my_classes")
-            .decodeList<SchoolClassDto>()
-            .map { AudienceClassOption(it.id, it.name) }
-        val students = SupabaseProvider.client.postgrest.rpc("my_students_for_pick")
-            .decodeList<StudentProfileDto>()
-            .map { AudienceStudentOption(it.id, it.fullName, it.classNames) }
-        // V61.0 — مدرسه‌های معلم برای مخاطب «مدارس»؛ نبودن تابع نباید سازنده را بشکند.
-        val schools = loadSchoolOptions()
-        val bank = loadBankSnapshot()
+        coroutineScope {
+            val teacherId = currentTeacherId()
+            // این چهار داده به هم وابسته نیستند؛ بارگذاری موازی زمان ورود سازنده را کم می‌کند.
+            val classesDeferred = async {
+                SupabaseProvider.client.postgrest.rpc("my_classes")
+                    .decodeList<SchoolClassDto>()
+                    .map { AudienceClassOption(it.id, it.name) }
+            }
+            val studentsDeferred = async {
+                SupabaseProvider.client.postgrest.rpc("my_students_for_pick")
+                    .decodeList<StudentProfileDto>()
+                    .map { AudienceStudentOption(it.id, it.fullName, it.classNames) }
+            }
+            val schoolsDeferred = async { loadSchoolOptions() }
+            val bankDeferred = async { loadBankSnapshot() }
 
-        if (examId == null) {
-            return@runCatching ExamBuilderState(
+            val classes = classesDeferred.await()
+            val students = studentsDeferred.await()
+            val schools = schoolsDeferred.await()
+            val bank = bankDeferred.await()
+
+            if (examId == null) {
+                return@coroutineScope ExamBuilderState(
+                    availableClasses = classes,
+                    availableStudents = students,
+                    availableSchools = schools,
+                    bankQuestions = bank.questions,
+                    bankCategories = bank.categories
+                )
+            }
+
+            // داده‌های مخصوص آزمون نیز مستقل هستند و هم‌زمان دریافت می‌شوند.
+            val examDeferred = async {
+                SupabaseProvider.client.from("exams").select {
+                    filter {
+                        eq("id", examId)
+                        eq("teacher_id", teacherId)
+                    }
+                }.decodeList<ExamDetailDto>().firstOrNull()
+                    ?: error("آزمون پیدا نشد یا متعلق به این حساب نیست.")
+            }
+            val keyDeferred = async {
+                SupabaseProvider.client.from("exam_keys").select {
+                    filter { eq("exam_id", examId) }
+                }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
+            }
+            val audienceDeferred = async { loadAudience(examId) }
+            val audienceSchoolsDeferred = async { loadAudienceSchools(examId) }
+
+            val exam = examDeferred.await()
+            val key = keyDeferred.await()
+            val audience = audienceDeferred.await()
+            val audienceSchools = audienceSchoolsDeferred.await()
+
+            ExamBuilderState(
+                examId = exam.id,
+                code = exam.code,
+                title = exam.title,
+                subject = exam.subject.orEmpty(),
+                durationMinutes = exam.duration?.toString().orEmpty(),
+                opensAtIso = exam.opensAt,
+                closesAtIso = exam.closesAt,
+                questions = ExamQuestionCodec.decode(exam.questions, key),
+                shuffleQuestions = exam.shuffleQuestions,
+                shuffleOptions = exam.shuffleOptions,
+                negativeMarking = exam.negativeMarking.toString(),
+                teacherMessage = exam.teacherMessage.orEmpty(),
+                attemptsAllowed = exam.attemptsAllowed.coerceIn(1, 5),
+                attemptOnTimeout = exam.attemptOnTimeout,
+                gradePolicy = exam.gradePolicy,
+                attemptCooldown = exam.attemptCooldown.toString(),
+                audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
+                audienceClasses = audience.classes,
+                audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
+                audienceSchools = audienceSchools,
                 availableClasses = classes,
                 availableStudents = students,
                 availableSchools = schools,
@@ -54,119 +118,6 @@ class SupabaseExamBuilderRepository(context: Context) {
                 bankCategories = bank.categories
             )
         }
-
-        val exam = SupabaseProvider.client.from("exams").select {
-            filter {
-                eq("id", examId)
-                eq("teacher_id", teacherId)
-            }
-        }.decodeList<ExamDetailDto>().firstOrNull() ?: error("آزمون پیدا نشد یا متعلق به این حساب نیست.")
-        val key = SupabaseProvider.client.from("exam_keys").select {
-            filter { eq("exam_id", examId) }
-        }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
-        val audience = loadAudience(examId)
-        // V61.0 — اگر مدرسه ذخیره شده باشد، حالت «مدارس» بازیابی می‌شود.
-        val audienceSchools = loadAudienceSchools(examId)
-
-        ExamBuilderState(
-            examId = exam.id,
-            code = exam.code,
-            title = exam.title,
-            subject = exam.subject.orEmpty(),
-            durationMinutes = exam.duration?.toString().orEmpty(),
-            opensAtIso = exam.opensAt,
-            closesAtIso = exam.closesAt,
-            questions = ExamQuestionCodec.decode(exam.questions, key),
-            shuffleQuestions = exam.shuffleQuestions,
-            shuffleOptions = exam.shuffleOptions,
-            negativeMarking = exam.negativeMarking.toString(),
-            teacherMessage = exam.teacherMessage.orEmpty(),
-            attemptsAllowed = exam.attemptsAllowed.coerceIn(1, 5),
-            attemptOnTimeout = exam.attemptOnTimeout,
-            gradePolicy = exam.gradePolicy,
-            attemptCooldown = exam.attemptCooldown.toString(),
-            audienceMode = if (audienceSchools.isNotEmpty()) "schools" else audience.mode,
-            audienceClasses = audience.classes,
-            audienceStudents = if (audienceSchools.isNotEmpty()) emptySet() else audience.students,
-            audienceSchools = audienceSchools,
-            availableClasses = classes,
-            availableStudents = students,
-            availableSchools = schools,
-            bankQuestions = bank.questions,
-            bankCategories = bank.categories
-        )
-    }
-
-    suspend fun save(
-        state: ExamBuilderState,
-        operationId: String,
-        onUploadProgress: (done: Int, total: Int) -> Unit
-    ): Result<ExamSaveResult> = runCatching {
-        val teacherId = currentTeacherId()
-        require(state.title.trim().isNotEmpty()) { "عنوان آزمون را وارد کنید." }
-        require(state.questions.isNotEmpty()) { "حداقل یک سؤال اضافه کنید." }
-        require(state.questions.all { it.text.isNotBlank() }) { "متن همه سؤال‌ها را وارد کنید." }
-        require(state.audienceMode != "classes" || state.audienceClasses.isNotEmpty()) { "حداقل یک کلاس انتخاب کنید." }
-        require(state.audienceMode != "students" || state.audienceStudents.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
-        require(state.audienceMode != "schools" || state.audienceSchools.isNotEmpty()) { "حداقل یک مدرسه انتخاب کنید." }
-        if (state.opensAtIso != null && state.closesAtIso != null) {
-            require(!Instant.parse(state.closesAtIso).isBefore(Instant.parse(state.opensAtIso))) {
-                "زمان پایان نمی‌تواند قبل از زمان شروع باشد."
-            }
-        }
-
-        val examId = state.examId ?: UUID.randomUUID().toString()
-        val questionsWithUrls = imageUploader.uploadPending(
-            teacherId = teacherId,
-            examId = examId,
-            questions = state.questions,
-            onProgress = onUploadProgress
-        )
-        val encoded = ExamQuestionCodec.encode(questionsWithUrls)
-        val duration = state.durationMinutes.toIntOrNull()?.coerceIn(0, 1440) ?: 0
-        val totalScore = questionsWithUrls.sumOf { it.score }
-        val code = state.code ?: generateCode()
-        val payload = buildJsonObject {
-            put("operation_id", operationId)
-            put("id", examId)
-            put("code", code)
-            put("title", state.title.trim())
-            put("subject", state.subject.trim())
-            put("duration", duration)
-            put("opens_at", state.opensAtIso)
-            put("closes_at", state.closesAtIso)
-            put("total_score", totalScore)
-            put("shuffle_q", state.shuffleQuestions)
-            put("shuffle_opt", state.shuffleOptions)
-            put("neg_marking", state.negativeMarking.toDoubleOrNull() ?: 0.0)
-            put("teacher_message", state.teacherMessage.trim().ifBlank { null })
-            put("attempts_allowed", state.attemptsAllowed.coerceIn(1, 5))
-            put("attempt_on_timeout", state.attemptOnTimeout)
-            put("grade_policy", state.gradePolicy)
-            put("attempt_cooldown", state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0)
-            put("questions", encoded.publicQuestions)
-            put("answer_key", encoded.answerKey)
-            put("audience", state.audienceMode)
-            put("classes", buildJsonArray { state.audienceClasses.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-            put("students", buildJsonArray { state.audienceStudents.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-            // V61.0 — سرور مدرسه‌ها را به دانش‌آموزان ثبت‌شدهٔ همان مدرسه‌ها گسترش می‌دهد.
-            put("schools", buildJsonArray { state.audienceSchools.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
-        }
-        val raw = SupabaseProvider.client.postgrest.rpc(
-            "native_save_exam_v2",
-            buildJsonObject { put("p_payload", payload) }
-        ).decodeAs<JsonObject>()
-        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
-            val balance = raw["balance"]?.jsonPrimitive?.longOrNull
-            val required = raw["required"]?.jsonPrimitive?.longOrNull
-            if (balance != null && required != null) error("$message؛ موجودی $balance تومان و مبلغ لازم $required تومان است.")
-            error(message)
-        }
-        ExamSaveResult(
-            code = raw["code"]?.jsonPrimitive?.contentOrNull ?: code,
-            chargedToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
-            walletBalanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
-        )
     }
 
     suspend fun refreshBank(): Result<BankSnapshot> = runCatching { loadBankSnapshot() }

@@ -11,6 +11,8 @@ import ir.exam.app.domain.model.AnalyticsSummary
 import ir.exam.app.domain.model.ClassGradeRow
 import ir.exam.app.domain.model.ExamQuestionAnalysis
 import ir.exam.app.domain.model.SchoolClass
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -87,11 +89,17 @@ class ReportsViewModel(
         runCatching {
             val roster = school.getClassRoster(selectedClass.id).getOrThrow()
             val selectedExams = state.value.exams.filter { it.id in state.value.selectedExamIds }
-            val answerMap = selectedExams.associate { exam ->
-                exam.id to grading.getAnswers(exam.id).getOrThrow()
-                    .asSequence()
-                    .filter { it.graded }
-                    .groupBy { it.studentId }
+            // دریافت پاسخ آزمون‌های مستقل به‌صورت موازی؛ نتیجه همچنان با همان
+            // ترتیب selectedExams ساخته می‌شود.
+            val answerMap = coroutineScope {
+                selectedExams.map { exam ->
+                    async {
+                        exam.id to grading.getAnswers(exam.id).getOrThrow()
+                            .asSequence()
+                            .filter { it.graded }
+                            .groupBy { it.studentId }
+                    }
+                }.associate { it.await() }
             }
             roster.map { student ->
                 val scores = selectedExams.associate { exam ->
