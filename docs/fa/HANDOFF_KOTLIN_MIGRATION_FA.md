@@ -11596,3 +11596,17 @@ RichTextSplitter به‌جای firstOrNull تکراری از map محدوده ا
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 132cdd5
 ```
+
+
+## ۲۳۴) V66.3 — جداسازی تیک نمایشی زمان‌سنج
+
+```text
+آپدیت هر ثانیهٔ remainingSeconds از State اصلی StudentExamViewModel حذف شد.
+ExamCountdownText اکنون شمارش نمایشی خود را در State محلی خودش انجام می‌دهد؛
+بنابراین تغییر هر ثانیه فقط خود زمان‌سنج را بازترکیب می‌کند، نه کل صفحهٔ آزمون.
+تایمر ViewModel همچنان برای deadline و ارسال خودکار فعال است.
+
+پچ: V66_3_isolate_exam_countdown.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 2f5860d
+```

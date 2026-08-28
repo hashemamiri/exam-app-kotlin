@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import ir.exam.app.core.figure.AtlasBlankAnswerCodec
 import ir.exam.app.domain.model.BooleanAnswer
 import ir.exam.app.domain.model.ChoiceAnswer
@@ -626,19 +628,28 @@ private fun StudentAnswerGraph(
  */
 @Composable
 fun ExamCountdownText(remainingSeconds: Long, totalSeconds: Long) {
-    if (remainingSeconds == UNLIMITED_TIME) {
+    var shownSeconds by remember(remainingSeconds) { mutableLongStateOf(remainingSeconds) }
+    LaunchedEffect(remainingSeconds) {
+        if (remainingSeconds != UNLIMITED_TIME) {
+            while (shownSeconds > 0L) {
+                delay(1_000L)
+                shownSeconds--
+            }
+        }
+    }
+    if (shownSeconds == UNLIMITED_TIME) {
         Text("بدون محدودیت", fontWeight = FontWeight.Bold)
         return
     }
-    val fraction = if (totalSeconds > 0L) remainingSeconds.toFloat() / totalSeconds else 1f
-    val nearEnd = remainingSeconds <= 300L || fraction <= .15f
+    val fraction = if (totalSeconds > 0L) shownSeconds.toFloat() / totalSeconds else 1f
+    val nearEnd = shownSeconds <= 300L || fraction <= .15f
     val color = when {
         nearEnd -> Color(0xFFD32F2F)
         fraction <= .5f -> Color(0xFFF57C00)
         else -> Color(0xFF2E7D32)
     }
     Text(
-        formatRemaining(remainingSeconds),
+        formatRemaining(shownSeconds),
         color = color,
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.titleMedium

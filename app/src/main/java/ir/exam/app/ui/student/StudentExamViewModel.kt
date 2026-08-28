@@ -310,7 +310,8 @@ class StudentExamViewModel(
                 }
                 val exam = state.value.exam ?: return@launch
                 val remaining = remainingFor(exam)
-                _state.update { it.copy(remainingSeconds = remaining) }
+                // نمایش ثانیه‌ها داخل composable خودش به‌روزرسانی می‌شود؛ تغییر
+                // State اصلی در هر ثانیه کل صفحهٔ آزمون را بازترکیب نمی‌کند.
                 if (remaining == UNLIMITED_TIME) return@launch
                 if (remaining <= 0L) {
                     val refreshed = exams.refreshActiveExam().getOrNull()
