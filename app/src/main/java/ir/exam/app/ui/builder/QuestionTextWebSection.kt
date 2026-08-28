@@ -67,16 +67,24 @@ fun QuestionTextWebSection(
 
     DisposableEffect(controller) {
         controller.nativeInsert = { specJson ->
-            val spec = FigureSpec.parse(specJson) ?: return@nativeInsert false
-            currentOnText(FigureCodec.insert(currentText, spec))
-            true
+            val spec = FigureSpec.parse(specJson)
+            if (spec == null) {
+                false
+            } else {
+                currentOnText(FigureCodec.insert(currentText, spec))
+                true
+            }
         }
         controller.nativeReplace = { specJson ->
-            val occ = controller.pendingEditOccurrence ?: return@nativeReplace false
-            val spec = FigureSpec.parse(specJson) ?: return@nativeReplace false
-            currentOnText(FigureCodec.replace(currentText, occ, spec))
-            controller.pendingEditOccurrence = null
-            true
+            val occ = controller.pendingEditOccurrence
+            val spec = FigureSpec.parse(specJson)
+            if (occ == null || spec == null) {
+                false
+            } else {
+                currentOnText(FigureCodec.replace(currentText, occ, spec))
+                controller.pendingEditOccurrence = null
+                true
+            }
         }
         controller.nativeOpenFormula = {
             val value = currentText
