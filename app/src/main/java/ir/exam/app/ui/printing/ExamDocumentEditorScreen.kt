@@ -588,7 +588,9 @@ private fun WordQuestionBlock(
 
         // V63.1 — شکل/نمودار/جدول درون‌متنی جدا رندر می‌شوند تا دستگیرهٔ
         // تغییر اندازه بگیرند؛ متن/فرمول باقی با NativeMathText قبلی.
-        val figureOccurrences = FigureCodec.occurrences(question.text)
+        val figureOccurrences = remember(question.id, question.text) {
+            FigureCodec.occurrences(question.text)
+        }
         var textOnly = question.text
         figureOccurrences.asReversed().forEach { occ ->
             textOnly = textOnly.removeRange(occ.start, occ.endExclusive)
@@ -597,7 +599,9 @@ private fun WordQuestionBlock(
         // کاربر): RichTextSplitter.split کل متن را می‌شکند و reconstruct جای
         // فرمول/شکل را دقیقاً حفظ می‌کند — بدون منطق offset دست‌ساز.
         if (editable) {
-            val parts = ir.exam.app.core.text.RichTextSplitter.split(question.text)
+            val parts = remember(question.id, question.text) {
+                ir.exam.app.core.text.RichTextSplitter.split(question.text)
+            }
             var figureCursor = 0
             // V64.5.1 — مثل ورد: تکه‌های متن و فرمول «در یک سطر جاری» کنار هم
             // می‌نشینند (FlowRow)؛ قبلاً هر تکه تمام‌عرض بود و متنِ فرمول‌دار

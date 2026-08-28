@@ -11610,3 +11610,17 @@ ExamCountdownText اکنون شمارش نمایشی خود را در State مح
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 2f5860d
 ```
+
+
+## ۲۳۵) V66.4 — cache رندر متن ترکیبی و ویرایشگر چاپ
+
+```text
+NativeMathText اکنون splitRows را فقط هنگام تغییر source اجرا می‌کند. در
+WordQuestionBlock نیز occurrenceهای شکل و قطعه‌های متن فقط با تغییر همان
+سؤال محاسبه می‌شوند؛ بازترکیب ناشی از انتخاب، زوم یا Stateهای جانبی parse
+تکراری انجام نمی‌دهد.
+
+پچ: V66_4_cache_rich_rendering.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit fcd3fc9
+```

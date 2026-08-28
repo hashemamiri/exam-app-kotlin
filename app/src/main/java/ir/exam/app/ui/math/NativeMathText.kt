@@ -65,7 +65,9 @@ fun NativeMathText(
     // V58.0 — پنل معلم به جای خالی/کادر نامگذاری نیاز ندارد؛ چاپ و دانش‌آموز دارند.
     showAtlasBlanks: Boolean = true
 ) {
-    val rows = RichTextSplitter.splitRows(source)
+    // متن ترکیبی در بازترکیب‌های ناشی از تایمر/انتخاب دوباره parse نشود؛
+    // فقط با تغییر خود source محاسبه شود.
+    val rows = remember(source) { RichTextSplitter.splitRows(source) }
     val effectiveSize = if (fontSize == TextUnit.Unspecified) 18.sp else fontSize
     val flat = rows.flatten()
     val hasMath = flat.any { it is RichSegment.Math }
