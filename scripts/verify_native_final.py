@@ -2095,6 +2095,15 @@ require("fun WordElement(" in _doc_editor_v63
         "V64.0 independent word-element model is missing from the editor")
 require("class V64_0WordElementModelTest" in _v64_test,
         "V64.0 element-model tests are missing")
+# ---- V64.1: Enter=عنصر جدید؛ Delete نوار ابزار برای شیء/عنصر ----
+require("onEnter = { onElementEnter(" in _doc_editor_v63
+        and "builder.insertOptionAfter(questionId, index)" in _doc_editor_v63
+        and "onDeleteSelected = {" in _doc_editor_v63
+        and "fun insertOptionAfter(id: String, index: Int)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
+        and "fun removeOptionAt(id: String, index: Int)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "V64.1 element enter/delete word behaviors are missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

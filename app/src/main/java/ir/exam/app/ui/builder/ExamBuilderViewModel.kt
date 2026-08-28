@@ -319,6 +319,29 @@ class ExamBuilderViewModel(
             correctIndex = question.correctIndex?.coerceAtMost(size - 1)
         )
     } }
+    // V64.1 — ورد واقعی: درج گزینهٔ خالی بعد از عنصر جاری (Enter) و حذف موضعی.
+    fun insertOptionAfter(id: String, index: Int) { update(id) { question ->
+        if (question.options.size >= 10) question else {
+            val at = (index + 1).coerceIn(0, question.options.size)
+            val options = question.options.toMutableList().apply { add(at, "") }
+            val ids = question.optionIds.resizeIds(question.options.size).toMutableList()
+                .apply { add(at, UUID.randomUUID().toString()) }
+            val images = question.optionImages.pad(question.options.size).toMutableList().apply { add(at, null) }
+            val correct = question.correctIndex?.let { if (it >= at) it + 1 else it }
+            question.copy(options = options, optionIds = ids, optionImages = images, correctIndex = correct)
+        }
+    } }
+    fun removeOptionAt(id: String, index: Int) { update(id) { question ->
+        if (question.options.size <= 2 || index !in question.options.indices) question else {
+            val options = question.options.toMutableList().apply { removeAt(index) }
+            val ids = question.optionIds.resizeIds(question.options.size + 1).toMutableList().apply { removeAt(index) }
+            val images = question.optionImages.pad(question.options.size + 1).toMutableList().apply { removeAt(index) }
+            val correct = question.correctIndex?.let {
+                when { it == index -> null; it > index -> it - 1; else -> it }
+            }
+            question.copy(options = options, optionIds = ids, optionImages = images, correctIndex = correct)
+        }
+    } }
     fun moveOption(id: String, index: Int, delta: Int) { update(id) { question ->
         val to = (index + delta).coerceIn(0, question.options.lastIndex)
         if (index !in question.options.indices || index == to) question else {

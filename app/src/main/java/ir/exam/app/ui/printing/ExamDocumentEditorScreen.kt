@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FormatAlignCenter
 import androidx.compose.material.icons.outlined.FormatAlignLeft
 import androidx.compose.material.icons.outlined.FormatAlignRight
@@ -152,8 +153,26 @@ fun ExamDocumentEditorScreen(
         DocumentToolbar(
             question = editing,
             hasObject = selectedImage != null || selectedFigure != null,
+            hasDeletable = selectedImage != null || selectedFigure != null || selectedElement != null,
             locked = objectsLocked,
             onToggleLock = { objectsLocked = !objectsLocked },
+            // V64.1 — حذف انتخاب‌شده (شیء یا عنصر) مثل Delete ورد.
+            onDeleteSelected = {
+                selectedImage?.let { (questionId, imageId) ->
+                    builder.removeImage(questionId, imageId); selectedImage = null
+                }
+                selectedFigure?.let { (questionId, occurrenceIndex) ->
+                    builder.deleteFigure(questionId, occurrenceIndex); selectedFigure = null
+                }
+                selectedElement?.let { (questionId, kind, index) ->
+                    when (kind) {
+                        "opt" -> builder.removeOptionAt(questionId, index)
+                        "mL" -> builder.removeMatchingSide(questionId, "left", index)
+                        "mR" -> builder.removeMatchingSide(questionId, "right", index)
+                    }
+                    selectedElement = null
+                }
+            },
             onObjectGrow = {
                 selectedImage?.let { (questionId, imageId) ->
                     val media = state.questions.firstOrNull { it.id == questionId }
@@ -242,6 +261,19 @@ fun ExamDocumentEditorScreen(
                         "mR" -> builder.updateMatchingText(questionId, "right", index, text)
                     }
                 },
+                // V64.1 — Enter در عنصر = عنصر جدید بعد از همان (مثل پاراگراف ورد).
+                onElementEnter = { questionId, kind, index ->
+                    when (kind) {
+                        "opt" -> {
+                            builder.insertOptionAfter(questionId, index)
+                            selectedElement = Triple(questionId, "opt", index + 1)
+                        }
+                        "mL", "mR" -> {
+                            builder.addMatchingRow(questionId)
+                            selectedElement = null
+                        }
+                    }
+                },
                 onImageFreeMove = { questionId -> builder.setImagePosition(questionId, "free") },
                 onMoveImage = builder::moveImage,
                 onResizeImage = builder::resizeImage,
@@ -326,6 +358,7 @@ private fun WordFlowDocument(
     selectedElement: Triple<String, String, Int>?,
     onSelectElement: (String, String, Int) -> Unit,
     onElementText: (String, String, Int, String) -> Unit,
+    onElementEnter: (String, String, Int) -> Unit,
     onImageFreeMove: (String) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
@@ -366,6 +399,7 @@ private fun WordFlowDocument(
                             ?.let { it.second to it.third },
                         onSelectElement = { kind, index -> onSelectElement(question.id, kind, index) },
                         onElementText = { kind, index, text -> onElementText(question.id, kind, index, text) },
+                        onElementEnter = { kind, index -> onElementEnter(question.id, kind, index) },
                         onImageFreeMove = { onImageFreeMove(question.id) },
                         onMoveImage = { imageId, x, y -> onMoveImage(question.id, imageId, x, y) },
                         onResizeImage = { imageId, w -> onResizeImage(question.id, imageId, w) },
@@ -433,6 +467,7 @@ private fun WordQuestionBlock(
     selectedElement: Pair<String, Int>?,
     onSelectElement: (String, Int) -> Unit,
     onElementText: (String, Int, String) -> Unit,
+    onElementEnter: (String, Int) -> Unit,
     onImageFreeMove: () -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
@@ -592,6 +627,7 @@ private fun WordQuestionBlock(
                         selected = selectedElement == "opt" to index,
                         onSelect = { onSelectElement("opt", index) },
                         onText = { onElementText("opt", index, it) },
+                        onEnter = { onElementEnter("opt", index) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -619,6 +655,7 @@ private fun WordQuestionBlock(
                             selected = selectedElement == "mR" to index,
                             onSelect = { onSelectElement("mR", index) },
                             onText = { onElementText("mR", index, it) },
+                            onEnter = { onElementEnter("mR", index) },
                             modifier = Modifier.weight(1f)
                         )
                         Text("↔", fontSize = fontSize)
@@ -631,6 +668,7 @@ private fun WordQuestionBlock(
                             selected = selectedElement == "mL" to index,
                             onSelect = { onSelectElement("mL", index) },
                             onText = { onElementText("mL", index, it) },
+                            onEnter = { onElementEnter("mL", index) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -669,8 +707,10 @@ private fun WordQuestionBlock(
 private fun DocumentToolbar(
     question: QuestionDraft?,
     hasObject: Boolean,
+    hasDeletable: Boolean,
     locked: Boolean,
     onToggleLock: () -> Unit,
+    onDeleteSelected: () -> Unit,
     onObjectGrow: () -> Unit,
     onObjectShrink: () -> Unit,
     onFontSize: (Float) -> Unit,
@@ -706,6 +746,14 @@ private fun DocumentToolbar(
                 if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
                 contentDescription = if (locked) "بازکردن قفل جابجایی" else "قفل جابجایی",
                 tint = if (locked) Color(0xFFC62828) else Color(0xFF25A86B)
+            )
+        }
+        // V64.1 — حذف عنصر/شیء انتخاب‌شده (مثل Delete در ورد).
+        IconButton(onClick = onDeleteSelected, enabled = hasDeletable) {
+            Icon(
+                Icons.Outlined.Delete,
+                contentDescription = "حذف انتخاب‌شده",
+                tint = if (hasDeletable) Color(0xFFC62828) else Color(0xFFB2BDC6)
             )
         }
         val hasQuestion = question != null
@@ -905,6 +953,7 @@ private fun WordElement(
     selected: Boolean,
     onSelect: () -> Unit,
     onText: (String) -> Unit,
+    onEnter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editing by remember(text, selected) { mutableStateOf(false) }
@@ -913,8 +962,17 @@ private fun WordElement(
         BasicTextField(
             value = draft,
             onValueChange = { value ->
-                draft = value
-                onText(value)
+                // V64.1 — Enter داخل عنصر = پایان این عنصر و ساخت عنصر بعدی
+                // (هر گزینه مثل یک پاراگراف ورد تک‌خطی است).
+                if ('\n' in value) {
+                    val clean = value.replace("\n", "")
+                    draft = clean
+                    onText(clean)
+                    onEnter()
+                } else {
+                    draft = value
+                    onText(value)
+                }
             },
             textStyle = TextStyle(
                 fontSize = fontSize,

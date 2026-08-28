@@ -11072,3 +11072,40 @@ import شد (درس: member-access مثل ContentScale.FillWidth را هم اس�
 جفت‌های جورکردنی همین‌طور؛ اینتر در متن سؤال فضا بسازد و صفحه‌بندی
 زنده به‌روز شود.
 ```
+
+## ۲۲۲) V64.1 — ورد واقعی گام ۲: Enter=عنصر جدید و Delete نوار ابزار
+
+### چه شد
+
+```text
+- Enter داخل عنصرِ در حال ویرایش (WordElement.onEnter؛ تشخیص \n در
+  onValueChange چون عنصرها تک‌خطی‌اند): برای گزینه →
+  insertOptionAfter(id,index) جدید در ویومدل (درج موضعی خالی بعد از
+  همان، جابجایی امن correctIndex اگر >=at، سقف ۱۰) و انتخاب به گزینهٔ
+  جدید می‌رود (selectedElement=Triple(qid,"opt",index+1))؛ برای
+  جورکردنی → addMatchingRow موجود.
+- دکمهٔ سطل (Icons.Outlined.Delete) در نوار ابزار بعد از قفل:
+  hasDeletable=شیء یا عنصر انتخابی؛ حذف تصویر (removeImage)، شکل
+  (deleteFigure)، گزینه (removeOptionAt جدید: حداقل ۲ گزینه؛
+  correctIndex==index→null، >index→−1) یا سمت جورکردنی
+  (removeMatchingSide موجود).
+- منطق insert/remove با شبیه‌سازی python (۶ سناریو) تأیید شد.
+دام این پچ: str.replace فراخوانی‌های WordElement با «تورفتگی حدسی»
+یکسان برای opt/mR/mL شکست خورد (mR/mL عمیق‌ترند) — درج با regex
+تورفتگی‌خوان انجام شد. درس: برای درج در چند جای مشابه، تورفتگی را از
+خود match بگیر نه حدس.
+```
+
+### تست/verify
+
+```text
+جدید: V64_1ElementEnterDeleteTest (۲ تست). verify بند V64.1.
+شبیه‌سازی سراسری needle=0 FAIL + شبیه‌سازی اجرایی منطق. اسکن import/
+member تمیز. پچ: V64_1_element_enter_delete — بدون SQL.
+چک‌لیست دستگاه: ویرایش گزینه → Enter → گزینهٔ خالی جدید زیر همان و
+آمادهٔ تایپ؛ سطل با گزینهٔ انتخابی فعال (قرمز) و حذف؛ حداقل ۲ گزینه
+بماند؛ پاسخ صحیح بعد از درج/حذف درست بماند؛ سطل برای تصویر/شکل هم.
+گام ۳ باقی‌مانده: قالب‌بندی per-element (نیاز به مدل استایل per-option)
+و انتخاب بازه‌ای متن per-range — پیش‌نیاز مدل rich-text در QuestionDraft
+و رندر چاپ؛ قبل از شروع از کاربر ask_user بگیر (تغییر مدل داده).
+```
