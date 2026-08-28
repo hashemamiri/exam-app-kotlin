@@ -715,7 +715,7 @@ private fun QuestionEditor(
     )
 
     Card(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onToggle),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

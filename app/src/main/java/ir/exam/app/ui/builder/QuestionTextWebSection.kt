@@ -19,12 +19,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureCodec
@@ -111,16 +118,40 @@ fun QuestionTextWebSection(
             parts.forEachIndexed { index, part ->
                 when (part) {
                     is RichSegment.Text -> {
+                        var fieldValue by remember(index) {
+                            mutableStateOf(
+                                TextFieldValue(
+                                    text = part.text,
+                                    selection = TextRange(part.text.length)
+                                )
+                            )
+                        }
+                        // همگام‌سازی تغییر بیرونی بدون انتقال caret به انتهای متن
+                        // در هر بار بازترکیب Compose.
+                        LaunchedEffect(index, part.text) {
+                            if (fieldValue.text != part.text) {
+                                val cursor = fieldValue.selection.end.coerceIn(0, part.text.length)
+                                fieldValue = TextFieldValue(
+                                    text = part.text,
+                                    selection = TextRange(cursor)
+                                )
+                            }
+                        }
                         BasicTextField(
-                            value = part.text,
-                            onValueChange = { newText ->
-                                currentOnText(RichTextSplitter.reconstruct(parts, index, newText))
+                            value = fieldValue,
+                            onValueChange = { next ->
+                                fieldValue = next
+                                currentOnText(
+                                    RichTextSplitter.reconstruct(parts, index, next.text)
+                                )
                             },
                             modifier = Modifier
                                 .widthIn(min = 12.dp)
                                 .heightIn(min = 28.dp)
                                 .then(if (text.isBlank()) Modifier.fillMaxWidth() else Modifier),
-                            textStyle = MaterialTheme.typography.bodyLarge,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                textDirection = TextDirection.Content
+                            ),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             decorationBox = { inner ->
                                 Box(contentAlignment = Alignment.CenterStart) { inner() }
