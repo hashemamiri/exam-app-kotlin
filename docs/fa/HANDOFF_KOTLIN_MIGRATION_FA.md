@@ -11714,3 +11714,17 @@ QuestionTextFieldWebView و FormulaHostDialog فقط صفحات محلی asset �
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 3cb6476
 ```
+
+
+## ۲۴۲) V66.11 — آزادسازی قطعی WebView هنگام خروج
+
+```text
+برای QuestionTextFieldWebView و FormulaHostDialog، onRelease اضافه شد. هنگام
+خروج AndroidView، بارگیری متوقف، صفحه به about:blank منتقل، viewهای فرزند حذف
+و destroy اجرا می‌شود. در کادر سؤال نیز reference کنترلر null می‌شود تا WebView
+قبلی نگه داشته نشود.
+
+پچ: V66_11_release_webview_resources.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 7bde959
+```

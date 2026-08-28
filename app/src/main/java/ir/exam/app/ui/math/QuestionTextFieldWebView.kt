@@ -199,6 +199,13 @@ fun QuestionTextFieldWebView(
                 // دیالوگ فرمول گزینه‌ها همان صفحه را بدون این پارامتر باز می‌کند.
                 loadUrl("https://exam-editor.local/question-editor/question_editor.html?nativeTools=1")
             }
+        },
+        onRelease = { view ->
+            controller.webView = null
+            view.stopLoading()
+            view.loadUrl("about:blank")
+            view.removeAllViews()
+            view.destroy()
         }
     )
     }

@@ -165,6 +165,12 @@ fun FormulaHostDialog(
                             // نه صفحهٔ کامل question_editor. auto-open مرجع خودش پنجره را باز می‌کند.
                             loadUrl("https://exam-editor.local/formula-editor/formula.html")
                         }
+                    },
+                    onRelease = { view ->
+                        view.stopLoading()
+                        view.loadUrl("about:blank")
+                        view.removeAllViews()
+                        view.destroy()
                     }
                 )
                 if (loading) {
