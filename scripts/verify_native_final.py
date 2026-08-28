@@ -2086,6 +2086,15 @@ require("FormulaTextCodec.occurrences(textOnly)" in _doc_editor_v63
         and "chrome.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }" in _doc_editor_v63
         and "Icons.Outlined.OpenWith" not in _doc_editor_v63,
         "V63.9 editor fixes (formula-in-edit, live drag, continuous flow, lock) are missing")
+# ---- V64.0: مدل عنصر Word-مانند — گزینه/جورکردنی مستقل؛ بدون نقطه‌چین ----
+_v64_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_0WordElementModelTest.kt").read_text()
+require("fun WordElement(" in _doc_editor_v63
+        and "if (selected) editing = true else onSelect()" in _doc_editor_v63
+        and "var selectedElement by remember" in _doc_editor_v63
+        and 'answerLineStyle == "lined"' not in _doc_editor_v63,
+        "V64.0 independent word-element model is missing from the editor")
+require("class V64_0WordElementModelTest" in _v64_test,
+        "V64.0 element-model tests are missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

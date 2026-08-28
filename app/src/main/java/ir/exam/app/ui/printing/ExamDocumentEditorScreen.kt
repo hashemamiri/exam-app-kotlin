@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -123,6 +122,9 @@ fun ExamDocumentEditorScreen(
     // V63.3 — شیء انتخاب‌شده برای +/− و آیکن جابجایی نوار ابزار.
     var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    // V64.0 — مدل Word-مانند: هر عنصر (گزینه/سمت جورکردنی) بلوک مستقل
+    // انتخاب/ویرایش است: (questionId, kind, index) — kind: opt | mL | mR
+    var selectedElement by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
     // V63.9 — قفل جابجایی: با لمس قفل، شیء همان‌جا ثابت می‌شود.
     var objectsLocked by remember { mutableStateOf(false) }
 
@@ -210,7 +212,7 @@ fun ExamDocumentEditorScreen(
                 onPageCount = { measuredPageCount = it },
                 onSelectQuestion = { id ->
                     editingQuestionId = if (editingQuestionId == id) null else id
-                    selectedImage = null; selectedFigure = null
+                    selectedImage = null; selectedFigure = null; selectedElement = null
                 },
                 onTextChange = builder::updateText,
                 onScoreChange = builder::updateScore,
@@ -227,6 +229,19 @@ fun ExamDocumentEditorScreen(
                     selectedImage = null
                 },
                 objectsLocked = objectsLocked,
+                selectedElement = selectedElement,
+                onSelectElement = { questionId, kind, index ->
+                    val target = Triple(questionId, kind, index)
+                    selectedElement = if (selectedElement == target) null else target
+                    selectedImage = null; selectedFigure = null
+                },
+                onElementText = { questionId, kind, index, text ->
+                    when (kind) {
+                        "opt" -> builder.updateOption(questionId, index, text)
+                        "mL" -> builder.updateMatchingText(questionId, "left", index, text)
+                        "mR" -> builder.updateMatchingText(questionId, "right", index, text)
+                    }
+                },
                 onImageFreeMove = { questionId -> builder.setImagePosition(questionId, "free") },
                 onMoveImage = builder::moveImage,
                 onResizeImage = builder::resizeImage,
@@ -308,6 +323,9 @@ private fun WordFlowDocument(
     onSelectImage: (String, String) -> Unit,
     onSelectFigure: (String, Int) -> Unit,
     objectsLocked: Boolean,
+    selectedElement: Triple<String, String, Int>?,
+    onSelectElement: (String, String, Int) -> Unit,
+    onElementText: (String, String, Int, String) -> Unit,
     onImageFreeMove: (String) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
@@ -344,6 +362,10 @@ private fun WordFlowDocument(
                         onSelectImage = { imageId -> onSelectImage(question.id, imageId) },
                         onSelectFigure = { occ -> onSelectFigure(question.id, occ) },
                         objectsLocked = objectsLocked,
+                        selectedElement = selectedElement?.takeIf { it.first == question.id }
+                            ?.let { it.second to it.third },
+                        onSelectElement = { kind, index -> onSelectElement(question.id, kind, index) },
+                        onElementText = { kind, index, text -> onElementText(question.id, kind, index, text) },
                         onImageFreeMove = { onImageFreeMove(question.id) },
                         onMoveImage = { imageId, x, y -> onMoveImage(question.id, imageId, x, y) },
                         onResizeImage = { imageId, w -> onResizeImage(question.id, imageId, w) },
@@ -408,6 +430,9 @@ private fun WordQuestionBlock(
     onSelectImage: (String) -> Unit,
     onSelectFigure: (Int) -> Unit,
     objectsLocked: Boolean,
+    selectedElement: Pair<String, Int>?,
+    onSelectElement: (String, Int) -> Unit,
+    onElementText: (String, Int, String) -> Unit,
     onImageFreeMove: () -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
@@ -552,11 +577,23 @@ private fun WordQuestionBlock(
             )
         }
 
+        // V64.0 — مدل Word-مانند: هر گزینه/سمت جورکردنی «بلوک مستقل» است؛
+        // لمس = انتخاب (کادر آبی) و لمس دوم = ویرایش درجای همان عنصر.
         when (question.type) {
             QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
                 Row(Modifier.fillMaxWidth().padding(top = (1 * zoom).dp)) {
                     Text("${index + 1}) ", fontSize = fontSize, fontWeight = FontWeight.Bold)
-                    NativeMathText(source = option, fontSize = fontSize, fontWeight = weight, fontStyle = style, textAlign = align)
+                    WordElement(
+                        text = option,
+                        fontSize = fontSize,
+                        weight = weight,
+                        style = style,
+                        align = align,
+                        selected = selectedElement == "opt" to index,
+                        onSelect = { onSelectElement("opt", index) },
+                        onText = { onElementText("opt", index, it) },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
             QuestionType.TRUE_FALSE -> Row(
@@ -573,15 +610,27 @@ private fun WordQuestionBlock(
                         Modifier.fillMaxWidth().padding(top = (1 * zoom).dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        NativeMathText(
-                            source = question.matchingRight.getOrNull(index).orEmpty(),
+                        WordElement(
+                            text = question.matchingRight.getOrNull(index).orEmpty(),
                             fontSize = fontSize,
+                            weight = weight,
+                            style = style,
+                            align = align,
+                            selected = selectedElement == "mR" to index,
+                            onSelect = { onSelectElement("mR", index) },
+                            onText = { onElementText("mR", index, it) },
                             modifier = Modifier.weight(1f)
                         )
                         Text("↔", fontSize = fontSize)
-                        NativeMathText(
-                            source = question.matchingLeft.getOrNull(index).orEmpty(),
+                        WordElement(
+                            text = question.matchingLeft.getOrNull(index).orEmpty(),
                             fontSize = fontSize,
+                            weight = weight,
+                            style = style,
+                            align = align,
+                            selected = selectedElement == "mL" to index,
+                            onSelect = { onSelectElement("mL", index) },
+                            onText = { onElementText("mL", index, it) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -604,12 +653,8 @@ private fun WordQuestionBlock(
             )
         }
 
-        if (question.type == QuestionType.ESSAY && question.answerLineStyle == "lined") {
-            repeat(question.answerLines.coerceIn(0, 40)) {
-                Spacer(Modifier.height(WordPageLayout.mmToDp(WordPageLayout.ANSWER_LINE_HEIGHT_MM, zoom).dp))
-                androidx.compose.material3.HorizontalDivider(color = Color(0xFFB9C2CC))
-            }
-        }
+        // V64.0 — نقطه‌چین/خط پاسخ از ویرایشگر حذف شد (درخواست کاربر):
+        // فضای پاسخ را خود کاربر با اینتر در متن سؤال می‌سازد.
     }
 }
 
@@ -842,6 +887,64 @@ private fun ResizableFigure(
             .pointerInput(spec.raw) { detectTapGestures(onTap = { onSelect() }) }
     ) {
         InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * V64.0 — عنصر Word-مانند: کوچک‌ترین واحد قابل انتخاب سند (گزینهٔ سؤال،
+ * سمت راست/چپ جفت جورکردنی). مثل Word: کلیک اول انتخاب (کادر آبی)، کلیک
+ * روی عنصرِ انتخاب‌شده = ویرایش درجا؛ فرمول‌های $...$ رندر می‌مانند.
+ */
+@Composable
+private fun WordElement(
+    text: String,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    weight: FontWeight?,
+    style: FontStyle?,
+    align: TextAlign,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onText: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var editing by remember(text, selected) { mutableStateOf(false) }
+    if (selected && editing) {
+        var draft by remember(text) { mutableStateOf(text) }
+        BasicTextField(
+            value = draft,
+            onValueChange = { value ->
+                draft = value
+                onText(value)
+            },
+            textStyle = TextStyle(
+                fontSize = fontSize,
+                fontWeight = weight ?: FontWeight.Normal,
+                fontStyle = style ?: FontStyle.Normal,
+                textAlign = align
+            ),
+            modifier = modifier
+                .background(Color(0x0F27A5F2))
+                .border(2.dp, Color(0xFF0B72B8))
+        )
+    } else {
+        Box(
+            modifier
+                .then(if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier)
+                .pointerInput(selected) {
+                    detectTapGestures(onTap = {
+                        if (selected) editing = true else onSelect()
+                    })
+                }
+        ) {
+            NativeMathText(
+                source = text.ifBlank { " " },
+                fontSize = fontSize,
+                fontWeight = weight,
+                fontStyle = style,
+                textAlign = align,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
