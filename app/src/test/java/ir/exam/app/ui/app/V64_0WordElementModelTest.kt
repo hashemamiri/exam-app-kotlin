@@ -31,9 +31,9 @@ class V64_0WordElementModelTest {
     @Test
     fun `every option and matching side is its own selectable element`() {
         assertTrue("fun WordElement(" in editor)
-        assertTrue("selected = selectedElement == \"opt\" to index" in editor)
-        assertTrue("selected = selectedElement == \"mL\" to index" in editor)
-        assertTrue("selected = selectedElement == \"mR\" to index" in editor)
+        assertTrue("selected = selectedElement == (\"opt\" to index)" in editor)
+        assertTrue("selected = selectedElement == (\"mL\" to index)" in editor)
+        assertTrue("selected = selectedElement == (\"mR\" to index)" in editor)
         // کلیک اول انتخاب، کلیک دوم ویرایش درجا
         assertTrue("if (selected) editing = true else onSelect()" in editor)
         // ذخیره از توابع موجود ویومدل

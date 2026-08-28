@@ -541,57 +541,70 @@ private fun WordQuestionBlock(
         figureOccurrences.asReversed().forEach { occ ->
             textOnly = textOnly.removeRange(occ.start, occ.endExclusive)
         }
-        // V63.9 — ویرایش قطعه‌ای: فرمول‌ها حتی حین ویرایش «رندر شده» می‌مانند
-        // (درخواست کاربر: لمس فرمول نباید کد نشان دهد)؛ فقط بخش‌های متنیِ
-        // بین فرمول‌ها تایپ‌پذیرند و تغییرشان همان تکه از متن خام را عوض
-        // می‌کند (FormulaTextCodec offsets).
+        // V64.2 — ویرایش قطعه‌ای روی «متن خام» (نه textOnly): تکه‌ها مستقیم
+        // از question.text با مرز فرمول/شکل ساخته می‌شوند؛ بنابراین توکن شکل
+        // سر جای واقعی‌اش می‌ماند و دیگر به انتهای سؤال نمی‌چسبد (باگ V63.9).
         if (editable) {
-            val formulaOccs = ir.exam.app.core.math.FormulaTextCodec.occurrences(textOnly)
-            var cursorPos = 0
+            val raw = question.text
+            val formulaOccs = ir.exam.app.core.math.FormulaTextCodec.occurrences(raw)
+            // مرزها: (start, endExclusive, نوع) — 0=متن، 1=فرمول، 2=شکل
+            val tokens = buildList {
+                formulaOccs.forEach { add(Triple(it.start, it.endExclusive, 1)) }
+                figureOccurrences.forEach { add(Triple(it.start, it.endExclusive, 2)) }
+            }.sortedBy { it.first }
             val pieces = buildList {
-                formulaOccs.forEach { occ ->
-                    add(Triple(cursorPos, occ.start, null as String?))
-                    add(Triple(occ.start, occ.endExclusive, occ.tex))
-                    cursorPos = occ.endExclusive
+                var cursorPos = 0
+                tokens.forEach { (fromIdx, toIdx, kindOf) ->
+                    if (fromIdx > cursorPos) add(Triple(cursorPos, fromIdx, 0))
+                    add(Triple(fromIdx, toIdx, kindOf))
+                    cursorPos = toIdx
                 }
-                add(Triple(cursorPos, textOnly.length, null as String?))
+                add(Triple(cursorPos, raw.length, 0))
             }
-            pieces.forEachIndexed { pieceIndex, (fromIdx, toIdx, tex) ->
-                if (tex != null) {
-                    NativeMathText(
-                        source = textOnly.substring(fromIdx, toIdx),
+            pieces.forEachIndexed { pieceIndex, (fromIdx, toIdx, kindOf) ->
+                when (kindOf) {
+                    1 -> NativeMathText(
+                        source = raw.substring(fromIdx, toIdx),
                         fontSize = fontSize,
                         modifier = Modifier.fillMaxWidth()
                     )
-                } else {
-                    var pieceDraft by remember(question.id, pieceIndex, formulaOccs.size) {
-                        mutableStateOf(textOnly.substring(fromIdx, toIdx))
+                    2 -> {
+                        val occIndex = figureOccurrences.indexOfFirst { it.start == fromIdx }
+                        figureOccurrences.getOrNull(occIndex)?.let { occ ->
+                            ResizableFigure(
+                                spec = occ.spec,
+                                zoom = zoom,
+                                selected = selectedFigureIndex == occIndex,
+                                onSelect = { onSelectFigure(occIndex) },
+                                onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
+                            )
+                        }
                     }
-                    BasicTextField(
-                        value = pieceDraft,
-                        onValueChange = { value ->
-                            pieceDraft = value
-                            // بازسازی متن کامل: تکه‌های دیگر دست‌نخورده.
-                            val rebuilt = buildString {
-                                pieces.forEachIndexed { i, (f2, t2, tex2) ->
-                                    if (i == pieceIndex) append(value)
-                                    else append(textOnly.substring(f2, t2))
-                                }
-                            }
-                            // شکل‌های حذف‌شده از متن (figureOccurrences) دوباره الحاق شوند.
-                            val suffix = figureOccurrences.joinToString("") { occ2 ->
-                                question.text.substring(occ2.start, occ2.endExclusive)
-                            }
-                            onTextChange(rebuilt + suffix)
-                        },
-                        textStyle = TextStyle(
-                            fontSize = fontSize,
-                            fontWeight = weight ?: FontWeight.Normal,
-                            fontStyle = style ?: FontStyle.Normal,
-                            textAlign = align
-                        ),
-                        modifier = Modifier.fillMaxWidth().background(Color(0x0F27A5F2))
-                    )
+                    else -> {
+                        var pieceDraft by remember(question.id, pieceIndex, tokens.size) {
+                            mutableStateOf(raw.substring(fromIdx, toIdx))
+                        }
+                        BasicTextField(
+                            value = pieceDraft,
+                            onValueChange = { value ->
+                                pieceDraft = value
+                                // بازسازی درجا: هر توکن دقیقاً سر جای خودش.
+                                onTextChange(buildString {
+                                    pieces.forEachIndexed { i, (f2, t2, _) ->
+                                        if (i == pieceIndex) append(value)
+                                        else append(raw.substring(f2, t2))
+                                    }
+                                })
+                            },
+                            textStyle = TextStyle(
+                                fontSize = fontSize,
+                                fontWeight = weight ?: FontWeight.Normal,
+                                fontStyle = style ?: FontStyle.Normal,
+                                textAlign = align
+                            ),
+                            modifier = Modifier.fillMaxWidth().background(Color(0x0F27A5F2))
+                        )
+                    }
                 }
             }
         } else if (textOnly.isNotBlank() || figureOccurrences.isEmpty()) NativeMathText(
@@ -602,7 +615,9 @@ private fun WordQuestionBlock(
             textAlign = align,
             modifier = Modifier.fillMaxWidth()
         )
-        figureOccurrences.forEachIndexed { occurrenceIndex, occ ->
+        // V64.2 — در حالت ویرایش، شکل‌ها داخل جریان قطعه‌ای درجا رندر شدند؛
+        // این بلوک فقط برای حالت نمایش است وگرنه شکل دوبار دیده می‌شد.
+        if (!editable) figureOccurrences.forEachIndexed { occurrenceIndex, occ ->
             ResizableFigure(
                 spec = occ.spec,
                 zoom = zoom,
@@ -624,7 +639,7 @@ private fun WordQuestionBlock(
                         weight = weight,
                         style = style,
                         align = align,
-                        selected = selectedElement == "opt" to index,
+                        selected = selectedElement == ("opt" to index),
                         onSelect = { onSelectElement("opt", index) },
                         onText = { onElementText("opt", index, it) },
                         onEnter = { onElementEnter("opt", index) },
@@ -652,7 +667,7 @@ private fun WordQuestionBlock(
                             weight = weight,
                             style = style,
                             align = align,
-                            selected = selectedElement == "mR" to index,
+                            selected = selectedElement == ("mR" to index),
                             onSelect = { onSelectElement("mR", index) },
                             onText = { onElementText("mR", index, it) },
                             onEnter = { onElementEnter("mR", index) },
@@ -665,7 +680,7 @@ private fun WordQuestionBlock(
                             weight = weight,
                             style = style,
                             align = align,
-                            selected = selectedElement == "mL" to index,
+                            selected = selectedElement == ("mL" to index),
                             onSelect = { onSelectElement("mL", index) },
                             onText = { onElementText("mL", index, it) },
                             onEnter = { onElementEnter("mL", index) },
@@ -934,7 +949,18 @@ private fun ResizableFigure(
             )
             .pointerInput(spec.raw) { detectTapGestures(onTap = { onSelect() }) }
     ) {
-        InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
+        // V64.2 — آناتومی/فیزیک (kind a/s) تصویر واقعی می‌خواهند نه SVG برچسبی؛
+        // همان مسیر AtlasFigureView که NativeMathText/چاپ استفاده می‌کنند.
+        if (spec.kind in setOf("a", "s")) {
+            ir.exam.app.ui.figure.AtlasFigureView(
+                spec = spec,
+                modifier = Modifier.fillMaxWidth(),
+                contentDescription = "شکل",
+                showBlanks = false
+            )
+        } else {
+            InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 
@@ -956,7 +982,10 @@ private fun WordElement(
     onEnter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var editing by remember(text, selected) { mutableStateOf(false) }
+    // V64.2 — کلید remember نباید متنِ در حال ویرایش باشد (درس stale-state:
+    // هر حرف تایپ text را عوض می‌کرد → editing ریست → کادر بعد از یک حرف
+    // بسته می‌شد). عنصر خالیِ تازه‌انتخاب‌شده (پس از Enter) مستقیم ویرایش می‌شود.
+    var editing by remember(selected) { mutableStateOf(selected && text.isEmpty()) }
     if (selected && editing) {
         var draft by remember(text) { mutableStateOf(text) }
         BasicTextField(

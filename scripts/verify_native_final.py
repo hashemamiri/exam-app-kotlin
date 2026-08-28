@@ -2077,7 +2077,8 @@ require("fun WordPaperChrome()" in _doc_editor_v63
         "V63.8 bare print-scaled editor with tap-select free drag is missing")
 # ---- V63.9: شش اصلاح ویرایشگر (فرمول رندر حین ویرایش، درگ زنده، جریان
 # پیوسته، تصویر کامل، پیام شناور ذخیره، قفل جابجایی) ----
-require("FormulaTextCodec.occurrences(textOnly)" in _doc_editor_v63
+# V64.2 — ویرایش قطعه‌ای حالا روی متن خام است (occurrences(raw)).
+require("FormulaTextCodec.occurrences(raw)" in _doc_editor_v63
         and "if (selected && !locked) Modifier.pointerInput(media.id, zoom)" in _doc_editor_v63
         and "ContentScale.FillWidth" in _doc_editor_v63
         and "var objectsLocked by remember" in _doc_editor_v63
@@ -2104,6 +2105,17 @@ require("onEnter = { onElementEnter(" in _doc_editor_v63
         and "fun removeOptionAt(id: String, index: Int)" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "V64.1 element enter/delete word behaviors are missing")
+# ---- V64.2: چهار باگ‌فیکس بازبینی کاربر (تایپ پایدار، off-by-one، جای شکل، آناتومی) ----
+require("var editing by remember(selected) { mutableStateOf(selected && text.isEmpty()) }" in _doc_editor_v63
+        and "remember(text, selected)" not in _doc_editor_v63
+        and "if (!editable) figureOccurrences.forEachIndexed" in _doc_editor_v63
+        and "onTextChange(rebuilt + suffix)" not in _doc_editor_v63
+        and "ir.exam.app.ui.figure.AtlasFigureView(" in _doc_editor_v63,
+        "V64.2 element-edit bugfixes are missing")
+require("question.options.size + 1" not in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
+            .split("fun removeOptionAt(")[1].split("fun moveOption(")[0],
+        "V64.2 removeOptionAt off-by-one returned")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

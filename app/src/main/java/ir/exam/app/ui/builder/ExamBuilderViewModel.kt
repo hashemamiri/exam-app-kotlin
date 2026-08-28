@@ -334,8 +334,10 @@ class ExamBuilderViewModel(
     fun removeOptionAt(id: String, index: Int) { update(id) { question ->
         if (question.options.size <= 2 || index !in question.options.indices) question else {
             val options = question.options.toMutableList().apply { removeAt(index) }
-            val ids = question.optionIds.resizeIds(question.options.size + 1).toMutableList().apply { removeAt(index) }
-            val images = question.optionImages.pad(question.options.size + 1).toMutableList().apply { removeAt(index) }
+            // V64.2 — رفع off-by-one: resizeIds/pad دقیقاً به اندازهٔ options
+            // فعلی؛ سپس removeAt همان index (قبلاً +1 یک عنصر اضافه می‌گذاشت).
+            val ids = question.optionIds.resizeIds(question.options.size).toMutableList().apply { removeAt(index) }
+            val images = question.optionImages.pad(question.options.size).toMutableList().apply { removeAt(index) }
             val correct = question.correctIndex?.let {
                 when { it == index -> null; it > index -> it - 1; else -> it }
             }
