@@ -11477,3 +11477,29 @@ WebView کادر متن از کارت سؤال حذف شد؛ فایل QuestionTe
 verify بند V65.0
 SQL جدید: ندارد
 ```
+
+## ۲۳۰.۱) V65.0.2 — اصلاح تست قراردادی کادر سؤال
+
+### خطای CI
+
+```text
+در V65_0NativeQuestionFieldTest.kt، متن نمونهٔ «مساحت $a^2$» داخل String
+کاتلین بدون escape نوشته شده بود. کاتلین آن را به‌عنوان interpolation
+تفسیر کرد و در compileDebugUnitTestKotlin با خطای Unresolved reference: a
+متوقف شد.
+```
+
+### اصلاح
+
+```text
+علامت‌های دلار متن نمونه به صورت \$ در سورس تست escape شدند؛ رفتار تست و
+توکن فرمول تغییری نکرد. SQL، وابستگی و Edge Function جدیدی وجود ندارد.
+```
+
+### وضعیت
+
+```text
+پچ: V65_0_2_native_question_test_string.patch
+پایهٔ پچ: V65.0.1 / commit 4c87a98
+تأیید محلی ساخت Gradle: در این محیط اجرا نشد؛ verify متنی و git apply --check انجام شد.
+```
