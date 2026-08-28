@@ -31,6 +31,15 @@ class V64_4OptionStyleTest {
     // ---- ۱) قرارداد منبع ----
 
     @Test
+    fun `serializable annotations survived the option-style insertion`() {
+        // V64.4.1 — درج OptionStyle بین @Serializable و QuestionDraft، annotation
+        // را دزدید و کامپایل ExamBuilderDraftStore شکست (لاگ CI کاربر).
+        val draft = source("app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt")
+        assertTrue("@Serializable\ndata class OptionStyle(" in draft)
+        assertTrue("@Serializable\ndata class QuestionDraft(" in draft)
+    }
+
+    @Test
     fun `toolbar formats the selected element instead of the whole question`() {
         assertTrue("fun setOptionStyle(id: String, index: Int, change: (OptionStyle) -> OptionStyle)" in builderVm)
         assertTrue("if (element != null && element.second == \"opt\")" in editor)

@@ -2144,6 +2144,12 @@ require('if (element != null && element.second == "opt")' in _doc_editor_v63
 require("class V64_4OptionStyleTest" in
         (ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_4OptionStyleTest.kt").read_text(),
         "V64.4 option-style tests are missing")
+# V64.4.1 — درج کلاس جدید annotation کلاس بعدی را ندزدد (لاگ CI: Serializer
+# has not been found for QuestionDraft).
+_draft_v64=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()
+require("@Serializable\ndata class OptionStyle(" in _draft_v64
+        and "@Serializable\ndata class QuestionDraft(" in _draft_v64,
+        "V64.4.1 serializable annotations are misplaced")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

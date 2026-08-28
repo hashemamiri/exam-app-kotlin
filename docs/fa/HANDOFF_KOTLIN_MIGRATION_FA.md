@@ -11258,3 +11258,30 @@ ExamQuestionCodec واقعی (roundtrip استایل‌ها؛ سؤال ساده 
 استایل مثل قبل؛ درج/حذف/جابجایی گزینه استایل‌ها را جابجا نکند؛ آزمون
 قدیمی باز و ذخیره شود بدون تغییر JSON.
 ```
+
+## ۲۲۶) V64.4.1 — هات‌فیکس: annotation دزدیده‌شده هنگام درج کلاس
+
+### لاگ CI کاربر و ریشه
+
+```text
+e: ExamBuilderDraftStore.kt:19:25 Serializer has not been found for type
+'QuestionDraft' → compileDebugKotlin FAILED.
+ریشه: پچ V64.4 کلاس OptionStyle را دقیقاً «بین» @Serializable و
+data class QuestionDraft درج کرد؛ annotation به OptionStyle چسبید (آن هم
+با کامنت KDoc وسطش) و QuestionDraft بدون @Serializable ماند —
+ExamBuilderDraftStore (پیش‌نویس محلی سازنده) که آن را serialize می‌کند
+شکست. لنگر درج «data class QuestionDraft(» بود بی‌توجه به اینکه خطِ
+قبلش annotation است.
+درس ۵۱ (تکمیل درس ۳۹ برش‌ها): هنگام درجِ متن قبل از یک اعلان، لنگر را
+از «ابتدای بلوک اعلان شامل annotationها/KDoc» انتخاب کن؛ و پس از درج،
+جفت‌های annotation/کلاس فایل را چک کن. اسکن importها این را نمی‌گیرد —
+اسکن جدید: هر data class ای که قبلاً @Serializable داشت، هنوز داشته باشد.
+```
+
+### رفع و تأیید
+
+```text
+@Serializable به بالای هر دو کلاس برگشت (KDoc بالای annotation).
+تست جدید در V64_4OptionStyleTest + require در verify (جفت annotation).
+پچ: V64_4_1_serializable_hotfix — بدون SQL.
+```

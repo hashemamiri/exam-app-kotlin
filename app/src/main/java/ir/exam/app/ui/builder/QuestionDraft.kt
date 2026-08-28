@@ -31,17 +31,18 @@ data class MediaDraft(
     val widthMm: Float = 55f
 )
 
-@Serializable
 /**
  * V64.4 — استایل مستقل هر گزینه (Word-مانند): null یعنی «ارث از سؤال».
  * fontSizeSp=null هم یعنی اندازهٔ خود سؤال.
  */
+@Serializable
 data class OptionStyle(
     val bold: Boolean = false,
     val italic: Boolean = false,
     val fontSizeSp: Float? = null
 )
 
+@Serializable
 data class QuestionDraft(
     val id: String = UUID.randomUUID().toString(),
     val type: QuestionType,
