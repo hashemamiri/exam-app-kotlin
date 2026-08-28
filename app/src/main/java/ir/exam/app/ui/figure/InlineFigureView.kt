@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
+import coil.compose.rememberConstraintsSizeResolver
 import coil.decode.SvgDecoder
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -20,10 +21,12 @@ fun InlineFigureView(
     contentDescription: String = "شکل"
 ) {
     val context = LocalContext.current
+    val sizeResolver = rememberConstraintsSizeResolver()
     val document = remember(spec) { FigureSvgRenderer.render(spec) }
     val request = remember(context, document.cacheKey) {
         ImageRequest.Builder(context)
             .data(document.xml.toByteArray(Charsets.UTF_8))
+            .size(sizeResolver)
             .decoderFactory(SvgDecoder.Factory())
             .memoryCacheKey(document.cacheKey)
             .memoryCachePolicy(CachePolicy.ENABLED)
@@ -36,6 +39,6 @@ fun InlineFigureView(
         model = request,
         contentDescription = contentDescription,
         contentScale = ContentScale.Fit,
-        modifier = modifier
+        modifier = modifier.then(sizeResolver)
     )
 }

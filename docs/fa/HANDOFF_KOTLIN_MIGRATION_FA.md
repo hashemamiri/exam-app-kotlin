@@ -11728,3 +11728,18 @@ SQL/Edge Function/وابستگی جدید: ندارد
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 7bde959
 ```
+
+
+## ۲۴۳) V66.12 — decode بر اساس اندازهٔ واقعی مقصد و split cache کامل
+
+```text
+RichTextSplitter برای splitRows نسخهٔ دریافت occurrenceهای cache‌شده گرفت و
+NativeMathText آن را استفاده می‌کند. InlineFigureView، AtlasFigureView و
+StudentCachedImage از rememberConstraintsSizeResolver کویل استفاده می‌کنند؛
+ImageRequest اندازهٔ واقعی مقصد را می‌گیرد و تصویر بزرگ با اندازهٔ اصلی decode
+نمی‌شود. cache و کیفیت نمایش حفظ شده‌اند.
+
+پچ: V66_12_destination_sized_image_decode.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 42c1fa0
+```

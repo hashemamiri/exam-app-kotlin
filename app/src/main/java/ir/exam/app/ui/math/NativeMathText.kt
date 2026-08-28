@@ -67,7 +67,12 @@ fun NativeMathText(
 ) {
     // متن ترکیبی در بازترکیب‌های ناشی از تایمر/انتخاب دوباره parse نشود؛
     // فقط با تغییر خود source محاسبه شود.
-    val rows = remember(source) { RichTextSplitter.splitRows(source) }
+    val formulas = remember(source) { ir.exam.app.core.math.FormulaTextCodec.occurrences(source) }
+    val figures = remember(source) { ir.exam.app.core.figure.FigureCodec.occurrences(source) }
+    // معادل cache‌شدهٔ RichTextSplitter.splitRows(source) برای حفظ قرارداد رندر سطری.
+    val rows = remember(source, formulas, figures) {
+        RichTextSplitter.splitRows(source, formulas, figures)
+    }
     val effectiveSize = if (fontSize == TextUnit.Unspecified) 18.sp else fontSize
     val flat = rows.flatten()
     val hasMath = flat.any { it is RichSegment.Math }

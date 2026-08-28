@@ -58,9 +58,17 @@ object RichTextSplitter {
      * خودش منتقل می‌شود تا کامل و تمام‌عرض دیده شود؛ فرمول‌ها داخل سطر
      * می‌مانند. سطرهای خالی میانی (اینتر پشت‌سرهم) حفظ می‌شوند.
      */
-    fun splitRows(source: String): List<List<RichSegment>> {
+    fun splitRows(source: String): List<List<RichSegment>> =
+        splitRows(source, FormulaTextCodec.occurrences(source), FigureCodec.occurrences(source))
+
+    /** سطربندی با occurrenceهای ازپیش‌محاسبه‌شده برای جلوگیری از parse دوباره. */
+    fun splitRows(
+        source: String,
+        formulas: List<FormulaOccurrence>,
+        figures: List<FigureOccurrence>
+    ): List<List<RichSegment>> {
         val rows = mutableListOf(mutableListOf<RichSegment>())
-        split(source).forEach { seg ->
+        split(source, formulas, figures).forEach { seg ->
             when (seg) {
                 is RichSegment.Text -> seg.text.split('\n').forEachIndexed { i, part ->
                     if (i > 0) rows += mutableListOf<RichSegment>()
