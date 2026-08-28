@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.core.figure.AtlasMarkPainter
@@ -52,6 +53,18 @@ fun AtlasFigureView(
     val context = LocalContext.current
     val assetPath = AtlasCatalog.assetPath(spec) ?: return
     val marks = remember(spec) { spec.marks() }
+    // درخواست تصویر اطلس بین بازترکیب‌ها پایدار بماند؛ ساختن ImageRequest
+    // تازه برای هر بازترکیب می‌توانست درخواست/بررسی cache را تکرار کند.
+    val assetRequest = remember(context, assetPath) {
+        ImageRequest.Builder(context)
+            .data("file:///android_asset/$assetPath")
+            .memoryCacheKey("atlas:$assetPath")
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.DISABLED)
+            .networkCachePolicy(CachePolicy.DISABLED)
+            .crossfade(false)
+            .build()
+    }
     val showLabel = spec.xStr("lab", "1") != "0"
     val title = spec.xStr("title").ifBlank { AtlasCatalog.displayName(spec) }
     val markNames = spec.xStr("mkName", "0") == "1"
@@ -77,10 +90,7 @@ fun AtlasFigureView(
                 .then(if (onImageTap != null) Modifier.clickable { onImageTap() } else Modifier)
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data("file:///android_asset/$assetPath")
-                    .crossfade(false)
-                    .build(),
+                model = assetRequest,
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize()

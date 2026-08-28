@@ -11649,3 +11649,16 @@ SQL/Edge Function/وابستگی جدید: ندارد
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 5ad0d70
 ```
+
+
+## ۲۳۷) V66.6 — پایدارسازی cache تصاویر اطلس
+
+```text
+در AtlasFigureView، ImageRequest تصاویر asset اکنون با remember پایدار می‌ماند
+و memoryCacheKey مشخص دارد. cache شبکه و دیسک برای asset محلی غیرفعال و cache
+حافظه فعال است؛ بازترکیب Compose باعث ساخت request جدید یا بررسی تکراری نمی‌شود.
+
+پچ: V66_6_cache_atlas_images.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 0d04a99
+```
