@@ -32,7 +32,8 @@ import androidx.compose.material.icons.outlined.FormatBold
 import androidx.compose.material.icons.outlined.FormatItalic
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.OpenWith
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material.icons.outlined.ZoomOut
@@ -56,6 +57,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -107,6 +109,13 @@ fun ExamDocumentEditorScreen(
         }
     }
     var savedTick by remember(examId) { mutableStateOf(false) }
+    // V63.9 — پیام ذخیره روی صفحه ظاهر و پس از ۲.۵ ثانیه محو می‌شود.
+    LaunchedEffect(savedTick) {
+        if (savedTick) {
+            kotlinx.coroutines.delay(2500)
+            savedTick = false
+        }
+    }
     // V63.5 — دکمهٔ برگشت گوشی: خروج از ویرایشگر به «چاپ آزمون»، نه از برنامه.
     BackHandler(onBack = onBack)
     var zoom by remember { mutableStateOf(1.6f) }
@@ -114,11 +123,14 @@ fun ExamDocumentEditorScreen(
     // V63.3 — شیء انتخاب‌شده برای +/− و آیکن جابجایی نوار ابزار.
     var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    // V63.9 — قفل جابجایی: با لمس قفل، شیء همان‌جا ثابت می‌شود.
+    var objectsLocked by remember { mutableStateOf(false) }
 
     // V63.6 — تعداد صفحه از صفحه‌بندی با ارتفاع «واقعی رندر» (مثل ورد).
     var measuredPageCount by remember { mutableStateOf(1) }
     val editing = state.questions.firstOrNull { it.id == editingQuestionId }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().background(Color(0xFFECEFF3))) {
         DocumentEditorTopBar(
             title = state.title.ifBlank { "آزمون" },
@@ -138,7 +150,8 @@ fun ExamDocumentEditorScreen(
         DocumentToolbar(
             question = editing,
             hasObject = selectedImage != null || selectedFigure != null,
-            freeMoveHint = selectedImage != null,
+            locked = objectsLocked,
+            onToggleLock = { objectsLocked = !objectsLocked },
             onObjectGrow = {
                 selectedImage?.let { (questionId, imageId) ->
                     val media = state.questions.firstOrNull { it.id == questionId }
@@ -181,11 +194,7 @@ fun ExamDocumentEditorScreen(
         state.uploadProgress?.let {
             Text(it, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         }
-        if (savedTick) Text(
-            "چیدمان چاپ ذخیره شد؛ فقط در چاپ همین آزمون اعمال می‌شود.",
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
+
 
         when {
             state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -217,6 +226,7 @@ fun ExamDocumentEditorScreen(
                         else questionId to occurrenceIndex
                     selectedImage = null
                 },
+                objectsLocked = objectsLocked,
                 onImageFreeMove = { questionId -> builder.setImagePosition(questionId, "free") },
                 onMoveImage = builder::moveImage,
                 onResizeImage = builder::resizeImage,
@@ -231,6 +241,19 @@ fun ExamDocumentEditorScreen(
             )
         }
     }
+    // V63.9 — پیام شناور ذخیره وسط‌پایین صفحه.
+    if (savedTick) Text(
+        "چیدمان چاپ ذخیره شد؛ فقط در چاپ همین آزمون اعمال می‌شود.",
+        color = Color.White,
+        fontSize = 13.sp,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 28.dp)
+            .background(Color(0xCC222D36), RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 9.dp)
+    )
+    }
+
 
 }
 
@@ -284,6 +307,7 @@ private fun WordFlowDocument(
     selectedFigure: Pair<String, Int>?,
     onSelectImage: (String, String) -> Unit,
     onSelectFigure: (String, Int) -> Unit,
+    objectsLocked: Boolean,
     onImageFreeMove: (String) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
@@ -300,9 +324,7 @@ private fun WordFlowDocument(
             val marginPx = WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp.roundToPx()
 
             val gapPx = WordPageLayout.mmToDp(WordPageLayout.BLOCK_GAP_MM, zoom).dp.roundToPx()
-            val pageGapPx = 14.dp.roundToPx()
             val contentWidth = pageWidthPx - marginPx * 2
-            val contentHeight = pageHeightPx - marginPx * 2
             val blockConstraints = Constraints(maxWidth = contentWidth)
 
             // ۱) اندازه‌گیری واقعی هر سؤال با عرض محتوا
@@ -321,6 +343,7 @@ private fun WordFlowDocument(
                         selectedFigureIndex = selectedFigure?.takeIf { it.first == question.id }?.second,
                         onSelectImage = { imageId -> onSelectImage(question.id, imageId) },
                         onSelectFigure = { occ -> onSelectFigure(question.id, occ) },
+                        objectsLocked = objectsLocked,
                         onImageFreeMove = { onImageFreeMove(question.id) },
                         onMoveImage = { imageId, x, y -> onMoveImage(question.id, imageId, x, y) },
                         onResizeImage = { imageId, w -> onResizeImage(question.id, imageId, w) },
@@ -329,37 +352,28 @@ private fun WordFlowDocument(
                 }.first().measure(blockConstraints)
             }
 
-            // ۲) صفحه‌بندی با ارتفاع واقعی: مثل ورد صفحهٔ بعدی فقط پس از پر شدن
-            val pages = mutableListOf<MutableList<Int>>(mutableListOf())
-            var used = 0
-            placeables.forEachIndexed { index, placeable ->
-                val gap = if (pages.last().isEmpty()) 0 else gapPx
-                if (used + gap + placeable.height > contentHeight && pages.last().isNotEmpty()) {
-                    pages += mutableListOf<Int>()
-                    used = 0
-                }
-                pages.last() += index
-                used += (if (pages.last().size == 1) 0 else gapPx) + placeable.height
-            }
-            onPageCount(pages.size)
+            // V63.9 — جریان پیوسته (درخواست کاربر): هر سؤال دقیقاً جایی که
+            // قبلی تمام شد شروع می‌شود؛ هیچ فضای خالی تا انتهای صفحه نمی‌ماند.
+            // کاغذهای A4 پشت‌سرهم و بدون فاصله فقط «پس‌زمینه»اند و محتوا مثل
+            // ورد از مرز صفحه عبور می‌کند.
+            val totalContent = placeables.sumOf { it.height } +
+                (placeables.size - 1).coerceAtLeast(0) * gapPx
+            val pageCount = (((totalContent + marginPx * 2).toFloat() / pageHeightPx) + 0.999f)
+                .toInt().coerceAtLeast(1)
+            onPageCount(pageCount)
 
-            // ۳) زمینهٔ کاغذها + سرصفحه/پاصفحهٔ هر صفحه
-            val chrome = pages.mapIndexed { pageIndex, _ ->
+            val chrome = (0 until pageCount).map { pageIndex ->
                 subcompose("page-$pageIndex") { WordPaperChrome() }
                     .first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
             }
-            val totalHeight = pages.size * pageHeightPx + (pages.size - 1) * pageGapPx
+            val totalHeight = pageCount * pageHeightPx
             layout(pageWidthPx, totalHeight) {
-                var pageTop = 0
-                pages.forEachIndexed { pageIndex, blockIndexes ->
-                    chrome[pageIndex].place(0, pageTop)
-                    var y = pageTop + marginPx
-                    blockIndexes.forEachIndexed { position, blockIndex ->
-                        if (position > 0) y += gapPx
-                        placeables[blockIndex].place(marginPx, y)
-                        y += placeables[blockIndex].height
-                    }
-                    pageTop += pageHeightPx + pageGapPx
+                chrome.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }
+                var y = marginPx
+                placeables.forEachIndexed { index, placeable ->
+                    if (index > 0) y += gapPx
+                    placeable.place(marginPx, y)
+                    y += placeable.height
                 }
             }
         }
@@ -393,6 +407,7 @@ private fun WordQuestionBlock(
     selectedFigureIndex: Int?,
     onSelectImage: (String) -> Unit,
     onSelectFigure: (Int) -> Unit,
+    objectsLocked: Boolean,
     onImageFreeMove: () -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
@@ -466,24 +481,59 @@ private fun WordQuestionBlock(
         figureOccurrences.asReversed().forEach { occ ->
             textOnly = textOnly.removeRange(occ.start, occ.endExclusive)
         }
-        // V63.4 — ویرایش درجا: سؤال انتخابی همان‌جا تایپ می‌شود (فرمول/شکل به
-        // صورت توکن متنی حفظ می‌شوند)؛ سؤال‌های دیگر رندر واقعی نماد/شکل.
+        // V63.9 — ویرایش قطعه‌ای: فرمول‌ها حتی حین ویرایش «رندر شده» می‌مانند
+        // (درخواست کاربر: لمس فرمول نباید کد نشان دهد)؛ فقط بخش‌های متنیِ
+        // بین فرمول‌ها تایپ‌پذیرند و تغییرشان همان تکه از متن خام را عوض
+        // می‌کند (FormulaTextCodec offsets).
         if (editable) {
-            var textDraft by remember(question.id) { mutableStateOf(question.text) }
-            BasicTextField(
-                value = textDraft,
-                onValueChange = { value ->
-                    textDraft = value
-                    onTextChange(value)
-                },
-                textStyle = TextStyle(
-                    fontSize = fontSize,
-                    fontWeight = weight ?: FontWeight.Normal,
-                    fontStyle = style ?: FontStyle.Normal,
-                    textAlign = align
-                ),
-                modifier = Modifier.fillMaxWidth().background(Color(0x0F27A5F2))
-            )
+            val formulaOccs = ir.exam.app.core.math.FormulaTextCodec.occurrences(textOnly)
+            var cursorPos = 0
+            val pieces = buildList {
+                formulaOccs.forEach { occ ->
+                    add(Triple(cursorPos, occ.start, null as String?))
+                    add(Triple(occ.start, occ.endExclusive, occ.tex))
+                    cursorPos = occ.endExclusive
+                }
+                add(Triple(cursorPos, textOnly.length, null as String?))
+            }
+            pieces.forEachIndexed { pieceIndex, (fromIdx, toIdx, tex) ->
+                if (tex != null) {
+                    NativeMathText(
+                        source = textOnly.substring(fromIdx, toIdx),
+                        fontSize = fontSize,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    var pieceDraft by remember(question.id, pieceIndex, formulaOccs.size) {
+                        mutableStateOf(textOnly.substring(fromIdx, toIdx))
+                    }
+                    BasicTextField(
+                        value = pieceDraft,
+                        onValueChange = { value ->
+                            pieceDraft = value
+                            // بازسازی متن کامل: تکه‌های دیگر دست‌نخورده.
+                            val rebuilt = buildString {
+                                pieces.forEachIndexed { i, (f2, t2, tex2) ->
+                                    if (i == pieceIndex) append(value)
+                                    else append(textOnly.substring(f2, t2))
+                                }
+                            }
+                            // شکل‌های حذف‌شده از متن (figureOccurrences) دوباره الحاق شوند.
+                            val suffix = figureOccurrences.joinToString("") { occ2 ->
+                                question.text.substring(occ2.start, occ2.endExclusive)
+                            }
+                            onTextChange(rebuilt + suffix)
+                        },
+                        textStyle = TextStyle(
+                            fontSize = fontSize,
+                            fontWeight = weight ?: FontWeight.Normal,
+                            fontStyle = style ?: FontStyle.Normal,
+                            textAlign = align
+                        ),
+                        modifier = Modifier.fillMaxWidth().background(Color(0x0F27A5F2))
+                    )
+                }
+            }
         } else if (textOnly.isNotBlank() || figureOccurrences.isEmpty()) NativeMathText(
             source = textOnly,
             fontSize = fontSize,
@@ -546,6 +596,7 @@ private fun WordQuestionBlock(
                 zoom = zoom,
                 freePlacement = question.imagePosition == "free",
                 selected = selectedImageId == media.id,
+                locked = objectsLocked,
                 onSelect = { onSelectImage(media.id) },
                 // V63.8 — با اولین کشیدن، تصویر خودکار «آزاد» می‌شود.
                 onFreeMove = onImageFreeMove,
@@ -573,7 +624,8 @@ private fun WordQuestionBlock(
 private fun DocumentToolbar(
     question: QuestionDraft?,
     hasObject: Boolean,
-    freeMoveHint: Boolean,
+    locked: Boolean,
+    onToggleLock: () -> Unit,
     onObjectGrow: () -> Unit,
     onObjectShrink: () -> Unit,
     onFontSize: (Float) -> Unit,
@@ -603,13 +655,14 @@ private fun DocumentToolbar(
             Icon(Icons.Outlined.Remove, contentDescription = "کوچک‌کردن شیء",
                 tint = if (hasObject) Color(0xFF0B72B8) else Color(0xFFB2BDC6))
         }
-        // آیکن جابجایی: وقتی شیء آزاد انتخاب است روشن — خود جابجایی با درگ.
-        Icon(
-            Icons.Outlined.OpenWith,
-            contentDescription = "جابجایی شیء با کشیدن",
-            tint = if (freeMoveHint) Color(0xFF0B72B8) else Color(0xFFB2BDC6),
-            modifier = Modifier.padding(horizontal = 6.dp)
-        )
+        // V63.9 — قفل جابجایی: بسته=قرمز (اشیا ثابت)، باز=سبز (جابجایی آزاد).
+        IconButton(onClick = onToggleLock) {
+            Icon(
+                if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                contentDescription = if (locked) "بازکردن قفل جابجایی" else "قفل جابجایی",
+                tint = if (locked) Color(0xFFC62828) else Color(0xFF25A86B)
+            )
+        }
         val hasQuestion = question != null
         TextButton(onClick = { onFontSize(+2f) }, enabled = hasQuestion) { Text("آ+") }
         TextButton(onClick = { onFontSize(-2f) }, enabled = hasQuestion) { Text("آ-") }
@@ -705,6 +758,7 @@ private fun DraggableQuestionImage(
     zoom: Float,
     freePlacement: Boolean,
     selected: Boolean,
+    locked: Boolean,
     onSelect: () -> Unit,
     onFreeMove: () -> Unit,
     onMoved: (Float, Float) -> Unit
@@ -718,8 +772,9 @@ private fun DraggableQuestionImage(
     var dragXmm by remember(media.id) { mutableStateOf(0f) }
     var dragYmm by remember(media.id) { mutableStateOf(0f) }
     val liveWidthMm = widthMm
-    val baseXmm = if (freePlacement) WordPageLayout.clampImageXmm(media.xMm + dragXmm, liveWidthMm) else 0f
-    val baseYmm = if (freePlacement) WordPageLayout.freePreviewYmm((media.yMm + dragYmm).coerceIn(0f, 270f)) else 0f
+    // V63.9 — آفست زنده حتی قبل از free شدن هم دیده می‌شود تا درگ واقعاً کار کند.
+    val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm)
+    val baseYmm = (if (freePlacement) media.yMm.coerceIn(0f, 60f) else 0f) + dragYmm
 
     // V63.8 — بدون لکهٔ آبی: لمس = انتخاب؛ شیء انتخاب‌شده با کشیدن انگشت
     // آزادانه جابه‌جا می‌شود (+/− نوار ابزار اندازه را عوض می‌کند).
@@ -728,13 +783,12 @@ private fun DraggableQuestionImage(
             .padding(top = WordPageLayout.mmToDp(WordPageLayout.MEDIA_GAP_MM / 2f, zoom).dp)
             .offset { IntOffset((baseXmm * pxPerMm).roundToInt(), (baseYmm * pxPerMm).roundToInt()) }
             .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
-            .height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
             .then(
                 if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier
             )
             .pointerInput(media.id) { detectTapGestures(onTap = { onSelect() }) }
             .then(
-                if (selected) Modifier.pointerInput(media.id, zoom) {
+                if (selected && !locked) Modifier.pointerInput(media.id, zoom) {
                     detectDragGestures(
                         onDrag = { change, drag ->
                             change.consume()
@@ -753,10 +807,12 @@ private fun DraggableQuestionImage(
                 } else Modifier
             )
     ) {
+        // V63.9 — ارتفاع از نسبت واقعی تصویر (آناتومی و... کامل دیده شوند).
         AsyncImage(
             model = media.uri,
             contentDescription = "تصویر سؤال",
-            modifier = Modifier.fillMaxWidth().height(WordPageLayout.mmToDp(liveWidthMm * 0.6f, zoom).dp)
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

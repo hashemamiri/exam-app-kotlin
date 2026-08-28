@@ -2027,7 +2027,7 @@ require("fun DocumentToolbar(" in _doc_editor_v63
 require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
         and "Icons.Outlined.ZoomIn" in _doc_editor_v63
         and "Icons.Outlined.ZoomOut" in _doc_editor_v63
-        and "Icons.Outlined.OpenWith" in _doc_editor_v63
+        and "Icons.Outlined.Lock" in _doc_editor_v63
         and "var selectedImage by remember" in _doc_editor_v63
         and "var selectedFigure by remember" in _doc_editor_v63
         and "fun resizeFigureBy(" in _doc_editor_v63
@@ -2058,8 +2058,7 @@ require("questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)" in
 # ---- V63.6: سند پیوستهٔ Word-واقعی — صفحه‌بندی با ارتفاع واقعی رندر ----
 require("SubcomposeLayout(" in _doc_editor_v63
         and "fun WordPaperChrome(" in _doc_editor_v63
-        and "if (used + gap + placeable.height > contentHeight && pages.last().isNotEmpty())" in _doc_editor_v63
-        and "onPageCount(pages.size)" in _doc_editor_v63
+        and "onPageCount(pageCount)" in _doc_editor_v63
         and "WordPageView" not in _doc_editor_v63
         and "block.heightMm" not in _doc_editor_v63,
         "V63.6 real-measured continuous word document is missing")
@@ -2076,6 +2075,17 @@ require("fun WordPaperChrome()" in _doc_editor_v63
         and "نام و امضای دبیر" not in _doc_editor_v63
         and 'builder.setImagePosition(questionId, "free")' in _doc_editor_v63,
         "V63.8 bare print-scaled editor with tap-select free drag is missing")
+# ---- V63.9: شش اصلاح ویرایشگر (فرمول رندر حین ویرایش، درگ زنده، جریان
+# پیوسته، تصویر کامل، پیام شناور ذخیره، قفل جابجایی) ----
+require("FormulaTextCodec.occurrences(textOnly)" in _doc_editor_v63
+        and "if (selected && !locked) Modifier.pointerInput(media.id, zoom)" in _doc_editor_v63
+        and "ContentScale.FillWidth" in _doc_editor_v63
+        and "var objectsLocked by remember" in _doc_editor_v63
+        and "Icons.Outlined.LockOpen" in _doc_editor_v63
+        and "kotlinx.coroutines.delay(2500)" in _doc_editor_v63
+        and "chrome.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }" in _doc_editor_v63
+        and "Icons.Outlined.OpenWith" not in _doc_editor_v63,
+        "V63.9 editor fixes (formula-in-edit, live drag, continuous flow, lock) are missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

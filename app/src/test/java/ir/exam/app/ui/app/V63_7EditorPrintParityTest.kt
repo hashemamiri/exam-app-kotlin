@@ -55,7 +55,8 @@ class V63_7EditorPrintParityTest {
     fun `objects select on tap and drag freely without blue handles`() {
         assertFalse("fun ResizeHandle(" in editor)
         assertTrue("detectTapGestures(onTap = { onSelect() })" in editor)
-        assertTrue("if (selected) Modifier.pointerInput(media.id, zoom)" in editor)
+        // V63.9 — درگ فقط وقتی قفل باز است؛ آفست زنده مستقل از حالت free.
+        assertTrue("if (selected && !locked) Modifier.pointerInput(media.id, zoom)" in editor)
         assertTrue("onFreeMove()" in editor)
         assertTrue("builder.setImagePosition(questionId, \"free\")" in editor)
     }
