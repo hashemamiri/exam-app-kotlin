@@ -11783,3 +11783,15 @@ serializerهای Kotlin، مدل‌های Room/DTO و متدهای JavascriptInt
 SQL/Edge Function/وابستگی جدید: ندارد
 تأیید متنی: git apply --check و verify انجام شد؛ build Release در Agent اجرا نشد.
 ```
+
+## ۲۴۴.۱) تکمیل فایل ProGuard برای R8
+
+```text
+فایل app/proguard-rules.pro که در V66.13 در commit وجود نداشت، اکنون واقعاً
+به repository اضافه شد. قوانین serializerهای Kotlin، مدل‌ها و generated classهای
+Room، متدهای JavascriptInterface و هشدارهای optional platform را پوشش می‌دهد.
+
+پچ: V66_13_1_complete_proguard_rules.patch
+پایه: commit 2667d7e
+SQL/Edge Function/وابستگی جدید: ندارد
+```
