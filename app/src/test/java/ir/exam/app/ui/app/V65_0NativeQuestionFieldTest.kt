@@ -50,7 +50,7 @@ class V65_0NativeQuestionFieldTest {
     @Test
     fun `figure insert and reconstruct keep formula tokens in place`() {
         val spec = FigureSpec.build("tri")
-        val withFig = FigureCodec.insert("مساحت $a^2$", spec)
+        val withFig = FigureCodec.insert("مساحت \$a^2\$", spec)
         assertTrue(withFig.contains("%%FIG:"))
         val parts = RichTextSplitter.split(withFig)
         assertTrue(parts.any { it is RichSegment.Math })
