@@ -120,6 +120,78 @@ class SupabaseExamBuilderRepository(context: Context) {
         }
     }
 
+    suspend fun save(
+        state: ExamBuilderState,
+        operationId: String,
+        onUploadProgress: (done: Int, total: Int) -> Unit
+    ): Result<ExamSaveResult> = runCatching {
+        val teacherId = currentTeacherId()
+        require(state.title.trim().isNotEmpty()) { "عنوان آزمون را وارد کنید." }
+        require(state.questions.isNotEmpty()) { "حداقل یک سؤال اضافه کنید." }
+        require(state.questions.all { it.text.isNotBlank() }) { "متن همه سؤال‌ها را وارد کنید." }
+        require(state.audienceMode != "classes" || state.audienceClasses.isNotEmpty()) { "حداقل یک کلاس انتخاب کنید." }
+        require(state.audienceMode != "students" || state.audienceStudents.isNotEmpty()) { "حداقل یک دانش‌آموز انتخاب کنید." }
+        require(state.audienceMode != "schools" || state.audienceSchools.isNotEmpty()) { "حداقل یک مدرسه انتخاب کنید." }
+        if (state.opensAtIso != null && state.closesAtIso != null) {
+            require(!Instant.parse(state.closesAtIso).isBefore(Instant.parse(state.opensAtIso))) {
+                "زمان پایان نمی‌تواند قبل از زمان شروع باشد."
+            }
+        }
+
+        val examId = state.examId ?: UUID.randomUUID().toString()
+        val questionsWithUrls = imageUploader.uploadPending(
+            teacherId = teacherId,
+            examId = examId,
+            questions = state.questions,
+            onProgress = onUploadProgress
+        )
+        val encoded = ExamQuestionCodec.encode(questionsWithUrls)
+        val duration = state.durationMinutes.toIntOrNull()?.coerceIn(0, 1440) ?: 0
+        val totalScore = questionsWithUrls.sumOf { it.score }
+        val code = state.code ?: generateCode()
+        val payload = buildJsonObject {
+            put("operation_id", operationId)
+            put("id", examId)
+            put("code", code)
+            put("title", state.title.trim())
+            put("subject", state.subject.trim())
+            put("duration", duration)
+            put("opens_at", state.opensAtIso)
+            put("closes_at", state.closesAtIso)
+            put("total_score", totalScore)
+            put("shuffle_q", state.shuffleQuestions)
+            put("shuffle_opt", state.shuffleOptions)
+            put("neg_marking", state.negativeMarking.toDoubleOrNull() ?: 0.0)
+            put("teacher_message", state.teacherMessage.trim().ifBlank { null })
+            put("attempts_allowed", state.attemptsAllowed.coerceIn(1, 5))
+            put("attempt_on_timeout", state.attemptOnTimeout)
+            put("grade_policy", state.gradePolicy)
+            put("attempt_cooldown", state.attemptCooldown.toIntOrNull()?.coerceIn(0, 1440) ?: 0)
+            put("questions", encoded.publicQuestions)
+            put("answer_key", encoded.answerKey)
+            put("audience", state.audienceMode)
+            put("classes", buildJsonArray { state.audienceClasses.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+            put("students", buildJsonArray { state.audienceStudents.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+            // V61.0 — سرور مدرسه‌ها را به دانش‌آموزان ثبت‌شدهٔ همان مدرسه‌ها گسترش می‌دهد.
+            put("schools", buildJsonArray { state.audienceSchools.sorted().forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
+        }
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_save_exam_v2",
+            buildJsonObject { put("p_payload", payload) }
+        ).decodeAs<JsonObject>()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
+            val balance = raw["balance"]?.jsonPrimitive?.longOrNull
+            val required = raw["required"]?.jsonPrimitive?.longOrNull
+            if (balance != null && required != null) error("$message؛ موجودی $balance تومان و مبلغ لازم $required تومان است.")
+            error(message)
+        }
+        ExamSaveResult(
+            code = raw["code"]?.jsonPrimitive?.contentOrNull ?: code,
+            chargedToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            walletBalanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+        )
+    }
+
     suspend fun refreshBank(): Result<BankSnapshot> = runCatching { loadBankSnapshot() }
 
     suspend fun saveToBank(
