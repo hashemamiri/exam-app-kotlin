@@ -627,29 +627,31 @@ private fun StudentAnswerGraph(
  * دقایق پایانی (کمتر از ۱۵٪ مهلت یا ۵ دقیقه) قرمز می‌شود.
  */
 @Composable
-fun ExamCountdownText(remainingSeconds: Long, totalSeconds: Long) {
-    var shownSeconds by remember(remainingSeconds) { mutableLongStateOf(remainingSeconds) }
-    LaunchedEffect(remainingSeconds) {
-        if (remainingSeconds != UNLIMITED_TIME) {
-            while (shownSeconds > 0L) {
+fun ExamCountdownText(initialRemainingSeconds: Long, totalSeconds: Long) {
+    var remainingSeconds by remember(initialRemainingSeconds) {
+        mutableLongStateOf(initialRemainingSeconds)
+    }
+    LaunchedEffect(initialRemainingSeconds) {
+        if (initialRemainingSeconds != UNLIMITED_TIME) {
+            while (remainingSeconds > 0L) {
                 delay(1_000L)
-                shownSeconds--
+                remainingSeconds--
             }
         }
     }
-    if (shownSeconds == UNLIMITED_TIME) {
+    if (remainingSeconds == UNLIMITED_TIME) {
         Text("بدون محدودیت", fontWeight = FontWeight.Bold)
         return
     }
-    val fraction = if (totalSeconds > 0L) shownSeconds.toFloat() / totalSeconds else 1f
-    val nearEnd = shownSeconds <= 300L || fraction <= .15f
+    val fraction = if (totalSeconds > 0L) remainingSeconds.toFloat() / totalSeconds else 1f
+    val nearEnd = remainingSeconds <= 300L || fraction <= .15f
     val color = when {
         nearEnd -> Color(0xFFD32F2F)
         fraction <= .5f -> Color(0xFFF57C00)
         else -> Color(0xFF2E7D32)
     }
     Text(
-        formatRemaining(shownSeconds),
+        formatRemaining(remainingSeconds),
         color = color,
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.titleMedium
