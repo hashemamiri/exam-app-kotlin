@@ -11769,3 +11769,17 @@ size(sizeResolver) از AtlasFigureView، InlineFigureView و StudentExamScreen
 پچ: V66_12_2_remove_unsupported_coil_resolver.patch
 پایه: commit d43ff03
 ```
+
+
+## ۲۴۴) V66.13 — فعال‌سازی R8 و کوچک‌سازی Release
+
+```text
+R8 و shrinkResources برای build نوع release فعال شد. قواعد محافظتی برای
+serializerهای Kotlin، مدل‌های Room/DTO و متدهای JavascriptInterface اضافه شد
+تا مسیرهای runtime حذف نشوند.
+
+پچ: V66_13_enable_release_r8.patch
+پایه: commit 969c907
+SQL/Edge Function/وابستگی جدید: ندارد
+تأیید متنی: git apply --check و verify انجام شد؛ build Release در Agent اجرا نشد.
+```
