@@ -715,12 +715,17 @@ private fun QuestionEditor(
     )
 
     Card(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onToggle),
+        // فقط سربرگ کارت باز/بسته می‌شود؛ بدنه باید لمس را به فیلدهای ویرایشی
+        // مثل BasicTextField برساند. clickable روی کل Card فوکوس کادر متن را
+        // می‌گرفت و با لمس کادر، کارت را دوباره جمع می‌کرد.
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle),
                 // V55.18 — فاصلهٔ کمتر آیکن‌ها تا نوع سؤال کامل نمایش داده شود.
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically
