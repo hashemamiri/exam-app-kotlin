@@ -11446,34 +11446,3 @@ FINAL_NATIVE_VERIFY                 → PASS
 ۳) اسپینر بازیابی نشست چند دور کامل بچرخد و حلقهٔ سفید در مرز تکرار
    موقعیتش را نپراند.
 ```
-
-## ۲۳۰) V65.0 — کادر متن سؤال Native در آزمون‌ساز
-
-### درخواست کاربر
-
-```text
-می خوام کادر متن سوال در ایجاد آزمون نیتیو بشه.
-```
-
-### چه شد
-
-```text
-QuestionTextWebSection دیگر QuestionTextFieldWebView را صدا نمی‌زند.
-ویرایش با BasicTextField + RichTextSplitter (متن/فرمول/شکل درجا).
-فرمول با NativeFormulaIcon رندر می‌شود؛ لمس = FormulaHostDialog تمام‌صفحه.
-شکل/اطلس با InlineFigureView و AtlasFigureView؛ لمس = ویرایشگر Native همان نوع.
-QuestionEditorFieldController مسیر nativeInsert/nativeReplace/nativeOpenFormula گرفت
-تا درج توکن از ویرایشگرهای موجود بدون JS کار کند.
-نوار ۸ آیکن Native و ترتیب مرجع حفظ شد.
-WebView کادر متن از کارت سؤال حذف شد؛ فایل QuestionTextFieldWebView.kt برای
-پنجرهٔ فرمول/دارایی محلی باقی است.
-```
-
-### تست/verify
-
-```text
-جدید: V65_0NativeQuestionFieldTest
-هماهنگ: V53.1، V53.4، V54.4، V55.7، V59.2.1
-verify بند V65.0
-SQL جدید: ندارد
-```

@@ -35,7 +35,6 @@ class V53_4FormulaHostFrameTest {
         val webSection = source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt")
         assertFalse("\"متن سؤال\"" in webSection)
         assertFalse("BorderStroke" in webSection)
-        assertTrue("BasicTextField(" in webSection)
     }
 
     @Test
@@ -46,8 +45,7 @@ class V53_4FormulaHostFrameTest {
         assertTrue("ExamEditorNative.onOpenFormula(t.value || '', s, en)" in nativeBlock)
         // پل Kotlin
         assertTrue("fun onOpenFormula(text: String?, selStart: Int, selEnd: Int)" in webField)
-        assertTrue("nativeOpenFormula" in webSection)
-        assertTrue("controller.openTool(\"formula\")" in webSection)
+        assertTrue("onOpenFormula = onOpenFormula" in webSection)
     }
 
     @Test

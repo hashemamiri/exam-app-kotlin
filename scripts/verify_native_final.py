@@ -1135,9 +1135,7 @@ table_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/TableSvgRenderer
 figure_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureSvgRenderer.kt").read_text()
 editor_asset=(ROOT/"app/src/main/assets/question_editor/question_editor.html").read_text(errors="ignore")
 require("QuestionTextWebSection(" in builder_screen and "InlineMathTextEditor(" not in builder_screen.split("import ",1)[1],
-        "V53.1 question card does not use QuestionTextWebSection")
-require("BasicTextField(" in web_section and "QuestionTextFieldWebView(" not in web_section,
-        "V65.0 question text field must be native Compose")
+        "V53.1 question card does not use the WebView text field")
 for _lbl in ["درج فرمول","درج شکل","درج نمودار","درج جدول","درج آناتومی بدن","درج جدول تناوبی","درج فیزیک","درج شیمی"]:
     require(_lbl in web_section, f"V53.1 native toolbar is missing: {_lbl}")
 require("QuestionToolIcons" in web_section and "ImageVector" in tool_icons,
@@ -1330,7 +1328,7 @@ require("ExamEditorNative.onContentHeight" in editor_asset
         and "html,body{background:transparent !important;}" in editor_asset,
         "V55.8 fixed-cap inner-scroll field or transparent background is missing")
 require("fun onContentHeight(height: Int)" in web_field
-        and "heightIn(min = 120.dp)" in web_section,
+        and "contentHeightDp.coerceIn(150, 4000).dp" in web_section,
         "V55.7 dynamic field height wiring is missing from Kotlin")
 
 # ---- V55.8: boot curtain, 60% inserted previews, keypad menus enlarged ----
@@ -1596,8 +1594,7 @@ require("delete from public.schools where created_by = v_uid" in _del_sql2
 require("join public.classes c on c.id = m.class_id" in _cal_sql,
         "V59.2.1 class-membership calendar coverage is missing")
 require("animateContentSize" not in _web_section
-        and "BasicTextField(" in _web_section
-        and "webReady" not in _web_section,
+        and "alpha = if (webReady || overlayOpen) 1f else 0f" in _web_section,
         "V59.2.1 question web field lag fix is missing")
 
 # ---- V59.3: post-deletion signout + storage image cleanup ----
@@ -2203,21 +2200,6 @@ require("class V64_6PrintEditorSyncTest" in _v64_6_test
         and "PrintLayoutMerger.merge" in _v64_6_test
         and "white spinner arc uses a seamless full turn" in _v64_6_test,
         "V64.6 regression tests are missing")
-
-# ---- V65.0: native question text field in exam builder ----
-_v65_section=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").read_text()
-_v65_ctrl=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text()
-_v65_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V65_0NativeQuestionFieldTest.kt").read_text()
-require("QuestionTextFieldWebView(" not in _v65_section
-        and "android.webkit" not in _v65_section
-        and "BasicTextField(" in _v65_section
-        and "RichTextSplitter.split" in _v65_section
-        and "nativeInsert" in _v65_ctrl
-        and "nativeOpenFormula" in _v65_ctrl,
-        "V65.0 builder question text field is not fully native")
-require("class V65_0NativeQuestionFieldTest" in _v65_test
-        and "builder question text field is compose native without webview" in _v65_test,
-        "V65.0 native question field tests are missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
