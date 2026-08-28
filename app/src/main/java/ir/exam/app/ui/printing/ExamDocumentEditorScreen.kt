@@ -494,7 +494,7 @@ private fun WordPaperChrome() {
     Box(
         Modifier
             .fillMaxSize()
-            .shadow(3.dp)
+            .shadow(1.dp)
             .background(Color.White)
     )
 }
