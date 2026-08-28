@@ -62,6 +62,7 @@ class StudentExamViewModel(
     val state = _state.asStateFlow()
     private var timer: Job? = null
     private var draftObserver: Job? = null
+    private var draftSaveJob: Job? = null
 
     init {
         if (pending != null && ownerUserId.isNotBlank()) {
@@ -360,8 +361,16 @@ class StudentExamViewModel(
     }
 
     private fun saveDraft(examId: String, answers: Map<String, StudentAnswer>, images: Map<String, List<String>>) {
-        val current=state.value
-        viewModelScope.launch { drafts.save(examId, StudentDraft(answers,images,current.flaggedQuestionIds,current.questionIndex)) }
+        // جلوگیری از صف‌شدن یک ذخیرهٔ Room برای هر کاراکتر تایپ‌شده.
+        draftSaveJob?.cancel()
+        val current = state.value
+        draftSaveJob = viewModelScope.launch {
+            delay(500L)
+            drafts.save(
+                examId,
+                StudentDraft(answers, images, current.flaggedQuestionIds, current.questionIndex)
+            )
+        }
     }
 
     fun goTo(index: Int) {

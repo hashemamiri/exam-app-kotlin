@@ -87,10 +87,15 @@ class ReportsViewModel(
         runCatching {
             val roster = school.getClassRoster(selectedClass.id).getOrThrow()
             val selectedExams = state.value.exams.filter { it.id in state.value.selectedExamIds }
-            val answerMap = selectedExams.associate { exam -> exam.id to grading.getAnswers(exam.id).getOrThrow() }
+            val answerMap = selectedExams.associate { exam ->
+                exam.id to grading.getAnswers(exam.id).getOrThrow()
+                    .asSequence()
+                    .filter { it.graded }
+                    .groupBy { it.studentId }
+            }
             roster.map { student ->
                 val scores = selectedExams.associate { exam ->
-                    val attempts = answerMap[exam.id].orEmpty().filter { it.studentId == student.id && it.graded }
+                    val attempts = answerMap[exam.id]?.get(student.id).orEmpty()
                     exam.id to attempts.maxOfOrNull { it.totalGrade }
                 }
                 val percentages = selectedExams.mapNotNull { exam ->

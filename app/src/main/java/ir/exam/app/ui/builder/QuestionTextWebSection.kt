@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,7 +99,13 @@ fun QuestionTextWebSection(
         }
     }
 
-    val parts = RichTextSplitter.split(text)
+    // occurrenceها و قطعه‌بندی فقط هنگام تغییر خود متن محاسبه شوند، نه در هر
+    // بازترکیب ناشی از تغییر Stateهای دیگر کارت سؤال.
+    val formulas = remember(text) { FormulaTextCodec.occurrences(text) }
+    val figures = remember(text) { FigureCodec.occurrences(text) }
+    val parts = remember(text, formulas, figures) {
+        RichTextSplitter.split(text, formulas, figures)
+    }
     Column(modifier) {
         FlowRow(
             modifier = Modifier
@@ -128,7 +135,7 @@ fun QuestionTextWebSection(
                         )
                     }
                     is RichSegment.Math -> {
-                        val occ = FormulaTextCodec.occurrences(text).getOrNull(part.index)
+                        val occ = formulas.getOrNull(part.index)
                         Box(
                             modifier = Modifier
                                 .height(36.dp)

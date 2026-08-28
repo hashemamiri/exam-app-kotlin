@@ -1,7 +1,9 @@
 package ir.exam.app.core.text
 
 import ir.exam.app.core.figure.FigureCodec
+import ir.exam.app.core.figure.FigureOccurrence
 import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.math.FormulaOccurrence
 import ir.exam.app.core.math.FormulaTextCodec
 
 /** یک بخش از متن غنی سؤال: متن عادی، فرمول `$...$` یا شکل `%%FIG:...%%`. */
@@ -13,9 +15,15 @@ sealed interface RichSegment {
 
 /** شکستن متن سؤال به بخش‌های متن/فرمول/شکل بر اساس قالب وب‌اپ. */
 object RichTextSplitter {
-    fun split(source: String): List<RichSegment> {
-        val formulas = FormulaTextCodec.occurrences(source)
-        val figures = FigureCodec.occurrences(source)
+    fun split(source: String): List<RichSegment> =
+        split(source, FormulaTextCodec.occurrences(source), FigureCodec.occurrences(source))
+
+    /** نسخهٔ قابل cache برای Compose؛ occurrenceها فقط یک‌بار برای هر متن ساخته می‌شوند. */
+    fun split(
+        source: String,
+        formulas: List<FormulaOccurrence>,
+        figures: List<FigureOccurrence>
+    ): List<RichSegment> {
         val items = mutableListOf<Triple<Int, Int, Int>>() // start, end, kind (0=math,1=figure)
         formulas.forEach { items += Triple(it.start, it.endExclusive, 0) }
         figures.forEach { items += Triple(it.start, it.endExclusive, 1) }
