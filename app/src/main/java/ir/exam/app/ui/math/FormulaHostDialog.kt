@@ -73,6 +73,9 @@ fun FormulaHostDialog(
                             setBackgroundColor(Color.parseColor("#E9EEF5"))
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
+                            // این صفحات کاملاً از asset محلی می‌آیند؛ cache دیسک WebView
+                            // فقط IO و نگهداری دادهٔ تکراری ایجاد می‌کند.
+                            settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                             settings.allowFileAccess = false
                             settings.allowContentAccess = false
                             @Suppress("DEPRECATION")

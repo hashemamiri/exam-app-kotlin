@@ -11701,3 +11701,16 @@ crossfade خاموش ساخته می‌شود تا بازترکیب صفحه د�
 SQL/Edge Function/وابستگی جدید: ندارد
 پایه: commit 412fee4
 ```
+
+
+## ۲۴۱) V66.10 — حذف cache دیسکی غیرضروری WebViewهای محلی
+
+```text
+QuestionTextFieldWebView و FormulaHostDialog فقط صفحات محلی asset را بارگیری
+می‌کنند. cacheMode آن‌ها LOAD_NO_CACHE شد تا cache دیسکی و IO اضافی هنگام
+ساخت/بازکردن ویرایشگر ایجاد نشود؛ JavaScript، DOM storage و پل Native تغییر نکرد.
+
+پچ: V66_10_disable_local_webview_disk_cache.patch
+SQL/Edge Function/وابستگی جدید: ندارد
+پایه: commit 3cb6476
+```

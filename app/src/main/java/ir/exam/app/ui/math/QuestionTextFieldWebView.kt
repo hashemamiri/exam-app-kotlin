@@ -137,6 +137,9 @@ fun QuestionTextFieldWebView(
                 setBackgroundColor(Color.TRANSPARENT)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                            // این صفحات کاملاً از asset محلی می‌آیند؛ cache دیسک WebView
+                            // فقط IO و نگهداری دادهٔ تکراری ایجاد می‌کند.
+                            settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
                 settings.allowFileAccessFromFileURLs = false
