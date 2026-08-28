@@ -35,7 +35,8 @@ class V64_0WordElementModelTest {
         assertTrue("selected = selectedElement == (\"mL\" to index)" in editor)
         assertTrue("selected = selectedElement == (\"mR\" to index)" in editor)
         // کلیک اول انتخاب، کلیک دوم ویرایش درجا
-        assertTrue("if (selected) editing = true else onSelect()" in editor)
+        // V64.3 — ویرایش کنترل‌شده از بالا (onStartEdit).
+        assertTrue("if (selected) onStartEdit() else onSelect()" in editor)
         // ذخیره از توابع موجود ویومدل
         assertTrue("builder.updateOption(questionId, index, text)" in editor)
         assertTrue("builder.updateMatchingText(questionId, \"left\", index, text)" in editor)
@@ -45,6 +46,7 @@ class V64_0WordElementModelTest {
     @Test
     fun `element selection is exclusive with object and question selection`() {
         assertTrue("var selectedElement by remember" in editor)
-        assertTrue("selectedImage = null; selectedFigure = null; selectedElement = null" in editor)
+        // V64.3 — پاک‌سازی انحصاری حالا editingElement را هم شامل می‌شود.
+        assertTrue("selectedElement = null; editingElement = null" in editor)
     }
 }

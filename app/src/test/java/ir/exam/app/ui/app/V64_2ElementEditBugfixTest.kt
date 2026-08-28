@@ -29,7 +29,9 @@ class V64_2ElementEditBugfixTest {
 
     @Test
     fun `element editing survives typing and empty elements auto-edit`() {
-        assertTrue("var editing by remember(selected) { mutableStateOf(selected && text.isEmpty()) }" in editor)
+        // V64.3 — ارتقا: editing حالا state بالابرده (editingElement) است.
+        assertTrue("var editingElement by remember" in editor)
+        assertTrue("editing = editingElement == (\"opt\" to index)" in editor)
         assertFalse("remember(text, selected)" in editor)
     }
 
@@ -43,8 +45,9 @@ class V64_2ElementEditBugfixTest {
 
     @Test
     fun `figure tokens stay in place while editing text`() {
-        // بازسازی روی متن خام با مرز فرمول+شکل؛ بدون الحاق شکل به انتها
-        assertTrue("figureOccurrences.forEach { add(Triple(it.start, it.endExclusive, 2)) }" in editor)
+        // V64.3 — بازسازی با ابزار core: reconstruct جای شکل/فرمول را حفظ می‌کند
+        assertTrue("RichTextSplitter.split(question.text)" in editor)
+        assertTrue("RichTextSplitter.reconstruct(parts, partIndex, value)" in editor)
         assertFalse("onTextChange(rebuilt + suffix)" in editor)
         // شکل در حالت ویرایش داخل جریان است و بلوک نمایش دوباره نمی‌کشد
         assertTrue("if (!editable) figureOccurrences.forEachIndexed" in editor)

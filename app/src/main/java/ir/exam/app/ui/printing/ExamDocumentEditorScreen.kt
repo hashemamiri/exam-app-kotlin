@@ -126,6 +126,10 @@ fun ExamDocumentEditorScreen(
     // V64.0 — مدل Word-مانند: هر عنصر (گزینه/سمت جورکردنی) بلوک مستقل
     // انتخاب/ویرایش است: (questionId, kind, index) — kind: opt | mL | mR
     var selectedElement by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
+    // V64.3 — عنصرِ «در حال ویرایش» جدا از «انتخاب» و کنترل‌شده از بالا
+    // (پیشنهاد بازبینی کاربر): لمس دوم روشنش می‌کند و Enter آن را به عنصر
+    // تازه‌ساخته می‌برد — برای هر عنصری، نه فقط خالی.
+    var editingElement by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
     // V63.9 — قفل جابجایی: با لمس قفل، شیء همان‌جا ثابت می‌شود.
     var objectsLocked by remember { mutableStateOf(false) }
 
@@ -170,7 +174,7 @@ fun ExamDocumentEditorScreen(
                         "mL" -> builder.removeMatchingSide(questionId, "left", index)
                         "mR" -> builder.removeMatchingSide(questionId, "right", index)
                     }
-                    selectedElement = null
+                    selectedElement = null; editingElement = null
                 }
             },
             onObjectGrow = {
@@ -231,7 +235,8 @@ fun ExamDocumentEditorScreen(
                 onPageCount = { measuredPageCount = it },
                 onSelectQuestion = { id ->
                     editingQuestionId = if (editingQuestionId == id) null else id
-                    selectedImage = null; selectedFigure = null; selectedElement = null
+                    selectedImage = null; selectedFigure = null
+                    selectedElement = null; editingElement = null
                 },
                 onTextChange = builder::updateText,
                 onScoreChange = builder::updateScore,
@@ -252,7 +257,11 @@ fun ExamDocumentEditorScreen(
                 onSelectElement = { questionId, kind, index ->
                     val target = Triple(questionId, kind, index)
                     selectedElement = if (selectedElement == target) null else target
-                    selectedImage = null; selectedFigure = null
+                    selectedImage = null; selectedFigure = null; editingElement = null
+                },
+                editingElement = editingElement,
+                onStartEditElement = { questionId, kind, index ->
+                    editingElement = Triple(questionId, kind, index)
                 },
                 onElementText = { questionId, kind, index, text ->
                     when (kind) {
@@ -267,10 +276,11 @@ fun ExamDocumentEditorScreen(
                         "opt" -> {
                             builder.insertOptionAfter(questionId, index)
                             selectedElement = Triple(questionId, "opt", index + 1)
+                            editingElement = Triple(questionId, "opt", index + 1)
                         }
                         "mL", "mR" -> {
                             builder.addMatchingRow(questionId)
-                            selectedElement = null
+                            selectedElement = null; editingElement = null
                         }
                     }
                 },
@@ -356,7 +366,9 @@ private fun WordFlowDocument(
     onSelectFigure: (String, Int) -> Unit,
     objectsLocked: Boolean,
     selectedElement: Triple<String, String, Int>?,
+    editingElement: Triple<String, String, Int>?,
     onSelectElement: (String, String, Int) -> Unit,
+    onStartEditElement: (String, String, Int) -> Unit,
     onElementText: (String, String, Int, String) -> Unit,
     onElementEnter: (String, String, Int) -> Unit,
     onImageFreeMove: (String) -> Unit,
@@ -397,7 +409,10 @@ private fun WordFlowDocument(
                         objectsLocked = objectsLocked,
                         selectedElement = selectedElement?.takeIf { it.first == question.id }
                             ?.let { it.second to it.third },
+                        editingElement = editingElement?.takeIf { it.first == question.id }
+                            ?.let { it.second to it.third },
                         onSelectElement = { kind, index -> onSelectElement(question.id, kind, index) },
+                        onStartEditElement = { kind, index -> onStartEditElement(question.id, kind, index) },
                         onElementText = { kind, index, text -> onElementText(question.id, kind, index, text) },
                         onElementEnter = { kind, index -> onElementEnter(question.id, kind, index) },
                         onImageFreeMove = { onImageFreeMove(question.id) },
@@ -465,7 +480,9 @@ private fun WordQuestionBlock(
     onSelectFigure: (Int) -> Unit,
     objectsLocked: Boolean,
     selectedElement: Pair<String, Int>?,
+    editingElement: Pair<String, Int>?,
     onSelectElement: (String, Int) -> Unit,
+    onStartEditElement: (String, Int) -> Unit,
     onElementText: (String, Int, String) -> Unit,
     onElementEnter: (String, Int) -> Unit,
     onImageFreeMove: () -> Unit,
@@ -541,60 +558,40 @@ private fun WordQuestionBlock(
         figureOccurrences.asReversed().forEach { occ ->
             textOnly = textOnly.removeRange(occ.start, occ.endExclusive)
         }
-        // V64.2 — ویرایش قطعه‌ای روی «متن خام» (نه textOnly): تکه‌ها مستقیم
-        // از question.text با مرز فرمول/شکل ساخته می‌شوند؛ بنابراین توکن شکل
-        // سر جای واقعی‌اش می‌ماند و دیگر به انتهای سؤال نمی‌چسبد (باگ V63.9).
+        // V64.3 — ویرایش قطعه‌ای با ابزار core تست‌شده (پیشنهاد بازبینی
+        // کاربر): RichTextSplitter.split کل متن را می‌شکند و reconstruct جای
+        // فرمول/شکل را دقیقاً حفظ می‌کند — بدون منطق offset دست‌ساز.
         if (editable) {
-            val raw = question.text
-            val formulaOccs = ir.exam.app.core.math.FormulaTextCodec.occurrences(raw)
-            // مرزها: (start, endExclusive, نوع) — 0=متن، 1=فرمول، 2=شکل
-            val tokens = buildList {
-                formulaOccs.forEach { add(Triple(it.start, it.endExclusive, 1)) }
-                figureOccurrences.forEach { add(Triple(it.start, it.endExclusive, 2)) }
-            }.sortedBy { it.first }
-            val pieces = buildList {
-                var cursorPos = 0
-                tokens.forEach { (fromIdx, toIdx, kindOf) ->
-                    if (fromIdx > cursorPos) add(Triple(cursorPos, fromIdx, 0))
-                    add(Triple(fromIdx, toIdx, kindOf))
-                    cursorPos = toIdx
-                }
-                add(Triple(cursorPos, raw.length, 0))
-            }
-            pieces.forEachIndexed { pieceIndex, (fromIdx, toIdx, kindOf) ->
-                when (kindOf) {
-                    1 -> NativeMathText(
-                        source = raw.substring(fromIdx, toIdx),
+            val parts = ir.exam.app.core.text.RichTextSplitter.split(question.text)
+            var figureCursor = 0
+            parts.forEachIndexed { partIndex, part ->
+                when (part) {
+                    is ir.exam.app.core.text.RichSegment.Math -> NativeMathText(
+                        source = "$" + part.tex + "$",
                         fontSize = fontSize,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    2 -> {
-                        val occIndex = figureOccurrences.indexOfFirst { it.start == fromIdx }
-                        figureOccurrences.getOrNull(occIndex)?.let { occ ->
-                            ResizableFigure(
-                                spec = occ.spec,
-                                zoom = zoom,
-                                selected = selectedFigureIndex == occIndex,
-                                onSelect = { onSelectFigure(occIndex) },
-                                onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
-                            )
-                        }
+                    is ir.exam.app.core.text.RichSegment.Figure -> {
+                        val occIndex = figureCursor++
+                        ResizableFigure(
+                            spec = part.spec,
+                            zoom = zoom,
+                            selected = selectedFigureIndex == occIndex,
+                            onSelect = { onSelectFigure(occIndex) },
+                            onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
+                        )
                     }
-                    else -> {
-                        var pieceDraft by remember(question.id, pieceIndex, tokens.size) {
-                            mutableStateOf(raw.substring(fromIdx, toIdx))
+                    is ir.exam.app.core.text.RichSegment.Text -> {
+                        var pieceDraft by remember(question.id, partIndex, parts.size) {
+                            mutableStateOf(part.text)
                         }
                         BasicTextField(
                             value = pieceDraft,
                             onValueChange = { value ->
                                 pieceDraft = value
-                                // بازسازی درجا: هر توکن دقیقاً سر جای خودش.
-                                onTextChange(buildString {
-                                    pieces.forEachIndexed { i, (f2, t2, _) ->
-                                        if (i == pieceIndex) append(value)
-                                        else append(raw.substring(f2, t2))
-                                    }
-                                })
+                                onTextChange(
+                                    ir.exam.app.core.text.RichTextSplitter.reconstruct(parts, partIndex, value)
+                                )
                             },
                             textStyle = TextStyle(
                                 fontSize = fontSize,
@@ -640,7 +637,9 @@ private fun WordQuestionBlock(
                         style = style,
                         align = align,
                         selected = selectedElement == ("opt" to index),
+                        editing = editingElement == ("opt" to index),
                         onSelect = { onSelectElement("opt", index) },
+                        onStartEdit = { onStartEditElement("opt", index) },
                         onText = { onElementText("opt", index, it) },
                         onEnter = { onElementEnter("opt", index) },
                         modifier = Modifier.weight(1f)
@@ -668,7 +667,9 @@ private fun WordQuestionBlock(
                             style = style,
                             align = align,
                             selected = selectedElement == ("mR" to index),
+                            editing = editingElement == ("mR" to index),
                             onSelect = { onSelectElement("mR", index) },
+                            onStartEdit = { onStartEditElement("mR", index) },
                             onText = { onElementText("mR", index, it) },
                             onEnter = { onElementEnter("mR", index) },
                             modifier = Modifier.weight(1f)
@@ -681,7 +682,9 @@ private fun WordQuestionBlock(
                             style = style,
                             align = align,
                             selected = selectedElement == ("mL" to index),
+                            editing = editingElement == ("mL" to index),
                             onSelect = { onSelectElement("mL", index) },
+                            onStartEdit = { onStartEditElement("mL", index) },
                             onText = { onElementText("mL", index, it) },
                             onEnter = { onElementEnter("mL", index) },
                             modifier = Modifier.weight(1f)
@@ -977,16 +980,16 @@ private fun WordElement(
     style: FontStyle?,
     align: TextAlign,
     selected: Boolean,
+    editing: Boolean,
     onSelect: () -> Unit,
+    onStartEdit: () -> Unit,
     onText: (String) -> Unit,
     onEnter: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // V64.2 — کلید remember نباید متنِ در حال ویرایش باشد (درس stale-state:
-    // هر حرف تایپ text را عوض می‌کرد → editing ریست → کادر بعد از یک حرف
-    // بسته می‌شد). عنصر خالیِ تازه‌انتخاب‌شده (پس از Enter) مستقیم ویرایش می‌شود.
-    var editing by remember(selected) { mutableStateOf(selected && text.isEmpty()) }
-    if (selected && editing) {
+    // V64.3 — کنترل‌شده از بالا (editingElement): هیچ state محلی‌ای که با
+    // تایپ ریست شود وجود ندارد؛ لمس دوم = onStartEdit برای «هر» عنصری.
+    if (editing) {
         var draft by remember(text) { mutableStateOf(text) }
         BasicTextField(
             value = draft,
@@ -1019,7 +1022,7 @@ private fun WordElement(
                 .then(if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier)
                 .pointerInput(selected) {
                     detectTapGestures(onTap = {
-                        if (selected) editing = true else onSelect()
+                        if (selected) onStartEdit() else onSelect()
                     })
                 }
         ) {

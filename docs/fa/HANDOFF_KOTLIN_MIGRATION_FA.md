@@ -11167,3 +11167,46 @@ verify V63.9 (raw) + ۲ require جدید V64.2 (شامل برش removeOptionAt
 متن سؤالِ شکل‌دار → شکل سر جای خودش در چاپ؛ آناتومی/فیزیک در ویرایشگر
 تصویر واقعی (بدون کادرهای تایپ نامگذاری).
 ```
+
+## ۲۲۴) V64.3 — بازآرایی از بازبینی کاربر: editingElement بالابرده + reconstruct
+
+### زمینه
+
+```text
+کاربر پچ پیشنهادی خودش (V64_1_1_editor_hotfix) را برای نظرخواهی فرستاد؛
+روی V64.2 apply نمی‌شد ولی دو ایدهٔ معماری‌اش از راه‌حل V64.2 بهتر بود و
+با تأیید کاربر در این پچ ادغام شد (گزینهٔ ۱ و ۲ پیشنهاد + تست JVM آن).
+گام «تغییر مدل داده» (استایل per-option و انتخاب بازه‌ای) پچ بعدی
+(V64.4) است — کاربر تأیید کلی داده؛ طراحی مدل قبل از ساخت گزارش شود.
+```
+
+### چه شد
+
+```text
+۱) ویرایش عنصر «کنترل‌شده از بالا»: state جدید editingElement:
+   Triple(qid,kind,index) در سطح صفحه؛ WordElement حالا پارامترهای
+   editing: Boolean و onStartEdit می‌گیرد (state محلی ریست‌شونده و
+   ترفند text.isEmpty حذف شدند). لمس دوم = ویرایش برای «هر» عنصری؛
+   Enter عنصر تازه را هم select و هم editing می‌کند؛ همهٔ انتخاب‌های
+   دیگر (سؤال/تصویر/شکل/حذف) editingElement را پاک می‌کنند.
+۲) ویرایش قطعه‌ای متن سؤال از منطق offset دست‌ساز V64.2 به
+   RichTextSplitter.split(question.text) + reconstruct(parts, partIndex,
+   value) مهاجرت کرد: Math→NativeMathText($tex$)، Figure→ResizableFigure
+   (با شمارندهٔ occurrence)، Text→BasicTextField. توجه: reconstruct
+   عمداً $ خام ورودی کاربر را حذف می‌کند (سلامت توکن‌ها).
+۳) تست اجرایی JVM از پچ پیشنهادی کاربر + یک تست دوم (ویرایش تکهٔ اول؛
+   جابجایی درست offsetها) — هر دو با شبیه‌سازی python سبز.
+```
+
+### تست/verify
+
+```text
+جدید: V64_3HoistedEditReconstructTest (۲ قرارداد + ۲ اجرایی JVM).
+هماهنگ: V64_0 (needle ویرایش → onStartEdit؛ needle پاک‌سازی انحصاری —
+در شبیه‌سازی سراسری گیر افتاد و اصلاح شد)، V64_2 (needle state →
+editingElement؛ needle بازسازی → reconstruct). verify: needleهای
+V63.9/V64.0/V64.2 به‌روز + بند V64.3. پچ: V64_3_hoisted_edit_reconstruct.
+چک‌لیست دستگاه: تایپ پیوسته در گزینه؛ لمس دومِ گزینهٔ «پر» هم ویرایش
+باز کند؛ Enter → گزینهٔ جدید مستقیم در حال تایپ؛ ویرایش متن سؤالِ
+شکل‌دار/فرمول‌دار جای توکن‌ها را عوض نکند.
+```

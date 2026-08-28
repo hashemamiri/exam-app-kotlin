@@ -2078,7 +2078,8 @@ require("fun WordPaperChrome()" in _doc_editor_v63
 # ---- V63.9: شش اصلاح ویرایشگر (فرمول رندر حین ویرایش، درگ زنده، جریان
 # پیوسته، تصویر کامل، پیام شناور ذخیره، قفل جابجایی) ----
 # V64.2 — ویرایش قطعه‌ای حالا روی متن خام است (occurrences(raw)).
-require("FormulaTextCodec.occurrences(raw)" in _doc_editor_v63
+# V64.3 — ویرایش قطعه‌ای با RichTextSplitter (ابزار core تست‌شده).
+require("RichTextSplitter.split(question.text)" in _doc_editor_v63
         and "if (selected && !locked) Modifier.pointerInput(media.id, zoom)" in _doc_editor_v63
         and "ContentScale.FillWidth" in _doc_editor_v63
         and "var objectsLocked by remember" in _doc_editor_v63
@@ -2090,7 +2091,7 @@ require("FormulaTextCodec.occurrences(raw)" in _doc_editor_v63
 # ---- V64.0: مدل عنصر Word-مانند — گزینه/جورکردنی مستقل؛ بدون نقطه‌چین ----
 _v64_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_0WordElementModelTest.kt").read_text()
 require("fun WordElement(" in _doc_editor_v63
-        and "if (selected) editing = true else onSelect()" in _doc_editor_v63
+        and "if (selected) onStartEdit() else onSelect()" in _doc_editor_v63
         and "var selectedElement by remember" in _doc_editor_v63
         and 'answerLineStyle == "lined"' not in _doc_editor_v63,
         "V64.0 independent word-element model is missing from the editor")
@@ -2106,7 +2107,7 @@ require("onEnter = { onElementEnter(" in _doc_editor_v63
             (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "V64.1 element enter/delete word behaviors are missing")
 # ---- V64.2: چهار باگ‌فیکس بازبینی کاربر (تایپ پایدار، off-by-one، جای شکل، آناتومی) ----
-require("var editing by remember(selected) { mutableStateOf(selected && text.isEmpty()) }" in _doc_editor_v63
+require("var editingElement by remember" in _doc_editor_v63
         and "remember(text, selected)" not in _doc_editor_v63
         and "if (!editable) figureOccurrences.forEachIndexed" in _doc_editor_v63
         and "onTextChange(rebuilt + suffix)" not in _doc_editor_v63
@@ -2116,6 +2117,17 @@ require("question.options.size + 1" not in
             (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
             .split("fun removeOptionAt(")[1].split("fun moveOption(")[0],
         "V64.2 removeOptionAt off-by-one returned")
+# ---- V64.3: بازآرایی پیشنهادی بازبینی کاربر — editingElement بالابرده +
+# مهاجرت به RichTextSplitter.split/reconstruct ----
+require("onStartEditElement: (String, String, Int) -> Unit" in _doc_editor_v63
+        and "RichTextSplitter.reconstruct(parts, partIndex, value)" in _doc_editor_v63
+        and "editingElement = Triple(questionId, \"opt\", index + 1)" in _doc_editor_v63
+        and "FormulaTextCodec.occurrences(raw)" not in _doc_editor_v63
+        and "remember(selected) { mutableStateOf(selected && text.isEmpty()) }" not in _doc_editor_v63,
+        "V64.3 hoisted editing state / core reconstruct migration is missing")
+require("class V64_3HoistedEditReconstructTest" in
+        (ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_3HoistedEditReconstructTest.kt").read_text(),
+        "V64.3 hoisted-edit tests are missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")
