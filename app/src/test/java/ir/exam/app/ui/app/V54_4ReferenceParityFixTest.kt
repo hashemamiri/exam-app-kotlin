@@ -70,8 +70,8 @@ class V54_4ReferenceParityFixTest {
     @Test
     fun `back button closes reference overlays inside the field webview`() {
         assertTrue("closeOverlays" in webField)
+        assertTrue("BackHandler(enabled = overlayOpen) { controller.closeOverlays() }" in webSection)
         assertTrue("closeOverlays: function ()" in asset)
         assertTrue("contentWindow.closeMath" in asset)
-        assertTrue("nativeOpenFormula" in webSection)
     }
 }

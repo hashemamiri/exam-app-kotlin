@@ -91,7 +91,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import ir.exam.app.core.calendar.PersianDigits
-import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.data.repository.ExamPackageCodec
@@ -827,8 +826,9 @@ private fun QuestionEditor(
                 exit = fadeOut() + shrinkVertically()
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // V65.0 — کادر متن سؤال Native Compose؛ فرمول تمام‌صفحه و ابزارهای
-            // شکل/نمودار/جدول/اطلس همان ویرایشگرهای Native موجود را باز می‌کنند.
+            // V53.1 — کادر متن سؤال WebView به‌جای کادر Native قبلی؛ فرمول و
+            // ابزارهای مرجع (آناتومی/تناوبی/فیزیک/شیمی) داخل همان WebView باز
+            // می‌شوند و شکل/نمودار/جدول ویرایشگر Native دارند.
             QuestionTextWebSection(
                 text = question.text,
                 controller = questionFieldController,

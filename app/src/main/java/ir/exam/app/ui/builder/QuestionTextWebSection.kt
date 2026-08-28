@@ -1,49 +1,41 @@
 package ir.exam.app.ui.builder
 
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ir.exam.app.core.figure.FigureCodec
-import ir.exam.app.core.figure.FigureSpec
-import ir.exam.app.core.math.FormulaTextCodec
-import ir.exam.app.core.text.RichSegment
-import ir.exam.app.core.text.RichTextSplitter
-import ir.exam.app.ui.figure.AtlasFigureView
-import ir.exam.app.ui.figure.InlineFigureView
-import ir.exam.app.ui.math.NativeFormulaIcon
 import ir.exam.app.ui.math.QuestionEditorFieldController
+import ir.exam.app.ui.math.QuestionTextFieldWebView
 import ir.exam.app.ui.math.QuestionToolIcons
 
 /**
- * V65.0 — کادر متن سؤال کاملاً Native Compose (بدون WebView).
- * نوار ۸ آیکن Native با ترتیب مرجع حفظ شده است. فرمول تمام‌صفحه همچنان
- * FormulaHostDialog است؛ شکل/جدول/اطلس همان ویرایشگرهای Native موجود.
+ * V53.1 — کادر متن سؤال WebView به‌جای کادر Native قبلی + نوار ۸ آیکن Native.
+ *
+ * ترتیب آیکن‌ها مطابق مرجع: فرمول، شکل، نمودار، جدول، آناتومی بدن، جدول تناوبی،
+ * فیزیک، شیمی. همهٔ آیکن‌ها Native (ImageVector) هستند؛ فقط «کادر متن سؤال» و
+ * «ویرایشگر فرمول» WebView می‌مانند (استثنای صریح کاربر). جدول (V53.1) و جدول
+ * تناوبی (V53.2) ویرایشگر کاملاً Native دارند؛ شکل/نمودار ویرایشگرهای Native
+ * موجود V45.3 را باز می‌کنند؛ آناتومی/فیزیک/شیمی تا تحویل V53.3 ابزار مرجع
+ * داخل همین صفحه را باز می‌کنند.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun QuestionTextWebSection(
     text: String,
@@ -60,113 +52,57 @@ fun QuestionTextWebSection(
     onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    val currentText by rememberUpdatedState(text)
-    val currentOnText by rememberUpdatedState(onTextChanged)
-    val currentOpenFormula by rememberUpdatedState(onOpenFormula)
-    val currentEditToken by rememberUpdatedState(onEditFigureToken)
+    var overlayOpen by remember { mutableStateOf(false) }
+    var loadError by remember { mutableStateOf(false) }
+    // V55.7 — ارتفاع واقعی محتوا از HTML (px CSS = dp). کادر با درج فرمول/شکل
+    // «کشیده» می‌شود و اسکرول با صفحهٔ اصلی برنامه است، نه داخل WebView.
+    var contentHeightDp by remember { mutableStateOf(150) }
+    // V59.2.1 — رفع لگ/پرش بازشدن کادر: تا اولین گزارش ارتفاع از HTML، کادر با
+    // ارتفاع ثابت و محو (alpha) نمایش داده می‌شود؛ بعد یک‌باره ظاهر می‌شود.
+    var webReady by remember { mutableStateOf(false) }
 
-    DisposableEffect(controller) {
-        controller.nativeInsert = { specJson ->
-            val spec = FigureSpec.parse(specJson) ?: return@nativeInsert false
-            currentOnText(FigureCodec.insert(currentText, spec))
-            true
-        }
-        controller.nativeReplace = { specJson ->
-            val occ = controller.pendingEditOccurrence ?: return@nativeReplace false
-            val spec = FigureSpec.parse(specJson) ?: return@nativeReplace false
-            currentOnText(FigureCodec.replace(currentText, occ, spec))
-            controller.pendingEditOccurrence = null
-            true
-        }
-        controller.nativeOpenFormula = {
-            val value = currentText
-            currentOpenFormula(value, value.length, value.length)
-            true
-        }
-        onDispose {
-            controller.nativeInsert = null
-            controller.nativeReplace = null
-            controller.nativeOpenFormula = null
-        }
+    // V54.4 — دکمهٔ بازگشت سیستم ابتدا لایهٔ تمام‌صفحهٔ باز مرجع را می‌بندد.
+    BackHandler(enabled = overlayOpen) { controller.closeOverlays() }
+
+    // همگام‌سازی تغییرهای بیرونی (مثلاً افزودن از بانک سؤال) به WebView بدون echo.
+    LaunchedEffect(text) {
+        if (text != controller.lastJsValue) controller.setValue(text)
     }
 
-    val parts = RichTextSplitter.split(text)
+    // V59.2.1 — انیمیشن اندازهٔ داخلی Column حذف شد؛ با ارتفاع متغیر WebView دو انیمیشن
+    // تو در تو (expandVertically بیرونی + این) باعث پرش می‌شد.
     Column(modifier) {
-        FlowRow(
+        // V54.4 — هیچ قاب/برچسب Compose دور WebView نیست؛ برچسب «متن سؤال» و
+        // قاب کادر همان markup و CSS بایت‌به‌بایت مرجع داخل خود HTML است.
+        QuestionTextFieldWebView(
+            controller = controller,
+            initialValue = text,
+            onValueChanged = onTextChanged,
+            onOverlayChanged = { overlayOpen = it },
+            onEditFigureToken = onEditFigureToken,
+            onOpenFormula = onOpenFormula,
+            onError = { loadError = true },
+            onContentHeight = {
+                contentHeightDp = it
+                webReady = true
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 120.dp)
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            parts.forEachIndexed { index, part ->
-                when (part) {
-                    is RichSegment.Text -> {
-                        BasicTextField(
-                            value = part.text,
-                            onValueChange = { newText ->
-                                currentOnText(RichTextSplitter.reconstruct(parts, index, newText))
-                            },
-                            modifier = Modifier
-                                .widthIn(min = 12.dp)
-                                .heightIn(min = 28.dp)
-                                .then(if (text.isBlank()) Modifier.fillMaxWidth() else Modifier),
-                            textStyle = MaterialTheme.typography.bodyLarge,
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            decorationBox = { inner ->
-                                Box(contentAlignment = Alignment.CenterStart) { inner() }
-                            }
-                        )
-                    }
-                    is RichSegment.Math -> {
-                        val occ = FormulaTextCodec.occurrences(text).getOrNull(part.index)
-                        Box(
-                            modifier = Modifier
-                                .height(36.dp)
-                                .widthIn(min = 36.dp)
-                                .clickable {
-                                    if (occ != null) {
-                                        currentOpenFormula(text, occ.start, occ.endExclusive)
-                                    } else {
-                                        currentOpenFormula(text, text.length, text.length)
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            NativeFormulaIcon(part.tex, Modifier.size(84.dp, 36.dp), 18.sp)
-                        }
-                    }
-                    is RichSegment.Figure -> {
-                        val spec = part.spec
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 80.dp)
-                                .clickable {
-                                    controller.pendingEditOccurrence = part.index
-                                    currentEditToken(spec.toJson())
-                                }
-                        ) {
-                            if (spec.kind in setOf("a", "s")) {
-                                AtlasFigureView(
-                                    spec = spec,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentDescription = "شکل",
-                                    showBlanks = false
-                                )
-                            } else {
-                                InlineFigureView(
-                                    spec,
-                                    Modifier.fillMaxWidth().height(120.dp),
-                                    contentDescription = "شکل"
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+                // V55.7 — ارتفاع کادر = ارتفاع واقعی محتوا (کشیده‌شدن با درج)؛
+                // فقط هنگام بازبودن ابزارهای تمام‌صفحهٔ مرجع، ارتفاع ثابت بزرگ.
+                .height(if (overlayOpen) 560.dp else contentHeightDp.coerceIn(150, 4000).dp)
+                // V59.2.1 — تا آماده‌شدن HTML، محو تا فلاش سفید/پرش دیده نشود.
+                .graphicsLayer { alpha = if (webReady || overlayOpen) 1f else 0f }
+        )
+        if (loadError) {
+            Text(
+                "ویرایشگر متن سؤال بارگیری نشد؛ دستگاه را دوباره امتحان کنید.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+            )
         }
+        // آیکن‌های درج فقط زیر کادر متن سؤال هستند؛ نوار داخلی HTML مخفی است.
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)

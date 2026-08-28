@@ -26,12 +26,6 @@ import org.json.JSONObject
 class QuestionEditorFieldController {
     internal var webView: WebView? = null
 
-    /** V65.0 — مسیر Native Compose برای درج/جایگزینی/فرمول بدون WebView. */
-    internal var nativeInsert: ((String) -> Boolean)? = null
-    internal var nativeReplace: ((String) -> Boolean)? = null
-    internal var nativeOpenFormula: (() -> Boolean)? = null
-    var pendingEditOccurrence: Int? = null
-
     /** آخرین متنی که خود WebView گزارش کرده یا برایش push شده؛ برای جلوگیری از echo. */
     var lastJsValue: String = ""
         internal set
@@ -43,9 +37,6 @@ class QuestionEditorFieldController {
 
     /** بازکردن ابزارهای مرجع داخل WebView: formula / anatomy / periodic / physics / chemistry. */
     fun openTool(name: String): Boolean {
-        if (name == "formula") {
-            nativeOpenFormula?.invoke()?.let { return it }
-        }
         val view = webView ?: return false
         val quoted = JSONObject.quote(name)
         view.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.openTool($quoted);", null)
@@ -54,7 +45,6 @@ class QuestionEditorFieldController {
 
     /** درج توکن `%%FIG:{json}%%` ساخته‌شده در ویرایشگرهای Native در محل مکان‌نما. */
     fun insertFigureJson(specJson: String): Boolean {
-        nativeInsert?.invoke(specJson)?.let { return it }
         val view = webView ?: return false
         val quoted = JSONObject.quote(specJson)
         view.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.insertToken($quoted);", null)
@@ -63,7 +53,6 @@ class QuestionEditorFieldController {
 
     /** V53.3 — جایگزینی توکن در حال ویرایش (dblclick) با خروجی ویرایشگر Native. */
     fun applyEditedFigureJson(specJson: String): Boolean {
-        nativeReplace?.invoke(specJson)?.let { return it }
         val view = webView ?: return false
         val quoted = JSONObject.quote(specJson)
         view.evaluateJavascript("window.ExamEditorTools && ExamEditorTools.applyEditedToken($quoted);", null)
