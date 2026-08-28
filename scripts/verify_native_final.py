@@ -2046,7 +2046,8 @@ require("BasicTextField(" in _doc_editor_v63
 # ---- V63.5: چیدمان چاپی محلی (فقط چاپ) + برگشت سخت‌افزاری ویرایشگر ----
 _layout_store_v63=(ROOT/"app/src/main/java/ir/exam/app/data/local/PrintLayoutStore.kt").read_text()
 require("class PrintLayoutStore(" in _layout_store_v63
-        and "layoutStore.write(examId, state.questions)" in _doc_editor_v63
+        and "layoutStore.write(" in _doc_editor_v63
+        and "canonicalQuestions ?: state.questions" in _doc_editor_v63
         and "BackHandler(onBack = onBack)" in _doc_editor_v63
         and "builder.save()" not in _doc_editor_v63
         and "confirmSave" not in _doc_editor_v63,
@@ -2172,6 +2173,33 @@ require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_edit
 require("class V63_2DocFormatReorderTest" in _v63_2_test
         and "format actions persist through the builder view-model used by print" in _v63_2_test,
         "V63.2 format/reorder tests are missing")
+
+# ---- V64.6: رفع حالت جعبه‌ای، همگام‌سازی آزمون و چاپ، و حلقهٔ سفید اسپینر ----
+_v64_6_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_6PrintEditorSyncTest.kt").read_text()
+_builder_v64_6=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
+_spinner_v64_6=(ROOT/"app/src/main/java/ir/exam/app/ui/auth/AuthIceComponents.kt").read_text()
+require("fun readForLatest(examId: String, latestQuestions: List<QuestionDraft>)" in _layout_store_v63
+        and "fun rebase(examId: String, latestQuestions: List<QuestionDraft>)" in _layout_store_v63
+        and "PrintLayoutMerger.merge(stored.base, stored.print, latestQuestions)" in _layout_store_v63
+        and "version\" to JsonPrimitive(STORAGE_VERSION)" in _layout_store_v63
+        and "baseQuestions: List<QuestionDraft>" in _layout_store_v63
+        and "canonicalQuestions ?: state.questions" in _doc_editor_v63
+        and "layoutStore.readForLatest(examId, latest)" in _doc_editor_v63
+        and "saveState.examId?.let { printLayoutStore.rebase(it, saveState.questions) }" in _builder_v64_6,
+        "V64.6 canonical exam changes are not synchronized with isolated print overrides")
+require("if (highlighted) {\n                    Modifier.border" not in _doc_editor_v63
+        and "then(if (selected) Modifier.border(2.dp" not in _doc_editor_v63
+        and "decorationBox = { innerField -> innerField() }" in _doc_editor_v63
+        and ".background(Color.Transparent)" in _doc_editor_v63,
+        "V64.6 box-free Word-like print editor is missing")
+require("val innerAngle by transition.animateFloat" in _spinner_v64_6
+        and "rotate(-innerAngle + 160f)" in _spinner_v64_6
+        and "angle * 1.4f" not in _spinner_v64_6,
+        "V64.6 spinner inner white arc still has a discontinuous restart")
+require("class V64_6PrintEditorSyncTest" in _v64_6_test
+        and "PrintLayoutMerger.merge" in _v64_6_test
+        and "white spinner arc uses a seamless full turn" in _v64_6_test,
+        "V64.6 regression tests are missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

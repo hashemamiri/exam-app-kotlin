@@ -8,6 +8,7 @@ import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.data.local.NativeDatabaseProvider
+import ir.exam.app.data.local.PrintLayoutStore
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.data.repository.ExamBuilderDraftStore
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
@@ -29,6 +30,10 @@ class ExamBuilderViewModel(
     private val repository: SupabaseExamBuilderRepository = SupabaseExamBuilderRepository(context)
 ) : ViewModel() {
     private val appContext = context.applicationContext
+    // V64.6 — تغییرات بخش «آزمون‌ها» باید در نسخهٔ چاپ هم دیده شوند؛
+    // این store فقط snapshot پایهٔ چاپ را rebase می‌کند و هیچ تغییر چاپی را
+    // به آزمون سرور/دانش‌آموز برنمی‌گرداند.
+    private val printLayoutStore = PrintLayoutStore(appContext)
     private val ownerUserId = SupabaseProvider.client.auth.currentUserOrNull()?.id.orEmpty()
     private val draftStore = ExamBuilderDraftStore(
         NativeDatabaseProvider.get(appContext).examBuilderDraftDao()
@@ -615,10 +620,15 @@ class ExamBuilderViewModel(
     }
 
     fun save() = viewModelScope.launch {
+        val saveState = state.value
         _state.update { it.copy(saving = true, error = null, savedCode = null, uploadProgress = null) }
-        repository.save(state.value, saveOperationId) { done, total ->
+        repository.save(saveState, saveOperationId) { done, total ->
             _state.update { it.copy(uploadProgress = "آپلود تصویر $done از $total") }
         }.onSuccess { result ->
+            // V64.6 — پیش از این save موفق آزمون، snapshot چاپ قدیمی می‌ماند
+            // و سؤال‌های چاپی ویرایش‌های جدید بخش آزمون‌ها را پنهان می‌کردند.
+            // rebase فقط اختلاف‌های مخصوص چاپ را حفظ می‌کند.
+            saveState.examId?.let { printLayoutStore.rebase(it, saveState.questions) }
             if (ownerUserId.isNotBlank()) draftStore.clear(ownerUserId)
             saveOperationId = UUID.randomUUID().toString()
             _state.update {

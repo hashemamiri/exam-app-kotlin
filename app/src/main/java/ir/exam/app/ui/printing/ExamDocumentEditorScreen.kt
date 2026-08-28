@@ -103,9 +103,14 @@ fun ExamDocumentEditorScreen(
     val context = LocalContext.current
     val layoutStore = remember(context.applicationContext) { PrintLayoutStore(context.applicationContext) }
     var layoutLoaded by remember(examId) { mutableStateOf(false) }
+    // V64.6 — پایهٔ canonical آزمون جدا نگه داشته می‌شود تا ذخیرهٔ ویرایشگر
+    // فقط تفاوت‌های مخصوص چاپ را بنویسد، نه نسخهٔ چاپی را داخل آزمون ببرد.
+    var canonicalQuestions by remember(examId) { mutableStateOf<List<QuestionDraft>?>(null) }
     LaunchedEffect(examId, state.loading) {
-        if (!state.loading && !layoutLoaded && state.questions.isNotEmpty()) {
-            layoutStore.read(examId)?.let(builder::overridePrintLayout)
+        if (!state.loading && !layoutLoaded) {
+            val latest = state.questions
+            canonicalQuestions = latest
+            layoutStore.readForLatest(examId, latest)?.let(builder::overridePrintLayout)
             layoutLoaded = true
         }
     }
@@ -146,7 +151,11 @@ fun ExamDocumentEditorScreen(
             pageCount = measuredPageCount,
             saving = state.saving,
             onSave = {
-                layoutStore.write(examId, state.questions)
+                layoutStore.write(
+                    examId,
+                    canonicalQuestions ?: state.questions,
+                    state.questions
+                )
                 savedTick = true
             },
             onBack = onBack
@@ -530,14 +539,11 @@ private fun WordQuestionBlock(
         "left" -> TextAlign.Left
         else -> TextAlign.Right
     }
+    // V64.6 — سؤال در ویرایشگر مثل متن Word است؛ انتخاب/ویرایش نباید
+    // دور کل سؤال یک کادر بسازد. کادر آبی فقط برای خودِ شیء تصویری باقی است.
     Column(
         Modifier
             .fillMaxWidth()
-            .then(
-                if (highlighted) {
-                    Modifier.border(1.dp, MaterialTheme.colorScheme.primary)
-                } else Modifier
-            )
             .clickable(onClick = onSelect)
     ) {
         // V63.4 — بدون مداد: انتخاب سؤال، بارم را هم درجا ویرایش‌پذیر می‌کند.
@@ -562,7 +568,10 @@ private fun WordQuestionBlock(
                     ),
                     singleLine = true,
                     cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
-                    modifier = Modifier.width(WordPageLayout.mmToDp(14f, zoom).dp)
+                    decorationBox = { innerField -> innerField() },
+                    modifier = Modifier
+                        .width(WordPageLayout.mmToDp(14f, zoom).dp)
+                        .background(Color.Transparent)
                 )
             } else Text(
                 scoreText(question.score),
@@ -633,8 +642,10 @@ private fun WordQuestionBlock(
                                 ),
                                 // V64.5 — مثل ورد: بدون جعبه/پس‌زمینه؛ فقط مکان‌نما.
                                 cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
+                                decorationBox = { innerField -> innerField() },
                                 // عرض به اندازهٔ محتوا؛ تکهٔ خالی حداقل جا برای مکان‌نما.
                                 modifier = Modifier.widthIn(min = 12.dp)
+                                    .background(Color.Transparent)
                             )
                         }
                     }
@@ -1054,15 +1065,16 @@ private fun WordElement(
                 fontStyle = style ?: FontStyle.Normal,
                 textAlign = align
             ),
-            // V64.5 — مثل ورد: کادر و پس‌زمینه حذف؛ فقط مکان‌نمای چشمک‌زن.
+            // V64.5/V64.6 — مثل ورد: کادر و پس‌زمینه حذف؛ فقط مکان‌نمای چشمک‌زن.
             cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
-            modifier = modifier
+            decorationBox = { innerField -> innerField() },
+            modifier = modifier.background(Color.Transparent)
         )
     } else {
         Box(
-            modifier
-                .then(if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier)
-                .pointerInput(selected) {
+            // V64.6 — متن انتخاب‌شده هم کادر ندارد؛ مکان‌نما/خود متن
+            // بازخورد انتخاب است و ابزار نوار بالا روی همان عنصر کار می‌کند.
+            modifier.pointerInput(selected) {
                     detectTapGestures(onTap = {
                         // V64.5 — مثل ورد: یک کلیک روی متن = مکان‌نما (انتخاب+ویرایش).
                         onSelect()

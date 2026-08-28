@@ -40,7 +40,10 @@ class V62_2NeonSessionLoadingTest {
         // گرادیان sweep + چرخش دو کمان ناهم‌جهت، بزرگ‌تر از قبل
         assertTrue("Brush.sweepGradient(" in spinner)
         assertTrue("rotate(angle)" in spinner)
-        assertTrue("rotate(-angle * 1.4f)" in spinner)
+        // V64.6 — حلقهٔ سفید باید یک دور کاملِ هم‌درز داشته باشد تا restart نپرد.
+        assertTrue("val innerAngle by transition.animateFloat" in spinner)
+        assertTrue("rotate(-innerAngle + 160f)" in spinner)
+        assertFalse("angle * 1.4f" in spinner)
         assertTrue("modifier.size(96.dp)" in spinner)
         // V62.4 — بدون هالهٔ نئونی و هستهٔ نبض‌دار
         assertFalse("glow" in spinner)

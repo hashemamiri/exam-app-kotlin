@@ -31,8 +31,9 @@ class V63_5PrintOnlyLayoutBackTest {
     fun `document editor saves a local print layout instead of the server exam`() {
         assertTrue("class PrintLayoutStore(" in store)
         assertTrue("print_layout_overrides" in store)
-        assertTrue("layoutStore.write(examId, state.questions)" in editor)
-        assertTrue("layoutStore.read(examId)?.let(builder::overridePrintLayout)" in editor)
+        assertTrue("layoutStore.write(" in editor)
+        assertTrue("canonicalQuestions ?: state.questions" in editor)
+        assertTrue("layoutStore.readForLatest(examId, latest)?.let(builder::overridePrintLayout)" in editor)
         assertTrue("چیدمان چاپ ذخیره شد؛ فقط در چاپ همین آزمون اعمال می‌شود." in editor)
         // ذخیرهٔ سروری و دیالوگ هزینه از ویرایشگر حذف شدند
         assertFalse("builder.save()" in editor)

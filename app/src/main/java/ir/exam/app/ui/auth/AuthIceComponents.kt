@@ -119,6 +119,15 @@ internal fun IceSpinner(modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing)),
         label = "ice-spinner-angle"
     )
+    // چرخش حلقهٔ سفید باید در پایان هر دور به همان زاویهٔ شروع برسد؛
+    // ضریب ۱٫۴ قبلی در ۳۶۰ درجه به ۵۰۴ درجه می‌رسید و هنگام restart
+    // حلقه را ناگهان ۱۴۴ درجه می‌پراند.
+    val innerAngle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing)),
+        label = "ice-spinner-inner-angle"
+    )
     Canvas(modifier.size(96.dp)) {
         val stroke = 9.dp.toPx()
         val inset = stroke
@@ -145,7 +154,8 @@ internal fun IceSpinner(modifier: Modifier = Modifier) {
         // کمان داخلی ناهم‌جهت
         val innerInset = inset + 16.dp.toPx()
         val innerSize = androidx.compose.ui.geometry.Size(size.width - 2 * innerInset, size.height - 2 * innerInset)
-        rotate(-angle * 1.4f) {
+        // offset ثابت، بدون ضریب غیرصحیح: seam حلقهٔ سفید بدون پرش است.
+        rotate(-innerAngle + 160f) {
             drawArc(
                 color = Color.White,
                 startAngle = 200f, sweepAngle = 140f, useCenter = false,

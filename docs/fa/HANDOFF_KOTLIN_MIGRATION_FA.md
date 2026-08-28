@@ -11370,3 +11370,79 @@ BasicTextField با widthIn(min=12.dp) به عرض «محتوا» (تکهٔ خا
 چک‌لیست: سؤال با فرمول وسط متن را لمس کنید — متن و فرمول در یک سطر
 بمانند، مکان‌نما ظاهر شود، هیچ نوار تمام‌عرض جدایی ساخته نشود.
 ```
+
+
+## ۲۲۹) V64.6 — رفع جعبهٔ ویرایشگر چاپ، همگام‌سازی آزمون/چاپ و پرش اسپینر
+
+### گزارش کاربر
+
+```text
+حالت جعبه‌ای در ویرایشگر چاپ وجود دارد.
+هر تغییری که در بخش آزمون‌ها ایجاد می‌شود باید در چاپ آزمون دیده شود، اما
+تغییرات بخش چاپ آزمون فقط در چاپ همان آزمون ذخیره شود.
+حلقه/دایرهٔ سفید وسط اسپینر صفحهٔ بازیابی نشست پرش دارد.
+```
+
+### ریشه و راه‌حل
+
+```text
+۱) ویرایشگر برای سؤال انتخابی دور کل سؤال و برای عنصر انتخابی دور متن
+   border می‌کشید؛ علاوه بر آن decoration ورودی‌ها صریح نبود. borderهای
+   متنی حذف و decorationBox به innerField خالی تبدیل شد؛ کادر آبی اشیای
+   تصویری برای انتخاب/جابجایی مستقل باقی ماند.
+۲) PrintLayoutStore قبلاً فقط یک snapshot کامل print نگه می‌داشت. در نتیجه
+   بعد از ذخیرهٔ تغییر آزمون، snapshot قدیمی در مسیر چاپ روی سؤال تازه
+   پوشانده می‌شد. قالب ذخیرهٔ جدید base/print دارد و PrintLayoutMerger یک
+   merge سه‌طرفه انجام می‌دهد: کلیدهایی که فقط در print نسبت به base تغییر
+   کرده‌اند حفظ می‌شوند و سایر تغییرات آخرین آزمون وارد چاپ می‌شوند.
+   ExamBuilderViewModel پس از save موفق rebase می‌کند؛ آزمون دانش‌آموز
+   هیچ‌وقت با نسخهٔ print بازنویسی نمی‌شود. payload قدیمی V63.5 نیز هنگام
+   rebase به قالب جدید مهاجرت می‌کند.
+۳) حلقهٔ سفید اسپینر با rotate(-angle * 1.4f) در پایان دور ۵۰۴ درجه و در
+   شروع دور بعد صفر می‌شد؛ بنابراین ۱۴۴ درجه پرش داشت. innerAngle اکنون
+   جداگانه از صفر تا ۳۶۰ درجه می‌چرخد و با offset ثابت ۱۶۰ درجه seam ندارد.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/data/local/PrintLayoutStore.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/main/java/ir/exam/app/ui/auth/AuthIceComponents.kt
+app/src/test/java/ir/exam/app/ui/app/V64_6PrintEditorSyncTest.kt
+app/src/test/java/ir/exam/app/ui/app/V63_5PrintOnlyLayoutBackTest.kt
+app/src/test/java/ir/exam/app/ui/app/V62_2NeonSessionLoadingTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+```
+
+### SQL و عملیات خارجی
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret/Dependency جدید: ندارد
+```
+
+### تست و وضعیت Build
+
+```text
+FINAL_NATIVE_VERIFY                 → PASS
+تست‌های قراردادی/اجرایی V64.6       → در سورس اضافه شد
+./gradlew testDebugUnitTest          → در این workspace اجرا نشد: دریافت
+                                       plugin KSP نسخهٔ 2.0.21-1.0.28 از
+                                       مخازن Gradle/Google با خطای plugin not found
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) در ویرایشگر چاپ، لمس سؤال/گزینه/جفت فقط مکان‌نما نشان دهد و هیچ کادر
+   مستطیلی دور متن ظاهر نشود؛ کادر انتخاب اشیای تصویری مجاز است.
+۲) یک تغییر در بخش آزمون‌ها ذخیره شود؛ ورود به چاپ همان متن/گزینه/استایل/
+   تصویر جدید را نشان دهد. سپس تغییر متن یا چیدمان در چاپ ذخیره شود؛
+   آزمون آنلاین و صفحهٔ دانش‌آموز تغییر نکند.
+۳) اسپینر بازیابی نشست چند دور کامل بچرخد و حلقهٔ سفید در مرز تکرار
+   موقعیتش را نپراند.
+```
