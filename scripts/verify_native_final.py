@@ -2155,6 +2155,11 @@ require("cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)
         and "matchingLeftStyles" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text(),
         "V64.5 word caret / matching styles are missing")
+# V64.5.1 — متن فرمول‌دار در حالت ویرایش با FlowRow در یک سطر جاری می‌ماند
+# (گزارش کاربر: «اگر فرمول در متن باشد جعبه‌ای می‌شود»).
+require("androidx.compose.foundation.layout.FlowRow(" in _doc_editor_v63
+        and "Modifier.widthIn(min = 12.dp)" in _doc_editor_v63,
+        "V64.5.1 flowing inline formula edit is missing")
 # V64.4.1 — درج کلاس جدید annotation کلاس بعدی را ندزدد (لاگ CI: Serializer
 # has not been found for QuestionDraft).
 _draft_v64=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()

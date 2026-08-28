@@ -43,6 +43,13 @@ class V64_3HoistedEditReconstructTest {
     }
 
     @Test
+    fun `formula text flows inline while editing instead of stacked boxes`() {
+        // V64.5.1 — تکه‌های متن/فرمول با FlowRow کنار هم؛ فیلد متن به عرض محتوا.
+        assertTrue("androidx.compose.foundation.layout.FlowRow(" in editor)
+        assertTrue("Modifier.widthIn(min = 12.dp)" in editor)
+    }
+
+    @Test
     fun `piecewise editing uses the tested core splitter`() {
         assertTrue("RichTextSplitter.split(question.text)" in editor)
         assertTrue("RichTextSplitter.reconstruct(parts, partIndex, value)" in editor)

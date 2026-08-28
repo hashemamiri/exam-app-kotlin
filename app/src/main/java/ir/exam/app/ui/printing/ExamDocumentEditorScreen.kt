@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -489,6 +490,7 @@ private fun WordPaperChrome() {
     )
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun WordQuestionBlock(
     row: Int,
@@ -588,45 +590,53 @@ private fun WordQuestionBlock(
         if (editable) {
             val parts = ir.exam.app.core.text.RichTextSplitter.split(question.text)
             var figureCursor = 0
-            parts.forEachIndexed { partIndex, part ->
-                when (part) {
-                    is ir.exam.app.core.text.RichSegment.Math -> NativeMathText(
-                        source = "$" + part.tex + "$",
-                        fontSize = fontSize,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    is ir.exam.app.core.text.RichSegment.Figure -> {
-                        val occIndex = figureCursor++
-                        ResizableFigure(
-                            spec = part.spec,
-                            zoom = zoom,
-                            selected = selectedFigureIndex == occIndex,
-                            onSelect = { onSelectFigure(occIndex) },
-                            onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
+            // V64.5.1 — مثل ورد: تکه‌های متن و فرمول «در یک سطر جاری» کنار هم
+            // می‌نشینند (FlowRow)؛ قبلاً هر تکه تمام‌عرض بود و متنِ فرمول‌دار
+            // به چند جعبهٔ سطری جدا می‌شکست (گزارش کاربر).
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.Center
+            ) {
+                parts.forEachIndexed { partIndex, part ->
+                    when (part) {
+                        is ir.exam.app.core.text.RichSegment.Math -> NativeMathText(
+                            source = "$" + part.tex + "$",
+                            fontSize = fontSize
                         )
-                    }
-                    is ir.exam.app.core.text.RichSegment.Text -> {
-                        var pieceDraft by remember(question.id, partIndex, parts.size) {
-                            mutableStateOf(part.text)
+                        is ir.exam.app.core.text.RichSegment.Figure -> {
+                            val occIndex = figureCursor++
+                            ResizableFigure(
+                                spec = part.spec,
+                                zoom = zoom,
+                                selected = selectedFigureIndex == occIndex,
+                                onSelect = { onSelectFigure(occIndex) },
+                                onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
+                            )
                         }
-                        BasicTextField(
-                            value = pieceDraft,
-                            onValueChange = { value ->
-                                pieceDraft = value
-                                onTextChange(
-                                    ir.exam.app.core.text.RichTextSplitter.reconstruct(parts, partIndex, value)
-                                )
-                            },
-                            textStyle = TextStyle(
-                                fontSize = fontSize,
-                                fontWeight = weight ?: FontWeight.Normal,
-                                fontStyle = style ?: FontStyle.Normal,
-                                textAlign = align
-                            ),
-                            // V64.5 — مثل ورد: بدون جعبه/پس‌زمینه؛ فقط مکان‌نما.
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        is ir.exam.app.core.text.RichSegment.Text -> {
+                            var pieceDraft by remember(question.id, partIndex, parts.size) {
+                                mutableStateOf(part.text)
+                            }
+                            BasicTextField(
+                                value = pieceDraft,
+                                onValueChange = { value ->
+                                    pieceDraft = value
+                                    onTextChange(
+                                        ir.exam.app.core.text.RichTextSplitter.reconstruct(parts, partIndex, value)
+                                    )
+                                },
+                                textStyle = TextStyle(
+                                    fontSize = fontSize,
+                                    fontWeight = weight ?: FontWeight.Normal,
+                                    fontStyle = style ?: FontStyle.Normal,
+                                    textAlign = align
+                                ),
+                                // V64.5 — مثل ورد: بدون جعبه/پس‌زمینه؛ فقط مکان‌نما.
+                                cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0B72B8)),
+                                // عرض به اندازهٔ محتوا؛ تکهٔ خالی حداقل جا برای مکان‌نما.
+                                modifier = Modifier.widthIn(min = 12.dp)
+                            )
+                        }
                     }
                 }
             }
