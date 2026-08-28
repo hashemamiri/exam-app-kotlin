@@ -11210,3 +11210,51 @@ V63.9/V64.0/V64.2 به‌روز + بند V64.3. پچ: V64_3_hoisted_edit_reconst
 باز کند؛ Enter → گزینهٔ جدید مستقیم در حال تایپ؛ ویرایش متن سؤالِ
 شکل‌دار/فرمول‌دار جای توکن‌ها را عوض نکند.
 ```
+
+## ۲۲۵) V64.4 — ورد واقعی گام ۳ (بخش اول): استایل مستقل هر گزینه
+
+### مدل داده (تأییدشدهٔ کاربر؛ سازگاری کامل عقب‌رو)
+
+```text
+OptionStyle(bold=false, italic=false, fontSizeSp: Float?=null) در
+QuestionDraft.kt؛ فیلد جدید optionStyles: List<OptionStyle?> هم‌تراز
+options — null یعنی «ارث از استایل سؤال».
+codec: decode از obj["optionStyles"] (آبجکت خالی {} = null — باگ در
+شبیه‌سازی pre-CI پیدا شد: JsonObject خالی OptionStyle پیش‌فرض می‌ساخت و
+roundtrip خراب می‌شد → takeIf { it.isNotEmpty() })؛ encode «فقط وقتی
+استایلی هست» فیلد را می‌نویسد (JSON سؤالات قدیمی بایت‌به‌بایت
+دست‌نخورده). کلیدهای فشرده: b/i/s.
+```
+
+### تغییرات
+
+```text
+- ویومدل: setOptionStyle(id,index,change) + helper padStyles؛ همهٔ
+  عملیات گزینه (insertOptionAfter/removeOptionAt/moveOption/
+  setOptionCount) optionStyles را هم‌تراز نگه می‌دارند (۴ محل).
+- نوار ابزار: اگر selectedElement از نوع opt باشد، آ+/آ−/بولد/ایتالیک
+  روی «همان گزینه» اثر می‌کنند (setOptionStyle)؛ وگرنه مثل قبل روی کل
+  سؤال. ابزارهای متن با انتخاب عنصر هم فعال‌اند (hasElement).
+- رندر ویرایشگر: WordElement گزینه با fontSize/weight/style مؤثر
+  (استایل گزینه یا ارث سؤال).
+- چاپ: OfficialPrintQuestion.optionStyles (Triple فشرده) از
+  QuestionDraft در printableExam پر و در examBlocks اعمال می‌شود؛
+  گزینهٔ بدون استایل دقیقاً مثل قبل چاپ می‌شود.
+باقی‌ماندهٔ گام ۳ (پچ بعد در صورت درخواست): استایل per-element برای
+جفت‌های جورکردنی + «انتخاب بازه‌ای متن» (rich-text داخل پاراگراف؛
+نیازمند مدل span در متن و رندر چاپ — بزرگ‌ترین قطعه).
+```
+
+### تست/verify
+
+```text
+جدید: V64_4OptionStyleTest — ۲ قرارداد + ۲ «اجرایی JVM» با
+ExamQuestionCodec واقعی (roundtrip استایل‌ها؛ سؤال ساده فیلد جدید
+نمی‌گیرد). verify: ۳ require جدید V64.4 (شامل needle آبجکت خالی).
+شبیه‌سازی سراسری = 0 FAIL؛ ExamQuestionCodecTest موجود همه named-arg
+است و نمی‌شکند. پچ: V64_4_option_style — بدون SQL.
+چک‌لیست دستگاه: انتخاب یک گزینه → بولد نوار فقط همان گزینه را بولد
+کند (ویرایشگر و چاپ)؛ آ+ روی گزینه فقط همان را بزرگ کند؛ سؤال بدون
+استایل مثل قبل؛ درج/حذف/جابجایی گزینه استایل‌ها را جابجا نکند؛ آزمون
+قدیمی باز و ذخیره شود بدون تغییر JSON.
+```

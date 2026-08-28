@@ -157,6 +157,7 @@ fun ExamDocumentEditorScreen(
         DocumentToolbar(
             question = editing,
             hasObject = selectedImage != null || selectedFigure != null,
+            hasElement = selectedElement != null,
             hasDeletable = selectedImage != null || selectedFigure != null || selectedElement != null,
             locked = objectsLocked,
             onToggleLock = { objectsLocked = !objectsLocked },
@@ -197,11 +198,31 @@ fun ExamDocumentEditorScreen(
                     resizeFigureBy(builder, state.questions, questionId, occurrenceIndex, -10f)
                 }
             },
+            // V64.4 — Word-مانند: اگر «عنصری» انتخاب است قالب روی همان عنصر
+            // اعمال می‌شود (استایل per-option)؛ وگرنه مثل قبل روی کل سؤال.
             onFontSize = { delta ->
-                editing?.let { builder.setQuestionFontSize(it.id, it.fontSizeSp + delta) }
+                val element = selectedElement
+                if (element != null && element.second == "opt") {
+                    val question = state.questions.firstOrNull { it.id == element.first }
+                    val base = question?.optionStyles?.getOrNull(element.third)?.fontSizeSp
+                        ?: question?.fontSizeSp ?: 16f
+                    builder.setOptionStyle(element.first, element.third) {
+                        it.copy(fontSizeSp = (base + delta).coerceIn(8f, 40f))
+                    }
+                } else editing?.let { builder.setQuestionFontSize(it.id, it.fontSizeSp + delta) }
             },
-            onBold = { editing?.let { builder.setQuestionBold(it.id, !it.bold) } },
-            onItalic = { editing?.let { builder.setQuestionItalic(it.id, !it.italic) } },
+            onBold = {
+                val element = selectedElement
+                if (element != null && element.second == "opt") {
+                    builder.setOptionStyle(element.first, element.third) { it.copy(bold = !it.bold) }
+                } else editing?.let { builder.setQuestionBold(it.id, !it.bold) }
+            },
+            onItalic = {
+                val element = selectedElement
+                if (element != null && element.second == "opt") {
+                    builder.setOptionStyle(element.first, element.third) { it.copy(italic = !it.italic) }
+                } else editing?.let { builder.setQuestionItalic(it.id, !it.italic) }
+            },
             onAlign = { value -> editing?.let { builder.setQuestionAlign(it.id, value) } },
             onMoveQuestion = { delta -> editing?.let { builder.moveQuestion(it.id, delta) } },
             onZoomOut = { zoom = (zoom - 0.2f).coerceIn(0.6f, 3f) },
@@ -632,9 +653,11 @@ private fun WordQuestionBlock(
                     Text("${index + 1}) ", fontSize = fontSize, fontWeight = FontWeight.Bold)
                     WordElement(
                         text = option,
-                        fontSize = fontSize,
-                        weight = weight,
-                        style = style,
+                        // V64.4 — استایل مستقل گزینه؛ null = ارث از سؤال.
+                        fontSize = question.optionStyles.getOrNull(index)?.fontSizeSp
+                            ?.let { (it.coerceIn(8f, 30f) * printScale).sp } ?: fontSize,
+                        weight = if (question.optionStyles.getOrNull(index)?.bold == true) FontWeight.Bold else weight,
+                        style = if (question.optionStyles.getOrNull(index)?.italic == true) FontStyle.Italic else style,
                         align = align,
                         selected = selectedElement == ("opt" to index),
                         editing = editingElement == ("opt" to index),
@@ -725,6 +748,7 @@ private fun WordQuestionBlock(
 private fun DocumentToolbar(
     question: QuestionDraft?,
     hasObject: Boolean,
+    hasElement: Boolean,
     hasDeletable: Boolean,
     locked: Boolean,
     onToggleLock: () -> Unit,
@@ -774,7 +798,8 @@ private fun DocumentToolbar(
                 tint = if (hasDeletable) Color(0xFFC62828) else Color(0xFFB2BDC6)
             )
         }
-        val hasQuestion = question != null
+        // V64.4 — با انتخاب عنصر هم فعال (قالب روی عنصر اثر می‌کند).
+        val hasQuestion = question != null || hasElement
         TextButton(onClick = { onFontSize(+2f) }, enabled = hasQuestion) { Text("آ+") }
         TextButton(onClick = { onFontSize(-2f) }, enabled = hasQuestion) { Text("آ-") }
         FormatToggle(

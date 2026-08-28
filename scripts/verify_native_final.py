@@ -2128,6 +2128,22 @@ require("onStartEditElement: (String, String, Int) -> Unit" in _doc_editor_v63
 require("class V64_3HoistedEditReconstructTest" in
         (ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_3HoistedEditReconstructTest.kt").read_text(),
         "V64.3 hoisted-edit tests are missing")
+# ---- V64.4: استایل مستقل هر گزینه (مدل + codec سازگار عقب‌رو + نوار + چاپ) ----
+_codec_v64=(ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").read_text()
+require("data class OptionStyle(" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()
+        and "fun setOptionStyle(id: String, index: Int, change: (OptionStyle) -> OptionStyle)" in
+            (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
+        and 'if (question.optionStyles.any { it != null })' in _codec_v64
+        and "takeIf { it.isNotEmpty() }" in _codec_v64,
+        "V64.4 per-option style model/codec is missing")
+require('if (element != null && element.second == "opt")' in _doc_editor_v63
+        and "val optionStyle = question.optionStyles.getOrNull(index)" in
+            (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text(),
+        "V64.4 element-aware toolbar / print styles are missing")
+require("class V64_4OptionStyleTest" in
+        (ROOT/"app/src/test/java/ir/exam/app/ui/app/V64_4OptionStyleTest.kt").read_text(),
+        "V64.4 option-style tests are missing")
 require("val weight = if (question.bold) FontWeight.Bold else null" in _doc_editor_v63
         and "val style = if (question.italic) FontStyle.Italic else null" in _doc_editor_v63,
         "V63.2 on-page style mirroring is missing")

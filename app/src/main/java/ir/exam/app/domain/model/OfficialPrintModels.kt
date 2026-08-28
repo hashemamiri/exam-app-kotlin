@@ -37,6 +37,8 @@ data class OfficialPrintQuestion(
     val text: String,
     val score: Double,
     val options: List<String> = emptyList(),
+    // V64.4 — استایل مستقل هر گزینه برای چاپ: (bold, italic, fontSizeSp?).
+    val optionStyles: List<Triple<Boolean, Boolean, Float?>?> = emptyList(),
     val answerText: String? = null,
     val answerLines: Int = 2,
     val answerLineStyle: String = "lined",

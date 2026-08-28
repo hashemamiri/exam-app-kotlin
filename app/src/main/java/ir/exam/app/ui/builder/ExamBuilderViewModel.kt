@@ -300,6 +300,14 @@ class ExamBuilderViewModel(
         update(id) { it.copy(text = FigureCodec.delete(it.text, occurrenceIndex)) }
     }
     fun updateScore(id: String, score: String) { update(id) { it.copy(score = score.toDoubleOrNull() ?: 0.0) } }
+    // V64.4 — استایل مستقل گزینه (بولد/ایتالیک/اندازه)؛ null = ارث از سؤال.
+    fun setOptionStyle(id: String, index: Int, change: (OptionStyle) -> OptionStyle) { update(id) { question ->
+        if (index !in question.options.indices) question else {
+            val styles = question.optionStyles.padStyles(question.options.size).toMutableList()
+            styles[index] = change(styles[index] ?: OptionStyle())
+            question.copy(optionStyles = styles)
+        }
+    } }
     fun updateOption(id: String, index: Int, text: String) { update(id) { question ->
         question.copy(options = question.options.mapIndexed { i, old -> if (i == index) text else old })
     } }
@@ -312,10 +320,12 @@ class ExamBuilderViewModel(
         val options = question.options.take(size) + List((size - question.options.size).coerceAtLeast(0)) { "" }
         val ids = question.optionIds.resizeIds(size)
         val images = question.optionImages.take(size) + List((size - question.optionImages.size).coerceAtLeast(0)) { null }
+        val styles = question.optionStyles.take(size) + List((size - question.optionStyles.size).coerceAtLeast(0)) { null }
         question.copy(
             options = options,
             optionIds = ids,
             optionImages = images,
+            optionStyles = styles,
             correctIndex = question.correctIndex?.coerceAtMost(size - 1)
         )
     } }
@@ -327,8 +337,9 @@ class ExamBuilderViewModel(
             val ids = question.optionIds.resizeIds(question.options.size).toMutableList()
                 .apply { add(at, UUID.randomUUID().toString()) }
             val images = question.optionImages.pad(question.options.size).toMutableList().apply { add(at, null) }
+            val styles = question.optionStyles.padStyles(question.options.size).toMutableList().apply { add(at, null) }
             val correct = question.correctIndex?.let { if (it >= at) it + 1 else it }
-            question.copy(options = options, optionIds = ids, optionImages = images, correctIndex = correct)
+            question.copy(options = options, optionIds = ids, optionImages = images, optionStyles = styles, correctIndex = correct)
         }
     } }
     fun removeOptionAt(id: String, index: Int) { update(id) { question ->
@@ -338,10 +349,11 @@ class ExamBuilderViewModel(
             // فعلی؛ سپس removeAt همان index (قبلاً +1 یک عنصر اضافه می‌گذاشت).
             val ids = question.optionIds.resizeIds(question.options.size).toMutableList().apply { removeAt(index) }
             val images = question.optionImages.pad(question.options.size).toMutableList().apply { removeAt(index) }
+            val styles = question.optionStyles.padStyles(question.options.size).toMutableList().apply { removeAt(index) }
             val correct = question.correctIndex?.let {
                 when { it == index -> null; it > index -> it - 1; else -> it }
             }
-            question.copy(options = options, optionIds = ids, optionImages = images, correctIndex = correct)
+            question.copy(options = options, optionIds = ids, optionImages = images, optionStyles = styles, correctIndex = correct)
         }
     } }
     fun moveOption(id: String, index: Int, delta: Int) { update(id) { question ->
@@ -352,13 +364,14 @@ class ExamBuilderViewModel(
                 add(to, removeAt(index))
             }
             val images = question.optionImages.pad(question.options.size).toMutableList().apply { add(to, removeAt(index)) }
+            val styles = question.optionStyles.padStyles(question.options.size).toMutableList().apply { add(to, removeAt(index)) }
             val current = question.correctIndex
             val correct = when {
                 current == index -> to
                 current != null && current in minOf(index, to)..maxOf(index, to) -> if (index < to) current - 1 else current + 1
                 else -> current
             }
-            question.copy(options = options, optionIds = ids, optionImages = images, correctIndex = correct)
+            question.copy(options = options, optionIds = ids, optionImages = images, optionStyles = styles, correctIndex = correct)
         }
     } }
     fun setCorrect(id: String, index: Int) { update(id) { it.copy(correctIndex = index) } }
@@ -655,6 +668,10 @@ private fun instantBefore(first: String, second: String): Boolean = runCatching 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 private fun <T> List<T>.replaceAt(index: Int, value: T): List<T> = mapIndexed { i, old -> if (i == index) value else old }
 private fun List<String?>.pad(size: Int): List<String?> = if (this.size >= size) this else this + List(size - this.size) { null }
+
+// V64.4 — هم‌ترازسازی لیست استایل گزینه‌ها با تعداد گزینه‌ها.
+private fun List<OptionStyle?>.padStyles(size: Int): List<OptionStyle?> =
+    take(size) + List((size - this.size).coerceAtLeast(0)) { null }
 
 private fun safeBuilderError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("URL:")

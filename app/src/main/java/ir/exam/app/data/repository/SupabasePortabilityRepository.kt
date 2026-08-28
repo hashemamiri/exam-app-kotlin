@@ -135,6 +135,9 @@ class SupabasePortabilityRepository {
                     text = question.text,
                     score = question.score,
                     options = question.options,
+                    optionStyles = question.optionStyles.map { style ->
+                        style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
+                    },
                     answerText = answer,
                     answerLines = question.answerLines,
                     answerLineStyle = question.answerLineStyle,

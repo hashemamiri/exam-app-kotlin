@@ -168,9 +168,14 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                 }
             }
             question.options.forEachIndexed { index, option ->
+                // V64.4 — استایل مستقل گزینه در چاپ؛ بدون استایل = مثل قبل.
+                val optionStyle = question.optionStyles.getOrNull(index)
+                val optionSize = (optionStyle?.third ?: question.fontSizeSp) * .9f
+                val optionBold = optionStyle?.first ?: false
+                val optionItalic = optionStyle?.second ?: false
                 NativeMathFormatter.segments("${index+1}) $option").forEach { segment ->
-                    if(segment.math)add(RenderBlock(formula=segment.text,textSize=question.fontSizeSp*.9f,fontFamily=question.fontFamily))
-                    else add(RenderBlock(text=segment.text,textSize=question.fontSizeSp*.9f,fontFamily=question.fontFamily))
+                    if(segment.math)add(RenderBlock(formula=segment.text,textSize=optionSize,bold=optionBold,italic=optionItalic,fontFamily=question.fontFamily))
+                    else add(RenderBlock(text=segment.text,textSize=optionSize,bold=optionBold,italic=optionItalic,fontFamily=question.fontFamily))
                 }
             }
             question.images.forEachIndexed { index,image -> add(RenderBlock(

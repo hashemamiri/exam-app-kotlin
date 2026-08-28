@@ -1,6 +1,7 @@
 package ir.exam.app.data.repository
 
 import ir.exam.app.ui.builder.MediaDraft
+import ir.exam.app.ui.builder.OptionStyle
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import java.util.UUID
@@ -46,6 +47,17 @@ internal object ExamQuestionCodec {
                 options = obj["options"].asArrayOrEmpty().map { it.asString().orEmpty() },
                 optionIds = List(obj["options"].asArrayOrEmpty().size) { UUID.randomUUID().toString() },
                 optionImages = obj["optionImages"].asArrayOrEmpty().map { it.asString()?.takeIf(String::isNotBlank) },
+                // V64.4 — استایل هر گزینه؛ JSON قدیمی بدون optionStyles = همه null.
+                optionStyles = obj["optionStyles"].asArrayOrEmpty().map { element ->
+                    // آبجکت خالی = گزینهٔ بدون استایل (null)؛ فقط آبجکت غیرخالی OptionStyle می‌شود.
+                    (element as? JsonObject)?.takeIf { it.isNotEmpty() }?.let { styleObj ->
+                        OptionStyle(
+                            bold = styleObj["b"]?.asBoolean() ?: false,
+                            italic = styleObj["i"]?.asBoolean() ?: false,
+                            fontSizeSp = styleObj["s"]?.asDouble()?.toFloat()
+                        )
+                    }
+                },
                 correctIndex = key["correctOption"]?.asInt() ?: obj["correctIndex"]?.asInt(),
                 expectedText = when (type) {
                     QuestionType.TRUE_FALSE -> (key["correctAnswer"]?.asBoolean() ?: false).toString()
@@ -125,6 +137,18 @@ internal object ExamQuestionCodec {
                 values["optionImages"] = JsonArray(question.options.indices.map { index ->
                     question.optionImages.getOrNull(index)?.let(::JsonPrimitive) ?: JsonPrimitive("")
                 })
+                // V64.4 — فقط وقتی استایلی هست بنویس تا JSON قدیمی دست‌نخورده بماند.
+                if (question.optionStyles.any { it != null }) {
+                    values["optionStyles"] = JsonArray(question.options.indices.map { index ->
+                        question.optionStyles.getOrNull(index)?.let { style ->
+                            JsonObject(buildMap {
+                                put("b", JsonPrimitive(style.bold))
+                                put("i", JsonPrimitive(style.italic))
+                                style.fontSizeSp?.let { put("s", JsonPrimitive(it)) }
+                            })
+                        } ?: JsonObject(emptyMap())
+                    })
+                }
             }
             if (question.type == QuestionType.MATCHING) {
                 values["leftItems"] = JsonArray(question.matchingLeft.map(::JsonPrimitive))
