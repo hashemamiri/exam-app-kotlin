@@ -29,6 +29,7 @@ import kotlinx.coroutines.withContext
  */
 class LocalImageRepository(context: Context) : ImageRepository {
     private val appContext = context.applicationContext
+    private var lastCleanupAtMs = 0L
 
     override suspend fun prepare(request: ImageEditRequest): Result<PreparedImage> = runCatching {
         withContext(Dispatchers.IO) {
@@ -211,8 +212,13 @@ class LocalImageRepository(context: Context) : ImageRepository {
     }
 
     private fun cleanupOldFiles() {
+        // پاک‌سازی پوشه برای هر انتخاب/ویرایش تصویر لازم نیست؛ اسکن مکرر
+        // فایل‌ها روی دستگاه‌های کند، شروع ویرایشگر را محسوس کند می‌کند.
+        val now = System.currentTimeMillis()
+        if (now - lastCleanupAtMs < CLEANUP_INTERVAL_MS) return
+        lastCleanupAtMs = now
         File(appContext.filesDir, "edited-images").listFiles()
-            ?.filter { System.currentTimeMillis() - it.lastModified() > 14L * 24 * 60 * 60 * 1000 }
+            ?.filter { now - it.lastModified() > 14L * 24 * 60 * 60 * 1000 }
             ?.forEach(File::delete)
     }
 
@@ -225,5 +231,6 @@ class LocalImageRepository(context: Context) : ImageRepository {
         const val SAFETY_DIVISOR = 3L
         const val JPEG_QUALITY = 92
         const val MAX_ATTEMPTS = 4
+        const val CLEANUP_INTERVAL_MS = 6L * 60 * 60 * 1000
     }
 }
