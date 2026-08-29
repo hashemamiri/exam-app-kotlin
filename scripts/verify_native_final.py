@@ -2323,6 +2323,49 @@ require("class V68_3PrintEditorWordBehaviorTest" in _v68_test
         and "spans shift with caret-ordered text edits" in _v68_test,
         "V68.3 word behavior regression tests are missing (root() helper is mandatory)")
 
+# ---- V68.4: free figure drag + every object clamped to its own question block ----
+# (درخواست کاربر): شکل‌ها/نمودارها/جدول‌ها مثل تصاویر کشیدنی‌اند اما هر شیء
+# فقط داخل محدودهٔ بلوک خودِ سؤال حرکت می‌کند؛ موقعیت شکل در X.fx/X.fy همان
+# توکن %%FIG%% ماندگار و در چاپ رسمی از مسیر free-image رندر می‌شود.
+_v684_layout=(ROOT/"app/src/main/java/ir/exam/app/core/printing/WordPageLayout.kt").read_text()
+_v684_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+_v684_vm=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
+_v684_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_4ObjectBoundsTest.kt").read_text()
+require("fun figurePosMm(" in _v684_layout and "fun withFigurePosMm(" in _v684_layout
+        and 'const val FIGURE_POS_X_KEY: String = "fx"' in _v684_layout
+        and 'const val FIGURE_POS_Y_KEY: String = "fy"' in _v684_layout
+        and "kotlin.math.roundToInt" in _v684_layout,
+        "V68.4 figure free position keys (X.fx/X.fy) are missing from WordPageLayout")
+require("onMoveFigure: (String, Int, Float, Float) -> Unit" in _v68_editor
+        and "onMoveFigure = { occ, x, y -> onMoveFigure(question.id, occ, x, y) }" in _v68_editor
+        and "WordPageLayout.withFigurePosMm(occ.spec, xMm, yMm)" in _v68_editor,
+        "V68.4 figure move is not threaded through the document editor")
+require("if (selected && !locked) Modifier.pointerInput(spec.raw, anchorPosMm, boundsHeightMm, shownWidthMm)" in _v68_editor
+        and "detectDragGestures" in _v68_editor
+        and "WordPageLayout.figurePosMm(spec)" in _v68_editor
+        and "dragMm = null" in _v68_editor,
+        "V68.4 figure body-drag with lock respect is missing from the editor")
+require("blockHeightMm = it.size.height / pxPerMm" in _v68_editor
+        and "(boundsHeightMm - heightMm).coerceAtLeast(0f)" in _v68_editor
+        and "figureAnchors[occIndex]" in _v68_editor
+        and "imageSlotTops[media.id]" in _v68_editor
+        and "anchorTopMm = imageSlotTops[media.id] ?: 0f" in _v68_editor
+        and "boundsHeightMm = blockHeightMm" in _v68_editor,
+        "V68.4 per-question-block bounds (natural anchor + block height) are missing")
+require("yMm = yMm.coerceIn(-300f, 300f)" in _v684_vm,
+        "V68.4 moveImage must accept negative slot offsets (image above its slot)")
+require("val figPos = WordPageLayout.figurePosMm(rich.spec)" in _v684_pdf
+        and 'imagePosition=if (figPos != null) "free" else "below"' in _v684_pdf
+        and "(block.imageYmm/297f*80f).coerceIn(0f,80f)" in _v684_pdf
+        and "WordPageLayout.figureWidthMm(rich.spec)" in _v684_pdf,
+        "V68.4 official print does not render positioned figures via the free path")
+require("class V68_4ObjectBoundsTest" in _v684_test
+        and "private fun root(): File" in _v684_test
+        and "figure free position roundtrips through the token with one decimal" in _v684_test
+        and "object motion clamps to the bounds of its own question block" in _v684_test
+        and "official print renders positioned figures through the free-image path" in _v684_test,
+        "V68.4 object-bounds regression tests are missing (root() helper is mandatory)")
+
 # V68.3 — پاک‌سازی ریشهٔ ریپو: پچ‌های قدیمی کامیت‌شده و gitlink تودرتو ممنوع.
 # gitlink تودرتو با اسکن index گیت تشخیص داده می‌شود (حتی در checkout تازهٔ CI
 # که پوشه خالی است)؛ «حذفِ در حال انجام» (بین git apply و git add) خطا نیست.

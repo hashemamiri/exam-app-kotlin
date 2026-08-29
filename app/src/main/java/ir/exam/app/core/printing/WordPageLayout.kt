@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
+import kotlin.math.roundToInt
 
 /**
  * V63.0 — موتور صفحه‌بندی «ویرایشگر سند» (Word-مانند).
@@ -155,6 +156,30 @@ object WordPageLayout {
     /** جای افقی تصویر آزاد همیشه داخل ناحیهٔ چاپ می‌ماند. */
     fun clampImageXmm(xMm: Float, widthMm: Float): Float =
         xMm.coerceIn(0f, (USABLE_WIDTH_MM - widthMm).coerceAtLeast(0f))
+
+    // V68.4 — موقعیت آزاد شکل: X.fx (mm مطلق از چپ بلوک سؤال) و X.fy
+    // (mm آفست عمودی از جای طبیعی درون‌متنی — همان قرارداد yMm تصویر، تا چاپ
+    // رسمی از همان مسیر free-image بدون تغییر مقیاس استفاده کند). حضور «هر
+    // دو» یعنی شکل آزاد جابه‌جا شده؛ غیبت هرکدام = همان رندر درون‌متنی قبلی.
+    const val FIGURE_POS_X_KEY: String = "fx"
+    const val FIGURE_POS_Y_KEY: String = "fy"
+
+    /** جابه‌جایی آزاد ذخیره‌شدهٔ شکل: fx مطلق از چپ بلوک + fy آفست از جای طبیعی؛ null = درون‌متنی. */
+    fun figurePosMm(spec: FigureSpec): Pair<Float, Float>? {
+        val x = spec.xStr(FIGURE_POS_X_KEY, "").toFloatOrNull() ?: return null
+        val y = spec.xStr(FIGURE_POS_Y_KEY, "").toFloatOrNull() ?: return null
+        return x to y
+    }
+
+    /** نسخهٔ جدید spec با موقعیت آزاد X.fx/X.fy (یک رقم اعشار؛ بقیهٔ کلیدها دست‌نخورده). */
+    fun withFigurePosMm(spec: FigureSpec, xMm: Float, yMm: Float): FigureSpec {
+        val extras = ((spec.raw["X"] as? JsonObject)?.toMutableMap() ?: mutableMapOf())
+        extras[FIGURE_POS_X_KEY] = JsonPrimitive(((xMm * 10f).roundToInt() / 10f).toString())
+        extras[FIGURE_POS_Y_KEY] = JsonPrimitive(((yMm * 10f).roundToInt() / 10f).toString())
+        val raw = spec.raw.toMutableMap()
+        raw["X"] = JsonObject(extras)
+        return FigureSpec(JsonObject(raw))
+    }
 
     /** برآورد جای عمودی حالت آزاد در پیش‌نمایش (هم‌ارز سقف 80pt چاپ). */
     fun freePreviewYmm(yMm: Float): Float = (yMm / PAGE_HEIGHT_MM * 28f).coerceAtMost(28f)

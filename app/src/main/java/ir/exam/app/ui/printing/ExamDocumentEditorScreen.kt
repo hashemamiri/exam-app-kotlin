@@ -49,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +69,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import ir.exam.app.ui.builder.StyleSpanOps
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.IntOffset
@@ -346,6 +348,16 @@ fun ExamDocumentEditorScreen(
                         questionId, occurrenceIndex,
                         WordPageLayout.withFigureWidthMm(occ.spec, widthMm)
                     )
+                },
+                // V68.4 — جابه‌جایی آزاد شکل/نمودار/جدول: موقعیت مطلق نسبت به
+                // بالا-چپ بلوک همان سؤال در X.fx/X.fy توکن %%FIG%% ذخیره می‌شود.
+                onMoveFigure = { questionId, occurrenceIndex, xMm, yMm ->
+                    val question = state.questions.firstOrNull { it.id == questionId }
+                    val occ = question?.let { FigureCodec.occurrences(it.text).getOrNull(occurrenceIndex) }
+                    if (occ != null) builder.updateFigure(
+                        questionId, occurrenceIndex,
+                        WordPageLayout.withFigurePosMm(occ.spec, xMm, yMm)
+                    )
                 }
             )
         }
@@ -429,7 +441,8 @@ private fun WordFlowDocument(
     onImageFreeMove: (String) -> Unit,
     onMoveImage: (String, String, Float, Float) -> Unit,
     onResizeImage: (String, String, Float) -> Unit,
-    onResizeFigure: (String, Int, Float) -> Unit
+    onResizeFigure: (String, Int, Float) -> Unit,
+    onMoveFigure: (String, Int, Float, Float) -> Unit
 ) {
     val scroll = rememberScrollState()
     // V68 — زوم دو-انگشتی (pinch) بدون شکستن اسکرول تک‌انگشتی.
@@ -481,7 +494,8 @@ private fun WordFlowDocument(
                         onImageFreeMove = { onImageFreeMove(question.id) },
                         onMoveImage = { imageId, x, y -> onMoveImage(question.id, imageId, x, y) },
                         onResizeImage = { imageId, w -> onResizeImage(question.id, imageId, w) },
-                        onResizeFigure = { occ, w -> onResizeFigure(question.id, occ, w) }
+                        onResizeFigure = { occ, w -> onResizeFigure(question.id, occ, w) },
+                        onMoveFigure = { occ, x, y -> onMoveFigure(question.id, occ, x, y) }
                     )
                 }.first().measure(blockConstraints)
             }
@@ -553,7 +567,8 @@ private fun WordQuestionBlock(
     onImageFreeMove: () -> Unit,
     onMoveImage: (String, Float, Float) -> Unit,
     onResizeImage: (String, Float) -> Unit,
-    onResizeFigure: (Int, Float) -> Unit
+    onResizeFigure: (Int, Float) -> Unit,
+    onMoveFigure: (Int, Float, Float) -> Unit
 ) {
     // V63.8 — هم‌مقیاسی دقیق با چاپ: چاپ متن را با textSize=fontSizeSp پوینت
     // روی عرض ۵۱۹pt می‌چیند (595-2×38). اینجا همان نسبت روی عرض واقعی صفحه
@@ -585,6 +600,14 @@ private fun WordQuestionBlock(
     val segmentBounds = remember(question.id) { mutableStateMapOf<Int, Rect>() }
     val segmentFocusers = remember(question.id) { mutableStateMapOf<Int, FocusRequester>() }
     var blockCoords by remember(question.id) { mutableStateOf<LayoutCoordinates?>(null) }
+    // V68.4 — محدودیت حرکت آزاد هر شیء به «همان بلوک سؤال»:
+    // ارتفاع بلوک (mm) + جای طبیعی (mm از بالا-چپ بلوک) هر شکل/تصویر.
+    val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
+        WordPageLayout.mmToDp(1f, zoom).dp.toPx()
+    }
+    var blockHeightMm by remember(question.id) { mutableStateOf(0f) }
+    val figureAnchors = remember(question.id) { mutableStateMapOf<Int, Pair<Float, Float>>() }
+    val imageSlotTops = remember(question.id) { mutableStateMapOf<String, Float>() }
     var pendingFocusPart by remember(question.id) { mutableStateOf<Int?>(null) }
     LaunchedEffect(editable, pendingFocusPart) {
         if (editable) {
@@ -598,7 +621,10 @@ private fun WordQuestionBlock(
     Column(
         Modifier
             .fillMaxWidth()
-            .onGloballyPositioned { blockCoords = it }
+            .onGloballyPositioned { blockCoords = it
+                // V68.4 — سقف حرکت آزاد اشیا = ارتفاع خودِ بلوک سؤال.
+                blockHeightMm = it.size.height / pxPerMm
+            }
             .pointerInput(question.id) {
                 detectTapGestures(onTap = { pos ->
                     onSelect()
@@ -679,13 +705,28 @@ private fun WordQuestionBlock(
                         )
                         is ir.exam.app.core.text.RichSegment.Figure -> {
                             val occIndex = figureCursor++
-                            ResizableFigure(
-                                spec = part.spec,
-                                zoom = zoom,
-                                selected = selectedFigureIndex == occIndex,
-                                onSelect = { onSelectFigure(occIndex) },
-                                onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
-                            )
+                            // V68.4 — لنگرِ جای طبیعی (بدون آفست) در جریان متن؛
+                            // شکل اسلات خود را رزرو می‌کند و آفست بصری آزاد است.
+                            Box(
+                                Modifier.onGloballyPositioned { c ->
+                                    val block = blockCoords
+                                    if (block != null) figureAnchors[occIndex] =
+                                        ((c.positionInRoot().x - block.positionInRoot().x) / pxPerMm) to
+                                            ((c.positionInRoot().y - block.positionInRoot().y) / pxPerMm)
+                                }
+                            ) {
+                                ResizableFigure(
+                                    spec = part.spec,
+                                    zoom = zoom,
+                                    selected = selectedFigureIndex == occIndex,
+                                    locked = objectsLocked,
+                                    anchorPosMm = figureAnchors[occIndex] ?: (0f to 0f),
+                                    boundsHeightMm = blockHeightMm,
+                                    onMove = { xMm, yMm -> onMoveFigure(occIndex, xMm, yMm) },
+                                    onSelect = { onSelectFigure(occIndex) },
+                                    onResized = { widthMm -> onResizeFigure(occIndex, widthMm) }
+                                )
+                            }
                         }
                         is ir.exam.app.core.text.RichSegment.Text -> {
                             val segRange = segRanges.getOrNull(partIndex)
@@ -821,13 +862,27 @@ private fun WordQuestionBlock(
         // V64.2 — در حالت ویرایش، شکل‌ها داخل جریان قطعه‌ای درجا رندر شدند؛
         // این بلوک فقط برای حالت نمایش است وگرنه شکل دوبار دیده می‌شد.
         if (!editable) figureOccurrences.forEachIndexed { occurrenceIndex, occ ->
-            ResizableFigure(
-                spec = occ.spec,
-                zoom = zoom,
-                selected = selectedFigureIndex == occurrenceIndex,
-                onSelect = { onSelectFigure(occurrenceIndex) },
-                onResized = { widthMm -> onResizeFigure(occurrenceIndex, widthMm) }
-            )
+            // V68.4 — همان لنگر طبیعی برای شاخهٔ نمایش (بدون ویرایش متن).
+            Box(
+                Modifier.onGloballyPositioned { c ->
+                    val block = blockCoords
+                    if (block != null) figureAnchors[occurrenceIndex] =
+                        ((c.positionInRoot().x - block.positionInRoot().x) / pxPerMm) to
+                            ((c.positionInRoot().y - block.positionInRoot().y) / pxPerMm)
+                }
+            ) {
+                ResizableFigure(
+                    spec = occ.spec,
+                    zoom = zoom,
+                    selected = selectedFigureIndex == occurrenceIndex,
+                    locked = objectsLocked,
+                    anchorPosMm = figureAnchors[occurrenceIndex] ?: (0f to 0f),
+                    boundsHeightMm = blockHeightMm,
+                    onMove = { xMm, yMm -> onMoveFigure(occurrenceIndex, xMm, yMm) },
+                    onSelect = { onSelectFigure(occurrenceIndex) },
+                    onResized = { widthMm -> onResizeFigure(occurrenceIndex, widthMm) }
+                )
+            }
         }
 
         // V64.0 — مدل Word-مانند: هر گزینه/سمت جورکردنی «بلوک مستقل» است؛
@@ -906,19 +961,33 @@ private fun WordQuestionBlock(
         }
 
         question.images.forEach { media ->
-            DraggableQuestionImage(
-                media = media,
-                zoom = zoom,
-                freePlacement = question.imagePosition == "free",
-                selected = selectedImageId == media.id,
-                locked = objectsLocked,
-                onSelect = { onSelectImage(media.id) },
-                // V68 — دستگیرهٔ گوشه: اندازه با کشیدن همان‌جا عوض می‌شود.
-                onResize = { w -> onResizeImage(media.id, w) },
-                // V63.8 — با اولین کشیدن، تصویر خودکار «آزاد» می‌شود.
-                onFreeMove = onImageFreeMove,
-                onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) }
-            )
+            // V68.4 — اسلات طبیعی تصویر (انتهای بلوک) با این wrapper اندازه‌گیری
+            // می‌شود تا آفست ذخیره‌شده (yMm) به مختصات مطلق بلوک تبدیل و clamp شود.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { c ->
+                        val block = blockCoords
+                        if (block != null) imageSlotTops[media.id] =
+                            (c.positionInRoot().y - block.positionInRoot().y) / pxPerMm
+                    }
+            ) {
+                DraggableQuestionImage(
+                    media = media,
+                    zoom = zoom,
+                    freePlacement = question.imagePosition == "free",
+                    selected = selectedImageId == media.id,
+                    locked = objectsLocked,
+                    anchorTopMm = imageSlotTops[media.id] ?: 0f,
+                    boundsHeightMm = blockHeightMm,
+                    onSelect = { onSelectImage(media.id) },
+                    // V68 — دستگیرهٔ گوشه: اندازه با کشیدن همان‌جا عوض می‌شود.
+                    onResize = { w -> onResizeImage(media.id, w) },
+                    // V63.8 — با اولین کشیدن، تصویر خودکار «آزاد» می‌شود.
+                    onFreeMove = onImageFreeMove,
+                    onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) }
+                )
+            }
         }
 
         // V64.0 — نقطه‌چین/خط پاسخ از ویرایشگر حذف شد (درخواست کاربر):
@@ -1072,6 +1141,8 @@ private fun DraggableQuestionImage(
     freePlacement: Boolean,
     selected: Boolean,
     locked: Boolean,
+    anchorTopMm: Float,
+    boundsHeightMm: Float,
     onSelect: () -> Unit,
     onResize: (Float) -> Unit,
     onFreeMove: () -> Unit,
@@ -1090,9 +1161,21 @@ private fun DraggableQuestionImage(
     val liveWidthMm = (liveResizeMm ?: widthMm).coerceIn(
         WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM
     )
+    // V68.4 — سقف عمودی = محدودهٔ خودِ بلوک سؤال: بالا-چپ بلوک تا
+    // (ارتفاع بلوک − ارتفاع تصویر). تصویر سؤال ۱ دیگر وارد سؤال ۲ نمی‌شود.
+    val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - heightMm).coerceAtLeast(0f)
+    else Float.MAX_VALUE
     // V63.9 — آفست زنده حتی قبل از free شدن هم دیده می‌شود تا درگ واقعاً کار کند.
     val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm)
-    val baseYmm = (if (freePlacement) media.yMm.coerceIn(0f, 60f) else 0f) + dragYmm
+    // V68.4 — yMm ذخیره‌شده = آفست از اسلات طبیعی (انتهای بلوک)؛ برای clamp
+    // به مختصات مطلق بلوک تبدیل و بعد دوباره به آفست برمی‌گردیم.
+    val visualTopMm =
+        (anchorTopMm + (if (freePlacement) media.yMm else 0f) + dragYmm).coerceIn(0f, maxTopMm)
+    val baseYmm = visualTopMm - anchorTopMm
+    // V68.4 — مقدار تازهٔ لنگر/سقف برای onDragEnd (بدون restart ژست؛
+    // کلید pointerInput همان media.id, zoom قبلی می‌ماند).
+    val currentAnchorTopMm by rememberUpdatedState(anchorTopMm)
+    val currentBoundsHeightMm by rememberUpdatedState(boundsHeightMm)
 
     // V63.8 — بدون لکهٔ آبی: لمس = انتخاب؛ شیء انتخاب‌شده با کشیدن انگشت
     // آزادانه جابه‌جا می‌شود (+/− نوار ابزار اندازه را عوض می‌کند).
@@ -1115,9 +1198,21 @@ private fun DraggableQuestionImage(
                         },
                         onDragEnd = {
                             onFreeMove()
+                            // V68.4 — commit هم مثل رندر زنده به محدودهٔ خودِ
+                            // بلوک clamp می‌شود؛ y به‌صورت آفست از اسلات طبیعی
+                            // ذخیره می‌شود (می‌تواند منفی = بالاتر از اسلات).
+                            val anchor = currentAnchorTopMm
+                            val dragMaxTopMm = if (currentBoundsHeightMm > 0f)
+                                (currentBoundsHeightMm - heightMm).coerceAtLeast(0f)
+                            else Float.MAX_VALUE
+                            val topMm = (
+                                anchor + (if (freePlacement) media.yMm else 0f) + dragYmm
+                                ).coerceIn(0f, dragMaxTopMm)
                             onMoved(
-                                (media.xMm + dragXmm).coerceIn(0f, 190f),
-                                (media.yMm + dragYmm).coerceIn(0f, 270f)
+                                WordPageLayout.clampImageXmm(
+                                    (if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm
+                                ),
+                                topMm - anchor
                             )
                             dragXmm = 0f; dragYmm = 0f
                         }
@@ -1153,32 +1248,82 @@ private fun DraggableQuestionImage(
 /**
  * V63.1 — شکل/نمودار/جدول درون‌متنی با دستگیرهٔ تغییر اندازه؛ عرض جدید داخل
  * X.wmm همان توکن %%FIG%% ذخیره می‌شود و چاپ رسمی همان را می‌خواند.
+ * V68.4 — کشیدن بدنه شکل هم آزادانه جابه‌جایش می‌کند؛ fx مطلق از چپ بلوک و
+ * fy آفست از جای طبیعی (مثل قرارداد تصویر) در X.fx/X.fy ذخیره می‌شود و
+ * رندر همیشه به محدودهٔ همان بلوک clamp می‌شود (شکل سؤال ۱ وارد سؤال ۲
+ * نمی‌شود). اسلات درون‌متنی خودش را رزرو می‌کند تا ارتفاع بلوک ثابت بماند؛
+ * آفست فقط بصری است.
  */
 @Composable
 private fun ResizableFigure(
     spec: ir.exam.app.core.figure.FigureSpec,
     zoom: Float,
     selected: Boolean,
+    locked: Boolean,
+    anchorPosMm: Pair<Float, Float>,
+    boundsHeightMm: Float,
+    onMove: (Float, Float) -> Unit,
     onSelect: () -> Unit,
     onResized: (Float) -> Unit
 ) {
     // V68 — اندازه با دستگیرهٔ گوشه مثل ورد (کشیدن = تغییر زنده).
     val widthMm = WordPageLayout.figureWidthMm(spec)
+    val heightMm = WordPageLayout.figureHeightMm(spec)
     var liveResizeMm by remember(spec.raw) { mutableStateOf<Float?>(null) }
+    // V68.4 — آفست زندهٔ حین درگ بدنه (mm)؛ با رها شدن commit می‌شود.
+    var dragMm by remember(spec.raw) { mutableStateOf<Pair<Float, Float>?>(null) }
     val shownWidthMm = (liveResizeMm ?: widthMm).coerceIn(
         WordPageLayout.FIGURE_MIN_WIDTH_MM, WordPageLayout.FIGURE_MAX_WIDTH_MM
     )
     val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
         WordPageLayout.mmToDp(1f, zoom).dp.toPx()
     }
+    // V68.4 — موقعیت پایه: x مطلق از چپ بلوک (مثل تصویر آزاد) و fy = آفست
+    // عمودی از جای طبیعی درون‌متنی (همان قرارداد yMm تصویر؛ سازگار با چاپ).
+    val pos = WordPageLayout.figurePosMm(spec)
+    val baseLeftMm = pos?.first ?: anchorPosMm.first
+    val baseTopMm = anchorPosMm.second + (pos?.second ?: 0f)
+    // V68.4 — clamp به محدودهٔ خودِ بلوک سؤال: بالا ∈ [0, ارتفاع بلوک − ارتفاع شکل].
+    val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - heightMm).coerceAtLeast(0f)
+    else Float.MAX_VALUE
+    val visualLeftMm = WordPageLayout.clampImageXmm(baseLeftMm + (dragMm?.first ?: 0f), shownWidthMm)
+    val visualTopMm = (baseTopMm + (dragMm?.second ?: 0f)).coerceIn(0f, maxTopMm)
+    // آفست بصری نسبت به اسلات رزروشدهٔ طبیعی (جریان متن تغییر نمی‌کند).
+    val offXmm = visualLeftMm - anchorPosMm.first
+    val offYmm = visualTopMm - anchorPosMm.second
     Box(
         Modifier
             .padding(top = WordPageLayout.mmToDp(1.5f, zoom).dp)
+            .offset { IntOffset((offXmm * pxPerMm).roundToInt(), (offYmm * pxPerMm).roundToInt()) }
             .width(WordPageLayout.mmToDp(shownWidthMm, zoom).dp)
             .then(
                 if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier
             )
             .pointerInput(spec.raw) { detectTapGestures(onTap = { onSelect() }) }
+            .then(
+                // V68.4 — درگ بدنه شکل مثل تصاویر: فقط انتخاب‌شده و باز (قفل = ثابت).
+                if (selected && !locked) Modifier.pointerInput(spec.raw, anchorPosMm, boundsHeightMm, shownWidthMm) {
+                    detectDragGestures(
+                        onDrag = { change, drag ->
+                            change.consume()
+                            dragMm = ((dragMm?.first ?: 0f) + drag.x / pxPerMm) to
+                                ((dragMm?.second ?: 0f) + drag.y / pxPerMm)
+                        },
+                        onDragEnd = {
+                            // V68.4 — commit در X.fx/X.fy: fx مطلق از چپ بلوک
+                            // (clamp ناحیهٔ چاپ) و fy آفست از جای طبیعی؛ commit
+                            // روی مختصات مطلقِ clamp‌شدهٔ بلوک حساب می‌شود.
+                            val x = WordPageLayout.clampImageXmm(
+                                baseLeftMm + (dragMm?.first ?: 0f), shownWidthMm
+                            )
+                            val topAbs = (baseTopMm + (dragMm?.second ?: 0f)).coerceIn(0f, maxTopMm)
+                            dragMm = null
+                            onMove(x, topAbs - anchorPosMm.second)
+                        },
+                        onDragCancel = { dragMm = null }
+                    )
+                } else Modifier
+            )
     ) {
         // V64.2 — آناتومی/فیزیک (kind a/s) تصویر واقعی می‌خواهند نه SVG برچسبی؛
         // همان مسیر AtlasFigureView که NativeMathText/چاپ استفاده می‌کنند.
@@ -1192,7 +1337,8 @@ private fun ResizableFigure(
         } else {
             InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
         }
-        if (selected) {
+        // V68.4 — دستگیره‌ها مثل تصاویر فقط در حالت باز (قفل = ثابت).
+        if (selected && !locked) {
             ObjectCornerHandles(
                 onLiveDeltaPx = { dxPx ->
                     liveResizeMm = (liveResizeMm ?: widthMm) + dxPx / pxPerMm

@@ -533,8 +533,10 @@ class ExamBuilderViewModel(
         })
     } }
     fun moveImage(questionId: String, imageId: String, xMm: Float, yMm: Float) { update(questionId) { question ->
+        // V68.4 — yMm = آفست از اسلات طبیعی (انتهای بلوک)؛ با clamp بلوکی
+        // در ویرایشگر می‌تواند منفی هم باشد (تصویر بالاتر از اسلات، داخل همان سؤال).
         question.copy(images = question.images.map { image ->
-            if (image.id == imageId) image.copy(xMm = xMm.coerceIn(0f, 190f), yMm = yMm.coerceIn(0f, 270f)) else image
+            if (image.id == imageId) image.copy(xMm = xMm.coerceIn(0f, 190f), yMm = yMm.coerceIn(-300f, 300f)) else image
         })
     } }
     fun resizeImage(questionId: String, imageId: String, widthMm: Float) { update(questionId) { question ->

@@ -169,7 +169,17 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                     is RichSegment.Math -> add(RenderBlock(formula=rich.tex,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
                     is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
                         // V63.1 — عرض ذخیره‌شده در خود توکن؛ بدون wmm همان ۹۵ قبلی.
-                        add(RenderBlock(image=bmp,imageWidthMm=WordPageLayout.figureWidthMm(rich.spec)))
+                        // V68.4 — شکلِ جابه‌جا شده (X.fx/X.fy: fx مطلق از چپ بلوک،
+                        // fy آفست از جای طبیعی — همان قرارداد تصویر آزاد) از مسیر
+                        // free تصویر در همان جایگاه چاپ می‌شود؛ بدون آن = درون‌متنی.
+                        val figPos = WordPageLayout.figurePosMm(rich.spec)
+                        add(RenderBlock(
+                            image=bmp,
+                            imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),
+                            imagePosition=if (figPos != null) "free" else "below",
+                            imageXmm=figPos?.first ?: 20f,
+                            imageYmm=figPos?.second ?: 30f
+                        ))
                     } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                     is RichSegment.Text -> if (rich.text.isNotBlank()) {
                         // V68 — بولد/ایتالیک بازه‌ای مثل ورد: استایل‌ها با Spannable
@@ -398,7 +408,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val scale=minOf(targetWidth/bitmap.width,maxHeight/bitmap.height,1f)
         val width=bitmap.width*scale;val height=bitmap.height*scale
         val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm/210f*CONTENT_WIDTH).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
-        val y=if(block.imagePosition=="free")top+(block.imageYmm/297f*80f).coerceAtMost(80f)else top+3f
+        val y=if(block.imagePosition=="free")top+(block.imageYmm/297f*80f).coerceIn(0f,80f)else top+3f
         canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
     }
 

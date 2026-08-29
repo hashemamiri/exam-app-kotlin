@@ -12150,3 +12150,124 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ۲) چاپ PDF همان تکه را ضخیم چاپ کند (برای نوع غیر جورکردنی).
 ۳) بقیهٔ چک‌لیست V68.3 بدون تغییر.
 ```
+
+---
+
+## ۲۴۹) V68.4 — حرکت آزاد شکل/نمودار + محدودیت همهٔ اشیا به محدودهٔ خودِ سؤال
+
+درخواست کاربر: «شکلها و نمودارها و ... در ویرایشگر چاپ حرکت آزادانه داشته باشند
+اما محدودیت حرکت فقط مختص همان سوال باشد یعنی مثلا تصاویر سوال یک فقط در
+محدوده سوال یک حرکت کنند».
+
+### تصمیم‌های کلیدی
+
+۱) **قرارداد ذخیرهٔ موقعیت شکل در توکن %%FIG%%** (بدون مهاجرت داده؛ توکن قدیمی
+   بدون کلید = همان رندر درون‌متنی قبلی):
+   - `X.fx` = mm **مطلق از چپ بلوک** سؤال (همان قرارداد xMm تصویر آزاد).
+   - `X.fy` = mm **آفست عمودی از جای طبیعی درون‌متنی** شکل — نه مطلق از
+     بالای بلوک! دلیل: مسیر چاپ free تصویر (`drawImage`) y را نسبت به
+     «جایگاه جریان خودِ بلوک» می‌کشد (`top + yMm/297*80`)؛ اگر fy مطلق از
+     بالای بلوک بود، در چاپ به‌اندازهٔ متنِ بالای شکل پایین‌تر می‌افتاد. با
+     آفست، شکل دقیقاً مثل تصویر آزاد رفتار می‌کند (x مطلق، y آفست) و هیچ
+     تغییری در drawImage/measureBlock لازم نشد.
+   - حضور «هر دو» کلید = آزاد؛ غیبت هرکدام یا مقدار غیرعددی = درون‌متنی.
+   - ذخیره با یک رقم اعشار: `((v*10).roundToInt()/10f).toString()` (نه
+     String.format — خطر locale؛ درس قدیمی). roundToInt کاتلین نیم را به
+     سمت +∞ می‌برد (63.25 → 63.3).
+
+۲) **clamp بلوکی در ویرایشگر** (هم شکل هم تصویر):
+   - `blockHeightMm = onGloballyPositioned بلوک / pxPerMm` (ارتفاع واقعی).
+   - سقف عمودی: `maxTopMm = (boundsHeightMm - ارتفاع شیء).coerceAtLeast(0f)`
+     → شیء سؤال ۱ وارد سؤال ۲ نمی‌شود؛ افقی همان `clampImageXmm` قبلی.
+   - **لنگر طبیعی** هر شیء با Boxِ رپر `onGloballyPositioned` اندازه‌گیری
+     می‌شود (positionInRoot نسبت به blockCoords): شکل‌ها در هر دو شاخهٔ
+     editable (FlowRow با figureCursor) و نمایش (`figureOccurrences`)،
+     تصاویر با `imageSlotTops[media.id]`. اسلات درون‌متنی/انتهایی «رزرو»
+     می‌شود → ارتفاع بلوک ثابت → سقف clamp معتبر؛ آفست فقط بصری (.offset).
+   - تصویر: yMm ذخیره‌شده همان آفست از اسلات انتهایی ماند؛ فقط clamp رندر و
+     commit مطلق‌سازی شد (قبلاً رندر `coerceIn(0f,60f)` بود و تصویر می‌توانست
+     از پایین بلوک بیرون برود). آفست منفی (بالاتر از اسلات) مجاز شد:
+     `moveImage` حالا `yMm.coerceIn(-300f, 300f)`.
+   - چاپ: `(imageYmm/297f*80f).coerceIn(0f,80f)` (قبلاً فقط سقف 80 — حالا
+     کف 0 هم هست تا آفست منفی تصویر به بالای بلوک قبلی نرود).
+
+۳) **درگ بدنهٔ شکل** مثل تصاویر: `detectDragGestures` روی Box شکل، فقط
+   `selected && !locked` (قفل اشیا حالا هندل‌های resize شکل را هم می‌بندد —
+   قبلاً بی‌قید بود). commit: `onMove(x مطلق، topAbs − لنگر)` → updateFigure
+   با `withFigurePosMm`. threading: onMoveFigure از ExamDocumentEditorScreen
+   (همان الگوی onResizeFigure با FigureCodec.occurrences) → WordFlowDocument
+   → WordQuestionBlock → ResizableFigure.
+
+۴) **stale-closure بدون شکستن needle**: خط تاریخی
+   `if (selected && !locked) Modifier.pointerInput(media.id, zoom)` در تست
+   V63_7 و verify (بخش V63.9) قفل شده و شامل پرانتز بستهٔ `zoom)` است؛ کلید
+   pointerInput تصویر دست نخورد و مقادیر تازه (anchor/ارتفاع بلوک) با
+   `rememberUpdatedState` (currentAnchorTopMm/currentBoundsHeightMm) در
+   onDragEnd خوانده شد. برای شکل کلید pointerInput گسترده شد
+   (spec.raw, anchorPosMm, boundsHeightMm, shownWidthMm) چون needleی روی آن
+   خط نیست.
+
+۵) **چاپ رسمی**: شکل دارای fx/fy →
+   `RenderBlock(image, imageWidthMm=figureWidthMm, imagePosition="free",
+   imageXmm=fx, imageYmm=fy)` در همان مسیر free-image موجود؛ بدون آن همان
+   "below" وسط‌چین قبلی. ارتفاع جریان بلوک image در measureBlock رزرو
+   می‌شود (شکل اسلات خود را در چاپ هم نگه می‌دارد).
+
+### درس‌های تازه
+
+- **needle شامل پرانتز بسته است**: `pointerInput(media.id, zoom)` بعد از
+  افزودن کلید چهارم dead شد چون `)` جابه‌جا شد؛ قبل از امضای هر فراخوانیِ
+  needle-شده، substring را بایت‌به‌بایت چک کنید (شکست فقط در کلون تمیز
+  دیده شد چون verify ورک‌اسپیس قبل از آخرین ویرایش اجرا شده بود —
+  **verify را بعد از هر ویرایش آخر دوباره اجرا کن**).
+- **مرجع مختصات چاپ = جریان بلوک است نه بالای بلوک**: هر دادهٔ ماندگارِ
+  عمودی که قرار است در چاپ رسمی بازتولید شود باید «آفست از جای طبیعی» باشد،
+  نه مطلق از بالای بلوک (drawImage y را به top جریان خود بلوک می‌چسباند).
+- فریم اول (blockCoords/anchor هنوز null): anchor=0 و bounds=0 → رفتار
+  «بدون clamp» مثل قبل؛ بعد از اندازه‌گیری همان فریم درست می‌شود (jump تک‌فریمی
+  قابل قبول، مشابه الگوی قبلی segmentBounds).
+
+### تست‌ها
+
+```text
+جدید: V68_4ObjectBoundsTest —
+  roundtrip fx/fy با یک رقم اعشار + legacy null (فقط یک کلید/غیرعددی) +
+  هم‌نشینی fx/fy با wmm + شبیه‌سازی فرمول clamp بلوکی + needleهای قرارداد
+  (درگ شکل، threading onMoveFigure، مسیر free چاپ، fy آفست).
+اجرای پایتونی پورت‌شده (درس ۵۲): roundtrip/null/coexist + clamp بلوکی
+  شکل و تصویر (درگ پایین → 78 = لبهٔ بلوک؛ درگ بالا → 0) + آفست منفی
+  تصویر + رندر دوباره از fy ذخیره‌شده همان visual + مسیر چاپ free/below
+  و کف 0 برای fy منفی → ۴۹ چک PASS.
+verify: بخش جدید V68.4 (layout keys، threading، درگ شکل، لنگر/ارتفاع
+  بلوک، moveImage منفی، مسیر free چاپ، تست جدید) → PASS.
+تست‌های قدیمی V63_1/V63_7/V63_9/V68_3 needle-check شدند → همه زنده.
+FINAL_NATIVE_VERIFY=PASS kotlin_files=208 edge_functions=3
+کلون تمیز: git apply --check + verify + شبیه‌ساز → PASS.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/WordPageLayout.kt
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V68_4ObjectBoundsTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) ویرایشگر چاپ → سؤال ۱ با شکل/نمودار درون‌متنی → انتخاب شکل → کشیدن بدنه
+   → شکل آزادانه داخل «همان سؤال ۱» حرکت کند و رها نزدیک مرز پایین، روی
+   لبهٔ پایین سؤال ۱ بایستد (وارد سؤال ۲ نشود).
+۲) کشیدن تصویر سؤال ۱ → همان clamp به بلوک سؤال ۱ (نه سؤال قبل/بعد).
+۳) شکل جابه‌جاشده → ذخیره → خروج و ورود دوباره → همان‌جا؛ چاپ PDF رسمی هم
+   همان جایگاه نسبت به سؤال (مسیر free تصویر) رندر شود.
+۴) شکل/تصویر بدون جابه‌جایی و آزمون‌های قدیمی → ظاهر و چاپ مثل قبل
+   (درون‌متنی وسط‌چین / تصویر زیر سؤال).
+۵) قفل اشیا روشن → درگ و هندل‌های resize شکل و تصویر غیرفعال بمانند.
+```
