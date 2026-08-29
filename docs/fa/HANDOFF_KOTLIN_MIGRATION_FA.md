@@ -11956,3 +11956,79 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
    جایگزین شود و تکراری در ابتدای متن ساخته نشود.
 ۴) درج فرمول در متن چندتوکنه (فرمول + شکل)؛ ترتیب همهٔ توکن‌ها بماند.
 ```
+
+## ۲۴۷) V68.0 — رفتار ورد در ویرایشگر چاپ (مکان‌نا، انتخاب بازه‌ای، دستگیرهٔ گوشه، زوم)
+
+### هدف (پاسخ ۴ سؤال کاربر)
+«بخش ویرایشگر چاپ آزمون رو شبیه ورد کن» — فقط رفتار صفحه، بدون قابلیت جدید:
+۱) **مکان‌نمای یک‌لمسی**: لمس هر جای سؤال، نزدیک‌ترین تکهٔ متنی همان نقطه را
+   فوکوس می‌کند (BasicTextField با FocusRequester)؛ نه کلیک کل سؤال.
+۲) **انتخاب بازه‌ای + استایل تکه‌ای**: هایلایت آبی خود BasicTextField؛
+   دکمهٔ B/I نوار ابزار فقط همان بازه را بولد/ایتالیک می‌کند (رفتار toggle ورد:
+   پوشش کامل→حذف، وگرنه→گسترش به کل انتخاب). استایل فقط در چیدمان چاپ
+   (PrintLayoutStore) ذخیره می‌شود؛ به آزمون دانش‌آموز سرریز نمی‌کند (قید V63.5).
+۳) **دستگیره‌های گوشه**: چهار دایرهٔ سفید/آبی روی تصویر/شکل انتخابی؛ کشیدن =
+   تغییر اندازهٔ زنده (clamp: FIGURE 40–180mm، IMAGE 20–190mm از
+   WordPageLayout). دکمه‌های +/− نوار اببرد حذف شدند (onObjectGrow/Shrink).
+۴) **زوم دو-انگشتی + دوبار-لمس = ۱۰۰٪** (مثل Ctrl+چرخ ورد؛ بازهٔ 0.6–3).
+
+### مدل دادهٔ spans (کلید V68)
+`QuestionDraft.textSpans: List<StyleSpan>` — بازه‌های [start,end) انحصاری روی
+متن کامل سؤال (هم‌مقیاس با آفست‌های RichTextSplitter). `StyleSpanOps`:
+- `adjust(old,new,spans)` — diff پیشوند/پسوند؛ بازهٔ هم‌پوشان با ناحیهٔ تغییر
+  فقط دو سرش زنده می‌ماند؛ در ViewModel.updateText صدا زده می‌شود.
+- `toggle(spans,s,e,bold,italic)` — وردی؛ ادغام بازه‌های مجاور هم‌استایل.
+- `splitBySpans(text,offsetInSource,spans)` — تکه‌های استایل‌دار با محورهای
+  مستقل bold/italic.
+JSON: `spans:[{s,e,b?,i?}]` (بازهٔ خالی اصلاً نوشته نمی‌شود)؛ decode با
+`asInt()` (توجه: asIntOrNull وجود ندارد — درس این پچ).
+`PrintTextSpan` در OfficialPrintModels + mapping در SupabasePortabilityRepository.
+
+### چاپ (درس مهم — parity خط)
+تکه‌های استایل **بلوک جدا نمی‌شوند** (هر RenderBlock = خط جدید در
+planPages!). متن استایل‌دار = **یک** RenderBlock با `styledText:
+SpannableStringBuilder` و StyleSpan(Typeface.BOLD/ITALIC)؛
+`styledLayout` (همان پارامترهای textLayout) می‌سازد. بدون spans مسیر
+قدیمی splitText(…,700) دقیقاً دست‌نخورده.
+
+### ادیتور — جزئیات
+- hoist: parts/formulas/segRanges به بالای WordQuestionBlock؛
+  `segmentBounds: mutableStateMapOf<Int,Rect>` (boundsInRoot) +
+  `segmentFocusers` + LaunchedEffect فوکوس خودکار اولین تکهٔ Text.
+- TextFieldValue به‌جای String؛ onTextRangeChange بازهٔ انتخابی را به
+  DocumentToolbar می‌رساند؛ حذف کامل متن → range=null.
+- `.imePadding()` روی Column اسکرول (مکان‌نا زیر کیبورد گم نمی‌شود).
+- نمایش غیر-ویرایش: شاخهٔ FlowRow با splitBySpans (Math→NativeMathText،
+  Figure→رد، Text→تکه‌های استایل‌دار).
+- `resizeFigureBy` هنوز تعریف شده (needle verify) ولی caller ندارد.
+
+### needleهای بازنویسی‌شده
+- تست V63_2 و verify: `.clickable(onClick = onSelect)` →
+  `detectTapGestures(onTap = { pos ->` (لمس سطح سؤال).
+- V64.3: فراخوانی `RichTextSplitter.reconstruct(parts, partIndex, value)`
+  باید دقیقاً با String بماند (value = newValue.text).
+- onObjectGrow/onObjectShrink از هیچ تستی خواسته نمی‌شد (حذف امن).
+
+### تست‌ها
+`V68_0PrintEditorWordBehaviorTest` (۱۵ تست): toggle وردی (افزودن/حذف/
+گسترش/سر-و-دُم/ایتالیک مستقل)، adjust (درج/حذف هم‌پوشان)، splitBySpans
+(برش/محور مستقل)، codec roundtrip + legacy بدون spans، قرارداد صفحه
+(مکان‌نا/ imePadding/دستگیره/زوم/نمایش استایل‌دار). شبیه‌سازی پایتون همهٔ
+assertهای منطقی + ۱۵۰ assert فایل‌خوان تست‌های قدیمی → سبز.
+
+### فایل‌های تغییرکرده
+QuestionDraft.kt، ExamQuestionCodec.kt، ExamBuilderViewModel.kt،
+OfficialPrintModels.kt، SupabasePortabilityRepository.kt،
+OfficialPdfPrintAdapter.kt، ExamDocumentEditorScreen.kt،
+V63_2DocFormatReorderTest.kt، V68_0PrintEditorWordBehaviorTest.kt (جدید)،
+scripts/verify_native_final.py، text/CHANGELOG_FA.txt، این هندآف.
+SQL: ندارد (spans داخل ستون JSON موجود سؤال ذخیره می‌شود).
+
+### چک‌لیست دستگاه
+۱) لمس وسط جملهٔ بلند → کیبورد باز و مکان‌نا همان‌جا (نه ابتدای سؤال).
+۲) انتخاب ۲-۳ کلمه (دابل‌لمس/دستگیرهٔ انتخاب) → B → فقط همان‌ها ضخیم؛
+   ذخیره/بازکردن → همان؛ چاپ PDF → همان خط، بدون شکست.
+۳) کشیدن گوشهٔ تصویر/نمودار → اندازهٔ زنده؛ رها شدن → ثبت؛ محدوده رعایت.
+۴) +/− نوار ابزار دیگر نیست؛ قفل/Delete/تراز/اندازه متن سرجایش.
+۵) پینچ داخل صفحه → زوم نرم با اسکرول سالم؛ دوبار-لمس → ۱۰۰٪.
+۶) regression: درج فرمول (V67.1)، جابه‌جایی تصویر آزاد، سربرگ چاپ.
