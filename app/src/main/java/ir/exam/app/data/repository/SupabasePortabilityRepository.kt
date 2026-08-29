@@ -138,6 +138,16 @@ class SupabasePortabilityRepository {
                     optionStyles = question.optionStyles.map { style ->
                         style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
                     },
+                    // V68.6 — آیتم‌های جورکردنی هم به چاپ می‌روند (گزارش کاربر:
+                    // گزینه‌های جورکردنی در چاپ نمایش داده نمی‌شدند).
+                    matchingLeft = question.matchingLeft,
+                    matchingRight = question.matchingRight,
+                    matchingLeftStyles = question.matchingLeftStyles.map { style ->
+                        style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
+                    },
+                    matchingRightStyles = question.matchingRightStyles.map { style ->
+                        style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
+                    },
                     answerText = answer,
                     answerLines = question.answerLines,
                     answerLineStyle = question.answerLineStyle,

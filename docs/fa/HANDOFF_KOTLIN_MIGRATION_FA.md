@@ -12541,3 +12541,116 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ۵) ویرایش آزمون موجود: پیام «بازیابی پیش‌نویس» نیاید؛ فقط ایجاد آزمون.
 ۶) بقیهٔ چک‌لیست V68.4.1 (درگ/resize آینه‌ای، پرش شکل).
 ```
+
+## ۲۵۳) V68.6 — چاپ ۱۰۰٪ مثل ویرایشگر: فرمول درون‌خطی + جورکردنی در چاپ + درگ آزاد تصویر گالری
+
+سه گزارش کاربر روی بیلد V68.5 (d1821eb) + دستور کلی «چاپ دقیقا و ۱۰۰٪ مثل
+ویرایشگر».
+
+### ۱) «متن۱ فرمول متن۲» به سه سطر می‌شکست — پاراگراف درون‌خطی
+
+ویرایشگر از V64.5.1 متن و فرمول را در FlowRow «یک سطر جاری» می‌چیند؛ چاپ
+هر RichSegment را بلوک جدا می‌ساخت → سه سطر. ریشه در
+OfficialPdfPrintAdapter.examBlocks.
+
+رفع: متن‌ها و فرمول‌های پیوسته در یک SpannableStringBuilder جمع می‌شوند؛
+هر فرمول جای‌نگهدار `U+FFFC` + `MathReplacementSpan` (توسعهٔ ReplacementSpan
+مثل ImageSpan) می‌گیرد. StaticLayout فرمول را در همان سطر جریان می‌دهد؛
+`getSize` عرض را از `mathRenderer.measure` می‌دهد و با FontMetrics ارتفاع
+سطر را رشد می‌دهد تا کسر هم جا شود؛ `draw` با خط کرسی متن هم‌تراز است
+(`y - size*0.92`). شکل‌ها همچنان بلوک جدا (در ویرایشگر هم شیء مستقل‌اند).
+
+نکات ظریف:
+- تکه‌های فقط-فاصلهٔ بین دو فرمول باید حفظ شوند → شرط از `isNotBlank`
+  به `isNotEmpty` عوض شد (وگرنه «$a$ $b$» به هم می‌چسبید).
+- U+FFFC bidi قویِ LTR است؛ اگر پاراگراف با فرمول شروع شود FIRSTSTRONG
+  جهت را می‌چرخاند → RLM نامرئی (U+200F) اول پاراگراف جهت RTL را تثبیت
+  می‌کند.
+- گزینه‌ها هم همین مسیر درون‌خطی + `align=question.textAlign` شدند
+  (قبلاً فرمولِ گزینه سطر جدا و همیشه راست).
+- needle قدیمی `StyleSpanOps.splitBySpans(rich.text, segStart, __spans)`
+  عیناً حفظ شد (استایل تکه‌ای حالا با شیفت آفست روی پاراگراف مشترک).
+- splitText حذف شد (StaticLayout خودش می‌شکند).
+
+### ۲) گزینه‌های جورکردنی در چاپ چاپ نمی‌شدند
+
+ریشه: آیتم‌های جورکردنی در `matchingLeft/Right` (و استایل‌ها در
+`matchingLeft/RightStyles`) هستند؛ mapping چاپ فقط `options` را می‌فرستاد
+که برای جورکردنی خالی است. رفع: چهار فیلد به OfficialPrintQuestion +
+نگاشت در SupabasePortabilityRepository + رندر ردیف در examBlocks:
+`matchRight=…, matchLeft=…` با بلوک جدید؛ drawPage: آیتم راست در نیمهٔ
+راست (راست‌چین)، «↔» وسط، آیتم چپ در نیمهٔ چپ (چپ‌چین) — مثل Row با
+SpaceBetween و weightهای برابر در ویرایشگر؛ `matchHalfWidth()` نیمه‌ها را
+با ۲۶pt فاصلهٔ وسط می‌دهد؛ استایل (اندازه/بولد/ایتالیک) هر سمت مستقل.
+
+### ۳) تصویر گالری جابه‌جایی آزاد واقعی نداشت — لامبدای کهنه
+
+DraggableQuestionImage کلید pointerInput را `media.id, zoom` دارد؛ بعد از
+commit اول (که media.xMm/yMm و imagePosition=free را عوض می‌کند) کلید
+عوض نمی‌شود و لامبدای در حال اجرا مقادیر لحظهٔ ساختش (x=0/y=0/free=false)
+را می‌بیند → هر درگِ بعدی دوباره از اسلات شروع و جای قبلی را بازنویسی
+می‌کرد. (شکل‌ها مصون‌اند چون commit آنها spec.raw را عوض می‌کند و کلیدِ
+ژست restart می‌شود.)
+
+رفع: `currentFreePlacement/currentXmm/currentYmm/currentObjHeightMm/
+currentLiveWidthMm` با rememberUpdatedState (مثل لنگر/سقف V68.4) و
+onDragEnd فقط از آنها می‌خواند. سقف درگ هم با ارتفاع واقعی شیء
+(currentObjHeightMm) به‌جای تخمین ۰٫۶.
+
+بونوس پاریتی: تصویر غیرآزاد حالا «وسط» اسلات می‌نشیند
+(`centeredXmm=(USABLE_WIDTH_MM-w)/2`) مثل center چاپ رسمی — عارضهٔ
+چپ‌چینِ V68.4.1 بسته شد. مبنای x همچنان از چپِ بلوک (سازگار با imageXmm
+چاپ و clampImageXmm).
+
+### درس‌های تازه
+
+- **لامبدای pointerInput مقدارهای لحظهٔ ساختش را می‌بیند**: هر مقداری که
+  در onDragEnd خوانده می‌شود باید rememberUpdatedState باشد، مگر آنکه
+  commit خودش کلید ژست را عوض کند (شکل‌ها: spec.raw).
+- **ReplacementSpan فرمولِ درون‌خطی در StaticLayout**: الگوی ImageSpan؛
+  fm.ascent/descent را در getSize رشد بده تا کسر جا شود؛ draw با خط کرسی
+  (`y - size*0.92`) هم‌تراز متن.
+- **U+FFFC bidi قوی LTR است** → پاراگراف فرمول‌آغازِ فارسی جهتش می‌چرخد؛
+  RLM نامرئی اول پاراگراف.
+- **فیلد مدل ≠ فیلد DTO**: جورکردنی options ندارد؛ چاپ فقط options را
+  می‌فرستاد. هر نوع سؤال، فهرست فیلدهای خودش را در mapping چاپ می‌خواهد.
+
+### تست‌ها
+
+- V68_6PrintInlineMatchingTest جدید (۹ تست با root() helper): needleهای
+  درون‌خطی/RLM/ReplacementSpan + import (درس CI ران ۳۷۴) + جورکردنی
+  (مدل/نگاشت/ردیف) + درگ تازه (rememberUpdatedState ×۵ + absence قدیمی)
+  + پورت‌های عددی (۱ پاراگراف به‌جای ۳ بلوک؛ ۴ ردیف از ۴/۳؛ نیمه+۲۶=عرض).
+- verify_native_final.py: بخش V68.6 (۶ require).
+- شبیه‌ساز: ۱۱۲ چک ALL PASSED (پورت‌های: inline=۱ بلوک، حفظ فاصله،
+  جمع‌شدن درگ ۳۰+۵=۳۵ در برابر ۵ قدیمی، نیمه‌های جورکردنی، وسط اسلات).
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt
+app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) سؤالی با «متن۱ فرمول متن۲» بسازید؛ در ویرایشگر و چاپ رسمی باید همه
+   در یک سطر جاری باشند (فرمول بین دو متن، هم‌تراز).
+۲) فرمول در ابتدای سؤال (فارسی): جهت سطر راست‌به‌چپ بماند.
+۳) فرمول کسری وسط متن: سطر به اندازهٔ کسر بلندتر شود و چیزی روی هم
+   نیفتد؛ فرمول گزینه‌ها هم درون‌خطی.
+۴) سؤال جورکردنی: آیتم‌ها در چاپ رسمی بیایند — آیتم راست در راست، ↔
+   وسط، آیتم چپ در چپ؛ استایل هر سمت جدا اعمال شود.
+۵) تصویر گالری: انتخاب + کشیدن؛ رها کنید و «دوباره» بکشید — باید از
+   جای جدید ادامه یابد (نه برگشت به اسلات) و در چاپ هم همان‌جا باشد.
+۶) تصویر غیرآزاد (بدون درگ): در ویرایشگر وسط اسلات باشد = چاپ.
+۷) رگرسیون V68.4/V68.5: درگ شکل آزاد، clamp بلوکی، جدول RTL/تناوبی
+   آینه، مقیاس ۲٫۸۳.
+```

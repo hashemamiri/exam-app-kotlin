@@ -17,10 +17,12 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
 import android.text.TextPaint
+import android.text.style.ReplacementSpan
 import ir.exam.app.core.calendar.JalaliCalendar
 import ir.exam.app.core.figure.AtlasBitmapRenderer
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureSvgRenderer
+import ir.exam.app.core.math.MathNode
 import ir.exam.app.core.math.NativeMathCanvasRenderer
 import ir.exam.app.core.math.NativeMathFormatter
 import ir.exam.app.core.math.NativeMathParser
@@ -94,7 +96,13 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val boxed: Boolean = false,
         val spacingAfter: Float = 6f,
         // V68 — متن استایل‌دار درون‌خطی (بولد/ایتالیک تکه‌ای)؛ خط واحد.
-        val styledText: android.text.SpannableStringBuilder? = null
+        val styledText: android.text.SpannableStringBuilder? = null,
+        // V68.6 — ردیف جورکردنی: آیتم راست در نیمهٔ راست، «↔» وسط، آیتم چپ
+        // در نیمهٔ چپ (مثل Row ویرایشگر)؛ استایل هر سمت مستقل.
+        val matchRight: String? = null,
+        val matchLeft: String? = null,
+        val matchRightStyle: Triple<Boolean, Boolean, Float?>? = null,
+        val matchLeftStyle: Triple<Boolean, Boolean, Float?>? = null
     )
     private data class PlannedBlock(val block: RenderBlock, val height: Float)
     private data class PlannedPage(val blocks: List<PlannedBlock>)
@@ -167,10 +175,41 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             val __ranges = RichTextSplitter.segmentSourceRanges(__segments, __formulas, __figures)
             // V68 — استایل تکه‌ای از دامنهٔ چاپ به StyleSpan ویرایشگر نگاشت می‌شود.
             val __spans = question.textSpans.map { ir.exam.app.ui.builder.StyleSpan(it.start, it.end, it.bold, it.italic) }
+            // V68.6 — پاراگراف درون‌خطی مثل ویرایشگر (FlowRow): متن‌ها و فرمول‌های
+            // پیوستهٔ سؤال در «یک سطر جاری» کنار هم می‌نشینند؛ قبلاً هر تکه بلوکِ
+            // جدا بود و «متن۱ فرمول متن۲» به سه سطر می‌شکست (گزارش کاربر). فرمول
+            // به‌صورت MathReplacementSpan روی جای‌نگهدار U+FFFC می‌نشیند و
+            // StaticLayout آن را در همان سطر جریان می‌دهد؛ شکل‌ها همچنان بلوکِ
+            // جدا هستند (در ویرایشگر هم شیء مستقل با اسلات خودشان‌اند).
+            var __inline = android.text.SpannableStringBuilder()
+            var __inlineLen = 0
+            fun __flushInline() {
+                if (__inline.isEmpty()) return
+                add(RenderBlock(styledText=__inline,textSize=question.fontSizeSp.coerceIn(8f,30f),
+                    bold=question.bold,italic=question.italic,
+                    align=question.textAlign,fontFamily=question.fontFamily))
+                __inline = android.text.SpannableStringBuilder()
+                __inlineLen = 0
+            }
             __segments.forEachIndexed { segIndex, rich ->
                 when (rich) {
-                    is RichSegment.Math -> add(RenderBlock(formula=rich.tex,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
+                    is RichSegment.Math -> {
+                        // V68.6 — فرمول درون‌خطی: جای‌نگهدار یک‌کاراکتری + span رندر.
+                        // اگر پاراگراف با فرمول شروع شود، U+FFFC نخستین کاراکترِ
+                        // «قوی» و LTR است و جهتِ FIRSTSTRONG را می‌چرخاند؛ یک
+                        // RLM نامرئی (پهنای صفر) اولِ پاراگراف جهتِ راست‌به‌چپ
+                        // متن فارسی را تثبیت می‌کند.
+                        if (__inline.isEmpty()) { __inline.append('\u200F'); __inlineLen += 1 }
+                        __inline.append('\uFFFC')
+                        __inline.setSpan(
+                            MathReplacementSpan(NativeMathParser.parse(rich.tex)),
+                            __inlineLen, __inlineLen + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        __inlineLen += 1
+                    }
                     is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
+                        // V63.1 — شکل درون‌متنی جدا از پاراگراف متن (شیء مستقل).
+                        __flushInline()
                         // V63.1 — عرض ذخیره‌شده در خود توکن؛ بدون wmm همان ۹۵ قبلی.
                         // V68.4 — شکلِ جابه‌جا شده (X.fx/X.fy) از مسیر free تصویر
                         // در همان جایگاه چاپ می‌شود؛ بدون آن = درون‌متنی قبلی.
@@ -191,52 +230,77 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                             imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
                         ))
                     } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
-                    is RichSegment.Text -> if (rich.text.isNotBlank()) {
-                        // V68 — بولد/ایتالیک بازه‌ای مثل ورد: استایل‌ها با Spannable
-                        // در همان خط می‌نشینند (هر تکه بلوک جدا نمی‌شود تا خط نشکند).
+                    is RichSegment.Text -> if (rich.text.isNotEmpty()) {
+                        // V68 — بولد/ایتالیک بازه‌ای مثل ورد: استایل‌ها با Spannable.
+                        // V68.6 — الحاق به پاراگراف درون‌خطی با شیفت آفست استایل‌ها؛
+                        // تکه‌های فقط-فاصله هم حفظ می‌شوند (جداکنندهٔ دو فرمول).
                         val segStart = __ranges.getOrNull(segIndex)?.first ?: 0
                         val overlapping = __spans.any { it.end > segStart && it.start < segStart + rich.text.length }
+                        val pieceText = rich.text.replace("\\$","$")
+                        __inline.append(pieceText)
                         if (overlapping) {
-                            val sb = android.text.SpannableStringBuilder(rich.text)
-                            var off = 0
+                            var off = __inlineLen
                             ir.exam.app.ui.builder.StyleSpanOps.splitBySpans(rich.text, segStart, __spans)
                                 .forEach { piece ->
                                     val a = off
                                     val b = off + piece.first.length
                                     off = b
-                                    if (piece.second) sb.setSpan(
+                                    if (piece.second) __inline.setSpan(
                                         android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
                                         a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                     )
-                                    if (piece.third) sb.setSpan(
+                                    if (piece.third) __inline.setSpan(
                                         android.text.style.StyleSpan(android.graphics.Typeface.ITALIC),
                                         a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                     )
                                 }
-                            if (sb.toString().contains("\\$")) {
-                                sb.replace(0, sb.length, sb.toString().replace("\\$","$"))
-                            }
-                            add(RenderBlock(styledText=sb,textSize=question.fontSizeSp.coerceIn(8f,30f),
-                                bold=question.bold,italic=question.italic,
-                                align=question.textAlign,fontFamily=question.fontFamily))
-                        } else splitText(rich.text.replace("\\$","$"),700).forEach {
-                            add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),
-                                bold=question.bold,italic=question.italic,
-                                align=question.textAlign,fontFamily=question.fontFamily))
                         }
+                        __inlineLen += pieceText.length
                     }
                 }
             }
+            __flushInline()
             question.options.forEachIndexed { index, option ->
-                // V64.4 — استایل مستقل گزینه در چاپ؛ بدون استایل = مثل قبل.
+                // V64.4 — استایل مستقل هر گزینه در چاپ؛ بدون استایل = مثل قبل.
                 val optionStyle = question.optionStyles.getOrNull(index)
                 val optionSize = (optionStyle?.third ?: question.fontSizeSp) * .9f
                 val optionBold = optionStyle?.first ?: false
                 val optionItalic = optionStyle?.second ?: false
+                // V68.6 — گزینه هم پاراگراف درون‌خطی: متن و فرمول گزینه در یک
+                // سطر جاری کنار هم (مثل سؤال)؛ قبلاً فرمولِ گزینه سطر جدا می‌شد.
+                val __opt = android.text.SpannableStringBuilder()
+                var __optLen = 0
                 NativeMathFormatter.segments("${index+1}) $option").forEach { segment ->
-                    if(segment.math)add(RenderBlock(formula=segment.text,textSize=optionSize,bold=optionBold,italic=optionItalic,fontFamily=question.fontFamily))
-                    else add(RenderBlock(text=segment.text,textSize=optionSize,bold=optionBold,italic=optionItalic,fontFamily=question.fontFamily))
+                    if (segment.math) {
+                        __opt.append('\uFFFC')
+                        __opt.setSpan(
+                            MathReplacementSpan(NativeMathParser.parse(segment.text)),
+                            __optLen, __optLen + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        __optLen += 1
+                    } else if (segment.text.isNotEmpty()) {
+                        __opt.append(segment.text)
+                        __optLen += segment.text.length
+                    }
                 }
+                if (__opt.isNotEmpty()) add(RenderBlock(styledText=__opt,textSize=optionSize,
+                    bold=optionBold,italic=optionItalic,
+                    align=question.textAlign,fontFamily=question.fontFamily))
+            }
+            // V68.6 — جورکردنی در چاپ رسمی (گزارش کاربر: اصلاً چاپ نمی‌شد؛ آیتم‌ها
+            // در matchingLeft/Right هستند نه options). هر ردیف مثل ویرایشگر:
+            // آیتم راست در نیمهٔ راست، «↔» وسط، آیتم چپ در نیمهٔ چپ.
+            val __matchRows = maxOf(question.matchingLeft.size, question.matchingRight.size)
+            repeat(__matchRows) { rowIndex ->
+                add(RenderBlock(
+                    matchRight=question.matchingRight.getOrNull(rowIndex),
+                    matchLeft=question.matchingLeft.getOrNull(rowIndex),
+                    matchRightStyle=question.matchingRightStyles.getOrNull(rowIndex),
+                    matchLeftStyle=question.matchingLeftStyles.getOrNull(rowIndex),
+                    textSize=question.fontSizeSp.coerceIn(8f,30f),
+                    bold=question.bold,italic=question.italic,
+                    align=question.textAlign,fontFamily=question.fontFamily
+                ))
             }
             question.images.forEachIndexed { index,image -> add(RenderBlock(
                 image=image,boxed=true,imagePosition=question.imagePosition,
@@ -321,6 +385,37 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                 canvas.translate(MARGIN, y)
                 layout.draw(canvas)
                 canvas.restore()
+            }
+            if (block.matchRight != null || block.matchLeft != null) {
+                // V68.6 — ردیف جورکردنی مثل ویرایشگر (Row با SpaceBetween و
+                // weightهای برابر): آیتم راست در نیمهٔ راست، «↔» وسط، آیتم چپ
+                // در نیمهٔ چپ.
+                val half = matchHalfWidth()
+                block.matchRight?.let {
+                    val layout = textLayout(it, block.matchRightStyle?.third ?: block.textSize,
+                        block.matchRightStyle?.first ?: block.bold, half,
+                        block.matchRightStyle?.second ?: block.italic, "right", block.fontFamily)
+                    canvas.save()
+                    canvas.translate(PAGE_WIDTH - MARGIN - half, y)
+                    layout.draw(canvas)
+                    canvas.restore()
+                }
+                block.matchLeft?.let {
+                    val layout = textLayout(it, block.matchLeftStyle?.third ?: block.textSize,
+                        block.matchLeftStyle?.first ?: block.bold, half,
+                        block.matchLeftStyle?.second ?: block.italic, "left", block.fontFamily)
+                    canvas.save()
+                    canvas.translate(MARGIN, y)
+                    layout.draw(canvas)
+                    canvas.restore()
+                }
+                val arrowPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.BLACK
+                    textSize = block.textSize
+                    typeface = persianTypeface(false)
+                }
+                val arrow = "↔"
+                canvas.drawText(arrow, PAGE_WIDTH / 2f - arrowPaint.measureText(arrow) / 2f, y + block.textSize, arrowPaint)
             }
             y += planned.height
         }
@@ -443,6 +538,21 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             val scale=minOf(targetWidth/image.width,220f/image.height,1f)
             return image.height*scale+block.spacingAfter+8f
         }
+        // V68.6 — ارتفاع ردیف جورکردنی: بلندترِ دو نیمه (آیتم‌ها می‌شکنند).
+        if (block.matchRight != null || block.matchLeft != null) {
+            val half = matchHalfWidth()
+            val rightHeight = block.matchRight?.let {
+                textLayout(it, block.matchRightStyle?.third ?: block.textSize,
+                    block.matchRightStyle?.first ?: block.bold, half,
+                    block.matchRightStyle?.second ?: block.italic, "right", block.fontFamily).height
+            } ?: 0f
+            val leftHeight = block.matchLeft?.let {
+                textLayout(it, block.matchLeftStyle?.third ?: block.textSize,
+                    block.matchLeftStyle?.first ?: block.bold, half,
+                    block.matchLeftStyle?.second ?: block.italic, "left", block.fontFamily).height
+            } ?: 0f
+            return maxOf(rightHeight, leftHeight) + block.spacingAfter + 4f
+        }
         block.formula?.let { return mathRenderer.measure(NativeMathParser.parse(it),block.textSize).height+block.spacingAfter+5f }
         block.styledText?.let {
             return styledLayout(it, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily).height + block.spacingAfter + 4f
@@ -450,6 +560,36 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val text = block.text.orEmpty()
         if (text.isEmpty()) return block.spacingAfter
         return textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily).height + block.spacingAfter + 4f
+    }
+
+    // V68.6 — عرض هر نیمهٔ ردیف جورکردنی (۲۶pt وسط برای «↔»).
+    private fun matchHalfWidth(): Int = (((CONTENT_WIDTH - 26f) / 2f).coerceAtLeast(60f)).toInt()
+
+    /**
+     * V68.6 — فرمول درون‌خطی داخل پاراگراف چاپ: مثل ImageSpan روی جای‌نگهدار
+     * U+FFFC می‌نشیند؛ StaticLayout عرض را از getSize می‌گیرد و با FontMetrics
+     * ارتفاع سطر را رشد می‌دهد تا کسرها هم در همان سطر جا شوند. draw با خط
+     * کرسی متن هم‌تراز است (سمبل‌ها مثل NativeMathText ویرایشگر روی کرسی).
+     */
+    private inner class MathReplacementSpan(private val node: MathNode) : ReplacementSpan() {
+        override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
+            val size = paint.textSize
+            val metrics = mathRenderer.measure(node, size)
+            if (fm != null) {
+                // فرمول از خط کرسی شروع می‌شود: بالا به‌اندازهٔ متنِ عادی و
+                // پایین به‌اندازهٔ باقی‌ماندهٔ ارتفاع فرمول جا می‌گیرد.
+                val above = (size * 0.92f).toInt()
+                fm.ascent = minOf(fm.ascent, -above)
+                fm.descent = maxOf(fm.descent, (metrics.height - above).toInt().coerceAtLeast(0))
+                fm.top = minOf(fm.top, fm.ascent)
+                fm.bottom = maxOf(fm.bottom, fm.descent)
+            }
+            return metrics.width.toInt().coerceAtLeast(2)
+        }
+
+        override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+            mathRenderer.draw(canvas, node, x, y - paint.textSize * 0.92f, paint.textSize, Color.BLACK)
+        }
     }
 
     private fun textLayout(text:String,size:Float,bold:Boolean,width:Int,italic:Boolean=false,align:String="right",fontFamily:String="default"):StaticLayout {
@@ -515,9 +655,6 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         result += PageRange(start, end)
         return result
     }
-
-    private fun splitText(value: String, chunk: Int): List<String> =
-        if (value.length <= chunk) listOf(value) else value.chunked(chunk)
 
     /** V53.1 — رندر برداری شکل/نمودار/جدول به bitmap برای PDF (AndroidSVG، بدون WebView). */
     private fun figureBitmap(spec: FigureSpec): Bitmap? = runCatching {

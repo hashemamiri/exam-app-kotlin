@@ -1173,7 +1173,12 @@ private fun DraggableQuestionImage(
     val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - objHeightMm).coerceAtLeast(0f)
     else Float.MAX_VALUE
     // V63.9 — آفست زنده حتی قبل از free شدن هم دیده می‌شود تا درگ واقعاً کار کند.
-    val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm)
+    // V68.6 — تصویر غیرآزاد مثل چاپ «وسط» اسلات می‌نشیند (چاپ رسمی غیرآزاد را
+    // center می‌کند؛ اینجا فضای LTR آن را چپ می‌چسباند — عارضهٔ V68.4.1). مبنای
+    // x چپِ بلوک می‌ماند تا با imageXmm چاپ و clamp یکی باشد: درگِ اول از
+    // وسط شروع و commit همچنان مطلق از چپ ذخیره می‌شود.
+    val centeredXmm = ((WordPageLayout.USABLE_WIDTH_MM - liveWidthMm) / 2f).coerceAtLeast(0f)
+    val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else centeredXmm) + dragXmm, liveWidthMm)
     // V68.4 — yMm ذخیره‌شده = آفست از اسلات طبیعی (انتهای بلوک)؛ برای clamp
     // به مختصات مطلق بلوک تبدیل و بعد دوباره به آفست برمی‌گردیم.
     val visualTopMm =
@@ -1183,6 +1188,17 @@ private fun DraggableQuestionImage(
     // کلید pointerInput همان media.id, zoom قبلی می‌ماند).
     val currentAnchorTopMm by rememberUpdatedState(anchorTopMm)
     val currentBoundsHeightMm by rememberUpdatedState(boundsHeightMm)
+    // V68.6 — درگ تصویر گالری (گزارش کاربر: جابه‌جایی آزاد واقعی نمی‌شد):
+    // لامبدای pointerInput مقادیر لحظهٔ ساختش را می‌بیند؛ چون کلید ژست
+    // (media.id, zoom) بعد از commit عوض نمی‌شود، media.xMm/yMm و
+    // freePlacement «کهنه» می‌ماندند و هر درگِ بعدی دوباره از اسلاتِ صفر
+    // شروع و جای قبلی را بازنویسی می‌کرد. مثل لنگر/سقف، اینها هم باید از
+    // rememberUpdatedState خوانده شوند.
+    val currentFreePlacement by rememberUpdatedState(freePlacement)
+    val currentXmm by rememberUpdatedState(media.xMm)
+    val currentYmm by rememberUpdatedState(media.yMm)
+    val currentObjHeightMm by rememberUpdatedState(objHeightMm)
+    val currentLiveWidthMm by rememberUpdatedState(liveWidthMm)
 
     // V63.8 — بدون لکهٔ آبی: لمس = انتخاب؛ شیء انتخاب‌شده با کشیدن انگشت
     // آزادانه جابه‌جا می‌شود (+/− نوار ابزار اندازه را عوض می‌کند).
@@ -1213,17 +1229,17 @@ private fun DraggableQuestionImage(
                             // V68.4 — commit هم مثل رندر زنده به محدودهٔ خودِ
                             // بلوک clamp می‌شود؛ y به‌صورت آفست از اسلات طبیعی
                             // ذخیره می‌شود (می‌تواند منفی = بالاتر از اسلات).
+                            // V68.6 — همهٔ مقادیر از rememberUpdatedState تا
+                            // درگِ بعدی از جای واقعی فعلی ادامه یابد.
                             val anchor = currentAnchorTopMm
                             val dragMaxTopMm = if (currentBoundsHeightMm > 0f)
-                                (currentBoundsHeightMm - heightMm).coerceAtLeast(0f)
+                                (currentBoundsHeightMm - currentObjHeightMm).coerceAtLeast(0f)
                             else Float.MAX_VALUE
-                            val topMm = (
-                                anchor + (if (freePlacement) media.yMm else 0f) + dragYmm
-                                ).coerceIn(0f, dragMaxTopMm)
+                            val baseX = if (currentFreePlacement) currentXmm else 0f
+                            val baseY = if (currentFreePlacement) currentYmm else 0f
+                            val topMm = (anchor + baseY + dragYmm).coerceIn(0f, dragMaxTopMm)
                             onMoved(
-                                WordPageLayout.clampImageXmm(
-                                    (if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm
-                                ),
+                                WordPageLayout.clampImageXmm(baseX + dragXmm, currentLiveWidthMm),
                                 topMm - anchor
                             )
                             dragXmm = 0f; dragYmm = 0f

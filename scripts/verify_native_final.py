@@ -2414,6 +2414,53 @@ require("class V68_5PrintParityRtlTest" in _v685_test
         and "draft recovery is offered only when creating a new exam" in _v685_test,
         "V68.5 print-parity/RTL regression tests are missing (root() helper is mandatory)")
 
+# ---- V68.6: inline formula paragraphs + matching in print + gallery image free drag ----
+_v686_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+_v686_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt").read_text()
+_v686_repo=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
+_v686_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt").read_text()
+_v686_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt").read_text()
+require("import android.text.style.ReplacementSpan" in _v686_pdf
+        and "import ir.exam.app.core.math.MathNode" in _v686_pdf,
+        "V68.6 inline math span symbols must be imported (lesson: every new symbol needs an import needle)")
+require("if (__inline.isEmpty()) { __inline.append('\\u200F'); __inlineLen += 1 }" in _v686_pdf
+        and "__inline.append('\\uFFFC')" in _v686_pdf
+        and "MathReplacementSpan(NativeMathParser.parse(rich.tex))" in _v686_pdf
+        and "__flushInline()" in _v686_pdf
+        and "is RichSegment.Math -> add(RenderBlock(formula=rich.tex" not in _v686_pdf
+        and "private inner class MathReplacementSpan(private val node: MathNode) : ReplacementSpan()" in _v686_pdf
+        and "fm.descent = maxOf(fm.descent, (metrics.height - above).toInt().coerceAtLeast(0))" in _v686_pdf,
+        "V68.6 question text and formulas must flow inline in one paragraph (ReplacementSpan on U+FFFC)")
+require("MathReplacementSpan(NativeMathParser.parse(segment.text))" in _v686_pdf
+        and "styledText=__opt,textSize=optionSize" in _v686_pdf
+        and "RenderBlock(formula=segment.text" not in _v686_pdf,
+        "V68.6 options must flow inline with their formulas")
+require("val matchingLeft: List<String> = emptyList()" in _v686_models
+        and "val matchingRight: List<String> = emptyList()" in _v686_models
+        and "matchingLeft = question.matchingLeft" in _v686_repo
+        and "matchingRight = question.matchingRight" in _v686_repo
+        and "val __matchRows = maxOf(question.matchingLeft.size, question.matchingRight.size)" in _v686_pdf
+        and "matchRight=question.matchingRight.getOrNull(rowIndex)" in _v686_pdf
+        and 'val arrow = "↔"' in _v686_pdf
+        and "private fun matchHalfWidth(): Int" in _v686_pdf,
+        "V68.6 matching questions must print (items live in matchingLeft/Right, not options)")
+require("val currentFreePlacement by rememberUpdatedState(freePlacement)" in _v686_editor
+        and "val currentXmm by rememberUpdatedState(media.xMm)" in _v686_editor
+        and "val currentYmm by rememberUpdatedState(media.yMm)" in _v686_editor
+        and "val currentObjHeightMm by rememberUpdatedState(objHeightMm)" in _v686_editor
+        and "val currentLiveWidthMm by rememberUpdatedState(liveWidthMm)" in _v686_editor
+        and "val topMm = (anchor + baseY + dragYmm).coerceIn(0f, dragMaxTopMm)" in _v686_editor
+        and "WordPageLayout.clampImageXmm(baseX + dragXmm, currentLiveWidthMm)" in _v686_editor
+        and "val centeredXmm = ((WordPageLayout.USABLE_WIDTH_MM - liveWidthMm) / 2f).coerceAtLeast(0f)" in _v686_editor
+        and "(if (freePlacement) media.xMm else centeredXmm)" in _v686_editor,
+        "V68.6 gallery image drag must read fresh placement via rememberUpdatedState (stale lambda)")
+require("class V68_6PrintInlineMatchingTest" in _v686_test
+        and "private fun root(): File" in _v686_test
+        and "question text and formulas flow inline in one paragraph" in _v686_test
+        and "gallery image drag reads fresh placement from rememberUpdatedState" in _v686_test
+        and "matching rows print right arrow left like the editor" in _v686_test,
+        "V68.6 inline/matching/drag regression tests are missing (root() helper is mandatory)")
+
 # V68.3 — پاک‌سازی ریشهٔ ریپو: پچ‌های قدیمی کامیت‌شده و gitlink تودرتو ممنوع.
 # gitlink تودرتو با اسکن index گیت تشخیص داده می‌شود (حتی در checkout تازهٔ CI
 # که پوشه خالی است)؛ «حذفِ در حال انجام» (بین git apply و git add) خطا نیست.

@@ -46,6 +46,12 @@ data class OfficialPrintQuestion(
     val options: List<String> = emptyList(),
     // V64.4 — استایل مستقل هر گزینه برای چاپ: (bold, italic, fontSizeSp?).
     val optionStyles: List<Triple<Boolean, Boolean, Float?>?> = emptyList(),
+    // V68.6 — آیتم‌های جورکردنی برای چاپ (قبلاً فقط در options نگاه می‌شدیم و
+    // جورکردنی چون options خالی دارد اصلاً چاپ نمی‌شد).
+    val matchingLeft: List<String> = emptyList(),
+    val matchingRight: List<String> = emptyList(),
+    val matchingLeftStyles: List<Triple<Boolean, Boolean, Float?>?> = emptyList(),
+    val matchingRightStyles: List<Triple<Boolean, Boolean, Float?>?> = emptyList(),
     val answerText: String? = null,
     val answerLines: Int = 2,
     val answerLineStyle: String = "lined",
