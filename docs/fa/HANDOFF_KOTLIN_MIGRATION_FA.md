@@ -12654,3 +12654,75 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ۷) رگرسیون V68.4/V68.5: درگ شکل آزاد، clamp بلوکی، جدول RTL/تناوبی
    آینه، مقیاس ۲٫۸۳.
 ```
+
+## ۲۵۴) V68.6.1 — هات‌فیکس کامپایل CI (ران V68.6 قرمز)
+
+### لاگ CI کاربر (run روی 6f20a8c)
+
+```text
+e: OfficialPdfPrintAdapter.kt:554:20 None of the following candidates is applicable:
+fun <T : Comparable<T>> maxOf(a: T, b: T): T
+...
+e: Overload resolution ambiguity between candidates:
+fun String?.plus(other: Any?): String
+...
+> Task :app:compileDebugKotlin FAILED
+```
+
+### ریشه
+
+```text
+measureBlock برای ردیف جورکردنی:
+  val rightHeight = block.matchRight?.let { textLayout(...).height } ?: 0f
+textLayout(...).height از نوع Int است؛ ?: 0f ترکیب Int و Float می‌سازد و
+استنباط نوع به Any/Comparable نامشخص می‌افتد → maxOf(Int, Float) وجود ندارد
+و سپس plus هم ambiguous می‌شود. این الگو دقیقاً تکرار درس V68.4.2 است:
+sumOf با Float وجود ندارد، و حالا maxOf با Int+Float هم باید یکسان‌سازی شود.
+```
+
+### رفع
+
+```kotlin
+val rightHeight = block.matchRight?.let { textLayout(...).height.toFloat() } ?: 0f
+val leftHeight  = block.matchLeft?.let  { textLayout(...).height.toFloat() } ?: 0f
+return maxOf(rightHeight, leftHeight) + block.spacingAfter + 4f
+```
+
+- ارتفاع StaticLayout صریحاً به Float تبدیل شد؛ هر دو شاخه Float شدند.
+- plus بعدی Float+Float است و ambiguity حل می‌شود.
+- رفتاری تغییری نکرد؛ فقط تایپ.
+
+### درس تازه
+
+- **StaticLayout.height از نوع Int است**؛ هر جا با Float جمع یا maxOf شود
+  باید `.toFloat()` شود. این قانون کنار قانون «sumOf با Float نیست → fold»
+  ثبت شود.
+- CI ران V68.6 قرمز بود ولی verify و شبیه‌ساز محلی سبز بودند؛ چون آنها فقط
+  متن را می‌بینند و تایپ را چک نمی‌کنند. پس از هر تغییر measureBlock، یک
+  جست‌وجوی `\.height` در فایل چاپ الزامی است.
+
+### تست‌ها
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=208 edge_functions=3
+simulate_tests.py → ALL PASSED (۱۱۸ چک — شامل needleهای V68.6)
+تست‌های فایل‌خوان V68_4/V68_5/V68_6 → زنده و سبز
+compileDebugKotlin در CI باید سبز شود (قبلاً فقط همین خط قرمز بود)
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+همان چک‌لیست V68.6 (این نسخه فقط رفع کامپایل است؛ رفتاری تغییری نکرده):
+۱) متن۱ فرمول متن۲ درون‌خطی.
+۲) جورکردنی در چاپ راست ↔ چپ.
+۳) درگ گالری از جای جدید ادامه یابد.
+```

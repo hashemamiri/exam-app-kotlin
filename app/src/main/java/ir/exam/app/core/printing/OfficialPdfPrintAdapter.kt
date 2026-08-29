@@ -544,12 +544,12 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             val rightHeight = block.matchRight?.let {
                 textLayout(it, block.matchRightStyle?.third ?: block.textSize,
                     block.matchRightStyle?.first ?: block.bold, half,
-                    block.matchRightStyle?.second ?: block.italic, "right", block.fontFamily).height
+                    block.matchRightStyle?.second ?: block.italic, "right", block.fontFamily).height.toFloat()
             } ?: 0f
             val leftHeight = block.matchLeft?.let {
                 textLayout(it, block.matchLeftStyle?.third ?: block.textSize,
                     block.matchLeftStyle?.first ?: block.bold, half,
-                    block.matchLeftStyle?.second ?: block.italic, "left", block.fontFamily).height
+                    block.matchLeftStyle?.second ?: block.italic, "left", block.fontFamily).height.toFloat()
             } ?: 0f
             return maxOf(rightHeight, leftHeight) + block.spacingAfter + 4f
         }
