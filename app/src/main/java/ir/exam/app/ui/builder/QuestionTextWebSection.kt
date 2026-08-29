@@ -154,6 +154,15 @@ fun QuestionTextWebSection(
         }
     }
 
+    // V67.1 — پنجرهٔ فرمول متنِ تغییرکرده را برمی‌گرداند؛ مکان‌نما بلافاصله
+    // بعد از ناحیهٔ تغییر (بعد از فرمول درج‌شده) می‌نشیند.
+    LaunchedEffect(text) {
+        controller.pendingCaretOffset?.let { off ->
+            focusAtOffset = off
+            controller.pendingCaretOffset = null
+        }
+    }
+
     // V67.0 — حل مکان‌نمای معلق پس از درج/ویرایش: بخشی که آفست را در بر می‌گیرد.
     val pendingFocusIndex = focusAtOffset?.let { off ->
         parts.indices.firstOrNull { i ->

@@ -2243,6 +2243,33 @@ require("class V67_0QuestionFieldCaretOrderTest" in _v67_test
         and "insertAt places token at caret and keeps order" in _v67_test,
         "V67.0 caret/order regression tests are missing")
 
+# ---- V67.1: formula insert order (auto-open range race) + caret after formula ----
+_v671_asset=(ROOT/"app/src/main/assets/formula_editor/formula.html").read_text(errors="ignore")
+_v671_ver=(ROOT/"app/src/main/assets/formula_editor/version.txt").read_text().strip()
+_v671_builder=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text()
+_v671_ctrl=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text()
+_v671_section=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").read_text()
+_v671_rich=(ROOT/"app/src/main/java/ir/exam/app/core/text/RichText.kt").read_text()
+_v671_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V67_1FormulaInsertOrderTest.kt").read_text()
+_v671_bridge=_v671_asset.split("exam-formula-native-bridge",1)[-1]
+require("window.__beginRangeSynced = false" in _v671_bridge and "__beginRangeSynced) {" in _v671_bridge
+        and "t.setSelectionRange(s | 0, e | 0)" in _v671_bridge,
+        "V67.1 formula begin no longer re-syncs the saved selection range")
+require("modal.classList.contains('open')" in _v671_bridge and "FORMULA_OPEN_TIMEOUT" in _v671_bridge,
+        "V67.1 V55.1 open-retry loop must stay intact")
+require(_v671_ver=="v67.1-range-sync" and "__nativeBridgeVersion = 'N67.1'" in _v671_asset,
+        "V67.1 formula asset version badge was not bumped")
+require("var pendingCaretOffset: Int? = null" in _v671_ctrl
+        and "questionFieldController.pendingCaretOffset =" in _v671_builder
+        and "RichTextSplitter.changeRangeAfterEdit(target.text, newText).last + 1" in _v671_builder
+        and "controller.pendingCaretOffset" in _v671_section,
+        "V67.1 caret-after-formula flow is broken")
+require("fun changeRangeAfterEdit(" in _v671_rich,
+        "V67.1 change-range helper is missing")
+require("class V67_1FormulaInsertOrderTest" in _v671_test
+        and "change range covers the inserted formula and ends right after it" in _v671_test,
+        "V67.1 formula order regression tests are missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

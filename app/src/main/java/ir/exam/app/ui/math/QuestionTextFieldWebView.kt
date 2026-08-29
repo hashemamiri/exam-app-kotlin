@@ -32,6 +32,9 @@ class QuestionEditorFieldController {
     internal var nativeOpenFormula: (() -> Boolean)? = null
     var pendingEditOccurrence: Int? = null
 
+    /** V67.1 — آفست مکان‌نمای درخواستی پس از بازگشت متن از پنجرهٔ فرمول. */
+    var pendingCaretOffset: Int? = null
+
     /** آخرین متنی که خود WebView گزارش کرده یا برایش push شده؛ برای جلوگیری از echo. */
     var lastJsValue: String = ""
         internal set

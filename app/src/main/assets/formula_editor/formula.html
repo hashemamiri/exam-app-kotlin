@@ -14623,6 +14623,7 @@ try {
         var t = field();
         if (!t) return;
         window.__aoNativeClosing = false; /* اجازهٔ بازشدن برای جلسهٔ جدید */
+        window.__beginRangeSynced = false; /* V67.1 — هر جلسه یک‌بار بازه با مکان‌نمای Native همگام شود */
         t.value = (text == null ? '' : String(text));
         try { t.setSelectionRange(s | 0, e | 0); } catch (err) {}
         /* V55.1 — در WebView رویداد load سند intercepted ممکن است دیر بیاید یا
@@ -14633,8 +14634,21 @@ try {
           tries++;
           try {
             var modal = document.getElementById('mfModal');
-            if (modal && modal.classList.contains('open')) { clearInterval(opener); layoutCheck(); return; }
-            if (typeof window.openMath === 'function') window.openMath('qTxt_1');
+            if (modal && modal.classList.contains('open')) {
+              /* V67.1 — auto-open مرجع ممکن است پیش از begin اجرا شده و بازهٔ
+                 ذخیره‌شدهٔ سیم‌کشی را [0,0] ثبت کرده باشد؛ در آن حالت فرمول
+                 به ابتدای متن می‌رفت. openMath بازه را دوباره از selection
+                 همین textarea (مکان‌نمای Native) ثبت می‌کند. */
+              if (!window.__beginRangeSynced) {
+                window.__beginRangeSynced = true;
+                if (typeof window.openMath === 'function') window.openMath('qTxt_1');
+              }
+              clearInterval(opener); layoutCheck(); return;
+            }
+            if (typeof window.openMath === 'function') {
+              window.__beginRangeSynced = true;
+              window.openMath('qTxt_1');
+            }
           } catch (err) {}
           if (tries > 80) {
             clearInterval(opener);
@@ -14656,7 +14670,7 @@ try {
        N55.x تمام شد). نسخهٔ پل از این پس فقط در پرچم زیر است و Kotlin در
        پیام‌های خطا از آن استفاده می‌کند؛ badge مرجع (v36 · V34) هم فقط داخل
        برنامه مخفی می‌شود — فایل در مرورگر عادی دست‌نخورده است. */
-    window.__nativeBridgeVersion = 'N55.6';
+    window.__nativeBridgeVersion = 'N67.1';
     (function hideBadges() {
       function hide() {
         try {

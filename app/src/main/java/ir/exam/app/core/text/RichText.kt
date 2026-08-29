@@ -141,4 +141,22 @@ object RichTextSplitter {
         }
         return ranges
     }
+
+    /**
+     * V67.1 — بازهٔ تغییر میان دو متن با پیشوند/پسوند مشترک؛ پایان بازه محل
+     * طبیعی مکان‌نما پس از درج/ویرایش (بلافاصله بعد از توکن درج‌شده) است.
+     */
+    fun changeRangeAfterEdit(old: String, new: String): IntRange {
+        if (old == new) return IntRange.EMPTY
+        var start = 0
+        val maxPrefix = minOf(old.length, new.length)
+        while (start < maxPrefix && old[start] == new[start]) start++
+        var endOld = old.length
+        var endNew = new.length
+        while (endNew > start && endOld > start && old[endOld - 1] == new[endNew - 1]) {
+            endOld--
+            endNew--
+        }
+        return IntRange(start, maxOf(endNew - 1, start))
+    }
 }

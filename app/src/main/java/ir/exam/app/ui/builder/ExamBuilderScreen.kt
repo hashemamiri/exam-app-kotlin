@@ -111,6 +111,7 @@ import ir.exam.app.ui.math.FormulaHostDialog
 import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.core.math.FormulaTextCodec
+import ir.exam.app.core.text.RichTextSplitter
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
 
@@ -1284,6 +1285,9 @@ private fun QuestionEditor(
             onDismiss = { formulaHost = null },
             onResult = { newText ->
                 if (newText != target.text) {
+                    // V67.1 — مکان‌نما بلافاصله بعد از فرمول درج‌شده بنشیند.
+                    questionFieldController.pendingCaretOffset =
+                        RichTextSplitter.changeRangeAfterEdit(target.text, newText).last + 1
                     viewModel.updateText(question.id, newText)
                     questionFieldController.setValue(newText)
                 }

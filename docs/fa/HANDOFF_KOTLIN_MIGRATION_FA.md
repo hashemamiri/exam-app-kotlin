@@ -11873,3 +11873,86 @@ verify: بند جدید V67.0 (شامل ممنوعیت بازگشت size(84.dp, 
 ۴) لمس شکل/فرمول → کادر انتخاب + × گوشه؛ × حذف کند؛ لمس دوم همان شیء →
    ویرایشگر مربوطه باز شود؛ حذف گزینه‌ها/متن مجدد فوکوس بگیرد.
 ```
+
+
+## ۲۴۶) V67.1 — هات‌فیکس: درج فرمول به ابتدای متن (مسابقهٔ auto-open)
+
+### گزارش دستگاه
+
+```text
+«با درج فرمول در کادر متن سوال، ترتیب رعایت نمی شود و فرمول به ابتدای
+متن می رود.»
+```
+
+### ریشه (با مدرک از سورس asset مرجع)
+
+```text
+formula.html خودش در load + 60ms پنجرهٔ فرمول را auto-open می‌کند
+(اسکریپت auto-open مرجع: bootOpen → window.openMath('qTxt_1')).
+openMath سیم‌کشی هنگام بازشدن، بازهٔ انتخاب textarea را در __HOST_SAVED
+ثبت می‌کند. اگر این auto-open «قبل از» begin ما اجرا شود، textarea هنوز
+خالی و انتخابش (0,0) است → __HOST_SAVED.range=[0,0] ثبت می‌شود.
+begin ما سپس value و setSelectionRange(جای مکان‌نما) را درست می‌گذارد،
+اما حلقهٔ V55.1 آن مودالِ از-پیش-باز را فقط می‌بیند و return می‌کند و
+بازهٔ [0,0] هرگز اصلاح نمی‌شود. mfApply هنگام درج همان [0,0] را اعمال
+می‌کند → فرمول در آفست صفر = ابتدای متن.
+```
+
+### اصلاح
+
+```text
+formula.html (بلوک پل Native — افزودهٔ خودمان، کد مرجع دست‌نخورده):
+- begin پرچم __beginRangeSynced=false می‌گذارد.
+- حلقهٔ بازکردن: اگر مودال از پیش باز بود، یک‌بار openMath('qTxt_1')
+  دوباره صدا زده می‌شود تا __HOST_SAVED.range از selection واقعی همین
+  textarea (مکان‌نمای Native) دوباره ثبت شود؛ سپس مثل قبل finish.
+- openMath خودمان هم هنگام بازکردن پرچم را ست می‌کند (بدون دوباره‌کاری).
+- __nativeBridgeVersion → N67.1؛ version.txt → v67.1-range-sync (درس ۲۱).
+Kotlin — مکان‌نما بعد از فرمول:
+- QuestionEditorFieldController.pendingCaretOffset (الگوی موجود
+  pendingEditOccurrence).
+- ExamBuilderScreen در onResult فرمول: changeRangeAfterEdit(target.text,
+  newText).last + 1 → آفست بعد از توکن درج‌شده.
+- QuestionTextWebSection با LaunchedEffect(text) آن را مصرف و مکان‌نما را
+  در بخش متنیِ بلافاصله بعد از فرمول می‌نشیند.
+- RichTextSplitter.changeRangeAfterEdit: بازهٔ تغییر با پیشوند/پسوند مشترک.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/assets/formula_editor/formula.html
+app/src/main/assets/formula_editor/version.txt
+app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt
+app/src/main/java/ir/exam/app/core/text/RichText.kt
+app/src/test/java/ir/exam/app/ui/app/V67_1FormulaInsertOrderTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### تست/verify
+
+```text
+جدید: V67_1FormulaInsertOrderTest (۲ اجرایی JVM: بازهٔ تغییر دقیق فرمول
+درج‌شده/الحاق/جایگزینی/بدون‌تغییر؛ ۳ قرارداد: همگام‌سازی بازه + ماندگاری
+حلقهٔ V55.1، badge نسخه asset، جریان pendingCaretOffset + import).
+شبیه‌سازی python منطق changeRangeAfterEdit: PASS.
+شبیه‌سازی needleهای تست‌های خوانندهٔ formula.html (V55Standalone، V55_1..V55_8)
+و فایل‌های Kotlin (V29، V53.x، V54_4، V55_7، V59_2_1، V65_0، V67_0، V45_3):
+صفر شکست. verify: بند جدید V67.1.
+پچ: V67_1_formula_insert_order — بدون SQL؛ نیازمند build جدید.
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) تایپ «با توجه به شکل» → دکمهٔ درج فرمول → ساخت فرمول → درج؛ فرمول
+   باید دقیقاً بعد از «شکل» بنشیند نه ابتدای متن.
+۲) تایپ ادامهٔ متن پس از درج؛ مکان‌نما خودش بعد از فرمول باشد.
+۳) ویرایش فرمول موجود (لمس دوم فرمول انتخاب‌شده) → تأیید؛ فرمول همان‌جا
+   جایگزین شود و تکراری در ابتدای متن ساخته نشود.
+۴) درج فرمول در متن چندتوکنه (فرمول + شکل)؛ ترتیب همهٔ توکن‌ها بماند.
+```
