@@ -132,7 +132,7 @@ class V68_6PrintInlineMatchingTest {
         assertTrue(hasFormula)
         // جای‌نگهدار فرمول همان جای منطقی خودش را در متن دارد
         val rebuilt = "متن1 " + "￼" + " متن2"
-        assertEquals(9, rebuilt.length)
+        assertEquals(11, rebuilt.length)
     }
 
     @Test

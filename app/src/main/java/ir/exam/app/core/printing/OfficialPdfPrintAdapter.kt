@@ -185,9 +185,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             var __inlineLen = 0
             fun __flushInline() {
                 if (__inline.isEmpty()) return
-                add(RenderBlock(styledText=__inline,textSize=question.fontSizeSp.coerceIn(8f,30f),
-                    bold=question.bold,italic=question.italic,
-                    align=question.textAlign,fontFamily=question.fontFamily))
+                add(RenderBlock(styledText=__inline,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
                 __inline = android.text.SpannableStringBuilder()
                 __inlineLen = 0
             }
@@ -297,9 +295,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                     matchLeft=question.matchingLeft.getOrNull(rowIndex),
                     matchRightStyle=question.matchingRightStyles.getOrNull(rowIndex),
                     matchLeftStyle=question.matchingLeftStyles.getOrNull(rowIndex),
-                    textSize=question.fontSizeSp.coerceIn(8f,30f),
-                    bold=question.bold,italic=question.italic,
-                    align=question.textAlign,fontFamily=question.fontFamily
+                    textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily
                 ))
             }
             question.images.forEachIndexed { index,image -> add(RenderBlock(

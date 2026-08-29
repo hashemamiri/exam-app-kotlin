@@ -12726,3 +12726,70 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ۲) جورکردنی در چاپ راست ↔ چپ.
 ۳) درگ گالری از جای جدید ادامه یابد.
 ```
+
+## ۲۵۵) V68.6.2 — هات‌فیکس دو تست قرمز پس از سبز شدن کامپایل (ران دوم V68.6)
+
+### لاگ CI کاربر (run روی d2a9dcc = V68.6.1)
+
+```text
+V63_2DocFormatReorderTest > format actions persist through the builder view-model used by print FAILED
+    java.lang.AssertionError at V63_2DocFormatReorderTest.kt:57
+V68_6PrintInlineMatchingTest > inline paragraph collapses three segments into one block FAILED
+    java.lang.AssertionError at V68_6PrintInlineMatchingTest.kt:135
+679 tests completed, 2 failed
+> Task :app:testDebugUnitTest FAILED
+```
+
+### ریشه
+
+۱) **V63_2**: needle قدیمی `bold=question.bold,italic=question.italic,align=question.textAlign`
+   در V68.5 به‌صورت یک‌خطی بود و تست آن را می‌خواست؛ در V68.6 با بازنویسی درون‌خطی،
+   کد به دو خط شکسته شد:
+   ```kotlin
+   bold=question.bold,italic=question.italic,
+   align=...
+   ```
+   → substring دقیق دیگر وجود نداشت و assertTrue شکست. compile سبز شده بود ولی
+   قرارداد needle شکسته بود — نمونهٔ زندهٔ درس ۱۱ (بخش ۲۲۰): «کد عمداً عوض می‌شود، تست قدیمی نه».
+
+۲) **V68_6**: تست عددی `rebuilt.length == 9` برای رشتهٔ «متن1 ￼ متن2» غلط بود.
+   «متن1 » = ۵، «￼» = ۱، « متن2» = ۵ → ۱۱. این تست از ابتدا در V68.6 اشتباه نوشته شده
+   بود ولی پشت خطای کامپایل پنهان ماند (CI به تست نرسیده بود).
+
+### رفع
+
+- OfficialPdfPrintAdapter: هر دو محل `bold=question.bold,italic=question.italic,align=question.textAlign`
+  دوباره یک‌خطی شدند (همان الگوی V68.5) تا needleهای V63_2 زنده بمانند؛ رفتاری تغییری نکرد.
+- V68_6PrintInlineMatchingTest: `assertEquals(9, ...)` → `assertEquals(11, ...)`.
+
+### درس تازه
+
+- **needle شامل کاما و بدون newline است**: اگر فراخوانی را چندخطی می‌کنید،
+  needleهای قدیمی که همان توالی را در یک خط می‌خواهند می‌شکنند. قبل از شکستن خط،
+  تست‌های خوانندهٔ فایل را شبیه‌سازی کنید.
+- **تست عددی طول رشتهٔ فارسی را با Python `len()` چک کنید** نه حدس؛ حتی یک فاصله
+  اختلاف ۲ می‌سازد و پشت compile قرمز پنهان می‌ماند.
+
+### تست‌ها
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=208
+simulate_tests.py → ALL PASSED (۱۱۸ چک)
+V63_2DocFormatReorderTest → باید سبز شود (needle یک‌خطی برگشت)
+V68_6PrintInlineMatchingTest → باید سبز شود (۱۱ به‌جای ۹)
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+همان چک‌لیست V68.6 (این نسخه فقط رفع تست است؛ رفتاری تغییری نکرده).
+```
