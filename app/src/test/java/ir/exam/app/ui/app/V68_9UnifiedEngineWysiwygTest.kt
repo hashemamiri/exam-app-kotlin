@@ -155,4 +155,15 @@ class V68_9UnifiedEngineWysiwygTest {
         assertTrue("decodeGalleryImage(context, media.uri)" in editor)
         assertTrue("attachImages(printable, imagesById)" in adapter)
     }
+
+    /** V68.9.1 — رگرسیون کامپایل: مرجع متد جاوا با «::» و مسیر nativeCanvas استاندارد. */
+    @Test
+    fun `java static references keep the double colon and canvas uses drawContext`() {
+        // V68.9 روی CI همین دو خطا را داشت: use(BitmapFactory.decodeStream) بدون
+        // «::» کامپایل نمی‌شود و drawIntoCanvas در نسخهٔ Compose پروژه نیست.
+        assertTrue("BitmapFactory::decodeStream" in adapter)
+        assertFalse(".use(android.graphics.BitmapFactory.decodeStream)" in adapter)
+        assertTrue("drawContext.canvas.nativeCanvas" in editor)
+        assertFalse("drawIntoCanvas" in editor)
+    }
 }

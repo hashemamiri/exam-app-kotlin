@@ -2554,6 +2554,17 @@ require("class V68_9UnifiedEngineWysiwygTest" in
         (ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_9UnifiedEngineWysiwygTest.kt").read_text(),
         "V68.9 unified-engine regression tests are missing")
 
+# ---- V68.9.1: هات‌فیکس کامپایل — مرجع متد جاوا باید «::» داشته باشد و مسیر
+# nativeCanvas از drawContext بیاید (drawIntoCanvas در Compose پروژه نیست) ----
+require("BitmapFactory::decodeStream" in _v689_pdf
+        and ".use(android.graphics.BitmapFactory.decodeStream)" not in _v689_pdf,
+        "V68.9.1 Java static method reference lost its '::' (compile error)")
+require("drawContext.canvas.nativeCanvas" in _v689_editor
+        and "drawIntoCanvas" not in _v689_editor,
+        "V68.9.1 editor canvas path must be drawContext.canvas.nativeCanvas")
+require("if (p.y + p.height > slice.first && p.y < slice.second)" in _v689_pdf,
+        "V68.9.1 block/slice intersection needle (V68.8 regression test) must stay intact")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

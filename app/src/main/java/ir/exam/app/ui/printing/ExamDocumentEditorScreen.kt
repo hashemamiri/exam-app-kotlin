@@ -97,7 +97,6 @@ import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.NativeMathText
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -633,13 +632,13 @@ private fun EnginePageView(
                 detectTapGestures { offset -> onTap(offset.x / pxPerPt, offset.y / pxPerPt) }
             }
     ) {
-        drawIntoCanvas { wrap ->
-            val native = wrap.nativeCanvas
-            native.save()
-            native.scale(pxPerPt, pxPerPt)
-            engine.drawEditorPage(native, document, pageIndex, skipQuestion)
-            native.restore()
-        }
+        // V68.9.1 — تابع کمکی مخصوص draw-into-canvas در نسخهٔ Compose پروژه
+        // نیست؛ مسیر استاندارد DrawScope: drawContext.canvas + nativeCanvas.
+        val native = drawContext.canvas.nativeCanvas
+        native.save()
+        native.scale(pxPerPt, pxPerPt)
+        engine.drawEditorPage(native, document, pageIndex, skipQuestion)
+        native.restore()
     }
 }
 

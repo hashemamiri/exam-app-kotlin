@@ -555,10 +555,12 @@ class UnifiedDocumentEngine(private val context: Context) {
         preview: Boolean = false
     ) {
         document.placed.forEachIndexed { index, p ->
-            if (p.y + p.height > slice.first && p.y < slice.second &&
-                (skipQuestion == null || p.block.questionIndex != skipQuestion)
-            ) {
-                drawBlockAt(canvas, p.block, p.y, p.height, preview, document.layouts[index])
+            // V68.8 needle: شرط تقاطع بلوک با برش (ساختار عیناً حفظ شد)؛
+            // سؤالِ skip فقط از رندر ویرایشگر حذف می‌شود (لایهٔ Compose رویش می‌نشیند).
+            if (p.y + p.height > slice.first && p.y < slice.second) {
+                if (skipQuestion == null || p.block.questionIndex != skipQuestion) {
+                    drawBlockAt(canvas, p.block, p.y, p.height, preview, document.layouts[index])
+                }
             }
         }
     }
@@ -1095,7 +1097,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
     }
 
     private fun emblemBitmap(): Bitmap? = emblemCache ?: runCatching {
-        context.assets.open("print/emblem.png").use(android.graphics.BitmapFactory.decodeStream)
+        context.assets.open("print/emblem.png").use(android.graphics.BitmapFactory::decodeStream)
     }.getOrNull()?.also { emblemCache = it }
 
     private var emblemCache: Bitmap? = null

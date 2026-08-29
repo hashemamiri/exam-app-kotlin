@@ -13227,3 +13227,55 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                                  (همی�
 ۶) رگرسیون: فرمول درون‌خطی، شکل درون‌متنی کنار متن، جورکردنی راست↔چپ↔چپ،
    جدول RTL، تصویر آزاد در جای خودش در چاپ.
 ```
+
+---
+
+## ۲۶۰) V68.9.1 — هات‌فیکس کامپایل CI روی V68.9 (دو خطا، صفر تغییر منطقی)
+
+### خطاها (از خروجی واقعی CI)
+- `OfficialPdfPrintAdapter.kt:1097-1099` — «Cannot infer type / Function invocation
+  'decodeStream(...)' expected»: در بازنویسی V68.9، «::» مرجع متد جاوا جا افتاد.
+  اصلی (V68.8 سبز): `use(android.graphics.BitmapFactory::decodeStream)`؛
+  نوشته‌شده: `use(android.graphics.BitmapFactory.decodeStream)`.
+  فیکس: بازگرداندن بایت‌به‌بایت همان اصلی (با git show 6592681 مقایسه شد).
+- `ExamDocumentEditorScreen.kt:100/636` — «Unresolved reference 'drawIntoCanvas'»:
+  آن تابع در نسخهٔ Compose پروژه وجود ندارد. فیکس: مسیر استاندارد DrawScope:
+  `drawContext.canvas.nativeCanvas` (import فقط nativeCanvas ماند).
+
+### درس
+بازنویسی فایل یعنی حتی «خطوط دست‌نخورده» هم باید بایت‌به‌بایت با اصلی مقایسه
+شوند؛ الگوهای مرجع متد (`X::y`) در diff شبیه فراخوانی دیده می‌شوند. از این پس
+بعد از هر بازنویسی: `git diff` روی همهٔ تکه‌های «بدون تغییر مورد انتظار».
+
+### رگرسیون‌گیرها (تا تکرار نشود)
+- verify V68.9.1: `BitmapFactory::decodeStream` الزامی + شکل بدون «::» ممنوع؛
+  `drawContext.canvas.nativeCanvas` الزامی + `drawIntoCanvas` ممنوع.
+- تست جدید در V68_9UnifiedEngineWysiwygTest: `java static references keep the
+  double colon and canvas uses drawContext`.
+
+### صادقانه
+- کامپایل باز هم فقط در CI تأیید می‌شود؛ این دو خطا تمام خطاهای آن لاگ بودند
+  (بقیهٔ فایل‌ها spell-check معکوس شدند و الگوی مشابه دیگری ندارند:
+  `pdf::writeTo` سالم). اگر دوباره قرمز شد، لاگ را بفرستید.
+
+### فایل‌های تغییرکرده
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt  (۱ کاراکتر «::» + بازسازی شرط تقاطع بلوک/برش در drawFlowWindow)
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt  (drawContext.canvas.nativeCanvas + حذف import)
+app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt   (سوزن کهنه: fontFamily)) → فرم جدید موتور واحد)
+app/src/test/java/ir/exam/app/ui/app/V68_9UnifiedEngineWysiwygTest.kt  (۱ تست رگرسیون V68.9.1)
+scripts/verify_native_final.py                                          (باند V68.9.1 + نگهدار سوزن تقاطع)
+text/CHANGELOG_FA.txt                                                   (خط V68.9.1)
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                                  (همین بخش ۲۶۰)
+```
+
+نکته: علاوه بر دو خطای کامپایل، دو سوزن تستِ هم‌زمان هم اصلاح شد (وگرنه بعد از
+سبزشدن کامپایل، `testDebugUnitTest` قرمز می‌شد):
+- سوزن تقاطع V68.8 (`if (p.y + p.height > slice.first && p.y < slice.second)`) —
+  به‌جای تغییر تست تاریخی، شرط در `drawFlowWindow` به دو `if` تو در تو شکسته شد
+  تا رشتهٔ سوزن عیناً بماند.
+- سوزن V68.6 (`align=question.textAlign,fontFamily=question.fontFamily))`) —
+  `.copy(questionIndex = …)` موتور واحد آن را شکسته بود؛ سوزن به فرم پایدار
+  بدون `))` به‌روز شد (قصد تست پابرجا).
+
+### SQL جدید: ندارد — Edge deploy: ندارد

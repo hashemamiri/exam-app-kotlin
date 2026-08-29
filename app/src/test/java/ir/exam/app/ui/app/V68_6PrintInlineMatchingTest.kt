@@ -59,7 +59,10 @@ class V68_6PrintInlineMatchingTest {
         assertTrue("MathReplacementSpan(NativeMathParser.parse(segment.text))" in pdfAdapter)
         assertTrue("styledText=__opt,textSize=optionSize" in pdfAdapter)
         // گزینه از align سؤال پیروی می‌کند (مثل ویرایشگر؛ قبلاً همیشه راست)
-        assertTrue("align=question.textAlign,fontFamily=question.fontFamily))" in pdfAdapter)
+        // V68.9.1 — سوزن کهنه: در موتور واحد V68.9 بلوک‌ها questionIndex هم
+        // می‌گیرند (`.copy(questionIndex = ...)`) پس `fontFamily))` دیگر بلافاصله
+        // بسته نمی‌شود؛ قصد تست (گزینه/متن درون‌خطی، تراز و فونت سؤال) پابرجاست.
+        assertTrue("align=question.textAlign,fontFamily=question.fontFamily" in pdfAdapter)
         // قدیمی: فرمولِ گزینه = بلوک جدا — دیگر نباشد
         assertTrue("RenderBlock(formula=segment.text" !in pdfAdapter)
     }
