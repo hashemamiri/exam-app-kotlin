@@ -3,7 +3,6 @@ package ir.exam.app.data.repository
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.OptionStyle
 import ir.exam.app.ui.builder.QuestionDraft
-import ir.exam.app.ui.builder.StyleSpan
 import ir.exam.app.ui.builder.QuestionType
 import java.util.UUID
 import kotlinx.serialization.json.JsonArray
@@ -37,26 +36,6 @@ internal object ExamQuestionCodec {
                 )
             }
         }
-
-    // V68 — استایل تکه‌ای متن: آرایهٔ {s,e,b,i}؛ خالی/غایب = بدون استایل.
-    private fun JsonElement?.decodeSpans(): List<StyleSpan> =
-        this.asArrayOrEmpty().mapNotNull { element ->
-            (element as? JsonObject)?.let { o ->
-                val s = o["s"]?.asInt() ?: return@let null
-                val e = o["e"]?.asInt() ?: return@let null
-                if (e > s) StyleSpan(s, e, o["b"]?.asBoolean() ?: false, o["i"]?.asBoolean() ?: false) else null
-            }
-        }
-
-    private fun encodeSpans(spans: List<StyleSpan>): JsonArray? =
-        if (spans.isEmpty()) null else JsonArray(spans.map { span ->
-            JsonObject(buildMap {
-                put("s", JsonPrimitive(span.start))
-                put("e", JsonPrimitive(span.end))
-                if (span.bold) put("b", JsonPrimitive(true))
-                if (span.italic) put("i", JsonPrimitive(true))
-            })
-        })
 
     private fun encodeStyles(styles: List<OptionStyle?>, size: Int): JsonArray? =
         if (styles.none { it != null }) null else JsonArray(List(size) { index ->
@@ -95,7 +74,6 @@ internal object ExamQuestionCodec {
                 optionStyles = obj["optionStyles"].decodeStyles(),
                 matchingLeftStyles = obj["leftStyles"].decodeStyles(),
                 matchingRightStyles = obj["rightStyles"].decodeStyles(),
-                textSpans = obj["spans"].decodeSpans(),
                 correctIndex = key["correctOption"]?.asInt() ?: obj["correctIndex"]?.asInt(),
                 expectedText = when (type) {
                     QuestionType.TRUE_FALSE -> (key["correctAnswer"]?.asBoolean() ?: false).toString()
@@ -187,8 +165,6 @@ internal object ExamQuestionCodec {
                 encodeStyles(question.matchingLeftStyles, question.matchingLeft.size)?.let {
                     values["leftStyles"] = it
                 }
-                // V68 — استایل تکه‌ای متن فقط وقتی وجود دارد نوشته می‌شود.
-                encodeSpans(question.textSpans)?.let { values["spans"] = it }
                 encodeStyles(question.matchingRightStyles, question.matchingRight.size)?.let {
                     values["rightStyles"] = it
                 }

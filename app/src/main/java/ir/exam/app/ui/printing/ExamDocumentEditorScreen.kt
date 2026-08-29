@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FormatAlignCenter
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material.icons.outlined.ZoomOut
 import androidx.compose.material3.Button
@@ -56,19 +58,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
-import ir.exam.app.ui.builder.StyleSpanOps
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.Color
@@ -137,8 +126,6 @@ fun ExamDocumentEditorScreen(
     BackHandler(onBack = onBack)
     var zoom by remember { mutableStateOf(1.6f) }
     var editingQuestionId by remember { mutableStateOf<String?>(null) }
-    // V68 — بازهٔ انتخاب‌شدهٔ متن (شروع/پایان انحصاری در متن کامل سؤالِ در ویرایش).
-    var textRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     // V63.3 — شیء انتخاب‌شده برای +/− و آیکن جابجایی نوار ابزار.
     var selectedImage by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedFigure by remember { mutableStateOf<Pair<String, Int>?>(null) }
@@ -179,6 +166,7 @@ fun ExamDocumentEditorScreen(
         // سؤال انتخابی و +/−/جابجایی روی شیء انتخابی اثر می‌کنند.
         DocumentToolbar(
             question = editing,
+            hasObject = selectedImage != null || selectedFigure != null,
             hasElement = selectedElement != null,
             hasDeletable = selectedImage != null || selectedFigure != null || selectedElement != null,
             locked = objectsLocked,
@@ -200,6 +188,26 @@ fun ExamDocumentEditorScreen(
                     selectedElement = null; editingElement = null
                 }
             },
+            onObjectGrow = {
+                selectedImage?.let { (questionId, imageId) ->
+                    val media = state.questions.firstOrNull { it.id == questionId }
+                        ?.images?.firstOrNull { it.id == imageId }
+                    if (media != null) builder.resizeImage(questionId, imageId, media.widthMm + 10f)
+                }
+                selectedFigure?.let { (questionId, occurrenceIndex) ->
+                    resizeFigureBy(builder, state.questions, questionId, occurrenceIndex, +10f)
+                }
+            },
+            onObjectShrink = {
+                selectedImage?.let { (questionId, imageId) ->
+                    val media = state.questions.firstOrNull { it.id == questionId }
+                        ?.images?.firstOrNull { it.id == imageId }
+                    if (media != null) builder.resizeImage(questionId, imageId, media.widthMm - 10f)
+                }
+                selectedFigure?.let { (questionId, occurrenceIndex) ->
+                    resizeFigureBy(builder, state.questions, questionId, occurrenceIndex, -10f)
+                }
+            },
             // V64.4 — Word-مانند: اگر «عنصری» انتخاب است قالب روی همان عنصر
             // اعمال می‌شود (استایل per-option)؛ وگرنه مثل قبل روی کل سؤال.
             // V64.5 — قالب عنصر برای هر سه نوع (گزینه و دو سمت جورکردنی).
@@ -219,33 +227,15 @@ fun ExamDocumentEditorScreen(
                     }
                 } else editing?.let { builder.setQuestionFontSize(it.id, it.fontSizeSp + delta) }
             },
-            // V68 — مثل ورد: با انتخاب بازه‌ای، بولد فقط همان تکهٔ متن را
-            // می‌پوشاند (استایل تکه‌ای؛ فقط چیدمان چاپ).
             onBold = {
-                val range = textRange
-                if (editing != null && range != null && range.second > range.first) {
-                    builder.setQuestionSpans(
-                        editing!!.id,
-                        StyleSpanOps.toggle(editing!!.textSpans, range.first, range.second, bold = true)
-                    )
-                } else {
-                    val element = selectedElement
-                    if (element != null) applyElementStyle(builder, element) { it.copy(bold = !it.bold) }
-                    else editing?.let { builder.setQuestionBold(it.id, !it.bold) }
-                }
+                val element = selectedElement
+                if (element != null) applyElementStyle(builder, element) { it.copy(bold = !it.bold) }
+                else editing?.let { builder.setQuestionBold(it.id, !it.bold) }
             },
             onItalic = {
-                val range = textRange
-                if (editing != null && range != null && range.second > range.first) {
-                    builder.setQuestionSpans(
-                        editing!!.id,
-                        StyleSpanOps.toggle(editing!!.textSpans, range.first, range.second, italic = true)
-                    )
-                } else {
-                    val element = selectedElement
-                    if (element != null) applyElementStyle(builder, element) { it.copy(italic = !it.italic) }
-                    else editing?.let { builder.setQuestionItalic(it.id, !it.italic) }
-                }
+                val element = selectedElement
+                if (element != null) applyElementStyle(builder, element) { it.copy(italic = !it.italic) }
+                else editing?.let { builder.setQuestionItalic(it.id, !it.italic) }
             },
             onAlign = { value -> editing?.let { builder.setQuestionAlign(it.id, value) } },
             onMoveQuestion = { delta -> editing?.let { builder.moveQuestion(it.id, delta) } },
@@ -276,17 +266,10 @@ fun ExamDocumentEditorScreen(
             else -> WordFlowDocument(
                 questions = state.questions,
                 zoom = zoom,
-                // V68 — زوم دو-انگشتی + دوبار-لمس = ۱۰۰٪ (مثل Ctrl+چرخ ورد).
-                onZoom = { factor -> zoom = (zoom * factor).coerceIn(0.6f, 3f) },
-                onResetZoom = { zoom = 1f },
-                onTextRangeChange = { s, e ->
-                    textRange = if (s != null && e != null && e > s) s to e else null
-                },
                 editingQuestionId = editingQuestionId,
                 onPageCount = { measuredPageCount = it },
                 onSelectQuestion = { id ->
                     editingQuestionId = if (editingQuestionId == id) null else id
-                    textRange = null
                     selectedImage = null; selectedFigure = null
                     selectedElement = null; editingElement = null
                 },
@@ -407,9 +390,6 @@ private fun DocumentEditorTopBar(
 private fun WordFlowDocument(
     questions: List<QuestionDraft>,
     zoom: Float,
-    onZoom: (Float) -> Unit,
-    onResetZoom: () -> Unit,
-    onTextRangeChange: (Int?, Int?) -> Unit,
     editingQuestionId: String?,
     onPageCount: (Int) -> Unit,
     onSelectQuestion: (String) -> Unit,
@@ -432,18 +412,11 @@ private fun WordFlowDocument(
     onResizeFigure: (String, Int, Float) -> Unit
 ) {
     val scroll = rememberScrollState()
-    // V68 — زوم دو-انگشتی (pinch) بدون شکستن اسکرول تک‌انگشتی.
-    val zoomState = rememberTransformableState { zoomChange, _, _ -> onZoom(zoomChange) }
     Column(
-        // V68 — imePadding: مکان‌نا هنگام باز بودن کیبورد زیر آن گم نمی‌شود.
-        Modifier.fillMaxSize().verticalScroll(scroll).imePadding().padding(vertical = 12.dp),
+        Modifier.fillMaxSize().verticalScroll(scroll).padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SubcomposeLayout(
-            Modifier
-                .transformable(zoomState)
-                .pointerInput(Unit) { detectTapGestures(onDoubleTap = { onResetZoom() }) }
-        ) { constraints ->
+        SubcomposeLayout(Modifier) { constraints ->
             val pageWidthPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM, zoom).dp.roundToPx()
             val pageHeightPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_HEIGHT_MM, zoom).dp.roundToPx()
             val marginPx = WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp.roundToPx()
@@ -463,7 +436,6 @@ private fun WordFlowDocument(
                         onSelect = { onSelectQuestion(question.id) },
                         editable = editingQuestionId == question.id,
                         onTextChange = { onTextChange(question.id, it) },
-                        onTextRangeChange = onTextRangeChange,
                         onScoreChange = { onScoreChange(question.id, it) },
                         selectedImageId = selectedImageId,
                         selectedFigureIndex = selectedFigure?.takeIf { it.first == question.id }?.second,
@@ -537,7 +509,6 @@ private fun WordQuestionBlock(
     onSelect: () -> Unit,
     editable: Boolean,
     onTextChange: (String) -> Unit,
-    onTextRangeChange: (Int?, Int?) -> Unit,
     onScoreChange: (String) -> Unit,
     selectedImageId: String?,
     selectedFigureIndex: Int?,
@@ -568,47 +539,12 @@ private fun WordQuestionBlock(
         "left" -> TextAlign.Left
         else -> TextAlign.Right
     }
-    // V68 — قطعه‌بندی و بازهٔ آفست هر قطعه (برای انتخاب بازه‌ای و استایل تکه‌ای).
-    val formulas = remember(question.id, question.text) {
-        ir.exam.app.core.math.FormulaTextCodec.occurrences(question.text)
-    }
-    val parts = remember(question.id, question.text) {
-        ir.exam.app.core.text.RichTextSplitter.split(question.text)
-    }
-    val segRanges = remember(question.id, question.text) {
-        ir.exam.app.core.text.RichTextSplitter.segmentSourceRanges(
-            parts, formulas, FigureCodec.occurrences(question.text)
-        )
-    }
-    // V68 — یک‌لمسی مثل ورد: لمس هر جای سؤال، نزدیک‌ترین تکهٔ متنیِ همان
-    // نقطه را فوکوس می‌کند تا مکان‌نا همان‌جا بنشیند.
-    val segmentBounds = remember(question.id) { mutableStateMapOf<Int, Rect>() }
-    val segmentFocusers = remember(question.id) { mutableStateMapOf<Int, FocusRequester>() }
-    var blockCoords by remember(question.id) { mutableStateOf<LayoutCoordinates?>(null) }
-    var pendingFocusPart by remember(question.id) { mutableStateOf<Int?>(null) }
-    LaunchedEffect(editable, pendingFocusPart) {
-        if (editable) {
-            val target = pendingFocusPart
-                ?: parts.indexOfFirst { it is ir.exam.app.core.text.RichSegment.Text }.takeIf { it >= 0 }
-            if (target != null) runCatching { segmentFocusers[target]?.requestFocus() }
-        }
-    }
     // V64.6 — سؤال در ویرایشگر مثل متن Word است؛ انتخاب/ویرایش نباید
     // دور کل سؤال یک کادر بسازد. کادر آبی فقط برای خودِ شیء تصویری باقی است.
     Column(
         Modifier
             .fillMaxWidth()
-            .onGloballyPositioned { blockCoords = it }
-            .pointerInput(question.id) {
-                detectTapGestures(onTap = { pos ->
-                    onSelect()
-                    val root = blockCoords?.localToRoot(pos) ?: return@detectTapGestures
-                    pendingFocusPart = segmentBounds.entries
-                        .filter { it.value.contains(root) }
-                        .minByOrNull { it.key }?.key
-                        ?: segmentBounds.keys.minOrNull()
-                })
-            }
+            .clickable(onClick = onSelect)
     ) {
         // V63.4 — بدون مداد: انتخاب سؤال، بارم را هم درجا ویرایش‌پذیر می‌کند.
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -663,6 +599,9 @@ private fun WordQuestionBlock(
         // کاربر): RichTextSplitter.split کل متن را می‌شکند و reconstruct جای
         // فرمول/شکل را دقیقاً حفظ می‌کند — بدون منطق offset دست‌ساز.
         if (editable) {
+            val parts = remember(question.id, question.text) {
+                ir.exam.app.core.text.RichTextSplitter.split(question.text)
+            }
             var figureCursor = 0
             // V64.5.1 — مثل ورد: تکه‌های متن و فرمول «در یک سطر جاری» کنار هم
             // می‌نشینند (FlowRow)؛ قبلاً هر تکه تمام‌عرض بود و متنِ فرمول‌دار
@@ -688,74 +627,16 @@ private fun WordQuestionBlock(
                             )
                         }
                         is ir.exam.app.core.text.RichSegment.Text -> {
-                            val segRange = segRanges.getOrNull(partIndex)
-                            // V68 — مقدار TextFieldValue: انتخاب بازه‌ای هم در
-                            // دسترس است (هایلایت خود BasicTextField مثل ورد).
-                            var segmentValue by remember(question.id, partIndex, parts.size) {
-                                mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(part.text))
+                            var pieceDraft by remember(question.id, partIndex, parts.size) {
+                                mutableStateOf(part.text)
                             }
-                            LaunchedEffect(part.text) {
-                                if (segmentValue.text != part.text) {
-                                    segmentValue = androidx.compose.ui.text.input.TextFieldValue(part.text)
-                                }
-                            }
-                            val requester = remember(partIndex, parts.size) { FocusRequester() }
-                            segmentFocusers[partIndex] = requester
-                            // V68 — بازه‌های استایل تکه‌ای محلی همین قطعه.
-                            val (localBold, localItalic) = remember(
-                                question.id, partIndex, question.textSpans, parts.size
-                            ) {
-                                val bolds = mutableListOf<Pair<Int, Int>>()
-                                val italics = mutableListOf<Pair<Int, Int>>()
-                                question.textSpans.forEach { sp ->
-                                    if (segRange != null) {
-                                        val s = (sp.start - segRange.first).coerceIn(0, part.text.length)
-                                        val e = (sp.end - segRange.first).coerceIn(0, part.text.length)
-                                        if (e > s) {
-                                            if (sp.bold) bolds += s to e
-                                            if (sp.italic) italics += s to e
-                                        }
-                                    }
-                                }
-                                bolds to italics
-                            }
-                            val fieldValue =
-                                if (localBold.isEmpty() && localItalic.isEmpty()) segmentValue
-                                else androidx.compose.ui.text.input.TextFieldValue(
-                                    androidx.compose.ui.text.buildAnnotatedString {
-                                        append(segmentValue.text)
-                                        localBold.forEach { (s, e) ->
-                                            addStyle(
-                                                androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold),
-                                                s, e
-                                            )
-                                        }
-                                        localItalic.forEach { (s, e) ->
-                                            addStyle(
-                                                androidx.compose.ui.text.SpanStyle(fontStyle = FontStyle.Italic),
-                                                s, e
-                                            )
-                                        }
-                                    },
-                                    segmentValue.selection
-                                )
                             BasicTextField(
-                                value = fieldValue,
-                                onValueChange = { newValue ->
-                                    segmentValue = newValue
-                                    val value = newValue.text
+                                value = pieceDraft,
+                                onValueChange = { value ->
+                                    pieceDraft = value
                                     onTextChange(
                                         ir.exam.app.core.text.RichTextSplitter.reconstruct(parts, partIndex, value)
                                     )
-                                    // V68 — گزارش بازهٔ انتخاب‌شده به نوار ابزار.
-                                    val sel = newValue.selection
-                                    val base = segRange?.first ?: 0
-                                    if (!sel.collapsed) {
-                                        onTextRangeChange(
-                                            base + minOf(sel.min, sel.max),
-                                            base + maxOf(sel.min, sel.max)
-                                        )
-                                    } else onTextRangeChange(null, null)
                                 },
                                 textStyle = TextStyle(
                                     fontSize = fontSize,
@@ -769,43 +650,7 @@ private fun WordQuestionBlock(
                                 // عرض به اندازهٔ محتوا؛ تکهٔ خالی حداقل جا برای مکان‌نما.
                                 modifier = Modifier.widthIn(min = 12.dp)
                                     .background(Color.Transparent)
-                                    .focusRequester(requester)
-                                    .onGloballyPositioned { c ->
-                                        if (segRange != null) segmentBounds[partIndex] = c.boundsInRoot()
-                                    }
                             )
-                        }
-                    }
-                }
-            }
-        } else if (question.textSpans.isNotEmpty() && textOnly.isNotBlank()) {
-            // V68 — نمایش استایل تکه‌ای در حالت غیر ویرایش: تکه‌های بولد/ایتالیک
-            // مثل ورد دیده می‌شوند (همان ساختار جریان قطعه‌ای ویرایش).
-            androidx.compose.foundation.layout.FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.Center
-            ) {
-                parts.forEachIndexed { partIndex, part ->
-                    when (part) {
-                        is ir.exam.app.core.text.RichSegment.Math -> NativeMathText(
-                            source = "$" + part.tex + "$",
-                            fontSize = fontSize
-                        )
-                        is ir.exam.app.core.text.RichSegment.Figure -> Unit
-                        is ir.exam.app.core.text.RichSegment.Text -> {
-                            val segRange = segRanges.getOrNull(partIndex)
-                            if (segRange != null) {
-                                StyleSpanOps.splitBySpans(part.text, segRange.first, question.textSpans)
-                                    .forEach { piece ->
-                                        if (piece.first.isEmpty()) return@forEach
-                                        NativeMathText(
-                                            source = piece.first,
-                                            fontSize = fontSize,
-                                            fontWeight = if (piece.second) FontWeight.Bold else weight,
-                                            fontStyle = if (piece.third) FontStyle.Italic else style
-                                        )
-                                    }
-                            }
                         }
                     }
                 }
@@ -913,8 +758,6 @@ private fun WordQuestionBlock(
                 selected = selectedImageId == media.id,
                 locked = objectsLocked,
                 onSelect = { onSelectImage(media.id) },
-                // V68 — دستگیرهٔ گوشه: اندازه با کشیدن همان‌جا عوض می‌شود.
-                onResize = { w -> onResizeImage(media.id, w) },
                 // V63.8 — با اولین کشیدن، تصویر خودکار «آزاد» می‌شود.
                 onFreeMove = onImageFreeMove,
                 onMoved = { xMm, yMm -> onMoveImage(media.id, xMm, yMm) }
@@ -936,11 +779,14 @@ private fun WordQuestionBlock(
 @Composable
 private fun DocumentToolbar(
     question: QuestionDraft?,
+    hasObject: Boolean,
     hasElement: Boolean,
     hasDeletable: Boolean,
     locked: Boolean,
     onToggleLock: () -> Unit,
     onDeleteSelected: () -> Unit,
+    onObjectGrow: () -> Unit,
+    onObjectShrink: () -> Unit,
     onFontSize: (Float) -> Unit,
     onBold: () -> Unit,
     onItalic: () -> Unit,
@@ -959,6 +805,15 @@ private fun DocumentToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
+        // + و − : اندازهٔ شیء انتخابی (تصویر/شکل/نمودار/جدول)
+        IconButton(onClick = onObjectGrow, enabled = hasObject) {
+            Icon(Icons.Outlined.Add, contentDescription = "بزرگ‌کردن شیء",
+                tint = if (hasObject) Color(0xFF0B72B8) else Color(0xFFB2BDC6))
+        }
+        IconButton(onClick = onObjectShrink, enabled = hasObject) {
+            Icon(Icons.Outlined.Remove, contentDescription = "کوچک‌کردن شیء",
+                tint = if (hasObject) Color(0xFF0B72B8) else Color(0xFFB2BDC6))
+        }
         // V63.9 — قفل جابجایی: بسته=قرمز (اشیا ثابت)، باز=سبز (جابجایی آزاد).
         IconButton(onClick = onToggleLock) {
             Icon(
@@ -1073,13 +928,10 @@ private fun DraggableQuestionImage(
     selected: Boolean,
     locked: Boolean,
     onSelect: () -> Unit,
-    onResize: (Float) -> Unit,
     onFreeMove: () -> Unit,
     onMoved: (Float, Float) -> Unit
 ) {
     val widthMm = media.widthMm.coerceIn(WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM)
-    // V68 — عرض زندهٔ حین کشیدن دستگیرهٔ گوشه (میلی‌متر).
-    var liveResizeMm by remember(media.id) { mutableStateOf<Float?>(null) }
     val heightMm = widthMm * 0.6f
     val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
         WordPageLayout.mmToDp(1f, zoom).dp.toPx()
@@ -1087,9 +939,7 @@ private fun DraggableQuestionImage(
     // آفست زندهٔ حین درگ (میلی‌متر)؛ با رها شدن انگشت commit می‌شود.
     var dragXmm by remember(media.id) { mutableStateOf(0f) }
     var dragYmm by remember(media.id) { mutableStateOf(0f) }
-    val liveWidthMm = (liveResizeMm ?: widthMm).coerceIn(
-        WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM
-    )
+    val liveWidthMm = widthMm
     // V63.9 — آفست زنده حتی قبل از free شدن هم دیده می‌شود تا درگ واقعاً کار کند.
     val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm)
     val baseYmm = (if (freePlacement) media.yMm.coerceIn(0f, 60f) else 0f) + dragYmm
@@ -1132,21 +982,6 @@ private fun DraggableQuestionImage(
             contentScale = ContentScale.FillWidth,
             modifier = Modifier.fillMaxWidth()
         )
-        // V68 — دستگیره‌های گوشه مثل ورد: کشیدن = تغییر اندازهٔ زنده.
-        if (selected && !locked) {
-            ObjectCornerHandles(
-                onLiveDeltaPx = { dxPx ->
-                    liveResizeMm = (liveResizeMm ?: widthMm) + dxPx / pxPerMm
-                },
-                onCommit = {
-                    val w = (liveResizeMm ?: widthMm).coerceIn(
-                        WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM
-                    )
-                    liveResizeMm = null
-                    onResize(w)
-                }
-            )
-        }
     }
 }
 
@@ -1162,19 +997,13 @@ private fun ResizableFigure(
     onSelect: () -> Unit,
     onResized: (Float) -> Unit
 ) {
-    // V68 — اندازه با دستگیرهٔ گوشه مثل ورد (کشیدن = تغییر زنده).
+    // V63.8 — بدون دستگیره/لکهٔ آبی: لمس = انتخاب (کادر آبی)؛ اندازه با
+    // +/− نوار ابزار (onResized از آنجا صدا می‌خورد).
     val widthMm = WordPageLayout.figureWidthMm(spec)
-    var liveResizeMm by remember(spec.raw) { mutableStateOf<Float?>(null) }
-    val shownWidthMm = (liveResizeMm ?: widthMm).coerceIn(
-        WordPageLayout.FIGURE_MIN_WIDTH_MM, WordPageLayout.FIGURE_MAX_WIDTH_MM
-    )
-    val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
-        WordPageLayout.mmToDp(1f, zoom).dp.toPx()
-    }
     Box(
         Modifier
             .padding(top = WordPageLayout.mmToDp(1.5f, zoom).dp)
-            .width(WordPageLayout.mmToDp(shownWidthMm, zoom).dp)
+            .width(WordPageLayout.mmToDp(widthMm, zoom).dp)
             .then(
                 if (selected) Modifier.border(2.dp, Color(0xFF0B72B8)) else Modifier
             )
@@ -1192,55 +1021,6 @@ private fun ResizableFigure(
         } else {
             InlineFigureView(spec = spec, modifier = Modifier.fillMaxWidth())
         }
-        if (selected) {
-            ObjectCornerHandles(
-                onLiveDeltaPx = { dxPx ->
-                    liveResizeMm = (liveResizeMm ?: widthMm) + dxPx / pxPerMm
-                },
-                onCommit = {
-                    val w = (liveResizeMm ?: widthMm).coerceIn(
-                        WordPageLayout.FIGURE_MIN_WIDTH_MM, WordPageLayout.FIGURE_MAX_WIDTH_MM
-                    )
-                    liveResizeMm = null
-                    onResized(w)
-                }
-            )
-        }
-    }
-}
-
-/**
- * V68 — چهار دستگیرهٔ گوشهٔ دایره‌ای مثل ورد روی شیء انتخاب‌شده؛ کشیدن هر
- * گوشه عرض را زنده تغییر می‌دهد و با رها شدن commit می‌شود (sign جهت گوشه).
- */
-@Composable
-private fun BoxScope.ObjectCornerHandles(
-    onLiveDeltaPx: (Float) -> Unit,
-    onCommit: () -> Unit
-) {
-    listOf(
-        Triple(Alignment.TopStart, (-9).dp to (-9).dp, -1f),
-        Triple(Alignment.TopEnd, 9.dp to (-9).dp, 1f),
-        Triple(Alignment.BottomStart, (-9).dp to 9.dp, -1f),
-        Triple(Alignment.BottomEnd, 9.dp to 9.dp, 1f)
-    ).forEach { (corner, offsetDp, sign) ->
-        Box(
-            Modifier
-                .align(corner)
-                .offset(x = offsetDp.first, y = offsetDp.second)
-                .size(18.dp)
-                .background(Color.White, CircleShape)
-                .border(1.5.dp, Color(0xFF0B72B8), CircleShape)
-                .pointerInput(corner) {
-                    detectDragGestures(
-                        onDrag = { change, drag ->
-                            change.consume()
-                            onLiveDeltaPx(sign * drag.x)
-                        },
-                        onDragEnd = { onCommit() }
-                    )
-                }
-        )
     }
 }
 

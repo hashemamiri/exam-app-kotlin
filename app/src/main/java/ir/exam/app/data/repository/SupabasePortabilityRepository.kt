@@ -147,9 +147,6 @@ class SupabasePortabilityRepository {
                     fontSizeSp = question.fontSizeSp,
                     bold = question.bold,
                     italic = question.italic,
-                    textSpans = question.textSpans.map {
-                        ir.exam.app.domain.model.PrintTextSpan(it.start, it.end, it.bold, it.italic)
-                    },
                     imageWidthsMm = question.images.map { it.widthMm } + question.optionImages.filterNotNull().map { 40f },
                     imageXmm = question.images.map { it.xMm } + question.optionImages.filterNotNull().map { 20f },
                     imageYmm = question.images.map { it.yMm } + question.optionImages.filterNotNull().map { 30f },

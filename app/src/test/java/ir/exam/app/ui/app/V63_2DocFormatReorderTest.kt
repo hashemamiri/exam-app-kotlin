@@ -30,8 +30,7 @@ class V63_2DocFormatReorderTest {
     fun `tapping a question opens the format bar with size bold italic align and reorder`() {
         // V63.3 — نوار واحد DocumentToolbar جایگزین QuestionFormatBar شد.
         assertTrue("fun DocumentToolbar(" in editor)
-        // V68 — یک‌لمسی مثل ورد: لمس سؤال با موقعیت، مکان‌نا در همان نقطه.
-        assertTrue("detectTapGestures(onTap = { pos ->" in editor)
+        assertTrue(".clickable(onClick = onSelect)" in editor)
         // اندازه با گام ۲
         assertTrue("onFontSize(+2f)" in editor)
         assertTrue("onFontSize(-2f)" in editor)

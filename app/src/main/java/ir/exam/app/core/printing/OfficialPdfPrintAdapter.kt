@@ -92,9 +92,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val imageXmm: Float = 20f,
         val imageYmm: Float = 30f,
         val boxed: Boolean = false,
-        val spacingAfter: Float = 6f,
-        // V68 — متن استایل‌دار درون‌خطی (بولد/ایتالیک تکه‌ای)؛ خط واحد.
-        val styledText: android.text.SpannableStringBuilder? = null
+        val spacingAfter: Float = 6f
     )
     private data class PlannedBlock(val block: RenderBlock, val height: Float)
     private data class PlannedPage(val blocks: List<PlannedBlock>)
@@ -157,14 +155,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign))
             // V53.1 — شکل/نمودار/جدول درون‌متنی (%%FIG%%) به‌جای JSON خام،
             // به‌صورت تصویر برداری در PDF رندر می‌شوند؛ فرمول‌ها مثل قبل.
-            // V68 — بازهٔ آفست هر قطعه برای استایل تکه‌ای متن.
-            val __formulas = ir.exam.app.core.math.FormulaTextCodec.occurrences(question.text)
-            val __figures = ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
-            val __segments = RichTextSplitter.split(question.text)
-            val __ranges = RichTextSplitter.segmentSourceRanges(__segments, __formulas, __figures)
-            // V68 — استایل تکه‌ای از دامنهٔ چاپ به StyleSpan ویرایشگر نگاشت می‌شود.
-            val __spans = question.textSpans.map { ir.exam.app.ui.builder.StyleSpan(it.start, it.end, it.bold, it.italic) }
-            __segments.forEachIndexed { segIndex, rich ->
+            RichTextSplitter.split(question.text).forEach { rich ->
                 when (rich) {
                     is RichSegment.Math -> add(RenderBlock(formula=rich.tex,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
                     is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
@@ -172,38 +163,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                         add(RenderBlock(image=bmp,imageWidthMm=WordPageLayout.figureWidthMm(rich.spec)))
                     } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                     is RichSegment.Text -> if (rich.text.isNotBlank()) {
-                        // V68 — بولد/ایتالیک بازه‌ای مثل ورد: استایل‌ها با Spannable
-                        // در همان خط می‌نشینند (هر تکه بلوک جدا نمی‌شود تا خط نشکند).
-                        val segStart = __ranges.getOrNull(segIndex)?.first ?: 0
-                        val overlapping = __spans.any { it.end > segStart && it.start < segStart + rich.text.length }
-                        if (overlapping) {
-                            val sb = android.text.SpannableStringBuilder(rich.text)
-                            var off = 0
-                            ir.exam.app.ui.builder.StyleSpanOps.splitBySpans(rich.text, segStart, __spans)
-                                .forEach { piece ->
-                                    val a = off
-                                    val b = off + piece.first.length
-                                    off = b
-                                    if (piece.second) sb.setSpan(
-                                        android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                                        a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                    )
-                                    if (piece.third) sb.setSpan(
-                                        android.text.style.StyleSpan(android.graphics.Typeface.ITALIC),
-                                        a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                    )
-                                }
-                            if (sb.toString().contains("\\$")) {
-                                sb.replace(0, sb.length, sb.toString().replace("\\$","$"))
-                            }
-                            add(RenderBlock(styledText=sb,textSize=question.fontSizeSp.coerceIn(8f,30f),
-                                bold=question.bold,italic=question.italic,
-                                align=question.textAlign,fontFamily=question.fontFamily))
-                        } else splitText(rich.text.replace("\\$","$"),700).forEach {
-                            add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),
-                                bold=question.bold,italic=question.italic,
-                                align=question.textAlign,fontFamily=question.fontFamily))
-                        }
+                        splitText(rich.text.replace("\\$","$"),700).forEach { add(RenderBlock(text=it,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily)) }
                     }
                 }
             }
@@ -278,13 +238,6 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             block.formula?.let { formula -> mathRenderer.draw(canvas,NativeMathParser.parse(formula),MARGIN,y,block.textSize,Color.BLACK) }
             block.text?.takeIf(String::isNotEmpty)?.let { text ->
                 val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
-                canvas.save()
-                canvas.translate(MARGIN, y)
-                layout.draw(canvas)
-                canvas.restore()
-            }
-            block.styledText?.let { sb ->
-                val layout = styledLayout(sb, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
                 canvas.save()
                 canvas.translate(MARGIN, y)
                 layout.draw(canvas)
@@ -409,29 +362,12 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             return image.height*scale+block.spacingAfter+8f
         }
         block.formula?.let { return mathRenderer.measure(NativeMathParser.parse(it),block.textSize).height+block.spacingAfter+5f }
-        block.styledText?.let {
-            return styledLayout(it, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily).height + block.spacingAfter + 4f
-        }
         val text = block.text.orEmpty()
         if (text.isEmpty()) return block.spacingAfter
         return textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily).height + block.spacingAfter + 4f
     }
 
     private fun textLayout(text:String,size:Float,bold:Boolean,width:Int,italic:Boolean=false,align:String="right",fontFamily:String="default"):StaticLayout {
-        val base=when(fontFamily.lowercase()){"vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular);"shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular);"sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular);else->Typeface.create("sans",Typeface.NORMAL)}
-        val style=when{bold&&italic->Typeface.BOLD_ITALIC;bold->Typeface.BOLD;italic->Typeface.ITALIC;else->Typeface.NORMAL}
-        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {color=Color.BLACK;textSize=size;typeface=Typeface.create(base,style)}
-        val alignment=when(align){"center"->Layout.Alignment.ALIGN_CENTER;"left"->Layout.Alignment.ALIGN_OPPOSITE;else->Layout.Alignment.ALIGN_NORMAL}
-        return StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
-            .setAlignment(alignment)
-            .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_RTL)
-            .setLineSpacing(2f, 1f)
-            .setIncludePad(false)
-            .build()
-    }
-
-    /** V68 — چیدمان متن با استایل تکه‌ای (Spannable): بولد/ایتالیک درون‌خطی. */
-    private fun styledLayout(text: android.text.SpannableStringBuilder, size: Float, bold: Boolean, width: Int, italic: Boolean = false, align: String = "right", fontFamily: String = "default"): StaticLayout {
         val base=when(fontFamily.lowercase()){"vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular);"shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular);"sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular);else->Typeface.create("sans",Typeface.NORMAL)}
         val style=when{bold&&italic->Typeface.BOLD_ITALIC;bold->Typeface.BOLD;italic->Typeface.ITALIC;else->Typeface.NORMAL}
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {color=Color.BLACK;textSize=size;typeface=Typeface.create(base,style)}

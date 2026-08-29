@@ -2024,7 +2024,7 @@ _v63_2_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_2DocFormatReorderTes
 require("fun DocumentToolbar(" in _doc_editor_v63
         and "builder.setQuestionFontSize(it.id, it.fontSizeSp + delta)" in _doc_editor_v63
         and "builder.moveQuestion(it.id, delta)" in _doc_editor_v63
-        and "detectTapGestures(onTap = { pos ->" in _doc_editor_v63
+        and ".clickable(onClick = onSelect)" in _doc_editor_v63
         and "onTextChange = builder::updateText" in _doc_editor_v63,
         "V63.2/63.3 format toolbar / reorder is missing from the document editor")
 require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
@@ -2269,47 +2269,6 @@ require("fun changeRangeAfterEdit(" in _v671_rich,
 require("class V67_1FormulaInsertOrderTest" in _v671_test
         and "change range covers the inserted formula and ends right after it" in _v671_test,
         "V67.1 formula order regression tests are missing")
-
-
-# ---- V68.0: Word-like print editor behavior (caret, range spans, corner handles, pinch) ----
-_v68_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt").read_text()
-_v68_draft=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()
-_v68_vm=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
-_v68_codec=(ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").read_text()
-_v68_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt").read_text()
-_v68_repo=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
-_v68_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
-_v68_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_0PrintEditorWordBehaviorTest.kt").read_text()
-require("detectTapGestures(onTap = { pos ->" in _v68_editor
-        and "focusRequester(requester)" in _v68_editor
-        and "androidx.compose.ui.text.input.TextFieldValue(part.text)" in _v68_editor
-        and ".clickable(onClick = onSelect)" not in _v68_editor
-        and ".imePadding()" in _v68_editor,
-        "V68.0 one-tap caret with keyboard-visible padding is missing")
-require("rememberTransformableState" in _v68_editor and "transformable(zoomState)" in _v68_editor
-        and "detectTapGestures(onDoubleTap = { onResetZoom() })" in _v68_editor,
-        "V68.0 pinch zoom and double-tap reset are missing")
-require("private fun BoxScope.ObjectCornerHandles(" in _v68_editor
-        and "onObjectGrow" not in _v68_editor and "onObjectShrink" not in _v68_editor
-        and "بزرگ‌کردن شیء" not in _v68_editor,
-        "V68.0 corner resize handles must replace toolbar +/- buttons")
-require("StyleSpanOps.toggle" in _v68_editor and "onTextRangeChange" in _v68_editor
-        and "fun toggle(" in _v68_draft and "fun adjust(" in _v68_draft
-        and "data class StyleSpan(" in _v68_draft and "val textSpans: List<StyleSpan>" in _v68_draft,
-        "V68.0 range text styling (spans) is incomplete")
-require("StyleSpanOps.adjust" in _v68_vm and "fun setQuestionSpans(" in _v68_vm,
-        "V68.0 span maintenance is missing from the builder view model")
-require("decodeSpans()" in _v68_codec and "encodeSpans(question.textSpans)" in _v68_codec,
-        "V68.0 spans codec is missing")
-require("data class PrintTextSpan(" in _v68_models
-        and "PrintTextSpan(it.start, it.end, it.bold, it.italic)" in _v68_repo
-        and "StyleSpanOps.splitBySpans(rich.text, segStart, __spans)" in _v68_pdf
-        and "textSpans.map { ir.exam.app.ui.builder.StyleSpan(it.start, it.end, it.bold, it.italic) }" in _v68_pdf,
-        "V68.0 print PDF does not render text spans")
-require("class V68_0PrintEditorWordBehaviorTest" in _v68_test
-        and "toggle bold adds then removes full coverage" in _v68_test
-        and "spans shift with caret-ordered text edits" in _v68_test,
-        "V68.0 word behavior regression tests are missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
