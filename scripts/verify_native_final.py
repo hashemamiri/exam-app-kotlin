@@ -2511,6 +2511,12 @@ require("class V68_8ContinuousPrintFreeDragTest" in
         (ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_8ContinuousPrintFreeDragTest.kt").read_text(),
         "V68.8 regression tests are missing")
 
+# ---- V68.8.1: رفع تنها تست قرمز CI — سوزن کهنهٔ V63.7 باید dstTop موتور پیوسته را چک کند ----
+_v6881_t=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V63_7EditorPrintParityTest.kt").read_text()
+require("val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP" in _v6881_t
+        and "var y = if (pageNumber == 1)" not in _v6881_t,
+        "V68.8.1 stale V63.7 needle (var y) must track the continuous engine's dstTop")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

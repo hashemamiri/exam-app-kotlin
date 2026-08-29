@@ -13041,3 +13041,66 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ۵) رگرسیون: سربرگ فقط صفحهٔ ۱، امضا فقط صفحهٔ آخر، جدول RTL، فرمول درون‌خطی،
    جورکردنی راست↔چپ، درگ شکل آزاد داخل بلوک همان سؤال.
 ```
+
+---
+
+## ۲۵۸) V68.8.1 — رفع تنها تست قرمز CI روی V68.8 (سوزن کهنهٔ V63.7)
+
+### چه اتفاقی افتاد (خروجی واقعی CI که کاربر فرستاد)
+- کاربر V68.8 را طبق دستور روی main پوش کرد؛ GitHub Actions این‌طور تمام شد:
+  - کامپایل سبز: `compileDebugKotlin` و `compileDebugUnitTestKotlin` بدون خطا
+    (فقط هشدار؛ فهرست کامل در پیام کاربر).
+  - `:app:testDebugUnitTest FAILED` — «685 tests completed, 1 failed»:
+    `V63_7EditorPrintParityTest > print header only on page one and signatures
+    only on the last page FAILED` و `java.lang.AssertionError at
+    V63_7EditorPrintParityTest.kt:30`.
+- نتیجه: هر دو فیکس V68.8 (چاپ پیوسته + درگ آزاد) کامپایل شد و ۶۸۴ تست دیگر
+  سبز بودند؛ فقط یک تست قدیمی سوزن کهنه داشت.
+
+### ریشه (خوانده‌شده از خودِ فایل تست و کد فعلی، نه حدس)
+- آن تست، تست ساختاری (needle-based) است. خط ۳۰ چک می‌کرد:
+  `"var y = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP" in pdfAdapter`
+- در بازنویسی V68.8 همین منطق با نام جدید در `drawSlice` فعال است (خط ~۱۸۱):
+  `val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP`
+  (صفحهٔ ۱ زیر سربرگ از CONTENT_TOP=125f شروع می‌شود؛ صفحات بعد بدون سربرگ از
+  LATER_CONTENT_TOP=50f — قصد V63.8 پابرجاست.)
+- سه سوزن دیگر همان تست (سربرگ فقط صفحهٔ ۱، امضای فقط صفحهٔ آخر، ظرفیت بیشتر
+  صفحات بعد) همگی در کد جدید موجودند — دقیقاً همان‌طور که CI نشان داد فقط همین
+  یک سوزن قرمز بود. در بازبینی V68.8 این فایل از قلم افتاده بود؛ درس: بعد از هر
+  بازنویسی، همهٔ تست‌های needle قدیمیِ مرتبط باید grep شوند، نه فقط V68_4/V68_5.
+
+### رفع
+- `app/src/test/java/ir/exam/app/ui/app/V63_7EditorPrintParityTest.kt` خط ۳۰:
+  سوزن به `val dstTop = if (pageNumber == 1) CONTENT_TOP else
+  LATER_CONTENT_TOP` به‌روز شد + کامنت فارسی «V68.8.1». قصد تست دست‌نخورده است.
+- `scripts/verify_native_final.py`: بند V68.8.1 اضافه شد — سوزن جدید در تست
+  الزامی و رشتهٔ کهنهٔ `var y = if (pageNumber == 1)` در آن ممنوع.
+- `text/CHANGELOG_FA.txt`: خط V68.8.1 در بالا.
+- **کد محصول: صفر تغییر** — هیچ فایل `.kt` اصلی‌ای دست نخورده؛ ریسک کامپایل این
+  پچ عملاً هیچ است چون CI خودِ V68.8 همین کد را کامپایل کرده بود.
+
+### هشدارهای CI (بدون اقدام، برای سابقه)
+- `OfficialPdfPrintAdapter.kt:255:55 Condition is always 'true'` — کد موجود
+  V68.4 است: `if (figPos != null)` داخل شاخهٔ `if (figPos != null)` برای
+  خوانایی/سوزن تست عمداً صریح نوشته شده؛ بی‌خطر و بدون تغییر ماند.
+- بقیه هشدارها deprecationهای قدیمی‌اند (Icons.AutoMirrored.Outlined.*،
+  SOFT_INPUT_ADJUST_RESIZE، allowFileAccessFromFileURLs/allowUniversalAccess،
+  quadraticBezierTo) — همهٔ موجود، خارج از scope این پچ.
+
+### صادقانه: چه چیزی را نتوانستیم تأیید کنیم
+- اجرای واقعی گریدل/تست‌ها در سندباکس ممکن نیست (AGP 8.7.3 قابل دانلود نبود)؛
+  اما سوزن تعویض‌شده با python روی سورس فعلی شبیه‌سازی شد (همهٔ ۴ سوزن تابع
+  pdfAdapter و همهٔ سوزن‌های editor سبز) و CI همین فایل تست را اجرا کرده بود و
+  فقط همین خط قرمز بود؛ دو خط دیگر همان تابع با کد فعلی منطبق‌اند.
+- رندر روی دستگاه همچنان فقط با کاربر تأیید می‌شود؛ چک‌لیست پنج‌بندی §۲۵۷
+  پابرجاست و با V68.8.1 تغییری نکرده.
+
+### فایل‌های تغییرکرده
+```text
+app/src/test/java/ir/exam/app/ui/app/V63_7EditorPrintParityTest.kt   (۱ سوزن + کامنت)
+scripts/verify_native_final.py                                       (بند V68.8.1)
+text/CHANGELOG_FA.txt                                                (خط V68.8.1)
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                               (همین بخش ۲۵۸)
+```
+
+### SQL جدید: ندارد — Edge deploy: ندارد

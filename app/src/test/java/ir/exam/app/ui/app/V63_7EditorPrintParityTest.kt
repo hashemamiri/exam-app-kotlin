@@ -27,7 +27,8 @@ class V63_7EditorPrintParityTest {
     @Test
     fun `print header only on page one and signatures only on the last page`() {
         assertTrue("if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)" in pdfAdapter)
-        assertTrue("var y = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP" in pdfAdapter)
+        // V68.8.1 — موتور چاپ پیوسته شد؛ سطر شروع محتوا dstTop نام گرفت (قبلاً var y)
+        assertTrue("val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP" in pdfAdapter)
         assertTrue("if (pageNumber == totalPages) canvas.drawText(printable.footerNote" in pdfAdapter)
         // ظرفیت صفحات بدون سربرگ بیشتر است
         assertTrue("CONTENT_BOTTOM - LATER_CONTENT_TOP" in pdfAdapter)
