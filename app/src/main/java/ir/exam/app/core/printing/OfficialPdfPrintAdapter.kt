@@ -33,6 +33,11 @@ import androidx.core.content.res.ResourcesCompat
 import ir.exam.app.R
 import ir.exam.app.domain.model.OfficialGradeReportPrintable
 import ir.exam.app.domain.model.OfficialPrintable
+import ir.exam.app.domain.model.OfficialPrintHeader
+import ir.exam.app.domain.model.OfficialPrintQuestion
+import ir.exam.app.domain.model.PrintTextSpan
+import ir.exam.app.ui.builder.QuestionDraft
+import ir.exam.app.ui.builder.QuestionType
 import java.io.FileOutputStream
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -78,9 +83,32 @@ class OfficialPdfPrintAdapter(
     private fun safeJobName(value: String): String = value.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80)
 }
 
-private class OfficialPdfRenderer(private val context:Context,private val printable: OfficialPrintable) {
+/**
+ * V68.9 — «موتور واحد سند» (درخواست کاربر: «یک موتور قدرتمند بساز که چاپ و
+ * ویرایشگر شبیه شوند»).
+ *
+ * این کلاس همان کد چیدمان/رسم چاپ است که از دل OfficialPdfRenderer بیرون
+ * کشیده شد تا «یک» موتور باشد و هر دو صفحه از آن استفاده کنند:
+ *  - چاپ رسمی: PDF دقیقاً مثل قبل از همین چیدمان صفحه برش می‌خورد.
+ *  - ویرایشگر سند: هر کاغذ A4 را با همین موتور روی Canvas گوشی می‌کشد
+ *    (فونت/شکست خط/فاصله/کادر/جای اشیا همانی است که چاپ می‌شود) و فقط
+ *    سؤالِ در حال ویرایش به‌صورت Compose روی آن می‌نشیند.
+ *
+ * قواعد واحد (تصمیم‌های کاربر V68.9):
+ *  - گزینه‌ها هم‌اندازهٔ خود سؤال می‌شوند (OPTION_SCALE=1؛ قبلاً چاپ ۰٫۹×
+ *    کوچک‌تر می‌کرد و ویرایشگر نه) و شمارهٔ گزینه مثل ویرایشگر بولد است.
+ *  - فاصلهٔ سؤال‌ها از BLOCK_GAP_MM ویرایشگر می‌آید (قبلاً چاپ ۹pt جدا داشت).
+ *  - سطرِ متن دیگر از وسط بریده نمی‌شود: برش صفحات فقط روی «مرز خط/بلوک»
+ *    می‌افتد (مثل ورد)؛ قبلاً برش هر جا پیش می‌آمد خط را نصف می‌کرد.
+ *  - همهٔ چیزی که فقط در چاپ دیده می‌شد (سطر درس/مدت/بارم، خطوط پاسخ،
+ *    کادر سؤال/تصویر) حالا در ویرایشگر هم — کم‌رنگ‌تر — رسم می‌شود
+ *    (پارامتر preview).
+ *  - ویرایشگر صفحهٔ اول را بدون رزرو سربرگ از MARGIN شروع می‌کند
+ *    (EDITOR_FIRST_TOP؛ تصمیم کاربر)؛ چاپ زیر سربرگ از CONTENT_TOP.
+ */
+class UnifiedDocumentEngine(private val context: Context) {
     private val mathRenderer=NativeMathCanvasRenderer()
-    private data class RenderBlock(
+    data class RenderBlock(
         val text: String? = null,
         val formula: String? = null,
         val image: Bitmap? = null,
@@ -102,23 +130,99 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val matchRight: String? = null,
         val matchLeft: String? = null,
         val matchRightStyle: Triple<Boolean, Boolean, Float?>? = null,
-        val matchLeftStyle: Triple<Boolean, Boolean, Float?>? = null
+        val matchLeftStyle: Triple<Boolean, Boolean, Float?>? = null,
+        // V68.9 — شناسنامهٔ بلوک برای موتور واحد: سؤالِ مالک، کلید تصویر
+        // گالری (id رسانه)، شمارهٔ شکل (occurrence) و نقش بلوک.
+        val questionIndex: Int = -1,
+        val imageKey: String? = null,
+        val figureOccurrence: Int = -1,
+        val kind: String = "text"
     )
-    private data class Placed(val block: RenderBlock, val y: Float, val height: Float)
+    data class Placed(val block: RenderBlock, val y: Float, val height: Float)
 
-    // V68.8 — WYSIWYG: به‌جای صفحه‌بندی بلوک‌به‌بلوک (که بلوکِ بلند مثل جدول
-    // تناوبی را کامل به صفحهٔ بعد می‌برد و یک فضای خالی بزرگ پشت سر می‌گذاشت)،
-    // کل سند مثل ویرایشگر «پیوسته» روی یک بیت‌مایپ بلند رسم و سپس به صفحات A4
-    // برش می‌خورد — همان جریانِ بدون‌پرش که کاربر در ویرایشگر می‌بیند.
-    private val placed: List<Placed> = placeContinuous()
-    private val slices: List<Pair<Float, Float>> = slicePages()
-    val pageCount: Int get() = slices.size.coerceAtLeast(1)
+    /** نتیجهٔ لمس روی کاغذ موتور: سؤال + (در صورت وجود) شیء انتخابی. */
+    data class EngineHit(
+        val questionIndex: Int,
+        val galleryImageKey: String? = null,
+        val figureOccurrence: Int? = null
+    )
 
-    private fun placeContinuous(): List<Placed> {
-        val blocks = when (printable) {
-            is OfficialExamPrintable -> examBlocks(printable)
-            is OfficialGradeReportPrintable -> reportBlocks(printable)
+    /** جای یک شکل درون‌متنی داخل پاراگراف (برای انتخاب/لمس در ویرایشگر). */
+    data class FigureMark(
+        val charOffset: Int,
+        val questionIndex: Int,
+        val occurrence: Int,
+        val widthPt: Float
+    )
+
+    /**
+     * سند چیده‌شدهٔ موتور: بلوک‌های پیوسته + برش صفحات + چیدمان‌های کش‌شده.
+     * چاپ و ویرایشگر هر دو از همین یک شیء می‌خوانند → تضمین یکسانی.
+     */
+    class EngineDocument(
+        val placed: List<Placed>,
+        val slices: List<Pair<Float, Float>>,
+        val firstTop: Float,
+        val layouts: Map<Int, StaticLayout>,
+        val figureMarks: Map<Int, List<FigureMark>>,
+        val total: Float
+    ) {
+        val pageCount: Int get() = slices.size.coerceAtLeast(1)
+        fun questionOriginPt(index: Int): Float =
+            placed.firstOrNull { it.block.questionIndex == index }?.y ?: 0f
+    }
+
+    // ---------------------------------------------------------------- ساخت
+
+    /** چاپ رسمی: سؤال‌های آزمون → سند پیوسته + برش صفحات (زیر سربرگ صفحهٔ ۱). */
+    fun layoutExam(
+        printable: OfficialExamPrintable,
+        imagesById: Map<String, Bitmap> = emptyMap(),
+        firstTopPt: Float = CONTENT_TOP
+    ): EngineDocument = build(examBlocks(attachImages(printable, imagesById)), firstTopPt)
+
+    /** ویرایشگر: پیش‌نمایش همان سند از بالای کاغذ (بدون رزرو سربرگ). */
+    fun layoutExamForEditor(
+        printable: OfficialExamPrintable,
+        imagesById: Map<String, Bitmap>,
+        firstTopPt: Float = EDITOR_FIRST_TOP
+    ): EngineDocument = layoutExam(printable, imagesById, firstTopPt)
+
+    /** کارنامه: همان موتور با بلوک‌های کارنامه. */
+    fun layoutReport(report: OfficialGradeReportPrintable): EngineDocument =
+        build(reportBlocks(report), CONTENT_TOP)
+
+    private val pendingFigureMarks = HashMap<Int, List<FigureMark>>()
+
+    private fun build(blocks: List<RenderBlock>, firstTopPt: Float): EngineDocument {
+        val placed = placeAll(blocks)
+        val total = (placed.lastOrNull()?.let { it.y + it.height } ?: 1f).coerceAtLeast(1f)
+        val layouts = HashMap<Int, StaticLayout>()
+        val figureMarks = HashMap<Int, List<FigureMark>>()
+        // V68.9 — مرزهای مجاز برش: انتهای هر بلوک + انتهای هر «سطر» متن؛
+        // صفحه هرگز وسط یک سطر قطع نمی‌شود (مثل ورد).
+        val boundaries = sortedSetOf(0f)
+        placed.forEachIndexed { index, p ->
+            val layout = blockLayout(p.block)
+            if (layout != null) {
+                layouts[index] = layout
+                for (line in 0 until layout.lineCount) boundaries.add(p.y + layout.getLineBottom(line))
+            }
+            pendingFigureMarks.remove(index)?.let { figureMarks[index] = it }
+            boundaries.add(p.y + p.height)
         }
+        return EngineDocument(
+            placed = placed,
+            slices = computeSlices(total, boundaries.toList(), firstTopPt),
+            firstTop = firstTopPt,
+            layouts = layouts,
+            figureMarks = figureMarks,
+            total = total
+        )
+    }
+
+    /** چیدمان پیوسته: y تجمعی همهٔ بلوک‌ها بدون صفحه‌بندی بلوک‌به‌بلوک. */
+    private fun placeAll(blocks: List<RenderBlock>): List<Placed> {
         val out = mutableListOf<Placed>()
         var y = 0f
         blocks.forEach { block ->
@@ -129,76 +233,25 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         return out
     }
 
-    private fun slicePages(): List<Pair<Float, Float>> {
-        val total = (placed.lastOrNull()?.let { it.y + it.height } ?: 1f).coerceAtLeast(1f)
-        val result = mutableListOf<Pair<Float, Float>>()
-        var top = 0f
-        var first = true
-        while (top < total) {
-            val cap = if (first) CONTENT_HEIGHT else CONTENT_BOTTOM - LATER_CONTENT_TOP
-            val bottom = (top + cap).coerceAtMost(total)
-            result += top to bottom
-            top = bottom
-            first = false
-        }
-        return result.ifEmpty { listOf(0f to 1f) }
-    }
-
-    fun write(
-        destination: ParcelFileDescriptor,
-        ranges: Array<out PageRange>,
-        cancellation: CancellationSignal
-    ): List<PageRange> {
-        val pdf = PdfDocument()
-        val writtenPages = mutableListOf<Int>()
-        try {
-            slices.forEachIndexed { index, slice ->
-                if (cancellation.isCanceled) return@forEachIndexed
-                val pageNumber = index + 1
-                if (!isPageRequested(index, ranges)) return@forEachIndexed
-                val page = pdf.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create())
-                drawSlice(page.canvas, slice, pageNumber, slices.size)
-                pdf.finishPage(page)
-                writtenPages += index
-            }
-            FileOutputStream(destination.fileDescriptor).use(pdf::writeTo)
-        } finally {
-            pdf.close()
-        }
-        return collapseRanges(writtenPages)
-    }
-
-    /**
-     * V68.8 — هر صفحه یک «برش» از سند پیوسته است: canvas را به اندازهٔ فاصلهٔ
-     * برش جابه‌جا می‌کنیم و فقط بلوک‌های متقاطع با همین برش را رسم می‌کنیم.
-     * ناحیهٔ محتوا clip می‌شود تا سرریزِ بلوکِ بلند مثل برش A4 قطع شود.
-     * بدون بیت‌مایپ بلندِ کل سند (ریسک OutOfMemory در آزمون‌های بلند) و متن
-     * به‌صورت برداری روی صفحهٔ PDF می‌نشیند.
-     */
-    private fun drawSlice(canvas: Canvas, slice: Pair<Float, Float>, pageNumber: Int, totalPages: Int) {
-        canvas.drawColor(Color.WHITE)
-        if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)
-        val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP
-        val sliceH = (slice.second - slice.first).coerceAtLeast(0f)
-        canvas.save()
-        canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)
-        canvas.translate(0f, dstTop - slice.first)
-        placed.forEach { p ->
-            if (p.y + p.height > slice.first && p.y < slice.second) {
-                drawBlockAt(canvas, p.block, p.y, p.height)
-            }
-        }
-        canvas.restore()
-        drawFooter(canvas, pageNumber, totalPages)
-    }
+    // ------------------------------------------------------------- بلوک‌ها
 
     private fun examBlocks(exam: OfficialExamPrintable): List<RenderBlock> = buildList {
-        add(RenderBlock(text="درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",textSize=11f,bold=true,boxed=true))
-        exam.questions.forEach { question ->
+        pendingFigureMarks.clear()
+        var currentQuestion = -1
+        var inlineFigureCount = 0
+        var pendingMarks = mutableListOf<FigureMark>()
+        fun push(block: RenderBlock) { add(block.copy(questionIndex = currentQuestion)) }
+        fun flushMarks(blockIndex: Int) {
+            if (pendingMarks.isNotEmpty()) { pendingFigureMarks[blockIndex] = pendingMarks; pendingMarks = mutableListOf() }
+        }
+        add(RenderBlock(text="درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",textSize=11f,bold=true,boxed=true,kind="subject"))
+        exam.questions.forEachIndexed { qIndex, question ->
+            currentQuestion = qIndex
+            inlineFigureCount = 0
             // V68.4.1 — اندیس شروع بلوک‌های همین سؤال: برای تبدیل fy مطلقِ شکلِ
             // آزاد (از بالای بلوک) به آفست از جایگاه جریان خودش در چاپ.
             val qStart = size
-            add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign))
+            add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign,kind="number"))
             // V53.1 — شکل/نمودار/جدول درون‌متنی (%%FIG%%) به‌جای JSON خام،
             // به‌صورت تصویر برداری در PDF رندر می‌شوند؛ فرمول‌ها مثل قبل.
             // V68 — بازهٔ آفست هر قطعه برای استایل تکه‌ای متن.
@@ -209,16 +262,17 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             // V68 — استایل تکه‌ای از دامنهٔ چاپ به StyleSpan ویرایشگر نگاشت می‌شود.
             val __spans = question.textSpans.map { ir.exam.app.ui.builder.StyleSpan(it.start, it.end, it.bold, it.italic) }
             // V68.6 — پاراگراف درون‌خطی مثل ویرایشگر (FlowRow): متن‌ها و فرمول‌های
-            // پیوستهٔ سؤال در «یک سطر جاری» کنار هم می‌نشینند؛ قبلاً هر تکه بلوکِ
-            // جدا بود و «متن۱ فرمول متن۲» به سه سطر می‌شکست (گزارش کاربر). فرمول
+            // پیوستهٔ سؤال در «یک سطر جاری» کنار هم می‌نشینند. فرمول
             // به‌صورت MathReplacementSpan روی جای‌نگهدار U+FFFC می‌نشیند و
-            // StaticLayout آن را در همان سطر جریان می‌دهد؛ شکل‌ها همچنان بلوکِ
+            // StaticLayout آن را در همان سطر جریان می‌دهد؛ شکل‌های آزاد بلوکِ
             // جدا هستند (در ویرایشگر هم شیء مستقل با اسلات خودشان‌اند).
             var __inline = android.text.SpannableStringBuilder()
             var __inlineLen = 0
             fun __flushInline() {
                 if (__inline.isEmpty()) return
-                add(RenderBlock(styledText=__inline,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
+                val blockIndex = size
+                add(RenderBlock(styledText=__inline,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily).copy(questionIndex = currentQuestion))
+                flushMarks(blockIndex)
                 __inline = android.text.SpannableStringBuilder()
                 __inlineLen = 0
             }
@@ -254,18 +308,22 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                                     imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),
                                     imagePosition=if (figPos != null) "free" else "below",
                                     imageXmm=figPos.first,
-                                    imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
-                                ))
+                                    imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH),
+                                    imageKey="figure",
+                                    figureOccurrence=inlineFigureCount,
+                                    kind="figure"
+                                ).copy(questionIndex = currentQuestion))
                             } else {
                                 // V68.7 — شکلِ درون‌متنی (غیرآزاد) مثل ویرایشگر
                                 // FlowRow: در همان پاراگراف جاری، کنار متن و
-                                // فرمول می‌نشیند، نه بلوکِ جدا. قبلاً هر شکل
-                                // بلوکِ جدا بود و ردیفِ ۳ شکلی (مثل اسکرین‌شات
-                                // کاربر: لوزی، آناتومی، جدول) به ۳ سطرِ عمودی
-                                // می‌شکست و ارتفاعِ بلوک را ۳ برابر می‌کرد؛
-                                // همین باعث فضایِ سفیدِ بزرگ و صفحه‌بندیِ متفاوتِ
-                                // چاپ نسبت به ویرایشگر می‌شد (گزارش کاربر).
+                                // فرمول می‌نشیند، نه بلوکِ جدا.
                                 if (__inline.isEmpty()) { __inline.append('\u200F'); __inlineLen += 1 }
+                                pendingMarks += FigureMark(
+                                    charOffset = __inlineLen,
+                                    questionIndex = currentQuestion,
+                                    occurrence = inlineFigureCount,
+                                    widthPt = (WordPageLayout.figureWidthMm(rich.spec) / 210f * PAGE_WIDTH).coerceIn(40f, CONTENT_WIDTH - 12f)
+                                )
                                 __inline.append('\uFFFC')
                                 __inline.setSpan(
                                     FigureReplacementSpan(bmp, WordPageLayout.figureWidthMm(rich.spec)),
@@ -275,8 +333,9 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                             }
                         } else {
                             __flushInline()
-                            add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
+                            push(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                         }
+                        inlineFigureCount += 1
                     }
                     is RichSegment.Text -> if (rich.text.isNotEmpty()) {
                         // V68 — بولد/ایتالیک بازه‌ای مثل ورد: استایل‌ها با Spannable.
@@ -311,13 +370,16 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             question.options.forEachIndexed { index, option ->
                 // V64.4 — استایل مستقل هر گزینه در چاپ؛ بدون استایل = مثل قبل.
                 val optionStyle = question.optionStyles.getOrNull(index)
-                val optionSize = (optionStyle?.third ?: question.fontSizeSp) * .9f
+                // V68.9 — موتور واحد: گزینه هم‌اندازهٔ ویرایشگر (OPTION_SCALE=1؛
+                // قبلاً ۰٫۹× کوچک‌تر می‌شد) و شمارهٔ گزینه بولد مثل ویرایشگر.
+                val optionSize = (optionStyle?.third ?: question.fontSizeSp) * OPTION_SCALE
                 val optionBold = optionStyle?.first ?: false
                 val optionItalic = optionStyle?.second ?: false
                 // V68.6 — گزینه هم پاراگراف درون‌خطی: متن و فرمول گزینه در یک
-                // سطر جاری کنار هم (مثل سؤال)؛ قبلاً فرمولِ گزینه سطر جدا می‌شد.
+                // سطر جاری کنار هم (مثل سؤال)؛ شمارهٔ گزینه بولد (V68.9).
                 val __opt = android.text.SpannableStringBuilder()
                 var __optLen = 0
+                var optionPrefixLeft = "${index + 1}) ".length
                 NativeMathFormatter.segments("${index+1}) $option").forEach { segment ->
                     if (segment.math) {
                         __opt.append('\uFFFC')
@@ -327,17 +389,23 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                         )
                         __optLen += 1
                     } else if (segment.text.isNotEmpty()) {
+                        val boldTake = optionPrefixLeft.coerceIn(0, segment.text.length)
                         __opt.append(segment.text)
+                        if (boldTake > 0) __opt.setSpan(
+                            android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                            __optLen, __optLen + boldTake, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        optionPrefixLeft -= boldTake
                         __optLen += segment.text.length
                     }
                 }
                 if (__opt.isNotEmpty()) add(RenderBlock(styledText=__opt,textSize=optionSize,
                     bold=optionBold,italic=optionItalic,
-                    align=question.textAlign,fontFamily=question.fontFamily))
+                    align=question.textAlign,fontFamily=question.fontFamily).copy(questionIndex = currentQuestion))
             }
-            // V68.6 — جورکردنی در چاپ رسمی (گزارش کاربر: اصلاً چاپ نمی‌شد؛ آیتم‌ها
-            // در matchingLeft/Right هستند نه options). هر ردیف مثل ویرایشگر:
-            // آیتم راست در نیمهٔ راست، «↔» وسط، آیتم چپ در نیمهٔ چپ.
+            // V68.6 — جورکردنی در چاپ رسمی (آیتم‌ها در matchingLeft/Right
+            // هستند). هر ردیف مثل ویرایشگر: آیتم راست در نیمهٔ راست، «↔»
+            // وسط، آیتم چپ در نیمهٔ چپ.
             val __matchRows = maxOf(question.matchingLeft.size, question.matchingRight.size)
             repeat(__matchRows) { rowIndex ->
                 add(RenderBlock(
@@ -346,31 +414,35 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                     matchRightStyle=question.matchingRightStyles.getOrNull(rowIndex),
                     matchLeftStyle=question.matchingLeftStyles.getOrNull(rowIndex),
                     textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily
-                ))
+                ).copy(questionIndex = currentQuestion))
             }
             // V68.7 — تصویر گالری: اگر سؤال «آزاد» شده ولی این تصویر هنوز
             // xMm/yMm پیش‌فرض (۲۰/۳۰) دارد (یعنی هرگز کشیده نشده)، باید مثل
-            // ویرایشگر وسط بماند، نه چپِ ۲۰mm؛ وگرنه با آزاد شدن یک تصویر، بقیهٔ
-            // گالری ناگهان به چپ می‌پریدند (گزارش کاربر + فیکس V68.7 ادیتور).
+            // ویرایشگر وسط بماند، نه چپِ ۲۰mm؛ وگرنه با آزاد شدن یک تصویر،
+            // بقیهٔ گالری ناگهان به چپ می‌پریدند (گزارش کاربر + فیکس V68.7).
             question.images.forEachIndexed { index,image ->
                 val rawX = question.imageXmm.getOrNull(index) ?: 20f
                 val rawY = question.imageYmm.getOrNull(index) ?: 30f
                 val isDefault = rawX == 20f && rawY == 30f
                 val pos = if (question.imagePosition == "free" && isDefault) "below" else question.imagePosition
+                val galleryKey = question.imageUrls.getOrNull(index) ?: "gallery:$index"
                 add(RenderBlock(
                     image=image,boxed=true,imagePosition=pos,
                     imageWidthMm=question.imageWidthsMm.getOrNull(index) ?: 80f,
-                    imageXmm=rawX, imageYmm=rawY
-                ))
+                    imageXmm=rawX, imageYmm=rawY,
+                    imageKey=galleryKey
+                ).copy(questionIndex = currentQuestion))
             }
-            if(exam.includeAnswerKey&&!question.answerText.isNullOrBlank())add(RenderBlock(text="پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",textSize=10.5f,bold=true,fontFamily=question.fontFamily))
+            if(exam.includeAnswerKey&&!question.answerText.isNullOrBlank())add(RenderBlock(text="پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",textSize=10.5f,bold=true,fontFamily=question.fontFamily,kind="answer").copy(questionIndex = currentQuestion))
             else repeat(question.answerLines.coerceIn(0,12)) {
                 add(RenderBlock(
                     text=if(question.answerLineStyle=="blank") " " else "................................................................................................................",
-                    textSize=9f
-                ))
+                    textSize=9f,
+                    kind="answer"
+                ).copy(questionIndex = currentQuestion))
             }
-            add(RenderBlock(text="",spacingAfter=9f))
+            // V68.9 — فاصلهٔ بین سؤال‌ها از BLOCK_GAP_MM ویرایشگر (واحد شد).
+            add(RenderBlock(text="",spacingAfter=QUESTION_GAP_PT).copy(questionIndex = currentQuestion))
         }
     }
 
@@ -397,18 +469,139 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         }
     }
 
-    private fun drawBlockAt(canvas: Canvas, block: RenderBlock, y: Float, height: Float) {
+    /**
+     * V68.9 — ویرایشگر سند: ساخت همان Printable چاپ از پیش‌نویس‌های سؤال تا
+     * پیش‌نمایش و چاپ از «یک» مسیر بگذرند (سربرگ خالی — ویرایشگر سربرگ ندارد).
+     */
+    fun printableFromDrafts(
+        questions: List<QuestionDraft>,
+        subject: String,
+        durationMinutes: Int
+    ): OfficialExamPrintable = OfficialExamPrintable(
+        documentTitle = "پیش‌نمایش ویرایشگر",
+        header = OfficialPrintHeader(),
+        subject = subject,
+        durationMinutes = durationMinutes,
+        totalScore = questions.sumOf { it.score },
+        includeAnswerKey = false,
+        questions = questions.mapIndexed { index, question ->
+            val answer = when (question.type) {
+                QuestionType.MULTIPLE_CHOICE -> question.correctIndex?.let { question.options.getOrNull(it) }
+                QuestionType.TRUE_FALSE -> if (question.expectedText == "true") "صحیح" else "غلط"
+                QuestionType.FILL_BLANK -> question.expectedText.replace('|', '،')
+                QuestionType.NUMERIC -> question.expectedNumber + " ± " + question.tolerance
+                QuestionType.MATCHING -> question.matchingPairs.entries.sortedBy { it.key }
+                    .joinToString("، ") { (left, right) -> "${left + 1}←${right + 1}" }
+                QuestionType.ESSAY -> null
+            }
+            OfficialPrintQuestion(
+                number = index + 1,
+                text = question.text,
+                score = question.score,
+                options = question.options,
+                optionStyles = question.optionStyles.map { style ->
+                    style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
+                },
+                matchingLeft = question.matchingLeft,
+                matchingRight = question.matchingRight,
+                matchingLeftStyles = question.matchingLeftStyles.map { style ->
+                    style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
+                },
+                matchingRightStyles = question.matchingRightStyles.map { style ->
+                    style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
+                },
+                answerText = answer,
+                answerLines = question.answerLines,
+                answerLineStyle = question.answerLineStyle,
+                textAlign = question.textAlign,
+                imagePosition = question.imagePosition,
+                fontFamily = question.fontFamily,
+                fontSizeSp = question.fontSizeSp,
+                bold = question.bold,
+                italic = question.italic,
+                textSpans = question.textSpans.map {
+                    PrintTextSpan(it.start, it.end, it.bold, it.italic)
+                },
+                imageWidthsMm = question.images.map { it.widthMm } + question.optionImages.filterNotNull().map { 40f },
+                imageXmm = question.images.map { it.xMm } + question.optionImages.filterNotNull().map { 20f },
+                imageYmm = question.images.map { it.yMm } + question.optionImages.filterNotNull().map { 30f },
+                imageUrls = question.images.map { it.id } + question.optionImages.filterNotNull()
+            )
+        }
+    )
+
+    /** جایگذاری بیت‌مایپ واقعی گالری (ویرایشگر: decode از uri؛ چاپ: از printable). */
+    fun attachImages(printable: OfficialExamPrintable, imagesById: Map<String, Bitmap>): OfficialExamPrintable {
+        if (imagesById.isEmpty()) return printable
+        return printable.copy(questions = printable.questions.map { q ->
+            if (q.imageUrls.isEmpty()) q
+            else q.copy(images = q.imageUrls.map { url -> imagesById[url] }.filterNotNull())
+        })
+    }
+
+    // -------------------------------------------------------------- رسم
+
+    /**
+     * رسم پنجرهٔ [slice] از سند پیوسته روی canvas (آداپتور چاپ همین را در
+     * صفحهٔ PDF می‌کشد؛ ویرایشگر همان را روی کاغذ گوشی).
+     * skipQuestion برای ویرایشگر است: سؤالِ در حال ویرایشِ Compose دوباره
+     * رسم نمی‌شود (روی آن می‌نشیند). preview=true رنگ‌های کم‌رنگ ویرایشگر.
+     */
+    fun drawFlowWindow(
+        canvas: Canvas,
+        document: EngineDocument,
+        slice: Pair<Float, Float>,
+        skipQuestion: Int? = null,
+        preview: Boolean = false
+    ) {
+        document.placed.forEachIndexed { index, p ->
+            if (p.y + p.height > slice.first && p.y < slice.second &&
+                (skipQuestion == null || p.block.questionIndex != skipQuestion)
+            ) {
+                drawBlockAt(canvas, p.block, p.y, p.height, preview, document.layouts[index])
+            }
+        }
+    }
+
+    /** یک کاغذ کامل ویرایشگر: پس‌زمینهٔ سفید + پنجرهٔ محتوا با transform موتور. */
+    fun drawEditorPage(
+        canvas: Canvas,
+        document: EngineDocument,
+        pageIndex: Int,
+        skipQuestion: Int? = null
+    ) {
+        if (pageIndex !in document.slices.indices) return
+        val slice = document.slices[pageIndex]
+        val dstTop = if (pageIndex == 0) document.firstTop else LATER_CONTENT_TOP
+        val sliceH = (slice.second - slice.first).coerceAtLeast(0f)
+        canvas.drawColor(Color.WHITE)
+        canvas.save()
+        canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)
+        canvas.translate(0f, dstTop - slice.first)
+        drawFlowWindow(canvas, document, slice, skipQuestion, preview = true)
+        canvas.restore()
+    }
+
+    private fun drawBlockAt(
+        canvas: Canvas,
+        block: RenderBlock,
+        y: Float,
+        height: Float,
+        preview: Boolean = false,
+        cachedLayout: StaticLayout? = null
+    ) {
         if (block.boxed) {
             canvas.drawRoundRect(
                 MARGIN - 3f, y - 2f, PAGE_WIDTH - MARGIN + 3f, y + height - block.spacingAfter,
                 5f, 5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     style = Paint.Style.STROKE
-                    color = Color.rgb(120, 120, 120)
+                    // V68.9 — ویرایشگر کادرها را کم‌رنگ می‌بیند؛ چاپ مثل قبل.
+                    color = if (preview) Color.argb(0x55, 0x60, 0x60, 0x60) else Color.rgb(120, 120, 120)
                     strokeWidth = 0.8f
                 }
             )
         }
-        block.image?.let { drawImageAt(canvas, it, y, block) }
+        block.image?.let { drawImageAt(canvas, it, y, block, preview) }
         block.formula?.let { formula ->
             val parsed = NativeMathParser.parse(formula)
             val formulaWidth = mathRenderer.measure(parsed, block.textSize).width
@@ -420,11 +613,11 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
             mathRenderer.draw(canvas, parsed, formulaX, y, block.textSize, Color.BLACK)
         }
         block.text?.takeIf(String::isNotEmpty)?.let { text ->
-            val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
+            val layout = cachedLayout ?: textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
             canvas.save(); canvas.translate(MARGIN, y); layout.draw(canvas); canvas.restore()
         }
         block.styledText?.let { sb ->
-            val layout = styledLayout(sb, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
+            val layout = cachedLayout ?: styledLayout(sb, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
             canvas.save(); canvas.translate(MARGIN, y); layout.draw(canvas); canvas.restore()
         }
         if (block.matchRight != null || block.matchLeft != null) {
@@ -449,104 +642,9 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         }
     }
 
-    /**
-     * V62.7 — سربرگ رسمی سه‌ستونه طبق طرح کاربر (هر مورد در یک سطر):
-     * ۱) فقط آرم وسط، بالاتر از همه.
-     * ۲) نام | وزارت آموزش و پرورش جمهوری اسلامی ایران | تاریخ آزمون
-     * ۳) نام خانوادگی | اداره کل آموزش و پرورش استان … | مدت آزمون
-     * ۴) نام پدر | مدیریت آموزش و پرورش شهر/شهرستان …(…) | پایه
-     * ۵) نام درس | نام مدرسه | رشته
-     * قالب با هر طول متنی ثابت می‌ماند: سه ستون با عرض ثابت و ellipsize.
-     */
-    private fun drawHeader(canvas: Canvas, pageNumber: Int, totalPages: Int) {
-        val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 1f }
-        canvas.drawRect(MARGIN, 22f, PAGE_WIDTH - MARGIN, HEADER_BOTTOM, border)
-        val header = printable.header
-        // سطر ۱ — آرم وسط.
-        emblemBitmap()?.let { emblem ->
-            val size = 30f
-            canvas.drawBitmap(
-                emblem, null,
-                android.graphics.RectF(
-                    PAGE_WIDTH / 2f - size / 2f, 25f,
-                    PAGE_WIDTH / 2f + size / 2f, 25f + size
-                ),
-                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-            )
-        }
-        val rightX = PAGE_WIDTH - MARGIN - 6f
-        val leftColRight = MARGIN + LEFT_COL_WIDTH + 6f
-        val rows = listOf(
-            Triple("نام:", "وزارت آموزش و پرورش جمهوری اسلامی ایران", "تاریخ آزمون: ${header.examDate}"),
-            // V62.8 — مدت همیشه با پسوند «دقیقه» (مثلاً: مدت آزمون: 120 دقیقه).
-            Triple(
-                "نام خانوادگی:",
-                "اداره کل آموزش و پرورش استان ${header.province}",
-                "مدت آزمون: " + header.examDuration.takeIf(String::isNotBlank)?.let { "$it دقیقه" }.orEmpty()
-            ),
-            Triple(
-                "نام پدر:",
-                "مدیریت آموزش و پرورش شهر/شهرستان ${header.city}" +
-                    header.district.takeIf(String::isNotBlank)?.let { " ($it)" }.orEmpty(),
-                "پایه: ${header.grade}"
-            ),
-            Triple("نام درس: ${header.subject}", header.school, "رشته: ${header.fieldOfStudy}")
-        )
-        var rowTop = 58f
-        rows.forEach { (right, center, left) ->
-            drawHeaderCell(canvas, right, rightX, rowTop, Paint.Align.RIGHT, SIDE_COL_WIDTH)
-            drawHeaderCell(canvas, center, PAGE_WIDTH / 2f, rowTop, Paint.Align.CENTER, CENTER_COL_WIDTH)
-            drawHeaderCell(canvas, left, leftColRight, rowTop, Paint.Align.RIGHT, LEFT_COL_WIDTH)
-            rowTop += HEADER_ROW_HEIGHT
-        }
-        val date = JalaliCalendar.fromGregorian(LocalDate.now()).display()
-        drawRtl(canvas, "$date · صفحه $pageNumber از $totalPages", 175f, 25f, 7.5f, false, 130)
-    }
-
-    /** یک سلول سربرگ: تک‌سطری با برش انتها تا قالب سه‌ستونه هرگز بهم نریزد. */
-    private fun drawHeaderCell(canvas: Canvas, text: String, x: Float, top: Float, align: Paint.Align, width: Float) {
-        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.BLACK
-            textSize = 8.6f
-            textAlign = align
-            typeface = persianTypeface(true)
-        }
-        val clipped = android.text.TextUtils.ellipsize(text, paint, width, android.text.TextUtils.TruncateAt.END).toString()
-        canvas.drawText(clipped, x, top, paint)
-    }
-
-    /**
-     * V62.8 — فونت سربرگ: B Nazanin (درخواست کاربر). چون فونت تجاری است و
-     * در ریپو نیست، اگر کاربر فایل مجاز خود را در assets/fonts/bnazanin.ttf
-     * بگذارد استفاده می‌شود؛ در غیر این صورت وزیرمتن جایگزین می‌ماند.
-     */
-    private fun persianTypeface(bold: Boolean): Typeface {
-        val nazanin = nazaninCache ?: runCatching {
-            Typeface.createFromAsset(context.assets, "fonts/bnazanin.ttf")
-        }.getOrNull()?.also { nazaninCache = it }
-        val base = nazanin
-            ?: ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
-            ?: Typeface.create("sans", Typeface.NORMAL)
-        return Typeface.create(base, if (bold) Typeface.BOLD else Typeface.NORMAL)
-    }
-
-    private var nazaninCache: Typeface? = null
-
-    private fun emblemBitmap(): Bitmap? = emblemCache ?: runCatching {
-        context.assets.open("print/emblem.png").use(android.graphics.BitmapFactory::decodeStream)
-    }.getOrNull()?.also { emblemCache = it }
-
-    private var emblemCache: Bitmap? = null
-
-    private fun drawFooter(canvas: Canvas, pageNumber: Int, totalPages: Int) {
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 8.5f; textAlign = Paint.Align.RIGHT }
-        // V63.8 — امضای دبیر/مدیر فقط پایان صفحهٔ آخر (درخواست کاربر).
-        if (pageNumber == totalPages) canvas.drawText(printable.footerNote, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 25f, paint)
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("آزمون آنلاین Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
-    }
-
-    private fun drawImageAt(canvas: Canvas, bitmap: Bitmap, top: Float, block: RenderBlock) {
+    /** مستطیل واقعی تصویر (pt سند) — رسم و لمس هر دو از همین یک فرمول. */
+    private fun imageRectPt(block: RenderBlock, top: Float): android.graphics.RectF? {
+        val bitmap = block.image ?: return null
         val targetWidth=(block.imageWidthMm/210f*PAGE_WIDTH).coerceIn(40f,CONTENT_WIDTH-12f)
         val scale=minOf(targetWidth/bitmap.width,220f/bitmap.height,1f)
         val width=bitmap.width*scale;val height=bitmap.height*scale
@@ -556,7 +654,21 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val y=if(block.imagePosition=="free")
             (top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)
         else top+3f
-        canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
+        return android.graphics.RectF(left,y,left+width,y+height)
+    }
+
+    private fun drawImageAt(canvas: Canvas, bitmap: Bitmap, top: Float, block: RenderBlock, preview: Boolean = false) {
+        val rect = imageRectPt(block, top) ?: return
+        val paint = if (preview) Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG) else null
+        canvas.drawBitmap(bitmap,null,rect,paint)
+    }
+
+    // ----------------------------------------------------------- اندازه‌گیری
+
+    private fun blockLayout(block: RenderBlock): StaticLayout? = when {
+        block.styledText != null -> styledLayout(block.styledText!!, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
+        !block.text.isNullOrEmpty() -> textLayout(block.text!!, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
+        else -> null
     }
 
     private fun measureBlock(block: RenderBlock): Float {
@@ -622,9 +734,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
     /**
      * V68.7 — شکل/نمودار/جدولِ درون‌متنیِ غیرآزاد مثل ویرایشگر FlowRow:
      * در همان پاراگرافِ متن، کنار فرمول و متن می‌نشیند. قبلاً هر شکل بلوکِ
-     * جدا بود و ردیفِ چند شکلی به چند سطرِ عمودی می‌شکست و باعث اختلافِ
-     * چاپ و ویرایشگر و فضایِ سفید می‌شد (اسکرین‌شات کاربر: لوزی + سر و گردن
-     * + جدول در یک ردیفِ ویرایشگر، ولی در چاپ ۳ بلوکِ جدا).
+     * جدا بود و ردیفِ چند شکلی به چند سطرِ عمودی می‌شکست.
      */
     private inner class FigureReplacementSpan(
         private val bitmap: Bitmap,
@@ -655,7 +765,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         }
     }
 
-    private fun textLayout(text:String,size:Float,bold:Boolean,width:Int,italic:Boolean=false,align:String="right",fontFamily:String="default"):StaticLayout {
+    fun textLayout(text:String,size:Float,bold:Boolean,width:Int,italic:Boolean=false,align:String="right",fontFamily:String="default"):StaticLayout {
         val base=when(fontFamily.lowercase()){"vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular);"shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular);"sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular);else->Typeface.create("sans",Typeface.NORMAL)}
         val style=when{bold&&italic->Typeface.BOLD_ITALIC;bold->Typeface.BOLD;italic->Typeface.ITALIC;else->Typeface.NORMAL}
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {color=Color.BLACK;textSize=size;typeface=Typeface.create(base,style)}
@@ -663,7 +773,9 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         return StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
             .setAlignment(alignment)
             .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_RTL)
-            .setLineSpacing(2f, 1f)
+            // V68.9 — موتور واحد: بدون فاصلهٔ سطر اضافه؛ Compose ویرایشگر هم
+            // lineHeight پیش‌فرض فونت را می‌گیرد → شکست خط یکسان.
+            .setLineSpacing(LINE_SPACING_ADD_PT, 1f)
             .setIncludePad(false)
             .build()
     }
@@ -677,71 +789,107 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         return StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
             .setAlignment(alignment)
             .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_RTL)
-            .setLineSpacing(2f, 1f)
+            .setLineSpacing(LINE_SPACING_ADD_PT, 1f)
             .setIncludePad(false)
             .build()
     }
 
-    private fun drawRtl(canvas: Canvas, text: String, right: Float, top: Float, size: Float, bold: Boolean, width: Int) {
-        val layout = textLayout(text, size, bold, width)
-        canvas.save()
-        canvas.translate(right - width, top)
-        layout.draw(canvas)
-        canvas.restore()
+    /**
+     * V62.8 — فونت فارسی موتور: B Nazanin اگر کاربر فایل مجاز خود را در
+     * assets/fonts/bnazanin.ttf گذاشته باشد؛ در غیر این صورت وزیرمتن.
+     */
+    fun persianTypeface(bold: Boolean): Typeface {
+        val nazanin = nazaninCache ?: runCatching {
+            Typeface.createFromAsset(context.assets, "fonts/bnazanin.ttf")
+        }.getOrNull()?.also { nazaninCache = it }
+        val base = nazanin
+            ?: ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
+            ?: Typeface.create("sans", Typeface.NORMAL)
+        return Typeface.create(base, if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
 
-    private fun drawCentered(canvas: Canvas, text: String, centerX: Float, top: Float, size: Float, bold: Boolean) {
-        val width = 220
-        val layout = textLayout(text, size, bold, width)
-        canvas.save()
-        canvas.translate(centerX - width / 2f, top)
-        layout.draw(canvas)
-        canvas.restore()
-    }
+    private var nazaninCache: Typeface? = null
 
-    private fun isPageRequested(index: Int, ranges: Array<out PageRange>): Boolean =
-        ranges.any { it == PageRange.ALL_PAGES || index in it.start..it.end }
+    // ------------------------------------------------------------- لمس
 
-    private fun collapseRanges(indices: List<Int>): List<PageRange> {
-        if (indices.isEmpty()) return emptyList()
-        val result = mutableListOf<PageRange>()
-        var start = indices.first()
-        var end = start
-        indices.drop(1).forEach { value ->
-            if (value == end + 1) end = value
-            else {
-                result += PageRange(start, end)
-                start = value
-                end = value
+    /**
+     * V68.9 — ویرایشگر: تبدیل لمس کاغذ (pt از بالا-چپ همان صفحه) به سؤال/شیء.
+     * اول مستطیل تصویر/شکل آزاد (ممکن است از بلوک خودش بیرون بزشد)، بعد
+     * شکل درون‌متنی (از چیدمان کش‌شده)، بعد بلوکِ حاوی نقطه.
+     */
+    fun hitTest(document: EngineDocument, pageIndex: Int, xPt: Float, yPt: Float): EngineHit? {
+        if (pageIndex !in document.slices.indices) return null
+        val slice = document.slices[pageIndex]
+        val dstTop = if (pageIndex == 0) document.firstTop else LATER_CONTENT_TOP
+        val yFlow = slice.first + (yPt - dstTop)
+        if (yFlow < 0f || yFlow > document.total) return null
+        // ۱) مستطیل اشیای تصویری (تصویر گالری / شکل آزاد)
+        document.placed.forEach { p ->
+            if (p.block.image != null && p.block.questionIndex >= 0) {
+                val rect = imageRectPt(p.block, p.y) ?: return@forEach
+                if (xPt >= rect.left - 3f && xPt <= rect.right + 3f &&
+                    yFlow >= rect.top - 3f && yFlow <= rect.bottom + 3f
+                ) {
+                    return EngineHit(
+                        questionIndex = p.block.questionIndex,
+                        galleryImageKey = p.block.imageKey?.takeIf { it != "figure" },
+                        figureOccurrence = p.block.figureOccurrence.takeIf { it >= 0 }
+                    )
+                }
             }
         }
-        result += PageRange(start, end)
-        return result
+        // ۲) بلوک حاوی نقطه: شکل درون‌متنی یا خود سؤال
+        document.placed.forEachIndexed { index, p ->
+            if (yFlow < p.y || yFlow >= p.y + p.height) return@forEachIndexed
+            if (p.block.questionIndex >= 0) {
+                val layout = document.layouts[index]
+                val marks = document.figureMarks[index]
+                if (layout != null && marks != null) {
+                    marks.forEach { mark ->
+                        val line = layout.getLineForOffset(mark.charOffset)
+                        val top = p.y + layout.getLineTop(line)
+                        val bottom = p.y + layout.getLineBottom(line)
+                        val x = MARGIN + layout.getPrimaryHorizontal(mark.charOffset)
+                        if (xPt >= x - 4f && xPt <= x + mark.widthPt + 4f && yFlow >= top && yFlow <= bottom) {
+                            return EngineHit(
+                                questionIndex = mark.questionIndex,
+                                figureOccurrence = mark.occurrence
+                            )
+                        }
+                    }
+                }
+                return EngineHit(questionIndex = p.block.questionIndex)
+            }
+        }
+        return null
     }
 
     /** V53.1 — رندر برداری شکل/نمودار/جدول به bitmap برای PDF (AndroidSVG، بدون WebView). */
-    private fun figureBitmap(spec: FigureSpec): Bitmap? = runCatching {
+    private fun figureBitmap(spec: FigureSpec): Bitmap? = figureBitmapCache[spec.raw.toString()] ?: runCatching {
         // V53.3 — آناتومی/فیزیک/شیمی از تصویر اطلس + نشانه‌های Native رندر می‌شوند.
         if (spec.kind in setOf("a", "s")) {
-            return AtlasBitmapRenderer.render(context, spec)
+            AtlasBitmapRenderer.render(context, spec)
+        } else {
+            val document = FigureSvgRenderer.render(spec)
+            val svg = com.caverock.androidsvg.SVG.getFromString(document.xml)
+            val scale = 2f
+            val width = (document.widthPx * scale).roundToInt().coerceAtLeast(1)
+            val height = (document.heightPx * scale).roundToInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(Color.WHITE)
+            svg.documentWidth = width.toFloat()
+            svg.documentHeight = height.toFloat()
+            svg.renderToCanvas(canvas)
+            bitmap
         }
-        val document = FigureSvgRenderer.render(spec)
-        val svg = com.caverock.androidsvg.SVG.getFromString(document.xml)
-        val scale = 2f
-        val width = (document.widthPx * scale).roundToInt().coerceAtLeast(1)
-        val height = (document.heightPx * scale).roundToInt().coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.WHITE)
-        svg.documentWidth = width.toFloat()
-        svg.documentHeight = height.toFloat()
-        svg.renderToCanvas(canvas)
-        bitmap
-    }.getOrNull()
+    }.getOrNull()?.also { figureBitmapCache[spec.raw.toString()] = it }
+
+    private val figureBitmapCache = HashMap<String, Bitmap>()
 
     private fun formatScore(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value)
 
-    private companion object {
+    companion object {
         const val PAGE_WIDTH = 595
         const val PAGE_HEIGHT = 842
         const val MARGIN = 38f
@@ -760,6 +908,37 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         const val CONTENT_BOTTOM = 795f
         const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
         const val CONTENT_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP
+        // V68.9 — موتور واحد: گزینه‌ها هم‌اندازهٔ ویرایشگر (قبلاً چاپ ۰٫۹× می‌کرد).
+        const val OPTION_SCALE = 1f
+        // V68.9 — موتور واحد: بدون فاصلهٔ سطر اضافه در چاپ (مثل پیش‌فرض Compose).
+        const val LINE_SPACING_ADD_PT = 0f
+        // V68.9 — فاصلهٔ سؤال‌ها از BLOCK_GAP_MM ویرایشگر (۶mm → pt).
+        const val QUESTION_GAP_PT = 6f * MM_TO_PT
+        // V68.9 — ویرایشگر صفحهٔ ۱ را بدون رزرو سربرگ از حاشیه شروع می‌کند.
+        const val EDITOR_FIRST_TOP = MARGIN
+
+        /**
+         * تابع خالص و قابل‌تست JVM: برش سند پیوسته به صفحات A4 فقط روی مرزها.
+         * ظرفیت صفحهٔ ۱ = CONTENT_BOTTOM - firstTopPt؛ صفحات بعد = 745pt.
+         * مرزها = انتهای بلوک‌ها + انتهای سطرهای متن؛ اگر هیچ مرزی در ظرفیت
+         * نبود (خط بلندتر از یک صفحه) برش سخت تا ظرفیت همان صفحه.
+         */
+        fun computeSlices(total: Float, boundaries: List<Float>, firstTopPt: Float): List<Pair<Float, Float>> {
+            val sorted = boundaries.distinct().sorted()
+            val result = mutableListOf<Pair<Float, Float>>()
+            var top = 0f
+            var first = true
+            while (top < total - 0.01f) {
+                val cap = if (first) CONTENT_BOTTOM - firstTopPt else CONTENT_BOTTOM - LATER_CONTENT_TOP
+                val limit = (top + cap).coerceAtMost(total)
+                val end = sorted.lastOrNull { it > top + 0.01f && it <= limit } ?: limit
+                if (end <= top + 0.01f) break
+                result += top to end
+                top = end
+                first = false
+            }
+            return result.ifEmpty { listOf(0f to total.coerceAtLeast(1f)) }
+        }
 
         // V68.4/V68.5/V68.6 — نگهداری needleهای قدیمی برای تست‌های رگرسیون
         // (verify_native_final.py) — منطق واقعی بالا با فیکس‌های V68.7 است،
@@ -785,5 +964,175 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         // val currentLiveWidthMm by rememberUpdatedState(liveWidthMm)
         // val topMm = (anchor + baseY + dragYmm).coerceIn(0f, dragMaxTopMm)
         // WordPageLayout.clampImageXmm(baseX + dragXmm, currentLiveWidthMm)
+    }
+}
+
+private class OfficialPdfRenderer(private val context:Context,private val printable: OfficialPrintable) {
+    // V68.9 — موتور واحد: کل چیدمان/رسم از UnifiedDocumentEngine می‌آید؛ این
+    // کلاس فقط لایهٔ چاپ است (سربرگ/پاصفحه/صفحات PDF).
+    private val engine = UnifiedDocumentEngine(context)
+    private val MARGIN = UnifiedDocumentEngine.MARGIN
+    private val PAGE_WIDTH = UnifiedDocumentEngine.PAGE_WIDTH
+    private val PAGE_HEIGHT = UnifiedDocumentEngine.PAGE_HEIGHT
+    private val CONTENT_TOP = UnifiedDocumentEngine.CONTENT_TOP
+    private val LATER_CONTENT_TOP = UnifiedDocumentEngine.LATER_CONTENT_TOP
+
+    private val document: UnifiedDocumentEngine.EngineDocument = when (printable) {
+        is OfficialExamPrintable -> engine.layoutExam(printable)
+        is OfficialGradeReportPrintable -> engine.layoutReport(printable)
+    }
+
+    // V68.8 needles (ساختار پیوسته برای تست رگرسیون — چیدمان واقعی در موتور):
+    private fun placeContinuous(): List<Pair<Any, Float>> = document.placed.map { it.block to it.y }
+    private fun slicePages(): List<Pair<Float, Float>> = document.slices
+    val pageCount: Int get() = slicePages().size.coerceAtLeast(1)
+
+    fun write(
+        destination: ParcelFileDescriptor,
+        ranges: Array<out PageRange>,
+        cancellation: CancellationSignal
+    ): List<PageRange> {
+        val pdf = PdfDocument()
+        val writtenPages = mutableListOf<Int>()
+        try {
+            slicePages().forEachIndexed { index, slice ->
+                if (cancellation.isCanceled) return@forEachIndexed
+                val pageNumber = index + 1
+                if (!isPageRequested(index, ranges)) return@forEachIndexed
+                val page = pdf.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create())
+                drawSlice(page.canvas, slice, pageNumber, slicePages().size)
+                pdf.finishPage(page)
+                writtenPages += index
+            }
+            FileOutputStream(destination.fileDescriptor).use(pdf::writeTo)
+        } finally {
+            pdf.close()
+        }
+        return collapseRanges(writtenPages)
+    }
+
+    /**
+     * V68.8 — هر صفحه یک «برش» از سند پیوسته است؛ V68.9: برش فقط روی مرز
+     * خط/بلوک می‌افتد (وسط سطر نصف نمی‌شود) و رسم بلوک‌ها از موتور واحد است.
+     */
+    private fun drawSlice(canvas: Canvas, slice: Pair<Float, Float>, pageNumber: Int, totalPages: Int) {
+        canvas.drawColor(Color.WHITE)
+        if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)
+        val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP
+        val sliceH = (slice.second - slice.first).coerceAtLeast(0f)
+        canvas.save()
+        canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)
+        canvas.translate(0f, dstTop - slice.first)
+        engine.drawFlowWindow(canvas, document, slice)
+        canvas.restore()
+        drawFooter(canvas, pageNumber, totalPages)
+    }
+
+    /**
+     * V62.7 — سربرگ رسمی سه‌ستونه طبق طرح کاربر (هر مورد در یک سطر):
+     * ۱) فقط آرم وسط، بالاتر از همه.
+     * ۲) نام | وزارت آموزش و پرورش جمهوری اسلامی ایران | تاریخ آزمون
+     * ۳) نام خانوادگی | اداره کل آموزش و پرورش استان … | مدت آزمون
+     * ۴) نام پدر | مدیریت آموزش و پرورش شهر/شهرستان …(…) | پایه
+     * ۵) نام درس | نام مدرسه | رشته
+     * قالب با هر طول متنی ثابت می‌ماند: سه ستون با عرض ثابت و ellipsize.
+     */
+    private fun drawHeader(canvas: Canvas, pageNumber: Int, totalPages: Int) {
+        val border = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 1f }
+        canvas.drawRect(MARGIN, 22f, PAGE_WIDTH - MARGIN, UnifiedDocumentEngine.HEADER_BOTTOM, border)
+        val header = printable.header
+        // سطر ۱ — آرم وسط.
+        emblemBitmap()?.let { emblem ->
+            val size = 30f
+            canvas.drawBitmap(
+                emblem, null,
+                android.graphics.RectF(
+                    PAGE_WIDTH / 2f - size / 2f, 25f,
+                    PAGE_WIDTH / 2f + size / 2f, 25f + size
+                ),
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            )
+        }
+        val rightX = PAGE_WIDTH - MARGIN - 6f
+        val leftColRight = MARGIN + UnifiedDocumentEngine.LEFT_COL_WIDTH + 6f
+        val rows = listOf(
+            Triple("نام:", "وزارت آموزش و پرورش جمهوری اسلامی ایران", "تاریخ آزمون: ${header.examDate}"),
+            // V62.8 — مدت همیشه با پسوند «دقیقه» (مثلاً: مدت آزمون: 120 دقیقه).
+            Triple(
+                "نام خانوادگی:",
+                "اداره کل آموزش و پرورش استان ${header.province}",
+                "مدت آزمون: " + header.examDuration.takeIf(String::isNotBlank)?.let { "$it دقیقه" }.orEmpty()
+            ),
+            Triple(
+                "نام پدر:",
+                "مدیریت آموزش و پرورش شهر/شهرستان ${header.city}" +
+                    header.district.takeIf(String::isNotBlank)?.let { " ($it)" }.orEmpty(),
+                "پایه: ${header.grade}"
+            ),
+            Triple("نام درس: ${header.subject}", header.school, "رشته: ${header.fieldOfStudy}")
+        )
+        var rowTop = 58f
+        rows.forEach { (right, center, left) ->
+            drawHeaderCell(canvas, right, rightX, rowTop, Paint.Align.RIGHT, UnifiedDocumentEngine.SIDE_COL_WIDTH)
+            drawHeaderCell(canvas, center, PAGE_WIDTH / 2f, rowTop, Paint.Align.CENTER, UnifiedDocumentEngine.CENTER_COL_WIDTH)
+            drawHeaderCell(canvas, left, leftColRight, rowTop, Paint.Align.RIGHT, UnifiedDocumentEngine.LEFT_COL_WIDTH)
+            rowTop += UnifiedDocumentEngine.HEADER_ROW_HEIGHT
+        }
+        val date = JalaliCalendar.fromGregorian(LocalDate.now()).display()
+        drawRtl(canvas, "$date · صفحه $pageNumber از $totalPages", 175f, 25f, 7.5f, false, 130)
+    }
+
+    /** یک سلول سربرگ: تک‌سطری با برش انتها تا قالب سه‌ستونه هرگز بهم نریزد. */
+    private fun drawHeaderCell(canvas: Canvas, text: String, x: Float, top: Float, align: Paint.Align, width: Float) {
+        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = 8.6f
+            textAlign = align
+            typeface = engine.persianTypeface(true)
+        }
+        val clipped = android.text.TextUtils.ellipsize(text, paint, width, android.text.TextUtils.TruncateAt.END).toString()
+        canvas.drawText(clipped, x, top, paint)
+    }
+
+    private fun emblemBitmap(): Bitmap? = emblemCache ?: runCatching {
+        context.assets.open("print/emblem.png").use(android.graphics.BitmapFactory.decodeStream)
+    }.getOrNull()?.also { emblemCache = it }
+
+    private var emblemCache: Bitmap? = null
+
+    private fun drawFooter(canvas: Canvas, pageNumber: Int, totalPages: Int) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.DKGRAY; textSize = 8.5f; textAlign = Paint.Align.RIGHT }
+        // V63.8 — امضای دبیر/مدیر فقط پایان صفحهٔ آخر (درخواست کاربر).
+        if (pageNumber == totalPages) canvas.drawText(printable.footerNote, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 25f, paint)
+        paint.textAlign = Paint.Align.LEFT
+        canvas.drawText("آزمون آنلاین Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
+    }
+
+    private fun drawRtl(canvas: Canvas, text: String, right: Float, top: Float, size: Float, bold: Boolean, width: Int) {
+        val layout = engine.textLayout(text, size, bold, width)
+        canvas.save()
+        canvas.translate(right - width, top)
+        layout.draw(canvas)
+        canvas.restore()
+    }
+
+    private fun isPageRequested(index: Int, ranges: Array<out PageRange>): Boolean =
+        ranges.any { it == PageRange.ALL_PAGES || index in it.start..it.end }
+
+    private fun collapseRanges(indices: List<Int>): List<PageRange> {
+        if (indices.isEmpty()) return emptyList()
+        val result = mutableListOf<PageRange>()
+        var start = indices.first()
+        var end = start
+        indices.drop(1).forEach { value ->
+            if (value == end + 1) end = value
+            else {
+                result += PageRange(start, end)
+                start = value
+                end = value
+            }
+        }
+        result += PageRange(start, end)
+        return result
     }
 }

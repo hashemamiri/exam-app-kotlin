@@ -2517,6 +2517,43 @@ require("val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP" i
         and "var y = if (pageNumber == 1)" not in _v6881_t,
         "V68.8.1 stale V63.7 needle (var y) must track the continuous engine's dstTop")
 
+# ---- V68.9: موتور واحد سند — چاپ و ویرایشگر از یک چیدمان/رسم (تصمیم کاربر) ----
+_v689_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+_v689_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt").read_text()
+_v689_math=(ROOT/"app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt").read_text()
+require("class UnifiedDocumentEngine(" in _v689_pdf
+        and "engine.drawFlowWindow(canvas, document, slice)" in _v689_pdf
+        and "private val engine = UnifiedDocumentEngine(context)" in _v689_pdf,
+        "V68.9 unified engine is missing or print no longer draws through it")
+require("engine.layoutExamForEditor(printable, imageBits.toMap())" in _v689_editor
+        and "engine.drawEditorPage(native, document, pageIndex, skipQuestion)" in _v689_editor
+        and "engine.hitTest(document, pageIndex, xPt, yPt)" in _v689_editor
+        and "private fun EnginePageView(" in _v689_editor
+        and "skipQuestion = editingIndex" in _v689_editor
+        and "editable = editingQuestionId == question.id" in _v689_editor,
+        "V68.9 editor paper is not rendered/edited through the unified engine")
+require("const val OPTION_SCALE = 1f" in _v689_pdf
+        and "(optionStyle?.third ?: question.fontSizeSp) * .9f" not in _v689_pdf
+        and "optionPrefixLeft -= boldTake" in _v689_pdf,
+        "V68.9 option parity with the editor (size 1.0 + bold number) is missing")
+require("const val LINE_SPACING_ADD_PT = 0f" in _v689_pdf
+        and ".setLineSpacing(LINE_SPACING_ADD_PT, 1f)" in _v689_pdf
+        and "Density(screenDensity.density, fontScale = 1f)" in _v689_editor
+        and "draftFontFamily(question.fontFamily)" in _v689_editor
+        and "lineHeight = TextUnit.Unspecified" in _v689_math,
+        "V68.9 typography unification (line spacing/fontScale/fontFamily) is missing")
+require("boundaries.add(p.y + layout.getLineBottom(line))" in _v689_pdf
+        and "fun computeSlices(total: Float, boundaries: List<Float>, firstTopPt: Float)" in _v689_pdf,
+        "V68.9 line-aware page slicing (never cut mid-line) is missing")
+require("const val QUESTION_GAP_PT = 6f * MM_TO_PT" in _v689_pdf
+        and 'kind="subject"' in _v689_pdf
+        and 'kind="answer"' in _v689_pdf
+        and "if (preview) Color.argb(0x55, 0x60, 0x60, 0x60) else Color.rgb(120, 120, 120)" in _v689_pdf,
+        "V68.9 print-only elements must render in the editor too (faint, one source)")
+require("class V68_9UnifiedEngineWysiwygTest" in
+        (ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_9UnifiedEngineWysiwygTest.kt").read_text(),
+        "V68.9 unified-engine regression tests are missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

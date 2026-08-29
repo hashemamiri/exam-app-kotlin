@@ -89,7 +89,12 @@ fun NativeMathText(
             textAlign = textAlign,
             maxLines = maxLines,
             overflow = overflow,
-            style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+            style = MaterialTheme.typography.bodyLarge.copy(
+                    // V68.9 — موتور واحد: ارتفاع سطر از خود فونت (مثل StaticLayout چاپ)،
+                    // نه ۲۴sp ثابت → شکست خط ویرایشگر = شکست خط چاپ.
+                    textDirection = TextDirection.Content,
+                    lineHeight = TextUnit.Unspecified
+                )
         )
         return
     }
@@ -149,7 +154,12 @@ fun NativeMathText(
                                 fontStyle = fontStyle,
                                 fontFamily = fontFamily,
                                 textAlign = textAlign,
-                                style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                    // V68.9 — موتور واحد: ارتفاع سطر از خود فونت (مثل StaticLayout چاپ)،
+                    // نه ۲۴sp ثابت → شکست خط ویرایشگر = شکست خط چاپ.
+                    textDirection = TextDirection.Content,
+                    lineHeight = TextUnit.Unspecified
+                )
                             )
                         }
                         is RichSegment.Figure -> Unit // شکل‌ها همیشه سطر مستقل دارند.

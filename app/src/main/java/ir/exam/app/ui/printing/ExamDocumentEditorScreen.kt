@@ -95,6 +95,16 @@ import ir.exam.app.ui.builder.ExamBuilderViewModel
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.NativeMathText
+import android.graphics.Bitmap
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import ir.exam.app.R
+import ir.exam.app.core.printing.UnifiedDocumentEngine
 
 /**
  * V63.0 — ویرایشگر سند آزمون (Word-مانند)؛ پچ ۱ از ۳.
@@ -280,6 +290,9 @@ fun ExamDocumentEditorScreen(
             }
             else -> WordFlowDocument(
                 questions = state.questions,
+                // V68.9 — سطر «درس/مدت/بارم» بالای سند از اطلاعات خود آزمون.
+                subject = state.subject,
+                durationMinutes = state.durationMinutes.toIntOrNull() ?: 0,
                 zoom = zoom,
                 // V68 — زوم دو-انگشتی + دوبار-لمس = ۱۰۰٪ (مثل Ctrl+چرخ ورد).
                 onZoom = { factor -> zoom = (zoom * factor).coerceIn(0.6f, 3f) },
@@ -421,6 +434,9 @@ private fun DocumentEditorTopBar(
 @Composable
 private fun WordFlowDocument(
     questions: List<QuestionDraft>,
+    // V68.9 — سطر «درس/مدت/بارم» بالای سند از اطلاعات خود آزمون.
+    subject: String,
+    durationMinutes: Int,
     zoom: Float,
     onZoom: (Float) -> Unit,
     onResetZoom: () -> Unit,
@@ -455,6 +471,42 @@ private fun WordFlowDocument(
     // دزدیده می‌شد؛ وقتی یک تصویر/شکل انتخاب است اسکرول موقتاً غیرفعال می‌شود
     // تا کشیدن در هر دو محور به خودِ شیء برسد. با لغو انتخاب، اسکرول برمی‌گردد.
     val scrollEnabled = selectedImageId == null && selectedFigure == null
+    // V68.9 — موتور واحد: همان چیدمان/فونت/شکست خط/جای اشیایی که چاپ رسمی
+    // استفاده می‌کند، اینجا کاغذهای ویرایشگر را می‌کشد؛ فقط سؤالِ در حال
+    // ویرایش به‌صورت Compose (قابل تایپ/درگ) روی همان نقطه می‌نشیند.
+    val context = LocalContext.current
+    val engine = remember(context) { UnifiedDocumentEngine(context.applicationContext) }
+    // V68.9 — امضای تصاویر فقط با تغییر id/uri عوض می‌شود (نه با هر تایپ) تا
+    // cache بیت‌مایپ‌ها بی‌دلیل خالی و دوباره decode نشود.
+    val imageSignature = remember(questions) {
+        questions.flatMap { q -> q.images.map { it.id + "@" + it.uri } }.joinToString("|")
+    }
+    val imageBits = remember(imageSignature) { mutableStateMapOf<String, Bitmap>() }
+    var imageBitsVersion by remember { mutableStateOf(0) }
+    LaunchedEffect(imageSignature) {
+        questions.forEach { q -> q.images.forEach { media ->
+            if (!imageBits.containsKey(media.id)) {
+                decodeGalleryImage(context, media.uri)?.let {
+                    imageBits[media.id] = it; imageBitsVersion += 1
+                }
+            }
+        } }
+    }
+    val printable = remember(questions, subject, durationMinutes) {
+        engine.printableFromDrafts(questions, subject, durationMinutes)
+    }
+    val document = remember(printable, imageBitsVersion) {
+        engine.layoutExamForEditor(printable, imageBits.toMap())
+    }
+    val editingIndex = remember(questions, editingQuestionId) {
+        questions.indexOfFirst { it.id == editingQuestionId }.takeIf { it >= 0 }
+    }
+    // V68.9 — sp مثل pt چاپ: بزرگ‌نمایی فونتِ سیستم، موتور واحد را به‌هم
+    // نمی‌زند (fontScale=1 فقط برای خود سند؛ dp/زوم بی‌تغییر).
+    val screenDensity = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides Density(screenDensity.density, fontScale = 1f)
+    ) {
     Column(
         // V68 — imePadding: مکان‌نا هنگام باز بودن کیبورد زیر آن گم نمی‌شود.
         Modifier.fillMaxSize().verticalScroll(scroll, enabled = scrollEnabled).imePadding().padding(vertical = 12.dp),
@@ -469,13 +521,49 @@ private fun WordFlowDocument(
             val pageHeightPx = WordPageLayout.mmToDp(WordPageLayout.PAGE_HEIGHT_MM, zoom).dp.roundToPx()
             val marginPx = WordPageLayout.mmToDp(WordPageLayout.MARGIN_MM, zoom).dp.roundToPx()
 
-            val gapPx = WordPageLayout.mmToDp(WordPageLayout.BLOCK_GAP_MM, zoom).dp.roundToPx()
             val contentWidth = pageWidthPx - marginPx * 2
-            val blockConstraints = Constraints(maxWidth = contentWidth)
+            // V68.9 — هر pt سند چاپ = همین نسبت روی صفحه.
+            val pxPerPt = pageWidthPx / UnifiedDocumentEngine.PAGE_WIDTH.toFloat()
 
-            // ۱) اندازه‌گیری واقعی هر سؤال با عرض محتوا
-            val placeables = questions.mapIndexed { index, question ->
-                subcompose("q-${question.id}") {
+            // V68.9 — شمار صفحه از خود موتور می‌آید: همان برش‌هایی که چاپ
+            // می‌شوند (بدون رزرو سربرگ در صفحهٔ ۱ — تصمیم کاربر).
+            val pageCount = document.pageCount
+            onPageCount(pageCount)
+
+            val chrome = (0 until pageCount).map { pageIndex ->
+                subcompose("page-$pageIndex") { WordPaperChrome() }
+                    .first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
+            }
+            // V68.9 — کاغذِ محتوا با خود موتور چاپ رسم می‌شود؛ لمس کاغذ هم
+            // از hitTest موتور به سؤال/تصویر/شکل نگاشت می‌شود.
+            val papers = (0 until pageCount).map { pageIndex ->
+                subcompose("engine-page-$pageIndex") {
+                    EnginePageView(
+                        engine = engine,
+                        document = document,
+                        pageIndex = pageIndex,
+                        pxPerPt = pxPerPt,
+                        skipQuestion = editingIndex,
+                        onTap = { xPt, yPt ->
+                            val hit = engine.hitTest(document, pageIndex, xPt, yPt)
+                                ?: return@EnginePageView
+                            val hitQuestion = questions.getOrNull(hit.questionIndex)
+                                ?: return@EnginePageView
+                            onSelectQuestion(hitQuestion.id)
+                            if (hit.galleryImageKey != null) {
+                                onSelectImage(hitQuestion.id, hit.galleryImageKey!!)
+                            }
+                            hit.figureOccurrence?.let { occ -> onSelectFigure(hitQuestion.id, occ) }
+                        }
+                    )
+                }.first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
+            }
+            // V68.9 — فقط سؤالِ در حال ویرایش، Compose است (تایپ/درگ/انتخاب
+            // درجا) و دقیقاً روی جای خودش در سند موتور می‌نشیند؛ بقیهٔ سند
+            // از موتور واحد می‌آید → آنچه می‌بینی همان است که چاپ می‌شود.
+            val overlay = editingIndex?.let { index ->
+                subcompose("q-${questions[index].id}") {
+                    val question = questions[index]
                     WordQuestionBlock(
                         row = index + 1,
                         question = question,
@@ -505,36 +593,78 @@ private fun WordFlowDocument(
                         onResizeFigure = { occ, w -> onResizeFigure(question.id, occ, w) },
                         onMoveFigure = { occ, x, y -> onMoveFigure(question.id, occ, x, y) }
                     )
-                }.first().measure(blockConstraints)
-            }
-
-            // V63.9 — جریان پیوسته (درخواست کاربر): هر سؤال دقیقاً جایی که
-            // قبلی تمام شد شروع می‌شود؛ هیچ فضای خالی تا انتهای صفحه نمی‌ماند.
-            // کاغذهای A4 پشت‌سرهم و بدون فاصله فقط «پس‌زمینه»اند و محتوا مثل
-            // ورد از مرز صفحه عبور می‌کند.
-            val totalContent = placeables.sumOf { it.height } +
-                (placeables.size - 1).coerceAtLeast(0) * gapPx
-            val pageCount = (((totalContent + marginPx * 2).toFloat() / pageHeightPx) + 0.999f)
-                .toInt().coerceAtLeast(1)
-            onPageCount(pageCount)
-
-            val chrome = (0 until pageCount).map { pageIndex ->
-                subcompose("page-$pageIndex") { WordPaperChrome() }
-                    .first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
+                }.first().measure(Constraints(maxWidth = contentWidth))
             }
             val totalHeight = pageCount * pageHeightPx
             layout(pageWidthPx, totalHeight) {
                 chrome.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }
-                var y = marginPx
-                placeables.forEachIndexed { index, placeable ->
-                    if (index > 0) y += gapPx
-                    placeable.place(marginPx, y)
-                    y += placeable.height
+                papers.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }
+                val overlayIndex = editingIndex
+                if (overlay != null && overlayIndex != null) {
+                    overlay.place(
+                        marginPx,
+                        (document.questionOriginPt(overlayIndex) * pxPerPt).roundToInt()
+                    )
                 }
             }
         }
     }
+    }
 }
+
+/**
+ * V68.9 — یک کاغذ A4 که «خود موتور چاپ» آن را رسم می‌کند (مقیاس pxPerPt):
+ * فونت، شکست خط، کادرها، خطوط پاسخ و جای تصاویر/شکل‌ها دقیقاً همان چاپ.
+ * لمس کاغذ هم از طریق hitTest موتور به سؤال/تصویر/شکل نگاشت می‌شود.
+ */
+@Composable
+private fun EnginePageView(
+    engine: UnifiedDocumentEngine,
+    document: UnifiedDocumentEngine.EngineDocument,
+    pageIndex: Int,
+    pxPerPt: Float,
+    skipQuestion: Int?,
+    onTap: (Float, Float) -> Unit
+) {
+    Canvas(
+        Modifier
+            .fillMaxSize()
+            .pointerInput(document, pageIndex) {
+                detectTapGestures { offset -> onTap(offset.x / pxPerPt, offset.y / pxPerPt) }
+            }
+    ) {
+        drawIntoCanvas { wrap ->
+            val native = wrap.nativeCanvas
+            native.save()
+            native.scale(pxPerPt, pxPerPt)
+            engine.drawEditorPage(native, document, pageIndex, skipQuestion)
+            native.restore()
+        }
+    }
+}
+
+/** V68.9 — فونت سؤال در ویرایشگر همان فونت چاپ: از نام خانواده به FontFamily. */
+private fun draftFontFamily(family: String?): FontFamily? = when (family?.lowercase()) {
+    "vazir", "vazirmatn" -> FontFamily(
+        Font(R.font.vazirmatn_regular, FontWeight.Normal),
+        Font(R.font.vazirmatn_bold, FontWeight.Bold)
+    )
+    "shabnam" -> FontFamily(Font(R.font.shabnam_regular))
+    "sahel" -> FontFamily(Font(R.font.sahel_regular))
+    else -> null
+}
+
+/** V68.9 — decode تصویر گالری برای موتور واحد (content/file uri؛ حداکثر ~1400px). */
+private fun decodeGalleryImage(context: android.content.Context, uri: String, maxPx: Int = 1400): Bitmap? = runCatching {
+    val resolver = context.contentResolver
+    val parsed = android.net.Uri.parse(uri)
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    resolver.openInputStream(parsed)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxPx) sample *= 2
+    val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+    resolver.openInputStream(parsed)?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
+}.getOrNull()
 
 /** کاغذ سفید A4 با سایه + عنوان بالا و شمارهٔ صفحه پایین (پشت سؤال‌ها). */
 @Composable
@@ -583,6 +713,9 @@ private fun WordQuestionBlock(
     // اعمال می‌شود تا «تعداد کلمات هر سطر» در ویرایش و چاپ یکی باشد.
     val printScale = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM - 2f * WordPageLayout.MARGIN_MM, zoom) / 519f
     val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * printScale).sp
+    // V68.9 — فونتِ چاپ همان فونتِ ویرایشگر: انتخاب «وزیر/شبام/سهل» سؤال در هر
+    // دو یکسان اعمال می‌شود (قبلاً فقط چاپ اعمال می‌کرد).
+    val family = remember(question.fontFamily) { draftFontFamily(question.fontFamily) }
     // V63.2 — بولد/ایتالیک/تراز سؤال روی برگه هم مثل چاپ دیده می‌شوند.
     val weight = if (question.bold) FontWeight.Bold else null
     val style = if (question.italic) FontStyle.Italic else null
@@ -649,7 +782,8 @@ private fun WordQuestionBlock(
             Text(
                 "سؤال $row     (",
                 fontSize = fontSize,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                fontFamily = family
             )
             if (editable) {
                 var scoreDraft by remember(question.id) { mutableStateOf(scoreText(question.score)) }
@@ -662,6 +796,7 @@ private fun WordQuestionBlock(
                     textStyle = TextStyle(
                         fontSize = fontSize,
                         fontWeight = FontWeight.Bold,
+                        fontFamily = family,
                         color = Color(0xFF0B72B8)
                     ),
                     singleLine = true,
@@ -674,12 +809,14 @@ private fun WordQuestionBlock(
             } else Text(
                 scoreText(question.score),
                 fontSize = fontSize,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                fontFamily = family
             )
             Text(
                 " نمره)",
                 fontSize = fontSize,
                 fontWeight = FontWeight.Bold,
+                fontFamily = family,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -709,7 +846,8 @@ private fun WordQuestionBlock(
                     when (part) {
                         is ir.exam.app.core.text.RichSegment.Math -> NativeMathText(
                             source = "$" + part.tex + "$",
-                            fontSize = fontSize
+                            fontSize = fontSize,
+                            fontFamily = family
                         )
                         is ir.exam.app.core.text.RichSegment.Figure -> {
                             val occIndex = figureCursor++
@@ -810,6 +948,7 @@ private fun WordQuestionBlock(
                                     fontSize = fontSize,
                                     fontWeight = weight ?: FontWeight.Normal,
                                     fontStyle = style ?: FontStyle.Normal,
+                                    fontFamily = family,
                                     textAlign = align
                                 ),
                                 // V64.5 — مثل ورد: بدون جعبه/پس‌زمینه؛ فقط مکان‌نما.
@@ -838,7 +977,8 @@ private fun WordQuestionBlock(
                     when (part) {
                         is ir.exam.app.core.text.RichSegment.Math -> NativeMathText(
                             source = "$" + part.tex + "$",
-                            fontSize = fontSize
+                            fontSize = fontSize,
+                            fontFamily = family
                         )
                         is ir.exam.app.core.text.RichSegment.Figure -> Unit
                         is ir.exam.app.core.text.RichSegment.Text -> {
@@ -851,7 +991,8 @@ private fun WordQuestionBlock(
                                             source = piece.first,
                                             fontSize = fontSize,
                                             fontWeight = if (piece.second) FontWeight.Bold else weight,
-                                            fontStyle = if (piece.third) FontStyle.Italic else style
+                                            fontStyle = if (piece.third) FontStyle.Italic else style,
+                                            fontFamily = family
                                         )
                                     }
                             }
@@ -864,6 +1005,7 @@ private fun WordQuestionBlock(
             fontSize = fontSize,
             fontWeight = weight,
             fontStyle = style,
+            fontFamily = family,
             textAlign = align,
             modifier = Modifier.fillMaxWidth()
         )
@@ -898,7 +1040,7 @@ private fun WordQuestionBlock(
         when (question.type) {
             QuestionType.MULTIPLE_CHOICE -> question.options.forEachIndexed { index, option ->
                 Row(Modifier.fillMaxWidth().padding(top = (1 * zoom).dp)) {
-                    Text("${index + 1}) ", fontSize = fontSize, fontWeight = FontWeight.Bold)
+                    Text("${index + 1}) ", fontSize = fontSize, fontWeight = FontWeight.Bold, fontFamily = family)
                     WordElement(
                         text = option,
                         // V64.4 — استایل مستقل گزینه؛ null = ارث از سؤال.
@@ -907,6 +1049,7 @@ private fun WordQuestionBlock(
                         weight = if (question.optionStyles.getOrNull(index)?.bold == true) FontWeight.Bold else weight,
                         style = if (question.optionStyles.getOrNull(index)?.italic == true) FontStyle.Italic else style,
                         align = align,
+                        fontFamily = family,
                         selected = selectedElement == ("opt" to index),
                         editing = editingElement == ("opt" to index),
                         onSelect = { onSelectElement("opt", index) },
@@ -921,8 +1064,8 @@ private fun WordQuestionBlock(
                 Modifier.fillMaxWidth().padding(top = (1 * zoom).dp),
                 horizontalArrangement = Arrangement.spacedBy((10 * zoom).dp)
             ) {
-                Text("○ صحیح", fontSize = fontSize)
-                Text("○ غلط", fontSize = fontSize)
+                Text("○ صحیح", fontSize = fontSize, fontFamily = family)
+                Text("○ غلط", fontSize = fontSize, fontFamily = family)
             }
             QuestionType.MATCHING -> {
                 val rows = maxOf(question.matchingLeft.size, question.matchingRight.size)
@@ -938,6 +1081,7 @@ private fun WordQuestionBlock(
                             weight = if (question.matchingRightStyles.getOrNull(index)?.bold == true) FontWeight.Bold else weight,
                             style = if (question.matchingRightStyles.getOrNull(index)?.italic == true) FontStyle.Italic else style,
                             align = align,
+                            fontFamily = family,
                             selected = selectedElement == ("mR" to index),
                             editing = editingElement == ("mR" to index),
                             onSelect = { onSelectElement("mR", index) },
@@ -946,7 +1090,7 @@ private fun WordQuestionBlock(
                             onEnter = { onElementEnter("mR", index) },
                             modifier = Modifier.weight(1f)
                         )
-                        Text("↔", fontSize = fontSize)
+                        Text("↔", fontSize = fontSize, fontFamily = family)
                         WordElement(
                             text = question.matchingLeft.getOrNull(index).orEmpty(),
                             fontSize = question.matchingLeftStyles.getOrNull(index)?.fontSizeSp
@@ -954,6 +1098,7 @@ private fun WordQuestionBlock(
                             weight = if (question.matchingLeftStyles.getOrNull(index)?.bold == true) FontWeight.Bold else weight,
                             style = if (question.matchingLeftStyles.getOrNull(index)?.italic == true) FontStyle.Italic else style,
                             align = align,
+                            fontFamily = family,
                             selected = selectedElement == ("mL" to index),
                             editing = editingElement == ("mL" to index),
                             onSelect = { onSelectElement("mL", index) },
@@ -1474,6 +1619,7 @@ private fun WordElement(
     weight: FontWeight?,
     style: FontStyle?,
     align: TextAlign,
+    fontFamily: FontFamily? = null,
     selected: Boolean,
     editing: Boolean,
     onSelect: () -> Unit,
@@ -1505,6 +1651,7 @@ private fun WordElement(
                 fontSize = fontSize,
                 fontWeight = weight ?: FontWeight.Normal,
                 fontStyle = style ?: FontStyle.Normal,
+                fontFamily = fontFamily,
                 textAlign = align
             ),
             // V64.5/V64.6 — مثل ورد: کادر و پس‌زمینه حذف؛ فقط مکان‌نمای چشمک‌زن.
@@ -1529,6 +1676,7 @@ private fun WordElement(
                 fontSize = fontSize,
                 fontWeight = weight,
                 fontStyle = style,
+                fontFamily = fontFamily,
                 textAlign = align,
                 modifier = Modifier.fillMaxWidth()
             )
