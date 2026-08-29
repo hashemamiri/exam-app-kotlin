@@ -157,14 +157,14 @@ object WordPageLayout {
     fun clampImageXmm(xMm: Float, widthMm: Float): Float =
         xMm.coerceIn(0f, (USABLE_WIDTH_MM - widthMm).coerceAtLeast(0f))
 
-    // V68.4 — موقعیت آزاد شکل: X.fx (mm مطلق از چپ بلوک سؤال) و X.fy
-    // (mm آفست عمودی از جای طبیعی درون‌متنی — همان قرارداد yMm تصویر، تا چاپ
-    // رسمی از همان مسیر free-image بدون تغییر مقیاس استفاده کند). حضور «هر
-    // دو» یعنی شکل آزاد جابه‌جا شده؛ غیبت هرکدام = همان رندر درون‌متنی قبلی.
+    // V68.4 — موقعیت آزاد شکل: X.fx و X.fy هر دو «mm مطلق از بالا-چپ بلوکِ
+    // همان سؤال»اند (V68.4.1: مطلق تا شکل بین حالت ویرایش/نمایش/چاپ نپرد؛
+    // چاپ ارتفاع جریان بالای شکل را هنگام رندر کم می‌کند). حضور «هر دو»
+    // یعنی شکل آزاد جابه‌جا شده؛ غیبت هرکدام = همان رندر درون‌متنی قبلی.
     const val FIGURE_POS_X_KEY: String = "fx"
     const val FIGURE_POS_Y_KEY: String = "fy"
 
-    /** جابه‌جایی آزاد ذخیره‌شدهٔ شکل: fx مطلق از چپ بلوک + fy آفست از جای طبیعی؛ null = درون‌متنی. */
+    /** جابه‌جایی آزاد ذخیره‌شدهٔ شکل (fx/fy مطلق از بالا-چپ بلوک)؛ null = درون‌متنی. */
     fun figurePosMm(spec: FigureSpec): Pair<Float, Float>? {
         val x = spec.xStr(FIGURE_POS_X_KEY, "").toFloatOrNull() ?: return null
         val y = spec.xStr(FIGURE_POS_Y_KEY, "").toFloatOrNull() ?: return null

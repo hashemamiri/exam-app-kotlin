@@ -154,6 +154,9 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
     private fun examBlocks(exam: OfficialExamPrintable): List<RenderBlock> = buildList {
         add(RenderBlock(text="درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",textSize=11f,bold=true,boxed=true))
         exam.questions.forEach { question ->
+            // V68.4.1 — اندیس شروع بلوک‌های همین سؤال: برای تبدیل fy مطلقِ شکلِ
+            // آزاد (از بالای بلوک) به آفست از جایگاه جریان خودش در چاپ.
+            val qStart = size
             add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign))
             // V53.1 — شکل/نمودار/جدول درون‌متنی (%%FIG%%) به‌جای JSON خام،
             // به‌صورت تصویر برداری در PDF رندر می‌شوند؛ فرمول‌ها مثل قبل.
@@ -169,16 +172,20 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                     is RichSegment.Math -> add(RenderBlock(formula=rich.tex,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
                     is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
                         // V63.1 — عرض ذخیره‌شده در خود توکن؛ بدون wmm همان ۹۵ قبلی.
-                        // V68.4 — شکلِ جابه‌جا شده (X.fx/X.fy: fx مطلق از چپ بلوک،
-                        // fy آفست از جای طبیعی — همان قرارداد تصویر آزاد) از مسیر
-                        // free تصویر در همان جایگاه چاپ می‌شود؛ بدون آن = درون‌متنی.
+                        // V68.4 — شکلِ جابه‌جا شده (X.fx/X.fy) از مسیر free تصویر
+                        // در همان جایگاه چاپ می‌شود؛ بدون آن = درون‌متنی قبلی.
+                        // V68.4.1 — fx/fy مطلق از بالا-چپ بلوک سؤال‌اند؛ drawImage
+                        // y را نسبت به «جریان خود بلوک» می‌کشد، پس ارتفاع بلوک‌های
+                        // قبلی همین سؤال (pt) کم می‌شود تا نتیجه نسبت به ابتدای
+                        // بلوک درست بیفتد (مثل ویرایشگر، بدون پرش).
                         val figPos = WordPageLayout.figurePosMm(rich.spec)
+                        val flowPt = (qStart until size).sumOf { measureBlock(this[it]) }
                         add(RenderBlock(
                             image=bmp,
                             imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),
                             imagePosition=if (figPos != null) "free" else "below",
                             imageXmm=figPos?.first ?: 20f,
-                            imageYmm=figPos?.second ?: 30f
+                            imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)
                         ))
                     } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                     is RichSegment.Text -> if (rich.text.isNotBlank()) {
@@ -408,7 +415,7 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val scale=minOf(targetWidth/bitmap.width,maxHeight/bitmap.height,1f)
         val width=bitmap.width*scale;val height=bitmap.height*scale
         val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm/210f*CONTENT_WIDTH).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
-        val y=if(block.imagePosition=="free")top+(block.imageYmm/297f*80f).coerceIn(0f,80f)else top+3f
+        val y=if(block.imagePosition=="free")top+(block.imageYmm/297f*80f).coerceAtMost(80f)else top+3f
         canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
     }
 

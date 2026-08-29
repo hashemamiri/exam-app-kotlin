@@ -2346,19 +2346,33 @@ require("if (selected && !locked) Modifier.pointerInput(spec.raw, anchorPosMm, b
         and "dragMm = null" in _v68_editor,
         "V68.4 figure body-drag with lock respect is missing from the editor")
 require("blockHeightMm = it.size.height / pxPerMm" in _v68_editor
-        and "(boundsHeightMm - heightMm).coerceAtLeast(0f)" in _v68_editor
+        and "(boundsHeightMm - objHeightMm).coerceAtLeast(0f)" in _v68_editor
+        and "val objHeightMm = if (realHeightMm > 0f) realHeightMm else heightMm" in _v68_editor
+        and "realHeightMm = it.size.height / pxPerMm" in _v68_editor
         and "figureAnchors[occIndex]" in _v68_editor
         and "imageSlotTops[media.id]" in _v68_editor
         and "anchorTopMm = imageSlotTops[media.id] ?: 0f" in _v68_editor
         and "boundsHeightMm = blockHeightMm" in _v68_editor,
         "V68.4 per-question-block bounds (natural anchor + block height) are missing")
+# V68.4.1 — رفع سه باگ گزارش‌شدهٔ دستگاه: (۱) درگ/بزرگ‌کردن آینه‌ای در RTL:
+# Modifier.offset و align هر دو rtlAware اند؛ فضای شیء باید LTR شود.
+require("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in _v68_editor
+        and "import androidx.compose.ui.platform.LocalLayoutDirection" in _v68_editor
+        and "import androidx.compose.ui.unit.LayoutDirection" in _v68_editor,
+        "V68.4.1 object space must be LTR (RTL mirrors offset/align: drag and resize were inverted)")
+# V68.4.1 — (۲) پرش بین حالت ویرایش/نمایش: fy باید مطلق از بالای بلوک باشد.
+require("baseTopMm = pos?.second ?: anchorPosMm.second" in _v68_editor
+        and "onMove(x, topAbs)" in _v68_editor,
+        "V68.4.1 figure fy must be absolute from the block top (mode-stable, no jump)")
 require("yMm = yMm.coerceIn(-300f, 300f)" in _v684_vm,
         "V68.4 moveImage must accept negative slot offsets (image above its slot)")
 require("val figPos = WordPageLayout.figurePosMm(rich.spec)" in _v684_pdf
         and 'imagePosition=if (figPos != null) "free" else "below"' in _v684_pdf
-        and "(block.imageYmm/297f*80f).coerceIn(0f,80f)" in _v684_pdf
+        and "val flowPt = (qStart until size).sumOf { measureBlock(this[it]) }" in _v684_pdf
+        and "imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)" in _v684_pdf
+        and "(block.imageYmm/297f*80f).coerceAtMost(80f)" in _v684_pdf
         and "WordPageLayout.figureWidthMm(rich.spec)" in _v684_pdf,
-        "V68.4 official print does not render positioned figures via the free path")
+        "V68.4 official print does not render positioned figures via the free path (fy must be block-absolute)")
 require("class V68_4ObjectBoundsTest" in _v684_test
         and "private fun root(): File" in _v684_test
         and "figure free position roundtrips through the token with one decimal" in _v684_test

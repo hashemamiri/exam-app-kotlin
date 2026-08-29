@@ -12,14 +12,17 @@ import org.junit.Test
 /**
  * V68.4 — حرکت آزاد شکل/نمودار/جدول + محدودیت حرکت همهٔ اشیا به محدودهٔ
  * خودِ همان سؤال (درخواست کاربر):
- * ۱) شکل درون‌متنی با کشیدن بدنه مثل تصاویر جابه‌جا می‌شود؛ fx مطلق از چپ
- *    بلوک و fy آفست از جای طبیعی (همان قرارداد yMm تصویر، سازگار با چاپ)
- *    در X.fx/X.fy همان توکن %%FIG%% ذخیره می‌شوند (یک رقم اعشار) و بدون
- *    مهاجرت داده، توکن قدیمی = همان رندر درون‌متنی.
+ * ۱) شکل درون‌متنی با کشیدن بدنه مثل تصاویر جابه‌جا می‌شود؛ fx و fy هر دو
+ *    «مطلق از بالا-چپ بلوک» در X.fx/X.fy همان توکن %%FIG%% ذخیره می‌شوند
+ *    (یک رقم اعشار) و بدون مهاجرت داده، توکن قدیمی = همان رندر درون‌متنی.
+ *    V68.4.1: مطلق بودن fy یعنی شکل بین حالت ویرایش/نمایش/چاپ نمی‌پرد.
  * ۲) هر شیء آزاد (تصویر و شکل) فقط داخل ارتفاع بلوکِ سؤال خودش حرکت
  *    می‌کند — تصویر سؤال ۱ وارد سؤال ۲ نمی‌شود؛ اسلات درون‌متنی/انتهایی
  *    رزرو می‌شود تا ارتفاع بلوک ثابت بماند و آفست فقط بصری باشد.
- * ۳) چاپ رسمی شکلِ دارای fx/fy را مثل تصویر آزاد در همان جایگاه می‌کشد.
+ *    V68.4.1: clamp با «ارتفاع واقعی» شیء است (نه فرض ۰٫۶/figureHeightMm).
+ * ۳) چاپ رسمی شکلِ دارای fx/fy را مثل تصویر آزاد در همان جایگاه (نسبت به
+ *    ابتدای بلوک) می‌کشد؛ فضای شیء در ویرایشگر LTR است تا در برنامهٔ RTL
+ *    درگ و بزرگ‌کردن آینه‌ای نشود (هر دو offset و align در RTL آینه می‌کنند).
  */
 class V68_4ObjectBoundsTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -105,15 +108,19 @@ class V68_4ObjectBoundsTest {
     fun `editor drags figures and clamps every object to its question block`() {
         // درگ بدنهٔ شکل مثل تصاویر + قفل اشیا
         assertTrue("if (selected && !locked) Modifier.pointerInput(spec.raw, anchorPosMm, boundsHeightMm, shownWidthMm)" in editor)
-        // clamp عمودی با ارتفاع بلوکِ همان سؤال (شکل و تصویر هر دو)
+        // V68.4.1 — فضای شیء LTR: برنامه RTL است و offset/align در RTL افقی را
+        // آینه می‌کنند (درگ/بزرگ‌کردن برعکس می‌شد) — مثل NativeFormulaView.
+        assertTrue("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in editor)
+        // clamp عمودی با ارتفاع بلوکِ همان سؤال و «ارتفاع واقعی» شیء (نه فرضی)
         assertTrue("blockHeightMm = it.size.height / pxPerMm" in editor)
-        assertTrue("(boundsHeightMm - heightMm).coerceAtLeast(0f)" in editor)
-        assertTrue("(boundsHeightMm - heightMm).coerceAtLeast(0f)\n    else Float.MAX_VALUE" in editor)
-        // موقعیت آزاد از توکن خوانده می‌شود
+        assertTrue("(boundsHeightMm - objHeightMm).coerceAtLeast(0f)\n    else Float.MAX_VALUE" in editor)
+        assertTrue("val objHeightMm = if (realHeightMm > 0f) realHeightMm else heightMm" in editor)
+        assertTrue("realHeightMm = it.size.height / pxPerMm" in editor)
+        // موقعیت آزاد از توکن خوانده می‌شود؛ fx و fy هر دو مطلق از بالا-چپ بلوک‌اند
+        // تا شکل بین حالت ویرایش/نمایش/چاپ نپرد.
         assertTrue("WordPageLayout.figurePosMm(spec)" in editor)
-        // fy = آفست از جای طبیعی (مثل yMm تصویر): رندر = لنگر + آفست، commit = مطلق − لنگر
-        assertTrue("baseTopMm = anchorPosMm.second + (pos?.second ?: 0f)" in editor)
-        assertTrue("onMove(x, topAbs - anchorPosMm.second)" in editor)
+        assertTrue("baseTopMm = pos?.second ?: anchorPosMm.second" in editor)
+        assertTrue("onMove(x, topAbs)" in editor)
         // اسلات طبیعی اندازه‌گیری می‌شود تا آفست بصری از آن محاسبه شود
         assertTrue("figureAnchors[occIndex]" in editor)
         assertTrue("imageSlotTops[media.id]" in editor)
@@ -136,8 +143,12 @@ class V68_4ObjectBoundsTest {
     fun `official print renders positioned figures through the free-image path`() {
         assertTrue("val figPos = WordPageLayout.figurePosMm(rich.spec)" in pdfAdapter)
         assertTrue("imagePosition=if (figPos != null) \"free\" else \"below\"" in pdfAdapter)
-        // y چاپ دیگر منفی نمی‌شود (آفست منفی = بالای بلوک همان سؤال)
-        assertTrue("(block.imageYmm/297f*80f).coerceIn(0f,80f)" in pdfAdapter)
+        // V68.4.1 — fy مطلق از بالای بلوک: در چاپ ارتفاع بلوک‌های قبلی همین
+        // سؤال کم می‌شود تا شکل نسبت به ابتدای بلوک (مثل ویرایشگر) بیفتد.
+        assertTrue("val flowPt = (qStart until size).sumOf { measureBlock(this[it]) }" in pdfAdapter)
+        assertTrue("imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)" in pdfAdapter)
+        // سقف ۸۰pt چاپ حفظ شده (کف نیست: شکل می‌تواند بالای جریان خودش باشد)
+        assertTrue("(block.imageYmm/297f*80f).coerceAtMost(80f)" in pdfAdapter)
         // توابع جدید در layout
         assertTrue("fun withFigurePosMm(" in layout)
         assertTrue("fun figurePosMm(" in layout)

@@ -70,6 +70,8 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import ir.exam.app.ui.builder.StyleSpanOps
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.IntOffset
@@ -1158,12 +1160,16 @@ private fun DraggableQuestionImage(
     // آفست زندهٔ حین درگ (میلی‌متر)؛ با رها شدن انگشت commit می‌شود.
     var dragXmm by remember(media.id) { mutableStateOf(0f) }
     var dragYmm by remember(media.id) { mutableStateOf(0f) }
+    // V68.4.1 — ارتفاع واقعیِ رندرشدهٔ تصویر (نسبت‌های واقعی به‌جای فرض ۰٫۶)؛
+    // clamp پایین بلوک با همین ارتفاع است تا تصویر در سؤال بعدی نرود و اسنپ نخورد.
+    var realHeightMm by remember(media.id) { mutableStateOf(0f) }
     val liveWidthMm = (liveResizeMm ?: widthMm).coerceIn(
         WordPageLayout.IMAGE_MIN_WIDTH_MM, WordPageLayout.IMAGE_MAX_WIDTH_MM
     )
     // V68.4 — سقف عمودی = محدودهٔ خودِ بلوک سؤال: بالا-چپ بلوک تا
     // (ارتفاع بلوک − ارتفاع تصویر). تصویر سؤال ۱ دیگر وارد سؤال ۲ نمی‌شود.
-    val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - heightMm).coerceAtLeast(0f)
+    val objHeightMm = if (realHeightMm > 0f) realHeightMm else heightMm
+    val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - objHeightMm).coerceAtLeast(0f)
     else Float.MAX_VALUE
     // V63.9 — آفست زنده حتی قبل از free شدن هم دیده می‌شود تا درگ واقعاً کار کند.
     val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else 0f) + dragXmm, liveWidthMm)
@@ -1179,9 +1185,14 @@ private fun DraggableQuestionImage(
 
     // V63.8 — بدون لکهٔ آبی: لمس = انتخاب؛ شیء انتخاب‌شده با کشیدن انگشت
     // آزادانه جابه‌جا می‌شود (+/− نوار ابزار اندازه را عوض می‌کند).
+    // V68.4.1 — فضای شیء LTR: برنامهٔ فارسی RTL است و Modifier.offset/align
+    // در RTL افقی را «آینه» می‌کنند (درگ و هندل‌های گوشه برعکس کار می‌کردند)؛
+    // با LTR، آفست مثبت = راست، هندل‌ها در گوشهٔ واقعی و x از چپ بلوک = چاپ.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
     Box(
         Modifier
             .padding(top = WordPageLayout.mmToDp(WordPageLayout.MEDIA_GAP_MM / 2f, zoom).dp)
+            .onGloballyPositioned { realHeightMm = it.size.height / pxPerMm }
             .offset { IntOffset((baseXmm * pxPerMm).roundToInt(), (baseYmm * pxPerMm).roundToInt()) }
             .width(WordPageLayout.mmToDp(liveWidthMm, zoom).dp)
             .then(
@@ -1243,6 +1254,7 @@ private fun DraggableQuestionImage(
             )
         }
     }
+    }
 }
 
 /**
@@ -1272,28 +1284,38 @@ private fun ResizableFigure(
     var liveResizeMm by remember(spec.raw) { mutableStateOf<Float?>(null) }
     // V68.4 — آفست زندهٔ حین درگ بدنه (mm)؛ با رها شدن commit می‌شود.
     var dragMm by remember(spec.raw) { mutableStateOf<Pair<Float, Float>?>(null) }
+    // V68.4.1 — ارتفاع واقعیِ رندرشدهٔ شکل (به‌جای تخمین figureHeightMm)؛
+    // clamp پایین بلوک با همین ارتفاع است تا نه سرریز کند و نه اسنپ بخورد.
+    var realHeightMm by remember(spec.raw) { mutableStateOf(0f) }
     val shownWidthMm = (liveResizeMm ?: widthMm).coerceIn(
         WordPageLayout.FIGURE_MIN_WIDTH_MM, WordPageLayout.FIGURE_MAX_WIDTH_MM
     )
     val pxPerMm = with(androidx.compose.ui.platform.LocalDensity.current) {
         WordPageLayout.mmToDp(1f, zoom).dp.toPx()
     }
-    // V68.4 — موقعیت پایه: x مطلق از چپ بلوک (مثل تصویر آزاد) و fy = آفست
-    // عمودی از جای طبیعی درون‌متنی (همان قرارداد yMm تصویر؛ سازگار با چاپ).
+    // V68.4.1 — fx و fy هر دو «مطلق از بالا-چپ بلوک» ذخیره می‌شوند تا شکل با
+    // رفتن/آمدن حالت ویرایش (جریان inline در FlowRow) یا حالت نمایش (زیر
+    // متن) و در چاپ، در همان جایگاه بماند و نپرد.
     val pos = WordPageLayout.figurePosMm(spec)
     val baseLeftMm = pos?.first ?: anchorPosMm.first
-    val baseTopMm = anchorPosMm.second + (pos?.second ?: 0f)
+    val baseTopMm = pos?.second ?: anchorPosMm.second
     // V68.4 — clamp به محدودهٔ خودِ بلوک سؤال: بالا ∈ [0, ارتفاع بلوک − ارتفاع شکل].
-    val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - heightMm).coerceAtLeast(0f)
+    val objHeightMm = if (realHeightMm > 0f) realHeightMm else heightMm
+    val maxTopMm = if (boundsHeightMm > 0f) (boundsHeightMm - objHeightMm).coerceAtLeast(0f)
     else Float.MAX_VALUE
     val visualLeftMm = WordPageLayout.clampImageXmm(baseLeftMm + (dragMm?.first ?: 0f), shownWidthMm)
     val visualTopMm = (baseTopMm + (dragMm?.second ?: 0f)).coerceIn(0f, maxTopMm)
     // آفست بصری نسبت به اسلات رزروشدهٔ طبیعی (جریان متن تغییر نمی‌کند).
     val offXmm = visualLeftMm - anchorPosMm.first
     val offYmm = visualTopMm - anchorPosMm.second
+    // V68.4.1 — فضای شیء LTR: برنامه RTL است و Modifier.offset/align در RTL
+    // افقی را آینه می‌کنند؛ با LTR درگ به راست = حرکت به راست و هندل‌های
+    // گوشه در گوشهٔ واقعی می‌نشینند (بزرگ‌کردن آینه‌ای نمی‌شود).
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
     Box(
         Modifier
             .padding(top = WordPageLayout.mmToDp(1.5f, zoom).dp)
+            .onGloballyPositioned { realHeightMm = it.size.height / pxPerMm }
             .offset { IntOffset((offXmm * pxPerMm).roundToInt(), (offYmm * pxPerMm).roundToInt()) }
             .width(WordPageLayout.mmToDp(shownWidthMm, zoom).dp)
             .then(
@@ -1310,15 +1332,13 @@ private fun ResizableFigure(
                                 ((dragMm?.second ?: 0f) + drag.y / pxPerMm)
                         },
                         onDragEnd = {
-                            // V68.4 — commit در X.fx/X.fy: fx مطلق از چپ بلوک
-                            // (clamp ناحیهٔ چاپ) و fy آفست از جای طبیعی؛ commit
-                            // روی مختصات مطلقِ clamp‌شدهٔ بلوک حساب می‌شود.
+                            // V68.4.1 — commit مطلق از بالا-چپ بلوک در X.fx/X.fy.
                             val x = WordPageLayout.clampImageXmm(
                                 baseLeftMm + (dragMm?.first ?: 0f), shownWidthMm
                             )
                             val topAbs = (baseTopMm + (dragMm?.second ?: 0f)).coerceIn(0f, maxTopMm)
                             dragMm = null
-                            onMove(x, topAbs - anchorPosMm.second)
+                            onMove(x, topAbs)
                         },
                         onDragCancel = { dragMm = null }
                     )
@@ -1352,6 +1372,7 @@ private fun ResizableFigure(
                 }
             )
         }
+    }
     }
 }
 
