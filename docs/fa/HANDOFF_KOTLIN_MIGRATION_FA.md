@@ -11956,3 +11956,120 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
    جایگزین شود و تکراری در ابتدای متن ساخته نشود.
 ۴) درج فرمول در متن چندتوکنه (فرمول + شکل)؛ ترتیب همهٔ توکن‌ها بماند.
 ```
+
+## ۲۴۷) V68.3 — بازنویسی درست V68 (رفتار ورد در ویرایشگر چاپ) + پاک‌سازی ریشهٔ ریپو
+
+### ماجرا (تاریخ واقعی ریموت)
+
+```text
+run 366  V67.0  مکان‌نمای پیش‌فرض + ترتیب اشیای درون‌متنی     → SUCCESS
+run 367  V67.1  هات‌فیکس درج فرمول در ابتدای متن             → SUCCESS
+run 368  4520d39 V68.0 رفتار ورد در ویرایشگر چاپ              → FAILURE
+run 369  b9654d7 V68.2 هات‌فیکس import BoxScope                → FAILURE
+b67382d  Revert کامل V68 به وضعیت V67.1                        → SUCCESS (run 370)
+```
+
+### ریشه‌یابی دو شکست CI (با مدرک؛ لاگ خام نیاز به admin داشت)
+
+```text
+شکست ۱ (ران ۳۶۸) — خطای کامپایل:
+  import androidx.compose.ui.BoxScope → Unresolved reference.
+  BoxScope فقط در androidx.compose.foundation.layout وجود دارد؛ V68.2 همان
+  یک import را اصلاح کرد ولی ران ۳۶۹ باز قرمز ماند.
+شکست ۲ (ران ۳۶۹) — خطای «اجرا»ی تست (کامپایل سبز شده بود):
+  V68_0PrintEditorWordBehaviorTest فایل سورس را با File(path).readText()
+  می‌خواند. تست‌های JVM با working directory = پوشهٔ ماژول (app/) اجرا
+  می‌شوند؛ مسیر app/src/main/... نسبت به app/ وجود ندارد →
+  FileNotFoundException → testDebugUnitTest شکست.
+  مدرک الگو: همهٔ تست‌های سبز فایل‌خوان (V63_2 و ۱۵۰+ مورد دیگر) مسیر را
+  با root() و دو نامزد "." و ".." حل می‌کنند؛ هیچ تست سبزی File(path)
+  خام ندارد.
+مرحلهٔ شکست‌خورده در هر دو ران: «اجرای تست‌ها و Lint» (annotations ران ۳۶۸).
+هشدارهای git exit 128 در هر دو ران همان fetch --unshallow روی ریپوی
+کامل است و بی‌ضرر است.
+```
+
+### بازنویسی V68.3 (همان طراحی سالم V68.0 + دو ریشه اصلاح‌شده)
+
+```text
+۱) مکان‌نمای یک‌لمسی: لمس هر جای سؤال، نزدیک‌ترین تکهٔ متنی همان نقطه را
+   فوکوس می‌کند (segmentBounds با boundsInRoot + FocusRequester)؛
+   BasicTextField با TextFieldValue و هایلایت انتخاب خود Compose.
+۲) استایل تکه‌ای متن (spans): QuestionDraft.textSpans با بازه‌های
+   [start,end) انحصاری؛ StyleSpanOps.adjust (هم‌مقیاسی با تایپ/حذف)،
+   toggle وردی (پوشش کامل→حذف، وگرنه→گسترش) و splitBySpans؛
+   JSON: spans:[{s,e,b?,i?}] فقط وقتی استایلی هست (سؤال قدیمی
+   بایت‌به‌بایت دست‌نخورده)؛ فقط چیدمان چاپ (PrintLayoutStore) — قید V63.5.
+۳) چاپ: متن استایل‌دار «یک» RenderBlock با styledText: SpannableStringBuilder
+   (StyleSpan های BOLD/ITALIC) و styledLayout؛ تکه‌ها بلوک جدا نمی‌شوند
+   (هر RenderBlock = خط جدید در planPages)؛ مسیر بدون spans دست‌نخورده.
+۴) دستگیره‌های گوشه: BoxScope.ObjectCornerHandles با چهار دایرهٔ
+   سفید/آبی روی تصویر/شکل انتخابی؛ کشیدن = تغییر اندازهٔ زنده (clamp:
+   FIGURE 40-180mm، IMAGE 20-190mm)؛ دکمه‌های +/− نوار اببرد حذف شدند.
+۵) زوم دو-انگشتی (transformable، 0.6..3) + دوبار-لمس = ۱۰۰٪؛
+   imePadding روی اسکرول (مکان‌نا زیر کیبورد گم نمی‌شود).
+۶) نمایش غیر-ویرایش هم استایل تکه‌ای را با splitBySpans نشان می‌دهد.
+```
+
+### پاک‌سازی ریشهٔ ریپو (در همین پچ)
+
+```text
+حذف‌شده‌ها:
+  V45_4_1_verify_hotfix.patch          (پچ قدیمی کامیت‌شده؛ درس ۹)
+  V45_4_math_editor_webview.patch      (پچ قدیمی کامیت‌شده)
+  patches/pending/V50_0_revert_to_v45_3.patch
+  FETCH_HEAD                           (فایل خالی ۰ بایت tracked!)
+  exam-app-kotlin                      (gitlink 160000 — کلون تودرتو
+                                        که روزی اشتباهاً commit شده؛
+                                        پوشهٔ خالی هم rmdir شد)
+هیچ کد/تست/verify/workflow به اینها ارجاع نداشت (grep سراسری قبل از حذف).
+verify ممنوعیت بازگشت همهٔ موارد بالا را enforce می‌کند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt
+app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt
+app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V63_2DocFormatReorderTest.kt   (needle چشم)
+app/src/test/java/ir/exam/app/ui/app/V68_3PrintEditorWordBehaviorTest.kt (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+حذف: V45_4_1_verify_hotfix.patch، V45_4_math_editor_webview.patch،
+     patches/pending/V50_0_revert_to_v45_3.patch، FETCH_HEAD، exam-app-kotlin
+```
+
+### تست/verify
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=208 edge_functions=3
+تست جدید: V68_3PrintEditorWordBehaviorTest — ۱۵ تست:
+  toggle وردی (افزودن/حذف/گسترش/سر-و-دُم/ایتالیک مستقل)، adjust
+  (درج/حذف هم‌پوشان)، splitBySpans (برش/محور مستقل)، codec roundtrip
+  + legacy بدون spans، قرارداد صفحه (مکان‌نا/imePadding/دستگیره/زوم/
+  نمایش استایل‌دار) — همه با root() اصلاح‌شده.
+SQL جدید: ندارد (spans داخل ستون JSON موجود سؤال).
+Edge Function جدید: ندارد. Secret جدید: ندارد.
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) لمس وسط جملهٔ بلند در ویرایشگر چاپ → کیبورد باز و مکان‌نا همان‌جا
+   (نه ابتدای سؤال).
+۲) انتخاب ۲-۳ کلمه (دابل‌لمس/دستگیرهٔ انتخاب) → B → فقط همان‌ها ضخیم؛
+   I → ایتالیک همان تکه؛ ذخیره/بازکردن → همان؛ چاپ PDF → همان خط
+   بدون شکست.
+۳) کشیدن گوشهٔ تصویر/نمودار انتخابی → اندازهٔ زنده؛ رها شدن → ثبت؛
+   محدودهٔ 40-180/20-190 رعایت شود؛ +/− نوار ابزار دیگر نیست.
+۴) پینچ داخل صفحه → زوم نرم؛ دوبار-لمس → ۱۰۰٪؛ اسکرول تک‌انگشتی سالم.
+۵) تایپ/حذف در متن استایل‌دار → بازه‌ها جابه‌جا/بریده می‌شوند نه حذف کامل.
+۶) regression: درج فرمول (V67.1)، جابه‌جایی تصویر آزاد، سربرگ چاپ،
+   چاپ آزمون بدون استایل (مثل قبل، بدون تغییر JSON).
+```

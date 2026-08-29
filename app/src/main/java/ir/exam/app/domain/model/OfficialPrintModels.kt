@@ -32,6 +32,13 @@ data class OfficialExamPrintable(
     override val footerNote: String = "نام و امضای دبیر:                              نام و امضای مدیر:"
 ) : OfficialPrintable
 
+data class PrintTextSpan(
+    val start: Int,
+    val end: Int,
+    val bold: Boolean = false,
+    val italic: Boolean = false
+)
+
 data class OfficialPrintQuestion(
     val number: Int,
     val text: String,
@@ -51,6 +58,8 @@ data class OfficialPrintQuestion(
     val imageWidthsMm: List<Float> = emptyList(),
     val imageXmm: List<Float> = emptyList(),
     val imageYmm: List<Float> = emptyList(),
+    // V68 — استایل تکه‌ای متن سؤال برای چاپ (بازه‌های انحصاری).
+    val textSpans: List<PrintTextSpan> = emptyList(),
     val imageUrls: List<String> = emptyList(),
     val images: List<Bitmap> = emptyList()
 )

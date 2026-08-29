@@ -247,7 +247,11 @@ class ExamBuilderViewModel(
         }
     }
 
-    fun updateText(id: String, text: String) { update(id) { it.copy(text = text) } }
+    fun updateText(id: String, text: String) { update(id) {
+        // V68 — بازه‌های استایل تکه‌ای با تغییر متن جابه‌جا/برش می‌خورند.
+        val spans = StyleSpanOps.adjust(it.text, text, it.textSpans)
+        it.copy(text = text, textSpans = spans)
+    } }
     fun insertFormula(
         id: String,
         target: String,
@@ -492,6 +496,10 @@ class ExamBuilderViewModel(
     fun setQuestionFont(id: String, value: String) { update(id) { it.copy(fontFamily=value.take(30)) } }
     fun setQuestionFontSize(id: String, value: Float) { update(id) { it.copy(fontSizeSp=value.coerceIn(8f,40f)) } }
     fun setQuestionBold(id: String, value: Boolean) { update(id) { it.copy(bold=value) } }
+    /** V68 — استایل تکه‌ای متن (Word-مانند؛ فقط چیدمان چاپی). */
+    fun setQuestionSpans(id: String, spans: List<StyleSpan>) {
+        update(id) { it.copy(textSpans = spans.filter { it.end > it.start }) }
+    }
     fun setQuestionItalic(id: String, value: Boolean) { update(id) { it.copy(italic=value) } }
     fun setAnswerLines(id: String, value: Int) { update(id) { it.copy(answerLines=value.coerceIn(0,12)) } }
     fun setAnswerLineStyle(id: String, value: String) { if (value in setOf("lined","blank")) update(id) { it.copy(answerLineStyle=value) } }
