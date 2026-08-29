@@ -170,6 +170,9 @@ internal object ExamQuestionCodec {
             values["italic"] = JsonPrimitive(question.italic)
             values["answerLines"] = JsonPrimitive(question.answerLines.coerceIn(0, 12))
             values["answerLineStyle"] = JsonPrimitive(question.answerLineStyle)
+            // V68.3.1 — استایل تکه‌ای متن برای «هر نوع سؤال» نوشته می‌شود (در
+            // V68.0 اشتباهاً داخل شاخهٔ MATCHING بود و roundtrip شکست می‌خورد).
+            encodeSpans(question.textSpans)?.let { values["spans"] = it }
             if (question.type == QuestionType.MULTIPLE_CHOICE) {
                 values["options"] = JsonArray(question.options.map(::JsonPrimitive))
                 values["optionImages"] = JsonArray(question.options.indices.map { index ->
@@ -187,8 +190,6 @@ internal object ExamQuestionCodec {
                 encodeStyles(question.matchingLeftStyles, question.matchingLeft.size)?.let {
                     values["leftStyles"] = it
                 }
-                // V68 — استایل تکه‌ای متن فقط وقتی وجود دارد نوشته می‌شود.
-                encodeSpans(question.textSpans)?.let { values["spans"] = it }
                 encodeStyles(question.matchingRightStyles, question.matchingRight.size)?.let {
                     values["rightStyles"] = it
                 }

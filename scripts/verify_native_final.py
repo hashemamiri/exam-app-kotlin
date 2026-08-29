@@ -2304,8 +2304,13 @@ require("StyleSpanOps.toggle" in _v68_editor and "onTextRangeChange" in _v68_edi
         "V68.3 range text styling (spans) is incomplete")
 require("StyleSpanOps.adjust" in _v68_vm and "fun setQuestionSpans(" in _v68_vm,
         "V68.3 span maintenance is missing from the builder view model")
-require("decodeSpans()" in _v68_codec and "encodeSpans(question.textSpans)" in _v68_codec,
-        "V68.3 spans codec is missing")
+# V68.3.1 — encodeSpans باید بی‌شرط و «قبل از» شاخه‌های نوع باشد؛ در V68.0
+# داخل شاخهٔ MATCHING بود و spans سؤالات دیگر encode نمی‌شد (ران 371).
+_v68_spans_idx=_v68_codec.find("encodeSpans(question.textSpans)")
+_v68_mc_idx=_v68_codec.find("if (question.type == QuestionType.MULTIPLE_CHOICE)")
+require("decodeSpans()" in _v68_codec and _v68_spans_idx != -1
+        and _v68_mc_idx != -1 and _v68_spans_idx < _v68_mc_idx,
+        "V68.3.1 spans must be encoded unconditionally before the type branches (not inside MATCHING)")
 require("data class PrintTextSpan(" in _v68_models
         and "PrintTextSpan(it.start, it.end, it.bold, it.italic)" in _v68_repo
         and "StyleSpanOps.splitBySpans(rich.text, segStart, __spans)" in _v68_pdf

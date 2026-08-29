@@ -12073,3 +12073,80 @@ Edge Function جدید: ندارد. Secret جدید: ندارد.
 ۶) regression: درج فرمول (V67.1)، جابه‌جایی تصویر آزاد، سربرگ چاپ،
    چاپ آزمون بدون استایل (مثل قبل، بدون تغییر JSON).
 ```
+
+## ۲۴۸) V68.3.1 — هات‌فیکس: encodeSpans داخل شاخهٔ MATCHING بود
+
+### شکست واقعی CI (ران ۳۷۱؛ لاگ کاربر)
+
+```text
+compileDebugKotlin + compileDebugUnitTestKotlin   → سبز (دو ریشهٔ V68.3 درست بودند)
+V68_3PrintEditorWordBehaviorTest > spans survive encode decode roundtrip FAILED
+    java.lang.AssertionError at V68_3PrintEditorWordBehaviorTest.kt:130
+656 tests completed, 1 failed
+```
+
+### ریشه (با مدرک از سورس)
+
+```text
+خط ۱۳۰: assertEquals(listOf(StyleSpan(6, 11, true, false)), decoded.single().textSpans)
+تست با QuestionType.ESSAY ساخته می‌شود؛ ولی در encode، خط
+  encodeSpans(question.textSpans)?.let { values["spans"] = it }
+(از V68.0) «بین» leftStyles و rightStyles داخل
+  if (question.type == QuestionType.MATCHING) { ... }
+نشسته بود → spans فقط برای جورکردنی encode می‌شد؛ decode آن را بی‌شرط
+می‌خواند → برای ESSAY (و MC/TF/Fill/Numeric) textSpans بعد از roundtrip
+خالی می‌ماند.
+تست legacy (بدون spans) سبز ماند چون خالی بودن همان انتظارش بود —
+به همین دلیل فقط یک تست قرمز شد.
+```
+
+### اصلاح
+
+```text
+encodeSpans(question.textSpans)?.let { values["spans"] = it }
+به بخش بی‌شرط encode منتقل شد (بلافاصله بعد از answerLineStyle و قبل از
+شاخهٔ MULTIPLE_CHOICE) — استایل متن مثل bold/italic برای هر نوع معنا دارد.
+```
+
+### چرا چهارگانهٔ V68.3 این را نگرفت (درس ۵۲)
+
+```text
+شبیه‌سازی پایتون فقط needleهای رشته‌ای و منطق خالص StyleSpanOps را اجرا
+کرد؛ roundtrip کدک اجرایی بود و فقط «از بیرون» مرور شد و جای درج لنگر
+(leftStyles) داخل شاخهٔ نوع از قلم افتاد.
+قاعدهٔ جدید: برای هر تست اجرایی، مسیر کد درگیر باید در پایتون هم
+اجرا شود. این بار encode/decode به پایتون پورت شد و roundtrip برای
+هر ۶ نوع + legacy اجرا و سبز شد.
+```
+
+### تست/verify
+
+```text
+جدید: spans roundtrip for every question type — هر ۶ نوع با assertEquals
+پیام‌دار "spans lost for $type" (قفل قرارداد بی‌شرط بودن).
+اجرای پایتونی encode/decode پورت‌شده: 6/6 نوع + legacy → PASS.
+verify: needle ترتیبی — encodeSpans باید قبل از
+"if (question.type == QuestionType.MULTIPLE_CHOICE)" باشد (بازگشت به
+داخل شاخهٔ نوع را می‌شکند).
+FINAL_NATIVE_VERIFY=PASS kotlin_files=208
+تست‌های فایل‌خوان کدک (V64_4/V64_5/...) دوباره شبیه‌سازی شدند → سبز.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt
+app/src/test/java/ir/exam/app/ui/app/V68_3PrintEditorWordBehaviorTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) ویرایشگر چاپ → سؤال تشریحی/چهارگزینه‌ای → انتخاب تکه‌ای متن → بولد →
+   ذخیره → خروج و ورود دوباره → استایل همان تکه مانده باشد.
+۲) چاپ PDF همان تکه را ضخیم چاپ کند (برای نوع غیر جورکردنی).
+۳) بقیهٔ چک‌لیست V68.3 بدون تغییر.
+```

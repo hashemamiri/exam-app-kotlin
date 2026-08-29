@@ -131,6 +131,20 @@ class V68_3PrintEditorWordBehaviorTest {
     }
 
     @Test
+    fun `spans roundtrip for every question type`() {
+        // V68.3.1 — در V68.0 خط encodeSpans اشتباهاً داخل شاخهٔ MATCHING بود و
+        // spans سؤالات دیگر گم می‌شد (شکست ران 371)؛ این تست قرارداد «هر نوع»
+        // را قفل می‌کند.
+        QuestionType.entries.forEach { type ->
+            val draft = QuestionDraft(type = type, text = "hello world")
+                .copy(textSpans = listOf(StyleSpan(0, 5, italic = true)))
+            val encoded = ExamQuestionCodec.encode(listOf(draft))
+            val decoded = ExamQuestionCodec.decode(encoded.publicQuestions, encoded.answerKey)
+            assertEquals("spans lost for $type", listOf(StyleSpan(0, 5, false, true)), decoded.single().textSpans)
+        }
+    }
+
+    @Test
     fun `legacy questions without spans decode to empty list`() {
         val draft = QuestionDraft(type = QuestionType.ESSAY, text = "بدون استایل")
         val encoded = ExamQuestionCodec.encode(listOf(draft))
