@@ -12432,3 +12432,112 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```text
 همان چک‌لیست V68.4.1 (این نسخه فقط رفع کامپایل است؛ رفتاری تغییری نکرده).
 ```
+
+## ۲۵۲) V68.5 — هم‌ترازی چاپ رسمی با ویرایشگر + راست‌به‌چپ‌سازی جدول‌ها
+
+چهار گزارش کاربر روی بیلد سبز V68.4.2 (584b013) که همگی یک پکیج رسیدند؛
+CI ران ۳۷۵ روی 584b013 سبز بود.
+
+### ۱) «چاپ مثل ویرایشگر نیست؛ اشیا به هم می‌ریزند» — ریشه: مقیاس غلط
+
+جای‌گذاری آزاد تصویر/شکل در چاپ رسمی، آفست میلی‌متری را با تقسیم‌های
+`/210*CONTENT_WIDTH` و `/297*80` به pt تبدیل می‌کرد (~۰٫۲۷pt/mm)؛ در حالی که
+A4 واقعی ۲٫۸۳pt/mm است — یعنی آفست عمودی ~۱۰ برابر فشرده می‌شد و شکل‌های
+پایین‌افتاده همیشه بالای صفحه جمع می‌شدند.
+
+رفع در OfficialPdfPrintAdapter:
+
+```kotlin
+const val MM_TO_PT = PAGE_WIDTH / 210f   // 595/210 = 2.833
+// drawImage مسیر free:
+left = MARGIN + (block.imageXmm*MM_TO_PT).coerceIn(0f, CONTENT_WIDTH - width)
+y    = (top + block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT - MARGIN - height)
+// شکل آزاد — تبدیل جریان همان مقیاس را برمی‌گرداند:
+imageYmm = (figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
+```
+
+نتیجه: y چاپ = `blockTop + fy*2.833` — دقیقاً همان نسبتی که ویرایشگر
+نشان می‌دهد. سقف قدیمی ۸۰pt (که با مقیاس واقعی بی‌معنا بود) با کفِ
+«پایین ناحیهٔ چاپ» عوض شد.
+
+### ۲) فرمول چاپی ناهماهنگ با متن — همیشه از MARGIN کشیده می‌شد
+
+متن سؤال راست‌چین بود ولی فرمول همان سطرِ پایین، چپ‌چین از حاشیه. رفع:
+اندازه‌گیری عرض فرمول با `mathRenderer.measure(...).width` و انتخاب x
+بر اساس `block.align` (center → وسط، left → MARGIN، else → راست‌چین).
+قرارداد align همان textLayout است (پیش‌فرض "right").
+
+### ۳) جدول‌ها راست‌به‌چپ — و معکوس‌شدن V55.13
+
+- **جدول فارسی (TableSvgRenderer)**: `cx = x0 + (cols-1-c)*cellW` —
+  ستون اول داده در راست؛ isHead روی ایندکس منطقی ماند. cacheKey →
+  `table-svg-rtl2-` (عوض‌کردن کلید کش الزامی است وگرنه Coil نسخهٔ LTR
+  قدیمی با همان کلید را نشان می‌دهد).
+- **جدول تناوبی**: کاربر صریحاً «آینه» خواست (گروه ۱ در راست) — این
+  **معکوس تصمیم V55.13** است («تناوبی استاندارد همیشه LTR است»)؛ خواستهٔ
+  امروزِ صریح کاربر مقدم است. در PeriodicSvgRenderer: سرستون
+  `x = PAD + (groups.size-1-ci)*step`، لیبل دوره در `PAD+groups.size*step`
+  (سمت چپ گرید)، بلوک f با `(14-ci)*step`، نشانگر `*`/`**` در
+  `PAD+15*step+LABEL/2f`؛ cacheKey → `periodic-svg-rtl2-`. عرض‌ها
+  (mainW/fW) تغییر نکرد. در PeriodicEditorDialog ترتیب «دستی» معکوس شد
+  (`groups.reversed()` / `(3..17).reversed()`) ولی providerهای LTR طبق
+  V55.13 حفظ شدند تا به LayoutDirection محیط وابسته نباشد و needleهای
+  تست V55.13 زنده بمانند — آینه‌سازی با ترتیب، نه با جهت layout.
+
+### ۴) درفت فقط هنگام «ایجاد» — انجام شد (ExamBuilderViewModel)
+
+`if (initialImport == null && initialExamId == null && ownerUserId.isNotBlank())`
+— در ویرایش، پیام بازیابی نمی‌آید و autosave بعدی همان آزمون را overwrite
+می‌کند (مبنای رسمی).
+
+### درس‌های تازه
+
+- **واحد را از هندسهٔ صفحه بیرون بکشید، نه از اعداد جادویی**: دو ثابت
+  جدا (۲۹۷/۸۰ برای y و ۲۱۰/CONTENT برای x) یعنی دو شانس جدا برای غلط؛
+  یک `MM_TO_PT = PAGE_WIDTH/210` واحد، و «برعکسش» برای برگرداندن pt→mm.
+- **بازگشت از تصمیم قدیمی با درخواست صریح کاربر اشکال ندارد** — ولی باید
+  در هندآف ثبت شود وگرنه نسخهٔ بعد دوباره «اصلاحش» می‌کند (این بخش، همان
+  ثبت معکوس‌شدن V55.13 است).
+- **عوض‌کردن چیدمان SVG = عوض‌کردن cacheKey** (پسوند -rtl2-)؛ در غیر این
+  صورت کش Coil رندر قبلی را نشان می‌دهد و فیکس «به نظر نمی‌رسد» کار کرده.
+- مثل همیشه sumOf-برای-Float نه (الگوی fold حفظ شد).
+
+### تست‌ها
+
+- `V68_5PrintParityRtlTest.kt` جدید (۶ تست، با root() helper):
+  needleهای MM_TO_PT/مسیر free/فرمول ترازدار/جدول آینه/تناوبی آینه/
+  درفت-فقط-ایجاد + عدد مقیاس (۲۰mm → ۵۶٫۷pt).
+- V68_4ObjectBoundsTest: دو needle مقیاس قدیمی به عبارت‌های V68.5 به‌روز.
+- verify_native_final.py: بخش V68.5 (۸ require) + به‌روزرسانی needleهای
+  مقیاس V68.4 در بخش قبلی.
+- شبیه‌ساز پایتونی: بخش چاپ با مقیاس واقعی بازنویسی شد (چک blockTop+fy،
+  ۵۶٫۷pt، سقف پایین صفحه، x آزاد ۲۵۷٫۸pt) + ۴ چک آینهٔ جدول/تناوبی +
+  درفت؛ needleهای فرمول/جدول/تناوبی جدید. ALL PASSED.
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/core/figure/TableSvgRenderer.kt
+app/src/main/java/ir/exam/app/core/figure/PeriodicSvgRenderer.kt
+app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt
+app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt
+app/src/test/java/ir/exam/app/ui/app/V68_5PrintParityRtlTest.kt (جدید)
+app/src/test/java/ir/exam/app/ui/app/V68_4ObjectBoundsTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) آزمونی با تصویر/شکل «آزاد» در پایین سؤال بسازید؛ ویرایشگر و چاپ رسمی
+   باید موقعیتش را تقریباً یکسان نشان بدهند (۲۰mm آفست = قابل مشاهده).
+۲) سؤال فرمول‌دار با تراز راست/وسط/چپ — فرمول در چاپ باید هم‌تراز متن بیفتد.
+۳) جدول فارسی چندستونه درج کنید؛ ستون اول باید در راست باشد (چاپ و پیش‌نمایش).
+۴) جدول تناوبی: گروه ۱ در راست، لیبل دوره‌ها در چپ گرید؛ دیالوگ ویرایش هم
+   آینه؛ دفعهٔ اول بعد از آپدیت، کش قدیمی نباید رندر LTR نشان دهد (کلید جدید).
+۵) ویرایش آزمون موجود: پیام «بازیابی پیش‌نویس» نیاید؛ فقط ایجاد آزمون.
+۶) بقیهٔ چک‌لیست V68.4.1 (درگ/resize آینه‌ای، پرش شکل).
+```

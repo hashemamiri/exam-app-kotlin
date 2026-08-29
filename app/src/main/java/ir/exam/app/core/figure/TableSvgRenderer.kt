@@ -145,7 +145,9 @@ object TableSvgRenderer {
         // پس‌زمینه‌های سبک
         val fontScale = if (style == "compact") 10 else 12
         for (r in 0 until rows) for (c in 0 until cols) {
-            val cx = x0 + c * cellW
+            // V68.5 — جدول فارسی راست‌به‌چپ: ستون اولِ داده در «راست» می‌نشیند
+            // (آینهٔ افقی چیدمان؛ سرستون/سرردیف روی ایندکس منطقی می‌ماند).
+            val cx = x0 + (cols - 1 - c) * cellW
             val cy = y0 + r * cellH
             val head = isHead(style, r, c)
             val fill = cellFill(style, r, c, head)
@@ -160,7 +162,7 @@ object TableSvgRenderer {
             val value = cells[r].getOrNull(c).orEmpty()
             if (value.isBlank()) continue
             val head = isHead(style, r, c)
-            val cx = x0 + c * cellW + cellW / 2f
+            val cx = x0 + (cols - 1 - c) * cellW + cellW / 2f
             val cy = y0 + r * cellH + cellH / 2f + 4f
             sb.append(text(cx, cy, value, if (head) headInk(style) else INK, "middle", bold = head, size = fontScale))
         }
@@ -181,7 +183,9 @@ object TableSvgRenderer {
             xml = xml,
             widthPx = width,
             heightPx = height,
-            cacheKey = "table-svg-${sha256(spec.toJson())}",
+            // V68.5 — نسخهٔ چیدمان راست‌به‌چپ؛ کلید عوض شد تا کش قدیمی SVG چپ‌به‌راست
+            // با کلید یکسان نمایش داده نشود.
+            cacheKey = "table-svg-rtl2-${sha256(spec.toJson())}",
             editBoxes = emptyList()
         )
     }

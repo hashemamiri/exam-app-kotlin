@@ -80,7 +80,9 @@ class ExamBuilderViewModel(
                     current.copy(questions = current.questions.map(QuestionDraft::ensureEditorIds))
                 }
                 cleanDraftFingerprint = draftFingerprint(_state.value)
-                if (initialImport == null && ownerUserId.isNotBlank()) {
+                // V68.5 — پیش‌نویس فقط هنگام «ایجاد» آزمون پیشنهاد می‌شود؛ هنگام
+                // ویرایش، فقط خودِ آزمونِ مورد ویرایش باز می‌شود (درخواست کاربر).
+                if (initialImport == null && initialExamId == null && ownerUserId.isNotBlank()) {
                     val draft = draftStore.load(ownerUserId)
                     if (draft != null && draft.examId == initialExamId &&
                         (draft.title.isNotBlank() || draft.questions.isNotEmpty())) {

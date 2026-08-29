@@ -228,20 +228,24 @@ private fun PeriodicTouchGrid(
     // V55.13 — گزارش دستگاه: در برنامهٔ RTL، ردیف‌های Compose از راست چیده
     // می‌شدند و جدول تناوبی برعکس (گروه ۱ سمت راست) دیده می‌شد؛ جدول تناوبی
     // استاندارد همیشه LTR است (مثل .ptb مرجع با direction:ltr).
+    // V68.5 — برعکس شد به درخواست صریح کاربر: چیدمان راست‌به‌چپ (گروه ۱ در
+    // راست، مثل کتاب‌های شیمی ایران و هماهنگ با PeriodicSvgRenderer).
+    // providerهای LTR نگه داشته شدند و ترتیب «دستی» معکوس می‌شود تا به
+    // LayoutDirection محیط وابسته نباشد.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
     Column(
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        // سرستون گروه‌ها
+        // سرستون گروه‌ها (معکوس: گروه ۱ در راست)
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             HeaderCell("")
-            groups.forEach { g -> HeaderCell(PeriodicSvgRenderer.faNum(g)) { onGroupTap(g) } }
+            groups.reversed().forEach { g -> HeaderCell(PeriodicSvgRenderer.faNum(g)) { onGroupTap(g) } }
         }
         periods.forEach { p ->
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 HeaderCell(PeriodicSvgRenderer.faNum(p)) { onPeriodTap(p) }
-                groups.forEach { g ->
+                groups.reversed().forEach { g ->
                     val fSlot = g == 3 && (p == 6 || p == 7)
                     if (fSlot) {
                         HeaderCell(if (hideF) "" else if (p == 6) "*" else "**")
@@ -261,7 +265,7 @@ private fun PeriodicTouchGrid(
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     HeaderCell(if (p == 8) "*" else "**")
-                    (3..17).forEach { g ->
+                    (3..17).reversed().forEach { g ->
                         val el = PeriodicElements.at(g, p)
                         if (el == null) HeaderCell("") else ElementCell(el, showZ, el.z in hiddenElements, el.z in hiddenZ) {
                             onElementTap(el.z)

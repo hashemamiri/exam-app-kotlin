@@ -2370,8 +2370,8 @@ require("yMm = yMm.coerceIn(-300f, 300f)" in _v684_vm,
 require("val figPos = WordPageLayout.figurePosMm(rich.spec)" in _v684_pdf
         and 'imagePosition=if (figPos != null) "free" else "below"' in _v684_pdf
         and "val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }" in _v684_pdf
-        and "imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)" in _v684_pdf
-        and "(block.imageYmm/297f*80f).coerceAtMost(80f)" in _v684_pdf
+        and "imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)" in _v684_pdf
+        and "(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in _v684_pdf
         and "WordPageLayout.figureWidthMm(rich.spec)" in _v684_pdf,
         "V68.4 official print does not render positioned figures via the free path (fy must be block-absolute)")
 require("class V68_4ObjectBoundsTest" in _v684_test
@@ -2380,6 +2380,39 @@ require("class V68_4ObjectBoundsTest" in _v684_test
         and "object motion clamps to the bounds of its own question block" in _v684_test
         and "official print renders positioned figures through the free-image path" in _v684_test,
         "V68.4 object-bounds regression tests are missing (root() helper is mandatory)")
+
+# ---- V68.5: real mm→pt print scale + RTL tables + aligned formulas + draft-on-create ----
+_v685_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+_v685_table=(ROOT/"app/src/main/java/ir/exam/app/core/figure/TableSvgRenderer.kt").read_text()
+_v685_periodic=(ROOT/"app/src/main/java/ir/exam/app/core/figure/PeriodicSvgRenderer.kt").read_text()
+_v685_periodic_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt").read_text()
+_v685_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_5PrintParityRtlTest.kt").read_text()
+require("const val MM_TO_PT = PAGE_WIDTH / 210f" in _v685_pdf
+        and "MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width)" in _v685_pdf
+        and "(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in _v685_pdf
+        and "mathRenderer.draw(canvas,NativeMathParser.parse(formula),MARGIN,y,block.textSize" not in _v685_pdf,
+        "V68.5 free placement must use the real mm→pt scale (the old /297*80 was ~10x compressed)")
+require("val formulaX = when (block.align)" in _v685_pdf
+        and "else -> PAGE_WIDTH - MARGIN - formulaWidth" in _v685_pdf,
+        "V68.5 formulas must align with the question text (default right-aligned)")
+require("val cx = x0 + (cols - 1 - c) * cellW" in _v685_table
+        and "table-svg-rtl2-" in _v685_table,
+        "V68.5 persian tables must lay out right-to-left with reversioned cache key")
+require("val x = PAD + (groups.size - 1 - ci) * step" in _v685_periodic
+        and "periodic-svg-rtl2-" in _v685_periodic
+        and "groups.reversed().forEach { g ->" in _v685_periodic_dialog
+        and "CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in _v685_periodic_dialog,
+        "V68.5 periodic table must mirror (group 1 on the right) in both svg and dialog")
+require("if (initialImport == null && initialExamId == null && ownerUserId.isNotBlank())" in
+        (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
+        "V68.5 draft recovery must be offered only when creating a new exam")
+require("class V68_5PrintParityRtlTest" in _v685_test
+        and "private fun root(): File" in _v685_test
+        and "free placement uses the real mm to pt scale in official print" in _v685_test
+        and "formulas align with the question text in official print" in _v685_test
+        and "persian tables lay out right to left with first column on the right" in _v685_test
+        and "draft recovery is offered only when creating a new exam" in _v685_test,
+        "V68.5 print-parity/RTL regression tests are missing (root() helper is mandatory)")
 
 # V68.3 — پاک‌سازی ریشهٔ ریپو: پچ‌های قدیمی کامیت‌شده و gitlink تودرتو ممنوع.
 # gitlink تودرتو با اسکن index گیت تشخیص داده می‌شود (حتی در checkout تازهٔ CI

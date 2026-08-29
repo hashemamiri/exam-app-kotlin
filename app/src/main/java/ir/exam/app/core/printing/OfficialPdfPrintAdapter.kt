@@ -179,14 +179,16 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                         // قبلی همین سؤال (pt) کم می‌شود تا نتیجه نسبت به ابتدای
                         // بلوک درست بیفتد (مثل ویرایشگر، بدون پرش).
                         val figPos = WordPageLayout.figurePosMm(rich.spec)
-                        // V68.4.2 — sumOf در کاتلین overload با Float ندارد؛ fold.
+                        // V68.5 — sumOf در کاتلین overload با Float ندارد؛ fold.
                         val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }
+                        // V68.5 — تبدیل pt→mm با مقیاس واقعی (210/595): drawImage با
+                        // MM_TO_PT برمی‌گرداند و نتیجه دقیقاً blockTop + fy می‌شود.
                         add(RenderBlock(
                             image=bmp,
                             imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),
                             imagePosition=if (figPos != null) "free" else "below",
                             imageXmm=figPos?.first ?: 20f,
-                            imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)
+                            imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
                         ))
                     } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                     is RichSegment.Text -> if (rich.text.isNotBlank()) {
@@ -293,7 +295,19 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                 )
             }
             block.image?.let { drawImage(canvas, it, y, planned.height - block.spacingAfter,block) }
-            block.formula?.let { formula -> mathRenderer.draw(canvas,NativeMathParser.parse(formula),MARGIN,y,block.textSize,Color.BLACK) }
+            block.formula?.let { formula ->
+                val parsed = NativeMathParser.parse(formula)
+                // V68.5 — فرمول مثل متنِ سؤال تراز می‌شود (پیش‌فرض راست‌چین)؛
+                // قبلاً همیشه از حاشیهٔ چپ کشیده می‌شد و زیرِ متنِ راست‌چین،
+                // چپ‌چین و «ناهماهنگ» دیده می‌شد.
+                val formulaWidth = mathRenderer.measure(parsed, block.textSize).width
+                val formulaX = when (block.align) {
+                    "center" -> MARGIN + (CONTENT_WIDTH - formulaWidth) / 2f
+                    "left" -> MARGIN
+                    else -> PAGE_WIDTH - MARGIN - formulaWidth
+                }
+                mathRenderer.draw(canvas, parsed, formulaX, y, block.textSize, Color.BLACK)
+            }
             block.text?.takeIf(String::isNotEmpty)?.let { text ->
                 val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
                 canvas.save()
@@ -415,8 +429,11 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val maxHeight=availableHeight.coerceAtMost(220f)
         val scale=minOf(targetWidth/bitmap.width,maxHeight/bitmap.height,1f)
         val width=bitmap.width*scale;val height=bitmap.height*scale
-        val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm/210f*CONTENT_WIDTH).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
-        val y=if(block.imagePosition=="free")top+(block.imageYmm/297f*80f).coerceAtMost(80f)else top+3f
+        val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
+        // V68.5 — آفست عمودی آزاد با مقیاس واقعی mm→pt (مثل ویرایشگر)؛ سقف فقط
+        // تا پایین ناحیهٔ چاپ تا شیء از برگه بیرون نرود (کف آزاد: شیءِ بالا برده
+        // در ادیتور به بالای اسلات خودش می‌رود — همان‌جا که ویرایشگر نشان می‌دهد).
+        val y=if(block.imagePosition=="free")(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)else top+3f
         canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
     }
 
@@ -528,6 +545,9 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         const val PAGE_WIDTH = 595
         const val PAGE_HEIGHT = 842
         const val MARGIN = 38f
+        // V68.5 — تبدیل واقعی mm→pt برای چیدمان آزاد (پیش‌تر y با /297*80
+        // تقریباً ۱۰ برابر فشرده می‌شد و چاپ با ویرایشگر هم‌خوان نبود).
+        const val MM_TO_PT = PAGE_WIDTH / 210f
         const val HEADER_BOTTOM = 112f
         const val CONTENT_TOP = 125f
         // V63.8 — سربرگ فقط صفحهٔ اول است؛ صفحات بعدی از بالاتر شروع می‌شوند.

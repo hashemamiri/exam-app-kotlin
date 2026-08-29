@@ -148,9 +148,10 @@ class V68_4ObjectBoundsTest {
         assertTrue("val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }" in pdfAdapter)
         // V68.4.2 — سیمبل‌های جدید باید import صریح داشته باشند (درس CI ران ۳۷۴)
         assertTrue("import androidx.compose.runtime.CompositionLocalProvider" in editor)
-        assertTrue("imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)" in pdfAdapter)
-        // سقف ۸۰pt چاپ حفظ شده (کف نیست: شکل می‌تواند بالای جریان خودش باشد)
-        assertTrue("(block.imageYmm/297f*80f).coerceAtMost(80f)" in pdfAdapter)
+        // V68.5 — تبدیل با مقیاس واقعی mm→pt (پیش‌تر 297/80 فشرده بود)
+        assertTrue("imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)" in pdfAdapter)
+        // V68.5 — آفست عمودی با MM_TO_PT واقعی؛ سقف = پایین ناحیهٔ چاپ
+        assertTrue("(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in pdfAdapter)
         // توابع جدید در layout
         assertTrue("fun withFigurePosMm(" in layout)
         assertTrue("fun figurePosMm(" in layout)
