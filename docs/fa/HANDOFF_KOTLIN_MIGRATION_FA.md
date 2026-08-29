@@ -12379,3 +12379,56 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
    درست باشد؛ اگر زوم خودش هنوز رفتار آینه‌ای دارد، دقیقاً بگویید چه
    می‌بینید (کدام انگشت ثابت، صفحه به کدام سمت می‌رود).
 ```
+
+---
+
+## ۲۵۱) V68.4.2 — رفع خطای کامپایل CI ران ۳۷۴ (دو درس تازه)
+
+CI روی f3b7ce7 (V68.4.1) در `:app:compileDebugKotlin` شکست خورد — چون
+sandbox بدون Android SDK است و کامپایل واقعی فقط در CI دیده می‌شود.
+
+### دو خطا و رفع
+
+۱) `ExamDocumentEditorScreen.kt — Unresolved reference
+   'CompositionLocalProvider'`: import جا افتاده بود (LocalLayoutDirection و
+   LayoutDirection import شده بودند ولی خود تابع نه). رفع:
+   `import androidx.compose.runtime.CompositionLocalProvider`.
+۲) `OfficialPdfPrintAdapter.kt — Overload resolution ambiguity (sumOf)`:
+   **`sumOf` در کاتلین overload با Float ندارد** (فقط Double/Int/Long/
+   UInt/ULong/BigDecimal/BigInteger)؛ `measureBlock` هم Float برمی‌گرداند →
+   ambiguity روی BigInteger/BigDecimal و بعد `flowPt * (297f/80f)` هم شکست.
+   رفع: `(qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }`.
+   نکتهٔ شرم‌آور: الگوی درست در خود پروژه بود —
+   `WordPageLayout.kt:206` از `.sumOf { …toDouble() }.toFloat()` استفاده
+   می‌کند؛ یعنی نویسندهٔ قبلی همین دام را می‌شناخت.
+
+### درس‌های تازه
+
+- **sumOf هرگز Float ندارد** — برای جمع Float از `fold(0f)` یا
+  `sumOf { it.toDouble() }.toFloat()` (الگوی موجود در WordPageLayout:206).
+- **هر سیمبل جدید = یک needle import در verify**: شبیه‌ساز/verify فقط متن
+  می‌بینند و رفرنس‌های unresolved را نمی‌گیرند؛ برای هر API تازه‌وارد،
+  علاوه بر needle استفاده، needle خط importش را هم در verify قفل کنید
+  (این بار برای CompositionLocalProvider اضافه شد؛ برای سیمبل‌های V68.4
+  قبلی خودکار صادق بود چون needleهایشان import را هم می‌خواستند — نه، فقط
+  شانس آورده بود؛ از الان قاعده است).
+- بعد از هر «آخرین ویرایشِ» یک فایل، verify را دوباره اجرا کنید و در
+  شبیه‌ساز علاوه بر needle استفاده، importهای جدید فایل‌های تغییرکرده را
+  با grep ممیزی کنید (اسکریپت ممیزی import = ۷ چک PASS).
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/test/java/ir/exam/app/ui/app/V68_4ObjectBoundsTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+همان چک‌لیست V68.4.1 (این نسخه فقط رفع کامپایل است؛ رفتاری تغییری نکرده).
+```

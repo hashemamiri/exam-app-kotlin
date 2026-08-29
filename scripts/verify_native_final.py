@@ -2357,6 +2357,7 @@ require("blockHeightMm = it.size.height / pxPerMm" in _v68_editor
 # V68.4.1 — رفع سه باگ گزارش‌شدهٔ دستگاه: (۱) درگ/بزرگ‌کردن آینه‌ای در RTL:
 # Modifier.offset و align هر دو rtlAware اند؛ فضای شیء باید LTR شود.
 require("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in _v68_editor
+        and "import androidx.compose.runtime.CompositionLocalProvider" in _v68_editor
         and "import androidx.compose.ui.platform.LocalLayoutDirection" in _v68_editor
         and "import androidx.compose.ui.unit.LayoutDirection" in _v68_editor,
         "V68.4.1 object space must be LTR (RTL mirrors offset/align: drag and resize were inverted)")
@@ -2368,7 +2369,7 @@ require("yMm = yMm.coerceIn(-300f, 300f)" in _v684_vm,
         "V68.4 moveImage must accept negative slot offsets (image above its slot)")
 require("val figPos = WordPageLayout.figurePosMm(rich.spec)" in _v684_pdf
         and 'imagePosition=if (figPos != null) "free" else "below"' in _v684_pdf
-        and "val flowPt = (qStart until size).sumOf { measureBlock(this[it]) }" in _v684_pdf
+        and "val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }" in _v684_pdf
         and "imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)" in _v684_pdf
         and "(block.imageYmm/297f*80f).coerceAtMost(80f)" in _v684_pdf
         and "WordPageLayout.figureWidthMm(rich.spec)" in _v684_pdf,

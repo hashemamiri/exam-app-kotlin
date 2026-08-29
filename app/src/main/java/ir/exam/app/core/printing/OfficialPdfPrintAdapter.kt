@@ -179,7 +179,8 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                         // قبلی همین سؤال (pt) کم می‌شود تا نتیجه نسبت به ابتدای
                         // بلوک درست بیفتد (مثل ویرایشگر، بدون پرش).
                         val figPos = WordPageLayout.figurePosMm(rich.spec)
-                        val flowPt = (qStart until size).sumOf { measureBlock(this[it]) }
+                        // V68.4.2 — sumOf در کاتلین overload با Float ندارد؛ fold.
+                        val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }
                         add(RenderBlock(
                             image=bmp,
                             imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),

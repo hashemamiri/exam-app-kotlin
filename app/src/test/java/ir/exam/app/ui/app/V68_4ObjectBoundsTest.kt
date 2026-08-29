@@ -145,7 +145,9 @@ class V68_4ObjectBoundsTest {
         assertTrue("imagePosition=if (figPos != null) \"free\" else \"below\"" in pdfAdapter)
         // V68.4.1 — fy مطلق از بالای بلوک: در چاپ ارتفاع بلوک‌های قبلی همین
         // سؤال کم می‌شود تا شکل نسبت به ابتدای بلوک (مثل ویرایشگر) بیفتد.
-        assertTrue("val flowPt = (qStart until size).sumOf { measureBlock(this[it]) }" in pdfAdapter)
+        assertTrue("val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }" in pdfAdapter)
+        // V68.4.2 — سیمبل‌های جدید باید import صریح داشته باشند (درس CI ران ۳۷۴)
+        assertTrue("import androidx.compose.runtime.CompositionLocalProvider" in editor)
         assertTrue("imageYmm=(figPos?.second ?: 30f) - flowPt * (297f / 80f)" in pdfAdapter)
         // سقف ۸۰pt چاپ حفظ شده (کف نیست: شکل می‌تواند بالای جریان خودش باشد)
         assertTrue("(block.imageYmm/297f*80f).coerceAtMost(80f)" in pdfAdapter)
