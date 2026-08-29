@@ -107,4 +107,38 @@ object RichTextSplitter {
             }
         }
     }
+
+    /**
+     * V67 — بازهٔ آفست هر بخش در متن خام. برای بخش‌های متنی دقیقاً بازهٔ
+     * زیررشتهٔ متن است و برای توکن‌ها بازهٔ خود توکن. درج در محل مکان‌نما و
+     * بازگشت مکان‌نما پس از درج/ویرایش از همین بازه‌ها استفاده می‌کنند.
+     */
+    fun segmentSourceRanges(
+        segments: List<RichSegment>,
+        formulas: List<FormulaOccurrence>,
+        figures: List<FigureOccurrence>
+    ): List<IntRange> {
+        val ranges = mutableListOf<IntRange>()
+        var offset = 0
+        segments.forEach { seg ->
+            when (seg) {
+                is RichSegment.Text -> {
+                    val end = offset + seg.text.length
+                    ranges += offset until end
+                    offset = end
+                }
+                is RichSegment.Math -> {
+                    val end = formulas.getOrNull(seg.index)?.endExclusive ?: offset
+                    ranges += offset until end
+                    offset = end
+                }
+                is RichSegment.Figure -> {
+                    val end = figures.getOrNull(seg.index)?.endExclusive ?: offset
+                    ranges += offset until end
+                    offset = end
+                }
+            }
+        }
+        return ranges
+    }
 }

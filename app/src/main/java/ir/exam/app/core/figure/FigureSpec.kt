@@ -247,6 +247,25 @@ object FigureCodec {
         return if (text.isBlank()) wrapped else text.trimEnd() + " " + wrapped
     }
 
+    /** V67 — توکن کامل یک شکل به‌صورت رشتهٔ نهایی. */
+    fun token(spec: FigureSpec): String = PREFIX + spec.toJson() + SUFFIX
+
+    /**
+     * V67 — درج توکن در محل مکان‌نما (پایان بخش متنی فعال) به‌جای انتهای کل
+     * متن تا ترتیب «متن، شکل، ادامهٔ متن» حفظ شود. فاصلهٔ امن فقط وقتی اضافه
+     * می‌شود که کاراکتر مجاور فاصله یا newline نباشد.
+     */
+    fun insertAt(text: String, spec: FigureSpec, at: Int): String {
+        val wrapped = token(spec)
+        if (text.isBlank()) return wrapped
+        val caret = at.coerceIn(0, text.length)
+        val before = text.substring(0, caret)
+        val after = text.substring(caret)
+        val prefix = if (before.isEmpty() || before.last() == ' ' || before.last() == '\n') "" else " "
+        val suffix = if (after.isEmpty() || after.first() == ' ' || after.first() == '\n') "" else " "
+        return before + prefix + wrapped + suffix + after
+    }
+
     fun replace(text: String, occurrenceIndex: Int, spec: FigureSpec): String {
         val target = occurrences(text).getOrNull(occurrenceIndex) ?: return text
         val wrapped = PREFIX + spec.toJson() + SUFFIX

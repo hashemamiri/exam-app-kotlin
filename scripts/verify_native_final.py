@@ -2219,6 +2219,30 @@ require("class V65_0NativeQuestionFieldTest" in _v65_test
         and "builder question text field is compose native without webview" in _v65_test,
         "V65.0 native question field tests are missing")
 
+# ---- V67.0: caret-first question field, inline order, natural formula size, token select/delete ----
+_v67_section=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").read_text()
+_v67_rich=(ROOT/"app/src/main/java/ir/exam/app/core/text/RichText.kt").read_text()
+_v67_fig=(ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureSpec.kt").read_text()
+_v67_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V67_0QuestionFieldCaretOrderTest.kt").read_text()
+require("FocusRequester()" in _v67_section and "requestFocus()" in _v67_section
+        and "onFocusChanged" in _v67_section and "focusedTextSegment" in _v67_section,
+        "V67.0 question field caret is not focused by default")
+require("NativeFormulaView(" in _v67_section and "NativeMathSvgRenderer.render" in _v67_section
+        and "size(84.dp, 36.dp)" not in _v67_section,
+        "V67.0 question field formulas do not render at natural size")
+require("selectedPartIndex" in _v67_section and "TokenCloseButton(" in _v67_section
+        and "FormulaTextCodec.delete" in _v67_section and "FigureCodec.delete" in _v67_section
+        and "Icons.Outlined.Close" in _v67_section,
+        "V67.0 selected inline tokens cannot be deleted with the close button")
+require("FigureCodec.insertAt(" in _v67_section and "fun insertAt(" in _v67_fig
+        and "fun token(" in _v67_fig and "focusAtOffset" in _v67_section,
+        "V67.0 inline insertion does not respect caret order")
+require("fun segmentSourceRanges(" in _v67_rich and "segmentSourceRanges(" in _v67_section,
+        "V67.0 segment source offsets are missing")
+require("class V67_0QuestionFieldCaretOrderTest" in _v67_test
+        and "insertAt places token at caret and keeps order" in _v67_test,
+        "V67.0 caret/order regression tests are missing")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
