@@ -61,7 +61,7 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.ui.BoxScope
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
