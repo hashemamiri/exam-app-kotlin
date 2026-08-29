@@ -450,9 +450,14 @@ private fun WordFlowDocument(
     val scroll = rememberScrollState()
     // V68 — زوم دو-انگشتی (pinch) بدون شکستن اسکرول تک‌انگشتی.
     val zoomState = rememberTransformableState { zoomChange, _, _ -> onZoom(zoomChange) }
+    // V68.8 — درگ آزاد واقعی (گزارش کاربر: «حرکت تصویر گالری آزادانه نیست»):
+    // کل سند داخل verticalScroll است و ژست عمودیِ درگِ شیء توسط اسکرول صفحه
+    // دزدیده می‌شد؛ وقتی یک تصویر/شکل انتخاب است اسکرول موقتاً غیرفعال می‌شود
+    // تا کشیدن در هر دو محور به خودِ شیء برسد. با لغو انتخاب، اسکرول برمی‌گردد.
+    val scrollEnabled = selectedImageId == null && selectedFigure == null
     Column(
         // V68 — imePadding: مکان‌نا هنگام باز بودن کیبورد زیر آن گم نمی‌شود.
-        Modifier.fillMaxSize().verticalScroll(scroll).imePadding().padding(vertical = 12.dp),
+        Modifier.fillMaxSize().verticalScroll(scroll, enabled = scrollEnabled).imePadding().padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         SubcomposeLayout(

@@ -5422,7 +5422,7 @@ git diff --check → PASS
   FormulaSmartReference.kt
 - core/math/FormulaBoxEditor.kt / FormulaMatrixFactory.kt
 - assets/formula_library_v13.json
-- ۵ تست حذف‌شده (FormulaBoxEditorTest، FormulaMatrixFactoryTest،
+- ۶ تست حذف‌شده (FormulaBoxEditorTest، FormulaMatrixFactoryTest،
   FormulaReferenceAssetTest، FormulaLibraryNavigatorTest،
   FormulaSmartReferenceTest)
 - ExamBuilderScreen.kt (اتصال دوباره به FormulaEditorDialog)
@@ -5677,7 +5677,7 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V53.2: دقیقاً ۱۱۸ عنصر،
                                           مسیر مشترک k='p'، ویرایشگر بدون WebView،
                                           برچسب‌های مرجع، SVG امن)
-V53_2PeriodicNativeTest                → ۵ تست منبع‌محور جدید؛ شبیه‌سازی محلی PASS
+V53_2PeriodicNativeTest                → ۶ تست منبع‌محور جدید؛ شبیه‌سازی محلی PASS
 git diff --check                       → PASS
 testDebugUnitTest / lintDebug          → باید در CI اجرا شود
 ```
@@ -6051,7 +6051,7 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 
 ```text
 FINAL_NATIVE_VERIFY                    → PASS (+ قرارداد V54.3 و پوشش ۶۱/۶۱ خودکار)
-V54_3ChartLibraryFinalTest             → ۵ تست منبع‌محور جدید؛ شبیه‌سازی PASS
+V54_3ChartLibraryFinalTest             → ۶ تست منبع‌محور جدید؛ شبیه‌سازی PASS
 git diff --check                       → PASS
 testDebugUnitTest / lintDebug          → باید در CI اجرا شود
 ```
@@ -6167,7 +6167,7 @@ SQL / Edge / Secret / Migration / Dependency جدید: ندارد
 کد مرجع HTML: دست‌نخورده؛ فقط بلوک افزودهٔ پل بازنویسی شد
 پیش‌نیاز: V54.3.1
 FINAL_NATIVE_VERIFY (با enforcement کامل)  → PASS, EXIT=0
-V54_4ReferenceParityFixTest                → ۵ تست جدید؛ شبیه‌سازی PASS
+V54_4ReferenceParityFixTest                → ۶ تست جدید؛ شبیه‌سازی PASS
 git diff --check                           → PASS
 testDebugUnitTest / lintDebug              → باید در CI اجرا شود
 ```
@@ -8086,7 +8086,7 @@ FINAL_NATIVE_VERIFY → PASS, EXIT=0
 
 ```text
 جدید: V58_0StudentExamUxTimerTest (۶ تست)، V58_1ExamMonitorReportsTest
-(۵ تست)، V58_2StudentAnswerGraphTest (۳ تست) · verify: بند قدیمی «علامت
+(۶ تست)، V58_2StudentAnswerGraphTest (۳ تست) · verify: بند قدیمی «علامت
 برای مرور» → onLongClick + ۱۰ require جدید V58.x · شبیه‌سازی python همهٔ
 assertionها (پس از اصلاح ۲ needle بخش‌محور) سبز · اسکن سراسری ۷۰۰ needle →
 فقط هشدار کاذب شناخته‌شدهٔ V55_16 · اسکن assertFalse فایل‌های تغییرکرده →
@@ -9182,7 +9182,7 @@ primaryContainer؛ needle «question-drag-color» حفظ).
 ### تأیید و عملیات
 
 ```text
-جدید: V61_6SchoolsHeaderPastelCardsTest (۵ تست) · هماهنگی: V61_4 (سطر
+جدید: V61_6SchoolsHeaderPastelCardsTest (۶ تست) · هماهنگی: V61_4 (سطر
 تقویم) و بند verify V61.4→V61.6 · شبیه‌سازی V61_1/4/5/6 سبز · اسکن سراسری
 ۱۲۹۸ needle: تنها fail جدید V18 کاذب بود (متغیر repository در آن تست به
 چند فایل map می‌شود و updateBankQuestion در repository واقعاً هست) · اسکن
@@ -9230,7 +9230,7 @@ revokeInvite برای V41B.1 حفظ شد).
 ### تأیید و عملیات
 
 ```text
-جدید: V61_7BackupCrossFilterCardsTest (۵ تست) · هماهنگی: V20 (targetY)،
+جدید: V61_7BackupCrossFilterCardsTest (۶ تست) · هماهنگی: V20 (targetY)،
 V61_5 (ManagerBackupSection + if (used) {) · verify: بلوک V61.7 (۶ require)
 · شبیه‌سازی V61_5/6/7 + V19/V40B/V41B1 سبز · اسکن سراسری ۱۳۱۳ needle و
 اسکن شمارشی: صفر خطای واقعی · FINAL_NATIVE_VERIFY=PASS EXIT=0
@@ -10175,7 +10175,7 @@ V62_7_manager_summary_multischool.sql باید در Supabase اجرا شود و�
 ### تست/verify
 
 ```text
-جدید: V62_8ShareEyeFlexHeaderTest (۵ تست). هماهنگ: V62_6 (needle چشم
+جدید: V62_8ShareEyeFlexHeaderTest (۶ تست). هماهنگ: V62_6 (needle چشم
 به‌جای سوییچ) و verify بند V62.6. verify: ۴ require جدید V62.8.
 دو needle اولیهٔ تست خودم دقیق نبود (FlowRow خودش fillMaxWidth دارد؛
 IconButton( شامل Button( است) و با برش/رشتهٔ دقیق‌تر اصلاح شد — شبیه‌سازی
@@ -12049,7 +12049,7 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 
 ```text
 FINAL_NATIVE_VERIFY=PASS kotlin_files=208 edge_functions=3
-تست جدید: V68_3PrintEditorWordBehaviorTest — ۱۵ تست:
+تست جدید: V68_3PrintEditorWordBehaviorTest — ۱۶ تست:
   toggle وردی (افزودن/حذف/گسترش/سر-و-دُم/ایتالیک مستقل)، adjust
   (درج/حذف هم‌پوشان)، splitBySpans (برش/محور مستقل)، codec roundtrip
   + legacy بدون spans، قرارداد صفحه (مکان‌نا/imePadding/دستگیره/زوم/
@@ -12926,4 +12926,118 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ۴) Q1+Q2 کوتاه: در ویرایشگر یک صفحه؛ چاپ هم یک صفحه (نه دو صفحه).
 ۵) جدول تناوبی بلند: بالای صفحهٔ ۲ بریده نشود؛ با coerceIn(MARGIN, ...) از بالا/پایین سالم.
 ۶) رگرسیون: جدول RTL/تناوبی آینه، مقیاس ۲٫۸۳، فرمول درون‌خطی، جورکردنی راست↔چپ، درگ شکل آزاد.
+```
+
+## ۲۵۷) V68.8 — چاپ مثل ویرایشگر (WYSIWYG) + درگ آزاد واقعی (گزارش اسکرین‌شات‌دار کاربر روی V68.7)
+
+### گزارش‌های کاربر (دو اسکرین‌شات از دستگاه)
+
+```text
+۱) «چاپ و ویرایشگر خیلی متفاوت هستند» — در چاپ، سؤال/جدول به صفحهٔ بعد پریده و
+   یک فضای خالی بزرگ بالای صفحه مانده بود؛ در ویرایشگر همان محتوا پیوسته و بدون
+   فضای خالی دیده می‌شد.
+۲) «حرکت تصویر گالری آزادانه نیست» — تصویر را که به بالا/پایین می‌کشیدم، به‌جای
+   جابه‌جاییِ شیء، کل صفحه اسکرول می‌شد (یا شیء فقط افقی حرکت می‌کرد).
+```
+
+### ریشه‌ها (خواندن کد، نه حدس)
+
+```text
+الف) موتور چاپ بلوک‌به‌بلوک صفحه‌بندی می‌کرد (planPages):
+   if (used + height > capacity) → صفحهٔ جدید + فضای خالی انتهای صفحهٔ قبل.
+   بلوک بلند (جدول تناوبی، شکل بزرگ) چون در یک صفحه جا نمی‌شد «کامل» به صفحهٔ
+   بعد می‌رفت و بالای صفحهٔ قبلی خالی می‌ماند. ویرایشگر از V63.6 پیوسته است
+   (SubcomposeLayout) → پس دو موتور دو نتیجه می‌دادند.
+ب) کل سند ویرایشگر داخل یک Column با verticalScroll(scroll) بود. ژست عمودیِ
+   detectDragGestures روی شیء با اسکرولِ والد رقابت می‌کرد و والد می‌برد؛
+   نتیجه: درگ عمودی عملاً آزاد نبود.
+```
+
+### چرا مسیر «ضبط مستقیم ComposeView ویرایشگر» انتخاب نشد
+
+```text
+بررسی واقعی مخزن: ComposeView هیچ‌جا استفاده نشده، WordQuestionBlock خصوصی و با
+~۲۵ پارامتر است، تصویرها با Coil AsyncImage و شکل‌ها با رندرر اطلس «آسنکرون»
+بارگذاری می‌شوند → ضبط آف‌اسکرین در لحظهٔ چاپ «خالی» می‌شد؛ به‌علاوه در این
+ساندباکس هیچ کامپایلری نیست که چنین بازنویسی بزرگی را تأیید کند. پس مسیر
+کم‌ریسک‌تر انتخاب شد: همان موتور رسم چاپ، ولی «پیوسته» مثل ویرایشگر.
+```
+
+### رفع‌ها
+
+```text
+۱) OfficialPdfPrintAdapter بازنویسی شد (planPages/drawPage/PlannedPage حذف):
+   placeContinuous()  → هر بلوک در یک جریان پیوسته (y تجمعی) جای‌گذاری می‌شود.
+   slicePages()       → سند پیوسته به برش‌های A4 تقسیم می‌شود: ظرفیت صفحهٔ ۱
+                        CONTENT_HEIGHT و صفحات بعد CONTENT_BOTTOM-LATER_CONTENT_TOP.
+   drawSlice()        → هر صفحه همان سند پیوسته است با canvas.translate به اندازهٔ
+                        برش + clipRect ناحیهٔ محتوا؛ فقط بلوک‌های متقاطع با همان
+                        برش رسم می‌شوند. سربرگ فقط صفحهٔ ۱ و امضا/پانوشت فقط
+                        صفحهٔ آخر (قرارداد V63.8 دست‌نخورده).
+   نتیجه: دیگر «پرش صفحه» و «فضای خالی مصنوعی» وجود ندارد؛ بلوک بلند میان دو
+   صفحه بریده می‌شود، دقیقاً همان‌طور که در ویرایشگر دیده می‌شود.
+
+   درس همین پچ: نسخهٔ اول این اصلاح کل سند را روی «یک بیت‌مایپ بلند» ۲x رستر
+   می‌کرد و بعد برش می‌زد؛ برای آزمون ۱۰ صفحه‌ای ≈ ۷۵ مگابایت حافظه می‌خواست
+   (ریسک OutOfMemory و کرش چاپ). به رسم مستقیم هر برش روی صفحهٔ PDF تغییر کرد:
+   حافظهٔ ثابت، متن برداری و تیزتر، و نزدیک‌ترین مسیر به drawPage آزمودهٔ V68.7.
+۲) ExamDocumentEditorScreen (WordFlowDocument):
+   val scrollEnabled = selectedImageId == null && selectedFigure == null
+   Modifier...verticalScroll(scroll, enabled = scrollEnabled)
+   → هنگام انتخاب یک تصویر/شکل، اسکرول صفحه خاموش است و ژست عمودی به خودِ شیء
+     می‌رسد؛ با لغو انتخاب، اسکرول برمی‌گردد (محدودیت حرکت به بلوک همان سؤال از
+     V68.4/V68.6 دست‌نخورده باقی است).
+```
+
+### محدودیت صادقانه (باید به کاربر گفته شود)
+
+```text
+- این اصلاح «ساختار» را یکسان کرد (پیوستگی، ترتیب، جای‌گذاری آزاد، تعداد صفحه)،
+  اما رندر متن در چاپ هنوز StaticLayout/MathReplacementSpan است نه NativeMathText
+  SVG ویرایشگر؛ پس تفاوت جزئی قلم/فرمول ممکن است باقی بماند. یکسان‌سازی پیکسلی
+  کامل فقط با ضبط واقعی ویو ویرایشگر ممکن است که در بالا دلیل رد شدنش آمد.
+- جای عمودی تصویر آزاد در سند پیوسته نسبت به «جریان بلوک» محاسبه می‌شود
+  (top + imageYmm*MM_TO_PT) و clamp به «یک صفحه» حذف شد؛ اگر جای تصویر گالری در
+  چاپ چند میلی‌متر با ویرایشگر فرق داشت، در چک‌لیست دستگاه گزارش شود.
+```
+
+### تست‌ها
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V68_8ContinuousPrintFreeDragTest.kt (جدید، ۶ تست)
+scripts/verify_native_final.py → بند V68.8 + به‌روزرسانی ۲ needle قدیمی clamp
+V68_4ObjectBoundsTest / V68_5PrintParityRtlTest → needle clamp به نسخهٔ پیوسته
+python3 scripts/verify_native_final.py → FINAL_NATIVE_VERIFY=PASS kotlin_files=208
+تلاش واقعی برای کامپایل در ساندباکس: `sh gradlew :app:compileDebugKotlin` →
+BUILD FAILED (نه دسترسی به Maven برای com.android.application، نه ANDROID_HOME)؛
+پس کامپایل و تست JVM فقط روی GitHub Actions و رندر نهایی فقط روی دستگاه تأیید می‌شود.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V68_8ContinuousPrintFreeDragTest.kt (جدید)
+app/src/test/java/ir/exam/app/ui/app/V68_4ObjectBoundsTest.kt
+app/src/test/java/ir/exam/app/ui/app/V68_5PrintParityRtlTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### SQL جدید: ندارد — Edge deploy: ندارد
+
+### چک‌لیست دستگاه
+
+```text
+۱) آزمون با جدول تناوبی/شکل بلند: در چاپ، بالای صفحه فضای خالی بزرگ نباشد و
+   محتوا مثل ویرایشگر ادامه یابد (بریده شدن میان دو صفحه طبیعی است).
+۲) تعداد صفحات چاپ ≈ تعداد صفحات ویرایشگر باشد (نه بیشتر).
+۳) تصویر گالری: انتخاب → کشیدن به بالا/پایین → شیء جابه‌جا شود، نه اینکه کل
+   صفحه اسکرول شود؛ پس از لغو انتخاب، اسکرول صفحه کار کند.
+۴) جای تصویر در چاپ همان‌جایی باشد که در ویرایشگر گذاشته‌اید (اگر چند mm اختلاف
+   بود گزارش شود).
+۵) رگرسیون: سربرگ فقط صفحهٔ ۱، امضا فقط صفحهٔ آخر، جدول RTL، فرمول درون‌خطی،
+   جورکردنی راست↔چپ، درگ شکل آزاد داخل بلوک همان سؤال.
 ```

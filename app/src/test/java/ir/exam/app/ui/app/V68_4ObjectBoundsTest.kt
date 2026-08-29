@@ -151,7 +151,7 @@ class V68_4ObjectBoundsTest {
         // V68.5 — تبدیل با مقیاس واقعی mm→pt (پیش‌تر 297/80 فشرده بود)
         assertTrue("imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)" in pdfAdapter)
         // V68.5 — آفست عمودی با MM_TO_PT واقعی؛ سقف = پایین ناحیهٔ چاپ
-        assertTrue("(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in pdfAdapter)
+        assertTrue("(top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)" in pdfAdapter)
         // توابع جدید در layout
         assertTrue("fun withFigurePosMm(" in layout)
         assertTrue("fun figurePosMm(" in layout)

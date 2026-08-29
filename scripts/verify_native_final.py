@@ -2371,7 +2371,7 @@ require("val figPos = WordPageLayout.figurePosMm(rich.spec)" in _v684_pdf
         and 'imagePosition=if (figPos != null) "free" else "below"' in _v684_pdf
         and "val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }" in _v684_pdf
         and "imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)" in _v684_pdf
-        and "(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in _v684_pdf
+        and "(top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)" in _v684_pdf
         and "WordPageLayout.figureWidthMm(rich.spec)" in _v684_pdf,
         "V68.4 official print does not render positioned figures via the free path (fy must be block-absolute)")
 require("class V68_4ObjectBoundsTest" in _v684_test
@@ -2389,7 +2389,7 @@ _v685_periodic_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/PeriodicEdi
 _v685_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_5PrintParityRtlTest.kt").read_text()
 require("const val MM_TO_PT = PAGE_WIDTH / 210f" in _v685_pdf
         and "MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width)" in _v685_pdf
-        and "(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in _v685_pdf
+        and "(top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)" in _v685_pdf
         and "mathRenderer.draw(canvas,NativeMathParser.parse(formula),MARGIN,y,block.textSize" not in _v685_pdf,
         "V68.5 free placement must use the real mm→pt scale (the old /297*80 was ~10x compressed)")
 require("val formulaX = when (block.align)" in _v685_pdf
@@ -2485,6 +2485,31 @@ require(not (ROOT/"V45_4_1_verify_hotfix.patch").exists()
         and not (_gitlink_tracked and not _pending_delete)
         and not (ROOT/"exam-app-kotlin/.git").exists(),
         "V68.3 repo root cleanup: stray patch files, tracked FETCH_HEAD and nested git repository must stay removed")
+
+# ---- V68.8: چاپ WYSIWYG پیوسته (بدون صفحه‌بندی بلوک‌به‌بلوک) + درگ آزاد واقعی ----
+_v688_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+_v688_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt").read_text()
+require("private fun placeContinuous()" in _v688_pdf
+        and "private fun slicePages()" in _v688_pdf
+        and "private fun drawSlice(" in _v688_pdf
+        and "private fun drawBlockAt(" in _v688_pdf
+        and "canvas.translate(0f, dstTop - slice.first)" in _v688_pdf
+        and "canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)" in _v688_pdf,
+        "V68.8 continuous layout + per-slice A4 drawing is missing from official print")
+require("docBitmap" not in _v688_pdf
+        and "renderDocument()" not in _v688_pdf
+        and "Bitmap.createBitmap(w, h" not in _v688_pdf,
+        "V68.8 must not rasterize the whole document into one tall bitmap (OOM risk)")
+require("used + height > capacity" not in _v688_pdf
+        and "PlannedPage(" not in _v688_pdf
+        and "private fun planPages()" not in _v688_pdf,
+        "V68.8 block-pagination (page-jump + artificial blank) returned")
+require("val scrollEnabled = selectedImageId == null && selectedFigure == null" in _v688_editor
+        and "verticalScroll(scroll, enabled = scrollEnabled)" in _v688_editor,
+        "V68.8 page scroll is not suspended while an object is selected (drag steal)")
+require("class V68_8ContinuousPrintFreeDragTest" in
+        (ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_8ContinuousPrintFreeDragTest.kt").read_text(),
+        "V68.8 regression tests are missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

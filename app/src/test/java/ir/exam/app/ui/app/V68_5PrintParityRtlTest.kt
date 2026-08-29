@@ -38,7 +38,7 @@ class V68_5PrintParityRtlTest {
         // x آزاد: از حاشیهٔ چپ با مقیاس واقعی (قبلاً /210*CONTENT_WIDTH فشرده بود)
         assertTrue("MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width)" in pdfAdapter)
         // y آزاد: مقیاس واقعی + سقفِ پایین ناحیهٔ چاپ (قبلاً /297*80 ≈ ۱۰ برابر فشرده)
-        assertTrue("(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)" in pdfAdapter)
+        assertTrue("(top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)" in pdfAdapter)
         // شکل آزاد: تبدیل جریان با همان مقیاس برمی‌گرداند تا نتیجه blockTop+fy شود
         assertTrue("imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)" in pdfAdapter)
     }

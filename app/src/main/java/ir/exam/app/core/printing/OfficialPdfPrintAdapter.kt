@@ -104,11 +104,45 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val matchRightStyle: Triple<Boolean, Boolean, Float?>? = null,
         val matchLeftStyle: Triple<Boolean, Boolean, Float?>? = null
     )
-    private data class PlannedBlock(val block: RenderBlock, val height: Float)
-    private data class PlannedPage(val blocks: List<PlannedBlock>)
+    private data class Placed(val block: RenderBlock, val y: Float, val height: Float)
 
-    private val pages: List<PlannedPage> = planPages()
-    val pageCount: Int get() = pages.size.coerceAtLeast(1)
+    // V68.8 — WYSIWYG: به‌جای صفحه‌بندی بلوک‌به‌بلوک (که بلوکِ بلند مثل جدول
+    // تناوبی را کامل به صفحهٔ بعد می‌برد و یک فضای خالی بزرگ پشت سر می‌گذاشت)،
+    // کل سند مثل ویرایشگر «پیوسته» روی یک بیت‌مایپ بلند رسم و سپس به صفحات A4
+    // برش می‌خورد — همان جریانِ بدون‌پرش که کاربر در ویرایشگر می‌بیند.
+    private val placed: List<Placed> = placeContinuous()
+    private val slices: List<Pair<Float, Float>> = slicePages()
+    val pageCount: Int get() = slices.size.coerceAtLeast(1)
+
+    private fun placeContinuous(): List<Placed> {
+        val blocks = when (printable) {
+            is OfficialExamPrintable -> examBlocks(printable)
+            is OfficialGradeReportPrintable -> reportBlocks(printable)
+        }
+        val out = mutableListOf<Placed>()
+        var y = 0f
+        blocks.forEach { block ->
+            val h = measureBlock(block)
+            out += Placed(block, y, h)
+            y += h
+        }
+        return out
+    }
+
+    private fun slicePages(): List<Pair<Float, Float>> {
+        val total = (placed.lastOrNull()?.let { it.y + it.height } ?: 1f).coerceAtLeast(1f)
+        val result = mutableListOf<Pair<Float, Float>>()
+        var top = 0f
+        var first = true
+        while (top < total) {
+            val cap = if (first) CONTENT_HEIGHT else CONTENT_BOTTOM - LATER_CONTENT_TOP
+            val bottom = (top + cap).coerceAtMost(total)
+            result += top to bottom
+            top = bottom
+            first = false
+        }
+        return result.ifEmpty { listOf(0f to 1f) }
+    }
 
     fun write(
         destination: ParcelFileDescriptor,
@@ -118,12 +152,12 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         val pdf = PdfDocument()
         val writtenPages = mutableListOf<Int>()
         try {
-            pages.forEachIndexed { index, pageModel ->
+            slices.forEachIndexed { index, slice ->
                 if (cancellation.isCanceled) return@forEachIndexed
                 val pageNumber = index + 1
                 if (!isPageRequested(index, ranges)) return@forEachIndexed
                 val page = pdf.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create())
-                drawPage(page.canvas, pageModel, pageNumber, pages.size)
+                drawSlice(page.canvas, slice, pageNumber, slices.size)
                 pdf.finishPage(page)
                 writtenPages += index
             }
@@ -134,29 +168,28 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         return collapseRanges(writtenPages)
     }
 
-    private fun planPages(): List<PlannedPage> {
-        val blocks = when (printable) {
-            is OfficialExamPrintable -> examBlocks(printable)
-            is OfficialGradeReportPrintable -> reportBlocks(printable)
-        }
-        val result = mutableListOf<PlannedPage>()
-        var current = mutableListOf<PlannedBlock>()
-        var used = 0f
-        blocks.forEach { block ->
-            // V63.8 — ظرفیت صفحهٔ اول با سربرگ، صفحات بعدی بدون سربرگ.
-            val capacity = if (result.isEmpty()) CONTENT_HEIGHT
-                else CONTENT_BOTTOM - LATER_CONTENT_TOP
-            val height = measureBlock(block).coerceAtMost(capacity)
-            if (used + height > capacity && current.isNotEmpty()) {
-                result += PlannedPage(current)
-                current = mutableListOf()
-                used = 0f
+    /**
+     * V68.8 — هر صفحه یک «برش» از سند پیوسته است: canvas را به اندازهٔ فاصلهٔ
+     * برش جابه‌جا می‌کنیم و فقط بلوک‌های متقاطع با همین برش را رسم می‌کنیم.
+     * ناحیهٔ محتوا clip می‌شود تا سرریزِ بلوکِ بلند مثل برش A4 قطع شود.
+     * بدون بیت‌مایپ بلندِ کل سند (ریسک OutOfMemory در آزمون‌های بلند) و متن
+     * به‌صورت برداری روی صفحهٔ PDF می‌نشیند.
+     */
+    private fun drawSlice(canvas: Canvas, slice: Pair<Float, Float>, pageNumber: Int, totalPages: Int) {
+        canvas.drawColor(Color.WHITE)
+        if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)
+        val dstTop = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP
+        val sliceH = (slice.second - slice.first).coerceAtLeast(0f)
+        canvas.save()
+        canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)
+        canvas.translate(0f, dstTop - slice.first)
+        placed.forEach { p ->
+            if (p.y + p.height > slice.first && p.y < slice.second) {
+                drawBlockAt(canvas, p.block, p.y, p.height)
             }
-            current += PlannedBlock(block, height)
-            used += height
         }
-        if (current.isNotEmpty()) result += PlannedPage(current)
-        return result.ifEmpty { listOf(PlannedPage(emptyList())) }
+        canvas.restore()
+        drawFooter(canvas, pageNumber, totalPages)
     }
 
     private fun examBlocks(exam: OfficialExamPrintable): List<RenderBlock> = buildList {
@@ -364,85 +397,56 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         }
     }
 
-    private fun drawPage(canvas: Canvas, page: PlannedPage, pageNumber: Int, totalPages: Int) {
-        canvas.drawColor(Color.WHITE)
-        // V63.8 — سربرگ رسمی فقط بالای صفحهٔ اول (درخواست کاربر).
-        if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)
-        var y = if (pageNumber == 1) CONTENT_TOP else LATER_CONTENT_TOP
-        page.blocks.forEach { planned ->
-            val block = planned.block
-            if (block.boxed) {
-                canvas.drawRoundRect(
-                    MARGIN - 3f, y - 2f, PAGE_WIDTH - MARGIN + 3f, y + planned.height - block.spacingAfter,
-                    5f, 5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                        style = Paint.Style.STROKE
-                        color = Color.rgb(120, 120, 120)
-                        strokeWidth = 0.8f
-                    }
-                )
-            }
-            block.image?.let { drawImage(canvas, it, y, planned.height - block.spacingAfter,block) }
-            block.formula?.let { formula ->
-                val parsed = NativeMathParser.parse(formula)
-                // V68.5 — فرمول مثل متنِ سؤال تراز می‌شود (پیش‌فرض راست‌چین)؛
-                // قبلاً همیشه از حاشیهٔ چپ کشیده می‌شد و زیرِ متنِ راست‌چین،
-                // چپ‌چین و «ناهماهنگ» دیده می‌شد.
-                val formulaWidth = mathRenderer.measure(parsed, block.textSize).width
-                val formulaX = when (block.align) {
-                    "center" -> MARGIN + (CONTENT_WIDTH - formulaWidth) / 2f
-                    "left" -> MARGIN
-                    else -> PAGE_WIDTH - MARGIN - formulaWidth
+    private fun drawBlockAt(canvas: Canvas, block: RenderBlock, y: Float, height: Float) {
+        if (block.boxed) {
+            canvas.drawRoundRect(
+                MARGIN - 3f, y - 2f, PAGE_WIDTH - MARGIN + 3f, y + height - block.spacingAfter,
+                5f, 5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    color = Color.rgb(120, 120, 120)
+                    strokeWidth = 0.8f
                 }
-                mathRenderer.draw(canvas, parsed, formulaX, y, block.textSize, Color.BLACK)
-            }
-            block.text?.takeIf(String::isNotEmpty)?.let { text ->
-                val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
-                canvas.save()
-                canvas.translate(MARGIN, y)
-                layout.draw(canvas)
-                canvas.restore()
-            }
-            block.styledText?.let { sb ->
-                val layout = styledLayout(sb, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
-                canvas.save()
-                canvas.translate(MARGIN, y)
-                layout.draw(canvas)
-                canvas.restore()
-            }
-            if (block.matchRight != null || block.matchLeft != null) {
-                // V68.6 — ردیف جورکردنی مثل ویرایشگر (Row با SpaceBetween و
-                // weightهای برابر): آیتم راست در نیمهٔ راست، «↔» وسط، آیتم چپ
-                // در نیمهٔ چپ.
-                val half = matchHalfWidth()
-                block.matchRight?.let {
-                    val layout = textLayout(it, block.matchRightStyle?.third ?: block.textSize,
-                        block.matchRightStyle?.first ?: block.bold, half,
-                        block.matchRightStyle?.second ?: block.italic, "right", block.fontFamily)
-                    canvas.save()
-                    canvas.translate(PAGE_WIDTH - MARGIN - half, y)
-                    layout.draw(canvas)
-                    canvas.restore()
-                }
-                block.matchLeft?.let {
-                    val layout = textLayout(it, block.matchLeftStyle?.third ?: block.textSize,
-                        block.matchLeftStyle?.first ?: block.bold, half,
-                        block.matchLeftStyle?.second ?: block.italic, "left", block.fontFamily)
-                    canvas.save()
-                    canvas.translate(MARGIN, y)
-                    layout.draw(canvas)
-                    canvas.restore()
-                }
-                val arrowPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.BLACK
-                    textSize = block.textSize
-                    typeface = persianTypeface(false)
-                }
-                val arrow = "↔"
-                canvas.drawText(arrow, PAGE_WIDTH / 2f - arrowPaint.measureText(arrow) / 2f, y + block.textSize, arrowPaint)
-            }
-            y += planned.height
+            )
         }
-        drawFooter(canvas, pageNumber, totalPages)
+        block.image?.let { drawImageAt(canvas, it, y, block) }
+        block.formula?.let { formula ->
+            val parsed = NativeMathParser.parse(formula)
+            val formulaWidth = mathRenderer.measure(parsed, block.textSize).width
+            val formulaX = when (block.align) {
+                "center" -> MARGIN + (CONTENT_WIDTH - formulaWidth) / 2f
+                "left" -> MARGIN
+                else -> PAGE_WIDTH - MARGIN - formulaWidth
+            }
+            mathRenderer.draw(canvas, parsed, formulaX, y, block.textSize, Color.BLACK)
+        }
+        block.text?.takeIf(String::isNotEmpty)?.let { text ->
+            val layout = textLayout(text, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
+            canvas.save(); canvas.translate(MARGIN, y); layout.draw(canvas); canvas.restore()
+        }
+        block.styledText?.let { sb ->
+            val layout = styledLayout(sb, block.textSize, block.bold, CONTENT_WIDTH.roundToInt(),block.italic,block.align,block.fontFamily)
+            canvas.save(); canvas.translate(MARGIN, y); layout.draw(canvas); canvas.restore()
+        }
+        if (block.matchRight != null || block.matchLeft != null) {
+            val half = matchHalfWidth()
+            block.matchRight?.let {
+                val layout = textLayout(it, block.matchRightStyle?.third ?: block.textSize,
+                    block.matchRightStyle?.first ?: block.bold, half,
+                    block.matchRightStyle?.second ?: block.italic, "right", block.fontFamily)
+                canvas.save(); canvas.translate(PAGE_WIDTH - MARGIN - half, y); layout.draw(canvas); canvas.restore()
+            }
+            block.matchLeft?.let {
+                val layout = textLayout(it, block.matchLeftStyle?.third ?: block.textSize,
+                    block.matchLeftStyle?.first ?: block.bold, half,
+                    block.matchLeftStyle?.second ?: block.italic, "left", block.fontFamily)
+                canvas.save(); canvas.translate(MARGIN, y); layout.draw(canvas); canvas.restore()
+            }
+            val arrowPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK; textSize = block.textSize; typeface = persianTypeface(false)
+            }
+            val arrow = "↔"
+            canvas.drawText(arrow, PAGE_WIDTH / 2f - arrowPaint.measureText(arrow) / 2f, y + block.textSize, arrowPaint)
+        }
     }
 
     /**
@@ -542,21 +546,15 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         canvas.drawText("آزمون آنلاین Native · $pageNumber/$totalPages", MARGIN, PAGE_HEIGHT - 25f, paint)
     }
 
-    private fun drawImage(canvas: Canvas, bitmap: Bitmap, top: Float, availableHeight: Float,block:RenderBlock) {
+    private fun drawImageAt(canvas: Canvas, bitmap: Bitmap, top: Float, block: RenderBlock) {
         val targetWidth=(block.imageWidthMm/210f*PAGE_WIDTH).coerceIn(40f,CONTENT_WIDTH-12f)
-        val maxHeight=availableHeight.coerceAtMost(220f)
-        val scale=minOf(targetWidth/bitmap.width,maxHeight/bitmap.height,1f)
+        val scale=minOf(targetWidth/bitmap.width,220f/bitmap.height,1f)
         val width=bitmap.width*scale;val height=bitmap.height*scale
         val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
-        // V68.5 — آفست عمودی آزاد با مقیاس واقعی mm→pt (مثل ویرایشگر)؛ سقف فقط
-        // تا پایین ناحیهٔ چاپ تا شیء از برگه بیرون نرود (کف آزاد: شیءِ بالا برده
-        // در ادیتور به بالای اسلات خودش می‌رود — همان‌جا که ویرایشگر نشان می‌دهد).
-        // V68.7 — فیکس برش تصویر گالری در بالای صفحهٔ دوم (اسکرین‌شات کاربر:
-        // جدول تناوبی بالای صفحهٔ ۲ بریده بود): قبلاً فقط سقف پایین clamp
-        // می‌شد و y منفی (بالای صفحه) باعث برش می‌شد؛ حالا کف هم به MARGIN
-        // محدود می‌شود تا تصویر هیچ‌وقت از بالای برگه بیرون نرود.
+        // V68.8 — سند پیوسته: y آزاد نسبت به جای جریان خودش بدون clamp به یک
+        // صفحه (سند بلند است)؛ کف فقط ۰ تا از بالای سند بیرون نرود.
         val y=if(block.imagePosition=="free")
-            (top+block.imageYmm*MM_TO_PT).coerceIn(MARGIN, PAGE_HEIGHT-MARGIN-height)
+            (top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)
         else top+3f
         canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
     }
