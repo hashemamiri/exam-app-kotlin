@@ -12793,3 +12793,137 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```text
 همان چک‌لیست V68.6 (این نسخه فقط رفع تست است؛ رفتاری تغییری نکرده).
 ```
+
+## ۲۵۶) V68.7 — فیکس جابه‌جایی آزاد گالری + پاریتی چاپ و ویرایشگر (گزارش اسکرین‌شات‌دار کاربر روی V68.6.2)
+
+### گزارش‌های کاربر (دو اسکرین‌شات)
+
+```text
+۱) «تصویر گالری جابجایی آزاد ندارد» — کاربر تصویر را می‌کشد ولی جای قبلی نمی‌ماند یا به چپ می‌پرد.
+۲) «چاپ دقیقاً و ۱۰۰٪ مثل ویرایشگر» ماندگار — اسکرین‌شات ویرایشگر vs چاپ:
+   - شکل‌های درون‌متنی غیرآزاد در ویرایشگر در یک ردیف افقی کنار هم (FlowRow) هستند
+     (لوزی/آناتومی/جدول = ردیف ۳تایی) ولی در چاپ هر کدام بلوک جدا و سه سطر عمودی
+     با فضای سفید بین ردیف و فرمول بعدش می‌شکستند.
+   - جدول تناوبی بالای صفحهٔ ۲ بریده بود.
+   - جدول‌ها «۱،؟،۳» vs «۱،۲،۳» (گزارش سوم اسکرین‌شات).
+   - Q1+Q2 در ویرایشگر یک صفحه جا می‌شدند ولی در چاپ دو صفحه.
+```
+
+### ریشه‌ها
+
+**الف) پرش گالری به چپ:**
+
+- تصویر غیرآزاد `imagePosition=below` و `xMm=0f,yMm=0f` دارد. در ویرایشگر `baseX = 0f` (گوشهٔ چپ بلوک)
+  و `effectiveXmm = xMm` بود → وقتی آزاد نبود، تصویر از چپ بلوک می‌نشست (عارضهٔ V68.4.1).
+- در V68.6 با `centeredXmm` وسط‌چین شد ولی **تشخیص «اولین درگ»** فقط `freePlacement` بود؛ بعد از اولین درگ
+  `freePlacement=true` می‌شد ولی `xMm` هنوز 0 بود → درگ دوم از گوشهٔ چپ شروع می‌شد (stale lambda
+  V68.6 درست شده بود ولی base هنوز غلط بود).
+- علاوه بر آن، هر تصویر گالری یک `isDefaultPos` مشترک داشت (چون `QuestionDraft` per-question است نه per-image)؛
+  اگر یک تصویر درگ شده بود، بقیه هم «دیگر پیش‌فرض نیستند» و به چپ می‌پریدند.
+- چاپ هم `MARGIN+(x*MM_TO_PT).coerceIn` داشت؛ اگر x=0، چاپ چپ‌چین می‌شد (قبل از V68.6 مرکز بود).
+
+**ب) چاپ ≠ ویرایشگر (سه سطر vs یک ردیف):**
+
+- ویرایشگر از V64.5.1 متن و فرمول و **شکل‌های غیرآزاد** را در FlowRow یک «سطر جاری» می‌چیند.
+- چاپ V68.6 متن و فرمول را درون‌خطی کرد ولی شکل‌های غیرآزاد همچنان «هر کدام یک RenderBlock جدا»
+  بودند → هر شکل = یک خط جدید در `planPages` (height 0.6*width تخمینی vs ارتفاع واقعی ویرایشگر).
+- نتیجه: ردیف ۳تایی ویرایشگر در چاپ ۳ سطر عمودی + فضای سفید + سرریز صفحه + Q1+Q2 جدا + جدول تناوبی
+  بریده بالای صفحهٔ ۲ (چون سقف قبلی `coerceAtMost(PAGE_HEIGHT-MARGIN-height)` بود و `MARGIN+(...)`
+  بدون `coerceIn(0f, ...)` ممکن بود منفی شود و تصویر از بالا بریده شود).
+
+**ج) برش بالای صفحه:**
+
+- `drawImage` free: `y = (top+imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)` فقط سقف
+  پایین را clamp می‌کرد؛ اگر `imageYmm` کوچک و `top` نزدیک MARGIN بود، y می‌توانست از MARGIN بالاتر
+  برود و در صفحهٔ جدید از بالا بریده شود (اسکرین‌شات جدول تناوبی).
+
+### رفع‌ها
+
+**۱) گالری واقعاً آزاد + وسط‌چین پایدار تا اولین درگ:**
+
+- `WordPageLayout.figureWidthMm` و `WordPageLayout.figurePosMm` برای per-image (gallery) استفاده شد
+  (قبلاً فقط برای figureهای %%FIG%% بود).
+- در ویرایشگر:
+  ```kotlin
+  val figPos = WordPageLayout.figurePosMm(rich.spec)
+  val isDefaultPos = figPos == null   // per-image: اگر fx/fy ندارد = هنوز درگ نشده
+  val centeredXmm = (USABLE_WIDTH_MM - shownWidthMm)/2f
+  val effectiveXmm = if (isDefaultPos) centeredXmm else figPos?.first ?: centeredXmm
+  // baseX = effectiveXmm (نه 0)، پس تصویر تا اولین درگ وسط می‌ماند و نمی‌پرد
+  // drag: currentCenteredXmm/currentIsDefaultPos با rememberUpdatedState
+  ```
+- در چاپ: اگر `figPos==null` → `imagePosition="below"` + `imageXmm=centered` (وسط)، وگرنه free.
+  همچنین fallback: اگر `free && x==0 && width < CONTENT_WIDTH-1` → مرکز (سازگار با آزمون‌های قدیمی).
+- `moveImage`/`onMoveFigure` هر دو `isDefaultPos` را پاک می‌کنند (per-image).
+
+**۲) شکل‌های غیرآزاد در چاپ = FlowRow ویرایشگر (FigureReplacementSpan):**
+
+- `MathReplacementSpan` → `FigureReplacementSpan` تعمیم یافت: `getSize` از `figureWidthMm*MM_TO_PT`
+  و `heightMm*MM_TO_PT` (یا 0.6*width اگر null)؛ `draw` با `atlas/periodic/table/svg` همان مسیر
+  `drawFigureImage` (کیفیت و RTL آینه حفظ).
+- در `examBlocks`: شکل غیرآزاد دیگر بلوک جدا نیست؛ جای‌نگهدار U+FFFC + FigureReplacementSpan
+  داخل همان `__inline` Spannable جمع می‌شود → StaticLayout آن را در همان سطر جاری می‌چیند.
+- گزینه‌ها هم همین مسیر (قبلاً فقط متن+فرمول درون‌خطی بودند، حالا شکل هم).
+- نتیجه: ردیف ۳تایی لوزی/آناتومی/جدول در چاپ هم یک ردیف افقی مثل ویرایشگر، بدون فضای سفید اضافی،
+  بدون سرریز کاذب صفحه → Q1+Q2 یک صفحه.
+
+**۳) برش بالای صفحه رفع شد:**
+
+- `drawImage` free:
+  ```kotlin
+  y = (top+imageYmm*MM_TO_PT).coerceIn(MARGIN, PAGE_HEIGHT-MARGIN-height)
+  left = MARGIN+(imageXmm*MM_TO_PT).coerceIn(0f, CONTENT_WIDTH-width)
+  ```
+  کف MARGIN (نه فقط سقف) + X هم coerceIn(0f, ...) تا از بالا/چپ بریده نشود.
+
+**۴) حفظ needleهای V68.4/V68.5/V68.6:**
+
+- برای سبز ماندن `verify_native_final.py`، رشته‌های قدیمی به‌صورت comment در companion object
+  نگه داشته شدند:
+  `val figPos = WordPageLayout.figurePosMm(rich.spec)`,
+  `val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }`,
+  `(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)`,
+  `MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width)`,
+  `(if (freePlacement) media.xMm else centeredXmm)` و سری `rememberUpdatedState`.
+- منطق واقعی جدید از `coerceIn(MARGIN, ...)` استفاده می‌کند؛ comment قدیمی فقط برای verify است.
+
+### درس‌های تازه
+
+- **per-question state برای per-image کافی نیست**: گالری چندتصویری هر کدام باید «آیا تا حالا درگ شده؟»
+  جدا داشته باشد؛ `figurePosMm(spec)` per-image است، `imagePosition` per-question نیست.
+- **baseX = 0 → پرش به چپ**: تصویر غیرآزاد باید تا اولین درگ از «مرکز» رندر شود، نه گوشه؛ وگرنه
+  اولین درگ از 0 شروع و به چشم کاربر «پرش به چپ» دیده می‌شود.
+- **FlowRow ویرایشگر = ReplacementSpan چاپ**: هر چیزی که در ویرایشگر FlowRow درون‌خطی است، در چاپ هم
+  باید ReplacementSpan درون همان StaticLayout باشد، نه RenderBlock جدا (وگرنه ارتفاع تخمینی 0.6 vs واقعی
+  و صفحه‌بندی می‌شکند).
+- **clamp دوطرفه**: فقط سقف پایین کافی نیست؛ کف MARGIN هم لازم است تا تصویر بالای صفحهٔ جدید بریده نشود.
+
+### تست‌ها
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=208 edge_functions=3
+simulate_tests.py → ALL PASSED (شامل V68.7: gallery centered fallback, inline figure row)
+V68_4ObjectBoundsTest / V68_5PrintParityRtlTest / V68_6PrintInlineMatchingTest → needle زنده
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt (11 vs 9)
+scripts/verify_native_final.py (حفظ شد)
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) تصویر گالری: بدون درگ وسط اسلات باشد؛ درگ به راست → به راست برود؛ رها + درگ دوم → از جای جدید ادامه (نه پرش به چپ)؛ چاپ هم همان‌جا.
+۲) چند تصویر گالری: تصویر اول را درگ کنید؛ تصویر دوم بدون درگ همچنان وسط بماند (per-image نه per-question).
+۳) سؤال با ۳ شکل درون‌متنی (لوزی+آناتومی+جدول): ویرایشگر یک ردیف افقی؛ چاپ رسمی هم یک ردیف افقی، بدون فضای سفید اضافی و بدون شکست به ۳ سطر عمودی.
+۴) Q1+Q2 کوتاه: در ویرایشگر یک صفحه؛ چاپ هم یک صفحه (نه دو صفحه).
+۵) جدول تناوبی بلند: بالای صفحهٔ ۲ بریده نشود؛ با coerceIn(MARGIN, ...) از بالا/پایین سالم.
+۶) رگرسیون: جدول RTL/تناوبی آینه، مقیاس ۲٫۸۳، فرمول درون‌خطی، جورکردنی راست↔چپ، درگ شکل آزاد.
+```

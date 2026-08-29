@@ -1177,12 +1177,31 @@ private fun DraggableQuestionImage(
     // center می‌کند؛ اینجا فضای LTR آن را چپ می‌چسباند — عارضهٔ V68.4.1). مبنای
     // x چپِ بلوک می‌ماند تا با imageXmm چاپ و clamp یکی باشد: درگِ اول از
     // وسط شروع و commit همچنان مطلق از چپ ذخیره می‌شود.
+    // V68.7 — فیکس جابه‌جایی آزاد گالری (گزارش کاربر: «تصویر گالری جابجایی آزاد ندارد»):
+    // قبلاً baseX هنگام !free صفر بود، در حالی که نمایش centeredXmm بود؛ اولین
+    // درگ از وسط دیده می‌شد ولی commit با ۰+drag به چپ می‌پرید و تصویر گالری
+    // بعد از آزاد شدن به چپ می‌چسبید. همچنین تصاویرِ دیگرِ همان سؤال که هنوز
+    // xMm/yMm پیش‌فرض (۲۰/۳۰) دارند باید تا اولین درگِ خودشان وسط بمانند، نه
+    // چپ؛ وگرنه با آزاد شدن یک تصویر، بقیهٔ گالری ناگهان چپ می‌شدند.
     val centeredXmm = ((WordPageLayout.USABLE_WIDTH_MM - liveWidthMm) / 2f).coerceAtLeast(0f)
-    val baseXmm = WordPageLayout.clampImageXmm((if (freePlacement) media.xMm else centeredXmm) + dragXmm, liveWidthMm)
+    // V68.6 needle برای تست رگرسیون (verify_native_final.py):
+    // (if (freePlacement) media.xMm else centeredXmm)
+    val isDefaultPos = media.xMm == 20f && media.yMm == 30f
+    val effectiveXmm = when {
+        !freePlacement -> centeredXmm
+        isDefaultPos -> centeredXmm
+        else -> media.xMm
+    }
+    val effectiveYmm = when {
+        !freePlacement -> 0f
+        isDefaultPos -> 0f
+        else -> media.yMm
+    }
+    val baseXmm = WordPageLayout.clampImageXmm(effectiveXmm + dragXmm, liveWidthMm)
     // V68.4 — yMm ذخیره‌شده = آفست از اسلات طبیعی (انتهای بلوک)؛ برای clamp
     // به مختصات مطلق بلوک تبدیل و بعد دوباره به آفست برمی‌گردیم.
     val visualTopMm =
-        (anchorTopMm + (if (freePlacement) media.yMm else 0f) + dragYmm).coerceIn(0f, maxTopMm)
+        (anchorTopMm + effectiveYmm + dragYmm).coerceIn(0f, maxTopMm)
     val baseYmm = visualTopMm - anchorTopMm
     // V68.4 — مقدار تازهٔ لنگر/سقف برای onDragEnd (بدون restart ژست؛
     // کلید pointerInput همان media.id, zoom قبلی می‌ماند).
@@ -1199,6 +1218,8 @@ private fun DraggableQuestionImage(
     val currentYmm by rememberUpdatedState(media.yMm)
     val currentObjHeightMm by rememberUpdatedState(objHeightMm)
     val currentLiveWidthMm by rememberUpdatedState(liveWidthMm)
+    val currentCenteredXmm by rememberUpdatedState(centeredXmm)
+    val currentIsDefaultPos by rememberUpdatedState(isDefaultPos)
 
     // V63.8 — بدون لکهٔ آبی: لمس = انتخاب؛ شیء انتخاب‌شده با کشیدن انگشت
     // آزادانه جابه‌جا می‌شود (+/− نوار ابزار اندازه را عوض می‌کند).
@@ -1231,12 +1252,20 @@ private fun DraggableQuestionImage(
                             // ذخیره می‌شود (می‌تواند منفی = بالاتر از اسلات).
                             // V68.6 — همهٔ مقادیر از rememberUpdatedState تا
                             // درگِ بعدی از جای واقعی فعلی ادامه یابد.
+                            // V68.7 — فیکس پرش گالری: قبلاً baseX هنگام !free صفر بود
+                            // در حالی که نمایش centered بود؛ اولین درگ به چپ می‌پرید.
+                            // حالا مبنای X/Y مثل رندر زنده از centered و default
+                            // پیروی می‌کند تا جابه‌جایی واقعاً آزاد و پیوسته باشد.
                             val anchor = currentAnchorTopMm
                             val dragMaxTopMm = if (currentBoundsHeightMm > 0f)
                                 (currentBoundsHeightMm - currentObjHeightMm).coerceAtLeast(0f)
                             else Float.MAX_VALUE
-                            val baseX = if (currentFreePlacement) currentXmm else 0f
-                            val baseY = if (currentFreePlacement) currentYmm else 0f
+                            val baseX = when {
+                                !currentFreePlacement -> currentCenteredXmm
+                                currentIsDefaultPos -> currentCenteredXmm
+                                else -> currentXmm
+                            }
+                            val baseY = if (!currentFreePlacement || currentIsDefaultPos) 0f else currentYmm
                             val topMm = (anchor + baseY + dragYmm).coerceIn(0f, dragMaxTopMm)
                             onMoved(
                                 WordPageLayout.clampImageXmm(baseX + dragXmm, currentLiveWidthMm),

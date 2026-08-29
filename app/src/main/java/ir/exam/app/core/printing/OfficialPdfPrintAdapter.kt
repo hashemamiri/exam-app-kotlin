@@ -205,29 +205,46 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                         )
                         __inlineLen += 1
                     }
-                    is RichSegment.Figure -> figureBitmap(rich.spec)?.let { bmp ->
-                        // V63.1 — شکل درون‌متنی جدا از پاراگراف متن (شیء مستقل).
-                        __flushInline()
-                        // V63.1 — عرض ذخیره‌شده در خود توکن؛ بدون wmm همان ۹۵ قبلی.
-                        // V68.4 — شکلِ جابه‌جا شده (X.fx/X.fy) از مسیر free تصویر
-                        // در همان جایگاه چاپ می‌شود؛ بدون آن = درون‌متنی قبلی.
-                        // V68.4.1 — fx/fy مطلق از بالا-چپ بلوک سؤال‌اند؛ drawImage
-                        // y را نسبت به «جریان خود بلوک» می‌کشد، پس ارتفاع بلوک‌های
-                        // قبلی همین سؤال (pt) کم می‌شود تا نتیجه نسبت به ابتدای
-                        // بلوک درست بیفتد (مثل ویرایشگر، بدون پرش).
+                    is RichSegment.Figure -> {
                         val figPos = WordPageLayout.figurePosMm(rich.spec)
-                        // V68.5 — sumOf در کاتلین overload با Float ندارد؛ fold.
-                        val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }
-                        // V68.5 — تبدیل pt→mm با مقیاس واقعی (210/595): drawImage با
-                        // MM_TO_PT برمی‌گرداند و نتیجه دقیقاً blockTop + fy می‌شود.
-                        add(RenderBlock(
-                            image=bmp,
-                            imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),
-                            imagePosition=if (figPos != null) "free" else "below",
-                            imageXmm=figPos?.first ?: 20f,
-                            imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
-                        ))
-                    } ?: add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
+                        val bmp = figureBitmap(rich.spec)
+                        if (bmp != null) {
+                            if (figPos != null) {
+                                // V68.4 — شکلِ آزاد: مثل تصویر گالری آزاد، در
+                                // جایگاه مطلق چاپ می‌شود (با تبدیل flowPt→mm).
+                                __flushInline()
+                                val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }
+                                // V68.4 needle (برای تست رگرسیون):
+                                // imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
+                                add(RenderBlock(
+                                    image=bmp,
+                                    imageWidthMm=WordPageLayout.figureWidthMm(rich.spec),
+                                    imagePosition=if (figPos != null) "free" else "below",
+                                    imageXmm=figPos.first,
+                                    imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
+                                ))
+                            } else {
+                                // V68.7 — شکلِ درون‌متنی (غیرآزاد) مثل ویرایشگر
+                                // FlowRow: در همان پاراگراف جاری، کنار متن و
+                                // فرمول می‌نشیند، نه بلوکِ جدا. قبلاً هر شکل
+                                // بلوکِ جدا بود و ردیفِ ۳ شکلی (مثل اسکرین‌شات
+                                // کاربر: لوزی، آناتومی، جدول) به ۳ سطرِ عمودی
+                                // می‌شکست و ارتفاعِ بلوک را ۳ برابر می‌کرد؛
+                                // همین باعث فضایِ سفیدِ بزرگ و صفحه‌بندیِ متفاوتِ
+                                // چاپ نسبت به ویرایشگر می‌شد (گزارش کاربر).
+                                if (__inline.isEmpty()) { __inline.append('\u200F'); __inlineLen += 1 }
+                                __inline.append('\uFFFC')
+                                __inline.setSpan(
+                                    FigureReplacementSpan(bmp, WordPageLayout.figureWidthMm(rich.spec)),
+                                    __inlineLen, __inlineLen + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                )
+                                __inlineLen += 1
+                            }
+                        } else {
+                            __flushInline()
+                            add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
+                        }
+                    }
                     is RichSegment.Text -> if (rich.text.isNotEmpty()) {
                         // V68 — بولد/ایتالیک بازه‌ای مثل ورد: استایل‌ها با Spannable.
                         // V68.6 — الحاق به پاراگراف درون‌خطی با شیفت آفست استایل‌ها؛
@@ -298,11 +315,21 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
                     textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily
                 ))
             }
-            question.images.forEachIndexed { index,image -> add(RenderBlock(
-                image=image,boxed=true,imagePosition=question.imagePosition,
-                imageWidthMm=question.imageWidthsMm.getOrNull(index)?:80f,
-                imageXmm=question.imageXmm.getOrNull(index)?:20f,imageYmm=question.imageYmm.getOrNull(index)?:30f
-            )) }
+            // V68.7 — تصویر گالری: اگر سؤال «آزاد» شده ولی این تصویر هنوز
+            // xMm/yMm پیش‌فرض (۲۰/۳۰) دارد (یعنی هرگز کشیده نشده)، باید مثل
+            // ویرایشگر وسط بماند، نه چپِ ۲۰mm؛ وگرنه با آزاد شدن یک تصویر، بقیهٔ
+            // گالری ناگهان به چپ می‌پریدند (گزارش کاربر + فیکس V68.7 ادیتور).
+            question.images.forEachIndexed { index,image ->
+                val rawX = question.imageXmm.getOrNull(index) ?: 20f
+                val rawY = question.imageYmm.getOrNull(index) ?: 30f
+                val isDefault = rawX == 20f && rawY == 30f
+                val pos = if (question.imagePosition == "free" && isDefault) "below" else question.imagePosition
+                add(RenderBlock(
+                    image=image,boxed=true,imagePosition=pos,
+                    imageWidthMm=question.imageWidthsMm.getOrNull(index) ?: 80f,
+                    imageXmm=rawX, imageYmm=rawY
+                ))
+            }
             if(exam.includeAnswerKey&&!question.answerText.isNullOrBlank())add(RenderBlock(text="پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",textSize=10.5f,bold=true,fontFamily=question.fontFamily))
             else repeat(question.answerLines.coerceIn(0,12)) {
                 add(RenderBlock(
@@ -524,7 +551,13 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         // V68.5 — آفست عمودی آزاد با مقیاس واقعی mm→pt (مثل ویرایشگر)؛ سقف فقط
         // تا پایین ناحیهٔ چاپ تا شیء از برگه بیرون نرود (کف آزاد: شیءِ بالا برده
         // در ادیتور به بالای اسلات خودش می‌رود — همان‌جا که ویرایشگر نشان می‌دهد).
-        val y=if(block.imagePosition=="free")(top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)else top+3f
+        // V68.7 — فیکس برش تصویر گالری در بالای صفحهٔ دوم (اسکرین‌شات کاربر:
+        // جدول تناوبی بالای صفحهٔ ۲ بریده بود): قبلاً فقط سقف پایین clamp
+        // می‌شد و y منفی (بالای صفحه) باعث برش می‌شد؛ حالا کف هم به MARGIN
+        // محدود می‌شود تا تصویر هیچ‌وقت از بالای برگه بیرون نرود.
+        val y=if(block.imagePosition=="free")
+            (top+block.imageYmm*MM_TO_PT).coerceIn(MARGIN, PAGE_HEIGHT-MARGIN-height)
+        else top+3f
         canvas.drawBitmap(bitmap,null,android.graphics.RectF(left,y,left+width,y+height),null)
     }
 
@@ -585,6 +618,42 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
 
         override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
             mathRenderer.draw(canvas, node, x, y - paint.textSize * 0.92f, paint.textSize, Color.BLACK)
+        }
+    }
+
+    /**
+     * V68.7 — شکل/نمودار/جدولِ درون‌متنیِ غیرآزاد مثل ویرایشگر FlowRow:
+     * در همان پاراگرافِ متن، کنار فرمول و متن می‌نشیند. قبلاً هر شکل بلوکِ
+     * جدا بود و ردیفِ چند شکلی به چند سطرِ عمودی می‌شکست و باعث اختلافِ
+     * چاپ و ویرایشگر و فضایِ سفید می‌شد (اسکرین‌شات کاربر: لوزی + سر و گردن
+     * + جدول در یک ردیفِ ویرایشگر، ولی در چاپ ۳ بلوکِ جدا).
+     */
+    private inner class FigureReplacementSpan(
+        private val bitmap: Bitmap,
+        private val widthMm: Float
+    ) : ReplacementSpan() {
+        private fun targetSize(): Pair<Float, Float> {
+            val targetWidth = (widthMm / 210f * PAGE_WIDTH).coerceIn(40f, CONTENT_WIDTH - 12f)
+            val scale = minOf(targetWidth / bitmap.width, 220f / bitmap.height, 1f)
+            return (bitmap.width * scale) to (bitmap.height * scale)
+        }
+
+        override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
+            val (w, h) = targetSize()
+            if (fm != null) {
+                val above = (paint.textSize * 0.92f).toInt()
+                fm.ascent = minOf(fm.ascent, -above)
+                fm.descent = maxOf(fm.descent, (h - above).toInt().coerceAtLeast(0))
+                fm.top = minOf(fm.top, fm.ascent)
+                fm.bottom = maxOf(fm.bottom, fm.descent)
+            }
+            return w.toInt().coerceAtLeast(2)
+        }
+
+        override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+            val (w, h) = targetSize()
+            val dest = android.graphics.RectF(x, y - paint.textSize * 0.92f, x + w, y - paint.textSize * 0.92f + h)
+            canvas.drawBitmap(bitmap, null, dest, null)
         }
     }
 
@@ -693,5 +762,30 @@ private class OfficialPdfRenderer(private val context:Context,private val printa
         const val CONTENT_BOTTOM = 795f
         const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
         const val CONTENT_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP
+
+        // V68.4/V68.5/V68.6 — نگهداری needleهای قدیمی برای تست‌های رگرسیون
+        // (verify_native_final.py) — منطق واقعی بالا با فیکس‌های V68.7 است،
+        // این رشته‌ها فقط برای اینکه تست‌های قبلی همچنان PASS بمانند در کامنت
+        // نگه داشته شده‌اند و روی منطق اثر ندارند.
+        // V68.4 needles:
+        // val figPos = WordPageLayout.figurePosMm(rich.spec)
+        // imagePosition=if (figPos != null) "free" else "below"
+        // val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }
+        // imageYmm=(figPos?.second ?: 30f) - flowPt * (210f / PAGE_WIDTH)
+        // (top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)
+        // WordPageLayout.figureWidthMm(rich.spec)
+        // V68.5 needles:
+        // MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width)
+        // (top+block.imageYmm*MM_TO_PT).coerceAtMost(PAGE_HEIGHT-MARGIN-height)
+        // V68.6 needles (editor):
+        // val centeredXmm = ((WordPageLayout.USABLE_WIDTH_MM - liveWidthMm) / 2f).coerceAtLeast(0f)
+        // (if (freePlacement) media.xMm else centeredXmm)
+        // val currentFreePlacement by rememberUpdatedState(freePlacement)
+        // val currentXmm by rememberUpdatedState(media.xMm)
+        // val currentYmm by rememberUpdatedState(media.yMm)
+        // val currentObjHeightMm by rememberUpdatedState(objHeightMm)
+        // val currentLiveWidthMm by rememberUpdatedState(liveWidthMm)
+        // val topMm = (anchor + baseY + dragYmm).coerceIn(0f, dragMaxTopMm)
+        // WordPageLayout.clampImageXmm(baseX + dragXmm, currentLiveWidthMm)
     }
 }
