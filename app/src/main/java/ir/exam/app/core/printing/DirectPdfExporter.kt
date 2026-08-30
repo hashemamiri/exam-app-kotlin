@@ -21,6 +21,7 @@ import com.lowagie.text.pdf.BaseFont
 import com.lowagie.text.pdf.PdfPCell
 import com.lowagie.text.pdf.PdfPTable
 import com.lowagie.text.pdf.PdfPageEventHelper
+import com.lowagie.text.pdf.PdfStream
 import com.lowagie.text.pdf.PdfWriter
 import com.lowagie.text.pdf.PersianTextShaper
 import ir.exam.app.R
@@ -38,11 +39,17 @@ import ir.exam.app.domain.model.OfficialPrintQuestion
 import ir.exam.app.ui.builder.StyleSpan
 import ir.exam.app.ui.builder.StyleSpanOps
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.io.OutputStream
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 
 /**
  * V70.0 — خروجی PDF «مستقیم» با openPDF (فورک آزاد iText 5 — همان کتابخانهٔ
@@ -58,47 +65,86 @@ import kotlinx.coroutines.coroutineScope
  * useAscender)، نگه‌داشتن پسوند .ttf در نام فونت (تا مسیر یونیکد انتخاب
  * شود) و شکل‌نویسی فارسی با PersianTextShaper (هم‌ارز majorBidi اپ قدیمی).
  *
- * V70.2 — رفع «قالب نامعتبر است» هنگام بازکردن PDF ذخیره‌شده: نوشتن مستقیم
- * روی استریم SAF، در صورت خطای میانی یا provider فایل ۰ بایتی/ناقص در محل
- * انتخاب‌شده باقی می‌گذاشت. اکنون PDF کامل ابتدا در حافظه ساخته می‌شود و فقط
- * پس از موفقیت ساخت، بایت‌های کامل یک‌جا (با flush صریح) نوشته می‌شوند؛ در
- * صورت شکست ساخت، فایل ۰ بایتیِ ایجادشده حذف می‌شود.
+ * V70.2 — رفع «قالب نامعتبر است» هنگام بازکردن PDF ذخیره‌شده: PDF پیش از
+ * لمس مقصد کامل می‌شد؛ اما نتیجهٔ واقعی مقصد دوباره خوانده و تأیید نمی‌شد.
+ *
+ * V71.0 — خط لولهٔ حرفه‌ای و تأییدپذیر: ساخت روی فایل خصوصی مرحله‌ای (مقیاس‌پذیر
+ * و بدون نگه‌داشتن کل PDF در RAM)، نهایی‌سازی اجباری Document، اعتبارسنجی با
+ * PdfReader + هدر/EOF + SHA-256، ثبت بادوام SAF با rwt/truncate/flush/fsync و
+ * fallback سازگار wt، سپس بازخوانی مقصد و تطبیق دقیق اندازه/هش. موفقیت فقط
+ * بعد از اثبات ذخیره نمایش داده می‌شود؛ PDF صفر یا ناقص دیگر موفق اعلام نمی‌شود.
  */
+data class DirectPdfExportReceipt(
+    val byteCount: Long,
+    val pageCount: Int
+) {
+    val sizeKiB: Long get() = ((byteCount + 1_023L) / 1_024L).coerceAtLeast(1L)
+}
+
 class DirectPdfExporter(private val context: Context) {
 
     private val appContext = context.applicationContext
     private val imageLoader = ImageLoader(appContext)
+    private val verifiedWriter = VerifiedSafPdfWriter(appContext.contentResolver)
 
-    suspend fun export(printable: OfficialExamPrintable, target: Uri): Result<Unit> {
-        val withImages = coroutineScope {
-            printable.copy(
-                questions = printable.questions.map { question ->
-                    question.copy(
-                        images = question.imageUrls.map { url -> async { loadBitmap(url) } }
-                            .awaitAll().filterNotNull()
-                    )
-                }
+    suspend fun export(
+        printable: OfficialExamPrintable,
+        target: Uri
+    ): Result<DirectPdfExportReceipt> = withContext(Dispatchers.IO) {
+        var stage: File? = null
+        try {
+            val withImages = hydrateImages(printable)
+            val staged = createStageFile()
+            stage = staged
+            FileOutputStream(staged).use { output ->
+                buildPdf(withImages, output)
+                output.flush()
+                output.channel.force(true)
+                output.fd.sync()
+            }
+
+            // موفقیت مرحلهٔ ساخت فقط وقتی پذیرفته می‌شود که خود OpenPDF فایل را
+            // بخواند و envelope، تعداد صفحه، اندازه و SHA-256 معتبر باشند.
+            val artifact = PdfArtifactVerifier.inspect(staged)
+            verifiedWriter.commit(staged, target, artifact)
+            Result.success(
+                DirectPdfExportReceipt(
+                    byteCount = artifact.byteCount,
+                    pageCount = artifact.pageCount
+                )
             )
-        }
-        return runCatching {
-            // V70.2 — ساخت کامل PDF در حافظه؛ خطای میانی هرگز فایل ناقص روی دیسک نمی‌گذارد.
-            val bytes = ByteArrayOutputStream().use { buffer ->
-                buildPdf(withImages, buffer)
-                buffer.toByteArray()
-            }
-            // فقط پس از موفقیت ساخت، بایت‌های کامل یک‌جا نوشته می‌شوند (الگوی اثبات‌شدهٔ
-            // خروجی‌های XLSX/JSON/CSV همین برنامه) — فایل SAF هیچ‌وقت نیمه‌کاره نمی‌ماند.
-            val stream: OutputStream = appContext.contentResolver.openOutputStream(target)
-                ?: error("نوشتن در محل انتخاب‌شده ممکن نشد.")
-            stream.use {
-                it.write(bytes)
-                it.flush()
-            }
-        }.onFailure {
-            // فایل ۰ بایتی که SAF هنگام انتخاب ساخته را پاک می‌کند تا بازکردنش
-            // خطای «قالب نامعتبر است» ندهد.
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            // placeholder صفر/ناقص را نگه نمی‌داریم؛ خطای دقیق برای UI برمی‌گردد.
             runCatching { appContext.contentResolver.delete(target, null, null) }
+            Result.failure(error)
+        } finally {
+            stage?.delete()
         }
+    }
+
+    private suspend fun hydrateImages(printable: OfficialExamPrintable): OfficialExamPrintable = coroutineScope {
+        printable.copy(
+            questions = printable.questions.map { question ->
+                question.copy(
+                    images = question.imageUrls.map { url -> async { loadBitmapSafely(url) } }
+                        .awaitAll().filterNotNull()
+                )
+            }
+        )
+    }
+
+    private fun createStageFile(): File {
+        val directory = File(appContext.cacheDir, "verified-pdf-staging")
+        if (!directory.isDirectory && !directory.mkdirs()) {
+            throw IOException("ساخت فضای موقت امن برای PDF ممکن نشد.")
+        }
+        val staleBefore = System.currentTimeMillis() - STALE_STAGE_MAX_AGE_MS
+        directory.listFiles().orEmpty()
+            .filter { it.isFile && it.lastModified() < staleBefore }
+            .forEach { it.delete() }
+        return File.createTempFile("exam-", ".pdf", directory)
     }
 
     // ------------------------------------------------------------- محتوا
@@ -109,8 +155,19 @@ class DirectPdfExporter(private val context: Context) {
         val boldBase = loadBaseFont("fonts/bnazanin_bold.ttf", R.font.vazirmatn_bold) ?: base
         val document = Document(PageSize.A4, MARGIN, MARGIN, MARGIN, MARGIN)
         val writer = PdfWriter.getInstance(document, out)
+        // Document.close باید xref/EOF را کامل کند، ولی stream مرحله‌ای را نبندد تا
+        // پس از بازگشت buildPdf بتوانیم flush + fsync واقعی انجام دهیم.
+        writer.setCloseStream(false)
+        writer.setFullCompression()
+        writer.setCompressionLevel(PdfStream.BEST_COMPRESSION)
+        writer.setViewerPreferences(PdfWriter.PageLayoutOneColumn)
         writer.setRunDirection(PdfWriter.RUN_DIRECTION_RTL)
         writer.setPageEvent(FooterHelper())
+        document.addTitle(printable.documentTitle.ifBlank { "آزمون" })
+        document.addSubject(printable.subject.ifBlank { printable.header.subject })
+        document.addCreator("Native Exam Online · OpenPDF 1.3.43")
+        printable.header.school.takeIf(String::isNotBlank)?.let(document::addAuthor)
+        document.addCreationDate()
         document.open()
         try {
             addHeader(document, printable.header, base, boldBase)
@@ -438,6 +495,15 @@ class DirectPdfExporter(private val context: Context) {
         return null
     }
 
+    private suspend fun loadBitmapSafely(url: String): Bitmap? = try {
+        loadBitmap(url)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        // خرابی یک تصویر شبکه‌ای نباید کل برگهٔ امتحان و متن سؤال‌ها را نابود کند.
+        null
+    }
+
     private suspend fun loadBitmap(url: String): Bitmap? {
         if (!url.startsWith("https://", true)) return null
         val request = ImageRequest.Builder(appContext)
@@ -496,5 +562,6 @@ class DirectPdfExporter(private val context: Context) {
         const val SIDE_COL_WIDTH = 130f
         const val CENTER_COL_WIDTH = 235f
         const val LEFT_COL_WIDTH = 130f
+        private const val STALE_STAGE_MAX_AGE_MS = 24L * 60L * 60L * 1_000L
     }
 }

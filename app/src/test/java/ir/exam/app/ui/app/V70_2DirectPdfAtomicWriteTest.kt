@@ -6,15 +6,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V70.2 — رفع «قالب نامعتبر است» هنگام بازکردن PDF مستقیم (فایل ۰ بایتی).
- *
- * ریشه: خروجی قبلاً مستقیم روی استریم SAF نوشته می‌شد؛ هر خطای میانی یا
- * provider که نوشتن را کامل ثبت نکند، فایل ۰ بایتی/ناقص در محل انتخاب‌شده
- * باقی می‌گذاشت و viewer خطای «قالب نامعتبر است» می‌داد. اکنون PDF کامل
- * ابتدا در حافظه (ByteArrayOutputStream) ساخته می‌شود و فقط پس از موفقیت
- * ساخت، بایت‌های کامل یک‌جا با flush صریح روی محل انتخابی نوشته می‌شوند
- * (الگوی اثبات‌شدهٔ خروجی‌های XLSX/JSON/CSV همین برنامه)؛ در صورت شکست
- * ساخت، فایل ۰ بایتیِ ایجادشده حذف می‌شود.
+ * V70.2/V71.0 — PDF باید پیش از لمس مقصد کامل شود و موفقیت فقط بعد از
+ * بازخوانی و تطبیق قطعی فایل مقصد اعلام شود.
  */
 class V70_2DirectPdfAtomicWriteTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -26,29 +19,45 @@ class V70_2DirectPdfAtomicWriteTest {
     private val exporter by lazy {
         source("app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
     }
-
-    @Test
-    fun `pdf is built fully in memory before touching the target file`() {
-        // ساخت کامل داخل ByteArrayOutputStream و گرفتن بایت‌ها پیش از بازکردن استریم SAF
-        assertTrue("ByteArrayOutputStream" in exporter)
-        assertTrue("buildPdf(withImages, buffer)" in exporter)
-        assertTrue("buffer.toByteArray()" in exporter)
-        // بازگشت به نوشتن مستقیم روی استریم SAF ممنوع (همان باگ فایل ۰ بایتی)
-        assertFalse("stream.use { buildPdf(withImages, it) }" in exporter)
+    private val safWriter by lazy {
+        source("app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt")
     }
 
     @Test
-    fun `complete bytes are written once with explicit flush`() {
-        assertTrue("openOutputStream(target)" in exporter)
-        assertTrue("it.write(bytes)" in exporter)
-        assertTrue("it.flush()" in exporter)
+    fun `pdf is finalized and validated in private staging before target`() {
+        assertTrue("File.createTempFile(" in exporter)
+        assertTrue("FileOutputStream(staged).use" in exporter)
+        assertTrue("output.fd.sync()" in exporter)
+        assertTrue("PdfArtifactVerifier.inspect(staged)" in exporter)
+        assertFalse("buildPdf(withImages, buffer)" in exporter)
+        assertFalse("buffer.toByteArray()" in exporter)
     }
 
     @Test
-    fun `zero-byte placeholder is deleted when building fails`() {
-        // وقتی ساخت ناموفق است، فایل ۰ بایتیِ انتخاب‌شده حذف می‌شود تا «قالب نامعتبر» ندهد
+    fun `destination uses durable truncate flush and fsync`() {
+        assertTrue("openFileDescriptor(target, \"rwt\")" in safWriter)
+        assertTrue("ParcelFileDescriptor.AutoCloseOutputStream" in safWriter)
+        assertTrue("output.channel.truncate(0L)" in safWriter)
+        assertTrue("output.flush()" in safWriter)
+        assertTrue("output.channel.force(true)" in safWriter)
+        assertTrue("output.fd.sync()" in safWriter)
+        assertTrue("openOutputStream(target, \"wt\")" in safWriter)
+    }
+
+    @Test
+    fun `success requires destination readback size and sha256 match`() {
+        assertTrue("openInputStream(target)" in safWriter)
+        assertTrue("PdfArtifactVerifier::fingerprint" in safWriter)
+        assertTrue("expected.hasSameBytes" in safWriter)
+        assertTrue("if (descriptorAttempt.verified) return" in safWriter)
+        assertTrue("if (streamAttempt.verified) return" in safWriter)
+    }
+
+    @Test
+    fun `zero or incomplete placeholder is deleted on failure`() {
         assertTrue("contentResolver.delete(target, null, null)" in exporter)
-        assertTrue(".onFailure {" in exporter)
+        assertTrue("Result.failure(error)" in exporter)
+        assertFalse("Result.success(Unit)" in exporter)
     }
 
     @Test

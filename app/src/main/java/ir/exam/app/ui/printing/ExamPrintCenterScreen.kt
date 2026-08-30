@@ -96,6 +96,8 @@ fun ExamPrintCenterScreen(
     val directPdf = remember { DirectPdfExporter(context.applicationContext) }
     var pendingPdfExamId by remember { mutableStateOf<String?>(null) }
     var pdfStatus by remember { mutableStateOf<String?>(null) }
+    var pdfStatusIsError by remember { mutableStateOf(false) }
+    var pdfExporting by remember { mutableStateOf(false) }
     val createPdf = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri: Uri? ->
@@ -103,14 +105,30 @@ fun ExamPrintCenterScreen(
         pendingPdfExamId = null
         if (uri != null && examId != null) {
             scope.launch {
-                pdfStatus = null
-                portability.printableExam(examId, false, header, layoutStore.read(examId))
-                    .onSuccess { printable ->
-                        directPdf.export(printable, uri)
-                            .onSuccess { pdfStatus = "فایل PDF ساخته شد." }
-                            .onFailure { pdfStatus = sanitizePdfError(it) }
-                    }
-                    .onFailure { pdfStatus = sanitizePdfError(it) }
+                pdfExporting = true
+                try {
+                    pdfStatusIsError = false
+                    pdfStatus = "در حال ساخت، ذخیره و اعتبارسنجی PDF…"
+                    portability.printableExam(examId, false, header, layoutStore.read(examId))
+                        .onSuccess { printable ->
+                            directPdf.export(printable, uri)
+                                .onSuccess { receipt ->
+                                    pdfStatusIsError = false
+                                    pdfStatus = "فایل PDF تأیید و ذخیره شد " +
+                                        "(${receipt.sizeKiB} کیلوبایت، ${receipt.pageCount} صفحه)."
+                                }
+                                .onFailure { error ->
+                                    pdfStatusIsError = true
+                                    pdfStatus = sanitizePdfError(error)
+                                }
+                        }
+                        .onFailure { error ->
+                            pdfStatusIsError = true
+                            pdfStatus = sanitizePdfError(error)
+                        }
+                } finally {
+                    pdfExporting = false
+                }
             }
         }
     }
@@ -149,8 +167,14 @@ fun ExamPrintCenterScreen(
             }
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        pdfStatus?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-        if (state.loading || state.portabilityLoading) {
+        pdfStatus?.let {
+            Text(
+                it,
+                color = if (pdfStatusIsError) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary
+            )
+        }
+        if (state.loading || state.portabilityLoading || pdfExporting) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
         if (state.exams.isEmpty() && !state.loading) Text("آزمونی برای چاپ نیست.")
@@ -194,9 +218,11 @@ fun ExamPrintCenterScreen(
                             // V70.0 — آیکن پرینتر: پی دی اف مستقیم با iText 5 (openPDF)
                             // روی همان قالب چاپ، بدون پنجرهٔ چاپ سیستم.
                             androidx.compose.material3.IconButton(onClick = {
+                                pdfStatus = null
+                                pdfStatusIsError = false
                                 pendingPdfExamId = exam.id
                                 createPdf.launch("${exam.title.ifBlank { "آزمون" }}.pdf")
-                            }) {
+                            }, enabled = !pdfExporting) {
                                 Icon(
                                     Icons.Outlined.Print,
                                     contentDescription = "پی دی اف مستقیم",

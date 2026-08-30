@@ -13639,3 +13639,135 @@ GIT_DIFF_CHECK=PASS
 
 پس از سبزشدن CI، اصلاح اصلی V70.2 روی دستگاه بررسی شود: PDF مستقیم باید حجم غیرصفر
 داشته باشد و بدون پیام «قالب نامعتبر است» باز شود.
+
+
+## ۲۶۸) V71.0 — موتور حرفه‌ای و تأییدپذیر PDF (رفع قطعی موفقیت کاذبِ فایل صفر)
+
+### گزارش تکمیلی کاربر پس از V70.3
+
+پاسخ‌های مستقیم کاربر به پرسش‌های تشخیصی:
+
+```text
+- GitHub Actions نسخهٔ V70.3 سبز شده و همان APK جدید روی گوشی نصب است.
+- بعد از ذخیره، برنامه دقیقاً پیام «فایل PDF ساخته شد.» نشان می‌دهد.
+- مقصد، Downloads حافظهٔ داخلی گوشی است (نه SD Card و نه Cloud provider).
+- حتی آزمون سادهٔ بدون تصویر نیز فایل ۰ بایتی می‌سازد.
+```
+
+پس مشکل تصویر، شکل، حجم آزمون، نسخهٔ قدیمی APK یا شکست Build نیست.
+
+### ریشهٔ اثبات‌شده در سطح برنامه (نه حدس دربارهٔ مدل گوشی)
+
+```text
+V70.2 فایل PDF را قبل از مقصد در ByteArrayOutputStream کامل می‌کرد، اما قرارداد
+موفقیت فقط این بود که openOutputStream/write/flush/close exception ندهند. هیچ‌گاه
+URI مقصد دوباره خوانده نمی‌شد و اندازه/محتوای واقعی آن با PDF ساخته‌شده مقایسه
+نمی‌شد. گزارش هم‌زمان «پیام موفقیت + فایل واقعی ۰ بایت» ثابت می‌کند provider
+بدون exception عملیات را تمام کرده ولی داده روی مقصد قابل مشاهده/ثبت نشده است؛
+بنابراین برنامه موفقیت کاذب نشان می‌داد.
+
+جزئیات داخلی اینکه چرا provider همان دستگاه write معمولی را silently discard کرده
+بدون لاگ دستگاه قابل نام‌گذاری نیست و در این بخش ادعای حدسی نشده است. V71 موفقیت
+را به رفتار provider اعتماد نمی‌دهد: فقط بازخوانی و تطبیق بایت‌ها معیار است.
+```
+
+### منابع فنی استفاده‌شده
+
+```text
+- مستندات Android: modeهای ContentResolver می‌توانند بین providerها رفتار متفاوت
+  داشته باشند و «w» لزوماً truncate نمی‌کند؛ «rwt» برای read/write + truncate است.
+- ParcelFileDescriptor.AutoCloseOutputStream مالکیت و بسته‌شدن descriptor را درست
+  مدیریت می‌کند.
+- FileDescriptor.sync پس از flush، bufferهای سیستم را تا storage همگام می‌کند.
+- API واقعی openPDF 1.3.43 با javap بررسی شد: setCloseStream(false)،
+  setFullCompression، setCompressionLevel، PdfReader و getNumberOfPages موجودند.
+- اصل PDF: xref/startxref/%%EOF هنگام Document.close نهایی می‌شوند؛ بنابراین
+  اعتبارسنجی فقط بعد از close انجام می‌شود.
+```
+
+### خط لولهٔ جدید V71.0
+
+```text
+۱) کل عملیات روی Dispatchers.IO اجرا می‌شود؛ Cancellation بلعیده نمی‌شود.
+۲) تصاویر شبکه‌ای موازی دریافت می‌شوند؛ خطای یک تصویر فقط همان تصویر را حذف می‌کند
+   و متن/کل PDF را از بین نمی‌برد.
+۳) PDF روی فایل خصوصی تصادفی داخل cache/verified-pdf-staging ساخته می‌شود؛ کل PDF
+   دیگر در RAM نگه داشته نمی‌شود و فایل‌های stage قدیمی‌تر از ۲۴ ساعت پاک می‌شوند.
+۴) PdfWriter.setCloseStream(false) اجازه می‌دهد Document.close ابتدا xref/EOF را
+   نهایی کند و سپس FileOutputStream جداگانه flush + FileDescriptor.sync شود.
+۵) Full Compression و BEST_COMPRESSION، چیدمان یک‌ستونه و metadata شامل عنوان،
+   موضوع، سازنده، مدرسه و تاریخ ساخت فعال شدند.
+۶) PdfArtifactVerifier فایل stage را با چهار لایه بررسی می‌کند:
+   %PDF- header، %%EOF، parse واقعی PdfReader بدون rebuild و حداقل یک صفحه؛ سپس
+   اندازه و SHA-256 را به‌شکل streaming محاسبه می‌کند.
+۷) VerifiedSafPdfWriter روش اصلی rwt را اجرا می‌کند: position(0)، truncate(0)،
+   کپی streaming با buffer 64KB، flush، channel.force(true)، fd.sync و کنترل channel.size.
+۸) اگر provider روش seekable را نپذیرد، fallback استاندارد openOutputStream(...,"wt")
+   اجرا می‌شود.
+۹) بعد از بسته‌شدن مقصد، URI با فاصله‌های کوتاه چند بار بازخوانی می‌شود؛ byteCount
+   و SHA-256 باید دقیقاً با stage برابر باشد. فقط آن‌وقت success برمی‌گردد.
+۱۰) UI در زمان کار پیام و spinner «در حال ساخت، ذخیره و اعتبارسنجی PDF…» دارد؛
+    آیکن تا پایان غیرفعال است تا دو خروجی هم‌زمان شروع نشوند. پیام موفقیت شامل حجم
+    واقعی و تعداد صفحه است. خطا قرمز است و فایل صفر/ناقص حذف می‌شود.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+افزوده:
+app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt
+app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt
+app/src/test/java/ir/exam/app/core/printing/V71_0VerifiedPdfPipelineTest.kt
+
+تغییر:
+app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### تست واقعی و بررسی پیش از تحویل
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=209 edge_functions=3
+V71_REAL_OPENPDF_JVM_TEST=PASS — JUnit 4.13.2: OK (5 tests)
+V71_AFFECTED_SOURCE_JUNIT=PASS — JUnit 4.13.2: OK (31 tests)
+V71_ANDROID_CORE_STANDALONE_COMPILE=PASS
+V71_DIRECT_EXPORTER_STANDALONE_API_COMPILE=PASS
+V71_PERSIAN_FONT_FULL_COMPRESSION_PDF=PASS — 5102 bytes, 1 page, 1 embedded font
+V30_CHANGED_INPUT_SIMULATION=PASS
+V63_0_V63_5_PRINT_CENTER_SIMULATION=PASS
+CHANGED_KOTLIN_IMPORT_MEMBER_ACCESS_SCAN=PASS
+ADDED_CONTENT_SECRET_SCAN=PASS
+CLEAN_GIT_APPLY_CHECK=PASS — base 951de42
+CLEAN_V71_ALL_CHECKS=PASS
+```
+
+تست واقعی یک PDF با openPDF 1.3.43 و full compression ساخت، آن را با PdfReader
+خواند، pageCount/size/SHA-256 را تأیید کرد و فایل صفر و truncated را رد کرد.
+همچنین ۳۱ تست JUnit منبع‌خوانِ متأثر (V41/V62.7/V62.8/V63.5/V70/V71) اجرا و سبز شدند.
+یک PDF فارسی با فونت واقعی bnazanin.ttf، Identity-H، شکل‌دهی حروف و full compression
+نیز ساخته شد؛ PdfReader و pypdf آن را یک‌صفحه‌ای با فونت و متن قابل استخراج خواندند.
+فایل‌های Android جدید نیز با Kotlin 2.0.21 + android.jar API 35 + Coroutines واقعی
+کامپایل شدند؛ DirectPdfExporter هم با API واقعی OpenPDF و Android type-check شد.
+
+تلاش برای Gradle کامل در sandbox به محدودیت ۲GB RAM بدون swap خورد: کامپایل کل
+۲۰۹ فایل در فایل قدیمی و نامرتبط JalaliDateTimePicker.kt با OutOfMemoryError متوقف
+شد؛ خطای سورس V71 گزارش نشد. مرجع نهایی Build کامل، GitHub Actions کاربر است.
+
+### SQL جدید: ندارد — Edge deploy: ندارد — Secret جدید: ندارد
+
+### چک‌لیست دستگاه
+
+```text
+۱) آزمون سادهٔ بدون تصویر → آیکن پرینتر → Downloads.
+۲) ابتدا پیام «در حال ساخت، ذخیره و اعتبارسنجی PDF…» دیده شود.
+۳) موفقیت باید حجم غیرصفر و تعداد صفحه را داخل همان پیام نشان دهد.
+۴) اندازهٔ فایل در Files با عدد پیام تقریباً برابر باشد و PDF باز شود.
+۵) آزمون دارای تصویر/شکل هم آزمایش شود.
+۶) اگر ذخیره واقعاً شکست خورد، نباید موفقیت نشان دهد؛ متن قرمز دقیق شامل اندازهٔ
+   مورد انتظار و اندازهٔ بازخوانی‌شده ارسال شود.
+۷) چاپ برگه، چاپ با کلید و ویرایش سند مثل قبل کار کنند.
+```
