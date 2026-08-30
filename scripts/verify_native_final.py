@@ -2642,6 +2642,20 @@ require('Text("چاپ برگه")' in _print_center_v62
         and 'OfficialPrintController' in _print_center_v62,
         "V70.0 must not break existing print-center capabilities (چاپ برگه/چاپ با کلید/ویرایش)")
 
+# ---- V70.2: رفع «قالب نامعتبر است» — PDF کامل در حافظه، سپس نوشتن یک‌جا ----
+# (علت: نوشتن مستقیم روی استریم SAF فایل ۰ بایتی/ناقص در محل انتخابی باقی
+# می‌گذاشت؛ اکنون بایت‌های کامل بعد از موفقیت ساخت یک‌جا نوشته و در شکست،
+# فایل ۰ بایتیِ ایجادشده حذف می‌شود. بازگشت به استریم مستقیم ممنوع است.)
+require("ByteArrayOutputStream" in _v70_direct_pdf.read_text()
+        and "buildPdf(withImages, buffer)" in _v70_direct_pdf.read_text()
+        and "buffer.toByteArray()" in _v70_direct_pdf.read_text()
+        and "it.write(bytes)" in _v70_direct_pdf.read_text()
+        and "it.flush()" in _v70_direct_pdf.read_text()
+        and "contentResolver.delete(target, null, null)" in _v70_direct_pdf.read_text(),
+        "V70.2 direct-PDF atomic write (memory build -> single write -> delete-on-failure) is missing")
+require("stream.use { buildPdf(withImages, it) }" not in _v70_direct_pdf.read_text(),
+        "V70.2 must not regress to streaming directly into the SAF stream (0-byte file bug)")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2650,8 +2664,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 244
-        and _v694_changelog.startswith("V70.0:"),
-        "changelog must keep the full history + the new V70.0 line on top")
+        and _v694_changelog.startswith("V70.2:"),
+        "changelog must keep the full history + the new V70.2 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

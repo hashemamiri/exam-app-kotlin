@@ -57,6 +57,12 @@ import kotlinx.coroutines.coroutineScope
  * V70.1 — رفع خطای کامپایل در openPDF 1.3.43 (خاصیت isUseAscender به‌جای
  * useAscender)، نگه‌داشتن پسوند .ttf در نام فونت (تا مسیر یونیکد انتخاب
  * شود) و شکل‌نویسی فارسی با PersianTextShaper (هم‌ارز majorBidi اپ قدیمی).
+ *
+ * V70.2 — رفع «قالب نامعتبر است» هنگام بازکردن PDF ذخیره‌شده: نوشتن مستقیم
+ * روی استریم SAF، در صورت خطای میانی یا provider فایل ۰ بایتی/ناقص در محل
+ * انتخاب‌شده باقی می‌گذاشت. اکنون PDF کامل ابتدا در حافظه ساخته می‌شود و فقط
+ * پس از موفقیت ساخت، بایت‌های کامل یک‌جا (با flush صریح) نوشته می‌شوند؛ در
+ * صورت شکست ساخت، فایل ۰ بایتیِ ایجادشده حذف می‌شود.
  */
 class DirectPdfExporter(private val context: Context) {
 
@@ -75,9 +81,23 @@ class DirectPdfExporter(private val context: Context) {
             )
         }
         return runCatching {
+            // V70.2 — ساخت کامل PDF در حافظه؛ خطای میانی هرگز فایل ناقص روی دیسک نمی‌گذارد.
+            val bytes = ByteArrayOutputStream().use { buffer ->
+                buildPdf(withImages, buffer)
+                buffer.toByteArray()
+            }
+            // فقط پس از موفقیت ساخت، بایت‌های کامل یک‌جا نوشته می‌شوند (الگوی اثبات‌شدهٔ
+            // خروجی‌های XLSX/JSON/CSV همین برنامه) — فایل SAF هیچ‌وقت نیمه‌کاره نمی‌ماند.
             val stream: OutputStream = appContext.contentResolver.openOutputStream(target)
                 ?: error("نوشتن در محل انتخاب‌شده ممکن نشد.")
-            stream.use { buildPdf(withImages, it) }
+            stream.use {
+                it.write(bytes)
+                it.flush()
+            }
+        }.onFailure {
+            // فایل ۰ بایتی که SAF هنگام انتخاب ساخته را پاک می‌کند تا بازکردنش
+            // خطای «قالب نامعتبر است» ندهد.
+            runCatching { appContext.contentResolver.delete(target, null, null) }
         }
     }
 
