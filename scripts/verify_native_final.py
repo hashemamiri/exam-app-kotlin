@@ -2074,7 +2074,7 @@ require("if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)" in _pd
         and "const val LATER_CONTENT_TOP = 50f" in _pdf_v62,
         "V63.8 first-page-only header / last-page-only signatures are missing from print")
 require("fun WordPaperChrome()" in _doc_editor_v63
-        and "/ 520f" in _doc_editor_v63
+        and "/ 515f" in _doc_editor_v63
         and "fun ResizeHandle(" not in _doc_editor_v63
         and "HeaderPreview(header)" not in _doc_editor_v63
         and "نام و امضای دبیر" not in _doc_editor_v63
@@ -2590,14 +2590,14 @@ require("with(density) { widthPx.toDp() }" in _v689_editor
         "V68.9.3 raw px must be converted to Dp for Modifier.size (compile fix)")
 
 # ---- V69.0: پاک‌سازی کد مرده + یکسان‌سازی حاشیه + موتور حرفه‌ای (کش‌ها) ----
-# (۱) حاشیه: چاپ 40pt = ویرایشگر 14mm و مقیاس /520؛ (۲) کش‌های موتور؛
+# (۱) حاشیه: چاپ 40pt = ویرایشگر 14mm و مقیاس /515؛ (۲) کش‌های موتور؛
 # (۳) فایل‌های قدیمی چاپ حذف شوند.
 _v690_layout=(ROOT/"app/src/main/java/ir/exam/app/core/printing/WordPageLayout.kt").read_text()
 require("const val MARGIN = 40f" in _v689_pdf
         and "const val MARGIN_MM: Float = 14f" in _v690_layout
-        and "/ 520f" in _doc_editor_v63
+        and "/ 515f" in _doc_editor_v63
         and "/ 519f" not in _doc_editor_v63,
-        "V69.0 margin unification (print 40pt = editor 14mm, editor scale /520) is missing")
+        "V69.0 margin unification (print 40pt = editor 14mm, editor scale /515) is missing")
 require("fun layoutKey(" in _v689_pdf
         and "private val layoutCache = LruCacheK<StaticLayout>(" in _v689_pdf
         and "private val typefaceCache = HashMap<String, Typeface>()" in _v689_pdf
@@ -2613,6 +2613,35 @@ require(not (ROOT/"app/src/main/java/ir/exam/app/core/printing/A4LayoutEngine.kt
         and not (ROOT/"app/src/main/java/ir/exam/app/domain/model/PrintModels.kt").exists(),
         "V69.0 legacy print files (A4LayoutEngine/PdfExamRenderer/A4Preview/PrintModels) must be deleted")
 
+# ---- V70.0: آیکن پرینتر + پی دی اف مستقیم با iText 5 (openPDF) ----
+# (۱) کلاس خروجی PDF مستقیم با فورک آزاد iText 5؛ (۲) آیکن پرینتر روی کارت
+# آزمون در بخش چاپ؛ (۳) قابلیت‌های موجود (چاپ برگه/چاپ با کلید/ویرایش) بمانند.
+_v70_direct_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
+_v70_gradle=(ROOT/"app/build.gradle.kts").read_text()
+require(_v70_direct_pdf.exists()
+        and "class DirectPdfExporter(" in _v70_direct_pdf.read_text()
+        and "PageSize.A4" in _v70_direct_pdf.read_text()
+        and "BaseFont.IDENTITY_H" in _v70_direct_pdf.read_text()
+        and "PdfPTable" in _v70_direct_pdf.read_text()
+        and 'fonts/bnazanin.ttf' in _v70_direct_pdf.read_text()
+        and 'fonts/bnazanin_bold.ttf' in _v70_direct_pdf.read_text()
+        and "addMatching(" in _v70_direct_pdf.read_text()
+        and "includeAnswerKey" in _v70_direct_pdf.read_text(),
+        "V70.0 DirectPdfExporter (iText5/openPDF A4 + Identity-H + B Nazanin) is missing")
+require('implementation("com.github.librepdf:openpdf:1.3.43")' in _v70_gradle,
+        "V70.0 openPDF (iText 5 fork) dependency is missing")
+require('Icons.Outlined.Print' in _print_center_v62
+        and 'contentDescription = "پی دی اف مستقیم"' in _print_center_v62
+        and 'CreateDocument("application/pdf")' in _print_center_v62
+        and 'printableExam(examId, false, header' in _print_center_v62
+        and 'DirectPdfExporter(' in _print_center_v62,
+        "V70.0 printer icon + direct PDF flow on the print-center card is missing")
+require('Text("چاپ برگه")' in _print_center_v62
+        and 'Text("چاپ با کلید")' in _print_center_v62
+        and 'contentDescription = "ویرایش آزمون"' in _print_center_v62
+        and 'OfficialPrintController' in _print_center_v62,
+        "V70.0 must not break existing print-center capabilities (چاپ برگه/چاپ با کلید/ویرایش)")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2621,8 +2650,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 244
-        and _v694_changelog.startswith("V69.0:"),
-        "changelog must keep the full history + the new V69.0 line on top")
+        and _v694_changelog.startswith("V70.0:"),
+        "changelog must keep the full history + the new V70.0 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

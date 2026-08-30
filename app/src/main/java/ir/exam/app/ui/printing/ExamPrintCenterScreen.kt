@@ -1,5 +1,8 @@
 package ir.exam.app.ui.printing
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,6 +41,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,8 +55,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.github.jan.supabase.postgrest.postgrest
+import ir.exam.app.core.printing.DirectPdfExporter
 import ir.exam.app.core.printing.OfficialPrintController
+import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.domain.model.OfficialPrintHeader
+import kotlinx.coroutines.launch
 import ir.exam.app.ui.builder.JalaliDateTimeField
 import ir.exam.app.ui.builder.jalaliDisplay
 import ir.exam.app.ui.classes.TeacherSchoolItem
@@ -81,6 +89,31 @@ fun ExamPrintCenterScreen(
     var header by remember { mutableStateOf(OfficialPrintHeader()) }
     // مدارس عضو معلم برای انتخاب «نام مدرسه» در سربرگ (همان RPC نمای مدارس).
     var schools by remember { mutableStateOf<List<TeacherSchoolItem>>(emptyList()) }
+    // V70.0 — پی دی اف مستقیم با iText 5 (openPDF): آیکن پرینتر روی کارت هر آزمون
+    // فایل PDF را مستقیم (بدون پنجرهٔ چاپ سیستم) با همان قالب چاپ می‌سازد.
+    val scope = rememberCoroutineScope()
+    val portability = remember { SupabasePortabilityRepository() }
+    val directPdf = remember { DirectPdfExporter(context.applicationContext) }
+    var pendingPdfExamId by remember { mutableStateOf<String?>(null) }
+    var pdfStatus by remember { mutableStateOf<String?>(null) }
+    val createPdf = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        val examId = pendingPdfExamId
+        pendingPdfExamId = null
+        if (uri != null && examId != null) {
+            scope.launch {
+                pdfStatus = null
+                portability.printableExam(examId, false, header, layoutStore.read(examId))
+                    .onSuccess { printable ->
+                        directPdf.export(printable, uri)
+                            .onSuccess { pdfStatus = "فایل PDF ساخته شد." }
+                            .onFailure { pdfStatus = sanitizePdfError(it) }
+                    }
+                    .onFailure { pdfStatus = sanitizePdfError(it) }
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.load()
         runCatching {
@@ -116,6 +149,7 @@ fun ExamPrintCenterScreen(
             }
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        pdfStatus?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
         if (state.loading || state.portabilityLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
@@ -154,6 +188,18 @@ fun ExamPrintCenterScreen(
                                 Icon(
                                     Icons.Outlined.Edit,
                                     contentDescription = "ویرایش آزمون",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            // V70.0 — آیکن پرینتر: پی دی اف مستقیم با iText 5 (openPDF)
+                            // روی همان قالب چاپ، بدون پنجرهٔ چاپ سیستم.
+                            androidx.compose.material3.IconButton(onClick = {
+                                pendingPdfExamId = exam.id
+                                createPdf.launch("${exam.title.ifBlank { "آزمون" }}.pdf")
+                            }) {
+                                Icon(
+                                    Icons.Outlined.Print,
+                                    contentDescription = "پی دی اف مستقیم",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -330,3 +376,12 @@ private fun HeaderPreviewRow(right: String, center: String, left: String) {
         Spacer(Modifier.height(0.dp))
     }
 }
+
+/** V70.0 — پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */
+private fun sanitizePdfError(error: Throwable): String = error.message.orEmpty()
+    .substringBefore("URL:")
+    .substringBefore("Headers:")
+    .replace(Regex("(?i)authorization[^,\\n]*"), "")
+    .replace(Regex("(?i)apikey[^,\\n]*"), "")
+    .take(240)
+    .ifBlank { "ساخت پی دی اف ناموفق بود." }

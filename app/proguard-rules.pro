@@ -26,3 +26,9 @@
 # Third-party optional platform classes may be absent on some Android devices.
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
+
+# V70.0 — openPDF (فورک iText 5) برای پی دی اف مستقیم: کلاس‌هایش را حفظ کن و از
+# وابستگی‌های اختیاری دسکتاپ (AWT و …) که روی اندروید وجود ندارند چشم‌پوشی کن.
+-keep class com.lowagie.** { *; }
+-dontwarn com.lowagie.**
+-dontwarn java.awt.**

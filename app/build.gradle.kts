@@ -108,6 +108,10 @@ dependencies {
     // V53.1 — همان AndroidSVG بسته‌بندی‌شدهٔ coil-svg، به‌صورت صریح برای رندر
     // برداری شکل/جدول در PDF (OfficialPdfPrintAdapter) بدون WebView.
     implementation("com.caverock:androidsvg-aar:1.4")
+    // V70.0 — خروجی PDF مستقیم (فایل، بدون پنجرهٔ چاپ) با openPDF: فورک آزاد
+    // iText 5 (همان کتابخانهٔ اپ قدیمی؛ LGPL/MPL — برخلاف iText 5 اصلی که AGPL
+    // است). DirectPdfExporter از همین کتابخانه استفاده می‌کند.
+    implementation("com.github.librepdf:openpdf:1.3.43")
     implementation("io.github.jan-tennert.supabase:auth-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.4")
     implementation("io.github.jan-tennert.supabase:storage-kt:3.1.4")

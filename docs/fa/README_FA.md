@@ -66,13 +66,17 @@ SUPABASE_ANON_KEY=YOUR_ANON_KEY
 
 در مرحلهٔ ۷، پیاده‌سازی Bitmap/Exif، آپلود واقعی Supabase Storage و PDF A4 به این قراردادها متصل می‌شوند.
 
-## مرحله ۷ — پیش‌نمایش و PDF واقعی A4
-- `A4LayoutEngine`: یک موتور مشترک صفحه‌بندی برای preview و PDF.
-- `A4Page` و `PrintBlock`: مدل چاپی مستقل از Compose و Android View.
-- `PdfExamRenderer`: نقطهٔ تولید PDF Android با اندازهٔ 210×297mm در 300dpi.
-- `A4Preview`: نمایش با نسبت فیزیکی A4 در Compose.
+## مرحله ۷ — موتور واحد سند و چاپ (WYSIWYG)
+- `UnifiedDocumentEngine` در `OfficialPdfPrintAdapter.kt`: یک چیدمان واحد برای
+  چاپ رسمی و ویرایشگر سند؛ سربرگ فقط صفحهٔ ۱، امضا فقط صفحهٔ آخر.
+- `OfficialPrintController`: چاپ از مسیر PrintManager (گفتگوی چاپ سیستم).
+- `ExamDocumentEditorScreen.kt`: ویرایشگر سند Word-مانند با صفحه‌بندی واقعی A4.
+- `WordPageLayout.kt`: ثابت‌های A4 و حاشیهٔ 14mm و helperهای تبدیل mm/pt.
+- `OfficialPrintModels.kt`: مدل‌های چاپی مستقل از Compose/View.
 
-قانون اصلی: preview نباید layout جداگانه داشته باشد؛ هر دو از A4LayoutEngine استفاده می‌کنند. فونت‌های `AppFont` در مرحلهٔ تکمیل چاپ به `res/font` وصل می‌شوند.
+قانون اصلی: پیش‌نمایش و ویرایشگر layout جداگانه ندارند؛ هر دو از همان موتور
+واحد استفاده می‌کنند. فونت فارسی چاپ `B Nazanin` از `assets/fonts/bnazanin.ttf`
+بارگذاری می‌شود و در نبود آن وزیرمتن.
 
 ## مرحله ۸ — تصحیح، بازخورد و گزارش
 - `AutoGrader`: قرارداد تصحیح خودکار به‌ازای هر نوع سؤال.

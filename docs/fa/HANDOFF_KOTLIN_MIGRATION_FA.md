@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V69.0 پاک‌سازی کد مرده + یکسان‌سازی حاشیه (چاپ 40pt = ویرایشگر 14mm) + موتور حرفه‌ای با کش‌های LRU؛ پیش از آن: V68.9.4
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V70.0 آیکن پرینتر + پی دی اف مستقیم با iText 5 (openPDF)؛ پیش از آن: V69.0
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -13439,7 +13439,7 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md   (همین بخش ۲۶۳)
 ### ۲) یکسان‌سازی حاشیه
 - حاشیهٔ چاپ `MARGIN` در موتور واحد: 38pt → 40pt (14mm × 2.8346 ≈ 39.7) — حالا هم‌تراز حاشیهٔ 14mm ویرایشگر.
 - عرض مفید چاپ: 595 − 2×40 = 515pt (قبلاً 519pt).
-- مقیاس ویرایشگر `printScale` از `/519f` به `/520f` همگام شد (خط ~۷۸۸ ویرایشگر).
+- مقیاس ویرایشگر `printScale` از `/519f` به `/515f` همگام شد (خط ~۷۹۰ ویرایشگر؛ 595−2×40=515).
 - سوزن تست V68_6 (`595f - 2f*38f`) به 40pt به‌روز شد تا هم‌خوان بماند.
 
 ### ۳) موتور قدرتمند/حرفه‌ای (پرفورمنس)
@@ -13460,16 +13460,51 @@ app/src/main/java/ir/exam/app/domain/model/PrintModels.kt
 app/src/main/java/ir/exam/app/core/printing/LruCacheK.kt
 تغییر:
 app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt   (حاشیه 40pt + کش‌ها + layoutKey + fontFamilyFrom)
-app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt     (/520f + حذف resizeFigureBy)
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt     (/515f + حذف resizeFigureBy)
 app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt      (عرض مفید 40pt)
-scripts/verify_native_final.py                                            (باند V69.0 + به‌روزرسانی سوزن‌های 519f/resizeFigureBy/changelog)
+scripts/verify_native_final.py                                            (باند V69.0 + به‌روزرسانی سوزن‌های 515f/resizeFigureBy/changelog)
 text/CHANGELOG_FA.txt                                                     (خط V69.0)
 docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                                    (همین بخش ۲۶۴)
+docs/fa/README_FA.md                                                       (بازنویسی بخش مرحله ۷ — معماری موتور واحد)
 ```
 
 ### SQL جدید: ندارد — Edge deploy: ندارد
 
 ### نتیجه بررسی (verify)
 `python3 scripts/verify_native_final.py` باید `FINAL_NATIVE_VERIFY=PASS` بدهد.
-(باند V69.0: حاشیهٔ 40pt + /520f، وجود LruCacheK، نبودِ چهار فایل قدیمی چاپ، و کش‌های موتور را الزامی می‌کند.)
+(باند V69.0: حاشیهٔ 40pt + /515f، وجود LruCacheK، نبودِ چهار فایل قدیمی چاپ، و کش‌های موتور را الزامی می‌کند.)
 
+---
+
+## ۲۶۵) V70.0 — آیکن پرینتر + پی دی اف مستقیم با iText 5 (openPDF)
+
+### درخواست کاربر
+«یک آیکن پرینتر روی کارت آزمون در بخش چاپ آزمون اضافه کن و پی دی اف مستقیم با iText 5 با قالب بسازد. قابلیت‌های موجود دستکاری نشود.»
+
+### چه شد
+- آیکن پرینتر (Icons.Outlined.Print) کنار مداد، روی کارت هر آزمون در صفحهٔ «چاپ آزمون» اضافه شد.
+- لمس آیکن → SAF (CreateDocument با MIME application/pdf) محل ذخیره را می‌پرسد → فایل PDF مستقیم ساخته می‌شود، بدون پنجرهٔ چاپ سیستم.
+- `DirectPdfExporter` با openPDF نوشته شد: فورک آزاد iText 5 (همان کتابخانهٔ اپ قدیمی که در APK آزاد بود؛ نسخهٔ iText 5.5.x اصلی AGPL است، openPDF همان کد با LGPL/MPL).
+- قالب خروجی = همان قالب چاپ رسمی: A4 با حاشیهٔ 40pt، سربرگ سه‌ستونهٔ رسمی با آرم (130/235/130)، نوار درس/مدت/بارم (کادردار)، سؤال شماره‌دار (کادردار)، متن با استایل تکه‌ای، فرمول (متن‌شده)، گزینه‌ها با شمارهٔ بولد، جورکردنی (راست/↔/چپ)، تصویر گالری، شکل/جدول (AndroidSVG) و سطر پاسخ؛ فونت B Nazanin با Identity-H و وزیرمتن پشتیبان.
+- قابلیت‌های موجود دست نخورد: «چاپ برگه»، «چاپ با کلید» (مسیر PrintManager) و مداد ویرایشگر سند مثل قبل کار می‌کنند.
+
+### فایل‌های تغییرکرده
+```text
+افزوده:
+app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt
+تغییر:
+app/build.gradle.kts                                               (وابستگی openpdf 1.3.43)
+app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt (آیکن پرینتر + SAF + پیام وضعیت)
+scripts/verify_native_final.py                                     (باند V70.0)
+text/CHANGELOG_FA.txt                                              (خط V70.0)
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                             (همین بخش ۲۶۵)
+```
+
+### SQL جدید: ندارد — Edge deploy: ندارد
+
+### نتیجه بررسی (verify)
+`python3 scripts/verify_native_final.py` باید `FINAL_NATIVE_VERIFY=PASS` بدهد.
+(باند V70.0: وجود DirectPdfExporter با A4/Identity-H/B Nazanin، وابستگی openpdf، آیکن پرینتر + CreateDocument PDF روی کارت، و دست‌نخوردن چاپ برگه/چاپ با کلید/ویرایش را الزامی می‌کند.)
+
+### نکتهٔ اجرا
+در WSL با `./gradlew assembleDebug` کامپایل می‌شود؛ وابستگی openpdf از Maven Central دانلود می‌شود (اینترنت لازم است).
