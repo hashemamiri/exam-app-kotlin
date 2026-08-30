@@ -89,7 +89,7 @@ fun ExamPrintCenterScreen(
     var header by remember { mutableStateOf(OfficialPrintHeader()) }
     // مدارس عضو معلم برای انتخاب «نام مدرسه» در سربرگ (همان RPC نمای مدارس).
     var schools by remember { mutableStateOf<List<TeacherSchoolItem>>(emptyList()) }
-    // V70.0 — پی دی اف مستقیم با iText 5 (openPDF): آیکن پرینتر روی کارت هر آزمون
+    // V72.0 — پی دی اف مستقیم با iText 7: آیکن پرینتر روی کارت هر آزمون
     // فایل PDF را مستقیم (بدون پنجرهٔ چاپ سیستم) با همان قالب چاپ می‌سازد.
     val scope = rememberCoroutineScope()
     val portability = remember { SupabasePortabilityRepository() }
@@ -215,7 +215,7 @@ fun ExamPrintCenterScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            // V70.0 — آیکن پرینتر: پی دی اف مستقیم با iText 5 (openPDF)
+                            // V72.0 — آیکن پرینتر: پی دی اف مستقیم با iText 7
                             // روی همان قالب چاپ، بدون پنجرهٔ چاپ سیستم.
                             androidx.compose.material3.IconButton(onClick = {
                                 pdfStatus = null

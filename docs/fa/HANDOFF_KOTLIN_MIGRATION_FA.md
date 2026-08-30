@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V70.0 آیکن پرینتر + پی دی اف مستقیم با iText 5 (openPDF)؛ پیش از آن: V69.0
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0 مهاجرت PDF مستقیم به iText 7 for Android؛ پیش از آن: V71.0
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -13770,4 +13770,84 @@ CLEAN_V71_ALL_CHECKS=PASS
 ۶) اگر ذخیره واقعاً شکست خورد، نباید موفقیت نشان دهد؛ متن قرمز دقیق شامل اندازهٔ
    مورد انتظار و اندازهٔ بازخوانی‌شده ارسال شود.
 ۷) چاپ برگه، چاپ با کلید و ویرایش سند مثل قبل کار کنند.
+```
+
+
+## ۲۶۹) V72.0 — مهاجرت خروجی PDF مستقیم از OpenPDF/iText 5 به iText 7
+
+### درخواست کاربر
+
+```text
+برای چاپ آزمون از itext7 استفاده کن
+```
+
+### چه شد
+
+```text
+- وابستگی رسمی iText 7 for Android نسخهٔ 7.2.5 اضافه شد:
+  com.itextpdf.android:kernel-android و layout-android از مخزن رسمی
+  https://repo.itextsupport.com/android.
+- DirectPdfExporter از API قدیمی com.lowagie/openPDF به API iText 7
+  منتقل شد: PdfWriter، WriterProperties، PdfDocument، Document، Table،
+  Cell، Paragraph، Image، PdfFontFactory و ImageDataFactory.
+- قالب چاپ حفظ شد: A4، حاشیهٔ 40pt، سربرگ رسمی سه‌ستونه با آرم،
+  درس/مدت/بارم، سؤال، گزینه، جورکردنی، تصویر، پاسخ و پانوشت.
+- فونت B Nazanin/وزیرمتن با PdfFontFactory، Identity-H و PREFER_EMBEDDED
+  ساخته می‌شود. RTL با BaseDirection.RIGHT_TO_LEFT تنظیم شده و شکل‌دهی
+  حروف فارسی با Android ICU انجام می‌شود تا خروجی فارسی به مسیر قبلی وابسته نباشد.
+- PdfArtifactVerifier به PdfReader/PdfDocument iText 7 منتقل شد و کنترل
+  هدر PDF، EOF، بازسازی xref، تعداد صفحه و SHA-256 را نگه داشت.
+- خط لولهٔ V71 بدون تغییر مفهومی حفظ شد: stage خصوصی، compression،
+  fsync، ثبت rwt/wt در SAF، read-back مقصد و اعلام موفقیت فقط پس از تطبیق دقیق.
+- فایل منسوخ com/lowagie حذف شد؛ proguard نیز از lowagie به com.itextpdf
+  منتقل شد. آیکن پرینتر و چاپ برگه/چاپ با کلید/ویرایش سند دست‌نخورده ماندند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+settings.gradle.kts
+app/build.gradle.kts
+app/proguard-rules.pro
+app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt
+app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt
+app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt (جدید)
+app/src/main/java/com/lowagie/text/pdf/PersianTextShaper.kt (حذف)
+app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V70_0DirectPdfTest.kt
+app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt
+app/src/test/java/ir/exam/app/core/printing/V71_0VerifiedPdfPipelineTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### SQL و عملیات خارجی
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Dependency جدید: iText 7 for Android 7.2.5
+مجوز: AGPL یا commercial iText باید پیش از انتشار محصول بررسی شود.
+```
+
+### تست و وضعیت Build
+
+```text
+python3 -m py_compile scripts/verify_native_final.py → PASS
+FINAL_NATIVE_VERIFY → باید PASS شود
+تست واقعی Gradle/Android → در حال بررسی در همین محیط؛ در صورت نبود JDK/SDK
+  کامل، اجرای نهایی باید در GitHub Actions انجام شود.
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) «چاپ آزمون» → آیکن پرینتر → انتخاب Downloads؛ فایل باید غیرصفر باشد.
+۲) PDF باید با viewer گوشی باز شود و متن فارسی/RTL، سربرگ و آرم را نشان دهد.
+۳) آزمون دارای تصویر/شکل و آزمون دارای فرمول هم بررسی شود.
+۴) «چاپ برگه»، «چاپ با کلید» و «ویرایش سند» مثل قبل کار کنند.
+۵) اگر write/read-back شکست خورد، پیام موفقیت نمایش داده نشود و خطای قرمز بیاید.
+۶) پیش از انتشار Release، انتخاب AGPL یا مجوز commercial iText 7 مستند شود.
 ```

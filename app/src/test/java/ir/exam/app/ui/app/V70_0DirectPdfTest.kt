@@ -1,12 +1,12 @@
 package ir.exam.app.ui.app
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V70.0 — آیکن پرینتر روی کارت آزمون + پی دی اف مستقیم با iText 5 (openPDF).
- * قابلیت‌های موجود (چاپ برگه/چاپ با کلید/ویرایش سند) نباید دست بخورند.
+ * V72.0 — خروجی PDF مستقیم با iText 7 for Android + حفظ قابلیت‌های چاپ آزمون.
  */
 class V70_0DirectPdfTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -22,27 +22,32 @@ class V70_0DirectPdfTest {
         source("app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt")
     }
     private val gradle by lazy { source("app/build.gradle.kts") }
+    private val settings by lazy { source("settings.gradle.kts") }
 
     @Test
-    fun `direct pdf exporter uses iText 5 openPDF with the print template`() {
+    fun `direct pdf exporter uses iText7 with the print template`() {
         assertTrue("class DirectPdfExporter(" in exporter)
         assertTrue("PageSize.A4" in exporter)
-        assertTrue("BaseFont.IDENTITY_H" in exporter)
-        assertTrue("PdfPTable" in exporter)
+        assertTrue("PdfEncodings.IDENTITY_H" in exporter)
+        assertTrue("Table(" in exporter)
         assertTrue("fonts/bnazanin.ttf" in exporter)
         assertTrue("fonts/bnazanin_bold.ttf" in exporter)
         assertTrue("addMatching(" in exporter)
         assertTrue("includeAnswerKey" in exporter)
-        assertTrue("PdfWriter.RUN_DIRECTION_RTL" in exporter)
-        // V70.1 — openPDF 1.3.43: خاصیت واقعی PdfPCell (نه useAscender) و
-        // شکل‌نویسی فارسی (اتصال حروف) برای هم‌ارزی با خروجی اپ قدیمی.
-        assertTrue("isUseAscender = true" in exporter)
+        assertTrue("BaseDirection.RIGHT_TO_LEFT" in exporter)
+        assertTrue("PdfFontFactory" in exporter)
+        assertTrue("WriterProperties()" in exporter)
+        assertTrue("setFullCompressionMode(true)" in exporter)
         assertTrue("PersianTextShaper.shape" in exporter)
     }
 
     @Test
-    fun `openpdf dependency is declared`() {
-        assertTrue("com.github.librepdf:openpdf:1.3.43" in gradle)
+    fun `official iText7 android dependencies and repository are declared`() {
+        assertTrue("com.itextpdf.android:kernel-android:7.2.5" in gradle)
+        assertTrue("com.itextpdf.android:layout-android:7.2.5" in gradle)
+        assertTrue("https://repo.itextsupport.com/android" in settings)
+        assertFalse("com.github.librepdf:openpdf" in gradle)
+        assertFalse("com.lowagie" in exporter)
     }
 
     @Test

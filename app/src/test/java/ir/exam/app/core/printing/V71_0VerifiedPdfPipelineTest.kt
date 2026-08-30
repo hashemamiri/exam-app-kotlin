@@ -1,10 +1,11 @@
 package ir.exam.app.core.printing
 
-import com.lowagie.text.Document
-import com.lowagie.text.PageSize
-import com.lowagie.text.Paragraph
-import com.lowagie.text.pdf.PdfStream
-import com.lowagie.text.pdf.PdfWriter
+import com.itextpdf.kernel.geom.PageSize
+import com.itextpdf.kernel.pdf.PdfDocument
+import com.itextpdf.kernel.pdf.PdfWriter
+import com.itextpdf.kernel.pdf.WriterProperties
+import com.itextpdf.layout.Document
+import com.itextpdf.layout.element.Paragraph
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -15,7 +16,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** V71.0 — تست واقعی ساخت/Parse/هش و قرارداد ذخیرهٔ تأییدشدهٔ PDF. */
+/** V72.0 — تست واقعی ساخت/Parse/هش و قرارداد ذخیرهٔ تأییدشدهٔ PDF با iText 7. */
 class V71_0VerifiedPdfPipelineTest {
     private fun root(): File = listOf(File("."), File("..")).first {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
@@ -24,24 +25,24 @@ class V71_0VerifiedPdfPipelineTest {
     private fun source(path: String) = File(root(), path).readText()
 
     private fun validPdf(): File {
-        val file = File.createTempFile("v71-valid-", ".pdf")
+        val file = File.createTempFile("v72-valid-", ".pdf")
         FileOutputStream(file).use { output ->
-            val document = Document(PageSize.A4)
-            val writer = PdfWriter.getInstance(document, output)
-            writer.setCloseStream(false)
-            writer.setFullCompression()
-            writer.setCompressionLevel(PdfStream.BEST_COMPRESSION)
-            document.open()
+            val writer = PdfWriter(
+                output,
+                WriterProperties()
+                    .setFullCompressionMode(true)
+                    .setCompressionLevel(9)
+            )
+            val pdf = PdfDocument(writer)
+            val document = Document(pdf, PageSize.A4)
             document.add(Paragraph("verified pdf pipeline"))
             document.close()
-            output.flush()
-            output.fd.sync()
         }
         return file
     }
 
     @Test
-    fun `real openpdf artifact is parsed and fingerprinted`() {
+    fun `real itext7 artifact is parsed and fingerprinted`() {
         val file = validPdf()
         try {
             val artifact = PdfArtifactVerifier.inspect(file)
@@ -56,9 +57,9 @@ class V71_0VerifiedPdfPipelineTest {
 
     @Test
     fun `zero and truncated files are rejected`() {
-        val zero = File.createTempFile("v71-zero-", ".pdf")
-        val truncated = File.createTempFile("v71-truncated-", ".pdf").apply {
-            writeText("%PDF-1.5\nnot-finished")
+        val zero = File.createTempFile("v72-zero-", ".pdf")
+        val truncated = File.createTempFile("v72-truncated-", ".pdf").apply {
+            writeText("%PDF-1.7\nnot-finished")
         }
         try {
             assertTrue(runCatching { PdfArtifactVerifier.inspect(zero) }.exceptionOrNull() is IOException)
@@ -83,15 +84,16 @@ class V71_0VerifiedPdfPipelineTest {
     }
 
     @Test
-    fun `exporter enables professional openpdf finalization and compression`() {
+    fun `exporter enables professional itext7 finalization and compression`() {
         val exporter = source("app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
-        assertTrue("withContext(Dispatchers.IO)" in exporter)
-        assertTrue("writer.setCloseStream(false)" in exporter)
-        assertTrue("writer.setFullCompression()" in exporter)
-        assertTrue("writer.setCompressionLevel(PdfStream.BEST_COMPRESSION)" in exporter)
+        assertTrue("WriterProperties()" in exporter)
+        assertTrue("PdfWriter(" in exporter)
+        assertTrue("pdf.setCloseWriter(false)" in exporter)
+        assertTrue("setFullCompressionMode(true)" in exporter)
+        assertTrue("setCompressionLevel(9)" in exporter)
         assertTrue("output.channel.force(true)" in exporter)
-        assertTrue("document.addTitle(" in exporter)
-        assertTrue("document.addCreator(" in exporter)
+        assertTrue("setTitle(" in exporter)
+        assertTrue("setCreator(" in exporter)
         assertTrue("PdfArtifactVerifier.inspect(staged)" in exporter)
         assertTrue("verifiedWriter.commit(staged, target, artifact)" in exporter)
         assertTrue("loadBitmapSafely" in exporter)
@@ -108,5 +110,16 @@ class V71_0VerifiedPdfPipelineTest {
         assertTrue("enabled = !pdfExporting" in screen)
         assertTrue("finally {\n                    pdfExporting = false" in screen)
         assertFalse("pdfStatus = \"فایل PDF ساخته شد.\"" in screen)
+    }
+
+    @Test
+    fun `artifact verifier uses itext7 and no openpdf remains in active printing`() {
+        val verifier = source("app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt")
+        val exporter = source("app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
+        assertTrue("com.itextpdf.kernel.pdf.PdfReader" in verifier)
+        assertTrue("PdfDocument(reader)" in verifier)
+        assertTrue("reader.hasRebuiltXref()" in verifier)
+        assertFalse("com.lowagie" in verifier)
+        assertFalse("com.lowagie" in exporter)
     }
 }

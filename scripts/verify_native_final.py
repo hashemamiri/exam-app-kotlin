@@ -2613,105 +2613,91 @@ require(not (ROOT/"app/src/main/java/ir/exam/app/core/printing/A4LayoutEngine.kt
         and not (ROOT/"app/src/main/java/ir/exam/app/domain/model/PrintModels.kt").exists(),
         "V69.0 legacy print files (A4LayoutEngine/PdfExamRenderer/A4Preview/PrintModels) must be deleted")
 
-# ---- V70.0: آیکن پرینتر + پی دی اف مستقیم با iText 5 (openPDF) ----
-# (۱) کلاس خروجی PDF مستقیم با فورک آزاد iText 5؛ (۲) آیکن پرینتر روی کارت
-# آزمون در بخش چاپ؛ (۳) قابلیت‌های موجود (چاپ برگه/چاپ با کلید/ویرایش) بمانند.
-_v70_direct_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
-_v70_gradle=(ROOT/"app/build.gradle.kts").read_text()
-require(_v70_direct_pdf.exists()
-        and "class DirectPdfExporter(" in _v70_direct_pdf.read_text()
-        and "PageSize.A4" in _v70_direct_pdf.read_text()
-        and "BaseFont.IDENTITY_H" in _v70_direct_pdf.read_text()
-        and "PdfPTable" in _v70_direct_pdf.read_text()
-        and 'fonts/bnazanin.ttf' in _v70_direct_pdf.read_text()
-        and 'fonts/bnazanin_bold.ttf' in _v70_direct_pdf.read_text()
-        and "addMatching(" in _v70_direct_pdf.read_text()
-        and "includeAnswerKey" in _v70_direct_pdf.read_text(),
-        "V70.0 DirectPdfExporter (iText5/openPDF A4 + Identity-H + B Nazanin) is missing")
-require('implementation("com.github.librepdf:openpdf:1.3.43")' in _v70_gradle,
-        "V70.0 openPDF (iText 5 fork) dependency is missing")
+# ---- V72.0: مهاجرت خروجی PDF مستقیم از OpenPDF/iText 5 به iText 7 ----
+# موتور مستقیم PDF باید از بستهٔ رسمی iText 7 for Android استفاده کند؛ چاپ
+# سیستمی OfficialPdfPrintAdapter و قابلیت‌های چاپ موجود همچنان مستقل‌اند.
+_v72_direct_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
+_v72_verifier=(ROOT/"app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt")
+_v72_gradle=(ROOT/"app/build.gradle.kts").read_text()
+_v72_settings=(ROOT/"settings.gradle.kts").read_text()
+_v72_direct_pdf_text=_v72_direct_pdf.read_text() if _v72_direct_pdf.exists() else ""
+_v72_verifier_text=_v72_verifier.read_text() if _v72_verifier.exists() else ""
+require(_v72_direct_pdf.exists()
+        and "class DirectPdfExporter(" in _v72_direct_pdf_text
+        and "PageSize.A4" in _v72_direct_pdf_text
+        and "PdfEncodings.IDENTITY_H" in _v72_direct_pdf_text
+        and "PdfFontFactory" in _v72_direct_pdf_text
+        and "Table(" in _v72_direct_pdf_text
+        and 'fonts/bnazanin.ttf' in _v72_direct_pdf_text
+        and 'fonts/bnazanin_bold.ttf' in _v72_direct_pdf_text
+        and "addMatching(" in _v72_direct_pdf_text
+        and "includeAnswerKey" in _v72_direct_pdf_text
+        and "BaseDirection.RIGHT_TO_LEFT" in _v72_direct_pdf_text
+        and "PersianTextShaper.shape" in _v72_direct_pdf_text,
+        "V72.0 iText7 DirectPdfExporter (A4 + Identity-H + B Nazanin) is missing")
+require('implementation("com.itextpdf.android:kernel-android:7.2.5")' in _v72_gradle
+        and 'implementation("com.itextpdf.android:layout-android:7.2.5")' in _v72_gradle
+        and 'https://repo.itextsupport.com/android' in _v72_settings,
+        "V72.0 official iText7 Android repository/dependencies are missing")
+require('implementation("com.github.librepdf:openpdf:1.3.43")' not in _v72_gradle
+        and "com.lowagie" not in _v72_direct_pdf_text
+        and not (ROOT/"app/src/main/java/com/lowagie").exists()
+        and "PersianTextShaper" in (ROOT/"app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt").read_text(),
+        "V72.0 active direct-PDF path still contains OpenPDF/lowagie or lost Persian shaping")
 require('Icons.Outlined.Print' in _print_center_v62
         and 'contentDescription = "پی دی اف مستقیم"' in _print_center_v62
         and 'CreateDocument("application/pdf")' in _print_center_v62
         and 'printableExam(examId, false, header' in _print_center_v62
         and 'DirectPdfExporter(' in _print_center_v62,
-        "V70.0 printer icon + direct PDF flow on the print-center card is missing")
+        "V72.0 printer icon + direct PDF flow on the print-center card is missing")
 require('Text("چاپ برگه")' in _print_center_v62
         and 'Text("چاپ با کلید")' in _print_center_v62
         and 'contentDescription = "ویرایش آزمون"' in _print_center_v62
         and 'OfficialPrintController' in _print_center_v62,
-        "V70.0 must not break existing print-center capabilities (چاپ برگه/چاپ با کلید/ویرایش)")
+        "V72.0 must not break existing print-center capabilities (چاپ برگه/چاپ با کلید/ویرایش)")
 
-# ---- V70.2 (ارتقایافته در V71.0): PDF کامل پیش از لمس مقصد + حذف فایل خراب ----
-# V71.0 ساختِ کامل را از RAM به فایل خصوصی مرحله‌ای منتقل کرد تا برای PDFهای
-# بزرگ مقیاس‌پذیر باشد؛ اصل قرارداد V70.2 (عدم نوشتن تدریجی iText روی SAF) حفظ است.
-_v70_direct_pdf_text=_v70_direct_pdf.read_text()
-require("File.createTempFile(" in _v70_direct_pdf_text
-        and "FileOutputStream(staged).use" in _v70_direct_pdf_text
-        and "buildPdf(withImages, output)" in _v70_direct_pdf_text
-        and "PdfArtifactVerifier.inspect(staged)" in _v70_direct_pdf_text
-        and "contentResolver.delete(target, null, null)" in _v70_direct_pdf_text,
-        "V70.2/V71.0 finalized staging + delete-on-failure contract is missing")
-require("stream.use { buildPdf(withImages, it) }" not in _v70_direct_pdf_text
-        and "buildPdf(withImages, buffer)" not in _v70_direct_pdf_text
-        and "buffer.toByteArray()" not in _v70_direct_pdf_text,
-        "V70.2/V71.0 must not write iText directly to SAF or hold the complete PDF in RAM")
+# خط لولهٔ V71 در مهاجرت کتابخانه حفظ می‌شود: ساخت مرحله‌ای، finalization،
+# اعتبارسنجی iText7، ذخیرهٔ بادوام و read-back دقیق مقصد.
+require("File.createTempFile(" in _v72_direct_pdf_text
+        and "FileOutputStream(staged).use" in _v72_direct_pdf_text
+        and "buildPdf(withImages, output)" in _v72_direct_pdf_text
+        and "PdfArtifactVerifier.inspect(staged)" in _v72_direct_pdf_text
+        and "verifiedWriter.commit(staged, target, artifact)" in _v72_direct_pdf_text
+        and "contentResolver.delete(target, null, null)" in _v72_direct_pdf_text
+        and "pdf.setCloseWriter(false)" in _v72_direct_pdf_text
+        and "WriterProperties()" in _v72_direct_pdf_text
+        and "setFullCompressionMode(true)" in _v72_direct_pdf_text
+        and "setCompressionLevel(9)" in _v72_direct_pdf_text,
+        "V72.0 finalized staging/compression pipeline is missing")
+require("stream.use { buildPdf(withImages, it) }" not in _v72_direct_pdf_text
+        and "buildPdf(withImages, buffer)" not in _v72_direct_pdf_text
+        and "buffer.toByteArray()" not in _v72_direct_pdf_text,
+        "V72.0 must not write iText directly to SAF or hold the complete PDF in RAM")
 
-# ---- V70.3: هات‌فیکس کامپایل تست V70.2 — مسیر فونت‌ها باید String باشد ----
-# Kotlin کوتیشن تکی را فقط برای یک Char می‌پذیرد؛ مسیر چندحرفی فونت باید با
-# کوتیشن دوتایی نوشته شود. این باند هم شکل درست را الزام می‌کند و هم دو شکل
-# معیوبی را که در CI خطای Too many characters in a character literal دادند رد می‌کند.
-_v703_atomic_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt")
-_v703_atomic_test_text=_v703_atomic_test.read_text(encoding="utf-8") if _v703_atomic_test.exists() else ""
-require(_v703_atomic_test.exists()
-        and 'assertTrue("fonts/bnazanin.ttf" in exporter)' in _v703_atomic_test_text
-        and 'assertTrue("fonts/bnazanin_bold.ttf" in exporter)' in _v703_atomic_test_text
-        and "assertTrue('fonts/bnazanin.ttf' in exporter)" not in _v703_atomic_test_text
-        and "assertTrue('fonts/bnazanin_bold.ttf' in exporter)" not in _v703_atomic_test_text,
-        "V70.3 test compile fix is missing: multi-character font paths must be Kotlin Strings, not Char literals")
-
-# ---- V71.0: خط لولهٔ حرفه‌ای PDF — parse + durable SAF + read-back SHA-256 ----
-_v71_integrity=(ROOT/"app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt")
-_v71_saf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt")
-_v71_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V71_0VerifiedPdfPipelineTest.kt")
-_v71_integrity_text=_v71_integrity.read_text() if _v71_integrity.exists() else ""
-_v71_saf_text=_v71_saf.read_text() if _v71_saf.exists() else ""
-require(_v71_integrity.exists()
-        and "PdfReader(file.absolutePath)" in _v71_integrity_text
-        and '"%PDF-"' in _v71_integrity_text
-        and '"%%EOF"' in _v71_integrity_text
-        and 'MessageDigest.getInstance("SHA-256")' in _v71_integrity_text
-        and "reader.numberOfPages" in _v71_integrity_text,
-        "V71.0 OpenPDF parse/envelope/page-count/SHA-256 artifact validation is missing")
-require(_v71_saf.exists()
-        and 'openFileDescriptor(target, "rwt")' in _v71_saf_text
-        and "ParcelFileDescriptor.AutoCloseOutputStream" in _v71_saf_text
-        and "output.channel.truncate(0L)" in _v71_saf_text
-        and "output.channel.force(true)" in _v71_saf_text
-        and "output.fd.sync()" in _v71_saf_text
-        and 'openOutputStream(target, "wt")' in _v71_saf_text
-        and "openInputStream(target)" in _v71_saf_text
-        and "PdfArtifactVerifier::fingerprint" in _v71_saf_text
-        and "expected.hasSameBytes" in _v71_saf_text,
-        "V71.0 durable rwt/wt SAF commit + exact destination read-back is missing")
-require("withContext(Dispatchers.IO)" in _v70_direct_pdf_text
-        and "writer.setCloseStream(false)" in _v70_direct_pdf_text
-        and "writer.setFullCompression()" in _v70_direct_pdf_text
-        and "writer.setCompressionLevel(PdfStream.BEST_COMPRESSION)" in _v70_direct_pdf_text
-        and "verifiedWriter.commit(staged, target, artifact)" in _v70_direct_pdf_text
-        and "loadBitmapSafely" in _v70_direct_pdf_text,
-        "V71.0 professional OpenPDF finalization/compression/background pipeline is missing")
+require(_v72_verifier.exists()
+        and "com.itextpdf.kernel.pdf.PdfReader" in _v72_verifier_text
+        and "PdfDocument(reader)" in _v72_verifier_text
+        and "reader.hasRebuiltXref()" in _v72_verifier_text
+        and '"%PDF-"' in _v72_verifier_text
+        and '"%%EOF"' in _v72_verifier_text
+        and 'MessageDigest.getInstance("SHA-256")' in _v72_verifier_text
+        and "pdf.numberOfPages" in _v72_verifier_text
+        and "com.lowagie" not in _v72_verifier_text,
+        "V72.0 iText7 parse/envelope/page-count/SHA-256 artifact validation is missing")
+_v72_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V71_0VerifiedPdfPipelineTest.kt")
+_v72_test_text=_v72_test.read_text() if _v72_test.exists() else ""
+require(_v72_test.exists()
+        and "real itext7 artifact is parsed and fingerprinted" in _v72_test_text
+        and "zero and truncated files are rejected" in _v72_test_text
+        and "WriterProperties()" in _v72_test_text,
+        "V72.0 real iText7 validation regression test is missing")
 require("فایل PDF تأیید و ذخیره شد" in _print_center_v62
         and "receipt.sizeKiB" in _print_center_v62
         and "receipt.pageCount" in _print_center_v62
         and "pdfStatusIsError" in _print_center_v62
         and "enabled = !pdfExporting" in _print_center_v62
         and 'pdfStatus = "فایل PDF ساخته شد."' not in _print_center_v62,
-        "V71.0 UI must report success only after verified receipt (size + page count)")
-require(_v71_test.exists()
-        and "real openpdf artifact is parsed and fingerprinted" in _v71_test.read_text()
-        and "zero and truncated files are rejected" in _v71_test.read_text(),
-        "V71.0 real JVM OpenPDF validation regression test is missing")
+        "V72.0 UI must report success only after verified receipt (size + page count)")
 
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
@@ -2721,7 +2707,7 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 246
-        and _v694_changelog.startswith("V71.0:"),
+        and _v694_changelog.startswith("V72.0:"),
         "changelog must keep the full history + the new V71.0 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors

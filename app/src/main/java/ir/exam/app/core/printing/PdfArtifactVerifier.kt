@@ -1,6 +1,7 @@
 package ir.exam.app.core.printing
 
-import com.lowagie.text.pdf.PdfReader
+import com.itextpdf.kernel.pdf.PdfDocument
+import com.itextpdf.kernel.pdf.PdfReader
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
@@ -8,7 +9,7 @@ import java.io.InputStream
 import java.io.RandomAccessFile
 import java.security.MessageDigest
 
-/** مشخصات یک PDF نهایی که هم ساختارش با OpenPDF خوانده شده و هم اثرانگشت دارد. */
+/** مشخصات یک PDF نهایی که با iText 7 خوانده شده و اثرانگشت دارد. */
 internal data class PdfArtifact(
     val byteCount: Long,
     val pageCount: Int,
@@ -25,12 +26,12 @@ internal data class PdfFingerprint(
 )
 
 /**
- * V71.0 — اعتبارسنج مستقل فایل PDF.
+ * V72.0 — اعتبارسنج مستقل فایل PDF با iText 7.
  *
  * موفقیت صرفاً «بدون exception تمام‌شدن write» نیست: فایل مرحله‌ای باید envelope
- * استاندارد PDF داشته باشد، PdfReader آن را بدون بازسازی بخواند، حداقل یک صفحه
- * داشته باشد و اثرانگشت SHA-256 آن مشخص باشد. همین اثرانگشت بعداً از URI مقصد
- * دوباره محاسبه می‌شود تا فایل صفر/ناقص هرگز موفقیت گزارش نشود.
+ * استاندارد PDF داشته باشد، PdfReader/PdfDocument آن را بدون بازسازی بخوانند،
+ * حداقل یک صفحه داشته باشد و اثرانگشت SHA-256 آن مشخص باشد. همین اثرانگشت
+ * بعداً از URI مقصد دوباره محاسبه می‌شود تا فایل صفر/ناقص هرگز موفقیت گزارش نشود.
  */
 internal object PdfArtifactVerifier {
     private val pdfHeader = "%PDF-".toByteArray(Charsets.US_ASCII)
@@ -45,17 +46,23 @@ internal object PdfArtifactVerifier {
         requirePdfEnvelope(file)
 
         val reader = try {
-            PdfReader(file.absolutePath)
+            PdfReader(file)
         } catch (error: Exception) {
-            throw IOException("OpenPDF نتوانست فایل ساخته‌شده را دوباره بخواند.", error)
+            throw IOException("iText 7 نتوانست فایل ساخته‌شده را باز کند.", error)
+        }
+        val pdf = try {
+            PdfDocument(reader)
+        } catch (error: Exception) {
+            runCatching { reader.close() }
+            throw IOException("iText 7 نتوانست ساختار PDF ساخته‌شده را بخواند.", error)
         }
         val pages = try {
-            if (reader.isRebuilt) {
-                throw IOException("ساختار PDF ناقص بود و OpenPDF آن را بازسازی کرد.")
+            if (reader.hasRebuiltXref()) {
+                throw IOException("ساختار PDF ناقص بود و iText 7 آن را بازسازی کرد.")
             }
-            reader.numberOfPages
+            pdf.numberOfPages
         } finally {
-            reader.close()
+            pdf.close()
         }
         if (pages < 1) throw IOException("PDF ساخته‌شده هیچ صفحه‌ای ندارد.")
 

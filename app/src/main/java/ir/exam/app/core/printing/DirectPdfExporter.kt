@@ -9,21 +9,32 @@ import androidx.core.graphics.drawable.toBitmap
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.lowagie.text.Chunk
-import com.lowagie.text.Document
-import com.lowagie.text.Element
-import com.lowagie.text.Font
-import com.lowagie.text.Image
-import com.lowagie.text.PageSize
-import com.lowagie.text.Paragraph
-import com.lowagie.text.Rectangle
-import com.lowagie.text.pdf.BaseFont
-import com.lowagie.text.pdf.PdfPCell
-import com.lowagie.text.pdf.PdfPTable
-import com.lowagie.text.pdf.PdfPageEventHelper
-import com.lowagie.text.pdf.PdfStream
-import com.lowagie.text.pdf.PdfWriter
-import com.lowagie.text.pdf.PersianTextShaper
+import com.itextpdf.io.font.PdfEncodings
+import com.itextpdf.io.font.constants.StandardFonts
+import com.itextpdf.io.image.ImageDataFactory
+import com.itextpdf.kernel.events.Event
+import com.itextpdf.kernel.events.IEventHandler
+import com.itextpdf.kernel.events.PdfDocumentEvent
+import com.itextpdf.kernel.font.PdfFont
+import com.itextpdf.kernel.font.PdfFontFactory
+import com.itextpdf.kernel.geom.PageSize
+import com.itextpdf.kernel.pdf.PdfDocument
+import com.itextpdf.kernel.pdf.PdfWriter
+import com.itextpdf.kernel.pdf.WriterProperties
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas
+import com.itextpdf.layout.Document
+import com.itextpdf.layout.borders.Border
+import com.itextpdf.layout.borders.SolidBorder
+import com.itextpdf.layout.element.Cell
+import com.itextpdf.layout.element.Image
+import com.itextpdf.layout.element.Paragraph
+import com.itextpdf.layout.element.Table
+import com.itextpdf.layout.element.Text
+import com.itextpdf.layout.properties.BaseDirection
+import com.itextpdf.layout.properties.HorizontalAlignment
+import com.itextpdf.layout.properties.TextAlignment
+import com.itextpdf.layout.properties.UnitValue
+import com.itextpdf.layout.properties.VerticalAlignment
 import ir.exam.app.R
 import ir.exam.app.core.figure.AtlasBitmapRenderer
 import ir.exam.app.core.figure.FigureCodec
@@ -52,27 +63,21 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 /**
- * V70.0 — خروجی PDF «مستقیم» با openPDF (فورک آزاد iText 5 — همان کتابخانهٔ
- * اپ قدیمی؛ LGPL/MPL، سازگار با اپ بسته). برخلاف چاپ سیستمی که گفتگوی چاپ
- * را باز می‌کند، این کلاس فایل PDF را مستقیم روی URI انتخابی کاربر می‌نویسد.
+ * V72.0 — خروجی PDF مستقیم با iText 7 for Android.
  *
- * قالب خروجی همان قالب چاپ رسمی است: A4 با حاشیهٔ 40pt، سربرگ سه‌ستونهٔ
- * رسمی با آرم، نوار درس/مدت/بارم، سؤال‌های شماره‌دار، گزینه‌ها، جورکردنی،
- * تصویرهای گالری و سطرهای پاسخ؛ فونت فارسی B Nazanin از
- * `assets/fonts/bnazanin.ttf` (و در نبود آن وزیرمتن) با کدگذاری Identity-H.
+ * برخلاف چاپ سیستمی که گفت‌وگوی چاپ را باز می‌کند، این کلاس فایل PDF را مستقیم
+ * روی URI انتخابی کاربر می‌نویسد. قالب خروجی همان قالب چاپ رسمی قبلی است: A4 با
+ * حاشیهٔ 40pt، سربرگ سه‌ستونه با آرم، نوار درس/مدت/بارم، سؤال‌های شماره‌دار،
+ * گزینه‌ها، جورکردنی، تصویرهای گالری و سطرهای پاسخ.
  *
- * V70.1 — رفع خطای کامپایل در openPDF 1.3.43 (خاصیت isUseAscender به‌جای
- * useAscender)، نگه‌داشتن پسوند .ttf در نام فونت (تا مسیر یونیکد انتخاب
- * شود) و شکل‌نویسی فارسی با PersianTextShaper (هم‌ارز majorBidi اپ قدیمی).
+ * iText 7 layout برای صفحه‌بندی، جدول و متن استفاده می‌شود و PdfFontFactory با
+ * کدگذاری Identity-H فونت فارسی B Nazanin را embed می‌کند. شکل‌دهی حروف عربی
+ * پیش از ورود متن به layout با Android ICU انجام می‌شود؛ بنابراین جایگزینی
+ * کتابخانه، خروجی فارسی و RTL قبلی را از بین نمی‌برد.
  *
- * V70.2 — رفع «قالب نامعتبر است» هنگام بازکردن PDF ذخیره‌شده: PDF پیش از
- * لمس مقصد کامل می‌شد؛ اما نتیجهٔ واقعی مقصد دوباره خوانده و تأیید نمی‌شد.
- *
- * V71.0 — خط لولهٔ حرفه‌ای و تأییدپذیر: ساخت روی فایل خصوصی مرحله‌ای (مقیاس‌پذیر
- * و بدون نگه‌داشتن کل PDF در RAM)، نهایی‌سازی اجباری Document، اعتبارسنجی با
- * PdfReader + هدر/EOF + SHA-256، ثبت بادوام SAF با rwt/truncate/flush/fsync و
- * fallback سازگار wt، سپس بازخوانی مقصد و تطبیق دقیق اندازه/هش. موفقیت فقط
- * بعد از اثبات ذخیره نمایش داده می‌شود؛ PDF صفر یا ناقص دیگر موفق اعلام نمی‌شود.
+ * خط لولهٔ V71 نیز حفظ شده است: ساخت روی فایل خصوصی مرحله‌ای، نهایی‌سازی
+ * PdfDocument، بررسی هدر/EOF/parse/page-count/SHA-256، ثبت بادوام SAF و
+ * بازخوانی مقصد پیش از اعلام موفقیت.
  */
 data class DirectPdfExportReceipt(
     val byteCount: Long,
@@ -103,7 +108,7 @@ class DirectPdfExporter(private val context: Context) {
                 output.fd.sync()
             }
 
-            // موفقیت مرحلهٔ ساخت فقط وقتی پذیرفته می‌شود که خود OpenPDF فایل را
+            // موفقیت مرحلهٔ ساخت فقط وقتی پذیرفته می‌شود که iText 7 فایل را
             // بخواند و envelope، تعداد صفحه، اندازه و SHA-256 معتبر باشند.
             val artifact = PdfArtifactVerifier.inspect(staged)
             verifiedWriter.commit(staged, target, artifact)
@@ -116,7 +121,6 @@ class DirectPdfExporter(private val context: Context) {
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
-            // placeholder صفر/ناقص را نگه نمی‌داریم؛ خطای دقیق برای UI برمی‌گردد.
             runCatching { appContext.contentResolver.delete(target, null, null) }
             Result.failure(error)
         } finally {
@@ -150,63 +154,68 @@ class DirectPdfExporter(private val context: Context) {
     // ------------------------------------------------------------- محتوا
 
     private fun buildPdf(printable: OfficialExamPrintable, out: OutputStream) {
-        val base = loadBaseFont("fonts/bnazanin.ttf", R.font.vazirmatn_regular)
-            ?: BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED)
-        val boldBase = loadBaseFont("fonts/bnazanin_bold.ttf", R.font.vazirmatn_bold) ?: base
-        val document = Document(PageSize.A4, MARGIN, MARGIN, MARGIN, MARGIN)
-        val writer = PdfWriter.getInstance(document, out)
-        // Document.close باید xref/EOF را کامل کند، ولی stream مرحله‌ای را نبندد تا
-        // پس از بازگشت buildPdf بتوانیم flush + fsync واقعی انجام دهیم.
-        writer.setCloseStream(false)
-        writer.setFullCompression()
-        writer.setCompressionLevel(PdfStream.BEST_COMPRESSION)
-        writer.setViewerPreferences(PdfWriter.PageLayoutOneColumn)
-        writer.setRunDirection(PdfWriter.RUN_DIRECTION_RTL)
-        writer.setPageEvent(FooterHelper())
-        document.addTitle(printable.documentTitle.ifBlank { "آزمون" })
-        document.addSubject(printable.subject.ifBlank { printable.header.subject })
-        document.addCreator("Native Exam Online · OpenPDF 1.3.43")
-        printable.header.school.takeIf(String::isNotBlank)?.let(document::addAuthor)
-        document.addCreationDate()
-        document.open()
+        val base = loadPdfFont("fonts/bnazanin.ttf", R.font.vazirmatn_regular)
+        val boldBase = loadPdfFont("fonts/bnazanin_bold.ttf", R.font.vazirmatn_bold)
+        val writer = PdfWriter(
+            out,
+            WriterProperties()
+                .setFullCompressionMode(true)
+                .setCompressionLevel(9)
+        )
+        val pdf = PdfDocument(writer)
+        // Document.close باید xref/EOF را کامل کند، اما stream مرحله‌ای را نبندد
+        // تا پس از آن flush + fsync واقعی انجام شود.
+        pdf.setCloseWriter(false)
+        pdf.documentInfo
+            .setTitle(printable.documentTitle.ifBlank { "آزمون" })
+            .setSubject(printable.subject.ifBlank { printable.header.subject })
+            .setCreator("Native Exam Online · iText 7")
+            .addCreationDate()
+        printable.header.school.takeIf(String::isNotBlank)?.let(pdf.documentInfo::setAuthor)
+        pdf.addEventHandler(PdfDocumentEvent.END_PAGE, FooterHandler(loadLatinFont()))
+
+        val document = Document(pdf, PageSize.A4)
+        document.setMargins(MARGIN, MARGIN, MARGIN, MARGIN)
         try {
-            addHeader(document, printable.header, base, boldBase)
+            addHeader(document, printable.header, boldBase)
             addSubject(document, printable, boldBase)
             printable.questions.forEach { question ->
                 addQuestion(document, question, printable.includeAnswerKey, base, boldBase)
             }
             // امضای دبیر/مدیر فقط در پایان برگه (همان قالب چاپ).
             if (printable.footerNote.isNotBlank()) {
-                val note = Paragraph(sh(printable.footerNote), font(base, boldBase, 9f, false, false))
-                note.alignment = Element.ALIGN_RIGHT
-                note.spacingBefore = 18f
-                document.add(note)
+                document.add(
+                    paragraph(TextAlignment.RIGHT, 9f, base, boldBase)
+                        .add(styledText(printable.footerNote, base, boldBase, 9f, false, false))
+                        .setMarginTop(18f)
+                )
             }
         } finally {
             document.close()
         }
     }
 
-    private fun addHeader(document: Document, header: OfficialPrintHeader, base: BaseFont, boldBase: BaseFont) {
-        val table = PdfPTable(3)
-        table.setTotalWidth(floatArrayOf(SIDE_COL_WIDTH, CENTER_COL_WIDTH, LEFT_COL_WIDTH))
-        table.setLockedWidth(true)
-        table.defaultCell.border = Rectangle.NO_BORDER
-        table.defaultCell.setPadding(1.5f)
-        table.defaultCell.isUseAscender = true
+    private fun addHeader(
+        document: Document,
+        header: OfficialPrintHeader,
+        boldBase: PdfFont
+    ) {
+        val table = Table(UnitValue.createPointArray(floatArrayOf(SIDE_COL_WIDTH, CENTER_COL_WIDTH, LEFT_COL_WIDTH)), true)
+            .setFixedLayout()
+            .setWidth(CONTENT_WIDTH)
 
         // سطر آرم وسط (همان print/emblem.png).
-        val emblem = runCatching {
-            Image.getInstance(appContext.assets.open("print/emblem.png").use { it.readBytes() })
-        }.getOrNull()
-        emblem?.scaleToFit(30f, 30f)
-        val emblemCell = if (emblem != null) PdfPCell(emblem, false) else PdfPCell()
-        emblemCell.border = Rectangle.NO_BORDER
-        emblemCell.horizontalAlignment = Element.ALIGN_CENTER
-        emblemCell.verticalAlignment = Element.ALIGN_MIDDLE
-        emblemCell.colspan = 3
-        emblemCell.fixedHeight = 36f
-        emblemCell.setPadding(0f)
+        val emblemCell = Cell(1, 3)
+            .setBorder(Border.NO_BORDER)
+            .setPadding(0f)
+            .setHeight(36f)
+            .setTextAlignment(TextAlignment.CENTER)
+            .setVerticalAlignment(VerticalAlignment.MIDDLE)
+        runCatching {
+            Image(ImageDataFactory.create(appContext.assets.open("print/emblem.png").use { it.readBytes() }))
+                .scaleToFit(30f, 30f)
+                .setHorizontalAlignment(HorizontalAlignment.CENTER)
+        }.onSuccess { emblemCell.add(it) }
         table.addCell(emblemCell)
 
         val rows = listOf(
@@ -225,56 +234,69 @@ class DirectPdfExporter(private val context: Context) {
             Triple("نام درس: ${header.subject}", header.school, "رشته: ${header.fieldOfStudy}")
         )
         rows.forEach { (right, center, left) ->
-            table.addCell(headerCell(right, boldBase, Element.ALIGN_RIGHT, SIDE_COL_WIDTH))
-            table.addCell(headerCell(center, boldBase, Element.ALIGN_CENTER, CENTER_COL_WIDTH))
-            table.addCell(headerCell(left, boldBase, Element.ALIGN_RIGHT, LEFT_COL_WIDTH))
+            table.addCell(headerCell(right, boldBase, TextAlignment.RIGHT, SIDE_COL_WIDTH))
+            table.addCell(headerCell(center, boldBase, TextAlignment.CENTER, CENTER_COL_WIDTH))
+            table.addCell(headerCell(left, boldBase, TextAlignment.RIGHT, LEFT_COL_WIDTH))
         }
         document.add(table)
     }
 
-    private fun headerCell(text: String, base: BaseFont, align: Int, width: Float): PdfPCell {
-        val f = Font(base, 8.6f, Font.NORMAL)
-        val cell = PdfPCell(Paragraph(ellipsize(sh(text), f, width - 3f), f))
-        cell.border = Rectangle.NO_BORDER
-        cell.horizontalAlignment = align
-        cell.verticalAlignment = Element.ALIGN_MIDDLE
-        cell.setPadding(1.5f)
-        cell.isUseAscender = true
-        return cell
+    private fun headerCell(
+        value: String,
+        font: PdfFont,
+        align: TextAlignment,
+        width: Float
+    ): Cell {
+        val fitted = ellipsize(sh(value), font, 8.6f, width - 3f)
+        return Cell()
+            .setBorder(Border.NO_BORDER)
+            .setPadding(1.5f)
+            .setTextAlignment(align)
+            .setVerticalAlignment(VerticalAlignment.MIDDLE)
+            .add(
+                paragraph(align, 8.6f, font, font)
+                    .add(styledText(fitted, font, font, 8.6f, false, false))
+            )
     }
 
-    private fun addSubject(document: Document, printable: OfficialExamPrintable, boldBase: BaseFont) {
+    private fun addSubject(document: Document, printable: OfficialExamPrintable, boldBase: PdfFont) {
         val text = "درس: ${printable.subject.ifBlank { "—" }}" +
             "     مدت: ${printable.durationMinutes} دقیقه" +
             "     بارم: ${formatScore(printable.totalScore)}"
-        addBoxedLine(document, text, Font(boldBase, 11f, Font.NORMAL), Element.ALIGN_RIGHT)
+        addBoxedLine(document, text, boldBase, 11f, TextAlignment.RIGHT)
     }
 
-    private fun addBoxedLine(document: Document, text: String, font: Font, align: Int) {
-        val table = PdfPTable(1)
-        table.widthPercentage = 100f
-        val cell = PdfPCell(Paragraph(sh(text), font))
-        cell.border = Rectangle.BOX
-        cell.borderWidth = 0.7f
-        cell.horizontalAlignment = align
-        cell.setPadding(4f)
-        cell.isUseAscender = true
-        table.addCell(cell)
-        document.add(table)
+    private fun addBoxedLine(
+        document: Document,
+        value: String,
+        font: PdfFont,
+        size: Float,
+        align: TextAlignment
+    ) {
+        val cell = Cell()
+            .setBorder(SolidBorder(0.7f))
+            .setPadding(4f)
+            .setTextAlignment(align)
+            .add(
+                paragraph(align, size, font, font)
+                    .add(styledText(value, font, font, size, false, false))
+            )
+        document.add(Table(1).setFixedLayout().setWidth(CONTENT_WIDTH).addCell(cell))
     }
 
     private fun addQuestion(
         document: Document,
         q: OfficialPrintQuestion,
         includeKey: Boolean,
-        base: BaseFont,
-        boldBase: BaseFont
+        base: PdfFont,
+        boldBase: PdfFont
     ) {
         val size = q.fontSizeSp.coerceIn(8f, 30f)
         addBoxedLine(
             document,
             "سؤال ${q.number}     (${formatScore(q.score)} نمره)",
-            Font(boldBase, size, Font.NORMAL),
+            boldBase,
+            size,
             alignmentFor(q.textAlign)
         )
         addQuestionText(document, q, size, base, boldBase)
@@ -282,27 +304,26 @@ class DirectPdfExporter(private val context: Context) {
         addMatching(document, q, size, base, boldBase)
         addGalleryImages(document, q)
         addAnswer(document, q, includeKey, base, boldBase)
-        val gap = Paragraph(" ")
-        gap.leading = 10f
-        document.add(gap)
+        document.add(Paragraph(" ").setFixedLeading(10f))
     }
 
     private fun addQuestionText(
         document: Document,
         q: OfficialPrintQuestion,
         size: Float,
-        base: BaseFont,
-        boldBase: BaseFont
+        base: PdfFont,
+        boldBase: PdfFont
     ) {
         val formulas = FormulaTextCodec.occurrences(q.text)
         val figures = FigureCodec.occurrences(q.text)
         val segments = RichTextSplitter.split(q.text, formulas, figures)
         val ranges = RichTextSplitter.segmentSourceRanges(segments, formulas, figures)
         val spans = q.textSpans.map { StyleSpan(it.start, it.end, it.bold, it.italic) }
-        var paragraph = newParagraph(alignmentFor(q.textAlign), size)
+        val align = alignmentFor(q.textAlign)
+        var current = paragraph(align, size, base, base)
         fun flush() {
-            if (!paragraph.isEmpty()) document.add(paragraph)
-            paragraph = newParagraph(alignmentFor(q.textAlign), size)
+            if (!current.isEmpty()) document.add(current)
+            current = paragraph(align, size, base, base)
         }
         segments.forEachIndexed { index, segment ->
             when (segment) {
@@ -311,12 +332,19 @@ class DirectPdfExporter(private val context: Context) {
                     if (part.isNotEmpty()) {
                         val offset = ranges.getOrNull(index)?.first ?: 0
                         StyleSpanOps.splitBySpans(part, offset, spans).forEach { (piece, bold, italic) ->
-                            paragraph.add(Chunk(sh(piece.replace("\\$", "$")), font(base, boldBase, size, bold, italic)))
+                            current.add(styledText(piece.replace("\\$", "$"), base, boldBase, size, bold, italic))
                         }
                     }
                 }
-                is RichSegment.Math -> paragraph.add(
-                    Chunk(sh(NativeMathFormatter.renderTex(segment.tex)), font(base, boldBase, size, q.bold, q.italic))
+                is RichSegment.Math -> current.add(
+                    styledText(
+                        NativeMathFormatter.renderTex(segment.tex),
+                        base,
+                        boldBase,
+                        size,
+                        q.bold,
+                        q.italic
+                    )
                 )
                 is RichSegment.Figure -> {
                     flush()
@@ -324,7 +352,10 @@ class DirectPdfExporter(private val context: Context) {
                     if (bitmap != null) {
                         document.add(imageParagraph(bitmap, figureWidthPt(segment.spec)))
                     } else {
-                        document.add(Paragraph(sh("[شکل]"), font(base, boldBase, size, false, false)))
+                        document.add(
+                            paragraph(TextAlignment.RIGHT, size, base, base)
+                                .add(styledText("[شکل]", base, boldBase, size, false, false))
+                        )
                     }
                 }
             }
@@ -332,22 +363,33 @@ class DirectPdfExporter(private val context: Context) {
         flush()
     }
 
-    private fun addOptions(document: Document, q: OfficialPrintQuestion, base: BaseFont, boldBase: BaseFont) {
+    private fun addOptions(document: Document, q: OfficialPrintQuestion, base: PdfFont, boldBase: PdfFont) {
         q.options.forEachIndexed { index, option ->
             val style = q.optionStyles.getOrNull(index)
             val size = (style?.third ?: q.fontSizeSp).coerceIn(8f, 30f)
             val bold = style?.first ?: false
             val italic = style?.second ?: false
-            val paragraph = newParagraph(alignmentFor(q.textAlign), size)
-            paragraph.add(Chunk("${index + 1}) ", font(base, boldBase, size, true, false)))
+            val optionParagraph = paragraph(alignmentFor(q.textAlign), size, base, base)
+            optionParagraph.add(styledText("${index + 1}) ", base, boldBase, size, true, false))
             NativeMathFormatter.segments(option).forEach { segment ->
                 if (segment.math) {
-                    paragraph.add(Chunk(sh(NativeMathFormatter.renderTex(segment.text)), font(base, boldBase, size, bold, italic)))
+                    optionParagraph.add(
+                        styledText(
+                            NativeMathFormatter.renderTex(segment.text),
+                            base,
+                            boldBase,
+                            size,
+                            bold,
+                            italic
+                        )
+                    )
                 } else {
-                    paragraph.add(Chunk(sh(segment.text.replace("\\$", "$")), font(base, boldBase, size, bold, italic)))
+                    optionParagraph.add(
+                        styledText(segment.text.replace("\\$", "$"), base, boldBase, size, bold, italic)
+                    )
                 }
             }
-            document.add(paragraph)
+            document.add(optionParagraph)
         }
     }
 
@@ -355,8 +397,8 @@ class DirectPdfExporter(private val context: Context) {
         document: Document,
         q: OfficialPrintQuestion,
         size: Float,
-        base: BaseFont,
-        boldBase: BaseFont
+        base: PdfFont,
+        boldBase: PdfFont
     ) {
         val rows = maxOf(q.matchingLeft.size, q.matchingRight.size)
         if (rows == 0) return
@@ -365,37 +407,55 @@ class DirectPdfExporter(private val context: Context) {
             val left = q.matchingLeft.getOrNull(rowIndex).orEmpty()
             val rightStyle = q.matchingRightStyles.getOrNull(rowIndex)
             val leftStyle = q.matchingLeftStyles.getOrNull(rowIndex)
-            val table = PdfPTable(3)
-            table.setTotalWidth(floatArrayOf(CONTENT_WIDTH / 2f - 12f, 24f, CONTENT_WIDTH / 2f - 12f))
-            table.setLockedWidth(true)
-            table.defaultCell.border = Rectangle.NO_BORDER
-            table.defaultCell.setPadding(1f)
-            table.defaultCell.isUseAscender = true
-            val rightCell = PdfPCell(
-                Paragraph(
-                    sh(NativeMathFormatter.renderText(right)),
-                    font(base, boldBase, size, rightStyle?.first ?: false, rightStyle?.second ?: false)
+            val table = Table(
+                UnitValue.createPointArray(floatArrayOf(CONTENT_WIDTH / 2f - 12f, 24f, CONTENT_WIDTH / 2f - 12f)),
+                true
+            ).setFixedLayout().setWidth(CONTENT_WIDTH)
+            table.addCell(
+                matchingCell(
+                    NativeMathFormatter.renderText(right),
+                    base,
+                    boldBase,
+                    size,
+                    rightStyle?.first ?: false,
+                    rightStyle?.second ?: false,
+                    TextAlignment.RIGHT
                 )
             )
-            rightCell.border = Rectangle.NO_BORDER
-            rightCell.horizontalAlignment = Element.ALIGN_RIGHT
-            val arrowCell = PdfPCell(Paragraph("↔", font(base, boldBase, size, false, false)))
-            arrowCell.border = Rectangle.NO_BORDER
-            arrowCell.horizontalAlignment = Element.ALIGN_CENTER
-            val leftCell = PdfPCell(
-                Paragraph(
-                    sh(NativeMathFormatter.renderText(left)),
-                    font(base, boldBase, size, leftStyle?.first ?: false, leftStyle?.second ?: false)
+            table.addCell(
+                matchingCell("↔", base, boldBase, size, false, false, TextAlignment.CENTER)
+            )
+            table.addCell(
+                matchingCell(
+                    NativeMathFormatter.renderText(left),
+                    base,
+                    boldBase,
+                    size,
+                    leftStyle?.first ?: false,
+                    leftStyle?.second ?: false,
+                    TextAlignment.RIGHT
                 )
             )
-            leftCell.border = Rectangle.NO_BORDER
-            leftCell.horizontalAlignment = Element.ALIGN_RIGHT
-            table.addCell(rightCell)
-            table.addCell(arrowCell)
-            table.addCell(leftCell)
             document.add(table)
         }
     }
+
+    private fun matchingCell(
+        value: String,
+        base: PdfFont,
+        boldBase: PdfFont,
+        size: Float,
+        bold: Boolean,
+        italic: Boolean,
+        align: TextAlignment
+    ): Cell = Cell()
+        .setBorder(Border.NO_BORDER)
+        .setPadding(1f)
+        .setTextAlignment(align)
+        .add(
+            paragraph(align, size, base, base)
+                .add(styledText(value, base, boldBase, size, bold, italic))
+        )
 
     private fun addGalleryImages(document: Document, q: OfficialPrintQuestion) {
         q.images.forEach { bitmap -> document.add(imageParagraph(bitmap, CONTENT_WIDTH)) }
@@ -405,55 +465,84 @@ class DirectPdfExporter(private val context: Context) {
         document: Document,
         q: OfficialPrintQuestion,
         includeKey: Boolean,
-        base: BaseFont,
-        boldBase: BaseFont
+        base: PdfFont,
+        boldBase: PdfFont
     ) {
         if (includeKey && !q.answerText.isNullOrBlank()) {
             val answer = q.answerText.orEmpty()
-            val paragraph = newParagraph(Element.ALIGN_RIGHT, 10.5f)
-            paragraph.add(
-                Chunk(sh("پاسخ: ${NativeMathFormatter.renderText(answer)}"), font(base, boldBase, 10.5f, true, false))
+            document.add(
+                paragraph(TextAlignment.RIGHT, 10.5f, base, base)
+                    .add(
+                        styledText(
+                            "پاسخ: ${NativeMathFormatter.renderText(answer)}",
+                            base,
+                            boldBase,
+                            10.5f,
+                            true,
+                            false
+                        )
+                    )
             )
-            document.add(paragraph)
         } else {
             val dots = if (q.answerLineStyle == "blank") " " else ".".repeat(100)
             repeat(q.answerLines.coerceIn(0, 12)) {
-                document.add(Paragraph(dots, font(base, boldBase, 9f, false, false)))
+                document.add(
+                    paragraph(TextAlignment.RIGHT, 9f, base, base)
+                        .add(styledText(dots, base, boldBase, 9f, false, false))
+                )
             }
         }
     }
 
     // ------------------------------------------------------------- کمکی‌ها
 
+    private fun paragraph(
+        align: TextAlignment,
+        size: Float,
+        base: PdfFont,
+        paragraphFont: PdfFont
+    ): Paragraph = Paragraph()
+        .setTextAlignment(align)
+        .setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        .setFont(paragraphFont)
+        .setFontSize(size)
+        .setFixedLeading(size * 1.35f)
+        .setMargin(0f)
+
+    private fun styledText(
+        value: String,
+        base: PdfFont,
+        boldBase: PdfFont,
+        size: Float,
+        bold: Boolean,
+        italic: Boolean
+    ): Text {
+        val text = Text(sh(value))
+            .setFont(if (bold) boldBase else base)
+            .setFontSize(size)
+            .setBaseDirection(BaseDirection.RIGHT_TO_LEFT)
+        if (italic) text.setItalic()
+        return text
+    }
+
     private fun imageParagraph(bitmap: Bitmap, maxWidth: Float): Paragraph {
-        val image = Image.getInstance(bitmapToPng(bitmap))
-        if (image.plainWidth > maxWidth) image.scaleToFit(maxWidth, 480f)
-        image.alignment = Image.ALIGN_CENTER
-        val paragraph = Paragraph()
-        paragraph.add(image)
-        paragraph.spacingBefore = 4f
-        paragraph.spacingAfter = 4f
-        return paragraph
+        val image = Image(ImageDataFactory.create(bitmapToPng(bitmap)))
+            .setHorizontalAlignment(HorizontalAlignment.CENTER)
+        if (image.imageWidth > maxWidth) image.scaleToFit(maxWidth, 480f)
+        return Paragraph()
+            .setTextAlignment(TextAlignment.CENTER)
+            .setMarginTop(4f)
+            .setMarginBottom(4f)
+            .add(image)
     }
 
-    private fun newParagraph(align: Int, size: Float): Paragraph = Paragraph().apply {
-        alignment = align
-        leading = size * 1.35f
-    }
-
-    private fun font(base: BaseFont, boldBase: BaseFont, size: Float, bold: Boolean, italic: Boolean): Font {
-        val bf = if (bold) boldBase else base
-        val style = (if (bold) Font.BOLD else 0) or (if (italic) Font.ITALIC else 0)
-        return Font(bf, size, style)
-    }
-
-    /** شکل‌نویسی فارسی/عربی (اتصال حروف) — هم‌ارز majorBidi در اپ قدیمی. */
+    /** شکل‌دهی فارسی پیش از layout؛ bidi و wrapping نهایی را iText 7 انجام می‌دهد. */
     private fun sh(text: String): String = PersianTextShaper.shape(text)
 
-    private fun alignmentFor(align: String): Int = when (align) {
-        "center" -> Element.ALIGN_CENTER
-        "left" -> Element.ALIGN_LEFT
-        else -> Element.ALIGN_RIGHT
+    private fun alignmentFor(align: String): TextAlignment = when (align) {
+        "center" -> TextAlignment.CENTER
+        "left" -> TextAlignment.LEFT
+        else -> TextAlignment.RIGHT
     }
 
     private fun figureWidthPt(spec: FigureSpec): Float =
@@ -462,12 +551,11 @@ class DirectPdfExporter(private val context: Context) {
     private fun formatScore(value: Double): String =
         if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value)
 
-    private fun ellipsize(text: String, font: Font, width: Float): String {
-        val bf = font.baseFont ?: return text
-        if (bf.getWidthPoint(text, font.size) <= width) return text
-        var end = text.length
-        while (end > 1 && bf.getWidthPoint(text.substring(0, end) + "…", font.size) > width) end--
-        return text.substring(0, end) + "…"
+    private fun ellipsize(value: String, font: PdfFont, size: Float, width: Float): String {
+        if (font.getWidth(value, size) <= width) return value
+        var end = value.length
+        while (end > 1 && font.getWidth(value.substring(0, end) + "…", size) > width) end--
+        return value.substring(0, end) + "…"
     }
 
     private fun bitmapToPng(bitmap: Bitmap): ByteArray {
@@ -476,31 +564,29 @@ class DirectPdfExporter(private val context: Context) {
         return stream.toByteArray()
     }
 
-    private fun loadBaseFont(asset: String, resFallback: Int): BaseFont? {
+    private fun loadPdfFont(asset: String, resFallback: Int): PdfFont {
         val assetBytes = runCatching { appContext.assets.open(asset).use { it.readBytes() } }.getOrNull()
-        if (assetBytes != null) {
-            // نام فونت باید به .ttf ختم شود؛ وگرنه openPDF 1.3.43 مسیر
-            // TrueType/یونیکد را انتخاب نمی‌کند و فونت هرگز بارگذاری نمی‌شود.
-            return BaseFont.createFont(
-                asset,
-                BaseFont.IDENTITY_H, BaseFont.EMBEDDED, BaseFont.CACHED, assetBytes, null
+        val resourceBytes = runCatching {
+            appContext.resources.openRawResource(resFallback).use { it.readBytes() }
+        }.getOrNull()
+        return runCatching {
+            PdfFontFactory.createFont(
+                assetBytes ?: resourceBytes ?: throw IOException("فونت PDF موجود نیست: $asset"),
+                PdfEncodings.IDENTITY_H,
+                PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED
             )
-        }
-        val resBytes = runCatching { appContext.resources.openRawResource(resFallback).use { it.readBytes() } }.getOrNull()
-        if (resBytes != null) {
-            return BaseFont.createFont(
-                asset, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, BaseFont.CACHED, resBytes, null
-            )
-        }
-        return null
+        }.getOrElse { loadLatinFont() }
     }
+
+    private fun loadLatinFont(): PdfFont =
+        runCatching { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
+            .getOrElse { throw IllegalStateException("فونت پایهٔ iText 7 ساخته نشد.", it) }
 
     private suspend fun loadBitmapSafely(url: String): Bitmap? = try {
         loadBitmap(url)
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
-        // خرابی یک تصویر شبکه‌ای نباید کل برگهٔ امتحان و متن سؤال‌ها را نابود کند.
         null
     }
 
@@ -526,11 +612,11 @@ class DirectPdfExporter(private val context: Context) {
         if (spec.kind in setOf("a", "s")) {
             AtlasBitmapRenderer.render(appContext, spec)
         } else {
-            val document = FigureSvgRenderer.render(spec)
-            val svg = com.caverock.androidsvg.SVG.getFromString(document.xml)
+            val rendered = FigureSvgRenderer.render(spec)
+            val svg = com.caverock.androidsvg.SVG.getFromString(rendered.xml)
             val scale = 2f
-            val width = (document.widthPx * scale).roundToInt().coerceAtLeast(1)
-            val height = (document.heightPx * scale).roundToInt().coerceAtLeast(1)
+            val width = (rendered.widthPx * scale).roundToInt().coerceAtLeast(1)
+            val height = (rendered.heightPx * scale).roundToInt().coerceAtLeast(1)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             canvas.drawColor(Color.WHITE)
@@ -541,17 +627,21 @@ class DirectPdfExporter(private val context: Context) {
         }
     }.getOrNull()?.also { figureCache.put(spec.raw.toString(), it) }
 
-    /** پانوشت هر صفحه: فقط شمارهٔ صفحه (لاتین با Helvetica — بدون درگیری bidi). */
-    private class FooterHelper : PdfPageEventHelper() {
-        private val latin: BaseFont =
-            BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED)
-        override fun onEndPage(writer: PdfWriter, document: Document) {
-            val cb = writer.directContent
-            cb.beginText()
-            cb.setFontAndSize(latin, 8f)
-            cb.setTextMatrix(DirectPdfExporter.MARGIN, 28f)
-            cb.showText("Native Exam Online · ${writer.pageNumber}")
-            cb.endText()
+    /** پانوشت هر صفحه: فقط شمارهٔ صفحه (لاتین با فونت استاندارد iText 7). */
+    private class FooterHandler(
+        private val latin: PdfFont
+    ) : IEventHandler {
+        override fun handleEvent(event: Event) {
+            val pageEvent = event as? PdfDocumentEvent ?: return
+            val pdf = pageEvent.document
+            val page = pageEvent.page
+            val canvas = PdfCanvas(page.newContentStreamAfter(), page.resources, pdf)
+            canvas.beginText()
+                .setFontAndSize(latin, 8f)
+                .setTextMatrix(MARGIN, 28f)
+                .showText("Native Exam Online · ${pdf.getPageNumber(page)}")
+                .endText()
+            canvas.release()
         }
     }
 
