@@ -2583,6 +2583,11 @@ require("private var drawImagesOnCanvas = true" in _v689_pdf
         and "if (!drawImagesOnCanvas) return" in _v689_pdf,
         "V68.9.2 editor paper must suppress bitmap drawing on the engine canvas (no double draw)")
 
+# ---- V68.9.2.1/V68.9.3: هات‌فیکس کامپایل — Modifier.size فقط Dp می‌گیرد ----
+require("with(density) { widthPx.toDp() }" in _v689_editor
+        and ".size(widthPx, heightPx)" not in _v689_editor,
+        "V68.9.3 raw px must be converted to Dp for Modifier.size (compile fix)")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

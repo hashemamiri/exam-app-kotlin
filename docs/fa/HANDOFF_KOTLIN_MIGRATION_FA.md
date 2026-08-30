@@ -13340,3 +13340,35 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                                  (همی�
 ۴) چاپ رسمی: مثل V68.9.1 بدون تغییر (شکل‌ها سر جای خودشان).
 ۵) هیچ شیءای دوبار رسم نشود (دو تصویر روی هم = گزارش شود).
 ```
+
+---
+
+## ۲۶۲) V68.9.3 — هات‌فیکس کامپایل: Modifier.size فقط Dp می‌گیرد (یک خط)
+
+### خطا (CI روی V68.9.2)
+`ExamDocumentEditorScreen.kt:711 — Argument type mismatch: actual 'kotlin.Int',
+but 'androidx.compose.ui.unit.Dp' was expected` (دو آرگومان).
+`Modifier.size(width: Dp, height: Dp)` نسخهٔ Int ندارد؛ در EngineObjectsLayer
+پیکسل خام پاس شده بود.
+
+### فیکس
+`val density = LocalDensity.current` داخل EngineObjectsLayer و
+`.size(with(density) { widthPx.toDp() }, with(density) { heightPx.toDp() })` —
+چون سند زیر `Density(density, fontScale = 1f)` است، round-trip پیکسل دقیق است.
+بازرسی کل فایل: تنها مورد Int-به-Dp همان خط بود (`.size(18.dp)` قدیمی سالم).
+
+### رگرسیون‌گیر
+verify V68.9.3: `with(density) { widthPx.toDp() }` الزامی + `.size(widthPx,
+heightPx)` ممنوع؛ همان دو سوزن در تست V68_9 هم اضافه شد.
+درس ثبت‌شده: «پیکسل خام هرگز مستقیم به مودیفایرهای Dp-محور Compose داده نشود».
+
+### فایل‌های تغییرکرده
+```text
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt  (تبدیل px→Dp)
+app/src/test/java/ir/exam/app/ui/app/V68_9UnifiedEngineWysiwygTest.kt  (۲ سوزن رگرسیون)
+scripts/verify_native_final.py                                          (باند V68.9.3)
+text/CHANGELOG_FA.txt                                                   (خط V68.9.3)
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                                  (همین بخش ۲۶۲)
+```
+
+### SQL جدید: ندارد — Edge deploy: ندارد

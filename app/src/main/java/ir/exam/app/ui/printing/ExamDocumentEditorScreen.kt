@@ -693,6 +693,9 @@ private fun EngineObjectsLayer(
     val dstTopPt = if (pageIndex == 0) document.firstTop
     else UnifiedDocumentEngine.LATER_CONTENT_TOP
     val objects = remember(document, pageIndex) { engine.editorObjects(document) }
+    // V68.9.3 — px خام نمی‌شود مستقیم به Modifier.size داد (Dp می‌خواهد)؛
+    // با چگالی محلی (fontScale=1 سند) تبدیل می‌شود؛ round-trip پیکسل‌دقیق.
+    val density = LocalDensity.current
     Box(Modifier.fillMaxSize().clipToBounds()) {
         objects.forEach { obj ->
             // سؤالِ در حال ویرایش: اشیایش از overlay تعاملی (Compose) می‌آیند؛
@@ -708,7 +711,7 @@ private fun EngineObjectsLayer(
                 contentDescription = "شکل",
                 modifier = Modifier
                     .offset { IntOffset(leftPx, topPx) }
-                    .size(widthPx, heightPx)
+                    .size(with(density) { widthPx.toDp() }, with(density) { heightPx.toDp() })
             )
         }
     }

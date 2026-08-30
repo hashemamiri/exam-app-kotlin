@@ -188,5 +188,9 @@ class V68_9UnifiedEngineWysiwygTest {
         assertTrue("bitmap = obj.bitmap.asImageBitmap()" in editor)
         // سؤال در حال ویرایش دوبار رسم نمی‌شود
         assertTrue("if (obj.questionIndex == skipQuestion) return@forEach" in editor)
+        // V68.9.3 — رگرسیون کامپایل: Modifier.size فقط Dp می‌گیرد؛ px باید
+        // با چگالی محلی به Dp تبدیل شود (روی CI خط ۷۱۱ قرمز شده بود).
+        assertTrue("with(density) { widthPx.toDp() }" in editor)
+        assertFalse(".size(widthPx, heightPx)" in editor)
     }
 }
