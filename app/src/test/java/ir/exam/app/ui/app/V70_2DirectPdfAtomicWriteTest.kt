@@ -41,7 +41,9 @@ class V70_2DirectPdfAtomicWriteTest {
         assertTrue("output.flush()" in safWriter)
         assertTrue("output.channel.force(true)" in safWriter)
         assertTrue("output.fd.sync()" in safWriter)
-        assertTrue("openOutputStream(target, \"wt\")" in safWriter)
+        assertTrue("openOutputStream(target)" in safWriter)
+        assertTrue("writeWithCompatibleStream" in safWriter)
+        assertTrue(safWriter.indexOf("writeWithCompatibleStream") < safWriter.indexOf("writeWithDurableDescriptor"))
     }
 
     @Test

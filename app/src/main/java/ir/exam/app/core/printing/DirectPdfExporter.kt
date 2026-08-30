@@ -76,8 +76,8 @@ import kotlinx.coroutines.withContext
  * کتابخانه، خروجی فارسی و RTL قبلی را از بین نمی‌برد.
  *
  * خط لولهٔ V71 نیز حفظ شده است: ساخت روی فایل خصوصی مرحله‌ای، نهایی‌سازی
- * PdfDocument، بررسی هدر/EOF/parse/page-count/SHA-256، ثبت بادوام SAF و
- * بازخوانی مقصد پیش از اعلام موفقیت.
+ * PdfDocument، بررسی هدر/EOF/parse/page-count/SHA-256، ثبت با
+ * ContentResolver.openOutputStream در SAF و بازخوانی مقصد پیش از اعلام موفقیت.
  */
 data class DirectPdfExportReceipt(
     val byteCount: Long,

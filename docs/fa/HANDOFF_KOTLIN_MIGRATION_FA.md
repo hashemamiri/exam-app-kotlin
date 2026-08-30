@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.1 هات‌فیکس compile شکل‌دهی فارسی؛ پیش از آن: V72.0
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.2 رفع PDF صفر بایت روی SAF؛ پیش از آن: V72.0.1
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -13923,4 +13923,70 @@ clean clone git apply --check            → PASS
 ۲) کلمات فارسی نباید به حروف جدا تبدیل شوند؛ متن لاتین/عدد هم خراب نشود.
 ۳) آزمون دارای فرمول، تصویر و شکل تست شود.
 ۴) چاپ برگه، چاپ با کلید و ویرایش سند مثل قبل بمانند.
+```
+
+
+## ۲۷۱) V72.0.2 — رفع PDF صفر بایت و قالب نامعتبر روی SAF
+
+### گزارش دستگاه
+
+```text
+فایل PDF ایجاد می‌شود اما اندازهٔ آن صفر بایت است و PDF Reader پیام قالب نامعتبر
+می‌دهد. این مشکل در مسیر ذخیرهٔ مستقیم iText 7 روی URI برگردانده‌شده از
+ACTION_CREATE_DOCUMENT مشاهده شد.
+```
+
+### ریشهٔ محتمل
+
+```text
+بعضی DocumentsProviderهای ابری مانند Google Drive/OneDrive برای
+openFileDescriptor(uri, "rwt") یک pipe غیرقابل seek یا descriptor با commit متفاوت
+برمی‌گردانند. position/truncate/fsync روی آن می‌تواند placeholder صفر یا فایل ناقص
+بسازد، در حالی که مسیر استاندارد ContentResolver.openOutputStream(uri) برای همین
+providerها درست کار می‌کند.
+```
+
+### اصلاح
+
+```text
+- VerifiedSafPdfWriter ابتدا با contentResolver.openOutputStream(target) می‌نویسد؛
+  stream پس از flush و close به provider تحویل می‌شود.
+- مسیر ParcelFileDescriptor با حالت rwt فقط fallback دستگاهی باقی مانده است.
+- read-back پس از close در ۶ مرحله و تا مجموع ۶٫۲۵ ثانیه تکرار می‌شود تا commit
+  تأخیری provider ابری فرصت کامل‌شدن داشته باشد.
+- موفقیت فقط در صورت برابر بودن byteCount و SHA-256 مقصد با فایل مرحله‌ای اعلام می‌شود.
+  PDF صفر/ناقص هرگز success نمی‌گیرد.
+- مسیر ساخت iText 7، PdfDocument.close، فونت Identity-H و قالب آزمون تغییر نکرده‌اند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt
+app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt
+app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt
+app/src/test/java/ir/exam/app/core/printing/V72_0_2SafPdfWriteTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### نتیجهٔ بررسی
+
+```text
+git diff --check                         → PASS
+FINAL_NATIVE_VERIFY                     → PASS
+Gradle کامل این محیط                   → به‌دلیل resolve نشدن KSP اجرا نشد
+```
+
+### تست دوباره روی دستگاه
+
+```text
+۱) نسخهٔ جدید را نصب کنید.
+۲) آیکن PDF را بزنید و ابتدا حافظهٔ داخلی/Downloads را انتخاب کنید.
+۳) پس از پیام «فایل PDF تأیید و ذخیره شد»، فایل را با PDF Reader باز کنید.
+۴) سپس Google Drive/OneDrive را هم امتحان کنید؛ پیام موفقیت فقط بعد از read-back
+   واقعی نمایش داده می‌شود.
+۵) اگر provider هنوز صفر ذخیره کرد، متن خطای قرمز برنامه را ارسال کنید؛ آن متن باید
+   اندازهٔ مورد انتظار و اندازهٔ خوانده‌شده را نشان دهد، نه اینکه موفقیت گزارش شود.
 ```

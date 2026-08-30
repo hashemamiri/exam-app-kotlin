@@ -13,29 +13,34 @@ import kotlinx.coroutines.delay
 /**
  * V71.0 — ثبت بادوام و قابل‌اثبات PDF روی URI انتخابی Storage Access Framework.
  *
- * روش اصلی از descriptor با حالت rwt استفاده می‌کند: صفرکردن قطعی، کپی جریانی،
- * flush و fsync. چون رفتار modeها بین DocumentProviderها یکسان نیست، روش سازگار
- * wt نیز fallback است. پس از بسته‌شدن مقصد، URI چند بار دوباره خوانده می‌شود و
- * اندازه + SHA-256 باید دقیقاً با PDF سالم مرحله‌ای برابر باشد؛ در غیر این صورت
- * هرگز موفقیت گزارش نمی‌شود.
+ * روش اصلی از ContentResolver.openOutputStream استفاده می‌کند؛ این مسیر برای
+ * DocumentProviderهای محلی و ابری سازگارتر است و پس از close کپی کامل را به
+ * provider تحویل می‌دهد. descriptor با حالت rwt فقط fallback دستگاهی است، چون
+ * بعضی providerهای ابری برای آن pipe غیرقابل seek برمی‌گردانند. پس از بسته‌شدن
+ * مقصد، URI چند بار دوباره خوانده می‌شود و اندازه + SHA-256 باید دقیقاً با PDF
+ * سالم مرحله‌ای برابر باشد؛ در غیر این صورت هرگز موفقیت گزارش نمی‌شود.
  */
 internal class VerifiedSafPdfWriter(
     private val contentResolver: ContentResolver
 ) {
     suspend fun commit(source: File, target: Uri, expected: PdfArtifact) {
-        val descriptorAttempt = attempt(target, expected) {
-            writeWithDurableDescriptor(source, target, expected.byteCount)
-        }
-        if (descriptorAttempt.verified) return
-
+        // برای Google Drive/OneDrive و سایر providerهای ابری، openOutputStream
+        // مسیر رسمی و قابل‌اعتماد است. بعضی providerها برای ParcelFileDescriptor
+        // یک pipe برمی‌گردانند و استفاده از channel.position/truncate روی آن
+        // فایل صفر یا ناقص ایجاد می‌کند؛ descriptor فقط fallback دستگاهی است.
         val streamAttempt = attempt(target, expected) {
             writeWithCompatibleStream(source, target, expected.byteCount)
         }
         if (streamAttempt.verified) return
 
-        val latest = streamAttempt.observed ?: descriptorAttempt.observed
+        val descriptorAttempt = attempt(target, expected) {
+            writeWithDurableDescriptor(source, target, expected.byteCount)
+        }
+        if (descriptorAttempt.verified) return
+
+        val latest = descriptorAttempt.observed ?: streamAttempt.observed
         val observedText = latest?.byteCount?.let { "$it بایت" } ?: "نامشخص"
-        val cause = streamAttempt.error ?: descriptorAttempt.error
+        val cause = descriptorAttempt.error ?: streamAttempt.error
         throw IOException(
             "ذخیرهٔ PDF تأیید نشد؛ اندازهٔ مورد انتظار ${expected.byteCount} بایت " +
                 "و اندازهٔ خوانده‌شده از مقصد $observedText بود. دوباره تلاش کنید.",
@@ -81,7 +86,11 @@ internal class VerifiedSafPdfWriter(
     }
 
     private fun writeWithCompatibleStream(source: File, target: Uri, expectedBytes: Long) {
-        val stream = contentResolver.openOutputStream(target, "wt")
+        // بدون ساختن FileOutputStream روی descriptor بنویسیم؛ این مسیر برای
+        // local و cloud DocumentsProviderها سازگارتر است و close آن commit را
+        // به provider اعلام می‌کند. حالت w برای ACTION_CREATE_DOCUMENT مقصد
+        // را از ابتدا برای نوشتن/جایگزینی باز می‌کند.
+        val stream = contentResolver.openOutputStream(target)
             ?: throw IOException("بازکردن مقصد PDF با حالت سازگار ممکن نشد.")
         stream.use { output ->
             val copied = FileInputStream(source).buffered(COPY_BUFFER_BYTES).use { input ->
@@ -126,6 +135,7 @@ internal class VerifiedSafPdfWriter(
 
     private companion object {
         const val COPY_BUFFER_BYTES = 64 * 1_024
-        val READ_BACK_DELAYS_MS = longArrayOf(0L, 80L, 240L, 600L, 1_200L)
+        // بعضی providerهای ابری بعد از close چند لحظه برای read-back زمان می‌خواهند.
+        val READ_BACK_DELAYS_MS = longArrayOf(0L, 150L, 400L, 900L, 1_800L, 3_000L)
     }
 }

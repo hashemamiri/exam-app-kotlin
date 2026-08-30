@@ -2717,6 +2717,22 @@ require(_v721_test.exists()
         and "assertNotEquals" in _v721_test.read_text(),
         "V72.0.1 Persian shaper JVM regression test is missing")
 
+# ---- V72.0.2: ذخیرهٔ SAF — stream برای providerهای ابری، descriptor فقط fallback ----
+_v722_writer=(ROOT/"app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt")
+_v722_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_2SafPdfWriteTest.kt")
+_v722_writer_text=_v722_writer.read_text() if _v722_writer.exists() else ""
+require(_v722_writer.exists()
+        and "contentResolver.openOutputStream(target)" in _v722_writer_text
+        and "writeWithCompatibleStream" in _v722_writer_text
+        and "writeWithDurableDescriptor" in _v722_writer_text
+        and _v722_writer_text.index("writeWithCompatibleStream") < _v722_writer_text.index("writeWithDurableDescriptor")
+        and "READ_BACK_DELAYS_MS = longArrayOf(0L, 150L, 400L, 900L, 1_800L, 3_000L)" in _v722_writer_text,
+        "V72.0.2 SAF writer must use openOutputStream first and retry cloud read-back")
+require(_v722_test.exists()
+        and "contentResolver.openOutputStream(target)" in _v722_test.read_text()
+        and "descriptor is only fallback" in _v722_test.read_text(),
+        "V72.0.2 SAF writer regression test is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2725,8 +2741,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 246
-        and _v694_changelog.startswith("V72.0.1:"),
-        "changelog must keep the full history + the new V72.0.1 line on top")
+        and _v694_changelog.startswith("V72.0.2:"),
+        "changelog must keep the full history + the new V72.0.2 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
