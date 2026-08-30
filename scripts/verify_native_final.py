@@ -2588,6 +2588,17 @@ require("with(density) { widthPx.toDp() }" in _v689_editor
         and ".size(widthPx, heightPx)" not in _v689_editor,
         "V68.9.3 raw px must be converted to Dp for Modifier.size (compile fix)")
 
+# ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
+# (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
+# فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
+_v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
+_v694_lines=_v694_changelog.count("\n")
+require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
+        "V68.9.4 changelog lost its historical Persian entries (truncated again?)")
+require(_v694_lines >= 243
+        and _v694_changelog.startswith("V68.9.4:"),
+        "V68.9.4 changelog must keep the full 240-line history + the two restored lines on top")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
