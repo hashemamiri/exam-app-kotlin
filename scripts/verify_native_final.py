@@ -2770,6 +2770,20 @@ require(_v724_test.exists()
         and "mathBase" in _v724_test.read_text(),
         "V72.0.4 PDF font coverage regression test is missing")
 
+# ---- V72.0.5: ترتیب RTL شکل‌های inline در پیش‌نمایش ویرایشگر ----
+_v725_adapter=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt")
+_v725_editor_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V68_9UnifiedEngineWysiwygTest.kt")
+_v725_adapter_text=_v725_adapter.read_text() if _v725_adapter.exists() else ""
+_v725_editor_test_text=_v725_editor_test.read_text() if _v725_editor_test.exists() else ""
+require(_v725_adapter.exists()
+        and "private fun replacementLeftPt(layout: StaticLayout, offset: Int, widthPt: Float)" in _v725_adapter_text
+        and "val primaryEnd = layout.getPrimaryHorizontal(end)" in _v725_adapter_text
+        and "replacementLeftPt(layout, mark.charOffset, mark.widthPt)" in _v725_adapter_text,
+        "V72.0.5 RTL inline-figure edge calculation is missing")
+require(_v725_editor_test.exists()
+        and "editor inline figures use the left edge of both span boundaries" in _v725_editor_test_text,
+        "V72.0.5 RTL inline-figure regression test is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2778,8 +2792,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 246
-        and _v694_changelog.startswith("V72.0.4:"),
-        "changelog must keep the full history + the new V72.0.4 line on top")
+        and _v694_changelog.startswith("V72.0.5:"),
+        "changelog must keep the full history + the new V72.0.5 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -171,6 +171,20 @@ class V68_9UnifiedEngineWysiwygTest {
     }
 
     /**
+     * V72.0.5 — رگرسیون ترتیب RTL: لایهٔ Compose نباید x مربوط به مرز راست
+     * ReplacementSpan را به‌عنوان ضلع چپ شکل استفاده کند؛ در غیر این صورت
+     * ترتیب شکل‌ها نسبت به خروجی چاپ آینه می‌شود.
+     */
+    @Test
+    fun `editor inline figures use the left edge of both span boundaries`() {
+        assertTrue("private fun replacementLeftPt(layout: StaticLayout, offset: Int, widthPt: Float)" in adapter)
+        assertTrue("val primaryEnd = layout.getPrimaryHorizontal(end)" in adapter)
+        assertTrue("val candidate = minOf(primaryStart, primaryEnd)" in adapter)
+        assertTrue("replacementLeftPt(layout, mark.charOffset, mark.widthPt)" in adapter)
+        assertFalse("MARGIN + layout.getPrimaryHorizontal(mark.charOffset)" in adapter)
+    }
+
+    /**
      * V68.9.2 — اشیای تصویری (جدول/آناتومی/شکل/تصویر گالری) در ویرایشگر با
      * Compose روی همان مستطیل موتور چاپ رسم می‌شوند (گزارش کاربر روی V68.9.1:
      * «جدول و آناتومی و شکل در ویرایشگر نیست») و canvas موتور در حالت ویرایشگر

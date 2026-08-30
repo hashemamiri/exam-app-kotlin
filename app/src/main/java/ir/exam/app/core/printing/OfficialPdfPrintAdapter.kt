@@ -611,7 +611,10 @@ class UnifiedDocumentEngine(private val context: Context) {
         canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)
         canvas.translate(0f, dstTop - slice.first)
         // V68.9.2 — متن/کادرها از canvas موتور؛ شکل/تصویرها با Compose روی
-        // همان مختصات (editorObjects) — تا رندر اشیای تصویری هرگز گم نشود.
+        // همان مختصات (editorObjects) رسم می‌شوند تا روی دستگاه‌هایی که
+        // ReplacementSpan را داخل Canvas پیش‌نمایش نمی‌کنند، شکل‌ها گم نشوند.
+        // V72.0.5 — مختصات inline در editorObjects با دو مرز span محاسبه می‌شود
+        // تا جهت RTL فقط ترتیب منطقی متن را نگه دارد و جای شکل‌ها را آینه نکند.
         val previousImagesOnCanvas = drawImagesOnCanvas
         drawImagesOnCanvas = false
         try {
@@ -625,6 +628,26 @@ class UnifiedDocumentEngine(private val context: Context) {
     // V68.9.2 — وقتی false است، بیت‌مایپ‌ها (شکل/تصویر) روی canvas موتور رسم
     // نمی‌شوند (ویرایشگر: لایهٔ Compose همان‌ها را روی همین مختصات می‌کشد).
     private var drawImagesOnCanvas = true
+
+    /**
+     * V72.0.5 — ضلع چپ یک ReplacementSpan را از هر دو مرز کاراکتر به‌دست
+     * می‌آورد. در خط RTL، getPrimaryHorizontal(offset) ممکن است مرز راست
+     * باشد؛ استفادهٔ مستقیم از آن، شکل را به سمت غلط می‌برد و ترتیب شکل‌ها
+     * در لایهٔ Compose ویرایشگر mirror می‌شود. چاپ خود StaticLayout همین دو
+     * مرز را به‌صورت داخلی استفاده می‌کند.
+     */
+    private fun replacementLeftPt(layout: StaticLayout, offset: Int, widthPt: Float): Float {
+        val start = offset.coerceIn(0, layout.text.length)
+        val end = (start + 1).coerceAtMost(layout.text.length)
+        val primaryStart = layout.getPrimaryHorizontal(start)
+        val primaryEnd = layout.getPrimaryHorizontal(end)
+        val candidate = minOf(primaryStart, primaryEnd)
+        val line = layout.getLineForOffset(start)
+        val lineLeft = layout.getLineLeft(line)
+        val lineRight = layout.getLineRight(line)
+        val maxLeft = (lineRight - widthPt).coerceAtLeast(lineLeft)
+        return candidate.coerceIn(lineLeft, maxLeft)
+    }
 
     /**
      * V68.9.2 — همهٔ اشیای تصویری سند (شکل آزاد/درون‌متنی/تصویر گالری) با
@@ -650,7 +673,7 @@ class UnifiedDocumentEngine(private val context: Context) {
             val marks = document.figureMarks[index] ?: return@forEachIndexed
             marks.forEach { mark ->
                 val line = layout.getLineForOffset(mark.charOffset)
-                val left = MARGIN + layout.getPrimaryHorizontal(mark.charOffset)
+                val left = MARGIN + replacementLeftPt(layout, mark.charOffset, mark.widthPt)
                 val top = p.y + layout.getLineTop(line)
                 out += EngineObject(
                     rect = android.graphics.RectF(left, top, left + mark.widthPt, top + mark.heightPt),
@@ -941,7 +964,7 @@ class UnifiedDocumentEngine(private val context: Context) {
                         val line = layout.getLineForOffset(mark.charOffset)
                         val top = p.y + layout.getLineTop(line)
                         val bottom = p.y + layout.getLineBottom(line)
-                        val x = MARGIN + layout.getPrimaryHorizontal(mark.charOffset)
+                        val x = MARGIN + replacementLeftPt(layout, mark.charOffset, mark.widthPt)
                         if (xPt >= x - 4f && xPt <= x + mark.widthPt + 4f && yFlow >= top && yFlow <= bottom) {
                             return EngineHit(
                                 questionIndex = mark.questionIndex,
