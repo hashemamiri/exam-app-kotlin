@@ -97,6 +97,9 @@ import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.NativeMathText
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -557,6 +560,19 @@ private fun WordFlowDocument(
                     )
                 }.first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
             }
+            // V68.9.2 — لایهٔ اشیای تصویری هر صفحه: شکل/جدول/آناتومی/تصویر با
+            // Compose روی همان مختصات موتور (راستی‌آزمایی‌شده با چاپ).
+            val objectLayers = (0 until pageCount).map { pageIndex ->
+                subcompose("objects-$pageIndex") {
+                    EngineObjectsLayer(
+                        engine = engine,
+                        document = document,
+                        pageIndex = pageIndex,
+                        pxPerPt = pxPerPt,
+                        skipQuestion = editingIndex
+                    )
+                }.first().measure(Constraints.fixed(pageWidthPx, pageHeightPx))
+            }
             // V68.9 — فقط سؤالِ در حال ویرایش، Compose است (تایپ/درگ/انتخاب
             // درجا) و دقیقاً روی جای خودش در سند موتور می‌نشیند؛ بقیهٔ سند
             // از موتور واحد می‌آید → آنچه می‌بینی همان است که چاپ می‌شود.
@@ -598,12 +614,28 @@ private fun WordFlowDocument(
             layout(pageWidthPx, totalHeight) {
                 chrome.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }
                 papers.forEachIndexed { pageIndex, paper -> paper.place(0, pageIndex * pageHeightPx) }
+                // V68.9.2 — اشیای تصویری (شکل/جدول/آناتومی/تصویر گالری) با
+                // Compose روی همان مستطیل موتور (WYSIWYG) رسم می‌شوند.
+                objectLayers.forEachIndexed { pageIndex, layer ->
+                    layer.place(0, pageIndex * pageHeightPx)
+                }
                 val overlayIndex = editingIndex
                 if (overlay != null && overlayIndex != null) {
-                    overlay.place(
-                        marginPx,
-                        (document.questionOriginPt(overlayIndex) * pxPerPt).roundToInt()
-                    )
+                    // V68.9.2 — فیکس ناپدیدشدن سؤال در حال ویرایش: جای سؤال
+                    // باید «داخل صفحهٔ خودش» حساب شود (قبلاً y = origin*pxPerPt
+                    // بدون firstTop و شمارهٔ صفحه بود؛ برای سؤال‌های صفحهٔ ۲+
+                    // overlay بیرون از کاغذ می‌افتاد و چون موتور هم همان سؤال
+                    // را skip می‌کرد، کل محتوایش ناپدید می‌شد).
+                    val originPt = document.questionOriginPt(overlayIndex)
+                    val sliceIndex = document.slices.indexOfFirst { s ->
+                        originPt >= s.first && originPt < s.second
+                    }.let { if (it >= 0) it else 0 }
+                    val slice = document.slices[sliceIndex]
+                    val dstTopPt = if (sliceIndex == 0) document.firstTop
+                    else UnifiedDocumentEngine.LATER_CONTENT_TOP
+                    val yPx = sliceIndex * pageHeightPx +
+                        ((dstTopPt + (originPt - slice.first)) * pxPerPt).roundToInt()
+                    overlay.place(marginPx, yPx)
                 }
             }
         }
@@ -639,6 +671,46 @@ private fun EnginePageView(
         native.scale(pxPerPt, pxPerPt)
         engine.drawEditorPage(native, document, pageIndex, skipQuestion)
         native.restore()
+    }
+}
+
+/**
+ * V68.9.2 — لایهٔ اشیای تصویری یک کاغذ ویرایشگر: هر شکل/جدول/آناتومی/تصویرِ
+ * سند با «همان بیت‌مایپ و همان مستطیل موتور چاپ» ولی با Compose رسم می‌شود
+ * (گزارش کاربر روی V68.9.1: «جدول و آناتومی و شکل در ویرایشگر نیست»).
+ * لمس به Canvas زیر می‌رسد (انتخاب از hitTest موتور)؛ درگ روی سؤالِ در حال
+ * ویرایش (overlay) انجام می‌شود.
+ */
+@Composable
+private fun EngineObjectsLayer(
+    engine: UnifiedDocumentEngine,
+    document: UnifiedDocumentEngine.EngineDocument,
+    pageIndex: Int,
+    pxPerPt: Float,
+    skipQuestion: Int?
+) {
+    val slice = document.slices.getOrNull(pageIndex) ?: return
+    val dstTopPt = if (pageIndex == 0) document.firstTop
+    else UnifiedDocumentEngine.LATER_CONTENT_TOP
+    val objects = remember(document, pageIndex) { engine.editorObjects(document) }
+    Box(Modifier.fillMaxSize().clipToBounds()) {
+        objects.forEach { obj ->
+            // سؤالِ در حال ویرایش: اشیایش از overlay تعاملی (Compose) می‌آیند؛
+            // اینجا دوبار رسم نشوند.
+            if (obj.questionIndex == skipQuestion) return@forEach
+            if (obj.rect.top >= slice.second || obj.rect.bottom <= slice.first) return@forEach
+            val leftPx = (obj.rect.left * pxPerPt).roundToInt()
+            val topPx = ((dstTopPt + (obj.rect.top - slice.first)) * pxPerPt).roundToInt()
+            val widthPx = (obj.rect.width() * pxPerPt).roundToInt().coerceAtLeast(1)
+            val heightPx = (obj.rect.height() * pxPerPt).roundToInt().coerceAtLeast(1)
+            Image(
+                bitmap = obj.bitmap.asImageBitmap(),
+                contentDescription = "شکل",
+                modifier = Modifier
+                    .offset { IntOffset(leftPx, topPx) }
+                    .size(widthPx, heightPx)
+            )
+        }
     }
 }
 

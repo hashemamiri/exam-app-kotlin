@@ -147,12 +147,28 @@ class UnifiedDocumentEngine(private val context: Context) {
         val figureOccurrence: Int? = null
     )
 
-    /** جای یک شکل درون‌متنی داخل پاراگراف (برای انتخاب/لمس در ویرایشگر). */
+    /** جای یک شکل درون‌متنی داخل پاراگراف (برای رسم/لمس در ویرایشگر). */
     data class FigureMark(
         val charOffset: Int,
         val questionIndex: Int,
         val occurrence: Int,
-        val widthPt: Float
+        val widthPt: Float,
+        val heightPt: Float,
+        val bitmap: Bitmap
+    )
+
+    /**
+     * V68.9.2 — یک شیء بصری سند (شکل آزاد/درون‌متنی/تصویر گالری) با مستطیل
+     * دقیق همان در چیدمان موتور؛ ویرایشگر این‌ها را با Compose روی همان
+     * مختصات می‌کشد تا رردر شکل‌ها به canvas خاص گره نخورد (گزارش کاربر:
+     * «جدول و آناتومی و شکل در ویرایشگر نیست»).
+     */
+    data class EngineObject(
+        val rect: android.graphics.RectF,
+        val bitmap: Bitmap,
+        val questionIndex: Int,
+        val galleryImageKey: String? = null,
+        val figureOccurrence: Int = -1
     )
 
     /**
@@ -318,11 +334,15 @@ class UnifiedDocumentEngine(private val context: Context) {
                                 // FlowRow: در همان پاراگراف جاری، کنار متن و
                                 // فرمول می‌نشیند، نه بلوکِ جدا.
                                 if (__inline.isEmpty()) { __inline.append('\u200F'); __inlineLen += 1 }
+                                // V68.9.2 — اندازهٔ هدف مشترک با span (منبع واحد).
+                                val __target = figureTargetSizePt(bmp, WordPageLayout.figureWidthMm(rich.spec))
                                 pendingMarks += FigureMark(
                                     charOffset = __inlineLen,
                                     questionIndex = currentQuestion,
                                     occurrence = inlineFigureCount,
-                                    widthPt = (WordPageLayout.figureWidthMm(rich.spec) / 210f * PAGE_WIDTH).coerceIn(40f, CONTENT_WIDTH - 12f)
+                                    widthPt = __target.first,
+                                    heightPt = __target.second,
+                                    bitmap = bmp
                                 )
                                 __inline.append('\uFFFC')
                                 __inline.setSpan(
@@ -580,8 +600,57 @@ class UnifiedDocumentEngine(private val context: Context) {
         canvas.save()
         canvas.clipRect(MARGIN - 6f, dstTop, PAGE_WIDTH - MARGIN + 6f, dstTop + sliceH)
         canvas.translate(0f, dstTop - slice.first)
-        drawFlowWindow(canvas, document, slice, skipQuestion, preview = true)
+        // V68.9.2 — متن/کادرها از canvas موتور؛ شکل/تصویرها با Compose روی
+        // همان مختصات (editorObjects) — تا رندر اشیای تصویری هرگز گم نشود.
+        val previousImagesOnCanvas = drawImagesOnCanvas
+        drawImagesOnCanvas = false
+        try {
+            drawFlowWindow(canvas, document, slice, skipQuestion, preview = true)
+        } finally {
+            drawImagesOnCanvas = previousImagesOnCanvas
+        }
         canvas.restore()
+    }
+
+    // V68.9.2 — وقتی false است، بیت‌مایپ‌ها (شکل/تصویر) روی canvas موتور رسم
+    // نمی‌شوند (ویرایشگر: لایهٔ Compose همان‌ها را روی همین مختصات می‌کشد).
+    private var drawImagesOnCanvas = true
+
+    /**
+     * V68.9.2 — همهٔ اشیای تصویری سند (شکل آزاد/درون‌متنی/تصویر گالری) با
+     * مستطیل دقیق همان در چیدمان موتور + همان بیت‌مایپ چاپ. ویرایشگر این‌ها
+     * را با Compose می‌کشد؛ چاپ همچنان از canvas موتور (مسیر چاپ دست‌نخورده).
+     */
+    fun editorObjects(document: EngineDocument): List<EngineObject> {
+        val out = mutableListOf<EngineObject>()
+        document.placed.forEachIndexed { index, p ->
+            val block = p.block
+            if (block.questionIndex >= 0 && block.image != null) {
+                imageRectPt(block, p.y)?.let { rect ->
+                    out += EngineObject(
+                        rect = rect,
+                        bitmap = block.image!!,
+                        questionIndex = block.questionIndex,
+                        galleryImageKey = block.imageKey?.takeIf { it != "figure" },
+                        figureOccurrence = block.figureOccurrence
+                    )
+                }
+            }
+            val layout = document.layouts[index] ?: return@forEachIndexed
+            val marks = document.figureMarks[index] ?: return@forEachIndexed
+            marks.forEach { mark ->
+                val line = layout.getLineForOffset(mark.charOffset)
+                val left = MARGIN + layout.getPrimaryHorizontal(mark.charOffset)
+                val top = p.y + layout.getLineTop(line)
+                out += EngineObject(
+                    rect = android.graphics.RectF(left, top, left + mark.widthPt, top + mark.heightPt),
+                    bitmap = mark.bitmap,
+                    questionIndex = mark.questionIndex,
+                    figureOccurrence = mark.occurrence
+                )
+            }
+        }
+        return out
     }
 
     private fun drawBlockAt(
@@ -603,7 +672,7 @@ class UnifiedDocumentEngine(private val context: Context) {
                 }
             )
         }
-        block.image?.let { drawImageAt(canvas, it, y, block, preview) }
+        block.image?.let { if (drawImagesOnCanvas) drawImageAt(canvas, it, y, block, preview) }
         block.formula?.let { formula ->
             val parsed = NativeMathParser.parse(formula)
             val formulaWidth = mathRenderer.measure(parsed, block.textSize).width
@@ -707,6 +776,16 @@ class UnifiedDocumentEngine(private val context: Context) {
     private fun matchHalfWidth(): Int = (((CONTENT_WIDTH - 26f) / 2f).coerceAtLeast(60f)).toInt()
 
     /**
+     * V68.9.2 — اندازهٔ هدف یک شکل (pt سند) — منبع واحد برای span چاپ و
+     * لایهٔ Compose ویرایشگر (تا هر دو دقیقاً همان مستطیل را ببینند).
+     */
+    private fun figureTargetSizePt(bitmap: Bitmap, widthMm: Float): Pair<Float, Float> {
+        val targetWidth = (widthMm / 210f * PAGE_WIDTH).coerceIn(40f, CONTENT_WIDTH - 12f)
+        val scale = minOf(targetWidth / bitmap.width, 220f / bitmap.height, 1f)
+        return (bitmap.width * scale) to (bitmap.height * scale)
+    }
+
+    /**
      * V68.6 — فرمول درون‌خطی داخل پاراگراف چاپ: مثل ImageSpan روی جای‌نگهدار
      * U+FFFC می‌نشیند؛ StaticLayout عرض را از getSize می‌گیرد و با FontMetrics
      * ارتفاع سطر را رشد می‌دهد تا کسرها هم در همان سطر جا شوند. draw با خط
@@ -742,11 +821,7 @@ class UnifiedDocumentEngine(private val context: Context) {
         private val bitmap: Bitmap,
         private val widthMm: Float
     ) : ReplacementSpan() {
-        private fun targetSize(): Pair<Float, Float> {
-            val targetWidth = (widthMm / 210f * PAGE_WIDTH).coerceIn(40f, CONTENT_WIDTH - 12f)
-            val scale = minOf(targetWidth / bitmap.width, 220f / bitmap.height, 1f)
-            return (bitmap.width * scale) to (bitmap.height * scale)
-        }
+        private fun targetSize(): Pair<Float, Float> = figureTargetSizePt(bitmap, widthMm)
 
         override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
             val (w, h) = targetSize()
@@ -761,6 +836,9 @@ class UnifiedDocumentEngine(private val context: Context) {
         }
 
         override fun draw(canvas: Canvas, text: CharSequence, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+            // V68.9.2 — در کاغذ ویرایشگر، شکل‌ها با Compose روی همان مستطیل
+            // رسم می‌شوند (editorObjects)؛ span از رسم دوم خودداری می‌کند.
+            if (!drawImagesOnCanvas) return
             val (w, h) = targetSize()
             val dest = android.graphics.RectF(x, y - paint.textSize * 0.92f, x + w, y - paint.textSize * 0.92f + h)
             canvas.drawBitmap(bitmap, null, dest, null)

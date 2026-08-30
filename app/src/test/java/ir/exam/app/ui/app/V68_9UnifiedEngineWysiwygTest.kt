@@ -107,7 +107,10 @@ class V68_9UnifiedEngineWysiwygTest {
     fun `editor renders paper through engine and overlays only the editing question`() {
         assertTrue("private fun EnginePageView(" in editor)
         assertTrue("skipQuestion = editingIndex" in editor)
-        assertTrue("document.questionOriginPt(overlayIndex) * pxPerPt" in editor)
+        // V68.9.2 — جای سؤالِ در حال ویرایش داخل «صفحهٔ خودش» حساب می‌شود
+        // (فیکس ناپدیدشدن سؤال‌های صفحهٔ ۲+ هنگام ویرایش).
+        assertTrue("val originPt = document.questionOriginPt(overlayIndex)" in editor)
+        assertTrue("((dstTopPt + (originPt - slice.first)) * pxPerPt).roundToInt()" in editor)
         // سؤال در حال ویرایش همان Compose تعاملی قبلی است (تایپ/درگ/انتخاب درجا)
         assertTrue("editable = editingQuestionId == question.id" in editor)
         assertTrue("onMoveFigure = { occ, x, y -> onMoveFigure(question.id, occ, x, y) }" in editor)
@@ -165,5 +168,25 @@ class V68_9UnifiedEngineWysiwygTest {
         assertFalse(".use(android.graphics.BitmapFactory.decodeStream)" in adapter)
         assertTrue("drawContext.canvas.nativeCanvas" in editor)
         assertFalse("drawIntoCanvas" in editor)
+    }
+
+    /**
+     * V68.9.2 — اشیای تصویری (جدول/آناتومی/شکل/تصویر گالری) در ویرایشگر با
+     * Compose روی همان مستطیل موتور چاپ رسم می‌شوند (گزارش کاربر روی V68.9.1:
+     * «جدول و آناتومی و شکل در ویرایشگر نیست») و canvas موتور در حالت ویرایشگر
+     * بیت‌مایپ رسم نمی‌کند تا دوبار رسم نشود؛ مسیر چاپ دست‌نخورده است.
+     */
+    @Test
+    fun `figures and gallery images render via compose at exact engine rects`() {
+        assertTrue("data class EngineObject(" in adapter)
+        assertTrue("fun editorObjects(document: EngineDocument): List<EngineObject>" in adapter)
+        assertTrue("private var drawImagesOnCanvas = true" in adapter)
+        assertTrue("if (!drawImagesOnCanvas) return" in adapter)
+        assertTrue("private fun figureTargetSizePt(bitmap: Bitmap, widthMm: Float)" in adapter)
+        assertTrue("private fun EngineObjectsLayer(" in editor)
+        assertTrue("subcompose(\"objects-${'$'}pageIndex\")" in editor)
+        assertTrue("bitmap = obj.bitmap.asImageBitmap()" in editor)
+        // سؤال در حال ویرایش دوبار رسم نمی‌شود
+        assertTrue("if (obj.questionIndex == skipQuestion) return@forEach" in editor)
     }
 }

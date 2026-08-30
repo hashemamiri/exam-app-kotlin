@@ -2565,6 +2565,24 @@ require("drawContext.canvas.nativeCanvas" in _v689_editor
 require("if (p.y + p.height > slice.first && p.y < slice.second)" in _v689_pdf,
         "V68.9.1 block/slice intersection needle (V68.8 regression test) must stay intact")
 
+# ---- V68.9.2: فیکس ناپدیدشدن جدول/آناتومی/شکل در ویرایشگر (گزارش کاربر روی V68.9.1) ----
+# (۱) جانمایی overlay باید داخل صفحهٔ خود سؤال باشد؛ (۲) اشیای تصویری با Compose
+# روی همان مستطیل موتور؛ (۳) canvas موتور در حالت ویرایشگر بیت‌مایپ نمی‌کشد.
+require("val originPt = document.questionOriginPt(overlayIndex)" in _v689_editor
+        and "((dstTopPt + (originPt - slice.first)) * pxPerPt).roundToInt()" in _v689_editor,
+        "V68.9.2 editing-question overlay must be placed inside its own page (vanishing fix)")
+require("data class EngineObject(" in _v689_pdf
+        and "fun editorObjects(document: EngineDocument): List<EngineObject>" in _v689_pdf
+        and "private fun figureTargetSizePt(bitmap: Bitmap, widthMm: Float)" in _v689_pdf,
+        "V68.9.2 engine must expose exact object rects + bitmaps for the editor")
+require("private fun EngineObjectsLayer(" in _v689_editor
+        and "bitmap = obj.bitmap.asImageBitmap()" in _v689_editor
+        and "if (obj.questionIndex == skipQuestion) return@forEach" in _v689_editor,
+        "V68.9.2 figures/gallery must render via Compose at engine rects")
+require("private var drawImagesOnCanvas = true" in _v689_pdf
+        and "if (!drawImagesOnCanvas) return" in _v689_pdf,
+        "V68.9.2 editor paper must suppress bitmap drawing on the engine canvas (no double draw)")
+
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:
