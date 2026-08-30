@@ -55,8 +55,8 @@ class V70_2DirectPdfAtomicWriteTest {
     fun `export template and fonts stay intact`() {
         assertTrue("PageSize.A4" in exporter)
         assertTrue("BaseFont.IDENTITY_H" in exporter)
-        assertTrue('fonts/bnazanin.ttf' in exporter)
-        assertTrue('fonts/bnazanin_bold.ttf' in exporter)
+        assertTrue("fonts/bnazanin.ttf" in exporter)
+        assertTrue("fonts/bnazanin_bold.ttf" in exporter)
         assertTrue("addMatching(" in exporter)
         assertTrue("includeAnswerKey" in exporter)
         assertTrue("PdfWriter.RUN_DIRECTION_RTL" in exporter)

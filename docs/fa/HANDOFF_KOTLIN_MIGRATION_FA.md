@@ -13575,3 +13575,67 @@ FINAL_NATIVE_VERIFY → PASS (باند V70.2 + همهٔ باندهای قبلی)
 ۳) آزمونی با تصویر سؤال/شکل هم امتحان شود؛ حجم بزرگ‌تر ولی سالم.
 ۴) چاپ برگه / چاپ با کلید / ویرایش سند مثل قبل کار کنند.
 ```
+
+
+## ۲۶۷) V70.3 — هات‌فیکس کامپایل تست V70.2 (String به‌جای Char)
+
+### گزارش GitHub Actions کاربر
+
+```text
+V70_2DirectPdfAtomicWriteTest.kt:58:20 Too many characters in a character literal.
+V70_2DirectPdfAtomicWriteTest.kt:59:20 Too many characters in a character literal.
+Task :app:compileDebugUnitTestKotlin FAILED
+```
+
+### ریشه (از روی خط دقیق CI و سورس، نه حدس)
+
+```text
+- در خطوط ۵۸ و ۵۹ تست V70.2، مسیرهای چندحرفی fonts/bnazanin.ttf و
+  fonts/bnazanin_bold.ttf با کوتیشن تکی ('...') نوشته شده بودند.
+- در Kotlin کوتیشن تکی فقط برای یک Char است؛ بنابراین کامپایلر پیش از اجرای تست‌ها
+  دقیقاً خطای Too many characters in a character literal را گزارش کرد.
+- :app:compileDebugKotlin در همان اجرا موفق شده بود و شکست فقط در
+  :app:compileDebugUnitTestKotlin رخ داد؛ هشدارهای deprecated/always true علت شکست نبودند.
+```
+
+### چه شد
+
+```text
+- هر دو literal مسیر فونت در V70_2DirectPdfAtomicWriteTest از Char نامعتبر به
+  String معتبر با کوتیشن دوتایی تبدیل شدند.
+- باند V70.3 در verify اضافه شد: دو شکل String درست را الزامی می‌کند و بازگشت دو
+  شکل معیوب با کوتیشن تکی را ممنوع می‌کند.
+- کد اصلی DirectPdfExporter و اصلاح اتمیک V70.2 هیچ تغییری نکردند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt  (اصلاح دو کوتیشن)
+scripts/verify_native_final.py                                       (باند ضدبازگشت V70.3)
+text/CHANGELOG_FA.txt                                                (خط V70.3 در بالا؛ کل تاریخچه حفظ شد)
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                               (همین بخش ۲۶۷)
+```
+
+### SQL جدید: ندارد — Edge deploy: ندارد — Secret جدید: ندارد
+
+### نتیجهٔ بررسی پیش از تحویل
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=207 edge_functions=3
+KOTLIN_2_0_21_STANDALONE_TEST_COMPILE=PASS
+MULTICHAR_ASSERT_CHAR_LITERAL_SCAN=PASS
+AFFECTED_TEST_NEEDLE_SIMULATION=PASS
+CHANGED_KOTLIN_IMPORT_MEMBER_SCAN=PASS
+GIT_DIFF_CHECK=PASS
+```
+
+فایل تست اصلاح‌شده با همان Kotlin 2.0.21 پروژه و JUnit 4.13.2 مستقلاً کامپایل شد.
+محیط عامل Android SDK ندارد؛ بنابراین اجرای کامل زیر باید در GitHub Actions تکرار شود:
+
+```text
+./gradlew testDebugUnitTest lintDebug
+```
+
+پس از سبزشدن CI، اصلاح اصلی V70.2 روی دستگاه بررسی شود: PDF مستقیم باید حجم غیرصفر
+داشته باشد و بدون پیام «قالب نامعتبر است» باز شود.

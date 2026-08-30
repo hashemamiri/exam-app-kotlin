@@ -2656,6 +2656,19 @@ require("ByteArrayOutputStream" in _v70_direct_pdf.read_text()
 require("stream.use { buildPdf(withImages, it) }" not in _v70_direct_pdf.read_text(),
         "V70.2 must not regress to streaming directly into the SAF stream (0-byte file bug)")
 
+# ---- V70.3: هات‌فیکس کامپایل تست V70.2 — مسیر فونت‌ها باید String باشد ----
+# Kotlin کوتیشن تکی را فقط برای یک Char می‌پذیرد؛ مسیر چندحرفی فونت باید با
+# کوتیشن دوتایی نوشته شود. این باند هم شکل درست را الزام می‌کند و هم دو شکل
+# معیوبی را که در CI خطای Too many characters in a character literal دادند رد می‌کند.
+_v703_atomic_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt")
+_v703_atomic_test_text=_v703_atomic_test.read_text(encoding="utf-8") if _v703_atomic_test.exists() else ""
+require(_v703_atomic_test.exists()
+        and 'assertTrue("fonts/bnazanin.ttf" in exporter)' in _v703_atomic_test_text
+        and 'assertTrue("fonts/bnazanin_bold.ttf" in exporter)' in _v703_atomic_test_text
+        and "assertTrue('fonts/bnazanin.ttf' in exporter)" not in _v703_atomic_test_text
+        and "assertTrue('fonts/bnazanin_bold.ttf' in exporter)" not in _v703_atomic_test_text,
+        "V70.3 test compile fix is missing: multi-character font paths must be Kotlin Strings, not Char literals")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2663,9 +2676,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 244
-        and _v694_changelog.startswith("V70.2:"),
-        "changelog must keep the full history + the new V70.2 line on top")
+require(_v694_lines >= 245
+        and _v694_changelog.startswith("V70.3:"),
+        "changelog must keep the full history + the new V70.3 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
