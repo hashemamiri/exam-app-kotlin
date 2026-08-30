@@ -72,8 +72,9 @@ import kotlinx.coroutines.withContext
  *
  * iText 7 layout برای صفحه‌بندی، جدول و متن استفاده می‌شود و PdfFontFactory با
  * کدگذاری Identity-H فونت فارسی B Nazanin را embed می‌کند. شکل‌دهی حروف عربی
- * پیش از ورود متن به layout با Android ICU انجام می‌شود؛ بنابراین جایگزینی
- * کتابخانه، خروجی فارسی و RTL قبلی را از بین نمی‌برد.
+ * پیش از ورود متن به layout با جدول Unicode Presentation Forms انجام می‌شود؛
+ * برای فرمول‌ها نیز فونت DejaVu Sans با پوشش نمادهای ریاضی، یونیکد و یونانی
+ * embed می‌شود تا نبود glyph به مربع یا نویسهٔ ناشناخته تبدیل نشود.
  *
  * خط لولهٔ V71 نیز حفظ شده است: ساخت روی فایل خصوصی مرحله‌ای، نهایی‌سازی
  * PdfDocument، بررسی هدر/EOF/parse/page-count/SHA-256، ثبت با
@@ -154,8 +155,28 @@ class DirectPdfExporter(private val context: Context) {
     // ------------------------------------------------------------- محتوا
 
     private fun buildPdf(printable: OfficialExamPrintable, out: OutputStream) {
-        val base = loadPdfFont("fonts/bnazanin.ttf", R.font.vazirmatn_regular)
-        val boldBase = loadPdfFont("fonts/bnazanin_bold.ttf", R.font.vazirmatn_bold)
+        val base = loadPdfFont(
+            "fonts/bnazanin.ttf",
+            R.font.vazirmatn_regular,
+            PERSIAN_SHAPED_GLYPHS
+        )
+        val boldBase = loadPdfFont(
+            "fonts/bnazanin_bold.ttf",
+            R.font.vazirmatn_bold,
+            PERSIAN_SHAPED_GLYPHS
+        )
+        // iText 7 Core fallback خودکار glyph ندارد؛ فرمول‌ها به فونت پوشش‌دهندهٔ
+        // یونانی، عملگرها، رادیکال و superscript/subscript نیاز دارند.
+        val mathBase = loadPdfFont(
+            "fonts/dejavu_sans.ttf",
+            R.font.vazirmatn_regular,
+            MATH_GLYPHS
+        )
+        val mathBold = loadPdfFont(
+            "fonts/dejavu_sans_bold.ttf",
+            R.font.vazirmatn_bold,
+            MATH_GLYPHS
+        )
         val writer = PdfWriter(
             out,
             WriterProperties()
@@ -180,7 +201,15 @@ class DirectPdfExporter(private val context: Context) {
             addHeader(document, printable.header, boldBase)
             addSubject(document, printable, boldBase)
             printable.questions.forEach { question ->
-                addQuestion(document, question, printable.includeAnswerKey, base, boldBase)
+                addQuestion(
+                    document,
+                    question,
+                    printable.includeAnswerKey,
+                    base,
+                    boldBase,
+                    mathBase,
+                    mathBold
+                )
             }
             // امضای دبیر/مدیر فقط در پایان برگه (همان قالب چاپ).
             if (printable.footerNote.isNotBlank()) {
@@ -289,7 +318,9 @@ class DirectPdfExporter(private val context: Context) {
         q: OfficialPrintQuestion,
         includeKey: Boolean,
         base: PdfFont,
-        boldBase: PdfFont
+        boldBase: PdfFont,
+        mathBase: PdfFont,
+        mathBold: PdfFont
     ) {
         val size = q.fontSizeSp.coerceIn(8f, 30f)
         addBoxedLine(
@@ -299,11 +330,11 @@ class DirectPdfExporter(private val context: Context) {
             size,
             alignmentFor(q.textAlign)
         )
-        addQuestionText(document, q, size, base, boldBase)
-        addOptions(document, q, base, boldBase)
-        addMatching(document, q, size, base, boldBase)
+        addQuestionText(document, q, size, base, boldBase, mathBase, mathBold)
+        addOptions(document, q, base, boldBase, mathBase, mathBold)
+        addMatching(document, q, size, base, boldBase, mathBase, mathBold)
         addGalleryImages(document, q)
-        addAnswer(document, q, includeKey, base, boldBase)
+        addAnswer(document, q, includeKey, base, boldBase, mathBase, mathBold)
         document.add(Paragraph(" ").setFixedLeading(10f))
     }
 
@@ -312,7 +343,9 @@ class DirectPdfExporter(private val context: Context) {
         q: OfficialPrintQuestion,
         size: Float,
         base: PdfFont,
-        boldBase: PdfFont
+        boldBase: PdfFont,
+        mathBase: PdfFont,
+        mathBold: PdfFont
     ) {
         val formulas = FormulaTextCodec.occurrences(q.text)
         val figures = FigureCodec.occurrences(q.text)
@@ -339,8 +372,8 @@ class DirectPdfExporter(private val context: Context) {
                 is RichSegment.Math -> current.add(
                     styledText(
                         NativeMathFormatter.renderTex(segment.tex),
-                        base,
-                        boldBase,
+                        mathBase,
+                        mathBold,
                         size,
                         q.bold,
                         q.italic
@@ -363,7 +396,14 @@ class DirectPdfExporter(private val context: Context) {
         flush()
     }
 
-    private fun addOptions(document: Document, q: OfficialPrintQuestion, base: PdfFont, boldBase: PdfFont) {
+    private fun addOptions(
+        document: Document,
+        q: OfficialPrintQuestion,
+        base: PdfFont,
+        boldBase: PdfFont,
+        mathBase: PdfFont,
+        mathBold: PdfFont
+    ) {
         q.options.forEachIndexed { index, option ->
             val style = q.optionStyles.getOrNull(index)
             val size = (style?.third ?: q.fontSizeSp).coerceIn(8f, 30f)
@@ -376,8 +416,8 @@ class DirectPdfExporter(private val context: Context) {
                     optionParagraph.add(
                         styledText(
                             NativeMathFormatter.renderTex(segment.text),
-                            base,
-                            boldBase,
+                            mathBase,
+                            mathBold,
                             size,
                             bold,
                             italic
@@ -398,7 +438,9 @@ class DirectPdfExporter(private val context: Context) {
         q: OfficialPrintQuestion,
         size: Float,
         base: PdfFont,
-        boldBase: PdfFont
+        boldBase: PdfFont,
+        mathBase: PdfFont,
+        mathBold: PdfFont
     ) {
         val rows = maxOf(q.matchingLeft.size, q.matchingRight.size)
         if (rows == 0) return
@@ -414,8 +456,8 @@ class DirectPdfExporter(private val context: Context) {
             table.addCell(
                 matchingCell(
                     NativeMathFormatter.renderText(right),
-                    base,
-                    boldBase,
+                    mathBase,
+                    mathBold,
                     size,
                     rightStyle?.first ?: false,
                     rightStyle?.second ?: false,
@@ -423,13 +465,13 @@ class DirectPdfExporter(private val context: Context) {
                 )
             )
             table.addCell(
-                matchingCell("↔", base, boldBase, size, false, false, TextAlignment.CENTER)
+                matchingCell("↔", mathBase, mathBold, size, false, false, TextAlignment.CENTER)
             )
             table.addCell(
                 matchingCell(
                     NativeMathFormatter.renderText(left),
-                    base,
-                    boldBase,
+                    mathBase,
+                    mathBold,
                     size,
                     leftStyle?.first ?: false,
                     leftStyle?.second ?: false,
@@ -466,7 +508,9 @@ class DirectPdfExporter(private val context: Context) {
         q: OfficialPrintQuestion,
         includeKey: Boolean,
         base: PdfFont,
-        boldBase: PdfFont
+        boldBase: PdfFont,
+        mathBase: PdfFont,
+        mathBold: PdfFont
     ) {
         if (includeKey && !q.answerText.isNullOrBlank()) {
             val answer = q.answerText.orEmpty()
@@ -475,8 +519,8 @@ class DirectPdfExporter(private val context: Context) {
                     .add(
                         styledText(
                             "پاسخ: ${NativeMathFormatter.renderText(answer)}",
-                            base,
-                            boldBase,
+                            mathBase,
+                            mathBold,
                             10.5f,
                             true,
                             false
@@ -564,18 +608,30 @@ class DirectPdfExporter(private val context: Context) {
         return stream.toByteArray()
     }
 
-    private fun loadPdfFont(asset: String, resFallback: Int): PdfFont {
+    private fun loadPdfFont(
+        asset: String,
+        resFallback: Int,
+        requiredGlyphs: String
+    ): PdfFont {
         val assetBytes = runCatching { appContext.assets.open(asset).use { it.readBytes() } }.getOrNull()
         val resourceBytes = runCatching {
             appContext.resources.openRawResource(resFallback).use { it.readBytes() }
         }.getOrNull()
-        return runCatching {
-            PdfFontFactory.createFont(
-                assetBytes ?: resourceBytes ?: throw IOException("فونت PDF موجود نیست: $asset"),
-                PdfEncodings.IDENTITY_H,
-                PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED
-            )
-        }.getOrElse { loadLatinFont() }
+        listOfNotNull(assetBytes, resourceBytes).forEach { bytes ->
+            val candidate = runCatching {
+                PdfFontFactory.createFont(
+                    bytes,
+                    PdfEncodings.IDENTITY_H,
+                    PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED
+                )
+            }.getOrNull()
+            if (candidate != null && requiredGlyphs.all { candidate.containsGlyph(it.code) }) {
+                return candidate
+            }
+        }
+        // فونت آزاد استاندارد، آخرین fallback برای متن لاتین/عدد است؛
+        // نباید برای glyphهای فارسی یا ریاضی موفقیت کاذب بدهیم.
+        return loadLatinFont()
     }
 
     private fun loadLatinFont(): PdfFont =
@@ -652,6 +708,28 @@ class DirectPdfExporter(private val context: Context) {
         const val SIDE_COL_WIDTH = 130f
         const val CENTER_COL_WIDTH = 235f
         const val LEFT_COL_WIDTH = 130f
+
+        // Probeهای واقعیِ glyph؛ B Nazanin برخی فرم‌های ی فارسی (FBE8/FBE9)
+        // را ندارد، پس در آن حالت به Vazirmatn resource fallback می‌کنیم.
+        private val PERSIAN_SHAPED_GLYPHS =
+            "\uFE80\uFE81\uFE82\uFE83\uFE84\uFE85\uFE86\uFE87\uFE88\uFE89\uFE8A\uFE8B\uFE8C" +
+                "\uFE8D\uFE8E\uFE8F\uFE90\uFE91\uFE92\uFE93\uFE94\uFE95\uFE96\uFE97\uFE98" +
+                "\uFE99\uFE9A\uFE9B\uFE9C\uFE9D\uFE9E\uFE9F\uFEA0\uFEA1\uFEA2\uFEA3\uFEA4" +
+                "\uFEA5\uFEA6\uFEA7\uFEA8\uFEA9\uFEAA\uFEAB\uFEAC\uFEAD\uFEAE\uFEAF\uFEB0" +
+                "\uFEB1\uFEB2\uFEB3\uFEB4\uFEB5\uFEB6\uFEB7\uFEB8\uFEB9\uFEBA\uFEBB\uFEBC" +
+                "\uFEBD\uFEBE\uFEBF\uFEC0\uFEC1\uFEC2\uFEC3\uFEC4\uFEC5\uFEC6\uFEC7\uFEC8" +
+                "\uFEC9\uFECA\uFECB\uFECC\uFECD\uFECE\uFECF\uFED0\uFED1\uFED2\uFED3\uFED4" +
+                "\uFED5\uFED6\uFED7\uFED8\uFED9\uFEDA\uFEDB\uFEDC\uFEDD\uFEDE\uFEDF\uFEE0" +
+                "\uFEE1\uFEE2\uFEE3\uFEE4\uFEE5\uFEE6\uFEE7\uFEE8\uFEE9\uFEEA\uFEEB\uFEEC" +
+                "\uFEED\uFEEE\uFEEF\uFEF0\uFEF1\uFEF2\uFB56\uFB57\uFB58\uFB59\uFB7A\uFB7B" +
+                "\uFB7C\uFB7D\uFB8A\uFB8B\uFB8E\uFB8F\uFB90\uFB91\uFB92\uFB93\uFB94\uFB95" +
+                "\uFBFC\uFBFD\uFBE8\uFBE9"
+
+        private val MATH_GLYPHS =
+            "αβγδεθλμπρσφωΔΣΩ×÷±∓≤≥≠≈∞∑∏∫∂∇→←⇒∈∉⊂⊆⊃⊇∪∩∅∀∃°·∠⊥∥≡≃∴∝∘" +
+                "↔↑↓↕⇐⇔↦↤⇌↩↪∬∭∮⋃⋂ℏ…⋯⋮⋱√⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱ₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎" +
+                "ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁄"
+
         private const val STALE_STAGE_MAX_AGE_MS = 24L * 60L * 60L * 1_000L
     }
 }

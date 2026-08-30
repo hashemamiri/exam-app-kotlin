@@ -2746,6 +2746,30 @@ require(_v723_test.exists()
         and "NativeMathFormatter.renderTex" in _v723_test.read_text(),
         "V72.0.3 formula Regex regression test is missing")
 
+# ---- V72.0.4: glyphهای کامل PDF — فونت مستقل برای فرمول ----
+_v724_exporter=(ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
+_v724_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_4PdfFontCoverageTest.kt")
+_v724_exporter_text=_v724_exporter.read_text() if _v724_exporter.exists() else ""
+_v724_math=(ROOT/"app/src/main/assets/fonts/dejavu_sans.ttf")
+_v724_math_bold=(ROOT/"app/src/main/assets/fonts/dejavu_sans_bold.ttf")
+_v724_license=(ROOT/"app/src/main/assets/fonts/DEJAVU_LICENSE.txt")
+require(_v724_exporter.exists()
+        and "fonts/dejavu_sans.ttf" in _v724_exporter_text
+        and "fonts/dejavu_sans_bold.ttf" in _v724_exporter_text
+        and "val mathBase" in _v724_exporter_text
+        and "val mathBold" in _v724_exporter_text
+        and "NativeMathFormatter.renderTex(segment.tex)" in _v724_exporter_text
+        and "NativeMathFormatter.renderTex(segment.text)" in _v724_exporter_text,
+        "V72.0.4 direct PDF math-font wiring is missing")
+require(_v724_math.is_file() and _v724_math.stat().st_size > 500_000
+        and _v724_math_bold.is_file() and _v724_math_bold.stat().st_size > 500_000
+        and _v724_license.is_file() and "Bitstream Vera" in _v724_license.read_text(),
+        "V72.0.4 DejaVu math font assets or license are missing")
+require(_v724_test.exists()
+        and "dedicated math font" in _v724_test.read_text()
+        and "mathBase" in _v724_test.read_text(),
+        "V72.0.4 PDF font coverage regression test is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2754,8 +2778,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 246
-        and _v694_changelog.startswith("V72.0.3:"),
-        "changelog must keep the full history + the new V72.0.3 line on top")
+        and _v694_changelog.startswith("V72.0.4:"),
+        "changelog must keep the full history + the new V72.0.4 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

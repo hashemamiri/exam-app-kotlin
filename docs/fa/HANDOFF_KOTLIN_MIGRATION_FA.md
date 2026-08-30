@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.3 رفع Regex فرمول در چاپ؛ پیش از آن: V72.0.2
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.4 اصلاح فونت فارسی/فرمول PDF؛ پیش از آن: V72.0.3
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -14038,4 +14038,68 @@ git diff --check                         → PASS
 NativeMathFormatter Kotlin smoke       → PASS
 FINAL_NATIVE_VERIFY                     → PASS
 clean clone git apply --check            → PASS
+```
+
+
+## ۲۷۳) V72.0.4 — اصلاح فونت فارسی و glyphهای فرمول در PDF
+
+### گزارش دستگاه
+
+```text
+PDF اکنون سالم ساخته و باز می‌شود، اما متن فارسی در برخی قسمت‌ها به‌هم‌ریخته یا
+بسیار نامفهوم است و فرمول‌ها به مربع/نویسهٔ ناشناخته تبدیل می‌شوند. در صفحهٔ
+ویرایشگر همان فرمول‌ها درست دیده می‌شوند.
+```
+
+### ریشه
+
+```text
+iText 7 Core برای هر Text یک فونت خودکار fallback نمی‌سازد. DirectPdfExporter تمام
+متن و خروجی NativeMathFormatter را با B Nazanin embed می‌کرد؛ این فونت برای حروف
+فارسی مناسب است، اما glyphهای Unicode ریاضی مانند √، ⁄، superscript/subscript،
+عملگرها و حروف یونانی را ندارد. Android/Compose در ویرایشگر fallback دارد، اما
+PDF iText 7 نداشت؛ نتیجه مربع یا نویسهٔ ناشناخته بود.
+```
+
+### اصلاح
+
+```text
+- دو فونت آزاد DejaVu Sans و DejaVu Sans Bold در assets/fonts اضافه شد؛ این فونت
+  glyphهای فارسی/عربی، Presentation Forms، عملگرهای ریاضی، حروف یونانی و
+  superscript/subscript را پوشش می‌دهد. متن مجوز در DEJAVU_LICENSE.txt کنار آن‌هاست.
+- mathBase/mathBold در DirectPdfExporter بارگذاری و embed می‌شوند. قطعه‌های
+  RichSegment.Math، فرمول گزینه‌ها، matching و پاسخ با فونت ریاضی چاپ می‌شوند؛
+  متن عادی همچنان با B Nazanin می‌ماند.
+- مسیر iText 7، Identity-H، PersianTextShaper و ذخیرهٔ تأییدشدهٔ SAF تغییر نکرده‌اند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/assets/fonts/dejavu_sans.ttf
+app/src/main/assets/fonts/dejavu_sans_bold.ttf
+app/src/main/assets/fonts/DEJAVU_LICENSE.txt
+app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt
+app/src/test/java/ir/exam/app/core/printing/V72_0_4PdfFontCoverageTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### نتیجهٔ بررسی
+
+```text
+DejaVu font glyph coverage check          → PASS
+iText 7 PDF + math-font parse smoke      → PASS
+git diff --check                          → PASS
+FINAL_NATIVE_VERIFY                      → PASS
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) چاپ آزمون دارای متن فارسی، فرمول، کسر، رادیکال، توان و حروف یونانی.
+۲) متن فارسی عادی باید پیوسته و خوانا باشد.
+۳) فرمول‌هایی مانند A^{-1}، \frac{a}{b} و \sqrt{x} نباید مربع داشته باشند.
+۴) PDF را هم در PDF Reader و هم بعد از Share/Drive باز کنید.
 ```
