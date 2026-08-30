@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.2 رفع PDF صفر بایت روی SAF؛ پیش از آن: V72.0.1
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.3 رفع Regex فرمول در چاپ؛ پیش از آن: V72.0.2
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -13989,4 +13989,53 @@ Gradle کامل این محیط                   → به‌دلیل resolve ن
    واقعی نمایش داده می‌شود.
 ۵) اگر provider هنوز صفر ذخیره کرد، متن خطای قرمز برنامه را ارسال کنید؛ آن متن باید
    اندازهٔ مورد انتظار و اندازهٔ خوانده‌شده را نشان دهد، نه اینکه موفقیت گزارش شود.
+```
+
+
+## ۲۷۲) V72.0.3 — رفع Syntax error در Regex فرمول هنگام لمس پرینتر
+
+### گزارش دستگاه
+
+```text
+پس از لمس آیکن پرینتر، صفحه خطای زیر را نشان می‌دهد:
+Syntax error in regexp pattern near index 40
+...\\(?:mathrm|text|mathbf|bold)\\{([^{}]*)}
+```
+
+### ریشه
+
+```text
+NativeMathFormatter.renderTex در هر بار پردازش فرمول این الگو را می‌ساخت:
+Regex("\\\\(?:mathrm|text|mathbf|bold)\\{([^{}]*)}")
+آکولاد بستهٔ انتهای گروه در رشتهٔ Regex escape نشده بود؛ Java/Kotlin Regex آن را
+quantifier ناقص تشخیص می‌داد و قبل از ساخت PDF Runtime exception می‌داد.
+```
+
+### اصلاح
+
+```text
+- آکولاد بسته به صورت \\} در الگو escape شد.
+- تست NativeMathFormatterTest.style commands render without invalid regex اضافه شد
+  و \mathrm و \mathbf را واقعاً اجرا می‌کند.
+- به همین دلیل دیگر لمس پرینتر با وجود فرمول‌های سبک برنامه را متوقف نمی‌کند.
+- iText 7، فونت Identity-H، شکل‌دهی فارسی، ذخیرهٔ SAF و اعتبارسنجی PDF تغییر نکردند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/math/NativeMathFormatter.kt
+app/src/test/java/ir/exam/app/core/math/NativeMathFormatterTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### نتیجهٔ بررسی
+
+```text
+git diff --check                         → PASS
+NativeMathFormatter Kotlin smoke       → PASS
+FINAL_NATIVE_VERIFY                     → PASS
+clean clone git apply --check            → PASS
 ```

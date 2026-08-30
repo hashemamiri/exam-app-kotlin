@@ -2733,6 +2733,19 @@ require(_v722_test.exists()
         and "descriptor is only fallback" in _v722_test.read_text(),
         "V72.0.2 SAF writer regression test is missing")
 
+# ---- V72.0.3: هات‌فیکس Regex فرمول — آکولاد بسته باید escape شود ----
+_v723_formatter=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathFormatter.kt")
+_v723_test=(ROOT/"app/src/test/java/ir/exam/app/core/math/NativeMathFormatterTest.kt")
+_v723_formatter_text=_v723_formatter.read_text() if _v723_formatter.exists() else ""
+require(_v723_formatter.exists()
+        and r"([^{}]*)\\}" in _v723_formatter_text
+        and r"([^{}]*)}" not in _v723_formatter_text,
+        "V72.0.3 formula Regex must escape the closing brace")
+require(_v723_test.exists()
+        and "style commands render without invalid regex" in _v723_test.read_text()
+        and "NativeMathFormatter.renderTex" in _v723_test.read_text(),
+        "V72.0.3 formula Regex regression test is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2741,8 +2754,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 246
-        and _v694_changelog.startswith("V72.0.2:"),
-        "changelog must keep the full history + the new V72.0.2 line on top")
+        and _v694_changelog.startswith("V72.0.3:"),
+        "changelog must keep the full history + the new V72.0.3 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

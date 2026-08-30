@@ -84,7 +84,7 @@ object NativeMathFormatter {
         value = replaceScripts(value, '^', superscript)
         value = replaceScripts(value, '_', subscript)
         value = value.replace("\\left", "").replace("\\right", "")
-        value = value.replace(Regex("\\\\(?:mathrm|text|mathbf|bold)\\{([^{}]*)}"), "$1")
+        value = value.replace(Regex("\\\\(?:mathrm|text|mathbf|bold)\\{([^{}]*)\\}"), "$1")
         value = value.replace("{", "").replace("}", "")
         value = value.replace(Regex("\\\\[A-Za-z]+")) { match -> match.value.removePrefix("\\") }
         return value.trim()

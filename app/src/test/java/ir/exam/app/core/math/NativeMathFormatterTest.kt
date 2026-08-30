@@ -17,6 +17,12 @@ class NativeMathFormatterTest {
     }
 
     @Test
+    fun `style commands render without invalid regex`() {
+        assertEquals("x + y", NativeMathFormatter.renderTex("\\mathrm{x + y}"))
+        assertEquals("z", NativeMathFormatter.renderTex("\\mathbf{z}"))
+    }
+
+    @Test
     fun `quick syntax converts deterministically`() {
         assertEquals("\\sqrt{x} \\leq 4 \\times 2", NativeMathFormatter.quickToTex("sqrt(x) <= 4 * 2"))
     }
