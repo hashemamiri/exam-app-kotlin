@@ -34,6 +34,10 @@ class V70_0DirectPdfTest {
         assertTrue("addMatching(" in exporter)
         assertTrue("includeAnswerKey" in exporter)
         assertTrue("PdfWriter.RUN_DIRECTION_RTL" in exporter)
+        // V70.1 — openPDF 1.3.43: خاصیت واقعی PdfPCell (نه useAscender) و
+        // شکل‌نویسی فارسی (اتصال حروف) برای هم‌ارزی با خروجی اپ قدیمی.
+        assertTrue("isUseAscender = true" in exporter)
+        assertTrue("PersianTextShaper.shape" in exporter)
     }
 
     @Test

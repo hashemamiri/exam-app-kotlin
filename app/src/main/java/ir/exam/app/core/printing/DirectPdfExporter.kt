@@ -22,6 +22,7 @@ import com.lowagie.text.pdf.PdfPCell
 import com.lowagie.text.pdf.PdfPTable
 import com.lowagie.text.pdf.PdfPageEventHelper
 import com.lowagie.text.pdf.PdfWriter
+import com.lowagie.text.pdf.PersianTextShaper
 import ir.exam.app.R
 import ir.exam.app.core.figure.AtlasBitmapRenderer
 import ir.exam.app.core.figure.FigureCodec
@@ -52,6 +53,10 @@ import kotlinx.coroutines.coroutineScope
  * رسمی با آرم، نوار درس/مدت/بارم، سؤال‌های شماره‌دار، گزینه‌ها، جورکردنی،
  * تصویرهای گالری و سطرهای پاسخ؛ فونت فارسی B Nazanin از
  * `assets/fonts/bnazanin.ttf` (و در نبود آن وزیرمتن) با کدگذاری Identity-H.
+ *
+ * V70.1 — رفع خطای کامپایل در openPDF 1.3.43 (خاصیت isUseAscender به‌جای
+ * useAscender)، نگه‌داشتن پسوند .ttf در نام فونت (تا مسیر یونیکد انتخاب
+ * شود) و شکل‌نویسی فارسی با PersianTextShaper (هم‌ارز majorBidi اپ قدیمی).
  */
 class DirectPdfExporter(private val context: Context) {
 
@@ -95,7 +100,7 @@ class DirectPdfExporter(private val context: Context) {
             }
             // امضای دبیر/مدیر فقط در پایان برگه (همان قالب چاپ).
             if (printable.footerNote.isNotBlank()) {
-                val note = Paragraph(printable.footerNote, font(base, boldBase, 9f, false, false))
+                val note = Paragraph(sh(printable.footerNote), font(base, boldBase, 9f, false, false))
                 note.alignment = Element.ALIGN_RIGHT
                 note.spacingBefore = 18f
                 document.add(note)
@@ -111,7 +116,7 @@ class DirectPdfExporter(private val context: Context) {
         table.setLockedWidth(true)
         table.defaultCell.border = Rectangle.NO_BORDER
         table.defaultCell.setPadding(1.5f)
-        table.defaultCell.useAscender = true
+        table.defaultCell.isUseAscender = true
 
         // سطر آرم وسط (همان print/emblem.png).
         val emblem = runCatching {
@@ -152,12 +157,12 @@ class DirectPdfExporter(private val context: Context) {
 
     private fun headerCell(text: String, base: BaseFont, align: Int, width: Float): PdfPCell {
         val f = Font(base, 8.6f, Font.NORMAL)
-        val cell = PdfPCell(Paragraph(ellipsize(text, f, width - 3f), f))
+        val cell = PdfPCell(Paragraph(ellipsize(sh(text), f, width - 3f), f))
         cell.border = Rectangle.NO_BORDER
         cell.horizontalAlignment = align
         cell.verticalAlignment = Element.ALIGN_MIDDLE
         cell.setPadding(1.5f)
-        cell.useAscender = true
+        cell.isUseAscender = true
         return cell
     }
 
@@ -171,12 +176,12 @@ class DirectPdfExporter(private val context: Context) {
     private fun addBoxedLine(document: Document, text: String, font: Font, align: Int) {
         val table = PdfPTable(1)
         table.widthPercentage = 100f
-        val cell = PdfPCell(Paragraph(text, font))
+        val cell = PdfPCell(Paragraph(sh(text), font))
         cell.border = Rectangle.BOX
         cell.borderWidth = 0.7f
         cell.horizontalAlignment = align
         cell.setPadding(4f)
-        cell.useAscender = true
+        cell.isUseAscender = true
         table.addCell(cell)
         document.add(table)
     }
@@ -229,12 +234,12 @@ class DirectPdfExporter(private val context: Context) {
                     if (part.isNotEmpty()) {
                         val offset = ranges.getOrNull(index)?.first ?: 0
                         StyleSpanOps.splitBySpans(part, offset, spans).forEach { (piece, bold, italic) ->
-                            paragraph.add(Chunk(piece.replace("\\$", "$"), font(base, boldBase, size, bold, italic)))
+                            paragraph.add(Chunk(sh(piece.replace("\\$", "$")), font(base, boldBase, size, bold, italic)))
                         }
                     }
                 }
                 is RichSegment.Math -> paragraph.add(
-                    Chunk(NativeMathFormatter.renderTex(segment.tex), font(base, boldBase, size, q.bold, q.italic))
+                    Chunk(sh(NativeMathFormatter.renderTex(segment.tex)), font(base, boldBase, size, q.bold, q.italic))
                 )
                 is RichSegment.Figure -> {
                     flush()
@@ -242,7 +247,7 @@ class DirectPdfExporter(private val context: Context) {
                     if (bitmap != null) {
                         document.add(imageParagraph(bitmap, figureWidthPt(segment.spec)))
                     } else {
-                        document.add(Paragraph("[شکل]", font(base, boldBase, size, false, false)))
+                        document.add(Paragraph(sh("[شکل]"), font(base, boldBase, size, false, false)))
                     }
                 }
             }
@@ -260,9 +265,9 @@ class DirectPdfExporter(private val context: Context) {
             paragraph.add(Chunk("${index + 1}) ", font(base, boldBase, size, true, false)))
             NativeMathFormatter.segments(option).forEach { segment ->
                 if (segment.math) {
-                    paragraph.add(Chunk(NativeMathFormatter.renderTex(segment.text), font(base, boldBase, size, bold, italic)))
+                    paragraph.add(Chunk(sh(NativeMathFormatter.renderTex(segment.text)), font(base, boldBase, size, bold, italic)))
                 } else {
-                    paragraph.add(Chunk(segment.text.replace("\\$", "$"), font(base, boldBase, size, bold, italic)))
+                    paragraph.add(Chunk(sh(segment.text.replace("\\$", "$")), font(base, boldBase, size, bold, italic)))
                 }
             }
             document.add(paragraph)
@@ -288,10 +293,10 @@ class DirectPdfExporter(private val context: Context) {
             table.setLockedWidth(true)
             table.defaultCell.border = Rectangle.NO_BORDER
             table.defaultCell.setPadding(1f)
-            table.defaultCell.useAscender = true
+            table.defaultCell.isUseAscender = true
             val rightCell = PdfPCell(
                 Paragraph(
-                    NativeMathFormatter.renderText(right),
+                    sh(NativeMathFormatter.renderText(right)),
                     font(base, boldBase, size, rightStyle?.first ?: false, rightStyle?.second ?: false)
                 )
             )
@@ -302,7 +307,7 @@ class DirectPdfExporter(private val context: Context) {
             arrowCell.horizontalAlignment = Element.ALIGN_CENTER
             val leftCell = PdfPCell(
                 Paragraph(
-                    NativeMathFormatter.renderText(left),
+                    sh(NativeMathFormatter.renderText(left)),
                     font(base, boldBase, size, leftStyle?.first ?: false, leftStyle?.second ?: false)
                 )
             )
@@ -330,7 +335,7 @@ class DirectPdfExporter(private val context: Context) {
             val answer = q.answerText.orEmpty()
             val paragraph = newParagraph(Element.ALIGN_RIGHT, 10.5f)
             paragraph.add(
-                Chunk("پاسخ: ${NativeMathFormatter.renderText(answer)}", font(base, boldBase, 10.5f, true, false))
+                Chunk(sh("پاسخ: ${NativeMathFormatter.renderText(answer)}"), font(base, boldBase, 10.5f, true, false))
             )
             document.add(paragraph)
         } else {
@@ -365,6 +370,9 @@ class DirectPdfExporter(private val context: Context) {
         return Font(bf, size, style)
     }
 
+    /** شکل‌نویسی فارسی/عربی (اتصال حروف) — هم‌ارز majorBidi در اپ قدیمی. */
+    private fun sh(text: String): String = PersianTextShaper.shape(text)
+
     private fun alignmentFor(align: String): Int = when (align) {
         "center" -> Element.ALIGN_CENTER
         "left" -> Element.ALIGN_LEFT
@@ -394,15 +402,17 @@ class DirectPdfExporter(private val context: Context) {
     private fun loadBaseFont(asset: String, resFallback: Int): BaseFont? {
         val assetBytes = runCatching { appContext.assets.open(asset).use { it.readBytes() } }.getOrNull()
         if (assetBytes != null) {
+            // نام فونت باید به .ttf ختم شود؛ وگرنه openPDF 1.3.43 مسیر
+            // TrueType/یونیکد را انتخاب نمی‌کند و فونت هرگز بارگذاری نمی‌شود.
             return BaseFont.createFont(
-                asset.substringAfterLast('/').substringBefore('.'),
+                asset,
                 BaseFont.IDENTITY_H, BaseFont.EMBEDDED, BaseFont.CACHED, assetBytes, null
             )
         }
         val resBytes = runCatching { appContext.resources.openRawResource(resFallback).use { it.readBytes() } }.getOrNull()
         if (resBytes != null) {
             return BaseFont.createFont(
-                "fallback", BaseFont.IDENTITY_H, BaseFont.EMBEDDED, BaseFont.CACHED, resBytes, null
+                asset, BaseFont.IDENTITY_H, BaseFont.EMBEDDED, BaseFont.CACHED, resBytes, null
             )
         }
         return null
