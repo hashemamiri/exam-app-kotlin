@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۲۴ — V55.2 برچسب نسخهٔ پل فرمول + تشخیص‌های صریح؛ پیش از آن: V55.1
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V69.0 پاک‌سازی کد مرده + یکسان‌سازی حاشیه (چاپ 40pt = ویرایشگر 14mm) + موتور حرفه‌ای با کش‌های LRU؛ پیش از آن: V68.9.4
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -13417,3 +13417,59 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md   (همین بخش ۲۶۳)
 ```
 
 ### SQL جدید: ندارد — Edge deploy: ندارد
+---
+
+## ۲۶۴) V69.0 — پاک‌سازی کد مرده + یکسان‌سازی حاشیه + موتور حرفه‌ای (یک پچ جامع)
+
+### درخواست کاربر
+«پچ پاک‌سازی و یکسان‌سازی حاشیه رو با هم بده. موتور رو قدرتمند و پیشرفته و حرفه‌ای کن.»
+تصمیم‌های ثبت‌شده در گفتگو: تحویل در «یک» پچ واحد V69.0؛ تمرکز موتور = هم پرفورمنس
+هم قابلیت‌های ورد-مانند.
+
+### ۱) پاک‌سازی کد مرده
+- حذف `A4LayoutEngine.kt` — موتور صفحه‌بندی قدیمی؛ بدون هیچ مرجعی (موتور واحد V68.9 جایگزینش است).
+- حذف `PdfExamRenderer.kt` — رندرر PDF مدل قدیمی preview؛ بدون مرجع.
+- حذف `ui/print/A4Preview.kt` — کامپوزبل قدیمی پیش‌نمایش A4؛ بدون مرجع.
+- حذف `domain/model/PrintModels.kt` — مدل قدیمی (A4Page/PrintBlock/QuestionPrintBlock/PrintDocument/AppFont)؛ هیچ مرجعی نداشت
+  (AppFont زنده در `core/ui/AppearancePreferences.kt` تعریف شده و دست نخورد).
+- حذف کمکی مردهٔ `resizeFigureBy` از ویرایشگر (تغییر اندازهٔ شکل از دستگیره‌های درگ انجام می‌شود).
+- نکته: `WordPageLayout` حذف نشد — موتور میلی‌متری خالص JVM است که تست‌های V63/V68 آن را اجرا می‌کنند و
+  ثابت‌های زندهٔ حاشیه/عرض صفحه را برای ویرایشگر می‌دهد.
+
+### ۲) یکسان‌سازی حاشیه
+- حاشیهٔ چاپ `MARGIN` در موتور واحد: 38pt → 40pt (14mm × 2.8346 ≈ 39.7) — حالا هم‌تراز حاشیهٔ 14mm ویرایشگر.
+- عرض مفید چاپ: 595 − 2×40 = 515pt (قبلاً 519pt).
+- مقیاس ویرایشگر `printScale` از `/519f` به `/520f` همگام شد (خط ~۷۸۸ ویرایشگر).
+- سوزن تست V68_6 (`595f - 2f*38f`) به 40pt به‌روز شد تا هم‌خوان بماند.
+
+### ۳) موتور قدرتمند/حرفه‌ای (پرفورمنس)
+- کلاس جدید `LruCacheK<V>` (بدون وابستگی اندروید، JVM-تست‌پذیر): کش LRU با سقف بایتی.
+- کش بیت‌مپ شکل‌ها: HashMap بدون سقف → `LruCacheK<Bitmap>` با سقف ۲۴MB (رفع نشت حافظه در آزمون‌های بزرگ).
+- کش چیدمان متن: `textLayout` حالا `StaticLayout` را با کلید محتوایی
+  `layoutKey(text, size, bold, italic, align, fontFamily, width)` کش می‌کند (سقف ۸MB) — چیدمان تکراری در هر تغییر حرف حذف شد.
+- کش فونت خانواده‌ها: `typefaceCache` + `fontFamilyFrom` — بارگذاری تکراری res/font حذف شد.
+
+### فایل‌های تغییرکرده
+```text
+حذف:
+app/src/main/java/ir/exam/app/core/printing/A4LayoutEngine.kt
+app/src/main/java/ir/exam/app/core/printing/PdfExamRenderer.kt
+app/src/main/java/ir/exam/app/ui/print/A4Preview.kt
+app/src/main/java/ir/exam/app/domain/model/PrintModels.kt
+افزوده:
+app/src/main/java/ir/exam/app/core/printing/LruCacheK.kt
+تغییر:
+app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt   (حاشیه 40pt + کش‌ها + layoutKey + fontFamilyFrom)
+app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt     (/520f + حذف resizeFigureBy)
+app/src/test/java/ir/exam/app/ui/app/V68_6PrintInlineMatchingTest.kt      (عرض مفید 40pt)
+scripts/verify_native_final.py                                            (باند V69.0 + به‌روزرسانی سوزن‌های 519f/resizeFigureBy/changelog)
+text/CHANGELOG_FA.txt                                                     (خط V69.0)
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md                                    (همین بخش ۲۶۴)
+```
+
+### SQL جدید: ندارد — Edge deploy: ندارد
+
+### نتیجه بررسی (verify)
+`python3 scripts/verify_native_final.py` باید `FINAL_NATIVE_VERIFY=PASS` بدهد.
+(باند V69.0: حاشیهٔ 40pt + /520f، وجود LruCacheK، نبودِ چهار فایل قدیمی چاپ، و کش‌های موتور را الزامی می‌کند.)
+

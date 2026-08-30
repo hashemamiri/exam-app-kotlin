@@ -2033,7 +2033,8 @@ require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
         and "Icons.Outlined.Lock" in _doc_editor_v63
         and "var selectedImage by remember" in _doc_editor_v63
         and "var selectedFigure by remember" in _doc_editor_v63
-        and "fun resizeFigureBy(" in _doc_editor_v63
+        # V69.0 — کمکی مردهٔ resizeFigureBy حذف شد (تغییر اندازه از دستگیره‌های درگ).
+        and "fun resizeFigureBy(" not in _doc_editor_v63
         and "QuestionFormatBar" not in _doc_editor_v63,
         "V63.3 unified scrollable toolbar with object selection is missing")
 require('contentDescription = "ویرایش آزمون"' in _print_center_v62
@@ -2073,7 +2074,7 @@ require("if (pageNumber == 1) drawHeader(canvas, pageNumber, totalPages)" in _pd
         and "const val LATER_CONTENT_TOP = 50f" in _pdf_v62,
         "V63.8 first-page-only header / last-page-only signatures are missing from print")
 require("fun WordPaperChrome()" in _doc_editor_v63
-        and "/ 519f" in _doc_editor_v63
+        and "/ 520f" in _doc_editor_v63
         and "fun ResizeHandle(" not in _doc_editor_v63
         and "HeaderPreview(header)" not in _doc_editor_v63
         and "نام و امضای دبیر" not in _doc_editor_v63
@@ -2588,16 +2589,40 @@ require("with(density) { widthPx.toDp() }" in _v689_editor
         and ".size(widthPx, heightPx)" not in _v689_editor,
         "V68.9.3 raw px must be converted to Dp for Modifier.size (compile fix)")
 
+# ---- V69.0: پاک‌سازی کد مرده + یکسان‌سازی حاشیه + موتور حرفه‌ای (کش‌ها) ----
+# (۱) حاشیه: چاپ 40pt = ویرایشگر 14mm و مقیاس /520؛ (۲) کش‌های موتور؛
+# (۳) فایل‌های قدیمی چاپ حذف شوند.
+_v690_layout=(ROOT/"app/src/main/java/ir/exam/app/core/printing/WordPageLayout.kt").read_text()
+require("const val MARGIN = 40f" in _v689_pdf
+        and "const val MARGIN_MM: Float = 14f" in _v690_layout
+        and "/ 520f" in _doc_editor_v63
+        and "/ 519f" not in _doc_editor_v63,
+        "V69.0 margin unification (print 40pt = editor 14mm, editor scale /520) is missing")
+require("fun layoutKey(" in _v689_pdf
+        and "private val layoutCache = LruCacheK<StaticLayout>(" in _v689_pdf
+        and "private val typefaceCache = HashMap<String, Typeface>()" in _v689_pdf
+        and "private fun fontFamilyFrom(" in _v689_pdf
+        and "private val figureBitmapCache = LruCacheK<Bitmap>(" in _v689_pdf,
+        "V69.0 engine caches (StaticLayout/typeface/LRU bitmaps) are missing")
+require((ROOT/"app/src/main/java/ir/exam/app/core/printing/LruCacheK.kt").exists()
+        and "class LruCacheK<V>(" in (ROOT/"app/src/main/java/ir/exam/app/core/printing/LruCacheK.kt").read_text(),
+        "V69.0 LruCacheK helper (android-free LRU cache) is missing")
+require(not (ROOT/"app/src/main/java/ir/exam/app/core/printing/A4LayoutEngine.kt").exists()
+        and not (ROOT/"app/src/main/java/ir/exam/app/core/printing/PdfExamRenderer.kt").exists()
+        and not (ROOT/"app/src/main/java/ir/exam/app/ui/print/A4Preview.kt").exists()
+        and not (ROOT/"app/src/main/java/ir/exam/app/domain/model/PrintModels.kt").exists(),
+        "V69.0 legacy print files (A4LayoutEngine/PdfExamRenderer/A4Preview/PrintModels) must be deleted")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
 _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
-        "V68.9.4 changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 243
-        and _v694_changelog.startswith("V68.9.4:"),
-        "V68.9.4 changelog must keep the full 240-line history + the two restored lines on top")
+        "changelog lost its historical Persian entries (truncated again?)")
+require(_v694_lines >= 244
+        and _v694_changelog.startswith("V69.0:"),
+        "changelog must keep the full history + the new V69.0 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

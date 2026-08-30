@@ -144,7 +144,8 @@ class V68_6PrintInlineMatchingTest {
         val left = listOf("الف", "ب", "ج", "د")
         val right = listOf("۱", "۲", "۳")
         assertEquals(4, maxOf(left.size, right.size))
-        val contentWidth = 595f - 2f * 38f
+        // V69.0 — حاشیهٔ چاپ 40pt شد (هم‌تراز 14mm ویرایشگر)؛ عرض مفید 515pt.
+        val contentWidth = 595f - 2f * 40f
         val half = ((contentWidth - 26f) / 2f).coerceAtLeast(60f)
         // دو نیمه + ۲۶pt فاصله = دقیقاً عرض ناحیهٔ چاپ
         assertEquals(contentWidth, half * 2f + 26f, 0.01f)

@@ -108,6 +108,16 @@ class OfficialPdfPrintAdapter(
  */
 class UnifiedDocumentEngine(private val context: Context) {
     private val mathRenderer=NativeMathCanvasRenderer()
+    // V69.0 — کش منابع موتور (پرفورمنس حرفه‌ای): فونت از res، چیدمان StaticLayout
+    // و بیت‌مپ شکل‌ها با کلید محتوا کش می‌شوند تا در هر رندر/تغییر حرف کار
+    // تکراری انجام نشود؛ بیت‌مپ و چیدمان با LruCacheK سقف حافظه دارند.
+    private val typefaceCache = HashMap<String, Typeface>()
+    private val layoutCache = LruCacheK<StaticLayout>(
+        maxBytes = 8L * 1024L * 1024L,
+        sizeOf = { layout ->
+            (layout.text.length * 4L + layout.height.toLong() * 16L).coerceAtLeast(1024L)
+        }
+    )
     data class RenderBlock(
         val text: String? = null,
         val formula: String? = null,
@@ -846,32 +856,34 @@ class UnifiedDocumentEngine(private val context: Context) {
     }
 
     fun textLayout(text:String,size:Float,bold:Boolean,width:Int,italic:Boolean=false,align:String="right",fontFamily:String="default"):StaticLayout {
-        val base=when(fontFamily.lowercase()){"vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular);"shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular);"sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular);else->Typeface.create("sans",Typeface.NORMAL)}
+        val key = layoutKey(text, size, bold, italic, align, fontFamily, width)
+        return layoutCache.get(key) ?: styledLayout(
+            android.text.SpannableStringBuilder(text), size, bold, width, italic, align, fontFamily
+        ).also { layoutCache.put(key, it) }
+    }
+
+    /** V68 — چیدمان متن با استایل تکه‌ای (Spannable): بولد/ایتالیک درون‌خطی. */
+    private fun styledLayout(text: android.text.SpannableStringBuilder, size: Float, bold: Boolean, width: Int, italic: Boolean = false, align: String = "right", fontFamily: String = "default"): StaticLayout {
+        val base = fontFamilyFrom(fontFamily)
         val style=when{bold&&italic->Typeface.BOLD_ITALIC;bold->Typeface.BOLD;italic->Typeface.ITALIC;else->Typeface.NORMAL}
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {color=Color.BLACK;textSize=size;typeface=Typeface.create(base,style)}
         val alignment=when(align){"center"->Layout.Alignment.ALIGN_CENTER;"left"->Layout.Alignment.ALIGN_OPPOSITE;else->Layout.Alignment.ALIGN_NORMAL}
         return StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
             .setAlignment(alignment)
             .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_RTL)
-            // V68.9 — موتور واحد: بدون فاصلهٔ سطر اضافه؛ Compose ویرایشگر هم
-            // lineHeight پیش‌فرض فونت را می‌گیرد → شکست خط یکسان.
             .setLineSpacing(LINE_SPACING_ADD_PT, 1f)
             .setIncludePad(false)
             .build()
     }
 
-    /** V68 — چیدمان متن با استایل تکه‌ای (Spannable): بولد/ایتالیک درون‌خطی. */
-    private fun styledLayout(text: android.text.SpannableStringBuilder, size: Float, bold: Boolean, width: Int, italic: Boolean = false, align: String = "right", fontFamily: String = "default"): StaticLayout {
-        val base=when(fontFamily.lowercase()){"vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular);"shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular);"sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular);else->Typeface.create("sans",Typeface.NORMAL)}
-        val style=when{bold&&italic->Typeface.BOLD_ITALIC;bold->Typeface.BOLD;italic->Typeface.ITALIC;else->Typeface.NORMAL}
-        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {color=Color.BLACK;textSize=size;typeface=Typeface.create(base,style)}
-        val alignment=when(align){"center"->Layout.Alignment.ALIGN_CENTER;"left"->Layout.Alignment.ALIGN_OPPOSITE;else->Layout.Alignment.ALIGN_NORMAL}
-        return StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
-            .setAlignment(alignment)
-            .setTextDirection(TextDirectionHeuristics.FIRSTSTRONG_RTL)
-            .setLineSpacing(LINE_SPACING_ADD_PT, 1f)
-            .setIncludePad(false)
-            .build()
+    /** V69.0 — فونت پایهٔ خانوادهٔ داده‌شده (کش‌شده)؛ پیش‌فرض بدون فونت فارسی. */
+    private fun fontFamilyFrom(fontFamily: String): Typeface = typefaceCache.getOrPut(fontFamily.lowercase()) {
+        when(fontFamily.lowercase()){
+            "vazir","vazirmatn"->ResourcesCompat.getFont(context,R.font.vazirmatn_regular)
+            "shabnam"->ResourcesCompat.getFont(context,R.font.shabnam_regular)
+            "sahel"->ResourcesCompat.getFont(context,R.font.sahel_regular)
+            else->Typeface.create("sans",Typeface.NORMAL)
+        } ?: Typeface.create("sans",Typeface.NORMAL)
     }
 
     /**
@@ -963,16 +975,22 @@ class UnifiedDocumentEngine(private val context: Context) {
             svg.renderToCanvas(canvas)
             bitmap
         }
-    }.getOrNull()?.also { figureBitmapCache[spec.raw.toString()] = it }
+    }.getOrNull()?.also { figureBitmapCache.put(spec.raw.toString(), it) }
 
-    private val figureBitmapCache = HashMap<String, Bitmap>()
+    // V69.0 — کش بیت‌مپ شکل‌ها با سقف (LruCacheK) به‌جای HashMap بدون سقف.
+    private val figureBitmapCache = LruCacheK<Bitmap>(
+        maxBytes = 24L * 1024L * 1024L,
+        sizeOf = { bmp -> (bmp.width.toLong() * bmp.height.toLong() * 4L).coerceAtLeast(4096L) }
+    )
 
     private fun formatScore(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value)
 
     companion object {
         const val PAGE_WIDTH = 595
         const val PAGE_HEIGHT = 842
-        const val MARGIN = 38f
+        // V69.0 — یکسان‌سازی حاشیه با WordPageLayout.MARGIN_MM=14mm
+        // (14mm × MM_TO_PT ≈ 40pt)؛ پیش‌تر 38pt بود و با ویرایشگر هم‌خوان نبود.
+        const val MARGIN = 40f
         // V68.5 — تبدیل واقعی mm→pt برای چیدمان آزاد (پیش‌تر y با /297*80
         // تقریباً ۱۰ برابر فشرده می‌شد و چاپ با ویرایشگر هم‌خوان نبود).
         const val MM_TO_PT = PAGE_WIDTH / 210f
@@ -988,6 +1006,10 @@ class UnifiedDocumentEngine(private val context: Context) {
         const val CONTENT_BOTTOM = 795f
         const val CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
         const val CONTENT_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP
+        // V69.0 — کلید کش چیدمان متن (خالص و JVM-تست‌پذیر؛ متن آخر است تا «|» داخل
+        // متن با فیلدهای دیگر تداخل نکند).
+        fun layoutKey(text: String, size: Float, bold: Boolean, italic: Boolean, align: String, fontFamily: String, width: Int): String =
+            "$size|${if (bold) 1 else 0}${if (italic) 1 else 0}|$align|${fontFamily.lowercase()}|$width|$text"
         // V68.9 — موتور واحد: گزینه‌ها هم‌اندازهٔ ویرایشگر (قبلاً چاپ ۰٫۹× می‌کرد).
         const val OPTION_SCALE = 1f
         // V68.9 — موتور واحد: بدون فاصلهٔ سطر اضافه در چاپ (مثل پیش‌فرض Compose).

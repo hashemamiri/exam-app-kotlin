@@ -783,9 +783,11 @@ private fun WordQuestionBlock(
     onMoveFigure: (Int, Float, Float) -> Unit
 ) {
     // V63.8 — هم‌مقیاسی دقیق با چاپ: چاپ متن را با textSize=fontSizeSp پوینت
-    // روی عرض ۵۱۹pt می‌چیند (595-2×38). اینجا همان نسبت روی عرض واقعی صفحه
+    // روی عرض ۵۲۰pt می‌چیند (595-2×40). اینجا همان نسبت روی عرض واقعی صفحه
     // اعمال می‌شود تا «تعداد کلمات هر سطر» در ویرایش و چاپ یکی باشد.
-    val printScale = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM - 2f * WordPageLayout.MARGIN_MM, zoom) / 519f
+    // V69.0 — حاشیهٔ موتور 38pt→40pt شد (هم‌تراز با 14mm ویرایشگر)؛ این
+    // تقسیم‌کننده هم 519→520 همگام شد تا مقیاس دو جا دقیقاً یکی بماند.
+    val printScale = WordPageLayout.mmToDp(WordPageLayout.PAGE_WIDTH_MM - 2f * WordPageLayout.MARGIN_MM, zoom) / 520f
     val fontSize = (question.fontSizeSp.coerceIn(8f, 30f) * printScale).sp
     // V68.9 — فونتِ چاپ همان فونتِ ویرایشگر: انتخاب «وزیر/شبام/سهل» سؤال در هر
     // دو یکسان اعمال می‌شود (قبلاً فقط چاپ اعمال می‌کرد).
@@ -1324,21 +1326,6 @@ private fun DocumentToolbar(
     }
 }
 
-/** V63.3 — تغییر اندازهٔ شکل انتخابی با گام میلی‌متری از نوار ابزار. */
-private fun resizeFigureBy(
-    builder: ExamBuilderViewModel,
-    questions: List<QuestionDraft>,
-    questionId: String,
-    occurrenceIndex: Int,
-    deltaMm: Float
-) {
-    val question = questions.firstOrNull { it.id == questionId } ?: return
-    val occ = FigureCodec.occurrences(question.text).getOrNull(occurrenceIndex) ?: return
-    builder.updateFigure(
-        questionId, occurrenceIndex,
-        WordPageLayout.withFigureWidthMm(occ.spec, WordPageLayout.figureWidthMm(occ.spec) + deltaMm)
-    )
-}
 
 /** دکمهٔ قالب با پس‌زمینهٔ آبی وقتی فعال است. */
 @Composable
