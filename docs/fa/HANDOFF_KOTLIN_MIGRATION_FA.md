@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0 مهاجرت PDF مستقیم به iText 7 for Android؛ پیش از آن: V71.0
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۸-۳۰ — V72.0.1 هات‌فیکس compile شکل‌دهی فارسی؛ پیش از آن: V72.0
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -13850,4 +13850,77 @@ FINAL_NATIVE_VERIFY → باید PASS شود
 ۴) «چاپ برگه»، «چاپ با کلید» و «ویرایش سند» مثل قبل کار کنند.
 ۵) اگر write/read-back شکست خورد، پیام موفقیت نمایش داده نشود و خطای قرمز بیاید.
 ۶) پیش از انتشار Release، انتخاب AGPL یا مجوز commercial iText 7 مستند شود.
+```
+
+
+## ۲۷۰) V72.0.1 — هات‌فیکس خطای بیلد CI در شکل‌دهی فارسی
+
+### گزارش واقعی CI
+
+```text
+PersianTextShaper.kt:3:25 Unresolved reference: ArabicShaping
+PersianTextShaper.kt:13:26 Unresolved reference: ArabicShaping
+compileDebugKotlin FAILED
+```
+
+### ریشه
+
+```text
+کلاس android.icu.text.ArabicShaping در android.jar بیلد CI این پروژه قابل دسترسی
+نبود؛ بنابراین import و ساخت نمونهٔ آن پیش از اجرای تست‌ها compileDebugKotlin را
+متوقف می‌کرد. خطا از iText 7 یا PdfArtifactVerifier نبود.
+```
+
+### اصلاح
+
+```text
+- وابستگی مستقیم به Android ICU کامل حذف شد.
+- PersianTextShaper اکنون یک جدول مستقل Kotlin از فرم‌های Unicode Presentation
+  Forms دارد و فرم isolated/final/initial/medial را با توجه به حروف مجاور انتخاب
+  می‌کند؛ نویسه‌های ناشناخته و متن لاتین دست‌نخورده می‌مانند.
+- BaseDirection.RIGHT_TO_LEFT در iText 7 همچنان ترتیب RTL و layout را مدیریت می‌کند.
+- تست V72_0_1PersianShaperTest برای شکل‌دهی فارسی و حفظ متن غیرعربی اضافه شد.
+- iText 7، فونت Identity-H، خروجی PDF مستقیم و خط لولهٔ stage/SHA/read-back تغییر
+  نکردند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt
+app/src/test/java/ir/exam/app/core/printing/V72_0_1PersianShaperTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### SQL و عملیات خارجی
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Dependency جدید: ندارد
+```
+
+### نتیجهٔ بررسی
+
+```text
+git diff --check                         → PASS
+PersianTextShaper Kotlin compile        → PASS
+PersianTextShaper JVM smoke test        → PASS
+FINAL_NATIVE_VERIFY                     → PASS
+clean clone git apply --check            → PASS
+```
+
+اجرای کامل Gradle باید دوباره در GitHub Actions انجام شود؛ این محیط همچنان پیش از
+مرحلهٔ پروژه به محدودیت قبلی دریافت/اجرای Gradle یا Android SDK برخورد می‌کند.
+
+### چک‌لیست دستگاه
+
+```text
+۱) همان تست‌های V72: آیکن پرینتر → PDF فارسی با سربرگ و متن RTL باز شود.
+۲) کلمات فارسی نباید به حروف جدا تبدیل شوند؛ متن لاتین/عدد هم خراب نشود.
+۳) آزمون دارای فرمول، تصویر و شکل تست شود.
+۴) چاپ برگه، چاپ با کلید و ویرایش سند مثل قبل بمانند.
 ```

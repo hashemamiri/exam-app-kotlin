@@ -2699,6 +2699,24 @@ require("فایل PDF تأیید و ذخیره شد" in _print_center_v62
         and 'pdfStatus = "فایل PDF ساخته شد."' not in _print_center_v62,
         "V72.0 UI must report success only after verified receipt (size + page count)")
 
+# ---- V72.0.1: هات‌فیکس compile روی Android — حذف android.icu.text.ArabicShaping ----
+# در CI واقعی android.jar نسخهٔ پروژه کلاس عمومی ArabicShaping را expose نمی‌کند.
+# شکل‌دهی باید مستقل از آن کلاس باشد تا compileDebugKotlin پیش از تست‌ها نشکند.
+_v721_shaper=(ROOT/"app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt")
+_v721_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_1PersianShaperTest.kt")
+_v721_shaper_text=_v721_shaper.read_text() if _v721_shaper.exists() else ""
+require(_v721_shaper.exists()
+        and "object PersianTextShaper" in _v721_shaper_text
+        and "data class Forms" in _v721_shaper_text
+        and "fun shape(text: String)" in _v721_shaper_text
+        and "android.icu.text.ArabicShaping" not in _v721_shaper_text
+        and "ArabicShaping" not in _v721_shaper_text,
+        "V72.0.1 Android compile hotfix is missing: Persian shaping still depends on ArabicShaping")
+require(_v721_test.exists()
+        and "PersianTextShaper.shape" in _v721_test.read_text()
+        and "assertNotEquals" in _v721_test.read_text(),
+        "V72.0.1 Persian shaper JVM regression test is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2707,8 +2725,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 246
-        and _v694_changelog.startswith("V72.0:"),
-        "changelog must keep the full history + the new V71.0 line on top")
+        and _v694_changelog.startswith("V72.0.1:"),
+        "changelog must keep the full history + the new V72.0.1 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
