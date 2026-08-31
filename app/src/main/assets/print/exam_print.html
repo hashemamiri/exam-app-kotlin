@@ -11561,6 +11561,7 @@ window.addEventListener('afterprint', () => { printMode = 'student'; renderPrevi
 window.setExamData = function(data) {
   if (!data) return;
   if (typeof data === "string") { try { data = JSON.parse(data); } catch(e) { console.error("setExamData parse error", e); return; } }
+  if (typeof data === "string") { try { data = JSON.parse(data); } catch(e) { console.error("setExamData parse error", e); return; } }
   if (data.template) {
     var tEl = document.getElementById("f_headerTemplate");
     if (tEl) {
