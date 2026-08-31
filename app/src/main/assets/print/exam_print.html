@@ -735,40 +735,44 @@
     margin-bottom: 20px;
   }
 
-  .header-box { border: 2px solid #000; padding: 8px 12px; margin-bottom: 12px; }
-  .h-top-grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
-  .h-center-text { text-align: center; }
-  .h-main-title { font-size: 15px; font-weight: 800; }
-  .h-sub-title { font-size: 13px; font-weight: 700; color: #222; margin-top: 2px; }
-  .h-meta-text { font-size: 12px; line-height: 1.8; }
-  .h-meta-left { text-align: left; }
-  .h-bottom-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 12px; font-size: 12px; border-top: 1px solid #000; margin-top: 8px; padding-top: 6px; }
-  .h-field { display: flex; gap: 4px; }
-  .h-field-label { font-weight: 700; white-space: nowrap; }
-  .h-field-val { border-bottom: 1px dotted #444; flex: 1; min-height: 16px; }
+  .exam-header-classic { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px; }
+  .exam-header-classic td { border: 1px solid #000; padding: 4px 8px; vertical-align: middle; }
+  .header-box { border: 2px solid #000; padding: 8px 12px; margin-bottom: 12px; font-size: 12px; }
+  .h-grid-3 { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+  .h-center { text-align: center; }
+  .h-title { font-size: 15px; font-weight: 800; }
+  .h-sub { font-size: 12.5px; font-weight: 700; color: #222; margin-top: 2px; }
+  .h-left { text-align: left; }
+  .h-meta { font-size: 11.5px; line-height: 1.8; }
 
   .exam-intro { border: 1px dashed #666; background: #fafafa; padding: 8px 12px; font-size: 12.5px; line-height: 1.8; margin-bottom: 12px; border-radius: 4px; }
-  .questions-container { display: flex; flex-direction: column; gap: 12px; }
-  .question-block { page-break-inside: avoid; break-inside: avoid; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; }
-  .question-head { display: flex; justify-content: space-between; font-weight: 700; font-size: 13.5px; margin-bottom: 6px; }
-  .question-title { display: flex; gap: 6px; align-items: baseline; flex: 1; }
-  .question-num { font-weight: 900; color: #1e3a8a; }
-  .question-score { font-size: 12px; color: #4b5563; white-space: nowrap; margin-right: 8px; }
-  .question-body { font-size: 13.5px; line-height: 1.85; margin-bottom: 8px; }
-  .question-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 14px; margin-top: 6px; font-size: 13px; }
-  .question-option { display: flex; gap: 6px; align-items: baseline; }
+  
+  .questions-print-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .questions-print-table th, .questions-print-table td { border: 1px solid #000; padding: 8px 10px; vertical-align: top; }
+  .questions-print-table th { background: #f8fafc; font-weight: 800; text-align: center; }
+  .qno-col { width: 44px; text-align: center; font-weight: 900; }
+  .qscore-col { width: 56px; text-align: center; font-weight: 800; white-space: nowrap; }
+  .qmain-td { text-align: right; line-height: 1.85; }
+
+  .q-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 14px; margin-top: 8px; }
+  .q-opt { display: flex; gap: 6px; align-items: baseline; }
   .choice-mark { width: 13px; height: 13px; border: 1.5px solid #000; border-radius: 50%; display: inline-block; vertical-align: middle; margin-left: 4px; }
-  .teacher-answer { background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 6px 10px; font-size: 12px; border-radius: 4px; margin-top: 6px; }
+  .teacher-answer { background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 6px 10px; font-size: 12px; border-radius: 4px; margin-top: 8px; font-weight: 600; }
 
   .exam-fig-wrapper, .qmf-fig { display: inline-block; max-width: 100%; vertical-align: middle; text-align: center; margin: 4px 6px; }
   .exam-fig-wrapper svg, .qmf-fig svg { max-width: 100%; height: auto; }
   .mathx { display: inline-block; vertical-align: middle; direction: ltr; unicode-bidi: embed; }
 
+  .answer-key { margin-top: 16px; border: 2px solid #166534; border-radius: 6px; padding: 10px; background: #f0fdf4; }
+  .answer-key h3 { color: #166534; font-size: 14px; margin-bottom: 8px; text-align: center; font-weight: 800; }
+  .answer-key table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .answer-key th, .answer-key td { border: 1px solid #86efac; padding: 5px 8px; text-align: center; }
+
   @media print {
     body { background: #fff; padding: 0; }
     .toolbar, .exam-tools, .no-print { display: none !important; }
     .page { width: 100%; min-height: auto; padding: 0; box-shadow: none; margin: 0; border-radius: 0; }
-    .exam-fig-wrapper, .qmf-fig, .mathx, .question-block { break-inside: avoid; page-break-inside: avoid; }
+    .exam-fig-wrapper, .qmf-fig, .mathx, tr { break-inside: avoid; page-break-inside: avoid; }
   }
 </style>
 
@@ -789,11 +793,11 @@
     <div class="tool-item">
       <label>قالب سربرگ:</label>
       <select id="f_headerTemplate" onchange="updateHeaderSettingsVisibility()">
-        <option value="classic">سربرگ ۱ - دانشگاه آزاد اسلامی</option>
+        <option value="classic">سربرگ ۱ - دانشگاه آزاد اسلامی (جدول استاندارد)</option>
         <option value="formal">سربرگ ۲ - بسمه تعالی / اداره امتحانات</option>
-        <option value="sama">سربرگ ۳ - آموزشکده سما</option>
+        <option value="sama">سربرگ ۳ - آموزشکده فنی و حرفه‌ای سما</option>
         <option value="school">سربرگ ۴ - آموزش و پرورش / مدرسه</option>
-        <option value="edu">سربرگ ۵ - اداره کل آموزش و پرورش</option>
+        <option value="edu">سربرگ ۵ - اداره کل آموزش و پرورش (هماهنگ)</option>
         <option value="detailed-school">سربرگ ۶ - مدیریت آموزش و پرورش / مصحح</option>
         <option value="ministry">سربرگ ۷ - وزارت آموزش و پرورش</option>
       </select>
@@ -803,7 +807,7 @@
       <input type="text" id="f_examTitle" value="ریاضی" oninput="renderAll()">
     </div>
     <div class="tool-item">
-      <label>مؤسسه / واحد:</label>
+      <label>مؤسسه / واحد / مدرسه:</label>
       <input type="text" id="f_orgName" value="دانشگاه آزاد اسلامی" oninput="renderAll()">
     </div>
     <div class="tool-item">
@@ -818,6 +822,10 @@
       <label>پایـه / رشته:</label>
       <input type="text" id="f_grade" value="" oninput="renderAll()">
     </div>
+    <div class="tool-item">
+      <label>تاریخ آزمون:</label>
+      <input type="text" id="f_date" value="" oninput="renderAll()">
+    </div>
   </div>
 </div>
 
@@ -825,7 +833,7 @@
   <div class="page" id="printPage">
     <div id="headerArea"></div>
     <div id="introArea"></div>
-    <div class="questions-container" id="questionsArea"></div>
+    <div id="questionsArea"></div>
   </div>
 </div>
 
@@ -9448,7 +9456,7 @@ let printMode = 'student';
 let questions = [];
 let currentTemplate = 'classic';
 let examMeta = {
-  title: 'آزمون ریاضی',
+  title: 'ریاضی',
   org: 'دانشگاه آزاد اسلامی',
   teacher: '',
   duration: '۹۰',
@@ -9530,22 +9538,54 @@ function renderHeader() {
   const teacher = (document.getElementById('f_teacher') && document.getElementById('f_teacher').value) || examMeta.teacher || '';
   const duration = (document.getElementById('f_duration') && document.getElementById('f_duration').value) || examMeta.duration || '';
   const grade = (document.getElementById('f_grade') && document.getElementById('f_grade').value) || examMeta.grade || '';
+  const date = (document.getElementById('f_date') && document.getElementById('f_date').value) || examMeta.date || '';
+
+  if (currentTemplate === 'classic') {
+    return `
+    <table class="exam-header-classic">
+      <tr>
+        <td style="width:33%;"><strong>نام و نام خانوادگی:</strong> ....................</td>
+        <td style="width:34%;text-align:center;font-weight:800;font-size:14px;" rowspan="2">${org}</td>
+        <td style="width:33%;"><strong>نام درس:</strong> ${title}</td>
+      </tr>
+      <tr>
+        <td><strong>شماره دانشجویی/داوطلب:</strong> ....................</td>
+        <td><strong>تاریخ امتحان:</strong> ${toPersianNum(date) || '....................'}</td>
+      </tr>
+      <tr>
+        <td><strong>استاد / طراح:</strong> ${teacher || '....................'}</td>
+        <td style="text-align:center;font-weight:700;">برگه آزمون پایان‌ترم</td>
+        <td><strong>مدت زمان:</strong> ${toPersianNum(duration)} دقیقه</td>
+      </tr>
+    </table>`;
+  }
+
+  const tmplNames = {
+    formal: 'بسمه تعالی / حوزه معاونت آموزشی - اداره امتحانات',
+    sama: 'سازمان سما / آموزشکده فنی و حرفه‌ای سما',
+    school: 'وزارت آموزش و پرورش / مدیریت آموزشگاه',
+    edu: 'اداره کل آموزش و پرورش / آزمون هماهنگ استانی',
+    'detailed-school': 'مدیریت آموزش و پرورش / فرم تصحیح اوراق',
+    ministry: 'وزارت آموزش و پرورش / ارزشیابی پایانی'
+  };
 
   return `
   <div class="header-box">
-    <div class="h-top-grid">
-      <div class="h-meta-text">
+    <div class="h-grid-3">
+      <div class="h-meta">
         <div><strong>نام و نام خانوادگی:</strong> ....................</div>
         <div><strong>شماره داوطلب:</strong> ....................</div>
+        ${grade ? `<div><strong>پایه / رشته:</strong> ${grade}</div>` : ''}
       </div>
-      <div class="h-center-text">
-        <div class="h-main-title">${org}</div>
-        <div class="h-sub-title">آزمون درس: ${title}</div>
+      <div class="h-center">
+        <div class="h-title">${org}</div>
+        <div class="h-sub">${tmplNames[currentTemplate] || 'برگه رسمی آزمون'}</div>
+        <div style="font-weight:800;margin-top:2px;">درس: ${title}</div>
       </div>
-      <div class="h-meta-text h-meta-left">
+      <div class="h-meta h-left">
         <div><strong>مدت آزمون:</strong> ${toPersianNum(duration)} دقیقه</div>
-        <div><strong>استاد:</strong> ${teacher || '....................'}</div>
-        ${grade ? `<div><strong>پایه/رشته:</strong> ${grade}</div>` : ''}
+        <div><strong>طراح / استاد:</strong> ${teacher || '....................'}</div>
+        <div><strong>تاریخ برگزاری:</strong> ${toPersianNum(date) || '....................'}</div>
       </div>
     </div>
   </div>`;
@@ -9567,43 +9607,80 @@ function renderAll() {
     return;
   }
 
-  let html = '';
+  let html = `
+  <table class="questions-print-table">
+    <thead>
+      <tr>
+        <th class="qno-col">ردیف</th>
+        <th>شرح سوال</th>
+        <th class="qscore-col">بارم</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
   questions.forEach((q, idx) => {
     const qNum = toPersianNum(idx + 1);
-    const scoreText = q.score ? `(${toPersianNum(q.score)} نمره)` : '';
-    html += `
-    <div class="question-block">
-      <div class="question-head">
-        <div class="question-title">
-          <span class="question-num">${qNum}.</span>
-          <div style="flex:1;">${renderRichExamText(q.text || '')}</div>
-        </div>
-        <span class="question-score">${scoreText}</span>
-      </div>`;
+    const scoreVal = q.score ? toPersianNum(q.score) : '';
 
-    if (q.options && q.options.length > 0) {
-      const letters = ['الف', 'ب', 'ج', 'د', 'ه', 'و'];
-      html += '<div class="question-options">';
-      q.options.forEach((opt, optIdx) => {
+    html += `
+    <tr>
+      <td class="qno-col">${qNum}</td>
+      <td class="qmain-td">
+        <div style="font-weight:600;margin-bottom:4px;">${renderRichExamText(q.text || '.........')}</div>`;
+
+    if (q.type === 'multiple' || q.type === 'truefalse') {
+      const letters = q.type === 'multiple' ? ['الف', 'ب', 'ج', 'د', 'ه', 'و'] : ['صحیح', 'غلط'];
+      const layoutCols = (q.optionsLayout === '1row') ? 'repeat(4, 1fr)' : ((q.optionsLayout === '4rows') ? '1fr' : 'repeat(2, 1fr)');
+      html += `<div class="q-options-grid" style="grid-template-columns:${layoutCols};">`;
+      (q.options || []).forEach((opt, optIdx) => {
         const mark = (printMode === 'teacher' && opt.correct) ? ' <strong style="color:#166534;">✓</strong>' : '';
         const ltr = letters[optIdx] || (optIdx + 1);
         html += `
-        <div class="question-option">
+        <div class="q-opt">
           <span class="choice-mark"></span>
           <span style="font-weight:700;">${ltr})</span>
-          <div>${renderRichExamText(opt.text || '')}${mark}</div>
+          <div>${renderRichExamText(opt.text || '............')}${mark}</div>
         </div>`;
+      });
+      html += '</div>';
+    }
+
+    if (q.type === 'matching' && q.pairs && q.pairs.length > 0) {
+      html += '<div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12.5px;">';
+      q.pairs.forEach((p, pIdx) => {
+        const pNum = toPersianNum(pIdx + 1);
+        html += `<div><strong>${pNum}.</strong> ${renderRichExamText(p.left || '............')}</div>`;
+        html += `<div><strong>( )</strong> ${renderRichExamText(p.right || '............')}</div>`;
       });
       html += '</div>';
     }
 
     if (printMode === 'teacher' && (q.answer || q.correctAnswer)) {
       const ans = q.answer || q.correctAnswer;
-      html += `<div class="teacher-answer"><strong>پاسخ تشریحی / کلید:</strong> ${renderRichExamText(ans)}</div>`;
+      html += `<div class="teacher-answer">🔑 پاسخ صحیح / کلید: ${renderRichExamText(ans)}</div>`;
     }
 
-    html += '</div>';
+    html += `
+      </td>
+      <td class="qscore-col">${scoreVal}</td>
+    </tr>`;
   });
+
+  html += '</tbody></table>';
+
+  if (printMode === 'teacher') {
+    html += '<div class="answer-key"><h3>کلید آزمون و راهنمای تصحیح</h3><table><tr><th>ردیف</th><th>نوع سوال</th><th>بارم</th><th>پاسخ صحیح</th></tr>';
+    const labels = { multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', long: 'تشریحی', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی' };
+    questions.forEach((q, i) => {
+      let ansText = q.answer || q.correctAnswer || '—';
+      if (q.type === 'multiple' && q.options) {
+        const correctIdx = q.options.findIndex(o => o.correct);
+        if (correctIdx >= 0) ansText = ['الف', 'ب', 'ج', 'د', 'ه', 'و'][correctIdx] || (correctIdx + 1);
+      }
+      html += `<tr><td>${toPersianNum(i+1)}</td><td>${labels[q.type] || 'تشریحی'}</td><td>${toPersianNum(q.score) || '—'}</td><td>${renderRichExamText(ansText)}</td></tr>`;
+    });
+    html += '</table></div>';
+  }
 
   qArea.innerHTML = html;
 }
@@ -9656,6 +9733,7 @@ window.setExamData = function(data) {
       if (k === 'f_teacher') examMeta.teacher = data.fields[k];
       if (k === 'f_duration') examMeta.duration = data.fields[k];
       if (k === 'f_grade') examMeta.grade = data.fields[k];
+      if (k === 'f_date' || k === 'h7_date') examMeta.date = data.fields[k];
     });
   }
   if (Array.isArray(data.questions)) {
