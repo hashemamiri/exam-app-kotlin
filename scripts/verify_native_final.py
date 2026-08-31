@@ -139,6 +139,7 @@ approved_webview_files = {
     "QuestionEditorWebViewDialog.kt",
     "QuestionTextFieldWebView.kt",
     "FormulaHostDialog.kt",
+    "ExamHtmlPrintDialog.kt",
 }
 require(
     webview_files <= approved_webview_files,
@@ -2784,6 +2785,41 @@ require(_v725_editor_test.exists()
         and "editor inline figures use the left edge of both span boundaries" in _v725_editor_test_text,
         "V72.0.5 RTL inline-figure regression test is missing")
 
+# ---- V73.0: دکمه چاپ و پنجره چاپ تعاملی HTML با اتصال خودکار سؤالات ----
+_v730_print_center=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt")
+_v730_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
+_v730_payload=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt")
+_v730_asset=(ROOT/"app/src/main/assets/print/exam_print.html")
+_v730_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V73_0HtmlPrintIntegrationTest.kt")
+_v730_print_center_text=_v730_print_center.read_text() if _v730_print_center.exists() else ""
+_v730_dialog_text=_v730_dialog.read_text() if _v730_dialog.exists() else ""
+_v730_payload_text=_v730_payload.read_text() if _v730_payload.exists() else ""
+_v730_test_text=_v730_test.read_text() if _v730_test.exists() else ""
+
+require(_v730_print_center.exists()
+        and 'Text("چاپ")' in _v730_print_center_text
+        and "ExamHtmlPrintDialog(" in _v730_print_center_text
+        and "htmlPrintExam" in _v730_print_center_text,
+        "V73.0 print button and html dialog in ExamPrintCenterScreen are missing")
+require(_v730_dialog.exists()
+        and "fun ExamHtmlPrintDialog(" in _v730_dialog_text
+        and "ExamPrintNative" in _v730_dialog_text
+        and "print/exam_print.html" in _v730_dialog_text
+        and "createPrintDocumentAdapter" in _v730_dialog_text,
+        "V73.0 ExamHtmlPrintDialog or print bridge wiring is missing")
+require(_v730_payload.exists()
+        and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
+        and "fun build(" in _v730_payload_text
+        and "fun buildFromDrafts(" in _v730_payload_text,
+        "V73.0 ExamHtmlPrintPayloadBuilder is missing")
+require(_v730_asset.is_file() and _v730_asset.stat().st_size > 400_000
+        and "window.setExamData" in _v730_asset.read_text()
+        and "ExamPrintNative" in _v730_asset.read_text(),
+        "V73.0 exam_print.html asset or setExamData bridge is missing")
+require(_v730_test.exists()
+        and "payload builder maps all six question types to json" in _v730_test_text,
+        "V73.0 HtmlPrint integration regression test is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2791,9 +2827,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 246
-        and _v694_changelog.startswith("V72.0.5:"),
-        "changelog must keep the full history + the new V72.0.5 line on top")
+require(_v694_lines >= 247
+        and _v694_changelog.startswith("V73.0:"),
+        "changelog must keep the full history + the new V73.0 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

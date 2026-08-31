@@ -170,7 +170,7 @@ class Neumorphic69IntegrationTest {
         val design = File(root, "app/src/main/java/ir/exam/app/ui/app/Neumorphic69Design.kt").readText()
         val mainSources = File(root, "app/src/main/java").walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
-            .filter { it.name !in setOf("FormulaEditorDialog.kt", "QuestionEditorWebView.kt", "QuestionEditorWebViewDialog.kt", "QuestionTextFieldWebView.kt", "FormulaHostDialog.kt") }
+            .filter { it.name !in setOf("FormulaEditorDialog.kt", "QuestionEditorWebView.kt", "QuestionEditorWebViewDialog.kt", "QuestionTextFieldWebView.kt", "FormulaHostDialog.kt", "ExamHtmlPrintDialog.kt") }
             .joinToString("\n") { it.readText() }
 
         listOf("setShadowLayer", "lightShadow", "darkShadow", "pressed", "NeumorphicTopBar").forEach {

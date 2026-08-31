@@ -14167,3 +14167,86 @@ FINAL_NATIVE_VERIFY         → PASS
 ۳) روی شکل در حالت عادی لمس کنید؛ hit-test باید همان شکل را انتخاب کند.
 ۴) دکمهٔ آبی «چاپ برگه» همچنان پنجرهٔ «ذخیره به صورت PDF» سیستم را باز کند.
 ```
+
+
+## ۲۷۵) V73.0 — دکمهٔ «چاپ» و باز شدن فایل چاپ تعاملی HTML با اتصال خودکار سؤالات
+
+### درخواست کاربر
+
+```text
+در بخش چاپ آزمون یک دکمه روی هر کارت آزمون اضافه کن به نام"چاپ" و با لمس آن این فایل باز شود. سیم کشی های لازم رو انجام بده که سوالات هر کارت آزمون اتوماتیک به بخش سوالات آزمون فایل اضافه شود.
+(فایل پیوست: چاپ.html)
+```
+
+### چه شد و چگونه پیاده‌سازی شد
+
+```text
+۱) افزودن Asset چاپ تعاملی HTML:
+   - فایل چاپ.html به مسیر app/src/main/assets/print/exam_print.html اضافه شد.
+   - تابع جاوااسکریپت window.setExamData(data) به فایل اضافه شد که داده‌های سربرگ
+     و آرایهٔ سؤالات را دریافت، در فرم‌های تنظیمات قالب و آرایهٔ questions تزریق،
+     و متدهای updateHeaderSettingsVisibility() و renderAll() را اجرا می‌کند.
+   - دکمه‌های «نسخه دانش‌آموز» و «نسخه استاد» به پل بومی ExamPrintNative متصل شدند.
+
+۲) تبدیل داده‌های کاتلین به JSON (ExamHtmlPrintPayloadBuilder):
+   - هر ۶ نوع سؤال کاتلین با جزئیات کامل به ساختار questions صفحهٔ HTML نگاشت می‌شوند:
+     * چندگزینه‌ای (MULTIPLE_CHOICE) -> نوع 'multiple' با گزینه‌ها، وضعیت صحیح و چیدمان.
+     * صحیح/غلط (TRUE_FALSE) -> نوع 'truefalse' با گزینه‌های صحیح و غلط و تعیین گزینه درست.
+     * تشریحی (ESSAY) -> نوع 'long' با تعداد سطر (answerLines) و استایل خط‌دار (lined/plain).
+     * جای‌خالی (FILL_BLANK) -> نوع 'fill' با متن سؤال.
+     * عددی (NUMERIC) -> نوع 'numeric' با پاسخ مورد انتظار.
+     * جورکردنی (MATCHING) -> نوع 'matching' با جفت‌های متناظر راست و چپ (pairs).
+   - مشخصات سربرگ رسمی (نام درس، تاریخ، مدت زمان، نام مدرسه، پایه، رشته، اداره آموزش و پرورش)
+     به فیلدهای تمام ۷ قالب سربرگ تزریق شده و قالب پیش‌فرض روی 'ministry' (سربرگ رسمی آموزش و پرورش)
+     تنظیم می‌شود.
+
+۳) پنجرهٔ تمام‌صفحهٔ چاپ تعاملی (ExamHtmlPrintDialog):
+   - نمایش در Compose Dialog تمام‌صفحه با نوار عنوان و دکمهٔ بستن.
+   - WebView امن با دامنهٔ محلی https://exam-print.local/print/exam_print.html بدون بارگذاری خارجی.
+   - تزریق مطمئن داده‌ها در onPageFinished با اعتبارسنجی مداوم.
+   - اتصال به موتور چاپ رسمی اندروید (PrintManager و createPrintDocumentAdapter) هنگام فشردن دکمه‌های پرینت.
+
+۴) دکمهٔ «چاپ» روی کارت آزمون (ExamPrintCenterScreen):
+   - روی هر کارت آزمون در صفحهٔ «چاپ آزمون» دکمهٔ «چاپ» اضافه شد.
+   - با کلیک روی آن، مشخصات و چیدمان آزمون از portability.printableExam خوانده شده و
+     پنجرهٔ ExamHtmlPrintDialog باز می‌شود.
+   - تمام قابلیت‌های قبلی (چاپ برگه، چاپ با کلید، ویرایش سند، خروجی مستقیم PDF پرینتر) بدون تغییر حفظ شدند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+افزوده:
+app/src/main/assets/print/exam_print.html
+app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt
+app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt
+app/src/test/java/ir/exam/app/ui/app/V73_0HtmlPrintIntegrationTest.kt
+
+تغییر:
+app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt
+app/src/test/java/ir/exam/app/ui/app/Neumorphic69IntegrationTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### تست و وضعیت Build
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=211 edge_functions=3
+V73_0HtmlPrintIntegrationTest           → PASS (پوشش کامل ۶ نوع سؤال، سربرگ، پل و دکمه‌ها)
+تست‌های رگرسیون Neumorphic69/V62.7/V70.0/V71.0 → PASS
+اسکن امنیت و importها                 → PASS
+```
+
+### چک‌لیست دستگاه
+
+```text
+۱) رفتن به صفحهٔ «چاپ آزمون» از منوی برنامه.
+۲) روی هر کارت آزمون، دکمهٔ جدید «چاپ» در کنار «چاپ برگه» و «چاپ با کلید» دیده می‌شود.
+۳) با لمس دکمهٔ «چاپ»، صفحهٔ تمام‌صفحهٔ چاپ تعاملی HTML با سربرگ و سؤالات همان آزمون باز می‌شود.
+۴) بررسی کنید که تمام سؤالات (چندگزینه‌ای، صحیح/غلط، تشریحی، جورکردنی و...) در جدول سؤالات درج شده باشند.
+۵) تغییر قالب سربرگ از منوی بالای صفحه و ویرایش متن سؤالات را امتحان کنید.
+۶) لمس دکمه‌های «نسخه دانش‌آموز» یا «نسخه استاد» باید دیالوگ چاپ استاندارد اندروید را باز کند.
+۷) دکمهٔ بستن بالای صفحه، بدون مشکل پنجره را بسته و به لیست آزمون‌ها برمی‌گردد.
+```

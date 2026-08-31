@@ -98,6 +98,9 @@ fun ExamPrintCenterScreen(
     var pdfStatus by remember { mutableStateOf<String?>(null) }
     var pdfStatusIsError by remember { mutableStateOf(false) }
     var pdfExporting by remember { mutableStateOf(false) }
+    // V73.0 — پنجرهٔ چاپ تعاملی HTML با انتقال خودکار سؤالات آزمون.
+    var htmlPrintExam by remember { mutableStateOf<ir.exam.app.domain.model.OfficialExamPrintable?>(null) }
+    var htmlPrintLoading by remember { mutableStateOf(false) }
     val createPdf = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri: Uri? ->
@@ -174,7 +177,7 @@ fun ExamPrintCenterScreen(
                 else MaterialTheme.colorScheme.primary
             )
         }
-        if (state.loading || state.portabilityLoading || pdfExporting) {
+        if (state.loading || state.portabilityLoading || pdfExporting || htmlPrintLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
         if (state.exams.isEmpty() && !state.loading) Text("آزمونی برای چاپ نیست.")
@@ -194,6 +197,31 @@ fun ExamPrintCenterScreen(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
                         ) {
+                            // V73.0 — دکمهٔ «چاپ»: باز کردن فایل چاپ تعاملی HTML با انتقال خودکار سؤالات
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        htmlPrintLoading = true
+                                        try {
+                                            pdfStatus = null
+                                            pdfStatusIsError = false
+                                            portability.printableExam(exam.id, false, header, layoutStore.read(exam.id))
+                                                .onSuccess { printable ->
+                                                    htmlPrintExam = printable
+                                                }
+                                                .onFailure { error ->
+                                                    pdfStatusIsError = true
+                                                    pdfStatus = sanitizePdfError(error)
+                                                }
+                                        } finally {
+                                            htmlPrintLoading = false
+                                        }
+                                    }
+                                },
+                                enabled = !htmlPrintLoading && !pdfExporting
+                            ) {
+                                Text("چاپ")
+                            }
                             // V63.5 — چیدمان چاپی محلی (ویرایشگر سند) فقط اینجا اعمال می‌شود.
                             Button(onClick = {
                                 viewModel.preparePrint(exam.id, false, header, layoutStore.read(exam.id))
@@ -241,6 +269,13 @@ fun ExamPrintCenterScreen(
             schools = schools,
             onDismiss = { headerOpen = false },
             onConfirm = { header = it; headerOpen = false }
+        )
+    }
+    // V73.0 — نمایش تمام‌صفحهٔ چاپ تعاملی HTML هنگام انتخاب آزمون
+    htmlPrintExam?.let { printable ->
+        ExamHtmlPrintDialog(
+            printable = printable,
+            onDismiss = { htmlPrintExam = null }
         )
     }
 }
