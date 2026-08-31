@@ -7,6 +7,11 @@ import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.printing.ExamHtmlPrintPayloadBuilder
 import java.io.File
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -95,49 +100,49 @@ class V73_0HtmlPrintIntegrationTest {
             questions = questions
         )
 
-        assertEquals("ministry", json.getString("template"))
-        val fields = json.getJSONObject("fields")
-        assertEquals("زیست‌شناسی", fields.getString("h7_course"))
-        assertEquals("۱۴۰۳/۱۰/۲۰", fields.getString("h7_examDate"))
-        assertEquals("شهید دستغیب", fields.getString("h7_schoolName"))
-        assertEquals("یازدهم", fields.getString("h7_grade"))
-        assertEquals("تجربی", fields.getString("h7_major"))
+        assertEquals("ministry", json["template"]?.jsonPrimitive?.content)
+        val fields = json["fields"]?.jsonObject!!
+        assertEquals("زیست‌شناسی", fields["h7_course"]?.jsonPrimitive?.content)
+        assertEquals("۱۴۰۳/۱۰/۲۰", fields["h7_examDate"]?.jsonPrimitive?.content)
+        assertEquals("شهید دستغیب", fields["h7_schoolName"]?.jsonPrimitive?.content)
+        assertEquals("یازدهم", fields["h7_grade"]?.jsonPrimitive?.content)
+        assertEquals("تجربی", fields["h7_major"]?.jsonPrimitive?.content)
 
-        val qArray = json.getJSONArray("questions")
-        assertEquals(6, qArray.length())
+        val qArray = json["questions"]?.jsonArray!!
+        assertEquals(6, qArray.size)
 
-        val mc = qArray.getJSONObject(0)
-        assertEquals("multiple", mc.getString("type"))
-        assertEquals("1.5", mc.getString("score"))
-        val mcOpts = mc.getJSONArray("options")
-        assertEquals(4, mcOpts.length())
-        assertTrue(mcOpts.getJSONObject(1).getBoolean("correct"))
-        assertFalse(mcOpts.getJSONObject(0).getBoolean("correct"))
+        val mc = qArray[0].jsonObject
+        assertEquals("multiple", mc["type"]?.jsonPrimitive?.content)
+        assertEquals("1.5", mc["score"]?.jsonPrimitive?.content)
+        val mcOpts = mc["options"]?.jsonArray!!
+        assertEquals(4, mcOpts.size)
+        assertTrue(mcOpts[1].jsonObject["correct"]?.jsonPrimitive?.booleanOrNull == true)
+        assertFalse(mcOpts[0].jsonObject["correct"]?.jsonPrimitive?.booleanOrNull == true)
 
-        val tf = qArray.getJSONObject(1)
-        assertEquals("truefalse", tf.getString("type"))
-        val tfOpts = tf.getJSONArray("options")
-        assertTrue(tfOpts.getJSONObject(0).getBoolean("correct"))
-        assertFalse(tfOpts.getJSONObject(1).getBoolean("correct"))
+        val tf = qArray[1].jsonObject
+        assertEquals("truefalse", tf["type"]?.jsonPrimitive?.content)
+        val tfOpts = tf["options"]?.jsonArray!!
+        assertTrue(tfOpts[0].jsonObject["correct"]?.jsonPrimitive?.booleanOrNull == true)
+        assertFalse(tfOpts[1].jsonObject["correct"]?.jsonPrimitive?.booleanOrNull == true)
 
-        val essay = qArray.getJSONObject(2)
-        assertEquals("long", essay.getString("type"))
-        assertEquals(4, essay.getInt("answerLines"))
-        assertEquals("lined", essay.getString("answerStyle"))
+        val essay = qArray[2].jsonObject
+        assertEquals("long", essay["type"]?.jsonPrimitive?.content)
+        assertEquals(4, essay["answerLines"]?.jsonPrimitive?.intOrNull)
+        assertEquals("lined", essay["answerStyle"]?.jsonPrimitive?.content)
 
-        val fill = qArray.getJSONObject(3)
-        assertEquals("fill", fill.getString("type"))
+        val fill = qArray[3].jsonObject
+        assertEquals("fill", fill["type"]?.jsonPrimitive?.content)
 
-        val num = qArray.getJSONObject(4)
-        assertEquals("numeric", num.getString("type"))
-        assertEquals("12", num.getString("answer"))
+        val num = qArray[4].jsonObject
+        assertEquals("numeric", num["type"]?.jsonPrimitive?.content)
+        assertEquals("12", num["answer"]?.jsonPrimitive?.content)
 
-        val match = qArray.getJSONObject(5)
-        assertEquals("matching", match.getString("type"))
-        val pairs = match.getJSONArray("pairs")
-        assertEquals(2, pairs.length())
-        assertEquals("الف", pairs.getJSONObject(0).getString("left"))
-        assertEquals("۲", pairs.getJSONObject(0).getString("right"))
+        val match = qArray[5].jsonObject
+        assertEquals("matching", match["type"]?.jsonPrimitive?.content)
+        val pairs = match["pairs"]?.jsonArray!!
+        assertEquals(2, pairs.size)
+        assertEquals("الف", pairs[0].jsonObject["left"]?.jsonPrimitive?.content)
+        assertEquals("۲", pairs[0].jsonObject["right"]?.jsonPrimitive?.content)
     }
 
     @Test
@@ -164,16 +169,16 @@ class V73_0HtmlPrintIntegrationTest {
         )
 
         val json = ExamHtmlPrintPayloadBuilder.build(printable)
-        assertEquals("ministry", json.getString("template"))
-        val fields = json.getJSONObject("fields")
-        assertEquals("فیزیک", fields.getString("h7_course"))
-        assertEquals("دبیرستان رازی", fields.getString("h7_schoolName"))
+        assertEquals("ministry", json["template"]?.jsonPrimitive?.content)
+        val fields = json["fields"]?.jsonObject!!
+        assertEquals("فیزیک", fields["h7_course"]?.jsonPrimitive?.content)
+        assertEquals("دبیرستان رازی", fields["h7_schoolName"]?.jsonPrimitive?.content)
 
-        val qArray = json.getJSONArray("questions")
-        assertEquals(1, qArray.length())
-        val q0 = qArray.getJSONObject(0)
-        assertEquals("multiple", q0.getString("type"))
-        assertTrue(q0.getJSONArray("options").getJSONObject(0).getBoolean("correct"))
+        val qArray = json["questions"]?.jsonArray!!
+        assertEquals(1, qArray.size)
+        val q0 = qArray[0].jsonObject
+        assertEquals("multiple", q0["type"]?.jsonPrimitive?.content)
+        assertTrue(q0["options"]?.jsonArray?.get(0)?.jsonObject?.get("correct")?.jsonPrimitive?.booleanOrNull == true)
     }
 
     @Test

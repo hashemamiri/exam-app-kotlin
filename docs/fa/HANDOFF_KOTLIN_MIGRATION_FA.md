@@ -14292,3 +14292,50 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```text
 FINAL_NATIVE_VERIFY=PASS kotlin_files=211 edge_functions=3
 ```
+
+
+## ۲۷۷) V73.0.2 — مهاجرت سازندهٔ JSON چاپ به kotlinx.serialization
+
+### گزارش واقعی CI
+
+```text
+V73_0HtmlPrintIntegrationTest > printable exam payload builder populates json FAILED
+    java.lang.RuntimeException at V73_0HtmlPrintIntegrationTest.kt:166
+
+V73_0HtmlPrintIntegrationTest > payload builder maps all six question types to json FAILED
+    java.lang.RuntimeException at V73_0HtmlPrintIntegrationTest.kt:90
+```
+
+### ریشه
+
+```text
+در تست‌های واحد محلی JVM، کلاس‌های پکیج org.json (مربوط به android.jar)
+شبیه‌سازی نشده‌اند (stub) و متدهای getString/getJSONObject خطای RuntimeException
+می‌دادند.
+```
+
+### اصلاح
+
+```text
+۱) ExamHtmlPrintPayloadBuilder به استفاده از kotlinx.serialization.json
+   (شامل buildJsonObject و buildJsonArray و JsonObject) منتقل شد تا
+   کاملاً مستقل از پلتفرم و تست‌پذیر روی JVM خالص باشد.
+۲) تست‌های V73_0HtmlPrintIntegrationTest با ساختار kotlinx.serialization
+   تطبیق داده شدند.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt
+app/src/test/java/ir/exam/app/ui/app/V73_0HtmlPrintIntegrationTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### نتیجهٔ بررسی
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=211 edge_functions=3
+```

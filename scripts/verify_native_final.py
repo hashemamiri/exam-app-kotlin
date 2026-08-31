@@ -2828,6 +2828,12 @@ require(_v7301_models.exists()
         and "val totalScore: Double = 0.0" in _v7301_models_text,
         "V73.0.1 default totalScore parameter in OfficialExamPrintable is missing")
 
+# ---- V73.0.2: مهاجرت سازنده JSON چاپ به kotlinx.serialization ----
+require("kotlinx.serialization.json" in _v730_payload_text
+        and "buildJsonObject" in _v730_payload_text
+        and "kotlinx.serialization.json" in _v730_test_text,
+        "V73.0.2 kotlinx.serialization migration in ExamHtmlPrintPayload is missing")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2835,9 +2841,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 248
-        and _v694_changelog.startswith("V73.0.1:"),
-        "changelog must keep the full history + the new V73.0.1 line on top")
+require(_v694_lines >= 249
+        and _v694_changelog.startswith("V73.0.2:"),
+        "changelog must keep the full history + the new V73.0.2 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
