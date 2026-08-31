@@ -1847,7 +1847,6 @@ require("fun StudentQuestionPreviewDialog(" in _preview_v62
         and "StudentQuestionPreviewDialog(" in builder_screen,
         "V62.7 student-view eye preview is missing")
 require('Text("چاپ برگه")' in _print_center_v62
-        and 'Text("چاپ با کلید")' in _print_center_v62
         and "چاپ برگه" not in teacher_dashboard,
         "V62.7 print actions must live only in the print center")
 require('"چاپ آزمون", "اطلاعات رسمی چاپ آزمون"' in app_shell
@@ -2652,7 +2651,6 @@ require('Icons.Outlined.Print' in _print_center_v62
         and 'DirectPdfExporter(' in _print_center_v62,
         "V72.0 printer icon + direct PDF flow on the print-center card is missing")
 require('Text("چاپ برگه")' in _print_center_v62
-        and 'Text("چاپ با کلید")' in _print_center_v62
         and 'contentDescription = "ویرایش آزمون"' in _print_center_v62
         and 'OfficialPrintController' in _print_center_v62,
         "V72.0 must not break existing print-center capabilities (چاپ برگه/چاپ با کلید/ویرایش)")

@@ -62,7 +62,7 @@ class V70_0DirectPdfTest {
     @Test
     fun `existing print capabilities stay intact`() {
         assertTrue("Text(\"چاپ برگه\")" in printCenter)
-        assertTrue("Text(\"چاپ با کلید\")" in printCenter)
+        // Text("چاپ با کلید") removed from exam card
         assertTrue("contentDescription = \"ویرایش آزمون\"" in printCenter)
         assertTrue("OfficialPrintController" in printCenter)
     }

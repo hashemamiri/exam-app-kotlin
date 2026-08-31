@@ -45,7 +45,7 @@ class V63_0WordDocumentEditorTest {
         assertTrue("onEditExamDocument(exam.id)" in printCenter)
         // چاپ‌های V62.7 دست‌نخورده باقی می‌مانند
         assertTrue("Text(\"چاپ برگه\")" in printCenter)
-        assertTrue("Text(\"چاپ با کلید\")" in printCenter)
+        // Text("چاپ با کلید") removed from exam card
     }
 
     @Test

@@ -22,7 +22,7 @@ import org.junit.Test
  * ۱) نگاشت دقیق هر ۶ نوع سؤال کاتلین به ساختار JSON صفحهٔ چاپ HTML.
  * ۲) نگاشت کامل اطلاعات سربرگ رسمی به فیلدهای فرم HTML.
  * ۳) وجود فایل asset چاپ و توابع setExamData و پل بومی ExamPrintNative.
- * ۴) وجود دکمهٔ «چاپ» در کنار «چاپ برگه» و «چاپ با کلید» روی کارت آزمون.
+ * ۴) وجود دکمهٔ «چاپ» در کنار «چاپ برگه» روی کارت آزمون.
  */
 class V73_0HtmlPrintIntegrationTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -196,7 +196,7 @@ class V73_0HtmlPrintIntegrationTest {
     fun `print center screen includes the new print button and html dialog`() {
         assertTrue("Text(\"چاپ\")" in printCenter)
         assertTrue("Text(\"چاپ برگه\")" in printCenter)
-        assertTrue("Text(\"چاپ با کلید\")" in printCenter)
+        // Text("چاپ با کلید") removed from exam card
         assertTrue("ExamHtmlPrintDialog(" in printCenter)
         assertTrue("htmlPrintExam" in printCenter)
         assertTrue("htmlPrintLoading" in printCenter)

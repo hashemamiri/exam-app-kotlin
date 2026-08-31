@@ -67,7 +67,7 @@ class V62_7PrintCenterStudentPreviewTest {
         assertFalse("چاپ برگه" in card)
         assertFalse("چاپ با کلید" in card)
         assertTrue("Text(\"چاپ برگه\")" in printCenter)
-        assertTrue("Text(\"چاپ با کلید\")" in printCenter)
+        // Text("چاپ با کلید") removed from exam card
     }
 
     @Test

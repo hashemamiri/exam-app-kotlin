@@ -228,11 +228,6 @@ fun ExamPrintCenterScreen(
                             }) {
                                 Text("چاپ برگه")
                             }
-                            OutlinedButton(onClick = {
-                                viewModel.preparePrint(exam.id, true, header, layoutStore.read(exam.id))
-                            }) {
-                                Text("چاپ با کلید")
-                            }
                             // V63.0 — مداد ویرایش آزمون: سند Word-مانند (همهٔ سؤال‌ها
                             // پشت‌سرهم، اندازهٔ واقعی A4 و صفحه‌بندی) را باز می‌کند.
                             // V63.3 — فقط آیکن مداد، بدون متن و کادر.
