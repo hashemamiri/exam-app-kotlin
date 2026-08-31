@@ -139,6 +139,7 @@ approved_webview_files = {
     "QuestionEditorWebViewDialog.kt",
     "QuestionTextFieldWebView.kt",
     "FormulaHostDialog.kt",
+    "ExamHtmlPrintDialog.kt",
 }
 require(
     webview_files <= approved_webview_files,

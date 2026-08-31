@@ -26,7 +26,7 @@ data class OfficialExamPrintable(
     override val header: OfficialPrintHeader,
     val subject: String,
     val durationMinutes: Int,
-    val totalScore: Double,
+    val totalScore: Double = 0.0,
     val questions: List<OfficialPrintQuestion>,
     val includeAnswerKey: Boolean = false,
     override val footerNote: String = "نام و امضای دبیر:                              نام و امضای مدیر:"
