@@ -14250,3 +14250,45 @@ V73_0HtmlPrintIntegrationTest           → PASS (پوشش کامل ۶ نوع س
 ۶) لمس دکمه‌های «نسخه دانش‌آموز» یا «نسخه استاد» باید دیالوگ چاپ استاندارد اندروید را باز کند.
 ۷) دکمهٔ بستن بالای صفحه، بدون مشکل پنجره را بسته و به لیست آزمون‌ها برمی‌گردد.
 ```
+
+
+## ۲۷۶) V73.0.1 — هات‌فیکس خطای کامپایل تست‌های واحد CI (پارامتر totalScore)
+
+### گزارش واقعی CI
+
+```text
+e: file:///home/runner/work/exam-app-kotlin/exam-app-kotlin/app/src/test/java/ir/exam/app/ui/app/V73_0HtmlPrintIntegrationTest.kt:154:13 No value passed for parameter 'totalScore'.
+Task :app:compileDebugUnitTestKotlin FAILED
+```
+
+### ریشه
+
+```text
+دیتاکلاس OfficialExamPrintable فیلد totalScore: Double بدون مقدار پیش‌فرض داشت؛
+در تست V73_0HtmlPrintIntegrationTest ساخت نمونهٔ دستی بدون مقداردهی این فیلد
+انجام شده بود و در مرحلهٔ compileDebugUnitTestKotlin متوقف می‌شد.
+کد اصلی برنامه (compileDebugKotlin) کاملاً سبز بود.
+```
+
+### اصلاح
+
+```text
+۱) افزودن مقدار پیش‌فرض val totalScore: Double = 0.0 در OfficialExamPrintable.
+۲) مقداردهی صریح totalScore = 20.0 در تست V73_0HtmlPrintIntegrationTest.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt
+app/src/test/java/ir/exam/app/ui/app/V73_0HtmlPrintIntegrationTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### نتیجهٔ بررسی
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=211 edge_functions=3
+```

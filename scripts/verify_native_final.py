@@ -2817,8 +2817,16 @@ require(_v730_asset.is_file() and _v730_asset.stat().st_size > 400_000
         and "ExamPrintNative" in _v730_asset.read_text(),
         "V73.0 exam_print.html asset or setExamData bridge is missing")
 require(_v730_test.exists()
-        and "payload builder maps all six question types to json" in _v730_test_text,
-        "V73.0 HtmlPrint integration regression test is missing")
+        and "payload builder maps all six question types to json" in _v730_test_text
+        and "totalScore = 20.0" in _v730_test_text,
+        "V73.0 HtmlPrint integration regression test is missing or lacks totalScore")
+
+# ---- V73.0.1: مقدار پیش‌فرض totalScore در OfficialExamPrintable ----
+_v7301_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt")
+_v7301_models_text=_v7301_models.read_text() if _v7301_models.exists() else ""
+require(_v7301_models.exists()
+        and "val totalScore: Double = 0.0" in _v7301_models_text,
+        "V73.0.1 default totalScore parameter in OfficialExamPrintable is missing")
 
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
@@ -2827,9 +2835,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 247
-        and _v694_changelog.startswith("V73.0:"),
-        "changelog must keep the full history + the new V73.0 line on top")
+require(_v694_lines >= 248
+        and _v694_changelog.startswith("V73.0.1:"),
+        "changelog must keep the full history + the new V73.0.1 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

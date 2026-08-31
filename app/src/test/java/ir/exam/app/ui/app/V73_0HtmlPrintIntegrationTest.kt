@@ -151,6 +151,7 @@ class V73_0HtmlPrintIntegrationTest {
             ),
             subject = "فیزیک",
             durationMinutes = 75,
+            totalScore = 20.0,
             questions = listOf(
                 OfficialPrintQuestion(
                     number = 1,
