@@ -11534,3 +11534,57 @@ ight])؛ اگر گروه بازی نبود، براکت راستِ تک‌طرف
 
 </body>
 </html>
+function printStudent() {
+  printMode = 'student';
+  renderPreview();
+  setTimeout(function() {
+    if (window.ExamPrintNative && window.ExamPrintNative.print) {
+      window.ExamPrintNative.print('student');
+    } else {
+      window.print();
+    }
+  }, 80);
+}
+function printTeacher() {
+  printMode = 'teacher';
+  renderPreview();
+  setTimeout(function() {
+    if (window.ExamPrintNative && window.ExamPrintNative.print) {
+      window.ExamPrintNative.print('teacher');
+    } else {
+      window.print();
+    }
+  }, 80);
+}
+window.addEventListener('afterprint', () => { printMode = 'student'; renderPreview(); });
+
+window.setExamData = function(data) {
+  if (!data) return;
+  if (typeof data === "string") { try { data = JSON.parse(data); } catch(e) { console.error("setExamData parse error", e); return; } }
+  if (data.template) {
+    var tEl = document.getElementById("f_headerTemplate");
+    if (tEl) {
+      tEl.value = data.template;
+    }
+  }
+  if (data.fields) {
+    Object.keys(data.fields).forEach(function(k) {
+      var el = document.getElementById(k);
+      if (el) {
+        if (el.type === "checkbox") el.checked = !!data.fields[k];
+        else el.value = data.fields[k];
+      }
+    });
+  }
+  if (Array.isArray(data.questions)) {
+    questions = data.questions.map(function(q, i) {
+      if (!q.id) q.id = i + 1;
+      return q;
+    });
+    qIdCounter = questions.length;
+  }
+  updateHeaderSettingsVisibility();
+  renderAll();
+};
+
+

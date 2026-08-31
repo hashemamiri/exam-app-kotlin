@@ -2813,8 +2813,8 @@ require(_v730_payload.exists()
         and "fun buildFromDrafts(" in _v730_payload_text,
         "V73.0 ExamHtmlPrintPayloadBuilder is missing")
 require(_v730_asset.is_file() and _v730_asset.stat().st_size > 400_000
-        and "window.setExamData" in _v730_asset.read_text()
-        and "ExamPrintNative" in _v730_asset.read_text(),
+        and "window.setExamData" in _v730_asset.read_text(encoding="utf-8")
+        and "ExamPrintNative" in _v730_asset.read_text(encoding="utf-8"),
         "V73.0 exam_print.html asset or setExamData bridge is missing")
 require(_v730_test.exists()
         and "payload builder maps all six question types to json" in _v730_test_text
