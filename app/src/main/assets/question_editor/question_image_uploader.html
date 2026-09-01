@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>استودیوی جامع بارگذاری، ویرایش و اسکن تصاویر سؤالات آزمون</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #eff6ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --warning: #d97706;
+    --bg-app: #f1f5f9;
+    --card-bg: #ffffff;
+    --border-color: #cbd5e1;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 14px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 30px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Vazirmatn', Tahoma, sans-serif; }
+  body { background-color: var(--bg-app); color: var(--text-main); line-height: 1.6; padding: 20px; }
+
+  .app-container { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+  /* HEADER */
+  .app-header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff;
+    padding: 22px 30px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .app-header h1 { font-size: 21px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+  .app-header p { font-size: 13.5px; opacity: 0.92; margin-top: 4px; }
+  .badge { background: rgba(255,255,255,0.22); padding: 5px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+
+  /* GRID LAYOUT */
+  .main-layout { display: grid; grid-template-columns: 1.22fr 0.78fr; gap: 24px; }
+  @media (max-width: 960px) { .main-layout { grid-template-columns: 1fr; } }
+
+  /* CARD */
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1e3a8a;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+  }
+
+  /* FORM CONTROLS */
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+  .form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+    background: #f8fafc;
+  }
+  .form-control:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+  textarea.form-control { resize: vertical; min-height: 85px; }
+
+  /* UPLOAD DROP ZONE */
+  .upload-dropzone {
+    border: 2px dashed #94a3b8;
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-dropzone:hover, .upload-dropzone.dragover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    transform: scale(1.01);
+  }
+  .upload-dropzone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 5;
+  }
+  .upload-icon { font-size: 38px; color: var(--primary); margin-bottom: 8px; }
+  .upload-text { font-size: 14px; font-weight: 700; color: #334155; }
+  .upload-subtext { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* IMAGE LIST */
+  .images-list { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+  .image-item-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+  .image-thumb {
+    width: 68px;
+    height: 68px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid #cbd5e1;
+    background: #f1f5f9;
+  }
+  .image-details { flex: 1; min-width: 0; }
+  .image-name { font-size: 13.5px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .image-meta { font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 3px; }
+  .image-actions { display: flex; gap: 6px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-outline { background: #fff; border: 1.5px solid var(--border-color); color: #334155; }
+  .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  /* QUESTION PREVIEW */
+  .preview-card {
+    border: 2px solid #0f172a;
+    border-radius: 8px;
+    padding: 18px 22px;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm);
+  }
+  .q-row { display: flex; gap: 10px; align-items: flex-start; }
+  .q-index { font-weight: 900; color: var(--primary); font-size: 16px; min-width: 24px; }
+  .q-content { flex: 1; font-size: 14.5px; line-height: 1.8; }
+
+  /* SIDE BY SIDE / MULTI-IMAGE CONTAINER */
+  .q-images-grid {
+    margin: 14px 0;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .q-images-grid.layout-side { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .q-images-grid.layout-single { display: block; }
+  .q-image-box {
+    text-align: center;
+    background: #fafafa;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+    max-width: 100%;
+  }
+  .q-image-box img { max-width: 100%; height: auto; border-radius: 4px; display: block; margin: 0 auto; }
+  .q-image-caption { font-size: 12.5px; color: #1e3a8a; margin-top: 6px; font-weight: 700; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 14px; font-size: 13.5px; }
+  .option-item { display: flex; align-items: center; gap: 6px; }
+  .choice-circle { width: 14px; height: 14px; border: 1.5px solid #000; border-radius: 50%; }
+
+  /* ================= MODAL CROPPER & STUDIO ================= */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-dialog {
+    background: #fff;
+    width: 100%;
+    max-width: 1040px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: 96vh;
+    overflow: hidden;
+    animation: popIn 0.22s ease-out;
+  }
+  @keyframes popIn { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .modal-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+  }
+  .modal-header h3 { font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+  .modal-close { background: none; border: none; font-size: 26px; line-height: 1; cursor: pointer; color: #64748b; padding: 0 4px; }
+  .modal-close:hover { color: var(--danger); }
+
+  .modal-body {
+    padding: 14px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* TOP LIVE STATS BANNER */
+  .live-stats-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    background: #1e293b;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    gap: 8px;
+  }
+  .stat-pill { display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .stat-value { color: #38bdf8; font-weight: 800; font-family: Tahoma, sans-serif; }
+
+  /* STUDIO MAIN TABS */
+  .studio-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .studio-tab-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 13px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .studio-tab-btn:hover { background: #f1f5f9; color: var(--primary); }
+  .studio-tab-btn.active { background: var(--primary-light); color: var(--primary); }
+
+  /* TOOL SUB-BARS */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 10px; }
+
+  .cropper-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    justify-content: space-between;
+    background: #f1f5f9;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+  }
+  .tool-btn-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .tool-btn {
+    background: #fff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #334155;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .tool-btn:hover { background: #e2e8f0; }
+  .tool-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 6px rgba(37,99,235,0.3); }
+
+  /* SCAN ENHANCER & BRUSH CONTROLS */
+  .panel-box {
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+  .panel-title { font-size: 12.5px; font-weight: 800; color: #1e3a8a; }
+
+  /* TEXT EDITING TOOLBAR STRIP */
+  .text-controls-bar {
+    background: #fdf2f8;
+    border: 1.5px solid #fbcfe8;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .text-controls-bar input[type="text"] {
+    padding: 7px 12px;
+    border: 1.5px solid #f472b6;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-weight: 700;
+    min-width: 170px;
+    outline: none;
+    background: #fff;
+  }
+  .text-controls-bar input[type="text"]:focus {
+    border-color: #db2777;
+    box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.15);
+  }
+
+  /* CANVAS STAGE */
+  .stage-container {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    background: #0f172a;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+    direction: ltr; /* Coordinate consistency */
+    box-shadow: inset 0 0 25px rgba(0,0,0,0.6);
+  }
+  #sourceCanvas {
+    position: absolute;
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+  #drawCanvas {
+    position: absolute;
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    z-index: 25;
+    cursor: default;
+    touch-action: none;
+  }
+
+  /* CROP OVERLAY FRAME */
+  .crop-frame {
+    position: absolute;
+    border: 2px solid #38bdf8;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.72);
+    cursor: move;
+    box-sizing: border-box;
+    display: none;
+    z-index: 10;
+  }
+  .crop-frame.circular { border-radius: 50%; }
+
+  /* CORNER & EDGE HANDLES */
+  .handle {
+    position: absolute;
+    background: #ffffff;
+    border: 2.5px solid #0284c7;
+    border-radius: 4px;
+    box-sizing: border-box;
+    z-index: 30;
+    touch-action: none;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .handle:hover, .handle:active { background: #38bdf8; transform: scale(1.3); }
+
+  .handle-tl { width: 18px; height: 18px; top: -9px; left: -9px; cursor: nwse-resize; }
+  .handle-tr { width: 18px; height: 18px; top: -9px; right: -9px; cursor: nesw-resize; }
+  .handle-bl { width: 18px; height: 18px; bottom: -9px; left: -9px; cursor: nesw-resize; }
+  .handle-br { width: 18px; height: 18px; bottom: -9px; right: -9px; cursor: nwse-resize; }
+
+  .handle-edge-t { top: -6px; left: 50%; transform: translateX(-50%); width: 34px; height: 12px; cursor: ns-resize; border-radius: 999px; }
+  .handle-edge-b { bottom: -6px; left: 50%; transform: translateX(-50%); width: 34px; height: 12px; cursor: ns-resize; border-radius: 999px; }
+  .handle-edge-l { top: 50%; left: -6px; transform: translateY(-50%); width: 12px; height: 34px; cursor: ew-resize; border-radius: 999px; }
+  .handle-edge-r { top: 50%; right: -6px; transform: translateY(-50%); width: 12px; height: 34px; cursor: ew-resize; border-radius: 999px; }
+
+  /* GRID LINES */
+  .crop-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr;
+  }
+  .crop-grid div { border: 1px dashed rgba(255,255,255,0.35); }
+
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .meta-chip {
+    font-size: 12.5px;
+    color: #1e293b;
+    background: #e2e8f0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div>
+      <h1>🖼️ استودیوی بارگذاری، اسکن و بهینه‌سازی تصاویر سؤالات</h1>
+      <p>تفکیک چند سؤاله، صاف‌سازی پرسپکتیو کتاب، سفیدسازی اسکن و برچسب‌های متنی دقیق</p>
+    </div>
+    <span class="badge">ویرایشگر استودیویی V3 Pro</span>
+  </header>
+
+  <div class="main-layout">
+
+    <!-- LEFT: QUESTION BUILDER FORM -->
+    <div class="card">
+      <div class="card-title">
+        <span>📝 مشخصات و تصاویر سؤال</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">متن سؤال:</label>
+        <textarea id="questionText" class="form-control" placeholder="متن سؤال خود را بنویسید...">با توجه به دو مدار الکتریکی در شکل (الف) و شکل (ب)، جریان عبوری از مقاومت $R_2$ را در هر دو حالت مقایسه کنید.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">بارگذاری تصویر سؤال (انتخاب یا رها کردن عکس):</label>
+        <div class="upload-dropzone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/svg+xml">
+          <div class="upload-icon">📷</div>
+          <div class="upload-text">برای انتخاب تصویر کلیک کنید یا عکس را اینجا بکشید و رها کنید</div>
+          <div class="upload-subtext">پشتیبانی از انواع فرمت‌های تصویری و چسباندن مستقیم با Ctrl+V</div>
+        </div>
+      </div>
+
+      <!-- IMAGE ATTACHED LIST -->
+      <div class="form-group">
+        <label class="form-label">تصاویر پیوست‌شده به این سؤال:</label>
+        <div class="images-list" id="imagesList">
+          <div style="text-align:center;color:#94a3b8;font-size:13px;padding:12px;">هنوز تصویری اضافه نشده است.</div>
+        </div>
+      </div>
+
+      <!-- MULTI-IMAGE CHORD LAYOUT SETTINGS -->
+      <div class="form-group" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+        <label class="form-label" style="color:#1e3a8a;">🖼️ چیدمان تصاویر در برگه آزمون:</label>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <span style="font-size:12px;font-weight:600;color:#64748b;">نوع نمایش:</span>
+            <select id="layoutModeSelect" class="form-control" onchange="updatePreview()">
+              <option value="side" selected>دو تصویر کنار هم (شکل الف / شکل ب)</option>
+              <option value="single">تک‌تصویر (وسط‌چین)</option>
+              <option value="vertical">عمودی (زیر هم)</option>
+            </select>
+          </div>
+          <div>
+            <span style="font-size:12px;font-weight:600;color:#64748b;">اندازه کلی در صفحه:</span>
+            <select id="imageWidthSelect" class="form-control" onchange="updatePreview()">
+              <option value="70mm">کوچک (۷۰ میلی‌متر)</option>
+              <option value="90mm" selected>متوسط (۹۰ میلی‌متر)</option>
+              <option value="130mm">بزرگ (۱۳۰ میلی‌متر)</option>
+              <option value="100%">تمام‌عرض برگه</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="exportQuestionJSON()">💾 خروجی داده‌های سوال (JSON)</button>
+        <button type="button" class="btn btn-outline" onclick="loadSampleCircuits()">💡 درج ۲ شکل نمونه (شکل الف و ب)</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: LIVE EXAM CARD PREVIEW -->
+    <div class="card">
+      <div class="card-title">
+        <span>👁️ پیش‌نمایش زنده در برگه آزمون</span>
+        <span class="badge" style="background:#1e3a8a;color:#fff;">A4 Print Ready</span>
+      </div>
+
+      <div class="preview-card" id="previewCard">
+        <div class="q-row">
+          <span class="q-index">۱.</span>
+          <div class="q-content">
+            <div id="prevQuestionText">با توجه به دو مدار الکتریکی در شکل (الف) و شکل (ب)، جریان عبوری از مقاومت $R_2$ را در هر دو حالت مقایسه کنید.</div>
+
+            <div id="prevImageContainer"></div>
+
+            <div class="options-grid">
+              <div class="option-item"><span class="choice-circle"></span> <strong>الف)</strong> جریان مدار الف دو برابر ب است.</div>
+              <div class="option-item"><span class="choice-circle"></span> <strong>ب)</strong> جریان هر دو مدار برابر است.</div>
+              <div class="option-item"><span class="choice-circle"></span> <strong>ج)</strong> جریان مدار ب بیشتر از الف است.</div>
+              <div class="option-item"><span class="choice-circle"></span> <strong>د)</strong> مدار الف جریان ندارد.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= MODAL CROPPER & STUDIO ================= -->
+<div class="modal-overlay" id="cropperModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>🎨 استودیوی ویرایش، اسکن و صاف‌سازی تصویر</h3>
+      <button type="button" class="modal-close" onclick="closeCropper()">×</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- TOP LIVE STATS BANNER -->
+      <div class="live-stats-banner">
+        <div class="stat-pill">
+          <span>💾 حجم بهینه‌شده:</span>
+          <span class="stat-value" id="topLiveSize" style="color:#4ade80;">۰ KB</span>
+        </div>
+        <div class="stat-pill">
+          <span>📐 ابعاد خروجی:</span>
+          <span class="stat-value" id="topLivePx">۰ × ۰ px</span>
+        </div>
+        <div class="stat-pill">
+          <span>🖨️ اندازه چاپ:</span>
+          <span class="stat-value" id="topLiveMm" style="color:#fde047;">۰ × ۰ mm</span>
+        </div>
+        <div class="stat-pill">
+          <span>📊 نسبت کادر:</span>
+          <span class="stat-value" id="topLiveRatio" style="color:#a7f3d0;">بدون برش</span>
+        </div>
+      </div>
+
+      <!-- STUDIO TABS -->
+      <div class="studio-tabs">
+        <button type="button" class="studio-tab-btn active" id="tabBtnCrop" onclick="switchStudioTab('crop')">✂️ برش و ابعاد</button>
+        <button type="button" class="studio-tab-btn" id="tabBtnSplit" onclick="switchStudioTab('split')">🪄 تفکیک چند سؤاله</button>
+        <button type="button" class="studio-tab-btn" id="tabBtnScan" onclick="switchStudioTab('scan')">📄 سفیدسازی اسکن کتاب</button>
+        <button type="button" class="studio-tab-btn" id="tabBtnBrush" onclick="switchStudioTab('brush')">🧽 پاک‌کن و لاک‌گیر</button>
+        <button type="button" class="studio-tab-btn" id="tabBtnAnnotate" onclick="switchStudioTab('annotate')">🔤 برچسب متنی و فلش</button>
+      </div>
+
+      <!-- TAB 1: CROP & ROTATE -->
+      <div class="tab-panel active" id="tabPanelCrop">
+        <div class="cropper-toolbar">
+          <div class="tool-btn-group">
+            <button type="button" class="tool-btn" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;font-weight:700;" onclick="autoTrimWhiteBorders()">✂️ برش خودکار حاشیه‌های سفید</button>
+            <button type="button" class="tool-btn" onclick="rotateImage(-90)">↺ ۹۰° چپ</button>
+            <button type="button" class="tool-btn" onclick="rotateImage(90)">↻ ۹۰° راست</button>
+            <button type="button" class="tool-btn" onclick="flipHorizontal()">⇄ قرینه</button>
+          </div>
+          <div class="tool-btn-group">
+            <button type="button" class="tool-btn active" id="btnAspectFull" onclick="selectFullImage()">🖼️ بدون برش</button>
+            <button type="button" class="tool-btn" id="btnAspectFree" onclick="setAspectRatio('free')">برش آزاد</button>
+            <button type="button" class="tool-btn" id="btnAspect11" onclick="setAspectRatio('1:1')">مربع ۱:۱</button>
+            <button type="button" class="tool-btn" id="btnAspect43" onclick="setAspectRatio('4:3')">۴:۳</button>
+            <button type="button" class="tool-btn" id="btnAspect169" onclick="setAspectRatio('16:9')">۱۶:۹</button>
+            <button type="button" class="tool-btn" id="btnAspectCircle" onclick="toggleCircularCrop()">⚪ دایره‌ای</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: BATCH PAGE SPLITTER -->
+      <div class="tab-panel" id="tabPanelSplit">
+        <div class="panel-box">
+          <span class="panel-title">🪄 تقسیم و تفکیک چند سؤاله با کادرهای کاملاً قابل تنظیم و تغییر ابعاد:</span>
+          <div class="tool-btn-group">
+            <button type="button" class="tool-btn" onclick="splitPageGrid(2, 1)">✂️ ۲ سؤال (بالا / پایین)</button>
+            <button type="button" class="tool-btn" onclick="splitPageGrid(3, 1)">✂️ ۳ سؤال ستونی</button>
+            <button type="button" class="tool-btn" onclick="splitPageGrid(2, 2)">✂️ ۴ سؤال (۲×۲)</button>
+            <button type="button" class="tool-btn" onclick="addNewSplitBox()" style="background:#eff6ff;border-color:#3b82f6;color:#1d4ed8;font-weight:600;">➕ افزودن کادر جدید</button>
+            <button type="button" class="tool-btn" onclick="deleteSelectedSplitBox()" id="btnDeleteSplitBox" style="background:#fef2f2;border-color:#ef4444;color:#b91c1c;">🗑️ حذف کادر انتخاب‌شده</button>
+            <button type="button" class="tool-btn" style="background:#ecfdf5;border-color:#10b981;color:#065f46;font-weight:700;" onclick="exportBatchSplitQuestions()">💾 ذخیره همزمان تمام بخش‌ها در سؤالات</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1;">
+            <span style="font-size:12px;font-weight:600;color:#334155;">✏️ عنوان کادر:</span>
+            <input type="text" id="splitBoxLabelInput" placeholder="مثلاً: سؤال ۱ یا شکل الف" style="padding:4px 10px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;width:170px;" oninput="onSelectedSplitBoxLabelChange(this.value)">
+            <span id="splitBoxInfo" style="font-size:12px;color:#64748b;margin-right:auto;">💡 با موس یا لمس روی هر کادر کلیک کنید تا انتخاب شود، سپس با ۸ دستگیره ابعاد آن را آزادانه تنظیم کنید.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: SCAN ENHANCER & WHITEOUT FILTER -->
+      <div class="tab-panel" id="tabPanelScan">
+        <div class="panel-box">
+          <span class="panel-title">📄 فیلتر بهبود اسکن کتاب:</span>
+          <div class="tool-btn-group">
+            <button type="button" class="tool-btn active" id="filterOriginal" onclick="applyScanFilter('original')">طبیعی (اصلی)</button>
+            <button type="button" class="tool-btn" id="filterBookScan" style="background:#ecfdf5;border-color:#10b981;color:#065f46;font-weight:700;" onclick="applyScanFilter('book_scan')">🌟 اسکن تمیز کتاب (پس‌زمینه سفید خالص)</button>
+            <button type="button" class="tool-btn" id="filterHighContrast" onclick="applyScanFilter('high_contrast')">🖨️ سیاه و سفید کنتراست بالا</button>
+            <button type="button" class="tool-btn" id="filterRemoveShadow" onclick="applyScanFilter('brighten')">☀️ حذف سایه و زردی کاغذ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: WHITEOUT ERASER BRUSH -->
+      <div class="tab-panel" id="tabPanelBrush">
+        <div class="panel-box">
+          <span class="panel-title">🧽 قلم لاک سفید (پاک کردن شماره سؤال یا نوشته‌های کتاب):</span>
+          <div class="tool-btn-group">
+            <button type="button" class="tool-btn active" id="btnBrushActive" onclick="toggleBrushMode()">🖌️ فعال‌سازی قلم لاک‌گیر</button>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#1e3a8a;">
+              <span>سایز قلم:</span>
+              <select id="brushSizeSelect" class="form-control" style="padding:4px 8px;width:auto;" onchange="brushSize = parseInt(this.value, 10)">
+                <option value="12">باریک (۱۲px)</option>
+                <option value="25" selected>متوسط (۲۵px)</option>
+                <option value="50">بزرگ (۵۰px)</option>
+              </select>
+            </div>
+            <button type="button" class="tool-btn" onclick="undoDrawStroke()">↩️ بازگردانی (Undo)</button>
+            <button type="button" class="tool-btn" onclick="clearDrawLayer()">🗑️ پاکسازی همه قلم‌ها</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: INTERACTIVE MOVABLE LABELS, ARROWS & TEXT -->
+      <div class="tab-panel" id="tabPanelAnnotate">
+        <div class="panel-box">
+          <span class="panel-title">🔤 ابزارهای درج شکل و برچسب:</span>
+          <div class="tool-btn-group">
+            <button type="button" class="tool-btn active" id="btnToolText" onclick="setAnnotateTool('text')">🔤 حالت انتخاب و جابجایی متن</button>
+            <button type="button" class="tool-btn" id="btnToolArrow" onclick="setAnnotateTool('arrow')">➡️ رسم فلش</button>
+            <button type="button" class="tool-btn" id="btnToolLine" onclick="setAnnotateTool('line')">📏 رسم خط</button>
+            <button type="button" class="tool-btn" id="btnToolRect" onclick="setAnnotateTool('rect')">⬜ کادر مستطیل</button>
+          </div>
+        </div>
+
+        <!-- SELECTED TEXT CONTROLLER STRIP -->
+        <div class="text-controls-bar" id="textControlsBar">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12.5px;font-weight:800;color:#be185d;">✍️ تایپ برچسب:</span>
+            <input type="text" id="activeTextInput" placeholder="متن را تایپ کنید (مثلاً A، B، R₁)" value="A" oninput="onTextInputChanged(this.value)">
+            <button type="button" class="btn btn-primary btn-sm" onclick="readyToPlaceNewText()">➕ درج یکباره روی تصویر</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-right:1.5px solid #fbcfe8;padding-right:12px;margin-right:4px;">
+            <div style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;">
+              <span>سایز:</span>
+              <select id="activeTextSizeSelect" class="form-control" style="padding:4px 8px;width:auto;" onchange="updateSelectedTextSize(this.value)">
+                <option value="14">۱۴px</option>
+                <option value="20">۲۰px</option>
+                <option value="26" selected>۲۶px</option>
+                <option value="36">۳۶px</option>
+                <option value="48">۴۸px</option>
+              </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;">
+              <span>رنگ:</span>
+              <input type="color" id="activeTextColorPicker" value="#dc2626" style="width:30px;height:30px;border:none;border-radius:4px;cursor:pointer;" onchange="updateSelectedTextColor(this.value)">
+              <button type="button" class="tool-btn" style="padding:2px 8px;background:#dc2626;color:#fff;" onclick="updateSelectedTextColor('#dc2626')">قرمز</button>
+              <button type="button" class="tool-btn" style="padding:2px 8px;background:#2563eb;color:#fff;" onclick="updateSelectedTextColor('#2563eb')">آبی</button>
+              <button type="button" class="tool-btn" style="padding:2px 8px;background:#000000;color:#fff;" onclick="updateSelectedTextColor('#000000')">مشکی</button>
+              <button type="button" class="tool-btn" style="padding:2px 8px;background:#16a34a;color:#fff;" onclick="updateSelectedTextColor('#16a34a')">سبز</button>
+            </div>
+
+            <button type="button" class="tool-btn" style="color:#dc2626;border-color:#fca5a5;" onclick="deleteSelectedText()">🗑️ حذف متن انتخاب شده</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CANVAS WORKSPACE -->
+      <div class="stage-container" id="stage">
+        <canvas id="sourceCanvas"></canvas>
+        <canvas id="drawCanvas"></canvas>
+        <div class="crop-frame" id="cropFrame">
+          <div class="crop-grid"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+
+          <!-- CORNER HANDLES -->
+          <div class="handle handle-tl" data-handle="tl"></div>
+          <div class="handle handle-tr" data-handle="tr"></div>
+          <div class="handle handle-bl" data-handle="bl"></div>
+          <div class="handle handle-br" data-handle="br"></div>
+
+          <!-- EDGE HANDLES -->
+          <div class="handle handle-edge-t" data-handle="t"></div>
+          <div class="handle handle-edge-b" data-handle="b"></div>
+          <div class="handle handle-edge-l" data-handle="l"></div>
+          <div class="handle handle-edge-r" data-handle="r"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="meta-chip" id="footerLiveSize" style="background:#dcfce7;color:#15803d;">💾 حجم: ۰ کیلوبایت</span>
+        <span class="meta-chip" id="cropDimensions">ابعاد: ۰ × ۰ px</span>
+        <span class="meta-chip" id="cropRatioLabel" style="background:#e0f2fe;color:#0369a1;">نسبت: بدون برش</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-outline" onclick="closeCropper()">انصراف</button>
+        <button type="button" class="btn btn-success" onclick="applyCrop()">✓ تایید و ذخیره نهایی</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= STATE & DATA ================= */
+let attachedImages = [];
+let currentEditingId = null;
+
+let originalImage = new Image();
+let baseImageCanvas = document.createElement('canvas');
+let rotationDegrees = 0;
+let flipH = false;
+let isCircular = false;
+let currentAspect = 'full';
+let currentFilter = 'original';
+
+// Active tool modes: 'crop', 'brush', 'text', 'arrow', 'line', 'rect', 'split'
+let activeToolMode = 'crop';
+let brushSize = 25;
+let drawStrokes = [];
+let textLabels = [];
+let selectedTextId = null;
+let isPendingNewTextPlacement = false;
+
+// Split Boxes for batch question splitter
+let splitBoxes = [];
+let selectedSplitIdx = null;
+let splitDragMode = null;
+let splitDragStart = { clickX: 0, clickY: 0, boxX: 0, boxY: 0, boxW: 0, boxH: 0 };
+
+// Crop coordinates in Stage coordinates (px)
+let cropBox = { x: 50, y: 50, w: 200, h: 200 };
+let imgDisplay = { x: 0, y: 0, w: 0, h: 0, scale: 1, rotW: 0, rotH: 0 };
+let sizeCalcTimeout = null;
+
+/* ================= EVENT LISTENERS ================= */
+document.addEventListener('DOMContentLoaded', () => {
+  setupUploadEvents();
+  setupCropDragEvents();
+  setupDrawingAndTextEvents();
+  document.getElementById('questionText').addEventListener('input', updatePreview);
+  updatePreview();
+});
+
+/* ================= TAB SWITCHING ================= */
+function switchStudioTab(tab) {
+  ['Crop', 'Split', 'Scan', 'Brush', 'Annotate'].forEach(t => {
+    const btn = document.getElementById('tabBtn' + t);
+    const panel = document.getElementById('tabPanel' + t);
+    if (btn) btn.classList.remove('active');
+    if (panel) panel.classList.remove('active');
+  });
+
+  const cropFrame = document.getElementById('cropFrame');
+  const drawCanvas = document.getElementById('drawCanvas');
+
+  if (tab === 'crop') {
+    document.getElementById('tabBtnCrop').classList.add('active');
+    document.getElementById('tabPanelCrop').classList.add('active');
+    activeToolMode = 'crop';
+    cropFrame.style.display = 'block';
+    cropFrame.style.pointerEvents = 'auto';
+    drawCanvas.style.pointerEvents = 'none';
+  } else if (tab === 'split') {
+    document.getElementById('tabBtnSplit').classList.add('active');
+    document.getElementById('tabPanelSplit').classList.add('active');
+    activeToolMode = 'split';
+    cropFrame.style.display = 'none';
+    drawCanvas.style.pointerEvents = 'auto';
+    if (splitBoxes.length === 0) {
+      splitPageGrid(2, 1);
+    } else {
+      if (selectedSplitIdx === null && splitBoxes.length > 0) selectedSplitIdx = 0;
+      syncSplitControls();
+      redrawDrawCanvas();
+    }
+  } else if (tab === 'scan') {
+    document.getElementById('tabBtnScan').classList.add('active');
+    document.getElementById('tabPanelScan').classList.add('active');
+    activeToolMode = 'crop';
+    cropFrame.style.display = 'block';
+    cropFrame.style.pointerEvents = 'auto';
+    drawCanvas.style.pointerEvents = 'none';
+  } else if (tab === 'brush') {
+    document.getElementById('tabBtnBrush').classList.add('active');
+    document.getElementById('tabPanelBrush').classList.add('active');
+    activeToolMode = 'brush';
+    cropFrame.style.display = 'block';
+    cropFrame.style.pointerEvents = 'none';
+    drawCanvas.style.pointerEvents = 'auto';
+    drawCanvas.style.cursor = 'crosshair';
+  } else if (tab === 'annotate') {
+    document.getElementById('tabBtnAnnotate').classList.add('active');
+    document.getElementById('tabPanelAnnotate').classList.add('active');
+    activeToolMode = 'text';
+    cropFrame.style.display = 'block';
+    cropFrame.style.pointerEvents = 'none';
+    drawCanvas.style.pointerEvents = 'auto';
+    drawCanvas.style.cursor = 'default';
+    setAnnotateTool('text');
+  }
+  redrawDrawCanvas();
+}
+
+/* ================= UPLOAD & CLIPBOARD ================= */
+function setupUploadEvents() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+      fileInput.value = '';
+    }
+  });
+
+  window.addEventListener('paste', (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if (!items) return;
+    for (let item of items) {
+      if (item.type.indexOf('image') === 0) {
+        const file = item.getAsFile();
+        handleFile(file);
+        break;
+      }
+    }
+  });
+}
+
+function handleFile(file) {
+  if (!file || !file.type.match(/^image\//)) {
+    alert('لطفاً یک فایل تصویری معتبر انتخاب کنید.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    openCropperWithImage(e.target.result, file.name);
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ================= CROPPER LOGIC ================= */
+function openCropperWithImage(dataUrl, fileName = 'تصویر سؤال') {
+  currentEditingId = null;
+  rotationDegrees = 0;
+  flipH = false;
+  isCircular = false;
+  currentAspect = 'full';
+  currentFilter = 'original';
+  drawStrokes = [];
+  textLabels = [];
+  splitBoxes = [];
+  selectedSplitIdx = null;
+  splitDragMode = null;
+  selectedTextId = null;
+  isPendingNewTextPlacement = false;
+  document.getElementById('activeTextInput').value = 'A';
+  updateAspectButtons();
+
+  originalImage = new Image();
+  originalImage.onload = () => {
+    prepareBaseImage();
+    document.getElementById('cropperModal').classList.add('active');
+    switchStudioTab('crop');
+    setTimeout(initStage, 60);
+  };
+  originalImage.src = dataUrl;
+  originalImage.dataset.name = fileName;
+}
+
+function editExistingImage(id) {
+  const imgItem = attachedImages.find(x => x.id === id);
+  if (!imgItem) return;
+  currentEditingId = id;
+  rotationDegrees = 0;
+  flipH = false;
+  isCircular = false;
+  currentAspect = 'full';
+  currentFilter = 'original';
+  drawStrokes = [];
+  textLabels = [];
+  splitBoxes = [];
+  selectedSplitIdx = null;
+  splitDragMode = null;
+  selectedTextId = null;
+  isPendingNewTextPlacement = false;
+  document.getElementById('activeTextInput').value = 'A';
+  updateAspectButtons();
+
+  originalImage = new Image();
+  originalImage.onload = () => {
+    prepareBaseImage();
+    document.getElementById('cropperModal').classList.add('active');
+    switchStudioTab('crop');
+    setTimeout(initStage, 60);
+  };
+  originalImage.src = imgItem.originalSrc || imgItem.dataUrl;
+  originalImage.dataset.name = imgItem.name;
+}
+
+function closeCropper() {
+  document.getElementById('cropperModal').classList.remove('active');
+}
+
+function prepareBaseImage() {
+  baseImageCanvas.width = originalImage.width;
+  baseImageCanvas.height = originalImage.height;
+  const ctx = baseImageCanvas.getContext('2d');
+  ctx.drawImage(originalImage, 0, 0);
+
+  if (currentFilter === 'book_scan') {
+    applyBookScanAlgorithm(ctx, baseImageCanvas.width, baseImageCanvas.height);
+  } else if (currentFilter === 'high_contrast') {
+    applyHighContrastAlgorithm(ctx, baseImageCanvas.width, baseImageCanvas.height);
+  } else if (currentFilter === 'brighten') {
+    applyBrightenAlgorithm(ctx, baseImageCanvas.width, baseImageCanvas.height);
+  }
+}
+
+/* ================= BATCH PAGE SPLITTER ================= */
+function getSplitBoxHandles(box) {
+  const { x, y, w, h } = box;
+  return {
+    nw: { x: x, y: y },
+    ne: { x: x + w, y: y },
+    se: { x: x + w, y: y + h },
+    sw: { x: x, y: y + h },
+    n:  { x: x + w / 2, y: y },
+    s:  { x: x + w / 2, y: y + h },
+    w:  { x: x, y: y + h / 2 },
+    e:  { x: x + w, y: y + h / 2 }
+  };
+}
+
+function getSplitHandleAtPoint(clickX, clickY) {
+  if (selectedSplitIdx === null || !splitBoxes[selectedSplitIdx]) return null;
+  const box = splitBoxes[selectedSplitIdx];
+  const handles = getSplitBoxHandles(box);
+  const hitRadius = 13;
+
+  for (const [dir, pos] of Object.entries(handles)) {
+    if (Math.hypot(clickX - pos.x, clickY - pos.y) <= hitRadius) {
+      return { boxIdx: selectedSplitIdx, handle: dir };
+    }
+  }
+  return null;
+}
+
+function getSplitBoxAtPoint(clickX, clickY) {
+  for (let i = splitBoxes.length - 1; i >= 0; i--) {
+    const b = splitBoxes[i];
+    if (clickX >= b.x && clickX <= b.x + b.w && clickY >= b.y && clickY <= b.y + b.h) {
+      return i;
+    }
+  }
+  return null;
+}
+
+function syncSplitControls() {
+  const input = document.getElementById('splitBoxLabelInput');
+  const delBtn = document.getElementById('btnDeleteSplitBox');
+  const info = document.getElementById('splitBoxInfo');
+  if (selectedSplitIdx !== null && splitBoxes[selectedSplitIdx]) {
+    const box = splitBoxes[selectedSplitIdx];
+    if (input) input.value = box.label || '';
+    if (delBtn) delBtn.disabled = false;
+    const relW = Math.round(box.w / (imgDisplay.scale || 1));
+    const relH = Math.round(box.h / (imgDisplay.scale || 1));
+    if (info) info.textContent = `📏 ابعاد «${box.label}»: ${relW} × ${relH} پیکسل | برای تغییر اندازه از ۸ دستگیره کادر استفاده کنید.`;
+  } else {
+    if (input) input.value = '';
+    if (delBtn) delBtn.disabled = true;
+    if (info) info.textContent = '💡 با کلیک یا لمس روی هر کادر، آن را انتخاب کنید و اندازه آن را با ۸ دستگیره تغییر دهید.';
+  }
+}
+
+function addNewSplitBox() {
+  const count = splitBoxes.length + 1;
+  const defaultW = Math.min(imgDisplay.w * 0.7, 300);
+  const defaultH = Math.min(imgDisplay.h * 0.35, 180);
+  const offset = ((count - 1) * 25) % Math.max(30, imgDisplay.w - defaultW);
+  const newBox = {
+    id: 'split_' + Date.now(),
+    label: 'سؤال ' + count,
+    x: imgDisplay.x + 20 + offset,
+    y: imgDisplay.y + 20 + offset,
+    w: defaultW,
+    h: defaultH
+  };
+  splitBoxes.push(newBox);
+  selectedSplitIdx = splitBoxes.length - 1;
+  syncSplitControls();
+  redrawDrawCanvas();
+}
+
+function deleteSelectedSplitBox() {
+  if (selectedSplitIdx === null || selectedSplitIdx < 0 || selectedSplitIdx >= splitBoxes.length) return;
+  splitBoxes.splice(selectedSplitIdx, 1);
+  if (splitBoxes.length > 0) {
+    selectedSplitIdx = Math.max(0, selectedSplitIdx - 1);
+  } else {
+    selectedSplitIdx = null;
+  }
+  syncSplitControls();
+  redrawDrawCanvas();
+}
+
+function onSelectedSplitBoxLabelChange(val) {
+  if (selectedSplitIdx !== null && splitBoxes[selectedSplitIdx]) {
+    splitBoxes[selectedSplitIdx].label = val;
+    redrawDrawCanvas();
+  }
+}
+
+function splitPageGrid(rows, cols) {
+  splitBoxes = [];
+  const startX = imgDisplay.x;
+  const startY = imgDisplay.y;
+  const cellW = imgDisplay.w / cols;
+  const cellH = imgDisplay.h / rows;
+
+  let count = 1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      splitBoxes.push({
+        id: 'split_' + count,
+        label: 'سؤال ' + count,
+        x: startX + c * cellW + 6,
+        y: startY + r * cellH + 6,
+        w: cellW - 12,
+        h: cellH - 12
+      });
+      count++;
+    }
+  }
+  selectedSplitIdx = 0;
+  syncSplitControls();
+  redrawDrawCanvas();
+}
+
+function exportBatchSplitQuestions() {
+  if (splitBoxes.length === 0) return;
+  const scale = imgDisplay.scale;
+  const srcW = baseImageCanvas.width;
+  const srcH = baseImageCanvas.height;
+
+  splitBoxes.forEach((box, idx) => {
+    let relX = (box.x - imgDisplay.x) / scale;
+    let relY = (box.y - imgDisplay.y) / scale;
+    let relW = box.w / scale;
+    let relH = box.h / scale;
+
+    if (relX < 0) { relW += relX; relX = 0; }
+    if (relY < 0) { relH += relY; relY = 0; }
+    if (relX + relW > srcW) relW = srcW - relX;
+    if (relY + relH > srcH) relH = srcH - relY;
+
+    const outW = Math.max(10, Math.round(relW));
+    const outH = Math.max(10, Math.round(relH));
+
+    const splitCanvas = document.createElement('canvas');
+    splitCanvas.width = outW;
+    splitCanvas.height = outH;
+    const sctx = splitCanvas.getContext('2d');
+    sctx.drawImage(baseImageCanvas, relX, relY, relW, relH, 0, 0, outW, outH);
+
+    const dataUrl = splitCanvas.toDataURL('image/webp', 0.92);
+    attachedImages.push({
+      id: 'img_split_' + Date.now() + '_' + idx,
+      name: `${originalImage.dataset.name || 'صفحه'} (${box.label || ('بخش ' + (idx + 1))})`,
+      caption: `شکل ${box.label || (idx + 1)}`,
+      dataUrl: dataUrl,
+      originalSrc: dataUrl,
+      width: outW,
+      height: outH,
+      sizeKb: Math.round((dataUrl.length * 0.75) / 1024)
+    });
+  });
+
+  closeCropper();
+  renderImagesList();
+  updatePreview();
+}
+
+/* ================= FILTERS ALGORITHMS ================= */
+function applyScanFilter(filterType) {
+  currentFilter = filterType;
+  ['filterOriginal', 'filterBookScan', 'filterHighContrast', 'filterRemoveShadow'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+
+  if (filterType === 'book_scan') document.getElementById('filterBookScan').classList.add('active');
+  else if (filterType === 'high_contrast') document.getElementById('filterHighContrast').classList.add('active');
+  else if (filterType === 'brighten') document.getElementById('filterRemoveShadow').classList.add('active');
+  else document.getElementById('filterOriginal').classList.add('active');
+
+  prepareBaseImage();
+  initStage();
+}
+
+function applyBookScanAlgorithm(ctx, w, h) {
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (lum > 175) {
+      data[i] = 255; data[i+1] = 255; data[i+2] = 255;
+    } else {
+      const darkFactor = Math.pow(lum / 175, 1.4) * 255;
+      data[i] = darkFactor * 0.2;
+      data[i+1] = darkFactor * 0.2;
+      data[i+2] = darkFactor * 0.2;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function applyHighContrastAlgorithm(ctx, w, h) {
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+    const val = lum > 145 ? 255 : 0;
+    data[i] = val; data[i+1] = val; data[i+2] = val;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function applyBrightenAlgorithm(ctx, w, h) {
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.min(255, data[i] * 1.25 + 20);
+    data[i+1] = Math.min(255, data[i+1] * 1.25 + 20);
+    data[i+2] = Math.min(255, data[i+2] * 1.25 + 20);
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+/* ================= AUTO-TRIM WHITE BORDERS ================= */
+function autoTrimWhiteBorders() {
+  const ctx = baseImageCanvas.getContext('2d');
+  const w = baseImageCanvas.width;
+  const h = baseImageCanvas.height;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+
+  for (let y = 0; y < h; y += 2) {
+    for (let x = 0; x < w; x += 2) {
+      const idx = (y * w + x) * 4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2], a = data[idx+3];
+      if (a > 30 && (r < 235 || g < 235 || b < 235)) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX > minX && maxY > minY) {
+    minX = Math.max(0, minX - 8);
+    minY = Math.max(0, minY - 8);
+    maxX = Math.min(w, maxX + 8);
+    maxY = Math.min(h, maxY + 8);
+
+    const trimW = maxX - minX;
+    const trimH = maxY - minY;
+
+    cropBox = {
+      x: imgDisplay.x + (minX * imgDisplay.scale),
+      y: imgDisplay.y + (minY * imgDisplay.scale),
+      w: trimW * imgDisplay.scale,
+      h: trimH * imgDisplay.scale
+    };
+
+    currentAspect = 'free';
+    updateAspectButtons();
+    updateCropFrameView();
+  }
+}
+
+/* ================= STAGE RENDER ================= */
+function initStage() {
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('sourceCanvas');
+  const drawCanvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const stageW = stage.clientWidth;
+  const stageH = stage.clientHeight;
+
+  const isQuarter = (rotationDegrees % 180 !== 0);
+  const rotW = isQuarter ? baseImageCanvas.height : baseImageCanvas.width;
+  const rotH = isQuarter ? baseImageCanvas.width : baseImageCanvas.height;
+
+  const scale = Math.min(stageW / rotW, stageH / rotH, 1) * 0.90;
+  const dispW = rotW * scale;
+  const dispH = rotH * scale;
+  const dispX = (stageW - dispW) / 2;
+  const dispY = (stageH - dispH) / 2;
+
+  imgDisplay = { x: dispX, y: dispY, w: dispW, h: dispH, scale: scale, rotW: rotW, rotH: rotH };
+
+  canvas.width = stageW;
+  canvas.height = stageH;
+  drawCanvas.width = stageW;
+  drawCanvas.height = stageH;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  ctx.clearRect(0, 0, stageW, stageH);
+  ctx.save();
+  ctx.translate(stageW / 2, stageH / 2);
+  ctx.rotate((rotationDegrees * Math.PI) / 180);
+  if (flipH) ctx.scale(-1, 1);
+  ctx.drawImage(baseImageCanvas, -baseImageCanvas.width / 2 * scale, -baseImageCanvas.height / 2 * scale, baseImageCanvas.width * scale, baseImageCanvas.height * scale);
+  ctx.restore();
+
+  if (currentAspect === 'full') {
+    cropBox = { x: dispX, y: dispY, w: dispW, h: dispH };
+  } else {
+    const initCropSide = Math.min(dispW, dispH) * 0.85;
+    cropBox = {
+      x: dispX + (dispW - initCropSide) / 2,
+      y: dispY + (dispH - initCropSide) / 2,
+      w: initCropSide,
+      h: initCropSide
+    };
+  }
+
+  redrawDrawCanvas();
+  updateCropFrameView();
+}
+
+function updateCropFrameView() {
+  const frame = document.getElementById('cropFrame');
+  frame.style.left = cropBox.x + 'px';
+  frame.style.top = cropBox.y + 'px';
+  frame.style.width = cropBox.w + 'px';
+  frame.style.height = cropBox.h + 'px';
+  frame.classList.toggle('circular', isCircular);
+
+  const scale = imgDisplay.scale || 1;
+  const rawW = Math.max(1, Math.round(cropBox.w / scale));
+  const rawH = Math.max(1, Math.round(cropBox.h / scale));
+
+  const maxDim = 1200;
+  let finalW = rawW;
+  let finalH = rawH;
+  if (rawW > maxDim || rawH > maxDim) {
+    if (rawW >= rawH) { finalW = maxDim; finalH = Math.round((rawH * maxDim) / rawW); }
+    else { finalH = maxDim; finalW = Math.round((rawW * maxDim) / rawH); }
+  }
+
+  const mmW = Math.round(rawW / 11.81);
+  const mmH = Math.round(rawH / 11.81);
+
+  document.getElementById('topLivePx').textContent = `${finalW} × ${finalH} px`;
+  document.getElementById('topLiveMm').textContent = `${mmW} × ${mmH} mm`;
+  document.getElementById('cropDimensions').textContent = `ابعاد خروجی: ${finalW} × ${finalH} px (${mmW} × ${mmH} mm)`;
+
+  calculateLiveSize(finalW, finalH);
+}
+
+function calculateLiveSize(finalW, finalH) {
+  clearTimeout(sizeCalcTimeout);
+  sizeCalcTimeout = setTimeout(() => {
+    try {
+      const approxKb = Math.max(1, Math.round((finalW * finalH * 0.18) / 1024));
+      document.getElementById('topLiveSize').textContent = `${approxKb} KB`;
+      document.getElementById('footerLiveSize').textContent = `💾 حجم بهینه‌شده: ${approxKb} کیلوبایت`;
+    } catch(e) {}
+  }, 70);
+}
+
+function rotateImage(delta) {
+  rotationDegrees = (rotationDegrees + delta + 360) % 360;
+  initStage();
+}
+
+function flipHorizontal() {
+  flipH = !flipH;
+  initStage();
+}
+
+function selectFullImage() {
+  currentAspect = 'full';
+  isCircular = false;
+  cropBox = { x: imgDisplay.x, y: imgDisplay.y, w: imgDisplay.w, h: imgDisplay.h };
+  updateAspectButtons();
+  updateCropFrameView();
+}
+
+function setAspectRatio(aspect) {
+  currentAspect = aspect;
+  isCircular = false;
+  updateAspectButtons();
+  applyAspectConstraint();
+}
+
+function toggleCircularCrop() {
+  isCircular = !isCircular;
+  if (isCircular) currentAspect = '1:1';
+  updateAspectButtons();
+  applyAspectConstraint();
+}
+
+function updateAspectButtons() {
+  ['btnAspectFull', 'btnAspectFree', 'btnAspect11', 'btnAspect43', 'btnAspect169', 'btnAspectCircle'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+
+  let ratioLabel = 'آزاد';
+  if (currentAspect === 'full') {
+    document.getElementById('btnAspectFull').classList.add('active');
+    ratioLabel = 'بدون برش (کامل)';
+  } else if (isCircular) {
+    document.getElementById('btnAspectCircle').classList.add('active');
+    ratioLabel = 'دایره‌ای (۱:۱)';
+  } else if (currentAspect === '1:1') {
+    document.getElementById('btnAspect11').classList.add('active');
+    ratioLabel = 'مربع ۱:۱';
+  } else if (currentAspect === '4:3') {
+    document.getElementById('btnAspect43').classList.add('active');
+    ratioLabel = '۴:۳ (استاندارد)';
+  } else if (currentAspect === '16:9') {
+    document.getElementById('btnAspect169').classList.add('active');
+    ratioLabel = '۱۶:۹ (عریض)';
+  } else {
+    document.getElementById('btnAspectFree').classList.add('active');
+    ratioLabel = 'برش آزاد';
+  }
+
+  document.getElementById('cropRatioLabel').textContent = `نسبت: ${ratioLabel}`;
+  document.getElementById('topLiveRatio').textContent = ratioLabel;
+}
+
+function applyAspectConstraint() {
+  if (currentAspect === 'full') {
+    cropBox = { x: imgDisplay.x, y: imgDisplay.y, w: imgDisplay.w, h: imgDisplay.h };
+  } else if (currentAspect === '1:1' || isCircular) {
+    const side = Math.min(cropBox.w, cropBox.h);
+    cropBox.w = side;
+    cropBox.h = side;
+  } else if (currentAspect === '4:3') {
+    cropBox.h = cropBox.w * (3 / 4);
+  } else if (currentAspect === '16:9') {
+    cropBox.h = cropBox.w * (9 / 16);
+  }
+  clampCropBox();
+  updateCropFrameView();
+}
+
+function clampCropBox() {
+  const minX = imgDisplay.x;
+  const minY = imgDisplay.y;
+  const maxX = imgDisplay.x + imgDisplay.w;
+  const maxY = imgDisplay.y + imgDisplay.h;
+
+  cropBox.w = Math.max(30, Math.min(cropBox.w, imgDisplay.w));
+  cropBox.h = Math.max(30, Math.min(cropBox.h, imgDisplay.h));
+
+  if (cropBox.x < minX) cropBox.x = minX;
+  if (cropBox.y < minY) cropBox.y = minY;
+  if (cropBox.x + cropBox.w > maxX) cropBox.x = maxX - cropBox.w;
+  if (cropBox.y + cropBox.h > maxY) cropBox.y = maxY - cropBox.h;
+}
+
+/* ================= EXACT HIT DETECTION FOR TEXT ================= */
+function findTextAtPoint(clickX, clickY) {
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+
+  for (let i = textLabels.length - 1; i >= 0; i--) {
+    const t = textLabels[i];
+    ctx.save();
+    ctx.font = `bold ${t.size}px Vazirmatn, Tahoma, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const metrics = ctx.measureText(t.text);
+    const textW = Math.max(metrics.width, 14);
+    const textH = t.size * 1.15;
+    ctx.restore();
+
+    if (clickX >= t.x - 2 && clickX <= t.x + textW + 2 && clickY >= t.y - 2 && clickY <= t.y + textH + 2) {
+      return t;
+    }
+  }
+  return null;
+}
+
+/* ================= INTERACTIVE MOVABLE LABELS, SPLIT BOXES & DRAWING ================= */
+function setupDrawingAndTextEvents() {
+  const drawCanvas = document.getElementById('drawCanvas');
+  let isDrawing = false;
+  let isDraggingText = false;
+  let dragTextObj = null;
+  let startX = 0, startY = 0;
+  let currentStroke = null;
+
+  const getCanvasPointerPos = (e) => {
+    const rect = drawCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const scaleX = drawCanvas.width / rect.width;
+    const scaleY = drawCanvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  const handlePointerDown = (e) => {
+    if (activeToolMode === 'crop') return;
+    const pos = getCanvasPointerPos(e);
+    const clickX = pos.x;
+    const clickY = pos.y;
+    startX = clickX;
+    startY = clickY;
+
+    // 1. Batch Split Box Drag & 8-Handle Resize
+    if (activeToolMode === 'split') {
+      const handleHit = getSplitHandleAtPoint(clickX, clickY);
+      if (handleHit) {
+        e.preventDefault();
+        selectedSplitIdx = handleHit.boxIdx;
+        splitDragMode = handleHit.handle;
+        const b = splitBoxes[selectedSplitIdx];
+        splitDragStart = { clickX, clickY, boxX: b.x, boxY: b.y, boxW: b.w, boxH: b.h };
+        syncSplitControls();
+        redrawDrawCanvas();
+        return;
+      }
+
+      const boxHit = getSplitBoxAtPoint(clickX, clickY);
+      if (boxHit !== null) {
+        e.preventDefault();
+        selectedSplitIdx = boxHit;
+        splitDragMode = 'move';
+        const b = splitBoxes[selectedSplitIdx];
+        splitDragStart = { clickX, clickY, boxX: b.x, boxY: b.y, boxW: b.w, boxH: b.h };
+        syncSplitControls();
+        redrawDrawCanvas();
+        return;
+      }
+
+      selectedSplitIdx = null;
+      syncSplitControls();
+      redrawDrawCanvas();
+      return;
+    }
+
+    // 2. Exact Text Selection
+    const hitText = findTextAtPoint(clickX, clickY);
+    if (hitText) {
+      e.preventDefault();
+      selectedTextId = hitText.id;
+      isDraggingText = true;
+      dragTextObj = hitText;
+      dragTextObj.startX = dragTextObj.x;
+      dragTextObj.startY = dragTextObj.y;
+      syncTextControls(hitText);
+      redrawDrawCanvas();
+      return;
+    }
+
+    // 3. Single-shot text insertion
+    if (activeToolMode === 'text') {
+      const textVal = document.getElementById('activeTextInput').value.trim();
+      if (isPendingNewTextPlacement && textVal.length > 0) {
+        e.preventDefault();
+        const defaultSize = parseInt(document.getElementById('activeTextSizeSelect').value, 10) || 26;
+        const defaultColor = document.getElementById('activeTextColorPicker').value || '#dc2626';
+
+        const newText = {
+          id: 'txt_' + Date.now(),
+          text: textVal,
+          x: clickX,
+          y: clickY,
+          size: defaultSize,
+          color: defaultColor
+        };
+        textLabels.push(newText);
+        selectedTextId = newText.id;
+        isPendingNewTextPlacement = false;
+
+        document.getElementById('activeTextInput').value = '';
+        document.getElementById('activeTextInput').placeholder = 'متن بعدی را تایپ کنید (مثلاً B)';
+        syncTextControls(newText);
+        redrawDrawCanvas();
+        return;
+      } else {
+        selectedTextId = null;
+        redrawDrawCanvas();
+        return;
+      }
+    }
+
+    // 4. Drawing tools (Brush, Arrow, Line, Rect)
+    isDrawing = true;
+    const color = activeToolMode === 'brush' ? '#ffffff' : document.getElementById('activeTextColorPicker').value;
+    const width = activeToolMode === 'brush' ? brushSize : 3;
+
+    currentStroke = {
+      type: activeToolMode,
+      color: color,
+      width: width,
+      points: [{ x: startX, y: startY }]
+    };
+  };
+
+  const handlePointerMove = (e) => {
+    const pos = getCanvasPointerPos(e);
+    const curX = pos.x;
+    const curY = pos.y;
+
+    // Split Box resizing and dragging
+    if (activeToolMode === 'split') {
+      if (splitDragMode && selectedSplitIdx !== null && splitBoxes[selectedSplitIdx]) {
+        e.preventDefault();
+        const dx = curX - splitDragStart.clickX;
+        const dy = curY - splitDragStart.clickY;
+        const b = splitBoxes[selectedSplitIdx];
+        const minSize = 25;
+
+        if (splitDragMode === 'move') {
+          b.x = splitDragStart.boxX + dx;
+          b.y = splitDragStart.boxY + dy;
+        } else if (splitDragMode === 'se') {
+          b.w = Math.max(minSize, splitDragStart.boxW + dx);
+          b.h = Math.max(minSize, splitDragStart.boxH + dy);
+        } else if (splitDragMode === 'nw') {
+          const newW = splitDragStart.boxW - dx;
+          const newH = splitDragStart.boxH - dy;
+          if (newW >= minSize) { b.x = splitDragStart.boxX + dx; b.w = newW; }
+          if (newH >= minSize) { b.y = splitDragStart.boxY + dy; b.h = newH; }
+        } else if (splitDragMode === 'ne') {
+          const newH = splitDragStart.boxH - dy;
+          b.w = Math.max(minSize, splitDragStart.boxW + dx);
+          if (newH >= minSize) { b.y = splitDragStart.boxY + dy; b.h = newH; }
+        } else if (splitDragMode === 'sw') {
+          const newW = splitDragStart.boxW - dx;
+          if (newW >= minSize) { b.x = splitDragStart.boxX + dx; b.w = newW; }
+          b.h = Math.max(minSize, splitDragStart.boxH + dy);
+        } else if (splitDragMode === 'n') {
+          const newH = splitDragStart.boxH - dy;
+          if (newH >= minSize) { b.y = splitDragStart.boxY + dy; b.h = newH; }
+        } else if (splitDragMode === 's') {
+          b.h = Math.max(minSize, splitDragStart.boxH + dy);
+        } else if (splitDragMode === 'w') {
+          const newW = splitDragStart.boxW - dx;
+          if (newW >= minSize) { b.x = splitDragStart.boxX + dx; b.w = newW; }
+        } else if (splitDragMode === 'e') {
+          b.w = Math.max(minSize, splitDragStart.boxW + dx);
+        }
+
+        syncSplitControls();
+        redrawDrawCanvas();
+        return;
+      } else {
+        const handleHit = getSplitHandleAtPoint(curX, curY);
+        if (handleHit) {
+          const h = handleHit.handle;
+          if (h === 'nw' || h === 'se') drawCanvas.style.cursor = 'nwse-resize';
+          else if (h === 'ne' || h === 'sw') drawCanvas.style.cursor = 'nesw-resize';
+          else if (h === 'n' || h === 's') drawCanvas.style.cursor = 'ns-resize';
+          else if (h === 'e' || h === 'w') drawCanvas.style.cursor = 'ew-resize';
+        } else {
+          const boxHit = getSplitBoxAtPoint(curX, curY);
+          drawCanvas.style.cursor = boxHit !== null ? 'move' : 'default';
+        }
+        return;
+      }
+    }
+
+    if (activeToolMode === 'text' && !isDraggingText) {
+      const isOverText = findTextAtPoint(curX, curY) !== null;
+      if (isOverText) drawCanvas.style.cursor = 'grab';
+      else if (isPendingNewTextPlacement) drawCanvas.style.cursor = 'crosshair';
+      else drawCanvas.style.cursor = 'default';
+    }
+
+    if (isDraggingText && dragTextObj) {
+      e.preventDefault();
+      drawCanvas.style.cursor = 'grabbing';
+      const dx = curX - startX;
+      const dy = curY - startY;
+      dragTextObj.x = dragTextObj.startX + dx;
+      dragTextObj.y = dragTextObj.startY + dy;
+      redrawDrawCanvas();
+      return;
+    }
+
+    if (!isDrawing || !currentStroke) return;
+    e.preventDefault();
+
+    if (activeToolMode === 'brush') {
+      currentStroke.points.push({ x: curX, y: curY });
+    } else {
+      currentStroke.endX = curX;
+      currentStroke.endY = curY;
+    }
+    redrawDrawCanvas(currentStroke);
+  };
+
+  const handlePointerUp = () => {
+    if (activeToolMode === 'split') {
+      splitDragMode = null;
+    }
+
+    if (isDraggingText) {
+      isDraggingText = false;
+      dragTextObj = null;
+      drawCanvas.style.cursor = 'default';
+    }
+    if (isDrawing && currentStroke) {
+      drawStrokes.push(currentStroke);
+      currentStroke = null;
+      isDrawing = false;
+      redrawDrawCanvas();
+    }
+  };
+
+  drawCanvas.addEventListener('mousedown', handlePointerDown);
+  drawCanvas.addEventListener('mousemove', handlePointerMove);
+  drawCanvas.addEventListener('mouseup', handlePointerUp);
+  drawCanvas.addEventListener('mouseleave', handlePointerUp);
+
+  drawCanvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+  drawCanvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+  drawCanvas.addEventListener('touchend', handlePointerUp);
+}
+
+function onTextInputChanged(val) {
+  if (selectedTextId) {
+    const t = textLabels.find(x => x.id === selectedTextId);
+    if (t) {
+      t.text = val;
+      redrawDrawCanvas();
+      return;
+    }
+  }
+  if (val.trim().length > 0) {
+    isPendingNewTextPlacement = true;
+    setAnnotateTool('text');
+  }
+}
+
+function readyToPlaceNewText() {
+  selectedTextId = null;
+  const input = document.getElementById('activeTextInput');
+  if (!input.value.trim()) input.value = 'B';
+  isPendingNewTextPlacement = true;
+  setAnnotateTool('text');
+  input.focus();
+  redrawDrawCanvas();
+}
+
+function syncTextControls(textObj) {
+  if (!textObj) return;
+  document.getElementById('activeTextInput').value = textObj.text;
+  document.getElementById('activeTextSizeSelect').value = textObj.size.toString();
+  document.getElementById('activeTextColorPicker').value = textObj.color;
+}
+
+function updateSelectedTextSize(sizeVal) {
+  const t = textLabels.find(x => x.id === selectedTextId);
+  if (t) {
+    t.size = parseInt(sizeVal, 10);
+    redrawDrawCanvas();
+  }
+}
+
+function updateSelectedTextColor(colorHex) {
+  document.getElementById('activeTextColorPicker').value = colorHex;
+  const t = textLabels.find(x => x.id === selectedTextId);
+  if (t) {
+    t.color = colorHex;
+    redrawDrawCanvas();
+  }
+}
+
+function deleteSelectedText() {
+  if (selectedTextId) {
+    textLabels = textLabels.filter(x => x.id !== selectedTextId);
+    selectedTextId = null;
+    document.getElementById('activeTextInput').value = '';
+    redrawDrawCanvas();
+  }
+}
+
+function setAnnotateTool(tool) {
+  activeToolMode = tool;
+  ['btnToolText', 'btnToolArrow', 'btnToolLine', 'btnToolRect'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+
+  if (tool === 'text') document.getElementById('btnToolText').classList.add('active');
+  else if (tool === 'arrow') document.getElementById('btnToolArrow').classList.add('active');
+  else if (tool === 'line') document.getElementById('btnToolLine').classList.add('active');
+  else if (tool === 'rect') document.getElementById('btnToolRect').classList.add('active');
+
+  const drawCanvas = document.getElementById('drawCanvas');
+  drawCanvas.style.pointerEvents = 'auto';
+  drawCanvas.style.cursor = tool === 'text' ? (isPendingNewTextPlacement ? 'crosshair' : 'default') : 'crosshair';
+  document.getElementById('cropFrame').style.pointerEvents = 'none';
+}
+
+function toggleBrushMode() {
+  switchStudioTab('brush');
+}
+
+function undoDrawStroke() {
+  drawStrokes.pop();
+  redrawDrawCanvas();
+}
+
+function clearDrawLayer() {
+  drawStrokes = [];
+  textLabels = [];
+  selectedTextId = null;
+  redrawDrawCanvas();
+}
+
+function redrawDrawCanvas(previewStroke = null) {
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 1. Render Batch Splitter Boxes
+  if (activeToolMode === 'split') {
+    splitBoxes.forEach((b, idx) => {
+      const isSelected = idx === selectedSplitIdx;
+      ctx.save();
+
+      if (isSelected) {
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(37, 99, 235, 0.12)';
+      } else {
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 4]);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+      }
+
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+      // Label badge
+      const scale = imgDisplay.scale || 1;
+      const relW = Math.round(b.w / scale);
+      const relH = Math.round(b.h / scale);
+      const badgeText = isSelected ? `✂️ ${b.label} (${relW}×${relH}px)` : `✂️ ${b.label}`;
+
+      ctx.font = 'bold 12px Vazirmatn, sans-serif';
+      ctx.direction = 'ltr';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const textMetrics = ctx.measureText(badgeText);
+      const badgeW = textMetrics.width + 16;
+      const badgeH = 22;
+
+      ctx.fillStyle = isSelected ? '#1d4ed8' : '#b45309';
+      const badgeY = b.y - badgeH < 0 ? b.y : b.y - badgeH;
+      ctx.fillRect(b.x, badgeY, badgeW, badgeH);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(badgeText, b.x + 8, badgeY + 4);
+
+      // If selected, draw 8 resize handles
+      if (isSelected) {
+        const handles = getSplitBoxHandles(b);
+        for (const [dir, pos] of Object.entries(handles)) {
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#2563eb';
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    });
+    return;
+  }
+
+  // 3. Draw strokes, arrows, lines, rects
+  const strokesToDraw = previewStroke ? [...drawStrokes, previewStroke] : drawStrokes;
+
+  strokesToDraw.forEach(stroke => {
+    ctx.strokeStyle = stroke.color;
+    ctx.fillStyle = stroke.color;
+    ctx.lineWidth = stroke.width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (stroke.type === 'brush' && stroke.points.length > 0) {
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      ctx.stroke();
+    } else if (stroke.type === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      ctx.lineTo(stroke.endX || stroke.points[0].x, stroke.endY || stroke.points[0].y);
+      ctx.stroke();
+    } else if (stroke.type === 'arrow') {
+      const fromX = stroke.points[0].x;
+      const fromY = stroke.points[0].y;
+      const toX = stroke.endX || fromX;
+      const toY = stroke.endY || fromY;
+      const headlen = 14;
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    } else if (stroke.type === 'rect') {
+      const fromX = stroke.points[0].x;
+      const fromY = stroke.points[0].y;
+      const toX = stroke.endX || fromX;
+      const toY = stroke.endY || fromY;
+      ctx.strokeRect(fromX, fromY, toX - fromX, toY - fromY);
+    }
+  });
+
+  // 4. Draw movable text labels
+  textLabels.forEach(t => {
+    ctx.save();
+    ctx.direction = 'ltr';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.font = `bold ${t.size}px Vazirmatn, Tahoma, sans-serif`;
+    ctx.fillStyle = t.color;
+    ctx.fillText(t.text, t.x, t.y);
+
+    const metrics = ctx.measureText(t.text);
+    const textW = Math.max(metrics.width, 14);
+    const textH = t.size * 1.15;
+
+    if (t.id === selectedTextId && activeToolMode !== 'crop') {
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(t.x - 2, t.y - 2, textW + 4, textH + 4);
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(t.x + textW + 4, t.y - 2, 7, 7);
+    }
+    ctx.restore();
+  });
+}
+
+/* ================= DRAG & RESIZE CROP ================= */
+function setupCropDragEvents() {
+  const frame = document.getElementById('cropFrame');
+  let isDragging = false;
+  let isResizing = false;
+  let activeHandle = null;
+  let startX = 0, startY = 0;
+  let startCrop = { ...cropBox };
+
+  const onPointerDown = (e) => {
+    if (activeToolMode !== 'crop') return;
+    const touch = e.touches ? e.touches[0] : e;
+    startX = touch.clientX;
+    startY = touch.clientY;
+    startCrop = { ...cropBox };
+
+    if (e.target.classList.contains('handle')) {
+      isResizing = true;
+      activeHandle = e.target.dataset.handle;
+      if (currentAspect === 'full') {
+        currentAspect = 'free';
+        updateAspectButtons();
+      }
+    } else if (e.target.closest('#cropFrame')) {
+      isDragging = true;
+    }
+
+    if (isDragging || isResizing) {
+      e.preventDefault();
+      document.addEventListener('mousemove', onPointerMove, { passive: false });
+      document.addEventListener('mouseup', onPointerUp);
+      document.addEventListener('touchmove', onPointerMove, { passive: false });
+      document.addEventListener('touchend', onPointerUp);
+    }
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDragging && !isResizing) return;
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+
+    if (isDragging) {
+      cropBox.x = startCrop.x + dx;
+      cropBox.y = startCrop.y + dy;
+      clampCropBox();
+    } else if (isResizing) {
+      let l = startCrop.x;
+      let t = startCrop.y;
+      let r = startCrop.x + startCrop.w;
+      let b = startCrop.y + startCrop.h;
+
+      if (activeHandle.includes('r')) r = startCrop.x + startCrop.w + dx;
+      if (activeHandle.includes('l')) l = startCrop.x + dx;
+      if (activeHandle.includes('b')) b = startCrop.y + startCrop.h + dy;
+      if (activeHandle.includes('t')) t = startCrop.y + dy;
+
+      if (r - l < 30) {
+        if (activeHandle.includes('l')) l = r - 30;
+        else r = l + 30;
+      }
+      if (b - t < 30) {
+        if (activeHandle.includes('t')) t = b - 30;
+        else b = t + 30;
+      }
+
+      let newW = r - l;
+      let newH = b - t;
+
+      if (currentAspect === '1:1' || isCircular) {
+        const side = Math.max(newW, newH);
+        if (activeHandle === 'tl') { l = r - side; t = b - side; }
+        else if (activeHandle === 'tr') { r = l + side; t = b - side; }
+        else if (activeHandle === 'bl') { l = r - side; b = t + side; }
+        else if (activeHandle === 'br' || activeHandle === 'r') { r = l + side; b = t + side; }
+        else if (activeHandle === 'l') { l = r - side; b = t + side; }
+        else if (activeHandle === 't') { t = b - side; r = l + side; }
+        else if (activeHandle === 'b') { b = t + side; r = l + side; }
+        newW = r - l;
+        newH = b - t;
+      }
+
+      const minX = imgDisplay.x;
+      const minY = imgDisplay.y;
+      const maxX = imgDisplay.x + imgDisplay.w;
+      const maxY = imgDisplay.y + imgDisplay.h;
+
+      if (l < minX) l = minX;
+      if (t < minY) t = minY;
+      if (r > maxX) r = maxX;
+      if (b > maxY) b = maxY;
+
+      cropBox.x = l;
+      cropBox.y = t;
+      cropBox.w = Math.max(30, r - l);
+      cropBox.h = Math.max(30, b - t);
+    }
+    updateCropFrameView();
+  };
+
+  const onPointerUp = () => {
+    isDragging = false;
+    isResizing = false;
+    document.removeEventListener('mousemove', onPointerMove);
+    document.removeEventListener('mouseup', onPointerUp);
+    document.removeEventListener('touchmove', onPointerMove);
+    document.removeEventListener('touchend', onPointerUp);
+  };
+
+  frame.addEventListener('mousedown', onPointerDown);
+  frame.addEventListener('touchstart', onPointerDown, { passive: false });
+}
+
+/* ================= APPLY FINAL COMPOSITED OUTPUT ================= */
+function applyCrop() {
+  selectedTextId = null;
+  redrawDrawCanvas();
+
+  const relX = (cropBox.x - imgDisplay.x) / imgDisplay.scale;
+  const relY = (cropBox.y - imgDisplay.y) / imgDisplay.scale;
+  const relW = cropBox.w / imgDisplay.scale;
+  const relH = cropBox.h / imgDisplay.scale;
+
+  let outW = Math.round(relW);
+  let outH = Math.round(relH);
+  const maxDim = 1200;
+  if (outW > maxDim || outH > maxDim) {
+    if (outW >= outH) { outW = maxDim; outH = Math.round((relH * maxDim) / relW); }
+    else { outH = maxDim; outW = Math.round((relW * maxDim) / relH); }
+  }
+
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = outW;
+  cropCanvas.height = outH;
+  const cropCtx = cropCanvas.getContext('2d');
+
+  cropCtx.imageSmoothingEnabled = true;
+  cropCtx.imageSmoothingQuality = 'high';
+
+  // 1. Draw base image
+  cropCtx.save();
+  if (isCircular) {
+    cropCtx.beginPath();
+    cropCtx.arc(outW / 2, outH / 2, Math.min(outW, outH) / 2, 0, Math.PI * 2);
+    cropCtx.clip();
+  }
+  cropCtx.translate(-relX * (outW / relW), -relY * (outH / relH));
+  cropCtx.translate((imgDisplay.rotW / 2) * (outW / relW), (imgDisplay.rotH / 2) * (outH / relH));
+  cropCtx.rotate((rotationDegrees * Math.PI) / 180);
+  if (flipH) cropCtx.scale(-1, 1);
+  cropCtx.drawImage(
+    baseImageCanvas,
+    (-baseImageCanvas.width / 2) * (outW / relW),
+    (-baseImageCanvas.height / 2) * (outH / relH),
+    baseImageCanvas.width * (outW / relW),
+    baseImageCanvas.height * (outH / relH)
+  );
+  cropCtx.restore();
+
+  // 2. Draw annotations, text labels & brush strokes
+  const drawCanvas = document.getElementById('drawCanvas');
+  cropCtx.drawImage(drawCanvas, cropBox.x, cropBox.y, cropBox.w, cropBox.h, 0, 0, outW, outH);
+
+  const optimizedDataUrl = cropCanvas.toDataURL('image/webp', 0.92);
+  const sizeKb = Math.round((optimizedDataUrl.length * 0.75) / 1024);
+
+  const labelSuffix = attachedImages.length === 0 ? ' (شکل الف)' : ' (شکل ب)';
+
+  if (currentEditingId) {
+    const idx = attachedImages.findIndex(x => x.id === currentEditingId);
+    if (idx >= 0) {
+      attachedImages[idx].dataUrl = optimizedDataUrl;
+      attachedImages[idx].width = outW;
+      attachedImages[idx].height = outH;
+      attachedImages[idx].sizeKb = sizeKb;
+    }
+  } else {
+    const newImageItem = {
+      id: 'img_' + Date.now(),
+      name: (originalImage.dataset.name || 'تصویر سؤال') + labelSuffix,
+      caption: 'شکل ' + (attachedImages.length === 0 ? '(الف)' : '(ب)'),
+      dataUrl: optimizedDataUrl,
+      originalSrc: originalImage.src,
+      width: outW,
+      height: outH,
+      sizeKb: sizeKb
+    };
+    attachedImages.push(newImageItem);
+  }
+
+  closeCropper();
+  renderImagesList();
+  updatePreview();
+}
+
+function removeImage(id) {
+  attachedImages = attachedImages.filter(x => x.id !== id);
+  renderImagesList();
+  updatePreview();
+}
+
+function renderImagesList() {
+  const container = document.getElementById('imagesList');
+  if (attachedImages.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:13px;padding:12px;">هنوز تصویری اضافه نشده است.</div>';
+    return;
+  }
+
+  container.innerHTML = attachedImages.map((img, idx) => `
+    <div class="image-item-card">
+      <img class="image-thumb" src="${img.dataUrl}" alt="تصویر">
+      <div class="image-details">
+        <div class="image-name">${img.name}</div>
+        <div class="image-meta">📐 ${img.width} × ${img.height} px • 💾 ${img.sizeKb || '~'} KB • ${img.caption}</div>
+      </div>
+      <div class="image-actions">
+        <button type="button" class="btn btn-outline btn-sm" onclick="editExistingImage('${img.id}')">✂️ ویرایش</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="removeImage('${img.id}')">🗑️ حذف</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updatePreview() {
+  const qText = document.getElementById('questionText').value;
+  document.getElementById('prevQuestionText').innerHTML = renderMathText(qText);
+
+  const container = document.getElementById('prevImageContainer');
+  const layoutMode = document.getElementById('layoutModeSelect').value;
+  const widthVal = document.getElementById('imageWidthSelect').value;
+
+  if (attachedImages.length > 0) {
+    container.style.display = 'block';
+    const gridClass = (layoutMode === 'side' && attachedImages.length > 1) ? 'q-images-grid layout-side' : 'q-images-grid layout-single';
+
+    container.innerHTML = `
+      <div class="${gridClass}" style="width:${widthVal};margin:12px auto;">
+        ${attachedImages.map((img, idx) => `
+          <div class="q-image-box">
+            <img src="${img.dataUrl}" alt="${img.name}" style="width:100%;">
+            <div class="q-image-caption">${img.caption || `شکل ${idx + 1}`}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    container.style.display = 'none';
+    container.innerHTML = '';
+  }
+}
+
+function renderMathText(text) {
+  if (!text) return '';
+  return text.replace(/\$([^\$]+)\$/g, '<span style="font-family:serif;direction:ltr;unicode-bidi:embed;font-weight:700;color:#1e3a8a;margin:0 3px;"><i>$1</i></span>');
+}
+
+/* ================= SAMPLE MULTI-IMAGE (CIRCUIT A & B) ================= */
+function loadSampleCircuits() {
+  const canvasA = document.createElement('canvas');
+  canvasA.width = 450; canvasA.height = 320;
+  const ctxA = canvasA.getContext('2d');
+  ctxA.fillStyle = '#ffffff'; ctxA.fillRect(0, 0, 450, 320);
+  ctxA.lineWidth = 3; ctxA.strokeStyle = '#1e3a8a';
+
+  ctxA.strokeRect(60, 60, 330, 200);
+  ctxA.clearRect(190, 50, 70, 20);
+  ctxA.strokeRect(190, 50, 70, 20);
+  ctxA.clearRect(190, 250, 70, 20);
+  ctxA.strokeRect(190, 250, 70, 20);
+
+  ctxA.clearRect(50, 130, 20, 60);
+  ctxA.beginPath(); ctxA.moveTo(50, 145); ctxA.lineTo(70, 145); ctxA.stroke();
+  ctxA.beginPath(); ctxA.lineWidth = 5; ctxA.moveTo(55, 175); ctxA.lineTo(65, 175); ctxA.stroke();
+
+  ctxA.fillStyle = '#0f172a'; ctxA.font = 'bold 16px Vazirmatn, sans-serif';
+  ctxA.fillText('R₁ = 4 Ω', 195, 42);
+  ctxA.fillText('R₂ = 6 Ω', 195, 295);
+  ctxA.fillText('ε = 12V', 10, 165);
+
+  const canvasB = document.createElement('canvas');
+  canvasB.width = 450; canvasB.height = 320;
+  const ctxB = canvasB.getContext('2d');
+  ctxB.fillStyle = '#ffffff'; ctxB.fillRect(0, 0, 450, 320);
+  ctxB.lineWidth = 3; ctxB.strokeStyle = '#1e3a8a';
+
+  ctxB.strokeRect(60, 60, 330, 200);
+  ctxB.beginPath(); ctxB.moveTo(225, 60); ctxB.lineTo(225, 260); ctxB.stroke();
+
+  ctxB.clearRect(215, 130, 20, 60);
+  ctxB.strokeRect(215, 130, 20, 60);
+  ctxB.clearRect(380, 130, 20, 60);
+  ctxB.strokeRect(380, 130, 20, 60);
+
+  ctxB.clearRect(50, 130, 20, 60);
+  ctxB.beginPath(); ctxB.moveTo(50, 145); ctxB.lineTo(70, 145); ctxB.stroke();
+  ctxB.beginPath(); ctxB.lineWidth = 5; ctxB.moveTo(55, 175); ctxB.lineTo(65, 175); ctxB.stroke();
+
+  ctxB.fillStyle = '#0f172a'; ctxB.font = 'bold 16px Vazirmatn, sans-serif';
+  ctxB.fillText('R₁ = 4 Ω', 242, 165);
+  ctxB.fillText('R₂ = 6 Ω', 315, 165);
+  ctxB.fillText('ε = 12V', 10, 165);
+
+  attachedImages = [
+    {
+      id: 'img_sample_1',
+      name: 'مدار متوالی (شکل الف)',
+      caption: 'شکل (الف) - مدار متوالی',
+      dataUrl: canvasA.toDataURL('image/webp', 0.92),
+      width: 450, height: 320, sizeKb: 18
+    },
+    {
+      id: 'img_sample_2',
+      name: 'مدار موازی (شکل ب)',
+      caption: 'شکل (ب) - مدار موازی',
+      dataUrl: canvasB.toDataURL('image/webp', 0.92),
+      width: 450, height: 320, sizeKb: 20
+    }
+  ];
+
+  renderImagesList();
+  updatePreview();
+}
+
+function exportQuestionJSON() {
+  const data = {
+    questionText: document.getElementById('questionText').value,
+    layoutMode: document.getElementById('layoutModeSelect').value,
+    imageWidth: document.getElementById('imageWidthSelect').value,
+    images: attachedImages
+  };
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'question_with_studio_images.json';
+  a.click();
+}
+</script>
+</body>
+</html>
