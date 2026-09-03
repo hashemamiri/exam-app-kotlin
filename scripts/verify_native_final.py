@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.8:"),
-        "changelog must keep the full history + the new V75.8 line on top")
+        and _v694_changelog.startswith("V75.9:"),
+        "changelog must keep the full history + the new V75.9 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
