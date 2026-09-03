@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.1:"),
-        "changelog must keep the full history + the new V75.1 line on top")
+        and _v694_changelog.startswith("V75.2:"),
+        "changelog must keep the full history + the new V75.2 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2709,6 +2709,17 @@ require(_v751_guard == (ROOT/"sql/manual/SQL_NATIVE_REGISTRATION_ROLE_GUARD_V75_
         "V75.1 dual-write SQL copy drifted from the migration")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_1RegistrationRoleGuardTest.kt").exists(),
         "V75.1 role escalation guard test missing")
+
+_v752_throttle=(ROOT/"supabase/migrations/20260903_native_staff_login_throttle_v75_2.sql").read_text()
+require("public.native_staff_login_attempts" in _v752_throttle
+        and "enable row level security" in _v752_throttle
+        and "v_recent >= 5 or v_global >= 20" in _v752_throttle
+        and "insert into public.native_staff_login_attempts(username) values (v_username)" in _v752_throttle,
+        "V75.2 staff login throttle is missing")
+require(_v752_throttle == (ROOT/"sql/manual/SQL_NATIVE_STAFF_LOGIN_THROTTLE_V75_2.sql").read_text(),
+        "V75.2 dual-write SQL copy drifted from the migration")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_2StaffLoginThrottleTest.kt").exists(),
+        "V75.2 staff login throttle test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
