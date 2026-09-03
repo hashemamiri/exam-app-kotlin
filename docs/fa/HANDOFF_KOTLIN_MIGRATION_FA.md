@@ -15193,3 +15193,51 @@ SQL جدید/Edge/Secret/Dependency: ندارد
 تست دستگاه: صدور یک آزمون در هر دو حالت؛ باز کردن فایل «بدون پاسخنامه» در
 «داده‌ها ← واردکردن آزمون» و بررسی اینکه پاسخ صحیحی همراه آن نیست.
 ```
+
+## ۲۸۷) V75.5 — محدودیت نرخِ ساخت حساب دانش‌آموز (بند ۳.۶ گزارش امنیتی)
+
+### ریشه
+
+```text
+دو عمل create و bulk در Edge Function manage-student هیچ سقفی نداشتند:
+هر نشستِ معتبرِ کادر مدرسه می‌توانست در چند دقیقه هزاران حساب در auth.users و profiles
+بسازد (هزینهٔ مستقیمِ ایجاد حساب، اشغال ظرفیت و اخلال در کار مدرسه).
+سقف ۱۰۰ ردیف در هر درخواست bulk هم فقط «اندازهٔ هر درخواست» را محدود می‌کرد،
+نه تعداد درخواست‌ها را.
+```
+
+### چه شد
+
+```text
+۱) جدول public.native_student_create_events با RLS (بدون policy ⇒ فقط توابع
+   security definer و service_role به آن دسترسی دارند).
+۲) تابع native_consume_student_create_quota با قفل مشورتی تراکنشی: ابتدا مجموع
+   یک‌ساعته و ۲۴ساعته را می‌خواند، سپس در صورت مجاز‌بودن ردیف مصرف را می‌نویسد.
+   (قفل مانع می‌شود دو درخواست هم‌زمان هر دو از سقف عبور کنند.)
+۳) سقف پیش‌فرض: ۳۰ حساب در ساعت و ۲۰۰ حساب در شبانه‌روز برای هر کادر مدرسه؛
+   پاک‌سازی ردیف‌های قدیمی‌تر از ۷ روز در همان تابع.
+۴) Edge: create یک واحد و bulk به‌اندازهٔ تعداد ردیف‌ها مصرف می‌کند؛ پاسخِ رد ۴۲۹.
+۵) تابع فقط به service_role مجاز است (نه anon و نه authenticated).
+```
+
+### فایل‌ها
+
+```text
+supabase/migrations/20260903_native_student_create_quota_v75_5.sql   (جدید)
+sql/manual/SQL_NATIVE_STUDENT_CREATE_QUOTA_V75_5.sql                 (جدید، dual-write)
+supabase/functions/manage-student/index.ts
+app/src/test/java/ir/exam/app/ui/app/V75_5StudentCreateRateLimitTest.kt (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL جدید: بله — روی پروژه اصلی اجرا شود
+Edge جدید: باید دوباره مستقر شود → supabase functions deploy manage-student
+Secret/Dependency جدید: ندارد
+تغییر سقف: پارامترهای p_hourly و p_daily در فراخوانی تابع (در فایل Edge) قابل تنظیم است؛
+عدد پیش‌فرض برای یک مدرسهٔ معمولی کافی است و فقط رفتار خودکار/مخرب را می‌گیرد.
+```

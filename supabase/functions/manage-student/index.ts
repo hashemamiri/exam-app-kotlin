@@ -74,6 +74,19 @@ Deno.serve(async (request) => {
       }
     };
 
+    // V75.5 — سهمیهٔ ساخت دانش‌آموز: شمارنده در دیتابیس است، نه در حافظهٔ Edge،
+    // تا با سردشدن یا چندتایی‌شدن instanceها دور زده نشود.
+    const consumeCreateQuota = async (amount: number): Promise<string | null> => {
+      const { data, error } = await service.rpc('native_consume_student_create_quota', {
+        p_actor: teacherId,
+        p_amount: amount,
+      });
+      if (error) return 'سرویس محدودسازی در دسترس نیست؛ کمی بعد دوباره تلاش کنید';
+      const result = (data || {}) as { ok?: boolean; error?: string };
+      if (result.ok === true) return null;
+      return result.error || 'سقف ساخت دانش‌آموز پر شده است';
+    };
+
     if (action === 'create') {
       const firstName = clean(body.first_name, 100);
       const lastName = clean(body.last_name, 100);
@@ -89,6 +102,8 @@ Deno.serve(async (request) => {
       if (!(await ensureOwnedClass(classId))) return json({ error: 'کلاس متعلق به این معلم نیست' }, 403);
       const { data: duplicate } = await service.from('profiles').select('id').eq('username', username).maybeSingle();
       if (duplicate) return json({ error: 'این نام کاربری قبلاً استفاده شده است' }, 409);
+      const createQuotaError = await consumeCreateQuota(1);
+      if (createQuotaError) return json({ error: createQuotaError }, 429);
 
       const { data: created, error: createError } = await service.auth.admin.createUser({
         email: userEmail(username), password, email_confirm: true,
@@ -238,6 +253,8 @@ Deno.serve(async (request) => {
       if (!rows.length) return json({ error: 'فهرست دانش‌آموزان خالی است' }, 400);
       const classId = clean(body.class_id, 64);
       if (!(await ensureOwnedClass(classId))) return json({ error: 'کلاس متعلق به این معلم نیست' }, 403);
+      const bulkQuotaError = await consumeCreateQuota(rows.length);
+      if (bulkQuotaError) return json({ error: bulkQuotaError }, 429);
       const results: Record<string, unknown>[] = [];
       for (const row of rows) {
         // Execute the same validated create path directly through admin APIs.

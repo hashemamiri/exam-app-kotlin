@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.4:"),
-        "changelog must keep the full history + the new V75.4 line on top")
+        and _v694_changelog.startswith("V75.5:"),
+        "changelog must keep the full history + the new V75.5 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2746,6 +2746,21 @@ require("viewModel.exportExam(exam.id, false)" in _v754_screen and "viewModel.ex
         "V75.4 export choice dialog missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_4ExamExportAnswerKeyTest.kt").exists(),
         "V75.4 export answer key test missing")
+
+_v755_quota=(ROOT/"supabase/migrations/20260903_native_student_create_quota_v75_5.sql").read_text()
+require("public.native_student_create_events" in _v755_quota
+        and "pg_advisory_xact_lock" in _v755_quota
+        and "to service_role" in _v755_quota,
+        "V75.5 student create quota is missing")
+require(_v755_quota == (ROOT/"sql/manual/SQL_NATIVE_STUDENT_CREATE_QUOTA_V75_5.sql").read_text(),
+        "V75.5 dual-write SQL copy drifted from the migration")
+_v755_edge=(ROOT/"supabase/functions/manage-student/index.ts").read_text()
+require("native_consume_student_create_quota" in _v755_edge
+        and "consumeCreateQuota(1)" in _v755_edge
+        and "consumeCreateQuota(rows.length)" in _v755_edge,
+        "V75.5 student create throttle missing in the edge function")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_5StudentCreateRateLimitTest.kt").exists(),
+        "V75.5 student create rate limit test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
