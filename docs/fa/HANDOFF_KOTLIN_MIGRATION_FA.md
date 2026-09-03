@@ -15352,3 +15352,64 @@ SQL/Edge/Secret/Dependency جدید: ندارد (بدون نیاز به کتاب
 بررسیِ عدم بازگشت خودکار. همچنین روی دستگاهِ روت‌شده: فایل تنظیمات برنامه دیگر
 نباید حاوی رشتهٔ توکن باشد.
 ```
+
+## ۲۹۰) V75.8 — خصوصی‌سازی باکت تصاویر (بند ۲.۱ گزارش امنیتی)
+
+### ریشه
+
+```text
+storage.buckets.public = true برای exam-images + سیاست v11_public_read_exam_images
+که خواندن را برای نقش public (هر کس، حتی بدون ورود) آزاد می‌کرد؛ یعنی تصویرِ پاسخِ
+دانش‌آموز (دست‌خط/برگه) و آواتارها با داشتن نشانی — که یک UUID غیرقابل حدس است اما
+در پیام‌ها و خروجی‌ها ردوبدل می‌شود — برای هر کسی باز بود.
+```
+
+### چه شد
+
+```text
+۱) SQL: public = false؛ حذف سیاست خواندنِ عمومی؛ چهار سیاستِ تازه:
+   - questions / option_images / matching → فقط authenticated
+   - avatars → فقط authenticated
+   - answers/<student>/<exam>/... → فقط خودِ دانش‌آموز
+   - answers/... → معلمِ صاحبِ همان آزمون
+۲) برنامه: یک Interceptor برای Coil که برای نشانی‌های storage پروژهٔ خودمان
+   هدر Authorization (توکن نشست) و apikey را می‌فرستد؛ برای سایت‌های دیگر هیچ هدری
+   ارسال نمی‌شود. بارگذار در ریشهٔ برنامه (ExamApp) نصب شد و همهٔ AsyncImageها
+   به‌طور خودکار از آن استفاده می‌کنند.
+۳) نشانیِ تصاویر در دیتابیس تغییر نکرده است ⇒ کشِ دیسکیِ تصویرها (و کارکردِ آفلاین)
+   حفظ می‌شود؛ فقط دسترسی حالا احراز هویت می‌خواهد.
+```
+
+### نکته‌های مهمِ عملیاتی
+
+```text
+الف) حتماً روی دستگاه تست شود: تصویر سؤال در آزمونِ دانش‌آموز، تصویر پاسخ در صفحهٔ
+   تصحیح، آواتار در پروفایل. اگر تصویری نمایش داده نشد، توکن یا سیاست را بررسی کنید.
+ب) دیالوگِ چاپ (WebView) از قبل فقط asset محلی را بار می‌کرد و درخواستِ بیرونی را
+   خالی برمی‌گرداند؛ بنابراین این تغییر چاپ را خراب نمی‌کند — اما تصویرِ سؤال در
+   خروجیِ چاپ از قبل هم نمایش داده نمی‌شد (محدودیتِ قدیمی، نه جدید).
+ج) اگر بعداً خواستید تصاویر فقط برای مخاطبِ همان آزمون باز باشد، سیاستِ
+   v75_8_read_question_images را به exams و جدول مخاطبان گره بزنید (گام بعدی).
+```
+
+### فایل‌ها
+
+```text
+supabase/migrations/20260903_native_storage_private_images_v75_8.sql   (جدید)
+sql/manual/SQL_NATIVE_STORAGE_PRIVATE_IMAGES_V75_8.sql                 (جدید، dual-write)
+app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt (جدید)
+app/src/main/java/ir/exam/app/ui/image/PrivateImageLoader.kt           (جدید)
+app/src/main/java/ir/exam/app/ui/app/ExamApp.kt
+app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt  (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL جدید: بله — روی پروژه اصلی اجرا شود (باکت را خصوصی می‌کند)
+Edge جدید/Secret/Dependency جدید: ندارد
+ترتیبِ پیشنهادی: ابتدا SQL اجرا شود، سپس نسخهٔ جدید برنامه نصب و تست تصویرها.
+```

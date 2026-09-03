@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.7:"),
-        "changelog must keep the full history + the new V75.7 line on top")
+        and _v694_changelog.startswith("V75.8:"),
+        "changelog must keep the full history + the new V75.8 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2792,6 +2792,21 @@ require('android:name=".ExamApplication"' in (ROOT/"app/src/main/AndroidManifest
         "V75.7 application class is not registered")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_7EncryptedSessionStorageTest.kt").exists(),
         "V75.7 encrypted session test missing")
+
+_v758_storage=(ROOT/"supabase/migrations/20260903_native_storage_private_images_v75_8.sql").read_text()
+require("set public = false" in _v758_storage
+        and "drop policy if exists v11_public_read_exam_images on storage.objects" in _v758_storage
+        and "v75_8_teacher_read_exam_answers" in _v758_storage
+        and "v75_8_student_read_own_answers" in _v758_storage,
+        "V75.8 private storage migration is missing or incomplete")
+require(_v758_storage == (ROOT/"sql/manual/SQL_NATIVE_STORAGE_PRIVATE_IMAGES_V75_8.sql").read_text(),
+        "V75.8 dual-write SQL copy drifted from the migration")
+_v758_app=(ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text()
+require("LocalImageLoader provides imageLoader" in _v758_app
+        and "addHeader(\"Authorization\", \"Bearer $token\")" in (ROOT/"app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt").read_text(),
+        "V75.8 authenticated image loading is not wired")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt").exists(),
+        "V75.8 private storage test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

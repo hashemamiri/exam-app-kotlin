@@ -43,6 +43,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import coil.compose.LocalImageLoader
+import ir.exam.app.ui.image.PrivateImageLoader
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -108,6 +110,17 @@ private enum class MainPage {
 
 @Composable
 fun ExamApp(appearance: AppearanceSettings = AppearanceSettings()) {
+    // V75.8 — بارگذار تصویرِ اختصاصی (تصاویر خصوصیِ Supabase با توکنِ نشست)
+    // یک‌بار در ریشه نصب می‌شود تا همهٔ صفحه‌ها از آن استفاده کنند.
+    val context = LocalContext.current
+    val imageLoader = remember(context) { PrivateImageLoader.create(context) }
+    CompositionLocalProvider(LocalImageLoader provides imageLoader) {
+        ExamAppContent(appearance)
+    }
+}
+
+@Composable
+private fun ExamAppContent(appearance: AppearanceSettings = AppearanceSettings()) {
     val appContext = LocalContext.current.applicationContext
     val authViewModel = remember(appContext) {
         AuthViewModel(SupabaseAuthRepository(appContext))
