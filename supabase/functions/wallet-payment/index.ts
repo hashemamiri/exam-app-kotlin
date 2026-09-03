@@ -40,6 +40,23 @@ function safeProvider(): Provider {
   return value as Provider;
 }
 
+function timingSafeEqualText(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// V75.0 — شارژ آزمایشی فقط با یک کلیدِ جداگانهٔ سرور مجاز است.
+// اگر PAY_PROVIDER=sandbox و PAY_ALLOW_SANDBOX=true روی سرور اصلی جا بمانند،
+// بدون این کلید هیچ اعتباری به کیف پول اضافه نمی‌شود (ریسک شارژ رایگان).
+function sandboxRequestAllowed(req: Request): boolean {
+  const expected = env('PAY_SANDBOX_TOKEN');
+  const provided = (req.headers.get('x-sandbox-token') || '').trim();
+  if (expected.length < 16 || provided.length === 0) return false;
+  return timingSafeEqualText(expected, provided);
+}
+
 function publicError(code: string, message: string, status = 400) {
   return Object.assign(new Error(message), { publicCode: code, publicStatus: status });
 }
@@ -231,6 +248,9 @@ Deno.serve(async (req) => {
       if (orderError || !orderData) return paymentPage(false, 'سفارش پرداخت یافت نشد.');
       const order = orderData as Order;
       if (order.status === 'paid') return paymentPage(true, 'این پرداخت قبلاً با موفقیت ثبت شده است.', order.ref_id || '');
+      if (order.provider === 'sandbox' && !sandboxRequestAllowed(req)) {
+        return paymentPage(false, 'شارژ آزمایشی روی این سرور مجاز نیست.');
+      }
       if (callbackCanceled(order.provider, params)) {
         await service.rpc('native_fail_wallet_payment_order', { p_order: order.id, p_status: 'canceled', p_code: 'user_canceled' });
         return paymentPage(false, 'پرداخت لغو شد.');
@@ -267,6 +287,10 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => { throw publicError('invalid_json', 'داده درخواست نامعتبر است.'); });
     const amountToman = validateAmount((body as Record<string, unknown>).amount_toman);
     const provider = safeProvider();
+    // V75.0 — بدون کلید اختصاصی، حالت آزمایشی هرگز به شارژ منتهی نمی‌شود.
+    if (provider === 'sandbox' && !sandboxRequestAllowed(req)) {
+      throw publicError('sandbox_token_required', 'شارژ آزمایشی روی این سرور مجاز نیست.', 403);
+    }
     const { data: created, error: createError } = await service.rpc('native_create_wallet_payment_order', {
       p_user: userData.user.id,
       p_amount_toman: amountToman,

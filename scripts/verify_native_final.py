@@ -2685,8 +2685,18 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V74.2:"),
-        "changelog must keep the full history + the new V74.2 line on top")
+        and _v694_changelog.startswith("V75.0:"),
+        "changelog must keep the full history + the new V75.0 line on top")
+
+_v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
+require("function sandboxRequestAllowed(" in _v750_payment
+        and "PAY_SANDBOX_TOKEN" in _v750_payment
+        and "x-sandbox-token" in _v750_payment
+        and "provider === 'sandbox' && !sandboxRequestAllowed(req)" in _v750_payment
+        and "order.provider === 'sandbox' && !sandboxRequestAllowed(req)" in _v750_payment,
+        "V75.0 sandbox wallet credit is reachable without the dedicated server token")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_0PaymentSandboxGuardTest.kt").exists(),
+        "V75.0 payment sandbox guard test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -14937,3 +14937,70 @@ val combined = JsonArray(encoded.publicQuestions.mapIndexed { index, item ->
 ۳) خروجی تعریف ۲۸ تابع قدیمی (بند ۲.۳) باید در ریپو ذخیره شود تا ممیزی بعدی
    بتواند مسیر تحویل آزمون و ثبت پاسخ را هم بررسی کند.
 ```
+
+## ۲۸۲) V75.0 — محافظ قطعی شارژ آزمایشی کیف پول (بند ۱.۱ گزارش امنیتی)
+
+### ریشه
+
+```text
+در wallet-payment وقتی PAY_PROVIDER=sandbox و PAY_ALLOW_SANDBOX=true باشد، تابع پس از
+ساخت سفارش، بدون هیچ تأییدیهٔ بانکی مستقیم native_credit_wallet_payment را صدا می‌زد.
+مبلغ هر سفارش محدود (۱۰۰هزار..۱۰ میلیون، مضرب ۱۰هزار) و سقف موجودی ۱۰ میلیون است،
+اما تعداد سفارش نامحدود ⇒ امکان شارژ رایگان و عملاً نامحدود برای هر کاربر واردشده.
+نشانی تابع عمومی است (verify_jwt=false) و فقط JWT یک نشست معتبر لازم دارد.
+```
+
+### چه شد
+
+```text
+۱) تابع جدید sandboxRequestAllowed(req): کلید سرور از env('PAY_SANDBOX_TOKEN') خوانده
+   می‌شود و باید با هدر x-sandbox-token برابر باشد؛ کلید کوتاه‌تر از ۱۶ نویسه یا خالی
+   یعنی «غیرفعال» (پیش‌فرض امن).
+۲) گارد در مسیر POST (شروع پرداخت): اگر provider === 'sandbox' و کلید معتبر نباشد،
+   خطای sandbox_token_required با وضعیت 403 پیش از ساخت سفارش برمی‌گردد.
+۳) گارد در مسیر GET (بازگشت بانک/callback): سفارش‌های sandbox بدون کلید، صفحهٔ
+   «ناموفق» می‌گیرند؛ بنابراین مسیر verify هم نمی‌تواند اعتبار بسازد.
+۴) مقایسه با timingSafeEqualText (زمان ثابت) انجام می‌شود و مقدار کلید هرگز در
+   پاسخ، پیام خطا یا لاگ نمی‌آید.
+۵) رفتار درگاه‌های واقعی (زرین‌پال/آیدی‌پی) کاملاً دست‌نخورده است.
+```
+
+### فایل‌های تغییرکرده
+
+```text
+supabase/functions/wallet-payment/index.ts
+app/src/test/java/ir/exam/app/ui/app/V75_0PaymentSandboxGuardTest.kt   (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات (بدون SQL)
+
+```text
+SQL جدید: ندارد
+Migration جدید: ندارد
+Secret جدید: PAY_SANDBOX_TOKEN فقط در حالت تست واقعی نیاز است؛ روی سرور اصلی تعریف
+               نکنید تا مسیر sandbox کاملاً بسته بماند.
+پیش‌نیاز: V74.2
+deploy: بله — پس از apply باید supabase functions deploy wallet-payment اجرا شود،
+        وگرنه محافظ روی سرور فعال نمی‌شود.
+```
+
+### تست
+
+```text
+جدید: V75_0PaymentSandboxGuardTest (۳ تست قرارداد منبع)
+verify: بند V75.0 (کلید، هدر، دو گارد) + وجود فایل تست
+FINAL_NATIVE_VERIFY: اجرا خواهد شد پس از apply در CI کاربر
+```
+
+### هنوز لازم است (خارج از کد)
+
+```text
+۱) در پنل Supabase مقدار PAY_ALLOW_SANDBOX را false و PAY_PROVIDER را به درگاه واقعی
+   برگردانید — این پچ «لایهٔ دوم» است، جایگزین اصلاح تنظیمات نیست.
+۲) Secret تازه‌ای به نام PAY_SANDBOX_TOKEN روی سرور اصلی نسازید.
+۳) بررسی سوابق: select * from public.wallet_payment_orders where provider='sandbox'
+   order by id desc limit 100;
+```
