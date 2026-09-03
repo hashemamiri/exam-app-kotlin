@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.5:"),
-        "changelog must keep the full history + the new V75.5 line on top")
+        and _v694_changelog.startswith("V75.6:"),
+        "changelog must keep the full history + the new V75.6 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2761,6 +2761,21 @@ require("native_consume_student_create_quota" in _v755_edge
         "V75.5 student create throttle missing in the edge function")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_5StudentCreateRateLimitTest.kt").exists(),
         "V75.5 student create rate limit test missing")
+
+_v756_legacy=(ROOT/"supabase/migrations/20260903_native_legacy_anon_revoke_v75_6.sql").read_text()
+require("revoke execute on function public.%I(%s) from anon" in _v756_legacy
+        and "'get_exam_for_student'" in _v756_legacy
+        and "'submit_answer'" in _v756_legacy
+        and "'teacher_public_profile'" not in _v756_legacy,
+        "V75.6 legacy anon revoke is missing or revokes the public profile endpoint")
+require(_v756_legacy == (ROOT/"sql/manual/SQL_NATIVE_LEGACY_ANON_REVOKE_V75_6.sql").read_text(),
+        "V75.6 dual-write SQL copy drifted from the migration")
+require("pg_get_functiondef" in (ROOT/"sql/manual/CHECK_LEGACY_FUNCTIONS_V75.sql").read_text(),
+        "V75.6 legacy function extraction query missing")
+require((ROOT/"docs/fa/SECURITY_LEGACY_FUNCTIONS_V75.md").exists(),
+        "V75.6 legacy functions report missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_6LegacyFunctionsAnonRevokeTest.kt").exists(),
+        "V75.6 legacy functions test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -15241,3 +15241,59 @@ Secret/Dependency جدید: ندارد
 تغییر سقف: پارامترهای p_hourly و p_daily در فراخوانی تابع (در فایل Edge) قابل تنظیم است؛
 عدد پیش‌فرض برای یک مدرسهٔ معمولی کافی است و فقط رفتار خودکار/مخرب را می‌گیرد.
 ```
+
+## ۲۸۸) V75.6 — توابع قدیمیِ خارج از ریپو (بند ۲.۳ گزارش امنیتی)
+
+### ریشه
+
+```text
+۳۰ تابعِ دورهٔ WebView در allowlist مجاز شده‌اند اما هیچ تعریفی از آن‌ها در ریپو نیست:
+get_exam_for_student، submit_answer، my_answers، my_grades، my_classes، create_class،
+update_class، delete_class، class_roster_pick، add_students_to_class،
+remove_student_from_class، my_students_for_pick، save_student_extra، set_student_active،
+bank_add، bank_list، bank_del، bank_move، fb_add، fb_list، exam_attendance،
+exam_attend_summary، exam_live_status، exam_autograde_info، approve_auto_grades،
+unapprove_grade، reset_student_attempt، extend_student_time، get_exam_audience،
+set_exam_audience — و native_submit_queued_answer_v1 مستقیماً submit_answer را صدا می‌زند.
+```
+
+### چه شد
+
+```text
+۱) دسترسیِ anon از همهٔ این توابع گرفته شد (حلقه روی pg_proc، مستقل از امضای تابع).
+   دلیلِ امن‌بودن: در نسخهٔ Native هیچ ورودِ مهمانی وجود ندارد؛ دانش‌آموز و کادر مدرسه
+   هر دو پیش از هر فراخوانی وارد می‌شوند، پس نقشِ فراخوان همواره authenticated است.
+۲) teacher_public_profile استثنا شد (نمای عمومی معلم، ماهیتاً برای همه).
+۳) ابزار استخراج تعریف توابع از سرور به ریپو اضافه شد (CHECK_LEGACY_FUNCTIONS_V75.sql).
+۴) راهنمای کامل در docs/fa/SECURITY_LEGACY_FUNCTIONS_V75.md.
+```
+
+### هنوز لازم است (روی دستگاه شما)
+
+```text
+الف) اجرای CHECK_LEGACY_FUNCTIONS_V75.sql در SQL Editor و فرستادن خروجیِ کوئری ۱ برای من،
+   تا متن واقعیِ get_exam_for_student و submit_answer را از نظر کنترل مهلت، جلوگیری از
+   ارسال مجدد و کنترل مخاطب بررسی کنم.
+ب) اگر بعد از این پچ جریانی از کار افتاد (در نسخهٔ فعلی چنین جریانی شناخته‌شده نیست)،
+   فقط همان تابع را با grant ... to anon برگردانید.
+```
+
+### فایل‌ها
+
+```text
+supabase/migrations/20260903_native_legacy_anon_revoke_v75_6.sql   (جدید)
+sql/manual/SQL_NATIVE_LEGACY_ANON_REVOKE_V75_6.sql                 (جدید، dual-write)
+sql/manual/CHECK_LEGACY_FUNCTIONS_V75.sql                          (جدید، فقط خواندن)
+docs/fa/SECURITY_LEGACY_FUNCTIONS_V75.md                           (جدید)
+app/src/test/java/ir/exam/app/ui/app/V75_6LegacyFunctionsAnonRevokeTest.kt (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL جدید: بله — روی پروژه اصلی اجرا شود
+Edge/Secret/Dependency جدید: ندارد
+```
