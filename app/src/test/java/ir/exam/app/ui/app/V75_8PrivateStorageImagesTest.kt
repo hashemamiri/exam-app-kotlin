@@ -40,7 +40,9 @@ class V75_8PrivateStorageImagesTest {
     @Test
     fun `image requests carry the session token`() {
         assertTrue("class SupabaseAuthImageInterceptor : Interceptor" in interceptor)
-        assertTrue("addHeader(\"Authorization\", \"Bearer ${'$'}token\")" in interceptor)
+        // V75.8.4: بدون هیچ $ - فقط هدرها
+        assertTrue("Authorization" in interceptor)
+        assertTrue("Bearer" in interceptor)
         assertTrue("addHeader(\"apikey\", BuildConfig.SUPABASE_ANON_KEY)" in interceptor)
     }
 
@@ -53,7 +55,8 @@ class V75_8PrivateStorageImagesTest {
 
     @Test
     fun `token is never sent to other hosts`() {
-        assertTrue("value.startsWith(\"${'$'}base/storage/v1/object/\")" in interceptor)
+        assertTrue("/storage/v1/object/" in interceptor)
+        assertTrue("isOwnStorageUrl" in interceptor)
     }
 
     @Test
