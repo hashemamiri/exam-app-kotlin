@@ -45,6 +45,13 @@ class V75_8PrivateStorageImagesTest {
     }
 
     @Test
+    fun `the auth extension is imported explicitly`() {
+        assertTrue("import io.github.jan.supabase.auth.auth" in interceptor)
+        assertTrue("currentSessionOrNull()?.accessToken" in interceptor)
+        assertTrue("runCatching" not in interceptor.substringAfter("class SupabaseAuthImageInterceptor"))
+    }
+
+    @Test
     fun `token is never sent to other hosts`() {
         assertTrue("value.startsWith(\"$base/storage/v1/object/\")" in interceptor)
     }

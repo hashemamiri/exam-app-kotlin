@@ -15457,3 +15457,47 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```text
 SQL/Edge/Secret/Dependency جدید: ندارد
 ```
+
+## ۲۹۲) V75.8.1 — رفع خطای کامپایلِ بارگذارِ تصویر
+
+### خطا
+
+```text
+e: .../ui/image/SupabaseAuthImageInterceptor.kt:30:59 Unresolved reference 'auth'
+e: ... Cannot infer type for this parameter / Argument type mismatch
+```
+
+### ریشه
+
+```text
+در supabase-kt دسترسی به بخشِ احراز هویت یک «extension property» است:
+  import io.github.jan.supabase.auth.auth
+بدون این import، عبارت SupabaseProvider.client.auth شناخته نمی‌شود و زنجیرهٔ
+استنتاجِ نوع هم به هم می‌ریزد (همان خطای Cannot infer type).
+```
+
+### چه شد
+
+```text
+۱) importِ io.github.jan.supabase.auth.auth اضافه شد (همان الگویی که بقیهٔ
+   فایل‌های پروژه استفاده می‌کنند).
+۲) توکن حالا با currentSessionOrNull()?.accessToken و با نوعِ صریحِ String?
+   گرفته می‌شود تا ابهامِ استنتاجِ نوع پیش نیاید.
+۳) یک تستِ تازه: نبودِ این import در آینده باعث خطا می‌شود.
+```
+
+### فایل‌ها
+
+```text
+app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt
+app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد — فقط رفع خطای ساخت
+```

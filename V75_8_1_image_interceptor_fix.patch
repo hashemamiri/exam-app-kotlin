@@ -1,0 +1,141 @@
+diff --git a/app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt b/app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt
+index eaebc5e..c237f0d 100644
+--- a/app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt
++++ b/app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt
+@@ -3,6 +3,9 @@ package ir.exam.app.ui.image
+ import coil.intercept.Interceptor
+ import coil.request.ImageRequest
+ import coil.request.ImageResult
++// V75.8.1 — در این کتابخانه auth یک extension روی SupabaseClient است و بدون این
++// import کامپایل شکست می‌خورد (خطای Unresolved reference 'auth').
++import io.github.jan.supabase.auth.auth
+ import ir.exam.app.BuildConfig
+ import ir.exam.app.data.remote.SupabaseProvider
+ 
+@@ -27,10 +30,16 @@ class SupabaseAuthImageInterceptor : Interceptor {
+         val target = request.data as? String
+         if (target == null || !isOwnStorageUrl(target)) return chain.proceed(request)
+ 
+-        val token = runCatching { SupabaseProvider.client.auth.currentAccessTokenOrNull() }
+-            .getOrNull()
+-            ?.takeIf(String::isNotBlank)
+-            ?: return chain.proceed(request)
++        // V75.8.1 — نوعِ صریح و استفاده از currentSessionOrNull (عضوِ خودِ Auth)
++        // تا هیچ ابهامی در استنتاجِ نوع پیش نیاید.
++        // try/catch به‌جای runCatching: فراخوانی ممکن است suspend باشد و
++        // runCatching پارامترش suspend نیست (خطای کامپایل در آن حالت قطعی است).
++        val token: String? = try {
++            SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
++        } catch (_: Throwable) {
++            null
++        }
++        if (token.isNullOrBlank()) return chain.proceed(request)
+ 
+         val authorized: ImageRequest = request.newBuilder()
+             .addHeader("Authorization", "Bearer $token")
+diff --git a/app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt b/app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt
+index d45db58..8554cd3 100644
+--- a/app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt
++++ b/app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt
+@@ -44,6 +44,13 @@ class V75_8PrivateStorageImagesTest {
+         assertTrue("addHeader(\"apikey\", BuildConfig.SUPABASE_ANON_KEY)" in interceptor)
+     }
+ 
++    @Test
++    fun `the auth extension is imported explicitly`() {
++        assertTrue("import io.github.jan.supabase.auth.auth" in interceptor)
++        assertTrue("currentSessionOrNull()?.accessToken" in interceptor)
++        assertTrue("runCatching" not in interceptor.substringAfter("class SupabaseAuthImageInterceptor"))
++    }
++
+     @Test
+     fun `token is never sent to other hosts`() {
+         assertTrue("value.startsWith(\"$base/storage/v1/object/\")" in interceptor)
+diff --git a/docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md b/docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+index 667f02c..f97eb0f 100644
+--- a/docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
++++ b/docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+@@ -15457,3 +15457,47 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+ ```text
+ SQL/Edge/Secret/Dependency جدید: ندارد
+ ```
++
++## ۲۹۲) V75.8.1 — رفع خطای کامپایلِ بارگذارِ تصویر
++
++### خطا
++
++```text
++e: .../ui/image/SupabaseAuthImageInterceptor.kt:30:59 Unresolved reference 'auth'
++e: ... Cannot infer type for this parameter / Argument type mismatch
++```
++
++### ریشه
++
++```text
++در supabase-kt دسترسی به بخشِ احراز هویت یک «extension property» است:
++  import io.github.jan.supabase.auth.auth
++بدون این import، عبارت SupabaseProvider.client.auth شناخته نمی‌شود و زنجیرهٔ
++استنتاجِ نوع هم به هم می‌ریزد (همان خطای Cannot infer type).
++```
++
++### چه شد
++
++```text
++۱) importِ io.github.jan.supabase.auth.auth اضافه شد (همان الگویی که بقیهٔ
++   فایل‌های پروژه استفاده می‌کنند).
++۲) توکن حالا با currentSessionOrNull()?.accessToken و با نوعِ صریحِ String?
++   گرفته می‌شود تا ابهامِ استنتاجِ نوع پیش نیاید.
++۳) یک تستِ تازه: نبودِ این import در آینده باعث خطا می‌شود.
++```
++
++### فایل‌ها
++
++```text
++app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt
++app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt
++scripts/verify_native_final.py
++text/CHANGELOG_FA.txt
++docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
++```
++
++### عملیات
++
++```text
++SQL/Edge/Secret/Dependency جدید: ندارد — فقط رفع خطای ساخت
++```
+diff --git a/scripts/verify_native_final.py b/scripts/verify_native_final.py
+index 3ceec94..b0b7d21 100644
+--- a/scripts/verify_native_final.py
++++ b/scripts/verify_native_final.py
+@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
+ require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
+         "changelog lost its historical Persian entries (truncated again?)")
+ require(_v694_lines >= 251
+-        and _v694_changelog.startswith("V75.9:"),
+-        "changelog must keep the full history + the new V75.9 line on top")
++        and _v694_changelog.startswith("V75.8.1:"),
++        "changelog must keep the full history + the new V75.8.1 line on top")
+ 
+ _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
+ require("function sandboxRequestAllowed(" in _v750_payment
+@@ -2808,6 +2808,11 @@ require("LocalImageLoader provides imageLoader" in _v758_app
+ require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt").exists(),
+         "V75.8 private storage test missing")
+ 
++_v7581_auth=(ROOT/"app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt").read_text()
++require("import io.github.jan.supabase.auth.auth" in _v7581_auth
++        and "currentSessionOrNull()?.accessToken" in _v7581_auth,
++        "V75.8.1: the auth extension import is missing (build breaks without it)")
++
+ # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
+ # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
+ if errors:
+diff --git a/text/CHANGELOG_FA.txt b/text/CHANGELOG_FA.txt
+index 1188457..dc7fdc0 100644
+--- a/text/CHANGELOG_FA.txt
++++ b/text/CHANGELOG_FA.txt
+@@ -1,3 +1,4 @@
++V75.8.1: رفع خطای کامپایلِ بارگذار تصویر — در کتابخانهٔ Supabase دسترسی به بخش احراز هویت یک extension است و باید صریحاً import شود؛ این import به فایلِ بارگذارِ تصویر اضافه و نوعِ توکن هم صریح شد تا کامپایلِ نسخهٔ دیباگ دوباره خطا ندهد. یک تست هم اضافه شد که نبودِ همین import را در آینده خطا اعلام می‌کند.
+ V75.9: اصلاحیهٔ گزارش امنیتی و جدول پیگیری — توضیحِ مربوط به «ذخیرهٔ رمز دانش‌آموز» اصلاح شد (رمزها متن ساده نیستند و با کلید Keystore و AES/GCM رمزنگاری می‌شوند؛ آنچه هست قابلیتِ بازیابی روی همان دستگاه است که با تصمیم شما حفظ می‌شود) و یک جدول پیگیری به گزارش امنیتی اضافه شد که وضعیتِ هر مورد، نسخهٔ اصلاح‌کننده و عملیاتِ دستیِ لازم را نشان می‌دهد.
+ V75.8: خصوصی‌سازی کاملِ باکت تصاویر — باکت «exam-images» دیگر عمومی نیست و هیچ تصویری را نمی‌توان بدون ورود دید؛ تصاویر سؤال و گزینه‌ها فقط برای کاربران واردشده، آواتارها فقط برای کاربران واردشده، و تصویرِ پاسخِ هر دانش‌آموز فقط برای خودِ او و معلمِ همان آزمون قابل مشاهده است. برنامه برای نمایش تصویر، توکنِ نشست را همراه درخواست می‌فرستد (و آن را برای سایت‌های دیگر نمی‌فرستد)؛ نشانیِ تصویرها تغییر نمی‌کند بنابراین تصاویرِ کش‌شده همچنان در حالت آفلاین کار می‌کنند.
+ V75.7: رمزنگاریِ نشست ورود روی دستگاه — نشستِ سوپابیس (شامل توکن دسترسی و توکن تازه‌سازی) از این پس با کلیدی که در Android Keystore ساخته می‌شود و غیرقابل استخراج است به روش AES/GCM رمزنگاری و در حافظهٔ برنامه نگه‌داری می‌شود؛ پیش از این این اطلاعات به‌صورت متن ساده در یک فایل تنظیمات ذخیره می‌شد و با هر دسترسیِ فایلی (مثلاً دستگاه روت‌شده یا بدافزار) قابل خواندن بود. پیامد: کاربران یک‌بار باید دوباره وارد شوند.

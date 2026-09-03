@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.9:"),
-        "changelog must keep the full history + the new V75.9 line on top")
+        and _v694_changelog.startswith("V75.8.1:"),
+        "changelog must keep the full history + the new V75.8.1 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2807,6 +2807,11 @@ require("LocalImageLoader provides imageLoader" in _v758_app
         "V75.8 authenticated image loading is not wired")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_8PrivateStorageImagesTest.kt").exists(),
         "V75.8 private storage test missing")
+
+_v7581_auth=(ROOT/"app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInterceptor.kt").read_text()
+require("import io.github.jan.supabase.auth.auth" in _v7581_auth
+        and "currentSessionOrNull()?.accessToken" in _v7581_auth,
+        "V75.8.1: the auth extension import is missing (build breaks without it)")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

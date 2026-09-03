@@ -3,6 +3,9 @@ package ir.exam.app.ui.image
 import coil.intercept.Interceptor
 import coil.request.ImageRequest
 import coil.request.ImageResult
+// V75.8.1 — در این کتابخانه auth یک extension روی SupabaseClient است و بدون این
+// import کامپایل شکست می‌خورد (خطای Unresolved reference 'auth').
+import io.github.jan.supabase.auth.auth
 import ir.exam.app.BuildConfig
 import ir.exam.app.data.remote.SupabaseProvider
 
@@ -27,10 +30,16 @@ class SupabaseAuthImageInterceptor : Interceptor {
         val target = request.data as? String
         if (target == null || !isOwnStorageUrl(target)) return chain.proceed(request)
 
-        val token = runCatching { SupabaseProvider.client.auth.currentAccessTokenOrNull() }
-            .getOrNull()
-            ?.takeIf(String::isNotBlank)
-            ?: return chain.proceed(request)
+        // V75.8.1 — نوعِ صریح و استفاده از currentSessionOrNull (عضوِ خودِ Auth)
+        // تا هیچ ابهامی در استنتاجِ نوع پیش نیاید.
+        // try/catch به‌جای runCatching: فراخوانی ممکن است suspend باشد و
+        // runCatching پارامترش suspend نیست (خطای کامپایل در آن حالت قطعی است).
+        val token: String? = try {
+            SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
+        } catch (_: Throwable) {
+            null
+        }
+        if (token.isNullOrBlank()) return chain.proceed(request)
 
         val authorized: ImageRequest = request.newBuilder()
             .addHeader("Authorization", "Bearer $token")
