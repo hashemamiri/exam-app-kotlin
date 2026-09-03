@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.2:"),
-        "changelog must keep the full history + the new V75.2 line on top")
+        and _v694_changelog.startswith("V75.3:"),
+        "changelog must keep the full history + the new V75.3 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2720,6 +2720,18 @@ require(_v752_throttle == (ROOT/"sql/manual/SQL_NATIVE_STAFF_LOGIN_THROTTLE_V75_
         "V75.2 dual-write SQL copy drifted from the migration")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_2StaffLoginThrottleTest.kt").exists(),
         "V75.2 staff login throttle test missing")
+
+_v753_monitor=(ROOT/"supabase/migrations/20260903_native_exam_monitor_limits_v75_3.sql").read_text()
+require("select 1 from public.exams e where e.id = p_exam" in _v753_monitor
+        and "v_len > 8192" in _v753_monitor
+        and "v_keys > 100" in _v753_monitor
+        and "coalesce(v_existing, 0) + v_len > 32768" in _v753_monitor
+        and "grant execute on function public.native_monitor_upsert_v1(text, jsonb) to authenticated" in _v753_monitor,
+        "V75.3 exam monitor limits are missing")
+require(_v753_monitor == (ROOT/"sql/manual/SQL_NATIVE_EXAM_MONITOR_LIMITS_V75_3.sql").read_text(),
+        "V75.3 dual-write SQL copy drifted from the migration")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_3ExamMonitorLimitsTest.kt").exists(),
+        "V75.3 exam monitor limits test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
