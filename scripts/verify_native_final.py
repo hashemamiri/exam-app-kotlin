@@ -2517,125 +2517,6 @@ require(not (ROOT/"app/src/main/java/ir/exam/app/core/printing/A4LayoutEngine.kt
         and not (ROOT/"app/src/main/java/ir/exam/app/domain/model/PrintModels.kt").exists(),
         "V69.0 legacy print files (A4LayoutEngine/PdfExamRenderer/A4Preview/PrintModels) must be deleted")
 
-# ---- V72.0: مهاجرت خروجی PDF مستقیم از OpenPDF/iText 5 به iText 7 ----
-# موتور مستقیم PDF باید از بستهٔ رسمی iText 7 for Android استفاده کند؛ چاپ
-# سیستمی OfficialPdfPrintAdapter و قابلیت‌های چاپ موجود همچنان مستقل‌اند.
-_v72_direct_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
-_v72_verifier=(ROOT/"app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt")
-_v72_gradle=(ROOT/"app/build.gradle.kts").read_text()
-_v72_settings=(ROOT/"settings.gradle.kts").read_text()
-_v72_direct_pdf_text=_v72_direct_pdf.read_text() if _v72_direct_pdf.exists() else ""
-_v72_verifier_text=_v72_verifier.read_text() if _v72_verifier.exists() else ""
-require(_v72_direct_pdf.exists()
-        and "class DirectPdfExporter(" in _v72_direct_pdf_text
-        and "PageSize.A4" in _v72_direct_pdf_text
-        and "PdfEncodings.IDENTITY_H" in _v72_direct_pdf_text
-        and "PdfFontFactory" in _v72_direct_pdf_text
-        and "Table(" in _v72_direct_pdf_text
-        and 'fonts/bnazanin.ttf' in _v72_direct_pdf_text
-        and 'fonts/bnazanin_bold.ttf' in _v72_direct_pdf_text
-        and "addMatching(" in _v72_direct_pdf_text
-        and "includeAnswerKey" in _v72_direct_pdf_text
-        and "BaseDirection.RIGHT_TO_LEFT" in _v72_direct_pdf_text
-        and "PersianTextShaper.shape" in _v72_direct_pdf_text,
-        "V72.0 iText7 DirectPdfExporter (A4 + Identity-H + B Nazanin) is missing")
-require('implementation("com.itextpdf.android:kernel-android:7.2.5")' in _v72_gradle
-        and 'implementation("com.itextpdf.android:layout-android:7.2.5")' in _v72_gradle
-        and 'https://repo.itextsupport.com/android' in _v72_settings,
-        "V72.0 official iText7 Android repository/dependencies are missing")
-require('implementation("com.github.librepdf:openpdf:1.3.43")' not in _v72_gradle
-        and "com.lowagie" not in _v72_direct_pdf_text
-        and not (ROOT/"app/src/main/java/com/lowagie").exists()
-        and "PersianTextShaper" in (ROOT/"app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt").read_text(),
-        "V72.0 active direct-PDF path still contains OpenPDF/lowagie or lost Persian shaping")
-require('Icons.Outlined.Print' in _print_center_v62
-        and 'contentDescription = "پی دی اف مستقیم"' in _print_center_v62
-        and 'CreateDocument("application/pdf")' in _print_center_v62
-        and 'printableExam(examId, false, header' in _print_center_v62
-        and 'DirectPdfExporter(' in _print_center_v62,
-        "V72.0 printer icon + direct PDF flow on the print-center card is missing")
-require('Text("چاپ برگه")' in _print_center_v62
-        and 'contentDescription = "ویرایش آزمون"' in _print_center_v62
-        and 'OfficialPrintController' in _print_center_v62,
-        "V72.0 must not break existing print-center capabilities (چاپ برگه/چاپ با کلید/ویرایش)")
-
-# خط لولهٔ V71 در مهاجرت کتابخانه حفظ می‌شود: ساخت مرحله‌ای، finalization،
-# اعتبارسنجی iText7، ذخیرهٔ بادوام و read-back دقیق مقصد.
-require("File.createTempFile(" in _v72_direct_pdf_text
-        and "FileOutputStream(staged).use" in _v72_direct_pdf_text
-        and "buildPdf(withImages, output)" in _v72_direct_pdf_text
-        and "PdfArtifactVerifier.inspect(staged)" in _v72_direct_pdf_text
-        and "verifiedWriter.commit(staged, target, artifact)" in _v72_direct_pdf_text
-        and "contentResolver.delete(target, null, null)" in _v72_direct_pdf_text
-        and "pdf.setCloseWriter(false)" in _v72_direct_pdf_text
-        and "WriterProperties()" in _v72_direct_pdf_text
-        and "setFullCompressionMode(true)" in _v72_direct_pdf_text
-        and "setCompressionLevel(9)" in _v72_direct_pdf_text,
-        "V72.0 finalized staging/compression pipeline is missing")
-require("stream.use { buildPdf(withImages, it) }" not in _v72_direct_pdf_text
-        and "buildPdf(withImages, buffer)" not in _v72_direct_pdf_text
-        and "buffer.toByteArray()" not in _v72_direct_pdf_text,
-        "V72.0 must not write iText directly to SAF or hold the complete PDF in RAM")
-
-require(_v72_verifier.exists()
-        and "com.itextpdf.kernel.pdf.PdfReader" in _v72_verifier_text
-        and "PdfDocument(reader)" in _v72_verifier_text
-        and "reader.hasRebuiltXref()" in _v72_verifier_text
-        and '"%PDF-"' in _v72_verifier_text
-        and '"%%EOF"' in _v72_verifier_text
-        and 'MessageDigest.getInstance("SHA-256")' in _v72_verifier_text
-        and "pdf.numberOfPages" in _v72_verifier_text
-        and "com.lowagie" not in _v72_verifier_text,
-        "V72.0 iText7 parse/envelope/page-count/SHA-256 artifact validation is missing")
-_v72_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V71_0VerifiedPdfPipelineTest.kt")
-_v72_test_text=_v72_test.read_text() if _v72_test.exists() else ""
-require(_v72_test.exists()
-        and "real itext7 artifact is parsed and fingerprinted" in _v72_test_text
-        and "zero and truncated files are rejected" in _v72_test_text
-        and "WriterProperties()" in _v72_test_text,
-        "V72.0 real iText7 validation regression test is missing")
-require("فایل PDF تأیید و ذخیره شد" in _print_center_v62
-        and "receipt.sizeKiB" in _print_center_v62
-        and "receipt.pageCount" in _print_center_v62
-        and "pdfStatusIsError" in _print_center_v62
-        and "enabled = !pdfExporting" in _print_center_v62
-        and 'pdfStatus = "فایل PDF ساخته شد."' not in _print_center_v62,
-        "V72.0 UI must report success only after verified receipt (size + page count)")
-
-# ---- V72.0.1: هات‌فیکس compile روی Android — حذف android.icu.text.ArabicShaping ----
-# در CI واقعی android.jar نسخهٔ پروژه کلاس عمومی ArabicShaping را expose نمی‌کند.
-# شکل‌دهی باید مستقل از آن کلاس باشد تا compileDebugKotlin پیش از تست‌ها نشکند.
-_v721_shaper=(ROOT/"app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt")
-_v721_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_1PersianShaperTest.kt")
-_v721_shaper_text=_v721_shaper.read_text() if _v721_shaper.exists() else ""
-require(_v721_shaper.exists()
-        and "object PersianTextShaper" in _v721_shaper_text
-        and "data class Forms" in _v721_shaper_text
-        and "fun shape(text: String)" in _v721_shaper_text
-        and "android.icu.text.ArabicShaping" not in _v721_shaper_text
-        and "ArabicShaping" not in _v721_shaper_text,
-        "V72.0.1 Android compile hotfix is missing: Persian shaping still depends on ArabicShaping")
-require(_v721_test.exists()
-        and "PersianTextShaper.shape" in _v721_test.read_text()
-        and "assertNotEquals" in _v721_test.read_text(),
-        "V72.0.1 Persian shaper JVM regression test is missing")
-
-# ---- V72.0.2: ذخیرهٔ SAF — stream برای providerهای ابری، descriptor فقط fallback ----
-_v722_writer=(ROOT/"app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt")
-_v722_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_2SafPdfWriteTest.kt")
-_v722_writer_text=_v722_writer.read_text() if _v722_writer.exists() else ""
-require(_v722_writer.exists()
-        and "contentResolver.openOutputStream(target)" in _v722_writer_text
-        and "writeWithCompatibleStream" in _v722_writer_text
-        and "writeWithDurableDescriptor" in _v722_writer_text
-        and _v722_writer_text.index("writeWithCompatibleStream") < _v722_writer_text.index("writeWithDurableDescriptor")
-        and "READ_BACK_DELAYS_MS = longArrayOf(0L, 150L, 400L, 900L, 1_800L, 3_000L)" in _v722_writer_text,
-        "V72.0.2 SAF writer must use openOutputStream first and retry cloud read-back")
-require(_v722_test.exists()
-        and "contentResolver.openOutputStream(target)" in _v722_test.read_text()
-        and "descriptor is only fallback" in _v722_test.read_text(),
-        "V72.0.2 SAF writer regression test is missing")
-
 # ---- V72.0.3: هات‌فیکس Regex فرمول — آکولاد بسته باید escape شود ----
 _v723_formatter=(ROOT/"app/src/main/java/ir/exam/app/core/math/NativeMathFormatter.kt")
 _v723_test=(ROOT/"app/src/test/java/ir/exam/app/core/math/NativeMathFormatterTest.kt")
@@ -2648,30 +2529,6 @@ require(_v723_test.exists()
         and "style commands render without invalid regex" in _v723_test.read_text()
         and "NativeMathFormatter.renderTex" in _v723_test.read_text(),
         "V72.0.3 formula Regex regression test is missing")
-
-# ---- V72.0.4: glyphهای کامل PDF — فونت مستقل برای فرمول ----
-_v724_exporter=(ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt")
-_v724_test=(ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_4PdfFontCoverageTest.kt")
-_v724_exporter_text=_v724_exporter.read_text() if _v724_exporter.exists() else ""
-_v724_math=(ROOT/"app/src/main/assets/fonts/dejavu_sans.ttf")
-_v724_math_bold=(ROOT/"app/src/main/assets/fonts/dejavu_sans_bold.ttf")
-_v724_license=(ROOT/"app/src/main/assets/fonts/DEJAVU_LICENSE.txt")
-require(_v724_exporter.exists()
-        and "fonts/dejavu_sans.ttf" in _v724_exporter_text
-        and "fonts/dejavu_sans_bold.ttf" in _v724_exporter_text
-        and "val mathBase" in _v724_exporter_text
-        and "val mathBold" in _v724_exporter_text
-        and "NativeMathFormatter.renderTex(segment.tex)" in _v724_exporter_text
-        and "NativeMathFormatter.renderTex(segment.text)" in _v724_exporter_text,
-        "V72.0.4 direct PDF math-font wiring is missing")
-require(_v724_math.is_file() and _v724_math.stat().st_size > 500_000
-        and _v724_math_bold.is_file() and _v724_math_bold.stat().st_size > 500_000
-        and _v724_license.is_file() and "Bitstream Vera" in _v724_license.read_text(),
-        "V72.0.4 DejaVu math font assets or license are missing")
-require(_v724_test.exists()
-        and "dedicated math font" in _v724_test.read_text()
-        and "mathBase" in _v724_test.read_text(),
-        "V72.0.4 PDF font coverage regression test is missing")
 
 # ---- V72.0.5: ترتیب RTL شکل‌های inline در پیش‌نمایش ویرایشگر ----
 _v725_adapter=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt")
@@ -2769,6 +2626,57 @@ require((ROOT/"app/src/main/assets/formula_editor/formula.html").is_file()
         and "ExistingFormulaEditor(" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text(),
         "V74.1 live HTML formula window or inline existing-formula editor was lost")
 
+# ---- V74.2: حذف کامل iText 7 و مسیر PDF مستقیم ----
+# به‌دلیل نبود مجوز، وابستگی/مخزن/قواعد R8 و کل مسیر DirectPdfExporter حذف شده‌اند.
+# چاپ سیستمی Android (OfficialPdfPrintAdapter)، چاپ HTML و ویرایش سند باقی می‌مانند.
+_i742_removed = [
+    ROOT/"app/src/main/java/ir/exam/app/core/printing/DirectPdfExporter.kt",
+    ROOT/"app/src/main/java/ir/exam/app/core/printing/PdfArtifactVerifier.kt",
+    ROOT/"app/src/main/java/ir/exam/app/core/printing/VerifiedSafPdfWriter.kt",
+    ROOT/"app/src/main/java/ir/exam/app/core/printing/PersianTextShaper.kt",
+    ROOT/"app/src/main/assets/fonts/dejavu_sans.ttf",
+    ROOT/"app/src/main/assets/fonts/dejavu_sans_bold.ttf",
+    ROOT/"app/src/main/assets/fonts/DEJAVU_LICENSE.txt",
+    ROOT/"app/src/test/java/ir/exam/app/core/printing/V71_0VerifiedPdfPipelineTest.kt",
+    ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_1PersianShaperTest.kt",
+    ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_2SafPdfWriteTest.kt",
+    ROOT/"app/src/test/java/ir/exam/app/core/printing/V72_0_4PdfFontCoverageTest.kt",
+    ROOT/"app/src/test/java/ir/exam/app/ui/app/V70_0DirectPdfTest.kt",
+    ROOT/"app/src/test/java/ir/exam/app/ui/app/V70_2DirectPdfAtomicWriteTest.kt",
+]
+require(all(not path.exists() for path in _i742_removed),
+        "V74.2 iText7 direct-PDF implementation/assets/tests were re-added")
+_i742_main = "\n".join(path.read_text(errors="ignore") for path in (ROOT/"app/src/main/java").rglob("*.kt"))
+_i742_tests = "\n".join(path.read_text(errors="ignore") for path in (ROOT/"app/src/test").rglob("*.kt"))
+_i742_build = (ROOT/"app/build.gradle.kts").read_text()
+_i742_settings = (ROOT/"settings.gradle.kts").read_text()
+_i742_proguard = (ROOT/"app/proguard-rules.pro").read_text()
+_i742_active = "\n".join((_i742_main, _i742_tests, _i742_build, _i742_settings, _i742_proguard))
+_i742_forbidden = (
+    "com.itextpdf", "itext 7", "itext7", "DirectPdfExporter",
+    "PdfArtifactVerifier", "VerifiedSafPdfWriter", "PersianTextShaper",
+    "repo.itextsupport.com",
+)
+require(not any(token.lower() in _i742_active.lower() for token in _i742_forbidden),
+        "V74.2 left an iText7/dead direct-PDF reference in code, tests, build or R8")
+_i742_print = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text()
+_i742_official = (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
+require(
+    "OfficialPrintController" in _i742_print
+    and 'Text("چاپ")' in _i742_print
+    and 'Text("چاپ برگه")' in _i742_print
+    and "ExamHtmlPrintDialog(" in _i742_print
+    and "DirectPdfExporter" not in _i742_print
+    and 'CreateDocument("application/pdf")' not in _i742_print
+    and 'contentDescription = "پی دی اف مستقیم"' not in _i742_print
+    and "Icons.Outlined.Print" not in _i742_print
+    and "pdfExporting" not in _i742_print,
+    "V74.2 removed direct-PDF UI but preserved system/HTML print actions incorrectly",
+)
+require("class OfficialPdfPrintAdapter" in _i742_official
+        and "android.graphics.pdf.PdfDocument" in _i742_official,
+        "V74.2 accidentally removed the license-free Android system print adapter")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2777,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V74.1:"),
-        "changelog must keep the full history + the new V74.1 line on top")
+        and _v694_changelog.startswith("V74.2:"),
+        "changelog must keep the full history + the new V74.2 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

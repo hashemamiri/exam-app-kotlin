@@ -14502,6 +14502,49 @@ SQL جدید: ندارد | Edge جدید: ندارد | Secret جدید: ندار
 ۴) چاپ آزمون/HTML: فرمول‌ها مثل قبل رندر شوند.
 ```
 
-گام بعدی (در صورت تمایل): پچ ۳ پیشنهادی — حذف `FormulaInlineEditor.kt`/`InlineMathTextEditor.kt`
-نیست (زنده‌اند)؛ بلکه بررسی اقلامِ کم‌استفادهٔ جدول گزارش مثل فونت‌های سنگین/تکراری
-قبل از هر تصمیم.
+## ۲۸۰) V74.2 — حذف کامل iText 7 و مسیر PDF مستقیم
+
+### تصمیم تأییدشده
+
+به‌دلیل نبود مجوز iText 7، کل مسیر ساخت و ذخیرهٔ مستقیم PDF حذف شد. این کار
+قابلیت‌های چاپ سیستمی Android و چاپ HTML را حذف نمی‌کند.
+
+### حذف‌شده
+
+```text
+کد اصلی:
+  core/printing/DirectPdfExporter.kt
+  core/printing/PdfArtifactVerifier.kt
+  core/printing/VerifiedSafPdfWriter.kt
+  core/printing/PersianTextShaper.kt
+
+وابستگی/زیرساخت:
+  دو implementation مربوط به kernel/layout در app/build.gradle.kts
+  مخزن repo.itextsupport.com در settings.gradle.kts
+  قواعد com.itextpdf در app/proguard-rules.pro
+
+دارایی و تست اختصاصی:
+  fonts/dejavu_sans.ttf و fonts/dejavu_sans_bold.ttf و مجوز آن‌ها
+  تست‌های V70.0، V70.2، V71.0، V72.0.1، V72.0.2 و V72.0.4
+```
+
+### رابط کاربری و چاپ باقی‌مانده
+
+```text
+حذف شد: آیکن «پی‌دی‌اف مستقیم» و انتخاب مقصد CreateDocument(application/pdf)
+باقی ماند: «چاپ» تعاملی HTML با ExamHtmlPrintDialog
+باقی ماند: «چاپ برگه» با OfficialPrintController و Android Print Framework
+باقی ماند: ویرایشگر سند و مسیرهای چاپ رسمی موجود
+```
+
+### verify و اثر حجم
+
+```text
+نگهبان V74.2 نبود iText/com.itextpdf/DirectPdfExporter را در کد، تست، build و R8
+الزام می‌کند و وجود OfficialPdfPrintAdapter/چاپ HTML را هم کنترل می‌کند.
+FINAL_NATIVE_VERIFY=PASS kotlin_files=198 edge_functions=3
+```
+
+SQL جدید: ندارد | Edge جدید: ندارد | Secret جدید: ندارد | Migration: ندارد
+پس از نصب APK، «چاپ برگه»، «چاپ» HTML و ویرایش سند باید تست شوند؛ مسیر PDF مستقیم
+دیگر عمداً در برنامه وجود ندارد.

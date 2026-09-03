@@ -1,8 +1,5 @@
 package ir.exam.app.ui.printing
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.github.jan.supabase.postgrest.postgrest
-import ir.exam.app.core.printing.DirectPdfExporter
 import ir.exam.app.core.printing.OfficialPrintController
 import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.domain.model.OfficialPrintHeader
@@ -89,52 +84,13 @@ fun ExamPrintCenterScreen(
     var header by remember { mutableStateOf(OfficialPrintHeader()) }
     // مدارس عضو معلم برای انتخاب «نام مدرسه» در سربرگ (همان RPC نمای مدارس).
     var schools by remember { mutableStateOf<List<TeacherSchoolItem>>(emptyList()) }
-    // V72.0 — پی دی اف مستقیم با iText 7: آیکن پرینتر روی کارت هر آزمون
-    // فایل PDF را مستقیم (بدون پنجرهٔ چاپ سیستم) با همان قالب چاپ می‌سازد.
     val scope = rememberCoroutineScope()
     val portability = remember { SupabasePortabilityRepository() }
-    val directPdf = remember { DirectPdfExporter(context.applicationContext) }
-    var pendingPdfExamId by remember { mutableStateOf<String?>(null) }
-    var pdfStatus by remember { mutableStateOf<String?>(null) }
-    var pdfStatusIsError by remember { mutableStateOf(false) }
-    var pdfExporting by remember { mutableStateOf(false) }
-    // V73.0 — پنجرهٔ چاپ تعاملی HTML با انتقال خودکار سؤالات آزمون.
+    var printStatus by remember { mutableStateOf<String?>(null) }
+    var printStatusIsError by remember { mutableStateOf(false) }
+    // V73.0 — پنجرهٔ چاپ تعاملی HTML با انتقال خودکار سؤالات.
     var htmlPrintExam by remember { mutableStateOf<ir.exam.app.domain.model.OfficialExamPrintable?>(null) }
     var htmlPrintLoading by remember { mutableStateOf(false) }
-    val createPdf = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri: Uri? ->
-        val examId = pendingPdfExamId
-        pendingPdfExamId = null
-        if (uri != null && examId != null) {
-            scope.launch {
-                pdfExporting = true
-                try {
-                    pdfStatusIsError = false
-                    pdfStatus = "در حال ساخت، ذخیره و اعتبارسنجی PDF…"
-                    portability.printableExam(examId, false, header, layoutStore.read(examId))
-                        .onSuccess { printable ->
-                            directPdf.export(printable, uri)
-                                .onSuccess { receipt ->
-                                    pdfStatusIsError = false
-                                    pdfStatus = "فایل PDF تأیید و ذخیره شد " +
-                                        "(${receipt.sizeKiB} کیلوبایت، ${receipt.pageCount} صفحه)."
-                                }
-                                .onFailure { error ->
-                                    pdfStatusIsError = true
-                                    pdfStatus = sanitizePdfError(error)
-                                }
-                        }
-                        .onFailure { error ->
-                            pdfStatusIsError = true
-                            pdfStatus = sanitizePdfError(error)
-                        }
-                } finally {
-                    pdfExporting = false
-                }
-            }
-        }
-    }
     LaunchedEffect(Unit) {
         viewModel.load()
         runCatching {
@@ -170,14 +126,14 @@ fun ExamPrintCenterScreen(
             }
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        pdfStatus?.let {
+        printStatus?.let {
             Text(
                 it,
-                color = if (pdfStatusIsError) MaterialTheme.colorScheme.error
+                color = if (printStatusIsError) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.primary
             )
         }
-        if (state.loading || state.portabilityLoading || pdfExporting || htmlPrintLoading) {
+        if (state.loading || state.portabilityLoading || htmlPrintLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
         if (state.exams.isEmpty() && !state.loading) Text("آزمونی برای چاپ نیست.")
@@ -203,22 +159,22 @@ fun ExamPrintCenterScreen(
                                     scope.launch {
                                         htmlPrintLoading = true
                                         try {
-                                            pdfStatus = null
-                                            pdfStatusIsError = false
+                                            printStatus = null
+                                            printStatusIsError = false
                                             portability.printableExam(exam.id, false, header, layoutStore.read(exam.id))
                                                 .onSuccess { printable ->
                                                     htmlPrintExam = printable
                                                 }
                                                 .onFailure { error ->
-                                                    pdfStatusIsError = true
-                                                    pdfStatus = sanitizePdfError(error)
+                                                    printStatusIsError = true
+                                                    printStatus = sanitizePrintError(error)
                                                 }
                                         } finally {
                                             htmlPrintLoading = false
                                         }
                                     }
                                 },
-                                enabled = !htmlPrintLoading && !pdfExporting
+                                enabled = !htmlPrintLoading
                             ) {
                                 Text("چاپ")
                             }
@@ -235,20 +191,6 @@ fun ExamPrintCenterScreen(
                                 Icon(
                                     Icons.Outlined.Edit,
                                     contentDescription = "ویرایش آزمون",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            // V72.0 — آیکن پرینتر: پی دی اف مستقیم با iText 7
-                            // روی همان قالب چاپ، بدون پنجرهٔ چاپ سیستم.
-                            androidx.compose.material3.IconButton(onClick = {
-                                pdfStatus = null
-                                pdfStatusIsError = false
-                                pendingPdfExamId = exam.id
-                                createPdf.launch("${exam.title.ifBlank { "آزمون" }}.pdf")
-                            }, enabled = !pdfExporting) {
-                                Icon(
-                                    Icons.Outlined.Print,
-                                    contentDescription = "پی دی اف مستقیم",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -433,11 +375,11 @@ private fun HeaderPreviewRow(right: String, center: String, left: String) {
     }
 }
 
-/** V70.0 — پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */
-private fun sanitizePdfError(error: Throwable): String = error.message.orEmpty()
+/** V73.0 — پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */
+private fun sanitizePrintError(error: Throwable): String = error.message.orEmpty()
     .substringBefore("URL:")
     .substringBefore("Headers:")
     .replace(Regex("(?i)authorization[^,\\n]*"), "")
     .replace(Regex("(?i)apikey[^,\\n]*"), "")
     .take(240)
-    .ifBlank { "ساخت پی دی اف ناموفق بود." }
+    .ifBlank { "چاپ ناموفق بود." }

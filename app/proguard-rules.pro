@@ -26,8 +26,3 @@
 # Third-party optional platform classes may be absent on some Android devices.
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
-
-# V72.0 — iText 7 for Android برای PDF مستقیم. APIهای layout و font را در
-# Release/R8 نگه می‌داریم تا سازنده، فونت Identity-H و parser PDF حذف نشوند.
--keep class com.itextpdf.** { *; }
--dontwarn com.itextpdf.**
