@@ -15004,3 +15004,47 @@ FINAL_NATIVE_VERIFY: اجرا خواهد شد پس از apply در CI کاربر
 ۳) بررسی سوابق: select * from public.wallet_payment_orders where provider='sandbox'
    order by id desc limit 100;
 ```
+
+## ۲۸۳) V75.1 — گارد ارتقای نقش به مدیر/معلم (بند ۲.۲ گزارش امنیتی)
+
+### ریشه
+
+```text
+native_complete_manager_registration_v36 و native_complete_teacher_registration_v1
+هر دو به authenticated مجازند و فقط وضعیت پروفایل را چک می‌کردند:
+  - ایمیل فقط «خالی نباشد» و «@student.exam.local نباشد» (تأیید ایمیل چک نمی‌شد)
+  - نقش انتخابی ثبت‌نام اصلاً خوانده نمی‌شد
+نتیجه: هر کاربر تازه‌وارد (حتی با ایمیل تأییدنشده) می‌توانست با یک فراخوانی مستقیم
+خود را «مدیر مدرسه» کند و مدرسهٔ جدید بسازد؛ گارد واقعی فقط در رابط کاربر بود.
+```
+
+### چه شد (فقط افزودن گارد؛ منطق قبلی دست‌نخورده)
+
+```text
+۱) هر دو تابع: select email_confirmed_at from auth.users → اگر null باشد خطا.
+۲) تابع مدیر: نقش از public.native_registration_roles خوانده می‌شود و در نبود جدول
+   از metadata قدیمی؛ اگر 'manager' نباشد ثبت‌نام مدیر رد می‌شود.
+   (to_regclass برای سازگاری با پروژه‌هایی که V60.2 را اجرا نکرده‌اند)
+۳) قفل هم‌نامی، بررسی مالکیت، محدودیت عضویت کلاس/مدرسه و تراکنش حفظ شدند.
+۴) grantها دوباره اعمال شده‌اند (فقط authenticated).
+```
+
+### فایل‌ها
+
+```text
+supabase/migrations/20260903_native_registration_role_guard_v75_1.sql   (جدید)
+sql/manual/SQL_NATIVE_REGISTRATION_ROLE_GUARD_V75_1.sql                  (جدید، dual-write)
+app/src/test/java/ir/exam/app/ui/app/V75_1RegistrationRoleGuardTest.kt   (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL جدید: بله — باید روی پروژه اصلی eazwuyrymsvdkwckdpco اجرا شود
+Edge جدید/Secret/Dependency: ندارد
+تست روی دستگاه: ثبت‌نام معلم و مدیر با ایمیل تأییدشده؛ تلاش برای فراخوانی مستقیم
+RPC روی حساب تأییدنشده باید خطای «ایمیل شما هنوز تأیید نشده است» بدهد.
+```

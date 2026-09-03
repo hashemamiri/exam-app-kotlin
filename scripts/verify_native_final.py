@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.0:"),
-        "changelog must keep the full history + the new V75.0 line on top")
+        and _v694_changelog.startswith("V75.1:"),
+        "changelog must keep the full history + the new V75.1 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2697,6 +2697,18 @@ require("function sandboxRequestAllowed(" in _v750_payment
         "V75.0 sandbox wallet credit is reachable without the dedicated server token")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_0PaymentSandboxGuardTest.kt").exists(),
         "V75.0 payment sandbox guard test missing")
+
+_v751_guard=(ROOT/"supabase/migrations/20260903_native_registration_role_guard_v75_1.sql").read_text()
+require("email_confirmed_at" in _v751_guard
+        and "native_registration_roles" in _v751_guard
+        and "coalesce(v_pending, 'teacher') <> 'manager'" in _v751_guard
+        and "grant execute on function public.native_complete_manager_registration_v36(text,text,text,text,text) to authenticated" in _v751_guard
+        and "grant execute on function public.native_complete_teacher_registration_v1(text,text) to authenticated" in _v751_guard,
+        "V75.1 role escalation guard is missing or incomplete")
+require(_v751_guard == (ROOT/"sql/manual/SQL_NATIVE_REGISTRATION_ROLE_GUARD_V75_1.sql").read_text(),
+        "V75.1 dual-write SQL copy drifted from the migration")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_1RegistrationRoleGuardTest.kt").exists(),
+        "V75.1 role escalation guard test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
