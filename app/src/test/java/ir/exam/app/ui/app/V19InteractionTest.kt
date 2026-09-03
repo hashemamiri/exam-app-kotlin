@@ -61,14 +61,12 @@ class V19InteractionTest {
     }
 
     @Test
-    fun `formula editor is ltr with active box auto scroll`() {
+    fun `formula view is ltr with active box auto scroll`() {
         val root = root()
         val formula = File(root, "app/src/main/java/ir/exam/app/ui/math/NativeFormulaView.kt").readText()
-        val dialog = File(root, "app/src/main/java/ir/exam/app/ui/math/FormulaEditorDialog.kt").readText()
         assertTrue("LocalLayoutDirection provides LayoutDirection.Ltr" in formula)
         assertTrue("horizontal.animateScrollTo(targetX)" in formula)
         assertTrue("vertical.animateScrollTo(targetY)" in formula)
-        assertTrue("LocalLayoutDirection provides LayoutDirection.Ltr" in dialog)
     }
 
     @Test

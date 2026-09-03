@@ -101,7 +101,6 @@ import ir.exam.app.ui.figure.FigurePickerDialog
 import ir.exam.app.ui.figure.FigureTypePickerDialog
 import ir.exam.app.ui.image.QuestionMediaEditor
 import ir.exam.app.ui.math.ExistingFormulaEditor
-import ir.exam.app.ui.math.FormulaEditorDialog
 import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.ui.figure.AtlasEditorDialog
 import ir.exam.app.ui.figure.AtlasTypePickerDialog

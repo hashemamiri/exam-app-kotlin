@@ -14424,3 +14424,84 @@ Dependency جدید: ندارد
 گام بعدی: پچ V74.1 — حذف زنجیرهٔ ویرایشگر فرمول Native مرده
 (FormulaEditorDialog/FormulaLibraryDialog/FormulaSmartHubDialog/
 FormulaReferenceLibrary و …) + تست‌ها و verify هماهنگ.
+
+## ۲۷۹) V74.1 — پاک‌سازی زنجیرهٔ مردهٔ ویرایشگر فرمول Native
+
+### چه شد (تصمیم‌های تأییدشدهٔ کاربر با ask_user)
+
+```text
+حذف کامل (۷ فایل کد + ۱ فایل داده — هیچ call-site ران‌تایمی نداشتند):
+  ui/math/FormulaEditorDialog.kt        (۱۲۳۰ سطر، ویرایشگر کامل فرمول Native)
+  ui/math/FormulaLibraryDialog.kt       (کتابخانهٔ تمام‌صفحه)
+  ui/math/FormulaSmartHubDialog.kt      (هاب درسی)
+  ui/math/FormulaReferenceLibrary.kt    (بارگذار کتابخانه از asset)
+  ui/math/FormulaLibraryNavigator.kt    (رهیاب دسته‌ها)
+  ui/math/FormulaSmartReference.kt      (درس/قالب/بسته/کلیدهای درشت)
+  ui/math/FormulaReferenceStore.kt      (اخیر/محبوب‌ها)
+  assets/formula_library_v13.json       (۱۷۲KB «مرجع ۱۲۰۰+ فرمول»)
+حذف import بی‌استفادهٔ FormulaEditorDialog از ExamBuilderScreen.kt
+```
+
+- پنجرهٔ فرمول از V53.4 کاملاً HTML تمام‌صفحه است (`formula_editor/formula.html`
+  از طریق `FormulaHostDialog`)؛ زنجیرهٔ Native بالا از آن زمان فقط در حافظهٔ
+  تست‌ها/verify زنده بود و در APK وزن مرده داشت.
+- مسیرهای زندهٔ فرمول **دست‌نخورده** ماندند: `FormulaHostDialog.kt`،
+  `NativeFormulaView.kt`، `NativeMathText.kt`، `NativeMathSvgRenderer.kt`،
+  `FormulaBoxEditor.kt`، `FormulaInlineEditor.kt` (ویرایش فرمول موجود از داخل
+  متن سؤال با `ExistingFormulaEditor`)، و asset `formula_editor/` (خودکفاست و
+  از json حذف‌شده تغذیه نمی‌کرد — پیش از حذف ثابت شد).
+
+### تست‌های حذف‌شده / کوتاه‌شده
+
+```text
+حذف کامل: FormulaReferenceAssetTest (۵ تست: ساختار json، ترتیب بخش‌های
+          ویرایشگر، پوششِ SVG با پیکرهٔ json، دسترسی‌پذیری Native، SVG به‌جای TeX)
+          FormulaLibraryNavigatorTest، FormulaSmartReferenceTest،
+          V52FormulaEditorPolishTest
+کوتاه‌سازی: V19InteractionTest (فقط assert مربوط به ویرایشگر مرده حذف شد؛
+          سه assert زندهٔ NativeFormulaView باقی ماند)
+          Neumorphic69IntegrationTest (set استثنای WebView فقط فایل‌های
+          واقعاً زنده را فهرست می‌کند)
+```
+
+### verify
+
+```text
+حذف تعریف ۷ متغیر زنجیره و ~۲۰ بلوک require وابسته
+بازنویسی ۲ بلوک به‌گونه‌ای که فقط ضمانت‌های زنده بمانند:
+  LTR/auto-scroll  → فقط NativeFormulaView
+  active-box safety → فقط فرمول‌های core (FormulaBoxEditor)
+بند جدید V74.1 ضد-بازگشت: غیبت ۸ فایل + نبود فراخوانی دیالوگ‌های حذف‌شده در main
+  + زنده‌بودن مسیرهای فرمول HTML و ExistingFormulaEditor
+نگهبان changelog: startswith V74.1 و آستانهٔ ۲۵۱ سطر
+```
+
+### تست/verify
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=202 edge_functions=3
+اسکن سراسری: هیچ ارجاع باقی‌مانده به ۸ فایل/نوع/مسیر حذف‌شده در main و تست‌ها
+بالانس آکولاد فایل‌های ویرایش‌شده → ۰
+مارکرهای زندهٔ V19 (LocalLayoutDirection/animateScrollTo) در NativeFormulaView موجود
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد | Edge جدید: ندارد | Secret جدید: ندارد | Migration: ندارد
+پیش‌نیاز: V74.0 (پچ قبلی همین پاک‌سازی) — این پچ به‌صورت ترتیبی روی V74.0 ساخته شد
+```
+
+### چک‌لیست دستگاه (پس از نصب APK)
+
+```text
+۱) آزمون‌ساز: درج فرمول جدید از پنجرهٔ فرمول HTML مثل قبل کار کند.
+۲) آزمون‌ساز: لمسِ یک فرمول موجود در متن سؤال → ویرایشگر inline (ExistingFormulaEditor)
+   باز شود و ویرایش/درج فرمول کار کند.
+۳) گزینه‌های «جورکردنی» و گزینه‌های متنی: ویرایش فرمول موجود مثل قبل.
+۴) چاپ آزمون/HTML: فرمول‌ها مثل قبل رندر شوند.
+```
+
+گام بعدی (در صورت تمایل): پچ ۳ پیشنهادی — حذف `FormulaInlineEditor.kt`/`InlineMathTextEditor.kt`
+نیست (زنده‌اند)؛ بلکه بررسی اقلامِ کم‌استفادهٔ جدول گزارش مثل فونت‌های سنگین/تکراری
+قبل از هر تصمیم.
