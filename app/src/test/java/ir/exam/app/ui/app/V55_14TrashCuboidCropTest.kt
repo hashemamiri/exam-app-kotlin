@@ -33,7 +33,6 @@ class V55_14TrashCuboidCropTest {
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
     private val gallery by lazy { source("app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt") }
     private val renderer by lazy { source("app/src/main/java/ir/exam/app/core/figure/FigureSvgRenderer.kt") }
-    private val asset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
     private val editor by lazy { source("app/src/main/java/ir/exam/app/ui/image/InteractiveImageEditorDialog.kt") }
 
     @Test
@@ -50,7 +49,6 @@ class V55_14TrashCuboidCropTest {
         assertFalse("FigureTemplate(\"box\", \"مکعب‌مستطیل\"" in gallery)
         assertTrue("\"cube\", \"cuboid\", \"box\" ->" in renderer)
         // مرجع هم نام جدید را می‌فهمد.
-        assertTrue("if (t === 'cuboid') t = 'box';" in asset)
         // نمودار جعبه‌ای دست‌نخورده است.
         assertTrue("FigureTemplate(\"box\", \"جعبه‌ای\"" in gallery)
     }

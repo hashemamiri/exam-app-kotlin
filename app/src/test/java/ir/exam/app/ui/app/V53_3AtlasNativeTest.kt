@@ -28,9 +28,7 @@ class V53_3AtlasNativeTest {
     private val mathText by lazy { source("app/src/main/java/ir/exam/app/ui/math/NativeMathText.kt") }
     private val pdfAdapter by lazy { source("app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt") }
     private val webSection by lazy { source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt") }
-    private val webField by lazy { source("app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt") }
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
-    private val asset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
     private val figureSpec by lazy { source("app/src/main/java/ir/exam/app/core/figure/FigureSpec.kt") }
 
     @Test
@@ -113,21 +111,3 @@ class V53_3AtlasNativeTest {
         assertTrue("AtlasTarget(kind = \"s\", domain = \"chem\", chooseType = true)" in builder)
         assertTrue("AtlasTypePickerDialog(" in builder)
     }
-
-    @Test
-    fun `double click on native token kinds opens native editor`() {
-        // پل asset
-        assertTrue("onEditFigure" in asset)
-        assertTrue("applyEditedToken" in asset && "cancelEditToken" in asset)
-        assertTrue("kind !== 't' && kind !== 'p' && kind !== 'a' && kind !== 's'" in asset)
-        // پل Kotlin
-        assertTrue("fun onEditFigure(specJson: String?)" in webField)
-        assertTrue("applyEditedFigureJson" in webField && "cancelEditFigure" in webField)
-        // اتصال Builder: هر چهار نوع به ویرایشگر Native خودش می‌رود.
-        assertTrue("onEditFigureToken = { rawJson ->" in builder)
-        listOf("\"t\" -> tableTarget", "\"p\" -> periodicTarget", "\"a\" -> atlasTarget", "\"s\" -> atlasTarget").forEach {
-            assertTrue("missing route: $it", it in builder)
-        }
-        assertTrue("editingWebToken" in builder && "deliverFigure" in builder)
-    }
-}

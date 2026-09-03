@@ -31,7 +31,6 @@ class V58_0StudentExamUxTimerTest {
     private val zoomDialog by lazy { source("app/src/main/java/ir/exam/app/ui/figure/ZoomableFigureDialog.kt") }
     private val builderVm by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt") }
     private val builderScreen by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
-    private val editorAsset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
 
     @Test
     fun `zoom dialog toolbar no longer overlaps the rotated periodic table`() {
@@ -104,7 +103,6 @@ class V58_0StudentExamUxTimerTest {
 
     @Test
     fun `teacher editor hides atlas naming boxes`() {
-        assertTrue(".qmf-surface.input .an-af{display:none !important;}" in editorAsset)
         assertTrue("showAtlasBlanks = false" in builderScreen)
     }
 }

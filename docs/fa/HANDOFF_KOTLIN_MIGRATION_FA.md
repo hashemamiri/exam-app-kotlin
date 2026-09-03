@@ -14339,3 +14339,88 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```text
 FINAL_NATIVE_VERIFY=PASS kotlin_files=211 edge_functions=3
 ```
+
+## ۲۷۸) V74.0 — پاکسازی کد مردهٔ WebView کادر متن سؤال و assetهای question_editor
+
+### چه شد (تصمیم‌های تأییدشدهٔ کاربر با ask_user)
+
+```text
+حذف کامل دو کامپوننت WebView مرده (هیچ call-site نداشتند):
+  ui/math/QuestionEditorWebView.kt            (QuestionEditorWebViewPoc)
+  ui/math/QuestionEditorWebViewDialog.kt
+حذف کامپوزبل مردهٔ QuestionTextFieldWebView( از داخل
+  ui/math/QuestionTextFieldWebView.kt         (فایل باقی می‌ماند)
+حذف کامل assetهای بی‌استفادهٔ question_editor (حذف ~۴.۹MB از APK):
+  app/src/main/assets/question_editor/         (question_editor.html +
+                                               question_image_uploader.html + version.txt)
+به‌روزرسانی کامنت کهنهٔ FormulaHostDialog (رجوع به asset حذف‌شده).
+```
+
+- کادر متن سؤال از V65.0 کاملاً Native (BasicTextField + RichTextSplitter) است؛
+  WebView قدیمی سؤال فقط بایگانیِ رفتارهای V53–V55 بود و هیچ مسیر ران‌تایمی نداشت.
+- `QuestionEditorFieldController` (کلاس هماهنگ‌کنندهٔ درج توکن) به‌طور کامل حفظ شد؛
+  Builder/QuestionTextWebSection همچنان از nativeInsert/nativeReplace/
+  nativeOpenFormula/pendingCaretOffset استفاده می‌کنند و متدهای dual-path
+  (insertFigureJson/applyEditedFigureJson/...) دست‌نخورده ماندند.
+
+### تست‌های حذف‌شده (بایگانی WebView قدیمی)
+
+```text
+حذف کامل: QuestionEditorWebViewPocTest، V54_6BridgeRecursionFixTest،
+          V54_7SrcdocFallbackTest، V55_7AutoGrowFieldTest،
+          V55_9NativeFigEditIsolationTest، V55_10SelectDeleteTypeTest،
+          V55_11XCaretFixTest
+کوتاه‌سازی (فقط حذف متد/خواصِ وابسته به asset/کامپوزبل مرده؛ مسیرهای زنده ماندند):
+          V53WebFieldNativeToolsTableTest، V53_3AtlasNativeTest،
+          V53_4FormulaHostFrameTest، V54_3ChartLibraryFinalTest،
+          V54_4ReferenceParityFixTest، V54_5FormulaBootDiagnosticsTest،
+          V55_8FixedBoxShrinkTest، V55_13GeoNativeLtrTest،
+          V55_14TrashCuboidCropTest، V58_0StudentExamUxTimerTest
+دست‌نخورده (زنده): V55StandaloneFormulaTest و همهٔ تست‌های مسیر فرمول فعلی
+```
+
+### verify
+
+```text
+حذف ~۲۵ شرط legacy مربوط به question_editor.html/QuestionTextFieldWebView
+به‌روزرسانی approved_webview_files (حذف نام دو فایل کاملاً حذف‌شده)
+بازنویسی دو شرط زنده (V55.7 heightIn در web_section؛ V55.13 مسیر g/'' در builder؛
+V55.14 شناسهٔ cuboid در gallery) بدون وابستگی به asset حذف‌شده
+نگهبان changelog: startswith V74.0 و آستانهٔ ۲۵۰ سطر
+بند جدید V74.0 ضد-بازگشت: غیبت دو فایل، غیبت پوشهٔ asset، نبود کامپوزبل مرده و
+نبود مسیر بارگیری قدیمی در main
+```
+
+### تست/verify
+
+```text
+FINAL_NATIVE_VERIFY=PASS kotlin_files=209 edge_functions=3
+شبیه‌سازی needleهای باقی‌ماندهٔ V65_0/V67_1/V54_4/V54_5/V55_8 → همگی سبز
+اسکن import فایل کوتاه‌شدهٔ QTFW → فقط WebView + JSONObject
+بالانس آکولاد همهٔ فایل‌های تغییرکرده → ۰
+```
+
+### عملیات
+
+```text
+SQL جدید: ندارد
+Edge Function جدید: ندارد
+Secret جدید: ندارد
+Migration جدید: ندارد
+Dependency جدید: ندارد
+پیش‌نیاز: V73.0.2 (HEAD 2ae2569)
+```
+
+### چک‌لیست دستگاه (پس از نصب APK جدید)
+
+```text
+۱) آزمون‌ساز: تایپ در کادر متن سؤال، درج فرمول/شکل/جدول/آناتومی/تناوبی و ویرایش
+   دوبارهٔ آن‌ها مثل قبل کار کند (همه مسیر Native است).
+۲) پنجرهٔ تمام‌صفحهٔ فرمول (فرمول HTML) مثل قبل باز و درج شود.
+۳) «چاپ آزمون» و چاپ HTML تعاملی مثل قبل کار کند.
+۴) APK جدید کوچک‌تر شده است (~۵MB).
+```
+
+گام بعدی: پچ V74.1 — حذف زنجیرهٔ ویرایشگر فرمول Native مرده
+(FormulaEditorDialog/FormulaLibraryDialog/FormulaSmartHubDialog/
+FormulaReferenceLibrary و …) + تست‌ها و verify هماهنگ.

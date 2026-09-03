@@ -12,6 +12,8 @@ import org.junit.Test
  *    رویداد onOpenFormula به Native می‌رود.
  * ۳) «پنجرهٔ فرمول تمام‌WebView»: FormulaHostDialog تمام‌صفحه برای متن سؤال،
  *    گزینه‌ها و جورکردنی؛ دیالوگ AlertDialog قدیمی از Builder حذف شد.
+ * (پاک‌سازی V74.0: asset قدیمی question_editor.html و WebView کادر متن سؤال حذف
+ * شدند؛ این تست فقط مسیر زندهٔ FormulaHostDialog فرمول را نگه می‌دارد.)
  */
 class V53_4FormulaHostFrameTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -20,34 +22,16 @@ class V53_4FormulaHostFrameTest {
 
     private fun source(path: String): String = File(root(), path).readText()
 
-    private val asset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
     private val host by lazy { source("app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt") }
-    private val webField by lazy { source("app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt") }
     private val webSection by lazy { source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt") }
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
 
     @Test
-    fun `reference frame and label render byte identical with no compose duplicate`() {
-        // V54.4 — قاب/برچسب مرجع داخل HTML دست‌نخورده می‌ماند؛ CSS دستکاری قاب حذف شد.
-        assertFalse(".field>span{display:none" in asset)
-        assertFalse(".exam-question-editor-shell{padding:0 !important" in asset)
-        // Compose هیچ برچسب/قاب تکراری دور WebView نمی‌کشد.
-        val webSection = source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt")
+    fun `question text section stays native compose without a webview field`() {
         assertFalse("\"متن سؤال\"" in webSection)
         assertFalse("BorderStroke" in webSection)
         assertTrue("BasicTextField(" in webSection)
-    }
-
-    @Test
-    fun `formula never boots the inline iframe in nativeTools mode`() {
-        // بازتعریف __openMathEditor در حالت nativeTools رویداد را به Native می‌فرستد.
-        val nativeBlock = asset.substringAfter("V53.4 — فرمول دیگر داخل همین WebView")
-        assertTrue("window.__openMathEditor = function ()" in nativeBlock)
-        assertTrue("ExamEditorNative.onOpenFormula(t.value || '', s, en)" in nativeBlock)
-        // پل Kotlin
-        assertTrue("fun onOpenFormula(text: String?, selStart: Int, selEnd: Int)" in webField)
-        assertTrue("nativeOpenFormula" in webSection)
-        assertTrue("controller.openTool(\"formula\")" in webSection)
+        assertFalse("QuestionTextFieldWebView(" in webSection)
     }
 
     @Test
@@ -59,9 +43,6 @@ class V53_4FormulaHostFrameTest {
         assertTrue("ExamFormulaHost.begin(" in host)
         // پایان کار با بسته‌شدن ویرایشگر مرجع (رویداد overlay=false پس از باز شدن).
         assertTrue("onResult(latestText)" in host)
-        // حالت میزبان asset: صفحهٔ مرجع قابل مشاهده می‌ماند و ویرایشگر فوراً باز می‌شود.
-        assertTrue("formulaHost = /[?&]formulaHost=1/" in asset)
-        assertTrue("window.ExamEditorFormula" in asset)
     }
 
     @Test

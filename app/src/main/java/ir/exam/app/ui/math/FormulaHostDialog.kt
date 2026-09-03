@@ -161,8 +161,8 @@ fun FormulaHostDialog(
                                     return true
                                 }
                             }
-                            // V55 — پنجرهٔ فرمول اکنون فایل مستقل formula.html (انتخاب کاربر) است؛
-                            // نه صفحهٔ کامل question_editor. auto-open مرجع خودش پنجره را باز می‌کند.
+                            // V55 — پنجرهٔ فرمول فایل مستقل formula.html است (پاک‌سازی V74.0:
+                            // asset قدیمی question_editor حذف شد). auto-open مرجع خودش پنجره را باز می‌کند.
                             loadUrl("https://exam-editor.local/formula-editor/formula.html")
                         }
                     },

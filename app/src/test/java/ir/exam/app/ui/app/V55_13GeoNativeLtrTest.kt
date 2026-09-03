@@ -26,23 +26,7 @@ class V55_13GeoNativeLtrTest {
 
     private fun source(path: String) = File(root(), path).readText()
 
-    private val asset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
-    private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
     private val periodic by lazy { source("app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt") }
-
-    @Test
-    fun `second click on geometry and graph tokens goes to the native editor`() {
-        val boot = asset.substringAfter("exam-editor-native-boot").substringBefore("</script>")
-        assertTrue("&& kind !== 'g' && kind !== ''" in boot.replace("\n", " ").replace("            ", " ")
-                || "kind !== 'g'" in boot)
-        // Kotlin: توکن g/خالی به FigurePickerDialog می‌رود و جایگزینی توکن دارد.
-        assertTrue("\"g\", \"\" -> figureTarget = FigureTarget(" in builder)
-        assertTrue("GRAPH_FIGURES.any { it.id == spec.type }" in builder)
-        // خروجی ویرایش، توکن همان شکل را جایگزین می‌کند (نه درج دوباره).
-        val figBlock = builder.substringAfter("figureTarget?.let").substringBefore("fun deliverFigure")
-        assertTrue("applyEditedFigureJson" in figBlock)
-        assertTrue("cancelEditFigure" in figBlock)
-    }
 
     @Test
     fun `periodic touch grid is forced left-to-right`() {

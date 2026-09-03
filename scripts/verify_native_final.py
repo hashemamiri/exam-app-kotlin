@@ -131,12 +131,10 @@ webview_files = {
     for f in (ROOT / "app/src/main/java").rglob("*.kt")
     if "android.webkit" in f.read_text(errors="ignore")
 }
-# Hybrid migration: WebView is allowed only inside the local formula editor adapter
-# and (V53.1, user-approved) the local question text field surface.
+# پاک‌سازی V74.0: کادر متن سؤال از V65 Native است و WebView قدیمی question_editor
+# حذف شد؛ WebView فقط در فرمول (FormulaHostDialog) و چاپ HTML (ExamHtmlPrintDialog)
+# مجاز است. QuestionTextFieldWebView.kt فقط کلاس کنترلر (با fallback امن) را دارد.
 approved_webview_files = {
-    "FormulaEditorDialog.kt",
-    "QuestionEditorWebView.kt",
-    "QuestionEditorWebViewDialog.kt",
     "QuestionTextFieldWebView.kt",
     "FormulaHostDialog.kt",
     "ExamHtmlPrintDialog.kt",
@@ -1129,12 +1127,10 @@ if errors:
 
 # ---- V53.1: WebView question text field + native tool icons + native table editor ----
 web_section=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").read_text()
-web_field=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text()
 tool_icons=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionToolIcons.kt").read_text()
 table_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/figure/TableEditorDialog.kt").read_text()
 table_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/TableSvgRenderer.kt").read_text()
 figure_renderer=(ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureSvgRenderer.kt").read_text()
-editor_asset=(ROOT/"app/src/main/assets/question_editor/question_editor.html").read_text(errors="ignore")
 require("QuestionTextWebSection(" in builder_screen and "InlineMathTextEditor(" not in builder_screen.split("import ",1)[1],
         "V53.1 question card does not use QuestionTextWebSection")
 require("BasicTextField(" in web_section and "QuestionTextFieldWebView(" not in web_section,
@@ -1143,8 +1139,6 @@ for _lbl in ["درج فرمول","درج شکل","درج نمودار","درج �
     require(_lbl in web_section, f"V53.1 native toolbar is missing: {_lbl}")
 require("QuestionToolIcons" in web_section and "ImageVector" in tool_icons,
         "V53.1 toolbar icons are not native ImageVectors")
-require("nativeTools=1" in web_field and "nativeToolbarHide" in editor_asset and "exam-editor-native-tools" in editor_asset,
-        "V53.1 HTML toolbar hiding bridge is missing")
 require("if (spec.isTable) return TableSvgRenderer.render(spec)" in figure_renderer,
         "V53.1 table tokens do not render through the shared SVG path")
 require("android.webkit" not in table_editor and "buildTable" in (ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureSpec.kt").read_text(),
@@ -1194,8 +1188,6 @@ require("AtlasBitmapRenderer.render(context, spec)" in (ROOT/"app/src/main/java/
         "V53.3 PDF path does not render atlas figures natively")
 for _bad in ['openTool("anatomy")','openTool("physics")','openTool("chemistry")','openTool("periodic")']:
     require(_bad not in web_section, f"V53.3 webview tool still wired: {_bad}")
-require("onEditFigure" in editor_asset and "applyEditedToken" in editor_asset,
-        "V53.3 dblclick native-edit bridge missing from asset")
 require("marks.size < 12" in atlas_editor and "nextMarkNumber" in atlas_editor,
         "V53.3 atlas editor mark limits do not match the reference")
 
@@ -1205,13 +1197,8 @@ formula_host=(ROOT/"app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt")
 require("formula-editor/formula.html" in formula_host and "usePlatformDefaultWidth = false" in formula_host,
         "V55 formula host dialog is not full-screen or does not load the standalone formula asset")
 formula_asset=(ROOT/"app/src/main/assets/formula_editor/formula.html").read_text(errors="ignore")
-require("onOpenFormula" in editor_asset and "ExamFormulaHost" in formula_asset
-        and "onEditorClosed" in formula_asset,
-        "V55 formula bridges are missing (question field or standalone formula asset)")
 require("FormulaHostDialog(" in builder_screen and "QuestionEditorWebViewDialog(" not in builder_screen,
         "V53.4 builder must open the full-screen formula window everywhere")
-require("nativeToolbarHide" in editor_asset and ".field>span{display:none" not in editor_asset,
-        "V54.4 reference frame/label must stay byte-identical; only the toolbar is hidden")
 
 
 # ---- V54.1: chart library stage 1 (20 new native chart types) ----
@@ -1251,31 +1238,15 @@ for _t in _v543_types:
     require(f'FigureTemplate("{_t}"' in figure_gallery, f"V54.3 gallery missing type: {_t}")
 require("STAGE1 + ChartSvgRendererStage2.SUPPORTED + ChartSvgRendererStage3.SUPPORTED" in chart_renderer,
         "V54.3 stage3 types are not merged into the shared supported set")
-_gr_module=editor_asset.split("graph-fig-js",1)[1].split("window.GraphFig",1)[0]
-_gr_types=re.findall(r"\{ id: '([A-Za-z0-9_]+)', name: '", _gr_module.split("var TYPES = [",1)[1].split("];",1)[0])
-_flat_gallery=re.sub(r"\s+"," ",figure_gallery)
-_missing=[i for i in _gr_types
-          if f'FigureTemplate( "{i}"' not in _flat_gallery
-          and f'FigureTemplate("{i}"' not in _flat_gallery and i != "col"]
-require(len(_gr_types) >= 60 and not _missing,
-        f"V54.3 native gallery does not cover all reference graph types: {_missing}")
 require("<script" not in chart_stage3 and "href=" not in chart_stage3
         and "<foreignObject" not in chart_stage3,
         "V54.3 stage3 SVG renderer contains unsafe markup")
 
 # ---- V54.4: reference-parity question field + formula window fixes ----
-require('if (request.isForMainFrame) onError("EDITOR_LOAD_FAILED")' in web_field,
-        "V54.4 load error must fire for the main frame only")
-require('!path.startsWith("/question-editor/")' in web_field and "emptyResponse()" in web_field,
-        "V54.4 foreign paths must get safe empty responses in the field webview")
 require('"متن سؤال"' not in web_section and "BorderStroke" not in web_section,
         "V54.4 compose must not draw a duplicate frame/label around the webview")
 require("Icons.Outlined.Close" not in formula_host and "0xFFE9EEF5" in formula_host,
         "V54.4 formula window must be pure reference webview without a compose close button")
-require("closeOverlays" in web_field and "closeOverlays: function ()" in editor_asset,
-        "V54.4 back-button overlay close bridge is missing")
-require("ExamEditorNative.onOpenFormula" in editor_asset and "window.ExamFormulaHost" in formula_asset,
-        "V55 formula host bridges are missing from the assets")
 
 # ---- V55: standalone formula.html as the formula window ----
 require(len(formula_asset) > 500000 and "auto-open" in formula_asset,
@@ -1325,46 +1296,20 @@ require("wrapNow('mbGroupLibrary', afterMenu)" in formula_asset
         "V55.6 instant library enforcement or formula fit is missing")
 
 # ---- V55.7/V55.8: question field reports height; fixed cap with inner scroll ----
-require("ExamEditorNative.onContentHeight" in editor_asset
-        and "max-height:260px !important" in editor_asset
-        and "overflow-y:auto !important" in editor_asset
-        and "html,body{background:transparent !important;}" in editor_asset,
-        "V55.8 fixed-cap inner-scroll field or transparent background is missing")
-require("fun onContentHeight(height: Int)" in web_field
-        and "heightIn(min = 120.dp)" in web_section,
-        "V55.7 dynamic field height wiring is missing from Kotlin")
+require("heightIn(min = 120.dp)" in web_section,
+        "V55.7 dynamic question-field height wiring is missing")
 
 # ---- V55.8: boot curtain, 60% inserted previews, keypad menus enlarged ----
-require("exam-editor-native-boot" in editor_asset and "nativeBootHide" in editor_asset,
-        "V55.8 boot curtain against reference-page flash is missing")
-require(".qmf-surface.input .qmf-fig{zoom:.6" in editor_asset
-        and ".qmf-surface.input .qmf-atom{zoom:.75" in editor_asset,
-        "V55.8 inserted figure/formula shrink is missing")
 require("wrapNow('mbVarShow', afterMenu)" in formula_asset
         and "wrapNow('mbParPicker', afterMenu)" in formula_asset
         and "'.mbv-cat, .mbv-i, .mbv-q'" in formula_asset,
         "V55.8 keypad variant/paren menu enlargement is missing")
 
 # ---- V55.9: single-click capture for native tokens + per-question webview ----
-require("__nativeFigEdit" in editor_asset and "stopImmediatePropagation" in editor_asset,
-        "V55.9 click capture for native token kinds is missing")
-require("key(controller)" in web_field,
-        "V55.9 per-question webview isolation (key) is missing")
 
 # ---- V55.10: select-then-edit tokens with delete button + inner scroll unlock ----
-require("native-fig-x" in editor_asset and "removeToken(fig)" in editor_asset
-        and "__nativeAllow" in editor_asset,
-        "V55.10 token select/delete behaviour is missing")
-require("onScrollableChanged" in editor_asset
-        and "requestDisallowInterceptTouchEvent(true)" in web_field,
-        "V55.10 inner-scroll gesture unlock is missing")
 
 # ---- V55.11: unclipped delete button (incl. formulas) + caret fix ----
-require("function attachX(el2)" in editor_asset
-        and "'.qmf-atom.is-on, .qmf-fig.is-on'" in editor_asset,
-        "V55.11 unified delete button for figures and formulas is missing")
-require("caretRangeFromPoint" in editor_asset,
-        "V55.11 surface caret/focus fix is missing")
 
 # ---- V55.12: two-stage atlas flow, arrow-end numbers, no label boxes, 2-col graphs ----
 require("fun AtlasTypePickerDialog(" in atlas_editor
@@ -1385,8 +1330,7 @@ require("GridCells.Fixed(2)" in figure_picker
         "V55.12 two-column graph picker without the edit hint is missing")
 
 # ---- V55.13: geometry/graph tokens edit natively + LTR periodic grid ----
-require("kind !== 'g'" in editor_asset
-        and '"g", "" -> figureTarget = FigureTarget(' in builder_screen,
+require('"g", "" -> figureTarget = FigureTarget(' in builder_screen,
         "V55.13 geometry/graph tokens must route to the native editor")
 require("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in
             (ROOT/"app/src/main/java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt").read_text(),
@@ -1396,9 +1340,8 @@ require("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.
 require("Icons.Outlined.Delete" in builder_screen and "برای همیشه حذف شود؟" in builder_screen,
         "V55.14 trash-icon question delete with confirmation is missing")
 require('FigureTemplate("cuboid", "مکعب‌مستطیل"' in
-            (ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt").read_text()
-        and "if (t === 'cuboid') t = 'box';" in editor_asset,
-        "V55.14 cuboid/box identifier split is missing")
+            (ROOT/"app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt").read_text(),
+        "V55.14 cuboid geometry identifier is missing from the gallery")
 
 # ---- V55.15: fresh crop callbacks + graph tokens tagged k='g' ----
 require("rememberUpdatedState(onMove)" in image_editor
@@ -1510,8 +1453,6 @@ require("آزمون توسط معلم ویرایش شد" in student_screen,
         "V58.0 teacher-edit notification dialog is missing")
 require('notice = "به بانک سؤال اضافه شد"' in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(),
         "V58.0 bank save confirmation message is missing")
-require(".qmf-surface.input .an-af{display:none !important;}" in editor_asset,
-        "V58.0 teacher editor must hide atlas naming boxes")
 
 # ---- V58.1: exam monitor (security events + teacher reports) ----
 _monitor_sql=(ROOT/"supabase/migrations/20260825_native_exam_monitor_v58.sql").read_text()
@@ -2832,6 +2773,19 @@ require("kotlinx.serialization.json" in _v730_payload_text
         and "kotlinx.serialization.json" in _v730_test_text,
         "V73.0.2 kotlinx.serialization migration in ExamHtmlPrintPayload is missing")
 
+# ---- V74.0: پاکسازی کد مردهٔ WebView کادر متن سؤال + assetهای بی‌استفادهٔ question_editor ----
+require(not (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionEditorWebView.kt").exists()
+        and not (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionEditorWebViewDialog.kt").exists(),
+        "V74.0 dead WebView question-editor composables were re-added")
+require(not (ROOT/"app/src/main/assets/question_editor").exists(),
+        "V74.0 orphan question_editor asset folder was re-added")
+_qftw_v740=(ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text()
+require("QuestionTextFieldWebView(" not in _qftw_v740 and "class QuestionEditorFieldController" in _qftw_v740,
+        "V74.0 removed WebView composable must stay gone while the controller remains")
+_v740_main_all="\n".join(p.read_text(errors="ignore") for p in (ROOT/"app/src/main/java").rglob("*.kt"))
+require("question_editor/" not in _v740_main_all and "/question-editor/" not in _v740_main_all,
+        "V74.0 stale question-editor loading path returned to the main source")
+
 # ---- V68.9.4: نگهبان صحت changelog — تاریخچه هرگز دوباره از بین نرود ----
 # (در V68.9.2/V68.9.3 الگوی مخرب python کل ۲۴۰ خط تاریخچه را پاک کرده بود و
 # فقط تست V30 آن را گرفت؛ این باند همان را در verify هم الزامی می‌کند.)
@@ -2839,9 +2793,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 249
-        and _v694_changelog.startswith("V73.0.2:"),
-        "changelog must keep the full history + the new V73.0.2 line on top")
+require(_v694_lines >= 250
+        and _v694_changelog.startswith("V74.0:"),
+        "changelog must keep the full history + the new V74.0 line on top")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

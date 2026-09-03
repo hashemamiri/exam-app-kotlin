@@ -27,36 +27,8 @@ class V55_8FixedBoxShrinkTest {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
     }
 
-    private val editorAsset by lazy {
-        File(root(), "app/src/main/assets/question_editor/question_editor.html").readText()
-    }
     private val formulaAsset by lazy {
         File(root(), "app/src/main/assets/formula_editor/formula.html").readText()
-    }
-
-    @Test
-    fun `field has fixed cap with inner scroll by explicit user choice`() {
-        assertTrue("max-height:260px !important" in editorAsset)
-        assertTrue("overflow-y:auto !important" in editorAsset)
-        assertTrue("-webkit-overflow-scrolling:touch" in editorAsset)
-    }
-
-    @Test
-    fun `inserted previews shrink only inside the app`() {
-        assertTrue(".qmf-surface.input .qmf-fig{zoom:.6" in editorAsset)
-        assertTrue(".qmf-surface.input .qmf-atom{zoom:.75" in editorAsset)
-        // قاعدهٔ مرجع .qmf-fig خودش دست‌نخورده است.
-        assertTrue("max-width:min(100%,340px)" in editorAsset)
-    }
-
-    @Test
-    fun `boot curtain prevents reference page flash`() {
-        assertTrue("exam-editor-native-boot" in editorAsset)
-        assertTrue("nativeBootHide" in editorAsset)
-        // پرده فقط در حالت nativeTools و با پشتیبان زمان‌دار.
-        val boot = editorAsset.substringAfter("exam-editor-native-boot").substringBefore("</script>")
-        assertTrue("nativeTools=1" in boot)
-        assertTrue("6000" in boot)
     }
 
     @Test

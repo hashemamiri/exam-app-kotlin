@@ -20,7 +20,6 @@ class V54_3ChartLibraryFinalTest {
     private val stage1 by lazy { source("app/src/main/java/ir/exam/app/core/figure/ChartSvgRenderer.kt") }
     private val gallery by lazy { source("app/src/main/java/ir/exam/app/core/figure/FigureGallery.kt") }
     private val picker by lazy { source("app/src/main/java/ir/exam/app/ui/figure/FigurePickerDialog.kt") }
-    private val asset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
 
     private val stage3Types = listOf(
         "plot", "flow", "gantt", "time", "dumb", "slope", "spark", "stream",
@@ -40,25 +39,6 @@ class V54_3ChartLibraryFinalTest {
             "گل رز / قطبی", "ابر واژه").forEach {
             assertTrue("missing farsi label: $it", it in gallery)
         }
-    }
-
-    @Test
-    fun `every reference graph type id now has a native gallery template`() {
-        // استخراج TYPES از ماژول graph-fig-js همان asset مرجع؛ تضمین پوشش ۶۱/۶۱.
-        val module = asset.substringAfter("graph-fig-js").substringBefore("window.GraphFig")
-        val typesBlock = module.substringAfter("var TYPES = [").substringBefore("];")
-        val ids = Regex("\\{ id: '([A-Za-z0-9_]+)', name: '").findAll(typesBlock)
-            .map { it.groupValues[1] }.toList()
-        assertTrue("reference TYPES not found", ids.size >= 60)
-        // قالب‌های چندخطی (line/quad/...) هم با نرمال‌سازی فاصله‌ها شمرده می‌شوند.
-        val flatGallery = gallery.replace(Regex("\\s+"), " ")
-        val missing = ids.filterNot { id ->
-            "FigureTemplate( \"$id\"" in flatGallery ||
-                "FigureTemplate(\"$id\"" in flatGallery ||
-                // col/bar هم‌ارز مرجع‌اند و قالب bar موجود پوشششان می‌دهد.
-                id == "col"
-        }
-        assertTrue("native gallery is missing reference types: $missing", missing.isEmpty())
     }
 
     @Test

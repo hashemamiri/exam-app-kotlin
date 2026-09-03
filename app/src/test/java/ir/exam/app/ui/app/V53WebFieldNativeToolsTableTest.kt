@@ -22,14 +22,13 @@ class V53WebFieldNativeToolsTableTest {
 
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
     private val webSection by lazy { source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt") }
-    private val webField by lazy { source("app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt") }
+
     private val toolIcons by lazy { source("app/src/main/java/ir/exam/app/ui/math/QuestionToolIcons.kt") }
     private val tableEditor by lazy { source("app/src/main/java/ir/exam/app/ui/figure/TableEditorDialog.kt") }
     private val tableRenderer by lazy { source("app/src/main/java/ir/exam/app/core/figure/TableSvgRenderer.kt") }
     private val figureRenderer by lazy { source("app/src/main/java/ir/exam/app/core/figure/FigureSvgRenderer.kt") }
     private val figureSpec by lazy { source("app/src/main/java/ir/exam/app/core/figure/FigureSpec.kt") }
     private val pdfAdapter by lazy { source("app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt") }
-    private val asset by lazy { source("app/src/main/assets/question_editor/question_editor.html") }
 
     @Test
     fun `question card uses webview text field instead of native inline editor`() {
@@ -60,17 +59,6 @@ class V53WebFieldNativeToolsTableTest {
             assertTrue("missing native icon: $it", "val $it: ImageVector" in toolIcons)
         }
         assertTrue("QuestionToolIcons" in webSection)
-    }
-
-    @Test
-    fun `html toolbar is hidden only for the native field`() {
-        assertTrue("nativeTools=1" in webField)
-        assertTrue("nativeToolbarHide" in asset)
-        assertTrue("[?&]nativeTools=1" in asset)
-        assertTrue("exam-editor-native-tools" in asset)
-        // پل درج توکن و بازکردن ابزار مرجع.
-        assertTrue("ExamEditorTools" in asset && "insertToken" in asset && "openTool" in asset)
-        assertTrue("onOverlayChanged" in asset && "onOverlayChanged" in webField)
     }
 
     @Test
@@ -107,14 +95,4 @@ class V53WebFieldNativeToolsTableTest {
         assertFalse("<style" in tableRenderer)
     }
 
-    @Test
-    fun `webview surface stays local and secret free`() {
-        assertTrue("exam-editor.local" in webField)
-        assertTrue("shouldOverrideUrlLoading" in webField)
-        assertTrue("allowUniversalAccessFromFileURLs = false" in webField)
-        assertFalse("SUPABASE" in webField)
-        assertFalse("access_token" in webField)
-        // پلاک موقت انواع مرجع تا V53.2/V53.3 — JSON خام نمایش داده نمی‌شود.
-        assertTrue("renderKindPlate" in figureRenderer)
-    }
 }
