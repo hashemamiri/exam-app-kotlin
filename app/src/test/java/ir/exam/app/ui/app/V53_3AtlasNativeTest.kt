@@ -111,3 +111,5 @@ class V53_3AtlasNativeTest {
         assertTrue("AtlasTarget(kind = \"s\", domain = \"chem\", chooseType = true)" in builder)
         assertTrue("AtlasTypePickerDialog(" in builder)
     }
+
+}
