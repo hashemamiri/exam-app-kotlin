@@ -83,6 +83,8 @@ fun TeacherDashboardScreen(
     }
     var deleteCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var duplicateCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
+    // V75.4 — پیش از صدور، معلم باید روشن کند که پاسخنامه همراه فایل باشد یا نه.
+    var exportCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var expandedExamId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(refreshKey) { viewModel.load() }
@@ -217,7 +219,7 @@ fun TeacherDashboardScreen(
                                         OutlinedButton(onClick = { duplicateCandidate = exam }) {
                                             Text("تکثیر با کسر هزینه")
                                         }
-                                        OutlinedButton(onClick = { viewModel.exportExam(exam.id) }) {
+                                        OutlinedButton(onClick = { exportCandidate = exam }) {
                                             Text("صادرکردن")
                                         }
                                     }
@@ -239,6 +241,30 @@ fun TeacherDashboardScreen(
                 Button(onClick = { viewModel.duplicate(exam); duplicateCandidate = null }) { Text("تأیید و تکثیر") }
             },
             dismissButton = { TextButton(onClick = { duplicateCandidate = null }) { Text("انصراف") } }
+        )
+    }
+
+    exportCandidate?.let { exam ->
+        AlertDialog(
+            onDismissRequest = { exportCandidate = null },
+            title = { Text("صدور فایل آزمون") },
+            text = {
+                Text(
+                    "فایل «${exam.title}» در حالت عادی همراه پاسخنامه است. " +
+                        "اگر این فایل را برای کسی می‌فرستید «بدون پاسخنامه» را انتخاب کنید؛ " +
+                        "برای آرشیو و بازگردانی روی حساب خودتان «همراه پاسخنامه» را انتخاب کنید."
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.exportExam(exam.id, false); exportCandidate = null }) {
+                    Text("بدون پاسخنامه")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.exportExam(exam.id, true); exportCandidate = null }) {
+                    Text("همراه پاسخنامه")
+                }
+            }
         )
     }
 

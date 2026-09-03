@@ -37,14 +37,19 @@ import kotlinx.serialization.json.put
 class SupabasePortabilityRepository {
     private val prettyJson = Json { prettyPrint = true; explicitNulls = false }
 
-    suspend fun exportExam(examId: String): Result<PortableFile> = runCatching {
+    suspend fun exportExam(examId: String, includeAnswerKey: Boolean = true): Result<PortableFile> = runCatching {
         val uid = currentUserId()
         val exam = SupabaseProvider.client.from("exams").select {
             filter { eq("id", examId); eq("teacher_id", uid) }
         }.decodeList<ExamDetailDto>().firstOrNull() ?: error("آزمون یافت نشد یا متعلق به این حساب نیست.")
-        val key = SupabaseProvider.client.from("exam_keys").select {
-            filter { eq("exam_id", examId) }
-        }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
+        // V75.4 — در حالت «بدون پاسخنامه» کلید پاسخ حتی خوانده نمی‌شود.
+        val key = if (includeAnswerKey) {
+            SupabaseProvider.client.from("exam_keys").select {
+                filter { eq("exam_id", examId) }
+            }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
+        } else {
+            JsonArray(emptyList())
+        }
         val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
         val questions = ExamQuestionCodec.decode(exam.questions, key)
         val content = ExamPackageCodec.encode(
@@ -64,10 +69,11 @@ class SupabasePortabilityRepository {
                 by = profile.displayName?.takeIf(String::isNotBlank) ?: profile.fullName.orEmpty(),
                 opensAtIso = exam.opensAt,
                 closesAtIso = exam.closesAt
-            )
+            ),
+            includeAnswerKey = includeAnswerKey
         )
         PortableFile(
-            fileName = ExamPackageCodec.safeFileName(exam.title),
+            fileName = ExamPackageCodec.safeFileName(exam.title, includeAnswerKey),
             mimeType = "application/octet-stream",
             content = content
         )

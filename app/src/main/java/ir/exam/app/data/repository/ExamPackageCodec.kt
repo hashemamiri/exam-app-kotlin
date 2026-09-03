@@ -44,14 +44,20 @@ object ExamPackageCodec {
         val closesAtIso: String? = null
     )
 
-    fun encode(source: ExportedExam): String {
+    fun encode(source: ExportedExam, includeAnswerKey: Boolean = true): String {
         validateQuestions(source.questions)
         val encoded = ExamQuestionCodec.encode(source.questions)
-        val combined = JsonArray(encoded.publicQuestions.mapIndexed { index, item ->
-            val public = item.jsonObject
-            val answer = encoded.answerKey.getOrNull(index)?.jsonObject ?: JsonObject(emptyMap())
-            JsonObject(public + (answer - "i"))
-        })
+        // V75.4 — «بدون پاسخنامه» (includeAnswerKey=false): فقط بدنهٔ عمومی سؤال‌ها
+        // در فایل می‌ماند و کلید پاسخ اصلاً وارد بسته نمی‌شود.
+        val combined = if (includeAnswerKey) {
+            JsonArray(encoded.publicQuestions.mapIndexed { index, item ->
+                val public = item.jsonObject
+                val answer = encoded.answerKey.getOrNull(index)?.jsonObject ?: JsonObject(emptyMap())
+                JsonObject(public + (answer - "i"))
+            })
+        } else {
+            JsonArray(encoded.publicQuestions)
+        }
         val root = buildJsonObject {
             put("_app", "exam-system")
             put("_kind", "exam")
@@ -71,6 +77,8 @@ object ExamPackageCodec {
                 put("attempts_allowed", source.attemptsAllowed.coerceIn(1, 5))
                 put("attempt_on_timeout", source.attemptOnTimeout)
                 put("grade_policy", source.gradePolicy)
+                // V75.4 — نشانگر صریح: آیا این بسته پاسخنامه دارد یا نه.
+                put("answer_key", includeAnswerKey)
                 put("attempt_cooldown", source.attemptCooldown.coerceIn(0, 1440))
                 put("questions", combined)
             })
@@ -116,9 +124,10 @@ object ExamPackageCodec {
         )
     }
 
-    fun safeFileName(title: String): String {
+    fun safeFileName(title: String, includeAnswerKey: Boolean = true): String {
         val safe = title.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().take(48).ifBlank { "exam" }
-        return "آزمون-$safe$EXTENSION"
+        // V75.4 — نام فایل هم تفاوت را نشان می‌دهد تا اشتباهی ردوبدل نشود.
+        return if (includeAnswerKey) "آزمون-$safe$EXTENSION" else "آزمون-$safe-بدون-پاسخنامه$EXTENSION"
     }
 
     private fun decodeBase64(value: String): String = try {

@@ -68,9 +68,9 @@ class TeacherDashboardViewModel(
         repository.deleteExam(exam.id).getOrThrow()
     }
 
-    fun exportExam(examId: String) = viewModelScope.launch {
+    fun exportExam(examId: String, includeAnswerKey: Boolean = true) = viewModelScope.launch {
         _state.update { it.copy(portabilityLoading = true, exportFile = null, error = null) }
-        portability.exportExam(examId)
+        portability.exportExam(examId, includeAnswerKey)
             .onSuccess { file -> _state.update { it.copy(portabilityLoading = false, exportFile = file) } }
             .onFailure { error -> _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) } }
     }

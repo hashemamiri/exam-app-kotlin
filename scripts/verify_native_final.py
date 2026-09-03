@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.3:"),
-        "changelog must keep the full history + the new V75.3 line on top")
+        and _v694_changelog.startswith("V75.4:"),
+        "changelog must keep the full history + the new V75.4 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2732,6 +2732,20 @@ require(_v753_monitor == (ROOT/"sql/manual/SQL_NATIVE_EXAM_MONITOR_LIMITS_V75_3.
         "V75.3 dual-write SQL copy drifted from the migration")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_3ExamMonitorLimitsTest.kt").exists(),
         "V75.3 exam monitor limits test missing")
+
+_v754_codec=(ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamPackageCodec.kt").read_text()
+require("fun encode(source: ExportedExam, includeAnswerKey: Boolean = true)" in _v754_codec
+        and "JsonArray(encoded.publicQuestions)" in _v754_codec
+        and "put(\"answer_key\", includeAnswerKey)" in _v754_codec,
+        "V75.4 answer-key export switch missing in ExamPackageCodec")
+_v754_repo=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
+require("fun exportExam(examId: String, includeAnswerKey: Boolean = true)" in _v754_repo,
+        "V75.4 export retry without answer key missing")
+_v754_screen=(ROOT/"app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt").read_text()
+require("viewModel.exportExam(exam.id, false)" in _v754_screen and "viewModel.exportExam(exam.id, true)" in _v754_screen,
+        "V75.4 export choice dialog missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_4ExamExportAnswerKeyTest.kt").exists(),
+        "V75.4 export answer key test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -15143,3 +15143,53 @@ Edge/Secret/Dependency جدید: ندارد
 تست دستگاه: شرکت در آزمون و فعال‌کردن ضبط/اسکرین‌شات؛ گزارش همچنان در صفحهٔ معلم
 دیده شود. ارسال دستی یک گزارش خیلی بزرگ باید با خطای فارسی رد شود.
 ```
+
+## ۲۸۶) V75.4 — انتخاب پاسخنامه هنگام صدور فایل آزمون (بند ۳.۳ گزارش امنیتی)
+
+### ریشه
+
+```text
+ExamPackageCodec.encode همیشه کلید پاسخ (exam_keys.answers) را کنار بدنهٔ عمومی سؤال‌ها
+در خروجی می‌گذاشت؛ ExamPackageCodec.decode هم همان آرایه را به‌عنوان کلید پاسخ می‌خواند
+(decode(combined, combined)). بنابراین فایل .azmoon که معلم برای همکار یا دانش‌آموز
+می‌فرستاد، در عمل پاسخنامهٔ کامل را هم حمل می‌کرد — در حالی که ظاهرش فقط یک آزمون بود.
+```
+
+### چه شد
+
+```text
+۱) هنگام صدور، یک انتخاب اجباری نمایش داده می‌شود: «بدون پاسخنامه» یا «همراه پاسخنامه».
+۲) در حالت «بدون پاسخنامه»: جدول exam_keys اصلاً خوانده نمی‌شود و فقط بدنهٔ عمومی
+   سؤال‌ها در بسته می‌ماند؛ نشانگر answer_key=false هم در فایل درج می‌شود.
+۳) نام فایل در این حالت «…-بدون-پاسخنامه.azmoon» است تا اشتباهی ردوبدل نشود.
+۴) حالت «همراه پاسخنامه» برای آرشیو شخصی و بازگردانی روی حساب خود معلم باقی ماند.
+```
+
+### نکتهٔ مهم برای معلم
+
+```text
+اگر می‌خواهید آزمونی را بعداً روی حساب خودتان بازگردانی کنید، باید «همراه پاسخنامه»
+را انتخاب کنید؛ فایل بدون پاسخنامه هنگام ورود، آزمونی با سؤال‌های کامل اما بدون
+پاسخ صحیح می‌سازد (بارم‌ها و متن‌ها سالم می‌مانند).
+```
+
+### فایل‌ها
+
+```text
+app/src/main/java/ir/exam/app/data/repository/ExamPackageCodec.kt
+app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardViewModel.kt
+app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt
+app/src/test/java/ir/exam/app/ui/app/V75_4ExamExportAnswerKeyTest.kt   (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL جدید/Edge/Secret/Dependency: ندارد
+تست دستگاه: صدور یک آزمون در هر دو حالت؛ باز کردن فایل «بدون پاسخنامه» در
+«داده‌ها ← واردکردن آزمون» و بررسی اینکه پاسخ صحیحی همراه آن نیست.
+```
