@@ -15297,3 +15297,58 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 SQL جدید: بله — روی پروژه اصلی اجرا شود
 Edge/Secret/Dependency جدید: ندارد
 ```
+
+## ۲۸۹) V75.7 — رمزنگاریِ نشست ورود روی دستگاه (بند ۳.۵ گزارش امنیتی)
+
+### ریشه
+
+```text
+پلاگین Auth کتابخانهٔ supabase-kt نشست را به‌طور پیش‌فرض با SettingsSessionManager
+در SharedPreferences (یک فایل XML ساده) می‌نویسد؛ یعنی access token و refresh token
+روی دستگاه به‌صورت متن ساده بودند. هر دسترسیِ فایلی — دستگاه روت‌شده، بدافزار، یا
+خواندن پوشهٔ دادهٔ برنامه — برابر با به‌دست‌آوردن نشستِ کاملِ ورود بود.
+```
+
+### چه شد
+
+```text
+۱) کلاس SecureSessionStorage: کلید AES در Android Keystore (غیرقابل استخراج)،
+   متنِ نشست با AES/GCM و IV تصادفی رمزنگاری می‌شود؛ در فایل تنظیمات فقط IV و
+   ciphertext نوشته می‌شود (درست مثل گاوصندوقِ رمز دانش‌آموزان که از قبل داشتیم).
+۲) کلاس EncryptedSessionManager پیاده‌سازِ SessionManager کتابخانه است و در تنظیمات
+   Auth نصب شد (sessionManager = ...)؛ API آن با نسخه ۳.۱.۴ روی باینریِ واقعی
+   کتابخانه بررسی شد تا خطای کامپایل پیش نیاید.
+۳) کلاس Application جدید (ExamApplication) زمینهٔ برنامه را پیش از هر چیز به
+   SupabaseProvider می‌دهد و در AndroidManifest ثبت شد.
+```
+
+### پیامدِ مهم برای کاربران
+
+```text
+نشستِ قبلی که به‌صورت متن ساده ذخیره شده بود دیگر خوانده نمی‌شود؛ بنابراین پس از
+نصب این نسخه، همهٔ کاربران (معلم، مدیر، دانش‌آموز) یک‌بار باید دوباره وارد شوند.
+این خروجِ یک‌باره طبیعی و بخشی از اصلاح است.
+```
+
+### فایل‌ها
+
+```text
+app/src/main/java/ir/exam/app/core/security/SecureSessionStorage.kt     (جدید)
+app/src/main/java/ir/exam/app/data/remote/EncryptedSessionManager.kt    (جدید)
+app/src/main/java/ir/exam/app/ExamApplication.kt                        (جدید)
+app/src/main/java/ir/exam/app/data/remote/SupabaseProvider.kt
+app/src/main/AndroidManifest.xml
+app/src/test/java/ir/exam/app/ui/app/V75_7EncryptedSessionStorageTest.kt (جدید)
+scripts/verify_native_final.py
+text/CHANGELOG_FA.txt
+docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
+```
+
+### عملیات
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد (بدون نیاز به کتابخانهٔ اضافه)
+تست دستگاه: ورود، بستن کامل برنامه، بازگشایی (نشست باید حفظ شود)؛ سپس خروج و
+بررسیِ عدم بازگشت خودکار. همچنین روی دستگاهِ روت‌شده: فایل تنظیمات برنامه دیگر
+نباید حاوی رشتهٔ توکن باشد.
+```

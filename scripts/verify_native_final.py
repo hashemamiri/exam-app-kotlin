@@ -2685,8 +2685,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.6:"),
-        "changelog must keep the full history + the new V75.6 line on top")
+        and _v694_changelog.startswith("V75.7:"),
+        "changelog must keep the full history + the new V75.7 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2776,6 +2776,22 @@ require((ROOT/"docs/fa/SECURITY_LEGACY_FUNCTIONS_V75.md").exists(),
         "V75.6 legacy functions report missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_6LegacyFunctionsAnonRevokeTest.kt").exists(),
         "V75.6 legacy functions test missing")
+
+_v757_storage=(ROOT/"app/src/main/java/ir/exam/app/core/security/SecureSessionStorage.kt").read_text()
+require("AndroidKeyStore" in _v757_storage and "AES/GCM/NoPadding" in _v757_storage,
+        "V75.7 encrypted session storage missing")
+_v757_manager=(ROOT/"app/src/main/java/ir/exam/app/data/remote/EncryptedSessionManager.kt").read_text()
+require(": SessionManager" in _v757_manager and "override suspend fun saveSession(session: UserSession)" in _v757_manager,
+        "V75.7 encrypted session manager missing")
+_v757_provider=(ROOT/"app/src/main/java/ir/exam/app/data/remote/SupabaseProvider.kt").read_text()
+require("sessionManager = EncryptedSessionManager(context)" in _v757_provider
+        and "fun attach(context: android.content.Context)" in _v757_provider,
+        "V75.7 supabase client is not using the encrypted session manager")
+require('android:name=".ExamApplication"' in (ROOT/"app/src/main/AndroidManifest.xml").read_text()
+        and "SupabaseProvider.attach(this)" in (ROOT/"app/src/main/java/ir/exam/app/ExamApplication.kt").read_text(),
+        "V75.7 application class is not registered")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V75_7EncryptedSessionStorageTest.kt").exists(),
+        "V75.7 encrypted session test missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

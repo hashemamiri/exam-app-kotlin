@@ -11,6 +11,18 @@ import ir.exam.app.BuildConfig
 
 /** کلاینت مرکزی Supabase؛ Auth، Postgrest و Storage باید همگی نصب شوند. */
 object SupabaseProvider {
+    @Volatile
+    private var appContext: android.content.Context? = null
+
+    /**
+     * V75.7 — باید از کلاس Application صدا زده شود (ExamApplication.onCreate)،
+     * پیش از هر دسترسی به client؛ در غیر این صورت نشست نمی‌تواند رمزنگاری شود.
+     */
+    @Synchronized
+    fun attach(context: android.content.Context) {
+        appContext = context.applicationContext
+    }
+
     val client: SupabaseClient by lazy {
         require(BuildConfig.SUPABASE_URL.isNotBlank()) { "SUPABASE_URL در تنظیمات build وارد نشده است" }
         require(BuildConfig.SUPABASE_ANON_KEY.isNotBlank()) { "SUPABASE_ANON_KEY در تنظیمات build وارد نشده است" }
@@ -24,6 +36,11 @@ object SupabaseProvider {
                 autoLoadFromStorage = true
                 autoSaveToStorage = true
                 alwaysAutoRefresh = true
+                // V75.7 — نشست در حافظهٔ رمزنگاری‌شده (Keystore) ذخیره می‌شود،
+                // نه در فایل XML سادهٔ SharedPreferences.
+                val context = appContext
+                    ?: error("SupabaseProvider.attach(context) در ExamApplication صدا زده نشده است")
+                sessionManager = EncryptedSessionManager(context)
             }
             install(Postgrest)
             install(Storage)
