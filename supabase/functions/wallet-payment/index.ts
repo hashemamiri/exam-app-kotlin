@@ -350,14 +350,7 @@ Deno.serve(async (req) => {
         });
         throw publicError('sandbox_credit_failed', 'ثبت اعتبار آزمایشی کامل نشد.', 500);
       }
-      return json({
-        ok: true,
-        credited: true,
-        order_id: orderId,
-        provider,
-        sandbox: true,
-        balance: credit?.balance ?? null,
-      });
+      return json({ ok: true, credited: true, order_id: orderId, provider, sandbox: true, balance: credit?.balance ?? null });
     }
 
     return json({ ok: true, credited: false, url: gateway.url, order_id: orderId, provider, sandbox: false });
