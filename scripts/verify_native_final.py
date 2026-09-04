@@ -2575,8 +2575,17 @@ require(_v730_dialog.exists()
         and "useWideViewPort" in _v730_dialog_text
         and "loadWithOverviewMode = false" in _v730_dialog_text
         and "onShowFileChooser" in _v730_dialog_text
-        and "ActivityResultContracts.GetContent" in _v730_dialog_text,
-        "V76.2 ExamHtmlPrintDialog (viewport, no overview zoom, file chooser) is missing")
+        and "ActivityResultContracts.GetContent" in _v730_dialog_text
+        and "NativeBarButton(\"⚙ تنظیمات سربرگ\")" in _v730_dialog_text
+        and "NativeBarButton(\"💾 ذخیره\")" in _v730_dialog_text
+        and "NativeBarButton(\"📂 بازکردن\")" in _v730_dialog_text
+        and "NativeBarButton(\"🖨 چاپ دانشجو\")" in _v730_dialog_text
+        and "NativeBarButton(\"✅ چاپ استاد\")" in _v730_dialog_text
+        and "NativeBarButton(\"➕ سوال جدید\")" in _v730_dialog_text
+        and "NativeBarButton(\"👁 پیش\u200cنمایش\")" in _v730_dialog_text
+        and "openExamPicker.launch" in _v730_dialog_text
+        and "window.__qmfSaveNow" in _v730_dialog_text,
+        "V76.3 ExamHtmlPrintDialog (native command bar, viewport, file chooser) is missing")
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
         and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
@@ -2706,12 +2715,13 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 255
-        and _v694_changelog.startswith("V76.2:")
+require(_v694_lines >= 256
+        and _v694_changelog.startswith("V76.3:")
+        and "V76.2:" in _v694_changelog
         and "V76.1:" in _v694_changelog
         and "V76.0:" in _v694_changelog
         and "V75.8.1:" in _v694_changelog,
-        "changelog must keep the full history + the new V76.2 line on top")
+        "changelog must keep the full history + the new V76.3 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment

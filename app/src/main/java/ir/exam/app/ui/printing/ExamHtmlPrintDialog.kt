@@ -15,20 +15,26 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +62,9 @@ import java.io.IOException
  * printable == null یعنی «آزمون جدید» — فایل با payload ریست خالی باز می‌شود.
  * V76.1 — viewport خود فایل اعمال می‌شود (رابط موبایل در اندازهٔ واقعی) و انتخاب
  * تصویر با دکمهٔ دوربینِ فایل از طریق onShowFileChooser پشتیبانی می‌شود.
+ * V76.3 — هفت کنترل اصلی (تنظیمات سربرگ، ذخیره، بازکردن، چاپ دانشجو/استاد،
+ * سوال جدید، پیش‌نمایش) به نوار فرمان بومی این پنجره منتقل شده‌اند؛ نوار HTML
+ * فایل مخفی است و فرمان‌ها از طریق evaluateJavascript به صفحه اعمال می‌شوند.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -65,6 +74,13 @@ fun ExamHtmlPrintDialog(
 ) {
     var loading by remember { mutableStateOf(true) }
     var jsError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    // V76.3 — ارجاع WebView برای فرمان‌های نوار بومی + پیام وضعیت
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    var barStatus by remember { mutableStateOf<String?>(null) }
+    val runJs: (String, ((String?) -> Unit)?) -> Unit = { script, cb ->
+        webViewRef?.evaluateJavascript(script, cb)
+    }
     // V76.1 — دکمهٔ دوربینِ فایل (📷) یک input[type=file] داینامیک را کلیک می‌کند؛
     // WebView اندروید بدون onShowFileChooser آن را بی‌صدا نادیده می‌گیرد.
     var fileChooserCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
@@ -72,6 +88,21 @@ fun ExamHtmlPrintDialog(
         val callback = fileChooserCallback
         fileChooserCallback = null
         callback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
+    }
+    // V76.3 — «بازکردن آزمون»: فایل JSON با انتخاب‌گر بومی خوانده و با پل setExamData وارد صفحه می‌شود.
+    val openExamPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+        }.getOrDefault("")
+        if (!text.trimStart().startsWith("{")) {
+            barStatus = "فایل انتخاب‌شده آزمون نیست (فایل JSON لازم است)."
+            return@rememberLauncherForActivityResult
+        }
+        val b64 = android.util.Base64.encodeToString(text.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+        runJs("(function(){try{window.setExamData(atob('" + b64 + "'));return 'ok'}catch(e){return 'err'}})()") { r ->
+            barStatus = if (r?.contains("ok") == true) "آزمون باز شد ✓" else "باز کردن آزمون ناموفق بود."
+        }
     }
 
     Dialog(
@@ -110,11 +141,33 @@ fun ExamHtmlPrintDialog(
                     )
                 }
 
+                // V76.3 — نوار فرمان بومی: هفت کنترل اصلی (نوار HTML فایل مخفی شده است).
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primary)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    NativeBarButton("⚙ تنظیمات سربرگ") { runJs("if (typeof toggleSettings==='function') toggleSettings();", null) }
+                    NativeBarButton("💾 ذخیره") {
+                        runJs(
+                            "(function(){try{return window.__qmfSaveNow?window.__qmfSaveNow():'missing'}catch(e){return 'err'}})()"
+                        ) { r -> barStatus = if (r?.contains("ok") == true) "ذخیره شد ✓" else "ذخیره نشد!" }
+                    }
+                    NativeBarButton("📂 بازکردن") { openExamPicker.launch("*/*") }
+                    NativeBarButton("🖨 چاپ دانشجو") { runJs("if (typeof printStudent==='function') printStudent();", null) }
+                    NativeBarButton("✅ چاپ استاد") { runJs("if (typeof printTeacher==='function') printTeacher();", null) }
+                    NativeBarButton("➕ سوال جدید") { runJs("if (typeof openQuestionTypePicker==='function') openQuestionTypePicker();", null) }
+                    NativeBarButton("👁 پیش‌نمایش") { runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null) }
+                }
+
                 Box(Modifier.fillMaxSize().weight(1f)) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            WebView(ctx).apply {
+                            WebView(ctx).also { webViewRef = it }.apply {
                                 setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
@@ -247,9 +300,32 @@ fun ExamHtmlPrintDialog(
                             modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
                         )
                     }
+
+                    barStatus?.let { message ->
+                        Text(
+                            message,
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .background(Color(0xCC1E3A8A))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun NativeBarButton(label: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
 

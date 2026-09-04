@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <!--
-  نسخهٔ 30-P3 — میزبان اپ اندروید: پل ورود خودکار آزمون از برنامه (window.setExamData) و
-  چاپ دانشجو/استاد از طریق پل بومی ExamPrintNative. دکمهٔ فرمول همان ویرایشگرِ اصلیِ خود فایل
-  (MATH_EDITOR_HTML — نسخهٔ مستقل 🧮) را باز می‌کند؛ اگر بوتِ آن شکست خورد، مودالِ سادهٔ
-  پشتیبان باز می‌شود. همهٔ ابزارهای درج (فرمول/شکل/نمودار/جدول/آناتومی/جدول تناوبی/فیزیک/
-  شیمی/دوربین) فعال‌اند. پنجره‌ها در نمایشگرهای باریک تمام‌صفحه و لمس‌پذیرند و پیش‌نمایش چشم
-  به عرضِ صفحه کوچک می‌شود.
+  نسخهٔ 30-P4 — میزبان اپ اندروید: پل ورود خودکار آزمون از برنامه (window.setExamData)،
+  چاپ دانشجو/استاد از طریق پل بومی ExamPrintNative، و پشتیبانِ فرمول اگر بوتِ ویرایشگرِ
+  اصلی (MATH_EDITOR_HTML) شکست خورد. هفت کنترلِ اصلی (تنظیمات سربرگ/ذخیره/بازکردن/
+  چاپ دانشجو/چاپ استاد/سوال جدید/چشم) به نوارِ بومیِ اپ منتقل شده‌اند (نوارِ HTML مخفی)
+  و __qmfSaveNow برای ذخیرهٔ بومیِ نشست آمده است. همهٔ ابزارهای درج فعال‌اند و پنجره‌ها
+  در نمایشگر باریک تمام‌صفحه و لمس‌پذیرند.
   مبنا: نسخهٔ 19 (SHA-256 ba2f671570936add44e379d3a590ab6f88b8307a4200e2214b44f8a2e6115abe) | تاریخ: 2026-09-04
 -->
 <html lang="fa" dir="rtl">
@@ -12972,8 +12972,8 @@ function correctAnswerText(q) {
   if (idx < 0) return '';
   return q.type === 'multiple' ? `${letters[idx]}) ${q.options[idx].text || ''}` : letters[idx];
 }
-function printStudent() { printMode = 'student'; renderPreview(); setTimeout(()=>{ try{ if(window.ExamPrintNative&&typeof window.ExamPrintNative.print==='function'){ window.ExamPrintNative.print(printMode==='teacher'?'teacher':'student'); return; } }catch(e){} window.print(); }, 80); }
-function printTeacher() { printMode = 'teacher'; renderPreview(); setTimeout(()=>{ try{ if(window.ExamPrintNative&&typeof window.ExamPrintNative.print==='function'){ window.ExamPrintNative.print(printMode==='teacher'?'teacher':'student'); return; } }catch(e){} window.print(); }, 80); }
+function printStudent() { printMode = 'student'; renderPreview(); const __pm='student'; setTimeout(()=>{ try{ if(window.ExamPrintNative&&typeof window.ExamPrintNative.print==='function'){ window.ExamPrintNative.print(__pm); return; } }catch(e){} window.print(); }, 80); }
+function printTeacher() { printMode = 'teacher'; renderPreview(); const __pm='teacher'; setTimeout(()=>{ try{ if(window.ExamPrintNative&&typeof window.ExamPrintNative.print==='function'){ window.ExamPrintNative.print(__pm); return; } }catch(e){} window.print(); }, 80); }
 window.addEventListener('afterprint', () => { printMode = 'student'; renderPreview(); });
 
 function answerSpaceHtml(q, defaultLines) {
@@ -14931,7 +14931,10 @@ loadSample();
   .math-box{width:100%}
 }
 </style>
-<script id="qmfMathFallback">/* V30-P3 — پشتیبانِ فرمول: فقط اگر بوتِ ویرایشگر اصلی شکست خورد */
+<style id="qmfNativeBar">/* V30-P4 — هفت کنترل اصلی به نوار بومی اپ منتقل شد؛ نوار HTML مخفی می‌شود */
+.toolbar{display:none!important}
+</style>
+<script id="qmfMathFallback">/* V30-P4 — پشتیبانِ فرمول: فقط اگر بوتِ ویرایشگر اصلی شکست خورد */
 (function () {
 'use strict';
 if (window.__qmfMathFallback) return; window.__qmfMathFallback = true;
@@ -14957,7 +14960,7 @@ window.__openFallbackMathModal = function (t, capturedTex) {
 };
 })();
 </script>
-<script id="qmfHostBridge">/* V30-P3 — پل میزبان اندروید: ورود خودکار آزمون از برنامهٔ بومی */
+<script id="qmfHostBridge">/* V30-P4 — پل میزبان اندروید: ورود/ذخیرهٔ خودکار آزمون از برنامهٔ بومی */
 (function () {
 'use strict';
 if (window.__qmfHostBridge) return; window.__qmfHostBridge = true;
@@ -14988,6 +14991,13 @@ function normQ(q, i) {
   }
   return n;
 }
+function collectFields() {
+  var fields = {};
+  try {
+    document.querySelectorAll('.field input,.field select,.field textarea,.exam-tools input,.exam-tools select').forEach(function (el) { if (el.id) fields[el.id] = (el.type === 'checkbox') ? !!el.checked : (el.value == null ? '' : el.value); });
+  } catch (e) {}
+  return fields;
+}
 function setField(id, val) {
   var el = document.getElementById(id); if (!el) return;
   if (el.type === 'checkbox') el.checked = !!val; else el.value = (val == null ? '' : String(val));
@@ -15009,10 +15019,16 @@ window.setExamData = function (data) {
     try { updateHeaderSettingsVisibility(); } catch (e) {}
     renderAll();
     try { syncTotalScore(); } catch (e) {}
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ fields: {}, questions: questions, qIdCounter: qIdCounter, savedAt: Date.now() })); } catch (e) {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ fields: collectFields(), questions: questions, qIdCounter: qIdCounter, savedAt: Date.now() })); } catch (e) {}
   } catch (e) {
     try { if (window.ExamPrintNative && window.ExamPrintNative.onError) window.ExamPrintNative.onError('import-failed'); } catch (_e) {}
   }
+};
+window.__qmfSaveNow = function () {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ fields: collectFields(), questions: (typeof questions !== 'undefined' ? questions : []), qIdCounter: (typeof qIdCounter !== 'undefined' ? qIdCounter : 0), savedAt: Date.now() }));
+    return 'ok';
+  } catch (e) { return 'err'; }
 };
 })();
 </script>

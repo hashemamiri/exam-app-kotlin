@@ -106,7 +106,16 @@ class V76_0Builder30HostTest {
         assertTrue(".pwo-body #printContent{zoom:.44}" in assetText)
         // چاپ از پل بومی می‌گذرد
         assertEquals(4, Regex(Regex.escape("window.ExamPrintNative.print")).findAll(assetText).count())
-        assertTrue("printMode==='teacher'?'teacher':'student'" in assetText)
+        // V76.3 — modeِ چاپ در لحظهٔ فراخوانی قفل می‌شود (رفع رقابتِ چاپ پشت‌سرهم)
+        assertTrue("const __pm='teacher'" in assetText)
+        assertTrue("const __pm='student'" in assetText)
+        assertTrue("window.ExamPrintNative.print(__pm)" in assetText)
+        // V76.3 — نوار HTML مخفی (هفت کنترل به نوار بومی اپ منتقل شد)
+        assertTrue("qmfNativeBar" in assetText)
+        assertTrue(".toolbar{display:none!important}" in assetText)
+        // ذخیرهٔ بومی + ماندگاری فیلدهای سربرگ در ورود آزمون
+        assertTrue("window.__qmfSaveNow" in assetText)
+        assertEquals(2, Regex("fields: collectFields\\(\\)").findAll(assetText).count())
         // پل میزبان + پاک‌سازی Cloudflare
         assertTrue("window.setExamData" in assetText)
         assertTrue("qmf_exam_autosave_azmoon_v1" in assetText)
@@ -115,8 +124,23 @@ class V76_0Builder30HostTest {
     }
 
     @Test
-    fun `builder-30 dialog applies mobile viewport and supports image picking`() {
+    fun `builder-30 dialog has a native command bar for the seven controls`() {
         val dialog = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
+        // V76.3 — هفت فرمان بومی (نوار HTML فایل مخفی شده است)
+        for (label in listOf("⚙ تنظیمات سربرگ", "💾 ذخیره", "📂 بازکردن", "🖨 چاپ دانشجو", "✅ چاپ استاد", "➕ سوال جدید", "👁 پیش‌نمایش")) {
+            assertTrue(label, "NativeBarButton(\"$label\")" in dialog)
+        }
+        // فرمان‌ها به توابع خود فایل می‌رسند
+        assertTrue("toggleSettings()" in dialog)
+        assertTrue("printStudent()" in dialog)
+        assertTrue("printTeacher()" in dialog)
+        assertTrue("openQuestionTypePicker()" in dialog)
+        assertTrue("togglePreviewWindow()" in dialog)
+        assertTrue("window.__qmfSaveNow" in dialog)
+        // بازکردن آزمون: انتخاب‌گر بومی + ورود با پل setExamData
+        assertTrue("openExamPicker.launch" in dialog)
+        assertTrue("window.setExamData(atob('" in dialog)
+        assertTrue("webViewRef?.evaluateJavascript" in dialog)
         // V76.2 — متاوویوپورت فایل اعمال شود، اما overview mode خاموش بماند
         // (وگرنه WebView برای محتوای عریض A4 کل صفحه را zoom-out می‌کند)
         assertTrue("settings.useWideViewPort = true" in dialog)

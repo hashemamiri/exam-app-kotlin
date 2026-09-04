@@ -15768,3 +15768,60 @@ renderPlainWithMath ریگکس \\(…\\) را با mathToHtml (MathParser کام
 ```
 
 پچ: V76_2_builder30_exact_formula_mobile — بدون SQL.
+
+## ۲۹۷) V76.3 — نوار فرمان بومی: هفت کنترل از صفحهٔ وب به Compose منتقل شد
+
+### درخواست کاربر
+
+```text
+دکمه‌های تنظیمات سربرگ، ذخیره آزمون، بازکردن آزمون، چاپ نسخه دانشجو،
+چاپ نسخه استاد، سوال جدید و آیکن پیش‌نمایش نیتیو شود.
+```
+
+### چه شد
+
+```text
+- نوار HTML فایل (toolbar با همین ۷ دکمه: toggleSettings/saveExam/
+  loadExam/printStudent/printTeacher/openQuestionTypePicker/
+  togglePreviewWindow) با CSS (qmfNativeBar: .toolbar{display:none})
+  مخفی شد — توابع سالم ماندند.
+- ExamHtmlPrintDialog: ردیف دومِ نوار بالا = Row افقیِ اسکرول‌پذیر با ۷
+  TextButton سفید روی زمینهٔ آبی (NativeBarButton). هر دکمه با
+  evaluateJavascript تابع خود فایل را صدا می‌زند؛ webViewRef در
+  factory با also ضبط می‌شود.
+- «ذخیره»: saveExam قبلی Blob/download بود که در WebView درست کار
+  نمی‌کند ⇒ پل جدید window.__qmfSaveNow در qmfHostBridge همان دادهٔ
+  saveExam را در LocalStorage نشست می‌نویسد + پیام «ذخیره شد ✓».
+  ضمناً importِ setExamData حالا fields واقعی را در LS می‌نویسد
+  (collectFields؛ قبلاً {} می‌نوشت و سربرگِ تزریقی در بازیابی می‌پرید).
+- «بازکردن»: GetContent بومی (*/*) → خواندن متن → سانیتی‌چک «{» →
+  setExamData(atob(base64)) در صفحه (بدون درگیریِ file-chooser).
+- چاپ‌ها: همان printStudent()/printTeacher() صفحه → پل ExamPrintNative.
+- باگ واقعی که jsdom گرفت: هر دو تابعِ چاپ mode را «داخل» setTimeout
+  ۸۰ms می‌خواندند؛ دو چاپ پشت‌سرهم ⇒ چاپ اول با modeِ دوم! اکنون mode
+  در لحظهٔ فراخوانی قفل می‌شود (const __pm).
+```
+
+### تأییدها
+
+```text
+- jsdom (drive3.js): ۱۱/۱۱ — نوار مخفی، __qmfSaveNow=ok + فیلدها/سؤالات
+  در LS، چاپ‌ها ['student','teacher'] (بعد از رفع رقابت)، تنظیمات/پنجرهٔ
+  نوع سؤال/چشم باز می‌شوند، فیلدهای import مانده‌اند.
+- verify PASS + شبیه‌سازی ۱۷۷ سوزن PASS؛ توازن/لنگرها OK.
+```
+
+### درس‌ها
+
+```text
+- «بومی‌سازی» کنترل‌ها = مخفی‌سازی CSS + فراخوانی تابع همان صفحه با
+  evaluateJavascript؛ بازنویسیِ منطقِ فایل لازم نبود و رفتار نسخهٔ ۳۰
+  دست‌نخورده ماند.
+- تبدیل window.print (سنکرون/مسدودکننده) به پل async، رقابت‌های
+  خواندنِ متغیر داخل setTimeout می‌سازد — state را در لحظهٔ فراخوانی
+  قفل کن (const __pm).
+- Blob/download و input[type=file] در WebView همیشه نیاز به مسیر بومی
+  دارند (DownloadListener/onShowFileChooser) — یا بومی‌شان کن یا پل بزن.
+```
+
+پچ: V76_3_builder30_native_command_bar — بدون SQL.
