@@ -15038,6 +15038,73 @@ window.setExamData = function (data) {
 window.__qmfSaveNow = function () {
   try { persistNow(); return "ok"; } catch (e) { return "err"; }
 };
+window.__qmfQuestionImages = function (qid) {
+  try {
+    var q = null;
+    if (typeof questions !== "undefined") { for (var i = 0; i < questions.length; i++) { if (String(questions[i].id) === String(qid)) { q = questions[i]; break; } } }
+    if (!q) return "no-question";
+    return JSON.stringify(Array.isArray(q.qimgImages) ? q.qimgImages : []);
+  } catch (e) { return "err"; }
+}
+window.__qmfRemoveQuestionImage = function (qid, idx) {
+  try {
+    var q = null;
+    if (typeof questions !== "undefined") { for (var i = 0; i < questions.length; i++) { if (String(questions[i].id) === String(qid)) { q = questions[i]; break; } } }
+    if (!q || !Array.isArray(q.qimgImages)) return "no-question";
+    if (idx < 0 || idx >= q.qimgImages.length) return "bad-index";
+    q.qimgImages.splice(idx, 1);
+    var ta = document.getElementById("q_text_" + qid);
+    try { if (typeof renderPreview === "function") renderPreview(); } catch (e2) {}
+    try { if (typeof renderAll === "function") renderAll(); } catch (e3) {}
+    try { if (ta) ta.dispatchEvent(new Event("input", { bubbles: true })); } catch (e4) {}
+    try { persistNow(); } catch (e5) {}
+    return "ok";
+  } catch (e) { return "err"; }
+}
+window.__qmfReplaceQuestionImage = function (qid, idx, dataUrl, h) {
+  try {
+    var q = null;
+    if (typeof questions !== "undefined") { for (var i = 0; i < questions.length; i++) { if (String(questions[i].id) === String(qid)) { q = questions[i]; break; } } }
+    if (!q || !Array.isArray(q.qimgImages)) return "no-question";
+    if (idx < 0 || idx >= q.qimgImages.length) return "bad-index";
+    q.qimgImages[idx] = { src: String(dataUrl), w: 420, h: Number(h) || 0 };
+    var ta = document.getElementById("q_text_" + qid);
+    try { if (typeof renderPreview === "function") renderPreview(); } catch (e2) {}
+    try { if (typeof renderAll === "function") renderAll(); } catch (e3) {}
+    try { if (ta) ta.dispatchEvent(new Event("input", { bubbles: true })); } catch (e4) {}
+    try { persistNow(); } catch (e5) {}
+    return "ok";
+  } catch (e) { return "err"; }
+}
+/* V76.6 — تفکیک چندسؤاله: هر بخش یک سؤال جدیدِ بعد از سؤالِ مبدا (عین رفتار استودیو:
+   کپیِ ساختار سؤالِ مبدا، متن خالی، یک تصویر). */
+window.__qmfSplitQuestion = function (qid, b64Items) {
+  try {
+    var src = null;
+    if (typeof questions !== "undefined") { for (var i = 0; i < questions.length; i++) { if (String(questions[i].id) === String(qid)) { src = questions[i]; break; } } }
+    if (!src) return "no-question";
+    var items = JSON.parse(atob(String(b64Items || "")));
+    if (!Array.isArray(items) || !items.length) return "bad-payload";
+    var at = -1;
+    for (var j = 0; j < questions.length; j++) { if (questions[j] === src) at = j; }
+    if (at < 0) return "no-question";
+    var made = 0;
+    for (var k = 0; k < items.length; k++) {
+      var it = items[k] || {};
+      if (!it.d) continue;
+      var cl = JSON.parse(JSON.stringify(src));
+      if (typeof qIdCounter !== "undefined") { qIdCounter++; cl.id = qIdCounter; } else { cl.id = "sp_" + Date.now() + "_" + k; }
+      cl.text = "";
+      cl.qimgImages = [{ src: String(it.d), w: 420, h: Number(it.h) || 0 }];
+      questions.splice(at + 1 + made, 0, cl);
+      made++;
+    }
+    try { if (typeof renderAll === "function") renderAll(); } catch (e2) {}
+    try { persistNow(); } catch (e3) {}
+    return "ok:" + made;
+  } catch (e) { return "err"; }
+}
+
 window.__qmfExportJson = function () {
   try {
     return JSON.stringify({ fields: collectFields(), questions: (typeof questions !== "undefined" ? questions : []), qIdCounter: (typeof qIdCounter !== "undefined" ? qIdCounter : 0) });

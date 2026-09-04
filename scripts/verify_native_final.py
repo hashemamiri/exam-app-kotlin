@@ -2630,6 +2630,26 @@ require("📐 صفحه‌ای (۴ گوشه)" in _v765_studio
         "V76.5 studio deskew/perspective tools are missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_5StudioDeskewPerspectiveTest.kt").exists(),
         "V76.5 studio deskew/perspective test is missing")
+_v766_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text()
+_v766_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text()
+_v766_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+require("✂️ تفکیک چندسؤاله" in _v766_studio
+        and "💾 همه بخش‌ها به همین سؤال" in _v766_studio
+        and "🧩 هر بخش → سؤال جداگانه" in _v766_studio
+        and "private fun encodeCropped(" in _v766_studio
+        and "internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap?" in _v766_studio
+        and "existingImages = parseExistingImages(studioImagesJson)" in _v766_dialog
+        and "window.__qmfSplitQuestion" in _v766_dialog
+        and "window.__qmfQuestionImages" in _v766_dialog,
+        "V76.6 studio split/multi-image is missing")
+require("window.__qmfSplitQuestion = function (qid, b64Items) {" in _v766_asset
+        and "questions.splice(at + 1 + made, 0, cl);" in _v766_asset
+        and "window.__qmfQuestionImages" in _v766_asset
+        and "window.__qmfRemoveQuestionImage" in _v766_asset
+        and "window.__qmfReplaceQuestionImage" in _v766_asset,
+        "V76.6 asset bridges (split/remove/replace/list) are missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_6StudioSplitMultiImageTest.kt").exists(),
+        "V76.6 split/multi-image test is missing")
 _v764_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 require("window.__qmfAddQuestionImage" in _v764_asset
         and "window.__qmfOpenLegacyStudio" in _v764_asset
@@ -2766,8 +2786,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 258
-        and _v694_changelog.startswith("V76.5:")
+require(_v694_lines >= 259
+        and _v694_changelog.startswith("V76.6:")
+        and "V76.5:" in _v694_changelog
         and "V76.4:" in _v694_changelog
         and "V76.3:" in _v694_changelog
         and "V76.2:" in _v694_changelog

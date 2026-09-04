@@ -16000,3 +16000,60 @@ import androidx.compose.ui.graphics.nativeCanvas لازم بود و نبود.
 
 پچ: V76_5_1_nativecanvas_import_fix — بدون SQL. (CI قرمز بخش ۳۰۱
 با همین پچ سبز می‌شود؛ تست دستگاه V76.5 پس از آن.)
+
+## ۳۰۳) V76.6 — تفکیک چندسؤالهٔ بومی + مدیریت تصویرهای موجود (فهرست/ویرایش دوباره/حذف)
+
+### قراردادهای استخراج‌شده از سورس واقعی
+
+```text
+- والد استودیو (qimgStudioParent) فقط میان‌است: st.open(file, cb) →
+  cb(imgs) → «imgs.forEach → addImage(block, dataUrl, w, h)» در
+  qimgUploaderJs — یعنی همهٔ تصویرها به همان سؤال.
+- exportBatchSplitQuestions: برشِ هر کادر از baseImageCanvas (بدون
+  سایز، فقط format/quality) → همه به همین سؤال.
+- exportSplitAsSeparateQuestions: newQuestionObj + topic از سؤال فعلی +
+  یک تصویر برای هر بخش؛ پرش به اولین سؤال جدید.
+- برای اپِ ما این یعنی: پل‌های سؤال‌ساز باید مدلِ خودِ صفحه را داشته
+  باشند (questions/qIdCounter/renderAll/persistNow) نه مدل داخلی استودیو.
+```
+
+### پیاده‌سازی
+
+```text
+- asset (۴ پل جدید، سبک __qmfAddQuestionImage):
+  __qmfQuestionImages(qid) → JSON آرایهٔ qimgImages؛
+  __qmfRemoveQuestionImage(qid,idx) → splice+رندر+input+persist؛
+  __qmfReplaceQuestionImage(qid,idx,dataUrl,h) → جایگزینی درجا؛
+  __qmfSplitQuestion(qid,b64[{d,h}]) → کپیِ عمیق سؤال مبدا
+  (JSON.parse(JSON.stringify)), متن خالی, یک تصویر {src,w:420,h}،
+  درج splice بعد از مبدا، renderAll+persist → "ok:تعداد".
+- Kotlin استودیو: حالت «✂️ تفکیک چندسؤاله» با پیش‌فرض‌های ۲ بالا/پایین،
+  ۳ ستونی، ۲×۲ + کادر جدید/حذف کادر؛ Canvas: کادرها با شماره و
+  انتخاب (سبز=انتخاب) + دستگیرهٔ اندازه پایین-چپ؛ کشیدن بدنه = جابه‌جایی؛
+  دو دکمهٔ اعمال: onSplitToSame / onSplitToQuestions.
+- encodeCropped(bmp, box, …) از processAndEncode جدا شد (برش+اسکن+
+  سایز+کیفیت) — هم درجِ تکی هم هر کادر تفکیک از همان زنجیره می‌رود.
+- مدیریت تصویرهای موجود: صفحهٔ شروع استودیو فهرست با بندانگشتی
+  (decodeDataUrlBounded 200) + «✏️ ویرایش» (باز شدن در ادیتور،
+  دکمه به «تایید و جایگزینی» عوض می‌شود → پل replace در همان ایندکس)
+  + «🗑️ حذف» (پل remove + refresh فهرست). editIndex با عکسِ تازه
+  ریست می‌شود (وگرنه درج اشتباهاً جایگزین می‌شد — رفع شد).
+- دیالوگ چاپ: LaunchedEffect(studioQuestionId) → fetch فهرست؛
+  parseExistingImages؛ onSplitToQuestions: JSON [{d,h}] → Base64 →
+  پل split؛ onSplitToSame: فراخوان‌های پشت‌سرهم addQuestionImage.
+```
+
+### نکات/درس‌ها
+
+```text
+- لنگر «if (perspMode) {» دو برابر بود (UI + Canvas) ⇒ لنگر باید
+  چندخطی با تودرتویی باشد نه یک خطِ تکرارشدنی.
+- شبیه‌ساز بعد از add فایل V76_6 دو سوزن V76_5 را FAIL داد: پین
+  pointerInput کهنه بود (کلید عوض شده بود) — همان قانون «همهٔ تست‌های
+  خواننده بعد از آخرین ویرایش». به‌روز شد.
+- drive5.js (۲۱ ادعا): questionImages/replace/remove/split + خطاها
+  (no-question/bad-index/bad-payload) + ماندگاری + رگرسیون‌های
+  setFields/دو تصویر/cam. drive3 و drive4 روی asset جدید هم سبز.
+```
+
+پچ: V76_6_studio_split_and_multi_image — بدون SQL.

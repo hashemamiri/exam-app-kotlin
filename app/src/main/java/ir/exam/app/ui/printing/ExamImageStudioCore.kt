@@ -11,9 +11,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -36,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,14 +87,24 @@ import androidx.compose.ui.graphics.nativeCanvas
  * پرسپکتیو با setPolyToPoly — همان «📍 انتخاب ۴ گوشه صفحه / ✓ اعمال صاف‌سازی»)،
  * صاف‌سازیِ دقیقِ ±۱۵° (اسلایدر + شبکهٔ راهنما) و «🎯 تشخیص خودکار زاویه»
  * با پروفایلِ تصویر (بهینه‌سازی واریانسِ ردیف‌های تاریک).
- * ابزارهای پیشرفتهٔ باقی‌مانده (تفکیک چندسؤاله، لاک‌گیر، برچسب/فلش، صفحه‌ای/۴گوشه،
- * تشخیص خودکار زاویه) در پچ‌های بعدی بومی می‌شوند؛ تا آن‌موقع دکمهٔ «ابزار کامل»
- * همان استودیوی HTML را باز می‌کند (__qmfOpenLegacyStudio) تا هیچ امکانی از دست نرود.
+ * V76.6 — تفکیک چندسؤاله (کادرهای ۲/۳/۴تایی + کادرِ دستی؛ «همه بخش‌ها به همین
+ * سؤال» یا «هر بخش → سؤال جداگانه» عین رفتار استودیو: کپیِ ساختارِ سؤالِ مبدا،
+ * متن خالی، یک تصویر برای هر بخش) + مدیریتِ تصویرهای موجودِ سؤال
+ * (فهرست/ویرایشِ دوباره/حذف — پل‌های __qmfQuestionImages/__qmfRemoveQuestionImage/
+ * __qmfReplaceQuestionImage). ابزارهای بعدی: لاک‌گیر/برچسب/فلش (V76.7).
  */
+/** V76.6 — تصویرِ موجودِ سؤال برای مدیریت (فهرست/ویرایشِ دوباره/حذف). */
+data class StudioImageRef(val dataUrl: String, val w: Int, val h: Int)
+
 @Composable
 fun ExamImageStudioDialog(
     questionId: String?,
+    existingImages: List<StudioImageRef> = emptyList(),
     onInsert: (dataUrl: String, heightPx: Int) -> Unit,
+    onDeleteExisting: (Int) -> Unit = {},
+    onReplaceExisting: (Int, String, Int) -> Unit = { _, _, _ -> },
+    onSplitToSame: (List<Pair<String, Int>>) -> Unit = {},
+    onSplitToQuestions: (List<Pair<String, Int>>) -> Unit = {},
     onLegacyStudio: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -112,6 +127,11 @@ fun ExamImageStudioDialog(
     var perspMode by remember { mutableStateOf(false) }
     var perspPts by remember { mutableStateOf(listOf(Offset(0.12f, 0.12f), Offset(0.88f, 0.12f), Offset(0.88f, 0.88f), Offset(0.12f, 0.88f))) }
     var note by remember { mutableStateOf<String?>(null) }
+    // V76.6 — مدیریتِ تصویر موجود + تفکیک چندسؤاله
+    var editIndex by remember { mutableStateOf(-1) }
+    var splitMode by remember { mutableStateOf(false) }
+    var splitBoxes by remember { mutableStateOf(listOf(Rect(0f, 0f, 1f, 0.5f), Rect(0f, 0.5f, 1f, 1f))) }
+    var selectedBox by remember { mutableStateOf(0) }
 
     fun makeCameraUri(): Pair<Uri, File> {
         val dir = File(context.cacheDir, "studio").apply { mkdirs() }
@@ -129,6 +149,7 @@ fun ExamImageStudioDialog(
             if (decoded != null) {
                 original = decoded
                 rotation = 0; flip = false; crop = Rect(0f, 0f, 1f, 1f)
+                editIndex = -1
             }
         }
     }
@@ -138,6 +159,7 @@ fun ExamImageStudioDialog(
             if (decoded != null) {
                 original = decoded
                 rotation = 0; flip = false; crop = Rect(0f, 0f, 1f, 1f)
+                editIndex = -1
             }
         }
     }
@@ -181,12 +203,14 @@ fun ExamImageStudioDialog(
                                         )
                                     }
                                     processing = false
-                                    result?.let { (dataUrl, h) -> onInsert(dataUrl, h) }
+                                    result?.let { (dataUrl, h) ->
+                                        if (editIndex >= 0) onReplaceExisting(editIndex, dataUrl, h) else onInsert(dataUrl, h)
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Text("تایید و درج")
+                            Text(if (editIndex >= 0) "تایید و جایگزینی" else "تایید و درج")
                         }
                     }
                 }
@@ -213,6 +237,64 @@ fun ExamImageStudioDialog(
                             onClick = { galleryLauncher.launch("image/*") },
                             modifier = Modifier.fillMaxWidth().height(56.dp)
                         ) { Text("🖼️ گالری", style = MaterialTheme.typography.titleMedium) }
+                        // V76.6 — تصویرهای موجودِ همین سؤال: ویرایشِ دوباره یا حذف
+                        if (existingImages.isNotEmpty()) {
+                            Text(
+                                "تصویرهای فعلی این سؤال (" + existingImages.size + "):",
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 300.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                existingImages.forEachIndexed { idx, ref ->
+                                    var thumb by remember(ref.dataUrl) { mutableStateOf<ImageBitmap?>(null) }
+                                    LaunchedEffect(ref.dataUrl) {
+                                        thumb = withContext(Dispatchers.IO) {
+                                            decodeDataUrlBounded(ref.dataUrl, 200)?.asImageBitmap()
+                                        }
+                                    }
+                                    Card(Modifier.fillMaxWidth()) {
+                                        Row(
+                                            Modifier.fillMaxWidth().padding(8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                Modifier.size(56.dp).background(Color(0xFFF1F5F9)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                thumb?.let {
+                                                    Image(bitmap = it, contentDescription = "بند‌انگشتی تصویر " + (idx + 1), contentScale = ContentScale.Crop)
+                                                }
+                                            }
+                                            Text("تصویر " + (idx + 1), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
+                                            TextButton(onClick = {
+                                                scope.launch {
+                                                    val bmp = withContext(Dispatchers.IO) { decodeDataUrlBounded(ref.dataUrl, 2560) }
+                                                    if (bmp != null) {
+                                                        editIndex = idx
+                                                        original = bmp
+                                                        rotation = 0; flip = false
+                                                        crop = Rect(0f, 0f, 1f, 1f); aspect = "free"
+                                                        deskewAngle = 0f; perspMode = false; splitMode = false
+                                                        note = null
+                                                    } else {
+                                                        note = "بازکردن تصویر ممکن نشد."
+                                                    }
+                                                }
+                                            }) { Text("✏️ ویرایش") }
+                                            TextButton(onClick = { onDeleteExisting(idx) }) {
+                                                Text("🗑️ حذف", color = MaterialTheme.colorScheme.error)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         if (questionId != null) {
                             OutlinedButton(
                                 onClick = onLegacyStudio,
@@ -285,9 +367,22 @@ fun ExamImageStudioDialog(
                             Canvas(
                                 Modifier
                                     .fillMaxSize()
-                                    .pointerInput(aspect, perspMode, boxSize.width, boxSize.height) {
+                                    .pointerInput(aspect, perspMode, splitMode, splitBoxes.size, boxSize.width, boxSize.height) {
                                         detectDragGestures(
                                             onDragStart = { pos ->
+                                                if (splitMode) {
+                                                    val nx = (pos.x - offX) / drawW
+                                                    val ny = (pos.y - offY) / drawH
+                                                    var hit = -1
+                                                    splitBoxes.forEachIndexed { bi, b ->
+                                                        if (nx >= b.left && nx <= b.right && ny >= b.top && ny <= b.bottom) hit = bi
+                                                    }
+                                                    selectedBox = if (hit >= 0) hit else selectedBox
+                                                    dragSplitIndex = if (hit >= 0) hit else -1
+                                                    dragTarget = if (hit >= 0 && dist(pos, Offset(offX + splitBoxes[hit].left * drawW, offY + splitBoxes[hit].bottom * drawH)) < 90f) Corner.SPLIT_RESIZE else Corner.SPLIT_MOVE
+                                                    dragOffset = Offset.Zero
+                                                    return@detectDragGestures
+                                                }
                                                 if (perspMode) {
                                                     dragTarget = Corner.PERSP
                                                     dragPerspIndex = nearestPerspIndex(pos, offX, offY, drawW, drawH, perspPts)
@@ -303,6 +398,26 @@ fun ExamImageStudioDialog(
                                             },
                                             onDrag = { change, drag ->
                                                 change.consume()
+                                                if (splitMode) {
+                                                    val dx = drag.x / drawW
+                                                    val dy = drag.y / drawH
+                                                    if (dragSplitIndex in splitBoxes.indices) {
+                                                        val old = splitBoxes[dragSplitIndex]
+                                                        val updated = if (dragTarget == Corner.SPLIT_RESIZE) {
+                                                            old.copy(
+                                                                left = (old.left + dx).coerceIn(0f, old.right - 0.05f),
+                                                                bottom = (old.bottom + dy).coerceIn(old.top + 0.05f, 1f)
+                                                            )
+                                                        } else {
+                                                            val w = old.width; val h = old.height
+                                                            val nl = (old.left + dx).coerceIn(0f, 1f - w)
+                                                            val nt = (old.top + dy).coerceIn(0f, 1f - h)
+                                                            Rect(nl, nt, nl + w, nt + h)
+                                                        }
+                                                        splitBoxes = splitBoxes.toMutableList().also { it[dragSplitIndex] = updated }
+                                                    }
+                                                    return@detectDragGestures
+                                                }
                                                 if (perspMode) {
                                                     val x = (change.position.x - offX).coerceIn(0f, drawW) / drawW
                                                     val y = (change.position.y - offY).coerceIn(0f, drawH) / drawH
@@ -337,7 +452,37 @@ fun ExamImageStudioDialog(
                                         )
                                     }
                             ) {
-                                if (perspMode) {
+                                if (splitMode) {
+                                    // V76.6 — کادرهای تفکیک با شماره و انتخاب
+                                    splitBoxes.forEachIndexed { bi, b ->
+                                        val l = offX + b.left * drawW
+                                        val t = offY + b.top * drawH
+                                        val r = offX + b.right * drawW
+                                        val btm = offY + b.bottom * drawH
+                                        drawRect(
+                                            color = if (bi == selectedBox) Color(0xFF16A34A) else Color(0xFFFFC107),
+                                            topLeft = Offset(l, t),
+                                            size = Size(r - l, btm - t),
+                                            style = Stroke(width = if (bi == selectedBox) 4f else 3f)
+                                        )
+                                        drawIntoCanvas { c ->
+                                            val bg = android.graphics.Paint().apply {
+                                                color = if (bi == selectedBox) 0xFF16A34A.toInt() else 0xFFFFC107.toInt()
+                                                isAntiAlias = true
+                                            }
+                                            val fg = android.graphics.Paint().apply {
+                                                color = android.graphics.Color.WHITE; textSize = 28f
+                                                textAlign = android.graphics.Paint.Align.CENTER; isAntiAlias = true
+                                            }
+                                            c.nativeCanvas.drawCircle(l + 26f, t + 26f, 22f, bg)
+                                            c.nativeCanvas.drawText((bi + 1).toString(), l + 26f, t + 36f, fg)
+                                        }
+                                        if (bi == selectedBox) {
+                                            // دستگیرهٔ اندازه (پایین-چپ)
+                                            drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(l, btm))
+                                        }
+                                    }
+                                } else if (perspMode) {
                                     // V76.5 — چهارگوشِ صفحه با نقطه‌های شماره‌دار ۱..۴
                                     val ptsPx = perspPts.map { Offset(offX + it.x * drawW, offY + it.y * drawH) }
                                     val quad = androidx.compose.ui.graphics.Path().apply {
@@ -407,6 +552,10 @@ fun ExamImageStudioDialog(
                             ToolChip("مربع ۱:۱") { aspect = "r11"; crop = centeredAspect(crop, 1f) }
                             ToolChip("۴:۳") { aspect = "r43"; crop = centeredAspect(crop, 4f / 3f) }
                             ToolChip("۱۶:۹") { aspect = "r169"; crop = centeredAspect(crop, 16f / 9f) }
+                            ToolChip("✂️ تفکیک چندسؤاله") {
+                                splitMode = !splitMode
+                                if (splitMode) { perspMode = false; selectedBox = 0 }
+                            }
                         }
                         // V76.5 — صاف‌سازی: صفحه‌ای ۴گوشه + خودکار + دقیق ±۱۵°
                         Row(
@@ -450,6 +599,98 @@ fun ExamImageStudioDialog(
                             )
                             Text("شبکه", style = MaterialTheme.typography.labelMedium)
                             Switch(checked = deskewGrid, onCheckedChange = { deskewGrid = it })
+                        }
+                        if (splitMode) {
+                            // V76.6 — پیش‌فرض‌های تفکیک + اعمال (عین استودیو)
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                ToolChip("✂️ ۲ سؤال (بالا / پایین)") {
+                                    splitBoxes = listOf(Rect(0f, 0f, 1f, 0.5f), Rect(0f, 0.5f, 1f, 1f)); selectedBox = 0
+                                }
+                                ToolChip("✂️ ۳ سؤال ستونی") {
+                                    splitBoxes = listOf(
+                                        Rect(0f, 0f, 1f / 3f, 1f), Rect(1f / 3f, 0f, 2f / 3f, 1f), Rect(2f / 3f, 0f, 1f, 1f)
+                                    ); selectedBox = 0
+                                }
+                                ToolChip("✂️ ۴ سؤال (۲×۲)") {
+                                    splitBoxes = listOf(
+                                        Rect(0f, 0f, 0.5f, 0.5f), Rect(0.5f, 0f, 1f, 0.5f),
+                                        Rect(0f, 0.5f, 0.5f, 1f), Rect(0.5f, 0.5f, 1f, 1f)
+                                    ); selectedBox = 0
+                                }
+                                ToolChip("➕ کادر جدید") {
+                                    splitBoxes = splitBoxes + Rect(0.08f, 0.62f, 0.92f, 0.94f)
+                                    selectedBox = splitBoxes.lastIndex
+                                }
+                                ToolChip("🗑️ حذف کادر انتخاب‌شده") {
+                                    if (splitBoxes.size > 1) {
+                                        splitBoxes = splitBoxes.filterIndexed { i, _ -> i != selectedBox }
+                                        selectedBox = selectedBox.coerceAtMost(splitBoxes.lastIndex)
+                                    }
+                                }
+                            }
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (questionId != null) {
+                                    Button(onClick = {
+                                        val src = original ?: return@Button
+                                        processing = true; note = null
+                                        scope.launch {
+                                            val results = withContext(Dispatchers.Default) {
+                                                val m = Matrix().apply {
+                                                    postRotate(rotation.toFloat() + deskewAngle)
+                                                    if (flip) postScale(-1f, 1f)
+                                                }
+                                                val base = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality) }
+                                            }
+                                            processing = false
+                                            if (results.isEmpty()) {
+                                                note = "هیچ بخشی آماده نشد."
+                                            } else {
+                                                onSplitToSame(results)
+                                            }
+                                        }
+                                    }) { Text("💾 همه بخش‌ها به همین سؤال") }
+                                    Button(onClick = {
+                                        val src = original ?: return@Button
+                                        processing = true; note = null
+                                        scope.launch {
+                                            val results = withContext(Dispatchers.Default) {
+                                                val m = Matrix().apply {
+                                                    postRotate(rotation.toFloat() + deskewAngle)
+                                                    if (flip) postScale(-1f, 1f)
+                                                }
+                                                val base = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality) }
+                                            }
+                                            processing = false
+                                            if (results.isEmpty()) {
+                                                note = "هیچ بخشی آماده نشد."
+                                            } else {
+                                                onSplitToQuestions(results)
+                                            }
+                                        }
+                                    }) { Text("🧩 هر بخش → سؤال جداگانه") }
+                                }
+                                ToolChip("انصراف") { splitMode = false }
+                                Text(
+                                    splitBoxes.size.toString() + " کادر — بدنه = جابه‌جایی، دستگیره = اندازه",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                         if (perspMode) {
                             Row(
@@ -552,10 +793,11 @@ fun ExamImageStudioDialog(
     }
 }
 
-private enum class Corner { START, END, MOVE, PERSP }
+private enum class Corner { START, END, MOVE, PERSP, SPLIT_MOVE, SPLIT_RESIZE }
 private var dragTarget by androidx.compose.runtime.mutableStateOf(Corner.MOVE)
 private var dragOffset by androidx.compose.runtime.mutableStateOf(Offset.Zero)
 private var dragPerspIndex by androidx.compose.runtime.mutableStateOf(-1)
+private var dragSplitIndex by androidx.compose.runtime.mutableStateOf(-1)
 
 /** نزدیک‌ترین نقطهٔ صفحه‌ای به لمس (آستانهٔ ۲۲۰px برای انگشت). */
 private fun nearestPerspIndex(pos: Offset, offX: Float, offY: Float, drawW: Float, drawH: Float, pts: List<Offset>): Int {
@@ -636,17 +878,32 @@ private fun processAndEncode(
         postRotate(rotation.toFloat() + deskew)
         if (flip) postScale(-1f, 1f)
     }
-    var bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-    val cx = (crop.left * bmp.width).roundToInt().coerceIn(0, bmp.width - 1)
-    val cy = (crop.top * bmp.height).roundToInt().coerceIn(0, bmp.height - 1)
-    val cw = max(1, ((crop.width) * bmp.width).roundToInt().coerceAtMost(bmp.width - cx))
-    val ch = max(1, ((crop.height) * bmp.height).roundToInt().coerceAtMost(bmp.height - cy))
-    bmp = Bitmap.createBitmap(bmp, cx, cy, cw, ch)
+    val bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+    encodeCropped(bmp, crop, scanOn, threshold, outSize, quality)
+}.getOrNull()
+
+/**
+ * V76.6 — برشِ پیکسلی + اسکن + اندازه + کدگذاری؛ مشترک بین درجِ تکی
+ * (processAndEncode) و تفکیک چندسؤاله (هر کادر جداگانه).
+ */
+private fun encodeCropped(
+    bmp: Bitmap,
+    box: Rect,
+    scanOn: Boolean,
+    threshold: Int,
+    outSize: Int,
+    quality: Int
+): Pair<String, Int>? = runCatching {
+    val cx = (box.left * bmp.width).roundToInt().coerceIn(0, bmp.width - 1)
+    val cy = (box.top * bmp.height).roundToInt().coerceIn(0, bmp.height - 1)
+    val cw = max(1, (box.width * bmp.width).roundToInt().coerceAtMost(bmp.width - cx))
+    val ch = max(1, (box.height * bmp.height).roundToInt().coerceAtMost(bmp.height - cy))
+    var out = Bitmap.createBitmap(bmp, cx, cy, cw, ch)
 
     if (scanOn) {
-        val w = bmp.width; val h = bmp.height
+        val w = out.width; val h = out.height
         val pixels = IntArray(w * h)
-        bmp.getPixels(pixels, 0, w, 0, 0, w, h)
+        out.getPixels(pixels, 0, w, 0, 0, w, h)
         for (i in pixels.indices) {
             val p = pixels[i]
             val r = (p shr 16) and 0xFF
@@ -656,29 +913,46 @@ private fun processAndEncode(
             val v = if (lum >= threshold) 255 else 0
             pixels[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
         }
-        bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
+        out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
             setPixels(pixels, 0, w, 0, 0, w, h)
         }
     }
 
     if (outSize > 0) {
-        val largest = max(bmp.width, bmp.height)
+        val largest = max(out.width, out.height)
         if (largest > outSize) {
             val scale = outSize.toFloat() / largest
-            bmp = Bitmap.createScaledBitmap(
-                bmp,
-                (bmp.width * scale).roundToInt().coerceAtLeast(1),
-                (bmp.height * scale).roundToInt().coerceAtLeast(1),
+            out = Bitmap.createScaledBitmap(
+                out,
+                (out.width * scale).roundToInt().coerceAtLeast(1),
+                (out.height * scale).roundToInt().coerceAtLeast(1),
                 true
             )
         }
     }
 
-    val out = ByteArrayOutputStream()
-    bmp.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(40, 100), out)
+    val bos = ByteArrayOutputStream()
+    out.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(40, 100), bos)
     val dataUrl = "data:image/jpeg;base64," +
-        android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
-    dataUrl to bmp.height
+        android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP)
+    dataUrl to out.height
+}.getOrNull()
+
+/** V76.6 — دیکدِ dataURL (تصویرِ موجودِ سؤال) با سقفِ ابعاد، برای ویرایشِ دوباره/بندانگشتی. */
+internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap? = runCatching {
+    val b64 = dataUrl.substringAfter("base64,", "")
+    if (b64.isBlank()) return@runCatching null
+    val bytes = android.util.Base64.decode(b64, android.util.Base64.NO_WRAP)
+    if (bytes.isEmpty()) return@runCatching null
+    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+    var sample = 1
+    var largest = max(opts.outWidth, opts.outHeight)
+    while (largest / (sample * 2) >= maxDim) sample *= 2
+    BitmapFactory.decodeByteArray(
+        bytes, 0, bytes.size,
+        BitmapFactory.Options().apply { inSampleSize = sample }
+    )
 }.getOrNull()
 
 /**

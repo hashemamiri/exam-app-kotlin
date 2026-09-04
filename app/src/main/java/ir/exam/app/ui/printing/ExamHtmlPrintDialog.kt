@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,6 +92,7 @@ fun ExamHtmlPrintDialog(
     var showSaveDialog by remember { mutableStateOf(false) }
     var showNewQuestion by remember { mutableStateOf(false) }
     var studioQuestionId by remember { mutableStateOf<String?>(null) }
+    var studioImagesJson by remember { mutableStateOf<String?>(null) }
     var pageSnapshotJson by remember { mutableStateOf<String?>(null) }
     var pendingOpenText by remember { mutableStateOf<String?>(null) }
     val saveFileLauncher = rememberLauncherForActivityResult(
@@ -108,7 +110,14 @@ fun ExamHtmlPrintDialog(
     val runJs: (String, ((String?) -> Unit)?) -> Unit = { script, cb ->
         webViewRef?.evaluateJavascript(script, cb)
     }
-    // V76.1 — دکمهٔ دوربینِ فایل (📷) یک input[type=file] داینامیک را کلیک می‌کند؛
+
+    // V76.6 — فهرست تصویرهای موجود سؤال، بعد از آماده‌شدن runJs
+    LaunchedEffect(studioQuestionId) {
+        val qid = studioQuestionId ?: return@LaunchedEffect
+        runJs("(function(){try{return window.__qmfQuestionImages?window.__qmfQuestionImages('" + qid + "'):'missing'}catch(e){return 'err'}})()") { r ->
+            studioImagesJson = unwrapJsString(r)
+        }
+    }    // V76.1 — دکمهٔ دوربینِ فایل (📷) یک input[type=file] داینامیک را کلیک می‌کند؛
     // WebView اندروید بدون onShowFileChooser آن را بی‌صدا نادیده می‌گیرد.
     var fileChooserCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -421,6 +430,7 @@ fun ExamHtmlPrintDialog(
             studioQuestionId?.let { qid ->
                 ExamImageStudioDialog(
                     questionId = qid,
+                    existingImages = parseExistingImages(studioImagesJson),
                     onInsert = { dataUrl, h ->
                         studioQuestionId = null
                         // dataUrl همیشه base64 است (بدون نقل‌قول/بک‌اسلش) ⇒ درج مستقیم امن است
@@ -428,6 +438,46 @@ fun ExamHtmlPrintDialog(
                             "(function(){try{return window.__qmfAddQuestionImage?window.__qmfAddQuestionImage('" + qid + "','" + dataUrl + "'," + h + "):'missing'}catch(e){return 'err'}})()"
                         ) { r ->
                             barStatus = if (r?.contains("ok") == true) "تصویر درج شد ✓" else "درج تصویر ناموفق بود."
+                        }
+                    },
+                    onDeleteExisting = { idx ->
+                        runJs(
+                            "(function(){try{return window.__qmfRemoveQuestionImage?window.__qmfRemoveQuestionImage('" + qid + "'," + idx + "):'missing'}catch(e){return 'err'}})()"
+                        ) { r ->
+                            if (r?.contains("ok") == true) {
+                                barStatus = "تصویر حذف شد."
+                                runJs("(function(){try{return window.__qmfQuestionImages?window.__qmfQuestionImages('" + qid + "'):'missing'}catch(e){return 'err'}})()") { r2 ->
+                                    studioImagesJson = unwrapJsString(r2)
+                                }
+                            } else barStatus = "حذف تصویر ناموفق بود."
+                        }
+                    },
+                    onReplaceExisting = { idx, dataUrl, h ->
+                        studioQuestionId = null
+                        runJs(
+                            "(function(){try{return window.__qmfReplaceQuestionImage?window.__qmfReplaceQuestionImage('" + qid + "'," + idx + ",'" + dataUrl + "'," + h + "):'missing'}catch(e){return 'err'}})()"
+                        ) { r ->
+                            barStatus = if (r?.contains("ok") == true) "تصویر جایگزین شد ✓" else "جایگزینی تصویر ناموفق بود."
+                        }
+                    },
+                    onSplitToSame = { items ->
+                        studioQuestionId = null
+                        // چند فراخوانیِ پشت‌سرهم؛ dataUrlها base64 امن‌اند
+                        items.forEach { (dataUrl, h) ->
+                            runJs(
+                                "(function(){try{return window.__qmfAddQuestionImage?window.__qmfAddQuestionImage('" + qid + "','" + dataUrl + "'," + h + "):'missing'}catch(e){return 'err'}})()"
+                            ) { }
+                        }
+                        barStatus = items.size.toString() + " بخش به همین سؤال اضافه شد ✓"
+                    },
+                    onSplitToQuestions = { items ->
+                        studioQuestionId = null
+                        val payload = "[" + items.joinToString(",") { (d, h) -> "{\"d\":\"" + d + "\",\"h\":" + h + "}" } + "]"
+                        val b64 = android.util.Base64.encodeToString(payload.toByteArray(), android.util.Base64.NO_WRAP)
+                        runJs(
+                            "(function(){try{return window.__qmfSplitQuestion?window.__qmfSplitQuestion('" + qid + "','" + b64 + "'):'missing'}catch(e){return 'err'}})()"
+                        ) { r ->
+                            barStatus = if (r?.toString()?.contains("ok") == true) "سؤال‌های جدید ساخته شدند ✓" else "ساخت سؤال‌های جداگانه ناموفق بود."
                         }
                     },
                     onLegacyStudio = {
@@ -459,6 +509,21 @@ internal fun parsePageFields(snapshotJson: String?): Map<String, String> {
     }.getOrNull() ?: return emptyMap()
     val fields = obj["fields"]?.jsonObject ?: return emptyMap()
     return fields.entries.associate { (k, v) -> k to (v as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty() }
+}
+
+/** V76.6 — فهرست تصویرهای موجودِ سؤال از JSON پل (__qmfQuestionImages). */
+internal fun parseExistingImages(raw: String?): List<StudioImageRef> {
+    if (raw.isNullOrBlank() || !raw.startsWith("[")) return emptyList()
+    return runCatching {
+        kotlinx.serialization.json.Json.parseToJsonElement(raw).jsonArray.map { el ->
+            val o = el.jsonObject
+            StudioImageRef(
+                dataUrl = (o["src"] as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty(),
+                w = (o["w"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 0,
+                h = (o["h"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 0
+            )
+        }.filter { it.dataUrl.isNotBlank() }
+    }.getOrDefault(emptyList())
 }
 
 @Composable
