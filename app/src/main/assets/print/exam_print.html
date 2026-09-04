@@ -12525,6 +12525,18 @@ window.__qmfPreviewDiag = function () {
     }
     out.questionCount = (typeof questions !== 'undefined') ? questions.length : -1;
     out.previewArea = !!document.getElementById('previewArea');
+    /* V84.0 — اگر باز هم چیزی دیده نشد، این‌ها می‌گویند دقیقاً کجا گیر است */
+    out.toggleFn = typeof window.togglePreviewWindow;
+    out.fitFn = typeof window.qmfFitPreviewScale;
+    out.uiInstalled = !!window.__qUI2Installed;
+    try {
+      var pcx = document.getElementById('printContent');
+      out.inlineDisplayPriority = pcx ? pcx.style.getPropertyPriority('display') : '';
+      out.scrollW = pcx ? pcx.scrollWidth : 0;
+      out.scrollH = pcx ? pcx.scrollHeight : 0;
+      out.parentTag = (pcx && pcx.parentNode) ?
+        String(pcx.parentNode.className || pcx.parentNode.tagName || '') : '';
+    } catch (e) {}
   } catch (e) { out.fatal = String(e.message || e); }
   return JSON.stringify(out);
 };
@@ -14110,19 +14122,34 @@ loadSample();
     if (!pc) return;
     var body = pc.parentNode;
     if (!body || !body.classList || !body.classList.contains('pwo-body')) return;
-    var st = window.getComputedStyle(pc);
-    var tr = st.transform || st.webkitTransform || 'none';
-    var k = 1;
-    if (tr && tr !== 'none') {
-      var mm = /matrix\(([-\d.]+)/.exec(tr);
-      if (mm) k = parseFloat(mm[1]) || 1;
+    /* V84.0 — مقیاس از روی اندازهٔ واقعیِ کادر محاسبه می‌شود، نه با
+       media queryِ ثابت. برگهٔ A4 عرضِ ثابتی دارد (۲۱۰mm ≈ ۷۹۴px)؛ اگر در
+       کادر جا نشود همان‌قدر که لازم است کوچک می‌شود و اگر جا شود دست‌نخورده
+       می‌ماند. این کار هم `zoom`ِ ناپشتیبان را حذف می‌کند و هم وابستگی به
+       عرضِ حدسیِ ۷۰۰px را. */
+    var avail = body.clientWidth - 12;
+    if (!(avail > 0)) return;
+    /* عرضِ طبیعیِ برگه، بدونِ تأثیرِ مقیاسِ فعلی */
+    pc.style.removeProperty('transform');
+    pc.style.removeProperty('width');
+    pc.style.removeProperty('margin-bottom');
+    var natural = pc.scrollWidth || pc.offsetWidth || 794;
+    if (!(natural > 0)) natural = 794;
+    var k = avail / natural;
+    if (k >= 1) { k = 1; }
+    if (k < 0.2) { k = 0.2; }
+    if (k >= 0.999) {
+      pc.style.removeProperty('transform');
+      pc.style.removeProperty('transform-origin');
+      pc.style.removeProperty('margin-bottom');
+      return;
     }
-    if (!(k > 0) || k >= 0.999) { body.style.removeProperty('height'); return; }
-    var h = pc.offsetHeight * k;
-    body.style.height = 'auto';
-    /* فضای اضافی زیر برگه را با منفی‌کردنِ حاشیه جمع می‌کنیم */
-    pc.style.marginBottom = (-(pc.offsetHeight - h)) + 'px';
-  };
+    pc.style.setProperty('transform', 'scale(' + k.toFixed(3) + ')', 'important');
+    pc.style.setProperty('transform-origin', 'top center', 'important');
+    /* transform فضای چیدمان را آزاد نمی‌کند؛ ارتفاعِ اضافی را جمع می‌کنیم */
+    var h = pc.offsetHeight;
+    if (h > 0) pc.style.marginBottom = (-(h - h * k)) + 'px';
+  };;
 
   window.togglePreviewWindow = function () {
     if ($('previewWinOverlay')) closePreviewWindow();
@@ -14134,6 +14161,19 @@ loadSample();
     /* V83.0 — پیش از نمایش، محتوا را تازه‌سازی کن. اگر کاربر پیش از هر
        رندری روی 👁 بزند، برگه خالی بود و کادر خاکستریِ توخالی دیده می‌شد. */
     try { if (typeof renderPreview === 'function') renderPreview(); } catch (e) {}
+    /* V84.0 — نمایشِ برگه دیگر به هیچ قانونِ CSSِ صفحه وابسته نیست.
+       قبلاً دیده‌شدنِ برگه به سلکتورِ نزولیِ
+       `#previewWinOverlay #printContent.live-preview{display:block}` وابسته
+       بود؛ اگر آن قانون به هر دلیلی اعمال نمی‌شد (ترتیبِ استایل‌ها، کشِ
+       WebView، یا `display:none !important` قویِ `@media screen`)، پنجره باز
+       می‌شد ولی برگه نامرئی می‌ماند و کاربر فقط کادرِ خاکستری می‌دید.
+       حالا سبک به‌صورت inline و با اولویتِ important روی خودِ عنصر می‌نشیند
+       که هیچ قانونِ دیگری نمی‌تواند آن را خنثی کند. */
+    try {
+      pc.style.setProperty('display', 'block', 'important');
+      pc.style.setProperty('visibility', 'visible', 'important');
+      pc.style.setProperty('opacity', '1', 'important');
+    } catch (e) {}
     prevInfo = { parent: pc.parentNode, next: pc.nextSibling };
     var ov = document.createElement('div');
     ov.id = 'previewWinOverlay';
@@ -14166,6 +14206,16 @@ loadSample();
       pc.classList.remove('in-window');
       /* V83.0 — جبرانِ ارتفاع فقط داخل پنجره معنا دارد */
       try { pc.style.removeProperty('margin-bottom'); } catch (e) {}
+      /* V84.0 — سبک‌های inlineِ نمایش پاک شوند تا برگه در حالتِ عادی
+         (بیرونِ پنجره) دوباره مخفی باشد و چیدمانِ ویرایشگر به هم نریزد. */
+      try {
+        pc.style.removeProperty('display');
+        pc.style.removeProperty('visibility');
+        pc.style.removeProperty('opacity');
+        pc.style.removeProperty('transform');
+        pc.style.removeProperty('transform-origin');
+        pc.style.removeProperty('width');
+      } catch (e) {}
       prevInfo.parent.insertBefore(pc, prevInfo.next);
     }
     try { if (ov.__qmfRO) { ov.__qmfRO.disconnect(); ov.__qmfRO = null; } } catch (e) {}
@@ -15034,11 +15084,6 @@ loadSample();
      فضای چیدمان را آزاد نمی‌کند، مقیاس روی یک لفافه اعمال می‌شود و ارتفاعِ
      لفافه با همان ضریب کم می‌شود تا اسکرول درست بماند. */
   .pwo-body{text-align:center}
-  .pwo-body #printContent{
-    transform:scale(.44);
-    transform-origin:top center;
-    margin:0 auto !important;
-  }
   .math-box{width:100%}
 }
 </style>

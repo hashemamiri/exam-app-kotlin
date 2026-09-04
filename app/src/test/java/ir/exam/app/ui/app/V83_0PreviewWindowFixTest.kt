@@ -32,8 +32,11 @@ class V83_0PreviewWindowFixTest {
     @Test
     fun `the unsupported zoom rule is gone from the preview window`() {
         assertFalse("zoom نباید برگردد", ".pwo-body #printContent{zoom:.44}" in assetText)
-        assertTrue("transform:scale(.44)" in assetText)
-        assertTrue("transform-origin:top center" in assetText)
+        // V84.0 — ضریب دیگر در CSS ثابت نیست؛ در JS از روی اندازهٔ واقعیِ
+        // کادر محاسبه می‌شود. پس رفتار پین می‌شود نه عدد.
+        assertFalse("ضریب ثابت نباید برگردد", "transform:scale(.44)" in assetText)
+        assertTrue("'transform', 'scale(' + k.toFixed(3) + ')'" in assetText)
+        assertTrue("'transform-origin', 'top center'" in assetText)
     }
 
     @Test

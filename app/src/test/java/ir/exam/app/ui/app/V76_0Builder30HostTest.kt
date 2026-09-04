@@ -106,7 +106,9 @@ class V76_0Builder30HostTest {
         // V83.0 — `zoom` در WebView اندروید کار نمی‌کرد (پیش‌نمایشِ خاکستریِ خالی)؛
         // با transform:scale جایگزین شد. آنچه مهم است «کوچک‌نماییِ برگه در
         // پنجرهٔ موبایل» است، نه ابزارِ آن.
-        assertTrue("transform:scale(.44)" in assetText)
+        // V84.0 — کوچک‌نمایی برگه در پنجرهٔ موبایل حالا اندازه‌گیری می‌شود،
+        // پس وجودِ سازوکار پین می‌شود نه رشتهٔ دقیقِ ضریب.
+        assertTrue("qmfFitPreviewScale" in assetText)
         assertFalse(".pwo-body #printContent{zoom:.44}" in assetText)
         // چاپ از پل بومی می‌گذرد
         assertEquals(4, Regex(Regex.escape("window.ExamPrintNative.print")).findAll(assetText).count())
