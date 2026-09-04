@@ -99,7 +99,7 @@ class V73_0HtmlPrintIntegrationTest {
         val json = ExamHtmlPrintPayloadBuilder.build(printable)
         assertEquals(false, json["reset"]?.jsonPrimitive?.booleanOrNull)
         val fields = json["fields"]?.jsonObject!!
-        assertEquals("ministry", fields["f_headerTemplate"]?.jsonPrimitive?.content)
+        assertEquals("classic", fields["f_headerTemplate"]?.jsonPrimitive?.content)
         assertEquals("زیست‌شناسی", fields["f_course"]?.jsonPrimitive?.content)
         assertEquals("شهید دستغیب", fields["f_branch"]?.jsonPrimitive?.content)
         assertEquals("۱۴۰۳/۱۰/۲۰", fields["f_examDate"]?.jsonPrimitive?.content)

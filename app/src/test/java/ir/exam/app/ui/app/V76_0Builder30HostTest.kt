@@ -91,8 +91,9 @@ class V76_0Builder30HostTest {
         assertTrue("renderRichText" in assetText)
         // ویرایشگر شکل خنثی شده (early return) بدون شکستن مسیر رندر
         val figEditor = assetText.substringAfter("function openQmfFigEditor(fig) {")
-        assertTrue(figEditor.trimStart().startsWith("\n  /* V30-P1"))
-        assertTrue("return false;" in figEditor.substringBefore("if (!fig)"))
+        val figHead = figEditor.substringBefore("if (!fig)")
+        assertTrue("/* V30-P1" in figHead)
+        assertTrue("return false;" in figHead)
         // چاپ از پل بومی می‌گذرد
         assertEquals(4, Regex(Regex.escape("window.ExamPrintNative.print")).findAll(assetText).count())
         assertTrue("printMode==='teacher'?'teacher':'student'" in assetText)

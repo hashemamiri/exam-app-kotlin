@@ -15599,3 +15599,46 @@ SQL/Edge/Secret/Dependency جدید: ندارد — فقط رفع خطای سا�
 ```
 
 پچ: V76_0_builder30_print_host — بدون SQL.
+
+## ۲۹۴) V76.0.1 — رفع دو شکست CI تست‌های V76.0
+
+### چه شد
+
+```text
+CI (روی کامیت V76.0 کاربر): 699 تست، دقیقاً ۲ شکست — هر دو باگِ تست
+بودند نه کد اصلی (کامپایل و بقیهٔ تست‌ها سبز):
+۱) V73_0:102 ComparisonFailure — assertEquals("ministry", …) از
+   اصلاحِ ministry→classic جا مانده بود (شبیه‌ساز سوزن فقط in/not-in
+   را می‌گیرد، assertEquals را نه).
+۲) V76_0:94 AssertionError — figEditor.trimStart().startsWith("\n  /*")
+   متناقض‌نویس بود: trimStart همان "\n  " را حذف می‌کند که startsWith
+   می‌خواهد ⇒ هرگز قابل‌قبول نبود.
+اصلاح: assertEquals("classic",…) و جایگزینی startsWith با دو in روی
+بخشِ قبل از "if (!fig)".
+```
+
+### درس‌ها (اصلاحِ دو یادداشتِ نادرستِ بخش ۲۹۳)
+
+```text
+- مقادیر معتبر select#f_headerTemplate در نسخهٔ ۳۰ «۷» تاست:
+  classic/formal/sama/school/edu/detailed-school/ministry — ministry
+  (سربرگ ۷، قالب وزارت) هم داخل همین asset هست، نه مالِ asset قدیمی.
+  انتخاب classic درست است چون پیش‌فرضِ خود فایل است (گزینهٔ اولِ select
+  + fallback تابع currentHeaderTemplate). گارد verify اضافه شد.
+- قاعدهٔ جدید شبیه‌سازی: بعد از هر تغییرِ main، علاوه بر needleهای
+  in/not-in، «همهٔ» assertEquals/startsWith/endsWith/شمارش‌های تست‌های
+  خواننده جداگانه فهرست و مقداربه‌مقدار شبیه‌سازی شود (الگوی انجام‌شده
+  در V76.0.1: شبیه‌سازی کامل نگاشت payload شامل formatScore/نگاشت هدر).
+- الگوی ضد trimStart: هرگز trimStart/trim و بعد startsWith با همان
+  فاصله/سطر جدید — یا بدون trim چک کن یا بدون پیشوندِ فضای خالی.
+- درختِ کامیت کاربر با محتوای پچ یکی است هرچند SHA فرق کند (متادیتای
+  commit)؛ برای پچ بعدی مبنای diff را origin/main بگیر نه HEAD~n.
+```
+
+### وضعیت
+
+```text
+verify PASS + شبیه‌سازی ۱۴۹ سوزن PASS + شبیه‌سازی مقداری assertEquals
+PASS. پچ: V76_0_1_builder30_test_fixes — بدون SQL (مبنای apply: کامیت
+V76.0 کاربر روی origin/main).
+```

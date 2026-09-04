@@ -2576,9 +2576,13 @@ require(_v730_dialog.exists()
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
         and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
-        and "f_headerTemplate" in _v730_payload_text
+        and 'put("f_headerTemplate", "classic")' in _v730_payload_text
         and "qIdCounter" in _v730_payload_text,
-        "V76.0 ExamHtmlPrintPayloadBuilder (builder-30 mapping) is missing")
+        "V76.0 ExamHtmlPrintPayloadBuilder (builder-30 mapping, classic default) is missing")
+_v760_host_test_text=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_0Builder30HostTest.kt").read_text() if (ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_0Builder30HostTest.kt").exists() else ""
+require("ministry" not in _v730_test_text
+        and "trimStart().startsWith" not in _v760_host_test_text,
+        "V76.0.1 stale test expectations (ministry / contradictory trimStart) are back")
 _v730_asset_text=_v730_asset.read_text(encoding="utf-8") if _v730_asset.is_file() else ""
 require(_v730_asset.is_file() and _v730_asset.stat().st_size > 5_000_000
         and "window.setExamData" in _v730_asset_text
@@ -2696,10 +2700,11 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 252
-        and _v694_changelog.startswith("V76.0:")
+require(_v694_lines >= 253
+        and _v694_changelog.startswith("V76.0.1:")
+        and "V76.0:" in _v694_changelog
         and "V75.8.1:" in _v694_changelog,
-        "changelog must keep the full history + the new V76.0 line on top")
+        "changelog must keep the full history + the new V76.0.1 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
