@@ -13,8 +13,13 @@ import java.io.File
  */
 class V86_0PreviewBoxHeightTest {
 
+    /* تست‌ها با دایرکتوری کاری `app/` اجرا می‌شوند، نه ریشهٔ ریپو. */
+    private fun root(): File = listOf(File("."), File("..")).first {
+        File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
+    }
+
     private val asset: String by lazy {
-        File("app/src/main/assets/print/exam_print.html").readText()
+        File(root(), "app/src/main/assets/print/exam_print.html").readText()
     }
 
     @Test
