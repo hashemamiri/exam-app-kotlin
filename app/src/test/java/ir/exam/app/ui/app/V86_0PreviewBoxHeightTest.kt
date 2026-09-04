@@ -42,7 +42,7 @@ class V86_0PreviewBoxHeightTest {
 
     @Test
     fun `the mobile rule no longer sets a vh height on the box`() {
-        assertTrue(".pwo-box{width:98vw;height:auto;max-height:100%;min-height:320px}" in asset)
+        assertTrue(".pwo-box{width:100%;height:100%;max-height:100%;min-height:0}" in asset)
         assertTrue(".pwo-box{width:98vw;height:94vh}" !in asset)
         assertTrue(".pwo-box{height:96vh !important}" !in asset)
     }
@@ -50,7 +50,6 @@ class V86_0PreviewBoxHeightTest {
     @Test
     fun `the body cannot be squeezed to nothing by its flex parent`() {
         assertTrue(".pwo-body{flex:1 1 auto;min-height:0;" in asset)
-        assertTrue("min-height:320px" in asset)
     }
 
     @Test
@@ -91,5 +90,27 @@ class V86_0PreviewBoxHeightTest {
     fun `the forced width is dropped when the window closes`() {
         assertTrue("pc.style.removeProperty('width')" in asset)
         assertTrue("out.forcedW" in asset)
+    }
+
+    @Test
+    fun `the preview window covers the whole screen`() {
+        // کادر تا لبه‌های دیدگاه: بدون حاشیه، گوشهٔ گرد یا سایه
+        assertTrue(".pwo-box{background:#fff;border-radius:0;width:100%;height:100%" in asset)
+        assertTrue("box-shadow:none;overflow:hidden}" in asset)
+        assertTrue("padding:0;direction:rtl}" in asset)
+        // پس‌زمینهٔ نیمه‌شفافِ همین اورلی دیگر دیده نمی‌شود، پس رنگِ کاغذ بگیرد.
+        // (قانونِ qtype-overlay همان رنگ را دارد و باید دست‌نخورده بماند.)
+        assertTrue("#previewWinOverlay{position:fixed;inset:0;z-index:125000;background:#eef2f7;" in asset)
+    }
+
+    @Test
+    fun `the box takes the full viewport height not a fraction`() {
+        assertTrue("var target = Math.max(320, h);" in asset)
+        assertTrue("Math.round(h * 0.94)" !in asset)
+    }
+
+    @Test
+    fun `the header clears the device notch`() {
+        assertTrue("env(safe-area-inset-top,0px)" in asset)
     }
 }
