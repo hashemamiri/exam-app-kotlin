@@ -74,7 +74,7 @@ class V76_5StudioDeskewPerspectiveTest {
         // شبکهٔ راهنما فقط کمکیِ بصری است
         assertTrue("if (deskewGrid)" in studio)
         // pointerInput با تغییر ابعاد/حالت تازه می‌شود (هندسهٔ کهنه نماند)
-        // (V76.6: splitMode/تعداد کادرها هم به کلید اضافه شدند)
-        assertTrue(".pointerInput(aspect, perspMode, splitMode, splitBoxes.size, boxSize.width, boxSize.height)" in studio)
+        // (V76.7: drawMode هم به کلید اضافه شد)
+        assertTrue(".pointerInput(aspect, perspMode, splitMode, splitBoxes.size, drawMode, boxSize.width, boxSize.height)" in studio)
     }
 }

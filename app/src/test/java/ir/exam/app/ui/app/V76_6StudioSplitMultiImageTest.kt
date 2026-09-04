@@ -38,8 +38,8 @@ class V76_6StudioSplitMultiImageTest {
         assertTrue("Corner.SPLIT_RESIZE" in studio)
         assertTrue("💾 همه بخش‌ها به همین سؤال" in studio)
         assertTrue("🧩 هر بخش → سؤال جداگانه" in studio)
-        // هر دو مسیر اعمال از زنجیرهٔ مشترک می‌گذرند
-        assertTrue("splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality) }" in studio)
+        // هر دو مسیر اعمال از زنجیرهٔ مشترک می‌گذرند (V76.7: با shapes)
+        assertTrue("splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes) }" in studio)
     }
 
     @Test
@@ -80,7 +80,8 @@ class V76_6StudioSplitMultiImageTest {
 
     @Test
     fun `split canvas rekeys and manages selection`() {
-        assertTrue(".pointerInput(aspect, perspMode, splitMode, splitBoxes.size, boxSize.width, boxSize.height)" in studio)
+        // (V76.7: drawMode هم به کلید اضافه شد)
+        assertTrue(".pointerInput(aspect, perspMode, splitMode, splitBoxes.size, drawMode, boxSize.width, boxSize.height)" in studio)
         assertTrue("var selectedBox by remember { mutableStateOf(0) }" in studio)
         assertTrue("private var dragSplitIndex by androidx.compose.runtime.mutableStateOf(-1)" in studio)
         // حذف کادر فقط وقتی بیش از یک کادر هست

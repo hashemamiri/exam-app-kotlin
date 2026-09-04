@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -92,10 +94,25 @@ import androidx.compose.ui.graphics.nativeCanvas
  * سؤال» یا «هر بخش → سؤال جداگانه» عین رفتار استودیو: کپیِ ساختارِ سؤالِ مبدا،
  * متن خالی، یک تصویر برای هر بخش) + مدیریتِ تصویرهای موجودِ سؤال
  * (فهرست/ویرایشِ دوباره/حذف — پل‌های __qmfQuestionImages/__qmfRemoveQuestionImage/
- * __qmfReplaceQuestionImage). ابزارهای بعدی: لاک‌گیر/برچسب/فلش (V76.7).
+ * __qmfReplaceQuestionImage).
+ * V76.7 — ابزارهای رسم (لاک‌گیر/برچسب/فلش): فلش و فلش دوسر، خط، کادر، بیضی،
+ * خط آزاد، هایلایتر نیمه‌شفاف، سانسورِ پیکسلی، برچسب متنی؛ ۴ رنگ، انتخاب/جابه‌جایی،
+ * بازگردانی/انجام مجدد، حذف انتخاب/پاک کردن همه، مقایسهٔ قبل/بعد؛ همه در لحظهٔ
+ * «تایید» روی خروجی پخته می‌شوند (bakeShapes در زنجیرهٔ encodeCropped).
  */
 /** V76.6 — تصویرِ موجودِ سؤال برای مدیریت (فهرست/ویرایشِ دوباره/حذف). */
 data class StudioImageRef(val dataUrl: String, val w: Int, val h: Int)
+
+/**
+ * V76.7 — شکلِ رسم‌شده روی تصویر؛ مختصات نرمال‌شده (۰..۱) نسبت به تصویرِ
+ * نمایش‌داده‌شده تا در پیش‌نمایش و پخت (ابعاد واقعی) یکسان بمانند.
+ */
+data class StudioShape(
+    val type: String,                                  // arrow/arrow2/line/rect/ellipse/free/highlighter/censor/text
+    val points: List<Offset> = emptyList(),
+    val color: Int = 0xFFDC2626.toInt(),
+    val text: String = ""
+)
 
 @Composable
 fun ExamImageStudioDialog(
@@ -133,6 +150,18 @@ fun ExamImageStudioDialog(
     var splitMode by remember { mutableStateOf(false) }
     var splitBoxes by remember { mutableStateOf(listOf(Rect(0f, 0f, 1f, 0.5f), Rect(0f, 0.5f, 1f, 1f))) }
     var selectedBox by remember { mutableStateOf(0) }
+    // V76.7 — ابزارهای رسم
+    var drawMode by remember { mutableStateOf("none") } // none/arrow/arrow2/line/rect/ellipse/free/highlighter/censor/text
+    var drawColor by remember { mutableStateOf(0xFFDC2626.toInt()) }
+    var shapes by remember { mutableStateOf(listOf<StudioShape>()) }
+    var redoStack by remember { mutableStateOf(listOf<StudioShape>()) }
+    var selectedShape by remember { mutableStateOf(-1) }
+    var activeShape by remember { mutableStateOf<StudioShape?>(null) }
+    var textPromptPoint by remember { mutableStateOf<Offset?>(null) }
+    var textPromptValue by remember { mutableStateOf("") }
+    var showTextPrompt by remember { mutableStateOf(false) }
+    var previewOriginal by remember { mutableStateOf(false) }
+    var openedWith by remember { mutableStateOf<Bitmap?>(null) }
 
     fun makeCameraUri(): Pair<Uri, File> {
         val dir = File(context.cacheDir, "studio").apply { mkdirs() }
@@ -151,6 +180,9 @@ fun ExamImageStudioDialog(
                 original = decoded
                 rotation = 0; flip = false; crop = Rect(0f, 0f, 1f, 1f)
                 editIndex = -1
+                openedWith = decoded
+                shapes = emptyList(); redoStack = emptyList(); selectedShape = -1
+                drawMode = "none"; previewOriginal = false
             }
         }
     }
@@ -161,6 +193,9 @@ fun ExamImageStudioDialog(
                 original = decoded
                 rotation = 0; flip = false; crop = Rect(0f, 0f, 1f, 1f)
                 editIndex = -1
+                openedWith = decoded
+                shapes = emptyList(); redoStack = emptyList(); selectedShape = -1
+                drawMode = "none"; previewOriginal = false
             }
         }
     }
@@ -200,7 +235,7 @@ fun ExamImageStudioDialog(
                                 scope.launch {
                                     val result = withContext(Dispatchers.Default) {
                                         processAndEncode(
-                                            src, rotation, deskewAngle, flip, crop, scanOn, threshold, outSize, quality
+                                            src, rotation, deskewAngle, flip, crop, scanOn, threshold, outSize, quality, shapes
                                         )
                                     }
                                     processing = false
@@ -282,6 +317,9 @@ fun ExamImageStudioDialog(
                                                         rotation = 0; flip = false
                                                         crop = Rect(0f, 0f, 1f, 1f); aspect = "free"
                                                         deskewAngle = 0f; perspMode = false; splitMode = false
+                                                        openedWith = bmp
+                                                        shapes = emptyList(); redoStack = emptyList(); selectedShape = -1
+                                                        drawMode = "none"; previewOriginal = false
                                                         note = null
                                                     } else {
                                                         note = "بازکردن تصویر ممکن نشد."
@@ -357,8 +395,10 @@ fun ExamImageStudioDialog(
                                     )
                                 )
                             } else null
+                            val displayBitmap: ImageBitmap =
+                                if (previewOriginal && openedWith != null) openedWith!!.asImageBitmap() else imgBitmap
                             Image(
-                                bitmap = imgBitmap,
+                                bitmap = displayBitmap,
                                 contentDescription = "پیش‌نمایش تصویر",
                                 modifier = Modifier.fillMaxSize(),
                                 colorFilter = scanPreview,
@@ -368,8 +408,27 @@ fun ExamImageStudioDialog(
                             Canvas(
                                 Modifier
                                     .fillMaxSize()
-                                    .pointerInput(aspect, perspMode, splitMode, splitBoxes.size, boxSize.width, boxSize.height) {
+                                    .pointerInput(aspect, perspMode, splitMode, splitBoxes.size, drawMode, boxSize.width, boxSize.height) {
                                         detectDragGestures(
+                                            onDragEnd = {
+                                                if (dragTarget == Corner.DRAW) {
+                                                    val sp = activeShape
+                                                    if (sp != null) {
+                                                        val ok = if (sp.type == "free" || sp.type == "highlighter") {
+                                                            sp.points.size > 2
+                                                        } else {
+                                                            sp.points.size >= 2 &&
+                                                                dist(sp.points[0], sp.points[1]) > 0.02f
+                                                        }
+                                                        if (ok) {
+                                                            shapes = shapes + sp
+                                                            redoStack = emptyList()
+                                                        }
+                                                    }
+                                                    activeShape = null
+                                                    dragTarget = Corner.IDLE
+                                                }
+                                            },
                                             onDragStart = { pos ->
                                                 if (splitMode) {
                                                     val nx = (pos.x - offX) / drawW
@@ -389,6 +448,48 @@ fun ExamImageStudioDialog(
                                                     dragPerspIndex = nearestPerspIndex(pos, offX, offY, drawW, drawH, perspPts)
                                                     dragOffset = Offset.Zero
                                                     return@detectDragGestures
+                                                }
+                                                if (drawMode != "none") {
+                                                    // V76.7 — کشیدن شکل جدید / یا لمس برای برچسب متنی
+                                                    val nx = ((pos.x - offX) / drawW).coerceIn(0f, 1f)
+                                                    val ny = ((pos.y - offY) / drawH).coerceIn(0f, 1f)
+                                                    if (drawMode == "text") {
+                                                        textPromptPoint = Offset(nx, ny)
+                                                        textPromptValue = ""
+                                                        showTextPrompt = true
+                                                        return@detectDragGestures
+                                                    }
+                                                    selectedShape = -1
+                                                    activeShape = StudioShape(
+                                                        type = drawMode,
+                                                        points = listOf(Offset(nx, ny), Offset(nx, ny)),
+                                                        color = drawColor
+                                                    )
+                                                    dragTarget = Corner.DRAW
+                                                    dragOffset = Offset.Zero
+                                                    return@detectDragGestures
+                                                }
+                                                if (shapes.isNotEmpty()) {
+                                                    // V76.7 — انتخاب/جابه‌جایی شکل موجود
+                                                    val nx = (pos.x - offX) / drawW
+                                                    val ny = (pos.y - offY) / drawH
+                                                    var hit = -1
+                                                    shapes.forEachIndexed { si, sp ->
+                                                        if (sp.points.isEmpty()) return@forEachIndexed
+                                                        val xs = sp.points.map { it.x }
+                                                        val ys = sp.points.map { it.y }
+                                                        val m = 0.035f
+                                                        if (nx >= kotlin.math.min(xs) - m && nx <= kotlin.math.max(xs) + m &&
+                                                            ny >= kotlin.math.min(ys) - m && ny <= kotlin.math.max(ys) + m
+                                                        ) hit = si
+                                                    }
+                                                    selectedShape = hit
+                                                    if (hit >= 0) {
+                                                        dragShapeIndex = hit
+                                                        dragTarget = Corner.SHAPE_MOVE
+                                                        dragOffset = Offset.Zero
+                                                        return@detectDragGestures
+                                                    }
                                                 }
                                                 dragTarget = when {
                                                     dist(pos, Offset(offX + crop.left * drawW, offY + crop.top * drawH)) < 90f -> Corner.START
@@ -427,6 +528,32 @@ fun ExamImageStudioDialog(
                                                     }
                                                     return@detectDragGestures
                                                 }
+                                                if (dragTarget == Corner.DRAW) {
+                                                    // V76.7 — شکلِ زنده
+                                                    val sp = activeShape
+                                                    if (sp != null) {
+                                                        val nx = ((change.position.x - offX) / drawW).coerceIn(0f, 1f)
+                                                        val ny = ((change.position.y - offY) / drawH).coerceIn(0f, 1f)
+                                                        activeShape = if (sp.type == "free" || sp.type == "highlighter") {
+                                                            sp.copy(points = sp.points + Offset(nx, ny))
+                                                        } else {
+                                                            sp.copy(points = listOf(sp.points.first(), Offset(nx, ny)))
+                                                        }
+                                                    }
+                                                    return@detectDragGestures
+                                                }
+                                                if (dragTarget == Corner.SHAPE_MOVE) {
+                                                    // V76.7 — جابه‌جایی شکلِ انتخاب‌شده
+                                                    val dx = drag.x / drawW
+                                                    val dy = drag.y / drawH
+                                                    if (dragShapeIndex in shapes.indices) {
+                                                        shapes = shapes.toMutableList().also { list ->
+                                                            val old = list[dragShapeIndex]
+                                                            list[dragShapeIndex] = old.copy(points = old.points.map { Offset(it.x + dx, it.y + dy) })
+                                                        }
+                                                    }
+                                                    return@detectDragGestures
+                                                }
                                                 val x = (change.position.x - offX) / drawW
                                                 val y = (change.position.y - offY) / drawH
                                                 when (dragTarget) {
@@ -453,7 +580,9 @@ fun ExamImageStudioDialog(
                                         )
                                     }
                             ) {
-                                if (splitMode) {
+                                if (previewOriginal) {
+                                    // نمای «قبل»: تصویر خام بدون هیچ پوششی
+                                } else if (splitMode) {
                                     // V76.6 — کادرهای تفکیک با شماره و انتخاب
                                     splitBoxes.forEachIndexed { bi, b ->
                                         val l = offX + b.left * drawW
@@ -526,6 +655,71 @@ fun ExamImageStudioDialog(
                                     drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(l, t))
                                     drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(r, b))
                                 }
+                                // V76.7 — شکل‌های رسم‌شده + شکلِ درحال کشیدن (پیش‌نمایش زنده)
+                                if (!previewOriginal && (shapes.isNotEmpty() || activeShape != null)) {
+                                    val baseW = max(3f, kotlin.math.min(drawW, drawH) * 0.008f)
+                                    fun P(p: Offset) = Offset(offX + p.x * drawW, offY + p.y * drawH)
+                                    fun head(a: Offset, tip: Offset, sw: Float, col: Color) {
+                                        val ang = kotlin.math.atan2(tip.y - a.y, tip.x - a.x)
+                                        val l = sw * 3.2f
+                                        drawLine(col, tip, Offset(tip.x - l * kotlin.math.cos(ang + 0.45f), tip.y - l * kotlin.math.sin(ang + 0.45f)), strokeWidth = sw)
+                                        drawLine(col, tip, Offset(tip.x - l * kotlin.math.cos(ang - 0.45f), tip.y - l * kotlin.math.sin(ang - 0.45f)), strokeWidth = sw)
+                                    }
+                                    (shapes + listOfNotNull(activeShape)).forEachIndexed { si, sp ->
+                                        val col = Color(sp.color)
+                                        val hl = sp.type == "highlighter"
+                                        val sw = if (hl) baseW * 3.5f else baseW
+                                        val st = Stroke(width = sw)
+                                        if (sp.type == "arrow" || sp.type == "arrow2" || sp.type == "line") {
+                                            if (sp.points.size >= 2) {
+                                                val a = P(sp.points[0]); val b2 = P(sp.points[1])
+                                                drawLine(col, a, b2, st)
+                                                if (sp.type != "line") head(a, b2, sw, col)
+                                                if (sp.type == "arrow2") head(b2, a, sw, col)
+                                            }
+                                        } else if (sp.type == "rect" || sp.type == "ellipse" || sp.type == "censor") {
+                                            if (sp.points.size >= 2) {
+                                                val a = P(sp.points[0]); val b2 = P(sp.points[1])
+                                                val tl = Offset(kotlin.math.min(a.x, b2.x), kotlin.math.min(a.y, b2.y))
+                                                val sz = Size(kotlin.math.abs(a.x - b2.x), kotlin.math.abs(a.y - b2.y))
+                                                if (sp.type == "censor") {
+                                                    drawRect(Color(0xFF1F2937), topLeft = tl, size = sz)
+                                                    if (si == selectedShape) drawRect(Color(0xFF4F46E5), topLeft = tl, size = sz, style = Stroke(width = 2f))
+                                                } else if (sp.type == "rect") {
+                                                    drawRect(col, topLeft = tl, size = sz, style = st)
+                                                } else {
+                                                    drawOval(col, topLeft = tl, size = sz, style = st)
+                                                }
+                                            }
+                                        } else if (sp.type == "free" || sp.type == "highlighter") {
+                                            if (sp.points.size >= 2) {
+                                                val path = androidx.compose.ui.graphics.Path().apply {
+                                                    val f = P(sp.points[0])
+                                                    moveTo(f.x, f.y)
+                                                    for (i in 1 until sp.points.size) {
+                                                        val q = P(sp.points[i])
+                                                        lineTo(q.x, q.y)
+                                                    }
+                                                }
+                                                drawPath(path, if (hl) col.copy(alpha = 0.42f) else col, style = st)
+                                            }
+                                        } else if (sp.type == "text") {
+                                            if (sp.points.isNotEmpty()) {
+                                                val at = P(sp.points[0])
+                                                drawIntoCanvas { c ->
+                                                    val tp = android.graphics.Paint().apply {
+                                                        color = sp.color; isAntiAlias = true
+                                                        textSize = max(24f, drawH * 0.045f)
+                                                    }
+                                                    c.nativeCanvas.drawText(sp.text, at.x, at.y, tp)
+                                                }
+                                            }
+                                        }
+                                        if (si == selectedShape && drawMode == "none" && sp.points.isNotEmpty()) {
+                                            drawCircle(Color(0xFF4F46E5).copy(alpha = 0.7f), radius = sw * 1.6f, center = P(sp.points.first()))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -557,6 +751,80 @@ fun ExamImageStudioDialog(
                                 splitMode = !splitMode
                                 if (splitMode) { perspMode = false; selectedBox = 0 }
                             }
+                        }
+                        // V76.7 — لاک‌گیر/برچسب/فلش (عین مجموعهٔ استودیو)
+                        fun setDraw(m: String) {
+                            drawMode = m
+                            if (m != "none") {
+                                splitMode = false; perspMode = false
+                                selectedShape = -1; activeShape = null
+                            }
+                        }
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            FilterChip(
+                                selected = drawMode == "none",
+                                onClick = { setDraw("none") },
+                                label = { Text("👆 انتخاب/جابجایی") }
+                            )
+                            ToolChip("➡️ فلش") { setDraw("arrow") }
+                            ToolChip("↔️ فلش دوسر") { setDraw("arrow2") }
+                            ToolChip("📏 خط") { setDraw("line") }
+                            ToolChip("⬜ کادر") { setDraw("rect") }
+                            ToolChip("⭕ بیضی") { setDraw("ellipse") }
+                            ToolChip("✏️ خط آزاد") { setDraw("free") }
+                            ToolChip("🖍️ هایلایتر") { setDraw("highlighter") }
+                            ToolChip("🚫 سانسور") { setDraw("censor") }
+                            ToolChip("🔤 متن") { setDraw("text") }
+                        }
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ToolChip("🔴") { drawColor = 0xFFDC2626.toInt() }
+                            ToolChip("🔵") { drawColor = 0xFF2563EB.toInt() }
+                            ToolChip("⚫") { drawColor = 0xFF111827.toInt() }
+                            ToolChip("🟢") { drawColor = 0xFF16A34A.toInt() }
+                            ToolChip("↩️ بازگردانی") {
+                                if (shapes.isNotEmpty()) {
+                                    redoStack = redoStack + shapes.last()
+                                    shapes = shapes.dropLast(1)
+                                    selectedShape = -1
+                                }
+                            }
+                            ToolChip("↪️ انجام مجدد") {
+                                redoStack.lastOrNull()?.let { last ->
+                                    shapes = shapes + last
+                                    redoStack = redoStack.dropLast(1)
+                                }
+                            }
+                            ToolChip("🗑️ حذف انتخاب") {
+                                if (selectedShape in shapes.indices) {
+                                    redoStack = redoStack + shapes[selectedShape]
+                                    shapes = shapes.filterIndexed { i, _ -> i != selectedShape }
+                                    selectedShape = -1
+                                }
+                            }
+                            ToolChip("🧹 پاک کردن همه") {
+                                redoStack = emptyList()
+                                shapes = emptyList()
+                                selectedShape = -1
+                                activeShape = null
+                            }
+                            FilterChip(
+                                selected = previewOriginal,
+                                onClick = { previewOriginal = !previewOriginal },
+                                label = { Text("👁 قبل/بعد") }
+                            )
                         }
                         // V76.5 — صاف‌سازی: صفحه‌ای ۴گوشه + خودکار + دقیق ±۱۵°
                         Row(
@@ -655,7 +923,7 @@ fun ExamImageStudioDialog(
                                                     if (flip) postScale(-1f, 1f)
                                                 }
                                                 val base = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality) }
+                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes) }
                                             }
                                             processing = false
                                             if (results.isEmpty()) {
@@ -675,7 +943,7 @@ fun ExamImageStudioDialog(
                                                     if (flip) postScale(-1f, 1f)
                                                 }
                                                 val base = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality) }
+                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes) }
                                             }
                                             processing = false
                                             if (results.isEmpty()) {
@@ -789,16 +1057,50 @@ fun ExamImageStudioDialog(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+                if (showTextPrompt) {
+                    // V76.7 — برچسب متنی: متن را بگیر و در نقطهٔ لمس بنشین
+                    AlertDialog(
+                        onDismissRequest = { showTextPrompt = false },
+                        title = { Text("متن برچسب") },
+                        text = {
+                            OutlinedTextField(
+                                value = textPromptValue,
+                                onValueChange = { textPromptValue = it },
+                                placeholder = { Text("مثلاً «شکل ۱» یا «الف»") },
+                                singleLine = true
+                            )
+                        },
+                        confirmButton = {
+                            Button(onClick = {
+                                val p = textPromptPoint
+                                if (p != null && textPromptValue.isNotBlank()) {
+                                    shapes = shapes + StudioShape(
+                                        type = "text",
+                                        points = listOf(p),
+                                        color = drawColor,
+                                        text = textPromptValue
+                                    )
+                                    redoStack = emptyList()
+                                }
+                                showTextPrompt = false
+                            }) { Text("افزودن") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showTextPrompt = false }) { Text("انصراف") }
+                        }
+                    )
+                }
             }
         }
     }
 }
 
-private enum class Corner { START, END, MOVE, PERSP, SPLIT_MOVE, SPLIT_RESIZE }
+private enum class Corner { START, END, MOVE, PERSP, SPLIT_MOVE, SPLIT_RESIZE, DRAW, SHAPE_MOVE, IDLE }
 private var dragTarget by androidx.compose.runtime.mutableStateOf(Corner.MOVE)
 private var dragOffset by androidx.compose.runtime.mutableStateOf(Offset.Zero)
 private var dragPerspIndex by androidx.compose.runtime.mutableStateOf(-1)
 private var dragSplitIndex by androidx.compose.runtime.mutableStateOf(-1)
+private var dragShapeIndex by androidx.compose.runtime.mutableStateOf(-1)
 
 /** نزدیک‌ترین نقطهٔ صفحه‌ای به لمس (آستانهٔ ۲۲۰px برای انگشت). */
 private fun nearestPerspIndex(pos: Offset, offX: Float, offY: Float, drawW: Float, drawH: Float, pts: List<Offset>): Int {
@@ -873,14 +1175,15 @@ private fun processAndEncode(
     scanOn: Boolean,
     threshold: Int,
     outSize: Int,
-    quality: Int
+    quality: Int,
+    shapes: List<StudioShape> = emptyList()
 ): Pair<String, Int>? = runCatching {
     val m = Matrix().apply {
         postRotate(rotation.toFloat() + deskew)
         if (flip) postScale(-1f, 1f)
     }
     val bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-    encodeCropped(bmp, crop, scanOn, threshold, outSize, quality)
+    encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)
 }.getOrNull()
 
 /**
@@ -893,13 +1196,16 @@ private fun encodeCropped(
     scanOn: Boolean,
     threshold: Int,
     outSize: Int,
-    quality: Int
+    quality: Int,
+    shapes: List<StudioShape> = emptyList()
 ): Pair<String, Int>? = runCatching {
-    val cx = (box.left * bmp.width).roundToInt().coerceIn(0, bmp.width - 1)
-    val cy = (box.top * bmp.height).roundToInt().coerceIn(0, bmp.height - 1)
-    val cw = max(1, (box.width * bmp.width).roundToInt().coerceAtMost(bmp.width - cx))
-    val ch = max(1, (box.height * bmp.height).roundToInt().coerceAtMost(bmp.height - cy))
-    var out = Bitmap.createBitmap(bmp, cx, cy, cw, ch)
+    // V76.7 — شکل‌ها قبل از برش روی تصویر پخته می‌شوند (در تفکیک هم هر بخش شکل‌ها را دارد)
+    val painted = if (shapes.isEmpty()) bmp else bakeShapes(bmp, shapes)
+    val cx = (box.left * painted.width).roundToInt().coerceIn(0, painted.width - 1)
+    val cy = (box.top * painted.height).roundToInt().coerceIn(0, painted.height - 1)
+    val cw = max(1, (box.width * painted.width).roundToInt().coerceAtMost(painted.width - cx))
+    val ch = max(1, (box.height * painted.height).roundToInt().coerceAtMost(painted.height - cy))
+    var out = Bitmap.createBitmap(painted, cx, cy, cw, ch)
 
     if (scanOn) {
         val w = out.width; val h = out.height
@@ -955,6 +1261,124 @@ internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap? = runCa
         BitmapFactory.Options().apply { inSampleSize = sample }
     )
 }.getOrNull()
+
+/**
+ * V76.7 — پختِ شکل‌ها روی بیت‌مپ با مختصات نرمال‌شده × ابعاد واقعی؛
+ * هایلایتر نیمه‌شفاف، سانسورِ پیکسلی (میانگینِ بلوک‌ها)، فلش‌ها با سرِ
+ * محاسبه‌شده از atan2، متن با اندازهٔ نسبیِ ارتفاع.
+ */
+internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap = runCatching {
+    if (shapes.isEmpty()) return@runCatching base
+    val out = base.copy(Bitmap.Config.ARGB_8888, true) ?: return@runCatching base
+    val cv = android.graphics.Canvas(out)
+    val w = out.width.toFloat()
+    val h = out.height.toFloat()
+    val X = { p: Offset -> p.x * w }
+    val Y = { p: Offset -> p.y * h }
+    val baseStroke = (max(w, h) * 0.005f).coerceIn(3f, 24f)
+    shapes.forEach { sp ->
+        val hl = sp.type == "highlighter"
+        val paint = android.graphics.Paint().apply {
+            color = sp.color
+            isAntiAlias = true
+            style = android.graphics.Paint.Style.STROKE
+            strokeCap = android.graphics.Paint.Cap.ROUND
+            strokeJoin = android.graphics.Paint.Join.ROUND
+            strokeWidth = if (hl) baseStroke * 3.5f else baseStroke
+            if (hl) alpha = 110
+        }
+        if (sp.type == "line" || sp.type == "arrow" || sp.type == "arrow2") {
+            if (sp.points.size >= 2) {
+                val x0 = X(sp.points[0]); val y0 = Y(sp.points[0])
+                val x1 = X(sp.points[1]); val y1 = Y(sp.points[1])
+                cv.drawLine(x0, y0, x1, y1, paint)
+                val hl2 = paint.strokeWidth * 3.2f
+                fun head(fx: Float, fy: Float, a: Float) {
+                    val dx1 = hl2 * kotlin.math.cos(a + 0.45f)
+                    val dy1 = hl2 * kotlin.math.sin(a + 0.45f)
+                    val dx2 = hl2 * kotlin.math.cos(a - 0.45f)
+                    val dy2 = hl2 * kotlin.math.sin(a - 0.45f)
+                    cv.drawLine(fx, fy, fx - dx1, fy - dy1, paint)
+                    cv.drawLine(fx, fy, fx - dx2, fy - dy2, paint)
+                }
+                val ang = kotlin.math.atan2(y1 - y0, x1 - x0)
+                head(x1, y1, ang)
+                if (sp.type == "arrow2") head(x0, y0, ang + Math.PI.toFloat())
+            }
+        } else if (sp.type == "rect" || sp.type == "ellipse" || sp.type == "censor") {
+            if (sp.points.size >= 2) {
+                val l = kotlin.math.min(X(sp.points[0]), X(sp.points[1]))
+                val t = kotlin.math.min(Y(sp.points[0]), Y(sp.points[1]))
+                val r = kotlin.math.max(X(sp.points[0]), X(sp.points[1]))
+                val b = kotlin.math.max(Y(sp.points[0]), Y(sp.points[1]))
+                if (sp.type == "censor") {
+                    // سانسورِ پیکسلی: میانگینِ بلوک‌های ناحیه (عین حسِ موزاییک)
+                    val x0i = l.roundToInt().coerceIn(0, out.width - 1)
+                    val y0i = t.roundToInt().coerceIn(0, out.height - 1)
+                    val x1i = r.roundToInt().coerceIn(x0i + 1, out.width)
+                    val y1i = b.roundToInt().coerceIn(y0i + 1, out.height)
+                    val rgnW = x1i - x0i
+                    val rgnH = y1i - y0i
+                    val px = IntArray(rgnW * rgnH)
+                    base.getPixels(px, 0, rgnW, x0i, y0i, rgnW, rgnH)
+                    val bs = max(6f, kotlin.math.min(rgnW, rgnH) / 8f).roundToInt()
+                    val fill = android.graphics.Paint().apply {
+                        style = android.graphics.Paint.Style.FILL
+                        isAntiAlias = false
+                    }
+                    var by = y0i
+                    while (by < y1i) {
+                        var bx = x0i
+                        while (bx < x1i) {
+                            val ex = minOf(bx + bs, x1i)
+                            val ey = minOf(by + bs, y1i)
+                            var sr = 0; var sg = 0; var sb = 0; var n = 0
+                            var yy = by
+                            while (yy < ey) {
+                                var xx = bx
+                                while (xx < ex) {
+                                    val c0 = px[(yy - y0i) * rgnW + (xx - x0i)]
+                                    sr += (c0 shr 16) and 0xFF
+                                    sg += (c0 shr 8) and 0xFF
+                                    sb += c0 and 0xFF
+                                    n++
+                                    xx++
+                                }
+                                yy++
+                            }
+                            fill.color = (0xFF shl 24) or ((sr / n) shl 16) or ((sg / n) shl 8) or (sb / n)
+                            cv.drawRect(bx.toFloat(), by.toFloat(), ex.toFloat(), ey.toFloat(), fill)
+                            bx += bs
+                        }
+                        by += bs
+                    }
+                } else if (sp.type == "rect") {
+                    cv.drawRect(l, t, r, b, paint)
+                } else {
+                    cv.drawOval(android.graphics.RectF(l, t, r, b), paint)
+                }
+            }
+        } else if (sp.type == "free" || sp.type == "highlighter") {
+            if (sp.points.size >= 2) {
+                val path = android.graphics.Path().apply {
+                    moveTo(X(sp.points[0]), Y(sp.points[0]))
+                    for (i in 1 until sp.points.size) lineTo(X(sp.points[i]), Y(sp.points[i]))
+                }
+                cv.drawPath(path, paint)
+            }
+        } else if (sp.type == "text") {
+            if (sp.points.isNotEmpty()) {
+                val tp = android.graphics.Paint().apply {
+                    color = sp.color
+                    isAntiAlias = true
+                    textSize = (h * 0.045f).coerceIn(28f, 220f)
+                }
+                cv.drawText(sp.text, X(sp.points[0]), Y(sp.points[0]), tp)
+            }
+        }
+    }
+    out
+}.getOrNull() ?: base
 
 /**
  * V76.5 — «🎯 تشخیص خودکار زاویه»: پروفایلِ تصویر — تصویر را نمونه‌برداری

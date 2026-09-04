@@ -2650,6 +2650,19 @@ require("window.__qmfSplitQuestion = function (qid, b64Items) {" in _v766_asset
         "V76.6 asset bridges (split/remove/replace/list) are missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_6StudioSplitMultiImageTest.kt").exists(),
         "V76.6 split/multi-image test is missing")
+_v767_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text()
+require("➡️ فلش" in _v767_studio
+        and "↔️ فلش دوسر" in _v767_studio
+        and "🖍️ هایلایتر" in _v767_studio
+        and "🚫 سانسور" in _v767_studio
+        and "🔤 متن" in _v767_studio
+        and "internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap" in _v767_studio
+        and "encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)" in _v767_studio
+        and "base.getPixels(px, 0, rgnW, x0i, y0i, rgnW, rgnH)" in _v767_studio
+        and "Corner.SHAPE_MOVE" in _v767_studio,
+        "V76.7 studio draw tools are missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_7StudioDrawToolsTest.kt").exists(),
+        "V76.7 draw tools test is missing")
 
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
@@ -2676,6 +2689,8 @@ _gate_word = {
 }
 _gate_call = {
     "TextButton": "androidx.compose.material3.TextButton",
+    "AlertDialog": "androidx.compose.material3.AlertDialog",
+    "OutlinedTextField": "androidx.compose.material3.OutlinedTextField",
     "Button": "androidx.compose.material3.Button",
     "OutlinedButton": "androidx.compose.material3.OutlinedButton",
     "IconButton": "androidx.compose.material3.IconButton",
@@ -2897,8 +2912,9 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 259
-        and _v694_changelog.startswith("V76.6:")
+require(_v694_lines >= 260
+        and _v694_changelog.startswith("V76.7:")
+        and "V76.6:" in _v694_changelog
         and "V76.5:" in _v694_changelog
         and "V76.4:" in _v694_changelog
         and "V76.3:" in _v694_changelog
