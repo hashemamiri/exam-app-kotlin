@@ -11769,7 +11769,6 @@ let exactMathBridgeInstalled = false;
 let activeExactTool = 'formula';
 let exactAutoHideEnabled = false;
 let exactAutoHideTimer = null;
-const EXACT_MATH_EDITOR_B64 = '';
 
 function updateQuestionTextFromTextarea(t) {
   try {
@@ -11782,16 +11781,6 @@ function updateQuestionTextFromTextarea(t) {
 }
 window.__examBuilderUpdateQuestionText = updateQuestionTextFromTextarea;
 
-function exactMathEditorHtml() {
-  const bin = atob(EXACT_MATH_EDITOR_B64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  let html = new TextDecoder('utf-8').decode(bytes);
-  const hook = `<script>(function(){function done(){try{parent.__examBuilderToolDone&&parent.__examBuilderToolDone();}catch(e){}}document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b)return;var id=b.id||'';var txt=(b.textContent||'').trim();if(/Apply$/.test(id)||/درج در سؤال|درج در سوال|اعمال تغییرات|✅ درج/.test(txt))setTimeout(done,250);if(/Close$|Cancel$/.test(id)||/انصراف|بستن|×/.test(txt))setTimeout(done,180);},true);document.addEventListener('input',function(e){if(e.target&&e.target.id==='qTxt_main')setTimeout(done,450);},true);})();<\/script>`;
-  html = html.replace('</body>', hook + '</body>');
-  return html;
-
-}
 function mathFrame() {
   let f = document.getElementById('mathEditorFrame');
   if (!f) {
@@ -11965,33 +11954,6 @@ function installExactMathBridge() {
     }
   } catch(e) {}
   exactMathBridgeInstalled = true;
-}
-function bootExactMathEditor(cb) {
-  const f = mathFrame();
-  if (!f) return;
-  if (exactMathReady) { installExactMathBridge(); cb(); return; }
-  if (!exactMathBooted) {
-    exactMathBooted = true;
-    const doc = f.contentDocument;
-    doc.open();
-    doc.write(exactMathEditorHtml());
-    doc.close();
-  }
-  const started = Date.now();
-  const timer = setInterval(function() {
-    try {
-      const w = f.contentWindow;
-      if (w && w.ExamEditor && typeof w.ExamEditor.setValue === 'function' && typeof w.__openMathEditor === 'function') {
-        clearInterval(timer);
-        exactMathReady = true;
-        installExactMathBridge();
-        cb();
-      } else if (Date.now() - started > 9000) {
-        clearInterval(timer);
-        alert('ویرایشگر فرمول بارگیری نشد.');
-      }
-    } catch(e) {}
-  }, 80);
 }
 function exactToolIsOpen(w) {
   try {

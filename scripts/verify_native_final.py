@@ -2666,6 +2666,24 @@ require("➡️ فلش" in _v767_studio
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_7StudioDrawToolsTest.kt").exists(),
         "V76.7 draw tools test is missing")
 
+# ---- V76.8: پاک‌سازی کدِ مردهٔ «ویرایشگر فرمول دقیق» از asset ----
+# EXACT_MATH_EDITOR_B64 رشتهٔ خالی بود و exactMathEditorHtml/bootExactMathEditor
+# هیچ فراخوانی نداشتند (مسیر مرده). حذف شد؛ رگرسیون ممنوع.
+_v768_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+require("EXACT_MATH_EDITOR_B64" not in _v768_asset
+        and "function exactMathEditorHtml" not in _v768_asset
+        and "function bootExactMathEditor" not in _v768_asset,
+        "V76.8 dead exact-math-editor code came back into the asset")
+# ابزارهای زنده نباید قربانی پاک‌سازی شده باشند
+require('id="mathEditorFrame"' in _v768_asset
+        and "MATH_EDITOR_HTML" in _v768_asset
+        and 'id="qimgStudioSrc"' in _v768_asset
+        and "window.__qmfSplitQuestion" in _v768_asset
+        and "window.__qmfAddQuestionImage" in _v768_asset,
+        "V76.8 cleanup removed live tooling from the asset")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_8AssetDeadCodeCleanupTest.kt").exists(),
+        "V76.8 dead-code cleanup test is missing")
+
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
 import re as _re
@@ -2915,7 +2933,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V76.7:")
+        and _v694_changelog.startswith("V76.8:")
+        and "V76.7:" in _v694_changelog
         and "V76.6:" in _v694_changelog
         and "V76.5:" in _v694_changelog
         and "V76.4:" in _v694_changelog
