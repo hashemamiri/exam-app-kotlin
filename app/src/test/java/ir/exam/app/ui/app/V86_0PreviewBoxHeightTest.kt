@@ -73,7 +73,7 @@ class V86_0PreviewBoxHeightTest {
     fun `the scale fix from V85 is still in place`() {
         assertTrue("qmf-pv-wrap" in asset)
         assertTrue("transform-origin" in asset)
-        assertTrue("Math.ceil(natH * k)" in asset)
+        assertTrue("Math.ceil(natH * kz)" in asset)
     }
 
     @Test
@@ -81,7 +81,7 @@ class V86_0PreviewBoxHeightTest {
         // printContent عرض صریح ندارد و عرض والد باریک را می‌گیرد؛
         // اگر همان را مقیاس کنیم برگه دو بار کوچک می‌شود.
         assertTrue("pc.style.setProperty('width', natural + 'px', 'important')" in asset)
-        assertTrue("Math.max(pc.scrollWidth || 0, pc.offsetWidth || 0) || 794" in asset)
+        assertTrue("Math.max(paperW, pc.scrollWidth || 0, pc.offsetWidth || 0) || 794" in asset)
         // ۷۹۴ فقط پشتیبانِ نبودِ اندازه است، نه کفِ اجباری
         assertTrue("Math.max(pc.scrollWidth || 0, pc.offsetWidth || 0, 794)" !in asset)
     }
@@ -112,5 +112,32 @@ class V86_0PreviewBoxHeightTest {
     @Test
     fun `the header clears the device notch`() {
         assertTrue("env(safe-area-inset-top,0px)" in asset)
+    }
+
+    @Test
+    fun `the paper width comes from a real ruler not a clamped measurement`() {
+        // .live-preview عرض 200mm دارد؛ scrollWidth زیر والدِ باریک فشرده است
+        assertTrue("width:200mm;height:0" in asset)
+        assertTrue("paperW = ruler.offsetWidth" in asset)
+        assertTrue("Math.max(paperW, pc.scrollWidth || 0, pc.offsetWidth || 0) || 794" in asset)
+        assertTrue("out.paperW" in asset)
+    }
+
+    @Test
+    fun `the user can zoom the sheet on top of the automatic fit`() {
+        assertTrue("window.qmfSetPreviewZoom = function (z)" in asset)
+        // زوم روی مقیاسِ خودکار ضرب می‌شود تا جا-شدن از دست نرود
+        assertTrue("var kz = k * (window.__qmfPvZoom || 1)" in asset)
+        assertTrue("z = Math.min(4, Math.max(1, z || 1))" in asset)
+        assertTrue("qmfInstallPinchZoom" in asset)
+        assertTrue("e.touches.length === 2" in asset)
+    }
+
+    @Test
+    fun `the zoom controls are reachable and reset on close`() {
+        assertTrue("pwo-zoom-val" in asset)
+        assertTrue("qmfSetPreviewZoom(1)" in asset)
+        assertTrue("min-width:34px;min-height:34px" in asset)
+        assertTrue("window.__qmfPvZoom = 1;" in asset)
     }
 }

@@ -35,7 +35,7 @@ class V83_0PreviewWindowFixTest {
         // V84.0 — ضریب دیگر در CSS ثابت نیست؛ در JS از روی اندازهٔ واقعیِ
         // کادر محاسبه می‌شود. پس رفتار پین می‌شود نه عدد.
         assertFalse("ضریب ثابت نباید برگردد", "transform:scale(.44)" in assetText)
-        assertTrue("'transform', 'scale(' + k.toFixed(3) + ')'" in assetText)
+        assertTrue("'transform', 'scale(' + kz.toFixed(3) + ')'" in assetText)
         // V85.0 — مبدأ به top left رفت تا مقیاس جابه‌جاییِ افقی ندهد.
         assertTrue("'transform-origin', 'top left'" in assetText)
     }

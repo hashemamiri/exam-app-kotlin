@@ -46,7 +46,7 @@ class V85_0PreviewWrapperTest {
         assertTrue("qmf-pv-wrap" in assetText)
         assertTrue("box.style.height" in assetText)
         assertTrue("box.style.width" in assetText)
-        assertTrue("Math.ceil(natH * k)" in assetText)
+        assertTrue("Math.ceil(natH * kz)" in assetText)
     }
 
     @Test

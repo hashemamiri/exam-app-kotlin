@@ -12546,6 +12546,15 @@ window.__qmfPreviewDiag = function () {
       out.bodyClientH = bd ? bd.clientHeight : 0;
       out.marginBottom = pcx ? (pcx.style.marginBottom || '') : '';
       out.forcedW = pcx ? (pcx.style.width || '') : '';
+      out.paperW = (function () {
+        try {
+          var r = document.createElement('div');
+          r.style.cssText = 'position:absolute;visibility:hidden;width:200mm;height:0';
+          document.body.appendChild(r);
+          var v = r.offsetWidth; document.body.removeChild(r); return v;
+        } catch (e) { return -1; }
+      })();
+      out.userZoom = window.__qmfPvZoom || 1;
       /* V86.0 — اگر این‌ها صفر باشند، واحدهای vh بی‌معنا هستند */
       out.innerH = window.innerHeight || 0;
       out.docClientH = (document.documentElement && document.documentElement.clientHeight) || 0;
@@ -14068,6 +14077,10 @@ loadSample();
 .pwo-box{background:#fff;border-radius:0;width:100%;height:100%;max-height:100%;min-height:0;display:flex;flex-direction:column;box-shadow:none;overflow:hidden}
 .pwo-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:#1e3a8a;color:#fff;font:800 15px Arial,sans-serif;flex:0 0 auto}
 .pwo-x{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer;font:700 13px Arial,sans-serif}
+.pwo-zoom{display:flex;align-items:center;gap:6px;font:700 12px Arial,sans-serif}
+.pwo-zb{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:7px;min-width:34px;min-height:34px;padding:4px 9px;cursor:pointer;font:700 14px Arial,sans-serif;touch-action:manipulation}
+.pwo-zb:active{background:rgba(255,255,255,.32)}
+.pwo-zoom-val{min-width:44px;text-align:center;opacity:.92}
 .pwo-x:hover{background:rgba(255,255,255,.3)}
 .pwo-body{flex:1 1 auto;min-height:0;overflow:auto;padding:12px;background:#eef2f7}
 /* V85.0 — لفافهٔ مقیاس: فضای واقعیِ برگهٔ کوچک‌شده را می‌گیرد تا کادر جمع نشود. */
@@ -14200,6 +14213,19 @@ loadSample();
     box.style.removeProperty('width');
 
     var avail = body.clientWidth - 12;
+    /* V86.3 — عرضِ کاغذ را از خودِ قانونِ چاپ بگیر، نه از اندازه‌گیریِ محدودشده.
+       `.live-preview` عرضِ `200mm` دارد. `scrollWidth` وقتی والد باریک است
+       عددِ فشرده‌شده را می‌دهد (۵۹۸ به‌جای عرضِ واقعیِ کاغذ)، پس کاغذ باریک‌تر
+       از کادر مقیاس می‌شد و کنارش سفید می‌ماند. حالا عرضِ کاغذ را با یک
+       خط‌کشِ واقعیِ ۲۰۰mm می‌سنجیم تا مستقل از چگالیِ دستگاه درست باشد. */
+    var paperW = 0;
+    try {
+      var ruler = document.createElement('div');
+      ruler.style.cssText = 'position:absolute;visibility:hidden;width:200mm;height:0';
+      document.body.appendChild(ruler);
+      paperW = ruler.offsetWidth || 0;
+      document.body.removeChild(ruler);
+    } catch (e) {}
     /* V86.1 — عرضِ طبیعیِ برگه.
        `#printContent` عرضِ صریح ندارد، پس عرضِ والد را می‌گیرد؛ روی موبایل
        آن والد باریک است (۳۳۲px) و محتوای واقعیِ برگه (۵۹۸px) از آن سرریز
@@ -14207,7 +14233,7 @@ loadSample();
        اول به عرضِ والد محدود، بعد ضرب در k — نتیجه ۳۳۲×۰٫۵۵۵ ≈ ۱۸۴px، یعنی
        نصفِ کادر پر و بقیه سفید. راهِ درست: عرضِ طبیعی را به خودِ برگه تحمیل
        کن تا سرریز جمع شود، بعد مقیاس بگیر. */
-    var natural = Math.max(pc.scrollWidth || 0, pc.offsetWidth || 0) || 794;
+    var natural = Math.max(paperW, pc.scrollWidth || 0, pc.offsetWidth || 0) || 794;
     if (!(avail > 0) || !(natural > 0)) return;
     pc.style.setProperty('width', natural + 'px', 'important');
     /* حالا که عرض تثبیت شد، محتوا ممکن است کمی بازتر شود؛ یک‌بار دیگر بخوان */
@@ -14228,12 +14254,51 @@ loadSample();
     }
 
     var natH = pc.scrollHeight || pc.offsetHeight || 0;
-    pc.style.setProperty('transform', 'scale(' + k.toFixed(3) + ')', 'important');
+    /* V86.3 — زومِ دستیِ کاربر روی مقیاسِ خودکار ضرب می‌شود */
+    var kz = k * (window.__qmfPvZoom || 1);
+    pc.style.setProperty('transform', 'scale(' + kz.toFixed(3) + ')', 'important');
     pc.style.setProperty('transform-origin', 'top left', 'important');
     /* لفافه دقیقاً به اندازهٔ نتیجهٔ مقیاس فضا می‌گیرد */
-    box.style.width = Math.round(natural * k) + 'px';
-    if (natH > 0) box.style.height = Math.ceil(natH * k) + 'px';
+    box.style.width = Math.round(natural * kz) + 'px';
+    if (natH > 0) box.style.height = Math.ceil(natH * kz) + 'px';
   };
+
+  /* V86.3 — زومِ دو-انگشتی روی برگه.
+     خواستهٔ کاربر: پیش‌فرض کلِ برگه جا شود، ولی بشود بزرگ‌نمایی کرد.
+     مقیاسِ خودکار پایه است و این ضریب رویش ضرب می‌شود، پس «جا شدن» هرگز
+     از دست نمی‌رود و دکمهٔ بازنشانی به همان حالت برمی‌گردد. */
+  window.__qmfPvZoom = 1;
+  window.qmfSetPreviewZoom = function (z) {
+    z = Math.min(4, Math.max(1, z || 1));
+    window.__qmfPvZoom = z;
+    try { qmfFitPreviewScale(); } catch (e) {}
+    var b = document.querySelector('.pwo-zoom-val');
+    if (b) b.textContent = Math.round(z * 100) + '%';
+  };
+  function qmfInstallPinchZoom(bodyEl) {
+    if (!bodyEl || bodyEl.__qmfPinch) return;
+    bodyEl.__qmfPinch = true;
+    var startDist = 0, startZoom = 1;
+    function dist(t) {
+      var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    bodyEl.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2) {
+        startDist = dist(e.touches);
+        startZoom = window.__qmfPvZoom || 1;
+      }
+    }, { passive: true });
+    bodyEl.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 2 && startDist > 0) {
+        e.preventDefault();
+        qmfSetPreviewZoom(startZoom * (dist(e.touches) / startDist));
+      }
+    }, { passive: false });
+    bodyEl.addEventListener('touchend', function (e) {
+      if (e.touches.length < 2) startDist = 0;
+    }, { passive: true });
+  }
 ;;
 
   window.togglePreviewWindow = function () {
@@ -14262,11 +14327,19 @@ loadSample();
     prevInfo = { parent: pc.parentNode, next: pc.nextSibling };
     var ov = document.createElement('div');
     ov.id = 'previewWinOverlay';
-    ov.innerHTML = '<div class="pwo-box"><div class="pwo-head"><span>👁 پیش‌نمایش آزمون</span><button type="button" class="pwo-x" onclick="closePreviewWindow()">✕ بستن</button></div><div class="pwo-body"></div></div>';
+    ov.innerHTML = '<div class="pwo-box"><div class="pwo-head"><span>👁 پیش‌نمایش آزمون</span>' +
+      '<span class="pwo-zoom">' +
+      '<button type="button" class="pwo-zb" onclick="qmfSetPreviewZoom((window.__qmfPvZoom||1)-0.25)">−</button>' +
+      '<span class="pwo-zoom-val">100%</span>' +
+      '<button type="button" class="pwo-zb" onclick="qmfSetPreviewZoom((window.__qmfPvZoom||1)+0.25)">+</button>' +
+      '<button type="button" class="pwo-zb" onclick="qmfSetPreviewZoom(1)">بازنشانی</button>' +
+      '</span>' +
+      '<button type="button" class="pwo-x" onclick="closePreviewWindow()">✕ بستن</button></div><div class="pwo-body"></div></div>';
     ov.addEventListener('click', function (e) { if (e.target === ov) closePreviewWindow(); });
     document.body.appendChild(ov);
     ov.querySelector('.pwo-body').appendChild(pc);
     pc.classList.add('in-window');
+    try { qmfInstallPinchZoom(ov.querySelector('.pwo-body')); } catch (e) {}
     try { setTimeout(function(){ if (window.mbFitAllSurds) window.mbFitAllSurds(document); }, 80); } catch (e) {}
     /* V83.0 — با transform:scale ارتفاعِ اصلی در چیدمان باقی می‌ماند و زیر
        برگه فضای خالیِ بزرگ می‌افتد. ارتفاع را با همان ضریب جبران می‌کنیم.
@@ -14316,6 +14389,7 @@ loadSample();
       pc.classList.remove('in-window');
       /* V86.1 — عرضِ تحمیلی فقط داخلِ پنجره معنا دارد */
       try { pc.style.removeProperty('width'); } catch (e) {}
+      window.__qmfPvZoom = 1;
       /* V83.0 — جبرانِ ارتفاع فقط داخل پنجره معنا دارد */
       try { pc.style.removeProperty('margin-bottom'); } catch (e) {}
       /* V84.0 — سبک‌های inlineِ نمایش پاک شوند تا برگه در حالتِ عادی

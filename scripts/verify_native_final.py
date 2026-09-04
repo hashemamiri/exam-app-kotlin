@@ -2951,7 +2951,7 @@ require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V82_0FormulaBridgeAndEditTes
 # ---- V83.0: پنجرهٔ پیش‌نمایش (zoom -> transform) ----
 require(".pwo-body #printContent{zoom:.44}" not in _v79_asset,
         "V83.0 the unsupported zoom rule must be gone")
-require("'transform', 'scale(' + k.toFixed(3) + ')'" in _v79_asset,
+require("'transform', 'scale(' + kz.toFixed(3) + ')'" in _v79_asset,
         "V84.0 the measured scale is missing")
 require("window.qmfFitPreviewScale" in _v79_asset, "V83.0 height compensation is missing")
 require("ResizeObserver" in _v79_asset, "V83.0 the preview must recompute on resize")
@@ -2982,7 +2982,17 @@ _v85_fit = _v79_asset.split("window.qmfFitPreviewScale = function")[1].split("\n
 require("marginBottom" not in _v85_fit, "V85.0 the negative-margin hack must be gone")
 require("body.style.height" not in _v85_fit, "V85.0 must not force the container height")
 require("qmf-pv-wrap" in _v79_asset, "V85.0 the scale wrapper is missing")
-require("Math.ceil(natH * k)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
+
+# V86.3 — عرضِ کاغذ از خط‌کشِ ۲۰۰mm، و زومِ کاربر روی مقیاسِ خودکار
+require("paperW = ruler.offsetWidth" in _v79_asset,
+        "V86.3 the paper ruler is missing")
+require("Math.max(paperW, pc.scrollWidth || 0, pc.offsetWidth || 0)" in _v79_asset,
+        "V86.3 the paper width must win over the clamped measurement")
+require("var kz = k * (window.__qmfPvZoom || 1)" in _v79_asset,
+        "V86.3 the user zoom must multiply the automatic fit")
+require("z = Math.min(4, Math.max(1, z || 1))" in _v79_asset,
+        "V86.3 the zoom must stay between the fit and 4x")
+require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top left'" in _v79_asset, "V85.0 origin must be top left")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V85_0PreviewWrapperTest.kt").exists(),

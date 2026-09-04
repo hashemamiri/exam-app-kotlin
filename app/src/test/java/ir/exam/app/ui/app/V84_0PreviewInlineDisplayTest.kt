@@ -56,7 +56,7 @@ class V84_0PreviewInlineDisplayTest {
         assertFalse("ضریب ثابت CSS نباید بماند", "transform:scale(.44)" in assetText)
         assertFalse("zoom نباید برگردد", "zoom:.44" in assetText)
         assertTrue("body.clientWidth" in assetText)
-        assertTrue("'transform', 'scale(' + k.toFixed(3) + ')'" in assetText)
+        assertTrue("'transform', 'scale(' + kz.toFixed(3) + ')'" in assetText)
         // حدهای منطقی — V85.0 شرطِ بالا به `k > 1` تغییر کرد. به‌جای پین‌کردنِ
         // شکلِ دقیقِ مقایسه، وجودِ هر دو حد ادعا می‌شود.
         assertTrue("k < 0.2" in assetText)
