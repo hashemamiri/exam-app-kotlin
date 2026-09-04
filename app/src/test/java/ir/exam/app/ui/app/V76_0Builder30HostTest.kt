@@ -72,8 +72,8 @@ class V76_0Builder30HostTest {
     }
 
     @Test
-    fun `builder-30 asset keeps render engines while insertion icons are gone`() {
-        // آیکن‌های درج حذف شده‌اند
+    fun `builder-30 asset keeps all render engines and all seven insert tools`() {
+        // V76.1 — هر ۷ دکمهٔ درج برگشته‌اند
         for (needle in listOf(
             "title=\"درج شکل\"",
             "title=\"درج نمودار\"",
@@ -83,17 +83,19 @@ class V76_0Builder30HostTest {
             "title=\"درج فیزیک\"",
             "title=\"درج شیمی\""
         )) {
-            assertFalse(needle, needle in assetText)
+            assertTrue(needle, needle in assetText)
         }
-        // دکمهٔ فرمول و موتورهای رندر باقی‌اند
+        // دکمهٔ فرمول و موتورهای رندر سرِ جای خودند
         assertTrue("q-tool-btn is-fx formula-btn" in assetText)
         assertTrue("renderVisualTool" in assetText)
         assertTrue("renderRichText" in assetText)
-        // ویرایشگر شکل خنثی شده (early return) بدون شکستن مسیر رندر
-        val figEditor = assetText.substringAfter("function openQmfFigEditor(fig) {")
-        val figHead = figEditor.substringBefore("if (!fig)")
-        assertTrue("/* V30-P1" in figHead)
-        assertTrue("return false;" in figHead)
+        // ویرایشگر شکل دست‌نخورده است (نسخهٔ P1 آن را خنثی کرده بود)
+        assertFalse("V30-P1: ویرایش شکل" in assetText)
+        assertTrue("__r11LastFigOpen" in assetText)
+        // فرمول: گاردِ fallback قبل از bootِ ویرایشگرِ غایب
+        assertEquals(2, Regex("__openFallbackMathModal").findAll(assetText).count())
+        assertTrue("!EXACT_MATH_EDITOR_B64" in assetText)
+        assertTrue("id=\"mathModal\"" in assetText)
         // چاپ از پل بومی می‌گذرد
         assertEquals(4, Regex(Regex.escape("window.ExamPrintNative.print")).findAll(assetText).count())
         assertTrue("printMode==='teacher'?'teacher':'student'" in assetText)
@@ -102,6 +104,18 @@ class V76_0Builder30HostTest {
         assertTrue("qmf_exam_autosave_azmoon_v1" in assetText)
         assertFalse("cloudflareinsights" in assetText)
         assertFalse("challenge-platform" in assetText)
+    }
+
+    @Test
+    fun `builder-30 dialog applies mobile viewport and supports image picking`() {
+        val dialog = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
+        // V76.1 — متاوویوپورت فایل اعمال شود (رابط در اندازهٔ واقعی موبایل)
+        assertTrue("settings.useWideViewPort = true" in dialog)
+        assertTrue("settings.loadWithOverviewMode = true" in dialog)
+        // دکمهٔ دوربین 📷: input[type=file] فقط با onShowFileChooser در WebView کار می‌کند
+        assertTrue("onShowFileChooser" in dialog)
+        assertTrue("ActivityResultContracts.GetContent" in dialog)
+        assertTrue("imagePicker.launch(\"image/*\")" in dialog)
     }
 
     @Test

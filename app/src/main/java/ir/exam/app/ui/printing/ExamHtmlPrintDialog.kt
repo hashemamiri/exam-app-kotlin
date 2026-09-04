@@ -2,14 +2,18 @@ package ir.exam.app.ui.printing
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Uri
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.ValueCallback
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +54,8 @@ import java.io.IOException
  * window.setExamData سؤالات و سربرگ آزمون خودکار تزریق می‌شوند و کاربر همان‌جا
  * ویرایش/چاپ می‌کند (فقط چاپ؛ آزمون سرور تغییر نمی‌کند).
  * printable == null یعنی «آزمون جدید» — فایل با payload ریست خالی باز می‌شود.
+ * V76.1 — viewport خود فایل اعمال می‌شود (رابط موبایل در اندازهٔ واقعی) و انتخاب
+ * تصویر با دکمهٔ دوربینِ فایل از طریق onShowFileChooser پشتیبانی می‌شود.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -59,6 +65,14 @@ fun ExamHtmlPrintDialog(
 ) {
     var loading by remember { mutableStateOf(true) }
     var jsError by remember { mutableStateOf<String?>(null) }
+    // V76.1 — دکمهٔ دوربینِ فایل (📷) یک input[type=file] داینامیک را کلیک می‌کند؛
+    // WebView اندروید بدون onShowFileChooser آن را بی‌صدا نادیده می‌گیرد.
+    var fileChooserCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        val callback = fileChooserCallback
+        fileChooserCallback = null
+        callback?.onReceiveValue(if (uri != null) arrayOf(uri) else null)
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -114,6 +128,10 @@ fun ExamHtmlPrintDialog(
                                 settings.setSupportZoom(true)
                                 settings.builtInZoomControls = true
                                 settings.displayZoomControls = false
+                                // V76.1 — بدون این دو، متا‌ویوپورتِ فایل (width=device-width)
+                                // اعمال نمی‌شود و کل رابط دسکتاپی/کوچک رندر می‌شود.
+                                settings.useWideViewPort = true
+                                settings.loadWithOverviewMode = true
 
                                 addJavascriptInterface(
                                     ExamPrintBridge(
@@ -189,6 +207,17 @@ fun ExamHtmlPrintDialog(
                                             val safe = message.message().replace(Regex("https?://\\S+"), "[url]").take(300)
                                             post { jsError = "CONSOLE: $safe"; loading = false }
                                         }
+                                        return true
+                                    }
+
+                                    // V76.1 — انتخاب تصویر برای دکمهٔ دوربین (📷) سؤال
+                                    override fun onShowFileChooser(
+                                        webView: WebView?,
+                                        filePathCallback: ValueCallback<Array<Uri>>,
+                                        fileChooserParams: android.webkit.WebChromeClient.FileChooserParams
+                                    ): Boolean {
+                                        fileChooserCallback = filePathCallback
+                                        imagePicker.launch("image/*")
                                         return true
                                     }
                                 }
