@@ -32,7 +32,8 @@ class V76_8AssetDeadCodeCleanupTest {
     fun `live tooling survived the cleanup`() {
         assertTrue("MATH_EDITOR_HTML" in assetText)
         assertTrue("id=\"mathEditorFrame\"" in assetText)
-        assertTrue("id=\"qimgStudioSrc\"" in assetText)
+        // V77.1 — استودیوی HTML عمداً حذف شد؛ دیگر نباید باشد
+        assertFalse("id=\"qimgStudioSrc\"" in assetText)
     }
 
     @Test
@@ -45,6 +46,7 @@ class V76_8AssetDeadCodeCleanupTest {
         assertTrue("window.__qmfRemoveQuestionImage" in assetText)
         assertTrue("window.__qmfReplaceQuestionImage" in assetText)
         assertTrue("window.__qmfSplitQuestion" in assetText)
-        assertTrue("window.__qmfOpenLegacyStudio" in assetText)
+        // V77.1 — پلِ استودیوی HTML عمداً حذف شده است
+        assertFalse("window.__qmfOpenLegacyStudio" in assetText)
     }
 }

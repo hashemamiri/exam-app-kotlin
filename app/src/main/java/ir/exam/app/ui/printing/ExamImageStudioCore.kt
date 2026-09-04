@@ -128,7 +128,6 @@ fun ExamImageStudioDialog(
     onReplaceExisting: (Int, String, Int) -> Unit = { _, _, _ -> },
     onSplitToSame: (List<Pair<String, Int>>) -> Unit = {},
     onSplitToQuestions: (List<Pair<String, Int>>) -> Unit = {},
-    onLegacyStudio: () -> Unit,
     onOcrText: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
@@ -351,12 +350,6 @@ fun ExamImageStudioDialog(
                                     }
                                 }
                             }
-                        }
-                        if (questionId != null) {
-                            OutlinedButton(
-                                onClick = onLegacyStudio,
-                                modifier = Modifier.fillMaxWidth()
-                            ) { Text("🧰 ابزارهای کامل (استودیو — موقت تا پورت نهایی)") }
                         }
                     }
                 } else {

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,7 +16,7 @@ import org.junit.Test
  * V76.4 — پنجره‌های بومی آزمون‌ساز + هستهٔ بومی استودیوی تصویر:
  * ۱) شِمای تنظیمات سربرگ دقیقاً از خود فایل ۳۰ استخراج شده (۷ قالب/همهٔ فیلدها).
  * ۲) چهار پنجرهٔ بومی در دیالوگ سیم‌کشی شده‌اند و پل‌های setFields/ExportJson/
- *    AddQuestionImage/OpenLegacyStudio موجودند.
+ *    AddQuestionImage موجودند.
  * ۳) دوربین سؤال در asset به پل بومی می‌رود (با پشتیبانِ استودیوی کامل HTML).
  * ۴) هستهٔ استودیوی بومی: چرخش/قرینه/برش/اسکن(۱۸۵)/اندازه‌های S-M-L-∞/کیفیت ۹۲.
  */
@@ -101,10 +102,10 @@ class V76_4Builder30NativeWindowsTest {
     }
 
     @Test
-    fun `camera button routes to the native image studio with legacy fallback`() {
-        // asset: کلیک دوربین → پل بومی؛ پشتیبان: مسیر قدیمی HTML
+    fun `camera button routes to the native image studio`() {
+        // asset: کلیک دوربین → پل بومی (V77.1: پشتیبانِ HTML حذف شد)
         assertTrue("openImageStudio" in assetText)
-        assertTrue("window.__qmfOpenLegacyStudio" in assetText)
+        assertFalse("window.__qmfOpenLegacyStudio" in assetText)
         assertTrue("p.file.click(); } catch (err) {}" in assetText)
         // Kotlin: پل + پنجرهٔ استودیو + درج با همان قرارداد
         assertTrue("fun openImageStudio(questionId: String?)" in dialogSource)
@@ -124,9 +125,9 @@ class V76_4Builder30NativeWindowsTest {
         assertTrue("FileProvider.getUriForFile" in studioSource)
         assertTrue("fun processAndEncode(" in studioSource)
         assertTrue("Bitmap.CompressFormat.JPEG" in studioSource)
-        // ابزارهای کامل تا پورت نهایی از دست نمی‌روند
-        assertTrue("ابزارهای کامل" in studioSource)
-        assertTrue("onLegacyStudio" in studioSource)
+        // V77.1 — پورت کامل شد: دکمه و پلِ «ابزارهای کامل» حذف شده‌اند
+        assertFalse("ابزارهای کامل" in studioSource)
+        assertFalse("onLegacyStudio" in studioSource)
     }
 
     @Test

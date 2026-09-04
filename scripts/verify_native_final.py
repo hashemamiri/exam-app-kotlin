@@ -2677,7 +2677,7 @@ require("EXACT_MATH_EDITOR_B64" not in _v768_asset
 # ابزارهای زنده نباید قربانی پاک‌سازی شده باشند
 require('id="mathEditorFrame"' in _v768_asset
         and "MATH_EDITOR_HTML" in _v768_asset
-        and 'id="qimgStudioSrc"' in _v768_asset
+        # V77.1: qimgStudioSrc عمداً حذف شد (پایان مهاجرت) — دیگر الزام نیست
         and "window.__qmfSplitQuestion" in _v768_asset
         and "window.__qmfAddQuestionImage" in _v768_asset,
         "V76.8 cleanup removed live tooling from the asset")
@@ -2748,6 +2748,36 @@ require("applyBookScan(bmp, deshadow, denoise)" in _v770_studio
         "V77.0 filters/layer state are not wired into the output pipeline")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V77_0StudioFiltersAndLayersTest.kt").exists(),
         "V77.0 filters/layers test is missing")
+
+# ---- V77.1: پایانِ مهاجرت — استودیوی HTML از asset حذف شد ----
+_v771_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+_v771_studio = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text(encoding="utf-8")
+_v771_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+require('id="qimgStudioSrc"' not in _v771_asset
+        and 'id="qimgStudioParent"' not in _v771_asset
+        and "__qimgStudio" not in _v771_asset
+        and "__qmfOpenLegacyStudio" not in _v771_asset,
+        "V77.1 the legacy HTML image studio came back into the asset")
+require("onLegacyStudio" not in _v771_studio
+        and "onLegacyStudio" not in _v771_dialog
+        and "ابزارهای کامل" not in _v771_studio,
+        "V77.1 the legacy studio button/callback came back into Kotlin")
+# سبک‌سازی واقعی رخ داده باشد (پیش از حذف ~6.18MB بود)
+require(len(_v771_asset) < 5_900_000,
+        "V77.1 asset is still carrying the removed HTML studio payload")
+# آنچه باید بماند: مسیرِ افزودن/رندر تصویر و همهٔ پل‌های بومی
+require("qimgUploaderJs" in _v771_asset
+        and "qimg-file" in _v771_asset
+        and "data-qimg-block" in _v771_asset
+        and "openImageStudio" in _v771_asset
+        and "MATH_EDITOR_HTML" in _v771_asset,
+        "V77.1 cleanup removed live tooling that must stay")
+for _b in ("__qmfAddQuestionImage", "__qmfExportJson", "__qmfSetFields", "__qmfSaveNow",
+           "__qmfQuestionImages", "__qmfRemoveQuestionImage", "__qmfReplaceQuestionImage",
+           "__qmfSplitQuestion", "__qmfAppendQuestionText"):
+    require("window." + _b in _v771_asset, "V77.1 removed the native bridge " + _b)
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V77_1LegacyStudioRemovalTest.kt").exists(),
+        "V77.1 legacy-studio removal test is missing")
 
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
@@ -2864,11 +2894,10 @@ for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder3
     require(not _missing, _fname + " import gate: " + "; ".join(_missing[:6]))
 _v764_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 require("window.__qmfAddQuestionImage" in _v764_asset
-        and "window.__qmfOpenLegacyStudio" in _v764_asset
         and "window.__qmfSetFields" in _v764_asset
         and "window.__qmfExportJson" in _v764_asset
         and "openImageStudio" in _v764_asset,
-        "V76.4 asset host bridge (setFields/export/addImage/legacyStudio/camera) is missing")
+        "V76.4 asset host bridge (setFields/export/addImage/camera) is missing")
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
         and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
@@ -2999,7 +3028,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V77.0:")
+        and _v694_changelog.startswith("V77.1:")
+        and "V77.0:" in _v694_changelog
         and "V76.9:" in _v694_changelog
         and "V76.8:" in _v694_changelog
         and "V76.7:" in _v694_changelog

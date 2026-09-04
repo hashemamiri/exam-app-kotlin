@@ -480,12 +480,6 @@ fun ExamHtmlPrintDialog(
                             barStatus = if (r?.toString()?.contains("ok") == true) "سؤال‌های جدید ساخته شدند ✓" else "ساخت سؤال‌های جداگانه ناموفق بود."
                         }
                     },
-                    onLegacyStudio = {
-                        studioQuestionId = null
-                        runJs("(function(){try{return window.__qmfOpenLegacyStudio?window.__qmfOpenLegacyStudio('" + qid + "'):'missing'}catch(e){return 'err'}})()") { r ->
-                            if (r?.contains("ok") != true) barStatus = "ابزار کامل در دسترس نیست؛ اول سؤال را باز کنید."
-                        }
-                    },
                     onOcrText = { text ->
                         // V76.9 — متنِ OCR به انتهای متنِ همان سؤال اضافه می‌شود
                         // (base64 تا فارسی و خط جدید سالم بمانند).
