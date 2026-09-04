@@ -2659,7 +2659,9 @@ require("➡️ فلش" in _v767_studio
         and "internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap" in _v767_studio
         and "encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)" in _v767_studio
         and "base.getPixels(px, 0, rgnW, x0i, y0i, rgnW, rgnH)" in _v767_studio
-        and "Corner.SHAPE_MOVE" in _v767_studio,
+        and "Corner.SHAPE_MOVE" in _v767_studio
+        and "val xsMin = xs.minOrNull() ?: nx" in _v767_studio
+        and "drawLine(col, a, b2, strokeWidth = sw)" in _v767_studio,
         "V76.7 studio draw tools are missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_7StudioDrawToolsTest.kt").exists(),
         "V76.7 draw tools test is missing")

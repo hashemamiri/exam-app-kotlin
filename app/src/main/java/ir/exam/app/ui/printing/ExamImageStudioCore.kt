@@ -479,8 +479,13 @@ fun ExamImageStudioDialog(
                                                         val xs = sp.points.map { it.x }
                                                         val ys = sp.points.map { it.y }
                                                         val m = 0.035f
-                                                        if (nx >= kotlin.math.min(xs) - m && nx <= kotlin.math.max(xs) + m &&
-                                                            ny >= kotlin.math.min(ys) - m && ny <= kotlin.math.max(ys) + m
+                                                        // min/max لیستی در kotlin.math نیست — minOrNull/maxOrNull
+                                                        val xsMin = xs.minOrNull() ?: nx
+                                                        val xsMax = xs.maxOrNull() ?: nx
+                                                        val ysMin = ys.minOrNull() ?: ny
+                                                        val ysMax = ys.maxOrNull() ?: ny
+                                                        if (nx >= xsMin - m && nx <= xsMax + m &&
+                                                            ny >= ysMin - m && ny <= ysMax + m
                                                         ) hit = si
                                                     }
                                                     selectedShape = hit
@@ -673,7 +678,7 @@ fun ExamImageStudioDialog(
                                         if (sp.type == "arrow" || sp.type == "arrow2" || sp.type == "line") {
                                             if (sp.points.size >= 2) {
                                                 val a = P(sp.points[0]); val b2 = P(sp.points[1])
-                                                drawLine(col, a, b2, st)
+                                                drawLine(col, a, b2, strokeWidth = sw)
                                                 if (sp.type != "line") head(a, b2, sw, col)
                                                 if (sp.type == "arrow2") head(b2, a, sw, col)
                                             }

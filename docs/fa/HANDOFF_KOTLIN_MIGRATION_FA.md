@@ -16150,3 +16150,33 @@ material3/foundation/layout/ui-graphics/coroutines/core است و در
 asset دست نخورد (همهٔ شکل‌ها سمت بومی پخته می‌شوند) ⇒ jsdomِ جدید لازم نبود؛
 drive3/4/5 در آزمون clone تمیز دوباره سبز شدند.
 پچ: V76_7_studio_draw_tools — بدون SQL.
+
+## ۳۰۶) V76.7.1 — رفع CI: min/max اسکالر با آرگومانِ لیست + drawLine با Stroke
+
+### دو ریشه (هر دو در کد جدید V76.7)
+
+```text
+۱) خطوط ۴۸۲/۴۸۳: hit-test جابه‌جایی شکل — kotlin.math.min(xs) برای
+   List<Float> وجود ندارد (فقط دوارگومان اسکالر)؛ خطای «none applicable»
+   به‌علاوهٔ ابهامِ minus/plus روی لیست. فیکس: minOrNull()/maxOrNull()
+   با fallback (xs.minOrNull() ?: nx).
+۲) خط ۶۷۶: drawLine(col, a, b2, st) — پارامتر چهارمِ drawLine
+   strokeWidth: Float است نه Stroke؛ Stroke مالِ style= در
+   drawRect/drawOval/drawPath. فیکس: drawLine(..., strokeWidth = sw).
+```
+
+### درس (به فهرست API امن)
+
+```text
+- kotlin.math.min/max = دوارگومانِ اسکالر؛ نسخهٔ لیستی =
+  collection.minOrNull()/maxOrNull() (هرگز کوتاه‌نویسِ min(list)).
+- DrawScope: Stroke فقط از راه style=؛ drawLine/drawCircle عرض را
+  strokeWidth: Float می‌گیرند.
+- اسکن «هم‌خانواده‌ها» بعد از هر فیکس: ۰ مورد باقی‌مانده از هر دو
+  الگو در فایل (regex چک شد).
+- محدودیت صادقانه: دروازهٔ import خطاهای «نوع» را نمی‌گیرد؛ تا
+  کامپایلِ دردسترس، هر API تازه = ریسک یک دور CI. برای همین پینِ
+  شکلِ درست در تست/verify ثبت می‌شود تا رگرسیون ممنوع شود.
+```
+
+پچ: V76_7_1_minmax_and_drawline_fix — بدون SQL.

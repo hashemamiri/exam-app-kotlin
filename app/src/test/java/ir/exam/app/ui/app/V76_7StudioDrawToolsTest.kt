@@ -76,6 +76,16 @@ class V76_7StudioDrawToolsTest {
     }
 
     @Test
+    fun `hit-testing and line drawing use the corrected kotlin forms`() {
+        // V76.7.1 — kotlin.math.min/max فقط دوارگومان اسکالر؛ شکلِ لیستی minOrNull/maxOrNull
+        assertTrue("val xsMin = xs.minOrNull() ?: nx" in studio)
+        assertTrue("val ysMax = ys.maxOrNull() ?: ny" in studio)
+        // drawLine عرض خط را با نام می‌گیرد؛ Stroke مالِ style= است
+        assertTrue("drawLine(col, a, b2, strokeWidth = sw)" in studio)
+        assertTrue("drawLine(col, a, b2, st)" !in studio)
+    }
+
+    @Test
     fun `shapes are baked into the output pipeline`() {
         assertTrue("internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap" in studio)
         assertTrue(
