@@ -6,6 +6,7 @@ import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -42,9 +43,9 @@ class V63_0WordDocumentEditorTest {
         )
         assertTrue("Icons.Outlined.Edit" in printCenter)
         assertTrue("ویرایش آزمون" in printCenter)
-        assertTrue("onEditExamDocument(exam.id)" in printCenter)
-        // چاپ‌های V62.7 دست‌نخورده باقی می‌مانند
-        assertTrue("Text(\"چاپ برگه\")" in printCenter)
+        // V76.0 — مداد (و پرینتر) نسخهٔ 30 را باز می‌کنند؛ مسیر DOC_EDITOR دست‌نخورده است
+        assertTrue("openBuilder30(exam.id)" in printCenter)
+        assertFalse("Text(\"چاپ برگه\")" in printCenter)
         // Text("چاپ با کلید") removed from exam card
     }
 

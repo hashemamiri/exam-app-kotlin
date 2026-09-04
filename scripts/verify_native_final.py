@@ -1750,14 +1750,16 @@ require("fun StudentQuestionPreviewDialog(" in _preview_v62
         and "پیش‌نمایش دانش‌آموزی سؤال" in builder_screen
         and "StudentQuestionPreviewDialog(" in builder_screen,
         "V62.7 student-view eye preview is missing")
-require('Text("چاپ برگه")' in _print_center_v62
+# V76.0 — چاپ فقط از نسخهٔ 30؛ سربرگ بومی صفحهٔ چاپ حذف شد (تنظیم داخل خود فایل).
+require("چاپ برگه" not in _print_center_v62
         and "چاپ برگه" not in teacher_dashboard,
-        "V62.7 print actions must live only in the print center")
+        "V76.0 native exam print actions must stay removed from print surfaces")
 require('"چاپ آزمون", "اطلاعات رسمی چاپ آزمون"' in app_shell
         and "MainPage.PRINT" in app_shell
-        and 'if (headerOpen) "بستن سربرگ" else "سربرگ"' in _print_center_v62
-        and "fun HeaderPreview(" in _print_center_v62,
-        "V62.7 print center with centered header dialog is missing")
+        and "بستن سربرگ" not in _print_center_v62
+        and "PrintHeaderDialog" not in _print_center_v62
+        and "fun HeaderPreview(" not in _print_center_v62,
+        "V62.7/V76.0 print center: native header dialog must stay removed")
 require("print/emblem.png" in _pdf_v62
         and "drawHeaderCell(" in _pdf_v62
         and "وزارت آموزش و پرورش جمهوری اسلامی ایران" in _pdf_v62
@@ -1797,11 +1799,15 @@ require("مدت آزمون: \\${header.examDuration}" not in _v62_7_test
 # V63.0.1 — needle قدیمی امضای بی‌پارامتر صفحهٔ چاپ ممنوع (V63.0 پارامتر مداد داد).
 require('"ExamPrintCenterScreen()" in appShell' not in _v62_7_test,
         "V63.0.1 stale print-center signature needle is back")
+# V76.0 — پنجرهٔ سربرگ بومی حذف شد؛ فیلدهای تاریخ/مدت داخل خود نسخهٔ 30 هستند.
+_v628_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 require("fonts/bnazanin.ttf" in _pdf_v62
         and "$" + "it دقیقه" in _pdf_v62
-        and ".imePadding().verticalScroll(" in _print_center_v62
-        and 'jalaliDisplay(it).substringBefore(" ")' in _print_center_v62,
-        "V62.8 nazanin header font / minute suffix / ime-aware dialog are missing")
+        and "f_examDate" in _v628_asset
+        and "مدت زمان امتحان" in _v628_asset
+        and "imePadding().verticalScroll(" not in _print_center_v62
+        and 'jalaliDisplay(it).substringBefore(" ")' not in _print_center_v62,
+        "V62.8 nazanin header font / minute suffix / builder-30 header fields are missing")
 # V62.2/V62.4 — صفحهٔ بازیابی نشست: پس‌زمینهٔ یخی لاگین + اسپینر دو کمانهٔ
 # بزرگ (V62.4: بدون هالهٔ نئونی و هستهٔ نبض‌دار).
 require("internal fun IceSpinner(" in _ice
@@ -1893,9 +1899,8 @@ require("fun ExamDocumentEditorScreen(" in _doc_editor_v63
 require("onEditExamDocument: (String) -> Unit" in _print_center_v62
         and "Icons.Outlined.Edit" in _print_center_v62
         and "ویرایش آزمون" in _print_center_v62
-        and "onEditExamDocument(exam.id)" in _print_center_v62
-        and "Text(\"چاپ برگه\")" in _print_center_v62,
-        "V63.0 edit pencil on print-center exam card is missing")
+        and "openBuilder30(exam.id)" in _print_center_v62,
+        "V63.0/V76.0 edit pencil on print-center exam card is missing")
 require("DOC_EDITOR" in app_shell
         and "editingDocumentExamId" in app_shell
         and "ExamDocumentEditorScreen(" in app_shell
@@ -1962,8 +1967,8 @@ require("class PrintLayoutStore(" in _layout_store_v63
         "V63.5 local print layout store / hardware back is missing")
 require("questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)" in
             (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
-        and "layoutStore.read(exam.id)" in _print_center_v62,
-        "V63.5 print path does not read the local layout override")
+        and "layoutStore.read(examId)" in _print_center_v62,
+        "V63.5/V76.0 print path does not read the local layout override")
 # ---- V63.6: سند پیوستهٔ Word-واقعی — صفحه‌بندی با ارتفاع واقعی رندر ----
 require("SubcomposeLayout(" in _doc_editor_v63
         and "fun WordPaperChrome(" in _doc_editor_v63
@@ -2556,29 +2561,37 @@ _v730_payload_text=_v730_payload.read_text() if _v730_payload.exists() else ""
 _v730_test_text=_v730_test.read_text() if _v730_test.exists() else ""
 
 require(_v730_print_center.exists()
-        and 'Text("چاپ")' in _v730_print_center_text
+        and "Icons.Outlined.Print" in _v730_print_center_text
+        and 'Text("آزمون جدید")' in _v730_print_center_text
         and "ExamHtmlPrintDialog(" in _v730_print_center_text
         and "htmlPrintExam" in _v730_print_center_text,
-        "V73.0 print button and html dialog in ExamPrintCenterScreen are missing")
+        "V76.0 builder-30 flow (pencil/printer/new-exam) is missing in ExamPrintCenterScreen")
 require(_v730_dialog.exists()
         and "fun ExamHtmlPrintDialog(" in _v730_dialog_text
+        and "printable: OfficialExamPrintable?" in _v730_dialog_text
         and "ExamPrintNative" in _v730_dialog_text
         and "print/exam_print.html" in _v730_dialog_text
         and "createPrintDocumentAdapter" in _v730_dialog_text,
-        "V73.0 ExamHtmlPrintDialog or print bridge wiring is missing")
+        "V73.0/V76.0 ExamHtmlPrintDialog or print bridge wiring is missing")
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
-        and "fun build(" in _v730_payload_text
-        and "fun buildFromDrafts(" in _v730_payload_text,
-        "V73.0 ExamHtmlPrintPayloadBuilder is missing")
-require(_v730_asset.is_file() and _v730_asset.stat().st_size > 400_000
-        and "window.setExamData" in _v730_asset.read_text(encoding="utf-8")
-        and "ExamPrintNative" in _v730_asset.read_text(encoding="utf-8"),
-        "V73.0 exam_print.html asset or setExamData bridge is missing")
+        and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
+        and "f_headerTemplate" in _v730_payload_text
+        and "qIdCounter" in _v730_payload_text,
+        "V76.0 ExamHtmlPrintPayloadBuilder (builder-30 mapping) is missing")
+_v730_asset_text=_v730_asset.read_text(encoding="utf-8") if _v730_asset.is_file() else ""
+require(_v730_asset.is_file() and _v730_asset.stat().st_size > 5_000_000
+        and "window.setExamData" in _v730_asset_text
+        and "__qmfHostBridge" in _v730_asset_text
+        and "ExamPrintNative" in _v730_asset_text
+        and "cloudflareinsights" not in _v730_asset_text
+        and 'title="درج شکل"' not in _v730_asset_text
+        and "is-fx formula-btn" in _v730_asset_text,
+        "V76.0 builder-30 asset or setExamData bridge is missing (or insertion icons/cloudflare returned)")
 require(_v730_test.exists()
         and "payload builder maps all six question types to json" in _v730_test_text
         and "totalScore = 20.0" in _v730_test_text,
-        "V73.0 HtmlPrint integration regression test is missing or lacks totalScore")
+        "V73.0/V76.0 HtmlPrint integration regression test is missing or lacks totalScore")
 
 # ---- V73.0.1: مقدار پیش‌فرض totalScore در OfficialExamPrintable ----
 _v7301_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt")
@@ -2662,16 +2675,15 @@ require(not any(token.lower() in _i742_active.lower() for token in _i742_forbidd
 _i742_print = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text()
 _i742_official = (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
 require(
-    "OfficialPrintController" in _i742_print
-    and 'Text("چاپ")' in _i742_print
-    and 'Text("چاپ برگه")' in _i742_print
+    "Icons.Outlined.Print" in _i742_print
     and "ExamHtmlPrintDialog(" in _i742_print
     and "DirectPdfExporter" not in _i742_print
     and 'CreateDocument("application/pdf")' not in _i742_print
     and 'contentDescription = "پی دی اف مستقیم"' not in _i742_print
-    and "Icons.Outlined.Print" not in _i742_print
-    and "pdfExporting" not in _i742_print,
-    "V74.2 removed direct-PDF UI but preserved system/HTML print actions incorrectly",
+    and "pdfExporting" not in _i742_print
+    and "OfficialPrintController" not in _i742_print
+    and 'Text("چاپ برگه")' not in _i742_print,
+    "V74.2/V76.0 removed direct-PDF UI but preserved builder-30 print actions incorrectly",
 )
 require("class OfficialPdfPrintAdapter" in _i742_official
         and "android.graphics.pdf.PdfDocument" in _i742_official,
@@ -2684,9 +2696,10 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 251
-        and _v694_changelog.startswith("V75.8.1:"),
-        "changelog must keep the full history + the new V75.8.1 line on top")
+require(_v694_lines >= 252
+        and _v694_changelog.startswith("V76.0:")
+        and "V75.8.1:" in _v694_changelog,
+        "changelog must keep the full history + the new V76.0 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2812,6 +2825,47 @@ _v7581_auth=(ROOT/"app/src/main/java/ir/exam/app/ui/image/SupabaseAuthImageInter
 require("import io.github.jan.supabase.auth.auth" in _v7581_auth
         and "currentSessionOrNull()?.accessToken" in _v7581_auth,
         "V75.8.1: the auth extension import is missing (build breaks without it)")
+
+# ---- V76.0: نسخهٔ 30 = میزبان چاپ/ویرایش آزمون (مداد+پرینتر+آزمون جدید) ----
+_v760_center=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt")
+_v760_inliner=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlImageInliner.kt")
+_v760_test=(ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_0Builder30HostTest.kt")
+_v760_center_text=_v760_center.read_text() if _v760_center.exists() else ""
+_v760_inliner_text=_v760_inliner.read_text() if _v760_inliner.exists() else ""
+_v760_asset_text=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8") if (ROOT/"app/src/main/assets/print/exam_print.html").is_file() else ""
+require(_v760_center.exists()
+        and 'Text("آزمون جدید")' in _v760_center_text
+        and "contentDescription = \"چاپ آزمون\"" in _v760_center_text
+        and "contentDescription = \"ویرایش آزمون\"" in _v760_center_text
+        and "ExamHtmlImageInliner.inline(" in _v760_center_text
+        and "viewModel.preparePrint" not in _v760_center_text
+        and "PrintHeaderDialog" not in _v760_center_text,
+        "V76.0 print-center builder-30 flow (icons + new exam + image inliner) is missing")
+require(_v760_inliner.exists()
+        and "PrivateImageLoader.create(context)" in _v760_inliner_text
+        and "fun imageToken(dataUrl: String): String" in _v760_inliner_text
+        and '"k", "img"' in _v760_inliner_text
+        and "const val MAX_IMAGES = 24" in _v760_inliner_text,
+        "V76.0 ExamHtmlImageInliner (private images as data-url tokens) is missing")
+require(len(_v760_asset_text) > 5_000_000
+        and "window.setExamData" in _v760_asset_text
+        and "qmfHostBridge" in _v760_asset_text
+        and "qmf_exam_autosave_azmoon_v1" in _v760_asset_text
+        and "ExamPrintNative.print" in _v760_asset_text
+        and "return false;" in _v760_asset_text.split("function openQmfFigEditor", 1)[-1].split("function openQmfFigEditorBody", 1)[0]
+        and "title=\"درج شکل\"" not in _v760_asset_text
+        and "cloudflareinsights" not in _v760_asset_text
+        and "challenge-platform" not in _v760_asset_text
+        and "is-fx formula-btn" in _v760_asset_text
+        and "renderVisualTool" in _v760_asset_text,
+        "V76.0 builder-30 asset regressed (bridge, engines, print bridge, cloudflare or insertion icons)")
+_v760_controller=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPrintController.kt").read_text()
+require("PrivateImageLoader.create(appContext)" in _v760_controller
+        and "ImageLoader(appContext)" not in _v760_controller,
+        "V76.0 official print controller must use the authorized image loader")
+require(_v760_test.exists()
+        and "image token matches the builder-30 inline img spec" in _v760_test.read_text(),
+        "V76.0 builder-30 host regression test is missing")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

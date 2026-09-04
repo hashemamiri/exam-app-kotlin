@@ -45,7 +45,8 @@ class V63_5PrintOnlyLayoutBackTest {
     fun `print path reads the local layout override`() {
         assertTrue("questionsOverride: List<ir.exam.app.ui.builder.QuestionDraft>? = null" in portability)
         assertTrue("questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)" in portability)
-        assertTrue("viewModel.preparePrint(exam.id, false, header, layoutStore.read(exam.id))" in printCenter)
+        // V76.0 — مسیر چاپ واحد: ورود سؤالات به نسخهٔ 30 با همان چیدمان محلی
+        assertTrue("portability.printableExam(examId, false, header, layoutStore.read(examId))" in printCenter)
         // preparePrint with key removed from card
         // ویومدل ویرایشگر جایگزینی درجا دارد (بدون تماس سرور)
         assertTrue("fun overridePrintLayout(questions: List<QuestionDraft>)" in

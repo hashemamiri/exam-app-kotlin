@@ -3,8 +3,6 @@ package ir.exam.app.ui.app
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintHeader
 import ir.exam.app.domain.model.OfficialPrintQuestion
-import ir.exam.app.ui.builder.QuestionDraft
-import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.printing.ExamHtmlPrintPayloadBuilder
 import java.io.File
 import kotlinx.serialization.json.booleanOrNull
@@ -18,11 +16,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V73.0 — آزمون‌های یکپارچگی چاپ تعاملی HTML و اتصال خودکار سؤالات آزمون:
- * ۱) نگاشت دقیق هر ۶ نوع سؤال کاتلین به ساختار JSON صفحهٔ چاپ HTML.
- * ۲) نگاشت کامل اطلاعات سربرگ رسمی به فیلدهای فرم HTML.
- * ۳) وجود فایل asset چاپ و توابع setExamData و پل بومی ExamPrintNative.
- * ۴) وجود دکمهٔ «چاپ» در کنار «چاپ برگه» روی کارت آزمون.
+ * V73.0 / V76.0 — آزمون‌های یکپارچگی «نسخهٔ 30» (آزمون‌ساز/چاپ تعاملی HTML):
+ * ۱) نگاشت هر ۶ نوع سؤال به ساختار questions نسخهٔ 30 با پل window.setExamData.
+ * ۲) فیلدهای سربرگ با شناسه‌های واقعی فرم فایل (f_headerTemplate/f_course/…).
+ * ۳) asset نسخهٔ 30: بدون آیکن‌های درج شکل (ویرایش شکل فقط در برنامه)، بدون
+ *    اسکریپت‌های Cloudflare، با پل بومی ExamPrintNative و پل میزبان setExamData.
+ * ۴) صفحهٔ چاپ: کارت آزمون فقط مداد + پرینتر؛ دکمهٔ وسط‌چین «آزمون جدید».
  */
 class V73_0HtmlPrintIntegrationTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -38,75 +37,74 @@ class V73_0HtmlPrintIntegrationTest {
 
     @Test
     fun `payload builder maps all six question types to json`() {
-        val questions = listOf(
-            QuestionDraft(
-                type = QuestionType.MULTIPLE_CHOICE,
-                text = "سؤال چهارگزینه‌ای",
-                score = 1.5,
-                options = listOf("گزینه ۱", "گزینه ۲", "گزینه ۳", "گزینه ۴"),
-                correctIndex = 1
+        val printable = OfficialExamPrintable(
+            documentTitle = "آزمون نوبت اول",
+            header = OfficialPrintHeader(
+                province = "فارس",
+                city = "شیراز",
+                district = "۱",
+                school = "شهید دستغیب",
+                grade = "یازدهم",
+                fieldOfStudy = "تجربی",
+                subject = "زیست‌شناسی",
+                examDate = "۱۴۰۳/۱۰/۲۰",
+                examDuration = "۶۰"
             ),
-            QuestionDraft(
-                type = QuestionType.TRUE_FALSE,
-                text = "سؤال صحیح و غلط",
-                score = 1.0,
-                expectedText = "true"
-            ),
-            QuestionDraft(
-                type = QuestionType.ESSAY,
-                text = "سؤال تشریحی",
-                score = 2.0,
-                answerLines = 4,
-                answerLineStyle = "lined"
-            ),
-            QuestionDraft(
-                type = QuestionType.FILL_BLANK,
-                text = "پایتخت ایران [...] است.",
-                score = 1.0
-            ),
-            QuestionDraft(
-                type = QuestionType.NUMERIC,
-                text = "حاصل ۴ × ۳",
-                score = 0.5,
-                expectedNumber = "12"
-            ),
-            QuestionDraft(
-                type = QuestionType.MATCHING,
-                text = "جورکردنی",
-                score = 2.0,
-                matchingLeft = listOf("الف", "ب"),
-                matchingRight = listOf("۱", "۲"),
-                matchingPairs = mapOf(0 to 1, 1 to 0)
+            subject = "زیست‌شناسی",
+            durationMinutes = 60,
+            totalScore = 20.0,
+            questions = listOf(
+                OfficialPrintQuestion(
+                    number = 1,
+                    text = "سؤال چهارگزینه‌ای",
+                    score = 1.5,
+                    options = listOf("گزینه ۱", "گزینه ۲", "گزینه ۳", "گزینه ۴"),
+                    answerText = "گزینه ۲"
+                ),
+                OfficialPrintQuestion(
+                    number = 2,
+                    text = "سؤال صحیح و غلط",
+                    score = 1.0,
+                    options = listOf("صحیح", "غلط"),
+                    answerText = "صحیح"
+                ),
+                OfficialPrintQuestion(
+                    number = 3,
+                    text = "سؤال تشریحی",
+                    score = 2.0,
+                    answerLines = 4,
+                    answerLineStyle = "lined"
+                ),
+                OfficialPrintQuestion(
+                    number = 4,
+                    text = "پایتخت ایران [...] است.",
+                    score = 1.0
+                ),
+                OfficialPrintQuestion(
+                    number = 5,
+                    text = "حاصل ۴ × ۳",
+                    score = 0.5,
+                    answerText = "12 ± 0"
+                ),
+                OfficialPrintQuestion(
+                    number = 6,
+                    text = "جورکردنی",
+                    score = 2.0,
+                    matchingLeft = listOf("الف", "ب"),
+                    matchingRight = listOf("۱", "۲")
+                )
             )
         )
 
-        val header = OfficialPrintHeader(
-            province = "فارس",
-            city = "شیراز",
-            district = "۱",
-            school = "شهید دستغیب",
-            grade = "یازدهم",
-            fieldOfStudy = "تجربی",
-            subject = "زیست‌شناسی",
-            examDate = "۱۴۰۳/۱۰/۲۰",
-            examDuration = "۶۰"
-        )
-
-        val json = ExamHtmlPrintPayloadBuilder.buildFromDrafts(
-            title = "آزمون نوبت اول",
-            subject = "زیست‌شناسی",
-            durationMinutes = 60,
-            header = header,
-            questions = questions
-        )
-
-        assertEquals("ministry", json["template"]?.jsonPrimitive?.content)
+        val json = ExamHtmlPrintPayloadBuilder.build(printable)
+        assertEquals(false, json["reset"]?.jsonPrimitive?.booleanOrNull)
         val fields = json["fields"]?.jsonObject!!
-        assertEquals("زیست‌شناسی", fields["h7_course"]?.jsonPrimitive?.content)
-        assertEquals("۱۴۰۳/۱۰/۲۰", fields["h7_examDate"]?.jsonPrimitive?.content)
-        assertEquals("شهید دستغیب", fields["h7_schoolName"]?.jsonPrimitive?.content)
-        assertEquals("یازدهم", fields["h7_grade"]?.jsonPrimitive?.content)
-        assertEquals("تجربی", fields["h7_major"]?.jsonPrimitive?.content)
+        assertEquals("ministry", fields["f_headerTemplate"]?.jsonPrimitive?.content)
+        assertEquals("زیست‌شناسی", fields["f_course"]?.jsonPrimitive?.content)
+        assertEquals("شهید دستغیب", fields["f_branch"]?.jsonPrimitive?.content)
+        assertEquals("۱۴۰۳/۱۰/۲۰", fields["f_examDate"]?.jsonPrimitive?.content)
+        assertEquals("60 دقیقه", fields["f_duration"]?.jsonPrimitive?.content)
+        assertEquals(6, json["qIdCounter"]?.jsonPrimitive?.intOrNull)
 
         val qArray = json["questions"]?.jsonArray!!
         assertEquals(6, qArray.size)
@@ -142,7 +140,9 @@ class V73_0HtmlPrintIntegrationTest {
         val pairs = match["pairs"]?.jsonArray!!
         assertEquals(2, pairs.size)
         assertEquals("الف", pairs[0].jsonObject["left"]?.jsonPrimitive?.content)
-        assertEquals("۲", pairs[0].jsonObject["right"]?.jsonPrimitive?.content)
+        assertEquals("۱", pairs[0].jsonObject["right"]?.jsonPrimitive?.content)
+        assertEquals("ب", pairs[1].jsonObject["left"]?.jsonPrimitive?.content)
+        assertEquals("۲", pairs[1].jsonObject["right"]?.jsonPrimitive?.content)
     }
 
     @Test
@@ -169,10 +169,10 @@ class V73_0HtmlPrintIntegrationTest {
         )
 
         val json = ExamHtmlPrintPayloadBuilder.build(printable)
-        assertEquals("ministry", json["template"]?.jsonPrimitive?.content)
         val fields = json["fields"]?.jsonObject!!
-        assertEquals("فیزیک", fields["h7_course"]?.jsonPrimitive?.content)
-        assertEquals("دبیرستان رازی", fields["h7_schoolName"]?.jsonPrimitive?.content)
+        assertEquals("فیزیک", fields["f_course"]?.jsonPrimitive?.content)
+        assertEquals("دبیرستان رازی", fields["f_branch"]?.jsonPrimitive?.content)
+        assertEquals("75 دقیقه", fields["f_duration"]?.jsonPrimitive?.content)
 
         val qArray = json["questions"]?.jsonArray!!
         assertEquals(1, qArray.size)
@@ -182,29 +182,51 @@ class V73_0HtmlPrintIntegrationTest {
     }
 
     @Test
-    fun `html asset exists and supports native bridge`() {
+    fun `html asset exists and supports the builder-30 host bridge`() {
         assertTrue(htmlAsset.isFile)
-        assertTrue(htmlAsset.length() > 400_000L)
+        assertTrue("asset too small", htmlAsset.length() > 5_000_000L)
         val content = htmlAsset.readText()
         assertTrue("window.setExamData" in content)
+        assertTrue("__qmfHostBridge" in content)
+        assertTrue("normQ" in content)
         assertTrue("ExamPrintNative" in content)
         assertTrue("updateHeaderSettingsVisibility()" in content)
         assertTrue("renderAll()" in content)
+        // V76.0 — آیکن‌های درج شکل حذف شده‌اند (ویرایش شکل فقط در برنامهٔ بومی)
+        assertFalse("q-tool-btn is-fig" in content)
+        assertFalse("title=\"درج شکل\"" in content)
+        assertFalse("title=\"درج نمودار\"" in content)
+        // موتور رندر توکن‌ها حفظ شده است
+        assertTrue("is-fx formula-btn" in content)
+        // V76.0 — بدون اسکریپت‌های تزریقی Cloudflare (استفادهٔ آفلاین/WebView)
+        assertFalse("cloudflareinsights" in content)
+        assertFalse("challenge-platform" in content)
     }
 
     @Test
-    fun `print center screen includes the new print button and html dialog`() {
-        assertTrue("Text(\"چاپ\")" in printCenter)
-        assertTrue("Text(\"چاپ برگه\")" in printCenter)
-        // Text("چاپ با کلید") removed from exam card
+    fun `print center opens builder 30 from pencil printer and new exam button`() {
+        // V76.0 — کارت آزمون فقط مداد + پرینتر دارد
+        assertTrue("contentDescription = \"ویرایش آزمون\"" in printCenter)
+        assertTrue("Icons.Outlined.Print" in printCenter)
+        assertTrue("contentDescription = \"چاپ آزمون\"" in printCenter)
+        assertFalse("Text(\"چاپ\")" in printCenter)
+        assertFalse("Text(\"چاپ برگه\")" in printCenter)
+        // دکمهٔ وسط‌چین «آزمون جدید» جایگزین «سربرگ»
+        assertTrue("Text(\"آزمون جدید\")" in printCenter)
+        assertFalse("بستن سربرگ" in printCenter)
+        assertFalse("PrintHeaderDialog" in printCenter)
+        // پنجرهٔ تمام‌صفحهٔ نسخهٔ 30
         assertTrue("ExamHtmlPrintDialog(" in printCenter)
         assertTrue("htmlPrintExam" in printCenter)
+        assertTrue("htmlPrintOpen" in printCenter)
         assertTrue("htmlPrintLoading" in printCenter)
+        assertTrue("ExamHtmlImageInliner.inline(" in printCenter)
     }
 
     @Test
     fun `html dialog implements secure webview and print bridge`() {
         assertTrue("fun ExamHtmlPrintDialog(" in dialogSource)
+        assertTrue("printable: OfficialExamPrintable?" in dialogSource)
         assertTrue("ExamPrintNative" in dialogSource)
         assertTrue("exam-print.local" in dialogSource)
         assertTrue("print/exam_print.html" in dialogSource)

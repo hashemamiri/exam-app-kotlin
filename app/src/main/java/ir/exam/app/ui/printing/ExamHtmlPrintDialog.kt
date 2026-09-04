@@ -45,14 +45,16 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 
 /**
- * V73.0 — پنجرهٔ تمام‌صفحهٔ چاپ تعاملی HTML با انتقال خودکار سؤالات آزمون:
- * فایل چاپ تعاملی را در WebView بارگذاری کرده و سؤالات و مشخصات سربرگ آزمون
- * را به‌صورت خودکار در بخش سؤالات و سربرگ فایل تزریق می‌کند.
+ * V76.0 — پنجرهٔ تمام‌صفحهٔ «نسخهٔ 30» (آزمون‌ساز/چاپ تعاملی HTML):
+ * فایل print/exam_print.html را در WebView بارگذاری می‌کند؛ با پل
+ * window.setExamData سؤالات و سربرگ آزمون خودکار تزریق می‌شوند و کاربر همان‌جا
+ * ویرایش/چاپ می‌کند (فقط چاپ؛ آزمون سرور تغییر نمی‌کند).
+ * printable == null یعنی «آزمون جدید» — فایل با payload ریست خالی باز می‌شود.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ExamHtmlPrintDialog(
-    printable: OfficialExamPrintable,
+    printable: OfficialExamPrintable?,
     onDismiss: () -> Unit
 ) {
     var loading by remember { mutableStateOf(true) }
@@ -83,7 +85,8 @@ fun ExamHtmlPrintDialog(
                         )
                     }
                     Text(
-                        text = "چاپ آزمون: " + printable.documentTitle.ifBlank { printable.subject }.ifBlank { "آزمون" },
+                        text = if (printable == null) "آزمون جدید — آزمون‌ساز"
+                        else "چاپ آزمون: " + printable.documentTitle.ifBlank { printable.subject }.ifBlank { "آزمون" },
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
@@ -118,7 +121,7 @@ fun ExamHtmlPrintDialog(
                                             post {
                                                 runCatching {
                                                     val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                                                    val jobName = "${printable.documentTitle.ifBlank { "exam" }}-$mode"
+                                                    val jobName = (printable?.documentTitle ?: "آزمون").ifBlank { "exam" } + "-$mode"
                                                     val printAdapter = createPrintDocumentAdapter(jobName)
                                                     printManager?.print(jobName, printAdapter, PrintAttributes.Builder().build())
                                                 }

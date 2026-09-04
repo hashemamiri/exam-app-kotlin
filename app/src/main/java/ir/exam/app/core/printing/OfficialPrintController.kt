@@ -4,10 +4,10 @@ import android.content.Context
 import android.print.PrintAttributes
 import android.print.PrintManager
 import androidx.core.graphics.drawable.toBitmap
-import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import ir.exam.app.domain.model.OfficialExamPrintable
+import ir.exam.app.ui.image.PrivateImageLoader
 import ir.exam.app.domain.model.OfficialGradeReportPrintable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -15,7 +15,11 @@ import kotlinx.coroutines.coroutineScope
 
 class OfficialPrintController(context: Context) {
     private val appContext = context.applicationContext
-    private val imageLoader = ImageLoader(appContext)
+    // V76.0 — بارگذار احرازهویت‌شده: بعد از خصوصی‌شدن باکت exam-images (V75.8)
+    // بارگذار ساده Coil تصاویر خصوصی را بدون توکن نشست نمی‌خواند؛ از این پس همان
+    // بارگذار برنامه (با SupabaseAuthImageInterceptor) استفاده می‌شود تا چاپ رسمی
+    // هم تصاویر سؤال را ببیند.
+    private val imageLoader = PrivateImageLoader.create(appContext)
 
     suspend fun printExam(context: Context, source: OfficialExamPrintable) {
         val withImages = coroutineScope {

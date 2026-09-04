@@ -15501,3 +15501,101 @@ docs/fa/HANDOFF_KOTLIN_MIGRATION_FA.md
 ```text
 SQL/Edge/Secret/Dependency جدید: ندارد — فقط رفع خطای ساخت
 ```
+
+## ۲۹۳) V76.0 — نسخهٔ ۳۰ میزبانِ چاپ آزمون (مداد+پرینتر+«آزمون جدید»)
+
+### درخواست کاربر
+
+```text
+۱) دکمهٔ «سربرگ» از چاپ آزمون حذف و «آزمون جدید» جای آن که نسخهٔ 30 را باز کند.
+۲) آیکن‌های درج شکل/نمودار/جدول/آناتومی/جدول تناوبی/فیزیک/شیمی از ویرایشگر
+   نسخهٔ 30 حذف شود (درج فقط از اپ کاتلین)؛ موتورهای رندر بمانند.
+۳) کارت آزمون فقط دو آیکن: مداد و پرینتر — هر دو نسخهٔ 30 را باز می‌کنند.
+۴) لمس پرینتر: ورود هوشمند و خودکار سؤالات به نسخهٔ 30؛ ویرایش/چاپ همان‌جا.
+تصمیم‌ها: هیچ ذخیره‌ای به آزمون سرور برنمی‌گردد (فقط autosave محلیِ همان
+جلسه)؛ ویرایشگر سند بومیِ Word-مانند از این صفحه کنار گذاشته می‌شود.
+```
+
+### چه شد
+
+```text
+- asset جدید app/src/main/assets/print/exam_print.html (۶٬۱۶۶٬۰۸۳ chars) از
+  نسخهٔ 30 ممیزی‌شده با ۷+۱ تحول؛ «+۱» = حذف اسنیپت دوم Cloudflare
+  (__CF$cv$params/challenge-platform) که قبل از بیکن آمده بود و گامِ
+  «تا انتهای body» آن را نمی‌گرفت (ریشهٔ FAIL اولِ verify).
+  اسکریپت بازتولید: /tmp/transform_asset.py (۷ گام assert-دار؛ منبع از
+  uploads/30.html). asset هیچ ارجاع اینترنتی ندارد ⇒ چاپ آفلاین.
+- تحول‌های کلیدی: حذف ۷ دکمهٔ q-tool-btn is-(fig|gra|tab|ana|pt|ph|ch) +
+  ۲۸ قانون CSS مرده؛ openQmfFigEditor → early return false (رندر می‌ماند)؛
+  دو سایت window.print → پل بومی ExamPrintNative.print(mode) با
+  fallback؛ پل میزبان <script id="qmfHostBridge"> با window.setExamData
+  (reset/fields/questions + normQ شش‌نوع + پاک‌کردن بنر پیش‌نویس + نوشتن
+  autosave) و ExamPrintNative.onError('import-failed').
+- کاتلین: ExamPrintCenterScreen بازنویسی شد — «آزمون جدید» وسط‌چین؛
+  کارت فقط IconButton مداد + پرینتر (هر دو openBuilder30(id) =
+  portability.printableExam(id,false,header,layoutStore.read(id)) →
+  ExamHtmlImageInliner.inline → ExamHtmlPrintDialog)؛ PrintHeaderDialog/
+  HeaderPreview/preparePrint مسیر حذف شد؛ پارامتر onEditExamDocument
+  برای سیم‌کشی DOC_EDITOR در ExamApp دست‌نخورده ماند (unreachable).
+- ExamHtmlPrintDialog: printable → nullable (null = «آزمون جدید»/ریست)؛
+  عنوان پنجرهٔ null-aware؛ jobName nullable-aware.
+- ExamHtmlPrintPayload.kt (جدید، JVM-تست‌پذیر): نگاشت ۶ نوع سؤال به
+  قالب saveExam نسخهٔ 30 + فیلدهای f_* با شناسه‌های واقعی فرم
+  (f_headerTemplate/f_course/f_branch/f_examDate/f_duration)؛ مقدار
+  سربرگ = classic (مقادیر معتبر: classic/formal/sama/school/edu/
+  detailed-school — «ministry» مال asset قدیمی V73 بود و رفع شد).
+- ExamHtmlImageInliner.kt (جدید): تصاویر خصوصی با PrivateImageLoader
+  (توکن‌دار) خوانده و تا لبهٔ ۱۲۸۰ کوچک، JPEG 85، data-URL، سقف ۲۴
+  تصویر/۱۴M chars؛ توکن ` %%FIG:{"k":"img","src":"...","w":420}%%`
+  انتهای متن سؤال. شکست تک‌تصویر فقط همان تصویر را حذف می‌کند.
+- OfficialPrintController: بارگذار سادهٔ Coil → PrivateImageLoader
+  (بعد از خصوصی‌شدن باکت V75.8، چاپ رسمی هم باید توکن داشته باشد).
+```
+
+### درس‌های این پچ (مهم)
+
+```text
+- قرارداد qIdCounter نسخهٔ 30: addQuestion اول qIdCounter++ بعد
+  id=qIdCounter ⇒ qIdCounter = «آخرین id» (max id)؛ نسخهٔ قبلیِ این
+  یادداشت «max id+1» نوشته بود که غلط بود و پل اصلاح شد.
+  restore داخلی خود 30: qIdCounter = data.qIdCounter || questions.length.
+- سوزن verify باید با نام پارامتر واقعی کد بخواند: در openBuilder30
+  پارامتر examId است نه exam.id (V63.5 یک بار روی این FAIL شد).
+- needle داخل کامنت فارسی هم شکست می‌دهد؛ «چاپ برگه» نباید حتی برای
+  توضیح در کد بیاید (assertFalse چک می‌کند).
+- assertِ شبیه‌ساز: kotlin JsonObject.toString() فشرده است ("reset":true
+  بدون فاصله) — تست reset روی این تکیه می‌کند.
+- هارنس node برای پل: getElementById باید برای autosaveBanner مقدار
+  بدون remove برگرداند یا null بدهد، وگرنه بنر.remove() پرت می‌کند به catch.
+```
+
+### تست/verify
+
+```text
+- جدید: V76_0Builder30HostTest (۵ تست: ریست payload، قالب توکن تصویر،
+  قرارداد کارت/دکمه، موتورهای رندر باقی+آیکن‌های حذف+Cloudflare صفر،
+  بارگذار احرازهویت‌شدهٔ چاپ رسمی).
+- بازنویسی تست‌های خواننده: V62_7 (تست سربرگ → «آزمون جدید»)، V63_0
+  (مداد → openBuilder30)، V63_5 (مسیر واحد چاپ)، V62_8 (رفتن پنجرهٔ
+  سربرگ؛ فیلدهای تاریخ/مدت داخل asset)، V73_0 (۴ تست → جریان جدید).
+- verify: بلوک‌های V62.7/V62.8/V63.0/V63.5/V74.2/V73.0 به‌روز + بند
+  V76.0 (صفحه/اینلاینر/asset/کنترلر/تست) + چنج‌لاگ startswith V76.0.
+- شبیه‌سازی پایتون: ۱۴۹ سوزن پارس‌شده + ۱۵ مورد دستی = 0 FAIL؛ توازن
+  آکولاد/پرانتز ۱۱ فایل تغییرکرده OK؛ اسکن import دو-الگویی OK؛
+  node: پل reset + ورود ۶ نوع سؤال + qIdCounter=max id + onError.
+- asset: همهٔ needleهای حذفی=0؛ setExamData=2؛ ExamPrintNative.print=4
+  (typeof+call×۲)؛ is-fx formula-btn=1؛ renderAll()=14؛ normQ=2.
+```
+
+### چک‌لیست دستگاه
+
+```text
+- چاپ آزمون: «آزمون جدید» وسط؛ کارت فقط مداد/پرینتر؛ لمس هر دو =
+  باز شدن آزمون‌ساز تعاملی با سؤالات همان آزمون (تصاویر هم دیده شوند).
+- داخل آزمون‌ساز: آیکن‌های درج شکل نباشد؛ فرمول (fx) باشد؛ سربرگ از
+  دکمهٔ «تنظیمات سربرگ» خود فایل کار کند؛ چاپ → پنجرهٔ چاپ اندروید.
+- ویرایش داخل آزمون‌ساز پس از بستن، در آزمون‌های برنامه تغییری نگذارد.
+- «آزمون جدید»: فایل خالی (بدون سؤال قبلی) باز شود.
+```
+
+پچ: V76_0_builder30_print_host — بدون SQL.

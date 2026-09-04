@@ -92,15 +92,13 @@ class V62_8ShareEyeFlexHeaderTest {
     }
 
     @Test
-    fun `print header uses nazanin date-only and minute suffix with ime-aware dialog`() {
+    fun `print header uses nazanin date-only and minute suffix`() {
         // فونت B Nazanin با جایگزین امن وزیرمتن
         assertTrue("fonts/bnazanin.ttf" in pdfAdapter)
         assertTrue("R.font.vazirmatn_regular" in pdfAdapter)
-        // مدت با پسوند «دقیقه» و تاریخ بدون ساعت
+        // مدت با پسوند «دقیقه» در خود PDF
         assertTrue("\$it دقیقه" in pdfAdapter)
-        assertTrue("jalaliDisplay(it).substringBefore(\" \")" in printCenter)
-        assertTrue("عدد دقیقه؛ مثال: 120" in printCenter)
-        // پنجرهٔ سربرگ کیبوردپذیر و اسکرول‌شونده
-        assertTrue(".imePadding().verticalScroll(" in printCenter)
+        // V76.0 — پنجرهٔ سربرگ بومی از صفحهٔ چاپ حذف شد؛ تاریخ/مدت داخل نسخهٔ 30 و PDF است
+        assertFalse("jalaliDisplay(it).substringBefore(\" \")" in printCenter)
     }
 }

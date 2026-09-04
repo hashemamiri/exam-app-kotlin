@@ -63,31 +63,26 @@ class V62_7PrintCenterStudentPreviewTest {
         assertTrue("contentDescription = \"حذف آزمون\"" in card)
         assertTrue("Text(\"تکثیر با کسر هزینه\")" in card)
         assertTrue("Text(\"صادرکردن\")" in card)
-        // چاپ‌ها از کارت آزمون حذف و فقط در صفحهٔ چاپ آزمون هستند
+        // چاپ‌ها از کارت آزمون حذف شده‌اند؛ V76.0 — چاپ فقط از نسخهٔ 30 است
         assertFalse("چاپ برگه" in card)
         assertFalse("چاپ با کلید" in card)
-        assertTrue("Text(\"چاپ برگه\")" in printCenter)
-        // Text("چاپ با کلید") removed from exam card
+        assertFalse("چاپ برگه" in printCenter)
+        assertFalse("چاپ با کلید" in printCenter)
     }
 
     @Test
-    fun `print center replaces the header card with a centered header dialog`() {
+    fun `print center replaces the native header with the builder-30 new exam button`() {
         // کارت منو: چاپ آزمون به‌جای سربرگ؛ صفحهٔ PRINT
         assertTrue("\"چاپ آزمون\", \"اطلاعات رسمی چاپ آزمون\"" in appShell)
         assertTrue("MainPage.PRINT" in appShell)
-        // V63.0.1 — صفحهٔ چاپ حالا پارامتر مداد ویرایش سند دارد.
         assertTrue("ExamPrintCenterScreen(" in appShell)
-        // دکمهٔ سربرگ وسط‌چین مثل مشخصات آزمون
+        // V76.0 — دکمهٔ وسط‌چین «آزمون جدید» نسخهٔ 30 را باز می‌کند؛ سربرگ بومی حذف شد
         assertTrue("horizontalArrangement = Arrangement.Center" in printCenter)
-        assertTrue("if (headerOpen) \"بستن سربرگ\" else \"سربرگ\"" in printCenter)
-        // فرم سربرگ: مدرسه از مدارس عضو یا سایر، پایه/رشته با چرخ، تاریخ شمسی
-        for (needle in listOf("GradeOdometerPicker(", "FieldOfStudyPicker(",
-            "JalaliDateTimeField(", "Text(\"سایر\")", "native_teacher_schools_v61",
-            "Text(\"نام درس\")", "Text(\"مدت امتحان\")", "پیش‌نمایش سربرگ"))
-            assertTrue(needle, needle in printCenter)
-        // پیش‌نمایش همان ۵ سطر چاپ را دارد
-        assertTrue("fun HeaderPreview(" in printCenter)
-        assertTrue("وزارت آموزش و پرورش جمهوری اسلامی ایران" in printCenter)
+        assertTrue("Text(\"آزمون جدید\")" in printCenter)
+        assertFalse("بستن سربرگ" in printCenter)
+        assertFalse("PrintHeaderDialog" in printCenter)
+        assertFalse("fun HeaderPreview(" in printCenter)
+        assertFalse("native_teacher_schools_v61" in printCenter)
     }
 
     @Test
