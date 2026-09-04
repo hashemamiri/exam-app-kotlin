@@ -14818,6 +14818,17 @@ function persistNow() {
 window.setExamData = function (data) {
   try {
     if (typeof data === 'string') data = JSON.parse(data);
+    /* V80.0 — محافظِ دوم: یک «ریست» نباید کارِ در جریان را پاک کند.
+       onPageFinished برای هر فریم شلیک می‌شود؛ اگر iframe ویرایشگر فرمول لود
+       شود و ریستِ تکراری برسد، سؤالاتِ نوشته‌شده از بین می‌رفت. ریست فقط وقتی
+       مجاز است که هنوز چیزی ساخته نشده باشد یا ابزاری باز نباشد. */
+    if (data && data.reset && !data.force) {
+      var hasWork = false;
+      try { hasWork = (typeof questions !== 'undefined' && questions.length > 0); } catch (e) {}
+      var toolOpen = false;
+      try { toolOpen = (typeof qmfAnyToolOpen === 'function') && qmfAnyToolOpen(); } catch (e) {}
+      if (hasWork || toolOpen) return;
+    }
     var banner = document.getElementById('autosaveBanner'); if (banner) banner.remove();
     if (!data || data.reset) {
       try { localStorage.removeItem(LS_KEY); } catch (e) {}

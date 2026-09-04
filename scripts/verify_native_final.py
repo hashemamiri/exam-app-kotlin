@@ -2898,6 +2898,19 @@ require(len(_v79_asset) < 4_400_000, "V79 asset did not shrink as expected")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V79_0FormulaAndNativeBuilderTest.kt").exists(),
         "V79 test is missing")
 
+# ---- V80.0: onPageFinished فقط برای فریم اصلی + گاردِ ریستِ سرگردان ----
+_v80_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+require("internal const val MAIN_PAGE_URL" in _v80_dialog, "V80.0 main-page constant is missing")
+require("if (url != MAIN_PAGE_URL) return" in _v80_dialog, "V80.0 sub-frame guard is missing")
+require("loadUrl(MAIN_PAGE_URL)" in _v80_dialog, "V80.0 loadUrl must use the shared constant")
+require(_v80_dialog.index("if (url != MAIN_PAGE_URL) return")
+        < _v80_dialog.index("ExamHtmlPrintPayloadBuilder.build(printable)"),
+        "V80.0 guard must precede the payload injection")
+require("data.reset && !data.force" in _v79_asset, "V80.0 stray-reset guard is missing")
+require("qmfAnyToolOpen" in _v79_asset, "V80.0 reset guard must consider open tools")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V80_0FormulaFrameResetGuardTest.kt").exists(),
+        "V80.0 test is missing")
+
 # مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
 _v79_total = (_v79_asset.__len__()
               + (ROOT/"app/src/main/assets/print/math_editor.html").stat().st_size
@@ -3156,7 +3169,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V79.0:")
+        and _v694_changelog.startswith("V80.0:")
+        and "V79.0:" in _v694_changelog
         and "V78.2:" in _v694_changelog
         and "V78.1:" in _v694_changelog
         and "V78.0:" in _v694_changelog

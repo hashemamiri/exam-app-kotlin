@@ -74,6 +74,13 @@ import java.io.IOException
  * و دکمهٔ دوربینِ سؤال، استودیوی تصویر بومی را باز می‌کند
  * (ExamPrintNative.openImageStudio با پشتیبانِ استودیوی کامل HTML).
  */
+
+/**
+ * V80.0 — نشانیِ سندِ اصلیِ آزمون‌ساز. onPageFinished برای هر فریم (از جمله
+ * iframe ویرایشگر فرمول) صدا زده می‌شود، پس باید بتوانیم فریمِ اصلی را تشخیص دهیم.
+ */
+internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print.html"
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ExamHtmlPrintDialog(
@@ -303,6 +310,14 @@ fun ExamHtmlPrintDialog(
                                         WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
 
                                     override fun onPageFinished(view: WebView, url: String) {
+                                        // V80.0 — onPageFinished برای «هر فریم» صدا زده می‌شود، نه فقط
+                                        // فریمِ اصلی. از V79.0 که ویرایشگر فرمول با src لود می‌شود،
+                                        // پایانِ لودِ همان iframe این متد را دوباره شلیک می‌کرد و
+                                        // setExamData({reset:true}) کلِ سؤالات را پاک و صفحه را
+                                        // باز-رندر می‌کرد — دقیقاً وقتی ویرایشگر می‌خواست باز شود.
+                                        // نتیجه: کلیک روی آیکن فرمول هیچ پنجره‌ای باز نمی‌کرد.
+                                        // فقط به پایانِ لودِ سندِ اصلی واکنش نشان بده.
+                                        if (url != MAIN_PAGE_URL) return
                                         // V78.2 — اگر ذخیرهٔ خودکارِ صفحه خالی بود ولی آینهٔ بومی
                                         // پیش‌نویس داشت، آن را برگردان (کش WebView پاک شده بوده).
                                         if (printable == null) {
@@ -361,7 +376,7 @@ fun ExamHtmlPrintDialog(
                                     }
                                 }
 
-                                loadUrl("https://exam-print.local/print/exam_print.html")
+                                loadUrl(MAIN_PAGE_URL)
                             }
                         },
                         onRelease = { view ->
