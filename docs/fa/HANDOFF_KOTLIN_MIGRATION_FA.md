@@ -16240,3 +16240,58 @@ ZIP/PDF/Word، حالت تاریک) باید روشن شود، چون حذف `qi
 «هیچ امکانی از دسترس خارج نشود» تضاد دارد.
 
 پچ: V76_8_asset_dead_code_cleanup — بدون SQL.
+
+## ۳۰۹) V76.9 — OCR فارسیِ بومی و آفلاین
+
+CI برای V76.8 سبز شد. کاربر از میان گزینه‌های اسکوپ، **OCR فارسی** را انتخاب کرد.
+
+### راستی‌آزماییِ پیش از کدنویسی (بدون حدس)
+- **ML Kit فارسی ندارد** → تنها راهِ آفلاین: Tesseract.
+- کتابخانه: `tesseract4android` 4.8.0. نکتهٔ حیاتی: **در Maven Central نیست**
+  (`repo1.maven.org/.../cz/adaptech/...` → 404؛ mvnrepository فقط SciJava را
+  نشان می‌دهد و آن هم متادیتای معتبر نداد). تنها مسیرِ کارِ تأییدشده: **JitPack**
+  با مختصات `com.github.adaptech-cz.Tesseract4Android:tesseract4android:4.8.0`
+  (aar واقعی دانلود شد: 12,832,786 بایت؛ pom فقط `androidx.annotation` را
+  می‌خواهد). مخزن JitPack در `settings.gradle.kts` با
+  `content { includeGroupByRegex("com\\.github\\.adaptech-cz.*") }` **محدود** شد
+  تا هیچ وابستگیِ دیگری از آنجا کشیده نشود.
+- **امضاهای API** با پارسِ مستقیمِ constant-pool روی `classes.jar` همان aar
+  استخراج شد (javap در دسترس نبود؛ JDK سیستم 11 و /var/tmp پاک شده بود):
+  `init(String,String)Z` · `setPageSegMode(I)V` · `getUTF8Text()Ljava/lang/String;`
+  · `meanConfidence()I` · `setImage(Landroid/graphics/Bitmap;)V` · `recycle()V` ·
+  `PageSegMode.PSM_AUTO` (فیلد static). درسِ V76.5/V76.7: هیچ API حدس زده نشد.
+- **حجم دادهٔ زبان**: برخلاف تخمینِ قبلیِ ۲–۱۵MB، `tessdata_fast/fas.traineddata`
+  فقط **431,500 بایت** است (standard 561KB، best 3.3MB). نسخهٔ fast انتخاب شد.
+  در `assets/tessdata/` قرار گرفت و `noCompress += "traineddata"` اضافه شد.
+
+### پیاده‌سازی
+- فایل جدید `ExamImageOcr.kt`: `ensureTessData` (کپیِ یک‌بارهٔ asset به
+  `filesDir/ocr/tessdata/` — Tesseract مسیرِ دیسک می‌خواهد؛ اندازه با خواندنِ
+  کاملِ asset مقایسه می‌شود، **بدون** `AssetFileDescriptor` تا به رفتار
+  فشرده‌سازی وابسته نباشد و کپیِ ناقص هم ترمیم شود)، `boundForOcr` (سقف ۲۲۰۰px)،
+  `recognize` (suspend، Dispatchers.Default، `recycle` در `also` پس از هر حالت)،
+  `normalizePersian` (ك/ي/ى عربی → ک/ی، ارقام فارسی+عربی → لاتین، جمع‌کردن
+  فاصله‌ها و خطوط خالیِ متوالی).
+- `ExamImageStudioCore.kt`: پارامتر جدید `onOcrText`، چهار state، دکمهٔ
+  «🔎 استخراج متن (OCR فارسی)» با اسپینر، و `AlertDialog` نتیجه که متن را
+  **پیش از درج قابل ویرایش** می‌کند (+ نمایش درصد اطمینان).
+- `prepareForOcr`: همان زنجیرهٔ چرخش/صاف‌سازی/قرینه/شکل‌ها/برش/اسکن ولی خروجیِ
+  **Bitmap**؛ عمداً بدون `outSize` چون کوچک‌کردن دقتِ OCR را خراب می‌کند.
+- پل جدید asset `__qmfAppendQuestionText(qid, b64Text)`: متن را به انتهای
+  `q.text` اضافه می‌کند (base64 برای سلامتِ فارسی و `\n`) + به‌روزرسانی textarea +
+  رویداد input + renderAll/renderPreview/updatePreview + persistNow.
+
+### راستی‌آزمایی
+verify PASS (کد ۲۰۷ فایل کاتلین) · شبیه‌سازیِ همهٔ پین‌ها: **۳۵۸ پین، ۰ خطا** ·
+هر ۱۶ بلوک `<script>` با پارسر node سالم · رفتار پل با شبیه‌سازی مستقیم آزموده شد
+(درج در سؤالِ دارای متن، سؤالِ خالی، `no-question`، `bad-payload` — همه درست، با
+رفت‌وبرگشتِ سالمِ فارسی) · منطق `normalizePersian` عیناً در python شبیه‌سازی و هر ۹
+انتظارِ تست تأیید شد · **دروازهٔ import به `ExamImageOcr.kt` گسترش یافت** و با
+حذفِ موقتِ import تستِ منفی گرفت.
+
+### باقی‌مانده
+ابزارهای فقط-HTML که هنوز پورت نشده‌اند (و مانعِ حذف `qimgStudioSrc` هستند):
+قطره‌چکان رنگ، لایهٔ پیشرفتهٔ اشیاء، فلش منحنی، فیلترهای اسکن کتاب/حذف سایه/حذف
+نویز/برش خودکار، پایپ‌لاین OpenCV، خروجی ZIP/PDF/Word، حالت تاریک.
+
+پچ: V76_9_native_persian_ocr — بدون SQL.

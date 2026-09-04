@@ -46,6 +46,11 @@ android {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
+    androidResources {
+        // V76.9 — دادهٔ زبانِ OCR نباید فشرده شود (کپیِ سالم از assets).
+        noCompress += "traineddata"
+    }
+
     signingConfigs {
         create("release") {
             val storeFileValue = signingProperties.getProperty("storeFile", "")
@@ -98,6 +103,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    // V76.9 — OCR فارسیِ آفلاین (Tesseract 4). فقط روی JitPack منتشر شده است؛
+    // دادهٔ زبان در app/src/main/assets/tessdata/fas.traineddata است.
+    implementation("com.github.adaptech-cz.Tesseract4Android:tesseract4android:4.8.0")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")

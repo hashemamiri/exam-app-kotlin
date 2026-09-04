@@ -124,6 +124,7 @@ fun ExamImageStudioDialog(
     onSplitToSame: (List<Pair<String, Int>>) -> Unit = {},
     onSplitToQuestions: (List<Pair<String, Int>>) -> Unit = {},
     onLegacyStudio: () -> Unit,
+    onOcrText: (String) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -162,6 +163,11 @@ fun ExamImageStudioDialog(
     var showTextPrompt by remember { mutableStateOf(false) }
     var previewOriginal by remember { mutableStateOf(false) }
     var openedWith by remember { mutableStateOf<Bitmap?>(null) }
+    // V76.9 — OCR فارسیِ آفلاین
+    var ocrRunning by remember { mutableStateOf(false) }
+    var ocrText by remember { mutableStateOf("") }
+    var ocrConfidence by remember { mutableStateOf(0) }
+    var showOcrResult by remember { mutableStateOf(false) }
 
     fun makeCameraUri(): Pair<Uri, File> {
         val dir = File(context.cacheDir, "studio").apply { mkdirs() }
@@ -831,6 +837,45 @@ fun ExamImageStudioDialog(
                                 label = { Text("👁 قبل/بعد") }
                             )
                         }
+                        // V76.9 — OCR فارسیِ آفلاین روی همان تصویرِ آماده‌شده
+                        // (چرخش/صاف‌سازی/برش/اسکن/شکل‌ها اعمال می‌شوند تا متن
+                        // دقیقاً از همان چیزی خوانده شود که کاربر می‌بیند).
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ToolChip(if (ocrRunning) "⏳ در حال خواندن متن…" else "🔎 استخراج متن (OCR فارسی)") {
+                                val src = original
+                                if (src != null && !ocrRunning) {
+                                    ocrRunning = true
+                                    note = null
+                                    scope.launch {
+                                        val prepared = withContext(Dispatchers.Default) {
+                                            prepareForOcr(
+                                                src, rotation, deskewAngle, flip, crop, scanOn, threshold, shapes
+                                            )
+                                        }
+                                        val res = if (prepared == null) null
+                                        else ExamImageOcr.recognize(context, prepared)
+                                        ocrRunning = false
+                                        if (res == null) {
+                                            note = "متنی خوانده نشد. تصویر واضح‌تر یا برش دقیق‌تری امتحان کنید."
+                                        } else {
+                                            ocrText = res.text
+                                            ocrConfidence = res.confidence
+                                            showOcrResult = true
+                                        }
+                                    }
+                                }
+                            }
+                            if (ocrRunning) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            }
+                        }
                         // V76.5 — صاف‌سازی: صفحه‌ای ۴گوشه + خودکار + دقیق ±۱۵°
                         Row(
                             Modifier
@@ -1095,6 +1140,37 @@ fun ExamImageStudioDialog(
                         }
                     )
                 }
+
+                if (showOcrResult) {
+                    // V76.9 — نتیجهٔ OCR: قابل ویرایش پیش از درج در متنِ سؤال.
+                    AlertDialog(
+                        onDismissRequest = { showOcrResult = false },
+                        title = { Text("متنِ استخراج‌شده — دقت حدود ٪$ocrConfidence") },
+                        text = {
+                            Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState())) {
+                                Text(
+                                    "متن را بررسی و در صورت نیاز اصلاح کنید، بعد در سؤال درج شود.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                OutlinedTextField(
+                                    value = ocrText,
+                                    onValueChange = { ocrText = it },
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp)
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            Button(onClick = {
+                                val t = ocrText.trim()
+                                showOcrResult = false
+                                if (t.isNotEmpty()) onOcrText(t)
+                            }) { Text("درج در متن سؤال") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showOcrResult = false }) { Text("انصراف") }
+                        }
+                    )
+                }
             }
         }
     }
@@ -1189,6 +1265,53 @@ private fun processAndEncode(
     }
     val bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
     encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)
+}.getOrNull()
+
+/**
+ * V76.9 — همان زنجیرهٔ چرخش/صاف‌سازی/قرینه/شکل‌ها/برش/اسکن، ولی خروجی **بیت‌مپ**
+ * است نه JPEG؛ چون OCR به پیکسل نیاز دارد نه dataURL. عمداً بدون مرحلهٔ
+ * کوچک‌سازیِ خروجی (outSize) است — کوچک‌کردنِ متن دقت OCR را خراب می‌کند؛
+ * سقفِ ابعاد را خودِ ExamImageOcr.boundForOcr اعمال می‌کند.
+ */
+private fun prepareForOcr(
+    src: Bitmap,
+    rotation: Int,
+    deskew: Float,
+    flip: Boolean,
+    crop: Rect,
+    scanOn: Boolean,
+    threshold: Int,
+    shapes: List<StudioShape> = emptyList()
+): Bitmap? = runCatching {
+    val m = Matrix().apply {
+        postRotate(rotation.toFloat() + deskew)
+        if (flip) postScale(-1f, 1f)
+    }
+    val bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+    val painted = if (shapes.isEmpty()) bmp else bakeShapes(bmp, shapes)
+    val cx = (crop.left * painted.width).roundToInt().coerceIn(0, painted.width - 1)
+    val cy = (crop.top * painted.height).roundToInt().coerceIn(0, painted.height - 1)
+    val cw = max(1, (crop.width * painted.width).roundToInt().coerceAtMost(painted.width - cx))
+    val ch = max(1, (crop.height * painted.height).roundToInt().coerceAtMost(painted.height - cy))
+    var out = Bitmap.createBitmap(painted, cx, cy, cw, ch)
+    if (scanOn) {
+        val w = out.width; val h = out.height
+        val pixels = IntArray(w * h)
+        out.getPixels(pixels, 0, w, 0, 0, w, h)
+        for (i in pixels.indices) {
+            val p = pixels[i]
+            val r = (p shr 16) and 0xFF
+            val g = (p shr 8) and 0xFF
+            val b = p and 0xFF
+            val lum = (r * 299 + g * 587 + b * 114) / 1000
+            val v = if (lum >= threshold) 255 else 0
+            pixels[i] = (0xFF shl 24) or (v shl 16) or (v shl 8) or v
+        }
+        out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
+            setPixels(pixels, 0, w, 0, 0, w, h)
+        }
+    }
+    out
 }.getOrNull()
 
 /**

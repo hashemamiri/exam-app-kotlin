@@ -2684,10 +2684,43 @@ require('id="mathEditorFrame"' in _v768_asset
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_8AssetDeadCodeCleanupTest.kt").exists(),
         "V76.8 dead-code cleanup test is missing")
 
+# ---- V76.9: OCR فارسیِ بومی و آفلاین ----
+_v769_ocr_path = ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageOcr.kt"
+require(_v769_ocr_path.exists(), "V76.9 native OCR engine file is missing")
+_v769_ocr = _v769_ocr_path.read_text(encoding="utf-8")
+_v769_studio = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text(encoding="utf-8")
+_v769_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+_v769_gradle = (ROOT/"app/build.gradle.kts").read_text(encoding="utf-8")
+_v769_settings = (ROOT/"settings.gradle.kts").read_text(encoding="utf-8")
+_v769_data = ROOT/"app/src/main/assets/tessdata/fas.traineddata"
+require(_v769_data.is_file() and _v769_data.stat().st_size > 300_000,
+        "V76.9 Persian tessdata is missing or truncated")
+require('noCompress += "traineddata"' in _v769_gradle
+        and "com.github.adaptech-cz.Tesseract4Android:tesseract4android:4.8.0" in _v769_gradle,
+        "V76.9 OCR dependency / noCompress rule is missing")
+require("https://jitpack.io" in _v769_settings and "includeGroupByRegex" in _v769_settings,
+        "V76.9 JitPack repository (scoped) is missing — tesseract4android is not on Maven Central")
+# APIهای تأییدشده با javap روی aar واقعی (4.8.0) — رگرسیون ممنوع
+require("engine.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO)" in _v769_ocr
+        and "val raw = engine.getUTF8Text()" in _v769_ocr
+        and "if (!engine.init(dataPath, LANG)) return@runCatching null" in _v769_ocr
+        and "runCatching { api?.recycle() }" in _v769_ocr,
+        "V76.9 OCR engine no longer matches the verified TessBaseAPI signatures")
+require("🔎 استخراج متن (OCR فارسی)" in _v769_studio
+        and "private fun prepareForOcr(" in _v769_studio
+        and "ExamImageOcr.recognize(context, prepared)" in _v769_studio,
+        "V76.9 studio OCR button/pipeline is missing")
+require("window.__qmfAppendQuestionText" in _v769_dialog
+        and "window.__qmfAppendQuestionText = function (qid, b64Text) {" in _v768_asset,
+        "V76.9 OCR text bridge is missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_9NativePersianOcrTest.kt").exists(),
+        "V76.9 OCR test is missing")
+
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
 import re as _re
 _gate_word = {
+    "TessBaseAPI": "com.googlecode.tesseract.android.TessBaseAPI",
     "MaterialTheme": "androidx.compose.material3.MaterialTheme",
     "Alignment": "androidx.compose.ui.Alignment",
     "ContentScale": "androidx.compose.ui.layout.ContentScale",
@@ -2781,7 +2814,7 @@ def _gate_strip(text):
         _out.append(_c)
         _i += 1
     return "".join(_out)
-for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt"):
+for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt"):
     _fpath = ROOT / "app/src/main/java/ir/exam/app/ui/printing" / _fname
     _ftext = _fpath.read_text()
     _body = _gate_strip(_ftext)
@@ -2933,7 +2966,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V76.8:")
+        and _v694_changelog.startswith("V76.9:")
+        and "V76.8:" in _v694_changelog
         and "V76.7:" in _v694_changelog
         and "V76.6:" in _v694_changelog
         and "V76.5:" in _v694_changelog

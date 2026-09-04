@@ -486,6 +486,25 @@ fun ExamHtmlPrintDialog(
                             if (r?.contains("ok") != true) barStatus = "ابزار کامل در دسترس نیست؛ اول سؤال را باز کنید."
                         }
                     },
+                    onOcrText = { text ->
+                        // V76.9 — متنِ OCR به انتهای متنِ همان سؤال اضافه می‌شود
+                        // (base64 تا فارسی و خط جدید سالم بمانند).
+                        val b64 = android.util.Base64.encodeToString(
+                            text.toByteArray(Charsets.UTF_8),
+                            android.util.Base64.NO_WRAP
+                        )
+                        runJs(
+                            "(function(){try{return window.__qmfAppendQuestionText?" +
+                                "window.__qmfAppendQuestionText('" + qid + "','" + b64 + "'):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                        ) { r ->
+                            barStatus = if (r?.contains("ok") == true) {
+                                "متنِ استخراج‌شده در سؤال درج شد ✓"
+                            } else {
+                                "درجِ متنِ استخراج‌شده ناموفق بود."
+                            }
+                        }
+                    },
                     onDismiss = { studioQuestionId = null }
                 )
             }

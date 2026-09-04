@@ -15067,6 +15067,29 @@ window.__qmfSplitQuestion = function (qid, b64Items) {
   } catch (e) { return "err"; }
 }
 
+window.__qmfAppendQuestionText = function (qid, b64Text) {
+  try {
+    var q = null;
+    if (typeof questions !== "undefined") { for (var i = 0; i < questions.length; i++) { if (String(questions[i].id) === String(qid)) { q = questions[i]; break; } } }
+    if (!q) return "no-question";
+    var add = "";
+    try { add = decodeURIComponent(escape(atob(String(b64Text)))); } catch (e0) { return "bad-payload"; }
+    if (!add) return "empty";
+    var cur = String(q.text || "");
+    q.text = cur ? (cur + "\n" + add) : add;
+    var ta = document.getElementById("q_text_" + qid);
+    if (ta) {
+      ta.value = q.text;
+      try { if (window.__examBuilderUpdateQuestionText) window.__examBuilderUpdateQuestionText(ta); } catch (e1) {}
+      try { ta.dispatchEvent(new Event("input", { bubbles: true })); } catch (e2) {}
+    }
+    try { if (typeof renderAll === "function") renderAll(); } catch (e3) {}
+    try { if (typeof renderPreview === "function") renderPreview(); } catch (e4) {}
+    try { if (typeof updatePreview === "function") updatePreview(); } catch (e5) {}
+    try { if (typeof persistNow === "function") persistNow(); } catch (e6) {}
+    return "ok";
+  } catch (e) { return "err"; }
+};
 window.__qmfExportJson = function () {
   try {
     return JSON.stringify({ fields: collectFields(), questions: (typeof questions !== "undefined" ? questions : []), qIdCounter: (typeof qIdCounter !== "undefined" ? qIdCounter : 0) });
