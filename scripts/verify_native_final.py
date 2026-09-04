@@ -2650,6 +2650,117 @@ require("window.__qmfSplitQuestion = function (qid, b64Items) {" in _v766_asset
         "V76.6 asset bridges (split/remove/replace/list) are missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_6StudioSplitMultiImageTest.kt").exists(),
         "V76.6 split/multi-image test is missing")
+
+# V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
+# باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
+import re as _re
+_gate_word = {
+    "MaterialTheme": "androidx.compose.material3.MaterialTheme",
+    "Alignment": "androidx.compose.ui.Alignment",
+    "ContentScale": "androidx.compose.ui.layout.ContentScale",
+    "LocalContext": "androidx.compose.ui.platform.LocalContext",
+    "Dispatchers": "kotlinx.coroutines.Dispatchers",
+    "ImageBitmap": "androidx.compose.ui.graphics.ImageBitmap",
+    "nativeCanvas": "androidx.compose.ui.graphics.nativeCanvas",
+    "drawIntoCanvas": "androidx.compose.ui.graphics.drawscope.drawIntoCanvas",
+    "rememberScrollState": "androidx.compose.foundation.rememberScrollState",
+    "detectDragGestures": "androidx.compose.foundation.gestures.detectDragGestures",
+    "pointerInput": "androidx.compose.ui.input.pointer.pointerInput",
+    "rememberCoroutineScope": "androidx.compose.runtime.rememberCoroutineScope",
+    "LaunchedEffect": "androidx.compose.runtime.LaunchedEffect",
+    "mutableStateMapOf": "androidx.compose.runtime.mutableStateMapOf",
+    "withContext": "kotlinx.coroutines.withContext",
+    "FileProvider": "androidx.core.content.FileProvider",
+    "Toast": "android.widget.Toast",
+    "Icons": "androidx.compose.material.icons.Icons",
+}
+_gate_call = {
+    "TextButton": "androidx.compose.material3.TextButton",
+    "Button": "androidx.compose.material3.Button",
+    "OutlinedButton": "androidx.compose.material3.OutlinedButton",
+    "IconButton": "androidx.compose.material3.IconButton",
+    "FilterChip": "androidx.compose.material3.FilterChip",
+    "Card": "androidx.compose.material3.Card",
+    "Icon": "androidx.compose.material3.Icon",
+    "Text": "androidx.compose.material3.Text",
+    "Slider": "androidx.compose.material3.Slider",
+    "Switch": "androidx.compose.material3.Switch",
+    "Surface": "androidx.compose.material3.Surface",
+    "CircularProgressIndicator": "androidx.compose.material3.CircularProgressIndicator",
+    "Image": "androidx.compose.foundation.Image",
+    "Canvas": "androidx.compose.foundation.Canvas",
+    "Box": "androidx.compose.foundation.layout.Box",
+    "Column": "androidx.compose.foundation.layout.Column",
+    "Row": "androidx.compose.foundation.layout.Row",
+    "Offset": "androidx.compose.ui.geometry.Offset",
+    "Rect": "androidx.compose.ui.geometry.Rect",
+    "Size": "androidx.compose.ui.geometry.Size",
+    "Color": "androidx.compose.ui.graphics.Color",
+    "ColorFilter": "androidx.compose.ui.graphics.ColorFilter",
+    "ColorMatrix": "androidx.compose.ui.graphics.ColorMatrix",
+    "asImageBitmap": "androidx.compose.ui.graphics.asImageBitmap",
+    "remember": "androidx.compose.runtime.remember",
+    "mutableStateOf": "androidx.compose.runtime.mutableStateOf",
+    "Matrix": "android.graphics.Matrix",
+    "Bitmap": "android.graphics.Bitmap",
+    "BitmapFactory": "android.graphics.BitmapFactory",
+    "File": "java.io.File",
+}
+_gate_dot = {
+    "background": "androidx.compose.foundation.background",
+    "size": "androidx.compose.foundation.layout.size",
+    "heightIn": "androidx.compose.foundation.layout.heightIn",
+    "fillMaxWidth": "androidx.compose.foundation.layout.fillMaxWidth",
+    "fillMaxSize": "androidx.compose.foundation.layout.fillMaxSize",
+    "padding": "androidx.compose.foundation.layout.padding",
+    "horizontalScroll": "androidx.compose.foundation.horizontalScroll",
+    "verticalScroll": "androidx.compose.foundation.verticalScroll",
+}
+def _gate_strip(text):
+    _out = []
+    _i = 0
+    _n = len(text)
+    _instr = False
+    while _i < _n:
+        _c = text[_i]
+        if _instr:
+            if _c == "\\":
+                _i += 2
+                continue
+            if _c == '"':
+                _instr = False
+            _i += 1
+            continue
+        if _c == '"':
+            _instr = True
+            _i += 1
+            continue
+        if _c == "/" and _i + 1 < _n and text[_i + 1] == "/":
+            while _i < _n and text[_i] != "\n":
+                _i += 1
+            continue
+        if _c == "/" and _i + 1 < _n and text[_i + 1] == "*":
+            _j = text.find("*/", _i + 2)
+            _i = _n if _j < 0 else _j + 2
+            continue
+        _out.append(_c)
+        _i += 1
+    return "".join(_out)
+for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt"):
+    _fpath = ROOT / "app/src/main/java/ir/exam/app/ui/printing" / _fname
+    _ftext = _fpath.read_text()
+    _body = _gate_strip(_ftext)
+    _missing = []
+    for _sym, _imp in _gate_word.items():
+        if _re.search(r"\b" + _sym + r"\b", _body) and ("import " + _imp + "\n") not in _ftext:
+            _missing.append(_sym + " needs import " + _imp)
+    for _sym, _imp in _gate_call.items():
+        if _re.search(r"\b" + _sym + r"\s*\(", _body) and ("import " + _imp + "\n") not in _ftext:
+            _missing.append(_sym + "( needs import " + _imp)
+    for _sym, _imp in _gate_dot.items():
+        if _re.search(r"\." + _sym + r"\s*\(", _body) and ("import " + _imp + "\n") not in _ftext:
+            _missing.append("." + _sym + "( needs import " + _imp)
+    require(not _missing, _fname + " import gate: " + "; ".join(_missing[:6]))
 _v764_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 require("window.__qmfAddQuestionImage" in _v764_asset
         and "window.__qmfOpenLegacyStudio" in _v764_asset

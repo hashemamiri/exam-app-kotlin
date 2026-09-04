@@ -16057,3 +16057,45 @@ import androidx.compose.ui.graphics.nativeCanvas لازم بود و نبود.
 ```
 
 پچ: V76_6_studio_split_and_multi_image — بدون SQL.
+
+## ۳۰۴) V76.6.1 — رفع CI دوم: import TextButton + دروازهٔ خودکارِ «استفاده بدون import»
+
+### ریشه
+
+```text
+CI روی V76.6: Unresolved TextButton (خط 275/290) + آبشارِ «@Composable
+invocations» (چون TextButton resolve نشده، لامبدای آن composable
+تشخیص داده نشد). علت: TextButton در V76.4.1 (وقتی بی‌استفاده بود)
+حذف شده بود و در V76.6 (بلوک فهرست تصویرها) دوباره استفاده شد بدون
+import — دقیقاً همان کلاسِ خطای nativeCanvas (V76.5.1): چکِ دستیِ
+«import→استفاده» داریم، «استفاده→import» نداشتیم.
+```
+
+### فیکس ساختاری (نه فقط یک import)
+
+```text
+دروازهٔ دائمی در verify_native_final.py: برای ۳ فایل Kotlin چاپ،
+بدنه بدون رشته/کامنت استخراج و سه الگو چک می‌شود:
+  Sym            (سمبل‌های بدون پرانتز: MaterialTheme, nativeCanvas,
+                      Dispatchers, Icons, withContext, …)
+  Sym(             (فراخوانی/سازنده: TextButton(, Card(, Color(, …)
+  .mod(              (modifierها: .background(, .size(, .heightIn(, …)
+هر سمبلِ یافته باید import متناظرش موجود باشد؛ وگرنه verify FAIL با
+فهرستِ «چه چیزی چه importی می‌خواهد». تست منفی هم گرفتیم (حذف عمدی
+import → دروازه می‌گیرد). dictionary پوشش‌دهندهٔ خانوادهٔ
+material3/foundation/layout/ui-graphics/coroutines/core است و در
+پچ‌های بعدی با هر API جدید تکمیل می‌شود.
+```
+
+### درس
+
+```text
+- هر پاک‌سازی import باید هم‌زمان با افزودن کاربردِ دوباره، همان
+  import را برگرداند — و چکِ آن نباید دستی باشد.
+- «@Composable invocations…» پشتِ یک سمبلِ resolve‌نشده معمولاً
+  آبشار است؛ اول ریشه را رفع کن، بقیه محو می‌شوند.
+- برای دو فایلِ حجیمِ استودیو/دیالوگ، این دروازه جایگزینِ کامپایلِ
+  دردسترس‌نداشته است؛ نگه‌داشتنی و توسعه‌پذیر.
+```
+
+پچ: V76_6_1_textbutton_import_and_import_gate — بدون SQL.

@@ -52,6 +52,8 @@ class V76_6StudioSplitMultiImageTest {
 
     @Test
     fun `existing image management wired through new bridges`() {
+        // درس V76.6.1: TextButton در بلوک فهرست استفاده شده — importش لازم است
+        assertTrue("import androidx.compose.material3.TextButton" in studio)
         assertTrue("window.__qmfQuestionImages" in dialog)
         assertTrue("window.__qmfRemoveQuestionImage" in dialog)
         assertTrue("window.__qmfReplaceQuestionImage" in dialog)
