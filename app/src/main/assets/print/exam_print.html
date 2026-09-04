@@ -12536,6 +12536,15 @@ window.__qmfPreviewDiag = function () {
       out.scrollH = pcx ? pcx.scrollHeight : 0;
       out.parentTag = (pcx && pcx.parentNode) ?
         String(pcx.parentNode.className || pcx.parentNode.tagName || '') : '';
+      /* V85.0 — ارتفاعِ لفافه و کادر: اگر برگه دیده نشد، عددِ تعیین‌کننده همین است. */
+      var bx = document.querySelector('.qmf-pv-wrap');
+      out.wrapExists = !!bx;
+      out.wrapW = bx ? bx.offsetWidth : 0;
+      out.wrapH = bx ? bx.offsetHeight : 0;
+      var bd = document.querySelector('.pwo-body');
+      out.bodyScrollH = bd ? bd.scrollHeight : 0;
+      out.bodyClientH = bd ? bd.clientHeight : 0;
+      out.marginBottom = pcx ? (pcx.style.marginBottom || '') : '';
     } catch (e) {}
   } catch (e) { out.fatal = String(e.message || e); }
   return JSON.stringify(out);
@@ -14053,6 +14062,9 @@ loadSample();
 .pwo-x{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer;font:700 13px Arial,sans-serif}
 .pwo-x:hover{background:rgba(255,255,255,.3)}
 .pwo-body{flex:1 1 auto;overflow:auto;padding:12px;background:#eef2f7}
+/* V85.0 — لفافهٔ مقیاس: فضای واقعیِ برگهٔ کوچک‌شده را می‌گیرد تا کادر جمع نشود. */
+.qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible}
+.qmf-pv-wrap > #printContent{margin:0 !important}
 #printContent.in-window{margin:6px auto !important;box-shadow:none !important}
 @media print{#qtypeOverlay,#previewWinOverlay{display:none !important}}
 
@@ -14120,36 +14132,56 @@ loadSample();
   window.qmfFitPreviewScale = function () {
     var pc = $('printContent');
     if (!pc) return;
-    var body = pc.parentNode;
+    var wrap = pc.parentNode;
+    if (!wrap || !wrap.classList) return;
+    /* V85.0 — مقیاس روی یک «لفافه» اعمال می‌شود، نه با حاشیهٔ منفی.
+       در V84 برای جبرانِ فضایی که transform آزاد نمی‌کند، به خودِ برگه
+       margin-bottom منفیِ بزرگ داده می‌شد (مثلاً -1016px) و هم‌زمان ارتفاعِ
+       کادر `auto` می‌شد. این دو با هم کادر را به ۱۲ پیکسل جمع کردند: برگه
+       دیده می‌شد ولی داخل نواری به ارتفاعِ ۱۲px، یعنی عملاً نامرئی.
+       راهِ درست: لفافه‌ای که ارتفاعش دقیقاً «ارتفاعِ برگه × ضریب» است.
+       ارتفاعِ صریحِ لفافه فضای واقعی را می‌گیرد و اسکرول درست کار می‌کند. */
+    var body = wrap.classList.contains('qmf-pv-wrap') ? wrap.parentNode : wrap;
     if (!body || !body.classList || !body.classList.contains('pwo-body')) return;
-    /* V84.0 — مقیاس از روی اندازهٔ واقعیِ کادر محاسبه می‌شود، نه با
-       media queryِ ثابت. برگهٔ A4 عرضِ ثابتی دارد (۲۱۰mm ≈ ۷۹۴px)؛ اگر در
-       کادر جا نشود همان‌قدر که لازم است کوچک می‌شود و اگر جا شود دست‌نخورده
-       می‌ماند. این کار هم `zoom`ِ ناپشتیبان را حذف می‌کند و هم وابستگی به
-       عرضِ حدسیِ ۷۰۰px را. */
-    var avail = body.clientWidth - 12;
-    if (!(avail > 0)) return;
-    /* عرضِ طبیعیِ برگه، بدونِ تأثیرِ مقیاسِ فعلی */
+
+    /* لفافه را بساز (یک‌بار) و برگه را داخلش بگذار */
+    var box = body.querySelector('.qmf-pv-wrap');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'qmf-pv-wrap';
+      pc.parentNode.insertBefore(box, pc);
+      box.appendChild(pc);
+    }
+
+    /* اندازه‌گیری بدونِ تأثیرِ مقیاسِ قبلی */
     pc.style.removeProperty('transform');
-    pc.style.removeProperty('width');
+    pc.style.removeProperty('transform-origin');
     pc.style.removeProperty('margin-bottom');
+    box.style.removeProperty('height');
+    box.style.removeProperty('width');
+
+    var avail = body.clientWidth - 12;
     var natural = pc.scrollWidth || pc.offsetWidth || 794;
-    if (!(natural > 0)) natural = 794;
+    if (!(avail > 0) || !(natural > 0)) return;
+
     var k = avail / natural;
-    if (k >= 1) { k = 1; }
-    if (k < 0.2) { k = 0.2; }
+    if (k > 1) k = 1;
+    if (k < 0.2) k = 0.2;
+
     if (k >= 0.999) {
-      pc.style.removeProperty('transform');
-      pc.style.removeProperty('transform-origin');
-      pc.style.removeProperty('margin-bottom');
+      box.style.removeProperty('height');
+      box.style.removeProperty('width');
       return;
     }
+
+    var natH = pc.scrollHeight || pc.offsetHeight || 0;
     pc.style.setProperty('transform', 'scale(' + k.toFixed(3) + ')', 'important');
-    pc.style.setProperty('transform-origin', 'top center', 'important');
-    /* transform فضای چیدمان را آزاد نمی‌کند؛ ارتفاعِ اضافی را جمع می‌کنیم */
-    var h = pc.offsetHeight;
-    if (h > 0) pc.style.marginBottom = (-(h - h * k)) + 'px';
-  };;
+    pc.style.setProperty('transform-origin', 'top left', 'important');
+    /* لفافه دقیقاً به اندازهٔ نتیجهٔ مقیاس فضا می‌گیرد */
+    box.style.width = Math.round(natural * k) + 'px';
+    if (natH > 0) box.style.height = Math.ceil(natH * k) + 'px';
+  };
+;;
 
   window.togglePreviewWindow = function () {
     if ($('previewWinOverlay')) closePreviewWindow();
@@ -14215,6 +14247,15 @@ loadSample();
         pc.style.removeProperty('transform');
         pc.style.removeProperty('transform-origin');
         pc.style.removeProperty('width');
+      } catch (e) {}
+      /* V85.0 — لفافهٔ مقیاس فقط داخل پنجره معنا دارد؛ برگه باید از آن
+         بیرون بیاید وگرنه گرهٔ اضافی به چیدمانِ ویرایشگر منتقل می‌شود. */
+      try {
+        var box = pc.parentNode;
+        if (box && box.classList && box.classList.contains('qmf-pv-wrap')) {
+          box.parentNode.insertBefore(pc, box);
+          box.parentNode.removeChild(box);
+        }
       } catch (e) {}
       prevInfo.parent.insertBefore(pc, prevInfo.next);
     }

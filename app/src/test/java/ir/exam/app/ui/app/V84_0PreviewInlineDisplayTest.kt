@@ -64,7 +64,8 @@ class V84_0PreviewInlineDisplayTest {
 
     @Test
     fun `the transform height is still compensated`() {
-        assertTrue("marginBottom" in assetText)
+        // V85.0 — لفافهٔ صریح جای حاشیهٔ منفی را گرفت.
+        assertTrue("qmf-pv-wrap" in assetText)
         assertTrue("ResizeObserver" in assetText)
     }
 

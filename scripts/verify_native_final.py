@@ -2977,6 +2977,17 @@ require("inlineDisplayPriority" in _v79_asset, "V84.0 the diagnostic must report
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V84_0PreviewInlineDisplayTest.kt").exists(),
         "V84.0 test is missing")
 
+# ---- V85.0: لفافهٔ مقیاس به‌جای حاشیهٔ منفی ----
+_v85_fit = _v79_asset.split("window.qmfFitPreviewScale = function")[1].split("\n  };")[0]
+require("marginBottom" not in _v85_fit, "V85.0 the negative-margin hack must be gone")
+require("body.style.height" not in _v85_fit, "V85.0 must not force the container height")
+require("qmf-pv-wrap" in _v79_asset, "V85.0 the scale wrapper is missing")
+require("Math.ceil(natH * k)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
+require("'transform-origin', 'top left'" in _v79_asset, "V85.0 origin must be top left")
+require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V85_0PreviewWrapperTest.kt").exists(),
+        "V85.0 test is missing")
+
 # مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
 _v79_total = (_v79_asset.__len__()
               + (ROOT/"app/src/main/assets/print/math_editor.html").stat().st_size
@@ -3235,7 +3246,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V84.0:")
+        and _v694_changelog.startswith("V85.0:")
+        and "V84.0:" in _v694_changelog
         and "V83.0:" in _v694_changelog
         and "V82.0:" in _v694_changelog
         and "V81.0:" in _v694_changelog

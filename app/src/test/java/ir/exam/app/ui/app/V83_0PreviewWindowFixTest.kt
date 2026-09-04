@@ -36,7 +36,8 @@ class V83_0PreviewWindowFixTest {
         // کادر محاسبه می‌شود. پس رفتار پین می‌شود نه عدد.
         assertFalse("ضریب ثابت نباید برگردد", "transform:scale(.44)" in assetText)
         assertTrue("'transform', 'scale(' + k.toFixed(3) + ')'" in assetText)
-        assertTrue("'transform-origin', 'top center'" in assetText)
+        // V85.0 — مبدأ به top left رفت تا مقیاس جابه‌جاییِ افقی ندهد.
+        assertTrue("'transform-origin', 'top left'" in assetText)
     }
 
     @Test
@@ -50,7 +51,10 @@ class V83_0PreviewWindowFixTest {
     fun `the height left behind by transform is compensated`() {
         assertTrue("window.qmfFitPreviewScale" in assetText)
         assertTrue("qmfFitPreviewScale()" in assetText)
-        assertTrue("marginBottom" in assetText)
+        // V85.0 — جبران با «لفافه» انجام می‌شود، نه حاشیهٔ منفی (که کادر را
+        // به ۱۲ پیکسل جمع می‌کرد).
+        assertTrue("qmf-pv-wrap" in assetText)
+        assertTrue("box.style.height" in assetText)
         // با تغییر اندازه هم دوباره محاسبه شود
         assertTrue("ResizeObserver" in assetText)
     }
