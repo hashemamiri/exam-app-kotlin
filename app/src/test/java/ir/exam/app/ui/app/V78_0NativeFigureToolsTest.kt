@@ -49,10 +49,12 @@ class V78_0NativeFigureToolsTest {
 
     @Test
     fun `formula deliberately stays on the html path`() {
-        assertTrue("activeExactTool !== 'formula'" in assetText)
+        // V82.0 — فرمول هم بومی شد؛ حالا هیچ ابزاری استثنا نیست.
+        assertFalse("activeExactTool !== 'formula'" in assetText)
         assertTrue("openFormulaEditor3" in assetText)
         // پل بومی نباید فرمول را مسیریابی کند
-        assertFalse("\"formula\"" in host)
+        // V82.0 — «formula» عمداً به میزبان اضافه شد.
+        assertTrue("FORMULA = \"formula\"" in host)
     }
 
     @Test

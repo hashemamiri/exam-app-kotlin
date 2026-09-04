@@ -82,8 +82,9 @@ class V80_0FormulaFrameResetGuardTest {
     }
 
     @Test
-    fun `formula stays on the HTML editor while the other seven go native`() {
-        assertTrue("activeExactTool !== 'formula'" in assetText)
+    fun `all eight tools go through the native bridge`() {
+        // V82.0 — فرمول هم به پل بومی پیوست؛ استثنا حذف شد.
+        assertFalse("activeExactTool !== 'formula'" in assetText)
         assertTrue("ExamPrintNative.openFigureTool" in assetText)
         assertTrue("is-fx formula-btn" in assetText)
     }

@@ -2802,11 +2802,9 @@ require("fun openFigureTool(" in _v780_dialog
         and "__qmfInsertFigToken" in _v780_dialog
         and "ExamFigureToolHost(" in _v780_dialog,
         "V78.0 Kotlin side of the figure tool bridge is missing")
-# فرمول عمداً بومی نشده است (تصمیم صریح کاربر)
-require("activeExactTool !== 'formula'" in _v780_asset,
-        "V78.0 the formula editor must stay on the HTML path")
-require('"formula"' not in _v780_host_src,
-        "V78.0 the formula tool must not be routed to a native dialog")
+# V82.0 — تصمیم عوض شد: فرمول هم مثل هفت ابزار دیگر پل بومی دارد.
+# گاردهای معکوسِ V78.0 («فرمول باید HTML بماند») عمداً حذف شدند؛ گاردهای
+# تازه در بخش V82.0 پایین‌تر همین رفتار جدید را قفل می‌کنند.
 # مسیر چاپ/پیش‌نمایش/کادر متن دست‌نخورده
 for _keep in ("function printStudent", "function printTeacher", "function renderPreview",
               "function renderEditor", "extracted-math-host-script"):
@@ -2925,6 +2923,30 @@ require("🩺 بررسی فرمول" in _v80_dialog, "V81.0 diagnostic button is
 require("assets.open(\"print/math_editor.html\")" in _v80_dialog, "V81.0 asset probe is missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V81_0FormulaFrameLifecycleTest.kt").exists(),
         "V81.0 test is missing")
+
+# ---- V82.0: فرمول هم پل بومی دارد + دابل‌کلیک = ویرایش ----
+_v82_host = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamFigureToolHost.kt").read_text(encoding="utf-8")
+require("activeExactTool !== 'formula'" not in _v79_asset,
+        "V82.0 the formula exception must be gone")
+require('const val FORMULA = "formula"' in _v82_host, "V82.0 formula must be a native tool")
+require("window.__qmfQuestionText = function" in _v79_asset, "V82.0 question-text bridge is missing")
+require("window.__qmfSetQuestionText = function" in _v79_asset, "V82.0 set-text bridge is missing")
+require("FormulaHostDialog(" in _v80_dialog, "V82.0 the native formula dialog is not wired")
+require("ExamPrintNative.editFigureTool" in _v79_asset, "V82.0 dblclick edit bridge is missing")
+require("window.__qmfEditFigAt = function" in _v79_asset, "V82.0 token locator is missing")
+require("window.__qmfReplaceFigToken = function" in _v79_asset, "V82.0 token replacer is missing")
+require("if (typeof openQmfFigEditor === 'function' && openQmfFigEditor(fig)) return;" in _v79_asset,
+        "V82.0 the geometry capture listener must try native first")
+require("if(!openQmfFigEditor(fig)){openTable(fig)}" in _v79_asset,
+        "V82.0 the table dblclick path must try native first")
+require("fun editFigureTool(questionId: String?, index: Int)" in _v80_dialog,
+        "V82.0 Kotlin editFigureTool is missing")
+require("internal fun toolOfSpec" in _v80_dialog, "V82.0 spec->tool mapping is missing")
+require("val isEdit: Boolean" in _v82_host, "V82.0 edit mode is missing")
+# پشتیبان HTML باید بماند
+require("buttonMap[activeExactTool]" in _v79_asset, "V82.0 the HTML fallback must stay")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V82_0FormulaBridgeAndEditTest.kt").exists(),
+        "V82.0 test is missing")
 
 # مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
 _v79_total = (_v79_asset.__len__()
@@ -3184,7 +3206,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V81.0:")
+        and _v694_changelog.startswith("V82.0:")
+        and "V81.0:" in _v694_changelog
         and "V80.0:" in _v694_changelog
         and "V79.0:" in _v694_changelog
         and "V78.2:" in _v694_changelog

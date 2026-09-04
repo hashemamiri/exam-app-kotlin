@@ -94,6 +94,6 @@ class V81_0FormulaFrameLifecycleTest {
         assertFalse("doc.write(MATH_EDITOR_HTML)" in assetText) // V79.0
         assertTrue("if (url != MAIN_PAGE_URL) return" in dialog) // V80.0
         assertTrue("data.reset && !data.force" in assetText)     // V80.0
-        assertTrue("activeExactTool !== 'formula'" in assetText) // V78.0
+        assertTrue("ExamPrintNative.openFigureTool" in assetText) // V78.0/V82.0
     }
 }

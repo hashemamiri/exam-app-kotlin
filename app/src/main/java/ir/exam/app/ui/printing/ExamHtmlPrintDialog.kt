@@ -53,7 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import ir.exam.app.core.figure.AtlasCatalog
+import ir.exam.app.core.figure.FigureSpec
+import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.domain.model.OfficialExamPrintable
+import ir.exam.app.ui.math.FormulaHostDialog
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -96,6 +100,10 @@ fun ExamHtmlPrintDialog(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     // V78.0 — درخواستِ بازکردنِ یک ابزار درجِ بومی از داخل صفحه
     var figureTool by remember { mutableStateOf<FigureToolRequest?>(null) }
+    // V82.0 — دابل‌کلیک: (questionId, tokenIndex) تا spec از صفحه خوانده شود.
+    var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    // V82.0 — ویرایشگر بومیِ فرمول: (questionId, متنِ کاملِ سؤال)
+    var formulaTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     // V78.1 — نوارِ بومیِ مدیریت سؤال
     var questionRows by remember { mutableStateOf<List<QuestionRow>>(emptyList()) }
     var questionTotal by remember { mutableStateOf("") }
@@ -136,6 +144,63 @@ fun ExamHtmlPrintDialog(
         ) { raw ->
             val json = unwrapJsString(raw)
             if (json.isNotBlank()) ExamDraftMirror.save(context, json)
+        }
+    }
+
+    // V82.0 — دابل‌کلیک روی ابزارِ درج‌شده: spec و محدودهٔ توکن را از صفحه
+    // بخوان و همان پنجرهٔ بومی را در حالتِ ویرایش باز کن.
+    LaunchedEffect(figureEditRequest) {
+        val (qid, index) = figureEditRequest ?: return@LaunchedEffect
+        runJs(
+            "(function(){try{return window.__qmfEditFigAt?" +
+                "window.__qmfEditFigAt('" + qid + "'," + index + "):''}catch(e){return ''}})()"
+        ) { raw ->
+            figureEditRequest = null
+            val payload = unwrapJsString(raw)
+            if (payload.isBlank()) {
+                barStatus = "ویرایش این مورد ممکن نبود."
+                return@runJs
+            }
+            val parsed = runCatching {
+                val o = kotlinx.serialization.json.Json.parseToJsonElement(payload).jsonObject
+                Triple(
+                    o["spec"]?.jsonPrimitive?.content.orEmpty(),
+                    o["start"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1,
+                    o["end"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
+                )
+            }.getOrNull()
+            val specJson = parsed?.first
+            if (specJson.isNullOrBlank() || parsed.second < 0 || parsed.third <= parsed.second) {
+                barStatus = "ویرایش این مورد ممکن نبود."
+                return@runJs
+            }
+            val tool = toolOfSpec(specJson)
+            if (tool == null) {
+                barStatus = "این ابزار پنجرهٔ بومی ندارد."
+                return@runJs
+            }
+            figureTool = FigureToolRequest(
+                questionId = qid,
+                tool = tool,
+                editIndex = index,
+                initialSpecJson = specJson,
+                tokenStart = parsed.second,
+                tokenEnd = parsed.third
+            )
+        }
+    }
+
+    // V82.0 — «فرمول» هم مثل بقیه از پل می‌آید؛ متنِ کاملِ سؤال را می‌گیریم و
+    // به FormulaHostDialog می‌دهیم (همان ویرایشگرِ آزمون‌سازِ بومی).
+    LaunchedEffect(figureTool) {
+        val req = figureTool ?: return@LaunchedEffect
+        if (req.tool != FigureToolRequest.FORMULA) return@LaunchedEffect
+        runJs(
+            "(function(){try{return window.__qmfQuestionText?" +
+                "window.__qmfQuestionText('" + req.questionId + "'):''}catch(e){return ''}})()"
+        ) { raw ->
+            formulaTarget = req.questionId to unwrapJsString(raw)
+            figureTool = null
         }
     }
 
@@ -284,6 +349,10 @@ fun ExamHtmlPrintDialog(
                                         },
                                         onOpenFigureTool = { qid, tool ->
                                             post { figureTool = FigureToolRequest(qid, tool) }
+                                        },
+                                        // V82.0 — ویرایشِ ابزارِ درج‌شده با دابل‌کلیک
+                                        onEditFigureTool = { qid, index ->
+                                            post { figureEditRequest = qid to index }
                                         }
                                     ),
                                     "ExamPrintNative"
@@ -604,7 +673,8 @@ fun ExamHtmlPrintDialog(
             }
 
             // V78.0 — ابزارهای درجِ بومی (جدول، تناوبی، شکل، نمودار، آناتومی،
-            // فیزیک، شیمی). «فرمول» عمداً اینجا نیست و مسیر HTML خود را دارد.
+            // فیزیک، شیمی). V82.0 — همین میزبان حالتِ «ویرایش» را هم دارد:
+            // اگر req.isEdit باشد، نتیجه جایگزینِ همان توکن می‌شود نه درجِ تازه.
             figureTool?.takeIf { it.isNative }?.let { req ->
                 ExamFigureToolHost(
                     request = req,
@@ -614,20 +684,59 @@ fun ExamHtmlPrintDialog(
                             token.toByteArray(Charsets.UTF_8),
                             android.util.Base64.NO_WRAP
                         )
-                        runJs(
+                        val script = if (req.isEdit) {
+                            "(function(){try{return window.__qmfReplaceFigToken?" +
+                                "window.__qmfReplaceFigToken('" + req.questionId + "'," +
+                                req.tokenStart + "," + req.tokenEnd + ",'" + b64 + "'):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                        } else {
                             "(function(){try{return window.__qmfInsertFigToken?" +
                                 "window.__qmfInsertFigToken('" + req.questionId + "','" + b64 + "'):'missing'}" +
                                 "catch(e){return 'err'}})()"
-                        ) { r ->
+                        }
+                        runJs(script) { r ->
                             barStatus = if (r?.contains("ok") == true) {
                                 mirrorDraft()
-                                "در سؤال درج شد ✓"
+                                if (req.isEdit) "ویرایش شد ✓" else "در سؤال درج شد ✓"
                             } else {
-                                "درج در سؤال ناموفق بود."
+                                if (req.isEdit) "ویرایش ناموفق بود." else "درج در سؤال ناموفق بود."
                             }
                         }
                     },
                     onDismiss = { figureTool = null }
+                )
+            }
+
+            // V82.0 — ویرایشگرِ بومیِ فرمول. همان FormulaHostDialog که
+            // آزمون‌سازِ بومی استفاده می‌کند: متنِ کاملِ سؤال را می‌گیرد و
+            // متنِ کامل برمی‌گرداند، پس هم درج و هم ویرایشِ فرمول را پوشش می‌دهد.
+            formulaTarget?.let { (qid, text) ->
+                FormulaHostDialog(
+                    initialText = text,
+                    selectionStart = text.length,
+                    selectionEnd = text.length,
+                    onDismiss = { formulaTarget = null },
+                    onResult = { newText ->
+                        formulaTarget = null
+                        if (newText != text) {
+                            val b64 = android.util.Base64.encodeToString(
+                                newText.toByteArray(Charsets.UTF_8),
+                                android.util.Base64.NO_WRAP
+                            )
+                            runJs(
+                                "(function(){try{return window.__qmfSetQuestionText?" +
+                                    "window.__qmfSetQuestionText('" + qid + "','" + b64 + "'):'missing'}" +
+                                    "catch(e){return 'err'}})()"
+                            ) { r ->
+                                barStatus = if (r?.contains("ok") == true) {
+                                    mirrorDraft()
+                                    "فرمول در سؤال درج شد ✓"
+                                } else {
+                                    "درج فرمول ناموفق بود."
+                                }
+                            }
+                        }
+                    }
                 )
             }
 
@@ -668,6 +777,24 @@ fun ExamHtmlPrintDialog(
 }
 
 /** خروجی evaluateJavascript برای رشته‌ها JSON-کوت است؛ رشتهٔ واقعی را برمی‌گرداند. */
+/**
+ * V82.0 — از روی `k` و `t` داخلِ spec، ابزارِ متناظر را تشخیص می‌دهد تا
+ * دابل‌کلیک همان پنجره‌ای را باز کند که موقع درج باز شده بود.
+ * نگاشت مرجع: خالی=هندسه/نمودار، t=جدول، a=آناتومی، p=تناوبی، s=فیزیک/شیمی.
+ */
+internal fun toolOfSpec(specJson: String): String? {
+    val spec = FigureSpec.parse(specJson) ?: return null
+    return when (spec.kind) {
+        "t" -> "table"
+        "p" -> "periodic"
+        "a" -> "anatomy"
+        "s" -> if (AtlasCatalog.scienceDomain(spec.type) == "chem") "chemistry" else "physics"
+        "g" -> "graph"
+        "" -> if (GRAPH_FIGURES.any { it.id == spec.type }) "graph" else "figure"
+        else -> null
+    }
+}
+
 internal fun unwrapJsString(value: String?): String {
     val raw = value ?: return ""
     if (!raw.startsWith("\"")) return raw
@@ -716,7 +843,9 @@ private class ExamPrintBridge(
     private val onClose: () -> Unit,
     private val onError: (String) -> Unit,
     private val onOpenImageStudio: (String) -> Unit,
-    private val onOpenFigureTool: (String, String) -> Unit
+    private val onOpenFigureTool: (String, String) -> Unit,
+    // V82.0 — دابل‌کلیک روی ابزارِ درج‌شده: ویرایشِ همان توکن
+    private val onEditFigureTool: (String, Int) -> Unit
 ) {
     @JavascriptInterface
     fun print(mode: String?) {
@@ -730,13 +859,24 @@ private class ExamPrintBridge(
     }
 
     /**
-     * V78.0 — ابزارهای درج (به‌جز فرمول) به پنجرهٔ بومیِ همان ابزار می‌روند؛
-     * همان ویرایشگرهایی که آزمون‌سازِ آنلاین استفاده می‌کند.
-     * tool: figure | graph | table | anatomy | periodic | physics | chemistry
+     * V78.0 — ابزارهای درج به پنجرهٔ بومیِ همان ابزار می‌روند؛ همان
+     * ویرایشگرهایی که آزمون‌سازِ آنلاین استفاده می‌کند.
+     * V82.0 — «formula» هم اضافه شد (FormulaHostDialog).
+     * tool: figure | graph | table | anatomy | periodic | physics | chemistry | formula
      */
     @JavascriptInterface
     fun openFigureTool(questionId: String?, tool: String?) {
         onOpenFigureTool(questionId.orEmpty(), tool.orEmpty())
+    }
+
+    /**
+     * V82.0 — دابل‌کلیک روی یک ابزارِ درج‌شده. `index` شمارهٔ ترتیبیِ توکن در
+     * متنِ همان سؤال است؛ میزبانِ بومی spec را می‌خواند و همان پنجره را در
+     * حالتِ ویرایش باز می‌کند، سپس نتیجه جایگزینِ همان توکن می‌شود.
+     */
+    @JavascriptInterface
+    fun editFigureTool(questionId: String?, index: Int) {
+        onEditFigureTool(questionId.orEmpty(), index)
     }
 
     @JavascriptInterface

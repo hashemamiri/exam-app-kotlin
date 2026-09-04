@@ -65,7 +65,8 @@ class V79_0FormulaAndNativeBuilderTest {
         // مسیر کلیک: کارت سؤال ← openQuestionTool ← دکمهٔ مخفی ← __openMathEditor
         assertTrue("is-fx formula-btn" in assetText)
         assertTrue("openQuestionTool(" in assetText)
-        assertTrue("activeExactTool !== 'formula'" in assetText)
+        // V82.0 — استثنای فرمول برداشته شد (پل بومی برای همه)
+        assertTrue("ExamPrintNative.openFigureTool" in assetText)
         assertTrue("id=\"openFormulaEditor3\"" in assetText)
         assertTrue("window.__openMathEditor" in assetText)
     }

@@ -3068,6 +3068,12 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
         } catch (_e) {}
         e.preventDefault();
         e.stopPropagation();
+        /* V82.0 — این شنوندهٔ capture زودتر از همه اجرا می‌شود و برای شکلِ
+           هندسی مستقیماً ویرایشگرِ HTML را باز می‌کرد، پس دابل‌کلیک هرگز به
+           مسیرِ بومی نمی‌رسید. حالا اول میزبانِ بومی امتحان می‌شود. */
+        try {
+          if (typeof openQmfFigEditor === 'function' && openQmfFigEditor(fig)) return;
+        } catch (_e2) {}
         openFromEl(fig);
       }, true);
       document.addEventListener('click', function (e) {
@@ -12142,11 +12148,50 @@ function figSpecFromEl(fig) {
 }
 let __r11LastFigOpen = 0;
 /* R11: جلوگیری از باز شدن دوبارهٔ ویرایشگر بر اثر کلیک دوم + دابلکلیکِ همزمان (هر دو مسیر از اینجا میگذرند) */
+/* V82.0 — شمارهٔ ترتیبیِ این شکل بین شکل‌های همان کادر (برای یافتن توکنِ متناظر). */
+function qmfFigIndexOf(fig) {
+  try {
+    var surface = fig.closest ? fig.closest('.qmf-surface') : null;
+    if (!surface) return -1;
+    var all = surface.querySelectorAll('.qmf-fig');
+    for (var i = 0; i < all.length; i++) if (all[i] === fig) return i;
+  } catch (e) {}
+  return -1;
+}
+
+/* V82.0 — کادرِ متنِ سؤالی که این شکل داخلش است. */
+function qmfQidOfFig(fig) {
+  try {
+    var surface = fig.closest ? fig.closest('.qmf-surface') : null;
+    var host = surface && surface.parentNode ? surface.parentNode : null;
+    var ta = host ? host.querySelector('textarea[id^="q_text_"]') : null;
+    if (!ta) {
+      var card = fig.closest ? fig.closest('.qmf') : null;
+      ta = card ? card.querySelector('textarea[id^="q_text_"]') : null;
+    }
+    var m = ta ? /^q_text_(\d+)$/.exec(String(ta.id || '')) : null;
+    return m ? m[1] : '';
+  } catch (e) { return ''; }
+}
+
 function openQmfFigEditor(fig) {
   if (!fig) return false;
   const now = Date.now();
   if (now - __r11LastFigOpen < 400) return false;
   __r11LastFigOpen = now;
+  /* V82.0 — ویرایشِ یک ابزارِ درج‌شده هم باید پنجرهٔ بومی را باز کند، نه
+     ویرایشگرِ HTML. همان قراردادِ V78.0، فقط با spec و محدودهٔ توکن تا نتیجه
+     جایگزینِ همان توکن شود و ابزارِ تازه‌ای درج نگردد. */
+  try {
+    if (window.ExamPrintNative && typeof window.ExamPrintNative.editFigureTool === 'function') {
+      var qid = qmfQidOfFig(fig);
+      var idx = qmfFigIndexOf(fig);
+      if (qid && idx >= 0) {
+        window.ExamPrintNative.editFigureTool(String(qid), Number(idx));
+        return true;
+      }
+    }
+  } catch (e) {}
   return openQmfFigEditorBody(fig);
 }
 function openQmfFigEditorBody(fig) {
@@ -12357,19 +12402,92 @@ function openQuestionTool(qId, tool) {
      (همان ویرایشگرهایی که آزمون‌سازِ آنلاین از V53 استفاده می‌کند). خروجی هر
      دو مسیر یکسان است: توکنِ %%FIG:{...}%% در متنِ همان سؤال. اگر میزبانِ بومی
      در دسترس نبود، پشتیبان همان دکمهٔ HTML قبلی است. */
-  if (activeExactTool !== 'formula') {
-    try {
-      if (window.ExamPrintNative && typeof window.ExamPrintNative.openFigureTool === 'function') {
-        window.__qmfFigToolQid = String(qId);
-        window.ExamPrintNative.openFigureTool(String(qId), String(activeExactTool));
-        return;
-      }
-    } catch (e) {}
-  }
+  /* V82.0 — حالا «فرمول» هم مثل هفت ابزار دیگر به پنجرهٔ بومی می‌رود
+     (FormulaHostDialog، همان ویرایشگری که آزمون‌سازِ بومی استفاده می‌کند).
+     اگر میزبانِ بومی در دسترس نبود، پشتیبان همان دکمهٔ HTML قبلی است. */
+  try {
+    if (window.ExamPrintNative && typeof window.ExamPrintNative.openFigureTool === 'function') {
+      window.__qmfFigToolQid = String(qId);
+      window.ExamPrintNative.openFigureTool(String(qId), String(activeExactTool));
+      return;
+    }
+  } catch (e) {}
   const btn = document.getElementById(buttonMap[activeExactTool] || buttonMap.formula);
   if (btn) btn.click();
 }
 function openMathModal(qId) { openQuestionTool(qId, 'formula'); }
+
+/* V82.0 — متنِ کاملِ یک سؤال را برای ویرایشگرِ بومیِ فرمول برمی‌گرداند. */
+window.__qmfQuestionText = function (qid) {
+  try {
+    var ta = document.getElementById('q_text_' + qid);
+    if (ta) {
+      try {
+        if (window.QMF && ta._qmfSurface && typeof QMF.syncFromSurface === 'function') {
+          QMF.syncFromSurface(ta);
+        }
+      } catch (e) {}
+      return String(ta.value == null ? '' : ta.value);
+    }
+    var q = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
+    }
+    return q ? String(q.text == null ? '' : q.text) : '';
+  } catch (e) { return ''; }
+};
+
+/* V82.0 — متنِ کاملِ سؤال را از ویرایشگرِ بومی برمی‌گرداند (base64، UTF-8 امن). */
+window.__qmfSetQuestionText = function (qid, b64) {
+  try {
+    var text = decodeURIComponent(escape(atob(String(b64 || ''))));
+    var q = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
+    }
+    if (!q) return 'no-question';
+    q.text = text;
+    var ta = document.getElementById('q_text_' + qid);
+    if (ta) {
+      ta.value = text;
+      try { if (window.QMF && typeof QMF.renderFromSrc === 'function') QMF.renderFromSrc(ta); } catch (e) {}
+      try { ta.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+    }
+    try { renderAll(); } catch (e) {}
+    try { renderPreview(); } catch (e) {}
+    try { persistNow(); } catch (e) {}
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
+/* V82.0 — دابل‌کلیک روی یک ابزارِ درج‌شده باید همان پنجرهٔ بومی را برای
+   «ویرایش» باز کند. این تابع spec و محدودهٔ توکن را به میزبانِ بومی می‌دهد. */
+window.__qmfEditFigAt = function (qid, index) {
+  try {
+    var text = window.__qmfQuestionText(qid);
+    var re = /%%FIG:(\{[\s\S]*?\})%%/g, m, n = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (n === Number(index)) {
+        return JSON.stringify({ spec: m[1], start: m.index, end: m.index + m[0].length });
+      }
+      n++;
+    }
+    return '';
+  } catch (e) { return ''; }
+};
+
+/* V82.0 — جایگزینیِ یک توکنِ مشخص با نسخهٔ ویرایش‌شده. */
+window.__qmfReplaceFigToken = function (qid, start, end, b64) {
+  try {
+    var token = decodeURIComponent(escape(atob(String(b64 || ''))));
+    var text = window.__qmfQuestionText(qid);
+    var st = Number(start), en = Number(end);
+    if (!(st >= 0 && en > st && en <= text.length)) return 'bad-range';
+    var next = text.slice(0, st) + token + text.slice(en);
+    var enc = btoa(unescape(encodeURIComponent(next)));
+    return window.__qmfSetQuestionText(qid, enc);
+  } catch (e) { return 'err'; }
+};
 
 /* V81.0 — تشخیصِ وضعیتِ ویرایشگر فرمول. دکمهٔ بومیِ «بررسی فرمول» این را صدا
    می‌زند تا اگر باز هم مشکلی بود، به‌جای حدس‌زدن، دقیقاً بدانیم کجا گیر است. */
@@ -13608,7 +13726,10 @@ loadSample();
       fig.appendChild(b);
     });
   }
-  document.addEventListener('dblclick',function(e){var fig=e.target&&e.target.closest?e.target.closest('.qmf-fig.qmf-tab'):null;if(!fig)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openTable(fig)},true);
+  /* V82.0 — این مسیرِ اختصاصیِ جدول هم باید از همان درِ بومی برود، وگرنه
+     دابل‌کلیک روی جدول پنجرهٔ HTML را باز می‌کرد. openQmfFigEditor خودش
+     اول بومی را امتحان می‌کند و در نبودش به openTable برمی‌گردد. */
+  document.addEventListener('dblclick',function(e){var fig=e.target&&e.target.closest?e.target.closest('.qmf-fig.qmf-tab'):null;if(!fig)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(!openQmfFigEditor(fig)){openTable(fig)}},true);
   document.addEventListener('click',function(e){var fig=e.target&&e.target.closest?e.target.closest('.qmf-fig.qmf-tab'):null;if(fig)setTimeout(function(){enhance(fig.parentElement||document)},0)},true);
   var mo=new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var n=ms[i].target;if(n&&n.closest&&n.closest('.qmf-surface')){enhance(n.closest('.qmf-surface'));break}}});
   window.addEventListener('load',function(){enhance(document);var c=document.getElementById('questionsContainer');if(c)mo.observe(c,{childList:true,subtree:true})});
