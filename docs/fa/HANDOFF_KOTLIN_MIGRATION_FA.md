@@ -15897,3 +15897,30 @@ V76.8: حذف استودیوی HTML (qimgStudioSrc) و «ابزارهای کام
 ```
 
 پچ: V76_4_builder30_native_windows_and_studio_core — بدون SQL.
+
+## ۲۹۹) V76.4.1 — رفع خطای کامپایل: colorMatrix در graphicsLayer وجود ندارد
+
+### چه شد
+
+```text
+CI روی V76.4: Unresolved reference 'colorMatrix' (ExamImageStudioCore:257)
+— در GraphicsLayerScope خصوصیتی به نام colorMatrix وجود ندارد؛ من خلط
+کرده بودم با ColorFilter/ColorMatrix. اصلاح: به‌جای graphicsLayer از
+پارامتر colorFilter خودِ Image استفاده شد (پایدار در همهٔ نسخه‌های
+Compose): ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(4×5)))
+با محاسبهٔ off حول آستانه (off = 128 − 255·(t/255)·s).
+```
+
+### درس‌ها
+
+```text
+- ایجنت gradle ندارد؛ پس هر API ترکیبیِ Compose باید از خانوادهٔ
+  «قطعیِ پایدار» انتخاب شود: پارامتر colorFilter خودِ Image امن است،
+  GraphicsLayerScope.colorMatrix نه (وجود ندارد).
+- فهرست APIهای امنِ تکرارشدنی برای پنجره‌های آینده: Image(colorFilter=)،
+  FilterChip، Slider(valueRange)، detectDragGestures(onDragStart,onDrag)،
+  CreateDocument(mimeType)، TakePicture()launch(uri)، FileProvider.
+- قبل از commit، سمبل‌های تازه در بلوک‌های DSL را با همین لیست تطبیق بده.
+```
+
+پچ: V76_4_1_studio_colorfilter_compile_fix — بدون SQL.

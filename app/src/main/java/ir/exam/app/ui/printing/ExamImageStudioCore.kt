@@ -35,7 +35,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,8 +49,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -67,7 +67,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -244,26 +243,27 @@ fun ExamImageStudioDialog(
                             }
                             val offX = (boxW - drawW) / 2f
                             val offY = (boxH - drawH) / 2f
+                            // V76.4.1 — پیش‌نمایشِ کنتراستِ بالای تقریبی با colorFilter خود Image؛
+                            // آستانهٔ دقیقِ سیاه‌سفید هنگام «تایید و درج» اعمال می‌شود.
+                            val scanPreview: ColorFilter? = if (scanOn) {
+                                val s = 4f
+                                val off = 128f - 255f * (threshold / 255f) * s
+                                ColorFilter.colorMatrix(
+                                    ColorMatrix(
+                                        floatArrayOf(
+                                            s, 0f, 0f, 0f, off,
+                                            0f, s, 0f, 0f, off,
+                                            0f, 0f, s, 0f, off,
+                                            0f, 0f, 0f, 1f, 0f
+                                        )
+                                    )
+                                )
+                            } else null
                             Image(
                                 bitmap = imgBitmap,
                                 contentDescription = "پیش‌نمایش تصویر",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer {
-                                        // پیش‌نمایشِ کنتراستِ بالای تقریبی؛ آستانهٔ دقیق هنگام درج اعمال می‌شود
-                                        if (scanOn) {
-                                            val s = 4f
-                                            val off = 128f - 255f * (threshold / 255f) * s
-                                            colorMatrix = androidx.compose.ui.graphics.ColorMatrix(
-                                                floatArrayOf(
-                                                    s, 0f, 0f, 0f, off,
-                                                    0f, s, 0f, 0f, off,
-                                                    0f, 0f, s, 0f, off,
-                                                    0f, 0f, 0f, 1f, 0f
-                                                )
-                                            )
-                                        }
-                                    },
+                                modifier = Modifier.fillMaxSize(),
+                                colorFilter = scanPreview,
                                 contentScale = ContentScale.Fit
                             )
                             // قاب برش با دو دستگیره
