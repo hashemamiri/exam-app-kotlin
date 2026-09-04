@@ -2617,6 +2617,18 @@ require(_v764_studio.exists()
         and "mutableStateOf(185)" in _v764_studio_text
         and "0 to \"∞\"" in _v764_studio_text,
         "V76.4 native image studio core is missing")
+_v765_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text()
+require("📐 صفحه‌ای (۴ گوشه)" in _v765_studio
+        and "✓ اعمال صاف‌سازی" in _v765_studio
+        and "🎯 تشخیص خودکار زاویه" in _v765_studio
+        and "private fun applyPerspective(" in _v765_studio
+        and "m.setPolyToPoly(srcPts, 0, dst, 0, 4)" in _v765_studio
+        and "private fun detectSkewAngle(src: Bitmap, threshold: Int): Float" in _v765_studio
+        and "postRotate(rotation.toFloat() + deskew)" in _v765_studio
+        and "valueRange = -15f..15f" in _v765_studio,
+        "V76.5 studio deskew/perspective tools are missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_5StudioDeskewPerspectiveTest.kt").exists(),
+        "V76.5 studio deskew/perspective test is missing")
 _v764_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 require("window.__qmfAddQuestionImage" in _v764_asset
         and "window.__qmfOpenLegacyStudio" in _v764_asset
@@ -2753,14 +2765,15 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 257
-        and _v694_changelog.startswith("V76.4:")
+require(_v694_lines >= 258
+        and _v694_changelog.startswith("V76.5:")
+        and "V76.4:" in _v694_changelog
         and "V76.3:" in _v694_changelog
         and "V76.2:" in _v694_changelog
         and "V76.1:" in _v694_changelog
         and "V76.0:" in _v694_changelog
         and "V75.8.1:" in _v694_changelog,
-        "changelog must keep the full history + the new V76.4 line on top")
+        "changelog must keep the full history + the new V76.5 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment

@@ -68,6 +68,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.tan
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 
 /**
  * V76.4 — هستهٔ بومیِ استودیوی تصویر سؤال (پچ اول از مسیر «بومیِ کامل»):
@@ -75,6 +77,10 @@ import kotlin.math.roundToInt
  * سفیدسازی اسکن (سیاه‌سفید با آستانه — پیش‌فرض ۱۸۵ مطابق استودیو)، اندازهٔ خروجی
  * S/M/L/∞ (۲۴۰/۴۲۰/۶۴۰/اصلی) و کیفیت (۴۰..۱۰۰ — پیش‌فرض ۹۲). خروجی با همان قرارداد
  * استودیو (dataUrl + ارتفاع پیکسلی) به سؤال درج می‌شود.
+ * V76.5 — ابزارهای صفحه/صاف‌سازی: برشِ صفحه‌ای با انتخاب ۴ گوشه (وارپِ
+ * پرسپکتیو با setPolyToPoly — همان «📍 انتخاب ۴ گوشه صفحه / ✓ اعمال صاف‌سازی»)،
+ * صاف‌سازیِ دقیقِ ±۱۵° (اسلایدر + شبکهٔ راهنما) و «🎯 تشخیص خودکار زاویه»
+ * با پروفایلِ تصویر (بهینه‌سازی واریانسِ ردیف‌های تاریک).
  * ابزارهای پیشرفتهٔ باقی‌مانده (تفکیک چندسؤاله، لاک‌گیر، برچسب/فلش، صفحه‌ای/۴گوشه،
  * تشخیص خودکار زاویه) در پچ‌های بعدی بومی می‌شوند؛ تا آن‌موقع دکمهٔ «ابزار کامل»
  * همان استودیوی HTML را باز می‌کند (__qmfOpenLegacyStudio) تا هیچ امکانی از دست نرود.
@@ -99,6 +105,12 @@ fun ExamImageStudioDialog(
     var quality by remember { mutableStateOf(92) }
     var processing by remember { mutableStateOf(false) }
     var aspect by remember { mutableStateOf("free") }
+    // V76.5 — صاف‌سازیِ دقیق و صفحه‌ای (۴ گوشه)
+    var deskewAngle by remember { mutableStateOf(0f) }
+    var deskewGrid by remember { mutableStateOf(false) }
+    var perspMode by remember { mutableStateOf(false) }
+    var perspPts by remember { mutableStateOf(listOf(Offset(0.12f, 0.12f), Offset(0.88f, 0.12f), Offset(0.88f, 0.88f), Offset(0.12f, 0.88f))) }
+    var note by remember { mutableStateOf<String?>(null) }
 
     fun makeCameraUri(): Pair<Uri, File> {
         val dir = File(context.cacheDir, "studio").apply { mkdirs() }
@@ -164,7 +176,7 @@ fun ExamImageStudioDialog(
                                 scope.launch {
                                     val result = withContext(Dispatchers.Default) {
                                         processAndEncode(
-                                            src, rotation, flip, crop, scanOn, threshold, outSize, quality
+                                            src, rotation, deskewAngle, flip, crop, scanOn, threshold, outSize, quality
                                         )
                                     }
                                     processing = false
@@ -216,10 +228,12 @@ fun ExamImageStudioDialog(
                             .background(Color(0xFF17203A))
                     ) {
                         var boxSize by remember { mutableStateOf(IntSize.Zero) }
-                        val shown = remember(original, rotation, flip) {
+                        val shown = remember(original, rotation, flip, deskewAngle, perspMode) {
                             val m = Matrix().apply {
-                                postRotate(rotation.toFloat())
-                                if (flip) postScale(-1f, 1f)
+                                if (!perspMode) {
+                                    postRotate(rotation.toFloat() + deskewAngle)
+                                    if (flip) postScale(-1f, 1f)
+                                }
                             }
                             Bitmap.createBitmap(original!!, 0, 0, original!!.width, original!!.height, m, true)
                         }
@@ -266,13 +280,19 @@ fun ExamImageStudioDialog(
                                 colorFilter = scanPreview,
                                 contentScale = ContentScale.Fit
                             )
-                            // قاب برش با دو دستگیره
+                            // قاب برش با دو دستگیره / یا چهار گوشهٔ صفحه‌ای (V76.5)
                             Canvas(
                                 Modifier
                                     .fillMaxSize()
-                                    .pointerInput(aspect) {
+                                    .pointerInput(aspect, perspMode, boxSize.width, boxSize.height) {
                                         detectDragGestures(
                                             onDragStart = { pos ->
+                                                if (perspMode) {
+                                                    dragTarget = Corner.PERSP
+                                                    dragPerspIndex = nearestPerspIndex(pos, offX, offY, drawW, drawH, perspPts)
+                                                    dragOffset = Offset.Zero
+                                                    return@detectDragGestures
+                                                }
                                                 dragTarget = when {
                                                     dist(pos, Offset(offX + crop.left * drawW, offY + crop.top * drawH)) < 90f -> Corner.START
                                                     dist(pos, Offset(offX + crop.right * drawW, offY + crop.bottom * drawH)) < 90f -> Corner.END
@@ -282,6 +302,14 @@ fun ExamImageStudioDialog(
                                             },
                                             onDrag = { change, drag ->
                                                 change.consume()
+                                                if (perspMode) {
+                                                    val x = (change.position.x - offX).coerceIn(0f, drawW) / drawW
+                                                    val y = (change.position.y - offY).coerceIn(0f, drawH) / drawH
+                                                    if (dragPerspIndex >= 0) {
+                                                        perspPts = perspPts.toMutableList().also { it[dragPerspIndex] = Offset(x, y) }
+                                                    }
+                                                    return@detectDragGestures
+                                                }
                                                 val x = (change.position.x - offX) / drawW
                                                 val y = (change.position.y - offY) / drawH
                                                 when (dragTarget) {
@@ -308,18 +336,49 @@ fun ExamImageStudioDialog(
                                         )
                                     }
                             ) {
-                                val l = offX + crop.left * drawW
-                                val t = offY + crop.top * drawH
-                                val r = offX + crop.right * drawW
-                                val b = offY + crop.bottom * drawH
-                                drawRoundRect(
-                                    color = Color.White,
-                                    topLeft = Offset(l, t),
-                                    size = Size(r - l, b - t),
-                                    style = Stroke(width = 3f)
-                                )
-                                drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(l, t))
-                                drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(r, b))
+                                if (perspMode) {
+                                    // V76.5 — چهارگوشِ صفحه با نقطه‌های شماره‌دار ۱..۴
+                                    val ptsPx = perspPts.map { Offset(offX + it.x * drawW, offY + it.y * drawH) }
+                                    val quad = androidx.compose.ui.graphics.Path().apply {
+                                        moveTo(ptsPx[0].x, ptsPx[0].y)
+                                        for (i in 1 until 4) lineTo(ptsPx[i].x, ptsPx[i].y)
+                                        close()
+                                    }
+                                    drawPath(quad, Color(0xFFFFC107), style = Stroke(width = 3f))
+                                    drawIntoCanvas { c ->
+                                        val bg = android.graphics.Paint().apply { color = 0xFF4F46E5.toInt(); isAntiAlias = true }
+                                        val fg = android.graphics.Paint().apply {
+                                            color = android.graphics.Color.WHITE; textSize = 30f
+                                            textAlign = android.graphics.Paint.Align.CENTER; isAntiAlias = true
+                                        }
+                                        ptsPx.forEachIndexed { i, p ->
+                                            c.nativeCanvas.drawCircle(p.x, p.y, 24f, bg)
+                                            c.nativeCanvas.drawText((i + 1).toString(), p.x, p.y + 10f, fg)
+                                        }
+                                    }
+                                } else {
+                                    if (deskewGrid) {
+                                        // شبکهٔ راهنمای صاف‌سازی (کمکِ بصریِ هم‌ترازی خطوط)
+                                        val step = drawH / 12f
+                                        var gy = offY
+                                        while (gy <= offY + drawH) {
+                                            drawLine(Color(0x664F46E5), Offset(offX, gy), Offset(offX + drawW, gy), strokeWidth = 1.5f)
+                                            gy += step
+                                        }
+                                    }
+                                    val l = offX + crop.left * drawW
+                                    val t = offY + crop.top * drawH
+                                    val r = offX + crop.right * drawW
+                                    val b = offY + crop.bottom * drawH
+                                    drawRoundRect(
+                                        color = Color.White,
+                                        topLeft = Offset(l, t),
+                                        size = Size(r - l, b - t),
+                                        style = Stroke(width = 3f)
+                                    )
+                                    drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(l, t))
+                                    drawCircle(Color(0xFF4F46E5), radius = 16f, center = Offset(r, b))
+                                }
                             }
                         }
                     }
@@ -347,6 +406,78 @@ fun ExamImageStudioDialog(
                             ToolChip("مربع ۱:۱") { aspect = "r11"; crop = centeredAspect(crop, 1f) }
                             ToolChip("۴:۳") { aspect = "r43"; crop = centeredAspect(crop, 4f / 3f) }
                             ToolChip("۱۶:۹") { aspect = "r169"; crop = centeredAspect(crop, 16f / 9f) }
+                        }
+                        // V76.5 — صاف‌سازی: صفحه‌ای ۴گوشه + خودکار + دقیق ±۱۵°
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = perspMode,
+                                onClick = { perspMode = !perspMode; note = null },
+                                label = { Text("📐 صفحه‌ای (۴ گوشه)") }
+                            )
+                            ToolChip("🎯 تشخیص خودکار زاویه") {
+                                val src = original ?: return@ToolChip
+                                processing = true; note = null
+                                scope.launch {
+                                    val ang = withContext(Dispatchers.Default) { detectSkewAngle(src, threshold) }
+                                    processing = false
+                                    deskewAngle = ang
+                                    note = "زاویهٔ تشخیص‌شده: ${"%.1f".format(ang)}° — در صورت نیاز با اسلایدر تنظیم کنید."
+                                }
+                            }
+                            ToolChip("صفر کردن صاف‌سازی") { deskewAngle = 0f }
+                        }
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("↯ صاف‌سازی: " + (if (deskewAngle >= 0) "+" else "") + "%.1f".format(deskewAngle) + "°", style = MaterialTheme.typography.labelLarge)
+                            Slider(
+                                value = deskewAngle,
+                                onValueChange = { deskewAngle = (it * 10).roundToInt() / 10f },
+                                valueRange = -15f..15f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text("شبکه", style = MaterialTheme.typography.labelMedium)
+                            Switch(checked = deskewGrid, onCheckedChange = { deskewGrid = it })
+                        }
+                        if (perspMode) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(onClick = {
+                                    val src = original ?: return@Button
+                                    processing = true; note = null
+                                    scope.launch {
+                                        val warped = withContext(Dispatchers.Default) { applyPerspective(src, perspPts) }
+                                        processing = false
+                                        if (warped != null) {
+                                            original = warped
+                                            rotation = 0; flip = false; deskewAngle = 0f
+                                            crop = Rect(0f, 0f, 1f, 1f); aspect = "free"
+                                            perspMode = false
+                                        } else {
+                                            note = "چهار نقطهٔ شماره‌دار را روی گوشه‌های صفحه بکشید و دوباره اعمال کنید."
+                                        }
+                                    }
+                                }) { Text("✓ اعمال صاف‌سازی") }
+                                ToolChip("انصراف") { perspMode = false }
+                                Text("نقطه‌های ۱..۴ را روی گوشه‌های صفحه بکشید.", style = MaterialTheme.typography.labelMedium)
+                            }
                         }
                         Row(
                             Modifier
@@ -407,14 +538,37 @@ fun ExamImageStudioDialog(
                         Text("در حال آماده‌سازی تصویر…")
                     }
                 }
+                note?.let {
+                    Text(
+                        it,
+                        Modifier.padding(horizontal = 12.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
 }
 
-private enum class Corner { START, END, MOVE }
+private enum class Corner { START, END, MOVE, PERSP }
 private var dragTarget by androidx.compose.runtime.mutableStateOf(Corner.MOVE)
 private var dragOffset by androidx.compose.runtime.mutableStateOf(Offset.Zero)
+private var dragPerspIndex by androidx.compose.runtime.mutableStateOf(-1)
+
+/** نزدیک‌ترین نقطهٔ صفحه‌ای به لمس (آستانهٔ ۲۲۰px برای انگشت). */
+private fun nearestPerspIndex(pos: Offset, offX: Float, offY: Float, drawW: Float, drawH: Float, pts: List<Offset>): Int {
+    var best = -1
+    var bestD = 220f
+    pts.forEachIndexed { i, p ->
+        val d = dist(pos, Offset(offX + p.x * drawW, offY + p.y * drawH))
+        if (d < bestD) {
+            bestD = d
+            best = i
+        }
+    }
+    return best
+}
 
 private fun dist(a: Offset, b: Offset): Float = (a - b).getDistance()
 
@@ -469,6 +623,7 @@ private fun decodeBounded(context: android.content.Context, uri: Uri, maxEdge: I
 private fun processAndEncode(
     src: Bitmap,
     rotation: Int,
+    deskew: Float,
     flip: Boolean,
     crop: Rect,
     scanOn: Boolean,
@@ -477,7 +632,7 @@ private fun processAndEncode(
     quality: Int
 ): Pair<String, Int>? = runCatching {
     val m = Matrix().apply {
-        postRotate(rotation.toFloat())
+        postRotate(rotation.toFloat() + deskew)
         if (flip) postScale(-1f, 1f)
     }
     var bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
@@ -523,4 +678,81 @@ private fun processAndEncode(
     val dataUrl = "data:image/jpeg;base64," +
         android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
     dataUrl to bmp.height
+}.getOrNull()
+
+/**
+ * V76.5 — «🎯 تشخیص خودکار زاویه»: پروفایلِ تصویر — تصویر را نمونه‌برداری
+ * (~۲۰۰px) سیاه‌سفید می‌کند و برای هر زاویهٔ ۰.۵±۱۵° شیبِ خطوط را با
+ * جابه‌جایی عمودی approximates؛ زاویه‌ای که بیشترین واریانسِ تاریکیِ ردیف‌ها
+ * را بدهد (خطوط متنی هم‌تراز) پاسخ است.
+ */
+private fun detectSkewAngle(src: Bitmap, threshold: Int): Float {
+    val targetW = 200
+    val largest = max(src.width, src.height).coerceAtLeast(1)
+    if (largest <= targetW) return 0f
+    val scale = targetW.toFloat() / largest
+    val w = (src.width * scale).roundToInt().coerceAtLeast(1)
+    val h = (src.height * scale).roundToInt().coerceAtLeast(1)
+    val small = Bitmap.createScaledBitmap(src, w, h, true) ?: return 0f
+    val px = IntArray(w * h)
+    small.getPixels(px, 0, w, 0, 0, w, h)
+    val dark = FloatArray(w * h)
+    for (i in px.indices) {
+        val p = px[i]
+        val r = (p shr 16) and 0xFF
+        val g = (p shr 8) and 0xFF
+        val b = p and 0xFF
+        val lum = (r * 299 + g * 587 + b * 114) / 1000
+        dark[i] = if (lum < threshold) 1f else 0f
+    }
+    var best = 0f
+    var bestScore = -1f
+    var angle = -15f
+    while (angle <= 15.01f) {
+        val tan = tan(Math.toRadians(angle.toDouble()))
+        val scores = FloatArray(h)
+        for (x in 0 until w) {
+            val shift = x * tan
+            for (y in 0 until h) {
+                val yi = (y + shift).roundToInt()
+                if (yi in 0 until h) scores[yi] += dark[y * w + x]
+            }
+        }
+        val mean = scores.sum() / h
+        var v = 0f
+        for (sv in scores) {
+            val d = sv - mean
+            v += d * d
+        }
+        if (v > bestScore) {
+            bestScore = v
+            best = angle
+        }
+        angle += 0.5f
+    }
+    return best
+}
+
+/**
+ * V76.5 — «✓ اعمال صاف‌سازی» صفحه‌ای: چهار نقطهٔ نرمال‌شدهٔ ۱..۴ با
+ * Matrix.setPolyToPoly به مستطیلِ محصورکننده وارپ می‌شود (خروجی = صفحهٔ صاف).
+ */
+private fun applyPerspective(src: Bitmap, pts: List<Offset>): Bitmap? = runCatching {
+    if (pts.size != 4) return@runCatching null
+    val srcPts = FloatArray(8)
+    pts.forEachIndexed { i, p ->
+        srcPts[i * 2] = p.x.coerceIn(0f, 1f) * src.width
+        srcPts[i * 2 + 1] = p.y.coerceIn(0f, 1f) * src.height
+    }
+    val xs = (0 until 4).map { srcPts[it * 2] }
+    val ys = (0 until 4).map { srcPts[it * 2 + 1] }
+    val l = xs.minOrNull() ?: return@runCatching null
+    val r = xs.maxOrNull() ?: return@runCatching null
+    val t = ys.minOrNull() ?: return@runCatching null
+    val b = ys.maxOrNull() ?: return@runCatching null
+    if (r - l < 10f || b - t < 10f) return@runCatching null
+    val dst = floatArrayOf(l, t, r, t, r, b, l, b)
+    val m = Matrix()
+    if (!m.setPolyToPoly(srcPts, 0, dst, 0, 4)) return@runCatching null
+    Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
 }.getOrNull()
