@@ -76,9 +76,13 @@ class V62_7PrintCenterStudentPreviewTest {
         assertTrue("\"چاپ آزمون\", \"اطلاعات رسمی چاپ آزمون\"" in appShell)
         assertTrue("MainPage.PRINT" in appShell)
         assertTrue("ExamPrintCenterScreen(" in appShell)
-        // V76.0 — دکمهٔ وسط‌چین «آزمون جدید» نسخهٔ 30 را باز می‌کند؛ سربرگ بومی حذف شد
-        assertTrue("horizontalArrangement = Arrangement.Center" in printCenter)
+        // V79.1 — ردیفِ وسط‌چین حالا دو دکمه دارد: «آزمون جدید» (بومی) و
+        // «آزمون‌ساز چاپی» (نسخهٔ ۳۰). به‌جای پین‌کردنِ شکلِ دقیقِ چیدمان،
+        // وسط‌چین‌بودن و وجودِ هر دو دکمه ادعا می‌شود.
+        assertTrue("Alignment.CenterHorizontally" in printCenter)
         assertTrue("Text(\"آزمون جدید\")" in printCenter)
+        assertTrue("Text(\"آزمون‌ساز چاپی\")" in printCenter)
+        assertTrue("onNewNativeExam" in printCenter)
         assertFalse("بستن سربرگ" in printCenter)
         assertFalse("PrintHeaderDialog" in printCenter)
         assertFalse("fun HeaderPreview(" in printCenter)

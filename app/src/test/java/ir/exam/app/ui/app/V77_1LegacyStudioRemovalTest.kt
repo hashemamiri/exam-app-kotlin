@@ -46,7 +46,7 @@ class V77_1LegacyStudioRemovalTest {
         // پیش از حذف ~6.18MB بود؛ حذف ~504KB آزاد کرد.
         assertTrue(
             "asset هنوز بزرگ است: ${assetFile.length()}",
-            assetFile.length() in 1L until 5_900_000L
+            assetFile.length() in 1L until 5_900_000L  // V79: اکنون ~۴٫۲MB
         )
     }
 
