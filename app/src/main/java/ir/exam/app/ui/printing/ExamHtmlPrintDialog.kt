@@ -85,6 +85,12 @@ fun ExamHtmlPrintDialog(
     val context = LocalContext.current
     // V76.3 — ارجاع WebView برای فرمان‌های نوار بومی + پیام وضعیت
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    // V78.0 — درخواستِ بازکردنِ یک ابزار درجِ بومی از داخل صفحه
+    var figureTool by remember { mutableStateOf<FigureToolRequest?>(null) }
+    // V78.1 — نوارِ بومیِ مدیریت سؤال
+    var questionRows by remember { mutableStateOf<List<QuestionRow>>(emptyList()) }
+    var questionTotal by remember { mutableStateOf("") }
+    var showQuestionManager by remember { mutableStateOf(false) }
     var barStatus by remember { mutableStateOf<String?>(null) }
     // V76.4 — پنجره‌های بومی
     val headerSchema = remember { loadHeaderSchema(context) }
@@ -109,6 +115,16 @@ fun ExamHtmlPrintDialog(
     }
     val runJs: (String, ((String?) -> Unit)?) -> Unit = { script, cb ->
         webViewRef?.evaluateJavascript(script, cb)
+    }
+
+    // V78.2 — گرفتنِ عکسِ فوریِ پیش‌نویس و نوشتنش در آینهٔ بومی
+    fun mirrorDraft() {
+        webViewRef?.evaluateJavascript(
+            "(function(){try{return window.__qmfDraftSnapshot?window.__qmfDraftSnapshot():''}catch(e){return ''}})()"
+        ) { raw ->
+            val json = unwrapJsString(raw)
+            if (json.isNotBlank()) ExamDraftMirror.save(context, json)
+        }
     }
 
     // V76.6 — فهرست تصویرهای موجود سؤال، بعد از آماده‌شدن runJs
@@ -195,6 +211,15 @@ fun ExamHtmlPrintDialog(
                     NativeBarButton("✅ چاپ استاد") { runJs("if (typeof printTeacher==='function') printTeacher();", null) }
                     NativeBarButton("➕ سوال جدید") { showNewQuestion = true }
                     NativeBarButton("👁 پیش‌نمایش") { runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null) }
+                    NativeBarButton("🗂 مدیریت سؤال") {
+                        runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
+                            questionRows = parseQuestionRows(list)
+                            runJs("(function(){try{return window.__qmfTotalScore?window.__qmfTotalScore():''}catch(e){return ''}})()") { total ->
+                                questionTotal = unwrapJsString(total)
+                                showQuestionManager = true
+                            }
+                        }
+                    }
                 }
 
                 Box(Modifier.fillMaxSize().weight(1f)) {
@@ -238,6 +263,9 @@ fun ExamHtmlPrintDialog(
                                         onError = { message -> post { jsError = message; loading = false } },
                                         onOpenImageStudio = { qid ->
                                             post { studioQuestionId = qid.ifBlank { null } }
+                                        },
+                                        onOpenFigureTool = { qid, tool ->
+                                            post { figureTool = FigureToolRequest(qid, tool) }
                                         }
                                     ),
                                     "ExamPrintNative"
@@ -275,6 +303,25 @@ fun ExamHtmlPrintDialog(
                                         WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
 
                                     override fun onPageFinished(view: WebView, url: String) {
+                                        // V78.2 — اگر ذخیرهٔ خودکارِ صفحه خالی بود ولی آینهٔ بومی
+                                        // پیش‌نویس داشت، آن را برگردان (کش WebView پاک شده بوده).
+                                        if (printable == null) {
+                                            view.evaluateJavascript(
+                                                "(function(){try{return window.__qmfHasLocalDraft?window.__qmfHasLocalDraft():'no'}catch(e){return 'no'}})()"
+                                            ) { has ->
+                                                if (!unwrapJsString(has).contains("yes")) {
+                                                    ExamDraftMirror.load(view.context)?.let { mirrored ->
+                                                        view.evaluateJavascript(
+                                                            "(function(){try{if(window.setExamData){window.setExamData($mirrored);return 'ok'}return 'missing'}catch(e){return 'err'}})()"
+                                                        ) { r ->
+                                                            if (r?.contains("ok") == true) {
+                                                                post { barStatus = "پیش‌نویس آزمون بازیابی شد ✓" }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                         val payload = ExamHtmlPrintPayloadBuilder.build(printable).toString()
                                         var attempts = 0
                                         fun tryInject() {
@@ -502,6 +549,67 @@ fun ExamHtmlPrintDialog(
                     onDismiss = { studioQuestionId = null }
                 )
             }
+
+            // V78.0 — ابزارهای درجِ بومی (جدول، تناوبی، شکل، نمودار، آناتومی،
+            // فیزیک، شیمی). «فرمول» عمداً اینجا نیست و مسیر HTML خود را دارد.
+            figureTool?.takeIf { it.isNative }?.let { req ->
+                ExamFigureToolHost(
+                    request = req,
+                    onInsert = { token ->
+                        figureTool = null
+                        val b64 = android.util.Base64.encodeToString(
+                            token.toByteArray(Charsets.UTF_8),
+                            android.util.Base64.NO_WRAP
+                        )
+                        runJs(
+                            "(function(){try{return window.__qmfInsertFigToken?" +
+                                "window.__qmfInsertFigToken('" + req.questionId + "','" + b64 + "'):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                        ) { r ->
+                            barStatus = if (r?.contains("ok") == true) {
+                                mirrorDraft()
+                                "در سؤال درج شد ✓"
+                            } else {
+                                "درج در سؤال ناموفق بود."
+                            }
+                        }
+                    },
+                    onDismiss = { figureTool = null }
+                )
+            }
+
+            if (showQuestionManager) {
+                ExamQuestionManagerSheet(
+                    rows = questionRows,
+                    totalScore = questionTotal,
+                    onAction = { qid, action, arg ->
+                        val argJs = if (arg == null) "null" else "'" + arg.replace("'", "") + "'"
+                        runJs(
+                            "(function(){try{return window.__qmfQuestionAction?" +
+                                "window.__qmfQuestionAction('" + qid + "','" + action + "'," + argJs + "):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                        ) { r ->
+                            if (r?.contains("ok") == true) {
+                                // فهرست را از خودِ صفحه دوباره بخوان تا منبعِ حقیقت یکی بماند
+                                runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
+                                    questionRows = parseQuestionRows(list)
+                                }
+                                runJs("(function(){try{return window.__qmfTotalScore?window.__qmfTotalScore():''}catch(e){return ''}})()") { total ->
+                                    questionTotal = unwrapJsString(total)
+                                }
+                                mirrorDraft()
+                            } else {
+                                barStatus = "این کار روی سؤال انجام نشد."
+                            }
+                        }
+                    },
+                    onJumpTo = { qid ->
+                        showQuestionManager = false
+                        runJs("(function(){try{var e=document.getElementById('q_text_'+'" + qid + "');if(e){e.scrollIntoView({block:'center'});e.focus();return 'ok'}return 'missing'}catch(e){return 'err'}})()", null)
+                    },
+                    onDismiss = { showQuestionManager = false }
+                )
+            }
         }
     }
 }
@@ -554,7 +662,8 @@ private class ExamPrintBridge(
     private val onPrint: (String) -> Unit,
     private val onClose: () -> Unit,
     private val onError: (String) -> Unit,
-    private val onOpenImageStudio: (String) -> Unit
+    private val onOpenImageStudio: (String) -> Unit,
+    private val onOpenFigureTool: (String, String) -> Unit
 ) {
     @JavascriptInterface
     fun print(mode: String?) {
@@ -565,6 +674,16 @@ private class ExamPrintBridge(
     @JavascriptInterface
     fun openImageStudio(questionId: String?) {
         onOpenImageStudio(questionId.orEmpty())
+    }
+
+    /**
+     * V78.0 — ابزارهای درج (به‌جز فرمول) به پنجرهٔ بومیِ همان ابزار می‌روند؛
+     * همان ویرایشگرهایی که آزمون‌سازِ آنلاین استفاده می‌کند.
+     * tool: figure | graph | table | anatomy | periodic | physics | chemistry
+     */
+    @JavascriptInterface
+    fun openFigureTool(questionId: String?, tool: String?) {
+        onOpenFigureTool(questionId.orEmpty(), tool.orEmpty())
     }
 
     @JavascriptInterface

@@ -2779,6 +2779,90 @@ for _b in ("__qmfAddQuestionImage", "__qmfExportJson", "__qmfSetFields", "__qmfS
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V77_1LegacyStudioRemovalTest.kt").exists(),
         "V77.1 legacy-studio removal test is missing")
 
+# ---- V78.0: ابزارهای درج به ویرایشگرهای بومیِ موجود وصل شدند ----
+_v780_host = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamFigureToolHost.kt")
+require(_v780_host.exists(), "V78.0 ExamFigureToolHost.kt is missing")
+_v780_host_src = _v780_host.read_text(encoding="utf-8")
+_v780_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+_v780_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+# ویرایشگرها از نو نوشته نشده‌اند؛ همان‌های ui/figure استفاده می‌شوند
+for _dlg in ("TableEditorDialog", "PeriodicEditorDialog", "FigurePickerDialog",
+             "FigureTypePickerDialog", "AtlasEditorDialog", "AtlasTypePickerDialog"):
+    require("import ir.exam.app.ui.figure." + _dlg in _v780_host_src,
+            "V78.0 must reuse the existing native editor " + _dlg)
+# قرارداد توکن دقیقاً همان چیزی است که renderFigToken و FigTokenVisuals می‌فهمند
+require('"%%FIG:" + spec.toJson() + "%%"' in _v780_host_src,
+        "V78.0 figure token format drifted from %%FIG:{json}%%")
+require("renderFigToken" in _v780_asset, "V78.0 must not touch the HTML figure renderer")
+# قلاب صفحه + پل بازگشت
+require("ExamPrintNative.openFigureTool" in _v780_asset
+        and "window.__qmfInsertFigToken" in _v780_asset,
+        "V78.0 asset hook/return bridge is missing")
+require("fun openFigureTool(" in _v780_dialog
+        and "__qmfInsertFigToken" in _v780_dialog
+        and "ExamFigureToolHost(" in _v780_dialog,
+        "V78.0 Kotlin side of the figure tool bridge is missing")
+# فرمول عمداً بومی نشده است (تصمیم صریح کاربر)
+require("activeExactTool !== 'formula'" in _v780_asset,
+        "V78.0 the formula editor must stay on the HTML path")
+require('"formula"' not in _v780_host_src,
+        "V78.0 the formula tool must not be routed to a native dialog")
+# مسیر چاپ/پیش‌نمایش/کادر متن دست‌نخورده
+for _keep in ("function printStudent", "function printTeacher", "function renderPreview",
+              "function renderEditor", "extracted-math-host-script"):
+    require(_keep in _v780_asset, "V78.0 touched an out-of-scope area: " + _keep)
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_0NativeFigureToolsTest.kt").exists(),
+        "V78.0 native figure tools test is missing")
+
+# ---- V78.1: مدیریت سؤال + نوار شماره، بومی ----
+_v781_sheet = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamQuestionManagerSheet.kt")
+require(_v781_sheet.exists(), "V78.1 ExamQuestionManagerSheet.kt is missing")
+_v781_src = _v781_sheet.read_text(encoding="utf-8")
+_v781_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+_v781_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+for _b in ("__qmfQuestionList", "__qmfQuestionAction", "__qmfTotalScore"):
+    require("window." + _b in _v781_asset, "V78.1 bridge " + _b + " is missing")
+# هر کار از تابعِ موجودِ صفحه استفاده کند، نه پیاده‌سازیِ موازی
+for _fn in ("removeQuestion(q.id)", "window.moveQuestion(q.id", "addOption(q.id)",
+            "removeOption(q.id", "addPair(q.id)", "removePair(q.id"):
+    require(_fn in _v781_asset, "V78.1 must delegate to the page function " + _fn)
+require("ExamQuestionManagerSheet(" in _v781_dialog
+        and "parseQuestionRows(" in _v781_dialog
+        and '"🗂 مدیریت سؤال"' in _v781_dialog,
+        "V78.1 Kotlin side of the question manager is missing")
+# کادرِ متنِ سؤال بومی نشده باشد (خارج از دامنه)
+require("OutlinedTextField" in _v781_src and "q_text_" not in _v781_src,
+        "V78.1 must not take over the question text box")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_1NativeQuestionManagerTest.kt").exists(),
+        "V78.1 question manager test is missing")
+
+# ---- V78.2: پاک‌کن مستقل + آینهٔ پیش‌نویس + کوچک‌سازی APK ----
+_v782_studio = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text(encoding="utf-8")
+_v782_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+_v782_gradle = (ROOT/"app/build.gradle.kts").read_text(encoding="utf-8")
+_v782_mirror = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDraftMirror.kt")
+require(_v782_mirror.exists(), "V78.2 ExamDraftMirror.kt is missing")
+# پاک‌کن مستقل + hit-test مشترک (نه منطقِ موازی)
+require('ToolChip("🧹 پاک‌کن")' in _v782_studio, "V78.2 eraser tool chip is missing")
+require("internal fun hitShapeIndex(" in _v782_studio, "V78.2 shared hit test is missing")
+require(_v782_studio.count("hitShapeIndex(shapes, nx, ny)") >= 3,
+        "V78.2 eraser and selection must share one hit test")
+require("ERASE" in _v782_studio, "V78.2 eraser drag state is missing")
+require("sp.locked || sp.hidden" in _v782_studio, "V78.2 locked/hidden shapes must stay immune")
+# آینهٔ پیش‌نویس
+require("window.__qmfDraftSnapshot" in _v782_asset
+        and "window.__qmfHasLocalDraft" in _v782_asset,
+        "V78.2 draft mirror bridges are missing")
+require("ExamDraftMirror.save(" in (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8"),
+        "V78.2 draft mirror is not wired")
+# کوچک‌سازی APK: فقط دو ABI واقعی
+require('abiFilters += listOf("armeabi-v7a", "arm64-v8a")' in _v782_gradle,
+        "V78.2 ABI filter is missing")
+require('"x86"' not in _v782_gradle and '"x86_64"' not in _v782_gradle,
+        "V78.2 x86 ABIs must be dropped")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_2EraserMirrorAbiTest.kt").exists(),
+        "V78.2 test is missing")
+
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
 import re as _re
@@ -2877,7 +2961,7 @@ def _gate_strip(text):
         _out.append(_c)
         _i += 1
     return "".join(_out)
-for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt", "ExamImageStudioFilters.kt"):
+for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt", "ExamImageStudioFilters.kt", "ExamFigureToolHost.kt", "ExamQuestionManagerSheet.kt", "ExamDraftMirror.kt"):
     _fpath = ROOT / "app/src/main/java/ir/exam/app/ui/printing" / _fname
     _ftext = _fpath.read_text()
     _body = _gate_strip(_ftext)
@@ -3028,7 +3112,10 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V77.1:")
+        and _v694_changelog.startswith("V78.2:")
+        and "V78.1:" in _v694_changelog
+        and "V78.0:" in _v694_changelog
+        and "V77.1:" in _v694_changelog
         and "V77.0:" in _v694_changelog
         and "V76.9:" in _v694_changelog
         and "V76.8:" in _v694_changelog

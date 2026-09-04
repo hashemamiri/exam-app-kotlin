@@ -473,6 +473,18 @@ fun ExamImageStudioDialog(
                                                         }
                                                         return@detectDragGestures
                                                     }
+                                                    if (drawMode == "eraser") {
+                                                        // V78.2 — پاک‌کنِ مستقل: هر شکلِ زیرِ انگشت پاک می‌شود
+                                                        // (قفل‌شده‌ها مصون‌اند، مثل انتخاب).
+                                                        val victim = hitShapeIndex(shapes, nx, ny)
+                                                        if (victim >= 0) {
+                                                            shapes = shapes.filterIndexed { i, _ -> i != victim }
+                                                            selectedShape = -1
+                                                            note = "شکل پاک شد."
+                                                        }
+                                                        dragTarget = Corner.ERASE
+                                                        return@detectDragGestures
+                                                    }
                                                     if (drawMode == "text") {
                                                         textPromptPoint = Offset(nx, ny)
                                                         textPromptValue = ""
@@ -494,23 +506,8 @@ fun ExamImageStudioDialog(
                                                     // V76.7 — انتخاب/جابه‌جایی شکل موجود
                                                     val nx = (pos.x - offX) / drawW
                                                     val ny = (pos.y - offY) / drawH
-                                                    var hit = -1
-                                                    shapes.forEachIndexed { si, sp ->
-                                                        if (sp.points.isEmpty()) return@forEachIndexed
-                                                        // V77.0 — قفل‌شده/پنهان انتخاب نمی‌شود
-                                                        if (sp.locked || sp.hidden) return@forEachIndexed
-                                                        val xs = sp.points.map { it.x }
-                                                        val ys = sp.points.map { it.y }
-                                                        val m = 0.035f
-                                                        // min/max لیستی در kotlin.math نیست — minOrNull/maxOrNull
-                                                        val xsMin = xs.minOrNull() ?: nx
-                                                        val xsMax = xs.maxOrNull() ?: nx
-                                                        val ysMin = ys.minOrNull() ?: ny
-                                                        val ysMax = ys.maxOrNull() ?: ny
-                                                        if (nx >= xsMin - m && nx <= xsMax + m &&
-                                                            ny >= ysMin - m && ny <= ysMax + m
-                                                        ) hit = si
-                                                    }
+                                                    // V78.2 — همان hit-test مشترکِ پاک‌کن (قفل/پنهان مصون)
+                                                    val hit = hitShapeIndex(shapes, nx, ny)
                                                     selectedShape = hit
                                                     if (hit >= 0) {
                                                         dragShapeIndex = hit
@@ -553,6 +550,17 @@ fun ExamImageStudioDialog(
                                                     val y = (change.position.y - offY).coerceIn(0f, drawH) / drawH
                                                     if (dragPerspIndex >= 0) {
                                                         perspPts = perspPts.toMutableList().also { it[dragPerspIndex] = Offset(x, y) }
+                                                    }
+                                                    return@detectDragGestures
+                                                }
+                                                if (dragTarget == Corner.ERASE) {
+                                                    // V78.2 — کشیدنِ پاک‌کن روی چند شکل، همه را پاک می‌کند
+                                                    val nx = (change.position.x - offX) / drawW
+                                                    val ny = (change.position.y - offY) / drawH
+                                                    val victim = hitShapeIndex(shapes, nx, ny)
+                                                    if (victim >= 0) {
+                                                        shapes = shapes.filterIndexed { i, _ -> i != victim }
+                                                        selectedShape = -1
                                                     }
                                                     return@detectDragGestures
                                                 }
@@ -826,6 +834,7 @@ fun ExamImageStudioDialog(
                             ToolChip("🔤 متن") { setDraw("text") }
                             ToolChip("🪝 فلش منحنی") { setDraw("curve") }
                             ToolChip("💧 قطره‌چکان") { setDraw("eyedropper") }
+                            ToolChip("🧹 پاک‌کن") { setDraw("eraser") }
                         }
                         Row(
                             Modifier
@@ -1339,7 +1348,29 @@ fun ExamImageStudioDialog(
     }
 }
 
-private enum class Corner { START, END, MOVE, PERSP, SPLIT_MOVE, SPLIT_RESIZE, DRAW, SHAPE_MOVE, IDLE }
+/**
+ * V78.2 — تشخیصِ شکلِ زیرِ انگشت. همان منطقی که از V76.7 برای «انتخاب» به کار
+ * می‌رفت، حالا استخراج شده تا «پاک‌کن» هم دقیقاً همان رفتار را داشته باشد
+ * (قفل‌شده و پنهان مصون‌اند). آخرین شکلِ منطبق برنده است = روییِ پشته.
+ */
+internal fun hitShapeIndex(shapes: List<StudioShape>, nx: Float, ny: Float): Int {
+    var hit = -1
+    shapes.forEachIndexed { si, sp ->
+        if (sp.points.isEmpty()) return@forEachIndexed
+        if (sp.locked || sp.hidden) return@forEachIndexed
+        val xs = sp.points.map { it.x }
+        val ys = sp.points.map { it.y }
+        val m = 0.035f
+        val xsMin = xs.minOrNull() ?: nx
+        val xsMax = xs.maxOrNull() ?: nx
+        val ysMin = ys.minOrNull() ?: ny
+        val ysMax = ys.maxOrNull() ?: ny
+        if (nx >= xsMin - m && nx <= xsMax + m && ny >= ysMin - m && ny <= ysMax + m) hit = si
+    }
+    return hit
+}
+
+private enum class Corner { START, END, MOVE, PERSP, SPLIT_MOVE, SPLIT_RESIZE, DRAW, SHAPE_MOVE, ERASE, IDLE }
 private var dragTarget by androidx.compose.runtime.mutableStateOf(Corner.MOVE)
 private var dragOffset by androidx.compose.runtime.mutableStateOf(Offset.Zero)
 private var dragPerspIndex by androidx.compose.runtime.mutableStateOf(-1)
