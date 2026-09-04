@@ -76,4 +76,20 @@ class V86_0PreviewBoxHeightTest {
         assertTrue("transform-origin" in asset)
         assertTrue("Math.ceil(natH * k)" in asset)
     }
+
+    @Test
+    fun `the sheet is measured at its natural width not the narrow parent`() {
+        // printContent عرض صریح ندارد و عرض والد باریک را می‌گیرد؛
+        // اگر همان را مقیاس کنیم برگه دو بار کوچک می‌شود.
+        assertTrue("pc.style.setProperty('width', natural + 'px', 'important')" in asset)
+        assertTrue("Math.max(pc.scrollWidth || 0, pc.offsetWidth || 0) || 794" in asset)
+        // ۷۹۴ فقط پشتیبانِ نبودِ اندازه است، نه کفِ اجباری
+        assertTrue("Math.max(pc.scrollWidth || 0, pc.offsetWidth || 0, 794)" !in asset)
+    }
+
+    @Test
+    fun `the forced width is dropped when the window closes`() {
+        assertTrue("pc.style.removeProperty('width')" in asset)
+        assertTrue("out.forcedW" in asset)
+    }
 }

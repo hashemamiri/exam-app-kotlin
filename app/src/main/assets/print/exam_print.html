@@ -12545,6 +12545,7 @@ window.__qmfPreviewDiag = function () {
       out.bodyScrollH = bd ? bd.scrollHeight : 0;
       out.bodyClientH = bd ? bd.clientHeight : 0;
       out.marginBottom = pcx ? (pcx.style.marginBottom || '') : '';
+      out.forcedW = pcx ? (pcx.style.width || '') : '';
       /* V86.0 — اگر این‌ها صفر باشند، واحدهای vh بی‌معنا هستند */
       out.innerH = window.innerHeight || 0;
       out.docClientH = (document.documentElement && document.documentElement.clientHeight) || 0;
@@ -14193,12 +14194,27 @@ loadSample();
     pc.style.removeProperty('transform');
     pc.style.removeProperty('transform-origin');
     pc.style.removeProperty('margin-bottom');
+    pc.style.removeProperty('width');
     box.style.removeProperty('height');
     box.style.removeProperty('width');
 
     var avail = body.clientWidth - 12;
-    var natural = pc.scrollWidth || pc.offsetWidth || 794;
+    /* V86.1 — عرضِ طبیعیِ برگه.
+       `#printContent` عرضِ صریح ندارد، پس عرضِ والد را می‌گیرد؛ روی موبایل
+       آن والد باریک است (۳۳۲px) و محتوای واقعیِ برگه (۵۹۸px) از آن سرریز
+       می‌کند. اگر همان جعبهٔ ۳۳۲ را مقیاس کنیم، برگه دو بار کوچک می‌شود:
+       اول به عرضِ والد محدود، بعد ضرب در k — نتیجه ۳۳۲×۰٫۵۵۵ ≈ ۱۸۴px، یعنی
+       نصفِ کادر پر و بقیه سفید. راهِ درست: عرضِ طبیعی را به خودِ برگه تحمیل
+       کن تا سرریز جمع شود، بعد مقیاس بگیر. */
+    var natural = Math.max(pc.scrollWidth || 0, pc.offsetWidth || 0) || 794;
     if (!(avail > 0) || !(natural > 0)) return;
+    pc.style.setProperty('width', natural + 'px', 'important');
+    /* حالا که عرض تثبیت شد، محتوا ممکن است کمی بازتر شود؛ یک‌بار دیگر بخوان */
+    var settled = pc.scrollWidth || natural;
+    if (settled > natural) {
+      natural = settled;
+      pc.style.setProperty('width', natural + 'px', 'important');
+    }
 
     var k = avail / natural;
     if (k > 1) k = 1;
@@ -14297,6 +14313,8 @@ loadSample();
     var pc = $('printContent');
     if (pc && prevInfo && prevInfo.parent) {
       pc.classList.remove('in-window');
+      /* V86.1 — عرضِ تحمیلی فقط داخلِ پنجره معنا دارد */
+      try { pc.style.removeProperty('width'); } catch (e) {}
       /* V83.0 — جبرانِ ارتفاع فقط داخل پنجره معنا دارد */
       try { pc.style.removeProperty('margin-bottom'); } catch (e) {}
       /* V84.0 — سبک‌های inlineِ نمایش پاک شوند تا برگه در حالتِ عادی
