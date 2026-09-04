@@ -88,9 +88,15 @@ class V76_7StudioDrawToolsTest {
     @Test
     fun `shapes are baked into the output pipeline`() {
         assertTrue("internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap" in studio)
+        // V77.0 — پس از deshadow/denoise، دو پارامتر بعد از shapes آمده‌اند؛
+        // پین به شکلِ فعلیِ امضا به‌روز شد (خودِ زنجیره تغییری نکرده است).
         assertTrue(
-            "shapes: List<StudioShape> = emptyList()\n): Pair<String, Int>? = runCatching {\n    // V76.7 — شکل‌ها قبل از برش روی تصویر پخته می‌شوند" in studio
+            "    shapes: List<StudioShape> = emptyList(),\n" +
+                "    deshadow: Boolean = false,\n" +
+                "    denoise: Boolean = false\n" +
+                "): Pair<String, Int>? = runCatching {" in studio
         )
+        assertTrue("// V76.7 — شکل‌ها قبل از برش روی تصویر پخته می‌شوند" in studio)
         assertTrue("val painted = if (shapes.isEmpty()) bmp else bakeShapes(bmp, shapes)" in studio)
         // درج تکی و هر دو مسیر تفکیک از زنجیرهٔ شکل‌دار می‌روند
         assertTrue("encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes, deshadow, denoise)" in studio)
