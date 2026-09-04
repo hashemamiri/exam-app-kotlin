@@ -45,8 +45,8 @@ class V76_6StudioSplitMultiImageTest {
     @Test
     fun `shared encode pipeline used by single insert and split`() {
         assertTrue("private fun encodeCropped(" in studio)
-        // processAndEncode حالا از helper مشترک استفاده می‌کند
-        assertTrue("""encodeCropped(bmp, crop, scanOn, threshold, outSize, quality)""" in studio)
+        // processAndEncode حالا از helper مشترک استفاده می‌کند (V76.7: با پارامتر shapes)
+        assertTrue("""encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)""" in studio)
         assertTrue("internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap?" in studio)
     }
 

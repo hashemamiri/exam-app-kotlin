@@ -16180,3 +16180,29 @@ drive3/4/5 در آزمون clone تمیز دوباره سبز شدند.
 ```
 
 پچ: V76_7_1_minmax_and_drawline_fix — بدون SQL.
+
+## ۳۰۷) V76.7.2 — رفع تست قرمزِ V76_6 (پینِ کهنهٔ encodeCropped)
+
+وضعیت CI پس از V76.7.1: کامپایل **سبز** شد (colorMatrix/nativeCanvas/TextButton/min/drawLine
+همه حل شده‌اند)، اما مرحلهٔ تست قرمز ماند:
+
+```
+V76_6StudioSplitMultiImageTest > shared encode pipeline used by single insert and split FAILED
+    java.lang.AssertionError at V76_6StudioSplitMultiImageTest.kt:49
+723 tests completed, 1 failed
+```
+
+ریشه: در V76.7 امضای `encodeCropped` پارامتر `shapes` گرفت و فراخوانِ داخل
+`processAndEncode` شد `encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)`.
+تست V76.6 هنوز رشتهٔ بدونِ `shapes` را پین کرده بود. این دقیقاً همان درسِ ثبت‌شده است:
+«پس از آخرین ویرایش هر فایل، همهٔ تست‌های خوانندهٔ همان فایل دوباره شبیه‌سازی شوند» —
+این بار شبیه‌سازِ محلی به‌خاطر ری‌استارتِ sandbox پاک شده بود و پینِ V76.6 دوباره
+بررسی نشد.
+
+فیکس: پینِ خط ۴۹ به شکلِ فعلیِ فراخوان به‌روز شد (با `, shapes`).
+
+**درس ۵۱ (دائمی)**: شبیه‌سازِ پین‌ها باید در هر پچ از صفر بازساخته و روی **همهٔ**
+فایل‌های `V76_*Test.kt` اجرا شود (نه فقط تست پچِ جاری)، چون فایل‌های `/tmp` در
+snapshot ذخیره نمی‌شوند. اجرای فعلی: ۱۸۱ پینِ رشته‌ای، ۰ خطا.
+
+پچ: V76_7_2_fix_v766_encodecropped_pin — بدون SQL.
