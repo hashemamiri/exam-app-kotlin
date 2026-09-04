@@ -92,10 +92,10 @@ class V76_0Builder30HostTest {
         // ویرایشگر شکل دست‌نخورده است (نسخهٔ P1 آن را خنثی کرده بود)
         assertFalse("V30-P1: ویرایش شکل" in assetText)
         assertTrue("__r11LastFigOpen" in assetText)
-        // فرمول: ویرایشگر اصلی نسخهٔ ۳۰ (MATH_EDITOR_HTML) مسیرِ اصلی است؛
+        // فرمول: ویرایشگر اصلی نسخهٔ ۳۰ (V79.0: asset جدا) مسیرِ اصلی است؛
         // گاردِ اشتباهِ V76.1 که همین مسیر را می‌دزدید حذف شده و پشتیبانِ ساده
         // فقط در timeoutِ شکستِ بوت به‌عنوان آخرین‌چاره صدا زده می‌شود.
-        assertTrue("doc.write(MATH_EDITOR_HTML)" in assetText)
+        assertTrue("f.src = MATH_EDITOR_URL" in assetText)
         assertFalse("if (!EXACT_MATH_EDITOR_B64)" in assetText)
         assertTrue("window.__openFallbackMathModal(window.__qmfActiveField || null, null)" in assetText)
         assertEquals(3, Regex("__openFallbackMathModal").findAll(assetText).count())

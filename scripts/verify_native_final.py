@@ -2676,7 +2676,7 @@ require("EXACT_MATH_EDITOR_B64" not in _v768_asset
         "V76.8 dead exact-math-editor code came back into the asset")
 # ابزارهای زنده نباید قربانی پاک‌سازی شده باشند
 require('id="mathEditorFrame"' in _v768_asset
-        and "MATH_EDITOR_HTML" in _v768_asset
+        and "MATH_EDITOR_URL" in _v768_asset  # V79.0: بدنه به asset جدا رفت
         # V77.1: qimgStudioSrc عمداً حذف شد (پایان مهاجرت) — دیگر الزام نیست
         and "window.__qmfSplitQuestion" in _v768_asset
         and "window.__qmfAddQuestionImage" in _v768_asset,
@@ -2770,7 +2770,7 @@ require("qimgUploaderJs" in _v771_asset
         and "qimg-file" in _v771_asset
         and "data-qimg-block" in _v771_asset
         and "openImageStudio" in _v771_asset
-        and "MATH_EDITOR_HTML" in _v771_asset,
+        and "MATH_EDITOR_URL" in _v771_asset,  # V79.0
         "V77.1 cleanup removed live tooling that must stay")
 for _b in ("__qmfAddQuestionImage", "__qmfExportJson", "__qmfSetFields", "__qmfSaveNow",
            "__qmfQuestionImages", "__qmfRemoveQuestionImage", "__qmfReplaceQuestionImage",
@@ -2862,6 +2862,48 @@ require('"x86"' not in _v782_gradle and '"x86_64"' not in _v782_gradle,
         "V78.2 x86 ABIs must be dropped")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_2EraserMirrorAbiTest.kt").exists(),
         "V78.2 test is missing")
+
+# ---- V79.0/1/2: رفع ویرایشگر فرمول + آزمون‌سازِ بومی + انتقال لوگوها ----
+_v79_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+_v79_math = ROOT/"app/src/main/assets/print/math_editor.html"
+# V79.0 — ویرایشگر فرمول از فایل هم‌مبدأ لود می‌شود، نه doc.write
+require(_v79_math.exists(), "V79.0 assets/print/math_editor.html is missing")
+_v79_math_src = _v79_math.read_text(encoding="utf-8")
+for _fn in ("openMath", "mfApply", "closeMath"):
+    require(_fn in _v79_math_src, "V79.0 math editor lost " + _fn)
+require('MATH_EDITOR_URL = "/print/math_editor.html"' in _v79_asset,
+        "V79.0 math editor URL constant is missing")
+require("f.src = MATH_EDITOR_URL" in _v79_asset, "V79.0 same-origin iframe load is missing")
+require("MATH_EDITOR_HTML" not in _v79_asset, "V79.0 the inline math editor blob must be gone")
+require("doc.write(" not in _v79_asset, "V79.0 doc.write must not come back")
+# پشتیبان فرمول دست‌نخورده
+require("__openFallbackMathModal" in _v79_asset, "V79.0 formula fallback disappeared")
+# V79.1 — «آزمون جدید» به آزمون‌سازِ بومی
+_v79_center = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text(encoding="utf-8")
+_v79_app = (ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text(encoding="utf-8")
+require("onNewNativeExam" in _v79_center and "onNewNativeExam = {" in _v79_app,
+        "V79.1 native new-exam route is missing")
+require("page = MainPage.BUILDER" in _v79_app, "V79.1 must navigate to the native builder")
+require("builderCameFromPrint" in _v79_app, "V79.1 back-navigation flag is missing")
+# نسخهٔ ۳۰ همچنان در دسترس بماند
+require('"آزمون‌ساز چاپی"' in _v79_center, "V79.1 must keep the v30 builder reachable")
+# V79.2 — لوگوها
+for _lg in ("logo_azad.png", "logo_formal.png", "logo_sama.png", "logo_ministry.png"):
+    require((ROOT/"app/src/main/assets/print/logos"/_lg).exists(), "V79.2 missing logo " + _lg)
+require("data:image/png;base64" not in _v79_asset, "V79.2 a base64 logo is still inlined")
+require("const LOGO_IMG = '/print/logos/logo_azad.png'" in _v79_asset, "V79.2 logo constant not rewritten")
+require("im.decoding = 'sync'" in _v79_asset, "V79.2 logo preload is missing")
+# فایل واقعاً سبک شد
+require(len(_v79_asset) < 4_400_000, "V79 asset did not shrink as expected")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V79_0FormulaAndNativeBuilderTest.kt").exists(),
+        "V79 test is missing")
+
+# مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
+_v79_total = (_v79_asset.__len__()
+              + (ROOT/"app/src/main/assets/print/math_editor.html").stat().st_size
+              + sum((ROOT/"app/src/main/assets/print/logos"/_l).stat().st_size
+                    for _l in ("logo_azad.png", "logo_formal.png", "logo_sama.png", "logo_ministry.png")))
+require(_v79_total > 5_400_000, "V79 content went missing rather than moving to assets")
 
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
@@ -2993,13 +3035,15 @@ require("ministry" not in _v730_test_text
         and "trimStart().startsWith" not in _v760_host_test_text,
         "V76.0.1 stale test expectations (ministry / contradictory trimStart) are back")
 _v730_asset_text=_v730_asset.read_text(encoding="utf-8") if _v730_asset.is_file() else ""
-require(_v730_asset.is_file() and _v730_asset.stat().st_size > 5_000_000
+# V79.0/V79.2 — بدنهٔ ویرایشگر فرمول و چهار لوگو به asset جدا رفتند؛
+# آستانه از ۵MB به ۴MB آمد و مجموعِ سه فایل هم جداگانه بررسی می‌شود.
+require(_v730_asset.is_file() and _v730_asset.stat().st_size > 4_000_000
         and "window.setExamData" in _v730_asset_text
         and "__qmfHostBridge" in _v730_asset_text
         and "ExamPrintNative" in _v730_asset_text
         and "cloudflareinsights" not in _v730_asset_text
         and 'title="درج شکل"' in _v730_asset_text
-        and "doc.write(MATH_EDITOR_HTML)" in _v730_asset_text
+        and "f.src = MATH_EDITOR_URL" in _v730_asset_text  # V79.0
         and "if (!EXACT_MATH_EDITOR_B64)" not in _v730_asset_text
         and "is-fx formula-btn" in _v730_asset_text,
         "V76.2 builder-30 asset or setExamData bridge is missing (tools/real formula editor)")
@@ -3112,7 +3156,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V78.2:")
+        and _v694_changelog.startswith("V79.0:")
+        and "V78.2:" in _v694_changelog
         and "V78.1:" in _v694_changelog
         and "V78.0:" in _v694_changelog
         and "V77.1:" in _v694_changelog
@@ -3276,7 +3321,7 @@ require(_v760_inliner.exists()
         and '"k", "img"' in _v760_inliner_text
         and "const val MAX_IMAGES = 24" in _v760_inliner_text,
         "V76.0 ExamHtmlImageInliner (private images as data-url tokens) is missing")
-require(len(_v760_asset_text) > 5_000_000
+require(len(_v760_asset_text) > 4_000_000  # V79.0/V79.2: ویرایشگر فرمول و لوگوها به asset جدا رفتند
         and "window.setExamData" in _v760_asset_text
         and "qmfHostBridge" in _v760_asset_text
         and "qmf_exam_autosave_azmoon_v1" in _v760_asset_text
@@ -3289,7 +3334,7 @@ require(len(_v760_asset_text) > 5_000_000
         and "cloudflareinsights" not in _v760_asset_text
         and "challenge-platform" not in _v760_asset_text
         and "is-fx formula-btn" in _v760_asset_text
-        and "doc.write(MATH_EDITOR_HTML)" in _v760_asset_text
+        and "f.src = MATH_EDITOR_URL" in _v760_asset_text  # V79.0
         and "if (!EXACT_MATH_EDITOR_B64)" not in _v760_asset_text
         and "window.__openFallbackMathModal(window.__qmfActiveField || null, null)" in _v760_asset_text
         and "qmfMobileWindows" in _v760_asset_text

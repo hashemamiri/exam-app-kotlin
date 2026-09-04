@@ -97,7 +97,7 @@ class V77_1LegacyStudioRemovalTest {
 
     @Test
     fun `math editor was not collateral damage`() {
-        assertTrue("MATH_EDITOR_HTML" in assetText)
+        assertTrue("MATH_EDITOR_URL" in assetText)  // V79.0
         assertTrue("id=\"mathEditorFrame\"" in assetText)
     }
 }

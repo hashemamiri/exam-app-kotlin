@@ -196,8 +196,8 @@ class V73_0HtmlPrintIntegrationTest {
         assertTrue("q-tool-btn is-fig" in content)
         assertTrue("title=\"درج شکل\"" in content)
         assertTrue("title=\"درج نمودار\"" in content)
-        // V76.2 — دکمهٔ فرمول همان ویرایشگر اصلی نسخهٔ ۳۰ است (MATH_EDITOR_HTML در فریم)
-        assertTrue("doc.write(MATH_EDITOR_HTML)" in content)
+        // V79.0 — همان ویرایشگر اصلی، ولی از asset هم‌مبدأ لود می‌شود
+        assertTrue("f.src = MATH_EDITOR_URL" in content)
         // گاردِ اشتباه V76.1 که مسیرِ ویرایشگر اصلی را می‌دزدید نباید برگردد
         assertFalse("if (!EXACT_MATH_EDITOR_B64)" in content)
         // موتور رندر توکن‌ها حفظ شده است

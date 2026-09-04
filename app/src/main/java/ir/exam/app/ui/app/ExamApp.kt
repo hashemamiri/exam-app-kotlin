@@ -185,6 +185,8 @@ private fun AuthenticatedExamApp(
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
     // V63.0 — آزمون در حال ویرایش در «ویرایشگر سند» Word-مانند (از صفحهٔ چاپ آزمون).
     var editingDocumentExamId by remember(user.id) { mutableStateOf<String?>(null) }
+    // V79.1 — آیا آزمون‌سازِ بومی از صفحهٔ «چاپ آزمون» باز شده؟ (برای بازگشت درست)
+    var builderCameFromPrint by remember(user.id) { mutableStateOf(false) }
     var schoolLaunchAction by remember(user.id) { mutableStateOf<SchoolLaunchAction?>(null) }
     var schoolStudentsSelected by rememberSaveable(user.id) { mutableStateOf(false) }
     // V61.6 — نمای مدارس باز است؟ (هدر «مدرسه من» به‌جای «کلاس‌ها»)
@@ -327,7 +329,10 @@ private fun AuthenticatedExamApp(
             onBack = {
                 editingExamId = null
                 importedExam = null
-                page = MainPage.HOME
+                // V79.1 — اگر از «چاپ آزمون» آمده‌ایم، به همان‌جا برگرد؛
+                // وگرنه رفتار قبلی (خانه) حفظ می‌شود.
+                page = if (builderCameFromPrint) MainPage.PRINT else MainPage.HOME
+                builderCameFromPrint = false
             }
         )
         return
@@ -579,6 +584,14 @@ private fun AuthenticatedExamApp(
                         onEditExamDocument = { examId ->
                             editingDocumentExamId = examId
                             page = MainPage.DOC_EDITOR
+                        },
+                        // V79.1 — «آزمون جدید» همان آزمون‌سازِ بومیِ «ایجاد آزمون»
+                        // را باز می‌کند (آزمونِ خالی، بدون examId).
+                        onNewNativeExam = {
+                            editingExamId = null
+                            importedExam = null
+                            builderCameFromPrint = true
+                            page = MainPage.BUILDER
                         }
                     )
                 }

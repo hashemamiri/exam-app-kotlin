@@ -30,7 +30,7 @@ class V76_8AssetDeadCodeCleanupTest {
 
     @Test
     fun `live tooling survived the cleanup`() {
-        assertTrue("MATH_EDITOR_HTML" in assetText)
+        assertTrue("MATH_EDITOR_URL" in assetText)  // V79.0
         assertTrue("id=\"mathEditorFrame\"" in assetText)
         // V77.1 — استودیوی HTML عمداً حذف شد؛ دیگر نباید باشد
         assertFalse("id=\"qimgStudioSrc\"" in assetText)

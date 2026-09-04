@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -40,8 +41,9 @@ import kotlinx.coroutines.launch
 
 /**
  * صفحهٔ «چاپ آزمون» — نسخهٔ 30 تعاملی:
- * - V76.0 — دکمهٔ وسط‌چین «آزمون جدید» جایگزین «سربرگ»: فایل آزمون‌ساز تعاملی
- *   (نسخهٔ 30) خالی باز می‌شود. تنظیم سربرگ از داخل همان فایل انجام می‌شود.
+ * - V79.1 — «آزمون جدید» آزمون‌سازِ بومی را باز می‌کند (همان صفحهٔ «ایجاد آزمون»).
+ *   دکمهٔ دوم «آزمون‌ساز چاپی» نسخهٔ ۳۰ را مثل قبل باز می‌کند، پس هیچ امکانی
+ *   از دسترس خارج نمی‌شود.
  * - V76.0 — کارت هر آزمون فقط دو آیکن دارد: مداد (ویرایش در نسخهٔ 30) و پرینتر
  *   (ورود خودکار سؤالات به نسخهٔ 30 و چاپ از همان‌جا). سؤالات با پل
  *   window.setExamData و تصاویر با توکن نشست (data-URL) منتقل می‌شوند؛
@@ -50,7 +52,9 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun ExamPrintCenterScreen(
-    onEditExamDocument: (String) -> Unit = {}
+    onEditExamDocument: (String) -> Unit = {},
+    // V79.1 — «آزمون جدید» به آزمون‌سازِ بومی می‌رود، نه به WebView نسخهٔ ۳۰.
+    onNewNativeExam: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val layoutStore = remember(context.applicationContext) { PrintLayoutStore(context.applicationContext) }
@@ -97,9 +101,17 @@ fun ExamPrintCenterScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // V76.0 — دکمهٔ وسط‌چین «آزمون جدید»: نسخهٔ 30 را بدون داده (ریست) باز می‌کند.
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            OutlinedButton(onClick = { htmlPrintExam = null; htmlPrintOpen = true }) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        ) {
+            // V79.1 — مسیرِ اصلی: آزمون‌سازِ کاملاً بومی (همان «ایجاد آزمون»).
+            Button(onClick = onNewNativeExam) {
                 Text("آزمون جدید")
+            }
+            // نسخهٔ ۳۰ همچنان در دسترس است تا هیچ امکانی از دست نرود.
+            OutlinedButton(onClick = { htmlPrintExam = null; htmlPrintOpen = true }) {
+                Text("آزمون‌ساز چاپی")
             }
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
