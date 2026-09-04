@@ -115,7 +115,11 @@ class V76_0Builder30HostTest {
         assertTrue(".toolbar{display:none!important}" in assetText)
         // ذخیرهٔ بومی + ماندگاری فیلدهای سربرگ در ورود آزمون
         assertTrue("window.__qmfSaveNow" in assetText)
-        assertEquals(2, Regex("fields: collectFields\\(\\)").findAll(assetText).count())
+        // V78.2 — سومین مصرف‌کننده اضافه شد: __qmfDraftSnapshot (آینهٔ پیش‌نویس).
+        // به‌جای شمارشِ شکننده، هر مصرف‌کننده جداگانه پین می‌شود.
+        assertTrue("persistNow" in assetText)
+        assertTrue("window.__qmfExportJson" in assetText)
+        assertTrue("window.__qmfDraftSnapshot" in assetText)
         // پل میزبان + پاک‌سازی Cloudflare
         assertTrue("window.setExamData" in assetText)
         assertTrue("qmf_exam_autosave_azmoon_v1" in assetText)
