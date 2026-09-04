@@ -2911,6 +2911,21 @@ require("qmfAnyToolOpen" in _v79_asset, "V80.0 reset guard must consider open to
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V80_0FormulaFrameResetGuardTest.kt").exists(),
         "V80.0 test is missing")
 
+# ---- V81.0: چرخهٔ عمرِ فریمِ ویرایشگر فرمول ----
+_v81_hide = _v79_asset.split("function hideExactMathFrame()")[1].split("\n}")[0]
+require("f.remove()" not in _v81_hide, "V81.0 the editor frame must not be removed on close")
+require("getComputedStyle(f).display !== 'none'" in _v79_asset, "V81.0 gate must read computed style")
+require("__r11MathBusyTimer" in _v79_asset, "V81.0 gate needs a short auto-release")
+require("if (booted && !ready)" in _v79_asset, "V81.0 stale boot must be retried")
+require("setProperty('display', 'block', 'important')" in _v79_asset, "V81.0 open must use important")
+require("__qmfMathFrameReset" in _v79_asset, "V81.0 frame-rebuild reset hook is missing")
+require("xhr.open('GET', MATH_EDITOR_URL, true)" in _v79_asset, "V81.0 xhr fallback is missing")
+require("window.__qmfFormulaDiag" in _v79_asset, "V81.0 diagnostic bridge is missing")
+require("🩺 بررسی فرمول" in _v80_dialog, "V81.0 diagnostic button is missing")
+require("assets.open(\"print/math_editor.html\")" in _v80_dialog, "V81.0 asset probe is missing")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V81_0FormulaFrameLifecycleTest.kt").exists(),
+        "V81.0 test is missing")
+
 # مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
 _v79_total = (_v79_asset.__len__()
               + (ROOT/"app/src/main/assets/print/math_editor.html").stat().st_size
@@ -3169,7 +3184,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V80.0:")
+        and _v694_changelog.startswith("V81.0:")
+        and "V80.0:" in _v694_changelog
         and "V79.0:" in _v694_changelog
         and "V78.2:" in _v694_changelog
         and "V78.1:" in _v694_changelog

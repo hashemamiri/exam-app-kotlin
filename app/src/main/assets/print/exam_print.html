@@ -11471,6 +11471,18 @@ function installWordPaste(w) {
   function boot(cb) {
     if (ready) { cb(); return; }
     const f = frame();
+    /* V81.0 — اگر بوتِ قبلی ناتمام مانده و فریم هنوز خالی است، دوباره تلاش کن.
+       بدون این، `booted` برای همیشه true می‌ماند و کلیک‌های بعدیِ فرمول هیچ
+       بارگذاری تازه‌ای شروع نمی‌کنند. */
+    if (booted && !ready) {
+      var stale = true;
+      try {
+        var dd = f.contentDocument;
+        stale = !dd || !dd.documentElement ||
+                (dd.documentElement.outerHTML || '').length < 2000;
+      } catch (eS) { stale = true; }
+      if (stale) booted = false;
+    }
     const poll = setInterval(() => {
       try {
         const w = f.contentWindow;
@@ -11492,7 +11504,37 @@ function installWordPaste(w) {
          حالا فایل از همان مبدأ (/print/…) لود می‌شود و محدودیت برطرف است. */
       try { f.src = MATH_EDITOR_URL; } catch (eSrc) {}
       f.addEventListener('load', function () { injectHostTheme(); }, { once: true });
-      setTimeout(() => { if (!ready) { clearInterval(poll); try { if (typeof window.__openFallbackMathModal === 'function') { window.__openFallbackMathModal(window.__qmfActiveField || null, null); return; } } catch (eFb) {} notify('⚠️ ویرایشگر بارگیری نشد', 'error'); } }, 6000);
+      /* V81.0 — پشتیبانِ بارگذاری: اگر src به هر دلیلی سند را نیاورد (مسیرِ
+         asset سرو نشد، خطای شبکهٔ داخلی و…)، همان محتوا مستقیماً داخل فریم
+         نوشته می‌شود. هر دو مسیر یک نتیجه دارند و ویرایشگر عوض نمی‌شود. */
+      setTimeout(function () {
+        if (ready) return;
+        var doc = null;
+        try { doc = f.contentDocument; } catch (eDoc) { doc = null; }
+        var empty = true;
+        try {
+          empty = !doc || !doc.documentElement ||
+                  (doc.documentElement.outerHTML || '').length < 2000;
+        } catch (eLen) { empty = true; }
+        if (!empty) return;
+        try {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', MATH_EDITOR_URL, true);
+          xhr.onload = function () {
+            if (ready) return;
+            var body = String(xhr.responseText || '');
+            if (body.length < 2000) { window.__qmfMathBootError = 'asset-empty'; return; }
+            try {
+              var dd = f.contentDocument;
+              dd.open(); dd.write(body); dd.close();
+              injectHostTheme();
+            } catch (eW) { window.__qmfMathBootError = 'write-blocked:' + eW.message; }
+          };
+          xhr.onerror = function () { window.__qmfMathBootError = 'asset-fetch-failed'; };
+          xhr.send();
+        } catch (eX) { window.__qmfMathBootError = 'xhr-failed:' + eX.message; }
+      }, 1200);
+      setTimeout(() => { if (!ready) { clearInterval(poll); booted = false; try { if (typeof window.__openFallbackMathModal === 'function') { window.__openFallbackMathModal(window.__qmfActiveField || null, null); return; } } catch (eFb) {} notify('⚠️ ویرایشگر بارگیری نشد' + (window.__qmfMathBootError ? ' (' + window.__qmfMathBootError + ')' : ''), 'error'); } }, 6000);
     }
   }
 
@@ -11544,7 +11586,11 @@ function installWordPaste(w) {
           else mirror.setSelectionRange(t.selectionStart || 0, t.selectionEnd || 0);
         } catch (e) {}
         try { w.__hostForceTex = (capturedTex != null && capturedTex !== '') ? capturedTex : null; } catch (e) {}
-        frame().style.display = 'block';
+        /* V81.0 — بستن با setProperty('display','none','important') انجام
+           می‌شود، پس بازکردن هم باید important باشد؛ وگرنه اعلانِ ساده بر آن
+           غلبه نمی‌کند و ویرایشگر در دفعهٔ دومِ باز شدن نامرئی می‌ماند. */
+        frame().style.setProperty('display', 'block', 'important');
+        frame().style.pointerEvents = 'auto';
         document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
         w.openMath('qTxt_1');
@@ -11568,20 +11614,31 @@ function installWordPaste(w) {
   /* R11: گارد ضدِ باز شدن دوبارهٔ ویرایشگر فرمول — تا وقتی ویرایشگر باز است یا در حال باز شدن،
      فراخوانی بعدی (کلیک دوم + دابلکلیک + Enter همزمان) نادیده گرفته میشود.
      تایمر ۴۰۰ms کافی نبود: بوت ویرایشگر همزمان است و رویداد دابلکلیک بعد از پایان بوت میرسد. */
+  /* V81.0 — قلابِ ریست برای وقتی فریم از DOM جدا و دوباره ساخته می‌شود. */
+  window.__qmfMathFrameReset = function () { booted = false; ready = false; };
   const __r11MathOpenImpl = window.__openMathEditor;
   let __r11MathBusy = false;
   window.__r11MathOpenDone = function () { __r11MathBusy = false; };
   window.__openMathEditor = function () {
     if (__r11MathBusy) {
-      /* FIX-REEDIT-FORMULA-GUARD: اگر ویرایشگر واقعاً بسته است (فریم مخفی/حذف‌شده)،
-         گاردِ بازِ مانده نباید کلیک دوم روی فرمول (باز-ویرایش) را مسدود کند. */
+      /* V81.0 — این گارد قبلاً `f.style.display` (سبکِ inline) را می‌خواند.
+         اما iframe در خودِ HTML نوشته شده و با CSS پنهان است، پس سبکِ inline
+         رشتهٔ خالی است و هرگز برابر 'none' نمی‌شد. نتیجه: اگر یک‌بار بوت
+         ناتمام می‌ماند، گارد تا ۶۰ ثانیه قفل می‌شد و همهٔ کلیک‌های بعدیِ
+         فرمول بی‌صدا رد می‌شدند. حالا سبکِ محاسبه‌شده خوانده می‌شود. */
       try {
         const f = document.getElementById('mathEditorFrame');
-        if (!f || f.style.display === 'none') __r11MathBusy = false;
-      } catch (e) {}
+        var vis = false;
+        try { vis = !!f && window.getComputedStyle(f).display !== 'none'; } catch (e2) { vis = false; }
+        if (!vis) __r11MathBusy = false;
+      } catch (e) { __r11MathBusy = false; }
     }
     if (__r11MathBusy) return;
     __r11MathBusy = true;
+    /* V81.0 — گاردِ قفل‌شده نباید بیش از ۸ ثانیه دوام بیاورد. بوتِ ناموفق
+       نباید ویرایشگر را برای یک دقیقه از کار بیندازد. */
+    try { if (window.__r11MathBusyTimer) clearTimeout(window.__r11MathBusyTimer); } catch (e) {}
+    window.__r11MathBusyTimer = setTimeout(function () { __r11MathBusy = false; }, 8000);
     try { return __r11MathOpenImpl.apply(this, arguments); }
     catch (e) { __r11MathBusy = false; throw e; }
   };
@@ -11777,6 +11834,10 @@ function mathFrame() {
     f.style.setProperty('display', 'none', 'important');
     f.style.pointerEvents = 'none';
     document.body.appendChild(f);
+    /* V81.0 — فریمِ تازه‌ساخته هیچ محتوایی ندارد. اگر فریمِ قبلی از DOM جدا
+       شده باشد، وضعیتِ بوت باید ریست شود تا بارگذاری دوباره انجام گیرد؛
+       وگرنه ready/booted سرِ فریمِ مرده می‌مانند و ویرایشگر دیگر باز نمی‌شود. */
+    try { window.__qmfMathFrameReset && window.__qmfMathFrameReset(); } catch (e) {}
   }
   return f;
 }
@@ -11790,7 +11851,9 @@ function hideExactMathFrame() {
   const f = document.getElementById('mathEditorFrame');
   if (f) {
     try { f.style.setProperty('display', 'none', 'important'); f.style.pointerEvents = 'none'; } catch(e) {}
-    try { f.remove(); } catch(e) {}
+    /* V81.0 — فریم دیگر حذف نمی‌شود. از V79.0 محتوای ویرایشگر با src لود
+       می‌شود؛ حذفِ فریم یعنی دفعهٔ بعد یک فریمِ خالیِ بدون src ساخته شود و
+       ویرایشگر هرگز باز نشود. پنهان‌کردن کافی است و بازکردنِ بعدی فوری است. */
   }
   exactMathReady = false;
   exactMathBooted = false;
@@ -12307,6 +12370,37 @@ function openQuestionTool(qId, tool) {
   if (btn) btn.click();
 }
 function openMathModal(qId) { openQuestionTool(qId, 'formula'); }
+
+/* V81.0 — تشخیصِ وضعیتِ ویرایشگر فرمول. دکمهٔ بومیِ «بررسی فرمول» این را صدا
+   می‌زند تا اگر باز هم مشکلی بود، به‌جای حدس‌زدن، دقیقاً بدانیم کجا گیر است. */
+window.__qmfFormulaDiag = function () {
+  var out = {};
+  try {
+    var f = document.getElementById('mathEditorFrame');
+    out.iframeExists = !!f;
+    out.src = f ? (f.getAttribute('src') || '') : '';
+    out.inlineDisplay = f ? (f.style.display || '') : '';
+    try { out.computedDisplay = f ? window.getComputedStyle(f).display : ''; } catch (e) { out.computedDisplay = 'err'; }
+    var doc = null;
+    try { doc = f ? f.contentDocument : null; } catch (e) { doc = null; out.docBlocked = String(e.message || e); }
+    out.docBytes = 0;
+    try { out.docBytes = (doc && doc.documentElement) ? (doc.documentElement.outerHTML || '').length : 0; } catch (e) {}
+    var cw = null;
+    try { cw = f ? f.contentWindow : null; } catch (e) { out.winBlocked = String(e.message || e); }
+    out.hasOpenMath = !!(cw && typeof cw.openMath === 'function');
+    out.hasMfApply = !!(cw && typeof cw.mfApply === 'function');
+    out.hasCloseMath = !!(cw && typeof cw.closeMath === 'function');
+    out.editorUrl = (typeof MATH_EDITOR_URL !== 'undefined') ? MATH_EDITOR_URL : '(undefined)';
+    out.bootError = window.__qmfMathBootError || '';
+    out.openMathType = typeof window.__openMathEditor;
+    out.activeField = window.__qmfActiveField ? String(window.__qmfActiveField.id || '?') : 'null';
+    out.fieldAttached = !!(window.__qmfActiveField && document.body.contains(window.__qmfActiveField));
+    out.questionCount = (typeof questions !== 'undefined') ? questions.length : -1;
+    out.hiddenHost = !!document.getElementById('qTxt_main');
+    out.formulaBtn = !!document.getElementById('openFormulaEditor3');
+  } catch (e) { out.fatal = String(e.message || e); }
+  return JSON.stringify(out);
+};
 function closeMathModal() {
   /* R11: با بستن ویرایشگر فرمول، وضعیت «انتخاب» آیتمها پاک شود تا کلیک بعدی دوباره انتخاب باشد */
   try { if (window.QMF && typeof window.QMF.clearSelection === 'function') window.QMF.clearSelection(activeMathTextarea || window.__qmfActiveField); } catch (e) {}

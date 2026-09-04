@@ -34,6 +34,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -99,6 +101,9 @@ fun ExamHtmlPrintDialog(
     var questionTotal by remember { mutableStateOf("") }
     var showQuestionManager by remember { mutableStateOf(false) }
     var barStatus by remember { mutableStateOf<String?>(null) }
+    // V81.0 — نتیجهٔ بررسی خواندنِ asset ویرایشگر و متنِ تشخیص.
+    var mathAssetProbe by remember { mutableStateOf("(not-checked)") }
+    var formulaDiag by remember { mutableStateOf<String?>(null) }
     // V76.4 — پنجره‌های بومی
     val headerSchema = remember { loadHeaderSchema(context) }
     var showHeaderSettings by remember { mutableStateOf(false) }
@@ -218,6 +223,12 @@ fun ExamHtmlPrintDialog(
                     NativeBarButton("✅ چاپ استاد") { runJs("if (typeof printTeacher==='function') printTeacher();", null) }
                     NativeBarButton("➕ سوال جدید") { showNewQuestion = true }
                     NativeBarButton("👁 پیش‌نمایش") { runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null) }
+                    // V81.0 — اگر ویرایشگر فرمول باز نشد، این دکمه دقیقاً می‌گوید کجا گیر است.
+                    NativeBarButton("🩺 بررسی فرمول") {
+                        runJs("(function(){try{return window.__qmfFormulaDiag?window.__qmfFormulaDiag():'{}'}catch(e){return '{\"err\":\"'+e.message+'\"}'}})()") { raw ->
+                            formulaDiag = "asset=" + mathAssetProbe + "\n" + unwrapJsString(raw)
+                        }
+                    }
                     NativeBarButton("🗂 مدیریت سؤال") {
                         runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
                             questionRows = parseQuestionRows(list)
@@ -318,6 +329,16 @@ fun ExamHtmlPrintDialog(
                                         // نتیجه: کلیک روی آیکن فرمول هیچ پنجره‌ای باز نمی‌کرد.
                                         // فقط به پایانِ لودِ سندِ اصلی واکنش نشان بده.
                                         if (url != MAIN_PAGE_URL) return
+                                        // V81.0 — یک‌بار بررسی کن که فایل ویرایشگر
+                                        // واقعاً از assets خوانده می‌شود. اگر نه، همان
+                                        // ابتدا معلوم شود، نه بعد از کلیک کاربر.
+                                        runCatching {
+                                            view.context.assets.open("print/math_editor.html").use { st ->
+                                                val head = ByteArray(256)
+                                                val n = st.read(head)
+                                                mathAssetProbe = if (n > 100) "ok:$n" else "short:$n"
+                                            }
+                                        }.onFailure { mathAssetProbe = "missing:${it.javaClass.simpleName}" }
                                         // V78.2 — اگر ذخیرهٔ خودکارِ صفحه خالی بود ولی آینهٔ بومی
                                         // پیش‌نویس داشت، آن را برگردان (کش WebView پاک شده بوده).
                                         if (printable == null) {
@@ -389,6 +410,23 @@ fun ExamHtmlPrintDialog(
 
                     if (loading) {
                         CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    }
+
+                    // V81.0 — نتیجهٔ «بررسی فرمول»: متنِ قابل خواندن و قابل انتخاب،
+                    // تا در صورت باقی‌ماندنِ مشکل عیناً برای بررسی فرستاده شود.
+                    formulaDiag?.let { diag ->
+                        AlertDialog(
+                            onDismissRequest = { formulaDiag = null },
+                            confirmButton = {
+                                TextButton(onClick = { formulaDiag = null }) { Text("بستن") }
+                            },
+                            title = { Text("وضعیت ویرایشگر فرمول") },
+                            text = {
+                                SelectionContainer {
+                                    Text(diag, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        )
                     }
 
                     jsError?.let { message ->
