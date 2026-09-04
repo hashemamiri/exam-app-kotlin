@@ -1,0 +1,833 @@
+{
+ "templates": [
+  {
+   "id": "classic",
+   "label": "سربرگ ۱ - قالب قبلی دانشگاه آزاد",
+   "fields": [
+    {
+     "id": "f_name",
+     "label": "نام و نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_studentId",
+     "label": "شماره دانشجویی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_professor",
+     "label": "استاد:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_department",
+     "label": "گروه آموزشی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_examType",
+     "label": "نوع امتحان:",
+     "full": false,
+     "kind": "select",
+     "options": [
+      {
+       "v": "میان‌ترم",
+       "t": "میان‌ترم"
+      },
+      {
+       "v": "پایان‌ترم",
+       "t": "پایان‌ترم"
+      },
+      {
+       "v": "کوئیز",
+       "t": "کوئیز"
+      },
+      {
+       "v": "تشریحی",
+       "t": "تشریحی"
+      },
+      {
+       "v": "تستی",
+       "t": "تستی"
+      }
+     ]
+    },
+    {
+     "id": "f_branch",
+     "label": "واحد:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً فسا، تهران مرکز، شیراز"
+    },
+    {
+     "id": "f_studentCount",
+     "label": "تعداد دانشجو:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_examDate",
+     "label": "تاریخ امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_examTime",
+     "label": "ساعات برگزاری امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_duration",
+     "label": "مدت زمان امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_tools",
+     "label": "وسایل مجاز:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_sheets",
+     "label": "تعداد برگ سفید لازم:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_gradesDate",
+     "label": "تاریخ اعلام نمرات:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "f_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "id": "formal",
+   "label": "سربرگ ۲ - قالب بسمه تعالی / اداره امتحانات",
+   "fields": [
+    {
+     "id": "h2_branch",
+     "label": "واحد:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً فسا، تهران مرکز، شیراز"
+    },
+    {
+     "id": "h2_chair",
+     "label": "شماره صندلی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_area",
+     "label": "حوزه:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً معاونت آموزش - اداره امتحانات"
+    },
+    {
+     "id": "h2_examLine",
+     "label": "عنوان آزمون/نیمسال:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً سؤالات امتحانی پایان نیمسال دوم‌سال تحصیلی ۹۳-۹۲"
+    },
+    {
+     "id": "h2_name",
+     "label": "نام و نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_studentId",
+     "label": "شماره دانشجویی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_major",
+     "label": "رشته:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_degree",
+     "label": "مقطع:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_professor",
+     "label": "نام استاد:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_examDate",
+     "label": "تاریخ امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_duration",
+     "label": "مدت امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_totalScore",
+     "label": "مجموع بارم نمره:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_tools",
+     "label": "وسایل مجاز در امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h2_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "id": "sama",
+   "label": "سربرگ ۳ - قالب آموزشکده سما",
+   "fields": [
+    {
+     "id": "h3_unit",
+     "label": "نام آموزشکده/واحد:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً آموزشکده فنی و حرفه‌ای سما واحد لنگرود"
+    },
+    {
+     "id": "h3_office",
+     "label": "اداره/دایره:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً اداره آموزش – دایره امتحانات"
+    },
+    {
+     "id": "h3_semester",
+     "label": "نیمسال:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً نیمسال اول ۹۶-۹۵"
+    },
+    {
+     "id": "h3_quote",
+     "label": "حدیث/عبارت بالای سربرگ:",
+     "full": true,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_professor",
+     "label": "نام استاد:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_examDate",
+     "label": "تاریخ برگزاری امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_examTime",
+     "label": "ساعت برگزاری امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_duration",
+     "label": "مدت زمان لازم جهت پاسخگویی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_name",
+     "label": "نام و نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_studentId",
+     "label": "شماره دانشجویی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_degree",
+     "label": "مقطع:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_major",
+     "label": "رشته تحصیلی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_chair",
+     "label": "شماره صندلی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h3_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "id": "school",
+   "label": "سربرگ ۴ - قالب آموزش و پرورش / مدرسه",
+   "fields": [
+    {
+     "id": "h4_page",
+     "label": "صفحه:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً ۱ از ۲"
+    },
+    {
+     "id": "h4_examTurn",
+     "label": "نوبت امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً پایانی نوبت اول"
+    },
+    {
+     "id": "h4_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_educationOffice",
+     "label": "مدیریت آموزش و پرورش:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً مدیریت آموزش و پرورش اردستان"
+    },
+    {
+     "id": "h4_schoolName",
+     "label": "نام مدرسه:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً دبیرستان امام خمینی اردستان"
+    },
+    {
+     "id": "h4_schoolYear",
+     "label": "ماه امتحان / سال تحصیلی:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً دی ماه ۱۳۹۴، سال تحصیلی ۹۵-۱۳۹۴"
+    },
+    {
+     "id": "h4_examDay",
+     "label": "تاریخ امتحان - روز:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_examDate",
+     "label": "تاریخ امتحان - مورخه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_duration",
+     "label": "مدت امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً ۶۰ دقیقه"
+    },
+    {
+     "id": "h4_startTime",
+     "label": "زمان شروع:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً ۸ صبح"
+    },
+    {
+     "id": "h4_name",
+     "label": "نام و نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_father",
+     "label": "نام پدر:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_class",
+     "label": "کلاس / پایه / رشته:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_note",
+     "label": "توجه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h4_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "id": "edu",
+   "label": "سربرگ ۵ - قالب اداره کل آموزش و پرورش",
+   "fields": [
+    {
+     "id": "h5_firstName",
+     "label": "نام:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_lastName",
+     "label": "نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_father",
+     "label": "نام پدر:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_page",
+     "label": "صفحه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_examTurn",
+     "label": "نوبت امتحانی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_grade",
+     "label": "پایه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_branch",
+     "label": "شعبه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_examDate",
+     "label": "تاریخ امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_startTime",
+     "label": "ساعت شروع:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_duration",
+     "label": "مدت امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_generalOffice",
+     "label": "اداره کل:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً اداره کل آموزش و پرورش"
+    },
+    {
+     "id": "h5_assessment",
+     "label": "عنوان سنجش:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً کارشناس سنجش و ارزشیابی تحصیلی"
+    },
+    {
+     "id": "h5_districtOffice",
+     "label": "اداره آموزش و پرورش:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً اداره آموزش و پرورش"
+    },
+    {
+     "id": "h5_schoolName",
+     "label": "نام آموزشگاه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h5_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "id": "detailed-school",
+   "label": "سربرگ ۶ - قالب مدیریت آموزش و پرورش / مصحح",
+   "fields": [
+    {
+     "id": "h6_name",
+     "label": "نام:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_family",
+     "label": "نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_father",
+     "label": "نام پدر:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_studentNo",
+     "label": "شماره دانش‌آموزی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_educationOffice",
+     "label": "مدیریت آموزش و پرورش:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً مدیریت آموزش و پرورش شهرستان گراش"
+    },
+    {
+     "id": "h6_schoolName",
+     "label": "نام آموزشگاه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_sealText",
+     "label": "متن محل مهر:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً محل مهر آموزشگاه"
+    },
+    {
+     "id": "h6_grade",
+     "label": "پایه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_branch",
+     "label": "شعبه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_examDate",
+     "label": "تاریخ امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_examTime",
+     "label": "ساعت برگزاری:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_duration",
+     "label": "مدت امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_pageCount",
+     "label": "تعداد صفحه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_pageNumber",
+     "label": "شماره صفحه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h6_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "id": "ministry",
+   "label": "سربرگ ۷ - قالب وزارت آموزش و پرورش",
+   "fields": [
+    {
+     "id": "h7_name",
+     "label": "نام:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_family",
+     "label": "نام خانوادگی:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_father",
+     "label": "نام پدر:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_course",
+     "label": "نام درس:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_examDate",
+     "label": "تاریخ امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_duration",
+     "label": "مدت امتحان:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_grade",
+     "label": "پایه:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_major",
+     "label": "رشته:",
+     "full": false,
+     "kind": "input",
+     "type": "text"
+    },
+    {
+     "id": "h7_ministry",
+     "label": "عنوان وزارت:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "وزارت آموزش و پرورش جمهوری اسلامی ایران"
+    },
+    {
+     "id": "h7_generalOffice",
+     "label": "اداره کل:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "اداره کل آموزش و پرورش استان فارس"
+    },
+    {
+     "id": "h7_districtOffice",
+     "label": "مدیریت:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مدیریت آموزش و پرورش شهرستان فسا(منطقه ۳)"
+    },
+    {
+     "id": "h7_schoolName",
+     "label": "نام مدرسه:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "دبستان فتح المبین"
+    },
+    {
+     "id": "h7_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 2
+    },
+    {
+     "id": "opt_footerText",
+     "label": "متن پایین صفحه / موفق باشید:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "مثلاً موفق باشید – دکتر نمازی – دانشگاه آزاد اسلامی واحد تهران مرکز"
+    }
+   ]
+  }
+ ]
+}

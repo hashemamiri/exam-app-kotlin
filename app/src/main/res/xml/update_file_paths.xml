@@ -3,4 +3,8 @@
     <external-files-path
         name="downloaded_updates"
         path="Download/updates/" />
+    <!-- V76.4 — عکس‌های لحظه‌ای استودیوی تصویر سؤال -->
+    <cache-path
+        name="studio_images"
+        path="studio/" />
 </paths>

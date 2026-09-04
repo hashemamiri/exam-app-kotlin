@@ -51,6 +51,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import ir.exam.app.domain.model.OfficialExamPrintable
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.ByteArrayInputStream
 import java.io.IOException
 
@@ -65,6 +68,10 @@ import java.io.IOException
  * V76.3 — هفت کنترل اصلی (تنظیمات سربرگ، ذخیره، بازکردن، چاپ دانشجو/استاد،
  * سوال جدید، پیش‌نمایش) به نوار فرمان بومی این پنجره منتقل شده‌اند؛ نوار HTML
  * فایل مخفی است و فرمان‌ها از طریق evaluateJavascript به صفحه اعمال می‌شوند.
+ * V76.4 — پنجره‌های «تنظیمات سربرگ/ذخیره/بازکردن/سوال جدید» هم بومی شدند
+ * (شِمای سربرگ از print/header_settings_schema.json — استخراج‌شده از خود فایل)
+ * و دکمهٔ دوربینِ سؤال، استودیوی تصویر بومی را باز می‌کند
+ * (ExamPrintNative.openImageStudio با پشتیبانِ استودیوی کامل HTML).
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -78,6 +85,26 @@ fun ExamHtmlPrintDialog(
     // V76.3 — ارجاع WebView برای فرمان‌های نوار بومی + پیام وضعیت
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
+    // V76.4 — پنجره‌های بومی
+    val headerSchema = remember { loadHeaderSchema(context) }
+    var showHeaderSettings by remember { mutableStateOf(false) }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var showNewQuestion by remember { mutableStateOf(false) }
+    var studioQuestionId by remember { mutableStateOf<String?>(null) }
+    var pageSnapshotJson by remember { mutableStateOf<String?>(null) }
+    var pendingOpenText by remember { mutableStateOf<String?>(null) }
+    val saveFileLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val payload = unwrapJsString(pageSnapshotJson).ifBlank { return@rememberLauncherForActivityResult }
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ok = runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                out.write(payload.toByteArray(Charsets.UTF_8))
+            } != null
+        }.getOrDefault(false)
+        barStatus = if (ok) "فایل JSON ذخیره شد ✓" else "ذخیرهٔ فایل ناموفق بود."
+    }
     val runJs: (String, ((String?) -> Unit)?) -> Unit = { script, cb ->
         webViewRef?.evaluateJavascript(script, cb)
     }
@@ -99,10 +126,7 @@ fun ExamHtmlPrintDialog(
             barStatus = "فایل انتخاب‌شده آزمون نیست (فایل JSON لازم است)."
             return@rememberLauncherForActivityResult
         }
-        val b64 = android.util.Base64.encodeToString(text.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-        runJs("(function(){try{window.setExamData(atob('" + b64 + "'));return 'ok'}catch(e){return 'err'}})()") { r ->
-            barStatus = if (r?.contains("ok") == true) "آزمون باز شد ✓" else "باز کردن آزمون ناموفق بود."
-        }
+        pendingOpenText = text
     }
 
     Dialog(
@@ -150,16 +174,17 @@ fun ExamHtmlPrintDialog(
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    NativeBarButton("⚙ تنظیمات سربرگ") { runJs("if (typeof toggleSettings==='function') toggleSettings();", null) }
-                    NativeBarButton("💾 ذخیره") {
-                        runJs(
-                            "(function(){try{return window.__qmfSaveNow?window.__qmfSaveNow():'missing'}catch(e){return 'err'}})()"
-                        ) { r -> barStatus = if (r?.contains("ok") == true) "ذخیره شد ✓" else "ذخیره نشد!" }
+                    NativeBarButton("⚙ تنظیمات سربرگ") {
+                        runJs("(function(){try{return window.__qmfExportJson?window.__qmfExportJson():'{}'}catch(e){return '{}'}})()") { r ->
+                            pageSnapshotJson = r
+                            showHeaderSettings = true
+                        }
                     }
+                    NativeBarButton("💾 ذخیره") { showSaveDialog = true }
                     NativeBarButton("📂 بازکردن") { openExamPicker.launch("*/*") }
                     NativeBarButton("🖨 چاپ دانشجو") { runJs("if (typeof printStudent==='function') printStudent();", null) }
                     NativeBarButton("✅ چاپ استاد") { runJs("if (typeof printTeacher==='function') printTeacher();", null) }
-                    NativeBarButton("➕ سوال جدید") { runJs("if (typeof openQuestionTypePicker==='function') openQuestionTypePicker();", null) }
+                    NativeBarButton("➕ سوال جدید") { showNewQuestion = true }
                     NativeBarButton("👁 پیش‌نمایش") { runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null) }
                 }
 
@@ -201,7 +226,10 @@ fun ExamHtmlPrintDialog(
                                             }
                                         },
                                         onClose = { post { onDismiss() } },
-                                        onError = { message -> post { jsError = message; loading = false } }
+                                        onError = { message -> post { jsError = message; loading = false } },
+                                        onOpenImageStudio = { qid ->
+                                            post { studioQuestionId = qid.ifBlank { null } }
+                                        }
                                     ),
                                     "ExamPrintNative"
                                 )
@@ -314,8 +342,123 @@ fun ExamHtmlPrintDialog(
                     }
                 }
             }
+
+            // V76.4 — پنجره‌های بومی آزمون‌ساز
+            if (showHeaderSettings && headerSchema != null) {
+                HeaderSettingsDialog(
+                    schema = headerSchema,
+                    currentValues = parsePageFields(pageSnapshotJson),
+                    onApply = { payload ->
+                        showHeaderSettings = false
+                        val b64 = android.util.Base64.encodeToString(
+                            kotlinx.serialization.json.Json.encodeToString(
+                                kotlinx.serialization.serializer<Map<String, String>>(),
+                                payload
+                            ).toByteArray(Charsets.UTF_8),
+                            android.util.Base64.NO_WRAP
+                        )
+                        runJs("(function(){try{return window.__qmfSetFields?window.__qmfSetFields(atob('" + b64 + "')):'missing'}catch(e){return 'err'}})()") { r ->
+                            barStatus = if (r?.contains("ok") == true) "سربرگ اعمال شد ✓" else "اعمال سربرگ ناموفق بود."
+                        }
+                    },
+                    onDismiss = { showHeaderSettings = false }
+                )
+            }
+            if (showSaveDialog) {
+                SaveExamDialog(
+                    onSaveSession = {
+                        showSaveDialog = false
+                        runJs("(function(){try{return window.__qmfSaveNow?window.__qmfSaveNow():'missing'}catch(e){return 'err'}})()") { r ->
+                            barStatus = if (r?.contains("ok") == true) "ذخیره شد ✓" else "ذخیره نشد!"
+                        }
+                    },
+                    onSaveFile = {
+                        showSaveDialog = false
+                        runJs("(function(){try{return window.__qmfExportJson?window.__qmfExportJson():'{}'}catch(e){return '{}'}})()") { r ->
+                            pageSnapshotJson = r ?: "{}"
+                            saveFileLauncher.launch(safeExamFileName(null))
+                        }
+                    },
+                    onDismiss = { showSaveDialog = false }
+                )
+            }
+            pendingOpenText?.let { text ->
+                val parsed = runCatching {
+                    kotlinx.serialization.json.Json.parseToJsonElement(text).jsonObject
+                }.getOrNull()
+                if (parsed == null) {
+                    pendingOpenText = null
+                    barStatus = "فایل JSON معتبر نیست."
+                } else {
+                    val fields = parsed["fields"]?.jsonObject
+                    val count = parsed["questions"]?.jsonArray?.size ?: 0
+                    OpenExamSummaryDialog(
+                        course = fields?.get("f_course")?.jsonPrimitive?.content,
+                        school = fields?.get("f_branch")?.jsonPrimitive?.content,
+                        questionCount = count,
+                        onApply = {
+                            pendingOpenText = null
+                            val b64 = android.util.Base64.encodeToString(text.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+                            runJs("(function(){try{window.setExamData(atob('" + b64 + "'));return 'ok'}catch(e){return 'err'}})()") { r ->
+                                barStatus = if (r?.contains("ok") == true) "آزمون باز شد ✓" else "باز کردن آزمون ناموفق بود."
+                            }
+                        },
+                        onDismiss = { pendingOpenText = null }
+                    )
+                }
+            }
+            if (showNewQuestion) {
+                NewQuestionTypeDialog(
+                    onPick = { type ->
+                        showNewQuestion = false
+                        runJs("(function(){try{if(typeof pickQuestionType==='function'){pickQuestionType('" + type + "');return 'ok'}return 'missing'}catch(e){return 'err'}})()") { r ->
+                            barStatus = if (r?.contains("ok") == true) null else "سوال جدید اضافه نشد."
+                        }
+                    },
+                    onDismiss = { showNewQuestion = false }
+                )
+            }
+            studioQuestionId?.let { qid ->
+                ExamImageStudioDialog(
+                    questionId = qid,
+                    onInsert = { dataUrl, h ->
+                        studioQuestionId = null
+                        // dataUrl همیشه base64 است (بدون نقل‌قول/بک‌اسلش) ⇒ درج مستقیم امن است
+                        runJs(
+                            "(function(){try{return window.__qmfAddQuestionImage?window.__qmfAddQuestionImage('" + qid + "','" + dataUrl + "'," + h + "):'missing'}catch(e){return 'err'}})()"
+                        ) { r ->
+                            barStatus = if (r?.contains("ok") == true) "تصویر درج شد ✓" else "درج تصویر ناموفق بود."
+                        }
+                    },
+                    onLegacyStudio = {
+                        studioQuestionId = null
+                        runJs("(function(){try{return window.__qmfOpenLegacyStudio?window.__qmfOpenLegacyStudio('" + qid + "'):'missing'}catch(e){return 'err'}})()") { r ->
+                            if (r?.contains("ok") != true) barStatus = "ابزار کامل در دسترس نیست؛ اول سؤال را باز کنید."
+                        }
+                    },
+                    onDismiss = { studioQuestionId = null }
+                )
+            }
         }
     }
+}
+
+/** خروجی evaluateJavascript برای رشته‌ها JSON-کوت است؛ رشتهٔ واقعی را برمی‌گرداند. */
+internal fun unwrapJsString(value: String?): String {
+    val raw = value ?: return ""
+    if (!raw.startsWith("\"")) return raw
+    return runCatching {
+        kotlinx.serialization.json.Json.parseToJsonElement(raw).jsonPrimitive.content
+    }.getOrDefault(raw)
+}
+
+/** استخراج فیلدهای ف_دار از JSON صفحه برای پیش‌پرکردن پنجرهٔ سربرگ. */
+internal fun parsePageFields(snapshotJson: String?): Map<String, String> {
+    val obj = runCatching {
+        kotlinx.serialization.json.Json.parseToJsonElement(unwrapJsString(snapshotJson)).jsonObject
+    }.getOrNull() ?: return emptyMap()
+    val fields = obj["fields"]?.jsonObject ?: return emptyMap()
+    return fields.entries.associate { (k, v) -> k to (v as? kotlinx.serialization.json.JsonPrimitive)?.content.orEmpty() }
 }
 
 @Composable
@@ -332,11 +475,18 @@ private fun NativeBarButton(label: String, onClick: () -> Unit) {
 private class ExamPrintBridge(
     private val onPrint: (String) -> Unit,
     private val onClose: () -> Unit,
-    private val onError: (String) -> Unit
+    private val onError: (String) -> Unit,
+    private val onOpenImageStudio: (String) -> Unit
 ) {
     @JavascriptInterface
     fun print(mode: String?) {
         onPrint(mode ?: "student")
+    }
+
+    /** V76.4 — دکمهٔ دوربینِ سؤال: باز کردن استودیوی تصویر بومی برای این سؤال. */
+    @JavascriptInterface
+    fun openImageStudio(questionId: String?) {
+        onOpenImageStudio(questionId.orEmpty())
     }
 
     @JavascriptInterface

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <!--
-  نسخهٔ 30-P4 — میزبان اپ اندروید: پل ورود خودکار آزمون از برنامه (window.setExamData)،
-  چاپ دانشجو/استاد از طریق پل بومی ExamPrintNative، و پشتیبانِ فرمول اگر بوتِ ویرایشگرِ
-  اصلی (MATH_EDITOR_HTML) شکست خورد. هفت کنترلِ اصلی (تنظیمات سربرگ/ذخیره/بازکردن/
-  چاپ دانشجو/چاپ استاد/سوال جدید/چشم) به نوارِ بومیِ اپ منتقل شده‌اند (نوارِ HTML مخفی)
-  و __qmfSaveNow برای ذخیرهٔ بومیِ نشست آمده است. همهٔ ابزارهای درج فعال‌اند و پنجره‌ها
-  در نمایشگر باریک تمام‌صفحه و لمس‌پذیرند.
+  نسخهٔ 30-P5 — میزبان اپ اندروید: پل ورود/ذخیرهٔ آزمون (window.setExamData، __qmfSaveNow،
+  __qmfExportJson، __qmfSetFields)، درج تصویر بومی (__qmfAddQuestionImage)، دوربینِ بومیِ
+  سؤال (ExamPrintNative.openImageStudio با پشتیبانِ استودیوی کامل __qmfOpenLegacyStudio)،
+  چاپ دانشجو/استاد از پل بومی با قفلِ mode، پشتیبانِ فرمول اگر بوتِ ویرایشگرِ اصلی
+  (MATH_EDITOR_HTML) شکست خورد. هفت کنترل اصلی به نوار بومی اپ منتقل شده‌اند (نوار HTML
+  مخفی) و پنجره‌های تنظیمات سربرگ/ذخیره/بازکردن/سوال جدید بومی شده‌اند.
   مبنا: نسخهٔ 19 (SHA-256 ba2f671570936add44e379d3a590ab6f88b8307a4200e2214b44f8a2e6115abe) | تاریخ: 2026-09-04
 -->
 <html lang="fa" dir="rtl">
@@ -14730,6 +14730,14 @@ loadSample();
       e.preventDefault();
       e.stopPropagation();
       try { p.file.value = ''; } catch (err) {}
+      /* V30-P5 — دوربین/استودیوی تصویر بومیِ اپ؛ پشتیبان: مسیر قدیمی HTML */
+      try {
+        var __qq = questionOf(block);
+        if (window.ExamPrintNative && typeof window.ExamPrintNative.openImageStudio === 'function') {
+          window.ExamPrintNative.openImageStudio(__qq ? String(__qq.id) : '');
+          return;
+        }
+      } catch (err2) {}
       try { p.file.click(); } catch (err) {}
     });
     p.file.addEventListener('change', function () {
@@ -14934,7 +14942,7 @@ loadSample();
 <style id="qmfNativeBar">/* V30-P4 — هفت کنترل اصلی به نوار بومی اپ منتقل شد؛ نوار HTML مخفی می‌شود */
 .toolbar{display:none!important}
 </style>
-<script id="qmfMathFallback">/* V30-P4 — پشتیبانِ فرمول: فقط اگر بوتِ ویرایشگر اصلی شکست خورد */
+<script id="qmfMathFallback">/* V30-P3 — پشتیبانِ فرمول: فقط اگر بوتِ ویرایشگر اصلی شکست خورد */
 (function () {
 'use strict';
 if (window.__qmfMathFallback) return; window.__qmfMathFallback = true;
@@ -14960,7 +14968,7 @@ window.__openFallbackMathModal = function (t, capturedTex) {
 };
 })();
 </script>
-<script id="qmfHostBridge">/* V30-P4 — پل میزبان اندروید: ورود/ذخیرهٔ خودکار آزمون از برنامهٔ بومی */
+<script id="qmfHostBridge">/* V30-P5 — پل میزبان اندروید: ورود/ذخیره/فیلدها/تصویر */
 (function () {
 'use strict';
 if (window.__qmfHostBridge) return; window.__qmfHostBridge = true;
@@ -15002,6 +15010,9 @@ function setField(id, val) {
   var el = document.getElementById(id); if (!el) return;
   if (el.type === 'checkbox') el.checked = !!val; else el.value = (val == null ? '' : String(val));
 }
+function persistNow() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ fields: collectFields(), questions: (typeof questions !== 'undefined' ? questions : []), qIdCounter: (typeof qIdCounter !== 'undefined' ? qIdCounter : 0), savedAt: Date.now() })); } catch (e) {}
+}
 window.setExamData = function (data) {
   try {
     if (typeof data === 'string') data = JSON.parse(data);
@@ -15019,16 +15030,58 @@ window.setExamData = function (data) {
     try { updateHeaderSettingsVisibility(); } catch (e) {}
     renderAll();
     try { syncTotalScore(); } catch (e) {}
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ fields: collectFields(), questions: questions, qIdCounter: qIdCounter, savedAt: Date.now() })); } catch (e) {}
+    persistNow();
   } catch (e) {
     try { if (window.ExamPrintNative && window.ExamPrintNative.onError) window.ExamPrintNative.onError('import-failed'); } catch (_e) {}
   }
 };
 window.__qmfSaveNow = function () {
+  try { persistNow(); return "ok"; } catch (e) { return "err"; }
+};
+window.__qmfExportJson = function () {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ fields: collectFields(), questions: (typeof questions !== 'undefined' ? questions : []), qIdCounter: (typeof qIdCounter !== 'undefined' ? qIdCounter : 0), savedAt: Date.now() }));
-    return 'ok';
-  } catch (e) { return 'err'; }
+    return JSON.stringify({ fields: collectFields(), questions: (typeof questions !== "undefined" ? questions : []), qIdCounter: (typeof qIdCounter !== "undefined" ? qIdCounter : 0) });
+  } catch (e) { return "{}"; }
+};
+window.__qmfSetFields = function (jsonStr) {
+  try {
+    var f = JSON.parse(jsonStr);
+    Object.keys(f || {}).forEach(function (k) { setField(k, f[k]); });
+    try { if (typeof updateHeaderSettingsVisibility === "function") updateHeaderSettingsVisibility(); } catch (e) {}
+    try { if (typeof renderAll === "function") renderAll(); } catch (e2) {}
+    persistNow();
+    return "ok";
+  } catch (e) { return "err"; }
+};
+window.__qmfAddQuestionImage = function (qid, dataUrl, h) {
+  try {
+    var q = null;
+    if (typeof questions !== "undefined") { for (var i = 0; i < questions.length; i++) { if (String(questions[i].id) === String(qid)) { q = questions[i]; break; } } }
+    if (!q) return "no-question";
+    if (!Array.isArray(q.qimgImages)) q.qimgImages = [];
+    q.qimgImages.push({ src: String(dataUrl), w: 420, h: Number(h) || 0 });
+    var ta = document.getElementById("q_text_" + qid);
+    try { if (window.__examBuilderUpdateQuestionText && ta) window.__examBuilderUpdateQuestionText(ta); } catch (e) {}
+    try { if (typeof renderPreview === "function") renderPreview(); } catch (e2) {}
+    try { if (typeof updatePreview === "function") updatePreview(); } catch (e3) {}
+    try { if (typeof renderAll === "function") renderAll(); } catch (e4) {}
+    try { if (ta) ta.dispatchEvent(new Event("input", { bubbles: true })); } catch (e5) {}
+    return "ok";
+  } catch (e) { return "err"; }
+};
+window.__qmfOpenLegacyStudio = function (qid) {
+  try {
+    var blocks = document.querySelectorAll("[data-qimg-block]");
+    for (var i = 0; i < blocks.length; i++) {
+      var host = blocks[i].closest(".exam-question-editor-shell") || blocks[i].parentNode;
+      var ta = host && host.querySelector ? host.querySelector('textarea[id="q_text_' + qid + '"]') : null;
+      if (ta || blocks.length === 1) {
+        var fi = blocks[i].querySelector(".qimg-file");
+        if (fi) { fi.value = ""; fi.click(); return "ok"; }
+      }
+    }
+    return "no-block";
+  } catch (e) { return "err"; }
 };
 })();
 </script>

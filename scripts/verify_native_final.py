@@ -2584,8 +2584,46 @@ require(_v730_dialog.exists()
         and "NativeBarButton(\"➕ سوال جدید\")" in _v730_dialog_text
         and "NativeBarButton(\"👁 پیش\u200cنمایش\")" in _v730_dialog_text
         and "openExamPicker.launch" in _v730_dialog_text
-        and "window.__qmfSaveNow" in _v730_dialog_text,
-        "V76.3 ExamHtmlPrintDialog (native command bar, viewport, file chooser) is missing")
+        and "window.__qmfSaveNow" in _v730_dialog_text
+        and "HeaderSettingsDialog(" in _v730_dialog_text
+        and "SaveExamDialog(" in _v730_dialog_text
+        and "OpenExamSummaryDialog(" in _v730_dialog_text
+        and "NewQuestionTypeDialog(" in _v730_dialog_text
+        and "loadHeaderSchema(context)" in _v730_dialog_text
+        and "window.__qmfSetFields" in _v730_dialog_text
+        and "ExamImageStudioDialog(" in _v730_dialog_text
+        and "fun openImageStudio(questionId: String?)" in _v730_dialog_text,
+        "V76.4 ExamHtmlPrintDialog (native command bar + native windows + studio bridge) is missing")
+_v764_windows=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamBuilder30Windows.kt")
+_v764_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt")
+_v764_schema=(ROOT/"app/src/main/assets/print/header_settings_schema.json")
+_v764_windows_text=_v764_windows.read_text() if _v764_windows.exists() else ""
+_v764_studio_text=_v764_studio.read_text() if _v764_studio.exists() else ""
+_v764_schema_text=_v764_schema.read_text(encoding="utf-8") if _v764_schema.is_file() else ""
+require(_v764_windows.exists()
+        and "fun loadHeaderSchema(" in _v764_windows_text
+        and '"multiple" to "🔘 چندگزینه‌ای"' in _v764_windows_text
+        and '"matching" to "↔ جورکردنی"' in _v764_windows_text
+        and 'payload["f_headerTemplate"] = templateId' in _v764_windows_text,
+        "V76.4 native windows (header schema dialog + question types) are missing")
+require(_v764_schema.is_file() and _v764_schema.stat().st_size > 5_000
+        and '"detailed-school"' in _v764_schema_text and '"ministry"' in _v764_schema_text
+        and '"f_course"' in _v764_schema_text,
+        "V76.4 header settings schema asset is missing")
+require(_v764_studio.exists()
+        and "ActivityResultContracts.TakePicture()" in _v764_studio_text
+        and "FileProvider.getUriForFile" in _v764_studio_text
+        and "fun processAndEncode(" in _v764_studio_text
+        and "mutableStateOf(185)" in _v764_studio_text
+        and "0 to \"∞\"" in _v764_studio_text,
+        "V76.4 native image studio core is missing")
+_v764_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
+require("window.__qmfAddQuestionImage" in _v764_asset
+        and "window.__qmfOpenLegacyStudio" in _v764_asset
+        and "window.__qmfSetFields" in _v764_asset
+        and "window.__qmfExportJson" in _v764_asset
+        and "openImageStudio" in _v764_asset,
+        "V76.4 asset host bridge (setFields/export/addImage/legacyStudio/camera) is missing")
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
         and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
@@ -2715,13 +2753,14 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 256
-        and _v694_changelog.startswith("V76.3:")
+require(_v694_lines >= 257
+        and _v694_changelog.startswith("V76.4:")
+        and "V76.3:" in _v694_changelog
         and "V76.2:" in _v694_changelog
         and "V76.1:" in _v694_changelog
         and "V76.0:" in _v694_changelog
         and "V75.8.1:" in _v694_changelog,
-        "changelog must keep the full history + the new V76.3 line on top")
+        "changelog must keep the full history + the new V76.4 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment

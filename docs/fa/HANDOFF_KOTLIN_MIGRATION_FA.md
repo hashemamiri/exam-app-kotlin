@@ -15825,3 +15825,75 @@ renderPlainWithMath ریگکس \\(…\\) را با mathToHtml (MathParser کام
 ```
 
 پچ: V76_3_builder30_native_command_bar — بدون SQL.
+
+## ۲۹۸) V76.4 — چهار پنجرهٔ بومی + هستهٔ بومی استودیوی تصویر (پچ اول از مسیر بومیِ کامل)
+
+### درخواست کاربر + تصمیم ask_user
+
+```text
+پنجرهٔ دکمه‌های تنظیمات سربرگ، ذخیره آزمون، بازکردن آزمون و سوال جدید
+نیتیو شود. پنجرهٔ دکمه دوربین با حفظ تمام امکانات و عملکردها نیتیو شود.
+ask_user (گزینهٔ «بومیِ کامل، پچ‌به‌پچ»): همهٔ ابزارهای استودیو در چند پچ
+بومی می‌شوند؛ پچ اول فقط هسته (دوربین/برش/چرخش/اسکن/اندازه). برای «هیچ
+امکانی در فاصلهٔ بین پچ‌ها از دست نرود»، دکمهٔ «ابزارهای کامل» همان
+استودیوی HTML را باز می‌کند تا پورت نهایی کامل شود.
+```
+
+### چه شد
+
+```text
+- شِمای تنظیمات سربرگ از خودِ 30.html استخراج شد (transform گام0):
+  ۷ قالب، ۱۰۶ فیلد با شناسه/برچسب/نوع/گزینه‌ها/placeholder واقعی ←
+  assets/print/header_settings_schema.json. پنجرهٔ بومی شِما-محور است؛
+  با تغییر قالب، فیلدهای همان قالب رندر می‌شود؛ مقادیر فعلی با
+  __qmfExportJson از صفحه پیش‌خوانی و با __qmfSetFields (پل جدید) اعمال
+  و ماندگار می‌شود (پل: set + updateHeaderSettingsVisibility + renderAll
+  + persistNow).
+- ذخیره: پنجرهٔ بومی دو مسیر — «این جلسه» (__qmfSaveNow) و «فایل JSON در
+  دستگاه» با CreateDocument SAF؛ داده از __qmfExportJson (پل جدید).
+  نکتهٔ رفع‌شده: خروجی evaluateJavascript برای رشته‌ها JSON-کوت است ⇒
+  unwrapJsString (parsePageFields و ذخیرهٔ فایل بدون این خراب می‌شد).
+- بازکردن: انتخاب‌گر بومی → خواندن → پارس → پنجرهٔ خلاصهٔ بومی (درس/
+  مدرسه/تعداد سؤال) → اعمال با setExamData(atob).
+- سوال جدید: پنجرهٔ بومی ۶ نوعه با همان نمادها/ترتیب فایل ← pickQuestionType.
+- دوربین: listener cam در qimgUploader حالا ExamPrintNative.
+  openImageStudio(qid) را صدا می‌زند (پشتیبان: p.file.click قدیمی).
+  پنجرهٔ بومی: دوربین (TakePicture + FileProvider cache/studio —
+  cache-path به update_file_paths.xml اضافه شد) یا گالری (GetContent) ←
+  ویرایشگر بومی: چرخش ±۹۰، قرینه، برش نرمال‌شده با دو دستگیره + نسبت‌های
+  بدون‌برش/آزاد/۱:۱/۴:۳/۱۶:۹، سفیدسازی اسکن (آستانه ۱۰۰..۲۴۰ پیش‌فرض ۱۸۵
+  — عین استودیو؛ پیش‌نمایش با ColorMatrix کنتراست، اعمال دقیق پیکسلی)،
+  خروجی S/M/L/∞ = ۲۴۰/۴۲۰/۶۴۰/اصلی (عین SIZES فایل)، کیفیت ۴۰..۱۰۰
+  پیش‌فرض ۹۲ (عین فایل) ← JPEG→dataURL ← درج با قرارداد دقیق استودیو:
+  __qmfAddQuestionImage(qid,dataUrl,h) → {src,w:420,h} در qimgImages +
+  touch-equivalent (renderPreview/updatePreview/renderAll/input).
+- jsdom: ۱۲/۱۲ — setFields(مقدار+قالب+ماندگاری)، exportJson(فیلدها+سؤال)،
+  addImage(قرارداد+سؤال ناموجود)، رهگیری دوربین→openImageStudio("1")،
+  openLegacyStudio→کلیک input. درس: mount بلوک دوربین با تأخیر observer
+  است (هارنس ۲.۵s صبر کند)؛ «let questions» روی window نیست (از مسیر
+  export راستی‌آزمایی شود).
+- باگ‌های بالقوه‌ای که قبل از commit رفع شد: mutableMapOf عادی
+  فیلدها→تایپ بی‌اثر بود (mutableStateMapOf)؛ خروجی quoted evaluate →
+  unwrapJsString؛ prefill پنجرهٔ سربرگ بدون این خالی می‌ماند.
+```
+
+### نقشهٔ بومی‌سازی ادامهٔ استودیو (تعهد پچ‌های بعدی)
+
+```text
+V76.5: برش ۴گوشه/صفحه‌ای + صاف‌سازی ±۱۵° + تشخیص خودکار زاویه.
+V76.6: تفکیک چندسؤاله + مدیریت چند تصویر در پنجرهٔ بومی.
+V76.7: پاک‌کن/لاک‌گیر + برچسب متنی و فلش + مقایسهٔ قبل/بعد.
+V76.8: حذف استودیوی HTML (qimgStudioSrc) و «ابزارهای کامل» موقت.
+```
+
+### درس‌ها
+
+```text
+- شِمای فرم‌های HTML را در transform از خود سورس تولید کن (نه بازنویسی
+  دستی)؛ هم پارتی است هم با تغییر فایل آینده دوباره تولید می‌شود.
+- evaluateJavascript خروجی رشته‌ای را JSON-کوت می‌دهد — همیشه unwrap.
+- stateهای Compose برای ورودی فرم باید observable باشند
+  (mutableStateMapOf) وگرنه فیلد «فریز» به‌نظر می‌رسد.
+```
+
+پچ: V76_4_builder30_native_windows_and_studio_core — بدون SQL.

@@ -130,11 +130,9 @@ class V76_0Builder30HostTest {
         for (label in listOf("⚙ تنظیمات سربرگ", "💾 ذخیره", "📂 بازکردن", "🖨 چاپ دانشجو", "✅ چاپ استاد", "➕ سوال جدید", "👁 پیش‌نمایش")) {
             assertTrue(label, "NativeBarButton(\"$label\")" in dialog)
         }
-        // فرمان‌ها به توابع خود فایل می‌رسند
-        assertTrue("toggleSettings()" in dialog)
+        // V76.4 — تنظیمات سربرگ/ذخیره/سوال جدید پنجرهٔ بومی دارند؛ چاپ‌ها/چشم همان توابع فایل
         assertTrue("printStudent()" in dialog)
         assertTrue("printTeacher()" in dialog)
-        assertTrue("openQuestionTypePicker()" in dialog)
         assertTrue("togglePreviewWindow()" in dialog)
         assertTrue("window.__qmfSaveNow" in dialog)
         // بازکردن آزمون: انتخاب‌گر بومی + ورود با پل setExamData
