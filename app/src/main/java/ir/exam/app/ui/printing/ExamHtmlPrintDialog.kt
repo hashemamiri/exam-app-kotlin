@@ -291,7 +291,13 @@ fun ExamHtmlPrintDialog(
                     // V81.0 — اگر ویرایشگر فرمول باز نشد، این دکمه دقیقاً می‌گوید کجا گیر است.
                     NativeBarButton("🩺 بررسی فرمول") {
                         runJs("(function(){try{return window.__qmfFormulaDiag?window.__qmfFormulaDiag():'{}'}catch(e){return '{\"err\":\"'+e.message+'\"}'}})()") { raw ->
-                            formulaDiag = "asset=" + mathAssetProbe + "\n" + unwrapJsString(raw)
+                            val formula = unwrapJsString(raw)
+                            // V83.0 — وضعیت پیش‌نمایش را هم کنارش نشان بده.
+                            runJs("(function(){try{return window.__qmfPreviewDiag?window.__qmfPreviewDiag():'{}'}catch(e){return '{}'}})()") { raw2 ->
+                                formulaDiag = "asset=" + mathAssetProbe +
+                                    "\n\n[فرمول]\n" + formula +
+                                    "\n\n[پیش‌نمایش]\n" + unwrapJsString(raw2)
+                            }
                         }
                     }
                     NativeBarButton("🗂 مدیریت سؤال") {

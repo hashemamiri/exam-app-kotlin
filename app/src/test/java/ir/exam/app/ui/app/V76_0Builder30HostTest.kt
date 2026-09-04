@@ -103,7 +103,11 @@ class V76_0Builder30HostTest {
         // V76.2 — پنجره‌های موبایل: تمام‌صفحه و لمس‌پذیر + پیش‌نمایشِ هم‌عرض صفحه
         assertTrue("qmfMobileWindows" in assetText)
         assertTrue("qtype-grid{grid-template-columns:repeat(2,minmax(0,1fr))" in assetText)
-        assertTrue(".pwo-body #printContent{zoom:.44}" in assetText)
+        // V83.0 — `zoom` در WebView اندروید کار نمی‌کرد (پیش‌نمایشِ خاکستریِ خالی)؛
+        // با transform:scale جایگزین شد. آنچه مهم است «کوچک‌نماییِ برگه در
+        // پنجرهٔ موبایل» است، نه ابزارِ آن.
+        assertTrue("transform:scale(.44)" in assetText)
+        assertFalse(".pwo-body #printContent{zoom:.44}" in assetText)
         // چاپ از پل بومی می‌گذرد
         assertEquals(4, Regex(Regex.escape("window.ExamPrintNative.print")).findAll(assetText).count())
         // V76.3 — modeِ چاپ در لحظهٔ فراخوانی قفل می‌شود (رفع رقابتِ چاپ پشت‌سرهم)

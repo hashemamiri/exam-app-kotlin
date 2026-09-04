@@ -2948,6 +2948,21 @@ require("buttonMap[activeExactTool]" in _v79_asset, "V82.0 the HTML fallback mus
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V82_0FormulaBridgeAndEditTest.kt").exists(),
         "V82.0 test is missing")
 
+# ---- V83.0: پنجرهٔ پیش‌نمایش (zoom -> transform) ----
+require(".pwo-body #printContent{zoom:.44}" not in _v79_asset,
+        "V83.0 the unsupported zoom rule must be gone")
+require("transform:scale(.44)" in _v79_asset, "V83.0 transform scale is missing")
+require("window.qmfFitPreviewScale" in _v79_asset, "V83.0 height compensation is missing")
+require("ResizeObserver" in _v79_asset, "V83.0 the preview must recompute on resize")
+require("window.__qmfPreviewDiag" in _v79_asset, "V83.0 preview diagnostic is missing")
+require("__qmfPreviewDiag" in _v80_dialog, "V83.0 diagnostic not wired to the button")
+# قوانین zoom مسیر چاپ دست‌نخورده
+require("zoom:.42 !important" in _v79_asset, "V83.0 print zoom must stay")
+require("#previewWinOverlay #printContent.live-preview{display:block !important}" in _v79_asset,
+        "V83.0 the overlay reveal rule must stay")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V83_0PreviewWindowFixTest.kt").exists(),
+        "V83.0 test is missing")
+
 # مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
 _v79_total = (_v79_asset.__len__()
               + (ROOT/"app/src/main/assets/print/math_editor.html").stat().st_size
@@ -3206,7 +3221,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V82.0:")
+        and _v694_changelog.startswith("V83.0:")
+        and "V82.0:" in _v694_changelog
         and "V81.0:" in _v694_changelog
         and "V80.0:" in _v694_changelog
         and "V79.0:" in _v694_changelog
@@ -3391,7 +3407,7 @@ require(len(_v760_asset_text) > 4_000_000  # V79.0/V79.2: ویرایشگر فر�
         and "if (!EXACT_MATH_EDITOR_B64)" not in _v760_asset_text
         and "window.__openFallbackMathModal(window.__qmfActiveField || null, null)" in _v760_asset_text
         and "qmfMobileWindows" in _v760_asset_text
-        and ".pwo-body #printContent{zoom:.44}" in _v760_asset_text
+        and "transform:scale(.44)" in _v760_asset_text  # V83.0: zoom -> transform
         and "renderVisualTool" in _v760_asset_text,
         "V76.2 builder-30 asset regressed (tools, real formula editor, mobile windows or bridges)")
 _v760_controller=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPrintController.kt").read_text()

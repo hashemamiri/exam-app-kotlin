@@ -12491,6 +12491,44 @@ window.__qmfReplaceFigToken = function (qid, start, end, b64) {
 
 /* V81.0 — تشخیصِ وضعیتِ ویرایشگر فرمول. دکمهٔ بومیِ «بررسی فرمول» این را صدا
    می‌زند تا اگر باز هم مشکلی بود، به‌جای حدس‌زدن، دقیقاً بدانیم کجا گیر است. */
+window.__qmfPreviewDiag = function () {
+  var out = {};
+  try {
+    var pc = document.getElementById('printContent');
+    out.printContentExists = !!pc;
+    out.contentBytes = pc ? (pc.innerHTML || '').length : 0;
+    out.textLen = pc ? (pc.textContent || '').trim().length : 0;
+    out.classes = pc ? String(pc.className || '') : '';
+    var ov = document.getElementById('previewWinOverlay');
+    out.overlayOpen = !!ov;
+    out.inOverlay = !!(ov && pc && ov.contains(pc));
+    if (pc) {
+      var st = window.getComputedStyle(pc);
+      out.display = st.display;
+      out.visibility = st.visibility;
+      out.opacity = st.opacity;
+      out.transform = st.transform;
+      out.zoom = st.zoom || '';
+      out.offsetW = pc.offsetWidth;
+      out.offsetH = pc.offsetHeight;
+      var r = pc.getBoundingClientRect();
+      out.rectW = Math.round(r.width);
+      out.rectH = Math.round(r.height);
+    }
+    if (ov) {
+      var b = ov.querySelector('.pwo-body');
+      if (b) {
+        out.bodyW = b.offsetWidth;
+        out.bodyH = b.offsetHeight;
+        out.bodyChildren = b.children.length;
+      }
+    }
+    out.questionCount = (typeof questions !== 'undefined') ? questions.length : -1;
+    out.previewArea = !!document.getElementById('previewArea');
+  } catch (e) { out.fatal = String(e.message || e); }
+  return JSON.stringify(out);
+};
+
 window.__qmfFormulaDiag = function () {
   var out = {};
   try {
@@ -14066,6 +14104,26 @@ loadSample();
   /* ---------- 2) پنجره پیش‌نمایش ---------- */
   var prevInfo = null;
   window.isPreviewOpen = function () { return !!$('previewWinOverlay'); };
+  /* V83.0 — ارتفاعِ لفافه را با ضریبِ واقعیِ transform هماهنگ می‌کند. */
+  window.qmfFitPreviewScale = function () {
+    var pc = $('printContent');
+    if (!pc) return;
+    var body = pc.parentNode;
+    if (!body || !body.classList || !body.classList.contains('pwo-body')) return;
+    var st = window.getComputedStyle(pc);
+    var tr = st.transform || st.webkitTransform || 'none';
+    var k = 1;
+    if (tr && tr !== 'none') {
+      var mm = /matrix\(([-\d.]+)/.exec(tr);
+      if (mm) k = parseFloat(mm[1]) || 1;
+    }
+    if (!(k > 0) || k >= 0.999) { body.style.removeProperty('height'); return; }
+    var h = pc.offsetHeight * k;
+    body.style.height = 'auto';
+    /* فضای اضافی زیر برگه را با منفی‌کردنِ حاشیه جمع می‌کنیم */
+    pc.style.marginBottom = (-(pc.offsetHeight - h)) + 'px';
+  };
+
   window.togglePreviewWindow = function () {
     if ($('previewWinOverlay')) closePreviewWindow();
     else openPreviewWindow();
@@ -14073,6 +14131,9 @@ loadSample();
   function openPreviewWindow() {
     var pc = $('printContent');
     if (!pc || $('previewWinOverlay')) return;
+    /* V83.0 — پیش از نمایش، محتوا را تازه‌سازی کن. اگر کاربر پیش از هر
+       رندری روی 👁 بزند، برگه خالی بود و کادر خاکستریِ توخالی دیده می‌شد. */
+    try { if (typeof renderPreview === 'function') renderPreview(); } catch (e) {}
     prevInfo = { parent: pc.parentNode, next: pc.nextSibling };
     var ov = document.createElement('div');
     ov.id = 'previewWinOverlay';
@@ -14082,6 +14143,18 @@ loadSample();
     ov.querySelector('.pwo-body').appendChild(pc);
     pc.classList.add('in-window');
     try { setTimeout(function(){ if (window.mbFitAllSurds) window.mbFitAllSurds(document); }, 80); } catch (e) {}
+    /* V83.0 — با transform:scale ارتفاعِ اصلی در چیدمان باقی می‌ماند و زیر
+       برگه فضای خالیِ بزرگ می‌افتد. ارتفاع را با همان ضریب جبران می‌کنیم.
+       اگر مقیاسی در کار نباشد (نمایشگر بزرگ)، هیچ کاری نمی‌کند. */
+    try { qmfFitPreviewScale(); } catch (e) {}
+    try {
+      if (window.ResizeObserver && !ov.__qmfRO) {
+        ov.__qmfRO = new ResizeObserver(function () {
+          try { qmfFitPreviewScale(); } catch (e) {}
+        });
+        ov.__qmfRO.observe(pc);
+      }
+    } catch (e) {}
     try { pc.scrollIntoView({ block: 'start' }); } catch (e) {}
   }
   window.openPreviewWindow = openPreviewWindow;
@@ -14091,8 +14164,11 @@ loadSample();
     var pc = $('printContent');
     if (pc && prevInfo && prevInfo.parent) {
       pc.classList.remove('in-window');
+      /* V83.0 — جبرانِ ارتفاع فقط داخل پنجره معنا دارد */
+      try { pc.style.removeProperty('margin-bottom'); } catch (e) {}
       prevInfo.parent.insertBefore(pc, prevInfo.next);
     }
+    try { if (ov.__qmfRO) { ov.__qmfRO.disconnect(); ov.__qmfRO = null; } } catch (e) {}
     prevInfo = null;
     if (ov.parentNode) ov.parentNode.removeChild(ov);
   };
@@ -14952,7 +15028,17 @@ loadSample();
   .qtype-head{font-size:18px}
   .pwo-box{width:98vw;height:94vh}
   .pwo-body{padding:6px}
-  .pwo-body #printContent{zoom:.44}
+  /* V83.0 — `zoom` استاندارد نیست و در WebView اندروید نتیجه نمی‌داد: برگهٔ
+     A4 داخل کادر می‌رفت ولی دیده نمی‌شد و کاربر فقط پس‌زمینهٔ خاکستری را
+     می‌دید. جایگزین با transform:scale (پشتیبانی سراسری). چون transform
+     فضای چیدمان را آزاد نمی‌کند، مقیاس روی یک لفافه اعمال می‌شود و ارتفاعِ
+     لفافه با همان ضریب کم می‌شود تا اسکرول درست بماند. */
+  .pwo-body{text-align:center}
+  .pwo-body #printContent{
+    transform:scale(.44);
+    transform-origin:top center;
+    margin:0 auto !important;
+  }
   .math-box{width:100%}
 }
 </style>
