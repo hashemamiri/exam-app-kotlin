@@ -15964,3 +15964,39 @@ V76.8: حذف استودیوی HTML (qimgStudioSrc) و «ابزارهای کام
 ```
 
 پچ: V76_5_studio_deskew_perspective — بدون SQL.
+
+## ۳۰۲) V76.5.1 — رفع CI: import خاصیت توسعه‌ای nativeCanvas + بستن حفرهٔ شبیه‌ساز
+
+### ریشه‌یابی قطعی (لاگ کاربر + آرتیفکت)
+
+```text
+CI: Unresolved reference 'nativeCanvas' در خطوط 355/356 ExamImageStudioCore
+(دقیقاً c.nativeCanvas.drawCircle / drawText). راستی‌آزمایی از آرتیفکت
+واقعی ui-graphics-android 1.7.6 (BOM 2024.12.01):
+  javap → AndroidCanvas_androidKt.getNativeCanvas(Canvas)
+یعنی nativeCanvas عضو interface نیست؛ extension property است ⇒
+import androidx.compose.ui.graphics.nativeCanvas لازم بود و نبود.
+```
+
+### درس‌ها (به فهرست API امن اضافه می‌شود)
+
+```text
+- «هر importی استفاده شده» چک می‌کردیم؛ جهتِ برعکس چک نمی‌شد: سمبلِ
+  به‌کاررفته که import ندارد (extension property/function) از چشم
+  شبیه‌ساز پنهان بود. nativeCanvas و drawIntoCanvas از این قبیل‌اند.
+- روش بازسازیِ قطعی بدون کامپایل: aar را از dl.google.com بگیر،
+  classes.jar را باز کن، javap -p روی facade کلاس‌ها — مسیر import
+  دقیق از پکیجِ facade درمی‌آید. (ui-graphics-android، نه ui-android!)
+- Kotlin همهٔ خطاهای unresolved یک فایل را یکجا گزارش می‌کند؛ پس وقتی
+  CI فقط دو خطا داد، رفع همان دو = کامپایل سبز آن فایل.
+```
+
+### بستن حفرهٔ شبیه‌ساز (کشف بخش ۳۰۱)
+
+```text
+مپ env «studio → studioSource» اضافه شد؛ سوزن‌های متغیر studio که
+قبلاً skip می‌شدند (۲۶ سوزن) حالا واقعاً چک می‌شوند: ۲۰۷→۲۳۳ سوزن.
+```
+
+پچ: V76_5_1_nativecanvas_import_fix — بدون SQL. (CI قرمز بخش ۳۰۱
+با همین پچ سبز می‌شود؛ تست دستگاه V76.5 پس از آن.)

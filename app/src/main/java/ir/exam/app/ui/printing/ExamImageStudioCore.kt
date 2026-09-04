@@ -70,6 +70,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.tan
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 
 /**
  * V76.4 — هستهٔ بومیِ استودیوی تصویر سؤال (پچ اول از مسیر «بومیِ کامل»):

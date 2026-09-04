@@ -58,6 +58,15 @@ class V76_5StudioDeskewPerspectiveTest {
     }
 
     @Test
+    fun `nativeCanvas numbers need their extension import`() {
+        // nativeCanvas یک خاصیت توسعه‌ای است (AndroidCanvas_androidKt.getNativeCanvas)
+        // بدون این import: «Unresolved reference 'nativeCanvas'» در کامپایل
+        assertTrue("import androidx.compose.ui.graphics.nativeCanvas" in studio)
+        assertTrue("c.nativeCanvas.drawCircle(" in studio)
+        assertTrue("c.nativeCanvas.drawText(" in studio)
+    }
+
+    @Test
     fun `deskew flows into the output pipeline`() {
         // processAndEncode حالا deskew را در ماتریسِ چرخش اعمال می‌کند
         assertTrue("postRotate(rotation.toFloat() + deskew)" in studio)

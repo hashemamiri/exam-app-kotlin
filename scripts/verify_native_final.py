@@ -2619,6 +2619,7 @@ require(_v764_studio.exists()
         "V76.4 native image studio core is missing")
 _v765_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text()
 require("📐 صفحه‌ای (۴ گوشه)" in _v765_studio
+        and "import androidx.compose.ui.graphics.nativeCanvas" in _v765_studio
         and "✓ اعمال صاف‌سازی" in _v765_studio
         and "🎯 تشخیص خودکار زاویه" in _v765_studio
         and "private fun applyPerspective(" in _v765_studio
