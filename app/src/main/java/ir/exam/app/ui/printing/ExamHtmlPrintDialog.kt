@@ -128,10 +128,12 @@ fun ExamHtmlPrintDialog(
                                 settings.setSupportZoom(true)
                                 settings.builtInZoomControls = true
                                 settings.displayZoomControls = false
-                                // V76.1 — بدون این دو، متا‌ویوپورتِ فایل (width=device-width)
-                                // اعمال نمی‌شود و کل رابط دسکتاپی/کوچک رندر می‌شود.
+                                // V76.2 — useWideViewPort متاوویوپورتِ فایل (width=device-width)
+                                // را اعمال می‌کند؛ اما overviewMode باید خاموش بماند وگرنه WebView
+                                // برای محتوای عریضِ A4 (۷۳۳px) کل صفحه را zoom-out می‌کند و همه
+                                // پنجره‌ها/دکمه‌ها ریز می‌شوند (ریشهٔ «پنجره‌ها کوچک است»).
                                 settings.useWideViewPort = true
-                                settings.loadWithOverviewMode = true
+                                settings.loadWithOverviewMode = false
 
                                 addJavascriptInterface(
                                     ExamPrintBridge(

@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <!--
-  نسخهٔ 30-P2 — میزبان اپ اندروید: پل ورود خودکار آزمون از برنامه (window.setExamData)،
-  چاپ دانشجو/استاد از طریق پل بومی ExamPrintNative، و بازگشتِ هوشمندِ دکمهٔ فرمول به
-  ویرایشگرِ سادهٔ خودِ فایل (ویرایشگرِ iframe در خروجیِ تک‌فایل موجود نیست). همهٔ
-  ابزارهای درج (فرمول/شکل/نمودار/جدول/آناتومی/جدول تناوبی/فیزیک/شیمی/دوربین) فعال‌اند.
+  نسخهٔ 30-P3 — میزبان اپ اندروید: پل ورود خودکار آزمون از برنامه (window.setExamData) و
+  چاپ دانشجو/استاد از طریق پل بومی ExamPrintNative. دکمهٔ فرمول همان ویرایشگرِ اصلیِ خود فایل
+  (MATH_EDITOR_HTML — نسخهٔ مستقل 🧮) را باز می‌کند؛ اگر بوتِ آن شکست خورد، مودالِ سادهٔ
+  پشتیبان باز می‌شود. همهٔ ابزارهای درج (فرمول/شکل/نمودار/جدول/آناتومی/جدول تناوبی/فیزیک/
+  شیمی/دوربین) فعال‌اند. پنجره‌ها در نمایشگرهای باریک تمام‌صفحه و لمس‌پذیرند و پیش‌نمایش چشم
+  به عرضِ صفحه کوچک می‌شود.
   مبنا: نسخهٔ 19 (SHA-256 ba2f671570936add44e379d3a590ab6f88b8307a4200e2214b44f8a2e6115abe) | تاریخ: 2026-09-04
 -->
 <html lang="fa" dir="rtl">
@@ -11501,7 +11503,7 @@ function installWordPaste(w) {
       const doc = f.contentDocument;
       doc.open(); doc.write(MATH_EDITOR_HTML); doc.close();
       injectHostTheme();
-      setTimeout(() => { if (!ready) { clearInterval(poll); notify('⚠️ ویرایشگر بارگیری نشد', 'error'); } }, 6000);
+      setTimeout(() => { if (!ready) { clearInterval(poll); try { if (typeof window.__openFallbackMathModal === 'function') { window.__openFallbackMathModal(window.__qmfActiveField || null, null); return; } } catch (eFb) {} notify('⚠️ ویرایشگر بارگیری نشد', 'error'); } }, 6000);
     }
   }
 
@@ -11536,7 +11538,6 @@ function installWordPaste(w) {
       }
     } catch (e) {}
     try { savedRange = capturedRange || [t.selectionStart || 0, (t.selectionEnd != null ? t.selectionEnd : t.selectionStart) || 0]; } catch (e) { savedRange = capturedRange; }
-    if (!EXACT_MATH_EDITOR_B64) { try { window.__openFallbackMathModal(t, capturedTex); } catch (eFb) {} return; }
     boot(() => {
       try {
         if (capturedRange) {
@@ -14918,7 +14919,19 @@ loadSample();
   window.addEventListener('load', installAll);
   installAll();
   schedule();
-})();</script><script id="qmfMathFallback">/* V30-P2 — دکمهٔ فرمول بدون iframe: مودالِ سادهٔ خودِ فایل */
+})();</script><style id="qmfMobileWindows">/* V30-P3 — پنجره‌ها در نمایشگر باریک: تمام‌صفحه و لمس‌پذیر */
+@media screen and (max-width:700px){
+  .qtype-box{width:98vw;padding:14px;max-height:94vh}
+  .qtype-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .qtype-item{font-size:17px;padding:22px 8px}
+  .qtype-head{font-size:18px}
+  .pwo-box{width:98vw;height:94vh}
+  .pwo-body{padding:6px}
+  .pwo-body #printContent{zoom:.44}
+  .math-box{width:100%}
+}
+</style>
+<script id="qmfMathFallback">/* V30-P3 — پشتیبانِ فرمول: فقط اگر بوتِ ویرایشگر اصلی شکست خورد */
 (function () {
 'use strict';
 if (window.__qmfMathFallback) return; window.__qmfMathFallback = true;
@@ -14944,7 +14957,7 @@ window.__openFallbackMathModal = function (t, capturedTex) {
 };
 })();
 </script>
-<script id="qmfHostBridge">/* V30-P2 — پل میزبان اندروید: ورود خودکار آزمون از برنامهٔ بومی */
+<script id="qmfHostBridge">/* V30-P3 — پل میزبان اندروید: ورود خودکار آزمون از برنامهٔ بومی */
 (function () {
 'use strict';
 if (window.__qmfHostBridge) return; window.__qmfHostBridge = true;

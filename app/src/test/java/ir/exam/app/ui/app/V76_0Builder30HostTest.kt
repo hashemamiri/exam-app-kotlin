@@ -92,10 +92,18 @@ class V76_0Builder30HostTest {
         // ویرایشگر شکل دست‌نخورده است (نسخهٔ P1 آن را خنثی کرده بود)
         assertFalse("V30-P1: ویرایش شکل" in assetText)
         assertTrue("__r11LastFigOpen" in assetText)
-        // فرمول: گاردِ fallback قبل از bootِ ویرایشگرِ غایب
-        assertEquals(2, Regex("__openFallbackMathModal").findAll(assetText).count())
-        assertTrue("!EXACT_MATH_EDITOR_B64" in assetText)
+        // فرمول: ویرایشگر اصلی نسخهٔ ۳۰ (MATH_EDITOR_HTML) مسیرِ اصلی است؛
+        // گاردِ اشتباهِ V76.1 که همین مسیر را می‌دزدید حذف شده و پشتیبانِ ساده
+        // فقط در timeoutِ شکستِ بوت به‌عنوان آخرین‌چاره صدا زده می‌شود.
+        assertTrue("doc.write(MATH_EDITOR_HTML)" in assetText)
+        assertFalse("if (!EXACT_MATH_EDITOR_B64)" in assetText)
+        assertTrue("window.__openFallbackMathModal(window.__qmfActiveField || null, null)" in assetText)
+        assertEquals(3, Regex("__openFallbackMathModal").findAll(assetText).count())
         assertTrue("id=\"mathModal\"" in assetText)
+        // V76.2 — پنجره‌های موبایل: تمام‌صفحه و لمس‌پذیر + پیش‌نمایشِ هم‌عرض صفحه
+        assertTrue("qmfMobileWindows" in assetText)
+        assertTrue("qtype-grid{grid-template-columns:repeat(2,minmax(0,1fr))" in assetText)
+        assertTrue(".pwo-body #printContent{zoom:.44}" in assetText)
         // چاپ از پل بومی می‌گذرد
         assertEquals(4, Regex(Regex.escape("window.ExamPrintNative.print")).findAll(assetText).count())
         assertTrue("printMode==='teacher'?'teacher':'student'" in assetText)
@@ -109,9 +117,10 @@ class V76_0Builder30HostTest {
     @Test
     fun `builder-30 dialog applies mobile viewport and supports image picking`() {
         val dialog = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
-        // V76.1 — متاوویوپورت فایل اعمال شود (رابط در اندازهٔ واقعی موبایل)
+        // V76.2 — متاوویوپورت فایل اعمال شود، اما overview mode خاموش بماند
+        // (وگرنه WebView برای محتوای عریض A4 کل صفحه را zoom-out می‌کند)
         assertTrue("settings.useWideViewPort = true" in dialog)
-        assertTrue("settings.loadWithOverviewMode = true" in dialog)
+        assertTrue("settings.loadWithOverviewMode = false" in dialog)
         // دکمهٔ دوربین 📷: input[type=file] فقط با onShowFileChooser در WebView کار می‌کند
         assertTrue("onShowFileChooser" in dialog)
         assertTrue("ActivityResultContracts.GetContent" in dialog)

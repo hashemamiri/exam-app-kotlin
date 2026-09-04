@@ -2573,9 +2573,10 @@ require(_v730_dialog.exists()
         and "print/exam_print.html" in _v730_dialog_text
         and "createPrintDocumentAdapter" in _v730_dialog_text
         and "useWideViewPort" in _v730_dialog_text
+        and "loadWithOverviewMode = false" in _v730_dialog_text
         and "onShowFileChooser" in _v730_dialog_text
         and "ActivityResultContracts.GetContent" in _v730_dialog_text,
-        "V76.1 ExamHtmlPrintDialog (viewport + file chooser) or print bridge is missing")
+        "V76.2 ExamHtmlPrintDialog (viewport, no overview zoom, file chooser) is missing")
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
         and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
@@ -2593,9 +2594,10 @@ require(_v730_asset.is_file() and _v730_asset.stat().st_size > 5_000_000
         and "ExamPrintNative" in _v730_asset_text
         and "cloudflareinsights" not in _v730_asset_text
         and 'title="درج شکل"' in _v730_asset_text
-        and "__openFallbackMathModal" in _v730_asset_text
+        and "doc.write(MATH_EDITOR_HTML)" in _v730_asset_text
+        and "if (!EXACT_MATH_EDITOR_B64)" not in _v730_asset_text
         and "is-fx formula-btn" in _v730_asset_text,
-        "V76.1 builder-30 asset or setExamData bridge is missing (tools/fallback)")
+        "V76.2 builder-30 asset or setExamData bridge is missing (tools/real formula editor)")
 require(_v730_test.exists()
         and "payload builder maps all six question types to json" in _v730_test_text
         and "totalScore = 20.0" in _v730_test_text,
@@ -2704,11 +2706,12 @@ _v694_changelog=(ROOT/"text/CHANGELOG_FA.txt").read_text(encoding="utf-8")
 _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
-require(_v694_lines >= 254
-        and _v694_changelog.startswith("V76.1:")
+require(_v694_lines >= 255
+        and _v694_changelog.startswith("V76.2:")
+        and "V76.1:" in _v694_changelog
         and "V76.0:" in _v694_changelog
         and "V75.8.1:" in _v694_changelog,
-        "changelog must keep the full history + the new V76.1 line on top")
+        "changelog must keep the full history + the new V76.2 line on top")
 
 _v750_payment=(ROOT/"supabase/functions/wallet-payment/index.ts").read_text()
 require("function sandboxRequestAllowed(" in _v750_payment
@@ -2869,10 +2872,13 @@ require(len(_v760_asset_text) > 5_000_000
         and "cloudflareinsights" not in _v760_asset_text
         and "challenge-platform" not in _v760_asset_text
         and "is-fx formula-btn" in _v760_asset_text
-        and "__openFallbackMathModal" in _v760_asset_text
-        and "!EXACT_MATH_EDITOR_B64" in _v760_asset_text
+        and "doc.write(MATH_EDITOR_HTML)" in _v760_asset_text
+        and "if (!EXACT_MATH_EDITOR_B64)" not in _v760_asset_text
+        and "window.__openFallbackMathModal(window.__qmfActiveField || null, null)" in _v760_asset_text
+        and "qmfMobileWindows" in _v760_asset_text
+        and ".pwo-body #printContent{zoom:.44}" in _v760_asset_text
         and "renderVisualTool" in _v760_asset_text,
-        "V76.1 builder-30 asset regressed (tools, formula fallback, bridges or cloudflare)")
+        "V76.2 builder-30 asset regressed (tools, real formula editor, mobile windows or bridges)")
 _v760_controller=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPrintController.kt").read_text()
 require("PrivateImageLoader.create(appContext)" in _v760_controller
         and "ImageLoader(appContext)" not in _v760_controller,
