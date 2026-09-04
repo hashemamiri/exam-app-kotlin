@@ -93,8 +93,8 @@ class V76_7StudioDrawToolsTest {
         )
         assertTrue("val painted = if (shapes.isEmpty()) bmp else bakeShapes(bmp, shapes)" in studio)
         // درج تکی و هر دو مسیر تفکیک از زنجیرهٔ شکل‌دار می‌روند
-        assertTrue("encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)" in studio)
-        assertTrue("encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes)" in studio)
+        assertTrue("encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes, deshadow, denoise)" in studio)
+        assertTrue("encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes, deshadowOn, denoiseOn)" in studio)
         assertTrue("src, rotation, deskewAngle, flip, crop, scanOn, threshold, outSize, quality, shapes" in studio)
         // سانسور پیکسلی واقعی + بیضی + سر فلش با atan2
         assertTrue("base.getPixels(px, 0, rgnW, x0i, y0i, rgnW, rgnH)" in studio)

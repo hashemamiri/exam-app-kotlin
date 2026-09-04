@@ -2657,7 +2657,7 @@ require("➡️ فلش" in _v767_studio
         and "🚫 سانسور" in _v767_studio
         and "🔤 متن" in _v767_studio
         and "internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap" in _v767_studio
-        and "encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)" in _v767_studio
+        and "encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes, deshadow, denoise)" in _v767_studio
         and "base.getPixels(px, 0, rgnW, x0i, y0i, rgnW, rgnH)" in _v767_studio
         and "Corner.SHAPE_MOVE" in _v767_studio
         and "val xsMin = xs.minOrNull() ?: nx" in _v767_studio
@@ -2715,6 +2715,39 @@ require("window.__qmfAppendQuestionText" in _v769_dialog
         "V76.9 OCR text bridge is missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_9NativePersianOcrTest.kt").exists(),
         "V76.9 OCR test is missing")
+
+# ---- V77.0: فیلترهای اسکن کتاب + قطره‌چکان + لایهٔ اشیاء + فلش منحنی + حالت تاریک ----
+_v770_path = ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioFilters.kt"
+require(_v770_path.exists(), "V77.0 studio filters file is missing")
+_v770 = _v770_path.read_text(encoding="utf-8")
+_v770_studio = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text(encoding="utf-8")
+require("internal fun flattenShadow(" in _v770
+        and "internal fun despeckle(" in _v770
+        and "internal fun autoCropBounds(" in _v770
+        and "internal fun bezierPolyline(" in _v770
+        and "internal fun alignShapes(" in _v770
+        and "internal fun distributeShapes(" in _v770
+        and "internal fun reorderShape(" in _v770
+        and "internal fun samplePixelColor(" in _v770,
+        "V77.0 filter/layer helpers are missing")
+# درسِ شبیه‌سازی: میانهٔ سادهٔ ۳×۳ خطوطِ ۱ پیکسلی را پاک می‌کرد — رگرسیون ممنوع
+require("minNeighbors: Int = 2" in _v770 and "same < minNeighbors" in _v770,
+        "V77.0 despeckle regressed to a plain median (it erases hairline strokes)")
+require("📖 حذف سایه و زردی" in _v770_studio
+        and "🧽 حذف نویز و لکه" in _v770_studio
+        and "✂️ برش خودکار حاشیه" in _v770_studio
+        and "💧 قطره‌چکان" in _v770_studio
+        and "🪝 فلش منحنی" in _v770_studio
+        and "🌙 حالت تاریک" in _v770_studio
+        and "🗂 لایهٔ اشیاء" in _v770_studio,
+        "V77.0 studio tools are missing from the toolbar")
+require("applyBookScan(bmp, deshadow, denoise)" in _v770_studio
+        and "encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes, deshadow, denoise)" in _v770_studio
+        and "if (sp.hidden) return@forEach" in _v770_studio
+        and "val movers = groupMembers(shapes, dragShapeIndex)" in _v770_studio,
+        "V77.0 filters/layer state are not wired into the output pipeline")
+require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V77_0StudioFiltersAndLayersTest.kt").exists(),
+        "V77.0 filters/layers test is missing")
 
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
@@ -2814,7 +2847,7 @@ def _gate_strip(text):
         _out.append(_c)
         _i += 1
     return "".join(_out)
-for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt"):
+for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt", "ExamImageStudioFilters.kt"):
     _fpath = ROOT / "app/src/main/java/ir/exam/app/ui/printing" / _fname
     _ftext = _fpath.read_text()
     _body = _gate_strip(_ftext)
@@ -2966,7 +2999,8 @@ _v694_lines=_v694_changelog.count("\n")
 require("جابه‌جایی" in _v694_changelog and "لیست" in _v694_changelog,
         "changelog lost its historical Persian entries (truncated again?)")
 require(_v694_lines >= 260
-        and _v694_changelog.startswith("V76.9:")
+        and _v694_changelog.startswith("V77.0:")
+        and "V76.9:" in _v694_changelog
         and "V76.8:" in _v694_changelog
         and "V76.7:" in _v694_changelog
         and "V76.6:" in _v694_changelog

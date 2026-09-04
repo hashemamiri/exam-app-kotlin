@@ -108,10 +108,15 @@ data class StudioImageRef(val dataUrl: String, val w: Int, val h: Int)
  * نمایش‌داده‌شده تا در پیش‌نمایش و پخت (ابعاد واقعی) یکسان بمانند.
  */
 data class StudioShape(
-    val type: String,                                  // arrow/arrow2/line/rect/ellipse/free/highlighter/censor/text
+    val type: String,                                  // arrow/arrow2/line/rect/ellipse/free/highlighter/censor/text/curve
     val points: List<Offset> = emptyList(),
     val color: Int = 0xFFDC2626.toInt(),
-    val text: String = ""
+    val text: String = "",
+    // V77.0 — لایهٔ پیشرفتهٔ اشیاء + فلش منحنی
+    val locked: Boolean = false,   // قفل: نه جابه‌جا می‌شود نه انتخاب
+    val hidden: Boolean = false,   // پنهان: نه در پیش‌نمایش نه در خروجی
+    val group: Int = 0,            // ۰ = بدون گروه؛ هم‌گروه‌ها با هم حرکت می‌کنند
+    val curve: Float = 0f          // خمیدگیِ فلش منحنی (۰ = مستقیم)
 )
 
 @Composable
@@ -168,6 +173,12 @@ fun ExamImageStudioDialog(
     var ocrText by remember { mutableStateOf("") }
     var ocrConfidence by remember { mutableStateOf(0) }
     var showOcrResult by remember { mutableStateOf(false) }
+    // V77.0 — فیلترهای اسکن کتاب، قطره‌چکان، لایهٔ اشیاء، فلش منحنی، حالت تاریک
+    var deshadowOn by remember { mutableStateOf(false) }
+    var denoiseOn by remember { mutableStateOf(false) }
+    var curveAmount by remember { mutableStateOf(0.22f) }
+    var showLayers by remember { mutableStateOf(false) }
+    var darkCanvas by remember { mutableStateOf(false) }
 
     fun makeCameraUri(): Pair<Uri, File> {
         val dir = File(context.cacheDir, "studio").apply { mkdirs() }
@@ -241,7 +252,8 @@ fun ExamImageStudioDialog(
                                 scope.launch {
                                     val result = withContext(Dispatchers.Default) {
                                         processAndEncode(
-                                            src, rotation, deskewAngle, flip, crop, scanOn, threshold, outSize, quality, shapes
+                                            src, rotation, deskewAngle, flip, crop, scanOn, threshold, outSize, quality, shapes,
+                                            deshadowOn, denoiseOn
                                         )
                                     }
                                     processing = false
@@ -353,7 +365,8 @@ fun ExamImageStudioDialog(
                         Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .background(Color(0xFF17203A))
+                            // V77.0 — حالت تاریک: پس‌زمینهٔ بوم برای کار در شب
+                            .background(if (darkCanvas) Color(0xFF05070C) else Color(0xFF17203A))
                     ) {
                         var boxSize by remember { mutableStateOf(IntSize.Zero) }
                         val shown = remember(original, rotation, flip, deskewAngle, perspMode) {
@@ -459,6 +472,14 @@ fun ExamImageStudioDialog(
                                                     // V76.7 — کشیدن شکل جدید / یا لمس برای برچسب متنی
                                                     val nx = ((pos.x - offX) / drawW).coerceIn(0f, 1f)
                                                     val ny = ((pos.y - offY) / drawH).coerceIn(0f, 1f)
+                                                    if (drawMode == "eyedropper") {
+                                                        // V77.0 — قطره‌چکان: رنگِ همان نقطه رنگِ فعالِ رسم می‌شود
+                                                        original?.let { src ->
+                                                            drawColor = samplePixelColor(src, nx, ny)
+                                                            note = "رنگ برداشته شد."
+                                                        }
+                                                        return@detectDragGestures
+                                                    }
                                                     if (drawMode == "text") {
                                                         textPromptPoint = Offset(nx, ny)
                                                         textPromptValue = ""
@@ -469,7 +490,8 @@ fun ExamImageStudioDialog(
                                                     activeShape = StudioShape(
                                                         type = drawMode,
                                                         points = listOf(Offset(nx, ny), Offset(nx, ny)),
-                                                        color = drawColor
+                                                        color = drawColor,
+                                                        curve = if (drawMode == "curve") curveAmount else 0f
                                                     )
                                                     dragTarget = Corner.DRAW
                                                     dragOffset = Offset.Zero
@@ -482,6 +504,8 @@ fun ExamImageStudioDialog(
                                                     var hit = -1
                                                     shapes.forEachIndexed { si, sp ->
                                                         if (sp.points.isEmpty()) return@forEachIndexed
+                                                        // V77.0 — قفل‌شده/پنهان انتخاب نمی‌شود
+                                                        if (sp.locked || sp.hidden) return@forEachIndexed
                                                         val xs = sp.points.map { it.x }
                                                         val ys = sp.points.map { it.y }
                                                         val m = 0.035f
@@ -558,9 +582,12 @@ fun ExamImageStudioDialog(
                                                     val dx = drag.x / drawW
                                                     val dy = drag.y / drawH
                                                     if (dragShapeIndex in shapes.indices) {
+                                                        // V77.0 — هم‌گروه‌ها با هم حرکت می‌کنند؛ قفل‌شده‌ها نه
+                                                        val movers = groupMembers(shapes, dragShapeIndex)
                                                         shapes = shapes.toMutableList().also { list ->
-                                                            val old = list[dragShapeIndex]
-                                                            list[dragShapeIndex] = old.copy(points = old.points.map { Offset(it.x + dx, it.y + dy) })
+                                                            movers.forEach { mi ->
+                                                                if (!list[mi].locked) list[mi] = translateShape(list[mi], dx, dy)
+                                                            }
                                                         }
                                                     }
                                                     return@detectDragGestures
@@ -677,11 +704,23 @@ fun ExamImageStudioDialog(
                                         drawLine(col, tip, Offset(tip.x - l * kotlin.math.cos(ang - 0.45f), tip.y - l * kotlin.math.sin(ang - 0.45f)), strokeWidth = sw)
                                     }
                                     (shapes + listOfNotNull(activeShape)).forEachIndexed { si, sp ->
+                                        if (sp.hidden) return@forEachIndexed   // V77.0 — شیء پنهان
                                         val col = Color(sp.color)
                                         val hl = sp.type == "highlighter"
                                         val sw = if (hl) baseW * 3.5f else baseW
                                         val st = Stroke(width = sw)
-                                        if (sp.type == "arrow" || sp.type == "arrow2" || sp.type == "line") {
+                                        if (sp.type == "curve") {
+                                            // V77.0 — فلش منحنی (پیش‌نمایش زنده)
+                                            if (sp.points.size >= 2) {
+                                                val poly = bezierPolyline(P(sp.points[0]), P(sp.points[1]), sp.curve)
+                                                val path = androidx.compose.ui.graphics.Path().apply {
+                                                    moveTo(poly[0].x, poly[0].y)
+                                                    for (i in 1 until poly.size) lineTo(poly[i].x, poly[i].y)
+                                                }
+                                                drawPath(path, col, style = st)
+                                                head(poly[poly.size - 2], poly[poly.size - 1], sw, col)
+                                            }
+                                        } else if (sp.type == "arrow" || sp.type == "arrow2" || sp.type == "line") {
                                             if (sp.points.size >= 2) {
                                                 val a = P(sp.points[0]); val b2 = P(sp.points[1])
                                                 drawLine(col, a, b2, strokeWidth = sw)
@@ -792,6 +831,8 @@ fun ExamImageStudioDialog(
                             ToolChip("🖍️ هایلایتر") { setDraw("highlighter") }
                             ToolChip("🚫 سانسور") { setDraw("censor") }
                             ToolChip("🔤 متن") { setDraw("text") }
+                            ToolChip("🪝 فلش منحنی") { setDraw("curve") }
+                            ToolChip("💧 قطره‌چکان") { setDraw("eyedropper") }
                         }
                         Row(
                             Modifier
@@ -837,6 +878,134 @@ fun ExamImageStudioDialog(
                                 label = { Text("👁 قبل/بعد") }
                             )
                         }
+                        // V77.0 — اسکن تمیز کتاب + برش خودکار حاشیه + لایهٔ اشیاء
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = deshadowOn,
+                                onClick = { deshadowOn = !deshadowOn },
+                                label = { Text("📖 حذف سایه و زردی") }
+                            )
+                            FilterChip(
+                                selected = denoiseOn,
+                                onClick = { denoiseOn = !denoiseOn },
+                                label = { Text("🧽 حذف نویز و لکه") }
+                            )
+                            ToolChip("✂️ برش خودکار حاشیه") {
+                                val src = original
+                                if (src != null) {
+                                    val w = src.width; val h = src.height
+                                    val b = autoCropBounds(bitmapPixels(src), w, h)
+                                    crop = boundsToCropRect(b, w, h)
+                                    aspect = "free"
+                                    note = "حاشیهٔ سفید بریده شد."
+                                }
+                            }
+                            FilterChip(
+                                selected = showLayers,
+                                onClick = { showLayers = !showLayers },
+                                label = { Text("🗂 لایهٔ اشیاء (${shapes.size})") }
+                            )
+                            FilterChip(
+                                selected = darkCanvas,
+                                onClick = { darkCanvas = !darkCanvas },
+                                label = { Text("🌙 حالت تاریک") }
+                            )
+                        }
+                        if (showLayers && shapes.isNotEmpty()) {
+                            // V77.0 — لایهٔ پیشرفتهٔ اشیاء
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 210.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp)
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    ToolChip("⬅ چپ") { shapes = alignShapes(shapes, layerActionTargets(shapes, selectedShape), "left") }
+                                    ToolChip("↔ وسط") { shapes = alignShapes(shapes, layerActionTargets(shapes, selectedShape), "hcenter") }
+                                    ToolChip("➡ راست") { shapes = alignShapes(shapes, layerActionTargets(shapes, selectedShape), "right") }
+                                    ToolChip("⬆ بالا") { shapes = alignShapes(shapes, layerActionTargets(shapes, selectedShape), "top") }
+                                    ToolChip("↕ وسط عمودی") { shapes = alignShapes(shapes, layerActionTargets(shapes, selectedShape), "vcenter") }
+                                    ToolChip("⬇ پایین") { shapes = alignShapes(shapes, layerActionTargets(shapes, selectedShape), "bottom") }
+                                    ToolChip("⇉ توزیع افقی") { shapes = distributeShapes(shapes, layerActionTargets(shapes, selectedShape), true) }
+                                    ToolChip("⇊ توزیع عمودی") { shapes = distributeShapes(shapes, layerActionTargets(shapes, selectedShape), false) }
+                                    ToolChip("🔗 گروه") {
+                                        if (selectedShape in shapes.indices) {
+                                            val g = nextGroupId(shapes)
+                                            shapes = shapes.mapIndexed { i, sp ->
+                                                if (i == selectedShape || sp.group == shapes[selectedShape].group && sp.group != 0) sp.copy(group = g) else sp
+                                            }
+                                            note = "گروه ساخته شد."
+                                        }
+                                    }
+                                    ToolChip("✂️ خروج از گروه") {
+                                        if (selectedShape in shapes.indices) {
+                                            val g = shapes[selectedShape].group
+                                            if (g != 0) shapes = shapes.map { if (it.group == g) it.copy(group = 0) else it }
+                                        }
+                                    }
+                                }
+                                shapes.forEachIndexed { si, sp ->
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            shapeLabel(sp, si),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (si == selectedShape) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        ToolChip(if (sp.hidden) "🚫" else "👁") {
+                                            shapes = shapes.toMutableList().also { it[si] = sp.copy(hidden = !sp.hidden) }
+                                        }
+                                        ToolChip(if (sp.locked) "🔒" else "🔓") {
+                                            shapes = shapes.toMutableList().also { it[si] = sp.copy(locked = !sp.locked) }
+                                        }
+                                        ToolChip("⤒") { val (l, ni) = reorderShape(shapes, si, "front"); shapes = l; selectedShape = ni }
+                                        ToolChip("⤴") { val (l, ni) = reorderShape(shapes, si, "forward"); shapes = l; selectedShape = ni }
+                                        ToolChip("⤵") { val (l, ni) = reorderShape(shapes, si, "backward"); shapes = l; selectedShape = ni }
+                                        ToolChip("⤓") { val (l, ni) = reorderShape(shapes, si, "back"); shapes = l; selectedShape = ni }
+                                        ToolChip("⧉") {
+                                            // تکثیر با کمی جابه‌جایی تا روی هم نیفتند
+                                            shapes = shapes + translateShape(sp.copy(group = 0), 0.03f, 0.03f)
+                                        }
+                                        ToolChip("🗑") {
+                                            redoStack = redoStack + sp
+                                            shapes = shapes.filterIndexed { i, _ -> i != si }
+                                            selectedShape = -1
+                                        }
+                                        ToolChip("🎯") { selectedShape = si }
+                                    }
+                                }
+                            }
+                        }
+                        if (drawMode == "curve") {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("خمیدگی", style = MaterialTheme.typography.bodySmall)
+                                Slider(
+                                    value = curveAmount,
+                                    onValueChange = { curveAmount = it },
+                                    valueRange = -0.6f..0.6f,
+                                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                                )
+                                Text(String.format("%.2f", curveAmount), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
                         // V76.9 — OCR فارسیِ آفلاین روی همان تصویرِ آماده‌شده
                         // (چرخش/صاف‌سازی/برش/اسکن/شکل‌ها اعمال می‌شوند تا متن
                         // دقیقاً از همان چیزی خوانده شود که کاربر می‌بیند).
@@ -856,7 +1025,8 @@ fun ExamImageStudioDialog(
                                     scope.launch {
                                         val prepared = withContext(Dispatchers.Default) {
                                             prepareForOcr(
-                                                src, rotation, deskewAngle, flip, crop, scanOn, threshold, shapes
+                                                src, rotation, deskewAngle, flip, crop, scanOn, threshold, shapes,
+                                                deshadowOn, denoiseOn
                                             )
                                         }
                                         val res = if (prepared == null) null
@@ -973,7 +1143,7 @@ fun ExamImageStudioDialog(
                                                     if (flip) postScale(-1f, 1f)
                                                 }
                                                 val base = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes) }
+                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes, deshadowOn, denoiseOn) }
                                             }
                                             processing = false
                                             if (results.isEmpty()) {
@@ -993,7 +1163,7 @@ fun ExamImageStudioDialog(
                                                     if (flip) postScale(-1f, 1f)
                                                 }
                                                 val base = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes) }
+                                                splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes, deshadowOn, denoiseOn) }
                                             }
                                             processing = false
                                             if (results.isEmpty()) {
@@ -1257,14 +1427,16 @@ private fun processAndEncode(
     threshold: Int,
     outSize: Int,
     quality: Int,
-    shapes: List<StudioShape> = emptyList()
+    shapes: List<StudioShape> = emptyList(),
+    deshadow: Boolean = false,
+    denoise: Boolean = false
 ): Pair<String, Int>? = runCatching {
     val m = Matrix().apply {
         postRotate(rotation.toFloat() + deskew)
         if (flip) postScale(-1f, 1f)
     }
     val bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
-    encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)
+    encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes, deshadow, denoise)
 }.getOrNull()
 
 /**
@@ -1281,13 +1453,16 @@ private fun prepareForOcr(
     crop: Rect,
     scanOn: Boolean,
     threshold: Int,
-    shapes: List<StudioShape> = emptyList()
+    shapes: List<StudioShape> = emptyList(),
+    deshadow: Boolean = false,
+    denoise: Boolean = false
 ): Bitmap? = runCatching {
     val m = Matrix().apply {
         postRotate(rotation.toFloat() + deskew)
         if (flip) postScale(-1f, 1f)
     }
-    val bmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+    val bmp0 = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
+    val bmp = if (deshadow || denoise) applyBookScan(bmp0, deshadow, denoise) else bmp0
     val painted = if (shapes.isEmpty()) bmp else bakeShapes(bmp, shapes)
     val cx = (crop.left * painted.width).roundToInt().coerceIn(0, painted.width - 1)
     val cy = (crop.top * painted.height).roundToInt().coerceIn(0, painted.height - 1)
@@ -1325,10 +1500,15 @@ private fun encodeCropped(
     threshold: Int,
     outSize: Int,
     quality: Int,
-    shapes: List<StudioShape> = emptyList()
+    shapes: List<StudioShape> = emptyList(),
+    deshadow: Boolean = false,
+    denoise: Boolean = false
 ): Pair<String, Int>? = runCatching {
+    // V77.0 — فیلترهای اسکن کتاب قبل از پختِ شکل‌ها اجرا می‌شوند تا رنگِ
+    // فلش/هایلایتری که کاربر کشیده خاکستری نشود.
+    val cleaned = if (deshadow || denoise) applyBookScan(bmp, deshadow, denoise) else bmp
     // V76.7 — شکل‌ها قبل از برش روی تصویر پخته می‌شوند (در تفکیک هم هر بخش شکل‌ها را دارد)
-    val painted = if (shapes.isEmpty()) bmp else bakeShapes(bmp, shapes)
+    val painted = if (shapes.isEmpty()) cleaned else bakeShapes(cleaned, shapes)
     val cx = (box.left * painted.width).roundToInt().coerceIn(0, painted.width - 1)
     val cy = (box.top * painted.height).roundToInt().coerceIn(0, painted.height - 1)
     val cw = max(1, (box.width * painted.width).roundToInt().coerceAtMost(painted.width - cx))
@@ -1405,6 +1585,7 @@ internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap = runCa
     val Y = { p: Offset -> p.y * h }
     val baseStroke = (max(w, h) * 0.005f).coerceIn(3f, 24f)
     shapes.forEach { sp ->
+        if (sp.hidden) return@forEach          // V77.0 — شیء پنهان در خروجی هم نیست
         val hl = sp.type == "highlighter"
         val paint = android.graphics.Paint().apply {
             color = sp.color
@@ -1415,7 +1596,30 @@ internal fun bakeShapes(base: Bitmap, shapes: List<StudioShape>): Bitmap = runCa
             strokeWidth = if (hl) baseStroke * 3.5f else baseStroke
             if (hl) alpha = 110
         }
-        if (sp.type == "line" || sp.type == "arrow" || sp.type == "arrow2") {
+        if (sp.type == "curve") {
+            // V77.0 — فلش منحنی: بزیهٔ نمونه‌برداری‌شده + سرِ فلش در راستای
+            // آخرین پاره‌خطِ واقعی (نه خطِ مستقیمِ دو سر).
+            if (sp.points.size >= 2) {
+                val a = Offset(X(sp.points[0]), Y(sp.points[0]))
+                val b = Offset(X(sp.points[1]), Y(sp.points[1]))
+                val poly = bezierPolyline(a, b, sp.curve)
+                val path = android.graphics.Path().apply {
+                    moveTo(poly[0].x, poly[0].y)
+                    for (i in 1 until poly.size) lineTo(poly[i].x, poly[i].y)
+                }
+                cv.drawPath(path, paint)
+                val last = poly[poly.size - 1]
+                val prev = poly[poly.size - 2]
+                val ang = kotlin.math.atan2(last.y - prev.y, last.x - prev.x)
+                val hl2 = paint.strokeWidth * 3.2f
+                val dx1 = hl2 * kotlin.math.cos(ang + 0.45f)
+                val dy1 = hl2 * kotlin.math.sin(ang + 0.45f)
+                val dx2 = hl2 * kotlin.math.cos(ang - 0.45f)
+                val dy2 = hl2 * kotlin.math.sin(ang - 0.45f)
+                cv.drawLine(last.x, last.y, last.x - dx1, last.y - dy1, paint)
+                cv.drawLine(last.x, last.y, last.x - dx2, last.y - dy2, paint)
+            }
+        } else if (sp.type == "line" || sp.type == "arrow" || sp.type == "arrow2") {
             if (sp.points.size >= 2) {
                 val x0 = X(sp.points[0]); val y0 = Y(sp.points[0])
                 val x1 = X(sp.points[1]); val y1 = Y(sp.points[1])

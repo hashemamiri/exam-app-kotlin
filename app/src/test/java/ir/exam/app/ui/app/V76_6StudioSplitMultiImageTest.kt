@@ -39,14 +39,14 @@ class V76_6StudioSplitMultiImageTest {
         assertTrue("💾 همه بخش‌ها به همین سؤال" in studio)
         assertTrue("🧩 هر بخش → سؤال جداگانه" in studio)
         // هر دو مسیر اعمال از زنجیرهٔ مشترک می‌گذرند (V76.7: با shapes)
-        assertTrue("splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes) }" in studio)
+        assertTrue("splitBoxes.mapNotNull { b -> encodeCropped(base, b, scanOn, threshold, outSize, quality, shapes, deshadowOn, denoiseOn) }" in studio)
     }
 
     @Test
     fun `shared encode pipeline used by single insert and split`() {
         assertTrue("private fun encodeCropped(" in studio)
         // processAndEncode حالا از helper مشترک استفاده می‌کند (V76.7: با پارامتر shapes)
-        assertTrue("""encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes)""" in studio)
+        assertTrue("""encodeCropped(bmp, crop, scanOn, threshold, outSize, quality, shapes, deshadow, denoise)""" in studio)
         assertTrue("internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap?" in studio)
     }
 
