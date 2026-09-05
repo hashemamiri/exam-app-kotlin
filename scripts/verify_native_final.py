@@ -2189,6 +2189,9 @@ _v68_editor=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorS
 _v68_draft=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text()
 _v68_vm=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text()
 _v68_codec=(ROOT/"app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt").read_text()
+# V86.9 — نگاشتِ سؤال‌ها از مخزن به تابعِ مشترکِ PrintableFromDrafts منتقل شد.
+# رفتار عوض نشده؛ فقط محلِ کد. گاردها به همان‌جا دنبالش می‌روند.
+_v869_mapper = (ROOT/"app/src/main/java/ir/exam/app/domain/model/PrintableFromDrafts.kt").read_text(encoding="utf-8")
 _v68_models=(ROOT/"app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt").read_text()
 _v68_repo=(ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
 _v68_pdf=(ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
@@ -2222,7 +2225,7 @@ require("decodeSpans()" in _v68_codec and _v68_spans_idx != -1
         and _v68_mc_idx != -1 and _v68_spans_idx < _v68_mc_idx,
         "V68.3.1 spans must be encoded unconditionally before the type branches (not inside MATCHING)")
 require("data class PrintTextSpan(" in _v68_models
-        and "PrintTextSpan(it.start, it.end, it.bold, it.italic)" in _v68_repo
+        and "PrintTextSpan(it.start, it.end, it.bold, it.italic)" in _v869_mapper
         and "StyleSpanOps.splitBySpans(rich.text, segStart, __spans)" in _v68_pdf
         and "textSpans.map { ir.exam.app.ui.builder.StyleSpan(it.start, it.end, it.bold, it.italic) }" in _v68_pdf,
         "V68.3 print PDF does not render text spans")
@@ -2347,8 +2350,8 @@ require("MathReplacementSpan(NativeMathParser.parse(segment.text))" in _v686_pdf
         "V68.6 options must flow inline with their formulas")
 require("val matchingLeft: List<String> = emptyList()" in _v686_models
         and "val matchingRight: List<String> = emptyList()" in _v686_models
-        and "matchingLeft = question.matchingLeft" in _v686_repo
-        and "matchingRight = question.matchingRight" in _v686_repo
+        and "matchingLeft = question.matchingLeft" in _v869_mapper
+        and "matchingRight = question.matchingRight" in _v869_mapper
         and "val __matchRows = maxOf(question.matchingLeft.size, question.matchingRight.size)" in _v686_pdf
         and "matchRight=question.matchingRight.getOrNull(rowIndex)" in _v686_pdf
         and 'val arrow = "↔"' in _v686_pdf
@@ -3044,6 +3047,19 @@ require('contentDescription = "پیش‌نمایش آزمون"' in _v867_builder
         "V86.8 the preview eye is missing")
 require("printExamStore.delete(rec.id)" in _v868_center,
         "V86.8 saved print exams must be removable")
+
+# V86.9 — چشم و پرینتر هر دو پنجرهٔ واقعیِ نسخهٔ ۳۰ را باز می‌کنند
+require("ir.exam.app.ui.printing.ExamHtmlPrintDialog(" in _v867_builder,
+        "V86.9 the eye must open the real printable window, not the compose approximation")
+require("htmlPrintExam = ir.exam.app.domain.model.PrintableFromDrafts.build(" in _v868_center,
+        "V86.9 the printer icon on a saved print exam is missing")
+require("fun answerTextFor(" in _v869_mapper and "QuestionType.ESSAY -> null" in _v869_mapper,
+        "V86.9 the shared answer-key mapping is missing")
+_v869_repo = (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text(encoding="utf-8")
+require("PrintableFromDrafts.questionAt(index, question)" in _v869_repo,
+        "V86.9 the server path must use the shared mapping so both keys agree")
+require("QuestionType.MULTIPLE_CHOICE ->" not in _v869_repo,
+        "V86.9 the answer-key logic must not be duplicated in the repository")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")

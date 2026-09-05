@@ -140,6 +140,10 @@ fun ExamBuilderScreen(
     var askPrintName by rememberSaveable { mutableStateOf(false) }
     var printExamName by rememberSaveable { mutableStateOf("") }
     var printSavedNote by remember { mutableStateOf<String?>(null) }
+    // V86.9 — چشم در مسیرِ چاپ همان پنجرهٔ آزمون‌سازِ چاپی را باز می‌کند،
+    // نه تقریبِ Compose. یعنی سربرگِ واقعی، A4، زوم و چاپِ استاد/دانشجو.
+    var printPreviewOf by remember { mutableStateOf<ir.exam.app.domain.model.OfficialExamPrintable?>(null) }
+    val builderContext = androidx.compose.ui.platform.LocalContext.current
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
@@ -230,7 +234,15 @@ fun ExamBuilderScreen(
                     // V86.8 — چشم: پیش‌نمایشِ کاملِ برگه، فقط در مسیرِ چاپ.
                     if (printMode) {
                         FloatingActionButton(
-                            onClick = { previewAll = true },
+                            onClick = {
+                                val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
+                                printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                    title = state.title.trim().ifBlank { "آزمون" },
+                                    subject = state.subject.trim(),
+                                    header = ir.exam.app.data.local.printHeaderOf(store.read()),
+                                    questions = state.questions
+                                )
+                            },
                             modifier = Modifier.align(Alignment.Center).size(56.dp),
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -486,6 +498,14 @@ fun ExamBuilderScreen(
             dismissButton = {
                 TextButton(onClick = { askPrintName = false }) { Text("انصراف") }
             }
+        )
+    }
+
+    // V86.9 — همان پنجرهٔ کاملِ آزمون‌سازِ چاپی.
+    printPreviewOf?.let { printable ->
+        ir.exam.app.ui.printing.ExamHtmlPrintDialog(
+            printable = printable,
+            onDismiss = { printPreviewOf = null }
         )
     }
 

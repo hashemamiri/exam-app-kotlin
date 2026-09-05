@@ -106,7 +106,8 @@ class V86_8PrintSaveAndPreviewTest {
     fun `the eye opens the preview and only on the print route`() {
         assertTrue("if (printMode) {" in builder)
         assertTrue("contentDescription = \"پیش‌نمایش آزمون\"" in builder)
-        assertTrue("onClick = { previewAll = true }" in builder)
+        // V86.9 — چشم حالا پنجرهٔ واقعیِ آزمون‌سازِ چاپی را باز می‌کند
+        assertTrue("printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(" in builder)
     }
 
     @Test

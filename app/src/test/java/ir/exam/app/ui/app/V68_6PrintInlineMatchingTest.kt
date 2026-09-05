@@ -25,7 +25,9 @@ class V68_6PrintInlineMatchingTest {
 
     private val pdfAdapter by lazy { source("app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt") }
     private val models by lazy { source("app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt") }
-    private val repo by lazy { source("app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt") }
+    // V86.9 — نگاشتِ سؤال‌ها به PrintableFromDrafts منتقل شد تا مسیرِ سرور و
+    // مسیرِ آزمونِ چاپیِ محلی یک کد داشته باشند. رفتار همان است.
+    private val repo by lazy { source("app/src/main/java/ir/exam/app/domain/model/PrintableFromDrafts.kt") }
     private val editor by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt") }
 
     // ---- ۱) پاراگراف درون‌خطی متن+فرمول ----

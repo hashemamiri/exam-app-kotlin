@@ -72,15 +72,7 @@ fun ExamPrintCenterScreen(
     val headerStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)
     }
-    val header = remember {
-        val f = headerStore.read()
-        OfficialPrintHeader(
-            school = f["f_branch"].orEmpty(),
-            subject = f["f_course"].orEmpty(),
-            examDate = f["f_examDate"].orEmpty(),
-            examDuration = f["f_duration"].orEmpty()
-        )
-    }
+    val header = remember { ir.exam.app.data.local.printHeaderOf(headerStore.read()) }
     // V86.8 — آزمون‌های چاپیِ ذخیره‌شده روی دستگاه، کنارِ آزمون‌های سرور.
     val printExamStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintExamStore(context.applicationContext)
@@ -182,6 +174,23 @@ fun ExamPrintCenterScreen(
                                 Icon(
                                     Icons.Outlined.Edit,
                                     contentDescription = "ویرایش آزمون چاپی",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            // V86.9 — پرینتر: همان پنجرهٔ کاملِ نسخهٔ ۳۰ که نوارش
+                            // «🖨 چاپ دانشجو» و «✅ چاپ استاد» دارد.
+                            IconButton(onClick = {
+                                htmlPrintExam = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                    title = rec.title.ifBlank { "آزمون" },
+                                    subject = rec.subject,
+                                    header = header,
+                                    questions = rec.questions
+                                )
+                                htmlPrintOpen = true
+                            }) {
+                                Icon(
+                                    Icons.Outlined.Print,
+                                    contentDescription = "چاپ آزمون چاپی",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }

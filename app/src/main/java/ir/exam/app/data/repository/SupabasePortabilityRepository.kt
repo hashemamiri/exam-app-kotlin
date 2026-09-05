@@ -12,12 +12,10 @@ import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.domain.model.BackupPreview
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintHeader
-import ir.exam.app.domain.model.OfficialPrintQuestion
 import ir.exam.app.domain.model.PortableFile
 import ir.exam.app.domain.model.RestoreOptions
 import ir.exam.app.domain.model.RestoreSummary
 import ir.exam.app.domain.model.StorageMaintenanceSummary
-import ir.exam.app.ui.builder.QuestionType
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.util.UUID
@@ -126,51 +124,10 @@ class SupabasePortabilityRepository {
             durationMinutes = exam.duration ?: 0,
             totalScore = exam.totalScore,
             includeAnswerKey = includeAnswerKey,
+            // V86.9 — نگاشت مشترک با مسیرِ آزمونِ چاپیِ محلی، تا کلیدِ پاسخِ
+            // نسخهٔ استاد در هر دو مسیر یکسان باشد.
             questions = questions.mapIndexed { index, question ->
-                val answer = when (question.type) {
-                    QuestionType.MULTIPLE_CHOICE -> question.correctIndex?.let { question.options.getOrNull(it) }
-                    QuestionType.TRUE_FALSE -> if (question.expectedText == "true") "صحیح" else "غلط"
-                    QuestionType.FILL_BLANK -> question.expectedText.replace('|', '،')
-                    QuestionType.NUMERIC -> question.expectedNumber + " ± " + question.tolerance
-                    QuestionType.MATCHING -> question.matchingPairs.entries.sortedBy { it.key }
-                        .joinToString("، ") { (left, right) -> "${left + 1}←${right + 1}" }
-                    QuestionType.ESSAY -> null
-                }
-                OfficialPrintQuestion(
-                    number = index + 1,
-                    text = question.text,
-                    score = question.score,
-                    options = question.options,
-                    optionStyles = question.optionStyles.map { style ->
-                        style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
-                    },
-                    // V68.6 — آیتم‌های جورکردنی هم به چاپ می‌روند (گزارش کاربر:
-                    // گزینه‌های جورکردنی در چاپ نمایش داده نمی‌شدند).
-                    matchingLeft = question.matchingLeft,
-                    matchingRight = question.matchingRight,
-                    matchingLeftStyles = question.matchingLeftStyles.map { style ->
-                        style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
-                    },
-                    matchingRightStyles = question.matchingRightStyles.map { style ->
-                        style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
-                    },
-                    answerText = answer,
-                    answerLines = question.answerLines,
-                    answerLineStyle = question.answerLineStyle,
-                    textAlign = question.textAlign,
-                    imagePosition = question.imagePosition,
-                    fontFamily = question.fontFamily,
-                    fontSizeSp = question.fontSizeSp,
-                    bold = question.bold,
-                    italic = question.italic,
-                    textSpans = question.textSpans.map {
-                        ir.exam.app.domain.model.PrintTextSpan(it.start, it.end, it.bold, it.italic)
-                    },
-                    imageWidthsMm = question.images.map { it.widthMm } + question.optionImages.filterNotNull().map { 40f },
-                    imageXmm = question.images.map { it.xMm } + question.optionImages.filterNotNull().map { 20f },
-                    imageYmm = question.images.map { it.yMm } + question.optionImages.filterNotNull().map { 30f },
-                    imageUrls = question.images.map { it.uri } + question.optionImages.filterNotNull()
-                )
+                ir.exam.app.domain.model.PrintableFromDrafts.questionAt(index, question)
             }
         )
     }

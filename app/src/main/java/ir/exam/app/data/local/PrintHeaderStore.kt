@@ -58,3 +58,15 @@ class PrintHeaderStore(context: Context) {
         const val KEY = "fields"
     }
 }
+
+/**
+ * V86.9 — نگاشتِ میدان‌های فرمِ سربرگ به مدلِ چاپ. یک جا نوشته می‌شود تا
+ * مسیرِ پیش‌نمایش و مسیرِ چاپ همان سربرگ را ببینند.
+ */
+fun printHeaderOf(fields: Map<String, String>): ir.exam.app.domain.model.OfficialPrintHeader =
+    ir.exam.app.domain.model.OfficialPrintHeader(
+        school = fields["f_branch"].orEmpty(),
+        subject = fields["f_course"].orEmpty(),
+        examDate = fields["f_examDate"].orEmpty(),
+        examDuration = fields["f_duration"].orEmpty()
+    )

@@ -90,8 +90,10 @@ class V86_7PrintHeaderButtonTest {
         assertTrue("print_header_fields" in store)
         assertTrue("fun read(): Map<String, String>" in store)
         assertTrue("ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)" in center)
-        assertTrue("school = f[\"f_branch\"].orEmpty()" in center)
-        assertTrue("subject = f[\"f_course\"].orEmpty()" in center)
+        // V86.9 — نگاشت به printHeaderOf منتقل شد تا پیش‌نمایش و چاپ یکی باشند
+        val store = File(root(), "app/src/main/java/ir/exam/app/data/local/PrintHeaderStore.kt").readText()
+        assertTrue("school = fields[\"f_branch\"].orEmpty()" in store)
+        assertTrue("subject = fields[\"f_course\"].orEmpty()" in store)
     }
 
     @Test
