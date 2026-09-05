@@ -2902,7 +2902,7 @@ require("internal const val MAIN_PAGE_URL" in _v80_dialog, "V80.0 main-page cons
 require("if (url != MAIN_PAGE_URL) return" in _v80_dialog, "V80.0 sub-frame guard is missing")
 require("loadUrl(MAIN_PAGE_URL)" in _v80_dialog, "V80.0 loadUrl must use the shared constant")
 require(_v80_dialog.index("if (url != MAIN_PAGE_URL) return")
-        < _v80_dialog.index("ExamHtmlPrintPayloadBuilder.build(printable)"),
+        < _v80_dialog.index("ExamHtmlPrintPayloadBuilder.build("),
         "V80.0 guard must precede the payload injection")
 require("data.reset && !data.force" in _v79_asset, "V80.0 stray-reset guard is missing")
 require("qmfAnyToolOpen" in _v79_asset, "V80.0 reset guard must consider open tools")
@@ -3022,8 +3022,28 @@ require("ir.exam.app.ui.printing.HeaderSettingsDialog(" in _v867_builder,
         "V86.7 must reuse the existing native header dialog")
 require("AudienceCard(state, viewModel)" in _v867_builder,
         "V86.7 the online route must keep its audience card")
-require(_v867_app.count("builderCameFromPrint = true") == 1,
-        "V86.7 only the print entry may turn the flag on")
+_v867_builder_routes = [i for i, ln in enumerate(_v867_app.split("\n"))
+                        if "page = MainPage.BUILDER" in ln]
+for _i in _v867_builder_routes:
+    _ctx = "\n".join(_v867_app.split("\n")[max(0, _i - 9):_i + 1])
+    require("builderCameFromPrint" in _ctx,
+            "V86.7 a builder route at line %d does not set builderCameFromPrint" % (_i + 1))
+require(len(_v867_builder_routes) >= 6,
+        "V86.7 builder routes vanished; the guard would pass vacuously")
+
+# V86.8 — ذخیرهٔ محلیِ آزمونِ چاپی، چشمِ پیش‌نمایش، و همهٔ میدان‌های سربرگ
+_v868_payload = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt").read_text(encoding="utf-8")
+_v868_center = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text(encoding="utf-8")
+require("extraHeaderFields: Map<String, String> = emptyMap()" in _v868_payload,
+        "V86.8 extra header fields must be optional so old callers keep working")
+require('if (key.startsWith("f_") && value.isNotBlank()) put(key, value)' in _v868_payload,
+        "V86.8 a blank saved field must not wipe a derived one, and only f_ keys may be injected")
+require("if (printMode) askPrintName = true else confirmSave = true" in _v867_builder,
+        "V86.8 the tick must not hit the server on the print route")
+require('contentDescription = "پیش‌نمایش آزمون"' in _v867_builder,
+        "V86.8 the preview eye is missing")
+require("printExamStore.delete(rec.id)" in _v868_center,
+        "V86.8 saved print exams must be removable")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
@@ -3158,7 +3178,7 @@ require("window.__qmfAddQuestionImage" in _v764_asset
         "V76.4 asset host bridge (setFields/export/addImage/camera) is missing")
 require(_v730_payload.exists()
         and "object ExamHtmlPrintPayloadBuilder" in _v730_payload_text
-        and "fun build(printable: OfficialExamPrintable?): JsonObject" in _v730_payload_text
+        and "printable: OfficialExamPrintable?" in _v730_payload_text
         and 'put("f_headerTemplate", "classic")' in _v730_payload_text
         and "qIdCounter" in _v730_payload_text,
         "V76.0 ExamHtmlPrintPayloadBuilder (builder-30 mapping, classic default) is missing")

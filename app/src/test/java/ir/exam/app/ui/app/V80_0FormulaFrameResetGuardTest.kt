@@ -47,7 +47,7 @@ class V80_0FormulaFrameResetGuardTest {
     @Test
     fun `the guard sits before the reset injection`() {
         val guard = dialog.indexOf("if (url != MAIN_PAGE_URL) return")
-        val reset = dialog.indexOf("ExamHtmlPrintPayloadBuilder.build(printable)")
+        val reset = dialog.indexOf("ExamHtmlPrintPayloadBuilder.build(")
         assertTrue("گارد پیدا نشد", guard > 0)
         assertTrue("تزریق پیدا نشد", reset > 0)
         assertTrue("گارد باید پیش از تزریق باشد", guard < reset)

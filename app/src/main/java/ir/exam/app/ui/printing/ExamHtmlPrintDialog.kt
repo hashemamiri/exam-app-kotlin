@@ -433,7 +433,11 @@ fun ExamHtmlPrintDialog(
                                                 }
                                             }
                                         }
-                                        val payload = ExamHtmlPrintPayloadBuilder.build(printable).toString()
+                                        val payload = ExamHtmlPrintPayloadBuilder.build(
+                                            printable,
+                                            // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
+                                            ir.exam.app.data.local.PrintHeaderStore(context).read()
+                                        ).toString()
                                         var attempts = 0
                                         fun tryInject() {
                                             attempts++

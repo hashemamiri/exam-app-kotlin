@@ -21,7 +21,16 @@ import kotlinx.serialization.json.put
  */
 object ExamHtmlPrintPayloadBuilder {
 
-    fun build(printable: OfficialExamPrintable?): JsonObject {
+    /**
+     * V86.8 — `extraHeaderFields` همان ۱۶ میدانِ «تنظیمات سربرگ» است که کاربر
+     * روی دستگاه ذخیره کرده. مدلِ `OfficialPrintHeader` فقط چهار میدان دارد،
+     * پس بقیه (استاد، گروه آموزشی، نوعِ امتحان، تاریخِ اعلامِ نمرات و…) از این
+     * راه به فرمِ فایل می‌رسند. خالی بودنش یعنی رفتارِ قبلی، بیت‌به‌بیت.
+     */
+    fun build(
+        printable: OfficialExamPrintable?,
+        extraHeaderFields: Map<String, String> = emptyMap()
+    ): JsonObject {
         if (printable == null) {
             return buildJsonObject {
                 put("reset", true)
@@ -44,6 +53,12 @@ object ExamHtmlPrintPayloadBuilder {
                 put("f_branch", h.school)
                 put("f_examDate", h.examDate)
                 put("f_duration", durationStr)
+                // V86.8 — میدان‌های ذخیره‌شدهٔ سربرگ. آخر می‌آیند تا مقدارِ
+                // صریحِ کاربر بر مقدارِ مشتق‌شده از آزمون بچربد؛ ولی رشتهٔ خالی
+                // نباید مقدارِ خوبِ بالا را پاک کند.
+                extraHeaderFields.forEach { (key, value) ->
+                    if (key.startsWith("f_") && value.isNotBlank()) put(key, value)
+                }
             })
             val questionsArray = buildJsonArray {
                 printable.questions.forEachIndexed { index, q ->

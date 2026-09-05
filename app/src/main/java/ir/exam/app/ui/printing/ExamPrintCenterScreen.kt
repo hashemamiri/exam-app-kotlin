@@ -10,8 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material3.Button
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -54,7 +56,9 @@ import kotlinx.coroutines.launch
 fun ExamPrintCenterScreen(
     onEditExamDocument: (String) -> Unit = {},
     // V79.1 — «آزمون جدید» به آزمون‌سازِ بومی می‌رود، نه به WebView نسخهٔ ۳۰.
-    onNewNativeExam: () -> Unit = {}
+    onNewNativeExam: () -> Unit = {},
+    // V86.8 — ویرایشِ آزمونِ چاپیِ ذخیره‌شده روی دستگاه.
+    onOpenLocalPrintExam: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val layoutStore = remember(context.applicationContext) { PrintLayoutStore(context.applicationContext) }
@@ -77,6 +81,11 @@ fun ExamPrintCenterScreen(
             examDuration = f["f_duration"].orEmpty()
         )
     }
+    // V86.8 — آزمون‌های چاپیِ ذخیره‌شده روی دستگاه، کنارِ آزمون‌های سرور.
+    val printExamStore = remember(context.applicationContext) {
+        ir.exam.app.data.local.PrintExamStore(context.applicationContext)
+    }
+    var localExams by remember { mutableStateOf(printExamStore.list()) }
     var htmlPrintOpen by remember { mutableStateOf(false) }
     var htmlPrintExam by remember { mutableStateOf<OfficialExamPrintable?>(null) }
     var htmlPrintLoading by remember { mutableStateOf(false) }
@@ -86,6 +95,8 @@ fun ExamPrintCenterScreen(
 
     LaunchedEffect(Unit) {
         viewModel.load()
+        // بازگشت از آزمون‌ساز ممکن است آزمونِ چاپیِ تازه‌ای ساخته باشد
+        localExams = printExamStore.list()
     }
 
     // V76.0 — ورود خودکار سؤالات یک آزمون به نسخهٔ 30 و باز کردن آن تمام‌صفحه.
@@ -139,8 +150,55 @@ fun ExamPrintCenterScreen(
         if (state.loading || htmlPrintLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
-        if (state.exams.isEmpty() && !state.loading) Text("آزمونی برای چاپ نیست.")
+        if (state.exams.isEmpty() && localExams.isEmpty() && !state.loading) {
+            Text("آزمونی برای چاپ نیست.")
+        }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // V86.8 — آزمون‌های چاپیِ محلی، با نشانهٔ «چاپی» تا با آزمونِ سرور
+            // اشتباه نشوند. حذف هم دارند، وگرنه راهی برای پاک‌کردنشان نیست.
+            items(localExams, key = { "local-" + it.id }) { rec ->
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                rec.title.ifBlank { "آزمون چاپی" },
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            AssistChip(onClick = {}, label = { Text("چاپی") })
+                        }
+                        Text("درس: ${rec.subject.ifBlank { "—" }} · ${rec.questions.size} سؤال")
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
+                        ) {
+                            IconButton(onClick = { onOpenLocalPrintExam(rec.id) }) {
+                                Icon(
+                                    Icons.Outlined.Edit,
+                                    contentDescription = "ویرایش آزمون چاپی",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            IconButton(onClick = {
+                                printExamStore.delete(rec.id)
+                                localExams = printExamStore.list()
+                            }) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = "حذف آزمون چاپی",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+            }
             items(state.exams, key = { it.id }) { exam ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {

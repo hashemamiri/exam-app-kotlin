@@ -600,6 +600,30 @@ private fun AuthenticatedExamApp(
                             importedExam = null
                             builderCameFromPrint = true
                             page = MainPage.BUILDER
+                        },
+                        // V86.8 — آزمونِ چاپیِ ذخیره‌شده روی دستگاه را در همان
+                        // آزمون‌سازِ بومی باز می‌کند؛ مسیرِ import موجود.
+                        onOpenLocalPrintExam = { localId ->
+                            val rec = ir.exam.app.data.local.PrintExamStore(appContext).get(localId)
+                            if (rec != null) {
+                                editingExamId = null
+                                importedExam = ir.exam.app.ui.builder.ExamImportDraft(
+                                    title = rec.title,
+                                    subject = rec.subject,
+                                    durationMinutes = 0,
+                                    negativeMarking = 0.0,
+                                    shuffleQuestions = false,
+                                    shuffleOptions = false,
+                                    teacherMessage = "",
+                                    attemptsAllowed = 1,
+                                    attemptOnTimeout = false,
+                                    gradePolicy = "last",
+                                    attemptCooldown = 0,
+                                    questions = rec.questions
+                                )
+                                builderCameFromPrint = true
+                                page = MainPage.BUILDER
+                            }
                         }
                     )
                 }

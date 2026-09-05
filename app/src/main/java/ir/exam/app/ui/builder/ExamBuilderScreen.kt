@@ -136,6 +136,10 @@ fun ExamBuilderScreen(
     var settingsExpanded by rememberSaveable { mutableStateOf(false) }
     // V86.7 — پنجرهٔ سربرگ فقط در مسیرِ چاپ باز می‌شود
     var showHeaderSettings by rememberSaveable { mutableStateOf(false) }
+    // V86.8 — ذخیرهٔ محلیِ آزمونِ چاپی: نام می‌پرسد، به سرور نمی‌رود
+    var askPrintName by rememberSaveable { mutableStateOf(false) }
+    var printExamName by rememberSaveable { mutableStateOf("") }
+    var printSavedNote by remember { mutableStateOf<String?>(null) }
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
@@ -210,7 +214,9 @@ fun ExamBuilderScreen(
             if (!state.loading) {
                 Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     FloatingActionButton(
-                        onClick = { confirmSave = true },
+                        // V86.8 — در مسیرِ چاپ، ذخیره محلی است: نه عنوانِ الزامی،
+                        // نه مخاطب، نه کسرِ موجودی.
+                        onClick = { if (printMode) askPrintName = true else confirmSave = true },
                         modifier = Modifier.align(Alignment.CenterStart).size(56.dp),
                         containerColor = Color(0xFF27A86B),
                         contentColor = Color.White
@@ -220,6 +226,21 @@ fun ExamBuilderScreen(
                             contentDescription = "ذخیره آزمون",
                             modifier = Modifier.size(28.dp)
                         )
+                    }
+                    // V86.8 — چشم: پیش‌نمایشِ کاملِ برگه، فقط در مسیرِ چاپ.
+                    if (printMode) {
+                        FloatingActionButton(
+                            onClick = { previewAll = true },
+                            modifier = Modifier.align(Alignment.Center).size(56.dp),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Visibility,
+                                contentDescription = "پیش‌نمایش آزمون",
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                     if (!radialMenuOpen) {
                         FloatingActionButton(
@@ -417,6 +438,65 @@ fun ExamBuilderScreen(
     }
     if (previewAll) {
         ExamPrintPreviewDialog(state = state, onDismiss = { previewAll = false })
+    }
+
+    // V86.8 — نام‌گذاری و ذخیرهٔ محلیِ آزمونِ چاپی.
+    if (printMode && askPrintName) {
+        val nameContext = androidx.compose.ui.platform.LocalContext.current
+        val printStore = remember { ir.exam.app.data.local.PrintExamStore(nameContext) }
+        val suggested = state.title.trim()
+            .ifBlank { state.subject.trim() }
+            .ifBlank { "آزمون چاپی" }
+        LaunchedEffect(askPrintName) {
+            if (printExamName.isBlank()) printExamName = suggested
+        }
+        AlertDialog(
+            onDismissRequest = { askPrintName = false },
+            title = { Text("ذخیره آزمون چاپی") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("این آزمون روی همین دستگاه ذخیره می‌شود و در بخش چاپ آزمون دیده خواهد شد.")
+                    OutlinedTextField(
+                        value = printExamName,
+                        onValueChange = { printExamName = it },
+                        label = { Text("نام آزمون") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = printExamName.isNotBlank() && state.questions.isNotEmpty(),
+                    onClick = {
+                        printStore.save(
+                            ir.exam.app.data.local.PrintExamRecord(
+                                id = state.examId ?: "local-" + System.currentTimeMillis(),
+                                title = printExamName.trim(),
+                                subject = state.subject.trim(),
+                                questions = state.questions,
+                                savedAt = System.currentTimeMillis()
+                            )
+                        )
+                        askPrintName = false
+                        printSavedNote = "آزمون «" + printExamName.trim() + "» ذخیره شد ✓"
+                    }
+                ) { Text("ذخیره") }
+            },
+            dismissButton = {
+                TextButton(onClick = { askPrintName = false }) { Text("انصراف") }
+            }
+        )
+    }
+
+    printSavedNote?.let { note ->
+        AlertDialog(
+            onDismissRequest = { printSavedNote = null },
+            confirmButton = {
+                TextButton(onClick = { printSavedNote = null }) { Text("باشد") }
+            },
+            text = { Text(note) }
+        )
     }
 
     // V86.7 — «تنظیمات سربرگ» در مسیرِ چاپ.

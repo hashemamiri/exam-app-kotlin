@@ -59,9 +59,15 @@ class V86_7PrintHeaderButtonTest {
     }
 
     @Test
-    fun `only the print entry point turns the flag on`() {
+    fun `only print entry points turn the flag on`() {
         assertTrue("printMode = builderCameFromPrint" in app)
-        assertEquals(1, Regex("builderCameFromPrint = true").findAll(app).count())
+        // V86.8 مسیرِ دومِ چاپ را افزود (بازکردنِ آزمونِ چاپیِ ذخیره‌شده).
+        // هر دو باید در بلوکِ ExamPrintCenterScreen باشند، نه جای دیگر.
+        val center = app.substringAfter("ExamPrintCenterScreen(").substringBefore("MainPage.SETTINGS")
+        assertEquals(
+            Regex("builderCameFromPrint = true").findAll(app).count(),
+            Regex("builderCameFromPrint = true").findAll(center).count()
+        )
     }
 
     @Test
