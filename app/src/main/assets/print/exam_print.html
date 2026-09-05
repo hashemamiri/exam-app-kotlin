@@ -14407,6 +14407,29 @@ loadSample();
   #questionsContainer .question-card[data-qtype="matching"] .q-type-badge{background:#FFDAB9}
   /* کارتِ جمع‌شده کمی کم‌رنگ‌تر تا کارتِ باز چشمگیر بماند */
   #questionsContainer .question-card.collapsed{opacity:.92}
+
+  /* V88.8 — سرصفحه همیشه یک سطرِ افقی می‌ماند، مثلِ `Row` در کارتِ
+     آزمونِ آنلاین. قانونِ `@media (max-width:420px)` آن را
+     `flex-direction:column` می‌کرد و روی گوشی هر کنترل یک سطر می‌شد؛
+     همان چیزی که کاربر با تصویر نشان داد. */
+  #questionsContainer .q-header{
+    flex-direction:row !important;
+    align-items:center !important;
+    flex-wrap:nowrap !important;
+    gap:8px;
+  }
+  #questionsContainer .q-number{align-self:center !important;flex:0 0 auto}
+  #questionsContainer .q-type-badge{flex:0 0 auto;white-space:nowrap}
+  /* «نمره» کوتاه می‌ماند تا آیکن‌ها کنارش جا شوند */
+  #questionsContainer .q-score{width:74px !important;flex:0 0 auto}
+  /* حذف و جابه‌جایی آیکن‌اند، نه دکمهٔ تمام‌عرض */
+  #questionsContainer .q-remove{
+    width:auto !important;
+    margin-right:auto !important;
+    margin-left:0 !important;
+    flex:0 0 auto;
+  }
+  #questionsContainer .q-move-group{flex:0 0 auto}
 }
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
@@ -14850,6 +14873,8 @@ loadSample();
     }
   }
   state.open = function (id) { openQuestionId(id, true); };
+  /* V88.8 — همان بازکننده، برای شنوندهٔ لمسِ کارت. */
+  window.__qmfCardOpener = function (id) { openQuestionId(id, true); return 'ok'; };
 
   /* ---------- هوک‌ها ---------- */
   function hook(name, fn) {
@@ -15874,9 +15899,10 @@ window.__qmfHasLocalDraft = function () {
    سؤال‌ها همچنان در `questions` جاوااسکریپت زندگی می‌کنند تا موتورِ چاپ
    دست‌نخورده بماند؛ سمتِ بومی فقط می‌خواند و از راهِ همین توابعِ موجودِ
    صفحه می‌نویسد، پس رفتار و رندر دقیقاً یکسان می‌ماند. */
-/* V88.6 — فقط لمسِ عمدیِ کارت ویرایشگرِ بومی را باز می‌کند. `pointerdown`
-   روی ناحیهٔ ابزار یا ورودی‌های خودِ کارت نادیده گرفته می‌شود تا تایپ در
-   کادرهای HTML و درگِ اشیا مثلِ قبل کار کند. */
+/* V88.8 — لمسِ کارت خودِ کارت را باز می‌کند (accordion)، دقیقاً مثلِ
+   آزمون‌سازِ آنلاین: کارتِ بسته باز می‌شود و کادرِ متنِ سؤال ظاهر می‌گردد.
+   ویرایشگرِ بومی دیگر با لمس نمی‌پرد؛ کاربر خواست کارت کشیده شود نه پنجره.
+   `input/textarea/...` استثنا می‌مانند تا تایپ و درگ مثلِ قبل کار کنند. */
 (function () {
   'use strict';
   function qidOfCard(card) {
@@ -15886,20 +15912,29 @@ window.__qmfHasLocalDraft = function () {
   }
   document.addEventListener('pointerup', function (e) {
     try {
-      if (!(window.ExamPrintNative &&
-            typeof window.ExamPrintNative.openQuestion === 'function')) return;
       var t = e.target;
       if (!t || !t.closest) return;
       /* ورودی‌ها، دکمه‌ها و اشیای درج‌شده مسیرِ خودشان را دارند */
       if (t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')) return;
       var card = t.closest('#questionsContainer .question-card');
       if (!card) return;
+      /* کارتِ باز با لمسِ دوباره بسته نمی‌شود؛ آزمونِ آنلاین هم همیشه یک
+         سؤال باز نگه می‌دارد. */
+      if (!card.classList.contains('collapsed')) return;
       var qid = qidOfCard(card);
       if (qid == null) return;
-      window.ExamPrintNative.openQuestion(String(qid));
+      if (typeof window.__qmfOpenCard === 'function') window.__qmfOpenCard(qid);
     } catch (err) {}
   }, true);
 })();
+
+/* V88.8 — بازکردنِ کارت از بیرونِ ماژولِ accordion. */
+window.__qmfOpenCard = function (qid) {
+  try {
+    if (window.__qmfCardOpener) return window.__qmfCardOpener(qid);
+  } catch (e) {}
+  return 'missing';
+};
 
 window.__qmfQuestionDetail = function (qid) {
   try {

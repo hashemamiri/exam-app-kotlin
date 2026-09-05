@@ -3188,11 +3188,12 @@ for _f in ("updateQ(q.id, field, v)", "updateOpt(id,", "addOption(id)",
            "removeOption(id,", "addPair(id)", "removePair(id,", "updatePair(id,"):
     require(_f in _v79_asset,
             "V88.1 the bridge must delegate to the page function %s" % _f)
-# V88.6 — نامِ آرگومان از `id` به `qid` رفت چون فراخوانی از شنوندهٔ لمس
-# می‌آید، نه از `openQuestionId`. معنا همان است: کارت میزبان را خبر کند.
-require("window.ExamPrintNative.openQuestion(String(qid))" in _v79_asset
-        and "typeof window.ExamPrintNative.openQuestion === 'function'" in _v79_asset,
-        "V88.1 opening a card must notify the host and still work in a browser")
+# V88.8 — لمس دیگر میزبان را خبر نمی‌کند: کاربر خواست کارت باز شود، نه
+# پنجره. پلِ `openQuestion` حذف نشد و ویرایشگرِ بومی از راهِ آن در دسترس
+# می‌ماند؛ سنجه از «لمس خبر می‌دهد» به «پل باقی است» تغییر کرد.
+require("fun openQuestion(questionId: String?)" in _v874_dlg
+        and "window.__qmfQuestionDetail = function" in _v79_asset,
+        "V88.1 the native question bridge must stay reachable")
 _v881_sheet = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt"
 require(_v881_sheet.is_file(), "V88.1 the native question editor is missing")
 require("org.json.JSONObject.quote(value)" in _v874_dlg,
@@ -3219,8 +3220,23 @@ require("(String(value) === 'plain') ? 'plain' : 'lined'" in _v79_asset,
 _v886_at = _v79_asset.index("function openQuestionId")
 require("ExamPrintNative.openQuestion" not in _v79_asset[_v886_at:_v886_at + 700],
         "V88.6 openQuestionId runs on every add, so it must not open the editor")
+# V88.8 — لمسِ کارت خودِ کارت را باز می‌کند، نه پنجرهٔ بومی را.
 require("t.closest('#questionsContainer .question-card')" in _v79_asset,
-        "V88.6 the editor must open from a deliberate tap on a card")
+        "V88.8 a tap must be recognised on a card")
+require("window.__qmfOpenCard(qid)" in _v79_asset
+        and "window.__qmfCardOpener = function (id) { openQuestionId(id, true); return 'ok'; };" in _v79_asset,
+        "V88.8 tapping a collapsed card must expand it like the online builder")
+_v888_from = _v79_asset.index("/* V88.8 \u2014 \u0644\u0645\u0633\u0650 \u06a9\u0627\u0631\u062a")
+_v888_to = _v79_asset.index("window.__qmfQuestionDetail = function")
+require("ExamPrintNative.openQuestion" not in _v79_asset[_v888_from:_v888_to],
+        "V88.8 tapping must not throw the native editor in front of the card")
+require("if (!card.classList.contains('collapsed')) return;" in _v79_asset,
+        "V88.8 an open card must not toggle shut")
+require("flex-direction:row !important;" in _v79_asset
+        and "flex-wrap:nowrap !important;" in _v79_asset,
+        "V88.8 the card header must stay a single row on a phone")
+require("#questionsContainer .q-score{width:74px !important;flex:0 0 auto}" in _v79_asset,
+        "V88.8 the score field must not stretch to full width on a phone")
 require("t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in _v79_asset,
         "V88.6 typing, tools and figures must keep their own handling")
 require("#questionsContainer .q-answer-config{display:none !important}" in _v79_asset,

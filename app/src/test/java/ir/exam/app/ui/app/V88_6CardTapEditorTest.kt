@@ -30,7 +30,8 @@ class V88_6CardTapEditorTest {
 
     @Test
     fun `a deliberate tap on the card opens it`() {
-        assertTrue("window.ExamPrintNative.openQuestion(String(qid))" in asset)
+        // V88.8 — لمس، خودِ کارت را باز می‌کند (accordion)، نه پنجرهٔ بومی را.
+        assertTrue("window.__qmfOpenCard(qid)" in asset)
         assertTrue("t.closest('#questionsContainer .question-card')" in asset)
     }
 
