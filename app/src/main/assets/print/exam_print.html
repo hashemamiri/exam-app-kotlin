@@ -265,6 +265,16 @@
     direction:rtl;
   }
   .interactive-figure.selected { outline:2px dashed #2563eb; outline-offset:4px; border-radius:8px; }
+  /* V86.5 — شیءِ شناور از جریانِ متن بیرون است و می‌تواند روی دیگری بنشیند */
+  .interactive-figure.fig-free { position:absolute; margin:0; }
+  .exam-question-editor-shell, .q-rich-content { position:relative; }
+  .fig-tools { position:absolute; top:-34px; right:0; display:none; gap:4px; z-index:9999;
+    background:#1e3a8a; border-radius:8px; padding:3px; direction:rtl; }
+  .interactive-figure.selected .fig-tools { display:flex; }
+  .fig-tools button { border:none; background:rgba(255,255,255,.16); color:#fff; border-radius:6px;
+    min-width:32px; min-height:32px; font:700 13px Arial,sans-serif; cursor:pointer; touch-action:manipulation; }
+  .fig-tools button:active { background:rgba(255,255,255,.35); }
+  @media print { .fig-tools, .fig-move-hint { display:none !important; } }
   .interactive-figure .qmf-fig { width:100% !important; max-width:100% !important; margin:0 auto !important; }
   .interactive-figure .qmf-fig svg,
   .interactive-figure .qmf-fig img { max-width:100% !important; width:100% !important; height:auto !important; }
@@ -12136,6 +12146,19 @@ function figLayoutStyle(q, figIndex) {
   /* PRINT_SYNC_FIX_V1004 + VERTICAL_RESIZE_V1005 */
   const wEff = w || 360;
   const yEff = Math.max(0, y);
+  /* V86.5 — حالتِ شناور: شیء از جریانِ متن بیرون می‌آید و می‌تواند کنارِ
+     شیءِ دیگر یا رویش بنشیند. `z` ترتیبِ روی‌هم‌افتادن است.
+     حالتِ پیش‌فرض (بدونِ free) دقیقاً مثلِ قبل می‌ماند، پس هیچ آزمونی که
+     تا امروز ساخته شده جابه‌جا نمی‌شود. */
+  if (l.free) {
+    const zi = Number.isFinite(+l.z) ? +l.z : 1;
+    const fp = [`--fig-x:${x}px`, `--fig-y:${yEff}px`,
+      `position:absolute`, `right:${x}px`, `left:auto`, `top:${yEff}px`,
+      `margin:0`, `z-index:${zi}`];
+    if (w) fp.push(`width:${w}px`);
+    if (h) fp.push(`height:${h}px`);
+    return fp.join(';');
+  }
   const parts = [`--fig-x:${x}px`, `--fig-y:${yEff}px`,
     `margin-right:clamp(0px, ${x}px, calc(100% - ${wEff}px - 18px))`,
     `left:auto`, `right:auto`, `top:${yEff}px`];
@@ -12248,8 +12271,8 @@ function renderFigToken(raw, q, figIndex) {
     }
   }
   if (!q || figIndex == null) return figHtml;
-  return `<div class="interactive-figure" data-qid="${q.id}" data-fig-index="${figIndex}" style="${figLayoutStyle(q, figIndex)}">
-    <span class="fig-move-hint">جابجایی: داخل کادر بکشید</span>${figHtml}<span class="fig-size-badge"></span><span class="fig-resize-handle" data-edge="l" title="تغییر اندازه از چپ"></span><span class="fig-resize-handle" data-edge="r" title="تغییر اندازه از راست"></span><span class="fig-resize-handle" data-edge="t" title="تغییر اندازه از بالا"></span><span class="fig-resize-handle" data-edge="b" title="تغییر اندازه از پایین"></span><span class="fig-resize-handle" data-edge="bl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="br" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tr" title="تغییر اندازه"></span>
+  return `<div class="interactive-figure${((q.figLayouts||{})[figIndex]||{}).free ? ' fig-free' : ''}" data-qid="${q.id}" data-fig-index="${figIndex}" style="${figLayoutStyle(q, figIndex)}">
+    <span class="fig-move-hint">جابجایی: داخل کادر بکشید</span><span class="fig-tools" contenteditable="false"><button type="button" onclick="qmfToggleFigFree('${q.id}',${figIndex})" title="کنار هم / روی هم">⧉</button><button type="button" onclick="qmfFigLayer('${q.id}',${figIndex},1)" title="بیاور جلو">▲</button><button type="button" onclick="qmfFigLayer('${q.id}',${figIndex},-1)" title="ببر عقب">▼</button></span>${figHtml}<span class="fig-size-badge"></span><span class="fig-resize-handle" data-edge="l" title="تغییر اندازه از چپ"></span><span class="fig-resize-handle" data-edge="r" title="تغییر اندازه از راست"></span><span class="fig-resize-handle" data-edge="t" title="تغییر اندازه از بالا"></span><span class="fig-resize-handle" data-edge="b" title="تغییر اندازه از پایین"></span><span class="fig-resize-handle" data-edge="bl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="br" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tr" title="تغییر اندازه"></span>
   </div>`;
 }
 function renderRichText(value, q) {
@@ -12277,6 +12300,54 @@ function setFigLayout(qId, figIndex, patch) {
   const layouts = ensureFigLayouts(q);
   layouts[figIndex] = Object.assign({}, layouts[figIndex] || {}, patch || {});
 }
+
+/* V86.5 — کنترل‌هایِ «کنارِ هم / رویِ هم».
+   حالتِ شناور شیء را از جریانِ متن بیرون می‌آورد؛ از آن پس دو شیء می‌توانند
+   هم‌تراز بنشینند یا هم‌پوشانی کنند و `z` تصمیم می‌گیرد کدام جلوتر است.
+   مختصات همان `figLayouts` است، پس چاپ هم همین را می‌بیند. */
+function qmfToggleFigFree(qId, figIndex) {
+  const q = questions.find(x => String(x.id) === String(qId));
+  if (!q) return;
+  const cur = (ensureFigLayouts(q)[figIndex]) || {};
+  const el = document.querySelector(
+    '.interactive-figure[data-qid="' + qId + '"][data-fig-index="' + figIndex + '"]');
+  const patch = { free: !cur.free };
+  /* هنگامِ شناور شدن، از جایِ فعلی شروع کن تا شیء نپرد */
+  if (!cur.free && el) {
+    const host = el.offsetParent || el.parentNode;
+    if (host && host.getBoundingClientRect) {
+      const r = el.getBoundingClientRect(), hr = host.getBoundingClientRect();
+      patch.x = Math.max(0, Math.round(hr.right - r.right));
+      patch.y = Math.max(0, Math.round(r.top - hr.top));
+      if (!cur.w) patch.w = Math.round(r.width);
+      if (!cur.h) patch.h = Math.round(r.height);
+    }
+    if (!Number.isFinite(+cur.z)) patch.z = qmfNextFigZ(q);
+  }
+  setFigLayout(qId, figIndex, patch);
+  if (typeof scheduleRender === 'function') scheduleRender();
+  else if (typeof renderAll === 'function') renderAll();
+}
+function qmfNextFigZ(q) {
+  let top = 1;
+  const ls = ensureFigLayouts(q);
+  Object.keys(ls).forEach(function (k) {
+    const z = +(ls[k] || {}).z;
+    if (Number.isFinite(z) && z >= top) top = z + 1;
+  });
+  return top;
+}
+function qmfFigLayer(qId, figIndex, dir) {
+  const q = questions.find(x => String(x.id) === String(qId));
+  if (!q) return;
+  const cur = (ensureFigLayouts(q)[figIndex]) || {};
+  const z = (Number.isFinite(+cur.z) ? +cur.z : 1) + (dir > 0 ? 1 : -1);
+  setFigLayout(qId, figIndex, { z: Math.max(0, z) });
+  if (typeof scheduleRender === 'function') scheduleRender();
+  else if (typeof renderAll === 'function') renderAll();
+}
+window.qmfToggleFigFree = qmfToggleFigFree;
+window.qmfFigLayer = qmfFigLayer;
 function stripMathDelimiters(s) {
   const t = String(s || '').trim();
   const m = t.match(/^\\\(([\s\S]*)\\\)$/) || t.match(/^\$\$([\s\S]*)\$\$$/) || t.match(/^\$([^$]*)\$$/);
@@ -13303,6 +13374,16 @@ function initPreviewFigureEditing() {
   }
   area.addEventListener('pointerdown', function(e) {
     const fig = e.target.closest && e.target.closest('.interactive-figure');
+    /* V86.5 — تا وقتی شیء کشیده می‌شود، ظرفِ اسکرول‌شونده قفل است.
+       بدونِ این، مرورگر هم‌زمان با جابه‌جاییِ شیء خودِ صفحه را اسکرول
+       می‌کرد و شیء از زیرِ انگشت در می‌رفت. */
+    if (fig) {
+      try {
+        var sc = e.target.closest('.pwo-body') ||
+                 document.scrollingElement || document.body;
+        if (sc) { sc.style.overflow = 'hidden'; window.__qmfDragLock = sc; }
+      } catch (err) {}
+    }
     if (!fig) {
       area.querySelectorAll('.interactive-figure.selected').forEach(x => x.classList.remove('selected'));
       return;
@@ -13353,9 +13434,18 @@ function initPreviewFigureEditing() {
     const c = clampToParent(drag.fig, x, y, w, h);
     drag.fig.style.setProperty('--fig-x', c.x + 'px');
     drag.fig.style.setProperty('--fig-y', c.y + 'px');
-    drag.fig.style.marginRight = 'clamp(0px, ' + c.x + 'px, calc(100% - ' + c.w + 'px - 18px))';
-    drag.fig.style.right = 'auto';
-    drag.fig.style.left = 'auto';
+    /* V86.5 — شیءِ شناور مطلق است: مستقیم `right` می‌گیرد، نه حاشیهٔ
+       clamp‌شده. آن clamp شیء را داخلِ ستونِ متن نگه می‌داشت و اجازه نمی‌داد
+       کنارِ شیءِ دیگر یا رویش بنشیند. */
+    if (drag.fig.classList.contains('fig-free')) {
+      drag.fig.style.removeProperty('margin-right');
+      drag.fig.style.right = c.x + 'px';
+      drag.fig.style.left = 'auto';
+    } else {
+      drag.fig.style.marginRight = 'clamp(0px, ' + c.x + 'px, calc(100% - ' + c.w + 'px - 18px))';
+      drag.fig.style.right = 'auto';
+      drag.fig.style.left = 'auto';
+    }
     drag.fig.style.top = Math.max(0, c.y) + 'px';
     drag.fig.style.width = 'min(' + c.w + 'px, calc(100% - 18px))';
     drag.fig.style.height = c.h + 'px';
@@ -13367,8 +13457,17 @@ function initPreviewFigureEditing() {
     try { drag.fig.releasePointerCapture?.(e.pointerId); } catch(_) {}
     drag = null;
   }
-  area.addEventListener('pointerup', endDrag);
-  area.addEventListener('pointercancel', endDrag);
+  /* V86.5 — قفلِ اسکرول در هر پایانی آزاد شود، حتی اگر درگ لغو شد */
+  function qmfReleaseScrollLock() {
+    try {
+      var sc = window.__qmfDragLock;
+      if (sc) { sc.style.removeProperty('overflow'); window.__qmfDragLock = null; }
+    } catch (err) {}
+  }
+  area.addEventListener('pointerup', function (e) { qmfReleaseScrollLock(); endDrag(e); });
+  area.addEventListener('pointercancel', function (e) { qmfReleaseScrollLock(); endDrag(e); });
+  window.addEventListener('pointerup', qmfReleaseScrollLock);
+  window.addEventListener('blur', qmfReleaseScrollLock);
 }
 function updateFigSizeBadge(fig, w, h) {
   try {
@@ -14082,7 +14181,10 @@ loadSample();
 .pwo-zb:active{background:rgba(255,255,255,.32)}
 .pwo-zoom-val{min-width:44px;text-align:center;opacity:.92}
 .pwo-x:hover{background:rgba(255,255,255,.3)}
-.pwo-body{flex:1 1 auto;min-height:0;overflow:auto;padding:12px;background:#eef2f7}
+.pwo-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px;background:#eef2f7}
+/* V86.5 — در زوم ۱× برگه دقیقاً جا می‌شود، پس اسکرولِ افقی فقط سرگردانی
+   است. به محضِ بزرگ‌نمایی آزاد می‌شود تا کاربر به لبه‌ها برسد. */
+.pwo-body.qmf-zoomed{overflow-x:auto}
 /* V85.0 — لفافهٔ مقیاس: فضای واقعیِ برگهٔ کوچک‌شده را می‌گیرد تا کادر جمع نشود. */
 .qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible}
 .qmf-pv-wrap > #printContent{margin:0 !important}
@@ -14290,6 +14392,10 @@ loadSample();
     z = Math.min(4, Math.max(1, z || 1));
     window.__qmfPvZoom = z;
     try { qmfFitPreviewScale(); } catch (e) {}
+    try {
+      var pb = document.querySelector('.pwo-body');
+      if (pb) pb.classList.toggle('qmf-zoomed', z > 1.001);
+    } catch (e) {}
     var b = document.querySelector('.pwo-zoom-val');
     if (b) b.textContent = Math.round(z * 100) + '%';
   };
@@ -14302,7 +14408,7 @@ loadSample();
       return Math.sqrt(dx * dx + dy * dy);
     }
     bodyEl.addEventListener('touchstart', function (e) {
-      if (e.touches.length === 2) {
+      if (e.touches.length === 2 && !window.__qmfDragLock) {
         startDist = dist(e.touches);
         startZoom = window.__qmfPvZoom || 1;
       }

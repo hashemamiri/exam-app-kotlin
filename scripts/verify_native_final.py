@@ -3000,6 +3000,18 @@ require("width:210mm !important;" in _v79_asset,
         "V86.4 the preview sheet must be a full A4 width")
 require("width:200mm !important; min-height:287mm !important;" in _v79_asset,
         "V86.4 the printable area must not change")
+
+# V86.5 — اسکرولِ مشروط، قفلِ درگ، و چیدمانِ آزادِ اشیاء
+require(".pwo-body.qmf-zoomed{overflow-x:auto}" in _v79_asset,
+        "V86.5 sideways scroll must unlock only when zoomed")
+require("window.__qmfDragLock" in _v79_asset,
+        "V86.5 the drag scroll lock is missing")
+require("function qmfReleaseScrollLock()" in _v79_asset,
+        "V86.5 the scroll lock must be released")
+require("if (l.free) {" in _v79_asset,
+        "V86.5 the floating layout branch is missing")
+require("margin-right:clamp(0px, ${x}px, calc(100% - ${wEff}px - 18px))" in _v79_asset,
+        "V86.5 the flowing layout must stay unchanged")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top left'" in _v79_asset, "V85.0 origin must be top left")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
