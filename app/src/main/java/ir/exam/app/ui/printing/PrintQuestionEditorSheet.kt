@@ -75,6 +75,10 @@ data class PrintQuestionDetail(
     val answerStyle: String = "lined",
     val answerLineHeightCm: Double? = null,
     val answer: String = "",
+    /** V89.3 — متنِ خوانا برای نمایش؛ توکن‌ها با نشانهٔ کوتاه جایگزین شده‌اند. */
+    val displayText: String = "",
+    /** آیا متن شیءِ درج‌شده دارد؟ */
+    val hasTokens: Boolean = false,
     val options: List<PrintOptionRow> = emptyList(),
     val pairs: List<PrintPairRow> = emptyList()
 )
@@ -98,6 +102,8 @@ fun parsePrintQuestionDetail(raw: String?): PrintQuestionDetail? {
             answerStyle = str("answerStyle").ifBlank { "lined" },
             answerLineHeightCm = o["answerLineHeightCm"]?.jsonPrimitive?.doubleOrNull,
             answer = str("answer"),
+            displayText = str("displayText"),
+            hasTokens = o["hasTokens"]?.jsonPrimitive?.booleanOrNull ?: false,
             options = o["options"]?.jsonArray?.map { el ->
                 val it = el.jsonObject
                 PrintOptionRow(

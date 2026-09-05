@@ -147,14 +147,16 @@ class V76_0Builder30HostTest {
             "چاپ دانشجو" to "printStudent();",
             "چاپ استاد" to "printTeacher();",
             "سوال جدید" to "pickQuestionType('",
-            "پیش‌نمایش" to "togglePreviewWindow()"
+            // V89.3 — دکمهٔ چشم به پلِ «همیشه باز» رفت تا هرگز نبندد.
+            "پیش‌نمایش" to "__qmfShowPreview"
         )) {
             assertTrue(action, probe in dialog)
         }
         // V76.4 — تنظیمات سربرگ/ذخیره/سوال جدید پنجرهٔ بومی دارند؛ چاپ‌ها/چشم همان توابع فایل
         assertTrue("printStudent()" in dialog)
         assertTrue("printTeacher()" in dialog)
-        assertTrue("togglePreviewWindow()" in dialog)
+        // V89.3 — دکمهٔ چشم به پلِ «همیشه باز» رفت؛ پیش‌نمایش در دسترس است.
+        assertTrue("__qmfShowPreview" in dialog)
         assertTrue("window.__qmfSaveNow" in dialog)
         // بازکردن آزمون: انتخاب‌گر بومی + ورود با پل setExamData
         assertTrue("openExamPicker.launch" in dialog)

@@ -140,5 +140,5 @@ internal fun wrapPrintPreviewHtml(body: String): String = """
   body{margin:0;padding:6px 8px;font:15px/1.9 Tahoma,Arial,sans-serif;color:#111827;background:transparent}
   img,svg{max-width:100%;height:auto}
   .qmf-fig{display:inline-block;vertical-align:middle;max-width:100%}
-</style></head><body>${'$'}body</body></html>
+</style></head><body>${body}</body></html>
 """.trimIndent()

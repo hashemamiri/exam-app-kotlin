@@ -2591,7 +2591,9 @@ require(_v730_dialog.exists()
         and "printStudent();" in _v730_dialog_text
         and "printTeacher();" in _v730_dialog_text
         and "pickQuestionType('" in _v730_dialog_text
-        and "togglePreviewWindow()" in _v730_dialog_text
+        # V89.3 — دکمهٔ چشم به `__qmfShowPreview` رفت تا هرگز نبندد؛
+        # سنجه از نامِ تابع به «پیش‌نمایش در دسترس است» تغییر کرد.
+        and "__qmfShowPreview" in _v730_dialog_text
         and "openExamPicker.launch" in _v730_dialog_text
         and "window.__qmfSaveNow" in _v730_dialog_text
         and "HeaderSettingsDialog(" in _v730_dialog_text
@@ -3175,7 +3177,8 @@ require("sc.style.overflow = 'hidden'" not in _v79_asset,
         "V87.9 overflow:hidden flattens the scroll box so figures cannot move down")
 require("fig.style.touchAction = 'none';" in _v79_asset,
         "V87.9 the drag lock must sit on the figure, not on the container geometry")
-require("y = drag.y + (e.clientY - drag.sy);" in _v79_asset,
+# V89.3 — حرکت بر ضریبِ مقیاسِ پیش‌نمایش تقسیم می‌شود؛ محور همان است.
+require("y = drag.y + (e.clientY - drag.sy) / k;" in _v79_asset,
         "V87.9 the vertical axis must follow the pointer")
 
 # V88.1 — ویرایشگرِ بومیِ سؤال: می‌خواند و از راهِ توابعِ خودِ صفحه می‌نویسد
@@ -3272,6 +3275,24 @@ require("fun fetch(i: Int)" not in _v874_dlg,
         "V89.2 the chained per-question loader must stay gone")
 require("openCardId = if (openCardId == detail.id) null else detail.id" in _v874_dlg,
         "V89.2 tapping an open card must close it")
+
+# V89.3 — توکنِ خام، مقیاسِ درگ، و چشمِ پیش‌نمایش
+_v893_web = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
+require("<body>${body}</body>" in _v893_web,
+        "V89.3 the preview wrapper must interpolate its body, not print a literal")
+require("window.__qmfDisplayText = function" in _v79_asset
+        and "displayText: window.__qmfDisplayText(String(q.id))" in _v79_asset,
+        "V89.3 the card must show readable text instead of the raw FIG token")
+require("text: String(q.text == null ? '' : q.text)," in _v79_asset,
+        "V89.3 the real text must stay untouched or printing breaks")
+require("function previewScale()" in _v79_asset
+        and "(rect.width / previewScale())" in _v79_asset,
+        "V89.3 a dragged figure must not shrink by the preview scale each time")
+require("(e.clientX - drag.sx) / k" in _v79_asset,
+        "V89.3 pointer travel must be converted out of the scaled space")
+require("window.__qmfShowPreview = function" in _v79_asset
+        and "window.__qmfShowPreview?window.__qmfShowPreview()" in _v874_dlg,
+        "V89.3 the eye must always open the preview, never toggle it shut")
 _v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
 require("List<Triple<String, String, ImageVector>>" in _v892_cards
         and "AssistChip" not in _v892_cards,

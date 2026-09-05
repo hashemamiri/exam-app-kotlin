@@ -701,7 +701,12 @@ fun ExamHtmlPrintDialog(
                         }
                         FloatingActionButton(
                             onClick = {
-                                runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null)
+                                runJs(
+                                    // V89.3 — همیشه باز کن، نه toggle
+                                    "(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()"
+                                ) { r ->
+                                    if (r?.contains("ok") != true) barStatus = "پیش‌نمایش باز نشد."
+                                }
                             },
                             modifier = Modifier.size(56.dp),
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,

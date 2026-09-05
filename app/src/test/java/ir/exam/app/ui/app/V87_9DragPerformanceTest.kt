@@ -66,7 +66,8 @@ class V87_9DragPerformanceTest {
 
     @Test
     fun `the vertical axis is still computed from the pointer`() {
-        assertTrue("y = drag.y + (e.clientY - drag.sy);" in asset)
+        // V89.3 — حرکت بر ضریبِ مقیاسِ پیش‌نمایش تقسیم می‌شود؛ محور همان است.
+        assertTrue("y = drag.y + (e.clientY - drag.sy) / k;" in asset)
         assertTrue("y = Math.max(0, y);" in asset)
     }
 }

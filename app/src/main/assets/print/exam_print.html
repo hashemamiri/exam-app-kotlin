@@ -13408,6 +13408,18 @@ function initPreviewFigureEditing() {
   markPreviewFiguresReady(area);
   let drag = null;
   function px(n) { return Number.isFinite(+n) ? +n : 0; }
+  /* V89.3 — پیش‌نمایش با `transform:scale` کوچک می‌شود، پس
+     `getBoundingClientRect` عرضِ **دیده‌شده** را می‌دهد نه عرضِ واقعی.
+     ذخیرهٔ آن باعث می‌شد شیء با هر لمس در ضریب ضرب شود و آب برود. */
+  function previewScale() {
+    try {
+      var pc = document.getElementById('printContent');
+      if (!pc) return 1;
+      var m = String(pc.style.transform || '').match(/scale\(([\d.]+)\)/);
+      var k = m ? parseFloat(m[1]) : 1;
+      return (Number.isFinite(k) && k > 0.05) ? k : 1;
+    } catch (e) { return 1; }
+  }
   function parentBox(el) { return el.closest('.question-main-td') || el.parentElement; }
   function selectFig(el) {
     area.querySelectorAll('.interactive-figure.selected').forEach(x => { if (x !== el) x.classList.remove('selected'); });
@@ -13495,8 +13507,8 @@ function initPreviewFigureEditing() {
     drag = { fig, qid, idx, resizing, edge:(handle && handle.dataset && handle.dataset.edge) || 'l', sx:e.clientX, sy:e.clientY,
       x:Number.isFinite(+layout.x) ? +layout.x : (parseFloat(fig.style.marginRight || fig.style.getPropertyValue('--fig-x') || '0') || 0),
       y:Number.isFinite(+layout.y) ? +layout.y : (parseFloat(fig.style.top || fig.style.getPropertyValue('--fig-y') || '0') || 0),
-      w:px(layout.w) || rect.width,
-      h:px(layout.h) || rect.height };
+      w:px(layout.w) || (rect.width / previewScale()),
+      h:px(layout.h) || (rect.height / previewScale()) };
     /* V87.9 — یک‌بار اندازه بگیر، بعد فقط بنویس. */
     drag.cache = measureParent(fig);
     drag.raf = 0;
@@ -13528,8 +13540,12 @@ function initPreviewFigureEditing() {
       }
     } else {
       // x فاصله از راست است؛ پس کشیدن به چپ مقدار x را زیاد می‌کند.
-      x = drag.x - (e.clientX - drag.sx);
-      y = drag.y + (e.clientY - drag.sy);
+      /* V89.3 — انگشت در فضای *دیده‌شده* حرکت می‌کند؛ برای رسیدن به واحدِ
+         واقعیِ سند باید بر ضریبِ مقیاس تقسیم شود، وگرنه جابه‌جایی کندتر از
+         انگشت است و «روان نیست» به نظر می‌رسد. */
+      var k = previewScale();
+      x = drag.x - (e.clientX - drag.sx) / k;
+      y = drag.y + (e.clientY - drag.sy) / k;
     }
     const c = clampToParent(drag.fig, x, y, w, h, drag.cache);
     /* V87.9 — نوشتن به یک فریم موکول می‌شود. رویدادهای اشاره‌گر می‌توانند
@@ -14694,7 +14710,19 @@ loadSample();
   }
 ;;
 
-  window.togglePreviewWindow = function () {
+  /* V89.3 — دکمهٔ چشم باید **همیشه** باز کند. `togglePreviewWindow` اگر
+   پنجره از قبل باز بود می‌بست، و چون کاربر آن را نمی‌دید («باز نشد»)،
+   دوباره می‌زد و چرخهٔ باز/بسته تکرار می‌شد. */
+window.__qmfShowPreview = function () {
+  try {
+    if (!document.getElementById('previewWinOverlay')) openPreviewWindow();
+    /* اگر باز بود ولی خالی مانده، محتوا را تازه کن */
+    else if (typeof renderPreview === 'function') renderPreview();
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
+window.togglePreviewWindow = function () {
     if ($('previewWinOverlay')) closePreviewWindow();
     else openPreviewWindow();
   };
@@ -15967,6 +15995,31 @@ window.__qmfOpenCard = function (qid) {
 /* V89.2 — همهٔ سؤال‌ها در **یک** فراخوانی. تا V89.1 برای هر سؤال یک
    `evaluateJavascript` جدا می‌رفت و با ۲۰ سؤال ۲۱ رفت‌وبرگشتِ زنجیره‌ای
    می‌شد — همان لگی که کاربر گزارش کرد. */
+/* V89.3 — متنِ سؤال برای نمایش در کادرِ بومی.
+   توکنِ `%%FIG:{...}%%` یک بلوکِ JSONِ چندصدنویسه‌ای است؛ نشان‌دادنِ خامِ آن
+   کادر را پر از کد می‌کند (گزارشِ کاربر). اینجا هر توکن به یک نشانهٔ کوتاهِ
+   خوانا تبدیل می‌شود. **متنِ اصلی دست‌نخورده می‌ماند**: ویرایش و چاپ هر دو
+   از `q.text` واقعی می‌خوانند، نه از این. */
+window.__qmfDisplayText = function (qid) {
+  try {
+    if (typeof questions === 'undefined') return '';
+    var q = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
+    }
+    if (!q) return '';
+    var names = { f: 'شکل', g: 'نمودار', t: 'جدول', a: 'آناتومی',
+                  p: 'جدول تناوبی', s: 'علوم' };
+    return String(q.text == null ? '' : q.text)
+      .replace(/%%FIG:([\s\S]*?)%%/g, function (_m, body) {
+        var kind = '';
+        try { kind = (JSON.parse(body) || {}).k || ''; } catch (e) {}
+        return '\u2b1c ' + (names[kind] || 'شیء') + ' ';
+      })
+      .replace(/\[\[(FIG|GRAPH|TABLE|ANATOMY|PERIODIC|PHYSICS|CHEMISTRY):[^\]]*\]\]/g, '\u2b1c شیء ');
+  } catch (e) { return ''; }
+};
+
 window.__qmfAllQuestions = function () {
   try {
     if (typeof questions === 'undefined') return '[]';
@@ -16003,6 +16056,10 @@ window.__qmfQuestionDetail = function (qid) {
       id: String(q.id),
       type: String(q.type || 'long'),
       text: String(q.text == null ? '' : q.text),
+      /* V89.3 — نسخهٔ خوانا برای کادرِ بومی؛ `text` خودش دست‌نخورده می‌ماند
+         تا ویرایش و چاپ از همان بخوانند. */
+      displayText: window.__qmfDisplayText(String(q.id)),
+      hasTokens: /%%FIG:|\[\[(FIG|GRAPH|TABLE|ANATOMY|PERIODIC|PHYSICS|CHEMISTRY):/.test(String(q.text || '')),
       score: String(q.score == null ? '' : q.score),
       optionsLayout: String(q.optionsLayout || '2rows'),
       answerLines: q.answerLines == null ? null : Number(q.answerLines),

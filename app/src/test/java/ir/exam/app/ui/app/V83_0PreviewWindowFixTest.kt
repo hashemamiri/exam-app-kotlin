@@ -96,7 +96,9 @@ class V83_0PreviewWindowFixTest {
 
     @Test
     fun `the preview button still reaches the page`() {
-        assertTrue("togglePreviewWindow" in dialog)
+        // V89.3 — دکمه از `__qmfShowPreview` استفاده می‌کند تا هرگز نبندد؛
+        // خودِ `togglePreviewWindow` در asset باقی است (سنجهٔ خطِ بعد).
+        assertTrue("__qmfShowPreview" in dialog)
         assertTrue("window.togglePreviewWindow = function" in assetText)
     }
 

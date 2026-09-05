@@ -102,6 +102,9 @@ fun PrintQuestionCard(
     modifier: Modifier = Modifier
 ) {
     val accent = printPastelColor(detail.type)
+    /* V89.3 — تا وقتی کاربر تایپ نکرده، متنِ خوانا نشان داده می‌شود؛ به‌محضِ
+       ویرایش، متنِ واقعی (با توکن‌ها) می‌آید تا چیزی گم نشود. */
+    var editingText by remember(detail.id) { mutableStateOf(false) }
     var text by remember(detail.id) { mutableStateOf(detail.text) }
     var score by remember(detail.id) { mutableStateOf(detail.score) }
     var answer by remember(detail.id) { mutableStateOf(detail.answer) }
@@ -182,10 +185,23 @@ fun PrintQuestionCard(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
                     OutlinedTextField(
-                        value = text,
-                        onValueChange = { text = it; onEditField("text", it) },
+                        value = if (editingText || !detail.hasTokens) text else detail.displayText,
+                        onValueChange = {
+                            /* نخستین تغییر، متنِ واقعی را می‌آورد تا ویرایشِ
+                               کاربر روی نسخهٔ خوانا نوشته نشود. */
+                            if (!editingText && detail.hasTokens) {
+                                editingText = true
+                                text = detail.text
+                            } else {
+                                text = it
+                                onEditField("text", it)
+                            }
+                        },
                         label = { Text("متن سؤال") },
                         minLines = 3,
+                        supportingText = if (detail.hasTokens && !editingText) {
+                            { Text("برای ویرایشِ متن، داخلِ کادر بنویسید") }
+                        } else null,
                         modifier = Modifier.fillMaxWidth()
                     )
 
