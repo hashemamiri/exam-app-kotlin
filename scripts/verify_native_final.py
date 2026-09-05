@@ -3293,6 +3293,24 @@ require("(e.clientX - drag.sx) / k" in _v79_asset,
 require("window.__qmfShowPreview = function" in _v79_asset
         and "window.__qmfShowPreview?window.__qmfShowPreview()" in _v874_dlg,
         "V89.3 the eye must always open the preview, never toggle it shut")
+
+# V89.5 — پوششِ پیش‌نمایش، حذفِ کنترل‌های داخلِ متن، و زنده‌شدنِ شیء
+require("if (cardDetails.isNotEmpty() && !previewOpen) {" in _v874_dlg,
+        "V89.5 the native card list must not cover the preview window")
+require("window.ExamPrintNative.previewClosed()" in _v79_asset
+        and "fun previewClosed()" in _v874_dlg,
+        "V89.5 closing the preview must bring the cards back")
+require("\u062c\u0627\u0628\u062c\u0627\u06cc\u06cc: \u062f\u0627\u062e\u0644 \u06a9\u0627\u062f\u0631 \u0628\u06a9\u0634\u06cc\u062f" not in _v79_asset,
+        "V89.5 figures are moved in the preview, so the in-text hint must be gone")
+require('title="\u06a9\u0646\u0627\u0631 \u0647\u0645 / \u0631\u0648\u06cc \u0647\u0645"' not in _v79_asset,
+        "V89.5 the in-text copy/layer buttons must be gone")
+require("qmfToggleFigFree" in _v79_asset and "qmfFigLayer" in _v79_asset,
+        "V89.5 their functions must survive; only the buttons were removed")
+_v895_at = _v79_asset.index("window.__qmfRichPreview = function")
+_v895_head = _v79_asset[_v895_at:_v895_at + 700]
+require("__qmfEnsureFigTools()" in _v895_head
+        and _v895_head.index("__qmfEnsureFigTools()") < _v895_head.index("renderRichText("),
+        "V89.5 the live preview must wake the deferred figure modules before rendering")
 _v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
 require("List<Triple<String, String, ImageVector>>" in _v892_cards
         and "AssistChip" not in _v892_cards,

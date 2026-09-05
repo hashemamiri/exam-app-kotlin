@@ -12320,7 +12320,7 @@ function renderFigToken(raw, q, figIndex) {
   }
   if (!q || figIndex == null) return figHtml;
   return `<div class="interactive-figure${((q.figLayouts||{})[figIndex]||{}).free ? ' fig-free' : ''}" data-qid="${q.id}" data-fig-index="${figIndex}" style="${figLayoutStyle(q, figIndex)}">
-    <span class="fig-move-hint">جابجایی: داخل کادر بکشید</span><span class="fig-tools" contenteditable="false"><button type="button" onclick="qmfToggleFigFree('${q.id}',${figIndex})" title="کنار هم / روی هم">⧉</button><button type="button" onclick="qmfFigLayer('${q.id}',${figIndex},1)" title="بیاور جلو">▲</button><button type="button" onclick="qmfFigLayer('${q.id}',${figIndex},-1)" title="ببر عقب">▼</button></span>${figHtml}<span class="fig-size-badge"></span><span class="fig-resize-handle" data-edge="l" title="تغییر اندازه از چپ"></span><span class="fig-resize-handle" data-edge="r" title="تغییر اندازه از راست"></span><span class="fig-resize-handle" data-edge="t" title="تغییر اندازه از بالا"></span><span class="fig-resize-handle" data-edge="b" title="تغییر اندازه از پایین"></span><span class="fig-resize-handle" data-edge="bl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="br" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tr" title="تغییر اندازه"></span>
+    ${figHtml}<span class="fig-size-badge"></span><span class="fig-resize-handle" data-edge="l" title="تغییر اندازه از چپ"></span><span class="fig-resize-handle" data-edge="r" title="تغییر اندازه از راست"></span><span class="fig-resize-handle" data-edge="t" title="تغییر اندازه از بالا"></span><span class="fig-resize-handle" data-edge="b" title="تغییر اندازه از پایین"></span><span class="fig-resize-handle" data-edge="bl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="br" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tr" title="تغییر اندازه"></span>
   </div>`;
 }
 function renderRichText(value, q) {
@@ -13627,7 +13627,8 @@ function ensureProfessionalResizeHandles(fig) {
 function markPreviewFiguresReady(area) {
   area.querySelectorAll('.interactive-figure').forEach(fig => {
     ensureProfessionalResizeHandles(fig);
-    if (!fig.querySelector('.fig-move-hint')) fig.insertAdjacentHTML('afterbegin','<span class="fig-move-hint">جابجایی: داخل کادر بکشید</span>');
+      /* V89.5 — راهنمای «داخل کادر بکشید» برداشته شد: جابه‌جایی در پنجرهٔ
+         پیش‌نمایش انجام می‌شود، نه در کادرِ متن. */
   });
 }
 function initPreviewSeparatorEditing() {
@@ -14797,6 +14798,13 @@ window.togglePreviewWindow = function () {
   window.closePreviewWindow = function () {
     var ov = $('previewWinOverlay');
     if (!ov) return;
+    /* V89.5 — به میزبانِ بومی خبر بده تا فهرستِ کارت‌ها برگردد. بدونِ این،
+       پس از بستنِ پیش‌نمایش صفحه خالی می‌ماند. */
+    try {
+      if (window.ExamPrintNative && typeof window.ExamPrintNative.previewClosed === 'function') {
+        window.ExamPrintNative.previewClosed();
+      }
+    } catch (e) {}
     /* V86.0 — شنونده‌ها و تایمر نشت نکنند */
     try { if (ov.__qmfRetry) clearInterval(ov.__qmfRetry); } catch (e) {}
     try {
@@ -16035,6 +16043,10 @@ window.__qmfAllQuestions = function () {
 window.__qmfRichPreview = function (qid) {
   try {
     if (typeof questions === 'undefined' || typeof renderRichText !== 'function') return '';
+    /* V89.5 — ماژول‌های شکل از V87.3 معوق‌اند و `renderFigToken` بدونِ آن‌ها
+       جای خالی می‌دهد، پس شیء «زنده» نمی‌شد. اینجا **پیش از** رندر فعال
+       می‌شوند تا نخستین فراخوانی هم شکل داشته باشد. */
+    try { if (window.__qmfEnsureFigTools) window.__qmfEnsureFigTools(); } catch (e) {}
     var q = null;
     for (var i = 0; i < questions.length; i++) {
       if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }

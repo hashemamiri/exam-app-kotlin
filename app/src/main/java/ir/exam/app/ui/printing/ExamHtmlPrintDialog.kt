@@ -152,6 +152,11 @@ fun ExamHtmlPrintDialog(
     var openCardId by remember { mutableStateOf<String?>(null) }
     var cardPreviewHtml by remember { mutableStateOf("") }
     var cardsRefresh by remember { mutableIntStateOf(0) }
+    /* V89.5 — فهرستِ کارت‌ها `fillMaxSize` است و روی WebView می‌نشیند، پس
+       پنجرهٔ پیش‌نمایش (که داخلِ WebView باز می‌شود) زیرش پنهان می‌ماند.
+       بدونِ سؤال، فهرست خالی بود و مشکل دیده نمی‌شد؛ با سؤال، چشم «کار
+       نمی‌کرد». هنگامِ باز بودنِ پیش‌نمایش کارت‌ها کنار می‌روند. */
+    var previewOpen by remember { mutableStateOf(false) }
     var editingDetail by remember { mutableStateOf<PrintQuestionDetail?>(null) }
     var editingIndex by remember { mutableIntStateOf(1) }
     // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
@@ -405,7 +410,8 @@ fun ExamHtmlPrintDialog(
                                         },
                                         onOpenQuestion = { qid ->
                                             post { if (qid.isNotBlank()) editingQuestionId = qid }
-                                        }
+                                        },
+                                        onPreviewClosed = { post { previewOpen = false } }
                                     ),
                                     "ExamPrintNative"
                                 )
@@ -579,7 +585,7 @@ fun ExamHtmlPrintDialog(
                     /* V88.9 — فهرستِ بومیِ کارت‌ها روی WebView. کارتِ HTML با
                        کلاسِ `qmf-native-cards` پنهان شده، پس محتوای زیر همان
                        سربرگ و پیش‌نمایش است و کارت‌ها اینجا رندر می‌شوند. */
-                    if (cardDetails.isNotEmpty()) {
+                    if (cardDetails.isNotEmpty() && !previewOpen) {
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -705,7 +711,8 @@ fun ExamHtmlPrintDialog(
                                     // V89.3 — همیشه باز کن، نه toggle
                                     "(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()"
                                 ) { r ->
-                                    if (r?.contains("ok") != true) barStatus = "پیش‌نمایش باز نشد."
+                                    if (r?.contains("ok") == true) previewOpen = true
+                                    else barStatus = "پیش‌نمایش باز نشد."
                                 }
                             },
                             modifier = Modifier.size(56.dp),
@@ -1272,7 +1279,9 @@ private class ExamPrintBridge(
     // V87.8 — پیام‌های صفحه به‌جای alert مرورگر، اعلانِ بومی می‌شوند
     private val onToast: (String) -> Unit,
     // V88.1 — بازکردنِ ویرایشگرِ بومیِ سؤال
-    private val onOpenQuestion: (String) -> Unit
+    private val onOpenQuestion: (String) -> Unit,
+    // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
+    private val onPreviewClosed: () -> Unit
 ) {
     /** V87.8 — `alert()` پنجرهٔ خام با نشانیِ exam-print.local نشان می‌داد. */
     @JavascriptInterface
@@ -1284,6 +1293,12 @@ private class ExamPrintBridge(
     @JavascriptInterface
     fun openQuestion(questionId: String?) {
         onOpenQuestion(questionId.orEmpty())
+    }
+
+    /** V89.5 — پیش‌نمایش بسته شد؛ فهرستِ کارت‌ها باید برگردد. */
+    @JavascriptInterface
+    fun previewClosed() {
+        onPreviewClosed()
     }
 
     @JavascriptInterface
