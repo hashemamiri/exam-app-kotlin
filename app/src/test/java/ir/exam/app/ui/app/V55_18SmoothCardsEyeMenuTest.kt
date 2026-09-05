@@ -44,12 +44,14 @@ class V55_18SmoothCardsEyeMenuTest {
     @Test
     fun `eye icon opens both previews independently via a menu`() {
         val editor = builder.substringAfter("private fun QuestionEditor(")
-            .substringBefore("private fun QuestionStyleControls(")
-        // V62.7 — منوی چشم حذف شد: چشم فقط پیش‌نمایش دانش‌آموزی را باز می‌کند؛
-        // «پیش‌نمایش چاپ این سؤال» به چیدمان چاپ داخل کارت منتقل شد.
+        // V62.7 — منوی چشم حذف شد: چشم فقط پیش‌نمایش دانش‌آموزی را باز می‌کند.
         assertTrue("onStudentPreview" in editor)
         assertTrue("پیش‌نمایش دانش‌آموزی سؤال" in editor)
-        assertTrue("پیش‌نمایش چاپ این سؤال" in builder)
+        // V88.4 — «چیدمان و ظاهر چاپ» از آزمونِ آنلاین برداشته شد؛ همان
+        // کنترل‌ها اکنون در آزمون‌سازِ چاپی بومی‌اند.
+        // سنجه روی *کد* است نه کامنت: دکمه و Composableِ آن باید رفته باشند.
+        assertTrue("QuestionStyleControls(question" !in builder)
+        assertTrue("styleExpanded" !in builder)
         assertTrue("پیش‌نمایش کامل A4" in builder)
         assertTrue("onPreviewAll: () -> Unit" in builder)
         assertTrue("onPreviewAll = { previewAll = true }" in builder)

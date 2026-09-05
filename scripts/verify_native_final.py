@@ -411,8 +411,12 @@ require(all(marker in builder_screen for marker in (
             "BoldToggleChip","detectDragGesturesAfterLongPress","Icons.Outlined.DragIndicator",
             "PersianDigits.convert(index + 1)","MinimalScoreField(",
             "private fun MinimalScoreField","Modifier.width(62.dp).height(40.dp)",
-            "Icons.Outlined.Visibility","visible = styleExpanded"
-        )) and "Text(\"↑\")" not in builder_screen and "Text(\"↓\")" not in builder_screen,
+            "Icons.Outlined.Visibility"
+        )) and "Text(\"↑\")" not in builder_screen and "Text(\"↓\")" not in builder_screen
+        # V88.4 — «چیدمان و ظاهر چاپ» از کارتِ آزمونِ آنلاین برداشته شد؛ تنظیماتِ
+        # کاغذ آنجا معنا نداشت و همان کنترل‌ها اکنون در آزمون‌سازِ چاپی بومی‌اند.
+        and "visible = styleExpanded" not in builder_screen
+        and "private fun QuestionStyleControls" not in builder_screen,
         "new exam-window/chip/drag/neon-score/print-eye builder behavior incomplete")
 require(all(marker in date_time_picker for marker in (
             "DateMonthGrid","DateWeekHeader","LocalLayoutDirection provides LayoutDirection.Ltr",
@@ -3193,6 +3197,21 @@ require("org.json.JSONObject.quote(value)" in _v874_dlg,
         "V88.1 arguments must be escaped before injection")
 require("fun openQuestion(questionId: String?)" in _v874_dlg,
         "V88.1 the native side must expose openQuestion")
+
+# V88.4 — چیدمانِ چاپ فقط در آزمون‌سازِ چاپی، و پیامِ خالی برداشته شد
+require("emptyMsg.style.display = 'block'" not in _v79_asset,
+        "V88.4 the empty-state notice must never be shown; questions are cards now")
+_v884_sheet = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt").read_text(encoding="utf-8")
+for _c in ('Text("\u0641\u0636\u0627\u06cc \u067e\u0627\u0633\u062e"',
+           '"lined" to "\u062e\u0637\u200c\u062f\u0627\u0631"',
+           '"plain" to "\u0633\u0627\u062f\u0647"',
+           '"1row" to "\u06cc\u06a9 \u0633\u0637\u0631"'):
+    require(_c in _v884_sheet,
+            "V88.4 the print editor must own the layout controls (%s)" % _c[:24])
+require("Math.min(1.6, Math.max(0.5, parseFloat(value) || 0.75))" in _v79_asset,
+        "V88.4 line spacing must stay inside the range the html form used")
+require("(String(value) === 'plain') ? 'plain' : 'lined'" in _v79_asset,
+        "V88.4 answer style must be validated before it reaches the page")
 require("ExamFigureToolHost.FORMULA" not in _v874_dlg,
         "V88.2 FORMULA lives on FigureToolRequest, not on the Composable host")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود

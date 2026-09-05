@@ -838,7 +838,6 @@ private fun QuestionEditor(
     var editingWebToken by remember(question.id) { mutableStateOf(false) }
     // V53.4 — پنجرهٔ تمام‌صفحهٔ فرمول WebView برای متن سؤال.
     var formulaHost by remember(question.id) { mutableStateOf<FormulaHostTarget?>(null) }
-    var styleExpanded by remember(question.id) { mutableStateOf(false) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
     }
@@ -1203,21 +1202,11 @@ private fun QuestionEditor(
                 )
                 QuestionType.ESSAY -> Unit
             }
-            // V62.7 — «چیدمان و ظاهر چاپ» از منوی چشم به این دکمهٔ داخل کارت
-            // باز منتقل شد (چشم فقط پیش‌نمایش دانش‌آموزی است).
-            if (expanded) {
-                TextButton(
-                    onClick = { styleExpanded = !styleExpanded },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (styleExpanded) "بستن چیدمان چاپ" else "چیدمان و ظاهر چاپ") }
-            }
-            AnimatedVisibility(
-                visible = styleExpanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                QuestionStyleControls(question, viewModel, onPreview)
-            }
+            /* V88.4 — «چیدمان و ظاهر چاپ» از کارتِ آزمونِ آنلاین برداشته شد:
+               آنجا آزمون روی صفحهٔ دانش‌آموز اجرا می‌شود و تنظیماتِ کاغذ
+               معنایی ندارد. همان کنترل‌ها در آزمون‌سازِ چاپی (جایی که واقعاً
+               چاپ می‌شود) به‌صورت بومی در دسترس‌اند. `QuestionStyleControls`
+               حذف نشد چون پیش‌نمایشِ چاپِ همین سؤال هنوز از آن استفاده می‌کند. */
             // V55.14/V55.17 — «حذف سؤال» و «ذخیره در بانک» متنی حذف شدند؛ هر دو
             // اکنون آیکن‌های کنار بارم روی سربرگ کارت سؤال هستند.
                 }
@@ -1472,44 +1461,6 @@ private fun QuestionEditor(
     }
 }
 
-@Composable
-private fun QuestionStyleControls(question: QuestionDraft, viewModel: ExamBuilderViewModel, onPreview:()->Unit) {
-    Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Text("چیدمان و ظاهر چاپ",style=MaterialTheme.typography.titleSmall)
-        Text("تراز متن")
-        Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-            listOf("right" to "راست","center" to "وسط","left" to "چپ","justify" to "دوطرفه").forEach { (v,l) ->
-                FilterChip(selected=question.textAlign==v,onClick={viewModel.setQuestionAlign(question.id,v)},label={Text(l)})
-            }
-        }
-        Text("جای تصویر")
-        listOf(listOf("above" to "بالا","below" to "پایین","right" to "راست"),listOf("left" to "چپ","free" to "آزاد")).forEach { row ->
-            Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) { row.forEach { (v,l) ->
-                FilterChip(selected=question.imagePosition==v,onClick={viewModel.setImagePosition(question.id,v)},label={Text(l)})
-            } }
-        }
-        Text("قلم سؤال")
-        Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-            listOf("default" to "برنامه","vazirmatn" to "وزیر","shabnam" to "شبنم","sahel" to "ساحل").forEach { (v,l) ->
-                FilterChip(selected=question.fontFamily==v,onClick={viewModel.setQuestionFont(question.id,v)},label={Text(l)})
-            }
-        }
-        Text("اندازه قلم: ${question.fontSizeSp.toInt()}")
-        Slider(value=question.fontSizeSp,onValueChange={viewModel.setQuestionFontSize(question.id,it)},valueRange=8f..40f,steps=31)
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected=question.bold,onClick={viewModel.setQuestionBold(question.id,!question.bold)},label={Text("ضخیم")})
-            FilterChip(selected=question.italic,onClick={viewModel.setQuestionItalic(question.id,!question.italic)},label={Text("مورب")})
-        }
-        Text("خط پاسخ: ${question.answerLines}")
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            OutlinedButton(onClick={viewModel.setAnswerLines(question.id,question.answerLines-1)},enabled=question.answerLines>0){Text("−")}
-            OutlinedButton(onClick={viewModel.setAnswerLines(question.id,question.answerLines+1)},enabled=question.answerLines<12){Text("+")}
-            FilterChip(selected=question.answerLineStyle=="lined",onClick={viewModel.setAnswerLineStyle(question.id,"lined")},label={Text("خط‌دار")})
-            FilterChip(selected=question.answerLineStyle=="blank",onClick={viewModel.setAnswerLineStyle(question.id,"blank")},label={Text("خالی")})
-        }
-        OutlinedButton(onClick=onPreview,modifier=Modifier.fillMaxWidth()){Text("پیش‌نمایش چاپ این سؤال")}
-    }
-}
 
 @Composable
 private fun MinimalScoreField(value: String, onValueChange: (String) -> Unit) {

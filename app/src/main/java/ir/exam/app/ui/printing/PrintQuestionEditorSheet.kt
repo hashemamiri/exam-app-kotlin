@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -146,6 +147,9 @@ fun PrintQuestionEditorSheet(
     var score by remember(detail.id) { mutableStateOf(detail.score) }
     var answer by remember(detail.id) { mutableStateOf(detail.answer) }
     var lines by remember(detail.id) { mutableStateOf(detail.answerLines?.toString().orEmpty()) }
+    var lineHeight by remember(detail.id) {
+        mutableStateOf(detail.answerLineHeightCm?.toString().orEmpty())
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -293,16 +297,61 @@ fun PrintQuestionEditorSheet(
                     )
                 }
 
+                // ---- چیدمانِ گزینه‌ها (فقط چندگزینه‌ای) ----
+                if (detail.type == "multiple") {
+                    Text("چیدمان گزینه‌ها", style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(
+                            "1row" to "یک سطر",
+                            "2rows" to "دو سطر",
+                            "4rows" to "چهار سطر"
+                        ).forEach { (value, label) ->
+                            FilterChip(
+                                selected = detail.optionsLayout == value,
+                                onClick = { onEditField("optionsLayout", value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+
                 // ---- فضای پاسخ ----
+                // V88.4 — تا V88.3 فقط تعدادِ خطوط بود؛ سبک و فاصلهٔ سطر در
+                // فرمِ HTML مانده بودند. حالا هر سه بومی‌اند و وقتی کارتِ
+                // سؤال باز است دیده می‌شوند.
                 if (printTypeHasAnswerSpace(detail.type)) {
-                    OutlinedTextField(
-                        value = lines,
-                        onValueChange = { lines = it; onEditField("answerLines", it) },
-                        label = { Text("تعداد خطوط پاسخ") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Text("فضای پاسخ", style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = lines,
+                            onValueChange = { lines = it; onEditField("answerLines", it) },
+                            label = { Text("سطر") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = lineHeight,
+                            onValueChange = { lineHeight = it; onEditField("answerLineHeightCm", it) },
+                            label = { Text("فاصله (cm)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("lined" to "خط‌دار", "plain" to "ساده").forEach { (value, label) ->
+                            FilterChip(
+                                selected = detail.answerStyle == value,
+                                onClick = { onEditField("answerStyle", value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
                 }
             }
         },

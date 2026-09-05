@@ -131,7 +131,9 @@ class V88_1NativeQuestionEditorTest {
         assertTrue("افزودن گزینه" in sheet)
         assertTrue("افزودن جفت" in sheet)
         assertTrue("پاسخ صحیح" in sheet)
-        assertTrue("تعداد خطوط پاسخ" in sheet)
+        // V88.4 — فضای پاسخ حالا سه کنترل دارد: سطر، فاصله و سبک
+        assertTrue("فضای پاسخ" in sheet)
+        assertTrue("فاصله (cm)" in sheet)
         // ابزارهای درج همان بومی‌های موجود
         assertTrue("onOpenFormula" in sheet)
         assertTrue("onOpenFigureTool(\"figure\")" in sheet)
