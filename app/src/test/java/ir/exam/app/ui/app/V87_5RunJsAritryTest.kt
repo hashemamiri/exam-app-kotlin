@@ -78,8 +78,12 @@ class V87_5RunJsAritryTest {
 
     @Test
     fun `the four V87_4 call sites pass null explicitly`() {
-        listOf("togglePreviewWindow();\", null)", "printStudent();\", null)",
-               "printTeacher();\", null)", "clearAutosave")
+        // V89.3 — دکمهٔ چشم از `togglePreviewWindow` به پلِ «همیشه باز»
+        // (`__qmfShowPreview`) رفت و حالا callback دارد، پس دیگر جزوِ
+        // فراخوانی‌های `, null` نیست. سه موردِ دیگر سرِ جایشان‌اند.
+        listOf("printStudent();\", null)", "printTeacher();\", null)", "clearAutosave")
             .forEach { assertTrue("$it اصلاح نشده", it in dialog) }
+        // و سنجهٔ اصلیِ این کلاس (هر فراخوانی هر دو آرگومان را می‌دهد)
+        // در آزمونِ بالا مستقل بررسی می‌شود.
     }
 }
