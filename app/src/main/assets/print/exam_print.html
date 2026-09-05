@@ -14435,6 +14435,11 @@ loadSample();
      می‌گیرد. گره‌ها می‌مانند چون `renderEditor` و رندرِ چاپ به آن‌ها ارجاع
      دارند؛ فقط دیده نمی‌شوند. بیرونِ برنامه (مرورگر) کارت مثلِ قبل است. */
   body.qmf-native-cards #questionsContainer{display:none !important}
+  /* V89.2 — کلِ قابِ سفیدِ «سؤالات آزمون» هم داخلِ برنامه کنار می‌رود؛
+     وگرنه یک کادرِ خالی زیرِ هدر می‌ماند (تصویرِ کاربر). */
+  body.qmf-native-cards .questions-area{
+    display:none !important;
+  }
 }
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
@@ -15958,6 +15963,21 @@ window.__qmfOpenCard = function (qid) {
     }
   } catch (e) {}
 })();
+
+/* V89.2 — همهٔ سؤال‌ها در **یک** فراخوانی. تا V89.1 برای هر سؤال یک
+   `evaluateJavascript` جدا می‌رفت و با ۲۰ سؤال ۲۱ رفت‌وبرگشتِ زنجیره‌ای
+   می‌شد — همان لگی که کاربر گزارش کرد. */
+window.__qmfAllQuestions = function () {
+  try {
+    if (typeof questions === 'undefined') return '[]';
+    var out = [];
+    for (var i = 0; i < questions.length; i++) {
+      var raw = window.__qmfQuestionDetail(String(questions[i].id));
+      try { out.push(JSON.parse(raw)); } catch (e) {}
+    }
+    return JSON.stringify(out);
+  } catch (e) { return '[]'; }
+};
 
 window.__qmfRichPreview = function (qid) {
   try {

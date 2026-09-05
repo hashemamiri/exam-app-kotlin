@@ -594,7 +594,12 @@ fun ExamHtmlPrintDialog(
                                     index = i + 1,
                                     expanded = openCardId == detail.id,
                                     livePreviewHtml = if (openCardId == detail.id) cardPreviewHtml else "",
-                                    onToggle = { openCardId = detail.id },
+                                    /* V89.2 — واقعاً toggle: لمسِ کارتِ باز آن را
+                                       می‌بندد. تا V89.1 فقط باز می‌کرد و کاربر
+                                       فکر می‌کرد لمس کار نمی‌کند. */
+                                    onToggle = {
+                                        openCardId = if (openCardId == detail.id) null else detail.id
+                                    },
                                     onEditField = { field, value ->
                                         runJs(
                                             "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
@@ -604,8 +609,11 @@ fun ExamHtmlPrintDialog(
                                     onEditOption = { idx, field, value ->
                                         runJs(
                                             "(function(){try{return window.__qmfOptionEdit?window.__qmfOptionEdit(" +
-                                                jsArg(detail.id) + "," + idx + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
-                                        ) { cardsRefresh++ }
+                                                jsArg(detail.id) + "," + idx + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()",
+                                            /* V89.2 — تایپ در گزینه نباید کلِ فهرست را بازبسازد؛
+                                               فقط انتخابِ پاسخِ درست چیدمان را عوض می‌کند. */
+                                            if (field == "correct") ({ _: String? -> cardsRefresh++ }) else null
+                                        )
                                     },
                                     onOptionCount = { action, idx ->
                                         runJs(
@@ -886,30 +894,19 @@ fun ExamHtmlPrintDialog(
 
             /* V88.9 — فهرستِ بومیِ کارت‌ها. هر بار که سؤالی اضافه/حذف/ویرایش
                شود `cardsRefresh` بالا می‌رود و فهرست از پل تازه می‌شود. */
+            /* V89.2 — فهرست با **یک** فراخوانی می‌آید. تا V89.1 به‌ازای هر
+               سؤال یک `evaluateJavascript` جدا می‌رفت و زنجیره‌شان کارت‌ها را
+               کند می‌کرد. */
             LaunchedEffect(cardsRefresh, loading) {
                 if (loading) return@LaunchedEffect
-                runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
-                    val rows = parseQuestionRows(list)
-                    if (rows.isEmpty()) {
-                        cardDetails = emptyList()
+                runJs("(function(){try{return window.__qmfAllQuestions?window.__qmfAllQuestions():'[]'}catch(e){return '[]'}})()") { raw ->
+                    val list = parsePrintQuestionList(unwrapJsString(raw))
+                    cardDetails = list
+                    if (list.isEmpty()) {
                         openCardId = null
-                        return@runJs
+                    } else if (openCardId == null || list.none { it.id == openCardId }) {
+                        openCardId = list.first().id
                     }
-                    val collected = mutableListOf<PrintQuestionDetail>()
-                    fun fetch(i: Int) {
-                        if (i >= rows.size) {
-                            cardDetails = collected.toList()
-                            if (openCardId == null || collected.none { it.id == openCardId }) {
-                                openCardId = collected.firstOrNull()?.id
-                            }
-                            return
-                        }
-                        runJs("(function(){try{return window.__qmfQuestionDetail?window.__qmfQuestionDetail(" + jsArg(rows[i].id) + "):'{}'}catch(e){return '{}'}})()") { raw ->
-                            parsePrintQuestionDetail(unwrapJsString(raw))?.let { collected += it }
-                            fetch(i + 1)
-                        }
-                    }
-                    fetch(0)
                 }
             }
 
@@ -1104,6 +1101,9 @@ fun ExamHtmlPrintDialog(
                         runJs(script) { r ->
                             barStatus = if (r?.contains("ok") == true) {
                                 mirrorDraft()
+                                /* V89.2 — بدونِ این، شیءِ درج‌شده در کادرِ متنِ
+                                   کارت و پیش‌نمایشِ زنده دیده نمی‌شد. */
+                                cardsRefresh++
                                 if (req.isEdit) "ویرایش شد ✓" else "در سؤال درج شد ✓"
                             } else {
                                 if (req.isEdit) "ویرایش ناموفق بود." else "درج در سؤال ناموفق بود."
@@ -1137,6 +1137,8 @@ fun ExamHtmlPrintDialog(
                             ) { r ->
                                 barStatus = if (r?.contains("ok") == true) {
                                     mirrorDraft()
+                                    // V89.2 — فرمولِ تازه باید در کارت دیده شود
+                                    cardsRefresh++
                                     "فرمول در سؤال درج شد ✓"
                                 } else {
                                     "درج فرمول ناموفق بود."

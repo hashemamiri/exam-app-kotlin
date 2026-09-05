@@ -3261,6 +3261,26 @@ _v889_preview = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWe
 require("fun PrintRichTextPreview(" in _v889_preview
         and "settings.javaScriptEnabled = false" in _v889_preview,
         "V88.9 the live preview must live in an approved file and run no scripts")
+
+# V89.2 — کادرِ خالی، لگِ فهرست، toggleِ کارت، و آیکنِ ابزار
+require("body.qmf-native-cards .questions-area{" in _v79_asset,
+        "V89.2 the empty white frame must not show under the header")
+require("window.__qmfAllQuestions = function" in _v79_asset
+        and "window.__qmfAllQuestions?window.__qmfAllQuestions()" in _v874_dlg,
+        "V89.2 the card list must load in one call, not one per question")
+require("fun fetch(i: Int)" not in _v874_dlg,
+        "V89.2 the chained per-question loader must stay gone")
+require("openCardId = if (openCardId == detail.id) null else detail.id" in _v874_dlg,
+        "V89.2 tapping an open card must close it")
+_v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
+require("List<Triple<String, String, ImageVector>>" in _v892_cards
+        and "AssistChip" not in _v892_cards,
+        "V89.2 the insert tools must be vector icons, not text chips")
+_v892_icons = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionToolIcons.kt").read_text(encoding="utf-8")
+for _n in ("Formula", "Figure", "Graph", "Table", "Anatomy", "Periodic", "Physics", "Chemistry"):
+    require("val %s: ImageVector" % _n in _v892_icons
+            and "QuestionToolIcons.%s" % _n in _v892_cards,
+            "V89.2 tool icon %s must be shared with the online builder" % _n)
 require("t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in _v79_asset,
         "V88.6 typing, tools and figures must keep their own handling")
 require("#questionsContainer .q-answer-config{display:none !important}" in _v79_asset,

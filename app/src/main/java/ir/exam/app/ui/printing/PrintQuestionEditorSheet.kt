@@ -116,6 +116,20 @@ fun parsePrintQuestionDetail(raw: String?): PrintQuestionDetail? {
     }.getOrNull()
 }
 
+/**
+ * V89.2 — کلِ فهرستِ سؤال‌ها از یک فراخوانی. هر عضو همان شکلی است که
+ * `parsePrintQuestionDetail` می‌فهمد، پس منطقِ تجزیه یکی می‌ماند.
+ */
+fun parsePrintQuestionList(raw: String?): List<PrintQuestionDetail> {
+    val body = raw?.trim().orEmpty()
+    if (body.isEmpty() || body == "[]" || body == "\"[]\"") return emptyList()
+    return runCatching {
+        detailJson.parseToJsonElement(body).jsonArray.mapNotNull { el ->
+            parsePrintQuestionDetail(el.toString())
+        }
+    }.getOrDefault(emptyList())
+}
+
 /** برچسبِ فارسیِ هر نوع سؤال. */
 fun printQuestionTypeLabel(type: String): String = when (type) {
     "multiple" -> "چندگزینه‌ای"

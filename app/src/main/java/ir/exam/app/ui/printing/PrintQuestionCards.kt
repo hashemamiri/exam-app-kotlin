@@ -23,7 +23,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -44,10 +43,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
+import ir.exam.app.ui.math.QuestionToolIcons
 
 /**
  * V88.9 — کارتِ بومیِ سؤال در آزمون‌سازِ چاپی.
@@ -73,15 +74,15 @@ fun printPastelColor(type: String): Color = when (type) {
 }
 
 /** هشت ابزارِ درج، همان‌ها و به همان ترتیبِ کارتِ آنلاین. */
-val printInsertTools: List<Pair<String, String>> = listOf(
-    FigureToolRequest.FORMULA to "فرمول",
-    "figure" to "شکل",
-    "graph" to "نمودار",
-    "table" to "جدول",
-    "anatomy" to "آناتومی",
-    "periodic" to "تناوبی",
-    "physics" to "فیزیک",
-    "chemistry" to "شیمی"
+val printInsertTools: List<Triple<String, String, ImageVector>> = listOf(
+    Triple(FigureToolRequest.FORMULA, "فرمول", QuestionToolIcons.Formula),
+    Triple("figure", "شکل", QuestionToolIcons.Figure),
+    Triple("graph", "نمودار", QuestionToolIcons.Graph),
+    Triple("table", "جدول", QuestionToolIcons.Table),
+    Triple("anatomy", "آناتومی", QuestionToolIcons.Anatomy),
+    Triple("periodic", "تناوبی", QuestionToolIcons.Periodic),
+    Triple("physics", "فیزیک", QuestionToolIcons.Physics),
+    Triple("chemistry", "شیمی", QuestionToolIcons.Chemistry)
 )
 
 @Composable
@@ -198,21 +199,27 @@ fun PrintQuestionCard(
                     }
 
                     // ---- هشت ابزارِ درج + دوربین ----
+                    /* V89.2 — آیکنِ برداری، نه متن. همان `QuestionToolIcons`ِ
+                       آزمون‌سازِ آنلاین استفاده می‌شود تا هر دو یکی باشند. */
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        printInsertTools.take(4).forEach { (tool, label) ->
-                            AssistChip(onClick = { onOpenTool(tool) }, label = { Text(label) })
+                        printInsertTools.take(4).forEach { (tool, label, icon) ->
+                            IconButton(onClick = { onOpenTool(tool) }) {
+                                Icon(icon, contentDescription = label)
+                            }
                         }
                     }
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        printInsertTools.drop(4).forEach { (tool, label) ->
-                            AssistChip(onClick = { onOpenTool(tool) }, label = { Text(label) })
+                        printInsertTools.drop(4).forEach { (tool, label, icon) ->
+                            IconButton(onClick = { onOpenTool(tool) }) {
+                                Icon(icon, contentDescription = label)
+                            }
                         }
                         // دکمهٔ تصویر: استودیوی ویرایشِ تصویر را باز می‌کند
                         IconButton(onClick = onOpenImageStudio) {
