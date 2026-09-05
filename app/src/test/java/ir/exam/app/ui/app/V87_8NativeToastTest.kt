@@ -68,7 +68,10 @@ class V87_8NativeToastTest {
         val params = Regex("private val (\\w+)\\s*:")
             .findAll(dialog.substringAfter("private class ExamPrintBridge(").substringBefore("\n) {"))
             .map { it.groupValues[1] }.toList()
-        assertEquals(7, params.size)
+        // V88.3 — عددِ سفت‌شده با هر پلِ تازه می‌شکست (V88.1 هشتمی را افزود).
+        // سنجهٔ درست «چند تا» نیست، «همه داده شده‌اند» است.
+        assertTrue("پلِ بومی باید دستِ‌کم هفت ورودی داشته باشد", params.size >= 7)
+        assertTrue("onToast" in params)
         val call = dialog.substringAfter("ExamPrintBridge(").substringBefore("\"ExamPrintNative\"")
         params.forEach { assertTrue("آرگومانِ $it داده نشده", "$it = " in call) }
     }

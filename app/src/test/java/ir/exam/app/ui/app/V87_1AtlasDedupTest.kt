@@ -38,6 +38,8 @@ class V87_1AtlasDedupTest {
 
     @Test
     fun `but all one hundred and thirty seven are still reachable`() {
+        // pinscan:exact-count — این عدد عمدی است: هر ۱۳۷ تصویرِ اطلس باید
+        // مقصد داشته باشد و گاردِ verify هم همین را قفل می‌کند.
         val refs = Regex("'(\\.\\./figure_atlas/[^']+)'").findAll(asset).map { it.groupValues[1] }.toList()
         assertEquals(137, refs.size)
         val missing = refs.filter { ref ->
