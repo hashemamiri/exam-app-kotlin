@@ -147,7 +147,9 @@ class V76_0Builder30HostTest {
         assertTrue("window.__qmfSaveNow" in dialog)
         // بازکردن آزمون: انتخاب‌گر بومی + ورود با پل setExamData
         assertTrue("openExamPicker.launch" in dialog)
-        assertTrue("window.setExamData(atob('" in dialog)
+        // V87.0 — base64 حالا به‌صورت UTF-8 رمزگشایی می‌شود، وگرنه متنِ فارسی
+        // به «Ø¯Ø§Ù†Ø´Ú¯Ø§Ù‡» تبدیل می‌شد.
+        assertTrue("window.setExamData(decodeURIComponent(escape(atob('" in dialog)
         assertTrue("webViewRef?.evaluateJavascript" in dialog)
         // V76.2 — متاوویوپورت فایل اعمال شود، اما overview mode خاموش بماند
         // (وگرنه WebView برای محتوای عریض A4 کل صفحه را zoom-out می‌کند)

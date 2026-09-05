@@ -545,7 +545,10 @@ fun ExamHtmlPrintDialog(
                             ).toByteArray(Charsets.UTF_8),
                             android.util.Base64.NO_WRAP
                         )
-                        runJs("(function(){try{return window.__qmfSetFields?window.__qmfSetFields(atob('" + b64 + "')):'missing'}catch(e){return 'err'}})()") { r ->
+                        // V87.0 — atob هر بایت را یک نویسهٔ Latin-1 می‌کند، ولی Kotlin با UTF-8
+                        // رمزگذاری کرده است. بدونِ decodeURIComponent(escape(...)) سربرگ
+                        // به‌صورت «Ø¯Ø§Ù†Ø´Ú¯Ø§Ù‡» درمی‌آید.
+                        runJs("(function(){try{var t=decodeURIComponent(escape(atob('" + b64 + "')));return window.__qmfSetFields?window.__qmfSetFields(t):'missing'}catch(e){return 'err'}})()") { r ->
                             barStatus = if (r?.contains("ok") == true) "سربرگ اعمال شد ✓" else "اعمال سربرگ ناموفق بود."
                         }
                     },
@@ -587,7 +590,8 @@ fun ExamHtmlPrintDialog(
                         onApply = {
                             pendingOpenText = null
                             val b64 = android.util.Base64.encodeToString(text.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
-                            runJs("(function(){try{window.setExamData(atob('" + b64 + "'));return 'ok'}catch(e){return 'err'}})()") { r ->
+                            // V87.0 — همان اصلاحِ رمزگذاری برای متنِ آزمونِ بازشده.
+                            runJs("(function(){try{window.setExamData(decodeURIComponent(escape(atob('" + b64 + "'))));return 'ok'}catch(e){return 'err'}})()") { r ->
                                 barStatus = if (r?.contains("ok") == true) "آزمون باز شد ✓" else "باز کردن آزمون ناموفق بود."
                             }
                         },

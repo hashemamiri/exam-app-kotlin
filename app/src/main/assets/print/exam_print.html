@@ -850,7 +850,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
 }</style></head>
 <body>
 
-<div class="toolbar no-print">
+<div class="toolbar no-print" id="qmfLegacyToolbar">
   <div class="btns">
     <button class="btn ghost" onclick="toggleSettings()">⚙ تنظیمات سربرگ</button>
 <!-- FIX-EXAM-SAVEBTN -->
@@ -14218,6 +14218,11 @@ loadSample();
   box-sizing:border-box !important;
 }
 @media print{#qtypeOverlay,#previewWinOverlay{display:none !important}}
+/* V87.0 — نوارِ دکمه‌های HTML تکراری است: نوارِ بومی همان هفت کار را انجام
+   می‌دهد و کاربر با لمسِ «آزمون‌ساز چاپی» هر دو را پشتِ هم می‌دید. خودِ
+   نوار پنهان می‌شود ولی توابعش (printStudent/printTeacher/togglePreviewWindow
+   و…) می‌مانند، چون پلِ بومی دقیقاً همان‌ها را صدا می‌زند. */
+#qmfLegacyToolbar{display:none !important}
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
 @media screen{#printContent.live-preview{display:none !important}.preview-note{display:none !important}#previewWinOverlay #printContent.live-preview{display:block !important}}

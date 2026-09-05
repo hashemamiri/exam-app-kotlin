@@ -3060,6 +3060,19 @@ require("PrintableFromDrafts.questionAt(index, question)" in _v869_repo,
         "V86.9 the server path must use the shared mapping so both keys agree")
 require("QuestionType.MULTIPLE_CHOICE ->" not in _v869_repo,
         "V86.9 the answer-key logic must not be duplicated in the repository")
+
+# V87.0 — رمزگذاریِ UTF-8 در پلِ base64، و نوارِ HTML تکراری
+_v870_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+require(_v870_dialog.count("atob(") == _v870_dialog.count("decodeURIComponent(escape(atob("),
+        "V87.0 every atob must decode as UTF-8 or persian turns into mojibake")
+require("#qmfLegacyToolbar{display:none !important}" in _v79_asset,
+        "V87.0 the duplicated html toolbar must stay hidden")
+# پنهان‌سازی نباید به حذفِ توابع تبدیل شود: پلِ بومی همین‌ها را صدا می‌زند
+require("function printStudent(" in _v79_asset and "function printTeacher(" in _v79_asset
+        and "window.togglePreviewWindow =" in _v79_asset,
+        "V87.0 hiding the toolbar must not remove the functions the native bar calls")
+require(_v79_asset.count("data:image/jpeg;base64,") == 137,
+        "V87.0 the anatomy atlas is 74% of the file but AtlasToolFlow renders it")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
