@@ -78,9 +78,11 @@ class V87_0HeaderEncodingTest {
     }
 
     @Test
-    fun `the anatomy atlas is still there because a native tool renders it`() {
-        // ۷۴٪ حجمِ فایل است و وسوسهٔ حذفش زیاد؛ ولی AtlasToolFlow از آن می‌خواند
-        assertEquals(137, Regex("data:image/jpeg;base64,").findAll(asset).count())
+    fun `the anatomy atlas is still reachable after the images moved to files`() {
+        // V87.1 — این تصاویر دو نسخه داشتند: base64 اینجا و فایل در figure_atlas.
+        // نسخهٔ درون‌خطی حذف شد، ولی هر ۱۳۷ ورودی باید همچنان مقصد داشته باشد.
+        assertEquals(0, Regex("data:image/jpeg;base64,").findAll(asset).count())
+        assertEquals(137, Regex("'\\.\\./figure_atlas/").findAll(asset).count())
         val host = File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamFigureToolHost.kt").readText()
         assertTrue("AtlasToolFlow" in host)
     }

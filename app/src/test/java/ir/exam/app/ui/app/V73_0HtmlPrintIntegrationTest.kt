@@ -186,13 +186,18 @@ class V73_0HtmlPrintIntegrationTest {
         assertTrue(htmlAsset.isFile)
         // V79.0/V79.2 — ویرایشگر فرمول و لوگوها به asset جدا رفتند؛ آستانه
         // پایین آمد و مجموعِ سه فایل پین می‌شود تا جابه‌جایی مجاز و حذف ممنوع باشد.
-        assertTrue("asset too small", htmlAsset.length() > 4_000_000L)
+        // V87.1 — تصاویرِ اطلس از داخلِ صفحه به figure_atlas/ رفتند (همان‌جا که
+        // پنجرهٔ بومی می‌خواندشان). base64 حدود ۳۳٪ تورم دارد، پس مجموع کوچک‌تر
+        // شد بدونِ آنکه حتی یک تصویر گم شود.
+        assertTrue("asset too small", htmlAsset.length() > 900_000L)
         val mathAsset = File(htmlAsset.parentFile, "math_editor.html")
         val logoDir = File(htmlAsset.parentFile, "logos")
         assertTrue("math editor asset missing", mathAsset.isFile)
+        val atlasDir = File(htmlAsset.parentFile.parentFile, "figure_atlas")
+        val atlasBytes = atlasDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
         val moved = htmlAsset.length() + mathAsset.length() +
-            (logoDir.listFiles()?.sumOf { it.length() } ?: 0L)
-        assertTrue("content vanished instead of moving: $moved", moved > 5_400_000L)
+            (logoDir.listFiles()?.sumOf { it.length() } ?: 0L) + atlasBytes
+        assertTrue("content vanished instead of moving: $moved", moved > 4_800_000L)
         val content = htmlAsset.readText()
         assertTrue("window.setExamData" in content)
         assertTrue("__qmfHostBridge" in content)
