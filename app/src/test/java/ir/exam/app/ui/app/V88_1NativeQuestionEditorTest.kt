@@ -118,7 +118,9 @@ class V88_1NativeQuestionEditorTest {
 
     @Test
     fun `touching a card opens the native editor and degrades outside the app`() {
-        assertTrue("window.ExamPrintNative.openQuestion(String(id))" in asset)
+        // V88.6 — فراخوانی از شنوندهٔ لمس می‌آید نه از openQuestionId، پس
+        // نامِ آرگومان `qid` است. معنا همان: کارت میزبان را خبر می‌کند.
+        assertTrue("window.ExamPrintNative.openQuestion(String(qid))" in asset)
         assertTrue("typeof window.ExamPrintNative.openQuestion === 'function'" in asset)
         assertTrue("fun openQuestion(questionId: String?)" in dialog)
         assertTrue("editingQuestionId = qid" in dialog)

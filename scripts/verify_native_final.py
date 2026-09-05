@@ -3188,7 +3188,9 @@ for _f in ("updateQ(q.id, field, v)", "updateOpt(id,", "addOption(id)",
            "removeOption(id,", "addPair(id)", "removePair(id,", "updatePair(id,"):
     require(_f in _v79_asset,
             "V88.1 the bridge must delegate to the page function %s" % _f)
-require("window.ExamPrintNative.openQuestion(String(id))" in _v79_asset
+# V88.6 — نامِ آرگومان از `id` به `qid` رفت چون فراخوانی از شنوندهٔ لمس
+# می‌آید، نه از `openQuestionId`. معنا همان است: کارت میزبان را خبر کند.
+require("window.ExamPrintNative.openQuestion(String(qid))" in _v79_asset
         and "typeof window.ExamPrintNative.openQuestion === 'function'" in _v79_asset,
         "V88.1 opening a card must notify the host and still work in a browser")
 _v881_sheet = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt"
@@ -3212,6 +3214,19 @@ require("Math.min(1.6, Math.max(0.5, parseFloat(value) || 0.75))" in _v79_asset,
         "V88.4 line spacing must stay inside the range the html form used")
 require("(String(value) === 'plain') ? 'plain' : 'lined'" in _v79_asset,
         "V88.4 answer style must be validated before it reaches the page")
+
+# V88.6 — ویرایشگر فقط با لمسِ عمدی؛ سرصفحهٔ کارت کوتاه
+_v886_at = _v79_asset.index("function openQuestionId")
+require("ExamPrintNative.openQuestion" not in _v79_asset[_v886_at:_v886_at + 700],
+        "V88.6 openQuestionId runs on every add, so it must not open the editor")
+require("t.closest('#questionsContainer .question-card')" in _v79_asset,
+        "V88.6 the editor must open from a deliberate tap on a card")
+require("t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in _v79_asset,
+        "V88.6 typing, tools and figures must keep their own handling")
+require("#questionsContainer .q-answer-config{display:none !important}" in _v79_asset,
+        "V88.6 the duplicated header controls must stay hidden inside the app")
+require('class="q-answer-config"' in _v79_asset,
+        "V88.6 those controls must survive for a plain browser")
 require("ExamFigureToolHost.FORMULA" not in _v874_dlg,
         "V88.2 FORMULA lives on FigureToolRequest, not on the Composable host")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود

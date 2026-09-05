@@ -14360,6 +14360,12 @@ loadSample();
   #questionsContainer .question-card.collapsed > *:not(.q-header){display:none !important}
   #questionsContainer .question-card.collapsed{padding-bottom:10px;cursor:pointer}
   #questionsContainer .question-card.collapsed .q-header{margin-bottom:0}
+  /* V88.6 — سرصفحهٔ کارت باید مثلِ آزمون‌سازِ آنلاین کوتاه بماند: شماره،
+     نوع، بارم و آیکن‌ها. «چیدمان گزینه‌ها» و «فضای پاسخ» از V88.4 به
+     ویرایشگرِ بومی رفتند و اینجا تکراری‌اند. خودِ کنترل‌ها حذف نشدند تا در
+     مرورگر (بیرونِ اپ) در دسترس بمانند؛ فقط داخلِ اپ پنهان می‌شوند. */
+  #questionsContainer .q-layout-select,
+  #questionsContainer .q-answer-config{display:none !important}
 }
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
@@ -14783,14 +14789,11 @@ loadSample();
   }
   function openQuestionId(id, scroll) {
     state.openId = id;
-    /* V88.1 — به میزبانِ بومی خبر بده تا ویرایشگرِ بومیِ سؤال باز شود.
-       اگر میزبان نبود (مرورگر) هیچ اتفاقی نمی‌افتد و کارتِ HTML مثلِ قبل
-       باز می‌شود، پس چیزی از دست نمی‌رود. */
-    try {
-      if (window.ExamPrintNative && typeof window.ExamPrintNative.openQuestion === 'function') {
-        window.ExamPrintNative.openQuestion(String(id));
-      }
-    } catch (e) {}
+    /* V88.6 — اینجا دیگر ویرایشگرِ بومی باز نمی‌شود.
+       `openQuestionId` پس از **هر** افزودنِ سؤال و هر تغییرِ حالت هم صدا زده
+       می‌شود (hook('addQuestion')…)، پس V88.1 باعث می‌شد پنجره ناخواسته
+       بپرد و کاربر اصلاً کارت‌ها را نبیند. باز کردنِ ویرایشگر حالا فقط با
+       لمسِ عمدیِ کارت انجام می‌شود (پایینِ همین فایل). */
     var cards = allCards();
     var target = null;
     cards.forEach(function (c) {
@@ -15830,6 +15833,33 @@ window.__qmfHasLocalDraft = function () {
    سؤال‌ها همچنان در `questions` جاوااسکریپت زندگی می‌کنند تا موتورِ چاپ
    دست‌نخورده بماند؛ سمتِ بومی فقط می‌خواند و از راهِ همین توابعِ موجودِ
    صفحه می‌نویسد، پس رفتار و رندر دقیقاً یکسان می‌ماند. */
+/* V88.6 — فقط لمسِ عمدیِ کارت ویرایشگرِ بومی را باز می‌کند. `pointerdown`
+   روی ناحیهٔ ابزار یا ورودی‌های خودِ کارت نادیده گرفته می‌شود تا تایپ در
+   کادرهای HTML و درگِ اشیا مثلِ قبل کار کند. */
+(function () {
+  'use strict';
+  function qidOfCard(card) {
+    var el = card.querySelector('[id^="q_text_"], [id^="qbody_"]');
+    if (!el) return null;
+    return String(el.id).replace(/^q_text_|^qbody_/, '');
+  }
+  document.addEventListener('pointerup', function (e) {
+    try {
+      if (!(window.ExamPrintNative &&
+            typeof window.ExamPrintNative.openQuestion === 'function')) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      /* ورودی‌ها، دکمه‌ها و اشیای درج‌شده مسیرِ خودشان را دارند */
+      if (t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')) return;
+      var card = t.closest('#questionsContainer .question-card');
+      if (!card) return;
+      var qid = qidOfCard(card);
+      if (qid == null) return;
+      window.ExamPrintNative.openQuestion(String(qid));
+    } catch (err) {}
+  }, true);
+})();
+
 window.__qmfQuestionDetail = function (qid) {
   try {
     if (typeof questions === 'undefined') return '{}';
