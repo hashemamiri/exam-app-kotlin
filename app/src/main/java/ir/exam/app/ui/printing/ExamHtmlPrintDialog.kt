@@ -31,6 +31,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -145,6 +147,11 @@ fun ExamHtmlPrintDialog(
     var showRestore by remember { mutableStateOf(false) }
     // V88.1 — ویرایشگرِ بومیِ سؤال
     var editingQuestionId by remember { mutableStateOf<String?>(null) }
+    // V88.9 — فهرستِ بومیِ کارت‌های سؤال (جایگزینِ کارتِ HTML داخلِ برنامه)
+    var cardDetails by remember { mutableStateOf<List<PrintQuestionDetail>>(emptyList()) }
+    var openCardId by remember { mutableStateOf<String?>(null) }
+    var cardPreviewHtml by remember { mutableStateOf("") }
+    var cardsRefresh by remember { mutableIntStateOf(0) }
     var editingDetail by remember { mutableStateOf<PrintQuestionDetail?>(null) }
     var editingIndex by remember { mutableIntStateOf(1) }
     // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
@@ -569,6 +576,62 @@ fun ExamHtmlPrintDialog(
                         )
                     }
 
+                    /* V88.9 — فهرستِ بومیِ کارت‌ها روی WebView. کارتِ HTML با
+                       کلاسِ `qmf-native-cards` پنهان شده، پس محتوای زیر همان
+                       سربرگ و پیش‌نمایش است و کارت‌ها اینجا رندر می‌شوند. */
+                    if (cardDetails.isNotEmpty()) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFEEF2F7))
+                                .padding(horizontal = 12.dp),
+                            contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            itemsIndexed(cardDetails, key = { _, d -> d.id }) { i, detail ->
+                                PrintQuestionCard(
+                                    detail = detail,
+                                    index = i + 1,
+                                    expanded = openCardId == detail.id,
+                                    livePreviewHtml = if (openCardId == detail.id) cardPreviewHtml else "",
+                                    onToggle = { openCardId = detail.id },
+                                    onEditField = { field, value ->
+                                        runJs(
+                                            "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
+                                                jsArg(detail.id) + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
+                                        ) { if (field != "text" && field != "score") cardsRefresh++ }
+                                    },
+                                    onEditOption = { idx, field, value ->
+                                        runJs(
+                                            "(function(){try{return window.__qmfOptionEdit?window.__qmfOptionEdit(" +
+                                                jsArg(detail.id) + "," + idx + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
+                                        ) { cardsRefresh++ }
+                                    },
+                                    onOptionCount = { action, idx ->
+                                        runJs(
+                                            "(function(){try{return window.__qmfOptionCount?window.__qmfOptionCount(" +
+                                                jsArg(detail.id) + "," + jsArg(action) + "," + idx + "):'missing'}catch(e){return 'err'}})()"
+                                        ) { cardsRefresh++ }
+                                    },
+                                    onEditPair = { idx, side, value ->
+                                        runJs(
+                                            "(function(){try{return window.__qmfPairEdit?window.__qmfPairEdit(" +
+                                                jsArg(detail.id) + "," + idx + "," + jsArg(side) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
+                                        ) { cardsRefresh++ }
+                                    },
+                                    onAction = { action ->
+                                        runJs(
+                                            "(function(){try{return window.__qmfQuestionAction?window.__qmfQuestionAction(" +
+                                                jsArg(detail.id) + "," + jsArg(action) + ",''):'missing'}catch(e){return 'err'}})()"
+                                        ) { cardsRefresh++ }
+                                    },
+                                    onOpenTool = { tool -> figureTool = FigureToolRequest(detail.id, tool) },
+                                    onOpenImageStudio = { studioQuestionId = detail.id }
+                                )
+                            }
+                        }
+                    }
+
                     /* V87.7 — پیام‌ها پایینِ صفحه می‌ماندند تا پیامِ بعدی
                        جایشان را بگیرد. حالا وسط ظاهر و پس از چند ثانیه محو
                        می‌شوند، مثلِ یک اعلانِ بومی. */
@@ -740,6 +803,8 @@ fun ExamHtmlPrintDialog(
                         }
                         runJs("(function(){try{if(typeof pickQuestionType==='function'){pickQuestionType('" + id + "');return 'ok'}return 'missing'}catch(e){return 'err'}})()") { r ->
                             barStatus = if (r?.contains("ok") == true) null else "سوال جدید اضافه نشد."
+                            // V88.9 — فهرستِ بومی باید سؤالِ تازه را ببیند
+                            cardsRefresh++
                         }
                     },
                     onImport = {
@@ -817,6 +882,47 @@ fun ExamHtmlPrintDialog(
                         }) { Text("نه، پاک کن") }
                     }
                 )
+            }
+
+            /* V88.9 — فهرستِ بومیِ کارت‌ها. هر بار که سؤالی اضافه/حذف/ویرایش
+               شود `cardsRefresh` بالا می‌رود و فهرست از پل تازه می‌شود. */
+            LaunchedEffect(cardsRefresh, loading) {
+                if (loading) return@LaunchedEffect
+                runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
+                    val rows = parseQuestionRows(list)
+                    if (rows.isEmpty()) {
+                        cardDetails = emptyList()
+                        openCardId = null
+                        return@runJs
+                    }
+                    val collected = mutableListOf<PrintQuestionDetail>()
+                    fun fetch(i: Int) {
+                        if (i >= rows.size) {
+                            cardDetails = collected.toList()
+                            if (openCardId == null || collected.none { it.id == openCardId }) {
+                                openCardId = collected.firstOrNull()?.id
+                            }
+                            return
+                        }
+                        runJs("(function(){try{return window.__qmfQuestionDetail?window.__qmfQuestionDetail(" + jsArg(rows[i].id) + "):'{}'}catch(e){return '{}'}})()") { raw ->
+                            parsePrintQuestionDetail(unwrapJsString(raw))?.let { collected += it }
+                            fetch(i + 1)
+                        }
+                    }
+                    fetch(0)
+                }
+            }
+
+            /* پیش‌نمایشِ زنده فقط برای کارتِ باز گرفته می‌شود. */
+            LaunchedEffect(openCardId, cardsRefresh) {
+                val qid = openCardId
+                if (qid == null) {
+                    cardPreviewHtml = ""
+                    return@LaunchedEffect
+                }
+                runJs("(function(){try{return window.__qmfRichPreview?window.__qmfRichPreview(" + jsArg(qid) + "):''}catch(e){return ''}})()") { raw ->
+                    cardPreviewHtml = unwrapJsString(raw)
+                }
             }
 
             // V88.1 — ویرایشگرِ بومیِ سؤال. جزئیات از پل می‌آید و هر تغییر

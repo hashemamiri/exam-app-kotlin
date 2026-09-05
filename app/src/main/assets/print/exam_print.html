@@ -14430,6 +14430,11 @@ loadSample();
     flex:0 0 auto;
   }
   #questionsContainer .q-move-group{flex:0 0 auto}
+
+  /* V88.9 — داخلِ برنامه کارتِ HTML کنار می‌رود و فهرستِ بومی جایش را
+     می‌گیرد. گره‌ها می‌مانند چون `renderEditor` و رندرِ چاپ به آن‌ها ارجاع
+     دارند؛ فقط دیده نمی‌شوند. بیرونِ برنامه (مرورگر) کارت مثلِ قبل است. */
+  body.qmf-native-cards #questionsContainer{display:none !important}
 }
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
@@ -15934,6 +15939,36 @@ window.__qmfOpenCard = function (qid) {
     if (window.__qmfCardOpener) return window.__qmfCardOpener(qid);
   } catch (e) {}
   return 'missing';
+};
+
+/* V88.9 — پیش‌نمایشِ زندهٔ متنِ سؤال برای کارتِ بومی.
+   کاربر خواست کادرِ متن بومی باشد ولی فرمول و شکل «زنده» دیده شوند. متن در
+   کادرِ بومی تایپ می‌شود و اینجا با همان `renderRichText`ِ صفحه به HTML
+   تبدیل می‌گردد — یعنی همان چیزی که پیش‌نمایش و چاپ می‌بینند، نه یک
+   بازپیاده‌سازی. */
+/* V88.9 — وقتی میزبانِ بومی هست، فهرستِ کارتِ HTML پنهان می‌شود. */
+(function () {
+  try {
+    if (window.ExamPrintNative && typeof window.ExamPrintNative.openQuestion === 'function') {
+      var mark = function () {
+        try { document.body.classList.add('qmf-native-cards'); } catch (e) {}
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mark);
+      else mark();
+    }
+  } catch (e) {}
+})();
+
+window.__qmfRichPreview = function (qid) {
+  try {
+    if (typeof questions === 'undefined' || typeof renderRichText !== 'function') return '';
+    var q = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
+    }
+    if (!q) return '';
+    return String(renderRichText(q.text || '', q) || '');
+  } catch (e) { return ''; }
 };
 
 window.__qmfQuestionDetail = function (qid) {

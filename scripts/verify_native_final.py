@@ -3227,7 +3227,8 @@ require("window.__qmfOpenCard(qid)" in _v79_asset
         and "window.__qmfCardOpener = function (id) { openQuestionId(id, true); return 'ok'; };" in _v79_asset,
         "V88.8 tapping a collapsed card must expand it like the online builder")
 _v888_from = _v79_asset.index("/* V88.8 \u2014 \u0644\u0645\u0633\u0650 \u06a9\u0627\u0631\u062a")
-_v888_to = _v79_asset.index("window.__qmfQuestionDetail = function")
+# V88.9 — پل‌های تازه بینِ این دو نشستند؛ مرز به انتهای خودِ شنونده رفت.
+_v888_to = _v79_asset.index("})();", _v888_from)
 require("ExamPrintNative.openQuestion" not in _v79_asset[_v888_from:_v888_to],
         "V88.8 tapping must not throw the native editor in front of the card")
 require("if (!card.classList.contains('collapsed')) return;" in _v79_asset,
@@ -3237,6 +3238,29 @@ require("flex-direction:row !important;" in _v79_asset
         "V88.8 the card header must stay a single row on a phone")
 require("#questionsContainer .q-score{width:74px !important;flex:0 0 auto}" in _v79_asset,
         "V88.8 the score field must not stretch to full width on a phone")
+
+# V88.9 — کارتِ بومی جای کارتِ HTML را گرفت
+require("body.qmf-native-cards #questionsContainer{display:none !important}" in _v79_asset
+        and "document.body.classList.add('qmf-native-cards')" in _v79_asset,
+        "V88.9 the html card list must step aside for the native one")
+require('id="questionsContainer"' in _v79_asset,
+        "V88.9 the container node must survive; renderEditor and print still use it")
+require("window.__qmfRichPreview = function" in _v79_asset
+        and "renderRichText(q.text || '', q)" in _v79_asset,
+        "V88.9 the live preview must reuse the page renderer, not a copy")
+_v889_cards = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt"
+require(_v889_cards.is_file(), "V88.9 the native question card is missing")
+_v889_text = _v889_cards.read_text(encoding="utf-8")
+require("onOpenImageStudio" in _v889_text and "PhotoCamera" in _v889_text,
+        "V88.9 the camera button must open the image studio")
+require("onOpenImageStudio = { studioQuestionId = detail.id }" in _v874_dlg,
+        "V88.9 the camera button must be wired to the studio")
+# V88.9 — نمایشگرِ زنده داخلِ فایلِ مجازِ WebView زندگی می‌کند تا گاردِ
+# «WebView فقط در فایل‌های تأییدشده» دست‌نخورده بماند.
+_v889_preview = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
+require("fun PrintRichTextPreview(" in _v889_preview
+        and "settings.javaScriptEnabled = false" in _v889_preview,
+        "V88.9 the live preview must live in an approved file and run no scripts")
 require("t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in _v79_asset,
         "V88.6 typing, tools and figures must keep their own handling")
 require("#questionsContainer .q-answer-config{display:none !important}" in _v79_asset,

@@ -1,6 +1,8 @@
 package ir.exam.app.ui.math
 
 import android.webkit.WebView
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 /**
@@ -83,3 +85,60 @@ class QuestionEditorFieldController {
         view.evaluateJavascript("window.ExamEditor && ExamEditor.setValue($quoted);", null)
     }
 }
+
+/**
+ * V88.9 — نمایشِ زندهٔ متنِ سؤال زیرِ کادرِ بومی.
+ *
+ * کاربر خواست کادرِ متن بومی باشد ولی فرمول و شکل «زنده» دیده شوند. متن در
+ * `OutlinedTextField` تایپ می‌شود و خروجیِ `renderRichText`ِ همان صفحه اینجا
+ * نمایش داده می‌شود — یعنی دقیقاً همان چیزی که چاپ خواهد شد، نه یک
+ * بازپیاده‌سازیِ تقریبی.
+ *
+ * این یک نمایشگرِ فقط-خواندنی است: نه جاوااسکریپت اجرا می‌کند، نه به شبکه
+ * می‌رود. بنابراین سطحِ حمله ندارد و با قانونِ «موتورِ رندر دست‌نخورده» هم
+ * نمی‌سازد چون خودش موتور نیست، فقط خروجی را نشان می‌دهد.
+ */
+@android.annotation.SuppressLint("SetJavaScriptEnabled")
+@androidx.compose.runtime.Composable
+fun PrintRichTextPreview(
+    html: String,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
+) {
+    val document = androidx.compose.runtime.remember(html) { wrapPrintPreviewHtml(html) }
+    androidx.compose.ui.viewinterop.AndroidView(
+        modifier = modifier.heightIn(min = 48.dp, max = 260.dp),
+        factory = { context ->
+            android.webkit.WebView(context).apply {
+                settings.javaScriptEnabled = false
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                @Suppress("DEPRECATION")
+                settings.allowFileAccessFromFileURLs = false
+                @Suppress("DEPRECATION")
+                settings.allowUniversalAccessFromFileURLs = false
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                isVerticalScrollBarEnabled = false
+            }
+        },
+        update = { view ->
+            view.loadDataWithBaseURL(
+                "https://exam-print.local/print/exam_print.html",
+                document,
+                "text/html",
+                "UTF-8",
+                null
+            )
+        }
+    )
+}
+
+/** پوششِ کمینه با جهتِ راست‌به‌چپ و قلمِ خوانا. */
+internal fun wrapPrintPreviewHtml(body: String): String = """
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{margin:0;padding:6px 8px;font:15px/1.9 Tahoma,Arial,sans-serif;color:#111827;background:transparent}
+  img,svg{max-width:100%;height:auto}
+  .qmf-fig{display:inline-block;vertical-align:middle;max-width:100%}
+</style></head><body>${'$'}body</body></html>
+""".trimIndent()
