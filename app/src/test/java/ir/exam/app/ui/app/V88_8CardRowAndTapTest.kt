@@ -41,9 +41,12 @@ class V88_8CardRowAndTapTest {
 
     @Test
     fun `tapping no longer throws the native editor in the way`() {
+        // V89.1 — پل‌های V88.9 بینِ شنونده و `__qmfQuestionDetail` نشستند،
+        // پس مرز به انتهای خودِ شنونده رفت (همان اصلاحی که در گاردِ verify شد).
         val from = asset.indexOf("/* V88.8 — لمسِ کارت خودِ کارت")
-        val to = asset.indexOf("window.__qmfQuestionDetail = function")
-        assertTrue(from in 1 until to)
+        assertTrue(from > 0)
+        val to = asset.indexOf("})();", from)
+        assertTrue(to > from)
         assertTrue("ExamPrintNative.openQuestion" !in asset.substring(from, to))
     }
 

@@ -97,7 +97,10 @@ class V88_9NativeCardsTest {
 
     @Test
     fun `the preview view runs no scripts`() {
-        val preview = File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintRichTextPreview.kt").readText()
+        // V89.0 — نمایشگر به `QuestionTextFieldWebView.kt` منتقل شد تا گاردِ
+        // «WebView فقط در فایل‌های تأییدشده» دست‌نخورده بماند.
+        val preview = File(root(), "app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").readText()
+        assertTrue("fun PrintRichTextPreview(" in preview)
         assertTrue("settings.javaScriptEnabled = false" in preview)
         assertTrue("settings.allowFileAccess = false" in preview)
     }
