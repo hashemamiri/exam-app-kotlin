@@ -104,7 +104,7 @@ fun PrintQuestionCard(
     /* V89.8 — کنترلرِ همان بخشِ متنِ آنلاین؛ درجِ بومی از راهِ آن انجام
        می‌شود و محلِ مکان‌نما را خودش نگه می‌دارد. */
     val fieldController = remember(detail.id) {
-        ir.exam.app.ui.builder.QuestionEditorFieldController()
+        ir.exam.app.ui.math.QuestionEditorFieldController()
     }
     var text by remember(detail.id) { mutableStateOf(detail.text) }
     var score by remember(detail.id) { mutableStateOf(detail.score) }

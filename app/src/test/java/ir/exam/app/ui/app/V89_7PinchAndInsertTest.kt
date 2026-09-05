@@ -31,7 +31,8 @@ class V89_7PinchAndInsertTest {
         // یک‌بارمصرف: پس از درج پاک می‌شود تا درجِ بعدی اشتباه نیفتد
         assertTrue("window.__qmfInsertPos = null;" in asset)
         // V89.8 — محلِ درج را `QuestionEditorFieldController` نگه می‌دارد.
-        assertTrue("ir.exam.app.ui.builder.QuestionEditorFieldController()" in cards)
+        // V89.9 — کنترلر در `ui.math` است، نه `ui.builder`.
+        assertTrue("ir.exam.app.ui.math.QuestionEditorFieldController()" in cards)
     }
 
     @Test
