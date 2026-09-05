@@ -13403,15 +13403,31 @@ function initPreviewFigureEditing() {
     area.querySelectorAll('.interactive-figure.selected').forEach(x => { if (x !== el) x.classList.remove('selected'); });
     if (el) el.classList.add('selected');
   }
-  function clampToParent(el, x, y, w, h) {
+  /* V87.9 — اندازه‌گیریِ والد یک‌بار در آغازِ درگ. تا V87.8 این تابع در هر
+     `pointermove` هم می‌خواند (`getBoundingClientRect`, `getComputedStyle`,
+     `offsetTop`) و هم می‌نوشت (`minHeight`)؛ این رفت‌وبرگشت مرورگر را مجبور
+     به بازچینشِ همگامِ کلِ صفحه می‌کرد — همان لگی که کاربر گزارش کرد. */
+  function measureParent(el) {
     const parent = parentBox(el);
-    if (!parent) return {x,y,w,h};
+    if (!parent) return null;
     const pr = parent.getBoundingClientRect();
-    const er = el.getBoundingClientRect();
     const cs = window.getComputedStyle(parent);
     const padR = parseFloat(cs.paddingRight) || 0;
     const padL = parseFloat(cs.paddingLeft) || 0;
-    const parentW = Math.max(1, (parent.clientWidth || pr.width || 0) - padR - padL);
+    return {
+      parent: parent,
+      parentW: Math.max(1, (parent.clientWidth || pr.width || 0) - padR - padL),
+      normalTop: (el.offsetTop || 0) - (parseFloat(el.style.top || '0') || 0),
+      elW: el.getBoundingClientRect().width,
+      elH: el.getBoundingClientRect().height
+    };
+  }
+  function clampToParent(el, x, y, w, h, cache) {
+    const m = cache || measureParent(el);
+    if (!m) return {x,y,w,h};
+    const parent = m.parent;
+    const er = { width: m.elW, height: m.elH };
+    const parentW = m.parentW;
     const borderSafe = 18;
     // ذخیره‌سازی همچنان عددی و تمیز می‌ماند؛ clamp نهایی در CSS و متناسب با عرض واقعی همان لحظه انجام می‌شود.
     w = Math.max(18, Math.min(w || er.width || 360, Math.max(18, parentW - borderSafe)));
@@ -13419,13 +13435,15 @@ function initPreviewFigureEditing() {
     const maxX = Math.max(0, parentW - w - borderSafe);
     x = Math.max(0, Math.min(maxX, x));
     y = Math.max(0, y);
+    /* V87.9 — رشدِ ارتفاعِ والد فقط وقتی لازم است نوشته می‌شود؛ نوشتنِ
+       بی‌قیدِ آن در هر فریم، خواندنِ فریمِ بعد را باطل و بازچینش را اجباری
+       می‌کرد. */
     try {
-      const normalTop = (el.offsetTop || 0) - (parseFloat(el.style.top || '0') || 0);
-      const need = Math.ceil(normalTop + y + h + 22);
+      const need = Math.ceil(m.normalTop + y + h + 22);
       const old = parseFloat(parent.dataset.figMinHeight || '0') || 0;
-      if (need > old || !parent.style.minHeight) {
-        parent.dataset.figMinHeight = String(Math.max(old, need));
-        parent.style.minHeight = Math.max(old, need) + 'px';
+      if (need > old) {
+        parent.dataset.figMinHeight = String(need);
+        parent.style.minHeight = need + 'px';
       }
     } catch(e) {}
     return {x,y,w,h};
@@ -13436,10 +13454,20 @@ function initPreviewFigureEditing() {
        بدونِ این، مرورگر هم‌زمان با جابه‌جاییِ شیء خودِ صفحه را اسکرول
        می‌کرد و شیء از زیرِ انگشت در می‌رفت. */
     if (fig) {
+      /* V87.9 — تا V87.8 اینجا `overflow:hidden` می‌گذاشتیم. آن کار اسکرول را
+         می‌بست ولی ارتفاعِ قابلِ اسکرول را هم صفر می‌کرد، پس وقتی شیء به
+         پایین کشیده می‌شد والد نمی‌توانست بلند شود و حرکت فقط افقی به نظر
+         می‌رسید. `touch-action:none` روی خودِ شیء همان هدف را می‌گیرد بدونِ
+         دست‌زدن به هندسهٔ ظرف. */
       try {
+        fig.style.touchAction = 'none';
         var sc = e.target.closest('.pwo-body') ||
                  document.scrollingElement || document.body;
-        if (sc) { sc.style.overflow = 'hidden'; window.__qmfDragLock = sc; }
+        if (sc) {
+          sc.style.overscrollBehavior = 'contain';
+          window.__qmfDragLock = sc;
+          window.__qmfDragFig = fig;
+        }
       } catch (err) {}
     }
     if (!fig) {
@@ -13459,6 +13487,10 @@ function initPreviewFigureEditing() {
       y:Number.isFinite(+layout.y) ? +layout.y : (parseFloat(fig.style.top || fig.style.getPropertyValue('--fig-y') || '0') || 0),
       w:px(layout.w) || rect.width,
       h:px(layout.h) || rect.height };
+    /* V87.9 — یک‌بار اندازه بگیر، بعد فقط بنویس. */
+    drag.cache = measureParent(fig);
+    drag.raf = 0;
+    drag.pending = null;
     fig.setPointerCapture?.(e.pointerId);
   });
   area.addEventListener('pointermove', function(e) {
@@ -13489,27 +13521,43 @@ function initPreviewFigureEditing() {
       x = drag.x - (e.clientX - drag.sx);
       y = drag.y + (e.clientY - drag.sy);
     }
-    const c = clampToParent(drag.fig, x, y, w, h);
-    drag.fig.style.setProperty('--fig-x', c.x + 'px');
-    drag.fig.style.setProperty('--fig-y', c.y + 'px');
+    const c = clampToParent(drag.fig, x, y, w, h, drag.cache);
+    /* V87.9 — نوشتن به یک فریم موکول می‌شود. رویدادهای اشاره‌گر می‌توانند
+       چند بار در هر فریم بیایند؛ بدونِ این، هر کدام یک بازچینش می‌ساختند. */
+    drag.pending = c;
+    if (!drag.raf) {
+      drag.raf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 16); })(function () {
+        drag.raf = 0;
+        var d = drag;
+        if (!d || !d.pending) return;
+        applyFigGeometry(d, d.pending);
+      });
+    }
+    return;
+  });
+
+  /* V87.9 — نوشتنِ هندسه، جدا از محاسبه. */
+  function applyFigGeometry(d, c) {
+    d.fig.style.setProperty('--fig-x', c.x + 'px');
+    d.fig.style.setProperty('--fig-y', c.y + 'px');
     /* V86.5 — شیءِ شناور مطلق است: مستقیم `right` می‌گیرد، نه حاشیهٔ
        clamp‌شده. آن clamp شیء را داخلِ ستونِ متن نگه می‌داشت و اجازه نمی‌داد
        کنارِ شیءِ دیگر یا رویش بنشیند. */
-    if (drag.fig.classList.contains('fig-free')) {
-      drag.fig.style.removeProperty('margin-right');
-      drag.fig.style.right = c.x + 'px';
-      drag.fig.style.left = 'auto';
+    if (d.fig.classList.contains('fig-free')) {
+      d.fig.style.removeProperty('margin-right');
+      d.fig.style.right = c.x + 'px';
+      d.fig.style.left = 'auto';
     } else {
-      drag.fig.style.marginRight = 'clamp(0px, ' + c.x + 'px, calc(100% - ' + c.w + 'px - 18px))';
-      drag.fig.style.right = 'auto';
-      drag.fig.style.left = 'auto';
+      d.fig.style.marginRight = 'clamp(0px, ' + c.x + 'px, calc(100% - ' + c.w + 'px - 18px))';
+      d.fig.style.right = 'auto';
+      d.fig.style.left = 'auto';
     }
-    drag.fig.style.top = Math.max(0, c.y) + 'px';
-    drag.fig.style.width = 'min(' + c.w + 'px, calc(100% - 18px))';
-    drag.fig.style.height = c.h + 'px';
-    updateFigSizeBadge(drag.fig, c.w, c.h);
-    setFigLayout(drag.qid, drag.idx, {x:Math.round(c.x), y:Math.round(c.y), w:Math.round(c.w), h:Math.round(c.h)});
-  });
+    d.fig.style.top = Math.max(0, c.y) + 'px';
+    d.fig.style.width = 'min(' + c.w + 'px, calc(100% - 18px))';
+    d.fig.style.height = c.h + 'px';
+    updateFigSizeBadge(d.fig, c.w, c.h);
+    setFigLayout(d.qid, d.idx, {x:Math.round(c.x), y:Math.round(c.y), w:Math.round(c.w), h:Math.round(c.h)});
+  }
   function endDrag(e) {
     if (!drag) return;
     try { drag.fig.releasePointerCapture?.(e.pointerId); } catch(_) {}
@@ -13519,7 +13567,9 @@ function initPreviewFigureEditing() {
   function qmfReleaseScrollLock() {
     try {
       var sc = window.__qmfDragLock;
-      if (sc) { sc.style.removeProperty('overflow'); window.__qmfDragLock = null; }
+      if (sc) { sc.style.removeProperty('overscroll-behavior'); window.__qmfDragLock = null; }
+      var fg = window.__qmfDragFig;
+      if (fg) { fg.style.removeProperty('touch-action'); window.__qmfDragFig = null; }
     } catch (err) {}
   }
   area.addEventListener('pointerup', function (e) { qmfReleaseScrollLock(); endDrag(e); });

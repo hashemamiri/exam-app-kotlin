@@ -3154,6 +3154,25 @@ require("fun toast(message: String?)" in _v874_dlg and "onToast = { message ->" 
 _v878_at = _v874_dlg.index("androidx.compose.animation.AnimatedVisibility(")
 require("Modifier.align" not in _v874_dlg[_v878_at:_v878_at + 300],
         "V87.8 AnimatedVisibility with Modifier.align picks the Column overload and fails to compile")
+
+# V87.9 — درگِ اشیا: بدونِ بازچینشِ همگام، و با محورِ عمودیِ سالم
+require("function measureParent(el)" in _v79_asset
+        and "drag.cache = measureParent(fig);" in _v79_asset,
+        "V87.9 the parent must be measured once per drag, not per frame")
+_v879_i = _v79_asset.index("area.addEventListener('pointermove'")
+_v879_j = _v79_asset.index("function applyFigGeometry")
+_v879_body = _v79_asset[_v879_i:_v879_j]
+for _probe in ("getBoundingClientRect", "getComputedStyle", "offsetTop"):
+    require(_probe not in _v879_body,
+            "V87.9 pointermove must not read layout (%s) or dragging lags" % _probe)
+require("drag.raf = (window.requestAnimationFrame" in _v79_asset,
+        "V87.9 geometry writes must be batched into one frame")
+require("sc.style.overflow = 'hidden'" not in _v79_asset,
+        "V87.9 overflow:hidden flattens the scroll box so figures cannot move down")
+require("fig.style.touchAction = 'none';" in _v79_asset,
+        "V87.9 the drag lock must sit on the figure, not on the container geometry")
+require("y = drag.y + (e.clientY - drag.sy);" in _v79_asset,
+        "V87.9 the vertical axis must follow the pointer")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
 for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
     require(_b in _v79_asset,
