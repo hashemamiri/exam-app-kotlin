@@ -374,11 +374,18 @@ fun ExamHtmlPrintDialog(
 
                                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                                         val path = request.url.path ?: return emptyResponse()
-                                        if (!path.startsWith("/print/")) return emptyResponse()
-                                        val assetPath = path.removePrefix("/print/")
+                                        // V87.1 — تصاویرِ اطلس از `print/` بیرون‌اند
+                                        // (`figure_atlas/`، همان‌هایی که پنجرهٔ بومی می‌خواند).
+                                        // مسیرِ نسبیِ `../figure_atlas/x.jpg` را WebView پیش از
+                                        // ارسال ساده می‌کند، پس اینجا به `/figure_atlas/` می‌رسد.
+                                        val assetPath = when {
+                                            path.startsWith("/print/") -> "print/" + path.removePrefix("/print/")
+                                            path.startsWith("/figure_atlas/") -> path.removePrefix("/")
+                                            else -> return emptyResponse()
+                                        }
                                         if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
                                         return try {
-                                            val stream = view.context.assets.open("print/$assetPath")
+                                            val stream = view.context.assets.open(assetPath)
                                             val mime = when {
                                                 assetPath.endsWith(".html") -> "text/html"
                                                 assetPath.endsWith(".css") -> "text/css"

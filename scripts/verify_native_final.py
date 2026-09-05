@@ -3071,20 +3071,31 @@ require("#qmfLegacyToolbar{display:none !important}" in _v79_asset,
 require("function printStudent(" in _v79_asset and "function printTeacher(" in _v79_asset
         and "window.togglePreviewWindow =" in _v79_asset,
         "V87.0 hiding the toolbar must not remove the functions the native bar calls")
-require(_v79_asset.count("data:image/jpeg;base64,") == 137,
-        "V87.0 the anatomy atlas is 74% of the file but AtlasToolFlow renders it")
+# V87.1 — تصاویر از data-URI به فایل تبدیل شدند؛ هیچ‌کدام حذف نشد.
+require(_v79_asset.count("data:image/jpeg;base64,") == 0,
+        "V87.1 atlas images must be files, not inline base64")
+require(_v79_asset.count("'../figure_atlas/") == 137,
+        "V87.1 all 137 atlas entries must point at the shared files")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V85_0PreviewWrapperTest.kt").exists(),
         "V85.0 test is missing")
 
-# مجموعِ سه فایل نباید کوچک‌تر از قبل شود (چیزی گم نشده، فقط جابه‌جا شده)
+# مجموعِ محتوا نباید کوچک‌تر شود — چیزی گم نشده، فقط جابه‌جا شده.
+# V87.1: تصاویرِ اطلس از داخلِ exam_print.html به figure_atlas/ رفتند (جایی که
+# پنجرهٔ بومی از قبل می‌خواندشان). چون base64 حدود ۳۳٪ تورم دارد، مجموعِ
+# واقعی کوچک‌تر شد بدونِ آنکه حتی یک تصویر از دست برود؛ برابریِ محتوا با
+# هشِ MD5 در V87_1AtlasDedupTest اثبات می‌شود.
 _v79_total = (_v79_asset.__len__()
               + (ROOT/"app/src/main/assets/print/math_editor.html").stat().st_size
               + sum((ROOT/"app/src/main/assets/print/logos"/_l).stat().st_size
-                    for _l in ("logo_azad.png", "logo_formal.png", "logo_sama.png", "logo_ministry.png")))
-require(_v79_total > 5_400_000, "V79 content went missing rather than moving to assets")
+                    for _l in ("logo_azad.png", "logo_formal.png", "logo_sama.png", "logo_ministry.png"))
+              + sum(_p.stat().st_size
+                    for _p in (ROOT/"app/src/main/assets/figure_atlas").rglob("*") if _p.is_file()))
+require(_v79_total > 4_800_000, "V79 content went missing rather than moving to assets")
+require(len(list((ROOT/"app/src/main/assets/figure_atlas").rglob("*.jpg"))) == 137,
+        "V87.1 the atlas images must all still be on disk")
 
 # V76.6.1 — دروازهٔ «استفاده بدون import»: سمبل‌های به‌کاررفته در کد (بدون رشته/کامنت)
 # باید import داشته باشند؛ درسِ nativeCanvas (V76.5.1) و TextButton (V76.6.1).
@@ -3218,7 +3229,8 @@ require("ministry" not in _v730_test_text
 _v730_asset_text=_v730_asset.read_text(encoding="utf-8") if _v730_asset.is_file() else ""
 # V79.0/V79.2 — بدنهٔ ویرایشگر فرمول و چهار لوگو به asset جدا رفتند؛
 # آستانه از ۵MB به ۴MB آمد و مجموعِ سه فایل هم جداگانه بررسی می‌شود.
-require(_v730_asset.is_file() and _v730_asset.stat().st_size > 4_000_000
+# V87.1 — آستانهٔ حجم پس از حذفِ تصاویرِ تکراری معنا ندارد؛ سنجه محتواست.
+require(_v730_asset.is_file() and _v730_asset.stat().st_size > 900_000
         and "window.setExamData" in _v730_asset_text
         and "__qmfHostBridge" in _v730_asset_text
         and "ExamPrintNative" in _v730_asset_text
@@ -3508,7 +3520,7 @@ require(_v760_inliner.exists()
         and '"k", "img"' in _v760_inliner_text
         and "const val MAX_IMAGES = 24" in _v760_inliner_text,
         "V76.0 ExamHtmlImageInliner (private images as data-url tokens) is missing")
-require(len(_v760_asset_text) > 4_000_000  # V79.0/V79.2: ویرایشگر فرمول و لوگوها به asset جدا رفتند
+require(len(_v760_asset_text) > 900_000  # V87.1: تصاویرِ اطلس به figure_atlas/ رفتند
         and "window.setExamData" in _v760_asset_text
         and "qmfHostBridge" in _v760_asset_text
         and "qmf_exam_autosave_azmoon_v1" in _v760_asset_text
