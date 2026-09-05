@@ -875,7 +875,7 @@ fun ExamHtmlPrintDialog(
                         },
                         onOpenFormula = {
                             editingQuestionId = null
-                            figureTool = FigureToolRequest(qid, ExamFigureToolHost.FORMULA)
+                            figureTool = FigureToolRequest(qid, FigureToolRequest.FORMULA)
                         },
                         onOpenFigureTool = { tool ->
                             editingQuestionId = null

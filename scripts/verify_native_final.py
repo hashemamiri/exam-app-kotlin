@@ -3193,6 +3193,8 @@ require("org.json.JSONObject.quote(value)" in _v874_dlg,
         "V88.1 arguments must be escaped before injection")
 require("fun openQuestion(questionId: String?)" in _v874_dlg,
         "V88.1 the native side must expose openQuestion")
+require("ExamFigureToolHost.FORMULA" not in _v874_dlg,
+        "V88.2 FORMULA lives on FigureToolRequest, not on the Composable host")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
 for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
     require(_b in _v79_asset,

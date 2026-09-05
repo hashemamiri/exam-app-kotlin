@@ -102,6 +102,14 @@ class V88_1NativeQuestionEditorTest {
     }
 
     @Test
+    fun `the formula constant comes from the request type that declares it`() {
+        // V88.2 — `ExamFigureToolHost.FORMULA` کامپایل نمی‌شد: آن یک Composable
+        // است و FORMULA در companion objectِ FigureToolRequest زندگی می‌کند.
+        assertTrue("FigureToolRequest(qid, FigureToolRequest.FORMULA)" in dialog)
+        assertTrue("ExamFigureToolHost.FORMULA" !in dialog)
+    }
+
+    @Test
     fun `arguments are escaped before they reach the page`() {
         // متنِ سؤال می‌تواند نقل‌قول یا `</script>` داشته باشد
         assertTrue("org.json.JSONObject.quote(value)" in dialog)
