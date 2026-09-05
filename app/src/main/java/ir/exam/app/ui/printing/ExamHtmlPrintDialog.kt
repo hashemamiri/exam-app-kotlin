@@ -6,15 +6,18 @@ import android.net.Uri
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import android.webkit.ValueCallback
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,27 +27,37 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -57,12 +70,14 @@ import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.domain.model.OfficialExamPrintable
+import ir.exam.app.ui.builder.BuilderRadialMenuOverlay
+import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.FormulaHostDialog
+import java.io.ByteArrayInputStream
+import java.io.IOException
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.io.ByteArrayInputStream
-import java.io.IOException
 
 /**
  * V76.0 — پنجرهٔ تمام‌صفحهٔ «نسخهٔ 30» (آزمون‌ساز/چاپ تعاملی HTML):
@@ -87,6 +102,7 @@ import java.io.IOException
  */
 internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print.html"
 
+@OptIn(ExperimentalFoundationApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ExamHtmlPrintDialog(
@@ -117,6 +133,12 @@ fun ExamHtmlPrintDialog(
     var showHeaderSettings by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var showNewQuestion by remember { mutableStateOf(false) }
+    // V87.4 — منویِ رادیالِ + (همان آزمون‌سازِ آنلاین) و منویِ چاپ
+    var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var showPrintMenu by remember { mutableStateOf(false) }
+    // V87.4 — پنجرهٔ بومیِ بازیابی، به‌جای بنرِ شناورِ HTML
+    var showRestore by remember { mutableStateOf(false) }
+    var restoreAsked by remember { mutableStateOf(false) }
     var studioQuestionId by remember { mutableStateOf<String?>(null) }
     var studioImagesJson by remember { mutableStateOf<String?>(null) }
     var pageSnapshotJson by remember { mutableStateOf<String?>(null) }
@@ -248,15 +270,16 @@ fun ExamHtmlPrintDialog(
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // V87.4 — برگشت، دقیقاً مثلِ آزمون‌سازِ آنلاین
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            Icons.Default.Close,
-                            contentDescription = "بستن",
+                            Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = "بازگشت",
                             tint = Color.White
                         )
                     }
                     Text(
-                        text = if (printable == null) "آزمون جدید — آزمون‌ساز"
+                        text = if (printable == null) "ساخت آزمون"
                         else "چاپ آزمون: " + printable.documentTitle.ifBlank { printable.subject }.ifBlank { "آزمون" },
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
@@ -265,51 +288,43 @@ fun ExamHtmlPrintDialog(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
+                    // «سربرگ» کنارِ عنوان؛ تنها کنترلِ باقی‌مانده در هدر
+                    // V87.4 — «سربرگ»؛ فشارِ طولانی همان تشخیصِ 🩺 را می‌آورد.
+                    // دکمهٔ تشخیص از نوار برداشته شد ولی امکانش نباید از دست برود.
+                    Text(
+                        "سربرگ",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .combinedClickable(
+                                onClick = {
+                                    runJs("(function(){try{return window.__qmfExportJson?window.__qmfExportJson():'{}'}catch(e){return '{}'}})()") { r ->
+                                        pageSnapshotJson = r
+                                        showHeaderSettings = true
+                                    }
+                                },
+                                onLongClick = {
+                                    runJs("(function(){try{return window.__qmfFormulaDiag?window.__qmfFormulaDiag():'{}'}catch(e){return '{}'}})()") { raw ->
+                                        val formula = unwrapJsString(raw)
+                                        runJs("(function(){try{return window.__qmfPreviewDiag?window.__qmfPreviewDiag():'{}'}catch(e){return '{}'}})()") { raw2 ->
+                                            formulaDiag = "asset=" + mathAssetProbe +
+                                                "\n\n[فرمول]\n" + formula +
+                                                "\n\n[پیش‌نمایش]\n" + unwrapJsString(raw2)
+                                        }
+                                    }
+                                }
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
                 }
 
-                // V76.3 — نوار فرمان بومی: هفت کنترل اصلی (نوار HTML فایل مخفی شده است).
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    NativeBarButton("⚙ تنظیمات سربرگ") {
-                        runJs("(function(){try{return window.__qmfExportJson?window.__qmfExportJson():'{}'}catch(e){return '{}'}})()") { r ->
-                            pageSnapshotJson = r
-                            showHeaderSettings = true
-                        }
-                    }
-                    NativeBarButton("💾 ذخیره") { showSaveDialog = true }
-                    NativeBarButton("📂 بازکردن") { openExamPicker.launch("*/*") }
-                    NativeBarButton("🖨 چاپ دانشجو") { runJs("if (typeof printStudent==='function') printStudent();", null) }
-                    NativeBarButton("✅ چاپ استاد") { runJs("if (typeof printTeacher==='function') printTeacher();", null) }
-                    NativeBarButton("➕ سوال جدید") { showNewQuestion = true }
-                    NativeBarButton("👁 پیش‌نمایش") { runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null) }
-                    // V81.0 — اگر ویرایشگر فرمول باز نشد، این دکمه دقیقاً می‌گوید کجا گیر است.
-                    NativeBarButton("🩺 بررسی فرمول") {
-                        runJs("(function(){try{return window.__qmfFormulaDiag?window.__qmfFormulaDiag():'{}'}catch(e){return '{\"err\":\"'+e.message+'\"}'}})()") { raw ->
-                            val formula = unwrapJsString(raw)
-                            // V83.0 — وضعیت پیش‌نمایش را هم کنارش نشان بده.
-                            runJs("(function(){try{return window.__qmfPreviewDiag?window.__qmfPreviewDiag():'{}'}catch(e){return '{}'}})()") { raw2 ->
-                                formulaDiag = "asset=" + mathAssetProbe +
-                                    "\n\n[فرمول]\n" + formula +
-                                    "\n\n[پیش‌نمایش]\n" + unwrapJsString(raw2)
-                            }
-                        }
-                    }
-                    NativeBarButton("🗂 مدیریت سؤال") {
-                        runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
-                            questionRows = parseQuestionRows(list)
-                            runJs("(function(){try{return window.__qmfTotalScore?window.__qmfTotalScore():''}catch(e){return ''}})()") { total ->
-                                questionTotal = unwrapJsString(total)
-                                showQuestionManager = true
-                            }
-                        }
-                    }
-                }
+                /* V87.4 — نوارِ دومِ فرمان حذف شد.
+                   «سربرگ» به هدر رفت، «ذخیره/چاپ/پیش‌نمایش» به دکمه‌های شناورِ
+                   پایین، و «سوال جدید/بازکردن» به منویِ رادیالِ + (همان منویِ
+                   آزمون‌سازِ آنلاین که گزینهٔ «وارد کردن» دارد).
+                   «مدیریت سؤال» و «بررسی فرمول» به خواستهٔ کاربر برداشته شدند؛
+                   پل‌هایشان دست‌نخورده‌اند تا امکانی از دسترس خارج نشود. */
 
                 Box(Modifier.fillMaxSize().weight(1f)) {
                     AndroidView(
@@ -427,6 +442,12 @@ fun ExamHtmlPrintDialog(
                                             view.evaluateJavascript(
                                                 "(function(){try{return window.__qmfHasLocalDraft?window.__qmfHasLocalDraft():'no'}catch(e){return 'no'}})()"
                                             ) { has ->
+                                                // V87.4 — پیش‌نویسِ خودِ صفحه هست ⇒ پنجرهٔ بومیِ
+                                                // وسط‌چین بپرس (بنرِ شناورِ HTML خاموش شده).
+                                                if (unwrapJsString(has).contains("yes") && !restoreAsked) {
+                                                    restoreAsked = true
+                                                    post { showRestore = true }
+                                                }
                                                 if (!unwrapJsString(has).contains("yes")) {
                                                     ExamDraftMirror.load(view.context)?.let { mirrored ->
                                                         view.evaluateJavascript(
@@ -535,7 +556,66 @@ fun ExamHtmlPrintDialog(
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
-                }
+
+                    /* V87.4 — کنترل‌های شناور، هم‌چیدمانِ آزمون‌سازِ آنلاین:
+                       تیکِ ذخیره سمتِ شروع، پرینتر و چشم کنارش، و + سمتِ پایان. */
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 16.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FloatingActionButton(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier.size(56.dp),
+                            containerColor = Color(0xFF27A86B),
+                            contentColor = Color.White
+                        ) {
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = "ذخیره آزمون",
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        // پرینتر: «چاپ آزمون» و «چاپ با کلید»
+                        FloatingActionButton(
+                            onClick = { showPrintMenu = true },
+                            modifier = Modifier.size(56.dp),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ) {
+                            Icon(
+                                Icons.Outlined.Print,
+                                contentDescription = "چاپ",
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                        FloatingActionButton(
+                            onClick = {
+                                runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();")
+                            },
+                            modifier = Modifier.size(56.dp),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ) {
+                            Icon(
+                                Icons.Outlined.Visibility,
+                                contentDescription = "پیش‌نمایش آزمون",
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                    if (!radialMenuOpen) {
+                        FloatingActionButton(
+                            onClick = { radialMenuOpen = true },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 16.dp, bottom = 16.dp)
+                                .size(56.dp)
+                        ) { Text("+", style = MaterialTheme.typography.headlineSmall) }
+                    }
+}
             }
 
             // V76.4 — پنجره‌های بومی آزمون‌ساز
@@ -606,6 +686,102 @@ fun ExamHtmlPrintDialog(
                     )
                 }
             }
+            // V87.4 — همان منویِ رادیالِ آزمون‌سازِ آنلاین. «وارد کردن» جای
+            // دکمهٔ حذف‌شدهٔ «بازکردن» را می‌گیرد.
+            if (radialMenuOpen) {
+                BuilderRadialMenuOverlay(
+                    onDismiss = { radialMenuOpen = false },
+                    onQuestionType = { type ->
+                        radialMenuOpen = false
+                        val id = when (type) {
+                            QuestionType.MULTIPLE_CHOICE -> "multiple"
+                            QuestionType.TRUE_FALSE -> "truefalse"
+                            QuestionType.ESSAY -> "long"
+                            QuestionType.FILL_BLANK -> "fill"
+                            QuestionType.NUMERIC -> "numeric"
+                            QuestionType.MATCHING -> "matching"
+                        }
+                        runJs("(function(){try{if(typeof pickQuestionType==='function'){pickQuestionType('" + id + "');return 'ok'}return 'missing'}catch(e){return 'err'}})()") { r ->
+                            barStatus = if (r?.contains("ok") == true) null else "سوال جدید اضافه نشد."
+                        }
+                    },
+                    onImport = {
+                        radialMenuOpen = false
+                        openExamPicker.launch("*/*")
+                    },
+                    // V87.4 — جایگاهِ «بانک» در آزمونِ چاپی معنا ندارد، پس همان
+                    // «🗂 مدیریت سؤال» را می‌گیرد تا این امکان از دسترس خارج نشود.
+                    onBank = {
+                        radialMenuOpen = false
+                        runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
+                            questionRows = parseQuestionRows(list)
+                            runJs("(function(){try{return window.__qmfTotalScore?window.__qmfTotalScore():''}catch(e){return ''}})()") { total ->
+                                questionTotal = unwrapJsString(total)
+                                showQuestionManager = true
+                            }
+                        }
+                    }
+                )
+            }
+
+            // V87.4 — منویِ چاپ با نام‌هایی که کاربر خواست.
+            if (showPrintMenu) {
+                AlertDialog(
+                    onDismissRequest = { showPrintMenu = false },
+                    title = { Text("چاپ") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        showPrintMenu = false
+                                        runJs("if (typeof printStudent==='function') printStudent();")
+                                    }
+                                    .padding(vertical = 14.dp, horizontal = 12.dp)
+                            ) { Text("🖨 چاپ آزمون", style = MaterialTheme.typography.titleMedium) }
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        showPrintMenu = false
+                                        runJs("if (typeof printTeacher==='function') printTeacher();")
+                                    }
+                                    .padding(vertical = 14.dp, horizontal = 12.dp)
+                            ) { Text("✅ چاپ با کلید", style = MaterialTheme.typography.titleMedium) }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showPrintMenu = false }) { Text("بستن") }
+                    }
+                )
+            }
+
+            // V87.4 — بازیابیِ پیش‌نویس: پنجرهٔ بومیِ وسط‌چین.
+            if (showRestore) {
+                AlertDialog(
+                    onDismissRequest = { showRestore = false },
+                    title = { Text("بازیابی آزمون") },
+                    text = { Text("یک آزمونِ ذخیره‌شدهٔ خودکار پیدا شد. بازیابی شود؟") },
+                    confirmButton = {
+                        Button(onClick = {
+                            showRestore = false
+                            runJs("(function(){try{if(window.restoreAutosave){window.restoreAutosave();return 'ok'}return 'missing'}catch(e){return 'err'}})()") { r ->
+                                barStatus = if (r?.contains("ok") == true) "آزمون بازیابی شد ✓" else "بازیابی ناموفق بود."
+                            }
+                        }) { Text("بازیابی") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showRestore = false
+                            runJs("(function(){try{if(window.clearAutosave){window.clearAutosave();return 'ok'}return 'missing'}catch(e){return 'err'}})()")
+                        }) { Text("نه، پاک کن") }
+                    }
+                )
+            }
+
             if (showNewQuestion) {
                 NewQuestionTypeDialog(
                     onPick = { type ->

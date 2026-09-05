@@ -83,7 +83,9 @@ class V81_0FormulaFrameLifecycleTest {
         assertTrue("window.__qmfFormulaDiag" in assetText)
         listOf("hasOpenMath", "docBytes", "computedDisplay", "bootError", "editorUrl")
             .forEach { assertTrue("کلید $it در تشخیص نیست", it in assetText) }
-        assertTrue("🩺 بررسی فرمول" in dialog)
+        // V87.4 — دکمهٔ 🩺 از نوار رفت؛ تشخیص با فشارِ طولانی روی «سربرگ».
+        assertTrue("__qmfFormulaDiag" in dialog)
+        assertTrue("onLongClick" in dialog)
         assertTrue("mathAssetProbe" in dialog)
         assertTrue("assets.open(\"print/math_editor.html\")" in dialog)
     }

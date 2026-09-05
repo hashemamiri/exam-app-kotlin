@@ -2569,6 +2569,8 @@ require(_v730_print_center.exists()
         and "ExamHtmlPrintDialog(" in _v730_print_center_text
         and "htmlPrintExam" in _v730_print_center_text,
         "V76.0 builder-30 flow (pencil/printer/new-exam) is missing in ExamPrintCenterScreen")
+# V87.4 — نوارِ دکمه‌ها با کنترل‌های شناور و منویِ + جایگزین شد. سنجه از
+# «برچسبِ دکمه» به «در دسترس بودنِ خودِ کار» تغییر کرد.
 require(_v730_dialog.exists()
         and "fun ExamHtmlPrintDialog(" in _v730_dialog_text
         and "printable: OfficialExamPrintable?" in _v730_dialog_text
@@ -2579,13 +2581,13 @@ require(_v730_dialog.exists()
         and "loadWithOverviewMode = false" in _v730_dialog_text
         and "onShowFileChooser" in _v730_dialog_text
         and "ActivityResultContracts.GetContent" in _v730_dialog_text
-        and "NativeBarButton(\"⚙ تنظیمات سربرگ\")" in _v730_dialog_text
-        and "NativeBarButton(\"💾 ذخیره\")" in _v730_dialog_text
-        and "NativeBarButton(\"📂 بازکردن\")" in _v730_dialog_text
-        and "NativeBarButton(\"🖨 چاپ دانشجو\")" in _v730_dialog_text
-        and "NativeBarButton(\"✅ چاپ استاد\")" in _v730_dialog_text
-        and "NativeBarButton(\"➕ سوال جدید\")" in _v730_dialog_text
-        and "NativeBarButton(\"👁 پیش\u200cنمایش\")" in _v730_dialog_text
+        and "showHeaderSettings = true" in _v730_dialog_text
+        and "showSaveDialog = true" in _v730_dialog_text
+        and "openExamPicker.launch" in _v730_dialog_text
+        and "printStudent();" in _v730_dialog_text
+        and "printTeacher();" in _v730_dialog_text
+        and "pickQuestionType('" in _v730_dialog_text
+        and "togglePreviewWindow()" in _v730_dialog_text
         and "openExamPicker.launch" in _v730_dialog_text
         and "window.__qmfSaveNow" in _v730_dialog_text
         and "HeaderSettingsDialog(" in _v730_dialog_text
@@ -2827,9 +2829,11 @@ for _b in ("__qmfQuestionList", "__qmfQuestionAction", "__qmfTotalScore"):
 for _fn in ("removeQuestion(q.id)", "window.moveQuestion(q.id", "addOption(q.id)",
             "removeOption(q.id", "addPair(q.id)", "removePair(q.id"):
     require(_fn in _v781_asset, "V78.1 must delegate to the page function " + _fn)
+# V87.4 — نوارِ دکمه‌ها برداشته شد؛ سنجه دیگر برچسبِ دکمه نیست، بلکه این است
+# که خودِ امکان از دسترس خارج نشده باشد (اکنون از منویِ +).
 require("ExamQuestionManagerSheet(" in _v781_dialog
         and "parseQuestionRows(" in _v781_dialog
-        and '"🗂 مدیریت سؤال"' in _v781_dialog,
+        and "showQuestionManager = true" in _v781_dialog,
         "V78.1 Kotlin side of the question manager is missing")
 # کادرِ متنِ سؤال بومی نشده باشد (خارج از دامنه)
 require("OutlinedTextField" in _v781_src and "q_text_" not in _v781_src,
@@ -2922,7 +2926,9 @@ require("setProperty('display', 'block', 'important')" in _v79_asset, "V81.0 ope
 require("__qmfMathFrameReset" in _v79_asset, "V81.0 frame-rebuild reset hook is missing")
 require("xhr.open('GET', MATH_EDITOR_URL, true)" in _v79_asset, "V81.0 xhr fallback is missing")
 require("window.__qmfFormulaDiag" in _v79_asset, "V81.0 diagnostic bridge is missing")
-require("🩺 بررسی فرمول" in _v80_dialog, "V81.0 diagnostic button is missing")
+# V87.4 — دکمهٔ 🩺 از نوار رفت؛ تشخیص با فشارِ طولانی روی «سربرگ» می‌آید.
+require("__qmfFormulaDiag" in _v80_dialog and "onLongClick" in _v80_dialog,
+        "V81.0 the formula diagnostic must stay reachable")
 require("assets.open(\"print/math_editor.html\")" in _v80_dialog, "V81.0 asset probe is missing")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V81_0FormulaFrameLifecycleTest.kt").exists(),
         "V81.0 test is missing")
@@ -3097,6 +3103,32 @@ require("__qmfEnsureFigTools()" in _v79_asset[_v873_at:_v873_at + 400],
         "V87.3 renderFigToken must activate the modules before drawing, or figures print blank")
 require('id="extracted-math-host-script" type=' not in _v79_asset,
         "V87.3 the formula host must not be deferred; the page uses QMF at once")
+
+# V87.4 — بازچینشِ کنترل‌ها و زومِ وسط‌چین
+_v874_dlg = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+require('"\u0633\u0627\u062e\u062a \u0622\u0632\u0645\u0648\u0646"' in _v874_dlg,
+        "V87.4 the printable builder header must read 'build exam'")
+require("Icons.AutoMirrored.Outlined.ArrowBack" in _v874_dlg,
+        "V87.4 the header needs the same back arrow as the online builder")
+require(_v874_dlg.count("FloatingActionButton(") == 4,
+        "V87.4 save, print, preview and plus must be floating controls")
+require("BuilderRadialMenuOverlay(" in _v874_dlg,
+        "V87.4 the plus must reuse the online builder menu, not a new one")
+for _t in ('MULTIPLE_CHOICE -> "multiple"', 'TRUE_FALSE -> "truefalse"', 'ESSAY -> "long"',
+           'FILL_BLANK -> "fill"', 'NUMERIC -> "numeric"', 'MATCHING -> "matching"'):
+    require(_t in _v874_dlg, "V87.4 question type mapping %s is missing" % _t)
+require("window.restoreAutosave()" in _v874_dlg and "window.clearAutosave()" in _v874_dlg,
+        "V87.4 the native restore dialog must reach both autosave bridges")
+require("window.__qmfMaybeShowBanner = maybeShowBanner" in _v79_asset,
+        "V87.4 the html restore banner must stay reachable outside the app")
+require("window.qmfCenterPreviewScroll" in _v79_asset,
+        "V87.4 zooming must recentre the sheet")
+require("pb.scrollLeft = over > 1 ? Math.round(over / 2) : 0;" in _v79_asset,
+        "V87.4 returning to 1x must clear the leftover scroll")
+# حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
+for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
+    require(_b in _v79_asset,
+            "V87.4 bridge %s must survive the toolbar removal" % _b)
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")

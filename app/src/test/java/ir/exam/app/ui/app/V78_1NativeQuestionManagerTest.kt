@@ -54,7 +54,8 @@ class V78_1NativeQuestionManagerTest {
 
     @Test
     fun `kotlin sheet is wired into the toolbar`() {
-        assertTrue("\"🗂 مدیریت سؤال\"" in dialog)
+        // V87.4 — نوارِ دکمه‌ها برداشته شد؛ مدیریتِ سؤال از منویِ + می‌آید.
+        assertTrue("showQuestionManager = true" in dialog)
         assertTrue("ExamQuestionManagerSheet(" in dialog)
         assertTrue("parseQuestionRows(" in dialog)
     }

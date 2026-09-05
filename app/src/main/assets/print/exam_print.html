@@ -1075,7 +1075,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
   </h2>
   <div class="qnum-strip-wrap" id="questionNumberStripWrap"><div class="qnum-strip" id="questionNumberStrip" dir="rtl"></div></div><!-- FIX-EXAM-NO-ADDBAR: نوار افزودن سوال حذف شد؛ افزودن فقط از دکمه «➕ سوال جدید» -->
 <div id="questionsContainer"></div>
-  <div id="emptyMsg" style="text-align:center;color:#9ca3af;padding:30px;">
+  <div id="emptyMsg" style="display:none">
     هنوز سؤالی اضافه نشده است.
   </div>
 </div>
@@ -14194,8 +14194,14 @@ loadSample();
       _banner = b;
     } catch(e){}
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', maybeShowBanner);
-  else maybeShowBanner();
+  /* V87.4 — بنرِ شناورِ HTML جای خود را به پنجرهٔ بومیِ وسط‌چین داد.
+     `restoreAutosave`/`clearAutosave` سراسری‌اند و پلِ بومی صدایشان می‌زند،
+     پس هیچ امکانی از دست نمی‌رود. بیرونِ اپ (مرورگر) بنر مثلِ قبل می‌آید. */
+  window.__qmfMaybeShowBanner = maybeShowBanner;
+  if (!(window.ExamPrintNative && typeof window.ExamPrintNative.openFigureTool === 'function')) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', maybeShowBanner);
+    else maybeShowBanner();
+  }
   /* هشدار هنگام بستن تب با آزمون باز */
   try {
     window.addEventListener('beforeunload', function(e){
@@ -14213,7 +14219,6 @@ loadSample();
 /* FIX-EXAM-SINGLE-WINDOW: سوال‌های بخش «سؤالات آزمون» کارت نیستند — فقط پنجرهٔ سوالِ فعال دیده می‌شود و کلیک روی شمارهٔ سوال، آن را جایگزین می‌کند */
 @media screen{
   #questionsContainer .question-card{background:#fff;border:1px solid #d8dfee;border-right:4px solid #1e40af;border-radius:12px;padding:14px;margin:0 0 14px;box-shadow:0 6px 18px rgba(30,64,175,.08)}
-  #questionsContainer:empty::after{content:'هنوز سوالی ندارید — از دکمهٔ «➕ سوال جدید» بالای صفحه استفاده کنید.';display:block;color:#94a3b8;font:700 13px Arial,sans-serif;text-align:center;padding:26px 10px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px}
 }
 /* FIX-EXAM-UI2 */
 .qtype-overlay{position:fixed;inset:0;z-index:130100;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:16px;direction:rtl}
@@ -14464,8 +14469,30 @@ loadSample();
       var pb = document.querySelector('.pwo-body');
       if (pb) pb.classList.toggle('qmf-zoomed', z > 1.001);
     } catch (e) {}
+    /* V87.4 — زوم باید حولِ مرکزِ برگه بماند.
+       `transform-origin: top right` برای RTL درست است (V86.6) و باید بماند،
+       ولی وقتی برگه از کادر پهن‌تر می‌شود همهٔ سرریز سمتِ چپ می‌افتد و
+       اسکرولِ افقی روی لبهٔ راست می‌ایستد؛ کاربر «زومِ چپ» می‌بیند.
+       پس پس از هر تغییرِ مقیاس، اسکرول را روی مرکز می‌گذاریم. */
+    try { qmfCenterPreviewScroll(); } catch (e) {}
     var b = document.querySelector('.pwo-zoom-val');
     if (b) b.textContent = Math.round(z * 100) + '%';
+  };
+
+  /* مرکزِ افقیِ محتوا را وسطِ کادر می‌آورد. اگر سرریزی نباشد کاری نمی‌کند. */
+  window.qmfCenterPreviewScroll = function () {
+    var pb = document.querySelector('.pwo-body');
+    if (!pb) return;
+    var run = function () {
+      var over = pb.scrollWidth - pb.clientWidth;
+      /* بازگشت به ۱x سرریز را از بین می‌برد؛ اگر اسکرول را صفر نکنیم
+         مقدارِ زومِ قبلی می‌ماند و برگه کج به نظر می‌رسد. */
+      pb.scrollLeft = over > 1 ? Math.round(over / 2) : 0;
+    };
+    run();
+    /* چیدمان پس از transform یک فریم طول می‌کشد */
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+    else setTimeout(run, 0);
   };
   function qmfInstallPinchZoom(bodyEl) {
     if (!bodyEl || bodyEl.__qmfPinch) return;
