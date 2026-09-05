@@ -3076,6 +3076,27 @@ require(_v79_asset.count("data:image/jpeg;base64,") == 0,
         "V87.1 atlas images must be files, not inline base64")
 require(_v79_asset.count("'../figure_atlas/") == 137,
         "V87.1 all 137 atlas entries must point at the shared files")
+
+# V87.2/V87.3 — پارسِ تنبلِ ماژول‌های شکل و پایانِ FOUCِ نوارِ قدیمی
+require('id="qmfLegacyToolbar" style="display:none"' in _v79_asset,
+        "V87.3 the legacy toolbar must be hidden by its own tag, not only by css 800KB below")
+import re as _re87
+_v873_def = _re87.findall(r'<script id="[^"]+" type="qmf/deferred">', _v79_asset)
+require(len(_v873_def) == 6,
+        "V87.3 the six figure modules must stay deferred")
+for _m in ("extracted-geo-fig-js", "extracted-graph-fig-js", "extracted-table-fig-js",
+           "extracted-anatomy-fig-js", "extracted-periodic-fig-js", "extracted-science-fig-js"):
+    require('id="%s"' % _m in _v79_asset,
+            "V87.3 module %s must not be deleted; print renders figures with it" % _m)
+for _c in ("GeoFig.make(", "GraphFig.svg(", "TableFig.html(",
+           "AnatomyFig.svg(", "PeriodicFig.html(", "ScienceFig.svg("):
+    require(_c in _v79_asset,
+            "V87.3 the print renderer still calls %s so the module must stay" % _c)
+_v873_at = _v79_asset.index("function renderFigToken")
+require("__qmfEnsureFigTools()" in _v79_asset[_v873_at:_v873_at + 400],
+        "V87.3 renderFigToken must activate the modules before drawing, or figures print blank")
+require('id="extracted-math-host-script" type=' not in _v79_asset,
+        "V87.3 the formula host must not be deferred; the page uses QMF at once")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")

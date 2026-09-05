@@ -67,7 +67,8 @@ class V87_0HeaderEncodingTest {
 
     @Test
     fun `the duplicated html toolbar is hidden but its functions live on`() {
-        assertTrue("<div class=\"toolbar no-print\" id=\"qmfLegacyToolbar\">" in asset)
+        // V87.3 — همان تگ، به‌علاوهٔ سبکِ درون‌خطی که FOUC را می‌بندد
+        assertTrue("<div class=\"toolbar no-print\" id=\"qmfLegacyToolbar\"" in asset)
         assertTrue("#qmfLegacyToolbar{display:none !important}" in asset)
         // نوار پنهان است ولی پلِ بومی همین توابع را صدا می‌زند
         assertTrue("function printStudent(" in asset)

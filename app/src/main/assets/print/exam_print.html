@@ -850,7 +850,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
 }</style></head>
 <body>
 
-<div class="toolbar no-print" id="qmfLegacyToolbar">
+<div class="toolbar no-print" id="qmfLegacyToolbar" style="display:none">
   <div class="btns">
     <button class="btn ghost" onclick="toggleSettings()">⚙ تنظیمات سربرگ</button>
 <!-- FIX-EXAM-SAVEBTN -->
@@ -1822,7 +1822,52 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
   <button type="button" id="openPhysicsEditor">فیزیک</button>
   <button type="button" id="openChemistryEditor">شیمی</button>
 </div>
-<script id="extracted-geo-fig-js">
+<script id="qmfLazyTools">
+/* V87.3 — شش ماژولِ ابزارِ درج (هندسه/نمودار/جدول/آناتومی/تناوبی/علوم) ۳۵۸KB
+   جاوااسکریپت‌اند که تا V86 هنگامِ بازشدنِ صفحه پارس می‌شدند، حتی برای آزمونی
+   که هیچ شکلی ندارد. پنجره‌هایشان بومی شده‌اند، ولی `renderFigToken` هنوز
+   `GeoFig.make`/`GraphFig.svg`/… را برای **رسمِ شکل در پیش‌نمایش و چاپ** صدا
+   می‌زند؛ پس حذفشان برگهٔ چاپی را بی‌شکل می‌کند و فقط تعویق درست است.
+
+   با `type="qmf/deferred"` مرورگر آن‌ها را پارس نمی‌کند. اینجا پیش از نخستین
+   نیازِ واقعی یک‌باره فعال می‌شوند: یا صفحه‌ای که توکنِ %%FIG%% دارد، یا
+   لمسِ یکی از ابزارها. آزمونِ بدونِ شکل هرگز هزینه‌اش را نمی‌دهد. */
+(function () {
+  'use strict';
+  var done = false;
+  function activate() {
+    if (done) return true;
+    done = true;
+    var ids = ['extracted-geo-fig-js', 'extracted-graph-fig-js', 'extracted-table-fig-js',
+               'extracted-anatomy-fig-js', 'extracted-periodic-fig-js', 'extracted-science-fig-js'];
+    for (var i = 0; i < ids.length; i++) {
+      var src = document.getElementById(ids[i]);
+      if (!src || src.dataset.qmfRan) continue;
+      src.dataset.qmfRan = '1';
+      try {
+        var el = document.createElement('script');
+        el.text = src.textContent;
+        document.head.appendChild(el);
+      } catch (e) {}
+    }
+    return true;
+  }
+  window.__qmfEnsureFigTools = activate;
+  /* رندر شکل بدونِ ماژول یعنی جایِ خالی روی برگه، پس رندر خودش فعال می‌کند. */
+  window.__qmfNeedFigTools = function (text) {
+    if (done) return;
+    if (typeof text === 'string' && text.indexOf('%%FIG:') === -1) return;
+    activate();
+  };
+  /* هر لمسی روی ابزارِ درج هم کافی است. */
+  document.addEventListener('pointerdown', function (e) {
+    if (done) return;
+    var t = e.target;
+    if (t && t.closest && t.closest('.q-tool-btn, .interactive-figure, .qmf-fig')) activate();
+  }, true);
+})();
+</script>
+<script id="extracted-geo-fig-js" type="qmf/deferred">
 
 (function () {
   const SHAPES = [
@@ -3110,7 +3155,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
 })();
 
 </script>
-<script id="extracted-graph-fig-js">
+<script id="extracted-graph-fig-js" type="qmf/deferred">
 
 (function () {
   var TYPES = [
@@ -5110,7 +5155,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
 })();
 
 </script>
-<script id="extracted-table-fig-js">
+<script id="extracted-table-fig-js" type="qmf/deferred">
 
 (function () {
   var TYPES = [
@@ -5551,7 +5596,7 @@ window.ATLAS={
 };
 
 </script>
-<script id="extracted-anatomy-fig-js">
+<script id="extracted-anatomy-fig-js" type="qmf/deferred">
 
 (function () {
   var CATS = [
@@ -6808,7 +6853,7 @@ window.ATLAS={
 })();
 
 </script>
-<script id="extracted-periodic-fig-js">
+<script id="extracted-periodic-fig-js" type="qmf/deferred">
 
 (function () {
   var CATS = {
@@ -7296,7 +7341,7 @@ window.SCIENCE_ATLAS={
 };
 
 </script>
-<script id="extracted-science-fig-js">
+<script id="extracted-science-fig-js" type="qmf/deferred">
 
 (function () {
   var PHYS_CATS = [
@@ -12244,6 +12289,9 @@ patchGeoFigOpenRouter();
 setTimeout(patchGeoFigOpenRouter, 0);
 setTimeout(patchGeoFigOpenRouter, 250);
 function renderFigToken(raw, q, figIndex) {
+  /* V87.3 — ماژول‌های شکل معوق‌اند؛ پیش از رسم فعال می‌شوند، وگرنه شکل
+     روی برگهٔ چاپی خالی درمی‌آید. */
+  try { if (window.__qmfEnsureFigTools) window.__qmfEnsureFigTools(); } catch (e) {}
   let figHtml = '';
   try {
     // دقیقاً همان سازندهٔ استخراج‌شده از question_editor.html را استفاده می‌کنیم؛
