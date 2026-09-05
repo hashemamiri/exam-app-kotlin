@@ -14545,13 +14545,20 @@ loadSample();
      `pointer-events:auto` و `touch-action:manipulation` دارند (برای ویرایشِ
      خانه لازم است)، پس در پیش‌نمایش لمس به شیء نمی‌رسید و درگ شروع نمی‌شد.
      در پیش‌نمایش ویرایشِ خانه معنا ندارد، پس لمس از آن‌ها عبور می‌کند. */
-  #previewArea .interactive-figure input,
-  #previewArea .interactive-figure textarea,
-  #previewArea .interactive-figure select,
-  #previewArea .interactive-figure .tbx-t input[data-r][data-c]{
+  /* V89.8 — آناتومی SVG می‌دهد و لمس مستقیم به شیء می‌رسد، ولی جدول و
+     جدولِ تناوبی HTML می‌دهند (`<table>`, `<td>`, `<input>`) و هر کدام از
+     آن‌ها لمس را می‌گیرد. برای اینکه رفتارشان **دقیقاً** مثلِ آناتومی شود،
+     کلِ محتوای شیء در پیش‌نمایش شفافِ لمسی می‌شود و فقط خودِ شیء رویداد
+     می‌گیرد. */
+  #previewArea .interactive-figure * {
     pointer-events:none !important;
     touch-action:none !important;
     user-select:none !important;
+    -webkit-user-select:none !important;
+  }
+  #previewArea .interactive-figure {
+    pointer-events:auto !important;
+    touch-action:none !important;
   }
 
   /* V88.9 — داخلِ برنامه کارتِ HTML کنار می‌رود و فهرستِ بومی جایش را

@@ -47,8 +47,9 @@ class V89_3PreviewAndTokensTest {
     fun `editing switches back to the real text so nothing is lost`() {
         // V89.7 — کادر به `TextFieldValue` رفت تا محلِ مکان‌نما را بدهد؛
         // شرطِ «خوانا تا پیش از ویرایش» همان است.
-        assertTrue("if (editingText || !detail.hasTokens) {" in cards)
-        assertTrue("TextFieldValue(detail.displayText)" in cards)
+        // V89.8 — کادرِ متن به `QuestionTextWebSection` رفت که خودش اشیاء را
+        // درون‌خطی نشان می‌دهد، پس منطقِ «متنِ خوانا» دیگر آنجا لازم نیست.
+        assertTrue("ir.exam.app.ui.builder.QuestionTextWebSection(" in cards)
         assertTrue("text = detail.text" in cards)
     }
 

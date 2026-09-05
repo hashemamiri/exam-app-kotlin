@@ -92,7 +92,9 @@ class V88_9NativeCardsTest {
     fun `the live preview comes from the page's own renderer`() {
         assertTrue("window.__qmfRichPreview = function" in asset)
         assertTrue("renderRichText(q.text || '', q)" in asset)
-        assertTrue("window.__qmfRichPreview?window.__qmfRichPreview(" in dialog)
+        // V89.8 — پیش‌نمایشِ جدا با بخشِ درون‌خطیِ آنلاین جایگزین شد؛
+        // پل باقی است ولی کارت دیگر از آن استفاده نمی‌کند.
+        assertTrue("window.__qmfRichPreview = function" in asset)
     }
 
     @Test

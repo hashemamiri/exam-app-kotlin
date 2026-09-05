@@ -3341,10 +3341,23 @@ require("#previewArea .interactive-figure.selected{outline:none !important}" in 
         "V89.7 no selection box or handles around a figure")
 require("ensureProfessionalResizeHandles" in _v79_asset,
         "V89.7 the handle code stays; only its display was removed")
-require("#previewArea .interactive-figure .tbx-t input[data-r][data-c]{" in _v79_asset,
+# V89.8 — سلکتورِ دقیقِ خانهٔ جدول با قانونِ عامِ «کلِ محتوای شیء» جایگزین
+# شد تا جدول و تناوبی هم دقیقاً مثلِ آناتومی جابه‌جا شوند.
+require("#previewArea .interactive-figure * {" in _v79_asset,
         "V89.7 table cells must let the drag through in the preview")
 require(".tbx-t input[data-r][data-c]{display:block!important;pointer-events:auto!important" in _v79_asset,
         "V89.7 but the table editor must stay typable")
+
+# V89.8 — اشیاء درونِ کادرِ متن، و درگِ یکسانِ جدول/تناوبی/آناتومی
+_v898_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
+require("ir.exam.app.ui.builder.QuestionTextWebSection(" in _v898_cards,
+        "V89.8 the printable card must reuse the online text section")
+require("PrintRichTextPreview" not in _v898_cards,
+        "V89.8 the separate preview under the box must be gone")
+require("'%%FIG:' + JSON.stringify(spec) + '%%'" in _v79_asset,
+        "V89.8 the token format must stay identical across both builders")
+require("#previewArea .interactive-figure * {" in _v79_asset,
+        "V89.8 table and periodic content must let the drag through like anatomy")
 _v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
 require("List<Triple<String, String, ImageVector>>" in _v892_cards
         and "AssistChip" not in _v892_cards,

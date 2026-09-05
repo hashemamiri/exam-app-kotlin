@@ -150,10 +150,6 @@ fun ExamHtmlPrintDialog(
     // V88.9 — فهرستِ بومیِ کارت‌های سؤال (جایگزینِ کارتِ HTML داخلِ برنامه)
     var cardDetails by remember { mutableStateOf<List<PrintQuestionDetail>>(emptyList()) }
     var openCardId by remember { mutableStateOf<String?>(null) }
-    var cardPreviewHtml by remember { mutableStateOf("") }
-    /* V89.6 — CSSِ صفحه یک‌بار گرفته می‌شود؛ ثابت است و با هر سؤال عوض
-       نمی‌شود، پس گرفتنش در هر رندر اتلاف بود. */
-    var cardPreviewCss by remember { mutableStateOf("") }
     var cardsRefresh by remember { mutableIntStateOf(0) }
     /* V89.5 — فهرستِ کارت‌ها `fillMaxSize` است و روی WebView می‌نشیند، پس
        پنجرهٔ پیش‌نمایش (که داخلِ WebView باز می‌شود) زیرش پنهان می‌ماند.
@@ -602,8 +598,6 @@ fun ExamHtmlPrintDialog(
                                     detail = detail,
                                     index = i + 1,
                                     expanded = openCardId == detail.id,
-                                    livePreviewHtml = if (openCardId == detail.id) cardPreviewHtml else "",
-                                    livePreviewCss = cardPreviewCss,
                                     /* V89.2 — واقعاً toggle: لمسِ کارتِ باز آن را
                                        می‌بندد. تا V89.1 فقط باز می‌کرد و کاربر
                                        فکر می‌کرد لمس کار نمی‌کند. */
@@ -933,25 +927,7 @@ fun ExamHtmlPrintDialog(
                 }
             }
 
-            /* V89.6 — CSS یک‌بار، پس از آماده‌شدنِ صفحه. */
-            LaunchedEffect(loading) {
-                if (loading || cardPreviewCss.isNotEmpty()) return@LaunchedEffect
-                runJs("(function(){try{return window.__qmfPreviewCss?window.__qmfPreviewCss():''}catch(e){return ''}})()") { raw ->
-                    cardPreviewCss = unwrapJsString(raw)
-                }
-            }
 
-            /* پیش‌نمایشِ زنده فقط برای کارتِ باز گرفته می‌شود. */
-            LaunchedEffect(openCardId, cardsRefresh) {
-                val qid = openCardId
-                if (qid == null) {
-                    cardPreviewHtml = ""
-                    return@LaunchedEffect
-                }
-                runJs("(function(){try{return window.__qmfRichPreview?window.__qmfRichPreview(" + jsArg(qid) + "):''}catch(e){return ''}})()") { raw ->
-                    cardPreviewHtml = unwrapJsString(raw)
-                }
-            }
 
             // V88.1 — ویرایشگرِ بومیِ سؤال. جزئیات از پل می‌آید و هر تغییر
             // بی‌درنگ به همان `questions` جاوااسکریپت برمی‌گردد، پس چاپ و

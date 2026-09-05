@@ -46,7 +46,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.ui.math.QuestionToolIcons
@@ -91,9 +90,6 @@ fun PrintQuestionCard(
     detail: PrintQuestionDetail,
     index: Int,
     expanded: Boolean,
-    livePreviewHtml: String,
-    /** V89.6 — CSSِ صفحه برای اینکه فرمول و شکل درست دیده شوند. */
-    livePreviewCss: String,
     onToggle: () -> Unit,
     onEditField: (field: String, value: String) -> Unit,
     onEditOption: (index: Int, field: String, value: String) -> Unit,
@@ -105,12 +101,10 @@ fun PrintQuestionCard(
     modifier: Modifier = Modifier
 ) {
     val accent = printPastelColor(detail.type)
-    /* V89.3 — تا وقتی کاربر تایپ نکرده، متنِ خوانا نشان داده می‌شود؛ به‌محضِ
-       ویرایش، متنِ واقعی (با توکن‌ها) می‌آید تا چیزی گم نشود. */
-    var editingText by remember(detail.id) { mutableStateOf(false) }
-    /* V89.7 — محلِ مکان‌نما تا ابزارِ درج بداند شیء کجا بیفتد. */
-    var textField by remember(detail.id) {
-        mutableStateOf(TextFieldValue(detail.text))
+    /* V89.8 — کنترلرِ همان بخشِ متنِ آنلاین؛ درجِ بومی از راهِ آن انجام
+       می‌شود و محلِ مکان‌نما را خودش نگه می‌دارد. */
+    val fieldController = remember(detail.id) {
+        ir.exam.app.ui.builder.QuestionEditorFieldController()
     }
     var text by remember(detail.id) { mutableStateOf(detail.text) }
     var score by remember(detail.id) { mutableStateOf(detail.score) }
@@ -191,42 +185,29 @@ fun PrintQuestionCard(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
-                    OutlinedTextField(
-                        value = if (editingText || !detail.hasTokens) {
-                            textField.copy(text = text)
-                        } else {
-                            TextFieldValue(detail.displayText)
+                    /* V89.8 — همان بخشِ متنِ آزمون‌سازِ آنلاین. اشیاء
+                       **درونِ** کادر و در محلِ خودشان دیده می‌شوند، نه به‌صورت
+                       یک پیش‌نمایشِ جدا زیرِ کادر (گزارشِ کاربر). قالبِ توکن در
+                       هر دو سازنده یکی است (`%%FIG:{json}%%`)، پس این بخش
+                       بدونِ تغییر کار می‌کند و `QuestionTextWebSection` هیچ
+                       وابستگی‌ای به `ExamBuilderViewModel` ندارد. */
+                    ir.exam.app.ui.builder.QuestionTextWebSection(
+                        text = detail.text,
+                        controller = fieldController,
+                        onTextChanged = { value ->
+                            text = value
+                            onEditField("text", value)
                         },
-                        onValueChange = { value ->
-                            /* نخستین تغییر، متنِ واقعی را می‌آورد تا ویرایشِ
-                               کاربر روی نسخهٔ خوانا نوشته نشود. */
-                            if (!editingText && detail.hasTokens) {
-                                editingText = true
-                                text = detail.text
-                                textField = TextFieldValue(detail.text)
-                            } else {
-                                textField = value
-                                text = value.text
-                                onEditField("text", value.text)
-                            }
-                        },
-                        label = { Text("متن سؤال") },
-                        minLines = 3,
-                        supportingText = if (detail.hasTokens && !editingText) {
-                            { Text("برای ویرایشِ متن، داخلِ کادر بنویسید") }
-                        } else null,
+                        onInsertFigure = { onOpenTool("figure", 0) },
+                        onInsertGraph = { onOpenTool("graph", 0) },
+                        onInsertTable = { onOpenTool("table", 0) },
+                        onInsertPeriodic = { onOpenTool("periodic", 0) },
+                        onInsertAnatomy = { onOpenTool("anatomy", 0) },
+                        onInsertPhysics = { onOpenTool("physics", 0) },
+                        onInsertChemistry = { onOpenTool("chemistry", 0) },
+                        onOpenFormula = { _, _, _ -> onOpenTool(FigureToolRequest.FORMULA, 0) },
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    /* نمایشِ زنده: همان خروجیِ `renderRichText`ِ صفحه، پس فرمول و
-                       شکل دقیقاً همان‌طور دیده می‌شوند که چاپ خواهند شد. */
-                    if (livePreviewHtml.isNotBlank()) {
-                        ir.exam.app.ui.math.PrintRichTextPreview(
-                            html = livePreviewHtml,
-                            css = livePreviewCss,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
 
                     // ---- هشت ابزارِ درج + دوربین ----
                     /* V89.2 — آیکنِ برداری، نه متن. همان `QuestionToolIcons`ِ
@@ -236,7 +217,7 @@ fun PrintQuestionCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         printInsertTools.take(4).forEach { (tool, label, icon) ->
-                            IconButton(onClick = { onOpenTool(tool, textField.selection.end) }) {
+                            IconButton(onClick = { onOpenTool(tool, -1) }) {
                                 Icon(icon, contentDescription = label)
                             }
                         }
@@ -247,7 +228,7 @@ fun PrintQuestionCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         printInsertTools.drop(4).forEach { (tool, label, icon) ->
-                            IconButton(onClick = { onOpenTool(tool, textField.selection.end) }) {
+                            IconButton(onClick = { onOpenTool(tool, -1) }) {
                                 Icon(icon, contentDescription = label)
                             }
                         }

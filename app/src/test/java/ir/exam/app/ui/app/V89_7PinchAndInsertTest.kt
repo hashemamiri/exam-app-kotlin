@@ -30,7 +30,8 @@ class V89_7PinchAndInsertTest {
         assertTrue("var want = window.__qmfInsertPos;" in asset)
         // یک‌بارمصرف: پس از درج پاک می‌شود تا درجِ بعدی اشتباه نیفتد
         assertTrue("window.__qmfInsertPos = null;" in asset)
-        assertTrue("onOpenTool(tool, textField.selection.end)" in cards)
+        // V89.8 — محلِ درج را `QuestionEditorFieldController` نگه می‌دارد.
+        assertTrue("ir.exam.app.ui.builder.QuestionEditorFieldController()" in cards)
     }
 
     @Test
@@ -73,7 +74,8 @@ class V89_7PinchAndInsertTest {
     @Test
     fun `a table can be dragged in the preview`() {
         // خانه‌های جدول pointer-events:auto دارند و لمس را می‌بلعیدند
-        assertTrue("#previewArea .interactive-figure .tbx-t input[data-r][data-c]{" in asset)
+        // V89.8 — قانونِ عام‌تر: کلِ محتوای شیء لمس را عبور می‌دهد.
+        assertTrue("#previewArea .interactive-figure * {" in asset)
         // ولی ویرایشگرِ جدول باید همچنان قابلِ تایپ بماند
         assertTrue(".tbx-t input[data-r][data-c]{display:block!important;pointer-events:auto!important" in asset)
     }

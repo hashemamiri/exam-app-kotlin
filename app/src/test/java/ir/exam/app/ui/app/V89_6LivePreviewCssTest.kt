@@ -33,12 +33,14 @@ class V89_6LivePreviewCssTest {
         assertTrue("window.__qmfPreviewCss = function" in asset)
         assertTrue("extraCss" in webview)
         assertTrue("<style>\${extraCss}</style>" in webview)
-        assertTrue("css = livePreviewCss" in cards)
+        // V89.8 — پیش‌نمایشِ جدا برداشته شد؛ پل و نمایشگر باقی‌اند.
+        assertTrue("window.__qmfPreviewCss = function" in asset)
     }
 
     @Test
     fun `the stylesheet is fetched once, not per question`() {
-        assertTrue("if (loading || cardPreviewCss.isNotEmpty()) return@LaunchedEffect" in dialog)
+        // V89.8 — بارگذارِ CSS با حذفِ پیش‌نمایشِ جدا برداشته شد.
+        assertTrue("window.__qmfPreviewCss" in asset)
     }
 
     @Test
