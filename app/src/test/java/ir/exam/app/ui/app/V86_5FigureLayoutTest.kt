@@ -26,7 +26,10 @@ class V86_5FigureLayoutTest {
 
     @Test
     fun `dragging a figure does not scroll the page underneath it`() {
-        assertTrue("sc.style.overflow = 'hidden'; window.__qmfDragLock = sc;" in asset)
+        // V87.9 — قفل از `overflow` روی ظرف به `touch-action` روی خودِ شیء رفت:
+        // overflow ارتفاعِ اسکرول را صفر می‌کرد و شیء نمی‌توانست پایین برود.
+        assertTrue("fig.style.touchAction = 'none';" in asset)
+        assertTrue("window.__qmfDragLock = sc;" in asset)
         assertTrue("function qmfReleaseScrollLock()" in asset)
         // قفل باید در هر پایانی آزاد شود، وگرنه صفحه برای همیشه بی‌حرکت می‌ماند
         assertTrue("window.addEventListener('pointerup', qmfReleaseScrollLock)" in asset)
@@ -55,9 +58,11 @@ class V86_5FigureLayoutTest {
 
     @Test
     fun `dragging a floating figure writes a real offset not a clamped margin`() {
-        assertTrue("if (drag.fig.classList.contains('fig-free'))" in asset)
-        assertTrue("drag.fig.style.removeProperty('margin-right')" in asset)
-        assertTrue("drag.fig.style.right = c.x + 'px'" in asset)
+        // V87.9 — نوشتنِ هندسه به `applyFigGeometry(d, c)` منتقل شد تا در یک
+        // فریم جمع شود؛ رفتار همان است، فقط نامِ متغیر از drag به d رسید.
+        assertTrue("if (d.fig.classList.contains('fig-free'))" in asset)
+        assertTrue("d.fig.style.removeProperty('margin-right')" in asset)
+        assertTrue("d.fig.style.right = c.x + 'px'" in asset)
     }
 
     @Test
