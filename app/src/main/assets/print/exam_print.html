@@ -13202,6 +13202,9 @@ function renderEditor() {
   questions.forEach((q, idx) => {
     const card = document.createElement('div');
     card.className = 'question-card';
+    /* V88.7 — نوعِ سؤال روی خودِ کارت تا CSS رنگِ پاستلیِ متناظر را بدهد،
+       همان نگاشتی که `QuestionType.pastelColor()` در آزمونِ آنلاین دارد. */
+    card.dataset.qtype = String(q.type || 'long');
     card.innerHTML = `
       <div class="q-header">
         <div class="q-number">${idx+1}</div>
@@ -14285,7 +14288,10 @@ loadSample();
 .qtype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
 .qtype-item{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:15px 10px;font:700 14px/1.7 Arial,sans-serif;color:#0f172a;cursor:pointer;text-align:center;transition:all .12s}
 .qtype-item:hover{background:#1e40af;color:#fff;border-color:#1e40af}
-.qnum-strip-wrap{margin:4px 0 14px;display:none}
+/* V88.7 — نوارِ شمارهٔ سؤالات حذف شد: از V87.7 همهٔ سؤال‌ها کارت‌اند و
+   شمارهٔ هر کدام روی سرصفحه‌اش دیده می‌شود، پس این نوار تکراری بود.
+   گره و `syncStrip` می‌مانند چون کدِ دیگری صدایشان می‌زند. */
+.qnum-strip-wrap{margin:4px 0 14px;display:none !important}
 .qnum-strip{display:flex;gap:6px;overflow-x:auto;padding:6px 2px 10px;direction:rtl;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .qnum-strip::-webkit-scrollbar{height:6px}
 .qnum-strip::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:3px}
@@ -14366,6 +14372,41 @@ loadSample();
      مرورگر (بیرونِ اپ) در دسترس بمانند؛ فقط داخلِ اپ پنهان می‌شوند. */
   #questionsContainer .q-layout-select,
   #questionsContainer .q-answer-config{display:none !important}
+
+  /* V88.7 — کارتِ سؤال دقیقاً زبانِ بصریِ آزمون‌سازِ آنلاین را می‌گیرد:
+     گوشهٔ ۱۴، نوارِ رنگیِ پاستلی به‌ازای نوعِ سؤال، و شمارهٔ دایره‌ایِ
+     هم‌رنگ. رنگ‌ها همان‌هایی‌اند که `QuestionType.pastelColor()` می‌دهد.
+     مقادیر مستقیم نوشته شده‌اند (نه `var()`) تا در هر موتوری یکسان باشند. */
+  #questionsContainer .question-card{
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+    border-right:6px solid #AEC6CF;
+    background:#fff;
+    box-shadow:0 6px 18px rgba(30,64,175,.07);
+    padding:14px;
+  }
+  #questionsContainer .q-number{color:#12213f;box-shadow:0 0 0 3px rgba(30,64,175,.10)}
+  #questionsContainer .q-type-badge{color:#12213f}
+  #questionsContainer .question-card[data-qtype="long"]{border-right-color:#FFD1DC}
+  #questionsContainer .question-card[data-qtype="long"] .q-number{background:#FFD1DC}
+  #questionsContainer .question-card[data-qtype="long"] .q-type-badge{background:#FFD1DC}
+  #questionsContainer .question-card[data-qtype="multiple"]{border-right-color:#AEC6CF}
+  #questionsContainer .question-card[data-qtype="multiple"] .q-number{background:#AEC6CF}
+  #questionsContainer .question-card[data-qtype="multiple"] .q-type-badge{background:#AEC6CF}
+  #questionsContainer .question-card[data-qtype="truefalse"]{border-right-color:#B4EEB4}
+  #questionsContainer .question-card[data-qtype="truefalse"] .q-number{background:#B4EEB4}
+  #questionsContainer .question-card[data-qtype="truefalse"] .q-type-badge{background:#B4EEB4}
+  #questionsContainer .question-card[data-qtype="fill"]{border-right-color:#FDFD96}
+  #questionsContainer .question-card[data-qtype="fill"] .q-number{background:#FDFD96}
+  #questionsContainer .question-card[data-qtype="fill"] .q-type-badge{background:#FDFD96}
+  #questionsContainer .question-card[data-qtype="numeric"]{border-right-color:#C3B1E1}
+  #questionsContainer .question-card[data-qtype="numeric"] .q-number{background:#C3B1E1}
+  #questionsContainer .question-card[data-qtype="numeric"] .q-type-badge{background:#C3B1E1}
+  #questionsContainer .question-card[data-qtype="matching"]{border-right-color:#FFDAB9}
+  #questionsContainer .question-card[data-qtype="matching"] .q-number{background:#FFDAB9}
+  #questionsContainer .question-card[data-qtype="matching"] .q-type-badge{background:#FFDAB9}
+  /* کارتِ جمع‌شده کمی کم‌رنگ‌تر تا کارتِ باز چشمگیر بماند */
+  #questionsContainer .question-card.collapsed{opacity:.92}
 }
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */

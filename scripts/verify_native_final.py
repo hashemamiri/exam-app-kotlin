@@ -3227,6 +3227,22 @@ require("#questionsContainer .q-answer-config{display:none !important}" in _v79_
         "V88.6 the duplicated header controls must stay hidden inside the app")
 require('class="q-answer-config"' in _v79_asset,
         "V88.6 those controls must survive for a plain browser")
+
+# V88.7 — نوارِ شماره حذف شد و کارت هم‌رنگِ آزمونِ آنلاین است
+require(".qnum-strip-wrap{margin:4px 0 14px;display:none !important}" in _v79_asset,
+        "V88.7 the question number strip must stay hidden; cards already show it")
+require("card.dataset.qtype = String(q.type || 'long');" in _v79_asset,
+        "V88.7 each card must carry its type so the pastel colour applies")
+_v887_drafts = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text(encoding="utf-8")
+for _html, _kotlin, _hex in (("long", "ESSAY", "FFD1DC"),
+                             ("multiple", "MULTIPLE_CHOICE", "AEC6CF"),
+                             ("truefalse", "TRUE_FALSE", "B4EEB4"),
+                             ("fill", "FILL_BLANK", "FDFD96"),
+                             ("numeric", "NUMERIC", "C3B1E1"),
+                             ("matching", "MATCHING", "FFDAB9")):
+    require("QuestionType.%s -> 0xFF%s" % (_kotlin, _hex) in _v887_drafts
+            and '[data-qtype="%s"] .q-number{background:#%s}' % (_html, _hex) in _v79_asset,
+            "V88.7 printable card colour for %s must match the online pastel" % _html)
 require("ExamFigureToolHost.FORMULA" not in _v874_dlg,
         "V88.2 FORMULA lives on FigureToolRequest, not on the Composable host")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
