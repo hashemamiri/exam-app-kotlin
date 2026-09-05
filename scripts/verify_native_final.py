@@ -3123,8 +3123,22 @@ require("window.__qmfMaybeShowBanner = maybeShowBanner" in _v79_asset,
         "V87.4 the html restore banner must stay reachable outside the app")
 require("window.qmfCenterPreviewScroll" in _v79_asset,
         "V87.4 zooming must recentre the sheet")
-require("pb.scrollLeft = over > 1 ? Math.round(over / 2) : 0;" in _v79_asset,
-        "V87.4 returning to 1x must clear the leftover scroll")
+# V87.7 — در ظرفِ rtl علامتِ scrollLeft قابلِ حدس نیست؛ دامنه سنجیده می‌شود.
+require("var min = pb.scrollLeft;" in _v79_asset and "var max = pb.scrollLeft;" in _v79_asset
+        and "Math.round((min + max) / 2)" in _v79_asset,
+        "V87.7 centring must measure the scroll range, not assume its sign")
+require("if (over <= 1) { pb.scrollLeft = 0; return; }" in _v79_asset,
+        "V87.7 returning to 1x must clear the leftover scroll")
+require("card.style.display = '';" in _v79_asset,
+        "V87.7 every question must stay a visible card")
+require(".question-card.collapsed > *:not(.q-header)" in _v79_asset,
+        "V87.7 a collapsed card must still show its header row")
+require('<h2 style="display:none">' in _v79_asset and 'id="totalScoreView"' in _v79_asset,
+        "V87.7 the questions heading is hidden but its nodes must survive")
+require(".background(Color.White)" in _v874_dlg,
+        "V87.7 the print builder header must be white")
+require("AnimatedVisibility(" in _v874_dlg and "kotlinx.coroutines.delay(2600)" in _v874_dlg,
+        "V87.7 status messages must be centred and fade on their own")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
 for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
     require(_b in _v79_asset,

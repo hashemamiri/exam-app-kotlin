@@ -100,8 +100,10 @@ class V87_4PrintBuilderChromeTest {
         assertTrue(
             Regex("qmfSetPreviewZoom[\\s\\S]{0,700}qmfCenterPreviewScroll\\(\\)").containsMatchIn(asset)
         )
-        // بازگشت به ۱x باید اسکرول را صفر کند وگرنه مقدارِ زومِ قبلی می‌ماند
-        assertTrue("pb.scrollLeft = over > 1 ? Math.round(over / 2) : 0;" in asset)
+        // V87.7 — بازگشت به ۱x باید اسکرول را صفر کند، و مرکزیابی دیگر
+        // علامتِ scrollLeft را حدس نمی‌زند بلکه دامنه را می‌سنجد.
+        assertTrue("if (over <= 1) { pb.scrollLeft = 0; return; }" in asset)
+        assertTrue("Math.round((min + max) / 2)" in asset)
         // مبدأِ RTL از V86.6 نباید عوض شود
         assertTrue("'transform-origin', 'top right'" in asset)
     }

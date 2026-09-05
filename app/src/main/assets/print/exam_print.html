@@ -1069,10 +1069,10 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
 </div>
 
 <div class="questions-area no-print">
-  <h2 style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-    <span>سؤالات آزمون</span>
-    <span class="total-chip">جمع بارم: <span id="totalScoreView">۰</span></span>
-  </h2>
+  <h2 style="display:none">
+        <span>سؤالات آزمون</span>
+        <span class="total-chip">جمع بارم: <span id="totalScoreView">۰</span></span>
+      </h2>
   <div class="qnum-strip-wrap" id="questionNumberStripWrap"><div class="qnum-strip" id="questionNumberStrip" dir="rtl"></div></div><!-- FIX-EXAM-NO-ADDBAR: نوار افزودن سوال حذف شد؛ افزودن فقط از دکمه «➕ سوال جدید» -->
 <div id="questionsContainer"></div>
   <div id="emptyMsg" style="display:none">
@@ -14276,6 +14276,14 @@ loadSample();
    نوار پنهان می‌شود ولی توابعش (printStudent/printTeacher/togglePreviewWindow
    و…) می‌مانند، چون پلِ بومی دقیقاً همان‌ها را صدا می‌زند. */
 #qmfLegacyToolbar{display:none !important}
+/* V87.7 — کارتِ جمع‌شده: مثلِ آزمون‌سازِ آنلاین فقط سرصفحه (شماره، نوع، بارم
+   و آیکن‌ها) دیده می‌شود و بدنه جمع است. تا V87.6 کارتِ غیرفعال کلاً
+   `display:none` می‌شد و کاربر فهرستِ سؤال‌ها را نمی‌دید. */
+@media screen{
+  #questionsContainer .question-card.collapsed > *:not(.q-header){display:none !important}
+  #questionsContainer .question-card.collapsed{padding-bottom:10px;cursor:pointer}
+  #questionsContainer .question-card.collapsed .q-header{margin-bottom:0}
+}
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
 @media screen{#printContent.live-preview{display:none !important}.preview-note{display:none !important}#previewWinOverlay #printContent.live-preview{display:block !important}}
@@ -14485,9 +14493,18 @@ loadSample();
     if (!pb) return;
     var run = function () {
       var over = pb.scrollWidth - pb.clientWidth;
-      /* بازگشت به ۱x سرریز را از بین می‌برد؛ اگر اسکرول را صفر نکنیم
-         مقدارِ زومِ قبلی می‌ماند و برگه کج به نظر می‌رسد. */
-      pb.scrollLeft = over > 1 ? Math.round(over / 2) : 0;
+      if (over <= 1) { pb.scrollLeft = 0; return; }
+      /* V87.7 — این ظرف `direction:rtl` است و در RTL دامنهٔ `scrollLeft`
+         بسته به موتور یکی از این سه است: 0…over، -over…0، یا over…0.
+         V87.4 مقدارِ مثبت نوشت و WebView آن را به 0 گیره کرد، پس زوم همچنان
+         به لبه می‌چسبید. به‌جای حدسِ علامت، دامنه را از خودِ مرورگر می‌پرسیم. */
+      var start = pb.scrollLeft;
+      pb.scrollLeft = -over;           /* لبهٔ مخالف */
+      var min = pb.scrollLeft;
+      pb.scrollLeft = over;
+      var max = pb.scrollLeft;
+      if (max - min < 1) { pb.scrollLeft = start; return; }
+      pb.scrollLeft = Math.round((min + max) / 2);
     };
     run();
     /* چیدمان پس از transform یک فریم طول می‌کشد */
@@ -14640,9 +14657,12 @@ loadSample();
   /* ---------- 3و4) آکاردئون کارت‌ها و نوار شماره ---------- */
   function cardHas(card, id) { return !!(card.querySelector('#q_text_' + id) || card.querySelector('#qbody_' + id)); }
   function collapseCard(card, collapsed) {
-    /* FIX-EXAM-SINGLE-WINDOW: سوال‌ها کارت نیستند — پنجرهٔ باز، جایگزینِ قبلی است */
+    /* V87.7 — همهٔ سؤال‌ها کارت‌اند، مثلِ آزمون‌سازِ آنلاین. تا V87.6 فقط
+       سؤالِ فعال دیده می‌شد و بقیه `display:none` بودند؛ کاربر خواست همه
+       دیده شوند. کلاسِ `collapsed` می‌ماند تا بدنه جمع شود و فقط سرصفحهٔ
+       کارت (شماره، نوع، بارم، آیکن‌ها) دیده شود. */
     card.classList.toggle('collapsed', collapsed);
-    card.style.display = collapsed ? 'none' : '';
+    card.style.display = '';
   }
   function allCards() { return Array.prototype.slice.call(document.querySelectorAll('#questionsContainer .question-card')); }
   function applyAccordion() {

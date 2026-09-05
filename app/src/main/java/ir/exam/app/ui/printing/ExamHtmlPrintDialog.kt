@@ -14,6 +14,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -138,6 +142,13 @@ fun ExamHtmlPrintDialog(
     var showPrintMenu by remember { mutableStateOf(false) }
     // V87.4 — پنجرهٔ بومیِ بازیابی، به‌جای بنرِ شناورِ HTML
     var showRestore by remember { mutableStateOf(false) }
+    // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
+    LaunchedEffect(barStatus) {
+        if (barStatus != null) {
+            kotlinx.coroutines.delay(2600)
+            barStatus = null
+        }
+    }
     var restoreAsked by remember { mutableStateOf(false) }
     var studioQuestionId by remember { mutableStateOf<String?>(null) }
     var studioImagesJson by remember { mutableStateOf<String?>(null) }
@@ -266,7 +277,8 @@ fun ExamHtmlPrintDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        // V87.7 — هدرِ سفید به خواستهٔ کاربر
+                        .background(Color.White)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -275,14 +287,14 @@ fun ExamHtmlPrintDialog(
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "بازگشت",
-                            tint = Color.White
+                            tint = Color(0xFF1E3A8A)
                         )
                     }
                     Text(
                         text = if (printable == null) "ساخت آزمون"
                         else "چاپ آزمون: " + printable.documentTitle.ifBlank { printable.subject }.ifBlank { "آزمون" },
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
+                        color = Color(0xFF111827),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -294,7 +306,7 @@ fun ExamHtmlPrintDialog(
                     Text(
                         "سربرگ",
                         style = MaterialTheme.typography.titleSmall,
-                        color = Color.White,
+                        color = Color(0xFF1E3A8A),
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .combinedClickable(
@@ -545,15 +557,24 @@ fun ExamHtmlPrintDialog(
                         )
                     }
 
-                    barStatus?.let { message ->
+                    /* V87.7 — پیام‌ها پایینِ صفحه می‌ماندند تا پیامِ بعدی
+                       جایشان را بگیرد. حالا وسط ظاهر و پس از چند ثانیه محو
+                       می‌شوند، مثلِ یک اعلانِ بومی. */
+                    AnimatedVisibility(
+                        visible = barStatus != null,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
                         Text(
-                            message,
+                            barStatus.orEmpty(),
                             color = Color.White,
-                            style = MaterialTheme.typography.labelMedium,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .background(Color(0xCC1E3A8A))
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xE6111827))
+                                .padding(horizontal = 18.dp, vertical = 12.dp)
                         )
                     }
 
