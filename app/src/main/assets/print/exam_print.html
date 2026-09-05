@@ -12549,7 +12549,7 @@ window.__qmfPreviewDiag = function () {
       out.paperW = (function () {
         try {
           var r = document.createElement('div');
-          r.style.cssText = 'position:absolute;visibility:hidden;width:200mm;height:0';
+          r.style.cssText = 'position:absolute;visibility:hidden;width:210mm;height:0';
           document.body.appendChild(r);
           var v = r.offsetWidth; document.body.removeChild(r); return v;
         } catch (e) { return -1; }
@@ -14087,6 +14087,24 @@ loadSample();
 .qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible}
 .qmf-pv-wrap > #printContent{margin:0 !important}
 #printContent.in-window{margin:6px auto !important;box-shadow:none !important}
+/* V86.4 — داخلِ پنجرهٔ پیش‌نمایش، برگه همیشه یک ورقِ کاملِ A4 است.
+   قانونِ `@media screen and (max-width:768px)` عرضِ `.live-preview` را روی
+   موبایل به `100%` می‌شکند تا در صفحهٔ ویرایش جا شود؛ نتیجه این بود که
+   کاغذ ۵۹۸px (عرضِ والدِ باریک) می‌شد، نه A4، و چیدمانش با خروجیِ چاپ فرق
+   داشت. داخلِ پنجره این را برمی‌گردانیم: ابعادِ حقیقیِ A4 با همان حاشیهٔ
+   ۵mmِ `@page`، و مقیاسِ خودکار آن را در کادر جا می‌دهد.
+   قانونِ `@media print` دست‌نخورده است — خروجیِ چاپ تغییری نمی‌کند. */
+#previewWinOverlay #printContent.live-preview{
+  width:210mm !important;
+  min-height:297mm !important;
+  max-width:none !important;
+  padding:5mm !important;
+  overflow-x:visible !important;
+  background:#fff !important;
+  border:1px solid #94a3b8 !important;
+  border-radius:0 !important;
+  box-sizing:border-box !important;
+}
 @media print{#qtypeOverlay,#previewWinOverlay{display:none !important}}
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
@@ -14214,14 +14232,14 @@ loadSample();
 
     var avail = body.clientWidth - 12;
     /* V86.3 — عرضِ کاغذ را از خودِ قانونِ چاپ بگیر، نه از اندازه‌گیریِ محدودشده.
-       `.live-preview` عرضِ `200mm` دارد. `scrollWidth` وقتی والد باریک است
+       برگه داخلِ پنجره عرضِ `210mm` (A4) دارد. `scrollWidth` وقتی والد باریک است
        عددِ فشرده‌شده را می‌دهد (۵۹۸ به‌جای عرضِ واقعیِ کاغذ)، پس کاغذ باریک‌تر
        از کادر مقیاس می‌شد و کنارش سفید می‌ماند. حالا عرضِ کاغذ را با یک
        خط‌کشِ واقعیِ ۲۰۰mm می‌سنجیم تا مستقل از چگالیِ دستگاه درست باشد. */
     var paperW = 0;
     try {
       var ruler = document.createElement('div');
-      ruler.style.cssText = 'position:absolute;visibility:hidden;width:200mm;height:0';
+      ruler.style.cssText = 'position:absolute;visibility:hidden;width:210mm;height:0';
       document.body.appendChild(ruler);
       paperW = ruler.offsetWidth || 0;
       document.body.removeChild(ruler);

@@ -117,7 +117,7 @@ class V86_0PreviewBoxHeightTest {
     @Test
     fun `the paper width comes from a real ruler not a clamped measurement`() {
         // .live-preview عرض 200mm دارد؛ scrollWidth زیر والدِ باریک فشرده است
-        assertTrue("width:200mm;height:0" in asset)
+        assertTrue("width:210mm;height:0" in asset)
         assertTrue("paperW = ruler.offsetWidth" in asset)
         assertTrue("Math.max(paperW, pc.scrollWidth || 0, pc.offsetWidth || 0) || 794" in asset)
         assertTrue("out.paperW" in asset)
@@ -139,5 +139,21 @@ class V86_0PreviewBoxHeightTest {
         assertTrue("qmfSetPreviewZoom(1)" in asset)
         assertTrue("min-width:34px;min-height:34px" in asset)
         assertTrue("window.__qmfPvZoom = 1;" in asset)
+    }
+
+    @Test
+    fun `the sheet inside the window is a full A4 page`() {
+        // قانونِ موبایل عرضِ برگه را به 100% می‌شکند؛ داخلِ پنجره برگردانده می‌شود
+        assertTrue("#previewWinOverlay #printContent.live-preview{" in asset)
+        assertTrue("width:210mm !important;" in asset)
+        assertTrue("min-height:297mm !important;" in asset)
+        assertTrue("padding:5mm !important;" in asset)
+    }
+
+    @Test
+    fun `the print rules keep the printable area untouched`() {
+        // @media print همچنان ناحیهٔ چاپ است: 210 منهای دو حاشیهٔ 5mm
+        assertTrue("width:200mm !important; min-height:287mm !important;" in asset)
+        assertTrue("@page { size: A4; margin: 5mm; }" in asset)
     }
 }

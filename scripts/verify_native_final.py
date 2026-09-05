@@ -2992,6 +2992,14 @@ require("var kz = k * (window.__qmfPvZoom || 1)" in _v79_asset,
         "V86.3 the user zoom must multiply the automatic fit")
 require("z = Math.min(4, Math.max(1, z || 1))" in _v79_asset,
         "V86.3 the zoom must stay between the fit and 4x")
+
+# V86.4 — داخلِ پنجره برگه یک ورقِ کاملِ A4 است، ولی ناحیهٔ چاپ دست‌نخورده
+require("#previewWinOverlay #printContent.live-preview{" in _v79_asset,
+        "V86.4 the in-window A4 rule is missing")
+require("width:210mm !important;" in _v79_asset,
+        "V86.4 the preview sheet must be a full A4 width")
+require("width:200mm !important; min-height:287mm !important;" in _v79_asset,
+        "V86.4 the printable area must not change")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top left'" in _v79_asset, "V85.0 origin must be top left")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
