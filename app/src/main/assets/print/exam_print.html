@@ -13456,7 +13456,15 @@ function initPreviewFigureEditing() {
     h = Math.max(30, h || er.height || 120);
     const maxX = Math.max(0, parentW - w - borderSafe);
     x = Math.max(0, Math.min(maxX, x));
-    y = Math.max(0, y);
+    /* V89.6 — شیءِ شناور `position:absolute` است و می‌تواند بالاتر از جای
+       طبیعی‌اش برود؛ گیرهٔ `y >= 0` مانعِ این بود و کاربر می‌دید شیءِ
+       پایین‌تر هرگز از شیءِ بالاتر عبور نمی‌کند. برای شیءِ غیرشناور گیره
+       می‌ماند چون در جریانِ متن است و y منفی چیدمان را می‌شکند. */
+    if (el.classList && el.classList.contains('fig-free')) {
+      y = Math.max(-4000, y);
+    } else {
+      y = Math.max(0, y);
+    }
     /* V87.9 — رشدِ ارتفاعِ والد فقط وقتی لازم است نوشته می‌شود؛ نوشتنِ
        بی‌قیدِ آن در هر فریم، خواندنِ فریمِ بعد را باطل و بازچینش را اجباری
        می‌کرد. */
@@ -13472,6 +13480,33 @@ function initPreviewFigureEditing() {
   }
   area.addEventListener('pointerdown', function(e) {
     const fig = e.target.closest && e.target.closest('.interactive-figure');
+    /* V89.6 — نخستین لمس شیء را شناور می‌کند تا جابه‌جایی واقعاً آزاد باشد
+       (بالا/پایین/روی هم). دکمهٔ دستیِ آن در V89.5 برداشته شد، پس این کار
+       باید خودکار انجام شود. مختصاتِ فعلی حفظ می‌شود تا شیء نپرد. */
+    if (fig && !fig.classList.contains('fig-free')) {
+      try {
+        var pb = parentBox(fig);
+        if (pb) {
+          var fr = fig.getBoundingClientRect(), pr2 = pb.getBoundingClientRect();
+          var k0 = previewScale();
+          var qid0 = fig.dataset.qid, idx0 = fig.dataset.figIndex;
+          var patch = {
+            free: true,
+            x: Math.max(0, Math.round((pr2.right - fr.right) / k0)),
+            y: Math.round((fr.top - pr2.top) / k0),
+            w: Math.round(fr.width / k0),
+            h: Math.round(fr.height / k0)
+          };
+          if (typeof setFigLayout === 'function') setFigLayout(qid0, idx0, patch);
+          fig.classList.add('fig-free');
+          fig.style.position = 'absolute';
+          fig.style.margin = '0';
+          fig.style.right = patch.x + 'px';
+          fig.style.left = 'auto';
+          fig.style.top = patch.y + 'px';
+        }
+      } catch (err) {}
+    }
     /* V86.5 — تا وقتی شیء کشیده می‌شود، ظرفِ اسکرول‌شونده قفل است.
        بدونِ این، مرورگر هم‌زمان با جابه‌جاییِ شیء خودِ صفحه را اسکرول
        می‌کرد و شیء از زیرِ انگشت در می‌رفت. */
@@ -13520,8 +13555,12 @@ function initPreviewFigureEditing() {
     e.preventDefault();
     let x = drag.x, y = drag.y, w = drag.w, h = drag.h;
     if (drag.resizing) {
-      const dx = e.clientX - drag.sx;
-      const dy = e.clientY - drag.sy;
+      /* V89.6 — همان تبدیلی که V89.3 برای جابه‌جایی انجام داد و اینجا جا
+         مانده بود: حرکتِ انگشت در فضای مقیاس‌شده است، پس تغییرِ اندازه
+         کندتر از انگشت بود و «کار نمی‌کند» به نظر می‌رسید. */
+      const ks = previewScale();
+      const dx = (e.clientX - drag.sx) / ks;
+      const dy = (e.clientY - drag.sy) / ks;
       const edge = String(drag.edge || '');
       // در RTL، x فاصله از راست است. دستگیره‌های چپ عرض را با لبهٔ راست ثابت تغییر می‌دهند؛
       // دستگیره‌های راست، لبهٔ چپ را ثابت نگه می‌دارند و x را همزمان اصلاح می‌کنند.
@@ -16038,6 +16077,26 @@ window.__qmfAllQuestions = function () {
     }
     return JSON.stringify(out);
   } catch (e) { return '[]'; }
+};
+
+/* V89.6 — CSSِ لازم برای نمایشِ زندهٔ متن.
+   `renderRichText` مارک‌آپِ درست می‌سازد ولی کلاس‌هایش (`mathx`, `mfrac`,
+   `msqrt`, `an-svg`…) بدونِ CSS بی‌اثرند؛ کاربر کسر را «۱a d - b c» می‌دید.
+   به‌جای کپیِ دستیِ قانون‌ها، همان `<style>`های خودِ صفحه برداشته می‌شوند تا
+   نمایشِ زنده و چاپ هرگز از هم جدا نشوند. */
+window.__qmfPreviewCss = function () {
+  try {
+    var out = [];
+    var nodes = document.querySelectorAll('style');
+    for (var i = 0; i < nodes.length; i++) {
+      var t = String(nodes[i].textContent || '');
+      /* فقط قانون‌هایی که به رندرِ متن مربوط‌اند؛ چیدمانِ صفحه لازم نیست. */
+      if (/\.mathx|\.mfrac|\.msqrt|\.qmf-fig|\.an-svg|\.sc-svg|\.embedded-tool|\.mdelim|\.munk/.test(t)) {
+        out.push(t);
+      }
+    }
+    return out.join('\n');
+  } catch (e) { return ''; }
 };
 
 window.__qmfRichPreview = function (qid) {

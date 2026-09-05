@@ -102,9 +102,11 @@ class QuestionEditorFieldController {
 @androidx.compose.runtime.Composable
 fun PrintRichTextPreview(
     html: String,
-    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    /** V89.6 — CSSِ خودِ صفحه؛ بدونِ آن کسر و رادیکال بی‌شکل دیده می‌شوند. */
+    css: String = ""
 ) {
-    val document = androidx.compose.runtime.remember(html) { wrapPrintPreviewHtml(html) }
+    val document = androidx.compose.runtime.remember(html, css) { wrapPrintPreviewHtml(html, css) }
     androidx.compose.ui.viewinterop.AndroidView(
         modifier = modifier.heightIn(min = 48.dp, max = 260.dp),
         factory = { context ->
@@ -133,12 +135,13 @@ fun PrintRichTextPreview(
 }
 
 /** پوششِ کمینه با جهتِ راست‌به‌چپ و قلمِ خوانا. */
-internal fun wrapPrintPreviewHtml(body: String): String = """
+internal fun wrapPrintPreviewHtml(body: String, extraCss: String = ""): String = """
 <!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body{margin:0;padding:6px 8px;font:15px/1.9 Tahoma,Arial,sans-serif;color:#111827;background:transparent}
   img,svg{max-width:100%;height:auto}
   .qmf-fig{display:inline-block;vertical-align:middle;max-width:100%}
-</style></head><body>${body}</body></html>
+</style>
+<style>${extraCss}</style></head><body>${body}</body></html>
 """.trimIndent()

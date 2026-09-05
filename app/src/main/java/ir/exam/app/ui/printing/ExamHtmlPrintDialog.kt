@@ -151,6 +151,9 @@ fun ExamHtmlPrintDialog(
     var cardDetails by remember { mutableStateOf<List<PrintQuestionDetail>>(emptyList()) }
     var openCardId by remember { mutableStateOf<String?>(null) }
     var cardPreviewHtml by remember { mutableStateOf("") }
+    /* V89.6 — CSSِ صفحه یک‌بار گرفته می‌شود؛ ثابت است و با هر سؤال عوض
+       نمی‌شود، پس گرفتنش در هر رندر اتلاف بود. */
+    var cardPreviewCss by remember { mutableStateOf("") }
     var cardsRefresh by remember { mutableIntStateOf(0) }
     /* V89.5 — فهرستِ کارت‌ها `fillMaxSize` است و روی WebView می‌نشیند، پس
        پنجرهٔ پیش‌نمایش (که داخلِ WebView باز می‌شود) زیرش پنهان می‌ماند.
@@ -600,6 +603,7 @@ fun ExamHtmlPrintDialog(
                                     index = i + 1,
                                     expanded = openCardId == detail.id,
                                     livePreviewHtml = if (openCardId == detail.id) cardPreviewHtml else "",
+                                    livePreviewCss = cardPreviewCss,
                                     /* V89.2 — واقعاً toggle: لمسِ کارتِ باز آن را
                                        می‌بندد. تا V89.1 فقط باز می‌کرد و کاربر
                                        فکر می‌کرد لمس کار نمی‌کند. */
@@ -919,6 +923,14 @@ fun ExamHtmlPrintDialog(
                     } else if (openCardId == null || list.none { it.id == openCardId }) {
                         openCardId = list.first().id
                     }
+                }
+            }
+
+            /* V89.6 — CSS یک‌بار، پس از آماده‌شدنِ صفحه. */
+            LaunchedEffect(loading) {
+                if (loading || cardPreviewCss.isNotEmpty()) return@LaunchedEffect
+                runJs("(function(){try{return window.__qmfPreviewCss?window.__qmfPreviewCss():''}catch(e){return ''}})()") { raw ->
+                    cardPreviewCss = unwrapJsString(raw)
                 }
             }
 

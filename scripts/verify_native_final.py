@@ -3311,6 +3311,19 @@ _v895_head = _v79_asset[_v895_at:_v895_at + 700]
 require("__qmfEnsureFigTools()" in _v895_head
         and _v895_head.index("__qmfEnsureFigTools()") < _v895_head.index("renderRichText("),
         "V89.5 the live preview must wake the deferred figure modules before rendering")
+
+# V89.6 — CSSِ نمایشِ زنده، جابه‌جاییِ آزاد، و مقیاسِ تغییرِ اندازه
+require("window.__qmfPreviewCss = function" in _v79_asset,
+        "V89.6 the live preview needs the page stylesheet or formulas render shapeless")
+_v896_web = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
+require("<style>${extraCss}</style>" in _v896_web,
+        "V89.6 the preview view must inject that stylesheet")
+require("if (fig && !fig.classList.contains('fig-free'))" in _v79_asset,
+        "V89.6 touching a figure must free it so it can move anywhere")
+require("y = Math.max(-4000, y);" in _v79_asset,
+        "V89.6 a free figure must be allowed above its natural position")
+require("const dx = (e.clientX - drag.sx) / ks;" in _v79_asset,
+        "V89.6 resizing must convert pointer travel out of the scaled space")
 _v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
 require("List<Triple<String, String, ImageVector>>" in _v892_cards
         and "AssistChip" not in _v892_cards,

@@ -91,6 +91,8 @@ fun PrintQuestionCard(
     index: Int,
     expanded: Boolean,
     livePreviewHtml: String,
+    /** V89.6 — CSSِ صفحه برای اینکه فرمول و شکل درست دیده شوند. */
+    livePreviewCss: String,
     onToggle: () -> Unit,
     onEditField: (field: String, value: String) -> Unit,
     onEditOption: (index: Int, field: String, value: String) -> Unit,
@@ -210,6 +212,7 @@ fun PrintQuestionCard(
                     if (livePreviewHtml.isNotBlank()) {
                         ir.exam.app.ui.math.PrintRichTextPreview(
                             html = livePreviewHtml,
+                            css = livePreviewCss,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
