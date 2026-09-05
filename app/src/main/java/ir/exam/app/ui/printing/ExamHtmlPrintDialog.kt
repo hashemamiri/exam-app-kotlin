@@ -386,6 +386,10 @@ fun ExamHtmlPrintDialog(
                                         // V82.0 — ویرایشِ ابزارِ درج‌شده با دابل‌کلیک
                                         onEditFigureTool = { qid, index ->
                                             post { figureEditRequest = qid to index }
+                                        },
+                                        // V87.8 — همان اعلانِ وسط‌چینِ محوشونده
+                                        onToast = { message ->
+                                            post { if (message.isNotBlank()) barStatus = message }
                                         }
                                     ),
                                     "ExamPrintNative"
@@ -560,22 +564,26 @@ fun ExamHtmlPrintDialog(
                     /* V87.7 — پیام‌ها پایینِ صفحه می‌ماندند تا پیامِ بعدی
                        جایشان را بگیرد. حالا وسط ظاهر و پس از چند ثانیه محو
                        می‌شوند، مثلِ یک اعلانِ بومی. */
-                    AnimatedVisibility(
-                        visible = barStatus != null,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier.align(Alignment.Center)
+                    Box(
+                        modifier = Modifier.align(Alignment.Center),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            barStatus.orEmpty(),
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xE6111827))
-                                .padding(horizontal = 18.dp, vertical = 12.dp)
-                        )
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = barStatus != null,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            Text(
+                                barStatus.orEmpty(),
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xE6111827))
+                                    .padding(horizontal = 18.dp, vertical = 12.dp)
+                            )
+                        }
                     }
 
                     /* V87.4 — کنترل‌های شناور، هم‌چیدمانِ آزمون‌سازِ آنلاین:
@@ -1063,8 +1071,16 @@ private class ExamPrintBridge(
     private val onOpenImageStudio: (String) -> Unit,
     private val onOpenFigureTool: (String, String) -> Unit,
     // V82.0 — دابل‌کلیک روی ابزارِ درج‌شده: ویرایشِ همان توکن
-    private val onEditFigureTool: (String, Int) -> Unit
+    private val onEditFigureTool: (String, Int) -> Unit,
+    // V87.8 — پیام‌های صفحه به‌جای alert مرورگر، اعلانِ بومی می‌شوند
+    private val onToast: (String) -> Unit
 ) {
+    /** V87.8 — `alert()` پنجرهٔ خام با نشانیِ exam-print.local نشان می‌داد. */
+    @JavascriptInterface
+    fun toast(message: String?) {
+        onToast(message.orEmpty())
+    }
+
     @JavascriptInterface
     fun print(mode: String?) {
         onPrint(mode ?: "student")

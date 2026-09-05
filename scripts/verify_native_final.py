@@ -3139,6 +3139,21 @@ require(".background(Color.White)" in _v874_dlg,
         "V87.7 the print builder header must be white")
 require("AnimatedVisibility(" in _v874_dlg and "kotlinx.coroutines.delay(2600)" in _v874_dlg,
         "V87.7 status messages must be centred and fade on their own")
+
+# V87.8 — پیام‌های صفحه به اعلانِ بومی رفتند و ابهامِ scope رفع شد
+require("window.qmfToast = function" in _v79_asset,
+        "V87.8 the page must route messages through the native toast")
+require("try { alert(text); } catch (e2) {}" in _v79_asset,
+        "V87.8 outside the app the alert fallback must remain")
+for _msg in ("\u0622\u0632\u0645\u0648\u0646 \u0630\u062e\u06cc\u0631\u0647\u200c\u0634\u062f\u0647 \u0628\u0627\u0632\u06cc\u0627\u0628\u06cc \u0634\u062f.",):
+    require("alert('%s')" % _msg not in _v79_asset,
+            "V87.8 the restore message must not use a raw browser alert")
+require("fun toast(message: String?)" in _v874_dlg and "onToast = { message ->" in _v874_dlg,
+        "V87.8 the native toast bridge is missing")
+# ابهامِ overload که کامپایل را شکست
+_v878_at = _v874_dlg.index("androidx.compose.animation.AnimatedVisibility(")
+require("Modifier.align" not in _v874_dlg[_v878_at:_v878_at + 300],
+        "V87.8 AnimatedVisibility with Modifier.align picks the Column overload and fails to compile")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
 for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
     require(_b in _v79_asset,

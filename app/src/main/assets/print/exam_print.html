@@ -13734,8 +13734,8 @@ function loadExam() {
         const data = JSON.parse(ev.target.result);
         Object.keys(data.fields||{}).forEach(k => { const el = document.getElementById(k); if (el) { if (el.type === 'checkbox') el.checked = !!data.fields[k]; else el.value = data.fields[k]; } });
         questions = data.questions || []; qIdCounter = data.qIdCounter || questions.length;
-        updateHeaderSettingsVisibility(); renderAll(); alert('آزمون با موفقیت بارگذاری شد.');
-      } catch(e) { alert('خطا در خواندن فایل.'); }
+        updateHeaderSettingsVisibility(); renderAll(); qmfToast('آزمون با موفقیت بارگذاری شد.');
+      } catch(e) { qmfToast('خطا در خواندن فایل.'); }
     };
     r.readAsText(f);
   };
@@ -14171,8 +14171,8 @@ loadSample();
       try { if (typeof updateHeaderSettingsVisibility==='function') updateHeaderSettingsVisibility(); } catch(e){}
       renderAll();
       hideBanner();
-      try { alert('آزمون ذخیره‌شده بازیابی شد.'); } catch(e){}
-    } catch(e){ try { alert('خطا در بازیابی آزمون.'); } catch(x){} }
+      try { qmfToast('آزمون ذخیره‌شده بازیابی شد.'); } catch(e){}
+    } catch(e){ try { qmfToast('خطا در بازیابی آزمون.'); } catch(x){} }
   };
   window.clearAutosave = function(){
     try { localStorage.removeItem(LS_KEY); } catch(e){}
@@ -14275,6 +14275,26 @@ loadSample();
    می‌دهد و کاربر با لمسِ «آزمون‌ساز چاپی» هر دو را پشتِ هم می‌دید. خودِ
    نوار پنهان می‌شود ولی توابعش (printStudent/printTeacher/togglePreviewWindow
    و…) می‌مانند، چون پلِ بومی دقیقاً همان‌ها را صدا می‌زند. */
+</style>
+<script id="qmfNativeToast">/* V87.8 — `alert()` پنجرهٔ خامِ مرورگر را با نشانیِ
+   exam-print.local نشان می‌داد («صفحه در https://exam-print.local می‌گوید…»).
+   این پیام‌ها حالا به اعلانِ بومیِ وسط‌چین می‌روند و خودشان محو می‌شوند.
+   بیرونِ اپ (مرورگر) همان alert قبلی می‌ماند تا چیزی از دست نرود. */
+(function () {
+  'use strict';
+  window.qmfToast = function (message) {
+    var text = String(message == null ? '' : message);
+    try {
+      if (window.ExamPrintNative && typeof window.ExamPrintNative.toast === 'function') {
+        window.ExamPrintNative.toast(text);
+        return;
+      }
+    } catch (e) {}
+    try { alert(text); } catch (e2) {}
+  };
+})();
+</script>
+<style id="qmfLegacyToolbarStyle">
 #qmfLegacyToolbar{display:none !important}
 /* V87.7 — کارتِ جمع‌شده: مثلِ آزمون‌سازِ آنلاین فقط سرصفحه (شماره، نوع، بارم
    و آیکن‌ها) دیده می‌شود و بدنه جمع است. تا V87.6 کارتِ غیرفعال کلاً
@@ -15531,7 +15551,7 @@ if (window.__qmfMathFallback) return; window.__qmfMathFallback = true;
 window.__openFallbackMathModal = function (t, capturedTex) {
   try {
     if (!t) t = (typeof activeMathTextarea !== 'undefined') ? activeMathTextarea : null;
-    if (!t) { alert('ابتدا متن یک سؤال را باز کنید.'); return; }
+    if (!t) { qmfToast('ابتدا متن یک سؤال را باز کنید.'); return; }
     activeMathTextarea = t;
     try { if (typeof extractedActiveTextarea !== 'undefined') extractedActiveTextarea = t; } catch (e0) {}
     var pe = null; try { pe = t._qmfPending; } catch (e1) {}
