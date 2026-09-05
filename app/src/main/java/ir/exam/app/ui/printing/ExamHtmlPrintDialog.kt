@@ -643,7 +643,14 @@ fun ExamHtmlPrintDialog(
                                                 jsArg(detail.id) + "," + jsArg(action) + ",''):'missing'}catch(e){return 'err'}})()"
                                         ) { cardsRefresh++ }
                                     },
-                                    onOpenTool = { tool -> figureTool = FigureToolRequest(detail.id, tool) },
+                                    /* V89.7 — محلِ مکان‌نما پیش از بازکردنِ ابزار
+                                       ثبت می‌شود تا شیء داخلِ متن درج شود، نه ته آن. */
+                                    onOpenTool = { tool, cursor ->
+                                        runJs(
+                                            "(function(){try{return window.__qmfSetInsertPos?window.__qmfSetInsertPos(" +
+                                                cursor + "):'missing'}catch(e){return 'err'}})()"
+                                        ) { figureTool = FigureToolRequest(detail.id, tool) }
+                                    },
                                     onOpenImageStudio = { studioQuestionId = detail.id }
                                 )
                             }

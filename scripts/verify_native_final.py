@@ -3324,6 +3324,27 @@ require("y = Math.max(-4000, y);" in _v79_asset,
         "V89.6 a free figure must be allowed above its natural position")
 require("const dx = (e.clientX - drag.sx) / ks;" in _v79_asset,
         "V89.6 resizing must convert pointer travel out of the scaled space")
+
+# V89.7 — درج در محلِ مکان‌نما، pinch، حذفِ کادر، و درگِ جدول
+require("window.__qmfSetInsertPos = function" in _v79_asset
+        and "var want = window.__qmfInsertPos;" in _v79_asset,
+        "V89.7 a figure must land at the cursor, not at the end of the text")
+require("window.__qmfInsertPos = null;" in _v79_asset,
+        "V89.7 the recorded position must be one-shot")
+require("function twoFingerDist(t)" in _v79_asset
+        and "var ratio = d / pinch.d0;" in _v79_asset,
+        "V89.7 two fingers must resize a figure")
+require("if (pinch) return;" in _v79_asset,
+        "V89.7 a pinch must not also drag the figure")
+require("#previewArea .interactive-figure.selected{outline:none !important}" in _v79_asset
+        and "#previewArea .fig-resize-handle{display:none !important}" in _v79_asset,
+        "V89.7 no selection box or handles around a figure")
+require("ensureProfessionalResizeHandles" in _v79_asset,
+        "V89.7 the handle code stays; only its display was removed")
+require("#previewArea .interactive-figure .tbx-t input[data-r][data-c]{" in _v79_asset,
+        "V89.7 table cells must let the drag through in the preview")
+require(".tbx-t input[data-r][data-c]{display:block!important;pointer-events:auto!important" in _v79_asset,
+        "V89.7 but the table editor must stay typable")
 _v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
 require("List<Triple<String, String, ImageVector>>" in _v892_cards
         and "AssistChip" not in _v892_cards,

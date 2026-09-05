@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.ui.math.QuestionToolIcons
@@ -99,7 +100,7 @@ fun PrintQuestionCard(
     onOptionCount: (action: String, index: Int) -> Unit,
     onEditPair: (index: Int, side: String, value: String) -> Unit,
     onAction: (action: String) -> Unit,
-    onOpenTool: (tool: String) -> Unit,
+    onOpenTool: (tool: String, cursor: Int) -> Unit,
     onOpenImageStudio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -107,6 +108,10 @@ fun PrintQuestionCard(
     /* V89.3 — تا وقتی کاربر تایپ نکرده، متنِ خوانا نشان داده می‌شود؛ به‌محضِ
        ویرایش، متنِ واقعی (با توکن‌ها) می‌آید تا چیزی گم نشود. */
     var editingText by remember(detail.id) { mutableStateOf(false) }
+    /* V89.7 — محلِ مکان‌نما تا ابزارِ درج بداند شیء کجا بیفتد. */
+    var textField by remember(detail.id) {
+        mutableStateOf(TextFieldValue(detail.text))
+    }
     var text by remember(detail.id) { mutableStateOf(detail.text) }
     var score by remember(detail.id) { mutableStateOf(detail.score) }
     var answer by remember(detail.id) { mutableStateOf(detail.answer) }
@@ -187,16 +192,22 @@ fun PrintQuestionCard(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
                     OutlinedTextField(
-                        value = if (editingText || !detail.hasTokens) text else detail.displayText,
-                        onValueChange = {
+                        value = if (editingText || !detail.hasTokens) {
+                            textField.copy(text = text)
+                        } else {
+                            TextFieldValue(detail.displayText)
+                        },
+                        onValueChange = { value ->
                             /* نخستین تغییر، متنِ واقعی را می‌آورد تا ویرایشِ
                                کاربر روی نسخهٔ خوانا نوشته نشود. */
                             if (!editingText && detail.hasTokens) {
                                 editingText = true
                                 text = detail.text
+                                textField = TextFieldValue(detail.text)
                             } else {
-                                text = it
-                                onEditField("text", it)
+                                textField = value
+                                text = value.text
+                                onEditField("text", value.text)
                             }
                         },
                         label = { Text("متن سؤال") },
@@ -225,7 +236,7 @@ fun PrintQuestionCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         printInsertTools.take(4).forEach { (tool, label, icon) ->
-                            IconButton(onClick = { onOpenTool(tool) }) {
+                            IconButton(onClick = { onOpenTool(tool, textField.selection.end) }) {
                                 Icon(icon, contentDescription = label)
                             }
                         }
@@ -236,7 +247,7 @@ fun PrintQuestionCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         printInsertTools.drop(4).forEach { (tool, label, icon) ->
-                            IconButton(onClick = { onOpenTool(tool) }) {
+                            IconButton(onClick = { onOpenTool(tool, textField.selection.end) }) {
                                 Icon(icon, contentDescription = label)
                             }
                         }

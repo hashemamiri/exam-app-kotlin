@@ -13478,7 +13478,54 @@ function initPreviewFigureEditing() {
     } catch(e) {}
     return {x,y,w,h};
   }
+  /* V89.7 — دو انگشت = تغییرِ اندازه، یک انگشت = جابه‌جایی.
+     `touch-action:none` روی شیء از V87.9 هست، پس مرورگر ژست را نمی‌دزدد. */
+  var pinch = null;
+  function twoFingerDist(t) {
+    var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  area.addEventListener('touchstart', function (e) {
+    if (!e.touches || e.touches.length !== 2) return;
+    var fig = e.target.closest && e.target.closest('.interactive-figure');
+    if (!fig) return;
+    var qid = fig.dataset.qid, idx = fig.dataset.figIndex;
+    var q = (typeof questions !== 'undefined')
+      ? questions.find(function (x) { return String(x.id) === String(qid); }) : null;
+    var layout = ((q && q.figLayouts) || {})[idx] || {};
+    var k = previewScale();
+    var r = fig.getBoundingClientRect();
+    pinch = {
+      fig: fig, qid: qid, idx: idx,
+      d0: twoFingerDist(e.touches),
+      w0: (Number.isFinite(+layout.w) ? +layout.w : r.width / k),
+      h0: (Number.isFinite(+layout.h) ? +layout.h : r.height / k)
+    };
+    drag = null;                 /* جابه‌جاییِ تک‌انگشتی را لغو کن */
+    e.preventDefault();
+  }, { passive: false });
+
+  area.addEventListener('touchmove', function (e) {
+    if (!pinch || !e.touches || e.touches.length !== 2) return;
+    e.preventDefault();
+    var d = twoFingerDist(e.touches);
+    if (!(pinch.d0 > 4)) return;
+    var ratio = d / pinch.d0;
+    var w = Math.max(24, Math.round(pinch.w0 * ratio));
+    var h = Math.max(24, Math.round(pinch.h0 * ratio));
+    pinch.fig.style.width = w + 'px';
+    pinch.fig.style.height = h + 'px';
+    updateFigSizeBadge(pinch.fig, w, h);
+    setFigLayout(pinch.qid, pinch.idx, { w: w, h: h });
+  }, { passive: false });
+
+  function endPinch() { pinch = null; }
+  area.addEventListener('touchend', endPinch);
+  area.addEventListener('touchcancel', endPinch);
+
   area.addEventListener('pointerdown', function(e) {
+    /* دو انگشت روی صفحه است ⇒ این pinch است، نه جابه‌جایی */
+    if (pinch) return;
     const fig = e.target.closest && e.target.closest('.interactive-figure');
     /* V89.6 — نخستین لمس شیء را شناور می‌کند تا جابه‌جایی واقعاً آزاد باشد
        (بالا/پایین/روی هم). دکمهٔ دستیِ آن در V89.5 برداشته شد، پس این کار
@@ -14486,6 +14533,26 @@ loadSample();
     flex:0 0 auto;
   }
   #questionsContainer .q-move-group{flex:0 0 auto}
+
+  /* V89.7 — تغییرِ اندازه با دو انگشت انجام می‌شود، پس کادرِ انتخاب،
+     هشت دستگیره و بجِ اندازه لازم نیستند و فقط شیء را شلوغ می‌کردند.
+     خودِ عنصرها می‌مانند (کد به آن‌ها ارجاع دارد) ولی دیده نمی‌شوند. */
+  #previewArea .interactive-figure.selected{outline:none !important}
+  #previewArea .fig-resize-handle{display:none !important}
+  #previewArea .fig-size-badge{display:none !important}
+
+  /* V89.7 — «جدول به سختی جابه‌جا می‌شود»: خانه‌های جدول
+     `pointer-events:auto` و `touch-action:manipulation` دارند (برای ویرایشِ
+     خانه لازم است)، پس در پیش‌نمایش لمس به شیء نمی‌رسید و درگ شروع نمی‌شد.
+     در پیش‌نمایش ویرایشِ خانه معنا ندارد، پس لمس از آن‌ها عبور می‌کند. */
+  #previewArea .interactive-figure input,
+  #previewArea .interactive-figure textarea,
+  #previewArea .interactive-figure select,
+  #previewArea .interactive-figure .tbx-t input[data-r][data-c]{
+    pointer-events:none !important;
+    touch-action:none !important;
+    user-select:none !important;
+  }
 
   /* V88.9 — داخلِ برنامه کارتِ HTML کنار می‌رود و فهرستِ بومی جایش را
      می‌گیرد. گره‌ها می‌مانند چون `renderEditor` و رندرِ چاپ به آن‌ها ارجاع
@@ -16297,6 +16364,15 @@ window.__qmfTotalScore = function () {
   try { return typeof calcTotalScore === 'function' ? String(calcTotalScore()) : ''; }
   catch (e) { return ''; }
 };
+/* V89.7 — میزبانِ بومی محلِ مکان‌نما را پیش از بازکردنِ ابزار ثبت می‌کند. */
+window.__qmfSetInsertPos = function (pos) {
+  try {
+    var n = parseInt(pos, 10);
+    window.__qmfInsertPos = (isFinite(n) && n >= 0) ? n : null;
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
 window.__qmfInsertFigToken = function (qid, b64Token) {
   /* V78.0 — بازگشتِ ابزارِ بومی: توکنِ %%FIG:{...}%% دقیقاً در همان محلِ درجی
      که openQuestionTool تعیین کرده بود وارد می‌شود (انتهای متنِ سؤال)، سپس
@@ -16319,6 +16395,14 @@ window.__qmfInsertFigToken = function (qid, b64Token) {
     try {
       if (ta && Number.isFinite(ta.selectionEnd)) pos = Math.max(0, Math.min(cur.length, ta.selectionEnd));
     } catch (e1) {}
+    /* V89.7 — کارتِ بومی `textarea` ندارد، پس محلِ مکان‌نما را خودش پیش از
+       بازکردنِ ابزار می‌فرستد. بدونِ این، شیء همیشه ته متن می‌افتاد و کاربر
+       آن را «زیرِ کادر» می‌دید. */
+    try {
+      var want = window.__qmfInsertPos;
+      if (want != null && want >= 0 && want <= cur.length) pos = want;
+    } catch (e1b) {}
+    window.__qmfInsertPos = null;
     var next = cur.slice(0, pos) + token + cur.slice(pos);
     q.text = next;
     if (ta) {

@@ -45,7 +45,10 @@ class V89_3PreviewAndTokensTest {
 
     @Test
     fun `editing switches back to the real text so nothing is lost`() {
-        assertTrue("if (editingText || !detail.hasTokens) text else detail.displayText" in cards)
+        // V89.7 — کادر به `TextFieldValue` رفت تا محلِ مکان‌نما را بدهد؛
+        // شرطِ «خوانا تا پیش از ویرایش» همان است.
+        assertTrue("if (editingText || !detail.hasTokens) {" in cards)
+        assertTrue("TextFieldValue(detail.displayText)" in cards)
         assertTrue("text = detail.text" in cards)
     }
 
