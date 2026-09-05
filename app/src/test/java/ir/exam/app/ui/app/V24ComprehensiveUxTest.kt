@@ -109,7 +109,10 @@ class V24ComprehensiveUxTest {
         assertTrue("private fun MinimalScoreField" in builder && "\"بارم\"" in builder)
         assertTrue("question.type.faLabel()" in editor)
         assertTrue("Icons.Outlined.Visibility" in editor)
-        assertTrue("visible = styleExpanded" in editor)
+        // V88.4 — «چیدمان و ظاهر چاپ» از کارتِ آزمونِ آنلاین برداشته شد
+        // (تنظیماتِ کاغذ آنجا معنا نداشت) و همان کنترل‌ها اکنون در
+        // آزمون‌سازِ چاپی بومی‌اند.
+        assertFalse("print layout returned to the online card", "visible = styleExpanded" in editor)
         assertTrue("حساس به حروف بزرگ و کوچک" in editor)
         assertTrue("fontWeight = if (selected) FontWeight.Bold" in builder)
         assertFalse("question reorder arrows returned", "Text(\"↑\")" in editor || "Text(\"↓\")" in editor)
