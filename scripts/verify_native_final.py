@@ -3129,6 +3129,47 @@ require("pb.scrollLeft = over > 1 ? Math.round(over / 2) : 0;" in _v79_asset,
 for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
     require(_b in _v79_asset,
             "V87.4 bridge %s must survive the toolbar removal" % _b)
+
+# V87.5 — runJs یک lambda است: آرگومانِ پیش‌فرض ندارد و هر دو الزامی است.
+require("val runJs: (String, ((String?) -> Unit)?) -> Unit" in _v874_dlg,
+        "V87.5 the runJs signature changed; the arity guard below assumes two parameters")
+def _v875_close(_s, _i):
+    _d, _in, _q = 1, False, ''
+    while _i < len(_s) and _d > 0:
+        _c = _s[_i]
+        if _in:
+            if _c == '\\':
+                _i += 2; continue
+            if _c == _q: _in = False
+        elif _c in '"\'':
+            _in, _q = True, _c
+        elif _c == '(': _d += 1
+        elif _c == ')': _d -= 1
+        _i += 1
+    return _i
+import re as _re875
+_v875_bad = []
+for _m in _re875.finditer(r'(?<![\w.])runJs\s*\(', _v874_dlg):
+    _e = _v875_close(_v874_dlg, _m.end())
+    _args = _v874_dlg[_m.end():_e - 1]
+    _after = _v874_dlg[_e:].lstrip()
+    _d = 0; _in = False; _q = ''; _n = 1 if _args.strip() else 0; _i = 0
+    while _i < len(_args):
+        _c = _args[_i]
+        if _in:
+            if _c == '\\':
+                _i += 2; continue
+            if _c == _q: _in = False
+        elif _c in '"\'':
+            _in, _q = True, _c
+        elif _c in '([{': _d += 1
+        elif _c in ')]}': _d -= 1
+        elif _c == ',' and _d == 0: _n += 1
+        _i += 1
+    if _n + (1 if _after.startswith('{') else 0) < 2:
+        _v875_bad.append(_v874_dlg[:_m.start()].count('\n') + 1)
+require(not _v875_bad,
+        "V87.5 runJs called without its callback at lines %s" % _v875_bad)
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")

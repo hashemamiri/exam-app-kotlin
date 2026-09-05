@@ -593,7 +593,7 @@ fun ExamHtmlPrintDialog(
                         }
                         FloatingActionButton(
                             onClick = {
-                                runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();")
+                                runJs("if (typeof togglePreviewWindow==='function') togglePreviewWindow();", null)
                             },
                             modifier = Modifier.size(56.dp),
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -737,7 +737,7 @@ fun ExamHtmlPrintDialog(
                                     .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                                     .clickable {
                                         showPrintMenu = false
-                                        runJs("if (typeof printStudent==='function') printStudent();")
+                                        runJs("if (typeof printStudent==='function') printStudent();", null)
                                     }
                                     .padding(vertical = 14.dp, horizontal = 12.dp)
                             ) { Text("🖨 چاپ آزمون", style = MaterialTheme.typography.titleMedium) }
@@ -747,7 +747,7 @@ fun ExamHtmlPrintDialog(
                                     .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                                     .clickable {
                                         showPrintMenu = false
-                                        runJs("if (typeof printTeacher==='function') printTeacher();")
+                                        runJs("if (typeof printTeacher==='function') printTeacher();", null)
                                     }
                                     .padding(vertical = 14.dp, horizontal = 12.dp)
                             ) { Text("✅ چاپ با کلید", style = MaterialTheme.typography.titleMedium) }
@@ -776,7 +776,7 @@ fun ExamHtmlPrintDialog(
                     dismissButton = {
                         TextButton(onClick = {
                             showRestore = false
-                            runJs("(function(){try{if(window.clearAutosave){window.clearAutosave();return 'ok'}return 'missing'}catch(e){return 'err'}})()")
+                            runJs("(function(){try{if(window.clearAutosave){window.clearAutosave();return 'ok'}return 'missing'}catch(e){return 'err'}})()", null)
                         }) { Text("نه، پاک کن") }
                     }
                 )
