@@ -3012,6 +3012,18 @@ require("if (l.free) {" in _v79_asset,
         "V86.5 the floating layout branch is missing")
 require("margin-right:clamp(0px, ${x}px, calc(100% - ${wEff}px - 18px))" in _v79_asset,
         "V86.5 the flowing layout must stay unchanged")
+
+# V86.7 — دکمهٔ سربرگ فقط در مسیرِ چاپ؛ آزمونِ آنلاین دست‌نخورده
+_v867_builder = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text(encoding="utf-8")
+_v867_app = (ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text(encoding="utf-8")
+require("printMode: Boolean = false" in _v867_builder,
+        "V86.7 the print flag must default to the online behaviour")
+require("ir.exam.app.ui.printing.HeaderSettingsDialog(" in _v867_builder,
+        "V86.7 must reuse the existing native header dialog")
+require("AudienceCard(state, viewModel)" in _v867_builder,
+        "V86.7 the online route must keep its audience card")
+require(_v867_app.count("builderCameFromPrint = true") == 1,
+        "V86.7 only the print entry may turn the flag on")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
 require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")

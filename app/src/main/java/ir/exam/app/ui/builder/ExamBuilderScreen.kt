@@ -118,7 +118,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun ExamBuilderScreen(
     viewModel: ExamBuilderViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    /**
+     * V86.7 — تنها وقتی `true` است که کاربر از «چاپ آزمون ← آزمون جدید» آمده
+     * باشد. در آن مسیر «مشخصات آزمون» (که مخاطب و زمان‌بندیِ آنلاین دارد)
+     * جای خود را به «تنظیمات سربرگ» می‌دهد. مقدارِ پیش‌فرض `false` است، پس
+     * «ایجاد آزمون آنلاین» هیچ تغییری نمی‌بیند.
+     */
+    printMode: Boolean = false
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -127,6 +134,8 @@ fun ExamBuilderScreen(
     var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
     var bankDialogOpen by rememberSaveable { mutableStateOf(false) }
     var settingsExpanded by rememberSaveable { mutableStateOf(false) }
+    // V86.7 — پنجرهٔ سربرگ فقط در مسیرِ چاپ باز می‌شود
+    var showHeaderSettings by rememberSaveable { mutableStateOf(false) }
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
@@ -246,21 +255,33 @@ fun ExamBuilderScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                OutlinedButton(
-                    onClick = { settingsExpanded = !settingsExpanded },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
-                }
-                AnimatedVisibility(
-                    visible = settingsExpanded,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ExamSettingsCard(state, viewModel)
-                        // مخاطبان آزمون داخل مشخصات آزمون است و با آن باز/بسته می‌شود.
-                        AudienceCard(state, viewModel)
+                if (printMode) {
+                    // V86.7 — مسیرِ چاپ: همان پنجرهٔ بومیِ سربرگ که «آزمون‌سازِ
+                    // چاپی» هم از آن استفاده می‌کند. قالب‌ها و آرم از
+                    // `header_settings_schema.json` می‌آیند و دست‌نخورده‌اند.
+                    OutlinedButton(
+                        onClick = { showHeaderSettings = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("تنظیمات سربرگ")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { settingsExpanded = !settingsExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
+                    }
+                    AnimatedVisibility(
+                        visible = settingsExpanded,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            ExamSettingsCard(state, viewModel)
+                            // مخاطبان آزمون داخل مشخصات آزمون است و با آن باز/بسته می‌شود.
+                            AudienceCard(state, viewModel)
+                        }
                     }
                 }
             }
@@ -396,6 +417,37 @@ fun ExamBuilderScreen(
     }
     if (previewAll) {
         ExamPrintPreviewDialog(state = state, onDismiss = { previewAll = false })
+    }
+
+    // V86.7 — «تنظیمات سربرگ» در مسیرِ چاپ.
+    // همان Composableِ آزمون‌سازِ چاپی است، پس قالب‌ها و آرم دقیقاً یکی‌اند.
+    if (printMode && showHeaderSettings) {
+        val headerContext = androidx.compose.ui.platform.LocalContext.current
+        val headerSchema = remember {
+            ir.exam.app.ui.printing.loadHeaderSchema(headerContext)
+        }
+        val headerStore = remember { ir.exam.app.data.local.PrintHeaderStore(headerContext) }
+        if (headerSchema != null) {
+            ir.exam.app.ui.printing.HeaderSettingsDialog(
+                schema = headerSchema,
+                currentValues = remember { headerStore.read() },
+                onApply = { values ->
+                    headerStore.write(values)
+                    showHeaderSettings = false
+                },
+                onDismiss = { showHeaderSettings = false }
+            )
+        } else {
+            // schema خوانده نشد: کاربر نباید با پنجره‌ای که باز نمی‌شود روبه‌رو شود
+            AlertDialog(
+                onDismissRequest = { showHeaderSettings = false },
+                confirmButton = {
+                    TextButton(onClick = { showHeaderSettings = false }) { Text("باشد") }
+                },
+                title = { Text("تنظیمات سربرگ") },
+                text = { Text("قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.") }
+            )
+        }
     }
 
     if (confirmSave) {

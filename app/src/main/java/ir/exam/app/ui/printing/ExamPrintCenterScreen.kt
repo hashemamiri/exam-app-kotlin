@@ -62,7 +62,21 @@ fun ExamPrintCenterScreen(
     val state by viewModel.state.collectAsState()
     val portability = remember { SupabasePortabilityRepository() }
     // سربرگ خالی: printableExam سربرگ را از پروفایل می‌سازد؛ جزئیات داخل نسخهٔ 30 ویرایش می‌شود.
-    val header = remember { OfficialPrintHeader() }
+    // V86.7 — مقادیرِ «تنظیمات سربرگ» که کاربر در آزمون‌سازِ چاپی وارد کرده
+    // روی دستگاه می‌مانند و همین‌جا به سربرگِ چاپ می‌رسند. اگر چیزی ذخیره
+    // نشده باشد، دقیقاً مثل قبل خالی است.
+    val headerStore = remember(context.applicationContext) {
+        ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)
+    }
+    val header = remember {
+        val f = headerStore.read()
+        OfficialPrintHeader(
+            school = f["f_branch"].orEmpty(),
+            subject = f["f_course"].orEmpty(),
+            examDate = f["f_examDate"].orEmpty(),
+            examDuration = f["f_duration"].orEmpty()
+        )
+    }
     var htmlPrintOpen by remember { mutableStateOf(false) }
     var htmlPrintExam by remember { mutableStateOf<OfficialExamPrintable?>(null) }
     var htmlPrintLoading by remember { mutableStateOf(false) }

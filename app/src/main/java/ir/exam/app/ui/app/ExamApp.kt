@@ -264,6 +264,8 @@ private fun AuthenticatedExamApp(
         closeTransientNavigation()
         editingExamId = null
         importedExam = null
+        // V86.7 — این مسیرِ «ایجاد آزمون آنلاین» است، نه چاپ.
+        builderCameFromPrint = false
         page = MainPage.BUILDER
     }
 
@@ -333,7 +335,10 @@ private fun AuthenticatedExamApp(
                 // وگرنه رفتار قبلی (خانه) حفظ می‌شود.
                 page = if (builderCameFromPrint) MainPage.PRINT else MainPage.HOME
                 builderCameFromPrint = false
-            }
+            },
+            // V86.7 — همان پرچمی که مسیرِ بازگشت را تعیین می‌کند، تعیین می‌کند
+            // که «مشخصات آزمون» یا «تنظیمات سربرگ» دیده شود.
+            printMode = builderCameFromPrint
         )
         return
     }
@@ -444,11 +449,13 @@ private fun AuthenticatedExamApp(
                         onEditExam = { id ->
                             editingExamId = id
                             importedExam = null
+                            builderCameFromPrint = false
                             page = MainPage.BUILDER
                         },
                         onImportExam = { draft ->
                             editingExamId = null
                             importedExam = draft
+                            builderCameFromPrint = false
                             page = MainPage.BUILDER
                         }
                     )
@@ -502,6 +509,7 @@ private fun AuthenticatedExamApp(
                     QuestionBankScreen { item ->
                         editingExamId = null
                         importedExam = item.toExamImportDraft()
+                        builderCameFromPrint = false
                         page = MainPage.BUILDER
                     }
                 }
@@ -607,6 +615,7 @@ private fun AuthenticatedExamApp(
                     onImportExam = { draft ->
                         editingExamId = null
                         importedExam = draft
+                        builderCameFromPrint = false
                         page = MainPage.BUILDER
                     },
                     aboutContent = { AboutScreen(updateViewModel, apkUpdateManager) }
