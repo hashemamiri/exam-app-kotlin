@@ -3013,7 +3013,7 @@ require("if (l.free) {" in _v79_asset,
 require("margin-right:clamp(0px, ${x}px, calc(100% - ${wEff}px - 18px))" in _v79_asset,
         "V86.5 the flowing layout must stay unchanged")
 require("Math.ceil(natH * kz)" in _v79_asset, "V85.0 the wrapper must take the scaled height")
-require("'transform-origin', 'top left'" in _v79_asset, "V85.0 origin must be top left")
+require("'transform-origin', 'top right'" in _v79_asset, "V86.6 origin must follow rtl and be top right")
 require("wrapExists" in _v79_asset, "V85.0 diagnostic must report the wrapper")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V85_0PreviewWrapperTest.kt").exists(),
         "V85.0 test is missing")

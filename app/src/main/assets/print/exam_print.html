@@ -12617,6 +12617,16 @@ window.__qmfPreviewDiag = function () {
       out.bodyClientH = bd ? bd.clientHeight : 0;
       out.marginBottom = pcx ? (pcx.style.marginBottom || '') : '';
       out.forcedW = pcx ? (pcx.style.width || '') : '';
+      /* V86.6 — اگر برگه سرِ جایش نبود، این دو عدد می‌گویند به کدام لبه چسبیده */
+      try {
+        var bdx = document.querySelector('.pwo-body');
+        if (pcx && bdx) {
+          var pr = pcx.getBoundingClientRect(), br = bdx.getBoundingClientRect();
+          out.gapRight = Math.round(br.right - pr.right);
+          out.gapLeft = Math.round(pr.left - br.left);
+        }
+      } catch (e) {}
+      out.tOrigin = pcx ? (pcx.style.transformOrigin || '') : '';
       out.paperW = (function () {
         try {
           var r = document.createElement('div');
@@ -14186,7 +14196,7 @@ loadSample();
    است. به محضِ بزرگ‌نمایی آزاد می‌شود تا کاربر به لبه‌ها برسد. */
 .pwo-body.qmf-zoomed{overflow-x:auto}
 /* V85.0 — لفافهٔ مقیاس: فضای واقعیِ برگهٔ کوچک‌شده را می‌گیرد تا کادر جمع نشود. */
-.qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible}
+.qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible;direction:rtl}
 .qmf-pv-wrap > #printContent{margin:0 !important}
 #printContent.in-window{margin:6px auto !important;box-shadow:none !important}
 /* V86.4 — داخلِ پنجرهٔ پیش‌نمایش، برگه همیشه یک ورقِ کاملِ A4 است.
@@ -14377,7 +14387,12 @@ loadSample();
     /* V86.3 — زومِ دستیِ کاربر روی مقیاسِ خودکار ضرب می‌شود */
     var kz = k * (window.__qmfPvZoom || 1);
     pc.style.setProperty('transform', 'scale(' + kz.toFixed(3) + ')', 'important');
-    pc.style.setProperty('transform-origin', 'top left', 'important');
+    /* V86.6 — مبدأِ مقیاس باید هم‌جهتِ صفحه باشد.
+       با `top left` برگه به لبهٔ چپِ جعبه می‌چسبد و تمامِ فضایِ آزادشده
+       (۶۲۸ منهای ۳۳۲ یعنی ۲۹۶px) سمتِ راست می‌افتد؛ در RTL دقیقاً همان‌جا
+       ستونِ بارم است، پس بریده به نظر می‌رسید. `top right` برگه را هم‌راستایِ
+       جهتِ صفحه نگه می‌دارد و لفافه با `margin:0 auto` وسط‌چینش می‌کند. */
+    pc.style.setProperty('transform-origin', 'top right', 'important');
     /* لفافه دقیقاً به اندازهٔ نتیجهٔ مقیاس فضا می‌گیرد */
     box.style.width = Math.round(natural * kz) + 'px';
     if (natH > 0) box.style.height = Math.ceil(natH * kz) + 'px';

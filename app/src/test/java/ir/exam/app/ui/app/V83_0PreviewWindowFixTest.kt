@@ -36,8 +36,8 @@ class V83_0PreviewWindowFixTest {
         // کادر محاسبه می‌شود. پس رفتار پین می‌شود نه عدد.
         assertFalse("ضریب ثابت نباید برگردد", "transform:scale(.44)" in assetText)
         assertTrue("'transform', 'scale(' + kz.toFixed(3) + ')'" in assetText)
-        // V85.0 — مبدأ به top left رفت تا مقیاس جابه‌جاییِ افقی ندهد.
-        assertTrue("'transform-origin', 'top left'" in assetText)
+        // V85.0 مبدأ را صریح کرد؛ V86.6 آن را با جهتِ RTL هم‌راستا کرد تا مقیاس جابه‌جاییِ افقی ندهد.
+        assertTrue("'transform-origin', 'top right'" in assetText)
     }
 
     @Test

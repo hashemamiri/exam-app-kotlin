@@ -75,4 +75,20 @@ class V86_5FigureLayoutTest {
         // ولی ابزارهای ویرایش چاپ نشوند
         assertTrue("@media print { .fig-tools, .fig-move-hint { display:none !important; } }" in asset)
     }
+
+    @Test
+    fun `the sheet hugs the right edge because the page is right to left`() {
+        // با مبدأِ چپ، فضایِ آزادشدهٔ transform سمتِ راست می‌افتد و در RTL
+        // ستونِ بارم همان‌جاست، پس بیرونِ کادر به نظر می‌رسید.
+        assertTrue("'transform-origin', 'top right'" in asset)
+        assertTrue("'transform-origin', 'top left'" !in asset)
+        assertTrue(".qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible;direction:rtl}" in asset)
+    }
+
+    @Test
+    fun `the diagnostic shows which edge the sheet is stuck to`() {
+        assertTrue("out.gapRight" in asset)
+        assertTrue("out.gapLeft" in asset)
+        assertTrue("out.tOrigin" in asset)
+    }
 }

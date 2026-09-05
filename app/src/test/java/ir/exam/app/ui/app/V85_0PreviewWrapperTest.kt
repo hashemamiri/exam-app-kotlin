@@ -51,12 +51,13 @@ class V85_0PreviewWrapperTest {
 
     @Test
     fun `the wrapper css does not collapse`() {
-        assertTrue(".qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible}" in assetText)
+        assertTrue(".qmf-pv-wrap{margin:0 auto;position:relative;overflow:visible;direction:rtl}" in assetText)
     }
 
     @Test
-    fun `transform origin is top left so nothing shifts sideways`() {
-        assertTrue("'transform-origin', 'top left'" in assetText)
+    fun `transform origin follows the page direction so nothing shifts sideways`() {
+        // V86.6 — صفحه RTL است: مبدأ باید راست باشد وگرنه ستونِ بارم بیرون می‌افتد
+        assertTrue("'transform-origin', 'top right'" in assetText)
     }
 
     @Test
