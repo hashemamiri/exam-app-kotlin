@@ -136,9 +136,20 @@ class V76_0Builder30HostTest {
     @Test
     fun `builder-30 dialog has a native command bar for the seven controls`() {
         val dialog = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
-        // V76.3 — هفت فرمان بومی (نوار HTML فایل مخفی شده است)
-        for (label in listOf("⚙ تنظیمات سربرگ", "💾 ذخیره", "📂 بازکردن", "🖨 چاپ دانشجو", "✅ چاپ استاد", "➕ سوال جدید", "👁 پیش‌نمایش")) {
-            assertTrue(label, "NativeBarButton(\"$label\")" in dialog)
+        // V76.3 — هفت فرمان بومی (نوار HTML فایل مخفی شده است).
+        // V87.4 — نوارِ دکمه‌ها با هدرِ سه‌جزئی، کنترل‌های شناور و منویِ +
+        // جایگزین شد. سنجه از «برچسبِ دکمه» به «در دسترس بودنِ خودِ کار»
+        // تغییر کرد: چیدمان آزاد است، حذفِ امکان نه.
+        for ((action, probe) in listOf(
+            "تنظیمات سربرگ" to "showHeaderSettings = true",
+            "ذخیره" to "showSaveDialog = true",
+            "بازکردن" to "openExamPicker.launch",
+            "چاپ دانشجو" to "printStudent();",
+            "چاپ استاد" to "printTeacher();",
+            "سوال جدید" to "pickQuestionType('",
+            "پیش‌نمایش" to "togglePreviewWindow()"
+        )) {
+            assertTrue(action, probe in dialog)
         }
         // V76.4 — تنظیمات سربرگ/ذخیره/سوال جدید پنجرهٔ بومی دارند؛ چاپ‌ها/چشم همان توابع فایل
         assertTrue("printStudent()" in dialog)
