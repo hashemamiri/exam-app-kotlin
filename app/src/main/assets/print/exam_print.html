@@ -14776,6 +14776,14 @@ loadSample();
   }
   function openQuestionId(id, scroll) {
     state.openId = id;
+    /* V88.1 — به میزبانِ بومی خبر بده تا ویرایشگرِ بومیِ سؤال باز شود.
+       اگر میزبان نبود (مرورگر) هیچ اتفاقی نمی‌افتد و کارتِ HTML مثلِ قبل
+       باز می‌شود، پس چیزی از دست نمی‌رود. */
+    try {
+      if (window.ExamPrintNative && typeof window.ExamPrintNative.openQuestion === 'function') {
+        window.ExamPrintNative.openQuestion(String(id));
+      }
+    } catch (e) {}
     var cards = allCards();
     var target = null;
     cards.forEach(function (c) {
@@ -15811,6 +15819,110 @@ window.__qmfHasLocalDraft = function () {
     return (d && d.questions && d.questions.length) ? 'yes' : 'no';
   } catch (e) { return 'no'; }
 };
+/* V88.1 — پلِ کاملِ یک سؤال، برای ویرایشگرِ بومیِ آزمون‌سازِ چاپی.
+   سؤال‌ها همچنان در `questions` جاوااسکریپت زندگی می‌کنند تا موتورِ چاپ
+   دست‌نخورده بماند؛ سمتِ بومی فقط می‌خواند و از راهِ همین توابعِ موجودِ
+   صفحه می‌نویسد، پس رفتار و رندر دقیقاً یکسان می‌ماند. */
+window.__qmfQuestionDetail = function (qid) {
+  try {
+    if (typeof questions === 'undefined') return '{}';
+    var q = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
+    }
+    if (!q) return '{}';
+    return JSON.stringify({
+      id: String(q.id),
+      type: String(q.type || 'long'),
+      text: String(q.text == null ? '' : q.text),
+      score: String(q.score == null ? '' : q.score),
+      optionsLayout: String(q.optionsLayout || '2rows'),
+      answerLines: q.answerLines == null ? null : Number(q.answerLines),
+      answerStyle: String(q.answerStyle || 'lined'),
+      answerLineHeightCm: q.answerLineHeightCm == null ? null : Number(q.answerLineHeightCm),
+      answer: String(q.answer == null ? '' : q.answer),
+      options: (q.options || []).map(function (o) {
+        return { text: String(o.text == null ? '' : o.text), correct: !!o.correct };
+      }),
+      pairs: (q.pairs || []).map(function (pr) {
+        return { left: String(pr.left == null ? '' : pr.left),
+                 right: String(pr.right == null ? '' : pr.right) };
+      })
+    });
+  } catch (e) { return '{}'; }
+};
+
+/* هر نوشتن از تابعِ خودِ صفحه می‌گذرد تا `renderAll`/`renderPreview` مثلِ
+   همیشه صدا زده شود. `payload` یک JSONِ base64 نیست چون از پلِ اندروید
+   به‌صورت رشتهٔ ساده می‌آید و خودِ اندروید آن را UTF-8 می‌فرستد. */
+window.__qmfQuestionEdit = function (qid, field, value) {
+  try {
+    if (typeof questions === 'undefined') return 'no-state';
+    var q = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
+    }
+    if (!q) return 'no-question';
+    if (typeof updateQ !== 'function') return 'missing';
+    var v = value;
+    if (field === 'answerLines') v = Math.max(0, parseInt(value, 10) || 0);
+    else if (field === 'answerLineHeightCm') v = Math.max(0.2, parseFloat(value) || 0.75);
+    updateQ(q.id, field, v);
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
+window.__qmfOptionEdit = function (qid, index, field, value) {
+  try {
+    if (typeof updateOpt !== 'function') return 'missing';
+    var id = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { id = questions[i].id; break; }
+    }
+    if (id == null) return 'no-question';
+    updateOpt(id, parseInt(index, 10) || 0, String(field),
+              field === 'correct' ? (String(value) === 'true') : String(value));
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
+window.__qmfOptionCount = function (qid, action, index) {
+  try {
+    var id = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { id = questions[i].id; break; }
+    }
+    if (id == null) return 'no-question';
+    if (action === 'add') {
+      if (typeof addOption !== 'function') return 'missing';
+      addOption(id);
+    } else if (action === 'remove') {
+      if (typeof removeOption !== 'function') return 'missing';
+      removeOption(id, parseInt(index, 10) || 0);
+    } else if (action === 'addPair') {
+      if (typeof addPair !== 'function') return 'missing';
+      addPair(id);
+    } else if (action === 'removePair') {
+      if (typeof removePair !== 'function') return 'missing';
+      removePair(id, parseInt(index, 10) || 0);
+    } else return 'unknown';
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
+window.__qmfPairEdit = function (qid, index, side, value) {
+  try {
+    if (typeof updatePair !== 'function') return 'missing';
+    var id = null;
+    for (var i = 0; i < questions.length; i++) {
+      if (String(questions[i].id) === String(qid)) { id = questions[i].id; break; }
+    }
+    if (id == null) return 'no-question';
+    updatePair(id, parseInt(index, 10) || 0, String(side), String(value));
+    return 'ok';
+  } catch (e) { return 'err'; }
+};
+
 window.__qmfQuestionList = function () {
   /* V78.1 — فهرستِ خلاصهٔ سؤال‌ها برای نوارِ بومیِ مدیریت سؤال. */
   try {

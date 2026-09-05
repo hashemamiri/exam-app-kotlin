@@ -3173,6 +3173,26 @@ require("fig.style.touchAction = 'none';" in _v79_asset,
         "V87.9 the drag lock must sit on the figure, not on the container geometry")
 require("y = drag.y + (e.clientY - drag.sy);" in _v79_asset,
         "V87.9 the vertical axis must follow the pointer")
+
+# V88.1 — ویرایشگرِ بومیِ سؤال: می‌خواند و از راهِ توابعِ خودِ صفحه می‌نویسد
+for _b in ("__qmfQuestionDetail", "__qmfQuestionEdit", "__qmfOptionEdit",
+           "__qmfOptionCount", "__qmfPairEdit"):
+    require("window.%s = function" % _b in _v79_asset,
+            "V88.1 bridge %s is missing" % _b)
+# نوشتن باید از تابعِ صفحه بگذرد وگرنه رندر و چاپ از هم می‌پاشند
+for _f in ("updateQ(q.id, field, v)", "updateOpt(id,", "addOption(id)",
+           "removeOption(id,", "addPair(id)", "removePair(id,", "updatePair(id,"):
+    require(_f in _v79_asset,
+            "V88.1 the bridge must delegate to the page function %s" % _f)
+require("window.ExamPrintNative.openQuestion(String(id))" in _v79_asset
+        and "typeof window.ExamPrintNative.openQuestion === 'function'" in _v79_asset,
+        "V88.1 opening a card must notify the host and still work in a browser")
+_v881_sheet = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt"
+require(_v881_sheet.is_file(), "V88.1 the native question editor is missing")
+require("org.json.JSONObject.quote(value)" in _v874_dlg,
+        "V88.1 arguments must be escaped before injection")
+require("fun openQuestion(questionId: String?)" in _v874_dlg,
+        "V88.1 the native side must expose openQuestion")
 # حذفِ دکمه‌ها نباید به حذفِ پل بدل شود
 for _b in ("__qmfQuestionList", "__qmfFormulaDiag", "__qmfExportJson", "__qmfSaveNow"):
     require(_b in _v79_asset,

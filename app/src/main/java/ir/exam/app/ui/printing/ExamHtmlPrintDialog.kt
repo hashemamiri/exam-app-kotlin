@@ -54,6 +54,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -142,6 +143,10 @@ fun ExamHtmlPrintDialog(
     var showPrintMenu by remember { mutableStateOf(false) }
     // V87.4 — پنجرهٔ بومیِ بازیابی، به‌جای بنرِ شناورِ HTML
     var showRestore by remember { mutableStateOf(false) }
+    // V88.1 — ویرایشگرِ بومیِ سؤال
+    var editingQuestionId by remember { mutableStateOf<String?>(null) }
+    var editingDetail by remember { mutableStateOf<PrintQuestionDetail?>(null) }
+    var editingIndex by remember { mutableIntStateOf(1) }
     // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
@@ -390,6 +395,9 @@ fun ExamHtmlPrintDialog(
                                         // V87.8 — همان اعلانِ وسط‌چینِ محوشونده
                                         onToast = { message ->
                                             post { if (message.isNotBlank()) barStatus = message }
+                                        },
+                                        onOpenQuestion = { qid ->
+                                            post { if (qid.isNotBlank()) editingQuestionId = qid }
                                         }
                                     ),
                                     "ExamPrintNative"
@@ -811,6 +819,73 @@ fun ExamHtmlPrintDialog(
                 )
             }
 
+            // V88.1 — ویرایشگرِ بومیِ سؤال. جزئیات از پل می‌آید و هر تغییر
+            // بی‌درنگ به همان `questions` جاوااسکریپت برمی‌گردد، پس چاپ و
+            // پیش‌نمایش دقیقاً همان چیزی را می‌بینند که قبلاً می‌دیدند.
+            editingQuestionId?.let { qid ->
+                LaunchedEffect(qid) {
+                    runJs("(function(){try{return window.__qmfQuestionDetail?window.__qmfQuestionDetail('" + qid + "'):'{}'}catch(e){return '{}'}})()") { raw ->
+                        val parsed = parsePrintQuestionDetail(unwrapJsString(raw))
+                        if (parsed == null) {
+                            editingQuestionId = null
+                        } else {
+                            editingDetail = parsed
+                            runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
+                                val rows = parseQuestionRows(list)
+                                editingIndex = rows.indexOfFirst { it.id == qid }.let { if (it < 0) 1 else it + 1 }
+                            }
+                        }
+                    }
+                }
+                editingDetail?.let { detail ->
+                    /** پس از هر نوشتن، عکسِ تازه را بگیر تا شماره/گزینه‌ها هم‌گام بماند. */
+                    fun refresh() {
+                        runJs("(function(){try{return window.__qmfQuestionDetail?window.__qmfQuestionDetail('" + qid + "'):'{}'}catch(e){return '{}'}})()") { raw ->
+                            parsePrintQuestionDetail(unwrapJsString(raw))?.let { editingDetail = it }
+                        }
+                    }
+                    PrintQuestionEditorSheet(
+                        detail = detail,
+                        index = editingIndex,
+                        onEditField = { field, value ->
+                            runJs(
+                                "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
+                                    jsArg(qid) + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()",
+                                null
+                            )
+                        },
+                        onEditOption = { i, field, value ->
+                            runJs(
+                                "(function(){try{return window.__qmfOptionEdit?window.__qmfOptionEdit(" +
+                                    jsArg(qid) + "," + i + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
+                            ) { refresh() }
+                        },
+                        onOptionCount = { action, i ->
+                            runJs(
+                                "(function(){try{return window.__qmfOptionCount?window.__qmfOptionCount(" +
+                                    jsArg(qid) + "," + jsArg(action) + "," + i + "):'missing'}catch(e){return 'err'}})()"
+                            ) { refresh() }
+                        },
+                        onEditPair = { i, side, value ->
+                            runJs(
+                                "(function(){try{return window.__qmfPairEdit?window.__qmfPairEdit(" +
+                                    jsArg(qid) + "," + i + "," + jsArg(side) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()",
+                                null
+                            )
+                        },
+                        onOpenFormula = {
+                            editingQuestionId = null
+                            figureTool = FigureToolRequest(qid, ExamFigureToolHost.FORMULA)
+                        },
+                        onOpenFigureTool = { tool ->
+                            editingQuestionId = null
+                            figureTool = FigureToolRequest(qid, tool)
+                        },
+                        onDismiss = { editingQuestionId = null; editingDetail = null }
+                    )
+                }
+            }
+
             if (showNewQuestion) {
                 NewQuestionTypeDialog(
                     onPick = { type ->
@@ -1064,6 +1139,15 @@ private fun NativeBarButton(label: String, onClick: () -> Unit) {
     }
 }
 
+/**
+ * V88.1 — یک رشتهٔ کاتلین را به لیترالِ امنِ جاوااسکریپت تبدیل می‌کند.
+ *
+ * متنِ سؤال می‌تواند نقل‌قول، بک‌اسلش، خطِ جدید یا `</script>` داشته باشد؛
+ * چسباندنِ خامِ آن به کدِ تزریقی هم نحو را می‌شکند و هم راهِ تزریق باز
+ * می‌کند. `JSONObject.quote` همان کارِ استانداردِ فرار را می‌کند.
+ */
+internal fun jsArg(value: String): String = org.json.JSONObject.quote(value)
+
 private class ExamPrintBridge(
     private val onPrint: (String) -> Unit,
     private val onClose: () -> Unit,
@@ -1073,12 +1157,20 @@ private class ExamPrintBridge(
     // V82.0 — دابل‌کلیک روی ابزارِ درج‌شده: ویرایشِ همان توکن
     private val onEditFigureTool: (String, Int) -> Unit,
     // V87.8 — پیام‌های صفحه به‌جای alert مرورگر، اعلانِ بومی می‌شوند
-    private val onToast: (String) -> Unit
+    private val onToast: (String) -> Unit,
+    // V88.1 — بازکردنِ ویرایشگرِ بومیِ سؤال
+    private val onOpenQuestion: (String) -> Unit
 ) {
     /** V87.8 — `alert()` پنجرهٔ خام با نشانیِ exam-print.local نشان می‌داد. */
     @JavascriptInterface
     fun toast(message: String?) {
         onToast(message.orEmpty())
+    }
+
+    /** V88.1 — لمسِ کارتِ سؤال، ویرایشگرِ بومی را باز می‌کند. */
+    @JavascriptInterface
+    fun openQuestion(questionId: String?) {
+        onOpenQuestion(questionId.orEmpty())
     }
 
     @JavascriptInterface
