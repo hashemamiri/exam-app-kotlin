@@ -35,8 +35,10 @@ class V95_1HandwritingParenFixTest {
 
     @Test
     fun `pencil button falls back to the real handwriting modal`() {
-        // openHw بیرون داده شد و stub اولیهٔ دکمهٔ مداد در نبودِ override آن را صدا می‌زند.
-        assertTrue("window.mbHwOpen = openHw;" in asset)
+        // V96 — اتصالِ زودهنگام: window.mbHwOpen بلافاصله پس از guard ثبت می‌شود
+        // و stub اولیهٔ دکمهٔ مداد در نبودِ آن، همین قلاب را صدا می‌زند.
+        assertTrue("window.mbHwOpen = function () {" in asset)
+        assertTrue("window.mbPencilAction = function (ev)" in asset)
         assertTrue("if (typeof window.mbHwOpen === 'function') { window.mbHwOpen(); return; }" in asset)
     }
 

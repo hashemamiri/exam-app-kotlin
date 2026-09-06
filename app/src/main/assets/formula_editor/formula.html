@@ -15679,9 +15679,9 @@ window.openMath = function () {
 </script>
 <style id="hwModalCss">
 /* MF_HW_V6 — مودال دست‌نویس (تبدیل خط به فرمول) */
-#mback{position:fixed;inset:0;background:rgba(20,28,45,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:30000;padding:10px}
+#mback{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;background:rgba(20,28,45,.5);display:flex;align-items:center;justify-content:center;z-index:30000;padding:10px}
 #mback[hidden],#popup[hidden],#helpCard[hidden]{display:none!important}
-#hwModal{width:min(760px,96vw);max-height:94vh;overflow:auto;background:#f0f0f0;border:1px solid #7d7d7d;border-radius:6px;box-shadow:0 18px 55px rgba(0,0,0,.5);animation:hwmpop .14s ease-out}
+#hwModal{width:96vw;max-width:760px;max-height:94vh;overflow:auto;background:#f0f0f0;border:1px solid #7d7d7d;border-radius:6px;box-shadow:0 18px 55px rgba(0,0,0,.5)}
 @keyframes hwmpop{from{transform:scale(.975);opacity:.4}to{transform:scale(1);opacity:1}}
 #mtitle{display:flex;align-items:center;gap:8px;height:34px;padding:0 4px 0 10px;background:linear-gradient(#fbfbfb,#e8e8e8);border-bottom:1px solid #cfcfcf;font-size:13px;color:#2b2b2b;user-select:none;direction:rtl}
 #mtitle .x{margin-inline-start:auto;width:30px;height:24px;display:grid;place-items:center;border:1px solid transparent;border-radius:4px;background:none;color:#333;font-size:13px}
@@ -15691,12 +15691,12 @@ window.openMath = function () {
 #previewRender{display:flex;align-items:center;height:100%;width:100%;justify-content:center;direction:ltr;padding:0 10px;overflow-x:auto}
 #previewRender .ph{font-style:italic;color:#9a9a9a;font-size:15.5px;font-family:Georgia,serif}
 #previewRender .math{font-size:24px}
-#previewEdit{position:absolute;inset:4px;width:calc(100% - 8px);border:none;outline:2px solid #5b9bd5;font-family:Consolas,Menlo,monospace;font-size:15px;background:#fff;color:#222;text-align:center;direction:ltr}
+#previewEdit{position:absolute;top:4px;left:4px;right:4px;bottom:4px;width:calc(100% - 8px);border:none;outline:2px solid #5b9bd5;font-family:Consolas,Menlo,monospace;font-size:15px;background:#fff;color:#222;text-align:center;direction:ltr}
 #inkwrap{border:1px solid;border-color:#808080 #e4e4e4 #e4e4e4 #808080;border-radius:2px;overflow:hidden;background:#FBF7DA}
 #ink{display:block;width:100%;height:260px;touch-action:none;cursor:crosshair}
 #toolrow{display:flex;gap:10px;padding-top:1px;flex-wrap:wrap}
 #inkwrap{position:relative}
-#calHint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;z-index:5}
+#calHint{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;pointer-events:none;z-index:5}
 #calHint[hidden]{display:none}
 #calHint .cal-big{font-family:Georgia,serif;font-size:62px;line-height:1;color:#2a2a2a;opacity:.32}
 #calHint .cal-sub{font-size:12.5px;color:#333;background:rgba(255,255,255,.82);border:1px solid #d8d8d8;border-radius:12px;padding:4px 14px;direction:rtl}
@@ -15810,7 +15810,7 @@ window.openMath = function () {
 #helpCard .htxt{flex:1;min-width:0}
 #helpCard .hnote{margin:4px 0}
 /* MF_HELPRESP_V981 */
-#helpBackdrop{position:fixed;inset:0;z-index:30015;background:rgba(0,0,0,.42)}
+#helpBackdrop{position:fixed;top:0;left:0;right:0;bottom:0;z-index:30015;background:rgba(0,0,0,.42)}
 #helpCard{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #helpCard.sheet{left:0!important;right:0!important;top:auto!important;bottom:0!important;width:auto!important;max-width:none!important;max-height:82vh;max-height:82dvh;border-radius:14px 14px 0 0;border-width:1px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));font-size:13px;line-height:1.75;box-shadow:0 -8px 30px rgba(0,0,0,.32)}
 #helpCard.sheet::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:#cfc8ad;margin:-4px auto 10px}
@@ -21723,6 +21723,19 @@ window.openMath = function () {
 'use strict';
 if (window.__mbHwInit) return; window.__mbHwInit = true;
 
+/* V96 — اتصال زودهنگام دکمهٔ مداد: حتی اگر بخشی از این اسکریپت پایین‌تر خطا بدهد،
+   پنجره باز می‌شود (openHw به‌صورت function declaration بالاتر hoist می‌شود). */
+window.mbHwOpen = function () {
+  try { openHw(); } catch (e) {
+    try { if (window.ExamEditorNative && typeof ExamEditorNative.onError === 'function') { ExamEditorNative.onError('HW_OPEN_FAIL ' + (e && e.message ? e.message : e)); } } catch (e2) {}
+  }
+};
+window.mbPencilAction = function (ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  try { if (typeof mbVarClose === 'function') mbVarClose(); } catch (e) {}
+  window.mbHwOpen();
+};
+
 var $ = function (id) { return document.getElementById(id); };
 var FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 function faNum(n) { return String(n).replace(/\d/g, function (d) { return FA_DIGITS[+d]; }); }
@@ -22567,6 +22580,29 @@ document.addEventListener('pointerdown', function (e) {
 });
 
 /* ================= مودال ================= */
+/* V96 — چیدمانِ مودال با style مستقیم (مستقل از پشتیبانی inset/min()/backdrop-filter).
+   روی برخی WebViewهای دستگاه قواعد CSS مودال اعمال نمی‌شد و پنجره باریک/بالاچسبیده
+   یا بی‌پس‌زمینه باز می‌شد؛ style مستقیم از هر cascade قوی‌تر است (همان الگوی V55.5). */
+function hwApplyLayout() {
+  var vw = window.innerWidth || 390, vh = window.innerHeight || 844;
+  var mb = $('mback'), hw = $('hwModal');
+  if (mb) {
+    mb.style.position = 'fixed';
+    mb.style.top = '0px'; mb.style.left = '0px';
+    mb.style.right = '0px'; mb.style.bottom = '0px';
+    mb.style.width = '100%'; mb.style.height = '100%';
+    mb.style.background = 'rgba(20,28,45,.5)';
+    mb.style.display = 'flex';
+    mb.style.alignItems = 'center';
+    mb.style.justifyContent = 'center';
+    mb.style.zIndex = '30000';
+  }
+  if (hw) {
+    hw.style.width = Math.min(760, Math.round(vw * 0.96)) + 'px';
+    hw.style.maxWidth = 'none';
+    hw.style.maxHeight = Math.round(vh * 0.94) + 'px';
+  }
+}
 function openHw() {
   state.strokes = [];
   state.undo = [];
@@ -22576,13 +22612,17 @@ function openHw() {
   state.lasso = null;
   state.structs = [];
   state.latex = '';
-  $('helpCard').hidden = true;
-  hidePopup();
-  setTool('write');
-  updatePreview(); updateStatus(); updateInsert(); updateUndoBtn();
+  try { $('helpCard').hidden = true; } catch (e) {}
+  try { hidePopup(); } catch (e) {}
+  hwApplyLayout();
   $('mback').hidden = false;
-  sizeCanvas();
-  draw();
+  try { setTool('write'); } catch (e) {}
+  try { updatePreview(); } catch (e) {}
+  try { updateStatus(); } catch (e) {}
+  try { updateInsert(); } catch (e) {}
+  try { updateUndoBtn(); } catch (e) {}
+  try { sizeCanvas(); } catch (e) {}
+  try { draw(); } catch (e) {}
 }
 function closeModal() {
   commitPreviewEdit(true);
@@ -22691,16 +22731,9 @@ document.addEventListener('keydown', function (e) {
 }, true);
 
 /* ================= init ================= */
-window.addEventListener('resize', function () { if (!$('mback').hidden) sizeCanvas(); });
+window.addEventListener('resize', function () { if (!$('mback').hidden) { hwApplyLayout(); sizeCanvas(); } });
 
-/* قلاب دکمهٔ مداد ویرایشگر */
-window.mbPencilAction = function (ev) {
-  if (ev && ev.stopPropagation) ev.stopPropagation();
-  try { if (typeof mbVarClose === 'function') mbVarClose(); } catch (e) {}
-  openHw();
-};
-window.mbHwOpen = openHw;
-/* دسترسی فقط-خواندنی به وضعیت برای دیباگ/تست خودکار */
+/* قلاب دکمهٔ مداد در ابتدای همین اسکریپت ثبت شد (V96)؛ اینجا فقط وضعیت دیباگ. */
 window.mbHwState = function () { return state; };
 })();
 

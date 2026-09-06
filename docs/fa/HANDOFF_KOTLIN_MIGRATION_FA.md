@@ -16706,3 +16706,48 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```
 
 پچ: V95_handwriting_paren_fix — بدون SQL.
+
+## ۳۱۸) V96 — دست‌نویس روی دستگاه هنوز باز نمی‌شد (مودال CSS-ناسازگار)
+
+گزارش کاربر: «دست‌نویس باز نمی‌شود. کامل استخراج و جایگذاری کن.» + اسکرین‌شات.
+بعد از V95 مودالِ دست‌نویس روی دستگاهِ کاربر همچنان باز نمی‌شد. تشخیص: رفعِ
+V95 به `nativePaintFix` (که فقط داخل برنامه اجرا می‌شود) تکیه داشت؛ ولی ریشهٔ
+مشکل در خودِ `formula.html` بود — CSS/JS مودال از قابلیت‌هایی استفاده می‌کرد
+که WebView برخی دستگاه‌ها اجرایشان نمی‌کند (همان الگوی V55.5):
+
+- `#mback` با `inset:0` بدون top/left/right/bottom/width/height صریح + `backdrop-filter`.
+- `#hwModal` با `min()` و انیمیشنِ CSS.
+- `#previewEdit` / `#calHint` / `#helpBackdrop` با `inset` (بدون ابعاد صریح).
+
+### ۱) CSS مودال با ویژگی‌های سازگار بازنویسی شد
+- `#mback`: `position:fixed; top:0; left:0; right:0; bottom:0; width:100%;
+  height:100%; background:rgba(20,28,45,.5)` — بدون inset، بدون backdrop-filter.
+- `#hwModal`: `width:96vw; max-width:760px; max-height:94vh` — بدون `min()`،
+  بدون انیمیشن؛ پس‌زمینه و سایهٔ ساده.
+- `#previewEdit` / `#calHint` / `#helpBackdrop`: top/left/right/bottom صریح.
+
+### ۲) `hwApplyLayout()` — چیدمانِ دستگاه‌محور (الگوی V55.5)
+- تابعِ جدید `hwApplyLayout()` هنگامِ باز شدن، تمامِ styleهای حیاتی را به‌صورت
+  مستقیم (position/top/left/right/bottom/width/height/background/display/
+  align-items/justify-content/z-index) روی `#mback` و عرضِ پیکسلی
+  (`Math.min(760, round(vw*0.96))`) روی `#hwModal` اعمال می‌کند — از هر
+  cascade قوی‌تر و مستقل از پشتیبانیِ CSS دستگاه.
+- `openHw` پیش از unhide چیدمان را اعمال می‌کند و هر گامِ بعدی در `try/catch`
+  جدا محافظت می‌شود تا هیچ خطایی مانعِ باز شدنِ پنجره نشود.
+- اتصالِ دکمهٔ مداد (`window.mbHwOpen`/`window.mbPencilAction`) به ابتدای
+  اسکریپت منتقل شد و خطاها به `ExamEditorNative.onError('HW_OPEN_FAIL …')`
+  گزارش می‌شود؛ رویداد resize هم چیدمان را دوباره اعمال می‌کند.
+
+### راستی‌آزمایی
+- `scripts/verify_native_final.py`: PASS.
+- `testDebugUnitTest`: ۱۰۶۷ تست، ۰ شکست (تستِ جدیدِ V96.1 با ۵ مورد؛
+  V95.1 برای اتصالِ زودهنگامِ مداد به‌روز شد).
+- مرورگرِ هدلس (Chromium، با CSS مدرنِ غیرفعال برای شبیه‌سازی WebView قدیمی):
+  `#mback` تمام‌صفحه و وسط‌چین، `#hwModal` وسط و خطِ رسم ثبت می‌شود — حتی با
+  حذفِ کاملِ CSS تزریقی، styleهای مستقیم چیدمان را نگه می‌دارند.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+پچ: V96_handwriting_open_fix — بدون SQL.
