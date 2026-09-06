@@ -57,12 +57,12 @@ class V89_6LivePreviewCssTest {
 
     @Test
     fun `a free figure may rise above its natural position`() {
-        // V91 — شناور می‌تواند بالاتر از جای طبیعی‌اش برود ولی نه بیرونِ
-        // سلولِ سؤالِ خودش (گیره از ارتفاعِ سلول حساب می‌شود).
-        assertTrue("var maxY = Math.max(0, m.parentH - h - borderSafe);" in asset)
-        assertTrue("y = Math.max(0, Math.min(maxY, y));" in asset)
-        // ولی شیءِ داخلِ جریانِ متن همچنان گیره دارد
+        // V93 — شناور فقط کفِ صفر دارد: سقفِ سلولِ اندازه‌گیری‌شده حذف شد
+        // (سقفِ منفی شیء را به بالا می‌پراند و قفل می‌کرد)؛ سلول با minHeight
+        // همراهِ شیء رشد می‌کند تا از سلولِ خودش بیرون نزند.
+        assertTrue("Math.min(maxY, y)" !in asset)
         assertTrue("y = Math.max(0, y);" in asset)
+        assertTrue("parent.style.minHeight = need + 'px';" in asset)
     }
 
     @Test

@@ -343,6 +343,12 @@ fun ExamHtmlPrintDialog(
     ) {
         Surface(Modifier.fillMaxSize(), color = Color(0xFF1E3A8A)) {
             Column(Modifier.fillMaxSize()) {
+                // V93 — با باز شدنِ پیش‌نمایش، هدر محو می‌شود تا برگهٔ A4 تمام‌صفحه دیده شود.
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !previewOpen,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
                 // نوار بالای پنجره با دکمه بستن و عنوان آزمون
                 Row(
                     modifier = Modifier
@@ -399,6 +405,7 @@ fun ExamHtmlPrintDialog(
                             )
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     )
+                }
                 }
 
                 /* V87.4 — نوارِ دومِ فرمان حذف شد.
@@ -803,9 +810,15 @@ fun ExamHtmlPrintDialog(
 
                     /* V87.4 — کنترل‌های شناور، هم‌چیدمانِ آزمون‌سازِ آنلاین:
                        تیکِ ذخیره سمتِ شروع، پرینتر و چشم کنارش، و + سمتِ پایان. */
+                    /* V93 — با باز شدنِ پیش‌نمایش، همهٔ دکمه‌های شناور محو می‌شوند. */
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !previewOpen,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.BottomStart)
+                    ) {
                     Row(
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
                             .padding(start = 16.dp, bottom = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -856,11 +869,17 @@ fun ExamHtmlPrintDialog(
                             )
                         }
                     }
-                    if (!radialMenuOpen) {
+                    }
+                    /* V93 — دکمهٔ + هم با باز شدنِ پیش‌نمایش محو می‌شود. */
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !previewOpen && !radialMenuOpen,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
                         FloatingActionButton(
                             onClick = { radialMenuOpen = true },
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
                                 .padding(end = 16.dp, bottom = 16.dp)
                                 .size(56.dp)
                         ) { Text("+", style = MaterialTheme.typography.headlineSmall) }

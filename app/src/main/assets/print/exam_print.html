@@ -11785,9 +11785,10 @@ function installWordPaste(w) {
 </style>
 
 <style id="qmf-print-box-clean-v92">
-/* V92 — در چاپ هم کادرِ سفیدِ هر شیء (background/padding/سایه) حذف می‌شود تا
-   روی ستونِ ۶٪ «بارم» نیفتد و آن را محو نکند (گزارشِ کاربر). شیءِ شناور نیز
-   در چاپ از جریانِ متن بیرون نمی‌ماند و داخلِ ستونِ سؤال جا می‌گیرد. */
+/* V92/V93 — در چاپ کادرِ سفیدِ هر شیء (background/padding/سایه) حذف می‌شود تا
+   روی ستونِ ۶٪ «بارم» نیفتد و آن را محو نکند (گزارشِ کاربر). V93 — شیءِ شناور
+   دیگر در چاپ بازجریان‌سازی نمی‌شود؛ دقیقاً همان‌جایی که در پیش‌نمایش تنظیم
+   شده (موقعیت، اندازه و لایه) می‌ماند تا خروجیِ چاپ عینِ پیش‌نمایش باشد. */
 @media print{
   .interactive-figure .qmf-fig,
   .q-rich-content .qmf-fig{
@@ -11798,14 +11799,7 @@ function installWordPaste(w) {
     margin:0 auto !important;
   }
   .interactive-figure.fig-free{
-    position:relative !important;
-    right:auto !important;
-    left:auto !important;
-    top:auto !important;
-    z-index:auto !important;
-    margin:8px auto !important;
-    width:auto !important;
-    max-width:100% !important;
+    position:absolute !important;
   }
 }
 </style>
@@ -13488,12 +13482,13 @@ function initPreviewFigureEditing() {
     /* V91 — شیءِ شناور حالا محدود به سلولِ سؤالِ خودش است: می‌تواند بالاتر از
        جای طبیعی‌اش برود ولی نه بیرونِ سلول (پیش‌تر فقط کفِ -4000 داشت و به
        سؤال‌های بالا/پایین می‌رفت). کف و سقف از ارتفاعِ سلول حساب می‌شود. */
-    if (el.classList && el.classList.contains('fig-free')) {
-      var maxY = Math.max(0, m.parentH - h - borderSafe);
-      y = Math.max(0, Math.min(maxY, y));
-    } else {
-      y = Math.max(0, y);
-    }
+    /* V93 — سقفِ عمودیِ قبلیِ شیءِ شناور حذف شد: سقف از ارتفاعِ سلولِ
+       اندازه‌گیری‌شده در آغازِ درگ حساب می‌شد، ولی چون شیءِ مطلق از جریانِ
+       متن بیرون است سلول کوتاه می‌ماند؛ سقف منفی می‌شد و شیء با نخستین حرکت
+       به بالا می‌پرید و همان‌جا قفل می‌شد (گزارشِ «پرش» و «حرکت آزاد نیست»).
+       سلول با `minHeight` خودش همراهِ شیء رشد می‌کند، پس فقط کفِ صفر کافی است
+       تا شیء از بالای سؤالِ خودش بیرون نزند و حرکتِ عمودی کاملاً آزاد بماند. */
+    y = Math.max(0, y);
     /* V87.9 — رشدِ ارتفاعِ والد فقط وقتی لازم است نوشته می‌شود؛ نوشتنِ
        بی‌قیدِ آن در هر فریم، خواندنِ فریمِ بعد را باطل و بازچینش را اجباری
        می‌کرد. */
@@ -14392,8 +14387,11 @@ loadSample();
       questions = data.questions || [];
       qIdCounter = data.qIdCounter || questions.length;
       try { if (typeof updateHeaderSettingsVisibility==='function') updateHeaderSettingsVisibility(); } catch(e){}
-      renderAll();
       hideBanner();
+      /* V93 — رندرِ کامل (ویرایشگر + پیش‌نمایش) به چرخهٔ بعدی موکول می‌شود تا
+         پاسخِ 'ok' همان لحظه به پلِ بومی برگردد و کارت‌های بازیابی‌شده بی‌تأخیر
+         ظاهر شوند؛ رندرِ سنگینِ برگهٔ A4 دیگر جلوی بازیابی را نمی‌گیرد. */
+      setTimeout(function(){ try { renderAll(); } catch(e){} }, 60);
       /* V91 — در میزبانِ بومی پیام را کاتلین می‌زند (پس از تازه‌کردنِ فهرست)؛
          در مرورگر همان اعلانِ قدیمی می‌ماند. */
       try { if (!(window.ExamPrintNative && typeof window.ExamPrintNative.toast === 'function')) qmfToast('آزمون ذخیره‌شده بازیابی شد.'); } catch(e){}
@@ -14935,7 +14933,7 @@ window.togglePreviewWindow = function () {
     prevInfo = { parent: pc.parentNode, next: pc.nextSibling };
     var ov = document.createElement('div');
     ov.id = 'previewWinOverlay';
-    ov.innerHTML = '<div class="pwo-box"><div class="pwo-head"><span>👁 پیش‌نمایش آزمون</span>' +
+    ov.innerHTML = '<div class="pwo-box"><div class="pwo-head">' +
       '<span class="pwo-zoom">' +
       '<button type="button" class="pwo-zb" onclick="qmfSetPreviewZoom((window.__qmfPvZoom||1)-0.25)">−</button>' +
       '<span class="pwo-zoom-val">100%</span>' +

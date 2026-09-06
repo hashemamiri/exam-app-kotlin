@@ -3312,10 +3312,13 @@ require("<style>${extraCss}</style>" in _v896_web,
         "V89.6 the preview view must inject that stylesheet")
 require("if (fig && !fig.classList.contains('fig-free'))" in _v79_asset,
         "V89.6 touching a figure must free it so it can move anywhere")
-# V91 — شناور حالا محدود به سلولِ سؤالِ خودش است؛ نه کفِ بازِ -4000.
-require("var maxY = Math.max(0, m.parentH - h - borderSafe);" in _v79_asset
-        and "y = Math.max(0, Math.min(maxY, y));" in _v79_asset,
-        "V91 a free figure must stay inside its own question cell")
+# V91/V93 — شناور محدود به سلولِ سؤالِ خودش می‌ماند؛ سقفِ سلولِ اندازه‌گیری‌شده
+# در V93 برداشته شد (سقفِ منفی باعثِ پرشِ شیء به بالا و قفل‌شدنِ حرکت می‌شد)؛
+# سلول با minHeight خودش همراهِ شیء رشد می‌کند، پس فقط کفِ صفر لازم است.
+require("Math.min(maxY, y)" not in _v79_asset
+        and "y = Math.max(0, y);" in _v79_asset
+        and "parent.style.minHeight = need + 'px';" in _v79_asset,
+        "V93 a free figure must move freely inside its own cell (no jump, minHeight grows)")
 require("const dx = (e.clientX - drag.sx) / ks;" in _v79_asset,
         "V89.6 resizing must convert pointer travel out of the scaled space")
 
@@ -3938,6 +3941,22 @@ require("onOpenFormula = { _, selStart, selEnd ->" in _v898_cards
 require("cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded" in _v874_dlg
         and "background(Color(0xFFEEF2F7))" in _v874_dlg,
         "V92 the native card list must open first even when questions exist")
+
+# V93 — پنج گزارشِ کاربر: تأخیرِ بازیابی، محو نشدنِ دکمه‌ها/هدر با چشم،
+# جملهٔ «پیش‌نمایش آزمون» در هدرِ پیش‌نمایش، پرشِ اشیاء و قفلِ حرکت،
+# و ناهماهنگیِ چاپ با پیش‌نمایش.
+require("setTimeout(function(){ try { renderAll(); } catch(e){} }, 60);" in _v79_asset,
+        "V93 restore must return immediately and defer the heavy re-render")
+require("androidx.compose.animation.AnimatedVisibility(" in _v874_dlg
+        and "visible = !previewOpen" in _v874_dlg
+        and "visible = !previewOpen && !radialMenuOpen" in _v874_dlg,
+        "V93 opening the preview must fade the header and all floating buttons")
+require("👁 پیش‌نمایش آزمون" not in _v79_asset
+        and "<div class=\"pwo-head\">' +" in _v79_asset,
+        "V93 the preview header must not show the eye or «پیش‌نمایش آزمون»")
+require("position:absolute !important;" in _v79_asset
+        and "margin:8px auto !important;" not in _v79_asset,
+        "V93 print must keep floating objects exactly where the preview shows them")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -28,9 +28,11 @@ class V91_0PreviewRestoreFixTest {
     fun `a dragged figure stays inside its own question cell`() {
         // ارتفاعِ سلولِ سؤال اندازه‌گیری می‌شود …
         assertTrue("parentH: Math.max(1, pr.height || parent.clientHeight || 0)" in asset)
-        // … و شیءِ شناور بینِ کف و سقفِ سلول گیره می‌خورد.
-        assertTrue("var maxY = Math.max(0, m.parentH - h - borderSafe);" in asset)
-        assertTrue("y = Math.max(0, Math.min(maxY, y));" in asset)
+        // V93 — و شیءِ شناور با کفِ صفر داخلِ سلول می‌ماند؛ سلول با minHeight
+        // همراهِ شیء رشد می‌کند (سقفِ قدیمی حذف شد چون باعثِ پرش و قفل می‌شد).
+        assertTrue("Math.min(maxY, y)" !in asset)
+        assertTrue("y = Math.max(0, y);" in asset)
+        assertTrue("parent.style.minHeight = need + 'px';" in asset)
     }
 
     @Test
