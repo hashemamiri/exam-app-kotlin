@@ -68,7 +68,8 @@ fun QuestionMediaEditor(
     onAdd: (List<String>) -> Unit,
     onReplace: (String, String) -> Unit,
     onMove: (String, Float, Float) -> Unit,
-    onRemove: (String) -> Unit
+    onRemove: (String) -> Unit,
+    onOpenStudio: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -122,7 +123,11 @@ fun QuestionMediaEditor(
     ) {
         IconButton(
             onClick = {
-                picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                if (onOpenStudio != null) {
+                    onOpenStudio()
+                } else {
+                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
             }
         ) {
             Icon(Icons.Outlined.PhotoCamera, contentDescription = "افزودن تصویر متن سؤال")

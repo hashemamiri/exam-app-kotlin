@@ -206,6 +206,9 @@ object NativeMathParser {
             }
         }
 
+        private fun isRtlChar(cp: Int): Boolean =
+            cp in 0x0600..0x06FF || cp in 0x0750..0x077F || cp in 0xFB50..0xFDFF || cp in 0xFE70..0xFEFF
+
         private fun atom(): MathNode {
             if (index >= source.length) {
                 val position = global(index)
@@ -214,6 +217,22 @@ object NativeMathParser {
             val start = index
             val codePoint = source.codePointAt(index)
             val charCount = Character.charCount(codePoint)
+            if (isRtlChar(codePoint)) {
+                index += charCount
+                while (index < source.length) {
+                    val nextCp = source.codePointAt(index)
+                    val nextCount = Character.charCount(nextCp)
+                    if (isRtlChar(nextCp)) {
+                        index += nextCount
+                    } else if (Character.isWhitespace(nextCp) && index + nextCount < source.length && isRtlChar(source.codePointAt(index + nextCount))) {
+                        index += nextCount
+                    } else {
+                        break
+                    }
+                }
+                val persianText = source.substring(start, index)
+                return sourceSymbol(persianText, start, index, editable = true)
+            }
             index += charCount
             val value = String(Character.toChars(codePoint))
             return when (value) {

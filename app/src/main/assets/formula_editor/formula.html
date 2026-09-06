@@ -1111,38 +1111,49 @@ html{ font-size:calc(16px * var(--fs)); }
             position: fixed;
             top: 20px;
             left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-size:0.875rem;
-            z-index: 1000;
-            transition: transform 0.4s;
-            backdrop-filter: blur(20px);
-            max-width: 90%;
+            transform: translateX(-50%);
+            display: none;
+            padding: 12px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            z-index: 35000 !important;
+            max-width: 90vw;
+            width: auto;
+            box-sizing: border-box;
             text-align: center;
+            direction: rtl;
+            white-space: normal;
+            word-break: break-word;
+            box-shadow: 0 8px 30px rgba(0,0,0,.5);
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid #475569;
         }
         .notification.show {
-            transform: translateX(-50%) translateY(0);
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
         .notification.success {
-            background: rgba(56, 239, 125, 0.2);
-            border: 1px solid rgba(56, 239, 125, 0.4);
-            color: var(--ok);
+            background: #064e3b !important;
+            border: 1px solid #059669 !important;
+            color: #a7f3d0 !important;
         }
         .notification.error {
-            background: rgba(255, 107, 107, 0.2);
-            border: 1px solid rgba(255, 107, 107, 0.4);
-            color: var(--err);
+            background: #881337 !important;
+            border: 1px solid #e11d48 !important;
+            color: #fecdd3 !important;
         }
         .notification.info {
-            background: rgba(58, 123, 213, 0.2);
-            border: 1px solid rgba(58, 123, 213, 0.4);
-            color: var(--accent);
+            background: #1e3a8a !important;
+            border: 1px solid #3b82f6 !important;
+            color: #bfdbfe !important;
         }
         .notification.warning {
-            background: rgba(247, 151, 30, 0.2);
-            border: 1px solid rgba(247, 151, 30, 0.4);
-            color: var(--warn);
+            background: #78350f !important;
+            border: 1px solid #d97706 !important;
+            color: #fde68a !important;
         }
         .edit-banner {
             background: rgba(168, 85, 247, 0.15);
@@ -3740,8 +3751,8 @@ html[data-theme="light"] .sk::after{
 /* ============================================================
  * v8.38 — notification/matching/profile
  * ============================================================ */
-.notification{transform:translateX(-50%) translateY(calc(-100% - 34px));opacity:0;visibility:hidden;pointer-events:none;transition:transform .35s ease,opacity .35s ease,visibility 0s linear .35s;max-width:min(92vw,560px);max-height:40vh;overflow:auto;z-index:20000!important}
-.notification.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible;transition:transform .35s ease,opacity .35s ease}
+.notification{position:fixed;top:20px;left:50%;transform:translateX(-50%);display:none;padding:12px 22px;border-radius:10px;font-size:14px;line-height:1.6;z-index:35000!important;max-width:90vw;width:auto;box-sizing:border-box;text-align:center;direction:rtl;white-space:normal;word-break:break-word;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#1e293b;color:#fff;border:1px solid #475569}
+.notification.show{display:block!important;opacity:1!important;visibility:visible!important}
 .match-answer-hidden{display:none!important}
 .match-answer-open{width:100%;margin-top:8px}
 .mt-board{position:relative;border:1px solid var(--card-brd);border-radius:14px;background:var(--panel);padding:12px;overflow:hidden;margin-top:10px}
@@ -7532,17 +7543,19 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
 @media print{.qpv-paper{width:210mm;min-height:297mm;padding:10mm;border:0;border-radius:0}.qpv-paper .qfree-stage{height:185mm;min-height:185mm}}
 
 
-/* MF_PAR_V970: دکمهٔ واحد «()» — منوی سه‌ستونی (چپ: باز / وسط: جفت / راست: بسته) */
-.mb-var.mbv-par3-pop, .mb-var:has(.mbv-par3) { max-width: min(430px, 94vw); }
-.mbv-par3 { display: flex; gap: 7px; align-items: stretch; direction: ltr; unicode-bidi: isolate; }
+/* MF_PAR_V970: دکمهٔ واحد «()» — منوی چهارستونی (نام / باز / جفت / بسته) */
+.mb-var.mbv-par3-pop, .mb-var.mbv-par4-pop, .mb-var:has(.mbv-par3), .mb-var:has(.mbv-par4) { max-width: min(520px, 96vw); }
+.mbv-par3, .mbv-par4 { display: flex; gap: 6px; align-items: stretch; direction: ltr; unicode-bidi: isolate; }
 .mbv-par-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.mbv-par-col-name { flex: 1.3 1 0; }
 .mbv-par-col-t { font-size: .74rem; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 5px; }
 .mbv-par-col-b { display: flex; flex-direction: column; gap: 6px; }
-.mbv-parbtn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff; cursor: pointer; font-family: inherit; touch-action: manipulation; }
+.mbv-par-name-cell { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 4px 6px; border-radius: 9px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #e2e8f0; font-size: .8rem; font-weight: 600; text-align: center; direction: rtl; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mbv-parbtn { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 6px; border-radius: 9px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff; cursor: pointer; font-family: inherit; touch-action: manipulation; }
 .mbv-parbtn:hover { border-color: var(--accent); background: rgba(0,210,255,.14); }
 .mbv-parbtn:active { transform: scale(0.95); }
 .mbv-par-lab { font-size: .8rem; color: var(--muted); flex: 0 0 auto; direction: rtl; unicode-bidi: isolate; white-space: nowrap; }
-.mbv-par-g { font-size: 1.6rem; line-height: 1; direction: ltr; unicode-bidi: isolate; }
+.mbv-par-g { font-size: 1.6rem; line-height: 1; direction: ltr; unicode-bidi: isolate; display: flex; align-items: center; justify-content: center; }
 .mbv-par-col-mid .mbv-parbtn { border-color: rgba(0,210,255,.5); background: rgba(0,210,255,.1); }
 .mbv-par-col-mid .mbv-par-g { color: var(--accent); }
 /* MF_FIX_V971 — پیش‌نمایشِ SVGِ براکت روی دکمه‌های منو */
@@ -7806,13 +7819,13 @@ function notify(msg, type, ms) {
   if (!n) return;
   clearTimeout(n._t); clearTimeout(n._t2);
   n.textContent = msg;
-  n.className = 'notification ' + (type || 'info');
-  void n.offsetWidth;
-  n.classList.add('show');
+  n.className = 'notification ' + (type || 'info') + ' show';
+  n.style.display = 'block';
   n._t = setTimeout(() => {
     n.classList.remove('show');
+    n.style.display = 'none';
     n._t2 = setTimeout(() => {
-      if (!n.classList.contains('show')) { n.textContent = ''; n.className = 'notification'; }
+      if (!n.classList.contains('show')) { n.textContent = ''; n.className = 'notification'; n.style.display = 'none'; }
     }, 450);
   }, ms || 4000);
 }
@@ -11830,10 +11843,14 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     const selTex = (sel && /^\s*\$.*\$\s*$/.test(sel))
       ? sel.trim().replace(/^\$/, '').replace(/\$$/, '')
       : '';
+    window.MF_SEL_START = (typeof window.MF_SEL_START === 'number') ? window.MF_SEL_START : ((MF_TARGET.selectionStart != null) ? MF_TARGET.selectionStart : MF_TARGET.value.length);
+    window.MF_SEL_END = (typeof window.MF_SEL_END === 'number') ? window.MF_SEL_END : ((MF_TARGET.selectionEnd != null) ? MF_TARGET.selectionEnd : window.MF_SEL_START);
     MB.hist = [];
     MB.future = [];
     MB.root = selTex ? mbParse(selTex) : [];
     MB.cur = { arr: MB.root, i: MB.root.length };
+    const nat = el('mfNat');
+    if (nat) nat.value = selTex || '';
     const modal = el('mfModal');
     if (!modal) return;
     modal.classList.add('open', 'box-fullscreen');
@@ -11857,6 +11874,14 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     if (modal) modal.classList.remove('open', 'box-fullscreen');
     if (typeof mbCloseQuickConvert === 'function') mbCloseQuickConvert();
     MF_TARGET = null;
+    window.MF_SEL_START = null;
+    window.MF_SEL_END = null;
+    MB.root = [];
+    MB.cur = { arr: MB.root, i: 0 };
+    MB.hist = [];
+    MB.future = [];
+    const nat = el('mfNat');
+    if (nat) nat.value = '';
     /* MF_BAR_V961: بازگرداندن FABها */
     try {
       document.body.classList.remove('math-open');
@@ -11911,8 +11936,8 @@ window.mbCloseSymbolLibrary = mbCloseSymbolLibrary;
     if (!tex) { closeMath(); return; }
     if (!MF_TARGET) { closeMath(); return; }
     const t = MF_TARGET;
-    const a = (t.selectionStart != null) ? t.selectionStart : t.value.length;
-    const b = (t.selectionEnd != null) ? t.selectionEnd : t.value.length;
+    const a = (typeof window.MF_SEL_START === 'number') ? window.MF_SEL_START : ((t.selectionStart != null) ? t.selectionStart : t.value.length);
+    const b = (typeof window.MF_SEL_END === 'number') ? window.MF_SEL_END : ((t.selectionEnd != null) ? t.selectionEnd : a);
     const ins = '$' + tex + '$';
     t.value = t.value.slice(0, a) + ins + t.value.slice(b);
     const caret = a + ins.length;
@@ -12603,28 +12628,32 @@ function mbParMenu(ev) {
     if (ev && ev.stopPropagation) ev.stopPropagation();
     const pop = el('mbVar'); if (!pop) return;
     const pairs = MB_PAIRS; /* MF_FIX_V971 — منبعِ یکتا */
-    /* MF_FIX_V971 — پیش‌نمایشِ واقعی (همان SVGِ ویرایشگر) + تولتیپِ راهنما */
+    /* MF_FIX_V971 / V97 — پیش‌نمایشِ واقعی؛ ستون نام جداست و دکمه‌ها فقط گلیف دارند */
     function parBtn(cls, attrs, glyph, lab, tip) {
       return '<button type="button" class="mbv-parbtn ' + cls + '" ' + attrs +
         ' title="' + esc(tip || lab) + '" aria-label="' + esc(lab) + '">' +
-        '<span class="mbv-par-lab">' + esc(lab) + '</span>' +
         '<span class="mbv-par-g">' + mbParGlyph(glyph) + '</span></button>';
     }
-    let h = ''; /* MF_FIX_V971 — تیترِ منو حذف شد؛ راهنما در تولتیپِ دکمه‌هاست */
-    h += '<div class="mbv-par3">';
-    /* ستون چپ — براکت‌های باز */
+    let h = '';
+    h += '<div class="mbv-par4">';
+    /* ستون چپ — نام */
+    h += '<div class="mbv-par-col mbv-par-col-name"><div class="mbv-par-col-t">نام</div><div class="mbv-par-col-b">' +
+      pairs.map(function (p) {
+        return '<div class="mbv-par-name-cell" title="' + esc(p[0] + ' — ' + (p[4] || '')) + '">' + esc(p[0]) + '</div>';
+      }).join('') + '</div></div>';
+    /* ستون دوم — براکت‌های باز */
     h += '<div class="mbv-par-col"><div class="mbv-par-col-t">باز (چپ)</div><div class="mbv-par-col-b">' +
       pairs.map(function (p) {
         return parBtn('mbv-parside', 'data-side="open" data-o="' + esc(p[1]) + '" data-c="' + esc(p[2]) + '"', p[1], p[0],
           p[0] + ' — بازِ تک‌طرفهٔ کشیده؛ تا بسته‌شدنِ گروه با محتوا رشد می‌کند');
       }).join('') + '</div></div>';
-    /* ستون وسط — جفت‌های کامل */
+    /* ستون سوم — جفت‌های کامل */
     h += '<div class="mbv-par-col mbv-par-col-mid"><div class="mbv-par-col-t">جفت</div><div class="mbv-par-col-b">' +
       pairs.map(function (p) {
         return parBtn('mbv-parpair', 'data-o="' + esc(p[1]) + '" data-c="' + esc(p[2]) + '"', p[1] + p[2], p[0],
           p[0] + ' — جفتِ کامل با یک لمس؛ مکان‌نما داخلِ گروه می‌رود');
       }).join('') + '</div></div>';
-    /* ستون راست — براکت‌های بسته */
+    /* ستون چهارم — براکت‌های بسته */
     h += '<div class="mbv-par-col"><div class="mbv-par-col-t">بسته (راست)</div><div class="mbv-par-col-b">' +
       pairs.map(function (p) {
         return parBtn('mbv-parside', 'data-side="close" data-o="' + esc(p[1]) + '" data-c="' + esc(p[2]) + '"', p[2], p[0],
@@ -12632,7 +12661,7 @@ function mbParMenu(ev) {
       }).join('') + '</div></div>';
     h += '</div>';
     pop.innerHTML = h;
-    try { pop.classList.add('mbv-par3-pop'); } catch (e) {}
+    try { pop.classList.add('mbv-par3-pop', 'mbv-par4-pop'); } catch (e) {}
     mbVarOpen(pop, (ev && ev.currentTarget) || null);
     /* ستون وسط — درجِ جفت کامل */
     pop.querySelectorAll('.mbv-parpair').forEach(function (btn) {
@@ -15347,8 +15376,8 @@ window.openMath = function () {
         }
         function enforceMenu(pop) {
           var vw = window.innerWidth, vh = window.innerHeight;
-          var w = pop.querySelector('.mbv-par3')
-            ? Math.min(520, Math.round(vw * 0.96))
+          var w = pop.querySelector('.mbv-par3, .mbv-par4')
+            ? Math.min(540, Math.round(vw * 0.96))
             : Math.min(480, Math.round(vw * 0.94));
           var maxH = Math.round(vh * 0.80);
           setImp(pop, {
@@ -15554,6 +15583,8 @@ window.openMath = function () {
         if (!t) return;
         window.__aoNativeClosing = false; /* اجازهٔ بازشدن برای جلسهٔ جدید */
         window.__beginRangeSynced = false; /* V67.1 — هر جلسه یک‌بار بازه با مکان‌نمای Native همگام شود */
+        window.MF_SEL_START = s | 0;
+        window.MF_SEL_END = e | 0;
         t.value = (text == null ? '' : String(text));
         try { t.setSelectionRange(s | 0, e | 0); } catch (err) {}
         /* V55.1 — در WebView رویداد load سند intercepted ممکن است دیر بیاید یا
@@ -15794,31 +15825,20 @@ window.openMath = function () {
 #popup .cand{width:40px;height:36px;border:1px solid #c9c9c9;border-radius:4px;background:#fbfbfb;font-family:Georgia,serif;font-size:17px;color:#222;display:grid;place-items:center}
 #popup .cand:hover{background:#e8f2fc;border-color:#5b9bd5}
 #popup .cand.cur{outline:2px solid #185abd;outline-offset:-2px;background:#dceeff}
-#helpCard{position:fixed;z-index:30020;width:330px;max-width:92vw;background:#fffef8;border:1px solid #b9b39a;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.3);padding:12px 14px;font-size:12px;line-height:1.9;color:#4c4633;direction:rtl;text-align:right}
+#helpBackdrop{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:30015;background:rgba(0,0,0,.55)}
+#helpCard{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30020;width:92vw;max-width:460px;max-height:85vh;overflow-y:auto;background:#fffef8;border:1px solid #b9b39a;border-radius:10px;box-shadow:0 16px 50px rgba(0,0,0,.5);padding:16px 18px;font-size:13px;line-height:1.75;color:#333;direction:rtl;text-align:right;box-sizing:border-box}
 #helpCard b{color:#3a3524}
 #helpCard .k{font-family:Consolas,monospace;background:#f3f0e2;padding:0 5px;border-radius:3px;font-size:11px;direction:ltr;display:inline-block}
-#helpCard .x{position:absolute;top:6px;left:8px;border:none;background:none;color:#888;font-size:12px}
+#helpCard .x{position:absolute;top:8px;left:10px;border:none;background:none;color:#888;font-size:16px;cursor:pointer;padding:4px 8px;line-height:1}
 #helpCard .x:hover{color:#c00}
-/* MF_TITLEICON_V978 — راهنمای آیکن‌دار */
-#helpCard{width:392px;max-height:74vh;overflow:auto;line-height:1.65}
-#helpCard .htitle{display:block;font-size:13px;margin-bottom:2px}
-#helpCard .hsec{margin:9px 0 4px;font-size:11px;font-weight:700;color:#8a7f5c;border-bottom:1px solid #e3ddc6;padding-bottom:2px}
-#helpCard .hrow{display:flex;align-items:flex-start;gap:8px;margin:6px 0}
+#helpCard .htitle{display:block;font-size:14px;font-weight:700;margin-bottom:4px;color:#1e293b}
+#helpCard .hsec{margin:10px 0 5px;font-size:11.5px;font-weight:700;color:#8a7f5c;border-bottom:1px solid #e3ddc6;padding-bottom:3px}
+#helpCard .hrow{display:flex;align-items:flex-start;gap:8px;margin:7px 0}
 #helpCard .hico{flex:0 0 26px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(#fdfdfd,#efefef);border:1px solid #bdb69c;border-radius:4px}
 #helpCard .hico svg{width:17px;height:17px;display:block}
 #helpCard .hico.htx{font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#222;direction:ltr}
 #helpCard .htxt{flex:1;min-width:0}
-#helpCard .hnote{margin:4px 0}
-/* MF_HELPRESP_V981 */
-#helpBackdrop{position:fixed;top:0;left:0;right:0;bottom:0;z-index:30015;background:rgba(0,0,0,.42)}
-#helpCard{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-#helpCard.sheet{left:0!important;right:0!important;top:auto!important;bottom:0!important;width:auto!important;max-width:none!important;max-height:82vh;max-height:82dvh;border-radius:14px 14px 0 0;border-width:1px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));font-size:13px;line-height:1.75;box-shadow:0 -8px 30px rgba(0,0,0,.32)}
-#helpCard.sheet::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:#cfc8ad;margin:-4px auto 10px}
-#helpCard.sheet .x{top:10px;left:12px;font-size:17px;padding:4px 8px;line-height:1}
-#helpCard.sheet .hico{flex-basis:30px;width:30px;height:30px}
-#helpCard.sheet .hico svg{width:19px;height:19px}
-#helpCard.sheet .hrow{margin:9px 0}
-@media (max-width:620px){#helpCard .htitle{font-size:14px}}
+#helpCard .hnote{margin:5px 0}
 /* MF_PENICON_V979 — آیکن ✍️ روی کلید دست‌نویس و کنار عنوان پنجره */
 #mtitleIco,.mb-emoji-ico{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Segoe UI Symbol','Twemoji Mozilla',sans-serif;font-style:normal;line-height:1;display:inline-block}
 /* آیکن عنوان: بدون قاب. line-height صریح لازم است وگرنه گلیف در فلکس جمع می‌شود */
@@ -22662,39 +22682,22 @@ function hwInsert() {
 $('insertBtn').onclick = hwInsert;
 
 /* ================= نمونه و راهنما ================= */
-/* MF_HELPRESP_V981 — راهنما: روی موبایل «شیت» تمام‌عرض از پایین، روی
-   دسکتاپ همان کارت شناور. قبلاً اگر کارت بلندتر از فضای بالای نوار بود،
-   به زیر نوار پرتاب می‌شد و عملاً بیرون از صفحه می‌افتاد. */
+/* MF_HELPRESP_V981 / V97 — راهنما: پنجرهٔ وسط‌چین با پس‌زمینهٔ مات */
 function hwHelpIsMobile() {
   return window.matchMedia && window.matchMedia('(max-width: 620px)').matches;
 }
 function hwHelpPlace() {
   var card = $('helpCard');
   if (!card || card.hidden) return;
-  if (hwHelpIsMobile()) {
-    /* موقعیت‌دهی به CSS سپرده می‌شود */
-    card.classList.add('sheet');
-    card.style.left = card.style.top = '';
-    return;
-  }
-  card.classList.remove('sheet');
-  var fr = $('mfooter').getBoundingClientRect();
-  var vw = document.documentElement.clientWidth;
-  var vh = document.documentElement.clientHeight;
-  var h = card.offsetHeight, w = card.offsetWidth;
-  var top = fr.top - h - 8;
-  if (top < 8) top = Math.max(8, Math.min(fr.top + fr.height + 8, vh - h - 8));
-  var left = fr.left + 12;
-  if (left + w > vw - 8) left = Math.max(8, vw - w - 8);
-  card.style.top = top + 'px';
-  card.style.left = left + 'px';
+  card.scrollTop = 0;
 }
 $('helpBtn').onclick = function () {
   var card = $('helpCard');
-  card.hidden = !card.hidden;
   var bd = $('helpBackdrop');
-  if (bd) bd.hidden = card.hidden || !hwHelpIsMobile();
-  if (!card.hidden) { card.scrollTop = 0; hwHelpPlace(); }
+  var willShow = card.hidden;
+  card.hidden = !willShow;
+  if (bd) bd.hidden = !willShow;
+  if (willShow) { card.scrollTop = 0; hwHelpPlace(); }
 };
 function hwHelpHide() {
   $('helpCard').hidden = true;

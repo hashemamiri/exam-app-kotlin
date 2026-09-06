@@ -200,17 +200,20 @@ object NativeMathSvgRenderer {
 
         val italic = node.value.codePointCount(0, node.value.length) == 1 &&
             node.value.firstOrNull()?.isLetter() == true && node.value.all { it.code < 128 }
-        val rtl = node.value.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' }
-        val textX = (width - naturalWidth) / 2f + if (rtl) naturalWidth else 0f
+        val rtl = node.value.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' || it in '\uFB50'..'\uFDFF' || it in '\uFE70'..'\uFEFF' }
+        val textX = if (rtl) (width + naturalWidth) / 2f else (width - naturalWidth) / 2f
         val body = buildString {
             append("<text x=\"").append(number(textX)).append("\" y=\"")
             append(number(baseline))
-            append("\" font-family=\"serif\" font-size=\"").append(number(size)).append('"')
+            if (rtl) {
+                append("\" font-family=\"Tahoma, Arial, sans-serif\" font-size=\"").append(number(size)).append('"')
+            } else {
+                append("\" font-family=\"serif\" font-size=\"").append(number(size)).append('"')
+            }
             if (node.bold) append(" font-weight=\"700\"")
             if (italic) append(" font-style=\"italic\"")
-            if (rtl) append(" text-anchor=\"end\" direction=\"rtl\"")
-            else append(" direction=\"ltr\"")
-            append(" unicode-bidi=\"bidi-override\">")
+            if (rtl) append(" text-anchor=\"end\" direction=\"rtl\" unicode-bidi=\"isolate\">")
+            else append(" direction=\"ltr\" unicode-bidi=\"isolate\">")
             append(escapeXml(node.value)).append("</text>")
         }
         val plainValue = node.value.codePoints().allMatch { Character.isLetterOrDigit(it) }

@@ -40,6 +40,10 @@ import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -140,9 +144,11 @@ fun ExamBuilderScreen(
     var askPrintName by rememberSaveable { mutableStateOf(false) }
     var printExamName by rememberSaveable { mutableStateOf("") }
     var printSavedNote by remember { mutableStateOf<String?>(null) }
-    // V86.9 — چشم در مسیرِ چاپ همان پنجرهٔ آزمون‌سازِ چاپی را باز می‌کند،
-    // نه تقریبِ Compose. یعنی سربرگِ واقعی، A4، زوم و چاپِ استاد/دانشجو.
+    // V86.9 / V97 — متغیرهای کنترل پیش‌نمایش مستقیم و چاپ از دکمه‌های شناور
     var printPreviewOf by remember { mutableStateOf<ir.exam.app.domain.model.OfficialExamPrintable?>(null) }
+    var printInitialPreview by rememberSaveable { mutableStateOf(false) }
+    var printInitialMode by rememberSaveable { mutableStateOf<String?>(null) }
+    var showPrintActionMenu by rememberSaveable { mutableStateOf(false) }
     val builderContext = androidx.compose.ui.platform.LocalContext.current
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmSave by remember { mutableStateOf(false) }
@@ -216,26 +222,31 @@ fun ExamBuilderScreen(
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             if (!state.loading) {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    FloatingActionButton(
-                        // V86.8 — در مسیرِ چاپ، ذخیره محلی است: نه عنوانِ الزامی،
-                        // نه مخاطب، نه کسرِ موجودی.
-                        onClick = { if (printMode) askPrintName = true else confirmSave = true },
-                        modifier = Modifier.align(Alignment.CenterStart).size(56.dp),
-                        containerColor = Color(0xFF27A86B),
-                        contentColor = Color.White
+                if (printMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Check,
-                            contentDescription = "ذخیره آزمون",
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    // V86.8 — چشم: پیش‌نمایشِ کاملِ برگه، فقط در مسیرِ چاپ.
-                    if (printMode) {
+                        FloatingActionButton(
+                            // V86.8 — در مسیرِ چاپ، ذخیره محلی است
+                            onClick = { if (printMode) askPrintName = true else confirmSave = true },
+                            modifier = Modifier.size(56.dp),
+                            containerColor = Color(0xFF27A86B),
+                            contentColor = Color.White
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = "ذخیره آزمون",
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        // V86.8 / V97 — چشم: پیش‌نمایشِ مستقیمِ برگه در مسیرِ چاپ.
                         FloatingActionButton(
                             onClick = {
                                 val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
+                                printInitialPreview = true
+                                printInitialMode = null
                                 printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
                                     title = state.title.trim().ifBlank { "آزمون" },
                                     subject = state.subject.trim(),
@@ -243,7 +254,7 @@ fun ExamBuilderScreen(
                                     questions = state.questions
                                 )
                             },
-                            modifier = Modifier.align(Alignment.Center).size(56.dp),
+                            modifier = Modifier.size(56.dp),
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,
                             contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         ) {
@@ -253,12 +264,85 @@ fun ExamBuilderScreen(
                                 modifier = Modifier.size(28.dp)
                             )
                         }
+                        // V97 — دکمهٔ شناور چاپ (چاپ آزمون / چاپ با کلید)
+                        Box {
+                            FloatingActionButton(
+                                onClick = { showPrintActionMenu = true },
+                                modifier = Modifier.size(56.dp),
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Print,
+                                    contentDescription = "چاپ آزمون",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showPrintActionMenu,
+                                onDismissRequest = { showPrintActionMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("چاپ آزمون (دانش‌آموز)") },
+                                    leadingIcon = { Icon(Icons.Outlined.Print, contentDescription = null) },
+                                    onClick = {
+                                        showPrintActionMenu = false
+                                        val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
+                                        printInitialPreview = false
+                                        printInitialMode = "student"
+                                        printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                            title = state.title.trim().ifBlank { "آزمون" },
+                                            subject = state.subject.trim(),
+                                            header = ir.exam.app.data.local.printHeaderOf(store.read()),
+                                            questions = state.questions
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("چاپ با کلید (پاسخ‌نامه)") },
+                                    leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null) },
+                                    onClick = {
+                                        showPrintActionMenu = false
+                                        val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
+                                        printInitialPreview = false
+                                        printInitialMode = "teacher"
+                                        printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                            title = state.title.trim().ifBlank { "آزمون" },
+                                            subject = state.subject.trim(),
+                                            header = ir.exam.app.data.local.printHeaderOf(store.read()),
+                                            questions = state.questions
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                        if (!radialMenuOpen) {
+                            FloatingActionButton(
+                                onClick = { radialMenuOpen = true },
+                                modifier = Modifier.size(56.dp)
+                            ) { Text("+", style = MaterialTheme.typography.headlineSmall) }
+                        }
                     }
-                    if (!radialMenuOpen) {
+                } else {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                         FloatingActionButton(
-                            onClick = { radialMenuOpen = true },
-                            modifier = Modifier.align(Alignment.CenterEnd).size(56.dp)
-                        ) { Text("+", style = MaterialTheme.typography.headlineSmall) }
+                            onClick = { confirmSave = true },
+                            modifier = Modifier.align(Alignment.CenterStart).size(56.dp),
+                            containerColor = Color(0xFF27A86B),
+                            contentColor = Color.White
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = "ذخیره آزمون",
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        if (!radialMenuOpen) {
+                            FloatingActionButton(
+                                onClick = { radialMenuOpen = true },
+                                modifier = Modifier.align(Alignment.CenterEnd).size(56.dp)
+                            ) { Text("+", style = MaterialTheme.typography.headlineSmall) }
+                        }
                     }
                 }
             }
@@ -337,6 +421,7 @@ fun ExamBuilderScreen(
                     question = question,
                     index = index,
                     expanded = expandedQuestionId == question.id,
+                    printMode = printMode,
                     onToggle = {
                         if (expandedQuestionId == question.id) {
                             expandedQuestionId = null
@@ -501,11 +586,17 @@ fun ExamBuilderScreen(
         )
     }
 
-    // V86.9 — همان پنجرهٔ کاملِ آزمون‌سازِ چاپی.
+    // V86.9 / V97 — همان پنجرهٔ آزمون‌سازِ چاپی / پیش‌نمایش مستقیم / چاپ مستقیم.
     printPreviewOf?.let { printable ->
         ir.exam.app.ui.printing.ExamHtmlPrintDialog(
             printable = printable,
-            onDismiss = { printPreviewOf = null }
+            initialPreview = printInitialPreview,
+            initialPrintMode = printInitialMode,
+            onDismiss = {
+                printPreviewOf = null
+                printInitialPreview = false
+                printInitialMode = null
+            }
         )
     }
 
@@ -811,6 +902,7 @@ private fun QuestionEditor(
     question: QuestionDraft,
     index: Int,
     expanded: Boolean,
+    printMode: Boolean = false,
     onToggle: () -> Unit,
     onExpand: () -> Unit,
     onMove: (Int) -> Unit,
@@ -826,6 +918,7 @@ private fun QuestionEditor(
     onStudentPreview: () -> Unit = {}
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
+    var studioOpen by remember(question.id) { mutableStateOf(false) }
     var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
     // V53.1 — کنترلر کادر متن سؤال WebView و هدف ویرایشگر Native جدول.
     val questionFieldController = remember(question.id) { QuestionEditorFieldController() }
@@ -930,17 +1023,17 @@ private fun QuestionEditor(
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
-                // V62.7 — درخواست کاربر: چشم «فقط» پیش‌نمایش دانش‌آموزی سؤال را
-                // باز می‌کند (همان شکلی که دانش‌آموز در آزمون می‌بیند)؛ منوی
-                // چندگزینه‌ای قبلی حذف شد. چیدمان چاپ با دکمهٔ داخل کارت باز است.
-                IconButton(
-                    onClick = onStudentPreview,
-                    modifier = Modifier.size(30.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Visibility,
-                        contentDescription = "پیش‌نمایش دانش‌آموزی سؤال"
-                    )
+                // V62.7 / V97 — درخواست کاربر: در آزمون چاپی چشم دانش‌آموزی حذف می‌شود
+                if (!printMode) {
+                    IconButton(
+                        onClick = onStudentPreview,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Visibility,
+                            contentDescription = "پیش‌نمایش دانش‌آموزی سؤال"
+                        )
+                    }
                 }
                 IconButton(
                     onClick = {},
@@ -1035,7 +1128,8 @@ private fun QuestionEditor(
                 onAdd = { uris -> viewModel.addImages(question.id, uris) },
                 onReplace = { imageId, uri -> viewModel.replaceImage(question.id, imageId, uri) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
-                onRemove = { imageId -> viewModel.removeImage(question.id, imageId) }
+                onRemove = { imageId -> viewModel.removeImage(question.id, imageId) },
+                onOpenStudio = { studioOpen = true }
             )
             Text("تصویر پاسخ دانش‌آموز")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1458,6 +1552,49 @@ private fun QuestionEditor(
                 }
             )
         }
+    }
+    if (studioOpen) {
+        val studioExisting = remember(question.images) {
+            question.images.map { img ->
+                ir.exam.app.ui.printing.StudioImageRef(
+                    dataUrl = img.uri,
+                    w = 0,
+                    h = 160
+                )
+            }
+        }
+        ir.exam.app.ui.printing.ExamImageStudioDialog(
+            questionId = question.id,
+            existingImages = studioExisting,
+            onInsert = { dataUrl, _ ->
+                viewModel.addImages(question.id, listOf(dataUrl))
+                studioOpen = false
+            },
+            onDeleteExisting = { idx ->
+                if (idx in question.images.indices) {
+                    viewModel.removeImage(question.id, question.images[idx].id)
+                }
+            },
+            onReplaceExisting = { idx, dataUrl, _ ->
+                if (idx in question.images.indices) {
+                    viewModel.replaceImage(question.id, question.images[idx].id, dataUrl)
+                }
+                studioOpen = false
+            },
+            onSplitToSame = { items ->
+                viewModel.addImages(question.id, items.map { it.first })
+                studioOpen = false
+            },
+            onOcrText = { ocrText ->
+                if (ocrText.isNotBlank()) {
+                    val cur = question.text
+                    val next = if (cur.isBlank()) ocrText else cur.trimEnd() + "\n" + ocrText
+                    viewModel.updateText(question.id, next)
+                }
+                studioOpen = false
+            },
+            onDismiss = { studioOpen = false }
+        )
     }
 }
 

@@ -115,6 +115,8 @@ internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print.ht
 @Composable
 fun ExamHtmlPrintDialog(
     printable: OfficialExamPrintable?,
+    initialPreview: Boolean = false,
+    initialPrintMode: String? = null,
     onDismiss: () -> Unit
 ) {
     var loading by remember { mutableStateOf(true) }
@@ -238,6 +240,12 @@ fun ExamHtmlPrintDialog(
     fun requestDismiss() {
         flushPendingEdits()
         onDismiss()
+    }
+
+    LaunchedEffect(previewOpen, loading) {
+        if (!loading && !previewOpen && initialPreview) {
+            requestDismiss()
+        }
     }
 
     // V78.2 — گرفتنِ عکسِ فوریِ پیش‌نویس و نوشتنش در آینهٔ بومی
@@ -567,7 +575,18 @@ fun ExamHtmlPrintDialog(
                                                 "(function(){if(window.setExamData){window.setExamData($payload);return 'ok';}return 'wait';})();"
                                             ) { result ->
                                                 when {
-                                                    result?.contains("ok") == true -> post { loading = false }
+                                                    result?.contains("ok") == true -> post {
+                                                        loading = false
+                                                        if (initialPreview) {
+                                                            previewOpen = true
+                                                            view.evaluateJavascript("(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()", null)
+                                                        }
+                                                        if (initialPrintMode == "student") {
+                                                            view.evaluateJavascript("if (typeof printStudent==='function') printStudent();", null)
+                                                        } else if (initialPrintMode == "teacher") {
+                                                            view.evaluateJavascript("if (typeof printTeacher==='function') printTeacher();", null)
+                                                        }
+                                                    }
                                                     attempts < 50 -> view.postDelayed({ tryInject() }, 100)
                                                     else -> post { loading = false }
                                                 }

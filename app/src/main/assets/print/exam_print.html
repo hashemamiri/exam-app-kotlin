@@ -74,7 +74,7 @@
   .question-table-head .question-cell { min-height:46px; padding:5px 10px; align-items:center; justify-content:center; text-align:center; }
   .question-table-head .question-no-cell,
   .question-table-head .question-score-cell { writing-mode: vertical-rl; text-orientation: mixed; }
-  .questions-print-table { width:calc(100% + 16mm); margin:0 -8mm; border-collapse:collapse; table-layout:fixed; direction:rtl; }
+  .questions-print-table { width:100%; margin:0; border-collapse:collapse; table-layout:fixed; direction:rtl; box-sizing:border-box; }
   .questions-print-table thead { display:table-row-group; }
   .questions-print-table tfoot { display:table-footer-group; }
   .questions-print-table th,
@@ -541,9 +541,10 @@
   .iau-logo { display: block; margin: 0 auto; width: 60px; height: auto; }
 
   .exam-header, .scores-table, .exam-header2, .exam-header3, .exam-header4, .exam-header5, .exam-header6, .exam-header7 {
-    width: calc(100% + 4mm);
-    margin-right: -2mm;
-    margin-left: -2mm;
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+    box-sizing: border-box;
   }
 
   .live-preview {
@@ -569,9 +570,10 @@
     .live-preview { width:200mm !important; min-height:287mm !important; max-width:none !important; margin:0 auto !important; padding: 3mm !important; box-shadow: none !important; border: 2px solid #000 !important; border-radius: 0 !important; box-sizing: border-box !important; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
     .exam-header, .scores-table, .exam-header2, .exam-header3, .exam-header4, .exam-header5, .exam-header6, .exam-header7 {
-      width: calc(100% + 4mm) !important;
-      margin-right: -2mm !important;
-      margin-left: -2mm !important;
+      width: 100% !important;
+      margin-right: 0 !important;
+      margin-left: 0 !important;
+      box-sizing: border-box !important;
     }
 
     .page-number-footer.show { display:block !important; position:fixed; bottom:4mm; left:0; right:0; text-align:center; font-size:9pt; color:#555; }
@@ -692,7 +694,7 @@
     .question-table-head .question-cell { min-height:38px !important; padding:3px 7px !important; }
     .question-table-head .question-no-cell,
     .question-table-head .question-score-cell { writing-mode: vertical-rl !important; text-orientation: mixed !important; }
-    .questions-print-table { width:calc(100% + 8mm) !important; margin:0 -4mm !important; }
+    .questions-print-table { width:100% !important; margin:0 !important; box-sizing:border-box !important; }
     .questions-print-table thead { display:table-row-group !important; }
     .questions-print-table th { min-height:38px !important; padding:3px 5px !important; }
     .questions-print-table .question-main-td { padding:5px 7px !important; line-height:1.55 !important; }
@@ -772,9 +774,10 @@
     }
     #previewArea { min-width: 640px; }
     .exam-header, .scores-table, .exam-header2, .exam-header3, .exam-header4, .exam-header5, .exam-header6, .exam-header7 {
-      width: calc(100% + 2mm);
-      margin-right: -1mm;
-      margin-left: -1mm;
+      width: 100%;
+      margin-right: 0;
+      margin-left: 0;
+      box-sizing: border-box;
     }
     .exam-header td, .scores-table td { font-size:8.2pt; padding:2px 4px; }
     .iau-logo { width:48px; }
@@ -13685,7 +13688,7 @@ function initPreviewFigureEditing() {
     drag.pending = c;
     if (!drag.raf) {
       drag.raf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 16); })(function () {
-        drag.raf = 0;
+        if (drag) drag.raf = 0;
         var d = drag;
         if (!d || !d.pending) return;
         applyFigGeometry(d, d.pending);
@@ -13727,6 +13730,10 @@ function initPreviewFigureEditing() {
   }
   function endDrag(e) {
     if (!drag) return;
+    if (drag.raf) {
+      try { (window.cancelAnimationFrame || clearTimeout)(drag.raf); } catch(_) {}
+      drag.raf = 0;
+    }
     try { drag.fig.releasePointerCapture?.(e.pointerId); } catch(_) {}
     drag = null;
   }

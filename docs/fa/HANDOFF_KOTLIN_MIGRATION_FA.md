@@ -16751,3 +16751,38 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```
 
 پچ: V96_handwriting_open_fix — بدون SQL.
+
+
+## ۳۱۹) V97 — رفع ۱۱ ایراد چاپی، فرمول‌ساز، متون فارسی و عملکرد استودیوی تصویر
+
+مجموعهٔ ۱۱ رفع باگ و بهبودهای درخواستی کاربر:
+۱) باز شدن مستقیم پیش‌نمایش چاپی با دکمهٔ چشم شناور در مسیر «چاپ آزمون ← آزمون جدید» (`ExamBuilderScreen` با `printMode=true`) به‌جای بازکردن کل وب‌ویو.
+۲) افزودن دکمهٔ شناور با آیکون پرینتر شامل منوی گزینه‌های «چاپ آزمون (دانش‌آموز)» و «چاپ با کلید (پاسخ‌نامه)».
+۳) اتصال آیکون دوربین زیر کادر متن سؤال به استودیوی تصویر (`ExamImageStudioDialog`).
+۴) حذف آیکون چشم (پیش‌نمایش دانش‌آموزی) از روی کارت‌های سؤال در مسیر چاپ آزمون، و اطمینان از عملکرد صحیح سایر آیکون‌ها.
+۵) رفع بریدگی و عدم نمایش کامل متن اعلان‌ها/پیام‌های پاپ‌آپ (`.notification`) در ویرایشگر فرمول و دست‌نویس با عرض واکنش‌گرا و شکست خطوط چندخطی.
+۶) اصلاح منوی براکت‌ها و پرانتزها `()` به صورت ۴ ستونی: تفکیک ستون مستقل نام از ستون‌های علائم (باز، جفت، بسته).
+۷) اصلاح نحوه باز شدن و چیدمان عمودی پنجره راهنمای دست‌نویس (`#helpCard` و `#helpBackdrop`) به صورت وسط‌چین کامل با پس‌زمینه نیمه‌شفاف.
+۸) پشتیبانی کامل از کاراکترها و متون فارسی درون فرمول‌ها در موتور رندرینگ بومی (`NativeMathAst` و `NativeMathSvgRenderer`) با `direction="rtl"`، `unicode-bidi="isolate"` و فونت‌های استاندارد بدون به‌هم‌ریختگی یا برعکس شدن.
+۹) رفع درج تکراری فرمول قبلی با ردیابی دقیق بازه‌های مکان‌نما (`MF_SEL_START`/`MF_SEL_END`) و پاکسازی کامل وضعیت ویرایشگر در بستن/درج مجدد.
+۱۰) هماهنگی و هم‌عرضی کامل جدول ردیف/متن سؤال/بارم با سربرگ در خروجی چاپی (`exam_print.html` و CSS با `width: 100%` و `box-sizing: border-box`).
+۱۱) رفع خطای کنسول جاوااسکریپت `Uncaught TypeError: Cannot set properties of null (setting 'raf')` هنگام درگ تصاویر در پیش‌نمایش چاپ.
+
+### تغییرات فایل‌ها:
+- `app/src/main/assets/print/exam_print.html`: تنظیم عرض ۱۰۰٪ و مارجین ۰ برای `.questions-print-table` و `.exam-header*`، بررسی ایمن `drag.raf` و لغو فریم در `endDrag`.
+- `app/src/main/assets/formula_editor/formula.html`: استایل چندخطی و وسط‌چین `.notification`، منوی ۴ ستونی پرانتزها (`.mbv-par4`)، پنجره راهنمای وسط‌چین با backdrop، ردیابی بازه و ریست متغیرها در `openMath`/`closeMath`/`mfApply`.
+- `app/src/main/java/ir/exam/app/core/math/NativeMathAst.kt`: شناسایی و گروه‌بندی کاراکترهای فارسی/عربی به‌صورت یک توکن مستقل RTL با قابلیت ویرایش.
+- `app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt`: تنظیم چینش متن فارسی در SVG با `unicode-bidi="isolate"` و فونت متناسب.
+- `app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt`: افزودن پارامتر `onOpenStudio`.
+- `app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt`: افزودن `initialPreview` و `initialPrintMode` و بستن خودکار دیالوگ پس از پیش‌نمایش اولیه.
+- `app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt`: دکمه‌های شناور ذخیره، پیش‌نمایش مستقیم، منوی چاپ دوگانه، حذف چشم از کارت‌های سؤال در حالت چاپ، و باز شدن مستقیم استودیو تصویر از دکمه دوربین.
+- `app/src/test/java/ir/exam/app/ui/app/V97_PrintAndFormulaFixesTest.kt`: تست‌های جدید ۸گانه برای اعتبارسنجی تمام بخش‌ها.
+- `app/src/test/java/ir/exam/app/ui/app/V95_1HandwritingParenFixTest.kt`: هماهنگی تست اندازه دکمه‌های پرانتز با چیدمان ۴ ستونی جدید.
+
+### راستی‌آزمایی
+- `testDebugUnitTest`: ۱۰۷۵ تست در ۲۰۶ کلاس، ۰ شکست، ۰ خطا.
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+پچ: V97_print_and_formula_fixes — بدون SQL.
