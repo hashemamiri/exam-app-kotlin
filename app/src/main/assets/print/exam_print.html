@@ -14727,15 +14727,25 @@ loadSample();
 /* V99.2 — در چاپِ مستقیم (حالتِ initialPrintMode) فهرستِ کارتِ بومی پنهان
    است و پنجرهٔ پیش‌نمایشِ HTML هم باز نیست؛ بدونِ این قانون WebView یک
    صفحهٔ سفیدِ کاملاً خالی پشتِ پنجرهٔ چاپ نشان می‌داد. حالا برگهٔ A4 در
-   جایِ اصلی‌اش (خارجِ overlay ⇒ برای چاپ هم درجا) روی پس‌زمینهٔ خاکستری
-   دیده می‌شود: «برگهٔ خالصِ A4» بدونِ هیچ کنترلِ آزمون‌ساز. */
+   جایِ اصلی‌اش (خارجِ overlay ⇒ برای چاپ هم درجا) دیده می‌شود.
+   V99.2e — روی موبایل نسخهٔ قبل `width:100%` داشت و با پس‌زمینهٔ تقریباً
+   سفید، کلِ صفحه را «برگهٔ سفیدِ خالی» نشان می‌داد (محتوا فقط بالایِ
+   صفحه بود). حالا عرضِ برگه محدود، زمینهٔ خاکستریِ روشن‌تر و حاشیه/سایهٔ
+   قوی است تا برگه به‌وضوح «برگه» دیده شود (فقط screen؛ چاپ دست‌نخورده). */
 @media screen{
-  body.qmf-print-mode{background:#eef2f7 !important}
+  body.qmf-print-mode{background:#cbd5e1 !important}
   body.qmf-print-mode .toolbar,
   body.qmf-print-mode .panel,
   body.qmf-print-mode .questions-area,
   body.qmf-print-mode .preview-note{display:none !important}
-  body.qmf-print-mode #printContent.live-preview{display:block !important;margin:10px auto}
+  body.qmf-print-mode #printContent.live-preview{
+    display:block !important;
+    width:min(210mm, 92vw) !important;
+    margin:12px auto !important;
+    border:2px solid #0f172a !important;
+    border-radius:6px !important;
+    box-shadow:0 6px 22px rgba(15,23,42,.4) !important;
+  }
 }
 </style>
 

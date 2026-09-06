@@ -643,7 +643,14 @@ fun ExamHtmlPrintDialog(
                                 webChromeClient = object : WebChromeClient() {
                                     override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
                                         if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
-                                            val safe = message.message().replace(Regex("https?://\\S+"), "[url]").take(300)
+                                            val text = message.message()
+                                            // V99.2d — پیام‌های بی‌ضرر: WebView هشدار «Ignored
+                                            // attempt to cancel a: touchmove ...» را با سطحِ ERROR
+                                            // می‌فرستد، ولی این فقط از handler هایِ pinch-zoom صفحه
+                                            // هنگامِ اسکرول می‌آید و خطای واقعی نیست؛ نوارِ قرمزِ
+                                            // «خطای صفحه چاپ» کاربر را گیج می‌کرد.
+                                            if (text.contains("Ignored attempt to cancel")) return true
+                                            val safe = text.replace(Regex("https?://\\S+"), "[url]").take(300)
                                             post { jsError = "CONSOLE: $safe"; loading = false }
                                         }
                                         return true

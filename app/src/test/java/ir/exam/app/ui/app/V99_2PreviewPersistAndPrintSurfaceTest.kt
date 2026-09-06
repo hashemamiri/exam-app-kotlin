@@ -47,11 +47,24 @@ class V99_2PreviewPersistAndPrintSurfaceTest {
 
     // ---------- ۱) چاپِ مستقیم: صفحهٔ سفید نباشد ----------
 
+    // ---------- ۱ب) هشدارهای بی‌ضررِ کنسول نباید خطا نمایش دهند ----------
+
+    @Test
+    fun `benign console warnings do not show the red error banner`() {
+        // V99.2d — WebView «Ignored attempt to cancel a: touchmove ...» را با
+        // سطحِ ERROR می‌فرستد؛ دیالوگ آن را می‌بلعد (handler های pinch-zoom).
+        assertTrue("if (text.contains(\"Ignored attempt to cancel\")) return true" in dialog)
+    }
+
     @Test
     fun `direct print shows the a4 sheet in place instead of a white page`() {
         // کلاسِ حالتِ چاپ: ابزارها/کارت‌های HTML پنهان، برگه در جایِ اصلی:
         assertTrue("body.qmf-print-mode" in asset)
-        assertTrue("body.qmf-print-mode #printContent.live-preview{display:block !important" in asset)
+        assertTrue("body.qmf-print-mode #printContent.live-preview{" in asset)
+        // V99.2e — روی موبایل برگه دیگر تمام‌صفحهٔ سفید نمی‌شود:
+        // عرضِ محدود + زمینهٔ خاکستریِ روشن + حاشیه/سایهٔ قوی.
+        assertTrue("width:min(210mm, 92vw) !important" in asset)
+        assertTrue("body.qmf-print-mode{background:#cbd5e1 !important}" in asset)
         assertTrue("body.qmf-print-mode .toolbar" in asset)
         // دیالوگ در حالتِ چاپِ مستقیم کلاس را اضافه می‌کند:
         assertTrue("document.body.classList.add('qmf-print-mode')" in dialog)

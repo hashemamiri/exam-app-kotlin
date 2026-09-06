@@ -3310,13 +3310,18 @@ require("if (initialPreview) {" in _v874_dlg
 # V99.2 — چاپِ مستقیم نباید صفحهٔ سفید بگذارد (برگه در جایِ اصلی) و
 # چیدمانِ پیش‌نمایش (موقعیتِ اشیاء + جداکننده) باید به وضعیتِ بومیِ
 # بیلدر برگردهد تا در بازِ بعدی/چاپ ریست نشود.
-require("body.qmf-print-mode #printContent.live-preview{display:block !important" in _v79_asset
+require("body.qmf-print-mode #printContent.live-preview{" in _v79_asset
+        and "width:min(210mm, 92vw) !important" in _v79_asset
+        and "body.qmf-print-mode{background:#cbd5e1 !important}" in _v79_asset
         and "document.body.classList.add('qmf-print-mode')" in _v874_dlg
         and "window.__qmfFigLayoutsSnapshot = function ()" in _v79_asset
         and "n.figLayouts = {};" in _v79_asset
         and "onFigLayouts: ((String) -> Unit)? = null" in _v874_dlg
         and "fun applyFigLayouts(snapshotJson: String)" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(encoding="utf-8"),
         "V99.2 direct print must show the sheet (no white page) and preview layouts must round-trip to the builder")
+# V99.2d — هشدارهای بی‌ضررِ کنسول (touchmove) نباید نوارِ قرمزِ خطا بزنند.
+require("if (text.contains(\"Ignored attempt to cancel\")) return true" in _v874_dlg,
+        "V99.2d benign console warnings must not show the red error banner")
 require("window.ExamPrintNative.previewClosed()" in _v79_asset
         and "fun previewClosed()" in _v874_dlg,
         "V89.5 closing the preview must bring the cards back")
