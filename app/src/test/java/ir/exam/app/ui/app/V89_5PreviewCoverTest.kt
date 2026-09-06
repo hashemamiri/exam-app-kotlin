@@ -25,7 +25,8 @@ class V89_5PreviewCoverTest {
     @Test
     fun `the card list steps aside while the preview is open`() {
         // بدونِ سؤال فهرست خالی بود و مشکل دیده نمی‌شد؛ با سؤال چشم بی‌اثر بود
-        assertTrue("if (cardDetails.isNotEmpty() && !previewOpen) {" in dialog)
+        // V99.1 — و در چاپِ مستقیم (initialPrintMode != null) هم کارت‌ها پنهان‌اند.
+        assertTrue("if (cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null) {" in dialog)
         assertTrue("if (r?.contains(\"ok\") == true) previewOpen = true" in dialog)
     }
 

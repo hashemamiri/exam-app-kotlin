@@ -57,11 +57,13 @@ class V89_6LivePreviewCssTest {
     @Test
     fun `a free figure may rise above its natural position`() {
         // V93 — شناور فقط کفِ صفر دارد: سقفِ سلولِ اندازه‌گیری‌شده حذف شد
-        // (سقفِ منفی شیء را به بالا می‌پراند و قفل می‌کرد)؛ سلول با minHeight
-        // همراهِ شیء رشد می‌کند تا از سلولِ خودش بیرون نزند.
+        // (سقفِ منفی شیء را به بالا می‌پراند و قفل می‌کرد).
+        // V99.1 — سلول با minHeight رشد نمی‌کند (همان رشد، خطوطِ کادرِ سؤال را
+        // جابه‌جا می‌کرد)؛ ارتفاعِ کادر را slotِ شیء در جریانِ متن نگه می‌دارد.
         assertTrue("Math.min(maxY, y)" !in asset)
         assertTrue("y = Math.max(0, y);" in asset)
-        assertTrue("parent.style.minHeight = need + 'px';" in asset)
+        assertTrue("parent.style.minHeight = need + 'px';" !in asset)
+        assertTrue("function syncFigFlowSlot(qId, figIndex, makingFree) {" in asset)
     }
 
     @Test

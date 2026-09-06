@@ -307,7 +307,7 @@ fun ExamPrintCenterScreen(
     printTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { printTarget = null },
-            title = { Text("چاپ") },
+            title = { Text("چاپ آزمون") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(

@@ -64,10 +64,12 @@ class V62_7PrintCenterStudentPreviewTest {
         assertTrue("Text(\"تکثیر با کسر هزینه\")" in card)
         assertTrue("Text(\"صادرکردن\")" in card)
         // چاپ‌ها از کارت آزمون حذف شده‌اند؛ V76.0 — چاپ فقط از نسخهٔ 30 است
+        // V99.1 — پرینتر حالا چاپِ مستقیم است: برچسبِ «چاپ با کلید» فقط داخلِ
+        // منوی چاپ (AlertDialog) هست، نه روی خودِ کارت.
         assertFalse("چاپ برگه" in card)
         assertFalse("چاپ با کلید" in card)
         assertFalse("چاپ برگه" in printCenter)
-        assertFalse("چاپ با کلید" in printCenter)
+        assertTrue("چاپ با کلید (پاسخ‌نامه)" in printCenter)
     }
 
     @Test
