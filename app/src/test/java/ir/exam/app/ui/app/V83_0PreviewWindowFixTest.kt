@@ -43,7 +43,7 @@ class V83_0PreviewWindowFixTest {
     @Test
     fun `print zoom rules are untouched`() {
         // مسیر چاپ خارج از دامنه است و نباید دست بخورد
-        assertTrue("zoom:.42 !important" in assetText)
+        assertTrue("zoom:.30 !important" in assetText)
         assertTrue("zoom:1 !important" in assetText)
     }
 

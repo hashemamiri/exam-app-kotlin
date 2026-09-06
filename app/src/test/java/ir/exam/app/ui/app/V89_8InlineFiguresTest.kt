@@ -55,7 +55,9 @@ class V89_8InlineFiguresTest {
             "onInsertFigure", "onInsertGraph", "onInsertTable", "onInsertPeriodic",
             "onInsertAnatomy", "onInsertPhysics", "onInsertChemistry"
         ).forEach { assertTrue("$it وصل نیست", "$it =" in cards) }
-        assertTrue("onOpenFormula = { _, selStart, _ ->" in cards)
+        // V92 — بازهٔ انتخاب (start/end) تا ویرایشگرِ فرمول منتقل می‌شود
+        assertTrue("onOpenFormula = { _, selStart, selEnd ->" in cards)
+        assertTrue("onOpenTool(FigureToolRequest.FORMULA, selStart, selEnd)" in cards)
     }
 
     @Test

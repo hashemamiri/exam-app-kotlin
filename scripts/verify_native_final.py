@@ -2969,8 +2969,8 @@ require("window.qmfFitPreviewScale" in _v79_asset, "V83.0 height compensation is
 require("ResizeObserver" in _v79_asset, "V83.0 the preview must recompute on resize")
 require("window.__qmfPreviewDiag" in _v79_asset, "V83.0 preview diagnostic is missing")
 require("__qmfPreviewDiag" in _v80_dialog, "V83.0 diagnostic not wired to the button")
-# قوانین zoom مسیر چاپ دست‌نخورده
-require("zoom:.42 !important" in _v79_asset, "V83.0 print zoom must stay")
+# قوانین zoom مسیر چاپ دست‌نخورده (V92: ضریبِ اشیاءِ غیرفرمولی ۰٫۴۲ → ۰٫۳۰)
+require("zoom:.30 !important" in _v79_asset, "V83.0 print zoom must stay")
 require("#previewWinOverlay #printContent.live-preview{display:block !important}" in _v79_asset,
         "V83.0 the overlay reveal rule must stay")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V83_0PreviewWindowFixTest.kt").exists(),
@@ -3917,6 +3917,27 @@ require("cardDetails.isEmpty() && !previewOpen && !loading" in _v874_dlg,
         "V91 the print builder needs a native empty state")
 require("parentH: Math.max(1, pr.height || parent.clientHeight || 0)" in _v79_asset,
         "V91 the question cell height must be measured for the vertical clamp")
+
+# V92 — شش گزارشِ کاربر: فرمولِ خالی، اندازهٔ ۳۰٪/۷۰٪، کوچک‌شدن با لمس،
+# محوِ ستونِ بارم در چاپ، مسدودشدنِ حرکت، و بازشدنِ سازندهٔ قدیمی.
+require("zoom:.30 !important" in _v79_asset and "max-width:30% !important" in _v79_asset,
+        "V92 non-formula objects must shrink to 30 percent")
+require("transform:scale(3.3333) !important" in _v79_asset,
+        "V92 the delete/edit buttons must compensate the new 0.30 zoom")
+require("<style id=\"qmf-print-box-clean-v92\">" in _v79_asset,
+        "V92 print needs the box-removal style so the score column stays visible")
+require("storedH: Number.isFinite(+layout.h)," in _v79_asset
+        and "d.fig.style.removeProperty('height');" in _v79_asset,
+        "V92 pure move must not rewrite the height (touch must not shrink objects)")
+require("fig.style.zIndex = String(z0);" in _v79_asset
+        and "setFigLayout(qid, idx, { z: zz })" in _v79_asset,
+        "V92 the touched object must rise to the top layer")
+require("onOpenFormula = { _, selStart, selEnd ->" in _v898_cards
+        and "selectionEnd = endCaret," in _v874_dlg,
+        "V92 the formula selection range must reach the formula editor")
+require("cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded" in _v874_dlg
+        and "background(Color(0xFFEEF2F7))" in _v874_dlg,
+        "V92 the native card list must open first even when questions exist")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

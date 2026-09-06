@@ -203,7 +203,9 @@ fun PrintQuestionCard(
     onOptionCount: (action: String, index: Int) -> Unit,
     onEditPair: (index: Int, side: String, value: String) -> Unit,
     onAction: (action: String) -> Unit,
-    onOpenTool: (tool: String, cursor: Int) -> Unit,
+    /* V92 — بازهٔ انتخاب (start/end) هم رد می‌شود تا فرمولِ دابل‌کلیک‌شده
+       با متنِ `$…$`‌اش در ویرایشگر از قبل بارگذاری شود، نه خالی. */
+    onOpenTool: (tool: String, cursor: Int, endCursor: Int) -> Unit,
     onOpenImageStudio: () -> Unit,
     /* V90 — لمسِ دوم روی یک شکلِ درون‌متنی: مشخصاتِ توکن و بازهٔ آن برای
        بازکردنِ همان پنجرهٔ بومی در حالتِ ویرایش. */
@@ -312,14 +314,16 @@ fun PrintQuestionCard(
                             text = value
                             onEditField("text", value)
                         },
-                        onInsertFigure = { off -> onOpenTool("figure", off) },
-                        onInsertGraph = { off -> onOpenTool("graph", off) },
-                        onInsertTable = { off -> onOpenTool("table", off) },
-                        onInsertPeriodic = { off -> onOpenTool("periodic", off) },
-                        onInsertAnatomy = { off -> onOpenTool("anatomy", off) },
-                        onInsertPhysics = { off -> onOpenTool("physics", off) },
-                        onInsertChemistry = { off -> onOpenTool("chemistry", off) },
-                        onOpenFormula = { _, selStart, _ -> onOpenTool(FigureToolRequest.FORMULA, selStart) },
+                        onInsertFigure = { off -> onOpenTool("figure", off, off) },
+                        onInsertGraph = { off -> onOpenTool("graph", off, off) },
+                        onInsertTable = { off -> onOpenTool("table", off, off) },
+                        onInsertPeriodic = { off -> onOpenTool("periodic", off, off) },
+                        onInsertAnatomy = { off -> onOpenTool("anatomy", off, off) },
+                        onInsertPhysics = { off -> onOpenTool("physics", off, off) },
+                        onInsertChemistry = { off -> onOpenTool("chemistry", off, off) },
+                        onOpenFormula = { _, selStart, selEnd ->
+                            onOpenTool(FigureToolRequest.FORMULA, selStart, selEnd)
+                        },
                         onEditFigureToken = { specJson, occurrenceIndex, start, end ->
                             onEditFigure(specJson, occurrenceIndex, start, end)
                         },

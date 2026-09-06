@@ -72,7 +72,7 @@ class V84_0PreviewInlineDisplayTest {
 
     @Test
     fun `print zoom rules remain untouched`() {
-        assertTrue("zoom:.42 !important" in assetText)
+        assertTrue("zoom:.30 !important" in assetText)
         assertTrue("zoom:1 !important" in assetText)
     }
 

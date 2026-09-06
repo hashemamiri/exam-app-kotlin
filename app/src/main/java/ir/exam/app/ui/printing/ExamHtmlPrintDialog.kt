@@ -118,6 +118,9 @@ fun ExamHtmlPrintDialog(
     onDismiss: () -> Unit
 ) {
     var loading by remember { mutableStateOf(true) }
+    // V92 — فهرستِ بومیِ کارت‌ها یک‌بار بارگذاری شده باشد؛ تا آن موقع صفحهٔ
+    // راهنمایِ «هنوز سؤالی نیست» نمایش داده نشود (با سؤال‌های موجود فلش می‌زد).
+    var cardsLoaded by remember { mutableStateOf(false) }
     var jsError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     // V76.3 — ارجاع WebView برای فرمان‌های نوار بومی + پیام وضعیت
@@ -130,6 +133,9 @@ fun ExamHtmlPrintDialog(
     var formulaTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     // V90 — محلِ مکان‌نما هنگامِ بازکردنِ ویرایشگرِ فرمول (B2)؛ -۱ یعنی انتها.
     var formulaCaret by remember { mutableIntStateOf(-1) }
+    // V92 — انتهایِ بازهٔ انتخابِ فرمول (`$…$`)؛ اگر برابر با مکان‌نما باشد
+    // ویرایشگر چیزی برای پیش‌بارگذاری ندارد و خالی باز می‌شود.
+    var formulaEnd by remember { mutableIntStateOf(-1) }
     // V78.1 — نوارِ بومیِ مدیریت سؤال
     var questionRows by remember { mutableStateOf<List<QuestionRow>>(emptyList()) }
     var questionTotal by remember { mutableStateOf("") }
@@ -597,7 +603,17 @@ fun ExamHtmlPrintDialog(
                     )
 
                     if (loading) {
-                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                        // V92 — تا آماده‌شدنِ صفحه، یک سطحِ بومیِ مات روی WebView
+                        // می‌نشیند تا «سازندهٔ قدیمیِ HTML» (کارت‌ها و دکمه‌هایش)
+                        // قبل از فهرستِ بومی دیده نشود.
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFEEF2F7)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
 
                     // V81.0 — نتیجهٔ «بررسی فرمول»: متنِ قابل خواندن و قابل انتخاب،
@@ -700,12 +716,15 @@ fun ExamHtmlPrintDialog(
                                     },
                                     /* V89.7 — محلِ مکان‌نما پیش از بازکردنِ ابزار
                                        ثبت می‌شود تا شیء داخلِ متن درج شود، نه ته آن. */
-                                    onOpenTool = { tool, cursor ->
+                                    onOpenTool = { tool, cursor, endCursor ->
                                         runJs(
                                             "(function(){try{return window.__qmfSetInsertPos?window.__qmfSetInsertPos(" +
                                                 cursor + "):'missing'}catch(e){return 'err'}})()"
                                         ) {
-                                            if (tool == FigureToolRequest.FORMULA) formulaCaret = cursor
+                                            if (tool == FigureToolRequest.FORMULA) {
+                                                formulaCaret = cursor
+                                                formulaEnd = endCursor
+                                            }
                                             figureTool = FigureToolRequest(detail.id, tool)
                                         }
                                     },
@@ -735,7 +754,7 @@ fun ExamHtmlPrintDialog(
                     /* V91 — حالتِ خالیِ بومی: وقتی هنوز سؤالی ساخته نشده،
                        به‌جای صفحهٔ خالیِ WebView یک راهنمایِ بومی می‌آید تا
                        پنجرهٔ آزمون‌سازِ چاپی از همان ابتدا بومی دیده شود. */
-                    if (cardDetails.isEmpty() && !previewOpen && !loading) {
+                    if (cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1034,6 +1053,7 @@ fun ExamHtmlPrintDialog(
                 runJs("(function(){try{return window.__qmfAllQuestions?window.__qmfAllQuestions():'[]'}catch(e){return '[]'}})()") { raw ->
                     val list = parsePrintQuestionList(unwrapJsString(raw))
                     cardDetails = list
+                    cardsLoaded = true
                     if (list.isEmpty()) {
                         openCardId = null
                     } else if (openCardId == null || list.none { it.id == openCardId }) {
@@ -1167,14 +1187,18 @@ fun ExamHtmlPrintDialog(
             formulaTarget?.let { (qid, text) ->
                 // V90 — محلِ مکان‌نما همان جایی است که کاربر فرمول را خواسته بود
                 val caret = if (formulaCaret in 0..text.length) formulaCaret else text.length
+                // V92 — بازهٔ انتخاب (`$…$`) تا انتها منتقل می‌شود تا ویرایشگر
+                // متنِ فرمول را پیش‌بارگذاری کند (نه ویرایشگرِ خالی).
+                val endCaret = if (formulaEnd in caret..text.length) formulaEnd else caret
                 FormulaHostDialog(
                     initialText = text,
                     selectionStart = caret,
-                    selectionEnd = caret,
-                    onDismiss = { formulaTarget = null; formulaCaret = -1 },
+                    selectionEnd = endCaret,
+                    onDismiss = { formulaTarget = null; formulaCaret = -1; formulaEnd = -1 },
                     onResult = { newText ->
                         formulaTarget = null
                         formulaCaret = -1
+                        formulaEnd = -1
                         if (newText != text) {
                             val b64 = android.util.Base64.encodeToString(
                                 newText.toByteArray(Charsets.UTF_8),

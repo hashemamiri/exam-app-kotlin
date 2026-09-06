@@ -16504,3 +16504,72 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```
 
 پچ: V91_print_preview_restore_fixes — بدون SQL.
+
+## ۳۱۴) V92 — رفع ۶ گزارشِ جدیدِ کاربر از آزمون‌سازِ چاپی
+
+پس از تستِ واقعیِ کاربر (عکسِ پیوست)، شش ایرادِ جدید رفع شد. فایل‌ها:
+`exam_print.html` (موتورِ WebView)، `ExamHtmlPrintDialog.kt` و
+`PrintQuestionCards.kt` (میزبانِ بومی). SQL/Edge جدید ندارد.
+
+### ۱) ویرایشگرِ فرمول بعد از دابل‌کلیک خالی بود
+- ریشه: زنجیرهٔ «بازهٔ انتخاب» فقط **شروع** را رد می‌کرد و پایان را جا
+  می‌انداخت. `onOpenFormula` در `PrintQuestionCards.kt` فقط `selStart` را
+  می‌فرستاد؛ `ExamHtmlPrintDialog` فقط یک `formulaCaret` ذخیره می‌کرد و
+  `selectionStart == selectionEnd` به `formula.html` می‌رسید؛ `openMath()`
+  هم فقط وقتی یک بازهٔ `$…$` در انتخاب باشد TeX را پیش‌بارگذاری می‌کند،
+  وگرنه خالی می‌ماند.
+- حالا بازهٔ کامل منتقل می‌شود: `onOpenTool(tool, cursor, endCursor)`،
+  حالتِ `formulaEnd`، و `selectionStart/selectionEnd` متفاوت در
+  `FormulaHostDialog` — پس فرمولِ دابل‌کلیک‌شده از قبل در ویرایشگر هست.
+
+### ۲) اندازهٔ اشیاء: غیرفرمولی ۳۰٪، فرمول ۷۰٪
+- بلوکِ `qmf-nonformula-size-final-css`: `zoom:.42 / max-width:42%` →
+  `zoom:.30 / max-width:30%`؛ جبرانِ دکمه‌های × و ✎ از `scale(2.38)` به
+  `scale(3.3333)` (یعنی ۱/۰٫۳۰) در هر سه بلوک (`qmf-nonformula-size-final-css`،
+  `qmf-r11-click-selection-css`، `qmf-bigger-btns`).
+- فرمول (`.qmf-atom` با `font-size:.7em`) دست‌نخورده در ۷۰٪ ماند.
+
+### ۳) با لمس، شیء در پیش‌نمایش یک‌باره کوچک می‌شد
+- ریشه: `applyFigGeometry` در هر جابه‌جاییِ خالص هم `height` ثابت می‌نوشت؛
+  این کار قانونِ `[style*="height"]` (`object-fit:contain`) را فعال می‌کرد و
+  محتوای شیء با نخستین لمس در یک قابِ ارتفاع‌دار جمع می‌شد.
+- حالا ارتفاع فقط هنگامِ تغییرِ اندازه یا وقتی از قبل ذخیره شده نوشته می‌شود
+  (`if (d.resizing || d.storedH)`)، وگرنه `removeProperty('height')`؛ پس
+  جابه‌جاییِ خالص اندازه را دست نمی‌زند.
+
+### ۴) ستونِ بارم در چاپ محو می‌شد
+- ریشه: حذفِ کادرِ سفید در V91 فقط برای `#previewArea` (صفحهٔ نمایش) بود؛
+  در `@media print` کادرِ سفید و `zoom:1` می‌ماند و شیءِ بزرگ‌شده روی ستونِ
+  ۶٪ بارم می‌نشست.
+- بلوکِ جدیدِ `qmf-print-box-clean-v92`: در چاپ کادرِ سفیدِ `.qmf-fig` حذف
+  می‌شود و شیءِ شناور (`fig-free`) به جریانِ عادی برمی‌گردد و `max-width:100%`
+  می‌گیرد تا از ستونِ متن بیرون نزند.
+
+### ۵) جابه‌جایی آزاد نبود؛ شیءِ دیگر جلویش را می‌گرفت
+- ریشه: شیءِ لمس‌شده بالاترین لایه نمی‌شد و شیءِ روییِ هم‌پوشان جلوی درگ را
+  می‌گرفت.
+- حالا در `pointerdown` شیءِ لمس‌شده `z = qmfNextFigZ(q)` می‌گیرد
+  (`fig.style.zIndex = String(z0)`)، و برای شیءِ از قبل شناور هم همان لحظه
+  `setFigLayout(qid, idx, { z: zz })` می‌شود تا همیشه روی بقیه باشد.
+
+### ۶) با وجودِ سؤال، اول سازندهٔ قدیمیِ WebView باز می‌شد
+- ریشه: در حالتِ `loading` فقط یک اسپینرِ شفاف وسطِ WebView بود، پس صفحهٔ
+  HTML (کارت‌ها و دکمه‌هایش) پشتش دیده می‌شد؛ و پیش از رسیدنِ فهرستِ بومی،
+  حالتِ خالیِ «هنوز سؤالی نیست» برای آزمونی که سؤال داشت فلش می‌زد.
+- حالا در `loading` یک سطحِ بومیِ مات (`background(Color(0xFFEEF2F7))`) روی
+  WebView می‌نشیند، و حالتِ خالی فقط بعد از بارگذاریِ واقعیِ فهرست با
+  `cardsLoaded` نمایش داده می‌شود.
+
+### راستی‌آزمایی
+- `testDebugUnitTest`: همهٔ تست‌ها سبز (شامل تستِ جدید `V92_0PrintPolishTest`).
+- `lintDebug`: BUILD SUCCESSFUL.
+- `scripts/verify_native_final.py`: PASS (`FINAL_NATIVE_VERIFY=PASS`).
+- سینتکسِ ۱۷ اسکریپتِ درونِ `exam_print.html` با `node --check`: ۰ خطا.
+- پین‌های به‌روزشده: `zoom:.42` → `zoom:.30` در V83/V84/V85 و verify؛
+  فاصلهٔ مجازِ V89.7 به ۶۰۰ کاراکتر.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+پچ: V92_print_polish_fixes — بدون SQL.

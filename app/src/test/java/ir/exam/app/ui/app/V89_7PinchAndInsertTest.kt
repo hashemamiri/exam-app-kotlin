@@ -37,8 +37,10 @@ class V89_7PinchAndInsertTest {
 
     @Test
     fun `the host records the cursor before opening the tool`() {
+        // V92 — بازهٔ انتخابِ فرمول هم اینجا ثبت می‌شود، پس فاصلهٔ مجاز
+        // بین ثبتِ مکان‌نما و بازکردنِ ابزار کمی بیشتر شد (همان دستور هنوز).
         assertTrue(
-            Regex("__qmfSetInsertPos[\\s\\S]{0,300}figureTool = FigureToolRequest")
+            Regex("__qmfSetInsertPos[\\s\\S]{0,600}figureTool = FigureToolRequest")
                 .containsMatchIn(dialog)
         )
     }

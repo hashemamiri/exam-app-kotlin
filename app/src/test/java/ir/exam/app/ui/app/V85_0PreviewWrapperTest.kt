@@ -85,6 +85,6 @@ class V85_0PreviewWrapperTest {
         assertTrue("ExamPrintNative.editFigureTool" in assetText)          // V82.0
         assertTrue("getComputedStyle(f).display !== 'none'" in assetText)  // V81.0
         assertTrue("f.src = MATH_EDITOR_URL" in assetText)                 // V79.0
-        assertTrue("zoom:.42 !important" in assetText)                     // چاپ دست‌نخورده
+        assertTrue("zoom:.30 !important" in assetText)                     // چاپ دست‌نخورده
     }
 }

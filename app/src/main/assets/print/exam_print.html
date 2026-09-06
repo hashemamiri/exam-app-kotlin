@@ -11763,24 +11763,51 @@ function installWordPaste(w) {
 </style>
 
 <style id="qmf-nonformula-size-final-css">
-/* به جز فرمول، همهٔ آیتم‌های تصویری/ابزاری داخل متن سؤال ۴۰٪ دیگر کوچک‌تر شوند: 70% × 60% = 42% */
+/* V92 — به جز فرمول، همهٔ آیتم‌های تصویری/ابزاری داخل متن سؤال به ۳۰٪
+   اندازهٔ طبیعی می‌رسند (۷۰٪ کوچک‌تر)؛ فرمول‌ها دست‌نخورده در ۷۰٪ می‌مانند. */
 .qmf-surface .qmf-fig,
 .qmf-surface .qmf-fig.qmf-gra,
 .qmf-surface .qmf-fig.qmf-tab,
 .qmf-surface .qmf-fig.qmf-pt,
 .qmf-surface .qmf-fig.qmf-sc,
 .qmf-surface .qmf-fig:has(.an-plate){
-  zoom:.42 !important;
-  max-width:42% !important;
+  zoom:.30 !important;
+  max-width:30% !important;
   transform-origin:top right !important;
 }
 .qmf-surface .qmf-fig.is-on > .qmf-del{
   left:10px !important;
   top:10px !important;
-  transform:scale(2.38) !important;
+  transform:scale(3.3333) !important;
   transform-origin:top left !important;
 }
 @media print{.qmf-surface .qmf-fig{zoom:1 !important;max-width:100% !important}.qmf-del{display:none !important}}
+</style>
+
+<style id="qmf-print-box-clean-v92">
+/* V92 — در چاپ هم کادرِ سفیدِ هر شیء (background/padding/سایه) حذف می‌شود تا
+   روی ستونِ ۶٪ «بارم» نیفتد و آن را محو نکند (گزارشِ کاربر). شیءِ شناور نیز
+   در چاپ از جریانِ متن بیرون نمی‌ماند و داخلِ ستونِ سؤال جا می‌گیرد. */
+@media print{
+  .interactive-figure .qmf-fig,
+  .q-rich-content .qmf-fig{
+    background:transparent !important;
+    box-shadow:none !important;
+    padding:0 !important;
+    border-radius:0 !important;
+    margin:0 auto !important;
+  }
+  .interactive-figure.fig-free{
+    position:relative !important;
+    right:auto !important;
+    left:auto !important;
+    top:auto !important;
+    z-index:auto !important;
+    margin:8px auto !important;
+    width:auto !important;
+    max-width:100% !important;
+  }
+}
 </style>
 
 <style id="separator-print-apply-fix">
@@ -11829,7 +11856,7 @@ function installWordPaste(w) {
 /* داخل شکلهای zoom شده (۰٫۴۲) همان جبرانبزرگنمایی ضربدر را برای ✎ هم اعمال میکنیم، گوشهٔ مقابل */
 .qmf-surface .qmf-fig.is-on>.qmf-edit{
   left:auto !important;right:10px !important;top:10px !important;
-  transform:scale(2.38) !important;transform-origin:top right !important;
+  transform:scale(3.3333) !important;transform-origin:top right !important;
 }
 @media print{.qmf-edit{display:none !important}}
 </style>
@@ -13539,12 +13566,18 @@ function initPreviewFigureEditing() {
           var fr = fig.getBoundingClientRect(), pr2 = pb.getBoundingClientRect();
           var k0 = previewScale();
           var qid0 = fig.dataset.qid, idx0 = fig.dataset.figIndex;
+          /* V92 — شیءِ لمس‌شده همان‌جا بالاترین لایه می‌شود تا شیءِ دیگر
+             جلوی جابه‌جایی‌اش را نگیرد (گزارشِ «حرکت آزاد نیست»). */
+          var q0 = (typeof questions !== 'undefined')
+            ? questions.find(function (x) { return String(x.id) === String(qid0); }) : null;
+          var z0 = (q0 && typeof qmfNextFigZ === 'function') ? qmfNextFigZ(q0) : 1;
           var patch = {
             free: true,
             x: Math.max(0, Math.round((pr2.right - fr.right) / k0)),
             y: Math.round((fr.top - pr2.top) / k0),
             w: Math.round(fr.width / k0),
-            h: Math.round(fr.height / k0)
+            h: Math.round(fr.height / k0),
+            z: z0
           };
           if (typeof setFigLayout === 'function') setFigLayout(qid0, idx0, patch);
           fig.classList.add('fig-free');
@@ -13553,6 +13586,7 @@ function initPreviewFigureEditing() {
           fig.style.right = patch.x + 'px';
           fig.style.left = 'auto';
           fig.style.top = patch.y + 'px';
+          fig.style.zIndex = String(z0);
         }
       } catch (err) {}
     }
@@ -13588,11 +13622,26 @@ function initPreviewFigureEditing() {
     const rect = fig.getBoundingClientRect();
     const handle = e.target.closest && e.target.closest('.fig-resize-handle');
     const resizing = !!handle;
+    /* V92 — شیءِ لمس‌شده همیشه بالاترین لایه می‌شود؛ وگرنه شیءِ روییِ
+       هم‌پوشان جلوی درگ را می‌گرفت و «حرکت آزاد نیست» به نظر می‌رسید. */
+    try {
+      const qz = questions.find(q => String(q.id) === String(qid));
+      if (qz && typeof qmfNextFigZ === 'function' && typeof setFigLayout === 'function') {
+        const zz = qmfNextFigZ(qz);
+        fig.style.zIndex = String(zz);
+        setFigLayout(qid, idx, { z: zz });
+      }
+    } catch (ez) {}
     drag = { fig, qid, idx, resizing, edge:(handle && handle.dataset && handle.dataset.edge) || 'l', sx:e.clientX, sy:e.clientY,
       x:Number.isFinite(+layout.x) ? +layout.x : (parseFloat(fig.style.marginRight || fig.style.getPropertyValue('--fig-x') || '0') || 0),
       y:Number.isFinite(+layout.y) ? +layout.y : (parseFloat(fig.style.top || fig.style.getPropertyValue('--fig-y') || '0') || 0),
       w:px(layout.w) || (rect.width / previewScale()),
-      h:px(layout.h) || (rect.height / previewScale()) };
+      h:px(layout.h) || (rect.height / previewScale()),
+      /* V92 — آیا ارتفاع از قبل ذخیره شده (تغییر اندازهٔ صریح)؟ فقط آن‌وقت
+         جابه‌جاییِ خالص اجازهٔ بازنویسیِ ارتفاع را دارد؛ در غیر این صورت
+         ارتفاع با محتوا می‌ماند تا با لمسِ ساده «کوچک نشود». */
+      storedH: Number.isFinite(+layout.h),
+      storedW: Number.isFinite(+layout.w) };
     /* V87.9 — یک‌بار اندازه بگیر، بعد فقط بنویس. */
     drag.cache = measureParent(fig);
     drag.raf = 0;
@@ -13668,7 +13717,16 @@ function initPreviewFigureEditing() {
     }
     d.fig.style.top = Math.max(0, c.y) + 'px';
     d.fig.style.width = 'min(' + c.w + 'px, calc(100% - 18px))';
-    d.fig.style.height = c.h + 'px';
+    /* V92 — جابه‌جاییِ خالص نباید ارتفاع را بازنویسی کند؛ نوشتنِ ارتفاعِ
+       ثابت، قانونِ `object-fit:contain` را فعال می‌کرد و محتوای شکل با
+       نخستین لمس یک‌باره کوچک می‌شد (گزارشِ «با لمس کوچک می‌شود»). فقط
+       هنگامِ تغییرِ اندازه یا اگر ارتفاع از قبل ذخیره شده بود، ارتفاع
+       نوشته می‌شود. */
+    if (d.resizing || d.storedH) {
+      d.fig.style.height = c.h + 'px';
+    } else {
+      d.fig.style.removeProperty('height');
+    }
     updateFigSizeBadge(d.fig, c.w, c.h);
     setFigLayout(d.qid, d.idx, {x:Math.round(c.x), y:Math.round(c.y), w:Math.round(c.w), h:Math.round(c.h)});
   }
@@ -14167,7 +14225,7 @@ loadSample();
 
 <style id="qmf-bigger-btns">
 /* FIX-QMF-BIGGER-BTNS: دکمه‌های × و ✎ بزرگ‌تر (درخواست کاربر) — اندازهٔ نهایی:
-   اتم فرمول zoom ندارد → 20px واقعی. فیگورها zoom والد 0.42 دارند → جبران با scale(2.3809) → 24px واقعی.
+   اتم فرمول zoom ندارد → 20px واقعی. فیگورها zoom والد 0.30 دارند → جبران با scale(3.3333) → 24px واقعی.
    آفست گوشه طوری است که مرکز آیتم کوچک برای کلیک دوم (ویرایش) آزاد بماند و overlap برنگردد. */
 .qmf-surface .qmf-atom.is-on > .qmf-del,
 .qmf-surface .qmf-atom[data-qmf-selected] > .qmf-del,
@@ -14215,7 +14273,7 @@ loadSample();
   left: -9px !important;
   top: -9px !important;
   right: auto !important;
-  transform: scale(2.3809) !important;
+  transform: scale(3.3333) !important;
   transform-origin: top left !important;
   font: 900 18px/22px Arial, sans-serif !important;
 }
@@ -14224,7 +14282,7 @@ loadSample();
   right: -9px !important;
   top: -9px !important;
   left: auto !important;
-  transform: scale(2.3809) !important;
+  transform: scale(3.3333) !important;
   transform-origin: top right !important;
   font: 700 16px/22px Arial, sans-serif !important;
 }
