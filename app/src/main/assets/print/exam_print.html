@@ -267,6 +267,11 @@
   .interactive-figure.selected { outline:2px dashed #2563eb; outline-offset:4px; border-radius:8px; }
   /* V86.5 — شیءِ شناور از جریانِ متن بیرون است و می‌تواند روی دیگری بنشیند */
   .interactive-figure.fig-free { position:absolute; margin:0; }
+  /* V99.1 — جایگاهی که فضای اصلیِ شیءِ شناور را در جریانِ متن نگه می‌دارد:
+     هنگامِ جابه‌جاییِ شیء، کادرِ سؤال و خطوطِ آن تکان نمی‌خورند و خروجیِ
+     چاپ با پیش‌نمایش یکی می‌ماند. فقط با انتخابِ صریحِ کاربر (بازگرداندنِ
+     شیء به جریان یا ویرایشِ سؤال) حذف می‌شود. */
+  .fig-flow-slot { display:block; break-inside:avoid; page-break-inside:avoid; }
   .exam-question-editor-shell, .q-rich-content { position:relative; }
   .fig-tools { position:absolute; top:-34px; right:0; display:none; gap:4px; z-index:9999;
     background:#1e3a8a; border-radius:8px; padding:3px; direction:rtl; }
@@ -12343,7 +12348,15 @@ function renderFigToken(raw, q, figIndex) {
     }
   }
   if (!q || figIndex == null) return figHtml;
-  return `<div class="interactive-figure${((q.figLayouts||{})[figIndex]||{}).free ? ' fig-free' : ''}" data-qid="${q.id}" data-fig-index="${figIndex}" style="${figLayoutStyle(q, figIndex)}">
+  /* V99.1 — شیءِ شناور: فضای اصلی‌اش در جریانِ متن با همان اندازهٔ لحظهٔ
+     شناور شدن (slot) نگه داشته می‌شود تا کادرِ سؤال و خطوطِ پاسخ با
+     جابه‌جاییِ شیء جابه‌جا نشوند و در چاپ هم دقیقاً همین دیده شود. */
+  const _fl991 = ((q.figLayouts||{})[figIndex]||{});
+  let _slot991 = '';
+  if (_fl991.free && _fl991.slot && Number.isFinite(+( _fl991.slot.h )) && +(_fl991.slot.h) > 0) {
+    _slot991 = `<div class="fig-flow-slot" style="width:${+( _fl991.slot.w ) || 360}px;height:${+( _fl991.slot.h )}px;margin:8px auto;"></div>`;
+  }
+  return _slot991 + `<div class="interactive-figure${_fl991.free ? ' fig-free' : ''}" data-qid="${q.id}" data-fig-index="${figIndex}" style="${figLayoutStyle(q, figIndex)}">
     ${figHtml}<span class="fig-size-badge"></span><span class="fig-resize-handle" data-edge="l" title="تغییر اندازه از چپ"></span><span class="fig-resize-handle" data-edge="r" title="تغییر اندازه از راست"></span><span class="fig-resize-handle" data-edge="t" title="تغییر اندازه از بالا"></span><span class="fig-resize-handle" data-edge="b" title="تغییر اندازه از پایین"></span><span class="fig-resize-handle" data-edge="bl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="br" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tr" title="تغییر اندازه"></span>
   </div>`;
 }
@@ -12373,6 +12386,53 @@ function setFigLayout(qId, figIndex, patch) {
   layouts[figIndex] = Object.assign({}, layouts[figIndex] || {}, patch || {});
 }
 
+/* V99.1 — همگام‌سازیِ «جای خالیِ جریان» (slot) با وضعیتِ شناورِ شیء:
+   - هنگامِ شناور شدن، اندازهٔ واقعیِ جعبهٔ شیء در جریان (offsetWidth/Height)
+     اندازه گرفته و در دادهٔ شیء ذخیره می‌شود و یک عنصر هم‌اندازه در همان
+     جایِ جریان درج می‌شود ⇒ کادرِ سؤال کوتاه نمی‌شود و خطوطِ متن/پاسخ
+     نمی‌پرند.
+   - هنگامِ برگشت به جریان (انتخابِ صریحِ کاربر)، slot حذف می‌شود.
+   slot در رندرِ بعدی از خودِ داده ساخته می‌شود (renderFigToken)، پس پیش‌نمایش
+   و چاپ یکی می‌مانند. */
+function syncFigFlowSlot(qId, figIndex, makingFree) {
+  if (typeof questions === 'undefined') return;
+  const q = questions.find(x => String(x.id) === String(qId));
+  if (!q) return;
+  const cur = (ensureFigLayouts(q)[figIndex]) || {};
+  const el = document.querySelector(
+    '.interactive-figure[data-qid="' + qId + '"][data-fig-index="' + figIndex + '"]');
+  if (makingFree && !cur.slot) {
+    let slot = null;
+    if (el && (el.offsetWidth || 0) > 0) {
+      slot = { w: el.offsetWidth, h: el.offsetHeight };
+    } else if (Number.isFinite(+cur.w) && Number.isFinite(+cur.h) && +cur.w > 0 && +cur.h > 0) {
+      slot = { w: +cur.w, h: +cur.h };
+    } else {
+      slot = { w: 360, h: 120 };
+    }
+    setFigLayout(qId, figIndex, { slot: slot });
+    try {
+      if (el && el.parentNode && !el.__figSlotEl) {
+        const s = document.createElement('div');
+        s.className = 'fig-flow-slot';
+        s.style.width = slot.w + 'px';
+        s.style.height = slot.h + 'px';
+        s.style.margin = '8px auto';
+        el.parentNode.insertBefore(s, el);
+        el.__figSlotEl = s;
+      }
+    } catch (e) {}
+  } else if (!makingFree && cur.slot) {
+    setFigLayout(qId, figIndex, { slot: null });
+    try {
+      if (el && el.__figSlotEl && el.__figSlotEl.parentNode) {
+        el.__figSlotEl.parentNode.removeChild(el.__figSlotEl);
+      }
+      if (el) el.__figSlotEl = null;
+    } catch (e) {}
+  }
+}
+
 /* V86.5 — کنترل‌هایِ «کنارِ هم / رویِ هم».
    حالتِ شناور شیء را از جریانِ متن بیرون می‌آورد؛ از آن پس دو شیء می‌توانند
    هم‌تراز بنشینند یا هم‌پوشانی کنند و `z` تصمیم می‌گیرد کدام جلوتر است.
@@ -12384,6 +12444,9 @@ function qmfToggleFigFree(qId, figIndex) {
   const el = document.querySelector(
     '.interactive-figure[data-qid="' + qId + '"][data-fig-index="' + figIndex + '"]');
   const patch = { free: !cur.free };
+  /* V99.1 — شناور شدن = رزروِ slot (خطوط ثابت می‌مانند)؛
+     بازگشت به جریان = حذفِ slot. هر دو انتخابِ صریحِ کاربرند. */
+  try { syncFigFlowSlot(qId, figIndex, !cur.free); } catch (se) {}
   /* هنگامِ شناور شدن، از جایِ فعلی شروع کن تا شیء نپرد */
   if (!cur.free && el) {
     const host = el.offsetParent || el.parentNode;
@@ -13463,9 +13526,9 @@ function initPreviewFigureEditing() {
     return {
       parent: parent,
       parentW: Math.max(1, (parent.clientWidth || pr.width || 0) - padR - padL),
-      /* V91 — ارتفاعِ سلولِ سؤال برای گیرهٔ عمودی (محدود به همان سؤال). */
-      parentH: Math.max(1, pr.height || parent.clientHeight || 0),
-      normalTop: (el.offsetTop || 0) - (parseFloat(el.style.top || '0') || 0),
+      /* V99.1 — اندازهٔ عمودیِ سلول دیگر در حینِ درگ خوانده/نوشته نمی‌شود:
+         ارتفاعِ کادرِ سؤال را slotِ شیء نگه می‌دارد و خطوط فقط با
+         انتخابِ صریحِ کاربر جابه‌جا می‌شوند. */
       elW: el.getBoundingClientRect().width,
       elH: el.getBoundingClientRect().height
     };
@@ -13492,17 +13555,11 @@ function initPreviewFigureEditing() {
        سلول با `minHeight` خودش همراهِ شیء رشد می‌کند، پس فقط کفِ صفر کافی است
        تا شیء از بالای سؤالِ خودش بیرون نزند و حرکتِ عمودی کاملاً آزاد بماند. */
     y = Math.max(0, y);
-    /* V87.9 — رشدِ ارتفاعِ والد فقط وقتی لازم است نوشته می‌شود؛ نوشتنِ
-       بی‌قیدِ آن در هر فریم، خواندنِ فریمِ بعد را باطل و بازچینش را اجباری
-       می‌کرد. */
-    try {
-      const need = Math.ceil(m.normalTop + y + h + 22);
-      const old = parseFloat(parent.dataset.figMinHeight || '0') || 0;
-      if (need > old) {
-        parent.dataset.figMinHeight = String(need);
-        parent.style.minHeight = need + 'px';
-      }
-    } catch(e) {}
+    /* V99.1 — سلول دیگر در حینِ درگ رشد نمی‌کند (minHeightِ قدیمی در هر
+       فریم خطوطِ کادرِ سؤال را جابه‌جا می‌کرد — همان «پرشِ خطوط»).
+       ارتفاعِ کادر را slotِ شیء در جریانِ متن نگه می‌دارد؛ پس خطوط
+       حینِ جابه‌جایی و پس از آن ثابت‌اند و فقط با انتخابِ صریحِ کاربر
+       (تعداد/فاصلهٔ خطوط، خطِ جداکننده، یا ویرایشِ سؤال) حرکت می‌کنند. */
     return {x,y,w,h};
   }
   /* V89.7 — دو انگشت = تغییرِ اندازه، یک انگشت = جابه‌جایی.
@@ -13613,6 +13670,9 @@ function initPreviewFigureEditing() {
       if (!drag.fig.classList.contains('fig-free')) {
         try {
           var qid0 = drag.qid, idx0 = drag.idx;
+          /* V99.1 — پیش از بیرون‌کردنِ شیء از جریانِ متن، جایِ اصلی‌اش را
+             رزرو کن (slot) تا خطوطِ کادرِ سؤال با آغازِ درگ نپرند. */
+          try { if (typeof syncFigFlowSlot === 'function') syncFigFlowSlot(qid0, idx0, true); } catch (se0) {}
           var q0 = (typeof questions !== 'undefined')
             ? questions.find(function (x) { return String(x.id) === String(qid0); }) : null;
           var z0 = (q0 && typeof qmfNextFigZ === 'function') ? qmfNextFigZ(q0) : 1;

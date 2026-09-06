@@ -16838,3 +16838,32 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```
 
 تحویل: اسکریپت خودکار apply_v99.py — بدون SQL.
+
+## ۳۲۲) V99.1 — حذف پنجرهٔ آزمون‌ساز چاپی از جریان چاپ و ثبات خطوط کادر سؤال هنگام جابه‌جایی اشیاء
+
+چهار ایراد گزارش‌شدهٔ کاربر برطرف شد:
+
+۱) **آیکن پرینتر دیگر پنجرهٔ آزمون‌ساز چاپی را باز نمی‌کند:** در کارت‌های آزمون (سرور و محلی) بخش «چاپ آزمون»، آیکن پرینتر حالا منوی کوچکی (چاپ آزمون (دانش‌آموز) / چاپ با کلید (پاسخ‌نامه)) نشان می‌دهد و چاپ مستقیم انجام می‌گیرد؛ آیکن مداد (ویرایش) دست‌نخورده باقی مانده و همچنان آزمون‌ساز را باز می‌کند.
+۲) **حذف پنجرهٔ میانیِ کارت‌ها در چاپ مستقیم:** در حالت `initialPrintMode` (student/teacher) فهرستِ بومیِ کارت‌های سؤال دیگر رندر نمی‌شود (`cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null`)؛ فقط WebView تمیز و سپس پنجرهٔ چاپِ اندروید با پیش‌نمایشِ خالصِ A4.
+۳) **ثبات خطوط هنگام جابه‌جایی اشیاء (رفع پرش):** مکانیزم رشدِ `minHeight` سلول در `clampToParent` (که در هر فریم خطوطِ کادر سؤال را جابه‌جا می‌کرد) به‌کلی حذف شد. به‌جای آن، هنگام شناور شدنِ شیء (درگ یا کلیدِ دستی) تابعِ تازهٔ `syncFigFlowSlot` فضای اصلیِ شیء را با یک عنصر هم‌اندازهٔ `.fig-flow-slot` در جریانِ متن رزرو می‌کند و اندازهٔ آن را در `q.figLayouts[i].slot` ذخیره می‌کند؛ `renderFigToken` در رندرهای بعدی slot را از خودِ داده می‌سازد ⇒ پیش‌نمایش و چاپ یکی می‌مانند.
+۴) **جابه‌جایی خطوط فقط با انتخابِ صریحِ کاربر:** slot فقط با دو انتخابِ صریح تغییر می‌کند — شناور/بازگشت به جریان (`qmfToggleFigFree` و آغازِ درگ)؛ و خطوطِ پاسخ فقط با فیلدهای کارت (تعداد/فاصلهٔ خطوط، خطِ جداکننده، ویرایشِ متن).
+
+### تغییرات فایل‌ها:
+- `app/src/main/assets/print/exam_print.html`: CSS `.fig-flow-slot`؛ تابع `syncFigFlowSlot(qId, figIndex, makingFree)`؛ درج slot در `renderFigToken`؛ رزرو slot در شاخهٔ درگ (پیش از `fig-free`) و `qmfToggleFigFree`؛ حذف بلوک رشد `minHeight` در `clampToParent` و حذف فیلدهای مردهٔ `parentH`/`normalTop` از `measureParent`.
+- `app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt`: شرط پنهان‌شدنِ کارت‌ها با `initialPrintMode == null`؛ رنگِ بارگذاری در چاپِ مستقیم (0xFF334155) با متن «در حال آماده‌سازی چاپ...». نکتهٔ مهم: در چاپِ مستقیم پنجرهٔ پیش‌نمایشِ HTML باز **نمی‌شود**، چون `@media print` overlay را پنهان می‌کند و محتوای چاپ داخلِ آن منتقل شده و خروجی خالی می‌ماند؛ برگهٔ A4 را خودِ پنجرهٔ چاپِ اندروید نشان می‌دهد.
+- `app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt`: `PrintTarget` (ServerExam/LocalExam) + `startPrint(target, mode)` + منوی چاپِ AlertDialog + `initialPrintMode = printModeFor` برای دیالوگ؛ پرینترِ هر دو نوع کارت به چاپِ مستقیم وصل شد.
+- `app/src/test/java/ir/exam/app/ui/app/V99_1PrintFlowLineStabilityTest.kt`: ۸ تستِ تازه.
+- `V87_9DragPerformanceTest.kt` / `V91_0PreviewRestoreFixTest.kt` / `V97_PrintAndFormulaFixesTest.kt`: به‌روزرسانی پین‌های تغییرکرده.
+- `scripts/verify_native_final.py`: باندهای V99.1 (slot، بدون minHeight، منوی چاپ، شرط کارت‌ها، چاپ بدون overlay).
+
+### راستی‌آزمایی
+- `scripts/verify_native_final.py`: `FINAL_NATIVE_VERIFY=PASS`.
+- سینتاکسِ ۱۷ بلوک `<script>` با `new Function` در Node: بدون خطا.
+- تست عملکردی jsdom روی خودِ asset (۱۶ چک): slot هنگامِ شناور شدن در اندازهٔ اصلی ساخته می‌شود و درست پیش از شیء رندر می‌گردد؛ بدونِ هیچ `min-height`؛ با بازگشت به جریان حذف می‌شود؛ مسیر درگ (`syncFigFlowSlot`) slot را ماندگارِ رندر می‌کند.
+- `./gradlew :app:test` و اجرای روی دستگاه: سمت کاربر.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+نکته: شمارهٔ V100 حذف شده و دوباره استفاده **نمی‌شود**؛ نسخهٔ بعدی V101 است.

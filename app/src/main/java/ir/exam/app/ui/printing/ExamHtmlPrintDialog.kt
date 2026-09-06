@@ -349,7 +349,7 @@ fun ExamHtmlPrintDialog(
             dismissOnClickOutside = false
         )
     ) {
-        Surface(Modifier.fillMaxSize(), color = if (initialPreview) Color(0xFF334155) else Color(0xFF1E3A8A)) {
+        Surface(Modifier.fillMaxSize(), color = if (initialPreview || initialPrintMode != null) Color(0xFF334155) else Color(0xFF1E3A8A)) {
             Column(Modifier.fillMaxSize()) {
                 // V93 — با باز شدنِ پیش‌نمایش، هدر محو می‌شود تا برگهٔ A4 تمام‌صفحه دیده شود.
                 androidx.compose.animation.AnimatedVisibility(
@@ -577,6 +577,12 @@ fun ExamHtmlPrintDialog(
                                                 when {
                                                     result?.contains("ok") == true -> post {
                                                         loading = false
+                                                        // V99.1 — در چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه) پنجرهٔ
+                                                        // پیش‌نمایشِ HTML باز نمی‌شود: آن پنجرهٔ overlay هنگامِ
+                                                        // چاپ پنهان می‌شود و چون محتوای چاپ داخلش منتقل شده،
+                                                        // خروجی چاپ خالی می‌ماند. برگهٔ خالصِ A4 را خودِ
+                                                        // پنجرهٔ چاپِ اندروید نمایش می‌دهد؛ پنجرهٔ کارت‌ها هم
+                                                        // (با شرطِ initialPrintMode) هرگز دیده نمی‌شود.
                                                         if (initialPreview) {
                                                             previewOpen = true
                                                             view.evaluateJavascript("(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()", null)
@@ -632,17 +638,20 @@ fun ExamHtmlPrintDialog(
                         Box(
                             Modifier
                                 .fillMaxSize()
-                                .background(if (initialPreview) Color(0xFF334155) else Color(0xFFEEF2F7)),
+                                .background(if (initialPreview || initialPrintMode != null) Color(0xFF334155) else Color(0xFFEEF2F7)),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                CircularProgressIndicator(color = if (initialPreview) Color.White else MaterialTheme.colorScheme.primary)
-                                if (initialPreview) {
+                                CircularProgressIndicator(color = if (initialPreview || initialPrintMode != null) Color.White else MaterialTheme.colorScheme.primary)
+                                if (initialPreview || initialPrintMode != null) {
                                     Text(
-                                        "در حال آماده‌سازی پیش‌نمایش برگه...",
+                                        // V99.1 — در چاپِ مستقیم متنِ «آماده‌سازی چاپ»؛
+                                        // برگهٔ A4 را پنجرهٔ چاپِ اندروید نمایش می‌دهد.
+                                        if (initialPrintMode != null) "در حال آماده‌سازی چاپ..."
+                                        else "در حال آماده‌سازی پیش‌نمایش برگه...",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color.White
                                     )
@@ -680,7 +689,10 @@ fun ExamHtmlPrintDialog(
                     /* V88.9 — فهرستِ بومیِ کارت‌ها روی WebView. کارتِ HTML با
                        کلاسِ `qmf-native-cards` پنهان شده، پس محتوای زیر همان
                        سربرگ و پیش‌نمایش است و کارت‌ها اینجا رندر می‌شوند. */
-                    if (cardDetails.isNotEmpty() && !previewOpen) {
+                    /* V99.1 — در چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه) پنجرهٔ
+                       کارت‌های آزمون‌ساز چاپی نباید نمایش داده شود؛ فقط
+                       برگهٔ خالصِ A4 و پنجرهٔ چاپِ اندروید می‌مانند. */
+                    if (cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null) {
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize()

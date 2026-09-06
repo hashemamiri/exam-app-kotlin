@@ -26,13 +26,14 @@ class V91_0PreviewRestoreFixTest {
 
     @Test
     fun `a dragged figure stays inside its own question cell`() {
-        // ارتفاعِ سلولِ سؤال اندازه‌گیری می‌شود …
-        assertTrue("parentH: Math.max(1, pr.height || parent.clientHeight || 0)" in asset)
-        // V93 — و شیءِ شناور با کفِ صفر داخلِ سلول می‌ماند؛ سلول با minHeight
-        // همراهِ شیء رشد می‌کند (سقفِ قدیمی حذف شد چون باعثِ پرش و قفل می‌شد).
+        // V93/V99.1 — شیءِ شناور با کفِ صفر داخلِ سلولِ سؤال می‌ماند (بالای
+        // سؤال بیرون نمی‌رود). V99.1 — سلول دیگر با minHeight رشد نمی‌کند؛
+        // ارتفاعِ کادر را slotِ شیء در جریانِ متن نگه می‌دارد تا خطوطِ
+        // کادر با جابه‌جاییِ شیء جابه‌جا نشوند.
         assertTrue("Math.min(maxY, y)" !in asset)
         assertTrue("y = Math.max(0, y);" in asset)
-        assertTrue("parent.style.minHeight = need + 'px';" in asset)
+        assertTrue("parent.style.minHeight = need + 'px';" !in asset)
+        assertTrue("function syncFigFlowSlot(qId, figIndex, makingFree) {" in asset)
     }
 
     @Test

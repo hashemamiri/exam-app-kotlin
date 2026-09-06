@@ -44,9 +44,14 @@ class V87_9DragPerformanceTest {
     }
 
     @Test
-    fun `the parent only grows, never rewritten on every frame`() {
-        assertTrue("if (need > old) {" in asset)
-        assertTrue("if (need > old || !parent.style.minHeight)" !in asset)
+    fun `the cell no longer grows during drag and the slot keeps its height`() {
+        // V99.1 — وقتی شیء شناور شد، فضای اصلی‌اش رزرو می‌شود (slot)؛ رشدِ
+        // سلول در هر فریم (minHeight) که خطوطِ کادرِ سؤال را جابه‌جا
+        // می‌کرد، به‌کلی برداشته شد.
+        assertTrue("parent.style.minHeight = need + 'px';" !in asset)
+        assertTrue("dataset.figMinHeight" !in asset)
+        assertTrue("fig-flow-slot" in asset)
+        assertTrue("function syncFigFlowSlot(qId, figIndex, makingFree) {" in asset)
     }
 
     @Test

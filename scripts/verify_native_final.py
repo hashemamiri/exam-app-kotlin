@@ -3287,8 +3287,26 @@ require("window.__qmfShowPreview = function" in _v79_asset
         "V89.3 the eye must always open the preview, never toggle it shut")
 
 # V89.5 — پوششِ پیش‌نمایش، حذفِ کنترل‌های داخلِ متن، و زنده‌شدنِ شیء
-require("if (cardDetails.isNotEmpty() && !previewOpen) {" in _v874_dlg,
-        "V89.5 the native card list must not cover the preview window")
+# V99.1 — و در چاپِ مستقیم (initialPrintMode != null) فهرستِ کارت‌ها هم
+# پنهان است: فقط برگهٔ خالصِ A4 و پنجرهٔ چاپِ اندروید باقی می‌ماند.
+require("if (cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null) {" in _v874_dlg,
+        "V89.5/V99.1 the native card list must not cover the preview or the direct print")
+# V99.1 — آیکنِ پرینتر در کارت‌های آزمون دیگر پنجرهٔ آزمون‌ساز چاپی را باز
+# نمی‌کند: نسخهٔ دانش‌آموز/پاسخ‌نامه انتخاب می‌شود، پنجرهٔ خالصِ A4 باز
+# می‌شود و سپس چاپ اجرا می‌گردد.
+_v991_center = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text(encoding="utf-8")
+require("printTarget = PrintTarget.ServerExam(exam.id)" in _v991_center
+        and "printTarget = PrintTarget.LocalExam(rec)" in _v991_center
+        and "fun startPrint(target: PrintTarget, mode: String)" in _v991_center,
+        "V99.1 printer icons must trigger direct print, not the print-builder window")
+require("initialPrintMode = printModeFor" in _v991_center,
+        "V99.1 the chosen print mode must reach the print dialog")
+# در چاپِ مستقیم پنجرهٔ پیش‌نمایشِ HTML (overlay) باز نمی‌شود: چون
+# @media print آن را پنهان می‌کند و محتوای چاپ داخلش منتقل شده، خروجی
+# چاپ خالی می‌ماند. برگهٔ خالصِ A4 را خودِ پنجرهٔ چاپِ اندروید نشان می‌دهد.
+require("if (initialPreview) {" in _v874_dlg
+        and "if (initialPrintMode == \"student\") {" in _v874_dlg,
+        "V99.1 direct print must run the print pipeline without opening the html preview overlay")
 require("window.ExamPrintNative.previewClosed()" in _v79_asset
         and "fun previewClosed()" in _v874_dlg,
         "V89.5 closing the preview must bring the cards back")
@@ -3314,11 +3332,21 @@ require("!drag.fig.classList.contains('fig-free')" in _v79_asset or "!fig.classL
         "V89.6 dragging a figure must free it so it can move anywhere")
 # V91/V93 — شناور محدود به سلولِ سؤالِ خودش می‌ماند؛ سقفِ سلولِ اندازه‌گیری‌شده
 # در V93 برداشته شد (سقفِ منفی باعثِ پرشِ شیء به بالا و قفل‌شدنِ حرکت می‌شد)؛
-# سلول با minHeight خودش همراهِ شیء رشد می‌کند، پس فقط کفِ صفر لازم است.
+# فقط کفِ صفر لازم است.
 require("Math.min(maxY, y)" not in _v79_asset
-        and "y = Math.max(0, y);" in _v79_asset
-        and "parent.style.minHeight = need + 'px';" in _v79_asset,
-        "V93 a free figure must move freely inside its own cell (no jump, minHeight grows)")
+        and "y = Math.max(0, y);" in _v79_asset,
+        "V93 a free figure must move freely inside its own cell (no jump)")
+# V99.1 — سلول با minHeight در حینِ درگ رشد نمی‌کند (همان رشد، خطوطِ
+# کادرِ سؤال را جابه‌جا می‌کرد)؛ به‌جای آن، فضای اصلیِ شیء با یک slot
+# هم‌اندازه در جریانِ متن رزرو می‌شود و فقط با انتخابِ صریحِ کاربر
+# (بازگشت به جریان) حذف می‌شود ⇒ چاپ با پیش‌نمایش یکی می‌ماند.
+require("parent.style.minHeight = need + 'px';" not in _v79_asset
+        and "dataset.figMinHeight" not in _v79_asset
+        and "function syncFigFlowSlot(qId, figIndex, makingFree) {" in _v79_asset
+        and ".fig-flow-slot { display:block;" in _v79_asset
+        and "syncFigFlowSlot(qid0, idx0, true);" in _v79_asset
+        and "syncFigFlowSlot(qId, figIndex, !cur.free)" in _v79_asset,
+        "V99.1 dragging a figure must not shift the question-box lines (slot reserved, no minHeight growth)")
 require("const dx = (e.clientX - drag.sx) / ks;" in _v79_asset,
         "V89.6 resizing must convert pointer travel out of the scaled space")
 
@@ -3918,8 +3946,12 @@ require("cardsRefresh++" in _v874_dlg
         "V91 the restored questions must appear immediately and natively")
 require("cardDetails.isEmpty() && !previewOpen && !loading" in _v874_dlg,
         "V91 the print builder needs a native empty state")
-require("parentH: Math.max(1, pr.height || parent.clientHeight || 0)" in _v79_asset,
-        "V91 the question cell height must be measured for the vertical clamp")
+# V99.1 — اندازه‌گیریِ ارتفاعِ سلول (parentH) دیگر لازم نیست، چون سلول با
+# minHeight رشد نمی‌کند؛ ارتفاعِ کادر را slot نگه می‌دارد. آنچه از رفتارِ
+# V91 باقی مانده: شیء نمی‌تواند از بالای سؤالِ خودش بیرون برود (کفِ صفر).
+require("parentH: Math.max(1, pr.height || parent.clientHeight || 0)" not in _v79_asset
+        and "y = Math.max(0, y);" in _v79_asset,
+        "V91/V99.1 the figure stays inside its own cell (floor 0); the cell height is preserved by the slot, not by measuring")
 
 # V92 — شش گزارشِ کاربر: فرمولِ خالی، اندازهٔ ۳۰٪/۷۰٪، کوچک‌شدن با لمس،
 # محوِ ستونِ بارم در چاپ، مسدودشدنِ حرکت، و بازشدنِ سازندهٔ قدیمی.

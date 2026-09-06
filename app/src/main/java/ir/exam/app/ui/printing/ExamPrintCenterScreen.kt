@@ -1,17 +1,22 @@
 package ir.exam.app.ui.printing
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -21,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,10 +51,13 @@ import kotlinx.coroutines.launch
  * صفحهٔ «چاپ آزمون» — نسخهٔ 30 تعاملی:
  * - V79.1 — «آزمون جدید» آزمون‌سازِ بومی را باز می‌کند (همان صفحهٔ «ایجاد آزمون»).
  *   V97 — دکمهٔ «آزمون‌ساز چاپی» حذف شد و تنها مسیر «آزمون جدید» بومی فعال است.
- * - V76.0 — کارت هر آزمون فقط دو آیکن دارد: مداد (ویرایش در نسخهٔ 30) و پرینتر
- *   (ورود خودکار سؤالات به نسخهٔ 30 و چاپ از همان‌جا). سؤالات با پل
- *   window.setExamData و تصاویر با توکن نشست (data-URL) منتقل می‌شوند؛
- *   هر ویرایشی فقط روی خروجی چاپ همان جلسه اثر دارد و آزمون سرور را عوض نمی‌کند.
+ * - V76.0 — کارت هر آزمون فقط دو آیکن دارد: مداد (ویرایش در نسخهٔ 30) و پرینتر.
+ *   V99.1 — پرینتر دیگر پنجرهٔ آزمون‌ساز چاپی را باز نمی‌کند: نسخهٔ
+ *   دانش‌آموز/پاسخ‌نامه انتخاب می‌شود و چاپ مستقیم انجام می‌گردد (برگهٔ خالصِ
+ *   A4 + پنجرهٔ چاپِ اندروید). مداد همچنان آزمون‌ساز را برای ویرایش باز می‌کند.
+ *   سؤالات با پل window.setExamData و تصاویر با توکن نشست (data-URL) منتقل
+ *   می‌شوند؛ هر ویرایشی فقط روی خروجی چاپ همان جلسه اثر دارد و آزمون سرور را
+ *   عوض نمی‌کند.
  * - V63.0 — پارامتر مداد ویرایشگر سند حفظ شده؛ مسیر DOC_EDITOR دست‌نخورده است.
  */
 @Composable
@@ -82,6 +91,11 @@ fun ExamPrintCenterScreen(
     var htmlPrintLoading by remember { mutableStateOf(false) }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
+    // V99.1 — آیکن پرینتر دیگر «پنجرهٔ آزمون‌ساز چاپی» را باز نمی‌کند:
+    // printTarget = آزمونِ انتخاب‌شدهٔ چاپ، printModeFor = حالتِ پنجرهٔ
+    // چاپ (null یعنی آزمون‌ساز برای ویرایش؛ student/teacher یعنی چاپِ مستقیم).
+    var printTarget by remember { mutableStateOf<PrintTarget?>(null) }
+    var printModeFor by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -95,6 +109,9 @@ fun ExamPrintCenterScreen(
         scope.launch {
             htmlPrintLoading = true
             try {
+                // V99.1 — مداد (ویرایش) هنوز آزمون‌سازِ کامل را باز می‌کند؛
+                // حالتِ پنجرهٔ چاپ باید null بماند تا کارت‌ها نمایش داده شوند.
+                printModeFor = null
                 printStatus = null
                 printStatusIsError = false
                 portability.printableExam(examId, false, header, layoutStore.read(examId))
@@ -106,6 +123,44 @@ fun ExamPrintCenterScreen(
                         printStatusIsError = true
                         printStatus = sanitizePrintError(error)
                     }
+            } finally {
+                htmlPrintLoading = false
+            }
+        }
+    }
+
+    // V99.1 — چاپِ مستقیم از آیکن پرینتر: پنجرهٔ آزمون‌ساز چاپی باز نمی‌شود؛
+    // در پنجرهٔ چاپ فقط برگهٔ خالصِ A4 دیده می‌شود و سپس پنجرهٔ چاپِ
+    // اندروید اجرا می‌شود.
+    fun startPrint(target: PrintTarget, mode: String) {
+        printTarget = null
+        scope.launch {
+            htmlPrintLoading = true
+            try {
+                printStatus = null
+                printStatusIsError = false
+                when (target) {
+                    is PrintTarget.ServerExam -> portability.printableExam(
+                        target.examId, false, header, layoutStore.read(target.examId)
+                    ).onSuccess { printable ->
+                        printModeFor = mode
+                        htmlPrintExam = ExamHtmlImageInliner.inline(context.applicationContext, printable)
+                        htmlPrintOpen = true
+                    }.onFailure { error ->
+                        printStatusIsError = true
+                        printStatus = sanitizePrintError(error)
+                    }
+                    is PrintTarget.LocalExam -> {
+                        printModeFor = mode
+                        htmlPrintExam = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                            title = target.rec.title.ifBlank { "آزمون" },
+                            subject = target.rec.subject,
+                            header = header,
+                            questions = target.rec.questions
+                        )
+                        htmlPrintOpen = true
+                    }
+                }
             } finally {
                 htmlPrintLoading = false
             }
@@ -171,17 +226,10 @@ fun ExamPrintCenterScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            // V86.9 — پرینتر: همان پنجرهٔ کاملِ نسخهٔ ۳۰ که نوارش
-                            // «🖨 چاپ دانشجو» و «✅ چاپ استاد» دارد.
-                            IconButton(onClick = {
-                                htmlPrintExam = ir.exam.app.domain.model.PrintableFromDrafts.build(
-                                    title = rec.title.ifBlank { "آزمون" },
-                                    subject = rec.subject,
-                                    header = header,
-                                    questions = rec.questions
-                                )
-                                htmlPrintOpen = true
-                            }) {
+                            // V99.1 — پرینتر: چاپِ مستقیم (پنجرهٔ آزمون‌ساز
+                            // چاپی باز نمی‌شود)؛ اول دانش‌آموز/پاسخ‌نامه را
+                            // انتخاب می‌کنید.
+                            IconButton(onClick = { printTarget = PrintTarget.LocalExam(rec) }, enabled = !htmlPrintLoading) {
                                 Icon(
                                     Icons.Outlined.Print,
                                     contentDescription = "چاپ آزمون چاپی",
@@ -226,8 +274,9 @@ fun ExamPrintCenterScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            // پرینتر: ورود خودکار سؤالات به نسخهٔ 30؛ چاپ نسخهٔ دانشجو/استاد همان‌جا.
-                            IconButton(onClick = { openBuilder30(exam.id) }, enabled = !htmlPrintLoading) {
+                            // V99.1 — پرینتر: چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه)؛
+                            // پنجرهٔ آزمون‌ساز چاپی دیگر باز نمی‌شود.
+                            IconButton(onClick = { printTarget = PrintTarget.ServerExam(exam.id) }, enabled = !htmlPrintLoading) {
                                 Icon(
                                     Icons.Outlined.Print,
                                     contentDescription = "چاپ آزمون",
@@ -241,12 +290,53 @@ fun ExamPrintCenterScreen(
         }
     }
     // V76.0 — پنجرهٔ تمام‌صفحهٔ نسخهٔ 30؛ null یعنی «آزمون جدید» (ریست).
+    // V99.1 — وقتی initialPrintMode خالی نباشد = چاپِ مستقیم: پنجرهٔ
+    // کارت‌ها و کنترل‌های آزمون‌ساز چاپی نمایش داده نمی‌شوند، فقط برگهٔ
+    // خالصِ A4 و سپس پنجرهٔ چاپِ اندروید.
     if (htmlPrintOpen) {
         ExamHtmlPrintDialog(
             printable = htmlPrintExam,
-            onDismiss = { htmlPrintOpen = false }
+            initialPrintMode = printModeFor,
+            onDismiss = {
+                htmlPrintOpen = false
+                printModeFor = null
+            }
         )
     }
+    // V99.1 — منوی چاپ از آیکن پرینتر: نسخهٔ دانش‌آموز یا پاسخ‌نامه.
+    printTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { printTarget = null },
+            title = { Text("چاپ") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                            .clickable { startPrint(target, "student") }
+                            .padding(vertical = 14.dp, horizontal = 12.dp)
+                    ) { Text("🖨 چاپ آزمون (دانش‌آموز)", style = MaterialTheme.typography.titleMedium) }
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                            .clickable { startPrint(target, "teacher") }
+                            .padding(vertical = 14.dp, horizontal = 12.dp)
+                    ) { Text("✅ چاپ با کلید (پاسخ‌نامه)", style = MaterialTheme.typography.titleMedium) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { printTarget = null }) { Text("بستن") }
+            }
+        )
+    }
+}
+
+/** V99.1 — هدفِ چاپِ آیکن پرینتر در کارت‌های آزمون. */
+private sealed class PrintTarget {
+    data class ServerExam(val examId: String) : PrintTarget()
+    data class LocalExam(val rec: ir.exam.app.data.local.PrintExamRecord) : PrintTarget()
 }
 
 /** پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */

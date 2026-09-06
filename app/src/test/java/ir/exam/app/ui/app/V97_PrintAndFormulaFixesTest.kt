@@ -135,6 +135,7 @@ class V97_PrintAndFormulaFixesTest {
     fun `direct print preview opens in pure preview mode without builder dialog`() {
         assertTrue("var previewOpen by remember { mutableStateOf(initialPreview) }" in htmlPrintDialog)
         assertTrue("visible = !previewOpen && !initialPreview" in htmlPrintDialog)
-        assertTrue("if (initialPreview) Color(0xFF334155)" in htmlPrintDialog)
+        // V99.1 — چاپِ مستقیم (student/teacher) هم رنگِ حالتِ خالص را می‌گیرد:
+        assertTrue("if (initialPreview || initialPrintMode != null) Color(0xFF334155)" in htmlPrintDialog)
     }
 }
