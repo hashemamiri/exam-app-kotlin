@@ -16786,3 +16786,30 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```
 
 پچ: V97_print_and_formula_fixes — بدون SQL.
+
+
+## ۳۲۰) V98 — حذف دکمهٔ وب‌ویوی آزمون‌ساز چاپی، سیاه شدن نام پرانتزها، اصلاح وسط‌چین راهنمای دست‌نویس، رندرینگ متن فارسی فرمول‌ها و تنظیمات سربرگ در ایجاد آزمون
+
+پنج اصلاح و بهبود نهایی:
+۱) حذف کامل دکمهٔ «آزمون‌ساز چاپی» از صفحهٔ «چاپ آزمون» (`ExamPrintCenterScreen`) و باقی ماندن دکمهٔ بومی «آزمون جدید»؛ استخراج و اتصال کامل امکانات استودیوی تصویر (`ExamImageStudioDialog`)، پیش‌نمایش مستقیم برگه (`initialPreview`) و موتور چاپ اختصاصی به آزمون‌ساز ایجاد آزمون (`ExamBuilderScreen`).
+۲) سیاه و کاملاً پررنگ شدن متن ستون نام‌ها در منوی پرانتزها و براکت‌ها `()` در `formula.html` (`color: #000000 !important`).
+۳) رفع قطعی مشکل باز شدن نصفه در پایین پنجره راهنمای دست‌نویس فرمول (`#helpCard`) با حذف محاسبات ناسازگار `transform: translate(-50%, -50%)` در CSS و اعمال موقعیت‌دهی دقیق و واکنش‌گرای پیکسلی در جاوااسکریپت `hwHelpPlace()`.
+۴) رفع به‌هم‌ریختگی و ناخوانایی متون فارسی درون فرمول‌ها در کادر متن سؤال (`QuestionTextWebSection` و `NativeFormulaView`) با تصحیح رندرینگ SVG در `NativeMathSvgRenderer`: حذف تگ‌های معکوس‌کننده و انکر ناهماهنگ و تکیه بر موتور Native Shaper (HarfBuzz) برای نمایش صحیح، متصل و روان عبارات و فرمول‌های فارسی.
+۵) فعال‌سازی و در دسترس بودن دکمهٔ «تنظیمات سربرگ» در آزمون‌ساز (`ExamBuilderScreen`) در حالت ایجاد آزمون آنلاین و چاپی در کنار «مشخصات آزمون» به همراه حفظ کلیه قالب‌ها و متغیرهای سربرگ.
+
+### تغییرات فایل‌ها:
+- `app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt`: حذف دکمهٔ «آزمون‌ساز چاپی» و وسط‌چین شدن دکمهٔ «آزمون جدید».
+- `app/src/main/assets/formula_editor/formula.html`: رنگ مشکی ستون نام پرانتزها (`.mbv-par-name-cell`) و بازنویسی `hwHelpPlace()` و استایل `#helpCard`.
+- `app/src/main/java/ir/exam/app/core/math/NativeMathSvgRenderer.kt`: تصحیح موقعیت `textX` و رندر استاندارد متن فارسی بدون انکر معکوس.
+- `app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt`: افزودن دکمه تنظیمات سربرگ در کنار مشخصات آزمون برای تمام حالت‌ها (`!printMode` و `printMode`).
+- `app/src/test/java/ir/exam/app/core/math/NativeMathSvgRendererTest.kt`: به‌روزرسانی اعتبارسنجی رندر متن فارسی فرمول‌ها.
+- `app/src/test/java/ir/exam/app/ui/app/V62_7PrintCenterStudentPreviewTest.kt` و `V79_0FormulaAndNativeBuilderTest.kt`: هماهنگی با حذف دکمه آزمون‌ساز چاپی قدیمی.
+- `app/src/test/java/ir/exam/app/ui/app/V97_PrintAndFormulaFixesTest.kt`: افزودن تست‌های اعتبارسنجی V98.
+
+### راستی‌آزمایی
+- `testDebugUnitTest`: ۱۰۷۶ تست در ۲۰۶ کلاس، ۰ شکست، ۰ خطا.
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+پچ: V98_print_formula_persian_fixes — بدون SQL.

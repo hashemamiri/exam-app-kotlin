@@ -9,14 +9,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * تست‌های جامع نسخه V97 — رفع ۱۱ مورد چاپی، فرمول‌ساز، متون فارسی و عملکرد استودیو تصویر:
+ * تست‌های جامع نسخه V97 و V98 — رفع موارد چاپی، فرمول‌ساز، متون فارسی و عملکرد استودیو تصویر:
  * ۱) هماهنگی عرض جدول سؤالات و سربرگ در exam_print.html (بدون بیرون‌زدگی).
  * ۲) تصحیح خطای TypeError در pointerup هنگام درگ شکل‌های چاپی (بررسی ایمن drag.raf).
  * ۳) رفع بریدگی اعلان‌ها (Notification) در ویرایشگر فرمول.
- * ۴) منوی ۴ ستونی پرانتزها و براکت‌ها (تفکیک ستون نام از علائم).
- * ۵) نمایش وسط‌چین و کامل راهنمای دست‌نویس فرمول با پس‌زمینهٔ مات.
+ * ۴) منوی ۴ ستونی پرانتزها و براکت‌ها (تفکیک ستون نام با رنگ مشکی از علائم).
+ * ۵) نمایش وسط‌چین و بدون بریدگی راهنمای دست‌نویس فرمول با موقعیت‌دهی دقیق پیکسلی و پس‌زمینهٔ مات.
  * ۶) ردیابی بازه و پاکسازی وضعیت فرمول قبلی هنگام درج فرمول جدید.
- * ۷) تجزیه و نمایش صحیح کاراکترهای فارسی در فرمول‌ها با فونت استاندارد و bidi isolate.
+ * ۷) تجزیه و نمایش صحیح کاراکترهای فارسی در فرمول‌ها با فونت استاندارد.
+ * ۸) حذف دکمهٔ «آزمون‌ساز چاپی» از صفحهٔ چاپ آزمون و هدایت به آزمون‌ساز بومی.
+ * ۹) دسترسی و وجود دکمهٔ تنظیمات سربرگ در آزمون‌ساز عمومی («ایجاد آزمون» و «چاپ آزمون»).
  */
 class V97_PrintAndFormulaFixesTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -29,6 +31,14 @@ class V97_PrintAndFormulaFixesTest {
 
     private val formulaHtml by lazy {
         File(root(), "app/src/main/assets/formula_editor/formula.html").readText()
+    }
+
+    private val printCenterScreen by lazy {
+        File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").readText()
+    }
+
+    private val examBuilderScreen by lazy {
+        File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
     }
 
     @Test
@@ -52,16 +62,20 @@ class V97_PrintAndFormulaFixesTest {
     }
 
     @Test
-    fun `formula html parenthesis menu has 4 columns including name column`() {
+    fun `formula html parenthesis menu has 4 columns and black text in name column`() {
         assertTrue("mbv-par4" in formulaHtml)
         assertTrue("mbv-par-col-name" in formulaHtml)
         assertTrue("<div class=\"mbv-par-col mbv-par-col-name\"><div class=\"mbv-par-col-t\">نام</div>" in formulaHtml)
+        assertTrue(".mbv-par-name-cell { display: flex; align-items: center; justify-content: center; min-height: 46px;" in formulaHtml)
+        assertTrue("color: #000000 !important;" in formulaHtml)
     }
 
     @Test
-    fun `formula html help modal is centered with backdrop`() {
+    fun `formula html help modal is centered and immune to bottom cutoff`() {
         assertTrue("#helpBackdrop{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;z-index:30015;background:rgba(0,0,0,.55)}" in formulaHtml)
-        assertTrue("#helpCard{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30020;" in formulaHtml)
+        assertTrue("#helpCard{position:fixed;top:6%;left:4%;right:4%;margin:0 auto;z-index:30020;" in formulaHtml)
+        assertTrue("card.style.top = top + 'px';" in formulaHtml)
+        assertTrue("card.style.left = left + 'px';" in formulaHtml)
     }
 
     @Test
@@ -84,11 +98,23 @@ class V97_PrintAndFormulaFixesTest {
     }
 
     @Test
-    fun `native math svg renderer renders persian with isolate bidi and rtl direction`() {
+    fun `native math svg renderer renders persian cleanly with font family`() {
         val doc = NativeMathSvgRenderer.render("تست")
         val svg = doc.xml
-        assertTrue("direction=\"rtl\" unicode-bidi=\"isolate\"" in svg)
         assertTrue("font-family=\"Tahoma, Arial, sans-serif\"" in svg)
         assertTrue("تست" in svg)
+    }
+
+    @Test
+    fun `print center screen removed old webview print builder button`() {
+        assertTrue("Text(\"آزمون‌ساز چاپی\")" !in printCenterScreen)
+        assertTrue("Text(\"آزمون جدید\")" in printCenterScreen)
+    }
+
+    @Test
+    fun `header settings is available in exam builder screen for online and print modes`() {
+        assertTrue("Text(\"تنظیمات سربرگ\")" in examBuilderScreen)
+        assertTrue("HeaderSettingsDialog" in examBuilderScreen)
+        assertTrue("showHeaderSettings = true" in examBuilderScreen)
     }
 }

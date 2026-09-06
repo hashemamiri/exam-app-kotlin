@@ -44,8 +44,7 @@ import kotlinx.coroutines.launch
 /**
  * صفحهٔ «چاپ آزمون» — نسخهٔ 30 تعاملی:
  * - V79.1 — «آزمون جدید» آزمون‌سازِ بومی را باز می‌کند (همان صفحهٔ «ایجاد آزمون»).
- *   دکمهٔ دوم «آزمون‌ساز چاپی» نسخهٔ ۳۰ را مثل قبل باز می‌کند، پس هیچ امکانی
- *   از دسترس خارج نمی‌شود.
+ *   V97 — دکمهٔ «آزمون‌ساز چاپی» حذف شد و تنها مسیر «آزمون جدید» بومی فعال است.
  * - V76.0 — کارت هر آزمون فقط دو آیکن دارد: مداد (ویرایش در نسخهٔ 30) و پرینتر
  *   (ورود خودکار سؤالات به نسخهٔ 30 و چاپ از همان‌جا). سؤالات با پل
  *   window.setExamData و تصاویر با توکن نشست (data-URL) منتقل می‌شوند؛
@@ -120,15 +119,10 @@ fun ExamPrintCenterScreen(
         // V76.0 — دکمهٔ وسط‌چین «آزمون جدید»: نسخهٔ 30 را بدون داده (ریست) باز می‌کند.
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            horizontalArrangement = Arrangement.Center
         ) {
-            // V79.1 — مسیرِ اصلی: آزمون‌سازِ کاملاً بومی (همان «ایجاد آزمون»).
             Button(onClick = onNewNativeExam) {
                 Text("آزمون جدید")
-            }
-            // نسخهٔ ۳۰ همچنان در دسترس است تا هیچ امکانی از دست نرود.
-            OutlinedButton(onClick = { htmlPrintExam = null; htmlPrintOpen = true }) {
-                Text("آزمون‌ساز چاپی")
             }
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

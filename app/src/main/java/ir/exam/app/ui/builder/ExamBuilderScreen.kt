@@ -383,11 +383,22 @@ fun ExamBuilderScreen(
                         Text("تنظیمات سربرگ")
                     }
                 } else {
-                    OutlinedButton(
-                        onClick = { settingsExpanded = !settingsExpanded },
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
+                        OutlinedButton(
+                            onClick = { settingsExpanded = !settingsExpanded },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
+                        }
+                        OutlinedButton(
+                            onClick = { showHeaderSettings = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("تنظیمات سربرگ")
+                        }
                     }
                     AnimatedVisibility(
                         visible = settingsExpanded,
@@ -612,7 +623,7 @@ fun ExamBuilderScreen(
 
     // V86.7 — «تنظیمات سربرگ» در مسیرِ چاپ.
     // همان Composableِ آزمون‌سازِ چاپی است، پس قالب‌ها و آرم دقیقاً یکی‌اند.
-    if (printMode && showHeaderSettings) {
+    if (showHeaderSettings) {
         val headerContext = androidx.compose.ui.platform.LocalContext.current
         val headerSchema = remember {
             ir.exam.app.ui.printing.loadHeaderSchema(headerContext)

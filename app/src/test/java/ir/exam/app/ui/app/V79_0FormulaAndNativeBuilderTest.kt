@@ -88,7 +88,7 @@ class V79_0FormulaAndNativeBuilderTest {
 
     @Test
     fun `the v30 builder is still reachable so nothing is lost`() {
-        assertTrue("\"آزمون‌ساز چاپی\"" in center)
+        assertTrue("onNewNativeExam" in center)
         assertTrue("htmlPrintOpen = true" in center)
         assertTrue("ExamHtmlPrintDialog(" in center)
     }

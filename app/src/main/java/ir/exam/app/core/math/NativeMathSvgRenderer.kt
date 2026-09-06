@@ -201,7 +201,7 @@ object NativeMathSvgRenderer {
         val italic = node.value.codePointCount(0, node.value.length) == 1 &&
             node.value.firstOrNull()?.isLetter() == true && node.value.all { it.code < 128 }
         val rtl = node.value.any { it in '\u0600'..'\u06FF' || it in '\u0750'..'\u077F' || it in '\uFB50'..'\uFDFF' || it in '\uFE70'..'\uFEFF' }
-        val textX = if (rtl) (width + naturalWidth) / 2f else (width - naturalWidth) / 2f
+        val textX = (width - naturalWidth) / 2f
         val body = buildString {
             append("<text x=\"").append(number(textX)).append("\" y=\"")
             append(number(baseline))
@@ -212,8 +212,7 @@ object NativeMathSvgRenderer {
             }
             if (node.bold) append(" font-weight=\"700\"")
             if (italic) append(" font-style=\"italic\"")
-            if (rtl) append(" text-anchor=\"end\" direction=\"rtl\" unicode-bidi=\"isolate\">")
-            else append(" direction=\"ltr\" unicode-bidi=\"isolate\">")
+            append(">")
             append(escapeXml(node.value)).append("</text>")
         }
         val plainValue = node.value.codePoints().allMatch { Character.isLetterOrDigit(it) }
@@ -679,7 +678,7 @@ object NativeMathSvgRenderer {
                 codePoint in '0'.code..'9'.code -> size * .58f
                 codePoint in 'A'.code..'Z'.code -> size * .66f
                 codePoint in 'a'.code..'z'.code -> size * .56f
-                codePoint in 0x0600..0x06FF -> size * .67f
+                codePoint in 0x0600..0x06FF || codePoint in 0x0750..0x077F || codePoint in 0xFB50..0xFDFF || codePoint in 0xFE70..0xFEFF -> size * .67f
                 codePoint in 0x2200..0x22FF || codePoint in 0x2190..0x21FF -> size * .75f
                 codePoint > 0xFFFF -> size * .90f
                 else -> size * .62f

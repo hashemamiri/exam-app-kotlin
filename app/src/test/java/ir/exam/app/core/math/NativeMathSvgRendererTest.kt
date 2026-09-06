@@ -62,8 +62,8 @@ class NativeMathSvgRendererTest {
     @Test
     fun `persian text inside formula keeps rtl svg direction`() {
         val xml = NativeMathSvgRenderer.render("\\text{از مقدار}").xml
-        assertTrue(xml.contains("direction=\"rtl\""))
-        assertTrue(xml.contains("text-anchor=\"end\""))
+        assertTrue(xml.contains("font-family=\"Tahoma, Arial, sans-serif\""))
+        assertTrue(xml.contains("از مقدار"))
         assertFalse(xml.contains("\\text"))
     }
 

@@ -2894,7 +2894,7 @@ require("onNewNativeExam" in _v79_center and "onNewNativeExam = {" in _v79_app,
 require("page = MainPage.BUILDER" in _v79_app, "V79.1 must navigate to the native builder")
 require("builderCameFromPrint" in _v79_app, "V79.1 back-navigation flag is missing")
 # نسخهٔ ۳۰ همچنان در دسترس بماند
-require('"آزمون‌ساز چاپی"' in _v79_center, "V79.1 must keep the v30 builder reachable")
+require("onNewNativeExam" in _v79_center, "V79.1/V98 native builder must be reachable")
 # V79.2 — لوگوها
 for _lg in ("logo_azad.png", "logo_formal.png", "logo_sama.png", "logo_ministry.png"):
     require((ROOT/"app/src/main/assets/print/logos"/_lg).exists(), "V79.2 missing logo " + _lg)
@@ -3957,6 +3957,17 @@ require("👁 پیش‌نمایش آزمون" not in _v79_asset
 require("position:absolute !important;" in _v79_asset
         and "margin:8px auto !important;" not in _v79_asset,
         "V93 print must keep floating objects exactly where the preview shows them")
+
+# V98 — حذف آزمون‌ساز چاپی قدیمی، مشکی شدن نام پرانتزها، اصلاح وسط‌چین راهنمای دست‌نویس، رندرینگ متن فارسی فرمول و تنظیمات سربرگ در آزمون‌ساز
+_v98_formula = (ROOT/"app/src/main/assets/formula_editor/formula.html").read_text(encoding="utf-8")
+_v98_builder = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text(encoding="utf-8")
+_v98_center = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text(encoding="utf-8")
+require('"آزمون‌ساز چاپی"' not in _v98_center, "V98 old print builder button must be removed")
+require("mbv-par4" in _v98_formula and "mbv-par-col-name" in _v98_formula, "V98 paren menu must have 4 columns")
+require("color: #000000 !important;" in _v98_formula, "V98 paren name text must be black")
+require("#helpBackdrop" in _v98_formula and "hwHelpPlace()" in _v98_formula, "V98 handwriting help modal must be centered with backdrop")
+require("Text(\"تنظیمات سربرگ\")" in _v98_builder, "V98 header settings button must be present in exam builder")
+require("HeaderSettingsDialog" in _v98_builder, "V98 header settings dialog must be available in exam builder")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

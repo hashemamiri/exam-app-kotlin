@@ -81,7 +81,6 @@ class V62_7PrintCenterStudentPreviewTest {
         // وسط‌چین‌بودن و وجودِ هر دو دکمه ادعا می‌شود.
         assertTrue("Alignment.CenterHorizontally" in printCenter)
         assertTrue("Text(\"آزمون جدید\")" in printCenter)
-        assertTrue("Text(\"آزمون‌ساز چاپی\")" in printCenter)
         assertTrue("onNewNativeExam" in printCenter)
         assertFalse("بستن سربرگ" in printCenter)
         assertFalse("PrintHeaderDialog" in printCenter)
