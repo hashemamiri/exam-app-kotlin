@@ -19,6 +19,8 @@ import org.junit.Test
  * ۷) تجزیه و نمایش صحیح کاراکترهای فارسی در فرمول‌ها با فونت استاندارد.
  * ۸) حذف دکمهٔ «آزمون‌ساز چاپی» از صفحهٔ چاپ آزمون و هدایت به آزمون‌ساز بومی.
  * ۹) دسترسی و وجود دکمهٔ تنظیمات سربرگ در آزمون‌ساز عمومی («ایجاد آزمون» و «چاپ آزمون»).
+ * ۱۰) لمس اشیاء در پیش‌نمایش جریان درون‌متنی را تغییر نمی‌دهد و خطوط متن فقط با درگ صریح تغییر می‌کنند.
+ * ۱۱) پیش‌نمایش مستقیم چاپی بدون باز کردن یا فلش زدن پنجره آزمون‌ساز وب‌ویو باز می‌شود.
  */
 class V97_PrintAndFormulaFixesTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -39,6 +41,10 @@ class V97_PrintAndFormulaFixesTest {
 
     private val examBuilderScreen by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
+    }
+
+    private val htmlPrintDialog by lazy {
+        File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
     }
 
     @Test
@@ -116,5 +122,19 @@ class V97_PrintAndFormulaFixesTest {
         assertTrue("Text(\"تنظیمات سربرگ\")" in examBuilderScreen)
         assertTrue("HeaderSettingsDialog" in examBuilderScreen)
         assertTrue("showHeaderSettings = true" in examBuilderScreen)
+    }
+
+    @Test
+    fun `preview figure touch preserves inline flow and shifts lines only on actual drag`() {
+        assertTrue("drag = {\n      fig, qid, idx, resizing" in printHtml || "drag = {\n      fig," in printHtml)
+        assertTrue("if (!drag.fig.classList.contains('fig-free'))" in printHtml)
+        assertTrue("dist < 6" in printHtml || "dist < 5" in printHtml)
+    }
+
+    @Test
+    fun `direct print preview opens in pure preview mode without builder dialog`() {
+        assertTrue("var previewOpen by remember { mutableStateOf(initialPreview) }" in htmlPrintDialog)
+        assertTrue("visible = !previewOpen && !initialPreview" in htmlPrintDialog)
+        assertTrue("if (initialPreview) Color(0xFF334155)" in htmlPrintDialog)
     }
 }

@@ -163,7 +163,7 @@ fun ExamHtmlPrintDialog(
        پنجرهٔ پیش‌نمایش (که داخلِ WebView باز می‌شود) زیرش پنهان می‌ماند.
        بدونِ سؤال، فهرست خالی بود و مشکل دیده نمی‌شد؛ با سؤال، چشم «کار
        نمی‌کرد». هنگامِ باز بودنِ پیش‌نمایش کارت‌ها کنار می‌روند. */
-    var previewOpen by remember { mutableStateOf(false) }
+    var previewOpen by remember { mutableStateOf(initialPreview) }
     // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
@@ -349,11 +349,11 @@ fun ExamHtmlPrintDialog(
             dismissOnClickOutside = false
         )
     ) {
-        Surface(Modifier.fillMaxSize(), color = Color(0xFF1E3A8A)) {
+        Surface(Modifier.fillMaxSize(), color = if (initialPreview) Color(0xFF334155) else Color(0xFF1E3A8A)) {
             Column(Modifier.fillMaxSize()) {
                 // V93 — با باز شدنِ پیش‌نمایش، هدر محو می‌شود تا برگهٔ A4 تمام‌صفحه دیده شود.
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = !previewOpen,
+                    visible = !previewOpen && !initialPreview && initialPrintMode == null,
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
@@ -629,16 +629,25 @@ fun ExamHtmlPrintDialog(
                     )
 
                     if (loading) {
-                        // V92 — تا آماده‌شدنِ صفحه، یک سطحِ بومیِ مات روی WebView
-                        // می‌نشیند تا «سازندهٔ قدیمیِ HTML» (کارت‌ها و دکمه‌هایش)
-                        // قبل از فهرستِ بومی دیده نشود.
                         Box(
                             Modifier
                                 .fillMaxSize()
-                                .background(Color(0xFFEEF2F7)),
+                                .background(if (initialPreview) Color(0xFF334155) else Color(0xFFEEF2F7)),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator()
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                CircularProgressIndicator(color = if (initialPreview) Color.White else MaterialTheme.colorScheme.primary)
+                                if (initialPreview) {
+                                    Text(
+                                        "در حال آماده‌سازی پیش‌نمایش برگه...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -780,7 +789,7 @@ fun ExamHtmlPrintDialog(
                     /* V91 — حالتِ خالیِ بومی: وقتی هنوز سؤالی ساخته نشده،
                        به‌جای صفحهٔ خالیِ WebView یک راهنمایِ بومی می‌آید تا
                        پنجرهٔ آزمون‌سازِ چاپی از همان ابتدا بومی دیده شود. */
-                    if (cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded) {
+                    if (cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded && !initialPreview && initialPrintMode == null) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -831,7 +840,7 @@ fun ExamHtmlPrintDialog(
                        تیکِ ذخیره سمتِ شروع، پرینتر و چشم کنارش، و + سمتِ پایان. */
                     /* V93 — با باز شدنِ پیش‌نمایش، همهٔ دکمه‌های شناور محو می‌شوند. */
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = !previewOpen,
+                        visible = !previewOpen && !initialPreview && initialPrintMode == null,
                         enter = fadeIn(),
                         exit = fadeOut(),
                         modifier = Modifier.align(Alignment.BottomStart)
@@ -891,7 +900,7 @@ fun ExamHtmlPrintDialog(
                     }
                     /* V93 — دکمهٔ + هم با باز شدنِ پیش‌نمایش محو می‌شود. */
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = !previewOpen && !radialMenuOpen,
+                        visible = !previewOpen && !initialPreview && initialPrintMode == null && !radialMenuOpen,
                         enter = fadeIn(),
                         exit = fadeOut(),
                         modifier = Modifier.align(Alignment.BottomEnd)

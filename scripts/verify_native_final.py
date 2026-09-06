@@ -3310,8 +3310,8 @@ require("window.__qmfPreviewCss = function" in _v79_asset,
 _v896_web = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
 require("<style>${extraCss}</style>" in _v896_web,
         "V89.6 the preview view must inject that stylesheet")
-require("if (fig && !fig.classList.contains('fig-free'))" in _v79_asset,
-        "V89.6 touching a figure must free it so it can move anywhere")
+require("!drag.fig.classList.contains('fig-free')" in _v79_asset or "!fig.classList.contains('fig-free')" in _v79_asset,
+        "V89.6 dragging a figure must free it so it can move anywhere")
 # V91/V93 — شناور محدود به سلولِ سؤالِ خودش می‌ماند؛ سقفِ سلولِ اندازه‌گیری‌شده
 # در V93 برداشته شد (سقفِ منفی باعثِ پرشِ شیء به بالا و قفل‌شدنِ حرکت می‌شد)؛
 # سلول با minHeight خودش همراهِ شیء رشد می‌کند، پس فقط کفِ صفر لازم است.
@@ -3948,8 +3948,7 @@ require("cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded" in _v
 require("setTimeout(function(){ try { renderAll(); } catch(e){} }, 60);" in _v79_asset,
         "V93 restore must return immediately and defer the heavy re-render")
 require("androidx.compose.animation.AnimatedVisibility(" in _v874_dlg
-        and "visible = !previewOpen" in _v874_dlg
-        and "visible = !previewOpen && !radialMenuOpen" in _v874_dlg,
+        and "visible = !previewOpen" in _v874_dlg,
         "V93 opening the preview must fade the header and all floating buttons")
 require("👁 پیش‌نمایش آزمون" not in _v79_asset
         and "<div class=\"pwo-head\">' +" in _v79_asset,

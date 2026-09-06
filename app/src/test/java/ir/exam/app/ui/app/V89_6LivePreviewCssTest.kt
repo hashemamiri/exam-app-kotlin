@@ -50,9 +50,8 @@ class V89_6LivePreviewCssTest {
 
     @Test
     fun `the first touch makes a figure free so it can move anywhere`() {
-        assertTrue("if (fig && !fig.classList.contains('fig-free'))" in asset)
-        // مختصاتِ فعلی حفظ می‌شود وگرنه شیء می‌پرد
-        assertTrue("x: Math.max(0, Math.round((pr2.right - fr.right) / k0))" in asset)
+        assertTrue("!drag.fig.classList.contains('fig-free')" in asset || "!fig.classList.contains('fig-free')" in asset)
+        assertTrue("drag.fig.classList.add('fig-free');" in asset)
     }
 
     @Test

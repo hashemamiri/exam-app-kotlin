@@ -13554,60 +13554,6 @@ function initPreviewFigureEditing() {
     /* دو انگشت روی صفحه است ⇒ این pinch است، نه جابه‌جایی */
     if (pinch) return;
     const fig = e.target.closest && e.target.closest('.interactive-figure');
-    /* V89.6 — نخستین لمس شیء را شناور می‌کند تا جابه‌جایی واقعاً آزاد باشد
-       (بالا/پایین/روی هم). دکمهٔ دستیِ آن در V89.5 برداشته شد، پس این کار
-       باید خودکار انجام شود. مختصاتِ فعلی حفظ می‌شود تا شیء نپرد. */
-    if (fig && !fig.classList.contains('fig-free')) {
-      try {
-        var pb = parentBox(fig);
-        if (pb) {
-          var fr = fig.getBoundingClientRect(), pr2 = pb.getBoundingClientRect();
-          var k0 = previewScale();
-          var qid0 = fig.dataset.qid, idx0 = fig.dataset.figIndex;
-          /* V92 — شیءِ لمس‌شده همان‌جا بالاترین لایه می‌شود تا شیءِ دیگر
-             جلوی جابه‌جایی‌اش را نگیرد (گزارشِ «حرکت آزاد نیست»). */
-          var q0 = (typeof questions !== 'undefined')
-            ? questions.find(function (x) { return String(x.id) === String(qid0); }) : null;
-          var z0 = (q0 && typeof qmfNextFigZ === 'function') ? qmfNextFigZ(q0) : 1;
-          var patch = {
-            free: true,
-            x: Math.max(0, Math.round((pr2.right - fr.right) / k0)),
-            y: Math.round((fr.top - pr2.top) / k0),
-            w: Math.round(fr.width / k0),
-            h: Math.round(fr.height / k0),
-            z: z0
-          };
-          if (typeof setFigLayout === 'function') setFigLayout(qid0, idx0, patch);
-          fig.classList.add('fig-free');
-          fig.style.position = 'absolute';
-          fig.style.margin = '0';
-          fig.style.right = patch.x + 'px';
-          fig.style.left = 'auto';
-          fig.style.top = patch.y + 'px';
-          fig.style.zIndex = String(z0);
-        }
-      } catch (err) {}
-    }
-    /* V86.5 — تا وقتی شیء کشیده می‌شود، ظرفِ اسکرول‌شونده قفل است.
-       بدونِ این، مرورگر هم‌زمان با جابه‌جاییِ شیء خودِ صفحه را اسکرول
-       می‌کرد و شیء از زیرِ انگشت در می‌رفت. */
-    if (fig) {
-      /* V87.9 — تا V87.8 اینجا `overflow:hidden` می‌گذاشتیم. آن کار اسکرول را
-         می‌بست ولی ارتفاعِ قابلِ اسکرول را هم صفر می‌کرد، پس وقتی شیء به
-         پایین کشیده می‌شد والد نمی‌توانست بلند شود و حرکت فقط افقی به نظر
-         می‌رسید. `touch-action:none` روی خودِ شیء همان هدف را می‌گیرد بدونِ
-         دست‌زدن به هندسهٔ ظرف. */
-      try {
-        fig.style.touchAction = 'none';
-        var sc = e.target.closest('.pwo-body') ||
-                 document.scrollingElement || document.body;
-        if (sc) {
-          sc.style.overscrollBehavior = 'contain';
-          window.__qmfDragLock = sc;
-          window.__qmfDragFig = fig;
-        }
-      } catch (err) {}
-    }
     if (!fig) {
       area.querySelectorAll('.interactive-figure.selected').forEach(x => x.classList.remove('selected'));
       return;
@@ -13620,8 +13566,8 @@ function initPreviewFigureEditing() {
     const rect = fig.getBoundingClientRect();
     const handle = e.target.closest && e.target.closest('.fig-resize-handle');
     const resizing = !!handle;
-    /* V92 — شیءِ لمس‌شده همیشه بالاترین لایه می‌شود؛ وگرنه شیءِ روییِ
-       هم‌پوشان جلوی درگ را می‌گرفت و «حرکت آزاد نیست» به نظر می‌رسید. */
+    /* V98 — لمسِ ساده شیء را از جریانِ متن خارج نمی‌کند و خطوط متن تکان نمی‌خورند؛
+       شناور شدن فقط با کشیدنِ صریح (drag) اتفاق می‌افتد. */
     try {
       const qz = questions.find(q => String(q.id) === String(qid));
       if (qz && typeof qmfNextFigZ === 'function' && typeof setFigLayout === 'function') {
@@ -13630,24 +13576,65 @@ function initPreviewFigureEditing() {
         setFigLayout(qid, idx, { z: zz });
       }
     } catch (ez) {}
-    drag = { fig, qid, idx, resizing, edge:(handle && handle.dataset && handle.dataset.edge) || 'l', sx:e.clientX, sy:e.clientY,
+    drag = {
+      fig, qid, idx, resizing, edge:(handle && handle.dataset && handle.dataset.edge) || 'l', sx:e.clientX, sy:e.clientY,
+      moved: false,
       x:Number.isFinite(+layout.x) ? +layout.x : (parseFloat(fig.style.marginRight || fig.style.getPropertyValue('--fig-x') || '0') || 0),
       y:Number.isFinite(+layout.y) ? +layout.y : (parseFloat(fig.style.top || fig.style.getPropertyValue('--fig-y') || '0') || 0),
       w:px(layout.w) || (rect.width / previewScale()),
       h:px(layout.h) || (rect.height / previewScale()),
-      /* V92 — آیا ارتفاع از قبل ذخیره شده (تغییر اندازهٔ صریح)؟ فقط آن‌وقت
-         جابه‌جاییِ خالص اجازهٔ بازنویسیِ ارتفاع را دارد؛ در غیر این صورت
-         ارتفاع با محتوا می‌ماند تا با لمسِ ساده «کوچک نشود». */
       storedH: Number.isFinite(+layout.h),
-      storedW: Number.isFinite(+layout.w) };
+      storedW: Number.isFinite(+layout.w)
+    };
     /* V87.9 — یک‌بار اندازه بگیر، بعد فقط بنویس. */
     drag.cache = measureParent(fig);
     drag.raf = 0;
     drag.pending = null;
-    fig.setPointerCapture?.(e.pointerId);
+    try { fig.setPointerCapture?.(e.pointerId); } catch(_) {}
+    if (fig) {
+      try {
+        fig.style.touchAction = 'none';
+        var sc = e.target.closest('.pwo-body') ||
+                 document.scrollingElement || document.body;
+        if (sc) {
+          sc.style.overscrollBehavior = 'contain';
+          window.__qmfDragLock = sc;
+          window.__qmfDragFig = fig;
+        }
+      } catch (err) {}
+    }
   });
   area.addEventListener('pointermove', function(e) {
     if (!drag) return;
+    const dist = Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy);
+    if (!drag.moved) {
+      if (!drag.resizing && dist < 6) return;
+      drag.moved = true;
+      if (!drag.fig.classList.contains('fig-free')) {
+        try {
+          var qid0 = drag.qid, idx0 = drag.idx;
+          var q0 = (typeof questions !== 'undefined')
+            ? questions.find(function (x) { return String(x.id) === String(qid0); }) : null;
+          var z0 = (q0 && typeof qmfNextFigZ === 'function') ? qmfNextFigZ(q0) : 1;
+          var patch0 = {
+            free: true,
+            x: Math.round(drag.x),
+            y: Math.round(drag.y),
+            w: Math.round(drag.w),
+            h: Math.round(drag.h),
+            z: z0
+          };
+          if (typeof setFigLayout === 'function') setFigLayout(qid0, idx0, patch0);
+          drag.fig.classList.add('fig-free');
+          drag.fig.style.position = 'absolute';
+          drag.fig.style.margin = '0';
+          drag.fig.style.right = patch0.x + 'px';
+          drag.fig.style.left = 'auto';
+          drag.fig.style.top = patch0.y + 'px';
+          drag.fig.style.zIndex = String(z0);
+        } catch (err) {}
+      }
+    }
     e.preventDefault();
     let x = drag.x, y = drag.y, w = drag.w, h = drag.h;
     if (drag.resizing) {
