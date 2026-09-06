@@ -98,5 +98,7 @@ class V99_2PreviewPersistAndPrintSurfaceTest {
         // بیلدر بومی آن را به وضعیت می‌نویسد:
         assertTrue("fun applyFigLayouts(snapshotJson: String)" in viewModel)
         assertTrue("onFigLayouts = { viewModel.applyFigLayouts(it) }" in builder)
+        // intOrNull تابعِ extension است؛ بدونِ import کملایت رد می‌شود (V99.2b).
+        assertTrue("import kotlinx.serialization.json.intOrNull" in viewModel)
     }
 }
