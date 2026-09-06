@@ -7,9 +7,10 @@ import org.junit.Test
 /**
  * رگرسیون V55.6 — سه درخواست کاربر پس از موفقیت V55.5 (پنل بزرگ شد):
  * ۱) هیچ برچسب نسخه‌ای روی صفحه نباشد: کد ساخت برچسب سبز N55.x حذف شد
- *    (نسخهٔ پل فقط پرچم window.__nativeBridgeVersion برای پیام‌های خطا)؛
- *    badge مرجع «v36 · V34» فقط داخل برنامه (hideBadges) مخفی می‌شود —
- *    فایل در مرورگر عادی دست‌نخورده است.
+ *    (نسخهٔ پل فقط پرچم window.__nativeBridgeVersion برای پیام‌های خطا).
+ *    در V94 بیلد جدید badge مرجع «v36 · V34» را هم از مبدأ حذف کرده
+ *    (MF_FIX_V974)؛ بنابراین دیگر hostBuildTag/سازندهٔ برچسبی در فایل نیست
+ *    و hideBadges فقط پاک‌سازی دفاعی nativeBridgeTag را نگه می‌دارد.
  * ۲) تأخیر بازشدن کتابخانه‌ها: enforce دیگر منتظر polling ۲۵۰ms نمی‌ماند؛
  *    wrapper مستقیم روی mbGroupLibrary/mbOpenSymbolLibrary/mbShowSymbolCategory/
  *    mbOpenItemLibrary بلافاصله پس از باز شدن اجرا می‌شود (اندازه‌گیری Chromium:
@@ -33,10 +34,14 @@ class V55_6CleanBadgesFitTest {
     fun `version badges are removed from screen but version flag remains`() {
         assertTrue("bt.id = 'nativeBridgeTag'" !in asset)
         assertTrue(Regex("""__nativeBridgeVersion = 'N\d+\.\d+'""").containsMatchIn(asset))
+        // V94: بیلد جدید badge مرجع (v36 · V34) را از مبدأ حذف کرده (MF_FIX_V974)؛
+        // دیگر hostBuildTag یا سازندهٔ برچسبی در فایل نیست.
+        assertTrue("hostBuildTag" !in asset)
+        assertTrue("bt.textContent = 'v36" !in asset)
+        assertTrue("MF_FIX_V974" in asset)
+        // hideBadges همچنان بابت پاک‌سازی دفاعی nativeBridgeTag باقی است.
         val hide = asset.substringAfter("hideBadges")
-        assertTrue("hostBuildTag" in hide.take(900))
-        // badge مرجع فقط مخفی می‌شود، کد مرجع سازنده‌اش دست نمی‌خورد.
-        assertTrue("bt.textContent = 'v36" in asset)
+        assertTrue("nativeBridgeTag" in hide.take(600))
     }
 
     @Test

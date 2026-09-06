@@ -16627,3 +16627,42 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```
 
 پچ: V93_print_preview_polish — بدون SQL.
+
+## ۳۱۶) V94 — جایگزینی بایت‌به‌بایتِ ویرایشگرِ فرمول
+
+به درخواستِ کاربر، فایلِ استخراجیِ او (فرمول.html) عیناً (بایت‌به‌بایت)
+جایگزینِ `app/src/main/assets/formula_editor/formula.html` شد؛ با لمسِ
+آیکنِ فرمول همین فایل در برنامه باز می‌شود. هیچ تغییرِ Kotlin لازم نبود.
+
+### چه چیزهایی سرِ جایشان ماند
+- هویتِ پلِ بومی تغییری نکرد: `window.__nativeBridgeVersion = 'N67.1'`،
+  `ExamFormulaHost`، `ExamEditorNative` و `exam-formula-native-bridge` همان
+  هستند؛ بنابراین `FormulaHostDialog.kt` بی‌تغییر همان فایل را سرو می‌کند
+  (مسیرِ `/formula-editor/…` → `assets.open("formula_editor/…")`).
+- فایلِ جدید هم مستقل (self-contained) است: وابستگیِ http(s) بیرونی ندارد،
+  جز یک اسکریپتِ Cloudflare در پایانِ فایل (خط ۲۵۸۵۶) که iframe مخفی می‌سازد و
+  `/cdn-cgi/challenge-platform/scripts/jsd/main.js` را می‌خواند؛ رهگیرِ برنامه
+  فقط مسیرهای `/formula-editor/` را پاسخ می‌دهد و به بقیه پاسخِ خالی می‌دهد،
+  پس این اسکریپت داخلِ برنامه بی‌اثر است. طبقِ خواستهٔ «بایت‌به‌بایت»
+  دست‌نخورده ماند.
+
+### تغییرِ لازم در تست
+- بیلدِ جدید badge نسخهٔ مرجع «v36 · V34» را از مبدأ حذف کرده
+  (`MF_FIX_V974`)؛ دیگر `hostBuildTag` یا سازندهٔ برچسبی در فایل نیست.
+  تستِ `V55_6CleanBadgesFitTest` به رفتارِ جدید به‌روز شد: حذفِ badge در مبدأ
+  (نه مخفی‌سازیِ داخلِ برنامه) + ماندنِ پرچمِ نسخه + پاک‌سازیِ دفاعیِ
+  `nativeBridgeTag`.
+
+### راستی‌آزمایی
+- `cmp` فایلِ استخراجی با داراییِ جدید: بایت‌به‌بایت یکسان.
+- `scripts/verify_native_final.py`: PASS (`FINAL_NATIVE_VERIFY=PASS`).
+- `testDebugUnitTest`: ۱۰۵۸ تست، ۰ شکست.
+- `lintDebug`: BUILD SUCCESSFUL (اجرای نخست با کرشِ detectorِ Compose برخورد
+  کرد؛ با توقفِ daemon و اجرای پاک برطرف شد — محیطی بود، نه کدی).
+- سینتکسِ ۲۲ اسکریپتِ inline درونِ فایل: ۰ خطا.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+پچ: V94_formula_editor_asset — بدون SQL.
