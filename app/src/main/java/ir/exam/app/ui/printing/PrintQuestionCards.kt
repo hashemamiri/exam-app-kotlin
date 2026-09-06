@@ -34,6 +34,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +50,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.calendar.PersianDigits
 import ir.exam.app.ui.math.QuestionToolIcons
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * V88.9 — کارتِ بومیِ سؤال در آزمون‌سازِ چاپی.
@@ -73,7 +83,9 @@ fun printPastelColor(type: String): Color = when (type) {
     else -> Color(0xFFFFD1DC)
 }
 
-/** هشت ابزارِ درج، همان‌ها و به همان ترتیبِ کارتِ آنلاین. */
+/** هشت ابزارِ درج، همان‌ها و به همان ترتیبِ کارتِ آنلاین.
+ *  V90 — فقط مرجع: خودِ `QuestionTextWebSection` این هشت ابزار را رندر می‌کند
+ *  و کارت دیگر ردیفِ تکراریِ آن‌ها را نشان نمی‌دهد. */
 val printInsertTools: List<Triple<String, String, ImageVector>> = listOf(
     Triple(FigureToolRequest.FORMULA, "فرمول", QuestionToolIcons.Formula),
     Triple("figure", "شکل", QuestionToolIcons.Figure),
@@ -84,6 +96,101 @@ val printInsertTools: List<Triple<String, String, ImageVector>> = listOf(
     Triple("physics", "فیزیک", QuestionToolIcons.Physics),
     Triple("chemistry", "شیمی", QuestionToolIcons.Chemistry)
 )
+
+/* V90 — مدل و تجزیهٔ پلِ کارتِ بومی. این‌ها قبلاً در `PrintQuestionEditorSheet.kt`
+   بودند؛ با حذفِ آن پنجرهٔ مرده، مدلِ مشترک به همین‌جا منتقل شد تا کارت و
+   دیالوگ همچنان از آن استفاده کنند. */
+
+/** یک گزینهٔ چندگزینه‌ای یا صحیح/غلط. */
+data class PrintOptionRow(val text: String, val correct: Boolean)
+
+/** یک جفتِ جورکردنی. */
+data class PrintPairRow(val left: String, val right: String)
+
+/** عکسِ فوریِ یک سؤال، همان‌طور که پل می‌دهد. */
+data class PrintQuestionDetail(
+    val id: String = "",
+    val type: String = "long",
+    val text: String = "",
+    val score: String = "",
+    val optionsLayout: String = "2rows",
+    val answerLines: Int? = null,
+    val answerStyle: String = "lined",
+    val answerLineHeightCm: Double? = null,
+    val answer: String = "",
+    /** V89.3 — متنِ خوانا برای نمایش؛ توکن‌ها با نشانهٔ کوتاه جایگزین شده‌اند. */
+    val displayText: String = "",
+    /** آیا متن شیءِ درج‌شده دارد؟ */
+    val hasTokens: Boolean = false,
+    val options: List<PrintOptionRow> = emptyList(),
+    val pairs: List<PrintPairRow> = emptyList()
+)
+
+private val detailJson = Json { ignoreUnknownKeys = true; isLenient = true }
+
+/** خروجیِ `__qmfQuestionDetail` را می‌خواند. `{}` یعنی سؤال پیدا نشد. */
+fun parsePrintQuestionDetail(raw: String?): PrintQuestionDetail? {
+    val body = raw?.trim().orEmpty()
+    if (body.isEmpty() || body == "{}" || body == "\"{}\"") return null
+    return runCatching {
+        val o: JsonObject = detailJson.parseToJsonElement(body).jsonObject
+        fun str(k: String) = o[k]?.jsonPrimitive?.contentOrNull.orEmpty()
+        PrintQuestionDetail(
+            id = str("id"),
+            type = str("type").ifBlank { "long" },
+            text = str("text"),
+            score = str("score"),
+            optionsLayout = str("optionsLayout").ifBlank { "2rows" },
+            answerLines = o["answerLines"]?.jsonPrimitive?.intOrNull,
+            answerStyle = str("answerStyle").ifBlank { "lined" },
+            answerLineHeightCm = o["answerLineHeightCm"]?.jsonPrimitive?.doubleOrNull,
+            answer = str("answer"),
+            displayText = str("displayText"),
+            hasTokens = o["hasTokens"]?.jsonPrimitive?.booleanOrNull ?: false,
+            options = o["options"]?.jsonArray?.map { el ->
+                val it = el.jsonObject
+                PrintOptionRow(
+                    text = it["text"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    correct = it["correct"]?.jsonPrimitive?.booleanOrNull ?: false
+                )
+            }.orEmpty(),
+            pairs = o["pairs"]?.jsonArray?.map { el ->
+                val it = el.jsonObject
+                PrintPairRow(
+                    left = it["left"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    right = it["right"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                )
+            }.orEmpty()
+        )
+    }.getOrNull()
+}
+
+/**
+ * V89.2 — کلِ فهرستِ سؤال‌ها از یک فراخوانی. هر عضو همان شکلی است که
+ * `parsePrintQuestionDetail` می‌فهمد، پس منطقِ تجزیه یکی می‌ماند.
+ */
+fun parsePrintQuestionList(raw: String?): List<PrintQuestionDetail> {
+    val body = raw?.trim().orEmpty()
+    if (body.isEmpty() || body == "[]" || body == "\"[]\"") return emptyList()
+    return runCatching {
+        detailJson.parseToJsonElement(body).jsonArray.mapNotNull { el ->
+            parsePrintQuestionDetail(el.toString())
+        }
+    }.getOrDefault(emptyList())
+}
+
+/** برچسبِ فارسیِ هر نوع سؤال. */
+fun printQuestionTypeLabel(type: String): String = when (type) {
+    "multiple" -> "چندگزینه‌ای"
+    "truefalse" -> "صحیح/غلط"
+    "fill" -> "جای خالی"
+    "numeric" -> "عددی"
+    "matching" -> "جورکردنی"
+    else -> "تشریحی"
+}
+
+/** آیا این نوع، فضای پاسخ دارد؟ */
+fun printTypeHasAnswerSpace(type: String): Boolean = type == "long" || type == "fill"
 
 @Composable
 fun PrintQuestionCard(
@@ -98,6 +205,9 @@ fun PrintQuestionCard(
     onAction: (action: String) -> Unit,
     onOpenTool: (tool: String, cursor: Int) -> Unit,
     onOpenImageStudio: () -> Unit,
+    /* V90 — لمسِ دوم روی یک شکلِ درون‌متنی: مشخصاتِ توکن و بازهٔ آن برای
+       بازکردنِ همان پنجرهٔ بومی در حالتِ ویرایش. */
+    onEditFigure: (specJson: String, occurrenceIndex: Int, start: Int, end: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accent = printPastelColor(detail.type)
@@ -108,6 +218,10 @@ fun PrintQuestionCard(
     }
     var text by remember(detail.id) { mutableStateOf(detail.text) }
     var score by remember(detail.id) { mutableStateOf(detail.score) }
+    /* V90 — متنِ کارت حالتِ «کنترل‌شده» دارد: خودِ کارت آن را نگه می‌دارد و
+       وقتی درج/ویرایشِ اشیاء از بیرون متنِ صفحه را عوض کرد، از روی
+       `detail.text` هم‌گام می‌شود. */
+    LaunchedEffect(detail.text) { text = detail.text }
     var answer by remember(detail.id) { mutableStateOf(detail.answer) }
     var lines by remember(detail.id) { mutableStateOf(detail.answerLines?.toString().orEmpty()) }
     var lineHeight by remember(detail.id) {
@@ -192,46 +306,34 @@ fun PrintQuestionCard(
                        بدونِ تغییر کار می‌کند و `QuestionTextWebSection` هیچ
                        وابستگی‌ای به `ExamBuilderViewModel` ندارد. */
                     ir.exam.app.ui.builder.QuestionTextWebSection(
-                        text = detail.text,
+                        text = text,
                         controller = fieldController,
                         onTextChanged = { value ->
                             text = value
                             onEditField("text", value)
                         },
-                        onInsertFigure = { onOpenTool("figure", 0) },
-                        onInsertGraph = { onOpenTool("graph", 0) },
-                        onInsertTable = { onOpenTool("table", 0) },
-                        onInsertPeriodic = { onOpenTool("periodic", 0) },
-                        onInsertAnatomy = { onOpenTool("anatomy", 0) },
-                        onInsertPhysics = { onOpenTool("physics", 0) },
-                        onInsertChemistry = { onOpenTool("chemistry", 0) },
-                        onOpenFormula = { _, _, _ -> onOpenTool(FigureToolRequest.FORMULA, 0) },
+                        onInsertFigure = { off -> onOpenTool("figure", off) },
+                        onInsertGraph = { off -> onOpenTool("graph", off) },
+                        onInsertTable = { off -> onOpenTool("table", off) },
+                        onInsertPeriodic = { off -> onOpenTool("periodic", off) },
+                        onInsertAnatomy = { off -> onOpenTool("anatomy", off) },
+                        onInsertPhysics = { off -> onOpenTool("physics", off) },
+                        onInsertChemistry = { off -> onOpenTool("chemistry", off) },
+                        onOpenFormula = { _, selStart, _ -> onOpenTool(FigureToolRequest.FORMULA, selStart) },
+                        onEditFigureToken = { specJson, occurrenceIndex, start, end ->
+                            onEditFigure(specJson, occurrenceIndex, start, end)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // ---- هشت ابزارِ درج + دوربین ----
-                    /* V89.2 — آیکنِ برداری، نه متن. همان `QuestionToolIcons`ِ
-                       آزمون‌سازِ آنلاین استفاده می‌شود تا هر دو یکی باشند. */
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        printInsertTools.take(4).forEach { (tool, label, icon) ->
-                            IconButton(onClick = { onOpenTool(tool, -1) }) {
-                                Icon(icon, contentDescription = label)
-                            }
-                        }
-                    }
+                    /* V90 — نوارِ تکراریِ هشت‌ابزار حذف شد: `QuestionTextWebSection`
+                       خودش همان هشت ابزار را دارد و درجِ آن‌ها با محلِ مکان‌نما
+                       انجام می‌شود. فقط دکمهٔ دوربین (استودیوی تصویر) می‌ماند. */
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        printInsertTools.drop(4).forEach { (tool, label, icon) ->
-                            IconButton(onClick = { onOpenTool(tool, -1) }) {
-                                Icon(icon, contentDescription = label)
-                            }
-                        }
                         // دکمهٔ تصویر: استودیوی ویرایشِ تصویر را باز می‌کند
                         IconButton(onClick = onOpenImageStudio) {
                             Icon(Icons.Outlined.PhotoCamera, contentDescription = "استودیوی تصویر")
@@ -258,7 +360,7 @@ fun PrintQuestionCard(
                                     modifier = Modifier.weight(1f)
                                 )
                                 if (detail.type == "multiple") {
-                                    IconButton(onClick = { onOptionCount("removeOption", i) }) {
+                                    IconButton(onClick = { onOptionCount("remove", i) }) {
                                         Icon(
                                             Icons.Outlined.Delete,
                                             contentDescription = "حذف گزینه",
@@ -269,7 +371,7 @@ fun PrintQuestionCard(
                             }
                         }
                         if (detail.type == "multiple") {
-                            TextButton(onClick = { onOptionCount("addOption", 0) }) {
+                            TextButton(onClick = { onOptionCount("add", 0) }) {
                                 Icon(Icons.Outlined.Add, contentDescription = null)
                                 Text("  افزودن گزینه")
                             }

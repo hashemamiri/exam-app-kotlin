@@ -87,7 +87,7 @@ class V53_2PeriodicNativeTest {
 
     @Test
     fun `periodic icon opens the native editor instead of the webview tool`() {
-        assertTrue("NativeToolButton(QuestionToolIcons.Periodic, \"درج جدول تناوبی\", onInsertPeriodic)" in webSection)
+        assertTrue("NativeToolButton(QuestionToolIcons.Periodic, \"درج جدول تناوبی\") { onInsertPeriodic(insertAtOffset) }" in webSection)
         assertFalse("openTool(\"periodic\")" in webSection)
         assertTrue("PeriodicEditorDialog(" in builder)
         assertTrue("onInsertPeriodic = { periodicTarget = TableTarget() }" in builder)

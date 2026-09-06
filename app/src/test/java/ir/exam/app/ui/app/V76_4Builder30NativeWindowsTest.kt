@@ -15,8 +15,8 @@ import org.junit.Test
 /**
  * V76.4 — پنجره‌های بومی آزمون‌ساز + هستهٔ بومی استودیوی تصویر:
  * ۱) شِمای تنظیمات سربرگ دقیقاً از خود فایل ۳۰ استخراج شده (۷ قالب/همهٔ فیلدها).
- * ۲) چهار پنجرهٔ بومی در دیالوگ سیم‌کشی شده‌اند و پل‌های setFields/ExportJson/
- *    AddQuestionImage موجودند.
+ * ۲) سه پنجرهٔ بومی در دیالوگ سیم‌کشی شده‌اند و پل‌های setFields/ExportJson/
+ *    AddQuestionImage موجودند (NewQuestionTypeDialog در V90 حذف شد).
  * ۳) دوربین سؤال در asset به پل بومی می‌رود (با پشتیبانِ استودیوی کامل HTML).
  * ۴) هستهٔ استودیوی بومی: چرخش/قرینه/برش/اسکن(۱۸۵)/اندازه‌های S-M-L-∞/کیفیت ۹۲.
  */
@@ -77,28 +77,18 @@ class V76_4Builder30NativeWindowsTest {
         // بازکردن: پنجرهٔ خلاصه قبل از اعمال
         assertTrue("OpenExamSummaryDialog(" in dialogSource)
         assertTrue("pendingOpenText" in dialogSource)
-        // سوال جدید: پنجرهٔ بومی ۶ نوعه + همان pickQuestionType فایل
-        assertTrue("NewQuestionTypeDialog(" in dialogSource)
+        // سوال جدید: از منویِ رادیالِ + با همان pickQuestionType فایل
         assertTrue("pickQuestionType('" in dialogSource)
     }
 
     @Test
-    fun `native windows cover all seven header templates and six question types`() {
+    fun `native windows cover all seven header templates`() {
         // ۷ قالب با همان برچسب‌های فایل (نمونه‌ها)
         for (label in listOf("سربرگ ۱ - قالب قبلی دانشگاه آزاد", "سربرگ ۷ - قالب وزارت آموزش و پرورش")) {
             assertTrue(label, label in schemaText)
         }
-        // ۶ نوع سؤال با همان نماد/ترتیب فایل
-        for (t in listOf(
-            "\"multiple\" to \"🔘 چندگزینه‌ای\"",
-            "\"truefalse\" to \"✓ صحیح/غلط\"",
-            "\"long\" to \"📝 تشریحی\"",
-            "\"fill\" to \"___ جای‌خالی\"",
-            "\"numeric\" to \"🔢 عددی\"",
-            "\"matching\" to \"↔ جورکردنی\""
-        )) {
-            assertTrue(t, t in windowsSource)
-        }
+        // V90 — شش نوعِ سؤال دیگر در این فایل نیستند؛ انتخابِ نوع از منویِ
+        // رادیالِ + (BuilderRadialMenuOverlay) می‌آید.
     }
 
     @Test

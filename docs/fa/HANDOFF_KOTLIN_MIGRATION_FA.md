@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۳ — V74.2 حذف کامل iText 7 و مسیر PDF مستقیم؛ افزوده‌شدن بخش ۲۸۱ (ممیزی امنیتی جامع) و نقشهٔ سخت‌سازی
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۶ — V90 رفع باگ‌ها و لگ‌های آزمون‌ساز چاپی (B1/B2/B3 + کد مرده + debounce تایپ)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -16384,3 +16384,74 @@ assertTrue(
 ادعاهای کوچکِ مستقل شکسته شود.
 
 پچ: V77_0_1_fix_encodecropped_signature_pin — بدون SQL.
+
+## ۳۱۲) V90 — رفع باگ‌ها و لگ‌های آزمون‌ساز چاپی (ممیزی Print Builder)
+
+پس از ممیزی عمیقِ آزمون‌ساز چاپی (گزارش کامل: `PRINT_BUILDER_AUDIT.md`)، این پچ
+باگ‌های B1/B2/B3، کلِ کد مرده و دو لگِ تایپ را یک‌جا رفع می‌کند. **B4 عمداً
+اصلاح نشد** — منتظر تصمیم کاربر است (پایین همین بخش).
+
+### B1 — دکمهٔ «افزودن گزینه» و «حذف گزینه» در کارت بومی کار می‌کند
+- `PrintQuestionCards.kt`: `onOptionCount("addOption"/"removeOption")` →
+  `onOptionCount("add"/"remove")`. توابعِ پلِ `__qmfOptionCount` فقط
+  `add`/`remove`/`addPair`/`removePair` را می‌شناسند؛ مقدار قبلی بی‌صدا
+  نادیده گرفته می‌شد.
+
+### B2 — درجِ شکل/نمودار/جدول/… در محلِ مکان‌نما (نه ابتدا/انتهای متن)
+- کال‌بک‌های درج در `QuestionTextWebSection` از `() -> Unit` به
+  `(insertOffset: Int) -> Unit` تغییر کرد و مقدار واقعیِ `insertAtOffset`
+  پاس داده می‌شود.
+- `PrintQuestionCard` همان offset را به `onOpenTool(tool, offset)` می‌دهد.
+- فرمول: `formulaCaret` در `ExamHtmlPrintDialog` ثبت می‌شود و `FormulaHostDialog`
+  با همان `selectionStart/End` باز می‌شود (نه انتهای سخت‌کدشدهٔ قبلی).
+- متنِ کارت «کنترل‌شده» شد (`LaunchedEffect(detail.text)`) تا پس از درجِ بیرونی،
+  کادر با متنِ صفحه هم‌گام بماند.
+
+### B3 — لمس دوم روی شکلِ درون‌متنی، ویرایشگر بومی همان نوع را باز می‌کند
+- `onEditFigureToken` حالا ۴ آرگومان دارد: `(specJson, occurrenceIndex, start, end)`.
+- `PrintQuestionCard.onEditFigure` → `ExamHtmlPrintDialog` با `toolOfSpec(specJson)`
+  یک `FigureToolRequest(…, editIndex, initialSpecJson, tokenStart, tokenEnd)` می‌سازد
+  (همان مسیرِ ویرایشی که V82 برای آزمون‌ساز آنلاین دارد).
+
+### حذف کد مرده
+- `PrintQuestionEditorSheet.kt` (کل فایل) حذف شد؛ مدل/پارسرِ مشترک
+  (`PrintQuestionDetail`، `parsePrintQuestionDetail`، `parsePrintQuestionList` و
+  برچسب‌ها) به `PrintQuestionCards.kt` منتقل شد تا کارت و دیالوگ از آن استفاده کنند.
+- stateهای `editingQuestionId`/`editingDetail`/`editingIndex`، پلِ `openQuestion` و
+  `NativeBarButton` از `ExamHtmlPrintDialog.kt` حذف شدند.
+- `NewQuestionTypeDialog` + `showNewQuestion` حذف شدند (سؤال جدید از منوی رادیالِ +
+  می‌آید).
+- ردیفِ تکراریِ ۸ ابزار در کارت حذف شد (خودِ `QuestionTextWebSection` همان ۸ ابزار
+  را دارد؛ فقط دکمهٔ دوربین ماند).
+- **sentinel کارت بومی** در `exam_print.html` از `openQuestion` به `openImageStudio`
+  تغییر کرد؛ بدون این تغییر، حذفِ پل `openQuestion` حالتِ کارت بومی را می‌شکست.
+
+### لگ‌ها (ممیزی ۵ مورد نام برد؛ جمع‌بندی قطعی)
+- **L1**: فیلدهای تایپی (پاسخ/سطر/فاصله‌cm) و `onEditPair` با `scheduleCardsRefresh()`
+  (debounce ۳۰۰ms) نوشته می‌شوند؛ دیگر هر ضربه کلِ فهرست را بازسازی نمی‌کند.
+- **L2**: متن سؤال با `scheduleTextWrite()` (debounce ۳۰۰ms) نوشته می‌شود؛
+  `flushPendingEdits()` پیش از بستن، متنِ در انتظار را همان لحظه می‌نویسد تا چیزی
+  از دست نرود. بستن دیالوگ هم از `requestDismiss()` می‌گذرد.
+- **L3**: از قبل در V89.2 رفع شده بود (خواندن یک‌جای `__qmfAllQuestions` به‌جای
+  رفت‌وبرگشتِ هر سؤال) — در این پچ فقط تأیید شد.
+- مورد کم‌اثرِ «فرمول» (یک `__qmfQuestionText` اضافه در هر بازشدن) عمداً
+  دست‌نخورده ماند (قابل‌قبول و بدون لگِ محسوس).
+
+### B4 — عمداً اصلاح نشد (نیاز به تصمیم شما)
+مقدار clamp‌شدهٔ `answerLines`/`answerLineHeightCm`/`answerStyle`/`optionsLayout`
+از JS به Native برنمی‌گردد؛ کاربر «۹» تایپ می‌کند، چاپ از «۱.۶» استفاده می‌کند،
+ولی کادر همان «۹» را نشان می‌دهد. فقط نمایشی/جزئی است و خودِ چاپ درست است.
+دو راه پیش روست: (الف) بازگرداندن مقدار clamp‌شده از `__qmfQuestionDetail` پس از
+هر ویرایش، یا (ب) clamp محلی در Native. تا تصمیم شما، این مورد اصلاح نمی‌شود.
+
+### راستی‌آزمایی
+- `compileDebugKotlin` + `compileDebugUnitTestKotlin`: **BUILD SUCCESSFUL**.
+- `testDebugUnitTest`: **۱۰۴۷ تست، ۰ خطا**.
+- `lintDebug`: **BUILD SUCCESSFUL**.
+- `scripts/verify_native_final.py`: **PASS** (kotlin_files=215 edge_functions=3).
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+```
+
+پچ: V90_print_builder_bugfix — بدون SQL.

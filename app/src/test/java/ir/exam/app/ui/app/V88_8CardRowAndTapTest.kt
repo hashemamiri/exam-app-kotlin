@@ -63,10 +63,10 @@ class V88_8CardRowAndTapTest {
     }
 
     @Test
-    fun `the native editor is still reachable through its bridge`() {
-        // حذف نشد: پل و ویرایشگر سرِ جایشان‌اند
+    fun `the question bridge is still reachable`() {
+        // V90 — پلِ `openQuestion` حذف شد (ویرایش در خودِ کارت است)، ولی
+        // پلِ خواندن/نوشتنِ سؤال دست‌نخورده می‌ماند.
         assertTrue("window.__qmfQuestionDetail = function" in asset)
-        assertTrue("fun openQuestion(questionId: String?)" in
-            File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText())
+        assertTrue("window.__qmfQuestionEdit = function" in asset)
     }
 }

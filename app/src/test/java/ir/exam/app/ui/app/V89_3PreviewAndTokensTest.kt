@@ -49,8 +49,10 @@ class V89_3PreviewAndTokensTest {
         // شرطِ «خوانا تا پیش از ویرایش» همان است.
         // V89.8 — کادرِ متن به `QuestionTextWebSection` رفت که خودش اشیاء را
         // درون‌خطی نشان می‌دهد، پس منطقِ «متنِ خوانا» دیگر آنجا لازم نیست.
+        // V90 — متن حالا حالتِ کنترل‌شده دارد و بعد از درجِ بیرونی هم‌گام می‌شود.
         assertTrue("ir.exam.app.ui.builder.QuestionTextWebSection(" in cards)
-        assertTrue("text = detail.text" in cards)
+        assertTrue("text = text" in cards)
+        assertTrue("LaunchedEffect(detail.text)" in cards)
     }
 
     @Test

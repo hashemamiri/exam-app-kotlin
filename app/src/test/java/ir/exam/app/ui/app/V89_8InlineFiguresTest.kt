@@ -55,7 +55,7 @@ class V89_8InlineFiguresTest {
             "onInsertFigure", "onInsertGraph", "onInsertTable", "onInsertPeriodic",
             "onInsertAnatomy", "onInsertPhysics", "onInsertChemistry"
         ).forEach { assertTrue("$it وصل نیست", "$it =" in cards) }
-        assertTrue("onOpenFormula = { _, _, _ ->" in cards)
+        assertTrue("onOpenFormula = { _, selStart, _ ->" in cards)
     }
 
     @Test

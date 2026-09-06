@@ -1003,7 +1003,7 @@ private fun QuestionEditor(
                 onOpenFormula = { text, selStart, selEnd ->
                     formulaHost = FormulaHostTarget(text, selStart, selEnd)
                 },
-                onEditFigureToken = { rawJson ->
+                onEditFigureToken = { rawJson, _, _, _ ->
                     // V53.3 — دوبار-کلیک توکن داخل WebView: بازکردن ویرایشگر Native همان نوع.
                     FigureSpec.parse(rawJson)?.let { spec ->
                         editingWebToken = true

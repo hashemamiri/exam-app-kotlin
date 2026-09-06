@@ -72,14 +72,15 @@ fun QuestionTextWebSection(
     text: String,
     controller: QuestionEditorFieldController,
     onTextChanged: (String) -> Unit,
-    onInsertFigure: () -> Unit,
-    onInsertGraph: () -> Unit,
-    onInsertTable: () -> Unit,
-    onInsertPeriodic: () -> Unit,
-    onInsertAnatomy: () -> Unit,
-    onInsertPhysics: () -> Unit,
-    onInsertChemistry: () -> Unit,
-    onEditFigureToken: (String) -> Unit = {},
+    onInsertFigure: (insertOffset: Int) -> Unit,
+    onInsertGraph: (insertOffset: Int) -> Unit,
+    onInsertTable: (insertOffset: Int) -> Unit,
+    onInsertPeriodic: (insertOffset: Int) -> Unit,
+    onInsertAnatomy: (insertOffset: Int) -> Unit,
+    onInsertPhysics: (insertOffset: Int) -> Unit,
+    onInsertChemistry: (insertOffset: Int) -> Unit,
+    onEditFigureToken: (specJson: String, occurrenceIndex: Int, start: Int, end: Int) -> Unit =
+        { _, _, _, _ -> },
     onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
@@ -307,7 +308,13 @@ fun QuestionTextWebSection(
                                         if (selected) {
                                             selectedPartIndex = null
                                             controller.pendingEditOccurrence = part.index
-                                            currentEditToken(spec.toJson())
+                                            val figOcc = figures.getOrNull(part.index)
+                                            currentEditToken(
+                                                spec.toJson(),
+                                                part.index,
+                                                figOcc?.start ?: -1,
+                                                figOcc?.endExclusive ?: -1
+                                            )
                                         } else {
                                             selectedPartIndex = index
                                         }
@@ -345,13 +352,13 @@ fun QuestionTextWebSection(
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             NativeToolButton(QuestionToolIcons.Formula, "درج فرمول") { controller.openTool("formula") }
-            NativeToolButton(QuestionToolIcons.Figure, "درج شکل", onInsertFigure)
-            NativeToolButton(QuestionToolIcons.Graph, "درج نمودار", onInsertGraph)
-            NativeToolButton(QuestionToolIcons.Table, "درج جدول", onInsertTable)
-            NativeToolButton(QuestionToolIcons.Anatomy, "درج آناتومی بدن", onInsertAnatomy)
-            NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی", onInsertPeriodic)
-            NativeToolButton(QuestionToolIcons.Physics, "درج فیزیک", onInsertPhysics)
-            NativeToolButton(QuestionToolIcons.Chemistry, "درج شیمی", onInsertChemistry)
+            NativeToolButton(QuestionToolIcons.Figure, "درج شکل") { onInsertFigure(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Graph, "درج نمودار") { onInsertGraph(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Table, "درج جدول") { onInsertTable(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Anatomy, "درج آناتومی بدن") { onInsertAnatomy(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { onInsertPeriodic(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Physics, "درج فیزیک") { onInsertPhysics(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Chemistry, "درج شیمی") { onInsertChemistry(insertAtOffset) }
         }
     }
 }

@@ -37,7 +37,8 @@ class V88_9NativeCardsTest {
         assertTrue("body.qmf-native-cards #questionsContainer{display:none !important}" in asset)
         assertTrue("document.body.classList.add('qmf-native-cards')" in asset)
         // بیرونِ برنامه دست‌نخورده
-        assertTrue("if (window.ExamPrintNative && typeof window.ExamPrintNative.openQuestion === 'function')" in asset)
+        // V90 — sentinel از openQuestion (که پلش حذف شد) به openImageStudio رفت
+        assertTrue("if (window.ExamPrintNative && typeof window.ExamPrintNative.openImageStudio === 'function')" in asset)
         // گره می‌ماند چون renderEditor و رندرِ چاپ به آن ارجاع دارند
         assertTrue("id=\"questionsContainer\"" in asset)
     }

@@ -86,9 +86,10 @@ class V89_2CardPerfTest {
 
     @Test
     fun `the eight tools are vector icons, not text`() {
+        // V90 — ردیفِ تکراریِ ابزارها از کارت حذف شد (خودِ کادرِ متنِ سؤال
+        // همان هشت ابزار را دارد)؛ فهرستِ مرجعِ آیکن‌های برداری می‌ماند.
         assertTrue("List<Triple<String, String, ImageVector>>" in cards)
         assertTrue("AssistChip" !in cards)
-        assertTrue("Icon(icon, contentDescription = label)" in cards)
         assertEquals(8, Regex("QuestionToolIcons\\.\\w+").findAll(cards).count())
         assertEquals(8, printInsertTools.size)
     }

@@ -100,9 +100,9 @@ class V53_3AtlasNativeTest {
 
     @Test
     fun `all three icons open native editors and webview tools are gone`() {
-        assertTrue("NativeToolButton(QuestionToolIcons.Anatomy, \"درج آناتومی بدن\", onInsertAnatomy)" in webSection)
-        assertTrue("NativeToolButton(QuestionToolIcons.Physics, \"درج فیزیک\", onInsertPhysics)" in webSection)
-        assertTrue("NativeToolButton(QuestionToolIcons.Chemistry, \"درج شیمی\", onInsertChemistry)" in webSection)
+        assertTrue("NativeToolButton(QuestionToolIcons.Anatomy, \"درج آناتومی بدن\") { onInsertAnatomy(insertAtOffset) }" in webSection)
+        assertTrue("NativeToolButton(QuestionToolIcons.Physics, \"درج فیزیک\") { onInsertPhysics(insertAtOffset) }" in webSection)
+        assertTrue("NativeToolButton(QuestionToolIcons.Chemistry, \"درج شیمی\") { onInsertChemistry(insertAtOffset) }" in webSection)
         assertFalse("openTool(\"anatomy\")" in webSection)
         assertFalse("openTool(\"physics\")" in webSection)
         assertFalse("openTool(\"chemistry\")" in webSection)

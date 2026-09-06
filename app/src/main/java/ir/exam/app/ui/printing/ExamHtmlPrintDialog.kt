@@ -44,7 +44,6 @@ import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -59,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -82,6 +82,7 @@ import ir.exam.app.ui.builder.QuestionType
 import ir.exam.app.ui.math.FormulaHostDialog
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -127,6 +128,8 @@ fun ExamHtmlPrintDialog(
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
     // V82.0 — ویرایشگر بومیِ فرمول: (questionId, متنِ کاملِ سؤال)
     var formulaTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // V90 — محلِ مکان‌نما هنگامِ بازکردنِ ویرایشگرِ فرمول (B2)؛ -۱ یعنی انتها.
+    var formulaCaret by remember { mutableIntStateOf(-1) }
     // V78.1 — نوارِ بومیِ مدیریت سؤال
     var questionRows by remember { mutableStateOf<List<QuestionRow>>(emptyList()) }
     var questionTotal by remember { mutableStateOf("") }
@@ -139,14 +142,11 @@ fun ExamHtmlPrintDialog(
     val headerSchema = remember { loadHeaderSchema(context) }
     var showHeaderSettings by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
-    var showNewQuestion by remember { mutableStateOf(false) }
     // V87.4 — منویِ رادیالِ + (همان آزمون‌سازِ آنلاین) و منویِ چاپ
     var radialMenuOpen by rememberSaveable { mutableStateOf(false) }
     var showPrintMenu by remember { mutableStateOf(false) }
     // V87.4 — پنجرهٔ بومیِ بازیابی، به‌جای بنرِ شناورِ HTML
     var showRestore by remember { mutableStateOf(false) }
-    // V88.1 — ویرایشگرِ بومیِ سؤال
-    var editingQuestionId by remember { mutableStateOf<String?>(null) }
     // V88.9 — فهرستِ بومیِ کارت‌های سؤال (جایگزینِ کارتِ HTML داخلِ برنامه)
     var cardDetails by remember { mutableStateOf<List<PrintQuestionDetail>>(emptyList()) }
     var openCardId by remember { mutableStateOf<String?>(null) }
@@ -156,8 +156,6 @@ fun ExamHtmlPrintDialog(
        بدونِ سؤال، فهرست خالی بود و مشکل دیده نمی‌شد؛ با سؤال، چشم «کار
        نمی‌کرد». هنگامِ باز بودنِ پیش‌نمایش کارت‌ها کنار می‌روند. */
     var previewOpen by remember { mutableStateOf(false) }
-    var editingDetail by remember { mutableStateOf<PrintQuestionDetail?>(null) }
-    var editingIndex by remember { mutableIntStateOf(1) }
     // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
@@ -184,6 +182,56 @@ fun ExamHtmlPrintDialog(
     }
     val runJs: (String, ((String?) -> Unit)?) -> Unit = { script, cb ->
         webViewRef?.evaluateJavascript(script, cb)
+    }
+
+    /* V90 — لگِ تایپ (L1/L2): هر ضربه یک رفت‌وبرگشتِ کامل به WebView بود.
+       نوشتنِ متن و بازسازیِ فهرست حالا با ۳۰۰ms debounce انجام می‌شوند تا
+       فقط پس از مکثِ تایپ یک‌بار اتفاق بیفتند. `flushPendingEdits` پیش از
+       بستن، متنِ در انتظار را همان لحظه می‌نویسد تا چیزی از دست نرود. */
+    val scope = rememberCoroutineScope()
+    var pendingTextEdit by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var textDebounce by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var cardsDebounce by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    fun writeQuestionText(qid: String, value: String) {
+        runJs(
+            "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
+                jsArg(qid) + "," + jsArg("text") + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
+        ) { }
+    }
+
+    fun scheduleTextWrite(qid: String, value: String) {
+        pendingTextEdit = qid to value
+        textDebounce?.cancel()
+        textDebounce = scope.launch {
+            kotlinx.coroutines.delay(300)
+            pendingTextEdit = null
+            writeQuestionText(qid, value)
+        }
+    }
+
+    fun scheduleCardsRefresh() {
+        cardsDebounce?.cancel()
+        cardsDebounce = scope.launch {
+            kotlinx.coroutines.delay(300)
+            cardsRefresh++
+        }
+    }
+
+    fun flushPendingEdits() {
+        textDebounce?.cancel()
+        textDebounce = null
+        pendingTextEdit?.let { (qid, value) ->
+            pendingTextEdit = null
+            writeQuestionText(qid, value)
+        }
+        cardsDebounce?.cancel()
+        cardsDebounce = null
+    }
+
+    fun requestDismiss() {
+        flushPendingEdits()
+        onDismiss()
     }
 
     // V78.2 — گرفتنِ عکسِ فوریِ پیش‌نویس و نوشتنش در آینهٔ بومی
@@ -281,7 +329,7 @@ fun ExamHtmlPrintDialog(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { requestDismiss() },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false
@@ -299,7 +347,7 @@ fun ExamHtmlPrintDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // V87.4 — برگشت، دقیقاً مثلِ آزمون‌سازِ آنلاین
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = { requestDismiss() }) {
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = "بازگشت",
@@ -391,7 +439,7 @@ fun ExamHtmlPrintDialog(
                                                 }
                                             }
                                         },
-                                        onClose = { post { onDismiss() } },
+                                        onClose = { post { requestDismiss() } },
                                         onError = { message -> post { jsError = message; loading = false } },
                                         onOpenImageStudio = { qid ->
                                             post { studioQuestionId = qid.ifBlank { null } }
@@ -406,9 +454,6 @@ fun ExamHtmlPrintDialog(
                                         // V87.8 — همان اعلانِ وسط‌چینِ محوشونده
                                         onToast = { message ->
                                             post { if (message.isNotBlank()) barStatus = message }
-                                        },
-                                        onOpenQuestion = { qid ->
-                                            post { if (qid.isNotBlank()) editingQuestionId = qid }
                                         },
                                         onPreviewClosed = { post { previewOpen = false } }
                                     ),
@@ -605,10 +650,26 @@ fun ExamHtmlPrintDialog(
                                         openCardId = if (openCardId == detail.id) null else detail.id
                                     },
                                     onEditField = { field, value ->
-                                        runJs(
-                                            "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
-                                                jsArg(detail.id) + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
-                                        ) { if (field != "text" && field != "score") cardsRefresh++ }
+                                        if (field == "text") {
+                                            // V90 — لگِ L2: متن با debounce نوشته می‌شود
+                                            scheduleTextWrite(detail.id, value)
+                                        } else {
+                                            runJs(
+                                                "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
+                                                    jsArg(detail.id) + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
+                                            ) {
+                                                if (field == "score") {
+                                                    // V90 — بارم در خودِ کارت است؛ بازسازی لازم نیست
+                                                } else if (field == "answer" || field == "answerLines" ||
+                                                    field == "answerLineHeightCm"
+                                                ) {
+                                                    // V90 — لگِ L1: این‌ها فیلدهای تایپی‌اند
+                                                    scheduleCardsRefresh()
+                                                } else {
+                                                    cardsRefresh++
+                                                }
+                                            }
+                                        }
                                     },
                                     onEditOption = { idx, field, value ->
                                         runJs(
@@ -629,7 +690,7 @@ fun ExamHtmlPrintDialog(
                                         runJs(
                                             "(function(){try{return window.__qmfPairEdit?window.__qmfPairEdit(" +
                                                 jsArg(detail.id) + "," + idx + "," + jsArg(side) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
-                                        ) { cardsRefresh++ }
+                                        ) { scheduleCardsRefresh() }
                                     },
                                     onAction = { action ->
                                         runJs(
@@ -643,9 +704,29 @@ fun ExamHtmlPrintDialog(
                                         runJs(
                                             "(function(){try{return window.__qmfSetInsertPos?window.__qmfSetInsertPos(" +
                                                 cursor + "):'missing'}catch(e){return 'err'}})()"
-                                        ) { figureTool = FigureToolRequest(detail.id, tool) }
+                                        ) {
+                                            if (tool == FigureToolRequest.FORMULA) formulaCaret = cursor
+                                            figureTool = FigureToolRequest(detail.id, tool)
+                                        }
                                     },
-                                    onOpenImageStudio = { studioQuestionId = detail.id }
+                                    onOpenImageStudio = { studioQuestionId = detail.id },
+                                    /* V90 — لمسِ دوم روی شکلِ درون‌متنی (B3): همان
+                                       پنجرهٔ بومی در حالتِ ویرایشِ همان توکن. */
+                                    onEditFigure = { specJson, occurrenceIndex, start, end ->
+                                        val tool = toolOfSpec(specJson)
+                                        if (tool == null) {
+                                            barStatus = "این ابزار پنجرهٔ بومی ندارد."
+                                        } else {
+                                            figureTool = FigureToolRequest(
+                                                questionId = detail.id,
+                                                tool = tool,
+                                                editIndex = occurrenceIndex,
+                                                initialSpecJson = specJson,
+                                                tokenStart = start,
+                                                tokenEnd = end
+                                            )
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -929,84 +1010,9 @@ fun ExamHtmlPrintDialog(
 
 
 
-            // V88.1 — ویرایشگرِ بومیِ سؤال. جزئیات از پل می‌آید و هر تغییر
-            // بی‌درنگ به همان `questions` جاوااسکریپت برمی‌گردد، پس چاپ و
-            // پیش‌نمایش دقیقاً همان چیزی را می‌بینند که قبلاً می‌دیدند.
-            editingQuestionId?.let { qid ->
-                LaunchedEffect(qid) {
-                    runJs("(function(){try{return window.__qmfQuestionDetail?window.__qmfQuestionDetail('" + qid + "'):'{}'}catch(e){return '{}'}})()") { raw ->
-                        val parsed = parsePrintQuestionDetail(unwrapJsString(raw))
-                        if (parsed == null) {
-                            editingQuestionId = null
-                        } else {
-                            editingDetail = parsed
-                            runJs("(function(){try{return window.__qmfQuestionList?window.__qmfQuestionList():'[]'}catch(e){return '[]'}})()") { list ->
-                                val rows = parseQuestionRows(list)
-                                editingIndex = rows.indexOfFirst { it.id == qid }.let { if (it < 0) 1 else it + 1 }
-                            }
-                        }
-                    }
-                }
-                editingDetail?.let { detail ->
-                    /** پس از هر نوشتن، عکسِ تازه را بگیر تا شماره/گزینه‌ها هم‌گام بماند. */
-                    fun refresh() {
-                        runJs("(function(){try{return window.__qmfQuestionDetail?window.__qmfQuestionDetail('" + qid + "'):'{}'}catch(e){return '{}'}})()") { raw ->
-                            parsePrintQuestionDetail(unwrapJsString(raw))?.let { editingDetail = it }
-                        }
-                    }
-                    PrintQuestionEditorSheet(
-                        detail = detail,
-                        index = editingIndex,
-                        onEditField = { field, value ->
-                            runJs(
-                                "(function(){try{return window.__qmfQuestionEdit?window.__qmfQuestionEdit(" +
-                                    jsArg(qid) + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()",
-                                null
-                            )
-                        },
-                        onEditOption = { i, field, value ->
-                            runJs(
-                                "(function(){try{return window.__qmfOptionEdit?window.__qmfOptionEdit(" +
-                                    jsArg(qid) + "," + i + "," + jsArg(field) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()"
-                            ) { refresh() }
-                        },
-                        onOptionCount = { action, i ->
-                            runJs(
-                                "(function(){try{return window.__qmfOptionCount?window.__qmfOptionCount(" +
-                                    jsArg(qid) + "," + jsArg(action) + "," + i + "):'missing'}catch(e){return 'err'}})()"
-                            ) { refresh() }
-                        },
-                        onEditPair = { i, side, value ->
-                            runJs(
-                                "(function(){try{return window.__qmfPairEdit?window.__qmfPairEdit(" +
-                                    jsArg(qid) + "," + i + "," + jsArg(side) + "," + jsArg(value) + "):'missing'}catch(e){return 'err'}})()",
-                                null
-                            )
-                        },
-                        onOpenFormula = {
-                            editingQuestionId = null
-                            figureTool = FigureToolRequest(qid, FigureToolRequest.FORMULA)
-                        },
-                        onOpenFigureTool = { tool ->
-                            editingQuestionId = null
-                            figureTool = FigureToolRequest(qid, tool)
-                        },
-                        onDismiss = { editingQuestionId = null; editingDetail = null }
-                    )
-                }
-            }
-
-            if (showNewQuestion) {
-                NewQuestionTypeDialog(
-                    onPick = { type ->
-                        showNewQuestion = false
-                        runJs("(function(){try{if(typeof pickQuestionType==='function'){pickQuestionType('" + type + "');return 'ok'}return 'missing'}catch(e){return 'err'}})()") { r ->
-                            barStatus = if (r?.contains("ok") == true) null else "سوال جدید اضافه نشد."
-                        }
-                    },
-                    onDismiss = { showNewQuestion = false }
-                )
-            }
+            // V90 — ویرایشگرِ جدای بومی (PrintQuestionEditorSheet) حذف شد؛
+            // ویرایش مستقیماً در خودِ کارتِ بومی انجام می‌شود و پنجرهٔ
+            // «سوال جدید» هم حذف شد (سوال تازه از منوی رادیالِ + می‌آید).
             studioQuestionId?.let { qid ->
                 ExamImageStudioDialog(
                     questionId = qid,
@@ -1125,13 +1131,16 @@ fun ExamHtmlPrintDialog(
             // آزمون‌سازِ بومی استفاده می‌کند: متنِ کاملِ سؤال را می‌گیرد و
             // متنِ کامل برمی‌گرداند، پس هم درج و هم ویرایشِ فرمول را پوشش می‌دهد.
             formulaTarget?.let { (qid, text) ->
+                // V90 — محلِ مکان‌نما همان جایی است که کاربر فرمول را خواسته بود
+                val caret = if (formulaCaret in 0..text.length) formulaCaret else text.length
                 FormulaHostDialog(
                     initialText = text,
-                    selectionStart = text.length,
-                    selectionEnd = text.length,
-                    onDismiss = { formulaTarget = null },
+                    selectionStart = caret,
+                    selectionEnd = caret,
+                    onDismiss = { formulaTarget = null; formulaCaret = -1 },
                     onResult = { newText ->
                         formulaTarget = null
+                        formulaCaret = -1
                         if (newText != text) {
                             val b64 = android.util.Base64.encodeToString(
                                 newText.toByteArray(Charsets.UTF_8),
@@ -1243,17 +1252,6 @@ internal fun parseExistingImages(raw: String?): List<StudioImageRef> {
     }.getOrDefault(emptyList())
 }
 
-@Composable
-private fun NativeBarButton(label: String, onClick: () -> Unit) {
-    TextButton(
-        onClick = onClick,
-        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-    ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-    }
-}
-
 /**
  * V88.1 — یک رشتهٔ کاتلین را به لیترالِ امنِ جاوااسکریپت تبدیل می‌کند.
  *
@@ -1273,8 +1271,6 @@ private class ExamPrintBridge(
     private val onEditFigureTool: (String, Int) -> Unit,
     // V87.8 — پیام‌های صفحه به‌جای alert مرورگر، اعلانِ بومی می‌شوند
     private val onToast: (String) -> Unit,
-    // V88.1 — بازکردنِ ویرایشگرِ بومیِ سؤال
-    private val onOpenQuestion: (String) -> Unit,
     // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
     private val onPreviewClosed: () -> Unit
 ) {
@@ -1282,12 +1278,6 @@ private class ExamPrintBridge(
     @JavascriptInterface
     fun toast(message: String?) {
         onToast(message.orEmpty())
-    }
-
-    /** V88.1 — لمسِ کارتِ سؤال، ویرایشگرِ بومی را باز می‌کند. */
-    @JavascriptInterface
-    fun openQuestion(questionId: String?) {
-        onOpenQuestion(questionId.orEmpty())
     }
 
     /** V89.5 — پیش‌نمایش بسته شد؛ فهرستِ کارت‌ها باید برگردد. */

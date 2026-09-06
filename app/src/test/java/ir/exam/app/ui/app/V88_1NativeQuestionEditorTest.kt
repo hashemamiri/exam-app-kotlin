@@ -27,8 +27,8 @@ class V88_1NativeQuestionEditorTest {
     private val dialog by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
     }
-    private val sheet by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt").readText()
+    private val cards by lazy {
+        File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").readText()
     }
 
     @Test
@@ -105,7 +105,7 @@ class V88_1NativeQuestionEditorTest {
     fun `the formula constant comes from the request type that declares it`() {
         // V88.2 — `ExamFigureToolHost.FORMULA` کامپایل نمی‌شد: آن یک Composable
         // است و FORMULA در companion objectِ FigureToolRequest زندگی می‌کند.
-        assertTrue("FigureToolRequest(qid, FigureToolRequest.FORMULA)" in dialog)
+        assertTrue("FigureToolRequest.FORMULA" in dialog)
         assertTrue("ExamFigureToolHost.FORMULA" !in dialog)
     }
 
@@ -113,31 +113,32 @@ class V88_1NativeQuestionEditorTest {
     fun `arguments are escaped before they reach the page`() {
         // متنِ سؤال می‌تواند نقل‌قول یا `</script>` داشته باشد
         assertTrue("org.json.JSONObject.quote(value)" in dialog)
-        assertTrue("jsArg(qid)" in dialog)
+        assertTrue("jsArg(detail.id)" in dialog)
     }
 
     @Test
-    fun `touching a card opens the native editor and degrades outside the app`() {
-        // V88.8 — لمسِ کارت دیگر میزبان را خبر نمی‌کند (کاربر خواست خودِ
-        // کارت باز شود). پل حذف نشد و ویرایشگرِ بومی از راهِ آن در دسترس
-        // می‌ماند، پس سنجه «پل باقی است» شد.
+    fun `touching a card opens the card itself and the bridge stays reachable`() {
+        // V90 — ویرایش مستقیماً در خودِ کارت انجام می‌شود (ویرایشگرِ جدای
+        // بومی حذف شد)؛ پلِ خواندن/نوشتن دست‌نخورده می‌ماند تا چاپ همان
+        // دادهٔ صفحه را ببیند.
         assertTrue("window.__qmfQuestionDetail = function" in asset)
-        assertTrue("fun openQuestion(questionId: String?)" in dialog)
-        assertTrue("editingQuestionId = qid" in dialog)
+        assertTrue("window.__qmfQuestionEdit = function" in asset)
+        assertTrue("PrintQuestionCard(" in dialog)
     }
 
     @Test
-    fun `the editor covers every question type`() {
-        assertTrue("متن سؤال" in sheet)
-        assertTrue("RadioButton(" in sheet)
-        assertTrue("افزودن گزینه" in sheet)
-        assertTrue("افزودن جفت" in sheet)
-        assertTrue("پاسخ صحیح" in sheet)
-        // V88.4 — فضای پاسخ حالا سه کنترل دارد: سطر، فاصله و سبک
-        assertTrue("فضای پاسخ" in sheet)
-        assertTrue("فاصله (cm)" in sheet)
-        // ابزارهای درج همان بومی‌های موجود
-        assertTrue("onOpenFormula" in sheet)
-        assertTrue("onOpenFigureTool(\"figure\")" in sheet)
+    fun `the card covers every question type`() {
+        // V90 — ویرایش در خودِ کارت انجام می‌شود؛ همان کنترل‌ها باید باشند.
+        assertTrue("QuestionTextWebSection(" in cards)
+        assertTrue("RadioButton(" in cards)
+        assertTrue("افزودن گزینه" in cards)
+        assertTrue("افزودن جفت" in cards)
+        assertTrue("پاسخ صحیح" in cards)
+        // V88.4 — فضای پاسخ سه کنترل دارد: سطر، فاصله و سبک
+        assertTrue("فضای پاسخ" in cards)
+        assertTrue("فاصله (cm)" in cards)
+        // ابزارهای درج همان بومی‌های موجود (از راهِ QuestionTextWebSection)
+        assertTrue("onOpenFormula" in cards)
+        assertTrue("onOpenTool(\"figure\"" in cards)
     }
 }

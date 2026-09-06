@@ -2599,7 +2599,6 @@ require(_v730_dialog.exists()
         and "HeaderSettingsDialog(" in _v730_dialog_text
         and "SaveExamDialog(" in _v730_dialog_text
         and "OpenExamSummaryDialog(" in _v730_dialog_text
-        and "NewQuestionTypeDialog(" in _v730_dialog_text
         and "loadHeaderSchema(context)" in _v730_dialog_text
         and "window.__qmfSetFields" in _v730_dialog_text
         and "ExamImageStudioDialog(" in _v730_dialog_text
@@ -2613,10 +2612,8 @@ _v764_studio_text=_v764_studio.read_text() if _v764_studio.exists() else ""
 _v764_schema_text=_v764_schema.read_text(encoding="utf-8") if _v764_schema.is_file() else ""
 require(_v764_windows.exists()
         and "fun loadHeaderSchema(" in _v764_windows_text
-        and '"multiple" to "🔘 چندگزینه‌ای"' in _v764_windows_text
-        and '"matching" to "↔ جورکردنی"' in _v764_windows_text
         and 'payload["f_headerTemplate"] = templateId' in _v764_windows_text,
-        "V76.4 native windows (header schema dialog + question types) are missing")
+        "V76.4 native windows (header schema dialog) are missing")
 require(_v764_schema.is_file() and _v764_schema.stat().st_size > 5_000
         and '"detailed-school"' in _v764_schema_text and '"ministry"' in _v764_schema_text
         and '"f_course"' in _v764_schema_text,
@@ -3191,23 +3188,18 @@ for _f in ("updateQ(q.id, field, v)", "updateOpt(id,", "addOption(id)",
            "removeOption(id,", "addPair(id)", "removePair(id,", "updatePair(id,"):
     require(_f in _v79_asset,
             "V88.1 the bridge must delegate to the page function %s" % _f)
-# V88.8 — لمس دیگر میزبان را خبر نمی‌کند: کاربر خواست کارت باز شود، نه
-# پنجره. پلِ `openQuestion` حذف نشد و ویرایشگرِ بومی از راهِ آن در دسترس
-# می‌ماند؛ سنجه از «لمس خبر می‌دهد» به «پل باقی است» تغییر کرد.
-require("fun openQuestion(questionId: String?)" in _v874_dlg
-        and "window.__qmfQuestionDetail = function" in _v79_asset,
+# V90 — پنجرهٔ جدای `PrintQuestionEditorSheet` حذف شد؛ ویرایش در خودِ کارتِ
+# بومی می‌ماند و پلِ خواندن/نوشتن دست‌نخورده است.
+require("window.__qmfQuestionDetail = function" in _v79_asset,
         "V88.1 the native question bridge must stay reachable")
-_v881_sheet = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt"
-require(_v881_sheet.is_file(), "V88.1 the native question editor is missing")
 require("org.json.JSONObject.quote(value)" in _v874_dlg,
         "V88.1 arguments must be escaped before injection")
-require("fun openQuestion(questionId: String?)" in _v874_dlg,
-        "V88.1 the native side must expose openQuestion")
 
 # V88.4 — چیدمانِ چاپ فقط در آزمون‌سازِ چاپی، و پیامِ خالی برداشته شد
 require("emptyMsg.style.display = 'block'" not in _v79_asset,
         "V88.4 the empty-state notice must never be shown; questions are cards now")
-_v884_sheet = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionEditorSheet.kt").read_text(encoding="utf-8")
+# V90 — کنترل‌های چیدمانِ چاپ از پنجرهٔ حذف‌شده به خودِ کارت منتقل شدند.
+_v884_sheet = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
 for _c in ('Text("\u0641\u0636\u0627\u06cc \u067e\u0627\u0633\u062e"',
            '"lined" to "\u062e\u0637\u200c\u062f\u0627\u0631"',
            '"plain" to "\u0633\u0627\u062f\u0647"',

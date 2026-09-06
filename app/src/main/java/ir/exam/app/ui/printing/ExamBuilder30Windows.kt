@@ -1,6 +1,5 @@
 package ir.exam.app.ui.printing
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,12 +33,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -51,7 +48,9 @@ import kotlinx.serialization.json.Json
  *    شناسه/برچسب/نوع واقعی)؛ مقدارها از صفحه خوانده و با __qmfSetFields اعمال می‌شوند.
  * ۲) SaveExamDialog — ذخیره: «این جلسه» (نگه‌داشتن در برنامه) یا «فایل JSON در دستگاه».
  * ۳) OpenExamSummaryDialog — پیش‌نمایش فایل باز‌شده قبل از اعمال.
- * ۴) NewQuestionTypeDialog — انتخاب نوع سؤال با همان ۶ گزینهٔ خود فایل.
+ *
+ * V90 — NewQuestionTypeDialog حذف شد: «سوال جدید» از منویِ رادیالِ + می‌آید
+ * و این پنجره هیچ‌جا باز نمی‌شد.
  */
 
 @Serializable
@@ -258,42 +257,6 @@ fun OpenExamSummaryDialog(
         },
         confirmButton = { TextButton(onClick = onApply) { Text("اعمال") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
-    )
-}
-
-/** پنجرهٔ بومی «سوال جدید» — همان ۶ نوعِ خود فایل (ترتیب/نمادها عیناً). */
-@Composable
-fun NewQuestionTypeDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    val types = listOf(
-        "multiple" to "🔘 چندگزینه‌ای",
-        "truefalse" to "✓ صحیح/غلط",
-        "long" to "📝 تشریحی",
-        "fill" to "___ جای‌خالی",
-        "numeric" to "🔢 عددی",
-        "matching" to "↔ جورکردنی"
-    )
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("انتخاب نوع سوال") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                types.forEach { (id, label) ->
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                            .clickable { onPick(id) }
-                            .padding(vertical = 14.dp, horizontal = 12.dp)
-                    ) {
-                        Text(label, style = MaterialTheme.typography.titleMedium)
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("انصراف") }
-        }
     )
 }
 
