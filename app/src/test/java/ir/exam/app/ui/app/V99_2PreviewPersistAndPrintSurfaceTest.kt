@@ -98,7 +98,9 @@ class V99_2PreviewPersistAndPrintSurfaceTest {
         // بیلدر بومی آن را به وضعیت می‌نویسد:
         assertTrue("fun applyFigLayouts(snapshotJson: String)" in viewModel)
         assertTrue("onFigLayouts = { viewModel.applyFigLayouts(it) }" in builder)
-        // intOrNull تابعِ extension است؛ بدونِ import کملایت رد می‌شود (V99.2b).
+        // intOrNull در این نسخهٔ kotlinx خاصیتِ extension است: هم import
+        // لازم است و هم با پرانتز صدا زده نمی‌شود (V99.2b/c).
         assertTrue("import kotlinx.serialization.json.intOrNull" in viewModel)
+        assertTrue("?.jsonPrimitive?.intOrNull ?: 0" in viewModel)
     }
 }

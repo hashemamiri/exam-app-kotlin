@@ -258,7 +258,8 @@ class ExamBuilderViewModel(
                 questions = state.questions.mapIndexed { index, q ->
                     val entry = map[(index + 1).toString()] ?: return@mapIndexed q
                     val figLayoutsJson = entry.jsonObject["figLayouts"]?.toString() ?: ""
-                    val sepExtraPx = entry.jsonObject["sepExtraPx"]?.jsonPrimitive?.intOrNull() ?: 0
+                    // intOrNull در این نسخهٔ kotlinx خاصیتِ extension است (نه تابع).
+                    val sepExtraPx = entry.jsonObject["sepExtraPx"]?.jsonPrimitive?.intOrNull ?: 0
                     if (figLayoutsJson == q.figLayoutsJson && sepExtraPx == q.sepExtraPx) q
                     else q.copy(figLayoutsJson = figLayoutsJson, sepExtraPx = sepExtraPx)
                 }
