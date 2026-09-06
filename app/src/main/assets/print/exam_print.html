@@ -13439,6 +13439,8 @@ function initPreviewFigureEditing() {
     return {
       parent: parent,
       parentW: Math.max(1, (parent.clientWidth || pr.width || 0) - padR - padL),
+      /* V91 — ارتفاعِ سلولِ سؤال برای گیرهٔ عمودی (محدود به همان سؤال). */
+      parentH: Math.max(1, pr.height || parent.clientHeight || 0),
       normalTop: (el.offsetTop || 0) - (parseFloat(el.style.top || '0') || 0),
       elW: el.getBoundingClientRect().width,
       elH: el.getBoundingClientRect().height
@@ -13456,12 +13458,12 @@ function initPreviewFigureEditing() {
     h = Math.max(30, h || er.height || 120);
     const maxX = Math.max(0, parentW - w - borderSafe);
     x = Math.max(0, Math.min(maxX, x));
-    /* V89.6 — شیءِ شناور `position:absolute` است و می‌تواند بالاتر از جای
-       طبیعی‌اش برود؛ گیرهٔ `y >= 0` مانعِ این بود و کاربر می‌دید شیءِ
-       پایین‌تر هرگز از شیءِ بالاتر عبور نمی‌کند. برای شیءِ غیرشناور گیره
-       می‌ماند چون در جریانِ متن است و y منفی چیدمان را می‌شکند. */
+    /* V91 — شیءِ شناور حالا محدود به سلولِ سؤالِ خودش است: می‌تواند بالاتر از
+       جای طبیعی‌اش برود ولی نه بیرونِ سلول (پیش‌تر فقط کفِ -4000 داشت و به
+       سؤال‌های بالا/پایین می‌رفت). کف و سقف از ارتفاعِ سلول حساب می‌شود. */
     if (el.classList && el.classList.contains('fig-free')) {
-      y = Math.max(-4000, y);
+      var maxY = Math.max(0, m.parentH - h - borderSafe);
+      y = Math.max(0, Math.min(maxY, y));
     } else {
       y = Math.max(0, y);
     }
@@ -14323,7 +14325,7 @@ loadSample();
   function hideBanner(){ if (_banner && _banner.parentNode) _banner.parentNode.removeChild(_banner); _banner = null; }
   window.restoreAutosave = function(){
     try {
-      var raw = localStorage.getItem(LS_KEY); if (!raw) return;
+      var raw = localStorage.getItem(LS_KEY); if (!raw) return 'missing';
       var data = JSON.parse(raw);
       Object.keys(data.fields||{}).forEach(function(k){
         var el = document.getElementById(k);
@@ -14334,8 +14336,11 @@ loadSample();
       try { if (typeof updateHeaderSettingsVisibility==='function') updateHeaderSettingsVisibility(); } catch(e){}
       renderAll();
       hideBanner();
-      try { qmfToast('آزمون ذخیره‌شده بازیابی شد.'); } catch(e){}
-    } catch(e){ try { qmfToast('خطا در بازیابی آزمون.'); } catch(x){} }
+      /* V91 — در میزبانِ بومی پیام را کاتلین می‌زند (پس از تازه‌کردنِ فهرست)؛
+         در مرورگر همان اعلانِ قدیمی می‌ماند. */
+      try { if (!(window.ExamPrintNative && typeof window.ExamPrintNative.toast === 'function')) qmfToast('آزمون ذخیره‌شده بازیابی شد.'); } catch(e){}
+      return 'ok';
+    } catch(e){ try { qmfToast('خطا در بازیابی آزمون.'); } catch(x){} return 'err'; }
   };
   window.clearAutosave = function(){
     try { localStorage.removeItem(LS_KEY); } catch(e){}
@@ -14559,6 +14564,16 @@ loadSample();
   #previewArea .interactive-figure {
     pointer-events:auto !important;
     touch-action:none !important;
+  }
+
+  /* V91 — کادرِ سفیدِ پس‌زمینهٔ هر شیء در پیش‌نمایش حذف شد تا اشیاء بدونِ
+     همپوشانی کنارِ هم بنشینند و روی ستونِ بارم نیفتند. */
+  #previewArea .interactive-figure .qmf-fig {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
   }
 
   /* V88.9 — داخلِ برنامه کارتِ HTML کنار می‌رود و فهرستِ بومی جایش را

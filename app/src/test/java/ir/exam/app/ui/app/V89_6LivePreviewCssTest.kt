@@ -57,8 +57,10 @@ class V89_6LivePreviewCssTest {
 
     @Test
     fun `a free figure may rise above its natural position`() {
-        // گیرهٔ y>=0 مانعِ عبور از شیءِ بالاتر بود
-        assertTrue("y = Math.max(-4000, y);" in asset)
+        // V91 — شناور می‌تواند بالاتر از جای طبیعی‌اش برود ولی نه بیرونِ
+        // سلولِ سؤالِ خودش (گیره از ارتفاعِ سلول حساب می‌شود).
+        assertTrue("var maxY = Math.max(0, m.parentH - h - borderSafe);" in asset)
+        assertTrue("y = Math.max(0, Math.min(maxY, y));" in asset)
         // ولی شیءِ داخلِ جریانِ متن همچنان گیره دارد
         assertTrue("y = Math.max(0, y);" in asset)
     }

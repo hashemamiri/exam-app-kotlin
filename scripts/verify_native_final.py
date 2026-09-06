@@ -3312,8 +3312,10 @@ require("<style>${extraCss}</style>" in _v896_web,
         "V89.6 the preview view must inject that stylesheet")
 require("if (fig && !fig.classList.contains('fig-free'))" in _v79_asset,
         "V89.6 touching a figure must free it so it can move anywhere")
-require("y = Math.max(-4000, y);" in _v79_asset,
-        "V89.6 a free figure must be allowed above its natural position")
+# V91 — شناور حالا محدود به سلولِ سؤالِ خودش است؛ نه کفِ بازِ -4000.
+require("var maxY = Math.max(0, m.parentH - h - borderSafe);" in _v79_asset
+        and "y = Math.max(0, Math.min(maxY, y));" in _v79_asset,
+        "V91 a free figure must stay inside its own question cell")
 require("const dx = (e.clientX - drag.sx) / ks;" in _v79_asset,
         "V89.6 resizing must convert pointer travel out of the scaled space")
 
@@ -3899,6 +3901,22 @@ require("PrivateImageLoader.create(appContext)" in _v760_controller
 require(_v760_test.exists()
         and "image token matches the builder-30 inline img spec" in _v760_test.read_text(),
         "V76.0 builder-30 host regression test is missing")
+
+# V91 — رفع ایرادهای پنجرهٔ پیش‌نمایش و بازیابیِ آزمون‌سازِ چاپی
+require("#previewArea .interactive-figure .qmf-fig {" in _v79_asset
+        and "background: transparent !important;" in _v79_asset
+        and "box-shadow: none !important;" in _v79_asset,
+        "V91 the figure background box must be removed in the preview")
+require("return 'ok';" in _v79_asset
+        and "return window.restoreAutosave();" in _v874_dlg,
+        "V91 restoreAutosave must report success so the native list refreshes")
+require("cardsRefresh++" in _v874_dlg
+        and '"آزمون بازیابی شد ✓"' in _v874_dlg,
+        "V91 the restored questions must appear immediately and natively")
+require("cardDetails.isEmpty() && !previewOpen && !loading" in _v874_dlg,
+        "V91 the print builder needs a native empty state")
+require("parentH: Math.max(1, pr.height || parent.clientHeight || 0)" in _v79_asset,
+        "V91 the question cell height must be measured for the vertical clamp")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -732,6 +732,31 @@ fun ExamHtmlPrintDialog(
                         }
                     }
 
+                    /* V91 — حالتِ خالیِ بومی: وقتی هنوز سؤالی ساخته نشده،
+                       به‌جای صفحهٔ خالیِ WebView یک راهنمایِ بومی می‌آید تا
+                       پنجرهٔ آزمون‌سازِ چاپی از همان ابتدا بومی دیده شود. */
+                    if (cardDetails.isEmpty() && !previewOpen && !loading) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(0xFFEEF2F7)),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                "هنوز سؤالی ساخته نشده است.",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF334155)
+                            )
+                            Text(
+                                "برای شروع، از دکمهٔ + پایینِ صفحه یک سؤال اضافه کنید.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFF64748B),
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                    }
+
                     /* V87.7 — پیام‌ها پایینِ صفحه می‌ماندند تا پیامِ بعدی
                        جایشان را بگیرد. حالا وسط ظاهر و پس از چند ثانیه محو
                        می‌شوند، مثلِ یک اعلانِ بومی. */
@@ -976,8 +1001,17 @@ fun ExamHtmlPrintDialog(
                     confirmButton = {
                         Button(onClick = {
                             showRestore = false
-                            runJs("(function(){try{if(window.restoreAutosave){window.restoreAutosave();return 'ok'}return 'missing'}catch(e){return 'err'}})()") { r ->
-                                barStatus = if (r?.contains("ok") == true) "آزمون بازیابی شد ✓" else "بازیابی ناموفق بود."
+                            runJs("(function(){try{if(window.restoreAutosave){return window.restoreAutosave();}return 'missing'}catch(e){return 'err'}})()") { r ->
+                                if (r?.contains("ok") == true) {
+                                    // V91 — فهرستِ بومی باید همان لحظه سؤال‌هایِ
+                                    // بازیابی‌شده را ببیند (پیش‌تر فقط پس از
+                                    // افزودنِ سؤالِ تازه ظاهر می‌شدند).
+                                    cardsRefresh++
+                                    barStatus = "آزمون بازیابی شد ✓"
+                                    mirrorDraft()
+                                } else {
+                                    barStatus = "بازیابی ناموفق بود."
+                                }
                             }
                         }) { Text("بازیابی") }
                     },
