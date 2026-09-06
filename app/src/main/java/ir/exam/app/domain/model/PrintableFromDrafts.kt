@@ -57,6 +57,9 @@ object PrintableFromDrafts {
                 question.optionImages.filterNotNull().map { 40f },
             imageXmm = question.images.map { it.xMm } +
                 question.optionImages.filterNotNull().map { 20f },
+            // V99.2 — چیدمانِ پیش‌نمایش (اشیاء + جداکننده) با printable می‌رود.
+            figLayoutsJson = question.figLayoutsJson,
+            sepExtraPx = question.sepExtraPx,
             imageYmm = question.images.map { it.yMm } +
                 question.optionImages.filterNotNull().map { 30f },
             imageUrls = question.images.map { it.uri } + question.optionImages.filterNotNull()

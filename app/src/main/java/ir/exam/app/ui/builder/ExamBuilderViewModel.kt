@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class ExamBuilderViewModel(
     context: Context,
@@ -234,6 +236,33 @@ class ExamBuilderViewModel(
     /** V63.5 — جایگزینی سؤال‌ها با چیدمان چاپی ذخیره‌شده (فقط ویرایشگر سند). */
     fun overridePrintLayout(questions: List<QuestionDraft>) {
         _state.update { it.copy(questions = questions) }
+    }
+
+    /**
+     * V99.2 — چیدمانِ اشیاء/جداکنندهٔ پنجرهٔ پیش‌نمایشِ چاپی را به وضعیتِ
+     * بومی برمی‌گرداند. ورودی JSON است: کلید = شمارهٔ سؤال (از ۱، همان
+     * idِ پلِ setExamData) و مقدار = {figLayouts: {...}, sepExtraPx: n}.
+     * بدون این، موقعیت‌هایی که کاربر در پیش‌نمایش چیده با هر بارِ باز
+     * شدنِ پنجره ریست می‌شد.
+     */
+    fun applyFigLayouts(snapshotJson: String) {
+        val map = runCatching {
+            kotlinx.serialization.json.Json.parseToJsonElement(snapshotJson)
+                .jsonObject
+                .mapValues { it.value }
+        }.getOrNull() ?: return
+        if (map.isEmpty()) return
+        _state.update { state ->
+            state.copy(
+                questions = state.questions.mapIndexed { index, q ->
+                    val entry = map[(index + 1).toString()] ?: return@mapIndexed q
+                    val figLayoutsJson = entry.jsonObject["figLayouts"]?.toString() ?: ""
+                    val sepExtraPx = entry.jsonObject["sepExtraPx"]?.jsonPrimitive?.intOrNull() ?: 0
+                    if (figLayoutsJson == q.figLayoutsJson && sepExtraPx == q.sepExtraPx) q
+                    else q.copy(figLayoutsJson = figLayoutsJson, sepExtraPx = sepExtraPx)
+                }
+            )
+        }
     }
 
     fun moveQuestion(id: String, delta: Int) {

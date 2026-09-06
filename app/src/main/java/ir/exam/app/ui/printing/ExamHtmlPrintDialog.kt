@@ -117,7 +117,13 @@ fun ExamHtmlPrintDialog(
     printable: OfficialExamPrintable?,
     initialPreview: Boolean = false,
     initialPrintMode: String? = null,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /**
+     * V99.2 — چیدمانِ اشیاء/جداکننده که کاربر در پنجرهٔ پیش‌نمایش ساخته
+     * (JSON: شمارهٔ سؤال → {figLayouts, sepExtraPx}). بیلدرِ بومی آن را به
+     * وضعیتِ خود می‌نویسد تا موقعیت‌ها در بازِ بعدی ریست نشوند.
+     */
+    onFigLayouts: ((String) -> Unit)? = null
 ) {
     var loading by remember { mutableStateOf(true) }
     // V92 — فهرستِ بومیِ کارت‌ها یک‌بار بارگذاری شده باشد؛ تا آن موقع صفحهٔ
@@ -237,8 +243,25 @@ fun ExamHtmlPrintDialog(
         cardsDebounce = null
     }
 
+    /* V99.2 — چیدمانِ اشیاء (موقعیت/شناور/slot + جداکننده) را از صفحه بخوان
+       و به میزبانِ بومی بده تا در بازِ بعدیِ پنجره ریست نشود. */
+    var lastFigLayoutsJson by remember { mutableStateOf<String?>(null) }
+
+    fun fetchFigLayoutsSnapshot() {
+        webViewRef?.evaluateJavascript(
+            "(function(){try{return window.__qmfFigLayoutsSnapshot?window.__qmfFigLayoutsSnapshot():'{}'}catch(e){return '{}'}})()"
+        ) { raw ->
+            val json = unwrapJsString(raw).ifBlank { "{}" }
+            if (json != "{}" && json != lastFigLayoutsJson) {
+                lastFigLayoutsJson = json
+                onFigLayouts?.invoke(json)
+            }
+        }
+    }
+
     fun requestDismiss() {
         flushPendingEdits()
+        fetchFigLayoutsSnapshot()
         onDismiss()
     }
 
@@ -476,7 +499,12 @@ fun ExamHtmlPrintDialog(
                                         onToast = { message ->
                                             post { if (message.isNotBlank()) barStatus = message }
                                         },
-                                        onPreviewClosed = { post { previewOpen = false } }
+                                        // V99.2 — پیش از بستنِ پیش‌نمایش، چیدمانِ
+                                        // اشیاء را اسنپ‌شات بگیر تا به بیلدر برسد.
+                                        onPreviewClosed = {
+                                            fetchFigLayoutsSnapshot()
+                                            post { previewOpen = false }
+                                        }
                                     ),
                                     "ExamPrintNative"
                                 )
@@ -586,6 +614,16 @@ fun ExamHtmlPrintDialog(
                                                         if (initialPreview) {
                                                             previewOpen = true
                                                             view.evaluateJavascript("(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()", null)
+                                                        }
+                                                        // V99.2 — در چاپِ مستقیم برگهٔ A4 در جایِ اصلی‌اش (خارجِ
+                                                        // overlay) روی پس‌زمینهٔ خاکستری دیده می‌شود؛ وگرنه با
+                                                        // پنهانِ بودنِ کارت‌ها و نداشتنِ پنجرهٔ پیش‌نمایش، WebView
+                                                        // یک صفحهٔ سفیدِ خالی پشتِ پنجرهٔ چاپ نشان می‌داد.
+                                                        if (initialPrintMode != null) {
+                                                            view.evaluateJavascript(
+                                                                "try{document.body.classList.add('qmf-print-mode');}catch(e){}",
+                                                                null
+                                                            )
                                                         }
                                                         if (initialPrintMode == "student") {
                                                             view.evaluateJavascript("if (typeof printStudent==='function') printStudent();", null)

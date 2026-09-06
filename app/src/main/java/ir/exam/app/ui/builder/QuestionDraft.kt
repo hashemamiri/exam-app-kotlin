@@ -205,6 +205,11 @@ data class QuestionDraft(
     val italic: Boolean = false,
     val answerLines: Int = 2,
     val answerLineStyle: String = "lined",
+    // V99.2 — چیدمانِ اشیاء در پیش‌نمایشِ چاپی (JSON: figLayouts + slot)؛
+    // از پنجرهٔ پیش‌نمایش به وضعیتِ بومی برمی‌گردد تا موقعیت‌ها ریست نشوند.
+    val figLayoutsJson: String = "",
+    /** V99.2 — فاصلهٔ اضافیِ خطِ جداکنندهٔ سؤال از پیش‌نمایش (پیکسل). */
+    val sepExtraPx: Int = 0,
     val rawPublic: JsonObject = JsonObject(emptyMap()),
     val rawAnswer: JsonObject = JsonObject(emptyMap())
 )

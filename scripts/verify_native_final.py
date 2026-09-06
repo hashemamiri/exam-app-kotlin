@@ -3307,6 +3307,16 @@ require("initialPrintMode = printModeFor" in _v991_center,
 require("if (initialPreview) {" in _v874_dlg
         and "if (initialPrintMode == \"student\") {" in _v874_dlg,
         "V99.1 direct print must run the print pipeline without opening the html preview overlay")
+# V99.2 — چاپِ مستقیم نباید صفحهٔ سفید بگذارد (برگه در جایِ اصلی) و
+# چیدمانِ پیش‌نمایش (موقعیتِ اشیاء + جداکننده) باید به وضعیتِ بومیِ
+# بیلدر برگردهد تا در بازِ بعدی/چاپ ریست نشود.
+require("body.qmf-print-mode #printContent.live-preview{display:block !important" in _v79_asset
+        and "document.body.classList.add('qmf-print-mode')" in _v874_dlg
+        and "window.__qmfFigLayoutsSnapshot = function ()" in _v79_asset
+        and "n.figLayouts = {};" in _v79_asset
+        and "onFigLayouts: ((String) -> Unit)? = null" in _v874_dlg
+        and "fun applyFigLayouts(snapshotJson: String)" in (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(encoding="utf-8"),
+        "V99.2 direct print must show the sheet (no white page) and preview layouts must round-trip to the builder")
 require("window.ExamPrintNative.previewClosed()" in _v79_asset
         and "fun previewClosed()" in _v874_dlg,
         "V89.5 closing the preview must bring the cards back")

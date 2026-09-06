@@ -66,6 +66,10 @@ object ExamHtmlPrintPayloadBuilder {
                         put("id", index + 1)
                         put("text", q.text)
                         put("score", formatScore(q.score))
+                        // V99.2 — چیدمانِ پیش‌نمایش (موقعیتِ اشیاء + جداکننده)
+                        // تا با بازِ بعدیِ پنجره ریست نشود و چاپ یکی بماند.
+                        if (q.figLayoutsJson.isNotBlank()) put("figLayoutsJson", q.figLayoutsJson)
+                        if (q.sepExtraPx > 0) put("sepExtraPx", q.sepExtraPx)
 
                         when {
                             q.matchingLeft.isNotEmpty() || q.matchingRight.isNotEmpty() -> {

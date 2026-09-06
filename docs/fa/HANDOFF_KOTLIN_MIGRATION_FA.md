@@ -16877,3 +16877,32 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 - `V73_0HtmlPrintIntegrationTest`: `assertFalse("Text(\"چاپ\")")` با عنوانِ منو در تضاد بود → عنوانِ منوی چاپ از «چاپ» به «چاپ آزمون» تغییر کرد.
 
 ابزارِ تازه: سیمولاتورِ پینِ کلِ ریپازیتوری (۶۵ پین در همهٔ فایل‌های تست) — از این پس با هر تغییرِ رفتاری، همهٔ پین‌ها چک می‌شوند. تحویل: اسکریپتِ مستقلِ `apply_v991b.sh` (پچِ جاسازی‌شده، بدون باندل؛ با اجرایِ دوباره امن است).
+
+## ۳۲) V99.2 — رفع صفحهٔ سفیدِ چاپِ مستقیم و ریست‌شدنِ چیدمانِ پیش‌نمایش
+
+دو گزارشِ تازهٔ کاربر برطرف شد:
+
+۱) **صفحهٔ سفید پس از بازگشت از پنجرهٔ چاپ:** در حالتِ چاپِ مستقیم، فهرستِ کارتِ بومی پنهان است (V99.1) و پنجرهٔ پیش‌نمایشِ HTML هم باز نیست؛ چون همهٔ عناصرِ صفحه (ابزارها/کارت‌های HTML/برگه) در `@media screen` مخفی‌اند، WebView یک صفحهٔ سفیدِ کاملاً خالی پشتِ پنجرهٔ چاپِ اندروید نشان می‌داد. حالا دیالوگ در چاپِ مستقیم کلاسِ `qmf-print-mode` را به body اضافه می‌کند: برگهٔ A4 در جایِ اصلی‌اش (خارجِ overlay — هم برایِ دیده‌شدنِ روی صفحه و هم برایِ چاپِ درست) روی پس‌زمینهٔ خاکستری با حاشیهٔ سفید دیده می‌شود.
+
+۲) **ریست‌شدنِ تغییراتِ پنجرهٔ پیش‌نمایش:** موقعیتِ اشیاء (`q.figLayouts` شاملِ شناور/slot) و فاصلهٔ جداکننده (`q.sepExtraPx`) فقط در وضعیتِ صفحه بود و با هر بارِ باز شدنِ پنجره، تزریقِ `setExamData` از دادهٔ بومی آن‌ها را بازنویسی می‌کرد. حالا:
+- صفحه `window.__qmfFigLayoutsSnapshot()` می‌دهد (شمارهٔ سؤال → {figLayouts, sepExtraPx}).
+- دیالوگ اسنپ‌شات را هنگامِ `previewClosed` و `requestDismiss` می‌گیرد و با پارامترِ تازهٔ `onFigLayouts` به میزبان می‌دهد.
+- `ExamBuilderViewModel.applyFigLayouts` آن را به `QuestionDraft.figLayoutsJson`/`sepExtraPx` می‌نویسد (با ایندکسِ سؤال = شمارهٔ پل).
+- `PrintableFromDrafts.questionAt` و `ExamHtmlPrintPayloadBuilder` فیلدها را در payload می‌گذارند و `normQ` صفحه آن‌ها را به `q.figLayouts`/`q.sepExtraPx` برمی‌گرداند ⇒ پیش‌نمایشِ بعدی و چاپ، دقیقاً همان چیدمانِ کاربر را نشان می‌دهند.
+
+مسیرِ آزمون‌های سرور بدونِ چیدمان می‌ماند (فیلدها default خالی) — بدونِ رگرسیون.
+
+### تغییرات فایل‌ها
+- `exam_print.html`: `qmf-print-mode` (screen)؛ `normQ` بازگردانِ چیدمان؛ `__qmfFigLayoutsSnapshot`.
+- `QuestionDraft.kt` / `OfficialPrintModels.kt`: فیلدهای `figLayoutsJson` + `sepExtraPx` (default).
+- `PrintableFromDrafts.kt` / `ExamHtmlPrintPayload.kt`: عبورِ فیلدها به payload.
+- `ExamHtmlPrintDialog.kt`: پارامتر `onFigLayouts`، `fetchFigLayoutsSnapshot`، اتصال به `previewClosed`/`requestDismiss`، و افزودنِ کلاسِ `qmf-print-mode` در چاپِ مستقیم.
+- `ExamBuilderViewModel.kt`: `applyFigLayouts(snapshotJson)`.
+- `ExamBuilderScreen.kt`: `onFigLayouts = { viewModel.applyFigLayouts(it) }`.
+- تست: `V99_2PreviewPersistAndPrintSurfaceTest.kt` (۴ تست) + به‌روزرسانی یک پینِ V89.5.
+- `scripts/verify_native_final.py`: باندِ V99.2.
+
+### راستی‌آزمایی
+- `FINAL_NATIVE_VERIFY=PASS`؛ ۶۷۸ پینِ کلِ ریپازیتوری بدونِ خطا.
+- jsdom (دو سناریوی عملکردی): بازگردانیِ `figLayoutsJson`/`sepExtraPx` در `normQ`، رندرِ شیءِ شناور + slot از دادهٔ تزریقی، اسنپ‌شاتِ درست، و «بازِ دومِ پنجره بدونِ ریست» — همه PASS.
+- `./gradlew :app:test` و APK: سمتِ کاربر.

@@ -35,7 +35,10 @@ class V89_5PreviewCoverTest {
         assertTrue("window.ExamPrintNative.previewClosed()" in asset)
         assertTrue("typeof window.ExamPrintNative.previewClosed === 'function'" in asset)
         assertTrue("fun previewClosed()" in dialog)
-        assertTrue("onPreviewClosed = { post { previewOpen = false } }" in dialog)
+        // V99.2 — پیش از بستن، چیدمانِ اشیاء اسنپ‌شات می‌شود و سپس
+        // کارت‌ها برمی‌گردند.
+        assertTrue("fetchFigLayoutsSnapshot()" in dialog)
+        assertTrue("post { previewOpen = false }" in dialog)
     }
 
     @Test

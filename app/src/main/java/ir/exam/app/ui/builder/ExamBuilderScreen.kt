@@ -607,7 +607,10 @@ fun ExamBuilderScreen(
                 printPreviewOf = null
                 printInitialPreview = false
                 printInitialMode = null
-            }
+            },
+            // V99.2 — چیدمانِ اشیاء در پیش‌نمایش به وضعیتِ بومی برمی‌گردد
+            // تا موقعیت‌ها در بازِ بعدی (و در چاپ) ریست نشوند.
+            onFigLayouts = { viewModel.applyFigLayouts(it) }
         )
     }
 

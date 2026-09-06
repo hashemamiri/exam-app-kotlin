@@ -12379,6 +12379,31 @@ function ensureFigLayouts(q) {
   if (!q.figLayouts || typeof q.figLayouts !== 'object') q.figLayouts = {};
   return q.figLayouts;
 }
+
+/* V99.2 — اسنپ‌شاتِ چیدمانِ همهٔ سؤالات (موقعیتِ اشیاء + فاصلهٔ جداکننده)
+   برای میزبانِ بومی. بیلدر آن را به وضعیتِ خود می‌نویسد تا در بارِ بعدی
+   (پیش‌نمایش یا چاپ) موقعیت‌ها حفظ بمانند و ریست نشوند.
+   کلید = شمارهٔ سؤال (همان id که پلِ setExamData می‌فرستد). */
+window.__qmfFigLayoutsSnapshot = function () {
+  try {
+    var out = {};
+    if (typeof questions !== 'undefined') {
+      questions.forEach(function (q) {
+        if (!q) return;
+        var entry = null;
+        if (q.figLayouts && Object.keys(q.figLayouts).length > 0) {
+          entry = { figLayouts: q.figLayouts };
+        }
+        if (q.sepExtraPx) {
+          entry = entry || {};
+          entry.sepExtraPx = q.sepExtraPx;
+        }
+        if (entry) out[String(q.id)] = entry;
+      });
+    }
+    return JSON.stringify(out);
+  } catch (e) { return '{}'; }
+};
 function setFigLayout(qId, figIndex, patch) {
   const q = questions.find(x => String(x.id) === String(qId));
   if (!q) return;
@@ -14699,6 +14724,19 @@ loadSample();
 
 /* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
 @media screen{#printContent.live-preview{display:none !important}.preview-note{display:none !important}#previewWinOverlay #printContent.live-preview{display:block !important}}
+/* V99.2 — در چاپِ مستقیم (حالتِ initialPrintMode) فهرستِ کارتِ بومی پنهان
+   است و پنجرهٔ پیش‌نمایشِ HTML هم باز نیست؛ بدونِ این قانون WebView یک
+   صفحهٔ سفیدِ کاملاً خالی پشتِ پنجرهٔ چاپ نشان می‌داد. حالا برگهٔ A4 در
+   جایِ اصلی‌اش (خارجِ overlay ⇒ برای چاپ هم درجا) روی پس‌زمینهٔ خاکستری
+   دیده می‌شود: «برگهٔ خالصِ A4» بدونِ هیچ کنترلِ آزمون‌ساز. */
+@media screen{
+  body.qmf-print-mode{background:#eef2f7 !important}
+  body.qmf-print-mode .toolbar,
+  body.qmf-print-mode .panel,
+  body.qmf-print-mode .questions-area,
+  body.qmf-print-mode .preview-note{display:none !important}
+  body.qmf-print-mode #printContent.live-preview{display:block !important;margin:10px auto}
+}
 </style>
 
 <script id="qmf-ui-v2-runtime">
@@ -15997,6 +16035,17 @@ function normQ(q, i) {
   q = q || {};
   var type = String(q.type || 'long');
   var n = { id: Number(q.id) || (i + 1), type: type, text: String(q.text == null ? '' : q.text), score: (q.score == null ? '' : String(q.score)) };
+  /* V99.2 — چیدمانِ اشیاء (موقعیت/شناور/slot) و فاصلهٔ جداکننده از سمتِ
+     بومی (پیش‌نمایش) بازگردانی می‌شود تا با هر بارِ باز شدنِ پنجره
+     موقعیت‌ها ریست نشوند و چاپ دقیقاً همان چیزی باشد که کاربر چیده است. */
+  n.figLayouts = {};
+  try {
+    if (q.figLayoutsJson) {
+      var _fl = JSON.parse(q.figLayoutsJson);
+      if (_fl && typeof _fl === 'object' && !Array.isArray(_fl)) n.figLayouts = _fl;
+    }
+  } catch (e) {}
+  if (Number(q.sepExtraPx) > 0) n.sepExtraPx = Number(q.sepExtraPx);
   if (type === 'multiple') {
     n.options = (q.options || []).map(function (o) { o = o || {}; return { text: String(o.text == null ? '' : o.text), correct: !!o.correct }; });
     while (n.options.length < 2) n.options.push({ text: '', correct: false });

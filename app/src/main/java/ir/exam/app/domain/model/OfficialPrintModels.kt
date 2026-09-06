@@ -67,7 +67,12 @@ data class OfficialPrintQuestion(
     // V68 — استایل تکه‌ای متن سؤال برای چاپ (بازه‌های انحصاری).
     val textSpans: List<PrintTextSpan> = emptyList(),
     val imageUrls: List<String> = emptyList(),
-    val images: List<Bitmap> = emptyList()
+    val images: List<Bitmap> = emptyList(),
+    // V99.2 — چیدمانِ اشیاء از پیش‌نمایشِ چاپی (JSON) تا چاپ با آنچه
+    // کاربر چیده یکی بماند و در بازِ بعدیِ پنجره ریست نشود.
+    val figLayoutsJson: String = "",
+    /** V99.2 — فاصلهٔ اضافیِ خطِ جداکننده از پیش‌نمایش (پیکسل). */
+    val sepExtraPx: Int = 0
 )
 
 data class OfficialGradeReportPrintable(
