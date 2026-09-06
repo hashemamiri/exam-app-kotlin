@@ -7536,13 +7536,13 @@ html[data-theme="light"] .q-math-prev { background: #f3f6ff; }
 .mb-var.mbv-par3-pop, .mb-var:has(.mbv-par3) { max-width: min(430px, 94vw); }
 .mbv-par3 { display: flex; gap: 7px; align-items: stretch; direction: ltr; unicode-bidi: isolate; }
 .mbv-par-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-.mbv-par-col-t { font-size: .66rem; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 5px; }
-.mbv-par-col-b { display: flex; flex-direction: column; gap: 5px; }
-.mbv-parbtn { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 36px; padding: 3px 8px; border-radius: 9px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff; cursor: pointer; font-family: inherit; touch-action: manipulation; }
+.mbv-par-col-t { font-size: .74rem; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 5px; }
+.mbv-par-col-b { display: flex; flex-direction: column; gap: 6px; }
+.mbv-parbtn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--input-brd); background: var(--input-bg); color: #fff; cursor: pointer; font-family: inherit; touch-action: manipulation; }
 .mbv-parbtn:hover { border-color: var(--accent); background: rgba(0,210,255,.14); }
 .mbv-parbtn:active { transform: scale(0.95); }
-.mbv-par-lab { font-size: .62rem; color: var(--muted); flex: 0 0 auto; direction: rtl; unicode-bidi: isolate; }
-.mbv-par-g { font-size: 1.3rem; line-height: 1; direction: ltr; unicode-bidi: isolate; }
+.mbv-par-lab { font-size: .8rem; color: var(--muted); flex: 0 0 auto; direction: rtl; unicode-bidi: isolate; white-space: nowrap; }
+.mbv-par-g { font-size: 1.6rem; line-height: 1; direction: ltr; unicode-bidi: isolate; }
 .mbv-par-col-mid .mbv-parbtn { border-color: rgba(0,210,255,.5); background: rgba(0,210,255,.1); }
 .mbv-par-col-mid .mbv-par-g { color: var(--accent); }
 /* MF_FIX_V971 — پیش‌نمایشِ SVGِ براکت روی دکمه‌های منو */
@@ -12695,12 +12695,13 @@ function mbParMenu(ev) {
   }
   window.mbParMenu = mbParMenu;
 
-  /* MF_PENCIL_V970: دکمهٔ مداد (✎) — جای دکمهٔ پرانتزِ حذف‌شده.
-     قلابِ آماده: در پیام/بیلدِ بعدی فایلِ همراهِ کاربر استخراج و به این دکمه وصل می‌شود. */
+  /* MF_PENCIL_V970: دکمهٔ مداد (✎) — دست‌نویس. اتصالِ اصلی در hwUiJs انجام
+     می‌شود (window.mbPencilAction → openHw)؛ این نسخهٔ اولیه فقط پشتیبان است
+     و اگر مودالِ دست‌نویس به هر دلیل بالا نیامد، آن را باز می‌کند. */
   function mbPencilAction(ev) {
     if (ev && ev.stopPropagation) ev.stopPropagation();
     try { mbVarClose(); } catch (e) {}
-    /* TODO(vNext): فایلِ ارسالی کاربر اینجا استخراج/جاسازی و باز می‌شود */
+    if (typeof window.mbHwOpen === 'function') { window.mbHwOpen(); return; }
     notify('✎ دکمهٔ مداد — فایلِ همراه به‌زودی به آن متصل می‌شود', 'info', 2200);
   }
   window.mbPencilAction = mbPencilAction;
@@ -15295,6 +15296,8 @@ window.openMath = function () {
         st.textContent =
           '#mfModal{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}' +
           '.modal.open .modal-box{will-change:auto !important;}' +
+          '#mback{backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}' +
+          '#hwModal{animation:none !important;will-change:auto !important;}' +
           '#mfModal.box-fullscreen .mf-box{min-height:100%;}';
         (document.head || document.documentElement).appendChild(st);
       } catch (e) {}
@@ -15344,7 +15347,9 @@ window.openMath = function () {
         }
         function enforceMenu(pop) {
           var vw = window.innerWidth, vh = window.innerHeight;
-          var w = Math.min(480, Math.round(vw * 0.94));
+          var w = pop.querySelector('.mbv-par3')
+            ? Math.min(520, Math.round(vw * 0.96))
+            : Math.min(480, Math.round(vw * 0.94));
           var maxH = Math.round(vh * 0.80);
           setImp(pop, {
             'box-sizing': 'border-box', 'width': px(w), 'min-width': '0', 'max-width': 'none',
@@ -15370,6 +15375,15 @@ window.openMath = function () {
           var qs = pop.querySelectorAll('.mbv-q, .mbv-o, .mbv-c');
           for (var q = 0; q < qs.length; q++) {
             setImp(qs[q], { 'min-width': '46px', 'height': '46px', 'font-size': '1.15rem' });
+          }
+          /* V95 — منوی سه‌ستونیِ پرانتز (mbParMenu): دکمه‌ها لمس‌پذیر و خوانا */
+          var pars = pop.querySelectorAll('.mbv-parbtn');
+          for (var pr = 0; pr < pars.length; pr++) {
+            setImp(pars[pr], { 'min-height': '46px', 'padding': '6px 10px' });
+            var pl = pars[pr].querySelector('.mbv-par-lab');
+            if (pl) setImp(pl, { 'font-size': '.8rem', 'white-space': 'nowrap' });
+            var pg = pars[pr].querySelector('.mbv-par-g');
+            if (pg) setImp(pg, { 'font-size': '1.6rem' });
           }
           var t = pop.querySelector('.mbv-title');
           if (t) setImp(t, { 'font-size': '.85rem', 'margin-bottom': '10px' });
@@ -15417,7 +15431,7 @@ window.openMath = function () {
         function afterMenu() {
           var pop = document.getElementById('mbVar');
           /* V55.8 — همهٔ منوهای شناور (دسته‌ها + حالت‌های کیپد + پرانتزها) */
-          if (pop && pop.classList.contains('open') && pop.querySelector('.mbv-cat, .mbv-i, .mbv-q')) {
+          if (pop && pop.classList.contains('open') && pop.querySelector('.mbv-cat, .mbv-i, .mbv-q, .mbv-parbtn')) {
             pop.__nativeSized = true;
             enforceMenu(pop);
           }
@@ -15450,6 +15464,7 @@ window.openMath = function () {
           /* V55.8 — منوهای حالت‌های دکمه‌های کیپد و انتخاب پرانتز */
           wrapNow('mbVarShow', afterMenu);
           wrapNow('mbParPicker', afterMenu);
+          wrapNow('mbParMenu', afterMenu);
           wrapNow('mbLogMenu', afterMenu);
           wrapNow('mbIntegralMenu', afterMenu);
           wrapNow('mbPercentMenu', afterMenu);
@@ -22684,6 +22699,7 @@ window.mbPencilAction = function (ev) {
   try { if (typeof mbVarClose === 'function') mbVarClose(); } catch (e) {}
   openHw();
 };
+window.mbHwOpen = openHw;
 /* دسترسی فقط-خواندنی به وضعیت برای دیباگ/تست خودکار */
 window.mbHwState = function () { return state; };
 })();
