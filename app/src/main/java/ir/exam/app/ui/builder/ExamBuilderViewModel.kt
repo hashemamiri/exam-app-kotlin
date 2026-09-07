@@ -60,7 +60,11 @@ class ExamBuilderViewModel(
                 _state.value = initialImport?.let { imported ->
                     loaded.copy(
                         loading = false,
-                        examId = null,
+                        // V101 — آزمونِ چاپیِ محلی شناسهٔ رکوردِ خودش را
+                        // نگه می‌دارد تا ذخیرهٔ بعدی همان کارت را به‌روز کند
+                        // (نه یک کارتِ تکراری). برای importهای غیرچاپی
+                        // (بستهٔ JSON) این مقدار null است و رفتار مثل قبل است.
+                        examId = imported.localPrintExamId,
                         code = null,
                         title = imported.title,
                         subject = imported.subject,

@@ -2,7 +2,14 @@ package ir.exam.app.ui.printing
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.Handler
+import android.os.Looper
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
 import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
 import android.print.PrintManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -68,6 +75,9 @@ import kotlinx.serialization.json.jsonPrimitive
  * JSON، بازیابی، مدیریت سؤال، ویرایشگر فرمول، استودیوی تصویر، هدر «سربرگ»،
  * تشخیص‌های فنی) با حذفِ آزمون‌سازِ چاپی از این پنجره برداشته شدند؛ ویرایش
  * آزمون در بیلدرِ بومی انجام می‌شود.
+ * V101 — راه‌اندازیِ WebView به تابعِ مشترکِ `createExamPrintWebView` منتقل
+ * شد تا «چاپِ مستقیمِ بدون‌صفحه» (HeadlessExamPrinter) هم از همان موتور
+ * استفاده کند؛ در آن مسیر هیچ پنجرهٔ پیش‌نمایشی روی صفحه ظاهر نمی‌شود.
  */
 
 /**
@@ -202,177 +212,51 @@ fun ExamHtmlPrintDialog(
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
-                            WebView(ctx).also { webViewRef = it }.apply {
-                                setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
-                                settings.allowFileAccess = false
-                                settings.allowContentAccess = false
-                                @Suppress("DEPRECATION")
-                                settings.allowFileAccessFromFileURLs = false
-                                @Suppress("DEPRECATION")
-                                settings.allowUniversalAccessFromFileURLs = false
-                                settings.setSupportZoom(true)
-                                settings.builtInZoomControls = true
-                                settings.displayZoomControls = false
-                                // V76.2 — useWideViewPort متاوویوپورتِ فایل (width=device-width)
-                                // را اعمال می‌کند؛ اما overviewMode باید خاموش بماند وگرنه WebView
-                                // برای محتوای عریضِ A4 (۷۳۳px) کل صفحه را zoom-out می‌کند و همه
-                                // پنجره‌ها/دکمه‌ها ریز می‌شوند (ریشهٔ «پنجره‌ها کوچک است»).
-                                settings.useWideViewPort = true
-                                settings.loadWithOverviewMode = false
-
-                                addJavascriptInterface(
-                                    ExamPrintBridge(
-                                        onPrint = { mode ->
-                                            post {
-                                                runCatching {
-                                                    val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                                                    val jobName = (printable?.documentTitle ?: "آزمون").ifBlank { "exam" } + "-$mode"
-                                                    val printAdapter = createPrintDocumentAdapter(jobName)
-                                                    printManager?.print(jobName, printAdapter, PrintAttributes.Builder().build())
-                                                }
-                                            }
-                                        },
-                                        onError = { message -> post { jsError = message; loading = false } },
-                                        // V82.0 — ویرایشِ ابزارِ درج‌شده با دابل‌کلیک
-                                        onEditFigureTool = { qid, index ->
-                                            post { figureEditRequest = qid to index }
-                                        },
-                                        // V87.8 — همان اعلانِ وسط‌چینِ محوشونده
-                                        onToast = { message ->
-                                            post { if (message.isNotBlank()) barStatus = message }
-                                        },
-                                        // V99.2 — پیش از بستنِ پیش‌نمایش، چیدمانِ
-                                        // اشیاء را اسنپ‌شات بگیر تا به بیلدر برسد.
-                                        onPreviewClosed = {
-                                            fetchFigLayoutsSnapshot()
-                                            post { previewOpen = false }
-                                        }
-                                    ),
-                                    "ExamPrintNative"
-                                )
-
-                                webViewClient = object : WebViewClient() {
-                                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                                        if (!request.isForMainFrame) return false
-                                        val url = request.url
-                                        val isLocal = url.host == "exam-print.local" || url.scheme == "about"
-                                        return !isLocal
+                            // V101 — راه‌اندازیِ کامل در تابعِ مشترک (همان موتور
+                            // چاپِ مستقیمِ بدون‌صفحه از اینجا استفاده می‌کند).
+                            createExamPrintWebView(
+                                context = ctx,
+                                printable = printable,
+                                printMode = initialPrintMode,
+                                // تزریقِ داده کامل شد: فقط در حالتِ پیش‌نمایش
+                                // پنجرهٔ پیش‌نمایش باز می‌شود؛ در چاپِ مستقیم
+                                // خودِ تابع پیش از این فراخوانی، چاپ را شلیک کرده است.
+                                onPageReady = {
+                                    loading = false
+                                    if (initialPreview) {
+                                        previewOpen = true
+                                        webViewRef?.evaluateJavascript(
+                                            "(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()",
+                                            null
+                                        )
                                     }
-
-                                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                                        val path = request.url.path ?: return emptyResponse()
-                                        // V87.1 — تصاویرِ اطلس از `print/` بیرون‌اند
-                                        // (`figure_atlas/`، همان‌هایی که پنجرهٔ بومی می‌خواند).
-                                        // مسیرِ نسبیِ `../figure_atlas/x.jpg` را WebView پیش از
-                                        // ارسال ساده می‌کند، پس اینجا به `/figure_atlas/` می‌رسد.
-                                        val assetPath = when {
-                                            path.startsWith("/print/") -> "print/" + path.removePrefix("/print/")
-                                            path.startsWith("/figure_atlas/") -> path.removePrefix("/")
-                                            else -> return emptyResponse()
-                                        }
-                                        if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
-                                        return try {
-                                            val stream = view.context.assets.open(assetPath)
-                                            val mime = when {
-                                                assetPath.endsWith(".html") -> "text/html"
-                                                assetPath.endsWith(".css") -> "text/css"
-                                                assetPath.endsWith(".js") -> "application/javascript"
-                                                assetPath.endsWith(".json") -> "application/json"
-                                                assetPath.endsWith(".png") -> "image/png"
-                                                assetPath.endsWith(".jpg") || assetPath.endsWith(".jpeg") -> "image/jpeg"
-                                                else -> "application/octet-stream"
-                                            }
-                                            WebResourceResponse(mime, "UTF-8", stream)
-                                        } catch (_: IOException) { emptyResponse() }
-                                    }
-
-                                    private fun emptyResponse(): WebResourceResponse =
-                                        WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
-
-                                    override fun onPageFinished(view: WebView, url: String) {
-                                        // V80.0 — onPageFinished برای «هر فریم» صدا زده می‌شود، نه فقط
-                                        // فریمِ اصلی. از V79.0 که ویرایشگر فرمول با src لود می‌شود،
-                                        // پایانِ لودِ همان iframe این متد را دوباره شلیک می‌کرد و
-                                        // setExamData({reset:true}) کلِ سؤالات را پاک و صفحه را
-                                        // باز-رندر می‌کرد — دقیقاً وقتی ویرایشگر می‌خواست باز شود.
-                                        // نتیجه: کلیک روی آیکن فرمول هیچ پنجره‌ای باز نمی‌کرد.
-                                        // فقط به پایانِ لودِ سندِ اصلی واکنش نشان بده.
-                                        if (url != MAIN_PAGE_URL) return
-                                        // V100 — جریانِ بازیابی (بررسی asset ویرایشگر فرمول +
-                                        // بازیابیِ autosave/آینهٔ پیش‌نویس) با حذفِ حالتِ
-                                        // «آزمون جدید»ِ آزمون‌سازِ چاپی حذف شد: پنجره همیشه با
-                                        // دادهٔ مشخص (پیش‌نمایش یا چاپ) باز می‌شود.
-                                        val payload = ExamHtmlPrintPayloadBuilder.build(
-                                            printable,
-                                            // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
-                                            ir.exam.app.data.local.PrintHeaderStore(context).read()
-                                        ).toString()
-                                        var attempts = 0
-                                        fun tryInject() {
-                                            attempts++
-                                            view.evaluateJavascript(
-                                                "(function(){if(window.setExamData){window.setExamData($payload);return 'ok';}return 'wait';}());"
-                                            ) { result ->
-                                                when {
-                                                    result?.contains("ok") == true -> post {
-                                                        loading = false
-                                                        // V99.1 — در چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه) پنجرهٔ
-                                                        // پیش‌نمایشِ HTML باز نمی‌شود: آن پنجرهٔ overlay هنگامِ
-                                                        // چاپ پنهان می‌شود و چون محتوای چاپ داخلش منتقل شده،
-                                                        // خروجی چاپ خالی می‌ماند. برگهٔ خالصِ A4 را خودِ
-                                                        // پنجرهٔ چاپِ اندروید نمایش می‌دهد؛ پنجرهٔ کارت‌ها هم
-                                                        // (با شرطِ initialPrintMode) هرگز دیده نمی‌شود.
-                                                        if (initialPreview) {
-                                                            previewOpen = true
-                                                            view.evaluateJavascript("(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()", null)
-                                                        }
-                                                        // V99.2 — در چاپِ مستقیم برگهٔ A4 در جایِ اصلی‌اش (خارجِ
-                                                        // overlay) روی پس‌زمینهٔ خاکستری دیده می‌شود؛ وگرنه با
-                                                        // پنهانِ بودنِ کارت‌ها و نداشتنِ پنجرهٔ پیش‌نمایش، WebView
-                                                        // یک صفحهٔ سفیدِ خالی پشتِ پنجرهٔ چاپ نشان می‌داد.
-                                                        if (initialPrintMode != null) {
-                                                            view.evaluateJavascript(
-                                                                "try{document.body.classList.add('qmf-print-mode');}catch(e){}",
-                                                                null
-                                                            )
-                                                        }
-                                                        if (initialPrintMode == "student") {
-                                                            view.evaluateJavascript("if (typeof printStudent==='function') printStudent();", null)
-                                                        } else if (initialPrintMode == "teacher") {
-                                                            view.evaluateJavascript("if (typeof printTeacher==='function') printTeacher();", null)
-                                                        }
-                                                    }
-                                                    attempts < 50 -> view.postDelayed({ tryInject() }, 100)
-                                                    else -> post { loading = false }
-                                                }
+                                },
+                                onPrint = { mode ->
+                                    webViewRef?.let { view ->
+                                        view.post {
+                                            runCatching {
+                                                val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                                                val jobName = (printable?.documentTitle ?: "آزمون").ifBlank { "exam" } + "-" + mode
+                                                val printAdapter = view.createPrintDocumentAdapter(jobName)
+                                                printManager?.print(jobName, printAdapter, PrintAttributes.Builder().build())
                                             }
                                         }
-                                        tryInject()
                                     }
+                                },
+                                onError = { message ->
+                                    // V101 — callback از تَرهٔ JS می‌آید؛ وضعیتِ Compose
+                                    // باید روی تَرهٔ اصلی نوشته شود.
+                                    webViewRef?.post { jsError = message; loading = false }
+                                },
+                                onToast = { message ->
+                                    webViewRef?.post { if (message.isNotBlank()) barStatus = message }
+                                },
+                                onEditFigureTool = { qid, index -> webViewRef?.post { figureEditRequest = qid to index } },
+                                onPreviewClosed = {
+                                    fetchFigLayoutsSnapshot()
+                                    webViewRef?.post { previewOpen = false }
                                 }
-
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                                        if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
-                                            val text = message.message()
-                                            // V99.2d — پیام‌های بی‌ضرر: WebView هشدار «Ignored
-                                            // attempt to cancel a: touchmove ...» را با سطحِ ERROR
-                                            // می‌فرستد، ولی این فقط از handler هایِ pinch-zoom صفحه
-                                            // هنگامِ اسکرول می‌آید و خطای واقعی نیست؛ نوارِ قرمزِ
-                                            // «خطای صفحه چاپ» کاربر را گیج می‌کرد.
-                                            if (text.contains("Ignored attempt to cancel")) return true
-                                            val safe = text.replace(Regex("https?://\\S+"), "[url]").take(300)
-                                            post { jsError = "CONSOLE: $safe"; loading = false }
-                                        }
-                                        return true
-                                    }
-                                }
-
-                                loadUrl(MAIN_PAGE_URL)
-                            }
+                            ).also { webViewRef = it }
                         },
                         onRelease = { view ->
                             view.stopLoading()
@@ -557,5 +441,295 @@ private class ExamPrintBridge(
     @JavascriptInterface
     fun onError(code: String?) {
         code?.takeIf { it.isNotBlank() }?.let(onError)
+    }
+}
+
+
+/**
+ * V101 — راه‌اندازیِ مشترکِ WebViewِ چاپ (پنجرهٔ پیش‌نمایش + چاپِ مستقیمِ
+ * بدون‌صفحه). تنظیمات، پلِ ExamPrintNative، перехبِرِ assetها و تزریقِ داده
+ * از طریق setExamData همین‌جا است. در حالتِ `printMode` (چاپِ مستقیم) صفحه
+ * به حالتِ چاپ می‌رود و خودِ صفحه printStudent/printTeacher را صدا می‌زند
+ * (پس از آن پلِ print به PrintManager می‌رسد)؛ سپس `onPageReady` در رشتهٔ
+ * اصلی فراخوانی می‌شود.
+ */
+@SuppressLint("SetJavaScriptEnabled")
+internal fun createExamPrintWebView(
+    context: Context,
+    printable: OfficialExamPrintable?,
+    printMode: String?,
+    onPageReady: () -> Unit,
+    onPrint: (String) -> Unit,
+    onError: (String) -> Unit,
+    onToast: (String) -> Unit,
+    onEditFigureTool: (String, Int) -> Unit,
+    onPreviewClosed: () -> Unit
+): WebView = WebView(context).apply {
+    setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = true
+    settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+    settings.allowFileAccess = false
+    settings.allowContentAccess = false
+    @Suppress("DEPRECATION")
+    settings.allowFileAccessFromFileURLs = false
+    @Suppress("DEPRECATION")
+    settings.allowUniversalAccessFromFileURLs = false
+    settings.setSupportZoom(true)
+    settings.builtInZoomControls = true
+    settings.displayZoomControls = false
+    // V76.2 — useWideViewPort متاوویوپورتِ فایل (width=device-width) را اعمال
+    // می‌کند؛ اما overviewMode باید خاموش بماند وگرنه WebView برای محتوای عریضِ
+    // A4 (۷۳px) کل صفحه را zoom-out می‌کند و همه پنجره‌ها/دکمه‌ها ریز می‌شوند
+    // (ریشهٔ «پنجره‌ها کوچک است»).
+    settings.useWideViewPort = true
+    settings.loadWithOverviewMode = false
+
+    addJavascriptInterface(
+        ExamPrintBridge(
+            onPrint = onPrint,
+            onError = onError,
+            // V82.0 — ویرایشِ ابزارِ درج‌شده با دابل‌کلیک
+            onEditFigureTool = onEditFigureTool,
+            // V87.8 — همان اعلانِ وسط‌چینِ محوشونده
+            onToast = onToast,
+            // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
+            onPreviewClosed = onPreviewClosed
+        ),
+        "ExamPrintNative"
+    )
+
+    webViewClient = object : WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            if (!request.isForMainFrame) return false
+            val url = request.url
+            val isLocal = url.host == "exam-print.local" || url.scheme == "about"
+            return !isLocal
+        }
+
+        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+            val path = request.url.path ?: return emptyResponse()
+            // V87.1 — تصاویرِ اطلس از `print/` بیرون‌اند
+            // (`figure_atlas/`، همان‌هایی که پنجرهٔ بومی می‌خواند).
+            val assetPath = when {
+                path.startsWith("/print/") -> "print/" + path.removePrefix("/print/")
+                path.startsWith("/figure_atlas/") -> path.removePrefix("/")
+                else -> return emptyResponse()
+            }
+            if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
+            return try {
+                val stream = view.context.assets.open(assetPath)
+                val mime = when {
+                    assetPath.endsWith(".html") -> "text/html"
+                    assetPath.endsWith(".css") -> "text/css"
+                    assetPath.endsWith(".js") -> "application/javascript"
+                    assetPath.endsWith(".json") -> "application/json"
+                    assetPath.endsWith(".png") -> "image/png"
+                    assetPath.endsWith(".jpg") || assetPath.endsWith(".jpeg") -> "image/jpeg"
+                    else -> "application/octet-stream"
+                }
+                WebResourceResponse(mime, "UTF-8", stream)
+            } catch (_: IOException) { emptyResponse() }
+        }
+
+        private fun emptyResponse(): WebResourceResponse =
+            WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
+
+        override fun onPageFinished(view: WebView, url: String) {
+            // V80.0 — onPageFinished برای «هر فریم» صدا زده می‌شود، نه فقط
+            // فریمِ اصلی. فقط به پایانِ لودِ سندِ اصلی واکنش نشان بده.
+            if (url != MAIN_PAGE_URL) return
+            val payload = ExamHtmlPrintPayloadBuilder.build(
+                printable,
+                // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
+                ir.exam.app.data.local.PrintHeaderStore(context).read()
+            ).toString()
+            var attempts = 0
+            fun tryInject() {
+                attempts++
+                view.evaluateJavascript(
+                    "(function(){if(window.setExamData){window.setExamData($payload);return 'ok';}return 'wait';}());"
+                ) { result ->
+                    when {
+                        result?.contains("ok") == true -> {
+                            // V99.1 — در چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه) پنجرهٔ
+                            // پیش‌نمایشِ HTML باز نمی‌شود: آن پنجرهٔ overlay هنگامِ
+                            // چاپ پنهان می‌شود و چون محتوای چاپ داخلش منتقل شده،
+                            // خروجی چاپ خالی می‌ماند.
+                            if (printMode != null) {
+                                view.evaluateJavascript(
+                                    "try{document.body.classList.add('qmf-print-mode');}catch(e){}",
+                                    null
+                                )
+                            }
+                            if (printMode == "student") {
+                                view.evaluateJavascript("if (typeof printStudent==='function') printStudent();", null)
+                            } else if (printMode == "teacher") {
+                                view.evaluateJavascript("if (typeof printTeacher==='function') printTeacher();", null)
+                            }
+                            view.post { onPageReady() }
+                        }
+                        attempts < 50 -> view.postDelayed({ tryInject() }, 100)
+                        else -> view.post { onError("برگهٔ چاپ بارگذاری نشد.") }
+                    }
+                }
+            }
+            tryInject()
+        }
+    }
+
+    webChromeClient = object : WebChromeClient() {
+        override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
+            if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                val text = message.message()
+                // V99.2d — پیام‌های بی‌ضرر: WebView هشدار «Ignored
+                // attempt to cancel a: touchmove ...» را با سطحِ ERROR
+                // می‌فرستد، ولی این فقط از handler هایِ pinch-zoom صفحه
+                // هنگامِ اسکرول می‌آید و خطای واقعی نیست.
+                if (text.contains("Ignored attempt to cancel")) return true
+                val safe = text.replace(Regex("https?://\\S+"), "[url]").take(300)
+                onError("CONSOLE: $safe")
+            }
+            return true
+        }
+    }
+
+    loadUrl(MAIN_PAGE_URL)
+}
+
+/**
+ * V101 — چاپِ مستقیمِ بدون‌صفحه (headless): WebView نمایش داده نمی‌شود
+ * (الگوی رسمیِ Android: PrintHtmlOffScreen). صفحهٔ آزمون بارگذاری و تزریق
+ * می‌شود، پنلِ چاپِ اندروید مستقیم روی صفحهٔ مرکز چاپ ظاهر می‌شود و
+ * WebView پس از پایانِ کارِ چاپ (onFinish/onCancel/onFailedِ adapter) آزاد
+ * می‌شود؛ حدِ ۳ دقیقه هم برای حالتی است که کاربر پنلِ چاپ را باز نکند.
+ */
+internal class HeadlessExamPrinter(context: Context) {
+    private val appContext = context.applicationContext
+    private val handler = Handler(Looper.getMainLooper())
+    private var webView: WebView? = null
+    private var jobName = "exam"
+    private var finished = false
+    private var onStatusCb: ((String) -> Unit)? = null
+    private var onFinishedCb: (() -> Unit)? = null
+
+    private val timeoutRunnable = Runnable {
+        if (!finished) finish()
+    }
+
+    fun print(
+        printable: OfficialExamPrintable,
+        mode: String,
+        onStatus: (String) -> Unit,
+        onFinished: () -> Unit
+    ) {
+        releaseWebView()
+        finished = false
+        jobName = printable.documentTitle.ifBlank { "exam" } + "-" + mode
+        onStatusCb = onStatus
+        onFinishedCb = onFinished
+        val web = WebView(appContext)
+        webView = web
+        createExamPrintWebView(
+            context = appContext,
+            printable = printable,
+            printMode = mode,
+            onPageReady = { },
+            onPrint = { m -> startPrintJob(web, m) },
+            onError = { message -> onStatus("چاپ ناموفق بود: $message") },
+            onToast = { message -> if (message.isNotBlank()) onStatus(message) },
+            onEditFigureTool = { _, _ -> },
+            onPreviewClosed = { }
+        )
+        handler.postDelayed(timeoutRunnable, 180_000L)
+        web.loadUrl(MAIN_PAGE_URL)
+    }
+
+    private fun status(message: String) {
+        onStatusCb?.invoke(message)
+    }
+
+    private fun startPrintJob(web: WebView, mode: String) {
+        web.post {
+            runCatching {
+                val printManager = web.context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                if (printManager == null) {
+                    status("امکان چاپ روی این دستگاه در دسترس نیست.")
+                    finish()
+                    return@post
+                }
+                val base = web.createPrintDocumentAdapter(jobName)
+                // V101 — الگوی رسمیِ AOSP (PrintHtmlOffScreen): آزادسازی در
+                // onFinishِ adapter؛ timeoutِ 180 ثانیه‌ای هم پشتوانه‌ی اضافی
+                // برای انصراف/اتصالِ معلق است (API چاپ callbackِ job ندارد).
+                printManager.print(jobName, OneShotPrintAdapter(base) { finish() }, PrintAttributes.Builder().build())
+            }.onFailure {
+                status("چاپ ناموفق بود.")
+                finish()
+            }
+        }
+    }
+
+    /** پایانِ منظم: آزادسازیِ WebView + اطلاع به میزبان (یک‌بار). */
+    private fun finish() {
+        if (finished) return
+        finished = true
+        handler.removeCallbacks(timeoutRunnable)
+        releaseWebView()
+        onFinishedCb?.invoke()
+    }
+
+    private fun releaseWebView() {
+        handler.removeCallbacks(timeoutRunnable)
+        webView?.let { view ->
+            runCatching {
+                view.stopLoading()
+                view.loadUrl("about:blank")
+                view.destroy()
+            }
+        }
+        webView = null
+    }
+}
+
+/**
+ * V101 — wrapper رسمیِ Android (PrintHtmlOffScreen): پس از پایانِ کارِ
+ * چاپ WebView آزاد می‌شود چون نگهداریِ آن پرهزینه است (adapter API فقط
+ * onStart/onLayout/onWrite/onFinish دارد؛ انصراف/اتصالِ معلق هم با timeoutِ
+ * 180 ثانیه‌ایِ HeadlessExamPrinter پوشش می‌شود).
+ */
+private class OneShotPrintAdapter(
+    private val wrapped: PrintDocumentAdapter,
+    private val onDone: () -> Unit
+) : PrintDocumentAdapter() {
+    override fun onStart() { wrapped.onStart() }
+
+    override fun onLayout(
+        oldAttributes: PrintAttributes?,
+        newAttributes: PrintAttributes,
+        cancellationSignal: CancellationSignal,
+        callback: LayoutResultCallback,
+        extras: Bundle?
+    ) {
+        wrapped.onLayout(oldAttributes, newAttributes, cancellationSignal, callback, extras)
+    }
+
+    override fun onWrite(
+        pages: Array<PageRange>,
+        destination: ParcelFileDescriptor,
+        cancellationSignal: CancellationSignal,
+        callback: WriteResultCallback
+    ) {
+        wrapped.onWrite(pages, destination, cancellationSignal, callback)
+    }
+
+    override fun onFinish() {
+        runCatching { wrapped.onFinish() }
+        handlerPost { onDone() }
+    }
+
+    private fun handlerPost(block: () -> Unit) {
+        // adapter روی رشتهٔ چاپ صدا زده می‌شود؛ آزادسازیِ WebView باید اصلی باشد.
+        Handler(Looper.getMainLooper()).post(block)
     }
 }

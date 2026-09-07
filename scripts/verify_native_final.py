@@ -2570,12 +2570,13 @@ _v730_dialog_text=_v730_dialog.read_text() if _v730_dialog.exists() else ""
 _v730_payload_text=_v730_payload.read_text() if _v730_payload.exists() else ""
 _v730_test_text=_v730_test.read_text() if _v730_test.exists() else ""
 
+# V101 — پنجرهٔ چاپ حذف شد؛ مسیر چاپ حالا بدون‌صفحه (HeadlessExamPrinter) است.
 require(_v730_print_center.exists()
         and "Icons.Outlined.Print" in _v730_print_center_text
         and 'Text("آزمون جدید")' in _v730_print_center_text
-        and "ExamHtmlPrintDialog(" in _v730_print_center_text
+        and "HeadlessExamPrinter(" in _v730_print_center_text
         and "htmlPrintExam" in _v730_print_center_text,
-        "V76.0 builder-30 flow (pencil/printer/new-exam) is missing in ExamPrintCenterScreen")
+        "V76.0/V101 print flow (printer/new-exam/headless) is missing in ExamPrintCenterScreen")
 # V87.4 — نوارِ دکمه‌ها با کنترل‌های شناور و منویِ + جایگزین شد. سنجه از
 # «برچسبِ دکمه» به «در دسترس بودنِ خودِ کار» تغییر کرد.
 require(_v730_dialog.exists()
@@ -3332,14 +3333,19 @@ require("printTarget = PrintTarget.ServerExam(exam.id)" in _v991_center
         and "printTarget = PrintTarget.LocalExam(rec)" in _v991_center
         and "fun startPrint(target: PrintTarget, mode: String)" in _v991_center,
         "V99.1 printer icons must trigger direct print, not the print-builder window")
-require("initialPrintMode = printModeFor" in _v991_center,
-        "V99.1 the chosen print mode must reach the print dialog")
+# V101 — حالتِ چاپ مستقیم به پرینترِ بدون‌صفحه می‌رسد (دیالوگ/پنجره حذف شد).
+require("headlessPrinter.print(" in _v991_center
+        and "htmlPrintExam!!," in _v991_center,
+        "V99.1/V101 the chosen print mode must reach the headless printer")
 # در چاپِ مستقیم پنجرهٔ پیش‌نمایشِ HTML (overlay) باز نمی‌شود: چون
 # @media print آن را پنهان می‌کند و محتوای چاپ داخلش منتقل شده، خروجی
 # چاپ خالی می‌ماند. برگهٔ خالصِ A4 را خودِ پنجرهٔ چاپِ اندروید نشان می‌دهد.
-require("if (initialPreview) {" in _v874_dlg
-        and "if (initialPrintMode == \"student\") {" in _v874_dlg,
-        "V99.1 direct print must run the print pipeline without opening the html preview overlay")
+# V101 — چاپِ مستقیم بدون‌صفحه: همان تزریقِ حالتِ چاپ + printStudent/printTeacher
+# درونِ WebViewِ بدون‌صفحه (هیچ پنجره‌ای باز نمی‌شود).
+require("document.body.classList.add('qmf-print-mode')" in _v874_dlg
+        and "printStudent();" in _v874_dlg
+        and "printTeacher();" in _v874_dlg,
+        "V99.1/V101 direct print must run the print pipeline (headless, no window)")
 # V99.2 — چاپِ مستقیم نباید صفحهٔ سفید بگذارد (برگه در جایِ اصلی) و
 # چیدمانِ پیش‌نمایش (موقعیتِ اشیاء + جداکننده) باید به وضعیتِ بومیِ
 # بیلدر برگردهد تا در بازِ بعدی/چاپ ریست نشود.
@@ -3756,14 +3762,14 @@ _i742_print = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterSc
 _i742_official = (ROOT/"app/src/main/java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt").read_text()
 require(
     "Icons.Outlined.Print" in _i742_print
-    and "ExamHtmlPrintDialog(" in _i742_print
+    and "HeadlessExamPrinter(" in _i742_print
     and "DirectPdfExporter" not in _i742_print
     and 'CreateDocument("application/pdf")' not in _i742_print
     and 'contentDescription = "پی دی اف مستقیم"' not in _i742_print
     and "pdfExporting" not in _i742_print
     and "OfficialPrintController" not in _i742_print
     and 'Text("چاپ برگه")' not in _i742_print,
-    "V74.2/V76.0 removed direct-PDF UI but preserved builder-30 print actions incorrectly",
+    "V74.2/V76.0/V101 removed direct-PDF UI but preserved headless print actions incorrectly",
 )
 require("class OfficialPdfPrintAdapter" in _i742_official
         and "android.graphics.pdf.PdfDocument" in _i742_official,
@@ -4041,6 +4047,31 @@ require("color: #000000 !important;" in _v98_formula, "V98 paren name text must 
 require("#helpBackdrop" in _v98_formula and "hwHelpPlace()" in _v98_formula, "V98 handwriting help modal must be centered with backdrop")
 require("Text(\"تنظیمات سربرگ\")" in _v98_builder, "V98 header settings button must be present in exam builder")
 require("HeaderSettingsDialog" in _v98_builder, "V98 header settings dialog must be available in exam builder")
+
+# V101 — (A) چاپِ مستقیمِ بدون‌صفحه (Headless): کارخانهٔ مشترکِ
+# createExamPrintWebView + HeadlessExamPrinter + OneShotPrintAdapter +
+# timeoutِ 180 ثانیه‌ای + رتبهٔ آزادسازی + نوشتنِ وضعیت از callbackها روی
+# تَرهٔ اصلی؛ (B) مداد روی کارتِ آزمونِ آنلاین: نسخهٔ چاپیِ محلی که فقط در
+# بخشِ چاپ ذخیره می‌شود (sourceExamId) و ذخیرهٔ مجدد همان نسخه را به‌روز
+# می‌کند (localPrintExamId → examId).
+_v101_dlg = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
+_v101_center = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text(encoding="utf-8")
+_v101_store = (ROOT/"app/src/main/java/ir/exam/app/data/local/PrintExamStore.kt").read_text(encoding="utf-8")
+_v101_draft = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/QuestionDraft.kt").read_text(encoding="utf-8")
+_v101_vm = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt").read_text(encoding="utf-8")
+_v101_app = (ROOT/"app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").read_text(encoding="utf-8")
+require("internal class HeadlessExamPrinter(context: Context)" in _v101_dlg, "V101 headless printer class must exist")
+require("private class OneShotPrintAdapter(" in _v101_dlg, "V101 one-shot adapter wrapper must exist")
+require("fun createExamPrintWebView(" in _v101_dlg, "V101 shared webview factory must exist")
+require("web.createPrintDocumentAdapter(jobName)" in _v101_dlg and "180_000L" in _v101_dlg, "V101 official print path + safety timeout must exist")
+require("webViewRef?.post { jsError = message; loading = false }" in _v101_dlg and "webViewRef?.post { previewOpen = false }" in _v101_dlg, "V101 bridge callbacks must write state on the main thread")
+require("HeadlessExamPrinter(context.applicationContext)" in _v101_center and "headlessPrinter.print(" in _v101_center, "V101 print center must use the headless printer")
+require("ExamHtmlPrintDialog(" not in _v101_center and "printModeFor" not in _v101_center, "V101 the print window must not be opened from the center")
+require('startPrint(target, "student")' in _v101_center and 'startPrint(target, "teacher")' in _v101_center, "V101 direct print entry points must stay")
+require("fun openPrintCopy(exam: ir.exam.app.data.dto.ExamDashboardDto)" in _v101_center and "sourceExamId = exam.id" in _v101_center, "V101 pencil must create a linked local print copy")
+require('contentDescription = "ویرایش نسخهٔ چاپی"' in _v101_center, "V101 server card pencil label must exist")
+require("val sourceExamId: String? = null" in _v101_store, "V101 PrintExamRecord must keep the source link")
+require("val localPrintExamId: String? = null" in _v101_draft and "examId = imported.localPrintExamId" in _v101_vm and "localPrintExamId = localId" in _v101_app, "V101 re-saving must update the print copy in place (local-only id chain)")
 
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.

@@ -619,7 +619,9 @@ private fun AuthenticatedExamApp(
                                     attemptOnTimeout = false,
                                     gradePolicy = "last",
                                     attemptCooldown = 0,
-                                    questions = rec.questions
+                                    questions = rec.questions,
+                                    // V101 — ذخیرهٔ بعدی همین رکورد را به‌روز کند
+                                    localPrintExamId = localId
                                 )
                                 builderCameFromPrint = true
                                 page = MainPage.BUILDER

@@ -234,8 +234,8 @@ class V73_0HtmlPrintIntegrationTest {
         assertTrue("Text(\"آزمون جدید\")" in printCenter)
         assertFalse("بستن سربرگ" in printCenter)
         assertFalse("PrintHeaderDialog" in printCenter)
-        // پنجرهٔ تمام‌صفحهٔ نسخهٔ 30
-        assertTrue("ExamHtmlPrintDialog(" in printCenter)
+        // V101 — پنجرهٔ چاپ حذف شد؛ چاپ بدون‌صفحه (HeadlessExamPrinter) است
+        assertTrue("HeadlessExamPrinter(" in printCenter)
         assertTrue("htmlPrintExam" in printCenter)
         assertTrue("htmlPrintOpen" in printCenter)
         assertTrue("htmlPrintLoading" in printCenter)

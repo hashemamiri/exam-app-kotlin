@@ -90,7 +90,8 @@ class V79_0FormulaAndNativeBuilderTest {
     fun `the v30 builder is still reachable so nothing is lost`() {
         assertTrue("onNewNativeExam" in center)
         assertTrue("htmlPrintOpen = true" in center)
-        assertTrue("ExamHtmlPrintDialog(" in center)
+        // V101 — چاپ بدون‌صفحه؛ پنجرهٔ چاپی دیگر وجود ندارد
+        assertTrue("HeadlessExamPrinter(" in center)
     }
 
     // ---------- V79.2 ----------

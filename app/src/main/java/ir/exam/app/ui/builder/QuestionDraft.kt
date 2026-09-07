@@ -292,5 +292,8 @@ data class ExamImportDraft(
     val questions: List<QuestionDraft>,
     val opensAtIso: String? = null,
     val closesAtIso: String? = null,
-    val exportedBy: String? = null
+    val exportedBy: String? = null,
+    // V101 — اگر این import یک «آزمون چاپیِ محلی» است، شناسهٔ رکوردش:
+    // ذخیرهٔ بعدیِ چاپی به‌جای ساختِ رکوردِ تازه، همان را به‌روز می‌کند.
+    val localPrintExamId: String? = null
 )

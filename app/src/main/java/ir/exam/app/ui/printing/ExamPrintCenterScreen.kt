@@ -58,6 +58,14 @@ import kotlinx.coroutines.launch
  *   V100 — «آزمون‌ساز چاپی» کامل حذف شد: مدادِ کارتِ آزمونِ سرور رفت (آن
  *   آزمون‌ها دیگر از این صفحه ویرایش نمی‌شوند). آزمون‌های محلیِ چاپی همچنان
  *   با مداد به آزمون‌سازِ بومی (onOpenLocalPrintExam) ویرایش می‌شوند.
+ *   V101 — پرینتر «چاپِ مستقیمِ بدون‌صفحه» (HeadlessExamPrinter) شد: پنجرهٔ
+ *   پیش‌نمایش دیگر هنگام لمسِ پرینتر و هنگام خروج از چاپ باز نمی‌شود؛
+ *   پنلِ چاپِ اندروید مستقیم روی همین صفحه ظاهر می‌شود.
+ *   V101 — مداد روی کارتِ آزمونِ آنلاین برگشت، اما معنای تازه دارد:
+ *   «نسخهٔ چاپی» از آن آزمون (کامل، با کلید) ساخته می‌شود و در آزمون‌سازِ
+ *   بومی باز می‌گردد؛ ویرایش/ذخیرهٔ آن فقط در بخش چاپ آزمون می‌ماند و به
+ *   آزمونِ سرور برنمی‌گردد. اگر نسخهٔ چاپی قبلاً ساخته شده باشد، همان باز
+ *   می‌شود (تکرار نمی‌شود).
  * - V63.0 — پارامتر مداد ویرایشگر سند حفظ شده؛ مسیر DOC_EDITOR دست‌نخورده است.
  */
 @Composable
@@ -92,12 +100,22 @@ fun ExamPrintCenterScreen(
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
     // V99.1 — آیکن پرینتر «پنجرهٔ آزمون‌ساز چاپی» را باز نمی‌کند:
-    // printTarget = آزمونِ انتخاب‌شدهٔ چاپ، printModeFor = حالتِ پنجرهٔ چاپ
-    // (student/teacher). V100 — حالتِ null (ویرایش در آزمون‌ساز چاپی) دیگر
-    // وجود ندارد؛ از این صفحه فقط چاپ مستقیم و ویرایشِ بومیِ آزمون‌های محلی.
+    // printTarget = آزمونِ انتخاب‌شدهٔ چاپ. V100 — حالتِ null (ویرایش در
+    // آزمون‌ساز چاپی) دیگر وجود ندارد؛ از این صفحه فقط چاپ مستقیم و
+    // ویرایشِ بومیِ آزمون‌های محلی.
     var printTarget by remember { mutableStateOf<PrintTarget?>(null) }
-    var printModeFor by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // V101 — چاپِ مستقیمِ بدون‌صفحه: WebView نمایش داده نمی‌شود؛ پنلِ چاپ
+    // روی همین صفحه ظاهر می‌شود (نه پنجرهٔ پیش‌نمایش).
+    val headlessPrinter = remember(context.applicationContext) {
+        HeadlessExamPrinter(context.applicationContext)
+    }
+    // V101 — برای ساختِ «نسخهٔ چاپی» از آزمونِ آنلاین، آزمون کامل (با کلید)
+    // با همان مسیرِ آزمون‌ساز بارگذاری می‌شود.
+    val builderRepo = remember(context.applicationContext) {
+        ir.exam.app.data.repository.SupabaseExamBuilderRepository(context.applicationContext)
+    }
+    var copyLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -122,15 +140,21 @@ fun ExamPrintCenterScreen(
                     is PrintTarget.ServerExam -> portability.printableExam(
                         target.examId, false, header, layoutStore.read(target.examId)
                     ).onSuccess { printable ->
-                        printModeFor = mode
                         htmlPrintExam = ExamHtmlImageInliner.inline(context.applicationContext, printable)
                         htmlPrintOpen = true
+                        printStatus = "در حال آماده‌سازی چاپ..."
+                        // V101 — چاپ بدون صفحه: هیچ پنجرهٔ پیش‌نمایشی باز نمی‌شود.
+                        headlessPrinter.print(
+                            htmlPrintExam!!,
+                            mode,
+                            onStatus = { msg -> printStatus = msg },
+                            onFinished = { htmlPrintOpen = false; printStatus = null }
+                        )
                     }.onFailure { error ->
                         printStatusIsError = true
                         printStatus = sanitizePrintError(error)
                     }
                     is PrintTarget.LocalExam -> {
-                        printModeFor = mode
                         htmlPrintExam = ir.exam.app.domain.model.PrintableFromDrafts.build(
                             title = target.rec.title.ifBlank { "آزمون" },
                             subject = target.rec.subject,
@@ -138,10 +162,61 @@ fun ExamPrintCenterScreen(
                             questions = target.rec.questions
                         )
                         htmlPrintOpen = true
+                        printStatus = "در حال آماده‌سازی چاپ..."
+                        headlessPrinter.print(
+                            htmlPrintExam!!,
+                            mode,
+                            onStatus = { msg -> printStatus = msg },
+                            onFinished = { htmlPrintOpen = false; printStatus = null }
+                        )
                     }
                 }
             } finally {
                 htmlPrintLoading = false
+            }
+        }
+    }
+
+    // V101 — مداد روی کارتِ آزمونِ آنلاین: «نسخهٔ چاپی» از آن آزمون می‌سازد
+    // (سؤالات کامل، با کلیدِ جواب) و در آزمون‌سازِ بومی باز می‌کند. ویرایش و
+    // ذخیرهٔ این نسخه فقط در بخش چاپ آزمون می‌ماند (PrintExamStore) و هرگز
+    // به آزمونِ سرور/دانش‌آموز برنمی‌گردد. اگر نسخهٔ چاپی قبلاً ساخته شده
+    // باشد، همان باز می‌شود.
+    fun openPrintCopy(exam: ir.exam.app.data.dto.ExamDashboardDto) {
+        scope.launch {
+            val existing = localExams.firstOrNull { it.sourceExamId == exam.id }
+            if (existing != null) {
+                onOpenLocalPrintExam(existing.id)
+                return@launch
+            }
+            copyLoading = true
+            printStatus = "در حال آماده‌سازی نسخهٔ چاپی..."
+            printStatusIsError = false
+            try {
+                val loaded = builderRepo.load(exam.id).getOrElse {
+                    printStatusIsError = true
+                    printStatus = sanitizePrintError(it)
+                    return@launch
+                }
+                if (loaded.questions.isEmpty()) {
+                    printStatusIsError = true
+                    printStatus = "برای نسخهٔ چاپی سؤالی در این آزمون پیدا نشد."
+                    return@launch
+                }
+                val rec = ir.exam.app.data.local.PrintExamRecord(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = loaded.title.ifBlank { exam.title },
+                    subject = loaded.subject.ifBlank { exam.subject.orEmpty() },
+                    questions = loaded.questions,
+                    savedAt = System.currentTimeMillis(),
+                    sourceExamId = exam.id
+                )
+                printExamStore.save(rec)
+                localExams = printExamStore.list()
+                onOpenLocalPrintExam(rec.id)
+            } finally {
+                copyLoading = false
+                printStatus = null
             }
         }
     }
@@ -239,13 +314,19 @@ fun ExamPrintCenterScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text("درس: ${exam.subject.orEmpty().ifBlank { "—" }}")
-                        // V100 — کارتِ آزمونِ سرور فقط پرینتر دارد: «آزمون‌ساز
-                        // چاپی» (مداد) کامل حذف شد و آزمون‌های سرور از این
-                        // صفحه ویرایش نمی‌شوند.
+                        // V101 — مداد: «نسخهٔ چاپی» ویرایش‌پذیر از این آزمون
+                        // (فقط در بخش چاپ آزمون ذخیره می‌شود).
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
                         ) {
+                            IconButton(onClick = { openPrintCopy(exam) }, enabled = !copyLoading) {
+                                Icon(
+                                    Icons.Outlined.Edit,
+                                    contentDescription = "ویرایش نسخهٔ چاپی",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                             // V99.1 — پرینتر: چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه).
                             IconButton(onClick = { printTarget = PrintTarget.ServerExam(exam.id) }, enabled = !htmlPrintLoading) {
                                 Icon(
@@ -260,20 +341,11 @@ fun ExamPrintCenterScreen(
             }
         }
     }
-    // V76.0 — پنجرهٔ تمام‌صفحهٔ نسخهٔ 30؛ null یعنی «آزمون جدید» (ریست).
-    // V99.1 — وقتی initialPrintMode خالی نباشد = چاپِ مستقیم: پنجرهٔ
-    // کارت‌ها و کنترل‌های آزمون‌ساز چاپی نمایش داده نمی‌شوند، فقط برگهٔ
-    // خالصِ A4 و سپس پنجرهٔ چاپِ اندروید.
-    if (htmlPrintOpen) {
-        ExamHtmlPrintDialog(
-            printable = htmlPrintExam,
-            initialPrintMode = printModeFor,
-            onDismiss = {
-                htmlPrintOpen = false
-                printModeFor = null
-            }
-        )
-    }
+    // V101 — چاپِ مستقیم دیگر پنجرهٔ تمام‌صفحهٔ «نسخهٔ 30» را باز نمی‌کند:
+    // HeadlessExamPrinter WebView نامرئی بارگذاری می‌کند و پنلِ چاپِ اندروید
+    // مستقیم روی همین صفحه ظاهر می‌شود؛ هنگام خروج از چاپ چیزی باز نمی‌ماند.
+    // (htmlPrintOpen هنوز «جریانِ چاپ فعال است» را نگه می‌دارد تا اسپینر و
+    // آیکن‌ها درست قفل شوند.)
     // V99.1 — منوی چاپ از آیکن پرینتر: نسخهٔ دانش‌آموز یا پاسخ‌نامه.
     printTarget?.let { target ->
         AlertDialog(

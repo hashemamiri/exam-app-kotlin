@@ -64,10 +64,10 @@ class V99_1PrintFlowLineStabilityTest {
         assertTrue("startPrint(target, \"teacher\")" in center)
         assertTrue("🖨 چاپ آزمون (دانش‌آموز)" in center)
         assertTrue("✅ چاپ با کلید (پاسخ‌نامه)" in center)
-        // حالتِ پنجرهٔ چاپ به دیالوگ می‌رسد:
-        assertTrue("initialPrintMode = printModeFor" in center)
-        // مسیرِ ویرایش حالت را صریح null می‌کند:
-        assertTrue("printModeFor = null" in center)
+        // V101 — حالتِ چاپ مستقیم به پرینترِ بدون‌صفحه می‌رسد (دیالوگ/پنجرهٔ
+        // چاپ دیگر وجود ندارد و printModeFor حذف شد):
+        assertTrue("headlessPrinter.print(" in center)
+        assertTrue("htmlPrintExam!!," in center)
     }
 
     // ---------- ۲) چاپِ مستقیم بدون پنجرهٔ کارت‌ها ----------

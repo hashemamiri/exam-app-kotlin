@@ -18,7 +18,11 @@ data class PrintExamRecord(
     val title: String,
     val subject: String = "",
     val questions: List<QuestionDraft> = emptyList(),
-    val savedAt: Long = 0L
+    val savedAt: Long = 0L,
+    // V101 — شناسهٔ آزمونِ سرورِ مبدأ (برای «نسخهٔ چاپی»): اگر برای همان
+    // آزمون نسخهٔ چاپی ساخته شده باشد، تکرار نمی‌شود و همان باز می‌گردد.
+    // قدیمی‌ها (بدون این فیلد) با ignoreUnknownKeys سالم خوانده می‌شوند.
+    val sourceExamId: String? = null
 )
 
 @Serializable
