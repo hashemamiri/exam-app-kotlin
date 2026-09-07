@@ -2616,6 +2616,10 @@ require("onShowFileChooser" not in _v730_dialog_text
         and "PrintQuestionCards" not in _v730_dialog_text
         and "FormulaHostDialog(" not in _v730_dialog_text,
         "V100 builder-mode leftovers remain in ExamHtmlPrintDialog")
+# V100d — پنجرهٔ چاپ از واحدهای dp استفاده می‌کند؛ import نباید در بازنویسیِ
+# بعدی جا بیفتد (بدونِ آن compileDebugKotlin شکست می‌خورد).
+require("import androidx.compose.ui.unit.dp" in _v730_dialog_text,
+        "V100d the dialog dp import is missing (compile would fail)")
 _v764_windows=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamBuilder30Windows.kt")
 _v764_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt")
 _v764_schema=(ROOT/"app/src/main/assets/print/header_settings_schema.json")
