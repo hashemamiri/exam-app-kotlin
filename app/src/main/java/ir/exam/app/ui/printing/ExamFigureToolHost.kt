@@ -15,57 +15,29 @@ import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 
 /**
- * V78.0 — پلِ ابزارهای درج بین آزمون‌سازِ چاپ (نسخهٔ ۳۰، HTML) و ویرایشگرهای
- * بومیِ موجود در `ui/figure` — همان‌هایی که آزمون‌سازِ آنلاین از V53 استفاده
- * می‌کند. هیچ ویرایشگری از نو نوشته نشده است؛ فقط سیم‌کشی شده.
- *
- * قرارداد یکسانِ دو نسخه: خروجی هر ابزار یک `FigureSpec` است که به‌صورت
- * توکنِ متنیِ `%%FIG:{json}%%` در متنِ سؤال درج می‌شود. رندرِ آن توکن همچنان
- * کارِ `renderFigToken` در HTML است، پس **خروجی چاپ هیچ تغییری نمی‌کند**.
- *
- * V82.0 — «فرمول» هم به همین شکل بومی شد، با این تفاوت که پنجره‌اش
- * (FormulaHostDialog) متنِ کاملِ سؤال را می‌گیرد و متنِ کامل برمی‌گرداند.
- *
- * V82.0 — `editIndex` یعنی «ویرایشِ nاُمین توکنِ همین سؤال» به‌جای درجِ تازه؛
- * دابل‌کلیک روی یک ابزارِ درج‌شده از این راه می‌آید.
+ * درخواست ویرایش یک شکل از پیش‌نمایش چاپ. خود شکل با همان ابزارهای بومیِ
+ * سازنده ویرایش می‌شود و توکنِ نتیجه جایگزینِ همان توکن در موتور رندر خواهد شد.
  */
 internal data class FigureToolRequest(
     val questionId: String,
     val tool: String,
-    /** V82.0 — ویرایش: اندیسِ توکن در متنِ سؤال. null یعنی درجِ جدید. */
-    val editIndex: Int? = null,
-    /** V82.0 — spec موجود برای پیش‌پرکردنِ پنجره هنگام ویرایش. */
-    val initialSpecJson: String? = null,
-    /** V82.0 — محدودهٔ توکن در متن، برای جایگزینیِ دقیق. */
-    val tokenStart: Int = -1,
-    val tokenEnd: Int = -1
+    val initialSpecJson: String,
+    val tokenStart: Int,
+    val tokenEnd: Int
 ) {
-
-    /** آیا این ابزار مسیر بومی دارد؟ */
     val isNative: Boolean get() = tool in NATIVE_TOOLS
-
-    /** V82.0 — آیا این درخواستِ ویرایش است؟ */
-    val isEdit: Boolean get() = editIndex != null && tokenEnd > tokenStart
 
     companion object {
         val NATIVE_TOOLS = setOf("figure", "graph", "table", "anatomy", "periodic", "physics", "chemistry")
-
-        /**
-         * V82.0 — «فرمول» هم پنجرهٔ بومی دارد (FormulaHostDialog) ولی قراردادش
-         * فرق می‌کند: متنِ کاملِ سؤال را می‌گیرد و متنِ کامل برمی‌گرداند،
-         * نه یک FigureSpec. برای همین از NATIVE_TOOLS جداست.
-         */
-        const val FORMULA = "formula"
-        val ALL_TOOLS = NATIVE_TOOLS + FORMULA
     }
 }
 
-/** توکنِ متنیِ سازگار با `renderFigToken` و با `FigTokenVisuals.TOKEN`. */
+/** توکنِ متناظر با قرارداد `FigureCodec` و رندرر چاپ. */
 internal fun figureTokenOf(spec: FigureSpec): String = "%%FIG:" + spec.toJson() + "%%"
 
 /**
  * پنجرهٔ بومیِ متناظر با `request.tool` را نشان می‌دهد و در پایان توکن را
- * برمی‌گرداند. `onInsert` مسئول رساندن توکن به صفحه است.
+ * برای جایگزینیِ شکل انتخاب‌شده برمی‌گرداند.
  */
 @Composable
 internal fun ExamFigureToolHost(
@@ -73,8 +45,7 @@ internal fun ExamFigureToolHost(
     onInsert: (token: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // V82.0 — هنگام ویرایش، spec موجود به همان پنجره داده می‌شود تا کاربر
-    // مقادیر قبلی را ببیند؛ همان ویرایشگرها، فقط با initialSpec.
+    // spec فعلی برای پرکردن مقادیر پنجره به ابزار بومی داده می‌شود.
     val initial = remember(request.initialSpecJson) {
         request.initialSpecJson?.let { FigureSpec.parse(it) }
     }
@@ -91,13 +62,11 @@ internal fun ExamFigureToolHost(
             onInsert = { spec -> onInsert(figureTokenOf(spec)) }
         )
 
-        // شکل و نمودار هم دو مرحله‌اند (انتخاب نوع ← ویرایش)، عیناً مثل
-        // مسیرِ chooseType در آزمون‌سازِ آنلاین.
+        // شکل و نمودار در صورت نیاز انتخاب نوع و سپس ویرایش را نشان می‌دهند.
         "figure" -> FigureToolFlow(FigureKind.GEOMETRY, onInsert, onDismiss, initial)
         "graph" -> FigureToolFlow(FigureKind.GRAPH, onInsert, onDismiss, initial)
 
-        // آناتومی و فیزیک/شیمی دو مرحله‌اند: اول انتخاب نوع، بعد ویرایش —
-        // عیناً همان جریانی که در آزمون‌سازِ آنلاین وجود دارد.
+        // آناتومی و فیزیک/شیمی نیز انتخاب نوع و سپس ویرایش دارند.
         "anatomy" -> AtlasToolFlow("a", "phys", onInsert, onDismiss, initial)
         "physics" -> AtlasToolFlow("s", "phys", onInsert, onDismiss, initial)
         "chemistry" -> AtlasToolFlow("s", "chem", onInsert, onDismiss, initial)
@@ -106,7 +75,7 @@ internal fun ExamFigureToolHost(
     }
 }
 
-/** انتخاب نوع ← ویرایش ← درج، برای شکل و نمودار. */
+/** انتخاب نوع و ویرایش برای شکل و نمودار. */
 @Composable
 private fun FigureToolFlow(
     kind: FigureKind,
@@ -127,21 +96,21 @@ private fun FigureToolFlow(
         FigurePickerDialog(
             initialSpec = spec,
             initialKind = kind,
-            // در حالتِ ویرایش، بستن یعنی انصراف کامل (پنجرهٔ انتخابِ نوعی در کار نیست)
+            // در ویرایشِ شکل موجود، بستن یعنی انصراف کامل.
             onDismiss = { if (initialSpec != null) onDismiss() else picked = null },
             onInsert = { s -> onInsert(figureTokenOf(s)) }
         )
     }
 }
 
-/** انتخاب نوع ← ویرایش ← درج، برای k='a' و k='s'. */
+/** انتخاب نوع و ویرایش برای k='a' و k='s'. */
 @Composable
 private fun AtlasToolFlow(
     kind: String,
     domain: String,
     onInsert: (String) -> Unit,
     onDismiss: () -> Unit,
-    // V82.0 — ویرایش: نوع از خودِ spec می‌آید و انتخابِ نوع رد می‌شود.
+    // در ویرایشِ شکل موجود، نوع از spec خوانده می‌شود.
     initialSpec: FigureSpec? = null
 ) {
     var pickedType by remember(initialSpec) { mutableStateOf(initialSpec?.type) }
@@ -159,7 +128,7 @@ private fun AtlasToolFlow(
             domain = domain,
             initialSpec = initialSpec,
             presetType = type,
-            // بازگشت از ویرایش به انتخابِ نوع، نه بستنِ کاملِ جریان
+            // در ساخت شکل تازه، بازگشت به انتخاب نوع می‌رود.
             onDismiss = { if (initialSpec != null) onDismiss() else pickedType = null },
             onInsert = { spec -> onInsert(figureTokenOf(spec)) }
         )

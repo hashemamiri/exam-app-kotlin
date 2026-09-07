@@ -32,7 +32,7 @@ data class MediaDraft(
 )
 
 /**
- * V64.4 — استایل مستقل هر گزینه (Word-مانند): null یعنی «ارث از سؤال».
+ * استایل مستقل هر گزینه: null یعنی «ارث از سؤال».
  * fontSizeSp=null هم یعنی اندازهٔ خود سؤال.
  */
 @Serializable
@@ -43,9 +43,8 @@ data class OptionStyle(
 )
 
 /**
- * V68 — استایل تکه‌ای متن سؤال (Word-مانند): بازهٔ [start, end) با بولد/ایتالیک.
- * فقط در چیدمان چاپی (PrintLayoutStore) نوشته می‌شود و به متن دانش‌آموز
- * سرریز نمی‌کند؛ JSON قدیمی بدون spans = خالی.
+ * استایل تکه‌ای متن سؤال: بازهٔ [start, end) با بولد/ایتالیک.
+ * روی خود سؤال ذخیره می‌شود و رندر چاپ آن را مستقیماً مصرف می‌کند.
  */
 @Serializable
 data class StyleSpan(
@@ -200,7 +199,7 @@ data class QuestionDraft(
     val fontFamily: String = "default",
     val fontSizeSp: Float = 16f,
     val bold: Boolean = false,
-    // V68 — استایل تکه‌ای متن (فقط چیدمان چاپی؛ JSON قدیمی = خالی).
+    // استایل تکه‌ای متن سؤال.
     val textSpans: List<StyleSpan> = emptyList(),
     val italic: Boolean = false,
     val answerLines: Int = 2,

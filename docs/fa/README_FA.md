@@ -66,17 +66,26 @@ SUPABASE_ANON_KEY=YOUR_ANON_KEY
 
 در مرحلهٔ ۷، پیاده‌سازی Bitmap/Exif، آپلود واقعی Supabase Storage و PDF A4 به این قراردادها متصل می‌شوند.
 
-## مرحله ۷ — موتور واحد سند و چاپ (WYSIWYG)
-- `UnifiedDocumentEngine` در `OfficialPdfPrintAdapter.kt`: یک چیدمان واحد برای
-  چاپ رسمی و ویرایشگر سند؛ سربرگ فقط صفحهٔ ۱، امضا فقط صفحهٔ آخر.
-- `OfficialPrintController`: چاپ از مسیر PrintManager (گفتگوی چاپ سیستم).
-- `ExamDocumentEditorScreen.kt`: ویرایشگر سند Word-مانند با صفحه‌بندی واقعی A4.
-- `WordPageLayout.kt`: ثابت‌های A4 و حاشیهٔ 14mm و helperهای تبدیل mm/pt.
-- `OfficialPrintModels.kt`: مدل‌های چاپی مستقل از Compose/View.
+## مرحله ۷ — PDF رسمی و موتور مستقل چاپ
+- `OfficialPrintLayoutEngine` در `OfficialPdfPrintAdapter.kt`: خروجی PDF رسمیِ
+  A4 برای آزمون و کارنامه؛ سربرگ فقط صفحهٔ ۱ و پاصفحه روی همهٔ صفحه‌ها رسم
+  می‌شود.
+- `PrintFigureMetrics.kt` و `PrintTextSpanSegments.kt`: دادهٔ اندازه/جای شکل و
+  استایل متن را فقط از مدل domain به PDF می‌رسانند؛ موتور PDF به state یا ابزار
+  رابط کاربری وابسته نیست.
+- `ExamHtmlPrintDialog.kt` و `exam_print_renderer.html`: موتور جداگانهٔ
+  پیش‌نمایش A4 و چاپ مستقیم. داده با `window.setExamData` وارد می‌شود و رندر
+  فرمول/شکل با رندررهای بومی به data URL امن تبدیل می‌شود.
+- `PrintHeaderSettings.kt` و `header_settings_schema.json`: تنظیمات مشترک هفت
+  قالب سربرگ در سازندهٔ بومی و برگهٔ چاپ.
+- `OfficialPrintModels.kt` و `PrintableFromDrafts.kt`: مدل canonical چاپ و
+  تبدیل دادهٔ سازندهٔ بومی به آن مدل.
 
-قانون اصلی: پیش‌نمایش و ویرایشگر layout جداگانه ندارند؛ هر دو از همان موتور
-واحد استفاده می‌کنند. فونت فارسی چاپ `B Nazanin` از `assets/fonts/bnazanin.ttf`
-بارگذاری می‌شود و در نبود آن وزیرمتن.
+قانون اصلی: ساخت و ویرایش آزمون فقط در سازندهٔ بومی انجام می‌شود. مسیر چاپ
+نه مسیر ویرایش سندِ جداگانه دارد و نه لایهٔ سازگارسازیِ layout ذخیره‌شده؛ فقط
+مدل canonical را به PDF رسمی یا موتور پیش‌نمایش/چاپ می‌دهد. فونت فارسی PDF
+`B Nazanin` از `assets/fonts/bnazanin.ttf` بارگذاری می‌شود و در نبود آن
+وزیرمتن استفاده می‌شود.
 
 ## مرحله ۸ — تصحیح، بازخورد و گزارش
 - `AutoGrader`: قرارداد تصحیح خودکار به‌ازای هر نوع سؤال.

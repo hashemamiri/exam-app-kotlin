@@ -83,7 +83,3 @@ class QuestionEditorFieldController {
         view.evaluateJavascript("window.ExamEditor && ExamEditor.setValue($quoted);", null)
     }
 }
-
-/* V100 — نمایشگرِ زندهٔ متنِ سؤال (نمایشِ فقط-خواندنیِ WebView + پوششِ
-   HTML) فقط در کارتِ بومیِ «آزمون‌ساز چاپی» مصرف داشت و با حذفش حذف
-   شدند. */

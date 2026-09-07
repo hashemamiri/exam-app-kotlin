@@ -9,15 +9,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * V78.2 — دو کارِ فاز ۲:
- *  ۱) پاک‌کنِ مستقل در استودیوی تصویر (با همان hit-test انتخاب)
- *  ۳) حذف x86/x86_64 از ABI — حدود ۶٫۴MB کوچک‌تر شدنِ APK
- *
- * V100 — دو تستِ «آینهٔ بومیِ پیش‌نویس» (ExamDraftMirror) با حذفِ کاملِ
- * «آزمون‌ساز چاپی» حذف شدند: پنجرهٔ چاپ دیگر پیش‌نویسِ خودکار بازیابی نمی‌کند.
- */
-class V78_2EraserMirrorAbiTest {
+/** پوشش پاک‌کن استودیوی تصویر و بسته‌بندی ABIهای پشتیبانی‌شده. */
+class ImageStudioEraserAndAbiTest {
     private fun root(): File = listOf(File("."), File("..")).first {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
     }
@@ -25,7 +18,6 @@ class V78_2EraserMirrorAbiTest {
     private fun source(path: String) = File(root(), path).readText()
 
     private val studio by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt") }
-    private val assetText by lazy { source("app/src/main/assets/print/exam_print.html") }
     private val gradle by lazy { source("app/build.gradle.kts") }
 
     // ---------- پاک‌کن ----------
@@ -64,17 +56,6 @@ class V78_2EraserMirrorAbiTest {
         assertEquals(-1, hitShapeIndex(emptyList(), 0.2f, 0.2f))
     }
 
-    // ---------- پل‌های ماندگارِ صفحه ----------
-
-    @Test
-    fun `draft snapshot bridge still exists in the page`() {
-        // خودِ پل‌های صفحه می‌مانند (ذخیرهٔ خودکار)؛ مصرف‌کنندهٔ بومیِ آن‌ها
-        // (آینهٔ پیش‌نویس) با V100 حذف شد.
-        assertTrue("window.__qmfDraftSnapshot" in assetText)
-        assertTrue("window.__qmfHasLocalDraft" in assetText)
-        assertTrue("qmf_exam_autosave_azmoon_v1" in assetText)
-    }
-
     // ---------- حجم APK ----------
 
     @Test
@@ -91,9 +72,4 @@ class V78_2EraserMirrorAbiTest {
         assertTrue(File(root(), "app/src/main/assets/tessdata/fas.traineddata").isFile)
     }
 
-    @Test
-    fun `out of scope areas remain untouched`() {
-        listOf("function printStudent", "function printTeacher", "function renderPreview", "function renderEditor")
-            .forEach { assertTrue(it in assetText) }
-    }
 }

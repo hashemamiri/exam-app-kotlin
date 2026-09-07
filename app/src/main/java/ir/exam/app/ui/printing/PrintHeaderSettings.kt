@@ -41,16 +41,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * V76.4 — پنجره‌های بومی آزمون‌ساز (نسخهٔ ۳۰):
+ * مدل و پنجرهٔ بومی تنظیمات سربرگ چاپ.
  *
- * ۱) HeaderSettingsDialog — تنظیمات سربرگ: شِمای فرم از خودِ فایلِ ۳۰ استخراج و در
- *    assets/print/header_settings_schema.json ذخیره شده (۷ قالب، همهٔ فیلدها با
- *    شناسه/برچسب/نوع واقعی)؛ مقدارها از صفحه خوانده و با __qmfSetFields اعمال می‌شوند.
- * ۲) SaveExamDialog — ذخیره: «این جلسه» (نگه‌داشتن در برنامه) یا «فایل JSON در دستگاه».
- * ۳) OpenExamSummaryDialog — پیش‌نمایش فایل باز‌شده قبل از اعمال.
- *
- * V90 — NewQuestionTypeDialog حذف شد: «سوال جدید» از منویِ رادیالِ + می‌آید
- * و این پنجره هیچ‌جا باز نمی‌شد.
+ * شِمای مشترک هفت قالب در `assets/print/header_settings_schema.json` نگه‌داری
+ * می‌شود و مقدارها در `PrintHeaderStore` ذخیره می‌شوند.
  */
 
 @Serializable
@@ -83,7 +77,7 @@ fun loadHeaderSchema(context: android.content.Context): HeaderSchema? = runCatch
     )
 }.getOrNull()
 
-/** پنجرهٔ بومی «تنظیمات سربرگ» — معادلِ کاملِ پنل HTML فایل. */
+/** پنجرهٔ بومی «تنظیمات سربرگ» بر پایهٔ شِمای مشترک چاپ. */
 @Composable
 fun HeaderSettingsDialog(
     schema: HeaderSchema,
@@ -213,8 +207,3 @@ private fun FieldSelect(f: HeaderField, values: Map<String, String>, onChange: (
         }
     }
 }
-
-/* V100 — SaveExamDialog، OpenExamSummaryDialog و safeExamFileName با حذفِ
-   «آزمون‌ساز چاپی» حذف شدند: پنجرهٔ چاپ دیگر JSON ذخیره/باز نمی‌کند.
-   (شِمای سربرگ و HeaderSettingsDialog می‌مانند — آزمون‌سازِ بومی از آن‌ها
-   استفاده می‌کند.) */

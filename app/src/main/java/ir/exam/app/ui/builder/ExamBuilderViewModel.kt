@@ -8,7 +8,6 @@ import ir.exam.app.core.figure.FigureCodec
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.data.local.NativeDatabaseProvider
-import ir.exam.app.data.local.PrintLayoutStore
 import ir.exam.app.data.remote.SupabaseProvider
 import ir.exam.app.data.repository.ExamBuilderDraftStore
 import ir.exam.app.data.repository.SupabaseExamBuilderRepository
@@ -33,10 +32,6 @@ class ExamBuilderViewModel(
     private val repository: SupabaseExamBuilderRepository = SupabaseExamBuilderRepository(context)
 ) : ViewModel() {
     private val appContext = context.applicationContext
-    // V64.6 — تغییرات بخش «آزمون‌ها» باید در نسخهٔ چاپ هم دیده شوند؛
-    // این store فقط snapshot پایهٔ چاپ را rebase می‌کند و هیچ تغییر چاپی را
-    // به آزمون سرور/دانش‌آموز برنمی‌گرداند.
-    private val printLayoutStore = PrintLayoutStore(appContext)
     private val ownerUserId = SupabaseProvider.client.auth.currentUserOrNull()?.id.orEmpty()
     private val draftStore = ExamBuilderDraftStore(
         NativeDatabaseProvider.get(appContext).examBuilderDraftDao()
@@ -236,11 +231,6 @@ class ExamBuilderViewModel(
                 error = null
             )
         }
-    }
-
-    /** V63.5 — جایگزینی سؤال‌ها با چیدمان چاپی ذخیره‌شده (فقط ویرایشگر سند). */
-    fun overridePrintLayout(questions: List<QuestionDraft>) {
-        _state.update { it.copy(questions = questions) }
     }
 
     /**
@@ -533,7 +523,7 @@ class ExamBuilderViewModel(
     fun setQuestionFont(id: String, value: String) { update(id) { it.copy(fontFamily=value.take(30)) } }
     fun setQuestionFontSize(id: String, value: Float) { update(id) { it.copy(fontSizeSp=value.coerceIn(8f,40f)) } }
     fun setQuestionBold(id: String, value: Boolean) { update(id) { it.copy(bold=value) } }
-    /** V68 — استایل تکه‌ای متن (Word-مانند؛ فقط چیدمان چاپی). */
+    /** استایل تکه‌ای متن سؤال برای رندرهای فعال. */
     fun setQuestionSpans(id: String, spans: List<StyleSpan>) {
         update(id) { it.copy(textSpans = spans.filter { it.end > it.start }) }
     }
@@ -682,10 +672,6 @@ class ExamBuilderViewModel(
         repository.save(saveState, saveOperationId) { done, total ->
             _state.update { it.copy(uploadProgress = "آپلود تصویر $done از $total") }
         }.onSuccess { result ->
-            // V64.6 — پیش از این save موفق آزمون، snapshot چاپ قدیمی می‌ماند
-            // و سؤال‌های چاپی ویرایش‌های جدید بخش آزمون‌ها را پنهان می‌کردند.
-            // rebase فقط اختلاف‌های مخصوص چاپ را حفظ می‌کند.
-            saveState.examId?.let { printLayoutStore.rebase(it, saveState.questions) }
             if (ownerUserId.isNotBlank()) draftStore.clear(ownerUserId)
             saveOperationId = UUID.randomUUID().toString()
             _state.update {

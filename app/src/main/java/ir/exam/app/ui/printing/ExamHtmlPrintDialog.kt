@@ -57,34 +57,19 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * V76.0 — پنجرهٔ تمام‌صفحهٔ «نسخهٔ 30» (آزمون‌ساز/چاپ تعاملی HTML):
- * فایل print/exam_print.html را در WebView بارگذاری می‌کند؛ با پل
- * window.setExamData سؤالات و سربرگ آزمون خودکار تزریق می‌شوند و کاربر همان‌جا
- * ویرایش/چاپ می‌کند (فقط چاپ؛ آزمون سرور تغییر نمی‌کند).
- * V76.1 — viewport خود فایل اعمال می‌شود (رابط موبایل در اندازهٔ واقعی).
- * V99.2 — `onFigLayouts` چیدمانِ اشیاء/جداکنندهٔ ساخته‌شده در پیش‌نمایش را به
- * میزبانِ بومی برمی‌گرداند تا در بازِ بعدی (و چاپ) ریست نشود.
+ * پنجرهٔ تمام‌صفحهٔ پیش‌نمایش و چاپ آزمون.
  *
- * V100 — «آزمون‌ساز چاپی» کامل حذف شد. این پنجره حالا فقط دو حالت دارد:
- *  - `initialPreview = true` — پیش‌نمایشِ بومی از آزمون‌ساز (دکمهٔ چشم):
- *    برگهٔ A4 با ویرایشِ شکل‌ها با لمسِ دوباره؛ بستنِ پنجرهٔ پیش‌نمایش
- *    پنجرهٔ کل را می‌بندد و چیدمان به بیلدر برمی‌گردد.
- *  - `initialPrintMode != null` — چاپِ مستقیم (student/teacher): برگهٔ خالصِ
- *    A4 روی پس‌زمینهٔ خاکستری و سپس پنجرهٔ چاپِ اندروید.
- * همهٔ امکاناتِ حالتِ ویرایش (کارت‌های بومی، منوی رادیال، ذخیره/بازکردن
- * JSON، بازیابی، مدیریت سؤال، ویرایشگر فرمول، استودیوی تصویر، هدر «سربرگ»،
- * تشخیص‌های فنی) با حذفِ آزمون‌سازِ چاپی از این پنجره برداشته شدند؛ ویرایش
- * آزمون در بیلدرِ بومی انجام می‌شود.
- * V101 — راه‌اندازیِ WebView به تابعِ مشترکِ `createExamPrintWebView` منتقل
- * شد تا «چاپِ مستقیمِ بدون‌صفحه» (HeadlessExamPrinter) هم از همان موتور
- * استفاده کند؛ در آن مسیر هیچ پنجرهٔ پیش‌نمایشی روی صفحه ظاهر نمی‌شود.
+ * asset مستقلِ `exam_print_renderer.html` فقط برگهٔ A4 را می‌سازد. ورود داده
+ * با `window.setExamData` انجام می‌شود و فرمول/شکل با رندررهای بومی به تصویر
+ * امن تبدیل می‌شوند. بنابراین این سطح هیچ فرم ساخت آزمون، ذخیرهٔ محلی یا
+ * ویرایشگر متنی ندارد.
+ *
+ * - `initialPreview` پیش‌نمایش A4 و تنظیم چیدمان شکل‌ها را نشان می‌دهد.
+ * - `initialPrintMode` چاپ مستقیم دانش‌آموز یا پاسخ‌نامه را آغاز می‌کند.
  */
 
-/**
- * V80.0 — نشانیِ سندِ اصلیِ آزمون‌ساز. onPageFinished برای هر فریم (از جمله
- * iframe ویرایشگر فرمول) صدا زده می‌شود، پس باید بتوانیم فریمِ اصلی را تشخیص دهیم.
- */
-internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print.html"
+/** نشانی ثابت سند اصلی تا callbackهای WebView فقط یک‌بار داده را تزریق کنند. */
+internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -103,18 +88,11 @@ fun ExamHtmlPrintDialog(
     var loading by remember { mutableStateOf(true) }
     var jsError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
-    // V76.3 — ارجاع WebView برای فرمان‌های نوار بومی + پیام وضعیت
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    // V78.0 — درخواستِ بازکردنِ یک ابزار درجِ بومی از داخل صفحه
+    // دابل‌کلیک روی شکل در پیش‌نمایش، ویرایشگر بومیِ همان شکل را باز می‌کند.
     var figureTool by remember { mutableStateOf<FigureToolRequest?>(null) }
-    // V82.0 — دابل‌کلیک: (questionId, tokenIndex) تا spec از صفحه خوانده شود.
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
-    // V87.7 — پیام پس از چند ثانیه خودش محو می‌شود
     var barStatus by remember { mutableStateOf<String?>(null) }
-    /* V89.5 — فهرستِ کارت‌ها `fillMaxSize` است و روی WebView می‌نشیند، پس
-       پنجرهٔ پیش‌نمایش (که داخلِ WebView باز می‌شود) زیرش پنهان می‌ماند.
-       بدونِ سؤال، فهرست خالی بود و مشکل دیده نمی‌شد؛ با سؤال، چشم «کار
-       نمی‌کرد». هنگامِ باز بودنِ پیش‌نمایش کارت‌ها کنار می‌روند. */
     var previewOpen by remember { mutableStateOf(initialPreview) }
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
@@ -127,25 +105,39 @@ fun ExamHtmlPrintDialog(
         webViewRef?.evaluateJavascript(script, cb)
     }
 
-    /* V99.2 — چیدمانِ اشیاء (موقعیت/شناور/slot + جداکننده) را از صفحه بخوان
-       و به میزبانِ بومی بده تا در بازِ بعدیِ پنجره ریست نشود. */
+    // چیدمان شکل‌ها و فاصلهٔ جداکننده باید پیش از بستن پیش‌نمایش حفظ شود.
     var lastFigLayoutsJson by remember { mutableStateOf<String?>(null) }
+    var dismissing by remember { mutableStateOf(false) }
 
-    fun fetchFigLayoutsSnapshot() {
-        webViewRef?.evaluateJavascript(
-            "(function(){try{return window.__qmfFigLayoutsSnapshot?window.__qmfFigLayoutsSnapshot():'{}'}catch(e){return '{}'}})()"
+    fun publishFigLayouts(raw: String?) {
+        val json = unwrapJsString(raw).ifBlank { "{}" }
+        if (json != "{}" && json != lastFigLayoutsJson) {
+            lastFigLayoutsJson = json
+            onFigLayouts?.invoke(json)
+        }
+    }
+
+    fun fetchFigLayoutsSnapshot(after: (() -> Unit)? = null) {
+        val view = webViewRef
+        if (view == null) {
+            after?.invoke()
+            return
+        }
+        view.evaluateJavascript(
+            "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.layoutSnapshot?window.ExamPrintRenderer.layoutSnapshot():'{}'}catch(e){return '{}'}})()"
         ) { raw ->
-            val json = unwrapJsString(raw).ifBlank { "{}" }
-            if (json != "{}" && json != lastFigLayoutsJson) {
-                lastFigLayoutsJson = json
-                onFigLayouts?.invoke(json)
-            }
+            publishFigLayouts(raw)
+            after?.invoke()
         }
     }
 
     fun requestDismiss() {
-        fetchFigLayoutsSnapshot()
-        onDismiss()
+        if (dismissing) return
+        dismissing = true
+        fetchFigLayoutsSnapshot {
+            val view = webViewRef
+            if (view != null) view.post { onDismiss() } else onDismiss()
+        }
     }
 
     LaunchedEffect(previewOpen, loading) {
@@ -159,8 +151,8 @@ fun ExamHtmlPrintDialog(
     LaunchedEffect(figureEditRequest) {
         val (qid, index) = figureEditRequest ?: return@LaunchedEffect
         runJs(
-            "(function(){try{return window.__qmfEditFigAt?" +
-                "window.__qmfEditFigAt('" + qid + "'," + index + "):''}catch(e){return ''}})()"
+            "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.figureAt?" +
+                "window.ExamPrintRenderer.figureAt('" + qid + "'," + index + "):''}catch(e){return ''}})()"
         ) { raw ->
             figureEditRequest = null
             val payload = unwrapJsString(raw)
@@ -189,7 +181,6 @@ fun ExamHtmlPrintDialog(
             figureTool = FigureToolRequest(
                 questionId = qid,
                 tool = tool,
-                editIndex = index,
                 initialSpecJson = specJson,
                 tokenStart = parsed.second,
                 tokenEnd = parsed.third
@@ -226,7 +217,7 @@ fun ExamHtmlPrintDialog(
                                     if (initialPreview) {
                                         previewOpen = true
                                         webViewRef?.evaluateJavascript(
-                                            "(function(){try{return window.__qmfShowPreview?window.__qmfShowPreview():'missing'}catch(e){return 'err'}})()",
+                                            "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.showPreview?window.ExamPrintRenderer.showPreview():'missing'}catch(e){return 'err'}})()",
                                             null
                                         )
                                     }
@@ -252,9 +243,11 @@ fun ExamHtmlPrintDialog(
                                     webViewRef?.post { if (message.isNotBlank()) barStatus = message }
                                 },
                                 onEditFigureTool = { qid, index -> webViewRef?.post { figureEditRequest = qid to index } },
+                                // یک snapshot پیش از dismiss کافی است؛ requestDismiss با
+                                // پرچم `dismissing` از فراخوانی تکراری جلوگیری می‌کند.
                                 onPreviewClosed = {
-                                    fetchFigLayoutsSnapshot()
-                                    webViewRef?.post { previewOpen = false }
+                                    val view = webViewRef
+                                    if (view != null) view.post { requestDismiss() } else requestDismiss()
                                 }
                             ).also { webViewRef = it }
                         },
@@ -328,11 +321,7 @@ fun ExamHtmlPrintDialog(
                     }
                 }
 
-                // V78.0 — ابزارهای درجِ بومی (جدول، تناوبی، شکل، نمودار، آناتومی،
-                // فیزیک، شیمی). V82.0 — همین میزبان حالتِ «ویرایش» را هم دارد:
-                // اگر req.isEdit باشد، نتیجه جایگزینِ همان توکن می‌شود نه درجِ تازه.
-                // V100 — در حالتِ پیش‌نمایش، این همان مسیرِ «دابل‌کلیک روی
-                // شکلِ برگه» است؛ درجِ تازه از این پنجره دیگر امکان‌پذیر نیست.
+                // فقط ویرایشِ شکلِ انتخاب‌شده از پیش‌نمایش با ابزارهای بومی.
                 figureTool?.takeIf { it.isNative }?.let { req ->
                     ExamFigureToolHost(
                         request = req,
@@ -342,22 +331,12 @@ fun ExamHtmlPrintDialog(
                                 token.toByteArray(Charsets.UTF_8),
                                 android.util.Base64.NO_WRAP
                             )
-                            val script = if (req.isEdit) {
-                                "(function(){try{return window.__qmfReplaceFigToken?" +
-                                    "window.__qmfReplaceFigToken('" + req.questionId + "'," +
-                                    req.tokenStart + "," + req.tokenEnd + ",'" + b64 + "'):'missing'}" +
-                                    "catch(e){return 'err'}})()"
-                            } else {
-                                "(function(){try{return window.__qmfInsertFigToken?" +
-                                    "window.__qmfInsertFigToken('" + req.questionId + "','" + b64 + "'):'missing'}" +
-                                    "catch(e){return 'err'}})()"
-                            }
-                            runJs(script) { r ->
-                                barStatus = if (r?.contains("ok") == true) {
-                                    if (req.isEdit) "ویرایش شد ✓" else "در سؤال درج شد ✓"
-                                } else {
-                                    if (req.isEdit) "ویرایش ناموفق بود." else "درج در سؤال ناموفق بود."
-                                }
+                            val script = "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.replaceFigure?" +
+                                "window.ExamPrintRenderer.replaceFigure('" + req.questionId + "'," +
+                                req.tokenStart + "," + req.tokenEnd + ",'" + b64 + "'):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                            runJs(script) { result ->
+                                barStatus = if (result?.contains("ok") == true) "ویرایش شد ✓" else "ویرایش ناموفق بود."
                             }
                         },
                         onDismiss = { figureTool = null }
@@ -395,26 +374,25 @@ internal fun unwrapJsString(value: String?): String {
     }.getOrDefault(raw)
 }
 
-/* V100 — jsArg (سازندهٔ لیترالِ امنِ JS) فقط در کارت‌های بومی مصرف داشت و
-   با حذفِ «آزمون‌ساز چاپی» حذف شد. */
-
 private class ExamPrintBridge(
+    private val renderer: ExamPrintAssetRenderer,
     private val onPrint: (String) -> Unit,
     private val onError: (String) -> Unit,
-    // V82.0 — دابل‌کلیک روی ابزارِ درج‌شده: ویرایشِ همان توکن
     private val onEditFigureTool: (String, Int) -> Unit,
-    // V87.8 — پیام‌های صفحه به‌جای alert مرورگر، اعلانِ بومی می‌شوند
     private val onToast: (String) -> Unit,
-    // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
     private val onPreviewClosed: () -> Unit
 ) {
-    /** V87.8 — `alert()` پنجرهٔ خام با نشانیِ exam-print.local نشان می‌داد. */
+    @JavascriptInterface
+    fun renderFormula(source: String?): String = renderer.formulaDataUrl(source)
+
+    @JavascriptInterface
+    fun renderFigure(rawSpec: String?): String = renderer.figureDataUrl(rawSpec)
+
     @JavascriptInterface
     fun toast(message: String?) {
         onToast(message.orEmpty())
     }
 
-    /** V89.5 — پیش‌نمایش بسته شد. */
     @JavascriptInterface
     fun previewClosed() {
         onPreviewClosed()
@@ -422,17 +400,9 @@ private class ExamPrintBridge(
 
     @JavascriptInterface
     fun print(mode: String?) {
-        onPrint(mode ?: "student")
+        onPrint(if (mode == "teacher") "teacher" else "student")
     }
 
-    /**
-     * V82.0 — دابل‌کلیک روی یک ابزارِ درج‌شده. `index` شمارهٔ ترتیبیِ توکن در
-     * متنِ همان سؤال است؛ میزبانِ بومی spec را می‌خواند و همان پنجره را در
-     * حالتِ ویرایش باز می‌کند، سپس نتیجه جایگزینِ همان توکن می‌شود.
-     * (V100 — openFigureTool/openImageStudio/close با حذفِ «آزمون‌ساز چاپی»
-     * برداشته شدند: این پل حالا فقط مسیرِ ویرایشِ دابل‌کلیکِ پیش‌نمایش
-     * و چاپ/اعلان را دارد.)
-     */
     @JavascriptInterface
     fun editFigureTool(questionId: String?, index: Int) {
         onEditFigureTool(questionId.orEmpty(), index)
@@ -444,14 +414,9 @@ private class ExamPrintBridge(
     }
 }
 
-
 /**
- * V101 — راه‌اندازیِ مشترکِ WebViewِ چاپ (پنجرهٔ پیش‌نمایش + چاپِ مستقیمِ
- * بدون‌صفحه). تنظیمات، پلِ ExamPrintNative، перехبِرِ assetها و تزریقِ داده
- * از طریق setExamData همین‌جا است. در حالتِ `printMode` (چاپِ مستقیم) صفحه
- * به حالتِ چاپ می‌رود و خودِ صفحه printStudent/printTeacher را صدا می‌زند
- * (پس از آن پلِ print به PrintManager می‌رسد)؛ سپس `onPageReady` در رشتهٔ
- * اصلی فراخوانی می‌شود.
+ * کارخانهٔ مشترک WebView برای پیش‌نمایش و چاپ مستقیم. فقط assetهای محلی
+ * را سرو می‌کند و payload را پس از آماده‌شدن صفحه تزریق می‌کند.
  */
 @SuppressLint("SetJavaScriptEnabled")
 internal fun createExamPrintWebView(
@@ -467,7 +432,6 @@ internal fun createExamPrintWebView(
 ): WebView = WebView(context).apply {
     setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
     settings.javaScriptEnabled = true
-    settings.domStorageEnabled = true
     settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
     settings.allowFileAccess = false
     settings.allowContentAccess = false
@@ -487,6 +451,7 @@ internal fun createExamPrintWebView(
 
     addJavascriptInterface(
         ExamPrintBridge(
+            renderer = ExamPrintAssetRenderer(context),
             onPrint = onPrint,
             onError = onError,
             // V82.0 — ویرایشِ ابزارِ درج‌شده با دابل‌کلیک
@@ -496,7 +461,7 @@ internal fun createExamPrintWebView(
             // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
             onPreviewClosed = onPreviewClosed
         ),
-        "ExamPrintNative"
+        "ExamPrintBridge"
     )
 
     webViewClient = object : WebViewClient() {
@@ -558,7 +523,7 @@ internal fun createExamPrintWebView(
                             // خروجی چاپ خالی می‌ماند.
                             if (printMode != null) {
                                 view.evaluateJavascript(
-                                    "try{document.body.classList.add('qmf-print-mode');}catch(e){}",
+                                    "try{document.body.classList.add('exam-print-mode');}catch(e){}",
                                     null
                                 )
                             }
@@ -628,21 +593,20 @@ internal class HeadlessExamPrinter(context: Context) {
         jobName = printable.documentTitle.ifBlank { "exam" } + "-" + mode
         onStatusCb = onStatus
         onFinishedCb = onFinished
-        val web = WebView(appContext)
-        webView = web
-        createExamPrintWebView(
+        lateinit var configuredWebView: WebView
+        configuredWebView = createExamPrintWebView(
             context = appContext,
             printable = printable,
             printMode = mode,
             onPageReady = { },
-            onPrint = { m -> startPrintJob(web, m) },
+            onPrint = { selectedMode -> startPrintJob(configuredWebView, selectedMode) },
             onError = { message -> onStatus("چاپ ناموفق بود: $message") },
             onToast = { message -> if (message.isNotBlank()) onStatus(message) },
             onEditFigureTool = { _, _ -> },
             onPreviewClosed = { }
         )
+        webView = configuredWebView
         handler.postDelayed(timeoutRunnable, 180_000L)
-        web.loadUrl(MAIN_PAGE_URL)
     }
 
     private fun status(message: String) {

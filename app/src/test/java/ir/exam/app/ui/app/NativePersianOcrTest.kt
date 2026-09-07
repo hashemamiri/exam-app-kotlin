@@ -3,15 +3,11 @@ package ir.exam.app.ui.app
 import ir.exam.app.ui.printing.ExamImageOcr
 import java.io.File
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * V76.9 — OCR فارسیِ بومی و آفلاین (جایگزینِ OCR استودیوی HTML که به آینه‌های
- * آنلاین وابسته بود): موتور Tesseract 4 + دادهٔ زبانِ `fas` داخل assets.
- */
-class V76_9NativePersianOcrTest {
+/** پوشش OCR فارسیِ بومی و آفلاینِ استودیوی تصویر. */
+class NativePersianOcrTest {
     private fun root(): File = listOf(File("."), File("..")).first {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
     }
@@ -20,8 +16,6 @@ class V76_9NativePersianOcrTest {
 
     private val ocr by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamImageOcr.kt") }
     private val studio by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt") }
-    private val dialog by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt") }
-    private val assetText by lazy { source("app/src/main/assets/print/exam_print.html") }
     private val gradle by lazy { source("app/build.gradle.kts") }
     private val settings by lazy { source("settings.gradle.kts") }
 
@@ -66,17 +60,6 @@ class V76_9NativePersianOcrTest {
         assertTrue("onOcrText: (String) -> Unit = {}," in studio)
         // نتیجه پیش از درج قابل ویرایش است
         assertTrue("درج در متن سؤال" in studio)
-    }
-
-    @Test
-    fun `ocr text is appended to the question through a bridge`() {
-        // V100 — استودیوی تصویر (و مسیرِ OCRِ آن) از پنجرهٔ چاپ با حذفِ
-        // «آزمون‌ساز چاپی» رفت؛ پلِ صفحه می‌ماند و در بیلدرِ بومی استفاده
-        // می‌شود.
-        assertFalse("window.__qmfAppendQuestionText" in dialog)
-        assertTrue("window.__qmfAppendQuestionText = function (qid, b64Text) {" in assetText)
-        assertTrue("""    q.text = cur ? (cur + "\n" + add) : add;""" in assetText)
-        assertTrue("""    return "ok";""" in assetText)
     }
 
     // ---------- ریاضیِ واقعی: نرمال‌سازی متن ----------

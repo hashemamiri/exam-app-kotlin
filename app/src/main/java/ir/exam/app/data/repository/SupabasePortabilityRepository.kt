@@ -77,7 +77,7 @@ class SupabasePortabilityRepository {
         )
     }
 
-    // V63.7 — سربرگ پیش‌فرض پروفایل برای پیش‌نمایش Word-مانند ویرایشگر سند.
+    // سربرگ پیش‌فرض پروفایل برای خروجی‌های چاپی.
     suspend fun profilePrintHeader(): Result<OfficialPrintHeader> = runCatching {
         val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
         OfficialPrintHeader(
@@ -90,13 +90,11 @@ class SupabasePortabilityRepository {
         )
     }
 
-    // V62.7 — headerOverride: سربرگ صفحهٔ «چاپ آزمون» جایگزین سربرگ پروفایل می‌شود.
+    // سربرگ صفحهٔ «چاپ آزمون» در صورت نیاز جایگزین سربرگ پروفایل می‌شود.
     suspend fun printableExam(
         examId: String,
         includeAnswerKey: Boolean,
-        headerOverride: OfficialPrintHeader? = null,
-        // V63.5 — سؤال‌های ویرایش‌شدهٔ مخصوص چاپ (PrintLayoutStore).
-        questionsOverride: List<ir.exam.app.ui.builder.QuestionDraft>? = null
+        headerOverride: OfficialPrintHeader? = null
     ): Result<OfficialExamPrintable> = runCatching {
         val uid = currentUserId()
         val exam = SupabaseProvider.client.from("exams").select {
@@ -106,7 +104,7 @@ class SupabasePortabilityRepository {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
         val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
-        val questions = questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)
+        val questions = ExamQuestionCodec.decode(exam.questions, key)
         OfficialExamPrintable(
             documentTitle = exam.title,
             header = headerOverride ?: OfficialPrintHeader(

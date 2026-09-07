@@ -42,7 +42,7 @@ jobs:
               sys.exit(1)
           print(f'Security source scan: PASS ({len(files)} tracked files)')
           PY
-      - name: بررسی نهایی حذف WebView و hardening
+      - name: بررسی موتور مستقل چاپ و پاک‌سازی مسیرهای بازنشسته
         run: python3 scripts/verify_native_final.py
       - name: آماده‌سازی Java
         uses: actions/setup-java@v5
