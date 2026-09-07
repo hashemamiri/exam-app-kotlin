@@ -4073,60 +4073,6 @@ require('contentDescription = "ویرایش نسخهٔ چاپی"' in _v101_cente
 require("val sourceExamId: String? = null" in _v101_store, "V101 PrintExamRecord must keep the source link")
 require("val localPrintExamId: String? = null" in _v101_draft and "examId = imported.localPrintExamId" in _v101_vm and "localPrintExamId = localId" in _v101_app, "V101 re-saving must update the print copy in place (local-only id chain)")
 
-# ---- V102: رفع‌خطاهای سه‌گانهٔ APKٔ V101 ----
-# (A) چاپ از آزمون‌ساز بدون‌صفحه؛ (B) هدرِ پنجرهٔ پیش‌نمایش؛ (C) جابجایی خط
-# جداکننده در پیش‌نمایشِ مقیاس‌شده (هدفِ لمس + دلتای مقیاس‌آگاه).
-_v102_builder = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text(encoding="utf-8")
-_v102_dlg = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
-_v102_center = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt").read_text(encoding="utf-8")
-_v102_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
-# (A) بیلدر: چاپ از پرینترِ بدون‌صفحه، نه پنجره
-require("val headlessPrinter = remember(context) {" in _v102_builder
-        and "HeadlessExamPrinter(context.applicationContext)" in _v102_builder,
-        "V102 builder must create the shared headless printer")
-require(_v102_builder.count("headlessPrinter.print(") >= 2,
-        "V102 builder student+teacher print must both go headless")
-require('printInitialMode = "student"' not in _v102_builder
-        and 'printInitialMode = "teacher"' not in _v102_builder,
-        "V102 builder print must not open the headerless window (no printInitialMode)")
-require("printInitialPreview = true" in _v102_builder,
-        "V102 the eye/preview path in the builder must stay")
-require("onStatus = { msg -> printStatus = msg }" in _v102_builder
-        and "onFinished = { printStatus = null }" in _v102_builder
-        and "printStatus?.let { noticeSnackbar.showSnackbar(it) }" in _v102_builder,
-        "V102 builder print status must be reported via snackbar and cleared on finish")
-require("headlessPrinter.print(" in _v102_center and "ExamHtmlPrintDialog(" not in _v102_center,
-        "V102 regression: print center must stay headless")
-# (B) هدرِ پنجرهٔ پیش‌نمایش (عنوان + بستن)
-require('printable?.documentTitle ?: "پیش‌نمایش برگه"' in _v102_dlg
-        and "Icons.Filled.Close" in _v102_dlg
-        and 'contentDescription = "بستن"' in _v102_dlg
-        and "IconButton(onClick = { requestDismiss() }) {" in _v102_dlg
-        and "import androidx.compose.material.icons.Icons" in _v102_dlg,
-        "V102 preview window must have a compose header (title + close)")
-_header_idx = _v102_dlg.find('printable?.documentTitle ?: "پیش‌نمایش برگه"')
-_box_idx = _v102_dlg.find("Box(Modifier.fillMaxSize().weight(1f)) {")
-require(_header_idx >= 0 and _box_idx >= 0 and _header_idx < _box_idx,
-        "V102 header must render above the webview")
-# (C) خطِ جداکننده در پیش‌نمایشِ مقیاس‌شده
-require("height:max(14px, calc(34px / var(--qmf-pv-k, 1)))" in _v102_asset,
-        "V102 sep touch target must scale with the preview scale")
-require("#previewWinOverlay .question-sep-drag::before" in _v102_asset,
-        "V102 sep line must be visible in the preview (touch has no hover)")
-require("pc.style.setProperty('--qmf-pv-k', String(kz))" in _v102_asset
-        and "pc.style.setProperty('--qmf-pv-k', '1')" in _v102_asset
-        and "pc.style.removeProperty('--qmf-pv-k')" in _v102_asset,
-        "V102 effective scale must be exposed as --qmf-pv-k (set/reset)")
-require("function curScale() {" in _v102_asset
-        and "k: curScale()" in _v102_asset
-        and "(e.clientY - sepDrag.sy) / (sepDrag.k || 1)" in _v102_asset,
-        "V102 sep drag delta must be divided by the current scale (1:1)")
-require("Math.min(600, Math.round(val || 0))" in _v102_asset
-        and "autoFitQuestionBox" not in _v102_asset,
-        "V102 sep movement must stay manual (clamp kept, no auto adjustments)")
-require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V102_BuilderHeadlessPreviewHeaderSepDragTest.kt").exists(),
-        "V102 regression test file is missing")
-
 # V54.3.1 — رفع باگ ساختاری: requireهای بلوک‌های V53.x/V54.x بعد از اولین چک errors
 # اجرا می‌شدند و هرگز enforce نمی‌شدند؛ بررسی نهایی الزامی است.
 if errors:

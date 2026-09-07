@@ -308,30 +308,17 @@
   .interactive-figure.selected .fig-move-hint { display:block; }
   /* جابجایی حرفه‌ای خط جداکنندهٔ سؤال‌ها در پیش‌نمایش */
   .questions-print-table .question-main-td{position:relative;}
-  /* V102 — هدفِ لمسِ خطِ جداکننده با مقیاسِ پنجرهٔ پیش‌نمایش بزرگ می‌شود:
-     وقتی برگه به k مقیاس شده، هدفِ ۱۴px فقط ۱۴k پیکسل روی صفحه است
-     (با k=0.5 یعنی ۷px — دست نمی‌رسد). حالا ناحیهٔ لمس حداقل ۳۴px روی
-     صفحه می‌ماند و نوارِ ظاهرِ خط همان‌جا (لبِ پایینِ کادر) می‌ماند. */
   .question-sep-drag{
-    position:absolute;left:-1px;right:-1px;bottom:-7px;z-index:12;
-    height:max(14px, calc(34px / var(--qmf-pv-k, 1)));
-    cursor:ns-resize;display:block;touch-action:none;
+    position:absolute;left:-1px;right:-1px;bottom:-7px;height:14px;z-index:12;
+    cursor:ns-resize;display:flex;align-items:center;justify-content:center;touch-action:none;
   }
   .question-sep-drag::before{
-    content:"";display:block;width:100%;height:3px;border-radius:999px;bottom:5px;
+    content:"";display:block;width:100%;height:3px;border-radius:999px;
     background:rgba(37,99,235,.0);transition:background .15s, box-shadow .15s;
   }
   .question-print-row:hover .question-sep-drag::before,
   .question-sep-drag.is-dragging::before{
     background:rgba(37,99,235,.85);box-shadow:0 0 0 3px rgba(37,99,235,.14);
-  }
-  /* V102 — روی صفحهٔ لمسی hover وجود ندارد؛ خط باید در پنجرهٔ پیش‌نمایش
-     همیشه دیده شود تا کاربر بداند از کجا بکشد. */
-  #previewWinOverlay .question-sep-drag::before{
-    background:rgba(37,99,235,.55);box-shadow:0 0 0 2px rgba(37,99,235,.12);
-  }
-  #previewWinOverlay .question-sep-drag::after{
-    opacity:1;transform:translateY(0);
   }
   .question-sep-drag::after{
     content:"↕ جابجایی خط";position:absolute;left:8px;bottom:9px;font-size:10px;
@@ -13851,17 +13838,6 @@ function initPreviewSeparatorEditing() {
   if (!area || area.__sepDragBound) return;
   area.__sepDragBound = true;
   let sepDrag = null;
-  /* V102 — مقیاسِ فعلیِ برگه (transform روی #printContent). در پنجرهٔ
-     پیش‌نمایش حرکتِ انگشت بر مقیاس تقسیم می‌شود تا خط دقیقاً به اندازهٔ
-     حرکتِ دست جابجا شود (۱:۱). */
-  function curScale() {
-    try {
-      var pc = document.getElementById('printContent');
-      var m = pc && pc.style ? String(pc.style.transform || '').match(/scale\(([0-9.]+)\)/) : null;
-      var k = m ? parseFloat(m[1]) : 1;
-      return (isFinite(k) && k > 0.05) ? k : 1;
-    } catch (e) { return 1; }
-  }
   function findQ(id) { return questions.find(q => String(q.id) === String(id)); }
   function applySepPad(qid, val) {
     const q = findQ(qid);
@@ -13889,15 +13865,14 @@ function initPreviewSeparatorEditing() {
     e.stopPropagation();
     const qid = h.dataset.qid;
     const q = findQ(qid);
-    sepDrag = { handle:h, qid:qid, sy:e.clientY, start: q ? (parseFloat(q.sepExtraPx || 0) || 0) : 0, k: curScale() };
+    sepDrag = { handle:h, qid:qid, sy:e.clientY, start: q ? (parseFloat(q.sepExtraPx || 0) || 0) : 0 };
     h.classList.add('is-dragging');
     h.setPointerCapture?.(e.pointerId);
   }, true);
   area.addEventListener('pointermove', function(e) {
     if (!sepDrag) return;
     e.preventDefault();
-    /* V102 — تقسیم بر مقیاس: خط ۱:۱ با انگشت حرکت می‌کند */
-    const next = sepDrag.start + (e.clientY - sepDrag.sy) / (sepDrag.k || 1);
+    const next = sepDrag.start + (e.clientY - sepDrag.sy);
     applySepPad(sepDrag.qid, next);
   }, true);
   function endSepDrag(e) {
@@ -14889,7 +14864,6 @@ loadSample();
     if (k >= 0.999) {
       box.style.removeProperty('height');
       box.style.removeProperty('width');
-      try { pc.style.setProperty('--qmf-pv-k', '1'); } catch (e) {}
       return;
     }
 
@@ -14897,8 +14871,6 @@ loadSample();
     /* V86.3 — زومِ دستیِ کاربر روی مقیاسِ خودکار ضرب می‌شود */
     var kz = k * (window.__qmfPvZoom || 1);
     pc.style.setProperty('transform', 'scale(' + kz.toFixed(3) + ')', 'important');
-    /* V102 — مقیاسِ مؤثر به‌عنوانِ متغیرِ CSS برای هدفِ لمسِ خطوط */
-    pc.style.setProperty('--qmf-pv-k', String(kz));
     /* V86.6 — مبدأِ مقیاس باید هم‌جهتِ صفحه باشد.
        با `top left` برگه به لبهٔ چپِ جعبه می‌چسبد و تمامِ فضایِ آزادشده
        (۶۲۸ منهای ۳۳۲ یعنی ۲۹۶px) سمتِ راست می‌افتد؛ در RTL دقیقاً همان‌جا
@@ -15098,7 +15070,6 @@ window.__qmfShowPreview = function () {
         pc.style.removeProperty('transform');
         pc.style.removeProperty('transform-origin');
         pc.style.removeProperty('width');
-        try { pc.style.removeProperty('--qmf-pv-k'); } catch (e) {}
       } catch (e) {}
       /* V85.0 — لفافهٔ مقیاس فقط داخل پنجره معنا دارد؛ برگه باید از آن
          بیرون بیاید وگرنه گرهٔ اضافی به چیدمانِ ویرایشگر منتقل می‌شود. */
