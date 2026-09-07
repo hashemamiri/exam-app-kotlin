@@ -81,7 +81,8 @@ class V87_5RunJsAritryTest {
         // V89.3 — دکمهٔ چشم از `togglePreviewWindow` به پلِ «همیشه باز»
         // (`__qmfShowPreview`) رفت و حالا callback دارد، پس دیگر جزوِ
         // فراخوانی‌های `, null` نیست. سه موردِ دیگر سرِ جایشان‌اند.
-        listOf("printStudent();\", null)", "printTeacher();\", null)", "clearAutosave")
+        // V100 — پنجرهٔ «بازیابی» (clearAutosave) با حذفِ «آزمون‌ساز چاپی» از پنجرهٔ چاپ رفت.
+        listOf("printStudent();\", null)", "printTeacher();\", null)")
             .forEach { assertTrue("$it اصلاح نشده", it in dialog) }
         // و سنجهٔ اصلیِ این کلاس (هر فراخوانی هر دو آرگومان را می‌دهد)
         // در آزمونِ بالا مستقل بررسی می‌شود.

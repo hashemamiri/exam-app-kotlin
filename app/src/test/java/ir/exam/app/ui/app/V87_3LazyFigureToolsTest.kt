@@ -1,6 +1,7 @@
 package ir.exam.app.ui.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -24,14 +25,8 @@ class V87_3LazyFigureToolsTest {
         "extracted-anatomy-fig-js", "extracted-periodic-fig-js", "extracted-science-fig-js"
     )
 
-    @Test
-    fun `the legacy toolbar is hidden by the tag itself not by a stylesheet far below`() {
-        // قانونِ CSS حدودِ ۸۳۷KB پایین‌تر از خودِ نوار بود، پس نوار یک لحظه دیده می‌شد
-        assertTrue("id=\"qmfLegacyToolbar\" style=\"display:none\"" in asset)
-        val tag = asset.indexOf("id=\"qmfLegacyToolbar\"")
-        val rule = asset.indexOf("#qmfLegacyToolbar{display:none !important}")
-        assertTrue("قانونِ CSS همچنان پایین‌تر است", rule > tag)
-    }
+    // V100 — نوارابزارِ HTML کامل حذف شد؛ تستِ «نوارِ پنهان» دیگر معنا ندارد.
+    // (نوارِ قدیمی با style display:none مخفی بود؛ حالا اصلاً وجود ندارد.)
 
     @Test
     fun `every figure module is deferred`() {
@@ -60,7 +55,9 @@ class V87_3LazyFigureToolsTest {
     @Test
     fun `the loader only wakes up when a figure is actually involved`() {
         assertTrue("window.__qmfEnsureFigTools = activate" in asset)
-        assertTrue("text.indexOf('%%FIG:') === -1" in asset)
+        // V100 — فراخوانِ «رندر» (با %%FIG) با حذفِ «آزمون‌ساز چاپی» رفت؛
+        // فراخوانِ لمسِ ابزار می‌ماند.
+        assertFalse("text.indexOf('%%FIG:') === -1" in asset)
         assertTrue(".q-tool-btn, .interactive-figure, .qmf-fig" in asset)
     }
 

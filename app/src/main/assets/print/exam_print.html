@@ -858,21 +858,10 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
 }</style></head>
 <body>
 
-<div class="toolbar no-print" id="qmfLegacyToolbar" style="display:none">
-  <div class="btns">
-    <button class="btn ghost" onclick="toggleSettings()">⚙ تنظیمات سربرگ</button>
-<!-- FIX-EXAM-SAVEBTN -->
-    <button class="btn ghost" onclick="saveExam()" title="دانلود نسخهٔ پشتیبان JSON — برای ویرایش در جلسهٔ بعد بازش کنید">💾 ذخیره آزمون (JSON)</button>
-    <button class="btn ghost" onclick="loadExam()" title="باز کردن فایل JSON آزمون ذخیره‌شده">📂 بازکردن آزمون</button>
-
-    <button class="btn primary" onclick="printStudent()">🖨 چاپ نسخه دانشجو</button>
-    <button class="btn success" onclick="printTeacher()">✅ چاپ نسخه استاد / کلید</button>
-    <!-- FIX-EXAM-UI2 -->
-    <button class="btn primary" onclick="openQuestionTypePicker()" title="افزودن سوال جدید">➕ سوال جدید</button>
-    <button class="btn ghost" onclick="togglePreviewWindow()" title="باز/بستن پنجره پیش‌نمایش">👁</button>
-
-  </div>
-</div>
+<!-- V100 — نوارابزار قدیمیِ HTML حذف شد: همهٔ فرمان‌ها (تنظیمات سربرگ، ذخیره/بازکردن
+     JSON، چاپ، سؤال جدید، پیش‌نمایش) یا بومی شدند یا با حذفِ کاملِ «آزمون‌ساز
+     چاپی» دیگر کاربری ندارند. (پنلِ تنظیمات می‌ماند: فیلدهای f_* همان حافظهٔ
+     مقادیرِ سربرگ‌اند و setField/collectFields با آن‌ها کار می‌کنند.) -->
 
 <div class="panel no-print" id="settingsPanel" style="display:none"><!-- FIX-EXAM-SETTINGS-COLLAPSED: پنل سربرگ پیش‌فرض بسته است؛ با ⚙ باز می‌شود و با افزودن سوال بسته می‌شود -->
   <h2 class="settings-title-row">
@@ -1093,9 +1082,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
   <div id="pageNumberFooter" class="page-number-footer"></div>
 </div>
 
-<div class="preview-note no-print" style="margin-top:20px;">
-  💡 برای خروجی PDF، دکمه «چاپ / خروجی PDF» را بزنید و <strong>Save as PDF</strong> را انتخاب کنید.
-</div>
+<!-- V100 — یادداشت «Save as PDF» حذف شد: چاپ از پنجرهٔ چاپِ اندروید انجام می‌شود. -->
 
 <iframe id="mathEditorFrame" title="ویرایشگر فرمول ریاضی" class="no-print"></iframe>
 
@@ -1861,12 +1848,7 @@ button,.q-tool-btn,.qimg-cam,.qimg-btn,.qnum-chip,.del-opt,.q-move,.q-remove,.ch
     return true;
   }
   window.__qmfEnsureFigTools = activate;
-  /* رندر شکل بدونِ ماژول یعنی جایِ خالی روی برگه، پس رندر خودش فعال می‌کند. */
-  window.__qmfNeedFigTools = function (text) {
-    if (done) return;
-    if (typeof text === 'string' && text.indexOf('%%FIG:') === -1) return;
-    activate();
-  };
+  /* V100 — __qmfNeedFigTools حذف شد: هیچ فراخواننده‌ای نداشت. */
   /* هر لمسی روی ابزارِ درج هم کافی است. */
   document.addEventListener('pointerdown', function (e) {
     if (done) return;
@@ -14013,31 +13995,8 @@ function renderPreview() {
 
 function renderAll() { renderEditor(); renderPreview(); }
 
-function saveExam() {
-  const data = { fields:{}, questions, qIdCounter };
-  document.querySelectorAll('.field input,.field select,.field textarea,.exam-tools input,.exam-tools select').forEach(el => data.fields[el.id] = (el.type === 'checkbox' ? el.checked : el.value));
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='exam-'+Date.now()+'.json'; a.click();
-  URL.revokeObjectURL(url);
-}
-function loadExam() {
-  const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
-  inp.onchange = e => {
-    const f = e.target.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        Object.keys(data.fields||{}).forEach(k => { const el = document.getElementById(k); if (el) { if (el.type === 'checkbox') el.checked = !!data.fields[k]; else el.value = data.fields[k]; } });
-        questions = data.questions || []; qIdCounter = data.qIdCounter || questions.length;
-        updateHeaderSettingsVisibility(); renderAll(); qmfToast('آزمون با موفقیت بارگذاری شد.');
-      } catch(e) { qmfToast('خطا در خواندن فایل.'); }
-    };
-    r.readAsText(f);
-  };
-  inp.click();
-}
+/* V100 — saveExam/loadExam حذف شدند: جریان JSONِ مرورگری با حذفِ «آزمون‌ساز
+   چاپی» دیگر کاربری ندارد. */
 
 document.addEventListener('input', function(e) {
   if (e.target && e.target.matches && e.target.matches('textarea[id^="q_text_"]')) {
@@ -14601,7 +14560,7 @@ loadSample();
 })();
 </script>
 <style id="qmfLegacyToolbarStyle">
-#qmfLegacyToolbar{display:none !important}
+/* V100 — نوارابزارِ HTML کامل حذف شد؛ قانونِ display:none آن بی‌فایده شد. */
 /* V87.7 — کارتِ جمع‌شده: مثلِ آزمون‌سازِ آنلاین فقط سرصفحه (شماره، نوع، بارم
    و آیکن‌ها) دیده می‌شود و بدنه جمع است. تا V87.6 کارتِ غیرفعال کلاً
    `display:none` می‌شد و کاربر فهرستِ سؤال‌ها را نمی‌دید. */
@@ -14804,7 +14763,6 @@ loadSample();
 
   /* ---------- 2) پنجره پیش‌نمایش ---------- */
   var prevInfo = null;
-  window.isPreviewOpen = function () { return !!$('previewWinOverlay'); };
   /* V83.0 — ارتفاعِ لفافه را با ضریبِ واقعیِ transform هماهنگ می‌کند. */
   /* V86.0 — تضمینِ ارتفاعِ کادر بدون اتکا به واحدِ vh.
      تشخیصِ کاربر: bodyW:344 (=98vw، سالم) ولی bodyH:12 و bodyScrollH:241.
@@ -15009,10 +14967,6 @@ window.__qmfShowPreview = function () {
   } catch (e) { return 'err'; }
 };
 
-window.togglePreviewWindow = function () {
-    if ($('previewWinOverlay')) closePreviewWindow();
-    else openPreviewWindow();
-  };
   function openPreviewWindow() {
     var pc = $('printContent');
     if (!pc || $('previewWinOverlay')) return;
@@ -15205,8 +15159,7 @@ window.togglePreviewWindow = function () {
     }
   }
   state.open = function (id) { openQuestionId(id, true); };
-  /* V88.8 — همان بازکننده، برای شنوندهٔ لمسِ کارت. */
-  window.__qmfCardOpener = function (id) { openQuestionId(id, true); return 'ok'; };
+  /* V100 — __qmfCardOpener حذف شد: شنوندهٔ لمسِ کارت‌های HTML دیگر نیست. */
 
   /* ---------- هوک‌ها ---------- */
   function hook(name, fn) {
@@ -16253,31 +16206,11 @@ window.__qmfHasLocalDraft = function () {
     if (!el) return null;
     return String(el.id).replace(/^q_text_|^qbody_/, '');
   }
-  document.addEventListener('pointerup', function (e) {
-    try {
-      var t = e.target;
-      if (!t || !t.closest) return;
-      /* ورودی‌ها، دکمه‌ها و اشیای درج‌شده مسیرِ خودشان را دارند */
-      if (t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')) return;
-      var card = t.closest('#questionsContainer .question-card');
-      if (!card) return;
-      /* کارتِ باز با لمسِ دوباره بسته نمی‌شود؛ آزمونِ آنلاین هم همیشه یک
-         سؤال باز نگه می‌دارد. */
-      if (!card.classList.contains('collapsed')) return;
-      var qid = qidOfCard(card);
-      if (qid == null) return;
-      if (typeof window.__qmfOpenCard === 'function') window.__qmfOpenCard(qid);
-    } catch (err) {}
-  }, true);
+  /* V100 — شنوندهٔ pointerup روی کارت‌های HTML حذف شد: در حالتِ بومی کارت‌ها
+     همیشه پنهان‌اند و کارت‌های بومی جایگزین شدند. */
 })();
 
-/* V88.8 — بازکردنِ کارت از بیرونِ ماژولِ accordion. */
-window.__qmfOpenCard = function (qid) {
-  try {
-    if (window.__qmfCardOpener) return window.__qmfCardOpener(qid);
-  } catch (e) {}
-  return 'missing';
-};
+/* V100 — __qmfOpenCard حذف شد: هیچ فراخواننده‌ای نداشت (کارت‌های HTML پنهان‌اند). */
 
 /* V88.9 — پیش‌نمایشِ زندهٔ متنِ سؤال برای کارتِ بومی.
    کاربر خواست کادرِ متن بومی باشد ولی فرمول و شکل «زنده» دیده شوند. متن در
@@ -16342,36 +16275,7 @@ window.__qmfAllQuestions = function () {
    `msqrt`, `an-svg`…) بدونِ CSS بی‌اثرند؛ کاربر کسر را «۱a d - b c» می‌دید.
    به‌جای کپیِ دستیِ قانون‌ها، همان `<style>`های خودِ صفحه برداشته می‌شوند تا
    نمایشِ زنده و چاپ هرگز از هم جدا نشوند. */
-window.__qmfPreviewCss = function () {
-  try {
-    var out = [];
-    var nodes = document.querySelectorAll('style');
-    for (var i = 0; i < nodes.length; i++) {
-      var t = String(nodes[i].textContent || '');
-      /* فقط قانون‌هایی که به رندرِ متن مربوط‌اند؛ چیدمانِ صفحه لازم نیست. */
-      if (/\.mathx|\.mfrac|\.msqrt|\.qmf-fig|\.an-svg|\.sc-svg|\.embedded-tool|\.mdelim|\.munk/.test(t)) {
-        out.push(t);
-      }
-    }
-    return out.join('\n');
-  } catch (e) { return ''; }
-};
-
-window.__qmfRichPreview = function (qid) {
-  try {
-    if (typeof questions === 'undefined' || typeof renderRichText !== 'function') return '';
-    /* V89.5 — ماژول‌های شکل از V87.3 معوق‌اند و `renderFigToken` بدونِ آن‌ها
-       جای خالی می‌دهد، پس شیء «زنده» نمی‌شد. اینجا **پیش از** رندر فعال
-       می‌شوند تا نخستین فراخوانی هم شکل داشته باشد. */
-    try { if (window.__qmfEnsureFigTools) window.__qmfEnsureFigTools(); } catch (e) {}
-    var q = null;
-    for (var i = 0; i < questions.length; i++) {
-      if (String(questions[i].id) === String(qid)) { q = questions[i]; break; }
-    }
-    if (!q) return '';
-    return String(renderRichText(q.text || '', q) || '');
-  } catch (e) { return ''; }
-};
+/* V100 — __qmfPreviewCss و __qmfRichPreview حذف شدند: هیچ فراخواننده‌ای نداشتند. */
 
 window.__qmfQuestionDetail = function (qid) {
   try {

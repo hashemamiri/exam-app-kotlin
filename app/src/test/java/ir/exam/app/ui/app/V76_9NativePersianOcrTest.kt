@@ -3,6 +3,7 @@ package ir.exam.app.ui.app
 import ir.exam.app.ui.printing.ExamImageOcr
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -69,7 +70,10 @@ class V76_9NativePersianOcrTest {
 
     @Test
     fun `ocr text is appended to the question through a bridge`() {
-        assertTrue("window.__qmfAppendQuestionText" in dialog)
+        // V100 — استودیوی تصویر (و مسیرِ OCRِ آن) از پنجرهٔ چاپ با حذفِ
+        // «آزمون‌ساز چاپی» رفت؛ پلِ صفحه می‌ماند و در بیلدرِ بومی استفاده
+        // می‌شود.
+        assertFalse("window.__qmfAppendQuestionText" in dialog)
         assertTrue("window.__qmfAppendQuestionText = function (qid, b64Text) {" in assetText)
         assertTrue("""    q.text = cur ? (cur + "\n" + add) : add;""" in assetText)
         assertTrue("""    return "ok";""" in assetText)

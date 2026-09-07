@@ -5,9 +5,11 @@ import org.junit.Test
 import java.io.File
 
 /**
- * V89.5 — فهرستِ کارت‌ها روی WebView می‌نشست و پنجرهٔ پیش‌نمایش را می‌پوشاند،
- * دکمه‌های جابه‌جاییِ داخلِ کادرِ متن اضافی بودند، و شیءِ درج‌شده «زنده»
- * نمی‌شد چون ماژول‌های شکل معوق بودند.
+ * V89.5 — دکمه‌های جابه‌جاییِ داخلِ کادرِ متن اضافی بودند (جابه‌جایی در
+ * پنجرهٔ پیش‌نمایش انجام می‌شود) و بستنِ پیش‌نمایش پنجرهٔ کل را مدیریت می‌کند.
+ *
+ * V100 — دو تستِ «فهرستِ کارت‌ها کنار می‌رود» و «پیش‌نمایشِ زنده ماژول‌ها را
+ * فعال می‌کند» (__qmfRichPreview) با حذفِ کاملِ «آزمون‌ساز چاپی» حذف شدند.
  */
 class V89_5PreviewCoverTest {
 
@@ -20,14 +22,6 @@ class V89_5PreviewCoverTest {
     }
     private val dialog by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
-    }
-
-    @Test
-    fun `the card list steps aside while the preview is open`() {
-        // بدونِ سؤال فهرست خالی بود و مشکل دیده نمی‌شد؛ با سؤال چشم بی‌اثر بود
-        // V99.1 — و در چاپِ مستقیم (initialPrintMode != null) هم کارت‌ها پنهان‌اند.
-        assertTrue("if (cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null) {" in dialog)
-        assertTrue("if (r?.contains(\"ok\") == true) previewOpen = true" in dialog)
     }
 
     @Test
@@ -60,15 +54,5 @@ class V89_5PreviewCoverTest {
     fun `dragging inside the preview still works`() {
         assertTrue("initPreviewFigureEditing" in asset)
         assertTrue("function previewScale()" in asset)
-    }
-
-    @Test
-    fun `the live preview activates the deferred figure modules first`() {
-        // V87.3 ماژول‌ها را معوق کرد؛ بدونِ فعال‌سازی، renderFigToken جای خالی می‌دهد
-        val at = asset.indexOf("window.__qmfRichPreview = function")
-        assertTrue(at > 0)
-        val head = asset.substring(at, at + 700)
-        assertTrue("__qmfEnsureFigTools()" in head)
-        assertTrue(head.indexOf("__qmfEnsureFigTools()") < head.indexOf("renderRichText("))
     }
 }

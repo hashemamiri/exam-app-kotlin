@@ -214,57 +214,7 @@ private fun FieldSelect(f: HeaderField, values: Map<String, String>, onChange: (
     }
 }
 
-/** پنجرهٔ بومی «ذخیره آزمون». */
-@Composable
-fun SaveExamDialog(
-    onSaveSession: () -> Unit,
-    onSaveFile: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("ذخیره آزمون") },
-        text = { Text("آزمون کجا ذخیره شود؟ «این جلسه» همان بازشدن نگه می‌دارد و «فایل JSON» نسخهٔ پشتیبان قابل‌ویرایش در دستگاه می‌سازد.") },
-        confirmButton = {
-            TextButton(onClick = onSaveFile) { Text("فایل JSON در دستگاه") }
-        },
-        dismissButton = {
-            TextButton(onClick = onSaveSession) { Text("ذخیره در همین جلسه") }
-        }
-    )
-}
-
-/** پنجرهٔ بومی تأیید «بازکردن آزمون» — خلاصهٔ فایل قبل از اعمال. */
-@Composable
-fun OpenExamSummaryDialog(
-    course: String?,
-    school: String?,
-    questionCount: Int,
-    onApply: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("بازکردن آزمون") },
-        text = {
-            Column {
-                Text("فایل آزمون خوانده شد:")
-                Spacer(Modifier.height(6.dp))
-                Text("درس: " + (course?.takeIf { it.isNotBlank() } ?: "—"))
-                Text("آزمون‌دهنده/مدرسه: " + (school?.takeIf { it.isNotBlank() } ?: "—"))
-                Text("تعداد سؤال: $questionCount")
-            }
-        },
-        confirmButton = { TextButton(onClick = onApply) { Text("اعمال") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
-    )
-}
-
-/** پاک‌سازی نام فایل برای ذخیرهٔ JSON. */
-internal fun safeExamFileName(course: String?): String {
-    val base = (course.orEmpty()).ifBlank { "exam" }
-        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-        .trim()
-        .take(40)
-    return "exam-$base-${System.currentTimeMillis()}.json"
-}
+/* V100 — SaveExamDialog، OpenExamSummaryDialog و safeExamFileName با حذفِ
+   «آزمون‌ساز چاپی» حذف شدند: پنجرهٔ چاپ دیگر JSON ذخیره/باز نمی‌کند.
+   (شِمای سربرگ و HeaderSettingsDialog می‌مانند — آزمون‌سازِ بومی از آن‌ها
+   استفاده می‌کند.) */

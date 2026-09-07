@@ -1,7 +1,6 @@
 package ir.exam.app.ui.app
 
 import androidx.compose.ui.geometry.Offset
-import ir.exam.app.ui.printing.ExamDraftMirror
 import ir.exam.app.ui.printing.StudioShape
 import ir.exam.app.ui.printing.hitShapeIndex
 import java.io.File
@@ -11,10 +10,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V78.2 — سه کارِ پایانیِ فاز ۲:
+ * V78.2 — دو کارِ فاز ۲:
  *  ۱) پاک‌کنِ مستقل در استودیوی تصویر (با همان hit-test انتخاب)
- *  ۲) آینهٔ بومیِ پیش‌نویس، تا پاک‌شدنِ کشِ WebView کارِ کاربر را نبرد
  *  ۳) حذف x86/x86_64 از ABI — حدود ۶٫۴MB کوچک‌تر شدنِ APK
+ *
+ * V100 — دو تستِ «آینهٔ بومیِ پیش‌نویس» (ExamDraftMirror) با حذفِ کاملِ
+ * «آزمون‌ساز چاپی» حذف شدند: پنجرهٔ چاپ دیگر پیش‌نویسِ خودکار بازیابی نمی‌کند.
  */
 class V78_2EraserMirrorAbiTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -63,32 +64,15 @@ class V78_2EraserMirrorAbiTest {
         assertEquals(-1, hitShapeIndex(emptyList(), 0.2f, 0.2f))
     }
 
-    // ---------- آینهٔ پیش‌نویس ----------
+    // ---------- پل‌های ماندگارِ صفحه ----------
 
     @Test
-    fun `draft bridges exist`() {
+    fun `draft snapshot bridge still exists in the page`() {
+        // خودِ پل‌های صفحه می‌مانند (ذخیرهٔ خودکار)؛ مصرف‌کنندهٔ بومیِ آن‌ها
+        // (آینهٔ پیش‌نویس) با V100 حذف شد.
         assertTrue("window.__qmfDraftSnapshot" in assetText)
         assertTrue("window.__qmfHasLocalDraft" in assetText)
-        // آینه فقط وقتی به کار می‌آید که localStorage خالی باشد
         assertTrue("qmf_exam_autosave_azmoon_v1" in assetText)
-    }
-
-    @Test
-    fun `mirror only accepts something that looks like a draft`() {
-        assertTrue(ExamDraftMirror.looksLikeDraft("""{"questions":[],"fields":{}}"""))
-        assertFalse(ExamDraftMirror.looksLikeDraft(""))
-        assertFalse(ExamDraftMirror.looksLikeDraft("null"))
-        assertFalse(ExamDraftMirror.looksLikeDraft("[1,2,3]"))
-        assertFalse(ExamDraftMirror.looksLikeDraft("""{"other":1}"""))
-        assertFalse(ExamDraftMirror.looksLikeDraft("not json at all"))
-    }
-
-    @Test
-    fun `mirror is wired into the print dialog`() {
-        val dialog = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
-        assertTrue("ExamDraftMirror.save(" in dialog)
-        assertTrue("ExamDraftMirror.load(" in dialog)
-        assertTrue("mirrorDraft()" in dialog)
     }
 
     // ---------- حجم APK ----------

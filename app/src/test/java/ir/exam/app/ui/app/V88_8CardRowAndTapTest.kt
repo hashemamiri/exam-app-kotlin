@@ -33,34 +33,9 @@ class V88_8CardRowAndTapTest {
         assertTrue("width:auto !important;" in asset)
     }
 
-    @Test
-    fun `tapping a collapsed card opens the card itself`() {
-        assertTrue("window.__qmfOpenCard(qid)" in asset)
-        assertTrue("window.__qmfCardOpener = function (id) { openQuestionId(id, true); return 'ok'; };" in asset)
-    }
-
-    @Test
-    fun `tapping no longer throws the native editor in the way`() {
-        // V89.1 — پل‌های V88.9 بینِ شنونده و `__qmfQuestionDetail` نشستند،
-        // پس مرز به انتهای خودِ شنونده رفت (همان اصلاحی که در گاردِ verify شد).
-        val from = asset.indexOf("/* V88.8 — لمسِ کارت خودِ کارت")
-        assertTrue(from > 0)
-        val to = asset.indexOf("})();", from)
-        assertTrue(to > from)
-        assertTrue("ExamPrintNative.openQuestion" !in asset.substring(from, to))
-    }
-
-    @Test
-    fun `an open card is not closed by tapping it again`() {
-        assertTrue("if (!card.classList.contains('collapsed')) return;" in asset)
-    }
-
-    @Test
-    fun `typing, tools and figures keep their own handling`() {
-        assertTrue(
-            "t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in asset
-        )
-    }
+    // V100 — شنوندهٔ «لمسِ کارت» (و رفتارهایش: بازکردنِ کارتِ جمع، عدمِ
+    // بستنِ دوباره، و مستثناکردنِ ورودی‌ها) با حذفِ کاملِ «آزمون‌ساز چاپی»
+    // از صفحه رفت؛ کارت‌های HTML در حالتِ بومی پنهان‌اند.
 
     @Test
     fun `the question bridge is still reachable`() {

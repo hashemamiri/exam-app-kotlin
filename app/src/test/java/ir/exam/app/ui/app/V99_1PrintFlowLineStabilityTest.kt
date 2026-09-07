@@ -1,5 +1,6 @@
 package ir.exam.app.ui.app
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -53,7 +54,8 @@ class V99_1PrintFlowLineStabilityTest {
         assertTrue("is PrintTarget.LocalExam -> {" in center)
         // ویرایش (مداد) دست‌نخورده می‌ماند:
         assertTrue("onOpenLocalPrintExam(rec.id)" in center)
-        assertTrue("openBuilder30(exam.id)" in center)
+        // V100 — مدادِ آزمونِ سرور (آزمون‌سازِ چاپی) کامل حذف شد:
+        assertFalse("openBuilder30" in center)
     }
 
     @Test
@@ -72,10 +74,13 @@ class V99_1PrintFlowLineStabilityTest {
 
     @Test
     fun `direct print hides the question cards window`() {
-        // فهرستِ بومیِ کارت‌ها فقط در حالتِ عادی (بدون چاپِ مستقیم):
-        assertTrue("cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null" in dialog)
-        // سربرگ و کنترل‌های پنجرهٔ آزمون‌ساز هم در چاپِ مستقیم پنهان‌اند (V97/V98.9):
-        assertTrue("initialPrintMode == null" in dialog)
+        // V100 — «پنجرهٔ کارت‌ها» با حذفِ کاملِ «آزمون‌ساز چاپی» دیگر وجود
+        // ندارد؛ حالتِ چاپِ مستقیم فقط برگهٔ خالصِ A4 + پنجرهٔ چاپِ اندروید است.
+        assertFalse("cardDetails" in dialog)
+        assertFalse("PrintQuestionCard(" in dialog)
+        // تزریق همچنان حالتِ چاپ را می‌شناسد:
+        assertTrue("initialPrintMode != null" in dialog)
+        assertTrue("qmf-print-mode" in dialog)
     }
 
     @Test

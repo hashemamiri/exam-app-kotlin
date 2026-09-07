@@ -1900,11 +1900,13 @@ require("fun ExamDocumentEditorScreen(" in _doc_editor_v63
         and "ExamBuilderScreen(" not in _doc_editor_v63
         and "fun WordPaperChrome()" in _doc_editor_v63,
         "V63.0 word-like document editor screen is missing")
+# V100 — مدادِ کارتِ آزمونِ سرور با حذفِ «آزمون‌ساز چاپی» رفت؛ فقط
+# آزمون‌های چاپیِ محلی مدادِ بومی دارند.
 require("onEditExamDocument: (String) -> Unit" in _print_center_v62
         and "Icons.Outlined.Edit" in _print_center_v62
         and "ویرایش آزمون" in _print_center_v62
-        and "openBuilder30(exam.id)" in _print_center_v62,
-        "V63.0/V76.0 edit pencil on print-center exam card is missing")
+        and "openBuilder30" not in _print_center_v62,
+        "V63.0/V100 the local print pencil is missing (server pencil must stay gone)")
 require("DOC_EDITOR" in app_shell
         and "editingDocumentExamId" in app_shell
         and "ExamDocumentEditorScreen(" in app_shell
@@ -1950,9 +1952,10 @@ require(".horizontalScroll(rememberScrollState())" in _doc_editor_v63
         and "fun resizeFigureBy(" not in _doc_editor_v63
         and "QuestionFormatBar" not in _doc_editor_v63,
         "V63.3 unified scrollable toolbar with object selection is missing")
-require('contentDescription = "ویرایش آزمون"' in _print_center_v62
+# V100 — فقط آزمون‌های چاپیِ محلی مداد دارند (ویرایش در بیلدرِ بومی).
+require('contentDescription = "ویرایش آزمون چاپی"' in _print_center_v62
         and 'Text("ویرایش سند")' not in _print_center_v62,
-        "V63.3 pencil-only edit icon on the print-center exam card is missing")
+        "V63.3/V100 the local print pencil (pencil-only) is missing")
 # ---- V63.4: ویرایش درجا — بدون پنجرهٔ جدا و بدون مداد هر سؤال ----
 require("BasicTextField(" in _doc_editor_v63
         and "onScoreChange = builder::updateScore" in _doc_editor_v63
@@ -1971,7 +1974,7 @@ require("class PrintLayoutStore(" in _layout_store_v63
         "V63.5 local print layout store / hardware back is missing")
 require("questionsOverride ?: ExamQuestionCodec.decode(exam.questions, key)" in
             (ROOT/"app/src/main/java/ir/exam/app/data/repository/SupabasePortabilityRepository.kt").read_text()
-        and "layoutStore.read(examId)" in _print_center_v62,
+        and "layoutStore.read(target.examId)" in _print_center_v62,
         "V63.5/V76.0 print path does not read the local layout override")
 # ---- V63.6: سند پیوستهٔ Word-واقعی — صفحه‌بندی با ارتفاع واقعی رندر ----
 require("SubcomposeLayout(" in _doc_editor_v63
@@ -2583,27 +2586,36 @@ require(_v730_dialog.exists()
         and "createPrintDocumentAdapter" in _v730_dialog_text
         and "useWideViewPort" in _v730_dialog_text
         and "loadWithOverviewMode = false" in _v730_dialog_text
-        and "onShowFileChooser" in _v730_dialog_text
-        and "ActivityResultContracts.GetContent" in _v730_dialog_text
-        and "showHeaderSettings = true" in _v730_dialog_text
-        and "showSaveDialog = true" in _v730_dialog_text
-        and "openExamPicker.launch" in _v730_dialog_text
         and "printStudent();" in _v730_dialog_text
         and "printTeacher();" in _v730_dialog_text
-        and "pickQuestionType('" in _v730_dialog_text
         # V89.3 — دکمهٔ چشم به `__qmfShowPreview` رفت تا هرگز نبندد؛
         # سنجه از نامِ تابع به «پیش‌نمایش در دسترس است» تغییر کرد.
         and "__qmfShowPreview" in _v730_dialog_text
-        and "openExamPicker.launch" in _v730_dialog_text
-        and "window.__qmfSaveNow" in _v730_dialog_text
-        and "HeaderSettingsDialog(" in _v730_dialog_text
-        and "SaveExamDialog(" in _v730_dialog_text
-        and "OpenExamSummaryDialog(" in _v730_dialog_text
-        and "loadHeaderSchema(context)" in _v730_dialog_text
-        and "window.__qmfSetFields" in _v730_dialog_text
-        and "ExamImageStudioDialog(" in _v730_dialog_text
-        and "fun openImageStudio(questionId: String?)" in _v730_dialog_text,
-        "V76.4 ExamHtmlPrintDialog (native command bar + native windows + studio bridge) is missing")
+        # V99.2 — چیدمانِ پیش‌نمایش به بیلدر برمی‌گردد.
+        and "onFigLayouts: ((String) -> Unit)? = null" in _v730_dialog_text
+        and "fun previewClosed()" in _v730_dialog_text,
+        "V76.4 ExamHtmlPrintDialog (preview + print surface) is missing")
+# V100 — «آزمون‌ساز چاپی» کامل حذف شد: هیچ امکاناتِ حالتِ ویرایش (نوارِ
+# بومی، ذخیره/بازکردنِ JSON، هدرِ «سربرگ»، استودیوی تصویر، مدیرِ سؤال،
+# پنجرهٔ فرمول، بازیابی) در پنجرهٔ چاپ باقی نمانده است.
+require("onShowFileChooser" not in _v730_dialog_text
+        and "showHeaderSettings" not in _v730_dialog_text
+        and "showSaveDialog" not in _v730_dialog_text
+        and "openExamPicker" not in _v730_dialog_text
+        and "pickQuestionType" not in _v730_dialog_text
+        and "window.__qmfSaveNow" not in _v730_dialog_text
+        and "window.__qmfSetFields" not in _v730_dialog_text
+        and "loadHeaderSchema(context)" not in _v730_dialog_text
+        and "HeaderSettingsDialog(" not in _v730_dialog_text
+        and "SaveExamDialog(" not in _v730_dialog_text
+        and "OpenExamSummaryDialog(" not in _v730_dialog_text
+        and "ExamImageStudioDialog(" not in _v730_dialog_text
+        and "fun openImageStudio(questionId: String?)" not in _v730_dialog_text
+        and "ExamQuestionManagerSheet(" not in _v730_dialog_text
+        and "ExamDraftMirror" not in _v730_dialog_text
+        and "PrintQuestionCards" not in _v730_dialog_text
+        and "FormulaHostDialog(" not in _v730_dialog_text,
+        "V100 builder-mode leftovers remain in ExamHtmlPrintDialog")
 _v764_windows=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamBuilder30Windows.kt")
 _v764_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt")
 _v764_schema=(ROOT/"app/src/main/assets/print/header_settings_schema.json")
@@ -2639,17 +2651,21 @@ require("📐 صفحه‌ای (۴ گوشه)" in _v765_studio
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_5StudioDeskewPerspectiveTest.kt").exists(),
         "V76.5 studio deskew/perspective test is missing")
 _v766_studio=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text()
-_v766_dialog=(ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text()
+_v766_builder=(ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text()
 _v766_asset=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 require("✂️ تفکیک چندسؤاله" in _v766_studio
         and "💾 همه بخش‌ها به همین سؤال" in _v766_studio
         and "🧩 هر بخش → سؤال جداگانه" in _v766_studio
         and "private fun encodeCropped(" in _v766_studio
-        and "internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap?" in _v766_studio
-        and "existingImages = parseExistingImages(studioImagesJson)" in _v766_dialog
-        and "window.__qmfSplitQuestion" in _v766_dialog
-        and "window.__qmfQuestionImages" in _v766_dialog,
-        "V76.6 studio split/multi-image is missing")
+        and "internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap?" in _v766_studio,
+        "V76.6 studio split/multi-image core is missing")
+# V100 — اتصالِ استودیو از پنجرهٔ چاپ به بیلدرِ بومی رفت (دکمهٔ دوربین
+# دیگر در پنجرهٔ چاپ نیست).
+require("existingImages = studioExisting" in _v766_builder
+        and "onSplitToSame" in _v766_builder
+        and "onReplaceExisting" in _v766_builder
+        and "ExamImageStudioDialog(" in _v766_builder,
+        "V76.6/V100 the native builder studio wiring is missing")
 require("window.__qmfSplitQuestion = function (qid, b64Items) {" in _v766_asset
         and "questions.splice(at + 1 + made, 0, cl);" in _v766_asset
         and "window.__qmfQuestionImages" in _v766_asset
@@ -2718,9 +2734,13 @@ require("🔎 استخراج متن (OCR فارسی)" in _v769_studio
         and "private fun prepareForOcr(" in _v769_studio
         and "ExamImageOcr.recognize(context, prepared)" in _v769_studio,
         "V76.9 studio OCR button/pipeline is missing")
-require("window.__qmfAppendQuestionText" in _v769_dialog
-        and "window.__qmfAppendQuestionText = function (qid, b64Text) {" in _v768_asset,
-        "V76.9 OCR text bridge is missing")
+_v769_builder = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text(encoding="utf-8")
+# V100 — خروجیِ OCR دیگر به پنجرهٔ چاپ نمی‌رود (پلِ صفحه هنوز تعریف شده
+# ولی فراخواننده ندارد)؛ بیلدرِ بومی متن را به کادرِ سؤال می‌چسباند.
+require("window.__qmfAppendQuestionText = function (qid, b64Text) {" in _v768_asset
+        and "onOcrText = { ocrText ->" in _v769_builder
+        and "window.__qmfAppendQuestionText" not in _v769_dialog,
+        "V76.9/V100 the OCR text path must be the builder, not the print window")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V76_9NativePersianOcrTest.kt").exists(),
         "V76.9 OCR test is missing")
 
@@ -2806,10 +2826,14 @@ require("renderFigToken" in _v780_asset, "V78.0 must not touch the HTML figure r
 require("ExamPrintNative.openFigureTool" in _v780_asset
         and "window.__qmfInsertFigToken" in _v780_asset,
         "V78.0 asset hook/return bridge is missing")
-require("fun openFigureTool(" in _v780_dialog
-        and "__qmfInsertFigToken" in _v780_dialog
-        and "ExamFigureToolHost(" in _v780_dialog,
-        "V78.0 Kotlin side of the figure tool bridge is missing")
+# V100 — `fun openFigureTool(` (راه‌اندازِ درجِ تازه) با حذفِ «آزمون‌ساز چاپی»
+# از پنجرهٔ چاپ رفت؛ پنجره فقط مسیرِ ویرایشِ دابل‌تپ را با همان میزبان و
+# همان پلِ بازگشت نگه داشته است.
+require("__qmfInsertFigToken" in _v780_dialog
+        and "__qmfReplaceFigToken" in _v780_dialog
+        and "ExamFigureToolHost(" in _v780_dialog
+        and "fun openFigureTool(" not in _v780_dialog,
+        "V78.0/V100 Kotlin side of the figure tool bridge (edit path only) is missing")
 # V82.0 — تصمیم عوض شد: فرمول هم مثل هفت ابزار دیگر پل بومی دارد.
 # گاردهای معکوسِ V78.0 («فرمول باید HTML بماند») عمداً حذف شدند؛ گاردهای
 # تازه در بخش V82.0 پایین‌تر همین رفتار جدید را قفل می‌کنند.
@@ -2821,9 +2845,12 @@ require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_0NativeFigureToolsTest.k
         "V78.0 native figure tools test is missing")
 
 # ---- V78.1: مدیریت سؤال + نوار شماره، بومی ----
+# V100 — مدیرِ سؤال (شیتِ بومی) با حذفِ «آزمون‌ساز چاپی» رفت؛ توابعِ سؤال
+# صفحه (remove/move/addOption/…) برای رندر و چاپ می‌مانند اما مصرف‌کنندهٔ
+# کاتلین دیگر ندارند.
 _v781_sheet = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamQuestionManagerSheet.kt")
-require(_v781_sheet.exists(), "V78.1 ExamQuestionManagerSheet.kt is missing")
-_v781_src = _v781_sheet.read_text(encoding="utf-8")
+require(not _v781_sheet.exists(), "V100 ExamQuestionManagerSheet.kt must stay deleted")
+_v781_src = ""
 _v781_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 _v781_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
 for _b in ("__qmfQuestionList", "__qmfQuestionAction", "__qmfTotalScore"):
@@ -2832,24 +2859,22 @@ for _b in ("__qmfQuestionList", "__qmfQuestionAction", "__qmfTotalScore"):
 for _fn in ("removeQuestion(q.id)", "window.moveQuestion(q.id", "addOption(q.id)",
             "removeOption(q.id", "addPair(q.id)", "removePair(q.id"):
     require(_fn in _v781_asset, "V78.1 must delegate to the page function " + _fn)
-# V87.4 — نوارِ دکمه‌ها برداشته شد؛ سنجه دیگر برچسبِ دکمه نیست، بلکه این است
-# که خودِ امکان از دسترس خارج نشده باشد (اکنون از منویِ +).
-require("ExamQuestionManagerSheet(" in _v781_dialog
-        and "parseQuestionRows(" in _v781_dialog
-        and "showQuestionManager = true" in _v781_dialog,
-        "V78.1 Kotlin side of the question manager is missing")
-# کادرِ متنِ سؤال بومی نشده باشد (خارج از دامنه)
-require("OutlinedTextField" in _v781_src and "q_text_" not in _v781_src,
-        "V78.1 must not take over the question text box")
-require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_1NativeQuestionManagerTest.kt").exists(),
-        "V78.1 question manager test is missing")
+# V100 — هیچ مصرف‌کنندهٔ کاتلینِ مدیرِ سؤال باقی نمانده است:
+require("ExamQuestionManagerSheet(" not in _v781_dialog
+        and "parseQuestionRows(" not in _v781_dialog
+        and "showQuestionManager" not in _v781_dialog,
+        "V100 the question manager must stay out of the print window")
+require(not (ROOT/"app/src/test/java/ir/exam/app/ui/app/V78_1NativeQuestionManagerTest.kt").exists(),
+        "V100 the question manager test must be deleted with the manager")
 
 # ---- V78.2: پاک‌کن مستقل + آینهٔ پیش‌نویس + کوچک‌سازی APK ----
 _v782_studio = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt").read_text(encoding="utf-8")
 _v782_asset = (ROOT/"app/src/main/assets/print/exam_print.html").read_text(encoding="utf-8")
 _v782_gradle = (ROOT/"app/build.gradle.kts").read_text(encoding="utf-8")
 _v782_mirror = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamDraftMirror.kt")
-require(_v782_mirror.exists(), "V78.2 ExamDraftMirror.kt is missing")
+# V100 — آینهٔ پیش‌نویس (autosave/بازیابی) با حذفِ حالتِ «آزمون جدید» از
+# «آزمون‌ساز چاپی» حذف شد: پنجره همیشه با دادهٔ مشخص باز می‌شود.
+require(not _v782_mirror.exists(), "V100 ExamDraftMirror.kt must stay deleted")
 # پاک‌کن مستقل + hit-test مشترک (نه منطقِ موازی)
 require('ToolChip("🧹 پاک‌کن")' in _v782_studio, "V78.2 eraser tool chip is missing")
 require("internal fun hitShapeIndex(" in _v782_studio, "V78.2 shared hit test is missing")
@@ -2861,8 +2886,8 @@ require("sp.locked || sp.hidden" in _v782_studio, "V78.2 locked/hidden shapes mu
 require("window.__qmfDraftSnapshot" in _v782_asset
         and "window.__qmfHasLocalDraft" in _v782_asset,
         "V78.2 draft mirror bridges are missing")
-require("ExamDraftMirror.save(" in (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8"),
-        "V78.2 draft mirror is not wired")
+require("ExamDraftMirror" not in (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8"),
+        "V100 the draft mirror must stay out of the print window")
 # کوچک‌سازی APK: فقط دو ABI واقعی
 require('abiFilters += listOf("armeabi-v7a", "arm64-v8a")' in _v782_gradle,
         "V78.2 ABI filter is missing")
@@ -2929,10 +2954,13 @@ require("setProperty('display', 'block', 'important')" in _v79_asset, "V81.0 ope
 require("__qmfMathFrameReset" in _v79_asset, "V81.0 frame-rebuild reset hook is missing")
 require("xhr.open('GET', MATH_EDITOR_URL, true)" in _v79_asset, "V81.0 xhr fallback is missing")
 require("window.__qmfFormulaDiag" in _v79_asset, "V81.0 diagnostic bridge is missing")
-# V87.4 — دکمهٔ 🩺 از نوار رفت؛ تشخیص با فشارِ طولانی روی «سربرگ» می‌آید.
-require("__qmfFormulaDiag" in _v80_dialog and "onLongClick" in _v80_dialog,
-        "V81.0 the formula diagnostic must stay reachable")
-require("assets.open(\"print/math_editor.html\")" in _v80_dialog, "V81.0 asset probe is missing")
+# V100 — هدرِ «سربرگ» (با تشخیصِ فشارِ طولانی + بررسیِ asset ویرایشگر
+# هنگامِ لود) با حذفِ «آزمون‌ساز چاپی» برداشته شد؛ صفحه هنوز
+# __qmfFormulaDiag را تعریف می‌کند ولی پنجرهٔ چاپ دیگر صدا نمی‌زند.
+require("__qmfFormulaDiag" not in _v80_dialog
+        and "onLongClick" not in _v80_dialog
+        and "assets.open(\"print/math_editor.html\")" not in _v80_dialog,
+        "V100 the removed header diagnostic must not come back into the print window")
 require((ROOT/"app/src/test/java/ir/exam/app/ui/app/V81_0FormulaFrameLifecycleTest.kt").exists(),
         "V81.0 test is missing")
 
@@ -2943,7 +2971,12 @@ require("activeExactTool !== 'formula'" not in _v79_asset,
 require('const val FORMULA = "formula"' in _v82_host, "V82.0 formula must be a native tool")
 require("window.__qmfQuestionText = function" in _v79_asset, "V82.0 question-text bridge is missing")
 require("window.__qmfSetQuestionText = function" in _v79_asset, "V82.0 set-text bridge is missing")
-require("FormulaHostDialog(" in _v80_dialog, "V82.0 the native formula dialog is not wired")
+_v82_builder = (ROOT/"app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").read_text(encoding="utf-8")
+# V100 — پنجرهٔ فرمول از پنجرهٔ چاپ حذف شد (دابل‌تپ روی فرمول در پیش‌نمایش
+# ویرایشگر نمی‌گشاید)؛ پنجرهٔ بومیِ فرمول فقط در بیلدر زندگی می‌کند.
+require("FormulaHostDialog(" not in _v80_dialog
+        and "FormulaHostDialog(" in _v82_builder,
+        "V82.0/V100 the native formula dialog must live in the builder, not the print window")
 require("ExamPrintNative.editFigureTool" in _v79_asset, "V82.0 dblclick edit bridge is missing")
 require("window.__qmfEditFigAt = function" in _v79_asset, "V82.0 token locator is missing")
 require("window.__qmfReplaceFigToken = function" in _v79_asset, "V82.0 token replacer is missing")
@@ -2968,7 +3001,10 @@ require("'transform', 'scale(' + kz.toFixed(3) + ')'" in _v79_asset,
 require("window.qmfFitPreviewScale" in _v79_asset, "V83.0 height compensation is missing")
 require("ResizeObserver" in _v79_asset, "V83.0 the preview must recompute on resize")
 require("window.__qmfPreviewDiag" in _v79_asset, "V83.0 preview diagnostic is missing")
-require("__qmfPreviewDiag" in _v80_dialog, "V83.0 diagnostic not wired to the button")
+# V100 — تشخیصِ پیش‌نمایش به دکمهٔ (حذف‌شده) هدرِ آزمون‌سازِ چاپی وصل بود؛
+# صفحه هنوز آن را تعریف می‌کند ولی پنجرهٔ چاپ صدا نمی‌زند.
+require("__qmfPreviewDiag" not in _v80_dialog,
+        "V100 the removed preview diagnostic must not come back into the print window")
 # قوانین zoom مسیر چاپ دست‌نخورده (V92: ضریبِ اشیاءِ غیرفرمولی ۰٫۴۲ → ۰٫۳۰)
 require("zoom:.30 !important" in _v79_asset, "V83.0 print zoom must stay")
 require("#previewWinOverlay #printContent.live-preview{display:block !important}" in _v79_asset,
@@ -3074,12 +3110,15 @@ require("QuestionType.MULTIPLE_CHOICE ->" not in _v869_repo,
 _v870_dialog = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
 require(_v870_dialog.count("atob(") == _v870_dialog.count("decodeURIComponent(escape(atob("),
         "V87.0 every atob must decode as UTF-8 or persian turns into mojibake")
-require("#qmfLegacyToolbar{display:none !important}" in _v79_asset,
-        "V87.0 the duplicated html toolbar must stay hidden")
-# پنهان‌سازی نباید به حذفِ توابع تبدیل شود: پلِ بومی همین‌ها را صدا می‌زند
+# V100 — نوارِ قدیمی (HTML) کامل حذف شد (نه فقط پنهان): نه گره و نه CSS.
+require("#qmfLegacyToolbar" not in _v79_asset,
+        "V100 the legacy html toolbar must stay fully removed")
+# پنهان‌سازی نباید به حذفِ توابع تبدیل شود: سطحِ چاپ/پیش‌نمایش
+# (printStudent/printTeacher + پنجرهٔ پیش‌نمایش) می‌ماند.
 require("function printStudent(" in _v79_asset and "function printTeacher(" in _v79_asset
-        and "window.togglePreviewWindow =" in _v79_asset,
-        "V87.0 hiding the toolbar must not remove the functions the native bar calls")
+        and "window.__qmfShowPreview = function" in _v79_asset
+        and "window.togglePreviewWindow =" not in _v79_asset,
+        "V87.0/V100 the print/preview surface drifted")
 # V87.1 — تصاویر از data-URI به فایل تبدیل شدند؛ هیچ‌کدام حذف نشد.
 require(_v79_asset.count("data:image/jpeg;base64,") == 0,
         "V87.1 atlas images must be files, not inline base64")
@@ -3087,8 +3126,8 @@ require(_v79_asset.count("'../figure_atlas/") == 137,
         "V87.1 all 137 atlas entries must point at the shared files")
 
 # V87.2/V87.3 — پارسِ تنبلِ ماژول‌های شکل و پایانِ FOUCِ نوارِ قدیمی
-require('id="qmfLegacyToolbar" style="display:none"' in _v79_asset,
-        "V87.3 the legacy toolbar must be hidden by its own tag, not only by css 800KB below")
+require('id="qmfLegacyToolbar"' not in _v79_asset,
+        "V100 the legacy toolbar node must stay removed (not just hidden)")
 import re as _re87
 _v873_def = _re87.findall(r'<script id="[^"]+" type="qmf/deferred">', _v79_asset)
 require(len(_v873_def) == 6,
@@ -3109,19 +3148,17 @@ require('id="extracted-math-host-script" type=' not in _v79_asset,
 
 # V87.4 — بازچینشِ کنترل‌ها و زومِ وسط‌چین
 _v874_dlg = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").read_text(encoding="utf-8")
-require('"\u0633\u0627\u062e\u062a \u0622\u0632\u0645\u0648\u0646"' in _v874_dlg,
-        "V87.4 the printable builder header must read 'build exam'")
-require("Icons.AutoMirrored.Outlined.ArrowBack" in _v874_dlg,
-        "V87.4 the header needs the same back arrow as the online builder")
-require(_v874_dlg.count("FloatingActionButton(") == 4,
-        "V87.4 save, print, preview and plus must be floating controls")
-require("BuilderRadialMenuOverlay(" in _v874_dlg,
-        "V87.4 the plus must reuse the online builder menu, not a new one")
-for _t in ('MULTIPLE_CHOICE -> "multiple"', 'TRUE_FALSE -> "truefalse"', 'ESSAY -> "long"',
-           'FILL_BLANK -> "fill"', 'NUMERIC -> "numeric"', 'MATCHING -> "matching"'):
-    require(_t in _v874_dlg, "V87.4 question type mapping %s is missing" % _t)
-require("window.restoreAutosave()" in _v874_dlg and "window.clearAutosave()" in _v874_dlg,
-        "V87.4 the native restore dialog must reach both autosave bridges")
+# V100 — هدرِ «ساخت آزمون» (بازگشت/عنوان/«سربرگ»)، چهار دکمهٔ شناور، منوی
+# رادیال، نگاشتِ نوع سؤال و بازیابیِ autosave با حذفِ «آزمون‌ساز چاپی»
+# رفتند: پنجرهٔ چاپ در پیش‌نمایش و چاپِ مستقیم هدر ندارد.
+require('"\u0633\u0627\u062e\u062a \u0622\u0632\u0645\u0648\u0646"' not in _v874_dlg
+        and "FloatingActionButton(" not in _v874_dlg
+        and "BuilderRadialMenuOverlay(" not in _v874_dlg
+        and "Icons.AutoMirrored.Outlined.ArrowBack" not in _v874_dlg
+        and 'MULTIPLE_CHOICE -> "multiple"' not in _v874_dlg
+        and "window.restoreAutosave()" not in _v874_dlg
+        and "window.clearAutosave()" not in _v874_dlg,
+        "V100 the print builder chrome must stay out of the print window")
 require("window.__qmfMaybeShowBanner = maybeShowBanner" in _v79_asset,
         "V87.4 the html restore banner must stay reachable outside the app")
 require("window.qmfCenterPreviewScroll" in _v79_asset,
@@ -3138,8 +3175,9 @@ require(".question-card.collapsed > *:not(.q-header)" in _v79_asset,
         "V87.7 a collapsed card must still show its header row")
 require('<h2 style="display:none">' in _v79_asset and 'id="totalScoreView"' in _v79_asset,
         "V87.7 the questions heading is hidden but its nodes must survive")
-require(".background(Color.White)" in _v874_dlg,
-        "V87.7 the print builder header must be white")
+# V100 — هدرِ سفید با حذفِ «آزمون‌ساز چاپی» برداشته شد.
+require(".background(Color.White)" not in _v874_dlg,
+        "V100 the removed white header must not come back")
 require("AnimatedVisibility(" in _v874_dlg and "kotlinx.coroutines.delay(2600)" in _v874_dlg,
         "V87.7 status messages must be centred and fade on their own")
 
@@ -3153,10 +3191,11 @@ for _msg in ("\u0622\u0632\u0645\u0648\u0646 \u0630\u062e\u06cc\u0631\u0647\u200
             "V87.8 the restore message must not use a raw browser alert")
 require("fun toast(message: String?)" in _v874_dlg and "onToast = { message ->" in _v874_dlg,
         "V87.8 the native toast bridge is missing")
-# ابهامِ overload که کامپایل را شکست
-_v878_at = _v874_dlg.index("androidx.compose.animation.AnimatedVisibility(")
-require("Modifier.align" not in _v874_dlg[_v878_at:_v878_at + 300],
-        "V87.8 AnimatedVisibility with Modifier.align picks the Column overload and fails to compile")
+# ابهامِ overload که کامپایل را شکست: V100 — دیالوگ حالا از
+# AnimatedVisibilityِ importشده استفاده می‌کند (فرمِ کامل‌نام نرفته) و
+# تله از بین رفته؛ گارد نگه داشته شد تا فرمِ کامل‌نام برگردد.
+require("androidx.compose.animation.AnimatedVisibility(" not in _v874_dlg,
+        "V87.8/V100 the qualified AnimatedVisibility brings back the overload trap")
 
 # V87.9 — درگِ اشیا: بدونِ بازچینشِ همگام، و با محورِ عمودیِ سالم
 require("function measureParent(el)" in _v79_asset
@@ -3192,20 +3231,17 @@ for _f in ("updateQ(q.id, field, v)", "updateOpt(id,", "addOption(id)",
 # بومی می‌ماند و پلِ خواندن/نوشتن دست‌نخورده است.
 require("window.__qmfQuestionDetail = function" in _v79_asset,
         "V88.1 the native question bridge must stay reachable")
-require("org.json.JSONObject.quote(value)" in _v874_dlg,
-        "V88.1 arguments must be escaped before injection")
+# V100 — jsArg/JSONObject.quote با کارت‌های بومی حذف شد: داده با یک
+# تزریقِ واحدِ ExamHtmlPrintPayloadBuilder می‌رسد و تنها رشته‌های درون‌خطی
+# اسکریپت‌های ثابتِ فراخوانیِ ابزار هستند (دادهٔ کاربر درونشان نیست).
 
 # V88.4 — چیدمانِ چاپ فقط در آزمون‌سازِ چاپی، و پیامِ خالی برداشته شد
 require("emptyMsg.style.display = 'block'" not in _v79_asset,
         "V88.4 the empty-state notice must never be shown; questions are cards now")
-# V90 — کنترل‌های چیدمانِ چاپ از پنجرهٔ حذف‌شده به خودِ کارت منتقل شدند.
-_v884_sheet = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
-for _c in ('Text("\u0641\u0636\u0627\u06cc \u067e\u0627\u0633\u062e"',
-           '"lined" to "\u062e\u0637\u200c\u062f\u0627\u0631"',
-           '"plain" to "\u0633\u0627\u062f\u0647"',
-           '"1row" to "\u06cc\u06a9 \u0633\u0637\u0631"'):
-    require(_c in _v884_sheet,
-            "V88.4 the print editor must own the layout controls (%s)" % _c[:24])
+# V100 — PrintQuestionCards.kt (کارت‌های بومی + کنترل‌های چیدمانِ چاپ)
+# با حذفِ «آزمون‌ساز چاپی» کامل حذف شد.
+_v884_sheet = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt"
+require(not _v884_sheet.is_file(), "V100 PrintQuestionCards.kt must stay deleted")
 require("Math.min(1.6, Math.max(0.5, parseFloat(value) || 0.75))" in _v79_asset,
         "V88.4 line spacing must stay inside the range the html form used")
 require("(String(value) === 'plain') ? 'plain' : 'lined'" in _v79_asset,
@@ -3215,19 +3251,13 @@ require("(String(value) === 'plain') ? 'plain' : 'lined'" in _v79_asset,
 _v886_at = _v79_asset.index("function openQuestionId")
 require("ExamPrintNative.openQuestion" not in _v79_asset[_v886_at:_v886_at + 700],
         "V88.6 openQuestionId runs on every add, so it must not open the editor")
-# V88.8 — لمسِ کارت خودِ کارت را باز می‌کند، نه پنجرهٔ بومی را.
-require("t.closest('#questionsContainer .question-card')" in _v79_asset,
-        "V88.8 a tap must be recognised on a card")
-require("window.__qmfOpenCard(qid)" in _v79_asset
-        and "window.__qmfCardOpener = function (id) { openQuestionId(id, true); return 'ok'; };" in _v79_asset,
-        "V88.8 tapping a collapsed card must expand it like the online builder")
-_v888_from = _v79_asset.index("/* V88.8 \u2014 \u0644\u0645\u0633\u0650 \u06a9\u0627\u0631\u062a")
-# V88.9 — پل‌های تازه بینِ این دو نشستند؛ مرز به انتهای خودِ شنونده رفت.
-_v888_to = _v79_asset.index("})();", _v888_from)
-require("ExamPrintNative.openQuestion" not in _v79_asset[_v888_from:_v888_to],
-        "V88.8 tapping must not throw the native editor in front of the card")
-require("if (!card.classList.contains('collapsed')) return;" in _v79_asset,
-        "V88.8 an open card must not toggle shut")
+# V100 — لمسِ کارت (بازکردن/بستن + پلِ openQuestion) با حذفِ کارت‌های
+# بومی برداشته شد: صفحه CSSِ collapsed و سرصفحهٔ تک‌خطی را نگه داشته،
+# ولی رفتارِ لمس روی کارت دیگر نیست.
+require("t.closest('#questionsContainer .question-card')" not in _v79_asset
+        and "window.__qmfOpenCard" not in _v79_asset
+        and "window.__qmfCardOpener" not in _v79_asset,
+        "V100 the card-tap behavior must stay removed")
 require("flex-direction:row !important;" in _v79_asset
         and "flex-wrap:nowrap !important;" in _v79_asset,
         "V88.8 the card header must stay a single row on a phone")
@@ -3240,38 +3270,33 @@ require("body.qmf-native-cards #questionsContainer{display:none !important}" in 
         "V88.9 the html card list must step aside for the native one")
 require('id="questionsContainer"' in _v79_asset,
         "V88.9 the container node must survive; renderEditor and print still use it")
-require("window.__qmfRichPreview = function" in _v79_asset
-        and "renderRichText(q.text || '', q)" in _v79_asset,
-        "V88.9 the live preview must reuse the page renderer, not a copy")
-_v889_cards = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt"
-require(_v889_cards.is_file(), "V88.9 the native question card is missing")
-_v889_text = _v889_cards.read_text(encoding="utf-8")
-require("onOpenImageStudio" in _v889_text and "PhotoCamera" in _v889_text,
-        "V88.9 the camera button must open the image studio")
-require("onOpenImageStudio = { studioQuestionId = detail.id }" in _v874_dlg,
-        "V88.9 the camera button must be wired to the studio")
-# V88.9 — نمایشگرِ زنده داخلِ فایلِ مجازِ WebView زندگی می‌کند تا گاردِ
-# «WebView فقط در فایل‌های تأییدشده» دست‌نخورده بماند.
+# V100 — نمایشِ زنده (و دکمهٔ دوربینِ کارت) با حذفِ کارت‌های بومی برداشته
+# شد؛ صفحه تابعِ renderRichText را برای رندر/چاپ نگه داشته است.
+require("window.__qmfRichPreview" not in _v79_asset
+        and "renderRichText(q.text || '', q)" not in _v79_asset
+        and "function renderRichText" in _v79_asset
+        and "onOpenImageStudio" not in _v874_dlg,
+        "V100 the native-card live preview/camera must stay removed")
 _v889_preview = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
-require("fun PrintRichTextPreview(" in _v889_preview
-        and "settings.javaScriptEnabled = false" in _v889_preview,
-        "V88.9 the live preview must live in an approved file and run no scripts")
+require("fun PrintRichTextPreview(" not in _v889_preview
+        and "wrapPrintPreviewHtml(" not in _v889_preview,
+        "V100 the live preview component must stay deleted from the approved webview file")
 
 # V89.2 — کادرِ خالی، لگِ فهرست، toggleِ کارت، و آیکنِ ابزار
 require("body.qmf-native-cards .questions-area{" in _v79_asset,
         "V89.2 the empty white frame must not show under the header")
+# V100 — فهرستِ کارت‌های بومی (بارگذاریِ یک‌جای __qmfAllQuestions و
+# toggleِ openCardId) با حذفِ «آزمون‌ساز چاپی» برداشته شد.
 require("window.__qmfAllQuestions = function" in _v79_asset
-        and "window.__qmfAllQuestions?window.__qmfAllQuestions()" in _v874_dlg,
-        "V89.2 the card list must load in one call, not one per question")
-require("fun fetch(i: Int)" not in _v874_dlg,
-        "V89.2 the chained per-question loader must stay gone")
-require("openCardId = if (openCardId == detail.id) null else detail.id" in _v874_dlg,
-        "V89.2 tapping an open card must close it")
+        and "window.__qmfAllQuestions()" not in _v874_dlg
+        and "openCardId" not in _v874_dlg,
+        "V100 the native card list must stay out of the print window")
 
 # V89.3 — توکنِ خام، مقیاسِ درگ، و چشمِ پیش‌نمایش
 _v893_web = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
-require("<body>${body}</body>" in _v893_web,
-        "V89.3 the preview wrapper must interpolate its body, not print a literal")
+# V100 — پوششِ نمایشِ زنده (wrapPrintPreviewHtml) با کارت‌های بومی حذف شد.
+require("wrapPrintPreviewHtml" not in _v893_web,
+        "V100 the live preview wrapper must stay deleted")
 require("window.__qmfDisplayText = function" in _v79_asset
         and "displayText: window.__qmfDisplayText(String(q.id))" in _v79_asset,
         "V89.3 the card must show readable text instead of the raw FIG token")
@@ -3289,8 +3314,10 @@ require("window.__qmfShowPreview = function" in _v79_asset
 # V89.5 — پوششِ پیش‌نمایش، حذفِ کنترل‌های داخلِ متن، و زنده‌شدنِ شیء
 # V99.1 — و در چاپِ مستقیم (initialPrintMode != null) فهرستِ کارت‌ها هم
 # پنهان است: فقط برگهٔ خالصِ A4 و پنجرهٔ چاپِ اندروید باقی می‌ماند.
-require("if (cardDetails.isNotEmpty() && !previewOpen && initialPrintMode == null) {" in _v874_dlg,
-        "V89.5/V99.1 the native card list must not cover the preview or the direct print")
+# V100 — دیگر فهرستِ کارتِ بومی در پنجره نیست که چیزی را بپوشاند؛
+# پنجرهٔ پیش‌نمایش مستقیم روی WebView می‌نشیند.
+require("cardDetails" not in _v874_dlg,
+        "V100 the native card list must stay out of the print window")
 # V99.1 — آیکنِ پرینتر در کارت‌های آزمون دیگر پنجرهٔ آزمون‌ساز چاپی را باز
 # نمی‌کند: نسخهٔ دانش‌آموز/پاسخ‌نامه انتخاب می‌شود، پنجرهٔ خالصِ A4 باز
 # می‌شود و سپس چاپ اجرا می‌گردد.
@@ -3331,18 +3358,16 @@ require('title="\u06a9\u0646\u0627\u0631 \u0647\u0645 / \u0631\u0648\u06cc \u064
         "V89.5 the in-text copy/layer buttons must be gone")
 require("qmfToggleFigFree" in _v79_asset and "qmfFigLayer" in _v79_asset,
         "V89.5 their functions must survive; only the buttons were removed")
-_v895_at = _v79_asset.index("window.__qmfRichPreview = function")
-_v895_head = _v79_asset[_v895_at:_v895_at + 700]
-require("__qmfEnsureFigTools()" in _v895_head
-        and _v895_head.index("__qmfEnsureFigTools()") < _v895_head.index("renderRichText("),
-        "V89.5 the live preview must wake the deferred figure modules before rendering")
+# V100 — __qmfRichPreview (نمایشِ زنده) با حذفِ کارت‌های بومی رفت؛ ماژول‌ها
+# به‌صورت تنبل با __qmfEnsureFigTools بیدار می‌شوند (renderFigToken).
+require("window.__qmfRichPreview" not in _v79_asset,
+        "V100 the live-preview bridge must stay removed")
 
 # V89.6 — CSSِ نمایشِ زنده، جابه‌جاییِ آزاد، و مقیاسِ تغییرِ اندازه
-require("window.__qmfPreviewCss = function" in _v79_asset,
-        "V89.6 the live preview needs the page stylesheet or formulas render shapeless")
-_v896_web = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").read_text(encoding="utf-8")
-require("<style>${extraCss}</style>" in _v896_web,
-        "V89.6 the preview view must inject that stylesheet")
+# V100 — __qmfPreviewCss (تأمینِ شییت‌استایل به نمایشِ زندهٔ کارت‌های
+# بومی) با حذفِ کارت‌ها برداشته شد.
+require("window.__qmfPreviewCss" not in _v79_asset,
+        "V100 the live-preview css bridge must stay removed")
 require("!drag.fig.classList.contains('fig-free')" in _v79_asset or "!fig.classList.contains('fig-free')" in _v79_asset,
         "V89.6 dragging a figure must free it so it can move anywhere")
 # V91/V93 — شناور محدود به سلولِ سؤالِ خودش می‌ماند؛ سقفِ سلولِ اندازه‌گیری‌شده
@@ -3389,26 +3414,21 @@ require(".tbx-t input[data-r][data-c]{display:block!important;pointer-events:aut
         "V89.7 but the table editor must stay typable")
 
 # V89.8 — اشیاء درونِ کادرِ متن، و درگِ یکسانِ جدول/تناوبی/آناتومی
-_v898_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
-require("ir.exam.app.ui.builder.QuestionTextWebSection(" in _v898_cards,
-        "V89.8 the printable card must reuse the online text section")
-require("PrintRichTextPreview" not in _v898_cards,
-        "V89.8 the separate preview under the box must be gone")
+_v898_cards = ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt"
+# V100 — کارتِ قابل‌چاپ (و استفادهٔش از بخشِ متنِ آنلاین) با حذفِ
+# «آزمون‌ساز چاپی» برداشته شد.
+require(not _v898_cards.is_file(), "V100 PrintQuestionCards.kt must stay deleted")
 require("'%%FIG:' + JSON.stringify(spec) + '%%'" in _v79_asset,
         "V89.8 the token format must stay identical across both builders")
 require("#previewArea .interactive-figure * {" in _v79_asset,
         "V89.8 table and periodic content must let the drag through like anatomy")
-_v892_cards = (ROOT/"app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").read_text(encoding="utf-8")
-require("List<Triple<String, String, ImageVector>>" in _v892_cards
-        and "AssistChip" not in _v892_cards,
-        "V89.2 the insert tools must be vector icons, not text chips")
+# V100 — نوارِ آیکن‌های وکتوریِ کارت با کارت‌ها رفت؛ QuestionToolIcons
+# همچنان منبعِ مشترکِ بیلدرِ آنلاین است.
 _v892_icons = (ROOT/"app/src/main/java/ir/exam/app/ui/math/QuestionToolIcons.kt").read_text(encoding="utf-8")
 for _n in ("Formula", "Figure", "Graph", "Table", "Anatomy", "Periodic", "Physics", "Chemistry"):
-    require("val %s: ImageVector" % _n in _v892_icons
-            and "QuestionToolIcons.%s" % _n in _v892_cards,
-            "V89.2 tool icon %s must be shared with the online builder" % _n)
-require("t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in _v79_asset,
-        "V88.6 typing, tools and figures must keep their own handling")
+    require("val %s: ImageVector" % _n in _v892_icons,
+            "V89.2 tool icon %s must stay shared" % _n)
+# V100 — لمسِ کارت (و گاردهایش) با حذفِ کارت‌های بومی برداشته شد.
 require("#questionsContainer .q-answer-config{display:none !important}" in _v79_asset,
         "V88.6 the duplicated header controls must stay hidden inside the app")
 require('class="q-answer-config"' in _v79_asset,
@@ -3595,8 +3615,10 @@ def _gate_strip(text):
         _out.append(_c)
         _i += 1
     return "".join(_out)
-for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt", "ExamImageStudioFilters.kt", "ExamFigureToolHost.kt", "ExamQuestionManagerSheet.kt", "ExamDraftMirror.kt"):
+for _fname in ("ExamImageStudioCore.kt", "ExamHtmlPrintDialog.kt", "ExamBuilder30Windows.kt", "ExamImageOcr.kt", "ExamImageStudioFilters.kt", "ExamFigureToolHost.kt"):
     _fpath = ROOT / "app/src/main/java/ir/exam/app/ui/printing" / _fname
+    if not _fpath.exists():
+        continue
     _ftext = _fpath.read_text()
     _body = _gate_strip(_ftext)
     _missing = []
@@ -3909,7 +3931,7 @@ _v760_asset_text=(ROOT/"app/src/main/assets/print/exam_print.html").read_text(en
 require(_v760_center.exists()
         and 'Text("آزمون جدید")' in _v760_center_text
         and "contentDescription = \"چاپ آزمون\"" in _v760_center_text
-        and "contentDescription = \"ویرایش آزمون\"" in _v760_center_text
+        and "contentDescription = \"ویرایش آزمون چاپی\"" in _v760_center_text
         and "ExamHtmlImageInliner.inline(" in _v760_center_text
         and "viewModel.preparePrint" not in _v760_center_text
         and "PrintHeaderDialog" not in _v760_center_text,
@@ -3953,14 +3975,13 @@ require("#previewArea .interactive-figure .qmf-fig {" in _v79_asset
         and "background: transparent !important;" in _v79_asset
         and "box-shadow: none !important;" in _v79_asset,
         "V91 the figure background box must be removed in the preview")
-require("return 'ok';" in _v79_asset
-        and "return window.restoreAutosave();" in _v874_dlg,
-        "V91 restoreAutosave must report success so the native list refreshes")
-require("cardsRefresh++" in _v874_dlg
-        and '"آزمون بازیابی شد ✓"' in _v874_dlg,
-        "V91 the restored questions must appear immediately and natively")
-require("cardDetails.isEmpty() && !previewOpen && !loading" in _v874_dlg,
-        "V91 the print builder needs a native empty state")
+# V100 — بازیابیِ autosave (و حالتِ خالی و تازه‌سازیِ فوری) با حذفِ حالتِ
+# «آزمون جدید» از «آزمون‌ساز چاپی» برداشته شد: پنجره همیشه با دادهٔ مشخص
+# باز می‌شود.
+require("return window.restoreAutosave();" not in _v874_dlg
+        and "cardsRefresh" not in _v874_dlg
+        and "cardDetails" not in _v874_dlg,
+        "V100 the autosave restore must stay out of the print window")
 # V99.1 — اندازه‌گیریِ ارتفاعِ سلول (parentH) دیگر لازم نیست، چون سلول با
 # minHeight رشد نمی‌کند؛ ارتفاعِ کادر را slot نگه می‌دارد. آنچه از رفتارِ
 # V91 باقی مانده: شیء نمی‌تواند از بالای سؤالِ خودش بیرون برود (کفِ صفر).
@@ -3982,21 +4003,21 @@ require("storedH: Number.isFinite(+layout.h)," in _v79_asset
 require("fig.style.zIndex = String(z0);" in _v79_asset
         and "setFigLayout(qid, idx, { z: zz })" in _v79_asset,
         "V92 the touched object must rise to the top layer")
-require("onOpenFormula = { _, selStart, selEnd ->" in _v898_cards
-        and "selectionEnd = endCaret," in _v874_dlg,
-        "V92 the formula selection range must reach the formula editor")
-require("cardDetails.isEmpty() && !previewOpen && !loading && cardsLoaded" in _v874_dlg
-        and "background(Color(0xFFEEF2F7))" in _v874_dlg,
-        "V92 the native card list must open first even when questions exist")
+# V100 — محدودهٔ انتخابِ فرمول (onOpenFormula در کارت) و پس‌زمینهٔ
+# فهرستِ کارت‌ها با حذفِ کارت‌های بومی برداشته شد.
+require("onOpenFormula" not in _v874_dlg
+        and "selectionEnd = endCaret" not in _v874_dlg
+        and "background(Color(0xFFEEF2F7))" not in _v874_dlg,
+        "V100 the native-card formula/open path must stay removed")
 
 # V93 — پنج گزارشِ کاربر: تأخیرِ بازیابی، محو نشدنِ دکمه‌ها/هدر با چشم،
 # جملهٔ «پیش‌نمایش آزمون» در هدرِ پیش‌نمایش، پرشِ اشیاء و قفلِ حرکت،
 # و ناهماهنگیِ چاپ با پیش‌نمایش.
 require("setTimeout(function(){ try { renderAll(); } catch(e){} }, 60);" in _v79_asset,
         "V93 restore must return immediately and defer the heavy re-render")
-require("androidx.compose.animation.AnimatedVisibility(" in _v874_dlg
-        and "visible = !previewOpen" in _v874_dlg,
-        "V93 opening the preview must fade the header and all floating buttons")
+# V100 — هدر/دکمه‌های شناور دیگر وجود ندارد که محو شوند.
+require("visible = !previewOpen" not in _v874_dlg,
+        "V100 the removed header/fab fade must not come back")
 require("👁 پیش‌نمایش آزمون" not in _v79_asset
         and "<div class=\"pwo-head\">' +" in _v79_asset,
         "V93 the preview header must not show the eye or «پیش‌نمایش آزمون»")

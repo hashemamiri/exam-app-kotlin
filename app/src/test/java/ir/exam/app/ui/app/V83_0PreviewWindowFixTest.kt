@@ -91,15 +91,19 @@ class V83_0PreviewWindowFixTest {
         assertTrue("window.__qmfPreviewDiag" in assetText)
         listOf("contentBytes", "inOverlay", "display", "transform", "rectW")
             .forEach { assertTrue("کلید $it نیست", it in assetText) }
-        assertTrue("__qmfPreviewDiag" in dialog)
+        // V100 — تشخیص از پنجرهٔ چاپ (فشارِ طولانی روی «سربرگ») با حذفِ
+        // «آزمون‌ساز چاپی» رفت؛ پلِ تشخیصِ صفحه می‌ماند.
+        assertFalse("__qmfPreviewDiag" in dialog)
     }
 
     @Test
     fun `the preview button still reaches the page`() {
-        // V89.3 — دکمه از `__qmfShowPreview` استفاده می‌کند تا هرگز نبندد؛
-        // خودِ `togglePreviewWindow` در asset باقی است (سنجهٔ خطِ بعد).
+        // V89.3 — دکمه از `__qmfShowPreview` استفاده می‌کند تا هرگز نبندد.
+        // V100 — `togglePreviewWindow` (نوارِ HTML) با حذفِ «آزمون‌ساز چاپی»
+        // از صفحه هم حذف شد؛ مسیرِ باز شدنِ پیش‌نمایش فقط `__qmfShowPreview`
+        // از تزریقِ بومی (آیکن چشم) است.
         assertTrue("__qmfShowPreview" in dialog)
-        assertTrue("window.togglePreviewWindow = function" in assetText)
+        assertFalse("window.togglePreviewWindow = function" in assetText)
     }
 
     @Test

@@ -63,9 +63,12 @@ class V77_1LegacyStudioRemovalTest {
 
     @Test
     fun `native studio is still the camera destination`() {
+        // V100 — استودیوی تصویر از پنجرهٔ چاپ با حذفِ «آزمون‌ساز چاپی» رفت؛
+        // فراخوانِ دوربینِ صفحه (حالا بی‌اثر و با گارد امن) می‌ماند و
+        // استودیو فقط در آزمون‌سازِ بومی باز می‌شود.
         assertTrue("openImageStudio" in assetText)
-        assertTrue("fun openImageStudio(questionId: String?)" in dialog)
-        assertTrue("ExamImageStudioDialog(" in dialog)
+        assertFalse("fun openImageStudio(questionId: String?)" in dialog)
+        assertFalse("ExamImageStudioDialog(" in dialog)
     }
 
     @Test

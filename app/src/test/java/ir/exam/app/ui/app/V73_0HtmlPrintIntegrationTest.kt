@@ -223,7 +223,9 @@ class V73_0HtmlPrintIntegrationTest {
     @Test
     fun `print center opens builder 30 from pencil printer and new exam button`() {
         // V76.0 — کارت آزمون فقط مداد + پرینتر دارد
-        assertTrue("contentDescription = \"ویرایش آزمون\"" in printCenter)
+        // V100 — مدادِ آزمونِ سرور (آزمون‌سازِ چاپی) حذف شد؛ مدادِ باقی‌مانده
+        // متعلق به آزمون‌های محلی است (آزمون‌سازِ بومی).
+        assertTrue("contentDescription = \"ویرایش آزمون چاپی\"" in printCenter)
         assertTrue("Icons.Outlined.Print" in printCenter)
         assertTrue("contentDescription = \"چاپ آزمون\"" in printCenter)
         assertFalse("Text(\"چاپ\")" in printCenter)

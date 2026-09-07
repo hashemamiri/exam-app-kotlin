@@ -7,13 +7,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * V76.0 — نسخهٔ 30 به‌عنوان میزبان چاپ/ویرایش آزمون:
- * ۱) payload ریست «آزمون جدید».
+ * V76.0 — نسخهٔ 30 به‌عنوان میزبان چاپ/پیش‌نمایش آزمون:
+ * ۱) payload ریست «آزمون جدید» (سازندهٔ payload هنوز قابل‌فراخوانی است).
  * ۲) توکن تصویر %%FIG k:img برای انتقال تصاویر خصوصی با data-URL.
- * ۳) قرارداد صفحهٔ چاپ: فقط مداد + پرینتر، «آزمون جدید» جای «سربرگ».
+ * ۳) قرارداد صفحهٔ چاپ: آیکن‌های کارت‌ها.
  * ۴) asset نسخهٔ 30: خنثی‌شدن ویرایشگر شکل با حفظ موتور رندر، چاپ بومی،
  *    پاک‌سازی Cloudflare، پل ورود آزمون و بنر پیش‌نویس.
  * ۵) بارگذار چاپ رسمی هم تصاویر خصوصی را با توکن می‌خواند.
+ *
+ * V100 — تستِ «نوارِ فرمانِ بومیِ هفت‌فرمانیِ دیالوگ» با حذفِ کاملِ
+ * «آزمون‌ساز چاپی» حذف شد؛ کارتِ آزمونِ سرور دیگر مداد ندارد (فقط پرینتر).
  */
 class V76_0Builder30HostTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -23,7 +26,6 @@ class V76_0Builder30HostTest {
     private fun source(path: String) = File(root(), path).readText()
 
     private val printCenter by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt") }
-    private val payloadSource by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt") }
     private val inlinerSource by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlImageInliner.kt") }
     private val controllerSource by lazy { source("app/src/main/java/ir/exam/app/core/printing/OfficialPrintController.kt") }
     private val assetText by lazy { File(root(), "app/src/main/assets/print/exam_print.html").readText() }
@@ -53,20 +55,26 @@ class V76_0Builder30HostTest {
     }
 
     @Test
-    fun `print center keeps only pencil and printer icons with the new exam button`() {
-        // فقط دو آیکن؛ هیچ دکمهٔ متنی چاپ یا سربرگ بومی باقی نماند
+    fun `print center keeps printer on server cards and the native builder pencil on local cards`() {
+        // V100 — کارتِ آزمونِ سرور فقط پرینتر دارد؛ مداد (آزمون‌سازِ چاپی) حذف شد.
         assertFalse("Text(\"چاپ برگه\")" in printCenter)
         assertFalse("Text(\"چاپ با کلید\")" in printCenter)
-        assertFalse("بستن سربرگ" in printCenter)
+        assertFalse("openBuilder30" in printCenter)
+        assertFalse("contentDescription = \"ویرایش آزمون\"" in printCenter)
         assertFalse("fun PrintHeaderDialog(" in printCenter)
         assertFalse("fun HeaderPreview(" in printCenter)
         assertFalse("viewModel.preparePrint" in printCenter)
         assertFalse("OfficialPrintController" in printCenter)
         assertTrue("Text(\"آزمون جدید\")" in printCenter)
-        assertTrue("contentDescription = \"ویرایش آزمون\"" in printCenter)
+        // کارتِ آزمونِ سرور: فقط پرینتر
         assertTrue("contentDescription = \"چاپ آزمون\"" in printCenter)
+        // کارتِ آزمونِ محلی: مداد به آزمون‌سازِ بومی + پرینتر + حذف
+        assertTrue("contentDescription = \"ویرایش آزمون چاپی\"" in printCenter)
+        assertTrue("contentDescription = \"چاپ آزمون چاپی\"" in printCenter)
+        assertTrue("contentDescription = \"حذف آزمون چاپی\"" in printCenter)
+        assertTrue("onOpenLocalPrintExam(rec.id)" in printCenter)
         // مسیر چاپ همان مسیر واحد نسخهٔ 30 است و چیدمان محلی چاپ را هم می‌خواند
-        assertTrue("portability.printableExam(examId, false, header, layoutStore.read(examId))" in printCenter)
+        assertTrue("portability.printableExam(" in printCenter)
         assertTrue("ExamHtmlImageInliner.inline(" in printCenter)
         assertTrue("onEditExamDocument: (String) -> Unit" in printCenter)
     }
@@ -131,47 +139,6 @@ class V76_0Builder30HostTest {
         assertTrue("qmf_exam_autosave_azmoon_v1" in assetText)
         assertFalse("cloudflareinsights" in assetText)
         assertFalse("challenge-platform" in assetText)
-    }
-
-    @Test
-    fun `builder-30 dialog has a native command bar for the seven controls`() {
-        val dialog = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
-        // V76.3 — هفت فرمان بومی (نوار HTML فایل مخفی شده است).
-        // V87.4 — نوارِ دکمه‌ها با هدرِ سه‌جزئی، کنترل‌های شناور و منویِ +
-        // جایگزین شد. سنجه از «برچسبِ دکمه» به «در دسترس بودنِ خودِ کار»
-        // تغییر کرد: چیدمان آزاد است، حذفِ امکان نه.
-        for ((action, probe) in listOf(
-            "تنظیمات سربرگ" to "showHeaderSettings = true",
-            "ذخیره" to "showSaveDialog = true",
-            "بازکردن" to "openExamPicker.launch",
-            "چاپ دانشجو" to "printStudent();",
-            "چاپ استاد" to "printTeacher();",
-            "سوال جدید" to "pickQuestionType('",
-            // V89.3 — دکمهٔ چشم به پلِ «همیشه باز» رفت تا هرگز نبندد.
-            "پیش‌نمایش" to "__qmfShowPreview"
-        )) {
-            assertTrue(action, probe in dialog)
-        }
-        // V76.4 — تنظیمات سربرگ/ذخیره/سوال جدید پنجرهٔ بومی دارند؛ چاپ‌ها/چشم همان توابع فایل
-        assertTrue("printStudent()" in dialog)
-        assertTrue("printTeacher()" in dialog)
-        // V89.3 — دکمهٔ چشم به پلِ «همیشه باز» رفت؛ پیش‌نمایش در دسترس است.
-        assertTrue("__qmfShowPreview" in dialog)
-        assertTrue("window.__qmfSaveNow" in dialog)
-        // بازکردن آزمون: انتخاب‌گر بومی + ورود با پل setExamData
-        assertTrue("openExamPicker.launch" in dialog)
-        // V87.0 — base64 حالا به‌صورت UTF-8 رمزگشایی می‌شود، وگرنه متنِ فارسی
-        // به «Ø¯Ø§Ù†Ø´Ú¯Ø§Ù‡» تبدیل می‌شد.
-        assertTrue("window.setExamData(decodeURIComponent(escape(atob('" in dialog)
-        assertTrue("webViewRef?.evaluateJavascript" in dialog)
-        // V76.2 — متاوویوپورت فایل اعمال شود، اما overview mode خاموش بماند
-        // (وگرنه WebView برای محتوای عریض A4 کل صفحه را zoom-out می‌کند)
-        assertTrue("settings.useWideViewPort = true" in dialog)
-        assertTrue("settings.loadWithOverviewMode = false" in dialog)
-        // دکمهٔ دوربین 📷: input[type=file] فقط با onShowFileChooser در WebView کار می‌کند
-        assertTrue("onShowFileChooser" in dialog)
-        assertTrue("ActivityResultContracts.GetContent" in dialog)
-        assertTrue("imagePicker.launch(\"image/*\")" in dialog)
     }
 
     @Test

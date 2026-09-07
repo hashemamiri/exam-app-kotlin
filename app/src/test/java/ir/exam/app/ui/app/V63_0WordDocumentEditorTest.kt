@@ -43,8 +43,9 @@ class V63_0WordDocumentEditorTest {
         )
         assertTrue("Icons.Outlined.Edit" in printCenter)
         assertTrue("ویرایش آزمون" in printCenter)
-        // V76.0 — مداد (و پرینتر) نسخهٔ 30 را باز می‌کنند؛ مسیر DOC_EDITOR دست‌نخورده است
-        assertTrue("openBuilder30(exam.id)" in printCenter)
+        // V100 — مدادِ کارتِ آزمونِ سرور (آزمون‌سازِ چاپی) کامل حذف شد؛ مدادِ
+        // باقی‌مانده متعلق به آزمون‌های محلی است (آزمون‌سازِ بومی).
+        assertFalse("openBuilder30" in printCenter)
         assertFalse("Text(\"چاپ برگه\")" in printCenter)
         // Text("چاپ با کلید") removed from exam card
     }

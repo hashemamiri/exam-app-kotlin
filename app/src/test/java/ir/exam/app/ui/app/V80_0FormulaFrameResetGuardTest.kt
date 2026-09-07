@@ -68,9 +68,10 @@ class V80_0FormulaFrameResetGuardTest {
         ).readText()
         assertTrue("put(\"reset\", true)" in payload)
         assertTrue("put(\"reset\", false)" in payload)
-        // و مسیر بازیابیِ پیش‌نویس V78.2 دست‌نخورده است
-        assertTrue("__qmfHasLocalDraft" in dialog)
-        assertTrue("ExamDraftMirror.load" in dialog)
+        // V100 — مسیر بازیابیِ پیش‌نویس (آینهٔ بومی) با حذفِ «آزمون‌ساز چاپی»
+        // از پنجرهٔ چاپ رفت؛ پل‌های صفحه دست‌نخورده‌اند.
+        assertFalse("ExamDraftMirror" in dialog)
+        assertTrue("__qmfHasLocalDraft" in assetText)
     }
 
     @Test

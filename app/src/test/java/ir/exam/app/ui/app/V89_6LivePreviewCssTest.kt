@@ -5,8 +5,12 @@ import org.junit.Test
 import java.io.File
 
 /**
- * V89.6 — فرمول در نمایشِ زنده بی‌شکل بود (CSS نداشت)، جابه‌جایی به بالا
- * ممکن نبود، و تغییرِ اندازه مقیاسِ پیش‌نمایش را لحاظ نمی‌کرد.
+ * V89.6 — جابه‌جاییِ شکل در پنجرهٔ پیش‌نمایش: لمسِ نخست شیء را آزاد می‌کند،
+ * شناور فقط کفِ صفر دارد، و تغییرِ اندازه مقیاسِ پیش‌نمایش را لحاظ می‌کند.
+ *
+ * V100 — سه تستِ CSSِ «پیش‌نمایشِ زندهٔ کارت» (__qmfPreviewCss/extraCss) با
+ * حذفِ کاملِ «آزمون‌ساز چاپی» (و کارت‌های بومی) حذف شدند؛ مکانیکِ شکل‌ها در
+ * پنجرهٔ پیش‌نمایش می‌ماند.
  */
 class V89_6LivePreviewCssTest {
 
@@ -16,36 +20,6 @@ class V89_6LivePreviewCssTest {
 
     private val asset by lazy {
         File(root(), "app/src/main/assets/print/exam_print.html").readText()
-    }
-    private val dialog by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
-    }
-    private val cards by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").readText()
-    }
-    private val webview by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").readText()
-    }
-
-    @Test
-    fun `the live preview carries the page's own stylesheet`() {
-        // بدونِ CSS، `renderRichText` مارک‌آپِ درست می‌داد ولی کسر بی‌شکل بود
-        assertTrue("window.__qmfPreviewCss = function" in asset)
-        assertTrue("extraCss" in webview)
-        assertTrue("<style>\${extraCss}</style>" in webview)
-        // V89.8 — پیش‌نمایشِ جدا برداشته شد؛ پل و نمایشگر باقی‌اند.
-        assertTrue("window.__qmfPreviewCss = function" in asset)
-    }
-
-    @Test
-    fun `the stylesheet is fetched once, not per question`() {
-        // V89.8 — بارگذارِ CSS با حذفِ پیش‌نمایشِ جدا برداشته شد.
-        assertTrue("window.__qmfPreviewCss" in asset)
-    }
-
-    @Test
-    fun `only rendering rules are taken, not page layout`() {
-        assertTrue("\\.mathx|\\.mfrac|\\.msqrt|\\.qmf-fig" in asset)
     }
 
     @Test

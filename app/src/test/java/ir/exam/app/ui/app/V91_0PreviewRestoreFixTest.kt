@@ -5,11 +5,13 @@ import org.junit.Test
 import java.io.File
 
 /**
- * V91 — ایرادهای پنجرهٔ پیش‌نمایش و بازیابیِ آزمون‌سازِ چاپی:
+ * V91 — ایرادهای پنجرهٔ پیش‌نمایش:
  * ۱) جابه‌جاییِ اشیاء محدود به همان سؤال می‌شود.
  * ۲) کادرِ سفیدِ پس‌زمینهٔ هر شیء در پیش‌نمایش حذف شد (رفع همپوشانی و محوشدنِ ستون بارم).
- * ۳) دکمهٔ بازیابی واقعاً فهرستِ بومی را تازه می‌کند و پیامِ بومی می‌دهد.
- * ۴) حالتِ خالیِ بومی به‌جای صفحهٔ خالیِ WebView.
+ *
+ * V100 — دو تستِ «بازیابی فهرستِ بومی» و «حالتِ خالیِ بومی» با حذفِ کاملِ
+ * «آزمون‌ساز چاپی» (کارت‌های بومی + جریانِ بازیابی) حذف شدند؛ دو تستِ
+ * مکانیکِ پیش‌نمایش (سلولِ سؤال + پس‌زمینه) می‌مانند.
  */
 class V91_0PreviewRestoreFixTest {
 
@@ -19,9 +21,6 @@ class V91_0PreviewRestoreFixTest {
 
     private val asset by lazy {
         File(root(), "app/src/main/assets/print/exam_print.html").readText()
-    }
-    private val dialog by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
     }
 
     @Test
@@ -42,29 +41,5 @@ class V91_0PreviewRestoreFixTest {
         assertTrue("background: transparent !important;" in asset)
         assertTrue("box-shadow: none !important;" in asset)
         assertTrue("padding: 0 !important;" in asset)
-    }
-
-    @Test
-    fun `restore reports success so the host can refresh the list`() {
-        assertTrue("return 'ok';" in asset)
-        assertTrue("return window.restoreAutosave();" in dialog)
-    }
-
-    @Test
-    fun `the restored questions appear immediately in the native list`() {
-        // فهرستِ بومی همان لحظه تازه می‌شود؛ پیش‌تر فقط پس از افزودنِ سؤال ظاهر می‌شد.
-        assertTrue("cardsRefresh++" in dialog)
-        assertTrue("\"آزمون بازیابی شد ✓\"" in dialog)
-        // در میزبانِ بومی، اعلانِ دوبارهٔ JS نمی‌آید (پیامِ بومی یک‌بار است).
-        assertTrue(
-            "typeof window.ExamPrintNative.toast === 'function')) qmfToast('آزمون ذخیره‌شده بازیابی شد.')"
-                in asset
-        )
-    }
-
-    @Test
-    fun `the print builder opens natively with an empty state`() {
-        assertTrue("cardDetails.isEmpty() && !previewOpen && !loading" in dialog)
-        assertTrue("\"هنوز سؤالی ساخته نشده است.\"" in dialog)
     }
 }

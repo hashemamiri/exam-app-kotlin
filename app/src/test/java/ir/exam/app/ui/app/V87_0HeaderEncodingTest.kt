@@ -1,6 +1,7 @@
 package ir.exam.app.ui.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -52,11 +53,9 @@ class V87_0HeaderEncodingTest {
         }
     }
 
-    @Test
-    fun `both injection points decode as utf8`() {
-        assertTrue("var t=decodeURIComponent(escape(atob('" in dialog)
-        assertTrue("window.setExamData(decodeURIComponent(escape(atob('" in dialog)
-    }
+    // V100 — دو نقطهٔ تزریقِ JS (تنظیمات سربرگ + بازکردن آزمون) با حذفِ
+    // «آزمون‌ساز چاپی» از پنجرهٔ چاپ رفتند؛ تستِ خالصِ رمزگشاییِ بالا
+    // (atob/unescape) هنوز قراردادِ درست را تثبیت می‌کند.
 
     @Test
     fun `no unguarded atob is left in the bridge`() {
@@ -67,13 +66,12 @@ class V87_0HeaderEncodingTest {
 
     @Test
     fun `the duplicated html toolbar is hidden but its functions live on`() {
-        // V87.3 — همان تگ، به‌علاوهٔ سبکِ درون‌خطی که FOUC را می‌بندد
-        assertTrue("<div class=\"toolbar no-print\" id=\"qmfLegacyToolbar\"" in asset)
-        assertTrue("#qmfLegacyToolbar{display:none !important}" in asset)
-        // نوار پنهان است ولی پلِ بومی همین توابع را صدا می‌زند
+        // V100 — نوارابزارِ HTML با حذفِ «آزمون‌ساز چاپی» کامل حذف شد؛
+        // توابعِ چاپِ صفحه می‌مانند و پلِ بومی (چاپِ مستقیم) آن‌ها را صدا می‌زند.
+        assertFalse("qmfLegacyToolbar\" style" in asset)
+        assertFalse("window.togglePreviewWindow =" in asset)
         assertTrue("function printStudent(" in asset)
         assertTrue("function printTeacher(" in asset)
-        assertTrue("window.togglePreviewWindow =" in asset)
         assertTrue("printStudent()" in dialog)
         assertTrue("printTeacher()" in dialog)
     }

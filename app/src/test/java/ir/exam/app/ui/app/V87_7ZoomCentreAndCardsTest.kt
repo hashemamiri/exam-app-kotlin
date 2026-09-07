@@ -60,12 +60,8 @@ class V87_7ZoomCentreAndCardsTest {
         assertTrue("class=\"q-type-badge\"" in asset)
     }
 
-    @Test
-    fun `the header is white and its contents stay legible`() {
-        assertTrue(".background(Color.White)" in dialog)
-        assertTrue("tint = Color(0xFF1E3A8A)" in dialog)
-        assertTrue("color = Color(0xFF111827)" in dialog)
-    }
+    // V100 — «هدرِ سفید» (بازگشت/عنوان/سربرگ) با حذفِ «آزمون‌ساز چاپی» از
+    // پنجرهٔ چاپ رفت؛ پیش‌نمایش و چاپِ مستقیم بدونِ هدر می‌شوند.
 
     @Test
     fun `status messages appear in the middle and fade by themselves`() {

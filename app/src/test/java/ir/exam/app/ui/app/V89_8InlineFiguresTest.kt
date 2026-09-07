@@ -17,9 +17,6 @@ class V89_8InlineFiguresTest {
     private val asset by lazy {
         File(root(), "app/src/main/assets/print/exam_print.html").readText()
     }
-    private val cards by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").readText()
-    }
     private val dialog by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
     }
@@ -27,12 +24,8 @@ class V89_8InlineFiguresTest {
         File(root(), "app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt").readText()
     }
 
-    @Test
-    fun `the printable card reuses the online text section`() {
-        assertTrue("ir.exam.app.ui.builder.QuestionTextWebSection(" in cards)
-        // پیش‌نمایشِ جدا زیرِ کادر برداشته شد
-        assertTrue("PrintRichTextPreview" !in cards)
-    }
+    // V100 — «کارتِ بومی از QuestionTextWebSection استفاده می‌کند» با حذفِ
+    // کارت‌ها (آزمون‌ساز چاپی) بی‌معنا شد.
 
     @Test
     fun `that section renders figures inline and needs no view model`() {
@@ -49,16 +42,8 @@ class V89_8InlineFiguresTest {
         assertTrue("سمتِ کاتلین همان قالب را نمی‌سازد", codec)
     }
 
-    @Test
-    fun `every insert tool is wired to the section`() {
-        listOf(
-            "onInsertFigure", "onInsertGraph", "onInsertTable", "onInsertPeriodic",
-            "onInsertAnatomy", "onInsertPhysics", "onInsertChemistry"
-        ).forEach { assertTrue("$it وصل نیست", "$it =" in cards) }
-        // V92 — بازهٔ انتخاب (start/end) تا ویرایشگرِ فرمول منتقل می‌شود
-        assertTrue("onOpenFormula = { _, selStart, selEnd ->" in cards)
-        assertTrue("onOpenTool(FigureToolRequest.FORMULA, selStart, selEnd)" in cards)
-    }
+    // V100 — «سیم‌کشیِ ابزارهای درج به کادرِ کارت» با حذفِ کارت‌ها رفت؛
+    // درجِ تازه در پنجرهٔ چاپ دیگر نیست (فقط ویرایشِ دابل‌کلیک می‌ماند).
 
     @Test
     fun `the separate preview state is gone from the dialog`() {

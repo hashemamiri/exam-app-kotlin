@@ -54,10 +54,10 @@ import kotlinx.coroutines.launch
  * - V76.0 — کارت هر آزمون فقط دو آیکن دارد: مداد (ویرایش در نسخهٔ 30) و پرینتر.
  *   V99.1 — پرینتر دیگر پنجرهٔ آزمون‌ساز چاپی را باز نمی‌کند: نسخهٔ
  *   دانش‌آموز/پاسخ‌نامه انتخاب می‌شود و چاپ مستقیم انجام می‌گردد (برگهٔ خالصِ
- *   A4 + پنجرهٔ چاپِ اندروید). مداد همچنان آزمون‌ساز را برای ویرایش باز می‌کند.
- *   سؤالات با پل window.setExamData و تصاویر با توکن نشست (data-URL) منتقل
- *   می‌شوند؛ هر ویرایشی فقط روی خروجی چاپ همان جلسه اثر دارد و آزمون سرور را
- *   عوض نمی‌کند.
+ *   A4 + پنجرهٔ چاپِ اندروید).
+ *   V100 — «آزمون‌ساز چاپی» کامل حذف شد: مدادِ کارتِ آزمونِ سرور رفت (آن
+ *   آزمون‌ها دیگر از این صفحه ویرایش نمی‌شوند). آزمون‌های محلیِ چاپی همچنان
+ *   با مداد به آزمون‌سازِ بومی (onOpenLocalPrintExam) ویرایش می‌شوند.
  * - V63.0 — پارامتر مداد ویرایشگر سند حفظ شده؛ مسیر DOC_EDITOR دست‌نخورده است.
  */
 @Composable
@@ -91,9 +91,10 @@ fun ExamPrintCenterScreen(
     var htmlPrintLoading by remember { mutableStateOf(false) }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
-    // V99.1 — آیکن پرینتر دیگر «پنجرهٔ آزمون‌ساز چاپی» را باز نمی‌کند:
-    // printTarget = آزمونِ انتخاب‌شدهٔ چاپ، printModeFor = حالتِ پنجرهٔ
-    // چاپ (null یعنی آزمون‌ساز برای ویرایش؛ student/teacher یعنی چاپِ مستقیم).
+    // V99.1 — آیکن پرینتر «پنجرهٔ آزمون‌ساز چاپی» را باز نمی‌کند:
+    // printTarget = آزمونِ انتخاب‌شدهٔ چاپ، printModeFor = حالتِ پنجرهٔ چاپ
+    // (student/teacher). V100 — حالتِ null (ویرایش در آزمون‌ساز چاپی) دیگر
+    // وجود ندارد؛ از این صفحه فقط چاپ مستقیم و ویرایشِ بومیِ آزمون‌های محلی.
     var printTarget by remember { mutableStateOf<PrintTarget?>(null) }
     var printModeFor by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -104,30 +105,8 @@ fun ExamPrintCenterScreen(
         localExams = printExamStore.list()
     }
 
-    // V76.0 — ورود خودکار سؤالات یک آزمون به نسخهٔ 30 و باز کردن آن تمام‌صفحه.
-    fun openBuilder30(examId: String) {
-        scope.launch {
-            htmlPrintLoading = true
-            try {
-                // V99.1 — مداد (ویرایش) هنوز آزمون‌سازِ کامل را باز می‌کند؛
-                // حالتِ پنجرهٔ چاپ باید null بماند تا کارت‌ها نمایش داده شوند.
-                printModeFor = null
-                printStatus = null
-                printStatusIsError = false
-                portability.printableExam(examId, false, header, layoutStore.read(examId))
-                    .onSuccess { printable ->
-                        htmlPrintExam = ExamHtmlImageInliner.inline(context.applicationContext, printable)
-                        htmlPrintOpen = true
-                    }
-                    .onFailure { error ->
-                        printStatusIsError = true
-                        printStatus = sanitizePrintError(error)
-                    }
-            } finally {
-                htmlPrintLoading = false
-            }
-        }
-    }
+    // V100 — مسیری که مدادِ کارتِ سرور به «آزمون‌ساز چاپی» باز می‌کرد حذف شد:
+    // آن آزمون‌ها از این صفحه فقط چاپ می‌شوند (ویرایششان مسیر دیگری ندارد).
 
     // V99.1 — چاپِ مستقیم از آیکن پرینتر: پنجرهٔ آزمون‌ساز چاپی باز نمی‌شود؛
     // در پنجرهٔ چاپ فقط برگهٔ خالصِ A4 دیده می‌شود و سپس پنجرهٔ چاپِ
@@ -260,22 +239,14 @@ fun ExamPrintCenterScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text("درس: ${exam.subject.orEmpty().ifBlank { "—" }}")
-                        // V76.0 — فقط مداد (ویرایش) و پرینتر (ورود سؤالات + چاپ)؛
-                        // هر دو همان جریان نسخهٔ 30 را باز می‌کنند.
+                        // V100 — کارتِ آزمونِ سرور فقط پرینتر دارد: «آزمون‌ساز
+                        // چاپی» (مداد) کامل حذف شد و آزمون‌های سرور از این
+                        // صفحه ویرایش نمی‌شوند.
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
                         ) {
-                            // مداد: ویرایش سؤالات/چیدمان در نسخهٔ 30 (فقط چاپ؛ بدون تغییر سرور).
-                            IconButton(onClick = { openBuilder30(exam.id) }, enabled = !htmlPrintLoading) {
-                                Icon(
-                                    Icons.Outlined.Edit,
-                                    contentDescription = "ویرایش آزمون",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            // V99.1 — پرینتر: چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه)؛
-                            // پنجرهٔ آزمون‌ساز چاپی دیگر باز نمی‌شود.
+                            // V99.1 — پرینتر: چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه).
                             IconButton(onClick = { printTarget = PrintTarget.ServerExam(exam.id) }, enabled = !htmlPrintLoading) {
                                 Icon(
                                     Icons.Outlined.Print,

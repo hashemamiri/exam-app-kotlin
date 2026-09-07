@@ -20,29 +20,14 @@ class V89_7PinchAndInsertTest {
     private val dialog by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
     }
-    private val cards by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").readText()
-    }
-
     @Test
     fun `a figure lands where the cursor is, not at the end`() {
         assertTrue("window.__qmfSetInsertPos = function" in asset)
         assertTrue("var want = window.__qmfInsertPos;" in asset)
         // یک‌بارمصرف: پس از درج پاک می‌شود تا درجِ بعدی اشتباه نیفتد
         assertTrue("window.__qmfInsertPos = null;" in asset)
-        // V89.8 — محلِ درج را `QuestionEditorFieldController` نگه می‌دارد.
-        // V89.9 — کنترلر در `ui.math` است، نه `ui.builder`.
-        assertTrue("ir.exam.app.ui.math.QuestionEditorFieldController()" in cards)
-    }
-
-    @Test
-    fun `the host records the cursor before opening the tool`() {
-        // V92 — بازهٔ انتخابِ فرمول هم اینجا ثبت می‌شود، پس فاصلهٔ مجاز
-        // بین ثبتِ مکان‌نما و بازکردنِ ابزار کمی بیشتر شد (همان دستور هنوز).
-        assertTrue(
-            Regex("__qmfSetInsertPos[\\s\\S]{0,600}figureTool = FigureToolRequest")
-                .containsMatchIn(dialog)
-        )
+        // V100 — ثبتِ مکان‌نما توسط میزبانِ بومی (کارت‌های بومی) بود و با
+        // حذفِ «آزمون‌ساز چاپی» از پنجرهٔ چاپ رفت؛ پلِ صفحه می‌ماند.
     }
 
     @Test

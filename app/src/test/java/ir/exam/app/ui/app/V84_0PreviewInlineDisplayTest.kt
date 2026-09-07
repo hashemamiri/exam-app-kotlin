@@ -94,7 +94,9 @@ class V84_0PreviewInlineDisplayTest {
     fun `the diagnostic reports why the preview failed`() {
         listOf("inlineDisplayPriority", "scrollW", "scrollH", "toggleFn", "fitFn", "uiInstalled")
             .forEach { assertTrue("کلید $it نیست", it in assetText) }
-        assertTrue("__qmfPreviewDiag" in dialog)
+        // V100 — تشخیص از پنجرهٔ چاپ (فشارِ طولانی روی «سربرگ») با حذفِ
+        // «آزمون‌ساز چاپی» رفت؛ پلِ تشخیصِ صفحه می‌ماند.
+        assertFalse("__qmfPreviewDiag" in dialog)
     }
 
     @Test

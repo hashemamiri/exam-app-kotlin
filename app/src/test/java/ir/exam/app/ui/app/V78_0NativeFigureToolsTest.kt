@@ -77,10 +77,13 @@ class V78_0NativeFigureToolsTest {
 
     @Test
     fun `kotlin bridge is wired end to end`() {
-        assertTrue("fun openFigureTool(" in dialog)
-        assertTrue("onOpenFigureTool" in dialog)
+        // V100 — «درجِ تازه» (openFigureTool) با حذفِ «آزمون‌ساز چاپی» رفت؛
+        // پل حالا فقط مسیرِ ویرایشِ دابل‌کلیکِ پیش‌نمایش را دارد.
+        assertFalse("onOpenFigureTool" in dialog)
+        assertTrue("fun editFigureTool(" in dialog)
         assertTrue("ExamFigureToolHost(" in dialog)
         assertTrue("__qmfInsertFigToken" in dialog)
+        assertTrue("__qmfReplaceFigToken" in dialog)
     }
 
     @Test

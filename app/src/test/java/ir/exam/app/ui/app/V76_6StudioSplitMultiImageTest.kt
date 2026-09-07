@@ -1,6 +1,7 @@
 package ir.exam.app.ui.app
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,11 +55,12 @@ class V76_6StudioSplitMultiImageTest {
     fun `existing image management wired through new bridges`() {
         // درس V76.6.1: TextButton در بلوک فهرست استفاده شده — importش لازم است
         assertTrue("import androidx.compose.material3.TextButton" in studio)
-        assertTrue("window.__qmfQuestionImages" in dialog)
-        assertTrue("window.__qmfRemoveQuestionImage" in dialog)
-        assertTrue("window.__qmfReplaceQuestionImage" in dialog)
-        assertTrue("existingImages = parseExistingImages(studioImagesJson)" in dialog)
-        assertTrue("internal fun parseExistingImages" in dialog)
+        // V100 — استودیوی تصویر از پنجرهٔ چاپ حذف شد (آزمون‌سازِ چاپی رفت)؛
+        // پل‌های صفحه دست‌نخورده‌اند و در بیلدرِ بومی استفاده می‌شوند.
+        assertTrue("window.__qmfQuestionImages" in assetText)
+        assertTrue("window.__qmfRemoveQuestionImage" in assetText)
+        assertTrue("window.__qmfReplaceQuestionImage" in assetText)
+        assertFalse("parseExistingImages" in dialog)
         // ویرایشِ دوباره: جایگزینی به‌جای درج
         assertTrue("تایید و جایگزینی" in studio)
         assertTrue("if (editIndex >= 0) onReplaceExisting(editIndex, dataUrl, h) else onInsert(dataUrl, h)" in studio)
@@ -68,7 +70,9 @@ class V76_6StudioSplitMultiImageTest {
 
     @Test
     fun `split to separate questions clones the source question`() {
-        assertTrue("window.__qmfSplitQuestion" in dialog)
+        // V100 — استودیوی تصویر (و مسیرِ تفکیکِ آن) از پنجرهٔ چاپ با حذفِ
+        // «آزمون‌ساز چاپی» رفت؛ پلِ صفحه می‌ماند و در بیلدرِ بومی استفاده می‌شود.
+        assertFalse("window.__qmfSplitQuestion" in dialog)
         assertTrue("""window.__qmfSplitQuestion = function (qid, b64Items) {""" in assetText)
         // عین رفتار استودیو: کپیِ ساختار، متن خالی، یک تصویر، درج بعد از سؤال مبدا
         assertTrue("var cl = JSON.parse(JSON.stringify(src));" in assetText)

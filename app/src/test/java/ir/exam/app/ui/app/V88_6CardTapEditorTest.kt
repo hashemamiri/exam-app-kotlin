@@ -5,8 +5,11 @@ import org.junit.Test
 import java.io.File
 
 /**
- * V88.6 — ویرایشگرِ بومی فقط با لمسِ عمدیِ کارت باز می‌شود، و سرصفحهٔ کارت
- * مثلِ آزمون‌سازِ آنلاین کوتاه است.
+ * V88.6 — سرصفحهٔ کارت مثلِ آزمون‌سازِ آنلاین کوتاه است و رفتارِ صفحه
+ * بدونِ میزبانِ بومی امن می‌ماند.
+ *
+ * V100 — دو تستِ «لمسِ عمدیِ کارت» و «ورودی‌ها مسیرِ خودشان» با حذفِ
+ * شنوندهٔ pointerup روی کارت‌های HTML (آزمون‌سازِ چاپی) حذف شدند.
  */
 class V88_6CardTapEditorTest {
 
@@ -26,20 +29,6 @@ class V88_6CardTapEditorTest {
         assertTrue(at > 0)
         val head = asset.substring(at, at + 700)
         assertTrue("openQuestionId نباید ویرایشگر را باز کند", "ExamPrintNative.openQuestion" !in head)
-    }
-
-    @Test
-    fun `a deliberate tap on the card opens it`() {
-        // V88.8 — لمس، خودِ کارت را باز می‌کند (accordion)، نه پنجرهٔ بومی را.
-        assertTrue("window.__qmfOpenCard(qid)" in asset)
-        assertTrue("t.closest('#questionsContainer .question-card')" in asset)
-    }
-
-    @Test
-    fun `typing, tools and figures keep their own behaviour`() {
-        assertTrue(
-            "t.closest('input, textarea, select, button, .q-tools, .interactive-figure, .qmf-fig')" in asset
-        )
     }
 
     @Test

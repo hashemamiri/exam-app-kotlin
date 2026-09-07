@@ -28,6 +28,7 @@ class V82_0FormulaBridgeAndEditTest {
     private val assetText by lazy { src("app/src/main/assets/print/exam_print.html") }
     private val host by lazy { src("app/src/main/java/ir/exam/app/ui/printing/ExamFigureToolHost.kt") }
     private val dialog by lazy { src("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt") }
+    private val builder by lazy { src("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
 
     // ---------- ۱) فرمول هم پل دارد ----------
 
@@ -48,11 +49,12 @@ class V82_0FormulaBridgeAndEditTest {
 
     @Test
     fun `the formula window reuses the existing native editor`() {
-        assertTrue("FormulaHostDialog(" in dialog)
-        assertTrue("import ir.exam.app.ui.math.FormulaHostDialog" in dialog)
-        // قرارداد آن متن‌محور است، نه FigureSpec
-        assertTrue("__qmfQuestionText" in dialog)
-        assertTrue("__qmfSetQuestionText" in dialog)
+        // V100 — ویرایشگرِ فرمول از پنجرهٔ چاپ با حذفِ «آزمون‌ساز چاپی»
+        // رفت؛ حالا فقط آزمون‌سازِ بومی میزبانش است. پل‌های صفحه می‌مانند.
+        assertFalse("FormulaHostDialog(" in dialog)
+        assertTrue("FormulaHostDialog(" in builder)
+        assertTrue("__qmfQuestionText" in assetText)
+        assertTrue("__qmfSetQuestionText" in assetText)
     }
 
     @Test

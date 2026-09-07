@@ -111,8 +111,10 @@ class V86_9RealPreviewAndPrintTest {
     @Test
     fun `that window carries both the student and the teacher print buttons`() {
         // V87.4 — نام‌ها به خواستهٔ کاربر عوض شدند؛ مقصدِ پل همان است.
-        assertTrue("چاپ آزمون" in dialog)
-        assertTrue("چاپ با کلید" in dialog)
+        // V100 — منویِ چاپِ بومی (برچسب‌های «چاپ آزمون»/«چاپ با کلید») با حذفِ
+        // «آزمون‌ساز چاپی» از پنجرهٔ چاپ رفت؛ چاپ از مرکز چاپ مستقیم می‌آید.
+        assertFalse("چاپ آزمون" in dialog)
+        assertFalse("چاپ با کلید" in dialog)
         assertTrue("printStudent()" in dialog)
         assertTrue("printTeacher()" in dialog)
     }

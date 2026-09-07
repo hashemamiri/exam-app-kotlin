@@ -20,18 +20,16 @@ class V89_3PreviewAndTokensTest {
     private val dialog by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText()
     }
-    private val cards by lazy {
-        File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintQuestionCards.kt").readText()
-    }
     private val webview by lazy {
         File(root(), "app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt").readText()
     }
 
+    // V100 — wrapPrintPreviewHtml (پوششِ نمایشِ زنده) با حذفِ نمایشگرِ
+    // زندهٔ کارتِ بومی (آزمون‌ساز چاپی) از QuestionTextFieldWebView حذف شد.
     @Test
-    fun `the preview wrapper interpolates its body`() {
-        // `${'$'}body` یک `$body` لفظی می‌ساخت و همان زیرِ کادر دیده می‌شد
-        assertTrue("<body>\${body}</body>" in webview)
-        assertTrue("\${'\$'}body" !in webview)
+    fun `the live preview wrapper stays deleted`() {
+        assertTrue("wrapPrintPreviewHtml" !in webview)
+        assertTrue("PrintRichTextPreview" !in webview)
     }
 
     @Test
@@ -43,17 +41,8 @@ class V89_3PreviewAndTokensTest {
         assertTrue("text: String(q.text == null ? '' : q.text)," in asset)
     }
 
-    @Test
-    fun `editing switches back to the real text so nothing is lost`() {
-        // V89.7 — کادر به `TextFieldValue` رفت تا محلِ مکان‌نما را بدهد؛
-        // شرطِ «خوانا تا پیش از ویرایش» همان است.
-        // V89.8 — کادرِ متن به `QuestionTextWebSection` رفت که خودش اشیاء را
-        // درون‌خطی نشان می‌دهد، پس منطقِ «متنِ خوانا» دیگر آنجا لازم نیست.
-        // V90 — متن حالا حالتِ کنترل‌شده دارد و بعد از درجِ بیرونی هم‌گام می‌شود.
-        assertTrue("ir.exam.app.ui.builder.QuestionTextWebSection(" in cards)
-        assertTrue("text = text" in cards)
-        assertTrue("LaunchedEffect(detail.text)" in cards)
-    }
+    // V100 — «کادرِ متنِ خوانا/واقعی» (QuestionTextWebSection) در کارتِ بومی
+    // بود و با حذفِ «آزمون‌ساز چاپی» حذف شد.
 
     @Test
     fun `the drag accounts for the preview scale`() {
@@ -72,8 +61,6 @@ class V89_3PreviewAndTokensTest {
         assertTrue("window.__qmfShowPreview?window.__qmfShowPreview()" in dialog)
     }
 
-    @Test
-    fun `but the toggle stays for anything that relies on it`() {
-        assertTrue("window.togglePreviewWindow = function" in asset)
-    }
+    // V100 — `togglePreviewWindow` با حذفِ نوارِ HTML (آزمون‌ساز چاپی) از
+    // صفحه حذف شد؛ باز شدنِ پیش‌نمایش فقط از تزریقِ بومی (آیکن چشم).
 }

@@ -15,10 +15,12 @@ import org.junit.Test
 /**
  * V76.4 — پنجره‌های بومی آزمون‌ساز + هستهٔ بومی استودیوی تصویر:
  * ۱) شِمای تنظیمات سربرگ دقیقاً از خود فایل ۳۰ استخراج شده (۷ قالب/همهٔ فیلدها).
- * ۲) سه پنجرهٔ بومی در دیالوگ سیم‌کشی شده‌اند و پل‌های setFields/ExportJson/
- *    AddQuestionImage موجودند (NewQuestionTypeDialog در V90 حذف شد).
- * ۳) دوربین سؤال در asset به پل بومی می‌رود (با پشتیبانِ استودیوی کامل HTML).
- * ۴) هستهٔ استودیوی بومی: چرخش/قرینه/برش/اسکن(۱۸۵)/اندازه‌های S-M-L-∞/کیفیت ۹۲.
+ * ۲) بارگذاری‌کنندهٔ شِما asset را می‌خواند (برای آزمون‌سازِ بومی).
+ * ۳) هستهٔ استودیوی بومی: چرخش/قرینه/برش/اسکن(۱۸)/اندازه‌های S-M-L-∞/کیفیت ۹۲.
+ *
+ * V100 — دو تستِ «سیم‌کشیِ چهار پنجره در دیالوگ» و «دوربین سؤال به استودیو»
+ * با حذفِ کاملِ «آزمون‌ساز چاپی» از پنجرهٔ چاپ حذف شدند (استودیو و شِما
+ * همچنان در آزمون‌سازِ بومی کار می‌کنند).
  */
 class V76_4Builder30NativeWindowsTest {
     private fun root(): File = listOf(File("."), File("..")).first {
@@ -27,10 +29,8 @@ class V76_4Builder30NativeWindowsTest {
 
     private fun source(path: String) = File(root(), path).readText()
 
-    private val dialogSource by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt") }
     private val windowsSource by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamBuilder30Windows.kt") }
     private val studioSource by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt") }
-    private val assetText by lazy { File(root(), "app/src/main/assets/print/exam_print.html").readText() }
     private val schemaText by lazy { File(root(), "app/src/main/assets/print/header_settings_schema.json").readText() }
 
     @Test
@@ -58,27 +58,8 @@ class V76_4Builder30NativeWindowsTest {
         // loadHeaderSchema باید همان فایل asset را بخواند و ساختار معتبر بدهد
         assertTrue("loadHeaderSchema" in windowsSource)
         assertTrue("print/header_settings_schema.json" in windowsSource)
-        val reflected = HeaderSchema::class.java // کلاس‌های سرِایال قابل‌دسترس‌اند
+        val reflected = HeaderSchema::class.java // کلاس‌های سر_ایال قابل‌دسترس‌اند
         assertNotNull(reflected)
-    }
-
-    @Test
-    fun `dialog wires the four native windows`() {
-        // تنظیمات سربرگ: شِما + پیش‌خوانی مقادیر صفحه + اعمال با __qmfSetFields
-        assertTrue("loadHeaderSchema(context)" in dialogSource)
-        assertTrue("HeaderSettingsDialog(" in dialogSource)
-        assertTrue("window.__qmfExportJson" in dialogSource)
-        assertTrue("window.__qmfSetFields" in dialogSource)
-        assertTrue("parsePageFields(" in dialogSource)
-        // ذخیره: این جلسه + فایل JSON با SAF بومی
-        assertTrue("SaveExamDialog(" in dialogSource)
-        assertTrue("ActivityResultContracts.CreateDocument(\"application/json\")" in dialogSource)
-        assertTrue("safeExamFileName(" in dialogSource)
-        // بازکردن: پنجرهٔ خلاصه قبل از اعمال
-        assertTrue("OpenExamSummaryDialog(" in dialogSource)
-        assertTrue("pendingOpenText" in dialogSource)
-        // سوال جدید: از منویِ رادیالِ + با همان pickQuestionType فایل
-        assertTrue("pickQuestionType('" in dialogSource)
     }
 
     @Test
@@ -87,25 +68,11 @@ class V76_4Builder30NativeWindowsTest {
         for (label in listOf("سربرگ ۱ - قالب قبلی دانشگاه آزاد", "سربرگ ۷ - قالب وزارت آموزش و پرورش")) {
             assertTrue(label, label in schemaText)
         }
-        // V90 — شش نوعِ سؤال دیگر در این فایل نیستند؛ انتخابِ نوع از منویِ
-        // رادیالِ + (BuilderRadialMenuOverlay) می‌آید.
-    }
-
-    @Test
-    fun `camera button routes to the native image studio`() {
-        // asset: کلیک دوربین → پل بومی (V77.1: پشتیبانِ HTML حذف شد)
-        assertTrue("openImageStudio" in assetText)
-        assertFalse("window.__qmfOpenLegacyStudio" in assetText)
-        assertTrue("p.file.click(); } catch (err) {}" in assetText)
-        // Kotlin: پل + پنجرهٔ استودیو + درج با همان قرارداد
-        assertTrue("fun openImageStudio(questionId: String?)" in dialogSource)
-        assertTrue("ExamImageStudioDialog(" in dialogSource)
-        assertTrue("window.__qmfAddQuestionImage" in dialogSource)
     }
 
     @Test
     fun `native image studio core keeps the studio defaults`() {
-        // پیش‌فرض‌های عینِ استودیوی ۳۰: آستانهٔ ۱۸۵، کیفیت ۹۲، سایزها ۲۴۰/۴۲۰/۶۴۰/∞
+        // پیش‌فرض‌های عینِ استودیوی ۳۰: آستانهٔ ۱۸۵، کیفیت ۹۲، سایزها ۲۴۰/۴۲/۶۴۰/∞
         assertTrue("mutableStateOf(185)" in studioSource)
         assertTrue("mutableStateOf(92)" in studioSource)
         assertTrue("mutableStateOf(420)" in studioSource)
