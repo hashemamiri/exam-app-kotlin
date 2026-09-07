@@ -9,6 +9,8 @@ import java.io.File
  * V87.8 — `alert()` پنجرهٔ خامِ مرورگر را با نشانیِ exam-print.local نشان
  * می‌داد؛ پیام‌ها به اعلانِ بومیِ محوشونده منتقل شدند. همچنین رفعِ ابهامِ
  * scope در `AnimatedVisibility` که کامپایل را شکست.
+ * V100 — با حذفِ «آزمون‌ساز چاپی» دو پیامِ بارگذاری/فایل‌خوانی از صفحه
+ * رفتند و پلِ بومی از ۸ ورودی به ۵ رسید؛ پین‌ها به‌روزرسانی شدند.
  */
 class V87_8NativeToastTest {
 
@@ -25,15 +27,24 @@ class V87_8NativeToastTest {
 
     @Test
     fun `no informational alert is left in the page`() {
+        // V100 — سه پیامِ باقی‌مانده (بازیابیِ autosave و کادرِ سؤالِ فرمول)
+        // همچنان qmfToast می‌زنند نه alert.
         listOf(
             "آزمون ذخیره‌شده بازیابی شد.",
             "خطا در بازیابی آزمون.",
-            "آزمون با موفقیت بارگذاری شد.",
-            "خطا در خواندن فایل.",
             "ابتدا متن یک سؤال را باز کنید."
         ).forEach {
             assertTrue("این پیام هنوز alert است: $it", "alert('$it')" !in asset)
             assertTrue("این پیام به toast نرفت: $it", "qmfToast('$it')" in asset)
+        }
+        // V100 — دو پیامِ دیگر با حذفِ جریانِ بارگذاری/فایل‌خوانی از صفحه
+        // رفتند و نباید برگردند.
+        listOf(
+            "آزمون با موفقیت بارگذاری شد.",
+            "خطا در خواندن فایل."
+        ).forEach {
+            assertTrue("پیامِ حذف‌شده برگشته: $it", "qmfToast('$it')" !in asset)
+            assertTrue("پیامِ حذف‌شده برگشته: $it", "alert('$it')" !in asset)
         }
     }
 
@@ -68,9 +79,11 @@ class V87_8NativeToastTest {
         val params = Regex("private val (\\w+)\\s*:")
             .findAll(dialog.substringAfter("private class ExamPrintBridge(").substringBefore("\n) {"))
             .map { it.groupValues[1] }.toList()
-        // V88.3 — عددِ سفت‌شده با هر پلِ تازه می‌شکست (V88.1 هشتمی را افزود).
-        // سنجهٔ درست «چند تا» نیست، «همه داده شده‌اند» است.
-        assertTrue("پلِ بومی باید دستِ‌کم هفت ورودی داشته باشد", params.size >= 7)
+        // V88.3 — عددِ سفت‌شده با هر پلِ تازه می‌شکست. سنجهٔ درست «چند تا»
+        // نیست، «همه داده شده‌اند» است.
+        // V100 — با حذفِ «آزمون‌ساز چاپی» پل از ۸ ورودی به ۵ رسید
+        // (onPrint/onError/onEditFigureTool/onToast/onPreviewClosed).
+        assertTrue("پلِ بومی باید دستِ‌کم پنج ورودی داشته باشد", params.size >= 5)
         assertTrue("onToast" in params)
         val call = dialog.substringAfter("ExamPrintBridge(").substringBefore("\"ExamPrintNative\"")
         params.forEach { assertTrue("آرگومانِ $it داده نشده", "$it = " in call) }
