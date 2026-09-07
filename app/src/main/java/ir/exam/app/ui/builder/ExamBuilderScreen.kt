@@ -148,6 +148,12 @@ fun ExamBuilderScreen(
     var printPreviewOf by remember { mutableStateOf<ir.exam.app.domain.model.OfficialExamPrintable?>(null) }
     var printInitialPreview by rememberSaveable { mutableStateOf(false) }
     var printInitialMode by rememberSaveable { mutableStateOf<String?>(null) }
+    // V102 — چاپِ بومی از آزمون‌ساز حالا بدون‌صفحه است (همان الگوی بخشِ چاپ):
+    // پنجرهٔ بدون‌هدر دیگر باز نمی‌شود و کارت‌های ویرایش پشتِ پنلِ چاپ نمی‌مانند.
+    var printStatus by remember { mutableStateOf<String?>(null) }
+    val headlessPrinter = remember(context) {
+        ir.exam.app.ui.printing.HeadlessExamPrinter(context.applicationContext)
+    }
     var showPrintActionMenu by rememberSaveable { mutableStateOf(false) }
     val builderContext = androidx.compose.ui.platform.LocalContext.current
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -205,6 +211,10 @@ fun ExamBuilderScreen(
             noticeSnackbar.showSnackbar(message)
             viewModel.clearNotice()
         }
+    }
+    // V102 — وضعیتِ چاپِ بدون‌صفحه از همین snackbar نمایش داده می‌شود.
+    LaunchedEffect(printStatus) {
+        printStatus?.let { noticeSnackbar.showSnackbar(it) }
     }
 
     Scaffold(
@@ -288,13 +298,19 @@ fun ExamBuilderScreen(
                                     onClick = {
                                         showPrintActionMenu = false
                                         val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
-                                        printInitialPreview = false
-                                        printInitialMode = "student"
-                                        printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
-                                            title = state.title.trim().ifBlank { "آزمون" },
-                                            subject = state.subject.trim(),
-                                            header = ir.exam.app.data.local.printHeaderOf(store.read()),
-                                            questions = state.questions
+                                        // V102 — چاپِ مستقیمِ بدون‌صفحه: پنلِ چاپِ اندروید
+                                        // مستقیم باز می‌شود (پنجرهٔ بدون‌هدر نمی‌آید).
+                                        printStatus = "در حال آماده‌سازی چاپ..."
+                                        headlessPrinter.print(
+                                            ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                                title = state.title.trim().ifBlank { "آزمون" },
+                                                subject = state.subject.trim(),
+                                                header = ir.exam.app.data.local.printHeaderOf(store.read()),
+                                                questions = state.questions
+                                            ),
+                                            "student",
+                                            onStatus = { msg -> printStatus = msg },
+                                            onFinished = { printStatus = null }
                                         )
                                     }
                                 )
@@ -304,13 +320,17 @@ fun ExamBuilderScreen(
                                     onClick = {
                                         showPrintActionMenu = false
                                         val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
-                                        printInitialPreview = false
-                                        printInitialMode = "teacher"
-                                        printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
-                                            title = state.title.trim().ifBlank { "آزمون" },
-                                            subject = state.subject.trim(),
-                                            header = ir.exam.app.data.local.printHeaderOf(store.read()),
-                                            questions = state.questions
+                                        printStatus = "در حال آماده‌سازی چاپ..."
+                                        headlessPrinter.print(
+                                            ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                                title = state.title.trim().ifBlank { "آزمون" },
+                                                subject = state.subject.trim(),
+                                                header = ir.exam.app.data.local.printHeaderOf(store.read()),
+                                                questions = state.questions
+                                            ),
+                                            "teacher",
+                                            onStatus = { msg -> printStatus = msg },
+                                            onFinished = { printStatus = null }
                                         )
                                     }
                                 )

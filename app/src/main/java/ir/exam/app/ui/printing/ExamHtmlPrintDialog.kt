@@ -24,13 +24,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -204,10 +211,34 @@ fun ExamHtmlPrintDialog(
             dismissOnClickOutside = false
         )
     ) {
-        // V100 — هدرِ قدیمی (بازگشت/عنوان/«سربرگ») با حذفِ آزمون‌سازِ چاپی
-        // کاربری نداشت: پیش‌نمایش و چاپِ مستقیم هر دو بدونِ هدر می‌شوند.
         Surface(Modifier.fillMaxSize(), color = Color(0xFF334155)) {
             Column(Modifier.fillMaxSize()) {
+                // V102 — هدرِ پنجره (عنوان + بستن): پنجرهٔ پیش‌نمایش دیگر
+                // «بدون هدر» نیست؛ کاربر عنوان برگه را می‌بیند و مستقیم
+                // می‌تواند پنجره را ببندد (با ذخیرهٔ چیدمان اشیاء).
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1E293B))
+                        .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        printable?.documentTitle ?: "پیش‌نمایش برگه",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { requestDismiss() }) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "بستن",
+                            tint = Color.White
+                        )
+                    }
+                }
                 Box(Modifier.fillMaxSize().weight(1f)) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
