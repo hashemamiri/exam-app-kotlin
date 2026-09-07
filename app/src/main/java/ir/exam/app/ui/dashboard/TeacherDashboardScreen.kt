@@ -43,7 +43,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ir.exam.app.core.printing.OfficialPrintController
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
@@ -58,7 +57,6 @@ fun TeacherDashboardScreen(
     onImportExam: (ExamImportDraft) -> Unit
 ) {
     val context = LocalContext.current
-    val printController = remember(context.applicationContext) { OfficialPrintController(context.applicationContext) }
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
     val exportLauncher = rememberLauncherForActivityResult(
@@ -95,13 +93,6 @@ fun TeacherDashboardScreen(
         state.importDraft?.let {
             onImportExam(it)
             viewModel.consumeImport()
-        }
-    }
-    LaunchedEffect(state.printExam) {
-        state.printExam?.let { printable ->
-            runCatching { printController.printExam(context, printable) }
-                .onFailure(viewModel::reportError)
-            viewModel.consumePrint()
         }
     }
     PullToRefreshBox(

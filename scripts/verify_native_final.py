@@ -1,30 +1,30 @@
 #!/usr/bin/env python3
-"""Fast, offline guardrails for the current exam print renderer.
+"""Fast offline guardrails for the all-native exam PDF pipeline.
 
-The retired document editor and print-layout compatibility store deliberately do
-not belong to this architecture.  This check keeps CI focused on the active
-renderer, preview, direct-print and header contracts instead of historical
-source snapshots.
+Preview and Android printing must consume one immutable native PDF.  The only
+permitted WebView is FormulaHostDialog / formula_editor/formula.html.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ROOT / "app/src/main"
-PRINT_ASSETS = MAIN / "assets/print"
-RENDERER = PRINT_ASSETS / "exam_print_renderer.html"
-DIALOG = MAIN / "java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt"
-NATIVE_MEDIA = MAIN / "java/ir/exam/app/ui/printing/ExamPrintAssetRenderer.kt"
-HEADER_SETTINGS = MAIN / "java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"
-PDF_ENGINE = MAIN / "java/ir/exam/app/core/printing/OfficialPdfPrintAdapter.kt"
-PDF_FIGURE_METRICS = MAIN / "java/ir/exam/app/core/printing/PrintFigureMetrics.kt"
-PDF_TEXT_SPANS = MAIN / "java/ir/exam/app/core/printing/PrintTextSpanSegments.kt"
-SCHEMA = PRINT_ASSETS / "header_settings_schema.json"
+KOTLIN = MAIN / "java"
+PRINT = KOTLIN / "ir/exam/app/ui/printing"
+CORE_PRINT = KOTLIN / "ir/exam/app/core/printing"
+ASSETS = MAIN / "assets"
+SCHEMA = ASSETS / "print/header_settings_schema.json"
+
+PDF_DOCUMENT = PRINT / "NativeExamPdfDocument.kt"
+PDF_PREVIEW = PRINT / "NativeExamPdfPreviewDialog.kt"
+PDF_ENGINE = CORE_PRINT / "OfficialPdfPrintAdapter.kt"
+PDF_LAYOUT_STATE = CORE_PRINT / "PrintPreviewLayoutCodec.kt"
+PDF_IMAGES = CORE_PRINT / "OfficialExamImageLoader.kt"
+HEADER_SETTINGS = PRINT / "PrintHeaderSettings.kt"
 
 errors: list[str] = []
 
@@ -42,83 +42,80 @@ def read(path: Path) -> str:
         return ""
 
 
-# Retired files must not silently return.
-for relative in (
+# Both the older document editor and every print-specific WebView asset/host are
+# retired.  Keeping this list explicit prevents a second renderer from returning.
+retired_files = (
     "app/src/main/java/ir/exam/app/ui/printing/ExamDocumentEditorScreen.kt",
     "app/src/main/java/ir/exam/app/core/printing/WordPageLayout.kt",
     "app/src/main/java/ir/exam/app/data/local/PrintLayoutStore.kt",
     "app/src/main/java/ir/exam/app/ui/printing/ExamBuilder30Windows.kt",
+    "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt",
+    "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt",
+    "app/src/main/java/ir/exam/app/ui/printing/ExamPrintAssetRenderer.kt",
+    "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlImageInliner.kt",
+    "app/src/main/java/ir/exam/app/ui/builder/ExamPrintPreview.kt",
+    "app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt",
     "app/src/main/assets/print/exam_print.html",
+    "app/src/main/assets/print/exam_print_renderer.html",
     "app/src/main/assets/print/math_editor.html",
-):
+)
+for relative in retired_files:
     require(not (ROOT / relative).exists(), f"retired file returned: {relative}")
 
-require(RENDERER.is_file(), "renderer asset is missing")
-if RENDERER.is_file():
-    renderer = read(RENDERER)
-    require(RENDERER.stat().st_size < 100_000, "renderer asset is unexpectedly large")
-    for marker in (
-        "window.setExamData = setExamData;",
-        "window.printStudent = function",
-        "window.printTeacher = function",
-        "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure};",
-        "@page{size:A4",
-        "function buildHeader()",
-        "function requestPrint(mode)",
-    ):
-        require(marker in renderer, f"renderer contract marker missing: {marker}")
-    for forbidden in (
-        "<iframe",
-        "<textarea",
-        "contenteditable",
-        "localstorage",
-        "math_editor.html",
-        "rendereditor",
-        "addquestion",
-        "__qmf",
-        "innerhtml",
-    ):
-        require(forbidden not in renderer.lower(), f"retired authoring code found in renderer: {forbidden}")
-    external_urls = re.findall(r"https?://([^/'\"\s<]+)", renderer, flags=re.I)
-    if external_urls:
-        errors.append(f"renderer has an external URL: {external_urls[0]}")
+for path in (PDF_DOCUMENT, PDF_PREVIEW, PDF_ENGINE, PDF_LAYOUT_STATE, PDF_IMAGES, HEADER_SETTINGS, SCHEMA):
+    require(path.is_file(), f"active native print file missing: {path.relative_to(ROOT)}")
 
-# Kotlin host must point at the new asset and retain the active bridge surface.
-dialog = read(DIALOG)
+pdf_document = read(PDF_DOCUMENT)
 for marker in (
-    'MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"',
-    '"ExamPrintBridge"',
-    "fun renderFormula",
-    "fun renderFigure",
-    "ExamPrintRenderer.layoutSnapshot",
-    "ExamPrintRenderer.showPreview",
-    "ExamPrintRenderer.replaceFigure",
-    "internal class HeadlessExamPrinter",
-    "webView = configuredWebView",
+    "NativeExamPdfDocumentFactory",
+    "PdfDocument",
+    "NativeExamPdfPrintAdapter",
+    "FileInputStream(document.pdfFile)",
+    "OfficialExamImageLoader.load",
+    "PrintAttributes.MediaSize.ISO_A4",
+    # شکل در چند page crop ممکن است بریده شود؛ geometry کامل باید بماند.
+    "flowBounds",
+    "canResize",
 ):
-    require(marker in dialog, f"print host marker missing: {marker}")
-for forbidden in ("ExamPrintNative", "__qmf", "qmf-print-mode", "math_editor.html", "exam_print.html"):
-    require(forbidden not in dialog, f"retired print host marker found: {forbidden}")
+    require(marker in pdf_document, f"shared native PDF contract missing: {marker}")
+for forbidden in ("WebView", "android.webkit", "createPrintDocumentAdapter", "ExamHtml"):
+    require(forbidden not in pdf_document, f"retired web-print code in native PDF document: {forbidden}")
 
-native_media = read(NATIVE_MEDIA)
-for marker in ("NativeMathSvgRenderer", "FigureSvgRenderer", "AtlasBitmapRenderer", "data:image/svg+xml;base64"):
-    require(marker in native_media, f"native media renderer marker missing: {marker}")
+pdf_preview = read(PDF_PREVIEW)
+for marker in (
+    "PdfRenderer",
+    "NativeExamPdfDocumentFactory.create",
+    "NativeExamPdfPrintAdapter(documentToPrint",
+    "NativePdfInteractionOverlay",
+    "detectDragGestures",
+    "detectTapGestures",
+    "PrintPreviewLayoutCodec.updateFigure",
+    "ExamFigureToolHost",
+    # هیچ gesture نباید از bounds crop‌شدهٔ صفحه به‌عنوان شکل کامل استفاده کند.
+    "target.flowBounds",
+    "figure.canResize",
+    "boundedHorizontally",
+):
+    require(marker in pdf_preview, f"native preview/gesture contract missing: {marker}")
+for forbidden in ("WebView", "AndroidView", "evaluateJavascript", "ExamHtml"):
+    require(forbidden not in pdf_preview, f"retired web-preview code in native preview: {forbidden}")
 
-header_settings = read(HEADER_SETTINGS)
-for marker in ("data class HeaderSchema", "fun HeaderSettingsDialog(", "print/header_settings_schema.json"):
-    require(marker in header_settings, f"native header-settings marker missing: {marker}")
-
-# The native PDF route is still used for official output and must keep its A4,
-# formula and figure capabilities independently of the retired editor engine.
 pdf_engine = read(PDF_ENGINE)
 for marker in (
     "class OfficialPrintLayoutEngine",
     "fun layoutExam(printable: OfficialExamPrintable)",
-    "fun layoutReport(report: OfficialGradeReportPrintable)",
+    "fun layoutExam(printable: OfficialExamPrintable, firstContentTop: Float)",
     "fun drawFlowWindow(",
     "NativeMathCanvasRenderer",
     "FigureSvgRenderer",
     "AtlasBitmapRenderer",
+    "PrintPreviewLayoutCodec.decode",
+    "InlineFigureMark",
+    "imageHeightMm",
+    # شکل آزاد ممکن است از slot و page اولیه‌اش پایین‌تر کشیده شده باشد.
+    "freeImageIntersects",
+    "total = maxOf(total, imageRect.bottom)",
+    "separatorQuestionIndex",
 ):
     require(marker in pdf_engine, f"native PDF engine marker missing: {marker}")
 for retired in (
@@ -132,16 +129,43 @@ for retired in (
 ):
     require(retired not in pdf_engine, f"retired PDF editor API found: {retired}")
 
-pdf_figure_metrics = read(PDF_FIGURE_METRICS)
-for marker in ("object PrintFigureMetrics", "fun figureWidthMm", "fun figurePosMm", "coerceIn(MIN_WIDTH_MM, MAX_WIDTH_MM)"):
-    require(marker in pdf_figure_metrics, f"native PDF figure metric marker missing: {marker}")
+layout_state = read(PDF_LAYOUT_STATE)
+for marker in ("NativePrintFigureLayout", "nativePdf", "fun decode", "fun encode", "fun snapshot"):
+    require(marker in layout_state, f"native interaction persistence marker missing: {marker}")
 
-pdf_text_spans = read(PDF_TEXT_SPANS)
-for marker in ("object PrintTextSpanSegments", "fun split(", "PrintTextSpan"):
-    require(marker in pdf_text_spans, f"native PDF text-span marker missing: {marker}")
+image_loader = read(PDF_IMAGES)
+for marker in ("PrivateImageLoader", '"https", "content", "file"', "allowHardware(false)"):
+    require(marker in image_loader, f"native private-image loading marker missing: {marker}")
 
-# Source-wide check for the removed route and compatibility layer.
+header_settings = read(HEADER_SETTINGS)
+for marker in ("data class HeaderSchema", "fun HeaderSettingsDialog(", "print/header_settings_schema.json"):
+    require(marker in header_settings, f"native header-settings marker missing: {marker}")
+
+# Formula editing is the single WebView exception.  No print/builder source may
+# import Android WebKit, and formula.html is the only shipped HTML document.
+web_imports = [
+    path.relative_to(ROOT).as_posix()
+    for path in KOTLIN.rglob("*.kt")
+    if "import android.webkit" in read(path)
+]
+require(
+    web_imports == ["app/src/main/java/ir/exam/app/ui/math/FormulaHostDialog.kt"],
+    f"unexpected Android WebKit import(s): {', '.join(web_imports) or 'none'}",
+)
+html_assets = [path.relative_to(ROOT).as_posix() for path in ASSETS.rglob("*.html")]
+require(
+    html_assets == ["app/src/main/assets/formula_editor/formula.html"],
+    f"unexpected HTML asset(s): {', '.join(html_assets) or 'none'}",
+)
+
+# Source-wide check for removed print route and old document-editor compatibility.
 retired_terms = (
+    "ExamHtmlPrint",
+    "ExamHtmlImageInliner",
+    "HeadlessExamPrinter",
+    "createExamPrintWebView",
+    "createPrintDocumentAdapter",
+    "exam_print_renderer.html",
     "PrintLayoutStore",
     "PrintLayoutMerger",
     "ExamDocumentEditorScreen",
@@ -161,7 +185,18 @@ for term in retired_terms:
     ]
     require(not offenders, f"retired source term {term} remains in: {', '.join(offenders)}")
 
-# Header schema stays the single source of field ids for active print settings.
+# آزمون فقط یک راه چاپ دارد: dashboard مسیر قدیمی را نگه نمی‌دارد و controller
+# فقط برای کارنامه است. Print Center و سازنده هر دو launcher مشترک را صدا می‌زنند.
+dashboard = read(KOTLIN / "ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt")
+dashboard_state = read(KOTLIN / "ir/exam/app/ui/dashboard/TeacherDashboardViewModel.kt")
+print_controller = read(CORE_PRINT / "OfficialPrintController.kt")
+print_center = read(PRINT / "ExamPrintCenterScreen.kt")
+require("OfficialPrintController" not in dashboard, "dashboard still exposes the retired exam print controller")
+require("preparePrint(" not in dashboard_state, "dashboard state still prepares a parallel exam print route")
+require("fun printExam" not in print_controller, "OfficialPrintController still renders exams in parallel")
+require("NativeExamPrintLauncher.print" in print_center, "Print Center does not use the shared native exam launcher")
+
+# Header schema stays the single source of saved header-field identifiers.
 try:
     schema = json.loads(read(SCHEMA))
     ids = [item.get("id") for item in schema.get("templates", [])]
@@ -174,12 +209,12 @@ except (json.JSONDecodeError, AttributeError) as exc:
     errors.append(f"invalid header schema: {exc}")
 
 if errors:
-    print("Print renderer verification: FAILED")
-    for error in errors:
-        print(f"- {error}")
+    print("Native PDF verification: FAILED")
+    for item in errors:
+        print(f"- {item}")
     sys.exit(1)
 
-print("Print renderer verification: PASS")
-print(f"- renderer: {RENDERER.stat().st_size} bytes")
-print("- retired document-editor and layout-store paths: absent")
-print("- preview, direct print, native math/figure rendering and header schema: present")
+print("Native PDF verification: PASS")
+print("- immutable A4 PDF: preview PdfRenderer + Print Framework adapter")
+print("- native figure/separator gestures and saved header schema: present")
+print("- only FormulaHostDialog/formula.html use WebView/HTML")

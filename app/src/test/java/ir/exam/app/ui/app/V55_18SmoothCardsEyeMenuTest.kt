@@ -42,22 +42,15 @@ class V55_18SmoothCardsEyeMenuTest {
     }
 
     @Test
-    fun `eye icon opens both previews independently via a menu`() {
+    fun `student eye preview remains separate and print preview uses shared native PDF`() {
         val editor = builder.substringAfter("private fun QuestionEditor(")
-        // V62.7 — منوی چشم حذف شد: چشم فقط پیش‌نمایش دانش‌آموزی را باز می‌کند.
         assertTrue("onStudentPreview" in editor)
         assertTrue("پیش‌نمایش دانش‌آموزی سؤال" in editor)
-        // V88.4 — «چیدمان و ظاهر چاپ» از آزمونِ آنلاین برداشته شد؛ همان
-        // کنترل‌ها اکنون در آزمون‌سازِ چاپی بومی‌اند.
-        // سنجه روی *کد* است نه کامنت: دکمه و Composableِ آن باید رفته باشند.
-        assertTrue("QuestionStyleControls(question" !in builder)
-        assertTrue("styleExpanded" !in builder)
-        assertTrue("پیش‌نمایش کامل A4" in builder)
-        assertTrue("onPreviewAll: () -> Unit" in builder)
-        assertTrue("onPreviewAll = { previewAll = true }" in builder)
-        // دو پیش‌نمایش state مستقل دارند؛ بستن یکی دیگری را باز نمی‌کند.
-        assertTrue("onDismiss = { previewQuestion = null }" in builder)
-        assertTrue("onDismiss = { previewAll = false }" in builder)
+        // پیش‌نمایش A4 قدیمیِ Compose حذف شده است؛ پیش‌نمایش چاپ فقط PDF مشترک است.
+        assertTrue("NativeExamPdfPreviewDialog(" in builder)
+        assertTrue("onFigLayouts = { viewModel.applyFigLayouts(it) }" in builder)
+        assertFalse("ExamPrintPreviewDialog(" in builder)
+        assertFalse("ExamHtmlPrintDialog(" in builder)
         assertFalse("VisibilityOff" in builder)
     }
 

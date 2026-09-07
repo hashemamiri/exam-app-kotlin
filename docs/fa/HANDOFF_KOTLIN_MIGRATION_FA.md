@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۶ — V91 رفع ایرادهای پیش‌نمایش و بازیابیِ آزمون‌ساز چاپی (۶ مورد)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۷ — V104 مهاجرت کامل پیش‌نمایش/چاپ آزمون به PDF بومی (حذف WebView چاپ)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -16906,3 +16906,117 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 - `FINAL_NATIVE_VERIFY=PASS`؛ ۶۷۸ پینِ کلِ ریپازیتوری بدونِ خطا.
 - jsdom (دو سناریوی عملکردی): بازگردانیِ `figLayoutsJson`/`sepExtraPx` در `normQ`، رندرِ شیءِ شناور + slot از دادهٔ تزریقی، اسنپ‌شاتِ درست، و «بازِ دومِ پنجره بدونِ ریست» — همه PASS.
 - `./gradlew :app:test` و APK: سمتِ کاربر.
+
+---
+
+## ۳۲۴) V100 تا V103 — ثبت پس‌نگر commitهای ۷ سپتامبر (بدون بخش هندآف در زمان خود)
+
+این commitها روی `main` هستند اما در زمان push بخشی در این هندآف نگرفتند؛ برای حفظ
+پیوستگی مستندات این‌جا ثبت می‌شوند (منبع: `git log` واقعی ریپو).
+
+```text
+b6ea0b0 … 5a99de3  V100 (۵ commit هم‌نام) — حذف کامل آزمون‌ساز چاپی + اصلاح پین‌ها + حافظهٔ R8 + صفحهٔ سفید چاپ
+e0d39ea            V101 — چاپ مستقیم بدون‌صفحه (Headless) + مدادِ نسخهٔ چاپی برای آزمون‌های آنلاین
+c9f79eb            V102 — چاپ بدون‌صفحه از بیلدر + هدر پیش‌نمایش + جابجایی خط در پیش‌نمایش مقیاس‌شده
+c957830            Revert V102 (بازگشت کامل)
+d5fc2ca            refactor(print): retire legacy editor and layout store
+                   → حذف exam_print.html / math_editor.html / ExamDocumentEditorScreen / PrintLayoutStore /
+                     WordPageLayout و ۵۸ تست قدیمی؛ افزودن exam_print_renderer.html (renderer HTML سبک)؛
+                     کوچک‌شدن verify_native_final.py از ~۴۴۰۰ به ۱۸۵ خط
+```
+
+نکته: یادداشت قبلی «شمارهٔ V100 دیگر استفاده نمی‌شود» عملاً رعایت نشد؛ شمارهٔ بعدی
+پس از این پچ **V105** است.
+
+---
+
+## ۳۲۵) V104 — PDF بومیِ واحد برای پیش‌نمایش و چاپ آزمون (پایان WebView چاپ)
+
+### خلاصه
+
+- پیش‌نمایش و چاپ آزمون به **یک فایل PDF A4 بومی و immutable** منتقل شد:
+  `NativeExamPdfDocumentFactory` آن را با `OfficialPrintLayoutEngine` می‌سازد،
+  `NativeExamPdfPreviewDialog` صفحه‌ها را با `android.graphics.pdf.PdfRenderer`
+  نشان می‌دهد و `NativeExamPdfPrintAdapter` **همان بایت‌ها** را به Android Print
+  Framework می‌دهد (renderer دوم وجود ندارد).
+- overlay بومی روی PDF: جابه‌جایی/تغییر اندازهٔ شکل، ویرایش دوضربه‌ای شکل با
+  `ExamFigureToolHost`، و تنظیم فاصلهٔ سؤال‌ها (`sepExtraPx`) — همه در draft پایدار
+  می‌شوند. شکلِ عبورکرده از page break با `bounds` + `flowBounds` کامل رسم و از هر
+  بخش قابل drag است؛ handle resize فقط روی بخش پایانی.
+- `PrintPreviewLayoutCodec` چیدمان پیکسلیِ قدیمی `{x,y,w,h,free}` را فقط هنگام
+  خواندن به میلی‌متر مهاجرت می‌دهد؛ ذخیره‌های جدید `nativePdf=true` دارند.
+- سربرگ هفت‌قالبی از `PrintHeaderStore` + `header_settings_schema.json` مستقیماً در
+  PDF رسم می‌شود؛ `HeaderSettingsDialog` قالب ذخیره‌شده را پیش‌انتخاب می‌کند.
+- تصاویر private/content/file با `OfficialExamImageLoader` (توکن‌دار) به Bitmap
+  می‌رسند.
+
+### حذف‌شده‌ها (قطعی)
+
+```text
+app/src/main/assets/print/exam_print_renderer.html      (renderer HTML موقتِ d5fc2ca)
+ui/printing/ExamHtmlPrintDialog.kt / ExamHtmlPrintPayload.kt / ExamHtmlImageInliner.kt
+ui/printing/ExamPrintAssetRenderer.kt
+ui/builder/ExamPrintPreview.kt
+ui/math/QuestionTextFieldWebView.kt          (→ QuestionEditorFieldController.kt)
+TeacherDashboardViewModel.preparePrint/consumePrint و route قدیمی چاپ از dashboard
+OfficialPrintController.printExam            (فقط چاپ کارنامه باقی ماند)
+```
+
+**تنها WebView مجاز در production:** `ui/math/FormulaHostDialog.kt` با asset محلی
+`formula_editor/formula.html`. `verify_native_final.py` این را قفل می‌کند.
+
+### فایل‌های جدید
+
+```text
+app/src/main/java/ir/exam/app/ui/printing/NativeExamPdfDocument.kt
+app/src/main/java/ir/exam/app/ui/printing/NativeExamPdfPreviewDialog.kt
+app/src/main/java/ir/exam/app/core/printing/OfficialExamImageLoader.kt
+app/src/main/java/ir/exam/app/core/printing/PrintPreviewLayoutCodec.kt
+app/src/main/java/ir/exam/app/ui/math/QuestionEditorFieldController.kt
+app/src/test/java/ir/exam/app/core/printing/PrintPreviewLayoutCodecTest.kt
+app/src/test/java/ir/exam/app/ui/app/NativeExamPdfContractTest.kt
+docs/fa/HANDOFF_NATIVE_PDF_V104_FA.md        (راهنمای مستقل و چک‌لیست دستگاه)
+```
+
+### نحوهٔ اعمال (مهم — درس این پچ)
+
+- پچ اصلی `V104_native_pdf_migration.patch` روی commit **c957830** ساخته شده بود،
+  نه روی HEAD (`d5fc2ca`)؛ `git apply` روی HEAD با ۲۵ خطا شکست می‌خورد و
+  `--3way` هم چهار فایلِ d5fc2ca (`exam_print_renderer.html`,
+  `ExamPrintAssetRenderer.kt`, دو تست) را زنده می‌گذاشت که با تست
+  `PrintRetirementCleanupTest` و verify جدید تضاد دارد.
+- راه‌حل: پچ در workspace روی c957830 اعمال، درختِ نتیجه با d5fc2ca مقایسه و
+  به‌صورت **rebased** (۳۶ فایل) تحویل شد. هیچ خط از d5fc2ca گم نشده؛ V104 خودش
+  همان پاک‌سازی را کامل‌تر انجام می‌دهد.
+- بلوک `V104:` در `text/CHANGELOG_FA.txt` به **ابتدای فایل** منتقل شد، چون
+  workflow دوازده سطر اولِ این فایل را به‌عنوان یادداشت درون‌برنامه‌ای انتشار
+  می‌فرستد (پچ اصلی آن را انتهای فایل گذاشته بود).
+
+### اعتبارسنجی در workspace (بدون Gradle/SDK)
+
+```text
+git apply --check روی c957830                 → OK
+verify_native_final.py (نسخهٔ V104)            → PASS
+اسکن Secret مطابق مرحلهٔ CI                     → PASS (693 tracked files)
+git diff --check                               → OK
+توازن {} و () در ۲۳ فایل Kotlin تغییرکرده        → OK
+ارجاع به کلاس/asset حذف‌شده در main/test         → صفر (به‌جز assertFalseهای عمدی)
+مسیرهای فایل در تست‌های خواننده                 → ۷۲۹ ارجاع، ۰ مفقود
+پین‌های تست‌های خواننده (شبیه‌ساز)              → ۵۰۱ پین؛ FAILهای باقی‌مانده همگی
+                                                 روی baseline هم یکسان‌اند (artifact شبیه‌ساز)
+compileDebugKotlin / testDebugUnitTest         → سمت CI کاربر (sandbox فاقد SDK/RAM کافی)
+```
+
+### عملیات
+
+```text
+SQL/Edge/Secret/Migration/Dependency جدید: ندارد
+پیش‌نیاز: d5fc2ca روی origin/main
+شمارهٔ نسخهٔ بعدی: V105
+```
+
+### چک‌لیست دستگاه
+
+مطابق `docs/fa/HANDOFF_NATIVE_PDF_V104_FA.md` (۶ گام: preview آزمون ترکیبی، move/resize
+شکل و ماندگاری، شکل عبورکرده از page break، خط آبی فاصله، یکی‌بودن چاپ با preview
+از Builder و Print Center، و کارکرد ویرایشگر فرمول به‌عنوان تنها WebView).

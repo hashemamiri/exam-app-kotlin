@@ -73,19 +73,26 @@ SUPABASE_ANON_KEY=YOUR_ANON_KEY
 - `PrintFigureMetrics.kt` و `PrintTextSpanSegments.kt`: دادهٔ اندازه/جای شکل و
   استایل متن را فقط از مدل domain به PDF می‌رسانند؛ موتور PDF به state یا ابزار
   رابط کاربری وابسته نیست.
-- `ExamHtmlPrintDialog.kt` و `exam_print_renderer.html`: موتور جداگانهٔ
-  پیش‌نمایش A4 و چاپ مستقیم. داده با `window.setExamData` وارد می‌شود و رندر
-  فرمول/شکل با رندررهای بومی به data URL امن تبدیل می‌شود.
+- `NativeExamPdfDocument.kt`: یک PDF A4 بومی و immutable را با
+  `OfficialPrintLayoutEngine` می‌سازد. `NativeExamPdfPrintAdapter` دقیقاً همان
+  فایل را به Android Print Framework می‌دهد؛ مسیر چاپ آزمون هیچ WebView یا
+  HTML ندارد.
+- `NativeExamPdfPreviewDialog.kt`: صفحه‌های همان فایل را با `PdfRenderer`
+  نمایش می‌دهد. overlay کاملاً Native روی PDF، gesture جابه‌جایی/تغییر اندازهٔ
+  شکل، فاصلهٔ بین سؤال‌ها و بازکردن ابزار بومی ویرایش شکل را نگه می‌دارد.
+- `PrintPreviewLayoutCodec.kt`: وضعیت پایدار شکل‌ها را با میلی‌متر PDF ذخیره و
+  چیدمان‌های پیکسلیِ قدیمی را فقط هنگام خواندن به قالب جدید منتقل می‌کند.
 - `PrintHeaderSettings.kt` و `header_settings_schema.json`: تنظیمات مشترک هفت
-  قالب سربرگ در سازندهٔ بومی و برگهٔ چاپ.
+  قالب سربرگ در سازندهٔ بومی و renderer PDF بومی.
 - `OfficialPrintModels.kt` و `PrintableFromDrafts.kt`: مدل canonical چاپ و
   تبدیل دادهٔ سازندهٔ بومی به آن مدل.
 
 قانون اصلی: ساخت و ویرایش آزمون فقط در سازندهٔ بومی انجام می‌شود. مسیر چاپ
-نه مسیر ویرایش سندِ جداگانه دارد و نه لایهٔ سازگارسازیِ layout ذخیره‌شده؛ فقط
-مدل canonical را به PDF رسمی یا موتور پیش‌نمایش/چاپ می‌دهد. فونت فارسی PDF
-`B Nazanin` از `assets/fonts/bnazanin.ttf` بارگذاری می‌شود و در نبود آن
-وزیرمتن استفاده می‌شود.
+نه renderer موازی و نه ویرایشگر سندِ جداگانه دارد؛ فقط مدل canonical را یک‌بار
+به PDF رسمی می‌دهد و preview/Print Framework همان فایل را مصرف می‌کنند.
+`PrintPreviewLayoutCodec` صرفاً دادهٔ ذخیره‌شدهٔ قدیمی را هنگام خواندن مهاجرت
+می‌دهد و renderer تازه‌ای نیست. فونت فارسی PDF `B Nazanin` از
+`assets/fonts/bnazanin.ttf` بارگذاری می‌شود و در نبود آن وزیرمتن استفاده می‌شود.
 
 ## مرحله ۸ — تصحیح، بازخورد و گزارش
 - `AutoGrader`: قرارداد تصحیح خودکار به‌ازای هر نوع سؤال.

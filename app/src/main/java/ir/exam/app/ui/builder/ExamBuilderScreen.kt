@@ -144,10 +144,10 @@ fun ExamBuilderScreen(
     var askPrintName by rememberSaveable { mutableStateOf(false) }
     var printExamName by rememberSaveable { mutableStateOf("") }
     var printSavedNote by remember { mutableStateOf<String?>(null) }
-    // V86.9 / V97 — متغیرهای کنترل پیش‌نمایش مستقیم و چاپ از دکمه‌های شناور
+    // پیش‌نمایش و چاپ فقط از PDF بومی مشترک استفاده می‌کنند.
     var printPreviewOf by remember { mutableStateOf<ir.exam.app.domain.model.OfficialExamPrintable?>(null) }
-    var printInitialPreview by rememberSaveable { mutableStateOf(false) }
-    var printInitialMode by rememberSaveable { mutableStateOf<String?>(null) }
+    var printHeaderFields by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var nativePrintBusy by remember { mutableStateOf(false) }
     var showPrintActionMenu by rememberSaveable { mutableStateOf(false) }
     val builderContext = androidx.compose.ui.platform.LocalContext.current
     var expandedQuestionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -155,8 +155,6 @@ fun ExamBuilderScreen(
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
     // همان انگشت کنترل کند و کارت سؤال زیر انگشت نلغزد.
     var innerReorderActive by remember { mutableStateOf(false) }
-    var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
-    var previewAll by remember { mutableStateOf(false) }
     // V62.7 — پیش‌نمایش دانش‌آموزی سؤال (شماره + سؤال) از آیکن چشم.
     var studentPreview by remember { mutableStateOf<Pair<Int, QuestionDraft>?>(null) }
     val questionPrefaceCount = 2 + if (state.importedBy != null) 1 else 0
@@ -245,12 +243,12 @@ fun ExamBuilderScreen(
                         FloatingActionButton(
                             onClick = {
                                 val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
-                                printInitialPreview = true
-                                printInitialMode = null
+                                val fields = store.read()
+                                printHeaderFields = fields
                                 printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
                                     title = state.title.trim().ifBlank { "آزمون" },
                                     subject = state.subject.trim(),
-                                    header = ir.exam.app.data.local.printHeaderOf(store.read()),
+                                    header = ir.exam.app.data.local.printHeaderOf(fields),
                                     questions = state.questions
                                 )
                             },
@@ -287,15 +285,21 @@ fun ExamBuilderScreen(
                                     leadingIcon = { Icon(Icons.Outlined.Print, contentDescription = null) },
                                     onClick = {
                                         showPrintActionMenu = false
-                                        val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
-                                        printInitialPreview = false
-                                        printInitialMode = "student"
-                                        printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
-                                            title = state.title.trim().ifBlank { "آزمون" },
-                                            subject = state.subject.trim(),
-                                            header = ir.exam.app.data.local.printHeaderOf(store.read()),
-                                            questions = state.questions
-                                        )
+                                        scope.launch {
+                                            nativePrintBusy = true
+                                            val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
+                                            val fields = store.read()
+                                            val source = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                                title = state.title.trim().ifBlank { "آزمون" },
+                                                subject = state.subject.trim(),
+                                                header = ir.exam.app.data.local.printHeaderOf(fields),
+                                                questions = state.questions
+                                            )
+                                            ir.exam.app.ui.printing.NativeExamPrintLauncher
+                                                .print(builderContext, source, fields, "student")
+                                                .onFailure { printSavedNote = "چاپ ناموفق بود: ${it.message.orEmpty().take(120)}" }
+                                            nativePrintBusy = false
+                                        }
                                     }
                                 )
                                 DropdownMenuItem(
@@ -303,15 +307,22 @@ fun ExamBuilderScreen(
                                     leadingIcon = { Icon(Icons.Outlined.CheckCircle, contentDescription = null) },
                                     onClick = {
                                         showPrintActionMenu = false
-                                        val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
-                                        printInitialPreview = false
-                                        printInitialMode = "teacher"
-                                        printPreviewOf = ir.exam.app.domain.model.PrintableFromDrafts.build(
-                                            title = state.title.trim().ifBlank { "آزمون" },
-                                            subject = state.subject.trim(),
-                                            header = ir.exam.app.data.local.printHeaderOf(store.read()),
-                                            questions = state.questions
-                                        )
+                                        scope.launch {
+                                            nativePrintBusy = true
+                                            val store = ir.exam.app.data.local.PrintHeaderStore(builderContext)
+                                            val fields = store.read()
+                                            val source = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                                                title = state.title.trim().ifBlank { "آزمون" },
+                                                subject = state.subject.trim(),
+                                                header = ir.exam.app.data.local.printHeaderOf(fields),
+                                                questions = state.questions,
+                                                includeAnswerKey = true
+                                            )
+                                            ir.exam.app.ui.printing.NativeExamPrintLauncher
+                                                .print(builderContext, source, fields, "teacher")
+                                                .onFailure { printSavedNote = "چاپ ناموفق بود: ${it.message.orEmpty().take(120)}" }
+                                            nativePrintBusy = false
+                                        }
                                     }
                                 )
                             }
@@ -455,8 +466,6 @@ fun ExamBuilderScreen(
                     onItemDragStarted = { innerReorderActive = true },
                     onItemDragEnded = { innerReorderActive = false },
                     viewModel = viewModel,
-                    onPreview = { previewQuestion = question },
-                    onPreviewAll = { previewAll = true },
                     // V62.7 — چشم: پیش‌نمایش دانش‌آموزی همین سؤال.
                     onStudentPreview = { studentPreview = index to question }
                 )
@@ -533,9 +542,6 @@ fun ExamBuilderScreen(
         )
     }
 
-    previewQuestion?.let { question ->
-        QuestionPrintPreviewDialog(question = question, onDismiss = { previewQuestion = null })
-    }
     // V62.7 — پیش‌نمایش دانش‌آموزی از آیکن چشم کارت سؤال.
     studentPreview?.let { (index, question) ->
         StudentQuestionPreviewDialog(
@@ -543,9 +549,6 @@ fun ExamBuilderScreen(
             number = index + 1,
             onDismiss = { studentPreview = null }
         )
-    }
-    if (previewAll) {
-        ExamPrintPreviewDialog(state = state, onDismiss = { previewAll = false })
     }
 
     // V86.8 — نام‌گذاری و ذخیرهٔ محلیِ آزمونِ چاپی.
@@ -597,20 +600,19 @@ fun ExamBuilderScreen(
         )
     }
 
-    // V86.9 / V97 — همان پنجرهٔ آزمون‌سازِ چاپی / پیش‌نمایش مستقیم / چاپ مستقیم.
+    // پیش‌نمایش همان PDF A4 است که دکمهٔ «چاپ» تحویل Print Framework می‌دهد.
     printPreviewOf?.let { printable ->
-        ir.exam.app.ui.printing.ExamHtmlPrintDialog(
+        ir.exam.app.ui.printing.NativeExamPdfPreviewDialog(
             printable = printable,
-            initialPreview = printInitialPreview,
-            initialPrintMode = printInitialMode,
-            onDismiss = {
-                printPreviewOf = null
-                printInitialPreview = false
-                printInitialMode = null
-            },
-            // V99.2 — چیدمانِ اشیاء در پیش‌نمایش به وضعیتِ بومی برمی‌گردد
-            // تا موقعیت‌ها در بازِ بعدی (و در چاپ) ریست نشوند.
-            onFigLayouts = { viewModel.applyFigLayouts(it) }
+            headerFields = printHeaderFields,
+            onDismiss = { printPreviewOf = null },
+            // gestureهای شکل/جداکننده در وضعیت پایدار draft نوشته می‌شوند.
+            onFigLayouts = { viewModel.applyFigLayouts(it) },
+            onQuestionTextChanged = { questionIndex, newText ->
+                state.questions.getOrNull(questionIndex)?.let { question ->
+                    viewModel.updateText(question.id, newText)
+                }
+            }
         )
     }
 
@@ -925,16 +927,13 @@ private fun QuestionEditor(
     onItemDragStarted: () -> Unit,
     onItemDragEnded: () -> Unit,
     viewModel: ExamBuilderViewModel,
-    onPreview: () -> Unit,
-    // V55.18 — آیکن چشم علاوه بر پیش‌نمایش همین سؤال، پیش‌نمایش کامل A4 را هم باز می‌کند.
-    onPreviewAll: () -> Unit,
     // V62.7 — چشم فقط پیش‌نمایش دانش‌آموزی سؤال را باز می‌کند.
     onStudentPreview: () -> Unit = {}
 ) {
     var formulaTarget by remember(question.id) { mutableStateOf<FormulaTarget?>(null) }
     var studioOpen by remember(question.id) { mutableStateOf(false) }
     var figureTarget by remember(question.id) { mutableStateOf<FigureTarget?>(null) }
-    // V53.1 — کنترلر کادر متن سؤال WebView و هدف ویرایشگر Native جدول.
+    // کنترلر کادر متن سؤال و هدف ویرایشگرهای Native.
     val questionFieldController = remember(question.id) { QuestionEditorFieldController() }
     var tableTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
     // V53.2 — هدف ویرایشگر Native جدول تناوبی.
@@ -942,8 +941,8 @@ private fun QuestionEditor(
     // V53.3 — هدف ویرایشگر Native آناتومی/فیزیک/شیمی.
     var atlasTarget by remember(question.id) { mutableStateOf<AtlasTarget?>(null) }
     // V53.3 — وقتی true، خروجی ویرایشگر جایگزین توکن dblclick می‌شود نه درج تازه.
-    var editingWebToken by remember(question.id) { mutableStateOf(false) }
-    // V53.4 — پنجرهٔ تمام‌صفحهٔ فرمول WebView برای متن سؤال.
+    var editingInlineToken by remember(question.id) { mutableStateOf(false) }
+    // پنجرهٔ تمام‌صفحهٔ فرمول برای متن سؤال.
     var formulaHost by remember(question.id) { mutableStateOf<FormulaHostTarget?>(null) }
     var scoreText by remember(question.id) {
         mutableStateOf(if (question.score == 1.0) "" else compactScore(question.score))
@@ -1111,9 +1110,9 @@ private fun QuestionEditor(
                     formulaHost = FormulaHostTarget(text, selStart, selEnd)
                 },
                 onEditFigureToken = { rawJson, _, _, _ ->
-                    // V53.3 — دوبار-کلیک توکن داخل WebView: بازکردن ویرایشگر Native همان نوع.
+                    // لمس دوم توکن: بازکردن ویرایشگر Native همان نوع.
                     FigureSpec.parse(rawJson)?.let { spec ->
-                        editingWebToken = true
+                        editingInlineToken = true
                         when (spec.kind) {
                             "t" -> tableTarget = TableTarget(initialSpec = spec)
                             "p" -> periodicTarget = TableTarget(initialSpec = spec)
@@ -1130,7 +1129,7 @@ private fun QuestionEditor(
                                 kind = if (GRAPH_FIGURES.any { it.id == spec.type }) FigureKind.GRAPH
                                 else FigureKind.GEOMETRY
                             )
-                            else -> editingWebToken = false
+                            else -> editingInlineToken = false
                         }
                     }
                 },
@@ -1440,9 +1439,9 @@ private fun QuestionEditor(
                 initialKind = target.kind,
                 onDismiss = {
                     // V55.13 — اگر از مسیر کلیک روی توکن آمده بودیم، ویرایش لغو شود.
-                    if (editingWebToken) {
+                    if (editingInlineToken) {
                         questionFieldController.cancelEditFigure()
-                        editingWebToken = false
+                        editingInlineToken = false
                     }
                     // V55.16 — انصراف: هدف فیلد گزینه/جورکردنی هم پاک شود.
                     fieldInsertTarget = null
@@ -1459,14 +1458,13 @@ private fun QuestionEditor(
                         }
                         occurrence != null -> viewModel.updateFigure(question.id, occurrence, spec)
                         // V55.13 — ویرایش توکن هندسه/نمودار موجود: جایگزینی همان توکن.
-                        editingWebToken -> {
+                        editingInlineToken -> {
                             if (!questionFieldController.applyEditedFigureJson(spec.toJson())) {
                                 viewModel.insertFigure(question.id, spec)
                             }
-                            editingWebToken = false
+                            editingInlineToken = false
                         }
-                        // V53.1 — درج در محل مکان‌نمای کادر WebView؛ متن از رویداد
-                        // onTextChanged همان WebView به ViewModel برمی‌گردد.
+                        // درج در محل مکان‌نمای کادر Native؛ متن مستقیماً به ViewModel برمی‌گردد.
                         questionFieldController.insertFigureJson(spec.toJson()) -> Unit
                         else -> viewModel.insertFigure(question.id, spec)
                     }
@@ -1475,8 +1473,8 @@ private fun QuestionEditor(
             )
         }
     }
-    // V53.3 — تحویل خروجی ویرایشگرهای Native به WebView:
-    // درج تازه در محل مکان‌نما یا جایگزینی توکن dblclick.
+    // تحویل خروجی ویرایشگرهای Native به کادر متن Native:
+    // درج تازه در محل مکان‌نما یا جایگزینی توکن انتخاب‌شده.
     fun deliverFigure(spec: FigureSpec, occurrenceIndex: Int?) {
         val fieldRef = fieldInsertTarget
         when {
@@ -1486,20 +1484,20 @@ private fun QuestionEditor(
                 fieldInsertTarget = null
             }
             occurrenceIndex != null -> viewModel.updateFigure(question.id, occurrenceIndex, spec)
-            editingWebToken -> {
+            editingInlineToken -> {
                 if (!questionFieldController.applyEditedFigureJson(spec.toJson())) {
                     viewModel.insertFigure(question.id, spec)
                 }
-                editingWebToken = false
+                editingInlineToken = false
             }
             questionFieldController.insertFigureJson(spec.toJson()) -> Unit
             else -> viewModel.insertFigure(question.id, spec)
         }
     }
     fun cancelFigureEditing() {
-        if (editingWebToken) {
+        if (editingInlineToken) {
             questionFieldController.cancelEditFigure()
-            editingWebToken = false
+            editingInlineToken = false
         }
         // V55.16 — انصراف از ابزارِ بازشده از پنجرهٔ +: هدف فیلد پاک شود تا درج
         // بعدیِ متن سؤال اشتباهی به گزینه نرود.
@@ -1537,7 +1535,6 @@ private fun QuestionEditor(
                     questionFieldController.pendingCaretOffset =
                         RichTextSplitter.changeRangeAfterEdit(target.text, newText).last + 1
                     viewModel.updateText(question.id, newText)
-                    questionFieldController.setValue(newText)
                 }
             }
         )

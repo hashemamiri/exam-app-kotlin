@@ -18,7 +18,7 @@ class V65_0NativeQuestionFieldTest {
 
     private val section by lazy { source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt") }
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
-    private val controller by lazy { source("app/src/main/java/ir/exam/app/ui/math/QuestionTextFieldWebView.kt") }
+    private val controller by lazy { source("app/src/main/java/ir/exam/app/ui/math/QuestionEditorFieldController.kt") }
 
     @Test
     fun `builder question text field is compose native without webview`() {

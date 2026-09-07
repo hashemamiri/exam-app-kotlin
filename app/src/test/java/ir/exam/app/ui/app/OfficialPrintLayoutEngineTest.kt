@@ -97,7 +97,10 @@ class OfficialPrintLayoutEngineTest {
             "NativeMathCanvasRenderer",
             "FigureSvgRenderer",
             "AtlasBitmapRenderer",
-            "computeSlices(total, boundaries.toList())"
+            "computeSlices(total, boundaries.toList(), firstContentTop)",
+            // شکل آزاد باید در صفحهٔ مقصد، نه فقط صفحهٔ slot اولیه، رسم شود.
+            "freeImageIntersects",
+            "total = maxOf(total, imageRect.bottom)"
         ).forEach { marker -> assertTrue("موتور PDF ناقص است: $marker", marker in pdf) }
         listOf(
             "WordPageLayout",

@@ -26,12 +26,11 @@ class V59_0ExamUxColoredReportsTest {
     private val grading by lazy { source("app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt") }
 
     @Test
-    fun `the standalone full a4 preview button is gone but the eye menu remains`() {
-        // دکمهٔ تمام‌عرض زیر کارت‌ها حذف شد
+    fun `standalone divergent a4 preview is gone and print preview is the native PDF`() {
         assertFalse("OutlinedButton(onClick = { previewAll = true }, modifier = Modifier.fillMaxWidth())" in builder)
-        // مسیر منوی چشم سالم است (قرارداد V55.18)
-        assertTrue("onPreviewAll = { previewAll = true }" in builder)
-        assertTrue("پیش‌نمایش کامل A4" in builder)
+        assertFalse("ExamPrintPreviewDialog(" in builder)
+        assertTrue("NativeExamPdfPreviewDialog(" in builder)
+        assertTrue("NativeExamPrintLauncher" in builder)
     }
 
     @Test
