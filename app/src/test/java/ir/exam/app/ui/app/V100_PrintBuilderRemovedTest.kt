@@ -89,7 +89,7 @@ class V100_PrintBuilderRemovedTest {
         assertTrue("var barStatus by remember { mutableStateOf<String?>(null) }" in dialog)
         assertTrue("if (text.contains(\"Ignored attempt to cancel\")) return true" in dialog)
         // تزریق + حالت‌های واقعی
-        assertTrue("window.setExamData($payload)" in dialog)
+        assertTrue("window.setExamData(\$payload)" in dialog)
         assertTrue("document.body.classList.add('qmf-print-mode')" in dialog)
         assertTrue("printStudent()" in dialog)
         assertTrue("printTeacher()" in dialog)

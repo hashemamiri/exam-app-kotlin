@@ -3195,11 +3195,13 @@ for _msg in ("\u0622\u0632\u0645\u0648\u0646 \u0630\u062e\u06cc\u0631\u0647\u200
             "V87.8 the restore message must not use a raw browser alert")
 require("fun toast(message: String?)" in _v874_dlg and "onToast = { message ->" in _v874_dlg,
         "V87.8 the native toast bridge is missing")
-# ابهامِ overload که کامپایل را شکست: V100 — دیالوگ حالا از
-# AnimatedVisibilityِ importشده استفاده می‌کند (فرمِ کامل‌نام نرفته) و
-# تله از بین رفته؛ گارد نگه داشته شد تا فرمِ کامل‌نام برگردد.
-require("androidx.compose.animation.AnimatedVisibility(" not in _v874_dlg,
-        "V87.8/V100 the qualified AnimatedVisibility brings back the overload trap")
+# تلهٔ overload (V87.8): فراخوانیِ ساده AnimatedVisibility بارِ
+# ColumnScope را برمی‌گزیند و در این نقطه کامپایل نمی‌شود؛ قانونِ
+# این کدبیس فراخوانی با فرمِ کامل‌نام است. V100d — گارد: باید دقیقاً
+# یک فراخوانی باشد و آن کامل‌نام.
+require(_v874_dlg.count("androidx.compose.animation.AnimatedVisibility(") == 1
+        and _v874_dlg.count("AnimatedVisibility(") == 1,
+        "V87.8/V100d the AnimatedVisibility call must exist exactly once, fully qualified")
 
 # V87.9 — درگِ اشیا: بدونِ بازچینشِ همگام، و با محورِ عمودیِ سالم
 require("function measureParent(el)" in _v79_asset

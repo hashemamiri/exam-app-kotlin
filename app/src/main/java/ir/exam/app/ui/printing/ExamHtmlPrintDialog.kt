@@ -417,12 +417,15 @@ fun ExamHtmlPrintDialog(
 
                     /* V87.7 — پیام‌ها پایینِ صفحه می‌ماندند تا پیامِ بعدی
                        جایشان را بگیرد. حالا وسط ظاهر و پس از چند ثانیه محو
-                       می‌شوند، مثلِ یک اعلانِ بومی. */
+                       می‌شوند، مثلِ یک اعلانِ بومی.
+                       V100e — با فرمِ کامل‌نام (همانندِ نسخهٔ قبل): فراخوانیِ
+                       ساده AnimatedVisibility بارِ ColumnScope را برمی‌گزیند و
+                       در این نقطه کامپایل نمی‌شود. */
                     Box(
                         modifier = Modifier.align(Alignment.Center),
                         contentAlignment = Alignment.Center
                     ) {
-                        AnimatedVisibility(
+                        androidx.compose.animation.AnimatedVisibility(
                             visible = barStatus != null,
                             enter = fadeIn(),
                             exit = fadeOut()
