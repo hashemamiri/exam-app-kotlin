@@ -1,0 +1,190 @@
+package ir.exam.app.ui.printing
+
+import ir.exam.app.domain.model.OfficialExamPrintable
+import ir.exam.app.domain.model.OfficialPrintQuestion
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+/**
+ * قرارداد دادهٔ موتور مستقل چاپ (`exam_print_renderer.html`).
+ *
+ * ورودی فقط ساختار چاپیِ canonical است؛ هیچ snapshot یا merge مخصوص چاپ در
+ * این مسیر وجود ندارد. متن خام سؤال‌ها و توکن‌های شکل عبور می‌کنند و موتور
+ * HTML آن‌ها را با رندررهای بومی نمایش می‌دهد.
+ */
+object ExamHtmlPrintPayloadBuilder {
+
+    fun build(
+        printable: OfficialExamPrintable?,
+        extraHeaderFields: Map<String, String> = emptyMap()
+    ): JsonObject {
+        if (printable == null) return buildJsonObject { put("reset", true) }
+
+        val header = printable.header
+        val courseName = printable.subject.ifBlank { printable.documentTitle.ifBlank { "آزمون" } }
+        val duration = when {
+            printable.durationMinutes > 0 -> "${printable.durationMinutes} دقیقه"
+            header.examDuration.isNotBlank() -> "${header.examDuration} دقیقه"
+            else -> ""
+        }
+
+        return buildJsonObject {
+            put("reset", false)
+            put("documentTitle", printable.documentTitle.ifBlank { "آزمون" })
+            put("footerNote", printable.footerNote)
+            put("totalScore", formatScore(printable.totalScore))
+            put("includeAnswerKey", printable.includeAnswerKey)
+            put("fields", buildJsonObject {
+                put("f_headerTemplate", "classic")
+                put("f_course", courseName)
+                put("f_branch", header.school)
+                put("f_examDate", header.examDate)
+                put("f_duration", duration)
+                // فقط شناسه‌های شِمای سربرگ پذیرفته می‌شوند. مقدار خالی نباید
+                // مقدار مشتق‌شدهٔ قابل‌استفاده را پاک کند.
+                extraHeaderFields.forEach { (key, value) ->
+                    if (key in HEADER_FIELD_IDS && value.isNotBlank()) put(key, value)
+                }
+            })
+            put("questions", buildJsonArray {
+                printable.questions.forEachIndexed { index, question ->
+                    add(questionJson(index, question))
+                }
+            })
+        }
+    }
+
+    private fun questionJson(index: Int, question: OfficialPrintQuestion) = buildJsonObject {
+        put("id", index + 1)
+        put("text", question.text)
+        put("score", formatScore(question.score))
+        put("textAlign", question.textAlign)
+        put("fontFamily", question.fontFamily)
+        put("fontSizeSp", question.fontSizeSp)
+        put("bold", question.bold)
+        put("italic", question.italic)
+        if (question.answerText != null) put("answer", question.answerText)
+        if (question.figLayoutsJson.isNotBlank()) put("figLayoutsJson", question.figLayoutsJson)
+        if (question.sepExtraPx > 0) put("sepExtraPx", question.sepExtraPx)
+        if (question.textSpans.isNotEmpty()) {
+            put("textSpans", buildJsonArray {
+                question.textSpans.forEach { span ->
+                    add(buildJsonObject {
+                        put("start", span.start)
+                        put("end", span.end)
+                        put("bold", span.bold)
+                        put("italic", span.italic)
+                    })
+                }
+            })
+        }
+
+        when {
+            question.matchingLeft.isNotEmpty() || question.matchingRight.isNotEmpty() -> {
+                put("type", "matching")
+                put("pairs", buildJsonArray {
+                    val count = maxOf(question.matchingLeft.size, question.matchingRight.size)
+                    repeat(count) { itemIndex ->
+                        add(buildJsonObject {
+                            put("left", question.matchingLeft.getOrElse(itemIndex) { "" })
+                            put("right", question.matchingRight.getOrElse(itemIndex) { "" })
+                            question.matchingLeftStyles.getOrNull(itemIndex)?.let { style ->
+                                put("leftBold", style.first)
+                                put("leftItalic", style.second)
+                                style.third?.let { put("leftSize", it) }
+                            }
+                            question.matchingRightStyles.getOrNull(itemIndex)?.let { style ->
+                                put("rightBold", style.first)
+                                put("rightItalic", style.second)
+                                style.third?.let { put("rightSize", it) }
+                            }
+                        })
+                    }
+                })
+            }
+            question.options.size == 2 &&
+                (question.options.firstOrNull() == "صحیح" || question.options.contains("صحیح")) -> {
+                put("type", "truefalse")
+                val correct = question.answerText.orEmpty()
+                val trueCorrect = correct.contains("صحیح") || correct == "true"
+                put("options", buildJsonArray {
+                    add(optionJson("صحیح", trueCorrect, null))
+                    add(optionJson("غلط", !trueCorrect, null))
+                })
+            }
+            question.options.isNotEmpty() -> {
+                put("type", "multiple")
+                val correct = question.answerText.orEmpty().trim()
+                put("options", buildJsonArray {
+                    question.options.forEachIndexed { optionIndex, optionText ->
+                        val isCorrect = correct.isNotBlank() && (
+                            correct == optionText || correct == optionText.trim() ||
+                                correct == "$optionIndex" || correct == "${optionIndex + 1}"
+                            )
+                        add(optionJson(optionText, isCorrect, question.optionStyles.getOrNull(optionIndex)))
+                    }
+                })
+                put("optionsLayout", if (question.options.size > 2) "2rows" else "1row")
+            }
+            question.answerText != null && question.answerText.any(Char::isDigit) && !question.answerText.contains("\n") -> {
+                put("type", "numeric")
+                put("answerLines", 1)
+                put("answerStyle", "lined")
+            }
+            question.text.contains("[...]") || question.text.contains("...") || question.text.contains("___") -> {
+                put("type", "fill")
+                put("answerLines", 1)
+                put("answerStyle", "lined")
+            }
+            else -> {
+                put("type", "long")
+                put("answerLines", question.answerLines.coerceIn(0, 30))
+                put("answerStyle", if (question.answerLineStyle == "plain") "plain" else "lined")
+            }
+        }
+    }
+
+    private fun optionJson(
+        text: String,
+        correct: Boolean,
+        style: Triple<Boolean, Boolean, Float?>?
+    ) = buildJsonObject {
+        put("text", text)
+        put("correct", correct)
+        style?.let {
+            put("bold", it.first)
+            put("italic", it.second)
+            it.third?.let { size -> put("size", size) }
+        }
+    }
+
+    private fun formatScore(score: Double): String =
+        if (score % 1.0 == 0.0) score.toInt().toString() else score.toString()
+
+    /** همهٔ شناسه‌های مجاز assets/print/header_settings_schema.json. */
+    private val HEADER_FIELD_IDS = setOf(
+        "f_headerTemplate", "f_name", "f_studentId", "f_professor", "f_course", "f_department",
+        "f_examType", "f_branch", "f_studentCount", "f_examDate", "f_examTime", "f_duration",
+        "f_tools", "f_sheets", "f_gradesDate", "f_intro",
+        "h2_branch", "h2_chair", "h2_area", "h2_examLine", "h2_name", "h2_studentId",
+        "h2_major", "h2_degree", "h2_course", "h2_professor", "h2_examDate", "h2_duration",
+        "h2_totalScore", "h2_tools", "h2_intro",
+        "h3_unit", "h3_office", "h3_semester", "h3_quote", "h3_course", "h3_professor",
+        "h3_examDate", "h3_examTime", "h3_duration", "h3_name", "h3_studentId", "h3_degree",
+        "h3_major", "h3_chair", "h3_intro",
+        "h4_page", "h4_examTurn", "h4_course", "h4_educationOffice", "h4_schoolName",
+        "h4_schoolYear", "h4_examDay", "h4_examDate", "h4_duration", "h4_startTime", "h4_name",
+        "h4_father", "h4_class", "h4_note", "h4_intro",
+        "h5_firstName", "h5_lastName", "h5_father", "h5_course", "h5_page", "h5_examTurn",
+        "h5_grade", "h5_branch", "h5_examDate", "h5_startTime", "h5_duration", "h5_generalOffice",
+        "h5_assessment", "h5_districtOffice", "h5_schoolName", "h5_intro",
+        "h6_name", "h6_family", "h6_father", "h6_studentNo", "h6_course", "h6_educationOffice",
+        "h6_schoolName", "h6_sealText", "h6_grade", "h6_branch", "h6_examDate", "h6_examTime",
+        "h6_duration", "h6_pageCount", "h6_pageNumber", "h6_intro",
+        "h7_name", "h7_family", "h7_father", "h7_course", "h7_examDate", "h7_duration", "h7_grade",
+        "h7_major", "h7_ministry", "h7_generalOffice", "h7_districtOffice", "h7_schoolName", "h7_intro",
+        "opt_footerText"
+    )
+}

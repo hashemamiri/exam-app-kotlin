@@ -68,19 +68,23 @@ fun ExamPrintCenterScreen(
     val headerStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)
     }
+    val header = remember { ir.exam.app.data.local.printHeaderOf(headerStore.read()) }
     // V86.8 — آزمون‌های چاپیِ ذخیره‌شده روی دستگاه، کنارِ آزمون‌های سرور.
     val printExamStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintExamStore(context.applicationContext)
     }
     var localExams by remember { mutableStateOf(printExamStore.list()) }
-    var pdfPrintLoading by remember { mutableStateOf(false) }
+    var htmlPrintLoading by remember { mutableStateOf(false) }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
     // هدف انتخاب‌شده برای چاپ مستقیم.
     var printTarget by remember { mutableStateOf<PrintTarget?>(null) }
     val scope = rememberCoroutineScope()
-    // چاپ مستقیم نیز نخست یک PDF A4 بومی می‌سازد؛ پنل Android همان فایل
-    // immutable را مستقیماً دریافت می‌کند.
+    // V101 — چاپِ مستقیمِ بدون‌صفحه: WebView نمایش داده نمی‌شود؛ پنلِ چاپ
+    // روی همین صفحه ظاهر می‌شود (نه پنجرهٔ پیش‌نمایش).
+    val headlessPrinter = remember(context.applicationContext) {
+        HeadlessExamPrinter(context.applicationContext)
+    }
     // V101 — برای ساختِ «نسخهٔ چاپی» از آزمونِ آنلاین، آزمون کامل (با کلید)
     // با همان مسیرِ آزمون‌ساز بارگذاری می‌شود.
     val builderRepo = remember(context.applicationContext) {
@@ -94,45 +98,49 @@ fun ExamPrintCenterScreen(
         localExams = printExamStore.list()
     }
 
-    // چاپ مستقیم: PDF immutable بومی یک‌بار ساخته و همان فایل به Print
-    // Framework تحویل می‌شود. نسخهٔ استاد فقط در PDF پاسخ‌ها را فعال می‌کند.
+    // چاپ مستقیم پس از آماده‌سازی دادهٔ آزمون در WebView نامرئی آغاز می‌شود.
     fun startPrint(target: PrintTarget, mode: String) {
         printTarget = null
         scope.launch {
-            pdfPrintLoading = true
+            htmlPrintLoading = true
             try {
-                printStatus = "در حال ساخت PDF A4..."
+                printStatus = null
                 printStatusIsError = false
-                val headerFields = headerStore.read()
-                val header = ir.exam.app.data.local.printHeaderOf(headerFields)
-                val printable = when (target) {
+                when (target) {
                     is PrintTarget.ServerExam -> portability.printableExam(
-                        target.examId,
-                        includeAnswerKey = mode == "teacher",
-                        headerOverride = header
-                    ).getOrElse { throw it }
-
-                    is PrintTarget.LocalExam -> ir.exam.app.domain.model.PrintableFromDrafts.build(
-                        title = target.rec.title.ifBlank { "آزمون" },
-                        subject = target.rec.subject,
-                        header = header,
-                        questions = target.rec.questions,
-                        includeAnswerKey = mode == "teacher"
-                    )
-                }
-                NativeExamPrintLauncher.print(context, printable, headerFields, mode)
-                    .onSuccess {
-                        printStatus = "پنجرهٔ چاپ باز شد."
-                    }
-                    .onFailure { error ->
+                        target.examId, false, header
+                    ).onSuccess { printable ->
+                        val printDocument = ExamHtmlImageInliner.inline(context.applicationContext, printable)
+                        printStatus = "در حال آماده‌سازی چاپ..."
+                        // چاپ بدون صفحه: هیچ پنجرهٔ پیش‌نمایشی باز نمی‌شود.
+                        headlessPrinter.print(
+                            printDocument,
+                            mode,
+                            onStatus = { msg -> printStatus = msg },
+                            onFinished = { printStatus = null }
+                        )
+                    }.onFailure { error ->
                         printStatusIsError = true
                         printStatus = sanitizePrintError(error)
                     }
-            } catch (error: Throwable) {
-                printStatusIsError = true
-                printStatus = sanitizePrintError(error)
+                    is PrintTarget.LocalExam -> {
+                        val printDocument = ir.exam.app.domain.model.PrintableFromDrafts.build(
+                            title = target.rec.title.ifBlank { "آزمون" },
+                            subject = target.rec.subject,
+                            header = header,
+                            questions = target.rec.questions
+                        )
+                        printStatus = "در حال آماده‌سازی چاپ..."
+                        headlessPrinter.print(
+                            printDocument,
+                            mode,
+                            onStatus = { msg -> printStatus = msg },
+                            onFinished = { printStatus = null }
+                        )
+                    }
+                }
             } finally {
-                pdfPrintLoading = false
+                htmlPrintLoading = false
             }
         }
     }
@@ -202,7 +210,7 @@ fun ExamPrintCenterScreen(
                 else MaterialTheme.colorScheme.primary
             )
         }
-        if (state.loading || pdfPrintLoading) {
+        if (state.loading || htmlPrintLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
         if (state.exams.isEmpty() && localExams.isEmpty() && !state.loading) {
@@ -242,7 +250,7 @@ fun ExamPrintCenterScreen(
                             }
                             // چاپ مستقیم: ابتدا نسخهٔ دانش‌آموز یا پاسخ‌نامه
                             // انتخاب می‌شود.
-                            IconButton(onClick = { printTarget = PrintTarget.LocalExam(rec) }, enabled = !pdfPrintLoading) {
+                            IconButton(onClick = { printTarget = PrintTarget.LocalExam(rec) }, enabled = !htmlPrintLoading) {
                                 Icon(
                                     Icons.Outlined.Print,
                                     contentDescription = "چاپ آزمون چاپی",
@@ -287,7 +295,7 @@ fun ExamPrintCenterScreen(
                                 )
                             }
                             // V99.1 — پرینتر: چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه).
-                            IconButton(onClick = { printTarget = PrintTarget.ServerExam(exam.id) }, enabled = !pdfPrintLoading) {
+                            IconButton(onClick = { printTarget = PrintTarget.ServerExam(exam.id) }, enabled = !htmlPrintLoading) {
                                 Icon(
                                     Icons.Outlined.Print,
                                     contentDescription = "چاپ آزمون",
@@ -300,7 +308,8 @@ fun ExamPrintCenterScreen(
             }
         }
     }
-    // PDF بومیِ آماده‌شده مستقیماً به پنل چاپ اندروید می‌رود.
+    // چاپ مستقیم با WebView نامرئیِ HeadlessExamPrinter آماده می‌شود و پنل
+    // چاپ اندروید مستقیماً روی همین صفحه باز می‌شود.
     // V99.1 — منوی چاپ از آیکن پرینتر: نسخهٔ دانش‌آموز یا پاسخ‌نامه.
     printTarget?.let { target ->
         AlertDialog(

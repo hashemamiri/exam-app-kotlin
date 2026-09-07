@@ -4,9 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.DashPathEffect
 import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.os.CancellationSignal
@@ -109,8 +107,6 @@ class OfficialPrintLayoutEngine(private val context: Context) {
         val fontFamily: String = "default",
         val imagePosition: String = "below",
         val imageWidthMm: Float = 80f,
-        /** ارتفاع صریحِ gesture resize؛ null یعنی نسبت طبیعی bitmap. */
-        val imageHeightMm: Float? = null,
         val imageXmm: Float = 20f,
         val imageYmm: Float = 30f,
         val boxed: Boolean = false,
@@ -119,144 +115,45 @@ class OfficialPrintLayoutEngine(private val context: Context) {
         val matchRight: String? = null,
         val matchLeft: String? = null,
         val matchRightStyle: Triple<Boolean, Boolean, Float?>? = null,
-        val matchLeftStyle: Triple<Boolean, Boolean, Float?>? = null,
-        /** مالک بلوک؛ فقط metadata پیش‌نمایش PDF است و به UI وابسته نیست. */
-        val questionIndex: Int = -1,
-        /** شمارهٔ occurrence شکل در متن سؤال؛ -1 یعنی تصویر پیوست سؤال. */
-        val figureOccurrence: Int = -1,
-        /** خط فاصلهٔ قابل‌کشیدنِ بین سؤال‌ها. */
-        val separatorQuestionIndex: Int = -1,
-        /** شکل آزاد از figLayoutsJson یا خود spec آمده است. */
-        val freeFigure: Boolean = false
+        val matchLeftStyle: Triple<Boolean, Boolean, Float?>? = null
     )
     data class Placed(val block: RenderBlock, val y: Float, val height: Float)
 
-    /** نشانهٔ یک figure inline برای overlay لمسی پیش‌نمایش PDF. */
-    data class InlineFigureMark(
-        val charOffset: Int,
-        val questionIndex: Int,
-        val occurrence: Int,
-        val widthPt: Float,
-        val heightPt: Float
-    )
-
-    /** مستطیل یک شکل روی جریان پیوسته، پیش از نگاشت به صفحهٔ PDF. */
-    data class FigureBounds(
-        val rect: RectF,
-        val questionIndex: Int,
-        val occurrence: Int,
-        val free: Boolean
-    )
-
-    /** محل خط فاصلهٔ یک سؤال روی جریان پیوسته. */
-    data class SeparatorBounds(
-        val questionIndex: Int,
-        val y: Float,
-        val height: Float
-    )
-
-    /** جریان آماده برای برش صفحه‌های PDF و metadata تعامل Native. */
+    /** جریان آماده برای برش صفحه‌های PDF. */
     class EngineDocument(
         val placed: List<Placed>,
         val slices: List<Pair<Float, Float>>,
-        val layouts: Map<Int, StaticLayout>,
-        val inlineFigureMarks: Map<Int, List<InlineFigureMark>>,
-        val figureBounds: List<FigureBounds>,
-        val separatorBounds: List<SeparatorBounds>,
-        val questionOrigins: Map<Int, Float>,
-        val total: Float,
-        val firstContentTop: Float
-    ) {
-        val pageCount: Int get() = slices.size.coerceAtLeast(1)
-        fun questionOriginPt(index: Int): Float = questionOrigins[index] ?: 0f
-    }
+        val layouts: Map<Int, StaticLayout>
+    )
 
     // ---------------------------------------------------------------- ساخت
 
     /** آزمون رسمی: سؤال‌ها → جریان پیوسته و صفحه‌های PDF. */
-    fun layoutExam(printable: OfficialExamPrintable): EngineDocument =
-        layoutExam(printable, CONTENT_TOP)
-
-    /**
-     * همان جریان آزمون با فضای سربرگِ محاسبه‌شدهٔ renderer بومی. در نتیجه
-     * headerهای قابل‌تنظیم هرگز روی سؤال اول نمی‌افتند و preview/print یک
-     * نقطهٔ شروع مشترک دارند.
-     */
-    fun layoutExam(printable: OfficialExamPrintable, firstContentTop: Float): EngineDocument =
-        build(examBlocks(printable), firstContentTop)
+    fun layoutExam(printable: OfficialExamPrintable): EngineDocument = build(examBlocks(printable))
 
     /** کارنامه: همان موتور با بلوک‌های کارنامه. */
     fun layoutReport(report: OfficialGradeReportPrintable): EngineDocument =
-        build(reportBlocks(report), CONTENT_TOP)
+        build(reportBlocks(report))
 
-    private val pendingInlineMarks = HashMap<Int, List<InlineFigureMark>>()
-
-    private fun build(blocks: List<RenderBlock>, firstContentTop: Float): EngineDocument {
+    private fun build(blocks: List<RenderBlock>): EngineDocument {
         val placed = placeAll(blocks)
-        // بلوکِ آزاد slot خود را در جریان نگه می‌دارد، اما ممکن است خود تصویر
-        // با y آزاد خیلی پایین‌تر از slot قرار گیرد. total باید extent واقعی
-        // تصویر را هم ببیند تا صفحه‌های لازم ساخته شوند.
-        var total = (placed.lastOrNull()?.let { it.y + it.height } ?: 1f).coerceAtLeast(1f)
+        val total = (placed.lastOrNull()?.let { it.y + it.height } ?: 1f).coerceAtLeast(1f)
         val layouts = HashMap<Int, StaticLayout>()
-        val inlineMarks = HashMap<Int, List<InlineFigureMark>>()
-        val questionOrigins = linkedMapOf<Int, Float>()
-        val figures = mutableListOf<FigureBounds>()
-        val separators = mutableListOf<SeparatorBounds>()
         // مرزهای مجاز برش: انتهای هر بلوک و انتهای هر سطر متن. در نتیجه صفحه
         // تا جای ممکن از وسط سطر قطع نمی‌شود.
         val boundaries = sortedSetOf(0f)
         placed.forEachIndexed { index, placedBlock ->
-            val block = placedBlock.block
-            if (block.questionIndex >= 0) questionOrigins.putIfAbsent(block.questionIndex, placedBlock.y)
-            val layout = blockLayout(block)
+            val layout = blockLayout(placedBlock.block)
             if (layout != null) {
                 layouts[index] = layout
                 for (line in 0 until layout.lineCount) boundaries.add(placedBlock.y + layout.getLineBottom(line))
             }
-            pendingInlineMarks.remove(index)?.let { inlineMarks[index] = it }
-            val imageRect = imageRectPt(block, placedBlock.y)
-            if (imageRect != null && block.imagePosition == "free") {
-                // مرزهای واقعی شکل آزاد به الگوریتم slice داده می‌شوند. در غیر
-                // این صورت شکلِ کشیده‌شده پس از page break ممکن بود فقط در
-                // صفحهٔ slot خودش draw شود و در صفحهٔ مقصد دیده نشود.
-                total = maxOf(total, imageRect.bottom)
-                boundaries.add(imageRect.top.coerceAtLeast(0f))
-                boundaries.add(imageRect.bottom)
-            }
-            if (imageRect != null && block.questionIndex >= 0 && block.figureOccurrence >= 0) {
-                figures += FigureBounds(imageRect, block.questionIndex, block.figureOccurrence, block.freeFigure)
-            }
-            if (block.separatorQuestionIndex >= 0) {
-                separators += SeparatorBounds(block.separatorQuestionIndex, placedBlock.y, placedBlock.height)
-            }
             boundaries.add(placedBlock.y + placedBlock.height)
-        }
-        inlineMarks.forEach { (blockIndex, marks) ->
-            val layout = layouts[blockIndex] ?: return@forEach
-            val placedBlock = placed[blockIndex]
-            marks.forEach { mark ->
-                val line = layout.getLineForOffset(mark.charOffset.coerceIn(0, layout.text.length))
-                val left = MARGIN + replacementLeftPt(layout, mark.charOffset, mark.widthPt)
-                val baseline = layout.getLineBaseline(line)
-                val top = placedBlock.y + baseline - placedBlock.block.textSize * .92f
-                figures += FigureBounds(
-                    rect = RectF(left, top, left + mark.widthPt, top + mark.heightPt),
-                    questionIndex = mark.questionIndex,
-                    occurrence = mark.occurrence,
-                    free = false
-                )
-            }
         }
         return EngineDocument(
             placed = placed,
-            slices = computeSlices(total, boundaries.toList(), firstContentTop),
-            layouts = layouts,
-            inlineFigureMarks = inlineMarks,
-            figureBounds = figures,
-            separatorBounds = separators,
-            questionOrigins = questionOrigins,
-            total = total,
-            firstContentTop = firstContentTop
+            slices = computeSlices(total, boundaries.toList()),
+            layouts = layouts
         )
     }
 
@@ -275,302 +172,182 @@ class OfficialPrintLayoutEngine(private val context: Context) {
     // ------------------------------------------------------------- بلوک‌ها
 
     private fun examBlocks(exam: OfficialExamPrintable): List<RenderBlock> = buildList {
-        pendingInlineMarks.clear()
-        add(
-            RenderBlock(
-                text = "درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",
-                textSize = 11f,
-                bold = true,
-                boxed = true
-            )
-        )
-        exam.questions.forEachIndexed { questionIndex, question ->
-            // اندیس شروع بلوک‌های همین سؤال؛ مختصات y شکل‌های آزاد نسبت به
-            // ابتدای همین سؤال ذخیره می‌شوند، نه نسبت به یک صفحهٔ موقت.
+        add(RenderBlock(text="درس: ${exam.subject}     مدت: ${exam.durationMinutes} دقیقه     بارم: ${formatScore(exam.totalScore)}",textSize=11f,bold=true,boxed=true))
+        exam.questions.forEach { question ->
+            // V68.4.1 — اندیس شروع بلوک‌های همین سؤال: برای تبدیل fy مطلقِ شکلِ
+            // آزاد (از بالای بلوک) به آفست از جایگاه جریان خودش در چاپ.
             val qStart = size
-            val storedLayouts = PrintPreviewLayoutCodec.decode(question.figLayoutsJson)
-            var figureOccurrence = 0
-
-            fun addQuestionBlock(block: RenderBlock) {
-                add(block.copy(questionIndex = questionIndex))
+            add(RenderBlock(text="سؤال ${question.number}     (${formatScore(question.score)} نمره)",textSize=question.fontSizeSp.coerceIn(8f,30f),bold=true,boxed=true,fontFamily=question.fontFamily,align=question.textAlign))
+            // V53.1 — شکل/نمودار/جدول درون‌متنی (%%FIG%%) به‌جای JSON خام،
+            // به‌صورت تصویر برداری در PDF رندر می‌شوند؛ فرمول‌ها مثل قبل.
+            // V68 — بازهٔ آفست هر قطعه برای استایل تکه‌ای متن.
+            val __formulas = ir.exam.app.core.math.FormulaTextCodec.occurrences(question.text)
+            val __figures = ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
+            val __segments = RichTextSplitter.split(question.text)
+            val __ranges = RichTextSplitter.segmentSourceRanges(__segments, __formulas, __figures)
+            // استایل‌های تکه‌ای مستقیماً از مدل چاپ خوانده می‌شوند؛ موتور PDF
+            // به مدل یا ابزارهای رابط کاربری وابسته نیست.
+            val __spans = question.textSpans
+            // متن و فرمول‌های پیوستهٔ سؤال در یک سطر جاری کنار هم می‌نشینند.
+            // فرمول به‌صورت MathReplacementSpan روی جای‌نگهدار U+FFFC می‌نشیند و
+            // StaticLayout آن را در همان سطر جریان می‌دهد؛ شکل‌های آزاد بلوک‌های
+            // مستقل در جریان PDF هستند.
+            var __inline = android.text.SpannableStringBuilder()
+            var __inlineLen = 0
+            fun __flushInline() {
+                if (__inline.isEmpty()) return
+                add(RenderBlock(styledText=__inline,textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily))
+                __inline = android.text.SpannableStringBuilder()
+                __inlineLen = 0
             }
-
-            addQuestionBlock(
-                RenderBlock(
-                    text = "سؤال ${question.number}     (${formatScore(question.score)} نمره)",
-                    textSize = question.fontSizeSp.coerceIn(8f, 30f),
-                    bold = true,
-                    boxed = true,
-                    fontFamily = question.fontFamily,
-                    align = question.textAlign
-                )
-            )
-            // شکل/نمودار/جدول درون‌متنی (%%FIG%%) و فرمول‌ها در همان جریان
-            // PDF رسم می‌شوند؛ هیچ asset یا runtime HTML در این مسیر وجود ندارد.
-            val formulas = ir.exam.app.core.math.FormulaTextCodec.occurrences(question.text)
-            val figures = ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
-            val segments = RichTextSplitter.split(question.text)
-            val ranges = RichTextSplitter.segmentSourceRanges(segments, formulas, figures)
-            val spans = question.textSpans
-            var inline = android.text.SpannableStringBuilder()
-            var inlineLen = 0
-            var pendingMarks = mutableListOf<InlineFigureMark>()
-
-            fun flushInline() {
-                if (inline.isEmpty()) return
-                val blockIndex = size
-                addQuestionBlock(
-                    RenderBlock(
-                        styledText = inline,
-                        textSize = question.fontSizeSp.coerceIn(8f, 30f),
-                        bold = question.bold,
-                        italic = question.italic,
-                        align = question.textAlign,
-                        fontFamily = question.fontFamily
-                    )
-                )
-                if (pendingMarks.isNotEmpty()) {
-                    pendingInlineMarks[blockIndex] = pendingMarks
-                    pendingMarks = mutableListOf()
-                }
-                inline = android.text.SpannableStringBuilder()
-                inlineLen = 0
-            }
-
-            segments.forEachIndexed { segmentIndex, rich ->
+            __segments.forEachIndexed { segIndex, rich ->
                 when (rich) {
                     is RichSegment.Math -> {
-                        // اگر پاراگراف با فرمول شروع شود، RLM جهت راست‌به‌چپ
+                        // V68.6 — فرمول درون‌خطی: جای‌نگهدار یک‌کاراکتری + span رندر.
+                        // اگر پاراگراف با فرمول شروع شود، U+FFFC نخستین کاراکترِ
+                        // «قوی» و LTR است و جهتِ FIRSTSTRONG را می‌چرخاند؛ یک
+                        // RLM نامرئی (پهنای صفر) اولِ پاراگراف جهتِ راست‌به‌چپ
                         // متن فارسی را تثبیت می‌کند.
-                        if (inline.isEmpty()) {
-                            inline.append('\u200F')
-                            inlineLen += 1
-                        }
-                        inline.append('\uFFFC')
-                        inline.setSpan(
+                        if (__inline.isEmpty()) { __inline.append('\u200F'); __inlineLen += 1 }
+                        __inline.append('\uFFFC')
+                        __inline.setSpan(
                             MathReplacementSpan(NativeMathParser.parse(rich.tex)),
-                            inlineLen,
-                            inlineLen + 1,
-                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                            __inlineLen, __inlineLen + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                         )
-                        inlineLen += 1
+                        __inlineLen += 1
                     }
-
                     is RichSegment.Figure -> {
-                        val occurrence = figureOccurrence++
-                        val stored = storedLayouts[occurrence]
-                        val specPosition = PrintFigureMetrics.figurePosMm(rich.spec)
-                        val bitmap = figureBitmap(rich.spec)
-                        if (bitmap != null) {
-                            // حرکت روی PDF، شکل inline را به شکل آزاد تبدیل می‌کند.
-                            // مختصات حالت آزاد همواره از ابتدای همان سؤال خوانده
-                            // می‌شود تا page-breakهای بعدی جای آن را تغییر ندهند.
-                            val isFree = stored?.free == true || specPosition != null
-                            val widthMm = stored?.widthMm ?: PrintFigureMetrics.figureWidthMm(rich.spec)
-                            // مقدار height فقط پس از resize صریح یا از layout قدیمی می‌آید؛
-                            // در غیر این صورت نسبت طبیعی bitmap حفظ می‌شود.
-                            val heightMm = stored?.heightMm
-                            if (isFree) {
-                                flushInline()
-                                val flowPt = (qStart until size).sumOf { measureBlock(this[it]).toDouble() }.toFloat()
-                                val xMm = stored?.xMm ?: specPosition?.first ?: 0f
-                                val yMm = stored?.yMm ?: specPosition?.second ?: 0f
-                                addQuestionBlock(
-                                    RenderBlock(
-                                        image = bitmap,
-                                        imageWidthMm = widthMm,
-                                        imageHeightMm = heightMm,
-                                        imagePosition = "free",
-                                        imageXmm = xMm,
-                                        // drawImageAt به top بلوک این مقدار را
-                                        // اضافه می‌کند؛ با کم‌کردن flow، y نهایی
-                                        // دقیقاً نسبت به ابتدای سؤال باقی می‌ماند.
-                                        imageYmm = yMm - flowPt / MM_TO_PT,
-                                        figureOccurrence = occurrence,
-                                        freeFigure = true
-                                    )
-                                )
+                        val figPos = PrintFigureMetrics.figurePosMm(rich.spec)
+                        val bmp = figureBitmap(rich.spec)
+                        if (bmp != null) {
+                            if (figPos != null) {
+                                // V68.4 — شکلِ آزاد: مثل تصویر گالری آزاد، در
+                                // جایگاه مطلق چاپ می‌شود (با تبدیل flowPt→mm).
+                                __flushInline()
+                                val flowPt = (qStart until size).fold(0f) { acc, i -> acc + measureBlock(this[i]) }
+                                add(RenderBlock(
+                                    image=bmp,
+                                    imageWidthMm=PrintFigureMetrics.figureWidthMm(rich.spec),
+                                    imagePosition=if (figPos != null) "free" else "below",
+                                    imageXmm=figPos.first,
+                                    imageYmm=figPos.second - flowPt * (210f / PAGE_WIDTH)
+                                ))
                             } else {
-                                if (inline.isEmpty()) {
-                                    inline.append('\u200F')
-                                    inlineLen += 1
-                                }
-                                val target = figureTargetSizePt(bitmap, widthMm, heightMm)
-                                pendingMarks += InlineFigureMark(
-                                    charOffset = inlineLen,
-                                    questionIndex = questionIndex,
-                                    occurrence = occurrence,
-                                    widthPt = target.first,
-                                    heightPt = target.second
+                                // شکلِ درون‌متنیِ غیرآزاد در همان پاراگراف جاری،
+                                // کنار متن و فرمول می‌نشیند، نه به‌صورت بلوک جدا.
+                                if (__inline.isEmpty()) { __inline.append('\u200F'); __inlineLen += 1 }
+                                __inline.append('\uFFFC')
+                                __inline.setSpan(
+                                    FigureReplacementSpan(bmp, PrintFigureMetrics.figureWidthMm(rich.spec)),
+                                    __inlineLen, __inlineLen + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                 )
-                                inline.append('\uFFFC')
-                                inline.setSpan(
-                                    FigureReplacementSpan(bitmap, widthMm, heightMm),
-                                    inlineLen,
-                                    inlineLen + 1,
-                                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                                )
-                                inlineLen += 1
+                                __inlineLen += 1
                             }
                         } else {
-                            flushInline()
-                            addQuestionBlock(
-                                RenderBlock(
-                                    text = "[شکل]",
-                                    textSize = question.fontSizeSp.coerceIn(8f, 30f)
-                                )
-                            )
+                            __flushInline()
+                            add(RenderBlock(text="[شکل]",textSize=question.fontSizeSp.coerceIn(8f,30f)))
                         }
                     }
-
                     is RichSegment.Text -> if (rich.text.isNotEmpty()) {
-                        val segmentStart = ranges.getOrNull(segmentIndex)?.first ?: 0
-                        val overlapping = spans.any {
-                            it.end > segmentStart && it.start < segmentStart + rich.text.length
-                        }
-                        val pieceText = rich.text.replace("\\$", "$")
-                        inline.append(pieceText)
+                        // استایل‌های بازه‌ای بولد/ایتالیک با Spannable اعمال می‌شوند.
+                        // V68.6 — الحاق به پاراگراف درون‌خطی با شیفت آفست استایل‌ها؛
+                        // تکه‌های فقط-فاصله هم حفظ می‌شوند (جداکنندهٔ دو فرمول).
+                        val segStart = __ranges.getOrNull(segIndex)?.first ?: 0
+                        val overlapping = __spans.any { it.end > segStart && it.start < segStart + rich.text.length }
+                        val pieceText = rich.text.replace("\\$","$")
+                        __inline.append(pieceText)
                         if (overlapping) {
-                            var offset = inlineLen
-                            PrintTextSpanSegments.split(rich.text, segmentStart, spans).forEach { piece ->
-                                val from = offset
-                                val to = offset + piece.first.length
-                                offset = to
-                                if (piece.second) {
-                                    inline.setSpan(
+                            var off = __inlineLen
+                            PrintTextSpanSegments.split(rich.text, segStart, __spans)
+                                .forEach { piece ->
+                                    val a = off
+                                    val b = off + piece.first.length
+                                    off = b
+                                    if (piece.second) __inline.setSpan(
                                         android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                                        from,
-                                        to,
-                                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                        a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                     )
-                                }
-                                if (piece.third) {
-                                    inline.setSpan(
+                                    if (piece.third) __inline.setSpan(
                                         android.text.style.StyleSpan(android.graphics.Typeface.ITALIC),
-                                        from,
-                                        to,
-                                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                                        a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                                     )
                                 }
-                            }
                         }
-                        inlineLen += pieceText.length
+                        __inlineLen += pieceText.length
                     }
                 }
             }
-            flushInline()
-
+            __flushInline()
             question.options.forEachIndexed { index, option ->
+                // V64.4 — استایل مستقل هر گزینه در چاپ؛ بدون استایل = مثل قبل.
                 val optionStyle = question.optionStyles.getOrNull(index)
+                // اندازهٔ گزینه با مقیاس کامل چاپ می‌شود و شمارهٔ آن بولد است.
                 val optionSize = (optionStyle?.third ?: question.fontSizeSp) * OPTION_SCALE
                 val optionBold = optionStyle?.first ?: false
                 val optionItalic = optionStyle?.second ?: false
-                val optionText = android.text.SpannableStringBuilder()
-                var optionLength = 0
-                var prefixLength = "${index + 1}) ".length
-                NativeMathFormatter.segments("${index + 1}) $option").forEach { segment ->
+                // V68.6 — گزینه هم پاراگراف درون‌خطی: متن و فرمول گزینه در یک
+                // سطر جاری کنار هم (مثل سؤال)؛ شمارهٔ گزینه بولد (V68.9).
+                val __opt = android.text.SpannableStringBuilder()
+                var __optLen = 0
+                var optionPrefixLeft = "${index + 1}) ".length
+                NativeMathFormatter.segments("${index+1}) $option").forEach { segment ->
                     if (segment.math) {
-                        optionText.append('\uFFFC')
-                        optionText.setSpan(
+                        __opt.append('\uFFFC')
+                        __opt.setSpan(
                             MathReplacementSpan(NativeMathParser.parse(segment.text)),
-                            optionLength,
-                            optionLength + 1,
-                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                            __optLen, __optLen + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                         )
-                        optionLength += 1
+                        __optLen += 1
                     } else if (segment.text.isNotEmpty()) {
-                        val boldLength = prefixLength.coerceIn(0, segment.text.length)
-                        optionText.append(segment.text)
-                        if (boldLength > 0) {
-                            optionText.setSpan(
-                                android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                                optionLength,
-                                optionLength + boldLength,
-                                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                            )
-                        }
-                        prefixLength -= boldLength
-                        optionLength += segment.text.length
+                        val boldTake = optionPrefixLeft.coerceIn(0, segment.text.length)
+                        __opt.append(segment.text)
+                        if (boldTake > 0) __opt.setSpan(
+                            android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                            __optLen, __optLen + boldTake, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                        optionPrefixLeft -= boldTake
+                        __optLen += segment.text.length
                     }
                 }
-                if (optionText.isNotEmpty()) {
-                    addQuestionBlock(
-                        RenderBlock(
-                            styledText = optionText,
-                            textSize = optionSize,
-                            bold = optionBold,
-                            italic = optionItalic,
-                            align = question.textAlign,
-                            fontFamily = question.fontFamily
-                        )
-                    )
-                }
+                if (__opt.isNotEmpty()) add(RenderBlock(styledText=__opt,textSize=optionSize,
+                    bold=optionBold,italic=optionItalic,
+                    align=question.textAlign,fontFamily=question.fontFamily))
             }
-
-            val matchingRows = maxOf(question.matchingLeft.size, question.matchingRight.size)
-            repeat(matchingRows) { rowIndex ->
-                addQuestionBlock(
-                    RenderBlock(
-                        matchRight = question.matchingRight.getOrNull(rowIndex),
-                        matchLeft = question.matchingLeft.getOrNull(rowIndex),
-                        matchRightStyle = question.matchingRightStyles.getOrNull(rowIndex),
-                        matchLeftStyle = question.matchingLeftStyles.getOrNull(rowIndex),
-                        textSize = question.fontSizeSp.coerceIn(8f, 30f),
-                        bold = question.bold,
-                        italic = question.italic,
-                        align = question.textAlign,
-                        fontFamily = question.fontFamily
-                    )
-                )
+            // ردیف‌های جورکردنی در چاپ رسمی: آیتم راست در نیمهٔ راست، «↔» در
+            // وسط و آیتم چپ در نیمهٔ چپ قرار می‌گیرند.
+            val __matchRows = maxOf(question.matchingLeft.size, question.matchingRight.size)
+            repeat(__matchRows) { rowIndex ->
+                add(RenderBlock(
+                    matchRight=question.matchingRight.getOrNull(rowIndex),
+                    matchLeft=question.matchingLeft.getOrNull(rowIndex),
+                    matchRightStyle=question.matchingRightStyles.getOrNull(rowIndex),
+                    matchLeftStyle=question.matchingLeftStyles.getOrNull(rowIndex),
+                    textSize=question.fontSizeSp.coerceIn(8f,30f),bold=question.bold,italic=question.italic,align=question.textAlign,fontFamily=question.fontFamily
+                ))
             }
-
-            question.images.forEachIndexed { index, image ->
+            // تصویر گالری با مختصات پیش‌فرض ۲۰/۳۰ هنوز جابه‌جا نشده است؛ آن را
+            // در جریان طبیعیِ وسط نگه می‌داریم تا با آزادشدن تصویر دیگر به چپ
+            // نپرد.
+            question.images.forEachIndexed { index,image ->
                 val rawX = question.imageXmm.getOrNull(index) ?: 20f
                 val rawY = question.imageYmm.getOrNull(index) ?: 30f
                 val isDefault = rawX == 20f && rawY == 30f
-                val position = if (question.imagePosition == "free" && isDefault) "below" else question.imagePosition
-                addQuestionBlock(
-                    RenderBlock(
-                        image = image,
-                        boxed = true,
-                        imagePosition = position,
-                        imageWidthMm = question.imageWidthsMm.getOrNull(index) ?: 80f,
-                        imageXmm = rawX,
-                        imageYmm = rawY
-                    )
-                )
+                val pos = if (question.imagePosition == "free" && isDefault) "below" else question.imagePosition
+                add(RenderBlock(
+                    image=image,boxed=true,imagePosition=pos,
+                    imageWidthMm=question.imageWidthsMm.getOrNull(index) ?: 80f,
+                    imageXmm=rawX, imageYmm=rawY
+                ))
             }
-
-            if (exam.includeAnswerKey && !question.answerText.isNullOrBlank()) {
-                addQuestionBlock(
-                    RenderBlock(
-                        text = "پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",
-                        textSize = 10.5f,
-                        bold = true,
-                        fontFamily = question.fontFamily
-                    )
-                )
-            } else {
-                repeat(question.answerLines.coerceIn(0, 12)) {
-                    addQuestionBlock(
-                        RenderBlock(
-                            text = if (question.answerLineStyle in setOf("blank", "plain")) " "
-                            else "................................................................................................................",
-                            textSize = 9f
-                        )
-                    )
-                }
+            if(exam.includeAnswerKey&&!question.answerText.isNullOrBlank())add(RenderBlock(text="پاسخ: ${NativeMathFormatter.renderText(question.answerText)}",textSize=10.5f,bold=true,fontFamily=question.fontFamily))
+            else repeat(question.answerLines.coerceIn(0,12)) {
+                add(RenderBlock(
+                    text=if(question.answerLineStyle=="blank") " " else "................................................................................................................",
+                    textSize=9f
+                ))
             }
-
-            // این هم همان فاصلهٔ قدیمی است، اما توسط gesture PDF بومی تنظیم و
-            // در مقدار پایدار sepExtraPx نگه‌داری می‌شود.
-            addQuestionBlock(
-                RenderBlock(
-                    text = "",
-                    spacingAfter = QUESTION_GAP_PT + question.sepExtraPx.coerceIn(0, 1_500) * .75f,
-                    separatorQuestionIndex = questionIndex
-                )
-            )
+            // فاصلهٔ ثابت بین سؤال‌ها در جریان چاپ.
+            add(RenderBlock(text="",spacingAfter=QUESTION_GAP_PT))
         }
     }
 
@@ -606,20 +383,8 @@ class OfficialPrintLayoutEngine(private val context: Context) {
         slice: Pair<Float, Float>
     ) {
         document.placed.forEachIndexed { index, placedBlock ->
-            val block = placedBlock.block
-            val slotIntersects = placedBlock.y + placedBlock.height > slice.first && placedBlock.y < slice.second
-            // شکل آزاد ممکن است خارج از محدودهٔ slot اولیه و حتی در page بعد
-            // باشد. خود extent تصویر، نه فقط slot، تعیین می‌کند در این slice
-            // رسم شود؛ clip صفحه قسمت لازم را جدا می‌کند.
-            val freeImageIntersects = if (block.imagePosition == "free") {
-                imageRectPt(block, placedBlock.y)?.let { rect ->
-                    rect.bottom > slice.first && rect.top < slice.second
-                } == true
-            } else {
-                false
-            }
-            if (slotIntersects || freeImageIntersects) {
-                drawBlockAt(canvas, block, placedBlock.y, placedBlock.height, document.layouts[index])
+            if (placedBlock.y + placedBlock.height > slice.first && placedBlock.y < slice.second) {
+                drawBlockAt(canvas, placedBlock.block, placedBlock.y, placedBlock.height, document.layouts[index])
             }
         }
     }
@@ -631,29 +396,10 @@ class OfficialPrintLayoutEngine(private val context: Context) {
         height: Float,
         cachedLayout: StaticLayout? = null
     ) {
-        if (block.separatorQuestionIndex >= 0) {
-            val separatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.rgb(144, 160, 176)
-                strokeWidth = .8f
-                pathEffect = DashPathEffect(floatArrayOf(3f, 2f), 0f)
-            }
-            canvas.drawLine(MARGIN, y + 2f, PAGE_WIDTH - MARGIN, y + 2f, separatorPaint)
-        }
         if (block.boxed) {
-            // تصویر آزاد در جای visual خودش قاب می‌گیرد، نه در slot قدیمی؛
-            // وگرنه هنگام عبور از page break قاب در صفحه‌ای جدا از تصویر می‌افتاد.
-            val box = if (block.imagePosition == "free") {
-                imageRectPt(block, y)?.let { image ->
-                    RectF(image.left - 3f, image.top - 2f, image.right + 3f, image.bottom + 6f)
-                }
-            } else {
-                null
-            } ?: RectF(MARGIN - 3f, y - 2f, PAGE_WIDTH - MARGIN + 3f, y + height - block.spacingAfter)
             canvas.drawRoundRect(
-                box,
-                5f,
-                5f,
-                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                MARGIN - 3f, y - 2f, PAGE_WIDTH - MARGIN + 3f, y + height - block.spacingAfter,
+                5f, 5f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     style = Paint.Style.STROKE
                     color = Color.rgb(120, 120, 120)
                     strokeWidth = 0.8f
@@ -691,32 +437,19 @@ class OfficialPrintLayoutEngine(private val context: Context) {
         }
     }
 
-    /**
-     * ضلع چپ ReplacementSpan در خط RTL با هر دو مرز کاراکتر تعیین می‌شود؛
-     * getPrimaryHorizontal در RTL ممکن است مرز راست را بدهد.
-     */
-    private fun replacementLeftPt(layout: StaticLayout, offset: Int, widthPt: Float): Float {
-        val start = offset.coerceIn(0, layout.text.length)
-        val end = (start + 1).coerceAtMost(layout.text.length)
-        val first = layout.getPrimaryHorizontal(start)
-        val second = layout.getPrimaryHorizontal(end)
-        val line = layout.getLineForOffset(start)
-        val min = layout.getLineLeft(line)
-        val max = (layout.getLineRight(line) - widthPt).coerceAtLeast(min)
-        return minOf(first, second).coerceIn(min, max)
-    }
-
-    /** مستطیل واقعی تصویر در جریان PDF. */
-    private fun imageRectPt(block: RenderBlock, top: Float): RectF? {
+    /** مستطیل واقعی تصویر در صفحهٔ PDF. */
+    private fun imageRectPt(block: RenderBlock, top: Float): android.graphics.RectF? {
         val bitmap = block.image ?: return null
-        val (width, height) = figureTargetSizePt(bitmap, block.imageWidthMm, block.imageHeightMm)
+        val targetWidth=(block.imageWidthMm/210f*PAGE_WIDTH).coerceIn(40f,CONTENT_WIDTH-12f)
+        val scale=minOf(targetWidth/bitmap.width,220f/bitmap.height,1f)
+        val width=bitmap.width*scale;val height=bitmap.height*scale
         val left=when(block.imagePosition){"right"->PAGE_WIDTH-MARGIN-width;"left"->MARGIN;"free"->MARGIN+(block.imageXmm*MM_TO_PT).coerceIn(0f,CONTENT_WIDTH-width);else->MARGIN+(CONTENT_WIDTH-width)/2f}
         // V68.8 — سند پیوسته: y آزاد نسبت به جای جریان خودش بدون clamp به یک
         // صفحه (سند بلند است)؛ کف فقط ۰ تا از بالای سند بیرون نرود.
         val y=if(block.imagePosition=="free")
             (top+block.imageYmm*MM_TO_PT).coerceAtLeast(0f)
         else top+3f
-        return RectF(left,y,left+width,y+height)
+        return android.graphics.RectF(left,y,left+width,y+height)
     }
 
     private fun drawImageAt(canvas: Canvas, bitmap: Bitmap, top: Float, block: RenderBlock) {
@@ -734,8 +467,9 @@ class OfficialPrintLayoutEngine(private val context: Context) {
 
     private fun measureBlock(block: RenderBlock): Float {
         block.image?.let { image ->
-            val (_, height) = figureTargetSizePt(image, block.imageWidthMm, block.imageHeightMm)
-            return height + block.spacingAfter + 8f
+            val targetWidth=(block.imageWidthMm/210f*PAGE_WIDTH).coerceIn(40f,CONTENT_WIDTH-12f)
+            val scale=minOf(targetWidth/image.width,220f/image.height,1f)
+            return image.height*scale+block.spacingAfter+8f
         }
         // V68.6 — ارتفاع ردیف جورکردنی: بلندترِ دو نیمه (آیتم‌ها می‌شکنند).
         if (block.matchRight != null || block.matchLeft != null) {
@@ -763,25 +497,9 @@ class OfficialPrintLayoutEngine(private val context: Context) {
     // V68.6 — عرض هر نیمهٔ ردیف جورکردنی (۲۶pt وسط برای «↔»).
     private fun matchHalfWidth(): Int = (((CONTENT_WIDTH - 26f) / 2f).coerceAtLeast(60f)).toInt()
 
-    /**
-     * اندازهٔ هدف یک شکل در صفحهٔ PDF.
-     *
-     * ارتفاع null یعنی نسبت bitmap و سقف قدیمی 220pt. هنگامی که کاربر دستگیرهٔ
-     * resize را می‌کشد، هر دو بُعد در layout بومی ذخیره می‌شوند؛ در آن حالت
-     * ارتفاع صریح باید بی‌کم‌وکاست در PDF، PdfRenderer و چاپ دیده شود.
-     */
-    private fun figureTargetSizePt(
-        bitmap: Bitmap,
-        widthMm: Float,
-        requestedHeightMm: Float? = null
-    ): Pair<Float, Float> {
+    /** اندازهٔ هدف یک شکل در صفحهٔ PDF. */
+    private fun figureTargetSizePt(bitmap: Bitmap, widthMm: Float): Pair<Float, Float> {
         val targetWidth = (widthMm / 210f * PAGE_WIDTH).coerceIn(40f, CONTENT_WIDTH - 12f)
-        val requestedHeight = requestedHeightMm
-            ?.takeIf { it.isFinite() }
-            ?.times(MM_TO_PT)
-            ?.coerceIn(8f * MM_TO_PT, 900f * MM_TO_PT)
-        if (requestedHeight != null) return targetWidth to requestedHeight
-
         val scale = minOf(targetWidth / bitmap.width, 220f / bitmap.height, 1f)
         return (bitmap.width * scale) to (bitmap.height * scale)
     }
@@ -820,10 +538,9 @@ class OfficialPrintLayoutEngine(private val context: Context) {
      */
     private inner class FigureReplacementSpan(
         private val bitmap: Bitmap,
-        private val widthMm: Float,
-        private val heightMm: Float?
+        private val widthMm: Float
     ) : ReplacementSpan() {
-        private fun targetSize(): Pair<Float, Float> = figureTargetSizePt(bitmap, widthMm, heightMm)
+        private fun targetSize(): Pair<Float, Float> = figureTargetSizePt(bitmap, widthMm)
 
         override fun getSize(paint: Paint, text: CharSequence, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
             val (w, h) = targetSize()
@@ -950,17 +667,13 @@ class OfficialPrintLayoutEngine(private val context: Context) {
         // فاصلهٔ سؤال‌ها: ۶mm تبدیل‌شده به pt.
         const val QUESTION_GAP_PT = 6f * MM_TO_PT
         /** برش جریان پیوسته به صفحه‌های A4 روی مرزهای امن. */
-        fun computeSlices(
-            total: Float,
-            boundaries: List<Float>,
-            firstContentTop: Float = CONTENT_TOP
-        ): List<Pair<Float, Float>> {
+        fun computeSlices(total: Float, boundaries: List<Float>): List<Pair<Float, Float>> {
             val sorted = boundaries.distinct().sorted()
             val result = mutableListOf<Pair<Float, Float>>()
             var top = 0f
             var first = true
             while (top < total - 0.01f) {
-                val cap = if (first) CONTENT_BOTTOM - firstContentTop else CONTENT_BOTTOM - LATER_CONTENT_TOP
+                val cap = if (first) CONTENT_BOTTOM - CONTENT_TOP else CONTENT_BOTTOM - LATER_CONTENT_TOP
                 val limit = (top + cap).coerceAtMost(total)
                 val end = sorted.lastOrNull { it > top + 0.01f && it <= limit } ?: limit
                 if (end <= top + 0.01f) break

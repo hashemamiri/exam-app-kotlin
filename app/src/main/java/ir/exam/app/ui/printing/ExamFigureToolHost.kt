@@ -5,9 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.core.figure.FigureSpec
-import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.ui.figure.AtlasEditorDialog
 import ir.exam.app.ui.figure.AtlasTypePickerDialog
 import ir.exam.app.ui.figure.FigureKind
@@ -34,25 +32,8 @@ internal data class FigureToolRequest(
     }
 }
 
-/** توکنِ متناظر با قرارداد `FigureCodec` و رندرر PDF. */
+/** توکنِ متناظر با قرارداد `FigureCodec` و رندرر چاپ. */
 internal fun figureTokenOf(spec: FigureSpec): String = "%%FIG:" + spec.toJson() + "%%"
-
-/**
- * تشخیص ابزار بومی از روی spec؛ هم آزمون‌ساز و هم overlay پیش‌نمایش PDF از
- * این نگاشت واحد استفاده می‌کنند. `k=img` عمداً ابزار ویرایش شکل ندارد.
- */
-internal fun toolOfSpec(specJson: String): String? {
-    val spec = FigureSpec.parse(specJson) ?: return null
-    return when (spec.kind) {
-        "t" -> "table"
-        "p" -> "periodic"
-        "a" -> "anatomy"
-        "s" -> if (AtlasCatalog.scienceDomain(spec.type) == "chem") "chemistry" else "physics"
-        "g" -> "graph"
-        "" -> if (GRAPH_FIGURES.any { it.id == spec.type }) "graph" else "figure"
-        else -> null
-    }
-}
 
 /**
  * پنجرهٔ بومیِ متناظر با `request.tool` را نشان می‌دهد و در پایان توکن را

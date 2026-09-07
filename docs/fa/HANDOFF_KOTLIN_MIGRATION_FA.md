@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۷ — V104 مهاجرت کامل پیش‌نمایش/چاپ آزمون به PDF بومی (حذف WebView چاپ)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۷ — بازگشت کامل V104 (Revert)؛ پیش‌نمایش/چاپ آزمون دوباره با موتور d5fc2ca (renderer HTML سبک + چاپ مستقیم)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -16932,6 +16932,10 @@ d5fc2ca            refactor(print): retire legacy editor and layout store
 
 ## ۳۲۵) V104 — PDF بومیِ واحد برای پیش‌نمایش و چاپ آزمون (پایان WebView چاپ)
 
+> ⚠️ **این نسخه در همان روز (۲۰۲۶-۰۹-۰۷) به تصمیم کاربر به‌طور کامل برگردانده شد — بخش ۳۲۶.**
+> کد V104 دیگر روی `main` نیست و فقط در تاریخچهٔ git (commit `cd1a6f4`) موجود است؛ این بخش برای
+> مستندسازی نگه داشته شده است.
+
 ### خلاصه
 
 - پیش‌نمایش و چاپ آزمون به **یک فایل PDF A4 بومی و immutable** منتقل شد:
@@ -17020,3 +17024,90 @@ SQL/Edge/Secret/Migration/Dependency جدید: ندارد
 مطابق `docs/fa/HANDOFF_NATIVE_PDF_V104_FA.md` (۶ گام: preview آزمون ترکیبی، move/resize
 شکل و ماندگاری، شکل عبورکرده از page break، خط آبی فاصله، یکی‌بودن چاپ با preview
 از Builder و Print Center، و کارکرد ویرایشگر فرمول به‌عنوان تنها WebView).
+
+---
+
+## ۳۲۶) بازگشت کامل V104 (Revert) — پیش‌نمایش/چاپ آزمون دوباره با موتور d5fc2ca
+
+### تصمیم و دلیل
+
+- V104 (commit `cd1a6f4`) روی `main` push شد و CI آن سبز بود (run 34147973155؛ اولین
+  `compileDebugKotlin`/`testDebugUnitTest` واقعی کد V104 با موفقیت انجام شد).
+- کاربر پس از استفاده روی دستگاه تصمیم گرفت: **کار می‌کرد ولی نتیجهٔ پیش‌نمایش/چاپ با PDF
+  بومی از روش قبلی ضعیف‌تر بود** → «V104 را revert کن». دلیل فنی جزئی‌تر ثبت نشده است.
+- بازگشت **کامل** است: همهٔ کد، asset، تست‌ها، `README_FA.md` و `verify_native_final.py`
+  دقیقاً به محتوای `d5fc2ca` برگشتند. فقط دو فایل مستند با `d5fc2ca` فرق دارند:
+  همین هندآف (بخش‌های ۳۲۴/۳۲۵ حفظ + این بخش) و `text/CHANGELOG_FA.txt` (بلوک بازگشت در
+  ابتدای فایل، چون CI دوازده سطر اول را به‌عنوان یادداشت انتشار می‌فرستد).
+
+### چه چیزی برگشت / چه چیزی حذف شد
+
+```text
+برگشت (۹ فایل که V104 حذف کرده بود):
+  app/src/main/assets/print/exam_print_renderer.html          renderer HTML سبک (۴۲٬۱۸۹ بایت)
+  ui/printing/ExamHtmlPrintDialog.kt / ExamHtmlPrintPayload.kt / ExamHtmlImageInliner.kt
+  ui/printing/ExamPrintAssetRenderer.kt
+  ui/builder/ExamPrintPreview.kt
+  ui/math/QuestionTextFieldWebView.kt
+  test: ExamHtmlPrintPayloadTest.kt / ExamPrintRendererContractTest.kt
+
+حذف (۸ فایل که V104 اضافه کرده بود):
+  core/printing/OfficialExamImageLoader.kt / PrintPreviewLayoutCodec.kt
+  ui/printing/NativeExamPdfDocument.kt / NativeExamPdfPreviewDialog.kt
+  ui/math/QuestionEditorFieldController.kt
+  test: core/printing/PrintPreviewLayoutCodecTest.kt / ui/app/NativeExamPdfContractTest.kt
+  docs/fa/HANDOFF_NATIVE_PDF_V104_FA.md   (راهنمای مستقل V104؛ از cd1a6f4 قابل بازیابی است)
+
+بازگشت محتوا به d5fc2ca (۱۸ فایل کد/تست + README + verify):
+  OfficialPdfPrintAdapter.kt / OfficialPrintController.kt / ExamBuilderScreen.kt /
+  TeacherDashboardScreen.kt / TeacherDashboardViewModel.kt / QuestionToolIcons.kt /
+  ExamFigureToolHost.kt / ExamPrintCenterScreen.kt / PrintHeaderSettings.kt /
+  ۹ تست پین‌شده / docs/fa/README_FA.md / scripts/verify_native_final.py (۱۸۵ سطر)
+```
+
+`android.webkit` باز هم فقط در سه فایل است (همان وضعیت d5fc2ca): `FormulaHostDialog`
+(ویرایشگر فرمول)، `ExamHtmlPrintDialog` (renderer چاپ سبک) و `QuestionTextFieldWebView.kt`
+(فقط `QuestionEditorFieldController` با fallback؛ کادر متن سؤال از V65 بومی است). تصمیم‌های دائمی
+(نبود `plain_password`، نبود silent install، `decodeAs`، WHERE در UPDATE/DELETE) دست نخورده‌اند.
+
+### سازگاری داده‌های ذخیره‌شده در دورهٔ V104 (مهم)
+
+- `figLayoutsJson`: V104 برای هر شکل `{nativePdf:true,xMm,yMm,widthMm,heightMm,free}`
+  می‌نوشت؛ renderer قدیمی فقط `{x,y,w,h,z,free}` (پیکسل CSS) می‌خواند. رفتار واقعی
+  `parseLayouts` روی JSON میلی‌متری (با Node آزمایش شد): `x=y=w=h=0` → `layoutFor` عرض/ارتفاع
+  پیش‌فرض می‌گذارد، `free` حفظ می‌شود → شکلِ آزادشده در V104 با اندازهٔ پیش‌فرض در
+  گوشهٔ بالا-راستِ همان سؤال قرار می‌گیرد (نه جای قبلی). با اولین باز و بسته‌کردن
+  پیش‌نمایش، snapshot پیکسلی جدید هنگام بستن (`fetchFigLayoutsSnapshot` → `onFigLayouts`)
+  روی draft نوشته می‌شود (خود-ترمیم) و کاربر یک‌بار شکل را دوباره جابه‌جا می‌کند. هیچ crash یا exception در این مسیر نیست.
+- `sepExtraPx`: در هر دو نسخه پیکسل (۰..۱۵۰۰) است؛ V104 تغییر فاصله را با `pt/0.75` به
+  همان واحد تبدیل می‌کرد → فاصله‌های تنظیم‌شده بدون تغییر حفظ می‌شوند.
+- فقط draftهایی درگیرند که پیش‌نمایش آن‌ها در بیلد V104 (همان روز) باز/ویرایش شده باشد.
+- بهبود کوچک V104 در `PrintHeaderSettings.kt` (پیش‌انتخاب قالب سربرگ ذخیره‌شده از
+  `f_headerTemplate`) هم با این بازگشت رفت؛ اگر خواسته شد، در V105 جداگانه قابل افزودن است.
+
+### نحوهٔ تحویل و راستی‌آزمایی
+
+```text
+تحویل:      apply_v104_revert.py (نصاب مستقل §۱۱؛ مبنا cd1a6f4؛ تطبیق hash درخت نتیجه)
+اجرا:       cd /mnt/c/Users/Hashem/Downloads/exam-app-kotlin && python3 /mnt/c/Users/Hashem/Downloads/apply_v104_revert.py
+commit:     Revert "V104: …" + بدنهٔ فارسی (الگوی همان Revert V102 = c957830)
+verify:     python3 scripts/verify_native_final.py → «Print renderer verification: PASS»
+            git diff --check → تمیز
+اثبات:      git diff --stat d5fc2ca <commit بازگشت> → فقط ۲ فایل مستند
+CI:         کد بایت‌به‌بایت برابر d5fc2ca است که run 34130265887 آن سبز بود
+```
+
+### اگر روزی V104 دوباره خواسته شد
+
+```bash
+# همهٔ کد V104 در تاریخچه است؛ یا revertِ commit بازگشت:
+git revert <commit بازگشت>
+# یا فقط فایل‌های مشخص:
+git checkout cd1a6f4 -- app/src/main/java/ir/exam/app/ui/printing/NativeExamPdfDocument.kt
+```
+
+درس: هر مهاجرت بزرگِ خروجی چاپ باید قبل از جایگزینی کامل، **کنار** مسیر فعلی و با
+مقایسهٔ چشمی روی دستگاه تأیید شود؛ V104 مسیر قدیمی را همان ابتدا حذف کرد و راه
+میانه‌ای برای مقایسه باقی نگذاشت.
+
+شمارهٔ نسخهٔ بعدی همچنان **V105** است.
