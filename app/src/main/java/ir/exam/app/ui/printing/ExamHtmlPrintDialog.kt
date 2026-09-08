@@ -21,6 +21,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -199,6 +206,26 @@ fun ExamHtmlPrintDialog(
         // کاربری نداشت: پیش‌نمایش و چاپِ مستقیم هر دو بدونِ هدر می‌شوند.
         Surface(Modifier.fillMaxSize(), color = Color(0xFF334155)) {
             Column(Modifier.fillMaxSize()) {
+                // V116 — هدرِ بومی (Compose) بالای WebView: واقعاً ثابت است، چون
+                // اصلاً داخل صفحهٔ اسکرول‌شونده نیست. ✕ قرمز، کل صفحه/اندازهٔ واقعی
+                // و نوارِ قالب‌بندیِ اسکرول‌شونده که به JS رندرر فرمان می‌دهد.
+                if (!loading && initialPrintMode == null) {
+                    var fitPage by remember { mutableStateOf(true) }
+                    PrintPreviewHeader(
+                        fitPage = fitPage,
+                        onToggleFit = {
+                            runJs("(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.toggleFit?window.ExamPrintRenderer.toggleFit():''}catch(e){return ''}})()") { raw: String? ->
+                                val r = unwrapJsString(raw)
+                                if (r == "fit" || r == "real") fitPage = r == "fit"
+                            }
+                        },
+                        onClose = { requestDismiss() },
+                        onFormat = { kind, value ->
+                            val v = value.replace("\\", "").replace("'", "")
+                            runJs("(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyFormat?window.ExamPrintRenderer.applyFormat('$kind','$v'):''}catch(e){return ''}})()", null)
+                        }
+                    )
+                }
                 Box(Modifier.fillMaxSize().weight(1f)) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
@@ -552,7 +579,7 @@ internal fun createExamPrintWebView(
                             // خروجی چاپ خالی می‌ماند.
                             if (printMode != null) {
                                 view.evaluateJavascript(
-                                    "try{document.body.classList.add('exam-print-mode');document.documentElement.classList.add('exam-print-mode-root');}catch(e){}",
+                                    "try{document.body.classList.add('exam-print-mode');}catch(e){}",
                                     null
                                 )
                             }
@@ -736,5 +763,119 @@ private class OneShotPrintAdapter(
     private fun handlerPost(block: () -> Unit) {
         // adapter روی رشتهٔ چاپ صدا زده می‌شود؛ آزادسازیِ WebView باید اصلی باشد.
         Handler(Looper.getMainLooper()).post(block)
+    }
+}
+
+/** V116 — هدرِ ثابتِ پیش‌نمایش: عنوان، کل صفحه/اندازهٔ واقعی، ✕ قرمز و نوارِ قالب‌بندی. */
+@Composable
+private fun PrintPreviewHeader(
+    fitPage: Boolean,
+    onToggleFit: () -> Unit,
+    onClose: () -> Unit,
+    onFormat: (kind: String, value: String) -> Unit
+) {
+    var colorMenu by remember { mutableStateOf(false) }
+    var sizeMenu by remember { mutableStateOf(false) }
+    var fontMenu by remember { mutableStateOf(false) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("پیش‌نمایش برگهٔ A4", style = MaterialTheme.typography.titleSmall, color = Color(0xFF0F172A))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Button(
+                    onClick = onToggleFit,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) { Text(if (fitPage) "اندازهٔ واقعی" else "کل صفحه", style = MaterialTheme.typography.labelMedium) }
+                androidx.compose.material3.FilledIconButton(
+                    onClick = onClose,
+                    colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFDC2626), contentColor = Color.White),
+                    modifier = Modifier.size(36.dp)
+                ) { Icon(androidx.compose.material.icons.Icons.Outlined.Close, contentDescription = "بستن") }
+            }
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FormatChip("B", bold = true) { onFormat("bold", "") }
+            FormatChip("I", italic = true) { onFormat("italic", "") }
+            FormatChip("U", underline = true) { onFormat("underline", "") }
+            Box {
+                FormatChip("رنگ") { colorMenu = true }
+                androidx.compose.material3.DropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
+                    listOf(
+                        "#000000" to "مشکی", "#dc2626" to "قرمز", "#2563eb" to "آبی", "#16a34a" to "سبز",
+                        "#7c3aed" to "بنفش", "#ea580c" to "نارنجی", "#6b7280" to "خاکستری"
+                    ).forEach { (hex, name) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(Color(android.graphics.Color.parseColor(hex))))
+                                    Text(name)
+                                }
+                            },
+                            onClick = { colorMenu = false; onFormat("color", hex) }
+                        )
+                    }
+                }
+            }
+            Box {
+                FormatChip("اندازه") { sizeMenu = true }
+                androidx.compose.material3.DropdownMenu(expanded = sizeMenu, onDismissRequest = { sizeMenu = false }) {
+                    listOf(10, 11, 12, 13, 14, 16, 18, 20, 24, 28).forEach { px ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text("$px") }, onClick = { sizeMenu = false; onFormat("size", px.toString()) })
+                    }
+                }
+            }
+            Box {
+                FormatChip("فونت") { fontMenu = true }
+                androidx.compose.material3.DropdownMenu(expanded = fontMenu, onDismissRequest = { fontMenu = false }) {
+                    listOf(
+                        "default" to "پیش‌فرض", "Vazirmatn" to "وزیرمتن", "Shabnam" to "شبنم", "Sahel" to "ساحل",
+                        "BNazanin" to "ب نازنین", "Tahoma" to "تاهوما", "serif" to "سریف"
+                    ).forEach { (key, name) ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(name) }, onClick = { fontMenu = false; onFormat("font", key) })
+                    }
+                }
+            }
+            FormatChip("پاک") { onFormat("clear", "") }
+            Text("متن سؤال را انتخاب کنید، بعد دکمه را بزنید", style = MaterialTheme.typography.labelSmall, color = Color(0xFF64748B))
+        }
+    }
+}
+
+@Composable
+private fun FormatChip(
+    label: String,
+    bold: Boolean = false,
+    italic: Boolean = false,
+    underline: Boolean = false,
+    onClick: () -> Unit
+) {
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+        modifier = Modifier.height(34.dp)
+    ) {
+        Text(
+            label,
+            color = Color(0xFF0F172A),
+            fontWeight = if (bold) androidx.compose.ui.text.font.FontWeight.Black else null,
+            fontStyle = if (italic) androidx.compose.ui.text.font.FontStyle.Italic else null,
+            textDecoration = if (underline) androidx.compose.ui.text.style.TextDecoration.Underline else null
+        )
     }
 }

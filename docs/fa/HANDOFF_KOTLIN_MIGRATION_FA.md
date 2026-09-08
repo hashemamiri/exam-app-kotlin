@@ -17450,3 +17450,33 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```text
 تحویل: apply_v115_1.py · نسخهٔ بعدی: V116
 ```
+
+## ۳۴۱. V116 — پیش‌نمایشِ سفید (هدر به Compose منتقل شد) + شکلِ دیلیمترها
+
+**گزارش کاربر:** (۱) پنجرهٔ پیش‌نمایش کاملاً سفید بود؛ نه هدر، نه چرخندهٔ بارگذاری،
+حتی با آزمون کوچک. (۲) `\left( \right)` و براکت/آکولاد بعد از درج در جعبهٔ متنِ
+سؤال کوچک/بدشکل می‌شدند.
+
+**ریشه (۱):** V115 برای «هدر واقعاً ثابت» سند را با `html,body{height:100%;overflow:hidden}`
+قفل و `#printSurface` را اسکرولر کرده بود. در WebView اندروید داخلِ AndroidView
+(Compose) ارتفاعِ ۱۰۰٪ به ارتفاعِ اندازه‌گیری‌شدهٔ اولیه (صفر/ناپایدار) گره می‌خورد و
+کلِ محتوا در ناحیهٔ overflow:hidden پنهان می‌ماند → صفحهٔ سفید. در Puppeteer (اندازهٔ
+ثابت) بازتولید نمی‌شد.
+
+**راه‌حل:** هدر و نوارِ قالب‌بندی از HTML بیرون آمد و به Compose منتقل شد
+(`PrintPreviewHeader` در `ExamHtmlPrintDialog.kt`): چون بیرونِ WebView است، واقعاً
+ثابت می‌ماند و مشکلِ position:fixed/اسکرولرِ داخلی برای همیشه منتفی است. سند مثل
+V113.2 عادی اسکرول می‌شود. `#screenChrome` در HTML فقط با `display:none` برای
+سازگاریِ تست‌ها مانده. API جدید رندرر: `ExamPrintRenderer.toggleFit()` (برمی‌گرداند
+`fit`/`real`) و `ExamPrintRenderer.applyFormat(kind, value)` با kind یکی از
+`bold|italic|underline|color|size|font|clear` (بدون انتخابِ متن: `noselection` و پیام
+داخل صفحه). کلاسِ `exam-print-mode-root` حذف شد.
+
+**ریشه (۲):** `delimiterPath()` در `NativeMathSvgRenderer` پرانتز/براکت/آکولاد را با
+مسیرهای دستیِ stroke‌دار می‌کشید؛ روی دستگاه با AndroidSVG نازک/کج و بی‌شباهت به
+ویرایشگر فرمول (KaTeX) بود. حالا مانند KaTeX خودِ گلیفِ فونت با `scale(1, k)` به
+ارتفاعِ بدنه کشیده می‌شود (k بین ۱ تا ۶). متنِ نمادها هم `stroke="none"` گرفت تا در
+AndroidSVG ضخیم/چرک نشود. تست `NativeMathSvgRendererTest` (۹ تست) سبز است.
+
+**فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`،
+`NativeMathSvgRenderer.kt`. verify PASS. تحویل: `apply_v116.py`.

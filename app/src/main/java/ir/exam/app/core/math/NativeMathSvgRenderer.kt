@@ -210,6 +210,7 @@ object NativeMathSvgRenderer {
             } else {
                 append("\" font-family=\"serif\" font-size=\"").append(number(size)).append('"')
             }
+            append(" stroke=\"none\"")
             if (node.bold) append(" font-weight=\"700\"")
             if (italic) append(" font-style=\"italic\"")
             append(">")
@@ -630,6 +631,12 @@ object NativeMathSvgRenderer {
         return output
     }
 
+    /**
+     * V116 — دیلیمترها (پرانتز/براکت/آکولاد/خط/زاویه) دیگر با مسیرهای دستی کشیده
+     * نمی‌شوند (روی دستگاه با AndroidSVG نازک/کج و متفاوت از ویرایشگر فرمول
+     * دیده می‌شدند). مثل KaTeX، خودِ گلیفِ فونت به‌صورت عمودی کشیده می‌شود تا
+     * به ارتفاع بدنه برسد؛ شکل همان شکلِ آشنای پرانتز می‌ماند.
+     */
     private fun delimiterPath(
         delimiter: String,
         width: Float,
@@ -637,34 +644,22 @@ object NativeMathSvgRenderer {
         left: Boolean,
         size: Float
     ): String {
-        val stroke = max(1.15f, size * .052f)
-        val inset = width * .18f
-        val outside = if (left) width - inset else inset
-        val inside = if (left) inset else width - inset
-        return when (delimiter) {
-            "(", ")" -> "<path d=\"M ${number(outside)} ${number(inset)} Q ${number(inside)} ${number(height / 2f)} ${number(outside)} ${number(height - inset)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
-            "[", "]", "⌊", "⌋", "⌈", "⌉" -> {
-                val top = delimiter !in setOf("⌊", "⌋")
-                val bottom = delimiter !in setOf("⌈", "⌉")
-                buildString {
-                    append("<path d=\"")
-                    if (top) append("M ${number(outside)} ${number(inset)} L ${number(inside)} ${number(inset)} ")
-                    append("M ${number(inside)} ${number(inset)} L ${number(inside)} ${number(height - inset)} ")
-                    if (bottom) append("M ${number(inside)} ${number(height - inset)} L ${number(outside)} ${number(height - inset)}")
-                    append("\" fill=\"none\" stroke-width=\"").append(number(stroke)).append("\"/>")
-                }
-            }
-            "{", "}" -> {
-                val mid = height / 2f
-                "<path d=\"M ${number(outside)} ${number(inset)} Q ${number(inside)} ${number(height * .22f)} ${number(outside)} ${number(mid - inset)} Q ${number(inside)} ${number(mid)} ${number(outside)} ${number(mid + inset)} Q ${number(inside)} ${number(height * .78f)} ${number(outside)} ${number(height - inset)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
-            }
-            "|" -> "<line x1=\"${number(width / 2f)}\" y1=\"${number(inset)}\" x2=\"${number(width / 2f)}\" y2=\"${number(height - inset)}\" stroke-width=\"${number(stroke)}\"/>"
-            "⟨", "⟩", "<", ">" -> "<path d=\"M ${number(outside)} ${number(inset)} L ${number(inside)} ${number(height / 2f)} L ${number(outside)} ${number(height - inset)}\" fill=\"none\" stroke-width=\"${number(stroke)}\"/>"
-            else -> {
-                val glyph = escapeXml(delimiter)
-                "<text x=\"0\" y=\"${number(height * .78f)}\" font-family=\"serif\" font-size=\"${number(minOf(height * .82f, size * 1.7f))}\">$glyph</text>"
-            }
+        val glyph = when (delimiter) {
+            "⟨", "<" -> "⟨"
+            "⟩", ">" -> "⟩"
+            "|" -> "|"
+            else -> delimiter
         }
+        val glyphSize = size * 1.08f
+        val glyphHeight = glyphSize * 1.18f
+        val scaleY = (height / glyphHeight).coerceIn(1f, 6f)
+        val glyphWidth = estimateTextWidth(glyph, glyphSize).coerceAtLeast(glyphSize * .3f)
+        val x = ((width - glyphWidth) / 2f).coerceAtLeast(0f)
+        // خطِ پایهٔ گلیف پس از مقیاس باید نزدیک پایین جعبه بنشیند.
+        val baseline = glyphSize * .92f
+        val translateY = height - glyphHeight * scaleY + (glyphHeight - baseline) * 0f
+        val family = if (glyph == "⟨" || glyph == "⟩") "\"DejaVu Sans\", \"Segoe UI Symbol\", sans-serif" else "serif"
+        return "<text x=\"0\" y=\"0\" transform=\"translate(${number(x)} ${number(translateY)}) scale(1 ${number(scaleY)}) translate(0 ${number(baseline)})\" font-family=\"$family\" font-size=\"${number(glyphSize)}\" stroke=\"none\">${escapeXml(glyph)}</text>"
     }
 
     private fun estimateTextWidth(value: String, size: Float): Float {

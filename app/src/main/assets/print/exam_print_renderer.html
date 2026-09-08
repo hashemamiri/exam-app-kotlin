@@ -22,14 +22,13 @@
 @font-face{font-family:"BNazanin";src:url("/fonts/bnazanin_bold.ttf");font-weight:700}
 :root{color-scheme:light;--ink:#111;--muted:#56657a;--paper:#fff;--screen:#e8edf3}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--screen);color:var(--ink);font-family:Tahoma,"Vazirmatn","Segoe UI",sans-serif}
-/* V115 — هدر واقعاً ثابت: خودِ صفحه اسکرول نمی‌کند؛ فقط #printSurface (زیر هدر)
-   اسکرول می‌شود. position:fixed در WebView با zoom/اسکرول افقی قابل‌اعتماد نبود. */
-html,body{height:100%;overflow:hidden}
-body{display:flex;flex-direction:column;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;overscroll-behavior:contain}
+html,body{margin:0;min-height:100%;background:var(--screen);color:var(--ink);font-family:Tahoma,"Vazirmatn","Segoe UI",sans-serif}
+/* V116 — هدر/نوار قالب‌بندی به Compose منتقل شد (ثابتِ واقعی). سند مثل V113.2
+   عادی اسکرول می‌شود؛ #screenChrome فقط برای سازگاری می‌ماند و پنهان است. */
+body{padding:8px 0 28px;-webkit-print-color-adjust:exact;print-color-adjust:exact;overscroll-behavior:contain}
 body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-select:none}
 /* V114 — هدر ثابت (fixed) با نوارِ قالب‌بندیِ اسکرول‌شونده؛ بستن = ضربدر قرمز */
-#screenChrome{position:relative;flex:0 0 auto;z-index:20;display:flex;flex-direction:column;gap:6px;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #ced8e2;border-radius:0;background:rgba(255,255,255,.98);box-shadow:0 4px 16px rgba(15,23,42,.10)}
+#screenChrome{display:none!important}
 .chrome-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 #closePreview{width:34px;height:34px;padding:0;border-radius:50%;background:#dc2626;color:#fff;font:900 18px/1 inherit;display:inline-flex;align-items:center;justify-content:center}
 #fmtBar{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;padding:2px 2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;direction:rtl}
@@ -55,11 +54,10 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 /* V113 — «کل صفحه»: هیچ اسکرول افقی‌ای نه در سطح (surface) و نه در صفحه.
    «اندازهٔ واقعی»: خودِ صفحه (نه یک جعبهٔ تودرتو) اسکرول می‌شود و پهنای
    سند دقیقاً پهنای برگه (210mm) است — نه بیشتر. */
-#printSurface{flex:1 1 auto;min-height:0;width:100%;overflow:auto;padding:10px 0 24px;box-sizing:border-box}
-html.fit-mode #printSurface{overflow-x:hidden}
-/* «اندازهٔ واقعی»: تنها محتوای اسکرول‌شونده خودِ برگه است → اسکرول افقی فقط تا لبهٔ برگه */
-html.real-mode #printSurface{overflow:auto}
-html.real-mode #sheet{margin:0 auto}
+html.fit-mode,html.fit-mode body{overflow-x:hidden}
+html.fit-mode #printSurface{overflow:hidden}
+html.real-mode #printSurface{overflow:visible;width:max-content;min-width:100%;margin:0 auto}
+#printSurface{width:100%;overflow:auto;padding:2px 0 18px}
 #sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:var(--paper);border:2px solid #000;border-radius:6px;box-shadow:0 7px 28px rgba(15,23,42,.24);font-size:10pt;line-height:1.75;overflow:visible}
 /* V115 — پیش‌نمایشِ چندبرگی: برگهٔ منطقی یکی است (مختصات اشیاء دست‌نخورده)،
    ولی روی صفحه هر ۲۹۷mm یک قابِ A4 کامل کشیده می‌شود و سطرِ سؤالی که به
@@ -301,7 +299,7 @@ html.real-mode #sheet{margin:0 auto}
 .question-sep-drag.is-dragging::before{background:rgba(37,99,235,.85);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
 .exam-footer{margin-top:20px;text-align:center;font-size:9pt;color:#555;padding-top:6px;white-space:pre-wrap}
 .empty{padding:38px 12px;text-align:center;color:#64748b;font-size:13px}
-body.exam-print-mode{padding:0;background:#fff;display:block;height:auto;overflow:visible}html.exam-print-mode-root{height:auto;overflow:visible}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible;height:auto}.exam-print-mode #sheet{width:auto;min-height:0;margin:0;border-radius:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .question-sep-drag{display:none!important}
+body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible}.exam-print-mode #sheet{width:auto;min-height:0;margin:0;border-radius:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .question-sep-drag{display:none!important}
 @media screen and (max-width:760px){#sheet{box-shadow:none}}
 @media print{
   @page{size:A4;margin:5mm}
@@ -1048,7 +1046,7 @@ body.exam-print-mode{padding:0;background:#fff;display:block;height:auto;overflo
     // V106 — پیش‌نمایش هنگام چاپ بسته می‌شود تا دستگیره‌ها/حالت انتخاب چاپ نشوند.
     previewWasOpen = document.body.classList.contains('preview-open');
     endDrag(); selectFigure(null); document.body.classList.remove('preview-open');
-    state.mode = mode === 'teacher' ? 'teacher' : 'student'; document.body.classList.add('exam-print-mode'); document.documentElement.classList.add('exam-print-mode-root'); render();
+    state.mode = mode === 'teacher' ? 'teacher' : 'student'; document.body.classList.add('exam-print-mode'); render();
     waitForImages(function () { callBridge('print', state.mode); }); return 'queued';
   }
   /* V106 — بازگشت از پنل چاپ: حالتِ چاپ (کلاس exam-print-mode، نسخهٔ استاد،
@@ -1056,18 +1054,18 @@ body.exam-print-mode{padding:0;background:#fff;display:block;height:auto;overflo
      می‌شود؛ پیش‌تر کلاس چاپ روی body می‌ماند و پیش‌نمایش به‌هم‌ریخته بود. */
   function restorePreview() {
     endDrag();
-    document.documentElement.classList.remove('exam-print-mode-root');
+
     document.body.classList.remove('exam-print-mode');
     state.mode = 'student';
     if (previewWasOpen) document.body.classList.add('preview-open');
     render();
-    try { surface.scrollTop = 0; surface.scrollLeft = 0; } catch (ignored) {}
+    try { window.scrollTo(0, 0); } catch (ignored) {}
     return 'ok';
   }
   window.addEventListener('afterprint', restorePreview);
   function showPreview() {
     endDrag(); state.mode = 'student';
-    document.body.classList.remove('exam-print-mode'); document.documentElement.classList.remove('exam-print-mode-root'); document.body.classList.add('preview-open'); previewWasOpen = true;
+    document.body.classList.remove('exam-print-mode'); document.body.classList.add('preview-open'); previewWasOpen = true;
     render(); return 'ok';
   }
   function closePreview() { callBridge('previewClosed'); }
@@ -1085,13 +1083,13 @@ body.exam-print-mode{padding:0;background:#fff;display:block;height:auto;overflo
     root.classList.remove('real-mode'); root.classList.add('fit-mode');
     surface.classList.add('fit-page');
     /* V113 — مقیاس از پهنای واقعیِ پنجره (نه surface که ممکن است خودش پهن‌تر شده باشد) */
-    var available = Math.max(0, surface.clientWidth - 16), natural = sheet.offsetWidth || 794, scale = natural > 0 ? Math.min(1, available / natural) : 1;
+    var available = Math.max(0, (root.clientWidth || window.innerWidth) - 16), natural = sheet.offsetWidth || 794, scale = natural > 0 ? Math.min(1, available / natural) : 1;
     var offset = Math.max(0, (surface.clientWidth - natural * scale) / 2);
     sheet.style.transform = 'translateX(' + offset.toFixed(2) + 'px) scale(' + scale.toFixed(4) + ')';
     surface.style.height = Math.ceil(sheet.offsetHeight * scale) + 24 + 'px';
     if (fitButton) fitButton.textContent = 'اندازهٔ واقعی';
   }
-  if (fitButton) fitButton.addEventListener('click', function () { fitPage = !fitPage; applyFit(); try { surface.scrollTop = 0; surface.scrollLeft = 0; } catch (ignored) {} });
+  if (fitButton) fitButton.addEventListener('click', function () { fitPage = !fitPage; applyFit(); try { window.scrollTo(0, 0); } catch (ignored) {} });
   window.addEventListener('resize', applyFit);
   /* ===== V114 — نوارِ قالب‌بندیِ متنِ انتخاب‌شده =====
      انتخابِ کاربر (Selection) به بازهٔ [start,end) در متنِ اصلیِ سؤال نگاشت
@@ -1175,6 +1173,18 @@ body.exam-print-mode{padding:0;background:#fff;display:block;height:auto;overflo
   window.printStudent = function () { return requestPrint('student'); };
   window.printTeacher = function () { return requestPrint('teacher'); };
   window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};
+  /* V116 — API برای هدرِ بومی (Compose): تغییر حالت اندازه و قالب‌بندیِ متنِ انتخاب‌شده. */
+  window.ExamPrintRenderer.toggleFit = function () { fitPage = !fitPage; applyFit(); try { window.scrollTo(0, 0); } catch (ignored) {} return fitPage ? 'fit' : 'real'; };
+  window.ExamPrintRenderer.applyFormat = function (kind, value) {
+    var sel = selectionRange() || lastSel; if (!sel) { notify('اول بخشی از متن سؤال را انتخاب کنید'); return 'noselection'; }
+    value = value == null ? '' : String(value);
+    if (kind === 'clear') { applyStyle(sel, {bold:false, italic:false, underline:false, color:'', size:0, font:''}); return 'ok'; }
+    if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !coversAxis(sel.question.spans, sel.start, sel.end, kind); applyStyle(sel, patch); return 'ok'; }
+    if (kind === 'color') { applyStyle(sel, {color:/^#[0-9a-fA-F]{6}$/.test(value) ? value : ''}); return 'ok'; }
+    if (kind === 'size') { var n = Number(value); applyStyle(sel, {size:(n >= 8 && n <= 40) ? Math.round(n) : 0}); return 'ok'; }
+    if (kind === 'font') { applyStyle(sel, {font:(value && value !== 'default') ? value.slice(0, 30) : ''}); return 'ok'; }
+    return 'unknown';
+  };
   render();
 }());
 </script>
