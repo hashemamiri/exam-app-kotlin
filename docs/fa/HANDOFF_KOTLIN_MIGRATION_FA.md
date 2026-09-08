@@ -17527,3 +17527,12 @@ Puppeteer: ۱۴ سؤال → ۴ برگه پیش‌نمایش، PDF چاپ هم �
 
 **فایل‌ها:** `exam_print_renderer.html` (103284 B)، `ExamHtmlPrintDialog.kt`،
 `NativeMathSvgRenderer.kt`، `V107_PrintBuilderPolishTest.kt`. تحویل: `apply_v117.py`.
+
+## ۳۴۴. V117.1 — تکرارِ اشیاء در پیش‌نمایش
+
+**گزارش:** با درجِ شکل، شیء در پیش‌نمایش و در سؤال‌های بعدی تکرار می‌شد.
+**ریشه:** در V117 ادامهٔ سطرِ بریده‌شده با `row.cloneNode(true)` ساخته می‌شود؛ کپی،
+`.figure-slot` و `.print-figure` (و دستگیره‌ها) را هم با خود می‌آورد → هر سطرِ
+بریده یک شکلِ اضافه (Puppeteer: ۱۲ سؤال → ۱۶ شکل). **راه‌حل:** در کپی، هر
+`.figure-slot` با یک `.figure-ghost` هم‌اندازهٔ نامرئی جایگزین می‌شود (تا سطربندی
+متن عوض نشود) و `.print-figure`/`.question-sep-drag` حذف می‌شوند (→ ۱۲ شکل).

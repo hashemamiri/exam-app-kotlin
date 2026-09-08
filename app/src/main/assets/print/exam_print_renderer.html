@@ -60,6 +60,7 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 .row-continue{overflow:hidden}
 .row-continue>table{margin-top:calc(-1px * var(--cut,0))}
 .table-head-only{margin-bottom:-1px}
+.figure-ghost{display:inline-block;visibility:hidden}
 .exam-print-mode .a4-page::after{display:none!important}
 /* ===== سربرگ‌ها — عیناً از آزمون‌سازِ مرجع ===== */
   /* ===== HEADER TEMPLATE 2 ===== */
@@ -994,6 +995,12 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
           var wrap = document.createElement('div'); wrap.className = 'row-continue'; cur.frame.appendChild(wrap);
           var cont = tableShell(src, false); wrap.appendChild(cont);
           var clone = row.cloneNode(true); clone.classList.add('row-part'); cont.tBodies[0].appendChild(clone);
+          /* V117.1 — کپیِ ادامه فقط جای خالیِ شکل را نگه می‌دارد؛ خودِ شکل و دستگیره‌ها
+             تکرار نمی‌شوند (اشیاء در سطرِ بریده‌شده و برگه‌های بعد تکرار می‌شدند). */
+          Array.prototype.forEach.call(clone.querySelectorAll('.figure-slot'), function (cs) {
+            var ph = document.createElement('span'); ph.className = 'figure-slot figure-ghost'; ph.style.cssText = cs.style.cssText; cs.parentNode.replaceChild(ph, cs);
+          });
+          Array.prototype.forEach.call(clone.querySelectorAll('.print-figure,.question-sep-drag'), function (x) { x.parentNode.removeChild(x); });
           cont.style.marginTop = (-cut) + 'px';
           host = cont; body = cont.tBodies[0];
           if (!overflows(cur.frame)) break;
