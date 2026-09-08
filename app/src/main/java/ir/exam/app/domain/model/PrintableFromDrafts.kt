@@ -24,12 +24,48 @@ object PrintableFromDrafts {
         QuestionType.ESSAY -> null
     }
 
-    fun questionAt(index: Int, question: QuestionDraft): OfficialPrintQuestion =
-        OfficialPrintQuestion(
+    /**
+     * V120 — گزینه‌های قابل‌چاپِ سؤال. برای «صحیح/غلط» خودِ `QuestionDraft`
+     * هیچ‌وقت `options` را پر نمی‌کند (فقط برای MULTIPLE_CHOICE پر می‌شود)،
+     * پس تا امروز `ExamHtmlPrintPayloadBuilder` هیچ‌وقت شاخهٔ «truefalse» را
+     * برای این نوع پیدا نمی‌کرد و آن را به‌اشتباه به‌عنوان سؤال تشریحی چاپ
+     * می‌کرد. این‌جا برای TRUE_FALSE گزینه‌های ثابت «صحیح»/«غلط» ساخته
+     * می‌شوند تا هم حدسِ نوع در payload درست کار کند و هم — با اضافه‌شدنِ
+     * `questionType` صریح — دیگر به این حدس متکی نباشیم.
+     */
+    private fun printableOptionsFor(question: QuestionDraft): List<String> = when (question.type) {
+        QuestionType.TRUE_FALSE -> listOf("صحیح", "غلط")
+        else -> question.options
+    }
+
+    /** V120 — نوعِ صریحِ سؤال برای موتور چاپ؛ حدسِ متنی را زائد می‌کند. */
+    private fun printableTypeFor(question: QuestionDraft): String = when (question.type) {
+        QuestionType.MULTIPLE_CHOICE -> "multiple"
+        QuestionType.TRUE_FALSE -> "truefalse"
+        QuestionType.FILL_BLANK -> "fill"
+        QuestionType.NUMERIC -> "numeric"
+        QuestionType.MATCHING -> "matching"
+        QuestionType.ESSAY -> "long"
+    }
+
+    fun questionAt(index: Int, question: QuestionDraft): OfficialPrintQuestion {
+        // V120 — تصاویرِ گالری و تصاویرِ گزینه‌ها با اندازه/موقعیتِ پیش‌فرضِ
+        // مخصوصِ خودشان با هم زیپ می‌شوند (نه این‌که دو منبعِ جدا با طول‌های
+        // متفاوت به هم بچسبند) تا اندیسِ url هیچ‌وقت از اندیسِ اندازه/موقعیت
+        // عقب یا جلو نیفتد.
+        val galleryImages = question.images.map { media ->
+            ImagePlacement(media.uri, media.widthMm, media.xMm, media.yMm)
+        }
+        val optionImages = question.optionImages.filterNotNull().map { uri ->
+            ImagePlacement(uri, widthMm = 40f, xMm = 20f, yMm = 30f)
+        }
+        val images = galleryImages + optionImages
+
+        return OfficialPrintQuestion(
             number = index + 1,
             text = question.text,
             score = question.score,
-            options = question.options,
+            options = printableOptionsFor(question),
             optionStyles = question.optionStyles.map { style ->
                 style?.let { Triple(it.bold, it.italic, it.fontSizeSp) }
             },
@@ -54,17 +90,20 @@ object PrintableFromDrafts {
             textSpans = question.textSpans.map {
                 PrintTextSpan(it.start, it.end, it.bold, it.italic, it.underline, it.color, it.size, it.font)
             },
-            imageWidthsMm = question.images.map { it.widthMm } +
-                question.optionImages.filterNotNull().map { 40f },
-            imageXmm = question.images.map { it.xMm } +
-                question.optionImages.filterNotNull().map { 20f },
+            imageWidthsMm = images.map { it.widthMm },
+            imageXmm = images.map { it.xMm },
             // V99.2 — چیدمانِ پیش‌نمایش (اشیاء + جداکننده) با printable می‌رود.
             figLayoutsJson = question.figLayoutsJson,
             sepExtraPx = question.sepExtraPx,
-            imageYmm = question.images.map { it.yMm } +
-                question.optionImages.filterNotNull().map { 30f },
-            imageUrls = question.images.map { it.uri } + question.optionImages.filterNotNull()
+            imageYmm = images.map { it.yMm },
+            imageUrls = images.map { it.uri },
+            // V120 — نوعِ صریح؛ ExamHtmlPrintPayloadBuilder دیگر مجبور به حدس نیست.
+            questionType = printableTypeFor(question)
         )
+    }
+
+    /** V120 — یک تصویر به‌همراه اندازه/موقعیتِ خودش (برای زیپ‌کردنِ ایمن). */
+    private data class ImagePlacement(val uri: String, val widthMm: Float, val xMm: Float, val yMm: Float)
 
     /** آزمونِ چاپیِ محلی: عنوان و درس از خودِ رکورد، بقیه از سربرگِ ذخیره‌شده. */
     fun build(

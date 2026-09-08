@@ -84,6 +84,42 @@ class ExamHtmlPrintPayloadTest {
     }
 
     @Test
+    fun `true false question prints as a two-option truefalse type, not essay`() {
+        // V120 — رگرسیون: قبلاً «صحیح/غلط» چون هیچ‌وقت options نداشت، هیچ
+        // شرطی از heuristicType برایش صدق نمی‌کرد و به‌اشتباه «تشریحی»
+        // (type=long) چاپ می‌شد. با questionType صریح این دیگر تکرار نمی‌شود.
+        val trueFalse = OfficialPrintQuestion(
+            number = 1,
+            text = "زمین گرد است.",
+            score = 1.0,
+            options = listOf("صحیح", "غلط"),
+            answerText = "صحیح",
+            questionType = "truefalse"
+        )
+        val item = ExamHtmlPrintPayloadBuilder.build(printable(trueFalse))["questions"]!!.jsonArray.single().jsonObject
+        assertEquals("truefalse", item["type"]!!.jsonPrimitive.content)
+        val options = item["options"]!!.jsonArray
+        assertEquals(2, options.size)
+        assertEquals("صحیح", options[0].jsonObject["text"]!!.jsonPrimitive.content)
+        assertTrue(options[0].jsonObject["correct"]!!.jsonPrimitive.boolean)
+        assertEquals("غلط", options[1].jsonObject["text"]!!.jsonPrimitive.content)
+        assertFalse(options[1].jsonObject["correct"]!!.jsonPrimitive.boolean)
+
+        // پاسخِ «غلط» باید گزینهٔ دوم را صحیح علامت بزند.
+        val falseAnswer = trueFalse.copy(answerText = "غلط")
+        val falseItem = ExamHtmlPrintPayloadBuilder.build(printable(falseAnswer))["questions"]!!.jsonArray.single().jsonObject
+        val falseOptions = falseItem["options"]!!.jsonArray
+        assertFalse(falseOptions[0].jsonObject["correct"]!!.jsonPrimitive.boolean)
+        assertTrue(falseOptions[1].jsonObject["correct"]!!.jsonPrimitive.boolean)
+
+        // بدونِ questionType صریح، حدسِ قدیمی (سازگاریِ عقب‌رو) هم باید
+        // «صحیح/غلط» را با موفقیت به truefalse تشخیص دهد، نه multiple/long.
+        val legacyGuess = trueFalse.copy(questionType = null)
+        val legacyItem = ExamHtmlPrintPayloadBuilder.build(printable(legacyGuess))["questions"]!!.jsonArray.single().jsonObject
+        assertEquals("truefalse", legacyItem["type"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun `matching numeric and empty payloads retain their print semantics`() {
         val matching = OfficialPrintQuestion(
             number = 1,

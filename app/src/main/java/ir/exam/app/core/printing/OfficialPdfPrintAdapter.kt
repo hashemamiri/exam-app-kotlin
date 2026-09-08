@@ -328,14 +328,21 @@ class OfficialPrintLayoutEngine(private val context: Context) {
             // تصویر گالری با مختصات پیش‌فرض ۲۰/۳۰ هنوز جابه‌جا نشده است؛ آن را
             // در جریان طبیعیِ وسط نگه می‌داریم تا با آزادشدن تصویر دیگر به چپ
             // نپرد.
+            // V120 — به‌جای خواندنِ مستقیمِ لیست‌های خامِ imageXmm/imageYmm/
+            // imageWidthsMm (که قبلاً اگر تولیدکننده‌شان هم‌طول با imageUrls
+            // نمی‌ساخت، اندیس‌ها بی‌صدا جابه‌جا می‌شدند)، از توابعِ کمکیِ
+            // هم‌طول‌سازِ مدل استفاده می‌شود.
+            val safeWidths = question.safeImageWidthsMm()
+            val safeX = question.safeImageXmm()
+            val safeY = question.safeImageYmm()
             question.images.forEachIndexed { index,image ->
-                val rawX = question.imageXmm.getOrNull(index) ?: 20f
-                val rawY = question.imageYmm.getOrNull(index) ?: 30f
+                val rawX = safeX.getOrElse(index) { 20f }
+                val rawY = safeY.getOrElse(index) { 30f }
                 val isDefault = rawX == 20f && rawY == 30f
                 val pos = if (question.imagePosition == "free" && isDefault) "below" else question.imagePosition
                 add(RenderBlock(
                     image=image,boxed=true,imagePosition=pos,
-                    imageWidthMm=question.imageWidthsMm.getOrNull(index) ?: 80f,
+                    imageWidthMm=safeWidths.getOrElse(index) { 80f },
                     imageXmm=rawX, imageYmm=rawY
                 ))
             }

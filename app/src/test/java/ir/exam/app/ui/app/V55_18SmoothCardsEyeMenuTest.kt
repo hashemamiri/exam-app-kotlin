@@ -13,10 +13,15 @@ import org.junit.Test
  *    «پرش» ورود آن می‌شد. اکنون کارت جدید از همان سمت خروج (targetX) وارد و
  *    نرم (tween 300 + FastOutSlowInEasing) به مرکز می‌آید؛ چپ مثل قبل.
  * ۲) «آیکن چشم هم پیش‌نمایش چاپ این سؤال و هم پیش‌نمایش کامل A4 را باز کند و
- *    بستن یکی دیگری را نیاورد»: چشم اکنون DropdownMenu سه‌گزینه‌ای دارد
- *    (پیش‌نمایش این سؤال / پیش‌نمایش کامل A4 / چیدمان و ظاهر چاپ)؛ دو
- *    پیش‌نمایش state مستقل دارند (previewQuestion و previewAll) و بستن هرکدام
- *    فقط همان را می‌بندد.
+ *    بستن یکی دیگری را نیاورد»: این طراحیِ اولیه در V62.7 با یک منوی
+ *    ساده‌ترِ تک‌گزینه‌ای جایگزین شد (چشم فقط پیش‌نمایش دانش‌آموزی را باز
+ *    می‌کند). سیم‌کشیِ قدیمیِ onPreview/onPreviewAll → previewQuestion/
+ *    previewAll → QuestionPrintPreviewDialog/ExamPrintPreviewDialog از
+ *    V62.7 دیگر به هیچ دکمه‌ای وصل نبود (پارامترها می‌ماندند ولی صدا زده
+ *    نمی‌شدند) — یعنی کدِ کاملاً مرده بود. در V120 این کدِ مرده و فایلِ
+ *    ExamPrintPreview.kt به‌طور کامل حذف شدند تا کسی در آینده به‌اشتباه
+ *    گمان نکند این پیش‌نمایشِ Compose-native با موتورِ واقعیِ چاپ
+ *    (HTML/WebView در ExamHtmlPrintDialog) هم‌خوان یا فعال است.
  * ۳) «صحیح/غلط روی کارت به‌صورت ص/غ + فاصلهٔ کمتر آیکن‌ها»: برچسب فشردهٔ
  *    ص/غ روی سربرگ کارت؛ فاصلهٔ ردیف 6dp→2dp و آیکن‌ها 42dp→38dp
  *    (فقط سربرگ؛ MinimalScoreField طبق قرارداد V25 دست‌نخورده 62x40 ماند).
@@ -42,7 +47,7 @@ class V55_18SmoothCardsEyeMenuTest {
     }
 
     @Test
-    fun `eye icon opens both previews independently via a menu`() {
+    fun `eye icon opens only the student preview and the old dead preview code is gone`() {
         val editor = builder.substringAfter("private fun QuestionEditor(")
         // V62.7 — منوی چشم حذف شد: چشم فقط پیش‌نمایش دانش‌آموزی را باز می‌کند.
         assertTrue("onStudentPreview" in editor)
@@ -52,13 +57,17 @@ class V55_18SmoothCardsEyeMenuTest {
         // سنجه روی *کد* است نه کامنت: دکمه و Composableِ آن باید رفته باشند.
         assertTrue("QuestionStyleControls(question" !in builder)
         assertTrue("styleExpanded" !in builder)
-        assertTrue("پیش‌نمایش کامل A4" in builder)
-        assertTrue("onPreviewAll: () -> Unit" in builder)
-        assertTrue("onPreviewAll = { previewAll = true }" in builder)
-        // دو پیش‌نمایش state مستقل دارند؛ بستن یکی دیگری را باز نمی‌کند.
-        assertTrue("onDismiss = { previewQuestion = null }" in builder)
-        assertTrue("onDismiss = { previewAll = false }" in builder)
         assertFalse("VisibilityOff" in builder)
+        // V120 — onPreview/onPreviewAll و پیش‌نمایشِ Compose-native مرده
+        // (previewQuestion/previewAll/QuestionPrintPreviewDialog/
+        // ExamPrintPreviewDialog) به‌طور کامل حذف شدند.
+        assertFalse("onPreviewAll: () -> Unit" in builder)
+        assertFalse("onPreviewAll = { previewAll = true }" in builder)
+        assertFalse("previewQuestion" in builder)
+        assertFalse("previewAll" in builder)
+        assertFalse("QuestionPrintPreviewDialog" in builder)
+        assertFalse("ExamPrintPreviewDialog" in builder)
+        assertTrue(!File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamPrintPreview.kt").exists())
     }
 
     @Test

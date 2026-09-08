@@ -79,8 +79,36 @@ data class OfficialPrintQuestion(
     // کاربر چیده یکی بماند و در بازِ بعدیِ پنجره ریست نشود.
     val figLayoutsJson: String = "",
     /** V99.2 — فاصلهٔ اضافیِ خطِ جداکننده از پیش‌نمایش (پیکسل). */
-    val sepExtraPx: Int = 0
-)
+    val sepExtraPx: Int = 0,
+    /**
+     * V120 — نوع صریح سؤال («multiple»/«truefalse»/«matching»/«numeric»/
+     * «fill»/«long»)؛ چون قبلاً هیچ نشانهٔ صریحی وجود نداشت،
+     * `ExamHtmlPrintPayloadBuilder` مجبور بود نوع را از روی محتوای متن/گزینه‌ها
+     * حدس بزند و سؤال‌های «صحیح/غلط» (که options ندارند) به‌اشتباه تشریحی
+     * چاپ می‌شدند. مقدار null یعنی «نامشخص»؛ در این حالت رفتار قدیمیِ
+     * حدسی دست‌نخورده می‌ماند (سازگاری با تست‌ها/فراخوان‌های قدیمی).
+     */
+    val questionType: String? = null
+) {
+    // V120 — لیست‌های موازیِ موقعیت/اندازهٔ هر تصویر (imageWidthsMm/imageXmm/
+    // imageYmm) باید دقیقاً هم‌طول با imageUrls باشند وگرنه اندیس‌ها بی‌صدا
+    // جابه‌جا می‌شوند و اندازه/موقعیتِ یک تصویر به تصویر دیگری می‌چسبد. این
+    // سه تابع کمکی، صرف‌نظر از این‌که تولیدکننده لیست‌ها را درست پر کرده یا
+    // نه، همیشه یک لیست هم‌طول با imageUrls و پرشده با پیش‌فرض امن برمی‌گردانند؛
+    // مصرف‌کننده‌ها (ExamHtmlPrintPayload/OfficialPdfPrintAdapter) باید از این
+    // توابع استفاده کنند نه مستقیماً از فیلدهای خام.
+    /** V120 — نسخهٔ امنِ عرض هر تصویر؛ هم‌طول با imageUrls. */
+    fun safeImageWidthsMm(): List<Float> = normalizeParallelList(imageWidthsMm, imageUrls.size, 80f)
+
+    /** V120 — نسخهٔ امنِ مختصات x هر تصویر؛ هم‌طول با imageUrls. */
+    fun safeImageXmm(): List<Float> = normalizeParallelList(imageXmm, imageUrls.size, 20f)
+
+    /** V120 — نسخهٔ امنِ مختصات y هر تصویر؛ هم‌طول با imageUrls. */
+    fun safeImageYmm(): List<Float> = normalizeParallelList(imageYmm, imageUrls.size, 30f)
+
+    private fun normalizeParallelList(source: List<Float>, size: Int, fallback: Float): List<Float> =
+        List(size) { index -> source.getOrNull(index) ?: fallback }
+}
 
 data class OfficialGradeReportPrintable(
     override val documentTitle: String,

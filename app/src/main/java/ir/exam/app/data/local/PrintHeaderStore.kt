@@ -62,6 +62,16 @@ class PrintHeaderStore(context: Context) {
 /**
  * V86.9 — نگاشتِ میدان‌های فرمِ سربرگ به مدلِ چاپ. یک جا نوشته می‌شود تا
  * مسیرِ پیش‌نمایش و مسیرِ چاپ همان سربرگ را ببینند.
+ *
+ * V120 — بررسی شد: این تابع عمداً فقط ۴ فیلدِ عمومی (branch/course/
+ * examDate/duration) را نگاشت می‌کند، نه هر ۹۰+ شناسهٔ هفت‌قالبِ
+ * `header_settings_schema.json` (province/city/district/grade/fieldOfStudy
+ * و غیره). این کافی است چون خروجیِ این تابع فقط برای مقادیرِ پیش‌فرضِ
+ * داخلی (courseName/duration در ExamHtmlPrintPayloadBuilder.build) به کار
+ * می‌رود؛ رندرِ واقعیِ سربرگِ HTML همهٔ فیلدهای خام را جداگانه از
+ * `PrintHeaderStore(context).read()` به‌عنوانِ `extraHeaderFields` می‌گیرد
+ * (رجوع کنید به ExamHtmlPrintDialog.onPageFinished). پس داده‌ای گم نمی‌شود؛
+ * بسط این تابع به همهٔ فیلدها فقط پیچیدگیِ بی‌فایده اضافه می‌کرد.
  */
 fun printHeaderOf(fields: Map<String, String>): ir.exam.app.domain.model.OfficialPrintHeader =
     ir.exam.app.domain.model.OfficialPrintHeader(

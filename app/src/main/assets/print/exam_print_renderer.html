@@ -982,8 +982,15 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       var rows = Array.prototype.slice.call(src.querySelectorAll(':scope > tbody > tr'));
       var host = tableShell(src, true); cur.frame.appendChild(host);
       if (overflows(cur.frame) && cur.frame.children.length > 1) { host.remove(); nextPage(); host = tableShell(src, true); cur.frame.appendChild(host); }
-      var body = host.tBodies[0], guard = 0;
-      for (var i = 0; i < rows.length && guard++ < 5000; i++) {
+      // V120 — قبلاً یک متغیرِ `guard` مشترک بینِ حلقهٔ بیرونیِ ردیف‌ها و
+      // حلقهٔ درونیِ برش‌زدنِ یک ردیفِ خیلی بلند بود. اگر حلقهٔ درونی برای
+      // یک ردیف زیاد تکرار می‌کرد، شمارندهٔ مشترک به سقف می‌رسید و شرطِ
+      // حلقهٔ بیرونی (`guard++ < 5000`) بلافاصله false می‌شد — یعنی همهٔ
+      // ردیف‌های باقی‌ماندهٔ جدول (`i` به بعد) اصلاً append نمی‌شدند و از
+      // برگهٔ چاپی به‌طور کامل و بی‌صدا حذف می‌شدند. حالا هر حلقه شمارندهٔ
+      // مستقلِ خودش را دارد.
+      var body = host.tBodies[0], rowGuard = 0;
+      for (var i = 0; i < rows.length && rowGuard++ < 5000; i++) {
         var row = rows[i]; body.appendChild(row);
         if (!overflows(cur.frame)) continue;
         var frame = cur.frame, bottom = frameInnerBottom(frame), top = relTop(frame, row), visible = bottom - top;
@@ -995,8 +1002,8 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
           bottom = frameInnerBottom(cur.frame); top = relTop(cur.frame, row); visible = bottom - top;
         }
         /* سطر بلندتر از فضای باقی‌مانده: همین‌جا قطع، ادامه در برگهٔ بعد */
-        var cut = Math.max(0, visible), remainH = row.offsetHeight - cut;
-        while (remainH > 1 && guard++ < 5000) {
+        var cut = Math.max(0, visible), remainH = row.offsetHeight - cut, splitGuard = 0;
+        while (remainH > 1 && splitGuard++ < 5000) {
           nextPage();
           /* V118 — سرستون فقط در برگهٔ اول؛ برگه‌های بعد بدون «ردیف/متن سؤال/بارم» */
           var wrap = document.createElement('div'); wrap.className = 'row-continue'; cur.frame.appendChild(wrap);

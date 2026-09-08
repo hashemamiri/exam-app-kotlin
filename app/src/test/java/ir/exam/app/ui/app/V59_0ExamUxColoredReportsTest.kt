@@ -26,12 +26,15 @@ class V59_0ExamUxColoredReportsTest {
     private val grading by lazy { source("app/src/main/java/ir/exam/app/ui/grading/GradingScreen.kt") }
 
     @Test
-    fun `the standalone full a4 preview button is gone but the eye menu remains`() {
+    fun `the standalone full a4 preview button and the old dead preview menu are both gone`() {
         // دکمهٔ تمام‌عرض زیر کارت‌ها حذف شد
         assertFalse("OutlinedButton(onClick = { previewAll = true }, modifier = Modifier.fillMaxWidth())" in builder)
-        // مسیر منوی چشم سالم است (قرارداد V55.18)
-        assertTrue("onPreviewAll = { previewAll = true }" in builder)
-        assertTrue("پیش‌نمایش کامل A4" in builder)
+        // V120 — «پیش‌نمایش کامل A4» (منوی چشم مردهٔ V55.18 که previewAll را
+        // ست می‌کرد) کاملاً حذف شد؛ پیش‌نمایشِ زنده اکنون دکمهٔ شناور «پیش‌نمایش
+        // آزمون» است که موتورِ واقعیِ چاپ (ExamHtmlPrintDialog) را باز می‌کند.
+        assertFalse("onPreviewAll = { previewAll = true }" in builder)
+        assertFalse("پیش‌نمایش کامل A4" in builder)
+        assertTrue("پیش‌نمایش آزمون" in builder)
     }
 
     @Test

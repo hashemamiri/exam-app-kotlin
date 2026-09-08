@@ -1,5 +1,6 @@
 package ir.exam.app.ui.printing
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +72,18 @@ internal fun ExamFigureToolHost(
         "physics" -> AtlasToolFlow("s", "phys", onInsert, onDismiss, initial)
         "chemistry" -> AtlasToolFlow("s", "chem", onInsert, onDismiss, initial)
 
-        else -> onDismiss()
+        // V120 — قبلاً این حالت بی‌سروصدا دیالوگ را می‌بست و کاربر بدون هیچ
+        // توضیحی می‌دید «چیزی باز نشد». چون `request.tool` معمولاً از
+        // `NATIVE_TOOLS` می‌آید، این شاخه فقط برای مقادیر نامعتبر/آیندهٔ
+        // ناشناخته اجرا می‌شود — حداقل با Log.w قابل‌ردیابی است.
+        else -> {
+            Log.w(TAG, "ابزار شکلِ ناشناخته در پیش‌نمایشِ چاپ نادیده گرفته شد: tool=${request.tool}")
+            onDismiss()
+        }
     }
 }
+
+private const val TAG = "ExamFigureToolHost"
 
 /** انتخاب نوع و ویرایش برای شکل و نمودار. */
 @Composable

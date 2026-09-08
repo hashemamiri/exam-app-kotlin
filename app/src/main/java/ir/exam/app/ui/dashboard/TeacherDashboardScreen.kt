@@ -49,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ir.exam.app.core.printing.OfficialPrintController
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
@@ -66,7 +65,6 @@ fun TeacherDashboardScreen(
     onOpenPrintExam: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val printController = remember(context.applicationContext) { OfficialPrintController(context.applicationContext) }
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
     val exportLauncher = rememberLauncherForActivityResult(
@@ -110,13 +108,10 @@ fun TeacherDashboardScreen(
             viewModel.consumeImport()
         }
     }
-    LaunchedEffect(state.printExam) {
-        state.printExam?.let { printable ->
-            runCatching { printController.printExam(context, printable) }
-                .onFailure(viewModel::reportError)
-            viewModel.consumePrint()
-        }
-    }
+    // V120 — LaunchedEffect(state.printExam) حذف شد: هدفش صدا زدنِ
+    // OfficialPrintController.printExam (موتورِ PDF بومیِ جداگانه) بود اما
+    // state.printExam هیچ‌وقت مقداردهی نمی‌شد (preparePrint حذف شد، رجوع
+    // کنید به TeacherDashboardViewModel) — کدِ کاملاً بدونِ اثر بود.
     PullToRefreshBox(
         isRefreshing = state.loading,
         onRefresh = viewModel::load,

@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
-import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.PortableFile
 import ir.exam.app.ui.builder.ExamImportDraft
 import java.util.UUID
@@ -21,7 +20,6 @@ data class TeacherDashboardState(
     val portabilityLoading: Boolean = false,
     val exportFile: PortableFile? = null,
     val importDraft: ExamImportDraft? = null,
-    val printExam: OfficialExamPrintable? = null,
     val error: String? = null,
     val message: String? = null
 )
@@ -86,18 +84,12 @@ class TeacherDashboardViewModel(
 
     fun consumeImport() { _state.update { it.copy(importDraft = null) } }
 
-    fun preparePrint(
-        examId: String,
-        includeAnswerKey: Boolean,
-        headerOverride: ir.exam.app.domain.model.OfficialPrintHeader? = null
-    ) = viewModelScope.launch {
-        _state.update { it.copy(portabilityLoading = true, printExam = null, error = null) }
-        portability.printableExam(examId, includeAnswerKey, headerOverride)
-            .onSuccess { printable -> _state.update { it.copy(portabilityLoading = false, printExam = printable) } }
-            .onFailure { error -> _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) } }
-    }
-
-    fun consumePrint() { _state.update { it.copy(printExam = null) } }
+    // V120 — preparePrint/consumePrint حذف شدند: هیچ فراخوان‌کننده‌ای در کل
+    // برنامه نداشتند (مسیرِ چاپِ زندهٔ آزمونِ آنلاین از «مرکز چاپ» با
+    // ExamPrintCenterScreen.openPrintCopy → PrintExamStore → موتورِ HTML/
+    // WebView انجام می‌شود، نه از این ViewModel). نگه‌داشتنِ کدِ مرده‌ای که
+    // یک موتورِ رندرِ کاملاً متفاوت (PDF بومی از طریق OfficialPrintController)
+    // را صدا می‌زد، ریسکِ داشتنِ دو مسیرِ چاپِ ناهم‌خوان را باز نگه می‌داشت.
 
     fun reportError(error: Throwable) {
         _state.update { it.copy(portabilityLoading = false, error = safeDashboardError(error)) }

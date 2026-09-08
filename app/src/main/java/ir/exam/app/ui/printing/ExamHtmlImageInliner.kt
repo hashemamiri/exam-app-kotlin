@@ -2,6 +2,7 @@ package ir.exam.app.ui.printing
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.core.graphics.drawable.toBitmap
 import coil.ImageLoader
 import coil.request.ImageRequest
@@ -29,6 +30,7 @@ object ExamHtmlImageInliner {
     const val MAX_IMAGES = 24
     const val IMAGE_WIDTH_PX = 420
 
+    private const val TAG = "ExamHtmlImageInliner"
     private const val MAX_EDGE = 1280
     private const val JPEG_QUALITY = 85
     private const val MAX_TOTAL_CHARS = 14_000_000L
@@ -47,6 +49,10 @@ object ExamHtmlImageInliner {
         return " %%FIG:$json%%"
     }
 
+    // V120 — قبلاً خطای هر عملیات (حتی خطاهایی که ربطی به شبکه/تصویر
+    // نداشتند، مثلاً باگ برنامه‌نویسی) با `getOrDefault(printable)` بی‌صدا
+    // بلعیده می‌شد و آزمون بدون هیچ تصویری (و بدون هیچ پیام خطایی) چاپ
+    // می‌شد. حالا حداقل با Log.w قابل‌ردیابی است.
     suspend fun inline(context: Context, printable: OfficialExamPrintable): OfficialExamPrintable =
         runCatching {
             val loader = PrivateImageLoader.create(context)
@@ -60,7 +66,11 @@ object ExamHtmlImageInliner {
                         val tokens = StringBuilder()
                         for (url in question.imageUrls) {
                             if (used >= MAX_IMAGES || budget <= 0) break
-                            val dataUrl = loadBitmapDataUrl(loader, url, context) ?: continue
+                            val dataUrl = loadBitmapDataUrl(loader, url, context)
+                            if (dataUrl == null) {
+                                Log.w(TAG, "بارگذاریِ تصویرِ سؤال برای چاپ ناموفق بود و از برگه حذف می‌شود: $url")
+                                continue
+                            }
                             budget -= dataUrl.length
                             used++
                             tokens.append(imageToken(dataUrl))
@@ -69,6 +79,8 @@ object ExamHtmlImageInliner {
                     }
                 }
             )
+        }.onFailure { error ->
+            Log.e(TAG, "آماده‌سازیِ تصاویرِ چاپ کاملاً ناموفق بود؛ آزمون بدون هیچ تصویرِ درون‌متنی چاپ می‌شود.", error)
         }.getOrDefault(printable)
 
     private suspend fun loadBitmapDataUrl(loader: ImageLoader, url: String, appContext: Context): String? =
@@ -105,6 +117,8 @@ object ExamHtmlImageInliner {
             scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
             "data:image/jpeg;base64," +
                 android.util.Base64.encodeToString(output.toByteArray(), android.util.Base64.NO_WRAP)
+        }.onFailure { error ->
+            Log.w(TAG, "دیکد/کوچک‌سازیِ تصویرِ چاپ ناموفق بود: $url", error)
         }.getOrNull()
 
     private fun scaleDown(bitmap: Bitmap, maxEdge: Int): Bitmap {

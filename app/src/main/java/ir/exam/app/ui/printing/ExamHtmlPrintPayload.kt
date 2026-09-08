@@ -85,8 +85,19 @@ object ExamHtmlPrintPayloadBuilder {
             })
         }
 
-        when {
-            question.matchingLeft.isNotEmpty() || question.matchingRight.isNotEmpty() -> {
+        // V120 — منبعِ اصلیِ تشخیصِ نوع اکنون فیلدِ صریح `questionType` است
+        // (از `PrintableFromDrafts` می‌آید). قبلاً هیچ نشانهٔ صریحی نبود و
+        // نوع فقط از روی محتوا حدس زده می‌شد؛ این حدس دو باگ داشت:
+        //  ۱) سؤال «صحیح/غلط» چون هیچ‌وقت `options` نداشت، هیچ‌گاه با شرطِ
+        //     زیر تطبیق نمی‌یافت و به‌اشتباه «تشریحی» چاپ می‌شد.
+        //  ۲) هر سؤالِ تشریحیِ حاویِ «...» (خیلی رایج در فارسی) به‌اشتباه
+        //     «جای‌خالی» تشخیص داده می‌شد.
+        // برای سازگاری با فراخوان‌های قدیمی/تست‌هایی که `questionType` را
+        // نمی‌فرستند (null)، حدسِ قبلی به‌عنوان fallback باقی مانده — با
+        // اصلاح ۲ (نشانهٔ ضعیفِ «...» ساده حذف شد، فقط نشانه‌های صریحِ
+        // «[...]» و «___» می‌مانند).
+        when (question.questionType ?: heuristicType(question)) {
+            "matching" -> {
                 put("type", "matching")
                 put("pairs", buildJsonArray {
                     val count = maxOf(question.matchingLeft.size, question.matchingRight.size)
@@ -108,8 +119,7 @@ object ExamHtmlPrintPayloadBuilder {
                     }
                 })
             }
-            question.options.size == 2 &&
-                (question.options.firstOrNull() == "صحیح" || question.options.contains("صحیح")) -> {
+            "truefalse" -> {
                 put("type", "truefalse")
                 val correct = question.answerText.orEmpty()
                 val trueCorrect = correct.contains("صحیح") || correct == "true"
@@ -118,7 +128,7 @@ object ExamHtmlPrintPayloadBuilder {
                     add(optionJson("غلط", !trueCorrect, null))
                 })
             }
-            question.options.isNotEmpty() -> {
+            "multiple" -> {
                 put("type", "multiple")
                 val correct = question.answerText.orEmpty().trim()
                 put("options", buildJsonArray {
@@ -132,13 +142,13 @@ object ExamHtmlPrintPayloadBuilder {
                 })
                 put("optionsLayout", if (question.options.size > 2) "2rows" else "1row")
             }
-            question.answerText != null && question.answerText.any(Char::isDigit) && !question.answerText.contains("\n") -> {
+            "numeric" -> {
                 put("type", "numeric")
                 put("answerLines", question.answerLines.coerceIn(0, 30))
                 put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
                 put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
-            question.text.contains("[...]") || question.text.contains("...") || question.text.contains("___") -> {
+            "fill" -> {
                 put("type", "fill")
                 put("answerLines", question.answerLines.coerceIn(0, 30))
                 put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
@@ -151,6 +161,23 @@ object ExamHtmlPrintPayloadBuilder {
                 put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
         }
+    }
+
+    /**
+     * V120 — حدسِ نوعِ سؤال، فقط وقتی `questionType` صریح نیست (سازگاریِ
+     * عقب‌رو). نسبت به نسخهٔ قبلی یک اصلاح دارد: نشانهٔ ضعیفِ «هر رشتهٔ
+     * حاویِ سه‌نقطهٔ ساده» حذف شده چون سؤال‌های تشریحیِ عادیِ فارسی هم
+     * معمولاً «...» دارند و به‌اشتباه «جای‌خالی» تشخیص داده می‌شدند؛
+     * نشانه‌های صریح «[...]» و «___» باقی مانده‌اند.
+     */
+    private fun heuristicType(question: OfficialPrintQuestion): String = when {
+        question.matchingLeft.isNotEmpty() || question.matchingRight.isNotEmpty() -> "matching"
+        question.options.size == 2 &&
+            (question.options.firstOrNull() == "صحیح" || question.options.contains("صحیح")) -> "truefalse"
+        question.options.isNotEmpty() -> "multiple"
+        question.answerText != null && question.answerText.any(Char::isDigit) && !question.answerText.contains("\n") -> "numeric"
+        question.text.contains("[...]") || question.text.contains("___") -> "fill"
+        else -> "long"
     }
 
     private fun optionJson(

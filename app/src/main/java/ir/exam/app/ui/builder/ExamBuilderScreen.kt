@@ -157,8 +157,6 @@ fun ExamBuilderScreen(
     // هنگام جابه‌جایی گزینه/جورکردنی، اسکرول لمسی فهرست غیرفعال می‌شود تا فقط
     // همان انگشت کنترل کند و کارت سؤال زیر انگشت نلغزد.
     var innerReorderActive by remember { mutableStateOf(false) }
-    var previewQuestion by remember { mutableStateOf<QuestionDraft?>(null) }
-    var previewAll by remember { mutableStateOf(false) }
     // V62.7 — پیش‌نمایش دانش‌آموزی سؤال (شماره + سؤال) از آیکن چشم.
     var studentPreview by remember { mutableStateOf<Pair<Int, QuestionDraft>?>(null) }
     val questionPrefaceCount = 2 + if (state.importedBy != null) 1 else 0
@@ -448,16 +446,17 @@ fun ExamBuilderScreen(
                     onItemDragStarted = { innerReorderActive = true },
                     onItemDragEnded = { innerReorderActive = false },
                     viewModel = viewModel,
-                    onPreview = { previewQuestion = question },
-                    onPreviewAll = { previewAll = true },
                     // V62.7 — چشم: پیش‌نمایش دانش‌آموزی همین سؤال.
                     onStudentPreview = { studentPreview = index to question }
                 )
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // V59.0 — دکمهٔ «پیش‌نمایش کامل A4» زیر کارت‌ها حذف شد؛ همان
-                    // گزینه از منوی چشم کارت سؤال باز می‌شود (V55.18).
+                    // V59.0 — دکمهٔ تمام‌عرضِ پیش‌نمایشِ کاملِ برگهٔ A4 زیر کارت‌ها
+                    // حذف شد؛ همان گزینه از منوی چشم کارت سؤال باز می‌شود (V55.18).
+                    // V120 — آن منوی چشمِ قدیمی هم بعداً کدِ مرده شد و کامل حذف شد؛
+                    // پیش‌نمایشِ زنده اکنون دکمهٔ شناور «پیش‌نمایش آزمون» پایین‌تر
+                    // است (ExamHtmlPrintDialog).
                     // V59.2 — جملهٔ اطلاع‌رسانی هزینهٔ سؤال‌ها به درخواست کاربر حذف شد.
                     if (state.saving) CircularProgressIndicator()
                     state.uploadProgress?.let { Text(it) }
@@ -526,9 +525,15 @@ fun ExamBuilderScreen(
         )
     }
 
-    previewQuestion?.let { question ->
-        QuestionPrintPreviewDialog(question = question, onDismiss = { previewQuestion = null })
-    }
+    // V120 — دو دیالوگِ Compose-native قدیمیِ پیش‌نمایشِ چاپ (که در فایلِ
+    // جداگانه‌ای به‌نامِ «ExamPrintPreview.kt» تعریف شده بودند) به‌طور کامل
+    // حذف شدند: state متغیرهای مربوطه هیچ‌جا مقداردهی نمی‌شدند چون
+    // callbackهای فراخوانی‌شان در QuestionEditor صدا زده نمی‌شدند (کدِ
+    // کاملاً مرده از V62.7 به بعد) و آن دو پیش‌نمایش با موتورِ واقعیِ چاپ
+    // (HTML/WebView در ExamHtmlPrintDialog) هم‌خوان نبودند؛ نگه‌داشتنشان
+    // ریسکِ سیم‌کشیِ دوبارهٔ یک پیش‌نمایشِ ناهم‌خوان را باز نگه می‌داشت.
+    // پیش‌نمایشِ زنده و صحیح همان دکمهٔ چشمِ «پیش‌نمایش آزمون» است که
+    // ExamHtmlPrintDialog (رجوع کنید به printPreviewOf پایین‌تر) را باز می‌کند.
     // V62.7 — پیش‌نمایش دانش‌آموزی از آیکن چشم کارت سؤال.
     studentPreview?.let { (index, question) ->
         StudentQuestionPreviewDialog(
@@ -536,9 +541,6 @@ fun ExamBuilderScreen(
             number = index + 1,
             onDismiss = { studentPreview = null }
         )
-    }
-    if (previewAll) {
-        ExamPrintPreviewDialog(state = state, onDismiss = { previewAll = false })
     }
 
     // V86.8 — نام‌گذاری و ذخیرهٔ محلیِ آزمونِ چاپی.
@@ -918,9 +920,9 @@ private fun QuestionEditor(
     onItemDragStarted: () -> Unit,
     onItemDragEnded: () -> Unit,
     viewModel: ExamBuilderViewModel,
-    onPreview: () -> Unit,
-    // V55.18 — آیکن چشم علاوه بر پیش‌نمایش همین سؤال، پیش‌نمایش کامل A4 را هم باز می‌کند.
-    onPreviewAll: () -> Unit,
+    // V120 — onPreview/onPreviewAll حذف شدند: هیچ‌جای بدنهٔ این composable
+    // صدا زده نمی‌شدند (کدِ مرده از زمانی که V62.7 چشم را به «فقط
+    // پیش‌نمایش دانش‌آموزی» تغییر داد ولی پارامترهای قدیمی را نگه داشت).
     // V62.7 — چشم فقط پیش‌نمایش دانش‌آموزی سؤال را باز می‌کند.
     onStudentPreview: () -> Unit = {}
 ) {
