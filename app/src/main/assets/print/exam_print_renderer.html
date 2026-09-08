@@ -25,7 +25,14 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 #closePreview,#fitToggle{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
 #fitToggle{background:#0f766e}.chrome-actions{display:flex;gap:8px}
 /* V107 — حالتِ «کل صفحه»: برگهٔ A4 با transform در پهنای صفحه جا می‌شود. */
-#printSurface.fit-page #sheet{transform-origin:top center}
+#printSurface.fit-page #sheet{transform-origin:top left;margin:0}
+/* V113 — «کل صفحه»: هیچ اسکرول افقی‌ای نه در سطح (surface) و نه در صفحه.
+   «اندازهٔ واقعی»: خودِ صفحه (نه یک جعبهٔ تودرتو) اسکرول می‌شود و پهنای
+   سند دقیقاً پهنای برگه (210mm) است — نه بیشتر. */
+html.fit-mode,html.fit-mode body{overflow-x:hidden}
+html.fit-mode #printSurface{overflow:hidden}
+html.real-mode body{padding-left:0;padding-right:0}
+html.real-mode #printSurface{overflow:visible;width:max-content;min-width:100%;margin:0 auto}
 #printSurface{width:100%;overflow:auto;padding:2px 0 18px}
 #sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:var(--paper);border:2px solid #000;border-radius:6px;box-shadow:0 7px 28px rgba(15,23,42,.24);font-size:10pt;line-height:1.75;overflow:visible}
 /* ===== سربرگ‌ها — عیناً از آزمون‌سازِ مرجع ===== */
@@ -967,9 +974,18 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
      «کل صفحه» و «اندازهٔ واقعی» جابه‌جا می‌کند؛ زومِ دوانگشتی همچنان آزاد است. */
   var surface = document.getElementById('printSurface'), fitButton = document.getElementById('fitToggle'), fitPage = true;
   function applyFit() {
-    if (!fitPage || document.body.classList.contains('exam-print-mode')) { surface.classList.remove('fit-page'); sheet.style.transform = ''; surface.style.height = ''; if (fitButton) fitButton.textContent = 'کل صفحه'; return; }
-    var available = Math.max(0, surface.clientWidth - 8), natural = sheet.offsetWidth || 794, scale = natural > 0 ? Math.min(1, available / natural) : 1;
-    surface.classList.add('fit-page'); sheet.style.transform = 'scale(' + scale.toFixed(4) + ')';
+    var root = document.documentElement, printing = document.body.classList.contains('exam-print-mode');
+    if (!fitPage || printing) {
+      surface.classList.remove('fit-page'); sheet.style.transform = ''; surface.style.height = '';
+      root.classList.remove('fit-mode'); root.classList.toggle('real-mode', !printing);
+      if (fitButton) fitButton.textContent = 'کل صفحه'; return;
+    }
+    root.classList.remove('real-mode'); root.classList.add('fit-mode');
+    surface.classList.add('fit-page');
+    /* V113 — مقیاس از پهنای واقعیِ پنجره (نه surface که ممکن است خودش پهن‌تر شده باشد) */
+    var available = Math.max(0, (root.clientWidth || window.innerWidth) - 24), natural = sheet.offsetWidth || 794, scale = natural > 0 ? Math.min(1, available / natural) : 1;
+    var offset = Math.max(0, (surface.clientWidth - natural * scale) / 2);
+    sheet.style.transform = 'translateX(' + offset.toFixed(2) + 'px) scale(' + scale.toFixed(4) + ')';
     surface.style.height = Math.ceil(sheet.offsetHeight * scale) + 24 + 'px';
     if (fitButton) fitButton.textContent = 'اندازهٔ واقعی';
   }

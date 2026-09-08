@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V112 میکروفون با پنجرهٔ سیستمی گوگل (بدون بوق/رفرش، تشخیص کامل)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V113 اسکرول پیش‌نمایش، جداسازی فهرست آنلاین/چاپی در دو صفحه
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17333,4 +17333,33 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 SQL/Edge/Secret/Dependency جدید: ندارد
 تحویل: apply_v112.py (§۱۱)
 شمارهٔ نسخهٔ بعدی: V113
+```
+
+---
+
+## ۳۳۵) V113 — اسکرول پیش‌نمایش + جداسازی آزمون‌های آنلاین/چاپی در دو صفحه
+
+### ۱) پیش‌نمایش (`exam_print_renderer.html`)
+- `applyFit()` حالا روی `<html>` کلاس `fit-mode` / `real-mode` می‌گذارد.
+- **کل صفحه:** `html,body{overflow-x:hidden}` و `#printSurface{overflow:hidden}`؛ مقیاس از پهنای واقعی پنجره (`documentElement.clientWidth`) محاسبه و برگه با `translateX` وسط‌چین می‌شود (transform-origin: top left تا پهنای مقیاس‌شده درست حساب شود) → هیچ اسکرول افقی.
+- **اندازهٔ واقعی:** `#printSurface{overflow:visible;width:max-content;min-width:100%}` و padding افقی body صفر → خودِ صفحه (نه جعبهٔ تودرتو) اسکرول می‌شود و پهنای سند دقیقاً برگهٔ ۲۱۰mm است، نه بیشتر. حالت چاپ (`exam-print-mode`) دست‌نخورده.
+
+### ۲) صفحهٔ «چاپ آزمون» (`ExamPrintCenterScreen`)
+- سطر بالا: «آزمون جدید» + «آزمون‌های آنلاین». دکمهٔ دوم `AlertDialog` با `LazyColumn` کارت‌های `state.exams`؛ لمس کارت → `openPrintCopy(exam)` (همان مسیر V101: نسخهٔ چاپی موجود را باز می‌کند یا می‌سازد). چیپ «نسخهٔ چاپی دارد» برای آزمون‌هایی که قبلاً نسخه دارند.
+- فهرست اصلی فقط `localExams` (چاپی‌ها)؛ کارت‌های آنلاین از فهرست اصلی حذف شدند.
+
+### ۳) صفحهٔ «آزمون‌ها» (`TeacherDashboardScreen`)
+- پارامتر جدید `onOpenPrintExam: (String) -> Unit`. سطر بالا (`SpaceBetween`، RTL): راست «آزمون‌های چاپی» (OutlinedButton) · وسط `FilledIconButton(+)` = ساخت آزمون آنلاین · چپ «واردکردن».
+- «آزمون‌های چاپی» → `AlertDialog` کارت‌های `PrintExamStore.list()`؛ لمس → `onOpenPrintExam(rec.id)`.
+- فهرست اصلی همان آزمون‌های آنلاین (بدون تغییر).
+
+### ۴) `ExamApp.kt`
+- منطق بازکردن آزمون چاپی محلی از لامبدای `onOpenLocalPrintExam` به تابع مشترک `openLocalPrintExam(localId)` منتقل شد (با `closeTransientNavigation()`)؛ هم صفحهٔ چاپ و هم داشبورد از آن استفاده می‌کنند (`builderCameFromPrint = true` → آزمون‌ساز چاپی).
+
+پین تست‌های موجود بررسی شد: هیچ literalی از فایل‌های تغییر‌کرده شکسته نشد؛ verify PASS.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v113.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V114
 ```

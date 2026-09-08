@@ -256,6 +256,34 @@ private fun AuthenticatedExamApp(
         page = MainPage.HOME
     }
 
+    // V113 — بازکردنِ آزمونِ چاپیِ ذخیره‌شده روی دستگاه در آزمون‌سازِ چاپی؛ هم از
+    // صفحهٔ «چاپ آزمون» و هم از پنجرهٔ «آزمون‌های چاپی» در «آزمون‌ها».
+    fun openLocalPrintExam(localId: String) {
+        closeTransientNavigation()
+        val rec = ir.exam.app.data.local.PrintExamStore(appContext).get(localId)
+        if (rec != null) {
+            editingExamId = null
+            importedExam = ir.exam.app.ui.builder.ExamImportDraft(
+                title = rec.title,
+                subject = rec.subject,
+                durationMinutes = 0,
+                negativeMarking = 0.0,
+                shuffleQuestions = false,
+                shuffleOptions = false,
+                teacherMessage = "",
+                attemptsAllowed = 1,
+                attemptOnTimeout = false,
+                gradePolicy = "last",
+                attemptCooldown = 0,
+                questions = rec.questions,
+                // V101 — ذخیرهٔ بعدی همین رکورد را به‌روز کند
+                localPrintExamId = localId
+            )
+            builderCameFromPrint = true
+            page = MainPage.BUILDER
+        }
+    }
+
     fun createExam() {
         closeTransientNavigation()
         editingExamId = null
@@ -435,7 +463,9 @@ private fun AuthenticatedExamApp(
                             importedExam = draft
                             builderCameFromPrint = false
                             page = MainPage.BUILDER
-                        }
+                        },
+                        // V113 — «آزمون‌های چاپی» از صفحهٔ آزمون‌ها
+                        onOpenPrintExam = ::openLocalPrintExam
                     )
                     UserRole.STUDENT -> StudentHomeScreen(
                         userId = user.id,
@@ -576,30 +606,7 @@ private fun AuthenticatedExamApp(
                         },
                         // V86.8 — آزمونِ چاپیِ ذخیره‌شده روی دستگاه را در همان
                         // آزمون‌سازِ بومی باز می‌کند؛ مسیرِ import موجود.
-                        onOpenLocalPrintExam = { localId ->
-                            val rec = ir.exam.app.data.local.PrintExamStore(appContext).get(localId)
-                            if (rec != null) {
-                                editingExamId = null
-                                importedExam = ir.exam.app.ui.builder.ExamImportDraft(
-                                    title = rec.title,
-                                    subject = rec.subject,
-                                    durationMinutes = 0,
-                                    negativeMarking = 0.0,
-                                    shuffleQuestions = false,
-                                    shuffleOptions = false,
-                                    teacherMessage = "",
-                                    attemptsAllowed = 1,
-                                    attemptOnTimeout = false,
-                                    gradePolicy = "last",
-                                    attemptCooldown = 0,
-                                    questions = rec.questions,
-                                    // V101 — ذخیرهٔ بعدی همین رکورد را به‌روز کند
-                                    localPrintExamId = localId
-                                )
-                                builderCameFromPrint = true
-                                page = MainPage.BUILDER
-                            }
-                        }
+                        onOpenLocalPrintExam = ::openLocalPrintExam
                     )
                 }
                 MainPage.SETTINGS -> ProfileSettingsScreen(

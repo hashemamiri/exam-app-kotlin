@@ -14,12 +14,18 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material3.Card
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,7 +61,9 @@ fun TeacherDashboardScreen(
     refreshKey: Int = 0,
     onCreateExam: () -> Unit,
     onEditExam: (String) -> Unit,
-    onImportExam: (ExamImportDraft) -> Unit
+    onImportExam: (ExamImportDraft) -> Unit,
+    // V113 — بازکردن آزمونِ چاپیِ محلی (از پنجرهٔ «آزمون‌های چاپی»)
+    onOpenPrintExam: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val printController = remember(context.applicationContext) { OfficialPrintController(context.applicationContext) }
@@ -86,6 +94,11 @@ fun TeacherDashboardScreen(
     // V75.4 — پیش از صدور، معلم باید روشن کند که پاسخنامه همراه فایل باشد یا نه.
     var exportCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var expandedExamId by remember { mutableStateOf<String?>(null) }
+    // V113 — پنجرهٔ کارت‌های آزمون‌های چاپی (ذخیره‌شده روی دستگاه)
+    var printExamsOpen by remember { mutableStateOf(false) }
+    val printExamStore = remember(context.applicationContext) {
+        ir.exam.app.data.local.PrintExamStore(context.applicationContext)
+    }
 
     LaunchedEffect(refreshKey) { viewModel.load() }
     LaunchedEffect(state.exportFile) {
@@ -122,8 +135,17 @@ fun TeacherDashboardScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = onCreateExam) { Text("ساخت آزمون جدید") }
+                // V113 — راست: «آزمون‌های چاپی»؛ وسط: + (ساخت آزمون آنلاین)؛ چپ: واردکردن.
+                // این صفحه به‌صورت پیش‌فرض فقط کارت‌های آزمون آنلاین را نشان می‌دهد.
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = { printExamsOpen = true }) { Text("آزمون‌های چاپی") }
+                    FilledIconButton(onClick = onCreateExam) {
+                        Icon(Icons.Outlined.Add, contentDescription = "ساخت آزمون جدید")
+                    }
                     OutlinedButton(
                         enabled = !state.portabilityLoading,
                         onClick = {
@@ -131,7 +153,7 @@ fun TeacherDashboardScreen(
                                 arrayOf("application/octet-stream", "application/json", "text/plain")
                             )
                         }
-                    ) { Text("واردکردن آزمون") }
+                    ) { Text("واردکردن") }
                 }
             }
             if (state.actionLoading || state.portabilityLoading) {
@@ -268,6 +290,39 @@ fun TeacherDashboardScreen(
         )
     }
 
+    // V113 — پنجرهٔ «آزمون‌های چاپی»: کارت‌های ذخیره‌شده روی دستگاه؛ لمس هر
+    // کارت آن را در آزمون‌سازِ چاپی باز می‌کند (ویرایش/چاپ).
+    if (printExamsOpen) {
+        val printExams = remember(printExamsOpen) { printExamStore.list() }
+        AlertDialog(
+            onDismissRequest = { printExamsOpen = false },
+            title = { Text("آزمون‌های چاپی") },
+            text = {
+                if (printExams.isEmpty()) Text("هنوز آزمون چاپی‌ای ذخیره نشده است. از بخش «چاپ آزمون» بسازید.")
+                else LazyColumn(
+                    Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(printExams, key = { it.id }) { rec ->
+                        Card(Modifier.fillMaxWidth().clickable { printExamsOpen = false; onOpenPrintExam(rec.id) }) {
+                            Row(
+                                Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Outlined.Print, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Column(Modifier.weight(1f)) {
+                                    Text(rec.title.ifBlank { "آزمون چاپی" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("درس: ${rec.subject.ifBlank { "—" }} · ${rec.questions.size} سؤال", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { printExamsOpen = false }) { Text("بستن") } }
+        )
+    }
     deleteCandidate?.let { exam ->
         AlertDialog(
             onDismissRequest = { deleteCandidate = null },

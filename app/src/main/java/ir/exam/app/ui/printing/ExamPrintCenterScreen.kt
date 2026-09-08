@@ -12,6 +12,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,6 +78,8 @@ fun ExamPrintCenterScreen(
         ir.exam.app.data.repository.SupabaseExamBuilderRepository(context.applicationContext)
     }
     var copyLoading by remember { mutableStateOf(false) }
+    // V113 — پنجرهٔ «آزمون‌های آنلاین»
+    var onlineOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -129,12 +136,17 @@ fun ExamPrintCenterScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // ساخت آزمون جدید از سازندهٔ بومی آغاز می‌شود.
+        // V113 — کنار «آزمون جدید»، «آزمون‌های آنلاین»: پنجرهٔ کارت‌های آزمون
+        // آنلاین؛ انتخاب هر کدام نسخهٔ چاپی می‌سازد/باز می‌کند (ویرایش و چاپ).
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
         ) {
             Button(onClick = onNewNativeExam) {
                 Text("آزمون جدید")
+            }
+            OutlinedButton(onClick = { onlineOpen = true }, enabled = !copyLoading) {
+                Text("آزمون‌های آنلاین")
             }
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -148,8 +160,9 @@ fun ExamPrintCenterScreen(
         if (state.loading || copyLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
-        if (state.exams.isEmpty() && localExams.isEmpty() && !state.loading) {
-            Text("آزمونی برای چاپ نیست.")
+        // V113 — فهرست اصلی فقط آزمون‌های چاپی است (آنلاین‌ها در پنجرهٔ خودشان).
+        if (localExams.isEmpty() && !state.loading) {
+            Text("هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.")
         }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // V86.8 — آزمون‌های چاپیِ محلی، با نشانهٔ «چاپی» تا با آزمونِ سرور
@@ -199,35 +212,44 @@ fun ExamPrintCenterScreen(
                     }
                 }
             }
-            items(state.exams, key = { it.id }) { exam ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text(
-                            exam.title.ifBlank { "آزمون" },
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text("درس: ${exam.subject.orEmpty().ifBlank { "—" }}")
-                        // V101 — مداد: «نسخهٔ چاپی» ویرایش‌پذیر از این آزمون
-                        // (فقط در بخش چاپ آزمون ذخیره می‌شود).
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-                        ) {
-                            IconButton(onClick = { openPrintCopy(exam) }, enabled = !copyLoading) {
-                                Icon(
-                                    Icons.Outlined.Edit,
-                                    contentDescription = "ویرایش نسخهٔ چاپی",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+        }
+    }
+    if (onlineOpen) {
+        AlertDialog(
+            onDismissRequest = { onlineOpen = false },
+            title = { Text("آزمون‌های آنلاین") },
+            text = {
+                if (state.exams.isEmpty()) Text(if (state.loading) "در حال دریافت آزمون‌ها…" else "آزمون آنلاینی وجود ندارد.")
+                else LazyColumn(
+                    Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.exams, key = { it.id }) { exam ->
+                        val hasCopy = localExams.any { it.sourceExamId == exam.id }
+                        Card(Modifier.fillMaxWidth().clickable(enabled = !copyLoading) { onlineOpen = false; openPrintCopy(exam) }) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        exam.title.ifBlank { "آزمون" },
+                                        style = MaterialTheme.typography.titleSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (hasCopy) AssistChip(onClick = {}, label = { Text("نسخهٔ چاپی دارد") })
+                                }
+                                Text("درس: ${exam.subject.orEmpty().ifBlank { "—" }}", style = MaterialTheme.typography.bodySmall)
                             }
-                            // V107 — آیکن پرینتر از کارت حذف شد (درخواست کاربر).
                         }
                     }
                 }
-            }
-        }
+            },
+            confirmButton = { TextButton(onClick = { onlineOpen = false }) { Text("بستن") } }
+        )
     }
 }
 
