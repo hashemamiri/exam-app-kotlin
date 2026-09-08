@@ -212,15 +212,7 @@ fun ExamHtmlPrintDialog(
                 // اصلاً داخل صفحهٔ اسکرول‌شونده نیست. ✕ قرمز، کل صفحه/اندازهٔ واقعی
                 // و نوارِ قالب‌بندیِ اسکرول‌شونده که به JS رندرر فرمان می‌دهد.
                 if (!loading && initialPrintMode == null) {
-                    var fitPage by remember { mutableStateOf(true) }
                     PrintPreviewHeader(
-                        fitPage = fitPage,
-                        onToggleFit = {
-                            runJs("(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.toggleFit?window.ExamPrintRenderer.toggleFit():''}catch(e){return ''}})()") { raw: String? ->
-                                val r = unwrapJsString(raw)
-                                if (r == "fit" || r == "real") fitPage = r == "fit"
-                            }
-                        },
                         onClose = { requestDismiss() },
                         onFormat = { kind, value ->
                             val v = value.replace("\\", "").replace("'", "")
@@ -493,8 +485,11 @@ internal fun createExamPrintWebView(
     // می‌کند؛ اما overviewMode باید خاموش بماند وگرنه WebView برای محتوای عریضِ
     // A4 (۷۳px) کل صفحه را zoom-out می‌کند و همه پنجره‌ها/دکمه‌ها ریز می‌شوند
     // (ریشهٔ «پنجره‌ها کوچک است»).
+    // V117 — viewport ثابت (۸۳۰px = برگهٔ A4 + حاشیه) و overviewMode روشن: پیش‌فرض
+    // «اندازهٔ واقعی با کمترین زوم» (کلِ برگه در پهنای صفحه)؛ کاربر با دو انگشت
+    // زوم می‌کند. پنجره‌های بومی دیگر داخلِ HTML نیستند، پس ریزشدنِ V76.2 منتفی است.
     settings.useWideViewPort = true
-    settings.loadWithOverviewMode = false
+    settings.loadWithOverviewMode = true
 
     addJavascriptInterface(
         ExamPrintBridge(
@@ -771,8 +766,6 @@ private class OneShotPrintAdapter(
 /** V116 — هدرِ ثابتِ پیش‌نمایش: عنوان، کل صفحه/اندازهٔ واقعی، ✕ قرمز و نوارِ قالب‌بندی. */
 @Composable
 private fun PrintPreviewHeader(
-    fitPage: Boolean,
-    onToggleFit: () -> Unit,
     onClose: () -> Unit,
     onFormat: (kind: String, value: String) -> Unit
 ) {
@@ -793,11 +786,6 @@ private fun PrintPreviewHeader(
         ) {
             Text("پیش‌نمایش برگهٔ A4", style = MaterialTheme.typography.titleSmall, color = Color(0xFF0F172A))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.Button(
-                    onClick = onToggleFit,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) { Text(if (fitPage) "اندازهٔ واقعی" else "کل صفحه", style = MaterialTheme.typography.labelMedium) }
                 androidx.compose.material3.FilledIconButton(
                     onClick = onClose,
                     colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFDC2626), contentColor = Color.White),

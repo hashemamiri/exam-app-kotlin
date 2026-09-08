@@ -44,7 +44,9 @@ class V107_PrintBuilderPolishTest {
 
     @Test
     fun `preview fits whole A4 by default, selects before drag and has no header help`() {
-        assertTrue("دکمهٔ کل صفحه/اندازهٔ واقعی نیست", "id=\"fitToggle\"" in renderer && "function applyFit()" in renderer)
+        // V117 — دکمهٔ کل صفحه/اندازهٔ واقعی حذف شد؛ پیش‌فرض اندازهٔ واقعی با کمترین زوم (overviewMode).
+        assertTrue("دکمهٔ کل صفحه هنوز هست", "id=\"fitToggle\"" !in renderer && "function applyFit()" !in renderer)
+        assertTrue("صفحه‌بندیِ واقعی نیست", "function paginate(flow)" in renderer && "a4-frame" in renderer)
         assertTrue("درگ با مقیاس هماهنگ نیست", "function sheetScale()" in renderer)
         assertTrue("لمس اول فقط انتخاب نمی‌کند", "if (!figure.classList.contains('selected')) { selectFigure(figure); return; }" in renderer)
         assertFalse("متن راهنمای سربرگ هنوز هست", "شکل را بکشید تا هرجای برگه ببرید" in renderer)

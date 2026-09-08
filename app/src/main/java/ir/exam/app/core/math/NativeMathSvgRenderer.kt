@@ -502,7 +502,8 @@ object NativeMathSvgRenderer {
 
     private fun delimited(node: MathNode.Delimited, size: Float): Layout {
         val bodyLayout = layout(node.body, size)
-        val sideWidth = max(size * .34f, bodyLayout.height * .20f)
+        // V117 — پهنای دیلیمتر مثل ویرایشگر فرمول ثابت است (به ارتفاع وابسته نیست)
+        val sideWidth = max(delimiterWidth(node.open, size), delimiterWidth(node.close, size))
         val padding = size * .08f
         val height = max(bodyLayout.height, size * 1.24f)
         val bodyY = (height - bodyLayout.height) / 2f
@@ -632,11 +633,47 @@ object NativeMathSvgRenderer {
     }
 
     /**
-     * V116 — دیلیمترها (پرانتز/براکت/آکولاد/خط/زاویه) دیگر با مسیرهای دستی کشیده
-     * نمی‌شوند (روی دستگاه با AndroidSVG نازک/کج و متفاوت از ویرایشگر فرمول
-     * دیده می‌شدند). مثل KaTeX، خودِ گلیفِ فونت به‌صورت عمودی کشیده می‌شود تا
-     * به ارتفاع بدنه برسد؛ شکل همان شکلِ آشنای پرانتز می‌ماند.
+     * V117 — دیلیمترها دقیقاً با همان مسیرهای ویرایشگر فرمول (formula.html،
+     * MB_DELIM_SHAPE) کشیده می‌شوند: سرهای ثابت (c) و نوکِ میانی (m) با ارتفاع
+     * ثابت، بازوی کشسان (b) به اندازهٔ باقی‌ماندهٔ ارتفاع؛ همه در viewBox 0 0 10 10
+     * و خطِ نازکِ بدون پرشدگی. بسته‌ها آینهٔ افقیِ بازها هستند.
      */
+    private data class DelimShape(val widthEm: Float, val parts: List<Pair<Char, String>>)
+
+    private val delimShapes: Map<String, DelimShape> = mapOf(
+        "bow" to DelimShape(.42f, listOf('b' to "M8.8 0.5 C2.1 3.2 2.1 6.8 8.8 9.5")),
+        "brk" to DelimShape(.36f, listOf('c' to "M9 1.2 L1.6 1.2 L1.6 10", 'b' to "M1.6 0 L1.6 10", 'c' to "M1.6 0 L1.6 8.8 L9 8.8")),
+        "brace" to DelimShape(.5f, listOf('c' to "M9 0.8 Q4.6 0.8 4.6 10", 'b' to "M4.6 0 L4.6 10", 'm' to "M4.6 0 Q4.6 5 0.7 5 Q4.6 5 4.6 10", 'b' to "M4.6 0 L4.6 10", 'c' to "M4.6 0 Q4.6 9.2 9 9.2")),
+        "ceil" to DelimShape(.36f, listOf('c' to "M9 1.2 L1.6 1.2 L1.6 10", 'b' to "M1.6 0 L1.6 10", 'c' to "M1.6 0 L1.6 10")),
+        "floor" to DelimShape(.36f, listOf('c' to "M1.6 0 L1.6 10", 'b' to "M1.6 0 L1.6 10", 'c' to "M1.6 0 L1.6 8.8 L9 8.8")),
+        "bar" to DelimShape(.28f, listOf('b' to "M5 0 L5 10")),
+        "dbar" to DelimShape(.4f, listOf('b' to "M3 0 L3 10 M7 0 L7 10")),
+        "ang" to DelimShape(.42f, listOf('b' to "M8.4 0 L1.6 5 L8.4 10"))
+    )
+
+    private fun delimKind(delimiter: String): Pair<String, Boolean>? = when (delimiter) {
+        "(", "⟮" -> "bow" to false
+        ")", "⟯" -> "bow" to true
+        "[" -> "brk" to false
+        "]" -> "brk" to true
+        "{" -> "brace" to false
+        "}" -> "brace" to true
+        "⌈" -> "ceil" to false
+        "⌉" -> "ceil" to true
+        "⌊" -> "floor" to false
+        "⌋" -> "floor" to true
+        "⟨", "〈", "<" -> "ang" to false
+        "⟩", "〉", ">" -> "ang" to true
+        "|" -> "bar" to false
+        "‖", "∥" -> "dbar" to false
+        else -> null
+    }
+
+    internal fun delimiterWidth(delimiter: String, size: Float): Float {
+        val kind = delimKind(delimiter) ?: return max(size * .34f, estimateTextWidth(delimiter, size))
+        return delimShapes.getValue(kind.first).widthEm * size + size * .06f
+    }
+
     private fun delimiterPath(
         delimiter: String,
         width: Float,
@@ -644,22 +681,39 @@ object NativeMathSvgRenderer {
         left: Boolean,
         size: Float
     ): String {
-        val glyph = when (delimiter) {
-            "⟨", "<" -> "⟨"
-            "⟩", ">" -> "⟩"
-            "|" -> "|"
-            else -> delimiter
+        val kind = delimKind(delimiter)
+        if (kind == null) {
+            val glyphSize = size * 1.08f
+            val glyphHeight = glyphSize * 1.18f
+            val scaleY = (height / glyphHeight).coerceIn(1f, 6f)
+            return "<text x=\"0\" y=\"0\" transform=\"translate(0 ${number(height - glyphHeight * scaleY)}) scale(1 ${number(scaleY)}) translate(0 ${number(glyphSize * .92f)})\" font-family=\"serif\" font-size=\"${number(glyphSize)}\" stroke=\"none\">${escapeXml(delimiter)}</text>"
         }
-        val glyphSize = size * 1.08f
-        val glyphHeight = glyphSize * 1.18f
-        val scaleY = (height / glyphHeight).coerceIn(1f, 6f)
-        val glyphWidth = estimateTextWidth(glyph, glyphSize).coerceAtLeast(glyphSize * .3f)
-        val x = ((width - glyphWidth) / 2f).coerceAtLeast(0f)
-        // خطِ پایهٔ گلیف پس از مقیاس باید نزدیک پایین جعبه بنشیند.
-        val baseline = glyphSize * .92f
-        val translateY = height - glyphHeight * scaleY + (glyphHeight - baseline) * 0f
-        val family = if (glyph == "⟨" || glyph == "⟩") "\"DejaVu Sans\", \"Segoe UI Symbol\", sans-serif" else "serif"
-        return "<text x=\"0\" y=\"0\" transform=\"translate(${number(x)} ${number(translateY)}) scale(1 ${number(scaleY)}) translate(0 ${number(baseline)})\" font-family=\"$family\" font-size=\"${number(glyphSize)}\" stroke=\"none\">${escapeXml(glyph)}</text>"
+        val shape = delimShapes.getValue(kind.first)
+        val flip = kind.second
+        val w = shape.widthEm * size
+        val capH = size * .3f
+        val midH = size * .34f
+        val fixed = shape.parts.sumOf { (c, _) -> when (c) { 'c' -> capH; 'm' -> midH; else -> 0f }.toDouble() }.toFloat()
+        val barCount = shape.parts.count { it.first == 'b' }
+        val barH = if (barCount > 0) max(0f, (height - fixed) / barCount) else 0f
+        val stroke = max(1.3f, size * .085f)
+        val x0 = (width - w) / 2f
+        val sb = StringBuilder()
+        var y = 0f
+        for ((c, d) in shape.parts) {
+            val h = when (c) { 'c' -> capH; 'm' -> midH; else -> barH }
+            if (h <= 0f) continue
+            // viewBox 0..10 → w×h؛ ضخامتِ خط پس از مقیاس ثابت می‌ماند (مثل vector-effect)
+            val sx = w / 10f
+            val sy = h / 10f
+            val tx = if (flip) x0 + w else x0
+            val sxSigned = if (flip) -sx else sx
+            sb.append("<g transform=\"translate(${number(tx)} ${number(y)}) scale(${number(sxSigned)} ${number(sy)})\">")
+            sb.append("<path d=\"$d\" fill=\"none\" stroke-width=\"${number(stroke)}\" vector-effect=\"non-scaling-stroke\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>")
+            sb.append("</g>")
+            y += h
+        }
+        return sb.toString()
     }
 
     private fun estimateTextWidth(value: String, size: Float): Float {

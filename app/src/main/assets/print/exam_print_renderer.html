@@ -11,7 +11,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=830,viewport-fit=cover">
 <title>پیش‌نمایش چاپ آزمون</title>
 <style>
 @font-face{font-family:"Vazirmatn";src:url("/fonts/vazirmatn_regular.ttf");font-weight:400}
@@ -43,33 +43,24 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 .exam-print-mode #screenChrome{display:none}
 #screenChrome strong{font-size:13px}
 #screenChrome span{font-size:11px;color:var(--muted)}
-#closePreview,#fitToggle{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
-#fitToggle{background:#0f766e}.chrome-actions{display:flex;gap:8px}
-/* V107 — حالتِ «کل صفحه»: برگهٔ A4 با transform در پهنای صفحه جا می‌شود. */
-/* V113.2 — سند RTL است: بدون direction:ltr روی سطح، برگهٔ ۲۱۰mm با margin:0 به
-   لبهٔ راست می‌چسبد و (چون پهن‌تر از صفحه است) به‌کل از سمت چپ بیرون می‌افتد و
-   دیده نمی‌شود. سطحِ fit-page چپ‌چین می‌شود و خودِ برگه RTL می‌ماند. */
-#printSurface.fit-page{direction:ltr}
-#printSurface.fit-page #sheet{transform-origin:top left;margin:0;direction:rtl}
-/* V113 — «کل صفحه»: هیچ اسکرول افقی‌ای نه در سطح (surface) و نه در صفحه.
-   «اندازهٔ واقعی»: خودِ صفحه (نه یک جعبهٔ تودرتو) اسکرول می‌شود و پهنای
-   سند دقیقاً پهنای برگه (210mm) است — نه بیشتر. */
-html.fit-mode,html.fit-mode body{overflow-x:hidden}
-html.fit-mode #printSurface{overflow:hidden}
-html.real-mode #printSurface{overflow:visible;width:max-content;min-width:100%;margin:0 auto}
-#printSurface{width:100%;overflow:auto;padding:2px 0 18px}
-#sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:var(--paper);border:2px solid #000;border-radius:6px;box-shadow:0 7px 28px rgba(15,23,42,.24);font-size:10pt;line-height:1.75;overflow:visible}
-/* V115 — پیش‌نمایشِ چندبرگی: برگهٔ منطقی یکی است (مختصات اشیاء دست‌نخورده)،
-   ولی روی صفحه هر ۲۹۷mm یک قابِ A4 کامل کشیده می‌شود و سطرِ سؤالی که به
-   انتهای برگه می‌رسد با یک فاصله‌گذار به برگهٔ بعد می‌رود؛ کادر هیچ برگه‌ای
-   بالا/پایین قطع نمی‌شود. در چاپ (exam-print-mode) مرورگر خودش صفحه‌بندی می‌کند. */
-.preview-open #sheet.paged{background:transparent;border-color:transparent;box-shadow:none;border-radius:0}
-.page-frame{position:absolute;left:0;right:0;box-sizing:border-box;height:297mm;background:var(--paper);border:2px solid #000;border-radius:6px;box-shadow:0 7px 28px rgba(15,23,42,.24);z-index:0;pointer-events:none}
-.page-frame::after{content:attr(data-label);position:absolute;bottom:2mm;left:0;right:0;text-align:center;font-size:8pt;color:#94a3b8}
-#sheet.paged>*:not(.page-frame){position:relative;z-index:1}
-#sheet.paged>.print-figure.free{position:absolute;z-index:5}
-.page-spacer{pointer-events:none}
-.exam-print-mode .page-frame,.exam-print-mode .page-spacer{display:none!important}
+#closePreview{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
+.chrome-actions{display:flex;gap:8px}
+/* V117 — صفحه‌بندیِ واقعی: #sheet فقط ظرفِ مختصاتِ اشیاءِ شناور است و هر برگه یک
+   .a4-page واقعی (۲۱۰×۲۹۷mm) با کادرِ داخلیِ .a4-frame است که محتوا در آن
+   «قطع» می‌شود. پیش‌نمایش و چاپ همین DOM را نشان می‌دهند → چاپ = پیش‌نمایش. */
+#printSurface{width:100%;overflow:visible;padding:2px 0 18px}
+#sheet{position:relative;width:210mm;margin:0 auto;padding:0;background:transparent;font-size:10pt;line-height:1.75;overflow:visible}
+.a4-page{position:relative;box-sizing:border-box;width:210mm;height:297mm;padding:5mm;margin:0 0 14px;background:var(--paper);box-shadow:0 7px 28px rgba(15,23,42,.24)}
+.a4-page:last-child{margin-bottom:0}
+.a4-frame{position:relative;box-sizing:border-box;height:100%;border:2px solid #000;border-radius:6px;padding:6mm;overflow:hidden}
+.a4-page::after{content:attr(data-label);position:absolute;bottom:1mm;left:0;right:0;text-align:center;font-size:8pt;color:#94a3b8}
+#sheet>.print-figure.free{position:absolute;z-index:5}
+.a4-frame>.print-figure.free{position:absolute;z-index:5}
+/* ادامهٔ سطرِ بریده‌شده در برگهٔ بعد: به اندازهٔ بخشِ چاپ‌شده بالا کشیده می‌شود */
+.row-continue{overflow:hidden}
+.row-continue>table{margin-top:calc(-1px * var(--cut,0))}
+.table-head-only{margin-bottom:-1px}
+.exam-print-mode .a4-page::after{display:none!important}
 /* ===== سربرگ‌ها — عیناً از آزمون‌سازِ مرجع ===== */
   /* ===== HEADER TEMPLATE 2 ===== */
   .exam-header2 {
@@ -299,21 +290,22 @@ html.real-mode #printSurface{overflow:visible;width:max-content;min-width:100%;m
 .question-sep-drag.is-dragging::before{background:rgba(37,99,235,.85);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
 .exam-footer{margin-top:20px;text-align:center;font-size:9pt;color:#555;padding-top:6px;white-space:pre-wrap}
 .empty{padding:38px 12px;text-align:center;color:#64748b;font-size:13px}
-body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible}.exam-print-mode #sheet{width:auto;min-height:0;margin:0;border-radius:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .question-sep-drag{display:none!important}
+body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible}.exam-print-mode #sheet{margin:0}.exam-print-mode .a4-page{margin:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .question-sep-drag{display:none!important}
 @media screen and (max-width:760px){#sheet{box-shadow:none}}
 @media print{
-  @page{size:A4;margin:5mm}
+  @page{size:A4;margin:0}
   html,body{background:#fff!important}body{padding:0!important;font-size:10pt}
   #screenChrome{display:none!important}#printSurface{overflow:visible!important;padding:0!important}
-  #sheet{width:200mm!important;min-height:287mm!important;margin:0 auto!important;padding:3mm!important;box-shadow:none!important;border:2px solid #000!important;border-radius:0!important}
+  #sheet{margin:0!important}
+  /* V117 — هر .a4-page دقیقاً یک برگهٔ چاپی است؛ ۰٫۶mm کمتر تا گردکردنِ ارتفاع برگهٔ خالی نسازد */
+  .a4-page{width:210mm!important;height:296.4mm!important;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always}
+  .a4-page:last-child{break-after:auto;page-break-after:auto}
+  .a4-page::after{display:none!important}
   .print-figure{cursor:default!important}.print-figure.selected{outline:0!important}
   .figure-handle,.question-sep-drag{display:none!important}
   .figure-slot.free-slot{border:0!important;opacity:0!important}
   .questions-print-table{width:100%!important;margin:0!important}
   .questions-print-table thead{display:table-row-group!important}
-  .questions-print-table th{min-height:38px!important;padding:3px 5px!important}
-  .questions-print-table .question-main-td{padding:5px 7px!important;line-height:1.55!important}
-  .questions-print-table .question-no-td,.questions-print-table .question-score-td{padding:5px 3px!important;font-size:9.5pt!important}
   .match-head-row,.match-pair-row{grid-template-columns:1fr 14px 22px 14px 1fr!important;column-gap:4px!important}
   .match-pair-row{min-height:22px!important}.match-dot{width:8px!important;height:8px!important}
   .choice-mark{width:9px!important;height:9px!important;margin-left:5px!important}
@@ -403,7 +395,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
 <div id="screenChrome" class="screen-only">
   <div class="chrome-row">
     <strong>پیش‌نمایش برگهٔ A4</strong>
-    <span class="chrome-actions"><button id="fitToggle" type="button">اندازهٔ واقعی</button><button id="closePreview" type="button" title="بستن" aria-label="بستن">✕</button></span>
+    <span class="chrome-actions"><button id="closePreview" type="button" title="بستن" aria-label="بستن">✕</button></span>
   </div>
   <div id="fmtBar" aria-label="قالب‌بندی متن انتخاب‌شده">
     <button class="fmt-btn b" type="button" data-fmt="bold" title="بلد">B</button>
@@ -620,10 +612,21 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     figure.style.width = width + 'px'; figure.style.height = height + 'px';
     slot.style.width = width + 'px'; slot.style.height = height + 'px';
     if (layout.free) {
-      if (figure.parentNode !== sheet) sheet.appendChild(figure);
+      /* V117 — مختصات نسبت به کلِ پشتهٔ برگه‌هاست، ولی شیء داخلِ کادرِ همان برگه‌ای
+         می‌نشیند که رویش قرار دارد؛ پس در چاپ هم روی همان برگه چاپ می‌شود. */
+      var x = clamp(finite(layout.x, 0), -400, 3000), y = clamp(finite(layout.y, 0), -400, 6000);
+      var pages = sheet.querySelectorAll('.a4-page'), page = pages[0];
+      for (var pi = 0; pi < pages.length; pi++) { if (y >= pages[pi].offsetTop) page = pages[pi]; }
+      var frame = page ? page.querySelector('.a4-frame') : null;
+      if (frame) {
+        if (figure.parentNode !== frame) frame.appendChild(figure);
+        figure.style.top = (y - page.offsetTop - frame.offsetTop - frame.clientTop) + 'px';
+        figure.style.right = (x - (page.offsetWidth - frame.offsetLeft - frame.offsetWidth) - frame.clientLeft) + 'px';
+      } else {
+        if (figure.parentNode !== sheet) sheet.appendChild(figure);
+        figure.style.right = x + 'px'; figure.style.top = y + 'px';
+      }
       figure.classList.add('free'); slot.classList.add('free-slot');
-      figure.style.right = clamp(finite(layout.x, 0), -400, 3000) + 'px';
-      figure.style.top = clamp(finite(layout.y, 0), -400, 6000) + 'px';
       figure.style.zIndex = clamp(Math.round(finite(layout.z, 1)), 1, 99);
     } else {
       if (figure.parentNode !== slot) slot.insertBefore(figure, slot.firstChild);
@@ -914,8 +917,9 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   }
   function render() {
     sheet.replaceChildren();
-    if (!state.questions.length) { var empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = 'سؤالی برای چاپ وجود ندارد.'; sheet.appendChild(empty); return; }
-    sheet.appendChild(buildHeader());
+    if (!state.questions.length) { var page0 = newPage(1); var empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = 'سؤالی برای چاپ وجود ندارد.'; page0.frame.appendChild(empty); sheet.appendChild(page0.page); labelPages(); return; }
+    var flow = [];
+    flow.push(buildHeader());
     var table = document.createElement('table'); table.className = 'questions-print-table';
     var colgroup = document.createElement('colgroup'); ['qno-col','qmain-col','qscore-col'].forEach(function (cls) { var col = document.createElement('col'); col.className = cls; colgroup.appendChild(col); }); table.appendChild(colgroup);
     var thead = document.createElement('thead'), headRow = document.createElement('tr');
@@ -923,53 +927,81 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     thead.appendChild(headRow); table.appendChild(thead);
     var tbody = document.createElement('tbody');
     state.questions.forEach(function (question, index) { tbody.appendChild(questionRow(question, index)); });
-    table.appendChild(tbody); sheet.appendChild(table);
-    if (state.mode === 'teacher') sheet.appendChild(answerKeyTable());
-    var footer = document.createElement('div'); footer.className = 'exam-footer'; footer.textContent = footerText(); sheet.appendChild(footer);
-    // شکل‌های شناور پس از قرارگرفتن در DOM به برگه منتقل می‌شوند.
+    table.appendChild(tbody); flow.push(table);
+    if (state.mode === 'teacher') flow.push(answerKeyTable());
+    var footer = document.createElement('div'); footer.className = 'exam-footer'; footer.textContent = footerText(); flow.push(footer);
+    paginate(flow);
+    // شکل‌های شناور پس از قرارگرفتن در DOM به برگهٔ درست منتقل می‌شوند.
     Array.prototype.forEach.call(sheet.querySelectorAll('.figure-slot'), function (slot) { if (typeof slot.__apply === 'function') slot.__apply(); });
-    paginatePreview();
-    if (typeof surface !== 'undefined' && surface) applyFit();
+    labelPages();
   }
-  /* V115 — صفحه‌بندیِ نمایشی (فقط پیش‌نمایش). اندازه‌ها بر حسب px برگهٔ
-     بدونِ مقیاس (offsetTop) محاسبه می‌شوند تا transform اثر نکند. */
-  var PAGE_GAP = 14;
-  function pxPerMm() { return (sheet.offsetWidth || 794) / 210; }
-  function paginatePreview() {
-    /* برگرداندن جدول‌های شکسته به یک جدول (رندر تازه همیشه یک جدول دارد) */
-    Array.prototype.forEach.call(sheet.querySelectorAll('.page-frame,.page-spacer'), function (n) { n.parentNode.removeChild(n); });
-    sheet.classList.remove('paged'); sheet.style.minHeight = '';
-    if (document.body.classList.contains('exam-print-mode') || !state.questions.length) return;
-    var mm = pxPerMm(), pageH = Math.round(297 * mm), pad = Math.round(8 * mm), border = 2, period = pageH + PAGE_GAP;
-    var cs = getComputedStyle(sheet), sheetPadTop = parseFloat(cs.paddingTop) || pad, sheetBorder = parseFloat(cs.borderTopWidth) || border;
-    function topOf(el) { var y = 0, n = el; while (n && n !== sheet) { y += n.offsetTop; n = n.offsetParent; } return y + sheetBorder; }
-    var table = sheet.querySelector('.questions-print-table'); if (!table) return;
-    var page = 0, guard = 0;
-    while (table && guard++ < 60) {
-      var rows = Array.prototype.slice.call(table.querySelectorAll(':scope > tbody > tr')), splitAt = -1;
-      for (var i = 0; i < rows.length; i++) {
-        var top = topOf(rows[i]), height = rows[i].offsetHeight, limit = page * period + pageH - pad - border;
-        if (top + height > limit && height < pageH - 2 * pad) { splitAt = i; break; }
-      }
-      if (splitAt <= 0 && !(splitAt === 0 && page > 0)) { if (splitAt === 0) { /* اولین سطر خودش جا نمی‌شود: یک سطر را نگه دار */ splitAt = 1; if (rows.length <= 1) break; } else break; }
-      /* جدولِ تازه با همان سرستون برای برگهٔ بعد */
-      var next = document.createElement('table'); next.className = table.className;
-      next.appendChild(table.querySelector('colgroup').cloneNode(true)); next.appendChild(table.querySelector('thead').cloneNode(true));
-      var tbody = document.createElement('tbody'); for (var j = splitAt; j < rows.length; j++) tbody.appendChild(rows[j]); next.appendChild(tbody);
-      page = Math.max(page + 1, Math.floor(topOf(table) / period) + 1);
-      var spacer = document.createElement('div'); spacer.className = 'page-spacer';
-      table.parentNode.insertBefore(spacer, table.nextSibling); spacer.parentNode.insertBefore(next, spacer.nextSibling);
-      var target = page * period + sheetBorder + sheetPadTop, cur = topOf(spacer);
-      spacer.style.height = Math.max(0, Math.round(target - cur)) + 'px';
-      table = next;
+  /* ===== V117 — صفحه‌بندیِ واقعی =====
+     هر برگه یک .a4-page با کادرِ .a4-frame (overflow:hidden) است. بلوک‌ها یکی‌یکی
+     داخلِ کادر گذاشته و اندازه‌گیری می‌شوند؛ سطرِ جدولی که از کادر بیرون بزند
+     همان‌جا «قطع» می‌شود و ادامه‌اش (نسخهٔ کپی، به اندازهٔ بخشِ چاپ‌شده بالا
+     کشیده‌شده) در برگهٔ بعد زیرِ سرستون می‌آید. چاپ همین برگه‌ها را چاپ می‌کند،
+     پس تعدادِ صفحه و چیدمانِ چاپ دقیقاً همان پیش‌نمایش است. */
+  var MIN_CUT_PX = 30;
+  function newPage(n) {
+    var page = document.createElement('div'); page.className = 'a4-page'; page.dataset.page = String(n);
+    var frame = document.createElement('div'); frame.className = 'a4-frame'; page.appendChild(frame);
+    return {page: page, frame: frame};
+  }
+  function labelPages() {
+    var pages = sheet.querySelectorAll('.a4-page');
+    Array.prototype.forEach.call(pages, function (p, i) { p.dataset.label = 'برگهٔ ' + toPersianNum(i + 1) + ' از ' + toPersianNum(pages.length); });
+  }
+  function frameInnerBottom(frame) { var cs = getComputedStyle(frame); return frame.clientHeight - parseFloat(cs.paddingBottom); }
+  function relTop(frame, el) { var fr = frame.getBoundingClientRect(), r = el.getBoundingClientRect(); return r.top - fr.top - frame.clientTop; }
+  function overflows(frame) { return frame.scrollHeight > frame.clientHeight + 0.5; }
+  function tableShell(src, withHead) {
+    var t = document.createElement('table'); t.className = src.className;
+    t.appendChild(src.querySelector('colgroup').cloneNode(true));
+    if (withHead) t.appendChild(src.querySelector('thead').cloneNode(true));
+    t.appendChild(document.createElement('tbody'));
+    return t;
+  }
+  function paginate(flow) {
+    var count = 0, cur = newPage(++count); sheet.appendChild(cur.page);
+    function nextPage() { cur = newPage(++count); sheet.appendChild(cur.page); return cur; }
+    for (var f = 0; f < flow.length; f++) {
+      var block = flow[f];
+      if (block.tagName === 'TABLE' && block.classList.contains('questions-print-table')) { placeTable(block); continue; }
+      cur.frame.appendChild(block);
+      if (overflows(cur.frame) && cur.frame.children.length > 1) { nextPage(); cur.frame.appendChild(block); }
     }
-    var total = Math.max(1, Math.ceil((sheet.scrollHeight + PAGE_GAP) / period));
-    sheet.classList.add('paged');
-    sheet.style.minHeight = (total * period - PAGE_GAP) + 'px';
-    for (var k = 0; k < total; k++) {
-      var frame = document.createElement('div'); frame.className = 'page-frame';
-      frame.style.top = (k * period - sheetBorder) + 'px'; frame.dataset.label = 'برگهٔ ' + toPersianNum(k + 1) + ' از ' + toPersianNum(total);
-      sheet.insertBefore(frame, sheet.firstChild);
+    function placeTable(src) {
+      var rows = Array.prototype.slice.call(src.querySelectorAll(':scope > tbody > tr'));
+      var host = tableShell(src, true); cur.frame.appendChild(host);
+      if (overflows(cur.frame) && cur.frame.children.length > 1) { host.remove(); nextPage(); host = tableShell(src, true); cur.frame.appendChild(host); }
+      var body = host.tBodies[0], guard = 0;
+      for (var i = 0; i < rows.length && guard++ < 5000; i++) {
+        var row = rows[i]; body.appendChild(row);
+        if (!overflows(cur.frame)) continue;
+        var frame = cur.frame, bottom = frameInnerBottom(frame), top = relTop(frame, row), visible = bottom - top;
+        var alone = body.rows.length === 1 && frame.children.length === 1;
+        if (visible < MIN_CUT_PX && !alone) {
+          /* جا نمی‌شود: کلِ سطر به برگهٔ بعد */
+          body.removeChild(row); nextPage(); host = tableShell(src, true); cur.frame.appendChild(host); body = host.tBodies[0]; body.appendChild(row);
+          if (!overflows(cur.frame)) continue;
+          bottom = frameInnerBottom(cur.frame); top = relTop(cur.frame, row); visible = bottom - top;
+        }
+        /* سطر بلندتر از فضای باقی‌مانده: همین‌جا قطع، ادامه در برگهٔ بعد */
+        var cut = Math.max(0, visible), remainH = row.offsetHeight - cut;
+        while (remainH > 1 && guard++ < 5000) {
+          nextPage();
+          var headOnly = tableShell(src, true); headOnly.classList.add('table-head-only'); cur.frame.appendChild(headOnly);
+          var wrap = document.createElement('div'); wrap.className = 'row-continue'; cur.frame.appendChild(wrap);
+          var cont = tableShell(src, false); wrap.appendChild(cont);
+          var clone = row.cloneNode(true); clone.classList.add('row-part'); cont.tBodies[0].appendChild(clone);
+          cont.style.marginTop = (-cut) + 'px';
+          host = cont; body = cont.tBodies[0];
+          if (!overflows(cur.frame)) break;
+          var b2 = frameInnerBottom(cur.frame), t2 = relTop(cur.frame, wrap), vis2 = b2 - t2;
+          if (vis2 <= MIN_CUT_PX) break;
+          cut += vis2; remainH -= vis2;
+        }
+      }
     }
   }
   function sheetScale() { var w = sheet.offsetWidth; return w > 0 ? (sheet.getBoundingClientRect().width / w) || 1 : 1; }
@@ -1070,27 +1102,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   }
   function closePreview() { callBridge('previewClosed'); }
   closeButton.addEventListener('click', closePreview);
-  /* V107 — پیش‌فرضِ پیش‌نمایش: کل برگهٔ A4 در پهنای صفحه (fit-page). دکمه بین
-     «کل صفحه» و «اندازهٔ واقعی» جابه‌جا می‌کند؛ زومِ دوانگشتی همچنان آزاد است. */
-  var surface = document.getElementById('printSurface'), fitButton = document.getElementById('fitToggle'), fitPage = true;
-  function applyFit() {
-    var root = document.documentElement, printing = document.body.classList.contains('exam-print-mode');
-    if (!fitPage || printing) {
-      surface.classList.remove('fit-page'); sheet.style.transform = ''; surface.style.height = '';
-      root.classList.remove('fit-mode'); root.classList.toggle('real-mode', !printing);
-      if (fitButton) fitButton.textContent = 'کل صفحه'; return;
-    }
-    root.classList.remove('real-mode'); root.classList.add('fit-mode');
-    surface.classList.add('fit-page');
-    /* V113 — مقیاس از پهنای واقعیِ پنجره (نه surface که ممکن است خودش پهن‌تر شده باشد) */
-    var available = Math.max(0, (root.clientWidth || window.innerWidth) - 16), natural = sheet.offsetWidth || 794, scale = natural > 0 ? Math.min(1, available / natural) : 1;
-    var offset = Math.max(0, (surface.clientWidth - natural * scale) / 2);
-    sheet.style.transform = 'translateX(' + offset.toFixed(2) + 'px) scale(' + scale.toFixed(4) + ')';
-    surface.style.height = Math.ceil(sheet.offsetHeight * scale) + 24 + 'px';
-    if (fitButton) fitButton.textContent = 'اندازهٔ واقعی';
-  }
-  if (fitButton) fitButton.addEventListener('click', function () { fitPage = !fitPage; applyFit(); try { window.scrollTo(0, 0); } catch (ignored) {} });
-  window.addEventListener('resize', applyFit);
+  var surface = document.getElementById('printSurface');
   /* ===== V114 — نوارِ قالب‌بندیِ متنِ انتخاب‌شده =====
      انتخابِ کاربر (Selection) به بازهٔ [start,end) در متنِ اصلیِ سؤال نگاشت
      می‌شود (از data-off هر تکه)، بازه‌های استایل به‌روز و سطر دوباره رندر
@@ -1174,7 +1186,6 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   window.printTeacher = function () { return requestPrint('teacher'); };
   window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};
   /* V116 — API برای هدرِ بومی (Compose): تغییر حالت اندازه و قالب‌بندیِ متنِ انتخاب‌شده. */
-  window.ExamPrintRenderer.toggleFit = function () { fitPage = !fitPage; applyFit(); try { window.scrollTo(0, 0); } catch (ignored) {} return fitPage ? 'fit' : 'real'; };
   window.ExamPrintRenderer.applyFormat = function (kind, value) {
     var sel = selectionRange() || lastSel; if (!sel) { notify('اول بخشی از متن سؤال را انتخاب کنید'); return 'noselection'; }
     value = value == null ? '' : String(value);
