@@ -257,8 +257,10 @@ class ExamBuilderViewModel(
                     val sepExtraPx = entry.jsonObject["sepExtraPx"]?.jsonPrimitive?.intOrNull ?: 0
                     // V114 — استایل‌های متنِ انتخاب‌شده در نوارِ پیش‌نمایش
                     val spans = entry.jsonObject["spans"]?.let { decodeSnapshotSpans(it, q.text.length) } ?: q.textSpans
-                    if (figLayoutsJson == q.figLayoutsJson && sepExtraPx == q.sepExtraPx && spans == q.textSpans) q
-                    else q.copy(figLayoutsJson = figLayoutsJson, sepExtraPx = sepExtraPx, textSpans = spans)
+                    // V121 — بازه‌های ترازِ پاراگرافیِ انتخاب‌شده در نوارِ پیش‌نمایش
+                    val aligns = entry.jsonObject["alignSpans"]?.let { decodeSnapshotAlignSpans(it, q.text.length) } ?: q.alignSpans
+                    if (figLayoutsJson == q.figLayoutsJson && sepExtraPx == q.sepExtraPx && spans == q.textSpans && aligns == q.alignSpans) q
+                    else q.copy(figLayoutsJson = figLayoutsJson, sepExtraPx = sepExtraPx, textSpans = spans, alignSpans = aligns)
                 }
             )
         }
@@ -285,6 +287,20 @@ class ExamBuilderViewModel(
         }
     }
 
+    /** V121 — بازه‌های ترازِ پاراگرافی که رندررِ پیش‌نمایش برمی‌گرداند (start/end/align). */
+    private fun decodeSnapshotAlignSpans(element: kotlinx.serialization.json.JsonElement, textLength: Int): List<AlignSpan>? {
+        val array = element as? kotlinx.serialization.json.JsonArray ?: return null
+        return array.mapNotNull { item ->
+            val o = (item as? kotlinx.serialization.json.JsonObject) ?: return@mapNotNull null
+            val s = o["start"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            val e = o["end"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            val align = o["align"]?.jsonPrimitive?.contentOrNull
+                ?.takeIf { it in setOf("right", "center", "left", "justify") } ?: return@mapNotNull null
+            if (s < 0 || e > textLength || e <= s) return@mapNotNull null
+            AlignSpan(s, e, align)
+        }
+    }
+
     fun moveQuestion(id: String, delta: Int) {
         _state.update { state ->
             val from = state.questions.indexOfFirst { it.id == id }
@@ -301,7 +317,9 @@ class ExamBuilderViewModel(
     fun updateText(id: String, text: String) { update(id) {
         // V68 — بازه‌های استایل تکه‌ای با تغییر متن جابه‌جا/برش می‌خورند.
         val spans = StyleSpanOps.adjust(it.text, text, it.textSpans)
-        it.copy(text = text, textSpans = spans)
+        // V121 — بازه‌های ترازِ پاراگرافی هم باید هم‌زمان جابه‌جا/برش بخورند.
+        val aligns = AlignSpanOps.adjust(it.text, text, it.alignSpans)
+        it.copy(text = text, textSpans = spans, alignSpans = aligns)
     } }
     fun insertFormula(
         id: String,
@@ -462,12 +480,32 @@ class ExamBuilderViewModel(
     fun setMatchingPair(id: String, leftIndex: Int, rightIndex: Int) { update(id) { question ->
         question.copy(matchingPairs = question.matchingPairs + (leftIndex to rightIndex))
     } }
-    // V121 — addMatchingRow/removeMatchingRow (که هر دو ستون را با هم و در
-    // اندیس آخر تغییر می‌دادند) حذف شدند: در سراسر برنامه هیچ نقطهٔ فراخوانی
-    // نداشتند (کد مرده) و منطق remap آن‌ها برای ستون‌های نامتقارن یا
-    // جفت‌های نامرتبط با ردیف حذف‌شده نادرست بود. مسیر واقعی UI از
-    // addMatchingSide/removeMatchingSide (هر ستون مستقل، با remap صحیح
-    // مشابه‌ی که در ادامه می‌آید) استفاده می‌کند.
+    fun addMatchingRow(id: String) { update(id) { question ->
+        val next = minOf(question.matchingLeft.size, question.matchingRight.size)
+        question.copy(
+            matchingLeft = question.matchingLeft + "",
+            matchingLeftIds = question.matchingLeftIds.resizeIds(question.matchingLeft.size) + UUID.randomUUID().toString(),
+            matchingRight = question.matchingRight + "",
+            matchingRightIds = question.matchingRightIds.resizeIds(question.matchingRight.size) + UUID.randomUUID().toString(),
+            matchingLeftImages = question.matchingLeftImages.pad(question.matchingLeft.size) + null,
+            matchingRightImages = question.matchingRightImages.pad(question.matchingRight.size) + null,
+            matchingPairs = question.matchingPairs + (next to next)
+        )
+    } }
+    fun removeMatchingRow(id: String) { update(id) { question ->
+        if (question.matchingLeft.size <= 2 || question.matchingRight.size <= 2) question else {
+            val last = minOf(question.matchingLeft.lastIndex, question.matchingRight.lastIndex)
+            question.copy(
+                matchingLeft = question.matchingLeft.dropLast(1),
+                matchingLeftIds = question.matchingLeftIds.resizeIds(question.matchingLeft.size).dropLast(1),
+                matchingRight = question.matchingRight.dropLast(1),
+                matchingRightIds = question.matchingRightIds.resizeIds(question.matchingRight.size).dropLast(1),
+                matchingLeftImages = question.matchingLeftImages.dropLast(1),
+                matchingRightImages = question.matchingRightImages.dropLast(1),
+                matchingPairs = question.matchingPairs.filterKeys { it != last }.mapValues { (_, right) -> right.coerceAtMost(last - 1) }
+            )
+        }
+    } }
     fun addMatchingSide(id: String, side: String) { update(id) { q ->
         if (side == "left" && q.matchingLeft.size < 30) q.copy(
             matchingLeft = q.matchingLeft + "",

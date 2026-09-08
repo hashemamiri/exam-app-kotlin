@@ -1,5 +1,6 @@
 package ir.exam.app.data.repository
 
+import ir.exam.app.ui.builder.AlignSpan
 import ir.exam.app.ui.builder.QuestionDraft
 import ir.exam.app.ui.builder.QuestionType
 import kotlinx.serialization.json.JsonArray
@@ -56,6 +57,28 @@ class ExamQuestionCodecTest {
         val source=QuestionDraft(type=QuestionType.FILL_BLANK,text="Name",expectedText="Tehran",caseSensitive=true,textAlign="center",imagePosition="free",fontFamily="shabnam",fontSizeSp=21f,bold=true,italic=true,answerLines=7,answerLineStyle="blank")
         val encoded=ExamQuestionCodec.encode(listOf(source));val decoded=ExamQuestionCodec.decode(encoded.publicQuestions,encoded.answerKey).single()
         assertTrue(decoded.caseSensitive);assertEquals("center",decoded.textAlign);assertEquals("free",decoded.imagePosition);assertEquals("shabnam",decoded.fontFamily);assertEquals(21f,decoded.fontSizeSp);assertTrue(decoded.bold);assertTrue(decoded.italic);assertEquals(7,decoded.answerLines);assertEquals("blank",decoded.answerLineStyle)
+    }
+
+    @Test
+    fun `align spans round trip and legacy JSON without them decodes to empty list`() {
+        // V121 — تراز پاراگرافیِ تکه‌ای؛ باید سالم رفت‌و‌برگشت کند و JSON قدیمی
+        // (بدونِ کلید alignSpans) نباید کرش کند یا مقداری جعلی بسازد.
+        val source = QuestionDraft(
+            type = QuestionType.ESSAY,
+            text = "بند اول\nبند دوم\nبند سوم",
+            textAlign = "right",
+            alignSpans = listOf(AlignSpan(0, 8, "center"), AlignSpan(9, 17, "justify"))
+        )
+        val encoded = ExamQuestionCodec.encode(listOf(source))
+        val decoded = ExamQuestionCodec.decode(encoded.publicQuestions, encoded.answerKey).single()
+        assertEquals(source.alignSpans, decoded.alignSpans)
+
+        val legacyPublic = JsonArray(listOf(JsonObject(mapOf(
+            "type" to JsonPrimitive("essay"),
+            "text" to JsonPrimitive("بدون بازهٔ تراز")
+        ))))
+        val legacyDecoded = ExamQuestionCodec.decode(legacyPublic, JsonArray(emptyList())).single()
+        assertTrue(legacyDecoded.alignSpans.isEmpty())
     }
 
     @Test

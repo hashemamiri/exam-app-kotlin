@@ -1,5 +1,6 @@
 package ir.exam.app.data.repository
 
+import ir.exam.app.ui.builder.AlignSpan
 import ir.exam.app.ui.builder.MediaDraft
 import ir.exam.app.ui.builder.OptionStyle
 import ir.exam.app.ui.builder.QuestionDraft
@@ -68,6 +69,27 @@ internal object ExamQuestionCodec {
             })
         })
 
+    // V121 — تراز پاراگرافیِ تکه‌ای: آرایهٔ {s,e,a}؛ خالی/غایب = بدون بازهٔ تراز.
+    private fun JsonElement?.decodeAlignSpans(): List<AlignSpan> =
+        this.asArrayOrEmpty().mapNotNull { element ->
+            (element as? JsonObject)?.let { o ->
+                val s = o["s"]?.asInt() ?: return@let null
+                val e = o["e"]?.asInt() ?: return@let null
+                val align = (o["a"] as? JsonPrimitive)?.contentOrNull
+                    ?.takeIf { it in setOf("right", "center", "left", "justify") } ?: return@let null
+                if (e > s) AlignSpan(s, e, align) else null
+            }
+        }
+
+    private fun encodeAlignSpans(spans: List<AlignSpan>): JsonArray? =
+        if (spans.isEmpty()) null else JsonArray(spans.map { span ->
+            JsonObject(mapOf(
+                "s" to JsonPrimitive(span.start),
+                "e" to JsonPrimitive(span.end),
+                "a" to JsonPrimitive(span.align)
+            ))
+        })
+
     private fun encodeStyles(styles: List<OptionStyle?>, size: Int): JsonArray? =
         if (styles.none { it != null }) null else JsonArray(List(size) { index ->
             styles.getOrNull(index)?.let { style ->
@@ -106,6 +128,8 @@ internal object ExamQuestionCodec {
                 matchingLeftStyles = obj["leftStyles"].decodeStyles(),
                 matchingRightStyles = obj["rightStyles"].decodeStyles(),
                 textSpans = obj["spans"].decodeSpans(),
+                // V121 — تراز پاراگرافیِ تکه‌ای؛ غایب = بدون بازهٔ تراز (fallback به textAlign کلی).
+                alignSpans = obj["alignSpans"].decodeAlignSpans(),
                 correctIndex = key["correctOption"]?.asInt() ?: obj["correctIndex"]?.asInt(),
                 expectedText = when (type) {
                     QuestionType.TRUE_FALSE -> (key["correctAnswer"]?.asBoolean() ?: false).toString()
@@ -185,6 +209,9 @@ internal object ExamQuestionCodec {
             // V68.3.1 — استایل تکه‌ای متن برای «هر نوع سؤال» نوشته می‌شود (در
             // V68.0 اشتباهاً داخل شاخهٔ MATCHING بود و roundtrip شکست می‌خورد).
             encodeSpans(question.textSpans)?.let { values["spans"] = it }
+            // V121 — تراز پاراگرافیِ تکه‌ای؛ فقط وقتی بازه‌ای هست نوشته می‌شود تا
+            // JSON قدیمیِ سؤال‌های بدونِ این ویژگی دست‌نخورده بماند.
+            encodeAlignSpans(question.alignSpans)?.let { values["alignSpans"] = it }
             if (question.type == QuestionType.MULTIPLE_CHOICE) {
                 values["options"] = JsonArray(question.options.map(::JsonPrimitive))
                 values["optionImages"] = JsonArray(question.options.indices.map { index ->

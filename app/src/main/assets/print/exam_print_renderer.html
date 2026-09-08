@@ -241,18 +241,31 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 
   .exam-intro { font-size: 10pt; margin: 8px 0; text-align: center; }
 /* ===== جدول سؤال‌ها (ردیف / متن سؤال / بارم) ===== */
+/* V121 — پیش‌فرض‌های متغیرهای کادر/جدول‌بندی؛ applyBoxStyle در صورتِ وجودِ
+   تنظیماتِ ذخیره‌شده روی :root بازنویسی‌شان می‌کند. */
+:root{--box-border-w:1px;--box-border-c:#000;--box-no-w:6%;--box-score-w:6%;--box-pad:8px}
 .questions-print-table{width:100%;margin:0;border-collapse:collapse;table-layout:fixed;direction:rtl}
 .questions-print-table thead{display:table-row-group}
-.questions-print-table th,.questions-print-table td{border:1px solid #000;vertical-align:top}
+.questions-print-table th,.questions-print-table td{border:var(--box-border-w) solid var(--box-border-c);vertical-align:top}
 .questions-print-table tr{break-inside:avoid;page-break-inside:avoid}
 .questions-print-table th{text-align:center;font-weight:900;min-height:46px;padding:5px 7px}
-.questions-print-table .qno-col,.questions-print-table .qscore-col{width:6%;text-align:center}
+.questions-print-table .qno-col,.questions-print-table .qscore-col{width:var(--box-no-w);text-align:center}
+.questions-print-table .qscore-col{width:var(--box-score-w)}
 .questions-print-table .qmain-col{width:88%}
 .questions-print-table .qno-head,.questions-print-table .qscore-head{writing-mode:vertical-rl;text-orientation:mixed}
-.questions-print-table .question-main-td{position:relative;padding:8px 10px;line-height:1.75}
+.questions-print-table .question-main-td{position:relative;padding:var(--box-pad);line-height:1.75}
 .questions-print-table .question-no-td,.questions-print-table .question-score-td{padding:8px 4px;text-align:center;font-weight:800}
 .question-text{white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:6px}
-.question-main-td[data-align="center"] .question-text{text-align:center}.question-main-td[data-align="left"] .question-text{text-align:left;direction:ltr}.question-main-td[data-align="justify"] .question-text{text-align:justify}.question-main-td[data-bold="true"] .question-text{font-weight:700}.question-main-td[data-italic="true"] .question-text{font-style:italic}.styled-bold{font-weight:800}.styled-italic{font-style:italic}
+.question-main-td[data-bold="true"] .question-text{font-weight:700}.question-main-td[data-italic="true"] .question-text{font-style:italic}.styled-bold{font-weight:800}.styled-italic{font-style:italic}
+/* V121 — تراز پاراگرافیِ تکه‌ای: هر بندِ متنِ سؤال (بین دو \n) یک بلوکِ
+   مستقل (.q-para) با data-align خودش است؛ اگر کاربر رویِ بخشی از یک بند
+   تراز گذاشته باشد، همان روی کلِ بند اعمال می‌شود (مثلِ ورد که تراز یک
+   ویژگیِ پاراگرافی است، نه درون‌سطری). */
+.q-para{min-height:1em}
+.q-para[data-align="center"]{text-align:center}
+.q-para[data-align="left"]{text-align:left;direction:ltr}
+.q-para[data-align="justify"]{text-align:justify}
+.q-para[data-align="right"]{text-align:right}
 /* V118 — فرمول با فونت ۲۴px رندر می‌شود؛ اینجا به اندازهٔ متن (۱em≈۱۳px) مقیاس می‌گیرد
    (نسبت ۰٫۵۸) و دیگر با max-height فشرده نمی‌شود، پس کسر/ماتریسِ چندسطری کامل می‌ماند. */
 .math{display:inline-block;vertical-align:middle;max-width:100%;width:auto;height:auto;margin:0 2px;transform-origin:center;zoom:.58}.math-fallback{font-family:serif;direction:ltr;unicode-bidi:isolate;font-size:.95em;color:#1e293b}
@@ -494,6 +507,19 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     value = asObject(value);
     return {bold:value.bold === true || value.b === true,italic:value.italic === true || value.i === true,size:clamp(finite(value.size, value.s), 8, 40)};
   }
+  var ALIGN_VALUES = ['right', 'center', 'left', 'justify'];
+  /* V121 — تراز پاراگرافیِ تکه‌ای: آرایهٔ {start,end,align} مثلِ cleanSpans پاک‌سازی می‌شود. */
+  function cleanAligns(value, length) {
+    if (!Array.isArray(value)) return [];
+    return value.map(function (item) {
+      item = asObject(item);
+      var start = clamp(Math.floor(finite(item.start, item.s)), 0, length);
+      var end = clamp(Math.floor(finite(item.end, item.e)), 0, length);
+      var align = text(item.align || item.a);
+      if (ALIGN_VALUES.indexOf(align) < 0) align = '';
+      return {start:start, end:end, align:align};
+    }).filter(function (item) { return item.end > item.start && item.align; });
+  }
   function normalQuestion(value, index) {
     value = asObject(value);
     var source = text(value.text);
@@ -506,8 +532,30 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       textAlign:['right','center','left','justify'].indexOf(text(value.textAlign)) >= 0 ? text(value.textAlign) : 'right',
       fontFamily:text(value.fontFamily || 'default'), fontSize:clamp(finite(value.fontSizeSp, 13), 8, 40),
       bold:value.bold === true, italic:value.italic === true, spans:cleanSpans(value.textSpans, source.length),
+      // V121 — تراز پاراگرافیِ تکه‌ای؛ غایب/خالی = هر بند از textAlign کلیِ سؤال ارث می‌برد.
+      aligns:cleanAligns(value.alignSpans, source.length),
       figLayouts:parseLayouts(value.figLayoutsJson), sepExtraPx:clamp(Math.round(finite(value.sepExtraPx, 0)), 0, 1500)
     };
+  }
+  /* V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ جدولِ سؤال‌ها؛ روی :root به‌عنوانِ
+     متغیرهای CSS اعمال می‌شود تا همهٔ سلول‌ها یک‌جا تغییر کنند. */
+  function applyBoxStyle(value) {
+    var root = document.documentElement.style;
+    if (!value || typeof value !== 'object') {
+      root.removeProperty('--box-border-w'); root.removeProperty('--box-border-c');
+      root.removeProperty('--box-no-w'); root.removeProperty('--box-score-w'); root.removeProperty('--box-pad');
+      return;
+    }
+    var borderW = clamp(finite(value.borderWidthPx, 1), 0, 6);
+    var borderC = /^#[0-9a-fA-F]{6}$/.test(text(value.borderColor)) ? text(value.borderColor) : '#000000';
+    var noW = clamp(finite(value.numberColWidthPercent, 6), 3, 20);
+    var scoreW = clamp(finite(value.scoreColWidthPercent, 6), 3, 20);
+    var pad = clamp(finite(value.cellPaddingPx, 8), 0, 30);
+    root.setProperty('--box-border-w', borderW + 'px');
+    root.setProperty('--box-border-c', borderC);
+    root.setProperty('--box-no-w', noW + '%');
+    root.setProperty('--box-score-w', scoreW + '%');
+    root.setProperty('--box-pad', pad + 'px');
   }
   function setExamData(data) {
     data = asObject(data);
@@ -516,6 +564,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     state.documentTitle = text(data.documentTitle || state.fields.f_course || 'آزمون');
     state.footerNote = text(data.footerNote);
     state.totalScore = text(data.totalScore);
+    applyBoxStyle(data.boxStyle);
     render();
     return 'ok';
   }
@@ -704,16 +753,47 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     slot.__apply = function () { applyFigureLayout(figure, slot, layout); };
     return slot;
   }
-  function appendRich(parent, question) {
-    var source = question.text, cursor = 0, figureIndex = 0;
+  /* V121 — مرزهای پاراگرافِ متنِ سؤال: هر «\n» که داخلِ یک توکنِ فرمول/شکل
+     نباشد یک مرز است. نیوخط‌های داخلِ یک فرمولِ $$...$$ چندسطری («خام»
+     توکن) عمداً نادیده گرفته می‌شوند چون خودِ فرمول یک تصویرِ درون‌سطری است. */
+  function paragraphRanges(source) {
+    var ranges = [], start = 0, cursor = 0;
     while (cursor < source.length) {
       var token = nextToken(source, cursor);
-      if (!token) { appendText(parent, source.slice(cursor), cursor, question.spans); break; }
-      if (token.start > cursor) appendText(parent, source.slice(cursor, token.start), cursor, question.spans);
-      if (token.kind === 'formula') parent.appendChild(formulaNode(token.raw));
-      else { parent.appendChild(makeFigure(token.raw, question, figureIndex)); figureIndex++; }
+      var textEnd = token ? token.start : source.length;
+      for (var i = cursor; i < textEnd; i++) {
+        if (source.charAt(i) === '\n') { ranges.push([start, i]); start = i + 1; }
+      }
+      if (!token) break;
       cursor = token.end;
     }
+    ranges.push([start, source.length]);
+    return ranges;
+  }
+  /* V121 — تراز مؤثرِ یک پاراگراف: آخرین AlignSpanِ همپوشان، وگرنه textAlignِ
+     کلیِ سؤال (fallback). معادلِ AlignSpanOps.effectiveAlign در Kotlin. */
+  function paragraphAlign(aligns, pStart, pEnd, fallback) {
+    var result = fallback;
+    aligns.forEach(function (span) { if (span.end > pStart && span.start < pEnd) result = span.align; });
+    return result;
+  }
+  function appendRich(parent, question) {
+    var source = question.text, ranges = paragraphRanges(source), figureIndex = 0;
+    ranges.forEach(function (range) {
+      var pStart = range[0], pEnd = range[1];
+      var para = document.createElement('div'); para.className = 'q-para';
+      para.dataset.align = paragraphAlign(question.aligns, pStart, pEnd, question.textAlign);
+      var cursor = pStart;
+      while (cursor < pEnd) {
+        var token = nextToken(source, cursor);
+        if (!token || token.start >= pEnd) { if (pEnd > cursor) appendText(para, source.slice(cursor, pEnd), cursor, question.spans); break; }
+        if (token.start > cursor) appendText(para, source.slice(cursor, token.start), cursor, question.spans);
+        if (token.kind === 'formula') para.appendChild(formulaNode(token.raw));
+        else { para.appendChild(makeFigure(token.raw, question, figureIndex)); figureIndex++; }
+        cursor = token.end;
+      }
+      parent.appendChild(para);
+    });
   }
   function applyTextStyle(element, style) {
     if (style.bold) element.style.fontWeight = '800';
@@ -1072,7 +1152,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   document.addEventListener('touchmove', function (event) { if (activeDrag && event.cancelable) event.preventDefault(); }, {passive:false});
   function snapshot() {
     var result = {};
-    state.questions.forEach(function (question) { result[String(question.id)] = {figLayouts:question.figLayouts,sepExtraPx:question.sepExtraPx,spans:question.spans}; });
+    state.questions.forEach(function (question) { result[String(question.id)] = {figLayouts:question.figLayouts,sepExtraPx:question.sepExtraPx,spans:question.spans,alignSpans:question.aligns}; });
     return JSON.stringify(result);
   }
   function figureAt(questionId, figureIndex) {
@@ -1196,6 +1276,30 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     try { window.getSelection().removeAllRanges(); } catch (ignored) {}
     lastSel = null; updateFmtBar(null);
   }
+  /* V121 — تراز پاراگرافی: بازهٔ انتخاب‌شده تا مرزِ بند(های) لمس‌شده گسترش
+     می‌یابد (تراز یک ویژگیِ پاراگرافی است، نه درون‌سطری — مشابهِ ورد)، سپس
+     AlignSpanِ آن محدوده جایگزین می‌شود. معادلِ AlignSpanOps.setAlign +
+     expandToParagraphs در Kotlin (تست‌شده در AlignSpanOpsTest). */
+  function applyAlign(sel, align) {
+    var q = sel.question, text = q.text;
+    var s = sel.start, e = sel.end;
+    while (s > 0 && text.charAt(s - 1) !== '\n') s--;
+    while (e < text.length && text.charAt(e) !== '\n') e++;
+    if (s >= e) return;
+    var out = [];
+    q.aligns.forEach(function (span) {
+      if (span.end <= s || span.start >= e) { out.push(span); return; }
+      if (span.start < s) out.push(Object.assign({}, span, {start:span.start, end:s}));
+      if (span.end > e) out.push(Object.assign({}, span, {start:e, end:span.end}));
+    });
+    out.push({start:s, end:e, align:align});
+    out = out.filter(function (x) { return x.end > x.start; }).sort(function (x, y) { return x.start - y.start; });
+    q.aligns = out;
+    var fresh = questionRow(q, state.questions.indexOf(q)); sel.row.parentNode.replaceChild(fresh, sel.row);
+    Array.prototype.forEach.call(fresh.querySelectorAll('.figure-slot'), function (slot) { if (typeof slot.__apply === 'function') slot.__apply(); });
+    try { window.getSelection().removeAllRanges(); } catch (ignored) {}
+    lastSel = null; updateFmtBar(null);
+  }
   function currentSel() { var r = selectionRange() || lastSel; if (!r) notify('اول بخشی از متن سؤال را انتخاب کنید'); return r; }
   function updateFmtBar(sel) {
     ['bold','italic','underline'].forEach(function (key) {
@@ -1222,15 +1326,27 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   window.printStudent = function () { return requestPrint('student'); };
   window.printTeacher = function () { return requestPrint('teacher'); };
   window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};
+  /* V121 — به‌روزرسانیِ زنده‌ی تنظیماتِ کادر/جدول‌بندی از پنجرهٔ بومی، بدونِ
+     نیاز به ارسالِ دوبارهٔ کلِ داده (که موقعیت‌های دستی/انتخاب را از بین
+     می‌برد). ورودی همان شکلِ فیلدِ boxStyleِ payload یا رشتهٔ JSON آن است. */
+  window.ExamPrintRenderer.applyBoxStyle = function (value) {
+    var parsed = value;
+    if (typeof value === 'string') { try { parsed = JSON.parse(value); } catch (ignored) { return 'invalid'; } }
+    applyBoxStyle(parsed); return 'ok';
+  };
   /* V116 — API برای هدرِ بومی (Compose): تغییر حالت اندازه و قالب‌بندیِ متنِ انتخاب‌شده. */
   window.ExamPrintRenderer.applyFormat = function (kind, value) {
     var sel = selectionRange() || lastSel; if (!sel) { notify('اول بخشی از متن سؤال را انتخاب کنید'); return 'noselection'; }
     value = value == null ? '' : String(value);
+    // V121 — «پاک» درون‌سطری (bold/italic/...) را حذف می‌کند؛ تراز پاراگرافی
+    // دست‌نخورده می‌ماند چون تراز یک ویژگیِ مستقل و پاراگرافی است (مثلِ ورد:
+    // Clear Formatting معمولاً روی alignment اثر نمی‌گذارد).
     if (kind === 'clear') { applyStyle(sel, {bold:false, italic:false, underline:false, color:'', size:0, font:''}); return 'ok'; }
     if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !coversAxis(sel.question.spans, sel.start, sel.end, kind); applyStyle(sel, patch); return 'ok'; }
     if (kind === 'color') { applyStyle(sel, {color:/^#[0-9a-fA-F]{6}$/.test(value) ? value : ''}); return 'ok'; }
     if (kind === 'size') { var n = Number(value); applyStyle(sel, {size:(n >= 8 && n <= 40) ? Math.round(n) : 0}); return 'ok'; }
     if (kind === 'font') { applyStyle(sel, {font:(value && value !== 'default') ? value.slice(0, 30) : ''}); return 'ok'; }
+    if (kind === 'align') { if (ALIGN_VALUES.indexOf(value) < 0) return 'unknown'; applyAlign(sel, value); return 'ok'; }
     return 'unknown';
   };
   render();

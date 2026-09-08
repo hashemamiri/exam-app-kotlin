@@ -64,6 +64,87 @@ data class StyleSpan(
     val hasStyle: Boolean get() = bold || italic || underline || color != null || size != null || font != null
 }
 
+/**
+ * V121 — تراز پاراگراف (راست/وسط/چپ/توجیه) برای بازهٔ [start, end) از متنِ
+ * سؤال. برخلافِ StyleSpan که خط‌به‌خط/درون‌سطری است، این یک ویژگیِ
+ * «پاراگرافی» است: در رندرِ پیش‌نمایش/چاپ، هر پاراگراف (تکهٔ بین دو \n) با
+ * آخرین AlignSpanی که رویش همپوشانی دارد ترازبندی می‌شود؛ اگر هیچ‌کدام
+ * همپوشانی نداشت، تراز پیش‌فرضِ کل سؤال (textAlign) اعمال می‌شود.
+ */
+@Serializable
+data class AlignSpan(
+    val start: Int,
+    /** انحصاری (exclusive). */
+    val end: Int,
+    val align: String
+)
+
+/**
+ * V121 — منطق خالص نگهداری/جابه‌جاییِ AlignSpan پس از تغییرِ متن.
+ * عمداً از StyleSpanOps.adjust کپی شده (نه به آن وابسته) چون نوعِ عنصر
+ * فرق دارد و AlignSpan فیلدهای بولی/رنگ ندارد؛ الگوریتمِ دیف پیشوند/پسوندِ
+ * مشترک هرچند تکراری، خیلی کوچک و پایدار است (همان توضیحِ عدمِ ادغام که
+ * در PrintTextSpanSegments.kt برای موردِ مشابه آمده).
+ */
+object AlignSpanOps {
+    fun adjust(old: String, new: String, spans: List<AlignSpan>): List<AlignSpan> {
+        if (spans.isEmpty()) return spans
+        var start = 0
+        val mp = minOf(old.length, new.length)
+        while (start < mp && old[start] == new[start]) start++
+        var eo = old.length
+        var en = new.length
+        while (en > start && eo > start && old[eo - 1] == new[en - 1]) { eo--; en-- }
+        val delta = en - eo
+        val out = mutableListOf<AlignSpan>()
+        spans.forEach { span ->
+            when {
+                span.end <= start -> out += span
+                span.start >= eo -> out += span.copy(start = span.start + delta, end = span.end + delta)
+                else -> {
+                    if (span.start < start) out += span.copy(start = span.start, end = start)
+                    if (span.end > eo) out += span.copy(start = start + delta, end = span.end + delta)
+                }
+            }
+        }
+        return out.filter { it.end > it.start && it.start >= 0 && it.end <= new.length }
+    }
+
+    /**
+     * V121 — بازهٔ [s, e) را طوری به مرزهای پاراگراف (جداشده با \n) گسترش
+     * می‌دهد که کل پاراگراف(های) لمس‌شده را دربر بگیرد؛ تراز یک ویژگیِ
+     * پاراگرافی است، نه فقط متنِ دقیقاً انتخاب‌شده.
+     */
+    fun expandToParagraphs(text: String, s: Int, e: Int): Pair<Int, Int> {
+        if (s >= e || s < 0 || e > text.length) return s to e
+        var start = s
+        while (start > 0 && text[start - 1] != '\n') start--
+        var end = e
+        while (end < text.length && text[end] != '\n') end++
+        return start to end
+    }
+
+    /** جایگزینیِ بازهٔ [s, e) با یک تراز؛ بازه‌های قبلیِ همپوشان برش می‌خورند. */
+    fun setAlign(spans: List<AlignSpan>, s: Int, e: Int, align: String): List<AlignSpan> {
+        if (s >= e) return spans
+        val out = mutableListOf<AlignSpan>()
+        spans.forEach { span ->
+            if (span.end <= s || span.start >= e) { out += span; return@forEach }
+            if (span.start < s) out += span.copy(start = span.start, end = s)
+            if (span.end > e) out += span.copy(start = e, end = span.end)
+        }
+        out += AlignSpan(s, e, align)
+        return out.filter { it.end > it.start }.sortedBy { it.start }
+    }
+
+    /** تراز مؤثر یک پاراگراف [pStart, pEnd): آخرین AlignSpanِ همپوشان، وگرنه fallback. */
+    fun effectiveAlign(spans: List<AlignSpan>, pStart: Int, pEnd: Int, fallback: String): String {
+        var result = fallback
+        spans.forEach { span -> if (span.end > pStart && span.start < pEnd) result = span.align }
+        return result
+    }
+}
+
 /** V68 — منطق خالص نگهداری/تغییر بازه‌ها؛ JVM-تست‌پذیر بدون اندروید. */
 object StyleSpanOps {
 
@@ -221,6 +302,12 @@ data class QuestionDraft(
     val figLayoutsJson: String = "",
     /** V99.2 — فاصلهٔ اضافیِ خطِ جداکنندهٔ سؤال از پیش‌نمایش (پیکسل). */
     val sepExtraPx: Int = 0,
+    /**
+     * V121 — تراز پاراگرافیِ تکه‌ای متنِ سؤال (بازه‌های [start,end) با یک
+     * تراز مستقل)؛ پیش‌فرض/fallback همان textAlign کلیِ سؤال است. از نوارِ
+     * فرمتِ پیش‌نمایشِ چاپی می‌آید (مشابهِ textSpans که از همان‌جا می‌آید).
+     */
+    val alignSpans: List<AlignSpan> = emptyList(),
     val rawPublic: JsonObject = JsonObject(emptyMap()),
     val rawAnswer: JsonObject = JsonObject(emptyMap())
 )
