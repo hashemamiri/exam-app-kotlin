@@ -17480,3 +17480,11 @@ AndroidSVG ضخیم/چرک نشود. تست `NativeMathSvgRendererTest` (۹ تس
 
 **فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`،
 `NativeMathSvgRenderer.kt`. verify PASS. تحویل: `apply_v116.py`.
+
+## ۳۴۲. V116.1 — هات‌فیکس کامپایل CI
+
+`ExamHtmlPrintDialog.kt:803 Unresolved reference 'Close'`: آیکون `Icons.Outlined.Close`
+یک extension property است و با نامِ کاملاً کیفی (بدون import) resolve نمی‌شود. import
+صریحِ `androidx.compose.material.icons.Icons` و `...icons.outlined.Close` اضافه شد
+(همان الگوی سایر فایل‌ها). **درس:** برای آیکون‌های Material همیشه import صریح؛
+در سندباکس Gradle نداریم، پس هر نمادِ جدید را با grep روی importها چک کن.

@@ -21,6 +21,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
@@ -800,7 +802,7 @@ private fun PrintPreviewHeader(
                     onClick = onClose,
                     colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFDC2626), contentColor = Color.White),
                     modifier = Modifier.size(36.dp)
-                ) { Icon(androidx.compose.material.icons.Icons.Outlined.Close, contentDescription = "بستن") }
+                ) { Icon(Icons.Outlined.Close, contentDescription = "بستن") }
             }
         }
         Row(
