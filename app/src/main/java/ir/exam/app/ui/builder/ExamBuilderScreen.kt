@@ -1150,7 +1150,21 @@ private fun QuestionEditor(
                 onReplace = { imageId, uri -> viewModel.replaceImage(question.id, imageId, uri) },
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
                 onRemove = { imageId -> viewModel.removeImage(question.id, imageId) },
-                onOpenStudio = { studioOpen = true }
+                onOpenStudio = { studioOpen = true },
+                // V108 — گفتار به متن: متن عادی مستقیم به انتهای متن سؤال؛ فرمول
+                // در ویرایشگر فرمول باز می‌شود تا پیش از درج بازبینی شود.
+                onSpeechText = { spoken ->
+                    val base = question.text
+                    val joined = if (base.isBlank() || base.endsWith(" ") || base.endsWith("\n")) base + spoken else "$base $spoken"
+                    viewModel.updateText(question.id, joined)
+                    questionFieldController.setValue(joined)
+                },
+                onSpeechFormula = { tex ->
+                    val base = question.text
+                    val prefix = if (base.isBlank() || base.endsWith(" ") || base.endsWith("\n")) base else "$base "
+                    val withFormula = prefix + "\$" + tex + "\$"
+                    formulaHost = FormulaHostTarget(withFormula, prefix.length, withFormula.length)
+                }
             )
             // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در
             // آزمونِ آنلاین معنا دارند؛ در آزمونِ چاپی به‌جای آن‌ها «فضای پاسخ»
