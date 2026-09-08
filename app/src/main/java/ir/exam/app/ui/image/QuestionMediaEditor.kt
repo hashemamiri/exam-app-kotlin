@@ -139,7 +139,9 @@ fun QuestionMediaEditor(
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
         // V107 — فقط آیکن؛ نوشتهٔ «تصویر» کنار آن حذف شد (درخواست کاربر).
-        if (images.isNotEmpty()) {
+        // V119 — بندانگشتی‌ها کنار آیکن دوربین حذف شد: با لمس آیکن، استودیو خودش
+        // تصاویرِ آپلودشده را نشان می‌دهد (وقتی استودیو در دسترس نیست، مثل قبل).
+        if (images.isNotEmpty() && onOpenStudio == null) {
             LazyRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(5.dp)

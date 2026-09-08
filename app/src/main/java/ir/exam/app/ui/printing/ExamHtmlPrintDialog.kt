@@ -98,6 +98,13 @@ fun ExamHtmlPrintDialog(
     var jsError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    // V119 — تصاویرِ سؤال (data-URL استودیو یا نشانیِ Supabase) پیش از ساختِ WebView
+    // به توکنِ %%FIG:img%% تبدیل می‌شوند؛ از V107 این مرحله در مسیرِ آزمون‌ساز
+    // فراخوانی نمی‌شد و تصویرِ آپلودشده در پیش‌نمایش/چاپ نبود.
+    var inlinedPrintable by remember(printable) { mutableStateOf<OfficialExamPrintable?>(null) }
+    LaunchedEffect(printable) {
+        inlinedPrintable = if (printable == null) null else ExamHtmlImageInliner.inline(context.applicationContext, printable)
+    }
     // دابل‌کلیک روی شکل در پیش‌نمایش، ویرایشگر بومیِ همان شکل را باز می‌کند.
     var figureTool by remember { mutableStateOf<FigureToolRequest?>(null) }
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
@@ -221,14 +228,15 @@ fun ExamHtmlPrintDialog(
                     )
                 }
                 Box(Modifier.fillMaxSize().weight(1f)) {
-                    AndroidView(
+                    val readyPrintable = inlinedPrintable
+                    if (readyPrintable != null || printable == null) AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
                             // V101 — راه‌اندازیِ کامل در تابعِ مشترک (همان موتور
                             // چاپِ مستقیمِ بدون‌صفحه از اینجا استفاده می‌کند).
                             createExamPrintWebView(
                                 context = ctx,
-                                printable = printable,
+                                printable = readyPrintable,
                                 printMode = initialPrintMode,
                                 // تزریقِ داده کامل شد: فقط در حالتِ پیش‌نمایش
                                 // پنجرهٔ پیش‌نمایش باز می‌شود؛ در چاپِ مستقیم

@@ -17562,3 +17562,22 @@ Puppeteer: ۱۴ سؤال → ۴ برگه پیش‌نمایش، PDF چاپ هم �
 
 **فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`، `PrivateImageLoader.kt`،
 `DataUrlFetcher.kt` (جدید)، `ExamHtmlImageInliner.kt`. verify PASS. تحویل: `apply_v118.py`.
+
+## ۳۴۶. V119 — سربرگ پیش‌نمایش = چاپ، تصویر در پیش‌نمایش، تکرارِ سؤال ۱، بندانگشتی
+
+1. **سربرگ در پیش‌نمایش بلندتر از چاپ:** ~۸۰ خطِ CSS سربرگ‌ها (فونت/padding/ارتفاع) فقط
+   داخلِ `@media print` بود؛ پس پیش‌نمایش و چاپ یکی نبودند. همهٔ آن قواعد به CSS عادی
+   منتقل شد و `@media print` فقط قواعدِ برگه/پنهان‌سازی را دارد. اندازه‌گیری هفت قالب:
+   screen==print (مثلاً edu ۵۱۶→۲۶۲، sama ۴۰۶→۲۴۸).
+2. **تصویرِ آپلودشده در پیش‌نمایش نبود:** `ExamHtmlImageInliner.inline` از V107 (حذفِ چاپِ
+   مستقیم از کارت‌ها) دیگر هیچ‌جا فراخوانی نمی‌شد. حالا داخلِ `ExamHtmlPrintDialog` با
+   `LaunchedEffect(printable)` اجرا و WebView فقط با `inlinedPrintable` ساخته می‌شود.
+3. **تکرارِ سؤال ۱ پس از کشیدنِ خط + غیرقابل‌جابه‌جایی:** ادامهٔ سطرِ بریده‌شده با `margin-top`
+   منفی روی `<table>` بود که در WebView اندروید ناپایدار است. حالا پوششِ `.row-shift`
+   با `translateY(-cut)` و ارتفاعِ صریحِ `.row-continue`. دستگیرهٔ جداکننده روی بخشِ آخرِ
+   سطر (`row-part`) با `wireSeparator` دوباره سیم‌کشی می‌شود و دستگیرهٔ بخش‌های قبلی
+   `grip-hidden` می‌گیرد (تست Puppeteer: درگ روی برگهٔ ۲ → sepExtraPx ۱۳۰۰→۱۰۰۰).
+4. **بندانگشتیِ تصویر کنار آیکن دوربین** فقط وقتی استودیو در دسترس نیست نشان داده می‌شود
+   (`onOpenStudio == null`)؛ پینِ `items(images, key = MediaDraft::id)` دست‌نخورده.
+
+**فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`، `QuestionMediaEditor.kt`.
