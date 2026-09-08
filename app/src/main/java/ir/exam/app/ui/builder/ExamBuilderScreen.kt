@@ -1159,19 +1159,22 @@ private fun QuestionEditor(
                     viewModel.updateText(question.id, joined)
                     questionFieldController.setValue(joined)
                 },
+                // V110 — فرمولِ گفتاری مستقیم به‌صورت `$tex$` در متن درج می‌شود؛
+                // کاربر اگر خواست با لمسِ فرمول ویرایشگر را باز می‌کند.
                 onSpeechFormula = { tex ->
                     val base = question.text
                     val prefix = if (base.isBlank() || base.endsWith(" ") || base.endsWith("\n")) base else "$base "
-                    val withFormula = prefix + "\$" + tex + "\$"
-                    formulaHost = FormulaHostTarget(withFormula, prefix.length, withFormula.length)
+                    val withFormula = prefix + "\$" + tex + "\$ "
+                    viewModel.updateText(question.id, withFormula)
+                    questionFieldController.setValue(withFormula)
                 }
             )
             // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در
             // آزمونِ آنلاین معنا دارند؛ در آزمونِ چاپی به‌جای آن‌ها «فضای پاسخ»
             // (تعداد سطر / نوع سطر / فاصلهٔ سطر به سانتی‌متر) نشان داده می‌شود.
             if (printMode) {
-                // فقط تشریحی فضای پاسخ چندسطری دارد (جای‌خالی/عددی یک سطر ثابت).
-                if (question.type == QuestionType.ESSAY) {
+                // V110 — فضای پاسخ برای تشریحی، جای‌خالی و عددی (درخواست کاربر).
+                if (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.NUMERIC) {
                     PrintAnswerSpaceControls(question = question, viewModel = viewModel)
                 }
             } else {
@@ -1303,7 +1306,9 @@ private fun QuestionEditor(
                     FilterChip(selected = question.expectedText == "true", onClick = { viewModel.setTrueFalse(question.id, true) }, label = { Text("صحیح") })
                     FilterChip(selected = question.expectedText == "false", onClick = { viewModel.setTrueFalse(question.id, false) }, label = { Text("غلط") })
                 }
-                QuestionType.FILL_BLANK -> Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                // V110 — در آزمونِ چاپی «پاسخ‌های قابل قبول / حساس به حروف» و
+                // «پاسخ عددی / تلورانس» معنایی ندارند (تصحیح خودکار آنلاین است).
+                QuestionType.FILL_BLANK -> if (!printMode) Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(question.expectedText, { viewModel.updateExpectedText(question.id, it) }, label = { Text("پاسخ‌های قابل قبول با |") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                         BoldToggleChip(
@@ -1315,7 +1320,7 @@ private fun QuestionEditor(
                         )
                     }
                 }
-                QuestionType.NUMERIC -> {
+                QuestionType.NUMERIC -> if (!printMode) {
                     OutlinedTextField(question.expectedNumber, { viewModel.updateExpectedNumber(question.id, it) }, label = { Text("پاسخ عددی") })
                     OutlinedTextField(question.tolerance, { viewModel.updateTolerance(question.id, it) }, label = { Text("تلورانس") })
                 }

@@ -690,8 +690,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   function answerBlock(question) {
     var wrapper = document.createElement('div');
     if (question.type === 'long' || question.type === 'essay' || question.type === 'fill' || question.type === 'numeric') {
-      var lines = question.type === 'numeric' ? 1 : question.answerLines;
-      if (question.type === 'fill') lines = Math.max(1, lines);
+      var lines = question.answerLines; // V110 — جای‌خالی/عددی هم تعداد سطرِ خودشان را دارند
       if (lines > 0) {
         // V107 — نوعِ سطر (خط‌چین/خالی/شطرنجی) و فاصلهٔ سطر به سانتی‌متر.
         var style = question.answerStyle === 'plain' ? 'plain' : (question.answerStyle === 'grid' ? 'grid' : 'lined');

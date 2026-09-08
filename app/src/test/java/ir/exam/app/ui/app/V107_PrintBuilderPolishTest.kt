@@ -21,7 +21,9 @@ class V107_PrintBuilderPolishTest {
 
     @Test
     fun `print builder hides online-only answer controls and shows answer space controls`() {
-        assertTrue("تصویر/نمودار پاسخ در حالت چاپی پنهان نمی‌شود", "if (printMode) {\n                // فقط تشریحی" in builder)
+        assertTrue("تصویر/نمودار پاسخ در حالت چاپی پنهان نمی‌شود", "if (printMode) {\n                // V110 — فضای پاسخ" in builder)
+        assertTrue("کلید جای‌خالی در حالت چاپی پنهان نیست", "QuestionType.FILL_BLANK -> if (!printMode) Column(" in builder)
+        assertTrue("کلید عددی در حالت چاپی پنهان نیست", "QuestionType.NUMERIC -> if (!printMode) {" in builder)
         assertTrue("کنترل فضای پاسخ نیست", "private fun PrintAnswerSpaceControls(" in builder)
         listOf("خط‌چین", "خالی", "شطرنجی", "فاصلهٔ سطر", "valueRange = 0.5f..2.0f").forEach {
             assertTrue("«$it» در فضای پاسخ نیست", it in builder)

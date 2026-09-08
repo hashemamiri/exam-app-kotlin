@@ -23,13 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -60,7 +58,8 @@ import ir.exam.app.core.speech.SpeechMathConverter
  * - **ویرایش پیش از درج:** متنِ تجمیعی در کادر قابل‌ویرایش است؛ پیش‌نمایشِ
  *   «نتیجهٔ درج» (متن/فرمول) زیر آن دیده می‌شود؛ حالت «فرمول» را می‌توان
  *   دستی تغییر داد. «درج» متن را می‌فرستد (فرمول → ویرایشگر فرمول).
- * - نشانگر شدتِ صدا (RMS) و وضعیت («در حال شنیدن» / «در حال پردازش»).
+ * - V110: بدون نشانگرِ لحظه‌ایِ صدا؛ فقط وقتی چیزی تشخیص داده شد تایپ می‌شود،
+ *   وگرنه بی‌سروصدا منتظر می‌ماند. فرمول مستقیم در متن درج می‌شود.
  */
 @Composable
 fun SpeechToTextButton(
@@ -78,7 +77,6 @@ fun SpeechToTextButton(
     var language by remember { mutableStateOf("fa-IR") }
     var transcript by remember { mutableStateOf("") }
     var partial by remember { mutableStateOf("") }
-    var level by remember { mutableStateOf(0f) }
     var status by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var forceFormula by remember { mutableStateOf<Boolean?>(null) }
@@ -126,17 +124,17 @@ fun SpeechToTextButton(
         }
         val sr = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
         sr.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { listening = true; processing = false; status = "در حال شنیدن…" }
-            override fun onBeginningOfSpeech() { status = "در حال شنیدن…" }
-            override fun onRmsChanged(rmsdB: Float) { level = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f) }
+            override fun onReadyForSpeech(params: Bundle?) { listening = true; processing = false; status = null }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { processing = true; status = "در حال پردازش…" }
+            override fun onEndOfSpeech() { processing = true }
             override fun onError(code: Int) {
                 listening = false; processing = false
                 when (code) {
-                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
-                        status = "سکوت… ادامه دهید"; scheduleNextSegment()
-                    }
+                    // V110 — سکوت/تشخیص‌نشدن: بی‌سروصدا منتظر می‌ماند و دوباره گوش می‌دهد
+                    // (هیچ متنی تغییر نمی‌کند تا پنجره «رفرش» به نظر نرسد).
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> scheduleNextSegment(150L)
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY, SpeechRecognizer.ERROR_CLIENT -> {
                         // موتور مشغول/در حال بستن قطعهٔ قبلی: کمی بعد دوباره
                         recognizer?.destroy(); recognizer = null
@@ -144,9 +142,9 @@ fun SpeechToTextButton(
                     }
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> { wantContinuous = false; error = "مجوز میکروفون داده نشده است." }
                     SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> {
-                        status = "اتصال اینترنت ضعیف است؛ دوباره تلاش می‌شود…"; scheduleNextSegment(1200L)
+                        status = "اتصال اینترنت ضعیف است؛ دوباره تلاش می‌شود…"; scheduleNextSegment(1500L)
                     }
-                    else -> { status = "خطای موتور گفتار (کد $code)؛ دوباره تلاش می‌شود…"; scheduleNextSegment(800L) }
+                    else -> scheduleNextSegment(800L)
                 }
             }
             override fun onResults(results: Bundle?) {
@@ -154,8 +152,7 @@ fun SpeechToTextButton(
                 val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
                 val best = SpeechMathConverter.pickBest(list)
                 if (best.isNotBlank()) appendSegment(best)
-                status = "ادامه دهید یا «درج» را بزنید"
-                scheduleNextSegment()
+                scheduleNextSegment(150L)
             }
             override fun onPartialResults(partialResults: Bundle?) {
                 partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
@@ -172,7 +169,7 @@ fun SpeechToTextButton(
         handler.removeCallbacksAndMessages(null)
         runCatching { recognizer?.stopListening() }
         listening = false; processing = false
-        status = "متوقف شد — می‌توانید متن را ویرایش و درج کنید"
+        status = null
     }
 
     fun closeAll() {
@@ -180,7 +177,7 @@ fun SpeechToTextButton(
         runCatching { recognizer?.destroy() }
         recognizer = null
         dialogOpen = false
-        transcript = ""; partial = ""; forceFormula = null; status = null; level = 0f
+        transcript = ""; partial = ""; forceFormula = null; status = null
     }
 
     fun beginSession(lang: String) {
@@ -234,15 +231,20 @@ fun SpeechToTextButton(
                     Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // V110 — بدون نوارِ شدتِ صدا و پیام‌های لحظه‌ای: فقط یک وضعیتِ ثابت.
                     Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (processing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Text(status ?: "آمادهٔ شنیدن…", style = MaterialTheme.typography.bodySmall)
+                        Icon(
+                            Icons.Outlined.Mic,
+                            contentDescription = null,
+                            tint = if (wantContinuous) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            status ?: if (wantContinuous) (if (processing) "در حال تبدیل…" else "در حال شنیدن… صحبت کنید")
+                            else "متوقف شد — متن را ویرایش و درج کنید",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
-                    LinearProgressIndicator(
-                        progress = { if (listening) level else 0f },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = if (listening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
-                    )
                     if (partial.isNotBlank()) Text("…$partial", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     OutlinedTextField(
                         value = transcript,
@@ -259,7 +261,7 @@ fun SpeechToTextButton(
                     if (transcript.isNotBlank()) {
                         Text("نتیجهٔ درج:", style = MaterialTheme.typography.labelMedium)
                         Text(preview, style = MaterialTheme.typography.bodyMedium)
-                        if (isFormula) Text("فرمول در ویرایشگر فرمول باز می‌شود تا بازبینی و درج کنید.", style = MaterialTheme.typography.bodySmall)
+                        if (isFormula) Text("فرمول در متن سؤال درج می‌شود؛ با لمس آن می‌توانید در ویرایشگر فرمول ویرایشش کنید.", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             },
