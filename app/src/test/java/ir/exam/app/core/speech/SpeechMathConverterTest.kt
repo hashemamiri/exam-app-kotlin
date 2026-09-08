@@ -36,4 +36,14 @@ class SpeechMathConverterTest {
         assertEquals("\$\\pi \\times r^{2}\$", SpeechMathConverter.convert("پی ضرب در آر به توان دو").text)
         assertTrue(SpeechMathConverter.convert("رادیکال دو").containsFormula)
     }
+
+    @Test
+    fun `common recognizer mistakes are corrected and best candidate is picked`() {
+        assertEquals("\$x^{2} + 3 x = 0\$", SpeechMathConverter.convert("اکس بتوان دو بعلاوه سه اکس مساویه صفر").text)
+        assertEquals("\$\\sqrt{2}\$", SpeechMathConverter.convert("رادیکاله دو").text)
+        assertEquals("25٪", SpeechMathConverter.convert("بیست و پنج در صد").text)
+        val best = SpeechMathConverter.pickBest(listOf("اکس به توان دم", "ایکس به توان دو", "عکس به توان دو"))
+        assertEquals("ایکس به توان دو", best)
+        assertEquals("", SpeechMathConverter.pickBest(emptyList()))
+    }
 }

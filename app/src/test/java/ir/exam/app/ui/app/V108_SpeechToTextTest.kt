@@ -22,7 +22,13 @@ class V108_SpeechToTextTest {
         assertTrue("فرمول گفتاری در ویرایشگر فرمول باز نمی‌شود", "formulaHost = FormulaHostTarget(withFormula, prefix.length, withFormula.length)" in builder)
         assertTrue("زبان فارسی نیست", "requestStart(\"fa-IR\")" in button)
         assertTrue("زبان انگلیسی نیست", "requestStart(\"en-US\")" in button)
-        assertTrue("مبدل هوشمند استفاده نمی‌شود", "SpeechMathConverter.convert(spoken)" in button)
+        assertTrue("مبدل هوشمند استفاده نمی‌شود", "SpeechMathConverter.convert(transcript)" in button)
+        // V109 — پنجره فقط با دکمه‌های خودش بسته می‌شود؛ شنیدن پیوسته؛ n-best؛ ویرایش پیش از درج
+        assertTrue("پنجره با لمس بیرون بسته می‌شود", "onDismissRequest = {}," in button)
+        assertTrue("شنیدن پیوسته نیست", "fun scheduleNextSegment(" in button)
+        assertTrue("n-best استفاده نمی‌شود", "SpeechMathConverter.pickBest(list)" in button && "EXTRA_MAX_RESULTS, 5" in button)
+        assertTrue("متن پیش از درج قابل ویرایش نیست", "label = { Text(\"متن شنیده‌شده (قابل ویرایش)\") }" in button)
+        assertTrue("اصلاح خطاهای رایج نیست", "fun correct(spoken: String): String" in source("app/src/main/java/ir/exam/app/core/speech/SpeechMathConverter.kt"))
         assertTrue("مجوز میکروفون در مانیفست نیست", "android.permission.RECORD_AUDIO" in manifest)
     }
 }

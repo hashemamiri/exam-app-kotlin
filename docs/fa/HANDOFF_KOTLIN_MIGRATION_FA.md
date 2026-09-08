@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V108 گفتار به متن (فارسی/انگلیسی) با تبدیل هوشمند عدد/نماد/فرمول
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V109 گفتار به متن حرفه‌ای (شنیدن پیوسته، n-best، اصلاح فارسی، ویرایش پیش از درج)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17244,4 +17244,28 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 SQL/Edge/Secret/Dependency جدید: ندارد (فقط مجوز RECORD_AUDIO)
 تحویل: apply_v108.py (§۱۱)
 شمارهٔ نسخهٔ بعدی: V109
+```
+
+---
+
+## ۳۳۱) V109 — گفتار به متن حرفه‌ای (پنجرهٔ پایدار، شنیدن پیوسته، دقت فارسی)
+
+### گزارش کاربر
+پنجرهٔ میکروفون سریع بسته می‌شد؛ موتور ضعیف بود؛ اولویت با فارسی. انتخاب کاربر: همان موتور گوگل + لایهٔ هوشمند (بدون هزینه/دانلود).
+
+### ریشهٔ بسته‌شدن سریع
+`SpeechRecognizer` اندروید هر جمله را با یک سکوت کوتاه می‌بندد و `onResults`/`onError(NO_MATCH|SPEECH_TIMEOUT)` می‌دهد؛ V108 روی همان رویداد `listening=false` می‌کرد و دیالوگ (که به `listening` بسته بود) ناپدید می‌شد.
+
+### تغییرات
+- **SpeechToTextButton.kt** (بازنویسی): وضعیتِ `dialogOpen` مستقل از `listening`؛ `onDismissRequest = {}` (فقط دکمه‌ها می‌بندند). شنیدنِ پیوسته: پس از `onResults`/سکوت/خطای موقت، `scheduleNextSegment()` قطعهٔ بعدی را آغاز می‌کند تا `wantContinuous=false` (دکمهٔ «توقف»). BUSY/CLIENT → recognizer بازسازی و ۶۰۰ms بعد تلاش. `EXTRA_MAX_RESULTS=5` و `SpeechMathConverter.pickBest`؛ `EXTRA_SPEECH_INPUT_*_SILENCE_LENGTH` طولانی‌تر (موتور ممکن است نادیده بگیرد). متن تجمیعی در `OutlinedTextField` قابل ویرایش؛ چیپ «متن/فرمول» (`forceFormula`)؛ پیش‌نمایش نتیجه؛ «درج» → onText/onFormula؛ «انصراف». RMS → `LinearProgressIndicator`. recognizer در onDispose/closeAll آزاد می‌شود. (`segmentStarter` آرایهٔ یک‌خانه‌ای برای ارجاعِ بازگشتی داخل composable.)
+- **SpeechMathConverter.kt**: `correct()` (≈۴۰ قاعدهٔ اصلاح خطاهای رایج فارسی/انگلیسی، پیش از همهٔ تبدیل‌ها)، `pickBest(candidates)` (امتیاز واژگان ریاضی/عددی؛ گزینهٔ اول +۱).
+- تست‌ها: `SpeechMathConverterTest` +۱ تست (اصلاح و n-best) → **OK (4 tests)** با kotlinc در sandbox؛ `V108_SpeechToTextTest` پین‌های V109.
+
+### راستی‌آزمایی روی دستگاه (کاربر)
+پنجره باز بماند؛ چند جمله پشت‌سرهم؛ «توقف» → ویرایش → «درج»؛ «اکس بتوان دو» → ویرایشگر فرمول با `x^{2}`.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v109.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V110
 ```

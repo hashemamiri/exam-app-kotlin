@@ -113,10 +113,68 @@ object SpeechMathConverter {
         "tangent", "log", "factorial", "infinity", "pi", "alpha", "beta", "theta", "delta"
     )
 
+    // ------------------------------------------------------------ V109: اصلاح خطاهای رایج موتور گفتار فارسی
+    private val corrections: List<Pair<Regex, String>> = listOf(
+        Regex("\\bبتوان\\b") to "به توان", Regex("\\bبه توانه\\b") to "به توان",
+        Regex("\\bبعلاوه\\b|\\bبه علاوه ی\\b|\\bبعلاوه ی\\b") to "به علاوه",
+        Regex("\\bاکس\\b|\\bایکسه\\b|\\bایکز\\b|\\bاکسی\\b") to "ایکس",
+        Regex("\\bایگرک\\b|\\bایگرگه\\b|\\bای گرگ\\b|\\bوایه\\b") to "ایگرگ",
+        Regex("\\bزده\\b|\\bزته\\b") to "زد",
+        Regex("\\bرادیکاله\\b|\\bرادی کال\\b") to "رادیکال",
+        Regex("\\bجزر\\b") to "جذر",
+        Regex("\\bمساویه\\b|\\bمساوی ه\\b|\\bمساوی با\\b") to "مساوی",
+        Regex("\\bبرابره\\b") to "برابر",
+        Regex("\\bمنهایه\\b|\\bمنحای\\b") to "منهای",
+        Regex("\\bضربدره\\b|\\bزربدر\\b|\\bضرب دره\\b") to "ضربدر",
+        Regex("\\bتقسیم بره\\b|\\bتقسیمه\\b") to "تقسیم بر",
+        Regex("\\bکسره\\b") to "کسر",
+        Regex("\\bانتگراله\\b|\\bانتگرا\\b|\\bاینتگرال\\b") to "انتگرال",
+        Regex("\\bسینوسه\\b|\\bسینوز\\b") to "سینوس",
+        Regex("\\bکسینوسه\\b|\\bکوسینوس\\b|\\bکسینوز\\b") to "کسینوس",
+        Regex("\\bتانژانته\\b|\\bتانجانت\\b") to "تانژانت",
+        Regex("\\bلگاریتمه\\b|\\bلگاریتیم\\b") to "لگاریتم",
+        Regex("\\bبینهایته\\b|\\bبی نهایته\\b") to "بی نهایت",
+        Regex("\\bدر صد\\b") to "درصد",
+        Regex("\\bعلامت سئوال\\b|\\bعلامت سوآل\\b") to "علامت سوال",
+        Regex("\\bالفا\\b") to "آلفا", Regex("\\bتیتا\\b|\\bتتاه\\b") to "تتا", Regex("\\bلامدا\\b") to "لاندا",
+        Regex("\\bپای\\b(?=\\s+(?:ضرب|به|منهای|تقسیم|مساوی|برابر|روی))") to "پی",
+        Regex("\\bصفر\\b\\s+\\bتا\\b") to "صفر تا",
+        // اعداد که موتور با «ی» می‌چسباند: «دوی»، «سه‌ی»
+        Regex("\\bدوی\\b") to "دو", Regex("\\bسه ی\\b") to "سه",
+        // انگلیسی
+        Regex("\\bsquare route\\b|\\bsquare root\\s+of\\s+of\\b", RegexOption.IGNORE_CASE) to "square root",
+        Regex("\\bx squared\\b|\\bex squared\\b|\\becks squared\\b", RegexOption.IGNORE_CASE) to "x squared",
+        Regex("\\bto the power\\s+of\\b", RegexOption.IGNORE_CASE) to "to the power of",
+        Regex("\\bwhy\\b(?=\\s+(?:squared|cubed|equals|plus|minus|over|to the power))", RegexOption.IGNORE_CASE) to "y"
+    )
+
+    /** V109 — اصلاح خطاهای رایج تشخیص گفتار؛ پیش از هر تبدیل دیگری اعمال می‌شود. */
+    fun correct(spoken: String): String = applyAll(normalize(spoken), corrections).replace(Regex("\\s+"), " ").trim()
+
+    /**
+     * V109 — انتخاب بهترین گزینه از میان چند حدس موتور (n-best): امتیاز به
+     * واژگان ریاضی/عددی/نمادی شناخته‌شده و طول معقول؛ گزینهٔ اول امتیاز پایه دارد.
+     */
+    fun pickBest(candidates: List<String>): String {
+        if (candidates.isEmpty()) return ""
+        val vocab = mathTriggers + faUnits.keys + enUnits.keys + faScales.keys + enScales.keys +
+            variables.keys + greek.keys + functions.keys + listOf("درصد", "درجه", "علامت سوال", "percent", "degrees", "ممیز", "point")
+        var bestScore = Int.MIN_VALUE
+        var best = candidates.first()
+        candidates.forEachIndexed { index, raw ->
+            val c = " " + correct(raw).lowercase() + " "
+            var score = if (index == 0) 1 else 0
+            vocab.forEach { word -> if (c.contains(" $word ")) score += if (word.length > 3) 3 else 2 }
+            score -= c.count { it == '?' }
+            if (score > bestScore) { bestScore = score; best = raw }
+        }
+        return best
+    }
+
     // ============================================================ API
     /** تبدیل کامل گفتار: اعداد و نمادها همیشه؛ عبارت ریاضی فقط اگر نشانهٔ ریاضی داشته باشد. */
     fun convert(spoken: String): Result {
-        val normalized = normalize(spoken)
+        val normalized = correct(spoken)
         if (normalized.isBlank()) return Result("", false)
         val withNumbers = convertNumbers(normalized)
         val withSymbols = applyAll(withNumbers, plainSymbols)
@@ -129,10 +187,10 @@ object SpeechMathConverter {
     }
 
     /** فقط بخش ریاضی: LaTeX خام (برای بازکردن در ویرایشگر فرمول). */
-    fun toLatexOnly(spoken: String): String = toLatex(convertNumbers(normalize(spoken)))
+    fun toLatexOnly(spoken: String): String = toLatex(convertNumbers(correct(spoken)))
 
     fun looksMathematical(spoken: String): Boolean {
-        val s = " " + normalize(spoken).lowercase() + " "
+        val s = " " + correct(spoken).lowercase() + " "
         return mathTriggers.any { s.contains(" $it ") }
     }
 
