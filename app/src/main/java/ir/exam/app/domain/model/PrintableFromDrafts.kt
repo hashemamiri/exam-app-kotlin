@@ -44,6 +44,7 @@ object PrintableFromDrafts {
             answerText = answerTextFor(question),
             answerLines = question.answerLines,
             answerLineStyle = question.answerLineStyle,
+            answerLineSpacingCm = question.answerLineSpacingCm,
             textAlign = question.textAlign,
             imagePosition = question.imagePosition,
             fontFamily = question.fontFamily,

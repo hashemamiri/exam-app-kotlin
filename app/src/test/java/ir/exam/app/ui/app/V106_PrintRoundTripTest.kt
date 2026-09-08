@@ -24,8 +24,9 @@ class V106_PrintRoundTripTest {
         assertTrue("چاپگر بدون‌صفحه از Context فعالیت استفاده نمی‌کند", "private val printContext: Context = context.findActivityContext() ?: context" in dialog)
         assertTrue("PrintManager چاپگر بدون‌صفحه از printContext گرفته نمی‌شود", "printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager" in dialog)
         assertFalse("PrintManager از Context خودِ WebView (application) گرفته می‌شود", "web.context.getSystemService(Context.PRINT_SERVICE)" in dialog)
-        assertTrue("مرکز چاپ چاپگر را با Context فعالیت نمی‌سازد", "remember(context) { HeadlessExamPrinter(context) }" in centre)
-        assertFalse("مرکز چاپ هنوز applicationContext به چاپگر می‌دهد", "HeadlessExamPrinter(context.applicationContext)" in centre)
+        // V107 — آیکن پرینتر و چاپِ مستقیم از کارت‌های مرکز چاپ حذف شد.
+        assertFalse("مرکز چاپ هنوز چاپگر بدون‌صفحه دارد", "HeadlessExamPrinter(" in centre)
+        assertFalse("آیکن پرینتر هنوز روی کارت‌ها هست", "Icons.Outlined.Print" in centre)
     }
 
     @Test

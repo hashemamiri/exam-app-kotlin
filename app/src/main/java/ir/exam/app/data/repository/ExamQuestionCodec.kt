@@ -135,7 +135,8 @@ internal object ExamQuestionCodec {
                 bold = obj["bold"]?.asBoolean() ?: false,
                 italic = obj["italic"]?.asBoolean() ?: false,
                 answerLines = (obj["answerLines"]?.asInt() ?: if (type == QuestionType.ESSAY) 5 else 2).coerceIn(0, 12),
-                answerLineStyle = obj["answerLineStyle"]?.asString()?.takeIf { it in setOf("lined", "blank") } ?: "lined",
+                answerLineStyle = obj["answerLineStyle"]?.asString()?.takeIf { it in setOf("lined", "blank", "grid") } ?: "lined",
+                answerLineSpacingCm = ((obj["answerLineSpacingCm"] as? JsonPrimitive)?.floatOrNull ?: 1.0f).coerceIn(0.5f, 2.0f),
                 rawPublic = obj,
                 rawAnswer = key
             )
@@ -170,6 +171,7 @@ internal object ExamQuestionCodec {
             values["italic"] = JsonPrimitive(question.italic)
             values["answerLines"] = JsonPrimitive(question.answerLines.coerceIn(0, 12))
             values["answerLineStyle"] = JsonPrimitive(question.answerLineStyle)
+            values["answerLineSpacingCm"] = JsonPrimitive(question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             // V68.3.1 — استایل تکه‌ای متن برای «هر نوع سؤال» نوشته می‌شود (در
             // V68.0 اشتباهاً داخل شاخهٔ MATCHING بود و roundtrip شکست می‌خورد).
             encodeSpans(question.textSpans)?.let { values["spans"] = it }

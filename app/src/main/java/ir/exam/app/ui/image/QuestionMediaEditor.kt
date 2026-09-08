@@ -133,9 +133,8 @@ fun QuestionMediaEditor(
             Icon(Icons.Outlined.PhotoCamera, contentDescription = "افزودن تصویر متن سؤال")
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-        if (images.isEmpty()) {
-            Text("تصویر", style = MaterialTheme.typography.labelSmall)
-        } else {
+        // V107 — فقط آیکن؛ نوشتهٔ «تصویر» کنار آن حذف شد (درخواست کاربر).
+        if (images.isNotEmpty()) {
             LazyRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(5.dp)

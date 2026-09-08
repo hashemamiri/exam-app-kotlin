@@ -55,6 +55,8 @@ data class OfficialPrintQuestion(
     val answerText: String? = null,
     val answerLines: Int = 2,
     val answerLineStyle: String = "lined",
+    /** V107 — فاصلهٔ سطرِ فضای پاسخ (سانتی‌متر). */
+    val answerLineSpacingCm: Float = 1.0f,
     val textAlign: String = "right",
     val imagePosition: String = "below",
     val fontFamily: String = "default",

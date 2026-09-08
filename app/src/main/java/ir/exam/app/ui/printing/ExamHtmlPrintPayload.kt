@@ -131,17 +131,20 @@ object ExamHtmlPrintPayloadBuilder {
             question.answerText != null && question.answerText.any(Char::isDigit) && !question.answerText.contains("\n") -> {
                 put("type", "numeric")
                 put("answerLines", 1)
-                put("answerStyle", "lined")
+                put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
+                put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
             question.text.contains("[...]") || question.text.contains("...") || question.text.contains("___") -> {
                 put("type", "fill")
                 put("answerLines", 1)
-                put("answerStyle", "lined")
+                put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
+                put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
             else -> {
                 put("type", "long")
                 put("answerLines", question.answerLines.coerceIn(0, 30))
-                put("answerStyle", if (question.answerLineStyle == "plain") "plain" else "lined")
+                put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
+                put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
         }
     }

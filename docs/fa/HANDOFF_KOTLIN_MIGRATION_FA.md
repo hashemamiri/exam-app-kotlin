@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V106 پرینتر کارت‌های چاپ آزمون (Context فعالیت) + پاک‌سازی حالت چاپ در رفت‌وبرگشت پیش‌نمایش
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V107 اصلاحات آزمون‌سازِ چاپی (فضای پاسخ، fit-page، انتخاب‌سپس‌درگ، حذف پرینتر کارت‌ها)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17181,4 +17181,39 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 SQL/Edge/Secret/Dependency جدید: ندارد
 تحویل: apply_v106.py (§۱۱)
 شمارهٔ نسخهٔ بعدی: V107
+```
+
+---
+
+## ۳۲۹) V107 — اصلاحات آزمون‌سازِ چاپی (بخش «چاپ آزمون»)
+
+### درخواست کاربر (۹ مورد + حذف پرینتر کارت‌ها؛ مورد ۸ «بانک سؤال آنلاین» به گفتهٔ کاربر نادیده گرفته شد)
+1. حذف «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» از کارت سؤالِ چاپی.
+2. فاصلهٔ بیشتر آیکن‌های سربرگ کارت؛ برچسب نوع سؤال کامل دیده شود.
+3. آیکن تصویر بدون نوشتهٔ «تصویر».
+4. کادر انتخاب اشیاء درون متن سؤال بزرگ بود.
+5. پیش‌نمایش به‌طور پیش‌فرض کل A4 را نشان دهد، سپس زوم به انتخاب کاربر (+ دکمهٔ کل صفحه/اندازهٔ واقعی — پاسخ کاربر).
+6. اشیاء در پیش‌نمایش: لمس اول = انتخاب، سپس جابه‌جایی/تغییر اندازه؛ دوبار لمس = ویرایش بدون تداخل.
+7. حذف راهنمای بالای پیش‌نمایش.
+9. به‌جای تصویر/نمودار پاسخ: فضای پاسخ = تعداد سطر (۰–۱۲) + نوع سطر (خط‌چین/خالی/شطرنجی) + فاصلهٔ سطر به سانتی‌متر (پاسخ کاربر).
+10. حذف آیکن پرینتر از کارت‌های بخش «چاپ آزمون».
+
+### تغییرات
+- **ExamBuilderScreen.kt**: بلوک تصویر/نمودار پاسخ فقط در `!printMode`؛ در `printMode` و نوع تشریحی `PrintAnswerSpaceControls` (تعداد سطر −/+، چیپ‌های lined/blank/grid، Slider ۰٫۵..۲٫۰ با گام ۰٫۱). سربرگ کارت: `spacedBy(6.dp)`، `Spacer(2.dp)` بعد از بارم، برچسب نوع با `softWrap=false`/`overflow=Visible`.
+- **QuestionDraft.kt**: `answerLineSpacingCm: Float = 1.0f`؛ `answerLineStyle` مقدار `grid` هم می‌پذیرد. **ExamBuilderViewModel.kt**: `setAnswerLineStyle` با `grid`، `setAnswerLineSpacingCm` (گرد به ۰٫۱). **ExamQuestionCodec.kt**: خواندن/نوشتن `answerLineSpacingCm` (پیش‌فرض ۱٫۰؛ سازگار با JSON قدیمی). **OfficialPrintModels/PrintableFromDrafts/ExamHtmlPrintPayload**: انتقال به payload (`answerStyle` = lined/plain/grid + `answerLineSpacingCm`).
+- **exam_print_renderer.html** (۸۵ KB): `answerBlock` ارتفاع سطر = فاصله (cm)، حالت `grid` با background شطرنجی (`.answer-space.grid`)، `plain` با min-height؛ `#screenChrome` بدون متن راهنما + دکمهٔ `#fitToggle`؛ `applyFit()` (transform scale روی `#sheet` تا در پهنای صفحه جا شود؛ در حالت چاپ خاموش) پس از هر `render()`؛ `sheetScale()` برای درگ/تغییر اندازه/جداکننده و `sheetOffsetOf` با مقیاس؛ `selectFigure()`: لمس اول فقط انتخاب (کادر + دستگیره)، لمس بعدی روی شیءِ انتخاب‌شده = درگ، لمس جای خالی = لغو انتخاب، دوبار لمس همچنان ویرایش؛ `requestPrint` انتخاب را پاک می‌کند.
+- **QuestionTextWebSection.kt**: شکل/نمودار (kind خالی/img) با پهنای ثابت ۱۷۶dp و کادر انتخاب دور همان (`compactFigure`)؛ جدول/تناوبی/اطلس تمام‌عرض می‌مانند.
+- **QuestionMediaEditor.kt**: نوشتهٔ «تصویر» حذف.
+- **ExamPrintCenterScreen.kt**: آیکن پرینتر، `startPrint`، `PrintTarget`، منوی چاپ و `HeadlessExamPrinter` حذف؛ فقط مداد/حذف و «نسخهٔ چاپی». (`HeadlessExamPrinter` در ExamHtmlPrintDialog.kt می‌ماند؛ فعلاً بدون فراخوان.)
+- تست‌ها: `V107_PrintBuilderPolishTest` (۴ تست)؛ به‌روزرسانی پین‌های V55_18 (۶dp)، V62_7 (منوی چاپ در مرکز چاپ نیست)، V106 (مرکز چاپ بدون چاپگر).
+
+### راستی‌آزمایی
+- verify PASS؛ `git diff --check` تمیز؛ شبیه‌سازی پین‌های تست‌های مرتبط با فایل‌های تغییرکرده: ۰ خطا.
+- jsdom: راهنما حذف؛ دکمهٔ fit «اندازهٔ واقعی» و کلاس `fit-page` فعال؛ grid: height=3×1.5cm و backgroundSize=1.5cm؛ لمس اول فقط انتخاب (بدون drag/free)؛ لمس دوم روی انتخاب‌شده → drag+free؛ لمس جای خالی → لغو انتخاب؛ دوبار لمس → editFigureTool؛ toggle → transform پاک؛ چاپ → transform و انتخاب پاک؛ restorePreview → پیش‌نمایش برمی‌گردد.
+- روی دستگاه بررسی شود: اندازهٔ برگه در fit-page روی گوشی و کیفیت درگ در مقیاس کوچک.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v107.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V108
 ```

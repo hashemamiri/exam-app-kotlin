@@ -22,7 +22,10 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 #screenChrome{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(794px,100%);margin:0 auto 12px;padding:8px 12px;border:1px solid #ced8e2;border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 4px 16px rgba(15,23,42,.10)}
 #screenChrome strong{font-size:13px}
 #screenChrome span{font-size:11px;color:var(--muted)}
-#closePreview{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
+#closePreview,#fitToggle{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
+#fitToggle{background:#0f766e}.chrome-actions{display:flex;gap:8px}
+/* V107 — حالتِ «کل صفحه»: برگهٔ A4 با transform در پهنای صفحه جا می‌شود. */
+#printSurface.fit-page #sheet{transform-origin:top center}
 #printSurface{width:100%;overflow:auto;padding:2px 0 18px}
 #sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:var(--paper);border:2px solid #000;border-radius:6px;box-shadow:0 7px 28px rgba(15,23,42,.24);font-size:10pt;line-height:1.75;overflow:visible}
 /* ===== سربرگ‌ها — عیناً از آزمون‌سازِ مرجع ===== */
@@ -241,6 +244,7 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 .answer-space{margin-right:18px;margin-top:2px;margin-bottom:8px}
 .answer-line-row{height:28px;border-bottom:1px dotted #555}
 .answer-space.plain{min-height:28px}
+.answer-space.grid{background-image:linear-gradient(to left,#8a8a8a 1px,transparent 1px),linear-gradient(to bottom,#8a8a8a 1px,transparent 1px);background-size:1cm 1cm;background-position:right top;border:1px solid #8a8a8a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .answer-key-box{margin-top:18px;break-inside:avoid;page-break-inside:avoid}
 .answer-key-box h3{font-size:12pt;margin:0 0 6px;text-align:center}
 .answer-key-box table{width:100%;border-collapse:collapse;font-size:9.5pt}
@@ -355,8 +359,8 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
 </head>
 <body>
 <div id="screenChrome" class="screen-only">
-  <div><strong>پیش‌نمایش برگهٔ A4</strong><br><span>شکل را بکشید تا هرجای برگه ببرید؛ دستگیرهٔ گوشه = تغییر اندازه؛ دوبار لمس = ویرایش شکل.</span></div>
-  <button id="closePreview" type="button">بستن</button>
+  <strong>پیش‌نمایش برگهٔ A4</strong>
+  <span class="chrome-actions"><button id="fitToggle" type="button">اندازهٔ واقعی</button><button id="closePreview" type="button">بستن</button></span>
 </div>
 <main id="printSurface" aria-live="polite"><article id="sheet"></article></main>
 <script>
@@ -438,7 +442,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       options:Array.isArray(value.options) ? value.options.map(function (x) { return asObject(x); }) : [],
       pairs:Array.isArray(value.pairs) ? value.pairs.map(function (x) { return asObject(x); }) : [],
       answer:text(value.answer), answerLines:clamp(Math.round(finite(value.answerLines, 2)), 0, 30),
-      answerStyle:text(value.answerStyle || 'lined'), optionsLayout:text(value.optionsLayout),
+      answerStyle:text(value.answerStyle || 'lined'), answerLineSpacingCm:clamp(finite(value.answerLineSpacingCm, 1), 0.5, 2), optionsLayout:text(value.optionsLayout),
       textAlign:['right','center','left','justify'].indexOf(text(value.textAlign)) >= 0 ? text(value.textAlign) : 'right',
       fontFamily:text(value.fontFamily || 'default'), fontSize:clamp(finite(value.fontSizeSp, 13), 8, 40),
       bold:value.bold === true, italic:value.italic === true, spans:cleanSpans(value.textSpans, source.length),
@@ -544,8 +548,8 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
      نسبت به کلِ برگه ذخیره می‌شود؛ پس حرکتش به سلولِ سؤال محدود نیست.
      slot در جریانِ متن با همان اندازه می‌ماند تا خطوط جابه‌جا نشوند. */
   function sheetOffsetOf(element) {
-    var rect = element.getBoundingClientRect(), base = sheet.getBoundingClientRect();
-    return {right: base.right - rect.right, top: rect.top - base.top};
+    var rect = element.getBoundingClientRect(), base = sheet.getBoundingClientRect(), k = sheetScale();
+    return {right: (base.right - rect.right) / k, top: (rect.top - base.top) / k};
   }
   function applyFigureLayout(figure, slot, layout) {
     var width = clamp(finite(layout.w, 210), 42, 680), height = clamp(finite(layout.h, 160), 32, 2400);
@@ -567,6 +571,15 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     activeDrag = drag; document.body.classList.add('dragging');
     try { target.setPointerCapture(event.pointerId); } catch (ignored) {}
   }
+  function selectFigure(figure) {
+    Array.prototype.forEach.call(sheet.querySelectorAll('.print-figure.selected'), function (other) { if (other !== figure) other.classList.remove('selected'); });
+    if (figure) figure.classList.add('selected');
+  }
+  // لمسِ جای خالیِ برگه انتخاب را برمی‌دارد.
+  document.addEventListener('pointerdown', function (event) {
+    if (activeDrag || (event.target && event.target.closest && event.target.closest('.print-figure'))) return;
+    selectFigure(null);
+  }, true);
   function wireFigure(figure, slot, question, figureIndex, layout) {
     var handle = document.createElement('span'); handle.className = 'figure-handle'; handle.textContent = '↘'; figure.appendChild(handle);
     var lastTap = 0;
@@ -581,18 +594,20 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       var now = Date.now();
       if (event.pointerType !== 'mouse' && now - lastTap < 320) { lastTap = 0; callBridge('editFigureTool', String(question.id), figureIndex); return; }
       lastTap = now;
+      // V107 — لمسِ اول فقط انتخاب می‌کند (کادر + دستگیره)؛ جابه‌جایی/تغییرِ اندازه
+      // فقط روی شیءِ انتخاب‌شده انجام می‌شود تا با «دوبار لمس = ویرایش» تداخل نکند.
+      if (!figure.classList.contains('selected')) { selectFigure(figure); return; }
       if (!layout.free) {
         var offset = sheetOffsetOf(figure);
         layout.free = true; layout.x = Math.round(offset.right); layout.y = Math.round(offset.top);
         applyFigureLayout(figure, slot, layout);
       }
-      figure.classList.add('selected');
       beginDrag({kind:'move',figure:figure,slot:slot,question:question,layout:layout,startX:event.clientX,startY:event.clientY,baseX:finite(layout.x,0),baseY:finite(layout.y,0)}, figure, event);
     });
     handle.addEventListener('pointerdown', function (event) {
       if (!document.body.classList.contains('preview-open')) return;
       event.preventDefault(); event.stopPropagation();
-      figure.classList.add('selected');
+      selectFigure(figure);
       var rect = figure.getBoundingClientRect();
       beginDrag({kind:'resize',figure:figure,slot:slot,question:question,layout:layout,startX:event.clientX,startY:event.clientY,baseW:finite(layout.w, rect.width),ratio:rect.width > 0 ? rect.height / rect.width : 0.75}, handle, event);
     });
@@ -678,9 +693,13 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       var lines = question.type === 'numeric' ? 1 : question.answerLines;
       if (question.type === 'fill') lines = Math.max(1, lines);
       if (lines > 0) {
-        var region = document.createElement('div'); region.className = 'answer-space ' + (question.answerStyle === 'plain' ? 'plain' : 'lined');
-        if (question.answerStyle === 'plain') region.style.minHeight = (lines * 28) + 'px';
-        else for (var i = 0; i < lines; i++) { var line = document.createElement('div'); line.className = 'answer-line-row'; region.appendChild(line); }
+        // V107 — نوعِ سطر (خط‌چین/خالی/شطرنجی) و فاصلهٔ سطر به سانتی‌متر.
+        var style = question.answerStyle === 'plain' ? 'plain' : (question.answerStyle === 'grid' ? 'grid' : 'lined');
+        var spacing = clamp(finite(question.answerLineSpacingCm, 1), 0.5, 2).toFixed(1) + 'cm';
+        var region = document.createElement('div'); region.className = 'answer-space ' + style;
+        if (style === 'plain') { region.style.minHeight = 'calc(' + lines + ' * ' + spacing + ')'; }
+        else if (style === 'grid') { region.style.height = 'calc(' + lines + ' * ' + spacing + ')'; region.style.backgroundSize = spacing + ' ' + spacing; }
+        else for (var i = 0; i < lines; i++) { var line = document.createElement('div'); line.className = 'answer-line-row'; line.style.height = spacing; region.appendChild(line); }
         wrapper.appendChild(region);
       }
     }
@@ -846,29 +865,31 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     var footer = document.createElement('div'); footer.className = 'exam-footer'; footer.textContent = footerText(); sheet.appendChild(footer);
     // شکل‌های شناور پس از قرارگرفتن در DOM به برگه منتقل می‌شوند.
     Array.prototype.forEach.call(sheet.querySelectorAll('.figure-slot'), function (slot) { if (typeof slot.__apply === 'function') slot.__apply(); });
+    if (typeof surface !== 'undefined' && surface) applyFit();
   }
+  function sheetScale() { var w = sheet.offsetWidth; return w > 0 ? (sheet.getBoundingClientRect().width / w) || 1 : 1; }
   function moveDrag(event) {
     if (!activeDrag) return;
     if (event.cancelable) event.preventDefault();
+    var k = sheetScale();
     if (activeDrag.kind === 'move') {
-      var dx = event.clientX - activeDrag.startX, dy = event.clientY - activeDrag.startY;
+      var dx = (event.clientX - activeDrag.startX) / k, dy = (event.clientY - activeDrag.startY) / k;
       var width = finite(activeDrag.layout.w, 210), height = finite(activeDrag.layout.h, 160);
       var maxX = Math.max(0, sheet.clientWidth - width), maxY = Math.max(0, sheet.scrollHeight - height);
       activeDrag.layout.x = Math.round(clamp(activeDrag.baseX - dx, 0, maxX));
       activeDrag.layout.y = Math.round(clamp(activeDrag.baseY + dy, 0, maxY));
       applyFigureLayout(activeDrag.figure, activeDrag.slot, activeDrag.layout);
     } else if (activeDrag.kind === 'resize') {
-      var widthNew = clamp(activeDrag.baseW - (event.clientX - activeDrag.startX), 42, 680);
+      var widthNew = clamp(activeDrag.baseW - (event.clientX - activeDrag.startX) / k, 42, 680);
       activeDrag.layout.w = Math.round(widthNew); activeDrag.layout.h = Math.round(clamp(widthNew * activeDrag.ratio, 32, 2400));
       applyFigureLayout(activeDrag.figure, activeDrag.slot, activeDrag.layout);
     } else if (activeDrag.kind === 'separator') {
-      activeDrag.question.sepExtraPx = Math.round(clamp(activeDrag.base + (event.clientY - activeDrag.startY), 0, 1500));
+      activeDrag.question.sepExtraPx = Math.round(clamp(activeDrag.base + (event.clientY - activeDrag.startY) / k, 0, 1500));
       activeDrag.pad.style.height = activeDrag.question.sepExtraPx + 'px';
     }
   }
   function endDrag() {
     if (!activeDrag) return;
-    if (activeDrag.figure) activeDrag.figure.classList.remove('selected');
     if (activeDrag.grip) activeDrag.grip.classList.remove('is-dragging');
     activeDrag = null; document.body.classList.remove('dragging');
   }
@@ -919,7 +940,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   function requestPrint(mode) {
     // V106 — پیش‌نمایش هنگام چاپ بسته می‌شود تا دستگیره‌ها/حالت انتخاب چاپ نشوند.
     previewWasOpen = document.body.classList.contains('preview-open');
-    endDrag(); document.body.classList.remove('preview-open');
+    endDrag(); selectFigure(null); document.body.classList.remove('preview-open');
     state.mode = mode === 'teacher' ? 'teacher' : 'student'; document.body.classList.add('exam-print-mode'); render();
     waitForImages(function () { callBridge('print', state.mode); }); return 'queued';
   }
@@ -943,6 +964,18 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   }
   function closePreview() { callBridge('previewClosed'); }
   closeButton.addEventListener('click', closePreview);
+  /* V107 — پیش‌فرضِ پیش‌نمایش: کل برگهٔ A4 در پهنای صفحه (fit-page). دکمه بین
+     «کل صفحه» و «اندازهٔ واقعی» جابه‌جا می‌کند؛ زومِ دوانگشتی همچنان آزاد است. */
+  var surface = document.getElementById('printSurface'), fitButton = document.getElementById('fitToggle'), fitPage = true;
+  function applyFit() {
+    if (!fitPage || document.body.classList.contains('exam-print-mode')) { surface.classList.remove('fit-page'); sheet.style.transform = ''; surface.style.height = ''; if (fitButton) fitButton.textContent = 'کل صفحه'; return; }
+    var available = Math.max(0, surface.clientWidth - 8), natural = sheet.offsetWidth || 794, scale = natural > 0 ? Math.min(1, available / natural) : 1;
+    surface.classList.add('fit-page'); sheet.style.transform = 'scale(' + scale.toFixed(4) + ')';
+    surface.style.height = Math.ceil(sheet.offsetHeight * scale) + 24 + 'px';
+    if (fitButton) fitButton.textContent = 'اندازهٔ واقعی';
+  }
+  if (fitButton) fitButton.addEventListener('click', function () { fitPage = !fitPage; applyFit(); try { window.scrollTo(0, 0); } catch (ignored) {} });
+  window.addEventListener('resize', applyFit);
   window.setExamData = setExamData;
   window.printStudent = function () { return requestPrint('student'); };
   window.printTeacher = function () { return requestPrint('teacher'); };

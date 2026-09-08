@@ -66,7 +66,7 @@ class V55_18SmoothCardsEyeMenuTest {
         val editor = builder.substringAfter("private fun QuestionEditor(")
             .substringBefore("private fun QuestionStyleControls(")
         assertTrue("\"ص/غ\"" in editor)
-        assertTrue("Arrangement.spacedBy(2.dp)" in editor)
+        assertTrue("Arrangement.spacedBy(6.dp)" in editor) // V107: فاصلهٔ آیکن‌ها ۶dp
         // V62.5 — آیکن‌های سربرگ ۳۸→۳۰dp تا برچسب «چندگزینه‌ای» کامل دیده شود.
         assertTrue(".size(30.dp)" in editor)
         // قرارداد V25: فیلد بارم دست‌نخورده.

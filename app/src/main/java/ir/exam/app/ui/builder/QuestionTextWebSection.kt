@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -293,10 +294,14 @@ fun QuestionTextWebSection(
                         }
                         is RichSegment.Figure -> {
                             val spec = part.spec
+                            // V107 — کادرِ انتخاب به اندازهٔ خودِ شیء است (نه تمامِ
+                            // پهنای کارت): شکل/نمودار با پهنای ثابت وسط‌چین می‌شود و
+                            // حاشیهٔ انتخاب دور همان کشیده می‌شود.
+                            val compactFigure = spec.kind !in setOf("a", "s", "t", "p")
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 80.dp)
+                                    .then(if (compactFigure) Modifier.width(176.dp) else Modifier.fillMaxWidth())
+                                    .heightIn(min = if (compactFigure) 40.dp else 80.dp)
                                     .then(
                                         if (selected) {
                                             Modifier.border(2.dp, MaterialTheme.colorScheme.primary)
@@ -330,7 +335,8 @@ fun QuestionTextWebSection(
                                 } else {
                                     InlineFigureView(
                                         spec,
-                                        Modifier.fillMaxWidth().height(120.dp),
+                                        if (compactFigure) Modifier.width(176.dp).height(132.dp)
+                                        else Modifier.fillMaxWidth().height(120.dp),
                                         contentDescription = "شکل"
                                     )
                                 }

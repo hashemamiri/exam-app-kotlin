@@ -69,7 +69,8 @@ class V62_7PrintCenterStudentPreviewTest {
         assertFalse("چاپ برگه" in card)
         assertFalse("چاپ با کلید" in card)
         assertFalse("چاپ برگه" in printCenter)
-        assertTrue("چاپ با کلید (پاسخ‌نامه)" in printCenter)
+        // V107 — منوی چاپ از مرکز چاپ حذف شد؛ چاپ فقط داخل آزمون‌ساز است.
+        assertFalse("چاپ با کلید (پاسخ‌نامه)" in printCenter)
     }
 
     @Test

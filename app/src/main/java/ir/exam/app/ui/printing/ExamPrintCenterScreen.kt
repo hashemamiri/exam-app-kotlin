@@ -1,22 +1,16 @@
 package ir.exam.app.ui.printing
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Print
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -24,9 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,9 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ir.exam.app.data.repository.SupabasePortabilityRepository
-import ir.exam.app.domain.model.OfficialExamPrintable
-import ir.exam.app.domain.model.OfficialPrintHeader
 import ir.exam.app.ui.dashboard.TeacherDashboardViewModel
 import kotlinx.coroutines.launch
 
@@ -62,29 +51,22 @@ fun ExamPrintCenterScreen(
     val context = LocalContext.current
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
-    val portability = remember { SupabasePortabilityRepository() }
-    // سربرگ پیش‌فرض از پروفایل ساخته می‌شود و مقدارهای تکمیلیِ تنظیمات سربرگ
-    // از دستگاه خوانده می‌شوند.
+    // V107 — سربرگ فقط از تنظیماتِ ذخیره‌شدهٔ دستگاه خوانده می‌شود و در
+    // آزمون‌سازِ چاپی (پیش‌نمایش/چاپ) به کار می‌رود؛ خودِ این صفحه چاپ نمی‌کند.
+    @Suppress("UNUSED_VARIABLE")
     val headerStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)
     }
-    val header = remember { ir.exam.app.data.local.printHeaderOf(headerStore.read()) }
     // V86.8 — آزمون‌های چاپیِ ذخیره‌شده روی دستگاه، کنارِ آزمون‌های سرور.
     val printExamStore = remember(context.applicationContext) {
         ir.exam.app.data.local.PrintExamStore(context.applicationContext)
     }
     var localExams by remember { mutableStateOf(printExamStore.list()) }
-    var htmlPrintLoading by remember { mutableStateOf(false) }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
-    // هدف انتخاب‌شده برای چاپ مستقیم.
-    var printTarget by remember { mutableStateOf<PrintTarget?>(null) }
     val scope = rememberCoroutineScope()
-    // V101 — چاپِ مستقیمِ بدون‌صفحه: WebView نمایش داده نمی‌شود؛ پنلِ چاپ
-    // روی همین صفحه ظاهر می‌شود (نه پنجرهٔ پیش‌نمایش).
-    // V106 — Context فعالیت لازم است تا پنلِ چاپ اندروید واقعاً باز شود
-    // (با applicationContext آیکن پرینتر ظاهراً «کار نمی‌کرد»).
-    val headlessPrinter = remember(context) { HeadlessExamPrinter(context) }
+    // V107 — چاپِ مستقیم از کارت‌ها حذف شد؛ چاپ فقط از داخلِ آزمون‌ساز
+    // (ExamHtmlPrintDialog) انجام می‌شود؛ چاپگرِ بدون‌صفحه دیگر اینجا نیست.
     // V101 — برای ساختِ «نسخهٔ چاپی» از آزمونِ آنلاین، آزمون کامل (با کلید)
     // با همان مسیرِ آزمون‌ساز بارگذاری می‌شود.
     val builderRepo = remember(context.applicationContext) {
@@ -96,53 +78,6 @@ fun ExamPrintCenterScreen(
         viewModel.load()
         // بازگشت از آزمون‌ساز ممکن است آزمونِ چاپیِ تازه‌ای ساخته باشد
         localExams = printExamStore.list()
-    }
-
-    // چاپ مستقیم پس از آماده‌سازی دادهٔ آزمون در WebView نامرئی آغاز می‌شود.
-    fun startPrint(target: PrintTarget, mode: String) {
-        printTarget = null
-        scope.launch {
-            htmlPrintLoading = true
-            try {
-                printStatus = null
-                printStatusIsError = false
-                when (target) {
-                    is PrintTarget.ServerExam -> portability.printableExam(
-                        target.examId, false, header
-                    ).onSuccess { printable ->
-                        val printDocument = ExamHtmlImageInliner.inline(context.applicationContext, printable)
-                        printStatus = "در حال آماده‌سازی چاپ..."
-                        // چاپ بدون صفحه: هیچ پنجرهٔ پیش‌نمایشی باز نمی‌شود.
-                        headlessPrinter.print(
-                            printDocument,
-                            mode,
-                            onStatus = { msg -> printStatus = msg },
-                            onFinished = { printStatus = null }
-                        )
-                    }.onFailure { error ->
-                        printStatusIsError = true
-                        printStatus = sanitizePrintError(error)
-                    }
-                    is PrintTarget.LocalExam -> {
-                        val printDocument = ir.exam.app.domain.model.PrintableFromDrafts.build(
-                            title = target.rec.title.ifBlank { "آزمون" },
-                            subject = target.rec.subject,
-                            header = header,
-                            questions = target.rec.questions
-                        )
-                        printStatus = "در حال آماده‌سازی چاپ..."
-                        headlessPrinter.print(
-                            printDocument,
-                            mode,
-                            onStatus = { msg -> printStatus = msg },
-                            onFinished = { printStatus = null }
-                        )
-                    }
-                }
-            } finally {
-                htmlPrintLoading = false
-            }
-        }
     }
 
     // V101 — مداد روی کارتِ آزمونِ آنلاین: «نسخهٔ چاپی» از آن آزمون می‌سازد
@@ -210,7 +145,7 @@ fun ExamPrintCenterScreen(
                 else MaterialTheme.colorScheme.primary
             )
         }
-        if (state.loading || htmlPrintLoading) {
+        if (state.loading || copyLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
         if (state.exams.isEmpty() && localExams.isEmpty() && !state.loading) {
@@ -248,15 +183,8 @@ fun ExamPrintCenterScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            // چاپ مستقیم: ابتدا نسخهٔ دانش‌آموز یا پاسخ‌نامه
-                            // انتخاب می‌شود.
-                            IconButton(onClick = { printTarget = PrintTarget.LocalExam(rec) }, enabled = !htmlPrintLoading) {
-                                Icon(
-                                    Icons.Outlined.Print,
-                                    contentDescription = "چاپ آزمون چاپی",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            // V107 — آیکن پرینتر از کارت حذف شد؛ چاپ فقط از
+                            // داخلِ آزمون‌ساز (پیش‌نمایش / دکمهٔ چاپ) انجام می‌شود.
                             IconButton(onClick = {
                                 printExamStore.delete(rec.id)
                                 localExams = printExamStore.list()
@@ -294,56 +222,13 @@ fun ExamPrintCenterScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            // V99.1 — پرینتر: چاپِ مستقیم (دانش‌آموز/پاسخ‌نامه).
-                            IconButton(onClick = { printTarget = PrintTarget.ServerExam(exam.id) }, enabled = !htmlPrintLoading) {
-                                Icon(
-                                    Icons.Outlined.Print,
-                                    contentDescription = "چاپ آزمون",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            // V107 — آیکن پرینتر از کارت حذف شد (درخواست کاربر).
                         }
                     }
                 }
             }
         }
     }
-    // چاپ مستقیم با WebView نامرئیِ HeadlessExamPrinter آماده می‌شود و پنل
-    // چاپ اندروید مستقیماً روی همین صفحه باز می‌شود.
-    // V99.1 — منوی چاپ از آیکن پرینتر: نسخهٔ دانش‌آموز یا پاسخ‌نامه.
-    printTarget?.let { target ->
-        AlertDialog(
-            onDismissRequest = { printTarget = null },
-            title = { Text("چاپ آزمون") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                            .clickable { startPrint(target, "student") }
-                            .padding(vertical = 14.dp, horizontal = 12.dp)
-                    ) { Text("🖨 چاپ آزمون (دانش‌آموز)", style = MaterialTheme.typography.titleMedium) }
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                            .clickable { startPrint(target, "teacher") }
-                            .padding(vertical = 14.dp, horizontal = 12.dp)
-                    ) { Text("✅ چاپ با کلید (پاسخ‌نامه)", style = MaterialTheme.typography.titleMedium) }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { printTarget = null }) { Text("بستن") }
-            }
-        )
-    }
-}
-
-/** V99.1 — هدفِ چاپِ آیکن پرینتر در کارت‌های آزمون. */
-private sealed class PrintTarget {
-    data class ServerExam(val examId: String) : PrintTarget()
-    data class LocalExam(val rec: ir.exam.app.data.local.PrintExamRecord) : PrintTarget()
 }
 
 /** پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */

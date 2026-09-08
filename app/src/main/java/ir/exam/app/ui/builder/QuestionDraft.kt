@@ -203,7 +203,10 @@ data class QuestionDraft(
     val textSpans: List<StyleSpan> = emptyList(),
     val italic: Boolean = false,
     val answerLines: Int = 2,
+    /** lined = خط‌چین، blank = خالی، grid = شطرنجی (V107). */
     val answerLineStyle: String = "lined",
+    /** V107 — فاصلهٔ سطرهای فضای پاسخ در چاپ، به سانتی‌متر (۰٫۵ تا ۲٫۰). */
+    val answerLineSpacingCm: Float = 1.0f,
     // V99.2 — چیدمانِ اشیاء در پیش‌نمایشِ چاپی (JSON: figLayouts + slot)؛
     // از پنجرهٔ پیش‌نمایش به وضعیتِ بومی برمی‌گردد تا موقعیت‌ها ریست نشوند.
     val figLayoutsJson: String = "",

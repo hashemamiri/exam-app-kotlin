@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -91,6 +92,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
@@ -985,7 +987,9 @@ private fun QuestionEditor(
                     .fillMaxWidth()
                     .clickable(onClick = onToggle),
                 // V55.18 — فاصلهٔ کمتر آیکن‌ها تا نوع سؤال کامل نمایش داده شود.
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                // V107 — فاصلهٔ آیکن‌ها بیشتر شد (۶dp) و برچسبِ نوعِ سؤال با
+                // سقفِ پهنا و کوچک‌شدنِ خودکار همیشه کامل دیده می‌شود.
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -1012,7 +1016,9 @@ private fun QuestionEditor(
                     if (question.type == QuestionType.TRUE_FALSE) "ص/غ" else question.type.faLabel(),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Visible
                 )
                 MinimalScoreField(
                     value = scoreText,
@@ -1021,6 +1027,7 @@ private fun QuestionEditor(
                         viewModel.updateScore(question.id, scoreText)
                     }
                 )
+                Spacer(Modifier.width(2.dp))
                 // V55.17 — درخواست کاربر: ذخیره در بانک با آیکن کنار سطل زباله.
                 IconButton(onClick = { viewModel.saveToBank(question.id) }, modifier = Modifier.size(30.dp)) {
                     Icon(
@@ -1145,6 +1152,15 @@ private fun QuestionEditor(
                 onRemove = { imageId -> viewModel.removeImage(question.id, imageId) },
                 onOpenStudio = { studioOpen = true }
             )
+            // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در
+            // آزمونِ آنلاین معنا دارند؛ در آزمونِ چاپی به‌جای آن‌ها «فضای پاسخ»
+            // (تعداد سطر / نوع سطر / فاصلهٔ سطر به سانتی‌متر) نشان داده می‌شود.
+            if (printMode) {
+                // فقط تشریحی فضای پاسخ چندسطری دارد (جای‌خالی/عددی یک سطر ثابت).
+                if (question.type == QuestionType.ESSAY) {
+                    PrintAnswerSpaceControls(question = question, viewModel = viewModel)
+                }
+            } else {
             Text("تصویر پاسخ دانش‌آموز")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("no" to "غیرفعال", "optional" to "اختیاری", "required" to "اجباری").forEach { (mode, label) ->
@@ -1176,6 +1192,7 @@ private fun QuestionEditor(
                     onClick = { viewModel.setAllowAnswerGraph(question.id, !question.allowAnswerGraph) },
                     label = { Text(if (question.allowAnswerGraph) "فعال" else "غیرفعال") }
                 )
+            }
             }
             when (question.type) {
                 QuestionType.MULTIPLE_CHOICE -> {
@@ -1612,6 +1629,47 @@ private fun QuestionEditor(
     }
 }
 
+
+/**
+ * V107 — فضای پاسخ در آزمونِ چاپی: تعداد سطر (۰ تا ۱۲)، نوع سطر
+ * (خط‌چین / خالی / شطرنجی) و فاصلهٔ سطر به سانتی‌متر (۰٫۵ تا ۲٫۰).
+ * همان فیلدهای answerLines / answerLineStyle / answerLineSpacingCm سؤال.
+ */
+@Composable
+private fun PrintAnswerSpaceControls(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Text("فضای پاسخ", style = MaterialTheme.typography.labelLarge)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("تعداد سطر: " + PersianDigits.convert(question.answerLines))
+        OutlinedButton(
+            onClick = { viewModel.setAnswerLines(question.id, question.answerLines - 1) },
+            enabled = question.answerLines > 0
+        ) { Text("−") }
+        OutlinedButton(
+            onClick = { viewModel.setAnswerLines(question.id, question.answerLines + 1) },
+            enabled = question.answerLines < 12
+        ) { Text("+") }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("نوع سطر:")
+        listOf("lined" to "خط‌چین", "blank" to "خالی", "grid" to "شطرنجی").forEach { (style, label) ->
+            FilterChip(
+                selected = question.answerLineStyle == style,
+                onClick = { viewModel.setAnswerLineStyle(question.id, style) },
+                label = { Text(label) }
+            )
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("فاصلهٔ سطر: " + PersianDigits.convert(String.format(java.util.Locale.US, "%.1f", question.answerLineSpacingCm)) + " سانتی‌متر")
+        Slider(
+            value = question.answerLineSpacingCm,
+            onValueChange = { viewModel.setAnswerLineSpacingCm(question.id, it) },
+            valueRange = 0.5f..2.0f,
+            steps = 14,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
 
 @Composable
 private fun MinimalScoreField(value: String, onValueChange: (String) -> Unit) {
