@@ -17375,3 +17375,14 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 ```text
 تحویل: apply_v113_1.py · نسخهٔ بعدی: V114
 ```
+
+---
+
+## ۳۳۷) V113.2 — برگهٔ ناپیدا در «کل صفحه» + کارت چاپی → آزمون‌ساز آنلاین
+
+1. **ریشهٔ برگهٔ ناپیدا:** V113 برای fit-page `margin:0` و `transform-origin:top left` گذاشت؛ اما `<html dir="rtl">` است → برگهٔ ۲۱۰mm (پهن‌تر از صفحه) به لبهٔ راست می‌چسبد و با `overflow-x:hidden` کل آن سمت چپ بیرون می‌افتد. رفع: `#printSurface.fit-page{direction:ltr}` و `#sheet{direction:rtl}` (محتوای برگه RTL می‌ماند).
+2. **کارت‌های «آزمون‌های چاپی» در صفحهٔ آزمون‌ها:** `onOpenPrintExam` در `ExamApp.kt` حالا `ExamImportDraft` با `localPrintExamId = null` و `builderCameFromPrint = false` می‌سازد → آزمون‌سازِ آنلاین (مشخصات آزمون، ذخیره به سرور به‌عنوان آزمون جدید). رکورد چاپی تغییر نمی‌کند. `openLocalPrintExam` (چاپی) فقط برای صفحهٔ «چاپ آزمون» می‌ماند. کارت‌ها به `PrintExamCards` جدا شدند؛ متن راهنما در پنجره.
+
+```text
+تحویل: apply_v113_2.py · نسخهٔ بعدی: V114
+```

@@ -62,7 +62,7 @@ fun TeacherDashboardScreen(
     onCreateExam: () -> Unit,
     onEditExam: (String) -> Unit,
     onImportExam: (ExamImportDraft) -> Unit,
-    // V113 — بازکردن آزمونِ چاپیِ محلی (از پنجرهٔ «آزمون‌های چاپی»)
+    // V113.2 — انتخاب آزمونِ چاپیِ محلی از پنجرهٔ «آزمون‌های چاپی» → ساخت آزمون آنلاین از روی آن
     onOpenPrintExam: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -290,8 +290,8 @@ fun TeacherDashboardScreen(
         )
     }
 
-    // V113 — پنجرهٔ «آزمون‌های چاپی»: کارت‌های ذخیره‌شده روی دستگاه؛ لمس هر
-    // کارت آن را در آزمون‌سازِ چاپی باز می‌کند (ویرایش/چاپ).
+    // V113.2 — پنجرهٔ «آزمون‌های چاپی»: کارت‌های ذخیره‌شده روی دستگاه؛ لمس هر
+    // کارت، ساختِ آزمونِ آنلاین با همان سؤال‌ها را باز می‌کند.
     if (printExamsOpen) {
         val printExams = remember(printExamsOpen) { printExamStore.list() }
         AlertDialog(
@@ -299,25 +299,9 @@ fun TeacherDashboardScreen(
             title = { Text("آزمون‌های چاپی") },
             text = {
                 if (printExams.isEmpty()) Text("هنوز آزمون چاپی‌ای ذخیره نشده است. از بخش «چاپ آزمون» بسازید.")
-                else LazyColumn(
-                    Modifier.fillMaxWidth().heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(printExams, key = { it.id }) { rec ->
-                        Card(Modifier.fillMaxWidth().clickable { printExamsOpen = false; onOpenPrintExam(rec.id) }) {
-                            Row(
-                                Modifier.padding(12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Outlined.Print, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                Column(Modifier.weight(1f)) {
-                                    Text(rec.title.ifBlank { "آزمون چاپی" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questions.size} سؤال", style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        }
-                    }
+                else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("با انتخاب هر آزمون، آزمون آنلاین جدیدی با همان سؤال‌ها ساخته می‌شود.", style = MaterialTheme.typography.bodySmall)
+                    PrintExamCards(printExams) { printExamsOpen = false; onOpenPrintExam(it) }
                 }
             },
             confirmButton = { TextButton(onClick = { printExamsOpen = false }) { Text("بستن") } }
@@ -348,4 +332,32 @@ private fun readExamFileLimited(input: java.io.InputStream): String {
         output.write(buffer, 0, read)
     }
     return output.toString(Charsets.UTF_8.name())
+}
+
+/** V113.2 — کارت‌های آزمون‌های چاپیِ دستگاه (پنجرهٔ «آزمون‌های چاپی»). */
+@Composable
+private fun PrintExamCards(
+    printExams: List<ir.exam.app.data.local.PrintExamRecord>,
+    onPick: (String) -> Unit
+) {
+    LazyColumn(
+        Modifier.fillMaxWidth().heightIn(max = 400.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(printExams, key = { it.id }) { rec ->
+            Card(Modifier.fillMaxWidth().clickable { onPick(rec.id) }) {
+                Row(
+                    Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Outlined.Print, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Column(Modifier.weight(1f)) {
+                        Text(rec.title.ifBlank { "آزمون چاپی" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questions.size} سؤال", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+    }
 }

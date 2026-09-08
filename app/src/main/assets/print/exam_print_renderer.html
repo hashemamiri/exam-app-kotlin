@@ -25,7 +25,11 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 #closePreview,#fitToggle{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
 #fitToggle{background:#0f766e}.chrome-actions{display:flex;gap:8px}
 /* V107 — حالتِ «کل صفحه»: برگهٔ A4 با transform در پهنای صفحه جا می‌شود. */
-#printSurface.fit-page #sheet{transform-origin:top left;margin:0}
+/* V113.2 — سند RTL است: بدون direction:ltr روی سطح، برگهٔ ۲۱۰mm با margin:0 به
+   لبهٔ راست می‌چسبد و (چون پهن‌تر از صفحه است) به‌کل از سمت چپ بیرون می‌افتد و
+   دیده نمی‌شود. سطحِ fit-page چپ‌چین می‌شود و خودِ برگه RTL می‌ماند. */
+#printSurface.fit-page{direction:ltr}
+#printSurface.fit-page #sheet{transform-origin:top left;margin:0;direction:rtl}
 /* V113 — «کل صفحه»: هیچ اسکرول افقی‌ای نه در سطح (surface) و نه در صفحه.
    «اندازهٔ واقعی»: خودِ صفحه (نه یک جعبهٔ تودرتو) اسکرول می‌شود و پهنای
    سند دقیقاً پهنای برگه (210mm) است — نه بیشتر. */

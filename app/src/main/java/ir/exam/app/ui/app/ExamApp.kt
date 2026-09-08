@@ -464,8 +464,33 @@ private fun AuthenticatedExamApp(
                             builderCameFromPrint = false
                             page = MainPage.BUILDER
                         },
-                        // V113 — «آزمون‌های چاپی» از صفحهٔ آزمون‌ها
-                        onOpenPrintExam = ::openLocalPrintExam
+                        // V113.2 — «آزمون‌های چاپی» در صفحهٔ آزمون‌ها: کارت در
+                        // آزمون‌سازِ *آنلاین* باز می‌شود (ساخت آزمون آنلاین از روی
+                        // آزمون چاپی)؛ رکورد چاپی دست‌نخورده می‌ماند.
+                        onOpenPrintExam = { localId ->
+                            val rec = ir.exam.app.data.local.PrintExamStore(appContext).get(localId)
+                            if (rec != null) {
+                                closeTransientNavigation()
+                                editingExamId = null
+                                importedExam = ir.exam.app.ui.builder.ExamImportDraft(
+                                    title = rec.title,
+                                    subject = rec.subject,
+                                    durationMinutes = 0,
+                                    negativeMarking = 0.0,
+                                    shuffleQuestions = false,
+                                    shuffleOptions = false,
+                                    teacherMessage = "",
+                                    attemptsAllowed = 1,
+                                    attemptOnTimeout = false,
+                                    gradePolicy = "last",
+                                    attemptCooldown = 0,
+                                    questions = rec.questions,
+                                    localPrintExamId = null
+                                )
+                                builderCameFromPrint = false
+                                page = MainPage.BUILDER
+                            }
+                        }
                     )
                     UserRole.STUDENT -> StudentHomeScreen(
                         userId = user.id,
