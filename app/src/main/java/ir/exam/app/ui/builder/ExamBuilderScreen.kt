@@ -1151,22 +1151,12 @@ private fun QuestionEditor(
                 onMove = { imageId, x, y -> viewModel.moveImage(question.id, imageId, x, y) },
                 onRemove = { imageId -> viewModel.removeImage(question.id, imageId) },
                 onOpenStudio = { studioOpen = true },
-                // V108 — گفتار به متن: متن عادی مستقیم به انتهای متن سؤال؛ فرمول
-                // در ویرایشگر فرمول باز می‌شود تا پیش از درج بازبینی شود.
+                // V108/V111 — گفتار به متن: فقط متن، به انتهای متن سؤال (بدون فرمول).
                 onSpeechText = { spoken ->
                     val base = question.text
                     val joined = if (base.isBlank() || base.endsWith(" ") || base.endsWith("\n")) base + spoken else "$base $spoken"
                     viewModel.updateText(question.id, joined)
                     questionFieldController.setValue(joined)
-                },
-                // V110 — فرمولِ گفتاری مستقیم به‌صورت `$tex$` در متن درج می‌شود؛
-                // کاربر اگر خواست با لمسِ فرمول ویرایشگر را باز می‌کند.
-                onSpeechFormula = { tex ->
-                    val base = question.text
-                    val prefix = if (base.isBlank() || base.endsWith(" ") || base.endsWith("\n")) base else "$base "
-                    val withFormula = prefix + "\$" + tex + "\$ "
-                    viewModel.updateText(question.id, withFormula)
-                    questionFieldController.setValue(withFormula)
                 }
             )
             // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در

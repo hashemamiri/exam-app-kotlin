@@ -15,17 +15,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,50 +41,37 @@ import androidx.core.content.ContextCompat
 import ir.exam.app.core.speech.SpeechMathConverter
 
 /**
- * V108/V109 — میکروفونِ گفتار به متن (فارسی/انگلیسی) کنار آیکن تصویر.
+ * V108–V111 — میکروفونِ گفتار به متن (فارسی/انگلیسی) کنار آیکن تصویر.
  *
- * V109 — نسخهٔ حرفه‌ای:
- * - **شنیدنِ پیوسته:** موتور اندروید هر جمله را یک «قطعه» می‌بندد؛ اینجا پس از هر
- *   قطعه (یا خطای «سکوت») بلافاصله قطعهٔ بعدی شروع می‌شود تا وقتی کاربر خودش
- *   «پایان» یا «درج» را بزند. پنجره هرگز خودبه‌خود بسته نمی‌شود.
- * - **n-best:** از هر قطعه چند حدس گرفته می‌شود و [SpeechMathConverter.pickBest]
- *   حدسِ سازگارتر با واژگان ریاضی/عددی را برمی‌گزیند.
- * - **اصلاح خودکار** خطاهای رایج فارسی (بتوان→به توان، اکس→ایکس، …) در مبدل.
- * - **ویرایش پیش از درج:** متنِ تجمیعی در کادر قابل‌ویرایش است؛ پیش‌نمایشِ
- *   «نتیجهٔ درج» (متن/فرمول) زیر آن دیده می‌شود؛ حالت «فرمول» را می‌توان
- *   دستی تغییر داد. «درج» متن را می‌فرستد (فرمول → ویرایشگر فرمول).
- * - V110: بدون نشانگرِ لحظه‌ایِ صدا؛ فقط وقتی چیزی تشخیص داده شد تایپ می‌شود،
- *   وگرنه بی‌سروصدا منتظر می‌ماند. فرمول مستقیم در متن درج می‌شود.
+ * V111 — نسخهٔ آرام و فقط‌متن:
+ * - تشخیص فرمول از روی صدا **کامل حذف** شد؛ فقط متن (با تبدیل عددهای گفتاری
+ *   به رقم و نمادهای ساده مثل درصد/علامت سؤال) درج می‌شود.
+ * - پنجره هیچ عنصرِ متغیری ندارد: نه نتایج جزئی، نه وضعیت لحظه‌ای، نه نوار
+ *   صدا. تنها چیزی که تغییر می‌کند کادر متن است، آن هم فقط وقتی یک جمله
+ *   نهایی تشخیص داده شد. در سکوت بی‌سروصدا گوش می‌دهد.
+ * - شنیدن پیوسته تا «توقف»؛ بستن فقط با «درج» یا «انصراف».
  */
 @Composable
 fun SpeechToTextButton(
     onText: (String) -> Unit,
-    onFormula: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val currentOnText by rememberUpdatedState(onText)
-    val currentOnFormula by rememberUpdatedState(onFormula)
     var languageMenu by remember { mutableStateOf(false) }
     var dialogOpen by remember { mutableStateOf(false) }
-    var listening by remember { mutableStateOf(false) }
-    var processing by remember { mutableStateOf(false) }
+    var recording by remember { mutableStateOf(false) }
     var language by remember { mutableStateOf("fa-IR") }
     var transcript by remember { mutableStateOf("") }
-    var partial by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var forceFormula by remember { mutableStateOf<Boolean?>(null) }
     var pendingLanguage by remember { mutableStateOf<String?>(null) }
-    var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
-    var wantContinuous by remember { mutableStateOf(false) }
-    val handler = remember { Handler(Looper.getMainLooper()) }
+    // وضعیت موتور خارج از Compose نگه داشته می‌شود تا هیچ recomposition اضافه‌ای رخ ندهد.
+    val engine = remember { SpeechEngineHolder() }
 
     fun appendSegment(segment: String) {
-        val cleaned = SpeechMathConverter.correct(segment)
+        val cleaned = SpeechMathConverter.convertPlain(segment)
         if (cleaned.isBlank()) return
         transcript = if (transcript.isBlank()) cleaned else transcript.trimEnd() + " " + cleaned
-        partial = ""
     }
 
     fun recognizerIntent(lang: String) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -97,94 +79,74 @@ fun SpeechToTextButton(
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang)
         putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, true)
-        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-        // مکث‌های طولانی‌تر پیش از بستنِ قطعه (موتور ممکن است نادیده بگیرد).
-        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
-        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
-        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 15000L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 20000L)
     }
 
-    // نگه‌دارندهٔ تابعِ شروعِ قطعه (بازگشتی: listener قطعهٔ بعدی را زمان‌بندی می‌کند).
-    val segmentStarter = remember { arrayOfNulls<() -> Unit>(1) }
-
-    fun scheduleNextSegment(delayMs: Long = 250L) {
-        if (!wantContinuous || !dialogOpen) return
-        handler.postDelayed({ if (wantContinuous && dialogOpen) segmentStarter[0]?.invoke() }, delayMs)
-    }
-
-    fun startSegment() { segmentStarter[0]?.invoke() }
-
-    segmentStarter[0] = start@{
+    fun startSegment() {
+        if (!engine.wantContinuous) return
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            engine.wantContinuous = false; recording = false
             error = "سرویس تشخیص گفتار روی این دستگاه در دسترس نیست (Google app / سرویس گفتار را فعال کنید)."
-            wantContinuous = false; listening = false
-            return@start
+            return
         }
-        val sr = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
+        val sr = engine.recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { engine.recognizer = it }
         sr.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { listening = true; processing = false; status = null }
+            override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { processing = true }
+            override fun onEndOfSpeech() {}
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
             override fun onError(code: Int) {
-                listening = false; processing = false
                 when (code) {
-                    // V110 — سکوت/تشخیص‌نشدن: بی‌سروصدا منتظر می‌ماند و دوباره گوش می‌دهد
-                    // (هیچ متنی تغییر نمی‌کند تا پنجره «رفرش» به نظر نرسد).
-                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> scheduleNextSegment(150L)
+                    // سکوت / تشخیص‌نشدن: بی‌سروصدا دوباره گوش بده.
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> engine.schedule(200L) { startSegment() }
                     SpeechRecognizer.ERROR_RECOGNIZER_BUSY, SpeechRecognizer.ERROR_CLIENT -> {
-                        // موتور مشغول/در حال بستن قطعهٔ قبلی: کمی بعد دوباره
-                        recognizer?.destroy(); recognizer = null
-                        scheduleNextSegment(600L)
+                        engine.release(); engine.schedule(700L) { startSegment() }
                     }
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> { wantContinuous = false; error = "مجوز میکروفون داده نشده است." }
-                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> {
-                        status = "اتصال اینترنت ضعیف است؛ دوباره تلاش می‌شود…"; scheduleNextSegment(1500L)
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
+                        engine.wantContinuous = false; recording = false; error = "مجوز میکروفون داده نشده است."
                     }
-                    else -> scheduleNextSegment(800L)
+                    else -> engine.schedule(1000L) { startSegment() }
                 }
             }
             override fun onResults(results: Bundle?) {
-                listening = false; processing = false
                 val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
                 val best = SpeechMathConverter.pickBest(list)
                 if (best.isNotBlank()) appendSegment(best)
-                scheduleNextSegment(150L)
+                engine.schedule(200L) { startSegment() }
             }
-            override fun onPartialResults(partialResults: Bundle?) {
-                partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-            }
-            override fun onEvent(eventType: Int, params: Bundle?) {}
         })
-        listening = true
         runCatching { sr.startListening(recognizerIntent(language)) }
-            .onFailure { recognizer?.destroy(); recognizer = null; scheduleNextSegment(800L) }
+            .onFailure { engine.release(); engine.schedule(800L) { startSegment() } }
     }
 
     fun stopListening() {
-        wantContinuous = false
-        handler.removeCallbacksAndMessages(null)
-        runCatching { recognizer?.stopListening() }
-        listening = false; processing = false
-        status = null
+        engine.wantContinuous = false
+        engine.cancelScheduled()
+        runCatching { engine.recognizer?.stopListening() }
+        recording = false
     }
 
     fun closeAll() {
         stopListening()
-        runCatching { recognizer?.destroy() }
-        recognizer = null
+        engine.release()
         dialogOpen = false
-        transcript = ""; partial = ""; forceFormula = null; status = null
+        transcript = ""
     }
 
     fun beginSession(lang: String) {
         language = lang
+        transcript = ""
         dialogOpen = true
-        wantContinuous = true
-        transcript = ""; partial = ""; forceFormula = null
+        recording = true
+        engine.wantContinuous = true
         startSegment()
     }
 
@@ -199,15 +161,13 @@ fun SpeechToTextButton(
         if (granted) beginSession(lang) else { pendingLanguage = lang; permission.launch(Manifest.permission.RECORD_AUDIO) }
     }
 
-    DisposableEffect(Unit) {
-        onDispose { handler.removeCallbacksAndMessages(null); runCatching { recognizer?.destroy() }; recognizer = null }
-    }
+    DisposableEffect(Unit) { onDispose { engine.cancelScheduled(); engine.release() } }
 
     IconButton(onClick = { if (dialogOpen) stopListening() else languageMenu = true }, modifier = modifier) {
         Icon(
-            if (listening) Icons.Outlined.Stop else Icons.Outlined.Mic,
+            if (recording) Icons.Outlined.Stop else Icons.Outlined.Mic,
             contentDescription = "گفتار به متن (فارسی/انگلیسی)",
-            tint = if (listening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            tint = if (recording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
         )
     }
     DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
@@ -216,68 +176,39 @@ fun SpeechToTextButton(
     }
 
     if (dialogOpen) {
-        val preview = remember(transcript, forceFormula) {
-            val r = SpeechMathConverter.convert(transcript)
-            val asFormula = forceFormula ?: r.containsFormula
-            if (asFormula) "\$" + (if (r.containsFormula) r.text.trim('$') else SpeechMathConverter.toLatexOnly(transcript)) + "\$" else r.text
-        }
-        val isFormula = preview.length >= 2 && preview.startsWith("$") && preview.endsWith("$")
         AlertDialog(
-            // پنجره فقط با دکمه‌های خودش بسته می‌شود (نه لمس بیرون / بازگشت).
+            // پنجره فقط با دکمه‌های خودش بسته می‌شود.
             onDismissRequest = {},
             title = { Text(if (language == "fa-IR") "گفتار به متن — فارسی" else "Speech to text — English") },
             text = {
-                Column(
-                    Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // V110 — بدون نوارِ شدتِ صدا و پیام‌های لحظه‌ای: فقط یک وضعیتِ ثابت.
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(
-                            Icons.Outlined.Mic,
-                            contentDescription = null,
-                            tint = if (wantContinuous) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            status ?: if (wantContinuous) (if (processing) "در حال تبدیل…" else "در حال شنیدن… صحبت کنید")
-                            else "متوقف شد — متن را ویرایش و درج کنید",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    if (partial.isNotBlank()) Text("…$partial", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        if (recording) "🔴 در حال ضبط — صحبت کنید؛ هر جمله پس از تشخیص در کادر زیر نوشته می‌شود."
+                        else "ضبط متوقف شد — می‌توانید متن را ویرایش و درج کنید.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     OutlinedTextField(
                         value = transcript,
                         onValueChange = { transcript = it },
                         label = { Text("متن شنیده‌شده (قابل ویرایش)") },
                         modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                        maxLines = 6
+                        minLines = 3,
+                        maxLines = 8
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = !isFormula, onClick = { forceFormula = false }, label = { Text("متن") })
-                        FilterChip(selected = isFormula, onClick = { forceFormula = true }, label = { Text("فرمول") })
-                    }
-                    if (transcript.isNotBlank()) {
-                        Text("نتیجهٔ درج:", style = MaterialTheme.typography.labelMedium)
-                        Text(preview, style = MaterialTheme.typography.bodyMedium)
-                        if (isFormula) Text("فرمول در متن سؤال درج می‌شود؛ با لمس آن می‌توانید در ویرایشگر فرمول ویرایشش کنید.", style = MaterialTheme.typography.bodySmall)
-                    }
                 }
             },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (listening || wantContinuous) {
+                    if (recording) {
                         TextButton(onClick = { stopListening() }) { Text("توقف") }
                     } else {
-                        TextButton(onClick = { wantContinuous = true; startSegment() }) { Text("ادامهٔ ضبط") }
+                        TextButton(onClick = { recording = true; engine.wantContinuous = true; startSegment() }) { Text("ادامهٔ ضبط") }
                     }
                     TextButton(
                         onClick = {
                             stopListening()
-                            if (transcript.isNotBlank()) {
-                                if (isFormula) currentOnFormula(preview.trim('$')) else currentOnText(preview)
-                            }
+                            val out = transcript.trim()
+                            if (out.isNotBlank()) currentOnText(out)
                             closeAll()
                         },
                         enabled = transcript.isNotBlank()
@@ -293,5 +224,21 @@ fun SpeechToTextButton(
             text = { Text(message) },
             confirmButton = { TextButton(onClick = { error = null }) { Text("باشد") } }
         )
+    }
+}
+
+/** وضعیتِ غیر-Compose موتور گفتار (recognizer، زمان‌بندی قطعهٔ بعدی). */
+private class SpeechEngineHolder {
+    var recognizer: SpeechRecognizer? = null
+    @Volatile var wantContinuous: Boolean = false
+    private val handler = Handler(Looper.getMainLooper())
+    fun schedule(delayMs: Long, block: () -> Unit) {
+        handler.removeCallbacksAndMessages(null)
+        handler.postDelayed({ if (wantContinuous) block() }, delayMs)
+    }
+    fun cancelScheduled() = handler.removeCallbacksAndMessages(null)
+    fun release() {
+        runCatching { recognizer?.destroy() }
+        recognizer = null
     }
 }

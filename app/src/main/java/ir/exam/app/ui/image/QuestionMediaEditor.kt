@@ -71,8 +71,7 @@ fun QuestionMediaEditor(
     onRemove: (String) -> Unit,
     onOpenStudio: (() -> Unit)? = null,
     // V108 — میکروفون کنار آیکن تصویر: متن/فرمولِ گفتاری.
-    onSpeechText: ((String) -> Unit)? = null,
-    onSpeechFormula: ((String) -> Unit)? = null
+    onSpeechText: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -136,10 +135,7 @@ fun QuestionMediaEditor(
             Icon(Icons.Outlined.PhotoCamera, contentDescription = "افزودن تصویر متن سؤال")
         }
         if (onSpeechText != null) {
-            ir.exam.app.ui.speech.SpeechToTextButton(
-                onText = onSpeechText,
-                onFormula = onSpeechFormula ?: { tex -> onSpeechText("\$" + tex + "\$") }
-            )
+            ir.exam.app.ui.speech.SpeechToTextButton(onText = onSpeechText)
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
         // V107 — فقط آیکن؛ نوشتهٔ «تصویر» کنار آن حذف شد (درخواست کاربر).

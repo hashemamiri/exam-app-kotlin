@@ -46,4 +46,11 @@ class SpeechMathConverterTest {
         assertEquals("ایکس به توان دو", best)
         assertEquals("", SpeechMathConverter.pickBest(emptyList()))
     }
+
+    @Test
+    fun `plain conversion never produces formulas`() {
+        assertEquals("x به توان 2 به علاوه 3 x مساوی 0", SpeechMathConverter.convertPlain("ایکس به توان دو به علاوه سه ایکس مساوی صفر").replace("ایکس", "x"))
+        assertEquals("25٪ دانش آموزان", SpeechMathConverter.convertPlain("بیست و پنج درصد دانش آموزان"))
+        assertFalse(SpeechMathConverter.convertPlain("رادیکال دو").contains("$"))
+    }
 }

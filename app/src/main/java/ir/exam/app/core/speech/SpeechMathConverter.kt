@@ -172,7 +172,17 @@ object SpeechMathConverter {
     }
 
     // ============================================================ API
-    /** تبدیل کامل گفتار: اعداد و نمادها همیشه؛ عبارت ریاضی فقط اگر نشانهٔ ریاضی داشته باشد. */
+    /**
+     * V111 — مسیرِ تولید: فقط متن. اعدادِ گفتاری → رقم، نمادهای متنی (درصد، درجه،
+     * علامت سؤال…) → علامت؛ **هیچ فرمولی ساخته نمی‌شود** (درخواست کاربر).
+     */
+    fun convertPlain(spoken: String): String {
+        val normalized = correct(spoken)
+        if (normalized.isBlank()) return ""
+        return cleanup(applyAll(convertNumbers(normalized), plainSymbols))
+    }
+
+    /** تبدیل کامل گفتار: اعداد و نمادها همیشه؛ عبارت ریاضی فقط اگر نشانهٔ ریاضی داشته باشد. (در UI استفاده نمی‌شود — V111) */
     fun convert(spoken: String): Result {
         val normalized = correct(spoken)
         if (normalized.isBlank()) return Result("", false)

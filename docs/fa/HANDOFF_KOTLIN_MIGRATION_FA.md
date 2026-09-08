@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V110 درج مستقیم فرمول گفتاری، پنجرهٔ آرام میکروفون، فضای پاسخ جای‌خالی/عددی در چاپ
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V111 میکروفون فقط‌متن و پنجرهٔ کاملاً آرام (حذف تشخیص فرمول صوتی)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17287,4 +17287,26 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 SQL/Edge/Secret/Dependency جدید: ندارد
 تحویل: apply_v110.py (§۱۱)
 شمارهٔ نسخهٔ بعدی: V111
+```
+
+---
+
+## ۳۳۳) V111 — میکروفون فقط‌متن + پنجرهٔ کاملاً آرام (حذف تشخیص فرمول از صدا)
+
+### گزارش کاربر
+پنجرهٔ میکروفون هنوز آرام نبود؛ تشخیص فرمول صوتی به‌کل حذف شود.
+
+### چرا هنوز ناآرام بود
+در V110 هنوز `EXTRA_PARTIAL_RESULTS=true` بود و `onPartialResults` متنِ «…جزئی» را با هر تکه‌صدا به‌روز می‌کرد؛ به‌علاوه `listening/processing/status` state بودند و هر قطعهٔ ۲–۳ ثانیه‌ای recomposition و تغییر متنِ وضعیت می‌داد.
+
+### تغییرات
+- **SpeechToTextButton.kt** (بازنویسی، فقط `onText`): `EXTRA_PARTIAL_RESULTS=false`؛ همهٔ callbackهای لحظه‌ای (`onRmsChanged`, `onPartialResults`, `onReadyForSpeech`, `onEndOfSpeech`) خالی؛ recognizer و زمان‌بندی در کلاس غیر-Compose `SpeechEngineHolder` (بدون state)؛ تنها stateهای UI: `dialogOpen`, `recording`, `transcript`. سکوت/NO_MATCH → بی‌صدا قطعهٔ بعد. n-best (`pickBest`) و اصلاح خطاهای رایج حفظ شد. سکوتِ پایانِ قطعه ۳ ثانیه.
+- **SpeechMathConverter.kt**: `convertPlain()` (اعداد + نمادهای متنی، بدون فرمول) — مسیر تولید. `convert()`/`toLatexOnly()` می‌مانند اما در UI استفاده نمی‌شوند.
+- **QuestionMediaEditor.kt / ExamBuilderScreen.kt**: پارامتر و مسیر `onSpeechFormula` حذف؛ فقط `onSpeechText` (افزودن به انتهای متن سؤال).
+- تست‌ها: `SpeechMathConverterTest` +۱ (`convertPlain` هرگز `$` تولید نمی‌کند) → **OK (5 tests)** با kotlinc؛ `V108_SpeechToTextTest` بازنویسی (۲ تست: فقط متن؛ پنجرهٔ آرام).
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v111.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V112
 ```
