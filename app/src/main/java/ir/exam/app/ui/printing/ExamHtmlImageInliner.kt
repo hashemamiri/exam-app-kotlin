@@ -73,6 +73,26 @@ object ExamHtmlImageInliner {
 
     private suspend fun loadBitmapDataUrl(loader: ImageLoader, url: String, appContext: Context): String? =
         runCatching {
+            // V118 — تصویرِ استودیو از قبل data-URL است: بدون Coil، مستقیم دیکد و
+            // (در صورت بزرگ‌بودن) کوچک می‌شود؛ پیش‌تر Coil آن را نمی‌شناخت و تصویر
+            // به‌کل از چاپ حذف می‌شد.
+            if (ir.exam.app.ui.image.DataUrlFetcher.isDataUrl(url)) {
+                val bytes = ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(url) ?: return null
+                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+                if (maxOf(bounds.outWidth, bounds.outHeight) <= MAX_EDGE && url.startsWith("data:image/jpeg", true)) return url
+                var sample = 1
+                while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_EDGE) sample *= 2
+                val decoded = android.graphics.BitmapFactory.decodeByteArray(
+                    bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                ) ?: return null
+                val scaledData = scaleDown(decoded, MAX_EDGE)
+                val out = java.io.ByteArrayOutputStream()
+                scaledData.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                return "data:image/jpeg;base64," +
+                    android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
+            }
             val request = ImageRequest.Builder(appContext)
                 .data(url)
                 .allowHardware(false)

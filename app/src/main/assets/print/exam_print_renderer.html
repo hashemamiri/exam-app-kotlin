@@ -249,7 +249,9 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 .questions-print-table .question-no-td,.questions-print-table .question-score-td{padding:8px 4px;text-align:center;font-weight:800}
 .question-text{white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:6px}
 .question-main-td[data-align="center"] .question-text{text-align:center}.question-main-td[data-align="left"] .question-text{text-align:left;direction:ltr}.question-main-td[data-align="justify"] .question-text{text-align:justify}.question-main-td[data-bold="true"] .question-text{font-weight:700}.question-main-td[data-italic="true"] .question-text{font-style:italic}.styled-bold{font-weight:800}.styled-italic{font-style:italic}
-.math{display:inline-block;vertical-align:middle;max-width:min(100%,260px);max-height:2.5em;width:auto;height:auto;margin:0 2px}.math-fallback{font-family:serif;direction:ltr;unicode-bidi:isolate;font-size:.95em;color:#1e293b}
+/* V118 — فرمول با فونت ۲۴px رندر می‌شود؛ اینجا به اندازهٔ متن (۱em≈۱۳px) مقیاس می‌گیرد
+   (نسبت ۰٫۵۸) و دیگر با max-height فشرده نمی‌شود، پس کسر/ماتریسِ چندسطری کامل می‌ماند. */
+.math{display:inline-block;vertical-align:middle;max-width:100%;width:auto;height:auto;margin:0 2px;transform-origin:center;zoom:.58}.math-fallback{font-family:serif;direction:ltr;unicode-bidi:isolate;font-size:.95em;color:#1e293b}
 /* ===== شکل‌ها ===== */
 .figure-slot{position:relative;display:inline-block;vertical-align:middle;min-width:42px;min-height:32px;margin:3px 4px;line-height:0}
 .print-figure{position:relative;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;max-width:100%;min-width:42px;min-height:32px;line-height:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
@@ -272,6 +274,7 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 .match-list-preview{margin-top:8px}
 .match-head-row,.match-pair-row{display:grid;grid-template-columns:1fr 16px 30px 16px 1fr;align-items:center;column-gap:6px}
 .match-head-row{margin-bottom:5px;font-weight:900;text-align:center}
+.match-head-row>div{white-space:nowrap}
 .match-pair-row{min-height:28px;line-height:1.7}
 .match-text-right,.match-text-left{text-align:center;white-space:pre-wrap}
 .match-dot{width:10px;height:10px;border:1.5px solid #000;border-radius:50%;display:inline-block;justify-self:center}
@@ -983,7 +986,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
         var alone = body.rows.length === 1 && frame.children.length === 1;
         if (visible < MIN_CUT_PX && !alone) {
           /* جا نمی‌شود: کلِ سطر به برگهٔ بعد */
-          body.removeChild(row); nextPage(); host = tableShell(src, true); cur.frame.appendChild(host); body = host.tBodies[0]; body.appendChild(row);
+          body.removeChild(row); nextPage(); host = tableShell(src, false); cur.frame.appendChild(host); body = host.tBodies[0]; body.appendChild(row);
           if (!overflows(cur.frame)) continue;
           bottom = frameInnerBottom(cur.frame); top = relTop(cur.frame, row); visible = bottom - top;
         }
@@ -991,7 +994,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
         var cut = Math.max(0, visible), remainH = row.offsetHeight - cut;
         while (remainH > 1 && guard++ < 5000) {
           nextPage();
-          var headOnly = tableShell(src, true); headOnly.classList.add('table-head-only'); cur.frame.appendChild(headOnly);
+          /* V118 — سرستون فقط در برگهٔ اول؛ برگه‌های بعد بدون «ردیف/متن سؤال/بارم» */
           var wrap = document.createElement('div'); wrap.className = 'row-continue'; cur.frame.appendChild(wrap);
           var cont = tableShell(src, false); wrap.appendChild(cont);
           var clone = row.cloneNode(true); clone.classList.add('row-part'); cont.tBodies[0].appendChild(clone);
@@ -1034,8 +1037,18 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   }
   function endDrag() {
     if (!activeDrag) return;
+    var kind = activeDrag.kind, figure = activeDrag.figure;
     if (activeDrag.grip) activeDrag.grip.classList.remove('is-dragging');
     activeDrag = null; document.body.classList.remove('dragging');
+    /* V118 — پس از جابه‌جاییِ خطِ جداکننده/شکل، برگه‌ها همان لحظه دوباره صفحه‌بندی
+       می‌شوند (برگهٔ جدید ساخته/حذف می‌شود) بدون نیاز به خروج و ورود. */
+    if (kind === 'separator' || kind === 'move' || kind === 'resize') {
+      var selectedId = figure && figure.dataset ? figure.dataset.questionId + ':' + figure.dataset.figureIndex : null;
+      var y = window.scrollY;
+      render();
+      if (selectedId) { var again = sheet.querySelector('.print-figure[data-question-id="' + selectedId.split(':')[0] + '"][data-figure-index="' + selectedId.split(':')[1] + '"]'); if (again) selectFigure(again); }
+      try { window.scrollTo(0, y); } catch (ignored) {}
+    }
   }
   document.addEventListener('pointermove', moveDrag, {passive:false}); document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
   // WebView قدیمی: رویدادِ لمسِ بومی هم باید لغو شود تا صفحه هنگامِ درگ اسکرول نکند.

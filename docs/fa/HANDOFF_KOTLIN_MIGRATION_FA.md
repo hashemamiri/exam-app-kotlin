@@ -17536,3 +17536,29 @@ Puppeteer: ۱۴ سؤال → ۴ برگه پیش‌نمایش، PDF چاپ هم �
 بریده یک شکلِ اضافه (Puppeteer: ۱۲ سؤال → ۱۶ شکل). **راه‌حل:** در کپی، هر
 `.figure-slot` با یک `.figure-ghost` هم‌اندازهٔ نامرئی جایگزین می‌شود (تا سطربندی
 متن عوض نشود) و `.print-figure`/`.question-sep-drag` حذف می‌شوند (→ ۱۲ شکل).
+
+## ۳۴۵. V118 — هفت اصلاحِ پیش‌نمایش/تصویر
+
+1. **صفحه‌بندیِ زنده:** `endDrag()` پس از جابه‌جاییِ خطِ جداکننده/شکل (`separator|move|resize`)
+   `render()` را دوباره اجرا می‌کند (با حفظ اسکرول و انتخابِ شکل) → برگه‌ها همان لحظه
+   ساخته/حذف می‌شوند (Puppeteer: درگ ۱۴۰۰px → ۳ به ۴ برگه).
+2. **دیلیمترهای چندسطری فشرده:** CSS `.math{max-height:2.5em}` فرمولِ بلند (کسر/ماتریس داخل
+   پرانتز) را له می‌کرد. حذف شد؛ به‌جایش `zoom:.58` (فرمول با ۲۴px رندر می‌شود، متن ~۱۳px)
+   و `max-width:100%`.
+3. **سربرگ بلند:** WebView «اندازهٔ قلمِ سیستم» را روی HTML اعمال می‌کند (textZoom≠100) →
+   سطرهای سربرگ بلندتر از چاپ. `settings.textZoom = 100` در `createExamPrintWebView`.
+   (در Puppeteer سربرگ کلاسیک ۱۶۱px = ۷ سطر ۲۲px؛ یعنی خودِ CSS درست بود.)
+4. **ستون چپِ جورکردنی:** `.match-head-row>div{white-space:nowrap}` تا «ستون چپ» نشکند.
+5. **سرستونِ جدول فقط در برگهٔ اول:** در `paginate` برگه‌های بعد با `tableShell(src,false)`
+   ساخته می‌شوند؛ `table-head-only` حذف شد.
+6. **متنِ راهنمای نوارِ قالب‌بندی** («متن سؤال را انتخاب کنید…») از `PrintPreviewHeader` حذف شد.
+7. **تصویر سیاه بعد از درج:** استودیوی تصویر خروجی را به‌صورت `data:image/jpeg;base64,…`
+   در `question.images[].uri` می‌گذارد؛ Coil 2.7 هیچ Fetcherی برای data-URL ندارد (در Coil
+   3.1 اضافه شد) → `AsyncImage` خطا می‌داد (کاشیِ سیاه) و `ExamHtmlImageInliner` هم
+   تصویر را برای چاپ نمی‌توانست بخواند. راه‌حل: `ui/image/DataUrlFetcher.kt` (Fetcher.Factory<String>
+   که base64 را دیکد و `ImageSource(Buffer, context)` می‌دهد) در `PrivateImageLoader.components`
+   نصب شد؛ `ExamHtmlImageInliner.loadBitmapDataUrl` data-URL را مستقیم (بدون Coil) دیکد/کوچک
+   می‌کند. تست `V75_8PrivateStorageImagesTest` (پین `add(SupabaseAuthImageInterceptor())`) سالم است.
+
+**فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`، `PrivateImageLoader.kt`،
+`DataUrlFetcher.kt` (جدید)، `ExamHtmlImageInliner.kt`. verify PASS. تحویل: `apply_v118.py`.

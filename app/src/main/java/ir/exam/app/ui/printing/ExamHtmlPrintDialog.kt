@@ -490,6 +490,9 @@ internal fun createExamPrintWebView(
     // زوم می‌کند. پنجره‌های بومی دیگر داخلِ HTML نیستند، پس ریزشدنِ V76.2 منتفی است.
     settings.useWideViewPort = true
     settings.loadWithOverviewMode = true
+    // V118 — WebView «اندازهٔ قلمِ سیستم» (دسترس‌پذیری) را روی متنِ HTML اعمال می‌کند
+    // و سربرگ/جدول بلندتر از حالتِ چاپ می‌شد؛ برگهٔ A4 باید مستقل از تنظیمِ گوشی باشد.
+    settings.textZoom = 100
 
     addJavascriptInterface(
         ExamPrintBridge(
@@ -842,7 +845,6 @@ private fun PrintPreviewHeader(
                 }
             }
             FormatChip("پاک") { onFormat("clear", "") }
-            Text("متن سؤال را انتخاب کنید، بعد دکمه را بزنید", style = MaterialTheme.typography.labelSmall, color = Color(0xFF64748B))
         }
     }
 }

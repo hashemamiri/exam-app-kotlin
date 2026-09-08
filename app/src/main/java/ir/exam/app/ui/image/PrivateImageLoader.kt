@@ -11,7 +11,8 @@ import coil.ImageLoader
  */
 object PrivateImageLoader {
     fun create(context: Context): ImageLoader = ImageLoader.Builder(context)
-        .components { add(SupabaseAuthImageInterceptor()) }
+        // V118 — data-URLهای استودیوی تصویر (Coil 2 خودش پشتیبانی نمی‌کند)
+        .components { add(SupabaseAuthImageInterceptor()); add(DataUrlFetcher.Factory()) }
         .respectCacheHeaders(false)
         .build()
 }
