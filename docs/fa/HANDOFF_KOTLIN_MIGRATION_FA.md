@@ -17581,3 +17581,34 @@ Puppeteer: ۱۴ سؤال → ۴ برگه پیش‌نمایش، PDF چاپ هم �
    (`onOpenStudio == null`)؛ پینِ `items(images, key = MediaDraft::id)` دست‌نخورده.
 
 **فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`، `QuestionMediaEditor.kt`.
+
+## ۳۴۷. V123 — خطِ کادرِ متنِ سؤال قابل‌جابه‌جایی در پیش‌نمایش + حذفِ کادرِ چیدمانِ آزادِ تصاویر
+
+1. **خطِ کادرِ متنِ سؤال قابلِ تغییرِ واقعی توسطِ کاربر (درخواستِ کاربر):**
+   مکانیزم از V105/V118 وجود داشت (grip در پایینِ سلولِ اصلیِ سؤال، `sepExtraPx` ۰..۱۵۰۰،
+   صفحه‌بندیِ زندهٔ برگه‌ها در `endDrag`، ماندگاری با
+   `layoutSnapshot → publishFigLayouts → applyFigLayouts → QuestionDraft.sepExtraPx`)،
+   اما دستگیره خطِ ۳px با شفافیت ۱۸٪ و هدفِ لمسِ 14px بود و کاربر آن را پیدا نمی‌کرد.
+   در V123 دستگیره تبدیل شد به **خطِ آبیِ واضحِ تمام‌عرض (5px، #2563eb با 55٪)** +
+   **دستگیرهٔ مرکزیِ کپسولی (34×14px، نماد ≡)** با هدفِ لمسِ 28px (14px بالاتر و پایین‌تر
+   از خط). هنگامِ درگ، خط و دستگیره روشن‌تر می‌شوند. پنهان‌بودن در حالتِ چاپ
+   (`.exam-print-mode` و `@media print`) و `grip-hidden` روی بخش‌هایِ بریده‌شدهٔ سطر
+   دست‌نخورده‌اند. اولینِ باز شدنِ هر پنجرهٔ پیش‌نمایش یک **راهنمای کوتاهِ یک‌باره**
+   (toast محوشوندهٔ ۲٫۶ ثانیه‌ای، پرچمِ حافظه‌ای `sepHintDone`) می‌آید.
+   مدلِ داده، SQL و زنجیرهٔ ماندگاری تغییری نکردند.
+2. **حذفِ کادرِ چیدمانِ آزادِ تصاویر:** قاعدهٔ
+   `.preview-open .figure-slot.free-slot{opacity:1;border:1px dashed #b9c4d3;...}` حذف شد.
+   slotِ تصویری که در پیش‌نمایش «آزاد» جابه‌جا شده حالا مثلِ چاپ در پیش‌نمایش هم
+   نامرئی است (`.figure-slot.free-slot{opacity:0;pointer-events:none}`)؛ تنها وظیفهٔش
+   رزروِ جا در جریانِ متن است (رفتارِ V105: «جای اصلی‌شان در متن رزرو می‌ماند تا خطوط
+   نپرند») — بدونِ هیچ کادری.
+
+**راستی‌آزمایی:** سینتکسِ همهٔ بلوک‌های `<script>` asset با node: ۰ خطا.
+هارنسِ رفتاری (اجرای منبعِ واقعیِ `showPreview`/`sepHintDone` روی stub + شبیه‌سازیِ
+عینِ فرمولِ درگ برای پایین/بالا/خارجِ محدوده): ۱۴/۱۴ PASS.
+`scripts/verify_native_final.py`: PASS (رندرر 116,091 بایت، زیرِ سقفِ 140KB).
+تستِ جدید: `V123_SepGripFreeSlotTest` (۵ تست). CI: `testDebugUnitTest` + `assembleDebug`.
+
+**فایل‌ها:** `app/src/main/assets/print/exam_print_renderer.html`،
+`app/src/test/java/ir/exam/app/ui/app/V123_SepGripFreeSlotTest.kt` (جدید)،
+`scripts/verify_native_final.py`، `text/CHANGELOG_FA.txt`.
