@@ -85,7 +85,13 @@ fun HeaderSettingsDialog(
     onApply: (Map<String, String>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var templateId by remember { mutableStateOf(schema.templates.firstOrNull()?.id ?: "classic") }
+    // V105 — قالبِ ذخیره‌شدهٔ قبلی پیش‌انتخاب می‌شود تا با هر بار بازکردن به «classic» برنگردد.
+    var templateId by remember(currentValues) {
+        mutableStateOf(
+            currentValues["f_headerTemplate"]?.takeIf { saved -> schema.templates.any { it.id == saved } }
+                ?: schema.templates.firstOrNull()?.id ?: "classic"
+        )
+    }
     // نقشهٔ observable — وگرنه تایپ در فیلدها بازسازی نمی‌شود
     val values = remember(currentValues) { mutableStateMapOf<String, String>().apply { putAll(currentValues) } }
     var templateMenu by remember { mutableStateOf(false) }

@@ -1,10 +1,12 @@
 <!doctype html>
 <!--
-  موتور مستقل چاپ و پیش‌نمایش آزمون.
+  موتور مستقل چاپ و پیش‌نمایش آزمون (V105).
   ورودی: window.setExamData(data)
   خروجی‌های عمومی: printStudent، printTeacher و ExamPrintRenderer.
   فرمول‌ها و شکل‌ها با رندررهای بومی از طریق ExamPrintBridge به data URL امن
   تبدیل می‌شوند؛ این فایل عمداً هیچ ابزار ساخت یا ویرایش متن ندارد.
+  V105: هفت قالبِ سربرگِ اصلی، جدولِ «ردیف/متن سؤال/بارم» و حرکتِ کاملاً آزادِ
+  شکل‌ها روی کلِ برگه (بدون اسکرولِ صفحه هنگامِ درگ).
 -->
 <html lang="fa" dir="rtl">
 <head>
@@ -12,35 +14,348 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>پیش‌نمایش چاپ آزمون</title>
 <style>
-:root{color-scheme:light;--ink:#172033;--muted:#56657a;--line:#9ba8b8;--accent:#16697a;--paper:#fff;--screen:#e8edf3}
+:root{color-scheme:light;--ink:#111;--muted:#56657a;--paper:#fff;--screen:#e8edf3}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--screen);color:var(--ink);font-family:Tahoma,"Vazirmatn","Segoe UI",sans-serif}
-body{padding:18px 12px 28px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{padding:18px 12px 28px;-webkit-print-color-adjust:exact;print-color-adjust:exact;overscroll-behavior:contain}
+body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-select:none}
 #screenChrome{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(794px,100%);margin:0 auto 12px;padding:8px 12px;border:1px solid #ced8e2;border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 4px 16px rgba(15,23,42,.10)}
 #screenChrome strong{font-size:13px}
 #screenChrome span{font-size:11px;color:var(--muted)}
 #closePreview{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
 #printSurface{width:100%;overflow:auto;padding:2px 0 18px}
-#sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto;padding:11mm 12mm 13mm;background:var(--paper);box-shadow:0 7px 28px rgba(15,23,42,.24);font-size:13px;line-height:1.85;overflow:hidden}
-.exam-header{border:1.2px solid #26384d;margin-bottom:10px;padding:8px 10px 9px;break-inside:avoid;page-break-inside:avoid}
-.header-main{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;gap:8px;min-height:58px;text-align:center;border-bottom:1px solid #8fa0b3;padding-bottom:6px}
-.header-main img{max-width:66px;max-height:56px;object-fit:contain;justify-self:center}
-.header-title{font-size:14px;font-weight:800;line-height:1.65}.header-subtitle{font-size:11px;font-weight:700;color:#405269}
-.header-template{font-size:10px;color:#64748b;margin-top:2px}
-.header-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid #c5d0dc;border-top:0;margin-top:7px}
-.header-field{min-height:29px;padding:3px 6px;border-top:1px solid #c5d0dc;border-left:1px solid #c5d0dc;font-size:10px;overflow-wrap:anywhere}.header-field:nth-child(3n){border-left:0}.header-field b{color:#31465e}.header-field em{font-style:normal;color:#111827}
-.header-intro{margin-top:7px;padding:5px 7px;border:1px solid #c5d0dc;background:#f8fafc;font-size:10px;white-space:pre-wrap}
-.questions{width:100%}.question{position:relative;break-inside:avoid-page;page-break-inside:avoid;margin:0 0 4px}.question-row{display:grid;grid-template-columns:1fr 40px;border:1px solid #4a5d72;min-height:48px}.question-content{position:relative;min-width:0;padding:7px 9px}.question-score{display:flex;align-items:center;justify-content:center;border-right:1px solid #4a5d72;background:#f2f6fa;color:#233b56;font-size:11px;font-weight:800;text-align:center;padding:4px;line-height:1.45}.question-score small{font-size:9px;font-weight:600;color:#62748a}.question-text{white-space:pre-wrap;overflow-wrap:anywhere}.q-number{font-weight:900;margin-left:5px}.question[data-align="center"] .question-text{text-align:center}.question[data-align="left"] .question-text{text-align:left;direction:ltr}.question[data-align="justify"] .question-text{text-align:justify}.question[data-bold="true"] .question-text{font-weight:700}.question[data-italic="true"] .question-text{font-style:italic}.styled-bold{font-weight:800}.styled-italic{font-style:italic}
+#sheet{position:relative;width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:var(--paper);border:2px solid #000;border-radius:6px;box-shadow:0 7px 28px rgba(15,23,42,.24);font-size:10pt;line-height:1.75;overflow:visible}
+/* ===== سربرگ‌ها — عیناً از آزمون‌سازِ مرجع ===== */
+  /* ===== HEADER TEMPLATE 2 ===== */
+  .exam-header2 {
+    width: 100%; border: 3px solid #000; margin-bottom: 8px; background:#fff;
+     overflow: hidden;
+  }
+  .h2-top {
+    position: relative; display: grid; grid-template-columns: 21% 58% 21%;
+    align-items: center; min-height: 92px; border-bottom: 3px solid #000; direction: ltr;
+  }
+  .h2-chair-box {
+    justify-self: start; margin-left: 8px; width: 195px; max-width: calc(100% - 14px); height: 44px;
+    border: 3px solid #000; display:flex; align-items:center; justify-content:flex-start;
+    padding: 0 12px; font-size: 11pt; font-weight: 700; direction: rtl; text-align: right;
+  }
+  .h2-title-block { text-align:center; direction: rtl; line-height: 1.45; }
+  .h2-bism { font-size: 14pt; font-weight: 800; }
+  .h2-university { font-size: 16pt; font-weight: 900; }
+  .h2-sub { font-size: 10.5pt; font-weight: 600; }
+  .h2-examline { font-size: 11pt; font-weight: 700; }
+  .h2-logo-wrap { justify-self:end; align-self:stretch; display:flex; align-items:center; justify-content:center; padding-left: 8px; padding-right: 12px; }
+  .h2-logo-img { width: 70px; height:auto; }
+  .h2-info-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13pt; font-weight: 900; direction: rtl; }
+  .h2-info-table td { border-top: 3px solid #000; border-left: none; border-right: none; padding: 7px 10px; height: 44px; vertical-align: middle; text-align: right; }
+  .h2-info-table tr:first-child td { border-top: none; }
+  .h2-info-table .h2-label { font-weight: 900; }
+  .h2-info-table .h2-val { font-weight: 700; padding-right: 7px; }
+
+  /* ===== HEADER TEMPLATE 3 - SAMA ===== */
+  .exam-header3 { width:100%; border:3px solid #000; background:#fff; margin-bottom:8px;  overflow:hidden; }
+  .h3-top { position:relative; min-height:72px; border-bottom:3px solid #000; direction:ltr; display:grid; grid-template-columns:15% 70% 15%; align-items:center; padding:4px 10px; }
+  .h3-logo { justify-self:start; align-self:start; width:48px; height:auto; max-height:64px; object-fit:contain; display:block; }
+  .h3-title { text-align:center; direction:rtl; line-height:1.22; align-self:center; }
+  .h3-bism { font-size:10.5pt; font-weight:800; margin-bottom:1px; }
+  .h3-quote { display:inline-block; border:2px solid #000; border-radius:8px; padding:3px 14px; font-size:10.5pt; font-weight:900; margin:1px 0 4px; min-width:62%; }
+  .h3-unit { font-size:10.8pt; font-weight:900; }
+  .h3-office-row { display:flex; gap:38px; justify-content:center; font-size:9.8pt; font-weight:800; margin-top:1px; }
+  .h3-info { width:100%; border-collapse:collapse; table-layout:fixed; direction:rtl; font-size:9.8pt; font-weight:800; }
+  .h3-info td { border-top:3px solid #000; padding:3px 8px; vertical-align:middle; text-align:right; }
+  .h3-info tr:first-child td { border-top:none; }
+  .h3-side { width:11.5%; border-left:3px solid #000; text-align:center !important; font-weight:900; line-height:1.35; font-size:9.5pt; }
+  .h3-main { width:88.5%; line-height:1.55; }
+  .h3-line { display:flex; flex-wrap:wrap; gap:14px; align-items:baseline; }
+  .h3-item { white-space:nowrap; }
+  .h3-label { font-weight:900; }
+  .h3-val { display:inline-block; min-width:70px; border-bottom:none; padding:0 6px 0; text-align:center; font-weight:700; }
+  .h3-val.long { min-width:155px; }
+  .h3-val.med { min-width:110px; }
+
+  /* ===== HEADER TEMPLATE 4 - SCHOOL ===== */
+  .exam-header4 { width:100%; background:#fff;  margin-bottom:8px; }
+  .h4-topline { position:relative; min-height:30px; text-align:center; font-size:14pt; font-weight:900; line-height:30px; }
+  .h4-page { position:absolute; left:58px; top:0; font-size:9.5pt; font-weight:700; }
+  .h4-table { width:100%; border-collapse:collapse; table-layout:fixed; direction:rtl; border:2.5px solid #000; font-size:12pt; font-weight:700; }
+  .h4-table td { border:1.8px solid #000; padding:4px 10px; height:34px; vertical-align:middle; text-align:right; line-height:1.45; }
+  .h4-right { width:40%; }
+  .h4-center { width:29%; text-align:center !important; font-size:13pt; font-weight:800; }
+  .h4-left { width:31%; }
+  .h4-school { font-size:15pt; font-weight:900; }
+  .h4-label { font-weight:900; }
+  .h4-val { display:inline-block; min-width:80px; border-bottom:none; padding:0 6px; text-align:center; font-weight:700; }
+  .h4-val.long { min-width:210px; }
+  .h4-val.med { min-width:135px; }
+  .h4-datebox { display:inline-block; min-width:82px; border-bottom:2px solid #000; text-align:center; font-weight:900; margin-right:8px; }
+  .h4-note-label { display:inline-block; border-bottom:1.8px solid #000; font-weight:900; }
+
+  /* ===== HEADER TEMPLATE 5 - EDUCATION OFFICE ===== */
+  .exam-header5 { width:100%; border:2.5px solid #000; background:#fff; margin-bottom:8px;  overflow:hidden; }
+  .h5-top { display:grid; grid-template-columns:30% 40% 30%; direction:rtl; min-height:210px; padding:10px 12px 6px; align-items:start; }
+  .h5-col { font-size:12.5pt; font-weight:700; line-height:2.05; }
+  .h5-right { text-align:right; padding-right:4px; }
+  .h5-left { text-align:right; padding-right:28px; }
+  .h5-center { text-align:center; font-size:13.5pt; font-weight:700; line-height:1.9; padding-top:0; }
+  .h5-bism { font-size:13pt; font-weight:800; margin-bottom:6px; }
+  .h5-seal { margin-top:4px; }
+  .h5-page { margin-top:18px; text-align:left; padding-left:4px; }
+  .h5-label { font-weight:800; }
+  .h5-val { display:inline-block; min-width:135px; border-bottom:none; padding:0 6px; text-align:center; font-weight:700; }
+  .h5-val.short { min-width:78px; }
+  .h5-val.med { min-width:110px; }
+  .h5-val.long { min-width:175px; }
+  .h5-bottom { width:100%; border-collapse:collapse; table-layout:fixed; direction:rtl; border-top:2.5px solid #000; font-size:12pt; font-weight:700; }
+  .h5-bottom td { border-left:2px solid #000; padding:8px 12px; height:98px; vertical-align:top; text-align:right; line-height:2; }
+  .h5-bottom td:last-child { border-left:none; }
+  .h5-vertical { width:4.2%; writing-mode:vertical-rl; text-orientation:mixed; text-align:center !important; vertical-align:middle !important; padding:4px !important; font-weight:800; }
+  .h5-sign { width:45.8%; }
+  .h5-sign-row { display:flex; justify-content:space-between; gap:28px; margin-bottom:4px; }
+
+  /* ===== HEADER TEMPLATE 6 - DETAILED SCHOOL WITH GRADERS ===== */
+  .exam-header6 { width:100%; border:3px double #000; background:#fff; margin-bottom:8px;  overflow:hidden; }
+  .h6-top { width:100%; border-collapse:collapse; table-layout:fixed; direction:rtl; font-size:11.5pt; font-weight:700; }
+  .h6-top td { border:1px solid #e5d8c2; padding:4px 10px; height:31px; vertical-align:middle; text-align:right; line-height:1.35; }
+  .h6-right { width:32%; }
+  .h6-center { width:34%; text-align:center !important; font-size:12.5pt; }
+  .h6-left { width:34%; }
+  .h6-bism { font-weight:800; font-size:12pt; }
+  .h6-school { font-size:14pt; font-weight:900; }
+  .h6-bold { font-weight:900; }
+  .h6-label { font-weight:800; }
+  .h6-val { display:inline-block; min-width:130px; border-bottom:none; padding:0 5px; text-align:center; font-weight:700; }
+  .h6-val.short { min-width:65px; }
+  .h6-val.med { min-width:100px; }
+  .h6-val.long { min-width:190px; }
+  .h6-correct { width:100%; border-collapse:collapse; table-layout:fixed; direction:rtl; border-top:3px solid #000; font-size:11.5pt; font-weight:700; }
+  .h6-correct td { border:2px solid #000; padding:5px 8px; height:32px; vertical-align:middle; text-align:right; line-height:1.4; }
+  .h6-correct .h6-title { text-align:center !important; font-weight:900; font-size:12.5pt; height:32px; }
+  .h6-correct .h6-small { height:28px; }
+  .h6-final { width:100%; border-collapse:collapse; table-layout:fixed; direction:rtl; border-top:none; font-size:12.5pt; font-weight:900; }
+  .h6-final td { border:2px solid #000; padding:5px 8px; height:34px; text-align:center; vertical-align:middle; }
+  .h6-final .h6-rownum { width:6.5%; }
+  .h6-final .h6-barem { width:7.5%; }
+  .h6-final .h6-questions { width:86%; }
+
+  /* ===== HEADER TEMPLATE 7 - MINISTRY OF EDUCATION ===== */
+  .exam-header7 { width:100%; border:3px double #000; background:#fff; margin-bottom:8px;  overflow:hidden; }
+  .h7-wrap { display:grid; grid-template-columns:31% 38% 31%; direction:rtl; align-items:center; min-height:185px; padding:10px 14px; }
+  .h7-col { font-size:13.5pt; font-weight:700; line-height:2.25; }
+  .h7-right { text-align:right; }
+  .h7-left { text-align:right; padding-right:22px; }
+  .h7-center { text-align:center; font-size:15pt; font-weight:700; line-height:1.95; }
+  .h7-emblem { width:62px; height:auto; display:block; margin:0 auto 4px; }
+  .h7-school { font-size:15.5pt; font-weight:800; }
+  .h7-label { font-weight:800; }
+  .h7-val { display:inline-block; min-width:150px; border-bottom:none; padding:0 6px; text-align:center; font-weight:700; }
+  .h7-val.short { min-width:85px; }
+  .h7-val.med { min-width:125px; }
+  .h7-val.long { min-width:185px; }
+
+  /* ===== COMPACT EXACT HEADER (half height) ===== */
+  .exam-header {
+    width: 100%;
+    border: 2.5px solid #000;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-bottom: 0;
+    font-size: 10pt;
+  }
+  .exam-header td {
+    border: 1.5px solid #000;
+    padding: 2px 8px;
+    vertical-align: middle;
+    font-weight: 700;
+    line-height: 1.3;
+    height: 22px;
+  }
+  .right-cell { width: 34%; text-align: right; padding-right: 10px; }
+  .left-cell { width: 34%; text-align: right; padding-right: 10px; padding-left: 6px; direction: rtl; }
+  .center-cell { width: 32%; text-align: center; vertical-align: middle; padding: 2px 4px; }
+  .logo-cell { padding: 2px; background: #fff; }
+  .uni-name { font-size: 11pt; font-weight: 900; margin: 0; }
+  .branch-name { font-size: 10.5pt; font-weight: 900; margin: 0; }
+  .grades-date-row td {
+    text-align: center; font-weight: 700; font-size: 10pt; padding: 3px 8px; height: 22px;
+  }
+  .scores-table {
+    width: 100%;
+    border: 2.5px solid #000;
+    border-top: none;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-bottom: 8px;
+    font-size: 10pt;
+  }
+  .scores-table td {
+    border: 1.5px solid #000;
+    padding: 6px 6px;
+    text-align: center;
+    font-weight: 700;
+    vertical-align: middle;
+    height: 28px;
+  }
+  .iau-logo { display: block; margin: 0 auto; width: 60px; height: auto; }
+
+  .exam-intro { font-size: 10pt; margin: 8px 0; text-align: center; }
+/* ===== جدول سؤال‌ها (ردیف / متن سؤال / بارم) ===== */
+.questions-print-table{width:100%;margin:0;border-collapse:collapse;table-layout:fixed;direction:rtl}
+.questions-print-table thead{display:table-row-group}
+.questions-print-table th,.questions-print-table td{border:1px solid #000;vertical-align:top}
+.questions-print-table tr{break-inside:avoid;page-break-inside:avoid}
+.questions-print-table th{text-align:center;font-weight:900;min-height:46px;padding:5px 7px}
+.questions-print-table .qno-col,.questions-print-table .qscore-col{width:6%;text-align:center}
+.questions-print-table .qmain-col{width:88%}
+.questions-print-table .qno-head,.questions-print-table .qscore-head{writing-mode:vertical-rl;text-orientation:mixed}
+.questions-print-table .question-main-td{position:relative;padding:8px 10px;line-height:1.75}
+.questions-print-table .question-no-td,.questions-print-table .question-score-td{padding:8px 4px;text-align:center;font-weight:800}
+.question-text{white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:6px}
+.question-main-td[data-align="center"] .question-text{text-align:center}.question-main-td[data-align="left"] .question-text{text-align:left;direction:ltr}.question-main-td[data-align="justify"] .question-text{text-align:justify}.question-main-td[data-bold="true"] .question-text{font-weight:700}.question-main-td[data-italic="true"] .question-text{font-style:italic}.styled-bold{font-weight:800}.styled-italic{font-style:italic}
 .math{display:inline-block;vertical-align:middle;max-width:min(100%,260px);max-height:2.5em;width:auto;height:auto;margin:0 2px}.math-fallback{font-family:serif;direction:ltr;unicode-bidi:isolate;font-size:.95em;color:#1e293b}
-.figure-slot{position:relative;display:inline-block;vertical-align:middle;min-width:42px;min-height:32px;margin:3px 4px;line-height:0}.print-figure{position:relative;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;max-width:100%;min-width:42px;min-height:32px;line-height:0;touch-action:pan-y;user-select:none;-webkit-user-select:none}.print-figure>img{display:block;max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:transparent}.print-figure.free{position:absolute;z-index:5;max-width:none;background:transparent}.print-figure.selected{outline:2px solid #0f766e;outline-offset:3px;z-index:8}.figure-handle{display:none;position:absolute;left:-8px;bottom:-8px;width:18px;height:18px;border:2px solid #fff;border-radius:50%;background:#0f766e;color:#fff;font:700 12px/13px sans-serif;text-align:center;cursor:nwse-resize;z-index:9}.preview-open .print-figure:hover .figure-handle,.preview-open .print-figure.selected .figure-handle{display:block}.figure-caption{display:block;line-height:1.25;text-align:center;font-size:8px;color:#64748b;margin-top:2px}.options{display:grid;gap:3px;margin:6px 2px 1px}.options.two-columns{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:13px}.option{padding:1px 3px;white-space:pre-wrap;overflow-wrap:anywhere}.option .letter{display:inline-block;min-width:18px;font-weight:800;color:#1f3349}.option.correct{background:#e7f8eb;border-radius:4px}.matching{width:100%;border-collapse:collapse;margin:7px 0 2px;font-size:11px}.matching td,.matching th{border:1px solid #7b8da2;padding:3px 5px;vertical-align:top;white-space:pre-wrap}.matching th{background:#eef4f8}.answer-lines{margin:7px 3px 0}.answer-line{height:20px;border-bottom:1px dotted #8192a5}.answer-line.plain{border-bottom:0}.answer-key{margin:6px 2px 1px;padding:3px 6px;border-right:3px solid #16803c;background:#effbf1;color:#155b2e;font-size:11px;white-space:pre-wrap}.question-separator{position:relative;height:4px;margin:4px 0 0;border-top:1px dashed #90a0b0}.separator-handle{display:none;position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:24px;height:17px;border:1px solid #b8c4d0;border-radius:8px;background:#fff;color:#47627b;font:700 11px/15px sans-serif;text-align:center;cursor:ns-resize;z-index:10}.preview-open .separator-handle{display:block}.exam-footer{display:flex;justify-content:space-between;gap:16px;margin-top:12px;padding-top:5px;border-top:1px solid #7d8c9e;font-size:10px;color:#34465b;white-space:pre-wrap}.empty{padding:38px 12px;text-align:center;color:#64748b;font-size:13px}
-body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible}.exam-print-mode #sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .separator-handle{display:none!important}
-@media screen and (max-width:760px){body{padding:8px 0 18px}#screenChrome{width:calc(100% - 16px)}#sheet{transform-origin:top center;box-shadow:none}.header-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.header-field:nth-child(3n){border-left:1px solid #c5d0dc}.header-field:nth-child(2n){border-left:0}.options.two-columns{grid-template-columns:1fr}.header-main{grid-template-columns:50px 1fr 50px}.header-main img{max-width:48px;max-height:46px}}
-@media print{@page{size:A4;margin:10mm}html,body{background:#fff!important}body{padding:0!important}#screenChrome{display:none!important}#printSurface{overflow:visible!important;padding:0!important}#sheet{width:auto!important;min-height:0!important;margin:0!important;padding:0!important;box-shadow:none!important}.question{break-inside:avoid-page;page-break-inside:avoid}.print-figure{cursor:default!important}.print-figure.selected{outline:0!important}.exam-header{break-inside:avoid-page;page-break-inside:avoid}}
+/* ===== شکل‌ها ===== */
+.figure-slot{position:relative;display:inline-block;vertical-align:middle;min-width:42px;min-height:32px;margin:3px 4px;line-height:0}
+.print-figure{position:relative;display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;max-width:100%;min-width:42px;min-height:32px;line-height:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.print-figure>img{display:block;max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;background:transparent;pointer-events:none;-webkit-user-drag:none}
+.print-figure.free{position:absolute;z-index:5;max-width:none;background:transparent}
+.figure-slot.free-slot{opacity:0;pointer-events:none}
+.preview-open .figure-slot.free-slot{opacity:1;border:1px dashed #b9c4d3;border-radius:4px}
+.print-figure.selected{outline:2px solid #0f766e;outline-offset:3px;z-index:8}
+.figure-handle{display:none;position:absolute;left:-9px;bottom:-9px;width:22px;height:22px;border:2px solid #fff;border-radius:50%;background:#0f766e;color:#fff;font:700 12px/17px sans-serif;text-align:center;cursor:nwse-resize;z-index:9;touch-action:none}
+.preview-open .print-figure:hover .figure-handle,.preview-open .print-figure.selected .figure-handle{display:block}
+/* ===== گزینه‌ها / پاسخ ===== */
+.options{display:grid;gap:3px 20px;margin:2px 18px 1px 2px;line-height:1.7}
+.options.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.options.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.options.cols-1{grid-template-columns:1fr}
+.option{white-space:pre-wrap;overflow-wrap:anywhere}
+.choice-mark{display:inline-block;width:11px;height:11px;border:1.5px solid #000;border-radius:50%;margin-left:6px;vertical-align:middle}
+.option .letter{font-weight:700;margin-left:6px}
+.option.correct .letter{color:#166534}
+.option.correct .tick{color:#166534;font-weight:900;margin-right:4px}
+.teacher-answer{margin-top:5px;color:#166534;font-weight:800;font-size:9.5pt;white-space:pre-wrap}
+.match-list-preview{margin-top:8px}
+.match-head-row,.match-pair-row{display:grid;grid-template-columns:1fr 16px 30px 16px 1fr;align-items:center;column-gap:6px}
+.match-head-row{margin-bottom:5px;font-weight:900;text-align:center}
+.match-pair-row{min-height:28px;line-height:1.7}
+.match-text-right,.match-text-left{text-align:center;white-space:pre-wrap}
+.match-dot{width:10px;height:10px;border:1.5px solid #000;border-radius:50%;display:inline-block;justify-self:center}
+.answer-space{margin-right:18px;margin-top:2px;margin-bottom:8px}
+.answer-line-row{height:28px;border-bottom:1px dotted #555}
+.answer-space.plain{min-height:28px}
+.answer-key-box{margin-top:18px;break-inside:avoid;page-break-inside:avoid}
+.answer-key-box h3{font-size:12pt;margin:0 0 6px;text-align:center}
+.answer-key-box table{width:100%;border-collapse:collapse;font-size:9.5pt}
+.answer-key-box td,.answer-key-box th{border:1px solid #000;padding:5px 7px;text-align:center}
+/* ===== جداکنندهٔ قابل‌جابه‌جایی ===== */
+.question-sep-cell-pad{height:0;line-height:0;font-size:0;pointer-events:none}
+.question-sep-drag{display:none;position:absolute;left:-1px;right:-1px;bottom:-7px;height:14px;z-index:12;cursor:ns-resize;align-items:center;justify-content:center;touch-action:none}
+.preview-open .question-sep-drag{display:flex}
+.question-sep-drag::before{content:"";display:block;width:100%;height:3px;border-radius:999px;background:rgba(37,99,235,.18)}
+.question-sep-drag.is-dragging::before{background:rgba(37,99,235,.85);box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+.exam-footer{margin-top:20px;text-align:center;font-size:9pt;color:#555;padding-top:6px;white-space:pre-wrap}
+.empty{padding:38px 12px;text-align:center;color:#64748b;font-size:13px}
+body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible}.exam-print-mode #sheet{width:auto;min-height:0;margin:0;border-radius:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .question-sep-drag{display:none!important}
+@media screen and (max-width:760px){body{padding:8px 0 18px}#screenChrome{width:calc(100% - 16px)}#sheet{box-shadow:none}}
+@media print{
+  @page{size:A4;margin:5mm}
+  html,body{background:#fff!important}body{padding:0!important;font-size:10pt}
+  #screenChrome{display:none!important}#printSurface{overflow:visible!important;padding:0!important}
+  #sheet{width:200mm!important;min-height:287mm!important;margin:0 auto!important;padding:3mm!important;box-shadow:none!important;border:2px solid #000!important;border-radius:0!important}
+  .print-figure{cursor:default!important}.print-figure.selected{outline:0!important}
+  .figure-handle,.question-sep-drag{display:none!important}
+  .figure-slot.free-slot{border:0!important;opacity:0!important}
+  .questions-print-table{width:100%!important;margin:0!important}
+  .questions-print-table thead{display:table-row-group!important}
+  .questions-print-table th{min-height:38px!important;padding:3px 5px!important}
+  .questions-print-table .question-main-td{padding:5px 7px!important;line-height:1.55!important}
+  .questions-print-table .question-no-td,.questions-print-table .question-score-td{padding:5px 3px!important;font-size:9.5pt!important}
+  .match-head-row,.match-pair-row{grid-template-columns:1fr 14px 22px 14px 1fr!important;column-gap:4px!important}
+  .match-pair-row{min-height:22px!important}.match-dot{width:8px!important;height:8px!important}
+  .choice-mark{width:9px!important;height:9px!important;margin-left:5px!important}
+    .page-number-footer.show::after { content: "صفحه " counter(page) " از " counter(pages); }
+
+    .exam-header { font-size: 9.5pt; border: 2px solid #000 !important; }
+    .exam-header td { padding: 2px 8px; line-height: 1.25; border: 1px solid #000 !important; height: 20px; }
+    .uni-name { font-size: 10.5pt; }
+    .branch-name { font-size: 10pt; }
+    .iau-logo { width: 55px !important; height: auto; }
+    .exam-header2 { border: 2px solid #000 !important; margin-bottom: 6px !important; }
+    .h2-top { min-height: 72px !important; border-bottom: 2px solid #000 !important; }
+    .h2-chair-box { height: 34px !important; border: 2px solid #000 !important; font-size: 9pt !important; width: 155px !important; padding: 0 8px !important; }
+    .h2-bism { font-size: 11pt !important; }
+    .h2-university { font-size: 13pt !important; }
+    .h2-sub { font-size: 8.8pt !important; }
+    .h2-examline { font-size: 9.2pt !important; }
+    .h2-logo-img { width: 55px !important; }
+    .h2-info-table { font-size: 10.5pt !important; }
+    .h2-info-table td { height: 32px !important; padding: 4px 8px !important; border-top: 2px solid #000 !important; }
+
+    .exam-header3 { border:2px solid #000 !important; margin-bottom:6px !important; }
+    .h3-top { min-height:58px !important; border-bottom:2px solid #000 !important; padding:3px 8px !important; }
+    .h3-logo { width:38px !important; max-height:52px !important; object-fit:contain !important; }
+    .h3-bism { font-size:8.8pt !important; margin-bottom:1px !important; }
+    .h3-quote { font-size:8.8pt !important; padding:2px 10px !important; border:1.5px solid #000 !important; border-radius:6px !important; margin-bottom:3px !important; }
+    .h3-unit { font-size:9pt !important; }
+    .h3-office-row { font-size:8.2pt !important; gap:24px !important; }
+    .h3-info { font-size:8.4pt !important; }
+    .h3-info td { border-top:2px solid #000 !important; padding:2px 6px !important; }
+    .h3-side { border-left:2px solid #000 !important; font-size:8pt !important; line-height:1.3 !important; }
+    .h3-main { line-height:1.45 !important; }
+    .h3-val { min-width:55px !important; border-bottom:none !important; }
+    .h3-val.long { min-width:115px !important; }
+    .h3-val.med { min-width:82px !important; }
+
+    .h4-topline { min-height:22px !important; line-height:22px !important; font-size:11pt !important; }
+    .h4-page { left:42px !important; font-size:8pt !important; }
+    .h4-table { border:2px solid #000 !important; font-size:9.2pt !important; }
+    .h4-table td { border:1px solid #000 !important; padding:2px 7px !important; height:24px !important; line-height:1.25 !important; }
+    .h4-center { font-size:9.8pt !important; }
+    .h4-school { font-size:11.5pt !important; }
+    .h4-val { min-width:55px !important; border-bottom:none !important; padding:0 4px !important; }
+    .h4-val.long { min-width:145px !important; }
+    .h4-val.med { min-width:95px !important; }
+    .h4-datebox { min-width:60px !important; border-bottom:1px solid #000 !important; }
+
+    .exam-header5 { border:2px solid #000 !important; margin-bottom:6px !important; }
+    .h5-top { min-height:150px !important; padding:7px 9px 4px !important; }
+    .h5-col { font-size:9.5pt !important; line-height:1.75 !important; }
+    .h5-left { padding-right:18px !important; }
+    .h5-center { font-size:10.5pt !important; line-height:1.65 !important; }
+    .h5-bism { font-size:10.5pt !important; margin-bottom:3px !important; }
+    .h5-page { margin-top:10px !important; }
+    .h5-val { min-width:95px !important; border-bottom:none !important; padding:0 4px !important; }
+    .h5-val.short { min-width:55px !important; }
+    .h5-val.med { min-width:75px !important; }
+    .h5-val.long { min-width:125px !important; }
+    .h5-bottom { border-top:2px solid #000 !important; font-size:9.5pt !important; }
+    .h5-bottom td { border-left:1px solid #000 !important; padding:5px 8px !important; height:70px !important; line-height:1.7 !important; }
+    .h5-bottom td:last-child { border-left:none !important; }
+    .h5-vertical { padding:3px !important; }
+
+    .exam-header6 { border:2px double #000 !important; margin-bottom:6px !important; }
+    .h6-top { font-size:9pt !important; }
+    .h6-top td { padding:2px 7px !important; height:23px !important; line-height:1.22 !important; }
+    .h6-center { font-size:9.6pt !important; }
+    .h6-bism { font-size:9.2pt !important; }
+    .h6-school { font-size:10.8pt !important; }
+    .h6-val { min-width:88px !important; border-bottom:none !important; padding:0 3px !important; }
+    .h6-val.short { min-width:45px !important; }
+    .h6-val.med { min-width:68px !important; }
+    .h6-val.long { min-width:130px !important; }
+    .h6-correct { border-top:2px solid #000 !important; font-size:9pt !important; }
+    .h6-correct td { border:1px solid #000 !important; padding:3px 5px !important; height:24px !important; line-height:1.25 !important; }
+    .h6-correct .h6-title { font-size:9.6pt !important; height:24px !important; }
+    .h6-correct .h6-small { height:22px !important; }
+    .h6-final { font-size:9.8pt !important; }
+    .h6-final td { border:1px solid #000 !important; padding:3px 5px !important; height:24px !important; }
+
+    .exam-header7 { border:2px double #000 !important; margin-bottom:6px !important; }
+    .h7-wrap { min-height:135px !important; padding:7px 10px !important; }
+}
 </style>
 </head>
 <body>
 <div id="screenChrome" class="screen-only">
-  <div><strong>پیش‌نمایش برگهٔ A4</strong><br><span>برای جابه‌جایی شکل، آن را بکشید؛ برای تغییر خود شکل، دوبار لمس کنید.</span></div>
+  <div><strong>پیش‌نمایش برگهٔ A4</strong><br><span>شکل را بکشید تا هرجای برگه ببرید؛ دستگیرهٔ گوشه = تغییر اندازه؛ دوبار لمس = ویرایش شکل.</span></div>
   <button id="closePreview" type="button">بستن</button>
 </div>
 <main id="printSurface" aria-live="polite"><article id="sheet"></article></main>
@@ -50,16 +365,8 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   var TEMPLATE_FIELDS = {"classic":["f_name","f_studentId","f_professor","f_course","f_department","f_examType","f_branch","f_studentCount","f_examDate","f_examTime","f_duration","f_tools","f_sheets","f_gradesDate","f_intro"],"formal":["h2_branch","h2_chair","h2_area","h2_examLine","h2_name","h2_studentId","h2_major","h2_degree","h2_course","h2_professor","h2_examDate","h2_duration","h2_totalScore","h2_tools","h2_intro"],"sama":["h3_unit","h3_office","h3_semester","h3_quote","h3_course","h3_professor","h3_examDate","h3_examTime","h3_duration","h3_name","h3_studentId","h3_degree","h3_major","h3_chair","h3_intro"],"school":["h4_page","h4_examTurn","h4_course","h4_educationOffice","h4_schoolName","h4_schoolYear","h4_examDay","h4_examDate","h4_duration","h4_startTime","h4_name","h4_father","h4_class","h4_note","h4_intro"],"edu":["h5_firstName","h5_lastName","h5_father","h5_course","h5_page","h5_examTurn","h5_grade","h5_branch","h5_examDate","h5_startTime","h5_duration","h5_generalOffice","h5_assessment","h5_districtOffice","h5_schoolName","h5_intro"],"detailed-school":["h6_name","h6_family","h6_father","h6_studentNo","h6_course","h6_educationOffice","h6_schoolName","h6_sealText","h6_grade","h6_branch","h6_examDate","h6_examTime","h6_duration","h6_pageCount","h6_pageNumber","h6_intro"],"ministry":["h7_name","h7_family","h7_father","h7_course","h7_examDate","h7_duration","h7_grade","h7_major","h7_ministry","h7_generalOffice","h7_districtOffice","h7_schoolName","h7_intro","opt_footerText"]};
   var HEADER_LABELS = {"f_name":"نام و نام خانوادگی:","f_studentId":"شماره دانشجویی:","f_professor":"استاد:","f_course":"نام درس:","f_department":"گروه آموزشی:","f_examType":"نوع امتحان:","f_branch":"واحد:","f_studentCount":"تعداد دانشجو:","f_examDate":"تاریخ امتحان:","f_examTime":"ساعات برگزاری امتحان:","f_duration":"مدت زمان امتحان:","f_tools":"وسایل مجاز:","f_sheets":"تعداد برگ سفید لازم:","f_gradesDate":"تاریخ اعلام نمرات:","f_intro":"توضیحات آغاز آزمون:","h2_branch":"واحد:","h2_chair":"شماره صندلی:","h2_area":"حوزه:","h2_examLine":"عنوان آزمون/نیمسال:","h2_name":"نام و نام خانوادگی:","h2_studentId":"شماره دانشجویی:","h2_major":"رشته:","h2_degree":"مقطع:","h2_course":"نام درس:","h2_professor":"نام استاد:","h2_examDate":"تاریخ امتحان:","h2_duration":"مدت امتحان:","h2_totalScore":"مجموع بارم نمره:","h2_tools":"وسایل مجاز در امتحان:","h2_intro":"توضیحات آغاز آزمون:","h3_unit":"نام آموزشکده/واحد:","h3_office":"اداره/دایره:","h3_semester":"نیمسال:","h3_quote":"حدیث/عبارت بالای سربرگ:","h3_course":"نام درس:","h3_professor":"نام استاد:","h3_examDate":"تاریخ برگزاری امتحان:","h3_examTime":"ساعت برگزاری امتحان:","h3_duration":"مدت زمان لازم جهت پاسخگویی:","h3_name":"نام و نام خانوادگی:","h3_studentId":"شماره دانشجویی:","h3_degree":"مقطع:","h3_major":"رشته تحصیلی:","h3_chair":"شماره صندلی:","h3_intro":"توضیحات آغاز آزمون:","h4_page":"صفحه:","h4_examTurn":"نوبت امتحان:","h4_course":"نام درس:","h4_educationOffice":"مدیریت آموزش و پرورش:","h4_schoolName":"نام مدرسه:","h4_schoolYear":"ماه امتحان / سال تحصیلی:","h4_examDay":"تاریخ امتحان - روز:","h4_examDate":"تاریخ امتحان - مورخه:","h4_duration":"مدت امتحان:","h4_startTime":"زمان شروع:","h4_name":"نام و نام خانوادگی:","h4_father":"نام پدر:","h4_class":"کلاس / پایه / رشته:","h4_note":"توجه:","h4_intro":"توضیحات آغاز آزمون:","h5_firstName":"نام:","h5_lastName":"نام خانوادگی:","h5_father":"نام پدر:","h5_course":"نام درس:","h5_page":"صفحه:","h5_examTurn":"نوبت امتحانی:","h5_grade":"پایه:","h5_branch":"شعبه:","h5_examDate":"تاریخ امتحان:","h5_startTime":"ساعت شروع:","h5_duration":"مدت امتحان:","h5_generalOffice":"اداره کل:","h5_assessment":"عنوان سنجش:","h5_districtOffice":"اداره آموزش و پرورش:","h5_schoolName":"نام آموزشگاه:","h5_intro":"توضیحات آغاز آزمون:","h6_name":"نام:","h6_family":"نام خانوادگی:","h6_father":"نام پدر:","h6_studentNo":"شماره دانش‌آموزی:","h6_course":"نام درس:","h6_educationOffice":"مدیریت آموزش و پرورش:","h6_schoolName":"نام آموزشگاه:","h6_sealText":"متن محل مهر:","h6_grade":"پایه:","h6_branch":"شعبه:","h6_examDate":"تاریخ امتحان:","h6_examTime":"ساعت برگزاری:","h6_duration":"مدت امتحان:","h6_pageCount":"تعداد صفحه:","h6_pageNumber":"شماره صفحه:","h6_intro":"توضیحات آغاز آزمون:","h7_name":"نام:","h7_family":"نام خانوادگی:","h7_father":"نام پدر:","h7_course":"نام درس:","h7_examDate":"تاریخ امتحان:","h7_duration":"مدت امتحان:","h7_grade":"پایه:","h7_major":"رشته:","h7_ministry":"عنوان وزارت:","h7_generalOffice":"اداره کل:","h7_districtOffice":"مدیریت:","h7_schoolName":"نام مدرسه:","h7_intro":"توضیحات آغاز آزمون:","opt_footerText":"متن پایین صفحه / موفق باشید:","documentTitle":"عنوان آزمون","totalScore":"بارم کل","course":"نام درس","examDate":"تاریخ امتحان","duration":"مدت زمان"};
   var TEMPLATE_LABELS = {"classic":"سربرگ ۱ - قالب قبلی دانشگاه آزاد","formal":"سربرگ ۲ - قالب بسمه تعالی / اداره امتحانات","sama":"سربرگ ۳ - قالب آموزشکده سما","school":"سربرگ ۴ - قالب آموزش و پرورش / مدرسه","edu":"سربرگ ۵ - قالب اداره کل آموزش و پرورش","detailed-school":"سربرگ ۶ - قالب مدیریت آموزش و پرورش / مصحح","ministry":"سربرگ ۷ - قالب وزارت آموزش و پرورش"};
-  var TEMPLATE_META = {
-    classic:{title:'دانشگاه آزاد اسلامی',logo:'/print/logos/logo_azad.png'},
-    formal:{title:'بسمه تعالی · ادارهٔ امتحانات',logo:'/print/logos/logo_formal.png'},
-    sama:{title:'آموزشکدهٔ سما',logo:'/print/logos/logo_sama.png'},
-    school:{title:'آموزش و پرورش',logo:'/print/logos/logo_ministry.png'},
-    edu:{title:'ادارهٔ کل آموزش و پرورش',logo:'/print/logos/logo_ministry.png'},
-    'detailed-school':{title:'مدیریت آموزش و پرورش',logo:'/print/emblem.png'},
-    ministry:{title:'وزارت آموزش و پرورش',logo:'/print/logos/logo_ministry.png'}
-  };
-  var FALLBACK_FIELDS = ['f_course','f_branch','f_examDate','f_duration','f_professor','f_examType'];
+  var LOGO_IMG = '/print/logos/logo_azad.png', LOGO_IMG_FORMAL = '/print/logos/logo_formal.png', LOGO_IMG_SAMA = '/print/logos/logo_sama.png', LOGO_IMG_MINISTRY = '/print/logos/logo_ministry.png';
+  var INTRO_IDS = ['f_intro','h2_intro','h3_intro','h4_intro','h5_intro','h6_intro','h7_intro'];
   var state = {fields:{},questions:[],documentTitle:'آزمون',footerNote:'',totalScore:'',mode:'student'};
   var sheet = document.getElementById('sheet');
   var closeButton = document.getElementById('closePreview');
@@ -216,6 +523,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     }
     var fallback = document.createElement('span'); fallback.className = 'math-fallback'; fallback.textContent = raw; return fallback;
   }
+  function toPersianNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
   function layoutFor(question, figureIndex, defaultWidth, defaultHeight) {
     var key = String(figureIndex), stored = asObject(question.figLayouts[key]);
     if (!question.figLayouts[key]) question.figLayouts[key] = stored;
@@ -232,41 +540,61 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     if (text(spec.k) === 'img') return safeImage(spec.src);
     return text(callBridge('renderFigure', JSON.stringify(spec)));
   }
+  /* V105 — شیءِ شناور فرزندِ #sheet است و مختصاتش (x از راست، y از بالا)
+     نسبت به کلِ برگه ذخیره می‌شود؛ پس حرکتش به سلولِ سؤال محدود نیست.
+     slot در جریانِ متن با همان اندازه می‌ماند تا خطوط جابه‌جا نشوند. */
+  function sheetOffsetOf(element) {
+    var rect = element.getBoundingClientRect(), base = sheet.getBoundingClientRect();
+    return {right: base.right - rect.right, top: rect.top - base.top};
+  }
   function applyFigureLayout(figure, slot, layout) {
     var width = clamp(finite(layout.w, 210), 42, 680), height = clamp(finite(layout.h, 160), 32, 2400);
     figure.style.width = width + 'px'; figure.style.height = height + 'px';
     slot.style.width = width + 'px'; slot.style.height = height + 'px';
     if (layout.free) {
-      figure.classList.add('free');
-      figure.style.right = clamp(finite(layout.x, 0), 0, 3000) + 'px';
-      figure.style.top = clamp(finite(layout.y, 0), 0, 6000) + 'px';
+      if (figure.parentNode !== sheet) sheet.appendChild(figure);
+      figure.classList.add('free'); slot.classList.add('free-slot');
+      figure.style.right = clamp(finite(layout.x, 0), -400, 3000) + 'px';
+      figure.style.top = clamp(finite(layout.y, 0), -400, 6000) + 'px';
       figure.style.zIndex = clamp(Math.round(finite(layout.z, 1)), 1, 99);
     } else {
-      figure.classList.remove('free'); figure.style.right = ''; figure.style.top = ''; figure.style.zIndex = '';
+      if (figure.parentNode !== slot) slot.insertBefore(figure, slot.firstChild);
+      figure.classList.remove('free'); slot.classList.remove('free-slot');
+      figure.style.right = ''; figure.style.top = ''; figure.style.zIndex = '';
     }
+  }
+  function beginDrag(drag, target, event) {
+    activeDrag = drag; document.body.classList.add('dragging');
+    try { target.setPointerCapture(event.pointerId); } catch (ignored) {}
   }
   function wireFigure(figure, slot, question, figureIndex, layout) {
     var handle = document.createElement('span'); handle.className = 'figure-handle'; handle.textContent = '↘'; figure.appendChild(handle);
+    var lastTap = 0;
     figure.addEventListener('dblclick', function (event) {
       if (!document.body.classList.contains('preview-open')) return;
       event.preventDefault(); event.stopPropagation();
       callBridge('editFigureTool', String(question.id), figureIndex);
     });
     figure.addEventListener('pointerdown', function (event) {
-      if (!document.body.classList.contains('preview-open') || event.button !== 0 || event.target === handle) return;
+      if (!document.body.classList.contains('preview-open') || (event.pointerType === 'mouse' && event.button !== 0) || event.target === handle) return;
       event.preventDefault(); event.stopPropagation();
-      if (!layout.free) { layout.free = true; applyFigureLayout(figure, slot, layout); }
+      var now = Date.now();
+      if (event.pointerType !== 'mouse' && now - lastTap < 320) { lastTap = 0; callBridge('editFigureTool', String(question.id), figureIndex); return; }
+      lastTap = now;
+      if (!layout.free) {
+        var offset = sheetOffsetOf(figure);
+        layout.free = true; layout.x = Math.round(offset.right); layout.y = Math.round(offset.top);
+        applyFigureLayout(figure, slot, layout);
+      }
       figure.classList.add('selected');
-      activeDrag = {kind:'move',figure:figure,slot:slot,question:question,layout:layout,startX:event.clientX,startY:event.clientY,baseX:finite(layout.x,0),baseY:finite(layout.y,0)};
-      try { figure.setPointerCapture(event.pointerId); } catch (ignored) {}
+      beginDrag({kind:'move',figure:figure,slot:slot,question:question,layout:layout,startX:event.clientX,startY:event.clientY,baseX:finite(layout.x,0),baseY:finite(layout.y,0)}, figure, event);
     });
     handle.addEventListener('pointerdown', function (event) {
       if (!document.body.classList.contains('preview-open')) return;
       event.preventDefault(); event.stopPropagation();
       figure.classList.add('selected');
       var rect = figure.getBoundingClientRect();
-      activeDrag = {kind:'resize',figure:figure,slot:slot,question:question,layout:layout,startX:event.clientX,startY:event.clientY,baseW:rect.width,baseH:rect.height,ratio:rect.width > 0 ? rect.height / rect.width : 0.75};
-      try { handle.setPointerCapture(event.pointerId); } catch (ignored) {}
+      beginDrag({kind:'resize',figure:figure,slot:slot,question:question,layout:layout,startX:event.clientX,startY:event.clientY,baseW:finite(layout.w, rect.width),ratio:rect.width > 0 ? rect.height / rect.width : 0.75}, handle, event);
     });
   }
   function makeFigure(raw, question, figureIndex) {
@@ -278,11 +606,13 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     figure.dataset.questionId = String(question.id); figure.dataset.figureIndex = String(figureIndex);
     var source = figureSource(spec);
     if (source) {
-      var image = document.createElement('img'); image.src = source; image.alt = text(spec.X && spec.X.title) || 'شکل سؤال'; figure.appendChild(image);
+      var image = document.createElement('img'); image.src = source; image.alt = text(spec.X && spec.X.title) || 'شکل سؤال'; image.draggable = false; figure.appendChild(image);
     } else {
       var missing = document.createElement('span'); missing.className = 'math-fallback'; missing.textContent = 'شکل قابل رندر نیست'; figure.appendChild(missing);
     }
-    slot.appendChild(figure); applyFigureLayout(figure, slot, layout); wireFigure(figure, slot, question, figureIndex, layout);
+    slot.appendChild(figure); wireFigure(figure, slot, question, figureIndex, layout);
+    // شیءِ شناور پس از قرارگرفتنِ slot در DOM به برگه منتقل می‌شود (render).
+    slot.__apply = function () { applyFigureLayout(figure, slot, layout); };
     return slot;
   }
   function appendRich(parent, question) {
@@ -301,124 +631,250 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     if (style.italic) element.style.fontStyle = 'italic';
     if (style.size) element.style.fontSize = clamp(style.size, 8, 40) + 'px';
   }
+  function richSpan(value) { var span = document.createElement('span'); span.textContent = text(value); return span; }
   function optionBlock(question) {
     if (question.type === 'matching') {
-      var table = document.createElement('table'); table.className = 'matching';
-      var header = document.createElement('tr'); ['ستون الف','ستون ب'].forEach(function (name) { var th = document.createElement('th'); th.textContent = name; header.appendChild(th); }); table.appendChild(header);
-      var count = Math.max(question.pairs.length, 0);
-      for (var i = 0; i < count; i++) {
-        var row = document.createElement('tr'), left = document.createElement('td'), right = document.createElement('td'), pair = question.pairs[i];
-        left.textContent = (i + 1) + ') ' + text(pair.left); right.textContent = String.fromCharCode(1575 + i) + ') ' + text(pair.right);
-        applyTextStyle(left, {bold:pair.leftBold === true,italic:pair.leftItalic === true,size:finite(pair.leftSize, 0)});
-        applyTextStyle(right, {bold:pair.rightBold === true,italic:pair.rightItalic === true,size:finite(pair.rightSize, 0)});
-        row.appendChild(left); row.appendChild(right); table.appendChild(row);
-      }
-      return table;
+      var list = document.createElement('div'); list.className = 'match-list-preview';
+      var head = document.createElement('div'); head.className = 'match-head-row';
+      ['ستون راست','','','ستون چپ'].forEach(function (name, i) { var cell = document.createElement('div'); if (i === 0) cell.className = 'match-title-right'; if (i === 3) cell.className = 'match-title-left'; cell.textContent = name; head.appendChild(cell); });
+      list.appendChild(head);
+      question.pairs.forEach(function (pair, i) {
+        var row = document.createElement('div'); row.className = 'match-pair-row';
+        var right = document.createElement('div'); right.className = 'match-text-right'; right.textContent = toPersianNum(i + 1) + '. ' + (text(pair.left) || '............');
+        applyTextStyle(right, {bold:pair.leftBold === true,italic:pair.leftItalic === true,size:finite(pair.leftSize, 0)});
+        var dot1 = document.createElement('span'); dot1.className = 'match-dot'; var gap = document.createElement('span'); gap.className = 'match-mid-gap'; var dot2 = document.createElement('span'); dot2.className = 'match-dot';
+        var left = document.createElement('div'); left.className = 'match-text-left'; left.textContent = text(pair.right) || '............';
+        applyTextStyle(left, {bold:pair.rightBold === true,italic:pair.rightItalic === true,size:finite(pair.rightSize, 0)});
+        row.appendChild(right); row.appendChild(dot1); row.appendChild(gap); row.appendChild(dot2); row.appendChild(left); list.appendChild(row);
+      });
+      var wrap = document.createElement('div'); wrap.appendChild(list);
+      if (state.mode === 'teacher') { var hint = document.createElement('div'); hint.className = 'teacher-answer'; hint.textContent = 'راهنما: گزینه‌های هم‌ردیف پاسخ صحیح هستند.'; wrap.appendChild(hint); }
+      return wrap;
     }
     if (question.type !== 'multiple' && question.type !== 'truefalse') return null;
-    var options = document.createElement('div'); options.className = 'options' + (question.optionsLayout === '2rows' ? ' two-columns' : '');
+    var letters = question.type === 'multiple' ? ['الف','ب','ج','د','ه','و','ز','ح'] : ['صحیح','غلط'];
+    var cols = question.type === 'truefalse' ? 'cols-2' : (question.optionsLayout === '1row' ? 'cols-4' : (question.optionsLayout === '4rows' ? 'cols-1' : 'cols-2'));
+    var options = document.createElement('div'); options.className = 'options ' + cols;
+    var wrapper = document.createElement('div'); wrapper.appendChild(options);
+    var correctText = '';
     question.options.forEach(function (raw, index) {
-      var item = document.createElement('div'), mark = document.createElement('span'), value = document.createElement('span');
-      var style = cleanStyle(raw); item.className = 'option'; mark.className = 'letter'; mark.textContent = String.fromCharCode(1575 + index) + ')'; value.textContent = text(raw.text);
-      applyTextStyle(value, style);
-      if (state.mode === 'teacher' && raw.correct === true) item.classList.add('correct');
-      item.appendChild(mark); item.appendChild(value); options.appendChild(item);
+      var item = document.createElement('div'), mark = document.createElement('span'), letter = document.createElement('span');
+      var style = cleanStyle(raw); item.className = 'option'; mark.className = 'choice-mark'; letter.className = 'letter';
+      letter.textContent = question.type === 'truefalse' ? (letters[index] || '') : (letters[index] || String(index + 1)) + ')';
+      item.appendChild(mark); item.appendChild(letter);
+      if (question.type !== 'truefalse') { var value = richSpan(text(raw.text) || '............'); applyTextStyle(value, style); item.appendChild(value); }
+      if (raw.correct === true) {
+        correctText = question.type === 'truefalse' ? (letters[index] || '') : text(raw.text);
+        if (state.mode === 'teacher') { item.classList.add('correct'); var tick = document.createElement('strong'); tick.className = 'tick'; tick.textContent = '✓'; item.appendChild(tick); }
+      }
+      options.appendChild(item);
     });
-    return options;
+    if (state.mode === 'teacher') { var answer = document.createElement('div'); answer.className = 'teacher-answer'; answer.textContent = 'پاسخ صحیح: ' + (correctText || 'مشخص نشده'); wrapper.appendChild(answer); }
+    return wrapper;
   }
   function answerBlock(question) {
     var wrapper = document.createElement('div');
-    if (state.mode === 'teacher' && question.answer) {
-      var key = document.createElement('div'); key.className = 'answer-key'; key.textContent = 'پاسخ: ' + question.answer; wrapper.appendChild(key);
-    }
     if (question.type === 'long' || question.type === 'essay' || question.type === 'fill' || question.type === 'numeric') {
       var lines = question.type === 'numeric' ? 1 : question.answerLines;
       if (question.type === 'fill') lines = Math.max(1, lines);
       if (lines > 0) {
-        var region = document.createElement('div'); region.className = 'answer-lines';
-        for (var i = 0; i < lines; i++) { var line = document.createElement('div'); line.className = 'answer-line' + (question.answerStyle === 'plain' ? ' plain' : ''); region.appendChild(line); }
+        var region = document.createElement('div'); region.className = 'answer-space ' + (question.answerStyle === 'plain' ? 'plain' : 'lined');
+        if (question.answerStyle === 'plain') region.style.minHeight = (lines * 28) + 'px';
+        else for (var i = 0; i < lines; i++) { var line = document.createElement('div'); line.className = 'answer-line-row'; region.appendChild(line); }
         wrapper.appendChild(region);
       }
     }
+    if (state.mode === 'teacher' && question.answer && question.type !== 'multiple' && question.type !== 'truefalse' && question.type !== 'matching') {
+      var key = document.createElement('div'); key.className = 'teacher-answer'; key.textContent = (question.type === 'numeric' ? 'پاسخ عددی: ' : 'پاسخ: ') + question.answer; wrapper.appendChild(key);
+    }
     return wrapper.childNodes.length ? wrapper : null;
   }
-  function questionNode(question, index) {
-    var root = document.createElement('section'); root.className = 'question'; root.dataset.questionId = String(question.id);
-    var row = document.createElement('div'); row.className = 'question-row';
-    var content = document.createElement('div'); content.className = 'question-content'; content.dataset.align = question.textAlign; content.dataset.bold = String(question.bold); content.dataset.italic = String(question.italic); content.style.fontSize = question.fontSize + 'px';
-    if (question.fontFamily && question.fontFamily !== 'default') content.style.fontFamily = question.fontFamily + ', Tahoma, sans-serif';
-    var rich = document.createElement('div'); rich.className = 'question-text'; var number = document.createElement('span'); number.className = 'q-number'; number.textContent = (index + 1) + '-'; rich.appendChild(number); appendRich(rich, question); content.appendChild(rich);
-    var options = optionBlock(question); if (options) content.appendChild(options);
-    var answer = answerBlock(question); if (answer) content.appendChild(answer);
-    var score = document.createElement('aside'), scoreValue = document.createElement('span'), scoreLabel = document.createElement('small');
-    score.className = 'question-score'; scoreValue.appendChild(document.createTextNode(question.score || '—')); scoreValue.appendChild(document.createElement('br')); scoreLabel.textContent = 'نمره'; scoreValue.appendChild(scoreLabel); score.appendChild(scoreValue);
-    row.appendChild(content); row.appendChild(score); root.appendChild(row);
-    var separator = document.createElement('div'); separator.className = 'question-separator'; separator.style.marginBottom = question.sepExtraPx + 'px';
-    var grip = document.createElement('span'); grip.className = 'separator-handle'; grip.textContent = '↕'; separator.appendChild(grip); wireSeparator(grip, separator, question); root.appendChild(separator);
-    return root;
+  function correctAnswerText(question) {
+    if (question.type === 'multiple' || question.type === 'truefalse') {
+      var letters = question.type === 'multiple' ? ['الف','ب','ج','د','ه','و','ز','ح'] : ['صحیح','غلط'];
+      for (var i = 0; i < question.options.length; i++) if (question.options[i].correct === true) return question.type === 'truefalse' ? letters[i] : (letters[i] || '') + ') ' + text(question.options[i].text);
+      return '';
+    }
+    if (question.type === 'matching') return question.pairs.map(function (p, i) { return toPersianNum(i + 1) + '←' + text(p.right); }).join('، ');
+    return text(question.answer);
   }
-  function wireSeparator(grip, separator, question) {
+  function questionRow(question, index) {
+    var row = document.createElement('tr'); row.className = 'question-print-row'; row.dataset.questionId = String(question.id);
+    var no = document.createElement('td'); no.className = 'question-no-td'; no.textContent = toPersianNum(index + 1);
+    var main = document.createElement('td'); main.className = 'question-main-td'; main.dataset.align = question.textAlign; main.dataset.bold = String(question.bold); main.dataset.italic = String(question.italic); main.style.fontSize = question.fontSize + 'px';
+    if (question.fontFamily && question.fontFamily !== 'default') main.style.fontFamily = question.fontFamily + ', Tahoma, sans-serif';
+    var rich = document.createElement('div'); rich.className = 'question-text'; appendRich(rich, question); main.appendChild(rich);
+    var options = optionBlock(question); if (options) main.appendChild(options);
+    var answer = answerBlock(question); if (answer) main.appendChild(answer);
+    var pad = document.createElement('div'); pad.className = 'question-sep-cell-pad'; pad.style.height = question.sepExtraPx + 'px'; main.appendChild(pad);
+    var grip = document.createElement('div'); grip.className = 'question-sep-drag'; grip.title = 'برای جابجایی خط جداکننده بالا/پایین بکشید'; main.appendChild(grip); wireSeparator(grip, pad, question);
+    var score = document.createElement('td'); score.className = 'question-score-td'; score.textContent = question.score ? toPersianNum(question.score) : '\u00a0';
+    row.appendChild(no); row.appendChild(main); row.appendChild(score);
+    return row;
+  }
+  function wireSeparator(grip, pad, question) {
     grip.addEventListener('pointerdown', function (event) {
       if (!document.body.classList.contains('preview-open')) return;
       event.preventDefault(); event.stopPropagation();
-      activeDrag = {kind:'separator',separator:separator,question:question,startY:event.clientY,base:question.sepExtraPx};
-      try { grip.setPointerCapture(event.pointerId); } catch (ignored) {}
+      grip.classList.add('is-dragging');
+      beginDrag({kind:'separator',pad:pad,grip:grip,question:question,startY:event.clientY,base:question.sepExtraPx}, grip, event);
     });
   }
-  function headerValue(fields, ids) {
-    for (var i = 0; i < ids.length; i++) { var value = text(fields[ids[i]]).trim(); if (value) return value; }
-    return '';
+  /* ===== سربرگ‌های هفت‌گانه — همان ساختار و کلاس‌های آزمون‌سازِ مرجع ===== */
+  function esc(value) { return text(value).replace(/[&<>"']/g, function (ch) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]; }); }
+  function v(id) { var x = text(state.fields[id]); return x.trim() ? esc(x) : ''; }
+  function currentHeaderTemplate() { var t = text(state.fields.f_headerTemplate || 'classic'); return TEMPLATE_FIELDS[t] ? t : 'classic'; }
+  function buildClassicHeader() {
+    var branch = v('f_branch') || '&nbsp;', gd = v('f_gradesDate') || '&nbsp;';
+    var R = function (label, val) { return '<td class="right-cell"><span class="lbl">' + label + ':</span> <span class="val">' + (val || '&nbsp;') + '</span></td>'; };
+    var L = function (label, val) { return '<td class="left-cell"><span class="lbl">' + label + ':</span> <span class="val">' + (val || '&nbsp;') + '</span></td>'; };
+    return '<table class="exam-header"><tr>' + R('نام و نام خانوادگی', v('f_name')) + '<td class="center-cell logo-cell" rowspan="4"><img class="iau-logo" src="' + LOGO_IMG + '" alt=""></td>' + L('تعداد دانشجو', v('f_studentCount')) + '</tr>' +
+      '<tr>' + R('شماره دانشجویی', v('f_studentId')) + L('تاریخ امتحان', v('f_examDate')) + '</tr>' +
+      '<tr>' + R('استاد', v('f_professor')) + L('ساعات برگزاری امتحان', v('f_examTime')) + '</tr>' +
+      '<tr>' + R('نام درس', v('f_course')) + L('مدت زمان امتحان', v('f_duration')) + '</tr>' +
+      '<tr>' + R('گروه آموزشی', v('f_department')) + '<td class="center-cell" rowspan="2"><div class="uni-name">دانشگاه آزاد اسلامی</div><div class="branch-name">واحد ' + branch + '</div></td>' + L('وسایل مجاز', v('f_tools')) + '</tr>' +
+      '<tr>' + R('نوع امتحان', v('f_examType')) + L('تعداد برگ سفید لازم', v('f_sheets')) + '</tr>' +
+      '<tr class="grades-date-row"><td class="right-cell"></td><td class="center-cell"><span class="lbl">تاریخ اعلام نمرات:</span> <span class="val">' + gd + '</span></td><td class="left-cell"></td></tr></table>' +
+      '<table class="scores-table"><tr><td>نمره میان‌ترم:</td><td>نمره پروژه،تحقیق و سمینار:</td><td>نمره پایان‌ترم:</td><td>نمره نهایی:</td></tr></table>';
+  }
+  function buildFormalHeader() {
+    var branch = v('h2_branch') || '&nbsp;', area = v('h2_area') || 'حوزه معاونت آموزش - اداره امتحانات', examLine = v('h2_examLine') || 'سؤالات امتحانی پایان نیمسال';
+    var C = function (label, val) { return '<span class="h2-label">' + label + ':</span><span class="h2-val">' + (val || '&nbsp;') + '</span>'; };
+    return '<div class="exam-header2"><div class="h2-top"><div class="h2-chair-box">' + C('شماره صندلی', v('h2_chair')) + '</div><div class="h2-title-block"><div class="h2-bism">بسمه تعالی</div><div class="h2-university">دانشگاه آزاد اسلامی واحد ' + branch + '</div><div class="h2-sub">' + area + '</div><div class="h2-examline">' + examLine + '</div></div><div class="h2-logo-wrap"><img class="h2-logo-img" src="' + LOGO_IMG_FORMAL + '" alt=""></div></div>' +
+      '<table class="h2-info-table"><tr><td style="width:31%;">' + C('نام و نام خانوادگی', v('h2_name')) + '</td><td style="width:29%;">' + C('شماره دانشجویی', v('h2_studentId')) + '</td><td style="width:22%;">' + C('رشته', v('h2_major')) + '</td><td style="width:18%;">' + C('مقطع', v('h2_degree')) + '</td></tr>' +
+      '<tr><td>' + C('نام درس', v('h2_course')) + '</td><td>' + C('نام استاد', v('h2_professor')) + '</td><td colspan="2">' + C('تاریخ امتحان', v('h2_examDate')) + '</td></tr>' +
+      '<tr><td>' + C('مدت امتحان', v('h2_duration')) + '</td><td>' + C('مجموع بارم نمره', v('h2_totalScore') || esc(state.totalScore)) + '</td><td colspan="2">' + C('وسایل مجاز در امتحان', v('h2_tools')) + '</td></tr></table></div>';
+  }
+  function buildSamaHeader() {
+    var unit = v('h3_unit') || 'آموزشکده فنی و حرفه‌ای سما واحد', office = v('h3_office') || 'اداره آموزش – دایره امتحانات', semester = v('h3_semester') || 'نیمسال', quote = v('h3_quote') || 'خیر دنیا و آخرت با دانش است و شر دنیا و آخرت با نادانی حضرت محمد(ص)';
+    var V = function (id, cls) { return '<span class="h3-val ' + (cls || '') + '">' + (v(id) || '&nbsp;') + '</span>'; };
+    return '<div class="exam-header3"><div class="h3-top"><img class="h3-logo" src="' + LOGO_IMG_SAMA + '" alt=""><div class="h3-title"><div class="h3-bism">باسمه تعالی</div><div class="h3-quote">' + quote + '</div><div class="h3-unit">' + unit + '</div><div class="h3-office-row"><span>' + office + '</span><span>' + semester + '</span></div></div><div></div></div>' +
+      '<table class="h3-info"><tr><td class="h3-side">این قسمت باید<br>توسط استاد<br>تکمیل گردد</td><td class="h3-main"><div class="h3-line"><span class="h3-item"><span class="h3-label">نام درس</span> ' + V('h3_course','long') + '</span><span class="h3-item"><span class="h3-label">نام استاد</span> ' + V('h3_professor','med') + '</span><span class="h3-item"><span class="h3-label">تاریخ برگزاری امتحان</span> ' + V('h3_examDate','med') + '</span><span class="h3-item"><span class="h3-label">ساعت برگزاری امتحان</span> ' + V('h3_examTime') + '</span><span class="h3-item"><span class="h3-label">مدت زمان لازم جهت پاسخگویی سؤالات</span> ' + V('h3_duration','med') + '</span></div></td></tr>' +
+      '<tr><td class="h3-side" rowspan="2">این قسمت باید<br>توسط دانشجو<br>تکمیل گردد</td><td class="h3-main"><div class="h3-line"><span class="h3-item"><span class="h3-label">نام و نام خانوادگی</span> ' + V('h3_name','long') + '</span><span class="h3-item"><span class="h3-label">شماره دانشجویی</span> ' + V('h3_studentId','long') + '</span><span class="h3-item"><span class="h3-label">مقطع</span> ' + V('h3_degree','med') + '</span></div></td></tr>' +
+      '<tr><td class="h3-main"><span class="h3-label">رشته تحصیلی</span> ' + V('h3_major','long') + '<span style="display:inline-block;width:90px"></span><span class="h3-label">شماره صندلی</span> ' + V('h3_chair','med') + '</td></tr></table></div>';
+  }
+  function buildSchoolHeader() {
+    var office = v('h4_educationOffice') || 'مدیریت آموزش و پرورش', school = v('h4_schoolName') || 'دبیرستان', year = v('h4_schoolYear') || 'سال تحصیلی', turn = v('h4_examTurn') || 'پایانی نوبت اول';
+    var V = function (id, cls) { return '<span class="h4-val ' + (cls || '') + '">' + (v(id) || '&nbsp;') + '</span>'; };
+    return '<div class="exam-header4"><div class="h4-topline"><span>*باسمه تعالی*</span><span class="h4-page">صفحه: ' + (v('h4_page') || '&nbsp;') + '</span></div><table class="h4-table">' +
+      '<tr><td class="h4-right"><span class="h4-label">سؤالات امتحانی ' + turn + ' درس</span> ' + V('h4_course','long') + '</td><td class="h4-center">' + office + '</td><td class="h4-left"><span class="h4-label">تاریخ امتحان:</span> روز ' + V('h4_examDay') + '، مورخه <span class="h4-datebox">' + (v('h4_examDate') || '&nbsp;') + '</span></td></tr>' +
+      '<tr><td class="h4-right"><span class="h4-label">نام و نام خانوادگی:</span> ' + V('h4_name','med') + ' <span class="h4-label">نام پدر:</span> ' + V('h4_father') + '</td><td class="h4-center h4-school">' + school + '</td><td class="h4-left"><span class="h4-label">مدت امتحان:</span> ' + V('h4_duration') + ' <span class="h4-label">شروع:</span> ' + V('h4_startTime') + ' صبح</td></tr>' +
+      '<tr><td class="h4-right"><span class="h4-label">کلاس (پایه / رشته):</span> ' + V('h4_class','long') + '</td><td class="h4-center">' + year + '</td><td class="h4-left"><span class="h4-note-label">توجه:</span> ' + V('h4_note','long') + '</td></tr></table></div>';
+  }
+  function buildEduHeader() {
+    var V = function (id, cls) { return '<span class="h5-val ' + (cls || '') + '">' + (v(id) || '&nbsp;') + '</span>'; };
+    var generalOffice = v('h5_generalOffice') || 'اداره کل آموزش و پرورش', assessment = v('h5_assessment') || 'کارشناس سنجش و ارزشیابی تحصیلی', district = v('h5_districtOffice') || 'اداره آموزش و پرورش';
+    return '<div class="exam-header5"><div class="h5-top"><div class="h5-col h5-right"><div><span class="h5-label">نام:</span>' + V('h5_firstName','long') + '</div><div><span class="h5-label">نام خانوادگی:</span>' + V('h5_lastName','long') + '</div><div><span class="h5-label">نام پدر:</span>' + V('h5_father','long') + '</div><div><span class="h5-label">نام درس:</span>' + V('h5_course','long') + '</div><div class="h5-page"><span class="h5-label">صفحه:</span>' + V('h5_page','short') + '</div></div>' +
+      '<div class="h5-center"><div class="h5-bism">باسمه تعالی</div><div>' + generalOffice + '</div><div>' + assessment + '</div><div>' + district + '</div><div><span class="h5-label">نام آموزشگاه:</span> ' + V('h5_schoolName','med') + '</div><div class="h5-seal">( مهر آموزشگاه )</div></div>' +
+      '<div class="h5-col h5-left"><div><span class="h5-label">نوبت امتحانی:</span>' + V('h5_examTurn','med') + '</div><div><span class="h5-label">پایه:</span>' + V('h5_grade','short') + ' <span class="h5-label">شعبه:</span>' + V('h5_branch','short') + '</div><div><span class="h5-label">تاریخ امتحان:</span>' + V('h5_examDate','med') + '</div><div><span class="h5-label">ساعت شروع:</span>' + V('h5_startTime','med') + '</div><div><span class="h5-label">مدت امتحان:</span>' + V('h5_duration','short') + ' دقیقه</div></div></div>' +
+      '<table class="h5-bottom"><tr><td class="h5-vertical">تصحیح</td><td class="h5-sign"><div class="h5-sign-row"><span>نام و نام خانوادگی دبیر:</span><span>نمره به عدد:</span></div><div class="h5-sign-row"><span>تاریخ و امضاء:</span><span>نمره به حروف:</span></div></td><td class="h5-vertical">تجدید نظر</td><td class="h5-sign"><div class="h5-sign-row"><span>نام و نام خانوادگی دبیر:</span><span>نمره به عدد:</span></div><div class="h5-sign-row"><span>تاریخ و امضاء:</span><span>نمره به حروف:</span></div></td></tr></table></div>';
+  }
+  function buildDetailedSchoolHeader() {
+    var V = function (id, cls) { return '<span class="h6-val ' + (cls || '') + '">' + (v(id) || '&nbsp;') + '</span>'; };
+    var office = v('h6_educationOffice') || 'مدیریت آموزش و پرورش', school = v('h6_schoolName') || 'آموزشگاه', seal = v('h6_sealText') || 'محل مهر آموزشگاه';
+    return '<div class="exam-header6"><table class="h6-top">' +
+      '<tr><td class="h6-right"><span class="h6-label">نام:</span>' + V('h6_name','long') + '</td><td class="h6-center"><span class="h6-bism">باسمه تعالی</span></td><td class="h6-left"><span class="h6-label">پایه:</span>' + V('h6_grade','short') + ' <span class="h6-label">شعبه:</span>' + V('h6_branch','short') + '</td></tr>' +
+      '<tr><td class="h6-right"><span class="h6-label">نام خانوادگی:</span>' + V('h6_family','long') + '</td><td class="h6-center">' + office + '</td><td class="h6-left"><span class="h6-label">تاریخ امتحان:</span>' + V('h6_examDate','med') + '</td></tr>' +
+      '<tr><td class="h6-right"><span class="h6-label">نام پدر:</span>' + V('h6_father','long') + '</td><td class="h6-center"><span class="h6-school">' + school + '</span></td><td class="h6-left"><span class="h6-label">ساعت برگزاری:</span>' + V('h6_examTime','med') + '</td></tr>' +
+      '<tr><td class="h6-right"><span class="h6-label">شماره دانش‌آموزی:</span>' + V('h6_studentNo','long') + '</td><td class="h6-center">' + seal + '</td><td class="h6-left"><span class="h6-label">مدت امتحان:</span>' + V('h6_duration','med') + '</td></tr>' +
+      '<tr><td class="h6-right"><span class="h6-label">نام درس:</span>' + V('h6_course','long') + '</td><td class="h6-center"><span class="h6-label">شماره صفحه:</span>' + V('h6_pageNumber','short') + '</td><td class="h6-left"><span class="h6-label">تعداد صفحه:</span>' + V('h6_pageCount','short') + '</td></tr></table>' +
+      '<table class="h6-correct"><tr><td class="h6-title" colspan="2">مصحح اول</td><td class="h6-title" colspan="2">مصحح دوم (در صورت اعتراض و درخواست کتبی دانش‌آموز)</td></tr><tr><td class="h6-small"><span class="h6-label">نام و نام‌خانوادگی دبیر تصحیح:</span></td><td class="h6-small"><span class="h6-label">تاریخ و امضا:</span></td><td class="h6-small"><span class="h6-label">نام و نام خانوادگی دبیر تصحیح:</span></td><td class="h6-small"><span class="h6-label">تاریخ و امضا:</span></td></tr><tr><td><span class="h6-label">نمره با عدد:</span></td><td><span class="h6-label">نمره با حروف:</span></td><td><span class="h6-label">نمره با عدد:</span></td><td><span class="h6-label">نمره با حروف:</span></td></tr></table>' +
+      '<table class="h6-final"><tr><td class="h6-rownum">ردیف</td><td class="h6-questions">سوالات</td><td class="h6-barem">بارم</td></tr></table></div>';
+  }
+  function buildMinistryHeader() {
+    var V = function (id, cls) { return '<span class="h7-val ' + (cls || '') + '">' + (v(id) || '&nbsp;') + '</span>'; };
+    var ministry = v('h7_ministry') || 'وزارت آموزش و پرورش جمهوری اسلامی ایران', generalOffice = v('h7_generalOffice') || 'اداره کل آموزش و پرورش', district = v('h7_districtOffice') || 'مدیریت آموزش و پرورش', school = v('h7_schoolName') || 'آموزشگاه';
+    return '<div class="exam-header7"><div class="h7-wrap"><div class="h7-col h7-right"><div><span class="h7-label">نام:</span>' + V('h7_name','long') + '</div><div><span class="h7-label">نام خانوادگی:</span>' + V('h7_family','long') + '</div><div><span class="h7-label">نام پدر:</span>' + V('h7_father','long') + '</div><div><span class="h7-label">نام درس:</span>' + V('h7_course','long') + '</div></div>' +
+      '<div class="h7-center"><img class="h7-emblem" src="' + LOGO_IMG_MINISTRY + '" alt=""><div>' + ministry + '</div><div>' + generalOffice + '</div><div>' + district + '</div><div class="h7-school">' + school + '</div></div>' +
+      '<div class="h7-col h7-left"><div><span class="h7-label">تاریخ امتحان:</span> ' + (v('h7_examDate') || '&nbsp;') + '</div><div><span class="h7-label">مدت امتحان:</span> ' + (v('h7_duration') || '&nbsp;') + '</div><div><span class="h7-label">پایه:</span> ' + (v('h7_grade') || '&nbsp;') + '</div><div><span class="h7-label">رشته:</span> ' + (v('h7_major') || '&nbsp;') + '</div></div></div></div>';
   }
   function buildHeader() {
-    var fields = state.fields, template = text(fields.f_headerTemplate || 'classic');
-    if (!TEMPLATE_FIELDS[template]) template = 'classic';
-    var meta = TEMPLATE_META[template] || TEMPLATE_META.classic, header = document.createElement('header'); header.className = 'exam-header';
-    var main = document.createElement('div'); main.className = 'header-main';
-    var logoRight = document.createElement('img'); logoRight.src = meta.logo; logoRight.alt = '';
-    var heading = document.createElement('div'), title = document.createElement('div'), subtitle = document.createElement('div'), templateTitle = document.createElement('div');
-    title.className = 'header-title'; title.textContent = meta.title; subtitle.className = 'header-subtitle'; subtitle.textContent = state.documentTitle || 'آزمون'; templateTitle.className = 'header-template'; templateTitle.textContent = TEMPLATE_LABELS[template] || '';
-    heading.appendChild(title); heading.appendChild(subtitle); heading.appendChild(templateTitle);
-    var logoLeft = document.createElement('img'); logoLeft.src = '/print/emblem.png'; logoLeft.alt = '';
-    main.appendChild(logoRight); main.appendChild(heading); main.appendChild(logoLeft); header.appendChild(main);
-    var ids = TEMPLATE_FIELDS[template].slice(), fieldItems = [];
-    ids.forEach(function (id) { var value = text(fields[id]).trim(); if (value && id !== 'f_intro' && !/_intro$/.test(id)) fieldItems.push([id,value]); });
-    FALLBACK_FIELDS.forEach(function (id) { var value = text(fields[id]).trim(); if (value && !fieldItems.some(function (item) { return item[0] === id; })) fieldItems.push([id,value]); });
-    var total = state.totalScore.trim(); if (total) fieldItems.push(['totalScore',total]);
-    if (fieldItems.length) {
-      var grid = document.createElement('div'); grid.className = 'header-fields';
-      fieldItems.forEach(function (item) { var cell = document.createElement('div'); cell.className = 'header-field'; var label = document.createElement('b'), value = document.createElement('em'); label.textContent = (HEADER_LABELS[item[0]] || item[0]) + ' '; value.textContent = item[1]; cell.appendChild(label); cell.appendChild(value); grid.appendChild(cell); });
-      header.appendChild(grid);
-    }
-    var intro = headerValue(fields,['f_intro','h2_intro','h3_intro','h4_intro','h5_intro','h6_intro','h7_intro']);
-    if (intro) { var note = document.createElement('div'); note.className = 'header-intro'; note.textContent = intro; header.appendChild(note); }
-    return header;
+    var t = currentHeaderTemplate(), markup;
+    if (t === 'formal') markup = buildFormalHeader();
+    else if (t === 'sama') markup = buildSamaHeader();
+    else if (t === 'school') markup = buildSchoolHeader();
+    else if (t === 'edu') markup = buildEduHeader();
+    else if (t === 'detailed-school') markup = buildDetailedSchoolHeader();
+    else if (t === 'ministry') markup = buildMinistryHeader();
+    else markup = buildClassicHeader();
+    // markup فقط از رشته‌های ثابتِ همین فایل و مقدارهای escape‌شدهٔ v() ساخته می‌شود.
+    var parsed = new DOMParser().parseFromString('<!doctype html><html dir="rtl"><body>' + markup + '</body></html>', 'text/html');
+    var fragment = document.createDocumentFragment();
+    Array.prototype.slice.call(parsed.body.childNodes).forEach(function (node) { fragment.appendChild(document.importNode(node, true)); });
+    var intro = '';
+    INTRO_IDS.forEach(function (id) { if (!intro && text(state.fields[id]).trim()) intro = text(state.fields[id]).trim(); });
+    if (intro) { var note = document.createElement('div'); note.className = 'exam-intro'; note.textContent = intro; fragment.appendChild(note); }
+    return fragment;
+  }
+  function footerText() {
+    var custom = text(state.fields.opt_footerText).trim();
+    if (custom) return custom;
+    if (state.footerNote) return state.footerNote;
+    var t = currentHeaderTemplate(), f = state.fields, val = function (id) { return text(f[id]).trim() || '…………'; };
+    var who = t === 'formal' ? val('h2_professor') : t === 'sama' ? val('h3_professor') : t === 'school' ? val('h4_schoolName') : t === 'edu' ? val('h5_schoolName') : t === 'detailed-school' ? val('h6_schoolName') : t === 'ministry' ? val('h7_schoolName') : val('f_professor');
+    var org = t === 'formal' ? 'دانشگاه آزاد اسلامی واحد ' + val('h2_branch') : t === 'sama' ? val('h3_unit') : t === 'school' ? val('h4_educationOffice') : t === 'edu' ? val('h5_generalOffice') : t === 'detailed-school' ? val('h6_educationOffice') : t === 'ministry' ? val('h7_generalOffice') : 'دانشگاه آزاد اسلامی واحد ' + val('f_branch');
+    return 'موفق باشید – ' + who + ' – ' + org;
+  }
+  function answerKeyTable() {
+    var box = document.createElement('div'); box.className = 'answer-key-box';
+    var h = document.createElement('h3'); h.textContent = 'کلید آزمون / نسخه استاد'; box.appendChild(h);
+    var table = document.createElement('table'), head = document.createElement('tr');
+    ['شماره','نوع','بارم','پاسخ صحیح'].forEach(function (name) { var th = document.createElement('th'); th.textContent = name; head.appendChild(th); }); table.appendChild(head);
+    var labels = {multiple:'چندگزینه‌ای',truefalse:'صحیح/غلط',long:'تشریحی',essay:'تشریحی',fill:'جای‌خالی',numeric:'عددی',matching:'جورکردنی'};
+    state.questions.forEach(function (q, i) {
+      var tr = document.createElement('tr');
+      [toPersianNum(i + 1), labels[q.type] || '', toPersianNum(q.score), correctAnswerText(q) || '—'].forEach(function (value) { var td = document.createElement('td'); td.textContent = value; tr.appendChild(td); });
+      table.appendChild(tr);
+    });
+    box.appendChild(table);
+    if (state.totalScore) { var total = document.createElement('div'); total.style.cssText = 'text-align:center;margin-top:6px;font-weight:800;'; total.textContent = 'جمع بارم: ' + toPersianNum(state.totalScore); box.appendChild(total); }
+    return box;
   }
   function render() {
     sheet.replaceChildren();
     if (!state.questions.length) { var empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = 'سؤالی برای چاپ وجود ندارد.'; sheet.appendChild(empty); return; }
     sheet.appendChild(buildHeader());
-    var questions = document.createElement('main'); questions.className = 'questions'; state.questions.forEach(function (question, index) { questions.appendChild(questionNode(question, index)); }); sheet.appendChild(questions);
-    if (state.footerNote) { var footer = document.createElement('footer'); footer.className = 'exam-footer'; footer.textContent = state.footerNote; sheet.appendChild(footer); }
+    var table = document.createElement('table'); table.className = 'questions-print-table';
+    var colgroup = document.createElement('colgroup'); ['qno-col','qmain-col','qscore-col'].forEach(function (cls) { var col = document.createElement('col'); col.className = cls; colgroup.appendChild(col); }); table.appendChild(colgroup);
+    var thead = document.createElement('thead'), headRow = document.createElement('tr');
+    [['qno-head','ردیف'],['','متن سؤال'],['qscore-head','بارم']].forEach(function (item) { var th = document.createElement('th'); if (item[0]) th.className = item[0]; th.textContent = item[1]; headRow.appendChild(th); });
+    thead.appendChild(headRow); table.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    state.questions.forEach(function (question, index) { tbody.appendChild(questionRow(question, index)); });
+    table.appendChild(tbody); sheet.appendChild(table);
+    if (state.mode === 'teacher') sheet.appendChild(answerKeyTable());
+    var footer = document.createElement('div'); footer.className = 'exam-footer'; footer.textContent = footerText(); sheet.appendChild(footer);
+    // شکل‌های شناور پس از قرارگرفتن در DOM به برگه منتقل می‌شوند.
+    Array.prototype.forEach.call(sheet.querySelectorAll('.figure-slot'), function (slot) { if (typeof slot.__apply === 'function') slot.__apply(); });
   }
   function moveDrag(event) {
     if (!activeDrag) return;
+    if (event.cancelable) event.preventDefault();
     if (activeDrag.kind === 'move') {
-      var host = activeDrag.figure.closest('.question-content'); if (!host) return;
-      var rect = host.getBoundingClientRect(), width = activeDrag.figure.getBoundingClientRect().width;
-      activeDrag.layout.x = clamp(activeDrag.baseX - (event.clientX - activeDrag.startX), 0, Math.max(0, rect.width - width));
-      activeDrag.layout.y = clamp(activeDrag.baseY + (event.clientY - activeDrag.startY), 0, 6000);
+      var dx = event.clientX - activeDrag.startX, dy = event.clientY - activeDrag.startY;
+      var width = finite(activeDrag.layout.w, 210), height = finite(activeDrag.layout.h, 160);
+      var maxX = Math.max(0, sheet.clientWidth - width), maxY = Math.max(0, sheet.scrollHeight - height);
+      activeDrag.layout.x = Math.round(clamp(activeDrag.baseX - dx, 0, maxX));
+      activeDrag.layout.y = Math.round(clamp(activeDrag.baseY + dy, 0, maxY));
       applyFigureLayout(activeDrag.figure, activeDrag.slot, activeDrag.layout);
     } else if (activeDrag.kind === 'resize') {
-      var widthNew = clamp(activeDrag.baseW + (event.clientX - activeDrag.startX), 42, 680);
+      var widthNew = clamp(activeDrag.baseW - (event.clientX - activeDrag.startX), 42, 680);
       activeDrag.layout.w = Math.round(widthNew); activeDrag.layout.h = Math.round(clamp(widthNew * activeDrag.ratio, 32, 2400));
       applyFigureLayout(activeDrag.figure, activeDrag.slot, activeDrag.layout);
     } else if (activeDrag.kind === 'separator') {
       activeDrag.question.sepExtraPx = Math.round(clamp(activeDrag.base + (event.clientY - activeDrag.startY), 0, 1500));
-      activeDrag.separator.style.marginBottom = activeDrag.question.sepExtraPx + 'px';
+      activeDrag.pad.style.height = activeDrag.question.sepExtraPx + 'px';
     }
   }
-  function endDrag() { if (activeDrag && activeDrag.figure) activeDrag.figure.classList.remove('selected'); activeDrag = null; }
-  document.addEventListener('pointermove', moveDrag); document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
+  function endDrag() {
+    if (!activeDrag) return;
+    if (activeDrag.figure) activeDrag.figure.classList.remove('selected');
+    if (activeDrag.grip) activeDrag.grip.classList.remove('is-dragging');
+    activeDrag = null; document.body.classList.remove('dragging');
+  }
+  document.addEventListener('pointermove', moveDrag, {passive:false}); document.addEventListener('pointerup', endDrag); document.addEventListener('pointercancel', endDrag);
+  // WebView قدیمی: رویدادِ لمسِ بومی هم باید لغو شود تا صفحه هنگامِ درگ اسکرول نکند.
+  document.addEventListener('touchmove', function (event) { if (activeDrag && event.cancelable) event.preventDefault(); }, {passive:false});
   function snapshot() {
     var result = {};
     state.questions.forEach(function (question) { result[String(question.id)] = {figLayouts:question.figLayouts,sepExtraPx:question.sepExtraPx}; });

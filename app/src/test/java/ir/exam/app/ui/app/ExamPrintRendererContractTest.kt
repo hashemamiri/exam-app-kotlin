@@ -60,7 +60,7 @@ class ExamPrintRendererContractTest {
 
     @Test
     fun `preview keeps layout persistence and native figure replacement`() {
-        listOf("layoutSnapshot", "figureAt", "replaceFigure", "pointerdown", "separator-handle")
+        listOf("layoutSnapshot", "figureAt", "replaceFigure", "pointerdown", "question-sep-drag")
             .forEach { required -> assertTrue("پیش‌نمایش قابلیت فعال را ندارد: $required", required in renderer) }
         assertTrue("snapshot پیش‌نمایش به میزبان برنمی‌گردد", "onFigLayouts?.invoke(json)" in dialog)
         assertTrue("ویرایش شکل از پیش‌نمایش به ابزار بومی نمی‌رسد", "ExamFigureToolHost(" in dialog)

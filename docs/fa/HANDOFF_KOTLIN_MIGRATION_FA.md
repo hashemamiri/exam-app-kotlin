@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۷ — بازگشت کامل V104 (Revert)؛ پیش‌نمایش/چاپ آزمون دوباره با موتور d5fc2ca (renderer HTML سبک + چاپ مستقیم)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۷ — V105 بازگشت سربرگ‌های هفت‌گانهٔ مرجع، ستون‌های ردیف/بارم و حرکت آزاد شکل‌ها در پیش‌نمایش (بدون اسکرول صفحه)
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17111,3 +17111,46 @@ git checkout cd1a6f4 -- app/src/main/java/ir/exam/app/ui/printing/NativeExamPdfD
 میانه‌ای برای مقایسه باقی نگذاشت.
 
 شمارهٔ نسخهٔ بعدی همچنان **V105** است.
+
+---
+
+## ۳۲۷) V105 — پیش‌نمایش/چاپ: سربرگ‌های مرجع، جدول ردیف/متن/بارم، حرکت آزاد شکل‌ها
+
+### گزارش کاربر (۴ مورد)
+۱) اشیاء در پیش‌نمایش حرکت آزادانهٔ کامل ندارند. ۲) هنگام جابه‌جایی اشیاء صفحه جابه‌جا (اسکرول) می‌شود.
+۳) فرمت و قالب سربرگ‌ها به‌هم ریخته است. ۴) ستون سؤالات (ردیف/بارم) در پیش‌نمایش حذف شده.
+
+### ریشه
+همهٔ چهار مورد از renderer سبکِ `d5fc2ca` (`exam_print_renderer.html`) بود که پس از بازگشت V104 دوباره فعال شد:
+- سربرگ: یک سربرگِ عمومیِ سه‌ستونی (`header-main`/`header-fields`) برای همهٔ قالب‌ها می‌ساخت؛ ساختار هفت قالب مرجع (`exam-header`…`exam-header7`) وجود نداشت.
+- جدول: هر سؤال یک `grid` دو‌ستونی (متن + کادر «نمره») بود؛ ستون «ردیف»، سربرگ جدول و ستون «بارم» مرجع نبود.
+- حرکت: شیء شناور با `position:absolute` داخل `.question-content` و `x` محدود به عرض همان سلول بود (`closest('.question-content')`).
+- اسکرول: `touch-action:pan-y` روی شکل + نبودن `preventDefault` روی `touchmove` ⇒ WebView هم‌زمان با درگ، صفحه را اسکرول می‌کرد.
+
+### تغییرات
+`app/src/main/assets/print/exam_print_renderer.html` (۴۲KB → ۸۱KB؛ زیر سقف ۱۰۰KB verify/test):
+- **سربرگ‌ها:** توابع `buildClassicHeader/Formal/Sama/School/Edu/DetailedSchool/Ministry` و CSS مربوطه (screen + print) از `exam_print.html` مرجع (commit `c957830`) منتقل شد؛ همان کلاس‌ها، جدول‌ها، `scores-table`، آرم‌ها (`/print/logos/*`)، `exam-intro`، پاورقی «موفق باشید – … – …» و کلید آزمون نسخهٔ استاد. قالب از `state.fields.f_headerTemplate` خوانده می‌شود. مقدارها با `v()`→`esc()` escape می‌شوند و markup با `DOMParser` + `importNode` وارد سند می‌شود (بدون `innerHTML` — قانون verify).
+- **جدول سؤال‌ها:** `table.questions-print-table` با `colgroup` (۶٪/۸۸٪/۶٪)، `thead` «ردیف | متن سؤال | بارم» (عمودی)، سلول‌های `question-no-td`/`question-main-td`/`question-score-td`، ارقام فارسی (`toPersianNum`). گزینه‌ها با `choice-mark` دایره‌ای و چیدمان ۱/۲/۴ ستونی، جورکردنی با `match-*`، خطوط پاسخ `answer-line-row`، پاسخ استاد `teacher-answer`.
+- **حرکت آزاد:** هنگام شناور شدن، شکل با `sheet.appendChild` فرزند `#sheet` می‌شود و مختصات (`x` از راست، `y` از بالا) نسبت به کل برگه ذخیره می‌شود (`sheetOffsetOf` جای فعلی را حفظ می‌کند تا نپرد). حد حرکت = کل برگه (`sheet.clientWidth`/`scrollHeight`). slot با کلاس `free-slot` در جریان متن می‌ماند (خطوط ثابت). با هر `render()` شکل‌های شناور دوباره به برگه منتقل می‌شوند (`slot.__apply`).
+- **بدون اسکرول:** `.print-figure{touch-action:none}`، `body.dragging{touch-action:none;overflow:hidden}`، `pointermove` غیرpassive با `preventDefault`، و شنوندهٔ `touchmove` غیرpassive که فقط حین درگ لغو می‌کند. دستگیرهٔ جداکننده `question-sep-drag` (جایگزین `separator-handle`)، `img` با `pointer-events:none` و `draggable=false`.
+- دوبار لمس (`< 320ms`) روی شکل → `editFigureTool` (ابزار بومی).
+
+`PrintHeaderSettings.kt`: قالبِ ذخیره‌شده (`f_headerTemplate`) در پنجرهٔ تنظیمات پیش‌انتخاب می‌شود (پیش‌تر همیشه «classic»؛ همان بهبود کوچک V104 که با revert رفته بود).
+
+تست‌ها: `V105_PrintPreviewParityTest.kt` (۵ تست) جدید؛ `ExamPrintRendererContractTest` پین `separator-handle` → `question-sep-drag`.
+
+### سازگاری داده
+- `figLayoutsJson` قدیمی (x نسبت به سلول سؤال) با V105 نسبت به برگه تفسیر می‌شود ⇒ شکلِ شناورِ قبلی نزدیک بالا-راست برگه ظاهر می‌شود؛ یک‌بار کشیدن کافی است (snapshot جدید هنگام بستن ذخیره می‌شود). `sepExtraPx` بدون تغییر.
+- قرارداد پل (`setExamData`, `printStudent/Teacher`, `ExamPrintRenderer.{showPreview,layoutSnapshot,figureAt,replaceFigure}`) و Kotlin میزبان دست‌نخورده‌اند؛ هیچ تغییری در `ExamHtmlPrintDialog.kt`.
+
+### راستی‌آزمایی
+- `scripts/verify_native_final.py` → PASS؛ `git diff --check` تمیز.
+- jsdom روی خودِ asset: هر ۷ قالب با کلاس درست رندر می‌شود، XSS در مقدار فیلد خنثی، سربرگ جدول «ردیف|متن سؤال|بارم»، ۵ نوع سؤال، کلید آزمون در حالت استاد، شکل با pointerdown شناور و فرزند `#sheet` می‌شود، `pointermove`/`touchmove` حین درگ `defaultPrevented`، snapshot و بازگردانی `free`/`sepExtraPx`، دوبار لمس → پل ویرایش.
+- شبیه‌ساز پین‌های تست‌های خوانندهٔ renderer: ۰ FAIL.
+- `testDebugUnitTest`/APK: CI کاربر.
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v105.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V106
+```
