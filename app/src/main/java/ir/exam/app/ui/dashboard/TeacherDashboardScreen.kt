@@ -313,7 +313,7 @@ fun TeacherDashboardScreen(
                                 Icon(Icons.Outlined.Print, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Column(Modifier.weight(1f)) {
                                     Text(rec.title.ifBlank { "آزمون چاپی" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("درس: ${rec.subject.ifBlank { "—" }} · ${rec.questions.size} سؤال", style = MaterialTheme.typography.bodySmall)
+                                    Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questions.size} سؤال", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
