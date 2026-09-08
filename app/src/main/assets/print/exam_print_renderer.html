@@ -14,12 +14,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>پیش‌نمایش چاپ آزمون</title>
 <style>
+@font-face{font-family:"Vazirmatn";src:url("/fonts/vazirmatn_regular.ttf");font-weight:400}
+@font-face{font-family:"Vazirmatn";src:url("/fonts/vazirmatn_bold.ttf");font-weight:700}
+@font-face{font-family:"Shabnam";src:url("/fonts/shabnam_regular.ttf")}
+@font-face{font-family:"Sahel";src:url("/fonts/sahel_regular.ttf")}
+@font-face{font-family:"BNazanin";src:url("/fonts/bnazanin.ttf");font-weight:400}
+@font-face{font-family:"BNazanin";src:url("/fonts/bnazanin_bold.ttf");font-weight:700}
 :root{color-scheme:light;--ink:#111;--muted:#56657a;--paper:#fff;--screen:#e8edf3}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--screen);color:var(--ink);font-family:Tahoma,"Vazirmatn","Segoe UI",sans-serif}
 body{padding:18px 12px 28px;-webkit-print-color-adjust:exact;print-color-adjust:exact;overscroll-behavior:contain}
 body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-select:none}
-#screenChrome{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(794px,100%);margin:0 auto 12px;padding:8px 12px;border:1px solid #ced8e2;border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 4px 16px rgba(15,23,42,.10)}
+/* V114 — هدر ثابت (fixed) با نوارِ قالب‌بندیِ اسکرول‌شونده؛ بستن = ضربدر قرمز */
+#screenChrome{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;flex-direction:column;gap:6px;margin:0;padding:6px 8px;border:0;border-bottom:1px solid #ced8e2;border-radius:0;background:rgba(255,255,255,.98);box-shadow:0 4px 16px rgba(15,23,42,.10)}
+.chrome-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#closePreview{width:34px;height:34px;padding:0;border-radius:50%;background:#dc2626;color:#fff;font:900 18px/1 inherit;display:inline-flex;align-items:center;justify-content:center}
+#fmtBar{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;padding:2px 2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;direction:rtl}
+#fmtBar>*{flex:0 0 auto}
+.fmt-btn{border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;min-width:34px;height:32px;padding:0 9px;font:700 13px inherit;cursor:pointer}
+.fmt-btn.on{background:#0f766e;color:#fff;border-color:#0f766e}
+.fmt-btn.b{font-weight:900}.fmt-btn.i{font-style:italic}.fmt-btn.u{text-decoration:underline}
+.fmt-select{height:32px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:700 12px inherit;padding:0 6px}
+.fmt-color{width:34px;height:32px;padding:0 2px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+.fmt-hint{font-size:11px;color:var(--muted);align-self:center}
+body{padding-top:96px}
+.styled-underline{text-decoration:underline}
+.exam-print-mode #screenChrome{display:none}body.exam-print-mode{padding-top:0}
 #screenChrome strong{font-size:13px}
 #screenChrome span{font-size:11px;color:var(--muted)}
 #closePreview,#fitToggle{border:0;border-radius:8px;padding:8px 13px;background:#334155;color:#fff;font:700 12px inherit;cursor:pointer}
@@ -269,7 +289,7 @@ html.real-mode #printSurface{overflow:visible;width:max-content;min-width:100%;m
 .exam-footer{margin-top:20px;text-align:center;font-size:9pt;color:#555;padding-top:6px;white-space:pre-wrap}
 .empty{padding:38px 12px;text-align:center;color:#64748b;font-size:13px}
 body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{display:none}.exam-print-mode #printSurface{padding:0;overflow:visible}.exam-print-mode #sheet{width:auto;min-height:0;margin:0;border-radius:0;box-shadow:none}.exam-print-mode .figure-handle,.exam-print-mode .question-sep-drag{display:none!important}
-@media screen and (max-width:760px){body{padding:8px 0 18px}#screenChrome{width:calc(100% - 16px)}#sheet{box-shadow:none}}
+@media screen and (max-width:760px){body{padding:96px 0 18px}#sheet{box-shadow:none}}
 @media print{
   @page{size:A4;margin:5mm}
   html,body{background:#fff!important}body{padding:0!important;font-size:10pt}
@@ -370,8 +390,24 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
 </head>
 <body>
 <div id="screenChrome" class="screen-only">
-  <strong>پیش‌نمایش برگهٔ A4</strong>
-  <span class="chrome-actions"><button id="fitToggle" type="button">اندازهٔ واقعی</button><button id="closePreview" type="button">بستن</button></span>
+  <div class="chrome-row">
+    <strong>پیش‌نمایش برگهٔ A4</strong>
+    <span class="chrome-actions"><button id="fitToggle" type="button">اندازهٔ واقعی</button><button id="closePreview" type="button" title="بستن" aria-label="بستن">✕</button></span>
+  </div>
+  <div id="fmtBar" aria-label="قالب‌بندی متن انتخاب‌شده">
+    <button class="fmt-btn b" type="button" data-fmt="bold" title="بلد">B</button>
+    <button class="fmt-btn i" type="button" data-fmt="italic" title="مورب">I</button>
+    <button class="fmt-btn u" type="button" data-fmt="underline" title="زیرخط">U</button>
+    <input class="fmt-color" id="fmtColor" type="color" value="#000000" title="رنگ متن">
+    <select class="fmt-select" id="fmtSize" title="اندازهٔ متن">
+      <option value="">اندازه</option><option value="10">۱۰</option><option value="11">۱۱</option><option value="12">۱۲</option><option value="13">۱۳</option><option value="14">۱۴</option><option value="16">۱۶</option><option value="18">۱۸</option><option value="20">۲۰</option><option value="24">۲۴</option><option value="28">۲۸</option>
+    </select>
+    <select class="fmt-select" id="fmtFont" title="فونت">
+      <option value="">فونت</option><option value="default">پیش‌فرض</option><option value="Vazirmatn">وزیرمتن</option><option value="Shabnam">شبنم</option><option value="Sahel">ساحل</option><option value="BNazanin">ب نازنین</option><option value="Tahoma">تاهوما</option><option value="serif">سریف</option>
+    </select>
+    <button class="fmt-btn" type="button" data-fmt="clear" title="حذف قالب‌بندی">پاک</button>
+    <span class="fmt-hint">متن را انتخاب کنید، بعد دکمه را بزنید</span>
+  </div>
 </div>
 <main id="printSurface" aria-live="polite"><article id="sheet"></article></main>
 <script>
@@ -438,7 +474,10 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       item = asObject(item);
       var start = clamp(Math.floor(finite(item.start, item.s)), 0, length);
       var end = clamp(Math.floor(finite(item.end, item.e)), 0, length);
-      return {start:start,end:end,bold:item.bold === true || item.b === true,italic:item.italic === true || item.i === true};
+      var color = text(item.color || item.c); if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = '';
+      var size = Math.round(finite(item.size, item.z)); if (!(size >= 8 && size <= 40)) size = 0;
+      var font = text(item.font || item.f); if (font === 'default') font = '';
+      return {start:start,end:end,bold:item.bold === true || item.b === true,italic:item.italic === true || item.i === true,underline:item.underline === true || item.u === true,color:color,size:size,font:font};
     }).filter(function (item) { return item.end > item.start; });
   }
   function cleanStyle(value) {
@@ -481,17 +520,20 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     for (var i = 0; i < boundaries.length - 1; i++) {
       var from = boundaries[i], to = boundaries[i + 1];
       if (to <= from) continue;
-      var bold = false, italic = false;
+      var bold = false, italic = false, underline = false, color = '', size = 0, font = '';
       spans.forEach(function (span) {
-        if (span.start < startOffset + to && span.end > startOffset + from) { bold = bold || span.bold; italic = italic || span.italic; }
+        if (span.start < startOffset + to && span.end > startOffset + from) { bold = bold || span.bold; italic = italic || span.italic; underline = underline || span.underline; if (span.color) color = span.color; if (span.size) size = span.size; if (span.font) font = span.font; }
       });
       var node = document.createTextNode(value.slice(from, to));
-      if (bold || italic) {
-        var wrapper = document.createElement('span');
-        if (bold) wrapper.classList.add('styled-bold');
-        if (italic) wrapper.classList.add('styled-italic');
-        wrapper.appendChild(node); parent.appendChild(wrapper);
-      } else parent.appendChild(node);
+      /* V114 — هر تکه داخل span با آفستِ متنِ اصلی تا انتخابِ کاربر به بازه نگاشت شود. */
+      var wrapper = document.createElement('span'); wrapper.className = 'txt'; wrapper.dataset.off = String(startOffset + from);
+      if (bold) wrapper.classList.add('styled-bold');
+      if (italic) wrapper.classList.add('styled-italic');
+      if (underline) wrapper.classList.add('styled-underline');
+      if (color) wrapper.style.color = color;
+      if (size) wrapper.style.fontSize = size + 'px';
+      if (font) wrapper.style.fontFamily = font === 'serif' ? 'serif' : ('"' + font + '", Tahoma, sans-serif');
+      wrapper.appendChild(node); parent.appendChild(wrapper);
     }
   }
   function escaped(source, index) {
@@ -908,7 +950,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   document.addEventListener('touchmove', function (event) { if (activeDrag && event.cancelable) event.preventDefault(); }, {passive:false});
   function snapshot() {
     var result = {};
-    state.questions.forEach(function (question) { result[String(question.id)] = {figLayouts:question.figLayouts,sepExtraPx:question.sepExtraPx}; });
+    state.questions.forEach(function (question) { result[String(question.id)] = {figLayouts:question.figLayouts,sepExtraPx:question.sepExtraPx,spans:question.spans}; });
     return JSON.stringify(result);
   }
   function figureAt(questionId, figureIndex) {
@@ -979,6 +1021,9 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   var surface = document.getElementById('printSurface'), fitButton = document.getElementById('fitToggle'), fitPage = true;
   function applyFit() {
     var root = document.documentElement, printing = document.body.classList.contains('exam-print-mode');
+    /* V114 — هدر ثابت است؛ فاصلهٔ بالای بدنه به‌اندازهٔ ارتفاع واقعی هدر */
+    var chrome = document.getElementById('screenChrome');
+    document.body.style.paddingTop = (!printing && chrome) ? (chrome.offsetHeight + 8) + 'px' : '0px';
     if (!fitPage || printing) {
       surface.classList.remove('fit-page'); sheet.style.transform = ''; surface.style.height = '';
       root.classList.remove('fit-mode'); root.classList.toggle('real-mode', !printing);
@@ -995,6 +1040,84 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   }
   if (fitButton) fitButton.addEventListener('click', function () { fitPage = !fitPage; applyFit(); try { window.scrollTo(0, 0); } catch (ignored) {} });
   window.addEventListener('resize', applyFit);
+  /* ===== V114 — نوارِ قالب‌بندیِ متنِ انتخاب‌شده =====
+     انتخابِ کاربر (Selection) به بازهٔ [start,end) در متنِ اصلیِ سؤال نگاشت
+     می‌شود (از data-off هر تکه)، بازه‌های استایل به‌روز و سطر دوباره رندر
+     می‌شود؛ snapshot() بازه‌ها را به بیلدرِ بومی برمی‌گرداند تا ذخیره شوند. */
+  var lastSel = null;
+  function selectionRange() {
+    var sel = window.getSelection && window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+    var range = sel.getRangeAt(0);
+    var row = range.commonAncestorContainer; if (row.nodeType !== 1) row = row.parentNode;
+    row = row.closest ? row.closest('.question-print-row') : null; if (!row) return null;
+    var rich = row.querySelector('.question-text'); if (!rich || !rich.contains(range.startContainer) || !rich.contains(range.endContainer)) return null;
+    function offsetOf(node, offset) {
+      if (node.nodeType === 1 && node.childNodes.length) { var child = node.childNodes[Math.min(offset, node.childNodes.length - 1)]; if (offset >= node.childNodes.length) { node = child; offset = child.nodeType === 3 ? child.textContent.length : 1; } else { node = child; offset = 0; } if (node.nodeType === 1 && node.childNodes.length) { node = node.childNodes[0]; } }
+      var el = node.nodeType === 1 ? node : node.parentNode;
+      var txt = el.closest ? el.closest('.txt') : null;
+      if (txt) return Number(txt.dataset.off) + (node.nodeType === 3 ? offset : 0);
+      /* مرزِ انتخاب روی فرمول/شکل: نزدیک‌ترین تکهٔ متنی */
+      var all = rich.querySelectorAll('.txt'), best = null;
+      for (var i = 0; i < all.length; i++) { var cmp = node.compareDocumentPosition(all[i]); if (cmp & Node.DOCUMENT_POSITION_PRECEDING) best = all[i]; }
+      return best ? Number(best.dataset.off) + best.textContent.length : 0;
+    }
+    var a = offsetOf(range.startContainer, range.startOffset), b = offsetOf(range.endContainer, range.endOffset);
+    var question = state.questions.find(function (q) { return String(q.id) === row.dataset.questionId; });
+    if (!question) return null;
+    var s = Math.max(0, Math.min(a, b)), e = Math.min(question.text.length, Math.max(a, b));
+    return e > s ? {question:question, row:row, start:s, end:e} : null;
+  }
+  function rememberSelection() { var r = selectionRange(); if (r) lastSel = r; }
+  document.addEventListener('selectionchange', rememberSelection);
+  function coversAxis(spans, s, e, key) {
+    var cursor = s, active = spans.filter(function (x) { return x[key]; }).sort(function (x, y) { return x.start - y.start; });
+    for (var i = 0; i < active.length; i++) { if (active[i].start > cursor) return false; cursor = Math.max(cursor, active[i].end); if (cursor >= e) return true; }
+    return cursor >= e;
+  }
+  function applyStyle(sel, patch) {
+    var q = sel.question, s = sel.start, e = sel.end, out = [];
+    q.spans.forEach(function (span) {
+      if (span.end <= s || span.start >= e) { out.push(span); return; }
+      if (span.start < s) out.push(Object.assign({}, span, {start:span.start, end:s}));
+      if (span.end > e) out.push(Object.assign({}, span, {start:e, end:span.end}));
+      out.push(Object.assign({}, span, {start:Math.max(span.start, s), end:Math.min(span.end, e)}, patch));
+    });
+    /* بخش‌هایی از انتخاب که هیچ بازه‌ای نداشتند */
+    var covered = out.filter(function (x) { return x.start >= s && x.end <= e; }).sort(function (x, y) { return x.start - y.start; }), cursor = s;
+    covered.forEach(function (x) { if (x.start > cursor) out.push(Object.assign({start:cursor, end:x.start, bold:false, italic:false, underline:false, color:'', size:0, font:''}, patch)); cursor = Math.max(cursor, x.end); });
+    if (cursor < e) out.push(Object.assign({start:cursor, end:e, bold:false, italic:false, underline:false, color:'', size:0, font:''}, patch));
+    out = out.filter(function (x) { return x.end > x.start && (x.bold || x.italic || x.underline || x.color || x.size || x.font); }).sort(function (x, y) { return x.start - y.start; });
+    var merged = [];
+    out.forEach(function (x) { var l = merged[merged.length - 1]; if (l && x.start <= l.end && l.bold === x.bold && l.italic === x.italic && l.underline === x.underline && l.color === x.color && l.size === x.size && l.font === x.font) l.end = Math.max(l.end, x.end); else merged.push(x); });
+    q.spans = merged;
+    var fresh = questionRow(q, state.questions.indexOf(q)); sel.row.parentNode.replaceChild(fresh, sel.row);
+    Array.prototype.forEach.call(fresh.querySelectorAll('.figure-slot'), function (slot) { if (typeof slot.__apply === 'function') slot.__apply(); });
+    try { window.getSelection().removeAllRanges(); } catch (ignored) {}
+    lastSel = null; updateFmtBar(null);
+  }
+  function currentSel() { var r = selectionRange() || lastSel; if (!r) notify('اول بخشی از متن سؤال را انتخاب کنید'); return r; }
+  function updateFmtBar(sel) {
+    ['bold','italic','underline'].forEach(function (key) {
+      var btn = document.querySelector('.fmt-btn[data-fmt="' + key + '"]'); if (!btn) return;
+      btn.classList.toggle('on', !!(sel && coversAxis(sel.question.spans, sel.start, sel.end, key)));
+    });
+  }
+  document.addEventListener('selectionchange', function () { updateFmtBar(selectionRange()); });
+  Array.prototype.forEach.call(document.querySelectorAll('.fmt-btn[data-fmt]'), function (btn) {
+    /* mousedown/pointerdown پیش‌فرض را می‌گیریم تا انتخابِ متن با کلیک روی دکمه از بین نرود */
+    btn.addEventListener('pointerdown', function (event) { event.preventDefault(); rememberSelection(); });
+    btn.addEventListener('click', function () {
+      var key = btn.dataset.fmt, sel = currentSel(); if (!sel) return;
+      if (key === 'clear') { applyStyle(sel, {bold:false, italic:false, underline:false, color:'', size:0, font:''}); return; }
+      var patch = {}; patch[key] = !coversAxis(sel.question.spans, sel.start, sel.end, key); applyStyle(sel, patch);
+    });
+  });
+  var fmtColor = document.getElementById('fmtColor'), fmtSize = document.getElementById('fmtSize'), fmtFont = document.getElementById('fmtFont');
+  [fmtColor, fmtSize, fmtFont].forEach(function (el) { if (el) el.addEventListener('pointerdown', rememberSelection); });
+  if (fmtColor) fmtColor.addEventListener('change', function () { var sel = currentSel(); if (sel) applyStyle(sel, {color:/^#[0-9a-fA-F]{6}$/.test(fmtColor.value) ? fmtColor.value : ''}); });
+  if (fmtSize) fmtSize.addEventListener('change', function () { var v = Number(fmtSize.value); fmtSize.value = ''; var sel = currentSel(); if (sel && v) applyStyle(sel, {size:v}); });
+  if (fmtFont) fmtFont.addEventListener('change', function () { var v = fmtFont.value; fmtFont.value = ''; var sel = currentSel(); if (sel && v) applyStyle(sel, {font:v === 'default' ? '' : v}); });
   window.setExamData = setExamData;
   window.printStudent = function () { return requestPrint('student'); };
   window.printTeacher = function () { return requestPrint('teacher'); };

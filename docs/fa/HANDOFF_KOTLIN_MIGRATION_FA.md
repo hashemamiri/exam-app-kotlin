@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V113 اسکرول پیش‌نمایش، جداسازی فهرست آنلاین/چاپی در دو صفحه
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V114 نوار قالب‌بندی متن انتخاب‌شده در پیش‌نمایش، هدر ثابت، حذف سربرگ از آزمون آنلاین
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17385,4 +17385,35 @@ SQL/Edge/Secret/Dependency جدید: ندارد
 
 ```text
 تحویل: apply_v113_2.py · نسخهٔ بعدی: V114
+```
+
+---
+
+## ۳۳۸) V114 — نوار قالب‌بندی متنِ انتخاب‌شده در پیش‌نمایش + هدر ثابت + حذف «تنظیمات سربرگ» از آزمون آنلاین
+
+### ۱) آزمون‌ساز آنلاین (`ExamBuilderScreen.kt`)
+در حالت غیرچاپی فقط `OutlinedButton` «مشخصات آزمون» (تمام‌عرض)؛ دکمهٔ «تنظیمات سربرگ» حذف شد. مسیر چاپ دست‌نخورده (`HeaderSettingsDialog(` هنوز در فایل هست — پین `PrintHeaderSettingsTest` سالم).
+
+### ۲) پیش‌نمایش (`exam_print_renderer.html`)
+- `#screenChrome` حالا `position:fixed` بالای صفحه با دو سطر: عنوان + (اندازهٔ واقعی/کل صفحه، **✕ قرمز** `#closePreview`)، و `#fmtBar` با `overflow-x:auto` (اسکرول افقی، RTL). `applyFit()` `body.paddingTop` را برابر ارتفاع واقعی هدر می‌گذارد؛ در `exam-print-mode` هدر پنهان و padding صفر.
+- **نوار قالب‌بندی:** B / I / U / رنگ (`<input type=color>`) / اندازه (select ۱۰–۲۸px) / فونت (پیش‌فرض، وزیرمتن، شبنم، ساحل، ب‌نازنین، تاهوما، سریف) / «پاک». همه روی **Selection** کاربر داخل `.question-text` عمل می‌کنند.
+- **نگاشت انتخاب → بازه:** `appendText` هر تکهٔ متنی را داخل `<span class="txt" data-off=آفست‌درمتن‌اصلی>` می‌گذارد؛ `selectionRange()` از آن آفستِ `[start,end)` در `question.text` را حساب می‌کند (مرزها روی فرمول/شکل به نزدیک‌ترین تکهٔ متنی می‌روند). `pointerdown` دکمه‌ها `preventDefault` می‌کند تا انتخاب نپرد؛ `lastSel` هم برای مواقعی که WebView انتخاب را زودتر پاک می‌کند.
+- `applyStyle(sel, patch)` بازه‌ها را می‌شکند/ادغام می‌کند و فقط سطرِ همان سؤال را دوباره می‌سازد (`questionRow`). مدل span در JS: `{start,end,bold,italic,underline,color,size,font}`.
+- **بازگشت به بیلدر:** `snapshot()` حالا `spans` هر سؤال را هم برمی‌گرداند (کنار `figLayouts/sepExtraPx`).
+- فونت‌ها با `@font-face` از `/fonts/<name>.ttf`؛ میزبان (`ExamHtmlPrintDialog.shouldInterceptRequest`) `/fonts/` را از `res/font` (getIdentifier) یا `assets/fonts` (ب‌نازنین) می‌دهد. CSS: `.styled-underline`.
+
+### ۳) مدل و ذخیره
+- `StyleSpan` (QuestionDraft.kt): فیلدهای جدید `underline`, `color(#rrggbb)`, `size(8..40)`, `font` + `hasStyle`. `StyleSpanOps.adjust/toggle` با `copy` فیلدها را حفظ می‌کنند (تست دستی JVM: OK).
+- `ExamQuestionCodec` spans: کلیدهای کوتاه `u`,`c`,`z`,`f` (قدیمی‌ها بدون آن‌ها سالم).
+- `PrintTextSpan` + `PrintableFromDrafts` + `ExamHtmlPrintPayload` (`underline/color/size/font`) → رندرر هم در پیش‌نمایش و هم چاپ اعمال می‌کند.
+- `ExamBuilderViewModel.applyFigLayouts` → `decodeSnapshotSpans` بازه‌ها را از snapshot می‌خواند و در `textSpans` می‌نویسد (ذخیرهٔ بعدی همراه سؤال). محدودیت: بازه‌های خارج از طول متن حذف می‌شوند.
+
+### محدودیت‌های شناخته‌شده
+- ویرایشگر بومیِ متن سؤال (Compose) فقط بولد/ایتالیک را نمایش می‌دهد؛ زیرخط/رنگ/اندازه/فونت فقط در پیش‌نمایش/چاپ دیده می‌شوند (ذخیره می‌شوند و از بین نمی‌روند).
+- انتخاب متن داخل گزینه‌ها/جفت‌ها پشتیبانی نمی‌شود (فقط متن سؤال).
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v114.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V115
 ```

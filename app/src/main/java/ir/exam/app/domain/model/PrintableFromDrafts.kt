@@ -52,7 +52,7 @@ object PrintableFromDrafts {
             bold = question.bold,
             italic = question.italic,
             textSpans = question.textSpans.map {
-                PrintTextSpan(it.start, it.end, it.bold, it.italic)
+                PrintTextSpan(it.start, it.end, it.bold, it.italic, it.underline, it.color, it.size, it.font)
             },
             imageWidthsMm = question.images.map { it.widthMm } +
                 question.optionImages.filterNotNull().map { 40f },

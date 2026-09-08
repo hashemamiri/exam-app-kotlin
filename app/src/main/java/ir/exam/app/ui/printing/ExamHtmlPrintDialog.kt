@@ -494,6 +494,17 @@ internal fun createExamPrintWebView(
             val path = request.url.path ?: return emptyResponse()
             // V87.1 — تصاویرِ اطلس از `print/` بیرون‌اند
             // (`figure_atlas/`، همان‌هایی که پنجرهٔ بومی می‌خواند).
+            // V114 — فونت‌های نوارِ قالب‌بندی: از res/font (وزیرمتن/شبنم/ساحل) یا assets/fonts (ب نازنین)
+            if (path.startsWith("/fonts/")) {
+                val name = path.removePrefix("/fonts/").removeSuffix(".ttf")
+                if (name.isBlank() || !name.matches(Regex("[a-z0-9_]+"))) return emptyResponse()
+                val res = view.context.resources
+                val id = res.getIdentifier(name, "font", view.context.packageName)
+                return try {
+                    val stream = if (id != 0) res.openRawResource(id) else view.context.assets.open("fonts/$name.ttf")
+                    WebResourceResponse("font/ttf", null, stream)
+                } catch (_: Exception) { emptyResponse() }
+            }
             val assetPath = when {
                 path.startsWith("/print/") -> "print/" + path.removePrefix("/print/")
                 path.startsWith("/figure_atlas/") -> path.removePrefix("/")

@@ -44,7 +44,13 @@ internal object ExamQuestionCodec {
             (element as? JsonObject)?.let { o ->
                 val s = o["s"]?.asInt() ?: return@let null
                 val e = o["e"]?.asInt() ?: return@let null
-                if (e > s) StyleSpan(s, e, o["b"]?.asBoolean() ?: false, o["i"]?.asBoolean() ?: false) else null
+                if (e > s) StyleSpan(
+                    s, e, o["b"]?.asBoolean() ?: false, o["i"]?.asBoolean() ?: false,
+                    underline = o["u"]?.asBoolean() ?: false,
+                    color = (o["c"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) },
+                    size = o["z"]?.asInt()?.takeIf { it in 8..40 },
+                    font = (o["f"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }?.take(30)
+                ) else null
             }
         }
 
@@ -55,6 +61,10 @@ internal object ExamQuestionCodec {
                 put("e", JsonPrimitive(span.end))
                 if (span.bold) put("b", JsonPrimitive(true))
                 if (span.italic) put("i", JsonPrimitive(true))
+                if (span.underline) put("u", JsonPrimitive(true))
+                span.color?.let { put("c", JsonPrimitive(it)) }
+                span.size?.let { put("z", JsonPrimitive(it)) }
+                span.font?.let { put("f", JsonPrimitive(it)) }
             })
         })
 

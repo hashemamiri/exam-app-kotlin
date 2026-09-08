@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -254,10 +255,33 @@ class ExamBuilderViewModel(
                     val figLayoutsJson = entry.jsonObject["figLayouts"]?.toString() ?: ""
                     // intOrNull در این نسخهٔ kotlinx خاصیتِ extension است (نه تابع).
                     val sepExtraPx = entry.jsonObject["sepExtraPx"]?.jsonPrimitive?.intOrNull ?: 0
-                    if (figLayoutsJson == q.figLayoutsJson && sepExtraPx == q.sepExtraPx) q
-                    else q.copy(figLayoutsJson = figLayoutsJson, sepExtraPx = sepExtraPx)
+                    // V114 — استایل‌های متنِ انتخاب‌شده در نوارِ پیش‌نمایش
+                    val spans = entry.jsonObject["spans"]?.let { decodeSnapshotSpans(it, q.text.length) } ?: q.textSpans
+                    if (figLayoutsJson == q.figLayoutsJson && sepExtraPx == q.sepExtraPx && spans == q.textSpans) q
+                    else q.copy(figLayoutsJson = figLayoutsJson, sepExtraPx = sepExtraPx, textSpans = spans)
                 }
             )
+        }
+    }
+
+    /** V114 — بازه‌های استایل که رندررِ پیش‌نمایش برمی‌گرداند (start/end/bold/italic/underline/color/size/font). */
+    private fun decodeSnapshotSpans(element: kotlinx.serialization.json.JsonElement, textLength: Int): List<StyleSpan>? {
+        val array = element as? kotlinx.serialization.json.JsonArray ?: return null
+        return array.mapNotNull { item ->
+            val o = (item as? kotlinx.serialization.json.JsonObject) ?: return@mapNotNull null
+            val s = o["start"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            val e = o["end"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
+            if (s < 0 || e > textLength || e <= s) return@mapNotNull null
+            val span = StyleSpan(
+                start = s, end = e,
+                bold = o["bold"]?.jsonPrimitive?.contentOrNull == "true",
+                italic = o["italic"]?.jsonPrimitive?.contentOrNull == "true",
+                underline = o["underline"]?.jsonPrimitive?.contentOrNull == "true",
+                color = o["color"]?.jsonPrimitive?.contentOrNull?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) },
+                size = o["size"]?.jsonPrimitive?.intOrNull?.takeIf { it in 8..40 },
+                font = o["font"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() && it != "default" }?.take(30)
+            )
+            if (span.hasStyle) span else null
         }
     }
 

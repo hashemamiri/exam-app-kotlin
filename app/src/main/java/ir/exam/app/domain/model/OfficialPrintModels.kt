@@ -36,7 +36,12 @@ data class PrintTextSpan(
     val start: Int,
     val end: Int,
     val bold: Boolean = false,
-    val italic: Boolean = false
+    val italic: Boolean = false,
+    // V114
+    val underline: Boolean = false,
+    val color: String? = null,
+    val size: Int? = null,
+    val font: String? = null
 )
 
 data class OfficialPrintQuestion(

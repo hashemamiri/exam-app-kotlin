@@ -52,8 +52,17 @@ data class StyleSpan(
     /** انحصاری (exclusive). */
     val end: Int,
     val bold: Boolean = false,
-    val italic: Boolean = false
-)
+    val italic: Boolean = false,
+    // V114 — استایل‌های نوارِ پیش‌نمایش (زیرخط، رنگ #rrggbb، اندازه px، فونت).
+    // null/false = بدون تغییر؛ ورودی‌های قدیمی بدون این فیلدها سالم خوانده می‌شوند.
+    val underline: Boolean = false,
+    val color: String? = null,
+    val size: Int? = null,
+    val font: String? = null
+) {
+    /** آیا این بازه اثری دارد؟ (برای حذف بازه‌های خالی). */
+    val hasStyle: Boolean get() = bold || italic || underline || color != null || size != null || font != null
+}
 
 /** V68 — منطق خالص نگهداری/تغییر بازه‌ها؛ JVM-تست‌پذیر بدون اندروید. */
 object StyleSpanOps {
@@ -75,8 +84,8 @@ object StyleSpanOps {
                 span.start >= eo -> out += span.copy(start = span.start + delta, end = span.end + delta)
                 else -> {
                     // هم‌پوشان با ناحیهٔ تغییرشده: دو سر نگه داشته می‌شوند.
-                    if (span.start < start) out += StyleSpan(span.start, start, span.bold, span.italic)
-                    if (span.end > eo) out += StyleSpan(start + delta, span.end + delta, span.bold, span.italic)
+                    if (span.start < start) out += span.copy(start = span.start, end = start)
+                    if (span.end > eo) out += span.copy(start = start + delta, end = span.end + delta)
                 }
             }
         }
@@ -103,14 +112,14 @@ object StyleSpanOps {
         spans.forEach { span ->
             if (span.end <= s || span.start >= e) { result += span; return@forEach }
             // سرِ قبل و بعد از بازهٔ انتخابی دست‌نخورده.
-            if (span.start < s) result += StyleSpan(span.start, s, span.bold, span.italic)
-            if (span.end > e) result += StyleSpan(e, span.end, span.bold, span.italic)
+            if (span.start < s) result += span.copy(start = span.start, end = s)
+            if (span.end > e) result += span.copy(start = e, end = span.end)
             val midS = maxOf(span.start, s)
             val midE = minOf(span.end, e)
             val nb = if (removing && bold) false else (bold || span.bold)
             val ni = if (removing && italic) false else (italic || span.italic)
-            if (midE > midS && (nb || ni)) {
-                result += StyleSpan(midS, midE, nb, ni)
+            if (midE > midS && (nb || ni || span.underline || span.color != null || span.size != null || span.font != null)) {
+                result += span.copy(start = midS, end = midE, bold = nb, italic = ni)
                 // میان‌تکه اگر کل بازهٔ انتخابی را با محور روشن پوشش داد، افزودن خام لازم نیست.
                 val axisOn = if (bold) nb else ni
                 if (axisOn && midS <= s && midE >= e) midCoversSelection = true
@@ -121,7 +130,7 @@ object StyleSpanOps {
         val merged = mutableListOf<StyleSpan>()
         result.filter { it.end > it.start }.sortedBy { it.start }.forEach { span ->
             val last = merged.lastOrNull()
-            if (last != null && span.start <= last.end && last.bold == span.bold && last.italic == span.italic) {
+            if (last != null && span.start <= last.end && last.copy(start = 0, end = 0) == span.copy(start = 0, end = 0)) {
                 merged[merged.lastIndex] = last.copy(end = maxOf(last.end, span.end))
             } else merged += span
         }

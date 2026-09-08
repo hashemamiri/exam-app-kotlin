@@ -76,6 +76,10 @@ object ExamHtmlPrintPayloadBuilder {
                         put("end", span.end)
                         put("bold", span.bold)
                         put("italic", span.italic)
+                        if (span.underline) put("underline", true)
+                        span.color?.let { put("color", it) }
+                        span.size?.let { put("size", it) }
+                        span.font?.let { put("font", it) }
                     })
                 }
             })

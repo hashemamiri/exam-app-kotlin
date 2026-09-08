@@ -385,22 +385,13 @@ fun ExamBuilderScreen(
                         Text("تنظیمات سربرگ")
                     }
                 } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // V114 — آزمونِ آنلاین فقط «مشخصات آزمون» دارد؛ «تنظیمات سربرگ»
+                    // مخصوص مسیرِ چاپ است (درخواست کاربر).
+                    OutlinedButton(
+                        onClick = { settingsExpanded = !settingsExpanded },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        OutlinedButton(
-                            onClick = { settingsExpanded = !settingsExpanded },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
-                        }
-                        OutlinedButton(
-                            onClick = { showHeaderSettings = true },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("تنظیمات سربرگ")
-                        }
+                        Text(if (settingsExpanded) "بستن مشخصات آزمون" else "مشخصات آزمون")
                     }
                     AnimatedVisibility(
                         visible = settingsExpanded,
