@@ -462,32 +462,12 @@ class ExamBuilderViewModel(
     fun setMatchingPair(id: String, leftIndex: Int, rightIndex: Int) { update(id) { question ->
         question.copy(matchingPairs = question.matchingPairs + (leftIndex to rightIndex))
     } }
-    fun addMatchingRow(id: String) { update(id) { question ->
-        val next = minOf(question.matchingLeft.size, question.matchingRight.size)
-        question.copy(
-            matchingLeft = question.matchingLeft + "",
-            matchingLeftIds = question.matchingLeftIds.resizeIds(question.matchingLeft.size) + UUID.randomUUID().toString(),
-            matchingRight = question.matchingRight + "",
-            matchingRightIds = question.matchingRightIds.resizeIds(question.matchingRight.size) + UUID.randomUUID().toString(),
-            matchingLeftImages = question.matchingLeftImages.pad(question.matchingLeft.size) + null,
-            matchingRightImages = question.matchingRightImages.pad(question.matchingRight.size) + null,
-            matchingPairs = question.matchingPairs + (next to next)
-        )
-    } }
-    fun removeMatchingRow(id: String) { update(id) { question ->
-        if (question.matchingLeft.size <= 2 || question.matchingRight.size <= 2) question else {
-            val last = minOf(question.matchingLeft.lastIndex, question.matchingRight.lastIndex)
-            question.copy(
-                matchingLeft = question.matchingLeft.dropLast(1),
-                matchingLeftIds = question.matchingLeftIds.resizeIds(question.matchingLeft.size).dropLast(1),
-                matchingRight = question.matchingRight.dropLast(1),
-                matchingRightIds = question.matchingRightIds.resizeIds(question.matchingRight.size).dropLast(1),
-                matchingLeftImages = question.matchingLeftImages.dropLast(1),
-                matchingRightImages = question.matchingRightImages.dropLast(1),
-                matchingPairs = question.matchingPairs.filterKeys { it != last }.mapValues { (_, right) -> right.coerceAtMost(last - 1) }
-            )
-        }
-    } }
+    // V121 — addMatchingRow/removeMatchingRow (که هر دو ستون را با هم و در
+    // اندیس آخر تغییر می‌دادند) حذف شدند: در سراسر برنامه هیچ نقطهٔ فراخوانی
+    // نداشتند (کد مرده) و منطق remap آن‌ها برای ستون‌های نامتقارن یا
+    // جفت‌های نامرتبط با ردیف حذف‌شده نادرست بود. مسیر واقعی UI از
+    // addMatchingSide/removeMatchingSide (هر ستون مستقل، با remap صحیح
+    // مشابه‌ی که در ادامه می‌آید) استفاده می‌کند.
     fun addMatchingSide(id: String, side: String) { update(id) { q ->
         if (side == "left" && q.matchingLeft.size < 30) q.copy(
             matchingLeft = q.matchingLeft + "",

@@ -239,7 +239,11 @@ fun StudentExamContent(
                 OutlinedButton(onClick = { showExit = true }) { Text("خروج") }
                 ExamCountdownText(
                     initialRemainingSeconds = state.remainingSeconds,
-                    totalSeconds = state.totalSeconds
+                    totalSeconds = state.totalSeconds,
+                    // V121 — وقتی معلم وسط آزمون ویرایش می‌کند، تایمر باید واقعاً
+                    // متوقف بماند؛ قبلاً این نمایش مستقل از state.timerPaused
+                    // همچنان می‌شمرد و با پیام «زمان‌سنج متوقف است» ناسازگار بود.
+                    paused = state.timerPaused
                 )
                 Button(onClick = onSubmit, enabled = !state.submitting) {
                     Text(if (state.submitting) "در حال ارسال..." else "ارسال نهایی")
@@ -646,12 +650,17 @@ private fun StudentCachedImage(uri: String, description: String, modifier: Modif
  * دقایق پایانی (کمتر از ۱۵٪ مهلت یا ۵ دقیقه) قرمز می‌شود.
  */
 @Composable
-fun ExamCountdownText(initialRemainingSeconds: Long, totalSeconds: Long) {
+fun ExamCountdownText(initialRemainingSeconds: Long, totalSeconds: Long, paused: Boolean = false) {
     var remainingSeconds by remember(initialRemainingSeconds) {
         mutableLongStateOf(initialRemainingSeconds)
     }
-    LaunchedEffect(initialRemainingSeconds) {
-        if (initialRemainingSeconds != UNLIMITED_TIME) {
+    // V121 — قبلاً این شمارش محلی مستقل از state.timerPaused بود؛ در نتیجه در
+    // بازهٔ نمایش دیالوگ «آزمون توسط معلم ویرایش شد» (که می‌گوید زمان‌سنج
+    // متوقف است) همچنان ثانیه‌شمار به کار خود ادامه می‌داد و در پایان با
+    // مقدار واقعی remainingSeconds ناگهان هم‌گام می‌شد. اکنون تا وقتی paused
+    // است، حلقهٔ شمارش متوقف می‌ماند و دوباره از همان لحظه ادامه می‌یابد.
+    LaunchedEffect(initialRemainingSeconds, paused) {
+        if (initialRemainingSeconds != UNLIMITED_TIME && !paused) {
             while (remainingSeconds > 0L) {
                 delay(1_000L)
                 remainingSeconds--
