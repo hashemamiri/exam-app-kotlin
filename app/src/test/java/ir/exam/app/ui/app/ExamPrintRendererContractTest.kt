@@ -20,7 +20,8 @@ class ExamPrintRendererContractTest {
     @Test
     fun `renderer-only asset exposes the active print contract`() {
         assertTrue("asset رندرر وجود ندارد", rendererFile.isFile)
-        assertTrue("رندرر باید سبک بماند", rendererFile.length() < 100_000L)
+        // V115 — سقف با scripts/verify_native_final.py هم‌تراز شد (نوار قالب‌بندی V114 + صفحه‌بندی V115).
+        assertTrue("رندرر باید سبک بماند", rendererFile.length() < 140_000L)
         listOf(
             "window.setExamData = setExamData;",
             "window.printStudent = function",
