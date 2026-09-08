@@ -552,7 +552,7 @@ internal fun createExamPrintWebView(
                             // خروجی چاپ خالی می‌ماند.
                             if (printMode != null) {
                                 view.evaluateJavascript(
-                                    "try{document.body.classList.add('exam-print-mode');}catch(e){}",
+                                    "try{document.body.classList.add('exam-print-mode');document.documentElement.classList.add('exam-print-mode-root');}catch(e){}",
                                     null
                                 )
                             }

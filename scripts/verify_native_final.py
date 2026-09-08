@@ -56,7 +56,8 @@ for relative in (
 require(RENDERER.is_file(), "renderer asset is missing")
 if RENDERER.is_file():
     renderer = read(RENDERER)
-    require(RENDERER.stat().st_size < 100_000, "renderer asset is unexpectedly large")
+    # V115 — سقف حجم: با نوار قالب‌بندی (V114) و صفحه‌بندی پیش‌نمایش (V115) از ۱۰۰KB گذشت.
+    require(RENDERER.stat().st_size < 140_000, "renderer asset is unexpectedly large")
     for marker in (
         "window.setExamData = setExamData;",
         "window.printStudent = function",
