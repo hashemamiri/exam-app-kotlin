@@ -82,9 +82,9 @@ fun ExamPrintCenterScreen(
     val scope = rememberCoroutineScope()
     // V101 — چاپِ مستقیمِ بدون‌صفحه: WebView نمایش داده نمی‌شود؛ پنلِ چاپ
     // روی همین صفحه ظاهر می‌شود (نه پنجرهٔ پیش‌نمایش).
-    val headlessPrinter = remember(context.applicationContext) {
-        HeadlessExamPrinter(context.applicationContext)
-    }
+    // V106 — Context فعالیت لازم است تا پنلِ چاپ اندروید واقعاً باز شود
+    // (با applicationContext آیکن پرینتر ظاهراً «کار نمی‌کرد»).
+    val headlessPrinter = remember(context) { HeadlessExamPrinter(context) }
     // V101 — برای ساختِ «نسخهٔ چاپی» از آزمونِ آنلاین، آزمون کامل (با کلید)
     // با همان مسیرِ آزمون‌ساز بارگذاری می‌شود.
     val builderRepo = remember(context.applicationContext) {

@@ -225,12 +225,30 @@ fun ExamHtmlPrintDialog(
                                 onPrint = { mode ->
                                     webViewRef?.let { view ->
                                         view.post {
+                                            // V106 — پس از بسته‌شدنِ پنلِ چاپ، برگه به حالتِ
+                                            // پیش‌نمایش برمی‌گردد (کلاسِ چاپ پاک، رندرِ دوباره).
+                                            val restore = {
+                                                // چاپِ مستقیم از بیلدر: پنجره پس از پنلِ چاپ بسته می‌شود
+                                                // (پیش‌تر صفحهٔ خالیِ حالتِ چاپ می‌ماند).
+                                                if (initialPrintMode != null) view.post { requestDismiss() }
+                                                else view.post {
+                                                    view.evaluateJavascript(
+                                                        "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.restorePreview?window.ExamPrintRenderer.restorePreview():'missing'}catch(e){return 'err'}})()",
+                                                        null
+                                                    )
+                                                }
+                                            }
                                             runCatching {
-                                                val printManager = ctx.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                                                val printContext = ctx.findActivityContext() ?: ctx
+                                                val printManager = printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
                                                 val jobName = (printable?.documentTitle ?: "آزمون").ifBlank { "exam" } + "-" + mode
                                                 val printAdapter = view.createPrintDocumentAdapter(jobName)
-                                                printManager?.print(jobName, printAdapter, PrintAttributes.Builder().build())
-                                            }
+                                                if (printManager == null) {
+                                                    restore()
+                                                } else {
+                                                    printManager.print(jobName, OneShotPrintAdapter(printAdapter) { restore() }, PrintAttributes.Builder().build())
+                                                }
+                                            }.onFailure { restore() }
                                         }
                                     }
                                 },
@@ -571,6 +589,11 @@ internal fun createExamPrintWebView(
  */
 internal class HeadlessExamPrinter(context: Context) {
     private val appContext = context.applicationContext
+    // V106 — PrintManager فقط با Context فعالیت پنلِ چاپ را نشان می‌دهد؛ با
+    // applicationContext هیچ خطایی نمی‌دهد ولی پنل هرگز باز نمی‌شود (ریشهٔ
+    // «آیکن پرینتر کارت‌ها کار نمی‌کند»). WebView با appContext ساخته می‌شود
+    // (بدون نشت)، ولی چاپ با Context فعالیت انجام می‌شود.
+    private val printContext: Context = context.findActivityContext() ?: context
     private val handler = Handler(Looper.getMainLooper())
     private var webView: WebView? = null
     private var jobName = "exam"
@@ -616,7 +639,7 @@ internal class HeadlessExamPrinter(context: Context) {
     private fun startPrintJob(web: WebView, mode: String) {
         web.post {
             runCatching {
-                val printManager = web.context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                val printManager = printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
                 if (printManager == null) {
                     status("امکان چاپ روی این دستگاه در دسترس نیست.")
                     finish()
@@ -654,6 +677,13 @@ internal class HeadlessExamPrinter(context: Context) {
         }
         webView = null
     }
+}
+
+/** V106 — Context فعالیتِ میزبان (لازم برای نمایشِ پنلِ چاپ). */
+internal tailrec fun Context.findActivityContext(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivityContext()
+    else -> null
 }
 
 /**

@@ -61,7 +61,7 @@ if RENDERER.is_file():
         "window.setExamData = setExamData;",
         "window.printStudent = function",
         "window.printTeacher = function",
-        "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure};",
+        "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};",
         "@page{size:A4",
         "function buildHeader()",
         "function requestPrint(mode)",

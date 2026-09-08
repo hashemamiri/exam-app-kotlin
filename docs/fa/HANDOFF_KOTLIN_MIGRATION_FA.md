@@ -1,6 +1,6 @@
 # هندآف جامع مهاجرت سامانه آزمون از WebView به Native Kotlin
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۷ — V105 بازگشت سربرگ‌های هفت‌گانهٔ مرجع، ستون‌های ردیف/بارم و حرکت آزاد شکل‌ها در پیش‌نمایش (بدون اسکرول صفحه)
+**آخرین به‌روزرسانی:** ۲۰۲۶-۰۹-۰۸ — V106 پرینتر کارت‌های چاپ آزمون (Context فعالیت) + پاک‌سازی حالت چاپ در رفت‌وبرگشت پیش‌نمایش
 **زبان همکاری:** فارسی
 **کاربر:** غیر‌برنامه‌نویس؛ دستورها باید ساده، مرحله‌ای و قابل کپی در WSL باشند.
 
@@ -17153,4 +17153,32 @@ git checkout cd1a6f4 -- app/src/main/java/ir/exam/app/ui/printing/NativeExamPdfD
 SQL/Edge/Secret/Dependency جدید: ندارد
 تحویل: apply_v105.py (§۱۱)
 شمارهٔ نسخهٔ بعدی: V106
+```
+
+---
+
+## ۳۲۸) V106 — پرینتر کارت‌های «چاپ آزمون» + پیش‌نمایشِ به‌هم‌ریخته پس از چاپ
+
+### گزارش کاربر
+۱) آیکن پرینتر روی کارت‌های آزمون در بخش «چاپ آزمون» کار نمی‌کند. ۲) پیش‌نمایش در حالت عادی درست است، اما با رفتن به چاپ یا بازگشت از آن به‌هم می‌ریزد.
+
+### ریشه (با دنبال‌کردن مسیر کد)
+- **پرینتر کارت‌ها:** `ExamPrintCenterScreen` → `startPrint` → `HeadlessExamPrinter(context.applicationContext)` → `web.context.getSystemService(PRINT_SERVICE)`؛ WebView با `applicationContext` ساخته شده بود، پس `PrintManager` هم از application context گرفته می‌شد. `PrintManager.print` با context غیرفعالیتی پنلِ چاپ را نشان نمی‌دهد (بدون exception؛ فقط بی‌اثر) ⇒ منوی «چاپ آزمون/چاپ با کلید» باز می‌شد، «در حال آماده‌سازی چاپ…» می‌آمد و بعد هیچ.
+- **پیش‌نمایشِ به‌هم‌ریخته:** `requestPrint` کلاس `exam-print-mode` را روی body می‌گذاشت (بدون padding/سایه، حالت استاد، دستگیره‌ها پنهان) و `state.mode='teacher'` می‌ماند؛ هیچ مسیری پس از بستنِ پنلِ چاپ آن را پاک نمی‌کرد (WebView اندروید `afterprint` قابل‌اتکا نمی‌فرستد). همچنین در چاپ از داخلِ پیش‌نمایش، `preview-open` همراه با `exam-print-mode` می‌ماند و درگِ نیمه‌کاره لغو نمی‌شد.
+
+### تغییرات
+- `ExamHtmlPrintDialog.kt`: `Context.findActivityContext()` (tailrec)؛ `HeadlessExamPrinter` WebView را همچنان با appContext می‌سازد اما `PrintManager` را از `printContext` (فعالیت) می‌گیرد. در پنجرهٔ پیش‌نمایش، چاپ با Context فعالیت و `OneShotPrintAdapter` انجام می‌شود و پس از `onFinish` پنلِ چاپ: در حالت پیش‌نمایش `ExamPrintRenderer.restorePreview()`، در چاپِ مستقیم (`initialPrintMode != null`) `requestDismiss()` (پنجرهٔ خالیِ حالتِ چاپ نمی‌ماند).
+- `ExamPrintCenterScreen.kt`: `remember(context) { HeadlessExamPrinter(context) }`.
+- `exam_print_renderer.html`: `requestPrint` درگ را تمام و `preview-open` را برمی‌دارد (به‌خاطر می‌سپارد)؛ `restorePreview()` جدید: حذف `exam-print-mode`، `state.mode='student'`، بازگرداندن `preview-open`، رندر دوباره با همان `figLayouts`/`sepExtraPx`، اسکرول به بالا؛ به `afterprint` هم متصل است؛ `showPreview` هم حالت را ریست می‌کند. قرارداد: `ExamPrintRenderer.{…,restorePreview}` (verify و ContractTest به‌روز).
+- تست جدید `V106_PrintRoundTripTest` (۳ تست).
+
+### راستی‌آزمایی
+- verify PASS، `git diff --check` تمیز.
+- jsdom: پس از `printTeacher` → `exam-print-mode` on/`preview-open` off/درگ لغو/کلید استاد هست؛ پس از `restorePreview` → کلاس چاپ off، پیش‌نمایش on، کلید استاد و تیک‌ها حذف، شکلِ شناور سرِ جایش، سربرگ همان قالب؛ چاپِ بدون‌پیش‌نمایش پس از restore پیش‌نمایش را باز نمی‌کند.
+- رفتار واقعی پنلِ چاپ روی دستگاه: سمت کاربر (CI کامپایل/تست).
+
+```text
+SQL/Edge/Secret/Dependency جدید: ندارد
+تحویل: apply_v106.py (§۱۱)
+شمارهٔ نسخهٔ بعدی: V107
 ```

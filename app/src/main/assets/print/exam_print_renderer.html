@@ -915,17 +915,38 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     images.forEach(function (image) { if (image.complete) one(); else { image.addEventListener('load', one, {once:true}); image.addEventListener('error', one, {once:true}); } });
     window.setTimeout(function () { if (!finished) { finished = true; done(); } }, 450);
   }
+  var previewWasOpen = false;
   function requestPrint(mode) {
+    // V106 — پیش‌نمایش هنگام چاپ بسته می‌شود تا دستگیره‌ها/حالت انتخاب چاپ نشوند.
+    previewWasOpen = document.body.classList.contains('preview-open');
+    endDrag(); document.body.classList.remove('preview-open');
     state.mode = mode === 'teacher' ? 'teacher' : 'student'; document.body.classList.add('exam-print-mode'); render();
     waitForImages(function () { callBridge('print', state.mode); }); return 'queued';
   }
-  function showPreview() { document.body.classList.add('preview-open'); document.body.classList.remove('exam-print-mode'); render(); return 'ok'; }
+  /* V106 — بازگشت از پنل چاپ: حالتِ چاپ (کلاس exam-print-mode، نسخهٔ استاد،
+     اسکرول) کامل پاک می‌شود و برگهٔ A4 با همان چیدمانِ کاربر دوباره رندر
+     می‌شود؛ پیش‌تر کلاس چاپ روی body می‌ماند و پیش‌نمایش به‌هم‌ریخته بود. */
+  function restorePreview() {
+    endDrag();
+    document.body.classList.remove('exam-print-mode');
+    state.mode = 'student';
+    if (previewWasOpen) document.body.classList.add('preview-open');
+    render();
+    try { window.scrollTo(0, 0); } catch (ignored) {}
+    return 'ok';
+  }
+  window.addEventListener('afterprint', restorePreview);
+  function showPreview() {
+    endDrag(); state.mode = 'student';
+    document.body.classList.remove('exam-print-mode'); document.body.classList.add('preview-open'); previewWasOpen = true;
+    render(); return 'ok';
+  }
   function closePreview() { callBridge('previewClosed'); }
   closeButton.addEventListener('click', closePreview);
   window.setExamData = setExamData;
   window.printStudent = function () { return requestPrint('student'); };
   window.printTeacher = function () { return requestPrint('teacher'); };
-  window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure};
+  window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};
   render();
 }());
 </script>
