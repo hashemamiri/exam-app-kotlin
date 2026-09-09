@@ -18229,3 +18229,7 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 7. **چشم اشتراک** — ریشه: `native_teacher_share_student_v62` فقط UPDATE می‌زد؛ بدون ردیف `school_students` هیچ تغییری نمی‌کرد ولی ok می‌داد و پیام «قابل مشاهده شد» می‌آمد. `supabase/migrations/20260909_native_share_student_v136.sql` (+ `sql/manual/SQL_NATIVE_SHARE_STUDENT_V136.sql`): `native_teacher_share_student_v136` برای همهٔ مدارس فعال معلم upsert می‌کند، بدون عضویت خطای روشن می‌دهد و `shared` مؤثر برمی‌گرداند. `SchoolRepository.setStudentShared: Result<Boolean>`؛ ViewModel اگر مقدار مؤثر ≠ خواسته باشد خطا نشان می‌دهد. **باید در SQL Editor اجرا شود.**
 8. **سطل حذف** — `BulkStudentDialog`: `IconButton` با `Icons.Outlined.Delete` قرمز.
 - تست‌های به‌روزشده: V20/V21 (اسکرول)، V22/V23 (member picker)، V26/V58_0_2 (topBar شرط)، V55_18_1 (سوایپ چپ)، V58_x (وایت‌برد)، V61_2 (featuredMenuCard)، V62_6 (RPC v136).
+
+### V136.1 — CI قرمز پس از V136 (دو خطای کامپایل)
+1. `ExamApp.kt`: محتوا داخل `Row` رفت و `AnimatedVisibility` بدون receiver صریح به overload `RowScope.AnimatedVisibility` resolve شد («cannot be called in this context with an implicit receiver»). رفع: `androidx.compose.animation.AnimatedVisibility(...)` با نام کامل. **درس:** هر وقت بلوکی را داخل Row/Column می‌بریم، فراخوانی‌های `AnimatedVisibility` را با نام کامل بنویسیم.
+2. `StudentWhiteboardDialog.kt`: `import androidx.compose.foundation.layout.weight` به یک property داخلی (internal) اشاره می‌کرد؛ `Modifier.weight` عضو RowScope/ColumnScope است و import نمی‌خواهد. حذف شد.

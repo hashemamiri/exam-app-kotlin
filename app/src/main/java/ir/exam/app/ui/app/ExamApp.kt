@@ -1157,7 +1157,8 @@ private fun AuthenticatedShell(
                             ) {
                                 content()
                             }
-                            AnimatedVisibility(
+                            // V136.1 — داخل Row، نسخهٔ RowScope.AnimatedVisibility انتخاب می‌شد؛ نام کامل لازم است.
+                            androidx.compose.animation.AnimatedVisibility(
                                 visible = menuOpen && !desktopRail,
                                 modifier = Modifier.fillMaxSize(),
                                 enter = fadeIn(tween(110)),
