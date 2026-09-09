@@ -418,7 +418,7 @@
   function faNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); }
   function ensureFmtBar() {
     var v = $('pgsViewer'); if (!v || $('hostFmt')) return;
-    var ribbon = v.querySelector('.pgs-ribbon'); if (!ribbon) return;
+    var ribbon = v.querySelector('.pgs-ribbon');
     var bar = document.createElement('div');
     bar.id = 'hostFmt'; bar.className = 'host-fmt';
     /* (ساختِ DOM با DOMParser + importNode — قاعدهٔ verify) */
@@ -433,7 +433,7 @@
       '<span class="hf-hint">متنِ سؤال را انتخاب کنید</span>';
     var doc = new DOMParser().parseFromString('<div>' + markup + '</div>', 'text/html');
     Array.prototype.slice.call(doc.body.firstChild.childNodes).forEach(function (n) { bar.appendChild(document.importNode(n, true)); });
-    ribbon.parentNode.insertBefore(bar, ribbon.nextSibling);
+    if (ribbon) ribbon.parentNode.insertBefore(bar, ribbon.nextSibling); else v.insertBefore(bar, v.firstChild);
     /* پنلِ 📐 (top ثابت در webhost.css) باید زیرِ هر دو نوار باز شود */
     function syncTop() { try { document.documentElement.style.setProperty('--host-top', Math.round(bar.getBoundingClientRect().bottom) + 'px'); } catch (e) {} }
     syncTop(); setTimeout(syncTop, 300); window.addEventListener('resize', syncTop);
@@ -468,6 +468,21 @@
     if (kind === 'size') { var n = Number(value); applyStyle(sel, {size: (n >= 8 && n <= 40) ? Math.round(n) : 0}); return 'ok'; }
     if (kind === 'font') { applyStyle(sel, {font: (value && value !== 'default') ? value.slice(0, 30) : ''}); return 'ok'; }
     return 'unknown';
+  }
+  /* V128.1 — نوارِ قالب‌بندی نباید فقط به showPreview وابسته باشد: هر بار که بینندهٔ PGS ساخته شد
+     (openPreviewWindow، بازگشت از چاپ، بازِ دوباره) نوار هم ساخته می‌شود؛ MutationObserver پشتیبان است. */
+  function hookPreviewOpen() {
+    var base = window.openPreviewWindow;
+    if (typeof base !== 'function' || base.__appHostFmt) return false;
+    var wrapped = function () { var r = base.apply(this, arguments); try { ensureFmtBar(); } catch (e) {} setTimeout(function () { try { ensureFmtBar(); } catch (e) {} }, 150); return r; };
+    wrapped.__appHostFmt = true;
+    window.openPreviewWindow = wrapped;
+    return true;
+  }
+  function watchViewer() {
+    if (window.__hostFmtObserver || typeof MutationObserver !== 'function') return;
+    window.__hostFmtObserver = new MutationObserver(function () { if ($('pgsViewer') && !$('hostFmt')) { try { ensureFmtBar(); } catch (e) {} } });
+    window.__hostFmtObserver.observe(document.body, {childList: true});
   }
   function hookPreviewClose() {
     var base = window.closePreviewWindow;
@@ -572,6 +587,8 @@
     installRichTextOverride();
     installPrintOverrides();
     hookPreviewClose();
+    hookPreviewOpen();
+    watchViewer();
     wrapRenderPreviewOnce();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(install, 0); });
