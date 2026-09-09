@@ -106,6 +106,8 @@ class V125_WebPrintEngineTest {
         // V130 — دکمهٔ «همه»، انتخابگرهای بومی، بدون راهنمای «متن سؤال را انتخاب کنید»
         assertTrue("id=\"hfAll\"" in webhost && "b.pickSize(" in webhost && "hf-hint" !in webhost)
         assertTrue("fun pickSize(current: String?)" in dialog && "GridCells.Fixed(5)" in dialog)
+        // V130.1 — سؤال بلندتر از صفحه شکسته و ادامه می‌یابد
+        assertTrue("function splitRichPiece(k, tr2main)" in engine)
         // V127.1 — پنل تنظیمات صفحه بدون vh (در WebView یک‌سطری باز می‌شد)
         assertTrue("top:var(--host-top,60px) !important;bottom:0 !important" in webhostCss && "max-height:none !important" in webhostCss)
         assertTrue("requestPrint(mode, {rangeKind: rangeKind, rangeText: rangeText, current: current, copies: copies})" in webhost)

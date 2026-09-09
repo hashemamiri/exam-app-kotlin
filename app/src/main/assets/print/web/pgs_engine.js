@@ -311,10 +311,60 @@
     return childArr(mainTd).filter(function (k) { return !k.classList.contains('question-sep-drag'); });
   }
 
+  /* V130.1 — متنِ بلندِ سؤال (.q-rich-content) که خودش از یک صفحه بلندتر است، قبلاً «آخرین تکه» بود و
+     بریده (clip) می‌شد. اکنون از انتها تکه‌تکه (چند کلمه از تکه‌های .txt، یا یک گرهٔ کامل مثل فرمول/شکل)
+     به ادامهٔ همان بلوک در سطرِ صفحهٔ بعد منتقل می‌شود. */
+  var RICH_WORDS_PER_STEP = 6;
+  function richCanSplit(k) {
+    if (!k.classList || !k.classList.contains('q-rich-content')) return false;
+    var last = k.lastChild;
+    while (last && last.nodeType === 3 && !last.textContent.trim()) last = last.previousSibling;
+    if (!last) return false;
+    if (k.childNodes.length > 1) return true;
+    var t = last.nodeType === 3 ? last.textContent : (last.classList && last.classList.contains('txt') ? last.textContent : '');
+    return t.trim().split(/\s+/).length > 1;
+  }
+  function splitRichPiece(k, tr2main) {
+    var cont = tr2main.querySelector('.q-rich-content');
+    if (!cont) { cont = k.cloneNode(false); cont.classList.add('q-rich-cont'); tr2main.insertBefore(cont, tr2main.firstChild); }
+    var last = k.lastChild;
+    while (last && last.nodeType === 3 && !last.textContent.trim()) { var ws = last; last = last.previousSibling; k.removeChild(ws); }
+    if (!last) return false;
+    var isTxt = last.nodeType === 1 && last.classList.contains('txt');
+    var isText = last.nodeType === 3;
+    if (isTxt || isText) {
+      var full = last.textContent, words = full.split(/(\s+)/);
+      /* تعداد کلمه‌های واقعی (نه جداکننده) */
+      var real = 0; for (var i = 0; i < words.length; i++) if (words[i].trim()) real++;
+      if (real > 1) {
+        var take = Math.min(RICH_WORDS_PER_STEP, real - 1), cut = words.length, n = 0;
+        for (var j = words.length - 1; j >= 0 && n < take; j--) { if (words[j].trim()) n++; cut = j; }
+        var head = words.slice(0, cut).join(''), tail = words.slice(cut).join('');
+        if (isTxt) {
+          var sp = last.cloneNode(false); sp.textContent = tail;
+          if (last.dataset && last.dataset.off !== undefined) sp.dataset.off = String(Number(last.dataset.off) + head.length);
+          last.textContent = head;
+          /* اگر اولین تکهٔ ادامه همان span بود (ادامهٔ همین تکه)، ادغام کن تا آفست‌ها پیوسته بمانند */
+          var f = cont.firstChild;
+          if (f && f.nodeType === 1 && f.classList.contains('txt') && f.dataset.off === String(Number(sp.dataset.off) + tail.length) && f.getAttribute('style') === sp.getAttribute('style')) { f.textContent = tail + f.textContent; f.dataset.off = sp.dataset.off; }
+          else cont.insertBefore(sp, cont.firstChild);
+        } else {
+          last.textContent = head;
+          var f2 = cont.firstChild;
+          if (f2 && f2.nodeType === 3) f2.textContent = tail + f2.textContent; else cont.insertBefore(document.createTextNode(tail), cont.firstChild);
+        }
+        return true;
+      }
+    }
+    cont.insertBefore(last, cont.firstChild);
+    return true;
+  }
+
   function moveLastPiece(mainTd, tr2main) {
     var kids = movableKids(mainTd);
     for (var i = kids.length - 1; i >= 0; i--) {
       var k = kids[i];
+      if (richCanSplit(k)) return splitRichPiece(k, tr2main);
       if (k.classList.contains('answer-space') && k.classList.contains('lined')) {
         var lines = k.querySelectorAll('.answer-line-row');
         if (lines.length > 1) {
@@ -342,15 +392,15 @@
     var tr2 = makeContinuationRow(tr);
     var tr2main = tr2.querySelector('.question-main-td');
     var guard = 0;
-    while (overflows(ctx.sheet) && guard++ < 400) {
+    while (overflows(ctx.sheet) && guard++ < 3000) {
       var mk = movableKids(main);
       if (mk.length === 0) break;
       if (mk.length === 1) {
-        /* آخرین تکه: فقط در صورتی بشکن که خط‌های پاسخ داشته باشد؛ وگرنه clip */
+        /* آخرین تکه: فقط در صورتی بشکن که خط‌های پاسخ داشته باشد یا متنِ چندکلمه‌ای/چندگرهی باشد (V130.1)؛ وگرنه clip */
         var only = mk[0];
         var canSplitLines = only.classList.contains('answer-space') &&
           only.querySelectorAll('.answer-line-row').length > 1;
-        if (!canSplitLines) break;
+        if (!canSplitLines && !richCanSplit(only)) break;
       }
       if (!moveLastPiece(main, tr2main)) break;
     }
@@ -457,6 +507,21 @@
         var hadOther = ctx.tbody.children.length > 1 || ctx.sheet.body.children.length > 1;
         ctx.tbody.removeChild(row);
         if (hadOther) {
+          /* V130.1 — اگر سطر حتی در یک صفحهٔ خالی هم جا نمی‌شود، همین‌جا (زیرِ سربرگ/سؤال‌های قبلی) شروع
+             و شکسته شود؛ قبلاً اول به صفحهٔ خالیِ بعدی می‌رفت و صفحهٔ جاری نیمه‌خالی می‌ماند. */
+          var probe = newSheet(sheets, area, cfg);
+          var pctx = openTableOn(probe, tpl);
+          pctx.tbody.appendChild(row);
+          var tooTall = overflows(probe);
+          pctx.tbody.removeChild(row);
+          probe.el.remove(); probe.label.remove(); sheets.pop();
+          var used = 0; childArr(ctx.sheet.body).forEach(function (c) { used += c.offsetHeight; });
+          if (tooTall && ctx.sheet.body.clientHeight - used > 120) {
+            ctx.tbody.appendChild(row);
+            var c1 = splitOversizeRow(ctx, sheets, area, cfg);
+            if (c1) { ctx = c1; cur = c1.sheet; }
+            continue;
+          }
           cur = newSheet(sheets, area, cfg);
           ctx = openTableOn(cur, tpl);
           ctx.tbody.appendChild(row);

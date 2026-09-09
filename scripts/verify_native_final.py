@@ -162,6 +162,9 @@ for f in ("TableEditorDialog.kt", "PeriodicEditorDialog.kt"):
     _t = read(MAIN / "java/ir/exam/app/ui/figure" / f)
     require("import androidx.compose.material3.AlertDialog" not in _t and "usePlatformDefaultWidth = false" in _t, f"{f} must be a full-screen dialog like FigurePickerDialog")
 require("fun cardLevel(done: Int, total: Int): CardLevel" in read(MAIN / "java/ir/exam/app/ui/grading/GradingViewModel.kt") and "state.cardStats[item.id]" in read(MAIN / "java/ir/exam/app/ui/grading/GradingScreen.kt"), "grading cards must be colour-coded by answer/grading progress")
+# V130.1 — متنِ سؤالِ بلندتر از صفحه باید به صفحهٔ بعد ادامه یابد (نه clip)
+_pe = read(WEB_ENGINE / "pgs_engine.js")
+require("function richCanSplit(k)" in _pe and "function splitRichPiece(k, tr2main)" in _pe and "if (!canSplitLines && !richCanSplit(only)) break;" in _pe, "oversize question text must be split across pages")
 # V127.1 — پنل 📐 نباید به vh/dvh وابسته باشد (در WebView یک‌سطری می‌شد): top/bottom مطلق در webhost.css
 _wc = read(WEB_ENGINE / "webhost.css")
 require("#pgsPageSetup{" in _wc and "top:var(--host-top,60px) !important;bottom:0 !important" in _wc and "max-height:none !important" in _wc, "page-setup panel must be pinned between ribbon and bottom without vh units")
