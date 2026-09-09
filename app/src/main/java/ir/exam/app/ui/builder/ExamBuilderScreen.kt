@@ -209,6 +209,42 @@ fun ExamBuilderScreen(
         }
     }
 
+    // V135.7 — گزارش کاربر: پیام‌های خطا/نتیجهٔ ذخیره فقط در انتهای فهرست (زیر همهٔ سؤال‌ها)
+    // رندر می‌شدند و دیده نمی‌شدند. حالا هر خطای ذخیره و نتیجهٔ ذخیره در یک پنجرهٔ روی صفحه می‌آید.
+    var errorDialog by remember { mutableStateOf<String?>(null) }
+    var dismissedSavedCode by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.error) { state.error?.let { errorDialog = it } }
+    errorDialog?.let { message ->
+        AlertDialog(
+            onDismissRequest = { errorDialog = null },
+            confirmButton = { TextButton(onClick = { errorDialog = null }) { Text("باشد") } },
+            title = { Text("خطا") },
+            text = { Text(message) }
+        )
+    }
+    state.savedCode?.takeIf { it != dismissedSavedCode }?.let { code ->
+        AlertDialog(
+            onDismissRequest = { dismissedSavedCode = code },
+            confirmButton = { Button(onClick = { dismissedSavedCode = code; onBack() }) { Text("بازگشت به آزمون‌ها") } },
+            dismissButton = { TextButton(onClick = { dismissedSavedCode = code }) { Text("ادامهٔ ویرایش") } },
+            title = { Text("ذخیره شد") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("کد آزمون: $code")
+                    Text(
+                        "مبلغ کسرشده: ${state.chargedToman.asToman()} تومان" +
+                            (state.walletBalanceToman?.let { " · مانده: ${it.asToman()} تومان" } ?: "")
+                    )
+                    state.lastSaveResult?.takeIf { it.chargedToman > 0 }?.let { r ->
+                        Text("سؤال‌ها: ${PersianDigits.convert(r.billedQuestions)} × ۱٬۰۰۰ = ${r.questionCostToman.asToman()} تومان")
+                        if (r.billedImages > 0) Text("تصاویر: ${PersianDigits.convert(r.billedImages)} × ۱٬۰۰۰ = ${r.imageCostToman.asToman()} تومان")
+                        if (r.billedAudio > 0) Text("صوت: ${PersianDigits.convert(r.billedAudio)} سؤال = ${r.audioCostToman.asToman()} تومان")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(noticeSnackbar) },
         topBar = {

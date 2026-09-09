@@ -109,8 +109,11 @@ object AudioTranscoder {
         outDir.mkdirs()
         val durationMs = endMs - startMs
         var last: Result? = null
-        for (br in BITRATES) {
-            if (estimateBytes(durationMs, br) > MAX_BYTES * 1.25) continue // بی‌فایده؛ سریع رد شو
+        // V135.7 — سرعت: قبلاً از ۱۲۸k شروع می‌شد و برای فایل‌های بلند چند بار کامل انکد می‌شد.
+        // حالا مستقیم از نرخِ برنامه‌ریزی‌شده (اولین نرخی که تخمینش زیر سقف است) شروع می‌کنیم؛
+        // فقط اگر خروجی واقعی از سقف گذشت، یک پله پایین‌تر تکرار می‌شود.
+        val startIdx = BITRATES.indexOfFirst { estimateBytes(durationMs, it) <= MAX_BYTES }.let { if (it < 0) BITRATES.lastIndex else it }
+        for (br in BITRATES.drop(startIdx)) {
             val out = File(outDir, "audio-${System.currentTimeMillis()}-${br / 1000}k.m4a")
             val channels = if (br < 48_000) 1 else 2
             val r = encodeOnce(context, uri, startMs, endMs, out, br, channels, onProgress)
@@ -173,8 +176,8 @@ object AudioTranscoder {
             // ورودی انکدر را به قطعه‌های ≤ ظرفیت تقسیم می‌کنیم.
             var pts = ptsUs
             while (pcm.hasRemaining()) {
-                val inIdx = encoder.dequeueInputBuffer(TIMEOUT_US)
-                if (inIdx < 0) { drainEncoder(false); continue }
+                val inIdx = encoder.dequeueInputBuffer(0L)
+                if (inIdx < 0) { drainEncoder(false); Thread.yield(); continue }
                 val inBuf = encoder.getInputBuffer(inIdx)!!
                 inBuf.clear()
                 val n = min(inBuf.remaining(), pcm.remaining())
@@ -244,7 +247,8 @@ object AudioTranscoder {
                         }
                     }
                 }
-                val outIdx = dec.dequeueOutputBuffer(info, TIMEOUT_US)
+                // V135.7 — تا ورودی تمام نشده، روی خروجی منتظر نمان (قبلاً هر دور تا ۱۰ms بیکار می‌ماند).
+                val outIdx = dec.dequeueOutputBuffer(info, if (inputDone) TIMEOUT_US else 0L)
                 when {
                     outIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ->
                         channels = dec.outputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)

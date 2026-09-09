@@ -1247,6 +1247,17 @@ function initPreviewFigureEditing() {
   markPreviewFiguresReady(area);
   let drag = null;
   function px(n) { return Number.isFinite(+n) ? +n : 0; }
+  // V135.7 — ضریب بزرگ‌نمایی پیش‌نمایش (transform: scale روی #pgsCanvas). getBoundingClientRect
+  // اندازهٔ روی صفحه (ضرب‌در زوم) را می‌دهد؛ اگر همان عدد به‌عنوان اندازهٔ واقعی ذخیره می‌شد،
+  // با هر لمس (حتی لرزش ۱px انگشت) شکل به اندازهٔ زوم کوچک می‌شد. همهٔ اندازه‌ها/جابه‌جایی‌ها
+  // با این ضریب به مختصات کاغذ برمی‌گردند.
+  function zoomFactor() {
+    try {
+      const c = document.getElementById('pgsCanvas');
+      if (c && c.offsetWidth > 0) { const z = c.getBoundingClientRect().width / c.offsetWidth; if (z > 0.05 && z < 20) return z; }
+    } catch(_) {}
+    return 1;
+  }
   function parentBox(el) { return el.closest('.question-main-td') || el.parentElement; }
   function selectFig(el) {
     area.querySelectorAll('.interactive-figure.selected').forEach(x => { if (x !== el) x.classList.remove('selected'); });
@@ -1256,7 +1267,8 @@ function initPreviewFigureEditing() {
     const parent = parentBox(el);
     if (!parent) return {x,y,w,h};
     const pr = parent.getBoundingClientRect();
-    const er = el.getBoundingClientRect();
+    const zf = zoomFactor();
+    const er = { width: el.getBoundingClientRect().width / zf, height: el.getBoundingClientRect().height / zf };
     const cs = window.getComputedStyle(parent);
     const padR = parseFloat(cs.paddingRight) || 0;
     const padL = parseFloat(cs.paddingLeft) || 0;
@@ -1306,7 +1318,8 @@ function initPreviewFigureEditing() {
     selectFig(fig);
     const qid = fig.dataset.qid, idx = fig.dataset.figIndex;
     const layout = (questions.find(q => String(q.id) === String(qid))?.figLayouts || {})[idx] || {};
-    const rect = fig.getBoundingClientRect();
+    const zf0 = zoomFactor();
+    const rect = { width: fig.getBoundingClientRect().width / zf0, height: fig.getBoundingClientRect().height / zf0 };
     let handle = (e.target.closest && e.target.closest('.fig-resize-handle')) || nearH;
     // V132 — تحملِ لمس: اگر انگشت تا ۲۴px نزدیکِ یکی از دستگیره‌های شکلِ انتخاب‌شده فرود آمد، همان دستگیره.
     if (!handle && fig.classList.contains('selected')) handle = nearHandle(fig, e.clientX, e.clientY);
@@ -1323,9 +1336,13 @@ function initPreviewFigureEditing() {
     if (!drag) return;
     e.preventDefault();
     let x = drag.x, y = drag.y, w = drag.w, h = drag.h;
+    const zf = zoomFactor();
+    // V135.7 — لرزشِ کمتر از ۳px (لمس ساده) هیچ تغییری ذخیره نکند.
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 3 && !drag.__moved) return;
+    drag.__moved = true;
     if (drag.resizing) {
-      const dx = e.clientX - drag.sx;
-      const dy = e.clientY - drag.sy;
+      const dx = (e.clientX - drag.sx) / zf;
+      const dy = (e.clientY - drag.sy) / zf;
       const edge = String(drag.edge || '');
       // در RTL، x فاصله از راست است. دستگیره‌های چپ عرض را با لبهٔ راست ثابت تغییر می‌دهند؛
       // دستگیره‌های راست، لبهٔ چپ را ثابت نگه می‌دارند و x را همزمان اصلاح می‌کنند.
@@ -1344,8 +1361,8 @@ function initPreviewFigureEditing() {
       }
     } else {
       // x فاصله از راست است؛ پس کشیدن به چپ مقدار x را زیاد می‌کند.
-      x = drag.x - (e.clientX - drag.sx);
-      y = drag.y + (e.clientY - drag.sy);
+      x = drag.x - (e.clientX - drag.sx) / zf;
+      y = drag.y + (e.clientY - drag.sy) / zf;
     }
     const c = clampToParent(drag.fig, x, y, w, h);
     drag.fig.style.setProperty('--fig-x', c.x + 'px');

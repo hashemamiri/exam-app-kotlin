@@ -2,6 +2,10 @@ package ir.exam.app.ui.audio
 
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.rememberCoroutineScope
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,6 +49,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var player by remember(url) { mutableStateOf<MediaPlayer?>(null) }
     var prepared by remember(url) { mutableStateOf(false) }
     var preparing by remember(url) { mutableStateOf(false) }
@@ -63,9 +68,14 @@ fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modi
         preparing = true; error = null
         val mp = MediaPlayer()
         mp.setAudioAttributes(AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).setUsage(AudioAttributes.USAGE_MEDIA).build())
-        runCatching {
-            val headers = authHeaders(url)
-            if (headers.isEmpty()) mp.setDataSource(context, Uri.parse(url)) else mp.setDataSource(context, Uri.parse(url), headers)
+        // V135.7 — گزارش کاربر «پخش فایل صوتی ممکن نشد»: MediaPlayer با هدرهای Authorization روی
+        // باکت خصوصی قابل اتکا نیست (درخواست‌های range/redirect بدون هدر). فایل ابتدا با نشست
+        // کاربر به کش دانلود و سپس از فایل محلی پخش می‌شود (یک‌بار برای هر URL).
+        scope.launch {
+            val local = withContext(Dispatchers.IO) { runCatching { cachedAudioFile(context, url) }.getOrNull() }
+            if (local == null) { error = "دانلود فایل صوتی ممکن نشد."; preparing = false; runCatching { mp.release() }; return@launch }
+            runCatching {
+            mp.setDataSource(local.absolutePath)
             mp.setOnPreparedListener {
                 prepared = true; preparing = false
                 if (it.duration > 0) total = it.duration.toLong()
@@ -75,7 +85,8 @@ fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modi
             mp.setOnErrorListener { _, _, _ -> error = "پخش فایل صوتی ممکن نشد."; preparing = false; playing = false; true }
             mp.prepareAsync()
             player = mp
-        }.onFailure { error = "پخش فایل صوتی ممکن نشد."; preparing = false; runCatching { mp.release() } }
+            }.onFailure { error = "پخش فایل صوتی ممکن نشد."; preparing = false; runCatching { mp.release() } }
+        }
     }
 
     LaunchedEffect(playing) {
@@ -122,6 +133,29 @@ fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modi
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)) }
         }
     }
+}
+
+/**
+ * V135.7 — فایل صوتی را (در صورت نیاز با توکن نشست) به کش می‌آورد و مسیر محلی برمی‌گرداند.
+ * نام فایل از hash نشانی است تا دفعات بعد بدون دانلود پخش شود. URL محلی (file://) مستقیم برمی‌گردد.
+ */
+private fun cachedAudioFile(context: android.content.Context, url: String): java.io.File? {
+    if (url.startsWith("file://", ignoreCase = true)) return java.io.File(Uri.parse(url).path.orEmpty()).takeIf { it.isFile }
+    val dir = java.io.File(context.cacheDir, "question_audio_cache").apply { mkdirs() }
+    val out = java.io.File(dir, url.hashCode().toUInt().toString(16) + ".m4a")
+    if (out.isFile && out.length() > 0) return out
+    val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+    conn.connectTimeout = 15_000; conn.readTimeout = 30_000
+    conn.instanceFollowRedirects = true
+    authHeaders(url).forEach { (k, v) -> conn.setRequestProperty(k, v) }
+    try {
+        if (conn.responseCode !in 200..299) return null
+        val tmp = java.io.File(dir, out.name + ".part")
+        conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        if (tmp.length() <= 0) { tmp.delete(); return null }
+        tmp.renameTo(out)
+        return out
+    } finally { conn.disconnect() }
 }
 
 private fun authHeaders(url: String): Map<String, String> {
