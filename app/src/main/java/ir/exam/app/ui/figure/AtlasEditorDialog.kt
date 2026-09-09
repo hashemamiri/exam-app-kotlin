@@ -336,6 +336,23 @@ fun AtlasEditorDialog(
             }
         }
     )
+    cropSource?.let { src ->
+        ir.exam.app.ui.image.InteractiveImageEditorDialog(
+            source = src,
+            onDismiss = { cropSource = null },
+            onDone = { out ->
+                val bytes: ByteArray? = runCatching {
+                    ctx.contentResolver.openInputStream(out)?.use { stream -> stream.readBytes() }
+                }.getOrNull() ?: out.path?.let { path -> runCatching { java.io.File(path).readBytes() }.getOrNull() }
+                val data: String? = bytes?.let { b -> encodePhotoDataUrl(b) }
+                if (data != null) {
+                    imageDataUrl = data
+                    marks = emptyList()
+                }
+                cropSource = null
+            }
+        )
+    }
 }
 
 /** شمارهٔ آزاد بعدی — همان nextMarkN مرجع. */
@@ -361,23 +378,6 @@ private fun AtlasThumb(kind: String, typeId: String, modifier: Modifier = Modifi
         contentScale = ContentScale.Fit,
         modifier = modifier
     )
-    cropSource?.let { src ->
-        ir.exam.app.ui.image.InteractiveImageEditorDialog(
-            source = src,
-            onDismiss = { cropSource = null },
-            onDone = { out ->
-                val bytes = runCatching { ctx.contentResolver.openInputStream(out)?.use { it.readBytes() } }.getOrNull()
-                    ?: out.path?.let { p -> runCatching { java.io.File(p).readBytes() }.getOrNull() }
-                val data = bytes?.let { encodePhotoDataUrl(it) }
-                if (data != null) {
-                    imageDataUrl = data
-                    marks = emptyList()
-                }
-                cropSource = null
-            }
-        )
-    }
-
 }
 
 @Composable
