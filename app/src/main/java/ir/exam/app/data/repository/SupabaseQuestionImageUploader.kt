@@ -232,7 +232,11 @@ class SupabaseQuestionImageUploader(context: Context) {
         check(bytes.size <= MAX_AUDIO_BYTES) { "حجم فایل صوتی بیش از ۳ مگابایت است." }
         val path = "$prefix/${UUID.randomUUID()}.m4a"
         val bucket = SupabaseProvider.client.storage.from(BUCKET)
-        bucket.upload(path, bytes) { upsert = false }
+        // V135.4 — نوع محتوا صریح؛ باکت باید audio/mp4 را مجاز داشته باشد (SQL_NATIVE_MEDIA_COST_V135_MIME.sql).
+        bucket.upload(path, bytes) {
+            upsert = false
+            contentType = io.ktor.http.ContentType("audio", "mp4")
+        }
         bucket.publicUrl(path)
     }
 

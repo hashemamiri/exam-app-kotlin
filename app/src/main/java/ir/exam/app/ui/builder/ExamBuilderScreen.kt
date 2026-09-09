@@ -1465,7 +1465,8 @@ private fun QuestionEditor(
             selectionStart = occurrence?.start ?: sourceText.length,
             selectionEnd = occurrence?.endExclusive ?: sourceText.length,
             onDismiss = { formulaTarget = null },
-            onResult = { newText ->
+            onResult = { raw ->
+                val newText = FormulaTextCodec.separateAdjacent(raw)
                 if (newText != sourceText) {
                     when (target.field) {
                         "option" -> target.index?.let { viewModel.updateOption(question.id, it, newText) }
@@ -1599,7 +1600,9 @@ private fun QuestionEditor(
             selectionStart = target.selStart,
             selectionEnd = target.selEnd,
             onDismiss = { formulaHost = null },
-            onResult = { newText ->
+            onResult = { raw ->
+                // V135.4 — فرمول‌های چسبیده از هم جدا شوند تا هر کدام کادر خودش را داشته باشد.
+                val newText = FormulaTextCodec.separateAdjacent(raw)
                 if (newText != target.text) {
                     // V67.1 — مکان‌نما بلافاصله بعد از فرمول درج‌شده بنشیند.
                     questionFieldController.pendingCaretOffset =

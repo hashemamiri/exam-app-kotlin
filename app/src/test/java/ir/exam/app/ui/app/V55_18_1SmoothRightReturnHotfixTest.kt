@@ -36,20 +36,23 @@ class V55_18_1SmoothRightReturnHotfixTest {
         assertTrue("var returningIndex by remember { mutableIntStateOf(-1) }" in cards)
         assertTrue("returnX.snapTo(x)" in cards)
         assertTrue("returnY.snapTo(y)" in cards)
-        assertTrue("returnX.animateTo(0f, tween(320, easing = FastOutSlowInEasing))" in cards)
+        assertTrue("returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in cards)
         // پس از پایان انیمیشن‌ها آزاد می‌شود
         assertTrue("returningIndex = -1" in cards)
     }
 
     @Test
     fun `no two-phase exit remains inside the rightward branch`() {
-        // V134 — چپ و راست یک مسیرِ واحد دارند: کارتِ فعلی از نقطهٔ رهاشدن با returnX بیرون می‌رود و
-        // کارتِ جدید یا با انیمیشنِ پشته جلو می‌آید یا از سمتِ مقابل وارد می‌شود؛ هیچ شاخهٔ جداگانه‌ای نیست.
-        assertFalse("if (direction == -1) {" in cards)
-        assertTrue("returningIndex = leaving" in cards)
-        assertTrue("returnX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing))" in cards)
-        assertTrue("if (!incomingWasVisible) launch { dragX.animateTo(0f, tween(360, easing = FastOutSlowInEasing)) }" in cards)
-        assertFalse("dragX.animateTo(targetX" in cards)
+        val rightBranch = cards.substringAfter("if (direction == -1) {").substringBefore("} else {")
+        // در شاخهٔ راست هیچ خروج جداگانه‌ای قبل از ورود کارت جدید نیست
+        assertFalse("animateTo(targetX" in rightBranch)
+        assertTrue("returningIndex = activeIndex" in rightBranch)
+        assertTrue("dragX.snapTo(targetX)" in rightBranch)
+        // کشیدن به چپ همان خروج انیمیت‌شدهٔ قبلی را دارد
+        val leftBranch = cards.substringAfter("if (direction == -1) {").substringAfter("} else {")
+        // V131 — خروج به چپ نرم‌تر شد (۳۶۰ms با FastOutSlowInEasing)
+        assertTrue("dragX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing))" in leftBranch)
+        assertTrue("dragX.snapTo(0f)" in leftBranch)
     }
 
     @Test

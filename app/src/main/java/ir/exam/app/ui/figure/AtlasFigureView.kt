@@ -75,7 +75,11 @@ fun AtlasFigureView(
     val blanks = showBlanks && onBlankAnswer != null &&
         spec.xStr("blank", "1") != "0" && marks.isNotEmpty()
 
-    Column(modifier) {
+    // V135.4 — تصویرِ کاربر می‌تواند باریک‌تر از کادر باشد (X.w درصد)، وسط‌چین.
+    val widthFraction = spec.atlasWidthPercent() / 100f
+    Column(
+        if (widthFraction < 1f) modifier.then(Modifier.fillMaxWidth(widthFraction)) else modifier
+    ) {
         if (showLabel && title.isNotBlank()) {
             Text(
                 title,

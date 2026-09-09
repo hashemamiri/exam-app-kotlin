@@ -21,6 +21,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,7 +129,9 @@ fun ExamHtmlPrintDialog(
     var previewOpen by remember { mutableStateOf(initialPreview) }
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
-            kotlinx.coroutines.delay(if (barStatusOk == null) 2600 else 3600)
+            // V135.4 — گزارش کاربر: پیام کسر هزینه/موجودی خیلی زود بسته می‌شد؛ پیام‌های
+            // موفق/خطا ۱۲ ثانیه می‌مانند و با لمس هم بسته می‌شوند (پیام‌های خنثی مثل قبل).
+            kotlinx.coroutines.delay(if (barStatusOk == null) 2600 else 12000)
             barStatus = null
             barStatusOk = null
         }
@@ -370,12 +373,13 @@ fun ExamHtmlPrintDialog(
                             exit = fadeOut()
                         ) {
                             Text(
-                                barStatus.orEmpty(),
+                                barStatus.orEmpty() + (if (barStatusOk != null) "\n(برای بستن لمس کنید)" else ""),
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
+                                    .clickable { barStatus = null; barStatusOk = null }
                                     .background(
                                         when (barStatusOk) {
                                             true -> Color(0xF216A34A)

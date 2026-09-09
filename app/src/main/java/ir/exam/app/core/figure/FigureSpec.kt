@@ -48,6 +48,9 @@ data class FigureSpec(val raw: JsonObject) {
     /** V134 — تصویرِ کاربر (data-URL) برای آناتومیِ نوع `photo`؛ خالی یعنی تصویرِ اطلس. */
     fun atlasImage(): String = xStr("img")
 
+    /** V135.4 — پهنای نمایشِ تصویرِ کاربر به درصد (۳۰..۱۰۰)؛ پیش‌فرض ۱۰۰. */
+    fun atlasWidthPercent(): Int = xStr("w").toIntOrNull()?.coerceIn(30, 100) ?: 100
+
     fun marks(): List<AtlasMark> =
         ((raw["X"] as? JsonObject)?.get("marks") as? kotlinx.serialization.json.JsonArray)
             ?.mapNotNull { item ->
@@ -146,7 +149,9 @@ data class FigureSpec(val raw: JsonObject) {
             showMarkNames: Boolean,
             marks: List<AtlasMark>,
             // V134 — تصویرِ خودِ کاربر (گالری/دوربین) به‌صورت data-URL؛ فقط برای t='photo'.
-            imageDataUrl: String? = null
+            imageDataUrl: String? = null,
+            // V135.4 — پهنای نمایش (درصد عرض کادر، ۳۰..۱۰۰) برای تصویرِ کاربر؛ null = تمام‌عرض.
+            widthPercent: Int? = null
         ): FigureSpec {
             val marksJson = kotlinx.serialization.json.JsonArray(
                 marks.map { m ->
@@ -170,6 +175,7 @@ data class FigureSpec(val raw: JsonObject) {
                 "marks" to marksJson
             )
             if (!imageDataUrl.isNullOrBlank()) x["img"] = JsonPrimitive(imageDataUrl)
+            if (widthPercent != null && widthPercent in 30..100 && widthPercent != 100) x["w"] = JsonPrimitive(widthPercent.toString())
             return FigureSpec(
                 JsonObject(
                     mapOf(

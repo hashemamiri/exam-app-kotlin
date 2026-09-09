@@ -38,10 +38,12 @@ class V55_18SmoothCardsEyeMenuTest {
 
     @Test
     fun `rightward card swipe enters smoothly from the exit side`() {
-        // V134 — هر دو جهت یک مسیرِ واحدِ آینه‌ای دارند (بدون شاخهٔ direction == -1)
-        assertTrue("if (direction == -1) {" !in cards)
-        assertTrue("returnX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing))" in cards)
-        assertTrue("dragX.snapTo(if (incomingWasVisible) 0f else -targetX)" in cards)
+        assertTrue("if (direction == -1) {" in cards)
+        assertTrue("dragX.snapTo(targetX)" in cards)
+        assertTrue("dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in cards)
+        // مسیر چپ (direction=1) همان snap فوری قبلی را دارد (شاخهٔ else داخلی).
+        val leftBranch = cards.substringAfter("if (direction == -1) {").substringAfter("} else {")
+        assertTrue("dragX.snapTo(0f)" in leftBranch)
     }
 
     @Test

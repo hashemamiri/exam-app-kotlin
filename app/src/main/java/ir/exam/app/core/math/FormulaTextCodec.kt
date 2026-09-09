@@ -49,9 +49,36 @@ object FormulaTextCodec {
         val wrapped = "${'$'}$clean${'$'}"
         val target = occurrenceIndex?.let { occurrences(source).getOrNull(it) }
         if (target != null) {
-            return source.substring(0, target.start) + wrapped + source.substring(target.endExclusive)
+            return separateAdjacent(source.substring(0, target.start) + wrapped + source.substring(target.endExclusive))
         }
         return if (source.isBlank()) wrapped else source.trimEnd() + " " + wrapped
+    }
+
+    /**
+     * V135.4 — دو فرمولِ پشت‌سرهم (`$a$$b$`) توسط occurrences یک فرمول با محتوای `a$$b`
+     * دیده می‌شد چون `$$` نادیده گرفته می‌شود؛ ویرایشگر فرمول هم فرمول جدید را دقیقاً
+     * چسبیده به قبلی درج می‌کند. این تابع بین «بستهٔ» یک فرمول و «بازِ» فرمول بعدی
+     * یک فاصله می‌گذارد تا هر فرمول کادر و ویرایشگر خودش را داشته باشد.
+     */
+    fun separateAdjacent(source: String): String {
+        if ("$$" !in source) return source
+        val out = StringBuilder(source.length + 8)
+        var inside = false
+        var i = 0
+        while (i < source.length) {
+            val ch = source[i]
+            out.append(ch)
+            if (ch == '$' && !isEscaped(source, i)) {
+                if (inside) {
+                    inside = false
+                    if (i + 1 < source.length && source[i + 1] == '$') out.append(' ')
+                } else {
+                    inside = true
+                }
+            }
+            i++
+        }
+        return out.toString()
     }
 
     fun delete(source: String, occurrenceIndex: Int): String {

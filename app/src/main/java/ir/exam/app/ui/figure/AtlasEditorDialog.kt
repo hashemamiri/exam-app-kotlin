@@ -160,7 +160,13 @@ fun AtlasEditorDialog(
     onInsert: (FigureSpec) -> Unit
 ) {
     val isAnatomy = kind == "a"
-    val imageDataUrl = photoDataUrl ?: initialSpec?.atlasImage()?.takeIf { it.startsWith("data:image/") }
+    // V135.4 — تصویرِ کاربر قابل برش/چرخش است؛ نتیجه جایگزین data-URL می‌شود.
+    var imageDataUrl by remember {
+        mutableStateOf(photoDataUrl ?: initialSpec?.atlasImage()?.takeIf { it.startsWith("data:image/") })
+    }
+    var cropSource by remember { mutableStateOf<android.net.Uri?>(null) }
+    var widthPercent by remember { mutableStateOf(initialSpec?.atlasWidthPercent() ?: 100) }
+    val ctx = LocalContext.current
     val allTypes = if (isAnatomy) AtlasCatalog.ANATOMY_TYPES else AtlasCatalog.SCIENCE_TYPES
     val effectiveDomain = when {
         isAnatomy -> ""
@@ -203,7 +209,8 @@ fun AtlasEditorDialog(
         showBlanks = showBlanks,
         showMarkNames = showMarkNames,
         marks = marks,
-        imageDataUrl = imageDataUrl
+        imageDataUrl = imageDataUrl,
+        widthPercent = if (imageDataUrl != null) widthPercent else null
     )
 
     AlertDialog(
@@ -249,6 +256,33 @@ fun AtlasEditorDialog(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (imageDataUrl != null) {
+                    // V135.4 — برش/چرخش و اندازهٔ نمایش تصویرِ کاربر (آزمون آنلاین و چاپی)
+                    OutlinedButton(
+                        onClick = {
+                            val bytes = ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(imageDataUrl.orEmpty())
+                            if (bytes != null) {
+                                val dir = java.io.File(ctx.cacheDir, "studio").apply { mkdirs() }
+                                val f = java.io.File.createTempFile("atlas-crop-", ".jpg", dir)
+                                f.writeBytes(bytes)
+                                cropSource = android.net.Uri.fromFile(f)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("برش و چرخش تصویر") }
+                    Text(
+                        "اندازهٔ نمایش: ${AtlasMarkPainter.faNum(widthPercent)}٪ عرض",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    androidx.compose.material3.Slider(
+                        value = widthPercent.toFloat(),
+                        onValueChange = { widthPercent = it.toInt().coerceIn(30, 100) },
+                        valueRange = 30f..100f,
+                        steps = 13,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 // بوم نشانه‌گذاری
                 MarkingCanvas(
                     kind = kind,
@@ -327,6 +361,23 @@ private fun AtlasThumb(kind: String, typeId: String, modifier: Modifier = Modifi
         contentScale = ContentScale.Fit,
         modifier = modifier
     )
+    cropSource?.let { src ->
+        ir.exam.app.ui.image.InteractiveImageEditorDialog(
+            source = src,
+            onDismiss = { cropSource = null },
+            onDone = { out ->
+                val bytes = runCatching { ctx.contentResolver.openInputStream(out)?.use { it.readBytes() } }.getOrNull()
+                    ?: out.path?.let { p -> runCatching { java.io.File(p).readBytes() }.getOrNull() }
+                val data = bytes?.let { encodePhotoDataUrl(it) }
+                if (data != null) {
+                    imageDataUrl = data
+                    marks = emptyList()
+                }
+                cropSource = null
+            }
+        )
+    }
+
 }
 
 @Composable
