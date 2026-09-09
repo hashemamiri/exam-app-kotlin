@@ -18204,3 +18204,7 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 2. **پیام‌های نامرئی سازندهٔ آزمون** (`ExamBuilderScreen.kt`): `state.error` و `savedCode` فقط در آخرین `item` فهرست رندر می‌شدند. حالا `LaunchedEffect(state.error)` یک `AlertDialog` «خطا» باز می‌کند و نتیجهٔ ذخیره در دیالوگ «ذخیره شد» (کد، مبلغ، تفکیک، دکمهٔ بازگشت/ادامه) می‌آید؛ متن انتهای فهرست هم حفظ شده است. اعتبارسنجی‌ها در `SupabaseExamBuilderRepository.save()` l.129–137 هستند.
 3. **«پخش فایل صوتی ممکن نشد»** (`QuestionAudioPlayer.kt`): MediaPlayer با هدر Authorization روی باکت خصوصی قابل اتکا نیست. حالا `cachedAudioFile()` فایل را با `HttpURLConnection` + هدرهای نشست به `cache/question_audio_cache/<hash>.m4a` می‌آورد و از مسیر محلی پخش می‌کند (URL محلی `file://` مستقیم).
 4. **کندی برش/فشرده‌سازی** (`AudioTranscoder.kt`): شروع از `BITRATES[startIdx]` (اولین نرخ با تخمین ≤ ۳MB) به‌جای ۱۲۸k؛ `dequeueOutputBuffer` دیکدر تا پایان ورودی با timeout صفر؛ `dequeueInputBuffer` انکدر بدون انتظار + drain.
+
+### V135.8 — «دانلود فایل صوتی ممکن نشد» ادامه داشت
+- کلاینت: `cachedAudioFile` اکنون suspend است؛ اول `storage.from(bucket).downloadAuthenticated(path)` (bucket/path با `storagePathOf` از URL public/authenticated استخراج می‌شود)، بعد HTTP مستقیم؛ پیام خطا شامل علت (`HTTP 403`، متن استثنا) است — از این پس کاربر علت را می‌فرستد و حدس نمی‌زنیم.
+- محتمل‌ترین علت سرور: بخش ۲ SQL نسخهٔ V135 (سیاست select با پوشهٔ `audio`) بعد از deadlock اجرا نشده باشد → 400/403. `sql/manual/CHECK_AUDIO_STORAGE_V135_8.sql` سیاست‌ها و فایل‌های audio را نشان می‌دهد.

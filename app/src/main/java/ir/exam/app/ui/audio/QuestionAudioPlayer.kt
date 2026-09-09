@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.BuildConfig
 import ir.exam.app.data.remote.SupabaseProvider
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.delay
 
 /**
@@ -72,8 +73,12 @@ fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modi
         // باکت خصوصی قابل اتکا نیست (درخواست‌های range/redirect بدون هدر). فایل ابتدا با نشست
         // کاربر به کش دانلود و سپس از فایل محلی پخش می‌شود (یک‌بار برای هر URL).
         scope.launch {
-            val local = withContext(Dispatchers.IO) { runCatching { cachedAudioFile(context, url) }.getOrNull() }
-            if (local == null) { error = "دانلود فایل صوتی ممکن نشد."; preparing = false; runCatching { mp.release() }; return@launch }
+            val fetched = withContext(Dispatchers.IO) { runCatching { cachedAudioFile(context, url) } }
+            val local = fetched.getOrNull()
+            if (local == null) {
+                val why = fetched.exceptionOrNull()?.message?.takeIf { it.isNotBlank() } ?: "نامشخص"
+                error = "دانلود فایل صوتی ممکن نشد ($why)"; preparing = false; runCatching { mp.release() }; return@launch
+            }
             runCatching {
             mp.setDataSource(local.absolutePath)
             mp.setOnPreparedListener {
@@ -139,23 +144,66 @@ fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modi
  * V135.7 — فایل صوتی را (در صورت نیاز با توکن نشست) به کش می‌آورد و مسیر محلی برمی‌گرداند.
  * نام فایل از hash نشانی است تا دفعات بعد بدون دانلود پخش شود. URL محلی (file://) مستقیم برمی‌گردد.
  */
-private fun cachedAudioFile(context: android.content.Context, url: String): java.io.File? {
-    if (url.startsWith("file://", ignoreCase = true)) return java.io.File(Uri.parse(url).path.orEmpty()).takeIf { it.isFile }
+private class AudioFetchException(message: String) : Exception(message)
+
+/**
+ * V135.7 — فایل صوتی را به کش می‌آورد و مسیر محلی برمی‌گرداند (نام از hash نشانی).
+ * V135.8 — گزارش کاربر «دانلود فایل صوتی ممکن نشد»: اول با کلاینت Storage سوپابیس
+ * (`downloadAuthenticated`، همان مسیر تصاویر) و در صورت شکست با HTTP مستقیم + هدرهای نشست؛
+ * و علت واقعی (کد HTTP/پیام) در خطا برگردانده می‌شود تا حدس نزنیم.
+ */
+private suspend fun cachedAudioFile(context: android.content.Context, url: String): java.io.File {
+    if (url.startsWith("file://", ignoreCase = true)) {
+        return java.io.File(Uri.parse(url).path.orEmpty()).takeIf { it.isFile }
+            ?: throw AudioFetchException("فایل محلی پیدا نشد")
+    }
     val dir = java.io.File(context.cacheDir, "question_audio_cache").apply { mkdirs() }
     val out = java.io.File(dir, url.hashCode().toUInt().toString(16) + ".m4a")
     if (out.isFile && out.length() > 0) return out
-    val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-    conn.connectTimeout = 15_000; conn.readTimeout = 30_000
-    conn.instanceFollowRedirects = true
-    authHeaders(url).forEach { (k, v) -> conn.setRequestProperty(k, v) }
+    val tmp = java.io.File(dir, out.name + ".part")
+    var reason = ""
+    // ۱) کلاینت Storage (نشست کاربر را خودش می‌فرستد)
+    storagePathOf(url)?.let { (bucket, path) ->
+        try {
+            val bytes = SupabaseProvider.client.storage.from(bucket).downloadAuthenticated(path)
+            if (bytes.isNotEmpty()) { tmp.writeBytes(bytes); tmp.renameTo(out); return out }
+            reason = "پاسخ خالی"
+        } catch (e: Throwable) {
+            reason = e.message.orEmpty().take(120)
+        }
+    }
+    // ۲) HTTP مستقیم با هدرهای نشست
     try {
-        if (conn.responseCode !in 200..299) return null
-        val tmp = java.io.File(dir, out.name + ".part")
-        conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-        if (tmp.length() <= 0) { tmp.delete(); return null }
-        tmp.renameTo(out)
-        return out
-    } finally { conn.disconnect() }
+        val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+        conn.connectTimeout = 15_000; conn.readTimeout = 30_000
+        conn.instanceFollowRedirects = true
+        authHeaders(url).forEach { (k, v) -> conn.setRequestProperty(k, v) }
+        try {
+            val code = conn.responseCode
+            if (code in 200..299) {
+                conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                if (tmp.length() > 0) { tmp.renameTo(out); return out }
+                reason = "پاسخ خالی"
+            } else {
+                reason = "HTTP $code" + (if (reason.isNotBlank()) " · $reason" else "")
+            }
+        } finally { conn.disconnect() }
+    } catch (e: Throwable) {
+        reason = (e.message ?: e.javaClass.simpleName).take(120) + (if (reason.isNotBlank()) " · $reason" else "")
+    }
+    tmp.delete()
+    throw AudioFetchException(reason.ifBlank { "نامشخص" })
+}
+
+/** `https://<proj>/storage/v1/object/(public|authenticated)/<bucket>/<path>` → (bucket, path). */
+private fun storagePathOf(url: String): Pair<String, String>? {
+    val marker = "/storage/v1/object/"
+    val i = url.indexOf(marker); if (i < 0) return null
+    var rest = url.substring(i + marker.length).substringBefore('?')
+    for (prefix in listOf("public/", "authenticated/", "sign/")) if (rest.startsWith(prefix)) { rest = rest.removePrefix(prefix); break }
+    val bucket = rest.substringBefore('/'); val path = rest.substringAfter('/', "")
+    if (bucket.isBlank() || path.isBlank()) return null
+    return bucket to java.net.URLDecoder.decode(path, "UTF-8")
 }
 
 private fun authHeaders(url: String): Map<String, String> {
