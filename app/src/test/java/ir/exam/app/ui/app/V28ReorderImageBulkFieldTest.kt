@@ -192,8 +192,8 @@ class V28ReorderImageBulkFieldTest {
     @Test
     fun `field of study is reachable in every student and class form`() {
         assertTrue("FieldOfStudyPicker" in school)
-        // فرم تکی، فرم گروهی، کلاس و فیلتر اعضا
-        assertTrue(school.split("FieldOfStudyPicker(").size - 1 >= 4)
+        // فرم تکی، فرم گروهی، کلاس (V136: فیلتر اعضا از StudentFilterDialog مشترک می‌آید)
+        assertTrue(school.split("FieldOfStudyPicker(").size - 1 >= 3)
         assertTrue("row.copy(field = it.take(100))" in school)
         assertTrue("student.fieldOfStudy" in school)
         assertTrue("item.fieldOfStudy" in school)

@@ -1,3 +1,6 @@
+V136.2 — رفع دو تست واحد شمارشی پس از V136
+- V23/V28: شمار GradeOdometerPicker و FieldOfStudyPicker در SchoolManagementScreen پس از حذف چیپ‌های «افزودن موجود» یکی کمتر شد؛ تست‌ها هم‌راستا شدند. کدی در برنامه تغییر نکرده است.
+
 V136.1 — رفع دو خطای کامپایل V136
 - ExamApp.kt: داخل Row نسخهٔ RowScope.AnimatedVisibility انتخاب می‌شد → نام کامل androidx.compose.animation.AnimatedVisibility.
 - StudentWhiteboardDialog.kt: import اشتباه layout.weight (internal) حذف شد.

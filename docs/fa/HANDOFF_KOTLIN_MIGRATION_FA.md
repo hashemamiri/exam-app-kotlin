@@ -18233,3 +18233,6 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 ### V136.1 — CI قرمز پس از V136 (دو خطای کامپایل)
 1. `ExamApp.kt`: محتوا داخل `Row` رفت و `AnimatedVisibility` بدون receiver صریح به overload `RowScope.AnimatedVisibility` resolve شد («cannot be called in this context with an implicit receiver»). رفع: `androidx.compose.animation.AnimatedVisibility(...)` با نام کامل. **درس:** هر وقت بلوکی را داخل Row/Column می‌بریم، فراخوانی‌های `AnimatedVisibility` را با نام کامل بنویسیم.
 2. `StudentWhiteboardDialog.kt`: `import androidx.compose.foundation.layout.weight` به یک property داخلی (internal) اشاره می‌کرد؛ `Modifier.weight` عضو RowScope/ColumnScope است و import نمی‌خواهد. حذف شد.
+
+### V136.2 — دو تست شمارشی (CI پس از V136.1)
+`V23InteractionGradeOdometerTest` (`assertEquals(5, …GradeOdometerPicker\()`) و `V28ReorderImageBulkFieldTest` (`FieldOfStudyPicker(` ≥ 4) تعداد فراخوانی‌ها در `SchoolManagementScreen.kt` را قفل کرده بودند؛ با حذف پیکرهای داخلی `MemberPickerDialog` یکی کم شد → ۴ و ≥۳. **درس:** pin-check باید علاوه بر رشته‌ها، `assertEquals(n, Regex(...).count())` و `split(...).size` را هم برای فایل‌های تغییرکرده پیدا کند.

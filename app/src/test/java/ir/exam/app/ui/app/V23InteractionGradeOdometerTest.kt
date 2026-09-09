@@ -124,7 +124,8 @@ class V23InteractionGradeOdometerTest {
 
         // V61.5 — یکی برای فیلتر دانش‌آموزان (school) و یکی برای نام مدرسهٔ
         // سربرگ (profile) به چرخ مشترک اضافه شد؛ شمار جدید ۵ و ۲ است.
-        assertEquals(5, Regex("GradeOdometerPicker\\(").findAll(school).count())
+        // V136 — «افزودن موجود» دیگر ادومتر خودش را ندارد (فیلتر مشترک StudentFilterDialog)؛ ۵ → ۴.
+        assertEquals(4, Regex("GradeOdometerPicker\\(").findAll(school).count())
         assertEquals(2, Regex("GradeOdometerPicker\\(").findAll(profile).count())
         assertFalse(
             "free-text grade input remains in school UI",
