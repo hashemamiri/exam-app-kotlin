@@ -16,7 +16,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * V135 — موتور صوت بومی (بدون FFmpeg): هر فایل صوتی که اندروید بتواند دیکد کند
+ * V135 — موتور صوت بومی (فقط MediaCodec اندروید، بدون کتابخانهٔ خارجی): هر فایل صوتی که اندروید بتواند دیکد کند
  * (mp3/m4a/ogg/wav/opus/flac/amr…) → PCM 16-bit → AAC-LC داخل m4a.
  *
  * - برش: فقط بازهٔ [startMs, endMs) دیکد و انکد می‌شود.
