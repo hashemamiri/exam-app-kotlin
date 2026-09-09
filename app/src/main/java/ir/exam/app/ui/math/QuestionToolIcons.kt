@@ -81,6 +81,24 @@ object QuestionToolIcons {
     }
 
     /** آناتومی: سر + تنه + دست‌وپا مرجع. */
+    /** V134 — گالری: قاب عکس با کوه و خورشید (جایگزین سه آیکن آناتومی/فیزیک/شیمی در نوار). */
+    val Gallery: ImageVector by lazy {
+        ImageVector.Builder("QTool.Gallery", 24.dp, 24.dp, 24f, 24f).apply {
+            path(stroke = stroke, strokeLineWidth = 1.8f, strokeLineJoin = StrokeJoin.Round, fill = null) {
+                moveTo(3.5f, 5.5f); horizontalLineToRelative(17f); verticalLineToRelative(13f)
+                horizontalLineToRelative(-17f); close()
+            }
+            path(stroke = stroke, strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, fill = null) {
+                moveTo(3.5f, 16.5f); lineTo(9f, 11f); lineTo(13f, 15f); lineTo(15.5f, 12.5f); lineTo(20.5f, 17.5f)
+            }
+            path(stroke = stroke, strokeLineWidth = 1.8f, fill = null) {
+                moveTo(17.6f, 9f)
+                arcToRelative(1.6f, 1.6f, 0f, true, true, -3.2f, 0f)
+                arcToRelative(1.6f, 1.6f, 0f, true, true, 3.2f, 0f)
+            }
+        }.build()
+    }
+
     val Anatomy: ImageVector by lazy {
         ImageVector.Builder("QTool.Anatomy", 24.dp, 24.dp, 24f, 24f).apply {
             path(stroke = stroke, strokeLineWidth = 1.8f, fill = null) {

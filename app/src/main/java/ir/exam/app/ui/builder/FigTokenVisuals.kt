@@ -25,7 +25,7 @@ object FigTokenVisuals {
         return when (spec.kind) {
             "t" -> "جدول"
             "p" -> "جدول تناوبی"
-            "a" -> "آناتومی"
+            "a" -> if (spec.type == "photo") "تصویر" else "آناتومی"
             "s" -> "فیزیک/شیمی"
             else -> spec.xStr("title").ifBlank { "شکل/نمودار" }
         }

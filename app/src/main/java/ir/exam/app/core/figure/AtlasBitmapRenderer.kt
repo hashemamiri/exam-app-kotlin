@@ -18,8 +18,17 @@ object AtlasBitmapRenderer {
     private const val TARGET_WIDTH = 760
 
     fun render(context: Context, spec: FigureSpec): Bitmap? = runCatching {
-        val assetPath = AtlasCatalog.assetPath(spec) ?: return null
-        val source = context.assets.open(assetPath).use { BitmapFactory.decodeStream(it) } ?: return null
+        // V134 — تصویرِ خودِ کاربر (data-URL) یا فایلِ اطلس.
+        val userImage = spec.atlasImage()
+        val source: Bitmap = if (userImage.startsWith("data:image/")) {
+            val b64 = userImage.substringAfter("base64,", "")
+            if (b64.isBlank()) return null
+            val bytes = android.util.Base64.decode(b64, android.util.Base64.NO_WRAP)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        } else {
+            val assetPath = AtlasCatalog.assetPath(spec) ?: return null
+            context.assets.open(assetPath).use { BitmapFactory.decodeStream(it) } ?: return null
+        }
         val marks = spec.marks()
         val showLabel = spec.xStr("lab", "1") != "0"
         val title = spec.xStr("title").ifBlank { AtlasCatalog.displayName(spec) }

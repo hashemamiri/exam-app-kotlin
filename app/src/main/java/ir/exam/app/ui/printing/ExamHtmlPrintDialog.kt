@@ -123,11 +123,14 @@ fun ExamHtmlPrintDialog(
     // V131 — پنجرهٔ بومیِ گزینه‌های پنلِ 📐 (اندازهٔ کاغذ/جهت/حاشیه‌ها/فاصلهٔ سؤالات)
     var optionPicker by remember { mutableStateOf<PrintOptionPickRequest?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
+    // V134 — رنگِ پیامِ وضعیت: null = خنثی (تیره)، true = موفق (سبز)، false = خطا (قرمز)
+    var barStatusOk by remember { mutableStateOf<Boolean?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
-            kotlinx.coroutines.delay(2600)
+            kotlinx.coroutines.delay(if (barStatusOk == null) 2600 else 3600)
             barStatus = null
+            barStatusOk = null
         }
     }
 
@@ -373,7 +376,13 @@ fun ExamHtmlPrintDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xE6111827))
+                                    .background(
+                                        when (barStatusOk) {
+                                            true -> Color(0xF216A34A)
+                                            false -> Color(0xF2DC2626)
+                                            null -> Color(0xE6111827)
+                                        }
+                                    )
                                     .padding(horizontal = 18.dp, vertical = 12.dp)
                             )
                         }
@@ -421,9 +430,18 @@ fun ExamHtmlPrintDialog(
                             chargeScope.launch {
                                 val result = ir.exam.app.data.repository.SupabaseBillingRepository()
                                     .chargePrint(printExamId.ifBlank { printable?.documentTitle.orEmpty() }, java.util.UUID.randomUUID().toString(), count, req.mode)
-                                result.onSuccess { req.fire() }
+                                result.onSuccess { charged ->
+                                    /* V134 — کادرِ سبز: «کسر ۱٬۰۰۰ تومان با موفقیت» */
+                                    barStatusOk = true
+                                    barStatus = "کسر " + formatToman(charged.costToman) + " تومان از کیف پول با موفقیت انجام شد" +
+                                        (charged.balanceToman?.let { " (موجودی: " + formatToman(it) + " تومان)" } ?: "")
+                                    req.fire()
+                                }
                                     .onFailure { e ->
-                                        barStatus = e.message?.takeIf { it.isNotBlank() } ?: "کسر هزینهٔ چاپ ناموفق بود."
+                                        /* V134 — کادرِ قرمز: «موجودی ناکافی» یا خطای واقعیِ سرور */
+                                        barStatusOk = false
+                                        val msg = e.message?.takeIf { it.isNotBlank() } ?: "کسر هزینهٔ چاپ ناموفق بود."
+                                        barStatus = if (msg.contains("کافی نیست")) "موجودی ناکافی — " + msg else msg
                                         req.restore()
                                     }
                             }
@@ -762,6 +780,10 @@ internal fun createExamPrintWebView(
 }
 
 /** V132 — درخواستِ چاپِ منتظرِ تأیید هزینه. */
+/** V134 — عددِ تومان با جداکنندهٔ هزارگان و ارقام فارسی. */
+internal fun formatToman(value: Long): String =
+    java.text.NumberFormat.getIntegerInstance(java.util.Locale("fa", "IR")).format(value)
+
 internal class PendingPrintCharge(val mode: String, val fire: () -> Unit, val restore: () -> Unit)
 
 /** V132 — هزینهٔ چاپ به‌ازای هر سؤال (تومان). */

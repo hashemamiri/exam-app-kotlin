@@ -42,10 +42,11 @@ class V53WebFieldNativeToolsTableTest {
     }
 
     @Test
-    fun `native toolbar has all eight icons in reference order`() {
+    fun `native toolbar has all six icons in reference order`() {
+        // V134 — آناتومی/فیزیک/شیمی زیر یک آیکنِ «گالری شکل‌ها» جمع شدند.
         val order = listOf(
             "درج فرمول", "درج شکل", "درج نمودار", "درج جدول",
-            "درج آناتومی بدن", "درج جدول تناوبی", "درج فیزیک", "درج شیمی"
+            "گالری شکل‌ها", "درج جدول تناوبی"
         )
         var cursor = -1
         order.forEach { label ->
@@ -55,7 +56,7 @@ class V53WebFieldNativeToolsTableTest {
             cursor = at
         }
         // همهٔ آیکن‌ها ImageVector بومی‌اند؛ هیچ آیکنی از HTML نمی‌آید.
-        listOf("Formula", "Figure", "Graph", "Table", "Anatomy", "Periodic", "Physics", "Chemistry").forEach {
+        listOf("Formula", "Figure", "Graph", "Table", "Gallery", "Anatomy", "Periodic", "Physics", "Chemistry").forEach {
             assertTrue("missing native icon: $it", "val $it: ImageVector" in toolIcons)
         }
         assertTrue("QuestionToolIcons" in webSection)

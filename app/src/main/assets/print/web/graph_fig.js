@@ -94,7 +94,7 @@
     if (ox < L || ox > R) ox = L;
     if (oy < T || oy > B) oy = B;
     var h = '';
-    h += '<rect x="' + L + '" y="' + T + '" width="' + (R - L) + '" height="' + (B - T) + '" fill="#fbfcfe" stroke="#d5dce6"/>';
+    h += '<rect class="gf-bg" x="' + L + '" y="' + T + '" width="' + (R - L) + '" height="' + (B - T) + '" fill="#fbfcfe" stroke="#d5dce6"/>';
     var gx;
     for (gx = Math.ceil(xmin); gx <= xmax; gx++) {
       var xx = xof(gx);
@@ -129,7 +129,7 @@
   }
 
   function frame(L, T, R, B) {
-    return '<rect x="' + L + '" y="' + T + '" width="' + (R - L) + '" height="' + (B - T) + '" fill="#fbfcfe" stroke="#d5dce6"/>';
+    return '<rect class="gf-bg" x="' + L + '" y="' + T + '" width="' + (R - L) + '" height="' + (B - T) + '" fill="#fbfcfe" stroke="#d5dce6"/>';
   }
   function itemW(n) {
     return 11 + 6 + Math.min(88, String(n).length * 7.2 + 8);
@@ -450,7 +450,7 @@
       var ex = cgx + rg * Math.cos(th);
       var ey = cgy - rg * Math.sin(th);
       var hg = chg.html;
-      hg += '<rect x="22" y="' + top + '" width="316" height="' + (266 - top) + '" rx="12" fill="#fbfcfe" stroke="#d5dce6"/>';
+      hg += '<rect class="gf-bg" x="22" y="' + top + '" width="316" height="' + (266 - top) + '" rx="12" fill="#fbfcfe" stroke="#d5dce6"/>';
       hg += '<path d="M' + (cgx - rg) + ',' + cgy + ' A' + rg + ',' + rg + ' 0 0 1 ' + (cgx + rg) + ',' + cgy + '" fill="none" stroke="#e6eaf0" stroke-width="14" stroke-linecap="round"/>';
       if (frac >= 0.992) {
         hg += '<path d="M' + (cgx - rg) + ',' + cgy + ' A' + rg + ',' + rg + ' 0 0 1 ' + (cgx + rg) + ',' + cgy + '" fill="none" stroke="#6c63f5" stroke-width="14" stroke-linecap="round"/>';

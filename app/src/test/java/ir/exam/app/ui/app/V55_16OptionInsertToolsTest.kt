@@ -45,8 +45,8 @@ class V55_16OptionInsertToolsTest {
         assertTrue("fun OptionInsertButton(" in tools)
         assertTrue("Icons.Outlined.Add" in tools)
         assertTrue("fun OptionInsertToolsDialog(" in tools)
-        // هر ۸ ابزار همان کادر متن سؤال.
-        listOf("FORMULA", "FIGURE", "GRAPH", "TABLE", "ANATOMY", "PERIODIC", "PHYSICS", "CHEMISTRY")
+        // V134 — هر ۶ ابزار همان کادر متن سؤال (آناتومی/فیزیک/شیمی/تصویر زیر «گالری»).
+        listOf("FORMULA", "FIGURE", "GRAPH", "TABLE", "GALLERY", "PERIODIC")
             .forEach { assertTrue("missing tool: $it", it in tools) }
         // آیکن فرمول قدیمی از هر دو کارت رفته است.
         assertFalse("Icons.Outlined.Functions" in builder)

@@ -110,6 +110,8 @@ import ir.exam.app.ui.math.ExistingFormulaEditor
 import ir.exam.app.core.figure.AtlasCatalog
 import ir.exam.app.ui.figure.AtlasEditorDialog
 import ir.exam.app.ui.figure.AtlasTypePickerDialog
+import ir.exam.app.ui.figure.FigureGalleryChoice
+import ir.exam.app.ui.figure.FigureGalleryChooserDialog
 import ir.exam.app.ui.figure.PeriodicEditorDialog
 import ir.exam.app.ui.figure.TableEditorDialog
 import ir.exam.app.ui.math.FormulaHostDialog
@@ -890,7 +892,9 @@ private data class AtlasTarget(
     val domain: String = "phys", // فقط برای k='s'
     val initialSpec: FigureSpec? = null,
     val chooseType: Boolean = false,
-    val presetType: String? = null
+    val presetType: String? = null,
+    // V134 — عکسِ خودِ کاربر (گالری/دوربین) که در ویرایشگر آناتومی نشانه‌گذاری می‌شود.
+    val photoDataUrl: String? = null
 )
 
 /** V53.4 — متن و محدودهٔ انتخاب برای پنجرهٔ تمام‌صفحهٔ فرمول WebView. */
@@ -938,6 +942,8 @@ private fun QuestionEditor(
     var periodicTarget by remember(question.id) { mutableStateOf<TableTarget?>(null) }
     // V53.3 — هدف ویرایشگر Native آناتومی/فیزیک/شیمی.
     var atlasTarget by remember(question.id) { mutableStateOf<AtlasTarget?>(null) }
+    // V134 — پنجرهٔ «گالری شکل‌ها» (آناتومی/فیزیک/شیمی/تصویر) برای متن سؤال یا فیلدِ +.
+    var galleryChooserOpen by remember(question.id) { mutableStateOf(false) }
     // V53.3 — وقتی true، خروجی ویرایشگر جایگزین توکن dblclick می‌شود نه درج تازه.
     var editingWebToken by remember(question.id) { mutableStateOf(false) }
     // V53.4 — پنجرهٔ تمام‌صفحهٔ فرمول WebView برای متن سؤال.
@@ -1106,9 +1112,7 @@ private fun QuestionEditor(
                 },
                 onInsertTable = { tableTarget = TableTarget() },
                 onInsertPeriodic = { periodicTarget = TableTarget() },
-                onInsertAnatomy = { atlasTarget = AtlasTarget(kind = "a", chooseType = true) },
-                onInsertPhysics = { atlasTarget = AtlasTarget(kind = "s", domain = "phys", chooseType = true) },
-                onInsertChemistry = { atlasTarget = AtlasTarget(kind = "s", domain = "chem", chooseType = true) },
+                onInsertGallery = { galleryChooserOpen = true },
                 onOpenFormula = { text, selStart, selEnd ->
                     formulaHost = FormulaHostTarget(text, selStart, selEnd)
                 },
@@ -1368,19 +1372,31 @@ private fun QuestionEditor(
                         fieldInsertTarget = ref
                         periodicTarget = TableTarget()
                     }
-                    OptionInsertTool.ANATOMY -> {
+                    OptionInsertTool.GALLERY -> {
                         fieldInsertTarget = ref
-                        atlasTarget = AtlasTarget(kind = "a", chooseType = true)
-                    }
-                    OptionInsertTool.PHYSICS -> {
-                        fieldInsertTarget = ref
-                        atlasTarget = AtlasTarget(kind = "s", domain = "phys", chooseType = true)
-                    }
-                    OptionInsertTool.CHEMISTRY -> {
-                        fieldInsertTarget = ref
-                        atlasTarget = AtlasTarget(kind = "s", domain = "chem", chooseType = true)
+                        galleryChooserOpen = true
                     }
                 }
+            }
+        )
+    }
+    // V134 — گالری شکل‌ها: آناتومی/فیزیک/شیمی مثل قبل (انتخاب نوع → ویرایش)؛ «تصویر»
+    // عکسِ گالری/دوربین را مستقیم در ویرایشگر آناتومی برای نام‌گذاری باز می‌کند.
+    if (galleryChooserOpen) {
+        FigureGalleryChooserDialog(
+            onDismiss = { galleryChooserOpen = false; fieldInsertTarget = null },
+            onChoice = { choice ->
+                galleryChooserOpen = false
+                atlasTarget = when (choice) {
+                    FigureGalleryChoice.ANATOMY -> AtlasTarget(kind = "a", chooseType = true)
+                    FigureGalleryChoice.PHYSICS -> AtlasTarget(kind = "s", domain = "phys", chooseType = true)
+                    FigureGalleryChoice.CHEMISTRY -> AtlasTarget(kind = "s", domain = "chem", chooseType = true)
+                    FigureGalleryChoice.PHOTO -> null
+                }
+            },
+            onPhoto = { dataUrl ->
+                galleryChooserOpen = false
+                atlasTarget = AtlasTarget(kind = "a", presetType = AtlasCatalog.PHOTO_TYPE, photoDataUrl = dataUrl)
             }
         )
     }
@@ -1580,6 +1596,7 @@ private fun QuestionEditor(
                 domain = target.domain,
                 initialSpec = target.initialSpec,
                 presetType = target.presetType,
+                photoDataUrl = target.photoDataUrl,
                 onDismiss = { cancelFigureEditing(); atlasTarget = null },
                 onInsert = { spec ->
                     deliverFigure(spec, null)

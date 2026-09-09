@@ -166,3 +166,24 @@ body{padding:0 !important;}
 .host-fmt .hf-btn.hf-al{min-width:30px;display:inline-flex;align-items:center;justify-content:center;}
 .host-fmt .hf-btn.hf-al svg{display:block;}
 .host-fmt .hf-btn.hf-al.on{background:#2563eb;color:#fff;}
+
+/* ===================== V134 — شیءهای درج‌شده روی کاغذ بدون کادر/زمینه =====================
+   خواستهٔ کاربر: در پیش‌نمایش/چاپ فقط خودِ شکل روی کاغذ دیده شود؛ نه کادر سفیدِ .qmf-fig، نه قابِ
+   .an-frame آناتومی/فیزیک/شیمی، نه زمینهٔ خاکستریِ صفحهٔ نمودار/هندسه (rect.gf-bg در graph_fig/geo_fig).
+   ویرایشگرها (خارج از .question-main-td) دست‌نخورده می‌مانند. */
+.question-main-td .qmf-fig{background:transparent !important;box-shadow:none !important;border:0 !important;overflow:visible !important;}
+.question-main-td .qmf-fig .gf-bg{fill:none !important;stroke:none !important;}
+.question-main-td .an-stage{padding:0 !important;}
+.question-main-td .an-frame{border:0 !important;background:transparent !important;border-radius:0 !important;}
+.question-main-td .an-frame img.an-svg,.question-main-td .an-stage img.an-svg{border-radius:0 !important;}
+/* V134 — ردیف‌های «جای پاسخ» زیر شکل (شماره + خط‌چین) روی کاغذ درشت‌تر و بدون کادر/زمینه؛
+   قبلاً ۲۶px با زمینهٔ خاکستری بود و در شکل‌های کوچک‌شده تقریباً دیده نمی‌شد. */
+.question-main-td .an-af{background:transparent !important;padding:6px 0 0 !important;gap:4px !important;border-radius:0 !important;}
+.question-main-td .an-af-row{background:transparent !important;border:0 !important;padding:2px 0 !important;gap:10px !important;}
+.question-main-td .an-af-n{flex:0 0 30px !important;height:30px !important;font-size:14px !important;}
+.question-main-td .an-af-box{min-height:34px !important;border-bottom:2px dashed #334155 !important;}
+/* وقتی کاربر ارتفاع شکل را با دستگیره تغییر داده، فقط تصویر باید فشرده شود نه ردیف‌های پاسخ. */
+.interactive-figure[style*="height"] .qmf-fig .an-plate{height:100%;display:flex;flex-direction:column;}
+.interactive-figure[style*="height"] .qmf-fig .an-stage{flex:1 1 auto;min-height:0;}
+.interactive-figure[style*="height"] .qmf-fig .an-frame{height:100%;}
+.interactive-figure[style*="height"] .qmf-fig .an-af{flex:0 0 auto;}

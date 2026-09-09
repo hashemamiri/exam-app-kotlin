@@ -33,10 +33,11 @@ class V65_0NativeQuestionFieldTest {
     }
 
     @Test
-    fun `eight native tool icons remain in reference order`() {
+    fun `six native tool icons remain in reference order`() {
+        // V134 — آناتومی/فیزیک/شیمی زیر یک آیکنِ «گالری شکل‌ها» جمع شدند.
         val order = listOf(
             "درج فرمول", "درج شکل", "درج نمودار", "درج جدول",
-            "درج آناتومی بدن", "درج جدول تناوبی", "درج فیزیک", "درج شیمی"
+            "گالری شکل‌ها", "درج جدول تناوبی"
         )
         var cursor = -1
         order.forEach { label ->

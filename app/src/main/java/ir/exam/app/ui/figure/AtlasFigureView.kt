@@ -51,14 +51,15 @@ fun AtlasFigureView(
     onImageTap: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val assetPath = AtlasCatalog.assetPath(spec) ?: return
+    // V134 — t='photo': تصویرِ خودِ کاربر (data-URL) به‌جای فایلِ اطلس.
+    val assetPath = AtlasCatalog.imageModel(spec) ?: return
     val marks = remember(spec) { spec.marks() }
     // درخواست تصویر اطلس بین بازترکیب‌ها پایدار بماند؛ ساختن ImageRequest
     // تازه برای هر بازترکیب می‌توانست درخواست/بررسی cache را تکرار کند.
     val assetRequest = remember(context, assetPath) {
         ImageRequest.Builder(context)
-            .data("file:///android_asset/$assetPath")
-            .memoryCacheKey("atlas:$assetPath")
+            .data(assetPath)
+            .memoryCacheKey("atlas:" + (if (assetPath.startsWith("data:")) assetPath.hashCode().toString() else assetPath))
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.DISABLED)
             .networkCachePolicy(CachePolicy.DISABLED)

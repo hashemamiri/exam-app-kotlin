@@ -971,11 +971,11 @@ private fun AuthenticatedShell(
                 onClick = { select(onAccount) }
             ),
             Design69MenuCard(
-                "سایت", "بازکردن onlineexam.ir در مرورگر", Design69Icons.Site,
+                "سایت", "onlineexam.ir", Design69Icons.Site,
                 onClick = { select(onSite) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر، داده‌ها و فهرست تغییرات", Design69Icons.Settings,
+                "تنظیمات", "ظاهر، داده و درباره", Design69Icons.Settings,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),
@@ -1003,11 +1003,11 @@ private fun AuthenticatedShell(
                 onClick = { select(onAccount) }
             ),
             Design69MenuCard(
-                "سایت", "بازکردن onlineexam.ir در مرورگر", Design69Icons.Site,
+                "سایت", "onlineexam.ir", Design69Icons.Site,
                 onClick = { select(onSite) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر، داده‌ها و فهرست تغییرات", Design69Icons.Settings,
+                "تنظیمات", "ظاهر، داده و درباره", Design69Icons.Settings,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),
@@ -1037,7 +1037,7 @@ private fun AuthenticatedShell(
                 onClick = { select(onAccount) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر، داده‌ها و فهرست تغییرات", Design69Icons.Settings,
+                "تنظیمات", "ظاهر، داده و درباره", Design69Icons.Settings,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),

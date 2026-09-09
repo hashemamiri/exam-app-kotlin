@@ -18108,3 +18108,35 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 
 ### ۵) تحویل
 - `apply_v133.py` (بدون تغییر SQL/سرور). فایل‌ها: math_host.js، webhost.js، webhost.css، NativeMathAst.kt، NativeMathSvgRenderer.kt، ExamImageStudioCore.kt، handoff، CHANGELOG.
+
+## §۳۵۹ — V134: پیام کسر هزینهٔ چاپ، سوایپِ یکسانِ کارت‌ها، شرح کارت‌ها، شکل‌ها بدون کادر، خطِ جداکننده، آیکنِ گالری + تصویرِ کاربر، ردیف‌های پاسخ، تراکنش‌های فارسی
+
+### ۱) پیام کسر هزینهٔ چاپ — `ui/printing/ExamHtmlPrintDialog.kt`
+- حالت `barStatusOk: Boolean?`؛ موفق → نوارِ سبز (`0xF216A34A`) «کسر N تومان از کیف پول با موفقیت انجام شد (موجودی: …)»، ناموفق → نوارِ قرمز (`0xF2DC2626`) «موجودی ناکافی — …». `formatToman(Long)` (fa-IR) کنارِ `PendingPrintCharge`. نوارِ وضعیت با پیامِ هزینه ۳٫۶ ثانیه می‌ماند.
+
+### ۲) سوایپِ چپ و راستِ کارت‌ها یکسان — `ui/app/TeacherManagementCardsScreen.kt` `settle()`
+- شاخهٔ `if (direction == -1)` حذف شد؛ هر دو جهت یک مسیر: کارتِ رهاشده (`returningIndex = leaving`) از نقطهٔ رهاسازی به بیرون (`returnX.animateTo(targetX, 360ms FastOutSlowIn)`) می‌رود؛ کارتِ ورودی اگر در پشته دیده نمی‌شد (`incomingWasVisible=false`) از `-targetX` به ۰ می‌آید، وگرنه فقط جلو می‌نشیند؛ سپس کارتِ رفته با ۳۲۰ms به پشته برمی‌گردد. پین‌های `V55_18SmoothCardsEyeMenuTest` و `V55_18_1SmoothRightReturnHotfixTest` به لیترال‌های تازه به‌روز شدند.
+
+### ۳) شرح کارت‌ها — `ui/app/ExamApp.kt`
+- «تنظیمات» → «ظاهر، داده و درباره» (۳ جا)، «سایت» → «onlineexam.ir» (۲ جا). پینِ `V24ComprehensiveUxTest` l.44 به‌روز شد.
+
+### ۴) شیءهای درج‌شده روی کاغذ بدون کادر/زمینه — `webhost.css` (بلوک V134) + `graph_fig.js`/`geo_fig.js`
+- کاربر خواست هیچ قابی نباشد: داخل `.question-main-td` → `.qmf-fig` بدون background/box-shadow/overflow، `.an-frame` بدون border/background، `.an-stage` بدون پدینگ، و مستطیلِ زمینهٔ نمودار/هندسه (`fill=#fbfcfe stroke=#d5dce6`) که حالا `class="gf-bg"` دارد با CSS `fill:none;stroke:none` پنهان می‌شود (ویرایشگرها دست‌نخورده). با puppeteer (`tfig.js`) تأیید شد.
+
+### ۵) خطِ جداکننده بین سؤال‌ها — `pgs_engine.js`
+- باگ: کشیدنِ جداکنندهٔ سؤال ۵ آن را به صفحهٔ بعد می‌برد و یک جداکنندهٔ دومِ غیرقابل‌کشیدن می‌ماند. حالا `trimSepPadToFit(row, sheet)` پدینگِ `.question-sep-cell-pad` را تا جای خالیِ صفحه کوتاه می‌کند (و `q.sepExtraPx` را هم‌زمان اصلاح می‌کند) به‌جای انتقالِ سؤال؛ و در `splitOversizeRow` دستگیرهٔ `.question-sep-drag` به ردیفِ ادامه منتقل می‌شود تا فقط یک دستگیرهٔ فعال بماند. تست: `/tmp/pp/tsep.js`.
+
+### ۶) آیکنِ «گالری شکل‌ها» + تصویرِ کاربر — `ui/figure/FigureGalleryChooser.kt` (جدید)
+- در نوار ابزارِ متن سؤال، سه آیکنِ آناتومی/فیزیک/شیمی با یک آیکن `QuestionToolIcons.Gallery` («گالری شکل‌ها») جایگزین شد؛ پارامترهای `onInsertAnatomy/Physics/Chemistry` در `QuestionTextWebSection` به `onInsertGallery` تبدیل شدند. در پنجرهٔ «+» گزینه‌ها هم `OptionInsertTool.GALLERY` جای سه مورد را گرفت (۶ ابزار).
+- `FigureGalleryChooserDialog`: چهار کاشیِ آناتومی/فیزیک/شیمی/تصویر؛ «تصویر» → گالری (`GetContent`) یا دوربین (`TakePicture` با `FileProvider` و پوشهٔ `cache/studio`)؛ عکس با `encodePhotoDataUrl` (سقف ۱۲۸۰px، JPEG ۸۲) به data-URL می‌شود و `AtlasTarget(kind="a", presetType=PHOTO_TYPE, photoDataUrl=…)` ویرایشگرِ آناتومی را باز می‌کند.
+- مدل: `FigureSpec.buildAtlas(..., imageDataUrl)` → `X.img`؛ `spec.atlasImage()`؛ `AtlasCatalog.PHOTO_TYPE="photo"` و `AtlasCatalog.imageModel(spec)` (data-URL یا `file:///android_asset/...`). `AtlasEditorDialog(photoDataUrl)` و `MarkingCanvas` از `imageModel` می‌خوانند (Coil با `DataUrlFetcher` V118). `AtlasFigureView`، `AtlasBitmapRenderer` (چاپ/PDF؛ دیکدِ base64) و `FigTokenVisuals` («تصویر») هم پشتیبانی می‌کنند. وب: `anatomy_fig.js` `mountSvg` اگر `X.img` data-URL باشد همان را به‌جای فایلِ اطلس می‌گذارد؛ `metaOf('photo')` → «تصویر». پیش‌نمایش با puppeteer تأیید شد (عکس + ردیف پاسخ).
+- پین‌ها: V53WebFieldNativeToolsTableTest، V65_0NativeQuestionFieldTest، V53_3AtlasNativeTest، V55_16OptionInsertToolsTest به ۶ ابزار/گالری به‌روز شدند.
+
+### ۷) ردیف‌های جای پاسخ زیر شکل روی کاغذ — `webhost.css`
+- در پیش‌نمایش/چاپ `.an-af` بدون زمینهٔ خاکستری و کادر؛ شمارهٔ دایره‌ای ۳۰px با فونت ۱۴px، خط‌چینِ پاسخ `min-height:34px` و `2px dashed #334155`. وقتی ارتفاعِ شکل با دستگیره تغییر کرده، فقط تصویر (`.an-stage`) فشرده می‌شود و ردیف‌ها ثابت می‌مانند (`.an-plate` ستونی). (`.an-af-paper` فقط برای ویرایشگرها پنهان است؛ روی کاغذ نمایش داده می‌شد ولی کوچک بود.)
+
+### ۸) تراکنش‌های کیف پول به فارسی — `ui/billing/WalletScreen.kt` `faReason()`
+- همهٔ الگوهای سرور: `payment:<provider>` (زرین‌پال/آیدی‌پی)، `exam:create/update/duplicate`, `exam:print:teacher|student`, `backup:restore`, `school_transfer_to_teacher/from_manager`, `wallet_transfer`, `refund`, `topup`, `admin/manual`, `gift/bonus`؛ پیش‌فرض «تراکنش کیف پول».
+
+### ۹) تحویل
+- `apply_v134.py` (بدون SQL). فایل‌های تغییرکرده در `git diff --name-only HEAD~1 HEAD` (۲۹ فایل + `FigureGalleryChooser.kt` جدید).

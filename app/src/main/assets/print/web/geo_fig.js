@@ -513,7 +513,7 @@
       var Opos = inbox(O[0], O[1] + 20, 22);
       var rLab = inbox(polar(O, (a0 + a1) / 2, 34)[0], polar(O, (a0 + a1) / 2, 34)[1], 22);
       return wrap(
-        '<rect x="14" y="14" width="332" height="252" rx="10" fill="#fbfcfe" stroke="#d5dce6"/>' +
+        '<rect class="gf-bg" x="14" y="14" width="332" height="252" rx="10" fill="#fbfcfe" stroke="#d5dce6"/>' +
         '<path d="M' + O[0] + ',' + O[1] + ' L' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) +
         ' A' + rr + ',' + rr + ' 0 ' + large + ' ' + sweep + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) +
         ' Z" fill="rgba(108,99,245,.10)" stroke="#2c3a50" stroke-width="2"/>' +
@@ -596,7 +596,7 @@
       var midLab = polar(O, 90, span > 180 ? rr * 0.35 : rr + 18);
       midLab = inbox(midLab[0], midLab[1], 18);
       return wrap(
-        '<rect x="16" y="16" width="328" height="248" rx="12" fill="#fbfcfe" stroke="#d5dce6"/>' +
+        '<rect class="gf-bg" x="16" y="16" width="328" height="248" rx="12" fill="#fbfcfe" stroke="#d5dce6"/>' +
         '<path d="M' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) +
         ' A' + rr + ',' + rr + ' 0 ' + large + ' ' + sweep + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) +
         ' Z" fill="rgba(108,99,245,.12)" stroke="#2c3a50" stroke-width="2.1"/>' +
@@ -618,7 +618,7 @@
       var Bpos = inbox(polar(O, a1, rr + 16)[0], polar(O, a1, rr + 16)[1], 22);
       var Opos = inbox(O[0], O[1] + 20, 22);
       return wrap(
-        '<rect x="14" y="14" width="332" height="252" rx="10" fill="#fbfcfe" stroke="#d5dce6"/>' +
+        '<rect class="gf-bg" x="14" y="14" width="332" height="252" rx="10" fill="#fbfcfe" stroke="#d5dce6"/>' +
         '<path d="M' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1) +
         ' A' + rr + ',' + rr + ' 0 ' + large + ' ' + sweep + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) +
         '" fill="none" stroke="#2c3a50" stroke-width="2.3" stroke-linecap="round"/>' +

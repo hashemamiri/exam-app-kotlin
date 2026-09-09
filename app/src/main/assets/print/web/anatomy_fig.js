@@ -180,6 +180,7 @@
   }
   function metaOf(id) {
     for (var i = 0; i < TYPES.length; i++) if (TYPES[i].id === id) return TYPES[i];
+    if (id === 'photo') return { id: id, name: 'تصویر', cap: '' };
     return { id: id, name: id, cap: '' };
   }
   function sanitizeSvg(txt) {
@@ -278,7 +279,9 @@
   function mountSvg(host, spec, done) {
     if (!host) return;
     var id = (spec && spec.t) || 'bodyF';
-    var url = fileFor(id);
+    /* V134 — t='photo': تصویرِ خودِ کاربر (data-URL در X.img) به‌جای فایلِ اطلس. */
+    var userImg = spec && spec.X && typeof spec.X.img === 'string' && /^data:image\//.test(spec.X.img) ? spec.X.img : '';
+    var url = userImg || fileFor(id);
     var alt = esc(((spec && spec.X && spec.X.title) || metaOf(id).name || ''));
     var media = '<img class="an-svg" alt="' + alt + '" src="' + url + '">';
     var isPrev = host.id === 'anPreview';

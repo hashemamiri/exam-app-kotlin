@@ -413,6 +413,10 @@
       if (!moveLastPiece(main, tr2main)) break;
     }
     if (!tr2main.children.length) return null;
+    /* V134 — دستگیرهٔ خطِ جداکننده همراهِ آخرین تکهٔ سؤال می‌رود (قبلاً زیرِ تکهٔ اول می‌ماند و خطِ زیرِ
+       ادامهٔ سؤال در صفحهٔ بعد قابلِ جابجایی نبود) */
+    var hnd = main.querySelector('.question-sep-drag');
+    if (hnd) tr2main.appendChild(hnd);
     var s2 = newSheet(sheets, area, cfg);
     var ctx2 = openTableOn(s2, cfg.__qTpl || ctx.table);
     ctx2.tbody.appendChild(tr2);
@@ -482,6 +486,25 @@
     return cur;
   }
 
+  function trimSepPadToFit(row, sheet) {
+    var pad = row.querySelector('.question-sep-cell-pad');
+    if (!pad) return false;
+    var h = pad.offsetHeight || parseFloat(pad.style.height) || 0;
+    if (h <= 0) return false;
+    var over = sheet.body.scrollHeight - sheet.body.clientHeight;
+    if (over <= 0) return false;
+    var next = Math.max(0, Math.floor(h - over - 1));
+    if (next === h) return false;
+    pad.style.height = next + 'px';
+    /* مقدارِ ذخیره‌شده هم به همان اندازهٔ واقعی می‌رسد تا در snapshot/چاپ همین چیده‌مان بماند */
+    try {
+      var qid = row.getAttribute('data-qid');
+      var q = (typeof questions !== 'undefined' && Array.isArray(questions)) ? questions.find(function (x) { return String(x.id) === String(qid); }) : null;
+      if (q) q.sepExtraPx = next;
+    } catch (e) {}
+    return true;
+  }
+
   function willTableJump(cur, tpl, firstRow) {
     var probe = openTableOn(cur, tpl);
     probe.tbody.appendChild(firstRow);
@@ -511,6 +534,9 @@
       }
       ctx.tbody.appendChild(row);
       cur.hasUnits = true;
+      /* V134 — فاصلهٔ اضافیِ خطِ جداکننده (question-sep-cell-pad) «پُرکننده» است: اگر فقط به‌خاطرِ آن سطر
+         سرریز کرد، همان‌جا تا تهِ صفحه کوتاه می‌شود و سؤال به صفحهٔ بعد نمی‌رود (خطِ جداکننده = تهِ صفحه). */
+      if (overflows(ctx.sheet)) trimSepPadToFit(row, ctx.sheet);
       if (overflows(ctx.sheet)) {
         var hadOther = ctx.tbody.children.length > 1 || ctx.sheet.body.children.length > 1;
         ctx.tbody.removeChild(row);

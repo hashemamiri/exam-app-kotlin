@@ -41,7 +41,7 @@ class V24ComprehensiveUxTest {
         }
         assertFalse("account remains under SettingsSection", "SettingsSection.ACCOUNT" in profile)
         // V132 — داده‌ها تبِ تنظیمات است؛ کارت «سایت» جای آن را در منو گرفت.
-        assertTrue("site card missing", "\"سایت\", \"بازکردن onlineexam.ir در مرورگر\"" in app)
+        assertTrue("site card missing", "\"سایت\", \"onlineexam.ir\"" in app)
     }
 
     @Test

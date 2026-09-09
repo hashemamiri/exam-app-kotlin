@@ -100,9 +100,13 @@ class V53_3AtlasNativeTest {
 
     @Test
     fun `all three icons open native editors and webview tools are gone`() {
-        assertTrue("NativeToolButton(QuestionToolIcons.Anatomy, \"درج آناتومی بدن\") { onInsertAnatomy(insertAtOffset) }" in webSection)
-        assertTrue("NativeToolButton(QuestionToolIcons.Physics, \"درج فیزیک\") { onInsertPhysics(insertAtOffset) }" in webSection)
-        assertTrue("NativeToolButton(QuestionToolIcons.Chemistry, \"درج شیمی\") { onInsertChemistry(insertAtOffset) }" in webSection)
+        // V134 — یک آیکنِ «گالری شکل‌ها» → پنجرهٔ آناتومی/فیزیک/شیمی/تصویر.
+        assertTrue("NativeToolButton(QuestionToolIcons.Gallery, \"گالری شکل‌ها\") { onInsertGallery(insertAtOffset) }" in webSection)
+        assertTrue("FigureGalleryChooserDialog(" in builder)
+        assertTrue("FigureGalleryChoice.ANATOMY -> AtlasTarget(kind = \"a\", chooseType = true)" in builder)
+        assertTrue("FigureGalleryChoice.PHYSICS -> AtlasTarget(kind = \"s\", domain = \"phys\", chooseType = true)" in builder)
+        assertTrue("FigureGalleryChoice.CHEMISTRY -> AtlasTarget(kind = \"s\", domain = \"chem\", chooseType = true)" in builder)
+        assertTrue("presetType = AtlasCatalog.PHOTO_TYPE, photoDataUrl = dataUrl" in builder)
         assertFalse("openTool(\"anatomy\")" in webSection)
         assertFalse("openTool(\"physics\")" in webSection)
         assertFalse("openTool(\"chemistry\")" in webSection)

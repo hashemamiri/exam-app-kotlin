@@ -29,8 +29,8 @@ import ir.exam.app.ui.math.QuestionToolIcons
 
 /**
  * V55.16 — درخواست کاربر: به‌جای آیکن فرمول روی کارت گزینه‌های چندگزینه‌ای و
- * جورکردنی، یک دکمهٔ «+» که پنجرهٔ ۸ ابزار درج (همان ۸ ابزار کادر متن سؤال:
- * فرمول، شکل، نمودار، جدول، آناتومی، تناوبی، فیزیک، شیمی) را باز می‌کند و با
+ * جورکردنی، یک دکمهٔ «+» که پنجرهٔ ابزارهای درج (همان ابزارهای کادر متن سؤال:
+ * فرمول، شکل، نمودار، جدول، گالری (آناتومی/فیزیک/شیمی/تصویر)، تناوبی) را باز می‌کند و با
  * انتخاب هر ابزار، پنجرهٔ درج همان ابزار برای «همان فیلد» باز می‌شود.
  */
 enum class OptionInsertTool(val label: String) {
@@ -38,10 +38,9 @@ enum class OptionInsertTool(val label: String) {
     FIGURE("شکل"),
     GRAPH("نمودار"),
     TABLE("جدول"),
-    ANATOMY("آناتومی بدن"),
-    PERIODIC("جدول تناوبی"),
-    PHYSICS("فیزیک"),
-    CHEMISTRY("شیمی")
+    // V134 — آناتومی/فیزیک/شیمی/تصویر زیر یک «گالری» جمع شدند.
+    GALLERY("گالری"),
+    PERIODIC("جدول تناوبی")
 }
 
 private fun toolIcon(tool: OptionInsertTool): ImageVector = when (tool) {
@@ -49,10 +48,8 @@ private fun toolIcon(tool: OptionInsertTool): ImageVector = when (tool) {
     OptionInsertTool.FIGURE -> QuestionToolIcons.Figure
     OptionInsertTool.GRAPH -> QuestionToolIcons.Graph
     OptionInsertTool.TABLE -> QuestionToolIcons.Table
-    OptionInsertTool.ANATOMY -> QuestionToolIcons.Anatomy
+    OptionInsertTool.GALLERY -> QuestionToolIcons.Gallery
     OptionInsertTool.PERIODIC -> QuestionToolIcons.Periodic
-    OptionInsertTool.PHYSICS -> QuestionToolIcons.Physics
-    OptionInsertTool.CHEMISTRY -> QuestionToolIcons.Chemistry
 }
 
 /** دکمهٔ + روی کارت گزینه/جورکردنی؛ جایگزین آیکن فرمول قبلی. */

@@ -240,45 +240,33 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                 // به راست تک‌فاز و هم‌زمان است: کارت فعلی با returnX/returnY از
                 // نقطهٔ رهاشدن نرم به جایگاه پشته برمی‌گردد و هم‌زمان کارت قبلی
                 // از سمت راست وارد می‌شود؛ کشیدن به چپ مثل قبل.
-                if (direction == -1) {
-                    returningIndex = activeIndex
-                    returnX.snapTo(x)
-                    returnY.snapTo(y)
-                    dragX.snapTo(targetX)
-                    dragY.snapTo(0f)
-                    activeIndex = (activeIndex + direction + cards.size) % cards.size
+                // V134 — هر دو جهت با یک سازوکارِ واحد و آینه‌ای (قبلاً چپ و راست دو مسیرِ متفاوت داشتند و
+                // حسِ حرکت یکی نبود): کارتِ فعلی از نقطهٔ رهاشدن با همان مدت/شتاب (۳۶۰ms، FastOutSlowIn)
+                // به همان سمتِ کشیدن از صفحه خارج می‌شود؛ کارتِ بعدی اگر در پشته دیده می‌شد با انیمیشنِ
+                // پشته جلو می‌آید و اگر پنهان بود از سمتِ مقابل وارد می‌شود؛ سپس کارتِ رفته (اگر در پشتهٔ
+                // جدید دیده می‌شود) از بیرونِ صفحه نرم به جایگاهِ خود برمی‌گردد.
+                val leaving = activeIndex
+                val incoming = (activeIndex + direction + cards.size) % cards.size
+                val incomingWasVisible = ((incoming - leaving + cards.size) % cards.size) <= 2
+                returningIndex = leaving
+                returnX.snapTo(x)
+                returnY.snapTo(y)
+                activeIndex = incoming
+                dragX.snapTo(if (incomingWasVisible) 0f else -targetX)
+                dragY.snapTo(0f)
+                coroutineScope {
+                    launch { returnX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing)) }
+                    launch { returnY.animateTo(targetY, tween(360, easing = FastOutSlowInEasing)) }
+                    if (!incomingWasVisible) launch { dragX.animateTo(0f, tween(360, easing = FastOutSlowInEasing)) }
+                }
+                val leavingVisible = ((leaving - activeIndex + cards.size) % cards.size) <= 2
+                if (leavingVisible) {
                     coroutineScope {
-                        launch { returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                        launch { returnY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                        launch { dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                    }
-                    returningIndex = -1
-                } else {
-                    // V131 — گزارش کاربر: «حرکت به چپ تند و خشن است». قبلاً کارت با tween خطیِ ۲۸۰ms
-                    // بیرون می‌رفت و بعد کارتِ بعدی ناگهان جای آن می‌نشست. حالا مثل سمت راست:
-                    // کارت فعلی نرم (FastOutSlowIn، ۳۶۰ms) بیرون می‌رود و هم‌زمان کارت بعدی
-                    // با انیمیشن‌های پشته (stackTop/scale/rotation) به جلو می‌آید؛ پس از خروج،
-                    // کارت رفته با returnX از بیرونِ صفحه نرم به جایگاه انتهای پشته برمی‌گردد.
-                    val leaving = activeIndex
-                    coroutineScope {
-                        launch { dragX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing)) }
-                        launch { dragY.animateTo(targetY, tween(360, easing = FastOutSlowInEasing)) }
-                    }
-                    activeIndex = (activeIndex + direction + cards.size) % cards.size
-                    dragX.snapTo(0f)
-                    dragY.snapTo(0f)
-                    // کارت رفته فقط وقتی در پشته دیده می‌شود (حداکثر ۳ کارت) که تعداد کارت‌ها ≤ ۳ باشد.
-                    if (cards.size <= 3) {
-                        returningIndex = leaving
-                        returnX.snapTo(targetX)
-                        returnY.snapTo(targetY)
-                        coroutineScope {
-                            launch { returnX.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
-                            launch { returnY.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
-                        }
-                        returningIndex = -1
+                        launch { returnX.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
+                        launch { returnY.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
                     }
                 }
+                returningIndex = -1
             } else {
                 coroutineScope {
                     launch { dragX.animateTo(0f, tween(280)) }

@@ -45,6 +45,9 @@ data class FigureSpec(val raw: JsonObject) {
      * نشانه‌های شماره‌دار آناتومی/علوم (`X.marks` مرجع): مختصات درصدی ۰..۱۰۰
      * نسبت به قاب تصویر، شمارهٔ `n` و برچسب اختیاری `lbl`.
      */
+    /** V134 — تصویرِ کاربر (data-URL) برای آناتومیِ نوع `photo`؛ خالی یعنی تصویرِ اطلس. */
+    fun atlasImage(): String = xStr("img")
+
     fun marks(): List<AtlasMark> =
         ((raw["X"] as? JsonObject)?.get("marks") as? kotlinx.serialization.json.JsonArray)
             ?.mapNotNull { item ->
@@ -141,7 +144,9 @@ data class FigureSpec(val raw: JsonObject) {
             showLabel: Boolean,
             showBlanks: Boolean,
             showMarkNames: Boolean,
-            marks: List<AtlasMark>
+            marks: List<AtlasMark>,
+            // V134 — تصویرِ خودِ کاربر (گالری/دوربین) به‌صورت data-URL؛ فقط برای t='photo'.
+            imageDataUrl: String? = null
         ): FigureSpec {
             val marksJson = kotlinx.serialization.json.JsonArray(
                 marks.map { m ->
@@ -164,6 +169,7 @@ data class FigureSpec(val raw: JsonObject) {
                 "mkName" to JsonPrimitive(if (showMarkNames) "1" else "0"),
                 "marks" to marksJson
             )
+            if (!imageDataUrl.isNullOrBlank()) x["img"] = JsonPrimitive(imageDataUrl)
             return FigureSpec(
                 JsonObject(
                     mapOf(

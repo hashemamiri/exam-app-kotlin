@@ -246,12 +246,27 @@ private fun formatTransactionDate(value: String): String = runCatching {
     "${jalali.display()} — ${PersianDigits.convert(local.toLocalTime().toString().take(5))}"
 }.getOrDefault("")
 
+/* V134 — همهٔ دلیل‌های ثبت‌شده در سرور (wallet_tx.reason) به فارسی؛ هیچ کلیدِ انگلیسی به کاربر نشان داده نمی‌شود. */
 private fun String.faReason(): String = when {
-    startsWith("payment:") -> "شارژ از درگاه"
+    startsWith("payment:") -> "شارژ از درگاه" + providerFa(removePrefix("payment:"))
     startsWith("exam:create:") -> "ساخت آزمون"
     startsWith("exam:update:") -> "ویرایش آزمون"
     startsWith("exam:duplicate:") -> "تکثیر آزمون"
+    startsWith("exam:print:teacher") -> "چاپ آزمون با کلید"
+    startsWith("exam:print:") -> "چاپ آزمون"
+    startsWith("backup:restore") -> "بازیابی نسخهٔ پشتیبان"
+    startsWith("school_transfer_to_teacher") -> "انتقال به کیف پول معلم"
+    startsWith("school_transfer_from_manager") -> "دریافت از مدیر مدرسه"
+    startsWith("wallet_transfer") -> "انتقال کیف پول"
     startsWith("refund") -> "بازگشت وجه"
-    this == "topup" -> "شارژ"
-    else -> ifBlank { "تراکنش کیف پول" }
+    this == "topup" || startsWith("topup") -> "شارژ کیف پول"
+    startsWith("admin") || startsWith("manual") -> "اصلاح توسط پشتیبانی"
+    startsWith("gift") || startsWith("bonus") -> "هدیه / اعتبار رایگان"
+    else -> "تراکنش کیف پول"
+}
+
+private fun providerFa(raw: String): String = when (raw.substringBefore(':').lowercase()) {
+    "zarinpal" -> " (زرین‌پال)"
+    "idpay" -> " (آیدی‌پی)"
+    else -> ""
 }

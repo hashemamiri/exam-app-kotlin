@@ -81,9 +81,9 @@ fun QuestionTextWebSection(
     onInsertGraph: (insertOffset: Int) -> Unit,
     onInsertTable: (insertOffset: Int) -> Unit,
     onInsertPeriodic: (insertOffset: Int) -> Unit,
-    onInsertAnatomy: (insertOffset: Int) -> Unit,
-    onInsertPhysics: (insertOffset: Int) -> Unit,
-    onInsertChemistry: (insertOffset: Int) -> Unit,
+    // V134 — یک آیکنِ «گالری» به‌جای سه آیکنِ آناتومی/فیزیک/شیمی؛ پنجرهٔ انتخاب
+    // (آناتومی/فیزیک/شیمی/تصویر) در ExamBuilderScreen باز می‌شود.
+    onInsertGallery: (insertOffset: Int) -> Unit,
     onEditFigureToken: (specJson: String, occurrenceIndex: Int, start: Int, end: Int) -> Unit =
         { _, _, _, _ -> },
     onOpenFormula: (text: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
@@ -367,10 +367,8 @@ fun QuestionTextWebSection(
             NativeToolButton(QuestionToolIcons.Figure, "درج شکل") { onInsertFigure(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Graph, "درج نمودار") { onInsertGraph(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Table, "درج جدول") { onInsertTable(insertAtOffset) }
-            NativeToolButton(QuestionToolIcons.Anatomy, "درج آناتومی بدن") { onInsertAnatomy(insertAtOffset) }
+            NativeToolButton(QuestionToolIcons.Gallery, "گالری شکل‌ها") { onInsertGallery(insertAtOffset) }
             NativeToolButton(QuestionToolIcons.Periodic, "درج جدول تناوبی") { onInsertPeriodic(insertAtOffset) }
-            NativeToolButton(QuestionToolIcons.Physics, "درج فیزیک") { onInsertPhysics(insertAtOffset) }
-            NativeToolButton(QuestionToolIcons.Chemistry, "درج شیمی") { onInsertChemistry(insertAtOffset) }
         }
     }
 }

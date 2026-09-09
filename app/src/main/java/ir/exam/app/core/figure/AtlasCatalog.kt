@@ -297,8 +297,21 @@ object AtlasCatalog {
         else -> null
     }
 
+    /** V134 — شناسهٔ نوعِ «تصویر کاربر» (گالری/دوربین) که در ویرایشگر آناتومی نشانه‌گذاری می‌شود. */
+    const val PHOTO_TYPE = "photo"
+
+    /**
+     * V134 — مدلِ تصویر برای Coil: data-URL خودِ کاربر (t='photo') یا فایلِ asset اطلس.
+     * DataUrlFetcher (V118) در بارگذارِ برنامه data-URL را می‌خواند.
+     */
+    fun imageModel(spec: FigureSpec): String? {
+        val img = spec.atlasImage()
+        if (img.startsWith("data:image/")) return img
+        return assetPath(spec)?.let { "file:///android_asset/$it" }
+    }
+
     fun displayName(spec: FigureSpec): String = when (spec.kind) {
-        "a" -> anatomyType(spec.type)?.name ?: spec.type
+        "a" -> if (spec.type == PHOTO_TYPE) "تصویر" else anatomyType(spec.type)?.name ?: spec.type
         "s" -> scienceType(spec.type)?.name ?: spec.type
         else -> spec.type
     }

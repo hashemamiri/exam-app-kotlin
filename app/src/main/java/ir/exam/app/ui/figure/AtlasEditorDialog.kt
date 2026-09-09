@@ -154,10 +154,13 @@ fun AtlasEditorDialog(
     initialSpec: FigureSpec? = null,
     // V55.12 — نوعِ ازپیش‌انتخاب‌شده در پنجرهٔ اول؛ ویرایش، انتخاب نوع ندارد.
     presetType: String? = null,
+    // V134 — تصویرِ خودِ کاربر (گالری/دوربین) به‌صورت data-URL؛ نوع t='photo'.
+    photoDataUrl: String? = null,
     onDismiss: () -> Unit,
     onInsert: (FigureSpec) -> Unit
 ) {
     val isAnatomy = kind == "a"
+    val imageDataUrl = photoDataUrl ?: initialSpec?.atlasImage()?.takeIf { it.startsWith("data:image/") }
     val allTypes = if (isAnatomy) AtlasCatalog.ANATOMY_TYPES else AtlasCatalog.SCIENCE_TYPES
     val effectiveDomain = when {
         isAnatomy -> ""
@@ -167,6 +170,7 @@ fun AtlasEditorDialog(
     val defaultType = when {
         initialSpec != null -> initialSpec.type
         presetType != null -> presetType
+        imageDataUrl != null -> AtlasCatalog.PHOTO_TYPE
         isAnatomy -> "bodyF"
         effectiveDomain == "chem" -> "beak"
         else -> "cSim"
@@ -185,6 +189,7 @@ fun AtlasEditorDialog(
     var marks by remember { mutableStateOf(initialSpec?.marks() ?: emptyList()) }
     val isEdit = initialSpec != null
     val editorTitle = when {
+        imageDataUrl != null -> "نام‌گذاری تصویر"
         isAnatomy -> "آناتومی بدن انسان"
         effectiveDomain == "chem" -> "شیمی"
         else -> "فیزیک"
@@ -197,7 +202,8 @@ fun AtlasEditorDialog(
         showLabel = showLabel,
         showBlanks = showBlanks,
         showMarkNames = showMarkNames,
-        marks = marks
+        marks = marks,
+        imageDataUrl = imageDataUrl
     )
 
     AlertDialog(
@@ -247,6 +253,7 @@ fun AtlasEditorDialog(
                 MarkingCanvas(
                     kind = kind,
                     typeId = typeId,
+                    imageDataUrl = imageDataUrl,
                     marks = marks,
                     onAddMark = { mark -> if (marks.size < 12) marks = marks + mark }
                 )
@@ -326,12 +333,14 @@ private fun AtlasThumb(kind: String, typeId: String, modifier: Modifier = Modifi
 private fun MarkingCanvas(
     kind: String,
     typeId: String,
+    imageDataUrl: String?,
     marks: List<AtlasMark>,
     onAddMark: (AtlasMark) -> Unit
 ) {
     val context = LocalContext.current
-    val path = AtlasCatalog.assetPath(
-        FigureSpec.buildAtlas(kind, typeId, "", showLabel = false, showBlanks = false, showMarkNames = false, marks = emptyList())
+    // V134 — تصویرِ کاربر (data-URL) یا فایلِ اطلس؛ DataUrlFetcher هر دو را می‌خواند.
+    val path = AtlasCatalog.imageModel(
+        FigureSpec.buildAtlas(kind, typeId, "", showLabel = false, showBlanks = false, showMarkNames = false, marks = emptyList(), imageDataUrl = imageDataUrl)
     ) ?: return
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var dragStart by remember { mutableStateOf<Offset?>(null) }
@@ -373,7 +382,7 @@ private fun MarkingCanvas(
     ) {
         AsyncImage(
             model = ImageRequest.Builder(context)
-                .data("file:///android_asset/$path")
+                .data(path)
                 .crossfade(false)
                 .build(),
             contentDescription = "تصویر برای نشانه‌گذاری",
