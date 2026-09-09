@@ -83,7 +83,7 @@ internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_re
 
 /**
  * V125 — سندِ اصلی اکنون میزبانِ موتورِ پیش‌نمایش/چاپِ «آزمون‌ساز v20» است
- * (print/web/*.css و *.js عیناً از نسخهٔ وب + print/web/webhost.js). رندررِ
+ * (فایل‌های css و js در print/web عیناً از نسخهٔ وب + print/web/webhost.js). رندررِ
  * قبلی (V105–V124) کنار گذاشته شده: print/exam_print_renderer_legacy.html.
  * بینندهٔ وب (PGS) نوارِ کاملِ خودش را دارد؛ پس هدرِ بومیِ پیش‌نمایش پنهان است.
  */
