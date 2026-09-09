@@ -45,7 +45,8 @@ class V58_0_2StudentExamFixesHotfixTest {
         assertTrue("onExamActiveChanged: (Boolean) -> Unit = {}" in home)
         assertTrue("val examActive = state.exam != null && !state.showPreview && !state.finished" in home)
         assertTrue("var studentExamActive by rememberSaveable(user.id)" in app)
-        assertTrue("if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive))" in app)
+        // V136 — روی تبلت (ریل کناری) سربرگ با منوی باز هم می‌ماند.
+        assertTrue("if ((!menuOpen || desktopRail) && !(user.role == UserRole.STUDENT && studentExamActive))" in app)
         assertTrue("onExamActiveChanged = { studentExamActive = it }" in app)
     }
 
@@ -109,6 +110,8 @@ class V58_0_2StudentExamFixesHotfixTest {
     fun `question graphs unlock the student answer graph automatically`() {
         assertTrue("val questionHasGraph = remember(question.id, question.text)" in student)
         assertTrue("it.spec.kind == \"g\"" in student)
-        assertTrue("if (presentation.allowAnswerGraph || questionHasGraph)" in student)
+        // V136 — تخته وایت‌برد با allowAnswerGraph؛ نمودار پاسخ فقط برای سؤال‌های دارای نمودار (سازگاری قدیمی).
+        assertTrue("if (presentation.allowAnswerGraph) {" in student)
+        assertTrue("if (questionHasGraph) {" in student)
     }
 }

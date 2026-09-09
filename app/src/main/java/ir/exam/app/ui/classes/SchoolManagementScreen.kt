@@ -517,6 +517,9 @@ fun SchoolManagementScreen(
         val inClass = state.roster.mapTo(hashSetOf(), StudentProfile::id)
         MemberPickerDialog(
             students = state.students.filterNot { it.id in inClass },
+            classes = state.classes,
+            filterMeta = state.filterMeta,
+            schools = state.schools,
             onDismiss = { showMemberPicker = false },
             onAdd = { ids -> viewModel.addStudents(ids); showMemberPicker = false }
         )
@@ -1567,23 +1570,20 @@ private fun ClassEditorDialog(
 @Composable
 private fun MemberPickerDialog(
     students: List<StudentProfile>,
+    classes: List<SchoolClass> = emptyList(),
+    filterMeta: Map<String, StudentFilterMeta> = emptyMap(),
+    schools: List<TeacherSchoolItem> = emptyList(),
     onDismiss: () -> Unit,
     onAdd: (List<String>) -> Unit
 ) {
     val selected = remember { mutableStateListOf<String>() }
-    var gender by remember { mutableStateOf<String?>(null) }
-    var grade by remember { mutableStateOf<String?>(null) }
-    var field by remember { mutableStateOf<String?>(null) }
-    val grades = remember(students) {
-        students.mapNotNull { it.grade?.trim()?.takeIf(String::isNotBlank) }.distinct().sorted()
-    }
-    val fields = remember(students) {
-        students.mapNotNull { it.fieldOfStudy?.trim()?.takeIf(String::isNotBlank) }.distinct().sorted()
-    }
-    val visible = students.filter { student ->
-        (gender == null || student.gender?.lowercase() == gender) &&
-            (grade == null || student.grade?.trim() == grade) &&
-            (field == null || student.fieldOfStudy?.trim() == field)
+    // V136 — خواستهٔ کاربر: بدون عنوان/✕ و بدون چیپ‌های همه/دختر/پسر/پایه/رشته؛
+    // هدر = انصراف (قرمز، راست) / آیکن فیلتر (وسط) / افزودن (چپ). فیلتر همان
+    // پنجرهٔ فیلتر فهرست دانش‌آموزان است (پایه/کلاس/جنسیت/مدرسه…).
+    var filter by remember { mutableStateOf(StudentListFilter()) }
+    var filterOpen by remember { mutableStateOf(false) }
+    val visible = remember(students, filter, classes, filterMeta) {
+        applyStudentFilter(students, filter, classes, filterMeta)
     }
 
     // V135.9 — پنجرهٔ «افزودن موجود» تمام‌صفحه (به‌جای AlertDialog با ارتفاع ۴۸۰dp).
@@ -1593,56 +1593,34 @@ private fun MemberPickerDialog(
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("افزودن موجود", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "بستن") }
-            }
-            LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilterChip(
-                            selected = gender == null,
-                            onClick = { gender = null },
-                            label = { Text("همه") }
-                        )
-                        FilterChip(
-                            selected = gender == "female",
-                            onClick = {
-                                gender = if (gender == "female") null else "female"
-                            },
-                            label = { Text("دختر") }
-                        )
-                        FilterChip(
-                            selected = gender == "male",
-                            onClick = {
-                                gender = if (gender == "male") null else "male"
-                            },
-                            label = { Text("پسر") }
-                        )
-                        GradeOdometerPicker(
-                            value = grade.orEmpty(),
-                            onValueChange = { grade = it.takeIf(String::isNotBlank) },
-                            availableGrades = grades,
-                            includeStandardGrades = false,
-                            emptyLabel = "همه پایه‌ها",
-                            modifier = Modifier.weight(1.45f)
-                        )
+            run {
+                // برنامه سراسری RTL است (ExamApp): فرزند اول در راست قرار می‌گیرد.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    // راست (اول در RTL): انصراف قرمز
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                        Text("انصراف", color = Color(0xFFD32F2F))
+                    }
+                    // وسط: آیکن فیلتر (قرمز اگر فیلتری فعال باشد)
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        IconButton(onClick = { filterOpen = true }) {
+                            Icon(
+                                Icons.Outlined.FilterList,
+                                contentDescription = "فیلتر",
+                                tint = if (filter.isActive) Color(0xFFD32F2F) else LocalContentColor.current
+                            )
+                        }
+                    }
+                    // چپ: افزودن
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Button(
+                            onClick = { onAdd(selected.toList()) },
+                            enabled = selected.isNotEmpty()
+                        ) { Text(if (selected.isEmpty()) "افزودن" else "افزودن (${selected.size})") }
                     }
                 }
-                item {
-                    FieldOfStudyPicker(
-                        value = field.orEmpty(),
-                        onValueChange = { field = it.takeIf(String::isNotBlank) },
-                        availableFields = fields,
-                        includeStandardFields = false,
-                        emptyLabel = "همه رشته‌ها",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            }
+            androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 6.dp))
+            LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
                 if (visible.isEmpty()) item { Text("دانش‌آموزی با این فیلتر یافت نشد.") }
                 items(visible, key = StudentProfile::id) { student ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1659,15 +1637,19 @@ private fun MemberPickerDialog(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                TextButton(onClick = onDismiss) { Text("انصراف") }
-                Button(
-                    onClick = { onAdd(selected.toList()) },
-                    enabled = selected.isNotEmpty()
-                ) { Text(if (selected.isEmpty()) "افزودن" else "افزودن (${selected.size})") }
-            }
             }
         }
+    }
+    if (filterOpen) {
+        StudentFilterDialog(
+            filter = filter,
+            classes = classes,
+            filterMeta = filterMeta,
+            schools = schools,
+            showTeacherFilter = false,
+            onDismiss = { filterOpen = false },
+            onApply = { filter = it; filterOpen = false }
+        )
     }
 }
 
@@ -2190,13 +2172,20 @@ private fun BulkStudentDialog(
                                     }
                                 ) { Text("🎲") }
                                 if (rows.size > 1) {
-                                    TextButton(
+                                    // V136 — آیکن سطل قرمز به‌جای متن «حذف» (هم‌خانوادهٔ چشم و تاس).
+                                    IconButton(
                                         onClick = {
                                             rows.removeAt(index)
                                             recomputeSuggestions()
                                             activeIndex = (index - 1).coerceAtLeast(0)
                                         }
-                                    ) { Text("حذف") }
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.Delete,
+                                            contentDescription = "حذف ردیف",
+                                            tint = Color(0xFFD32F2F)
+                                        )
+                                    }
                                 }
                             }
                         }

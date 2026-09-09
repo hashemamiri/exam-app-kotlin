@@ -38,12 +38,13 @@ import ir.exam.app.core.figure.FigureTemplate
 import ir.exam.app.core.ui.LocalTabletLayout
 import ir.exam.app.core.figure.GEOMETRY_FIGURES
 import ir.exam.app.core.figure.GRAPH_FIGURES
+import ir.exam.app.core.figure.AXIS_FIGURES
 import ir.exam.app.ui.figure.FigureKind.GEOMETRY
 import ir.exam.app.ui.figure.FigureKind.GRAPH
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-enum class FigureKind { GEOMETRY, GRAPH }
+enum class FigureKind { GEOMETRY, GRAPH, AXIS }
 
 /**
  * مرحلهٔ اول درج: فقط نوع‌های متعلق به همان آیکن را نشان می‌دهد.
@@ -56,6 +57,7 @@ fun FigureTypePickerDialog(
     onTypeSelected: (FigureSpec) -> Unit
 ) {
     val geometry = kind == GEOMETRY
+    val axis = kind == FigureKind.AXIS
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -64,7 +66,7 @@ fun FigureTypePickerDialog(
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (geometry) "📐 درج شکل" else "📈 درج نمودار",
+                        if (geometry) "📐 درج شکل" else if (axis) "📏 درج محور" else "📈 درج نمودار",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -72,6 +74,7 @@ fun FigureTypePickerDialog(
                 }
                 Text(
                     if (geometry) "ابتدا نوع شکل هندسی را انتخاب کنید."
+                    else if (axis) "نوع محور را انتخاب کنید."
                     else "ابتدا نوع نمودار را انتخاب کنید.",
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -98,7 +101,8 @@ fun FigureTypePickerDialog(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(GRAPH_FIGURES, key = { it.id }) { template ->
+                        // V136 — محورها همان سلول نمودار را دارند.
+                        items(if (axis) AXIS_FIGURES else GRAPH_FIGURES, key = { it.id }) { template ->
                             GraphTypeCell(template) { onTypeSelected(template.toSpec()) }
                         }
                     }
@@ -155,15 +159,15 @@ fun FigurePickerDialog(
     onDismiss: () -> Unit,
     onInsert: (FigureSpec) -> Unit
 ) {
-    val resolvedKind = if (initialSpec?.type?.let { type -> GRAPH_FIGURES.any { it.id == type } } == true) {
-        GRAPH
-    } else {
-        initialKind
+    val resolvedKind = when {
+        initialSpec?.type?.let { type -> AXIS_FIGURES.any { it.id == type } } == true -> FigureKind.AXIS
+        initialSpec?.type?.let { type -> GRAPH_FIGURES.any { it.id == type } } == true -> GRAPH
+        else -> initialKind
     }
-    val baseSpec = initialSpec ?: if (resolvedKind == GEOMETRY) {
-        GEOMETRY_FIGURES.first().toSpec()
-    } else {
-        GRAPH_FIGURES.first().toSpec()
+    val baseSpec = initialSpec ?: when (resolvedKind) {
+        GEOMETRY -> GEOMETRY_FIGURES.first().toSpec()
+        FigureKind.AXIS -> AXIS_FIGURES.first().toSpec()
+        else -> GRAPH_FIGURES.first().toSpec()
     }
     val typeLabel = templateLabel(resolvedKind, baseSpec.type)
 
@@ -175,7 +179,7 @@ fun FigurePickerDialog(
             Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (resolvedKind == GEOMETRY) "✏️ ویرایش شکل" else "✏️ ویرایش نمودار",
+                        if (resolvedKind == GEOMETRY) "✏️ ویرایش شکل" else if (resolvedKind == FigureKind.AXIS) "✏️ ویرایش محور" else "✏️ ویرایش نمودار",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -313,8 +317,11 @@ private fun GeometryEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -
 
 @Composable
 private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> Unit) {
-    val graphType = initialSpec.type.takeIf { type -> GRAPH_FIGURES.any { it.id == type } } ?: GRAPH_FIGURES.first().id
-    val template = GRAPH_FIGURES.firstOrNull { it.id == graphType } ?: GRAPH_FIGURES.first()
+    // V136 — محورها هم از همین پنل (پارامتر + پیش‌نمایش) ویرایش می‌شوند.
+    val allTemplates = GRAPH_FIGURES + AXIS_FIGURES
+    val graphType = initialSpec.type.takeIf { type -> allTemplates.any { it.id == type } } ?: GRAPH_FIGURES.first().id
+    val template = allTemplates.firstOrNull { it.id == graphType } ?: GRAPH_FIGURES.first()
+    val isAxis = AXIS_FIGURES.any { it.id == graphType }
     var title by remember(initialSpec.toJson()) { mutableStateOf(initialSpec.xStr("title")) }
     var params by remember(initialSpec.toJson()) {
         mutableStateOf(initialParams(template, initialSpec))
@@ -323,13 +330,13 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
 
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Text("نوع نمودار: ${template.label}", style = MaterialTheme.typography.titleMedium)
+            Text((if (isAxis) "نوع محور: " else "نوع نمودار: ") + template.label, style = MaterialTheme.typography.titleMedium)
         }
         item {
             OutlinedTextField(
                 title,
                 { title = it },
-                label = { Text("عنوان نمودار (اختیاری)") },
+                label = { Text(if (isAxis) "عنوان محور (اختیاری)" else "عنوان نمودار (اختیاری)") },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -356,7 +363,7 @@ private fun GraphEditorPane(initialSpec: FigureSpec, onInsert: (FigureSpec) -> U
         }
         item {
             Button(onClick = { onInsert(draft) }, modifier = Modifier.fillMaxWidth()) {
-                Text("✅ درج نمودار")
+                Text(if (isAxis) "✅ درج محور" else "✅ درج نمودار")
             }
         }
     }
@@ -422,6 +429,13 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     )
     // V54.3 — فیلدهای فارسی مرجع برای ۲۲ نوع مرحلهٔ پایانی.
     "plot" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max")
+    // V136 — محورها
+    "axnum" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام برچسب")
+    "axxy" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max", "step" to "گام برچسب")
+    "axq1" -> listOf("xmax" to "x max", "ymax" to "y max", "step" to "گام برچسب")
+    "axgrid" -> listOf("xmax" to "تعداد ستون", "ymax" to "تعداد سطر")
+    "axpol" -> listOf("xmax" to "تعداد حلقه")
+    "ax3d" -> listOf("xmax" to "تعداد تیک", "step" to "گام")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
     "gantt" -> listOf("labs" to "فعالیت‌ها", "vals" to "شروع", "vals2" to "مدت")
     "time" -> listOf("labs" to "رویدادها", "vals" to "تاریخ / مقدار")
@@ -512,7 +526,7 @@ private fun buildGraphSpec(
 }
 
 private fun templateLabel(kind: FigureKind, type: String): String =
-    (if (kind == GEOMETRY) GEOMETRY_FIGURES else GRAPH_FIGURES)
+    (if (kind == GEOMETRY) GEOMETRY_FIGURES else GRAPH_FIGURES + AXIS_FIGURES)
         .firstOrNull { it.id == type }
         ?.label
         ?: type

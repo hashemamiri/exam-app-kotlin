@@ -47,6 +47,16 @@ val GEOMETRY_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("pris", "منشور", """{"t":"pris"}""")
 )
 
+/** V136 — محورها (آیکن «درج محور»)؛ رندر در AxisSvgRenderer، توکن با k='g' مثل نمودارها. */
+val AXIS_FIGURES: List<FigureTemplate> = listOf(
+    FigureTemplate("axnum", "محور اعداد", """{"k":"g","t":"axnum","X":{"xmin":-5,"xmax":5,"step":1}}"""),
+    FigureTemplate("axxy", "محور مختصات (۴ ربع)", """{"k":"g","t":"axxy","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1}}"""),
+    FigureTemplate("axq1", "ربع اول", """{"k":"g","t":"axq1","X":{"xmax":10,"ymax":8,"step":1}}"""),
+    FigureTemplate("axgrid", "شبکهٔ شطرنجی", """{"k":"g","t":"axgrid","X":{"xmax":10,"ymax":8}}"""),
+    FigureTemplate("axpol", "محور قطبی", """{"k":"g","t":"axpol","X":{"xmax":4}}"""),
+    FigureTemplate("ax3d", "سه‌بعدی (x,y,z)", """{"k":"g","t":"ax3d","X":{"xmax":4,"step":1}}""")
+)
+
 /** نمودارهای پرکاربرد (شناسه‌ها دقیقاً مطابق وب‌اپ). */
 val GRAPH_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate(

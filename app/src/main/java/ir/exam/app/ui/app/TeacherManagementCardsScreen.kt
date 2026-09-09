@@ -260,25 +260,34 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                     // کارت فعلی نرم (FastOutSlowIn، ۳۶۰ms) بیرون می‌رود و هم‌زمان کارت بعدی
                     // با انیمیشن‌های پشته (stackTop/scale/rotation) به جلو می‌آید؛ پس از خروج،
                     // کارت رفته با returnX از بیرونِ صفحه نرم به جایگاه انتهای پشته برمی‌گردد.
+                    // V136 — گزارش کاربر: «چپ هنوز مثل راست نرم نیست». تا V135 چپ دو فاز
+                    // بود (اول خروج ۳۶۰ms، بعد تعویض activeIndex و آمدن کارت بعدی). حالا
+                    // دقیقاً آینهٔ راست است: activeIndex همان لحظه عوض می‌شود، کارت رفته با
+                    // returnX/returnY از نقطهٔ رهاشدن هم‌زمان با جلوآمدن کارت بعدی به بیرون
+                    // می‌رود (۳۰۰ms، همان easing) و سپس اگر در پشته دیده می‌شود، از بیرون
+                    // نرم به جایگاه انتهای پشته برمی‌گردد.
                     val leaving = activeIndex
-                    coroutineScope {
-                        launch { dragX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing)) }
-                        launch { dragY.animateTo(targetY, tween(360, easing = FastOutSlowInEasing)) }
-                    }
-                    activeIndex = (activeIndex + direction + cards.size) % cards.size
+                    returningIndex = leaving
+                    returnX.snapTo(x)
+                    returnY.snapTo(y)
                     dragX.snapTo(0f)
                     dragY.snapTo(0f)
+                    activeIndex = (activeIndex + direction + cards.size) % cards.size
+                    coroutineScope {
+                        launch { returnX.animateTo(targetX, tween(300, easing = FastOutSlowInEasing)) }
+                        launch { returnY.animateTo(targetY, tween(300, easing = FastOutSlowInEasing)) }
+                    }
                     // کارت رفته فقط وقتی در پشته دیده می‌شود (حداکثر ۳ کارت) که تعداد کارت‌ها ≤ ۳ باشد.
                     if (cards.size <= 3) {
-                        returningIndex = leaving
-                        returnX.snapTo(targetX)
-                        returnY.snapTo(targetY)
                         coroutineScope {
-                            launch { returnX.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
-                            launch { returnY.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
+                            launch { returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
+                            launch { returnY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
                         }
-                        returningIndex = -1
+                    } else {
+                        returnX.snapTo(0f)
+                        returnY.snapTo(0f)
                     }
+                    returningIndex = -1
                 }
             } else {
                 coroutineScope {

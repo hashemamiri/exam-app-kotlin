@@ -49,7 +49,7 @@ class V21StudentBuilderPolishTest {
         val builder = File(root(), "app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt").readText()
         assertTrue("suspend fun scrollQuestionToHeader" in builder)
         assertTrue(builder.split("withFrameNanos").size - 1 >= 2)
-        assertTrue("animateScrollToItem(questionPrefaceCount + questionIndex, 0)" in builder)
+        assertTrue("animateScrollToItem(target, 0)" in builder)
         assertTrue("scope.launch { scrollQuestionToHeader(index) }" in builder)
         assertTrue("Alignment.CenterStart" in builder && "Alignment.CenterEnd" in builder)
     }

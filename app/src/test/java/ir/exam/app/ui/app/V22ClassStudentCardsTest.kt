@@ -28,8 +28,13 @@ class V22ClassStudentCardsTest {
     fun `member picker filters and student accordion controls are complete`() {
         val school = File(root(), "app/src/main/java/ir/exam/app/ui/classes/SchoolManagementScreen.kt").readText()
         val picker = school.substringAfter("private fun MemberPickerDialog(").substringBefore("private fun StudentEditDialog(")
-        listOf("دختر", "پسر", "همه پایه‌ها", "selected").forEach {
+        // V136 — چیپ‌های همه/دختر/پسر/پایه/رشته حذف شدند؛ فیلتر با آیکن وسط هدر
+        // (همان StudentFilterDialog) اعمال می‌شود و هدر عنوان/✕ ندارد.
+        listOf("StudentFilterDialog(", "applyStudentFilter(students, filter, classes, filterMeta)", "Icons.Outlined.FilterList", "selected").forEach {
             assertTrue("missing member filter $it", it in picker)
+        }
+        listOf("Text(\"دختر\")", "Text(\"پسر\")", "همه پایه‌ها", "Text(\"افزودن موجود\"", "Icons.Outlined.Close").forEach {
+            assertTrue("member picker still has $it", it !in picker)
         }
         val card = school.substringAfter("private fun StudentCard(").substringBefore("private fun ClassEditorDialog(")
         assertTrue("expanded = !expanded" in card)

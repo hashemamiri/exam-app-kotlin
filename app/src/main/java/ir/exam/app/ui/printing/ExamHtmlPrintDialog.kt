@@ -507,7 +507,8 @@ internal fun toolOfSpec(specJson: String): String? {
         "p" -> "periodic"
         "a" -> "anatomy"
         "s" -> if (AtlasCatalog.scienceDomain(spec.type) == "chem") "chemistry" else "physics"
-        "g" -> "graph"
+        // V136 — محورها با k='g' ذخیره می‌شوند ولی ویرایشگر «محور» را باز می‌کنند.
+        "g" -> if (ir.exam.app.core.figure.AXIS_FIGURES.any { it.id == spec.type }) "axis" else "graph"
         "" -> if (GRAPH_FIGURES.any { it.id == spec.type }) "graph" else "figure"
         else -> null
     }

@@ -37,6 +37,8 @@ enum class OptionInsertTool(val label: String) {
     FORMULA("فرمول"),
     FIGURE("شکل"),
     GRAPH("نمودار"),
+    // V136 — محور (اعداد/مختصات/قطبی/سه‌بعدی).
+    AXIS("محور"),
     TABLE("جدول"),
     // V134 — آناتومی/فیزیک/شیمی/تصویر زیر یک «گالری» جمع شدند.
     GALLERY("گالری"),
@@ -47,6 +49,7 @@ private fun toolIcon(tool: OptionInsertTool): ImageVector = when (tool) {
     OptionInsertTool.FORMULA -> QuestionToolIcons.Formula
     OptionInsertTool.FIGURE -> QuestionToolIcons.Figure
     OptionInsertTool.GRAPH -> QuestionToolIcons.Graph
+    OptionInsertTool.AXIS -> QuestionToolIcons.Axis
     OptionInsertTool.TABLE -> QuestionToolIcons.Table
     OptionInsertTool.GALLERY -> QuestionToolIcons.Gallery
     OptionInsertTool.PERIODIC -> QuestionToolIcons.Periodic

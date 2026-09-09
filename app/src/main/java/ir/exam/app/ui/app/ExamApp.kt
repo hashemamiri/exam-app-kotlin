@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -1051,6 +1052,18 @@ private fun AuthenticatedShell(
     Neumorphic69Provider(depth = appearance.neumorphicDepth) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
             val colors = neumorphic69Colors
+            // V136 — چیدمان دسکتاپی تبلت: ریل کناری ثابت به‌جای داک + منوی همبرگری.
+            val desktopRail = TabletDesktopContract.usesSideRail(
+                ir.exam.app.core.ui.LocalTabletLayout.current, user.role
+            )
+            val featuredMenuCard = if (user.role == UserRole.MANAGER) {
+                Design69MenuCard(
+                    "داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,
+                    page == MainPage.CARDS,
+                    // V61.9 — کارت منو مستقیم داشبورد (وضعیت) را باز می‌کند.
+                    onClick = { select(onManagerDashboard) }
+                )
+            } else null
             Box(Modifier.fillMaxSize().background(colors.background)) {
                 // V62.4 — پس‌زمینهٔ یخی سراسری برنامه (بدون موج)؛ در تم تیره
                 // خود IceAppBackdrop همان پس‌زمینهٔ تم را می‌کشد.
@@ -1060,7 +1073,7 @@ private fun AuthenticatedShell(
                     topBar = {
                         // V58.0.2 — در حین آزمون دانش‌آموز، هدر «خانه دانش‌آموز» و
                         // دکمهٔ منوی همبرگری حذف می‌شوند (درخواست کاربر).
-                        if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive)) {
+                        if ((!menuOpen || desktopRail) && !(user.role == UserRole.STUDENT && studentExamActive)) {
                             TopAppBar(
                                 // V62.4 — سربرگ شفاف تا پس‌زمینهٔ یخی سراسری دیده شود.
                                 colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
@@ -1092,7 +1105,8 @@ private fun AuthenticatedShell(
                         }
                     },
                     bottomBar = {
-                        if (user.role != UserRole.STUDENT) {
+                        // V136 — روی تبلت (معلم/مدیر) داک پایین حذف و ریل کناری دسکتاپی جایگزین می‌شود.
+                        if (user.role != UserRole.STUDENT && !desktopRail) {
                             TeacherBottomDock(
                                 active = if (managerDashboardActive) TeacherDockSection.NONE
                                 else page.teacherDockSection(),
@@ -1111,22 +1125,40 @@ private fun AuthenticatedShell(
                         }
                     }
                 ) { innerPadding ->
+                    Row(Modifier.fillMaxSize().padding(innerPadding)) {
+                    if (desktopRail) {
+                        TabletSideRail(
+                            user = user,
+                            dockActive = if (managerDashboardActive) TeacherDockSection.NONE else page.teacherDockSection(),
+                            quickAddOpen = quickAddOpen,
+                            menuCards = menuCards,
+                            featuredCard = featuredMenuCard,
+                            primaryLabel = if (user.role == UserRole.MANAGER) "معلم‌ها" else "آزمون‌ها",
+                            primaryIcon = if (user.role == UserRole.MANAGER) Design69Icons.Students else Design69Icons.Exams,
+                            onProfile = onProfile,
+                            onWallet = onWallet,
+                            onAdd = onToggleAdd,
+                            onExams = onHome,
+                            onCards = onCards
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding),
+                            .weight(1f),
                         contentAlignment = Alignment.TopCenter
                     ) {
-                        Box(Modifier.fillMaxSize().widthIn(max = 900.dp)) {
+                        // V136 — با ریل کناری، سقف عرض محتوا برداشته می‌شود تا مثل دسکتاپ کل عرض را بگیرد.
+                        Box(Modifier.fillMaxSize().widthIn(max = if (desktopRail) androidx.compose.ui.unit.Dp.Unspecified else 900.dp)) {
                             Box(
                                 Modifier
                                     .fillMaxSize()
-                                    .graphicsLayer { alpha = if (menuOpen) .10f else 1f }
+                                    .graphicsLayer { alpha = if (menuOpen && !desktopRail) .10f else 1f }
                             ) {
                                 content()
                             }
                             AnimatedVisibility(
-                                visible = menuOpen,
+                                visible = menuOpen && !desktopRail,
                                 modifier = Modifier.fillMaxSize(),
                                 enter = fadeIn(tween(110)),
                                 exit = fadeOut(tween(90))
@@ -1139,18 +1171,12 @@ private fun AuthenticatedShell(
                                         cards = menuCards,
                                         onProfile = onProfile,
                                         // V61.0 — کارت وسط‌چین «داشبورد» زیر پروفایل مدیر/معاون.
-                                        featuredCard = if (user.role == UserRole.MANAGER) {
-                                            Design69MenuCard(
-                                                "داشبورد", "اطلاعات مدرسه و آمار", Design69Icons.Dashboard,
-                                                page == MainPage.CARDS,
-                                                // V61.9 — کارت منو مستقیم داشبورد (وضعیت) را باز می‌کند.
-                                                onClick = { select(onManagerDashboard) }
-                                            )
-                                        } else null
+                                        featuredCard = featuredMenuCard
                                     )
                                 }
                             }
                         }
+                    }
                     }
                 }
 

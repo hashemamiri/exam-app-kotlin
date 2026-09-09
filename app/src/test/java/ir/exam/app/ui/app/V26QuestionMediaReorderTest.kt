@@ -18,7 +18,8 @@ class V26QuestionMediaReorderTest {
     fun `hamburger hides the shared header`() {
         val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
         // V58.0.2 — شرط پنهان‌شدن هدر گسترده شد: منوی باز «یا» آزمون فعال دانش‌آموز.
-        assertTrue("if (!menuOpen && !(user.role == UserRole.STUDENT && studentExamActive))" in app)
+        // V136 — روی تبلت (ریل کناری) سربرگ با منوی باز هم می‌ماند.
+        assertTrue("if ((!menuOpen || desktopRail) && !(user.role == UserRole.STUDENT && studentExamActive))" in app)
         assertTrue("TopAppBar(" in app)
     }
 

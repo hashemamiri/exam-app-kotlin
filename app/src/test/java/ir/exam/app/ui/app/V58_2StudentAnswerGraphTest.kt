@@ -33,7 +33,8 @@ class V58_2StudentAnswerGraphTest {
     @Test
     fun `teacher can allow the answer graph per question`() {
         assertTrue("val allowAnswerGraph: Boolean = false" in draft)
-        assertTrue("نمودار پاسخ دانش‌آموز" in builderScreen)
+        // V136 — برچسب چیپ به «تخته وایت‌برد دانش‌آموز» تغییر کرد (همان پرچم allowAnswerGraph).
+        assertTrue("تخته وایت‌برد دانش‌آموز" in builderScreen)
         assertTrue("fun setAllowAnswerGraph(questionId: String, allowed: Boolean)" in builderVm)
         // ذخیره و خواندن در JSON سؤال
         assertTrue("values[\"allowAnswerGraph\"] = JsonPrimitive(question.allowAnswerGraph)" in examCodec)
@@ -46,9 +47,12 @@ class V58_2StudentAnswerGraphTest {
     @Test
     fun `student draws and edits the graph through the native flow`() {
         // V58.0.2: علاوه بر چیپ معلم، نمودار داخل متن سؤال هم فعال‌ساز است.
-        assertTrue("if (presentation.allowAnswerGraph || questionHasGraph)" in student)
+        // V136 — تخته وایت‌برد با allowAnswerGraph؛ نمودار پاسخ فقط برای سؤال‌های دارای نمودار (سازگاری قدیمی).
+        assertTrue("if (presentation.allowAnswerGraph) {" in student)
+        assertTrue("if (questionHasGraph) {" in student)
         assertTrue("fun StudentAnswerGraph(" in student)
         assertTrue("Text(\"رسم نمودار پاسخ\")" in student)
+        assertTrue("StudentWhiteboardDialog(" in student)
         assertTrue("FigureTypePickerDialog(" in student)
         assertTrue("kind = ir.exam.app.ui.figure.FigureKind.GRAPH" in student)
         assertTrue("FigurePickerDialog(" in student)

@@ -212,6 +212,97 @@
     var title = X.title || '';
     var head = title ? '<text class="ttl" x="180" y="14" text-anchor="middle">' + esc(title) + '</text>' : '';
 
+
+    // V136 — محورها (axnum/axxy/axq1/axgrid/axpol/ax3d)؛ پورت یک‌به‌یک AxisSvgRenderer.kt
+    if (t === 'axnum' || t === 'axxy' || t === 'axq1' || t === 'axgrid' || t === 'axpol' || t === 'ax3d') {
+      var AL = 40, AT = 26, AR = 336, AB = 246, ST = '#2c3a50', GR = '#d5dce6', MU = '#4a5870';
+      function f2(v) { return String(Math.round(v * 100) / 100); }
+      function ln(x1, y1, x2, y2, c, w) { return '<line x1="' + f2(x1) + '" y1="' + f2(y1) + '" x2="' + f2(x2) + '" y2="' + f2(y2) + '" stroke="' + c + '" stroke-width="' + w + '"/>'; }
+      function tx(x, y, s, c, an, bold, sz) { return '<text x="' + f2(x) + '" y="' + f2(y) + '" font-family="sans-serif" font-size="' + (sz || 11) + '"' + (bold ? ' font-weight="700"' : '') + ' fill="' + c + '" text-anchor="' + an + '" style="font:' + (bold ? '700 ' : '400 ') + (sz || 11) + 'px sans-serif">' + esc(s) + '</text>'; }
+      function arR(x, y) { return '<polygon points="' + f2(x) + ',' + f2(y) + ' ' + f2(x - 8) + ',' + f2(y - 4.5) + ' ' + f2(x - 8) + ',' + f2(y + 4.5) + '" fill="' + ST + '"/>'; }
+      function arL(x, y) { return '<polygon points="' + f2(x) + ',' + f2(y) + ' ' + f2(x + 8) + ',' + f2(y - 4.5) + ' ' + f2(x + 8) + ',' + f2(y + 4.5) + '" fill="' + ST + '"/>'; }
+      function arU(x, y) { return '<polygon points="' + f2(x) + ',' + f2(y) + ' ' + f2(x - 4.5) + ',' + f2(y + 8) + ' ' + f2(x + 4.5) + ',' + f2(y + 8) + '" fill="' + ST + '"/>'; }
+      function nm(v) { return (v === Math.round(v)) ? String(v) : v.toFixed(1); }
+      function stepOf(span) { var st = num(X.step, 0); if (st > 0) return st; return span <= 12 ? 1 : span <= 30 ? 2 : span <= 60 ? 5 : 10; }
+      var hAx = title ? tx(180, 14, title, '#1a2433', 'middle', true, 13) : '';
+      var i, d;
+      if (t === 'axnum') {
+        var nmin = num(X.xmin, -5), nmax = num(X.xmax, 5); if (nmax <= nmin) nmax = nmin + 2;
+        var nst = stepOf(nmax - nmin), ny = 140;
+        var npx = function (x) { return AL + (x - nmin) / (nmax - nmin) * (AR - AL); };
+        hAx += ln(AL - 12, ny, AR + 12, ny, ST, 2) + arR(AR + 12, ny) + arL(AL - 12, ny);
+        for (var nv = Math.ceil(nmin / nst) * nst; nv <= nmax + 1e-4; nv += nst) {
+          var nz = Math.abs(nv) < 1e-4;
+          hAx += ln(npx(nv), ny - (nz ? 10 : 7), npx(nv), ny + (nz ? 10 : 7), ST, nz ? 2 : 1.4);
+          hAx += tx(npx(nv), ny + 24, nm(nv), MU, 'middle', false, 11);
+        }
+        return wrap(hAx);
+      }
+      if (t === 'axxy' || t === 'axq1') {
+        var q1 = t === 'axq1';
+        var cxmin = q1 ? 0 : num(X.xmin, -5), cxmax = num(X.xmax, q1 ? 10 : 5); if (cxmax <= cxmin) cxmax = cxmin + 2;
+        var cymin = q1 ? 0 : num(X.ymin, -4), cymax = num(X.ymax, q1 ? 8 : 4); if (cymax <= cymin) cymax = cymin + 2;
+        var sx = stepOf(cxmax - cxmin), sy = stepOf(cymax - cymin);
+        var cpx = function (x) { return AL + (x - cxmin) / (cxmax - cxmin) * (AR - AL); };
+        var cpy = function (y) { return AB - (y - cymin) / (cymax - cymin) * (AB - AT); };
+        var ox = Math.min(AR, Math.max(AL, cpx(0))), oy = Math.min(AB, Math.max(AT, cpy(0)));
+        var g;
+        for (g = Math.ceil(cxmin / sx) * sx; g <= cxmax + 1e-4; g += sx) hAx += ln(cpx(g), AT, cpx(g), AB, GR, 0.8);
+        for (g = Math.ceil(cymin / sy) * sy; g <= cymax + 1e-4; g += sy) hAx += ln(AL, cpy(g), AR, cpy(g), GR, 0.8);
+        hAx += ln(AL - 8, oy, AR + 8, oy, ST, 1.8) + arR(AR + 8, oy);
+        hAx += ln(ox, AB + 8, ox, AT - 8, ST, 1.8) + arU(ox, AT - 8);
+        hAx += tx(AR + 4, oy - 8, 'x', ST, 'end', true, 12) + tx(ox + 8, AT - 2, 'y', ST, 'start', true, 12);
+        for (g = Math.ceil(cxmin / sx) * sx; g <= cxmax + 1e-4; g += sx) {
+          if (Math.abs(g) > 1e-4) hAx += ln(cpx(g), oy - 4, cpx(g), oy + 4, ST, 1.2) + tx(cpx(g), oy + 15, nm(g), MU, 'middle', false, 10);
+        }
+        for (g = Math.ceil(cymin / sy) * sy; g <= cymax + 1e-4; g += sy) {
+          if (Math.abs(g) > 1e-4) hAx += ln(ox - 4, cpy(g), ox + 4, cpy(g), ST, 1.2) + tx(ox - 7, cpy(g) + 4, nm(g), MU, 'end', false, 10);
+        }
+        hAx += tx(ox - 6, oy + 14, '0', MU, 'end', false, 10);
+        return wrap(hAx);
+      }
+      if (t === 'axgrid') {
+        var cols = Math.min(40, Math.max(2, Math.floor(num(X.xmax, 10)))), rows = Math.min(40, Math.max(2, Math.floor(num(X.ymax, 8))));
+        var cell = Math.min((AR - AL) / cols, (AB - AT) / rows), gw = cell * cols, gh = cell * rows;
+        var x0 = (360 - gw) / 2, y0 = AT + ((AB - AT) - gh) / 2;
+        hAx += '<rect x="' + f2(x0) + '" y="' + f2(y0) + '" width="' + f2(gw) + '" height="' + f2(gh) + '" fill="#fbfcfe" stroke="' + ST + '" stroke-width="1.4"/>';
+        for (i = 1; i < cols; i++) hAx += ln(x0 + i * cell, y0, x0 + i * cell, y0 + gh, GR, 0.9);
+        for (i = 1; i < rows; i++) hAx += ln(x0, y0 + i * cell, x0 + gw, y0 + i * cell, GR, 0.9);
+        return wrap(hAx);
+      }
+      if (t === 'axpol') {
+        var rings = Math.min(12, Math.max(1, Math.floor(num(X.xmax, 4)))), pcx = 180, pcy = (AT + AB) / 2;
+        var rMax = Math.min(AR - AL, AB - AT) / 2 - 6;
+        for (i = 1; i <= rings; i++) {
+          var rr = rMax * i / rings;
+          hAx += '<circle cx="' + pcx + '" cy="' + pcy + '" r="' + f2(rr) + '" fill="none" stroke="' + GR + '" stroke-width="0.9"/>';
+          hAx += tx(pcx + rr + 2, pcy - 3, String(i), MU, 'start', false, 9);
+        }
+        for (i = 0; i < 12; i++) {
+          var a = i * Math.PI / 6;
+          hAx += ln(pcx, pcy, pcx + rMax * Math.cos(a), pcy - rMax * Math.sin(a), i % 3 === 0 ? ST : GR, i % 3 === 0 ? 1.4 : 0.8);
+          hAx += tx(pcx + (rMax + 13) * Math.cos(a), pcy - (rMax + 13) * Math.sin(a) + 3, (i * 30) + '°', MU, 'middle', false, 9);
+        }
+        hAx += arR(pcx + rMax, pcy);
+        return wrap(hAx);
+      }
+      // ax3d
+      var dcx = 170, dcy = 150, len = 100, zx = dcx - len * 0.62, zy = dcy + len * 0.62;
+      hAx += ln(dcx - 30, dcy, dcx + len, dcy, ST, 1.8) + arR(dcx + len, dcy);
+      hAx += ln(dcx, dcy + 30, dcx, dcy - len, ST, 1.8) + arU(dcx, dcy - len);
+      hAx += ln(dcx + 20, dcy - 20, zx, zy, ST, 1.8);
+      hAx += '<polygon points="' + f2(zx) + ',' + f2(zy) + ' ' + f2(zx + 9) + ',' + f2(zy - 1) + ' ' + f2(zx + 2) + ',' + f2(zy - 9) + '" fill="' + ST + '"/>';
+      hAx += tx(dcx + len + 4, dcy + 4, 'x', ST, 'start', true, 12) + tx(dcx + 6, dcy - len - 2, 'y', ST, 'start', true, 12) + tx(zx - 4, zy + 12, 'z', ST, 'end', true, 12) + tx(dcx - 6, dcy + 14, 'O', MU, 'end', false, 10);
+      var dst = Math.max(0.5, num(X.step, 1)), dn = Math.min(10, Math.max(1, Math.floor(num(X.xmax, 4))));
+      for (i = 1; i <= dn; i++) {
+        d = len * i / (dn + 0.6);
+        hAx += ln(dcx + d, dcy - 3, dcx + d, dcy + 3, ST, 1.1) + tx(dcx + d, dcy + 13, nm(i * dst), MU, 'middle', false, 9);
+        hAx += ln(dcx - 3, dcy - d, dcx + 3, dcy - d, ST, 1.1) + tx(dcx - 6, dcy - d + 3, nm(i * dst), MU, 'end', false, 9);
+        hAx += ln(dcx - d * 0.62 - 2.5, dcy + d * 0.62 - 2.5, dcx - d * 0.62 + 2.5, dcy + d * 0.62 + 2.5, ST, 1.1);
+      }
+      return wrap(hAx);
+    }
+
     if (t === 'line' || t === 'quad' || t === 'sine' || t === 'plot' || t === 'exp') {
       var xmin = num(X.xmin, -5), xmax = num(X.xmax, 5);
       var ymin = num(X.ymin, -4), ymax = num(X.ymax, 4);

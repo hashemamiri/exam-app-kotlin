@@ -123,7 +123,7 @@ fun StudentQuestionPreviewDialog(question: QuestionDraft, number: Int, onDismiss
                             )
                         }
                         if (question.allowAnswerGraph) {
-                            Text("رسم نمودار پاسخ برای دانش‌آموز فعال است.", style = MaterialTheme.typography.bodySmall)
+                            Text("تخته وایت‌برد پاسخ برای دانش‌آموز فعال است.", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }

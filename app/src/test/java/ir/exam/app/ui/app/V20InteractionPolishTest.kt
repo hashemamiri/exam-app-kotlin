@@ -60,7 +60,9 @@ class V20InteractionPolishTest {
         assertTrue("Alignment.CenterEnd" in builder)
         assertTrue("expandedQuestionId = null" in builder)
         assertTrue("scrollQuestionToHeader(index)" in builder)
-        assertTrue("listState.animateScrollToItem(questionPrefaceCount + questionIndex, 0)" in builder)
+        // V136 — اسکرول نرم: آیتم مرئی با animateScrollBy زیر هدر می‌نشیند، دور از دید با animateScrollToItem.
+        assertTrue("listState.animateScrollToItem(target, 0)" in builder)
+        assertTrue("listState.animateScrollBy(" in builder)
         assertTrue(builder.split("withFrameNanos").size - 1 >= 2)
     }
 

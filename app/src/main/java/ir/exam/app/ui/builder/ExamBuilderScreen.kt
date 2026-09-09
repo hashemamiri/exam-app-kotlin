@@ -15,6 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -181,7 +182,24 @@ fun ExamBuilderScreen(
         // دو frame: یکی برای recomposition و یکی برای اندازه‌گیری ارتفاع کارت بازشده.
         withFrameNanos { }
         withFrameNanos { }
-        listState.animateScrollToItem(questionPrefaceCount + questionIndex, 0)
+        // V136 — گزارش کاربر: کارت زیر هدر نمی‌نشست. animateScrollToItem با آیتم‌های
+        // با ارتفاع متغیر (کارت بازشده) اول می‌پرد بعد تنظیم می‌شود؛ حالا اگر آیتم
+        // روی صفحه است، با animateScrollBy نرم به بالای viewport (زیر هدر) می‌رود
+        // و فقط برای آیتم‌های دور از دید از animateScrollToItem استفاده می‌شود.
+        val target = questionPrefaceCount + questionIndex
+        val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }
+        if (info != null) {
+            listState.animateScrollBy(
+                (info.offset - listState.layoutInfo.viewportStartOffset).toFloat(),
+                tween(420, easing = FastOutSlowInEasing)
+            )
+        } else {
+            listState.animateScrollToItem(target, 0)
+            withFrameNanos { }
+            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }?.let { again ->
+                listState.animateScrollBy((again.offset - listState.layoutInfo.viewportStartOffset).toFloat(), tween(220))
+            }
+        }
     }
 
     fun revealQuestion(type: QuestionType) {
@@ -1167,6 +1185,10 @@ private fun QuestionEditor(
                 onInsertGraph = {
                     figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
                 },
+                // V136 — آیکن محور کنار نمودار.
+                onInsertAxis = {
+                    figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true)
+                },
                 onInsertTable = { tableTarget = TableTarget() },
                 onInsertPeriodic = { periodicTarget = TableTarget() },
                 onInsertGallery = { galleryChooserOpen = true },
@@ -1190,7 +1212,8 @@ private fun QuestionEditor(
                             // دارند؛ قبلاً به ویرایشگر مرجع (کادر خاکستری) می‌رفتند.
                             "g", "" -> figureTarget = FigureTarget(
                                 initialSpec = spec,
-                                kind = if (GRAPH_FIGURES.any { it.id == spec.type }) FigureKind.GRAPH
+                                kind = if (ir.exam.app.core.figure.AXIS_FIGURES.any { it.id == spec.type }) FigureKind.AXIS
+                                else if (GRAPH_FIGURES.any { it.id == spec.type }) FigureKind.GRAPH
                                 else FigureKind.GEOMETRY
                             )
                             else -> editingWebToken = false
@@ -1257,9 +1280,10 @@ private fun QuestionEditor(
                     }
                 }
             }
-            // V58.0 — اجازهٔ رسم نمودار پاسخ توسط دانش‌آموز (مثلاً رسم سهمی تابع).
+            // V136 — «تخته وایت‌برد» جایگزین «نمودار پاسخ دانش‌آموز» (V58.0) شد؛ همان
+            // پرچم allowAnswerGraph در JSON سؤال ذخیره می‌شود تا آزمون‌های قدیمی سازگار بمانند.
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("نمودار پاسخ دانش‌آموز")
+                Text("تخته وایت‌برد دانش‌آموز")
                 FilterChip(
                     selected = question.allowAnswerGraph,
                     onClick = { viewModel.setAllowAnswerGraph(question.id, !question.allowAnswerGraph) },
@@ -1430,6 +1454,10 @@ private fun QuestionEditor(
                     OptionInsertTool.GRAPH -> {
                         fieldInsertTarget = ref
                         figureTarget = FigureTarget(kind = FigureKind.GRAPH, chooseType = true)
+                    }
+                    OptionInsertTool.AXIS -> {
+                        fieldInsertTarget = ref
+                        figureTarget = FigureTarget(kind = FigureKind.AXIS, chooseType = true)
                     }
                     OptionInsertTool.TABLE -> {
                         fieldInsertTarget = ref

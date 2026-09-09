@@ -96,14 +96,14 @@ class V23InteractionGradeOdometerTest {
         ).readText()
         val picker = school.substringAfter("private fun MemberPickerDialog(")
             .substringBefore("private fun StudentEditDialog(")
-        assertTrue("gender = if (gender == \"female\") null else \"female\"" in picker)
-        assertTrue("gender = if (gender == \"male\") null else \"male\"" in picker)
-        assertTrue("GradeOdometerPicker(" in picker)
-        assertTrue("includeStandardGrades = false" in picker)
-        assertTrue("emptyLabel = \"همه پایه‌ها\"" in picker)
-        assertTrue("student.gender?.lowercase() == gender" in picker)
-        assertTrue("student.grade?.trim() == grade" in picker)
+        // V136 — «افزودن موجود» چیپ/ادومتر داخلی ندارد؛ فیلتر از StudentFilterDialog
+        // می‌آید که خودش GradeOdometerPicker دارد (بخش «پایه»).
+        assertTrue("StudentFilterDialog(" in picker)
+        assertFalse("GradeOdometerPicker(" in picker)
         assertFalse("old per-grade chip loop returned", "grades.forEach" in picker)
+        val filterDialog = school.substringAfter("private fun StudentFilterDialog(")
+            .substringBefore("private fun MemberPickerDialog(")
+        assertTrue("GradeOdometerPicker(" in filterDialog)
     }
 
     @Test

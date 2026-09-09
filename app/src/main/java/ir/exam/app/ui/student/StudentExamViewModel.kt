@@ -348,9 +348,13 @@ class StudentExamViewModel(
 
     fun addResponseImages(questionId: String, uris: List<String>) {
         val exam = state.value.exam ?: return
-        val max = exam.questions.firstOrNull { it.id == questionId }?.maxAnswerImages ?: 0
+        val question = exam.questions.firstOrNull { it.id == questionId }
+        // V136 — تخته وایت‌برد (allowAnswerGraph) حتی بدون سهمیهٔ تصویر هم یک تصویر
+        // (خروجی تخته) می‌پذیرد؛ تخته‌های بعدی تصویر قبلی را جایگزین می‌کنند.
+        val whiteboardOnly = exam.questionPresentation[questionId]?.allowAnswerGraph == true && (question?.maxAnswerImages ?: 0) <= 0
+        val max = if (whiteboardOnly) 1 else (question?.maxAnswerImages ?: 0)
         if (max <= 0) return
-        val current = state.value.responseImages[questionId].orEmpty()
+        val current = if (whiteboardOnly) emptyList() else state.value.responseImages[questionId].orEmpty()
         val next = (current + uris.take((max - current.size).coerceAtLeast(0))).distinct()
         val images = state.value.responseImages + (questionId to next)
         _state.update { it.copy(responseImages = images, error = null) }

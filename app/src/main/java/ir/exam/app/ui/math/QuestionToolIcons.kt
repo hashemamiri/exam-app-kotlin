@@ -65,6 +65,22 @@ object QuestionToolIcons {
         }.build()
     }
 
+    /** V136 — محور: دو محور عمود با پیکان و تیک‌ها. */
+    val Axis: ImageVector by lazy {
+        ImageVector.Builder("QTool.Axis", 24.dp, 24.dp, 24f, 24f).apply {
+            path(stroke = stroke, strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, fill = null) {
+                moveTo(3f, 17f); horizontalLineTo(21f)
+                moveTo(18.5f, 14.5f); lineTo(21f, 17f); lineTo(18.5f, 19.5f)
+                moveTo(7f, 21f); verticalLineTo(3f)
+                moveTo(4.5f, 5.5f); lineTo(7f, 3f); lineTo(9.5f, 5.5f)
+                moveTo(11f, 15.8f); verticalLineTo(18.2f)
+                moveTo(15f, 15.8f); verticalLineTo(18.2f)
+                moveTo(5.8f, 13f); horizontalLineTo(8.2f)
+                moveTo(5.8f, 9f); horizontalLineTo(8.2f)
+            }
+        }.build()
+    }
+
     /** جدول: قاب + دو خط افقی + یک خط عمودی مرجع. */
     val Table: ImageVector by lazy {
         ImageVector.Builder("QTool.Table", 24.dp, 24.dp, 24f, 24f).apply {

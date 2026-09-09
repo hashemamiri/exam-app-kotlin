@@ -26,7 +26,9 @@ class V61_2ManagerDashboardClassTeacherTest {
 
     @Test
     fun `manager menu has centered dashboard card under profile`() {
-        assertTrue("featuredCard = if (user.role == UserRole.MANAGER) {" in app)
+        // V136 — کارت داشبورد یک‌بار ساخته می‌شود (featuredMenuCard) و به منو و ریل تبلت داده می‌شود.
+        assertTrue("val featuredMenuCard = if (user.role == UserRole.MANAGER) {" in app)
+        assertTrue("featuredCard = featuredMenuCard" in app)
         assertTrue("\"داشبورد\", \"اطلاعات مدرسه و آمار\", Design69Icons.Dashboard," in app)
         // کارت‌های منو: فهرست و مدیریت
         val managerMenu = app.substringAfter("} else if (user.role == UserRole.MANAGER) {")

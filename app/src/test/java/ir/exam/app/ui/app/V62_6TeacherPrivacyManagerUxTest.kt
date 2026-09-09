@@ -48,7 +48,8 @@ class V62_6TeacherPrivacyManagerUxTest {
         // کلاینت: سوییچ اشتراک روی کارت کلاس معلم؛ هر لحظه قابل تغییر
         assertTrue("fun setClassShared(id: String, shared: Boolean)" in classesVm)
         assertTrue("native_teacher_share_class_v62" in schoolRepo)
-        assertTrue("native_teacher_share_student_v62" in schoolRepo)
+        // V136 — RPC اشتراک دانش‌آموز به نسخهٔ v136 (upsert ردیف school_students) ارتقا یافت.
+        assertTrue("native_teacher_share_student_v136" in schoolRepo)
         // V62.8 — سوییچ به آیکن چشم تبدیل شد؛ منطق اشتراک همان است.
         assertTrue("نمایش کلاس به مدیر" in school)
         assertTrue("onShareChanged = if (!managerTeacherPicker) {" in school)

@@ -401,11 +401,21 @@ fun StudentExamContent(
                     )
                 }
             }
-            if (presentation.allowAnswerGraph || questionHasGraph) {
+            // V136 — «تخته وایت‌برد» (جایگزین نمودار پاسخ V58): با اجازهٔ معلم، دانش‌آموز
+            // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود. اگر سؤال از
+            // آزمون‌های قدیمی نمودار پاسخ داشته باشد، همان ویرایشگر نمودار حفظ می‌شود.
+            if (presentation.allowAnswerGraph) {
                 item {
-                    // V58.0 — معلم اجازه داده: دانش‌آموز نمودار پاسخ رسم/ویرایش کند
-                    // (مثلاً سهمی یک تابع). توکن %%FIG:...%% داخل همان TextAnswer
-                    // ذخیره می‌شود و معلم در تصحیح همان نمودار را می‌بیند.
+                    StudentWhiteboardEntry(
+                        questionId = question.id,
+                        current = if (question.maxAnswerImages > 0) emptyList() else state.responseImages[question.id].orEmpty(),
+                        onAdd = onAddImages,
+                        onRemove = onRemoveImage
+                    )
+                }
+            }
+            if (questionHasGraph) {
+                item {
                     StudentAnswerGraph(
                         answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
                         onAnswerText = { onAnswer(TextAnswer(question.id, it)) }
@@ -569,6 +579,34 @@ private fun StripChipCell(
             color = if (flagged) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (selectedChip) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+/** V136 — دکمهٔ بازکردن تخته وایت‌برد؛ خروجی به تصاویر پاسخ اضافه می‌شود. */
+@Composable
+private fun StudentWhiteboardEntry(
+    questionId: String,
+    current: List<String>,
+    onAdd: (String, List<String>) -> Unit,
+    onRemove: (String, String) -> Unit
+) {
+    var open by remember(questionId) { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("تخته وایت‌برد")
+        Button(onClick = { open = true }) { Text(if (current.isEmpty()) "بازکردن تخته و نوشتن پاسخ" else "نوشتن دوباره روی تخته") }
+        current.forEach { uri ->
+            Column {
+                coil.compose.AsyncImage(model = uri, contentDescription = "پاسخ تخته", modifier = Modifier.fillMaxWidth())
+                TextButton(onClick = { onRemove(questionId, uri) }) { Text("حذف پاسخ تخته") }
+            }
+        }
+    }
+    if (open) {
+        StudentWhiteboardDialog(
+            questionId = questionId,
+            onDismiss = { open = false },
+            onDone = { uri -> onAdd(questionId, listOf(uri)); open = false }
         )
     }
 }

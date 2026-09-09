@@ -298,11 +298,16 @@ class ClassesViewModel(
     }
 
     // V62.8 — چشم روی کارت دانش‌آموز: اشتراک با مدیر + پیام روی صفحه.
+    // V136 — پیام بر اساس مقدار مؤثر برگشتی از سرور (نه صرفاً خواستهٔ کلاینت).
     fun setStudentShared(id: String, shared: Boolean) = action(
         if (shared) "دانش‌آموز برای مدیر قابل مشاهده شد." else "دانش‌آموز از دید مدیر پنهان شد."
     ) {
-        repository.setStudentShared(id, shared).getOrThrow()
+        val effective = repository.setStudentShared(id, shared).getOrThrow()
         reloadData()
+        if (effective != shared) error(
+            if (shared) "اشتراک اعمال نشد؛ دانش‌آموز هنوز از دید مدیر پنهان است."
+            else "لغو اشتراک اعمال نشد؛ دانش‌آموز هنوز برای مدیر قابل مشاهده است."
+        )
     }
 
     fun addStudents(studentIds: List<String>) {

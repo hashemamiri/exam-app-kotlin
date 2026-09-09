@@ -235,11 +235,12 @@ class SupabaseSchoolRepository : SchoolRepository {
         }).throwIfError()
     }
 
-    override suspend fun setStudentShared(studentId: String, shared: Boolean): Result<Unit> = runCatching {
-        rpcObject("native_teacher_share_student_v62", buildJsonObject {
+    // V136 — نسخهٔ جدید ردیف school_students را در صورت نبود می‌سازد و مقدار مؤثر «shared» را برمی‌گرداند.
+    override suspend fun setStudentShared(studentId: String, shared: Boolean): Result<Boolean> = runCatching {
+        rpcObject("native_teacher_share_student_v136", buildJsonObject {
             put("p_student", studentId)
             put("p_share", shared)
-        }).throwIfError()
+        }).throwIfError()["shared"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: shared
     }
 
     private suspend fun rpcObject(name: String, parameters: JsonObject): JsonObject =

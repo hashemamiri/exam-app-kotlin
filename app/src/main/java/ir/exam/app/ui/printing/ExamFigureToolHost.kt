@@ -29,7 +29,7 @@ internal data class FigureToolRequest(
     val isNative: Boolean get() = tool in NATIVE_TOOLS
 
     companion object {
-        val NATIVE_TOOLS = setOf("figure", "graph", "table", "anatomy", "periodic", "physics", "chemistry")
+        val NATIVE_TOOLS = setOf("figure", "graph", "axis", "table", "anatomy", "periodic", "physics", "chemistry")
     }
 }
 
@@ -66,6 +66,8 @@ internal fun ExamFigureToolHost(
         // شکل و نمودار در صورت نیاز انتخاب نوع و سپس ویرایش را نشان می‌دهند.
         "figure" -> FigureToolFlow(FigureKind.GEOMETRY, onInsert, onDismiss, initial)
         "graph" -> FigureToolFlow(FigureKind.GRAPH, onInsert, onDismiss, initial)
+        // V136 — محور (اعداد/مختصات/قطبی/سه‌بعدی).
+        "axis" -> FigureToolFlow(FigureKind.AXIS, onInsert, onDismiss, initial)
 
         // آناتومی و فیزیک/شیمی نیز انتخاب نوع و سپس ویرایش دارند.
         "anatomy" -> AtlasToolFlow("a", "phys", onInsert, onDismiss, initial)
