@@ -153,8 +153,11 @@ private class AudioFetchException(message: String) : Exception(message)
  * و علت واقعی (کد HTTP/پیام) در خطا برگردانده می‌شود تا حدس نزنیم.
  */
 private suspend fun cachedAudioFile(context: android.content.Context, url: String): java.io.File {
-    if (url.startsWith("file://", ignoreCase = true)) {
-        return java.io.File(Uri.parse(url).path.orEmpty()).takeIf { it.isFile }
+    // V135.9 — File.toURI() خروجی «file:/…» (یک اسلش) می‌دهد؛ مقایسهٔ «file://» آن را رد می‌کرد و
+    // به مسیر HTTP می‌رفت → «FileURLConnection cannot be cast to HttpURLConnection».
+    val parsed = Uri.parse(url)
+    if (parsed.scheme.equals("file", ignoreCase = true) || url.startsWith("/")) {
+        return java.io.File(parsed.path ?: url).takeIf { it.isFile }
             ?: throw AudioFetchException("فایل محلی پیدا نشد")
     }
     val dir = java.io.File(context.cacheDir, "question_audio_cache").apply { mkdirs() }

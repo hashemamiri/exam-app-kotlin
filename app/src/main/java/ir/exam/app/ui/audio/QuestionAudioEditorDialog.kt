@@ -290,7 +290,9 @@ private fun WaveformTrimmer(
                     onDragStart = { p ->
                         widthPx = size.width.toFloat()
                         val ds = abs(p.x - xOf(startMs)); val de = abs(p.x - xOf(endMs))
-                        dragging = if (min(ds, de) > 56f) 0 else if (ds <= de) 1 else 2
+                        // V135.9 — ناحیهٔ گرفتن دستگیره ۲۸dp در هر طرف (قبلاً ۵۶px ≈ ۱۸dp) و نزدیک‌ترین دستگیره انتخاب می‌شود.
+                        val grab = 28.dp.toPx()
+                        dragging = if (min(ds, de) > grab) 0 else if (ds <= de) 1 else 2
                     },
                     onDragEnd = { dragging = 0 },
                     onDragCancel = { dragging = 0 },
@@ -305,7 +307,13 @@ private fun WaveformTrimmer(
                 )
             }
             .pointerInput(totalMs, startMs, endMs) {
-                detectTapGestures { p -> widthPx = size.width.toFloat(); onSeekPlay(msOf(p.x)) }
+                detectTapGestures { p ->
+                    widthPx = size.width.toFloat()
+                    // V135.9 — ضربه نزدیک دستگیره، خودِ دستگیره را جابه‌جا نمی‌کند و پخش را هم نمی‌پراند.
+                    val grab = 28.dp.toPx()
+                    if (abs(p.x - xOf(startMs)) <= grab || abs(p.x - xOf(endMs)) <= grab) return@detectTapGestures
+                    onSeekPlay(msOf(p.x))
+                }
             }
     ) {
         Canvas(Modifier.fillMaxWidth().height(120.dp)) {
@@ -322,9 +330,13 @@ private fun WaveformTrimmer(
                 drawRect(if (inSel) primary else dim, topLeft = Offset(x + bw * 0.15f, mid - h / 2), size = Size(bw * 0.7f, h))
             }
             // دستگیره‌ها
-            for ((x, _) in listOf(xs to 1, xe to 2)) {
-                drawRect(primary, topLeft = Offset(x - 2f, 0f), size = Size(4f, size.height))
-                drawRoundRect(primary, topLeft = Offset(x - 12f, mid - 18f), size = Size(24f, 36f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f))
+            // V135.9 — دستگیره‌های بزرگ‌تر (۲۲×۵۶dp) با سه خط وسط، به‌رنگ دستگیرهٔ فعال.
+            val hw = 22.dp.toPx(); val hh = 56.dp.toPx(); val rr = 7.dp.toPx()
+            for ((x, id) in listOf(xs to 1, xe to 2)) {
+                val col = if (dragging == id) play else primary
+                drawRect(col, topLeft = Offset(x - 2f, 0f), size = Size(4f, size.height))
+                drawRoundRect(col, topLeft = Offset(x - hw / 2, mid - hh / 2), size = Size(hw, hh), cornerRadius = androidx.compose.ui.geometry.CornerRadius(rr, rr))
+                for (k in -1..1) drawRect(androidx.compose.ui.graphics.Color.White.copy(alpha = .85f), topLeft = Offset(x + k * 4.dp.toPx() - 1f, mid - hh / 5), size = Size(2f, hh * 2 / 5))
             }
             playPosMs?.let { pm -> val px = xOf(pm); drawRect(play, topLeft = Offset(px - 1.5f, 0f), size = Size(3f, size.height)) }
         }

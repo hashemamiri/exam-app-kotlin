@@ -82,8 +82,9 @@ class StudentExamViewModel(
         _state.update { it.copy(restoringExam = true, error = null) }
         exams.restoreActiveExam()
             .onSuccess { exam ->
-                if (exam == null) _state.update { it.copy(restoringExam = false) }
-                else openExam(exam, resumed = true)
+                // V135.9 — گزارش کاربر: با ورود مجدد، به‌جای بازشدن خودکار آزمون، پیام
+                // «آزمون نیمه‌تمام دارید» با دکمهٔ «پیوستن به آزمون» نمایش داده می‌شود.
+                _state.update { it.copy(restoringExam = false, resumableExamAvailable = exam != null) }
             }
             .onFailure { error ->
                 _state.update {

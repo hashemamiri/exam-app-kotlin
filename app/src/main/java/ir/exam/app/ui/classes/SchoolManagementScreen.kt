@@ -1586,38 +1586,42 @@ private fun MemberPickerDialog(
             (field == null || student.fieldOfStudy?.trim() == field)
     }
 
-    AlertDialog(
+    // V135.9 — پنجرهٔ «افزودن موجود» تمام‌صفحه (به‌جای AlertDialog با ارتفاع ۴۸۰dp).
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text("افزودن موجود") },
-        text = {
-            LazyColumn(Modifier.heightIn(max = 480.dp)) {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("افزودن موجود", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "بستن") }
+            }
+            LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilterChip(
                             selected = gender == null,
                             onClick = { gender = null },
-                            label = { Text("همه") },
-                            modifier = Modifier.weight(1f)
+                            label = { Text("همه") }
                         )
                         FilterChip(
                             selected = gender == "female",
                             onClick = {
                                 gender = if (gender == "female") null else "female"
                             },
-                            label = { Text("دختر") },
-                            modifier = Modifier.weight(1f)
+                            label = { Text("دختر") }
                         )
                         FilterChip(
                             selected = gender == "male",
                             onClick = {
                                 gender = if (gender == "male") null else "male"
                             },
-                            label = { Text("پسر") },
-                            modifier = Modifier.weight(1f)
+                            label = { Text("پسر") }
                         )
                         GradeOdometerPicker(
                             value = grade.orEmpty(),
@@ -1655,15 +1659,16 @@ private fun MemberPickerDialog(
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onAdd(selected.toList()) },
-                enabled = selected.isNotEmpty()
-            ) { Text("افزودن") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
-    )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                TextButton(onClick = onDismiss) { Text("انصراف") }
+                Button(
+                    onClick = { onAdd(selected.toList()) },
+                    enabled = selected.isNotEmpty()
+                ) { Text(if (selected.isEmpty()) "افزودن" else "افزودن (${selected.size})") }
+            }
+            }
+        }
+    }
 }
 
 
@@ -1849,29 +1854,26 @@ private fun StudentEditDialog(
                                     modifier = Modifier.weight(1f).height(64.dp)
                                 )
                             }
+                            // V135.9 — چیپ‌های جنسیت به اندازهٔ متن (وسط‌چین)، نه کشیده به عرض ردیف.
                             Row(
                                 Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 FilterChip(
                                     selected = gender == "female",
                                     onClick = { gender = "female" },
-                                    label = { Text("دختر") },
-                                    colors = genderFilterChipColors(Color(0xFFFF5C9A)),
-                                    modifier = Modifier.weight(1f)
+                                    label = { Text("دختر", modifier = Modifier.padding(horizontal = 6.dp)) },
+                                    colors = genderFilterChipColors(Color(0xFFFF5C9A))
                                 )
                                 FilterChip(
                                     selected = gender == "male",
                                     onClick = { gender = "male" },
-                                    label = { Text("پسر") },
-                                    colors = genderFilterChipColors(Color(0xFF3B9EFF)),
-                                    modifier = Modifier.weight(1f)
+                                    label = { Text("پسر", modifier = Modifier.padding(horizontal = 6.dp)) },
+                                    colors = genderFilterChipColors(Color(0xFF3B9EFF))
                                 )
                                 // V61.6 — تاس مثل آیکن چشم بدون کادر.
-                                IconButton(
-                                    onClick = { newPassword = generatePassword(10) },
-                                    modifier = Modifier.weight(1f)
-                                ) { Text("🎲") }
+                                IconButton(onClick = { newPassword = generatePassword(10) }) { Text("🎲") }
                             }
                         }
                     }
@@ -2168,26 +2170,24 @@ private fun BulkStudentDialog(
                                         )
                                     }
                                 )
+                                // V135.9 — چیپ‌های جنسیت به اندازهٔ متن (وسط‌چین).
                                 FilterChip(
                                     selected = row.gender == "male",
                                     onClick = { rows[index] = row.copy(gender = "male") },
-                                    label = { Text("پسر") },
-                                    colors = genderFilterChipColors(Color(0xFF3B9EFF)),
-                                    modifier = Modifier.weight(1f)
+                                    label = { Text("پسر", modifier = Modifier.padding(horizontal = 6.dp)) },
+                                    colors = genderFilterChipColors(Color(0xFF3B9EFF))
                                 )
                                 FilterChip(
                                     selected = row.gender == "female",
                                     onClick = { rows[index] = row.copy(gender = "female") },
-                                    label = { Text("دختر") },
-                                    colors = genderFilterChipColors(Color(0xFFFF5C9A)),
-                                    modifier = Modifier.weight(1f)
+                                    label = { Text("دختر", modifier = Modifier.padding(horizontal = 6.dp)) },
+                                    colors = genderFilterChipColors(Color(0xFFFF5C9A))
                                 )
                                 // V61.6 — تاس مثل آیکن چشم بدون کادر.
                                 IconButton(
                                     onClick = {
                                         rows[index] = row.copy(password = generatePassword(10))
-                                    },
-                                    modifier = Modifier.weight(1f)
+                                    }
                                 ) { Text("🎲") }
                                 if (rows.size > 1) {
                                     TextButton(
@@ -2195,8 +2195,7 @@ private fun BulkStudentDialog(
                                             rows.removeAt(index)
                                             recomputeSuggestions()
                                             activeIndex = (index - 1).coerceAtLeast(0)
-                                        },
-                                        modifier = Modifier.weight(1f)
+                                        }
                                     ) { Text("حذف") }
                                 }
                             }

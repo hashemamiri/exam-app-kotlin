@@ -18208,3 +18208,10 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 ### V135.8 — «دانلود فایل صوتی ممکن نشد» ادامه داشت
 - کلاینت: `cachedAudioFile` اکنون suspend است؛ اول `storage.from(bucket).downloadAuthenticated(path)` (bucket/path با `storagePathOf` از URL public/authenticated استخراج می‌شود)، بعد HTTP مستقیم؛ پیام خطا شامل علت (`HTTP 403`، متن استثنا) است — از این پس کاربر علت را می‌فرستد و حدس نمی‌زنیم.
 - محتمل‌ترین علت سرور: بخش ۲ SQL نسخهٔ V135 (سیاست select با پوشهٔ `audio`) بعد از deadlock اجرا نشده باشد → 400/403. `sql/manual/CHECK_AUDIO_STORAGE_V135_8.sql` سیاست‌ها و فایل‌های audio را نشان می‌دهد.
+
+### V135.9 — پنج گزارش کاربر
+1. **علت واقعی خطای پخش** (پیام V135.8 آن را نشان داد): ویرایشگر صوت خروجی را با `File.toURI().toString()` می‌سازد که «`file:/…`» (یک اسلش) است؛ `cachedAudioFile` فقط `file://` را محلی می‌دانست و URL را به `HttpURLConnection` می‌داد → ClassCastException. حالا با `Uri.parse(url).scheme == "file"` یا مسیر مطلق تشخیص داده می‌شود. (این خطا در پیش‌نمایش معلم بود؛ URL دانش‌آموز https است و با کلاینت Storage دانلود می‌شود.)
+2. **آزمون نیمه‌تمام**: `StudentExamViewModel.restoreActiveExam()` دیگر `openExam` را خودکار صدا نمی‌زند؛ فقط `resumableExamAvailable=true` می‌کند و پنل V59.2 در `StudentHomeScreen` («پیوستن به آزمون» → `rejoinActiveExam`) نشان داده می‌شود.
+3. **دستگیره‌های برش** (`QuestionAudioEditorDialog.kt` → `WaveformTrimmer`): ناحیهٔ گرفتن `28.dp.toPx()` (قبلاً ۵۶px ثابت)، دستگیره ۲۲×۵۶dp با سه خط سفید و رنگ قرمز هنگام درگ؛ tap نزدیک دستگیره seek نمی‌کند.
+4. **چیپ جنسیت**: در `StudentEditDialog` و `BulkStudentDialog` `Modifier.weight(1f)` از چیپ‌ها/تاس/حذف برداشته شد و ردیف `Arrangement.spacedBy(8.dp, CenterHorizontally)` است.
+5. **افزودن موجود**: `MemberPickerDialog` از `AlertDialog` به `Dialog(usePlatformDefaultWidth=false)` + `Surface(fillMaxSize)` با سرتیتر (✕) و دکمه‌های پایین تبدیل شد.
