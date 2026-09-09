@@ -1,10 +1,8 @@
 package ir.exam.app.ui.app
 
-import ir.exam.app.data.local.PrintBoxStyle
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintHeader
 import ir.exam.app.domain.model.OfficialPrintQuestion
-import ir.exam.app.domain.model.PrintAlignSpan
 import ir.exam.app.domain.model.PrintTextSpan
 import ir.exam.app.ui.printing.ExamHtmlPrintPayloadBuilder
 import kotlinx.serialization.json.boolean
@@ -146,40 +144,5 @@ class ExamHtmlPrintPayloadTest {
         val reset = ExamHtmlPrintPayloadBuilder.build(null)
         assertTrue(reset["reset"]!!.jsonPrimitive.boolean)
         assertFalse("questions" in reset)
-    }
-
-    @Test
-    fun `align spans are forwarded to the question payload only when present`() {
-        // V121 — تراز پاراگرافیِ تکه‌ای؛ کلید فقط وقتی نوشته می‌شود که بازه‌ای باشد
-        // تا موتورِ HTML بتواند fallback به textAlign کلی را تشخیص دهد.
-        val withSpans = OfficialPrintQuestion(
-            1, "بند اول\nبند دوم", 2.0,
-            alignSpans = listOf(PrintAlignSpan(0, 7, "center"))
-        )
-        val item = ExamHtmlPrintPayloadBuilder.build(printable(withSpans))["questions"]!!.jsonArray.single().jsonObject
-        val spans = item["alignSpans"]!!.jsonArray
-        assertEquals(1, spans.size)
-        assertEquals("center", spans.single().jsonObject["align"]!!.jsonPrimitive.content)
-
-        val withoutSpans = OfficialPrintQuestion(1, "بدون بازه", 1.0)
-        val plainItem = ExamHtmlPrintPayloadBuilder.build(printable(withoutSpans))["questions"]!!.jsonArray.single().jsonObject
-        assertFalse("alignSpans" in plainItem)
-    }
-
-    @Test
-    fun `box style is only emitted when explicitly provided`() {
-        // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندی؛ اگر پاس داده نشود (مسیرهای
-        // قدیمی/تست) نباید کلیدِ boxStyle در payload ظاهر شود.
-        val withoutStyle = ExamHtmlPrintPayloadBuilder.build(printable(OfficialPrintQuestion(1, "متن", 1.0)))
-        assertFalse("boxStyle" in withoutStyle)
-
-        val style = PrintBoxStyle(borderWidthPx = 2.5f, borderColor = "#334455", numberColWidthPercent = 8f, scoreColWidthPercent = 9f, cellPaddingPx = 12f)
-        val withStyle = ExamHtmlPrintPayloadBuilder.build(printable(OfficialPrintQuestion(1, "متن", 1.0)), boxStyle = style)
-        val box = withStyle["boxStyle"]!!.jsonObject
-        assertEquals("2.5", box["borderWidthPx"]!!.jsonPrimitive.content)
-        assertEquals("#334455", box["borderColor"]!!.jsonPrimitive.content)
-        assertEquals("8.0", box["numberColWidthPercent"]!!.jsonPrimitive.content)
-        assertEquals("9.0", box["scoreColWidthPercent"]!!.jsonPrimitive.content)
-        assertEquals("12.0", box["cellPaddingPx"]!!.jsonPrimitive.content)
     }
 }

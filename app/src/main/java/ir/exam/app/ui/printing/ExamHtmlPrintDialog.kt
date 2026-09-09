@@ -110,8 +110,6 @@ fun ExamHtmlPrintDialog(
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
-    // V121 — پنجرهٔ تنظیماتِ کادر/جدول‌بندیِ سراسریِ جدولِ سؤال‌ها.
-    var showBoxSettings by remember { mutableStateOf(false) }
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
             kotlinx.coroutines.delay(2600)
@@ -223,7 +221,6 @@ fun ExamHtmlPrintDialog(
                 if (!loading && initialPrintMode == null) {
                     PrintPreviewHeader(
                         onClose = { requestDismiss() },
-                        onOpenBoxSettings = { showBoxSettings = true },
                         onFormat = { kind, value ->
                             // V120 — قبلاً فقط `\` و `'` حذف می‌شدند؛ `"`، خطِ
                             // جدید و `</script>` دست‌نخورده می‌ماندند. اگر یک‌روز
@@ -403,27 +400,6 @@ fun ExamHtmlPrintDialog(
                             }
                         },
                         onDismiss = { figureTool = null }
-                    )
-                }
-
-                // V121 — تنظیماتِ کادر/جدول‌بندیِ سراسری؛ همان ذخیره‌سازِ سراسریِ
-                // دستگاه (PrintBoxStyleStore) که مثلِ PrintHeaderStore کار می‌کند.
-                if (showBoxSettings) {
-                    val boxStore = remember { ir.exam.app.data.local.PrintBoxStyleStore(context) }
-                    PrintBoxSettingsDialog(
-                        initial = remember { boxStore.read() },
-                        onApply = { style ->
-                            boxStore.write(style)
-                            showBoxSettings = false
-                            val json = ir.exam.app.data.local.printBoxStyleToJson(style)
-                            runJs(
-                                "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyBoxStyle?" +
-                                    "window.ExamPrintRenderer.applyBoxStyle(${json.toJsStringLiteral()}):''}" +
-                                    "catch(e){return ''}})()",
-                                null
-                            )
-                        },
-                        onDismiss = { showBoxSettings = false }
                     )
                 }
             }
@@ -619,9 +595,7 @@ internal fun createExamPrintWebView(
             val payload = ExamHtmlPrintPayloadBuilder.build(
                 printable,
                 // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
-                ir.exam.app.data.local.PrintHeaderStore(context).read(),
-                // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ چاپ، ذخیره‌شده روی دستگاه
-                ir.exam.app.data.local.PrintBoxStyleStore(context).read()
+                ir.exam.app.data.local.PrintHeaderStore(context).read()
             ).toString()
             var attempts = 0
             fun tryInject() {
@@ -828,7 +802,6 @@ private class OneShotPrintAdapter(
 @Composable
 private fun PrintPreviewHeader(
     onClose: () -> Unit,
-    onOpenBoxSettings: () -> Unit,
     onFormat: (kind: String, value: String) -> Unit
 ) {
     var colorMenu by remember { mutableStateOf(false) }
@@ -865,12 +838,6 @@ private fun PrintPreviewHeader(
             FormatChip("B", bold = true) { onFormat("bold", "") }
             FormatChip("I", italic = true) { onFormat("italic", "") }
             FormatChip("U", underline = true) { onFormat("underline", "") }
-            // V121 — تراز پاراگرافیِ تکه‌ای: روی بندِ حاویِ بخشِ انتخاب‌شده اعمال
-            // می‌شود (applyFormat("align", ...) در exam_print_renderer.html).
-            FormatChip("راست") { onFormat("align", "right") }
-            FormatChip("وسط") { onFormat("align", "center") }
-            FormatChip("چپ") { onFormat("align", "left") }
-            FormatChip("بلوک") { onFormat("align", "justify") }
             Box {
                 FormatChip("رنگ") { colorMenu = true }
                 androidx.compose.material3.DropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
@@ -910,8 +877,6 @@ private fun PrintPreviewHeader(
                 }
             }
             FormatChip("پاک") { onFormat("clear", "") }
-            // V121 — کادر/جدول‌بندیِ سراسریِ جدولِ سؤال‌ها (خط دور/ستون/فاصلهٔ داخلی).
-            FormatChip("کادر") { onOpenBoxSettings() }
         }
     }
 }

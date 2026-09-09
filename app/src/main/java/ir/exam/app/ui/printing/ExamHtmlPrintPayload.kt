@@ -1,6 +1,5 @@
 package ir.exam.app.ui.printing
 
-import ir.exam.app.data.local.PrintBoxStyle
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintQuestion
 import kotlinx.serialization.json.JsonObject
@@ -19,10 +18,7 @@ object ExamHtmlPrintPayloadBuilder {
 
     fun build(
         printable: OfficialExamPrintable?,
-        extraHeaderFields: Map<String, String> = emptyMap(),
-        // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ جدولِ سؤال‌ها (از
-        // PrintBoxStyleStore می‌آید؛ null یعنی پیش‌فرض‌های موتورِ HTML).
-        boxStyle: PrintBoxStyle? = null
+        extraHeaderFields: Map<String, String> = emptyMap()
     ): JsonObject {
         if (printable == null) return buildJsonObject { put("reset", true) }
 
@@ -40,17 +36,7 @@ object ExamHtmlPrintPayloadBuilder {
             put("footerNote", printable.footerNote)
             put("totalScore", formatScore(printable.totalScore))
             put("includeAnswerKey", printable.includeAnswerKey)
-            if (boxStyle != null) {
-                put("boxStyle", buildJsonObject {
-                    put("borderWidthPx", boxStyle.borderWidthPx)
-                    put("borderColor", boxStyle.borderColor)
-                    put("numberColWidthPercent", boxStyle.numberColWidthPercent)
-                    put("scoreColWidthPercent", boxStyle.scoreColWidthPercent)
-                    put("cellPaddingPx", boxStyle.cellPaddingPx)
-                })
-            }
             put("fields", buildJsonObject {
-
                 put("f_headerTemplate", "classic")
                 put("f_course", courseName)
                 put("f_branch", header.school)
@@ -98,19 +84,7 @@ object ExamHtmlPrintPayloadBuilder {
                 }
             })
         }
-        // V121 — تراز پاراگرافیِ تکه‌ای؛ اگر چیزی تنظیم نشده، رندرر از textAlign
-        // کلیِ سؤال استفاده می‌کند (رجوع کنید به exam_print_renderer.html).
-        if (question.alignSpans.isNotEmpty()) {
-            put("alignSpans", buildJsonArray {
-                question.alignSpans.forEach { span ->
-                    add(buildJsonObject {
-                        put("start", span.start)
-                        put("end", span.end)
-                        put("align", span.align)
-                    })
-                }
-            })
-        }
+
         // V120 — منبعِ اصلیِ تشخیصِ نوع اکنون فیلدِ صریح `questionType` است
         // (از `PrintableFromDrafts` می‌آید). قبلاً هیچ نشانهٔ صریحی نبود و
         // نوع فقط از روی محتوا حدس زده می‌شد؛ این حدس دو باگ داشت:

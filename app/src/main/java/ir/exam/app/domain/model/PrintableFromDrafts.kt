@@ -90,8 +90,6 @@ object PrintableFromDrafts {
             textSpans = question.textSpans.map {
                 PrintTextSpan(it.start, it.end, it.bold, it.italic, it.underline, it.color, it.size, it.font)
             },
-            // V121 — تراز پاراگرافیِ تکه‌ای متن سؤال.
-            alignSpans = question.alignSpans.map { PrintAlignSpan(it.start, it.end, it.align) },
             imageWidthsMm = images.map { it.widthMm },
             imageXmm = images.map { it.xMm },
             // V99.2 — چیدمانِ پیش‌نمایش (اشیاء + جداکننده) با printable می‌رود.
