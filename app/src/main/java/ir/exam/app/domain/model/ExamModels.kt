@@ -29,7 +29,10 @@ data class QuestionPresentation(
     val answerLineStyle: String = "lined",
     val media: List<QuestionMediaPresentation> = emptyList(),
     /** V58.0 — اجازهٔ معلم: دانش‌آموز بتواند نمودار پاسخ رسم/ویرایش کند. */
-    val allowAnswerGraph: Boolean = false
+    val allowAnswerGraph: Boolean = false,
+    /** V135 — فایل صوتی سؤال (URL) و مدت آن؛ دانش‌آموز با پخش‌کننده می‌شنود. */
+    val audioUrl: String? = null,
+    val audioMs: Long = 0L
 )
 
 data class QuestionMediaPresentation(

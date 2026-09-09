@@ -16,6 +16,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -171,6 +172,10 @@ internal object ExamQuestionCodec {
                 answerLines = (obj["answerLines"]?.asInt() ?: if (type == QuestionType.ESSAY) 5 else 2).coerceIn(0, 12),
                 answerLineStyle = obj["answerLineStyle"]?.asString()?.takeIf { it in setOf("lined", "blank", "grid") } ?: "lined",
                 answerLineSpacingCm = ((obj["answerLineSpacingCm"] as? JsonPrimitive)?.floatOrNull ?: 1.0f).coerceIn(0.5f, 2.0f),
+                // V135 — صوت سؤال
+                audioUri = obj["audio"]?.asString()?.takeIf(String::isNotBlank),
+                audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
+                audioMs = (obj["audioMs"] as? JsonPrimitive)?.longOrNull ?: 0L,
                 rawPublic = obj,
                 rawAnswer = key
             )
@@ -194,6 +199,14 @@ internal object ExamQuestionCodec {
                     "w" to JsonPrimitive(image.widthMm)
                 ))
             })
+            // V135 — صوت سؤال (URL + حجم فشرده + مدت)؛ بدون صوت، کلیدها حذف می‌شوند.
+            if (!question.audioUri.isNullOrBlank()) {
+                values["audio"] = JsonPrimitive(question.audioUri)
+                values["audioBytes"] = JsonPrimitive(question.audioBytes)
+                values["audioMs"] = JsonPrimitive(question.audioMs)
+            } else {
+                values.remove("audio"); values.remove("audioBytes"); values.remove("audioMs")
+            }
             values["allowImages"] = JsonPrimitive(question.answerImageMode)
             values["allowAnswerGraph"] = JsonPrimitive(question.allowAnswerGraph)
             values["maxImages"] = JsonPrimitive(if (question.answerImageMode == "no") 0 else question.maxAnswerImages.coerceIn(1, 10))

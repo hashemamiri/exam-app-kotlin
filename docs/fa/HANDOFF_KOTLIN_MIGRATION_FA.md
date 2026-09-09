@@ -18140,3 +18140,38 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 
 ### ۹) تحویل
 - `apply_v134.py` (بدون SQL). فایل‌های تغییرکرده در `git diff --name-only HEAD~1 HEAD` (۲۹ فایل + `FigureGalleryChooser.kt` جدید).
+
+## §۳۶۰ — V135: فایل صوتی سؤال (آزمون آنلاین)، هزینهٔ تصویر/صوت با تفکیک، کادر جداگانهٔ هر فرمول
+
+### ۱) موتور صوت بومی — `core/audio/AudioTranscoder.kt` (جدید، بدون FFmpeg)
+- `MediaExtractor` + `MediaCodec` دیکد به PCM 16-bit → `Resampler` (درون‌یابی خطی به ۴۴٫۱kHz، downmix/duplicate کانال) → انکدر AAC-LC → `MediaMuxer` (m4a).
+- برش: فقط بازهٔ `[startMs,endMs)` (seek به sync قبلی + فیلتر pts).
+- تطبیقی: نرخ بیت‌های `128/96/80/64/48/40/32k` (زیر ۴۸k مونو)؛ اولین خروجیِ ≤ `MAX_BYTES` (۳MB) برنده است؛ اگر همه بزرگ‌تر بودند `AudioTooLargeException`. `estimateBytes/plannedBitrate` برای «حجم زنده» در ویرایشگر. `waveform()` ۲۴۰ اوج نرمال‌شده.
+- کاربر تصمیم گرفت: AAC بومی (نه FFmpeg).
+
+### ۲) ویرایشگر صوت معلم — `ui/audio/QuestionAudioEditorDialog.kt` (جدید)
+- انتخاب فایل با `OpenDocument("audio/*")` (بدون مجوز)؛ شکل موج؛ دو دستگیرهٔ کشیدنی شروع/پایان (`WaveformTrimmer`؛ حداقل فاصله ۰٫۵s)؛ لمس روی موج = پخش پیش‌شنود از همان نقطه (`MediaPlayer`)؛ دکمهٔ پخش بازه.
+- کارت «حجم زنده»: حجم تخمینی + نرخ بیت برنامه‌ریزی‌شده + هزینهٔ صوت (۲/۴/۶ هزار)؛ اگر با کمترین نرخ هم > ۳MB شود کارت قرمز و دکمهٔ تأیید غیرفعال. پس از فشرده‌سازی هم دوباره سقف چک می‌شود و خطا می‌دهد.
+- خروجی: `file://…/files/question_audio/audio-*.m4a` + bytes + durationMs → `viewModel.setAudio(qid, uri, bytes, ms)`.
+- آیکن موسیقی (`Icons.Outlined.MusicNote`) در `QuestionMediaEditor` کنارِ دوربین/میکروفون؛ فقط وقتی `onOpenAudio != null` یعنی **فقط آزمون آنلاین** (`printMode=false`)؛ با داشتن صوت، آیکن آبی و پخش‌کننده زیر ردیف.
+
+### ۳) پخش‌کنندهٔ دانش‌آموز — `ui/audio/QuestionAudioPlayer.kt` (جدید)
+- پلی/پاز/پخش دوباره، `Slider` کشیدنی (seek در `onValueChangeFinished`)، زمان جاری/کل. برای URL باکت خصوصی هدرهای `Authorization/apikey` مثل `SupabaseAuthImageInterceptor`. در `StudentExamScreen` بالای تصاویر سؤال از `presentation.audioUrl/audioMs`.
+
+### ۴) مدل/کدک/آپلود
+- `QuestionDraft.audioUri/audioBytes/audioMs`؛ `ExamQuestionCodec` کلیدهای `audio/audioBytes/audioMs` (بدون صوت حذف می‌شوند)؛ `QuestionPresentation.audioUrl/audioMs` + `StudentExamPayloadCodec.parsePresentation`.
+- `SupabaseQuestionImageUploader.uploadPending` صوتِ `file://` را با `uploadAudioAt("audio/<teacher>/<exam>")` (بدون تغییر، سقف ۳MB) آپلود می‌کند و در شمارندهٔ پیشرفت می‌آید.
+- هزینهٔ کلاینت: `QuestionDraft.imageCount()` (تصاویر سؤال + گزینه‌ها + جورکردنی — انتخاب کاربر)، `audioChargeForBytes`, `chargeToman()`؛ `ExamBuilderState.maximumChargeToman/totalImageCount/imageChargeToman/audioQuestionCount/audioChargeToman`؛ `ExamSaveResult` تفکیک سرور؛ `state.lastSaveResult`.
+
+### ۵) سرور — `supabase/migrations/20260909_native_media_cost_v135.sql` (+ `sql/manual/SQL_NATIVE_MEDIA_COST_V135.sql`) **باید در Supabase اجرا شود**
+- `native_question_media_cost_v135(jsonb)`: تعداد تصاویر (`images/image/optionImages/leftImages/rightImages`) ×۱۰۰۰ و هزینهٔ صوت بر اساس `audioBytes` (بیش از ۳MB → exception).
+- `native_save_exam_v1` بازنویسی: کلیدهای سؤال‌های مشمول (`v_billed_keys` با همان قاعدهٔ fingerprint جدید/تغییرکرده — انتخاب کاربر) → `v_cost = billable×1000 + image_cost + audio_cost`؛ خروجی اضافه: `question_cost, billed_images, image_cost, billed_audio, audio_cost`. `native_save_exam_v2` بدون تغییر.
+- سیاست‌های storage: پوشهٔ `audio` به insert (`v11_authenticated_upload_exam_images`) و select (`v75_8_read_question_images`) اضافه شد.
+
+### ۶) پنجرهٔ تأیید هزینه — `ExamBuilderScreen.kt`
+- ردیف‌های «سؤال‌ها: n×۱٬۰۰۰»، «تصاویر: m×۱٬۰۰۰»، «فایل صوتی: k سؤال = …» و «جمع». پس از ذخیره، تفکیک واقعیِ سرور زیر «مبلغ کسرشده».
+
+### ۷) کادر جداگانهٔ هر فرمول — `QuestionTextWebSection.kt`
+- هر `RichSegment.Math` همیشه کادر گرد ۱dp (`outline` ۵۵٪) با زمینهٔ کم‌رنگ دارد؛ انتخاب = کادر ۲dp آبی؛ لمس دوم همان فرمول را در ویرایشگر باز می‌کند (رفتار قبلی). ارتفاع جعبه +۶dp. پینِ `V54_4ReferenceParityFixTest` (RoundedCornerShape) به‌روز شد.
+
+### ۸) تست: `V135AudioMediaCostTest.kt` (پله‌های هزینه، ۵ تصویر = ۶۰۰۰، پین‌های منبع).

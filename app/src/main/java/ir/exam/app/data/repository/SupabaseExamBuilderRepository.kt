@@ -188,7 +188,14 @@ class SupabaseExamBuilderRepository(context: Context) {
         ExamSaveResult(
             code = raw["code"]?.jsonPrimitive?.contentOrNull ?: code,
             chargedToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
-            walletBalanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+            walletBalanceToman = raw["balance"]?.jsonPrimitive?.longOrNull,
+            // V135 — تفکیک هزینه (سرورهای قدیمی این کلیدها را ندارند → صفر)
+            billedQuestions = raw["billed_questions"]?.jsonPrimitive?.intOrNull ?: 0,
+            questionCostToman = raw["question_cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            billedImages = raw["billed_images"]?.jsonPrimitive?.intOrNull ?: 0,
+            imageCostToman = raw["image_cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            billedAudio = raw["billed_audio"]?.jsonPrimitive?.intOrNull ?: 0,
+            audioCostToman = raw["audio_cost"]?.jsonPrimitive?.longOrNull ?: 0
         )
     }
 

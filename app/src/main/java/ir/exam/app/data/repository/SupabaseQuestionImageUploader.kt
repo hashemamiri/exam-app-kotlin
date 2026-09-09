@@ -29,6 +29,7 @@ class SupabaseQuestionImageUploader(context: Context) {
         onProgress: (done: Int, total: Int) -> Unit
     ): List<QuestionDraft> {
         val pendingCount = questions.sumOf { question ->
+            (if (!question.audioUri.isNullOrBlank() && !question.audioUri.isRemoteUrl()) 1 else 0) +
             question.images.count { !it.uri.isRemoteUrl() } +
                 question.optionImages.countPending() +
                 question.matchingLeftImages.countPending() +
@@ -53,6 +54,14 @@ class SupabaseQuestionImageUploader(context: Context) {
                         done += 1
                         onProgress(done, pendingCount)
                     })
+                },
+                // V135 — فایل صوتی فشرده‌شده (m4a ≤ 3MB) بدون تغییر آپلود می‌شود.
+                audioUri = question.audioUri?.let { a ->
+                    if (a.isBlank() || a.isRemoteUrl()) a
+                    else uploadAudioAt("audio/$teacherId/$examId", Uri.parse(a)).also {
+                        done += 1
+                        onProgress(done, pendingCount)
+                    }
                 },
                 optionImages = question.optionImages.map { upload(it, "option_images") },
                 matchingLeftImages = question.matchingLeftImages.map { upload(it, "matching") },
@@ -216,6 +225,17 @@ class SupabaseQuestionImageUploader(context: Context) {
         }
     }
 
+    /** V135 — آپلود فایل صوتی آمادهٔ سؤال (خروجی AudioTranscoder؛ سقف ۳MB دوباره بررسی می‌شود). */
+    private suspend fun uploadAudioAt(prefix: String, uri: Uri): String = withContext(Dispatchers.IO) {
+        val bytes = openInput(uri)?.use { it.readBytes() } ?: error("فایل صوتی سؤال قابل خواندن نیست.")
+        check(bytes.isNotEmpty()) { "فایل صوتی خالی است." }
+        check(bytes.size <= MAX_AUDIO_BYTES) { "حجم فایل صوتی بیش از ۳ مگابایت است." }
+        val path = "$prefix/${UUID.randomUUID()}.m4a"
+        val bucket = SupabaseProvider.client.storage.from(BUCKET)
+        bucket.upload(path, bytes) { upsert = false }
+        bucket.publicUrl(path)
+    }
+
     private fun openInput(uri: Uri): InputStream? = if (uri.scheme.equals("file", true)) {
         uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
     } else {
@@ -232,6 +252,7 @@ class SupabaseQuestionImageUploader(context: Context) {
         const val AVATAR_MAX_DIMENSION = 1024
         const val AVATAR_QUALITY = 88
         const val MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+        const val MAX_AUDIO_BYTES = 3 * 1024 * 1024
         const val MAX_ATTEMPTS = 4
         const val MIN_DECODE_EDGE = 640
         const val MAX_DECODE_PIXELS = 7_000_000L

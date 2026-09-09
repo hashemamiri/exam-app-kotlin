@@ -284,6 +284,12 @@ data class QuestionDraft(
     /** V58.0 — اجازهٔ رسم نمودار پاسخ توسط دانش‌آموز. */
     val allowAnswerGraph: Boolean = false,
     val images: List<MediaDraft> = emptyList(),
+    /** V135 — فایل صوتی سؤال (آزمون آنلاین): file:// محلی پیش از ذخیره یا https:// پس از آپلود. */
+    val audioUri: String? = null,
+    /** V135 — حجم خروجی فشرده‌شده (بایت) — مبنای هزینه (تا ۱/۲/۳ مگابایت). */
+    val audioBytes: Long = 0L,
+    /** V135 — مدت فایل صوتی (میلی‌ثانیه). */
+    val audioMs: Long = 0L,
     val textAlign: String = "right",
     val imagePosition: String = "below",
     val fontFamily: String = "default",
@@ -362,17 +368,50 @@ data class ExamBuilderState(
     val savedCode: String? = null,
     val chargedToman: Long = 0,
     val walletBalanceToman: Long? = null,
+    /** V135 — تفکیک هزینهٔ آخرین ذخیره (سؤال/تصویر/صوت) برای پنجرهٔ نتیجه. */
+    val lastSaveResult: ExamSaveResult? = null,
     val error: String? = null,
     /** V58.0 — پیام گذرای موفقیت (مثلاً «به بانک سؤال اضافه شد»). */
     val notice: String? = null
 ) {
-    val maximumChargeToman: Long get() = questions.size * 1_000L
+    val maximumChargeToman: Long get() = questions.sumOf { it.chargeToman() }
+    /** V135 — تعداد کل تصاویر (سؤال + گزینه‌ها + جورکردنی). */
+    val totalImageCount: Int get() = questions.sumOf { it.imageCount() }
+    val imageChargeToman: Long get() = totalImageCount * 1_000L
+    val audioQuestionCount: Int get() = questions.count { !it.audioUri.isNullOrBlank() }
+    val audioChargeToman: Long get() = questions.sumOf { it.audioChargeToman() }
 }
+
+/** V135 — تعداد تصاویر سؤال + گزینه‌ها + جورکردنی (مبنای ۱۰۰۰ تومان به‌ازای هر تصویر). */
+fun QuestionDraft.imageCount(): Int =
+    images.size + optionImages.count { !it.isNullOrBlank() } +
+        matchingLeftImages.count { !it.isNullOrBlank() } + matchingRightImages.count { !it.isNullOrBlank() }
+
+/** V135 — هزینهٔ صوت: تا ۱MB ۲۰۰۰، تا ۲MB ۴۰۰۰، تا ۳MB ۶۰۰۰ تومان. */
+fun audioChargeForBytes(bytes: Long): Long = when {
+    bytes <= 0L -> 0L
+    bytes <= 1L * 1024 * 1024 -> 2_000L
+    bytes <= 2L * 1024 * 1024 -> 4_000L
+    else -> 6_000L
+}
+
+fun QuestionDraft.audioChargeToman(): Long =
+    if (audioUri.isNullOrBlank()) 0L else audioChargeForBytes(audioBytes.coerceAtLeast(1L))
+
+/** V135 — هزینهٔ کامل یک سؤال: ۱۰۰۰ + تصاویر + صوت (همان فرمول سرور). */
+fun QuestionDraft.chargeToman(): Long = 1_000L + imageCount() * 1_000L + audioChargeToman()
 
 data class ExamSaveResult(
     val code: String,
     val chargedToman: Long,
-    val walletBalanceToman: Long?
+    val walletBalanceToman: Long?,
+    // V135 — تفکیک هزینه از سرور
+    val billedQuestions: Int = 0,
+    val questionCostToman: Long = 0,
+    val billedImages: Int = 0,
+    val imageCostToman: Long = 0,
+    val billedAudio: Int = 0,
+    val audioCostToman: Long = 0
 )
 
 data class ExamImportDraft(

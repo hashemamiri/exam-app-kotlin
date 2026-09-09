@@ -469,6 +469,16 @@ fun ExamBuilderScreen(
                                 (state.walletBalanceToman?.let { " · مانده: ${it.asToman()} تومان" } ?: ""),
                             color = MaterialTheme.colorScheme.primary
                         )
+                        // V135 — تفکیک واقعیِ سرور: سؤال / تصویر / صوت
+                        state.lastSaveResult?.takeIf { it.chargedToman > 0 }?.let { r ->
+                            Text(
+                                "سؤال‌ها: ${PersianDigits.convert(r.billedQuestions)} × ۱٬۰۰۰ = ${r.questionCostToman.asToman()} تومان" +
+                                    (if (r.billedImages > 0) " · تصاویر: ${PersianDigits.convert(r.billedImages)} × ۱٬۰۰۰ = ${r.imageCostToman.asToman()} تومان" else "") +
+                                    (if (r.billedAudio > 0) " · صوت: ${PersianDigits.convert(r.billedAudio)} سؤال = ${r.audioCostToman.asToman()} تومان" else ""),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                             Text("بازگشت به آزمون‌ها")
                         }
@@ -665,6 +675,15 @@ fun ExamBuilderScreen(
                     } else {
                         Text("سرور فقط سؤال‌های مشمول تغییر را محاسبه می‌کند. سقف این ذخیره ${state.maximumChargeToman.asToman()} تومان است.")
                     }
+                    // V135 — تفکیک هزینه: هر سؤال ۱۰۰۰ + هر تصویر ۱۰۰۰ + صوت (۲/۴/۶ هزار بر اساس حجم)
+                    Text("• سؤال‌ها: ${PersianDigits.convert(state.questions.size)} × ۱٬۰۰۰ = ${(state.questions.size * 1_000L).asToman()} تومان")
+                    if (state.totalImageCount > 0) {
+                        Text("• تصاویر (سؤال، گزینه‌ها، جورکردنی): ${PersianDigits.convert(state.totalImageCount)} × ۱٬۰۰۰ = ${state.imageChargeToman.asToman()} تومان")
+                    }
+                    if (state.audioQuestionCount > 0) {
+                        Text("• فایل صوتی: ${PersianDigits.convert(state.audioQuestionCount)} سؤال = ${state.audioChargeToman.asToman()} تومان (تا ۱MB ۲٬۰۰۰ · تا ۲MB ۴٬۰۰۰ · تا ۳MB ۶٬۰۰۰)")
+                    }
+                    Text("جمع: ${state.maximumChargeToman.asToman()} تومان", style = MaterialTheme.typography.titleSmall)
                     Text("ذخیره و کسر موجودی در یک تراکنش انجام می‌شود؛ اگر ذخیره شکست بخورد، مبلغی کم نخواهد شد.")
                 }
             },
@@ -944,6 +963,8 @@ private fun QuestionEditor(
     var atlasTarget by remember(question.id) { mutableStateOf<AtlasTarget?>(null) }
     // V134 — پنجرهٔ «گالری شکل‌ها» (آناتومی/فیزیک/شیمی/تصویر) برای متن سؤال یا فیلدِ +.
     var galleryChooserOpen by remember(question.id) { mutableStateOf(false) }
+    // V135 — ویرایشگر صوت سؤال
+    var audioEditorOpen by remember(question.id) { mutableStateOf(false) }
     // V53.3 — وقتی true، خروجی ویرایشگر جایگزین توکن dblclick می‌شود نه درج تازه.
     var editingWebToken by remember(question.id) { mutableStateOf(false) }
     // V53.4 — پنجرهٔ تمام‌صفحهٔ فرمول WebView برای متن سؤال.
@@ -1156,8 +1177,18 @@ private fun QuestionEditor(
                     val joined = if (base.isBlank() || base.endsWith(" ") || base.endsWith("\n")) base + spoken else "$base $spoken"
                     viewModel.updateText(question.id, joined)
                     questionFieldController.setValue(joined)
-                }
+                },
+                // V135 — صوت سؤال فقط در آزمون آنلاین (چاپی صدا ندارد).
+                onOpenAudio = if (printMode) null else ({ audioEditorOpen = true }),
+                hasAudio = !question.audioUri.isNullOrBlank()
             )
+            if (!printMode && !question.audioUri.isNullOrBlank()) {
+                ir.exam.app.ui.audio.QuestionAudioPlayer(
+                    url = question.audioUri!!,
+                    durationMs = question.audioMs,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             // V107 — «تصویر پاسخ دانش‌آموز» و «نمودار پاسخ دانش‌آموز» فقط در
             // آزمونِ آنلاین معنا دارند؛ در آزمونِ چاپی به‌جای آن‌ها «فضای پاسخ»
             // (تعداد سطر / نوع سطر / فاصلهٔ سطر به سانتی‌متر) نشان داده می‌شود.
@@ -1604,6 +1635,23 @@ private fun QuestionEditor(
                 }
             )
         }
+    }
+    if (audioEditorOpen) {
+        ir.exam.app.ui.audio.QuestionAudioEditorDialog(
+            questionId = question.id,
+            existingUri = question.audioUri,
+            existingBytes = question.audioBytes,
+            existingMs = question.audioMs,
+            onDismiss = { audioEditorOpen = false },
+            onApply = { uri, bytes, ms ->
+                viewModel.setAudio(question.id, uri, bytes, ms)
+                audioEditorOpen = false
+            },
+            onRemove = {
+                viewModel.setAudio(question.id, null, 0L, 0L)
+                audioEditorOpen = false
+            }
+        )
     }
     if (studioOpen) {
         val studioExisting = remember(question.images) {

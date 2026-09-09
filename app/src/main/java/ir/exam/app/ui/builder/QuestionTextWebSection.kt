@@ -2,6 +2,7 @@ package ir.exam.app.ui.builder
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -254,18 +255,28 @@ fun QuestionTextWebSection(
                                 modifier = Modifier
                                     .then(
                                         if (bigFormula) {
-                                            Modifier.fillMaxWidth().heightIn(min = 36.dp)
+                                            Modifier.fillMaxWidth().heightIn(min = 42.dp)
                                         } else {
-                                            Modifier.height(boxHeight)
+                                            // V135 — ۶dp برای پدینگ/کادرِ جداگانهٔ فرمول
+                                            Modifier.height(boxHeight + 6.dp)
                                         }
                                     )
-                                    .then(
-                                        if (selected) {
-                                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary)
-                                        } else {
-                                            Modifier
-                                        }
+                                    // V135 — هر فرمول یک کادرِ جداگانهٔ همیشگی دارد (کادر روشن + زمینهٔ کم‌رنگ)
+                                    // تا به‌عنوان یک شیء مستقل دیده شود؛ لمس اول انتخاب (کادر پررنگ)، لمس دوم
+                                    // همان فرمول را در ویرایشگر فرمول باز می‌کند.
+                                    .padding(horizontal = 2.dp, vertical = 1.dp)
+                                    .background(
+                                        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                        RoundedCornerShape(6.dp)
                                     )
+                                    .border(
+                                        if (selected) 2.dp else 1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.55f),
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                                     .clickable {
                                         if (selected) {
                                             selectedPartIndex = null

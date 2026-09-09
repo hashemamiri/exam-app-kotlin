@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -71,7 +72,10 @@ fun QuestionMediaEditor(
     onRemove: (String) -> Unit,
     onOpenStudio: (() -> Unit)? = null,
     // V108 — میکروفون کنار آیکن تصویر: متن/فرمولِ گفتاری.
-    onSpeechText: ((String) -> Unit)? = null
+    onSpeechText: ((String) -> Unit)? = null,
+    // V135 — آیکن موسیقی (فقط آزمون آنلاین): ویرایشگر صوت سؤال. null = نمایش داده نشود.
+    onOpenAudio: (() -> Unit)? = null,
+    hasAudio: Boolean = false
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -136,6 +140,15 @@ fun QuestionMediaEditor(
         }
         if (onSpeechText != null) {
             ir.exam.app.ui.speech.SpeechToTextButton(onText = onSpeechText)
+        }
+        if (onOpenAudio != null) {
+            IconButton(onClick = onOpenAudio) {
+                Icon(
+                    Icons.Outlined.MusicNote,
+                    contentDescription = if (hasAudio) "ویرایش فایل صوتی سؤال" else "افزودن فایل صوتی سؤال",
+                    tint = if (hasAudio) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Unspecified
+                )
+            }
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
         // V107 — فقط آیکن؛ نوشتهٔ «تصویر» کنار آن حذف شد (درخواست کاربر).

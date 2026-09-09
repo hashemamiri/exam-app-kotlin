@@ -28,7 +28,9 @@ class V54_4ReferenceParityFixTest {
     fun `compose draws no duplicate frame or label around the webview`() {
         assertFalse("\"متن سؤال\"" in webSection)
         assertFalse("BorderStroke" in webSection)
-        assertFalse("RoundedCornerShape" in webSection)
+        // V135 — RoundedCornerShape فقط برای کادرِ جداگانهٔ هر فرمول (نه قابِ دورِ کل کادر متن).
+        assertFalse("Modifier.fillMaxWidth().border(" in webSection)
+        assertTrue("MaterialTheme.colorScheme.outline.copy(alpha = 0.55f)" in webSection)
     }
 
     @Test

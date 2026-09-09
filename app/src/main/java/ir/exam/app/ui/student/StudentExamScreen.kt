@@ -298,6 +298,10 @@ fun StudentExamContent(
                 var zoomImage by remember(question.id) { mutableStateOf<String?>(null) }
                 val answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty()
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    // V135 — فایل صوتی سؤال: پلی/پاز + نوار جلو/عقب
+                    presentation.audioUrl?.let { audio ->
+                        ir.exam.app.ui.audio.QuestionAudioPlayer(url = audio, durationMs = presentation.audioMs, modifier = Modifier.fillMaxWidth())
+                    }
                     if(presentation.imagePosition=="above") question.images.forEach { img ->
                         StudentCachedImage(img, "تصویر سؤال", Modifier.fillMaxWidth().clickable { zoomImage = img })
                     }

@@ -21,6 +21,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -191,6 +192,8 @@ internal object StudentExamPayloadCodec {
             answerLines = (obj.int("answerLines") ?: 2).coerceIn(0, 12),
             answerLineStyle = obj.text("answerLineStyle")?.takeIf { it in setOf("lined", "blank") } ?: "lined",
             allowAnswerGraph = obj.boolean("allowAnswerGraph"),
+            audioUrl = obj.text("audio")?.takeIf(String::isNotBlank),
+            audioMs = obj.long("audioMs") ?: 0L,
             media = images.indices.map { index ->
                 val pos = positions.getOrNull(index) as? JsonObject
                 QuestionMediaPresentation(
@@ -242,6 +245,7 @@ internal object StableExamShuffle {
 
 private fun JsonObject.text(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 private fun JsonObject.int(key: String): Int? = this[key]?.jsonPrimitive?.intOrNull
+private fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
 private fun JsonObject.double(key: String): Double? = this[key]?.jsonPrimitive?.doubleOrNull
 private fun JsonObject.boolean(key: String): Boolean = this[key]?.jsonPrimitive?.booleanOrNull ?: false
 private fun JsonElement?.arrayOrEmpty(): JsonArray = this as? JsonArray ?: JsonArray(emptyList())

@@ -615,6 +615,10 @@ class ExamBuilderViewModel(
             if (image.id == imageId) image.copy(widthMm = widthMm.coerceIn(20f, 190f)) else image
         })
     } }
+    /** V135 — فایل صوتی سؤال (خروجی ویرایشگر صوت؛ file:// محلی ≤ 3MB) یا حذف با null. */
+    fun setAudio(questionId: String, uri: String?, bytes: Long, durationMs: Long) { update(questionId) { question ->
+        question.copy(audioUri = uri?.takeIf(String::isNotBlank), audioBytes = if (uri.isNullOrBlank()) 0L else bytes, audioMs = if (uri.isNullOrBlank()) 0L else durationMs)
+    } }
     fun removeImage(questionId: String, imageId: String) { update(questionId) { question ->
         question.copy(images = question.images.filterNot { it.id == imageId })
     } }
@@ -724,6 +728,7 @@ class ExamBuilderViewModel(
                     savedCode = result.code,
                     chargedToman = result.chargedToman,
                     walletBalanceToman = result.walletBalanceToman,
+                    lastSaveResult = result,
                     uploadProgress = null
                 )
             }
