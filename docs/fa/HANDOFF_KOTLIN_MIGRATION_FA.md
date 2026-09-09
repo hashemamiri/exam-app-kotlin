@@ -18083,3 +18083,5 @@ outline-offset ۵px + دستگیره‌ها ۱۲px بیرون). `webhost.css` ب
 verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Neumorphic69IntegrationTest و V24 («داده‌ها» تبِ تنظیمات، کارت «سایت»).
 
 **رفع شکست CI نسخهٔ V131** — `V55_18_1SmoothRightReturnHotfixTest` پینِ `dragX.animateTo(targetX, tween(280))` را در شاخهٔ چپ می‌خواست؛ V131 آن را به `tween(360, easing = FastOutSlowInEasing)` تغییر داده بود. پین در V132 به‌روز شد (۶۷۱ تست، ۱ شکست → صفر).
+
+**V132.2** — پینِ `V36ManagerFoundationTest.manager hamburger excludes calendar and header` («داده‌ها» در منوی مدیر) → «سایت». درسِ تکراری: هنگام تغییرِ برچسبِ کارت‌های همبرگری، هر سه تستِ V24/V36/V69 را grep کنید.

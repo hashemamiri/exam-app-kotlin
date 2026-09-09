@@ -80,7 +80,8 @@ class V36ManagerFoundationTest {
         val managerMenu = app.substringAfter("} else if (user.role == UserRole.MANAGER) {")
             .substringBefore("} else {")
         assertTrue("\"حساب\"" in managerMenu)
-        assertTrue("\"داده‌ها\"" in managerMenu)
+        // V132 — «داده‌ها» به تبِ تنظیمات رفت؛ کارت «سایت» جای آن است
+        assertTrue("\"سایت\"" in managerMenu)
         assertTrue("\"تنظیمات\"" in managerMenu)
         assertTrue("\"خروج\"" in managerMenu)
         assertFalse("\"تقویم\"" in managerMenu)
