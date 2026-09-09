@@ -161,3 +161,8 @@ body{padding:0 !important;}
 #pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="br"]{right:-10px;left:auto;bottom:-10px;top:auto;}
 #pgsViewer #previewArea .interactive-figure .fig-move-hint{top:-30px;}
 #pgsViewer #previewArea .interactive-figure .fig-size-badge{bottom:-28px;}
+/* V133 — پاراگراف‌های ترازشده و دکمه‌های تراز */
+#pgsViewer .q-para,#pgsPrintRoot .q-para{display:block;}
+.host-fmt .hf-btn.hf-al{min-width:30px;display:inline-flex;align-items:center;justify-content:center;}
+.host-fmt .hf-btn.hf-al svg{display:block;}
+.host-fmt .hf-btn.hf-al.on{background:#2563eb;color:#fff;}

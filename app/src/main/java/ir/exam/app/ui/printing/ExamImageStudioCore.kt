@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
@@ -175,6 +176,7 @@ fun ExamImageStudioDialog(
     var denoiseOn by remember { mutableStateOf(false) }
     var curveAmount by remember { mutableStateOf(0.22f) }
     var showLayers by remember { mutableStateOf(false) }
+    var studioTab by remember { mutableStateOf("image") } // V133 — بخشِ فعالِ نوار ابزار
     var darkCanvas by remember { mutableStateOf(false) }
 
     fun makeCameraUri(): Pair<Uri, File> {
@@ -781,6 +783,33 @@ fun ExamImageStudioDialog(
                             .padding(vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        // V133 — مرتب‌سازی ابزارها: به‌جای ده ردیفِ درهم، یک نوارِ بخش‌ها و فقط ابزارهای همان بخش
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(
+                                "image" to "🖼️ تصویر و برش",
+                                "draw" to "✏️ طراحی و علامت",
+                                "enhance" to "✨ بهبود و OCR",
+                                "deskew" to "📐 صاف‌سازی"
+                            ).forEach { (key, label) ->
+                                FilterChip(
+                                    selected = studioTab == key,
+                                    onClick = {
+                                        studioTab = key
+                                        if (key != "deskew") perspMode = false
+                                        if (key != "image") splitMode = false
+                                        if (key != "draw" && drawMode != "none") { drawMode = "none"; activeShape = null }
+                                    },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        if (studioTab == "image") {
                         Row(
                             Modifier
                                 .fillMaxWidth()
@@ -801,6 +830,7 @@ fun ExamImageStudioDialog(
                                 if (splitMode) { perspMode = false; selectedBox = 0 }
                             }
                         }
+                        }
                         // V76.7 — لاک‌گیر/برچسب/فلش (عین مجموعهٔ استودیو)
                         fun setDraw(m: String) {
                             drawMode = m
@@ -809,6 +839,7 @@ fun ExamImageStudioDialog(
                                 selectedShape = -1; activeShape = null
                             }
                         }
+                        if (studioTab == "draw") {
                         Row(
                             Modifier
                                 .fillMaxWidth()
@@ -878,6 +909,8 @@ fun ExamImageStudioDialog(
                                 label = { Text("👁 قبل/بعد") }
                             )
                         }
+                        }
+                        if (studioTab == "enhance") {
                         // V77.0 — اسکن تمیز کتاب + برش خودکار حاشیه + لایهٔ اشیاء
                         Row(
                             Modifier
@@ -991,6 +1024,8 @@ fun ExamImageStudioDialog(
                                 }
                             }
                         }
+                        }
+                        if (studioTab == "draw") {
                         if (drawMode == "curve") {
                             Row(
                                 Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -1006,6 +1041,8 @@ fun ExamImageStudioDialog(
                                 Text(String.format("%.2f", curveAmount), style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                        }
+                        if (studioTab == "enhance") {
                         // V76.9 — OCR فارسیِ آفلاین روی همان تصویرِ آماده‌شده
                         // (چرخش/صاف‌سازی/برش/اسکن/شکل‌ها اعمال می‌شوند تا متن
                         // دقیقاً از همان چیزی خوانده شود که کاربر می‌بیند).
@@ -1046,6 +1083,8 @@ fun ExamImageStudioDialog(
                                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             }
                         }
+                        }
+                        if (studioTab == "deskew") {
                         // V76.5 — صاف‌سازی: صفحه‌ای ۴گوشه + خودکار + دقیق ±۱۵°
                         Row(
                             Modifier
@@ -1089,6 +1128,8 @@ fun ExamImageStudioDialog(
                             Text("شبکه", style = MaterialTheme.typography.labelMedium)
                             Switch(checked = deskewGrid, onCheckedChange = { deskewGrid = it })
                         }
+                        }
+                        if (studioTab == "image") {
                         if (splitMode) {
                             // V76.6 — پیش‌فرض‌های تفکیک + اعمال (عین استودیو)
                             Row(
@@ -1181,6 +1222,8 @@ fun ExamImageStudioDialog(
                                 )
                             }
                         }
+                        }
+                        if (studioTab == "deskew") {
                         if (perspMode) {
                             Row(
                                 Modifier
@@ -1210,6 +1253,8 @@ fun ExamImageStudioDialog(
                                 Text("نقطه‌های ۱..۴ را روی گوشه‌های صفحه بکشید.", style = MaterialTheme.typography.labelMedium)
                             }
                         }
+                        }
+                        if (studioTab == "image") {
                         Row(
                             Modifier
                                 .fillMaxWidth()
@@ -1256,6 +1301,7 @@ fun ExamImageStudioDialog(
                             valueRange = 40f..100f,
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
+                        }
                     }
                 }
 
@@ -1409,7 +1455,12 @@ private fun centeredAspect(current: Rect, aspect: Float): Rect {
 
 @Composable
 private fun ToolChip(label: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick) { Text(label) }
+    // V133 — دکمه‌های جمع‌وجورتر تا ابزارها در یک نگاه جا شوند
+    OutlinedButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.height(36.dp)
+    ) { Text(label, style = MaterialTheme.typography.labelLarge) }
 }
 
 /** دیکود با محدودیت ابعاد (inSampleSize) تا حافظه نترکد. */

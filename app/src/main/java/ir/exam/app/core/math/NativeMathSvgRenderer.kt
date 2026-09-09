@@ -178,7 +178,8 @@ object NativeMathSvgRenderer {
     private fun symbol(node: MathNode.Symbol, size: Float): Layout {
         val naturalWidth = estimateTextWidth(node.value, size)
         val editable = node.editable && node.sourceStart >= 0 && node.sourceEnd >= node.sourceStart
-        val width = if (editable) max(naturalWidth, size * .72f) else naturalWidth.coerceAtLeast(size * .08f)
+        // V133 — عرضِ نماد = عرضِ طبیعیِ آن (حداقلِ قبلی .72em بین حروف فاصلهٔ ناخواسته می‌انداخت)
+        val width = if (editable) max(naturalWidth, size * .50f) else naturalWidth.coerceAtLeast(size * .08f)
         val baseline = size * .94f
         val height = size * 1.24f
         if (node.value.isEmpty()) {
@@ -226,7 +227,7 @@ object NativeMathSvgRenderer {
                     node.sourceEnd,
                     size * .025f,
                     size * .015f,
-                    (width - size * .05f).coerceAtLeast(size * .60f),
+                    (width - size * .05f).coerceAtLeast(size * .45f),
                     height - size * .03f,
                     mergeable
                 )
@@ -285,10 +286,12 @@ object NativeMathSvgRenderer {
     }
 
     private fun fraction(node: MathNode.Fraction, size: Float): Layout {
-        val numerator = layout(node.top, size * .76f)
-        val denominator = layout(node.bottom, size * .76f)
-        val padding = size * .18f
-        val gap = size * .10f
+        // V133 — مثل ویرایشگر: صورت/مخرج هم‌اندازهٔ متن (فقط کمی کوچک‌تر)، خط کسر
+        // به اندازهٔ بزرگ‌ترِ صورت/مخرج با پدینگ .3em کشیده می‌شود.
+        val numerator = layout(node.top, size * .92f)
+        val denominator = layout(node.bottom, size * .92f)
+        val padding = size * .28f
+        val gap = size * .06f
         val width = max(numerator.width, denominator.width) + padding * 2
         val topX = (width - numerator.width) / 2f
         val lineY = numerator.height + gap
@@ -297,10 +300,10 @@ object NativeMathSvgRenderer {
         val height = bottomY + denominator.height
         val body = buildString {
             append(translate(numerator.body, topX, 0f))
-            append("<line x1=\"").append(number(padding * .25f)).append("\" y1=\"")
-            append(number(lineY)).append("\" x2=\"").append(number(width - padding * .25f))
+            append("<line x1=\"").append(number(padding * .15f)).append("\" y1=\"")
+            append(number(lineY)).append("\" x2=\"").append(number(width - padding * .15f))
             append("\" y2=\"").append(number(lineY)).append("\" stroke-width=\"")
-            append(number(max(1.2f, size * .055f))).append("\"/>")
+            append(number(max(1.2f, size * .048f))).append("\"/>")
             append(translate(denominator.body, bottomX, bottomY))
         }
         return Layout(
@@ -315,41 +318,44 @@ object NativeMathSvgRenderer {
     }
 
     private fun radical(node: MathNode.Radical, size: Float): Layout {
+        // V133 — هم‌شکلِ ویرایشگر (mbFitSurd): جعبهٔ علامت √ به عرضِ نصفِ ارتفاع،
+        // مسیرِ «M3 47 L13 78 L34 top» در viewBox ۵۰×۱۰۰، خطِ بالا ۱٫۶px با پدینگِ .16em
+        // بالای رادیکاند و .04em در دو طرف؛ اندیسِ ریشه .6em و کمی روی علامت.
         val radicand = layout(node.body, size)
-        val rootIndex = node.index?.let { layout(it, size * .46f) }
-        val indexWidth = rootIndex?.width ?: 0f
-        val hookWidth = size * .72f
-        val topPadding = size * .15f
-        val bodyX = indexWidth + hookWidth
-        val bodyY = topPadding + size * .08f
-        val width = bodyX + radicand.width + size * .10f
-        val height = max(radicand.height + topPadding, size * 1.30f)
-        val stroke = max(1.3f, size * .065f)
-        val hookStartX = indexWidth + size * .04f
-        val middleY = topPadding + radicand.height * .58f
-        val lowY = topPadding + radicand.height * .84f
+        val rootIndex = node.index?.let { layout(it, size * .6f) }
+        val indexWidth = rootIndex?.let { (it.width - size * .30f).coerceAtLeast(0f) } ?: 0f
+        val stroke = max(1.2f, size * .057f)
+        val topPadding = stroke / 2f
+        val innerHeight = radicand.height + size * .16f
+        val surdW = innerHeight * .5f
+        val bodyX = indexWidth + surdW + size * .04f
+        val bodyY = topPadding + size * .16f
+        val width = bodyX + radicand.width + size * .04f
+        val height = topPadding + innerHeight
         val topY = topPadding
-        val indexY = topPadding + size * .22f
+        fun sx(u: Float) = indexWidth + surdW * u / 50f
+        fun sy(u: Float) = topPadding + innerHeight * u / 100f
+        val indexY = (topY - (rootIndex?.height ?: 0f) * .35f).coerceAtLeast(0f)
+        val shift = if (rootIndex != null && indexY == 0f) (rootIndex.height * .35f - topY).coerceAtLeast(0f) else 0f
         val body = buildString {
-            rootIndex?.let { append(translate(it.body, 0f, indexY)) }
-            append("<path d=\"M ").append(number(hookStartX)).append(' ').append(number(middleY))
-            append(" L ").append(number(hookStartX + size * .18f)).append(' ').append(number(middleY))
-            append(" L ").append(number(hookStartX + size * .28f)).append(' ').append(number(lowY))
-            append(" L ").append(number(bodyX - size * .08f)).append(' ').append(number(topY))
-            append(" L ").append(number(width)).append(' ').append(number(topY))
-            append("\" fill=\"none\" stroke-width=\"").append(number(stroke)).append("\"/>")
-            append(translate(radicand.body, bodyX, bodyY))
+            rootIndex?.let { append(translate(it.body, 0f, 0f)) }
+            append("<path d=\"M ").append(number(sx(3f))).append(' ').append(number(sy(47f) + shift))
+            append(" L ").append(number(sx(13f))).append(' ').append(number(sy(78f) + shift))
+            append(" L ").append(number(sx(34f))).append(' ').append(number(topY + shift))
+            append(" L ").append(number(width)).append(' ').append(number(topY + shift))
+            append("\" fill=\"none\" stroke-width=\"").append(number(stroke)).append("\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>")
+            append(translate(radicand.body, bodyX, bodyY + shift))
         }
-        val ownBar = RadicalLine(bodyX - size * .08f, width, topY)
+        val ownBar = RadicalLine(sx(34f), width, topY + shift)
         return Layout(
             width,
-            height + size * .08f,
-            bodyY + radicand.baseline,
+            height + shift + size * .04f,
+            bodyY + shift + radicand.baseline,
             body,
-            (rootIndex?.boxes.orEmpty().map { it.moved(0f, indexY) }) +
-                radicand.boxes.map { it.moved(bodyX, bodyY) },
-            (rootIndex?.radicalBars.orEmpty().map { it.moved(0f, indexY) }) +
-                radicand.radicalBars.map { it.moved(bodyX, bodyY) } + ownBar
+            (rootIndex?.boxes.orEmpty()) +
+                radicand.boxes.map { it.moved(bodyX, bodyY + shift) },
+            (rootIndex?.radicalBars.orEmpty()) +
+                radicand.radicalBars.map { it.moved(bodyX, bodyY + shift) } + ownBar
         )
     }
 
@@ -361,7 +367,7 @@ object NativeMathSvgRenderer {
     private fun script(node: MathNode.Script, size: Float): Layout {
         val operator = isDisplayOperator(node.base)
         val base = layout(node.base, if (operator) size * 1.12f else size)
-        val scriptScale = if (operator) .52f else .58f
+        val scriptScale = if (operator) .60f else .72f
         val upper = node.upper?.let { layout(it, size * scriptScale) }
         val lower = node.lower?.let { layout(it, size * scriptScale) }
         if (operator) {
@@ -392,11 +398,12 @@ object NativeMathSvgRenderer {
                     lower?.radicalBars.orEmpty().map { it.moved(lowerX, lowerY) }
             )
         }
-        val upperLift = if (upper != null) max(size * .30f, upper.height * .68f) else 0f
+        // V133 — توان: بالایش حدود .38em بالاتر از سقفِ پایه؛ اندیس: پایه‌اش حدود .22em زیرِ خطِ کرسی
+        val upperLift = if (upper != null) (upper.height - base.baseline * .55f).coerceAtLeast(0f) else 0f
         val baseY = upperLift
-        val scriptX = base.width + size * .035f
-        val lowerY = baseY + base.baseline + size * .12f
-        val width = base.width + max(upper?.width ?: 0f, lower?.width ?: 0f) + size * .04f
+        val scriptX = base.width + size * .02f
+        val lowerY = baseY + base.baseline + size * .22f - (lower?.baseline ?: 0f)
+        val width = base.width + max(upper?.width ?: 0f, lower?.width ?: 0f) + size * .03f
         val height = max(baseY + base.height, lowerY + (lower?.height ?: 0f))
         val body = buildString {
             append(translate(base.body, 0f, baseY))
@@ -730,8 +737,12 @@ object NativeMathSvgRenderer {
                 Character.isWhitespace(codePoint) -> size * .34f
                 codePoint in '0'.code..'9'.code -> size * .58f
                 codePoint in 'A'.code..'Z'.code -> size * .66f
-                codePoint in 'a'.code..'z'.code -> size * .56f
+                codePoint == 'i'.code || codePoint == 'j'.code || codePoint == 'l'.code -> size * .30f
+                codePoint == 't'.code || codePoint == 'f'.code || codePoint == 'r'.code -> size * .38f
+                codePoint == 'm'.code || codePoint == 'w'.code -> size * .80f
+                codePoint in 'a'.code..'z'.code -> size * .54f
                 codePoint in 0x0600..0x06FF || codePoint in 0x0750..0x077F || codePoint in 0xFB50..0xFDFF || codePoint in 0xFE70..0xFEFF -> size * .67f
+                codePoint == 0x2212 || codePoint == '+'.code || codePoint == '='.code || codePoint == 0xB1 -> size * .78f
                 codePoint in 0x2200..0x22FF || codePoint in 0x2190..0x21FF -> size * .75f
                 codePoint > 0xFFFF -> size * .90f
                 else -> size * .62f

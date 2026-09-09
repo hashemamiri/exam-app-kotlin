@@ -185,6 +185,8 @@
       figLayouts: asObject(parseMaybe(src.figLayoutsJson !== undefined ? src.figLayoutsJson : src.figLayouts)),
       /* V128 — بازه‌های قالب‌بندیِ متنِ سؤال (نوارِ B/I/U/رنگ/اندازه/فونتِ پیش‌نمایش؛ در بیلدرِ بومی ذخیره می‌شوند). */
       __spans: cleanSpans(src.textSpans, text(src.text).length),
+      /* V133 — ترازِ پاراگراف‌ها (راست/وسط/چپ/دوطرفه) که از نوارِ پیش‌نمایش انتخاب می‌شود و در آزمون ذخیره می‌ماند. */
+      __aligns: cleanAligns(src.alignSpans, text(src.text).length),
       /* قالب‌بندیِ سطحِ سؤال از بیلدرِ بومی؛ در لایهٔ میزبان روی .q-rich-content اعمال می‌شود. */
       __style: {bold: src.bold === true, italic: src.italic === true, fontFamily: text(src.fontFamily), fontSizeSp: num(src.fontSizeSp, 0), textAlign: text(src.textAlign)}
     };
@@ -369,6 +371,41 @@
       return {start: start, end: end, bold: item.bold === true, italic: item.italic === true, underline: item.underline === true, color: color, size: size, font: font};
     }).filter(function (item) { return item.end > item.start && (item.bold || item.italic || item.underline || item.color || item.size || item.font); });
   }
+  var ALIGNS = ['right', 'center', 'left', 'justify'];
+  function cleanAligns(value, length) {
+    if (!Array.isArray(value)) return [];
+    return value.map(function (item) {
+      item = asObject(item);
+      var start = Math.max(0, Math.min(length, Math.floor(num(item.start, 0))));
+      var end = Math.max(0, Math.min(length, Math.floor(num(item.end, 0))));
+      return {start: start, end: end, align: text(item.align)};
+    }).filter(function (item) { return item.end > item.start && ALIGNS.indexOf(item.align) >= 0; }).sort(function (a, b) { return a.start - b.start; });
+  }
+  /* مرزِ پاراگرافِ دربرگیرندهٔ بازهٔ [s,e) در متن (پاراگراف = بینِ دو خطِ جدید) */
+  function paragraphBounds(src, s, e) {
+    var a = src.lastIndexOf('\n', Math.max(0, s - 1)) + 1;
+    var b = src.indexOf('\n', Math.max(s, e - 1)); if (b < 0) b = src.length;
+    if (e > s && src.charAt(e - 1) === '\n') { b = e - 1; }
+    return [a, Math.max(a, b)];
+  }
+  function alignOfParagraph(q, ps, pe) {
+    var hit = (q.__aligns || []).find(function (x) { return x.start < Math.max(pe, ps + 1) && x.end > ps; });
+    return hit ? hit.align : '';
+  }
+  function setAlignRange(q, s, e, align) {
+    var src = text(q.text), pb = paragraphBounds(src, s, e), a = pb[0], b = pb[1];
+    var out = [];
+    (q.__aligns || []).forEach(function (x) {
+      if (x.end <= a || x.start >= b) { out.push(x); return; }
+      if (x.start < a) out.push({start: x.start, end: a, align: x.align});
+      if (x.end > b) out.push({start: b, end: x.end, align: x.align});
+    });
+    if (align) out.push({start: a, end: Math.max(b, a + 1), align: align});
+    out = out.filter(function (x) { return x.end > x.start; }).sort(function (x, y) { return x.start - y.start; });
+    var merged = [];
+    out.forEach(function (x) { var l = merged[merged.length - 1]; if (l && x.start <= l.end && l.align === x.align) l.end = Math.max(l.end, x.end); else merged.push({start: x.start, end: x.end, align: x.align}); });
+    return merged;
+  }
   function fontCss(font) { return font === 'serif' ? 'serif' : ('"' + font + '", Vazirmatn, Tahoma, sans-serif'); }
   function styledTextHtml(piece, off, q) {
     var spans = (q && q.__spans) || [], bounds = [0, piece.length];
@@ -408,14 +445,35 @@
       if (!q) return base.apply(this, arguments);
       var src = String(value == null ? '' : value); if (!src) return '';
       var tokenRe = /%%FIG:([\s\S]*?)%%|\[\[(FIG|GRAPH|TABLE|ANATOMY|PERIODIC|PHYSICS|CHEMISTRY):([^\]|]*)(?:\|([^\]]*))?\]\]/g;
-      var out = '', last = 0, m, figIndex = 0;
+      var parts = [], last = 0, m, figIndex = 0;
       while ((m = tokenRe.exec(src))) {
-        out += styledPlainWithMath(src.slice(last, m.index), last, q);
-        if (m[1] != null) out += window.renderFigToken(m[1], q, figIndex++);
-        else out += window.renderVisualTool(typeMap[m[2]], m[3] || '', m[4] || '');
+        parts.push({from: last, to: m.index, html: null});
+        var tokHtml = (m[1] != null) ? window.renderFigToken(m[1], q, figIndex++) : window.renderVisualTool(typeMap[m[2]], m[3] || '', m[4] || '');
+        parts.push({from: m.index, to: tokenRe.lastIndex, html: tokHtml});
         last = tokenRe.lastIndex;
       }
-      return out + styledPlainWithMath(src.slice(last), last, q);
+      parts.push({from: last, to: src.length, html: null});
+      var renderRange = function (a, b) {
+        var h = '';
+        parts.forEach(function (p) {
+          var l = Math.max(a, p.from), r = Math.min(b, p.to);
+          if (p.html != null) { if (p.from >= a && p.to <= b) h += p.html; return; }
+          if (r > l) h += styledPlainWithMath(src.slice(l, r), l, q);
+        });
+        return h;
+      };
+      if (!(q.__aligns && q.__aligns.length)) return renderRange(0, src.length);
+      /* V133 — با وجودِ تراز، هر پاراگراف در یک div با text-align خودش می‌نشیند (پاراگراف = بین دو خطِ جدید؛
+         خطِ جدیدِ داخلِ توکن‌های شکل شمرده نمی‌شود). آفست‌های .txt دست‌نخورده می‌مانند. */
+      var out = '', ps = 0;
+      var inToken = function (i) { return parts.some(function (p) { return p.html != null && i >= p.from && i < p.to; }); };
+      for (var i = 0; i <= src.length; i++) {
+        if (i < src.length && (src.charAt(i) !== '\n' || inToken(i))) continue;
+        var al = alignOfParagraph(q, ps, i), body = renderRange(ps, i);
+        out += '<div class="q-para"' + (al ? ' style="text-align:' + al + '"' : '') + '>' + (body || '<br>') + '</div>';
+        ps = i + 1;
+      }
+      return out;
     };
     wrapped.__appHost = true;
     window.renderRichText = wrapped;
@@ -553,6 +611,9 @@
       var q0 = sel && (sel.all ? (questions || [])[0] : sel.question);
       btn.classList.toggle('on', !!(sel && q0 && (sel.all ? coversAxis(q0.__spans || [], 0, text(q0.text).length, key) : coversAxis(q0.__spans || [], sel.start, sel.end, key))));
     });
+    var curAl = '';
+    if (sel) { var qa = sel.all ? (questions || [])[0] : sel.question; if (qa) { var pba = sel.all ? [0, text(qa.text).length] : paragraphBounds(text(qa.text), sel.start, sel.end); curAl = alignOfParagraph(qa, pba[0], pba[1]); } }
+    Array.prototype.forEach.call(document.querySelectorAll('#hostFmt .hf-btn.hf-al'), function (b) { b.classList.toggle('on', !!curAl && b.dataset.fmt === 'align-' + curAl); });
     var bar = $('hostFmt'); if (bar) bar.classList.toggle('has-sel', !!sel);
     var allBtn = $('hfAll'); if (allBtn) allBtn.classList.toggle('on', !!(sel && sel.all));
   }
@@ -562,6 +623,13 @@
     var hit = (q0.__spans || []).find(function (x) { return x.start <= s0 && x.end > s0 && x.size; }); return hit ? hit.size : 0;
   }
   function faNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); }
+  /* V133 — آیکونِ ترازِ متن: چهار خطِ افقی (x1..x2 در viewBox 20) */
+  function alignBtn(kind, title, lines) {
+    var svg = '<svg viewBox="0 0 20 16" width="18" height="15" aria-hidden="true">' + lines.map(function (ln, i) {
+      return '<line x1="' + ln[0] + '" y1="' + (2 + i * 4) + '" x2="' + ln[1] + '" y2="' + (2 + i * 4) + '" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+    }).join('') + '</svg>';
+    return '<button type="button" class="hf-btn hf-al" data-fmt="align-' + kind + '" title="' + title + '">' + svg + '</button>';
+  }
   function ensureFmtBar() {
     var v = $('pgsViewer'); if (!v || $('hostFmt')) return;
     var ribbon = v.querySelector('.pgs-ribbon');
@@ -575,6 +643,10 @@
       '<label class="hf-color" title="رنگ متن"><span class="hf-a">A</span><span class="hf-swatch" id="hfSwatch"></span><input type="color" id="hfColor" value="#000000"></label>' +
       '<button type="button" class="hf-btn hf-pick" id="hfSize" title="اندازهٔ متن">اندازه</button>' +
       '<button type="button" class="hf-btn hf-pick" id="hfFont" title="فونت">فونت</button>' +
+      alignBtn('right', 'راست‌چین', [[4,20],[8,20],[4,20],[10,20]]) +
+      alignBtn('center', 'وسط‌چین', [[2,18],[5,15],[2,18],[6,14]]) +
+      alignBtn('left', 'چپ‌چین', [[0,16],[0,12],[0,16],[0,10]]) +
+      alignBtn('justify', 'دوطرفه (جاستیفای)', [[0,20],[0,20],[0,20],[0,20]]) +
       '<button type="button" class="hf-btn hf-clear" data-fmt="clear" title="حذف قالب‌بندی">پاک</button>' +
       '<button type="button" class="hf-btn hf-all" id="hfAll" title="انتخابِ همهٔ متن">همه</button>';
     var doc = new DOMParser().parseFromString('<div>' + markup + '</div>', 'text/html');
@@ -599,6 +671,7 @@
       btn.addEventListener('click', function () {
         var key = btn.dataset.fmt, sel = currentSel(); if (!sel) return;
         if (key === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return; }
+        if (key.indexOf('align-') === 0) { formatSelection(key, ''); return; }
         var patch = {}; patch[key] = !selCovers(sel, key); applyStyle(sel, patch);
       });
     });
@@ -649,6 +722,13 @@
     var sel = (lastSel && lastSel.sticky) ? lastSel : (selectionRange() || lastSel); if (!sel) { toast('اول بخشی از متنِ سؤال را انتخاب کنید یا «همه» را بزنید'); return 'noselection'; }
     value = value == null ? '' : String(value);
     if (kind === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return 'ok'; }
+    if (kind.indexOf('align-') === 0 || kind === 'align') {
+      var al = kind === 'align' ? value : kind.slice(6); if (ALIGNS.indexOf(al) < 0) return 'unknown';
+      /* V133 — تراز روی پاراگرافِ دربرگیرندهٔ انتخاب؛ دوباره‌زدنِ همان تراز → برگشت به پیش‌فرض */
+      if (sel.all) { (questions || []).forEach(function (q0) { var L = text(q0.text).length; q0.__aligns = L ? [{start: 0, end: L, align: al}] : []; }); lastSel = {all: true, sticky: true}; }
+      else { var q1 = sel.question, pb1 = paragraphBounds(text(q1.text), sel.start, sel.end), cur = alignOfParagraph(q1, pb1[0], pb1[1]); q1.__aligns = setAlignRange(q1, sel.start, sel.end, cur === al ? '' : al); lastSel = {question: q1, start: sel.start, end: sel.end, sticky: true}; }
+      rerenderKeepScroll(); updateFmtBar(lastSel); return 'ok';
+    }
     if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !selCovers(sel, kind); applyStyle(sel, patch); return 'ok'; }
     if (kind === 'color') { applyStyle(sel, {color: /^#[0-9a-fA-F]{6}$/.test(value) ? value : ''}); return 'ok'; }
     if (kind === 'size') { var n = Number(value); applyStyle(sel, {size: (n >= 1 && n <= 100) ? Math.round(n) : 0}); return 'ok'; }
@@ -702,7 +782,7 @@
     (questions || []).forEach(function (q) {
       result[String(q.id)] = {figLayouts: q.figLayouts || {}, sepExtraPx: Math.round(num(q.sepExtraPx, 0)), spans: (q.__spans || []).map(function (x) {
         return {start: x.start, end: x.end, bold: !!x.bold, italic: !!x.italic, underline: !!x.underline, color: x.color || '', size: x.size || 0, font: x.font || ''};
-      })};
+      }), alignSpans: (q.__aligns || []).map(function (x) { return {start: x.start, end: x.end, align: x.align}; })};
     });
     return JSON.stringify(result);
   }
@@ -812,6 +892,8 @@
     return '<span class="mdelim" data-delim="' + esc(c0) + '"><span class="mdelim-glyph">' + esc(c0) + '</span></span>';
   }
   function installDelimOverride() {
+    /* V133 — ماتریس‌ها (pmatrix/bmatrix/…) هم از همین دلیمترهای SVGِ ویرایشگر استفاده می‌کنند (math_host.js) */
+    window.__hostDelimHtml = delimHtml;
     if (typeof window.MathParser !== 'function' || !window.MathParser.prototype || window.MathParser.prototype.__hostDelim) return;
     var P = window.MathParser.prototype;
     P.__hostDelim = true;

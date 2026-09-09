@@ -370,16 +370,24 @@ function mEsc(e) {
       let cols = 0; rows.forEach(r => { cols = Math.max(cols, r.length); });
       const DEL = { pmatrix: ['(', ')'], bmatrix: ['[', ']'], Bmatrix: ['{', '}'], vmatrix: ['|', '|'], Vmatrix: ['‖', '‖'], smallmatrix: ['(', ')'], cases: ['{', ''], matrix: ['', ''], array: ['', ''], aligned: ['', ''], alignedat: ['', ''], gathered: ['', ''], split: ['', ''] };
       const d = DEL[env] || ['[', ']'];
-      const L = d[0] ? '<span class="mmatrix-g">' + d[0] + '</span>' : '';
-      const R = d[1] ? '<span class="mmatrix-g">' + d[1] + '</span>' : '';
-      if (!rows.length || !cols) return '<span class="mmatrix">' + L + '<span class="mmatrix-empty"></span>' + R + '</span>';
-      let h = '<span class="mmatrix">' + L + '<table>';
+      /* V133 — پرانتز/کروشهٔ ماتریس مثل ویرایشگر فرمول: کشسان و هم‌قدِ ماتریس (همان سازوکارِ mparbox) */
+      const dk = this.delimKind(d[0], d[1]);
+      const mkD = function (ch) {
+        if (!ch) return '';
+        if (typeof window.__hostDelimHtml === 'function') return window.__hostDelimHtml(ch);
+        return '<span class="mdelim" data-delim="' + mEsc(ch) + '"><span class="mdelim-glyph">' + mEsc(ch) + '</span></span>';
+      };
+      const L = mkD(d[0]);
+      const R = mkD(d[1]);
+      const open = '<span class="mparbox mmatrix-box" data-kind="' + mEsc(dk) + '">';
+      if (!rows.length || !cols) return open + L + '<span class="mpar-body"><span class="mmatrix"><span class="mmatrix-empty"></span></span></span>' + R + '</span>';
+      let h = open + L + '<span class="mpar-body"><span class="mmatrix"><table>';
       rows.forEach(r => {
         h += '<tr>';
         for (let c = 0; c < cols; c++) h += '<td>' + new MathParser(r[c] || '').parseSeq(null) + '</td>';
         h += '</tr>';
       });
-      return h + '</table>' + R + '</span>';
+      return h + '</table></span></span>' + R + '</span>';
     }
     if (cmd === 'frac' || cmd === 'dfrac' || cmd === 'tfrac')
       return '<span class="mfrac"><span class="mnum">' + this.readUnit() + '</span><span class="mden">' + this.readUnit() + '</span></span>';
@@ -605,6 +613,7 @@ function mEsc(e) {
     '.mmatrix-empty{display:inline-block;min-width:.9em;padding:.15em 0}\n' +
     '.mdisp{display:block;text-align:center;margin:.35em 0}\n' +
     '.mspace15{display:inline-block;width:.3em}\n' +
+    '.mmatrix-box>.mpar-body>.mmatrix{margin:0}\n' +
     '.mmatrix-g{display:inline-flex;align-items:center;font-size:1.5em;line-height:1;padding:0 .05em;user-select:none;font-weight:500}\n' +
     '.mvec-l{position:relative;display:inline-block;padding:0 .1em}\n' +
     '.mvec-l::before{content:"⟶";position:absolute;top:-.55em;left:0;right:0;text-align:center;font-size:.78em;line-height:1;font-weight:700}\n' +

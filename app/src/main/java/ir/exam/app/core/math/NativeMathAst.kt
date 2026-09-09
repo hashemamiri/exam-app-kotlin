@@ -239,6 +239,8 @@ object NativeMathParser {
                 "{" -> parseSequence('}')
                 "\\" -> command(start)
                 "~" -> sourceSymbol(" ", start, index, editable = false)
+                // V133 — خطِ تیرهٔ کیبورد در ریاضی «منها»ی واقعی است (مثل ویرایشگر فرمول)
+                "-" -> sourceSymbol("\u2212", start, index, editable = true)
                 else -> sourceSymbol(
                     value,
                     start,
@@ -268,6 +270,8 @@ object NativeMathParser {
                 return when (escaped) {
                     '\\' -> MathNode.LineBreak
                     ' ' -> sourceSymbol(" ", slashStart, index, editable = false)
+                    // V133 — فاصله‌های TeX (\, \: \; \!) مثل ویرایشگر: فاصلهٔ نازک، نه □
+                    ',', ':', ';', '!' -> sourceSymbol(if (escaped == '!') "" else "\u2009", slashStart, index, editable = false)
                     '{', '}', '%', '$', '#', '&', '_', '|' ->
                         sourceSymbol(escaped.toString(), slashStart, index)
                     else -> sourceSymbol("□", slashStart, index)
