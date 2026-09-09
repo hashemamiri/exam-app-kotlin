@@ -18180,3 +18180,5 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 - علت: تغییر سیاست‌های `storage.objects` در همان تراکنشِ توابع، با سرویس Storage سوپابیس (که مدام `storage.objects` را می‌خواند) بن‌بست می‌کند.
 - راه حل: SQL دو بخش شد: `SQL_NATIVE_MEDIA_COST_V135.sql` (توابع) و `SQL_NATIVE_MEDIA_COST_V135_STORAGE.sql` (سیاست‌های storage)؛ هر دو با `set local lock_timeout = '8s'` تا در بدترین حالت خطای قابل تکرار بدهند نه بن‌بست. اگر بخش ۲ «lock timeout» داد، چند ثانیه بعد دوباره Run شود.
 - قاعدهٔ همیشگی از این پس: تغییر policy روی `storage.objects` همیشه در فایل/تراکنش جداگانه و با lock_timeout.
+
+### V135.2 — تست `V135AudioMediaCostTest` با `File(path)` نسبی نوشته شده بود؛ Gradle تست‌ها را از پوشهٔ `app/` اجرا می‌کند → FileNotFound. مثل بقیهٔ تست‌ها از `root()` (جست‌وجوی `.`/`..`) استفاده شد. قاعده: هر تست منبع‌خوان باید `root()` داشته باشد.

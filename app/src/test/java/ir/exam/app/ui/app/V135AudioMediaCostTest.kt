@@ -16,7 +16,11 @@ import java.io.File
  * V135 — صوت سؤال (آزمون آنلاین) + هزینهٔ تصویر/صوت + کادر جداگانهٔ فرمول.
  */
 class V135AudioMediaCostTest {
-    private fun source(path: String): String = File(path).readText()
+    private fun root(): File = listOf(File("."), File("..")).first {
+        File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
+    }
+
+    private fun source(path: String): String = File(root(), path).readText()
     private val transcoder by lazy { source("app/src/main/java/ir/exam/app/core/audio/AudioTranscoder.kt") }
     private val editor by lazy { source("app/src/main/java/ir/exam/app/ui/audio/QuestionAudioEditorDialog.kt") }
     private val player by lazy { source("app/src/main/java/ir/exam/app/ui/audio/QuestionAudioPlayer.kt") }

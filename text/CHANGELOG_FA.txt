@@ -1,3 +1,5 @@
+V135.2 — رفع خطای تست CI نسخهٔ V135 (مسیر فایل‌ها در تست نسبت به ریشهٔ پروژه)
+
 V135.1 — رفع بن‌بست SQL نسخهٔ V135
 - فایل SQL به دو بخش تقسیم شد: SQL_NATIVE_MEDIA_COST_V135.sql (توابع) و سپس SQL_NATIVE_MEDIA_COST_V135_STORAGE.sql (سیاست‌های storage).
 - هر بخش با lock_timeout اجرا می‌شود تا با سرویس Storage بن‌بست نکند.
