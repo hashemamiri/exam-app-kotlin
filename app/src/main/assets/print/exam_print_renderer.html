@@ -51,9 +51,21 @@ body.dragging{touch-action:none;overflow:hidden;user-select:none;-webkit-user-se
 #printSurface{width:100%;overflow:visible;padding:2px 0 18px}
 #sheet{position:relative;width:210mm;margin:0 auto;padding:0;background:transparent;font-size:10pt;line-height:1.75;overflow:visible}
 .a4-page{position:relative;box-sizing:border-box;width:210mm;height:297mm;padding:5mm;margin:0 0 14px;background:var(--paper);box-shadow:0 7px 28px rgba(15,23,42,.24)}
+/* V121 — موتور PGS (آزمون‌ساز v20): اندازهٔ کاغذ/جهت/حاشیه/فونتِ پایه با متغیر و از تنظیمات؛
+   کادرِ بدونِ‌کادر (opt_pageBorder=false) فقط border را حذف می‌کند تا چیدمان یکسان بماند. */
+.a4-page{width:var(--pg-w,210mm);height:var(--pg-h,297mm);padding:var(--pg-mt,5mm) var(--pg-mr,5mm) var(--pg-mb,5mm) var(--pg-ml,5mm)}
+#sheet{width:var(--pg-w,210mm);font-size:calc(var(--pg-font,10) * 1pt)}
+.a4-page.no-border>.a4-frame{border-color:transparent}
+.q-cont>.question-no-td,.q-cont>.question-score-td{color:transparent}
+.q-cont .question-text:empty{display:none}
 .a4-page:last-child{margin-bottom:0}
 .a4-frame{position:relative;box-sizing:border-box;height:100%;border:2px solid #000;border-radius:6px;padding:6mm;overflow:hidden}
-.a4-page::after{content:attr(data-label);position:absolute;bottom:1mm;left:0;right:0;text-align:center;font-size:8pt;color:#94a3b8}
+/* V120 — محتوا داخلِ .a4-inner بریده می‌شود (نه در لبهٔ padding کادر)؛ پیش‌تر سطرِ
+   بریده‌شده تا ۶mm پایین‌تر از خطِ قطع دیده می‌شد و همان تکه در برگهٔ بعد تکرار می‌شد. */
+.a4-frame>.a4-inner{position:relative;height:100%;overflow:hidden}
+.a4-page>.page-no{position:absolute;left:0;right:0;bottom:calc(var(--pg-mb,5mm) / 2 - 1.4mm);text-align:center;font-size:8.5pt;color:#333;pointer-events:none}.a4-page>.page-no:empty{display:none}
+.a4-page::after{content:attr(data-label);position:absolute;top:100%;margin-top:1px;left:0;right:0;text-align:center;font-size:8pt;color:#64748b}
+.a4-page{margin-bottom:20px}
 #sheet>.print-figure.free{position:absolute;z-index:5}
 .a4-frame>.print-figure.free{position:absolute;z-index:5}
 /* ادامهٔ سطرِ بریده‌شده در برگهٔ بعد: به اندازهٔ بخشِ چاپ‌شده بالا کشیده می‌شود */
@@ -386,7 +398,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   #screenChrome{display:none!important}#printSurface{overflow:visible!important;padding:0!important}
   #sheet{margin:0!important}
   /* V117 — هر .a4-page دقیقاً یک برگهٔ چاپی است؛ ۰٫۶mm کمتر تا گردکردنِ ارتفاع برگهٔ خالی نسازد */
-  .a4-page{width:210mm!important;height:296.4mm!important;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always}
+  .a4-page{width:var(--pg-w,210mm)!important;height:calc(var(--pg-h,297mm) - 0.6mm)!important;margin:0!important;box-shadow:none!important;break-after:page;page-break-after:always}
   .a4-page:last-child{break-after:auto;page-break-after:auto}
   .a4-page::after{display:none!important}
   .print-figure{cursor:default!important}.print-figure.selected{outline:0!important}
@@ -509,8 +521,48 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       figLayouts:parseLayouts(value.figLayoutsJson), sepExtraPx:clamp(Math.round(finite(value.sepExtraPx, 0)), 0, 1500)
     };
   }
+  /* ===== V121 — تنظیمات صفحه (PGS v20): کاغذ، جهت، حاشیه، کادر، شمارهٔ صفحه، تکرارِ سرستون، فونت ===== */
+  var PAPERS = {a4:[210,297],a5:[148,210],b5:[176,250],letter:[215.9,279.4],f4:[210,330],legal:[215.9,355.6]};
+  var SETUP_DEFAULTS = {paper:'a4',orient:'portrait',customW:210,customH:297,mT:5,mB:5,mR:5,mL:5,border:true,pageNumbers:true,repeatHeader:false,font:10,spacing:'normal',showScores:true};
+  var pageSetup = readSetup({});
+  function readSetup(value) {
+    var src = asObject(value), out = {};
+    Object.keys(SETUP_DEFAULTS).forEach(function (k) { out[k] = SETUP_DEFAULTS[k]; });
+    if (PAPERS[text(src.paper)] || text(src.paper) === 'custom') out.paper = text(src.paper);
+    if (text(src.orient) === 'landscape' || text(src.orient) === 'portrait') out.orient = text(src.orient);
+    out.customW = clamp(finite(src.customW, out.customW), 60, 600); out.customH = clamp(finite(src.customH, out.customH), 60, 600);
+    ['mT','mB','mR','mL'].forEach(function (k) { out[k] = clamp(finite(src[k], out[k]), 0, 80); });
+    ['border','pageNumbers','repeatHeader','showScores'].forEach(function (k) { if (typeof src[k] === 'boolean') out[k] = src[k]; else if (src[k] === 'true' || src[k] === 'false') out[k] = src[k] === 'true'; });
+    out.font = clamp(finite(src.font, out.font), 6, 20);
+    if (['compact','normal','open'].indexOf(text(src.spacing)) >= 0) out.spacing = text(src.spacing);
+    return out;
+  }
+  function pageDims() {
+    var W, H;
+    if (pageSetup.paper === 'custom') { W = pageSetup.customW; H = pageSetup.customH; } else { var pp = PAPERS[pageSetup.paper] || PAPERS.a4; W = pp[0]; H = pp[1]; }
+    if (pageSetup.orient === 'landscape' && W < H) { var t = W; W = H; H = t; }
+    return {W:W, H:H};
+  }
+  function applySetupCss() {
+    var d = pageDims(), root = document.documentElement.style;
+    root.setProperty('--pg-w', d.W + 'mm'); root.setProperty('--pg-h', d.H + 'mm');
+    root.setProperty('--pg-mt', pageSetup.mT + 'mm'); root.setProperty('--pg-mb', pageSetup.mB + 'mm');
+    root.setProperty('--pg-mr', pageSetup.mR + 'mm'); root.setProperty('--pg-ml', pageSetup.mL + 'mm');
+    root.setProperty('--pg-font', String(pageSetup.font));
+    var dyn = document.getElementById('pgDynPage');
+    if (!dyn) { dyn = document.createElement('style'); dyn.id = 'pgDynPage'; document.head.appendChild(dyn); }
+    dyn.textContent = '@media print{@page{size:' + d.W + 'mm ' + d.H + 'mm;margin:0}}';
+    var vp = document.querySelector('meta[name=viewport]');
+    if (vp) vp.setAttribute('content', 'width=' + Math.round(d.W * 3.7795 + 36) + ',viewport-fit=cover');
+  }
+  function setPageSetup(value) {
+    if (typeof value === 'string') { try { value = JSON.parse(value); } catch (ignored) { value = {}; } }
+    pageSetup = readSetup(value); applySetupCss(); render(); return 'ok';
+  }
+  function getPageSetup() { return JSON.stringify(pageSetup); }
   function setExamData(data) {
     data = asObject(data);
+    if (data.pageSetup !== undefined) { pageSetup = readSetup(typeof data.pageSetup === 'string' ? (function () { try { return JSON.parse(data.pageSetup); } catch (e) { return {}; } }()) : data.pageSetup); applySetupCss(); }
     state.fields = asObject(data.fields);
     state.questions = data.reset === true ? [] : (Array.isArray(data.questions) ? data.questions.map(normalQuestion) : []);
     state.documentTitle = text(data.documentTitle || state.fields.f_course || 'آزمون');
@@ -746,7 +798,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     var options = document.createElement('div'); options.className = 'options ' + cols;
     var wrapper = document.createElement('div'); wrapper.appendChild(options);
     var correctText = '';
-    question.options.forEach(function (raw, index) {
+    (question.type === 'truefalse' ? question.options.slice(0, 2) : question.options).forEach(function (raw, index) {
       var item = document.createElement('div'), mark = document.createElement('span'), letter = document.createElement('span');
       var style = cleanStyle(raw); item.className = 'option'; mark.className = 'choice-mark'; letter.className = 'letter';
       letter.textContent = question.type === 'truefalse' ? (letters[index] || '') : (letters[index] || String(index + 1)) + ')';
@@ -797,10 +849,11 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     if (question.fontFamily && question.fontFamily !== 'default') main.style.fontFamily = question.fontFamily + ', Tahoma, sans-serif';
     var rich = document.createElement('div'); rich.className = 'question-text'; appendRich(rich, question); main.appendChild(rich);
     var options = optionBlock(question); if (options) main.appendChild(options);
-    var answer = answerBlock(question); if (answer) main.appendChild(answer);
+    var answer = answerBlock(question); if (answer) { Array.prototype.slice.call(answer.childNodes).forEach(function (n) { main.appendChild(n); }); }
     var pad = document.createElement('div'); pad.className = 'question-sep-cell-pad'; pad.style.height = question.sepExtraPx + 'px'; main.appendChild(pad);
     var grip = document.createElement('div'); grip.className = 'question-sep-drag'; grip.title = 'برای جابجایی خط جداکننده بالا/پایین بکشید'; main.appendChild(grip); wireSeparator(grip, pad, question);
-    var score = document.createElement('td'); score.className = 'question-score-td'; score.textContent = question.score ? toPersianNum(question.score) : '\u00a0';
+    main.style.paddingBottom = (pageSetup.spacing === 'compact' ? 5 : (pageSetup.spacing === 'open' ? 16 : 10)) + 'px';
+    var score = document.createElement('td'); score.className = 'question-score-td'; score.textContent = (pageSetup.showScores && question.score) ? toPersianNum(question.score) : '\u00a0';
     row.appendChild(no); row.appendChild(main); row.appendChild(score);
     return row;
   }
@@ -919,7 +972,7 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
       table.appendChild(tr);
     });
     box.appendChild(table);
-    if (state.totalScore) { var total = document.createElement('div'); total.style.cssText = 'text-align:center;margin-top:6px;font-weight:800;'; total.textContent = 'جمع بارم: ' + toPersianNum(state.totalScore); box.appendChild(total); }
+    if (state.totalScore) { var total = document.createElement('div'); total.className = 'answer-key-total'; total.style.cssText = 'text-align:center;margin-top:6px;font-weight:800;'; total.textContent = 'جمع بارم: ' + toPersianNum(state.totalScore); box.appendChild(total); }
     return box;
   }
   function render() {
@@ -950,15 +1003,20 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
      پس تعدادِ صفحه و چیدمانِ چاپ دقیقاً همان پیش‌نمایش است. */
   var MIN_CUT_PX = 30;
   function newPage(n) {
-    var page = document.createElement('div'); page.className = 'a4-page'; page.dataset.page = String(n);
+    var page = document.createElement('div'); page.className = 'a4-page' + (pageSetup.border ? '' : ' no-border'); page.dataset.page = String(n);
     var frame = document.createElement('div'); frame.className = 'a4-frame'; page.appendChild(frame);
-    return {page: page, frame: frame};
+    var inner = document.createElement('div'); inner.className = 'a4-inner'; frame.appendChild(inner);
+    var no = document.createElement('div'); no.className = 'page-no'; page.appendChild(no);
+    return {page: page, frame: inner};
   }
   function labelPages() {
     var pages = sheet.querySelectorAll('.a4-page');
-    Array.prototype.forEach.call(pages, function (p, i) { p.dataset.label = 'برگهٔ ' + toPersianNum(i + 1) + ' از ' + toPersianNum(pages.length); });
+    Array.prototype.forEach.call(pages, function (p, i) {
+      p.dataset.label = 'برگهٔ ' + toPersianNum(i + 1) + ' از ' + toPersianNum(pages.length);
+      var no = p.querySelector('.page-no'); if (no) no.textContent = pageSetup.pageNumbers ? ('صفحهٔ ' + toPersianNum(i + 1) + ' از ' + toPersianNum(pages.length)) : '';
+    });
   }
-  function frameInnerBottom(frame) { var cs = getComputedStyle(frame); return frame.clientHeight - parseFloat(cs.paddingBottom); }
+  function frameInnerBottom(frame) { var cs = getComputedStyle(frame); return frame.clientHeight - parseFloat(cs.paddingBottom || 0); }
   function relTop(frame, el) { var fr = frame.getBoundingClientRect(), r = el.getBoundingClientRect(); return r.top - fr.top - frame.clientTop; }
   function overflows(frame) { return frame.scrollHeight > frame.clientHeight + 0.5; }
   function tableShell(src, withHead) {
@@ -975,35 +1033,63 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     for (var f = 0; f < flow.length; f++) {
       var block = flow[f];
       if (block.tagName === 'TABLE' && block.classList.contains('questions-print-table')) { placeTable(block); continue; }
+      if (block.classList && block.classList.contains('answer-key-box')) { placeKey(block); continue; }
       cur.frame.appendChild(block);
       if (overflows(cur.frame) && cur.frame.children.length > 1) { nextPage(); cur.frame.appendChild(block); }
+    }
+    /* V120 — کلیدِ نسخهٔ استاد هم سطر‌به‌سطر صفحه‌بندی می‌شود؛ پیش‌تر یک بلوکِ یک‌تکه
+       بود و با سؤال‌های زیاد از پایینِ برگه بیرون می‌زد و بریده می‌شد. */
+    function placeKey(box) {
+      var table = box.querySelector('table'), rows = table ? Array.prototype.slice.call(table.rows) : [];
+      cur.frame.appendChild(box);
+      if (!overflows(cur.frame)) return;
+      if (cur.frame.children.length > 1) { box.remove(); nextPage(); cur.frame.appendChild(box); if (!overflows(cur.frame)) return; }
+      if (rows.length < 2) return;
+      var head = rows[0], moved = [], guard = 0;
+      while (overflows(cur.frame) && table.rows.length > 2 && guard++ < 5000) moved.unshift(table.rows[table.rows.length - 1]), table.deleteRow(table.rows.length - 1);
+      var total = box.querySelector('.answer-key-total'); if (total && moved.length) box.removeChild(total);
+      while (moved.length && guard++ < 5000) {
+        nextPage();
+        var more = document.createElement('div'); more.className = 'answer-key-box';
+        var t2 = document.createElement('table'); t2.appendChild(head.cloneNode(true)); more.appendChild(t2);
+        cur.frame.appendChild(more);
+        while (moved.length) { t2.appendChild(moved[0]); moved.shift(); if (overflows(cur.frame)) { moved.unshift(t2.rows[t2.rows.length - 1]); t2.deleteRow(t2.rows.length - 1); break; } }
+        if (!moved.length && total) { more.appendChild(total); if (overflows(cur.frame)) { more.removeChild(total); nextPage(); var tb = document.createElement('div'); tb.className = 'answer-key-box'; tb.appendChild(total); cur.frame.appendChild(tb); } }
+        if (t2.rows.length < 2) break;
+      }
     }
     function placeTable(src) {
       var rows = Array.prototype.slice.call(src.querySelectorAll(':scope > tbody > tr'));
       var host = tableShell(src, true); cur.frame.appendChild(host);
       if (overflows(cur.frame) && cur.frame.children.length > 1) { host.remove(); nextPage(); host = tableShell(src, true); cur.frame.appendChild(host); }
-      // V120 — قبلاً یک متغیرِ `guard` مشترک بینِ حلقهٔ بیرونیِ ردیف‌ها و
-      // حلقهٔ درونیِ برش‌زدنِ یک ردیفِ خیلی بلند بود. اگر حلقهٔ درونی برای
-      // یک ردیف زیاد تکرار می‌کرد، شمارندهٔ مشترک به سقف می‌رسید و شرطِ
-      // حلقهٔ بیرونی (`guard++ < 5000`) بلافاصله false می‌شد — یعنی همهٔ
-      // ردیف‌های باقی‌ماندهٔ جدول (`i` به بعد) اصلاً append نمی‌شدند و از
-      // برگهٔ چاپی به‌طور کامل و بی‌صدا حذف می‌شدند. حالا هر حلقه شمارندهٔ
-      // مستقلِ خودش را دارد.
-      var body = host.tBodies[0], rowGuard = 0;
-      for (var i = 0; i < rows.length && rowGuard++ < 5000; i++) {
-        var row = rows[i]; body.appendChild(row);
+      var body = host.tBodies[0], guard = 0;
+      for (var i = 0; i < rows.length && guard++ < 5000; i++) {
+        var row = rows[i]; if (!row.__placed) body.appendChild(row); else delete row.__placed;
         if (!overflows(cur.frame)) continue;
         var frame = cur.frame, bottom = frameInnerBottom(frame), top = relTop(frame, row), visible = bottom - top;
         var alone = body.rows.length === 1 && frame.children.length === 1;
         if (visible < MIN_CUT_PX && !alone) {
           /* جا نمی‌شود: کلِ سطر به برگهٔ بعد */
-          body.removeChild(row); nextPage(); host = tableShell(src, false); cur.frame.appendChild(host); body = host.tBodies[0]; body.appendChild(row);
+          body.removeChild(row); nextPage(); host = tableShell(src, pageSetup.repeatHeader); cur.frame.appendChild(host); body = host.tBodies[0]; body.appendChild(row);
           if (!overflows(cur.frame)) continue;
           bottom = frameInnerBottom(cur.frame); top = relTop(cur.frame, row); visible = bottom - top;
         }
+        /* V121 — موتور PGS (v20): اول تقسیمِ محتوایی — تکه‌های انتهایی سلول (خطوط پاسخ،
+           گزینه‌ها، فاصلهٔ جداکننده…) به یک سطرِ ادامه (q-cont) در برگهٔ بعد می‌روند تا
+           هیچ متنی وسطِ خط بریده نشود؛ فقط اگر یک تکهٔ تقسیم‌ناپذیر باقی بماند، برشِ
+           تصویری (row-continue) انجام می‌شود. */
+        var split = splitRowByPieces(row, src, alone);
+        if (split && split.whole) {
+          /* تکه‌ای برای جداکردن نبود و سطر تنها نیست: کلِ سطر به برگهٔ بعد */
+          body.removeChild(row); nextPage(); host = tableShell(src, pageSetup.repeatHeader); cur.frame.appendChild(host); body = host.tBodies[0]; body.appendChild(row);
+          if (!overflows(cur.frame)) continue;
+          split = splitRowByPieces(row, src, true);
+          if (!split) { bottom = frameInnerBottom(cur.frame); top = relTop(cur.frame, row); visible = bottom - top; }
+        }
+        if (split) { host = split.host; body = split.body; rows.splice(i + 1, 0, split.row); split.row.__placed = true; continue; }
         /* سطر بلندتر از فضای باقی‌مانده: همین‌جا قطع، ادامه در برگهٔ بعد */
-        var cut = Math.max(0, visible), remainH = row.offsetHeight - cut, splitGuard = 0;
-        while (remainH > 1 && splitGuard++ < 5000) {
+        var cut = Math.max(0, visible), remainH = row.offsetHeight - cut;
+        while (remainH > 1 && guard++ < 5000) {
           nextPage();
           /* V118 — سرستون فقط در برگهٔ اول؛ برگه‌های بعد بدون «ردیف/متن سؤال/بارم» */
           var wrap = document.createElement('div'); wrap.className = 'row-continue'; cur.frame.appendChild(wrap);
@@ -1021,14 +1107,91 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
           if (cloneGrip) { var q = rowQuestion(row); if (q) { var pad = clone.querySelector('.question-sep-cell-pad'); wireSeparator(cloneGrip, pad, q); } }
           shift.style.transform = 'translateY(' + (-cut) + 'px)';
           var full = row.offsetHeight; wrap.style.height = Math.max(0, full - cut) + 'px';
-          host = cont; body = cont.tBodies[0];
+          /* V120 — سطرهای بعدی داخلِ ظرفِ بریده‌شدهٔ ادامه (row-continue با ارتفاعِ ثابت و
+             overflow:hidden) نمی‌روند؛ جدولِ تازه‌ای زیرِ آن ساخته می‌شود. پیش‌تر
+             host = cont می‌شد و همهٔ سؤال‌های پس از اولین سطرِ بریده‌شده ناپدید می‌شدند. */
+          host = tableShell(src, false); cur.frame.appendChild(host); body = host.tBodies[0];
           if (!overflows(cur.frame)) { var og = row.querySelector('.question-sep-drag'); if (og) og.classList.add('grip-hidden'); break; }
+          host.remove();
           var b2 = frameInnerBottom(cur.frame), t2 = relTop(cur.frame, wrap), vis2 = b2 - t2;
-          if (vis2 <= MIN_CUT_PX) break;
+          if (vis2 <= MIN_CUT_PX) { host = tableShell(src, false); cur.frame.appendChild(host); body = host.tBodies[0]; break; }
           if (cloneGrip) cloneGrip.classList.add('grip-hidden');
           cut += vis2; remainH -= vis2;
         }
       }
+      function movablePieces(main) {
+        return Array.prototype.filter.call(main.children, function (k) { return !k.classList.contains('question-sep-drag') && !k.__split && !(k.classList.contains('question-sep-cell-pad') && !(parseFloat(k.style.height) > 0)); });
+      }
+      function moveLastPiece(main, target) {
+        var kids = movablePieces(main);
+        if (!kids.length) return false;
+        var k = kids[kids.length - 1];
+        if (k.classList.contains('question-sep-cell-pad')) {
+          var h = parseFloat(k.style.height) || 0, room = Math.max(0, Math.floor(frameInnerBottom(cur.frame) - relTop(cur.frame, k)));
+          var pad2 = target.querySelector(':scope > .question-sep-cell-pad');
+          if (!pad2) { pad2 = document.createElement('div'); pad2.className = 'question-sep-cell-pad'; pad2.style.height = '0px'; target.insertBefore(pad2, target.firstChild); }
+          if (room >= 8 && room < h) { pad2.style.height = (parseFloat(pad2.style.height) + (h - room)) + 'px'; k.style.height = room + 'px'; k.__split = true; return true; }
+          pad2.style.height = (parseFloat(pad2.style.height) + h) + 'px'; k.parentNode.removeChild(k); return true;
+        }
+        if (k.classList.contains('answer-space') && k.classList.contains('lined')) {
+          var lines = k.querySelectorAll('.answer-line-row');
+          if (lines.length > 1) {
+            var space2 = target.querySelector(':scope > .answer-space.lined');
+            if (!space2) { space2 = k.cloneNode(false); target.insertBefore(space2, target.firstChild); }
+            space2.insertBefore(lines[lines.length - 1], space2.firstChild);
+            return true;
+          }
+        }
+        target.insertBefore(k, target.firstChild);
+        return true;
+      }
+      function splitRowByPieces(row, src, alone) {
+        var main = row.querySelector(':scope > .question-main-td'); if (!main) return null;
+        var frame = cur.frame;
+        var tr2 = document.createElement('tr'); tr2.className = row.className + ' q-cont'; tr2.dataset.questionId = row.dataset.questionId;
+        var tr2main = null;
+        Array.prototype.forEach.call(row.children, function (td) {
+          var c = document.createElement('td'); c.className = td.className;
+          if (td.classList.contains('question-main-td')) { c.style.cssText = td.style.cssText; c.dataset.align = td.dataset.align; c.dataset.bold = td.dataset.bold; c.dataset.italic = td.dataset.italic; tr2main = c; }
+          else c.textContent = td.textContent;
+          tr2.appendChild(c);
+        });
+        var moved = 0, guard = 0;
+        while (overflows(frame) && guard++ < 400) {
+          var kids = movablePieces(main);
+          if (!kids.length) break;
+          if (kids.length === 1) {
+            var only = kids[0];
+            if (!(only.classList.contains('answer-space') && only.querySelectorAll('.answer-line-row').length > 1)) break;
+          }
+          if (!moveLastPiece(main, tr2main)) break;
+          moved++;
+        }
+        if (!moved || overflows(frame)) {
+          /* برگشت: تکه‌ها به سطر اصلی */
+          Array.prototype.slice.call(tr2main.children).forEach(function (k) {
+            if (k.classList.contains('question-sep-cell-pad')) {
+              var op = main.querySelector(':scope > .question-sep-cell-pad');
+              if (op) { op.style.height = ((parseFloat(op.style.height) || 0) + (parseFloat(k.style.height) || 0)) + 'px'; delete op.__split; return; }
+            }
+            if (k.classList.contains('answer-space') && k.classList.contains('lined')) {
+              var orig = main.querySelector(':scope > .answer-space.lined');
+              if (orig) { Array.prototype.slice.call(k.children).forEach(function (l) { orig.appendChild(l); }); return; }
+            }
+            main.insertBefore(k, main.querySelector(':scope > .question-sep-drag'));
+          });
+          return alone ? null : {whole: true};
+        }
+        /* دستگیرهٔ جداکننده روی آخرین بخش */
+        var grip = main.querySelector(':scope > .question-sep-drag');
+        if (grip) { var q = rowQuestion(row), padNew = tr2main.querySelector(':scope > .question-sep-cell-pad'); grip.parentNode.removeChild(grip); grip = document.createElement('div'); grip.className = 'question-sep-drag'; tr2main.appendChild(grip); if (q) wireSeparator(grip, padNew, q); }
+        nextPage();
+        var host2 = tableShell(src, pageSetup.repeatHeader); cur.frame.appendChild(host2);
+        host2.tBodies[0].appendChild(tr2);
+        return {host: host2, body: host2.tBodies[0], row: tr2};
+      }
+      /* V120 — جدولِ خالیِ به‌جامانده (بدون سطر) حذف می‌شود تا خطِ اضافه نکشد */
+      Array.prototype.forEach.call(sheet.querySelectorAll('.questions-print-table'), function (t) { if (t.tBodies[0] && t.tBodies[0].rows.length === 0 && (!t.tHead || pageSetup.repeatHeader)) t.remove(); });
     }
   }
   function sheetScale() { var w = sheet.offsetWidth; return w > 0 ? (sheet.getBoundingClientRect().width / w) || 1 : 1; }
@@ -1191,9 +1354,11 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
     var merged = [];
     out.forEach(function (x) { var l = merged[merged.length - 1]; if (l && x.start <= l.end && l.bold === x.bold && l.italic === x.italic && l.underline === x.underline && l.color === x.color && l.size === x.size && l.font === x.font) l.end = Math.max(l.end, x.end); else merged.push(x); });
     q.spans = merged;
-    var fresh = questionRow(q, state.questions.indexOf(q)); sel.row.parentNode.replaceChild(fresh, sel.row);
-    Array.prototype.forEach.call(fresh.querySelectorAll('.figure-slot'), function (slot) { if (typeof slot.__apply === 'function') slot.__apply(); });
+    /* V120 — به‌جای تعویضِ همان سطر (که در سطرِ بریده‌شدهٔ برگهٔ بعد، کپیِ ادامه را
+       با سطرِ کامل عوض می‌کرد و صفحه‌بندی را به‌هم می‌زد)، کلِ برگه‌ها با اسکرولِ
+       فعلی دوباره صفحه‌بندی می‌شوند؛ تغییرِ اندازهٔ قلم هم ارتفاعِ سطر را عوض می‌کند. */
     try { window.getSelection().removeAllRanges(); } catch (ignored) {}
+    var keepY = window.scrollY; render(); try { window.scrollTo(0, keepY); } catch (ignored) {}
     lastSel = null; updateFmtBar(null);
   }
   function currentSel() { var r = selectionRange() || lastSel; if (!r) notify('اول بخشی از متن سؤال را انتخاب کنید'); return r; }
@@ -1221,7 +1386,8 @@ body.exam-print-mode{padding:0;background:#fff}.exam-print-mode #screenChrome{di
   window.setExamData = setExamData;
   window.printStudent = function () { return requestPrint('student'); };
   window.printTeacher = function () { return requestPrint('teacher'); };
-  window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};
+  window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview,setPageSetup:setPageSetup,getPageSetup:getPageSetup};
+  applySetupCss();
   /* V116 — API برای هدرِ بومی (Compose): تغییر حالت اندازه و قالب‌بندیِ متنِ انتخاب‌شده. */
   window.ExamPrintRenderer.applyFormat = function (kind, value) {
     var sel = selectionRange() || lastSel; if (!sel) { notify('اول بخشی از متن سؤال را انتخاب کنید'); return 'noselection'; }

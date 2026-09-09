@@ -17582,33 +17582,94 @@ Puppeteer: ۱۴ سؤال → ۴ برگه پیش‌نمایش، PDF چاپ هم �
 
 **فایل‌ها:** `exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`، `QuestionMediaEditor.kt`.
 
-## ۳۴۷. V123 — خطِ کادرِ متنِ سؤال قابل‌جابه‌جایی در پیش‌نمایش + حذفِ کادرِ چیدمانِ آزادِ تصاویر
+## ۳۴۷. V120 — بازبینیِ کد‌به‌کدِ پیش‌نمایش: سؤال‌های بعد از سطرِ بریده‌شده گم می‌شدند
 
-1. **خطِ کادرِ متنِ سؤال قابلِ تغییرِ واقعی توسطِ کاربر (درخواستِ کاربر):**
-   مکانیزم از V105/V118 وجود داشت (grip در پایینِ سلولِ اصلیِ سؤال، `sepExtraPx` ۰..۱۵۰۰،
-   صفحه‌بندیِ زندهٔ برگه‌ها در `endDrag`، ماندگاری با
-   `layoutSnapshot → publishFigLayouts → applyFigLayouts → QuestionDraft.sepExtraPx`)،
-   اما دستگیره خطِ ۳px با شفافیت ۱۸٪ و هدفِ لمسِ 14px بود و کاربر آن را پیدا نمی‌کرد.
-   در V123 دستگیره تبدیل شد به **خطِ آبیِ واضحِ تمام‌عرض (5px، #2563eb با 55٪)** +
-   **دستگیرهٔ مرکزیِ کپسولی (34×14px، نماد ≡)** با هدفِ لمسِ 28px (14px بالاتر و پایین‌تر
-   از خط). هنگامِ درگ، خط و دستگیره روشن‌تر می‌شوند. پنهان‌بودن در حالتِ چاپ
-   (`.exam-print-mode` و `@media print`) و `grip-hidden` روی بخش‌هایِ بریده‌شدهٔ سطر
-   دست‌نخورده‌اند. اولینِ باز شدنِ هر پنجرهٔ پیش‌نمایش یک **راهنمای کوتاهِ یک‌باره**
-   (toast محوشوندهٔ ۲٫۶ ثانیه‌ای، پرچمِ حافظه‌ای `sepHintDone`) می‌آید.
-   مدلِ داده، SQL و زنجیرهٔ ماندگاری تغییری نکردند.
-2. **حذفِ کادرِ چیدمانِ آزادِ تصاویر:** قاعدهٔ
-   `.preview-open .figure-slot.free-slot{opacity:1;border:1px dashed #b9c4d3;...}` حذف شد.
-   slotِ تصویری که در پیش‌نمایش «آزاد» جابه‌جا شده حالا مثلِ چاپ در پیش‌نمایش هم
-   نامرئی است (`.figure-slot.free-slot{opacity:0;pointer-events:none}`)؛ تنها وظیفهٔش
-   رزروِ جا در جریانِ متن است (رفتارِ V105: «جای اصلی‌شان در متن رزرو می‌ماند تا خطوط
-   نپرند») — بدونِ هیچ کادری.
+کاربر گفت «پیش‌نمایش باگ داره» و خواست کلِ مسیرِ پیش‌نمایش خط‌به‌خط بررسی شود
+(`exam_print_renderer.html`، `ExamHtmlPrintDialog.kt`، `ExamHtmlImageInliner.kt`،
+`ExamHtmlPrintPayload.kt`، `PrintableFromDrafts.kt`، `applyFigLayouts`). نتیجه با
+Puppeteer (۱۴ سؤال از همهٔ نوع‌ها) بازتولید شد:
 
-**راستی‌آزمایی:** سینتکسِ همهٔ بلوک‌های `<script>` asset با node: ۰ خطا.
-هارنسِ رفتاری (اجرای منبعِ واقعیِ `showPreview`/`sepHintDone` روی stub + شبیه‌سازیِ
-عینِ فرمولِ درگ برای پایین/بالا/خارجِ محدوده): ۱۴/۱۴ PASS.
-`scripts/verify_native_final.py`: PASS (رندرر 116,091 بایت، زیرِ سقفِ 140KB).
-تستِ جدید: `V123_SepGripFreeSlotTest` (۵ تست). CI: `testDebugUnitTest` + `assembleDebug`.
+1. **باگِ اصلی (paginate/placeTable):** پس از قطعِ یک سطر و ساختِ `.row-continue` در برگهٔ
+   بعد، کد `host = cont; body = cont.tBodies[0]` می‌گذاشت و **سطرهای بعدی داخلِ همان
+   ظرفِ بریده‌شده** (ارتفاعِ ثابت + `overflow:hidden` + `translateY(-cut)`) می‌رفتند؛
+   یعنی از اولین سؤالی که از پایینِ برگه بیرون می‌زد، تمامِ سؤال‌های بعدی نامرئی بودند
+   (۱۴ سؤال → ۲ برگه، برگهٔ دوم فقط ادامهٔ سؤال ۶ + پاورقی؛ سؤال‌های ۷ تا ۱۴ گم).
+   حالا پس از هر ادامه، یک `tableShell` تازه زیرِ `.row-continue` ساخته می‌شود و
+   سطرهای بعدی در آن می‌آیند؛ جدولِ خالیِ به‌جامانده حذف می‌شود. نتیجه: ۳ برگه، همهٔ
+   ۱۴ سؤال، overflow صفر در برگه‌های ۲ و ۳.
+2. **applyStyle روی بخشِ ادامه‌یافته:** نوارِ قالب‌بندی، `sel.row` را با سطرِ کاملِ تازه
+   عوض می‌کرد؛ وقتی انتخاب روی `.row-part` در برگهٔ بعد بود، کپیِ ادامه با سطرِ کامل
+   جایگزین می‌شد و صفحه‌بندی به‌هم می‌ریخت (و تغییرِ اندازهٔ قلم ارتفاعِ سطر را عوض
+   می‌کند بدونِ صفحه‌بندیِ دوباره). حالا پس از اعمالِ استایل `render()` با حفظِ اسکرول.
+   تست: انتخابِ ۵ حرف در `row-part` سؤال ۱ → span ثبت و صفحه‌بندی `1 | 1p,2,3` درست.
+3. بررسی‌شده و سالم: پلِ `setExamData` (id = index+1 ↔ `applyFigLayouts`)، حلقهٔ
+   `tryInject`، `inlinedPrintable`/`LaunchedEffect`، `requestDismiss` با `dismissing`،
+   `restorePreview`/`afterprint`، `waitForImages`، `figureAt/replaceFigure`،
+   `sheetOffsetOf/applyFigureLayout`، `snapshot`. حالتِ چاپ (`exam-print-mode` +
+   media print) همان صفحه‌بندیِ پیش‌نمایش را می‌دهد.
 
-**فایل‌ها:** `app/src/main/assets/print/exam_print_renderer.html`،
-`app/src/test/java/ir/exam/app/ui/app/V123_SepGripFreeSlotTest.kt` (جدید)،
-`scripts/verify_native_final.py`، `text/CHANGELOG_FA.txt`.
+4. **کلیدِ نسخهٔ استاد یک بلوکِ یک‌تکه بود:** با سؤال‌های زیاد (۶۰ سؤال → جدولِ ۲۰۵۸px)
+   از کادرِ ۱۰۸۱px بیرون می‌زد و بریده می‌شد. حالا `placeKey` سطرهای کلید را با تکرارِ
+   سرستون در برگه‌های بعد پخش می‌کند (۶۰ سؤال → ۳ جعبه، ۱۲۰ سؤال → ۵ جعبه، overflow صفر).
+5. **قطعِ سطر در لبهٔ padding نبود:** `.a4-frame` با `padding:6mm` و `overflow:hidden`
+   محتوا را تا لبهٔ داخلیِ **border** نشان می‌داد نه لبهٔ padding؛ یعنی ۶mm از سطرِ
+   بریده‌شده پایینِ خطِ قطع دیده می‌شد و همان تکه در برگهٔ بعد تکرار می‌شد
+   (frame.scrollHeight − clientHeight = ۱۱…۴۱px در برگه‌های میانی). حالا محتوا داخلِ
+   `.a4-inner` (height:100%, overflow:hidden) می‌نشیند و `cur.frame` همان است؛ شکل‌های
+   شناور همچنان فرزندِ `.a4-frame` می‌مانند (مختصات دست‌نخورده). overflow همهٔ برگه‌ها = ۰.
+6. **نوعِ سؤال حدسی بود:** `ExamHtmlPrintPayload` نوع را از گزینه‌ها/متنِ پاسخ حدس می‌زد؛
+   «صحیح/غلط» آزمون‌ساز (بدونِ `options`) **تشریحی** چاپ می‌شد (چهار خط پاسخ، بدونِ
+   دایره‌های صحیح/غلط) و «جای‌خالی» با پاسخِ عددی، **عددی** می‌شد. حالا
+   `OfficialPrintQuestion.kind` (essay/multiple/truefalse/fill/numeric/matching) در
+   `PrintableFromDrafts.questionAt` پر و در payload مقدم است؛ خالی = حدسِ قدیمی (تست‌های
+   `ExamHtmlPrintPayloadTest` دست‌نخورده پاس می‌شوند).
+7. **صحیح/غلط با بیش از دو گزینه** (داده‌های قدیمی با ۴ گزینه) دو دایرهٔ خالیِ اضافه
+   می‌کشید؛ رندرر فقط دو گزینهٔ اول را می‌کشد.
+
+**فایل‌ها:** `exam_print_renderer.html`، `OfficialPrintModels.kt`، `PrintableFromDrafts.kt`،
+`ExamHtmlPrintPayload.kt`. نسخهٔ بعدی: V121، بند ۳۴۸.
+
+## ۳۴۸. V121 — موتور پیش‌نمایش/چاپ PGS (آزمون‌ساز v20) در برنامه
+
+**درخواست:** «بخش پیش‌نمایش و چاپ و موتور چاپ رو استخراج کن و در برنامه جایگذاری کن» — منبع:
+`<script id="pgs-engine">` نسخهٔ وبِ v20 (readCfg/applySetup/PAGESETUP_HTML، makeSheet، placeRows،
+splitOversizeRow/moveLastPiece، splitAnswerKey، doPrint، ویوئر). موتور PGS عیناً قابلِ کپی نبود
+(iframe چاپ، localStorage، ویوئر HTML با هدر/زوم/بندانگشتی، همه در رندرر ممنوع‌اند و هدرِ
+پیش‌نمایش در برنامه بومی است)؛ پس **منطقِ آن** روی رندررِ فعلی (`exam_print_renderer.html`)
+پیاده شد و مسیرِ چاپِ اندروید (WebView.createPrintDocumentAdapter) دست‌نخورده ماند.
+
+**چه چیزی از PGS آمد**
+1. **تنظیمات صفحه** (معادل 📐 وب): کاغذ A4/A5/B5/Letter/F4/Legal/سفارشی، جهت، چهار حاشیه (mm)،
+   کادرِ دورِ برگه، شمارهٔ صفحه («صفحهٔ ۱ از ۳» پایینِ برگه — در چاپ هم هست)، تکرارِ سرستونِ
+   «ردیف/متن سؤال/بارم» در هر برگه، فونتِ پایه (pt)، فاصلهٔ سؤال‌ها (فشرده/معمولی/باز)، نمایشِ بارم.
+   - رندرر: `SETUP_DEFAULTS/readSetup/applySetupCss/setPageSetup/getPageSetup`؛ اندازه‌ها با متغیرهای
+     CSS `--pg-w/--pg-h/--pg-m*/--pg-font` روی `.a4-page`/`#sheet`؛ `@page size` در `<style id=pgDynPage>`؛
+     `meta viewport` با عرضِ کاغذ به‌روز می‌شود. `setExamData({pageSetup:{…}})` هم پذیرفته می‌شود.
+   - Kotlin: `data/local/PrintPageSetupStore.kt` (`PrintPageSetup` + ذخیره در SharedPreferences
+     `print_page_setup`، مثل PrintHeaderStore)؛ `toJson()` فقط مقادیرِ اعتبارسنجی‌شده می‌دهد؛
+     `printAttributes()` MediaSize هم‌اندازه با برگه (پیش‌تر `PrintAttributes.Builder().build()` = A4 ثابت).
+   - `ExamHtmlPrintPayloadBuilder.build(..., pageSetupJson)`؛ در `onPageFinished` تزریق می‌شود.
+   - هدرِ بومیِ پیش‌نمایش دکمهٔ «تنظیمات صفحه» گرفت → `PrintPageSetupDialog` (AlertDialog با FilterChip/
+     Switch/OutlinedTextField)؛ «اعمال» ذخیره + `ExamPrintRenderer.setPageSetup(json)` (رندرِ فوری)؛
+     «پیش‌فرض» برمی‌گرداند. هر دو مسیرِ چاپ (پنجره و HeadlessExamPrinter) `printAttributes()` می‌گیرند.
+2. **تقسیمِ محتواییِ سطر** (`splitRowByPieces` = splitOversizeRow/moveLastPiece وب): وقتی سطرِ سؤال در
+   برگه جا نشود، تکه‌های انتهایی سلول (فاصلهٔ جداکننده — که به نسبتِ فضای باقی‌مانده **دو نیم** می‌شود —،
+   خطوطِ پاسخ **تک‌به‌تک**، شبکهٔ گزینه‌ها، متن) به یک `tr.question-print-row.q-cont` در برگهٔ بعد می‌روند
+   (ردیف/بارمِ آن نامرئی است). فقط اگر یک تکهٔ تقسیم‌ناپذیر (متن/تصویرِ بلند) بماند، برشِ تصویریِ V117
+   (`row-continue`) انجام می‌شود. اگر تکه‌ای جدا نشود و سطر تنها نباشد → کلِ سطر به برگهٔ بعد
+   (`split.whole`). دستگیرهٔ جداکننده روی آخرین بخش است و به padِ همان بخش سیم‌کشی می‌شود
+   (`wireSeparator(grip, padNew, q)`)؛ کشیدنِ آن `sepExtraPx` را مثلِ قبل تغییر می‌دهد.
+   - `questionRow` حالا بچه‌های `answerBlock` را مستقیم در `td.question-main-td` می‌گذارد (بدون wrapper)
+     تا مثل وب قابلِ تکه‌کردن باشند.
+3. برچسبِ «برگهٔ n از m» (فقط پیش‌نمایش) زیرِ برگه رفت تا با شمارهٔ صفحهٔ چاپی تداخل نکند.
+
+**آزمون در Chromium (puppeteer):** ۱۴ سؤالِ مخلوط → ۳ برگه، همه ov=0، ادامهٔ ۶ و ۱۳ به‌صورت q-cont؛
+سطرِ ۳۰ خط + ۱۵۰۰px جداکننده → ۱۸ خط در برگهٔ ۱، ۱۱ خط + ۵۶۲px در ۲، ۱ خط + ۹۳۸px در ۳، بدونِ برشِ
+تصویری؛ درگِ دستگیرهٔ ادامه sepExtraPx=۱۲۰۰ و بازصفحه‌بندی؛ A5 افقی/بی‌کادر/تکرار سرستون → ۷۹۴×۵۵۹px،
+سرستون در هر برگه، «صفحهٔ ۱ از ۸»؛ ۶۰ سؤالِ نسخهٔ استاد → ۲۲ برگه همه ov=0 (پیش‌تر برگهٔ ۲ در A5
+۵۵px سرریز داشت — با `split.whole` رفع شد).
+
+**قراردادها:** امضای `window.ExamPrintRenderer` در verify_native_final.py و ExamPrintRendererContractTest
+با `setPageSetup/getPageSetup` به‌روز شد. آزمونِ جدید: `V121_PgsPrintEngineTest`.
+**نیامده از PGS (عمداً):** ویوئرِ HTML (زوم/بندانگشتی/تمام‌صفحه — هدر و زوم بومی/پینچِ WebView است)،
+چاپ از iframe و گفت‌وگوی «محدودهٔ صفحات/نسخه‌ها» (پنلِ چاپِ اندروید خودش دارد)، localStorage.

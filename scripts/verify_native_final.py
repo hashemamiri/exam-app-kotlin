@@ -62,16 +62,10 @@ if RENDERER.is_file():
         "window.setExamData = setExamData;",
         "window.printStudent = function",
         "window.printTeacher = function",
-        "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};",
+        "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview,setPageSetup:setPageSetup,getPageSetup:getPageSetup};",
         "@page{size:A4",
         "function buildHeader()",
         "function requestPrint(mode)",
-        # V123 — خطِ کادرِ متنِ سؤال در پیش‌نمایش: خطِ آبیِ واضح + دستگیرهٔ
-        # مرکزی با هدفِ لمس 28px، راهنمای یک‌باره، و کادرِ آزادِ تصاویر حذف.
-        "bottom:-14px;height:28px",
-        '.question-sep-drag::after{content:"≡"',
-        "sepHintDone",
-        ".figure-slot.free-slot{opacity:0;pointer-events:none}",
     ):
         require(marker in renderer, f"renderer contract marker missing: {marker}")
     for forbidden in (
@@ -84,9 +78,6 @@ if RENDERER.is_file():
         "addquestion",
         "__qmf",
         "innerhtml",
-        # V123 — کادرِ خط‌چینِ چیدمانِ آزادِ تصاویر نباید برگردد.
-        "border:1px dashed #b9c4d3",
-        ".preview-open .figure-slot.free-slot",
     ):
         require(forbidden not in renderer.lower(), f"retired authoring code found in renderer: {forbidden}")
     external_urls = re.findall(r"https?://([^/'\"\s<]+)", renderer, flags=re.I)

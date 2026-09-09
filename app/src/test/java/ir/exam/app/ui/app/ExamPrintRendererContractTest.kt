@@ -26,7 +26,7 @@ class ExamPrintRendererContractTest {
             "window.setExamData = setExamData;",
             "window.printStudent = function",
             "window.printTeacher = function",
-            "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview};",
+            "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview,setPageSetup:setPageSetup,getPageSetup:getPageSetup};",
             "@page{size:A4",
             "function requestPrint(mode)",
             "function buildHeader()"
