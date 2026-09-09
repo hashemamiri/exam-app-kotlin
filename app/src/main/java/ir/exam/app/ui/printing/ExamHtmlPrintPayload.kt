@@ -1,5 +1,6 @@
 package ir.exam.app.ui.printing
 
+import ir.exam.app.data.local.PrintBoxStyle
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintQuestion
 import kotlinx.serialization.json.JsonObject
@@ -19,6 +20,9 @@ object ExamHtmlPrintPayloadBuilder {
     fun build(
         printable: OfficialExamPrintable?,
         extraHeaderFields: Map<String, String> = emptyMap(),
+        // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ جدولِ سؤال‌ها (از
+        // PrintBoxStyleStore می‌آید؛ null یعنی پیش‌فرض‌های موتورِ HTML).
+        boxStyle: PrintBoxStyle? = null,
         /** V121 — تنظیمات صفحهٔ موتور چاپ (JSON خامِ [ir.exam.app.data.local.PrintPageSetup.toJson]). */
         pageSetupJson: String? = null
     ): JsonObject {
@@ -38,8 +42,18 @@ object ExamHtmlPrintPayloadBuilder {
             put("footerNote", printable.footerNote)
             put("totalScore", formatScore(printable.totalScore))
             put("includeAnswerKey", printable.includeAnswerKey)
+            if (boxStyle != null) {
+                put("boxStyle", buildJsonObject {
+                    put("borderWidthPx", boxStyle.borderWidthPx)
+                    put("borderColor", boxStyle.borderColor)
+                    put("numberColWidthPercent", boxStyle.numberColWidthPercent)
+                    put("scoreColWidthPercent", boxStyle.scoreColWidthPercent)
+                    put("cellPaddingPx", boxStyle.cellPaddingPx)
+                })
+            }
             if (pageSetupJson != null) put("pageSetup", pageSetupJson)
             put("fields", buildJsonObject {
+
                 put("f_headerTemplate", "classic")
                 put("f_course", courseName)
                 put("f_branch", header.school)
@@ -87,11 +101,32 @@ object ExamHtmlPrintPayloadBuilder {
                 }
             })
         }
-
-        // V120 — نوعِ صریح از آزمون‌ساز مقدم است؛ حدس فقط برای ورودی‌های قدیمیِ بدون kind.
-        val kind = question.kind
-        when {
-            kind == "matching" || (kind.isBlank() && (question.matchingLeft.isNotEmpty() || question.matchingRight.isNotEmpty())) -> {
+        // V121 — تراز پاراگرافیِ تکه‌ای؛ اگر چیزی تنظیم نشده، رندرر از textAlign
+        // کلیِ سؤال استفاده می‌کند (رجوع کنید به exam_print_renderer.html).
+        if (question.alignSpans.isNotEmpty()) {
+            put("alignSpans", buildJsonArray {
+                question.alignSpans.forEach { span ->
+                    add(buildJsonObject {
+                        put("start", span.start)
+                        put("end", span.end)
+                        put("align", span.align)
+                    })
+                }
+            })
+        }
+        // V120 — منبعِ اصلیِ تشخیصِ نوع اکنون فیلدِ صریح `questionType` است
+        // (از `PrintableFromDrafts` می‌آید). قبلاً هیچ نشانهٔ صریحی نبود و
+        // نوع فقط از روی محتوا حدس زده می‌شد؛ این حدس دو باگ داشت:
+        //  ۱) سؤال «صحیح/غلط» چون هیچ‌وقت `options` نداشت، هیچ‌گاه با شرطِ
+        //     زیر تطبیق نمی‌یافت و به‌اشتباه «تشریحی» چاپ می‌شد.
+        //  ۲) هر سؤالِ تشریحیِ حاویِ «...» (خیلی رایج در فارسی) به‌اشتباه
+        //     «جای‌خالی» تشخیص داده می‌شد.
+        // برای سازگاری با فراخوان‌های قدیمی/تست‌هایی که `questionType` را
+        // نمی‌فرستند (null)، حدسِ قبلی به‌عنوان fallback باقی مانده — با
+        // اصلاح ۲ (نشانهٔ ضعیفِ «...» ساده حذف شد، فقط نشانه‌های صریحِ
+        // «[...]» و «___» می‌مانند).
+        when (question.questionType ?: heuristicType(question)) {
+            "matching" -> {
                 put("type", "matching")
                 put("pairs", buildJsonArray {
                     val count = maxOf(question.matchingLeft.size, question.matchingRight.size)
@@ -113,8 +148,7 @@ object ExamHtmlPrintPayloadBuilder {
                     }
                 })
             }
-            kind == "truefalse" || (kind.isBlank() && question.options.size == 2 &&
-                (question.options.firstOrNull() == "صحیح" || question.options.contains("صحیح"))) -> {
+            "truefalse" -> {
                 put("type", "truefalse")
                 val correct = question.answerText.orEmpty()
                 val trueCorrect = correct.contains("صحیح") || correct == "true"
@@ -123,7 +157,7 @@ object ExamHtmlPrintPayloadBuilder {
                     add(optionJson("غلط", !trueCorrect, null))
                 })
             }
-            kind == "multiple" || (kind.isBlank() && question.options.isNotEmpty()) -> {
+            "multiple" -> {
                 put("type", "multiple")
                 val correct = question.answerText.orEmpty().trim()
                 put("options", buildJsonArray {
@@ -137,13 +171,13 @@ object ExamHtmlPrintPayloadBuilder {
                 })
                 put("optionsLayout", if (question.options.size > 2) "2rows" else "1row")
             }
-            kind == "numeric" || (kind.isBlank() && question.answerText != null && question.answerText.any(Char::isDigit) && !question.answerText.contains("\n")) -> {
+            "numeric" -> {
                 put("type", "numeric")
                 put("answerLines", question.answerLines.coerceIn(0, 30))
                 put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
                 put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
-            kind == "fill" || (kind.isBlank() && (question.text.contains("[...]") || question.text.contains("...") || question.text.contains("___"))) -> {
+            "fill" -> {
                 put("type", "fill")
                 put("answerLines", question.answerLines.coerceIn(0, 30))
                 put("answerStyle", when (question.answerLineStyle) { "blank", "plain" -> "plain"; "grid" -> "grid"; else -> "lined" })
@@ -156,6 +190,23 @@ object ExamHtmlPrintPayloadBuilder {
                 put("answerLineSpacingCm", question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
             }
         }
+    }
+
+    /**
+     * V120 — حدسِ نوعِ سؤال، فقط وقتی `questionType` صریح نیست (سازگاریِ
+     * عقب‌رو). نسبت به نسخهٔ قبلی یک اصلاح دارد: نشانهٔ ضعیفِ «هر رشتهٔ
+     * حاویِ سه‌نقطهٔ ساده» حذف شده چون سؤال‌های تشریحیِ عادیِ فارسی هم
+     * معمولاً «...» دارند و به‌اشتباه «جای‌خالی» تشخیص داده می‌شدند؛
+     * نشانه‌های صریح «[...]» و «___» باقی مانده‌اند.
+     */
+    private fun heuristicType(question: OfficialPrintQuestion): String = when {
+        question.matchingLeft.isNotEmpty() || question.matchingRight.isNotEmpty() -> "matching"
+        question.options.size == 2 &&
+            (question.options.firstOrNull() == "صحیح" || question.options.contains("صحیح")) -> "truefalse"
+        question.options.isNotEmpty() -> "multiple"
+        question.answerText != null && question.answerText.any(Char::isDigit) && !question.answerText.contains("\n") -> "numeric"
+        question.text.contains("[...]") || question.text.contains("___") -> "fill"
+        else -> "long"
     }
 
     private fun optionJson(

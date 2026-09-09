@@ -111,6 +111,8 @@ fun ExamHtmlPrintDialog(
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
+    // V121 — پنجرهٔ تنظیماتِ کادر/جدول‌بندیِ سراسریِ جدولِ سؤال‌ها.
+    var showBoxSettings by remember { mutableStateOf(false) }
     // V121 — پنجرهٔ «تنظیمات صفحه» (📐 موتور PGS): تغییرات همان لحظه در رندرر اعمال می‌شوند.
     var pageSetupOpen by remember { mutableStateOf(false) }
     LaunchedEffect(barStatus) {
@@ -224,10 +226,21 @@ fun ExamHtmlPrintDialog(
                 if (!loading && initialPrintMode == null) {
                     PrintPreviewHeader(
                         onClose = { requestDismiss() },
+                        onOpenBoxSettings = { showBoxSettings = true },
                         onPageSetup = { pageSetupOpen = true },
                         onFormat = { kind, value ->
-                            val v = value.replace("\\", "").replace("'", "")
-                            runJs("(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyFormat?window.ExamPrintRenderer.applyFormat('$kind','$v'):''}catch(e){return ''}})()", null)
+                            // V120 — قبلاً فقط `\` و `'` حذف می‌شدند؛ `"`، خطِ
+                            // جدید و `</script>` دست‌نخورده می‌ماندند. اگر یک‌روز
+                            // این مسیر برای مقداری غیر از هگز رنگ/کلید فونت/عدد
+                            // به کار می‌رفت، همان یک نقطهٔ تزریقِ کد در WebView
+                            // می‌شد. حالا با toJsStringLiteral هر دو آرگومان با
+                            // JSON.encode-مانند کاملاً امن اسکیپ می‌شوند.
+                            runJs(
+                                "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyFormat?" +
+                                    "window.ExamPrintRenderer.applyFormat(${kind.toJsStringLiteral()},${value.toJsStringLiteral()}):''}" +
+                                    "catch(e){return ''}})()",
+                                null
+                            )
                         }
                     )
                 }
@@ -394,9 +407,12 @@ fun ExamHtmlPrintDialog(
                                 token.toByteArray(Charsets.UTF_8),
                                 android.util.Base64.NO_WRAP
                             )
+                            // V120 — questionId (و b64، هرچند فقط ارقام/حروفِ base64
+                            // دارد) اکنون با toJsStringLiteral اسکیپ می‌شوند؛ قبلاً
+                            // مستقیم داخلِ رشتهٔ تک‌کوت الحاق می‌شدند.
                             val script = "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.replaceFigure?" +
-                                "window.ExamPrintRenderer.replaceFigure('" + req.questionId + "'," +
-                                req.tokenStart + "," + req.tokenEnd + ",'" + b64 + "'):'missing'}" +
+                                "window.ExamPrintRenderer.replaceFigure(${req.questionId.toJsStringLiteral()}," +
+                                req.tokenStart + "," + req.tokenEnd + ",${b64.toJsStringLiteral()}):'missing'}" +
                                 "catch(e){return 'err'}})()"
                             runJs(script) { result ->
                                 barStatus = if (result?.contains("ok") == true) "ویرایش شد ✓" else "ویرایش ناموفق بود."
@@ -405,10 +421,42 @@ fun ExamHtmlPrintDialog(
                         onDismiss = { figureTool = null }
                     )
                 }
+
+                // V121 — تنظیماتِ کادر/جدول‌بندیِ سراسری؛ همان ذخیره‌سازِ سراسریِ
+                // دستگاه (PrintBoxStyleStore) که مثلِ PrintHeaderStore کار می‌کند.
+                if (showBoxSettings) {
+                    val boxStore = remember { ir.exam.app.data.local.PrintBoxStyleStore(context) }
+                    PrintBoxSettingsDialog(
+                        initial = remember { boxStore.read() },
+                        onApply = { style ->
+                            boxStore.write(style)
+                            showBoxSettings = false
+                            val json = ir.exam.app.data.local.printBoxStyleToJson(style)
+                            runJs(
+                                "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyBoxStyle?" +
+                                    "window.ExamPrintRenderer.applyBoxStyle(${json.toJsStringLiteral()}):''}" +
+                                    "catch(e){return ''}})()",
+                                null
+                            )
+                        },
+                        onDismiss = { showBoxSettings = false }
+                    )
+                }
             }
         }
     }
 }
+
+/**
+ * V120 — رشته را به یک لیترالِ رشته‌ایِ امنِ جاوااسکریپت تبدیل می‌کند
+ * (`kotlinx.serialization` همان قوانینِ اسکیپِ JSON را دارد که برای رشتهٔ
+ * جاوااسکریپت هم کافی است: `\`، `"`، کنترل‌کاراکترها و `</script>` را
+ * می‌پوشاند). قبلاً `onFormat` فقط `\` و `'` را دستی حذف می‌کرد که `"`،
+ * خطِ جدید و `</script>` را باز می‌گذاشت؛ همهٔ نقاطی که مقدارِ آزاد را به
+ * `runJs` می‌دهند باید از این تابع استفاده کنند، نه الحاقِ مستقیمِ رشته.
+ */
+private fun String.toJsStringLiteral(): String =
+    kotlinx.serialization.json.JsonPrimitive(this).toString().replace("</", "<\\/")
 
 /** خروجی evaluateJavascript برای رشته‌ها JSON-کوت است؛ رشتهٔ واقعی را برمی‌گرداند. */
 /**
@@ -588,6 +636,8 @@ internal fun createExamPrintWebView(
                 printable,
                 // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
                 ir.exam.app.data.local.PrintHeaderStore(context).read(),
+                // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ چاپ، ذخیره‌شده روی دستگاه
+                ir.exam.app.data.local.PrintBoxStyleStore(context).read(),
                 // V121 — تنظیمات صفحهٔ موتور چاپ (کاغذ/جهت/حاشیه/…)
                 ir.exam.app.data.local.PrintPageSetupStore(context).read().toJson()
             ).toString()
@@ -796,6 +846,7 @@ private class OneShotPrintAdapter(
 @Composable
 private fun PrintPreviewHeader(
     onClose: () -> Unit,
+    onOpenBoxSettings: () -> Unit,
     onPageSetup: () -> Unit,
     onFormat: (kind: String, value: String) -> Unit
 ) {
@@ -838,6 +889,12 @@ private fun PrintPreviewHeader(
             FormatChip("B", bold = true) { onFormat("bold", "") }
             FormatChip("I", italic = true) { onFormat("italic", "") }
             FormatChip("U", underline = true) { onFormat("underline", "") }
+            // V121 — تراز پاراگرافیِ تکه‌ای: روی بندِ حاویِ بخشِ انتخاب‌شده اعمال
+            // می‌شود (applyFormat("align", ...) در exam_print_renderer.html).
+            FormatChip("راست") { onFormat("align", "right") }
+            FormatChip("وسط") { onFormat("align", "center") }
+            FormatChip("چپ") { onFormat("align", "left") }
+            FormatChip("بلوک") { onFormat("align", "justify") }
             Box {
                 FormatChip("رنگ") { colorMenu = true }
                 androidx.compose.material3.DropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
@@ -877,6 +934,8 @@ private fun PrintPreviewHeader(
                 }
             }
             FormatChip("پاک") { onFormat("clear", "") }
+            // V121 — کادر/جدول‌بندیِ سراسریِ جدولِ سؤال‌ها (خط دور/ستون/فاصلهٔ داخلی).
+            FormatChip("کادر") { onOpenBoxSettings() }
         }
     }
 }

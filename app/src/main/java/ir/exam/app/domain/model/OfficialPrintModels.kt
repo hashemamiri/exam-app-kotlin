@@ -44,6 +44,16 @@ data class PrintTextSpan(
     val font: String? = null
 )
 
+/**
+ * V121 — تراز پاراگرافیِ یک بازهٔ متنِ سؤال؛ معادلِ domain مربوطِ
+ * `ui.builder.AlignSpan`. align یکی از right/center/left/justify است.
+ */
+data class PrintAlignSpan(
+    val start: Int,
+    val end: Int,
+    val align: String
+)
+
 data class OfficialPrintQuestion(
     val number: Int,
     val text: String,
@@ -73,6 +83,8 @@ data class OfficialPrintQuestion(
     val imageYmm: List<Float> = emptyList(),
     // V68 — استایل تکه‌ای متن سؤال برای چاپ (بازه‌های انحصاری).
     val textSpans: List<PrintTextSpan> = emptyList(),
+    // V121 — تراز پاراگرافیِ تکه‌ای متن سؤال برای چاپ.
+    val alignSpans: List<PrintAlignSpan> = emptyList(),
     val imageUrls: List<String> = emptyList(),
     val images: List<Bitmap> = emptyList(),
     // V99.2 — چیدمانِ اشیاء از پیش‌نمایشِ چاپی (JSON) تا چاپ با آنچه
