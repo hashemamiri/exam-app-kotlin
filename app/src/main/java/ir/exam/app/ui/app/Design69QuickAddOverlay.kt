@@ -199,7 +199,7 @@ fun Design69QuickAddOverlay(
                     )
                 }
                 .size(58.dp)
-                .neumorphic69(colors, 29.dp, 12.dp)
+                .neumorphic69(colors, 29.dp, neoDepth(12.dp))
                 .graphicsLayer {
                     rotationZ = Design69QuickAddContract.OPEN_ROTATION_DEGREES * travel.value
                     scaleX = 1f + .20f * travel.value

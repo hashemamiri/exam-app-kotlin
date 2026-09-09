@@ -81,6 +81,15 @@ val neumorphic69Colors: Neumorphic69Colors
     get() = LocalNeumorphic69Colors.current
 
 /**
+ * V131 — «عمق سایه» در تنظیمات ظاهر فقط روی اجزایی اثر داشت که depth پیش‌فرض (LocalNeumorphic69Depth)
+ * می‌گرفتند؛ دکمه‌ها/کاشی‌ها/داک با عددهای ثابت (۶..۱۲dp) بی‌تغییر می‌ماندند → کاربر: «کار نمی‌کند».
+ * این تابع عمقِ ثابتِ طراحی را نسبت به انتخاب کاربر (پیش‌فرض ۱۴) مقیاس می‌کند.
+ */
+@Composable
+@ReadOnlyComposable
+fun neoDepth(base: Dp): Dp = base * (LocalNeumorphic69Depth.current.value / 14f)
+
+/**
  * پالت را از MaterialTheme واقعی می‌گیرد؛ بنابراین light/dark، dynamic color و انتخاب کاربر حفظ می‌شود.
  */
 @Composable
@@ -253,7 +262,7 @@ fun NeumorphicIconButton(
         onClick = onClick,
         modifier = modifier.size(46.dp).semantics { this.selected = selected },
         radius = 16.dp,
-        depth = 9.dp
+        depth = neoDepth(9.dp)
     ) {
         Icon(
             icon,
@@ -298,7 +307,7 @@ fun NeumorphicTopBar(
                                 .size(46.dp)
                                 .semantics { contentDescription = navigationDescription },
                             radius = 16.dp,
-                            depth = 9.dp
+                            depth = neoDepth(9.dp)
                         ) {
                             navigationIconContent(colors.muted, Modifier.size(23.dp))
                         }
@@ -375,7 +384,7 @@ fun NeumorphicCompactMenuBar(
                     contentDescription = if (menuOpen) "بستن منو" else "بازکردن منو"
                 },
             radius = 14.dp,
-            depth = 8.dp
+            depth = neoDepth(8.dp)
         ) {
             Design69MorphingMenuIcon(
                 open = menuOpen,
@@ -413,7 +422,7 @@ fun NeumorphicMenuTile(
         modifier
             .height(Design69MenuContract.CARD_HEIGHT_DP.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .neumorphic69(colors, 22.dp, 10.dp, pressed = selected || pressed)
+            .neumorphic69(colors, 22.dp, neoDepth(10.dp), pressed = selected || pressed)
             .clip(RoundedCornerShape(22.dp))
             .background(if (selected) colors.accent.copy(alpha = .14f) else Color.Transparent)
             .semantics { this.selected = selected }
@@ -434,7 +443,7 @@ fun NeumorphicMenuTile(
                 Box(
                     Modifier
                         .size(38.dp)
-                        .neumorphic69(colors, 13.dp, 7.dp, pressed = true),
+                        .neumorphic69(colors, 13.dp, neoDepth(7.dp), pressed = true),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(21.dp))

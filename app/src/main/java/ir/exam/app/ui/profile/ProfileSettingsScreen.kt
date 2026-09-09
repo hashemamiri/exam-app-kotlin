@@ -383,17 +383,21 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             }
                         }
                     }
+                    // V131 — لغزنده‌ها هنگام کشیدن هر فریم در DataStore نوشته می‌شدند و مقدار با تأخیر
+                    // برمی‌گشت → لغزنده می‌پرید/برنمی‌گشت. حالا مقدار محلی است و در پایان کشیدن ذخیره می‌شود.
+                    var depthDraft by remember(settings.neumorphicDepth) { mutableStateOf(settings.neumorphicDepth) }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("عمق سایه")
                         Text(
-                            PersianDigits.convert(settings.neumorphicDepth.toInt()),
+                            PersianDigits.convert(depthDraft.toInt()),
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Slider(
-                        value = settings.neumorphicDepth,
-                        onValueChange = viewModel::setNeumorphicDepth,
+                        value = depthDraft,
+                        onValueChange = { depthDraft = it },
+                        onValueChangeFinished = { viewModel.setNeumorphicDepth(depthDraft) },
                         valueRange = 8f..22f,
                         steps = 13
                     )
@@ -448,10 +452,12 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("اندازه متن", style = MaterialTheme.typography.titleMedium)
-                    Text("${PersianDigits.convert((settings.fontScale * 100).toInt())} درصد")
+                    var scaleDraft by remember(settings.fontScale) { mutableStateOf(settings.fontScale) }
+                    Text("${PersianDigits.convert((scaleDraft * 100).toInt())} درصد")
                     Slider(
-                        value = settings.fontScale,
-                        onValueChange = viewModel::setFontScale,
+                        value = scaleDraft,
+                        onValueChange = { scaleDraft = it },
+                        onValueChangeFinished = { viewModel.setFontScale(scaleDraft) },
                         valueRange = 0.85f..1.30f,
                         steps = 8
                     )

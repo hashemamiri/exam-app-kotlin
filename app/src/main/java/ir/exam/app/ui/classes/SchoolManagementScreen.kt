@@ -144,6 +144,9 @@ fun SchoolManagementScreen(
     var managerCreateTeacher by remember { mutableStateOf<SchoolTeacherPick?>(null) }
     var managerCreateClasses by remember { mutableStateOf<List<SchoolClass>>(emptyList()) }
     var managerCreateClassId by remember { mutableStateOf<String?>(null) }
+    // V131 — وقتی «+ دانش‌آموز جدید» از داخل فهرست اعضای یک کلاس زده می‌شود، شناسهٔ همان کلاس؛
+    // دانش‌آموزِ ساخته‌شده هم به آن کلاس و هم به لیست دانش‌آموزان اضافه می‌شود.
+    var rosterCreateClassId by remember { mutableStateOf<String?>(null) }
     // V62.8 — لیست اعضای کلاس پس از ساخت (نام کلاس + اعضا).
     var managerCreatedRoster by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
     // cache زندهٔ رمزها برای UI؛ منبع پایدار آن StudentPasswordVault رمزنگاری‌شده
@@ -265,7 +268,8 @@ fun SchoolManagementScreen(
                     roster = state.roster,
                     onBack = viewModel::closeClass,
                     onAdd = { showMemberPicker = true },
-                    onCreate = { showBulk = true },
+                    // V131 — ساخت دانش‌آموز از داخل کلاس: به همان کلاس هم اضافه شود (معلم و مدیر).
+                    onCreate = { rosterCreateClassId = state.selectedClass?.id; showBulk = true },
                     onToggle = viewModel::setStudentActive,
                     onEdit = { editingStudent = it },
                     onDelete = { viewModel.removeStudent(it.id) },
@@ -541,11 +545,13 @@ fun SchoolManagementScreen(
     }
 
     if(showBulk) BulkStudentDialog(
-        onDismiss={showBulk=false;managerCreateClassId=null},
+        onDismiss={showBulk=false;managerCreateClassId=null;rosterCreateClassId=null},
         onCreate={requests->
             requests.forEach{knownPasswords[it.username.lowercase()]=it.password}
             // V62.7 — مدیر: افزودن به کلاس معلم انتخابی؛ معلم: مسیر قبلی.
-            val target=managerCreateClassId
+            // V131 — از داخل کلاس (rosterCreateClassId): مدیر با RPC مدیر به کلاس معلم اضافه می‌کند،
+            // معلم با class_id همان تابع manage-student (عضویت کلاس + لیست دانش‌آموزان).
+            val target=managerCreateClassId ?: (if (managerTeacherPicker) rosterCreateClassId else null)
             if(managerTeacherPicker&&target!=null){
                 viewModel.createStudentsBulkForManagerClass(target,requests)
                 // V62.8 — در پایان، لیست دانش‌آموزان همان کلاس نمایش داده شود.
@@ -553,8 +559,8 @@ fun SchoolManagementScreen(
                     kotlinx.coroutines.delay(1200)
                     managerCreatedRoster=viewModel.managerClassRoster(target)
                 }
-            } else viewModel.createStudentsBulk(null,requests)
-            managerCreateClassId=null;showBulk=false
+            } else viewModel.createStudentsBulk(if (managerTeacherPicker) null else rosterCreateClassId,requests)
+            managerCreateClassId=null;rosterCreateClassId=null;showBulk=false
         }
     )
 

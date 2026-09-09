@@ -24,7 +24,8 @@ enum class NeumorphicPalette { INDIGO_MINT, BLUE_CYAN, PINK_ORANGE, PURPLE_PINK 
 data class AppearanceSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val fontScale: Float = 1f,
-    val dynamicColors: Boolean = true,
+    // V131 — پیش‌فرض خاموش: با رنگ پویا، پالت انتخابی کاربر نادیده گرفته می‌شد («پالت کار نمی‌کند»).
+    val dynamicColors: Boolean = false,
     val appFont: AppFont = AppFont.VAZIRMATN,
     val neumorphicPalette: NeumorphicPalette = NeumorphicPalette.INDIGO_MINT,
     val neumorphicDepth: Float = 14f,
@@ -41,7 +42,7 @@ class AppearancePreferences(context: Context) {
                 themeMode = values[THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                     ?: ThemeMode.SYSTEM,
                 fontScale = (values[FONT_SCALE] ?: 1f).coerceIn(MIN_FONT_SCALE, MAX_FONT_SCALE),
-                dynamicColors = values[DYNAMIC_COLORS] ?: true,
+                dynamicColors = values[DYNAMIC_COLORS] ?: false,
                 appFont = values[APP_FONT]?.let { runCatching { AppFont.valueOf(it) }.getOrNull() }
                     ?: AppFont.VAZIRMATN,
                 neumorphicPalette = values[NEUMORPHIC_PALETTE]?.let {

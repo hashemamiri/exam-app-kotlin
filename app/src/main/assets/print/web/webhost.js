@@ -41,7 +41,7 @@
   function ensurePgs() {
     /* pgsToggleSetup(false) همان ensureBaseDom را صدا می‌زند و پنل را بسته نگه می‌دارد. */
     try { if (typeof window.pgsToggleSetup === 'function') window.pgsToggleSetup(false); } catch (e) {}
-    if ($('opt_paper') && !setupBound) { setupBound = true; bindSetupReport(); }
+    if ($('opt_paper') && !setupBound) { setupBound = true; bindSetupReport(); try { syncNativeSelects(); } catch (e) {} }
     return !!$('opt_paper');
   }
   /* V126 — پنلِ 📐 خودِ موتورِ وب تنها جای تنظیمِ صفحه است؛ وب آن را در حافظهٔ مرورگر نگه می‌داشت،
@@ -79,7 +79,93 @@
     var preset = $('opt_marginPreset'); if (preset) preset.value = 'custom';
     var paper = $('opt_paper'), isCustom = paper && paper.value === 'custom';
     ['opt_customW','opt_customH'].forEach(function (id) { var el = $(id); if (el) el.disabled = !isCustom; });
+    try { if (window.__pgsSyncCustomState) window.__pgsSyncCustomState(); } catch (e) {}
+    try { syncNativeSelects(); } catch (e) {}
     return true;
+  }
+
+  /* ================================================================ V131 — انتخابگرهای بومیِ پنلِ 📐
+     select‌های «اندازهٔ کاغذ / جهت / حاشیه‌ها / فاصلهٔ بین سؤالات» پنهان و به‌جایشان دکمه‌ای می‌نشیند که
+     پنجرهٔ بومی (ExamPrintBridge.pickOption) را باز می‌کند؛ نتیجه با ExamPrintRenderer.setOption برمی‌گردد
+     و روی همان select با رویدادِ change اعمال می‌شود (saveSetup/pageSetupChanged/preset حاشیه مثل قبل). */
+  var NATIVE_SELECTS = ['opt_paper', 'opt_orientation', 'opt_marginPreset', 'opt_questionSpacing'];
+  function selectOptions(sel) {
+    return Array.prototype.map.call(sel.options, function (o) { return {value: o.value, label: o.textContent}; });
+  }
+  function selectLabel(sel) { var o = sel.options[sel.selectedIndex]; return o ? o.textContent : ''; }
+  function syncNativeSelects() {
+    NATIVE_SELECTS.forEach(function (id) {
+      var sel = $(id); if (!sel) return;
+      var btn = sel.__hostBtn;
+      if (!btn) {
+        btn = document.createElement('button'); btn.type = 'button'; btn.className = 'host-sel';
+        btn.setAttribute('data-for', id);
+        sel.parentNode.insertBefore(btn, sel.nextSibling);
+        sel.classList.add('host-sel-hidden');
+        sel.__hostBtn = btn;
+        btn.addEventListener('click', function () {
+          var b = bridge();
+          if (b && typeof b.pickOption === 'function') {
+            b.pickOption(id, sel.value, JSON.stringify(selectOptions(sel)));
+          } else {
+            /* مرورگر: به select اصلی برگرد */
+            sel.classList.remove('host-sel-hidden'); btn.style.display = 'none';
+          }
+        });
+        sel.addEventListener('change', function () { btn.textContent = selectLabel(sel); });
+      }
+      btn.textContent = selectLabel(sel);
+    });
+  }
+  function setOption(id, value) {
+    var sel = $(id); if (!sel || NATIVE_SELECTS.indexOf(id) < 0) return 'missing';
+    value = text(value);
+    var ok = Array.prototype.some.call(sel.options, function (o) { return o.value === value; });
+    if (!ok) return 'badvalue';
+    if (sel.value !== value) {
+      sel.value = value;
+      try { sel.dispatchEvent(new Event('change', {bubbles: true})); } catch (e) {}
+    } else if (sel.__hostBtn) sel.__hostBtn.textContent = selectLabel(sel);
+    return 'ok';
+  }
+
+  /* ================================================================ V131 — محو/نمایشِ نوارِ قالب‌بندی
+     - با بازشدنِ پنلِ 📐 نوار محو و با بستنش برمی‌گردد.
+     - در پیش‌نمایش: اسکرولِ تند/زیاد به بالا (پیمایش به پایینِ برگه) نوار را محو و اسکرول به پایین آن را
+       نمایان می‌کند؛ پیش‌فرض باز. */
+  var fmtHiddenBySetup = false;
+  function setFmtHidden(hidden) {
+    var bar = $('hostFmt'); if (!bar) return;
+    bar.classList.toggle('hf-hidden', !!hidden);
+    if (typeof bar.__syncTop === 'function') { bar.__syncTop(); setTimeout(bar.__syncTop, 260); }
+  }
+  function hookSetupToggle() {
+    var base = window.pgsToggleSetup;
+    if (typeof base !== 'function' || base.__appHostFmt) return false;
+    var wrapped = function () {
+      var r = base.apply(this, arguments);
+      try {
+        var p = $('pgsPageSetup'), open = !!(p && p.style.display !== 'none' && p.style.display);
+        fmtHiddenBySetup = open; setFmtHidden(open);
+        if (open) syncNativeSelects();
+      } catch (e) {}
+      return r;
+    };
+    wrapped.__appHostFmt = true;
+    window.pgsToggleSetup = wrapped;
+    return true;
+  }
+  function bindFmtScrollHide(bar) {
+    var wrap = $('pgsCanvasWrap'); if (!wrap || wrap.__hostFmtScroll) return;
+    wrap.__hostFmtScroll = true;
+    var lastTop = wrap.scrollTop, lastT = Date.now(), acc = 0;
+    wrap.addEventListener('scroll', function () {
+      if (fmtHiddenBySetup) return;
+      var top = wrap.scrollTop, now = Date.now(), dy = top - lastTop, dt = Math.max(1, now - lastT);
+      lastTop = top; lastT = now;
+      if (dy > 0) { acc = acc < 0 ? dy : acc + dy; if (acc > 160 || dy / dt > 1.6) setFmtHidden(true); }
+      else if (dy < 0) { acc = acc > 0 ? dy : acc + dy; if (acc < -40 || top <= 0) setFmtHidden(false); }
+    }, {passive: true});
   }
 
   /* ---------------------------------------------------------------- نگاشتِ سؤال‌ها */
@@ -495,8 +581,18 @@
     Array.prototype.slice.call(doc.body.firstChild.childNodes).forEach(function (n) { bar.appendChild(document.importNode(n, true)); });
     if (ribbon) ribbon.parentNode.insertBefore(bar, ribbon.nextSibling); else v.insertBefore(bar, v.firstChild);
     /* پنلِ 📐 (top ثابت در webhost.css) باید زیرِ هر دو نوار باز شود */
-    function syncTop() { try { document.documentElement.style.setProperty('--host-top', Math.round(bar.getBoundingClientRect().bottom) + 'px'); } catch (e) {} }
+    function syncTop() {
+      try {
+        var hidden = bar.classList.contains('hf-hidden');
+        var b = hidden ? (ribbon ? ribbon.getBoundingClientRect().bottom : 0) : bar.getBoundingClientRect().bottom;
+        document.documentElement.style.setProperty('--host-top', Math.round(b) + 'px');
+      } catch (e) {}
+    }
+    bar.__syncTop = syncTop;
     syncTop(); setTimeout(syncTop, 300); window.addEventListener('resize', syncTop);
+    /* V131 — نوار پیش‌فرض باز؛ محو با اسکرولِ تند/زیاد و بازگشت با اسکرول به عقب */
+    bar.classList.remove('hf-hidden'); fmtHiddenBySetup = false;
+    bindFmtScrollHide(bar);
     Array.prototype.forEach.call(bar.querySelectorAll('.hf-btn[data-fmt]'), function (btn) {
       /* pointerdown پیش‌فرض گرفته می‌شود تا انتخابِ متن با لمسِ دکمه از بین نرود */
       btn.addEventListener('pointerdown', function (ev) { ev.preventDefault(); rememberSelection(); });
@@ -735,6 +831,8 @@
     installPrintOverrides();
     hookPreviewClose();
     hookPreviewOpen();
+    hookSetupToggle();
+    try { syncNativeSelects(); } catch (e) {}
     watchViewer();
     wrapRenderPreviewOnce();
   }
@@ -747,6 +845,6 @@
   window.ExamPrintRenderer = {
     showPreview: showPreview, layoutSnapshot: snapshot, figureAt: figureAt, replaceFigure: replaceFigure,
     restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup,
-    formatSelection: formatSelection
+    formatSelection: formatSelection, setOption: setOption
   };
 })();

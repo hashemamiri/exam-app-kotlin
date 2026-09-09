@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import ir.exam.app.ui.app.neoDepth
 import ir.exam.app.ui.app.neumorphic69
 import ir.exam.app.ui.app.neumorphic69Colors
 import kotlin.math.PI
@@ -143,7 +144,7 @@ fun BuilderRadialMenuOverlay(
                         shape = RoundedCornerShape(22.dp)
                         clip = true
                     }
-                    .neumorphic69(colors, 22.dp, 10.dp)
+                    .neumorphic69(colors, 22.dp, neoDepth(10.dp))
                     // V61.6 — پس‌زمینهٔ پاستلی اختصاصی نوع؛ متن تیره برای خوانایی.
                     .background(action.background?.let(::Color) ?: colors.surface)
                     .clickable(

@@ -103,8 +103,8 @@
         '<div class="field"><label>جهت کاغذ:</label><select id="opt_orientation">' +
           '<option value="portrait">عمودی</option><option value="landscape">افقی</option>' +
         '</select></div>' +
-        '<div class="field"><label>عرض سفارشی (mm):</label><input type="number" id="opt_customW" value="210" min="60" max="600" step="1"></div>' +
-        '<div class="field"><label>ارتفاع سفارشی (mm):</label><input type="number" id="opt_customH" value="297" min="60" max="600" step="1"></div>' +
+        '<div class="field"><label>عرض (mm):</label><input type="number" id="opt_customW" value="210" min="60" max="600" step="1"></div>' +
+        '<div class="field"><label>ارتفاع (mm):</label><input type="number" id="opt_customH" value="297" min="60" max="600" step="1"></div>' +
         '<div class="field"><label>حاشیه‌ها:</label><select id="opt_marginPreset">' +
           '<option value="normal">معمولی (بالا/پایین ۱۲ — راست/چپ ۱۰)</option>' +
           '<option value="narrow">باریک (۶ میلی‌متر)</option>' +
@@ -190,8 +190,16 @@
     var paper = $('opt_paper'), preset = $('opt_marginPreset');
     function syncCustomState() {
       var isCustom = paper && paper.value === 'custom';
-      ['opt_customW','opt_customH'].forEach(function (id) { var el = $(id); if (el) el.disabled = !isCustom; });
+      /* V131 — عرض/ارتفاع فقط وقتی «اندازهٔ کاغذ = سفارشی» است دیده می‌شوند (و آن‌وقت برچسبِ «سفارشی» می‌گیرند) */
+      ['opt_customW','opt_customH'].forEach(function (id) {
+        var el = $(id); if (!el) return;
+        el.disabled = !isCustom;
+        var f = el.closest ? el.closest('.field') : null; if (f) f.classList.toggle('pgs-field-off', !isCustom);
+        var lb = f ? f.querySelector('label') : null;
+        if (lb) lb.textContent = (id === 'opt_customW' ? 'عرض' : 'ارتفاع') + (isCustom ? ' سفارشی' : '') + ' (mm):';
+      });
     }
+    window.__pgsSyncCustomState = syncCustomState;
     if (paper) paper.addEventListener('change', function () { syncCustomState(); saveSetup(); });
     if (preset) preset.addEventListener('change', function () {
       var p = MARGIN_PRESETS[preset.value];

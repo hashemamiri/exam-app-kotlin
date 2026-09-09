@@ -63,7 +63,8 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 object Design69ManagementCardsContract {
-    const val CARD_COUNT = 6
+    // V131 — کارت «کارنامه» (کارنامه و لیست نمرات) از «آمار» جدا شد.
+    const val CARD_COUNT = 7
     const val DRAG_THRESHOLD_DP = 52
 }
 
@@ -80,6 +81,7 @@ private data class ManagementCardSpec(
 fun TeacherManagementCardsScreen(
     cycleKey: Int,
     onStats: () -> Unit,
+    onGradeList: () -> Unit,
     onQuestionBank: () -> Unit,
     onGrading: () -> Unit,
     onPending: () -> Unit,
@@ -89,6 +91,7 @@ fun TeacherManagementCardsScreen(
     val neo = neumorphic69Colors
     val cards = remember(
         onStats,
+        onGradeList,
         onQuestionBank,
         onGrading,
         onPending,
@@ -100,10 +103,17 @@ fun TeacherManagementCardsScreen(
         listOf(
             ManagementCardSpec(
                 "آمار",
-                "نمودارها، میانگین‌ها، تحلیل سؤال و خروجی‌های آزمون را مدیریت می‌کند.",
+                "نمودارها، میانگین‌ها و تحلیل کیفیت سؤال‌های آزمون را نشان می‌دهد.",
                 Design69Icons.Reports,
                 listOf(neo.accent, neo.accent2),
                 onStats
+            ),
+            ManagementCardSpec(
+                "کارنامه",
+                "کارنامه و لیست نمرات کلاس؛ انتخاب آزمون‌ها و خروجی Excel یا PDF.",
+                Design69Icons.Reports,
+                listOf(Color(0xFF0EA5E9), Color(0xFF6366F1)),
+                onGradeList
             ),
             ManagementCardSpec(
                 "بانک سؤال",
@@ -244,13 +254,30 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                     }
                     returningIndex = -1
                 } else {
+                    // V131 — گزارش کاربر: «حرکت به چپ تند و خشن است». قبلاً کارت با tween خطیِ ۲۸۰ms
+                    // بیرون می‌رفت و بعد کارتِ بعدی ناگهان جای آن می‌نشست. حالا مثل سمت راست:
+                    // کارت فعلی نرم (FastOutSlowIn، ۳۶۰ms) بیرون می‌رود و هم‌زمان کارت بعدی
+                    // با انیمیشن‌های پشته (stackTop/scale/rotation) به جلو می‌آید؛ پس از خروج،
+                    // کارت رفته با returnX از بیرونِ صفحه نرم به جایگاه انتهای پشته برمی‌گردد.
+                    val leaving = activeIndex
                     coroutineScope {
-                        launch { dragX.animateTo(targetX, tween(280)) }
-                        launch { dragY.animateTo(targetY, tween(280)) }
+                        launch { dragX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing)) }
+                        launch { dragY.animateTo(targetY, tween(360, easing = FastOutSlowInEasing)) }
                     }
                     activeIndex = (activeIndex + direction + cards.size) % cards.size
                     dragX.snapTo(0f)
                     dragY.snapTo(0f)
+                    // کارت رفته فقط وقتی در پشته دیده می‌شود (حداکثر ۳ کارت) که تعداد کارت‌ها ≤ ۳ باشد.
+                    if (cards.size <= 3) {
+                        returningIndex = leaving
+                        returnX.snapTo(targetX)
+                        returnY.snapTo(targetY)
+                        coroutineScope {
+                            launch { returnX.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
+                            launch { returnY.animateTo(0f, tween(320, easing = FastOutSlowInEasing)) }
+                        }
+                        returningIndex = -1
+                    }
                 }
             } else {
                 coroutineScope {
@@ -421,7 +448,7 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
         NeumorphicPanel(
             modifier = Modifier.fillMaxWidth(),
             radius = 22.dp,
-            depth = 9.dp,
+            depth = neoDepth(9.dp),
             pressed = true,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
         ) {

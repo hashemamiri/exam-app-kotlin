@@ -381,6 +381,8 @@ class ClassesViewModel(
                 }
             }
             reloadData()
+            // V131 — اگر همین کلاس در حال نمایش است، فهرست اعضایش هم تازه شود.
+            if (!classId.isNullOrBlank() && state.value.selectedClass?.id == classId) loadRosterNow(classId)
             _state.update { it.copy(bulkResult = result) }
         }
 

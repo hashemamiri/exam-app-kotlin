@@ -226,7 +226,7 @@ private fun DockItem(
                 .size(44.dp)
                 .then(
                     if (selected || pressed) {
-                        Modifier.neumorphic69(colors, 14.dp, 6.dp, pressed = true)
+                        Modifier.neumorphic69(colors, 14.dp, neoDepth(6.dp), pressed = true)
                     } else Modifier
                 )
                 .clip(RoundedCornerShape(14.dp)),
@@ -282,7 +282,7 @@ private fun CenterAddAction(
             Box(
                 Modifier
                     .size(58.dp)
-                    .neumorphic69(colors, 29.dp, if (pressed) 8.dp else 11.dp)
+                    .neumorphic69(colors, 29.dp, neoDepth(if (pressed) 8.dp else 11.dp))
                     .graphicsLayer {
                         shape = CircleShape
                         clip = true

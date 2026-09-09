@@ -106,6 +106,12 @@ class V125_WebPrintEngineTest {
         // V130 — دکمهٔ «همه»، انتخابگرهای بومی، بدون راهنمای «متن سؤال را انتخاب کنید»
         assertTrue("id=\"hfAll\"" in webhost && "b.pickSize(" in webhost && "hf-hint" !in webhost)
         assertTrue("fun pickSize(current: String?)" in dialog && "GridCells.Fixed(5)" in dialog)
+        // V131 — انتخابگرهای بومی پنل 📐، محو نوار قالب‌بندی، عرض/ارتفاع فقط برای کاغذ سفارشی
+        assertTrue("fun pickOption(id: String?, current: String?, optionsJson: String?)" in dialog && "internal fun PrintOptionPickerDialog(" in dialog)
+        assertTrue("b.pickOption(id, sel.value" in webhost && "setOption: setOption" in webhost && "function hookSetupToggle()" in webhost && "function bindFmtScrollHide(bar)" in webhost)
+        assertTrue("__pgsSyncCustomState" in engine && "<label>عرض (mm):</label>" in engine)
+        assertFalse("<label>عرض سفارشی (mm):</label>" in engine)
+        assertTrue("if (typeof window.__pgsInstalled === 'undefined') { try { renderPreview(); } catch(_) {} }" in File(printDir, "web/mainscript.js").readText())
         // V130.1 — سؤال بلندتر از صفحه شکسته و ادامه می‌یابد
         assertTrue("function splitRichPiece(k, tr2main)" in engine)
         // V127.1 — پنل تنظیمات صفحه بدون vh (در WebView یک‌سطری باز می‌شد)

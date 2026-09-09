@@ -1422,7 +1422,9 @@ function initPreviewSeparatorEditing() {
     try { sepDrag.handle.releasePointerCapture?.(e.pointerId); } catch(_) {}
     sepDrag.handle.classList.remove('is-dragging');
     sepDrag = null;
-    try { renderPreview(); } catch(_) {}
+    /* V131 — قبلاً renderPreview() کل برگه را از نو می‌ساخت (پرش/رفرش پیش‌نمایش). حالا فقط صفحه‌بندیِ
+       درجا انجام می‌شود (PGS bindRepaginateTriggers خودش پس از pointerup صفحه‌بندی می‌کند). */
+    if (typeof window.__pgsInstalled === 'undefined') { try { renderPreview(); } catch(_) {} }
   }
   area.addEventListener('pointerup', endSepDrag, true);
   area.addEventListener('pointercancel', endSepDrag, true);

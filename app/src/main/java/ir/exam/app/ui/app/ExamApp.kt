@@ -179,6 +179,8 @@ private fun AuthenticatedExamApp(
     // V61.6 — بخش فعال کارت‌های مدیر (null=کارت‌ها، report=کارنامه، status=وضعیت).
     // V61.9 — پیش‌فرض «status» (داشبورد)؛ دکمهٔ آمار داک آن را null (کارت‌ها) می‌کند.
     var managerCardsSection by rememberSaveable(user.id) { mutableStateOf<String?>("status") }
+    // V131 — بخشِ صفحهٔ گزارش معلم: "stats" (آمار/نمودار/تحلیل سؤال) یا "grades" (کارنامه و لیست نمرات).
+    var reportsSection by rememberSaveable(user.id) { mutableStateOf("stats") }
     var editingExamId by remember(user.id) { mutableStateOf<String?>(null) }
     var importedExam by remember(user.id) { mutableStateOf<ExamImportDraft?>(null) }
     // V79.1 — آیا آزمون‌سازِ بومی از صفحهٔ «چاپ آزمون» باز شده؟ (برای بازگشت درست)
@@ -367,7 +369,7 @@ private fun AuthenticatedExamApp(
         managerInviteHeader = managerInviteHeader,
         // V62.6 — هدر پویا «کلاس‌های نام معلم / نام کلاس» به‌جای «معلم‌ها».
         managerClassHeader = managerClassHeader,
-        gradingHeader = if (page == MainPage.GRADING) (if (gradingPendingOnly) "مانده" else if (gradingGradedOnly) "پاسخ" else "تصحیح") else null,
+        gradingHeader = if (page == MainPage.REPORTS) (if (reportsSection == "grades") "کارنامه و لیست نمرات" else "آمار") else if (page == MainPage.GRADING) (if (gradingPendingOnly) "مانده" else if (gradingGradedOnly) "پاسخ" else "تصحیح") else null,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         studentExamActive = studentExamActive,
@@ -553,7 +555,7 @@ private fun AuthenticatedExamApp(
                         initialGradedOnly = gradingGradedOnly
                     )
                 }
-                MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen()
+                MainPage.REPORTS -> if (user.role == UserRole.TEACHER) ReportsScreen(section = reportsSection)
                 MainPage.STUDENT_RESULTS -> if (user.role == UserRole.STUDENT) StudentResultsScreen()
                 MainPage.WALLET -> when (user.role) {
                     UserRole.TEACHER -> WalletScreen(refreshKey = walletRefreshKey)
@@ -598,7 +600,8 @@ private fun AuthenticatedExamApp(
                 } else if (user.role == UserRole.TEACHER) {
                     TeacherManagementCardsScreen(
                         cycleKey = cardsCycleKey,
-                        onStats = { page = MainPage.REPORTS },
+                        onStats = { reportsSection = "stats"; page = MainPage.REPORTS },
+                        onGradeList = { reportsSection = "grades"; page = MainPage.REPORTS },
                         onQuestionBank = { page = MainPage.QUESTION_BANK },
                         onGrading = {
                             gradingPendingOnly = false
@@ -920,17 +923,8 @@ private fun AuthenticatedShell(
     fun select(action: () -> Unit) = action()
 
     val menuCards = if (user.role == UserRole.TEACHER) {
+        // V131 — جای «تقویم» با «دانش‌آموزان» و جای «چاپ آزمون» با «کلاس‌ها» عوض شد.
         listOf(
-            Design69MenuCard(
-                "دانش‌آموزان", "فهرست و وضعیت", Design69Icons.Students,
-                page == MainPage.SCHOOL && schoolStudentsSelected,
-                onClick = { select(onStudents) }
-            ),
-            Design69MenuCard(
-                "کلاس‌ها", "فهرست و مدیریت", Design69Icons.Classes,
-                page == MainPage.SCHOOL && !schoolStudentsSelected,
-                onClick = { select(onClasses) }
-            ),
             Design69MenuCard(
                 "تقویم", "رویدادها و پیام‌ها", Design69Icons.Calendar,
                 page == MainPage.CALENDAR, onClick = { select(onCalendar) }
@@ -941,6 +935,16 @@ private fun AuthenticatedShell(
                 "چاپ آزمون", "اطلاعات رسمی چاپ آزمون", Design69Icons.Header,
                 page == MainPage.PRINT,
                 onClick = { select(onHeader) }
+            ),
+            Design69MenuCard(
+                "دانش‌آموزان", "فهرست و وضعیت", Design69Icons.Students,
+                page == MainPage.SCHOOL && schoolStudentsSelected,
+                onClick = { select(onStudents) }
+            ),
+            Design69MenuCard(
+                "کلاس‌ها", "فهرست و مدیریت", Design69Icons.Classes,
+                page == MainPage.SCHOOL && !schoolStudentsSelected,
+                onClick = { select(onClasses) }
             ),
             Design69MenuCard(
                 "حساب", "مشخصات و امنیت حساب", Design69Icons.Account,
@@ -1052,7 +1056,7 @@ private fun AuthenticatedShell(
                                         else if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
                                         // V61.6 — نمای مدارس: هدر «مدرسه من» به‌جای «کلاس‌ها».
                                         else if (page == MainPage.SCHOOL && schoolsViewOpen && !schoolStudentsSelected) "مدرسه من"
-                                        else if (page == MainPage.GRADING && gradingHeader != null) gradingHeader
+                                        else if ((page == MainPage.GRADING || page == MainPage.REPORTS) && gradingHeader != null) gradingHeader
                                         else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)
                                     )
                                 },

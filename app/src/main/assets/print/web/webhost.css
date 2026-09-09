@@ -128,3 +128,15 @@ body{padding:0 !important;}
 #hostFmt .hf-pick{min-width:52px;font-size:13px;}
 #hostFmt .hf-all{min-width:44px;font-weight:700;}
 #hostFmt .hf-all.on{background:#2563eb;color:#fff;}
+
+/* ===================== V131 — انتخابگرهای بومیِ پنلِ 📐 و محوشدنِ نوارِ قالب‌بندی ===================== */
+#pgsPageSetup select.host-sel-hidden{display:none !important;}
+#pgsPageSetup .field.pgs-field-off{display:none !important;}
+#pgsPageSetup .host-sel{
+  display:block;width:100%;min-height:42px;box-sizing:border-box;padding:0 12px;text-align:right;
+  font:inherit;font-size:16px;color:#0f172a;background:#fff;border:1px solid #cbd5e1;border-radius:10px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#pgsPageSetup .host-sel:active{background:#eef2ff;}
+.host-fmt{transition:max-height .22s ease,opacity .18s ease,padding .22s ease;max-height:60px;opacity:1;}
+.host-fmt.hf-hidden{max-height:0 !important;opacity:0;padding-top:0 !important;padding-bottom:0 !important;overflow:hidden !important;pointer-events:none;border-top-width:0 !important;}

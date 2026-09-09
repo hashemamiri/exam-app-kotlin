@@ -18000,3 +18000,36 @@ PGS (pgs_engine.js `splitOversizeRow`): تکه‌های سلولِ سؤال (`mo
 خالی جا نمی‌شود و صفحهٔ جاری بیش از ۱۲۰px جا دارد، همان‌جا شروع و شکسته می‌شود (قبلاً صفحهٔ جاری نیمه‌خالی
 می‌ماند). چاپ همان شیت‌هاست (`rebuildPrintRoot`). puppeteer: ۷۰۰ کلمه + فرمول → ۳۵۳/۳۵۷ کلمه در دو صفحه،
 ۱۸۰۰ کلمه → ۵ صفحه، هیچ سرریزی؛ بلد کردنِ کلمه‌ای در صفحهٔ ادامه → span با آفستِ درستِ متنِ اصلی.
+
+## §۳۵۶ — V131: انتخابگرهای بومی پنل صفحه، نوار قالب‌بندی محوشونده، کارت «کارنامه»، ظاهر، کارت‌ها، دانش‌آموزِ داخلِ کلاس
+
+**۱. انتخابگرهای بومی پنل 📐** — `webhost.js` (`NATIVE_SELECTS`, `syncNativeSelects`, `setOption`): چهار select
+(`opt_paper/opt_orientation/opt_marginPreset/opt_questionSpacing`) با کلاس `host-sel-hidden` پنهان و دکمهٔ `.host-sel`
+جایشان می‌نشیند → `ExamPrintBridge.pickOption(id, current, optionsJson)` → Kotlin `PrintOptionPickRequest` →
+`PrintOptionPickerDialog` (AlertDialog؛ گزینهٔ فعلی Button پررنگ، بقیه Outlined) → `ExamPrintRenderer.setOption(id,value)`
+که `sel.value` را می‌گذارد و رویداد `change` می‌فرستد (پس saveSetup/preset حاشیه/pageSetupChanged مثل قبل کار می‌کند).
+در مرورگر بدون پل، دکمه به select اصلی برمی‌گردد.
+**۲. عرض/ارتفاع** — برچسب‌ها «عرض (mm)/ارتفاع (mm)»؛ `syncCustomState` در pgs_engine (`window.__pgsSyncCustomState`) وقتی
+کاغذ سفارشی نیست کلاس `pgs-field-off` (display:none در webhost.css) می‌زند و وقتی سفارشی است برچسب «عرض سفارشی» می‌شود.
+**۳. نوار قالب‌بندی محو** — `hookSetupToggle` دور `pgsToggleSetup`: باز شدن پنل → `hf-hidden` (max-height 0 با transition)
+و `--host-top` به پایینِ ribbon (syncTop حالت hidden را می‌فهمد)؛ بستن → برمی‌گردد.
+**۴. پرش با جابه‌جایی خط** — `mainscript.js endSepDrag` بعد از drag کل `renderPreview()` را صدا می‌زد (بازسازی کامل + پرش
+اسکرول). حالا وقتی PGS نصب است فقط `bindRepaginateTriggers` (schedulePaginate پس از pointerup) صفحه‌بندیِ درجا می‌کند؛
+puppeteer: scrollTop قبل/بعد ۳۰۰=۳۰۰، sepExtraPx ذخیره شد.
+**۵. محو با اسکرول** — `bindFmtScrollHide` روی `#pgsCanvasWrap`: اسکرول به پایینِ برگه با تجمع >۱۶۰px یا سرعت >۱.۶px/ms
+→ محو؛ برگشت ≥۴۰px یا top=0 → نمایان؛ پیش‌فرض باز؛ در حالت پنل باز اسکرول اثری ندارد.
+**۶. همبرگری معلم** — ترتیب: تقویم، چاپ آزمون، دانش‌آموزان، کلاس‌ها، حساب، داده‌ها، تنظیمات، خروج.
+**۷. ظاهر** — (الف) «عمق سایه» فقط روی اجزای با depth پیش‌فرض اثر داشت؛ دکمه‌ها/کاشی‌ها/داک/+ عددهای ثابت داشتند →
+`neoDepth(base)` (مقیاس نسبت به ۱۴) در Neumorphic69Design/TeacherBottomDock/QuickAdd/BuilderRadialMenu/کارت‌ها.
+(ب) «رنگ‌های پویا» پیش‌فرض true بود → روی اندروید ۱۲+ پالتِ انتخابی هیچ اثری نداشت؛ پیش‌فرض false شد.
+(ج) لغزنده‌های عمق/اندازهٔ متن هر فریم در DataStore می‌نوشتند و با تأخیر برمی‌گشتند (پرش) → draft محلی +
+`onValueChangeFinished`. حالت نمایش/قلم/چیدمان کدشان درست بود (ExamAppTheme از appearance می‌خواند).
+**۸. کارت «کارنامه»** — TeacherManagementCardsScreen CARD_COUNT=7، `onGradeList`; ExamApp `reportsSection`
+("stats"/"grades") → `ReportsScreen(section)`: stats = آمار/نمودار/تحلیل سؤال؛ grades = انتخاب کلاس/آزمون‌ها/Excel/PDF/جدول.
+عنوان TopAppBar از gradingHeader («آمار»/«کارنامه و لیست نمرات»).
+**۹. حرکت کارت به چپ** — قبلاً tween خطی ۲۸۰ms و سپس جهش؛ حالا FastOutSlowIn ۳۶۰ms و (وقتی ≤۳ کارت) بازگشت نرم کارت رفته
+با returnX مثل سمت راست.
+**۱۰. دانش‌آموز داخل کلاس** — `ClassRosterContent.onCreate` حالا `rosterCreateClassId = selectedClass.id`؛ معلم →
+`createStudentsBulk(classId)` (تابع manage-student با class_id عضویت کلاس + attach به لیست)؛ مدیر →
+`createStudentsBulkForManagerClass(classId)` (RPC native_manager_set_class_student_v40c) + تازه‌سازی roster اگر همان کلاس باز است.
+تست‌ها: Neumorphic69IntegrationTest (۷ کارت، «کارنامه»)، V125_WebPrintEngineTest، verify بلوک V131.

@@ -71,7 +71,8 @@ class Neumorphic69IntegrationTest {
         // V61.5 — عمل چهارم «مدرسه جدید» به پنجرهٔ + اضافه شد.
         assertEquals(4, Design69QuickAddContract.ACTION_COUNT)
         assertEquals(135, Design69QuickAddContract.OPEN_ROTATION_DEGREES)
-        assertEquals(6, Design69ManagementCardsContract.CARD_COUNT)
+        // V131 — کارت «کارنامه» از «آمار» جدا شد.
+        assertEquals(7, Design69ManagementCardsContract.CARD_COUNT)
         assertEquals(52, Design69ManagementCardsContract.DRAG_THRESHOLD_DP)
     }
 
@@ -115,7 +116,7 @@ class Neumorphic69IntegrationTest {
         assertTrue("DRAG_THRESHOLD_DP = 52" in cards)
         assertTrue("Key.DirectionLeft" in cards && "Key.DirectionRight" in cards)
         assertFalse("vertical card navigation returned", "Key.DirectionDown" in cards)
-        listOf("آمار", "بانک سؤال", "تصحیح", "مانده", "پاسخ", "درخواست‌ها").forEach {
+        listOf("آمار", "کارنامه", "بانک سؤال", "تصحیح", "مانده", "پاسخ", "درخواست‌ها").forEach {
             assertTrue("missing management card $it", it in cards)
         }
         assertTrue("cards[activeIndex].subtitle" in cards)

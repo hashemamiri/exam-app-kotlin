@@ -33,7 +33,13 @@ import ir.exam.app.ui.math.NativeMathText
 import kotlinx.coroutines.launch
 
 @Composable
-fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() }) {
+fun ReportsScreen(
+    // V131 — "stats": آمار/نمودار/تحلیل سؤال (کارت «آمار»)؛ "grades": کارنامه و لیست نمرات (کارت «کارنامه»).
+    section: String = "stats",
+    viewModel: ReportsViewModel = remember { ReportsViewModel() }
+) {
+    val statsOnly = section != "grades"
+    val gradesOnly = section == "grades"
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -46,10 +52,10 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { Text("آمار، کارنامه و لیست نمرات", style = MaterialTheme.typography.headlineSmall) }
+        item { Text(if (gradesOnly) "کارنامه و لیست نمرات" else "آمار و تحلیل آزمون‌ها", style = MaterialTheme.typography.headlineSmall) }
         state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         if (state.loading) item { CircularProgressIndicator() }
-        state.analytics?.let { analytics ->
+        if (statsOnly) state.analytics?.let { analytics ->
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatCard("آزمون", analytics.examCount.toString(), Modifier.weight(1f))
@@ -65,7 +71,7 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
             }
             item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(10.dp)){Text("نمودار وضعیت پاسخ‌ها");NativeBarChart(listOf("پاسخ" to analytics.answerCount.toDouble(),"تصحیح" to analytics.gradedCount.toDouble(),"مانده" to analytics.pendingCount.toDouble()))}} }
         }
-        item {
+        if (statsOnly) item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("تحلیل پیشرفته کیفیت سؤال", style = MaterialTheme.typography.titleMedium)
@@ -102,7 +108,7 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                 }
             }
         }
-        item {
+        if (gradesOnly) item {
             Text("انتخاب کلاس", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 state.classes.take(6).forEach { item ->
@@ -114,7 +120,7 @@ fun ReportsScreen(viewModel: ReportsViewModel = remember { ReportsViewModel() })
                 }
             }
         }
-        if (state.selectedClass != null) {
+        if (gradesOnly && state.selectedClass != null) {
             item {
                 Text("آزمون‌های گزارش", style = MaterialTheme.typography.titleMedium)
                 Column {

@@ -58,6 +58,7 @@ import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.domain.model.OfficialExamPrintable
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -107,6 +108,8 @@ fun ExamHtmlPrintDialog(
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
     // V130 — پنجرهٔ بومیِ اندازه/فونت (از دکمه‌های نوارِ قالب‌بندی)
     var formatPicker by remember { mutableStateOf<String?>(null) }
+    // V131 — پنجرهٔ بومیِ گزینه‌های پنلِ 📐 (اندازهٔ کاغذ/جهت/حاشیه‌ها/فاصلهٔ سؤالات)
+    var optionPicker by remember { mutableStateOf<PrintOptionPickRequest?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
     LaunchedEffect(barStatus) {
@@ -280,6 +283,7 @@ fun ExamHtmlPrintDialog(
                                 },
                                 onEditFigureTool = { qid, index -> webViewRef?.post { figureEditRequest = qid to index } },
                                 onPickFormat = { kind -> webViewRef?.post { formatPicker = kind } },
+                                onPickOption = { req -> webViewRef?.post { optionPicker = req } },
                                 // یک snapshot پیش از dismiss کافی است؛ requestDismiss با
                                 // پرچم `dismissing` از فراخوانی تکراری جلوگیری می‌کند.
                                 onPreviewClosed = {
@@ -372,6 +376,20 @@ fun ExamHtmlPrintDialog(
                         }
                     )
                 }
+                // V131 — پنجرهٔ بومیِ گزینه‌های صفحه؛ نتیجه با setOption روی همان select موتور اعمال می‌شود.
+                optionPicker?.let { req ->
+                    PrintOptionPickerDialog(
+                        request = req,
+                        onDismiss = { optionPicker = null },
+                        onPick = { value ->
+                            optionPicker = null
+                            val script = "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.setOption?" +
+                                "window.ExamPrintRenderer.setOption(${req.id.toJsStringLiteral()},${value.toJsStringLiteral()}):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                            runJs(script, null)
+                        }
+                    )
+                }
 
                 // فقط ویرایشِ شکلِ انتخاب‌شده از پیش‌نمایش با ابزارهای بومی.
                 figureTool?.takeIf { it.isNative }?.let { req ->
@@ -449,8 +467,25 @@ private class ExamPrintBridge(
     private val onToast: (String) -> Unit,
     private val onPreviewClosed: () -> Unit,
     private val pageSetupStore: ir.exam.app.data.local.PrintPageSetupStore,
-    private val onPickFormat: (String) -> Unit = { }
+    private val onPickFormat: (String) -> Unit = { },
+    private val onPickOption: (PrintOptionPickRequest) -> Unit = { }
 ) {
+    /** V131 — پنلِ 📐: بازکردنِ پنجرهٔ بومی برای یک select (id، مقدارِ فعلی، گزینه‌ها به‌صورت JSON [{value,label}]). */
+    @JavascriptInterface
+    fun pickOption(id: String?, current: String?, optionsJson: String?) {
+        val items = runCatching {
+            kotlinx.serialization.json.Json.parseToJsonElement(optionsJson.orEmpty()).jsonArray.map { el ->
+                val o = el.jsonObject
+                PrintOptionItem(
+                    value = o["value"]?.jsonPrimitive?.content.orEmpty(),
+                    label = o["label"]?.jsonPrimitive?.content.orEmpty().trim()
+                )
+            }
+        }.getOrDefault(emptyList())
+        if (id.isNullOrBlank() || items.isEmpty()) return
+        onPickOption(PrintOptionPickRequest(id, current.orEmpty(), items))
+    }
+
     /** V130 — نوارِ قالب‌بندی: بازکردنِ پنجرهٔ بومیِ اندازه (مقدارِ فعلی برای پیش‌انتخاب). */
     @JavascriptInterface
     fun pickSize(current: String?) {
@@ -521,7 +556,9 @@ internal fun createExamPrintWebView(
     onEditFigureTool: (String, Int) -> Unit,
     onPreviewClosed: () -> Unit,
     // V130 — پنجره‌های بومیِ «اندازه» و «فونت» برای نوارِ قالب‌بندیِ پیش‌نمایش (kind = "size" | "font")
-    onPickFormat: (String) -> Unit = { }
+    onPickFormat: (String) -> Unit = { },
+    // V131 — پنجرهٔ بومیِ گزینه‌های پنلِ 📐
+    onPickOption: (PrintOptionPickRequest) -> Unit = { }
 ): WebView = WebView(context).apply {
     setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
     settings.javaScriptEnabled = true
@@ -566,6 +603,7 @@ internal fun createExamPrintWebView(
             // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
             onPreviewClosed = onPreviewClosed,
             onPickFormat = onPickFormat,
+            onPickOption = onPickOption,
             // V126 — تنظیمات صفحه از پنلِ 📐 خودِ موتورِ وب روی دستگاه ذخیره می‌شود
             pageSetupStore = ir.exam.app.data.local.PrintPageSetupStore(context)
         ),
@@ -869,6 +907,51 @@ internal fun PreviewFormatPickerDialog(kind: String, onDismiss: () -> Unit, onPi
                 ) {
                     fonts.forEach { (key, name) ->
                         androidx.compose.material3.OutlinedButton(onClick = { onPick(key) }, modifier = Modifier.fillMaxWidth()) { Text(name) }
+                    }
+                }
+            }
+        }
+    )
+}
+
+/** V131 — یک گزینهٔ select پنلِ 📐. */
+internal data class PrintOptionItem(val value: String, val label: String)
+
+/** V131 — درخواستِ بازکردنِ انتخابگرِ بومی برای select با شناسهٔ [id]. */
+internal data class PrintOptionPickRequest(val id: String, val current: String, val items: List<PrintOptionItem>)
+
+private fun printOptionTitle(id: String): String = when (id) {
+    "opt_paper" -> "اندازهٔ کاغذ"
+    "opt_orientation" -> "جهت کاغذ"
+    "opt_marginPreset" -> "حاشیه‌ها"
+    "opt_questionSpacing" -> "فاصلهٔ بین سؤالات"
+    else -> "انتخاب"
+}
+
+/**
+ * V131 — انتخابگرِ بومیِ گزینه‌های پنلِ «تنظیمات صفحه و چاپ» (اندازهٔ کاغذ، جهت، حاشیه‌ها، فاصلهٔ سؤالات)
+ * به سبکِ همان PreviewFormatPickerDialog؛ گزینهٔ فعلی پررنگ است.
+ */
+@Composable
+internal fun PrintOptionPickerDialog(
+    request: PrintOptionPickRequest,
+    onDismiss: () -> Unit,
+    onPick: (String) -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(printOptionTitle(request.id)) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("انصراف") } },
+        text = {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                request.items.forEach { item ->
+                    if (item.value == request.current) {
+                        androidx.compose.material3.Button(onClick = { onPick(item.value) }, modifier = Modifier.fillMaxWidth()) { Text(item.label) }
+                    } else {
+                        androidx.compose.material3.OutlinedButton(onClick = { onPick(item.value) }, modifier = Modifier.fillMaxWidth()) { Text(item.label) }
                     }
                 }
             }
