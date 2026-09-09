@@ -17954,3 +17954,39 @@ clamp در `cleanSpans`/`formatSelection` (۱..۱۰۰)، `ExamBuilderViewModel.d
 `ExamQuestionCodec` («z») هم ۱..۱۰۰. puppeteer: B → ایتالیک → ۷۲ بدونِ انتخابِ دوباره →
 `{3..15,bold,italic,size:72}`؛ لمسِ جای دیگر → هایلایت صفر. verify/تست: مارکرهای V129.
 نسخهٔ بعدی: V130، بند ۳۵۵.
+
+## ۳۵۵. V130 — پرانتز هلالی مجزا، $ پنهان، انتخابگرهای بومی اندازه/فونت، دکمهٔ «همه»، پنجره‌های تمام‌صفحه، رنگ کارت‌های پاسخ/مانده/تصحیح
+
+**۱) دو نوع پرانتز در کادر متن سؤال.** رندررِ بومی (`NativeMathSvgRenderer.delimKind`) `⟮ ⟯` را هم `bow` می‌کشید
+(یکسان با `( )`)؛ اکنون شکلِ `paren` ویرایشگر (خمِ بالا + بازوی صاف + خمِ پایین، `.44em`) اضافه شد و `⟮→⟯`
+به `matchingDelimiter`ِ NativeMathAst. (پیش‌نمایش/چاپ از V129 همین تفکیک را دارد.)
+
+**۲) $ در کادر متن.** کاربر: فقط وقتی فرمول باز/ناقص است دیده می‌شد. `DollarHidingTransformation`
+(VisualTransformation با OffsetMapping) روی BasicTextFieldِ بخش‌های متنیِ `QuestionTextWebSection`: `$` از دید
+حذف می‌شود، متنِ ذخیره‌شده دست نمی‌خورد.
+
+**۳) پنجرهٔ اندازه/فونت بومی.** `<select>`های `#hfSize/#hfFont` به دکمه تبدیل شدند؛ کلیک → پل
+`ExamPrintBridge.pickSize(current)` / `pickFont(fontsJson)` → `onPickFormat(kind)` در `createExamPrintWebView`
+(پارامتر جدید با پیش‌فرض) → `formatPicker` در ExamHtmlPrintDialog → `PreviewFormatPickerDialog` (اندازه: LazyVerticalGrid
+۵ ستونه ۱..۱۰۰؛ فونت: فهرست همان FONTS) → `ExamPrintRenderer.formatSelection(kind, value)`. بدون پل (مرورگر): prompt.
+انتخابِ پابرجای V129 باعث می‌شود بعد از بستن پنجرهٔ بومی، بازه هنوز معتبر باشد.
+
+**۴) «همه».** راهنمای `.hf-hint` حذف؛ دکمهٔ `#hfAll`: `lastSel={all:true,sticky:true}`، همهٔ `.txt`ها هایلایت،
+`applyStyle` با `sel.all` روی متنِ کاملِ همهٔ سؤال‌ها (`patchSpans` جدا شد). دوباره زدن یا لمس بیرون → لغو.
+
+**۵) پنجره‌های چاپ/تنظیمات.** webhost.css: `#pgsPrintDlg .pgs-dlg-row` nowrap (هر ردیف یک سطر)؛ گریدِ 📐 روی
+گوشی هم ۲ ستونه (media ≤480 قبلاً تک‌ستونه می‌کرد). puppeteer: ردیف‌ها ۳۲px، scrollWidth=clientWidth.
+
+**۶) ویرایشگر جدول و جدول تناوبی تمام‌صفحه.** هر دو از AlertDialog به همان الگوی `FigurePickerDialog` (Dialog
+usePlatformDefaultWidth=false + Surface fillMaxSize + سرتیتر ✕ + محتوای weight(1f) اسکرول‌شونده + دکمه‌های پایین).
+
+**۷) کارت‌های پاسخ/مانده/تصحیح (GradingScreen).** `GradingViewModel.loadCardStats`: برای هر آزمون `getAnswers` +
+`attendance` (rpc `exam_attendance`) → `ExamCardStats{totalStudents, answered, graded, pending}`. مبنای «همهٔ
+دانش‌آموزان» = فهرستِ حضورِ آزمون (تصمیم کاربر). رنگِ کادر با `cardLevel(done,total)`: هیچ=قرمز، کمتر از نصف=نارنجی،
+نصف و بیشتر=زرد، همه=سبز. کارتِ «پاسخ»: answered/total؛ «تصحیح» و «مانده»: graded/answered. «مانده» فقط
+آزمون‌های دارای پاسخِ تصحیح‌نشده را فهرست می‌کند و عنوانِ صفحه/هدرِ TopAppBar (`gradingHeader` در AuthenticatedShell)
+با کارتِ واردشده هم‌خوان است («پاسخ»/«مانده»/«تصحیح»).
+
+**آزمون‌ها:** puppeteer (۱۲ سؤال): نوار بدون hint؛ «اندازه» بدون انتخاب → toast (پل صدا زده نشد)؛ «همه» → ۲۴ تکه
+هایلایت + B + size 30 + font Shabnam → span کاملِ همهٔ سؤال‌ها؛ لمس بیرون → لغو. verify/تست: مارکرهای V130.
+نسخهٔ بعدی: V131، بند ۳۵۶.

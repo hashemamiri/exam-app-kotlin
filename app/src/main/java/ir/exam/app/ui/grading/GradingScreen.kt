@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -75,15 +76,50 @@ fun GradingScreen(
 
         val exam = state.selectedExam
         if (exam == null) {
-            Text("تصحیح و نظارت", style = MaterialTheme.typography.headlineSmall)
+            // V130 — عنوان و فهرست متناسب با کارتِ انتخاب‌شده (پاسخ/مانده/تصحیح)
+            val heading = when {
+                state.pendingOnly -> "مانده — پاسخ‌های در انتظار تصحیح"
+                state.gradedOnly -> "پاسخ — وضعیت پاسخ‌دهی آزمون‌ها"
+                else -> "تصحیح — وضعیت تصحیح آزمون‌ها"
+            }
+            Text(heading, style = MaterialTheme.typography.headlineSmall)
+            val visibleExams = if (state.pendingOnly) {
+                // «مانده» فقط آزمون‌هایی را نشان می‌دهد که پاسخِ تصحیح‌نشده دارند (تا آمار نرسیده، همه می‌مانند).
+                state.exams.filter { ex -> state.cardStats[ex.id]?.let { it.pending > 0 } ?: true }
+            } else state.exams
             if (state.loading) CircularProgressIndicator()
-            else if (state.exams.isEmpty()) Text("آزمونی برای تصحیح وجود ندارد.")
+            else if (visibleExams.isEmpty()) Text(if (state.pendingOnly) "پاسخِ در انتظارِ تصحیحی نیست." else "آزمونی برای تصحیح وجود ندارد.")
             else LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.exams, key = { it.id }) { item ->
-                    Card(Modifier.fillMaxWidth()) {
+                items(visibleExams, key = { it.id }) { item ->
+                    val st = state.cardStats[item.id]
+                    // رنگِ کادر: پاسخ → نسبتِ پاسخ‌داده‌ها به کلِ دانش‌آموزان؛ تصحیح → نسبتِ تصحیح‌شده‌ها به پاسخ‌ها
+                    val level = when {
+                        st == null -> null
+                        state.gradedOnly -> cardLevel(st.answered, if (st.totalStudents > 0) st.totalStudents else st.answered)
+                        state.pendingOnly -> cardLevel(st.graded, st.answered)
+                        else -> cardLevel(st.graded, st.answered)
+                    }
+                    val border = when (level) {
+                        CardLevel.FULL -> Color(0xFF16A34A)
+                        CardLevel.HIGH -> Color(0xFFEAB308)
+                        CardLevel.LOW -> Color(0xFFF97316)
+                        CardLevel.NONE -> Color(0xFFDC2626)
+                        null -> null
+                    }
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        border = border?.let { BorderStroke(2.dp, it) }
+                    ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(item.title, style = MaterialTheme.typography.titleMedium)
                             Text("${item.subject ?: "بدون درس"} · کد ${item.code ?: "—"}")
+                            if (st != null) {
+                                Text(
+                                    if (state.gradedOnly) "پاسخ داده: ${st.answered}" + (if (st.totalStudents > 0) " از ${st.totalStudents} دانش‌آموز" else "")
+                                    else "تصحیح‌شده: ${st.graded} از ${st.answered} پاسخ · مانده: ${st.pending}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { viewModel.selectExam(item.id) }) { Text("ورود به تصحیح") }
                                 // V58.0 — گزارش‌های نظارتی: رویدادهای امنیتی و زمان‌بندی هر دانش‌آموز.

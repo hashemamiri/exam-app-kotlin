@@ -506,6 +506,7 @@ object NativeMathParser {
 
     private fun matchingDelimiter(open: String): String = when (open) {
         "(" -> ")"
+        "⟮" -> "⟯"
         "[" -> "]"
         "{" -> "}"
         "⌊" -> "⌋"

@@ -18,6 +18,31 @@ import kotlinx.serialization.json.JsonObject
 
 data class GradingEdit(val grades: List<Double>, val feedback: String)
 
+/**
+ * V130 — آمارِ هر آزمون برای رنگِ کارت‌ها: تعدادِ دانش‌آموزانِ آزمون (فهرستِ حضور)،
+ * تعدادِ پاسخ‌ها، تعدادِ تصحیح‌شده‌ها. اگر حضور در دسترس نبود، totalStudents = 0.
+ */
+data class ExamCardStats(
+    val totalStudents: Int = 0,
+    val answered: Int = 0,
+    val graded: Int = 0,
+    val pending: Int = 0
+) {
+    /** سهمِ پاسخ‌داده‌ها: null یعنی مبنایی (فهرستِ حضور) نداریم. */
+    val answeredRatio: Double? get() = if (totalStudents > 0) answered.toDouble() / totalStudents else null
+    val gradedRatio: Double? get() = if (answered > 0) graded.toDouble() / answered else null
+}
+
+/** V130 — سطحِ رنگِ کارت: none = قرمز، low = نارنجی (کم)، high = زرد (بیشتر)، full = سبز. */
+enum class CardLevel { NONE, LOW, HIGH, FULL }
+
+fun cardLevel(done: Int, total: Int): CardLevel = when {
+    total <= 0 || done <= 0 -> CardLevel.NONE
+    done >= total -> CardLevel.FULL
+    done * 2 < total -> CardLevel.LOW
+    else -> CardLevel.HIGH
+}
+
 data class GradingUiState(
     val loading: Boolean = true,
     val actionLoading: Boolean = false,
@@ -38,7 +63,9 @@ data class GradingUiState(
     val message: String? = null,
     /** V58.0 — گزارش‌های نظارتی آزمون انتخاب‌شده (rows از native_monitor_list_v1). */
     val monitorExamId: String? = null,
-    val monitorReports: JsonObject? = null
+    val monitorReports: JsonObject? = null,
+    /** V130 — آمارِ کارت‌ها به تفکیکِ examId (به‌تدریج پر می‌شود). */
+    val cardStats: Map<String, ExamCardStats> = emptyMap()
 )
 
 class GradingViewModel(
@@ -53,6 +80,23 @@ class GradingViewModel(
         val exams = repository.getExams().getOrElse { return@launch fail(it) }
         val feedback = repository.feedbackBank().getOrDefault(emptyList())
         _state.update { it.copy(loading = false, exams = exams, feedbackBank = feedback) }
+        loadCardStats(exams.map { it.id })
+    }
+
+    /** V130 — آمارِ هر آزمون (پاسخ‌ها + فهرستِ حضور) برای رنگِ کارت‌های پاسخ/تصحیح/مانده. */
+    private fun loadCardStats(examIds: List<String>) = viewModelScope.launch {
+        examIds.forEach { id ->
+            val answers = repository.getAnswers(id).getOrDefault(emptyList())
+            val roster = repository.attendance(id).getOrDefault(emptyList())
+            val byStudent = answers.filter { it.studentId != null }.distinctBy { it.studentId }.size
+            val stats = ExamCardStats(
+                totalStudents = roster.size,
+                answered = if (roster.isNotEmpty()) roster.count { it.status == "submitted" || it.submittedAt != null }.coerceAtLeast(byStudent.coerceAtMost(roster.size)) else byStudent,
+                graded = answers.count { it.graded },
+                pending = answers.count { !it.graded }
+            )
+            _state.update { it.copy(cardStats = it.cardStats + (id to stats)) }
+        }
     }
 
     /** V58.0 — بازکردن گزارش‌های نظارتی آزمون از روی کارت (کنار ورود به تصحیح). */

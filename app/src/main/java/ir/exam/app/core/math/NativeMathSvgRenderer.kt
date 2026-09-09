@@ -641,6 +641,8 @@ object NativeMathSvgRenderer {
     private data class DelimShape(val widthEm: Float, val parts: List<Pair<Char, String>>)
 
     private val delimShapes: Map<String, DelimShape> = mapOf(
+        // V130 — پرانتزِ هلالی ⟮ ⟯ مثل ویرایشگر (MB_DELIM_SHAPE.paren): خمِ بالا + بازوی صاف + خمِ پایین؛ ( ) همان کمانِ یکپارچه (bow) می‌ماند.
+        "paren" to DelimShape(.44f, listOf('c' to "M9 1 C3.2 3.1 1.6 6 1.6 10", 'b' to "M1.6 0 L1.6 10", 'c' to "M1.6 0 C1.6 4 3.2 6.9 9 9")),
         "bow" to DelimShape(.42f, listOf('b' to "M8.8 0.5 C2.1 3.2 2.1 6.8 8.8 9.5")),
         "brk" to DelimShape(.36f, listOf('c' to "M9 1.2 L1.6 1.2 L1.6 10", 'b' to "M1.6 0 L1.6 10", 'c' to "M1.6 0 L1.6 8.8 L9 8.8")),
         "brace" to DelimShape(.5f, listOf('c' to "M9 0.8 Q4.6 0.8 4.6 10", 'b' to "M4.6 0 L4.6 10", 'm' to "M4.6 0 Q4.6 5 0.7 5 Q4.6 5 4.6 10", 'b' to "M4.6 0 L4.6 10", 'c' to "M4.6 0 Q4.6 9.2 9 9.2")),
@@ -652,8 +654,10 @@ object NativeMathSvgRenderer {
     )
 
     private fun delimKind(delimiter: String): Pair<String, Boolean>? = when (delimiter) {
-        "(", "⟮" -> "bow" to false
-        ")", "⟯" -> "bow" to true
+        "(" -> "bow" to false
+        ")" -> "bow" to true
+        "⟮" -> "paren" to false
+        "⟯" -> "paren" to true
         "[" -> "brk" to false
         "]" -> "brk" to true
         "{" -> "brace" to false

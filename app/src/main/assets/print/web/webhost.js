@@ -373,13 +373,40 @@
     return e > s ? {question: q, start: s, end: e} : null;
   }
   function rememberSelection() { var r = selectionRange(); if (r) lastSel = r; }
+  function selCovers(sel, key) {
+    if (sel.all) { var qs = questions || []; return qs.length > 0 && qs.every(function (q0) { return coversAxis(q0.__spans || [], 0, text(q0.text).length, key); }); }
+    return coversAxis(sel.question.__spans || [], sel.start, sel.end, key);
+  }
   function coversAxis(spans, s, e, key) {
     var cursor = s, active = spans.filter(function (x) { return x[key]; }).sort(function (x, y) { return x.start - y.start; });
     for (var i = 0; i < active.length; i++) { if (active[i].start > cursor) return false; cursor = Math.max(cursor, active[i].end); if (cursor >= e) return true; }
     return cursor >= e;
   }
   function applyStyle(sel, patch) {
-    var q = sel.question, s = sel.start, e = sel.end, out = [];
+    /* V130 — «همه»: قالب روی متنِ کاملِ همهٔ سؤال‌ها یک‌جا اعمال می‌شود */
+    if (sel.all) {
+      (questions || []).forEach(function (q0) { q0.__spans = patchSpans(q0, 0, text(q0.text).length, patch); });
+      lastSel = {all: true, sticky: true};
+      rerenderKeepScroll();
+      updateFmtBar(lastSel);
+      return;
+    }
+    var q = sel.question, s = sel.start, e = sel.end;
+    q.__spans = patchSpans(q, s, e, patch);
+    /* V129 — انتخاب تا وقتی کاربر جای دیگری را لمس نکند «پابرجا» می‌ماند: بازه نگه داشته می‌شود و پس از
+       باز-رندر، همان بازه دوباره هایلایت (کلاس hf-selected) و Selection مرورگر هم روی آن بازسازی می‌شود تا
+       بتوان چند ابزار را پشتِ‌سرِهم روی همان متن زد. */
+    lastSel = {question: q, start: s, end: e, sticky: true};
+    rerenderKeepScroll();
+    updateFmtBar(lastSel);
+  }
+  function rerenderKeepScroll() {
+    var wrap = $('pgsCanvasWrap'), top = wrap ? wrap.scrollTop : 0;
+    try { window.renderPreview(); } catch (e3) {}
+    [80, 300, 700, 1450].forEach(function (t) { setTimeout(function () { var w = $('pgsCanvasWrap'); if (w) w.scrollTop = top; restoreSelection(); }, t); });
+  }
+  function patchSpans(q, s, e, patch) {
+    var out = [];
     var blank = {bold: false, italic: false, underline: false, color: '', size: 0, font: ''};
     (q.__spans || []).forEach(function (span) {
       if (span.end <= s || span.start >= e) { out.push(span); return; }
@@ -397,15 +424,7 @@
       if (l && x.start <= l.end && l.bold === x.bold && l.italic === x.italic && l.underline === x.underline && l.color === x.color && l.size === x.size && l.font === x.font) l.end = Math.max(l.end, x.end);
       else merged.push(Object.assign({}, x));
     });
-    q.__spans = merged;
-    /* V129 — انتخاب تا وقتی کاربر جای دیگری را لمس نکند «پابرجا» می‌ماند: بازه نگه داشته می‌شود و پس از
-       باز-رندر، همان بازه دوباره هایلایت (کلاس hf-selected) و Selection مرورگر هم روی آن بازسازی می‌شود تا
-       بتوان چند ابزار را پشتِ‌سرِهم روی همان متن زد. */
-    lastSel = {question: q, start: s, end: e, sticky: true};
-    var wrap = $('pgsCanvasWrap'), top = wrap ? wrap.scrollTop : 0;
-    try { window.renderPreview(); } catch (e3) {}
-    [80, 300, 700, 1450].forEach(function (t) { setTimeout(function () { var w = $('pgsCanvasWrap'); if (w) w.scrollTop = top; restoreSelection(); }, t); });
-    updateFmtBar(lastSel);
+    return merged;
   }
   function clearSticky() {
     if (!lastSel) return;
@@ -416,6 +435,7 @@
   function restoreSelection() {
     var sel = lastSel; if (!sel || !sel.sticky) return;
     Array.prototype.forEach.call(document.querySelectorAll('.hf-selected'), function (el) { el.classList.remove('hf-selected'); });
+    if (sel.all) { Array.prototype.forEach.call(document.querySelectorAll('#previewArea .q-rich-content .txt'), function (t) { t.classList.add('hf-selected'); }); return; }
     var rows = document.querySelectorAll('#previewArea .question-print-row[data-qid="' + String(sel.question.id) + '"] .q-rich-content .txt');
     var first = null, last = null, firstOff = 0, lastOff = 0;
     Array.prototype.forEach.call(rows, function (t) {
@@ -440,16 +460,21 @@
       } catch (e) {}
     }
   }
-  function currentSel() { var r = (lastSel && lastSel.sticky) ? lastSel : (selectionRange() || lastSel); if (!r) toast('اول بخشی از متنِ سؤال را انتخاب کنید (لمسِ طولانی روی کلمه)'); return r; }
+  function currentSel() { var r = (lastSel && lastSel.sticky) ? lastSel : (selectionRange() || lastSel); if (!r) toast('بخشی از متن را انتخاب کنید یا «همه» را بزنید'); return r; }
   function updateFmtBar(sel) {
     ['bold', 'italic', 'underline'].forEach(function (key) {
       var btn = document.querySelector('#hostFmt .hf-btn[data-fmt="' + key + '"]'); if (!btn) return;
-      btn.classList.toggle('on', !!(sel && coversAxis(sel.question.__spans || [], sel.start, sel.end, key)));
+      var q0 = sel && (sel.all ? (questions || [])[0] : sel.question);
+      btn.classList.toggle('on', !!(sel && q0 && (sel.all ? coversAxis(q0.__spans || [], 0, text(q0.text).length, key) : coversAxis(q0.__spans || [], sel.start, sel.end, key))));
     });
     var bar = $('hostFmt'); if (bar) bar.classList.toggle('has-sel', !!sel);
+    var allBtn = $('hfAll'); if (allBtn) allBtn.classList.toggle('on', !!(sel && sel.all));
   }
   var FONTS = [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما'], ['serif', 'سریف']];
-  var SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30, 32, 36, 40, 44, 48, 54, 60, 72, 84, 100];
+  function currentSize(sel) {
+    var q0 = sel.all ? (questions || [])[0] : sel.question, s0 = sel.all ? 0 : sel.start; if (!q0) return 0;
+    var hit = (q0.__spans || []).find(function (x) { return x.start <= s0 && x.end > s0 && x.size; }); return hit ? hit.size : 0;
+  }
   function faNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); }
   function ensureFmtBar() {
     var v = $('pgsViewer'); if (!v || $('hostFmt')) return;
@@ -462,10 +487,10 @@
       '<button type="button" class="hf-btn hf-i" data-fmt="italic" title="ایتالیک">I</button>' +
       '<button type="button" class="hf-btn hf-u" data-fmt="underline" title="زیرخط">U</button>' +
       '<label class="hf-color" title="رنگ متن"><span class="hf-a">A</span><span class="hf-swatch" id="hfSwatch"></span><input type="color" id="hfColor" value="#000000"></label>' +
-      '<select class="hf-sel" id="hfSize" title="اندازهٔ متن"><option value="">اندازه</option>' + SIZES.map(function (n) { return '<option value="' + n + '">' + faNum(n) + '</option>'; }).join('') + '</select>' +
-      '<select class="hf-sel" id="hfFont" title="فونت"><option value="">فونت</option>' + FONTS.map(function (f) { return '<option value="' + f[0] + '">' + f[1] + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="hf-btn hf-pick" id="hfSize" title="اندازهٔ متن">اندازه</button>' +
+      '<button type="button" class="hf-btn hf-pick" id="hfFont" title="فونت">فونت</button>' +
       '<button type="button" class="hf-btn hf-clear" data-fmt="clear" title="حذف قالب‌بندی">پاک</button>' +
-      '<span class="hf-hint">متنِ سؤال را انتخاب کنید</span>';
+      '<button type="button" class="hf-btn hf-all" id="hfAll" title="انتخابِ همهٔ متن">همه</button>';
     var doc = new DOMParser().parseFromString('<div>' + markup + '</div>', 'text/html');
     Array.prototype.slice.call(doc.body.firstChild.childNodes).forEach(function (n) { bar.appendChild(document.importNode(n, true)); });
     if (ribbon) ribbon.parentNode.insertBefore(bar, ribbon.nextSibling); else v.insertBefore(bar, v.firstChild);
@@ -478,22 +503,42 @@
       btn.addEventListener('click', function () {
         var key = btn.dataset.fmt, sel = currentSel(); if (!sel) return;
         if (key === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return; }
-        var patch = {}; patch[key] = !coversAxis(sel.question.__spans || [], sel.start, sel.end, key); applyStyle(sel, patch);
+        var patch = {}; patch[key] = !selCovers(sel, key); applyStyle(sel, patch);
       });
     });
+    /* V130 — «همه»: انتخابِ تمامِ متنِ سؤال‌های برگه برای اعمالِ یک‌بارهٔ ابزارها */
+    var allBtn = bar.querySelector('#hfAll');
+    allBtn.addEventListener('pointerdown', function (ev) { ev.preventDefault(); });
+    allBtn.addEventListener('click', function () {
+      if (lastSel && lastSel.all) { clearSticky(); return; }
+      try { window.getSelection().removeAllRanges(); } catch (e) {}
+      lastSel = {all: true, sticky: true}; restoreSelection(); updateFmtBar(lastSel);
+    });
     var color = $('hfColor'), size = $('hfSize'), font = $('hfFont');
-    [color, size, font].forEach(function (el) { el.addEventListener('pointerdown', rememberSelection); el.addEventListener('focus', rememberSelection); });
+    [color, size, font].forEach(function (el) { el.addEventListener('pointerdown', function (ev) { if (el !== color) ev.preventDefault(); rememberSelection(); }); el.addEventListener('focus', rememberSelection); });
     color.addEventListener('change', function () {
       var sw = $('hfSwatch'); if (sw) sw.style.background = color.value;
       var sel = currentSel(); if (sel) applyStyle(sel, {color: /^#[0-9a-fA-F]{6}$/.test(color.value) ? color.value : ''});
     });
-    size.addEventListener('change', function () { var n = Number(size.value); size.value = ''; var sel = currentSel(); if (sel && n) applyStyle(sel, {size: n}); });
-    font.addEventListener('change', function () { var f = font.value; font.value = ''; var sel = currentSel(); if (sel && f) applyStyle(sel, {font: f === 'default' ? '' : f}); });
+    /* V130 — پنجرهٔ اندازه/فونت بومی (Compose) از طریقِ پل؛ نتیجه با ExamPrintRenderer.formatSelection برمی‌گردد.
+       اگر پل نبود (مرورگر)، prompt ساده. */
+    size.addEventListener('click', function () {
+      var sel = currentSel(); if (!sel) return;
+      var b = window.ExamPrintBridge;
+      if (b && typeof b.pickSize === 'function') { b.pickSize(String(currentSize(sel) || '')); return; }
+      var v = Number(window.prompt('اندازه (۱ تا ۱۰۰)', String(currentSize(sel) || 12))); if (v >= 1 && v <= 100) applyStyle(sel, {size: Math.round(v)});
+    });
+    font.addEventListener('click', function () {
+      var sel = currentSel(); if (!sel) return;
+      var b = window.ExamPrintBridge;
+      if (b && typeof b.pickFont === 'function') { b.pickFont(JSON.stringify(FONTS)); return; }
+      var v = window.prompt('نام فونت', ''); if (v != null) applyStyle(sel, {font: v === 'default' ? '' : v});
+    });
     if (!document.__hostSelBound) {
       document.__hostSelBound = true;
       document.addEventListener('selectionchange', function () {
         var r = selectionRange();
-        if (r) { if (!(lastSel && lastSel.sticky && lastSel.question === r.question && lastSel.start === r.start && lastSel.end === r.end)) { Array.prototype.forEach.call(document.querySelectorAll('.hf-selected'), function (el) { el.classList.remove('hf-selected'); }); lastSel = r; } updateFmtBar(r); }
+        if (r) { if (!(lastSel && lastSel.sticky && !lastSel.all && lastSel.question === r.question && lastSel.start === r.start && lastSel.end === r.end)) { Array.prototype.forEach.call(document.querySelectorAll('.hf-selected'), function (el) { el.classList.remove('hf-selected'); }); lastSel = r; } updateFmtBar(r); }
         else if (!(lastSel && lastSel.sticky)) updateFmtBar(null);
       });
       /* لمس روی جای دیگرِ برگه (نه نوار و نه متنِ انتخاب‌شده) → پایانِ انتخابِ پابرجا */
@@ -505,10 +550,10 @@
     }
   }
   function formatSelection(kind, value) {
-    var sel = selectionRange() || lastSel; if (!sel) { toast('اول بخشی از متنِ سؤال را انتخاب کنید'); return 'noselection'; }
+    var sel = (lastSel && lastSel.sticky) ? lastSel : (selectionRange() || lastSel); if (!sel) { toast('اول بخشی از متنِ سؤال را انتخاب کنید یا «همه» را بزنید'); return 'noselection'; }
     value = value == null ? '' : String(value);
     if (kind === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return 'ok'; }
-    if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !coversAxis(sel.question.__spans || [], sel.start, sel.end, kind); applyStyle(sel, patch); return 'ok'; }
+    if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !selCovers(sel, kind); applyStyle(sel, patch); return 'ok'; }
     if (kind === 'color') { applyStyle(sel, {color: /^#[0-9a-fA-F]{6}$/.test(value) ? value : ''}); return 'ok'; }
     if (kind === 'size') { var n = Number(value); applyStyle(sel, {size: (n >= 1 && n <= 100) ? Math.round(n) : 0}); return 'ok'; }
     if (kind === 'font') { applyStyle(sel, {font: (value && value !== 'default') ? value.slice(0, 30) : ''}); return 'ok'; }

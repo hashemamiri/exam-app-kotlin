@@ -8,13 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,6 +32,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureSpec
@@ -89,18 +92,20 @@ fun PeriodicEditorDialog(
         }
     }
 
-    AlertDialog(
+    // V130 — مثل پنجرهٔ درج شکل (FigurePickerDialog): تمام‌صفحه به‌جای AlertDialog.
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEdit) "ویرایش جدول تناوبی" else "درج جدول تناوبی") },
-        confirmButton = {
-            TextButton(onClick = { onInsert(currentSpec()) }) {
-                Text(if (isEdit) "اعمال تغییرات" else "درج در سؤال")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (isEdit) "ویرایش جدول تناوبی" else "درج جدول تناوبی", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismiss) { Text("✕") }
+                }
+                HorizontalDivider()
             Column(
-                Modifier.fillMaxWidth().heightIn(max = 580.dp).verticalScroll(rememberScrollState()),
+                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("حالت جدول", style = MaterialTheme.typography.labelMedium)
@@ -203,8 +208,13 @@ fun PeriodicEditorDialog(
                     Text("بازگردانی همه")
                 }
             }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    TextButton(onClick = onDismiss) { Text("انصراف") }
+                    Button(onClick = { onInsert(currentSpec()) }) { Text(if (isEdit) "اعمال تغییرات" else "درج در سؤال") }
+                }
+            }
         }
-    )
+    }
 }
 
 private fun toggle(set: Set<Int>, value: Int): Set<Int> =

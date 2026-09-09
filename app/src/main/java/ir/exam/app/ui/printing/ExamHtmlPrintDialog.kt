@@ -26,6 +26,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -100,6 +105,8 @@ fun ExamHtmlPrintDialog(
     // دابل‌کلیک روی شکل در پیش‌نمایش، ویرایشگر بومیِ همان شکل را باز می‌کند.
     var figureTool by remember { mutableStateOf<FigureToolRequest?>(null) }
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    // V130 — پنجرهٔ بومیِ اندازه/فونت (از دکمه‌های نوارِ قالب‌بندی)
+    var formatPicker by remember { mutableStateOf<String?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
     LaunchedEffect(barStatus) {
@@ -272,6 +279,7 @@ fun ExamHtmlPrintDialog(
                                     webViewRef?.post { if (message.isNotBlank()) barStatus = message }
                                 },
                                 onEditFigureTool = { qid, index -> webViewRef?.post { figureEditRequest = qid to index } },
+                                onPickFormat = { kind -> webViewRef?.post { formatPicker = kind } },
                                 // یک snapshot پیش از dismiss کافی است؛ requestDismiss با
                                 // پرچم `dismissing` از فراخوانی تکراری جلوگیری می‌کند.
                                 onPreviewClosed = {
@@ -350,6 +358,21 @@ fun ExamHtmlPrintDialog(
                     }
                 }
 
+                // V130 — پنجره‌های بومیِ اندازه (شبکهٔ ۵ستونه، ۱..۱۰۰) و فونت؛ نتیجه با formatSelection به موتور برمی‌گردد.
+                formatPicker?.let { kind ->
+                    PreviewFormatPickerDialog(
+                        kind = kind,
+                        onDismiss = { formatPicker = null },
+                        onPick = { value ->
+                            formatPicker = null
+                            val script = "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.formatSelection?" +
+                                "window.ExamPrintRenderer.formatSelection(${kind.toJsStringLiteral()},${value.toJsStringLiteral()}):'missing'}" +
+                                "catch(e){return 'err'}})()"
+                            runJs(script, null)
+                        }
+                    )
+                }
+
                 // فقط ویرایشِ شکلِ انتخاب‌شده از پیش‌نمایش با ابزارهای بومی.
                 figureTool?.takeIf { it.isNative }?.let { req ->
                     ExamFigureToolHost(
@@ -425,8 +448,21 @@ private class ExamPrintBridge(
     private val onEditFigureTool: (String, Int) -> Unit,
     private val onToast: (String) -> Unit,
     private val onPreviewClosed: () -> Unit,
-    private val pageSetupStore: ir.exam.app.data.local.PrintPageSetupStore
+    private val pageSetupStore: ir.exam.app.data.local.PrintPageSetupStore,
+    private val onPickFormat: (String) -> Unit = { }
 ) {
+    /** V130 — نوارِ قالب‌بندی: بازکردنِ پنجرهٔ بومیِ اندازه (مقدارِ فعلی برای پیش‌انتخاب). */
+    @JavascriptInterface
+    fun pickSize(current: String?) {
+        onPickFormat("size")
+    }
+
+    /** V130 — نوارِ قالب‌بندی: بازکردنِ پنجرهٔ بومیِ فونت. */
+    @JavascriptInterface
+    fun pickFont(fontsJson: String?) {
+        onPickFormat("font")
+    }
+
     @JavascriptInterface
     fun renderFormula(source: String?): String = renderer.formulaDataUrl(source)
 
@@ -483,7 +519,9 @@ internal fun createExamPrintWebView(
     onError: (String) -> Unit,
     onToast: (String) -> Unit,
     onEditFigureTool: (String, Int) -> Unit,
-    onPreviewClosed: () -> Unit
+    onPreviewClosed: () -> Unit,
+    // V130 — پنجره‌های بومیِ «اندازه» و «فونت» برای نوارِ قالب‌بندیِ پیش‌نمایش (kind = "size" | "font")
+    onPickFormat: (String) -> Unit = { }
 ): WebView = WebView(context).apply {
     setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
     settings.javaScriptEnabled = true
@@ -527,6 +565,7 @@ internal fun createExamPrintWebView(
             onToast = onToast,
             // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
             onPreviewClosed = onPreviewClosed,
+            onPickFormat = onPickFormat,
             // V126 — تنظیمات صفحه از پنلِ 📐 خودِ موتورِ وب روی دستگاه ذخیره می‌شود
             pageSetupStore = ir.exam.app.data.local.PrintPageSetupStore(context)
         ),
@@ -790,4 +829,49 @@ private class OneShotPrintAdapter(
         // adapter روی رشتهٔ چاپ صدا زده می‌شود؛ آزادسازیِ WebView باید اصلی باشد.
         Handler(Looper.getMainLooper()).post(block)
     }
+}
+
+/**
+ * V130 — انتخابگرِ بومیِ «اندازه» (۱..۱۰۰ در شبکهٔ ۵ستونه) و «فونت» برای نوارِ قالب‌بندیِ پیش‌نمایش.
+ * فهرستِ فونت‌ها همان FONTS در webhost.js است (کلیدِ CSS ← نامِ فارسی).
+ */
+@Composable
+internal fun PreviewFormatPickerDialog(kind: String, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val fonts = listOf(
+        "default" to "پیش‌فرض", "Vazirmatn" to "وزیرمتن", "Shabnam" to "شبنم", "Sahel" to "ساحل",
+        "BNazanin" to "ب نازنین", "Tahoma" to "تاهوما", "serif" to "سریف"
+    )
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (kind == "size") "اندازهٔ متن" else "فونت متن") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("انصراف") } },
+        text = {
+            if (kind == "size") {
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(5),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(100) { index ->
+                        val n = index + 1
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { onPick(n.toString()) },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                            modifier = Modifier.height(40.dp)
+                        ) { Text(n.toString().map { '۰' + (it - '0') }.joinToString("")) }
+                    }
+                }
+            } else {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    fonts.forEach { (key, name) ->
+                        androidx.compose.material3.OutlinedButton(onClick = { onPick(key) }, modifier = Modifier.fillMaxWidth()) { Text(name) }
+                    }
+                }
+            }
+        }
+    )
 }

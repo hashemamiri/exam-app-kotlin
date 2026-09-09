@@ -367,6 +367,7 @@ private fun AuthenticatedExamApp(
         managerInviteHeader = managerInviteHeader,
         // V62.6 — هدر پویا «کلاس‌های نام معلم / نام کلاس» به‌جای «معلم‌ها».
         managerClassHeader = managerClassHeader,
+        gradingHeader = if (page == MainPage.GRADING) (if (gradingPendingOnly) "مانده" else if (gradingGradedOnly) "پاسخ" else "تصحیح") else null,
         menuOpen = menuOpen,
         quickAddOpen = quickAddOpen,
         studentExamActive = studentExamActive,
@@ -884,6 +885,8 @@ private fun AuthenticatedShell(
     managerInviteHeader: Boolean,
     // V62.6 — هدر پویا در صفحهٔ مدیریت معلم (کلاس‌ها/نام کلاس).
     managerClassHeader: String? = null,
+    // V130 — هدرِ صفحهٔ تصحیح متناسب با کارتِ واردشده («پاسخ» / «مانده» / «تصحیح»)
+    gradingHeader: String? = null,
     menuOpen: Boolean,
     quickAddOpen: Boolean,
     studentExamActive: Boolean = false,
@@ -1049,6 +1052,7 @@ private fun AuthenticatedShell(
                                         else if (user.role == UserRole.MANAGER && page == MainPage.HOME && managerInviteHeader) "کدهای دعوت معلم"
                                         // V61.6 — نمای مدارس: هدر «مدرسه من» به‌جای «کلاس‌ها».
                                         else if (page == MainPage.SCHOOL && schoolsViewOpen && !schoolStudentsSelected) "مدرسه من"
+                                        else if (page == MainPage.GRADING && gradingHeader != null) gradingHeader
                                         else page.sectionTitle(user.role, profileDestination, schoolStudentsSelected)
                                     )
                                 },

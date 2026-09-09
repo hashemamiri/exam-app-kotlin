@@ -151,6 +151,17 @@ require(".mdelim-x{display:flex !important" in read(WEB_ENGINE / "webhost.css"),
 require("var pendingDelete by remember" in read(MAIN / "java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt"), "deleting a print exam must ask for confirmation")
 require("it in 1..100" in read(MAIN / "java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt") and "it in 1..100" in read(MAIN / "java/ir/exam/app/data/repository/ExamQuestionCodec.kt"), "span font size range must be 1..100")
 require("groups.reversed()" not in read(MAIN / "java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt") and "PAD + LABEL + ci * step" in read(MAIN / "java/ir/exam/app/core/figure/PeriodicSvgRenderer.kt"), "periodic table must be standard LTR (H at left) in editor and native renderer, like the web preview")
+# V130 — «همه» در نوار قالب‌بندی، انتخابگرهای بومی اندازه/فونت، پرانتز هلالی مجزا، $ پنهان، پنجره‌های تمام‌صفحه، رنگ کارت‌ها
+for marker in ('id="hfAll"', "function patchSpans(q, s, e, patch)", "b.pickSize(", "b.pickFont("):
+    require(marker in _wj, f"V130 web host marker missing: {marker}")
+require("hf-hint" not in _wj, "the 'select question text' hint must be gone from the formatting bar")
+require("fun pickSize(current: String?)" in dialog and "internal fun PreviewFormatPickerDialog(" in dialog and "GridCells.Fixed(5)" in dialog, "native size/font pickers must be wired through the bridge (5-column size grid)")
+require('"⟮" -> "paren" to false' in read(MAIN / "java/ir/exam/app/core/math/NativeMathSvgRenderer.kt"), "⟮⟯ must render with the editor's paren shape, distinct from ( )")
+require("visualTransformation = DollarHidingTransformation" in read(MAIN / "java/ir/exam/app/ui/builder/QuestionTextWebSection.kt"), "$ must never be visible in the question text box")
+for f in ("TableEditorDialog.kt", "PeriodicEditorDialog.kt"):
+    _t = read(MAIN / "java/ir/exam/app/ui/figure" / f)
+    require("import androidx.compose.material3.AlertDialog" not in _t and "usePlatformDefaultWidth = false" in _t, f"{f} must be a full-screen dialog like FigurePickerDialog")
+require("fun cardLevel(done: Int, total: Int): CardLevel" in read(MAIN / "java/ir/exam/app/ui/grading/GradingViewModel.kt") and "state.cardStats[item.id]" in read(MAIN / "java/ir/exam/app/ui/grading/GradingScreen.kt"), "grading cards must be colour-coded by answer/grading progress")
 # V127.1 — پنل 📐 نباید به vh/dvh وابسته باشد (در WebView یک‌سطری می‌شد): top/bottom مطلق در webhost.css
 _wc = read(WEB_ENGINE / "webhost.css")
 require("#pgsPageSetup{" in _wc and "top:var(--host-top,60px) !important;bottom:0 !important" in _wc and "max-height:none !important" in _wc, "page-setup panel must be pinned between ribbon and bottom without vh units")

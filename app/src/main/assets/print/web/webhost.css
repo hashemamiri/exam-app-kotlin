@@ -35,7 +35,8 @@ body{padding:0 !important;}
 #pgsPageSetup .field input,#pgsPageSetup .field select{font-size:16px;min-height:42px;width:100%;box-sizing:border-box;}
 #pgsPageSetup h2{position:sticky;top:0;background:#fff;z-index:2;margin:0 0 10px !important;padding:6px 0 8px !important;}
 #pgsPageSetup h2 .toggle{font-size:14px !important;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;color:#1e3a8a !important;}
-@media (max-width:480px){ #pgsPageSetup .grid-form{grid-template-columns:1fr !important;} }
+/* V130 — روی گوشی هم دو فیلد در هر سطر (قبلاً تک‌ستونه می‌شد) */
+@media (max-width:480px){ #pgsPageSetup .grid-form{grid-template-columns:1fr 1fr !important;gap:8px 8px !important;} #pgsPageSetup .field label{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} }
 @media (min-width:700px){ #pgsPageSetup{left:auto !important;right:16px !important;width:min(560px,calc(100% - 32px)) !important;} }
 
 /* راهنمای «Save as PDF» مرورگر در برنامه معنی ندارد (پنلِ چاپِ اندروید خودش PDF دارد). */
@@ -116,3 +117,14 @@ body{padding:0 !important;}
   justify-content:center;min-width:0 !important;padding:0 .05em !important;font-size:1em !important}
 .mdelim.mdx-host .mdelim-glyph{display:none !important}
 .mmatrix > .mdelim.mdx-host{margin:.06em 0}
+
+/* ===================== V130 — پنجرهٔ چاپ: هر ردیف در یک سطر؛ نوار قالب‌بندی: دکمهٔ «همه» و انتخابگرهای بومی ===================== */
+#pgsPrintDlg .pgs-dlg-row{flex-wrap:nowrap !important;gap:6px !important;overflow:hidden;white-space:nowrap;font-size:12.5px !important;}
+#pgsPrintDlg .pgs-dlg-row b{flex:0 0 auto;}
+#pgsPrintDlg .pgs-dlg-row label{gap:3px !important;}
+#pgsPrintDlg .pgs-dlg-row label{flex:0 0 auto;}
+#pgsPrintDlg .pgs-dlg-row input[type="text"]{flex:1 1 90px;min-width:70px;width:auto !important;}
+#pgsPrintDlg .pgs-dlg-row input[type="number"]{flex:0 0 72px;width:72px !important;}
+#hostFmt .hf-pick{min-width:52px;font-size:13px;}
+#hostFmt .hf-all{min-width:44px;font-weight:700;}
+#hostFmt .hf-all.on{background:#2563eb;color:#fff;}

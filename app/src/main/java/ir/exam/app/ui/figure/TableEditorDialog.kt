@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.dp
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.TableSvgRenderer
@@ -69,18 +73,20 @@ fun TableEditorDialog(
 
     fun hasContent(): Boolean = cells.any { row -> row.any { it.isNotBlank() } }
 
-    AlertDialog(
+    // V130 — مثل پنجرهٔ درج شکل (FigurePickerDialog): تمام‌صفحه به‌جای AlertDialog.
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (isEdit) "ویرایش جدول" else "درج جدول") },
-        confirmButton = {
-            TextButton(onClick = { onInsert(FigureSpec.buildTable(style, title.trim(), cells)) }) {
-                Text(if (isEdit) "اعمال تغییرات" else "درج در سؤال")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (isEdit) "ویرایش جدول" else "درج جدول", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismiss) { Text("✕") }
+                }
+                HorizontalDivider()
             Column(
-                Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
+                Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("سبک جدول", style = MaterialTheme.typography.labelMedium)
@@ -207,8 +213,13 @@ fun TableEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("پرکردن با نمونهٔ این سبک") }
             }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    TextButton(onClick = onDismiss) { Text("انصراف") }
+                    Button(onClick = { onInsert(FigureSpec.buildTable(style, title.trim(), cells)) }) { Text(if (isEdit) "اعمال تغییرات" else "درج در سؤال") }
+                }
+            }
         }
-    )
+    }
 }
 
 @Composable

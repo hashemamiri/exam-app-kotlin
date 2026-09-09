@@ -42,6 +42,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ir.exam.app.core.figure.FigureCodec
@@ -225,6 +229,8 @@ fun QuestionTextWebSection(
                                         }
                                     },
                                 textStyle = MaterialTheme.typography.bodyLarge,
+                                // V130 — علامتِ $ (فرمولِ بسته‌نشده/نصفه) هرگز در کادرِ متن دیده نشود؛ مقدارِ واقعی دست نمی‌خورد.
+                                visualTransformation = DollarHidingTransformation,
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 decorationBox = { inner ->
                                     Box(contentAlignment = Alignment.CenterStart) { inner() }
@@ -401,5 +407,35 @@ private fun TokenCloseButton(modifier: Modifier = Modifier, onClick: () -> Unit)
             tint = Color.White,
             modifier = Modifier.size(18.dp)
         )
+    }
+}
+
+/**
+ * V130 — نمایشِ بخشِ متنیِ سؤال بدونِ نویسهٔ `$`. فرمول‌های کامل (`$…$`) پیش‌تر
+ * به RichSegment.Math تبدیل شده‌اند؛ آنچه در بخشِ متنی می‌ماند `$`ِ تک/بسته‌نشده
+ * است که فقط از دید پنهان می‌شود (متنِ ذخیره‌شده تغییری نمی‌کند تا بستنِ فرمول
+ * بعداً ممکن بماند). نگاشتِ آفست: هر `$` قبل از مکان‌نما یک واحد جابه‌جایی است.
+ */
+internal object DollarHidingTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val source = text.text
+        if ('$' !in source) return TransformedText(text, OffsetMapping.Identity)
+        val out = StringBuilder(source.length)
+        val origToOut = IntArray(source.length + 1)
+        source.forEachIndexed { i, ch ->
+            origToOut[i] = out.length
+            if (ch != '$') out.append(ch)
+        }
+        origToOut[source.length] = out.length
+        val outToOrig = IntArray(out.length + 1) { source.length }
+        for (i in source.indices) {
+            if (source[i] != '$') outToOrig[origToOut[i]] = i
+        }
+        outToOrig[out.length] = source.length
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int = origToOut[offset.coerceIn(0, source.length)]
+            override fun transformedToOriginal(offset: Int): Int = outToOrig[offset.coerceIn(0, out.length)]
+        }
+        return TransformedText(AnnotatedString(out.toString()), mapping)
     }
 }
