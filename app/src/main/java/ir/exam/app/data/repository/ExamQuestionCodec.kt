@@ -49,7 +49,7 @@ internal object ExamQuestionCodec {
                     s, e, o["b"]?.asBoolean() ?: false, o["i"]?.asBoolean() ?: false,
                     underline = o["u"]?.asBoolean() ?: false,
                     color = (o["c"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) },
-                    size = o["z"]?.asInt()?.takeIf { it in 8..40 },
+                    size = o["z"]?.asInt()?.takeIf { it in 1..100 }, // V129
                     font = (o["f"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }?.take(30)
                 ) else null
             }

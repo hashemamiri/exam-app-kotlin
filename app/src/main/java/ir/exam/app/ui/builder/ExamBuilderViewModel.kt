@@ -280,7 +280,7 @@ class ExamBuilderViewModel(
                 italic = o["italic"]?.jsonPrimitive?.contentOrNull == "true",
                 underline = o["underline"]?.jsonPrimitive?.contentOrNull == "true",
                 color = o["color"]?.jsonPrimitive?.contentOrNull?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) },
-                size = o["size"]?.jsonPrimitive?.intOrNull?.takeIf { it in 8..40 },
+                size = o["size"]?.jsonPrimitive?.intOrNull?.takeIf { it in 1..100 }, // V129: بازهٔ ۱..۱۰۰
                 font = o["font"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() && it != "default" }?.take(30)
             )
             if (span.hasStyle) span else null

@@ -86,3 +86,33 @@ body{padding:0 !important;}
   font-size:12px;font-weight:900;border-radius:999px;background:#2563eb;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);
 }
 #pgsViewer .question-sep-drag.is-dragging::after{content:"↕ جابجایی خط";width:auto;padding:0 8px;}
+
+/* ===================== V129 — انتخابِ پابرجا برای نوارِ قالب‌بندی ===================== */
+#pgsViewer .txt.hf-selected{background:rgba(37,99,235,.22);box-shadow:0 0 0 1px rgba(37,99,235,.35);border-radius:2px;}
+#pgsPrintRoot .hf-selected,body.pgs-fallback .hf-selected{background:none !important;box-shadow:none !important;}
+.hf-sel option{color:#111;background:#fff;}
+
+/* ===================== V129 — اشیاء: دستگیره‌های لمسیِ بزرگ‌تر روی چهار ضلع و چهار گوشه ===================== */
+/* همان باگِ pgs_style.css که در V128 برای sep-drag دیدیم: پنهان با !important و نمایش بدونِ !important → همیشه پنهان */
+#pgsViewer #previewArea .interactive-figure.selected .fig-resize-handle{display:block !important;}
+#pgsViewer #previewArea .interactive-figure.selected .fig-move-hint,#pgsViewer #previewArea .interactive-figure.selected .fig-size-badge{display:block !important;}
+#pgsPrintRoot .fig-resize-handle,#pgsPrintRoot .fig-move-hint,#pgsPrintRoot .fig-size-badge,body.pgs-fallback .fig-resize-handle,body.pgs-fallback .fig-move-hint,body.pgs-fallback .fig-size-badge{display:none !important;}
+#pgsViewer .interactive-figure .fig-resize-handle{width:18px;height:18px;border-radius:5px;}
+#pgsViewer .interactive-figure .fig-resize-handle[data-edge="l"],#pgsViewer .interactive-figure .fig-resize-handle[data-edge="r"]{height:34px;width:12px;}
+#pgsViewer .interactive-figure .fig-resize-handle[data-edge="t"],#pgsViewer .interactive-figure .fig-resize-handle[data-edge="b"]{width:34px;height:12px;}
+#pgsViewer .interactive-figure.selected .fig-move-hint::after{content:" · لمسِ دوباره: ویرایش";}
+
+/* ===================== V129 — دلیمترهای کش‌پذیرِ SVG، عینِ ویرایشگرِ فرمول (formula.html) ===================== */
+.mdelim-x{display:flex !important;flex-direction:column;align-items:stretch;align-self:stretch;
+  width:var(--mdw,.4em);min-width:var(--mdw,.4em);flex:0 0 auto;height:auto;min-height:1em}
+.mdelim-x .mdx{display:block;width:100%;overflow:visible}
+.mdelim-x .mdx-c{flex:0 0 .3em;height:.3em}
+.mdelim-x .mdx-m{flex:0 0 .34em;height:.34em}
+.mdelim-x .mdx-b{flex:1 1 auto;min-height:0;height:auto}
+.mdelim-x.mdx-flip{transform:scaleX(-1)}
+.mdelim-x path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.mparbox > .mdelim.mdx-host,.mathx .mdelim.mdx-host,.mmatrix > .mdelim.mdx-host,.mbrk-box > .mdelim.mdx-host{
+  display:inline-flex !important;align-items:stretch !important;align-self:stretch !important;
+  justify-content:center;min-width:0 !important;padding:0 .05em !important;font-size:1em !important}
+.mdelim.mdx-host .mdelim-glyph{display:none !important}
+.mmatrix > .mdelim.mdx-host{margin:.06em 0}

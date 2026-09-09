@@ -143,6 +143,14 @@ _wj = read(WEBHOST)
 for marker in ("function installRichTextOverride()", "function ensureFmtBar()", "formatSelection: formatSelection", "spans: (q.__spans || []).map("):
     require(marker in _wj, f"V128 web host marker missing: {marker}")
 require("#pgsViewer #previewArea .question-sep-drag{display:flex !important" in read(WEB_ENGINE / "webhost.css"), "separator drag handle must be visible inside the PGS viewer")
+# V129 — دلیمترهای SVGِ ویرایشگر در پیش‌نمایش/چاپ، انتخابِ پابرجا، لمسِ اول=انتخاب/دوم=ویرایش، دستگیره‌ها دیدنی، اندازهٔ ۱..۱۰۰
+for marker in ("function installDelimOverride()", "P.makeDelimWrap = function (o, c, inner)", "function restoreSelection()", "wasSelected: fig.classList.contains('selected')", "(n >= 1 && n <= 100)"):
+    require(marker in _wj, f"V129 web host marker missing: {marker}")
+require("#pgsViewer #previewArea .interactive-figure.selected .fig-resize-handle{display:block !important;}" in read(WEB_ENGINE / "webhost.css"), "figure resize handles must be visible inside the PGS viewer")
+require(".mdelim-x{display:flex !important" in read(WEB_ENGINE / "webhost.css"), "editor-identical SVG delimiter CSS must be present in the host layer")
+require("var pendingDelete by remember" in read(MAIN / "java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt"), "deleting a print exam must ask for confirmation")
+require("it in 1..100" in read(MAIN / "java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt") and "it in 1..100" in read(MAIN / "java/ir/exam/app/data/repository/ExamQuestionCodec.kt"), "span font size range must be 1..100")
+require("groups.reversed()" not in read(MAIN / "java/ir/exam/app/ui/figure/PeriodicEditorDialog.kt") and "PAD + LABEL + ci * step" in read(MAIN / "java/ir/exam/app/core/figure/PeriodicSvgRenderer.kt"), "periodic table must be standard LTR (H at left) in editor and native renderer, like the web preview")
 # V127.1 — پنل 📐 نباید به vh/dvh وابسته باشد (در WebView یک‌سطری می‌شد): top/bottom مطلق در webhost.css
 _wc = read(WEB_ENGINE / "webhost.css")
 require("#pgsPageSetup{" in _wc and "top:var(--host-top,60px) !important;bottom:0 !important" in _wc and "max-height:none !important" in _wc, "page-setup panel must be pinned between ribbon and bottom without vh units")

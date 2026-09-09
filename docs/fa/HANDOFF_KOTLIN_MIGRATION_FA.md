@@ -17915,3 +17915,42 @@ snapshot `{start:3,end:15,bold,size:18}`؛ فرمول‌ها سالم (۱۴ math
 مسیری — از جمله بازگشت از چاپ)، (۲) `MutationObserver` روی body: هر وقت `#pgsViewer` هست و `#hostFmt` نیست،
 نوار ساخته می‌شود، (۳) اگر `.pgs-ribbon` پیدا نشد نوار در بالای بیننده درج می‌شود (قبلاً ساکت برمی‌گشت).
 اگر باز هم دیده نشد: APKِ نصب‌شده را چک کنید (بیلدِ CI بعد از V128)؛ فایل‌ها از assets سرو می‌شوند و cache ندارند.
+
+## ۳۵۴. V129 — دلیمترهای عینِ ویرایشگر، انتخابِ پابرجا، شکل‌ها (لمسِ اول انتخاب/دوم ویرایش)، جدول تناوبی، تأییدِ حذف
+
+**خواستهٔ کاربر (۵ بند):** ۱) پرانتز/کروشه/آکولاد در پیش‌نمایش و چاپ دقیقاً مثلِ ویرایشگرِ فرمول؛ ۲) جدول تناوبی
+ویرایشگر و پیش‌نمایش هم‌جهت؛ ۳) شکل‌های درج‌شده: لمسِ اول انتخاب با دستگیره روی همهٔ اضلاع/گوشه‌ها، لمسِ دوم
+ویرایشگر؛ ۴) سطلِ کارت آزمون چاپی اول بپرسد؛ ۵) انتخابِ نوار قالب‌بندی تا تغییرِ کاربر بماند + اندازهٔ ۱..۱۰۰.
+
+**۱) دلیمترها (webhost.js `installDelimOverride`).** ویرایشگر (formula.html، `MB_DELIM_SHAPE/MB_DELIM_MAP`،
+l.7950) هر دلیمتر را از قطعه‌های SVG (سرِ ثابت `mdx-c` + بازوی flex `mdx-b` + نوکِ میانی `mdx-m`) می‌سازد؛
+موتورِ وب (math_host.js `makeDelimWrap` l.174) گلیفِ فونت را با `scaleY(--mds)` می‌کشید و `IFRAME_STROKE_JS`
+فقط `[ ] | ‖ ⟨ ⟩` را به مسیرِ ثابت تبدیل می‌کرد. اکنون در لایهٔ میزبان `MathParser.prototype.makeDelimWrap`
+جایگزین می‌شود (همان جدول‌های ویرایشگر، عیناً کپی) و همان CSS (`.mdelim-x…`، از formula.html l.8643) در
+webhost.css. نکته‌ها: `data-delim` عمداً روی `.mdx-host` گذاشته نمی‌شود تا `fixDom`ِ موتور SVG را با مسیرِ
+خودش عوض نکند؛ یک `.mdelim-glyph` خالی داخلِ host می‌ماند تا `fitMathStretchers` (l.655) متن را پاک نکند
+(`--mds` می‌گذارد ولی گلیف پنهان است). floor/ceil هم به‌جای `.mbrk` (خطوط CSS) از همین SVG استفاده می‌کنند.
+math_host.js دست نخورد. puppeteer: ( ) [ ] { } ⌊ ⌋ | همه `.mdelim-x` با ارتفاعِ بدنه (کشِ کامل کسر).
+
+**۲) جدول تناوبی.** بررسی: موتورِ وب (periodic_fig.js + tools_styles.css `.ptb{direction:ltr}`) جدول را
+استاندارد و **H در چپ** می‌کشد؛ ویرایشگرِ بومی از V68.5 عمداً معکوس بود (H راست). کاربر پس از پرسش،
+«استاندارد، H در چپ برای همه» را انتخاب کرد → `PeriodicTouchGrid` بدونِ `reversed()` (provider LTR ماند)
+و `PeriodicSvgRenderer` (نمای درون‌خطیِ بیلدر) هم `x = PAD + LABEL + ci*step`، لیبلِ دوره در چپ.
+
+**۳) شکل‌ها.** قبلاً دابل‌تپِ ۳۲۰ms ویرایشگر را باز می‌کرد. اکنون `pointerdown/up` (capture): لمس روی شکلِ
+انتخاب‌نشده → فقط انتخابِ خودِ موتور (mainscript `selectFig`)؛ لمس روی شکلِ **از‌پیش‌انتخاب‌شده** بدونِ
+جابجایی (>۸px) و نه روی دستگیره → `editFigureTool`. دستگیره‌ها (`.fig-resize-handle` ×۸، l/r/t/b/bl/br/tl/tr)
+همان باگِ pgs_style.css (پنهان با !important، نمایش بدونِ آن) را داشتند → webhost.css:
+`#pgsViewer #previewArea .interactive-figure.selected .fig-resize-handle{display:block !important}` (+ hint و
+badge)؛ در `#pgsPrintRoot`/`body.pgs-fallback` پنهان. دستگیره‌های لمسیِ بزرگ‌تر (۱۸px؛ اضلاع ۳۴×۱۲).
+
+**۴) حذفِ آزمون چاپی.** `ExamPrintCenterScreen`: `pendingDelete: Pair<id,title>?` → AlertDialog «حذف/انصراف».
+
+**۵) انتخابِ پابرجا + اندازه.** پس از هر اعمال، `lastSel={question,start,end,sticky:true}` می‌ماند و بعد از
+renderPreview (در همان موج‌های اسکرول) `restoreSelection()` همان بازه را با کلاس `.hf-selected` هایلایت و
+Selection مرورگر را روی آن بازسازی می‌کند (تکه‌های مرزیِ `.txt` تقسیم می‌شوند؛ data-off حفظ). پایانِ انتخاب:
+pointerdown خارج از نوار/متنِ هایلایت (`clearSticky`) یا انتخابِ جدید. `#hfSize` ۳۴ گزینه از ۱ تا ۱۰۰؛
+clamp در `cleanSpans`/`formatSelection` (۱..۱۰۰)، `ExamBuilderViewModel.decodeSnapshotSpans` و
+`ExamQuestionCodec` («z») هم ۱..۱۰۰. puppeteer: B → ایتالیک → ۷۲ بدونِ انتخابِ دوباره →
+`{3..15,bold,italic,size:72}`؛ لمسِ جای دیگر → هایلایت صفر. verify/تست: مارکرهای V129.
+نسخهٔ بعدی: V130، بند ۳۵۵.

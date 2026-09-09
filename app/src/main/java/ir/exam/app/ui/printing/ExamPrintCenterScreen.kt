@@ -67,6 +67,8 @@ fun ExamPrintCenterScreen(
         ir.exam.app.data.local.PrintExamStore(context.applicationContext)
     }
     var localExams by remember { mutableStateOf(printExamStore.list()) }
+    // V129 — آزمونی که کاربر روی سطلش زده و منتظر تأیید حذف است (id، عنوان).
+    var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -164,6 +166,21 @@ fun ExamPrintCenterScreen(
         if (localExams.isEmpty() && !state.loading) {
             Text("هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.")
         }
+        pendingDelete?.let { (delId, delTitle) ->
+            AlertDialog(
+                onDismissRequest = { pendingDelete = null },
+                title = { Text("حذف آزمون چاپی") },
+                text = { Text("آزمون «${delTitle.ifBlank { "آزمون چاپی" }}» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        printExamStore.delete(delId)
+                        localExams = printExamStore.list()
+                        pendingDelete = null
+                    }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("انصراف") } }
+            )
+        }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // V86.8 — آزمون‌های چاپیِ محلی، با نشانهٔ «چاپی» تا با آزمونِ سرور
             // اشتباه نشوند. حذف هم دارند، وگرنه راهی برای پاک‌کردنشان نیست.
@@ -198,10 +215,8 @@ fun ExamPrintCenterScreen(
                             }
                             // V107 — آیکن پرینتر از کارت حذف شد؛ چاپ فقط از
                             // داخلِ آزمون‌ساز (پیش‌نمایش / دکمهٔ چاپ) انجام می‌شود.
-                            IconButton(onClick = {
-                                printExamStore.delete(rec.id)
-                                localExams = printExamStore.list()
-                            }) {
+                            // V129 — حذف فقط بعد از تأیید کاربر (پنجرهٔ پرسش).
+                            IconButton(onClick = { pendingDelete = rec.id to rec.title }) {
                                 Icon(
                                     Icons.Outlined.Delete,
                                     contentDescription = "حذف آزمون چاپی",

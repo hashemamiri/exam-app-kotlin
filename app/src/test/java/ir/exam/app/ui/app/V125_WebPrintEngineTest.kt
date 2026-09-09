@@ -100,6 +100,9 @@ class V125_WebPrintEngineTest {
         // V128 — قالب‌بندیِ متنِ انتخاب‌شده در لایهٔ میزبان؛ snapshot بازه‌ها را برمی‌گرداند (applyFigLayouts آن‌ها را می‌خواند)
         assertTrue("function ensureFmtBar()" in webhost && "spans: (q.__spans || []).map(" in webhost)
         assertTrue("#pgsViewer #previewArea .question-sep-drag{display:flex !important" in webhostCss)
+        // V129 — دلیمترهای عینِ ویرایشگر، انتخابِ پابرجا، لمسِ اول انتخاب/دوم ویرایش، اندازهٔ ۱..۱۰۰
+        assertTrue("function installDelimOverride()" in webhost && "function restoreSelection()" in webhost && "(n >= 1 && n <= 100)" in webhost)
+        assertTrue("#pgsViewer #previewArea .interactive-figure.selected .fig-resize-handle{display:block !important;}" in webhostCss && ".mdelim-x{display:flex !important" in webhostCss)
         // V127.1 — پنل تنظیمات صفحه بدون vh (در WebView یک‌سطری باز می‌شد)
         assertTrue("top:var(--host-top,60px) !important;bottom:0 !important" in webhostCss && "max-height:none !important" in webhostCss)
         assertTrue("requestPrint(mode, {rangeKind: rangeKind, rangeText: rangeText, current: current, copies: copies})" in webhost)

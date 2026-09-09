@@ -65,19 +65,19 @@ object PeriodicSvgRenderer {
         }
         val topY = PAD + titleH
 
-        // V68.5 — چیدمان راست‌به‌چپ (درخواست کاربر؛ برعکس V55.13): گروه ۱ در
-        // «راست» می‌نشیند مثل کتاب‌های شیمی ایران؛ لیبل دوره در چپ گرید.
+        // V129 — چیدمان استاندارد چپ‌به‌راست (تصمیم کاربر): گروه ۱ (H) در «چپ»،
+        // عیناً مثل موتور پیش‌نمایش/چاپ وب (.ptb با direction:ltr)؛ لیبل دوره در چپ گرید.
         // سرستون گروه‌ها
         groups.forEachIndexed { ci, g ->
-            val x = PAD + (groups.size - 1 - ci) * step + CELL / 2f
+            val x = PAD + LABEL + ci * step + CELL / 2f
             sb.append(text(x, topY + 13f, faNum(g), MUTED, "middle", bold = false, size = 9))
         }
         // بدنه اصلی
         periods.forEachIndexed { ri, p ->
             val y = topY + LABEL + ri * step
-            sb.append(text(PAD + groups.size * step + LABEL / 2f, y + CELL / 2f + 3f, faNum(p), MUTED, "middle", bold = false, size = 9))
+            sb.append(text(PAD + LABEL / 2f, y + CELL / 2f + 3f, faNum(p), MUTED, "middle", bold = false, size = 9))
             groups.forEachIndexed { ci, g ->
-                val x = PAD + (groups.size - 1 - ci) * step
+                val x = PAD + LABEL + ci * step
                 val isFSlot = g == 3 && (p == 6 || p == 7)
                 if (isFSlot) {
                     if (!hideF) {
@@ -95,9 +95,9 @@ object PeriodicSvgRenderer {
             listOf(8, 9).forEachIndexed { ri, p ->
                 val y = topY + mainH + 8f + ri * step
                 val mark = if (p == 8) "*" else "**"
-                sb.append(text(PAD + 15 * step + LABEL / 2f, y + CELL / 2f + 4f, mark, MUTED, "middle", bold = true, size = 12))
+                sb.append(text(PAD + LABEL / 2f, y + CELL / 2f + 4f, mark, MUTED, "middle", bold = true, size = 12))
                 (3..17).forEachIndexed { ci, g ->
-                    val x = PAD + (14 - ci) * step
+                    val x = PAD + LABEL + ci * step
                     PeriodicElements.at(g, p)?.let { el ->
                         sb.append(cell(x, y, el, showZ, el.z in hidden, el.z in hiddenZ))
                     }

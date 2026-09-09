@@ -278,7 +278,7 @@
       var start = Math.max(0, Math.min(length, Math.floor(num(item.start, 0))));
       var end = Math.max(0, Math.min(length, Math.floor(num(item.end, 0))));
       var color = text(item.color); if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = '';
-      var size = Math.round(num(item.size, 0)); if (!(size >= 8 && size <= 40)) size = 0;
+      var size = Math.round(num(item.size, 0)); if (!(size >= 1 && size <= 100)) size = 0;
       var font = text(item.font); if (font === 'default') font = '';
       return {start: start, end: end, bold: item.bold === true, italic: item.italic === true, underline: item.underline === true, color: color, size: size, font: font};
     }).filter(function (item) { return item.end > item.start && (item.bold || item.italic || item.underline || item.color || item.size || item.font); });
@@ -398,14 +398,49 @@
       else merged.push(Object.assign({}, x));
     });
     q.__spans = merged;
-    try { window.getSelection().removeAllRanges(); } catch (e2) {}
-    lastSel = null; updateFmtBar(null);
-    /* باز-رندر + صفحه‌بندیِ PGS با حفظِ اسکرول (موج‌های paginate در ۱۶۰/۵۵۰/۱۳۰۰ms) */
+    /* V129 — انتخاب تا وقتی کاربر جای دیگری را لمس نکند «پابرجا» می‌ماند: بازه نگه داشته می‌شود و پس از
+       باز-رندر، همان بازه دوباره هایلایت (کلاس hf-selected) و Selection مرورگر هم روی آن بازسازی می‌شود تا
+       بتوان چند ابزار را پشتِ‌سرِهم روی همان متن زد. */
+    lastSel = {question: q, start: s, end: e, sticky: true};
     var wrap = $('pgsCanvasWrap'), top = wrap ? wrap.scrollTop : 0;
     try { window.renderPreview(); } catch (e3) {}
-    [80, 300, 700, 1450].forEach(function (t) { setTimeout(function () { var w = $('pgsCanvasWrap'); if (w) w.scrollTop = top; }, t); });
+    [80, 300, 700, 1450].forEach(function (t) { setTimeout(function () { var w = $('pgsCanvasWrap'); if (w) w.scrollTop = top; restoreSelection(); }, t); });
+    updateFmtBar(lastSel);
   }
-  function currentSel() { var r = selectionRange() || lastSel; if (!r) toast('اول بخشی از متنِ سؤال را انتخاب کنید (لمسِ طولانی روی کلمه)'); return r; }
+  function clearSticky() {
+    if (!lastSel) return;
+    lastSel = null;
+    Array.prototype.forEach.call(document.querySelectorAll('.hf-selected'), function (el) { el.classList.remove('hf-selected'); });
+    updateFmtBar(null);
+  }
+  function restoreSelection() {
+    var sel = lastSel; if (!sel || !sel.sticky) return;
+    Array.prototype.forEach.call(document.querySelectorAll('.hf-selected'), function (el) { el.classList.remove('hf-selected'); });
+    var rows = document.querySelectorAll('#previewArea .question-print-row[data-qid="' + String(sel.question.id) + '"] .q-rich-content .txt');
+    var first = null, last = null, firstOff = 0, lastOff = 0;
+    Array.prototype.forEach.call(rows, function (t) {
+      var off = Number(t.dataset.off), len = t.textContent.length;
+      if (off + len <= sel.start || off >= sel.end) return;
+      if (off >= sel.start && off + len <= sel.end) t.classList.add('hf-selected');
+      else {
+        /* تکهٔ مرزی: فقط بخشِ داخلِ بازه هایلایت شود → تکه به دو/سه span تقسیم می‌شود */
+        var a = Math.max(0, sel.start - off), b = Math.min(len, sel.end - off), txt = t.textContent, frag = document.createDocumentFragment();
+        function piece(str, o, mark) { var sp = document.createElement('span'); sp.className = 'txt' + (mark ? ' hf-selected' : ''); sp.dataset.off = String(o); sp.dataset.q = t.dataset.q; sp.setAttribute('style', t.getAttribute('style') || ''); sp.textContent = str; return sp; }
+        if (a > 0) frag.appendChild(piece(txt.slice(0, a), off, false));
+        frag.appendChild(piece(txt.slice(a, b), off + a, true));
+        if (b < len) frag.appendChild(piece(txt.slice(b), off + b, false));
+        t.parentNode.replaceChild(frag, t);
+      }
+    });
+    var marked = document.querySelectorAll('#previewArea .question-print-row[data-qid="' + String(sel.question.id) + '"] .hf-selected');
+    if (marked.length) {
+      try {
+        var r = document.createRange(); r.setStartBefore(marked[0]); r.setEndAfter(marked[marked.length - 1]);
+        var ws = window.getSelection(); ws.removeAllRanges(); ws.addRange(r);
+      } catch (e) {}
+    }
+  }
+  function currentSel() { var r = (lastSel && lastSel.sticky) ? lastSel : (selectionRange() || lastSel); if (!r) toast('اول بخشی از متنِ سؤال را انتخاب کنید (لمسِ طولانی روی کلمه)'); return r; }
   function updateFmtBar(sel) {
     ['bold', 'italic', 'underline'].forEach(function (key) {
       var btn = document.querySelector('#hostFmt .hf-btn[data-fmt="' + key + '"]'); if (!btn) return;
@@ -414,7 +449,7 @@
     var bar = $('hostFmt'); if (bar) bar.classList.toggle('has-sel', !!sel);
   }
   var FONTS = [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما'], ['serif', 'سریف']];
-  var SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28];
+  var SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30, 32, 36, 40, 44, 48, 54, 60, 72, 84, 100];
   function faNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); }
   function ensureFmtBar() {
     var v = $('pgsViewer'); if (!v || $('hostFmt')) return;
@@ -456,7 +491,17 @@
     font.addEventListener('change', function () { var f = font.value; font.value = ''; var sel = currentSel(); if (sel && f) applyStyle(sel, {font: f === 'default' ? '' : f}); });
     if (!document.__hostSelBound) {
       document.__hostSelBound = true;
-      document.addEventListener('selectionchange', function () { var r = selectionRange(); if (r) lastSel = r; updateFmtBar(r); });
+      document.addEventListener('selectionchange', function () {
+        var r = selectionRange();
+        if (r) { if (!(lastSel && lastSel.sticky && lastSel.question === r.question && lastSel.start === r.start && lastSel.end === r.end)) { Array.prototype.forEach.call(document.querySelectorAll('.hf-selected'), function (el) { el.classList.remove('hf-selected'); }); lastSel = r; } updateFmtBar(r); }
+        else if (!(lastSel && lastSel.sticky)) updateFmtBar(null);
+      });
+      /* لمس روی جای دیگرِ برگه (نه نوار و نه متنِ انتخاب‌شده) → پایانِ انتخابِ پابرجا */
+      document.addEventListener('pointerdown', function (ev) {
+        var t = ev.target;
+        if (t && t.closest && (t.closest('#hostFmt') || t.closest('.hf-selected'))) return;
+        if (lastSel && lastSel.sticky) clearSticky();
+      }, true);
     }
   }
   function formatSelection(kind, value) {
@@ -465,7 +510,7 @@
     if (kind === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return 'ok'; }
     if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !coversAxis(sel.question.__spans || [], sel.start, sel.end, kind); applyStyle(sel, patch); return 'ok'; }
     if (kind === 'color') { applyStyle(sel, {color: /^#[0-9a-fA-F]{6}$/.test(value) ? value : ''}); return 'ok'; }
-    if (kind === 'size') { var n = Number(value); applyStyle(sel, {size: (n >= 8 && n <= 40) ? Math.round(n) : 0}); return 'ok'; }
+    if (kind === 'size') { var n = Number(value); applyStyle(sel, {size: (n >= 1 && n <= 100) ? Math.round(n) : 0}); return 'ok'; }
     if (kind === 'font') { applyStyle(sel, {font: (value && value !== 'default') ? value.slice(0, 30) : ''}); return 'ok'; }
     return 'unknown';
   }
@@ -567,11 +612,20 @@
     var fig = figureOf(e.target); if (!fig) return;
     e.preventDefault(); e.stopImmediatePropagation(); editFigure(fig);
   }, true);
+  /* V129 — کلیک/لمسِ اول: انتخاب (کادر + ۸ دستگیرهٔ تغییر اندازه روی اضلاع و گوشه‌ها)؛ کلیک/لمسِ دوم روی
+     شکلِ از‌پیش‌انتخاب‌شده (بدونِ کشیدن و نه روی دستگیره): بازکردنِ ویرایشگرِ بومی. */
+  var figDown = null;
+  window.addEventListener('pointerdown', function (e) {
+    var fig = figureOf(e.target);
+    figDown = fig ? {fig: fig, x: e.clientX, y: e.clientY, wasSelected: fig.classList.contains('selected'), onHandle: !!(e.target.closest && e.target.closest('.fig-resize-handle'))} : null;
+  }, true);
   window.addEventListener('pointerup', function (e) {
-    var fig = figureOf(e.target); if (!fig || e.pointerType === 'mouse') return;
-    var now = Date.now();
-    if (fig === lastTapFig && now - lastTap < 320) { lastTap = 0; lastTapFig = null; editFigure(fig); return; }
-    lastTap = now; lastTapFig = fig;
+    var d = figDown; figDown = null;
+    if (!d) return;
+    var fig = figureOf(e.target); if (fig !== d.fig) return;
+    var moved = Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8;
+    if (moved || d.onHandle) return;
+    if (d.wasSelected) { e.preventDefault(); e.stopImmediatePropagation(); editFigure(fig); }
   }, true);
 
   /* ---------------------------------------------------------------- API برنامه */
@@ -582,8 +636,56 @@
   }
   function getPageSetup() { return JSON.stringify(readPageSetup()); }
 
+  /* ================================================================ V129 — دلیمترهای عینِ ویرایشگرِ فرمول
+     ویرایشگر (formula.html، MB_DELIM_SHAPE) هر پرانتز/کروشه/آکولاد/… را از قطعه‌های SVGِ کش‌پذیر (سرِ ثابت +
+     بازوی flex) می‌سازد؛ موتورِ وب در پیش‌نمایش گلیفِ فونت را با scaleY می‌کشید (و برای [ ] | مسیرِ stroke).
+     اینجا makeDelimWrap با همان جدولِ ویرایشگر جایگزین می‌شود تا پیش‌نمایش و چاپ عیناً مثلِ ویرایشگر باشند. */
+  var DELIM_SHAPE = {
+    paren: ['.44em', [['c', 'M9 1 C3.2 3.1 1.6 6 1.6 10'], ['b', 'M1.6 0 L1.6 10'], ['c', 'M1.6 0 C1.6 4 3.2 6.9 9 9']]],
+    bow: ['.42em', [['b', 'M8.8 0.5 C2.1 3.2 2.1 6.8 8.8 9.5']]],
+    brk: ['.36em', [['c', 'M9 1.2 L1.6 1.2 L1.6 10'], ['b', 'M1.6 0 L1.6 10'], ['c', 'M1.6 0 L1.6 8.8 L9 8.8']]],
+    brace: ['.5em', [['c', 'M9 0.8 Q4.6 0.8 4.6 10'], ['b', 'M4.6 0 L4.6 10'], ['m', 'M4.6 0 Q4.6 5 0.7 5 Q4.6 5 4.6 10'], ['b', 'M4.6 0 L4.6 10'], ['c', 'M4.6 0 Q4.6 9.2 9 9.2']]],
+    ceil: ['.36em', [['c', 'M9 1.2 L1.6 1.2 L1.6 10'], ['b', 'M1.6 0 L1.6 10'], ['c', 'M1.6 0 L1.6 10']]],
+    floor: ['.36em', [['c', 'M1.6 0 L1.6 10'], ['b', 'M1.6 0 L1.6 10'], ['c', 'M1.6 0 L1.6 8.8 L9 8.8']]],
+    bar: ['.28em', [['b', 'M5 0 L5 10']]],
+    dbar: ['.4em', [['b', 'M3 0 L3 10 M7 0 L7 10']]],
+    ang: ['.42em', [['b', 'M8.4 0 L1.6 5 L8.4 10']]]
+  };
+  var DELIM_MAP = {'(': ['bow', 0], ')': ['bow', 1], '⟮': ['paren', 0], '⟯': ['paren', 1], '[': ['brk', 0], ']': ['brk', 1],
+    '{': ['brace', 0], '}': ['brace', 1], '⌈': ['ceil', 0], '⌉': ['ceil', 1], '⌊': ['floor', 0], '⌋': ['floor', 1],
+    '⟨': ['ang', 0], '⟩': ['ang', 1], '〈': ['ang', 0], '〉': ['ang', 1], '|': ['bar', 0], '‖': ['dbar', 0], '∥': ['dbar', 0]};
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]; }); }
+  function delimSvg(ch) {
+    var info = DELIM_MAP[String(ch)]; if (!info) return '';
+    var sh = DELIM_SHAPE[info[0]]; if (!sh) return '';
+    var out = '<span class="mdelim-x mdx-' + info[0] + (info[1] ? ' mdx-flip' : '') + '" style="--mdw:' + sh[0] + '" aria-hidden="true">';
+    for (var i = 0; i < sh[1].length; i++) out += '<svg class="mdx mdx-' + sh[1][i][0] + '" viewBox="0 0 10 10" preserveAspectRatio="none"><path d="' + sh[1][i][1] + '"/></svg>';
+    return out + '</span>';
+  }
+  function delimHtml(ch) {
+    var c0 = String(ch == null ? '' : ch); if (!c0) return '';
+    /* data-delim عمداً گذاشته نمی‌شود تا اصلاح‌گرِ strokeِ موتورِ وب (fixDom) SVG را با مسیرِ خودش عوض نکند؛
+       یک .mdelim-glyphِ خالی و پنهان هم می‌ماند تا fitMathStretchers (که فقط دنبالِ آن کلاس می‌گردد) محتوای SVG را پاک نکند */
+    if (DELIM_MAP[c0]) return '<span class="mdelim mdx-host" data-dl="' + esc(c0) + '">' + delimSvg(c0) + '<span class="mdelim-glyph"></span></span>';
+    return '<span class="mdelim" data-delim="' + esc(c0) + '"><span class="mdelim-glyph">' + esc(c0) + '</span></span>';
+  }
+  function installDelimOverride() {
+    if (typeof window.MathParser !== 'function' || !window.MathParser.prototype || window.MathParser.prototype.__hostDelim) return;
+    var P = window.MathParser.prototype;
+    P.__hostDelim = true;
+    P.makeDelimWrap = function (o, c, inner) {
+      var kind = this.delimKind(o, c);
+      if (kind === 'floor' || kind === 'ceil') {
+        var fo = kind === 'floor' ? '⌊' : '⌈', fc = kind === 'floor' ? '⌋' : '⌉';
+        return '<span class="mbrk-box mbrk-' + kind + '">' + delimHtml(fo) + '<span class="mpar-body">' + (inner || '') + '</span>' + delimHtml(fc) + '</span>';
+      }
+      return '<span class="mparbox" data-kind="' + esc(kind) + '">' + delimHtml(o) + '<span class="mpar-body">' + (inner || '') + '</span>' + delimHtml(c) + '</span>';
+    };
+  }
+
   function install() {
     ensurePgs();
+    installDelimOverride();
     installRichTextOverride();
     installPrintOverrides();
     hookPreviewClose();
