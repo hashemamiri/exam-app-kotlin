@@ -54,8 +54,9 @@ class V61_6SchoolsHeaderPastelCardsTest {
         val bulk = school.substringAfter("private fun BulkStudentDialog(")
             .substringBefore("internal fun studentClipboardText")
         assertFalse("OutlinedButton" in edit.substringAfter("رمز جدید اختیاری"))
-        assertTrue(edit.indexOf("IconButton(\n                                    onClick = { newPassword = generatePassword(10) }") > 0)
-        assertFalse("OutlinedButton" in bulk.substringAfter("Text(\"دختر\")"))
+        // V135.9 — تاس تک‌خطی بدون weight
+        assertTrue("IconButton(onClick = { newPassword = generatePassword(10) })" in edit)
+        assertFalse("OutlinedButton" in bulk.substringAfter("Text(\"دختر\""))
     }
 
     @Test

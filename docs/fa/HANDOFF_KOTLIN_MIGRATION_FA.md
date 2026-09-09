@@ -18215,3 +18215,6 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 3. **دستگیره‌های برش** (`QuestionAudioEditorDialog.kt` → `WaveformTrimmer`): ناحیهٔ گرفتن `28.dp.toPx()` (قبلاً ۵۶px ثابت)، دستگیره ۲۲×۵۶dp با سه خط سفید و رنگ قرمز هنگام درگ؛ tap نزدیک دستگیره seek نمی‌کند.
 4. **چیپ جنسیت**: در `StudentEditDialog` و `BulkStudentDialog` `Modifier.weight(1f)` از چیپ‌ها/تاس/حذف برداشته شد و ردیف `Arrangement.spacedBy(8.dp, CenterHorizontally)` است.
 5. **افزودن موجود**: `MemberPickerDialog` از `AlertDialog` به `Dialog(usePlatformDefaultWidth=false)` + `Surface(fillMaxSize)` با سرتیتر (✕) و دکمه‌های پایین تبدیل شد.
+
+### V135.10 — CI قرمز پس از V135.9
+سه تست متن‌بنیاد (`V61_3StudentFormGradeFieldTest`, `V61_6SchoolsHeaderPastelCardsTest`) و یک تست رفتاری (`StudentExamViewModelTest.process restart…`) قفل رفتار قدیمی بودند؛ به‌روزرسانی شدند: `Text("پسر"` (بدون پرانتز بسته)، `IconButton(onClick = { newPassword = generatePassword(10) })` تک‌خطی، و بازیابی = `resumableExamAvailable` سپس `rejoinActiveExam()`. **درس:** قبل از commit، `grep` ادبیِ تست‌ها برای اسنیپت‌های تغییرکرده (از جمله چندخطی) کافی نیست؛ اسکریپت pin-check باید `indexOf(...)` و تست‌های ViewModel را هم ببیند.

@@ -73,6 +73,12 @@ class StudentExamViewModelTest {
         val viewModel = StudentExamViewModel(repository, drafts)
         advanceUntilIdle()
 
+        // V135.9 — با ورود مجدد، آزمون خودکار باز نمی‌شود؛ پیام «آزمون نیمه‌تمام» و دکمهٔ پیوستن نشان داده می‌شود.
+        assertEquals(null, viewModel.state.value.exam)
+        assertTrue(viewModel.state.value.resumableExamAvailable)
+        assertTrue(!viewModel.state.value.restoringExam)
+        viewModel.rejoinActiveExam()
+        advanceUntilIdle()
         assertEquals("e1", viewModel.state.value.exam?.id)
         assertTrue(viewModel.state.value.resumedExam)
         assertTrue(viewModel.state.value.showPreview)

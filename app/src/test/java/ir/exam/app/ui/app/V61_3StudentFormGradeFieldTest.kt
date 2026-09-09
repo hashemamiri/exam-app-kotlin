@@ -28,8 +28,8 @@ class V61_3StudentFormGradeFieldTest {
         val row = bulk.substringAfter("// V61.0 — ترتیب درخواستی وسط‌چین: چشم، پسر، دختر، تاس.")
         assertTrue("Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally)" in row)
         val eye = row.indexOf("PasswordVisibilityButton(")
-        val boy = row.indexOf("Text(\"پسر\")")
-        val girl = row.indexOf("Text(\"دختر\")")
+        val boy = row.indexOf("Text(\"پسر\"")
+        val girl = row.indexOf("Text(\"دختر\"")
         val dice = row.indexOf("Text(\"🎲\")")
         assertTrue(eye in 0 until boy && boy < girl && girl < dice)
         // چشم هر دو کادر رمز و رمز فعلی را همزمان نشان می‌دهد
