@@ -14,8 +14,8 @@ body{padding:0 !important;}
 #settingsPanel,.questions-area,.toolbar,#emptyMsg,.qtype-overlay{display:none !important;}
 /* بینندهٔ PGS تمام‌صفحه است؛ نوارِ خودش دکمهٔ بستن/چاپ/زوم/تنظیمات صفحه را دارد. */
 #pgsViewer .pgs-btn[onclick="pgsFullscreen()"]{display:none !important;}
-/* گزینه‌هایی که در پنلِ چاپِ اندروید انتخاب می‌شوند (بازه/تعداد نسخه) */
-#pgsPrintDlg .pgs-dlg-row:nth-of-type(2),#pgsPrintDlg .pgs-dlg-row:nth-of-type(3){display:none !important;}
+/* راهنمای «Save as PDF» مرورگر در برنامه معنی ندارد (پنلِ چاپِ اندروید خودش PDF دارد). */
+#pgsPrintDlg .pgs-dlg-row:nth-of-type(4){display:none !important;}
 
 
 /* چاپِ سیستم (PrintManager): فقط برگه‌های صفحه‌بندی‌شدهٔ #pgsPrintRoot چاپ می‌شوند (قاعدهٔ رسمیِ PGS در pgs_style.css). */

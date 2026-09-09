@@ -108,7 +108,7 @@ if RENDERER.is_file():
         "window.ExamPrintRenderer = {",
         "showPreview: showPreview, layoutSnapshot: snapshot, figureAt: figureAt, replaceFigure: replaceFigure,",
         "restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup",
-        "function requestPrint(mode)",
+        "function requestPrint(mode, opts)",
         "callBridge('print', mode)",
         "callBridge('previewClosed')",
         "callBridge('editFigureTool', String(qid), index)",
@@ -135,6 +135,10 @@ dialog = read(DIALOG)
 for retired in ("PrintPreviewHeader", "PrintBoxStyleStore", "PrintBoxSettingsDialog", "applyFormat", "applyBoxStyle", "WEB_ENGINE_PREVIEW", "PrintPageSetupDialog"):
     require(retired not in dialog, f"retired native preview UI still referenced: {retired}")
 require("fun pageSetupChanged(json: String?)" in dialog, "web page-setup panel must persist through the bridge")
+# V127 — پنل‌های fixedِ موتورِ وب با overviewMode بریده می‌شدند؛ بازه/نسخه در دیالوگِ چاپِ وب.
+require("settings.loadWithOverviewMode = false" in dialog, "web engine needs the real device viewport (no overview mode)")
+require("function applyRangeAndCopies(opts)" in read(WEBHOST), "print dialog range/copies must be applied to #pgsPrintRoot")
+require("نام و امضای دبیر:" not in read(MAIN / "java/ir/exam/app/domain/model/OfficialPrintModels.kt"), "teacher/principal signature footer must stay removed")
 require("PrintPageSetup.fromJson(json)" in dialog, "page setup JSON from the web panel must be parsed")
 for marker in (
     'MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"',

@@ -29,7 +29,9 @@ data class OfficialExamPrintable(
     val totalScore: Double = 0.0,
     val questions: List<OfficialPrintQuestion>,
     val includeAnswerKey: Boolean = false,
-    override val footerNote: String = "نام و امضای دبیر:                              نام و امضای مدیر:"
+    // V127 — سطرِ «نام و امضای دبیر/مدیر» به درخواستِ کاربر از پیش‌نمایش/چاپ حذف شد؛
+    // خالی یعنی موتورِ وب پاورقیِ پیش‌فرضِ خودش («موفق باشید – استاد – واحد») را می‌گذارد.
+    override val footerNote: String = ""
 ) : OfficialPrintable
 
 data class PrintTextSpan(

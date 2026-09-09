@@ -72,7 +72,7 @@ class V125_WebPrintEngineTest {
             "window.printStudent = function",
             "window.printTeacher = function",
             "window.ExamPrintRenderer = {",
-            "function requestPrint(mode)",
+            "function requestPrint(mode, opts)",
             "callBridge('print', mode)",
             "callBridge('previewClosed')",
             "callBridge('editFigureTool', String(qid), index)",
@@ -93,6 +93,13 @@ class V125_WebPrintEngineTest {
         assertFalse("PrintPreviewHeader" in dialog)
         assertFalse("WEB_ENGINE_PREVIEW" in dialog)
         assertTrue("settings.setSupportZoom(false)" in dialog)
+        // V127 — پنل‌های fixed موتور وب (📐/دیالوگ چاپ) به viewport واقعی دستگاه نیاز دارند
+        assertTrue("settings.loadWithOverviewMode = false" in dialog)
+        // V127 — بازه/تعداد نسخه از دیالوگ چاپ وب؛ امضای دبیر/مدیر حذف
+        assertTrue("function applyRangeAndCopies(opts)" in webhost)
+        assertTrue("requestPrint(mode, {rangeKind: rangeKind, rangeText: rangeText, current: current, copies: copies})" in webhost)
+        val models = File(root(), "app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt").readText()
+        assertFalse("امضای دبیر/مدیر باید حذف شده باشد", "نام و امضای دبیر:" in models)
         assertTrue("internal const val MAIN_PAGE_URL = \"https://exam-print.local/print/exam_print_renderer.html\"" in dialog)
     }
 }

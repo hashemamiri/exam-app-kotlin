@@ -31,7 +31,7 @@ class ExamPrintRendererContractTest {
             "window.printTeacher = function",
             "window.ExamPrintRenderer = {",
             "restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup",
-            "function requestPrint(mode)"
+            "function requestPrint(mode, opts)"
         ).forEach { required ->
             assertTrue("قرارداد فعال رندرر پیدا نشد: $required", required in webhost)
         }

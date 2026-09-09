@@ -200,8 +200,37 @@
   window.addEventListener('afterprint', function (e) {
     if (printRootReady && !e.__appHost) { e.stopImmediatePropagation(); }
   }, true);
-  function requestPrint(mode) {
+  /* V127 — بازهٔ صفحات و تعداد نسخه از دیالوگِ چاپِ خودِ وب (مثل نسخهٔ وب): پس از آنکه PGS
+     #pgsPrintRoot را ساخت، فقط برگه‌های انتخابی می‌مانند و به تعدادِ نسخه تکرار می‌شوند. */
+  function parseRange(str, total) {
+    var set = {}, any = false;
+    String(str || '').replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }).split(/[،,;]+/).forEach(function (part) {
+      part = part.trim(); if (!part) return;
+      var m = /^(\d+)\s*-\s*(\d+)$/.exec(part), a, b;
+      if (m) { a = Math.max(1, Math.min(total, +m[1])); b = Math.max(1, Math.min(total, +m[2])); }
+      else if (/^\d+$/.test(part)) { a = b = Math.max(1, Math.min(total, +part)); }
+      else return;
+      for (var i = Math.min(a, b); i <= Math.max(a, b); i++) { set[i] = 1; any = true; }
+    });
+    return any ? set : null;
+  }
+  function applyRangeAndCopies(opts) {
+    var root = $('pgsPrintRoot'); if (!root) return;
+    var sheets = Array.prototype.slice.call(root.querySelectorAll('.pgs-sheet'));
+    /* بازه پس از ساختِ برگه‌های نهایی (نسخهٔ استاد ممکن است برگهٔ کلید اضافه داشته باشد) حل می‌شود. */
+    var range = null;
+    if (opts.rangeKind === 'range') range = parseRange(opts.rangeText, sheets.length);
+    else if (opts.rangeKind === 'current') { range = {}; range[Math.max(1, Math.min(sheets.length, num(opts.current, 1)))] = 1; }
+    if (range) sheets.forEach(function (el, i) { if (!range[i + 1]) el.remove(); });
+    var copies = Math.max(1, Math.min(20, num(opts.copies, 1)));
+    if (copies > 1) {
+      var once = Array.prototype.slice.call(root.querySelectorAll('.pgs-sheet'));
+      for (var c = 1; c < copies; c++) once.forEach(function (el) { root.appendChild(el.cloneNode(true)); });
+    }
+  }
+  function requestPrint(mode, opts) {
     mode = mode === 'teacher' ? 'teacher' : 'student';
+    opts = opts || {};
     if (printing) return 'busy';
     printing = true;
     try { printMode = mode; } catch (e) {}
@@ -211,6 +240,7 @@
          (برگه‌های صفحه‌بندی‌شده). PrintManagerِ اندروید همین سند را با @media print چاپ می‌کند. */
       printRootReady = false;
       try { var ev = new Event('beforeprint'); ev.__appHost = true; window.dispatchEvent(ev); } catch (e) {}
+      try { applyRangeAndCopies(opts); } catch (e) {}
       printRootReady = true;
       printing = false;
       callBridge('print', mode);
@@ -240,12 +270,17 @@
     return true;
   }
   function installPrintOverrides() {
-    /* دکمه‌های نوارِ PGS (چاپ دانشجو/استاد، دیالوگِ چاپ) و Ctrl+P → پلِ بومی؛ بازه/تعداد نسخه در پنلِ چاپِ اندروید انتخاب می‌شود. */
+    /* دکمه‌های نوارِ PGS (چاپ دانشجو/استاد، دیالوگِ چاپ) و Ctrl+P → پلِ بومی. */
     window.pgsPrintNow = function (mode) { var m = $('pgsPrintMenu'); if (m) m.classList.remove('open'); requestPrint(mode || 'student'); };
     window.pgsDoPrintFromDlg = function () {
       var mode = (document.querySelector('input[name="pgsMode"]:checked') || {}).value || 'student';
+      var rangeKind = (document.querySelector('input[name="pgsRange"]:checked') || {}).value || 'all';
+      var copies = num($('pgsCopies') && $('pgsCopies').value, 1);
+      var rangeText = ($('pgsRangeVal') && $('pgsRangeVal').value) || '';
+      if (rangeKind === 'range' && !parseRange(rangeText, 999)) { toast('بازهٔ صفحات معتبر نیست. نمونه: ۱،۳-۵'); return; }
+      var current = num(String(($('pgsPageInput') && $('pgsPageInput').value) || '1').replace(/[۰-۹]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }), 1);
       try { window.pgsClosePrintDlg(); } catch (e) {}
-      requestPrint(mode);
+      requestPrint(mode, {rangeKind: rangeKind, rangeText: rangeText, current: current, copies: copies});
     };
     window.printStudent = function () { return requestPrint('student'); };
     window.printTeacher = function () { return requestPrint('teacher'); };
