@@ -1,6 +1,5 @@
 package ir.exam.app.ui.printing
 
-import ir.exam.app.data.local.PrintBoxStyle
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintQuestion
 import kotlinx.serialization.json.JsonObject
@@ -20,9 +19,6 @@ object ExamHtmlPrintPayloadBuilder {
     fun build(
         printable: OfficialExamPrintable?,
         extraHeaderFields: Map<String, String> = emptyMap(),
-        // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ جدولِ سؤال‌ها (از
-        // PrintBoxStyleStore می‌آید؛ null یعنی پیش‌فرض‌های موتورِ HTML).
-        boxStyle: PrintBoxStyle? = null,
         /** V121 — تنظیمات صفحهٔ موتور چاپ (JSON خامِ [ir.exam.app.data.local.PrintPageSetup.toJson]). */
         pageSetupJson: String? = null
     ): JsonObject {
@@ -42,15 +38,6 @@ object ExamHtmlPrintPayloadBuilder {
             put("footerNote", printable.footerNote)
             put("totalScore", formatScore(printable.totalScore))
             put("includeAnswerKey", printable.includeAnswerKey)
-            if (boxStyle != null) {
-                put("boxStyle", buildJsonObject {
-                    put("borderWidthPx", boxStyle.borderWidthPx)
-                    put("borderColor", boxStyle.borderColor)
-                    put("numberColWidthPercent", boxStyle.numberColWidthPercent)
-                    put("scoreColWidthPercent", boxStyle.scoreColWidthPercent)
-                    put("cellPaddingPx", boxStyle.cellPaddingPx)
-                })
-            }
             if (pageSetupJson != null) put("pageSetup", pageSetupJson)
             put("fields", buildJsonObject {
 

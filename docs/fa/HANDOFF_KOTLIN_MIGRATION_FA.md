@@ -17795,3 +17795,41 @@ CSS در webhost.css بزرگ کنید؛ ۲) `applyFormat` (نوارِ قالب�
 می‌کند. همان الگو در V125_WebPrintEngineTest هم بود. هر دو بازنویسی شدند. درسِ ثابت: هرگز `/*` (مثل
 الگوهای مسیر `dir/*`) داخلِ کامنتِ Kotlin ننویسید؛ پیش از تحویل، تعادلِ `/*`…`*/` فایل‌های .kt تغییر‌یافته را
 با اسکریپت بشمارید.
+
+## ۳۵۱. V126 — حذف کامل موتور چاپ/پیش‌نمایش قبلی و رابط‌های بومیِ وابسته
+
+**درخواست:** «موتور چاپ و بخش پیش‌نمایش قبلی رو کامل حذف کن». کاربر انتخاب کرد: همه‌چیز حذف شود و فقط
+موتورِ وب بماند (پنجرهٔ بومیِ «کادر» V122 هم حذف؛ تنظیمات صفحه فقط از پنلِ 📐 خودِ موتورِ وب)؛ تست‌های
+قدیمیِ رندرر حذف شوند. پایه: f265629 (= سرِ GitHub پس از V125.1).
+
+**حذف‌شده‌ها (git rm):**
+- `assets/print/exam_print_renderer_legacy.html` (رندررِ V105–V124).
+- `data/local/PrintBoxStyleStore.kt` و `ui/printing/PrintBoxSettingsDialog.kt` (پنجرهٔ «کادر»؛ معادلی در وب ندارد).
+- تست‌های `V105_PrintPreviewParityTest, V106_PrintRoundTripTest, V107_PrintBuilderPolishTest, V121_PgsPrintEngineTest,
+  V123_SepGripFreeSlotTest, V124_PgsPrintEngineTest` (همه متنِ رندررِ قبلی را می‌خواندند). بندهای Kotlinِ مهمشان
+  (PrintManager از Context فعالیت، restorePreview پس از پنل چاپ، HeadlessExamPrinter) به
+  `ExamPrintRendererContractTest` (بازنویسی‌شده روی webhost.js) منتقل شد.
+- در `ExamHtmlPrintDialog.kt`: ثابتِ `WEB_ENGINE_PREVIEW`، `PrintPreviewHeader` (هدر ✕/نوارِ قالب‌بندی V114–V116)،
+  `FormatChip`، `PrintPageSetupDialog` و `SetupSwitch` (پنجرهٔ بومیِ «تنظیمات صفحه» V121)، وضعیت‌های
+  `showBoxSettings/pageSetupOpen`، importهای بی‌استفاده. فایل از ۱۰۶۶ به ~۷۹۰ خط رسید.
+- `ExamHtmlPrintPayload.build`: پارامترِ `boxStyle` و کلیدِ `boxStyle` حذف شد (`pageSetupJson` ماند).
+- `webhost.js`: `applyBoxStyle` و `applyFormat` حذف؛ `webhost.css`: متغیرهای `--box-*` حذف.
+
+**تنها افزودهٔ لازم — ماندگاریِ تنظیمات صفحه:** پنلِ 📐 وب خودش را در localStorage نگه می‌داشت (که در برنامه
+ممنوع/خاموش است). حالا `webhost.js` روی `#pgsPageSetup` رویدادهای change/input را می‌شنود و
+`ExamPrintBridge.pageSetupChanged(JSON)` (همان JSONِ `readPageSetup`) را صدا می‌زند؛ `ExamPrintBridge` (Kotlin)
+با `PrintPageSetup.fromJson` (متدِ جدید در companion، همهٔ مقادیر اعتبارسنجی‌شده) آن را در
+`PrintPageSetupStore` می‌نویسد. بارِ بعد همان JSON با کلیدِ `pageSetup` در payload برمی‌گردد و
+`printAttributes()` پنلِ چاپِ اندروید را هم‌اندازهٔ کاغذ باز می‌کند — یعنی رفتارِ V121 بدونِ هیچ UI بومی.
+
+**آزمون (puppeteer):** بازکردنِ پنلِ 📐 و تغییرِ کاغذ به A5 و جهت به افقی → دو فراخوانیِ
+`pageSetupChanged` با JSON درست، پیش‌نمایش ۷ برگه، بدونِ خطای JS؛ printTeacher → ۱۰ برگه در #pgsPrintRoot؛
+هارنسِ کاملِ run.js همچنان سبز (۴ برگهٔ چاپ با کلید، A5 → 210×148mm، previewClosed).
+
+**verify_native_final.py:** به‌جای «legacy باید باشد» اکنون «legacy و PrintBoxStyleStore/PrintBoxSettingsDialog
+باید نباشند»، نبودِ `PrintPreviewHeader/applyFormat/applyBoxStyle/WEB_ENGINE_PREVIEW/PrintPageSetupDialog` در
+دیالوگ، وجودِ `fun pageSetupChanged` + `PrintPageSetup.fromJson` و گزارشِ webhost. تستِ
+`V125_WebPrintEngineTest` و `ExamHtmlPrintPayloadTest` هم‌راستا شدند.
+
+**نکته برای ادامه:** اگر روزی «کادر» (ضخامت خط/عرض ستون) لازم شد باید در خودِ موتورِ وب (pgs_style.css/
+mainscript) پیاده شود، نه با UI بومی. نسخهٔ بعدی: V127، بند ۳۵۲.

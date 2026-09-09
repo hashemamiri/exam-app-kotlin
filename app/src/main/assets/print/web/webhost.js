@@ -8,7 +8,8 @@
      ۳) چاپ را به‌جای window.print/iframe (که در WebView کار نمی‌کند) به پلِ
         بومی ExamPrintBridge.print(mode) می‌رساند — با همان مسیرِ رسمیِ PGS
         برای چاپِ سیستم: رویدادِ beforeprint → body.pgs-fallback + #pgsPrintRoot؛
-     ۴) همان API قبلیِ برنامه را نگه می‌دارد (window.ExamPrintRenderer).
+     ۴) همان API قبلیِ برنامه را نگه می‌دارد (window.ExamPrintRenderer)؛
+     ۵) (V126) تغییراتِ پنلِ «تنظیمات صفحه»ی وب را به برنامه برمی‌گرداند.
    ============================================================================ */
 (function () {
   'use strict';
@@ -36,10 +37,21 @@
   }
 
   /* ---------------------------------------------------------------- DOM پایهٔ PGS */
+  var setupBound = false;
   function ensurePgs() {
     /* pgsToggleSetup(false) همان ensureBaseDom را صدا می‌زند و پنل را بسته نگه می‌دارد. */
     try { if (typeof window.pgsToggleSetup === 'function') window.pgsToggleSetup(false); } catch (e) {}
+    if ($('opt_paper') && !setupBound) { setupBound = true; bindSetupReport(); }
     return !!$('opt_paper');
+  }
+  /* V126 — پنلِ 📐 خودِ موتورِ وب تنها جای تنظیمِ صفحه است؛ وب آن را در حافظهٔ مرورگر نگه می‌داشت،
+     اینجا هر تغییر به برنامه برمی‌گردد (ExamPrintBridge.pageSetupChanged) تا روی دستگاه بماند و
+     پنلِ چاپِ اندروید هم‌اندازهٔ همان کاغذ باز شود. */
+  function reportPageSetup() { callBridge('pageSetupChanged', JSON.stringify(readPageSetup())); }
+  function bindSetupReport() {
+    var panel = $('pgsPageSetup'); if (!panel) return;
+    panel.addEventListener('change', reportPageSetup);
+    panel.addEventListener('input', reportPageSetup);
   }
 
   /* ---------------------------------------------------------------- تنظیمات صفحه */
@@ -155,25 +167,7 @@
     applyFields(fields);
     questions = data.reset === true ? [] : (Array.isArray(data.questions) ? data.questions.map(toWebQuestion) : []);
     qIdCounter = questions.reduce(function (m, q) { return Math.max(m, num(q.id, 0)); }, 0);
-    applyBoxStyle(data.boxStyle);
     try { updateHeaderSettingsVisibility(); } catch (e) { try { window.renderPreview(); } catch (e2) {} }
-    return 'ok';
-  }
-
-  /* ---------------------------------------------------------------- کادر/جدول‌بندی (V121 برنامه) */
-  function applyBoxStyle(value) {
-    var root = document.documentElement.style;
-    value = parseMaybe(value);
-    if (!value || typeof value !== 'object') {
-      ['--box-border-w','--box-border-c','--box-no-w','--box-score-w','--box-pad'].forEach(function (k) { root.removeProperty(k); });
-      return 'ok';
-    }
-    var bw = Math.max(0, Math.min(6, num(value.borderWidthPx, 1)));
-    var bc = /^#[0-9a-fA-F]{6}$/.test(text(value.borderColor)) ? text(value.borderColor) : '#000000';
-    root.setProperty('--box-border-w', bw + 'px'); root.setProperty('--box-border-c', bc);
-    root.setProperty('--box-no-w', Math.max(3, Math.min(20, num(value.numberColWidthPercent, 6))) + '%');
-    root.setProperty('--box-score-w', Math.max(3, Math.min(20, num(value.scoreColWidthPercent, 6))) + '%');
-    root.setProperty('--box-pad', Math.max(0, Math.min(30, num(value.cellPaddingPx, 8))) + 'px');
     return 'ok';
   }
 
@@ -340,9 +334,6 @@
   window.printTeacher = function () { return requestPrint('teacher'); };
   window.ExamPrintRenderer = {
     showPreview: showPreview, layoutSnapshot: snapshot, figureAt: figureAt, replaceFigure: replaceFigure,
-    restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup,
-    applyBoxStyle: applyBoxStyle,
-    /* قالب‌بندیِ بازه‌ایِ متن (V114 برنامه) در موتورِ وب وجود ندارد؛ نوارِ آن در هدرِ بومی پنهان است. */
-    applyFormat: function () { toast('قالب‌بندیِ متن را در ویرایشگرِ سؤال انجام دهید'); return 'unsupported'; }
+    restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup
   };
 })();

@@ -21,16 +21,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.Icon
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,13 +71,6 @@ import kotlinx.serialization.json.jsonPrimitive
 /** نشانی ثابت سند اصلی تا callbackهای WebView فقط یک‌بار داده را تزریق کنند. */
 internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"
 
-/**
- * V125 — سندِ اصلی اکنون میزبانِ موتورِ پیش‌نمایش/چاپِ «آزمون‌ساز v20» است
- * (فایل‌های css و js در print/web عیناً از نسخهٔ وب + print/web/webhost.js). رندررِ
- * قبلی (V105–V124) کنار گذاشته شده: print/exam_print_renderer_legacy.html.
- * بینندهٔ وب (PGS) نوارِ کاملِ خودش را دارد؛ پس هدرِ بومیِ پیش‌نمایش پنهان است.
- */
-internal const val WEB_ENGINE_PREVIEW = true
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -119,10 +102,6 @@ fun ExamHtmlPrintDialog(
     var figureEditRequest by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var barStatus by remember { mutableStateOf<String?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
-    // V121 — پنجرهٔ تنظیماتِ کادر/جدول‌بندیِ سراسریِ جدولِ سؤال‌ها.
-    var showBoxSettings by remember { mutableStateOf(false) }
-    // V121 — پنجرهٔ «تنظیمات صفحه» (📐 موتور PGS): تغییرات همان لحظه در رندرر اعمال می‌شوند.
-    var pageSetupOpen by remember { mutableStateOf(false) }
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
             kotlinx.coroutines.delay(2600)
@@ -228,44 +207,8 @@ fun ExamHtmlPrintDialog(
         // کاربری نداشت: پیش‌نمایش و چاپِ مستقیم هر دو بدونِ هدر می‌شوند.
         Surface(Modifier.fillMaxSize(), color = Color(0xFF334155)) {
             Column(Modifier.fillMaxSize()) {
-                // V116 — هدرِ بومی (Compose) بالای WebView: واقعاً ثابت است، چون
-                // اصلاً داخل صفحهٔ اسکرول‌شونده نیست. ✕ قرمز، کل صفحه/اندازهٔ واقعی
-                // و نوارِ قالب‌بندیِ اسکرول‌شونده که به JS رندرر فرمان می‌دهد.
-                // V125 — موتورِ وبِ آزمون‌ساز v20 نوارِ خودش را دارد (بستن/چاپ/زوم/تنظیمات
-                // صفحه/بندانگشتی)؛ هدرِ بومی فقط اگر موتورِ وب بارگذاری نشود نمایش داده می‌شود.
-                if (!loading && initialPrintMode == null && !WEB_ENGINE_PREVIEW) {
-                    PrintPreviewHeader(
-                        onClose = { requestDismiss() },
-                        onOpenBoxSettings = { showBoxSettings = true },
-                        onPageSetup = { pageSetupOpen = true },
-                        onFormat = { kind, value ->
-                            // V120 — قبلاً فقط `\` و `'` حذف می‌شدند؛ `"`، خطِ
-                            // جدید و `</script>` دست‌نخورده می‌ماندند. اگر یک‌روز
-                            // این مسیر برای مقداری غیر از هگز رنگ/کلید فونت/عدد
-                            // به کار می‌رفت، همان یک نقطهٔ تزریقِ کد در WebView
-                            // می‌شد. حالا با toJsStringLiteral هر دو آرگومان با
-                            // JSON.encode-مانند کاملاً امن اسکیپ می‌شوند.
-                            runJs(
-                                "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyFormat?" +
-                                    "window.ExamPrintRenderer.applyFormat(${kind.toJsStringLiteral()},${value.toJsStringLiteral()}):''}" +
-                                    "catch(e){return ''}})()",
-                                null
-                            )
-                        }
-                    )
-                }
-                if (pageSetupOpen) {
-                    PrintPageSetupDialog(
-                        initial = remember { ir.exam.app.data.local.PrintPageSetupStore(context).read() },
-                        onDismiss = { pageSetupOpen = false },
-                        onApply = { setup ->
-                            ir.exam.app.data.local.PrintPageSetupStore(context).write(setup)
-                            pageSetupOpen = false
-                            val json = setup.toJson()
-                            runJs("(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.setPageSetup?window.ExamPrintRenderer.setPageSetup($json):'missing'}catch(e){return 'err'}})()", null)
-                        }
-                    )
-                }
+                // V126 — هیچ هدر/نوارِ بومی روی پیش‌نمایش نیست: بینندهٔ موتورِ وب (PGS)
+                // نوارِ کاملِ خودش را دارد (بستن، چاپ، زوم، تنظیمات صفحه 📐، بندانگشتی).
                 Box(Modifier.fillMaxSize().weight(1f)) {
                     val readyPrintable = inlinedPrintable
                     if (readyPrintable != null || printable == null) AndroidView(
@@ -432,26 +375,6 @@ fun ExamHtmlPrintDialog(
                     )
                 }
 
-                // V121 — تنظیماتِ کادر/جدول‌بندیِ سراسری؛ همان ذخیره‌سازِ سراسریِ
-                // دستگاه (PrintBoxStyleStore) که مثلِ PrintHeaderStore کار می‌کند.
-                if (showBoxSettings) {
-                    val boxStore = remember { ir.exam.app.data.local.PrintBoxStyleStore(context) }
-                    PrintBoxSettingsDialog(
-                        initial = remember { boxStore.read() },
-                        onApply = { style ->
-                            boxStore.write(style)
-                            showBoxSettings = false
-                            val json = ir.exam.app.data.local.printBoxStyleToJson(style)
-                            runJs(
-                                "(function(){try{return window.ExamPrintRenderer&&window.ExamPrintRenderer.applyBoxStyle?" +
-                                    "window.ExamPrintRenderer.applyBoxStyle(${json.toJsStringLiteral()}):''}" +
-                                    "catch(e){return ''}})()",
-                                null
-                            )
-                        },
-                        onDismiss = { showBoxSettings = false }
-                    )
-                }
             }
         }
     }
@@ -501,7 +424,8 @@ private class ExamPrintBridge(
     private val onError: (String) -> Unit,
     private val onEditFigureTool: (String, Int) -> Unit,
     private val onToast: (String) -> Unit,
-    private val onPreviewClosed: () -> Unit
+    private val onPreviewClosed: () -> Unit,
+    private val pageSetupStore: ir.exam.app.data.local.PrintPageSetupStore
 ) {
     @JavascriptInterface
     fun renderFormula(source: String?): String = renderer.formulaDataUrl(source)
@@ -527,6 +451,16 @@ private class ExamPrintBridge(
     @JavascriptInterface
     fun editFigureTool(questionId: String?, index: Int) {
         onEditFigureTool(questionId.orEmpty(), index)
+    }
+
+    /**
+     * V126 — پنلِ «تنظیمات صفحه»ی خودِ موتورِ وب (📐) تغییرش را برمی‌گرداند تا مثلِ قبل روی
+     * دستگاه بماند و پنلِ چاپِ اندروید هم‌اندازهٔ همان کاغذ باز شود (وب localStorage داشت).
+     */
+    @JavascriptInterface
+    fun pageSetupChanged(json: String?) {
+        // روی رشتهٔ JS صدا زده می‌شود؛ SharedPreferences.apply ایمن است.
+        runCatching { pageSetupStore.write(ir.exam.app.data.local.PrintPageSetup.fromJson(json)) }
     }
 
     @JavascriptInterface
@@ -589,7 +523,9 @@ internal fun createExamPrintWebView(
             // V87.8 — همان اعلانِ وسط‌چینِ محوشونده
             onToast = onToast,
             // V89.5 — بستنِ پنجرهٔ پیش‌نمایش
-            onPreviewClosed = onPreviewClosed
+            onPreviewClosed = onPreviewClosed,
+            // V126 — تنظیمات صفحه از پنلِ 📐 خودِ موتورِ وب روی دستگاه ذخیره می‌شود
+            pageSetupStore = ir.exam.app.data.local.PrintPageSetupStore(context)
         ),
         "ExamPrintBridge"
     )
@@ -649,8 +585,6 @@ internal fun createExamPrintWebView(
                 printable,
                 // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
                 ir.exam.app.data.local.PrintHeaderStore(context).read(),
-                // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندیِ چاپ، ذخیره‌شده روی دستگاه
-                ir.exam.app.data.local.PrintBoxStyleStore(context).read(),
                 // V121 — تنظیمات صفحهٔ موتور چاپ (کاغذ/جهت/حاشیه/…)
                 ir.exam.app.data.local.PrintPageSetupStore(context).read().toJson()
             ).toString()
@@ -852,215 +786,5 @@ private class OneShotPrintAdapter(
     private fun handlerPost(block: () -> Unit) {
         // adapter روی رشتهٔ چاپ صدا زده می‌شود؛ آزادسازیِ WebView باید اصلی باشد.
         Handler(Looper.getMainLooper()).post(block)
-    }
-}
-
-/** V116 — هدرِ ثابتِ پیش‌نمایش: عنوان، کل صفحه/اندازهٔ واقعی، ✕ قرمز و نوارِ قالب‌بندی. */
-@Composable
-private fun PrintPreviewHeader(
-    onClose: () -> Unit,
-    onOpenBoxSettings: () -> Unit,
-    onPageSetup: () -> Unit,
-    onFormat: (kind: String, value: String) -> Unit
-) {
-    var colorMenu by remember { mutableStateOf(false) }
-    var sizeMenu by remember { mutableStateOf(false) }
-    var fontMenu by remember { mutableStateOf(false) }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("پیش‌نمایش برگه", style = MaterialTheme.typography.titleSmall, color = Color(0xFF0F172A))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = onPageSetup,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    modifier = Modifier.height(36.dp)
-                ) { Text("تنظیمات صفحه", color = Color(0xFF0F172A)) }
-                androidx.compose.material3.FilledIconButton(
-                    onClick = onClose,
-                    colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFDC2626), contentColor = Color.White),
-                    modifier = Modifier.size(36.dp)
-                ) { Icon(Icons.Outlined.Close, contentDescription = "بستن") }
-            }
-        }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FormatChip("B", bold = true) { onFormat("bold", "") }
-            FormatChip("I", italic = true) { onFormat("italic", "") }
-            FormatChip("U", underline = true) { onFormat("underline", "") }
-            // V121 — تراز پاراگرافیِ تکه‌ای: روی بندِ حاویِ بخشِ انتخاب‌شده اعمال
-            // می‌شود (applyFormat("align", ...) در exam_print_renderer.html).
-            FormatChip("راست") { onFormat("align", "right") }
-            FormatChip("وسط") { onFormat("align", "center") }
-            FormatChip("چپ") { onFormat("align", "left") }
-            FormatChip("بلوک") { onFormat("align", "justify") }
-            Box {
-                FormatChip("رنگ") { colorMenu = true }
-                androidx.compose.material3.DropdownMenu(expanded = colorMenu, onDismissRequest = { colorMenu = false }) {
-                    listOf(
-                        "#000000" to "مشکی", "#dc2626" to "قرمز", "#2563eb" to "آبی", "#16a34a" to "سبز",
-                        "#7c3aed" to "بنفش", "#ea580c" to "نارنجی", "#6b7280" to "خاکستری"
-                    ).forEach { (hex, name) ->
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(Color(android.graphics.Color.parseColor(hex))))
-                                    Text(name)
-                                }
-                            },
-                            onClick = { colorMenu = false; onFormat("color", hex) }
-                        )
-                    }
-                }
-            }
-            Box {
-                FormatChip("اندازه") { sizeMenu = true }
-                androidx.compose.material3.DropdownMenu(expanded = sizeMenu, onDismissRequest = { sizeMenu = false }) {
-                    listOf(10, 11, 12, 13, 14, 16, 18, 20, 24, 28).forEach { px ->
-                        androidx.compose.material3.DropdownMenuItem(text = { Text("$px") }, onClick = { sizeMenu = false; onFormat("size", px.toString()) })
-                    }
-                }
-            }
-            Box {
-                FormatChip("فونت") { fontMenu = true }
-                androidx.compose.material3.DropdownMenu(expanded = fontMenu, onDismissRequest = { fontMenu = false }) {
-                    listOf(
-                        "default" to "پیش‌فرض", "Vazirmatn" to "وزیرمتن", "Shabnam" to "شبنم", "Sahel" to "ساحل",
-                        "BNazanin" to "ب نازنین", "Tahoma" to "تاهوما", "serif" to "سریف"
-                    ).forEach { (key, name) ->
-                        androidx.compose.material3.DropdownMenuItem(text = { Text(name) }, onClick = { fontMenu = false; onFormat("font", key) })
-                    }
-                }
-            }
-            FormatChip("پاک") { onFormat("clear", "") }
-            // V121 — کادر/جدول‌بندیِ سراسریِ جدولِ سؤال‌ها (خط دور/ستون/فاصلهٔ داخلی).
-            FormatChip("کادر") { onOpenBoxSettings() }
-        }
-    }
-}
-
-@Composable
-private fun FormatChip(
-    label: String,
-    bold: Boolean = false,
-    italic: Boolean = false,
-    underline: Boolean = false,
-    onClick: () -> Unit
-) {
-    androidx.compose.material3.OutlinedButton(
-        onClick = onClick,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = Modifier.height(34.dp)
-    ) {
-        Text(
-            label,
-            color = Color(0xFF0F172A),
-            fontWeight = if (bold) androidx.compose.ui.text.font.FontWeight.Black else null,
-            fontStyle = if (italic) androidx.compose.ui.text.font.FontStyle.Italic else null,
-            textDecoration = if (underline) androidx.compose.ui.text.style.TextDecoration.Underline else null
-        )
-    }
-}
-
-/** V121 — پنجرهٔ «تنظیمات صفحه» موتور چاپ (معادلِ 📐 در آزمون‌ساز v20). */
-@Composable
-private fun PrintPageSetupDialog(
-    initial: ir.exam.app.data.local.PrintPageSetup,
-    onDismiss: () -> Unit,
-    onApply: (ir.exam.app.data.local.PrintPageSetup) -> Unit
-) {
-    var s by remember { mutableStateOf(initial) }
-    var mT by remember { mutableStateOf(initial.mT.toString()) }
-    var mB by remember { mutableStateOf(initial.mB.toString()) }
-    var mR by remember { mutableStateOf(initial.mR.toString()) }
-    var mL by remember { mutableStateOf(initial.mL.toString()) }
-    var customW by remember { mutableStateOf(initial.customW.toString()) }
-    var customH by remember { mutableStateOf(initial.customH.toString()) }
-    var font by remember { mutableStateOf(initial.font.toString()) }
-    fun num(text: String, fallback: Int, lo: Int, hi: Int) = (text.trim().toIntOrNull() ?: fallback).coerceIn(lo, hi)
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("تنظیمات صفحه") },
-        text = {
-            Column(
-                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("کاغذ", style = MaterialTheme.typography.labelLarge)
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ir.exam.app.data.local.PrintPageSetup.PAPER_NAMES.forEach { (key, name) ->
-                        androidx.compose.material3.FilterChip(selected = s.paper == key, onClick = { s = s.copy(paper = key) }, label = { Text(name) })
-                    }
-                }
-                if (s.paper == "custom") {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.material3.OutlinedTextField(value = customW, onValueChange = { customW = it }, label = { Text("عرض (mm)") }, singleLine = true, modifier = Modifier.weight(1f))
-                        androidx.compose.material3.OutlinedTextField(value = customH, onValueChange = { customH = it }, label = { Text("ارتفاع (mm)") }, singleLine = true, modifier = Modifier.weight(1f))
-                    }
-                }
-                Text("جهت", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    androidx.compose.material3.FilterChip(selected = s.orient == "portrait", onClick = { s = s.copy(orient = "portrait") }, label = { Text("عمودی") })
-                    androidx.compose.material3.FilterChip(selected = s.orient == "landscape", onClick = { s = s.copy(orient = "landscape") }, label = { Text("افقی") })
-                }
-                Text("حاشیه‌ها (mm)", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    androidx.compose.material3.OutlinedTextField(value = mT, onValueChange = { mT = it }, label = { Text("بالا") }, singleLine = true, modifier = Modifier.weight(1f))
-                    androidx.compose.material3.OutlinedTextField(value = mB, onValueChange = { mB = it }, label = { Text("پایین") }, singleLine = true, modifier = Modifier.weight(1f))
-                    androidx.compose.material3.OutlinedTextField(value = mR, onValueChange = { mR = it }, label = { Text("راست") }, singleLine = true, modifier = Modifier.weight(1f))
-                    androidx.compose.material3.OutlinedTextField(value = mL, onValueChange = { mL = it }, label = { Text("چپ") }, singleLine = true, modifier = Modifier.weight(1f))
-                }
-                androidx.compose.material3.OutlinedTextField(value = font, onValueChange = { font = it }, label = { Text("اندازهٔ فونت پایه (pt)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text("فاصلهٔ سؤال‌ها", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("compact" to "فشرده", "normal" to "معمولی", "open" to "باز").forEach { (key, name) ->
-                        androidx.compose.material3.FilterChip(selected = s.spacing == key, onClick = { s = s.copy(spacing = key) }, label = { Text(name) })
-                    }
-                }
-                SetupSwitch("کادرِ دورِ برگه", s.border) { s = s.copy(border = it) }
-                SetupSwitch("شمارهٔ صفحه", s.pageNumbers) { s = s.copy(pageNumbers = it) }
-                SetupSwitch("تکرارِ سرستونِ جدول در هر برگه", s.repeatHeader) { s = s.copy(repeatHeader = it) }
-                SetupSwitch("نمایشِ بارم", s.showScores) { s = s.copy(showScores = it) }
-            }
-        },
-        confirmButton = {
-            androidx.compose.material3.TextButton(onClick = {
-                onApply(
-                    s.copy(
-                        mT = num(mT, s.mT, 0, 80), mB = num(mB, s.mB, 0, 80), mR = num(mR, s.mR, 0, 80), mL = num(mL, s.mL, 0, 80),
-                        customW = num(customW, s.customW, 60, 600), customH = num(customH, s.customH, 60, 600),
-                        font = num(font, s.font, 6, 20)
-                    )
-                )
-            }) { Text("اعمال") }
-        },
-        dismissButton = {
-            Row {
-                androidx.compose.material3.TextButton(onClick = { onApply(ir.exam.app.data.local.PrintPageSetup()) }) { Text("پیش‌فرض") }
-                androidx.compose.material3.TextButton(onClick = onDismiss) { Text("انصراف") }
-            }
-        }
-    )
-}
-
-@Composable
-private fun SetupSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(label)
-        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange)
     }
 }

@@ -1,6 +1,5 @@
 package ir.exam.app.ui.app
 
-import ir.exam.app.data.local.PrintBoxStyle
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.domain.model.OfficialPrintHeader
 import ir.exam.app.domain.model.OfficialPrintQuestion
@@ -167,19 +166,12 @@ class ExamHtmlPrintPayloadTest {
     }
 
     @Test
-    fun `box style is only emitted when explicitly provided`() {
-        // V121 — تنظیماتِ سراسریِ کادر/جدول‌بندی؛ اگر پاس داده نشود (مسیرهای
-        // قدیمی/تست) نباید کلیدِ boxStyle در payload ظاهر شود.
-        val withoutStyle = ExamHtmlPrintPayloadBuilder.build(printable(OfficialPrintQuestion(1, "متن", 1.0)))
-        assertFalse("boxStyle" in withoutStyle)
-
-        val style = PrintBoxStyle(borderWidthPx = 2.5f, borderColor = "#334455", numberColWidthPercent = 8f, scoreColWidthPercent = 9f, cellPaddingPx = 12f)
-        val withStyle = ExamHtmlPrintPayloadBuilder.build(printable(OfficialPrintQuestion(1, "متن", 1.0)), boxStyle = style)
-        val box = withStyle["boxStyle"]!!.jsonObject
-        assertEquals("2.5", box["borderWidthPx"]!!.jsonPrimitive.content)
-        assertEquals("#334455", box["borderColor"]!!.jsonPrimitive.content)
-        assertEquals("8.0", box["numberColWidthPercent"]!!.jsonPrimitive.content)
-        assertEquals("9.0", box["scoreColWidthPercent"]!!.jsonPrimitive.content)
-        assertEquals("12.0", box["cellPaddingPx"]!!.jsonPrimitive.content)
+    fun `page setup json is passed through and no box style key exists`() {
+        // V126 — «کادر» (V121/V122) حذف شد؛ تنظیمات صفحه فقط از پنلِ خودِ موتورِ وب می‌آید.
+        val plain = ExamHtmlPrintPayloadBuilder.build(printable(OfficialPrintQuestion(1, "متن", 1.0)))
+        assertFalse("boxStyle" in plain)
+        assertFalse("pageSetup" in plain)
+        val withSetup = ExamHtmlPrintPayloadBuilder.build(printable(OfficialPrintQuestion(1, "متن", 1.0)), pageSetupJson = "{\"paper\":\"a5\"}")
+        assertEquals("{\"paper\":\"a5\"}", withSetup["pageSetup"]!!.jsonPrimitive.content)
     }
 }

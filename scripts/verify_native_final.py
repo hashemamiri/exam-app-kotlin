@@ -58,7 +58,6 @@ require(RENDERER.is_file(), "renderer asset is missing")
 # عیناً از نسخهٔ وب) در print/web/ و لایهٔ میزبانِ برنامه در print/web/webhost.js است.
 WEB_ENGINE = PRINT_ASSETS / "web"
 WEBHOST = WEB_ENGINE / "webhost.js"
-LEGACY_RENDERER = PRINT_ASSETS / "exam_print_renderer_legacy.html"
 WEB_ENGINE_FILES = (
     "vazirmatn_embed.css", "main.css", "editor_styles.css", "tools_styles.css", "qmf_styles.css", "ui_styles.css",
     "pgs_style.css", "webhost.css", "host_dom.js", "geo_fig.js", "graph_fig.js", "table_fig.js", "anatomy_atlas_data.js",
@@ -75,7 +74,6 @@ if RENDERER.is_file():
         'src="web/pgs_engine.js"',
         'src="web/webhost.js"',
         'href="web/pgs_style.css"',
-        "exam_print_renderer_legacy.html",
     ):
         require(marker in renderer, f"renderer host marker missing: {marker}")
     external_urls = re.findall(r"https?://([^/'\"\s<]+)", renderer, flags=re.I)
@@ -109,8 +107,7 @@ if RENDERER.is_file():
         "window.printTeacher = function",
         "window.ExamPrintRenderer = {",
         "showPreview: showPreview, layoutSnapshot: snapshot, figureAt: figureAt, replaceFigure: replaceFigure,",
-        "restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup,",
-        "applyBoxStyle: applyBoxStyle,",
+        "restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup",
         "function requestPrint(mode)",
         "callBridge('print', mode)",
         "callBridge('previewClosed')",
@@ -124,12 +121,21 @@ if RENDERER.is_file():
         require(marker in webhost or marker in read(WEB_ENGINE / "mainscript.js"), f"web host marker missing: {marker}")
     for forbidden in ("localstorage", "innerhtml", "<iframe", "document.write"):
         require(forbidden not in webhost.lower(), f"forbidden construct in webhost.js: {forbidden}")
-    require(LEGACY_RENDERER.is_file(), "legacy renderer must be kept aside (exam_print_renderer_legacy.html)")
-    legacy = read(LEGACY_RENDERER)
-    require("window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot" in legacy, "legacy renderer content changed")
+    # V126 — رندرر قبلی (V105–V124) و پنجره‌های بومیِ «کادر»/«تنظیمات صفحه»/هدرِ قالب‌بندی کاملاً حذف شدند.
+    require(not (PRINT_ASSETS / "exam_print_renderer_legacy.html").exists(), "legacy renderer must be deleted")
+    for retired_file in ("app/src/main/java/ir/exam/app/data/local/PrintBoxStyleStore.kt", "app/src/main/java/ir/exam/app/ui/printing/PrintBoxSettingsDialog.kt"):
+        require(not (ROOT / retired_file).exists(), f"retired print file still present: {retired_file}")
+    require("callBridge('pageSetupChanged', JSON.stringify(readPageSetup()))" in webhost, "webhost must report page-setup changes")
+    for retired in ("applyBoxStyle", "applyFormat", "boxStyle"):
+        require(retired not in webhost, f"retired host API still in webhost.js: {retired}")
 
 # Kotlin host must point at the new asset and retain the active bridge surface.
 dialog = read(DIALOG)
+# V126 — هدر/نوارِ قالب‌بندیِ بومی، «کادر» و پنجرهٔ بومیِ «تنظیمات صفحه» حذف شدند؛ تنظیمات صفحه از پنلِ 📐 وب می‌آید.
+for retired in ("PrintPreviewHeader", "PrintBoxStyleStore", "PrintBoxSettingsDialog", "applyFormat", "applyBoxStyle", "WEB_ENGINE_PREVIEW", "PrintPageSetupDialog"):
+    require(retired not in dialog, f"retired native preview UI still referenced: {retired}")
+require("fun pageSetupChanged(json: String?)" in dialog, "web page-setup panel must persist through the bridge")
+require("PrintPageSetup.fromJson(json)" in dialog, "page setup JSON from the web panel must be parsed")
 for marker in (
     'MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"',
     '"ExamPrintBridge"',

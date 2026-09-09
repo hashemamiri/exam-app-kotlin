@@ -2,13 +2,18 @@ package ir.exam.app.data.local
 
 import android.content.Context
 import android.print.PrintAttributes
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * V121 — «تنظیمات صفحه» موتور چاپ (برگرفته از موتور PGS آزمون‌ساز v20):
  * کاغذ، جهت، حاشیه‌ها، کادر، شمارهٔ صفحه، تکرارِ سرستون، فونتِ پایه، فاصلهٔ سؤال‌ها،
  * نمایشِ بارم. مثلِ [PrintHeaderStore] روی دستگاه می‌ماند و برای همهٔ آزمون‌های چاپی
- * به کار می‌رود. رندرر (exam_print_renderer.html) همین JSON را با کلیدِ `pageSetup`
- * از `setExamData` می‌گیرد؛ چاپ همان چیدمانِ پیش‌نمایش است.
+ * به کار می‌رود. موتورِ وب (print/web) همین JSON را با کلیدِ `pageSetup` از `setExamData`
+ * می‌گیرد و هر تغییر در پنلِ 📐 خودش را با `ExamPrintBridge.pageSetupChanged(json)` برمی‌گرداند
+ * (V126؛ به‌جای localStorage وب)؛ چاپ همان چیدمانِ پیش‌نمایش است.
  */
 data class PrintPageSetup(
     val paper: String = "a4",
@@ -74,6 +79,33 @@ data class PrintPageSetup(
             "a4" to "A4", "a5" to "A5", "b5" to "B5", "letter" to "Letter", "f4" to "F4", "legal" to "Legal", "custom" to "سفارشی"
         )
         val SPACINGS = listOf("compact", "normal", "open")
+
+        /**
+         * V126 — خواندنِ JSONِ پنلِ «تنظیمات صفحه»ی خودِ موتورِ وب (همان کلیدهای [toJson]).
+         * مقادیرِ نامعتبر به پیش‌فرض برمی‌گردند؛ خروجی هرگز null نیست.
+         */
+        fun fromJson(json: String?): PrintPageSetup {
+            val d = PrintPageSetup()
+            val o = runCatching { Json.parseToJsonElement(json.orEmpty()).jsonObject }.getOrNull() ?: return d
+            fun str(k: String) = o[k]?.jsonPrimitive?.contentOrNull
+            fun int(k: String, def: Int) = o[k]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toInt() ?: def
+            fun bool(k: String, def: Boolean) = when (str(k)) { "true" -> true; "false" -> false; else -> def }
+            val paper = str("paper")?.takeIf { it in PAPERS.keys || it == "custom" } ?: d.paper
+            return PrintPageSetup(
+                paper = paper,
+                orient = if (str("orient") == "landscape") "landscape" else "portrait",
+                customW = int("customW", d.customW).coerceIn(60, 600),
+                customH = int("customH", d.customH).coerceIn(60, 600),
+                mT = int("mT", d.mT).coerceIn(0, 80), mB = int("mB", d.mB).coerceIn(0, 80),
+                mR = int("mR", d.mR).coerceIn(0, 80), mL = int("mL", d.mL).coerceIn(0, 80),
+                border = bool("border", d.border),
+                pageNumbers = bool("pageNumbers", d.pageNumbers),
+                repeatHeader = bool("repeatHeader", d.repeatHeader),
+                font = int("font", d.font).coerceIn(6, 20),
+                spacing = str("spacing")?.takeIf { it in SPACINGS } ?: d.spacing,
+                showScores = bool("showScores", d.showScores)
+            )
+        }
     }
 }
 

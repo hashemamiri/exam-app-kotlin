@@ -88,12 +88,10 @@ class V125_WebPrintEngineTest {
     }
 
     @Test
-    fun `legacy renderer is kept aside and native header yields to web viewer`() {
-        val legacy = File(printDir, "exam_print_renderer_legacy.html")
-        assertTrue("رندرر قبلی حذف شده؛ باید کنار گذاشته می‌شد", legacy.isFile)
-        assertTrue("رندرر قبلی تغییر کرده", "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot" in legacy.readText())
-        assertTrue("internal const val WEB_ENGINE_PREVIEW = true" in dialog)
-        assertTrue("if (!loading && initialPrintMode == null && !WEB_ENGINE_PREVIEW) {" in dialog)
+    fun `legacy renderer is deleted and no native header remains`() {
+        assertFalse("رندرر قبلی باید حذف شده باشد (V126)", File(printDir, "exam_print_renderer_legacy.html").exists())
+        assertFalse("PrintPreviewHeader" in dialog)
+        assertFalse("WEB_ENGINE_PREVIEW" in dialog)
         assertTrue("settings.setSupportZoom(false)" in dialog)
         assertTrue("internal const val MAIN_PAGE_URL = \"https://exam-print.local/print/exam_print_renderer.html\"" in dialog)
     }

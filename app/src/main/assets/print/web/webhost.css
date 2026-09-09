@@ -17,12 +17,6 @@ body{padding:0 !important;}
 /* گزینه‌هایی که در پنلِ چاپِ اندروید انتخاب می‌شوند (بازه/تعداد نسخه) */
 #pgsPrintDlg .pgs-dlg-row:nth-of-type(2),#pgsPrintDlg .pgs-dlg-row:nth-of-type(3){display:none !important;}
 
-/* V121 برنامه — کادر/جدول‌بندیِ سراسری (PrintBoxStyleStore) روی جدولِ سؤال‌های وب. */
-.pgs-sheet .questions-print-table th,
-.pgs-sheet .questions-print-table td{border-width:var(--box-border-w,1px);border-color:var(--box-border-c,#000);}
-.pgs-sheet .questions-print-table .qno-col{width:var(--box-no-w,6%);}
-.pgs-sheet .questions-print-table .qscore-col{width:var(--box-score-w,6%);}
-.pgs-sheet .questions-print-table .question-main-td{padding-left:var(--box-pad,7px) !important;padding-right:var(--box-pad,7px) !important;}
 
 /* چاپِ سیستم (PrintManager): فقط برگه‌های صفحه‌بندی‌شدهٔ #pgsPrintRoot چاپ می‌شوند (قاعدهٔ رسمیِ PGS در pgs_style.css). */
 @media print{
