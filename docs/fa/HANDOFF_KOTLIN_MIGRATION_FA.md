@@ -17872,3 +17872,40 @@ verify/تست‌ها: `loadWithOverviewMode = false`, `applyRangeAndCopies`, ن�
 دو‌ستونه (یک‌ستونه زیر ۴۸۰px)، ردیفِ چک‌باکس‌ها افقی/لمسی، روی تبلت (≥۷۰۰px) پنلِ ۵۶۰px سمتِ راست.
 آزمون در ۴ اندازه (۳۶۰×۷۴۰، ۴۱۲×۹۱۵، ۸۰۰×۱۲۸۰، ۴۱۲×۳۰۰): پنل همیشه از ۶۰px تا کف، scrollHeight > ارتفاع → اسکرول.
 درس: در CSSِ لایهٔ میزبان برای WebView از vh/dvh استفاده نکنید؛ inset مطلق بگذارید.
+
+## ۳۵۳. V128 — نوار قالب‌بندی در پیش‌نمایش (B/I/U/رنگ/اندازه/فونت) + جابجایی خط جداکنندهٔ سؤال
+
+**خواستهٔ کاربر (پاسخ به سؤال‌ها):** ابزارها روی «متنِ انتخاب‌شده، و اگر انتخابی نبود روی کل» اعمال شوند؛ در
+خودِ آزمون ذخیره شوند (نه فقط این پیش‌نمایش)؛ «خط کادر» = خطِ افقیِ بین سؤال‌ها؛ هر سؤال جداگانه.
+
+**پیاده‌سازی — همه در لایهٔ میزبان (webhost.js/css)، فایل‌های موتور وب دست‌نخورده:**
+- `installRichTextOverride`: `renderRichText(value, q)` را برای متنِ سؤال (وقتی q داده شده) بازنویسی می‌کند؛
+  تکه‌های متنی به `<span class="txt" data-off data-q>` با استایلِ بازه‌ها (`q.__spans`) رندر می‌شوند؛
+  فرمول‌ها (`mathToHtml`) و توکن‌های شکل (`renderFigToken` / `renderVisualTool`) همان مسیرِ وب. گزینه‌ها/جفت‌ها
+  (بدون q) دست‌نخورده.
+- ورودی: `textSpans` از payload (همان StyleSpan بیلدر: start/end/bold/italic/underline/color/size/font) →
+  `cleanSpans`. خروجی: `layoutSnapshot()` هر سؤال `spans` می‌دهد → `ExamBuilderViewModel.applyFigLayouts`
+  (کدِ V114، هنوز موجود) آن را با `decodeSnapshotSpans` می‌خواند و در `textSpans` ذخیره می‌کند →
+  `ExamQuestionCodec` («spans») در DB/Supabase. **هیچ تغییرِ Kotlin لازم نبود.**
+- نوارِ `#hostFmt` زیرِ روبانِ PGS (در `showPreview` → `ensureFmtBar`): B/I/U (toggle با `coversAxis`)،
+  رنگ (input color داخلِ دکمهٔ A)، اندازه (۱۰…۲۸px)، فونت (وزیرمتن/شبنم/ساحل/ب‌نازنین/تاهوما/سریف)، «پاک».
+  DOM با DOMParser+importNode (قاعدهٔ verify: innerHTML ممنوع). `pointerdown` دکمه‌ها preventDefault می‌شود تا
+  انتخاب از بین نرود؛ `selectionchange` آخرین انتخاب را نگه می‌دارد (`lastSel`) چون در اندروید بازشدنِ
+  select/color-picker انتخاب را می‌پراند. بدونِ انتخاب → toast «اول بخشی از متنِ سؤال را انتخاب کنید».
+  نگاشتِ Selection→آفست: `offsetOf` (data-off + موقعیت داخل txt؛ مرز روی فرمول/شکل → نزدیک‌ترین txt قبلی).
+- اعمال: `applyStyle` (split/merge بازه‌ها، همان الگوریتمِ V114) → `renderPreview()` (PGS دوباره صفحه‌بندی
+  می‌کند؛ اسکرولِ `#pgsCanvasWrap` در موج‌های paginate بازگردانده می‌شود).
+- `--host-top`: ارتفاعِ روبان+نوار به CSS داده می‌شود تا پنلِ 📐 (V127.1) زیرِ هر دو باز شود.
+- API اضافه: `ExamPrintRenderer.formatSelection(kind, value)` (نامِ `applyFormat` در verify «بازنشسته» است).
+
+**جابجایی خطِ جداکننده — باگِ خودِ موتورِ وب:** mainscript.js از قبل `.question-sep-drag` (pointer drag →
+`q.sepExtraPx`) دارد و PGS با آن سازگار است، ولی در pgs_style.css با `display:none !important` پنهان و در
+`#pgsViewer` بدونِ `!important` باز می‌شود → همیشه پنهان (در وبِ اصلی هم). اصلاح در webhost.css:
+`#pgsViewer #previewArea .question-sep-drag{display:flex !important}` + دستگیرهٔ همیشه‌پیدا (خطِ آبیِ کم‌رنگ +
+دکمهٔ ↕ سمتِ راست، ارتفاعِ لمسیِ ۲۲px)؛ در `#pgsPrintRoot`/`body.pgs-fallback` پنهان. مقدار در `sepExtraPx`
+هر سؤال ذخیره می‌شود (snapshot → بیلدر، مثل قبل). puppeteer (لمس و ماوس): sepExtraPx 0→60/134.
+راهنمای یک‌باره هنگام بازشدن پیش‌نمایش (toast).
+
+**آزمون‌ها:** puppeteer ۴۱۲px: span ورودی (bold+قرمز) رندر شد؛ انتخابِ ۳..۱۵ در سؤال ۲ + B + اندازه ۱۸ →
+snapshot `{start:3,end:15,bold,size:18}`؛ فرمول‌ها سالم (۱۴ mathx). verify/تست: مارکرهای V128.
+نسخهٔ بعدی: V129، بند ۳۵۴.

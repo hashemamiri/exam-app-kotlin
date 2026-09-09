@@ -19,7 +19,7 @@ body{padding:0 !important;}
    Dialogِ Compose) قابل‌اعتماد نیست. اینجا پنل بدونِ هیچ واحدِ vh، بینِ نوارِ بالا و کفِ صفحه کشیده می‌شود
    (top/bottom مطلق) و محتوایش داخلِ خودش اسکرول می‌خورد. */
 #pgsPageSetup{
-  position:fixed !important;top:60px !important;bottom:0 !important;left:0 !important;right:0 !important;
+  position:fixed !important;top:var(--host-top,60px) !important;bottom:0 !important;left:0 !important;right:0 !important;
   width:auto !important;max-width:none !important;height:auto !important;max-height:none !important;min-height:0 !important;
   margin:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;
   border-radius:16px 16px 0 0 !important;box-sizing:border-box;
@@ -46,3 +46,43 @@ body{padding:0 !important;}
 @media print{
   #pgsViewer,#pgsPageSetup,#pgsPrintDlg,#pgsDock{display:none !important;}
 }
+
+/* ===================== V128 — نوارِ قالب‌بندیِ متنِ انتخاب‌شده (زیرِ نوارِ PGS) ===================== */
+.host-fmt{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 8px;
+  background:#1b2a5b;color:#fff;border-top:1px solid rgba(255,255,255,.08);
+  overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none;direction:rtl;z-index:4;
+}
+.host-fmt::-webkit-scrollbar{display:none;}
+.hf-btn{
+  flex:0 0 auto;min-width:40px;height:38px;padding:0 10px;border:1px solid rgba(255,255,255,.18);border-radius:9px;
+  background:rgba(255,255,255,.08);color:#fff;font:700 15px/1 'Vazirmatn',Tahoma,sans-serif;cursor:pointer;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;
+}
+.hf-btn.on{background:#22c55e;border-color:#22c55e;color:#062b12;}
+.hf-b{font-weight:900;} .hf-i{font-style:italic;font-family:serif;} .hf-u{text-decoration:underline;}
+.hf-clear{font-size:12.5px;}
+.hf-color{flex:0 0 auto;position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  width:40px;height:38px;border:1px solid rgba(255,255,255,.18);border-radius:9px;background:rgba(255,255,255,.08);cursor:pointer;}
+.hf-a{font:900 15px/1 'Vazirmatn',Tahoma,sans-serif;}
+.hf-swatch{display:block;width:22px;height:4px;border-radius:2px;background:#000;margin-top:3px;box-shadow:0 0 0 1px rgba(255,255,255,.5);}
+.hf-color input[type=color]{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;cursor:pointer;}
+.hf-sel{flex:0 0 auto;height:38px;border:1px solid rgba(255,255,255,.18);border-radius:9px;background:#0f1a3d;color:#fff;
+  font:700 13px 'Vazirmatn',Tahoma,sans-serif;padding:0 8px;max-width:110px;}
+.hf-hint{flex:0 0 auto;margin-right:auto;font:600 11.5px 'Vazirmatn',Tahoma,sans-serif;color:#a5b4fc;opacity:.9;padding:0 6px;}
+.host-fmt.has-sel .hf-hint{color:#86efac;}
+
+/* ===================== V128 — دستگیرهٔ جابجاییِ خطِ جداکنندهٔ سؤال، قابل‌دیدن روی لمس =====================
+   در وب فقط با hover پیدا می‌شد؛ در گوشی hover نداریم. ضمناً pgs_style.css خودش دستگیره را با
+   display:none !important پنهان و بدونِ !important در #pgsViewer باز می‌کند → همیشه پنهان می‌ماند (باگِ
+   موتورِ وب). اینجا با !important برگردانده می‌شود؛ در چاپ (#pgsPrintRoot / cleanSheetClone) حذف می‌شود. */
+#pgsViewer #previewArea .question-sep-drag{display:flex !important;height:22px;bottom:-11px;z-index:12;}
+#pgsPrintRoot .question-sep-drag,body.pgs-fallback .question-sep-drag{display:none !important;}
+#pgsViewer .question-sep-drag::before{background:rgba(37,99,235,.28);height:3px;}
+#pgsViewer .question-sep-drag.is-dragging::before{background:rgba(37,99,235,.9);box-shadow:0 0 0 3px rgba(37,99,235,.18);}
+#pgsViewer .question-sep-drag::after{
+  content:"↕";opacity:1;transform:none;left:auto;right:4px;bottom:auto;top:50%;margin-top:-10px;
+  width:20px;height:20px;padding:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:900;border-radius:999px;background:#2563eb;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+#pgsViewer .question-sep-drag.is-dragging::after{content:"↕ جابجایی خط";width:auto;padding:0 8px;}

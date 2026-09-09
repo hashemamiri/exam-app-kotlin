@@ -97,6 +97,8 @@
       score: text(src.score),
       sepExtraPx: Math.max(0, Math.min(600, num(src.sepExtraPx, 0))),
       figLayouts: asObject(parseMaybe(src.figLayoutsJson !== undefined ? src.figLayoutsJson : src.figLayouts)),
+      /* V128 — بازه‌های قالب‌بندیِ متنِ سؤال (نوارِ B/I/U/رنگ/اندازه/فونتِ پیش‌نمایش؛ در بیلدرِ بومی ذخیره می‌شوند). */
+      __spans: cleanSpans(src.textSpans, text(src.text).length),
       /* قالب‌بندیِ سطحِ سؤال از بیلدرِ بومی؛ در لایهٔ میزبان روی .q-rich-content اعمال می‌شود. */
       __style: {bold: src.bold === true, italic: src.italic === true, fontFamily: text(src.fontFamily), fontSizeSp: num(src.fontSizeSp, 0), textAlign: text(src.textAlign)}
     };
@@ -256,10 +258,216 @@
   }
 
   /* ---------------------------------------------------------------- پیش‌نمایش (بینندهٔ PGS) */
+  var hintShown = false;
   function showPreview() {
     try { printMode = 'student'; } catch (e) {}
     try { window.openPreviewWindow(); } catch (e) { return 'err'; }
+    try { ensureFmtBar(); } catch (e) {}
+    if (!hintShown) { hintShown = true; setTimeout(function () { toast('برای قالب‌بندی، متنِ سؤال را انتخاب کنید؛ فاصلهٔ هر سؤال را با کشیدنِ دستگیرهٔ آبیِ زیرِ آن کم/زیاد کنید'); }, 900); }
     return 'ok';
+  }
+
+  /* ================================================================ V128 — قالب‌بندیِ متنِ انتخاب‌شده
+     متنِ هر سؤال به تکه‌های <span class="txt" data-off data-q> با آفستِ متنِ اصلی رندر می‌شود تا انتخابِ
+     کاربر (Selection) به بازهٔ [start,end) نگاشت شود؛ بازه‌ها در q.__spans نگه داشته و با snapshot به
+     بیلدرِ بومی برمی‌گردند (همان مدلِ StyleSpan که V114 داشت). فرمول‌ها و شکل‌ها بدونِ تغییر رندر می‌شوند. */
+  function cleanSpans(value, length) {
+    if (!Array.isArray(value)) return [];
+    return value.map(function (item) {
+      item = asObject(item);
+      var start = Math.max(0, Math.min(length, Math.floor(num(item.start, 0))));
+      var end = Math.max(0, Math.min(length, Math.floor(num(item.end, 0))));
+      var color = text(item.color); if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = '';
+      var size = Math.round(num(item.size, 0)); if (!(size >= 8 && size <= 40)) size = 0;
+      var font = text(item.font); if (font === 'default') font = '';
+      return {start: start, end: end, bold: item.bold === true, italic: item.italic === true, underline: item.underline === true, color: color, size: size, font: font};
+    }).filter(function (item) { return item.end > item.start && (item.bold || item.italic || item.underline || item.color || item.size || item.font); });
+  }
+  function fontCss(font) { return font === 'serif' ? 'serif' : ('"' + font + '", Vazirmatn, Tahoma, sans-serif'); }
+  function styledTextHtml(piece, off, q) {
+    var spans = (q && q.__spans) || [], bounds = [0, piece.length];
+    spans.forEach(function (sp) { var l = Math.max(0, sp.start - off), r = Math.min(piece.length, sp.end - off); if (r > l) bounds.push(l, r); });
+    bounds.sort(function (a, b) { return a - b; });
+    var out = '', qid = q ? String(q.id) : '';
+    for (var i = 0; i < bounds.length - 1; i++) {
+      var from = bounds[i], to = bounds[i + 1];
+      if (to <= from) continue;
+      var st = '';
+      var b = false, it = false, u = false, color = '', size = 0, font = '';
+      spans.forEach(function (sp) {
+        if (sp.start < off + to && sp.end > off + from) { b = b || sp.bold; it = it || sp.italic; u = u || sp.underline; if (sp.color) color = sp.color; if (sp.size) size = sp.size; if (sp.font) font = sp.font; }
+      });
+      if (b) st += 'font-weight:700;'; if (it) st += 'font-style:italic;'; if (u) st += 'text-decoration:underline;';
+      if (color) st += 'color:' + color + ';'; if (size) st += 'font-size:' + size + 'px;'; if (font) st += 'font-family:' + fontCss(font).replace(/"/g, '\'') + ';';
+      out += '<span class="txt" data-off="' + (off + from) + '" data-q="' + qid + '"' + (st ? ' style="' + st + '"' : '') + '>' + window.plainTextHtml(piece.slice(from, to)) + '</span>';
+    }
+    return out;
+  }
+  function styledPlainWithMath(seg, off, q) {
+    var re = /\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g, out = '', last = 0, m;
+    while ((m = re.exec(seg))) {
+      out += styledTextHtml(seg.slice(last, m.index), off + last, q);
+      var tex = m[1] != null ? m[1] : (m[2] != null ? m[2] : m[3]);
+      try { out += (typeof window.mathToHtml === 'function') ? window.mathToHtml(tex) : ('<span class="math-inline">' + window.renderMathTex(tex) + '</span>'); }
+      catch (e) { out += '<span class="math-inline">' + window.renderMathTex(tex) + '</span>'; }
+      last = re.lastIndex;
+    }
+    return out + styledTextHtml(seg.slice(last), off + last, q);
+  }
+  function installRichTextOverride() {
+    var base = window.renderRichText;
+    if (typeof base !== 'function' || base.__appHost) return;
+    var typeMap = {FIG: 'figure', GRAPH: 'graph', TABLE: 'table', ANATOMY: 'anatomy', PERIODIC: 'periodic', PHYSICS: 'physics', CHEMISTRY: 'chemistry'};
+    var wrapped = function (value, q) {
+      if (!q) return base.apply(this, arguments);
+      var src = String(value == null ? '' : value); if (!src) return '';
+      var tokenRe = /%%FIG:([\s\S]*?)%%|\[\[(FIG|GRAPH|TABLE|ANATOMY|PERIODIC|PHYSICS|CHEMISTRY):([^\]|]*)(?:\|([^\]]*))?\]\]/g;
+      var out = '', last = 0, m, figIndex = 0;
+      while ((m = tokenRe.exec(src))) {
+        out += styledPlainWithMath(src.slice(last, m.index), last, q);
+        if (m[1] != null) out += window.renderFigToken(m[1], q, figIndex++);
+        else out += window.renderVisualTool(typeMap[m[2]], m[3] || '', m[4] || '');
+        last = tokenRe.lastIndex;
+      }
+      return out + styledPlainWithMath(src.slice(last), last, q);
+    };
+    wrapped.__appHost = true;
+    window.renderRichText = wrapped;
+  }
+
+  /* --- نگاشتِ انتخاب به بازه --- */
+  function posInTxt(txt, node, offset) {
+    var pos = 0, kids = txt.childNodes;
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i];
+      if (node === txt && i === offset) return pos;
+      if (k === node) return pos + (k.nodeType === 3 ? offset : 0);
+      pos += k.nodeType === 3 ? k.textContent.length : 1;
+    }
+    return pos;
+  }
+  function offsetOf(rich, node, offset) {
+    if (node.nodeType === 1 && node.childNodes.length && !(node.closest && node.closest('.txt'))) {
+      if (offset >= node.childNodes.length) { node = node.childNodes[node.childNodes.length - 1]; offset = node.nodeType === 3 ? node.textContent.length : node.childNodes.length; }
+      else { node = node.childNodes[offset]; offset = 0; }
+    }
+    var el = node.nodeType === 1 ? node : node.parentNode;
+    var txt = el && el.closest ? el.closest('.txt') : null;
+    if (txt) return Number(txt.dataset.off) + posInTxt(txt, node, offset);
+    var all = rich.querySelectorAll('.txt'), best = null;
+    for (var i = 0; i < all.length; i++) { if (node.compareDocumentPosition(all[i]) & Node.DOCUMENT_POSITION_PRECEDING) best = all[i]; }
+    return best ? Number(best.dataset.off) + best.textContent.length : 0;
+  }
+  var lastSel = null;
+  function selectionRange() {
+    var sel = window.getSelection && window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+    var range = sel.getRangeAt(0);
+    var n = range.commonAncestorContainer; if (n.nodeType !== 1) n = n.parentNode;
+    var rich = n && n.closest ? n.closest('.q-rich-content') : null;
+    if (!rich || !rich.contains(range.startContainer) || !rich.contains(range.endContainer)) return null;
+    var first = rich.querySelector('.txt[data-q]'); if (!first) return null;
+    var q = (questions || []).find(function (x) { return String(x.id) === first.dataset.q; }); if (!q) return null;
+    var a = offsetOf(rich, range.startContainer, range.startOffset), b = offsetOf(rich, range.endContainer, range.endOffset);
+    var s = Math.max(0, Math.min(a, b)), e = Math.min(text(q.text).length, Math.max(a, b));
+    return e > s ? {question: q, start: s, end: e} : null;
+  }
+  function rememberSelection() { var r = selectionRange(); if (r) lastSel = r; }
+  function coversAxis(spans, s, e, key) {
+    var cursor = s, active = spans.filter(function (x) { return x[key]; }).sort(function (x, y) { return x.start - y.start; });
+    for (var i = 0; i < active.length; i++) { if (active[i].start > cursor) return false; cursor = Math.max(cursor, active[i].end); if (cursor >= e) return true; }
+    return cursor >= e;
+  }
+  function applyStyle(sel, patch) {
+    var q = sel.question, s = sel.start, e = sel.end, out = [];
+    var blank = {bold: false, italic: false, underline: false, color: '', size: 0, font: ''};
+    (q.__spans || []).forEach(function (span) {
+      if (span.end <= s || span.start >= e) { out.push(span); return; }
+      if (span.start < s) out.push(Object.assign({}, span, {end: s}));
+      if (span.end > e) out.push(Object.assign({}, span, {start: e}));
+      out.push(Object.assign({}, span, {start: Math.max(span.start, s), end: Math.min(span.end, e)}, patch));
+    });
+    var covered = out.filter(function (x) { return x.start >= s && x.end <= e; }).sort(function (x, y) { return x.start - y.start; }), cursor = s;
+    covered.forEach(function (x) { if (x.start > cursor) out.push(Object.assign({start: cursor, end: x.start}, blank, patch)); cursor = Math.max(cursor, x.end); });
+    if (cursor < e) out.push(Object.assign({start: cursor, end: e}, blank, patch));
+    out = out.filter(function (x) { return x.end > x.start && (x.bold || x.italic || x.underline || x.color || x.size || x.font); }).sort(function (x, y) { return x.start - y.start; });
+    var merged = [];
+    out.forEach(function (x) {
+      var l = merged[merged.length - 1];
+      if (l && x.start <= l.end && l.bold === x.bold && l.italic === x.italic && l.underline === x.underline && l.color === x.color && l.size === x.size && l.font === x.font) l.end = Math.max(l.end, x.end);
+      else merged.push(Object.assign({}, x));
+    });
+    q.__spans = merged;
+    try { window.getSelection().removeAllRanges(); } catch (e2) {}
+    lastSel = null; updateFmtBar(null);
+    /* باز-رندر + صفحه‌بندیِ PGS با حفظِ اسکرول (موج‌های paginate در ۱۶۰/۵۵۰/۱۳۰۰ms) */
+    var wrap = $('pgsCanvasWrap'), top = wrap ? wrap.scrollTop : 0;
+    try { window.renderPreview(); } catch (e3) {}
+    [80, 300, 700, 1450].forEach(function (t) { setTimeout(function () { var w = $('pgsCanvasWrap'); if (w) w.scrollTop = top; }, t); });
+  }
+  function currentSel() { var r = selectionRange() || lastSel; if (!r) toast('اول بخشی از متنِ سؤال را انتخاب کنید (لمسِ طولانی روی کلمه)'); return r; }
+  function updateFmtBar(sel) {
+    ['bold', 'italic', 'underline'].forEach(function (key) {
+      var btn = document.querySelector('#hostFmt .hf-btn[data-fmt="' + key + '"]'); if (!btn) return;
+      btn.classList.toggle('on', !!(sel && coversAxis(sel.question.__spans || [], sel.start, sel.end, key)));
+    });
+    var bar = $('hostFmt'); if (bar) bar.classList.toggle('has-sel', !!sel);
+  }
+  var FONTS = [['default', 'پیش‌فرض'], ['Vazirmatn', 'وزیرمتن'], ['Shabnam', 'شبنم'], ['Sahel', 'ساحل'], ['BNazanin', 'ب نازنین'], ['Tahoma', 'تاهوما'], ['serif', 'سریف']];
+  var SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28];
+  function faNum(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[+d]; }); }
+  function ensureFmtBar() {
+    var v = $('pgsViewer'); if (!v || $('hostFmt')) return;
+    var ribbon = v.querySelector('.pgs-ribbon'); if (!ribbon) return;
+    var bar = document.createElement('div');
+    bar.id = 'hostFmt'; bar.className = 'host-fmt';
+    /* (ساختِ DOM با DOMParser + importNode — قاعدهٔ verify) */
+    var markup =
+      '<button type="button" class="hf-btn hf-b" data-fmt="bold" title="بلد">B</button>' +
+      '<button type="button" class="hf-btn hf-i" data-fmt="italic" title="ایتالیک">I</button>' +
+      '<button type="button" class="hf-btn hf-u" data-fmt="underline" title="زیرخط">U</button>' +
+      '<label class="hf-color" title="رنگ متن"><span class="hf-a">A</span><span class="hf-swatch" id="hfSwatch"></span><input type="color" id="hfColor" value="#000000"></label>' +
+      '<select class="hf-sel" id="hfSize" title="اندازهٔ متن"><option value="">اندازه</option>' + SIZES.map(function (n) { return '<option value="' + n + '">' + faNum(n) + '</option>'; }).join('') + '</select>' +
+      '<select class="hf-sel" id="hfFont" title="فونت"><option value="">فونت</option>' + FONTS.map(function (f) { return '<option value="' + f[0] + '">' + f[1] + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="hf-btn hf-clear" data-fmt="clear" title="حذف قالب‌بندی">پاک</button>' +
+      '<span class="hf-hint">متنِ سؤال را انتخاب کنید</span>';
+    var doc = new DOMParser().parseFromString('<div>' + markup + '</div>', 'text/html');
+    Array.prototype.slice.call(doc.body.firstChild.childNodes).forEach(function (n) { bar.appendChild(document.importNode(n, true)); });
+    ribbon.parentNode.insertBefore(bar, ribbon.nextSibling);
+    /* پنلِ 📐 (top ثابت در webhost.css) باید زیرِ هر دو نوار باز شود */
+    function syncTop() { try { document.documentElement.style.setProperty('--host-top', Math.round(bar.getBoundingClientRect().bottom) + 'px'); } catch (e) {} }
+    syncTop(); setTimeout(syncTop, 300); window.addEventListener('resize', syncTop);
+    Array.prototype.forEach.call(bar.querySelectorAll('.hf-btn[data-fmt]'), function (btn) {
+      /* pointerdown پیش‌فرض گرفته می‌شود تا انتخابِ متن با لمسِ دکمه از بین نرود */
+      btn.addEventListener('pointerdown', function (ev) { ev.preventDefault(); rememberSelection(); });
+      btn.addEventListener('click', function () {
+        var key = btn.dataset.fmt, sel = currentSel(); if (!sel) return;
+        if (key === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return; }
+        var patch = {}; patch[key] = !coversAxis(sel.question.__spans || [], sel.start, sel.end, key); applyStyle(sel, patch);
+      });
+    });
+    var color = $('hfColor'), size = $('hfSize'), font = $('hfFont');
+    [color, size, font].forEach(function (el) { el.addEventListener('pointerdown', rememberSelection); el.addEventListener('focus', rememberSelection); });
+    color.addEventListener('change', function () {
+      var sw = $('hfSwatch'); if (sw) sw.style.background = color.value;
+      var sel = currentSel(); if (sel) applyStyle(sel, {color: /^#[0-9a-fA-F]{6}$/.test(color.value) ? color.value : ''});
+    });
+    size.addEventListener('change', function () { var n = Number(size.value); size.value = ''; var sel = currentSel(); if (sel && n) applyStyle(sel, {size: n}); });
+    font.addEventListener('change', function () { var f = font.value; font.value = ''; var sel = currentSel(); if (sel && f) applyStyle(sel, {font: f === 'default' ? '' : f}); });
+    if (!document.__hostSelBound) {
+      document.__hostSelBound = true;
+      document.addEventListener('selectionchange', function () { var r = selectionRange(); if (r) lastSel = r; updateFmtBar(r); });
+    }
+  }
+  function formatSelection(kind, value) {
+    var sel = selectionRange() || lastSel; if (!sel) { toast('اول بخشی از متنِ سؤال را انتخاب کنید'); return 'noselection'; }
+    value = value == null ? '' : String(value);
+    if (kind === 'clear') { applyStyle(sel, {bold: false, italic: false, underline: false, color: '', size: 0, font: ''}); return 'ok'; }
+    if (kind === 'bold' || kind === 'italic' || kind === 'underline') { var patch = {}; patch[kind] = !coversAxis(sel.question.__spans || [], sel.start, sel.end, kind); applyStyle(sel, patch); return 'ok'; }
+    if (kind === 'color') { applyStyle(sel, {color: /^#[0-9a-fA-F]{6}$/.test(value) ? value : ''}); return 'ok'; }
+    if (kind === 'size') { var n = Number(value); applyStyle(sel, {size: (n >= 8 && n <= 40) ? Math.round(n) : 0}); return 'ok'; }
+    if (kind === 'font') { applyStyle(sel, {font: (value && value !== 'default') ? value.slice(0, 30) : ''}); return 'ok'; }
+    return 'unknown';
   }
   function hookPreviewClose() {
     var base = window.closePreviewWindow;
@@ -290,7 +498,11 @@
   /* ---------------------------------------------------------------- snapshot / ویرایشِ شکل */
   function snapshot() {
     var result = {};
-    (questions || []).forEach(function (q) { result[String(q.id)] = {figLayouts: q.figLayouts || {}, sepExtraPx: Math.round(num(q.sepExtraPx, 0))}; });
+    (questions || []).forEach(function (q) {
+      result[String(q.id)] = {figLayouts: q.figLayouts || {}, sepExtraPx: Math.round(num(q.sepExtraPx, 0)), spans: (q.__spans || []).map(function (x) {
+        return {start: x.start, end: x.end, bold: !!x.bold, italic: !!x.italic, underline: !!x.underline, color: x.color || '', size: x.size || 0, font: x.font || ''};
+      })};
+    });
     return JSON.stringify(result);
   }
   function figTokens(source) {
@@ -357,6 +569,7 @@
 
   function install() {
     ensurePgs();
+    installRichTextOverride();
     installPrintOverrides();
     hookPreviewClose();
     wrapRenderPreviewOnce();
@@ -369,6 +582,7 @@
   window.printTeacher = function () { return requestPrint('teacher'); };
   window.ExamPrintRenderer = {
     showPreview: showPreview, layoutSnapshot: snapshot, figureAt: figureAt, replaceFigure: replaceFigure,
-    restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup
+    restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup,
+    formatSelection: formatSelection
   };
 })();
