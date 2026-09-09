@@ -97,6 +97,8 @@ class V125_WebPrintEngineTest {
         assertTrue("settings.loadWithOverviewMode = false" in dialog)
         // V127 — بازه/تعداد نسخه از دیالوگ چاپ وب؛ امضای دبیر/مدیر حذف
         assertTrue("function applyRangeAndCopies(opts)" in webhost)
+        // V127.1 — پنل تنظیمات صفحه بدون vh (در WebView یک‌سطری باز می‌شد)
+        assertTrue("top:60px !important;bottom:0 !important" in webhostCss && "max-height:none !important" in webhostCss)
         assertTrue("requestPrint(mode, {rangeKind: rangeKind, rangeText: rangeText, current: current, copies: copies})" in webhost)
         val models = File(root(), "app/src/main/java/ir/exam/app/domain/model/OfficialPrintModels.kt").readText()
         assertFalse("امضای دبیر/مدیر باید حذف شده باشد", "نام و امضای دبیر:" in models)

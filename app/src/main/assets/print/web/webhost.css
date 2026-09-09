@@ -14,6 +14,30 @@ body{padding:0 !important;}
 #settingsPanel,.questions-area,.toolbar,#emptyMsg,.qtype-overlay{display:none !important;}
 /* بینندهٔ PGS تمام‌صفحه است؛ نوارِ خودش دکمهٔ بستن/چاپ/زوم/تنظیمات صفحه را دارد. */
 #pgsViewer .pgs-btn[onclick="pgsFullscreen()"]{display:none !important;}
+/* V127.1 — پنل 📐 «تنظیمات صفحه» در WebView به‌صورت یک سطر (فقط عنوان) در پایین باز می‌شد: ارتفاعِ آن در
+   pgs_style.css با vh/dvh (max-height:82dvh / calc(100vh - 96px)) حساب می‌شود که در WebViewِ اندروید (داخلِ
+   Dialogِ Compose) قابل‌اعتماد نیست. اینجا پنل بدونِ هیچ واحدِ vh، بینِ نوارِ بالا و کفِ صفحه کشیده می‌شود
+   (top/bottom مطلق) و محتوایش داخلِ خودش اسکرول می‌خورد. */
+#pgsPageSetup{
+  position:fixed !important;top:60px !important;bottom:0 !important;left:0 !important;right:0 !important;
+  width:auto !important;max-width:none !important;height:auto !important;max-height:none !important;min-height:0 !important;
+  margin:0 !important;overflow-y:auto !important;-webkit-overflow-scrolling:touch;
+  border-radius:16px 16px 0 0 !important;box-sizing:border-box;
+  padding-bottom:calc(18px + env(safe-area-inset-bottom,0px)) !important;
+}
+#pgsPageSetup .grid-form{display:grid !important;grid-template-columns:1fr 1fr !important;gap:10px 12px !important;}
+#pgsPageSetup .field{display:flex !important;flex-direction:column !important;min-width:0;}
+#pgsPageSetup .pgs-setup-full{grid-column:1 / -1 !important;}
+/* ردیفِ چک‌باکس‌ها (کادر/شمارهٔ صفحه/تکرار سرستون/بارم): افقی و لمسی */
+#pgsPageSetup .field[style*="flex-wrap"]{flex-direction:row !important;flex-wrap:wrap !important;gap:10px 18px !important;}
+#pgsPageSetup .field[style*="flex-wrap"] label{display:inline-flex;align-items:center;gap:8px;min-height:40px;white-space:nowrap;}
+#pgsPageSetup .field[style*="flex-wrap"] input[type="checkbox"]{width:22px;height:22px;min-height:0;}
+#pgsPageSetup .field input,#pgsPageSetup .field select{font-size:16px;min-height:42px;width:100%;box-sizing:border-box;}
+#pgsPageSetup h2{position:sticky;top:0;background:#fff;z-index:2;margin:0 0 10px !important;padding:6px 0 8px !important;}
+#pgsPageSetup h2 .toggle{font-size:14px !important;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;color:#1e3a8a !important;}
+@media (max-width:480px){ #pgsPageSetup .grid-form{grid-template-columns:1fr !important;} }
+@media (min-width:700px){ #pgsPageSetup{left:auto !important;right:16px !important;width:min(560px,calc(100% - 32px)) !important;} }
+
 /* راهنمای «Save as PDF» مرورگر در برنامه معنی ندارد (پنلِ چاپِ اندروید خودش PDF دارد). */
 #pgsPrintDlg .pgs-dlg-row:nth-of-type(4){display:none !important;}
 

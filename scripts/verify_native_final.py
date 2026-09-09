@@ -138,6 +138,9 @@ require("fun pageSetupChanged(json: String?)" in dialog, "web page-setup panel m
 # V127 — پنل‌های fixedِ موتورِ وب با overviewMode بریده می‌شدند؛ بازه/نسخه در دیالوگِ چاپِ وب.
 require("settings.loadWithOverviewMode = false" in dialog, "web engine needs the real device viewport (no overview mode)")
 require("function applyRangeAndCopies(opts)" in read(WEBHOST), "print dialog range/copies must be applied to #pgsPrintRoot")
+# V127.1 — پنل 📐 نباید به vh/dvh وابسته باشد (در WebView یک‌سطری می‌شد): top/bottom مطلق در webhost.css
+_wc = read(WEB_ENGINE / "webhost.css")
+require("#pgsPageSetup{" in _wc and "top:60px !important;bottom:0 !important" in _wc and "max-height:none !important" in _wc, "page-setup panel must be pinned between ribbon and bottom without vh units")
 require("نام و امضای دبیر:" not in read(MAIN / "java/ir/exam/app/domain/model/OfficialPrintModels.kt"), "teacher/principal signature footer must stay removed")
 require("PrintPageSetup.fromJson(json)" in dialog, "page setup JSON from the web panel must be parsed")
 for marker in (
