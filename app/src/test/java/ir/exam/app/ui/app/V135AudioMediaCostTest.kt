@@ -25,6 +25,7 @@ class V135AudioMediaCostTest {
     private val codec by lazy { source("app/src/main/java/ir/exam/app/data/repository/ExamQuestionCodec.kt") }
     private val uploader by lazy { source("app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt") }
     private val migration by lazy { source("supabase/migrations/20260909_native_media_cost_v135.sql") }
+    private val storageMigration by lazy { source("supabase/migrations/20260909_native_media_cost_v135_storage.sql") }
     private val webSection by lazy { source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt") }
 
     @Test
@@ -98,7 +99,8 @@ class V135AudioMediaCostTest {
         assertTrue("= any(v_billed_keys)" in migration)
         assertTrue("when v_audio_bytes <= 1 * 1024 * 1024 then 2000" in migration)
         assertTrue("'image_cost', v_img_cost" in migration && "'audio_cost', v_audio_cost" in migration)
-        assertTrue("'audio'" in migration && "storage.foldername(name))[1] in ('avatars','questions','option_images','matching','answers','audio')" in migration)
+        assertTrue("'audio'" in storageMigration && "storage.foldername(name))[1] in ('avatars','questions','option_images','matching','answers','audio')" in storageMigration)
+        assertTrue("set local lock_timeout" in migration && "set local lock_timeout" in storageMigration)
         assertTrue("جمع: \${state.maximumChargeToman.asToman()} تومان" in builder)
         assertTrue("تصاویر (سؤال، گزینه‌ها، جورکردنی)" in builder)
     }

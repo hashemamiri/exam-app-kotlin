@@ -18175,3 +18175,8 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 - هر `RichSegment.Math` همیشه کادر گرد ۱dp (`outline` ۵۵٪) با زمینهٔ کم‌رنگ دارد؛ انتخاب = کادر ۲dp آبی؛ لمس دوم همان فرمول را در ویرایشگر باز می‌کند (رفتار قبلی). ارتفاع جعبه +۶dp. پینِ `V54_4ReferenceParityFixTest` (RoundedCornerShape) به‌روز شد.
 
 ### ۸) تست: `V135AudioMediaCostTest.kt` (پله‌های هزینه، ۵ تصویر = ۶۰۰۰، پین‌های منبع).
+
+### V135.1 — رفع بن‌بست (deadlock 40P01) هنگام اجرای SQL نسخهٔ V135
+- علت: تغییر سیاست‌های `storage.objects` در همان تراکنشِ توابع، با سرویس Storage سوپابیس (که مدام `storage.objects` را می‌خواند) بن‌بست می‌کند.
+- راه حل: SQL دو بخش شد: `SQL_NATIVE_MEDIA_COST_V135.sql` (توابع) و `SQL_NATIVE_MEDIA_COST_V135_STORAGE.sql` (سیاست‌های storage)؛ هر دو با `set local lock_timeout = '8s'` تا در بدترین حالت خطای قابل تکرار بدهند نه بن‌بست. اگر بخش ۲ «lock timeout» داد، چند ثانیه بعد دوباره Run شود.
+- قاعدهٔ همیشگی از این پس: تغییر policy روی `storage.objects` همیشه در فایل/تراکنش جداگانه و با lock_timeout.

@@ -6,7 +6,10 @@
 -- خروجی native_save_exam_v1 تفکیک هزینه را برمی‌گرداند تا پنجرهٔ کسر هزینه شفاف باشد.
 -- native_save_exam_v2 (V61) بدون تغییر همین v1 را صدا می‌زند.
 
+-- بخش ۱/۲ (توابع). بخش ۲ (سیاست‌های storage) فایل SQL_NATIVE_MEDIA_COST_V135_STORAGE.sql جداگانه است
+-- تا با سرویس Storage سوپابیس بن‌بست (deadlock) پیش نیاید.
 begin;
+set local lock_timeout = '8s';
 
 create or replace function public.native_question_media_cost_v135(p_q jsonb)
 returns jsonb
@@ -286,23 +289,6 @@ end;
 $$;
 revoke all on function public.native_save_exam_v1(jsonb) from public, anon;
 grant execute on function public.native_save_exam_v1(jsonb) to authenticated;
-
--- سیاست آپلود باکت: پوشهٔ audio برای فایل صوتی سؤال (مسیر audio/<teacher>/<exam>/…)
-drop policy if exists v11_authenticated_upload_exam_images on storage.objects;
-create policy v11_authenticated_upload_exam_images
-on storage.objects for insert to authenticated
-with check (
-    bucket_id = 'exam-images'
-    and (storage.foldername(name))[1] in ('avatars','questions','option_images','matching','answers','audio')
-    and (storage.foldername(name))[2] = auth.uid()::text
-);
-drop policy if exists v75_8_read_question_images on storage.objects;
-create policy v75_8_read_question_images
-on storage.objects for select to authenticated
-using (
-    bucket_id = 'exam-images'
-    and (storage.foldername(name))[1] in ('questions', 'option_images', 'matching', 'audio')
-);
 
 notify pgrst, 'reload schema';
 commit;
