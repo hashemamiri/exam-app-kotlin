@@ -49,6 +49,23 @@ class V125_WebPrintEngineTest {
     }
 
     @Test
+    fun `atlas data points to the app figure_atlas files instead of embedded base64`() {
+        val anatomy = File(printDir, "web/anatomy_atlas_data.js").readText()
+        val science = File(printDir, "web/science_atlas_data.js").readText()
+        assertTrue("window.ATLAS={" in anatomy && "'/figure_atlas/anatomy/atlas-" in anatomy)
+        assertTrue("window.SCIENCE_ATLAS={" in science && "'/figure_atlas/science/" in science)
+        assertFalse("تصویر base64 در اطلس آناتومی", "data:image" in anatomy)
+        assertFalse("تصویر base64 در اطلس علوم", "data:image" in science)
+        assertTrue(anatomy.length < 20_000 && science.length < 20_000)
+        val assets = File(root(), "app/src/main/assets")
+        Regex("'(/figure_atlas/[^']+)'").findAll(anatomy + science).forEach { m ->
+            assertTrue("فایل اطلس نیست: ${'$'}{m.groupValues[1]}", File(assets, m.groupValues[1].removePrefix("/")).isFile)
+        }
+        // WebView چاپ همین مسیر را از assets سرو می‌کند
+        assertTrue("path.startsWith(\"/figure_atlas/\") -> path.removePrefix(\"/\")" in dialog)
+    }
+
+    @Test
     fun `webhost keeps the app renderer API and print handshake`() {
         listOf(
             "window.setExamData = setExamData;",

@@ -17774,6 +17774,16 @@ pinch/fit دارد و زومِ WebView نوارِ ثابتش را از دست م
 localStorage/innerHTML/iframe/document.write در webhost.js، و **دست‌نخورده‌ماندنِ** رندررِ legacy.
 آزمونِ جدید: `V125_WebPrintEngineTest`.
 
+**کاهش حجم (به درخواست کاربر، همان نسخه):** `anatomy_atlas_data.js` (۲MB) و `science_atlas_data.js` (۱٫۱MB) در
+وب، تصاویر اطلس را base64 داخل خود داشتند. برنامه همین ۶۷+۷۰ تصویر را از قبل در `assets/figure_atlas/
+{anatomy,science}/*.jpg` دارد (AtlasCatalog.kt) و WebViewِ چاپ مسیرِ `/figure_atlas/` را از assets سرو
+می‌کند (ExamHtmlPrintDialog). پس دو فایل به نگاشتِ نازک تبدیل شدند: `window.ATLAS['NN']='/figure_atlas/anatomy/
+atlas-NN.jpg'` و `window.SCIENCE_ATLAS[id]='/figure_atlas/science/id.jpg'` — `anatomy_fig.js#fileFor` و
+`science_fig.js` این مقدار را مستقیم در `src` می‌گذارند، پس بدونِ تغییرِ موتور کار می‌کند. کلیدها با فایل‌ها
+یک‌به‌یک مطابقت داده شد (comm)؛ verify و V125_WebPrintEngineTest وجودِ هر فایلِ ارجاع‌شده و نبودِ
+`data:image` را چک می‌کنند. آزمونِ puppeteer: قلب (atlas-26.jpg) و مدارِ ساده (cSim.jpg) در پیش‌نمایش رندر
+شدند. حجم web/ از ۵٫۷MB به ۲٫۷MB رسید.
+
 **باقی‌مانده/ریسک برای آزمایش روی دستگاه:** ۱) اندازهٔ نوارِ PGS روی گوشی (viewport ثابتِ ۸۳۰px با
 overviewMode) — اگر ریز بود `WebView.settings` را به `useWideViewPort=false` تغییر دهید یا نوار را با
 CSS در webhost.css بزرگ کنید؛ ۲) `applyFormat` (نوارِ قالب‌بندیِ V114) در موتورِ وب نیست — اگر لازم شد

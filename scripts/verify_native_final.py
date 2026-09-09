@@ -93,6 +93,15 @@ if RENDERER.is_file():
         require(not found, f"web engine file has an external URL: {name}: {found[:1]}")
         require("cdn-cgi" not in body, f"Cloudflare challenge script leaked into {name}")
     require("qmf_exam_autosave" not in engine, "web autosave/recovery banner must not be bundled")
+    # V125 — اطلس‌های آناتومی/علوم به‌جای base64ِ نسخهٔ وب (~3MB) به JPEGهای خودِ برنامه اشاره می‌کنند.
+    for name, key, prefix in (("anatomy_atlas_data.js", "window.ATLAS={", "/figure_atlas/anatomy/atlas-"),
+                              ("science_atlas_data.js", "window.SCIENCE_ATLAS={", "/figure_atlas/science/")):
+        atlas = read(WEB_ENGINE / name)
+        require(key in atlas and prefix in atlas, f"{name} must map ids to app figure_atlas files")
+        require("data:image" not in atlas, f"{name} must not embed base64 images (use assets/figure_atlas)")
+        require((WEB_ENGINE / name).stat().st_size < 20_000, f"{name} is unexpectedly large")
+        for ref in re.findall(r"'(/figure_atlas/[^']+)'", atlas):
+            require((MAIN / "assets" / ref.lstrip("/")).is_file(), f"atlas file missing: {ref}")
     webhost = read(WEBHOST)
     for marker in (
         "window.setExamData = setExamData;",
