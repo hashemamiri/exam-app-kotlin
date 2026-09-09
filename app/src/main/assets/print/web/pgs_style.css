@@ -1,0 +1,393 @@
+/* =====================================================================
+   PGS — سیستم جدید پیش‌نمایش و چاپ (نسخهٔ ۲۰)
+   معماری: شیت‌های واقعی mm-محور + صفحه‌بندی JS + چاپ از iframe اختصاصی
+   این استایل در انتهای سند تزریق می‌شود تا بر همهٔ قواعد قدیمی برتری داشته باشد.
+   ===================================================================== */
+
+/* ---------- متغیرها ---------- */
+:root{
+  --pgs-accent:#1e3a8a;
+  --pgs-accent2:#2563eb;
+  --pgs-ribbon:#111c3d;
+  --pgs-canvas-bg:#525659;
+}
+
+/* ---------- داک (محل پارک محتوای چاپ وقتی پیش‌نمایش بسته است) ---------- */
+#pgsDock{position:fixed;top:0;left:-30000px;width:max-content;pointer-events:none;z-index:-1;}
+
+/* ---------- شیت صفحه ---------- */
+.pgs-sheet{
+  position:relative;
+  box-sizing:border-box;
+  background:#fff;
+  color:#000;
+  overflow:hidden;
+  direction:rtl;
+  font-family:'Vazirmatn','B Nazanin','Tahoma',sans-serif;
+  font-size:calc(var(--pgs-font,10.5) * 1pt);
+  line-height:normal;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+.pgs-sheet-body{position:relative;height:100%;overflow:hidden;}
+.pgs-frame{position:absolute;border:2px solid #000;pointer-events:none;box-sizing:border-box;}
+.pgs-pageno{
+  position:absolute;left:0;right:0;text-align:center;
+  font-size:9pt;color:#333;pointer-events:none;
+}
+.pgs-pageno:empty{display:none;}
+.pgs-page-label{
+  text-align:center;color:#d3d6db;font:600 11px 'Vazirmatn',Tahoma,sans-serif;
+  margin:2px 0 14px;user-select:none;
+}
+.pgs-area{min-width:0 !important;}
+
+/* روی نمایشگر: سایه و فاصله بین صفحات */
+#pgsViewer .pgs-sheet,#pgsPrintRoot .pgs-sheet{box-shadow:0 2px 14px rgba(0,0,0,.45);}
+
+/* ---------- برابری ۱۰۰٪: قواعد محتوای داخل شیت (screen == print) ----------
+   این مقادیر از بلاک‌های @media print قدیمی (خطوط ۵۵۲–۶۹۸ و …) استخراج شده‌اند
+   تا خروجی کاغذی دقیقاً همان چیزی باشد که قبلاً چاپ می‌شد، ولی این بار
+   پیش‌نمایش هم دقیقاً همین را نشان می‌دهد. */
+.pgs-sheet .exam-header,
+.pgs-sheet .exam-header2,
+.pgs-sheet .exam-header3,
+.pgs-sheet .exam-header4,
+.pgs-sheet .exam-header5,
+.pgs-sheet .exam-header6,
+.pgs-sheet .exam-header7,
+.pgs-sheet .scores-table{
+  width:100% !important;
+  margin-left:0 !important;
+  margin-right:0 !important;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.pgs-sheet .exam-header{font-size:9.5pt;border:2px solid #000 !important;}
+.pgs-sheet .exam-header td{padding:2px 8px !important;line-height:1.25 !important;border:1px solid #000 !important;height:20px !important;}
+.pgs-sheet .uni-name{font-size:10.5pt;}
+.pgs-sheet .branch-name{font-size:10pt;}
+.pgs-sheet .iau-logo{width:55px !important;height:auto;}
+.pgs-sheet .exam-header2{border:2px solid #000 !important;margin-bottom:6px !important;}
+.pgs-sheet .h2-top{min-height:72px !important;border-bottom:2px solid #000 !important;}
+.pgs-sheet .h2-chair-box{height:34px !important;border:2px solid #000 !important;font-size:9pt !important;width:155px !important;padding:0 8px !important;}
+.pgs-sheet .h2-bism{font-size:11pt !important;}
+.pgs-sheet .h2-university{font-size:13pt !important;}
+.pgs-sheet .h2-sub{font-size:8.8pt !important;}
+.pgs-sheet .h2-examline{font-size:9.2pt !important;}
+.pgs-sheet .h2-logo-img{width:55px !important;}
+.pgs-sheet .h2-info-table{font-size:10.5pt !important;}
+.pgs-sheet .h2-info-table td{height:32px !important;padding:4px 8px !important;border-top:2px solid #000 !important;}
+.pgs-sheet .exam-header3{border:2px solid #000 !important;margin-bottom:6px !important;}
+.pgs-sheet .h3-top{min-height:58px !important;border-bottom:2px solid #000 !important;padding:3px 8px !important;}
+.pgs-sheet .h3-logo{width:38px !important;max-height:52px !important;object-fit:contain !important;}
+.pgs-sheet .h3-bism{font-size:8.8pt !important;margin-bottom:1px !important;}
+.pgs-sheet .h3-quote{font-size:8.8pt !important;padding:2px 10px !important;border:1.5px solid #000 !important;border-radius:6px !important;margin-bottom:3px !important;}
+.pgs-sheet .h3-unit{font-size:9pt !important;}
+.pgs-sheet .h3-office-row{font-size:8.2pt !important;gap:24px !important;}
+.pgs-sheet .h3-info{font-size:8.4pt !important;}
+.pgs-sheet .h3-info td{border-top:2px solid #000 !important;padding:2px 6px !important;}
+.pgs-sheet .h3-side{border-left:2px solid #000 !important;font-size:8pt !important;line-height:1.3 !important;}
+.pgs-sheet .h3-main{line-height:1.45 !important;}
+.pgs-sheet .h3-val{min-width:55px !important;border-bottom:none !important;}
+.pgs-sheet .h3-val.long{min-width:115px !important;}
+.pgs-sheet .h3-val.med{min-width:82px !important;}
+.pgs-sheet .h4-topline{min-height:22px !important;line-height:22px !important;font-size:11pt !important;}
+.pgs-sheet .h4-page{left:42px !important;font-size:8pt !important;}
+.pgs-sheet .h4-table{border:2px solid #000 !important;font-size:9.2pt !important;}
+.pgs-sheet .h4-table td{border:1px solid #000 !important;padding:2px 7px !important;height:24px !important;line-height:1.25 !important;}
+.pgs-sheet .h4-center{font-size:9.8pt !important;}
+.pgs-sheet .h4-school{font-size:11.5pt !important;}
+.pgs-sheet .h4-val{min-width:55px !important;border-bottom:none !important;padding:0 4px !important;}
+.pgs-sheet .h4-val.long{min-width:145px !important;}
+.pgs-sheet .h4-val.med{min-width:95px !important;}
+.pgs-sheet .h4-datebox{min-width:60px !important;border-bottom:1px solid #000 !important;}
+.pgs-sheet .exam-header5{border:2px solid #000 !important;margin-bottom:6px !important;}
+.pgs-sheet .h5-top{min-height:150px !important;padding:7px 9px 4px !important;}
+.pgs-sheet .h5-col{font-size:9.5pt !important;line-height:1.75 !important;}
+.pgs-sheet .h5-left{padding-right:18px !important;}
+.pgs-sheet .h5-center{font-size:10.5pt !important;line-height:1.65 !important;}
+.pgs-sheet .h5-bism{font-size:10.5pt !important;margin-bottom:3px !important;}
+.pgs-sheet .h5-page{margin-top:10px !important;}
+.pgs-sheet .h5-val{min-width:95px !important;border-bottom:none !important;padding:0 4px !important;}
+.pgs-sheet .h5-val.short{min-width:55px !important;}
+.pgs-sheet .h5-val.med{min-width:75px !important;}
+.pgs-sheet .h5-val.long{min-width:125px !important;}
+.pgs-sheet .h5-bottom{border-top:2px solid #000 !important;font-size:9.5pt !important;}
+.pgs-sheet .h5-bottom td{border-left:1px solid #000 !important;padding:5px 8px !important;height:70px !important;line-height:1.7 !important;}
+.pgs-sheet .h5-bottom td:last-child{border-left:none !important;}
+.pgs-sheet .h5-vertical{padding:3px !important;}
+.pgs-sheet .exam-header6{border:2px double #000 !important;margin-bottom:6px !important;}
+.pgs-sheet .h6-top{font-size:9pt !important;}
+.pgs-sheet .h6-top td{padding:2px 7px !important;height:23px !important;line-height:1.22 !important;}
+.pgs-sheet .h6-center{font-size:9.6pt !important;}
+.pgs-sheet .h6-bism{font-size:9.2pt !important;}
+.pgs-sheet .h6-school{font-size:10.8pt !important;}
+.pgs-sheet .h6-val{min-width:88px !important;border-bottom:none !important;padding:0 3px !important;}
+.pgs-sheet .h6-val.short{min-width:45px !important;}
+.pgs-sheet .h6-val.med{min-width:68px !important;}
+.pgs-sheet .h6-val.long{min-width:130px !important;}
+.pgs-sheet .h6-correct{border-top:2px solid #000 !important;font-size:9pt !important;}
+.pgs-sheet .h6-correct td{border:1px solid #000 !important;padding:3px 5px !important;height:24px !important;line-height:1.25 !important;}
+.pgs-sheet .h6-correct .h6-title{font-size:9.6pt !important;height:24px !important;}
+.pgs-sheet .h6-correct .h6-small{height:22px !important;}
+.pgs-sheet .h6-final{font-size:9.8pt !important;}
+.pgs-sheet .h6-final td{border:1px solid #000 !important;padding:3px 5px !important;height:24px !important;}
+.pgs-sheet .exam-header7{border:2px double #000 !important;margin-bottom:6px !important;}
+.pgs-sheet .h7-wrap{min-height:135px !important;padding:7px 10px !important;}
+.pgs-sheet .h7-col{font-size:10pt !important;line-height:1.95 !important;}
+.pgs-sheet .h7-left{padding-right:14px !important;}
+.pgs-sheet .h7-center{font-size:11.4pt !important;line-height:1.7 !important;}
+.pgs-sheet .h7-emblem{width:46px !important;margin-bottom:2px !important;}
+.pgs-sheet .h7-school{font-size:12pt !important;}
+.pgs-sheet .h7-val{min-width:105px !important;border-bottom:none !important;padding:0 4px !important;}
+.pgs-sheet .h7-val.short{min-width:60px !important;}
+.pgs-sheet .h7-val.med{min-width:88px !important;}
+.pgs-sheet .h7-val.long{min-width:130px !important;}
+.pgs-sheet .grades-date-row td{font-size:9.5pt !important;padding:2px 8px !important;height:20px !important;}
+.pgs-sheet .scores-table{font-size:9.5pt !important;border:2px solid #000 !important;border-top:none !important;}
+.pgs-sheet .scores-table td{padding:5px 6px !important;border:1px solid #000 !important;height:24px !important;}
+
+/* جدول سؤالات داخل شیت: بدون بیرون‌زدگی، با مقادیر چاپ قدیمی */
+.pgs-sheet .questions-print-table{
+  width:100% !important;
+  margin:0 !important;
+  border-collapse:collapse;
+  table-layout:fixed;
+  break-inside:auto;
+}
+.pgs-sheet .questions-print-table thead{display:table-header-group;}
+.pgs-sheet .questions-print-table th{min-height:38px !important;padding:3px 5px !important;}
+.pgs-sheet .questions-print-table .question-main-td{padding:5px 7px !important;line-height:1.55 !important;}
+.pgs-sheet .questions-print-table .question-no-td,
+.pgs-sheet .questions-print-table .question-score-td{padding:5px 3px !important;font-size:9.5pt !important;}
+.pgs-sheet .questions-print-table tr{break-inside:auto;page-break-inside:auto;}
+.pgs-sheet .match-head-row,.pgs-sheet .match-pair-row{grid-template-columns:1fr 14px 22px 14px 1fr !important;column-gap:4px !important;}
+.pgs-sheet .match-pair-row{min-height:22px !important;}
+.pgs-sheet .match-dot{width:8px !important;height:8px !important;}
+.pgs-sheet .choice-mark{width:9px !important;height:9px !important;margin-left:5px !important;}
+.pgs-sheet .answer-space{margin-top:1px !important;margin-bottom:6px !important;}
+.pgs-sheet .question-sep-cell-pad{display:block !important;visibility:visible !important;line-height:0 !important;font-size:0 !important;pointer-events:none !important;}
+.pgs-sheet .teacher-answer{break-inside:avoid;page-break-inside:avoid;}
+.pgs-sheet .exam-intro{font-size:10pt;margin:8px 0;text-align:center;}
+.pgs-sheet .answer-key{margin-top:14px;}
+.pgs-sheet .answer-key h3{font-size:12pt;margin-bottom:6px;text-align:center;break-after:avoid;page-break-after:avoid;}
+.pgs-sheet .q-rich-content table.mathx table,
+.pgs-sheet .q-rich-content .mathx table,
+.pgs-sheet .q-rich-content .mathx td,
+.pgs-sheet .q-rich-content .mathx th{border:none !important;}
+.pgs-sheet .qimg-fig img{box-shadow:none !important;}
+.pgs-sheet .qmf-fig img,.pgs-sheet .interactive-figure{max-width:100%;}
+
+/* اجزای فقط-نمایشگر (هرگز چاپ نمی‌شوند) */
+.pgs-screen-only{pointer-events:auto;}
+.pgs-no-print,.question-sep-drag,.fig-resize-handle,.fig-move-hint,.fig-size-badge,
+.qimg-h,.qimg-tip,.qmf-del,.qmf-edit{display:none !important;}
+#pgsViewer .question-sep-drag,
+#pgsViewer .fig-resize-handle,
+#pgsViewer .qimg-h{display:block;}
+#pgsViewer .interactive-figure.selected .fig-move-hint,
+#pgsViewer .interactive-figure.selected .fig-size-badge,
+#pgsViewer .qimg-fig.sel .qimg-h,
+#pgsViewer .qimg-fig.sel .qimg-tip{display:block;}
+#printContent #pageNumberFooter{display:none !important;}
+
+/* ---------- پنل تنظیمات صفحه ---------- */
+#pgsPageSetup{
+  position:fixed;top:64px;left:16px;z-index:131000;
+  width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;
+  background:#fff;border-radius:14px;border:1px solid #dbe2ee;
+  box-shadow:0 18px 60px rgba(2,8,30,.35);
+  padding:14px 18px;margin:0;
+}
+#pgsPageSetup h2{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+#pgsPageSetup .toggle{cursor:pointer;color:#64748b;font-size:12px;white-space:nowrap;}
+#pgsPageSetup .grid-form{grid-template-columns:1fr 1fr !important;}
+#pgsPageSetup .pgs-setup-full{grid-column:1 / -1 !important;}
+.pgs-setup-hint{font-size:11px;color:#64748b;grid-column:1/-1;line-height:1.8;}
+
+/* ---------- بینندهٔ پیش‌نمایش (Word-like) ---------- */
+#pgsViewer{
+  position:fixed;inset:0;z-index:129000;direction:rtl;
+  display:flex;flex-direction:column;
+  background:var(--pgs-canvas-bg);
+  font-family:'Vazirmatn',Tahoma,sans-serif;
+}
+body.pgs-viewer-open{overflow:hidden;}
+
+.pgs-ribbon{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  background:var(--pgs-ribbon);color:#fff;padding:7px 10px;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:5;
+}
+.pgs-sep{width:1px;height:24px;background:rgba(255,255,255,.18);margin:0 4px;}
+.pgs-btn{
+  display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.09);color:#e8ecf7;border-radius:8px;
+  padding:7px 11px;font:600 12.5px/1 'Vazirmatn',Tahoma,sans-serif;
+  transition:background .12s,transform .06s;white-space:nowrap;
+}
+.pgs-btn:hover{background:rgba(255,255,255,.2);}
+.pgs-btn:active{transform:scale(.97);}
+.pgs-btn.primary{background:#2563eb;color:#fff;}
+.pgs-btn.primary:hover{background:#3b82f6;}
+.pgs-btn.on{background:#16a34a;color:#fff;}
+.pgs-btn.icon{padding:7px 9px;}
+.pgs-btn:disabled{opacity:.4;cursor:default;}
+.pgs-zoomval{
+  min-width:56px;text-align:center;background:rgba(255,255,255,.12);color:#fff;
+  border-radius:7px;padding:7px 4px;font:700 12px 'Vazirmatn',Tahoma;user-select:none;
+}
+.pgs-pageind{
+  display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.1);
+  border-radius:8px;padding:4px 6px;font:700 12px 'Vazirmatn',Tahoma;color:#fff;
+}
+.pgs-pageind input{
+  width:38px;text-align:center;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.25);
+  color:#fff;border-radius:6px;padding:4px 2px;font:700 12px 'Vazirmatn',Tahoma;
+}
+.pgs-spacer{flex:1 1 auto;}
+.pgs-menu-wrap{position:relative;}
+.pgs-menu{
+  position:absolute;top:calc(100% + 6px);right:0;min-width:230px;z-index:30;
+  background:#fff;border-radius:12px;box-shadow:0 16px 50px rgba(0,0,0,.45);
+  padding:8px;display:none;
+}
+.pgs-menu.open{display:block;}
+.pgs-menu button{
+  display:flex;width:100%;align-items:center;gap:8px;border:none;background:none;
+  padding:9px 10px;border-radius:8px;cursor:pointer;color:#0f172a;
+  font:600 13px 'Vazirmatn',Tahoma;text-align:right;
+}
+.pgs-menu button:hover{background:#eef2ff;color:#1e3a8a;}
+
+.pgs-main{flex:1 1 auto;display:flex;min-height:0;position:relative;}
+.pgs-thumbs{
+  flex:0 0 auto;width:168px;overflow:auto;background:#3c4043;padding:12px 10px;
+  display:flex;flex-direction:column;gap:12px;align-items:center;
+}
+.pgs-thumbs.hidden{display:none;}
+.pgs-thumb{position:relative;cursor:pointer;border:2px solid transparent;border-radius:4px;}
+.pgs-thumb.active{border-color:#6ea8fe;}
+.pgs-thumb-sizer{overflow:hidden;background:#fff;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.pgs-thumb-cap{
+  position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.65);color:#fff;font:700 10px 'Vazirmatn',Tahoma;
+  border-radius:999px;padding:1px 8px;pointer-events:none;
+}
+.pgs-canvas-wrap{flex:1 1 auto;overflow:auto;padding:26px 12px 60px;scroll-behavior:smooth;}
+.pgs-canvas-sizer{margin:0 auto;position:relative;}
+.pgs-canvas{position:absolute;top:0;right:0;transform-origin:top right;}
+.pgs-canvas .pgs-sheet{margin:0 auto;}
+
+.pgs-status{
+  flex:0 0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:#20242c;color:#c7ccd8;padding:6px 14px;
+  font:600 11.5px 'Vazirmatn',Tahoma;
+}
+.pgs-status b{color:#fff;font-weight:800;}
+.pgs-status .pgs-dot{width:4px;height:4px;border-radius:50%;background:#4b5563;display:inline-block;}
+
+/* ---------- دیالوگ چاپ ---------- */
+#pgsPrintDlg{
+  position:fixed;inset:0;z-index:132000;background:rgba(8,12,26,.6);
+  display:none;align-items:center;justify-content:center;padding:20px;direction:rtl;
+}
+#pgsPrintDlg.open{display:flex;}
+.pgs-dlg-box{
+  background:#fff;border-radius:16px;width:min(440px,94vw);padding:20px 22px;
+  box-shadow:0 24px 80px rgba(0,0,0,.5);font-family:'Vazirmatn',Tahoma;
+}
+.pgs-dlg-box h3{font-size:16px;color:#1e3a8a;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.pgs-dlg-row{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:13px;color:#1f2937;}
+.pgs-dlg-row label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.pgs-dlg-row input[type="text"],.pgs-dlg-row input[type="number"]{
+  border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font:600 12px 'Vazirmatn',Tahoma;width:110px;
+}
+.pgs-dlg-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:18px;}
+.pgs-dlg-actions button{
+  border:none;border-radius:10px;padding:10px 18px;cursor:pointer;
+  font:700 13px 'Vazirmatn',Tahoma;
+}
+.pgs-dlg-actions .ok{background:#2563eb;color:#fff;}
+.pgs-dlg-actions .ok:hover{background:#1d4ed8;}
+.pgs-dlg-actions .cancel{background:#eef2f7;color:#334155;}
+
+/* ---------- ریشهٔ چاپ (fallback منوی چاپ مرورگر) ---------- */
+#pgsPrintRoot{display:none;}
+
+/* ---------- حالت چاپ سند اصلی (fallback منوی چاپ مرورگر) ----------
+   کلاس pgs-fallback فقط لحظهٔ beforeprint به body اضافه می‌شود تا این قواعد
+   داخل iframe چاپ (که همین استایل‌ها در آن کپی می‌شود) بی‌اثر بمانند. */
+@media print{
+  html,body{background:#fff !important;}
+  body::before,body::after{content:none !important;display:none !important;}
+  body.pgs-fallback > *{display:none !important;}
+  body.pgs-fallback #pgsPrintRoot{display:block !important;}
+  #pgsPrintRoot .pgs-sheet{
+    margin:0 auto !important;box-shadow:none !important;
+    break-after:page;page-break-after:page;
+  }
+  #pgsPrintRoot .pgs-sheet:last-child{break-after:auto;page-break-after:auto;}
+}
+
+/* ---------- پایهٔ لمسی (همهٔ اندازه‌ها) ---------- */
+#pgsViewer,#pgsPageSetup,#pgsPrintDlg{-webkit-tap-highlight-color:transparent;}
+.pgs-btn{touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.pgs-canvas-wrap{touch-action:pan-x pan-y;overscroll-behavior:contain;}
+#pgsViewer{overscroll-behavior:contain;}
+.pgs-canvas-wrap.pgs-pinch{scroll-behavior:auto;}
+
+/* ---------- موبایل ---------- */
+@media (max-width:820px){
+  /* روبان: یک ردیف افقی اسکرول‌شونده با دکمه‌های لمسی ≥۴۰px و فقط آیکون */
+  .pgs-ribbon{
+    flex-wrap:nowrap;overflow-x:auto;overflow-y:visible;gap:4px;
+    padding:6px 8px;padding-top:calc(6px + env(safe-area-inset-top,0px));
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  .pgs-ribbon::-webkit-scrollbar{display:none;}
+  .pgs-sep{display:none;}
+  .pgs-btn{min-height:40px;min-width:40px;flex:0 0 auto;justify-content:center;padding:8px 11px;font-size:14px;}
+  .pgs-btn .pgs-t{display:none;}
+  .pgs-menu-wrap{position:static;}
+  .pgs-menu{position:fixed;top:calc(50px + env(safe-area-inset-top,0px));right:10px;z-index:60;min-width:210px;}
+  .pgs-menu button{min-height:44px;}
+  .pgs-zoomval{min-width:50px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;}
+  .pgs-pageind input{width:44px;min-height:36px;font-size:16px;}
+  .pgs-pageind .pgs-btn{min-width:40px;}
+
+  /* بندانگشتی: کشوی کناری از راست */
+  .pgs-main{position:relative;}
+  .pgs-thumbs{
+    position:absolute;top:0;bottom:0;right:0;width:150px;z-index:25;
+    transform:translateX(108%);transition:transform .25s ease;
+    box-shadow:-10px 0 26px rgba(0,0,0,.45);
+  }
+  .pgs-thumbs.open{transform:none;}
+  .pgs-thumbs.hidden{display:flex !important;} /* در موبایل hidden بی‌اثر است؛ کشو حاکم است */
+
+  /* نوار وضعیت: خلاصه + safe-area */
+  .pgs-status{gap:10px;padding:6px 10px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));}
+  .pgs-status .pgs-hide-m{display:none;}
+
+  /* تنظیمات صفحه: bottom-sheet تمام‌عرض */
+  #pgsPageSetup{
+    top:auto;bottom:0;left:0;right:0;width:100%;
+    max-height:82vh;max-height:82dvh;
+    border-radius:16px 16px 0 0;border-left:none;border-right:none;
+    box-shadow:0 -14px 44px rgba(2,8,30,.45);
+  }
+  #pgsPageSetup .grid-form{grid-template-columns:1fr 1fr !important;}
+  #pgsPageSetup .field input,#pgsPageSetup .field select{font-size:16px;}
+
+  /* دیالوگ چاپ: جمع‌وجور و لمسی */
+  .pgs-dlg-row{flex-wrap:wrap;gap:8px;}
+  .pgs-dlg-row label{min-height:32px;}
+  .pgs-dlg-actions button{min-height:44px;flex:1;}
+
+  .pgs-canvas-wrap{padding:14px 6px 44px;}
+}
+@media (max-width:480px){
+  #pgsPageSetup .grid-form{grid-template-columns:1fr !important;}
+}

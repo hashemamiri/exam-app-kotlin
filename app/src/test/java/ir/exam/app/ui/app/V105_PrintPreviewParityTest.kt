@@ -14,7 +14,7 @@ class V105_PrintPreviewParityTest {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
     }
 
-    private val renderer by lazy { File(root(), "app/src/main/assets/print/exam_print_renderer.html").readText() }
+    private val renderer by lazy { File(root(), "app/src/main/assets/print/exam_print_renderer_legacy.html").readText() }
     private val headerSettings by lazy { File(root(), "app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt").readText() }
 
     @Test

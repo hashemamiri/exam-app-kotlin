@@ -1,0 +1,120 @@
+/* FIX-QMF-BIGGER-BTNS: دکمه‌های × و ✎ بزرگ‌تر (درخواست کاربر) — اندازهٔ نهایی:
+   اتم فرمول zoom ندارد → 20px واقعی. فیگورها zoom والد 0.42 دارند → جبران با scale(2.3809) → 24px واقعی.
+   آفست گوشه طوری است که مرکز آیتم کوچک برای کلیک دوم (ویرایش) آزاد بماند و overlap برنگردد. */
+.qmf-surface .qmf-atom.is-on > .qmf-del,
+.qmf-surface .qmf-atom[data-qmf-selected] > .qmf-del,
+.qmf-surface .qmf-atom.is-on > .qmf-edit,
+.qmf-surface .qmf-atom[data-qmf-selected] > .qmf-edit {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  transform: scale(1) !important;
+  border: 2px solid #fff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3) !important;
+}
+.qmf-surface .qmf-atom.is-on > .qmf-del,
+.qmf-surface .qmf-atom[data-qmf-selected] > .qmf-del {
+  left: -7px !important;
+  top: -7px !important;
+  right: auto !important;
+  transform-origin: top left !important;
+  font: 900 14px/17px Arial, sans-serif !important;
+}
+.qmf-surface .qmf-atom.is-on > .qmf-edit,
+.qmf-surface .qmf-atom[data-qmf-selected] > .qmf-edit {
+  right: -7px !important;
+  top: -7px !important;
+  left: auto !important;
+  transform-origin: top right !important;
+  font: 700 12px/17px Arial, sans-serif !important;
+}
+.qmf-surface .qmf-fig.is-on > .qmf-del,
+.qmf-surface .qmf-fig[data-qmf-selected] > .qmf-del,
+.qmf-surface .qmf-fig.is-on > .qmf-edit,
+.qmf-surface .qmf-fig[data-qmf-selected] > .qmf-edit {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  border: 2px solid #fff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3) !important;
+}
+.qmf-surface .qmf-fig.is-on > .qmf-del,
+.qmf-surface .qmf-fig[data-qmf-selected] > .qmf-del {
+  left: -9px !important;
+  top: -9px !important;
+  right: auto !important;
+  transform: scale(2.3809) !important;
+  transform-origin: top left !important;
+  font: 900 18px/22px Arial, sans-serif !important;
+}
+.qmf-surface .qmf-fig.is-on > .qmf-edit,
+.qmf-surface .qmf-fig[data-qmf-selected] > .qmf-edit {
+  right: -9px !important;
+  top: -9px !important;
+  left: auto !important;
+  transform: scale(2.3809) !important;
+  transform-origin: top right !important;
+  font: 700 16px/22px Arial, sans-serif !important;
+}
+/* FIX-EXAM-MATRIX-BORDER: سلول‌های ماتریس/فرمول (خروجی mathToHtml) نباید border جدولِ سوالات (.questions-print-table td) را بگیرند؛ پیش‌نمایش دقیقاً مثل کادر متن سوال شود */
+#printContent .q-rich-content .mathx table,
+#printContent .q-rich-content .mathx td,
+#printContent .q-rich-content .mathx th { border:none !important; }
+/* FIX-EXAM-CSS */
+.q-move-group{display:inline-flex;gap:3px;margin-left:6px;align-items:center}
+.q-move{width:30px;height:30px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;cursor:pointer;line-height:1;font-family:inherit}
+.q-move:disabled{opacity:.35;cursor:default}
+.q-move:hover:not(:disabled){background:#e0e7ff}
+/* FIX-EXAM-PRINTBREAK: جلوگیری از نصف شدن سؤال‌ها/جدول‌ها در مرز صفحات چاپ */
+@media print{
+  .questions-print-table tr.question-print-row{break-inside:avoid !important;page-break-inside:avoid !important}
+  .questions-print-table tr.question-print-row>td{vertical-align:top}
+  .q-rich-content table,.q-rich-content .qmf-fig,.q-rich-content img{break-inside:avoid !important;page-break-inside:avoid !important}
+  .exam-header,.exam-header2,.exam-header3,.exam-header4,.exam-header5,.exam-header6,.exam-header7,.scores-table{break-inside:avoid !important;page-break-inside:avoid !important}
+  .q-move,.q-move-group{display:none !important}
+}
+
+/* FIX-EXAM-PRINT-END: بعد از کادر «متن پایین صفحه / موفق باشید» هیچ محتوایی چاپ نشود
+   (هاستِ مخفیِ ویرایشگر در حالت چاپِ کروم ~۹ صفحهٔ خالی می‌ساخت) */
+@media print{
+  #extractedQuestionEditorHost{display:none !important}
+  #autosaveBanner{display:none !important}
+}
+/* FIX-EXAM-RAD-ICON: رادیکال هم‌سبکِ آیکن فرمول — stroke گرد 2px (کروم border کسری را گرد می‌کند؛ 2px صحیح) با linecap/linejoin گرد و هندسهٔ موربِ نرم */
+.msurd .root-line{stroke-width:1.5 !important;stroke-linecap:round;stroke-linejoin:round}
+.mathx .msqrt>.mrad{border-top:2px solid transparent !important}
+/* FIX-EXAM-SINGLE-WINDOW: سوال‌های بخش «سؤالات آزمون» کارت نیستند — فقط پنجرهٔ سوالِ فعال دیده می‌شود و کلیک روی شمارهٔ سوال، آن را جایگزین می‌کند */
+@media screen{
+  #questionsContainer .question-card{background:#fff;border:1px solid #d8dfee;border-right:4px solid #1e40af;border-radius:12px;padding:14px;margin:0 0 14px;box-shadow:0 6px 18px rgba(30,64,175,.08)}
+  #questionsContainer:empty::after{content:'هنوز سوالی ندارید — از دکمهٔ «➕ سوال جدید» بالای صفحه استفاده کنید.';display:block;color:#94a3b8;font:700 13px Arial,sans-serif;text-align:center;padding:26px 10px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px}
+}
+/* FIX-EXAM-UI2 */
+.qtype-overlay{position:fixed;inset:0;z-index:130100;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:16px;direction:rtl}
+.qtype-box{background:#fff;border-radius:14px;padding:18px;width:min(620px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:90vh;overflow:auto}
+.qtype-head{display:flex;justify-content:space-between;align-items:center;font-weight:800;color:#1e3a8a;margin-bottom:14px;font-size:16px}
+.qtype-x{border:none;background:#eef2ff;color:#4f46e5;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px}
+.qtype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.qtype-item{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:15px 10px;font:700 14px/1.7 Arial,sans-serif;color:#0f172a;cursor:pointer;text-align:center;transition:all .12s}
+.qtype-item:hover{background:#1e40af;color:#fff;border-color:#1e40af}
+.qnum-strip-wrap{margin:4px 0 14px;display:none}
+.qnum-strip{display:flex;gap:6px;overflow-x:auto;padding:6px 2px 10px;direction:rtl;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.qnum-strip::-webkit-scrollbar{height:6px}
+.qnum-strip::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:3px}
+.qnum-chip{flex:0 0 auto;min-width:36px;height:36px;padding:0 8px;border-radius:9px;border:1px solid #c7d2fe;background:#eef2ff;color:#1e3a8a;font:800 15px Arial,sans-serif;cursor:pointer;transition:all .12s}
+.qnum-chip.active{background:#1e40af;color:#fff;border-color:#1e40af;box-shadow:0 2px 8px rgba(30,64,175,.35)}
+.qnum-chip:hover:not(.active){background:#e0e7ff}
+#previewWinOverlay{position:fixed;inset:0;z-index:125000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;direction:rtl}
+.pwo-box{background:#fff;border-radius:14px;width:min(1100px,96vw);height:min(780px,92vh);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden}
+.pwo-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#1e3a8a;color:#fff;font:800 15px Arial,sans-serif;flex:0 0 auto}
+.pwo-x{border:none;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer;font:700 13px Arial,sans-serif}
+.pwo-x:hover{background:rgba(255,255,255,.3)}
+.pwo-body{flex:1 1 auto;overflow:auto;padding:12px;background:#eef2f7}
+#printContent.in-window{margin:6px auto !important;box-shadow:none !important}
+@media print{#qtypeOverlay,#previewWinOverlay{display:none !important}}
+
+/* FIX-EXAM-PREVIEW-EYE: پیش‌نمایش فقط از طریق دکمهٔ چشم دیده شود؛ زیر کادر «سؤالات آزمون» مخفی است (چاپ دست‌نخورده می‌ماند چون این قانون فقط screen است) */
+@media screen{#printContent.live-preview{display:none !important}.preview-note{display:none !important}#previewWinOverlay #printContent.live-preview{display:block !important}}

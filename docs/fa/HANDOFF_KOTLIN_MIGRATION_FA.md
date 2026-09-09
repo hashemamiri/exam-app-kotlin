@@ -17708,3 +17708,74 @@ V120–V123 گرفت (رفع ۱۰ باگ، مکث زمان‌سنج، ترازِ
 `questionType`ِ مخزن، و هفت اصلاحِ من) ادغام شدند؛ `boxStyle` و `pageSetup` هر دو در payload می‌روند؛
 `applyBoxStyle` بعد از ساختِ `window.ExamPrintRenderer` وصل می‌شود؛ فاصلهٔ سؤال‌ها فقط وقتی «معمولی»
 نیست `--box-pad` را بازنویسی می‌کند. §۳۴۸ «V120 — بازبینیِ کد‌به‌کد» همان هفت اصلاحِ من است. شمارهٔ بعدی: V125.
+
+## ۳۵۰. V125 — استخراج بخش پیش‌نمایش/چاپ و موتورهای وابستهٔ آزمون‌ساز v20 و جایگذاری در برنامه
+
+**درخواست:** «بخش پیش‌نمایش و چاپ و موتورهای وابسته رو استخراج کن و در برنامه جایگذاری کن» — کاربر
+گزینهٔ **جایگزینیِ کامل** را انتخاب کرد: HTML/CSS/JS پیش‌نمایش/چاپِ نسخهٔ وب (renderPreview + pgs-engine +
+استایل‌ها) **عیناً** با همهٔ وابستگی‌ها (موتورهای شکل، میزبانِ ریاضی، سربرگ/پاورقی/کلیدِ پاسخ، تصویر،
+فونت) وارد برنامه شود و رندررِ فعلی کنار گذاشته شود (نه حذف). معیارِ پذیرش: پیش‌نمایش و چاپ داخلِ برنامه
+دقیقاً مثلِ نسخهٔ وب. پایه: e1b37b1 (سرِ GitHub؛ با `git fetch` بررسی شد).
+
+**ساختار جدید `app/src/main/assets/print/`:**
+- `exam_print_renderer.html` — اکنون **میزبانِ نازک** (~۲KB): `window.__appHost = true`، لینکِ CSSهای وب +
+  `webhost.css`، `document.write(window.__APP_HOST_DOM)` از `host_dom.js` (DOMِ اصلیِ وب: settingsPanel/
+  questions-area/دیالوگ‌ها — عیناً، ولی به‌جای innerHTML با document.write چون verify آن را رد می‌کند)، سپس
+  اسکریپت‌های وب به همان ترتیبِ سندِ اصلی و در آخر `webhost.js`. نشانیِ سند (`MAIN_PAGE_URL`) و
+  `ExamPrintBridge` تغییری نکرد.
+- `exam_print_renderer_legacy.html` — رندررِ V105–V124 **دست‌نخورده** (git mv). آزمون‌های V105/V106/V107/
+  V121/V123/V124/ExamPrintRendererContractTest که متنِ آن را می‌خوانند به این فایل اشاره می‌کنند.
+- `web/` (۲۳ فایل، ۵٫۷MB) — از `آزمون_ساز-v20.html` بدونِ تغییر بریده شده (فقط فاصلهٔ انتهای خط در
+  math_host.js برای `git diff --check`): `vazirmatn_embed.css, main.css, editor_styles.css, tools_styles.css,
+  qmf_styles.css, ui_styles.css, pgs_style.css`؛ `geo_fig.js, graph_fig.js, table_fig.js, anatomy_atlas_data.js,
+  anatomy_fig.js, periodic_fig.js, science_atlas_data.js, science_fig.js, math_host.js, mainscript.js,
+  ui_v2_runtime.js, qimg_uploader.js, pgs_engine.js` + سه فایلِ برنامه: `host_dom.js`, `webhost.js`, `webhost.css`.
+  اسکریپتِ Cloudflare (`cdn-cgi`) و بنرِ autosave وارد نشده؛ هیچ URL خارجی وجود ندارد (verify چک می‌کند).
+
+**`web/webhost.js` — لایهٔ میزبانِ برنامه روی موتورِ وب (API قبلی حفظ شد):**
+- `setExamData(payload)` → `questions` وب (`toWebQuestion`: type/text/options/answer/score/answerLines/
+  figures/images)، فیلدهای سربرگ، `opt_*` (paper→opt_paper، orient→opt_orientation، customW/H، mT/mB/mR/mL،
+  border→opt_pageBorder، pageNumbers→opt_showPageNumbers، repeatHeader، font→opt_baseFont،
+  spacing→opt_questionSpacing، showScores) و متغیرهای `--box-*` از boxStyle. `reset` مثلِ قبل.
+- `ExamPrintRenderer.showPreview` → `openPreviewWindow()` (بینندهٔ PGS با نوار/زوم/بندانگشتی/تنظیمات صفحه/
+  گفت‌وگوی چاپِ خودِ وب). `closePreviewWindow` → `bridge.previewClosed()`.
+- چاپ: `printStudent/printTeacher` و نیز `pgsPrintNow/pgsDoPrintFromDlg/window.print` وب همه به
+  `requestPrint(mode)` می‌رسند: حالتِ استاد/دانش‌آموز ست می‌شود، رویدادِ `beforeprint` (با نشانِ
+  `__appHost`) dispatch می‌شود تا PGS `#pgsPrintRoot` را بسازد و `body.pgs-fallback` بزند، سپس
+  `ExamPrintBridge.print(mode)` (PrintManager). `restorePreview` → `afterprint` و پاک‌سازی.
+- **باگِ مهمِ پیدا‌شده در آزمون (puppeteer):** PDF فقط ۱ صفحه می‌شد با اینکه `#pgsPrintRoot` ۴ برگه داشت.
+  علت: خودِ Chromium هنگامِ ساختِ سندِ چاپ دوباره `beforeprint` می‌فرستد و شنوندهٔ PGS وسطِ رندرِ
+  چاپی (رسانهٔ print، بدونِ viewport) دوباره paginate می‌کرد. راه‌حل در webhost.js: شنوندهٔ **capture**
+  برای `beforeprint/afterprint` که وقتی `printRootReady` است و رویداد از برنامه نیست
+  `stopImmediatePropagation()` می‌کند. پس از آن PDF = ۴ صفحهٔ A4 (۳ برگه + کلید). PrintManagerِ اندروید
+  همان مسیرِ Chromium است؛ پس این اصلاح برای دستگاه هم لازم بود.
+- `layoutSnapshot/figureAt/replaceFigure` روی `questions[].figures` وب کار می‌کنند؛ dblclick/دو‌ضربه روی
+  `.interactive-figure` → `bridge.editFigureTool(qid, index)`. `applyFormat` در موتورِ وب معادلی ندارد →
+  toast «پشتیبانی نمی‌شود» (نوارِ قالب‌بندیِ بومی هم به‌خاطرِ نکتهٔ بعد دیده نمی‌شود).
+- `webhost.css`: @font-face برای Shabnam/Sahel/BNazanin از `/fonts/` (فونت‌های برنامه)؛ پنهان‌کردنِ
+  settingsPanel/questions-area/toolbar؛ متغیرهای «کادر» روی `.pgs-sheet table`؛ در `@media print`
+  بیننده/دیالوگ‌ها پنهان.
+
+**تغییرِ Kotlin (`ExamHtmlPrintDialog.kt`):** ثابتِ `WEB_ENGINE_PREVIEW = true`؛ هدرِ بومیِ پیش‌نمایش
+(`PrintPreviewHeader`) وقتی موتورِ وب فعال است نمایش داده نمی‌شود چون بینندهٔ PGS نوارِ کاملِ خودش را
+دارد (✕، چاپ، زوم، تنظیمات صفحه، بندانگشتی)؛ زومِ WebView خاموش شد (`setSupportZoom(false)` — PGS خودش
+pinch/fit دارد و زومِ WebView نوارِ ثابتش را از دست می‌داد)؛ `cacheMode = LOAD_DEFAULT` (منابع محلی‌اند).
+پنجره‌های بومیِ «کادر» و «تنظیمات صفحه» و storeها سرِ جایشان‌اند و مقدارشان از راهِ payload/
+`setPageSetup/applyBoxStyle` به موتورِ وب می‌رسد. HeadlessExamPrinter (چاپِ مستقیم از بیلدر) بدونِ
+بیننده کار می‌کند (آزمون شد: setExamData → printTeacher → ۴ برگه با کلید).
+
+**نتایجِ آزمون در Chromium (puppeteer، ۱۴ سؤالِ مخلوط):** بارگذاری ۳۹۶ms؛ پیش‌نمایش ۳ برگهٔ A4 با
+سربرگ، ۱۴ فرمولِ ریاضی، ۲ شکلِ هندسی/نمودار، بدونِ سرریز؛ printTeacher → ۴ برگه (کلیدِ پاسخ)، PDF ۴
+صفحهٔ 595×842pt؛ A5 افقی → ۹ برگهٔ 210×148mm؛ figureAt/replaceFigure/restore/close همه OK.
+
+**verify_native_final.py:** بلوکِ رندرر بازنویسی شد: میزبان < 8KB با نشانگرهای `web/*`، وجودِ ۲۳ فایلِ
+موتور، نشانگرهای موتور (renderPreview/paginate/buildHeader/rebuildPrintRoot/pgs-fallback)، بدونِ URL
+خارجی/cdn-cgi، نشانگرهای webhost.js (API + دست‌دادنِ چاپ + guardِ beforeprint)، بدونِ
+localStorage/innerHTML/iframe/document.write در webhost.js، و **دست‌نخورده‌ماندنِ** رندررِ legacy.
+آزمونِ جدید: `V125_WebPrintEngineTest`.
+
+**باقی‌مانده/ریسک برای آزمایش روی دستگاه:** ۱) اندازهٔ نوارِ PGS روی گوشی (viewport ثابتِ ۸۳۰px با
+overviewMode) — اگر ریز بود `WebView.settings` را به `useWideViewPort=false` تغییر دهید یا نوار را با
+CSS در webhost.css بزرگ کنید؛ ۲) `applyFormat` (نوارِ قالب‌بندیِ V114) در موتورِ وب نیست — اگر لازم شد
+باید در خودِ وب پیاده شود؛ ۳) اگر بازگشت به رندررِ قبلی لازم شد: `WEB_ENGINE_PREVIEW=false` **و**
+جابه‌جاییِ دو فایلِ html (legacy ↔ اصلی) + بازگرداندنِ بلوکِ verify. نسخهٔ بعدی: V126، بند ۳۵۱.

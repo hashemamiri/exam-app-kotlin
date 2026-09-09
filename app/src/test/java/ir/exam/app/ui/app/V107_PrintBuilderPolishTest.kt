@@ -12,7 +12,7 @@ class V107_PrintBuilderPolishTest {
     }
     private fun source(path: String) = File(root(), path).readText()
     private val builder by lazy { source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt") }
-    private val renderer by lazy { source("app/src/main/assets/print/exam_print_renderer.html") }
+    private val renderer by lazy { source("app/src/main/assets/print/exam_print_renderer_legacy.html") }
     private val centre by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt") }
     private val media by lazy { source("app/src/main/java/ir/exam/app/ui/image/QuestionMediaEditor.kt") }
     private val textSection by lazy { source("app/src/main/java/ir/exam/app/ui/builder/QuestionTextWebSection.kt") }

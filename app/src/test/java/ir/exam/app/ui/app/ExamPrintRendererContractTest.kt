@@ -12,7 +12,7 @@ class ExamPrintRendererContractTest {
     }
 
     private fun source(path: String): String = File(root(), path).readText()
-    private val rendererFile by lazy { File(root(), "app/src/main/assets/print/exam_print_renderer.html") }
+    private val rendererFile by lazy { File(root(), "app/src/main/assets/print/exam_print_renderer_legacy.html") }
     private val renderer by lazy { rendererFile.readText() }
     private val dialog by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt") }
     private val nativeRenderer by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamPrintAssetRenderer.kt") }

@@ -14,7 +14,7 @@ class V106_PrintRoundTripTest {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
     }
     private fun source(path: String) = File(root(), path).readText()
-    private val renderer by lazy { source("app/src/main/assets/print/exam_print_renderer.html") }
+    private val renderer by lazy { source("app/src/main/assets/print/exam_print_renderer_legacy.html") }
     private val dialog by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt") }
     private val centre by lazy { source("app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt") }
 

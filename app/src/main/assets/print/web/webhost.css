@@ -1,0 +1,30 @@
+/* V125 — استایلِ لایهٔ میزبانِ برنامه (روی موتورِ وبِ آزمون‌ساز v20؛ فایل‌های وب دست‌نخورده‌اند). */
+
+/* فونت‌های برنامه (همان‌هایی که بیلدرِ بومی دارد) — وزیرمتن از vazirmatn_embed.css (base64) می‌آید. */
+@font-face{font-family:"Shabnam";src:url("/fonts/shabnam_regular.ttf")}
+@font-face{font-family:"Sahel";src:url("/fonts/sahel_regular.ttf")}
+@font-face{font-family:"BNazanin";src:url("/fonts/bnazanin.ttf");font-weight:400}
+@font-face{font-family:"BNazanin";src:url("/fonts/bnazanin_bold.ttf");font-weight:700}
+@font-face{font-family:"B Nazanin";src:url("/fonts/bnazanin.ttf");font-weight:400}
+@font-face{font-family:"B Nazanin";src:url("/fonts/bnazanin_bold.ttf");font-weight:700}
+
+/* بخش‌های ویرایشگرِ وب که در برنامه کاربرد ندارند (سربرگ و سؤال‌ها از بیلدرِ بومی می‌آیند). */
+html,body{margin:0;padding:0;background:#e8ecf1;}
+body{padding:0 !important;}
+#settingsPanel,.questions-area,.toolbar,#emptyMsg,.qtype-overlay{display:none !important;}
+/* بینندهٔ PGS تمام‌صفحه است؛ نوارِ خودش دکمهٔ بستن/چاپ/زوم/تنظیمات صفحه را دارد. */
+#pgsViewer .pgs-btn[onclick="pgsFullscreen()"]{display:none !important;}
+/* گزینه‌هایی که در پنلِ چاپِ اندروید انتخاب می‌شوند (بازه/تعداد نسخه) */
+#pgsPrintDlg .pgs-dlg-row:nth-of-type(2),#pgsPrintDlg .pgs-dlg-row:nth-of-type(3){display:none !important;}
+
+/* V121 برنامه — کادر/جدول‌بندیِ سراسری (PrintBoxStyleStore) روی جدولِ سؤال‌های وب. */
+.pgs-sheet .questions-print-table th,
+.pgs-sheet .questions-print-table td{border-width:var(--box-border-w,1px);border-color:var(--box-border-c,#000);}
+.pgs-sheet .questions-print-table .qno-col{width:var(--box-no-w,6%);}
+.pgs-sheet .questions-print-table .qscore-col{width:var(--box-score-w,6%);}
+.pgs-sheet .questions-print-table .question-main-td{padding-left:var(--box-pad,7px) !important;padding-right:var(--box-pad,7px) !important;}
+
+/* چاپِ سیستم (PrintManager): فقط برگه‌های صفحه‌بندی‌شدهٔ #pgsPrintRoot چاپ می‌شوند (قاعدهٔ رسمیِ PGS در pgs_style.css). */
+@media print{
+  #pgsViewer,#pgsPageSetup,#pgsPrintDlg,#pgsDock{display:none !important;}
+}

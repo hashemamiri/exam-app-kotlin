@@ -15,7 +15,7 @@ class V121_PgsPrintEngineTest {
         File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
     }
 
-    private val renderer by lazy { File(root(), "app/src/main/assets/print/exam_print_renderer.html").readText() }
+    private val renderer by lazy { File(root(), "app/src/main/assets/print/exam_print_renderer_legacy.html").readText() }
     private val dialog by lazy { File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt").readText() }
     private val store by lazy { File(root(), "app/src/main/java/ir/exam/app/data/local/PrintPageSetupStore.kt").readText() }
     private val payload by lazy { File(root(), "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt").readText() }

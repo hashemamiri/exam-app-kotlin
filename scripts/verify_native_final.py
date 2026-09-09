@@ -54,44 +54,70 @@ for relative in (
     require(not (ROOT / relative).exists(), f"retired file returned: {relative}")
 
 require(RENDERER.is_file(), "renderer asset is missing")
+# V125 — سندِ اصلی اکنون میزبانِ نازکِ موتورِ وبِ «آزمون‌ساز v20» است؛ موتور (CSS/JS
+# عیناً از نسخهٔ وب) در print/web/ و لایهٔ میزبانِ برنامه در print/web/webhost.js است.
+WEB_ENGINE = PRINT_ASSETS / "web"
+WEBHOST = WEB_ENGINE / "webhost.js"
+LEGACY_RENDERER = PRINT_ASSETS / "exam_print_renderer_legacy.html"
+WEB_ENGINE_FILES = (
+    "vazirmatn_embed.css", "main.css", "editor_styles.css", "tools_styles.css", "qmf_styles.css", "ui_styles.css",
+    "pgs_style.css", "webhost.css", "host_dom.js", "geo_fig.js", "graph_fig.js", "table_fig.js", "anatomy_atlas_data.js",
+    "anatomy_fig.js", "periodic_fig.js", "science_atlas_data.js", "science_fig.js", "math_host.js", "mainscript.js",
+    "ui_v2_runtime.js", "qimg_uploader.js", "pgs_engine.js", "webhost.js",
+)
 if RENDERER.is_file():
     renderer = read(RENDERER)
-    # V115 — سقف حجم: با نوار قالب‌بندی (V114) و صفحه‌بندی پیش‌نمایش (V115) از ۱۰۰KB گذشت.
-    require(RENDERER.stat().st_size < 140_000, "renderer asset is unexpectedly large")
+    require(RENDERER.stat().st_size < 8_000, "renderer entry must stay a thin host (engine lives in print/web/)")
+    for marker in (
+        "window.__appHost = true;",
+        'src="web/host_dom.js"',
+        'src="web/mainscript.js"',
+        'src="web/pgs_engine.js"',
+        'src="web/webhost.js"',
+        'href="web/pgs_style.css"',
+        "exam_print_renderer_legacy.html",
+    ):
+        require(marker in renderer, f"renderer host marker missing: {marker}")
+    external_urls = re.findall(r"https?://([^/'\"\s<]+)", renderer, flags=re.I)
+    if external_urls:
+        errors.append(f"renderer has an external URL: {external_urls[0]}")
+    for name in WEB_ENGINE_FILES:
+        require((WEB_ENGINE / name).is_file(), f"web engine file missing: print/web/{name}")
+    engine = read(WEB_ENGINE / "pgs_engine.js") + read(WEB_ENGINE / "mainscript.js")
+    for marker in ("function renderPreview()", "function paginate()", "function buildHeader()", "classList.add('pgs-fallback')", "function rebuildPrintRoot()"):
+        require(marker in engine or marker in read(WEB_ENGINE / "pgs_engine.js"), f"web engine marker missing: {marker}")
+    for name in WEB_ENGINE_FILES:
+        body = read(WEB_ENGINE / name)
+        found = re.findall(r"https?://([^/'\"\s<)]+)", body, flags=re.I)
+        found = [h for h in found if h.lower() != "www.w3.org"]
+        require(not found, f"web engine file has an external URL: {name}: {found[:1]}")
+        require("cdn-cgi" not in body, f"Cloudflare challenge script leaked into {name}")
+    require("qmf_exam_autosave" not in engine, "web autosave/recovery banner must not be bundled")
+    webhost = read(WEBHOST)
     for marker in (
         "window.setExamData = setExamData;",
         "window.printStudent = function",
         "window.printTeacher = function",
-        "window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot,figureAt:figureAt,replaceFigure:replaceFigure,restorePreview:restorePreview,setPageSetup:setPageSetup,getPageSetup:getPageSetup};",
-        "@page{size:A4",
-        "function buildHeader()",
+        "window.ExamPrintRenderer = {",
+        "showPreview: showPreview, layoutSnapshot: snapshot, figureAt: figureAt, replaceFigure: replaceFigure,",
+        "restorePreview: restorePreview, setPageSetup: setPageSetup, getPageSetup: getPageSetup,",
+        "applyBoxStyle: applyBoxStyle,",
         "function requestPrint(mode)",
-        # V123 — خطِ کادرِ متنِ سؤال در پیش‌نمایش: خطِ آبیِ واضح + دستگیرهٔ
-        # مرکزی با هدفِ لمس 28px، راهنمای یک‌باره، و کادرِ آزادِ تصاویر حذف.
-        "bottom:-14px;height:28px",
-        '.question-sep-drag::after{content:"≡"',
-        "sepHintDone",
-        ".figure-slot.free-slot{opacity:0;pointer-events:none}",
+        "callBridge('print', mode)",
+        "callBridge('previewClosed')",
+        "callBridge('editFigureTool', String(qid), index)",
+        "ev.__appHost = true; window.dispatchEvent(ev)",
+        "e.stopImmediatePropagation(); document.body.classList.add('pgs-fallback')",
+        "window.openPreviewWindow()",
+        "function toWebQuestion(src, index)",
+        "if (!window.__appHost) loadSample();",
     ):
-        require(marker in renderer, f"renderer contract marker missing: {marker}")
-    for forbidden in (
-        "<iframe",
-        "<textarea",
-        "contenteditable",
-        "localstorage",
-        "math_editor.html",
-        "rendereditor",
-        "addquestion",
-        "__qmf",
-        "innerhtml",
-        # V123 — کادرِ خط‌چینِ چیدمانِ آزادِ تصاویر نباید برگردد.
-        "border:1px dashed #b9c4d3",
-        ".preview-open .figure-slot.free-slot",
-    ):
-        require(forbidden not in renderer.lower(), f"retired authoring code found in renderer: {forbidden}")
-    external_urls = re.findall(r"https?://([^/'\"\s<]+)", renderer, flags=re.I)
-    if external_urls:
-        errors.append(f"renderer has an external URL: {external_urls[0]}")
+        require(marker in webhost or marker in read(WEB_ENGINE / "mainscript.js"), f"web host marker missing: {marker}")
+    for forbidden in ("localstorage", "innerhtml", "<iframe", "document.write"):
+        require(forbidden not in webhost.lower(), f"forbidden construct in webhost.js: {forbidden}")
+    require(LEGACY_RENDERER.is_file(), "legacy renderer must be kept aside (exam_print_renderer_legacy.html)")
+    legacy = read(LEGACY_RENDERER)
+    require("window.ExamPrintRenderer = {showPreview:showPreview,layoutSnapshot:snapshot" in legacy, "legacy renderer content changed")
 
 # Kotlin host must point at the new asset and retain the active bridge surface.
 dialog = read(DIALOG)
@@ -190,6 +216,6 @@ if errors:
     sys.exit(1)
 
 print("Print renderer verification: PASS")
-print(f"- renderer: {RENDERER.stat().st_size} bytes")
+print(f"- renderer host: {RENDERER.stat().st_size} bytes; web engine files: {len(WEB_ENGINE_FILES)}")
 print("- retired document-editor and layout-store paths: absent")
 print("- preview, direct print, native math/figure rendering and header schema: present")

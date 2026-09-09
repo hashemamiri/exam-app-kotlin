@@ -81,6 +81,14 @@ import kotlinx.serialization.json.jsonPrimitive
 /** نشانی ثابت سند اصلی تا callbackهای WebView فقط یک‌بار داده را تزریق کنند. */
 internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"
 
+/**
+ * V125 — سندِ اصلی اکنون میزبانِ موتورِ پیش‌نمایش/چاپِ «آزمون‌ساز v20» است
+ * (print/web/*.css و *.js عیناً از نسخهٔ وب + print/web/webhost.js). رندررِ
+ * قبلی (V105–V124) کنار گذاشته شده: print/exam_print_renderer_legacy.html.
+ * بینندهٔ وب (PGS) نوارِ کاملِ خودش را دارد؛ پس هدرِ بومیِ پیش‌نمایش پنهان است.
+ */
+internal const val WEB_ENGINE_PREVIEW = true
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ExamHtmlPrintDialog(
@@ -223,7 +231,9 @@ fun ExamHtmlPrintDialog(
                 // V116 — هدرِ بومی (Compose) بالای WebView: واقعاً ثابت است، چون
                 // اصلاً داخل صفحهٔ اسکرول‌شونده نیست. ✕ قرمز، کل صفحه/اندازهٔ واقعی
                 // و نوارِ قالب‌بندیِ اسکرول‌شونده که به JS رندرر فرمان می‌دهد.
-                if (!loading && initialPrintMode == null) {
+                // V125 — موتورِ وبِ آزمون‌ساز v20 نوارِ خودش را دارد (بستن/چاپ/زوم/تنظیمات
+                // صفحه/بندانگشتی)؛ هدرِ بومی فقط اگر موتورِ وب بارگذاری نشود نمایش داده می‌شود.
+                if (!loading && initialPrintMode == null && !WEB_ENGINE_PREVIEW) {
                     PrintPreviewHeader(
                         onClose = { requestDismiss() },
                         onOpenBoxSettings = { showBoxSettings = true },
@@ -543,15 +553,18 @@ internal fun createExamPrintWebView(
 ): WebView = WebView(context).apply {
     setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
     settings.javaScriptEnabled = true
-    settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+    // V125 — موتورِ وب چند مگابایت اسکریپت دارد (اطلس‌های شکل)؛ همهٔ منابع محلی و بدونِ شبکه‌اند.
+    settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
     settings.allowFileAccess = false
     settings.allowContentAccess = false
     @Suppress("DEPRECATION")
     settings.allowFileAccessFromFileURLs = false
     @Suppress("DEPRECATION")
     settings.allowUniversalAccessFromFileURLs = false
-    settings.setSupportZoom(true)
-    settings.builtInZoomControls = true
+    // V125 — بینندهٔ PGS خودش برگه را در پهنای صفحه جا می‌دهد (pgsFit) و زوم/لمسِ
+    // دوانگشتیِ خودش را دارد؛ زومِ WebView نوارِ ثابتِ آن را از دست می‌داد.
+    settings.setSupportZoom(false)
+    settings.builtInZoomControls = false
     settings.displayZoomControls = false
     // V76.2 — useWideViewPort متاوویوپورتِ فایل (width=device-width) را اعمال
     // می‌کند؛ اما overviewMode باید خاموش بماند وگرنه WebView برای محتوای عریضِ
