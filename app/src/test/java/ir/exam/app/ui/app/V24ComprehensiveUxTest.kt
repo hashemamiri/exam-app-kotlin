@@ -40,7 +40,8 @@ class V24ComprehensiveUxTest {
             assertTrue("missing independent menu destination $it", it in app && it in profile)
         }
         assertFalse("account remains under SettingsSection", "SettingsSection.ACCOUNT" in profile)
-        assertFalse("data remains under SettingsSection", "SettingsSection.DATA" in profile)
+        // V132 — داده‌ها تبِ تنظیمات است؛ کارت «سایت» جای آن را در منو گرفت.
+        assertTrue("site card missing", "\"سایت\", \"بازکردن onlineexam.ir در مرورگر\"" in app)
     }
 
     @Test

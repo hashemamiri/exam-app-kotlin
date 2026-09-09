@@ -605,7 +605,9 @@ fun ExamBuilderScreen(
             },
             // V99.2 — چیدمانِ اشیاء در پیش‌نمایش به وضعیتِ بومی برمی‌گردد
             // تا موقعیت‌ها در بازِ بعدی (و در چاپ) ریست نشوند.
-            onFigLayouts = { viewModel.applyFigLayouts(it) }
+            onFigLayouts = { viewModel.applyFigLayouts(it) },
+            // V132 — شناسهٔ آزمون برای ثبتِ تراکنشِ هزینهٔ چاپ در کیف پول
+            printExamId = state.examId ?: "local"
         )
     }
 

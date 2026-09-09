@@ -1279,8 +1279,24 @@ function initPreviewFigureEditing() {
     } catch(e) {}
     return {x,y,w,h};
   }
+  // V132 — دستگیرهٔ نزدیکِ نقطهٔ لمس (تا ۲۴px) روی شکلِ انتخاب‌شده؛ حتی اگر لمس کمی بیرونِ کادر باشد.
+  function nearHandle(sel, cx, cy) {
+    let best = null, bd = 24;
+    if (!sel) return null;
+    sel.querySelectorAll('.fig-resize-handle').forEach(h => {
+      const r = h.getBoundingClientRect(); const d = Math.hypot(cx - (r.left + r.width / 2), cy - (r.top + r.height / 2));
+      if (d < bd) { bd = d; best = h; }
+    });
+    return best;
+  }
   area.addEventListener('pointerdown', function(e) {
-    const fig = e.target.closest && e.target.closest('.interactive-figure');
+    let fig = e.target.closest && e.target.closest('.interactive-figure');
+    let nearH = null;
+    if (!fig) {
+      const sel = area.querySelector('.interactive-figure.selected');
+      nearH = nearHandle(sel, e.clientX, e.clientY);
+      if (nearH) fig = sel;
+    }
     if (!fig) {
       area.querySelectorAll('.interactive-figure.selected').forEach(x => x.classList.remove('selected'));
       return;
@@ -1291,8 +1307,11 @@ function initPreviewFigureEditing() {
     const qid = fig.dataset.qid, idx = fig.dataset.figIndex;
     const layout = (questions.find(q => String(q.id) === String(qid))?.figLayouts || {})[idx] || {};
     const rect = fig.getBoundingClientRect();
-    const handle = e.target.closest && e.target.closest('.fig-resize-handle');
+    let handle = (e.target.closest && e.target.closest('.fig-resize-handle')) || nearH;
+    // V132 — تحملِ لمس: اگر انگشت تا ۲۴px نزدیکِ یکی از دستگیره‌های شکلِ انتخاب‌شده فرود آمد، همان دستگیره.
+    if (!handle && fig.classList.contains('selected')) handle = nearHandle(fig, e.clientX, e.clientY);
     const resizing = !!handle;
+    fig.__lastResize = resizing;
     drag = { fig, qid, idx, resizing, edge:(handle && handle.dataset && handle.dataset.edge) || 'l', sx:e.clientX, sy:e.clientY,
       x:Number.isFinite(+layout.x) ? +layout.x : (parseFloat(fig.style.marginRight || fig.style.getPropertyValue('--fig-x') || '0') || 0),
       y:Number.isFinite(+layout.y) ? +layout.y : (parseFloat(fig.style.top || fig.style.getPropertyValue('--fig-y') || '0') || 0),

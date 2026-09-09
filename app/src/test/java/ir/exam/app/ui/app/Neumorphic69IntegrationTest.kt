@@ -157,7 +157,8 @@ class Neumorphic69IntegrationTest {
             assertTrue("missing settings section $it", it in profile)
         }
         assertFalse("account still nested in settings tabs", "SettingsSection.ACCOUNT" in profile)
-        assertFalse("data still nested in settings tabs", "SettingsSection.DATA" in profile)
+        // V132 — «داده‌ها» دوباره به‌عنوان تبِ «تنظیمات» آمد (کارت همبرگری جایش را به «سایت» داد).
+        assertTrue("data tab inside settings", "SettingsSection.DATA to \"داده‌ها\"" in profile)
         assertTrue("ProfileSettingsDestination.ACCOUNT" in profile)
         assertTrue("ProfileSettingsDestination.DATA" in profile)
         assertTrue("تغییر ایمیل" in profile && "AppLockSettings" in profile)

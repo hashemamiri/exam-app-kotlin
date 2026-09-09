@@ -137,8 +137,38 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     fun showRecovery() = switchTo(AuthScreen.RECOVERY)
 
     fun signIn() = request {
+        val pane = when (state.value.screen) {
+            AuthScreen.LOGIN_MANAGER -> "manager"
+            AuthScreen.LOGIN_TEACHER -> "teacher"
+            AuthScreen.LOGIN_STUDENT -> "student"
+            else -> null
+        }
         val user = repository.signInWithPassword(state.value.email, state.value.password).getOrThrow()
+        guardPanelRole(user, pane)
         acceptAuthenticatedUser(user)
+    }
+
+    /**
+     * V132 — پیامِ روشن هنگام ورود از پنلِ اشتباه: ایمیل/حسابِ مدیر در پنلِ معلم (یا برعکس)
+     * وارد نمی‌شود؛ نشست بسته و به کاربر گفته می‌شود با کدام پنل وارد شود. حسابِ تازه
+     * (requiresTeacherSetup) نقشِ نهایی ندارد و در جریانِ تکمیل ثبت‌نام می‌ماند.
+     */
+    private suspend fun guardPanelRole(user: AppUser, pane: String?) {
+        if (pane == null || user.requiresTeacherSetup) return
+        val actual = user.role
+        val message = when {
+            pane == "teacher" && actual == ir.exam.app.domain.model.UserRole.MANAGER ->
+                "این ایمیل قبلاً به‌عنوان «مدیر/معاون» ثبت‌نام شده است. لطفاً از تبِ «مدیر/معاون» وارد شوید."
+            pane == "manager" && actual == ir.exam.app.domain.model.UserRole.TEACHER ->
+                "این ایمیل قبلاً به‌عنوان «معلم» ثبت‌نام شده است. لطفاً از تبِ «معلم» وارد شوید."
+            (pane == "teacher" || pane == "manager") && actual == ir.exam.app.domain.model.UserRole.STUDENT ->
+                "این حساب، حسابِ دانش‌آموز است. لطفاً از تبِ «دانش‌آموز» وارد شوید."
+            pane == "student" && actual != ir.exam.app.domain.model.UserRole.STUDENT ->
+                "این حساب متعلق به کادر مدرسه است. لطفاً از تبِ «معلم» یا «مدیر/معاون» وارد شوید."
+            else -> null
+        } ?: return
+        runCatching { repository.signOut() }
+        error(message)
     }
 
     fun sendLoginOtp() = request {
@@ -335,6 +365,8 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         (roleResult?.get("error") as? kotlinx.serialization.json.JsonPrimitive)
             ?.content?.takeIf(String::isNotBlank)?.let(::error)
         val user = repository.refreshCurrentUser().getOrThrow()
+        // V132 — ایمیلِ گوگلِ مدیر در پنلِ معلم (و برعکس): پیامِ روشن به‌جای ورودِ خاموش به پنلِ دیگر.
+        guardPanelRole(user, role)
         // V60.2 — مسیر مشترک: حساب تازه به صفحهٔ تکمیل ثبت‌نام (معلم/مدیر بر
         // اساس pendingRegistrationRole) می‌رود؛ حساب کامل مستقیم وارد می‌شود.
         acceptAuthenticatedUser(user)

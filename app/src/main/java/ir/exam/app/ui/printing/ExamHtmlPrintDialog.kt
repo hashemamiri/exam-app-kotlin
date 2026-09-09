@@ -58,6 +58,7 @@ import ir.exam.app.core.figure.GRAPH_FIGURES
 import ir.exam.app.domain.model.OfficialExamPrintable
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -90,9 +91,20 @@ fun ExamHtmlPrintDialog(
      * (JSON: شمارهٔ سؤال → {figLayouts, sepExtraPx}). بیلدرِ بومی آن را به
      * وضعیتِ خود می‌نویسد تا موقعیت‌ها در بازِ بعدی ریست نشوند.
      */
-    onFigLayouts: ((String) -> Unit)? = null
+    onFigLayouts: ((String) -> Unit)? = null,
+    /**
+     * V132 — هزینهٔ چاپ (۱۰۰۰ تومان به‌ازای هر سؤال). اگر بیلدر پیش از بازکردنِ این
+     * پنجره هزینه را گرفته باشد (`printPrepaid=true`) دوباره پرسیده نمی‌شود؛ وگرنه
+     * پیش از پنلِ چاپِ اندروید، پنجرهٔ تأیید هزینه و کسر از کیف پول انجام می‌شود.
+     */
+    printExamId: String = "",
+    printPrepaid: Boolean = false
 ) {
     var loading by remember { mutableStateOf(true) }
+    // V132 — درخواستِ چاپِ در انتظارِ تأیید هزینه: (mode, اجرای واقعی چاپ, بازگشت به پیش‌نمایش)
+    var pendingPrintCharge by remember { mutableStateOf<PendingPrintCharge?>(null) }
+    var prepaidOnce by remember { mutableStateOf(printPrepaid) }
+    val chargeScope = androidx.compose.runtime.rememberCoroutineScope()
     var jsError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -259,17 +271,23 @@ fun ExamHtmlPrintDialog(
                                                     )
                                                 }
                                             }
-                                            runCatching {
-                                                val printContext = ctx.findActivityContext() ?: ctx
-                                                val printManager = printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-                                                val jobName = (printable?.documentTitle ?: "آزمون").ifBlank { "exam" } + "-" + mode
-                                                val printAdapter = view.createPrintDocumentAdapter(jobName)
-                                                if (printManager == null) {
-                                                    restore()
-                                                } else {
-                                                    printManager.print(jobName, OneShotPrintAdapter(printAdapter) { restore() }, ir.exam.app.data.local.PrintPageSetupStore(ctx).read().printAttributes())
-                                                }
-                                            }.onFailure { restore() }
+                                            val fire = {
+                                                runCatching {
+                                                    val printContext = ctx.findActivityContext() ?: ctx
+                                                    val printManager = printContext.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                                                    val jobName = (printable?.documentTitle ?: "آزمون").ifBlank { "exam" } + "-" + mode
+                                                    val printAdapter = view.createPrintDocumentAdapter(jobName)
+                                                    if (printManager == null) {
+                                                        restore()
+                                                    } else {
+                                                        printManager.print(jobName, OneShotPrintAdapter(printAdapter) { restore() }, ir.exam.app.data.local.PrintPageSetupStore(ctx).read().printAttributes())
+                                                    }
+                                                }.onFailure { restore() }
+                                                Unit
+                                            }
+                                            // V132 — اول تأیید هزینه (۱۰۰۰ تومان/سؤال) و کسر از کیف پول، بعد پنلِ چاپ.
+                                            if (prepaidOnce) { prepaidOnce = false; fire() }
+                                            else pendingPrintCharge = PendingPrintCharge(mode, fire, restore)
                                         }
                                     }
                                 },
@@ -387,6 +405,28 @@ fun ExamHtmlPrintDialog(
                                 "window.ExamPrintRenderer.setOption(${req.id.toJsStringLiteral()},${value.toJsStringLiteral()}):'missing'}" +
                                 "catch(e){return 'err'}})()"
                             runJs(script, null)
+                        }
+                    )
+                }
+
+                // V132 — پنجرهٔ تأیید هزینهٔ چاپ
+                pendingPrintCharge?.let { req ->
+                    val count = printable?.questions?.size ?: 0
+                    PrintCostConfirmDialog(
+                        questionCount = count,
+                        mode = req.mode,
+                        onCancel = { pendingPrintCharge = null; req.restore() },
+                        onConfirm = {
+                            pendingPrintCharge = null
+                            chargeScope.launch {
+                                val result = ir.exam.app.data.repository.SupabaseBillingRepository()
+                                    .chargePrint(printExamId.ifBlank { printable?.documentTitle.orEmpty() }, java.util.UUID.randomUUID().toString(), count, req.mode)
+                                result.onSuccess { req.fire() }
+                                    .onFailure { e ->
+                                        barStatus = e.message?.takeIf { it.isNotBlank() } ?: "کسر هزینهٔ چاپ ناموفق بود."
+                                        req.restore()
+                                    }
+                            }
                         }
                     )
                 }
@@ -719,6 +759,40 @@ internal fun createExamPrintWebView(
     }
 
     loadUrl(MAIN_PAGE_URL)
+}
+
+/** V132 — درخواستِ چاپِ منتظرِ تأیید هزینه. */
+internal class PendingPrintCharge(val mode: String, val fire: () -> Unit, val restore: () -> Unit)
+
+/** V132 — هزینهٔ چاپ به‌ازای هر سؤال (تومان). */
+const val PRINT_COST_PER_QUESTION_TOMAN = 1000L
+
+/**
+ * V132 — پنجرهٔ تأیید هزینهٔ چاپ: «چاپ آزمون» / «چاپ با کلید» هر دو پیش از پنلِ چاپ
+ * این پنجره را نشان می‌دهند؛ با «پرداخت و چاپ» هزینه از کیف پول کسر و سپس پنلِ چاپ باز می‌شود.
+ */
+@Composable
+internal fun PrintCostConfirmDialog(
+    questionCount: Int,
+    mode: String,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val cost = questionCount.coerceAtLeast(0) * PRINT_COST_PER_QUESTION_TOMAN
+    val title = if (mode == "teacher") "چاپ با کلید (پاسخ‌نامه)" else "چاپ آزمون"
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("هزینهٔ چاپ: ${PRINT_COST_PER_QUESTION_TOMAN} تومان به‌ازای هر سؤال")
+                Text("تعداد سؤال: $questionCount")
+                Text("مبلغ قابل کسر از کیف پول: ${"%,d".format(cost)} تومان", style = MaterialTheme.typography.titleMedium)
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onConfirm) { Text("پرداخت و چاپ") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onCancel) { Text("انصراف") } }
+    )
 }
 
 /**

@@ -131,14 +131,33 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         persistUser(currentProfile())
     }
 
-    /** V60.0 — ایمیل ورود معلم/مدیر از روی نام کاربری؛ null اگر کادر نبود. */
-    private suspend fun staffLoginEmail(username: String): String? = runCatching {
-        val raw = SupabaseProvider.client.postgrest.rpc(
-            "native_staff_login_email_v1",
-            buildJsonObject { put("p_username", username) }
-        ).decodeAs<JsonObject>()
-        raw["email"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
-    }.getOrNull()
+    /**
+     * V60.0 — ایمیل ورود معلم/مدیر از روی نام کاربری؛ null اگر کادر نبود.
+     * V132 — خطای واقعیِ سرور دیگر بلعیده نمی‌شود: اگر RPC روی سرور نباشد (مهاجرت
+     * V75.2 اجرا نشده)، یا محدودیت نرخ فعال شده باشد، همان پیام به کاربر می‌رسد؛
+     * پیش‌تر هر خطایی بی‌صدا به مسیرِ دانش‌آموز (username@student.exam.local) می‌افتاد
+     * و ورودِ معلم/مدیر با نام کاربری با پیامِ گمراه‌کنندهٔ «رمز نادرست» شکست می‌خورد.
+     */
+    private suspend fun staffLoginEmail(username: String): String? {
+        val raw = runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "native_staff_login_email_v1",
+                buildJsonObject { put("p_username", username) }
+            ).decodeAs<JsonObject>()
+        }.getOrElse { e ->
+            val msg = e.message.orEmpty()
+            if ("native_staff_login_email_v1" in msg || "PGRST202" in msg || "404" in msg) {
+                error("ورود با نام کاربری روی سرور فعال نیست (تابع native_staff_login_email_v1 پیدا نشد). با ایمیل وارد شوید یا مهاجرت V75.2 را اجرا کنید.")
+            }
+            error("بررسی نام کاربری ناموفق بود: ${msg.take(160)}")
+        }
+        val email = raw["email"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)
+        if (email != null) return email
+        val err = raw["error"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        // فقط «پیدا نشد» به مسیر دانش‌آموز می‌افتد؛ محدودیت نرخ/نامعتبر بودن به کاربر گفته می‌شود.
+        if ("بیش از حد" in err || "نامعتبر" in err) error(err)
+        return null
+    }
 
     override suspend fun sendLoginOtp(email: String): Result<Unit> = sendOtp(
         email = email,

@@ -140,3 +140,24 @@ body{padding:0 !important;}
 #pgsPageSetup .host-sel:active{background:#eef2ff;}
 .host-fmt{transition:max-height .22s ease,opacity .18s ease,padding .22s ease;max-height:60px;opacity:1;}
 .host-fmt.hf-hidden{max-height:0 !important;opacity:0;padding-top:0 !important;padding-bottom:0 !important;overflow:hidden !important;pointer-events:none;border-top-width:0 !important;}
+
+/* ===================== V132 — کادرِ انتخابِ شکل چسبیده به شیء و دستگیره‌های لمس‌پذیر =====================
+   قبلاً .qmf-fig پدینگ ۱۰/۱۲px + outline-offset ۵px + دستگیره‌ها ۱۲px بیرون → کادر خیلی بزرگ‌تر از شیء و
+   نمی‌شد شیء را نزدیکِ متن/بارم گذاشت. حالا پدینگِ شکلِ داخلِ پیش‌نمایش ۲px، کادر ۲px بیرون‌تر و دستگیره‌ها
+   روی خودِ لبه (وسطِ دستگیره روی خط کادر). ناحیهٔ لمسِ هر دستگیره با ::before نامرئی ۴۰px است. */
+#pgsViewer #previewArea .interactive-figure .qmf-fig{padding:2px !important;border-radius:6px !important;box-shadow:none !important;margin:0 auto !important;}
+#pgsViewer #previewArea .interactive-figure.selected{outline:2px solid #2563eb !important;outline-offset:2px !important;border-radius:6px !important;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle{width:16px;height:16px;border-radius:50%;z-index:30;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle::before{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%);border-radius:50%;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="l"],#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="r"]{width:14px;height:28px;border-radius:7px;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="t"],#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="b"]{width:28px;height:14px;border-radius:7px;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="l"]{left:-10px;top:50%;transform:translateY(-50%);}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="r"]{right:-10px;left:auto;top:50%;transform:translateY(-50%);}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="t"]{top:-10px;left:50%;transform:translateX(-50%);}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="b"]{bottom:-10px;top:auto;left:50%;transform:translateX(-50%);}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="tl"]{left:-10px;top:-10px;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="tr"]{right:-10px;left:auto;top:-10px;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="bl"]{left:-10px;bottom:-10px;top:auto;}
+#pgsViewer #previewArea .interactive-figure .fig-resize-handle[data-edge="br"]{right:-10px;left:auto;bottom:-10px;top:auto;}
+#pgsViewer #previewArea .interactive-figure .fig-move-hint{top:-30px;}
+#pgsViewer #previewArea .interactive-figure .fig-size-badge{bottom:-28px;}

@@ -148,6 +148,18 @@ object Design69Icons {
         }
     }
 
+    /** V132 — کرهٔ زمین (کارت «سایت»). */
+    val Site: ImageVector by lazy {
+        vector("Design69Site") {
+            strokePath {
+                circle(12f, 12f, 9f)
+                moveTo(3f, 12f); lineTo(21f, 12f)
+                moveTo(12f, 3f); curveTo(15.5f, 6.5f, 15.5f, 17.5f, 12f, 21f)
+                moveTo(12f, 3f); curveTo(8.5f, 6.5f, 8.5f, 17.5f, 12f, 21f)
+            }
+        }
+    }
+
     val Settings: ImageVector by lazy {
         vector("Design69Settings") {
             strokePath {

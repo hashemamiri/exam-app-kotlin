@@ -54,15 +54,17 @@ class V62_7PrintCenterStudentPreviewTest {
     }
 
     @Test
-    fun `exam card buttons are two centered rows without print actions`() {
+    fun `exam card actions are icons in a single row without print actions`() {
         val card = dashboard.substringAfter("expandedExamId == exam.id")
             .substringBefore("deleteCandidate?.let")
-        assertTrue("Alignment.CenterHorizontally" in card)
-        assertTrue("Text(\"ویرایش\")" in card)
+        // V132 — همهٔ عملیات آیکن‌اند و در یک سطر (ExamCardAction)
+        assertTrue("Arrangement.SpaceEvenly" in card)
+        assertTrue("ExamCardAction(Icons.Outlined.Edit, \"ویرایش\")" in card)
         assertTrue("if (exam.isOpen) \"بستن\" else \"بازکردن\"" in card)
-        assertTrue("contentDescription = \"حذف آزمون\"" in card)
-        assertTrue("Text(\"تکثیر با کسر هزینه\")" in card)
-        assertTrue("Text(\"صادرکردن\")" in card)
+        assertTrue("ExamCardAction(Icons.Outlined.Delete, \"حذف\"" in card)
+        assertTrue("ExamCardAction(Icons.Outlined.ContentCopy, \"تکثیر\")" in card)
+        assertTrue("ExamCardAction(Icons.Outlined.IosShare, \"صادرکردن\")" in card)
+        assertFalse("OutlinedButton(" in card)
         // چاپ‌ها از کارت آزمون حذف شده‌اند؛ V76.0 — چاپ فقط از نسخهٔ 30 است
         // V99.1 — پرینتر حالا چاپِ مستقیم است: برچسبِ «چاپ با کلید» فقط داخلِ
         // منوی چاپ (AlertDialog) هست، نه روی خودِ کارت.

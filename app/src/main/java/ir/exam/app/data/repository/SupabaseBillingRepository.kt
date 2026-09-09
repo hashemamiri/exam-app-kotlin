@@ -12,6 +12,11 @@ import ir.exam.app.domain.model.WalletRules
 import ir.exam.app.domain.model.WalletSnapshot
 import ir.exam.app.domain.model.WalletTransaction
 import ir.exam.app.domain.repository.BillingRepository
+import ir.exam.app.domain.repository.PrintChargeResult
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import java.net.URI
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -56,6 +61,25 @@ class SupabaseBillingRepository : BillingRepository {
             sandbox = dto.sandbox,
             credited = dto.credited,
             balanceAfterToman = dto.balance
+        )
+    }
+
+    // V132 — هزینهٔ چاپ: rpc native_charge_print_v1 (همان الگوی native_duplicate_exam_v2).
+    override suspend fun chargePrint(examId: String, operationId: String, questionCount: Int, mode: String): Result<PrintChargeResult> = runCatching {
+        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_print_v1", buildJsonObject {
+            put("p_exam", examId)
+            put("p_operation", operationId)
+            put("p_questions", questionCount)
+            put("p_mode", mode)
+        }).decodeAs()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
+            val required = raw["required"]?.jsonPrimitive?.longOrNull
+            val balance = raw["balance"]?.jsonPrimitive?.longOrNull
+            error(if (required != null && balance != null) "$message (لازم: $required تومان، موجودی: $balance تومان)" else message)
+        }
+        PrintChargeResult(
+            costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
         )
     }
 

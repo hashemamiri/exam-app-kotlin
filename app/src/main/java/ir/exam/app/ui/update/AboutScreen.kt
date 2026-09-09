@@ -95,10 +95,6 @@ fun AboutScreen(
                 Text("نسخه نصب‌شده: ${BuildConfig.VERSION_NAME}")
             }
         }
-        // لیست تغییرات نسخهٔ جدید همیشه دیده می‌شود؛ چه قبل از دانلود چه بعد از آن.
-        state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
-            item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
-        }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
@@ -153,6 +149,10 @@ fun AboutScreen(
                     }
                 }
             }
+        }
+        // V132 — لیست تغییرات نسخهٔ جدید زیرِ دکمه‌های بررسی/دریافت (همیشه دیده می‌شود؛ چه قبل از دانلود چه بعد از آن).
+        state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
+            item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
         }
     }
 }

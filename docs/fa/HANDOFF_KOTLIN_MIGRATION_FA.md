@@ -18033,3 +18033,51 @@ puppeteer: scrollTop قبل/بعد ۳۰۰=۳۰۰، sepExtraPx ذخیره شد.
 `createStudentsBulk(classId)` (تابع manage-student با class_id عضویت کلاس + attach به لیست)؛ مدیر →
 `createStudentsBulkForManagerClass(classId)` (RPC native_manager_set_class_student_v40c) + تازه‌سازی roster اگر همان کلاس باز است.
 تست‌ها: Neumorphic69IntegrationTest (۷ کارت، «کارنامه»)، V125_WebPrintEngineTest، verify بلوک V131.
+
+## §۳۵۷ — V132: دکمه‌های بروزرسانی بالای تغییرات، کارت «سایت»، آیکن‌های کارت آزمون، هزینهٔ چاپ، ورود با نام کاربری، گاردِ پنل، کادر و دستگیره‌های شکل
+
+**۱. درباره** — `AboutScreen.kt`: آیتمِ `ChangeListCard` به بعد از آیتمِ دکمه‌ها (بررسی/دریافت/نصب) منتقل شد.
+
+**۲. منوی همبرگری** — کارت «داده‌ها» حذف و به‌جای آن کارت «سایت» (`Design69Icons.Site`، کرهٔ زمین) در هر سه بلوکِ معلم/مدیر
+(`ExamApp.kt` menuCards؛ پارامتر `onData` → `onSite`). «داده‌ها» حالا تبِ سومِ «تنظیمات» است
+(`SettingsSection {APPEARANCE, DATA, ABOUT}`؛ `ProfileSettingsScreen.kt` شرطِ `destination == DATA || settingsSection == DATA`).
+enum `ProfileSettingsDestination.DATA` عمداً حفظ شد (پین تست‌های V24/V69 و عنوانِ صفحه).
+فایل جدید `ui/app/SiteBrowserChooserDialog.kt`: `listBrowsers()` با `PackageManager.queryIntentActivities(ACTION_VIEW https, MATCH_ALL)`
+→ AlertDialog با آیکن/نام مرورگرها → `openSiteWith()` با `setClassName(pkg, activity)` → `https://onlineexam.ir`.
+اگر ≤۱ مرورگر باشد مستقیم باز می‌شود. مانیفست: بلوک `<queries><intent ACTION_VIEW scheme=https>` (بدون آن روی Android 11+ فهرست خالی است).
+state در ExamApp: `siteChooserOpen` + `siteError`.
+
+**۳. کارت آزمون** — `TeacherDashboardScreen.kt`: دو سطرِ دکمه → یک `Row(SpaceEvenly)` از `ExamCardAction(icon,label,tint)`
+(IconButton + برچسبِ labelSmall): ویرایش(Edit)، بازکردن/بستن(LockOpen/Lock)، تکثیر(ContentCopy)، صادرکردن(IosShare)، حذف(Delete قرمز).
+دیالوگ‌های duplicateCandidate/exportCandidate/deleteCandidate دست‌نخورده. تست V62_7 به‌روز شد.
+
+**۴. هزینهٔ چاپ (۱۰۰۰ تومان/سؤال)** — کلاینت هیچ RPC کسرِ کیف پول نداشت (فقط snapshot/topup). مهاجرت جدید
+`supabase/migrations/20260909_native_charge_print_v132.sql` (+ dual-write `sql/manual/SQL_NATIVE_CHARGE_PRINT_V132.sql`):
+`native_charge_print_v1(p_exam text, p_operation uuid, p_questions int, p_mode text)` دقیقاً با الگوی `native_duplicate_exam_v2`
+(idempotent با `native_exam_operations`، قفلِ `wallets for update`، `wallet_tx` با reason `exam:print:<mode>:<exam>`، خطای «موجودی کافی نیست» با balance/required؛
+تعداد سؤال از کلاینت چون آزمون‌های چاپیِ Room روی سرور نیستند؛ سقف ۵۰۰). فقط authenticated.
+کلاینت: `BillingRepository.chargePrint()` + `PrintChargeResult`؛ `SupabaseBillingRepository.chargePrint` (decodeAs JsonObject، پیامِ خطا با لازم/موجودی).
+`ExamHtmlPrintDialog`: پارامترهای جدید `printExamId`, `printPrepaid`؛ در `onPrint` کارِ واقعیِ چاپ داخل `fire` بسته‌بندی شد و
+`pendingPrintCharge = PendingPrintCharge(mode, fire, restore)`؛ `PrintCostConfirmDialog` (تعداد سؤال، مبلغ، «پرداخت و چاپ»/«انصراف») →
+`chargePrint` → موفق: `fire()`؛ خطا: `barStatus` + `restore()`. هر دو مسیرِ چاپ (چاپ آزمون و چاپ با کلید — از FAB بیلدر، و دکمهٔ چاپِ نوارِ PGS در پیش‌نمایش)
+از همین `onPrint` می‌گذرند، پس یک نقطهٔ کنترل کافی است. `HeadlessExamPrinter` (V101) جایی صدا زده نمی‌شود و دست نخورد.
+⚠️ باید مهاجرت V132 در SQL Editor اجرا شود؛ بدون آن پیامِ «تابع پیدا نشد» و چاپ انجام نمی‌شود.
+
+**۵. ورود با نام کاربری** — مسیر از V60/V75.2 وجود داشت، اما `staffLoginEmail` هر خطایی (تابع نصب‌نشده، محدودیت نرخ، ۴۰۴) را با
+`getOrNull` می‌بلعید و به `username@student.exam.local` می‌افتاد → «رمز نادرست». حالا خطای واقعی بالا می‌آید (پیامِ روشن اگر
+`native_staff_login_email_v1` روی سرور نباشد) و فقط «پیدا نشد» به مسیر دانش‌آموز می‌رود. hint/supporting فیلدِ ورود معلم و مدیر/معاون
+به «ایمیل یا نام کاربری معلم/مدیر…» تغییر کرد؛ متنِ راهنمای TeacherSetupPane هم («با همین نام کاربری وارد می‌شوید»).
+یادآوری: RPC فقط `role in ('teacher','manager')` — «معاون» در دیتابیس همان `manager` است (constraint V36).
+
+**۶. گاردِ پنل** — `AuthViewModel.guardPanelRole(user, pane)`: بعد از ورود با رمز (pane از `state.screen`) و بعد از گوگل
+(`role` دکمه) اگر `!requiresTeacherSetup` و نقش با پنل نخواند → `repository.signOut()` + پیام
+«این ایمیل قبلاً به‌عنوان «مدیر/معاون» ثبت‌نام شده است. لطفاً از تبِ «مدیر/معاون» وارد شوید.» (و برعکس؛ و حالت دانش‌آموز).
+
+**۷/۸. کادر و دستگیره‌های شکل** — اندازه‌گیری با puppeteer: کادر ۳۶۰×۲۸۲ در برابر svg ۳۳۶×۲۶۲ (پدینگِ `.qmf-fig` ۱۰/۱۲px از tools_styles.css +
+outline-offset ۵px + دستگیره‌ها ۱۲px بیرون). `webhost.css` بلوک V132: داخل پیش‌نمایش `.qmf-fig{padding:2px}`، outline ۲px با offset ۲px،
+دستگیره‌ها ۱۶px (کناری ۱۴×۲۸، بالا/پایین ۲۸×۱۴) روی خطِ کادر (−۱۰px) و `::before` نامرئی ۴۴×۴۴ به‌عنوان ناحیهٔ لمس. اکنون فاصلهٔ کادر تا شیء ۲px است.
+`mainscript.js`: `nearHandle(sel,cx,cy)` — نزدیک‌ترین دستگیره تا ۲۴px؛ در pointerdown اگر لمس بیرونِ شکل ولی نزدیکِ دستگیرهٔ شکلِ انتخاب‌شده باشد،
+همان شکل + resize (نه deselect)؛ `fig.__lastResize` ست می‌شود. `webhost.js` تشخیصِ لمسِ دوم: `d.onHandle || fig.__lastResize` → ویرایشگر باز نمی‌شود.
+تست puppeteer: drag از ۱۶px کنارِ دستگیرهٔ br → resize (w 360→384)، انتخاب باقی، editFigureTool=۰؛ تپِ وسطِ شکل → editFigureTool=۱.
+
+verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Neumorphic69IntegrationTest و V24 («داده‌ها» تبِ تنظیمات، کارت «سایت»).

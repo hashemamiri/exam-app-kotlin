@@ -195,6 +195,9 @@ private fun AuthenticatedExamApp(
     var settingsInitialSection by rememberSaveable(user.id) {
         mutableStateOf(SettingsSection.APPEARANCE)
     }
+    // V132 — پنجرهٔ انتخاب مرورگر برای کارت «سایت» + خطای احتمالیِ بازکردن
+    var siteChooserOpen by rememberSaveable(user.id) { mutableStateOf(false) }
+    var siteError by remember(user.id) { mutableStateOf<String?>(null) }
     var gradingPendingOnly by remember(user.id) { mutableStateOf(false) }
     var gradingGradedOnly by remember(user.id) { mutableStateOf(false) }
     var showSignOut by remember(user.id) { mutableStateOf(false) }
@@ -418,10 +421,10 @@ private fun AuthenticatedExamApp(
             profileDestination = ProfileSettingsDestination.ACCOUNT
             page = MainPage.SETTINGS
         },
-        onData = {
+        // V132 — کارت «سایت»: فهرست مرورگرها → onlineexam.ir («داده‌ها» به داخلِ «تنظیمات» رفت)
+        onSite = {
             closeTransientNavigation()
-            profileDestination = ProfileSettingsDestination.DATA
-            page = MainPage.SETTINGS
+            siteChooserOpen = true
         },
         onSettings = {
             closeTransientNavigation()
@@ -712,6 +715,22 @@ private fun AuthenticatedExamApp(
         )
     }
 
+    // V132 — کارت «سایت»: فهرست مرورگرهای نصب‌شده → onlineexam.ir
+    if (siteChooserOpen) {
+        SiteBrowserChooserDialog(
+            onDismiss = { siteChooserOpen = false },
+            onError = { siteError = it }
+        )
+    }
+    siteError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { siteError = null },
+            title = { Text("سایت") },
+            text = { Text(message) },
+            confirmButton = { TextButton(onClick = { siteError = null }) { Text("باشه") } }
+        )
+    }
+
     // ورود به برنامه: اگر آپدیت جدید موجود باشد، یک پیغام روی صفحه ظاهر می‌شود.
     // این پنجره برخلاف نسخه قدیمی، هنگام دانلود باز می‌ماند و پیشرفت، «در انتظار
     // شبکه» و خطای واقعی را نشان می‌دهد؛ پس از دریافت هم نصب‌کننده خودکار باز می‌شود.
@@ -910,7 +929,7 @@ private fun AuthenticatedShell(
     onProfile: () -> Unit,
     onHeader: () -> Unit,
     onAccount: () -> Unit,
-    onData: () -> Unit,
+    onSite: () -> Unit,
     onSettings: () -> Unit,
     onCreateStudent: () -> Unit,
     onCreateExam: () -> Unit,
@@ -952,12 +971,11 @@ private fun AuthenticatedShell(
                 onClick = { select(onAccount) }
             ),
             Design69MenuCard(
-                "داده‌ها", "پشتیبان و بازیابی داده‌ها", Design69Icons.Data,
-                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.DATA,
-                onClick = { select(onData) }
+                "سایت", "بازکردن onlineexam.ir در مرورگر", Design69Icons.Site,
+                onClick = { select(onSite) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
+                "تنظیمات", "ظاهر، داده‌ها و فهرست تغییرات", Design69Icons.Settings,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),
@@ -985,12 +1003,11 @@ private fun AuthenticatedShell(
                 onClick = { select(onAccount) }
             ),
             Design69MenuCard(
-                "داده‌ها", "داده‌های مدرسه", Design69Icons.Data,
-                page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.DATA,
-                onClick = { select(onData) }
+                "سایت", "بازکردن onlineexam.ir در مرورگر", Design69Icons.Site,
+                onClick = { select(onSite) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
+                "تنظیمات", "ظاهر، داده‌ها و فهرست تغییرات", Design69Icons.Settings,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),
@@ -1020,7 +1037,7 @@ private fun AuthenticatedShell(
                 onClick = { select(onAccount) }
             ),
             Design69MenuCard(
-                "تنظیمات", "ظاهر و فهرست تغییرات", Design69Icons.Settings,
+                "تنظیمات", "ظاهر، داده‌ها و فهرست تغییرات", Design69Icons.Settings,
                 page == MainPage.SETTINGS && profileDestination == ProfileSettingsDestination.SETTINGS,
                 onClick = { select(onSettings) }
             ),

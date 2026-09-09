@@ -96,7 +96,8 @@ import ir.exam.app.ui.security.AppLockSettings
 import kotlinx.coroutines.launch
 
 enum class ProfileSettingsDestination { PROFILE, HEADER, ACCOUNT, DATA, SETTINGS }
-enum class SettingsSection { APPEARANCE, ABOUT }
+// V132 — «داده‌ها» (پشتیبان/بازیابی) از منوی همبرگری به داخلِ «تنظیمات» آمد.
+enum class SettingsSection { APPEARANCE, DATA, ABOUT }
 
 @Composable
 fun ProfileSettingsScreen(
@@ -156,6 +157,7 @@ fun ProfileSettingsScreen(
             ) {
                 listOf(
                     SettingsSection.APPEARANCE to "ظاهر",
+                    SettingsSection.DATA to "داده‌ها",
                     SettingsSection.ABOUT to "درباره"
                 ).forEach { (item, label) ->
                     FilterChip(
@@ -229,7 +231,7 @@ fun ProfileSettingsScreen(
                 onSendRecoveryCode = viewModel::sendPasswordRecoveryOtp,
                 onRecoverPassword = viewModel::recoverPassword
             )
-            destination == ProfileSettingsDestination.DATA -> Column(
+            destination == ProfileSettingsDestination.DATA || settingsSection == SettingsSection.DATA -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp)
             ) {
                 when (user.role) {

@@ -23,6 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Print
+import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.foundation.layout.heightIn
@@ -207,39 +212,21 @@ fun TeacherDashboardScreen(
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
-                                // V62.7 — چیدمان جدید دکمه‌ها (درخواست کاربر):
-                                // سطر ۱ وسط‌چین: ویرایش، بازکردن/بستن، سطل زبالهٔ حذف.
-                                // سطر ۲ وسط‌چین: تکثیر و صادرکردن. دکمه‌های چاپ به
-                                // صفحهٔ اختصاصی خودش منتقل شدند.
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Button(onClick = { onEditExam(exam.id) }) { Text("ویرایش") }
-                                        OutlinedButton(onClick = { viewModel.setOpen(exam) }) {
-                                            Text(if (exam.isOpen) "بستن" else "بازکردن")
-                                        }
-                                        IconButton(onClick = { deleteCandidate = exam }) {
-                                            Icon(
-                                                Icons.Outlined.Delete,
-                                                contentDescription = "حذف آزمون",
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)
-                                    ) {
-                                        OutlinedButton(onClick = { duplicateCandidate = exam }) {
-                                            Text("تکثیر با کسر هزینه")
-                                        }
-                                        OutlinedButton(onClick = { exportCandidate = exam }) {
-                                            Text("صادرکردن")
-                                        }
-                                    }
+                                // V132 — همهٔ عملیاتِ کارت به‌صورتِ آیکن در یک سطر:
+                                // ویرایش، بازکردن/بستن، تکثیر (با کسر هزینه)، صادرکردن، حذف.
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    ExamCardAction(Icons.Outlined.Edit, "ویرایش") { onEditExam(exam.id) }
+                                    ExamCardAction(
+                                        if (exam.isOpen) Icons.Outlined.Lock else Icons.Outlined.LockOpen,
+                                        if (exam.isOpen) "بستن" else "بازکردن"
+                                    ) { viewModel.setOpen(exam) }
+                                    ExamCardAction(Icons.Outlined.ContentCopy, "تکثیر") { duplicateCandidate = exam }
+                                    ExamCardAction(Icons.Outlined.IosShare, "صادرکردن") { exportCandidate = exam }
+                                    ExamCardAction(Icons.Outlined.Delete, "حذف", tint = MaterialTheme.colorScheme.error) { deleteCandidate = exam }
                                 }
                             }
                         }
@@ -327,6 +314,20 @@ private fun readExamFileLimited(input: java.io.InputStream): String {
         output.write(buffer, 0, read)
     }
     return output.toString(Charsets.UTF_8.name())
+}
+
+/** V132 — یک عملِ کارتِ آزمون: آیکن + برچسبِ کوچک زیرش (همه در یک سطر). */
+@Composable
+private fun ExamCardAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(onClick = onClick) { Icon(icon, contentDescription = label, tint = tint) }
+        Text(label, style = MaterialTheme.typography.labelSmall, color = tint)
+    }
 }
 
 /** V113.2 — کارت‌های آزمون‌های چاپیِ دستگاه (پنجرهٔ «آزمون‌های چاپی»). */

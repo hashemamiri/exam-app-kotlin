@@ -765,7 +765,8 @@
     if (!d) return;
     var fig = figureOf(e.target); if (fig !== d.fig) return;
     var moved = Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8;
-    if (moved || d.onHandle) return;
+    /* V132 — لمسِ روی/نزدیکِ دستگیره (mainscript با تحملِ ۲۴px آن را resize می‌گیرد) هرگز ویرایشگر را باز نمی‌کند */
+    if (moved || d.onHandle || fig.__lastResize) return;
     if (d.wasSelected) { e.preventDefault(); e.stopImmediatePropagation(); editFigure(fig); }
   }, true);
 

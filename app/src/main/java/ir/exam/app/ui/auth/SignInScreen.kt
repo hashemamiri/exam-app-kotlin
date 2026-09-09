@@ -260,7 +260,9 @@ private fun StaffLoginPane(state: AuthUiState, viewModel: AuthViewModel, manager
         IceField(
             value = state.email,
             onValueChange = viewModel::setEmail,
-            hint = "ایمیل یا نام کاربری",
+            hint = if (managerRole) "ایمیل یا نام کاربری مدیر/معاون" else "ایمیل یا نام کاربری معلم",
+            // V132 — نام کاربریِ انتخاب‌شده در ثبت‌نام هم برای ورود کافی است.
+            supporting = "می‌توانید به‌جای ایمیل، نام کاربری انگلیسی که هنگام ثبت‌نام انتخاب کردید را وارد کنید.",
             keyboardType = KeyboardType.Email
         )
     }
@@ -399,7 +401,7 @@ private fun TeacherSetupPane(state: AuthUiState, viewModel: AuthViewModel) {
             state.username,
             viewModel::setUsername,
             hint = "نام کاربری انگلیسی",
-            supporting = "۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط؛ ورود معلم همچنان با ایمیل انجام می‌شود."
+            supporting = "۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط؛ با همین نام کاربری (یا ایمیل) وارد می‌شوید."
         )
     }
     StaggeredItem(3) {

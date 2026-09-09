@@ -9,6 +9,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- V132 — فهرست مرورگرهای نصب‌شده برای کارت «سایت» (Android 11+ بدون این، queryIntentActivities خالی برمی‌گرداند) -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
 
     <application
         android:name=".ExamApplication"
