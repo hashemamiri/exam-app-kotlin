@@ -287,7 +287,7 @@ fun ExamHtmlPrintDialog(
                                             }
                                             // V132 — اول تأیید هزینه (۱۰۰۰ تومان/سؤال) و کسر از کیف پول، بعد پنلِ چاپ.
                                             if (prepaidOnce) { prepaidOnce = false; fire() }
-                                            else pendingPrintCharge = PendingPrintCharge(mode, fire, restore)
+                                            else pendingPrintCharge = PendingPrintCharge(mode, fire) { restore() }
                                         }
                                     }
                                 },

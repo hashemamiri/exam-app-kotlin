@@ -178,7 +178,7 @@ require(".fig-resize-handle::before{content:\"\";position:absolute;left:50%;top:
 _ms = read(WEB_ENGINE / "mainscript.js")
 require("function nearHandle(sel, cx, cy)" in _ms and "fig.__lastResize = resizing" in _ms, "V132 near-handle tolerance missing in mainscript.js")
 require("d.onHandle || fig.__lastResize" in read(WEBHOST), "V132 tap-on-handle must not open the editor")
-require("internal fun PrintCostConfirmDialog(" in dialog and "PRINT_COST_PER_QUESTION_TOMAN = 1000L" in dialog and "pendingPrintCharge = PendingPrintCharge(mode, fire, restore)" in dialog, "V132 print cost confirmation missing")
+require("internal fun PrintCostConfirmDialog(" in dialog and "PRINT_COST_PER_QUESTION_TOMAN = 1000L" in dialog and "pendingPrintCharge = PendingPrintCharge(mode, fire) { restore() }" in dialog, "V132 print cost confirmation missing")
 require("native_charge_print_v1" in read(MAIN / "java/ir/exam/app/data/repository/SupabaseBillingRepository.kt"), "V132 chargePrint rpc missing")
 require((ROOT / "supabase/migrations/20260909_native_charge_print_v132.sql").exists() and (ROOT / "sql/manual/SQL_NATIVE_CHARGE_PRINT_V132.sql").exists(), "V132 charge-print migration must be dual-written")
 require("fun SiteBrowserChooserDialog(" in read(MAIN / "java/ir/exam/app/ui/app/SiteBrowserChooserDialog.kt") and "<queries>" in read(MAIN / "AndroidManifest.xml"), "V132 site browser chooser missing")

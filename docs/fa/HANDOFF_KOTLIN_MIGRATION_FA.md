@@ -18058,7 +18058,7 @@ state در ExamApp: `siteChooserOpen` + `siteError`.
 تعداد سؤال از کلاینت چون آزمون‌های چاپیِ Room روی سرور نیستند؛ سقف ۵۰۰). فقط authenticated.
 کلاینت: `BillingRepository.chargePrint()` + `PrintChargeResult`؛ `SupabaseBillingRepository.chargePrint` (decodeAs JsonObject، پیامِ خطا با لازم/موجودی).
 `ExamHtmlPrintDialog`: پارامترهای جدید `printExamId`, `printPrepaid`؛ در `onPrint` کارِ واقعیِ چاپ داخل `fire` بسته‌بندی شد و
-`pendingPrintCharge = PendingPrintCharge(mode, fire, restore)`؛ `PrintCostConfirmDialog` (تعداد سؤال، مبلغ، «پرداخت و چاپ»/«انصراف») →
+`pendingPrintCharge = PendingPrintCharge(mode, fire) { restore() }` (restore خودش `view.post` است و Boolean برمی‌گرداند؛ مستقیم به `() -> Unit` پاس نمی‌شود — خطای CI اول V132)؛ `PrintCostConfirmDialog` (تعداد سؤال، مبلغ، «پرداخت و چاپ»/«انصراف») →
 `chargePrint` → موفق: `fire()`؛ خطا: `barStatus` + `restore()`. هر دو مسیرِ چاپ (چاپ آزمون و چاپ با کلید — از FAB بیلدر، و دکمهٔ چاپِ نوارِ PGS در پیش‌نمایش)
 از همین `onPrint` می‌گذرند، پس یک نقطهٔ کنترل کافی است. `HeadlessExamPrinter` (V101) جایی صدا زده نمی‌شود و دست نخورد.
 ⚠️ باید مهاجرت V132 در SQL Editor اجرا شود؛ بدون آن پیامِ «تابع پیدا نشد» و چاپ انجام نمی‌شود.
@@ -18081,3 +18081,5 @@ outline-offset ۵px + دستگیره‌ها ۱۲px بیرون). `webhost.css` ب
 تست puppeteer: drag از ۱۶px کنارِ دستگیرهٔ br → resize (w 360→384)، انتخاب باقی، editFigureTool=۰؛ تپِ وسطِ شکل → editFigureTool=۱.
 
 verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Neumorphic69IntegrationTest و V24 («داده‌ها» تبِ تنظیمات، کارت «سایت»).
+
+**رفع شکست CI نسخهٔ V131** — `V55_18_1SmoothRightReturnHotfixTest` پینِ `dragX.animateTo(targetX, tween(280))` را در شاخهٔ چپ می‌خواست؛ V131 آن را به `tween(360, easing = FastOutSlowInEasing)` تغییر داده بود. پین در V132 به‌روز شد (۶۷۱ تست، ۱ شکست → صفر).

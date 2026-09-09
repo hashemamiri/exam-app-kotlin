@@ -50,7 +50,8 @@ class V55_18_1SmoothRightReturnHotfixTest {
         assertTrue("dragX.snapTo(targetX)" in rightBranch)
         // کشیدن به چپ همان خروج انیمیت‌شدهٔ قبلی را دارد
         val leftBranch = cards.substringAfter("if (direction == -1) {").substringAfter("} else {")
-        assertTrue("dragX.animateTo(targetX, tween(280))" in leftBranch)
+        // V131 — خروج به چپ نرم‌تر شد (۳۶۰ms با FastOutSlowInEasing)
+        assertTrue("dragX.animateTo(targetX, tween(360, easing = FastOutSlowInEasing))" in leftBranch)
         assertTrue("dragX.snapTo(0f)" in leftBranch)
     }
 
