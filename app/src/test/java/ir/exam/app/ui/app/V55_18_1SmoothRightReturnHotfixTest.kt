@@ -36,25 +36,21 @@ class V55_18_1SmoothRightReturnHotfixTest {
         assertTrue("var returningIndex by remember { mutableIntStateOf(-1) }" in cards)
         assertTrue("returnX.snapTo(x)" in cards)
         assertTrue("returnY.snapTo(y)" in cards)
-        assertTrue("returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing))" in cards)
+        // V137.2 — بازگشت با فنر نرم به جایگاه پشته
+        assertTrue("returnX.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f))" in cards)
         // پس از پایان انیمیشن‌ها آزاد می‌شود
         assertTrue("returningIndex = -1" in cards)
     }
 
     @Test
     fun `no two-phase exit remains inside the rightward branch`() {
-        val rightBranch = cards.substringAfter("if (direction == -1) {").substringBefore("} else {")
-        // در شاخهٔ راست هیچ خروج جداگانه‌ای قبل از ورود کارت جدید نیست
-        assertFalse("animateTo(targetX" in rightBranch)
-        assertTrue("returningIndex = activeIndex" in rightBranch)
-        assertTrue("dragX.snapTo(targetX)" in rightBranch)
-        // کشیدن به چپ همان خروج انیمیت‌شدهٔ قبلی را دارد
-        val leftBranch = cards.substringAfter("if (direction == -1) {").substringAfter("} else {")
-        // V136 — چپ هم تک‌فاز و آینهٔ راست شد: activeIndex فوراً عوض می‌شود و کارت
-        // رفته با returnX (نه dragX) هم‌زمان با جلوآمدن کارت بعدی بیرون می‌رود.
-        assertFalse("dragX.animateTo(targetX" in leftBranch)
-        assertTrue("returnX.animateTo(targetX, tween(300, easing = FastOutSlowInEasing))" in leftBranch)
-        assertTrue("dragX.snapTo(0f)" in leftBranch)
+        // V137.2 — چپ و راست یک مسیر مشترک دارند؛ activeIndex همان لحظه عوض می‌شود و کارتِ رفته
+        // با returnX (نه dragX) هم‌زمان با جلوآمدن کارت بعدی بیرون می‌پرد.
+        assertFalse("if (direction == -1) {" in cards)
+        assertFalse("dragX.animateTo(targetX" in cards)
+        assertTrue("returningIndex = leaving" in cards)
+        assertTrue("returnX.animateTo(targetX, tween(340, easing = FastOutSlowInEasing))" in cards)
+        assertTrue("returnAlpha.animateTo(0f, tween(220, delayMillis = 120))" in cards)
     }
 
     @Test
@@ -62,5 +58,6 @@ class V55_18_1SmoothRightReturnHotfixTest {
         assertTrue("val returning = index == returningIndex && !active" in cards)
         assertTrue("returning -> returnX.value" in cards)
         assertTrue("returning -> returnY.value" in cards)
+        assertTrue("returning -> stackRotation + returnRotation.value" in cards)
     }
 }

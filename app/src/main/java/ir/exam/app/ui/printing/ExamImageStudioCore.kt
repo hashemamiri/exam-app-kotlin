@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -33,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -226,27 +228,24 @@ fun ExamImageStudioDialog(
             shape = RoundedCornerShape(0.dp)
         ) {
             Column(Modifier.fillMaxSize()) {
-                // نوار بالا
+                // V137.2 — نوار بالا (خواستهٔ کاربر): ✓ سبز سمت راست، ✗ قرمز سمت چپ، بدون عنوان/نام تصویر؛
+                // بخش‌های ابزار به‌صورت اسکرولی بین این دو. (Row در RTL از راست شروع می‌شود.)
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { if (!processing) onDismiss() }) {
-                        Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White)
-                    }
-                    Text(
-                        "تصویر سؤال" + (questionId?.let { " — سؤال $it" } ?: ""),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (original != null && questionId != null) {
-                        Button(
+                    val canApply = original != null && questionId != null
+                    Surface(
+                        color = if (canApply) Color(0xFF19945B) else Color(0xFF19945B).copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        IconButton(
+                            enabled = canApply && !processing,
                             onClick = {
-                                val src = original ?: return@Button
+                                val src = original ?: return@IconButton
                                 processing = true
                                 scope.launch {
                                     val result = withContext(Dispatchers.Default) {
@@ -260,10 +259,56 @@ fun ExamImageStudioDialog(
                                         if (editIndex >= 0) onReplaceExisting(editIndex, dataUrl, h) else onInsert(dataUrl, h)
                                     }
                                 }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MaterialTheme.colorScheme.primary)
+                            }
                         ) {
-                            Text(if (editIndex >= 0) "تایید و جایگزینی" else "تایید و درج")
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = if (editIndex >= 0) "تایید و جایگزینی" else "تایید و درج",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    Row(
+                        Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (original != null) {
+                            listOf(
+                                "image" to "🖼️ تصویر و برش",
+                                "draw" to "✏️ طراحی و علامت",
+                                "enhance" to "✨ بهبود و OCR",
+                                "deskew" to "📐 صاف‌سازی"
+                            ).forEach { (key, label) ->
+                                FilterChip(
+                                    selected = studioTab == key,
+                                    onClick = {
+                                        studioTab = key
+                                        if (key != "deskew") perspMode = false
+                                        if (key != "image") splitMode = false
+                                        if (key != "draw" && drawMode != "none") { drawMode = "none"; activeShape = null }
+                                    },
+                                    label = { Text(label) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        labelColor = Color.White,
+                                        selectedContainerColor = Color.White,
+                                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        enabled = true,
+                                        selected = studioTab == key,
+                                        borderColor = Color.White.copy(alpha = 0.6f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    Surface(color = Color(0xFFD63B49), shape = RoundedCornerShape(14.dp)) {
+                        IconButton(enabled = !processing, onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White)
                         }
                     }
                 }
@@ -783,32 +828,7 @@ fun ExamImageStudioDialog(
                             .padding(vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // V133 — مرتب‌سازی ابزارها: به‌جای ده ردیفِ درهم، یک نوارِ بخش‌ها و فقط ابزارهای همان بخش
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf(
-                                "image" to "🖼️ تصویر و برش",
-                                "draw" to "✏️ طراحی و علامت",
-                                "enhance" to "✨ بهبود و OCR",
-                                "deskew" to "📐 صاف‌سازی"
-                            ).forEach { (key, label) ->
-                                FilterChip(
-                                    selected = studioTab == key,
-                                    onClick = {
-                                        studioTab = key
-                                        if (key != "deskew") perspMode = false
-                                        if (key != "image") splitMode = false
-                                        if (key != "draw" && drawMode != "none") { drawMode = "none"; activeShape = null }
-                                    },
-                                    label = { Text(label) }
-                                )
-                            }
-                        }
+                        // V133 — مرتب‌سازی ابزارها: فقط ابزارهای بخشِ فعال؛ V137.2 — نوارِ بخش‌ها به سربرگ منتقل شد.
                         if (studioTab == "image") {
                         Row(
                             Modifier

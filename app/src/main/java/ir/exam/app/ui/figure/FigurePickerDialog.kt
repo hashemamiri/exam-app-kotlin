@@ -436,6 +436,26 @@ private fun paramFields(type: String): List<Pair<String, String>> = when (type) 
     "axgrid" -> listOf("xmax" to "تعداد ستون", "ymax" to "تعداد سطر")
     "axpol" -> listOf("xmax" to "تعداد حلقه")
     "ax3d" -> listOf("xmax" to "تعداد تیک", "step" to "گام")
+    // V137.2 — ۲۰ نوع تازهٔ محور
+    "axnumpts" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام", "pts" to "نقطه‌ها (با ویرگول)", "labs" to "نام نقطه‌ها")
+    "axnumint" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام", "lo" to "ابتدای بازه", "hi" to "انتهای بازه", "lc" to "ابتدا بسته؟ (۱/۰)", "hc" to "انتها بسته؟ (۱/۰)", "labs" to "برچسب")
+    "axnumineq" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام", "x0" to "نقطهٔ مرز", "dir" to "جهت (۱ راست، -۱ چپ)", "cl" to "بسته؟ (۱/۰)", "labs" to "برچسب")
+    "axnumfrac" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام", "den" to "مخرج")
+    "axnumdec" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام اعشاری")
+    "axnumblank" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام")
+    "axnumlog" -> listOf("xmax" to "تعداد دهه")
+    "axnumtwo" -> listOf("xmin" to "کمینه", "xmax" to "بیشینه", "step" to "گام", "m" to "ضریب", "b" to "عرض از مبدأ", "s1" to "نام محور بالا", "s2" to "نام محور پایین")
+    "axxypts" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max", "step" to "گام", "pts" to "نقطه‌ها (x,y;x,y)", "labs" to "نام نقطه‌ها")
+    "axxyline" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max", "step" to "گام", "m" to "شیب m", "b" to "عرض از مبدأ b", "labs" to "برچسب")
+    "axxyvec" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max", "step" to "گام", "x1" to "x ابتدا", "y1" to "y ابتدا", "x2" to "x انتها", "y2" to "y انتها", "labs" to "برچسب")
+    "axxycirc" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max", "step" to "گام", "cx" to "x مرکز", "cy" to "y مرکز", "r" to "شعاع")
+    "axxynogrid", "axxyquads", "axxyblank" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y min", "ymax" to "y max", "step" to "گام")
+    "axdual" -> listOf("xmin" to "x min", "xmax" to "x max", "ymin" to "y چپ min", "ymax" to "y چپ max", "lo" to "y راست min", "hi" to "y راست max", "s1" to "نام محور چپ", "s2" to "نام محور راست")
+    "axlog" -> listOf("xmax" to "x max", "ymax" to "تعداد دههٔ y")
+    "axloglog" -> listOf("xmax" to "تعداد دههٔ x", "ymax" to "تعداد دههٔ y")
+    "axtime" -> listOf("labs" to "زمان‌ها (با ویرگول)", "s1" to "نام محور")
+    "axpolpts" -> listOf("xmax" to "تعداد حلقه", "pts" to "نقطه‌ها (r,θ;r,θ)", "labs" to "نام نقطه‌ها")
+    "ax3dpt" -> listOf("xmax" to "تعداد تیک", "step" to "گام", "x1" to "x نقطه", "y1" to "y نقطه", "z1" to "z نقطه", "labs" to "نام نقطه")
     "flow" -> listOf("labs" to "مراحل (با ویرگول)")
     "gantt" -> listOf("labs" to "فعالیت‌ها", "vals" to "شروع", "vals2" to "مدت")
     "time" -> listOf("labs" to "رویدادها", "vals" to "تاریخ / مقدار")
@@ -476,7 +496,9 @@ private val TEXT_PARAM_KEYS = setOf(
     "mins", "q1s", "meds", "q3s", "maxs", "opens", "highs", "lows", "closes",
     "rows", "cols", "mean", "ucl", "lcl", "unit", "n", "ab", "ac", "bc", "abc",
     // V54.3 — کلیدهای متنی مرحلهٔ پایانی.
-    "nrows", "ncols"
+    "nrows", "ncols",
+    // V137.2 — نقطه‌های محور (جفت‌های عددی) متنی ذخیره می‌شوند.
+    "pts"
 )
 
 private fun paramKeys(type: String): List<String> = paramFields(type).map { it.first }

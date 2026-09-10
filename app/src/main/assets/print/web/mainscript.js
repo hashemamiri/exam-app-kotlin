@@ -1373,6 +1373,7 @@ function initPreviewFigureEditing() {
     drag.fig.style.top = Math.max(0, c.y) + 'px';
     drag.fig.style.width = 'min(' + c.w + 'px, calc(100% - 18px))';
     drag.fig.style.height = c.h + 'px';
+    applyFigScale(drag.fig, c.w, c.h);
     updateFigSizeBadge(drag.fig, c.w, c.h);
     setFigLayout(drag.qid, drag.idx, {x:Math.round(c.x), y:Math.round(c.y), w:Math.round(c.w), h:Math.round(c.h)});
   });
@@ -1409,7 +1410,57 @@ function markPreviewFiguresReady(area) {
   area.querySelectorAll('.interactive-figure').forEach(fig => {
     ensureProfessionalResizeHandles(fig);
     if (!fig.querySelector('.fig-move-hint')) fig.insertAdjacentHTML('afterbegin','<span class="fig-move-hint">جابجایی: داخل کادر بکشید</span>');
+    fitFigBox(fig);
   });
+}
+/* V137.2 — اندازهٔ طبیعیِ شیءِ داخل کادر (svg/جدول/تناوبی/آناتومی/تصویر) بدون زوم و بدون scale؛
+   با کلاس موقت .fig-measure که width/height/transform را خنثی می‌کند اندازه‌گیری و در dataset ذخیره می‌شود. */
+function figNaturalSize(fig) {
+  try {
+    if (fig.dataset.natW && fig.dataset.natH) return { w: +fig.dataset.natW, h: +fig.dataset.natH };
+    const inner = fig.querySelector('.qmf-fig');
+    if (!inner) return null;
+    fig.classList.add('fig-measure');
+    const w = inner.offsetWidth, h = inner.offsetHeight;
+    fig.classList.remove('fig-measure');
+    if (!(w > 0 && h > 0)) return null;
+    fig.dataset.natW = String(w); fig.dataset.natH = String(h);
+    return { w, h };
+  } catch (e) { return null; }
+}
+/* V137.2 — خودِ شیء با کادر بزرگ/کوچک می‌شود (نه فقط کادر): شیء در اندازهٔ طبیعی‌اش می‌ماند و با
+   transform:scale(w/natW, h/natH) از گوشهٔ راست‌بالا دقیقاً به اندازهٔ کادر کشیده می‌شود؛ برای همهٔ
+   انواع (شکل، نمودار، محور، جدول، تناوبی، آناتومی/فیزیک/شیمی، تصویر) یکسان است. */
+function applyFigScale(fig, w, h) {
+  const nat = figNaturalSize(fig);
+  if (!nat || !(w > 0 && h > 0)) return;
+  fig.classList.add('fig-scaled');
+  fig.style.setProperty('--nat-w', nat.w + 'px');
+  fig.style.setProperty('--nat-h', nat.h + 'px');
+  fig.style.setProperty('--sx', String(Math.max(0.05, w / nat.w)));
+  fig.style.setProperty('--sy', String(Math.max(0.05, h / nat.h)));
+}
+/* V137.2 — کادر ۸دستگیره دقیقاً به اندازهٔ شیء: اگر معلم اندازه‌ای ذخیره نکرده، عرض/ارتفاعِ کادر همان
+   اندازهٔ طبیعی شیء (محدود به عرض ستون) می‌شود؛ اگر ذخیره کرده، شیء به همان اندازه scale می‌شود. */
+function fitFigBox(fig) {
+  try {
+    const nat = figNaturalSize(fig);
+    if (!nat) return;
+    const st = fig.getAttribute('style') || '';
+    const hasW = /(^|;)\s*width\s*:/.test(st), hasH = /(^|;)\s*height\s*:/.test(st);
+    const parent = fig.closest('.question-main-td') || fig.parentElement;
+    let maxW = 9999;
+    if (parent) {
+      const cs = window.getComputedStyle(parent);
+      maxW = Math.max(18, (parent.clientWidth || 0) - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) - 18);
+    }
+    let w = hasW ? fig.offsetWidth : Math.min(nat.w, maxW);
+    let h = hasH ? fig.offsetHeight : w * nat.h / nat.w;
+    if (!(w > 0) || !(h > 0)) return;
+    if (!hasW) fig.style.width = 'min(' + Math.round(w) + 'px, calc(100% - 18px))';
+    if (!hasH) fig.style.height = Math.round(h) + 'px';
+    applyFigScale(fig, w, h);
+  } catch (e) {}
 }
 function initPreviewSeparatorEditing() {
   const area = document.getElementById('previewArea');

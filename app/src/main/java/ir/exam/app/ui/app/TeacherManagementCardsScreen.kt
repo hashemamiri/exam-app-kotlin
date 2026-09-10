@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -210,10 +211,15 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
     var returningIndex by remember { mutableIntStateOf(-1) }
     val returnX = remember { Animatable(0f) }
     val returnY = remember { Animatable(0f) }
+    // V137.2 — کج‌شدن/مقیاس/محوِ کارتِ در حال پرواز و بازگشت.
+    val returnRotation = remember { Animatable(0f) }
+    val returnScale = remember { Animatable(1f) }
+    val returnAlpha = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val threshold = with(density) { Design69ManagementCardsContract.DRAG_THRESHOLD_DP.dp.toPx() }
     val exitHorizontal = with(density) { 520.dp.toPx() }
+    val liftPx = with(density) { 36.dp.toPx() }
 
     fun changeCard(direction: Int) {
         if (settling) return
@@ -232,63 +238,54 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                 val direction = if (x < 0f) 1 else -1
                 val targetX = (sign(x).takeIf { it != 0f } ?: 1f) * exitHorizontal
                 val targetY = y * 1.20f
-                // V55.18.1 — گزارش دستگاه: «به راست هنوز نرم نیست». علت پرش در
-                // V55.18 دو فازِ پشت‌سرهم بود: اول کارت فعال ۲۸۰ میلی‌ثانیه بیرون
-                // می‌رفت، بعد activeIndex عوض می‌شد و همان کارت (که حالا در پشته
-                // relative=1 و مرئی است اما translation فقط روی کارت فعال اعمال
-                // می‌شود) از بیرون صفحه به جایگاه پشته تلپورت می‌کرد. حالا کشیدن
-                // به راست تک‌فاز و هم‌زمان است: کارت فعلی با returnX/returnY از
-                // نقطهٔ رهاشدن نرم به جایگاه پشته برمی‌گردد و هم‌زمان کارت قبلی
-                // از سمت راست وارد می‌شود؛ کشیدن به چپ مثل قبل.
-                // V135.4 — به درخواست کاربر، حرکتِ V134 («خیلی سریع و خشن») حذف و حرکتِ قبلی (V131) برگردانده شد.
-                if (direction == -1) {
-                    returningIndex = activeIndex
-                    returnX.snapTo(x)
-                    returnY.snapTo(y)
-                    dragX.snapTo(targetX)
-                    dragY.snapTo(0f)
-                    activeIndex = (activeIndex + direction + cards.size) % cards.size
-                    coroutineScope {
-                        launch { returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                        launch { returnY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                        launch { dragX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
+                // V137.2 — حرکت تازهٔ «پرواز و بازگشت» و کاملاً یکسان برای چپ و راست (خواستهٔ کاربر):
+                // ۱) کارت فعلی از نقطهٔ رهاشدن با کمی بلندشدن (scale ۱٫۰۶) و کج‌شدن به سمت حرکت (±۱۴°)
+                //    از همان سمت بیرون می‌پرد و در نیمهٔ راه محو می‌شود؛ هم‌زمان activeIndex عوض شده و
+                //    کارت بعدی با انیمیشن‌های پشته (فاصله/مقیاس/چرخش) جلو می‌آید.
+                // ۲) اگر کارتِ رفته در پشته دیده می‌شود، از همان سمت و از پشتِ پشته با محوِ معکوس و
+                //    فنر نرم (spring) به جایگاه انتهای پشته می‌نشیند. هیچ تفاوتی بین دو جهت نیست؛
+                //    فقط علامتِ targetX و زاویه عوض می‌شود.
+                val leaving = activeIndex
+                returningIndex = leaving
+                returnX.snapTo(x)
+                returnY.snapTo(y)
+                returnRotation.snapTo(x / 42f + y / 75f)
+                returnScale.snapTo(1f)
+                returnAlpha.snapTo(1f)
+                dragX.snapTo(0f)
+                dragY.snapTo(0f)
+                activeIndex = (activeIndex + direction + cards.size) % cards.size
+                coroutineScope {
+                    launch { returnX.animateTo(targetX, tween(340, easing = FastOutSlowInEasing)) }
+                    launch { returnY.animateTo(targetY - liftPx, tween(340, easing = FastOutSlowInEasing)) }
+                    launch { returnRotation.animateTo(direction * 14f, tween(340, easing = FastOutSlowInEasing)) }
+                    launch {
+                        returnScale.animateTo(1.06f, tween(150, easing = FastOutSlowInEasing))
+                        returnScale.animateTo(.92f, tween(190, easing = FastOutSlowInEasing))
                     }
-                    returningIndex = -1
-                } else {
-                    // V131 — گزارش کاربر: «حرکت به چپ تند و خشن است». قبلاً کارت با tween خطیِ ۲۸۰ms
-                    // بیرون می‌رفت و بعد کارتِ بعدی ناگهان جای آن می‌نشست. حالا مثل سمت راست:
-                    // کارت فعلی نرم (FastOutSlowIn، ۳۶۰ms) بیرون می‌رود و هم‌زمان کارت بعدی
-                    // با انیمیشن‌های پشته (stackTop/scale/rotation) به جلو می‌آید؛ پس از خروج،
-                    // کارت رفته با returnX از بیرونِ صفحه نرم به جایگاه انتهای پشته برمی‌گردد.
-                    // V136 — گزارش کاربر: «چپ هنوز مثل راست نرم نیست». تا V135 چپ دو فاز
-                    // بود (اول خروج ۳۶۰ms، بعد تعویض activeIndex و آمدن کارت بعدی). حالا
-                    // دقیقاً آینهٔ راست است: activeIndex همان لحظه عوض می‌شود، کارت رفته با
-                    // returnX/returnY از نقطهٔ رهاشدن هم‌زمان با جلوآمدن کارت بعدی به بیرون
-                    // می‌رود (۳۰۰ms، همان easing) و سپس اگر در پشته دیده می‌شود، از بیرون
-                    // نرم به جایگاه انتهای پشته برمی‌گردد.
-                    val leaving = activeIndex
-                    returningIndex = leaving
-                    returnX.snapTo(x)
-                    returnY.snapTo(y)
-                    dragX.snapTo(0f)
-                    dragY.snapTo(0f)
-                    activeIndex = (activeIndex + direction + cards.size) % cards.size
-                    coroutineScope {
-                        launch { returnX.animateTo(targetX, tween(300, easing = FastOutSlowInEasing)) }
-                        launch { returnY.animateTo(targetY, tween(300, easing = FastOutSlowInEasing)) }
-                    }
-                    // کارت رفته فقط وقتی در پشته دیده می‌شود (حداکثر ۳ کارت) که تعداد کارت‌ها ≤ ۳ باشد.
-                    if (cards.size <= 3) {
-                        coroutineScope {
-                            launch { returnX.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                            launch { returnY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-                        }
-                    } else {
-                        returnX.snapTo(0f)
-                        returnY.snapTo(0f)
-                    }
-                    returningIndex = -1
+                    launch { returnAlpha.animateTo(0f, tween(220, delayMillis = 120)) }
                 }
+                // کارت رفته فقط وقتی در پشته دیده می‌شود (حداکثر ۳ کارت) که تعداد کارت‌ها ≤ ۳ باشد.
+                if (cards.size <= 3) {
+                    returnX.snapTo(targetX * .45f)
+                    returnY.snapTo(-liftPx * .6f)
+                    returnRotation.snapTo(direction * 6f)
+                    returnScale.snapTo(.96f)
+                    coroutineScope {
+                        launch { returnAlpha.animateTo(1f, tween(260)) }
+                        launch { returnX.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f)) }
+                        launch { returnY.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f)) }
+                        launch { returnRotation.animateTo(0f, spring(dampingRatio = .78f, stiffness = 260f)) }
+                        launch { returnScale.animateTo(1f, spring(dampingRatio = .78f, stiffness = 260f)) }
+                    }
+                } else {
+                    returnX.snapTo(0f)
+                    returnY.snapTo(0f)
+                    returnRotation.snapTo(0f)
+                    returnScale.snapTo(1f)
+                    returnAlpha.snapTo(1f)
+                }
+                returningIndex = -1
             } else {
                 coroutineScope {
                     launch { dragX.animateTo(0f, tween(280)) }
@@ -381,12 +378,14 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                             .height(190.dp)
                             .zIndex(3f - relative)
                             .graphicsLayer {
-                                scaleX = stackScale
-                                scaleY = stackScale
-                                alpha = stackAlpha
                                 // V55.18.1: کارت در حال برگشت به پشته (کشیدن به راست)
                                 // از نقطهٔ رهاشدن نرم به جایگاهش می‌رود، نه تلپورت.
                                 val returning = index == returningIndex && !active
+                                // V137.2 — کارت فعال هنگام کشیدن کمی بلند می‌شود؛ کارتِ در حال پرواز مقیاس/محوِ خودش را دارد.
+                                val dragLift = if (active) 1f + (abs(dragX.value) / exitHorizontal).coerceIn(0f, .5f) * .08f else 1f
+                                scaleX = stackScale * dragLift * (if (returning) returnScale.value else 1f)
+                                scaleY = stackScale * dragLift * (if (returning) returnScale.value else 1f)
+                                alpha = stackAlpha * (if (returning) returnAlpha.value else 1f)
                                 translationX = when {
                                     active -> dragX.value
                                     returning -> returnX.value
@@ -397,9 +396,11 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                                     returning -> returnY.value
                                     else -> 0f
                                 }
-                                rotationZ = if (active) {
-                                    stackRotation + dragX.value / 42f + dragY.value / 75f
-                                } else stackRotation
+                                rotationZ = when {
+                                    active -> stackRotation + dragX.value / 42f + dragY.value / 75f
+                                    returning -> stackRotation + returnRotation.value
+                                    else -> stackRotation
+                                }
                             }
                             .clip(RoundedCornerShape(29.dp))
                             .background(Brush.linearGradient(data.colors))

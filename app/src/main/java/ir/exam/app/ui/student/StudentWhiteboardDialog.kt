@@ -112,6 +112,26 @@ internal enum class BoardTool(val label: String, val pickable: Boolean = true) {
 internal enum class BoardBackground(val label: String) { PLAIN("ساده"), GRID("شطرنجی"), LINED("خط‌دار"), DOTS("نقطه‌ای"), AXES("محور مختصات") }
 
 /**
+ * V137.2 — ابزارهای هندسیِ تعاملی روی تخته (خط‌کش، گونیا، نقاله، پرگار). این‌ها «شیء» نیستند و در تصویر
+ * خروجی نمی‌آیند؛ فقط راهنمای کشیدن‌اند: قلم/خط نزدیک لبهٔ خط‌کش/گونیا روی همان لبه می‌چسبد، نزدیک کمان
+ * نقاله روی کمان می‌رود، و با پرگار هر کشیدن یک کمان به مرکز/شعاع پرگار است. جابه‌جایی: کشیدن بدنه؛
+ * چرخش/اندازه: کشیدن دستگیرهٔ آبی.
+ */
+internal enum class BoardInstrument(val label: String) { NONE("هیچ"), RULER("خط‌کش"), SETSQUARE("گونیا"), PROTRACTOR("نقاله"), COMPASS("پرگار") }
+
+internal data class InstrumentState(
+    val kind: BoardInstrument = BoardInstrument.NONE,
+    val center: Offset = Offset.Zero,
+    val angle: Float = 0f,
+    val size: Float = 0f
+) {
+    val dir: Offset get() = Offset(cos(angle), sin(angle))
+    val nrm: Offset get() = Offset(-sin(angle), cos(angle))
+    /** دستگیرهٔ آبی چرخش/اندازه. */
+    val handle: Offset get() = center + dir * size
+}
+
+/**
  * یک عنصر روی تخته. برای IMAGE، `ref` منبع است: `tex:<فرمول>`، `fig:<json شکل>`، `img:<نشانی تصویر سؤال>`
  * و points = [بالا‑راست، پایین‑چپ] قاب تصویر.
  */
@@ -179,6 +199,8 @@ fun StudentWhiteboardDialog(
     var confirmDone by remember { mutableStateOf(false) }
     var confirmClearAll by remember { mutableStateOf(false) }
     var insertMenu by remember { mutableStateOf(false) }
+    // V137.2 — ابزار هندسی فعال (خط‌کش/گونیا/نقاله/پرگار).
+    var instrument by remember { mutableStateOf(InstrumentState()) }
     var restored by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
     var nextId by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -292,6 +314,30 @@ fun StudentWhiteboardDialog(
                     }
                     FilterChip(selected = insertMenu, onClick = { insertMenu = !insertMenu }, label = { Text("درج…") })
                 }
+                // V137.2 — ابزارهای هندسی
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("ابزار هندسی:", style = MaterialTheme.typography.labelMedium)
+                    BoardInstrument.values().forEach { k ->
+                        FilterChip(
+                            selected = instrument.kind == k,
+                            onClick = {
+                                instrument = if (k == BoardInstrument.NONE) InstrumentState() else defaultInstrument(k, boardSize, density)
+                                if (k != BoardInstrument.NONE && tool != BoardTool.PEN && tool != BoardTool.LINE) tool = BoardTool.PEN
+                            },
+                            label = { Text(k.label) }
+                        )
+                    }
+                    if (instrument.kind != BoardInstrument.NONE) {
+                        Text(
+                            when (instrument.kind) {
+                                BoardInstrument.COMPASS -> "بکشید تا کمان رسم شود؛ دستگیرهٔ آبی = شعاع"
+                                BoardInstrument.PROTRACTOR -> "قلم نزدیک کمان/خط پایه می‌چسبد"
+                                else -> "قلم نزدیک لبه می‌چسبد؛ دستگیرهٔ آبی = چرخش/اندازه"
+                            },
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 if (insertMenu) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         FilterChip(selected = false, onClick = { insertMenu = false; formulaOpen = true }, label = { Text("فرمول") })
@@ -381,33 +427,55 @@ fun StudentWhiteboardDialog(
                                 }
                             )
                         }
-                        .pointerInput(tool, color, width, page) {
+                        .pointerInput(tool, color, width, page, instrument.kind) {
                             if (tool == BoardTool.TEXT) return@pointerInput
                             var moving: Long? = null
+                            // V137.2 — حالت کشیدنِ ابزار هندسی: "move" (بدنه) / "handle" (چرخش/اندازه) / null؛
+                            // snapLock: لبه/کمانی که ضربهٔ فعلی به آن چسبیده (تا پایان کشیدن ثابت می‌ماند).
+                            var instMode: String? = null
+                            var snapLock: SnapTarget? = null
                             detectDragGestures(
                                 onDragStart = { p ->
-                                    when (tool) {
+                                    val inst = instrument
+                                    val instActive = inst.kind != BoardInstrument.NONE && tool != BoardTool.SELECT && tool != BoardTool.OBJ_ERASER
+                                    instMode = when {
+                                        !instActive -> null
+                                        (p - inst.handle).getDistance() < 30f * density -> "handle"
+                                        instrumentBodyHit(inst, p, density) -> "move"
+                                        else -> null
+                                    }
+                                    if (instMode == null) when (tool) {
                                         BoardTool.SELECT -> {
                                             val hit = hitTest(strokes.filter { it.page == page }, p, density, bitmaps)
                                             selectedId = hit?.id; moving = hit?.id
                                         }
                                         BoardTool.OBJ_ERASER -> hitTest(strokes.filter { it.page == page }, p, density, bitmaps)?.let { remove(it.id) }
-                                        else -> draft = BoardStroke(newId(), tool, listOf(p, p), color, width, page = page)
+                                        else -> {
+                                            snapLock = if (instActive) snapTargetOf(inst, p, density) else null
+                                            val sp = snapLock?.let { snapApply(inst, it, p, density) } ?: p
+                                            draft = BoardStroke(newId(), tool, listOf(sp, sp), color, width, page = page)
+                                        }
                                     }
                                 },
-                                onDragEnd = { draft?.let { commit(it) }; draft = null; moving = null },
-                                onDragCancel = { draft = null; moving = null },
+                                onDragEnd = { draft?.let { commit(it) }; draft = null; moving = null; instMode = null; snapLock = null },
+                                onDragCancel = { draft = null; moving = null; instMode = null; snapLock = null },
                                 onDrag = { change, delta ->
                                     change.consume()
-                                    when (tool) {
-                                        BoardTool.SELECT -> moving?.let { id -> strokes.firstOrNull { it.id == id }?.let { replace(it.moved(delta)) } }
-                                        BoardTool.OBJ_ERASER -> hitTest(strokes.filter { it.page == page }, change.position, density, bitmaps)?.let { remove(it.id) }
+                                    when {
+                                        instMode == "move" -> instrument = instrument.copy(center = instrument.center + delta)
+                                        instMode == "handle" -> {
+                                            val v = change.position - instrument.center
+                                            instrument = instrument.copy(angle = atan2(v.y, v.x), size = v.getDistance().coerceIn(40f * density, 4000f))
+                                        }
+                                        tool == BoardTool.SELECT -> moving?.let { id -> strokes.firstOrNull { it.id == id }?.let { replace(it.moved(delta)) } }
+                                        tool == BoardTool.OBJ_ERASER -> hitTest(strokes.filter { it.page == page }, change.position, density, bitmaps)?.let { remove(it.id) }
                                         else -> {
                                             val d = draft ?: return@detectDragGestures
+                                            val pos = snapLock?.let { snapApply(instrument, it, change.position, density) } ?: change.position
                                             draft = if (d.tool == BoardTool.PEN || d.tool == BoardTool.ERASER || d.tool == BoardTool.HIGHLIGHT) {
-                                                d.copy(points = d.points + change.position)
+                                                d.copy(points = d.points + pos)
                                             } else {
-                                                d.copy(points = listOf(d.points.first(), change.position))
+                                                d.copy(points = listOf(d.points.first(), pos))
                                             }
                                         }
                                     }
@@ -418,6 +486,8 @@ fun StudentWhiteboardDialog(
                     androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                         val c = drawContext.canvas.nativeCanvas
                         renderBoard(c, size.width, size.height, background, pageItems + listOfNotNull(draft), density, bitmaps, selectedId)
+                        // V137.2 — ابزار هندسی فقط روی صفحه (در خروجی نیست).
+                        if (instrument.kind != BoardInstrument.NONE) drawInstrument(c, instrument, density)
                     }
                     if (pageItems.isEmpty() && draft == null) {
                         Text(
@@ -526,6 +596,171 @@ fun StudentWhiteboardDialog(
 }
 
 // ---------------------------------------------------------------- رندر مشترک (صفحه و خروجی)
+
+// ============================================================ V137.2 — ابزارهای هندسی
+
+/** هدف چسبیدن ضربه: لبهٔ شماره‌دار (index) یا کمان (arc) یا کمانِ پرگار (compass). */
+internal data class SnapTarget(val edge: Int = -1, val arc: Boolean = false, val compass: Boolean = false)
+
+internal fun defaultInstrument(kind: BoardInstrument, board: IntSize, density: Float): InstrumentState {
+    val w = board.width.coerceAtLeast(1).toFloat(); val h = board.height.coerceAtLeast(1).toFloat()
+    val m = min(w, h)
+    val size = when (kind) {
+        BoardInstrument.RULER -> w * 0.32f
+        BoardInstrument.SETSQUARE -> m * 0.38f
+        BoardInstrument.PROTRACTOR -> m * 0.30f
+        BoardInstrument.COMPASS -> m * 0.20f
+        BoardInstrument.NONE -> 0f
+    }
+    return InstrumentState(kind, Offset(w / 2f, h / 2f), 0f, size)
+}
+
+/** لبه‌های مستقیمِ قابل‌چسبیدن هر ابزار (مختصات تخته). */
+internal fun instrumentEdges(st: InstrumentState, density: Float): List<Pair<Offset, Offset>> {
+    val d = st.dir; val n = st.nrm; val c = st.center; val s = st.size
+    val half = RULER_THICK_DP * density / 2f
+    return when (st.kind) {
+        BoardInstrument.RULER -> listOf(
+            (c - n * half - d * s) to (c - n * half + d * s),
+            (c + n * half - d * s) to (c + n * half + d * s)
+        )
+        BoardInstrument.SETSQUARE -> {
+            val a = c; val b = c + d * s; val e = c - n * s
+            listOf(a to b, a to e, b to e)
+        }
+        BoardInstrument.PROTRACTOR -> listOf((c - d * s) to (c + d * s))
+        else -> emptyList()
+    }
+}
+
+private fun projectOnSegment(p: Offset, a: Offset, b: Offset): Offset {
+    val ab = b - a
+    val len2 = ab.x * ab.x + ab.y * ab.y
+    if (len2 <= 0f) return a
+    val t = (((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / len2).coerceIn(0f, 1f)
+    return Offset(a.x + ab.x * t, a.y + ab.y * t)
+}
+
+/** آیا نقطه روی بدنهٔ ابزار است (برای جابه‌جایی)؟ */
+internal fun instrumentBodyHit(st: InstrumentState, p: Offset, density: Float): Boolean {
+    val v = p - st.center
+    val lx = v.x * st.dir.x + v.y * st.dir.y
+    val ly = v.x * st.nrm.x + v.y * st.nrm.y
+    val pad = 6f * density
+    return when (st.kind) {
+        BoardInstrument.RULER -> abs(lx) <= st.size + pad && abs(ly) <= RULER_THICK_DP * density / 2f + pad
+        BoardInstrument.SETSQUARE -> lx >= -pad && ly <= pad && (lx - ly) <= st.size + pad // مثلث (0,0),(s,0),(0,-s)
+        BoardInstrument.PROTRACTOR -> ly <= pad && ly >= -st.size - pad && v.getDistance() <= st.size + pad
+        BoardInstrument.COMPASS -> v.getDistance() <= 34f * density
+        BoardInstrument.NONE -> false
+    }
+}
+
+/** اگر نقطهٔ شروع نزدیک لبه/کمان باشد، هدف چسبیدن را برمی‌گرداند. */
+internal fun snapTargetOf(st: InstrumentState, p: Offset, density: Float): SnapTarget? {
+    val snapPx = 28f * density
+    if (st.kind == BoardInstrument.COMPASS) return SnapTarget(compass = true)
+    var best: SnapTarget? = null; var bestD = snapPx
+    instrumentEdges(st, density).forEachIndexed { i, (a, b) ->
+        val d = (p - projectOnSegment(p, a, b)).getDistance()
+        if (d < bestD) { bestD = d; best = SnapTarget(edge = i) }
+    }
+    if (st.kind == BoardInstrument.PROTRACTOR) {
+        val v = p - st.center
+        val ly = v.x * st.nrm.x + v.y * st.nrm.y
+        val d = abs(v.getDistance() - st.size)
+        if (ly <= 0f && d < bestD) { bestD = d; best = SnapTarget(arc = true) }
+    }
+    return best
+}
+
+/** نقطهٔ چسبیده روی هدف. */
+internal fun snapApply(st: InstrumentState, target: SnapTarget, p: Offset, density: Float): Offset {
+    val v = p - st.center
+    val r = v.getDistance()
+    return when {
+        target.compass || target.arc -> if (r <= 0f) st.center + st.dir * st.size else st.center + v * (st.size / r)
+        target.edge >= 0 -> instrumentEdges(st, density).getOrNull(target.edge)?.let { (a, b) -> projectOnSegment(p, a, b) } ?: p
+        else -> p
+    }
+}
+
+private const val RULER_THICK_DP = 44f
+
+/** رسم ابزار روی بوم (نیمه‌شفاف، با دستگیرهٔ آبی). */
+internal fun drawInstrument(canvas: Canvas, st: InstrumentState, density: Float) {
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0x55FDE68A }
+    val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.4f * density; color = 0xCC374151.toInt() }
+    val tick = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f * density; color = 0xCC374151.toInt() }
+    val txt = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF374151.toInt(); textSize = 9f * density; textAlign = Paint.Align.CENTER }
+    val handle = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xFF2563EB.toInt() }
+    val handleRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f * density; color = 0xFFFFFFFF.toInt() }
+    val deg = Math.toDegrees(st.angle.toDouble()).toFloat()
+    val cmPx = 10f * density * 1.6f // «سانتی‌متر» نمایشی (۱۶dp)
+    val save = canvas.save()
+    canvas.translate(st.center.x, st.center.y)
+    canvas.rotate(deg)
+    when (st.kind) {
+        BoardInstrument.RULER -> {
+            val t = RULER_THICK_DP * density / 2f
+            val r = RectF(-st.size, -t, st.size, t)
+            canvas.drawRoundRect(r, 4f * density, 4f * density, fill)
+            canvas.drawRoundRect(r, 4f * density, 4f * density, line)
+            var i = 0; var x = -st.size
+            while (x <= st.size) {
+                val len = when { i % 10 == 0 -> 12f; i % 5 == 0 -> 8f; else -> 5f } * density
+                canvas.drawLine(x, -t, x, -t + len, tick)
+                if (i % 10 == 0) canvas.drawText((i / 10).toString(), x, -t + len + 9f * density, txt)
+                x += cmPx / 10f; i++
+            }
+        }
+        BoardInstrument.SETSQUARE -> {
+            val path = Path().apply { moveTo(0f, 0f); lineTo(st.size, 0f); lineTo(0f, -st.size); close() }
+            canvas.drawPath(path, fill); canvas.drawPath(path, line)
+            // سوراخ میانی و علامت ۹۰°
+            canvas.drawCircle(st.size * 0.28f, -st.size * 0.28f, st.size * 0.1f, line)
+            canvas.drawRect(0f, -8f * density, 8f * density, 0f, tick)
+            var x = 0f; var i = 0
+            while (x <= st.size) { canvas.drawLine(x, 0f, x, if (i % 5 == 0) -7f * density else -4f * density, tick); x += cmPx / 5f; i++ }
+            var y = 0f; i = 0
+            while (y <= st.size) { canvas.drawLine(0f, -y, if (i % 5 == 0) 7f * density else 4f * density, -y, tick); y += cmPx / 5f; i++ }
+        }
+        BoardInstrument.PROTRACTOR -> {
+            val r = st.size
+            val rect = RectF(-r, -r, r, r)
+            canvas.drawArc(rect, 180f, 180f, true, fill)
+            canvas.drawArc(rect, 180f, 180f, true, line)
+            canvas.drawLine(-r, 0f, r, 0f, line)
+            canvas.drawCircle(0f, 0f, 3f * density, line)
+            for (a in 0..180) {
+                val rad = Math.toRadians(a.toDouble())
+                val len = when { a % 30 == 0 -> 14f; a % 10 == 0 -> 10f; a % 5 == 0 -> 7f; else -> 4f } * density
+                val cx = cos(rad).toFloat(); val sy = -sin(rad).toFloat()
+                canvas.drawLine(cx * r, sy * r, cx * (r - len), sy * (r - len), tick)
+                if (a % 30 == 0) {
+                    val tr = r - len - 8f * density
+                    canvas.drawText(a.toString(), cx * tr, sy * tr + 3f * density, txt)
+                }
+            }
+        }
+        BoardInstrument.COMPASS -> {
+            val dash = Paint(line).apply { pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f * density, 6f * density), 0f); color = 0x882563EB.toInt() }
+            canvas.drawCircle(0f, 0f, st.size, dash)
+            val apexX = st.size / 2f; val apexY = -st.size * 0.65f - 20f * density
+            val leg = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 4f * density; color = 0xFF6B7280.toInt(); strokeCap = Paint.Cap.ROUND }
+            canvas.drawLine(apexX, apexY, 0f, 0f, leg)
+            canvas.drawLine(apexX, apexY, st.size, 0f, leg)
+            canvas.drawCircle(apexX, apexY, 6f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF374151.toInt() })
+            canvas.drawCircle(0f, 0f, 4f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFDC2626.toInt() })
+            canvas.drawText("r", apexX, apexY - 9f * density, txt)
+        }
+        BoardInstrument.NONE -> Unit
+    }
+    canvas.restoreToCount(save)
+    val h = st.handle
+    canvas.drawCircle(h.x, h.y, 11f * density, handle)
+    canvas.drawCircle(h.x, h.y, 11f * density, handleRing)
+}
 
 private fun renderBoard(
     canvas: Canvas, w: Float, h: Float, bg: BoardBackground, items: List<BoardStroke>, density: Float,

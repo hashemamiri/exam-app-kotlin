@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +62,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -135,37 +135,80 @@ fun InteractiveImageEditorDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("ویرایش تصویر", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                // V137.2 — سربرگ (خواستهٔ کاربر): ✓ سبز راست، ✗ قرمز چپ، بدون عنوان؛ ابزارها اسکرولی بین آن‌ها.
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterHorizontally)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ImageToolButton(
-                        "چرخش به چپ",
-                        Icons.Outlined.RotateLeft,
-                        enabled = safeSource != null && !preparing
-                    ) {
-                        rotation = (rotation + 270) % 360
+                    Surface(color = Color(0xFF19945B), shape = RoundedCornerShape(16.dp)) {
+                        IconButton(
+                            enabled = !busy && !preparing && safeSource != null,
+                            onClick = {
+                                val preparedSource = safeSource ?: return@IconButton
+                                busy = true
+                                error = null
+                                scope.launch {
+                                    val crop = if (cropActive) {
+                                        CropGeometry.cropRect(
+                                            cropCenterX,
+                                            cropCenterY,
+                                            cropSide,
+                                            safePixels.width,
+                                            safePixels.height,
+                                            rotation
+                                        )
+                                    } else null
+                                    repository.prepare(
+                                        ImageEditRequest(preparedSource, crop, rotation, forceSquare)
+                                    ).onSuccess { onDone(it.uri) }
+                                        .onFailure {
+                                            error = it.message
+                                            busy = false
+                                        }
+                                }
+                            }
+                        ) { Icon(Icons.Outlined.Check, contentDescription = "اعمال و ذخیره", tint = Color.White) }
                     }
-                    ImageToolButton(
-                        if (forceSquare) "برش دایره‌ای پروفایل" else "برش مربعی",
-                        Icons.Outlined.Crop,
-                        selected = cropActive,
-                        enabled = safeSource != null && !preparing
+                    Row(
+                        Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        cropActive = if (forceSquare) true else !cropActive
-                        if (cropActive) {
-                            cropCenterX = .5f
-                            cropCenterY = .5f
-                            cropSide = .78f
+                        ImageToolButton(
+                            "چرخش به چپ",
+                            Icons.Outlined.RotateLeft,
+                            enabled = safeSource != null && !preparing
+                        ) {
+                            rotation = (rotation + 270) % 360
+                        }
+                        ImageToolButton(
+                            if (forceSquare) "برش دایره‌ای پروفایل" else "برش مربعی",
+                            Icons.Outlined.Crop,
+                            selected = cropActive,
+                            enabled = safeSource != null && !preparing
+                        ) {
+                            cropActive = if (forceSquare) true else !cropActive
+                            if (cropActive) {
+                                cropCenterX = .5f
+                                cropCenterY = .5f
+                                cropSide = .78f
+                            }
+                        }
+                        ImageToolButton(
+                            "چرخش به راست",
+                            Icons.Outlined.RotateRight,
+                            enabled = safeSource != null && !preparing
+                        ) {
+                            rotation = (rotation + 90) % 360
                         }
                     }
-                    ImageToolButton(
-                        "چرخش به راست",
-                        Icons.Outlined.RotateRight,
-                        enabled = safeSource != null && !preparing
-                    ) {
-                        rotation = (rotation + 90) % 360
+                    Surface(color = Color(0xFFD63B49), shape = RoundedCornerShape(16.dp)) {
+                        IconButton(enabled = !busy, onClick = onDismiss) {
+                            Icon(Icons.Outlined.Close, contentDescription = "انصراف", tint = Color.White)
+                        }
                     }
                 }
 
@@ -297,35 +340,6 @@ fun InteractiveImageEditorDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(color = Color(0xFF19945B), shape = RoundedCornerShape(16.dp)) {
-                        IconButton(
-                            enabled = !busy && !preparing && safeSource != null,
-                            onClick = {
-                                val preparedSource = safeSource ?: return@IconButton
-                                busy = true
-                                error = null
-                                scope.launch {
-                                    val crop = if (cropActive) {
-                                        CropGeometry.cropRect(
-                                            cropCenterX,
-                                            cropCenterY,
-                                            cropSide,
-                                            safePixels.width,
-                                            safePixels.height,
-                                            rotation
-                                        )
-                                    } else null
-                                    repository.prepare(
-                                        ImageEditRequest(preparedSource, crop, rotation, forceSquare)
-                                    ).onSuccess { onDone(it.uri) }
-                                        .onFailure {
-                                            error = it.message
-                                            busy = false
-                                        }
-                                }
-                            }
-                        ) { Icon(Icons.Outlined.Check, contentDescription = "اعمال و ذخیره", tint = Color.White) }
-                    }
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -337,11 +351,6 @@ fun InteractiveImageEditorDialog(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                             style = MaterialTheme.typography.labelMedium
                         )
-                    }
-                    Surface(color = Color(0xFFD63B49), shape = RoundedCornerShape(16.dp)) {
-                        IconButton(enabled = !busy, onClick = onDismiss) {
-                            Icon(Icons.Outlined.Close, contentDescription = "انصراف", tint = Color.White)
-                        }
                     }
                 }
             }

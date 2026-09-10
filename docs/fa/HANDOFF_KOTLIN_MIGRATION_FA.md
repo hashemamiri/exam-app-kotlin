@@ -18298,3 +18298,54 @@ StudentExamViewModel.kt: WHITEBOARD_MAX_PAGES=6 — سقف تصاویر تخته
 پین‌های موجود (V58_2: `StudentWhiteboardDialog(`؛ V58_0_2/V59_0: `private fun StudentWhiteboardEntry(`)
 حفظ شده‌اند؛ اسکن پین با مقایسهٔ HEAD/کار جاری بدون اختلاف.
 ```
+
+## V137.2 — ابزار هندسی تخته، ۲۱ محور تازه، تغییر اندازهٔ واقعی شیء، سربرگ ویرایشگر تصویر، ظاهر نئومورفیک، حرکت کارت‌ها
+
+### چه شد
+
+```text
+۱) تخته (StudentWhiteboardDialog.kt): BoardInstrument {NONE,RULER,SETSQUARE,PROTRACTOR,COMPASS} +
+   InstrumentState(kind, center, angle, size; dir/nrm/handle). ردیف «ابزار هندسی:» زیر ردیف ابزارها.
+   drawInstrument(canvas, st, density) فقط روی Canvas صفحه (بعد از renderBoard) → در exportBoard نیست.
+   در detectDragGestures: instMode = "handle" (فاصله تا handle < 30dp → چرخش/اندازه با atan2)،
+   "move" (instrumentBodyHit) یا null؛ برای قلم/خط: snapTargetOf → SnapTarget(edge|arc|compass)
+   در شروع ضربه قفل می‌شود و snapApply هر نقطه را روی همان لبه (projectOnSegment)/کمان (شعاع ثابت)
+   می‌نشاند. پرگار: هر کشیدن کمان به مرکز/شعاع پرگار. instrumentEdges: خط‌کش ۲ لبه، گونیا ۳ ضلع
+   (0,0),(s,0),(0,-s) در دستگاه محلی، نقاله خط پایه + کمان نیم‌دایرهٔ بالا.
+۲) ExamBuilderScreen.kt: questionPrefaceCount = 1 + … (آیتم راهنمای import شمرده نمی‌شد → کارت
+   بالاتر از سربرگ می‌رفت و انتهای کارت زیر سربرگ می‌نشست).
+۳/۵) mainscript.js: figNaturalSize (اندازهٔ طبیعی .qmf-fig با کلاس موقت .fig-measure؛ در dataset)،
+   applyFigScale (کلاس .fig-scaled + --nat-w/--nat-h/--sx/--sy → transform:scale از گوشهٔ راست‌بالا)،
+   fitFigBox (بدون اندازهٔ ذخیره‌شده: width/height کادر = اندازهٔ طبیعی شیء محدود به ستون؛ با اندازهٔ
+   ذخیره‌شده: scale). در markPreviewFiguresReady و در pointermove پس از تنظیم width/height.
+   webhost.css: قواعد .fig-measure / .fig-scaled (svg/img width:auto؛ .qmf-fig به اندازهٔ طبیعی و
+   scale). تست puppeteer: کشیدن دستگیرهٔ br از 324×254 به 384×314 → svg 379×309 (قبلاً 320×250 ثابت).
+   محورها زمینه/کادر ندارند (rect فقط در axgrid که خودِ شبکه است؛ .question-main-td .qmf-fig شفاف).
+۴) کاربر تأیید کرد در تست جدید محور دیده می‌شود؛ تغییری لازم نشد.
+۶) AxisSvgRenderer.kt: SUPPORTED = ۶ + ۲۱ نوع تازه؛ توابع numberBase/numberLineEx/numberLineLog/
+   numberLineTwo/cartesianBase/cartesianEx/dualAxis/logAxes/timeAxis + polar(withPoints)/threeD(withPoint).
+   کلیدهای X تازه: pts (متنی؛ «x,y;x,y» یا «v,v,v»)، lo/hi/lc/hc، x0/dir/cl، den، m/b، x1/y1/x2/y2/z1،
+   cx/cy/r، s1/s2، labs. FigureGallery.kt AXIS_FIGURES: ۲۷ قالب. FigurePickerDialog.kt: paramFields
+   برای هر نوع؛ "pts" به TEXT_PARAM_KEYS اضافه شد. graph_fig.js: AXIS_EXT؛ برای این انواع، svgOf از
+   ExamPrintBridge.renderFigure (data:image/svg+xml همان AxisSvgRenderer) یک <svg><image/></svg>
+   می‌سازد (منبع واحد رندر)؛ بدون پل (مرورگر) به نزدیک‌ترین محور پایه برمی‌گردد.
+   تست: هر ۲۷ SVG با harness JVM تولید و با Chrome رندر شد (well-formed، بدون NaN).
+۷) InteractiveImageEditorDialog.kt: عنوان «ویرایش تصویر» حذف؛ Row سربرگ = ✓ سبز (اول = راست در RTL)
+   / Row(weight+horizontalScroll) ابزارهای چرخش/برش / ✗ قرمز؛ ردیف پایین فقط «حجم تقریبی».
+   ExamImageStudioCore.kt: نوار بالا = ✓ سبز (IconButton؛ غیرفعال تا تصویر/سؤال) / چیپ‌های بخش‌ها
+   (image/draw/enhance/deskew؛ وقتی original != null) اسکرولی / ✗ قرمز؛ عنوان «تصویر سؤال — سؤال n»
+   و دکمهٔ «تایید و درج» حذف؛ ردیف چیپ‌های بخش از پایین حذف شد.
+۸) ProfileSettingsScreen.kt: سه کارت «ظاهر نئومورفیک — پالت رنگ / عمق سایه / پیش‌نمایش».
+۹) TeacherManagementCardsScreen.kt settle(): یک مسیر مشترک برای دو جهت (شاخهٔ direction == -1 حذف):
+   returnX/Y/Rotation/Scale/Alpha؛ پرواز ۳۴۰ms (بلندشدن liftPx=36dp، کج‌شدن ±۱۴°، scale ۱٫۰۶→۰٫۹۲،
+   محو از ۱۲۰ms)؛ بازگشت به پشته (cards.size ≤ 3) با spring(0.78, 260) از targetX*0.45. graphicsLayer:
+   dragLift (تا ۸٪ هنگام کشیدن)، returnScale/returnAlpha/returnRotation برای کارت returning.
+   تست‌های V55_18 و V55_18_1 به سوزن‌های تازه به‌روز شدند.
+```
+
+### تست
+
+```text
+verify_native_final PASS · git diff --check تمیز · اسکن پین تست‌ها: فقط سوزن‌های V55_18/V55_18_1
+عمداً به‌روز شدند · graph_fig.js/mainscript.js با node parse شدند · puppeteer: resize واقعی svg.
+```

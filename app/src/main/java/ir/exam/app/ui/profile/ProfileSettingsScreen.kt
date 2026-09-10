@@ -348,9 +348,10 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("ظاهر نئومورفیک ۶۹", style = MaterialTheme.typography.titleMedium)
+                    // V137.2 — «ظاهر نئومورفیک» (بدون ۶۹) و هر بخش در کارت جداگانه: پالت / عمق سایه / پیش‌نمایش.
+                    Text("ظاهر نئومورفیک — پالت رنگ", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "پالت و عمق سایه در DataStore دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
+                        "پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Row(
@@ -385,6 +386,13 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             }
                         }
                     }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("ظاهر نئومورفیک — عمق سایه", style = MaterialTheme.typography.titleMedium)
                     // V131 — لغزنده‌ها هنگام کشیدن هر فریم در DataStore نوشته می‌شدند و مقدار با تأخیر
                     // برمی‌گشت → لغزنده می‌پرید/برنمی‌گشت. حالا مقدار محلی است و در پایان کشیدن ذخیره می‌شود.
                     var depthDraft by remember(settings.neumorphicDepth) { mutableStateOf(settings.neumorphicDepth) }
@@ -403,6 +411,13 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                         valueRange = 8f..22f,
                         steps = 13
                     )
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("ظاهر نئومورفیک — پیش‌نمایش", style = MaterialTheme.typography.titleMedium)
                     Box(
                         Modifier
                             .fillMaxWidth()

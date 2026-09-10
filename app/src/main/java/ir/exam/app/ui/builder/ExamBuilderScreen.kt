@@ -163,7 +163,9 @@ fun ExamBuilderScreen(
     var innerReorderActive by remember { mutableStateOf(false) }
     // V62.7 — پیش‌نمایش دانش‌آموزی سؤال (شماره + سؤال) از آیکن چشم.
     var studentPreview by remember { mutableStateOf<Pair<Int, QuestionDraft>?>(null) }
-    val questionPrefaceCount = 2 + if (state.importedBy != null) 1 else 0
+    // V137.2 — ریشهٔ «انتهای کارت زیر هدر»: پیش از سؤال‌ها فقط یک آیتم (دکمهٔ مشخصات/سربرگ)
+    // هست، نه دو تا؛ با ۲، همیشه سؤالِ بعدی زیر هدر می‌نشست (یعنی انتهای کارت جاری).
+    val questionPrefaceCount = 1 + if (state.importedBy != null) 1 else 0
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {

@@ -54,7 +54,29 @@ val AXIS_FIGURES: List<FigureTemplate> = listOf(
     FigureTemplate("axq1", "ربع اول", """{"k":"g","t":"axq1","X":{"xmax":10,"ymax":8,"step":1}}"""),
     FigureTemplate("axgrid", "شبکهٔ شطرنجی", """{"k":"g","t":"axgrid","X":{"xmax":10,"ymax":8}}"""),
     FigureTemplate("axpol", "محور قطبی", """{"k":"g","t":"axpol","X":{"xmax":4}}"""),
-    FigureTemplate("ax3d", "سه‌بعدی (x,y,z)", """{"k":"g","t":"ax3d","X":{"xmax":4,"step":1}}""")
+    FigureTemplate("ax3d", "سه‌بعدی (x,y,z)", """{"k":"g","t":"ax3d","X":{"xmax":4,"step":1}}"""),
+    // V137.2 — ۲۰ نوع تازه.
+    FigureTemplate("axnumpts", "محور اعداد با نقطه", """{"k":"g","t":"axnumpts","X":{"xmin":-5,"xmax":5,"step":1,"pts":"-2,1.5,4"}}"""),
+    FigureTemplate("axnumint", "بازه روی محور", """{"k":"g","t":"axnumint","X":{"xmin":-5,"xmax":5,"step":1,"lo":-2,"hi":3,"lc":1,"hc":0}}"""),
+    FigureTemplate("axnumineq", "نامعادله روی محور", """{"k":"g","t":"axnumineq","X":{"xmin":-5,"xmax":5,"step":1,"x0":1,"dir":1,"cl":0}}"""),
+    FigureTemplate("axnumfrac", "محور اعداد کسری", """{"k":"g","t":"axnumfrac","X":{"xmin":0,"xmax":3,"step":1,"den":4}}"""),
+    FigureTemplate("axnumdec", "محور اعداد اعشاری", """{"k":"g","t":"axnumdec","X":{"xmin":0,"xmax":1,"step":0.1}}"""),
+    FigureTemplate("axnumblank", "محور اعداد بی‌عدد", """{"k":"g","t":"axnumblank","X":{"xmin":-5,"xmax":5,"step":1}}"""),
+    FigureTemplate("axnumlog", "محور لگاریتمی", """{"k":"g","t":"axnumlog","X":{"xmax":4}}"""),
+    FigureTemplate("axnumtwo", "دو محور موازی (تبدیل)", """{"k":"g","t":"axnumtwo","X":{"xmin":0,"xmax":10,"step":1,"m":2,"b":0,"s1":"A","s2":"B"}}"""),
+    FigureTemplate("axxypts", "مختصات با نقطه‌ها", """{"k":"g","t":"axxypts","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1,"pts":"1,2;-3,1;2,-2"}}"""),
+    FigureTemplate("axxyline", "مختصات با خط y=mx+b", """{"k":"g","t":"axxyline","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1,"m":1,"b":1}}"""),
+    FigureTemplate("axxyvec", "مختصات با بردار", """{"k":"g","t":"axxyvec","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1,"x1":0,"y1":0,"x2":3,"y2":2}}"""),
+    FigureTemplate("axxycirc", "مختصات با دایره", """{"k":"g","t":"axxycirc","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1,"cx":1,"cy":1,"r":2}}"""),
+    FigureTemplate("axxynogrid", "مختصات بدون شبکه", """{"k":"g","t":"axxynogrid","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1}}"""),
+    FigureTemplate("axxyquads", "مختصات با نام ربع‌ها", """{"k":"g","t":"axxyquads","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1}}"""),
+    FigureTemplate("axxyblank", "مختصات بی‌عدد", """{"k":"g","t":"axxyblank","X":{"xmin":-5,"xmax":5,"ymin":-4,"ymax":4,"step":1}}"""),
+    FigureTemplate("axdual", "دو محور y (چپ/راست)", """{"k":"g","t":"axdual","X":{"xmin":0,"xmax":10,"ymin":0,"ymax":100,"lo":0,"hi":10,"s1":"y₁","s2":"y₂"}}"""),
+    FigureTemplate("axlog", "نیم‌لگاریتمی", """{"k":"g","t":"axlog","X":{"xmax":10,"ymax":3}}"""),
+    FigureTemplate("axloglog", "تمام‌لگاریتمی", """{"k":"g","t":"axloglog","X":{"xmax":3,"ymax":3}}"""),
+    FigureTemplate("axtime", "محور زمان", """{"k":"g","t":"axtime","X":{"labs":"۸:۰۰,۹:۰۰,۱۰:۰۰,۱۱:۰۰,۱۲:۰۰","s1":"t"}}"""),
+    FigureTemplate("axpolpts", "قطبی با نقطه‌ها", """{"k":"g","t":"axpolpts","X":{"xmax":4,"pts":"2,30;3,120"}}"""),
+    FigureTemplate("ax3dpt", "سه‌بعدی با نقطه", """{"k":"g","t":"ax3dpt","X":{"xmax":4,"step":1,"x1":3,"y1":2,"z1":2}}""")
 )
 
 /** نمودارهای پرکاربرد (شناسه‌ها دقیقاً مطابق وب‌اپ). */

@@ -187,3 +187,19 @@ body{padding:0 !important;}
 .interactive-figure[style*="height"] .qmf-fig .an-stage{flex:1 1 auto;min-height:0;}
 .interactive-figure[style*="height"] .qmf-fig .an-frame{height:100%;}
 .interactive-figure[style*="height"] .qmf-fig .an-af{flex:0 0 auto;}
+
+/* ===================== V137.2 — تغییر اندازهٔ واقعیِ شیء با دستگیره‌ها =====================
+   .fig-measure: حالت موقتِ اندازه‌گیری (اندازهٔ طبیعی، بدون scale/زوم/محدودیت عرض).
+   .fig-scaled: شیء در اندازهٔ طبیعی (--nat-w/--nat-h) و با scale(--sx,--sy) از گوشهٔ راست‌بالا
+   دقیقاً هم‌اندازهٔ کادر ۸دستگیره؛ برای همهٔ انواع شیء یکسان. */
+.interactive-figure.fig-measure{width:auto !important;height:auto !important;max-width:none !important;}
+.interactive-figure.fig-measure .qmf-fig{width:max-content !important;max-width:none !important;height:auto !important;display:inline-block !important;transform:none !important;}
+.interactive-figure.fig-measure .qmf-fig svg,
+.interactive-figure.fig-measure .qmf-fig img{width:auto !important;height:auto !important;max-width:none !important;}
+.interactive-figure.fig-scaled[style]{overflow:visible;}
+.interactive-figure.fig-scaled[style] .qmf-fig{width:var(--nat-w) !important;height:var(--nat-h) !important;max-width:none !important;display:block !important;margin:0 !important;transform:scale(var(--sx,1),var(--sy,1));transform-origin:top right;will-change:transform;}
+.interactive-figure.fig-scaled[style] .qmf-fig svg,
+.interactive-figure.fig-scaled[style] .qmf-fig img{width:auto !important;height:auto !important;max-width:none !important;object-fit:fill !important;}
+.interactive-figure.fig-scaled[style] .qmf-fig .an-plate,
+.interactive-figure.fig-scaled[style] .qmf-fig .an-frame{height:auto;}
+@media print{.interactive-figure.fig-scaled[style] .qmf-fig{transform:scale(var(--sx,1),var(--sy,1));transform-origin:top right;}}

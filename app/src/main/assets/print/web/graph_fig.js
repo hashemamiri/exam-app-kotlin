@@ -205,6 +205,10 @@
     return 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * f) + ',' + Math.round(A[1] + (B[1] - A[1]) * f) + ',' + Math.round(A[2] + (B[2] - A[2]) * f) + ')';
   }
 
+  // V137.2 — شناسه‌های محورهای تازه (هم‌نام با AxisSvgRenderer.SUPPORTED).
+  var AXIS_EXT = ['axnumpts', 'axnumint', 'axnumineq', 'axnumfrac', 'axnumdec', 'axnumblank', 'axnumlog', 'axnumtwo',
+    'axxypts', 'axxyline', 'axxyvec', 'axxycirc', 'axxynogrid', 'axxyquads', 'axxyblank', 'axdual',
+    'axlog', 'axloglog', 'axtime', 'axpolpts', 'ax3dpt'];
   function svgOf(spec) {
     spec = spec || {};
     var t = spec.t || 'line';
@@ -212,6 +216,22 @@
     var title = X.title || '';
     var head = title ? '<text class="ttl" x="180" y="14" text-anchor="middle">' + esc(title) + '</text>' : '';
 
+
+    // V137.2 — ۲۱ نوع تازهٔ محور: منبع واحد رندر، AxisSvgRenderer.kt است؛ پیش‌نمایش چاپ از پل
+    // بومی (ExamPrintBridge.renderFigure → data:image/svg+xml) همان SVG را می‌گیرد تا خروجی
+    // سازنده/چاپ یکسان بماند. بدون پل (تست مرورگر) به نزدیک‌ترین محور پایه برمی‌گردد.
+    if (AXIS_EXT.indexOf(t) >= 0) {
+      try {
+        if (window.ExamPrintBridge && typeof ExamPrintBridge.renderFigure === 'function') {
+          var url = ExamPrintBridge.renderFigure(JSON.stringify(spec));
+          if (url && String(url).indexOf('data:') === 0) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 280" width="320" height="250" overflow="hidden">' +
+              '<image href="' + esc(url) + '" x="0" y="0" width="360" height="280" preserveAspectRatio="xMidYMid meet"/></svg>';
+          }
+        }
+      } catch (_e) {}
+      t = t.indexOf('axnum') === 0 ? 'axnum' : t === 'axpolpts' ? 'axpol' : t === 'ax3dpt' ? 'ax3d' : t === 'axtime' ? 'axnum' : 'axxy';
+    }
 
     // V136 — محورها (axnum/axxy/axq1/axgrid/axpol/ax3d)؛ پورت یک‌به‌یک AxisSvgRenderer.kt
     if (t === 'axnum' || t === 'axxy' || t === 'axq1' || t === 'axgrid' || t === 'axpol' || t === 'ax3d') {
