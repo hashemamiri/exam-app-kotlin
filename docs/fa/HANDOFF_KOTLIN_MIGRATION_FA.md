@@ -18511,3 +18511,64 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
   تخته، native_submit_queued_answer_v1)، ۴ تصحیح/مدیر/شارژ/تقویم.
 تست: V138_SiteSkeletonTest.kt.
 ```
+
+## V139 — سایت فاز ۲: سازندهٔ آزمون
+
+- فایل جدید `site/src/builder.js` (در build_site.py بعد از app.js الحاق می‌شود؛ ماژول `window.SiteBuilder`). app.js توابع کمکی خود را در `window.ExamSite` صادر می‌کند (el/rpc/rpcObj/confirmDlg/openPrintPreview/…؛ `__setUser` فقط برای تست بدون سرور).
+- مدل سؤال آینهٔ `QuestionDraft`؛ `decodeQuestion`/`encodeQuestions` عیناً `ExamQuestionCodec` (کلیدهای پاسخ از سؤال عمومی حذف و در `answer_key[{i,…}]` می‌روند). payload ذخیره کلید به کلید همان `SupabaseExamBuilderRepository.save` → `native_save_exam_v2(p_payload)`؛ پاسخ `{error,balance,required,code,cost,…}` مثل اپ تفسیر می‌شود.
+- مخاطبان: `my_classes`، `my_students_for_pick`، `native_teacher_schools_v61`، `get_exam_audience`، `native_exam_audience_schools_v61`. بانک: `native_bank_snapshot_v1`، `native_bank_add_v2`.
+- آپلود تصویر: Storage REST به باکت `exam-images` با مسیر `questions|option_images/<teacher>/<exam>/<uuid>.webp` (upsert=false) و publicUrl؛ در حالت چاپی تصویر به‌صورت data: ذخیره و هنگام تبدیل به آنلاین آپلود می‌شود.
+- درج شکل: iframe موتور چاپ باز می‌شود، یک textarea مخفی `#qTxt_main` با متن سؤال ساخته و `__qmfActiveField` روی آن تنظیم می‌شود؛ `GeoFig/GraphFig/TableFig/PeriodicFig/AnatomyFig/ScienceFig.open(null,null)`؛ رویداد input روی textarea مخفی توکن `%%FIG:{…}%%` را به سؤال برمی‌گرداند.
+- پیش‌نمایش: `openPrintPreview(payload,{onSnapshot})` هنگام بستن `ExamPrintRenderer.layoutSnapshot()` را می‌گیرد و مانند `ExamBuilderViewModel.applyFigLayouts` به spans/alignSpans/figLayouts/sepExtraPx سؤال‌ها اعمال می‌کند؛ `buildPrintPayload` اکنون `figLayoutsJson`/`sepExtraPx` را هم می‌فرستد.
+- آزمون چاپی محلی: `localStorage["examsite.printexams.v1"]` (مثل PrintExamStore)؛ پیش‌نویس: `examsite.builderdraft.v1`.
+- گفتار: Web Speech API (Chrome/Edge) فارسی/انگلیسی؛ پنجره فقط با دکمهٔ کاربر بسته می‌شود.
+- تست: `V139_SiteBuilderTest`. هنوز نشده: فاز ۳ (شرکت دانش‌آموز + تخته)، فاز ۴ (تصحیح/مدیر/شارژ)، صوت سؤال در سایت.
+
+## V140 — سایت فاز ۳: پنل دانش‌آموز
+
+- فایل جدید `site/src/student.js` (ماژول `window.SiteStudent`؛ بعد از builder.js الحاق می‌شود). صفحهٔ `join` در app.js به آن مسیردهی می‌شود.
+- codec: `sanitize`/`decodeExam` آینهٔ `StudentExamPayloadCodec` (حذف کلیدهای پاسخ، `expires_at/server_now` → مهلت محلی، `attempts_*`)؛ `stableShuffle` بیت‌به‌بیت `StableExamShuffle` (BigInt، ماسک ۳۲ بیت، seedهای `student:exam:index:options`, `…:questions`, `…:matching`).
+- نشست فعال: `localStorage["examsite.student.active.v1"]` (آینهٔ ActiveExamSessionEntity: payload پاک‌شده + deadline)؛ پیش‌نویس: `examsite.student.draft.v1.<examId>` = {answers, images}.
+- ارسال: `native_submit_queued_answer_v1` با `p_responses` به ترتیب originalIndex (ChoiceAnswer = اندیس اصلی گزینه، Boolean، متن، matching={left:rightOriginal})، `p_images` {qid:[url]}، `p_meta{native,queued,created_at_epoch_ms,monitor_report,web:true}`. گزارش نظارتی مثل `monitorReport()` اپ؛ رویدادها: `app_leave` (visibilitychange)، `window_blur`؛ ارسال حداکثر هر ۵ ثانیه + هر ۶۰ ثانیه.
+- تصاویر پاسخ در حین آزمون به‌صورت data: (WebP) نگه داشته و هنگام ارسال به `exam-images/answers/<student>/<exam>/<question>/<uuid>.webp` آپلود می‌شوند.
+- تخته: canvas 1400×1000، چند صفحه (≤۶ = WHITEBOARD_MAX_PAGES)، هر ثبت جایگزین صفحه‌های قبلی (مثل V137.1)، زمینه‌ها: blank/lined/grid/line/quad/first/polar.
+- رندر متن سؤال: iframe مخفی موتور چاپ (`renderRichText`) + فقط قواعد CSS ریاضی/شکل، اسکوپ‌شده زیر `.st-exam` (تزریق کل CSS موتور، استایل سایت را خراب می‌کند — تجربه‌شده).
+- تست: `V140_SiteStudentTest`. باقی‌مانده: فاز ۴ (تصحیح، مدیر، شارژ، تقویم)، صوت ضبط پاسخ.
+
+## V141 — سایت فاز ۴: تصحیح، مدیر، شارژ، تقویم
+
+- فایل جدید `site/src/admin.js` (ماژول `window.SiteAdmin` = {gradingPage, answerDetail, topUpCard, managerTeachersPage, managerSchoolPage, calendarPage, J}؛ بعد از student.js در `build_site.py` الحاق می‌شود). app.js: صفحه‌های `grading`/`calendar`/`school`/`teachers` به آن مسیردهی می‌شوند؛ `pageWallet` برای معلم/مدیر `topUpCard` را اضافه می‌کند؛ `pageGrades` دکمهٔ «جزئیات» → `answerDetail`. منوی «تقویم و پیام‌ها» برای معلم و دانش‌آموز.
+- تصحیح: خواندن `exams`/`exam_keys`/`answers` با select (همان SupabaseGradingRepository)؛ نمرهٔ خودکار سؤال‌های عینی سمت مرورگر (`autoScore`: correctOption/correctIndex، correctAnswer، accept[]، answer±tolerance، matchAnswer)؛ ذخیره با `native_save_grade(p_answer,p_grades[],p_feedback)`؛ تب‌ها: تصحیح، سؤال‌به‌سؤال (`native_bulk_save_question_grades_v1` + `native_finalize_bulk_grades_v1`)، حضور/زنده (`exam_attendance`, `exam_live_status` هر ۳۰ ثانیه، `extend_student_time`, `reset_student_attempt`)، نظارت (`native_monitor_list_v1` → rows[].report)، تحلیل (`native_question_analysis_v1`)، بانک بازخورد (`fb_list/fb_add/native_feedback_update_v1/native_feedback_delete_v1`).
+- شارژ: Edge Function `wallet-payment` با `{amount_toman}` از طریق `S.http('/functions/v1/wallet-payment')`؛ اگر `credited` → تازه‌سازی، وگرنه باز کردن `url` فقط اگر میزبان zarinpal/idpay/supabase باشد (مثل اپ).
+- تقویم: الگوریتم jalaali-js (breaks + jalCal/g2d/d2g) — نسخهٔ اولیه اشتباه بود؛ بررسی: ۱۴۰۵/۱/۱ = 2026-03-21، ۱۴۰۳ کبیسه، ۱۴۰۴ غیرکبیسه. RPCها: `cal_month`, `holidays_for`, `cal_day`, `cal_save_note`, `cal_delete_note`, `cal_unseen_v59`/`cal_mark_seen_v59`؛ مخاطب از `my_classes`, `my_students_for_pick`, `native_teacher_schools_v61`.
+- مدیر: `native_manager_teachers_v37`, دعوت `_v62`/`_v40b`، `native_manager_transfer_wallet_v38(p_operation uuid)`, `native_manager_teacher_classes_v40c`, `native_manager_change_teacher_class_v41` (پاسخ `approval_required` نمایش داده می‌شود)، `native_manager_class_roster_v40c`, `native_manager_school_students_v40c`, `native_manager_set_class_student_v40c`.
+- CSS تازه در site.css: `.g-wrap/.g-list/.g-item/.g-q/.g-bar/.cal/.cal-d/.cal-ev`. تست: `V141_SitePhase4Test`. با این نسخه هر چهار فاز سایت تحویل شده است؛ باقی‌مانده: ضبط صوت پاسخ در مرورگر، بازبینی روی داده‌های واقعی با کلید anon.
+
+## V142 — سایت فاز ۵: دانش‌آموزان، مدرسه، درخواست‌ها، بانک
+
+- فایل جدید `site/src/school.js` (ماژول `window.SiteSchool` = {studentsPage, rosterDlg, classShareChip, joinSchoolCard, managerRequestsCard, bankPage, studentForm, bulkForm, manageStudent}؛ بعد از admin.js الحاق می‌شود). app.js: `pageStudents`/`rosterDlg` به آن مسیردهی می‌شوند، ستون «اشتراک با مدیر» کلاس‌ها → `classShareChip`، داشبورد معلم → `managerRequestsCard` (اگر خالی باشد پنهان)، پروفایل معلم → `joinSchoolCard`، صفحهٔ جدید `bank` در منوی معلم.
+- حساب دانش‌آموز فقط از Edge Function `manage-student` (`S.http('/functions/v1/manage-student')`) با actionهای create/update/reset_password/delete/bulk — همان SupabaseSchoolRepository؛ اعتبارسنجی کلاینت: نام کاربری `^[a-z0-9_]{4,20}$`، رمز ۸..۷۲، جنسیت male|female. پس از create/update، `native_save_student_extra_v28` (نام پدر/پایه/رشته). رمز فقط یک بار در دیالوگ «اطلاعات ورود» نمایش داده می‌شود (کپی).
+- پاسخ bulk: کلیدهای `created|results|items` و `failures|errors` هر دو پذیرفته می‌شوند (قرارداد دقیق تابع را در `supabase/functions/manage-student/index.ts` ببینید؛ اگر فرق داشت فقط `bulkForm` را اصلاح کنید).
+- سازنده: حالت `state.bankEdit` (از `S.go('builder', {bankEdit:{id,subject,cats,question}})`) → فقط یک سؤال، بدون عنوان/مدت/مشخصات، دکمهٔ «ذخیره در بانک» → `native_bank_update_question_v1` یا `native_bank_add_v2` با `p_question` = public+key بدون `i` (مثل اپ)؛ پیش‌نویس مرورگر در این حالت ذخیره نمی‌شود.
+- تست: `V142_SitePhase5Test`. باقی‌مانده برای فاز ۶: گزارش کلاس (ReportsScreen) + Excel، صدور/وارد کردن آزمون و پشتیبان، ضبط صوت، ورود گوگل، بازیابی رمز، حذف حساب.
+
+## V143 — سایت فاز ۶: گزارش، صدور/وارد کردن، پشتیبان، صوت، گوگل، بازیابی رمز، حذف حساب
+
+- فایل جدید `site/src/extras.js` (ماژول `window.SiteExtras`؛ آخرین فایل در build_site.py). app.js: صفحهٔ `reports`، دکمهٔ صدور در `examActions`، «وارد کردن» در فهرست آزمون‌ها، Excel در کارنامه، کارت‌های پشتیبان/حذف حساب در پروفایل، دکمهٔ گوگل + «فراموشی رمز» در دیالوگ ورود، `handleOAuthReturn()` در `boot()`، `api.sendRecoveryOtp/verifyRecoveryOtp` (مثل SupabaseAuthRepository: OTP بدون createUser → `native_my_profile` → username).
+- گزارش کلاس مثل ReportsViewModel: `class_roster` + جدول `answers` (فقط graded، بیشینهٔ تلاش‌ها) + `total_score` آزمون؛ XLSX با ZIP ذخیره‌ای (بدون فشرده‌سازی، CRC32) و inlineStr — با openpyxl آزمایش شد.
+- بستهٔ آزمون: عیناً ExamPackageCodec (`EXAMPKG1\n` + base64(JSON{_app:'exam-system',_kind:'exam',_v:2,exam{…questions: public+key بدون i}}))؛ ورودی هر سه شکل (تگ/JSON خام/base64) پذیرفته می‌شود؛ باز شدن در سازنده با `S.go('builder',{importPkg,fresh:true})` → ذخیره به‌عنوان آزمون جدید.
+- پشتیبان: `native_export_backup_v3` → JSON (سقف ۲۰MB)؛ بازیابی: اعتبارسنجی کلاینت مثل `parseBackup` (_app exam-native، _kind backup، _version 1..4، ≤200 آزمون، ≤500 کلاس، ≤10000 سؤال) → `native_restore_backup_v3(p_operation,p_bundle,p_options{exams,classes,memberships,header})`.
+- صوت: MediaRecorder (ترجیح audio/mp4، بعد webm/opus) یا فایل؛ آپلود در `exam-images/audio/<teacher>/<exam>/<uuid>.<ext>` (اپ همیشه .m4a می‌فرستد؛ سایت پسوند واقعی را می‌گذارد — پخش در اپ از URL است و مشکلی ندارد)؛ `q.audio/audioBytes/audioMs` مثل ExamQuestionCodec. در حالت چاپی data: URL.
+- گوگل: OAuth implicit مرورگر `GET /auth/v1/authorize?provider=google&redirect_to=<آدرس سایت>`؛ توکن‌ها از hash خوانده و در نشست ذخیره می‌شوند، سپس `native_set_registration_role_v1(p_role)`. پیش‌نیاز: آدرس سایت در Supabase → Authentication → URL Configuration → Redirect URLs اضافه شود؛ روی file:// کار نمی‌کند (پیام می‌دهد).
+- حذف حساب: `manage-student` با `{action:'delete_account'}` و همان پیام «نسخهٔ سرور به‌روز نیست» برای «عملیات ناشناخته».
+- تست: `V143_SitePhase6Test`. با این نسخه فهرست مقایسهٔ سایت/اپ (موارد ۱–۱۱) کامل شده است.
+
+## V143.1 — نوار ابزار آیکونی کادر متن سؤال (سایت)
+
+- builder.js: دکمه‌های `.b-tools` از `btn light sm` با متن به `tool-btn` (فقط ایموجی + `title`/`aria-label`) تغییر کردند؛ کلاس `on` + شبه‌عنصر ✓ برای وضعیت «صوت دارد». CSS: `.tool-btn` در site.css (۳۸×۳۸، hover آبی).
+
+## V143.2 — تراشهٔ توکن‌ها در کادر متن سؤال سایت (آینهٔ FigTokenVisuals)
+
+- builder.js: `tokenTextarea(ta)` یک روکش `.b-ta-mask` روی textarea می‌گذارد که با `maskedHtml()` توکن‌های `%%FIG:{json}%%` را به «⟦برچسب⟧» (همان `FigTokenVisuals.chipLabel`: t=جدول، p=جدول تناوبی، a=آناتومی/تصویر، s=فیزیک/شیمی، وگرنه X.title) و `$…$` را به «⟦فرمول⟧» تبدیل می‌کند. روکش فقط وقتی توکن هست و کادر فوکوس ندارد دیده می‌شود (`.has-token:not(.editing)`)؛ مقدار textarea همیشه متن خام است.
+- پیش‌نمایش زنده `.b-live` با iframe مخفی موتور چاپ (`renderRichText`) و CSS اسکوپ‌شده زیر `.b-live` (همان روش student.js؛ کل CSS موتور تزریق نمی‌شود). تأخیر ۲۰۰ms.
+- همهٔ درج‌ها (فرمول، شکل، گفتار) پس از تغییر `ta.value` رویداد `input` می‌فرستند تا روکش و پیش‌نمایش به‌روز شود.

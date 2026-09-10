@@ -193,3 +193,118 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 .soon b{color:var(--brand)}
 code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direction:ltr;display:inline-block}
 .warn-key{background:var(--warn-soft);border:1px solid #f8dcae;color:#7c4a03;border-radius:12px;padding:12px 16px;margin:0 auto 18px;max-width:1100px;font-size:14px}
+
+/* ---- فاز ۲: سازندهٔ آزمون ---- */
+.builder .b-top .grid3{margin-bottom:0}
+.b-body{display:grid;grid-template-columns:320px 1fr;gap:16px;margin-top:16px;align-items:start}
+.b-list{position:sticky;top:76px;max-height:calc(100vh - 100px);overflow:auto}
+.b-add{display:flex;flex-wrap:wrap;gap:6px}
+.b-add .btn{flex:1 1 45%;justify-content:center;padding:6px 8px;font-size:12px}
+.b-qs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.b-q{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:#fff;font-size:13px}
+.b-q:hover{border-color:var(--brand)}
+.b-q.on{border-color:var(--brand);background:var(--brand-soft)}
+.b-q .n{min-width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.b-q .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tool-btn{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:18px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;position:relative;transition:.15s}
+.tool-btn:hover{border-color:var(--brand);background:var(--brand-soft)}
+.tool-btn.on{border-color:var(--brand);background:var(--brand-soft);box-shadow:inset 0 0 0 1px var(--brand)}
+.tool-btn.on::after{content:'✓';position:absolute;top:-5px;left:-5px;background:var(--brand);color:#fff;font-size:10px;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.b-imgs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.b-img{position:relative;width:110px;height:90px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.b-img img{width:100%;height:100%;object-fit:contain}
+.b-img .x{position:absolute;top:4px;left:4px;border:0;background:var(--danger);color:#fff;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px}
+.b-type{border-top:1px dashed var(--line);padding-top:12px;margin-top:6px}
+.b-type h4,.b-editor h4{margin:0 0 10px;font-size:14px;color:var(--ink-2)}
+.b-opt{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.b-opt input[type=text],.b-opt select{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;background:#fff}
+.b-opt .thumb{width:44px;height:36px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#fff}
+.b-aud{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px 14px;max-height:260px;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+.b-bank{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow:auto}
+.b-bank-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px}
+.modal.wide{max-width:860px;width:min(860px,94vw)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+@media (max-width:900px){.b-body{grid-template-columns:1fr}.b-list{position:static;max-height:none}.grid4{grid-template-columns:1fr 1fr}}
+
+/* ---- فاز ۳: پنل دانش‌آموز ---- */
+.st-head{display:flex;align-items:center;gap:12px;position:sticky;top:64px;z-index:5}
+.st-timer{font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;padding:6px 12px;border-radius:10px;background:var(--brand-soft);color:#173d9c}
+.st-timer.danger{background:var(--danger-soft);color:#8a1f16;animation:blink 1s step-start infinite}
+@keyframes blink{50%{opacity:.55}}
+.st-nav{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.st-dot{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px}
+.st-dot.done{background:var(--ok-soft);border-color:#bfe6cd}
+.st-dot.on{border:2px solid var(--brand);font-weight:700}
+.st-qtext{line-height:2;margin-bottom:12px}
+.st-imgs{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.st-imgs img{max-width:260px;max-height:220px;border:1px solid var(--line);border-radius:10px;cursor:zoom-in;background:#fff}
+.st-answer{border-top:1px dashed var(--line);padding-top:12px}
+.st-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;background:#fff}
+.st-opt.on{border-color:var(--brand);background:var(--brand-soft)}
+.st-optlabel{font-weight:700;color:var(--muted);min-width:28px}
+.st-opt .thumb,.st-mr .thumb,.st-ml .thumb{width:64px;height:52px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#fff}
+.st-input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px}
+.st-match-right{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;padding:10px;background:var(--bg);border-radius:10px;margin-bottom:10px}
+.st-ml{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.st-chips{display:flex;gap:4px;flex-wrap:wrap}
+.st-chips .chip{cursor:pointer}
+.st-imgsec{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
+.chip.warn{background:var(--warn-soft);color:#7c4a03}
+/* تخته */
+.engine-bg.wb{display:flex;flex-direction:column;background:#eceff4}
+.wb-bar{flex-wrap:wrap;gap:6px}
+.wb-tool{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;border-radius:8px;width:36px;height:34px;cursor:pointer;font-size:15px}
+.wb-tool.on{background:#fff;color:#111}
+.wb-sel{border-radius:8px;padding:6px;border:0}
+.wb-color{width:34px;height:34px;border:0;background:transparent;padding:0;cursor:pointer}
+.wb-size{width:90px}
+.wb-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:12px}
+.wb-canvas{background:#fff;box-shadow:0 6px 30px rgba(0,0,0,.15);max-width:100%;max-height:100%;touch-action:none;cursor:crosshair}
+
+/* ---- فاز ۴: تصحیح / مدیر / تقویم ---- */
+.g-wrap{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
+.g-list{display:flex;flex-direction:column;gap:6px;max-height:75vh;overflow:auto}
+.g-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+.g-item.on{border-color:var(--brand);background:var(--brand-soft)}
+.g-q{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fff}
+.g-qtext{margin:8px 0;line-height:1.9;white-space:pre-wrap}
+.g-resp{margin-top:4px;font-size:14px}
+.ok-t{color:#155e35;font-weight:700}.warn-t{color:#7c4a03;font-weight:700}.err-t{color:#8a1f16;font-weight:700}
+.chip.ok{background:var(--ok-soft);color:#155e35}.chip.danger{background:var(--danger-soft);color:#8a1f16}
+.g-bar{position:relative;height:18px;background:var(--bg);border-radius:9px;min-width:90px;overflow:hidden}
+.g-bar div{height:100%;border-radius:9px}
+.g-bar span{position:absolute;inset:0;font-size:11px;display:flex;align-items:center;justify-content:center}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-h{text-align:center;font-weight:700;color:var(--muted);font-size:13px;padding:6px 0}
+.cal-d{min-height:86px;border:1px solid var(--line);border-radius:10px;padding:6px;cursor:pointer;background:#fff;font-size:12px;overflow:hidden}
+.cal-d:hover{border-color:var(--brand)}
+.cal-d.empty{border:0;background:transparent;cursor:default}
+.cal-d.hol .n{color:#c62828}
+.cal-d.today{border:2px solid var(--brand)}
+.cal-d .n{font-weight:700;font-size:14px;margin-bottom:4px}
+.cal-ev{background:var(--brand-soft);color:#173d9c;border-radius:6px;padding:2px 6px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev.hol{background:var(--danger-soft);color:#8a1f16}
+@media (max-width:900px){.g-wrap{grid-template-columns:1fr}.g-list{max-height:none}.cal-d{min-height:60px}}
+
+/* ---- فاز ۵: دانش‌آموزان / بانک ---- */
+.chip.warn{background:#fff3e0;color:#7c4a03}
+button.chip{cursor:pointer;border:0;font-family:inherit}
+label.g-item{cursor:pointer}
+.row input[type=search],.row select{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:inherit;background:#fff}
+
+/* ---- فاز ۶ ---- */
+.btn.danger{background:#c62828;color:#fff}
+.btn.light.sm.on{border-color:var(--brand);color:var(--brand)}
+
+/* ---- V143.2: تراشهٔ توکن‌ها در کادر متن سؤال + پیش‌نمایش زنده ---- */
+.b-ta-wrap{position:relative}
+.b-ta-wrap textarea{display:block}
+.b-ta-mask{position:absolute;inset:0;padding:10px;font-size:15px;line-height:1.7;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:auto;white-space:pre-wrap;word-break:break-word;cursor:text;display:none}
+.b-ta-wrap.has-token:not(.editing) .b-ta-mask{display:block}
+.b-ta-mask .ph{color:#9aa3b2}
+.b-chip{display:inline-block;padding:1px 8px;margin:0 2px;border-radius:8px;font-size:13px;font-weight:700;background:var(--brand-soft);color:var(--brand);white-space:nowrap;direction:rtl}
+.b-chip.tex{background:#fff3e0;color:#7c4a03}
+.b-live{margin-top:8px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;background:#fafbfe;line-height:1.9;font-size:15px;overflow:auto}
+.b-live::before{content:'پیش‌نمایش';display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.b-live img,.b-live svg{max-width:100%}

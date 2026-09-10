@@ -242,6 +242,8 @@
       await authApi.updateUser({password: password, data: {full_name: name, registration_role: 'manager'}});
       return currentProfile();
     },
+    sendRecoveryOtp: function (email) { return authApi.sendOtp(requireEmail(email), false); },
+    verifyRecoveryOtp: async function (email, code) { await authApi.verifyOtp(requireEmail(email), cleanCode(code)); var p = await rpcObj('native_my_profile', {}); if (p && p.error) throw new Error(String(p.error)); return p && p.username ? p.username : null; },
     changePassword: async function (pw) { validatePassword(pw); await authApi.updateUser({password: pw}); },
     updateUsername: function (u) { return rpcObj('native_update_my_username_v1', {p_username: u.trim().toLowerCase()}); },
     // معلم
@@ -339,6 +341,7 @@
   function closePrintOverlay() {
     if (!printCtx) return;
     var c = printCtx; printCtx = null;
+    if (c.onSnapshot) { try { var w = c.iframe.contentWindow; var snap = w.ExamPrintRenderer && w.ExamPrintRenderer.layoutSnapshot ? w.ExamPrintRenderer.layoutSnapshot() : '{}'; if (snap && snap !== '{}') c.onSnapshot(snap); } catch (e) {} }
     try { c.overlay.remove(); } catch (e) {}
     document.body.style.overflow = '';
     if (c.onClosed) c.onClosed();
@@ -355,7 +358,7 @@
     var iframe = el('iframe', {class: 'with-bar', title: 'print-engine'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
-    printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed};
+    printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
     iframe.addEventListener('load', function () {
       var w = iframe.contentWindow, tries = 0;
@@ -424,6 +427,8 @@
       var o = {id: index + 1, text: q.text || '', score: fmtScore(score), textAlign: q.align || 'right', fontFamily: q.font || 'default', fontSizeSp: Number(q.fontSize) || 16, bold: q.bold === true, italic: q.italic === true};
       if (Array.isArray(q.spans) && q.spans.length) o.textSpans = q.spans.map(function (s) { return {start: s.s, end: s.e, bold: !!s.b, italic: !!s.i, underline: !!s.u, color: s.c, size: s.z, font: s.f}; });
       if (Array.isArray(q.alignSpans) && q.alignSpans.length) o.alignSpans = q.alignSpans.map(function (s) { return {start: s.s, end: s.e, align: s.a}; });
+      if (q.figLayouts && typeof q.figLayouts === 'object' && Object.keys(q.figLayouts).length) o.figLayoutsJson = JSON.stringify(q.figLayouts);
+      if (Number(q.sepExtraPx) > 0) o.sepExtraPx = Number(q.sepExtraPx);
       var lines = q.answerLines != null ? Number(q.answerLines) : (type === 'long' ? 5 : 2);
       var style = q.answerLineStyle === 'blank' ? 'plain' : (q.answerLineStyle === 'grid' ? 'grid' : 'lined');
       var spacing = q.answerLineSpacingCm != null ? Number(q.answerLineSpacingCm) : 1.0;
@@ -537,7 +542,7 @@
         el('button', {class: 'btn lg soft', text: '🖨 پیش‌نمایش چاپ نمونه', onclick: demoPrint})
       ])
     ]);
-    var foot = el('footer', {html: 'آزمون‌ساز — نسخهٔ وب (فاز ۱) · همان بک‌اند برنامهٔ اندروید · <a href="https://github.com/hashemamiri/exam-app-kotlin" target="_blank" rel="noopener">مخزن پروژه</a>'});
+    var foot = el('footer', {html: 'آزمون‌ساز — نسخهٔ وب (فاز ۶) · همان بک‌اند برنامهٔ اندروید · <a href="https://github.com/hashemamiri/exam-app-kotlin" target="_blank" rel="noopener">مخزن پروژه</a>'});
     if (keyWarn) root.appendChild(el('div', {style: 'padding-top:14px'}, [keyWarn]));
     root.appendChild(top); root.appendChild(hero); root.appendChild(features); root.appendChild(roles); root.appendChild(tools); root.appendChild(foot);
   }
@@ -598,10 +603,16 @@
         });
         pw.querySelector('input').addEventListener('keydown', function (e) { if (e.key === 'Enter') b.click(); });
         m.appendChild(id); m.appendChild(pw); m.appendChild(b);
+        if (window.SiteExtras) m.appendChild(window.SiteExtras.googleButton('teacher'));
         m.appendChild(el('p', {class: 'center muted', style: 'margin:14px 0 0;font-size:13px'}, [
-          el('a', {href: '#', text: 'ورود با کد ایمیل / فراموشی رمز', onclick: function (e) { e.preventDefault(); state.otpMode = true; state.step = 'form'; draw(); }})
+          el('a', {href: '#', text: 'ورود با کد ایمیل', onclick: function (e) { e.preventDefault(); state.otpMode = true; state.step = 'form'; draw(); }}), el('span', {text: ' · '}),
+          el('a', {href: '#', text: 'فراموشی رمز', onclick: function (e) { e.preventDefault(); state.otpMode = 'recovery'; draw(); }})
         ]));
         m.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin-top:12px', text: 'دانش‌آموزان با نام کاربری و رمزی که معلم داده وارد می‌شوند. معلم و مدیر با نام کاربری یا ایمیل.'}));
+      } else if (state.otpMode === 'recovery' && window.SiteExtras) {
+        m.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'بازیابی رمز عبور با ایمیل حساب. پس از تأیید کد، رمز جدید بگذارید.'}));
+        window.SiteExtras.recoveryFlow(m, api, setMsg, busy, async function () { user = await currentProfile(); afterLogin(); });
+        m.appendChild(el('p', {class: 'center', style: 'margin-top:12px;font-size:13px'}, [el('a', {href: '#', text: 'بازگشت به ورود با رمز', onclick: function (e) { e.preventDefault(); state.otpMode = false; state.step = 'form'; draw(); }})]));
       } else {
         if (state.step === 'form') {
           var em = input('ایمیل', 'name@example.com', 'email', true);
@@ -717,10 +728,10 @@
   /* ---------------- پنل ---------------- */
   var MENUS = {
     teacher: [
-      ['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'],
-      ['grading', '✅', 'تصحیح'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']
+      ['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['bank', '🏦', 'بانک سؤال'], ['reports', '📈', 'گزارش‌ها'],
+      ['grading', '✅', 'تصحیح'], ['calendar', '📅', 'تقویم و پیام‌ها'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']
     ],
-    student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']],
+    student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['calendar', '📅', 'تقویم و پیام‌ها'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']],
     manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']]
   };
   var ROLE_LABEL = {teacher: 'معلم', student: 'دانش‌آموز', manager: 'مدیر / معاون'};
@@ -734,7 +745,7 @@
       ]),
       el('div', {class: 'menu'}, menu.map(function (it) {
         if (it === '-') return el('div', {class: 'sep'});
-        return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
+        return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
       })),
       el('div', {class: 'foot'}, [el('button', {class: 'btn light', style: 'width:100%', text: 'خروج از حساب', onclick: doLogout})])
     ]);
@@ -743,14 +754,14 @@
       el('div', {class: 'head'}, [
         el('button', {class: 'icon-btn hamb', html: '☰', onclick: function () { $('sidebar').classList.toggle('open'); }}),
         el('h1', {text: title}),
-        el('span', {class: 'chip brand', text: 'نسخهٔ وب · فاز ۱'})
+        el('span', {class: 'chip brand', text: 'نسخهٔ وب · فاز ۶'})
       ]),
       el('div', {id: 'content'})
     ]);
     root.appendChild(el('div', {class: 'app'}, [side, main]));
     var c = $('content');
     var pages = {dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
-      builder: soon('سازندهٔ آزمون (چاپی و آنلاین)', 'فاز ۲'), grading: soon('تصحیح و بازخورد', 'فاز ۴'), join: soon('شرکت در آزمون با کد + تختهٔ سفید', 'فاز ۳'), school: soon('مدیریت مدرسه، دعوت معلم و دانش‌آموزان', 'فاز ۴')};
+      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
   }
   function soon(title, phase) { return function (c) { c.appendChild(el('div', {class: 'soon', html: '<div style="font-size:40px">🚧</div><h3>' + esc(title) + '</h3>این بخش در <b>' + esc(phase) + '</b> سایت فعال می‌شود. فعلاً از برنامهٔ اندروید استفاده کنید.'})); }; }
@@ -766,6 +777,7 @@
       if (user.role === 'teacher') {
         var r = await Promise.all([api.exams().catch(function () { return []; }), api.classes().catch(function () { return []; }), api.students().catch(function () { return []; }), api.wallet().catch(function () { return {balance: 0}; })]);
         c.innerHTML = '';
+        if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());
         c.appendChild(el('div', {class: 'grid4'}, [statCard(fa(r[0].length), 'آزمون'), statCard(fa(r[1].length), 'کلاس'), statCard(fa(r[2].length), 'دانش‌آموز'), statCard(money(r[3].balance), 'موجودی کیف پول')]));
         var open = r[0].filter(function (x) { return x.is_open; });
         var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
@@ -779,7 +791,8 @@
         var graded = g.filter(function (x) { return x.graded_at; });
         var avg = graded.length ? graded.reduce(function (s, x) { return s + (Number(x.total_score) ? Number(x.total_grade) / Number(x.total_score) * 100 : 0); }, 0) / graded.length : 0;
         c.appendChild(el('div', {class: 'grid3'}, [statCard(fa(g.length), 'آزمون شرکت‌کرده'), statCard(fa(graded.length), 'تصحیح‌شده'), statCard(fa(Math.round(avg)) + '٪', 'میانگین درصد')]));
-        c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', text: 'شرکت در آزمون با کد و تختهٔ سفید در فاز ۳ سایت فعال می‌شود؛ فعلاً از برنامه استفاده کنید.'}));
+        c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', html: 'برای شرکت در آزمون، کد معلم را در بخش <b>شرکت در آزمون</b> وارد کنید.'}));
+        c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn', text: '🔑 شرکت در آزمون', onclick: function () { view.panel = 'join'; view.arg = null; render(); }}), (window.SiteStudent && window.SiteStudent.hasActive()) ? el('span', {class: 'chip warn', text: 'آزمون نیمه‌تمام دارید'}) : null]));
       } else {
         var s = await api.managerSummary();
         c.innerHTML = '';
@@ -809,10 +822,12 @@
   }
   function examActions(x, refresh) {
     var wrap = el('div', {class: 'acts'});
+    wrap.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { view.panel = 'builder'; view.arg = {examId: x.id}; render(); }}));
     wrap.appendChild(el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: function () { printExam(x); }}));
     wrap.appendChild(el('button', {class: 'icon-btn', title: x.is_open ? 'بستن آزمون' : 'بازکردن آزمون', html: x.is_open ? '🔒' : '🔓', onclick: async function () {
       try { await api.setExamOpen(x.id, !x.is_open); toast(x.is_open ? 'آزمون بسته شد.' : 'آزمون باز شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
+    if (window.SiteExtras) wrap.appendChild(el('button', {class: 'icon-btn', title: 'صدور فایل آزمون', html: '📤', onclick: function () { window.SiteExtras.exportExamDlg(x); }}));
     wrap.appendChild(el('button', {class: 'icon-btn', title: 'کپی آزمون', html: '⧉', onclick: async function () {
       if (!(await confirmDlg('کپی آزمون', 'از «' + esc(x.title) + '» یک نسخهٔ جدید ساخته می‌شود (هزینهٔ سؤال‌ها طبق تعرفه کسر می‌شود).', 'کپی'))) return;
       try { var r = await api.duplicateExam(x.id); toast('کپی شد؛ کد جدید: ' + (r.code || '') + (r.cost ? ' · هزینه ' + money(r.cost) : ''), 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
@@ -853,9 +868,10 @@
         });
       }
       q.addEventListener('input', draw);
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [q, el('span', {class: 'grow'}), el('span', {class: 'muted', text: fa(list.length) + ' آزمون'}), el('button', {class: 'btn', text: '➕ آزمون جدید', onclick: function () { view.panel = 'builder'; render(); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [q, el('span', {class: 'grow'}), el('span', {class: 'muted', text: fa(list.length) + ' آزمون'}), window.SiteExtras ? el('button', {class: 'btn light', text: '📥 وارد کردن', onclick: window.SiteExtras.importExam}) : null, el('button', {class: 'btn', text: '➕ آزمون جدید', onclick: function () { view.panel = 'builder'; view.arg = null; render(); }})]));
       c.appendChild(grid); draw();
     } catch (e) { showErr(c, e); }
+    if (window.SiteBuilder) c.appendChild(window.SiteBuilder.printExamsSection(function () { pageExams(c); }));
   }
 
   /* ---- کلاس‌ها ---- */
@@ -870,7 +886,7 @@
         el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'پسر', 'دختر', 'کل', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, list.map(function (k) {
           return el('tr', {}, [el('td', {html: '<b>' + esc(k.name) + '</b>'}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.boys || 0)}), el('td', {text: fa(k.girls || 0)}), el('td', {text: fa(k.total || 0)}),
-            el('td', {}, [el('span', {class: 'chip ' + (k.shared_with_manager ? 'ok' : 'off'), text: k.shared_with_manager ? 'بله' : 'خیر'})]),
+            el('td', {}, [window.SiteSchool ? window.SiteSchool.classShareChip(k, function () { pageClasses(c); }) : el('span', {class: 'chip ' + (k.shared_with_manager ? 'ok' : 'off'), text: k.shared_with_manager ? 'بله' : 'خیر'})]),
             el('td', {}, [el('div', {class: 'acts'}, [
               el('button', {class: 'icon-btn', title: 'فهرست دانش‌آموزان', html: '👥', onclick: function () { rosterDlg(k); }}),
               el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { classForm(k, function () { pageClasses(c); }); }}),
@@ -899,6 +915,7 @@
     function fld(l, v) { return el('div', {class: 'field'}, [el('label', {text: l}), el('input', {type: 'text', value: v})]); }
   }
   async function rosterDlg(k) {
+    if (window.SiteSchool) return window.SiteSchool.rosterDlg(k);
     var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
     var body = el('div'); loading(body);
     bg.appendChild(el('div', {class: 'modal wide'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '👥 دانش‌آموزان کلاس ' + k.name}), body]));
@@ -917,6 +934,7 @@
     ]);
   }
   async function pageStudents(c) {
+    if (window.SiteSchool) return window.SiteSchool.studentsPage(c);
     loading(c);
     try {
       var list = await api.students();
@@ -945,6 +963,7 @@
         el('tbody', {}, w.transactions.map(function (t) { var a = Number(t.amount) || 0; return el('tr', {}, [el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(t.created_at)}), el('td', {text: t.reason || '—'}), el('td', {class: 'tx-amt ' + (a >= 0 ? 'pos' : 'neg'), text: (a >= 0 ? '+' : '−') + money(Math.abs(a))}), el('td', {text: money(t.balance_after || 0)})]); }))
       ]));
       c.appendChild(card);
+      if (window.SiteAdmin && user.role !== 'student') c.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
     } catch (e) { showErr(c, e); }
   }
 
@@ -1018,6 +1037,9 @@
         sec.appendChild(el('div', {class: 'grid3'}, [el('div', {class: 'field ltr'}, [el('label', {text: 'نام کاربری'}), un]), el('div', {class: 'field'}, [el('label', {text: ' '}), bun])]));
       }
       c.appendChild(sec);
+      if (p.role === 'teacher' && window.SiteSchool) c.appendChild(window.SiteSchool.joinSchoolCard(function () { pageProfile(c); }));
+      if (p.role === 'teacher' && window.SiteExtras) c.appendChild(window.SiteExtras.backupCard());
+      if (p.role !== 'student' && window.SiteExtras) c.appendChild(window.SiteExtras.deleteAccountCard(async function () { saveSession(null); user = null; view.panel = 'dashboard'; render(); }));
     } catch (e) { showErr(c, e); }
   }
 
@@ -1028,7 +1050,7 @@
       var r = await Promise.all([api.myGrades().catch(function () { return []; }), api.myAnswers().catch(function () { return []; })]);
       var grades = r[0], answers = r[1];
       c.innerHTML = '';
-      var card = el('div', {class: 'card'}, [el('h3', {text: '📊 نمرات'})]);
+      var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null])]);
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));
       else card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'ارسال', 'نمره', 'درصد', 'بازخورد'].map(function (h) { return el('th', {text: h}); }))]),
@@ -1038,8 +1060,8 @@
       if (answers.length) {
         var card2 = el('div', {class: 'card'}, [el('h3', {text: '🗂 پاسخ‌های ارسال‌شده'})]);
         card2.appendChild(el('table', {class: 'tbl'}, [
-          el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'ارسال', 'وضعیت', 'نمره'].map(function (h) { return el('th', {text: h}); }))]),
-          el('tbody', {}, answers.map(function (a) { return el('tr', {}, [el('td', {text: a.title || 'آزمون'}), el('td', {text: a.subject || '—'}), el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(a.submitted_at)}), el('td', {}, [el('span', {class: 'chip ' + (a.graded ? 'ok' : 'off'), text: a.graded ? 'تصحیح‌شده' : 'در انتظار'})]), el('td', {text: a.graded ? fa(fmtScore(a.total_grade)) + ' / ' + fa(fmtScore(a.total_score)) : '—'})]); }))
+          el('thead', {}, [el('tr', {}, ['آزمون', 'درس', 'ارسال', 'وضعیت', 'نمره', ''].map(function (h) { return el('th', {text: h}); }))]),
+          el('tbody', {}, answers.map(function (a) { return el('tr', {}, [el('td', {text: a.title || 'آزمون'}), el('td', {text: a.subject || '—'}), el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(a.submitted_at)}), el('td', {}, [el('span', {class: 'chip ' + (a.graded ? 'ok' : 'off'), text: a.graded ? 'تصحیح‌شده' : 'در انتظار'})]), el('td', {text: a.graded ? fa(fmtScore(a.total_grade)) + ' / ' + fa(fmtScore(a.total_score)) : '—'}), el('td', {}, [el('button', {class: 'btn light sm', text: 'جزئیات', onclick: function () { if (window.SiteAdmin) window.SiteAdmin.answerDetail(a.id); }})])]); }))
         ]));
         c.appendChild(card2);
       }
@@ -1048,6 +1070,7 @@
 
   /* ---- معلم‌ها (مدیر) ---- */
   async function pageTeachers(c) {
+    if (window.SiteAdmin) return window.SiteAdmin.managerTeachersPage(c);
     loading(c);
     try {
       var list = await api.managerTeachers();
@@ -1065,6 +1088,7 @@
   /* ================================================================ راه‌اندازی */
   async function boot() {
     loadSession();
+    if (window.SiteExtras && KEY_READY) { try { await window.SiteExtras.handleOAuthReturn(); } catch (e) { console.warn(e); } }
     document.addEventListener('click', function (e) { var sb = $('sidebar'); if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.closest('.hamb')) sb.classList.remove('open'); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });
     if (session && KEY_READY) {
@@ -1073,6 +1097,11 @@
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint};
+  window.ExamSite = {openFormulaEditor: openFormulaEditor, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
+    user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
+    go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,
+    __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); } /* برای تست خودکار بدون سرور */};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
