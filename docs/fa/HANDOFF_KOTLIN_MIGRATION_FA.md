@@ -18572,3 +18572,9 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - builder.js: `tokenTextarea(ta)` یک روکش `.b-ta-mask` روی textarea می‌گذارد که با `maskedHtml()` توکن‌های `%%FIG:{json}%%` را به «⟦برچسب⟧» (همان `FigTokenVisuals.chipLabel`: t=جدول، p=جدول تناوبی، a=آناتومی/تصویر، s=فیزیک/شیمی، وگرنه X.title) و `$…$` را به «⟦فرمول⟧» تبدیل می‌کند. روکش فقط وقتی توکن هست و کادر فوکوس ندارد دیده می‌شود (`.has-token:not(.editing)`)؛ مقدار textarea همیشه متن خام است.
 - پیش‌نمایش زنده `.b-live` با iframe مخفی موتور چاپ (`renderRichText`) و CSS اسکوپ‌شده زیر `.b-live` (همان روش student.js؛ کل CSS موتور تزریق نمی‌شود). تأخیر ۲۰۰ms.
 - همهٔ درج‌ها (فرمول، شکل، گفتار) پس از تغییر `ta.value` رویداد `input` می‌فرستند تا روکش و پیش‌نمایش به‌روز شود.
+
+## V143.3 — ویرایشگر تراشه‌ای کادر متن سؤال (به‌جای روکش V143.2)
+
+- گزارش کاربر: با V143.2 هنگام کلیک روی کادر، کد خام توکن‌ها دیده می‌شد. حالا `tokenTextarea(ta)` textarea را مخفی می‌کند و یک `div.b-rich[contenteditable]` می‌سازد: `render(raw)` متن را به گره‌های متنی + `span.b-chip[data-tok][contenteditable=false]` تبدیل می‌کند؛ `serialize()` برعکس (data-tok → توکن، BR/DIV → \n). روی `input` نما، `ta.value` و رویداد `input` textarea به‌روز می‌شود (همان مسیر قبلی ذخیره). اگر کاربر خودش `$…$`/`%%FIG…%%` کامل تایپ کند بلافاصله تراشه می‌شود.
+- مکان‌نما: `caretToRaw()` selection نما را به `ta.selectionStart/End` خام نگاشت می‌کند (ابزارها همان textarea را می‌خوانند) و `placeCaret(pos)` پس از درج برنامه‌ای، مکان‌نما را برمی‌گرداند. paste فقط متن ساده.
+- برچسب تراشه (`figChipLabel`) آینهٔ `FigTokenVisuals.chipLabel`؛ توکن‌های بدون `k` (شکل هندسی قدیمی) → X.title یا «شکل/نمودار».

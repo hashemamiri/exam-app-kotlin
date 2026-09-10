@@ -317,14 +317,14 @@ label.g-item{cursor:pointer}
 .btn.danger{background:#c62828;color:#fff}
 .btn.light.sm.on{border-color:var(--brand);color:var(--brand)}
 
-/* ---- V143.2: تراشهٔ توکن‌ها در کادر متن سؤال + پیش‌نمایش زنده ---- */
+/* ---- V143.3: ویرایشگر تراشه‌ای کادر متن سؤال + پیش‌نمایش زنده ---- */
 .b-ta-wrap{position:relative}
-.b-ta-wrap textarea{display:block}
-.b-ta-mask{position:absolute;inset:0;padding:10px;font-size:15px;line-height:1.7;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:auto;white-space:pre-wrap;word-break:break-word;cursor:text;display:none}
-.b-ta-wrap.has-token:not(.editing) .b-ta-mask{display:block}
-.b-ta-mask .ph{color:#9aa3b2}
-.b-chip{display:inline-block;padding:1px 8px;margin:0 2px;border-radius:8px;font-size:13px;font-weight:700;background:var(--brand-soft);color:var(--brand);white-space:nowrap;direction:rtl}
+.b-rich{min-height:110px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px;line-height:1.8;background:#fff;white-space:pre-wrap;word-break:break-word;outline:none;text-align:right}
+.b-rich:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.b-rich:empty::before{content:attr(data-ph);color:#9aa3b2}
+.b-chip{display:inline-block;padding:0 8px;margin:0 2px;border-radius:8px;font-size:13px;font-weight:700;background:var(--brand-soft);color:var(--brand);white-space:nowrap;direction:rtl;cursor:pointer;user-select:all;vertical-align:baseline}
 .b-chip.tex{background:#fff3e0;color:#7c4a03}
+.b-chip:hover{outline:2px solid var(--brand)}
 .b-live{margin-top:8px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;background:#fafbfe;line-height:1.9;font-size:15px;overflow:auto}
 .b-live::before{content:'پیش‌نمایش';display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
 .b-live img,.b-live svg{max-width:100%}
@@ -1691,16 +1691,82 @@ label.g-item{cursor:pointer}
       try { box.innerHTML = w.renderRichText(String(text), null); } catch (e) { box.style.display = 'none'; }
     }, 200);
   }
-  /* کادر متن با روکش تراشه‌ها: در حالت عادی روکش دیده می‌شود؛ با کلیک/فوکوس، متن خام برای ویرایش نمایان است */
+  /* ویرایشگر تراشه‌ای (همیشه، حتی حین تایپ، توکن‌ها تراشه‌اند — مثل VisualTransformation اپ).
+     textarea مخفی منبع حقیقت و نقطهٔ اتصال ابزارها (selectionStart/End) می‌ماند؛ div contenteditable «نما» است. */
   function tokenTextarea(ta) {
-    var wrap = el('div', {class: 'b-ta-wrap'}); var mask = el('div', {class: 'b-ta-mask'});
+    var wrap = el('div', {class: 'b-ta-wrap'});
+    var rich = el('div', {class: 'b-rich', contenteditable: 'true', dir: 'rtl', spellcheck: 'false', 'data-ph': ta.placeholder || ''});
     var live = el('div', {class: 'b-live', style: 'display:none'});
     previewCss();
-    function sync() { mask.innerHTML = maskedHtml(ta.value) || '<span class="ph">' + esc(ta.placeholder || '') + '</span>'; wrap.classList.toggle('has-token', /\$[^$]+\$|%%FIG:/.test(ta.value)); livePreview(live, ta.value); }
-    ta.addEventListener('input', sync); ta.addEventListener('focus', function () { wrap.classList.add('editing'); }); ta.addEventListener('blur', function () { wrap.classList.remove('editing'); sync(); });
-    mask.addEventListener('click', function () { ta.focus(); });
-    wrap.appendChild(ta); wrap.appendChild(mask); sync();
-    return {wrap: wrap, live: live, sync: sync};
+    ta.style.display = 'none';
+    var TOKEN_RE = /%%FIG:(\{[\s\S]*?\})%%|\$([^$]+)\$/g;
+    function chip(tok, label, cls) { var c = el('span', {class: 'b-chip ' + cls, contenteditable: 'false', title: cls === 'tex' ? tok.slice(1, -1) : label, text: '⟦' + label + '⟧'}); c.setAttribute('data-tok', tok); return c; }
+    function render(raw) {
+      rich.innerHTML = ''; var last = 0, m; TOKEN_RE.lastIndex = 0;
+      while ((m = TOKEN_RE.exec(raw))) {
+        if (m.index > last) rich.appendChild(document.createTextNode(raw.slice(last, m.index)));
+        rich.appendChild(m[1] != null ? chip(m[0], figChipLabel(m[1]), 'fig') : chip(m[0], 'فرمول', 'tex'));
+        last = m.index + m[0].length;
+      }
+      if (last < raw.length) rich.appendChild(document.createTextNode(raw.slice(last)));
+    }
+    function serialize(node) {
+      var out = '';
+      Array.prototype.forEach.call(node.childNodes, function (n) {
+        if (n.nodeType === 3) out += n.nodeValue;
+        else if (n.nodeType === 1) {
+          if (n.getAttribute && n.getAttribute('data-tok')) out += n.getAttribute('data-tok');
+          else if (n.tagName === 'BR') out += '\n';
+          else { var block = /^(DIV|P)$/.test(n.tagName); if (block && out && !/\n$/.test(out)) out += '\n'; out += serialize(n); }
+        }
+      });
+      return out;
+    }
+    /* موقعیت مکان‌نما بر حسب متن خام → روی textarea مخفی می‌نشیند تا ابزارها همان‌جا درج کنند */
+    function caretToRaw() {
+      var sel = document.getSelection(); if (!sel || !sel.rangeCount || !rich.contains(sel.anchorNode)) return;
+      function off(node, o) { var r = document.createRange(); r.setStart(rich, 0); r.setEnd(node, o); var f = r.cloneContents(); var d = document.createElement('div'); d.appendChild(f); return serialize(d).length; }
+      try { var a = off(sel.anchorNode, sel.anchorOffset), b = off(sel.focusNode, sel.focusOffset); ta.selectionStart = Math.min(a, b); ta.selectionEnd = Math.max(a, b); } catch (e) {}
+    }
+    function placeCaret(rawPos) {
+      /* مکان‌نما را در نما روی موقعیت خام می‌گذارد (بعد از درج ابزار) */
+      var pos = 0, sel = document.getSelection(), r = document.createRange(); var done = false;
+      function walk(n) {
+        if (done) return;
+        if (n.nodeType === 3) { var len = n.nodeValue.length; if (pos + len >= rawPos) { r.setStart(n, Math.max(0, rawPos - pos)); done = true; return; } pos += len; }
+        else if (n.nodeType === 1 && n.getAttribute && n.getAttribute('data-tok')) { var l2 = n.getAttribute('data-tok').length; if (pos + l2 >= rawPos) { r.setStartAfter(n); done = true; return; } pos += l2; }
+        else if (n.nodeType === 1 && n.tagName === 'BR') { pos += 1; if (pos >= rawPos) { r.setStartAfter(n); done = true; return; } }
+        else Array.prototype.forEach.call(n.childNodes, walk);
+      }
+      walk(rich);
+      if (!done) { r.selectNodeContents(rich); r.collapse(false); } else r.collapse(true);
+      try { sel.removeAllRanges(); sel.addRange(r); } catch (e) {}
+    }
+    var fromRich = false;
+    rich.addEventListener('input', function () {
+      var raw = serialize(rich);
+      /* اگر کاربر خودش $…$ یا %%FIG…%% کامل تایپ کرد، به تراشه تبدیل شود */
+      var hasNewTok = false; TOKEN_RE.lastIndex = 0; var m; while ((m = TOKEN_RE.exec(raw))) { hasNewTok = true; break; }
+      var chipCount = rich.querySelectorAll('[data-tok]').length, tokCount = (raw.match(TOKEN_RE) || []).length;
+      fromRich = true; ta.value = raw; ta.dispatchEvent(new Event('input')); fromRich = false;
+      if (hasNewTok && tokCount !== chipCount) { caretToRaw(); var p = ta.selectionStart; render(raw); placeCaret(p); }
+      livePreview(live, raw);
+    });
+    ['keyup', 'mouseup', 'focus'].forEach(function (ev) { rich.addEventListener(ev, caretToRaw); });
+    document.addEventListener('selectionchange', function () { if (document.activeElement === rich) caretToRaw(); });
+    rich.addEventListener('paste', function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+    /* کلیک روی تراشهٔ فرمول → ویرایش همان فرمول */
+    rich.addEventListener('click', function (e) {
+      var c = e.target.closest && e.target.closest('[data-tok]'); if (!c) return;
+      var tok = c.getAttribute('data-tok'); var raw = ta.value; var idx = raw.indexOf(tok); if (idx < 0) return;
+      if (c.classList.contains('tex')) { S.openFormulaEditor(raw, idx, idx + tok.length).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.selectionStart = ta.selectionEnd = idx; ta.dispatchEvent(new Event('input')); } }); }
+      else { var r = document.createRange(); r.selectNode(c); var sel = document.getSelection(); sel.removeAllRanges(); sel.addRange(r); caretToRaw(); }
+    });
+    /* تغییر برنامه‌ای متن (ابزارها) → بازسازی نما */
+    ta.addEventListener('input', function () { if (fromRich) return; var p = ta.selectionStart; render(ta.value); rich.focus(); placeCaret(p == null ? ta.value.length : p); livePreview(live, ta.value); });
+    render(ta.value); livePreview(live, ta.value);
+    wrap.appendChild(ta); wrap.appendChild(rich);
+    return {wrap: wrap, live: live, sync: function () { render(ta.value); }};
   }
   function buildUI(container) {
     var wrap = el('div', {class: 'builder'});

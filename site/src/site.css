@@ -297,14 +297,14 @@ label.g-item{cursor:pointer}
 .btn.danger{background:#c62828;color:#fff}
 .btn.light.sm.on{border-color:var(--brand);color:var(--brand)}
 
-/* ---- V143.2: تراشهٔ توکن‌ها در کادر متن سؤال + پیش‌نمایش زنده ---- */
+/* ---- V143.3: ویرایشگر تراشه‌ای کادر متن سؤال + پیش‌نمایش زنده ---- */
 .b-ta-wrap{position:relative}
-.b-ta-wrap textarea{display:block}
-.b-ta-mask{position:absolute;inset:0;padding:10px;font-size:15px;line-height:1.7;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:auto;white-space:pre-wrap;word-break:break-word;cursor:text;display:none}
-.b-ta-wrap.has-token:not(.editing) .b-ta-mask{display:block}
-.b-ta-mask .ph{color:#9aa3b2}
-.b-chip{display:inline-block;padding:1px 8px;margin:0 2px;border-radius:8px;font-size:13px;font-weight:700;background:var(--brand-soft);color:var(--brand);white-space:nowrap;direction:rtl}
+.b-rich{min-height:110px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px;line-height:1.8;background:#fff;white-space:pre-wrap;word-break:break-word;outline:none;text-align:right}
+.b-rich:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.b-rich:empty::before{content:attr(data-ph);color:#9aa3b2}
+.b-chip{display:inline-block;padding:0 8px;margin:0 2px;border-radius:8px;font-size:13px;font-weight:700;background:var(--brand-soft);color:var(--brand);white-space:nowrap;direction:rtl;cursor:pointer;user-select:all;vertical-align:baseline}
 .b-chip.tex{background:#fff3e0;color:#7c4a03}
+.b-chip:hover{outline:2px solid var(--brand)}
 .b-live{margin-top:8px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;background:#fafbfe;line-height:1.9;font-size:15px;overflow:auto}
 .b-live::before{content:'پیش‌نمایش';display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
 .b-live img,.b-live svg{max-width:100%}
