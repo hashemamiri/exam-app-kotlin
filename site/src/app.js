@@ -1092,7 +1092,7 @@
     document.addEventListener('click', function (e) { var sb = $('sidebar'); if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.closest('.hamb')) sb.classList.remove('open'); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });
     if (session && KEY_READY) {
-      try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); }
+      try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); else setTimeout(function () { toast(errMsg(e), 'err'); }, 300); }
     }
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();

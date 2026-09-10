@@ -18578,3 +18578,8 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - گزارش کاربر: با V143.2 هنگام کلیک روی کادر، کد خام توکن‌ها دیده می‌شد. حالا `tokenTextarea(ta)` textarea را مخفی می‌کند و یک `div.b-rich[contenteditable]` می‌سازد: `render(raw)` متن را به گره‌های متنی + `span.b-chip[data-tok][contenteditable=false]` تبدیل می‌کند؛ `serialize()` برعکس (data-tok → توکن، BR/DIV → \n). روی `input` نما، `ta.value` و رویداد `input` textarea به‌روز می‌شود (همان مسیر قبلی ذخیره). اگر کاربر خودش `$…$`/`%%FIG…%%` کامل تایپ کند بلافاصله تراشه می‌شود.
 - مکان‌نما: `caretToRaw()` selection نما را به `ta.selectionStart/End` خام نگاشت می‌کند (ابزارها همان textarea را می‌خوانند) و `placeCaret(pos)` پس از درج برنامه‌ای، مکان‌نما را برمی‌گرداند. paste فقط متن ساده.
 - برچسب تراشه (`figChipLabel`) آینهٔ `FigTokenVisuals.chipLabel`؛ توکن‌های بدون `k` (شکل هندسی قدیمی) → X.title یا «شکل/نمودار».
+
+## V143.4 — رفع ورود با گوگل در سایت
+
+- ریشه: `handleOAuthReturn` (extras.js) نشست را فقط از hash می‌ساخت (بدون `user`)؛ `currentProfile()` در app.js با `authApi.user()` که `session.user` را می‌خواند شروع می‌شود → خطا → کاربر null → صفحهٔ ورود. اصلاح: پس از `__setSession`، `GET /auth/v1/user` و ذخیرهٔ `session.user`؛ در خطا نشست پاک و toast نمایش داده می‌شود. خطای غیرنشستی `currentProfile` در `boot()` هم حالا toast می‌شود.
+- استقرار: سایت روی Cloudflare Pages (پروژهٔ `onlineexam`, Direct Upload از پوشه‌ای با `index.html` = فایل azmoonsaz) با دامنه‌های `onlineexam.ir` و `www.onlineexam.ir`؛ DNS دامنه روی کلودفلر (clay/stella.ns.cloudflare.com). Supabase: Site URL و Redirect URLs باید دامنه را داشته باشند، وگرنه OAuth به `http://localhost:3000` برمی‌گردد.

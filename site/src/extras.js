@@ -292,8 +292,11 @@
     if (!p.access_token) return false;
     var session = {access_token: p.access_token, refresh_token: p.refresh_token, expires_in: Number(p.expires_in) || 3600, expires_at: Math.floor(Date.now() / 1000) + (Number(p.expires_in) || 3600), token_type: p.token_type || 'bearer'};
     S.__setSession(session);
+    /* hash فقط توکن دارد؛ کاربر را از سرور بگیر (currentProfile به session.user نیاز دارد) */
+    try { session.user = await S.http('/auth/v1/user', {method: 'GET'}); S.__setSession(session); }
+    catch (e) { S.__setSession(null); toast('ورود با گوگل ناتمام ماند: ' + errMsg(e), 'err'); return false; }
     var role = 'teacher'; try { role = sessionStorage.getItem('examsite.google.role') || 'teacher'; sessionStorage.removeItem('examsite.google.role'); } catch (e) {}
-    try { var rr = await S.rpcObj('native_set_registration_role_v1', {p_role: role}); if (rr && rr.error) throw new Error(String(rr.error)); } catch (e) { if (!/function|not found|404/i.test(errMsg(e))) toast(errMsg(e), 'err'); }
+    try { var rr = await S.rpcObj('native_set_registration_role_v1', {p_role: role}); if (rr && rr.error) throw new Error(String(rr.error)); } catch (e) { if (!/function|not found|404|PGRST202/i.test(errMsg(e))) toast(errMsg(e), 'err'); }
     return true;
   }
   function recoveryFlow(m, api, setMsg, busy, onDone) {
