@@ -18589,3 +18589,37 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - `.github/workflows/site.yml`: trigger روی `push` به main با تغییر `site/**` + `workflow_dispatch`. مراحل: `python3 site/build_site.py` → جایگزینی `var SUPABASE_ANON_KEY = "…";` با Secret → `site_out/index.html` + `_headers` (Cache-Control: no-cache) → `cloudflare/wrangler-action@v3` با `pages deploy site_out --project-name=onlineexam --branch=main`.
 - Secrets: `SUPABASE_ANON_KEY` (موجود)، `CLOUDFLARE_API_TOKEN` (توکن سفارشی با مجوز Account → Cloudflare Pages: Edit)، `CLOUDFLARE_ACCOUNT_ID` (Workers & Pages → Overview، سمت راست).
 - کلید anon همچنان در Git نیست؛ فایل `azmoonsaz_VXX.html` تحویلی فقط برای تست محلی است و مسیر تولید همان Actions است. پروژهٔ Pages از نوع Direct Upload است؛ `--branch=main` آن را به‌عنوان production deployment ثبت می‌کند.
+
+## V143.6 — وضعیت استقرار سایت و زیرساخت دامنه (مرجع عملیاتی — بدون تغییر کد)
+
+این بخش «چه چیزی کجاست» را برای هر کسی که بعداً پروژه را ادامه می‌دهد ثبت می‌کند. هیچ رمز/توکنی این‌جا نیست و نباید اضافه شود.
+
+### دامنه و DNS
+- دامنه: `onlineexam.ir`، ثبت‌شده از طریق واسط **irandns.com** (نه مستقیم در ایرنیک). تغییر نیم‌سرور از پنل irandns انجام می‌شود (منوی «تغییر DNS ها»؛ در تاریخچه با عنوان «بروزرسانی DNS ها — موفق» ثبت شده).
+- نیم‌سرورها: `clay.ns.cloudflare.com` و `stella.ns.cloudflare.com` (حساب کلودفلر: جیمیل مالک). وضعیت zone در کلودفلر: **Active**.
+- بررسی سریع: `nslookup -type=NS onlineexam.ir 8.8.8.8` در PowerShell (در WSL کاربر `dig` نصب نیست؛ `sudo apt install bind9-dnsutils`).
+- SSL/TLS: حالت **Full** + **Always Use HTTPS** روشن. DNSSEC دست‌نخورده (خاموش).
+
+### میزبانی سایت
+- Cloudflare **Pages**، پروژهٔ `onlineexam` (نوع Direct Upload)، آدرس پیش‌فرض `onlineexam.pages.dev`.
+- Custom domains: `onlineexam.ir` و `www.onlineexam.ir` — هر دو **Active / SSL enabled** (رکوردهای CNAME توسط Pages ساخته شدند). دامنهٔ ریشه یک بار «Verification is in undefined status» داد و با Remove/Set up دوباره درست شد.
+- انتشار: از V143.5 خودکار با GitHub Actions (`.github/workflows/site.yml`) روی هر push به main که `site/**` را تغییر دهد؛ یعنی هر `apply_vXX.py` سایت خودبه‌خود روی دامنه می‌رود. اجرای دستی: Actions ← site ← Run workflow. مسیر دستیِ جایگزین: Workers & Pages ← onlineexam ← Create deployment ← آپلود پوشه‌ای که فقط `index.html` (= فایل azmoonsaz) دارد.
+- Secrets لازم در GitHub: `SUPABASE_ANON_KEY` (موجود از CI اندروید)، `CLOUDFLARE_API_TOKEN` (توکن سفارشی: Account → Cloudflare Pages → Edit)، `CLOUDFLARE_ACCOUNT_ID`. اگر workflow با خطای auth خورد، اول این دو را بررسی کنید.
+- `_headers` تولیدی: `Cache-Control: no-cache` برای همهٔ مسیرها تا نسخهٔ جدید فوراً دیده شود؛ با این حال به کاربر توصیه می‌شود بعد از هر انتشار Ctrl+F5 بزند.
+
+### Supabase (احراز هویت روی دامنه)
+- Authentication ← URL Configuration: **Site URL** = `https://onlineexam.ir`؛ **Redirect URLs** شامل `https://onlineexam.ir`, `https://onlineexam.ir/**`, `https://www.onlineexam.ir/**`. بدون این‌ها، OAuth گوگل به `http://localhost:3000/#access_token=…` برمی‌گردد (اتفاق افتاد و همین‌طور تشخیص داده شد).
+- ورود گوگل در سایت: `/auth/v1/authorize?provider=google&redirect_to=<origin>` → بازگشت با توکن در hash → `handleOAuthReturn` (extras.js) → `GET /auth/v1/user` (اصلاح V143.4) → `native_set_registration_role_v1` → `currentProfile()`. از `file://` کار نمی‌کند (پیام فارسی داده می‌شود).
+- نکتهٔ امنیتی: کاربر یک بار URL کامل با access_token/refresh_token را در چت فرستاد؛ توصیه شد از سایت خارج شود یا در Auth ← Users ← Sign out user کند. هر توکنی که در چت ظاهر شود باید باطل تلقی شود.
+
+### ایمیل دامنه
+- **Cloudflare Email Routing** روی `onlineexam.ir` فعال است (Status: Enabled، DNS records: Locked — MX های `route1/2/3.mx.cloudflare.net`، DKIM `cf2024-1._domainkey`، SPF `v=spf1 include:_spf.mx.cloudflare.net ~all`).
+- قانون: `info@onlineexam.ir` → Send to an email → جیمیل مالک (مقصد باید در تب Destination Addresses وضعیت Verified داشته باشد). Catch-all پیش‌فرض Drop/Disabled است؛ در صورت نیاز روشن شود.
+- Email Routing فقط دریافت است. برای ارسال «از طرف» info@: جیمیل ← Settings ← Accounts and Import ← Send mail as با SMTP `smtp.gmail.com:587` و App Password. اگر روزی صندوق مستقل لازم شد (مثلاً Zoho Mail)، رکوردهای MX کلودفلر باید جایگزین شوند و Email Routing غیرفعال شود.
+- کاربرد آتی: این آدرس می‌تواند به‌عنوان فرستندهٔ SMTP سفارشی Supabase (Auth ← SMTP Settings) استفاده شود تا ایمیل‌های OTP/بازیابی از `info@onlineexam.ir` بروند؛ فعلاً انجام نشده.
+
+### چک‌لیست خرابی سایت
+1. `https://onlineexam.ir` باز نمی‌شود → Pages ← Custom domains هر دو Active؟ zone در کلودفلر Active؟
+2. نسخهٔ قدیمی دیده می‌شود → Actions ← آخرین اجرای site سبز است؟ Ctrl+F5.
+3. ورود گوگل به صفحهٔ ورود برمی‌گردد → Redirect URLs در Supabase؛ پیام قرمز پایین صفحه (از V143.4) را بخوانید.
+4. ایمیل info نمی‌رسد → Email Routing ← Activity Log؛ مقصد Verified؟

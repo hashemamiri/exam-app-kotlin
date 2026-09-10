@@ -1,3 +1,6 @@
+V143.6 — به‌روزرسانی handoff: مرجع عملیاتی استقرار سایت (بدون تغییر کد)
+- ثبت وضعیت دامنه onlineexam.ir (irandns → نیم‌سرورهای کلودفلر)، Cloudflare Pages و دامنه‌های سفارشی، تنظیمات Supabase برای OAuth، Email Routing برای info@onlineexam.ir و چک‌لیست عیب‌یابی.
+
 V143.5 — انتشار خودکار سایت روی Cloudflare Pages (GitHub Actions)
 - گردش کار جدید .github/workflows/site.yml: با هر push به main که پوشهٔ site/ را تغییر دهد، index.html ساخته، کلید anon از Secret تزریق و روی پروژهٔ Pages «onlineexam» منتشر می‌شود؛ دیگر لازم نیست فایل دستی آپلود شود.
 - دو Secret جدید در GitHub لازم است: CLOUDFLARE_API_TOKEN و CLOUDFLARE_ACCOUNT_ID (راهنما در handoff §V143.5).
