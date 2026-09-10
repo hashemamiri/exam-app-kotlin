@@ -1,0 +1,44 @@
+# V143.5 — انتشار خودکار سایت روی Cloudflare Pages
+# با هر push به main که site/ را تغییر دهد (یعنی هر apply_vXX.py سایت)، index.html
+# ساخته، کلید anon از Secret تزریق و روی پروژهٔ Pages «onlineexam» منتشر می‌شود.
+# Secrets لازم: SUPABASE_ANON_KEY (از قبل هست)، CLOUDFLARE_API_TOKEN، CLOUDFLARE_ACCOUNT_ID
+name: site
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+concurrency:
+  group: site-deploy
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Build index.html with anon key
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$SUPABASE_ANON_KEY" || { echo "SUPABASE_ANON_KEY secret is missing"; exit 1; }
+          python3 site/build_site.py
+          mkdir -p site_out
+          python3 - <<'PY'
+          import os
+          h = open('site/index.html', encoding='utf-8').read()
+          old = 'var SUPABASE_ANON_KEY = "…";'
+          assert h.count(old) == 1, 'placeholder not found'
+          open('site_out/index.html', 'w', encoding='utf-8').write(h.replace(old, 'var SUPABASE_ANON_KEY = "%s";' % os.environ['SUPABASE_ANON_KEY']))
+          PY
+          # هدرها: بدون کش برای index تا به‌روزرسانی فوری دیده شود
+          printf '/*\n  Cache-Control: no-cache\n' > site_out/_headers
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site_out --project-name=onlineexam --branch=main --commit-dirty=true

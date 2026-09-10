@@ -18583,3 +18583,9 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 
 - ریشه: `handleOAuthReturn` (extras.js) نشست را فقط از hash می‌ساخت (بدون `user`)؛ `currentProfile()` در app.js با `authApi.user()` که `session.user` را می‌خواند شروع می‌شود → خطا → کاربر null → صفحهٔ ورود. اصلاح: پس از `__setSession`، `GET /auth/v1/user` و ذخیرهٔ `session.user`؛ در خطا نشست پاک و toast نمایش داده می‌شود. خطای غیرنشستی `currentProfile` در `boot()` هم حالا toast می‌شود.
 - استقرار: سایت روی Cloudflare Pages (پروژهٔ `onlineexam`, Direct Upload از پوشه‌ای با `index.html` = فایل azmoonsaz) با دامنه‌های `onlineexam.ir` و `www.onlineexam.ir`؛ DNS دامنه روی کلودفلر (clay/stella.ns.cloudflare.com). Supabase: Site URL و Redirect URLs باید دامنه را داشته باشند، وگرنه OAuth به `http://localhost:3000` برمی‌گردد.
+
+## V143.5 — انتشار خودکار سایت (Cloudflare Pages ← GitHub Actions)
+
+- `.github/workflows/site.yml`: trigger روی `push` به main با تغییر `site/**` + `workflow_dispatch`. مراحل: `python3 site/build_site.py` → جایگزینی `var SUPABASE_ANON_KEY = "…";` با Secret → `site_out/index.html` + `_headers` (Cache-Control: no-cache) → `cloudflare/wrangler-action@v3` با `pages deploy site_out --project-name=onlineexam --branch=main`.
+- Secrets: `SUPABASE_ANON_KEY` (موجود)، `CLOUDFLARE_API_TOKEN` (توکن سفارشی با مجوز Account → Cloudflare Pages: Edit)، `CLOUDFLARE_ACCOUNT_ID` (Workers & Pages → Overview، سمت راست).
+- کلید anon همچنان در Git نیست؛ فایل `azmoonsaz_VXX.html` تحویلی فقط برای تست محلی است و مسیر تولید همان Actions است. پروژهٔ Pages از نوع Direct Upload است؛ `--branch=main` آن را به‌عنوان production deployment ثبت می‌کند.
