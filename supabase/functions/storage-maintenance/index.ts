@@ -109,6 +109,73 @@ async function removeChunks(
   }
 }
 
+// ---------- V144: Cloudflare R2 (S3 API) — فهرست و حذف فایل‌های یتیم ----------
+const encT = new TextEncoder();
+const hexOf = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+const sha256Hex = async (s: string) => hexOf(await crypto.subtle.digest('SHA-256', encT.encode(s)));
+async function hmacRaw(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
+  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return crypto.subtle.sign('HMAC', k, encT.encode(data));
+}
+const rfc3986 = (s: string) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+type R2Cfg = { accountId: string; accessKey: string; secretKey: string; bucket: string; publicBase: string };
+function r2Config(): R2Cfg | null {
+  const accountId = env('R2_ACCOUNT_ID'), accessKey = env('R2_ACCESS_KEY_ID'), secretKey = env('R2_SECRET_ACCESS_KEY');
+  const publicBase = env('R2_PUBLIC_BASE').replace(/\/+$/, '');
+  if (!accountId || !accessKey || !secretKey || !publicBase) return null;
+  return { accountId, accessKey, secretKey, bucket: env('R2_BUCKET') || 'azmoon-media', publicBase };
+}
+async function r2Fetch(cfg: R2Cfg, method: string, path: string, query: Record<string, string>, body = ''): Promise<Response> {
+  const host = `${cfg.accountId}.r2.cloudflarestorage.com`;
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const date = amzDate.slice(0, 8);
+  const scope = `${date}/auto/s3/aws4_request`;
+  const payloadHash = await sha256Hex(body);
+  const canonicalUri = '/' + cfg.bucket + (path ? '/' + path.split('/').map(rfc3986).join('/') : '');
+  const q = Object.keys(query).sort().map((k) => `${rfc3986(k)}=${rfc3986(query[k])}`).join('&');
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+  const canonicalRequest = [method, canonicalUri, q, canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, await sha256Hex(canonicalRequest)].join('\n');
+  let k: ArrayBuffer = await hmacRaw(encT.encode('AWS4' + cfg.secretKey), date);
+  k = await hmacRaw(k, 'auto'); k = await hmacRaw(k, 's3'); k = await hmacRaw(k, 'aws4_request');
+  const signature = hexOf(await hmacRaw(k, stringToSign));
+  const auth = `AWS4-HMAC-SHA256 Credential=${cfg.accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return fetch(`https://${host}${canonicalUri}${q ? '?' + q : ''}`, { method, headers: { Authorization: auth, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate }, body: body || undefined });
+}
+const unxml = (s: string) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+async function r2ListAll(cfg: R2Cfg): Promise<ListedFile[]> {
+  const out: ListedFile[] = [];
+  let token = '';
+  for (;;) {
+    const query: Record<string, string> = { 'list-type': '2', 'max-keys': '1000' };
+    if (token) query['continuation-token'] = token;
+    const res = await r2Fetch(cfg, 'GET', '', query);
+    if (!res.ok) throw new Error('list_r2_' + res.status);
+    const xml = await res.text();
+    for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+      const key = /<Key>([^<]*)<\/Key>/.exec(m[1])?.[1] || '';
+      const lm = /<LastModified>([^<]*)<\/LastModified>/.exec(m[1])?.[1] || '';
+      if (key) out.push({ path: unxml(key), createdAt: Date.parse(lm) || 0 });
+      if (out.length > MAX_OBJECTS) throw new Error('object_limit_r2');
+    }
+    const truncated = /<IsTruncated>true<\/IsTruncated>/.test(xml);
+    token = unxml(/<NextContinuationToken>([^<]*)<\/NextContinuationToken>/.exec(xml)?.[1] || '');
+    if (!truncated || !token) break;
+  }
+  return out;
+}
+async function r2Delete(cfg: R2Cfg, keys: string[]) {
+  for (const key of keys) {
+    const res = await r2Fetch(cfg, 'DELETE', key, {});
+    if (!res.ok && res.status !== 404) throw new Error('remove_r2_' + res.status);
+  }
+}
+function r2PathFromPublicUrl(value: string, publicBase: string): string | null {
+  if (!value.startsWith(publicBase + '/')) return null;
+  try { return decodeURIComponent(value.slice(publicBase.length + 1).split('?')[0]); } catch { return null; }
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (request.method !== 'POST') return json({ error: 'روش درخواست مجاز نیست' }, 405);
@@ -159,8 +226,15 @@ Deno.serve(async (request) => {
       if (path) examReferences.add(path);
     });
 
+    const r2 = r2Config();
+    const r2References = new Set<string>();
+    if (r2) rawReferences.forEach((value) => { const p = r2PathFromPublicUrl(value, r2.publicBase); if (p) r2References.add(p); });
+
     const cutoff = Date.now() - graceDays * 86_400_000;
     const examObjects = await listTree(service, 'exam-images');
+    const r2Orphans = r2
+      ? (await r2ListAll(r2)).filter((item) => item.createdAt > 0 && item.createdAt < cutoff && !r2References.has(item.path)).map((item) => item.path)
+      : [];
     const orphanPaths = examObjects
       .filter((item) => item.createdAt > 0 && item.createdAt < cutoff && !examReferences.has(item.path))
       .map((item) => item.path);
@@ -183,13 +257,14 @@ Deno.serve(async (request) => {
     if (!dryRun) {
       await removeChunks(service, 'exam-images', orphanPaths);
       await removeChunks(service, 'app-updates', oldApks);
+      if (r2) await r2Delete(r2, r2Orphans);
     }
     await service.from('maintenance_audit').insert({
       requested_by: userId,
       dry_run: dryRun,
-      orphan_candidates: orphanPaths.length,
+      orphan_candidates: orphanPaths.length + r2Orphans.length,
       apk_candidates: oldApks.length,
-      deleted_objects: dryRun ? 0 : orphanPaths.length,
+      deleted_objects: dryRun ? 0 : orphanPaths.length + r2Orphans.length,
       deleted_apks: dryRun ? 0 : oldApks.length,
       grace_days: graceDays,
     });
@@ -198,11 +273,14 @@ Deno.serve(async (request) => {
       ok: true,
       dry_run: dryRun,
       referenced_exam_objects: examReferences.size,
+      r2_enabled: !!r2,
+      r2_referenced_objects: r2References.size,
+      r2_orphan_candidates: r2Orphans.length,
       scanned_exam_objects: examObjects.length,
-      orphan_candidates: orphanPaths.length,
+      orphan_candidates: orphanPaths.length + r2Orphans.length,
       scanned_apks: apkObjects.length,
       apk_candidates: oldApks.length,
-      deleted_objects: dryRun ? 0 : orphanPaths.length,
+      deleted_objects: dryRun ? 0 : orphanPaths.length + r2Orphans.length,
       deleted_apks: dryRun ? 0 : oldApks.length,
     });
   } catch (error) {

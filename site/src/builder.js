@@ -8,7 +8,6 @@
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
   var LS_PRINT = 'examsite.printexams.v1';
   var LS_DRAFT = 'examsite.builderdraft.v1';
-  var BUCKET = 'exam-images';
   var TYPES = [['multiple', 'چندگزینه‌ای', '◉'], ['truefalse', 'صحیح / غلط', '✓'], ['fill', 'جای‌خالی', '▁'], ['numeric', 'عددی', '#'], ['matching', 'جورکردنی', '⇄'], ['essay', 'تشریحی', '✎']];
   var TYPE_LABEL = {}; TYPES.forEach(function (t) { TYPE_LABEL[t[0]] = t[1]; });
 
@@ -109,11 +108,7 @@
   async function uploadImage(file, folder, examId) {
     var blob = await downscale(file, 2200);
     if (blob.size > 8 * 1024 * 1024) throw new Error('حجم تصویر پس از فشرده‌سازی بیش از ۸ مگابایت است.');
-    var path = folder + '/' + S.user().id + '/' + examId + '/' + uuid() + '.webp';
-    var sess = S.session();
-    var res = await fetch(S.config.url + '/storage/v1/object/' + BUCKET + '/' + path, {method: 'POST', headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (sess ? sess.access_token : S.config.anon), 'Content-Type': 'image/webp', 'x-upsert': 'false'}, body: blob});
-    if (!res.ok) { var t = await res.text(); throw new Error('آپلود تصویر ناموفق بود: ' + t.slice(0, 120)); }
-    return S.config.url + '/storage/v1/object/public/' + BUCKET + '/' + path;
+    return S.uploadMedia(blob, 'image', folder, examId, 'webp', 'image/webp');
   }
   function pickFile(accept) {
     return new Promise(function (resolve) { var i = el('input', {type: 'file', accept: accept || 'image/*', style: 'display:none'}); i.addEventListener('change', function () { resolve(i.files && i.files[0] ? i.files[0] : null); i.remove(); }); document.body.appendChild(i); i.click(); });

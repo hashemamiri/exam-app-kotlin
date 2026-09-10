@@ -1433,7 +1433,26 @@ label.g-item{cursor:pointer}
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  /* V144 — بارگذاری رسانه: اول R2 (لینک موقت از Edge Function media-upload)، در نبود پیکربندی → Supabase Storage */
+  var MEDIA_BUCKET = 'exam-images', r2Disabled = false;
+  async function uploadMedia(blob, kind, folder, examId, ext, contentType) {
+    if (!r2Disabled) {
+      try {
+        var t = await http('/functions/v1/media-upload', {method: 'POST', body: {kind: kind, folder: folder, exam_id: examId, ext: ext, size: blob.size}});
+        if (t && t.upload_url) {
+          var put = await fetch(t.upload_url, {method: 'PUT', headers: t.headers || {'Content-Type': contentType}, body: blob});
+          if (!put.ok) throw new Error('R2 PUT ' + put.status);
+          return t.public_url;
+        }
+        if (t && t.error === 'r2_not_configured') r2Disabled = true; else throw new Error((t && (t.message || t.error)) || 'media-upload');
+      } catch (e) { if (e && e.status === 503) r2Disabled = true; else throw new Error('آپلود فایل ناموفق بود: ' + errMsg(e)); }
+    }
+    var path = folder + '/' + user.id + '/' + examId + '/' + uuid() + '.' + ext;
+    var res = await fetch(SUPABASE_URL + '/storage/v1/object/' + MEDIA_BUCKET + '/' + path, {method: 'POST', headers: {'apikey': ANON, 'Authorization': 'Bearer ' + (session ? session.access_token : ANON), 'Content-Type': contentType, 'x-upsert': 'false'}, body: blob});
+    if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
+    return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
+  }
+  window.ExamSite = {openFormulaEditor: openFormulaEditor, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
@@ -1452,7 +1471,6 @@ label.g-item{cursor:pointer}
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
   var LS_PRINT = 'examsite.printexams.v1';
   var LS_DRAFT = 'examsite.builderdraft.v1';
-  var BUCKET = 'exam-images';
   var TYPES = [['multiple', 'چندگزینه‌ای', '◉'], ['truefalse', 'صحیح / غلط', '✓'], ['fill', 'جای‌خالی', '▁'], ['numeric', 'عددی', '#'], ['matching', 'جورکردنی', '⇄'], ['essay', 'تشریحی', '✎']];
   var TYPE_LABEL = {}; TYPES.forEach(function (t) { TYPE_LABEL[t[0]] = t[1]; });
 
@@ -1553,11 +1571,7 @@ label.g-item{cursor:pointer}
   async function uploadImage(file, folder, examId) {
     var blob = await downscale(file, 2200);
     if (blob.size > 8 * 1024 * 1024) throw new Error('حجم تصویر پس از فشرده‌سازی بیش از ۸ مگابایت است.');
-    var path = folder + '/' + S.user().id + '/' + examId + '/' + uuid() + '.webp';
-    var sess = S.session();
-    var res = await fetch(S.config.url + '/storage/v1/object/' + BUCKET + '/' + path, {method: 'POST', headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (sess ? sess.access_token : S.config.anon), 'Content-Type': 'image/webp', 'x-upsert': 'false'}, body: blob});
-    if (!res.ok) { var t = await res.text(); throw new Error('آپلود تصویر ناموفق بود: ' + t.slice(0, 120)); }
-    return S.config.url + '/storage/v1/object/public/' + BUCKET + '/' + path;
+    return S.uploadMedia(blob, 'image', folder, examId, 'webp', 'image/webp');
   }
   function pickFile(accept) {
     return new Promise(function (resolve) { var i = el('input', {type: 'file', accept: accept || 'image/*', style: 'display:none'}); i.addEventListener('change', function () { resolve(i.files && i.files[0] ? i.files[0] : null); i.remove(); }); document.body.appendChild(i); i.click(); });
@@ -3625,17 +3639,11 @@ label.g-item{cursor:pointer}
   }
 
   /* ================================================================ صوت سؤال: ضبط / انتخاب فایل / آپلود (audio/<teacher>/<exam>/<uuid>.m4a) */
-  var MAX_AUDIO = 3 * 1024 * 1024, BUCKET = 'exam-images';
+  var MAX_AUDIO = 3 * 1024 * 1024;
   async function uploadAudio(blob, examId, ext) {
-    if (!blob || !blob.size) throw new Error('فایل صوتی خالی است.');
-    if (blob.size > MAX_AUDIO) throw new Error('حجم فایل صوتی بیش از ۳ مگابایت است.');
-    var path = 'audio/' + S.user().id + '/' + examId + '/' + uuid() + '.' + (ext || 'm4a');
-    var sess = S.session();
-    var res = await fetch(S.config.url + '/storage/v1/object/' + BUCKET + '/' + path, {method: 'POST', headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (sess ? sess.access_token : S.config.anon), 'Content-Type': blob.type || 'audio/mp4', 'x-upsert': 'false'}, body: blob});
-    if (!res.ok) throw new Error('آپلود صوت ناموفق بود: ' + (await res.text()).slice(0, 120));
-    return S.config.url + '/storage/v1/object/public/' + BUCKET + '/' + path;
+    if (blob.size > MAX_AUDIO) throw new Error('حجم صوت حداکثر ۳ مگابایت است.');
+    return S.uploadMedia(blob, 'audio', 'audio', examId, ext || 'm4a', blob.type || 'audio/mp4');
   }
-  function audioDuration(blob) { return new Promise(function (res) { var a = document.createElement('audio'); a.preload = 'metadata'; a.onloadedmetadata = function () { var d = a.duration; URL.revokeObjectURL(a.src); res(isFinite(d) ? Math.round(d * 1000) : 0); }; a.onerror = function () { res(0); }; a.src = URL.createObjectURL(blob); }); }
   function extOf(blob) { var t = (blob.type || '').toLowerCase(); if (/mp4|m4a|aac/.test(t)) return 'm4a'; if (/webm/.test(t)) return 'webm'; if (/ogg|opus/.test(t)) return 'ogg'; if (/mpeg|mp3/.test(t)) return 'mp3'; if (/wav/.test(t)) return 'wav'; return 'm4a'; }
   function audioDlg(q, examId, isPrint, done) {
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var cur = el('div');

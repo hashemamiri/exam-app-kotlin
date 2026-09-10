@@ -217,17 +217,11 @@
   }
 
   /* ================================================================ صوت سؤال: ضبط / انتخاب فایل / آپلود (audio/<teacher>/<exam>/<uuid>.m4a) */
-  var MAX_AUDIO = 3 * 1024 * 1024, BUCKET = 'exam-images';
+  var MAX_AUDIO = 3 * 1024 * 1024;
   async function uploadAudio(blob, examId, ext) {
-    if (!blob || !blob.size) throw new Error('فایل صوتی خالی است.');
-    if (blob.size > MAX_AUDIO) throw new Error('حجم فایل صوتی بیش از ۳ مگابایت است.');
-    var path = 'audio/' + S.user().id + '/' + examId + '/' + uuid() + '.' + (ext || 'm4a');
-    var sess = S.session();
-    var res = await fetch(S.config.url + '/storage/v1/object/' + BUCKET + '/' + path, {method: 'POST', headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (sess ? sess.access_token : S.config.anon), 'Content-Type': blob.type || 'audio/mp4', 'x-upsert': 'false'}, body: blob});
-    if (!res.ok) throw new Error('آپلود صوت ناموفق بود: ' + (await res.text()).slice(0, 120));
-    return S.config.url + '/storage/v1/object/public/' + BUCKET + '/' + path;
+    if (blob.size > MAX_AUDIO) throw new Error('حجم صوت حداکثر ۳ مگابایت است.');
+    return S.uploadMedia(blob, 'audio', 'audio', examId, ext || 'm4a', blob.type || 'audio/mp4');
   }
-  function audioDuration(blob) { return new Promise(function (res) { var a = document.createElement('audio'); a.preload = 'metadata'; a.onloadedmetadata = function () { var d = a.duration; URL.revokeObjectURL(a.src); res(isFinite(d) ? Math.round(d * 1000) : 0); }; a.onerror = function () { res(0); }; a.src = URL.createObjectURL(blob); }); }
   function extOf(blob) { var t = (blob.type || '').toLowerCase(); if (/mp4|m4a|aac/.test(t)) return 'm4a'; if (/webm/.test(t)) return 'webm'; if (/ogg|opus/.test(t)) return 'ogg'; if (/mpeg|mp3/.test(t)) return 'mp3'; if (/wav/.test(t)) return 'wav'; return 'm4a'; }
   function audioDlg(q, examId, isPrint, done) {
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var cur = el('div');

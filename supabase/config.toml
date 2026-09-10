@@ -10,3 +10,7 @@ verify_jwt = false
 
 [functions.storage-maintenance]
 verify_jwt = false
+
+# V144: توکن کاربر داخل تابع با auth.getUser بررسی می‌شود.
+[functions.media-upload]
+verify_jwt = false

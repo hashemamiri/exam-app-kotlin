@@ -1097,7 +1097,26 @@
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  /* V144 — بارگذاری رسانه: اول R2 (لینک موقت از Edge Function media-upload)، در نبود پیکربندی → Supabase Storage */
+  var MEDIA_BUCKET = 'exam-images', r2Disabled = false;
+  async function uploadMedia(blob, kind, folder, examId, ext, contentType) {
+    if (!r2Disabled) {
+      try {
+        var t = await http('/functions/v1/media-upload', {method: 'POST', body: {kind: kind, folder: folder, exam_id: examId, ext: ext, size: blob.size}});
+        if (t && t.upload_url) {
+          var put = await fetch(t.upload_url, {method: 'PUT', headers: t.headers || {'Content-Type': contentType}, body: blob});
+          if (!put.ok) throw new Error('R2 PUT ' + put.status);
+          return t.public_url;
+        }
+        if (t && t.error === 'r2_not_configured') r2Disabled = true; else throw new Error((t && (t.message || t.error)) || 'media-upload');
+      } catch (e) { if (e && e.status === 503) r2Disabled = true; else throw new Error('آپلود فایل ناموفق بود: ' + errMsg(e)); }
+    }
+    var path = folder + '/' + user.id + '/' + examId + '/' + uuid() + '.' + ext;
+    var res = await fetch(SUPABASE_URL + '/storage/v1/object/' + MEDIA_BUCKET + '/' + path, {method: 'POST', headers: {'apikey': ANON, 'Authorization': 'Bearer ' + (session ? session.access_token : ANON), 'Content-Type': contentType, 'x-upsert': 'false'}, body: blob});
+    if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
+    return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
+  }
+  window.ExamSite = {openFormulaEditor: openFormulaEditor, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},

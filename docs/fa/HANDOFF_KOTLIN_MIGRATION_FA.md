@@ -18623,3 +18623,33 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 2. نسخهٔ قدیمی دیده می‌شود → Actions ← آخرین اجرای site سبز است؟ Ctrl+F5.
 3. ورود گوگل به صفحهٔ ورود برمی‌گردد → Redirect URLs در Supabase؛ پیام قرمز پایین صفحه (از V143.4) را بخوانید.
 4. ایمیل info نمی‌رسد → Email Routing ← Activity Log؛ مقصد Verified؟
+
+## V144 — رسانهٔ آزمون روی Cloudflare R2 (مرحلهٔ ۱: سرور + سایت)
+
+تصمیم کاربر: اول سرور+سایت، بعد اپ؛ فایل‌های قدیمی در Supabase Storage می‌مانند؛ آدرس عمومی `https://media.onlineexam.ir`.
+
+### معماری
+- `supabase/functions/media-upload/index.ts` (verify_jwt=false در config.toml؛ خودش `auth.getUser` می‌کند): ورودی `{kind:'image'|'audio', folder, exam_id, ext, size}` → خروجی `{upload_url, public_url, headers:{Content-Type}, expires_in:300, key}`. کلید شیء: `<folder>/<userId>/<examId>/<uuid>.<ext>`؛ folder مجاز تصویر: questions|option_images|matching_images، صوت: audio. سقف: تصویر ۸MB، صوت ۳MB؛ پسوندهای مجاز webp/jpg/jpeg/png و m4a/mp4/webm/ogg/mp3/wav. نقش‌های مجاز: teacher, manager. اگر Secrets نباشد → 503 `{error:'r2_not_configured'}`.
+- امضای SigV4 دستی (region `auto`, service `s3`, UNSIGNED-PAYLOAD, SignedHeaders `content-type;host`, path-style `https://<account>.r2.cloudflarestorage.com/<bucket>/<key>`). **صحت الگوریتم با @aws-sdk/s3-request-presigner روی ورودی یکسان بایت‌به‌بایت تأیید شد.** کلاینت باید PUT را دقیقاً با همان `Content-Type` بفرستد.
+- سایت: `S.uploadMedia(blob, kind, folder, examId, ext, contentType)` در app.js؛ `builder.js uploadImage` و `extras.js uploadAudio` به آن سپرده شدند. اگر پاسخ 503/r2_not_configured بود، پرچم `r2Disabled` تا پایان نشست ست می‌شود و آپلود مستقیم به Supabase Storage (`exam-images`) مثل قبل انجام می‌شود.
+- `storage-maintenance`: `r2Config()` از همان Secrets؛ `r2ListAll` (ListObjectsV2 با continuation) و `r2Delete`؛ ارجاع‌ها با `r2PathFromPublicUrl(value, R2_PUBLIC_BASE)` از همان مجموعهٔ رشته‌های جداول استخراج می‌شوند؛ حذف فقط در غیر dry-run؛ فیلدهای `r2_enabled/r2_referenced_objects/r2_orphan_candidates` در پاسخ.
+- اپ اندروید (V144.1، انجام‌نشده): `SupabaseQuestionImageUploader` باید همین تابع را صدا بزند (OkHttp PUT)، با همان fallback؛ `PendingMediaStore.isRemoteUrl` از قبل هر https را می‌پذیرد؛ `ExamPackageCodec.safeUrl` هم.
+
+### راه‌اندازی یک‌بارهٔ کلودفلر (کاربر)
+1. Cloudflare ← **R2 Object Storage** ← Create bucket ← نام `azmoon-media`، Location: Automatic.
+2. باکت ← Settings ← **Custom Domains** ← Connect Domain ← `media.onlineexam.ir` (DNS خودکار). Public access از طریق همین دامنه فعال می‌شود؛ r2.dev لازم نیست.
+3. باکت ← Settings ← **CORS policy** ← Add:
+   ```json
+   [{"AllowedOrigins":["https://onlineexam.ir","https://www.onlineexam.ir"],"AllowedMethods":["PUT","GET"],"AllowedHeaders":["Content-Type"],"MaxAgeSeconds":3600}]
+   ```
+   (برای تست محلی می‌توان `http://localhost:*` را موقتاً افزود.)
+4. R2 ← **Manage R2 API Tokens** ← Create API token ← Permissions: **Object Read & Write** ← Specify bucket: `azmoon-media` ← Create → `Access Key ID` و `Secret Access Key` (فقط یک‌بار نمایش داده می‌شود).
+5. Supabase ← Edge Functions ← Secrets:
+   `R2_ACCOUNT_ID` (Account ID کلودفلر)، `R2_ACCESS_KEY_ID`، `R2_SECRET_ACCESS_KEY`، `R2_BUCKET=azmoon-media`، `R2_PUBLIC_BASE=https://media.onlineexam.ir`.
+6. Deploy: `supabase functions deploy media-upload storage-maintenance --project-ref eazwuyrymsvdkwckdpco`.
+7. تست: در سایت یک تصویر به سؤال اضافه و ذخیره کنید؛ URL ذخیره‌شده باید با `https://media.onlineexam.ir/questions/` شروع شود و در مرورگر باز شود. سپس `storage-maintenance` را با `dry_run:true` صدا بزنید و `r2_enabled:true` را ببینید.
+
+### نکات
+- کش: کلودفلر پاسخ‌های دامنهٔ سفارشی R2 را کش می‌کند؛ چون نام فایل‌ها uuid و تغییرناپذیرند مشکلی نیست.
+- حذف فایل هنگام حذف سؤال/آزمون همچنان با storage-maintenance (مهلت پیش‌فرض ۷ روز) انجام می‌شود، نه لحظه‌ای.
+- هیچ کلید R2 در کلاینت نیست؛ presigned URL ۵ دقیقه اعتبار دارد و فقط برای همان کلید/نوع محتوا کار می‌کند.
