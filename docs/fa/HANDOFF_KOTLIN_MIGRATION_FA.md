@@ -18246,3 +18246,55 @@ verify: بلوک V132 (۱۰ پین). تست‌ها: V62_7 (آیکن‌ها)، Ne
 6. **وایت‌برد** — `StudentWhiteboardDialog.kt` بازنویسی: `BoardTool` (قلم/پاک‌کن/خط/پیکان/مستطیل/دایره/متن)، `BoardBackground` (ساده/شطرنجی/خط‌دار)، ۸ رنگ، ۴ ضخامت، redo، متن با `AlertDialog`؛ Canvas و خروجی PNG (`exportBoard`) هر دو همان `drawStroke` منطق را دارند. **تصویر تخته برای معلم**: مسیر کلاینت درست بود (`file:` → `uploadAnswer` → `p_images` با کلید `question.id`) ولی تابع قدیمی `submit_answer` (خارج از ریپو) تصاویر سؤالِ بدون سهمیهٔ تصویر (`allowImages=no`) را ذخیره نمی‌کند. تور ایمنی در `native_submit_queued_answer_v1` (بازتعریف در SQL V137): پس از ثبت موفق، کلیدهای `p_images` با آرایهٔ ناتهی از `https://` روی آخرین ردیف `answers` همان دانش‌آموز/آزمون با `||` ادغام می‌شوند. تصحیح: `AnswerImagesRow` (۲۲۰dp، اسکرول افقی، لمس → `FullScreenImageViewer` با زوم) در هر دو حالت دانش‌آموزمحور و سؤال‌محور.
 7. **منوی همبرگری** — `NeumorphicMenuTile` توضیح `textAlign=Center` + `fillMaxWidth`؛ پنل توضیح کارت‌های مدیریت (`TeacherManagementCardsScreen`) عنوان و توضیح وسط‌چین.
 - تست‌ها: V58_0_2، V58_0_3، V58_1 (`monitorReport(final: Boolean = false)`, `ON_PAUSE` نباید باشد، `ExamLeaveGuard`)، V58_2 (بازنویسی تست نمودار → وایت‌برد)، V59_0، V62_6 (`native_teacher_share_class_v137`). pin-scan روی ۲۲۳ اسنیپت تست‌های مرتبط با فایل‌های تغییرکرده بدون خطا.
+
+## V137.1 — کارت زیر سربرگ، تصویر سیاه تخته، تختهٔ کامل
+
+### ریشه‌ها
+
+```text
+۱) کارت سؤال زیر سربرگ نمی‌نشست: scrollQuestionToHeader یک‌بار اسکرول می‌کرد اما کارت با
+   expandVertically در حال بازشدن بود و ارتفاع‌ها عوض می‌شد؛ آخرین آیتم هم جای کافی
+   برای رسیدن به سربرگ نداشت.
+۲) تصویر سیاه تخته: uploadOnce بیت‌مپ ARGB (PNG با کانال آلفا) را با JPEG/WEBP_LOSSY فشرده
+   می‌کرد → پیکسل‌های شفاف سیاه. (خود تخته پس‌زمینهٔ سفید می‌کشید، اما مسیر پاک‌کن/لایه‌ها
+   آلفا تولید می‌کرد.)
+```
+
+### چه شد
+
+```text
+ExamBuilderScreen.kt: scrollQuestionToHeader پس از اسکرول اولیه ۳۶ فریم با withFrameNanos
+  اختلاف را دنبال می‌کند (scrollBy)؛ آیتم انتهایی «v137-tail-space» به ارتفاع ۰٫۷۵ صفحه.
+SupabaseQuestionImageUploader.kt: flattenOnWhite() — هر بیت‌مپ دارای آلفا پیش از فشرده‌سازی
+  روی سفید می‌نشیند (setHasAlpha=false).
+StudentWhiteboardDialog.kt (بازنویسی V137.1):
+  - BoardStroke با id/ref/page؛ BoardTool: PEN/HIGHLIGHT/ERASER/OBJ_ERASER/SELECT/LINE/ARROW/
+    RECT/CIRCLE/TRIANGLE/TEXT/IMAGE؛ BoardBackground: PLAIN/GRID/LINED/DOTS/AXES.
+  - رندر مشترک renderBoard(canvas,...) برای صفحه و خروجی؛ پاک‌کن با PorterDuff.CLEAR داخل
+    saveLayer (زمینه سالم)؛ خروجی روی سفید flatten + setHasAlpha(false) در filesDir/whiteboard.
+  - انتخاب: hitTest (فاصله تا پاره‌خط برای قلم/خط، کادر برای بقیه)؛ درگ = جابه‌جایی؛ رنگ/ضخامت
+    روی شیء انتخاب‌شده اعمال می‌شود؛ دوبار لمس متن = ویرایش؛ بزرگ‌تر/کوچک‌تر برای متن/تصویر.
+  - IMAGE.ref: `tex:<tex>` (NativeMathSvgRenderer→AndroidSVG)، `fig:<json>` (FigureSvgRenderer/
+    AtlasBitmapRenderer)، `img:<url>` (Coil imageLoader.execute). درج از FormulaHostDialog و
+    ExamFigureToolHost (tool: graph/axis/figure/table/physics/chemistry/periodic).
+  - پیش‌نویس JSON در filesDir/whiteboard/draft-<qid>.json (نوشتن با تأخیر ۷۰۰ms، بازیابی در ورود).
+  - چند صفحه (≤۶) → onDone(List<String>)؛ تأیید پیش از ثبت؛ سربرگ: شمارهٔ سؤال + زمان.
+  - onPreviewKeyEvent: Ctrl+Z / Ctrl+Y / Delete.
+StudentExamScreen.kt: StudentWhiteboardEntry پارامترهای questionNumber/remainingSeconds/
+  questionImages؛ onDone فهرست؛ برچسب «صفحهٔ n» برای چند تصویر.
+StudentExamViewModel.kt: WHITEBOARD_MAX_PAGES=6 — سقف تصاویر تختهٔ سؤالِ بدون سهمیهٔ تصویر.
+```
+
+### آنچه پیاده نشد (نیازمند تصمیم/زمان بیشتر)
+
+```text
+خط‌کش/گونیا/نقاله/پرگار تعاملی، تشخیص خودکار شکل، کیبورد ریاضی اختصاصی، پیوست فایل،
+گزارش فعالیت تخته، حالت مرور فقط‌خواندنی جدا (معلم همان تصویر را می‌بیند)، حالت کنتراست بالا.
+```
+
+### تست
+
+```text
+پین‌های موجود (V58_2: `StudentWhiteboardDialog(`؛ V58_0_2/V59_0: `private fun StudentWhiteboardEntry(`)
+حفظ شده‌اند؛ اسکن پین با مقایسهٔ HEAD/کار جاری بدون اختلاف.
+```

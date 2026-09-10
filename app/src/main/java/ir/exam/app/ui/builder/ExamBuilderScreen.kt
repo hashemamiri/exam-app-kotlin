@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -195,10 +196,18 @@ fun ExamBuilderScreen(
             )
         } else {
             listState.animateScrollToItem(target, 0)
+        }
+        // V137.1 — گزارش کاربر: چندگزینه‌ای/جورکردنی زیر هدر نمی‌نشستند. دو علت:
+        // ۱) بدنهٔ کارت با expandVertically در چند صد میلی‌ثانیه باز می‌شود و در دو
+        //    frame اول ارتفاع نهایی را ندارد؛ ۲) برای آخرین سؤال، فضای زیر کارت
+        //    (bottom padding) کمتر از ارتفاع صفحه بود و فهرست نمی‌توانست بیشتر بالا برود
+        //    (فاصلهٔ انتهایی به اندازهٔ صفحه اضافه شد). اینجا تا پایان انیمیشن
+        //    (حداکثر ~۶۰۰ms) موقعیت کارت هر frame اصلاح می‌شود.
+        repeat(36) {
             withFrameNanos { }
-            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }?.let { again ->
-                listState.animateScrollBy((again.offset - listState.layoutInfo.viewportStartOffset).toFloat(), tween(220))
-            }
+            val again = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target } ?: return@repeat
+            val delta = again.offset - listState.layoutInfo.viewportStartOffset
+            if (kotlin.math.abs(delta) > 1) listState.scrollBy(delta.toFloat())
         }
     }
 
@@ -539,6 +548,11 @@ fun ExamBuilderScreen(
                     }
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
+            }
+            item(key = "v137-tail-space") {
+                // V137.1 — فضای انتهایی به اندازهٔ صفحه تا آخرین کارت هم بتواند زیر هدر بنشیند.
+                val tailDp = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+                Spacer(Modifier.height((tailDp * 0.75f).dp))
             }
         }
     }

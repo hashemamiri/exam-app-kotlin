@@ -51,6 +51,8 @@ data class StudentExamUiState(
 )
 
 const val UNLIMITED_TIME = -1L
+/** V137.1 — بیشینهٔ صفحه‌های تخته که به‌عنوان تصویر پاسخ ثبت می‌شوند. */
+const val WHITEBOARD_MAX_PAGES = 6
 
 private const val EXAM_CHANGE_POLL_INTERVAL_MS = 60_000L
 
@@ -365,7 +367,8 @@ class StudentExamViewModel(
         // V136 — تخته وایت‌برد (allowAnswerGraph) حتی بدون سهمیهٔ تصویر هم یک تصویر
         // (خروجی تخته) می‌پذیرد؛ تخته‌های بعدی تصویر قبلی را جایگزین می‌کنند.
         val whiteboardOnly = exam.questionPresentation[questionId]?.allowAnswerGraph == true && (question?.maxAnswerImages ?: 0) <= 0
-        val max = if (whiteboardOnly) 1 else (question?.maxAnswerImages ?: 0)
+        // V137.1 — تختهٔ چندصفحه‌ای: هر بار ثبت، همهٔ صفحه‌های تخته جایگزین قبلی می‌شوند (تا ۶ تصویر).
+        val max = if (whiteboardOnly) WHITEBOARD_MAX_PAGES else (question?.maxAnswerImages ?: 0)
         if (max <= 0) return
         val current = if (whiteboardOnly) emptyList() else state.value.responseImages[questionId].orEmpty()
         val next = (current + uris.take((max - current.size).coerceAtLeast(0))).distinct()

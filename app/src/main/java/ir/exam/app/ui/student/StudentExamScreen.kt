@@ -421,7 +421,10 @@ fun StudentExamContent(
                         questionId = question.id,
                         current = if (question.maxAnswerImages > 0) emptyList() else state.responseImages[question.id].orEmpty(),
                         onAdd = onAddImages,
-                        onRemove = onRemoveImage
+                        onRemove = onRemoveImage,
+                        questionNumber = state.questionIndex + 1,
+                        remainingSeconds = state.remainingSeconds,
+                        questionImages = question.images
                     )
                 }
             }
@@ -594,16 +597,21 @@ private fun StudentWhiteboardEntry(
     questionId: String,
     current: List<String>,
     onAdd: (String, List<String>) -> Unit,
-    onRemove: (String, String) -> Unit
+    onRemove: (String, String) -> Unit,
+    questionNumber: Int = 0,
+    remainingSeconds: Long = UNLIMITED_TIME,
+    questionImages: List<String> = emptyList()
 ) {
     var open by remember(questionId) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("تخته وایت‌برد")
-        Button(onClick = { open = true }) { Text(if (current.isEmpty()) "بازکردن تخته و نوشتن پاسخ" else "نوشتن دوباره روی تخته") }
-        current.forEach { uri ->
+        // V137.1 — پیش‌نویس تخته ذخیره می‌شود؛ بازکردن دوباره همان محتوا را برای ویرایش می‌آورد.
+        Button(onClick = { open = true }) { Text(if (current.isEmpty()) "بازکردن تخته و نوشتن پاسخ" else "ویرایش تخته") }
+        current.forEachIndexed { index, uri ->
             Column {
+                if (current.size > 1) Text("صفحهٔ ${index + 1}", style = MaterialTheme.typography.labelMedium)
                 coil.compose.AsyncImage(model = uri, contentDescription = "پاسخ تخته", modifier = Modifier.fillMaxWidth())
-                TextButton(onClick = { onRemove(questionId, uri) }) { Text("حذف پاسخ تخته") }
+                TextButton(onClick = { onRemove(questionId, uri) }) { Text("حذف این تصویر تخته") }
             }
         }
     }
@@ -611,7 +619,10 @@ private fun StudentWhiteboardEntry(
         StudentWhiteboardDialog(
             questionId = questionId,
             onDismiss = { open = false },
-            onDone = { uri -> onAdd(questionId, listOf(uri)); open = false }
+            onDone = { uris -> onAdd(questionId, uris); open = false },
+            questionNumber = questionNumber,
+            remainingSeconds = remainingSeconds,
+            questionImages = questionImages
         )
     }
 }

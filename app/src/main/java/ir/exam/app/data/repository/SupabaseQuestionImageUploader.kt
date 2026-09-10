@@ -120,6 +120,7 @@ class SupabaseQuestionImageUploader(context: Context) {
         attempt: Int
     ): String {
         val bitmap = decodeSampledBitmap(uri, maxDimension, forceSquare, attempt)
+            ?.let(::flattenOnWhite)
             ?: error("تصویر انتخاب‌شده قابل خواندن نیست.")
         // bitmap روی هر مسیر (حتی خطا/OutOfMemoryError در مراحل بعدی) آزاد می‌شود
         // تا تلاش‌های بعدی حلقهٔ retry حافظهٔ کافی داشته باشند.
@@ -142,6 +143,22 @@ class SupabaseQuestionImageUploader(context: Context) {
         } finally {
             bitmap.recycle()
         }
+    }
+
+    /**
+     * V137.1 — تصویرِ دارای کانال شفافیت (PNG تخته/اسکرین‌شات) پیش از فشرده‌سازیِ JPEG/WEBP_LOSSY
+     * روی سفید می‌نشیند؛ در غیر این صورت پیکسل‌های شفاف سیاه می‌شوند (تصویرِ سیاهِ تخته نزد معلم).
+     */
+    private fun flattenOnWhite(source: Bitmap): Bitmap {
+        if (!source.hasAlpha()) return source
+        val flat = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(flat).apply {
+            drawColor(android.graphics.Color.WHITE)
+            drawBitmap(source, 0f, 0f, null)
+        }
+        source.recycle()
+        flat.setHasAlpha(false)
+        return flat
     }
 
     private fun decodeSampledBitmap(
