@@ -595,7 +595,9 @@
       var units = [];
       childArr(flow).forEach(function (node) {
         if (node.tagName === 'TABLE' && node.classList.contains('questions-print-table')) {
-          var rows = Array.prototype.slice.call(node.querySelectorAll('tbody > tr'));
+          /* V137.4 — فقط ردیف‌های مستقیمِ خودِ جدول سؤالات؛ 'tbody > tr' همهٔ ردیف‌های تودرتو (جدولِ
+             درج‌شده در متن سؤال: شیء «جدول» و جدول‌های جورکردنی) را هم می‌کشید بیرون و جدول شیء خالی می‌ماند. */
+          var rows = Array.prototype.slice.call(node.querySelectorAll(':scope > tbody > tr'));
           var last = units[units.length - 1];
           if (last && last.kind === 'qtable') last.rows = last.rows.concat(rows);
           else units.push({ kind: 'qtable', tpl: node, rows: rows });

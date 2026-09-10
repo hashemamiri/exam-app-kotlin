@@ -1411,7 +1411,35 @@ function markPreviewFiguresReady(area) {
     ensureProfessionalResizeHandles(fig);
     if (!fig.querySelector('.fig-move-hint')) fig.insertAdjacentHTML('afterbegin','<span class="fig-move-hint">جابجایی: داخل کادر بکشید</span>');
     fitFigBox(fig);
+    watchFigImages(fig);
   });
+}
+/* V137.4 — ریشهٔ «شیء بیرون از کادر» برای آناتومی/فیزیک/شیمی: این شکل‌ها تصویر اطلس (<img>) دارند که
+   هنگام اندازه‌گیریِ اول هنوز بارگذاری نشده (ارتفاع ۰ → کادر ۴px و شیء بیرون کادر). پس از load هر
+   تصویر، اگر معلم اندازه‌ای ذخیره نکرده، اندازهٔ طبیعی دوباره گرفته و کادر از نو تنظیم می‌شود. */
+function watchFigImages(fig) {
+  try {
+    fig.querySelectorAll('.qmf-fig img').forEach(img => {
+      if (img.__figWatched) return;
+      img.__figWatched = true;
+      const placeholder = fig.dataset.natPending === '1';
+      if (img.complete && img.naturalWidth > 0 && !placeholder) return;
+      const refit = () => {
+        try {
+          const q = questions.find(x => String(x.id) === String(fig.dataset.qid));
+          const saved = q && q.figLayouts && q.figLayouts[fig.dataset.figIndex];
+          if (saved && (saved.w || saved.h)) return;
+          delete fig.dataset.natW; delete fig.dataset.natH; delete fig.dataset.natPending;
+          fig.style.width = ''; fig.style.height = '';
+          fig.classList.remove('fig-scaled');
+          fitFigBox(fig);
+          updateFigSizeBadge(fig);
+        } catch (e) {}
+      };
+      if (img.complete && img.naturalWidth > 0) setTimeout(refit, 0);
+      else img.addEventListener('load', refit, { once: true });
+    });
+  } catch (e) {}
 }
 /* V137.2 — اندازهٔ طبیعیِ شیءِ داخل کادر (svg/جدول/تناوبی/آناتومی/تصویر) بدون زوم و بدون scale؛
    با کلاس موقت .fig-measure که width/height/transform را خنثی می‌کند اندازه‌گیری و در dataset ذخیره می‌شود. */
@@ -1421,8 +1449,11 @@ function markPreviewFiguresReady(area) {
    svg به همان محدوده (+۳ واحد حاشیه برای ضخامت خط) تنگ می‌شود؛ بعد اندازهٔ طبیعی اندازه‌گیری می‌شود. */
 function tightenFigSvgs(fig) {
   try {
-    fig.querySelectorAll('.qmf-fig svg').forEach(svg => {
-      if (svg.dataset.tight || svg.closest('svg') !== svg) return;
+    // V137.4 — فقط svg که فرزند مستقیم .qmf-fig است (شکل/نمودار/محور/هندسه)؛ svgهای تودرتو در
+    // قاب علوم/آناتومی (overflow:visible، متن با CSS، تصویر زیرین) getBBox نادرست می‌دهند و تنگ‌کردنشان
+    // شیء را به چند پیکسل می‌رساند (لنز → ۱۵px). محدودهٔ خیلی کوچک هم نادیده گرفته می‌شود.
+    fig.querySelectorAll('.qmf-fig > svg').forEach(svg => {
+      if (svg.dataset.tight) return;
       svg.dataset.tight = '1';
       const vb = (svg.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
       if (vb.length !== 4 || !(vb[2] > 0) || !(vb[3] > 0)) return;
@@ -1433,6 +1464,7 @@ function tightenFigSvgs(fig) {
       try { bb = svg.getBBox(); } catch (_e) { bb = null; }
       hidden.forEach((el, i) => { el.style.display = prev[i]; });
       if (!bb || !(bb.width > 8) || !(bb.height > 8)) return;
+      if (bb.width < vb[2] * 0.3 || bb.height < vb[3] * 0.12) return;
       const pad = 3;
       const x = Math.max(vb[0], bb.x - pad), y = Math.max(vb[1], bb.y - pad);
       const x2 = Math.min(vb[0] + vb[2], bb.x + bb.width + pad), y2 = Math.min(vb[1] + vb[3], bb.y + bb.height + pad);
@@ -1448,18 +1480,55 @@ function tightenFigSvgs(fig) {
     });
   } catch (e) {}
 }
+function figColumnWidth(fig) {
+  const parent = fig.closest('.question-main-td') || fig.parentElement;
+  if (!parent) return 9999;
+  const cs = window.getComputedStyle(parent);
+  return Math.max(18, (parent.clientWidth || 0) - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) - 18);
+}
+/* V137.4 — گزارش کاربر: «اشیا بیرون از کادر ۸دستگیره می‌افتند». علت: اندازه‌گیری با width:max-content
+   برای اشیای HTML (جدول width:100%، تناوبی grid، آناتومی .an-plate) اندازه‌های بی‌معنی می‌داد (جدول
+   ۱۰۰۰۰۰۴px!) و شیء با scale(0.05) بیرون کادر می‌رفت. حالا سه مسیر: SVG → از width/height خودِ svg
+   (پس از تنگ‌کردن)؛ تصویر → naturalWidth/Height؛ HTML → اندازه‌گیری در «عرض ستون» (نه max-content). */
 function figNaturalSize(fig) {
   try {
     if (fig.dataset.natW && fig.dataset.natH) return { w: +fig.dataset.natW, h: +fig.dataset.natH };
     const inner = fig.querySelector('.qmf-fig');
     if (!inner) return null;
     tightenFigSvgs(fig);
-    fig.classList.add('fig-measure');
-    const w = inner.offsetWidth, h = inner.offsetHeight;
-    fig.classList.remove('fig-measure');
+    const padW = (parseFloat(getComputedStyle(inner).paddingLeft) || 0) + (parseFloat(getComputedStyle(inner).paddingRight) || 0);
+    const padH = (parseFloat(getComputedStyle(inner).paddingTop) || 0) + (parseFloat(getComputedStyle(inner).paddingBottom) || 0);
+    let w = 0, h = 0;
+    const svg = inner.firstElementChild && inner.firstElementChild.tagName && inner.firstElementChild.tagName.toLowerCase() === 'svg' ? inner.firstElementChild : null;
+    const img = !svg && inner.firstElementChild && inner.firstElementChild.tagName && inner.firstElementChild.tagName.toLowerCase() === 'img' ? inner.firstElementChild : null;
+    if (svg) {
+      const sw = parseFloat(svg.getAttribute('width')), sh = parseFloat(svg.getAttribute('height'));
+      const vb = (svg.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
+      if (sw > 0 && sh > 0) { w = sw; h = sh; }
+      else if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) { w = vb[2]; h = vb[3]; }
+    } else if (img && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      w = img.naturalWidth; h = img.naturalHeight;
+    }
+    if (w > 0 && h > 0) {
+      w += padW; h += padH;
+    } else {
+      // HTML: در عرض ستون اندازه بگیر (جدول/تناوبی/آناتومی خودشان را با عرض دردسترس می‌چینند).
+      // همان سقف پیش‌فرض قدیمی (۳۶۰px) تا جدول/تناوبی/آناتومی تمام‌عرض نشوند.
+      const colW = Math.min(360, figColumnWidth(fig));
+      const prevW = fig.style.width, prevH = fig.style.height;
+      fig.classList.add('fig-measure');
+      fig.style.width = Math.round(colW) + 'px';
+      fig.style.height = 'auto';
+      w = inner.offsetWidth; h = inner.offsetHeight;
+      fig.classList.remove('fig-measure');
+      fig.style.width = prevW; fig.style.height = prevH;
+      // تصویر اطلس هنوز بارگذاری نشده: جای‌نگه‌دار با نسبت ۳۶۰×۲۸۰ (و بدون cache) تا پس از load دوباره اندازه شود.
+      const pendingImg = Array.from(inner.querySelectorAll('img')).some(im => !(im.complete && im.naturalWidth > 0));
+      if (pendingImg && h < 40) { fig.dataset.natPending = '1'; return { w: Math.round(w || colW), h: Math.round((w || colW) * 280 / 360) }; }
+    }
     if (!(w > 0 && h > 0)) return null;
-    fig.dataset.natW = String(w); fig.dataset.natH = String(h);
-    return { w, h };
+    fig.dataset.natW = String(Math.round(w)); fig.dataset.natH = String(Math.round(h));
+    return { w: Math.round(w), h: Math.round(h) };
   } catch (e) { return null; }
 }
 /* V137.2 — خودِ شیء با کادر بزرگ/کوچک می‌شود (نه فقط کادر): شیء در اندازهٔ طبیعی‌اش می‌ماند و با
@@ -1482,12 +1551,7 @@ function fitFigBox(fig) {
     if (!nat) return;
     const st = fig.getAttribute('style') || '';
     const hasW = /(^|;)\s*width\s*:/.test(st), hasH = /(^|;)\s*height\s*:/.test(st);
-    const parent = fig.closest('.question-main-td') || fig.parentElement;
-    let maxW = 9999;
-    if (parent) {
-      const cs = window.getComputedStyle(parent);
-      maxW = Math.max(18, (parent.clientWidth || 0) - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) - 18);
-    }
+    const maxW = figColumnWidth(fig);
     let w = hasW ? fig.offsetWidth : Math.min(nat.w, maxW);
     let h = hasH ? fig.offsetHeight : w * nat.h / nat.w;
     if (!(w > 0) || !(h > 0)) return;

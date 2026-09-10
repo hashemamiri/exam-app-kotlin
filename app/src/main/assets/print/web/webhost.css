@@ -196,14 +196,22 @@ body{padding:0 !important;}
    .fig-measure: حالت موقتِ اندازه‌گیری (اندازهٔ طبیعی، بدون scale/زوم/محدودیت عرض).
    .fig-scaled: شیء در اندازهٔ طبیعی (--nat-w/--nat-h) و با scale(--sx,--sy) از گوشهٔ راست‌بالا
    دقیقاً هم‌اندازهٔ کادر ۸دستگیره؛ برای همهٔ انواع شیء یکسان. */
-.interactive-figure.fig-measure{width:auto !important;height:auto !important;max-width:none !important;}
-.interactive-figure.fig-measure .qmf-fig{width:max-content !important;max-width:none !important;height:auto !important;display:inline-block !important;transform:none !important;}
-.interactive-figure.fig-measure .qmf-fig svg,
-.interactive-figure.fig-measure .qmf-fig img{width:auto !important;height:auto !important;max-width:none !important;}
+/* V137.4 — اندازه‌گیری HTML در عرض ستون (width روی خودِ کادر به‌صورت inline تنظیم می‌شود)، نه max-content. */
+.interactive-figure.fig-measure{height:auto !important;max-width:none !important;}
+.interactive-figure.fig-measure .qmf-fig{width:auto !important;max-width:100% !important;height:auto !important;display:block !important;transform:none !important;}
+.interactive-figure.fig-measure .qmf-fig > svg,
+.interactive-figure.fig-measure .qmf-fig > img{width:auto !important;height:auto !important;max-width:none !important;}
+.interactive-figure.fig-measure .qmf-fig img.an-svg{width:100% !important;height:auto !important;max-width:100% !important;}
 .interactive-figure.fig-scaled[style]{overflow:visible;}
 .interactive-figure.fig-scaled[style] .qmf-fig{width:var(--nat-w) !important;height:var(--nat-h) !important;max-width:none !important;display:block !important;margin:0 !important;transform:scale(var(--sx,1),var(--sy,1));transform-origin:top right;will-change:transform;}
-.interactive-figure.fig-scaled[style] .qmf-fig svg,
-.interactive-figure.fig-scaled[style] .qmf-fig img{width:auto !important;height:auto !important;max-width:none !important;object-fit:fill !important;}
+.interactive-figure.fig-scaled[style] .qmf-fig > svg,
+.interactive-figure.fig-scaled[style] .qmf-fig > img{width:auto !important;height:auto !important;max-width:none !important;object-fit:fill !important;}
+/* V137.4 — ریشهٔ «شیء بیرون از کادر» پس از تغییر اندازه: قانون #pgsViewer #previewArea … .qmf-fig{margin:0 auto}
+   (V132) بر margin:0 بالا غلبه می‌کرد و شیءِ scale‌شده به اندازهٔ (کادر − طبیعی)/۲ جابه‌جا می‌شد. */
+#pgsViewer #previewArea .interactive-figure.fig-scaled[style] .qmf-fig{margin:0 !important;}
+/* V137.4 — تصویر اطلس داخل قاب آناتومی/فیزیک/شیمی همیشه هم‌عرض قاب (نه اندازهٔ طبیعی که از کادر بیرون می‌زد). */
+.interactive-figure.fig-scaled[style] .qmf-fig .an-frame img.an-svg,
+.interactive-figure.fig-scaled[style] .qmf-fig .an-stage img.an-svg{width:100% !important;height:auto !important;max-width:100% !important;object-fit:contain !important;}
 .interactive-figure.fig-scaled[style] .qmf-fig .an-plate,
 .interactive-figure.fig-scaled[style] .qmf-fig .an-frame{height:auto;}
 @media print{.interactive-figure.fig-scaled[style] .qmf-fig{transform:scale(var(--sx,1),var(--sy,1));transform-origin:top right;}}

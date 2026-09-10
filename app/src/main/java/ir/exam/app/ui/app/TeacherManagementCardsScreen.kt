@@ -2,7 +2,6 @@ package ir.exam.app.ui.app
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -353,7 +352,10 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                         else -> false
                     }
                 }
-                .pointerInput(activeIndex, settling) {
+                // V137.4 — ریشهٔ «لگ و باگ» جابه‌جایی: کلیدهای (activeIndex, settling) با هر تغییر،
+                // آشکارسازِ حرکت را از نو می‌ساختند؛ اگر انگشت وسطِ نشستنِ کارت قبلی پایین می‌آمد،
+                // حرکت گم می‌شد و باید دوباره می‌کشید. حالا آشکارساز پایدار است و state را زنده می‌خواند.
+                .pointerInput(Unit) {
                     detectDragGestures(
                         onDragEnd = { settle(false) },
                         onDragCancel = { settle(true) }
@@ -376,29 +378,31 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                     val data = cards[index]
                     // V137.3 — کارتِ در حال پرواز تا پایان پرواز در جایگاه کارت فعال (relative ۰) می‌ماند.
                     val visualRelative = if (isFlying) 0 else relative
-                    val stackTop by animateDpAsState(
-                        (30 + visualRelative * 30).dp,
-                        tween(650, easing = FastOutSlowInEasing),
+                    // V137.4 — جای کارت در پشته با translationY در graphicsLayer (فقط رسم دوباره)،
+                    // نه padding (که هر فریم برای همهٔ کارت‌ها layout دوباره می‌کرد → لگ).
+                    val stackTopPx by animateFloatAsState(
+                        with(density) { (visualRelative * 30).dp.toPx() },
+                        tween(520, easing = FastOutSlowInEasing),
                         label = "management-card-top-$index"
                     )
                     val stackScale by animateFloatAsState(
                         1f - visualRelative * .075f,
-                        tween(650, easing = FastOutSlowInEasing),
+                        tween(520, easing = FastOutSlowInEasing),
                         label = "management-card-scale-$index"
                     )
                     val stackAlpha by animateFloatAsState(
                         1f - visualRelative * .25f,
-                        tween(500),
+                        tween(400),
                         label = "management-card-alpha-$index"
                     )
                     val stackRotation by animateFloatAsState(
                         if (visualRelative == 0) 0f else if (visualRelative == 1) 5f else -6f,
-                        tween(650, easing = FastOutSlowInEasing),
+                        tween(520, easing = FastOutSlowInEasing),
                         label = "management-card-rotation-$index"
                     )
                     Box(
                         Modifier
-                            .padding(top = stackTop)
+                            .padding(top = 30.dp)
                             .fillMaxWidth(.90f)
                             .height(190.dp)
                             .zIndex(if (isFlying) 4f else 3f - relative)
@@ -419,7 +423,7 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                                     returning -> returnX.value
                                     else -> 0f
                                 }
-                                translationY = when {
+                                translationY = stackTopPx + when {
                                     active -> dragY.value - liftPx * .8f * (1f - enterP)
                                     returning -> returnY.value
                                     else -> 0f

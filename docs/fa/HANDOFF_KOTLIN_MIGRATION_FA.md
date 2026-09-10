@@ -18394,3 +18394,33 @@ verify_native_final PASS · git diff --check تمیز · اسکن پین تست�
 verify_native_final PASS · git diff --check تمیز · mainscript.js/graph_fig.js با node parse شدند ·
 اسکن پین تست‌ها: فقط V20InteractionPolishTest (animateScrollBy) عمداً به‌روز شد.
 ```
+
+
+## V137.4 — شیء داخل کادر ۸دستگیره برای همهٔ انواع، جابه‌جایی کارت‌ها بدون لگ
+
+### چه شد
+
+```text
+گزارش: «اشیا بیرون از کادر ۸دستگیره» و «جابه‌جایی کارت‌ها لگ/باگ دارد». با puppeteer (Chrome +
+http.server روی assets تا اطلس بارگذاری شود) ریشه‌ها پیدا شد:
+۱) figNaturalSize با width:max-content برای HTML: جدول → 1000004px، natH 18 → sx=sy=0.05 و شیء
+   دور از کادر. حالا: svg مستقیم → width/height خودِ svg (پس از tighten)؛ img مستقیم → natural*;
+   HTML (جدول/تناوبی/.an-plate) → اندازه‌گیری با width = min(360, عرض ستون) روی خودِ کادر.
+   figColumnWidth() مشترک با fitFigBox.
+۲) tightenFigSvgs فقط برای '.qmf-fig > svg' (svgهای تودرتوی قاب علوم/آناتومی getBBox نادرست) و
+   نادیده‌گرفتن bbox خیلی کوچک (<30٪ عرض یا <12٪ ارتفاع viewBox).
+۳) اطلس فیزیک/شیمی/آناتومی: <img> هنگام اندازه‌گیری اول بار نشده (h≈0 → کادر 4px). حالا جای‌نگه‌دار
+   360×280 با dataset.natPending و watchFigImages(): پس از load (یا فوراً اگر complete) اگر معلم
+   اندازه ذخیره نکرده، natW/natH پاک و fitFigBox دوباره. CSS: img.an-svg در حالت measure و scaled
+   همیشه width:100% قاب.
+۴) شیء scale‌شده وسط‌چین می‌شد: قانون V132 «#pgsViewer #previewArea … .qmf-fig{margin:0 auto}» بر
+   margin:0 غلبه می‌کرد → margin:0 !important برای .fig-scaled[style] .qmf-fig.
+۵) باگ جدا که در تست دیده شد: pgs_engine collect با 'tbody > tr' ردیف‌های جدولِ درج‌شده در متن سؤال
+   را هم به‌عنوان ردیف سؤال می‌برد و جدول شیء خالی می‌ماند → ':scope > tbody > tr'.
+   نتیجهٔ puppeteer (fig vs obj): جدول 306×60/303×52، محور 244×191/241×187، اطلس 306×169/303×165،
+   آناتومی 306×488/303×455، تناوبی 306×315/303×312؛ پس از کشیدن دستگیره bl: 377×227/373×223.
+۶) کارت‌ها: pointerInput(activeIndex, settling) هر تغییر آشکارساز را از نو می‌ساخت (حرکت گم می‌شد
+   → «باگ»)؛ padding(top = animateDp) هر فریم layout همهٔ کارت‌ها («لگ»). حالا pointerInput(Unit)،
+   stackTopPx با translationY در graphicsLayer، tween 520/400.
+تست: V137_4_PreviewBoxCardsTest.kt.
+```
