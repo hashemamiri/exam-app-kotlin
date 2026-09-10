@@ -29,7 +29,9 @@ data class AppearanceSettings(
     val appFont: AppFont = AppFont.VAZIRMATN,
     val neumorphicPalette: NeumorphicPalette = NeumorphicPalette.INDIGO_MINT,
     val neumorphicDepth: Float = 14f,
-    val deviceLayoutMode: DeviceLayoutMode = DeviceLayoutMode.AUTO
+    val deviceLayoutMode: DeviceLayoutMode = DeviceLayoutMode.AUTO,
+    /** V137.5 — اعداد فارسی روی ابزارهای تخته، محورها، نمودارها، شکل‌ها و جدول‌ها. */
+    val persianDigits: Boolean = false
 )
 
 /** تنظیمات ظاهر فقط روی دستگاه ذخیره می‌شوند و هیچ دادهٔ حساب یا token در آن نیست. */
@@ -52,7 +54,8 @@ class AppearancePreferences(context: Context) {
                     .coerceIn(MIN_NEO_DEPTH, MAX_NEO_DEPTH),
                 deviceLayoutMode = values[DEVICE_LAYOUT]?.let {
                     runCatching { DeviceLayoutMode.valueOf(it) }.getOrNull()
-                } ?: DeviceLayoutMode.AUTO
+                } ?: DeviceLayoutMode.AUTO,
+                persianDigits = values[PERSIAN_DIGITS] ?: false
             )
         }
         .catch { emit(AppearanceSettings()) }
@@ -85,6 +88,10 @@ class AppearancePreferences(context: Context) {
         store.edit { it[DEVICE_LAYOUT] = mode.name }
     }
 
+    suspend fun setPersianDigits(enabled: Boolean) {
+        store.edit { it[PERSIAN_DIGITS] = enabled }
+    }
+
     suspend fun reset() {
         store.edit { it.clear() }
     }
@@ -102,5 +109,6 @@ class AppearancePreferences(context: Context) {
         private val NEUMORPHIC_PALETTE = stringPreferencesKey("neumorphic_palette")
         private val NEUMORPHIC_DEPTH = floatPreferencesKey("neumorphic_depth")
         private val DEVICE_LAYOUT = stringPreferencesKey("device_layout")
+        private val PERSIAN_DIGITS = booleanPreferencesKey("persian_digits")
     }
 }

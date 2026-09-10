@@ -39,6 +39,8 @@ object ExamHtmlPrintPayloadBuilder {
             put("totalScore", formatScore(printable.totalScore))
             put("includeAnswerKey", printable.includeAnswerKey)
             if (pageSetupJson != null) put("pageSetup", pageSetupJson)
+            // V137.5 — اعداد فارسی در شکل‌ها/نمودارها/جدول‌های موتور وب
+            put("persianDigits", ir.exam.app.core.figure.FigureDigits.persian)
             put("fields", buildJsonObject {
 
                 put("f_headerTemplate", "classic")

@@ -252,6 +252,8 @@
     lastData = null;
     wrapRenderPreviewOnce();
     if (data.pageSetup !== undefined) writePageSetup(data.pageSetup);
+    /* V137.5 — کلید اعداد فارسی برای شکل‌ها (mainscript.renderFigToken آن را می‌خواند) */
+    if (data.persianDigits !== undefined) window.__figPersianDigits = !!data.persianDigits;
     var fields = asObject(data.fields);
     if (!text(fields.opt_footerText).trim() && text(data.footerNote).trim()) fields.opt_footerText = text(data.footerNote).trim();
     applyFields(fields);

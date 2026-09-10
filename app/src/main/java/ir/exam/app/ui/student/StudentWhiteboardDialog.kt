@@ -29,7 +29,30 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowRightAlt
+import androidx.compose.material.icons.automirrored.outlined.Redo
+import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material.icons.outlined.AddBox
+import androidx.compose.material.icons.outlined.Architecture
+import androidx.compose.material.icons.outlined.AutoFixNormal
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.ChangeHistory
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CropSquare
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.Highlight
+import androidx.compose.material.icons.outlined.HorizontalRule
+import androidx.compose.material.icons.outlined.LayersClear
+import androidx.compose.material.icons.outlined.OpenWith
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.SquareFoot
+import androidx.compose.material.icons.outlined.Straighten
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -72,6 +95,7 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import androidx.core.graphics.drawable.toBitmap
 import ir.exam.app.core.figure.AtlasBitmapRenderer
+import ir.exam.app.core.figure.FigureDigits
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureSvgRenderer
 import ir.exam.app.core.math.FormulaTextCodec
@@ -105,7 +129,41 @@ import kotlin.math.sin
 internal enum class BoardTool(val label: String, val pickable: Boolean = true) {
     PEN("قلم"), HIGHLIGHT("هایلایتر"), ERASER("پاک‌کن"), OBJ_ERASER("پاک‌کن شیء"), SELECT("انتخاب/جابه‌جایی"),
     LINE("خط"), ARROW("پیکان"), RECT("مستطیل"), CIRCLE("دایره"), TRIANGLE("مثلث"), TEXT("متن"),
-    IMAGE("تصویر", pickable = false)
+    IMAGE("تصویر", pickable = false);
+
+    /** V137.5 — آیکون ابزار (نوار ابزار آیکونی). */
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+        get() = when (this) {
+            PEN -> Icons.Outlined.Draw
+            HIGHLIGHT -> Icons.Outlined.Highlight
+            ERASER -> Icons.Outlined.AutoFixNormal
+            OBJ_ERASER -> Icons.Outlined.LayersClear
+            SELECT -> Icons.Outlined.OpenWith
+            LINE -> Icons.Outlined.HorizontalRule
+            ARROW -> Icons.AutoMirrored.Outlined.ArrowRightAlt
+            RECT -> Icons.Outlined.CropSquare
+            CIRCLE -> Icons.Outlined.RadioButtonUnchecked
+            TRIANGLE -> Icons.Outlined.ChangeHistory
+            TEXT -> Icons.Outlined.TextFields
+            IMAGE -> Icons.Outlined.AddBox
+        }
+}
+
+/** V137.5 — چیپِ آیکونیِ نوار ابزار تخته (دایرهٔ ۴۰dp؛ انتخاب‌شده = پس‌زمینهٔ رنگ اصلی). */
+@Composable
+internal fun BoardIconChip(selected: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    val bg = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+    val fg = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    Box(
+        Modifier.size(40.dp).clip(CircleShape).background(bg).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) { Icon(icon, contentDescription = label, tint = fg, modifier = Modifier.size(22.dp)) }
+}
+
+private fun k_hint(kind: BoardInstrument): String = when (kind) {
+    BoardInstrument.RULER -> "خط‌کش: قلم نزدیک لبه می‌چسبد؛ آبی = چرخش/اندازه؛ خاکستری = جابه‌جایی"
+    BoardInstrument.SETSQUARE -> "گونیا: قلم نزدیک لبه می‌چسبد؛ آبی = چرخش/اندازه؛ خاکستری = جابه‌جایی"
+    else -> "قلم نزدیک لبه می‌چسبد؛ آبی = چرخش/اندازه؛ خاکستری = جابه‌جایی"
 }
 
 /** پس‌زمینهٔ تخته (V137؛ V137.1: نقطه‌ای و محور مختصات). */
@@ -117,7 +175,19 @@ internal enum class BoardBackground(val label: String) { PLAIN("ساده"), GRID
  * نقاله روی کمان می‌رود، و با پرگار هر کشیدن یک کمان به مرکز/شعاع پرگار است. جابه‌جایی: کشیدن بدنه؛
  * چرخش/اندازه: کشیدن دستگیرهٔ آبی.
  */
-internal enum class BoardInstrument(val label: String) { NONE("هیچ"), RULER("خط‌کش"), SETSQUARE("گونیا"), PROTRACTOR("نقاله"), COMPASS("پرگار") }
+internal enum class BoardInstrument(val label: String) {
+    NONE("بدون ابزار"), RULER("خط‌کش"), SETSQUARE("گونیا"), PROTRACTOR("نقاله"), COMPASS("پرگار");
+
+    /** V137.5 — آیکون ابزار هندسی. */
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+        get() = when (this) {
+            NONE -> Icons.Outlined.Block
+            RULER -> Icons.Outlined.Straighten
+            SETSQUARE -> Icons.Outlined.SquareFoot
+            PROTRACTOR -> Icons.Outlined.Speed
+            COMPASS -> Icons.Outlined.Architecture
+        }
+}
 
 internal data class InstrumentState(
     val kind: BoardInstrument = BoardInstrument.NONE,
@@ -173,7 +243,9 @@ fun StudentWhiteboardDialog(
     onDone: (fileUris: List<String>) -> Unit,
     questionNumber: Int = 0,
     remainingSeconds: Long = UNLIMITED_TIME,
-    questionImages: List<String> = emptyList()
+    questionImages: List<String> = emptyList(),
+    /** V137.5 — حالت معلم (سازندهٔ آزمون): دکمهٔ پایانی «افزودن تصویر تخته به سؤال» است، نه «ثبت به‌عنوان پاسخ». */
+    teacherMode: Boolean = false
 ) {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current.density
@@ -303,36 +375,37 @@ fun StudentWhiteboardDialog(
                             color = if (remainingSeconds != UNLIMITED_TIME && remainingSeconds < 120) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    TextButton(onClick = { undo() }, enabled = strokes.isNotEmpty()) { Text("برگشت") }
-                    TextButton(onClick = { redoLast() }, enabled = redo.isNotEmpty()) { Text("جلو") }
-                    TextButton(onClick = onDismiss) { Text("بستن", color = MaterialTheme.colorScheme.error) }
+                    IconButton(onClick = { undo() }, enabled = strokes.isNotEmpty()) { Icon(Icons.AutoMirrored.Outlined.Undo, contentDescription = "برگشت") }
+                    IconButton(onClick = { redoLast() }, enabled = redo.isNotEmpty()) { Icon(Icons.AutoMirrored.Outlined.Redo, contentDescription = "جلو") }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "بستن", tint = MaterialTheme.colorScheme.error) }
                 }
-                // ابزارها
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // ابزارها — V137.5: آیکون به‌جای متن (نام ابزار در contentDescription/کنار ابزار انتخاب‌شده)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     BoardTool.values().filter { it.pickable }.forEach { t ->
-                        FilterChip(selected = tool == t, onClick = { tool = t; if (t != BoardTool.SELECT) selectedId = null }, label = { Text(t.label) })
+                        BoardIconChip(selected = tool == t, icon = t.icon, label = t.label, onClick = { tool = t; if (t != BoardTool.SELECT) selectedId = null })
                     }
-                    FilterChip(selected = insertMenu, onClick = { insertMenu = !insertMenu }, label = { Text("درج…") })
+                    BoardIconChip(selected = insertMenu, icon = Icons.Outlined.AddBox, label = "درج…", onClick = { insertMenu = !insertMenu })
+                    Text(tool.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
-                // V137.2 — ابزارهای هندسی
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("ابزار هندسی:", style = MaterialTheme.typography.labelMedium)
+                // V137.2 — ابزارهای هندسی (V137.5: آیکون)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     BoardInstrument.values().forEach { k ->
-                        FilterChip(
+                        BoardIconChip(
                             selected = instrument.kind == k,
+                            icon = k.icon,
+                            label = k.label,
                             onClick = {
                                 instrument = if (k == BoardInstrument.NONE) InstrumentState() else defaultInstrument(k, boardSize, density)
                                 if (k != BoardInstrument.NONE && tool != BoardTool.PEN && tool != BoardTool.LINE) tool = BoardTool.PEN
-                            },
-                            label = { Text(k.label) }
+                            }
                         )
                     }
                     if (instrument.kind != BoardInstrument.NONE) {
                         Text(
                             when (instrument.kind) {
-                                BoardInstrument.COMPASS -> "بکشید تا کمان رسم شود؛ دستگیرهٔ آبی = شعاع"
-                                BoardInstrument.PROTRACTOR -> "قلم نزدیک کمان/خط پایه می‌چسبد"
-                                else -> "قلم نزدیک لبه می‌چسبد؛ دستگیرهٔ آبی = چرخش/اندازه"
+                                BoardInstrument.COMPASS -> "پرگار: بکشید تا کمان رسم شود؛ آبی = شعاع؛ خاکستری = جابه‌جایی"
+                                BoardInstrument.PROTRACTOR -> "نقاله: قلم نزدیک کمان/خط پایه می‌چسبد؛ خاکستری = جابه‌جایی"
+                                else -> k_hint(instrument.kind)
                             },
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -438,10 +511,11 @@ fun StudentWhiteboardDialog(
                                 onDragStart = { p ->
                                     val inst = instrument
                                     val instActive = inst.kind != BoardInstrument.NONE && tool != BoardTool.SELECT && tool != BoardTool.OBJ_ERASER
+                                    // V137.5 — جابه‌جایی فقط از دستگیرهٔ خاکستریِ مخصوص (grip)؛ روی بدنه می‌شود کشید/نوشت.
                                     instMode = when {
                                         !instActive -> null
                                         (p - inst.handle).getDistance() < 30f * density -> "handle"
-                                        instrumentBodyHit(inst, p, density) -> "move"
+                                        (p - instrumentGrip(inst, density)).getDistance() < 30f * density -> "move"
                                         else -> null
                                     }
                                     if (instMode == null) when (tool) {
@@ -504,7 +578,7 @@ fun StudentWhiteboardDialog(
                     onClick = { confirmDone = true },
                     enabled = strokes.isNotEmpty() && boardSize.width > 0,
                     modifier = Modifier.fillMaxWidth().height(48.dp)
-                ) { Text("ثبت به‌عنوان تصویر پاسخ" + if (pageCount > 1) " ($pageCount صفحه)" else "") }
+                ) { Text((if (teacherMode) "افزودن تصویر تخته به سؤال" else "ثبت به‌عنوان تصویر پاسخ") + if (pageCount > 1) " ($pageCount صفحه)" else "") }
             }
         }
     }
@@ -577,8 +651,17 @@ fun StudentWhiteboardDialog(
         val filled = (0 until pageCount).count { p -> strokes.any { it.page == p } }
         AlertDialog(
             onDismissRequest = { confirmDone = false },
-            title = { Text("ثبت پاسخ تخته؟") },
-            text = { Text(if (pageCount > 1) "$filled صفحهٔ دارای محتوا به‌عنوان تصویر پاسخ ثبت می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند." else "تصویر تخته به‌عنوان پاسخ این سؤال ثبت می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند.") },
+            title = { Text(if (teacherMode) "افزودن تصویر تخته به سؤال؟" else "ثبت پاسخ تخته؟") },
+            text = {
+                Text(
+                    when {
+                        teacherMode && pageCount > 1 -> "$filled صفحهٔ دارای محتوا به‌عنوان تصویر به سؤال افزوده می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند."
+                        teacherMode -> "تصویر تخته به سؤال افزوده می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند."
+                        pageCount > 1 -> "$filled صفحهٔ دارای محتوا به‌عنوان تصویر پاسخ ثبت می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند."
+                        else -> "تصویر تخته به‌عنوان پاسخ این سؤال ثبت می‌شود. پیش‌نویس تخته برای ویرایش دوباره می‌ماند."
+                    }
+                )
+            },
             confirmButton = {
                 Button(onClick = {
                     confirmDone = false
@@ -588,7 +671,7 @@ fun StudentWhiteboardDialog(
                         }
                     }.getOrDefault(emptyList())
                     if (uris.isNotEmpty()) onDone(uris)
-                }) { Text("ثبت") }
+                }) { Text(if (teacherMode) "افزودن" else "ثبت") }
             },
             dismissButton = { TextButton(onClick = { confirmDone = false }) { Text("انصراف") } }
         )
@@ -656,6 +739,21 @@ internal fun instrumentBodyHit(st: InstrumentState, p: Offset, density: Float): 
     }
 }
 
+/**
+ * V137.5 — دستگیرهٔ خاکستریِ «جابه‌جایی» هر ابزار (مختصات تخته). خط‌کش: وسط بدنه؛ گونیا: داخل سوراخ میانی؛
+ * نقاله: وسط نیم‌دایره؛ پرگار: لولای بالایی. فقط کشیدنِ این دستگیره ابزار را جابه‌جا می‌کند.
+ */
+internal fun instrumentGrip(st: InstrumentState, density: Float): Offset {
+    val d = st.dir; val n = st.nrm; val c = st.center; val s = st.size
+    return when (st.kind) {
+        BoardInstrument.RULER -> c
+        BoardInstrument.SETSQUARE -> c + d * (s * 0.28f) - n * (s * 0.28f)
+        BoardInstrument.PROTRACTOR -> c - n * (s * 0.45f)
+        BoardInstrument.COMPASS -> c + d * (s / 2f) - n * (s * 0.85f + 26f * density)
+        BoardInstrument.NONE -> c
+    }
+}
+
 /** اگر نقطهٔ شروع نزدیک لبه/کمان باشد، هدف چسبیدن را برمی‌گرداند. */
 internal fun snapTargetOf(st: InstrumentState, p: Offset, density: Float): SnapTarget? {
     val snapPx = 28f * density
@@ -710,7 +808,7 @@ internal fun drawInstrument(canvas: Canvas, st: InstrumentState, density: Float)
             while (x <= st.size) {
                 val len = when { i % 10 == 0 -> 12f; i % 5 == 0 -> 8f; else -> 5f } * density
                 canvas.drawLine(x, -t, x, -t + len, tick)
-                if (i % 10 == 0) canvas.drawText((i / 10).toString(), x, -t + len + 9f * density, txt)
+                if (i % 10 == 0) canvas.drawText(FigureDigits.apply((i / 10).toString()), x, -t + len + 9f * density, txt)
                 x += cmPx / 10f; i++
             }
         }
@@ -739,7 +837,11 @@ internal fun drawInstrument(canvas: Canvas, st: InstrumentState, density: Float)
                 canvas.drawLine(cx * r, sy * r, cx * (r - len), sy * (r - len), tick)
                 if (a % 30 == 0) {
                     val tr = r - len - 8f * density
-                    canvas.drawText(a.toString(), cx * tr, sy * tr + 3f * density, txt)
+                    // V137.5 — برچسب‌های ۰ و ۱۸۰ روی خطِ پایه می‌افتادند؛ حالا بالای خط و کمی داخل‌تر رسم می‌شوند.
+                    val onBase = a == 0 || a == 180
+                    val lx = if (onBase) cx * (tr - 5f * density) else cx * tr
+                    val ly = if (onBase) -5f * density else sy * tr + 3f * density
+                    canvas.drawText(FigureDigits.apply(a.toString()), lx, ly, txt)
                 }
             }
         }
@@ -806,6 +908,22 @@ internal fun drawInstrument(canvas: Canvas, st: InstrumentState, density: Float)
     val h = st.handle
     canvas.drawCircle(h.x, h.y, 11f * density, handle)
     canvas.drawCircle(h.x, h.y, 11f * density, handleRing)
+    // V137.5 — دستگیرهٔ خاکستریِ جابه‌جایی (چهارپیکان)
+    val g = instrumentGrip(st, density)
+    val gripFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xEE6B7280.toInt() }
+    val gripLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.8f * density; color = 0xFFFFFFFF.toInt(); strokeCap = Paint.Cap.ROUND }
+    val gr = 13f * density
+    canvas.drawCircle(g.x, g.y, gr, gripFill)
+    canvas.drawCircle(g.x, g.y, gr, handleRing)
+    val a = gr * 0.62f; val hd = 3f * density
+    canvas.drawLine(g.x - a, g.y, g.x + a, g.y, gripLine)
+    canvas.drawLine(g.x, g.y - a, g.x, g.y + a, gripLine)
+    listOf(Offset(1f, 0f), Offset(-1f, 0f), Offset(0f, 1f), Offset(0f, -1f)).forEach { u ->
+        val tip = Offset(g.x + u.x * a, g.y + u.y * a)
+        val side = Offset(-u.y, u.x)
+        canvas.drawLine(tip.x, tip.y, tip.x - u.x * hd + side.x * hd, tip.y - u.y * hd + side.y * hd, gripLine)
+        canvas.drawLine(tip.x, tip.y, tip.x - u.x * hd - side.x * hd, tip.y - u.y * hd - side.y * hd, gripLine)
+    }
 }
 
 private fun renderBoard(
@@ -854,10 +972,11 @@ private fun drawBackground(canvas: Canvas, w: Float, h: Float, bg: BoardBackgrou
             val tick = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF6B7280.toInt(); textSize = 10f * density; textAlign = Paint.Align.CENTER }
             var i = 1
             while (cx + i * step < w || cx - i * step > 0) {
-                if (cx + i * step < w) canvas.drawText("$i", cx + i * step, cy + 14f * density, tick)
-                if (cx - i * step > 0) canvas.drawText("-$i", cx - i * step, cy + 14f * density, tick)
-                if (cy - i * step > 0) canvas.drawText("$i", cx - 10f * density, cy - i * step + 4f * density, tick)
-                if (cy + i * step < h) canvas.drawText("-$i", cx - 10f * density, cy + i * step + 4f * density, tick)
+                val pos = FigureDigits.apply("$i"); val neg = FigureDigits.apply("-$i")
+                if (cx + i * step < w) canvas.drawText(pos, cx + i * step, cy + 14f * density, tick)
+                if (cx - i * step > 0) canvas.drawText(neg, cx - i * step, cy + 14f * density, tick)
+                if (cy - i * step > 0) canvas.drawText(pos, cx - 10f * density, cy - i * step + 4f * density, tick)
+                if (cy + i * step < h) canvas.drawText(neg, cx - 10f * density, cy + i * step + 4f * density, tick)
                 i++
             }
         }

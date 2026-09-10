@@ -170,6 +170,7 @@ class ProfileSettingsViewModel(
     fun setDeviceLayoutMode(mode: DeviceLayoutMode) = viewModelScope.launch {
         appearance.setDeviceLayoutMode(mode)
     }
+    fun setPersianDigits(enabled: Boolean) = viewModelScope.launch { appearance.setPersianDigits(enabled) }
     fun resetAppearance() = viewModelScope.launch { appearance.reset() }
 
     private fun saveProfile(profile: NativeProfile, message: String) = viewModelScope.launch {

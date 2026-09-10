@@ -470,7 +470,7 @@ object ChartSvgRenderer {
         if (s.isBlank()) return ""
         val weight = if (bold) " font-weight=\"700\"" else ""
         val anchorAttr = if (anchor.isNotBlank()) " text-anchor=\"$anchor\"" else ""
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\"$anchorAttr>${escape(s)}</text>"
+        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\"$anchorAttr>${escape(FigureDigits.apply(s))}</text>"
     }
 
     private fun escape(value: String): String = buildString(value.length) {

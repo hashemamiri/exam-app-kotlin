@@ -18424,3 +18424,35 @@ http.server روی assets تا اطلس بارگذاری شود) ریشه‌ها
    stackTopPx با translationY در graphicsLayer، tween 520/400.
 تست: V137_4_PreviewBoxCardsTest.kt.
 ```
+
+## V137.5 — کارایی پیش‌نمایش، تختهٔ آیکونی، دستگیرهٔ جابه‌جایی، ۰/۱۸۰ نقاله، اعداد فارسی
+
+```text
+۱) کارایی پیش‌نمایش (پروفایل CDP با puppeteer، N=40 سؤال/۲۰ شیء): ۸۰٪ زمان در pgs_engine.overflows()
+   (هر بار scrollHeight → layout اجباری؛ برای هر ردیف ۲ بار + probe برگهٔ خالی) و buildThumbs
+   (cloneNode همهٔ برگه‌ها ۲۶۰ms بعد از هر paginate). schedulePaginate پس از هر renderPreview ۴ بار
+   paginate می‌کرد (0/160/550/1300ms).
+   حالا: contentSignature() (مجموع offsetHeight بلوک‌ها/ردیف‌ها) → امواج ۱۶۰/۵۵۰/۱۳۰۰ فقط اگر امضا عوض
+   شده (paginateIfChanged)؛ placeRows: overflows دوباره فقط اگر trimSepPadToFit true برگرداند؛ probe
+   برگهٔ خالی فقط وقتی rowH > bodyH-80؛ buildThumbs فقط اگر (تعداد|صفحه|امضا) عوض شده باشد.
+   mainscript: pointermove فقط مختصات را نگه می‌دارد و dragStep() در rAF اجرا می‌شود؛ clampToParent
+   اندازهٔ والد/عنصر را در drag.__clampCache نگه می‌دارد؛ updateFigSizeBadge بدون getBoundingClientRect
+   وقتی w/h داده شده. endDrag آخرین حرکت معوق را اعمال می‌کند.
+   نتیجه (N=40): drag maxFrame 135→70ms، slow frames 5→1؛ overflows self 800→170ms.
+۲) تخته: BoardTool.icon / BoardInstrument.icon (material-icons-extended: Draw, Highlight,
+   AutoFixNormal, LayersClear, OpenWith, HorizontalRule, ArrowRightAlt(AutoMirrored), CropSquare,
+   RadioButtonUnchecked, ChangeHistory, TextFields, AddBox | Block, Straighten, SquareFoot, Speed,
+   Architecture) با BoardIconChip (دایرهٔ ۴۰dp). سربرگ: Undo/Redo/Close آیکونی.
+   StudentWhiteboardDialog(teacherMode=true) از ExamBuilderScreen → دکمه/تأیید «افزودن تصویر تخته به سؤال».
+۳) دستگیرهٔ جابه‌جایی: instrumentGrip(st) (خط‌کش=center، گونیا=سوراخ 0.28s، نقاله=center-n*0.45s،
+   پرگار=لولا) رسم به‌صورت دایرهٔ خاکستری با چهارپیکان؛ onDragStart: "move" فقط در شعاع ۳۰dp از grip
+   (instrumentBodyHit دیگر برای move استفاده نمی‌شود؛ تابع مانده).
+۴) نقاله: برچسب 0/180 در y=-5dp و x کمی داخل‌تر (tr-5dp).
+۵) اعداد فارسی: AppearanceSettings.persianDigits (+setPersianDigits، کلید Switch در کارت «حالت رنگ»
+   تنظیمات ظاهر). MainActivity مقدار را در FigureDigits.persian (object سراسری، core/figure) می‌نویسد؛
+   همهٔ رندرکننده‌های SVG بومی در text() از FigureDigits.apply(s) می‌گذرند؛ تخته (خط‌کش/نقاله/زمینهٔ
+   محور) هم. موتور وب: payload.persianDigits → window.__figPersianDigits → mainscript.faDigitsInFigHtml
+   فقط متنِ <text>/<tspan>/td/th را تبدیل می‌کند (data-fig دست‌نخورده تا ویرایشگر لاتین بخواند).
+   تأیید puppeteer: محور '-۵','-۴'…، جدول '۱','۲','۳','۴'، data-fig لاتین؛ drag شیء همچنان کار می‌کند.
+تست: V137_5_PerfIconsDigitsTest.kt.
+```

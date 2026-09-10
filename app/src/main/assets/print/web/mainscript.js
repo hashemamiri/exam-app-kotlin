@@ -404,6 +404,22 @@ function patchGeoFigOpenRouter() {
 patchGeoFigOpenRouter();
 setTimeout(patchGeoFigOpenRouter, 0);
 setTimeout(patchGeoFigOpenRouter, 250);
+/* V137.5 — اعداد فارسی در شکل‌ها: فقط متنِ داخل <text> (SVG) و td/th (جدول/جدول تناوبی) تبدیل می‌شود؛
+   data-fig (JSON مشخصات) دست نمی‌خورد تا ویرایشگر همان اعداد لاتین را بخواند. */
+function faDigitsInFigHtml(html) {
+  if (!window.__figPersianDigits || !html || !/[0-9]/.test(html)) return html;
+  try {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    const FA = '۰۱۲۳۴۵۶۷۸۹';
+    const conv = s => s.replace(/[0-9]/g, d => FA[d.charCodeAt(0) - 48]);
+    tpl.content.querySelectorAll('text, tspan, td, th').forEach(el => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let n; while ((n = walker.nextNode())) { if (/[0-9]/.test(n.nodeValue)) n.nodeValue = conv(n.nodeValue); }
+    });
+    return tpl.innerHTML;
+  } catch (e) { return html; }
+}
 function renderFigToken(raw, q, figIndex) {
   let figHtml = '';
   try {
@@ -431,6 +447,7 @@ function renderFigToken(raw, q, figIndex) {
       figHtml = `<span class="qmf-fig">${escapeHtml(raw)}</span>`;
     }
   }
+  figHtml = faDigitsInFigHtml(figHtml);
   if (!q || figIndex == null) return figHtml;
   return `<div class="interactive-figure" data-qid="${q.id}" data-fig-index="${figIndex}" style="${figLayoutStyle(q, figIndex)}">
     <span class="fig-move-hint">جابجایی: داخل کادر بکشید</span>${figHtml}<span class="fig-size-badge"></span><span class="fig-resize-handle" data-edge="l" title="تغییر اندازه از چپ"></span><span class="fig-resize-handle" data-edge="r" title="تغییر اندازه از راست"></span><span class="fig-resize-handle" data-edge="t" title="تغییر اندازه از بالا"></span><span class="fig-resize-handle" data-edge="b" title="تغییر اندازه از پایین"></span><span class="fig-resize-handle" data-edge="bl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="br" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tl" title="تغییر اندازه"></span><span class="fig-resize-handle" data-edge="tr" title="تغییر اندازه"></span>
@@ -1263,16 +1280,25 @@ function initPreviewFigureEditing() {
     area.querySelectorAll('.interactive-figure.selected').forEach(x => { if (x !== el) x.classList.remove('selected'); });
     if (el) el.classList.add('selected');
   }
-  function clampToParent(el, x, y, w, h) {
+  function clampToParent(el, x, y, w, h, cache) {
     const parent = parentBox(el);
     if (!parent) return {x,y,w,h};
-    const pr = parent.getBoundingClientRect();
-    const zf = zoomFactor();
-    const er = { width: el.getBoundingClientRect().width / zf, height: el.getBoundingClientRect().height / zf };
-    const cs = window.getComputedStyle(parent);
-    const padR = parseFloat(cs.paddingRight) || 0;
-    const padL = parseFloat(cs.paddingLeft) || 0;
-    const parentW = Math.max(1, (parent.clientWidth || pr.width || 0) - padR - padL);
+    // V137.5 — کارایی: در طول یک درگ، اندازهٔ والد/عنصر یک بار خوانده و در شیء drag نگه داشته می‌شود.
+    let m = cache && cache.__clampCache;
+    if (!m || m.parent !== parent) {
+      const pr = parent.getBoundingClientRect();
+      const zf = zoomFactor();
+      const r = el.getBoundingClientRect();
+      const cs = window.getComputedStyle(parent);
+      m = {
+        parent: parent,
+        er: { width: r.width / zf, height: r.height / zf },
+        parentW: Math.max(1, (parent.clientWidth || pr.width || 0) - ((parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.paddingLeft) || 0)))
+      };
+      if (cache) cache.__clampCache = m;
+    }
+    const er = m.er;
+    const parentW = m.parentW;
     const borderSafe = 18;
     // ذخیره‌سازی همچنان عددی و تمیز می‌ماند؛ clamp نهایی در CSS و متناسب با عرض واقعی همان لحظه انجام می‌شود.
     w = Math.max(18, Math.min(w || er.width || 360, Math.max(18, parentW - borderSafe)));
@@ -1332,9 +1358,21 @@ function initPreviewFigureEditing() {
       h:px(layout.h) || rect.height };
     fig.setPointerCapture?.(e.pointerId);
   });
+  // V137.5 — کارایی: هر pointermove فقط مختصات را ذخیره می‌کند و کارِ واقعی (clamp + استایل + مقیاس)
+  // حداکثر یک بار در هر فریم (requestAnimationFrame) انجام می‌شود؛ قبلاً هر رویداد چند layout اجباری داشت.
+  let dragRaf = 0, dragLast = null;
   area.addEventListener('pointermove', function(e) {
     if (!drag) return;
     e.preventDefault();
+    dragLast = { clientX: e.clientX, clientY: e.clientY };
+    if (dragRaf) return;
+    dragRaf = requestAnimationFrame(function () {
+      dragRaf = 0;
+      const ev = dragLast; dragLast = null;
+      if (drag && ev) dragStep(ev);
+    });
+  });
+  function dragStep(e) {
     let x = drag.x, y = drag.y, w = drag.w, h = drag.h;
     const zf = zoomFactor();
     // V135.7 — لرزشِ کمتر از ۳px (لمس ساده) هیچ تغییری ذخیره نکند.
@@ -1364,7 +1402,7 @@ function initPreviewFigureEditing() {
       x = drag.x - (e.clientX - drag.sx) / zf;
       y = drag.y + (e.clientY - drag.sy) / zf;
     }
-    const c = clampToParent(drag.fig, x, y, w, h);
+    const c = clampToParent(drag.fig, x, y, w, h, drag);
     drag.fig.style.setProperty('--fig-x', c.x + 'px');
     drag.fig.style.setProperty('--fig-y', c.y + 'px');
     drag.fig.style.marginRight = 'clamp(0px, ' + c.x + 'px, calc(100% - ' + c.w + 'px - 18px))';
@@ -1376,8 +1414,10 @@ function initPreviewFigureEditing() {
     applyFigScale(drag.fig, c.w, c.h);
     updateFigSizeBadge(drag.fig, c.w, c.h);
     setFigLayout(drag.qid, drag.idx, {x:Math.round(c.x), y:Math.round(c.y), w:Math.round(c.w), h:Math.round(c.h)});
-  });
+  }
   function endDrag(e) {
+    if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
+    if (drag && dragLast) { const ev = dragLast; dragLast = null; try { dragStep(ev); } catch (err) {} }
     if (!drag) return;
     try { drag.fig.releasePointerCapture?.(e.pointerId); } catch(_) {}
     drag = null;
@@ -1389,7 +1429,7 @@ function updateFigSizeBadge(fig, w, h) {
   try {
     const b = fig && fig.querySelector ? fig.querySelector('.fig-size-badge') : null;
     if (!b) return;
-    const r = fig.getBoundingClientRect ? fig.getBoundingClientRect() : {width:0,height:0};
+    const r = (w && h) ? {width:w,height:h} : (fig.getBoundingClientRect ? fig.getBoundingClientRect() : {width:0,height:0});
     const ww = Math.round(w || r.width || 0);
     const hh = Math.round(h || r.height || 0);
     b.textContent = ww ? (ww + ' × ' + hh + ' px') : '';

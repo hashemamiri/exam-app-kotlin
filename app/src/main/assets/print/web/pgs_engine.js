@@ -536,20 +536,30 @@
       cur.hasUnits = true;
       /* V134 — فاصلهٔ اضافیِ خطِ جداکننده (question-sep-cell-pad) «پُرکننده» است: اگر فقط به‌خاطرِ آن سطر
          سرریز کرد، همان‌جا تا تهِ صفحه کوتاه می‌شود و سؤال به صفحهٔ بعد نمی‌رود (خطِ جداکننده = تهِ صفحه). */
-      if (overflows(ctx.sheet)) trimSepPadToFit(row, ctx.sheet);
-      if (overflows(ctx.sheet)) {
+      /* V137.5 — کارایی: هر overflows() یک layout اجباری است (بیش از ۸۰٪ زمان صفحه‌بندی)؛ فقط وقتی
+         trim واقعاً چیزی را تغییر داد دوباره اندازه می‌گیریم، و برای سطرِ کوچک‌تر از برگه به‌جای ساختنِ
+         برگهٔ آزمایشی (probe) ارتفاعِ خودِ سطر با ارتفاع بدنهٔ برگه مقایسه می‌شود. */
+      var over = overflows(ctx.sheet);
+      if (over && trimSepPadToFit(row, ctx.sheet)) over = overflows(ctx.sheet);
+      if (over) {
         var hadOther = ctx.tbody.children.length > 1 || ctx.sheet.body.children.length > 1;
+        var rowH = row.offsetHeight;
+        var bodyH = ctx.sheet.body.clientHeight;
         ctx.tbody.removeChild(row);
         if (hadOther) {
           /* V130.1 — اگر سطر حتی در یک صفحهٔ خالی هم جا نمی‌شود، همین‌جا (زیرِ سربرگ/سؤال‌های قبلی) شروع
              و شکسته شود؛ قبلاً اول به صفحهٔ خالیِ بعدی می‌رفت و صفحهٔ جاری نیمه‌خالی می‌ماند. */
-          var probe = newSheet(sheets, area, cfg);
-          var pctx = openTableOn(probe, tpl);
-          pctx.tbody.appendChild(row);
-          var tooTall = overflows(probe);
-          pctx.tbody.removeChild(row);
-          probe.el.remove(); probe.label.remove(); sheets.pop();
-          var used = 0; childArr(ctx.sheet.body).forEach(function (c) { used += c.offsetHeight; });
+          var tooTall = false;
+          if (rowH > bodyH - 80) {
+            var probe = newSheet(sheets, area, cfg);
+            var pctx = openTableOn(probe, tpl);
+            pctx.tbody.appendChild(row);
+            tooTall = overflows(probe);
+            pctx.tbody.removeChild(row);
+            probe.el.remove(); probe.label.remove(); sheets.pop();
+          }
+          var used = 0;
+          if (tooTall) childArr(ctx.sheet.body).forEach(function (c) { used += c.offsetHeight; });
           if (tooTall && ctx.sheet.body.clientHeight - used > 120) {
             ctx.tbody.appendChild(row);
             var c1 = splitOversizeRow(ctx, sheets, area, cfg);
@@ -638,14 +648,34 @@
   }
 
   var pagTimer = null;
+  /* V137.5 — کارایی: امضای ارتفاعِ محتوا (مجموع offsetHeight سطرها/بلوک‌های داخل برگه‌ها). امواجِ
+     باز-صفحه‌بندی (۱۶۰/۵۵۰/۱۳۰۰ms) فقط وقتی دوباره paginate می‌کنند که این امضا از آخرین بار عوض شده
+     باشد (مثلاً تصویر/فرمولی بار شده). قبلاً هر renderPreview چهار صفحه‌بندیِ کامل می‌کرد. */
+  function contentSignature() {
+    var area = $('previewArea');
+    if (!area) return '';
+    var parts = [];
+    var nodes = area.querySelectorAll('.pgs-sheet-body > *:not(table), .pgs-sheet-body > table > tbody > tr');
+    for (var i = 0; i < nodes.length; i++) parts.push(nodes[i].offsetHeight);
+    return nodes.length + ':' + parts.join(',');
+  }
+  var lastSignature = '';
+  function paginateIfChanged() {
+    if (pgsState.paginating) return;
+    var sig = contentSignature();
+    if (sig === lastSignature) return;
+    paginate();
+    lastSignature = contentSignature();
+  }
   function schedulePaginate(delay) {
     clearTimeout(pagTimer);
     pagTimer = setTimeout(function () {
       paginate();
+      lastSignature = contentSignature();
       /* امواج باز-صفحه‌بندی: بعد از fit شدن فرمول‌ها/تصاویر ارتفاع‌ها عوض می‌شود */
-      setTimeout(function () { if (!pgsState.paginating) paginate(); }, 160);
-      setTimeout(function () { if (!pgsState.paginating) paginate(); }, 550);
-      setTimeout(function () { if (!pgsState.paginating) paginate(); }, 1300);
+      setTimeout(paginateIfChanged, 160);
+      setTimeout(paginateIfChanged, 550);
+      setTimeout(paginateIfChanged, 1300);
     }, delay || 0);
   }
 
@@ -810,6 +840,7 @@
   }
 
   var thumbsTimer = null;
+  var lastThumbsKey = '';
   function updateViewer() {
     if (!viewerOpen()) return;
     var sheets = sheetList();
@@ -845,7 +876,13 @@
       var box = $('pgsThumbs');
       if (!box || !viewerOpen()) return;
       var visible = isMobile() ? box.classList.contains('open') : !box.classList.contains('hidden');
-      if (visible) buildThumbs(sheetList());
+      if (!visible) return;
+      /* V137.5 — کارایی: بندانگشتی‌ها (clone همهٔ برگه‌ها) فقط وقتی دوباره ساخته می‌شوند که محتوا عوض شده باشد */
+      var list = sheetList();
+      var key = list.length + '|' + pgsState.page + '|' + contentSignature();
+      if (key === lastThumbsKey && box.children.length === list.length) return;
+      lastThumbsKey = key;
+      buildThumbs(list);
     }, 260);
   }
 

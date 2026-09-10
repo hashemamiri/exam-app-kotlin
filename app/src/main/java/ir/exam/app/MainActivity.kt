@@ -18,6 +18,8 @@ class MainActivity : FragmentActivity() {
         setContent {
             val appearancePreferences = remember { AppearancePreferences(applicationContext) }
             val appearance by appearancePreferences.settings.collectAsState(initial = AppearanceSettings())
+            // V137.5 — کلید «اعداد فارسی» برای رندرکننده‌های Canvas/SVG (خارج از Compose)
+            ir.exam.app.core.figure.FigureDigits.persian = appearance.persianDigits
             ExamAppTheme(appearance) {
                 ExamApp(appearance = appearance)
             }

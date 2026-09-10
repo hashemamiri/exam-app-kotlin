@@ -302,6 +302,14 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                             )
                         }
                     }
+                    // V137.5 — اعداد فارسی روی ابزارها/محورها/نمودارها/شکل‌ها/جدول‌ها
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("اعداد فارسی در ابزارها")
+                            Text("خط‌کش و نقالهٔ تخته، محورها، نمودارها، شکل‌ها و جدول‌ها", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Switch(settings.persianDigits, viewModel::setPersianDigits)
+                    }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {

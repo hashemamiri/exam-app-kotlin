@@ -247,7 +247,7 @@ object TableSvgRenderer {
 
     private fun text(x: Float, y: Float, s: String, color: String, anchor: String, bold: Boolean, size: Int): String {
         val weight = if (bold) " font-weight=\"700\"" else ""
-        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\" direction=\"rtl\">${escape(s)}</text>"
+        return "<text x=\"${f(x)}\" y=\"${f(y)}\" font-family=\"sans-serif\" font-size=\"$size\"$weight fill=\"$color\" text-anchor=\"$anchor\" direction=\"rtl\">${escape(FigureDigits.apply(s))}</text>"
     }
 
     private fun escape(value: String): String = buildString(value.length) {

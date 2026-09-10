@@ -1730,7 +1730,9 @@ private fun QuestionEditor(
                 whiteboardOpen = false
             },
             questionNumber = index + 1,
-            questionImages = question.images.map { it.uri }
+            questionImages = question.images.map { it.uri },
+            // V137.5 — دکمهٔ پایانی در پنل معلم: «افزودن تصویر تخته به سؤال»
+            teacherMode = true
         )
     }
     if (audioEditorOpen) {

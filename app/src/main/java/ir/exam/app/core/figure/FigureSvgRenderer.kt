@@ -47,7 +47,7 @@ private fun txt(x: Float, y: Float, s: String, color: String, anchor: String = "
     if (s.isBlank()) return ""
     val fam = if (serif) "serif" else "sans-serif"
     val anchorAttr = if (anchor.isNotBlank()) " text-anchor=\"$anchor\"" else ""
-    return "<text x=\"${fmt(x)}\" y=\"${fmt(y)}\" font-family=\"$fam\" font-size=\"$size\" font-weight=\"700\" fill=\"$color\"$anchorAttr>${escapeXml(s)}</text>"
+    return "<text x=\"${fmt(x)}\" y=\"${fmt(y)}\" font-family=\"$fam\" font-size=\"$size\" font-weight=\"700\" fill=\"$color\"$anchorAttr>${escapeXml(FigureDigits.apply(s))}</text>"
 }
 
 object FigureSvgRenderer {
