@@ -186,9 +186,12 @@ fun QuestionTextWebSection(
     val autoFocusIndex = (pendingFocusIndex ?: postInsertFocus ?: lastTextIndex)
         .let { if (parts.getOrNull(it) is RichSegment.Text) it else lastTextIndex }
     val caretFocus = remember { FocusRequester() }
-    // مکان‌نما بدون لمس قبلی هم پیدا باشد؛ پس از هر درج/حذف توکن دوباره برقرار می‌شود.
-    LaunchedEffect(autoFocusIndex, parts.size) {
-        if (autoFocusIndex >= 0) runCatching { caretFocus.requestFocus() }
+    // V137 — بازشدن کارت سؤال/افزودن سؤال نباید کیبورد را خودکار باز کند؛ فوکوس خودکار
+    // فقط پس از درج/ویرایش توکن (فرمول/شکل) که کاربر خودش انجام داده برقرار می‌شود.
+    // (پیش‌تر LaunchedEffect روی lastTextIndex هم requestFocus می‌زد → کیبورد ناخواسته.)
+    val explicitFocusRequested = pendingFocusIndex != null || postInsertFocus != null
+    LaunchedEffect(autoFocusIndex, parts.size, explicitFocusRequested) {
+        if (explicitFocusRequested && autoFocusIndex >= 0) runCatching { caretFocus.requestFocus() }
     }
 
     Column(modifier) {

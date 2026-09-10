@@ -227,9 +227,7 @@ private fun SubmissionCard(
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         NativeMathText("سؤال ${index + 1}: ${question.text}")
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
-                        submission.responseImages[question.id].orEmpty().forEach { url ->
-                            AsyncImage(url, "تصویر پاسخ", Modifier.size(160.dp))
-                        }
+                        AnswerImagesRow(submission.responseImages[question.id].orEmpty())
                         val scoreKey = "${submission.id}:$index"
                         OutlinedTextField(
                             value = scoreInputs[scoreKey] ?: edit.grades.getOrElse(index) { 0.0 }.toString(),
@@ -297,9 +295,7 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(submission.studentName, style = MaterialTheme.typography.titleMedium)
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
-                        submission.responseImages[question.id].orEmpty().forEach { url ->
-                            AsyncImage(url, "تصویر پاسخ", Modifier.size(150.dp))
-                        }
+                        AnswerImagesRow(submission.responseImages[question.id].orEmpty())
                         val scoreKey = "${submission.id}:$index"
                         OutlinedTextField(
                             value = state.scoreInputs[scoreKey] ?: edit?.grades?.getOrNull(index)?.toString().orEmpty(),
@@ -367,25 +363,37 @@ private fun String.faStatus(): String = when (lowercase()) {
  */
 @Composable
 private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("گزارش‌های آزمون") },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("بستن") } },
-        text = {
-            val rows = (reports?.get("rows") as? JsonArray).orEmpty()
-            if (rows.isEmpty()) {
-                Text(
-                    "هنوز گزارشی برای این آزمون ثبت نشده است.\n" +
-                        "گزارش از زمان شرکت دانش‌آموز با نسخهٔ جدید برنامه ساخته می‌شود؛ " +
-                        "آزمون‌هایی که پیش از این نسخه برگزار شده‌اند گزارش ندارند."
-                )
-            } else {
-                // V59.0 — ابتدا کارت‌های رنگی دانش‌آموزان (سبز→زرد→نارنجی→قرمز بر
-                // اساس شدت تخلف)؛ با لمس هر کارت گزارش کامل همان دانش‌آموز باز می‌شود.
-                var selected by remember { mutableStateOf<Int?>(null) }
-                val selectedRow = selected?.let { rows.getOrNull(it) as? JsonObject }
-                if (selectedRow == null) {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // V137 — پنجرهٔ گزارش‌ها تمام‌صفحه شد (فهرست دانش‌آموزان و گزارش هر دانش‌آموز).
+    val rows = (reports?.get("rows") as? JsonArray).orEmpty()
+    var selected by remember(reports) { mutableStateOf<Int?>(null) }
+    val selectedRow = selected?.let { rows.getOrNull(it) as? JsonObject }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = { if (selectedRow != null) selected = null else onDismiss() },
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (selectedRow == null) "گزارش‌های آزمون"
+                        else (selectedRow["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (selectedRow != null) {
+                        TextButton(onClick = { selected = null }) { Text("→ بازگشت به لیست") }
+                    }
+                    TextButton(onClick = onDismiss) { Text("بستن", color = MaterialTheme.colorScheme.error) }
+                }
+                if (rows.isEmpty()) {
+                    Text(
+                        "هنوز گزارشی برای این آزمون ثبت نشده است.\n" +
+                            "گزارش از زمان شرکت دانش‌آموز با نسخهٔ جدید برنامه ساخته می‌شود؛ " +
+                            "آزمون‌هایی که پیش از این نسخه برگزار شده‌اند گزارش ندارند."
+                    )
+                } else if (selectedRow == null) {
+                    // V59.0 — کارت‌های رنگی دانش‌آموزان (سبز→زرد→نارنجی→قرمز بر اساس شدت تخلف).
+                    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(rows.size) { index ->
                             val row = rows[index] as? JsonObject ?: return@items
                             val report = row["report"] as? JsonObject
@@ -397,13 +405,13 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
                                 )
                             ) {
                                 Row(
-                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    Modifier.fillMaxWidth().padding(14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(
                                             (row["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
-                                            style = MaterialTheme.typography.titleSmall,
+                                            style = MaterialTheme.typography.titleMedium,
                                             color = Color.White
                                         )
                                         Text(
@@ -419,42 +427,67 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
                     }
                 } else {
                     val report = selectedRow["report"] as? JsonObject
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = { selected = null }) { Text("→ بازگشت به لیست") }
-                        Text(
-                            (selectedRow["student_name"] as? JsonPrimitive)?.contentOrNull ?: "دانش‌آموز",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        val events = report?.get("events") as? JsonObject
-                        if (events.isNullOrEmpty()) {
-                            Text("رویداد مشکوکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
-                        } else events.forEach { (kind, count) ->
-                            Text(
-                                "${kind.faMonitorEvent()}: ${(count as? JsonPrimitive)?.contentOrNull ?: "?"} بار",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                    val events = report?.get("events") as? JsonObject
+                    val times = report?.get("question_time_ms") as? JsonObject
+                    val visits = report?.get("question_visits") as? JsonObject
+                    val labels = report?.get("question_labels") as? JsonObject
+                    val submitted = (report?.get("submitted") as? JsonPrimitive)?.contentOrNull == "true"
+                    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("رویدادها", style = MaterialTheme.typography.titleSmall)
+                                    if (events.isNullOrEmpty()) {
+                                        Text("رویداد مشکوکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                                    } else events.forEach { (kind, count) ->
+                                        Text(
+                                            "${kind.faMonitorEvent()}: ${(count as? JsonPrimitive)?.contentOrNull ?: "?"} بار",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
                         }
-                        (report?.get("entered_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
-                            ?.toLongOrNull()?.takeIf { it > 0 }?.let {
-                                Text("زمان ورود: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
+                        item {
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("زمان", style = MaterialTheme.typography.titleSmall)
+                                    (report?.get("entered_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
+                                        ?.toLongOrNull()?.takeIf { it > 0 }?.let {
+                                            Text("زمان شروع: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    (report?.get("left_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
+                                        ?.toLongOrNull()?.takeIf { it > 0 }?.let {
+                                            // V137 — تا پیش از ارسال نهایی، این فقط «آخرین فعالیت» است نه خروج.
+                                            Text(
+                                                (if (submitted) "زمان ارسال پاسخ: " else "آخرین فعالیت: ") + it.faClock(),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                }
                             }
-                        (report?.get("left_at_epoch_ms") as? JsonPrimitive)?.contentOrNull
-                            ?.toLongOrNull()?.takeIf { it > 0 }?.let {
-                                Text("زمان خروج: ${it.faClock()}", style = MaterialTheme.typography.bodySmall)
-                            }
-                        val times = report?.get("question_time_ms") as? JsonObject
-                        val visits = report?.get("question_visits") as? JsonObject
-                        if (!times.isNullOrEmpty()) {
-                            Text("مدت پاسخ‌گویی هر سؤال:", style = MaterialTheme.typography.bodySmall)
-                            LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                items(times.entries.toList().size) { qIndex ->
-                                    val (qid, ms) = times.entries.toList()[qIndex]
-                                    val seconds = ((ms as? JsonPrimitive)?.contentOrNull?.toLongOrNull() ?: 0L) / 1000L
-                                    val visitCount = (visits?.get(qid) as? JsonPrimitive)?.contentOrNull ?: "1"
-                                    Text(
-                                        "سؤال ${qIndex + 1}: $seconds ثانیه · $visitCount بازدید",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
+                        }
+                        item {
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("مدت پاسخ‌گویی هر سؤال", style = MaterialTheme.typography.titleSmall)
+                                    if (times.isNullOrEmpty()) {
+                                        Text("زمانی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                                    } else {
+                                        // V137 — مرتب بر اساس شمارهٔ سؤال معلم (question_labels)؛ زمان به دقیقه:ثانیه.
+                                        val entries = times.entries.toList().sortedBy { (qid, _) ->
+                                            (labels?.get(qid) as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: Int.MAX_VALUE
+                                        }
+                                        entries.forEachIndexed { order, (qid, ms) ->
+                                            val label = (labels?.get(qid) as? JsonPrimitive)?.contentOrNull ?: (order + 1).toString()
+                                            val seconds = ((ms as? JsonPrimitive)?.contentOrNull?.toLongOrNull() ?: 0L) / 1000L
+                                            val visitCount = (visits?.get(qid) as? JsonPrimitive)?.contentOrNull ?: "1"
+                                            Text(
+                                                "سؤال $label: ${seconds.faDuration()} · $visitCount بازدید",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -462,7 +495,38 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
                 }
             }
         }
-    )
+    }
+}
+
+/** V137 — نمایش ثانیه به شکل «۲ دقیقه و ۵ ثانیه». */
+private fun Long.faDuration(): String {
+    val m = this / 60; val s = this % 60
+    return if (m > 0) "$m دقیقه و $s ثانیه" else "$s ثانیه"
+}
+
+/**
+ * V137 — تصاویر پاسخ دانش‌آموز (از جمله خروجی تختهٔ وایت‌برد) بزرگ‌تر و با لمس تمام‌صفحه/زوم.
+ */
+@Composable
+private fun AnswerImagesRow(urls: List<String>) {
+    if (urls.isEmpty()) return
+    var viewing by remember { mutableStateOf<String?>(null) }
+    Text("تصاویر پاسخ (${urls.size})", style = MaterialTheme.typography.labelMedium)
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        urls.forEach { url ->
+            AsyncImage(
+                url, "تصویر پاسخ",
+                Modifier.size(220.dp).clickable { viewing = url },
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            )
+        }
+    }
+    viewing?.let { url ->
+        ir.exam.app.ui.image.FullScreenImageViewer(uri = url, onDismiss = { viewing = null })
+    }
 }
 
 /** V59.0 — مجموع رویدادهای مشکوک برای رنگ‌بندی کارت. */

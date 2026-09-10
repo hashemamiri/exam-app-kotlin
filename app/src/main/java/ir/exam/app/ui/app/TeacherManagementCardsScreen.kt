@@ -462,17 +462,20 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
             pressed = true,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // V137 — عنوان و توضیح کارت وسط‌چین.
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     cards[activeIndex].title,
                     color = neo.ink,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
                 Text(
                     cards[activeIndex].subtitle,
                     color = neo.muted,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
                 )
             }
         }

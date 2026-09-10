@@ -19,7 +19,9 @@ class SupabaseTeacherDashboardRepository {
         val userId = currentTeacherId()
         SupabaseProvider.client.from("exams").select {
             filter { eq("teacher_id", userId) }
-        }.decodeList<ExamDashboardDto>().sortedByDescending { it.createdAt.orEmpty() }
+        }.decodeList<ExamDashboardDto>()
+            // V137 — تازه‌ترین آزمون بالای فهرست؛ ردیف‌های بدون تاریخ (قدیمی) در انتها.
+            .sortedWith(compareByDescending<ExamDashboardDto> { it.createdAt != null }.thenByDescending { it.createdAt.orEmpty() })
     }
 
     suspend fun setOpen(examId: String, open: Boolean): Result<Unit> = runCatching {

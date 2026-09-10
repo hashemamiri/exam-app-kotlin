@@ -40,7 +40,9 @@ class V58_1ExamMonitorReportsTest {
         assertTrue("SCREEN_RECORDING_STATE_VISIBLE" in student)
         assertTrue("screen_record_attempt" in student)
         assertTrue("app_leave" in student)
-        assertTrue("app_close" in student)
+        // V137 — فقط ON_STOP واقعی «خروج از برنامه» است؛ ON_PAUSE (گالری/مجوز/خاموشی صفحه) دیگر ثبت نمی‌شود.
+        assertFalse("Lifecycle.Event.ON_PAUSE" in student)
+        assertTrue("ExamLeaveGuard.consumeSuppressed()" in student)
         assertTrue("exam_screen_leave" in student)
         assertTrue("DETECT_SCREEN_CAPTURE" in manifest)
         assertTrue("DETECT_SCREEN_RECORDING" in manifest)
@@ -54,10 +56,11 @@ class V58_1ExamMonitorReportsTest {
         assertTrue("questionTimeSpentMs" in studentVm)
         assertTrue("questionVisits" in studentVm)
         assertTrue("entered_at_epoch_ms" in studentVm)
-        assertTrue("fun monitorReport()" in studentVm)
+        // V137 — گزارش پارامتر final گرفت (ارسال نهایی) و دیگر شمارندهٔ سؤال جاری را نمی‌بندد.
+        assertTrue("fun monitorReport(final: Boolean = false)" in studentVm)
         // ثبت فوری روی سرور + همراه ارسال نهایی
         assertTrue("exams.reportMonitor(examId, monitorReport().toString())" in studentVm)
-        assertTrue("monitorReportJson = monitorReport().toString()" in studentVm)
+        assertTrue("monitorReportJson = monitorReport(final = true).toString()" in studentVm)
     }
 
     @Test

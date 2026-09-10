@@ -186,11 +186,21 @@ fun StudentExamContent(
         }
     }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, state.finished) {
+    // V137 — رفع «گزارش می‌گوید دانش‌آموز از برنامه خارج شد ولی نشده بود»:
+    // ۱) DisposableEffect با کلید state.finished پس از ارسال، با مقدار کهنهٔ finished=false
+    //    دوباره ساخته می‌شد و onDispose «exam_screen_leave» را بعد از ثبت پاسخ می‌نوشت →
+    //    حالا وضعیت زنده (rememberUpdatedState) خوانده می‌شود.
+    // ۲) ON_PAUSE برای انتخاب‌گر عکس/گالری، پنجرهٔ مجوز و خاموش‌شدن صفحه هم رخ می‌دهد؛
+    //    فقط ON_STOP (رفتن واقعی به پس‌زمینه) ثبت می‌شود و اگر خود برنامه انتخاب‌گر را باز
+    //    کرده باشد (ExamLeaveGuard) شمرده نمی‌شود.
+    val finishedNow by androidx.compose.runtime.rememberUpdatedState(state.finished)
+    val securityEventNow by androidx.compose.runtime.rememberUpdatedState(onSecurityEvent)
+    DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (!state.finished) when (event) {
-                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> onSecurityEvent("app_leave")
-                androidx.lifecycle.Lifecycle.Event.ON_STOP -> onSecurityEvent("app_close")
+            if (!finishedNow) when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_STOP ->
+                    if (!ExamLeaveGuard.consumeSuppressed()) securityEventNow("app_leave")
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> ExamLeaveGuard.clear()
                 else -> Unit
             }
         }
@@ -198,7 +208,7 @@ fun StudentExamContent(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             // خروج از صفحهٔ آزمون داخل برنامه (وسط آزمون)
-            if (!state.finished) onSecurityEvent("exam_screen_leave")
+            if (!finishedNow) securityEventNow("exam_screen_leave")
         }
     }
     if (state.finished) {
@@ -221,7 +231,7 @@ fun StudentExamContent(
     val presentation=exam.questionPresentation[question.id] ?: ir.exam.app.domain.model.QuestionPresentation()
     // V58.0.3 — remember فقط در متن Composable مجاز است؛ داخل بدنهٔ LazyColumn
     // (LazyListScope) خطای کامپایل می‌داد و به اینجا منتقل شد.
-    // V58.0.2 — اگر خود سؤال نمودار داشته باشد (توکن k='g') رسم نمودار پاسخ
+    // V58.0.2 — اگر خود سؤال نمودار داشته باشد (توکن k='g') تختهٔ وایت‌برد (V137)
     // بدون نیاز به چیپ معلم فعال است.
     val questionHasGraph = remember(question.id, question.text) {
         ir.exam.app.core.figure.FigureCodec.occurrences(question.text)
@@ -402,23 +412,16 @@ fun StudentExamContent(
                 }
             }
             // V136 — «تخته وایت‌برد» (جایگزین نمودار پاسخ V58): با اجازهٔ معلم، دانش‌آموز
-            // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود. اگر سؤال از
-            // آزمون‌های قدیمی نمودار پاسخ داشته باشد، همان ویرایشگر نمودار حفظ می‌شود.
-            if (presentation.allowAnswerGraph) {
+            // رسم آزاد می‌کند و نتیجه به‌عنوان تصویر پاسخ ثبت می‌شود.
+            // V137 — «نمودار پاسخ دانش‌آموز» به‌کلی حذف شد؛ سؤالی که خودش نمودار دارد
+            // (questionHasGraph) هم فقط تختهٔ وایت‌برد می‌گیرد.
+            if (presentation.allowAnswerGraph || questionHasGraph) {
                 item {
                     StudentWhiteboardEntry(
                         questionId = question.id,
                         current = if (question.maxAnswerImages > 0) emptyList() else state.responseImages[question.id].orEmpty(),
                         onAdd = onAddImages,
                         onRemove = onRemoveImage
-                    )
-                }
-            }
-            if (questionHasGraph) {
-                item {
-                    StudentAnswerGraph(
-                        answerText = (state.answers[question.id] as? TextAnswer)?.value.orEmpty(),
-                        onAnswerText = { onAnswer(TextAnswer(question.id, it)) }
                     )
                 }
             }
@@ -530,6 +533,8 @@ private fun ResponseImages(
             enabled = values.size < max,
             onClick = {
                 val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                // V137 — بازشدن گالری خروج از برنامه نیست.
+                ExamLeaveGuard.suppressNext()
                 if (max - values.size <= 1) singlePicker.launch(request) else multiplePicker.launch(request)
             }
         ) { Text("افزودن تصویر پاسخ") }
@@ -611,64 +616,6 @@ private fun StudentWhiteboardEntry(
     }
 }
 
-/**
- * V58.0 — نمودار پاسخ دانش‌آموز: با اجازهٔ معلم، دانش‌آموز از همان کتابخانهٔ
- * ۶۱ نمودار Native یکی را انتخاب و پارامترهایش را ویرایش می‌کند (مثلاً سهمی
- * y=ax²+bx+c). توکن %%FIG:...%% داخل TextAnswer ذخیره می‌شود.
- */
-@Composable
-private fun StudentAnswerGraph(
-    answerText: String,
-    onAnswerText: (String) -> Unit
-) {
-    var pickerOpen by remember { mutableStateOf(false) }
-    var editorSpec by remember { mutableStateOf<ir.exam.app.core.figure.FigureSpec?>(null) }
-    val existing = ir.exam.app.core.figure.FigureCodec.occurrences(answerText)
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("نمودار پاسخ شما")
-        if (existing.isEmpty()) {
-            Button(onClick = { pickerOpen = true }) { Text("رسم نمودار پاسخ") }
-        } else {
-            NativeMathText(answerText, zoomableFigures = true)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { editorSpec = existing.first().spec }) { Text("ویرایش نمودار") }
-                OutlinedButton(onClick = {
-                    // حذف توکن نمودار از پاسخ؛ متن آزاد دست‌نخورده می‌ماند.
-                    val occ = existing.first()
-                    onAnswerText(answerText.removeRange(occ.start, occ.endExclusive))
-                }) { Text("حذف نمودار") }
-            }
-        }
-    }
-    if (pickerOpen) {
-        ir.exam.app.ui.figure.FigureTypePickerDialog(
-            kind = ir.exam.app.ui.figure.FigureKind.GRAPH,
-            onDismiss = { pickerOpen = false },
-            onTypeSelected = { spec ->
-                pickerOpen = false
-                editorSpec = spec
-            }
-        )
-    }
-    editorSpec?.let { spec ->
-        ir.exam.app.ui.figure.FigurePickerDialog(
-            initialSpec = spec,
-            initialKind = ir.exam.app.ui.figure.FigureKind.GRAPH,
-            onDismiss = { editorSpec = null },
-            onInsert = { edited ->
-                editorSpec = null
-                val token = "%%FIG:" + edited.toJson() + "%%"
-                val occ = ir.exam.app.core.figure.FigureCodec.occurrences(answerText).firstOrNull()
-                onAnswerText(
-                    if (occ != null) answerText.replaceRange(occ.start, occ.endExclusive, token)
-                    else if (answerText.isBlank()) token
-                    else answerText + "\n" + token
-                )
-            }
-        )
-    }
-}
-
 /** تصویر شبکه‌ای با ImageRequest پایدار و بدون crossfade در بازترکیب‌های صفحهٔ آزمون. */
 @Composable
 private fun StudentCachedImage(uri: String, description: String, modifier: Modifier = Modifier) {
@@ -741,4 +688,15 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+/**
+ * V137 — نگهبان «خروج از برنامه»: وقتی خود برنامه یک فعالیت بیرونی (گالری/انتخاب‌گر) را
+ * باز می‌کند، ON_STOP بعدی نباید «خارج شدن از برنامه» شمرده شود.
+ */
+internal object ExamLeaveGuard {
+    @Volatile private var suppressed = false
+    fun suppressNext() { suppressed = true }
+    fun consumeSuppressed(): Boolean { val s = suppressed; suppressed = false; return s }
+    fun clear() { suppressed = false }
 }

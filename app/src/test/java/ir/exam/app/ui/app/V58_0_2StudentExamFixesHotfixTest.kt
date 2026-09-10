@@ -93,7 +93,7 @@ class V58_0_2StudentExamFixesHotfixTest {
         // چیپ سطر شماره‌ها دیگر FilterChip نیست تا combinedClickable لمس را بگیرد.
         // V59.0: چیپ‌ها به StripChipCell منتقل شدند.
         val strip = student.substringAfter("private fun StripChipCell(")
-            .substringBefore("private fun StudentAnswerGraph(")
+            .substringBefore("private fun StudentWhiteboardEntry(")
         assertFalse("FilterChip(" in strip)
         assertTrue("combinedClickable(" in strip)
         assertTrue("onLongClick = { onToggleFlag(q.id) }" in strip)
@@ -110,8 +110,7 @@ class V58_0_2StudentExamFixesHotfixTest {
     fun `question graphs unlock the student answer graph automatically`() {
         assertTrue("val questionHasGraph = remember(question.id, question.text)" in student)
         assertTrue("it.spec.kind == \"g\"" in student)
-        // V136 — تخته وایت‌برد با allowAnswerGraph؛ نمودار پاسخ فقط برای سؤال‌های دارای نمودار (سازگاری قدیمی).
-        assertTrue("if (presentation.allowAnswerGraph) {" in student)
-        assertTrue("if (questionHasGraph) {" in student)
+        // V137 — نمودار پاسخ حذف شد؛ هر دو شرط تختهٔ وایت‌برد را باز می‌کنند.
+        assertTrue("if (presentation.allowAnswerGraph || questionHasGraph) {" in student)
     }
 }

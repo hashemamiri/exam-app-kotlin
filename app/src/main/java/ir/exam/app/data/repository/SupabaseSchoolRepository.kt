@@ -228,11 +228,13 @@ class SupabaseSchoolRepository : SchoolRepository {
     }
 
     // V62.6 — اشتراک کلاس/دانش‌آموز معلم با مدیر (قابل تغییر از UI کلاس‌ها).
-    override suspend fun setClassShared(classId: String, shared: Boolean): Result<Unit> = runCatching {
-        rpcObject("native_teacher_share_class_v62", buildJsonObject {
+    // V137 — نسخهٔ جدید عضویت معلم در مدرسه را می‌سنجد، school_id خالی کلاس را پر می‌کند
+    // و مقدار مؤثر «shared» را برمی‌گرداند تا پیام کلاینت واقعی باشد.
+    override suspend fun setClassShared(classId: String, shared: Boolean): Result<Boolean> = runCatching {
+        rpcObject("native_teacher_share_class_v137", buildJsonObject {
             put("p_class", classId)
             put("p_share", shared)
-        }).throwIfError()
+        }).throwIfError()["shared"]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull() ?: shared
     }
 
     // V136 — نسخهٔ جدید ردیف school_students را در صورت نبود می‌سازد و مقدار مؤثر «shared» را برمی‌گرداند.

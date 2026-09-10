@@ -28,7 +28,8 @@ interface SchoolRepository {
     suspend fun resetStudentPassword(studentId: String, newPassword: String): Result<StudentCredential>
     suspend fun deleteStudent(studentId: String): Result<Unit>
     // V62.6 — اشتراک کلاس/دانش‌آموز معلم با مدیر (پیش‌فرض پنهان؛ قابل تغییر).
-    suspend fun setClassShared(classId: String, shared: Boolean): Result<Unit> =
+    // V137 — مقدار مؤثر «shared» سرور برمی‌گردد (مثل setStudentShared).
+    suspend fun setClassShared(classId: String, shared: Boolean): Result<Boolean> =
         Result.failure(UnsupportedOperationException("class sharing not implemented"))
     suspend fun setStudentShared(studentId: String, shared: Boolean): Result<Boolean> =
         Result.failure(UnsupportedOperationException("student sharing not implemented"))

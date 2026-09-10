@@ -290,11 +290,16 @@ class ClassesViewModel(
     }
 
     // V62.6 — اشتراک کلاس با مدیر مدرسه؛ قابل روشن/خاموش شدن در هر زمان.
+    // V137 — پیام بر اساس مقدار مؤثر برگشتی از سرور؛ بدون عضویت در مدرسه، سرور خطای روشن می‌دهد.
     fun setClassShared(id: String, shared: Boolean) = action(
         if (shared) "کلاس برای مدیر قابل مشاهده شد." else "کلاس از دید مدیر پنهان شد."
     ) {
-        repository.setClassShared(id, shared).getOrThrow()
+        val effective = repository.setClassShared(id, shared).getOrThrow()
         reloadData()
+        if (effective != shared) error(
+            if (shared) "اشتراک اعمال نشد؛ کلاس هنوز از دید مدیر پنهان است."
+            else "لغو اشتراک اعمال نشد؛ کلاس هنوز برای مدیر قابل مشاهده است."
+        )
     }
 
     // V62.8 — چشم روی کارت دانش‌آموز: اشتراک با مدیر + پیام روی صفحه.

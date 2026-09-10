@@ -47,7 +47,8 @@ class V62_6TeacherPrivacyManagerUxTest {
         )) assertTrue(needle, needle in sql)
         // کلاینت: سوییچ اشتراک روی کارت کلاس معلم؛ هر لحظه قابل تغییر
         assertTrue("fun setClassShared(id: String, shared: Boolean)" in classesVm)
-        assertTrue("native_teacher_share_class_v62" in schoolRepo)
+        // V137 — RPC اشتراک کلاس به نسخهٔ v137 (بررسی عضویت مدرسه + مقدار مؤثر shared) ارتقا یافت.
+        assertTrue("native_teacher_share_class_v137" in schoolRepo)
         // V136 — RPC اشتراک دانش‌آموز به نسخهٔ v136 (upsert ردیف school_students) ارتقا یافت.
         assertTrue("native_teacher_share_student_v136" in schoolRepo)
         // V62.8 — سوییچ به آیکن چشم تبدیل شد؛ منطق اشتراک همان است.

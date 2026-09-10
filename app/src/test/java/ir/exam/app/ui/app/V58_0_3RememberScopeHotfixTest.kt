@@ -34,9 +34,8 @@ class V58_0_3RememberScopeHotfixTest {
         // اعلان قبل از Scaffold یعنی در متن Composable، نه داخل LazyListScope.
         assertTrue("remember must run in composable scope, not LazyListScope", declaration < scaffold)
         // مصرف در همان جای قبلی است.
-        // V136 — تخته وایت‌برد با allowAnswerGraph؛ نمودار پاسخ فقط برای سؤال‌های دارای نمودار (سازگاری قدیمی).
-        assertTrue("if (presentation.allowAnswerGraph) {" in student)
-        assertTrue("if (questionHasGraph) {" in student)
+        // V137 — نمودار پاسخ حذف شد؛ هر دو شرط تختهٔ وایت‌برد را باز می‌کنند.
+        assertTrue("if (presentation.allowAnswerGraph || questionHasGraph) {" in student)
     }
 
     @Test

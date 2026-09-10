@@ -45,7 +45,7 @@ class V59_0ExamUxColoredReportsTest {
         assertTrue("LazyRow(" in student)
         // چیپ دست‌ساز با long-press همچنان برقرار (V58.0.2)
         val chip = student.substringAfter("private fun StripChipCell(")
-            .substringBefore("private fun StudentAnswerGraph(")
+            .substringBefore("private fun StudentWhiteboardEntry(")
         assertTrue("combinedClickable(" in chip)
         assertTrue("onLongClick = { onToggleFlag(q.id) }" in chip)
         assertFalse("FilterChip(" in chip)

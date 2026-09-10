@@ -459,12 +459,15 @@ fun NeumorphicMenuTile(
                 )
             }
             Spacer(Modifier.height(12.dp))
+            // V137 — توضیح کارت منوی همبرگری وسط‌چین.
             Text(
                 subtitle,
                 color = colors.muted,
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

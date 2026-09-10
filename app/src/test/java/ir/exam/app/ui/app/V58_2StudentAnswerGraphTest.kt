@@ -1,6 +1,7 @@
 package ir.exam.app.ui.app
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -45,29 +46,13 @@ class V58_2StudentAnswerGraphTest {
     }
 
     @Test
-    fun `student draws and edits the graph through the native flow`() {
-        // V58.0.2: علاوه بر چیپ معلم، نمودار داخل متن سؤال هم فعال‌ساز است.
-        // V136 — تخته وایت‌برد با allowAnswerGraph؛ نمودار پاسخ فقط برای سؤال‌های دارای نمودار (سازگاری قدیمی).
-        assertTrue("if (presentation.allowAnswerGraph) {" in student)
-        assertTrue("if (questionHasGraph) {" in student)
-        assertTrue("fun StudentAnswerGraph(" in student)
-        assertTrue("Text(\"رسم نمودار پاسخ\")" in student)
+    fun `student draws on the whiteboard instead of the removed answer graph`() {
+        // V137 — «نمودار پاسخ دانش‌آموز» حذف شد؛ چیپ معلم یا نمودار داخل سؤال، تختهٔ وایت‌برد را باز می‌کند.
+        assertTrue("if (presentation.allowAnswerGraph || questionHasGraph) {" in student)
         assertTrue("StudentWhiteboardDialog(" in student)
-        assertTrue("FigureTypePickerDialog(" in student)
-        assertTrue("kind = ir.exam.app.ui.figure.FigureKind.GRAPH" in student)
-        assertTrue("FigurePickerDialog(" in student)
-        assertTrue("Text(\"ویرایش نمودار\")" in student)
-        assertTrue("Text(\"حذف نمودار\")" in student)
-    }
-
-    @Test
-    fun `graph token lives inside the same text answer`() {
-        // درج: جایگزینی توکن قبلی یا افزودن به انتهای پاسخ
-        assertTrue("answerText.replaceRange(occ.start, occ.endExclusive, token)" in student)
-        assertTrue("else if (answerText.isBlank()) token" in student)
-        // حذف: فقط بازهٔ توکن حذف می‌شود
-        assertTrue("answerText.removeRange(occ.start, occ.endExclusive)" in student)
-        // نمایش زندهٔ نمودار پاسخ با زوم
-        assertTrue("NativeMathText(answerText, zoomableFigures = true)" in student)
+        assertFalse("fun StudentAnswerGraph(" in student)
+        assertFalse("Text(\"رسم نمودار پاسخ\")" in student)
+        assertFalse("FigureTypePickerDialog(" in student)
+        assertFalse("Text(\"ویرایش نمودار\")" in student)
     }
 }

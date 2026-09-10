@@ -181,6 +181,8 @@ class StudentExamViewModel(
     fun recordSecurityEvent(kind: String) {
         val key = kind.trim().take(40)
         if (key.isEmpty()) return
+        // V137 — پس از ارسال/پایان آزمون (یا پیش از شروع) هیچ رویدادی ثبت نمی‌شود.
+        if (state.value.finished || !state.value.started) return
         securityEvents[key] = (securityEvents[key] ?: 0) + 1
         // ثبت فوری روی سرور (best-effort؛ خطا آزمون را مختل نمی‌کند)
         val examId = state.value.exam?.id ?: return
@@ -203,28 +205,39 @@ class StudentExamViewModel(
         }
     }
 
-    internal fun monitorReport(): kotlinx.serialization.json.JsonObject {
+    internal fun monitorReport(final: Boolean = false): kotlinx.serialization.json.JsonObject {
         val exam = state.value.exam
-        // بستن بازهٔ سؤال جاری پیش از گزارش
+        val now = System.currentTimeMillis()
+        // V137 — ریشهٔ «مدت پاسخ‌گویی نمایش داده نمی‌شد»: نسخهٔ قبلی بازهٔ سؤال جاری را
+        // با remove می‌بست و دوباره باز نمی‌کرد؛ اولین گزارش (همان شروع آزمون) زمان‌سنجی
+        // سؤال جاری را برای همیشه متوقف می‌کرد. حالا گزارش فقط یک «عکس لحظه‌ای» می‌گیرد:
+        // زمان ذخیره‌شده + بازهٔ باز فعلی، بدون دست‌زدن به شمارنده‌ها.
+        val times = questionTimeSpentMs.toMutableMap()
         if (exam != null) {
-            val now = System.currentTimeMillis()
-            questionEnterEpochMs.remove(state.value.questionIndex)?.let { enteredAt ->
+            questionEnterEpochMs[state.value.questionIndex]?.let { enteredAt ->
                 exam.questions.getOrNull(state.value.questionIndex)?.let { q ->
-                    questionTimeSpentMs[q.id] = (questionTimeSpentMs[q.id] ?: 0L) + (now - enteredAt)
+                    times[q.id] = (times[q.id] ?: 0L) + (now - enteredAt)
                 }
             }
         }
+        // شمارهٔ سؤال از دید معلم (ترتیب اصلی، نه ترتیب درهم‌شدهٔ دانش‌آموز).
+        val labels = exam?.questions?.associate { q -> q.id to (q.originalIndex + 1) }.orEmpty()
         return kotlinx.serialization.json.buildJsonObject {
             put("entered_at_epoch_ms", kotlinx.serialization.json.JsonPrimitive(examEnteredAtEpochMs))
-            put("left_at_epoch_ms", kotlinx.serialization.json.JsonPrimitive(System.currentTimeMillis()))
+            put("left_at_epoch_ms", kotlinx.serialization.json.JsonPrimitive(now))
+            // V137 — تا پیش از ارسال نهایی، «زمان خروج» فقط آخرین فعالیت است، نه ترک آزمون.
+            put("submitted", kotlinx.serialization.json.JsonPrimitive(final))
             put("events", kotlinx.serialization.json.JsonObject(
                 securityEvents.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
             ))
             put("question_time_ms", kotlinx.serialization.json.JsonObject(
-                questionTimeSpentMs.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
+                times.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
             ))
             put("question_visits", kotlinx.serialization.json.JsonObject(
                 questionVisits.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
+            ))
+            put("question_labels", kotlinx.serialization.json.JsonObject(
+                labels.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }
             ))
         }
     }
@@ -425,9 +438,9 @@ class StudentExamViewModel(
                 answers = state.value.answers,
                 responseImages = state.value.responseImages,
                 submittedAtEpochMs = System.currentTimeMillis(),
-                monitorReportJson = monitorReport().toString()
+                monitorReportJson = monitorReport(final = true).toString()
             )
-            runCatching { exams.reportMonitor(exam.id, monitorReport().toString()) }
+            runCatching { exams.reportMonitor(exam.id, monitorReport(final = true).toString()) }
             exams.submitAttempt(attempt)
                 .onSuccess { outcome ->
                     timer?.cancel()
