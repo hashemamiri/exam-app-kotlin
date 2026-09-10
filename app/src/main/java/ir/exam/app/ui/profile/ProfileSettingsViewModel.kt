@@ -59,7 +59,6 @@ class ProfileSettingsViewModel(
         it.copy(employeeCode = value.uppercase().filter { c -> c in 'A'..'Z' || c.isDigit() || c == '_' || c == '-' }.take(30))
     }
     fun setPhone(value: String) = updateProfile { it.copy(phone = value.filter(Char::isDigit).take(11)) }
-    fun setAvatarPublic(value: Boolean) = updateProfile { it.copy(avatarPublic = value) }
     fun setProvince(value: String) = updateHeader { it.copy(province = value.take(120)) }
     fun setCity(value: String) = updateHeader { it.copy(city = value.take(120)) }
     fun setDistrict(value: String) = updateHeader { it.copy(district = value.take(120)) }
@@ -67,22 +66,28 @@ class ProfileSettingsViewModel(
     fun setGrade(value: String) = updateHeader { it.copy(grade = value.take(120)) }
     fun setFieldOfStudy(value: String) = updateHeader { it.copy(fieldOfStudy = value.take(120)) }
 
+    private val appContext = context.applicationContext
+
+    /** V137.6 — عکس پروفایل فقط محلی ذخیره می‌شود؛ هیچ آپلودی به سرور انجام نمی‌شود. */
     fun uploadAvatar(uri: Uri) = viewModelScope.launch {
         val profile = state.value.profile ?: return@launch
         _state.update { it.copy(uploadingAvatar = true, error = null, message = null) }
         runCatching {
-            val url = repository.uploadAvatar(uri).getOrThrow()
-            repository.save(profile.copy(avatarUrl = url)).getOrThrow()
+            ir.exam.app.data.local.LocalAvatarStore.save(appContext, profile.id, uri).getOrThrow()
+            // اگر از نسخه‌های قبلی نشانی سروری مانده، پاک می‌شود تا هیچ عکسی روی سرور نماند.
+            if (profile.avatarUrl != null) repository.save(profile.copy(avatarUrl = null)).getOrThrow() else profile
         }
-            .onSuccess { saved -> markSaved(saved, "عکس پروفایل ذخیره شد.") }
+            .onSuccess { saved -> markSaved(saved, "عکس پروفایل روی همین دستگاه ذخیره شد.") }
             .onFailure { error -> _state.update { it.copy(uploadingAvatar = false, error = safeProfileError(error)) } }
     }
 
     fun removeAvatar() {
         val profile = state.value.profile ?: return
+        ir.exam.app.data.local.LocalAvatarStore.remove(appContext, profile.id)
         // V59.3 — فایل عکس قبلی از استوریج هم پاک می‌شود (best-effort).
         val oldUrl = profile.avatarUrl
-        saveProfile(profile.copy(avatarUrl = null), "عکس پروفایل حذف شد.")
+        if (oldUrl != null) saveProfile(profile.copy(avatarUrl = null), "عکس پروفایل حذف شد.")
+        else markSaved(profile, "عکس پروفایل حذف شد.")
         if (!oldUrl.isNullOrBlank()) viewModelScope.launch {
             ir.exam.app.data.repository.StorageImageCleaner.removeByPublicUrls(listOf(oldUrl))
         }

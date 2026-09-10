@@ -26,11 +26,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowRightAlt
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Redo
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.AddBox
@@ -160,6 +162,18 @@ internal fun BoardIconChip(selected: Boolean, icon: androidx.compose.ui.graphics
     ) { Icon(icon, contentDescription = label, tint = fg, modifier = Modifier.size(22.dp)) }
 }
 
+/** V137.6 — یک سطرِ راهنما: آیکون + نام + توضیح. */
+@Composable
+private fun HelpRow(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, desc: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.labelLarge)
+            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
 private fun k_hint(kind: BoardInstrument): String = when (kind) {
     BoardInstrument.RULER -> "خط‌کش: قلم نزدیک لبه می‌چسبد؛ آبی = چرخش/اندازه؛ خاکستری = جابه‌جایی"
     BoardInstrument.SETSQUARE -> "گونیا: قلم نزدیک لبه می‌چسبد؛ آبی = چرخش/اندازه؛ خاکستری = جابه‌جایی"
@@ -269,6 +283,7 @@ fun StudentWhiteboardDialog(
     var formulaOpen by remember { mutableStateOf(false) }
     var figureTool by remember { mutableStateOf<String?>(null) }
     var confirmDone by remember { mutableStateOf(false) }
+    var helpOpen by remember { mutableStateOf(false) } // V137.6 — راهنمای آیکون‌ها
     var confirmClearAll by remember { mutableStateOf(false) }
     var insertMenu by remember { mutableStateOf(false) }
     // V137.2 — ابزار هندسی فعال (خط‌کش/گونیا/نقاله/پرگار).
@@ -375,6 +390,7 @@ fun StudentWhiteboardDialog(
                             color = if (remainingSeconds != UNLIMITED_TIME && remainingSeconds < 120) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    IconButton(onClick = { helpOpen = true }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = "راهنما", tint = MaterialTheme.colorScheme.primary) }
                     IconButton(onClick = { undo() }, enabled = strokes.isNotEmpty()) { Icon(Icons.AutoMirrored.Outlined.Undo, contentDescription = "برگشت") }
                     IconButton(onClick = { redoLast() }, enabled = redo.isNotEmpty()) { Icon(Icons.AutoMirrored.Outlined.Redo, contentDescription = "جلو") }
                     IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, contentDescription = "بستن", tint = MaterialTheme.colorScheme.error) }
@@ -647,6 +663,43 @@ fun StudentWhiteboardDialog(
             dismissButton = { TextButton(onClick = { confirmClearAll = false }) { Text("انصراف") } }
         )
     }
+    if (helpOpen) {
+        // V137.6 — راهنمای همهٔ آیکون‌های تخته
+        AlertDialog(
+            onDismissRequest = { helpOpen = false },
+            title = { Text("راهنمای تخته") },
+            text = {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("سربرگ", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    HelpRow(Icons.AutoMirrored.Outlined.Undo, "برگشت", "آخرین کار را لغو می‌کند (Ctrl+Z).")
+                    HelpRow(Icons.AutoMirrored.Outlined.Redo, "جلو", "کارِ لغوشده را برمی‌گرداند (Ctrl+Y).")
+                    HelpRow(Icons.Outlined.Close, "بستن", "تخته بسته می‌شود؛ پیش‌نویس می‌ماند.")
+                    Text("ابزارها", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    HelpRow(BoardTool.PEN.icon, "قلم", "کشیدن آزاد با رنگ و ضخامت انتخابی.")
+                    HelpRow(BoardTool.HIGHLIGHT.icon, "هایلایتر", "خط پهنِ نیمه‌شفاف برای برجسته‌کردن.")
+                    HelpRow(BoardTool.ERASER.icon, "پاک‌کن", "هر جا بکشید پاک می‌شود.")
+                    HelpRow(BoardTool.OBJ_ERASER.icon, "پاک‌کن شیء", "روی هر خط/شکل/متن بزنید تا کامل حذف شود.")
+                    HelpRow(BoardTool.SELECT.icon, "انتخاب/جابه‌جایی", "روی شیء بزنید تا انتخاب شود؛ بکشید تا جابه‌جا شود. رنگ/ضخامت روی شیء انتخاب‌شده اعمال می‌شود.")
+                    HelpRow(BoardTool.LINE.icon, "خط", "خط راست بین نقطهٔ شروع و پایان.")
+                    HelpRow(BoardTool.ARROW.icon, "پیکان", "خط راست با نوک پیکان.")
+                    HelpRow(BoardTool.RECT.icon, "مستطیل", "کشیدن از یک گوشه تا گوشهٔ مقابل.")
+                    HelpRow(BoardTool.CIRCLE.icon, "دایره/بیضی", "کشیدن داخل کادر.")
+                    HelpRow(BoardTool.TRIANGLE.icon, "مثلث", "کشیدن داخل کادر.")
+                    HelpRow(BoardTool.TEXT.icon, "متن", "روی تخته بزنید و متن را بنویسید؛ با انتخاب می‌توان ویرایش/بزرگ/کوچک کرد.")
+                    HelpRow(Icons.Outlined.AddBox, "درج…", "فرمول، نمودار، محور، شکل هندسی، جدول، فیزیک/شیمی، جدول تناوبی یا تصویر سؤال.")
+                    Text("ابزارهای هندسی", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    HelpRow(BoardInstrument.NONE.icon, "بدون ابزار", "ابزار هندسی برداشته می‌شود.")
+                    HelpRow(BoardInstrument.RULER.icon, "خط‌کش", "قلم/خط نزدیک لبه به لبه می‌چسبد.")
+                    HelpRow(BoardInstrument.SETSQUARE.icon, "گونیا", "سه لبهٔ شماره‌دار؛ قلم به لبه می‌چسبد.")
+                    HelpRow(BoardInstrument.PROTRACTOR.icon, "نقاله", "قلم نزدیک کمان روی کمان و نزدیک خط پایه روی خط می‌رود.")
+                    HelpRow(BoardInstrument.COMPASS.icon, "پرگار", "هر کشیدن یک کمان به مرکز و شعاع پرگار است.")
+                    Text("دستگیره‌ها: دایرهٔ خاکستری (چهارپیکان) = جابه‌جایی ابزار؛ دایرهٔ آبی = چرخش و تغییر اندازه.", style = MaterialTheme.typography.bodySmall)
+                    Text("پایین نوار: رنگ‌ها و ضخامت، زمینه (ساده/شطرنجی/خط‌دار/نقطه‌ای/محور)، صفحه‌های قبلی/بعدی، + صفحه، پاک‌کردن صفحه.", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { TextButton(onClick = { helpOpen = false }) { Text("فهمیدم") } }
+        )
+    }
     if (confirmDone) {
         val filled = (0 until pageCount).count { p -> strokes.any { it.page == p } }
         AlertDialog(
@@ -818,10 +871,22 @@ internal fun drawInstrument(canvas: Canvas, st: InstrumentState, density: Float)
             // سوراخ میانی و علامت ۹۰°
             canvas.drawCircle(st.size * 0.28f, -st.size * 0.28f, st.size * 0.1f, line)
             canvas.drawRect(0f, -8f * density, 8f * density, 0f, tick)
+            // V137.6 — شماره‌گذاری گونیا: هر میلی‌متر تیک، هر ۵ بلندتر، هر سانتی‌متر عدد (روی هر دو لبهٔ عمود).
             var x = 0f; var i = 0
-            while (x <= st.size) { canvas.drawLine(x, 0f, x, if (i % 5 == 0) -7f * density else -4f * density, tick); x += cmPx / 5f; i++ }
+            while (x <= st.size) {
+                val len = when { i % 10 == 0 -> 11f; i % 5 == 0 -> 7f; else -> 4f } * density
+                canvas.drawLine(x, 0f, x, -len, tick)
+                if (i % 10 == 0 && i > 0) canvas.drawText(FigureDigits.apply((i / 10).toString()), x, -len - 3f * density, txt)
+                x += cmPx / 10f; i++
+            }
             var y = 0f; i = 0
-            while (y <= st.size) { canvas.drawLine(0f, -y, if (i % 5 == 0) 7f * density else 4f * density, -y, tick); y += cmPx / 5f; i++ }
+            val txtL = Paint(txt).apply { textAlign = Paint.Align.LEFT }
+            while (y <= st.size) {
+                val len = when { i % 10 == 0 -> 11f; i % 5 == 0 -> 7f; else -> 4f } * density
+                canvas.drawLine(0f, -y, len, -y, tick)
+                if (i % 10 == 0 && i > 0) canvas.drawText(FigureDigits.apply((i / 10).toString()), len + 2f * density, -y + 3f * density, txtL)
+                y += cmPx / 10f; i++
+            }
         }
         BoardInstrument.PROTRACTOR -> {
             val r = st.size

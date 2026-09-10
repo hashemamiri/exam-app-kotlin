@@ -97,7 +97,7 @@ fun TabletSideRail(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 52)
+                    ProfileAvatar(null, user.name.ifBlank { "کاربر" }, 52, userId = user.id)
                     Column(Modifier.weight(1f)) {
                         Text(
                             if (user.role == UserRole.MANAGER) "پروفایل مدیر/معاون" else "پروفایل معلم",

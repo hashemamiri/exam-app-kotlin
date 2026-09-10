@@ -197,7 +197,6 @@ fun ProfileSettingsScreen(
                 onLastName = viewModel::setLastName,
                 onEmployeeCode = viewModel::setEmployeeCode,
                 onPhone = viewModel::setPhone,
-                onAvatarPublic = viewModel::setAvatarPublic,
                 onPickAvatar = {
                     picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
@@ -262,7 +261,7 @@ fun ProfileSettingsScreen(
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
             title = { Text("حذف عکس پروفایل") },
-            text = { Text("عکس از پروفایل حذف شود؟ فایل قدیمی در پاک‌سازی دوره‌ای Storage حذف خواهد شد.") },
+            text = { Text("عکس پروفایل از این دستگاه حذف شود؟") },
             confirmButton = {
                 Button(onClick = { confirmRemove = false; viewModel.removeAvatar() }) { Text("حذف") }
             },
@@ -508,7 +507,6 @@ private fun ProfileSection(
     onLastName: (String) -> Unit,
     onEmployeeCode: (String) -> Unit,
     onPhone: (String) -> Unit,
-    onAvatarPublic: (Boolean) -> Unit,
     onPickAvatar: () -> Unit,
     onRemoveAvatar: () -> Unit,
     onSave: () -> Unit
@@ -524,32 +522,29 @@ private fun ProfileSection(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    ProfileAvatar(profile.avatarUrl, profile.shownName, 112)
+                    // V137.6 — عکس پروفایل فقط محلی است (بدون آپلود، بدون نمایش به دیگران)
+                    val ctx = LocalContext.current
+                    val hasLocal = remember(state.savedVersion, state.uploadingAvatar) {
+                        ir.exam.app.data.local.LocalAvatarStore.path(ctx, profile.id) != null
+                    }
+                    ProfileAvatar(null, profile.shownName, 112, userId = profile.id, version = state.savedVersion)
                     if (state.uploadingAvatar) {
                         CircularProgressIndicator()
-                        Text("در حال فشرده‌سازی و آپلود امن عکس...")
+                        Text("در حال آماده‌سازی عکس...")
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = onPickAvatar, enabled = !state.uploadingAvatar && !state.saving) {
                             Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                            Text(if (profile.avatarUrl == null) "انتخاب عکس" else "تعویض")
+                            Text(if (!hasLocal) "انتخاب عکس" else "تعویض")
                         }
-                        if (profile.avatarUrl != null) {
+                        if (hasLocal) {
                             OutlinedButton(onClick = onRemoveAvatar, enabled = !state.uploadingAvatar && !state.saving) {
                                 Icon(Icons.Outlined.Delete, contentDescription = null)
                                 Text("حذف")
                             }
                         }
                     }
-                    if (user.role == UserRole.TEACHER) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("نمایش عکس به دانش‌آموزان")
-                                Text("فقط دانش‌آموزان خودتان", style = MaterialTheme.typography.bodySmall)
-                            }
-                            Switch(profile.avatarPublic, onAvatarPublic)
-                        }
-                    }
+                    Text("عکس فقط روی همین دستگاه می‌ماند و به سرور فرستاده نمی‌شود.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -1056,10 +1051,13 @@ private fun SaveStatus(state: ProfileSettingsState, onSave: () -> Unit, label: S
 }
 
 @Composable
-fun ProfileAvatar(url: String?, name: String, sizeDp: Int) {
-    if (!url.isNullOrBlank()) {
+fun ProfileAvatar(url: String?, name: String, sizeDp: Int, userId: String? = null, version: Int = 0) {
+    // V137.6 — فقط عکس محلیِ خودِ کاربر نمایش داده می‌شود؛ نشانی‌های سروری نادیده گرفته می‌شوند.
+    val ctx = LocalContext.current
+    val local = remember(userId, version) { ir.exam.app.data.local.LocalAvatarStore.path(ctx, userId) }
+    if (local != null) {
         AsyncImage(
-            model = url,
+            model = coil.request.ImageRequest.Builder(ctx).data(local).memoryCacheKey(local.path + "@" + local.lastModified()).diskCacheKey(local.path + "@" + local.lastModified()).build(),
             contentDescription = "عکس پروفایل $name",
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(sizeDp.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)

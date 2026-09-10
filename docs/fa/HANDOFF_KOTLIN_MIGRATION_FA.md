@@ -18456,3 +18456,22 @@ http.server روی assets تا اطلس بارگذاری شود) ریشه‌ها
    تأیید puppeteer: محور '-۵','-۴'…، جدول '۱','۲','۳','۴'، data-fig لاتین؛ drag شیء همچنان کار می‌کند.
 تست: V137_5_PerfIconsDigitsTest.kt.
 ```
+
+## V137.6 — راهنمای تخته، شماره‌گذاری گونیا، عکس پروفایل فقط محلی
+
+```text
+۱) تخته: IconButton HelpOutline (AutoMirrored) اول سربرگ → AlertDialog «راهنمای تخته» با HelpRow(icon,
+   name, desc) برای همهٔ BoardTool/BoardInstrument + Undo/Redo/Close + درج + دستگیره‌ها + نوار پایین.
+۲) گونیا (drawInstrument SETSQUARE): تیک هر cmPx/10، بلندتر هر ۵، عدد هر ۱۰ روی لبهٔ افقی (بالای تیک)
+   و لبهٔ عمودی (سمت راست تیک، Paint.Align.LEFT)؛ اعداد از FigureDigits.apply.
+۳) عکس پروفایل: data/local/LocalAvatarStore (filesDir/avatars/<userId>.jpg، مربع، ≤512px، JPEG 88).
+   ProfileSettingsViewModel.uploadAvatar → LocalAvatarStore.save؛ اگر avatarUrl سروری قدیمی بود،
+   با save(avatarUrl=null) پاک می‌شود. removeAvatar فایل محلی را حذف می‌کند (+ پاک‌سازی Storage قدیمی).
+   ProfileAvatar(url, name, size, userId, version): فقط فایل محلیِ userId را نشان می‌دهد (url نادیده؛
+   نشانی‌های سروری معلم/دانش‌آموز دیگر جایی رندر نمی‌شوند). Design69MainMenuScreen/TabletDesktopShell
+   userId = user.id. Switch «نمایش عکس به دانش‌آموزان» و setAvatarPublic حذف شد (فیلد avatarPublic در
+   مدل/DTO/RPC دست‌نخورده ماند تا سازگاری سرور حفظ شود؛ SupabaseQuestionImageUploader.uploadAvatar
+   دیگر از هیچ‌جا صدا زده نمی‌شود).
+۴) apply_vXX.py: commit با check=False؛ اگر «nothing to commit» بود push ادامه می‌یابد.
+تست: V137_6_BoardHelpLocalAvatarTest.kt.
+```

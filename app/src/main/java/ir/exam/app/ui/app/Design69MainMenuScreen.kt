@@ -123,7 +123,7 @@ fun Design69MainMenuScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ProfileAvatar(user.avatarUrl, user.name.ifBlank { "کاربر" }, 76)
+                    ProfileAvatar(null, user.name.ifBlank { "کاربر" }, 76, userId = user.id)
                     Column(Modifier.weight(1f)) {
                         Text(
                             when (user.role) {
