@@ -18475,3 +18475,39 @@ http.server روی assets تا اطلس بارگذاری شود) ریشه‌ها
 ۴) apply_vXX.py: commit با check=False؛ اگر «nothing to commit» بود push ادامه می‌یابد.
 تست: V137_6_BoardHelpLocalAvatarTest.kt.
 ```
+
+## V138 — سایت تک‌فایلی (فاز ۱)
+
+```text
+هدف: site/index.html = نسخهٔ وبِ برنامه با همان بک‌اند Supabase (anon key را کاربر خودش در
+  `var SUPABASE_ANON_KEY = "…";` بالای فایل می‌گذارد؛ در Git همیشه جای‌نگهدار می‌ماند).
+ساخت: python3 site/build_site.py  (منابع: site/src/template.html + site.css + app.js)
+  - CSS/JS موتور چاپ به ترتیبِ exam_print_renderer.html خوانده و inline می‌شوند (host_dom.js +
+    document.write)؛ قلم‌های /fonts/* در webhost.css → data:URL؛ '/figure_atlas/' →
+    https://raw.githubusercontent.com/hashemamiri/exam-app-kotlin/main/app/src/main/assets/figure_atlas/
+  - formula.html بی‌تغییر؛ فقط <script> پل بعد از <meta charset> و حذف اسکریپت cdn-cgi کلودفلر.
+  - هر دو موتور به‌صورت رشته در window.__ENGINES و با iframe.srcdoc باز می‌شوند.
+پل‌ها (همان نام‌های اندروید): iframe چاپ → window.ExamPrintBridge = parent.__printBridge
+  (toast/previewClosed/pageSetupChanged→localStorage/editFigureTool→openQmfFigEditorBody/
+  print(mode)→تأیید هزینه + native_charge_print_v1 + window.print روی iframe سپس restorePreview؛
+  renderFigure/renderFormula خالی → fallback خود موتور وب). iframe فرمول → ExamEditorNative =
+  parent.__formulaBridge (onTextChanged/onEditorClosed/onError)؛ شروع با ExamFormulaHost.begin
+  هر ۱۵۰ms تا ۶۷ بار (مثل FormulaHostDialog).
+داده: کلاینت fetch سبک (بدون supabase-js): /auth/v1/token?grant_type=password|refresh_token،
+  /auth/v1/otp (create_user, data{full_name,registration_role})، /auth/v1/verify type=email،
+  PUT /auth/v1/user؛ /rest/v1/rpc/<name>؛ select exams/exam_keys. نشست در localStorage
+  (examsite.session.v1) و refresh خودکار ۶۰ ثانیه پیش از انقضا.
+  ورود: مثل SupabaseAuthRepository (username بدون @ → native_staff_login_email_v1 → fallback
+  username@student.exam.local). پروفایل: native_ensure_profile_v1 + native_my_registration_state_v1
+  (requires_teacher_setup/pending_role → صفحهٔ تکمیل ثبت‌نام).
+buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type/options/leftItems/spans{s,e,b,i,u,c,z,f}/
+  alignSpans{s,e,a}/answerLines/answerLineStyle/answerLineSpacingCm) + کلید exam_keys.answers
+  (correctOption/correctAnswer/accept/answer±tolerance/matchAnswer) → payload setExamData مثل
+  ExamHtmlPrintPayload (type long/fill/numeric/multiple/truefalse/matching، textSpans{start,end,…}،
+  answerStyle plain/lined/grid، fields f_headerTemplate=classic/f_course/f_duration/f_branch).
+تأیید puppeteer (file://): لندینگ؛ demoPrint → pgsViewer با سربرگ کلاسیک، کسر MathJax، گزینه‌ها، نوار
+  قالب‌بندی؛ previewClosed روکش را می‌بندد؛ ویرایشگر فرمول با begin باز و با closeMath متن برمی‌گردد.
+فازهای بعد: ۲ سازندهٔ آزمون (native_save_exam_v2 p_payload)، ۳ دانش‌آموز (get_exam_for_student p_code،
+  تخته، native_submit_queued_answer_v1)، ۴ تصحیح/مدیر/شارژ/تقویم.
+تست: V138_SiteSkeletonTest.kt.
+```

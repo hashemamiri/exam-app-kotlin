@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>آزمون‌ساز — نسخهٔ وب</title>
+<script>
+/* ============================================================================
+   تنظیمات اتصال — تنها جایی که باید دست بزنید:
+   مقدار SUPABASE_ANON_KEY را از پنل Supabase (Project Settings → API → anon public)
+   بین دو علامت نقل‌قول بگذارید. کلید anon عمومی است و در مرورگر کاربران دیده می‌شود؛
+   هرگز کلید service_role را این‌جا نگذارید.
+   ============================================================================ */
+var SUPABASE_ANON_KEY = "…";
+window.SITE_CONFIG = { SUPABASE_URL: "/*__SUPABASE_URL__*/", SUPABASE_ANON_KEY: SUPABASE_ANON_KEY };
+</script>
+<style>/*__VAZIR_CSS__*/</style>
+<style>/*__SITE_CSS__*/</style>
+</head>
+<body>
+<div id="root"><div class="loading" style="padding-top:120px"><span class="spinner"></span> در حال بارگذاری…</div></div>
+<div class="toast-wrap" id="toasts"></div>
+<script>/*__ENGINES_JS__*/</script>
+<script>/*__SITE_JS__*/</script>
+</body>
+</html>
