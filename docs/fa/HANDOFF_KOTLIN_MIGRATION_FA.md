@@ -18349,3 +18349,48 @@ StudentExamViewModel.kt: WHITEBOARD_MAX_PAGES=6 — سقف تصاویر تخته
 verify_native_final PASS · git diff --check تمیز · اسکن پین تست‌ها: فقط سوزن‌های V55_18/V55_18_1
 عمداً به‌روز شدند · graph_fig.js/mainscript.js با node parse شدند · puppeteer: resize واقعی svg.
 ```
+
+## V137.3 — تختهٔ معلم، اسکرول بدون پرش، کادر دقیق شیء، حرکت کارت‌ها با ۱۰ کارت، تصویر تخته برای معلم
+
+### چه شد
+
+```text
+(الف) QuestionMediaEditor.kt: پارامتر onOpenWhiteboard (بعد از hasAudio) → IconButton(Icons.Outlined.Draw)
+   درست بعد از آیکن MusicNote. ExamBuilderScreen.kt QuestionEditor: state whiteboardOpen؛
+   StudentWhiteboardDialog(questionId = "teacher-<id>", questionNumber = index+1, questionImages =
+   تصاویر سؤال) و onDone → viewModel.addImages (خروجی file:// از filesDir/whiteboard؛ آپلودکننده file
+   را می‌خواند). چاپی و آنلاین هر دو. پرگار (drawInstrument COMPASS): پایه‌ها با تابع محلی leg()
+   (چهارضلعیِ باریک‌شونده)، سوزن نازک تا مرکز، مداد زرد + بست فلزی + چوب + نوک گرافیتی روی محیط،
+   لولا + دستگیرهٔ شیاردار. برچسب «r» حذف.
+(ب) scrollQuestionToHeader: علت پرش = animateScrollBy(420ms) با هدفِ لحظهٔ شروع + بستنِ آنیِ
+   اختلاف در حلقهٔ ۳۶ فریم. حالا: اگر آیتم دیده نمی‌شود animateScrollToItem(target,0)؛ سپس تا ۷۵
+   فریم هر فریم ۲۲٪ فاصلهٔ فعلی (delta*0.22f؛ زیر ۲px کامل) با scrollBy طی می‌شود و پس از ۸ فریم
+   پایدار تمام می‌شود. import animateScrollBy حذف؛ V20InteractionPolishTest به‌روز شد.
+(ج) mainscript.js tightenFigSvgs(fig): یک بار برای هر svg اصلیِ داخل .qmf-fig، با پنهان‌کردن موقت
+   .gf-bg، getBBox می‌گیرد و viewBox/width/height را به محدودهٔ محتوا (+۳ واحد) تنگ می‌کند؛
+   figNaturalSize قبل از اندازه‌گیری آن را صدا می‌زند → کادر ۸دستگیره = اندازهٔ محتوا برای همهٔ اشیا.
+   graph_fig.js: خروجی ExamPrintBridge.renderFigure اگر data:image/svg+xml;base64 باشد decode و
+   خودِ <svg> درج می‌شود (نه <image>) تا getBBox کار کند؛ مسیر <image> برای PNG/سایر باقی است.
+   webhost.css: .question-main-td .qmf-fig svg rect[fill="#fbfcfe"]{fill:none} → مستطیل‌های زمینهٔ
+   بدون کلاس (axgrid، نمودار خطی/میله‌ای FigureSvgRenderer، Chart*) روی کاغذ پُر نمی‌شوند.
+(د) TeacherManagementCardsScreen.kt: علت «انیمیشن قدیمی»: معلم ۱۰ کارت دارد؛ کارت رفته فوراً
+   relative=9 می‌شد و چون فقط relative≤2 رسم می‌شود ناپدید می‌شد؛ شرط cards.size≤3 هم بازگشت را
+   حذف می‌کرد. حالا state flying/enteringIndex/enterProgress: کارت در حال پرواز همیشه رسم می‌شود
+   (visualRelative=0، zIndex 4) تا پایان ۳۴۰ms؛ فاز بازگشت وقتی leavingStaysVisible؛ کارتِ تازه‌وارد
+   از ته پشته (arriving قبلاً نامرئی) با enterProgress (alpha، scale .86→1، بالاتر ۰٫۸ liftPx) وارد
+   می‌شود. چپ/راست یکسان.
+(هـ) StudentExamViewModel.addResponseImages: تخته روی سؤالِ دارای نمودار (questionHasGraph) بدون
+   allowAnswerGraph → max=0 → خروجی دور ریخته می‌شد (حتی در پیش‌نویس). حالا اگر همهٔ URIها شامل
+   "/whiteboard/" باشند (خروجی exportBoard) مثل allowAnswerGraph رفتار می‌شود (تا ۶ صفحه، جایگزین).
+   GradingScreen.kt: answerImagesFor(question.id, index) کلیدهای id، "q-<index>"، "<index>" و
+   "<index+1>" را امتحان می‌کند (شناسهٔ سؤال بدون id در ExamQuestionCodec = UUID تصادفی، در
+   StudentExamPayloadCodec = q-<i>). SQL V137 بدون تغییر (فقط https ادغام می‌کند؛ درست است).
+تست: V137_3_FeedbackTest.kt (۶ تست پین منبع).
+```
+
+### تست
+
+```text
+verify_native_final PASS · git diff --check تمیز · mainscript.js/graph_fig.js با node parse شدند ·
+اسکن پین تست‌ها: فقط V20InteractionPolishTest (animateScrollBy) عمداً به‌روز شد.
+```

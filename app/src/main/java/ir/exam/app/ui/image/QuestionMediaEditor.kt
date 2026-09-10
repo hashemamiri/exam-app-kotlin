@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
@@ -75,7 +76,10 @@ fun QuestionMediaEditor(
     onSpeechText: ((String) -> Unit)? = null,
     // V135 — آیکن موسیقی (فقط آزمون آنلاین): ویرایشگر صوت سؤال. null = نمایش داده نشود.
     onOpenAudio: (() -> Unit)? = null,
-    hasAudio: Boolean = false
+    hasAudio: Boolean = false,
+    // V137.3 — آیکن تختهٔ سفید کنار آیکن موسیقی: معلم هم با همان تختهٔ دانش‌آموز شکل می‌کشد و
+    // خروجی به‌عنوان تصویر سؤال اضافه می‌شود. null = نمایش داده نشود.
+    onOpenWhiteboard: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember(context) { LocalImageRepository(context) }
@@ -148,6 +152,11 @@ fun QuestionMediaEditor(
                     contentDescription = if (hasAudio) "ویرایش فایل صوتی سؤال" else "افزودن فایل صوتی سؤال",
                     tint = if (hasAudio) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Unspecified
                 )
+            }
+        }
+        if (onOpenWhiteboard != null) {
+            IconButton(onClick = onOpenWhiteboard) {
+                Icon(Icons.Outlined.Draw, contentDescription = "تختهٔ سفید: کشیدن شکل برای سؤال")
             }
         }
         if (processing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)

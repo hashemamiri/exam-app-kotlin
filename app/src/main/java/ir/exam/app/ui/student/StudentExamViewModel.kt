@@ -366,7 +366,13 @@ class StudentExamViewModel(
         val question = exam.questions.firstOrNull { it.id == questionId }
         // V136 — تخته وایت‌برد (allowAnswerGraph) حتی بدون سهمیهٔ تصویر هم یک تصویر
         // (خروجی تخته) می‌پذیرد؛ تخته‌های بعدی تصویر قبلی را جایگزین می‌کنند.
-        val whiteboardOnly = exam.questionPresentation[questionId]?.allowAnswerGraph == true && (question?.maxAnswerImages ?: 0) <= 0
+        // V137.3 — ریشهٔ «تصویر تخته به معلم نمی‌رسید»: سؤالِ دارای نمودار (questionHasGraph) بدون
+        // پرچم allowAnswerGraph تخته را نشان می‌داد ولی اینجا max = 0 می‌شد و خروجی تخته دور ریخته
+        // می‌شد (حتی در پیش‌نویس هم ذخیره نمی‌شد). حالا خروجی تخته (فایل‌های filesDir/whiteboard)
+        // از روی خودِ URI شناخته می‌شود و مستقل از پرچم پذیرفته می‌شود.
+        val fromWhiteboard = uris.isNotEmpty() && uris.all { it.contains("/whiteboard/") }
+        val whiteboardOnly = (fromWhiteboard || exam.questionPresentation[questionId]?.allowAnswerGraph == true) &&
+            (question?.maxAnswerImages ?: 0) <= 0
         // V137.1 — تختهٔ چندصفحه‌ای: هر بار ثبت، همهٔ صفحه‌های تخته جایگزین قبلی می‌شوند (تا ۶ تصویر).
         val max = if (whiteboardOnly) WHITEBOARD_MAX_PAGES else (question?.maxAnswerImages ?: 0)
         if (max <= 0) return

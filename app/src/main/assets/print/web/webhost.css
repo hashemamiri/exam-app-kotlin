@@ -173,6 +173,10 @@ body{padding:0 !important;}
    ویرایشگرها (خارج از .question-main-td) دست‌نخورده می‌مانند. */
 .question-main-td .qmf-fig{background:transparent !important;box-shadow:none !important;border:0 !important;overflow:visible !important;}
 .question-main-td .qmf-fig .gf-bg{fill:none !important;stroke:none !important;}
+/* V137.3 — «هیچ شیئی کادر زمینه نداشته باشد»: مستطیل‌های زمینهٔ بدون کلاس (شبکهٔ محور axgrid، صفحهٔ
+   نمودار خطی/میله‌ای رندر بومی و نمودارهای Chart*) همه با رنگ #fbfcfe رسم می‌شوند؛ روی کاغذ فقط
+   پُرشدگی حذف می‌شود و خطِ دورِ شبکه (که خودِ شیء است) می‌ماند. */
+.question-main-td .qmf-fig svg rect[fill="#fbfcfe"]{fill:none !important;}
 .question-main-td .an-stage{padding:0 !important;}
 .question-main-td .an-frame{border:0 !important;background:transparent !important;border-radius:0 !important;}
 .question-main-td .an-frame img.an-svg,.question-main-td .an-stage img.an-svg{border-radius:0 !important;}

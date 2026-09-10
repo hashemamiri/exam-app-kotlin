@@ -60,9 +60,11 @@ class V20InteractionPolishTest {
         assertTrue("Alignment.CenterEnd" in builder)
         assertTrue("expandedQuestionId = null" in builder)
         assertTrue("scrollQuestionToHeader(index)" in builder)
-        // V136 — اسکرول نرم: آیتم مرئی با animateScrollBy زیر هدر می‌نشیند، دور از دید با animateScrollToItem.
+        // V137.3 — اسکرول بدون پرش: دنبال‌کنندهٔ نرم فریم‌به‌فریم (۲۲٪ فاصله در هر فریم)،
+        // دور از دید با animateScrollToItem؛ دیگر animateScrollBy + بستنِ آنیِ اختلاف نداریم.
         assertTrue("listState.animateScrollToItem(target, 0)" in builder)
-        assertTrue("listState.animateScrollBy(" in builder)
+        assertTrue("delta * 0.22f" in builder)
+        assertTrue("listState.animateScrollBy(" !in builder)
         assertTrue(builder.split("withFrameNanos").size - 1 >= 2)
     }
 

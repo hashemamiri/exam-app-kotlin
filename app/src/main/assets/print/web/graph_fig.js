@@ -224,6 +224,14 @@
       try {
         if (window.ExamPrintBridge && typeof ExamPrintBridge.renderFigure === 'function') {
           var url = ExamPrintBridge.renderFigure(JSON.stringify(spec));
+          // V137.3 — SVG بومی به‌جای <image> مستقیم درج می‌شود تا کادر ۸دستگیره بتواند به اندازهٔ
+          // خودِ محتوا تنگ شود (tightenFigSvgs با getBBox) و زمینه/حاشیهٔ خالی نداشته باشد.
+          if (url && String(url).indexOf('data:image/svg+xml;base64,') === 0) {
+            try {
+              var xml = decodeURIComponent(escape(atob(String(url).slice('data:image/svg+xml;base64,'.length))));
+              if (xml.indexOf('<svg') >= 0) return xml.slice(xml.indexOf('<svg'));
+            } catch (_d) {}
+          }
           if (url && String(url).indexOf('data:') === 0) {
             return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 280" width="320" height="250" overflow="hidden">' +
               '<image href="' + esc(url) + '" x="0" y="0" width="360" height="280" preserveAspectRatio="xMidYMid meet"/></svg>';

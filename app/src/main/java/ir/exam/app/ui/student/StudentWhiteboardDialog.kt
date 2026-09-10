@@ -744,15 +744,61 @@ internal fun drawInstrument(canvas: Canvas, st: InstrumentState, density: Float)
             }
         }
         BoardInstrument.COMPASS -> {
+            // V137.3 — پرگار واقعی (درخواست کاربر): دو پایهٔ فلزیِ باریک‌شونده که در لولای بالایی
+            // به هم می‌رسند، دستگیرهٔ شیاردار روی لولا، پایهٔ سوزن روی مرکز (نقطهٔ قرمز) و پایهٔ
+            // مداد (چوب زرد + نوک گرافیتی) روی محیط دایره؛ دایرهٔ راهنما خط‌چین آبی.
             val dash = Paint(line).apply { pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f * density, 6f * density), 0f); color = 0x882563EB.toInt() }
             canvas.drawCircle(0f, 0f, st.size, dash)
-            val apexX = st.size / 2f; val apexY = -st.size * 0.65f - 20f * density
-            val leg = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 4f * density; color = 0xFF6B7280.toInt(); strokeCap = Paint.Cap.ROUND }
-            canvas.drawLine(apexX, apexY, 0f, 0f, leg)
-            canvas.drawLine(apexX, apexY, st.size, 0f, leg)
-            canvas.drawCircle(apexX, apexY, 6f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF374151.toInt() })
-            canvas.drawCircle(0f, 0f, 4f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFDC2626.toInt() })
-            canvas.drawText("r", apexX, apexY - 9f * density, txt)
+            val r = st.size
+            val apexX = r / 2f
+            val apexY = -(r * 0.85f + 26f * density)
+            val metal = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = 0xFF9CA3AF.toInt() }
+            val metalDark = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f * density; color = 0xFF4B5563.toInt() }
+            fun leg(tipX: Float, tipY: Float, topHalf: Float, tipHalf: Float) {
+                val dx = tipX - apexX; val dy = tipY - apexY
+                val len = kotlin.math.hypot(dx, dy).coerceAtLeast(1f)
+                val nx = -dy / len; val ny = dx / len
+                val path = android.graphics.Path().apply {
+                    moveTo(apexX + nx * topHalf, apexY + ny * topHalf)
+                    lineTo(tipX + nx * tipHalf, tipY + ny * tipHalf)
+                    lineTo(tipX - nx * tipHalf, tipY - ny * tipHalf)
+                    lineTo(apexX - nx * topHalf, apexY - ny * topHalf)
+                    close()
+                }
+                canvas.drawPath(path, metal)
+                canvas.drawPath(path, metalDark)
+            }
+            // پایهٔ سوزن: تا ۱۰dp بالای مرکز فلز، بعد سوزن نازک تا خود مرکز.
+            val needleTop = 12f * density
+            val d1 = kotlin.math.hypot(apexX, apexY).coerceAtLeast(1f)
+            val n1x = -apexX / d1 * needleTop; val n1y = -apexY / d1 * needleTop
+            leg(n1x, n1y, 4.5f * density, 1.8f * density)
+            canvas.drawLine(n1x, n1y, 0f, 0f, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.2f * density; color = 0xFF374151.toInt() })
+            // پایهٔ مداد: فلز تا نیمهٔ راه، سپس بست فلزی و بدنهٔ زرد مداد تا نزدیک محیط و نوک گرافیتی روی محیط.
+            val pdx = r - apexX; val pdy = -apexY
+            val pl = kotlin.math.hypot(pdx, pdy).coerceAtLeast(1f)
+            val ux = pdx / pl; val uy = pdy / pl
+            val metalEnd = 0.55f * pl
+            leg(apexX + ux * metalEnd, apexY + uy * metalEnd, 4.5f * density, 3.2f * density)
+            val pencil = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 5f * density; color = 0xFFFACC15.toInt(); strokeCap = Paint.Cap.BUTT }
+            val pencilStart = 0.45f * pl; val pencilEnd = pl - 9f * density
+            canvas.drawLine(apexX + ux * pencilStart, apexY + uy * pencilStart, apexX + ux * pencilEnd, apexY + uy * pencilEnd, pencil)
+            val clamp = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 7f * density; color = 0xFF6B7280.toInt() }
+            canvas.drawLine(apexX + ux * (metalEnd - 6f * density), apexY + uy * (metalEnd - 6f * density), apexX + ux * (metalEnd + 6f * density), apexY + uy * (metalEnd + 6f * density), clamp)
+            val wood = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f * density; color = 0xFFE7C99A.toInt(); strokeCap = Paint.Cap.BUTT }
+            canvas.drawLine(apexX + ux * pencilEnd, apexY + uy * pencilEnd, apexX + ux * (pl - 3f * density), apexY + uy * (pl - 3f * density), wood)
+            canvas.drawLine(apexX + ux * (pl - 3.5f * density), apexY + uy * (pl - 3.5f * density), r, 0f, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.6f * density; color = 0xFF111827.toInt(); strokeCap = Paint.Cap.ROUND })
+            // لولا و دستگیرهٔ شیاردار.
+            canvas.drawCircle(apexX, apexY, 7f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF6B7280.toInt() })
+            canvas.drawCircle(apexX, apexY, 2.2f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFE5E7EB.toInt() })
+            val knobW = 4f * density; val knobH = 16f * density
+            canvas.drawRoundRect(apexX - knobW / 2f, apexY - 7f * density - knobH, apexX + knobW / 2f, apexY - 6f * density, 2f * density, 2f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF4B5563.toInt() })
+            var gy = apexY - 8f * density - knobH + 3f * density
+            while (gy < apexY - 8f * density) {
+                canvas.drawLine(apexX - knobW / 2f, gy, apexX + knobW / 2f, gy, Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeWidth = 1f; color = 0xFF9CA3AF.toInt() })
+                gy += 2.5f * density
+            }
+            canvas.drawCircle(0f, 0f, 3.5f * density, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFDC2626.toInt() })
         }
         BoardInstrument.NONE -> Unit
     }

@@ -15,7 +15,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -185,31 +184,30 @@ fun ExamBuilderScreen(
         // دو frame: یکی برای recomposition و یکی برای اندازه‌گیری ارتفاع کارت بازشده.
         withFrameNanos { }
         withFrameNanos { }
-        // V136 — گزارش کاربر: کارت زیر هدر نمی‌نشست. animateScrollToItem با آیتم‌های
-        // با ارتفاع متغیر (کارت بازشده) اول می‌پرد بعد تنظیم می‌شود؛ حالا اگر آیتم
-        // روی صفحه است، با animateScrollBy نرم به بالای viewport (زیر هدر) می‌رود
-        // و فقط برای آیتم‌های دور از دید از animateScrollToItem استفاده می‌شود.
         val target = questionPrefaceCount + questionIndex
-        val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target }
-        if (info != null) {
-            listState.animateScrollBy(
-                (info.offset - listState.layoutInfo.viewportStartOffset).toFloat(),
-                tween(420, easing = FastOutSlowInEasing)
-            )
-        } else {
+        // V137.2 — گزارش کاربر: «زیر هدر می‌نشیند اما پرش دارد». علت: V136/V137.1 اول یک
+        // animateScrollBy ۴۲۰ms با هدفِ لحظهٔ شروع اجرا می‌کرد و بعد حلقهٔ فریم‌ها اختلاف
+        // باقی‌مانده را با scrollBy «آنی» می‌بست → در پایان یک پرش دیده می‌شد. حالا فقط یک
+        // دنبال‌کنندهٔ نرم داریم: هر فریم ۲۲٪ فاصلهٔ فعلی (که با بازشدن کارت تغییر می‌کند)
+        // طی می‌شود (نزدیک‌شدن نمایی، بدون پرش پایانی) تا ~۷۵ فریم یا رسیدن به زیر هدر.
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == target }) {
+            // آیتم دور از دید (مثلاً سؤال تازه در انتهای فهرست): اول به نزدیکی آن می‌رویم.
             listState.animateScrollToItem(target, 0)
-        }
-        // V137.1 — گزارش کاربر: چندگزینه‌ای/جورکردنی زیر هدر نمی‌نشستند. دو علت:
-        // ۱) بدنهٔ کارت با expandVertically در چند صد میلی‌ثانیه باز می‌شود و در دو
-        //    frame اول ارتفاع نهایی را ندارد؛ ۲) برای آخرین سؤال، فضای زیر کارت
-        //    (bottom padding) کمتر از ارتفاع صفحه بود و فهرست نمی‌توانست بیشتر بالا برود
-        //    (فاصلهٔ انتهایی به اندازهٔ صفحه اضافه شد). اینجا تا پایان انیمیشن
-        //    (حداکثر ~۶۰۰ms) موقعیت کارت هر frame اصلاح می‌شود.
-        repeat(36) {
             withFrameNanos { }
-            val again = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target } ?: return@repeat
-            val delta = again.offset - listState.layoutInfo.viewportStartOffset
-            if (kotlin.math.abs(delta) > 1) listState.scrollBy(delta.toFloat())
+        }
+        var settled = 0
+        repeat(75) {
+            withFrameNanos { }
+            val info = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == target } ?: return@repeat
+            val delta = (info.offset - listState.layoutInfo.viewportStartOffset).toFloat()
+            if (kotlin.math.abs(delta) <= 0.5f) {
+                settled++
+                if (settled >= 8) return
+                return@repeat
+            }
+            settled = 0
+            val step = if (kotlin.math.abs(delta) < 2f) delta else delta * 0.22f
+            listState.scrollBy(step)
         }
     }
 
@@ -1035,6 +1033,7 @@ private fun QuestionEditor(
     var galleryChooserOpen by remember(question.id) { mutableStateOf(false) }
     // V135 — ویرایشگر صوت سؤال
     var audioEditorOpen by remember(question.id) { mutableStateOf(false) }
+    var whiteboardOpen by remember(question.id) { mutableStateOf(false) }
     // V53.3 — وقتی true، خروجی ویرایشگر جایگزین توکن dblclick می‌شود نه درج تازه.
     var editingWebToken by remember(question.id) { mutableStateOf(false) }
     // V53.4 — پنجرهٔ تمام‌صفحهٔ فرمول WebView برای متن سؤال.
@@ -1255,7 +1254,9 @@ private fun QuestionEditor(
                 },
                 // V135 — صوت سؤال فقط در آزمون آنلاین (چاپی صدا ندارد).
                 onOpenAudio = if (printMode) null else ({ audioEditorOpen = true }),
-                hasAudio = !question.audioUri.isNullOrBlank()
+                hasAudio = !question.audioUri.isNullOrBlank(),
+                // V137.3 — تختهٔ سفید معلم (چاپی و آنلاین): خروجی PNG هر صفحه یک تصویر سؤال می‌شود.
+                onOpenWhiteboard = { whiteboardOpen = true }
             )
             if (!printMode && !question.audioUri.isNullOrBlank()) {
                 ir.exam.app.ui.audio.QuestionAudioPlayer(
@@ -1718,6 +1719,19 @@ private fun QuestionEditor(
                 }
             )
         }
+    }
+    if (whiteboardOpen) {
+        // V137.3 — همان تختهٔ دانش‌آموز؛ پیش‌نویس با کلید جدا (teacher-…) تا با پاسخ‌ها قاطی نشود.
+        ir.exam.app.ui.student.StudentWhiteboardDialog(
+            questionId = "teacher-${question.id}",
+            onDismiss = { whiteboardOpen = false },
+            onDone = { uris ->
+                if (uris.isNotEmpty()) viewModel.addImages(question.id, uris)
+                whiteboardOpen = false
+            },
+            questionNumber = index + 1,
+            questionImages = question.images.map { it.uri }
+        )
     }
     if (audioEditorOpen) {
         ir.exam.app.ui.audio.QuestionAudioEditorDialog(

@@ -1415,11 +1415,45 @@ function markPreviewFiguresReady(area) {
 }
 /* V137.2 — اندازهٔ طبیعیِ شیءِ داخل کادر (svg/جدول/تناوبی/آناتومی/تصویر) بدون زوم و بدون scale؛
    با کلاس موقت .fig-measure که width/height/transform را خنثی می‌کند اندازه‌گیری و در dataset ذخیره می‌شود. */
+/* V137.3 — کادر ۸دستگیره «برای همهٔ اشیا» دقیقاً به اندازهٔ شیء: خیلی از SVGها (محور، نمودار، هندسه،
+   علوم، آناتومی) دور محتوا حاشیهٔ خالی دارند (viewBox ۳۶۰×۲۸۰ ولی محتوا مثلاً ۲۹۶×۲۲۰)؛ کادر به
+   اندازهٔ svg بود نه شیء. اینجا یک بار getBBox محتوا (بدون rect.gf-bg) گرفته و viewBox/width/height
+   svg به همان محدوده (+۳ واحد حاشیه برای ضخامت خط) تنگ می‌شود؛ بعد اندازهٔ طبیعی اندازه‌گیری می‌شود. */
+function tightenFigSvgs(fig) {
+  try {
+    fig.querySelectorAll('.qmf-fig svg').forEach(svg => {
+      if (svg.dataset.tight || svg.closest('svg') !== svg) return;
+      svg.dataset.tight = '1';
+      const vb = (svg.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
+      if (vb.length !== 4 || !(vb[2] > 0) || !(vb[3] > 0)) return;
+      const hidden = Array.from(svg.querySelectorAll('.gf-bg'));
+      const prev = hidden.map(el => el.style.display);
+      hidden.forEach(el => { el.style.display = 'none'; });
+      let bb = null;
+      try { bb = svg.getBBox(); } catch (_e) { bb = null; }
+      hidden.forEach((el, i) => { el.style.display = prev[i]; });
+      if (!bb || !(bb.width > 8) || !(bb.height > 8)) return;
+      const pad = 3;
+      const x = Math.max(vb[0], bb.x - pad), y = Math.max(vb[1], bb.y - pad);
+      const x2 = Math.min(vb[0] + vb[2], bb.x + bb.width + pad), y2 = Math.min(vb[1] + vb[3], bb.y + bb.height + pad);
+      const w = x2 - x, h = y2 - y;
+      if (!(w > 8) || !(h > 8)) return;
+      if (w >= vb[2] - 1 && h >= vb[3] - 1) return;
+      const w0 = parseFloat(svg.getAttribute('width')) || vb[2];
+      const scale = w0 / vb[2];
+      svg.setAttribute('viewBox', [x, y, w, h].map(v => Math.round(v * 100) / 100).join(' '));
+      svg.setAttribute('width', String(Math.round(w * scale * 100) / 100));
+      svg.setAttribute('height', String(Math.round(h * scale * 100) / 100));
+      delete fig.dataset.natW; delete fig.dataset.natH;
+    });
+  } catch (e) {}
+}
 function figNaturalSize(fig) {
   try {
     if (fig.dataset.natW && fig.dataset.natH) return { w: +fig.dataset.natW, h: +fig.dataset.natH };
     const inner = fig.querySelector('.qmf-fig');
     if (!inner) return null;
+    tightenFigSvgs(fig);
     fig.classList.add('fig-measure');
     const w = inner.offsetWidth, h = inner.offsetHeight;
     fig.classList.remove('fig-measure');

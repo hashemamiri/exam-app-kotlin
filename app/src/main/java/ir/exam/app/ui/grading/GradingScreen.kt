@@ -227,7 +227,7 @@ private fun SubmissionCard(
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         NativeMathText("سؤال ${index + 1}: ${question.text}")
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
-                        AnswerImagesRow(submission.responseImages[question.id].orEmpty())
+                        AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"
                         OutlinedTextField(
                             value = scoreInputs[scoreKey] ?: edit.grades.getOrElse(index) { 0.0 }.toString(),
@@ -295,7 +295,7 @@ private fun QuestionCentricContent(state: GradingUiState, viewModel: GradingView
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(submission.studentName, style = MaterialTheme.typography.titleMedium)
                         Text("پاسخ: ${submission.responses.getOrNull(index).displayText()}")
-                        AnswerImagesRow(submission.responseImages[question.id].orEmpty())
+                        AnswerImagesRow(submission.answerImagesFor(question.id, index))
                         val scoreKey = "${submission.id}:$index"
                         OutlinedTextField(
                             value = state.scoreInputs[scoreKey] ?: edit?.grades?.getOrNull(index)?.toString().orEmpty(),
@@ -502,6 +502,16 @@ private fun MonitorReportsDialog(reports: JsonObject?, onDismiss: () -> Unit) {
 private fun Long.faDuration(): String {
     val m = this / 60; val s = this % 60
     return if (m > 0) "$m دقیقه و $s ثانیه" else "$s ثانیه"
+}
+
+/**
+ * V137.3 — تصاویر پاسخ یک سؤال با کلیدهای جایگزین: شناسهٔ سؤال در سمت معلم (ExamQuestionCodec) و
+ * سمت دانش‌آموز (StudentExamPayloadCodec) وقتی JSON سؤال «id» ندارد یکسان نیست (UUID تصادفی در
+ * برابر «q-<index>»)؛ پس علاوه بر id، کلیدهای «q-<index>»، «<index>» و شمارهٔ یک‌مبنا هم بررسی می‌شود.
+ */
+internal fun GradingSubmission.answerImagesFor(questionId: String, index: Int): List<String> {
+    val keys = listOf(questionId, "q-$index", index.toString(), (index + 1).toString())
+    return keys.firstNotNullOfOrNull { key -> responseImages[key]?.takeIf { it.isNotEmpty() } }.orEmpty()
 }
 
 /**

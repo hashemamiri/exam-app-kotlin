@@ -215,6 +215,15 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
     val returnRotation = remember { Animatable(0f) }
     val returnScale = remember { Animatable(1f) }
     val returnAlpha = remember { Animatable(1f) }
+    // V137.3 — ریشهٔ «انیمیشن قدیمی دیده می‌شود»: معلم ۱۰ کارت دارد؛ با کشیدن به چپ، کارتِ
+    // رفته بلافاصله relative = ۹ می‌شد و چون فقط relative ≤ ۲ رسم می‌شود، همان لحظه ناپدید
+    // می‌شد (پروازش هرگز دیده نمی‌شد) و شرط «cards.size ≤ ۳» هم فاز بازگشت را حذف می‌کرد.
+    // حالا: کارتِ در حال پرواز (flying) همیشه رسم می‌شود و در جای کارت فعال می‌ماند؛ فاز
+    // بازگشت وقتی اجرا می‌شود که کارت پس از تغییر در پشته دیده شود؛ و کارتی که از ته پشته
+    // جلو می‌آید (enteringIndex) با محو/مقیاس از پشت وارد می‌شود — هر دو جهت عیناً یکسان.
+    var flying by remember { mutableStateOf(false) }
+    var enteringIndex by remember { mutableIntStateOf(-1) }
+    val enterProgress = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val threshold = with(density) { Design69ManagementCardsContract.DRAG_THRESHOLD_DP.dp.toPx() }
@@ -246,7 +255,15 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                 //    فنر نرم (spring) به جایگاه انتهای پشته می‌نشیند. هیچ تفاوتی بین دو جهت نیست؛
                 //    فقط علامتِ targetX و زاویه عوض می‌شود.
                 val leaving = activeIndex
+                val arriving = (activeIndex + direction + cards.size) % cards.size
+                val arrivingWasVisible = ((arriving - leaving + cards.size) % cards.size) <= 2
+                val leavingStaysVisible = ((leaving - arriving + cards.size) % cards.size) <= 2
                 returningIndex = leaving
+                flying = true
+                if (!arrivingWasVisible) {
+                    enteringIndex = arriving
+                    enterProgress.snapTo(0f)
+                }
                 returnX.snapTo(x)
                 returnY.snapTo(y)
                 returnRotation.snapTo(x / 42f + y / 75f)
@@ -254,8 +271,11 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                 returnAlpha.snapTo(1f)
                 dragX.snapTo(0f)
                 dragY.snapTo(0f)
-                activeIndex = (activeIndex + direction + cards.size) % cards.size
+                activeIndex = arriving
                 coroutineScope {
+                    if (!arrivingWasVisible) {
+                        launch { enterProgress.animateTo(1f, tween(420, delayMillis = 60, easing = FastOutSlowInEasing)) }
+                    }
                     launch { returnX.animateTo(targetX, tween(340, easing = FastOutSlowInEasing)) }
                     launch { returnY.animateTo(targetY - liftPx, tween(340, easing = FastOutSlowInEasing)) }
                     launch { returnRotation.animateTo(direction * 14f, tween(340, easing = FastOutSlowInEasing)) }
@@ -265,8 +285,9 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                     }
                     launch { returnAlpha.animateTo(0f, tween(220, delayMillis = 120)) }
                 }
-                // کارت رفته فقط وقتی در پشته دیده می‌شود (حداکثر ۳ کارت) که تعداد کارت‌ها ≤ ۳ باشد.
-                if (cards.size <= 3) {
+                flying = false
+                // فاز بازگشت فقط وقتی کارتِ رفته پس از تغییر در پشته (۳ کارت اول) دیده می‌شود.
+                if (leavingStaysVisible) {
                     returnX.snapTo(targetX * .45f)
                     returnY.snapTo(-liftPx * .6f)
                     returnRotation.snapTo(direction * 6f)
@@ -286,6 +307,7 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                     returnAlpha.snapTo(1f)
                 }
                 returningIndex = -1
+                enteringIndex = -1
             } else {
                 coroutineScope {
                     launch { dragX.animateTo(0f, tween(280)) }
@@ -348,26 +370,29 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
         ) {
             cards.indices.reversed().forEach { index ->
                 val relative = (index - activeIndex + cards.size) % cards.size
-                if (relative <= 2) {
+                val isFlying = flying && index == returningIndex
+                if (relative <= 2 || isFlying) {
                     val active = relative == 0
                     val data = cards[index]
+                    // V137.3 — کارتِ در حال پرواز تا پایان پرواز در جایگاه کارت فعال (relative ۰) می‌ماند.
+                    val visualRelative = if (isFlying) 0 else relative
                     val stackTop by animateDpAsState(
-                        (30 + relative * 30).dp,
+                        (30 + visualRelative * 30).dp,
                         tween(650, easing = FastOutSlowInEasing),
                         label = "management-card-top-$index"
                     )
                     val stackScale by animateFloatAsState(
-                        1f - relative * .075f,
+                        1f - visualRelative * .075f,
                         tween(650, easing = FastOutSlowInEasing),
                         label = "management-card-scale-$index"
                     )
                     val stackAlpha by animateFloatAsState(
-                        1f - relative * .25f,
+                        1f - visualRelative * .25f,
                         tween(500),
                         label = "management-card-alpha-$index"
                     )
                     val stackRotation by animateFloatAsState(
-                        if (relative == 0) 0f else if (relative == 1) 5f else -6f,
+                        if (visualRelative == 0) 0f else if (visualRelative == 1) 5f else -6f,
                         tween(650, easing = FastOutSlowInEasing),
                         label = "management-card-rotation-$index"
                     )
@@ -376,23 +401,26 @@ private fun ManagementCardsStack(cycleKey: Int, cards: List<ManagementCardSpec>)
                             .padding(top = stackTop)
                             .fillMaxWidth(.90f)
                             .height(190.dp)
-                            .zIndex(3f - relative)
+                            .zIndex(if (isFlying) 4f else 3f - relative)
                             .graphicsLayer {
                                 // V55.18.1: کارت در حال برگشت به پشته (کشیدن به راست)
                                 // از نقطهٔ رهاشدن نرم به جایگاهش می‌رود، نه تلپورت.
                                 val returning = index == returningIndex && !active
                                 // V137.2 — کارت فعال هنگام کشیدن کمی بلند می‌شود؛ کارتِ در حال پرواز مقیاس/محوِ خودش را دارد.
                                 val dragLift = if (active) 1f + (abs(dragX.value) / exitHorizontal).coerceIn(0f, .5f) * .08f else 1f
-                                scaleX = stackScale * dragLift * (if (returning) returnScale.value else 1f)
-                                scaleY = stackScale * dragLift * (if (returning) returnScale.value else 1f)
-                                alpha = stackAlpha * (if (returning) returnAlpha.value else 1f)
+                                // V137.3 — ورود کارت از ته پشته: از پشت (کمی بالاتر و کوچک‌تر) با محو وارد می‌شود.
+                                val enterP = if (index == enteringIndex) enterProgress.value else 1f
+                                val enterScale = .86f + .14f * enterP
+                                scaleX = stackScale * dragLift * enterScale * (if (returning) returnScale.value else 1f)
+                                scaleY = stackScale * dragLift * enterScale * (if (returning) returnScale.value else 1f)
+                                alpha = stackAlpha * enterP * (if (returning) returnAlpha.value else 1f)
                                 translationX = when {
                                     active -> dragX.value
                                     returning -> returnX.value
                                     else -> 0f
                                 }
                                 translationY = when {
-                                    active -> dragY.value
+                                    active -> dragY.value - liftPx * .8f * (1f - enterP)
                                     returning -> returnY.value
                                     else -> 0f
                                 }
