@@ -67,7 +67,7 @@
       item('کیف پول', 'wallet', function () { go('wallet'); }, 'wallet'),
       el('button', {class: 'm-dock-add' + (ui.addOpen ? ' on' : ''), 'aria-label': 'افزودن سریع', onclick: function () { ui.addOpen = !ui.addOpen; ui.menuOpen = false; paint(); }}, [ic(ui.addOpen ? 'close' : 'plus')]),
       isManager() ? item('معلم‌ها', 'students', function () { go('teachers'); }, 'exams') : item('آزمون‌ها', 'exams', function () { go('exams'); }, 'exams'),
-      item('کارت‌ها', 'cards', function () { go('cards'); }, 'cards')
+      item('کارت‌ها', 'cards', function () { if (view.panel === 'cards' && !ui.menuOpen && !ui.addOpen) ui.cycle = true; go('cards'); }, 'cards')
     ])]);
   }
 
@@ -81,9 +81,20 @@
       /* V61.5 — عمل چهارم: مدرسه جدید (مدیر می‌سازد؛ معلم با کد دعوت عضو می‌شود) */
       ['مدرسه جدید', mgr ? 'ساخت مدرسه' : 'عضویت با کد دعوت', 'classes', function () { mgr ? go('school') : go('profile'); }]
     ];
-    return el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) { ui.addOpen = false; paint(); } }}, [el('div', {class: 'm-quick'}, items.map(function (it, i) {
-      return el('button', {class: 'm-quick-item', style: 'animation-delay:' + (i * 40) + 'ms', onclick: it[3]}, [ic(it[2], 'm-quick-ic'), el('div', {}, [el('b', {text: it[0]}), el('span', {text: it[1]})])]);
-    }))]);
+    /* V153 — چیدمان ضربدری اپ: پنل فرورفته، ۴ کارت ۸۸dp در چهار گوشه، خط‌چین از مرکز، دکمهٔ ✕ گرادیانی وسط */
+    var close = function () { ui.addOpen = false; paint(); };
+    var pos = [[1, -1], [-1, -1], [1, 1], [-1, 1]]; /* x: راست/چپ (RTL: مثبت = راست)، y: بالا/پایین */
+    var xs = [];
+    var stage = el('div', {class: 'm-qa-stage'}, [
+      el('div', {class: 'm-qa-panel neo pressed'}),
+      el('svg', {class: 'm-qa-lines'}),
+      el('button', {class: 'm-qa-x', 'aria-label': 'بستن افزودن سریع', onclick: close}, [ic('plus')])
+    ].concat(items.map(function (it, i) {
+      var b = el('button', {class: 'm-qa-item', style: '--qx:' + (pos[i][0] * -1) + ';--qy:' + pos[i][1] + ';animation-delay:' + (i * 40) + 'ms', onclick: it[3]}, [ic(it[2], 'm-qa-ic'), el('span', {text: it[0]})]);
+      xs.push(b); return b;
+    })));
+    var svg = stage.querySelector('svg'); svg.setAttribute('viewBox', '-160 -165 320 330'); svg.innerHTML = pos.map(function (p) { return '<line x1="0" y1="0" x2="' + (p[0] * -108) + '" y2="' + (p[1] * 108) + '"/>'; }).join('');
+    return el('div', {class: 'm-sheet-bg m-qa-bg', onclick: function (e) { if (e.target === e.currentTarget) close(); }}, [stage]);
   }
 
   /* ---------- منوی کاشی‌ای (Design69MainMenuScreen) — همان ۸ کارت معلم به همان ترتیب ---------- */
@@ -161,21 +172,59 @@
     bg.appendChild(body); document.body.appendChild(bg);
   }
 
+  /* V153 — دستهٔ کارت‌ها مثل اپ: ۳ کارت روی هم (۹۰٪ عرض × ۱۹۰dp، گوشهٔ ۲۹dp)، کشیدن افقی ≥۵۲px کارت را رد می‌کند، نقطه‌ها، پنل توضیح؛ ضربهٔ دوباره روی داک = کارت بعدی */
+  var deckIndex = {};
+  function cardsDeck(c, key, cards) {
+    c.innerHTML = '';
+    if (ui.cycle) { deckIndex[key] = ((deckIndex[key] || 0) + 1) % cards.length; ui.cycle = false; }
+    var idx = deckIndex[key] || 0;
+    var stage = el('div', {class: 'm-deck-stage'});
+    var dots = el('div', {class: 'm-deck-dots'});
+    var info = el('div', {class: 'm-deck-info neo pressed'}, [el('b'), el('span')]);
+    function draw(dir) {
+      stage.innerHTML = ''; dots.innerHTML = '';
+      for (var rel = 2; rel >= 0; rel--) (function (rel) {
+        var k = cards[(idx + rel) % cards.length];
+        var card = el('button', {class: 'm-deck-card r' + rel + (dir && rel === 0 ? ' enter' : ''), style: 'background:' + k[3], onclick: function () { if (rel === 0) k[4](); }}, [
+          el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: I[k[2]]}), el('small', {text: 'آزمون آنلاین'})]),
+          el('b', {text: k[0]})
+        ]);
+        if (rel === 0) swipe(card);
+        stage.appendChild(card);
+      })(rel);
+      cards.forEach(function (_, i) { dots.appendChild(el('i', {class: i === idx ? 'on' : ''})); });
+      info.querySelector('b').textContent = cards[idx][0]; info.querySelector('span').textContent = cards[idx][1];
+    }
+    function swipe(card) {
+      var sx = 0, sy = 0, dx = 0, dy = 0, on = false;
+      card.addEventListener('pointerdown', function (e) { sx = e.clientX; sy = e.clientY; dx = dy = 0; on = true; card.setPointerCapture(e.pointerId); card.style.transition = 'none'; });
+      card.addEventListener('pointermove', function (e) { if (!on) return; dx = e.clientX - sx; dy = e.clientY - sy; card.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 42 + dy / 75) + 'deg)'; });
+      function end() {
+        if (!on) return; on = false; card.style.transition = '';
+        if (Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) > 52) {
+          card.classList.add('fly'); card.style.transform = 'translate(' + (dx < 0 ? -520 : 520) + 'px,' + (dy * 1.2 - 36) + 'px) rotate(' + (dx < 0 ? 14 : -14) + 'deg) scale(.92)';
+          idx = (idx + 1) % cards.length; deckIndex[key] = idx;
+          setTimeout(function () { draw(true); }, 260);
+        } else card.style.transform = '';
+      }
+      card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
+      card.addEventListener('click', function (e) { if (Math.abs(dx) > 6 || Math.abs(dy) > 6) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    }
+    draw(false);
+    c.appendChild(el('div', {class: 'm-deck'}, [stage, dots, info]));
+  }
   /* ---------- کارت‌ها (TeacherManagementCardsScreen) ---------- */
   function cardsScreen(c) {
-    c.innerHTML = '';
     var cards = [
       ['آمار', 'نمودارها، میانگین‌ها و تحلیل کیفیت سؤال‌های آزمون را نشان می‌دهد.', 'reports', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { go('reports', {section: 'stats'}); }],
       ['کارنامه', 'کارنامه و لیست نمرات کلاس؛ انتخاب آزمون‌ها و خروجی Excel یا PDF.', 'reports', 'linear-gradient(135deg,#0EA5E9,#6366F1)', function () { go('reports', {section: 'grades'}); }],
       ['بانک سؤال', 'جست‌وجو، دسته‌بندی، مشاهده، ویرایش، حذف و افزودن سؤال به آزمون.', 'exams', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { go('bank'); }],
       ['تصحیح', 'همه پاسخ‌ها، حضور، بازخورد و ثبت یا اصلاح نمره را باز می‌کند.', 'grading', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('grading'); }],
-      ['مانده', 'فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.', 'cards', 'linear-gradient(135deg,#F59E0B,#F97316)', function () { go('grading', {filter: 'pending'}); }],
-      ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#10B981,#34D399)', function () { go('grading', {filter: 'graded'}); }],
-      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#8B5CF6,#EC4899)', function () { go('dashboard', {requests: true}); }]
+      ['مانده', 'فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.', 'cards', 'linear-gradient(135deg,#E0587F,#7D6CF4)', function () { go('grading', {filter: 'pending'}); }],
+      ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#4D5B74,#273247)', function () { go('grading', {filter: 'graded'}); }],
+      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('dashboard', {requests: true}); }]
     ];
-    c.appendChild(el('div', {class: 'm-cards'}, cards.map(function (k, i) {
-      return el('button', {class: 'm-card neo', style: 'animation-delay:' + (i * 30) + 'ms', onclick: k[4]}, [el('span', {class: 'm-card-ic', style: 'background:' + k[3], html: I[k[2]]}), el('div', {}, [el('b', {text: k[0]}), el('span', {text: k[1]})])]);
-    })));
+    cardsDeck(c, 'teacher', cards);
   }
 
   /* ---------- دانش‌آموز (StudentHomeScreen + منوی ۶کارتی؛ در اپ داک ندارد، نوار بالا با ☰) ---------- */
@@ -252,15 +301,12 @@
     ]);
   }
   function managerCards(c) {
-    c.innerHTML = '';
     var cards = [
       ['مدارس', 'لیست مدرسه‌ها، ساخت مدرسه جدید و کلاس‌های هر مدرسه را باز می‌کند.', 'classes', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { go('school'); }],
       ['کارنامه', 'آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌های مدرسه.', 'reports', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { go('dashboard'); }],
       ['وضعیت', 'داشبورد مدرسه با اطلاعات، آمار کلی و پنل سریع بخش‌ها.', 'cards', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('dashboard'); }]
     ];
-    c.appendChild(el('div', {class: 'm-cards'}, cards.map(function (k, i) {
-      return el('button', {class: 'm-card neo', style: 'animation-delay:' + (i * 30) + 'ms', onclick: k[4]}, [el('span', {class: 'm-card-ic', style: 'background:' + k[3], html: I[k[2]]}), el('div', {}, [el('b', {text: k[0]}), el('span', {text: k[1]})])]);
-    })));
+    cardsDeck(c, 'teacher', cards);
   }
 
   /* ---------- V151: جدول → کارت‌های نئومورفیک (SchoolManagementScreen: Card با عنوان، خط‌های اطلاعات، ردیف عملیات وسط‌چین) ----------
@@ -331,16 +377,18 @@
     var radial = null;
     function drawRadial() {
       if (radial) { radial.remove(); radial = null; }
-      plus.classList.toggle('on', radialOpen);
+      plus.classList.toggle('on', radialOpen); bar.classList.toggle('radial-open', radialOpen);
       if (!radialOpen) return;
       radial = el('div', {class: 'm-radial-bg', onclick: function (e) { if (e.target === e.currentTarget) { radialOpen = false; drawRadial(); } }});
-      var ring = el('div', {class: 'm-radial'});
+      /* V153 — مثل BuilderRadialMenuOverlay: دایرهٔ کامل وسط صفحه، شعاع ۳۱٪ عرض (۱۰۴..۱۳۸)، حلقهٔ خط‌چین، ۸ مربع گوشه‌گرد ۶۶dp از ساعت ۱۲ هر ۴۵°، دکمهٔ ✕ گرادیانی→قرمز در مرکز */
+      var R = Math.max(104, Math.min(138, window.innerWidth * 0.31));
+      var ring = el('div', {class: 'm-radial', style: '--r:' + R + 'px'});
+      ring.appendChild(el('span', {class: 'm-radial-ring'}));
+      ring.appendChild(el('button', {class: 'm-radial-x', 'aria-label': 'بستن', onclick: function () { radialOpen = false; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]));
       RADIAL.forEach(function (r, i) {
-        /* دکمهٔ + در گوشهٔ راست‌پایین است؛ ربع‌دایرهٔ چپ‌بالا در دو حلقه (۴+۴) تا دایره‌ها روی هم نیفتند */
-        var ring_i = i < 4 ? 0 : 1, k = i % 4;
-        var ang = Math.PI + (Math.PI / 2) * ((k + (ring_i ? 0.5 : 0)) / 3.5);
-        var R = ring_i ? 200 : 115, x = Math.cos(ang) * R, y = Math.sin(ang) * R;
-        ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';transform:translate(' + x.toFixed(0) + 'px,' + y.toFixed(0) + 'px);animation-delay:' + (i * 30) + 'ms', onclick: function () {
+        var ang = (-90 + i * 45) * Math.PI / 180;
+        var x = Math.cos(ang) * R, y = Math.sin(ang) * R;
+        ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';--tx:' + x.toFixed(0) + 'px;--ty:' + y.toFixed(0) + 'px;animation-delay:' + (i * 30) + 'ms', onclick: function () {
           radialOpen = false; drawRadial();
           if (r[0] === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
           if (r[0] === 'bank') { var bb = c.querySelector('.b-list .btn.soft'); if (bb) bb.click(); return; }
@@ -358,7 +406,7 @@
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
-  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'سازندهٔ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
+  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
   function paint() {
     cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
@@ -372,7 +420,10 @@
     var home = mgr ? 'teachers' : 'exams';
     var noHead = mgr ? (page === 'teachers' || page === 'cards') : (page === 'exams' || page === 'dashboard' || page === 'cards');
     if (!ui.menuOpen && !noHead) {
-      head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(home); }}, [ic('chevron')]), el('h1', {text: (mgr ? MANAGER_TITLES : TITLES)[page] || ''})]);
+      var ttl = (mgr ? MANAGER_TITLES : TITLES)[page] || '';
+      if (page === 'builder' && view.arg && view.arg.examId) ttl = 'ویرایش آزمون';
+      if (page === 'builder' && view.arg && view.arg.mode === 'print') ttl = 'چاپ آزمون';
+      head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(home); }}, [ic('chevron')]), el('h1', {text: ttl})]);
     }
     var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
     if (head) shell.appendChild(head);
