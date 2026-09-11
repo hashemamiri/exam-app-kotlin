@@ -29,7 +29,8 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { if (n.ok) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.keys().then(function (ks) { ks.forEach(function (k) { if (/\/engines\./.test(k.url) && k.url !== req.url) c.delete(k); }); }); c.put(req, copy); }); } return n; }); }));
     return;
   }
-  if (url.pathname.indexOf('/pwa/') === 0) {
+  /* V164 — قلم‌ها و پوشهٔ pwa: کش-اول */
+  if (url.pathname.indexOf('/pwa/') === 0 || url.pathname.indexOf('/fonts/') === 0) {
     e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); return n; }); }));
   }
 });

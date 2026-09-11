@@ -38,6 +38,8 @@ jobs:
           cp -r site/pwa site_out/pwa
           # V162 — موتورهای چاپ/فرمول در فایل جداگانه با hash در نام (کش دائمی)
           cp site/engines.*.js site_out/
+          # V164 — قلم وزیرمتن (woff2) — کش یک‌ساله
+          cp -r site/fonts site_out/fonts
           python3 - <<'PY'
           import hashlib
           h = hashlib.sha256(open('site_out/index.html', 'rb').read()).hexdigest()[:12]
@@ -46,7 +48,7 @@ jobs:
           open(p, 'w', encoding='utf-8').write(s.replace('__SW_VERSION__', h))
           PY
           # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ آیکون‌ها کش طولانی
-          printf '/*\n  Cache-Control: no-cache\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
+          printf '/*\n  Cache-Control: no-cache\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n/engines.*.js\n  Cache-Control: public, max-age=31536000, immutable\n/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n' > site_out/_headers
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

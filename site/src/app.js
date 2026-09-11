@@ -622,78 +622,35 @@
     /* V154 — ورود/ثبت‌نام در گوشی به سبک SignInScreen اپ (پوستهٔ یخی) */
     if (!user && window.SiteMobile && window.SiteMobile.authActive()) { closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }
     root.innerHTML = '';
-    if (user && !user.requiresSetup) renderPanel(); else renderLanding();
+    if (user && !user.requiresSetup) { document.body.classList.remove('lp-body'); renderPanel(); } else renderLanding();
   }
 
-  /* ---------------- لندینگ ---------------- */
-  function renderLanding() {
+  /* ---------------- لندینگ (V164: صفحهٔ ورود به سبک اپ؛ فرم داخل کارت، بدون پنجرهٔ بازشو) ---------------- */
+  function renderLanding(mode) {
+    document.body.classList.add('lp-body');
     var keyWarn = KEY_READY ? null : el('div', {class: 'warn-key', html: '⚠️ کلید اتصال (<code class="k">SUPABASE_ANON_KEY</code>) هنوز در بالای فایل <code class="k">index.html</code> وارد نشده است؛ تا آن زمان ورود و ثبت‌نام کار نمی‌کند.'});
-    var top = el('header', {class: 'topbar'}, [el('div', {class: 'in'}, [
+    var tiles = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']];
+    var left = el('div', {class: 'lp-l'}, [
       brandEl(),
-      el('nav', {class: 'nav'}, [
-        el('a', {href: '#features', text: 'امکانات'}),
-        el('a', {href: '#roles', text: 'نقش‌ها'}),
-        el('a', {href: '#tools', text: 'ابزارها'})
-      ]),
-      el('span', {class: 'grow'}),
-      el('button', {class: 'btn ghost', text: 'ورود', onclick: function () { openAuth('login'); }}),
-      el('button', {class: 'btn', text: 'ثبت‌نام معلم/مدیر', onclick: function () { openAuth('register'); }})
-    ])]);
-    var hero = el('section', {class: 'hero'}, [
-      el('div', {}, [
-        el('h1', {html: 'آزمون‌ساز آنلاین و چاپی<br><span>برای معلم، مدرسه و دانش‌آموز</span>'}),
-        el('p', {text: 'طراحی آزمون با فرمول ریاضی، شکل هندسی، نمودار، جدول تناوبی و اطلس علوم؛ برگزاری آنلاین با تختهٔ سفید؛ چاپ برگهٔ رسمی با هفت قالب سربرگ. همان حسابِ برنامهٔ اندروید، حالا در مرورگر.'}),
-        el('div', {class: 'actions'}, [
-          el('button', {class: 'btn lg', text: 'ورود به پنل', onclick: function () { openAuth('login'); }}),
-          el('button', {class: 'btn lg light', text: '🧮 امتحان ویرایشگر فرمول', onclick: function () { demoFormula(); }}),
-          el('button', {class: 'btn lg light', text: '🖨 نمونهٔ پیش‌نمایش چاپ', onclick: function () { demoPrint(); }})
-        ])
-      ]),
-      el('div', {class: 'hero-art'}, [
-        el('div', {class: 'sheet'}, [
-          el('div', {class: 'h'}, [el('span', {text: 'آزمون ریاضی — پایهٔ دهم'}), el('span', {text: 'زمان: ۶۰ دقیقه'})]),
-          el('div', {class: 'q'}, [el('b', {text: '۱)'}), el('span', {html: 'حاصل عبارت <span class="f">x² − 4x + 4</span> را به‌صورت مربع کامل بنویسید.'})]),
-          el('div', {class: 'line'}), el('div', {class: 'line'}),
-          el('div', {class: 'q'}, [el('b', {text: '۲)'}), el('span', {text: 'کدام گزینه ریشهٔ معادله است؟'})]),
-          el('div', {class: 'opts'}, [el('span', {text: '○ ۲'}), el('span', {text: '○ −۲'}), el('span', {text: '○ ۴'}), el('span', {text: '○ صفر'})]),
-          el('div', {class: 'q'}, [el('b', {text: '۳)'}), el('span', {text: 'نمودار تابع را روی محور مختصات رسم کنید.'})]),
-          el('div', {class: 'line'}), el('div', {class: 'line'}), el('div', {class: 'line'})
-        ]),
-        el('div', {class: 'badge-float a', text: '✓ تصحیح خودکار'}),
-        el('div', {class: 'badge-float b', text: '∑ فرمول‌نویسی ریاضی'})
+      el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
+      el('p', {text: 'فرمول ریاضی، شکل هندسی، تختهٔ سفید و چاپ رسمی A4 — یک حساب برای اپ اندروید و وب.'}),
+      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); })),
+      el('div', {class: 'demos'}, [
+        el('span', {text: 'بدون ورود امتحان کنید:'}),
+        el('button', {type: 'button', text: '🧮 ویرایشگر فرمول', onclick: demoFormula}),
+        el('button', {type: 'button', text: '🖨 نمونهٔ چاپ', onclick: demoPrint})
       ])
     ]);
-    var features = el('section', {class: 'section', id: 'features'}, [
-      el('h2', {text: 'همهٔ امکانات برنامه، در مرورگر'}),
-      el('p', {class: 'sub', text: 'همان حساب کاربری، همان کلاس‌ها و آزمون‌ها؛ بدون نصب.'}),
-      el('div', {class: 'features'}, [
-        ['📝', 'سازندهٔ آزمون', 'چندگزینه‌ای، صحیح/غلط، جای‌خالی، عددی، جورکردنی و تشریحی با بارم و کلید پاسخ.'],
-        ['🧮', 'ویرایشگر فرمول', 'همان ویرایشگر فرمول برنامه: کسر، رادیکال، انتگرال، ماتریس و نمادهای ریاضی.'],
-        ['📐', 'شکل و نمودار', 'اشکال هندسی، محورهای مختصات، جدول، جدول تناوبی، اطلس آناتومی و علوم.'],
-        ['🖨', 'چاپ رسمی', 'هفت قالب سربرگ (دانشگاه، مدرسه، اداره، وزارت)، صفحه‌بندی A4/A5، نسخهٔ دانش‌آموز و استاد.'],
-        ['🏫', 'کلاس و دانش‌آموز', 'ساخت کلاس، افزودن دانش‌آموز، فهرست حضور، اشتراک با مدیر مدرسه.'],
-        ['📊', 'کارنامه و تصحیح', 'تصحیح خودکار تستی، تصحیح دستی تشریحی، بازخورد و کارنامهٔ دانش‌آموز.']
-      ].map(function (f) { return el('div', {class: 'feature'}, [el('div', {class: 'ic', text: f[0]}), el('h3', {text: f[1]}), el('p', {text: f[2]})]); }))
+    var card = el('div', {class: 'card neo'});
+    drawAuthInto(card, mode || 'login');
+    var right = el('div', {class: 'lp-r'}, [card]);
+    var page = el('div', {class: 'lp'}, [
+      el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}),
+      left, right,
+      el('div', {class: 'foot', html: 'onlineexam.ir · نسخهٔ وب · همان حساب اپ اندروید · <a href="https://github.com/hashemamiri/exam-app-kotlin" target="_blank" rel="noopener">مخزن پروژه</a>'})
     ]);
-    var roles = el('section', {class: 'section', id: 'roles'}, [
-      el('h2', {text: 'برای چه کسانی؟'}),
-      el('div', {class: 'roles'}, [
-        ['👩‍🏫', 'معلم', ['ساخت آزمون آنلاین و چاپی', 'مدیریت کلاس‌ها و دانش‌آموزان', 'تصحیح و کارنامه', 'کیف پول و شارژ'], 'ثبت‌نام معلم', 'register'],
-        ['🎓', 'دانش‌آموز', ['ورود با نام کاربریِ دریافتی از معلم', 'شرکت در آزمون با کد', 'تختهٔ سفید برای پاسخ تشریحی', 'مشاهدهٔ کارنامه'], 'ورود دانش‌آموز', 'login'],
-        ['🏫', 'مدیر / معاون', ['ثبت مدرسه و دعوت معلم‌ها', 'گزارش فعالیت معلمان', 'دانش‌آموزان مدرسه', 'توزیع اعتبار'], 'ثبت‌نام مدیر', 'register-manager']
-      ].map(function (r) { return el('div', {class: 'role'}, [el('div', {class: 'em', text: r[0]}), el('h3', {text: r[1]}), el('ul', {}, r[2].map(function (t) { return el('li', {text: t}); })), el('button', {class: 'btn soft', text: r[3], onclick: function () { openAuth(r[4]); }})]); }))
-    ]);
-    var tools = el('section', {class: 'section', id: 'tools'}, [
-      el('h2', {text: 'ابزارها را همین حالا امتحان کنید'}),
-      el('p', {class: 'sub', text: 'بدون ورود: ویرایشگر فرمول و موتور پیش‌نمایش چاپ همین‌جا اجرا می‌شوند.'}),
-      el('div', {class: 'row', style: 'justify-content:center'}, [
-        el('button', {class: 'btn lg', text: '🧮 ویرایشگر فرمول', onclick: demoFormula}),
-        el('button', {class: 'btn lg soft', text: '🖨 پیش‌نمایش چاپ نمونه', onclick: demoPrint})
-      ])
-    ]);
-    var foot = el('footer', {html: 'آزمون‌ساز — نسخهٔ وب (فاز ۶) · همان بک‌اند برنامهٔ اندروید · <a href="https://github.com/hashemamiri/exam-app-kotlin" target="_blank" rel="noopener">مخزن پروژه</a>'});
-    if (keyWarn) root.appendChild(el('div', {style: 'padding-top:14px'}, [keyWarn]));
-    root.appendChild(top); root.appendChild(hero); root.appendChild(features); root.appendChild(roles); root.appendChild(tools); root.appendChild(foot);
+    if (keyWarn) page.appendChild(keyWarn);
+    root.appendChild(page);
   }
   function brandEl() { return el('div', {class: 'logo'}, [el('span', {class: 'mark', text: '✎'}), el('span', {text: 'آزمون‌ساز'})]); }
 
@@ -715,34 +672,35 @@
   }
 
   /* ---------------- ورود / ثبت‌نام ---------------- */
+  /* V164 — دیگر پنجرهٔ بازشو نداریم: فرم داخل کارت صفحهٔ ورود رسم می‌شود. openAuth/closeAuth برای سازگاری مانده‌اند. */
   var authModal = null;
   function closeAuth() { if (authModal) { authModal.remove(); authModal = null; } }
-  function openAuth(mode) {
-    closeAuth();
+  function openAuth(mode) { closeAuth(); if (!user) { root = $('root'); root.innerHTML = ''; renderLanding(mode); } }
+  function drawAuthInto(m, mode) {
     var state = {mode: mode === 'register-manager' ? 'register' : (mode || 'login'), role: mode === 'register-manager' ? 'manager' : 'teacher', step: 'form', email: '', otpMode: false};
-    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) closeAuth(); }});
-    var m = el('div', {class: 'modal'});
-    bg.appendChild(m); document.body.appendChild(bg); authModal = bg;
     function draw() {
       m.innerHTML = '';
-      m.appendChild(el('button', {class: 'x', text: '✕', onclick: closeAuth}));
+      var isLogin = state.mode === 'login';
+      m.appendChild(el('h2', {text: isLogin ? 'ورود به حساب' : 'ساخت حساب جدید'}));
+      m.appendChild(el('p', {class: 's', text: isLogin ? 'معلم، مدیر و دانش‌آموز' : 'برای معلم و مدیر / معاون'}));
       if (!KEY_READY) m.appendChild(el('div', {class: 'alert warn', text: 'کلید SUPABASE_ANON_KEY در فایل وارد نشده؛ ورود ممکن نیست.'}));
-      var tabs = el('div', {class: 'tabs'}, [
-        el('button', {class: state.mode === 'login' ? 'on' : '', text: 'ورود', onclick: function () { state.mode = 'login'; state.step = 'form'; draw(); }}),
-        el('button', {class: state.mode === 'register' ? 'on' : '', text: 'ثبت‌نام', onclick: function () { state.mode = 'register'; state.step = 'form'; draw(); }})
+      var tabs = el('div', {class: 'tabs neo-in', role: 'tablist'}, [
+        el('button', {type: 'button', role: 'tab', 'aria-selected': String(isLogin), class: isLogin ? 'on' : '', text: 'ورود', onclick: function () { state.mode = 'login'; state.step = 'form'; state.otpMode = false; draw(); }}),
+        el('button', {type: 'button', role: 'tab', 'aria-selected': String(!isLogin), class: !isLogin ? 'on' : '', text: 'ثبت‌نام', onclick: function () { state.mode = 'register'; state.step = 'form'; draw(); }})
       ]);
       m.appendChild(tabs);
-      if (state.mode === 'login') drawLogin(); else drawRegister();
+      if (isLogin) drawLogin(); else drawRegister();
+      var f = m.querySelector('input'); if (f && window.innerWidth > 1024) f.focus();
     }
     var msg = el('div');
     function setMsg(t, kind) { msg.innerHTML = ''; if (t) msg.appendChild(el('div', {class: 'alert ' + (kind || 'error'), text: t})); }
     function busy(btn, on) { btn.disabled = on; btn.textContent = on ? 'لطفاً صبر کنید…' : btn.dataset.label; }
     function drawLogin() {
-      m.appendChild(el('h2', {text: 'ورود به حساب'}));
       m.appendChild(msg); setMsg('');
       if (!state.otpMode) {
-        var id = input('نام کاربری یا ایمیل', 'مثلاً ali_1385 یا name@example.com', 'text', true);
-        var pw = input('رمز عبور', '', 'password', true);
+        var id = input('نام کاربری یا ایمیل', 'ali_1385', 'text', true);
+        id.querySelector('input').setAttribute('autocomplete', 'username'); id.querySelector('input').setAttribute('inputmode', 'email');
+        var pw = input('رمز عبور', '••••••••', 'password', true);
         var b = el('button', {class: 'btn', text: 'ورود', 'data-label': 'ورود', style: 'width:100%'});
         b.addEventListener('click', async function () {
           setMsg(''); busy(b, true);
@@ -752,16 +710,16 @@
         });
         pw.querySelector('input').addEventListener('keydown', function (e) { if (e.key === 'Enter') b.click(); });
         m.appendChild(id); m.appendChild(pw); m.appendChild(b);
-        if (window.SiteExtras) m.appendChild(window.SiteExtras.googleButton('teacher'));
-        m.appendChild(el('p', {class: 'center muted', style: 'margin:14px 0 0;font-size:13px'}, [
-          el('a', {href: '#', text: 'ورود با کد ایمیل', onclick: function (e) { e.preventDefault(); state.otpMode = true; state.step = 'form'; draw(); }}), el('span', {text: ' · '}),
+        m.appendChild(el('div', {class: 'lk'}, [
+          el('a', {href: '#', text: 'ورود با کد ایمیل', onclick: function (e) { e.preventDefault(); state.otpMode = true; state.step = 'form'; draw(); }}),
           el('a', {href: '#', text: 'فراموشی رمز', onclick: function (e) { e.preventDefault(); state.otpMode = 'recovery'; draw(); }})
         ]));
-        m.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin-top:12px', text: 'دانش‌آموزان با نام کاربری و رمزی که معلم داده وارد می‌شوند. معلم و مدیر با نام کاربری یا ایمیل.'}));
+        if (window.SiteExtras) { m.appendChild(el('div', {class: 'sep', text: 'یا'})); m.appendChild(window.SiteExtras.googleButton('teacher')); }
+        m.appendChild(el('p', {class: 'hint', text: 'دانش‌آموزان با نام کاربری و رمزی که معلم داده وارد می‌شوند.'}));
       } else if (state.otpMode === 'recovery' && window.SiteExtras) {
         m.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'بازیابی رمز عبور با ایمیل حساب. پس از تأیید کد، رمز جدید بگذارید.'}));
         window.SiteExtras.recoveryFlow(m, api, setMsg, busy, async function () { user = await currentProfile(); afterLogin(); });
-        m.appendChild(el('p', {class: 'center', style: 'margin-top:12px;font-size:13px'}, [el('a', {href: '#', text: 'بازگشت به ورود با رمز', onclick: function (e) { e.preventDefault(); state.otpMode = false; state.step = 'form'; draw(); }})]));
+        m.appendChild(el('div', {class: 'lk', style: 'justify-content:center'}, [el('a', {href: '#', text: '← بازگشت به ورود با رمز', onclick: function (e) { e.preventDefault(); state.otpMode = false; state.step = 'form'; draw(); }})]));
       } else {
         if (state.step === 'form') {
           var em = input('ایمیل', 'name@example.com', 'email', true);
@@ -785,12 +743,11 @@
           });
           m.appendChild(code); m.appendChild(b2);
         }
-        m.appendChild(el('p', {class: 'center', style: 'margin-top:12px;font-size:13px'}, [el('a', {href: '#', text: 'بازگشت به ورود با رمز', onclick: function (e) { e.preventDefault(); state.otpMode = false; state.step = 'form'; draw(); }})]));
+        m.appendChild(el('div', {class: 'lk', style: 'justify-content:center'}, [el('a', {href: '#', text: '← بازگشت به ورود با رمز', onclick: function (e) { e.preventDefault(); state.otpMode = false; state.step = 'form'; draw(); }})]));
       }
     }
     function drawRegister() {
-      m.appendChild(el('h2', {text: 'ثبت‌نام ' + (state.role === 'manager' ? 'مدیر / معاون' : 'معلم')}));
-      m.appendChild(el('div', {class: 'tabs'}, [
+      m.appendChild(el('div', {class: 'tabs neo-in', style: 'margin-top:-6px'}, [
         el('button', {class: state.role === 'teacher' ? 'on' : '', text: '👩‍🏫 معلم', onclick: function () { state.role = 'teacher'; state.step = 'form'; draw(); }}),
         el('button', {class: state.role === 'manager' ? 'on' : '', text: '🏫 مدیر / معاون', onclick: function () { state.role = 'manager'; state.step = 'form'; draw(); }})
       ]));
@@ -806,7 +763,7 @@
           busy(b1, false);
         });
         m.appendChild(name); m.appendChild(em); m.appendChild(b1);
-        m.appendChild(el('p', {class: 'muted', style: 'font-size:12px;margin-top:12px', text: 'دانش‌آموزان نیازی به ثبت‌نام ندارند؛ معلم برایشان حساب می‌سازد.'}));
+        m.appendChild(el('p', {class: 'hint', text: 'دانش‌آموزان نیازی به ثبت‌نام ندارند؛ معلم برایشان حساب می‌سازد.'}));
       } else if (state.step === 'code') {
         m.appendChild(el('div', {class: 'alert info', text: 'کد تأیید به ' + state.email + ' فرستاده شد.'}));
         var code = input('کد تأیید ایمیل', '', 'text', true);
@@ -823,9 +780,18 @@
       }
     }
     function input(label, ph, type, ltr) {
-      return el('div', {class: 'field' + (ltr ? ' ltr' : '')}, [el('label', {text: label}), el('input', {type: type || 'text', placeholder: ph || '', autocomplete: type === 'password' ? 'current-password' : 'on'})]);
+      var inp = el('input', {type: type || 'text', placeholder: ph || '', autocomplete: type === 'password' ? 'current-password' : 'on'});
+      var f = el('div', {class: 'field' + (ltr ? ' ltr' : '') + (type === 'password' ? ' pw' : '')}, [el('label', {text: label}), inp]);
+      if (type === 'password') f.appendChild(eyeButton(inp));
+      return f;
     }
     draw();
+  }
+  /* V164 — دکمهٔ نمایش/پنهان رمز */
+  function eyeButton(inp) {
+    var b = el('button', {type: 'button', class: 'eye', 'aria-label': 'نمایش رمز عبور', 'aria-pressed': 'false', html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.7"/></svg>'});
+    b.addEventListener('click', function () { var show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', String(show)); b.setAttribute('aria-label', show ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'); inp.focus(); });
+    return b;
   }
   /* تکمیل ثبت‌نام (نام کاربری + رمز + مدرسه) — هم پس از OTP و هم برای حساب‌های نیمه‌کاره (requires_teacher_setup) */
   function drawCompletion(container, role, fullName, msg, setMsg) {
@@ -854,7 +820,7 @@
       b.disabled = false;
     });
     container.appendChild(b);
-    function fld(label, val, ltr, type) { return el('div', {class: 'field' + (ltr ? ' ltr' : '')}, [el('label', {text: label}), el('input', {type: type || 'text', value: val || ''})]); }
+    function fld(label, val, ltr, type) { var inp = el('input', {type: type || 'text', value: val || ''}); var f = el('div', {class: 'field' + (ltr ? ' ltr' : '') + (type === 'password' ? ' pw' : '')}, [el('label', {text: label}), inp]); if (type === 'password') f.appendChild(eyeButton(inp)); return f; }
   }
   function afterLogin() {
     closeAuth();
@@ -865,13 +831,13 @@
     render();
   }
   function renderSetupGate() {
-    root = $('root'); root.innerHTML = '';
-    var m = el('div', {class: 'modal', style: 'margin:60px auto'});
+    root = $('root'); root.innerHTML = ''; document.body.classList.add('lp-body');
+    var m = el('div', {class: 'card neo', style: 'max-width:480px;margin:40px auto;padding:32px 30px'});
+    var wrap = el('div', {class: 'lp', style: 'display:block'}); wrap.appendChild(m); root.appendChild(wrap);
     m.appendChild(el('h2', {text: 'تکمیل ثبت‌نام ' + (user.pendingRole === 'manager' ? 'مدیر / معاون' : 'معلم')}));
     var msg = el('div'); m.appendChild(msg);
     drawCompletion(m, user.pendingRole || 'teacher', user.name, msg, function (t) { msg.innerHTML = ''; if (t) msg.appendChild(el('div', {class: 'alert error', text: t})); });
     m.appendChild(el('button', {class: 'btn light', style: 'width:100%;margin-top:10px', text: 'خروج', onclick: doLogout}));
-    root.appendChild(m);
   }
   async function doLogout() { await authApi.signOut(); user = null; view.panel = 'dashboard'; render(); }
 

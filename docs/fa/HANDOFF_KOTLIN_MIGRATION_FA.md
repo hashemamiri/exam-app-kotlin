@@ -18931,3 +18931,11 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 **CI:** `android.yml` push باز (کد اپ تغییر کرده). تست‌ها: `V163_ServerPrintExamsTest`؛ V157/V158/V161 به‌روز شدند.
 
 **V163.1/V163.2:** تست V157 با حذف افزودن گروهی هماهنگ شد؛ در بازنویسی بخش چاپیِ `builder.js` بلوک `var state/blankState/isoToLocal/localToIso/saveDraft` به‌اشتباه حذف شده بود و برگردانده شد (خطای «blankState is not defined» در سایت دسکتاپ). درس: پس از هر بازنویسی بلوکی در JS، فهرست `function` های قبل/بعد را با `comm` مقایسه کنید.
+
+
+## V164 — صفحهٔ ورود دسکتاپ به سبک اپ + قلم وزیرمتن
+
+- **قلم:** `site/fonts/Vazirmatn-{400,700,800}.woff2` (OFL؛ همان قلم اپ). `@font-face` در ابتدای `site/src/site.css`؛ `site.yml` پوشه را به `site_out/fonts` کپی و در `_headers` کش immutable می‌گذارد؛ `sw.js` مسیر `/fonts/` را کش-اول می‌کند. هنگام تست محلی با `file://` قلم لود نمی‌شود (مسیر مطلق `/fonts/`) — روی Pages درست است.
+- **صفحهٔ ورود:** `renderLanding(mode)` در `app.js` صفحهٔ `.lp` (دو ستون: برند + کارت) را می‌سازد؛ فرم با `drawAuthInto(card, mode)` رسم می‌شود (همان منطق قبلیِ openAuth: ورود با رمز/کد ایمیل/بازیابی، ثبت‌نام معلم/مدیر سه‌مرحله‌ای، گوگل). `openAuth(mode)` فقط لندینگ را با آن تب رندر می‌کند. `renderSetupGate` هم داخل کارت `.lp` است. کلاس `lp-body` روی body برای پس‌زمینهٔ تیره.
+- **رنگ‌ها:** متغیرهای `.lp` از `--m-acc/--m-acc2` (پالت انتخابی کاربر، از `applyAppearance` در mobile.js که هنگام بارگذاری اجرا می‌شود) برای برند استفاده می‌کنند؛ CTA گرادیان عمیق‌تر `#5B52E8→#0A8571` برای کنتراست متن سفید. تیره با `.m-dark .lp`.
+- CSS در انتهای `site.css` (بلوک V164). تست: `V164_SiteLoginPageTest`.
