@@ -21,7 +21,7 @@
   function $(id) { return document.getElementById(id); }
   /* V160 — رسانهٔ Storage خصوصی (باکت exam-images از V75.8 public=false): <img src> و <audio src> ساده 400 می‌گیرند.
      مثل SupabaseAuthImageInterceptor/QuestionAudioPlayer اپ، با هدر نشست دانلود و به blob: تبدیل می‌شود (کش در حافظه). */
-  var mediaCache = {};
+  var mediaCache = {}, lastMediaError = '';
   function isOwnStorageUrl(u) { return typeof u === 'string' && SUPABASE_URL && u.indexOf(SUPABASE_URL + '/storage/v1/object/') === 0; }
   function mediaBlobUrl(u) {
     if (!isOwnStorageUrl(u)) return Promise.resolve(u);
@@ -30,13 +30,14 @@
     mediaCache[u] = fetch(authed, {headers: {'apikey': ANON, 'Authorization': 'Bearer ' + (session ? session.access_token : ANON)}}).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.blob();
-    }).then(function (b) { return URL.createObjectURL(b); }).catch(function (e) { delete mediaCache[u]; console.error('media', u, e); return u; });
+    }).then(function (b) { return URL.createObjectURL(b); }).catch(function (e) { delete mediaCache[u]; console.error('media', u, e); lastMediaError = 'Storage ' + (e && e.message || ''); return u; });
     return mediaCache[u];
   }
   function el(tag, attrs, children) {
     var e = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === 'src' && (tag === 'img' || tag === 'audio') && isOwnStorageUrl(attrs[k])) { e.setAttribute('data-src', attrs[k]); mediaBlobUrl(attrs[k]).then(function (u) { e.src = u; }); }
+      if (k === 'src' && (tag === 'img' || tag === 'audio') && isOwnStorageUrl(attrs[k])) { e.setAttribute('data-src', attrs[k]); mediaBlobUrl(attrs[k]).then(function (u) { e.src = u; if (u === attrs[k]) e.title = 'بارگذاری نشد: ' + lastMediaError; }); }
+      else if (k === 'src' && tag === 'img' && /^https?:/i.test(String(attrs[k]))) { e.setAttribute(k, attrs[k]); e.addEventListener('error', function () { var h = ''; try { h = new URL(attrs[k]).host; } catch (x) {} e.title = 'تصویر بارگذاری نشد (' + h + ')'; e.classList.add('img-broken'); }); }
       else if (k === 'class') e.className = attrs[k];
       else if (k === 'html') e.innerHTML = attrs[k];
       else if (k === 'text') e.textContent = attrs[k];
@@ -1218,7 +1219,7 @@
       }
       c.appendChild(sec);
       if (p.role === 'teacher' && window.SiteSchool) c.appendChild(window.SiteSchool.joinSchoolCard(function () { pageProfile(c); }));
-      if (p.role === 'teacher' && window.SiteExtras) c.appendChild(window.SiteExtras.backupCard());
+      if (p.role === 'teacher' && window.SiteExtras) { c.appendChild(window.SiteExtras.backupCard()); c.appendChild(window.SiteExtras.mediaDiagCard()); }
       if (p.role !== 'student' && window.SiteExtras) c.appendChild(window.SiteExtras.deleteAccountCard(async function () { saveSession(null); user = null; view.panel = 'dashboard'; render(); }));
     } catch (e) { showErr(c, e); }
   }

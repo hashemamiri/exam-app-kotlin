@@ -14,10 +14,12 @@
   /* V160 — تصویرهای قبلاً ذخیره‌شده (https): Storage خصوصی با هدر نشست (S.mediaBlobUrl) و S3 عمومی با crossOrigin تا بوم آلوده (tainted) نشود */
   function loadImage(src) {
     return new Promise(function (res, rej) {
-      var fail = function () { rej(new Error('تصویر قابل خواندن نیست.')); };
+      /* V160.1 — علت واقعی در پیام (میزبان + کد HTTP / CORS) تا حدس نزنیم */
+      var host = ''; try { host = /^https?:/i.test(src) ? new URL(src).host : (src.slice(0, 5) + '…'); } catch (e) { host = src.slice(0, 30); }
+      var fail = function (why) { rej(new Error('تصویر قابل خواندن نیست (' + host + (why ? ' — ' + why : '') + ').')); };
       var go = function (u) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () {
-        if (/^https?:/i.test(u)) { fetch(u).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = fail; im2.src = URL.createObjectURL(b); }).catch(fail); } else fail(); }; im.src = u; };
-      (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, fail);
+        if (/^https?:/i.test(u)) { fetch(u, {mode: 'cors'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = function () { fail('فرمت ناشناخته ' + (b.type || '')); }; im2.src = URL.createObjectURL(b); }).catch(function (e) { fail(e && e.message && /HTTP/.test(e.message) ? e.message : 'CORS/شبکه: ' + (e && e.message || '')); }); } else fail('data-url نامعتبر'); }; im.src = u; };
+      (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, function (e) { fail(e && e.message || ''); });
     });
   }
   function fileToUrl(f) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(f); }); }

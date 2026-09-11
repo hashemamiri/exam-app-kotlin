@@ -186,6 +186,38 @@
 
   /* ================================================================ پشتیبان کامل / بازیابی */
   var MAX_BACKUP = 20 * 1024 * 1024;
+  /* V160.1 — عیب‌یابی رسانه: نشانی تصویرهای واقعی آزمون‌های این معلم را می‌آزماید و علت دقیق (HTTP/CORS) را نشان می‌دهد */
+  function mediaDiagCard() {
+    var out = el('div', {class: 'muted', style: 'font-size:13px;white-space:pre-wrap;direction:ltr;text-align:left'});
+    var card = el('div', {class: 'card'}, [el('h3', {text: '🩺 عیب‌یابی تصویر و صوت'}), el('p', {class: 'muted', style: 'font-size:13px', text: 'نشانی رسانه‌های آزمون‌های شما بررسی و علت بارگذاری‌نشدن (کد HTTP، CORS، میزبان) نشان داده می‌شود.'}),
+      el('button', {class: 'btn light', text: '▶ اجرای بررسی', onclick: async function () {
+        out.textContent = '…';
+        try {
+          var exams = await S.api.exams(); var urls = [];
+          for (var i = 0; i < Math.min(exams.length, 15) && urls.length < 6; i++) {
+            var ex = await S.api.examDetail(exams[i].id);
+            (ex.questions || []).forEach(function (q) { (q.images || []).concat(q.audio ? [q.audio] : []).forEach(function (u) { if (/^https?:/i.test(u) && urls.indexOf(u) < 0 && urls.length < 6) urls.push(u); }); });
+          }
+          if (!urls.length) { out.textContent = 'هیچ رسانهٔ راه‌دوری در آزمون‌های شما پیدا نشد.'; return; }
+          var lines = [];
+          for (var k = 0; k < urls.length; k++) {
+            var u = urls[k], host = new URL(u).host, line = '[' + (k + 1) + '] ' + host + ' … ' + u.split('/').slice(-2).join('/').slice(0, 50) + '\n';
+            if (S.isOwnStorageUrl(u)) {
+              var au = u.replace('/storage/v1/object/public/', '/storage/v1/object/authenticated/');
+              try { var r = await fetch(au, {headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (S.session() ? S.session().access_token : S.config.anon)}}); line += '  Storage(auth): HTTP ' + r.status + (r.ok ? ' ✓ ' + (r.headers.get('content-type') || '') : ' ✗ ' + (await r.text()).slice(0, 120)); }
+              catch (e) { line += '  Storage(auth): شبکه ✗ ' + errMsg(e); }
+            } else {
+              try { var r2 = await fetch(u, {mode: 'cors'}); line += '  GET(cors): HTTP ' + r2.status + (r2.ok ? ' ✓ ' + (r2.headers.get('content-type') || '') : ' ✗'); }
+              catch (e2) { line += '  GET(cors): ✗ ' + errMsg(e2) + '  ← احتمالاً CORS صندوقچه (Origin/GET) یا دسترسی عمومی'; }
+              try { var r3 = await fetch(u, {mode: 'no-cors'}); line += '\n  GET(no-cors): ' + (r3.type === 'opaque' ? 'پاسخ رسید (opaque)' : r3.status); } catch (e3) { line += '\n  GET(no-cors): ✗ شبکه/DNS ' + errMsg(e3); }
+            }
+            lines.push(line);
+          }
+          out.textContent = lines.join('\n\n');
+        } catch (e) { out.textContent = 'خطا: ' + errMsg(e); }
+      }}), out]);
+    return card;
+  }
   function backupCard() {
     var card = el('div', {class: 'card'}, [el('h3', {text: '🗄 پشتیبان و بازیابی داده‌ها'}), el('p', {class: 'muted', style: 'font-size:13px', text: 'پشتیبان شامل آزمون‌ها، کلاس‌ها و عضویت‌ها و سربرگ چاپ است (حداکثر ۲۰ مگابایت). بازیابی، آزمون‌ها را به‌صورت نسخهٔ جدید می‌سازد و مثل ساخت آزمون هزینه دارد.'})]);
     var msg = el('div'); card.appendChild(msg);
@@ -336,5 +368,5 @@
     return card;
   }
 
-  window.SiteExtras = {reportsPage: reportsPage, gradesExcelButton: gradesExcelButton, exportExamDlg: exportExamDlg, importExam: importExam, parseExamPackage: parseExamPackage, backupCard: backupCard, audioDlg: audioDlg, googleButton: googleButton, handleOAuthReturn: handleOAuthReturn, recoveryFlow: recoveryFlow, deleteAccountCard: deleteAccountCard, xlsx: xlsx, csv: csv, download: download};
+  window.SiteExtras = {reportsPage: reportsPage, gradesExcelButton: gradesExcelButton, exportExamDlg: exportExamDlg, importExam: importExam, parseExamPackage: parseExamPackage, backupCard: backupCard, mediaDiagCard: mediaDiagCard, audioDlg: audioDlg, googleButton: googleButton, handleOAuthReturn: handleOAuthReturn, recoveryFlow: recoveryFlow, deleteAccountCard: deleteAccountCard, xlsx: xlsx, csv: csv, download: download};
 })();

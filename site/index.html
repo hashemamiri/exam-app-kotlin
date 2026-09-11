@@ -811,6 +811,7 @@ img,video,canvas,iframe{max-width:100%}
 .studio-ex img{width:64px;height:48px;object-fit:cover;border-radius:8px;background:#fff}
 .studio-ex .danger-text{color:#fca5a5}
 @media (max-width:700px){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}
+.img-broken{outline:2px dashed #dc2626;min-width:48px;min-height:32px}
 </style>
 </head>
 <body>
@@ -1673,7 +1674,7 @@ window.__HEADER_SCHEMA = {
   function $(id) { return document.getElementById(id); }
   /* V160 — رسانهٔ Storage خصوصی (باکت exam-images از V75.8 public=false): <img src> و <audio src> ساده 400 می‌گیرند.
      مثل SupabaseAuthImageInterceptor/QuestionAudioPlayer اپ، با هدر نشست دانلود و به blob: تبدیل می‌شود (کش در حافظه). */
-  var mediaCache = {};
+  var mediaCache = {}, lastMediaError = '';
   function isOwnStorageUrl(u) { return typeof u === 'string' && SUPABASE_URL && u.indexOf(SUPABASE_URL + '/storage/v1/object/') === 0; }
   function mediaBlobUrl(u) {
     if (!isOwnStorageUrl(u)) return Promise.resolve(u);
@@ -1682,13 +1683,14 @@ window.__HEADER_SCHEMA = {
     mediaCache[u] = fetch(authed, {headers: {'apikey': ANON, 'Authorization': 'Bearer ' + (session ? session.access_token : ANON)}}).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.blob();
-    }).then(function (b) { return URL.createObjectURL(b); }).catch(function (e) { delete mediaCache[u]; console.error('media', u, e); return u; });
+    }).then(function (b) { return URL.createObjectURL(b); }).catch(function (e) { delete mediaCache[u]; console.error('media', u, e); lastMediaError = 'Storage ' + (e && e.message || ''); return u; });
     return mediaCache[u];
   }
   function el(tag, attrs, children) {
     var e = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === 'src' && (tag === 'img' || tag === 'audio') && isOwnStorageUrl(attrs[k])) { e.setAttribute('data-src', attrs[k]); mediaBlobUrl(attrs[k]).then(function (u) { e.src = u; }); }
+      if (k === 'src' && (tag === 'img' || tag === 'audio') && isOwnStorageUrl(attrs[k])) { e.setAttribute('data-src', attrs[k]); mediaBlobUrl(attrs[k]).then(function (u) { e.src = u; if (u === attrs[k]) e.title = 'بارگذاری نشد: ' + lastMediaError; }); }
+      else if (k === 'src' && tag === 'img' && /^https?:/i.test(String(attrs[k]))) { e.setAttribute(k, attrs[k]); e.addEventListener('error', function () { var h = ''; try { h = new URL(attrs[k]).host; } catch (x) {} e.title = 'تصویر بارگذاری نشد (' + h + ')'; e.classList.add('img-broken'); }); }
       else if (k === 'class') e.className = attrs[k];
       else if (k === 'html') e.innerHTML = attrs[k];
       else if (k === 'text') e.textContent = attrs[k];
@@ -2870,7 +2872,7 @@ window.__HEADER_SCHEMA = {
       }
       c.appendChild(sec);
       if (p.role === 'teacher' && window.SiteSchool) c.appendChild(window.SiteSchool.joinSchoolCard(function () { pageProfile(c); }));
-      if (p.role === 'teacher' && window.SiteExtras) c.appendChild(window.SiteExtras.backupCard());
+      if (p.role === 'teacher' && window.SiteExtras) { c.appendChild(window.SiteExtras.backupCard()); c.appendChild(window.SiteExtras.mediaDiagCard()); }
       if (p.role !== 'student' && window.SiteExtras) c.appendChild(window.SiteExtras.deleteAccountCard(async function () { saveSession(null); user = null; view.panel = 'dashboard'; render(); }));
     } catch (e) { showErr(c, e); }
   }
@@ -3680,10 +3682,12 @@ window.__HEADER_SCHEMA = {
   /* V160 — تصویرهای قبلاً ذخیره‌شده (https): Storage خصوصی با هدر نشست (S.mediaBlobUrl) و S3 عمومی با crossOrigin تا بوم آلوده (tainted) نشود */
   function loadImage(src) {
     return new Promise(function (res, rej) {
-      var fail = function () { rej(new Error('تصویر قابل خواندن نیست.')); };
+      /* V160.1 — علت واقعی در پیام (میزبان + کد HTTP / CORS) تا حدس نزنیم */
+      var host = ''; try { host = /^https?:/i.test(src) ? new URL(src).host : (src.slice(0, 5) + '…'); } catch (e) { host = src.slice(0, 30); }
+      var fail = function (why) { rej(new Error('تصویر قابل خواندن نیست (' + host + (why ? ' — ' + why : '') + ').')); };
       var go = function (u) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () {
-        if (/^https?:/i.test(u)) { fetch(u).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = fail; im2.src = URL.createObjectURL(b); }).catch(fail); } else fail(); }; im.src = u; };
-      (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, fail);
+        if (/^https?:/i.test(u)) { fetch(u, {mode: 'cors'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = function () { fail('فرمت ناشناخته ' + (b.type || '')); }; im2.src = URL.createObjectURL(b); }).catch(function (e) { fail(e && e.message && /HTTP/.test(e.message) ? e.message : 'CORS/شبکه: ' + (e && e.message || '')); }); } else fail('data-url نامعتبر'); }; im.src = u; };
+      (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, function (e) { fail(e && e.message || ''); });
     });
   }
   function fileToUrl(f) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(f); }); }
@@ -5423,6 +5427,38 @@ window.__HEADER_SCHEMA = {
 
   /* ================================================================ پشتیبان کامل / بازیابی */
   var MAX_BACKUP = 20 * 1024 * 1024;
+  /* V160.1 — عیب‌یابی رسانه: نشانی تصویرهای واقعی آزمون‌های این معلم را می‌آزماید و علت دقیق (HTTP/CORS) را نشان می‌دهد */
+  function mediaDiagCard() {
+    var out = el('div', {class: 'muted', style: 'font-size:13px;white-space:pre-wrap;direction:ltr;text-align:left'});
+    var card = el('div', {class: 'card'}, [el('h3', {text: '🩺 عیب‌یابی تصویر و صوت'}), el('p', {class: 'muted', style: 'font-size:13px', text: 'نشانی رسانه‌های آزمون‌های شما بررسی و علت بارگذاری‌نشدن (کد HTTP، CORS، میزبان) نشان داده می‌شود.'}),
+      el('button', {class: 'btn light', text: '▶ اجرای بررسی', onclick: async function () {
+        out.textContent = '…';
+        try {
+          var exams = await S.api.exams(); var urls = [];
+          for (var i = 0; i < Math.min(exams.length, 15) && urls.length < 6; i++) {
+            var ex = await S.api.examDetail(exams[i].id);
+            (ex.questions || []).forEach(function (q) { (q.images || []).concat(q.audio ? [q.audio] : []).forEach(function (u) { if (/^https?:/i.test(u) && urls.indexOf(u) < 0 && urls.length < 6) urls.push(u); }); });
+          }
+          if (!urls.length) { out.textContent = 'هیچ رسانهٔ راه‌دوری در آزمون‌های شما پیدا نشد.'; return; }
+          var lines = [];
+          for (var k = 0; k < urls.length; k++) {
+            var u = urls[k], host = new URL(u).host, line = '[' + (k + 1) + '] ' + host + ' … ' + u.split('/').slice(-2).join('/').slice(0, 50) + '\n';
+            if (S.isOwnStorageUrl(u)) {
+              var au = u.replace('/storage/v1/object/public/', '/storage/v1/object/authenticated/');
+              try { var r = await fetch(au, {headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (S.session() ? S.session().access_token : S.config.anon)}}); line += '  Storage(auth): HTTP ' + r.status + (r.ok ? ' ✓ ' + (r.headers.get('content-type') || '') : ' ✗ ' + (await r.text()).slice(0, 120)); }
+              catch (e) { line += '  Storage(auth): شبکه ✗ ' + errMsg(e); }
+            } else {
+              try { var r2 = await fetch(u, {mode: 'cors'}); line += '  GET(cors): HTTP ' + r2.status + (r2.ok ? ' ✓ ' + (r2.headers.get('content-type') || '') : ' ✗'); }
+              catch (e2) { line += '  GET(cors): ✗ ' + errMsg(e2) + '  ← احتمالاً CORS صندوقچه (Origin/GET) یا دسترسی عمومی'; }
+              try { var r3 = await fetch(u, {mode: 'no-cors'}); line += '\n  GET(no-cors): ' + (r3.type === 'opaque' ? 'پاسخ رسید (opaque)' : r3.status); } catch (e3) { line += '\n  GET(no-cors): ✗ شبکه/DNS ' + errMsg(e3); }
+            }
+            lines.push(line);
+          }
+          out.textContent = lines.join('\n\n');
+        } catch (e) { out.textContent = 'خطا: ' + errMsg(e); }
+      }}), out]);
+    return card;
+  }
   function backupCard() {
     var card = el('div', {class: 'card'}, [el('h3', {text: '🗄 پشتیبان و بازیابی داده‌ها'}), el('p', {class: 'muted', style: 'font-size:13px', text: 'پشتیبان شامل آزمون‌ها، کلاس‌ها و عضویت‌ها و سربرگ چاپ است (حداکثر ۲۰ مگابایت). بازیابی، آزمون‌ها را به‌صورت نسخهٔ جدید می‌سازد و مثل ساخت آزمون هزینه دارد.'})]);
     var msg = el('div'); card.appendChild(msg);
@@ -5573,7 +5609,7 @@ window.__HEADER_SCHEMA = {
     return card;
   }
 
-  window.SiteExtras = {reportsPage: reportsPage, gradesExcelButton: gradesExcelButton, exportExamDlg: exportExamDlg, importExam: importExam, parseExamPackage: parseExamPackage, backupCard: backupCard, audioDlg: audioDlg, googleButton: googleButton, handleOAuthReturn: handleOAuthReturn, recoveryFlow: recoveryFlow, deleteAccountCard: deleteAccountCard, xlsx: xlsx, csv: csv, download: download};
+  window.SiteExtras = {reportsPage: reportsPage, gradesExcelButton: gradesExcelButton, exportExamDlg: exportExamDlg, importExam: importExam, parseExamPackage: parseExamPackage, backupCard: backupCard, mediaDiagCard: mediaDiagCard, audioDlg: audioDlg, googleButton: googleButton, handleOAuthReturn: handleOAuthReturn, recoveryFlow: recoveryFlow, deleteAccountCard: deleteAccountCard, xlsx: xlsx, csv: csv, download: download};
 })();
 
 /* V148 — پوستهٔ موبایل پنل معلم، آینهٔ برنامهٔ اندروید (Design69 / Neumorphic):

@@ -18868,3 +18868,6 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 4. **سایت** — `buildPrintPayload` تصویرهای سؤال را اصلاً به رندرر نمی‌داد. حالا توکن `%%FIG:{k:'img',src,w:420}%%` به انتهای متن (مثل `ExamHtmlImageInliner.imageToken`) و `inlinePrintImages` قبل از `setExamData` نشانی‌های https را به `data:image/jpeg` (≤۱۲۸۰px، ۸۵٪، حداکثر ۲۴) تبدیل می‌کند؛ push تا ۶۰ ثانیه منتظر می‌ماند.
 - نکتهٔ CORS آروان: برای این‌که بوم سایت بتواند تصویر S3 را بخواند/چاپ کند، در CORS صندوقچه متد `GET` و Origin سایت باید مجاز باشد (قبلاً در §V144.3 گفته شده).
 - تست: `V160_CrossPlatformMediaTest.kt`.
+
+## §V160.1 — تشخیص دقیق خطای رسانه
+کاربر پس از V160 همچنان گزارش «تصویر قابل خواندن نیست» (اپ→سایت، سایت→اپ، گوشی↔دسکتاپ) داد. چون هر سه مسیر می‌شکنند، مظنون اصلی خودِ نشانی/ذخیره‌ساز است نه کلاینت (مثلاً صندوقچهٔ آروان خصوصی، `S3_PUBLIC_BASE` اشتباه، یا CORS بدون GET). به‌جای حدس: (۱) `studio.js loadImage` و `el()` علت را در پیام/tooltip می‌گذارند؛ (۲) `ExamImageStudioCore` با `decodeImageRefBounded(strict=true)` پیام استثنا (HTTP…) را در `note` نشان می‌دهد؛ (۳) `extras.js mediaDiagCard()` (پروفایل معلم) URL های واقعی را با fetch cors/no-cors/authenticated می‌آزماید. قدم بعد: کاربر خروجی این کارت را بفرستد.

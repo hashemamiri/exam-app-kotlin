@@ -372,7 +372,11 @@ fun ExamImageStudioDialog(
                                             Text("تصویر " + (idx + 1), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
                                             TextButton(onClick = {
                                                 scope.launch {
-                                                    val bmp = withContext(Dispatchers.IO) { decodeImageRefBounded(context, ref.dataUrl, 2560) }
+                                                    var why = ""
+                                                    val bmp = withContext(Dispatchers.IO) {
+                                                        try { decodeImageRefBounded(context, ref.dataUrl, 2560, strict = true) }
+                                                        catch (e: Throwable) { why = e.message ?: e.javaClass.simpleName; null }
+                                                    }
                                                     if (bmp != null) {
                                                         editIndex = idx
                                                         original = bmp
@@ -384,7 +388,9 @@ fun ExamImageStudioDialog(
                                                         drawMode = "none"; previewOriginal = false
                                                         note = null
                                                     } else {
-                                                        note = "بازکردن تصویر ممکن نشد."
+                                                        // V160.1 — علت واقعی (HTTP/شبکه/فرمت) به‌جای پیام کلی
+                                                        val host = runCatching { android.net.Uri.parse(ref.dataUrl).host }.getOrNull() ?: ref.dataUrl.take(12)
+                                                        note = "بازکردن تصویر ممکن نشد ($host" + (if (why.isNotBlank()) " — $why" else "") + ")"
                                                     }
                                                 }
                                             }) { Text("✏️ ویرایش") }
@@ -1651,11 +1657,13 @@ private fun encodeCropped(
  * V160 — تصویرِ موجودِ سؤال ممکن است `data:` (تازه در همین جلسه ساخته‌شده) یا `https://` (قبلاً
  * ذخیره‌شده از سایت/برنامه) باشد. قبلاً فقط data: خوانده می‌شد و «بازکردن تصویر ممکن نشد» می‌داد.
  */
-internal fun decodeImageRefBounded(context: android.content.Context, ref: String, maxDim: Int): Bitmap? =
+internal fun decodeImageRefBounded(context: android.content.Context, ref: String, maxDim: Int, strict: Boolean = false): Bitmap? =
     if (ir.exam.app.core.media.RemoteMediaBytes.isRemote(ref)) {
-        ir.exam.app.core.media.RemoteMediaBytes.fetchOrNull(context, ref)?.let { decodeBytesBounded(it, maxDim) }
+        val bytes = if (strict) ir.exam.app.core.media.RemoteMediaBytes.fetch(context, ref)
+        else ir.exam.app.core.media.RemoteMediaBytes.fetchOrNull(context, ref)
+        bytes?.let { decodeBytesBounded(it, maxDim) ?: if (strict) error("فرمت تصویر شناخته نشد (${it.size} بایت)") else null }
     } else {
-        decodeDataUrlBounded(ref, maxDim)
+        decodeDataUrlBounded(ref, maxDim) ?: if (strict) error("data-url نامعتبر") else null
     }
 
 internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap? = runCatching {
