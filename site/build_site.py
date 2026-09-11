@@ -98,7 +98,7 @@ def build_formula_engine():
 def main():
     tpl = read(os.path.join(SITE, "src", "template.html"))
     site_css = read(os.path.join(SITE, "src", "site.css"))
-    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
+    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "studio.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
     vazir = read(os.path.join(WEB, "vazirmatn_embed.css"))
     engines = "window.__ENGINES = {print: %s, formula: %s};" % (js_string(build_print_engine()), js_string(build_formula_engine()))
     # V157 — همان header_settings_schema.json اپ برای پنجرهٔ «تنظیمات سربرگ» سایت (HeaderSettingsDialog)

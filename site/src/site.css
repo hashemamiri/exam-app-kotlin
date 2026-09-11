@@ -754,3 +754,32 @@ img,video,canvas,iframe{max-width:100%}
 /* V158 */
 .m-dlg-actions{gap:8px;margin-top:10px;justify-content:flex-start}.m-dlg-actions .m-btn{min-width:120px}
 .m-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* V159 */
+.b-top .b-meta{font-size:13px;padding:4px 2px}
+.m-builder .b-top .b-meta{text-align:center}
+/* V159 — استودیوی تصویر */
+.studio-bg{position:fixed;inset:0;z-index:70;background:#1c2333;display:flex;flex-direction:column;color:#fff}
+.studio-bar{height:52px;flex:0 0 auto;background:#0f172a;display:flex;align-items:center;gap:8px;padding:0 8px}
+.studio-ok,.studio-x{flex:0 0 auto;width:40px;height:40px;border:0;border-radius:14px;color:#fff;font-size:20px;font-weight:700;cursor:pointer}
+.studio-ok{background:#19945B}.studio-ok[disabled]{opacity:.4;cursor:default}.studio-x{background:#D63B49}
+.studio-tabs{flex:1;display:flex;gap:6px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.studio-tab{border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;flex:0 0 auto}
+.studio-tab.on{background:#fff;color:#0f172a}
+.studio-stage{flex:1;position:relative;min-height:0;overflow:hidden;touch-action:none}
+.studio-stage.picker{overflow:auto;touch-action:auto}
+.studio-canvas,.studio-overlay{position:absolute;inset:0;width:100%;height:100%}
+.studio-tools{flex:0 0 auto;max-height:42vh;overflow:auto;background:#111827;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.studio-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.studio-chip{border:1px solid rgba(255,255,255,.35);background:#1f2937;color:#fff;border-radius:999px;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}
+.studio-chip.on{background:#2563EB;border-color:#2563EB}
+.studio-sec{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.studio-slider{display:flex;align-items:center;gap:8px}.studio-slider input{flex:1;min-width:120px}
+.studio-lbl{font-size:13px;opacity:.9}.studio-hint{margin:0;font-size:12px;opacity:.75}
+.studio-pick{max-width:420px;margin:24px auto;padding:0 20px;display:flex;flex-direction:column;gap:12px;align-items:stretch}
+.studio-pick h3{text-align:center;margin:0 0 6px}
+.studio-src{height:56px;font-size:16px}
+.studio-ex{display:flex;align-items:center;gap:8px;background:#1f2937;border-radius:12px;padding:6px}
+.studio-ex img{width:64px;height:48px;object-fit:cover;border-radius:8px;background:#fff}
+.studio-ex .danger-text{color:#fca5a5}
+@media (max-width:700px){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}

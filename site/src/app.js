@@ -75,6 +75,19 @@
     if (typeof e === 'string') return e;
     return e.message || e.error_description || e.msg || e.error || e.hint || JSON.stringify(e);
   }
+  /* V159 — پنجرهٔ ورودی متن (AlertDialog با OutlinedTextField در اپ) */
+  function promptDlg(title, body, label, value, okLabel) {
+    return new Promise(function (resolve) {
+      var bg = el('div', {class: 'modal-bg'});
+      var i = el('input', {type: 'text', value: value || ''});
+      var ok = el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { bg.remove(); resolve(i.value); }});
+      i.addEventListener('input', function () { ok.disabled = !i.value.trim(); });
+      i.addEventListener('keydown', function (e) { if (e.key === 'Enter' && i.value.trim()) ok.click(); });
+      var m = el('div', {class: 'modal'}, [el('h2', {text: title}), body ? el('p', {class: 'muted', text: body}) : null, el('div', {class: 'field'}, [el('label', {text: label || ''}), i]),
+        el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [ok, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); resolve(null); }})])]);
+      bg.appendChild(m); document.body.appendChild(bg); setTimeout(function () { i.focus(); i.select(); }, 30);
+    });
+  }
   function confirmDlg(title, body, okLabel, danger) {
     return new Promise(function (resolve) {
       var bg = el('div', {class: 'modal-bg'});
@@ -1243,7 +1256,7 @@
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
   window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
-    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,

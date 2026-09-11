@@ -340,7 +340,9 @@
       el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: function () { preview(); }}),
       el('button', {class: 'btn sm', text: state.bankEdit ? '🏦 ذخیره در بانک' : state.mode === 'print' ? '💾 ذخیره روی مرورگر' : '☁ ذخیره در سرور', onclick: save})
     ]));
-    top.appendChild(state.bankEdit ? el('div', {class: 'grid3'}, [subject]) : el('div', {class: 'grid3'}, [title, subject, duration]));
+    /* V159 — مثل ExamBuilderScreen: آنلاین → عنوان/درس/مدت داخل «مشخصات آزمون» (ExamSettingsCard)؛ چاپی → بدون این فیلدها (نام هنگام ذخیره پرسیده می‌شود) */
+    if (state.bankEdit) top.appendChild(el('div', {class: 'grid3'}, [subject]));
+    else if (state.mode === 'online') top.appendChild(el('div', {class: 'b-meta muted', text: [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'}));
     top.appendChild(msg);
     wrap.appendChild(top);
 
@@ -394,7 +396,16 @@
         el('button', {class: 'tool-btn', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', text: '⚛', onclick: function () { insertFigure('periodic', ta, q); }}),
         el('button', {class: 'tool-btn', title: 'آناتومی', 'aria-label': 'آناتومی', text: '🫀', onclick: function () { insertFigure('anatomy', ta, q); }}),
         el('button', {class: 'tool-btn', title: 'علوم', 'aria-label': 'علوم', text: '🔬', onclick: function () { insertFigure('science', ta, q); }}),
-        el('button', {class: 'tool-btn', title: 'تصویر', 'aria-label': 'تصویر', text: '🖼', onclick: async function () { var f = await pickFile(); if (!f) return; try { var url = state.mode === 'print' ? await fileToDataUrl(f) : await uploadImage(f, 'questions', state.examId || (state.examId = uuid())); q.images.push({uri: url, xMm: 20, yMm: 30, widthMm: 55}); mark(); drawEditor(); toast('تصویر افزوده شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); } }}),
+        /* V159 — استودیوی ویرایش و تصویر (ExamImageStudioDialog)؛ dataURL برمی‌گرداند؛ در مسیر آنلاین هنگام ذخیره آپلود می‌شود */
+        el('button', {class: 'tool-btn', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', text: '🖼', onclick: function () {
+          var addImg = function (u) { return {uri: u, xMm: 20, yMm: 30, widthMm: 55}; };
+          window.SiteStudio.open({existing: q.images,
+            onInsert: function (u) { q.images.push(addImg(u)); mark(); drawEditor(); toast('تصویر افزوده شد.', 'ok'); },
+            onReplace: function (k, u) { if (q.images[k]) q.images[k].uri = u; mark(); drawEditor(); toast('تصویر جایگزین شد.', 'ok'); },
+            onDelete: function (k) { q.images.splice(k, 1); mark(); drawEditor(); },
+            onSplitToSame: function (urls) { urls.forEach(function (u) { q.images.push(addImg(u)); }); mark(); drawEditor(); toast(fa(urls.length) + ' تصویر افزوده شد.', 'ok'); },
+            onSplitToQuestions: function (urls) { urls.forEach(function (u, j) { if (j === 0) { q.images.push(addImg(u)); return; } var nq = newQuestion(q.type); nq.images.push(addImg(u)); state.questions.splice(i + j, 0, nq); }); mark(); drawList(); drawEditor(); toast(fa(urls.length) + ' سؤال ساخته شد.', 'ok'); }});
+        }}),
         el('button', {class: 'tool-btn', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', text: '🎤', onclick: function () { dictate(ta, q); }}),
         window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', text: '🎙', onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
       ]);
@@ -448,7 +459,7 @@
           var img = q.optionImages[k];
           box.appendChild(el('div', {class: 'b-opt'}, [r, t,
             img ? el('img', {src: img, class: 'thumb'}) : null,
-            el('button', {class: 'icon-btn', title: 'تصویر گزینه', html: img ? '🖼✕' : '🖼', onclick: async function () { if (img) { q.optionImages[k] = null; mark(); redraw(); return; } var f = await pickFile(); if (!f) return; try { q.optionImages[k] = state.mode === 'print' ? await fileToDataUrl(f) : await uploadImage(f, 'option_images', state.examId || (state.examId = uuid())); mark(); redraw(); } catch (e) { toast(errMsg(e), 'err'); } }}),
+            el('button', {class: 'icon-btn', title: 'تصویر گزینه', html: img ? '🖼✕' : '🖼', onclick: function () { if (img) { q.optionImages[k] = null; mark(); redraw(); return; } window.SiteStudio.open({onInsert: function (u) { q.optionImages[k] = u; mark(); redraw(); }}); }}),
             el('button', {class: 'icon-btn', title: 'فرمول', html: '∑', onclick: function () { S.openFormulaEditor(q.options[k], null, null).then(function (v) { if (v != null) { q.options[k] = v; mark(); redraw(); } }); }}),
             el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف گزینه', onclick: function () { if (q.options.length <= 2) return toast('حداقل دو گزینه لازم است.', 'err'); q.options.splice(k, 1); q.optionImages.splice(k, 1); if (q.correctIndex === k) q.correctIndex = null; else if (q.correctIndex > k) q.correctIndex--; mark(); redraw(); }})
           ]));
@@ -483,8 +494,13 @@
     function openSettings() {
       var bg = el('div', {class: 'modal-bg'});
       var m = el('div', {class: 'modal wide'});
-      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}));
+      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }}));
       m.appendChild(el('h2', {text: '⚙ مشخصات آزمون'}));
+      m.appendChild(el('div', {class: 'grid3'}, [
+        inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); }),
+        inp('درس', state.subject, function (v) { state.subject = v; mark(); }),
+        inp('مدت (دقیقه)', state.duration, function (v) { state.duration = en(v); mark(); }, 'number')
+      ]));
       m.appendChild(el('div', {class: 'grid2'}, [
         inp('زمان شروع (اختیاری)', state.opensAt, function (v) { state.opensAt = v; mark(); }, 'datetime-local'),
         inp('زمان پایان (اختیاری)', state.closesAt, function (v) { state.closesAt = v; mark(); }, 'datetime-local'),
@@ -572,13 +588,18 @@
           if (braw && braw.error) throw new Error(String(braw.error));
           state.dirty = false; saveDraft(); toast('در بانک ذخیره شد.', 'ok'); S.go('bank'); return;
         }
-        if (!state.title.trim()) throw new Error('عنوان آزمون را وارد کنید.');
+        if (state.mode !== 'print' && !state.title.trim()) throw new Error('عنوان آزمون را در «مشخصات آزمون» وارد کنید.');
         if (!state.questions.length) throw new Error('حداقل یک سؤال اضافه کنید.');
         if (state.questions.some(function (q) { return !q.text.trim(); })) throw new Error('متن همه سؤال‌ها را وارد کنید.');
         if (state.mode === 'print') {
+          /* V159 — مثل پنجرهٔ «ذخیره آزمون چاپی» اپ (askPrintName): نام آزمون پرسیده می‌شود */
+          var suggested = (state.title || '').trim() || (state.subject || '').trim() || 'آزمون چاپی';
+          var name = await S.promptDlg('ذخیره آزمون چاپی', 'این آزمون روی همین مرورگر ذخیره می‌شود و در بخش چاپ آزمون دیده خواهد شد.', 'نام آزمون', suggested, 'ذخیره');
+          if (name == null || !name.trim()) return;
+          state.title = name.trim();
           var id = state.printId || uuid(); state.printId = id;
-          upsertPrintExam({id: id, title: state.title.trim(), subject: state.subject.trim(), duration: state.duration, questions: state.questions});
-          state.dirty = false; saveDraft(); toast('آزمون چاپی ذخیره شد.', 'ok'); return;
+          upsertPrintExam({id: id, title: state.title, subject: (state.subject || '').trim(), duration: state.duration, questions: state.questions});
+          state.dirty = false; saveDraft(); toast('آزمون «' + state.title + '» ذخیره شد ✓', 'ok'); return;
         }
         if (state.audienceMode === 'classes' && !state.audienceClasses.length) throw new Error('حداقل یک کلاس انتخاب کنید.');
         if (state.audienceMode === 'students' && !state.audienceStudents.length) throw new Error('حداقل یک دانش‌آموز انتخاب کنید.');
