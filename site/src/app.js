@@ -735,6 +735,16 @@
     manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']]
   };
   var ROLE_LABEL = {teacher: 'معلم', student: 'دانش‌آموز', manager: 'مدیر / معاون'};
+  function toggleSidebar() { var sb = $('sidebar'), bg = $('sb-bg'); if (!sb) return; var open = sb.classList.toggle('open'); if (bg) bg.classList.toggle('on', open); }
+  function closeSidebar() { var sb = $('sidebar'), bg = $('sb-bg'); if (sb) sb.classList.remove('open'); if (bg) bg.classList.remove('on'); }
+  /* V146 — جدول‌های پهن روی گوشی به‌صورت افقی اسکرول می‌شوند (بعد از هر render) */
+  function wrapTables(rootEl) {
+    (rootEl || document).querySelectorAll('table.tbl').forEach(function (t) {
+      if (t.parentElement && t.parentElement.classList.contains('tbl-wrap')) return;
+      var w = document.createElement('div'); w.className = 'tbl-wrap'; t.parentNode.insertBefore(w, t); w.appendChild(t);
+    });
+  }
+  if (window.MutationObserver) new MutationObserver(function () { wrapTables(document); }).observe(document.documentElement, {childList: true, subtree: true});
   function renderPanel() {
     var menu = MENUS[user.role] || MENUS.student;
     var side = el('aside', {class: 'sidebar', id: 'sidebar'}, [
@@ -745,20 +755,27 @@
       ]),
       el('div', {class: 'menu'}, menu.map(function (it) {
         if (it === '-') return el('div', {class: 'sep'});
-        return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
+        return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; closeSidebar(); render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
       })),
       el('div', {class: 'foot'}, [el('button', {class: 'btn light', style: 'width:100%', text: 'خروج از حساب', onclick: doLogout})])
     ]);
     var title = (menu.filter(function (x) { return x !== '-' && x[0] === view.panel; })[0] || ['', '', ''])[2];
     var main = el('main', {class: 'main'}, [
       el('div', {class: 'head'}, [
-        el('button', {class: 'icon-btn hamb', html: '☰', onclick: function () { $('sidebar').classList.toggle('open'); }}),
+        el('button', {class: 'icon-btn hamb', html: '☰', 'aria-label': 'منو', onclick: toggleSidebar}),
         el('h1', {text: title}),
         el('span', {class: 'chip brand', text: 'نسخهٔ وب · فاز ۶'})
       ]),
       el('div', {id: 'content'})
     ]);
-    root.appendChild(el('div', {class: 'app'}, [side, main]));
+    /* V146 — گوشی/تبلت: پس‌زمینهٔ سایدبار + منوی پایین (۴ مورد اول + «بیشتر» که سایدبار را باز می‌کند) */
+    var sbBg = el('div', {class: 'sb-bg', id: 'sb-bg', onclick: closeSidebar});
+    var items = menu.filter(function (x) { return x !== '-'; });
+    var primary = items.slice(0, 4);
+    var bottom = el('nav', {class: 'bottom-nav', 'aria-label': 'منوی پایین'}, primary.map(function (it) {
+      return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
+    }).concat([el('button', {class: primary.some(function (it) { return it[0] === view.panel; }) ? '' : 'on', onclick: toggleSidebar}, [el('span', {class: 'i', text: '☰'}), el('span', {text: 'بیشتر'})])]));
+    root.appendChild(el('div', {class: 'app'}, [side, sbBg, main, bottom]));
     var c = $('content');
     var pages = {dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
       builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
@@ -1089,7 +1106,7 @@
   async function boot() {
     loadSession();
     if (window.SiteExtras && KEY_READY) { try { await window.SiteExtras.handleOAuthReturn(); } catch (e) { console.warn(e); } }
-    document.addEventListener('click', function (e) { var sb = $('sidebar'); if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.closest('.hamb')) sb.classList.remove('open'); });
+    document.addEventListener('click', function (e) { var sb = $('sidebar'); if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.closest('.hamb') && !e.target.closest('.bottom-nav')) closeSidebar(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });
     if (session && KEY_READY) {
       try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); else setTimeout(function () { toast(errMsg(e), 'err'); }, 300); }
