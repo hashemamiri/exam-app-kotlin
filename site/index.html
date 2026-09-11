@@ -2397,20 +2397,14 @@ window.__HEADER_SCHEMA = {
       brandEl(),
       el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
       el('p', {text: 'فرمول ریاضی، شکل هندسی، تختهٔ سفید و چاپ رسمی A4 — یک حساب برای اپ اندروید و وب.'}),
-      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); })),
-      el('div', {class: 'demos'}, [
-        el('span', {text: 'بدون ورود امتحان کنید:'}),
-        el('button', {type: 'button', text: '🧮 ویرایشگر فرمول', onclick: demoFormula}),
-        el('button', {type: 'button', text: '🖨 نمونهٔ چاپ', onclick: demoPrint})
-      ])
+      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))
     ]);
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');
     var right = el('div', {class: 'lp-r'}, [card]);
     var page = el('div', {class: 'lp'}, [
       el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}),
-      left, right,
-      el('div', {class: 'foot', html: 'onlineexam.ir · نسخهٔ وب · همان حساب اپ اندروید · <a href="https://github.com/hashemamiri/exam-app-kotlin" target="_blank" rel="noopener">مخزن پروژه</a>'})
+      left, right
     ]);
     if (keyWarn) page.appendChild(keyWarn);
     root.appendChild(page);
