@@ -412,3 +412,13 @@ img,video,canvas,iframe{max-width:100%}
   .bottom-nav button .i{font-size:16px}
   .modal{max-height:100dvh}
 }
+
+/* ---- V147: PWA ---- */
+.pwa-bar{position:fixed;bottom:calc(72px + env(safe-area-inset-bottom));inset-inline:12px;z-index:45;background:#1c2333;color:#fff;border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.3);font-size:14px;animation:fade .25s}
+.pwa-bar img{width:40px;height:40px;border-radius:10px;flex:0 0 auto}
+.pwa-bar .t{flex:1;line-height:1.5}
+.pwa-bar .t b{display:block}
+.pwa-bar .btn{padding:7px 12px;font-size:13px}
+.pwa-bar .x{border:0;background:transparent;color:#fff;font-size:18px;padding:0 4px}
+@media (min-width:861px){.pwa-bar{bottom:20px;inset-inline:auto;inset-inline-start:20px;max-width:380px}}
+@media (display-mode:standalone){.topbar .in .btn.pwa-hide{display:none}}

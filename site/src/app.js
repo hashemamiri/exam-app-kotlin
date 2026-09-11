@@ -735,6 +735,35 @@
     manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']]
   };
   var ROLE_LABEL = {teacher: 'معلم', student: 'دانش‌آموز', manager: 'مدیر / معاون'};
+  /* V147 — PWA: ثبت Service Worker، پیشنهاد نصب (اندروید/کروم) و راهنمای iOS؛ اعلان نسخهٔ جدید */
+  var deferredInstall = null;
+  function pwaInit() {
+    if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+    navigator.serviceWorker.register('/pwa/sw.js').then(function (reg) {
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing; if (!nw) return;
+        nw.addEventListener('statechange', function () { if (nw.state === 'installed' && navigator.serviceWorker.controller) toast('نسخهٔ جدید سایت آماده است؛ صفحه را دوباره باز کنید.', 'ok'); });
+      });
+    }).catch(function (e) { console.warn('sw', e); });
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; pwaOffer(); });
+    window.addEventListener('appinstalled', function () { deferredInstall = null; var b = $('pwa-bar'); if (b) b.remove(); try { localStorage.setItem('pwa.installed', '1'); } catch (x) {} toast('آزمون‌ساز روی دستگاه نصب شد.', 'ok'); });
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    if (ios && !standalone) setTimeout(pwaOffer, 4000);
+  }
+  function pwaOffer() {
+    if ($('pwa-bar')) return;
+    try { if (localStorage.getItem('pwa.dismiss') && Date.now() - Number(localStorage.getItem('pwa.dismiss')) < 7 * 864e5) return; } catch (e) {}
+    if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) return;
+    var ios = !deferredInstall;
+    var bar = el('div', {class: 'pwa-bar', id: 'pwa-bar'}, [
+      el('img', {src: '/pwa/icon-192.png', alt: ''}),
+      el('div', {class: 't'}, [el('b', {text: 'نصب آزمون‌ساز روی گوشی'}), el('span', {text: ios ? 'در Safari دکمهٔ «اشتراک» و سپس «Add to Home Screen» را بزنید.' : 'مثل یک برنامه، تمام‌صفحه و با آیکون روی صفحهٔ اصلی.'})]),
+      ios ? null : el('button', {class: 'btn', text: 'نصب', onclick: function () { if (!deferredInstall) return; deferredInstall.prompt(); deferredInstall.userChoice.then(function () { deferredInstall = null; bar.remove(); }); }}),
+      el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bar.remove(); try { localStorage.setItem('pwa.dismiss', String(Date.now())); } catch (e) {} }})
+    ].filter(Boolean));
+    document.body.appendChild(bar);
+  }
   function toggleSidebar() { var sb = $('sidebar'), bg = $('sb-bg'); if (!sb) return; var open = sb.classList.toggle('open'); if (bg) bg.classList.toggle('on', open); }
   function closeSidebar() { var sb = $('sidebar'), bg = $('sb-bg'); if (sb) sb.classList.remove('open'); if (bg) bg.classList.remove('on'); }
   /* V146 — جدول‌های پهن روی گوشی به‌صورت افقی اسکرول می‌شوند (بعد از هر render) */
@@ -1105,6 +1134,7 @@
   /* ================================================================ راه‌اندازی */
   async function boot() {
     loadSession();
+    try { pwaInit(); } catch (e) { console.warn('pwa', e); }
     if (window.SiteExtras && KEY_READY) { try { await window.SiteExtras.handleOAuthReturn(); } catch (e) { console.warn(e); } }
     document.addEventListener('click', function (e) { var sb = $('sidebar'); if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.closest('.hamb') && !e.target.closest('.bottom-nav')) closeSidebar(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });

@@ -34,8 +34,17 @@ jobs:
           assert h.count(old) == 1, 'placeholder not found'
           open('site_out/index.html', 'w', encoding='utf-8').write(h.replace(old, 'var SUPABASE_ANON_KEY = "%s";' % os.environ['SUPABASE_ANON_KEY']))
           PY
-          # هدرها: بدون کش برای index تا به‌روزرسانی فوری دیده شود
-          printf '/*\n  Cache-Control: no-cache\n' > site_out/_headers
+          # V147 — PWA: مانیفست، آیکون‌ها و Service Worker (نسخهٔ SW = هش index.html تا هر انتشار کش قدیمی را دور بریزد)
+          cp -r site/pwa site_out/pwa
+          python3 - <<'PY'
+          import hashlib
+          h = hashlib.sha256(open('site_out/index.html', 'rb').read()).hexdigest()[:12]
+          p = 'site_out/pwa/sw.js'; s = open(p, encoding='utf-8').read()
+          assert '__SW_VERSION__' in s
+          open(p, 'w', encoding='utf-8').write(s.replace('__SW_VERSION__', h))
+          PY
+          # هدرها: بدون کش برای index و SW تا به‌روزرسانی فوری دیده شود؛ آیکون‌ها کش طولانی
+          printf '/*\n  Cache-Control: no-cache\n/pwa/sw.js\n  Cache-Control: no-cache\n  Service-Worker-Allowed: /\n/pwa/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8\n/pwa/*.png\n  Cache-Control: public, max-age=604800\n' > site_out/_headers
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

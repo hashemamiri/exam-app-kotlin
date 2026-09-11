@@ -18733,3 +18733,16 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - `::java.io.ByteArrayInputStream` (ارجاع تابعی با نام کامل) در Kotlin معتبر نیست → `?.let { ByteArrayInputStream(it) }` در `LocalImageRepository` و `SupabaseQuestionImageUploader`.
 - `SupabaseClient.httpClient.httpClient` API داخلی supabase-kt است (خطای «This API is internal») → کلاینت مستقل `HttpClient(OkHttp)` (`s3Client`، lazy در companion) برای PUT به لینک امضاشدهٔ S3؛ بهتر هم هست چون هدرهای Supabase (apikey/Authorization) به آروان فرستاده نمی‌شوند.
 - درس: بدون Gradle محلی، از ارجاع تابعی با نام کامل و APIهای داخلی کتابخانه پرهیز شود.
+
+## V147 — سایت به‌صورت PWA (وب‌اپلیکیشن نصب‌شدنی روی گوشی)
+
+تصمیم کاربر: «PWA الان + بازطراحی مرحله‌به‌مرحله شبیه اپ اندروید، اولویت نقش معلم» (بازطراحی از V148 شروع می‌شود: داشبورد و آزمون‌ها).
+
+- `site/pwa/manifest.webmanifest`: standalone، rtl/fa، theme `#1e5eff`، آیکون‌های any+maskable ۱۹۲/۵۱۲، shortcuts (آزمون‌ها، آزمون جدید)، `start_url=/?source=pwa`.
+- `site/pwa/sw.js`: پوستهٔ سایت (index + pwa/) کش می‌شود؛ ناوبری «شبکه اول، در قطعی کش»؛ **هیچ درخواست بین‌دامنه‌ای (Supabase/آروان/فونت) کش نمی‌شود**؛ فقط GET. نسخهٔ SW در CI با هش `index.html` جایگزین `__SW_VERSION__` می‌شود → هر انتشار کش قبلی را پاک می‌کند.
+- آیکون‌ها با Pillow تولید شدند (`site/pwa/icon-*.png`, `maskable-*.png`, `apple-touch-icon.png`) — مداد سفید روی گرادیان برند.
+- `template.html`: link manifest/apple-touch-icon/icon، `apple-mobile-web-app-*`.
+- `app.js`: `pwaInit()` در `boot()` — ثبت SW فقط روی https؛ `beforeinstallprompt` → نوار «نصب آزمون‌ساز روی گوشی» (`.pwa-bar`، بالای منوی پایین) با دکمهٔ نصب؛ iOS بعد از ۴ ثانیه راهنمای «Add to Home Screen»؛ بستن = ۷ روز سکوت (`localStorage pwa.dismiss`)؛ `updatefound` → toast نسخهٔ جدید.
+- `site.yml`: `cp -r site/pwa site_out/pwa`، مهر نسخهٔ SW، `_headers`: no-cache برای `/*` و `sw.js`، `Service-Worker-Allowed`, نوع مانیفست، آیکون‌ها ۷ روز.
+- محدودیت‌ها (صادقانه به کاربر): iOS نصب فقط از Safari و دستی؛ اعلان push نداریم؛ آفلاین فقط پوسته (داده نیاز به شبکه دارد).
+- تست `V147_SitePwaTest`.
