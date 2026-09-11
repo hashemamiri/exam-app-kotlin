@@ -18817,3 +18817,10 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 4. عنوان صفحهٔ سازنده مثل TopAppBar اپ: «ساخت آزمون» / «ویرایش آزمون» (و «چاپ آزمون» در حالت چاپ).
 - CSS مردهٔ `.m-quick*` و `.m-cards/.m-card*` حذف شد. دسکتاپ بی‌تغییر (همهٔ کلاس‌ها فقط داخل پوستهٔ موبایل ساخته می‌شوند).
 - تست `V153_SiteMobileAppParityTest`.
+
+## V154 — ورود/ثبت‌نام گوشی به سبک SignInScreen اپ
+
+- در گوشی (≤860px) وقتی کاربر وارد نشده، `render()` به‌جای لندینگ دسکتاپ `SiteMobile.paintAuth(root)` را می‌کشد (`app.js`). دسکتاپ بی‌تغییر (لندینگ + مودال).
+- آینهٔ `SignInScreen.kt`/`AuthIceComponents.kt`: پس‌زمینهٔ یخی (گرادیان E8F6FB→D0EBF7→BFE3F5، دیسک شعاعی، سه موج متحرک ۹s)، برف فقط در جریان بازیابی؛ خوش‌آمد (لوگوی ۸۴dp گرادیانی + «آزمون آنلاین» + دو دکمه + یادآوری دانش‌آموز)؛ کارت سفید ۲۴dp؛ تب‌های سگمنتی ۴۶dp با پیل لغزان (ورود: مدیر/معاون · معلم · دانش‌آموز؛ ثبت‌نام: معلم · مدیر/معاون)؛ فیلد ۵۲dp گوشهٔ ۱۴ با hint و supporting؛ دکمهٔ اصلی ۰۲۸۴C7 / خط‌دار؛ دکمه‌ها تا معتبر شدن ورودی غیرفعال (مثل `enabled=`)؛ OTP باکسی ۶..۸ رقم با فیلد مخفی؛ نوار مراحل بازیابی (ایمیل/کد بازیابی/رمز جدید)؛ متن‌ها عیناً اپ.
+- منطق همان API قبلی سایت (`api.signInWithPassword/sendLoginOtp/verifyLoginOtp/sendRegistrationOtp/verifyRegistrationOtp/completeTeacher/completeManager/sendRecoveryOtp/verifyRecoveryOtp/changePassword`) از طریق `ExamSite.auth` (login/currentProfile/requireEmail/logout). گوگل: همان `SiteExtras.googleButton` (OAuth redirect وب) با ظاهر یخی.
+- تست `V154_SiteMobileAuthTest`.

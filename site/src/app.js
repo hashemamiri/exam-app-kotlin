@@ -475,6 +475,8 @@
     /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
     if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }
     document.body.classList.remove('m-mode');
+    /* V154 — ورود/ثبت‌نام در گوشی به سبک SignInScreen اپ (پوستهٔ یخی) */
+    if (!user && window.SiteMobile && window.SiteMobile.authActive()) { closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }
     root.innerHTML = '';
     if (user && !user.requiresSetup) renderPanel(); else renderLanding();
   }
@@ -1178,6 +1180,7 @@
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,
     render: render, renderPage: renderPage, printExam: printExam, logout: doLogout,
-    __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); } /* برای تست خودکار بدون سرور */};
+    __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); },
+    auth: {keyReady: KEY_READY, login: function (u) { user = u; afterLogin(); }, currentProfile: currentProfile, requireEmail: requireEmail, drawCompletion: drawCompletion, logout: doLogout} /* برای تست خودکار بدون سرور */};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
