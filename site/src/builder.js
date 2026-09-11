@@ -115,38 +115,74 @@
   }
   function fileToDataUrl(file) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(file); }); }
 
-  /* ================================================================ آزمون‌های چاپی محلی (PrintExamStore) */
-  function printExams() { try { return JSON.parse(localStorage.getItem(LS_PRINT) || '[]') || []; } catch (e) { return []; } }
-  function savePrintExams(list) { localStorage.setItem(LS_PRINT, JSON.stringify(list)); }
-  function upsertPrintExam(rec) { var list = printExams().filter(function (x) { return x.id !== rec.id; }); rec.savedAt = Date.now(); list.unshift(rec); savePrintExams(list); }
+  /* ================================================================ V163 — آزمون‌های چاپی روی سرور (print_exams، جدا از exams)
+     قبلاً فقط در localStorage همین مرورگر بودند؛ حالا در جدول print_exams تا اپ/دسکتاپ/گوشی یکی باشند.
+     رکورد سرور: {id,title,subject,duration,questions:[public+key ادغام‌شده],source_exam_id,saved_at}. هزینه فقط هر تصویر جدید ۱۰۰۰ تومان. */
+  var LS_PRINT = 'examsite.printexams.v1';
+  var LS_PRINT_MIGRATED = 'examsite.printexams.migrated.v163';
+  function combinedQuestions(list) { var enc = encodeQuestions(list); return enc.publicQuestions.map(function (q, i) { var c = Object.assign({}, q, enc.answerKey[i] || {}); delete c.i; return c; }); }
+  function draftsFromCombined(arr) { return (Array.isArray(arr) ? arr : []).map(function (q) { return decodeQuestion(q, q); }); }
+  async function printExamsList() { var r = await S.rpcObj('native_print_exams_list_v163', {}); if (r && r.error) throw new Error(String(r.error)); return Array.isArray(r) ? r : []; }
+  async function printExamGet(id) { var r = await S.rpcObj('native_print_exam_get_v163', {p_id: id}); if (!r || r.error) throw new Error(r && r.error ? String(r.error) : 'آزمون چاپی پیدا نشد.'); return r; }
+  /* تصاویر data: باید قبل از ذخیرهٔ سرور آپلود شوند (مثل مسیر آنلاین) */
+  async function uploadPrintImages(questions, printId) {
+    var dataBlob = async function (u) { return await (await fetch(u)).blob(); };
+    for (var i = 0; i < questions.length; i++) {
+      var q = questions[i];
+      for (var k = 0; k < (q.images || []).length; k++) if (/^data:/.test(q.images[k].uri)) q.images[k].uri = await uploadImage(await dataBlob(q.images[k].uri), 'questions', printId);
+      for (var o = 0; o < (q.optionImages || []).length; o++) if (q.optionImages[o] && /^data:/.test(q.optionImages[o])) q.optionImages[o] = await uploadImage(await dataBlob(q.optionImages[o]), 'option_images', printId);
+      var ml = q.matchingLeftImages || [], mr = q.matchingRightImages || [];
+      for (var a = 0; a < ml.length; a++) if (ml[a] && /^data:/.test(ml[a])) ml[a] = await uploadImage(await dataBlob(ml[a]), 'matching_images', printId);
+      for (var b = 0; b < mr.length; b++) if (mr[b] && /^data:/.test(mr[b])) mr[b] = await uploadImage(await dataBlob(mr[b]), 'matching_images', printId);
+    }
+  }
+  function countNewImages(questions) { var n = 0; questions.forEach(function (q) { (q.images || []).forEach(function (m) { if (/^data:/.test(m.uri)) n++; }); ['optionImages', 'matchingLeftImages', 'matchingRightImages'].forEach(function (k) { (q[k] || []).forEach(function (u) { if (u && /^data:/.test(u)) n++; }); }); }); return n; }
+  async function printExamSave(rec, opts) {
+    opts = opts || {};
+    var newImgs = countNewImages(rec.questions);
+    if (newImgs > 0 && !opts.silent) { if (!(await S.confirmDlg('هزینهٔ تصاویر', fa(newImgs) + ' تصویر جدید در این آزمون چاپی هست؛ برای ذخیره روی سرور، به‌ازای هر تصویر ' + fa('1,000') + ' تومان (جمعاً ' + S.money(newImgs * 1000) + ') از کیف پول کسر می‌شود. سؤال‌ها و خود ذخیره رایگان است.', 'تأیید و ذخیره'))) return null; }
+    await uploadPrintImages(rec.questions, rec.id);
+    var payload = {id: rec.id, operation_id: S.uuid(), title: rec.title || '', subject: rec.subject || '', duration: parseInt(rec.duration, 10) || 0, questions: combinedQuestions(rec.questions), source_exam_id: rec.sourceExamId || null};
+    var raw = await S.rpcObj('native_print_exam_save_v163', {p_payload: payload});
+    if (raw && raw.error) { var m = String(raw.error); if (raw.balance != null && raw.required != null) m += '؛ موجودی ' + fa(raw.balance) + ' تومان و مبلغ لازم ' + fa(raw.required) + ' تومان است.'; throw new Error(m); }
+    return raw;
+  }
+  async function printExamDelete(id) { var r = await S.rpcObj('native_print_exam_delete_v163', {p_id: id}); if (r && r.error) throw new Error(String(r.error)); }
+  /* انتقال یک‌بارهٔ آزمون‌های چاپی قدیمیِ این مرورگر به سرور (بدون پرسش هزینه: تصاویر قدیمی data: آپلود و شمرده می‌شوند) */
+  async function migrateLocalPrintExams() {
+    var list = []; try { list = JSON.parse(localStorage.getItem(LS_PRINT) || '[]') || []; } catch (e) {}
+    if (!list.length) { try { localStorage.setItem(LS_PRINT_MIGRATED, '1'); } catch (e) {} return 0; }
+    if (localStorage.getItem(LS_PRINT_MIGRATED)) return 0;
+    var n = 0;
+    for (var i = 0; i < list.length; i++) { try { await printExamSave({id: list[i].id, title: list[i].title, subject: list[i].subject, duration: list[i].duration, questions: list[i].questions || [], sourceExamId: list[i].sourceExamId}, {silent: true}); n++; } catch (e) { console.warn('print migrate', e); return n; } }
+    try { localStorage.setItem(LS_PRINT_MIGRATED, '1'); localStorage.removeItem(LS_PRINT); } catch (e) {}
+    if (n) toast(fa(n) + ' آزمون چاپی این مرورگر به سرور منتقل شد.', 'ok');
+    return n;
+  }
   function printExamsSection(refresh) {
-    var list = printExams();
-    var card = el('div', {class: 'card', style: 'margin-top:20px'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🖨 آزمون‌های چاپی (فقط روی این مرورگر)'}), el('button', {class: 'btn soft sm', text: '➕ آزمون چاپی جدید', onclick: function () { S.go('builder', {mode: 'print'}); }})])]);
-    if (!list.length) { card.appendChild(S.emptyBox('🖨', 'آزمون چاپی ذخیره نشده است. آزمون چاپی بدون کد و بدون سرور است و برای چاپ برگه ساخته می‌شود.')); return card; }
-    card.appendChild(el('table', {class: 'tbl'}, [
-      el('thead', {}, [el('tr', {}, ['عنوان', 'درس', 'سؤال', 'بارم', 'ذخیره', ''].map(function (h) { return el('th', {text: h}); }))]),
-      el('tbody', {}, list.map(function (r) {
-        var total = (r.questions || []).reduce(function (s, q) { return s + (Number(q.score) || 0); }, 0);
-        return el('tr', {}, [el('td', {html: '<b>' + esc(r.title || 'بدون عنوان') + '</b>'}), el('td', {text: r.subject || '—'}), el('td', {text: fa((r.questions || []).length)}), el('td', {text: fa(S.fmtScore(total))}), el('td', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(new Date(r.savedAt).toISOString())}),
-          el('td', {}, [el('div', {class: 'acts'}, [
-            el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
-            el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: function () { var st = {title: r.title, subject: r.subject, duration: r.duration, questions: r.questions}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: r.title}); }}),
-            el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» از این مرورگر حذف می‌شود.', 'حذف', true))) return; savePrintExams(printExams().filter(function (x) { return x.id !== r.id; })); toast('حذف شد.', 'ok'); refresh(); }})
-          ])])]);
-      }))
-    ]));
+    var card = el('div', {class: 'card', style: 'margin-top:20px'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🖨 آزمون‌های چاپی'}), el('button', {class: 'btn soft sm', text: '➕ آزمون چاپی جدید', onclick: function () { S.go('builder', {mode: 'print'}); }})])]);
+    var body = el('div'); card.appendChild(body); S.loading(body);
+    (async function () {
+      try {
+        await migrateLocalPrintExams();
+        var list = await printExamsList();
+        body.innerHTML = '';
+        if (!list.length) { body.appendChild(S.emptyBox('🖨', 'آزمون چاپی ذخیره نشده است. آزمون چاپی بدون کد و بدون مخاطب است و برای چاپ برگه ساخته می‌شود؛ روی سرور ذخیره می‌شود و در اپ و سایت یکی است.')); return; }
+        body.appendChild(el('table', {class: 'tbl'}, [
+          el('thead', {}, [el('tr', {}, ['عنوان', 'درس', 'سؤال', 'ذخیره', ''].map(function (h) { return el('th', {text: h}); }))]),
+          el('tbody', {}, list.map(function (r) {
+            return el('tr', {}, [el('td', {html: '<b>' + esc(r.title || 'بدون عنوان') + '</b>'}), el('td', {text: r.subject || '—'}), el('td', {text: fa(r.question_count || 0)}), el('td', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(new Date(r.saved_at || Date.now()).toISOString())}),
+              el('td', {}, [el('div', {class: 'acts'}, [
+                el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
+                el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title}); } catch (e) { toast(errMsg(e), 'err'); } }}),
+                el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})
+              ])])]);
+          }))
+        ]));
+      } catch (e) { S.showErr(body, e); }
+    })();
     return card;
   }
-
-  /* ================================================================ صفحهٔ سازنده */
-  var state = null;
-  function blankState(mode) {
-    return {mode: mode || 'online', examId: null, code: null, title: '', subject: '', duration: '', opensAt: '', closesAt: '', questions: [], shuffleQuestions: false, shuffleOptions: false, negativeMarking: '', teacherMessage: '', attemptsAllowed: 1, attemptOnTimeout: false, gradePolicy: 'last', attemptCooldown: '',
-      audienceMode: 'all', audienceClasses: [], audienceStudents: [], audienceSchools: [], availableClasses: [], availableStudents: [], availableSchools: [], selected: 0, dirty: false, printId: null, bankEdit: null};
-  }
-  function isoToLocal(iso) { if (!iso) return ''; try { var d = new Date(iso); var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); } catch (e) { return ''; } }
-  function localToIso(v) { if (!v) return null; var d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString(); }
-  function saveDraft() { if (!state || state.bankEdit) return; try { localStorage.setItem(LS_DRAFT, JSON.stringify(state)); } catch (e) {} }
 
   async function page(c, arg) {
     arg = arg || {};
@@ -156,7 +192,7 @@
       if (arg.importPkg) { var pk = arg.importPkg; state = blankState('online'); state.title = pk.title; state.subject = pk.subject; state.duration = pk.duration ? String(pk.duration) : ''; state.negativeMarking = pk.negativeMarking ? String(pk.negativeMarking) : ''; state.attemptCooldown = pk.attemptCooldown ? String(pk.attemptCooldown) : ''; state.shuffleQuestions = pk.shuffleQuestions; state.shuffleOptions = pk.shuffleOptions; state.teacherMessage = pk.teacherMessage; state.attemptsAllowed = pk.attemptsAllowed; state.attemptOnTimeout = pk.attemptOnTimeout; state.gradePolicy = pk.gradePolicy; state.opensAt = isoToLocal(pk.opensAtIso); state.closesAt = isoToLocal(pk.closesAtIso); state.questions = pk.questions.map(function (q) { var d = decodeQuestion(q, q); d.id = uuid(); return d; }); state.selected = 0; state.dirty = true; }
       else if (arg.bankEdit) { state = blankState('online'); state.bankEdit = {id: arg.bankEdit.id, cats: arg.bankEdit.cats || []}; state.subject = arg.bankEdit.subject || ''; state.title = 'سؤال بانک'; if (arg.bankEdit.question) state.questions = [decodeQuestion(arg.bankEdit.question, arg.bankEdit.question)]; else state.questions = [newQuestion('multiple')]; state.selected = 0; }
       else if (arg.examId) state = await loadOnline(arg.examId);
-      else if (arg.printId) { var rec = printExams().filter(function (x) { return x.id === arg.printId; })[0]; if (!rec) throw new Error('آزمون چاپی پیدا نشد.'); state = blankState('print'); state.printId = rec.id; state.title = rec.title || ''; state.subject = rec.subject || ''; state.duration = rec.duration || ''; state.questions = (rec.questions || []).map(function (q) { return q; }); }
+      else if (arg.printId) { var rec = await printExamGet(arg.printId); state = blankState('print'); state.printId = rec.id; state.sourceExamId = rec.source_exam_id || null; state.title = rec.title || ''; state.subject = rec.subject || ''; state.duration = rec.duration ? String(rec.duration) : ''; state.questions = draftsFromCombined(rec.questions); }
       else if (arg.mode === 'print') state = blankState('print');
       /* V158.1 — پیش‌نویس فقط وقتی برمی‌گردد که همان مسیر (آنلاین) باشد؛ پیش‌نویس چاپی نباید «آزمون جدید» آنلاین را به سازندهٔ چاپی ببرد (ExamApp.createExam: builderCameFromPrint=false) */
       else if (draft && draft.dirty && draft.mode !== 'print' && !draft.bankEdit && !arg.fresh && (await S.confirmDlg('پیش‌نویس ذخیره‌نشده', 'یک پیش‌نویس آزمون از قبل در این مرورگر مانده است («' + esc(draft.title || 'بدون عنوان') + '»، ' + fa((draft.questions || []).length) + ' سؤال). ادامه می‌دهید؟', 'ادامهٔ پیش‌نویس'))) state = draft;
@@ -338,7 +374,7 @@
       state.mode === 'print' && !state.bankEdit ? el('button', {class: 'btn light sm', text: '🏷 تنظیمات سربرگ', onclick: function () { S.openHeaderSettings(); }}) : null,
       state.bankEdit ? el('button', {class: 'btn light sm', text: '↩ بازگشت به بانک', onclick: function () { S.go('bank'); }}) : null,
       el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: function () { preview(); }}),
-      el('button', {class: 'btn sm', text: state.bankEdit ? '🏦 ذخیره در بانک' : state.mode === 'print' ? '💾 ذخیره روی مرورگر' : '☁ ذخیره در سرور', onclick: save})
+      el('button', {class: 'btn sm', text: state.bankEdit ? '🏦 ذخیره در بانک' : state.mode === 'print' ? '☁ ذخیره آزمون چاپی' : '☁ ذخیره در سرور', onclick: save})
     ]));
     /* V159 — مثل ExamBuilderScreen: آنلاین → عنوان/درس/مدت داخل «مشخصات آزمون» (ExamSettingsCard)؛ چاپی → بدون این فیلدها (نام هنگام ذخیره پرسیده می‌شود) */
     if (state.bankEdit) top.appendChild(el('div', {class: 'grid3'}, [subject]));
@@ -594,12 +630,13 @@
         if (state.mode === 'print') {
           /* V159 — مثل پنجرهٔ «ذخیره آزمون چاپی» اپ (askPrintName): نام آزمون پرسیده می‌شود */
           var suggested = (state.title || '').trim() || (state.subject || '').trim() || 'آزمون چاپی';
-          var name = await S.promptDlg('ذخیره آزمون چاپی', 'این آزمون روی همین مرورگر ذخیره می‌شود و در بخش چاپ آزمون دیده خواهد شد.', 'نام آزمون', suggested, 'ذخیره');
+          var name = await S.promptDlg('ذخیره آزمون چاپی', 'این آزمون روی سرور ذخیره می‌شود و در بخش چاپ آزمونِ اپ و سایت دیده خواهد شد. فقط تصاویر جدید هزینه دارند (هر تصویر ۱۰۰۰ تومان).', 'نام آزمون', suggested, 'ذخیره');
           if (name == null || !name.trim()) return;
           state.title = name.trim();
           var id = state.printId || uuid(); state.printId = id;
-          upsertPrintExam({id: id, title: state.title, subject: (state.subject || '').trim(), duration: state.duration, questions: state.questions});
-          state.dirty = false; saveDraft(); toast('آزمون «' + state.title + '» ذخیره شد ✓', 'ok'); return;
+          var pr = await printExamSave({id: id, title: state.title, subject: (state.subject || '').trim(), duration: state.duration, questions: state.questions, sourceExamId: state.sourceExamId || null});
+          if (!pr) return;
+          state.dirty = false; saveDraft(); toast('آزمون «' + state.title + '» ذخیره شد ✓' + (pr.cost ? ' · هزینهٔ تصاویر: ' + S.money(pr.cost) : ''), 'ok'); return;
         }
         if (state.audienceMode === 'classes' && !state.audienceClasses.length) throw new Error('حداقل یک کلاس انتخاب کنید.');
         if (state.audienceMode === 'students' && !state.audienceStudents.length) throw new Error('حداقل یک دانش‌آموز انتخاب کنید.');
@@ -697,5 +734,5 @@
   function sel(label, val, opts, on) { var s = el('select'); opts.forEach(function (o) { var op = el('option', {value: o[0], text: o[1]}); if (o[0] === val) op.selected = true; s.appendChild(op); }); s.addEventListener('change', function () { on(s.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), s]); }
   function chk(label, val, on) { var c = el('input', {type: 'checkbox'}); c.checked = !!val; c.addEventListener('change', function () { on(c.checked); }); return el('label', {class: 'row', style: 'gap:6px;font-size:14px'}, [c, label]); }
 
-  window.SiteBuilder = {page: page, printExamsSection: printExamsSection, encodeQuestions: encodeQuestions, decodeQuestion: decodeQuestion, newQuestion: newQuestion, toServerExam: toServerExam};
+  window.SiteBuilder = {page: page, printExamsSection: printExamsSection, printExamsList: printExamsList, printExamGet: printExamGet, printExamSave: printExamSave, printExamDelete: printExamDelete, draftsFromCombined: draftsFromCombined, migrateLocalPrintExams: migrateLocalPrintExams, encodeQuestions: encodeQuestions, decodeQuestion: decodeQuestion, newQuestion: newQuestion, toServerExam: toServerExam};
 })();

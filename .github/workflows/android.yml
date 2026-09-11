@@ -3,9 +3,9 @@ name: ساخت APK آزمایشی و Release Kotlin
 # وقتی کد اپ تغییر می‌کند (مثل V160.x: RemoteMediaBytes، x-amz-acl) باز شود تا APK جدید ساخته شود.
 # اجرای دستی همیشه: GitHub → Actions → این workflow → Run workflow.
 on:
-  # push:
-  #   branches: [main]
-  #   paths-ignore: ['site/**', 'docs/**', 'text/**', '.github/workflows/site.yml']
+  push:
+    branches: [main]
+    paths-ignore: ['site/**', 'docs/**', 'text/**', '.github/workflows/site.yml']
   workflow_dispatch:
 
 permissions:

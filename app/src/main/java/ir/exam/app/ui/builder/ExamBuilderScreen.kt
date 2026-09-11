@@ -626,7 +626,11 @@ fun ExamBuilderScreen(
     // V86.8 — نام‌گذاری و ذخیرهٔ محلیِ آزمونِ چاپی.
     if (printMode && askPrintName) {
         val nameContext = androidx.compose.ui.platform.LocalContext.current
-        val printStore = remember { ir.exam.app.data.local.PrintExamStore(nameContext) }
+        // V163 — روی سرور (print_exams) ذخیره می‌شود؛ فقط تصاویر جدید ۱۰۰۰ تومان.
+        val printRepo = remember { ir.exam.app.data.repository.SupabasePrintExamRepository(nameContext) }
+        var printSaving by remember { mutableStateOf(false) }
+        var printSaveErr by remember { mutableStateOf<String?>(null) }
+        val pendingImages = remember(state.questions) { printRepo.pendingImageCount(state.questions) }
         val suggested = state.title.trim()
             .ifBlank { state.subject.trim() }
             .ifBlank { "آزمون چاپی" }
@@ -638,7 +642,13 @@ fun ExamBuilderScreen(
             title = { Text("ذخیره آزمون چاپی") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("این آزمون روی همین دستگاه ذخیره می‌شود و در بخش چاپ آزمون دیده خواهد شد.")
+                    Text("این آزمون در حساب شما (سرور) ذخیره می‌شود و در اپ و سایت، بخش «چاپ آزمون»، دیده خواهد شد.")
+                    if (pendingImages > 0) Text(
+                        "این آزمون $pendingImages تصویر جدید دارد؛ هزینهٔ آپلود هر تصویر ۱۰۰۰ تومان (جمعاً ${pendingImages * 1000} تومان) از کیف پول کم می‌شود.",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    printSaveErr?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    if (printSaving) Text("در حال ذخیره…")
                     OutlinedTextField(
                         value = printExamName,
                         onValueChange = { printExamName = it },
@@ -650,19 +660,28 @@ fun ExamBuilderScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = printExamName.isNotBlank() && state.questions.isNotEmpty(),
+                    enabled = printExamName.isNotBlank() && state.questions.isNotEmpty() && !printSaving,
                     onClick = {
-                        printStore.save(
-                            ir.exam.app.data.local.PrintExamRecord(
-                                id = state.examId ?: "local-" + System.currentTimeMillis(),
+                        printSaving = true; printSaveErr = null
+                        scope.launch {
+                            val rec = ir.exam.app.data.local.PrintExamRecord(
+                                id = state.examId ?: java.util.UUID.randomUUID().toString(),
                                 title = printExamName.trim(),
                                 subject = state.subject.trim(),
                                 questions = state.questions,
                                 savedAt = System.currentTimeMillis()
                             )
-                        )
-                        askPrintName = false
-                        printSavedNote = "آزمون «" + printExamName.trim() + "» ذخیره شد ✓"
+                            runCatching { printRepo.save(rec) }
+                                .onSuccess { r ->
+                                    val reloaded = runCatching { printRepo.get(r.id) }.getOrNull()
+                                    viewModel.applyPrintSaved(r.id, reloaded?.questions ?: state.questions)
+                                    askPrintName = false
+                                    printSavedNote = "آزمون «" + printExamName.trim() + "» ذخیره شد ✓" +
+                                        (if (r.costToman > 0) "\n${r.billedImages} تصویر جدید، ${r.costToman} تومان از کیف پول کم شد." else "")
+                                }
+                                .onFailure { printSaveErr = it.message ?: "ذخیره ناموفق بود." }
+                            printSaving = false
+                        }
                     }
                 ) { Text("ذخیره") }
             },

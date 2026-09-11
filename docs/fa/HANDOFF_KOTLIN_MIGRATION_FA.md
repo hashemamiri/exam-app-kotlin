@@ -18912,3 +18912,20 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - **قاعده:** هر تغییری در assets/print یا formula.html → hash عوض می‌شود و مرورگرها خودکار نسخهٔ تازه می‌گیرند؛ فایل engines باید همراه index در Git بماند (Pages از مخزن می‌سازد).
 - **«تنظیمات» گوشی** (`mobile.js` → `settingsScreen`): آینهٔ `ProfileSettingsScreen(destination=SETTINGS)`: چیپ ظاهر/داده‌ها/درباره. ظاهر در `localStorage` کلید `examsite.appearance.v1` (themeMode, fontScale, appFont, palette, depth, persianDigits) و با `applyAppearance()` روی `:root` اعمال می‌شود: کلاس `m-dark`، متغیرهای `--m-acc/--m-acc2` (همان رنگ‌های `NeumorphicPalette.accentColors`)، `--m-depth` (سایه‌های neo با `calc(var(--m-depth)/2)`)، `--m-font`، `--m-scale`. داده‌ها: معلم `SiteExtras.backupCard()`؛ مدیر `native_manager_export_backup_v61` → `school-backup.json`؛ دانش‌آموز پیام اپ. درباره: نشانی/حالت PWA، بارگذاری دوباره، لینک آخرین APK.
 - تست: `V162_SiteSpeedSettingsTest`.
+
+
+## V163 — آزمون‌های چاپی روی سرور + اصلاحات سایت گوشی
+
+**چرا:** آزمون‌های چاپی در اپ (`PrintExamStore` روی SharedPreferences) و در سایت (`localStorage`) جدا بودند و هیچ‌کدام دیگری را نمی‌دید. حالا یک منبع: جدول `public.print_exams`.
+
+**پایگاه داده (باید اعمال شود):** `supabase/migrations/20260911_native_print_exams_v163.sql`
+- جدول `print_exams(id uuid, teacher_id, title, subject, duration, questions jsonb, source_exam_id, billed_images jsonb, …)` + RLS (فقط مالک).
+- RPCها: `native_print_exams_list_v163()`, `native_print_exam_get_v163(p_id)`, `native_print_exam_save_v163(p_payload)`, `native_print_exam_delete_v163(p_id)`.
+- `save`: هر URL تصویر http که قبلاً در `billed_images` نبوده ۱۰۰۰ تومان از کیف پول کم می‌کند (idempotent با `native_exam_operations`، exam_id = `print:<id>`)؛ `data:image` رد می‌شود؛ خروجی `{ok,id,billed_images,cost,balance}` یا `{error,balance,required}`.
+- اعمال: `supabase db push` یا کپی محتوای فایل در SQL Editor داشبورد. **بدون این مهاجرت، بخش «چاپ آزمون» در اپ و سایت خطای «function … does not exist» می‌دهد.**
+
+**اپ:** `data/repository/SupabasePrintExamRepository.kt` (list/get/save/delete + `pendingImageCount` + انتقال یک‌بارهٔ رکوردهای قدیمی `PrintExamStore` به سرور). سؤال‌ها به شکل بستهٔ .azmoon (public+key ادغام‌شده) ذخیره و با `ExamQuestionCodec.decode(combined, combined)` بازیابی می‌شوند. تصاویر محلی قبل از ذخیره با `SupabaseQuestionImageUploader.uploadPending` آپلود می‌شوند. کاربران: `ExamApp.openLocalPrintExam` (ناهمگام)، `ExamBuilderScreen` (پنجرهٔ «ذخیره آزمون چاپی» با پیام هزینه)، `TeacherDashboardScreen` (پنجرهٔ آزمون‌های چاپی)، `ExamPrintCenterScreen` (فهرست/حذف/نسخهٔ چاپی از آزمون آنلاین). `PrintExamStore.kt` فقط برای مهاجرت باقی مانده.
+
+**سایت:** `builder.js` → توابع `printExamsList/Get/Save/Delete`, `uploadPrintImages`, `countNewImages` (تأیید هزینه), `migrateLocalPrintExams` (پرچم `examsite.printexams.migrated.v163`). `mobile.js`: حذف `bulkDialog`/افزودن گروهی و توابع کمکی نام کاربری؛ `closeOverlays()` پیش از `go()`; اسکرول کارت آزمون به دید; `printCenter`/`printExamsSheet` از سرور. `school.js`: `studentForm(..., afterCreate)`؛ در گوشی فهرست کلاس یک دکمهٔ + (→ ×) با دو کارت «افزودن موجود»/«افزودن جدید». `site.css`: داک ۶۴px، دکمهٔ + ۴۸px، `.m-sheet-fixed`, `.m-roster-*`.
+
+**CI:** `android.yml` push باز (کد اپ تغییر کرده). تست‌ها: `V163_ServerPrintExamsTest`؛ V157/V158/V161 به‌روز شدند.

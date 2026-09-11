@@ -63,10 +63,20 @@ fun ExamPrintCenterScreen(
         ir.exam.app.data.local.PrintHeaderStore(context.applicationContext)
     }
     // V86.8 — آزمون‌های چاپیِ ذخیره‌شده روی دستگاه، کنارِ آزمون‌های سرور.
-    val printExamStore = remember(context.applicationContext) {
-        ir.exam.app.data.local.PrintExamStore(context.applicationContext)
+    // V163 — آزمون‌های چاپی روی سرور (print_exams) تا اپ و سایت یکی باشند.
+    val printRepo = remember(context.applicationContext) {
+        ir.exam.app.data.repository.SupabasePrintExamRepository(context.applicationContext)
     }
-    var localExams by remember { mutableStateOf(printExamStore.list()) }
+    var localExams by remember { mutableStateOf<List<ir.exam.app.data.repository.SupabasePrintExamRepository.Summary>>(emptyList()) }
+    var localLoading by remember { mutableStateOf(true) }
+    var localError by remember { mutableStateOf<String?>(null) }
+    suspend fun reloadLocal() {
+        localLoading = true
+        runCatching { printRepo.list() }
+            .onSuccess { localExams = it; localError = null }
+            .onFailure { localError = sanitizePrintError(it) }
+        localLoading = false
+    }
     // V129 — آزمونی که کاربر روی سطلش زده و منتظر تأیید حذف است (id، عنوان).
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     var printStatus by remember { mutableStateOf<String?>(null) }
@@ -86,7 +96,7 @@ fun ExamPrintCenterScreen(
     LaunchedEffect(Unit) {
         viewModel.load()
         // بازگشت از آزمون‌ساز ممکن است آزمونِ چاپیِ تازه‌ای ساخته باشد
-        localExams = printExamStore.list()
+        reloadLocal()
     }
 
     // V101 — مداد روی کارتِ آزمونِ آنلاین: «نسخهٔ چاپی» از آن آزمون می‌سازد
@@ -123,9 +133,14 @@ fun ExamPrintCenterScreen(
                     savedAt = System.currentTimeMillis(),
                     sourceExamId = exam.id
                 )
-                printExamStore.save(rec)
-                localExams = printExamStore.list()
-                onOpenLocalPrintExam(rec.id)
+                // V163 — روی سرور؛ تصاویر آزمون آنلاین قبلاً URL هستند → هزینهٔ تازه‌ای ندارد
+                val saved = runCatching { printRepo.save(rec) }.getOrElse {
+                    printStatusIsError = true
+                    printStatus = sanitizePrintError(it)
+                    return@launch
+                }
+                reloadLocal()
+                onOpenLocalPrintExam(saved.id)
             } finally {
                 copyLoading = false
                 printStatus = null
@@ -159,11 +174,12 @@ fun ExamPrintCenterScreen(
                 else MaterialTheme.colorScheme.primary
             )
         }
-        if (state.loading || copyLoading) {
+        if (state.loading || copyLoading || localLoading) {
             CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
         }
+        localError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         // V113 — فهرست اصلی فقط آزمون‌های چاپی است (آنلاین‌ها در پنجرهٔ خودشان).
-        if (localExams.isEmpty() && !state.loading) {
+        if (localExams.isEmpty() && !state.loading && !localLoading) {
             Text("هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.")
         }
         pendingDelete?.let { (delId, delTitle) ->
@@ -173,9 +189,12 @@ fun ExamPrintCenterScreen(
                 text = { Text("آزمون «${delTitle.ifBlank { "آزمون چاپی" }}» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.") },
                 confirmButton = {
                     TextButton(onClick = {
-                        printExamStore.delete(delId)
-                        localExams = printExamStore.list()
                         pendingDelete = null
+                        scope.launch {
+                            runCatching { printRepo.delete(delId) }
+                                .onFailure { printStatusIsError = true; printStatus = sanitizePrintError(it) }
+                            reloadLocal()
+                        }
                     }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
                 },
                 dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("انصراف") } }
@@ -201,7 +220,7 @@ fun ExamPrintCenterScreen(
                             )
                             AssistChip(onClick = {}, label = { Text("چاپی") })
                         }
-                        Text("درس: ${rec.subject.ifBlank { "—" }} · ${rec.questions.size} سؤال")
+                        Text("درس: ${rec.subject.ifBlank { "—" }} · ${rec.questionCount} سؤال")
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)

@@ -99,8 +99,9 @@ fun TeacherDashboardScreen(
     var expandedExamId by remember { mutableStateOf<String?>(null) }
     // V113 — پنجرهٔ کارت‌های آزمون‌های چاپی (ذخیره‌شده روی دستگاه)
     var printExamsOpen by remember { mutableStateOf(false) }
-    val printExamStore = remember(context.applicationContext) {
-        ir.exam.app.data.local.PrintExamStore(context.applicationContext)
+    // V163 — از سرور (print_exams) خوانده می‌شود
+    val printRepo = remember(context.applicationContext) {
+        ir.exam.app.data.repository.SupabasePrintExamRepository(context.applicationContext)
     }
 
     LaunchedEffect(refreshKey) { viewModel.load() }
@@ -275,15 +276,22 @@ fun TeacherDashboardScreen(
     // V113.2 — پنجرهٔ «آزمون‌های چاپی»: کارت‌های ذخیره‌شده روی دستگاه؛ لمس هر
     // کارت، ساختِ آزمونِ آنلاین با همان سؤال‌ها را باز می‌کند.
     if (printExamsOpen) {
-        val printExams = remember(printExamsOpen) { printExamStore.list() }
+        var printExams by remember(printExamsOpen) { mutableStateOf<List<ir.exam.app.data.repository.SupabasePrintExamRepository.Summary>?>(null) }
+        var printErr by remember(printExamsOpen) { mutableStateOf<String?>(null) }
+        LaunchedEffect(printExamsOpen) {
+            runCatching { printRepo.list() }.onSuccess { printExams = it }.onFailure { printErr = it.message; printExams = emptyList() }
+        }
         AlertDialog(
             onDismissRequest = { printExamsOpen = false },
             title = { Text("آزمون‌های چاپی") },
             text = {
-                if (printExams.isEmpty()) Text("هنوز آزمون چاپی‌ای ذخیره نشده است. از بخش «چاپ آزمون» بسازید.")
+                val list = printExams
+                if (list == null) Text("در حال دریافت…")
+                else if (printErr != null) Text(printErr.orEmpty(), color = MaterialTheme.colorScheme.error)
+                else if (list.isEmpty()) Text("هنوز آزمون چاپی‌ای ذخیره نشده است. از بخش «چاپ آزمون» بسازید.")
                 else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("با انتخاب هر آزمون، آزمون آنلاین جدیدی با همان سؤال‌ها ساخته می‌شود.", style = MaterialTheme.typography.bodySmall)
-                    PrintExamCards(printExams) { printExamsOpen = false; onOpenPrintExam(it) }
+                    PrintExamCards(list) { printExamsOpen = false; onOpenPrintExam(it) }
                 }
             },
             confirmButton = { TextButton(onClick = { printExamsOpen = false }) { Text("بستن") } }
@@ -333,7 +341,7 @@ private fun ExamCardAction(
 /** V113.2 — کارت‌های آزمون‌های چاپیِ دستگاه (پنجرهٔ «آزمون‌های چاپی»). */
 @Composable
 private fun PrintExamCards(
-    printExams: List<ir.exam.app.data.local.PrintExamRecord>,
+    printExams: List<ir.exam.app.data.repository.SupabasePrintExamRepository.Summary>,
     onPick: (String) -> Unit
 ) {
     LazyColumn(
@@ -350,7 +358,7 @@ private fun PrintExamCards(
                     Icon(Icons.Outlined.Print, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f)) {
                         Text(rec.title.ifBlank { "آزمون چاپی" }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questions.size} سؤال", style = MaterialTheme.typography.bodySmall)
+                        Text("${rec.subject.ifBlank { "بدون درس" }} · ${rec.questionCount} سؤال", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

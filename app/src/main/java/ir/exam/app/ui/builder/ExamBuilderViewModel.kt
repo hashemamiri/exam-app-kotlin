@@ -714,6 +714,11 @@ class ExamBuilderViewModel(
         _state.update { it.copy(bankQuestions = bank.questions, bankCategories=bank.categories, bankLoading = false) }
     }
 
+    /** V163 — پس از ذخیرهٔ آزمون چاپی روی سرور: شناسه و سؤال‌های با URL جایگزین می‌شوند. */
+    fun applyPrintSaved(id: String, questions: List<QuestionDraft>) {
+        _state.update { it.copy(examId = id, questions = questions) }
+    }
+
     fun save() = viewModelScope.launch {
         val saveState = state.value
         _state.update { it.copy(saving = true, error = null, savedCode = null, uploadProgress = null) }

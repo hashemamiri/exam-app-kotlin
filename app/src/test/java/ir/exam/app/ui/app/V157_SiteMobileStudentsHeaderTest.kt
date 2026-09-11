@@ -29,7 +29,7 @@ class V157_SiteMobileStudentsHeaderTest {
     fun `mobile students screen mirrors StudentsContent`() {
         val m = source("site/src/mobile.js")
         assertTrue("async function studentsScreen(c)" in m && "else if (page === 'students' && !mgr) studentsScreen(content);" in m)
-        assertTrue("text: 'Excel'" in m && "'افزودن گروهی دانش‌آموز'" in m && "'جست‌وجوی دانش‌آموز'" in m && "'فیلتر دانش‌آموزان'" in m)
+        assertTrue("text: 'Excel'" in m && "'افزودن گروهی دانش‌آموز'" !in m /* V163: حذف گروهی از گوشی */ && "'جست‌وجوی دانش‌آموز'" in m && "'فیلتر دانش‌آموزان'" in m)
         assertTrue("'جست‌وجوی نام، نام کاربری، پایه یا پدر'" in m && "'دانش‌آموزی یافت نشد.'" in m)
         assertTrue("text: 'حذف فیلترها'" in m && "text: 'اعمال فیلتر'" in m && "'فقط دانش‌آموزانی که عضو هیچ کلاسی نیستند'" in m)
         assertTrue("'اطلاعات ورودی اکسل'" in m && "'ذخیره Excel'" in m && "function suggestUsername(first, last, suffix)" in m)

@@ -264,9 +264,13 @@ private fun AuthenticatedExamApp(
 
     // V113 — بازکردنِ آزمونِ چاپیِ ذخیره‌شده روی دستگاه در آزمون‌سازِ چاپی؛ هم از
     // صفحهٔ «چاپ آزمون» و هم از پنجرهٔ «آزمون‌های چاپی» در «آزمون‌ها».
+    // V163 — رکورد از سرور (print_exams) خوانده می‌شود؛ بارگذاری ناهمگام.
+    val printExamRepo = remember(appContext) { ir.exam.app.data.repository.SupabasePrintExamRepository(appContext) }
+    val printOpenScope = rememberCoroutineScope()
     fun openLocalPrintExam(localId: String) {
         closeTransientNavigation()
-        val rec = ir.exam.app.data.local.PrintExamStore(appContext).get(localId)
+        printOpenScope.launch {
+        val rec = runCatching { printExamRepo.get(localId) }.getOrNull()
         if (rec != null) {
             editingExamId = null
             importedExam = ir.exam.app.ui.builder.ExamImportDraft(
@@ -287,6 +291,7 @@ private fun AuthenticatedExamApp(
             )
             builderCameFromPrint = true
             page = MainPage.BUILDER
+        }
         }
     }
 
@@ -475,7 +480,8 @@ private fun AuthenticatedExamApp(
                         // آزمون‌سازِ *آنلاین* باز می‌شود (ساخت آزمون آنلاین از روی
                         // آزمون چاپی)؛ رکورد چاپی دست‌نخورده می‌ماند.
                         onOpenPrintExam = { localId ->
-                            val rec = ir.exam.app.data.local.PrintExamStore(appContext).get(localId)
+                            printOpenScope.launch {
+                            val rec = runCatching { printExamRepo.get(localId) }.getOrNull()
                             if (rec != null) {
                                 closeTransientNavigation()
                                 editingExamId = null
@@ -496,6 +502,7 @@ private fun AuthenticatedExamApp(
                                 )
                                 builderCameFromPrint = false
                                 page = MainPage.BUILDER
+                            }
                             }
                         }
                     )

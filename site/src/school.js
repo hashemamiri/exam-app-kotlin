@@ -41,7 +41,7 @@
   }
 
   /* ---------------- فرم دانش‌آموز (ساخت / ویرایش) ---------------- */
-  async function studentForm(s, classes, defaultClass, done) {
+  async function studentForm(s, classes, defaultClass, done, afterCreate) {
     var isEdit = !!s;
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div');
     var first = inp({value: s ? (s.first_name || '') : ''}), last = inp({value: s ? (s.last_name || '') : ''});
@@ -73,6 +73,7 @@
           var r = await manageStudent({action: 'create', first_name: first.value.trim(), last_name: last.value.trim(), username: u, password: pw.value, gender: gender, class_id: cls.value || ''});
           if (!r.id) throw new Error('شناسه دانش‌آموز از سرور دریافت نشد.');
           await saveExtra(r.id, u, father.value.trim(), grade.value.trim(), field.value.trim());
+          if (afterCreate) { try { await afterCreate(r.id); } catch (e2) { console.warn(e2); } }
           bg.remove(); toast('حساب ساخته شد.', 'ok');
           credentialDlg('اطلاعات ورود دانش‌آموز', [{name: first.value.trim() + ' ' + last.value.trim(), username: u, password: pw.value}]);
         }
@@ -233,7 +234,21 @@
         var r = await Promise.all([S.rpc('class_roster', {p_class: k.id}), S.rpc('native_my_classes_v28', {})]);
         var classes = r[1] || [];
         body.innerHTML = '';
-        body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'muted', text: fa((r[0] || []).length) + ' نفر'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '📋 افزودن موجود', onclick: function () { addExistingDlg(k, load); }}), el('button', {class: 'btn light sm', text: '👥 گروهی', onclick: function () { bulkForm(classes, k.id, load); }}), el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, k.id, load); }})]));
+        if (window.SiteMobile && window.SiteMobile.active()) {
+          /* V163 — سایت گوشی مثل ClassRosterContent اپ: فقط یک دکمهٔ + وسط؛ لمس → دو کارت «افزودن موجود» / «افزودن جدید» (بدون گروهی) */
+          var addOpen = false, addWrap = el('div', {class: 'm-roster-add'});
+          function drawAdd() {
+            addWrap.innerHTML = '';
+            addWrap.appendChild(el('button', {class: 'btn m-btn m-roster-plus', text: addOpen ? '×' : '+', 'aria-label': addOpen ? 'بستن افزودن' : 'افزودن دانش‌آموز', onclick: function () { addOpen = !addOpen; drawAdd(); }}));
+            if (addOpen) addWrap.appendChild(el('div', {class: 'm-roster-opts'}, [
+              el('button', {class: 'm-roster-opt neo', text: 'افزودن موجود', onclick: function () { addOpen = false; drawAdd(); addExistingDlg(k, load); }}),
+              el('button', {class: 'm-roster-opt neo', text: 'افزودن جدید', onclick: function () { addOpen = false; drawAdd(); studentForm(null, classes, k.id, load); }})
+            ]));
+          }
+          drawAdd();
+          body.appendChild(el('div', {class: 'row', style: 'margin-bottom:6px'}, [el('span', {class: 'muted', text: fa((r[0] || []).length) + ' نفر'})]));
+          body.appendChild(addWrap);
+        } else body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'muted', text: fa((r[0] || []).length) + ' نفر'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '📋 افزودن موجود', onclick: function () { addExistingDlg(k, load); }}), el('button', {class: 'btn light sm', text: '👥 گروهی', onclick: function () { bulkForm(classes, k.id, load); }}), el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, k.id, load); }})]));
         body.appendChild(studentTable(r[0] || [], classes, {classId: k.id, refresh: load}));
       } catch (e) { S.showErr(body, e); }
     }
