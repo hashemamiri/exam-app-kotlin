@@ -32,8 +32,8 @@ class V157_SiteMobileStudentsHeaderTest {
         assertTrue("text: 'Excel'" in m && "'افزودن گروهی دانش‌آموز'" !in m /* V163: حذف گروهی از گوشی */ && "'جست‌وجوی دانش‌آموز'" in m && "'فیلتر دانش‌آموزان'" in m)
         assertTrue("'جست‌وجوی نام، نام کاربری، پایه یا پدر'" in m && "'دانش‌آموزی یافت نشد.'" in m)
         assertTrue("text: 'حذف فیلترها'" in m && "text: 'اعمال فیلتر'" in m && "'فقط دانش‌آموزانی که عضو هیچ کلاسی نیستند'" in m)
-        assertTrue("'اطلاعات ورودی اکسل'" in m && "'ذخیره Excel'" in m && "function suggestUsername(first, last, suffix)" in m)
-        assertTrue("'نام همه ردیف‌ها لازم است.'" in m && "'نام کاربری تکراری در ردیف‌ها وجود دارد.'" in m)
+        // V163 — افزودن گروهی (bulkDialog و suggestUsername) از سایت گوشی حذف شد؛ فقط ذخیرهٔ Excel مانده است
+        assertTrue("'ذخیره Excel'" in m && "function suggestUsername(" !in m && "bulkDialog" !in m)
         for (name in listOf("نام", "نام کاربری", "جنسیت", "پایه", "رشته", "نام پدر", "کلاس", "وضعیت")) assertTrue("['$name', function" in m)
         assertTrue("classPickDlg: classPickDlg, credentialDlg: credentialDlg" in source("site/src/school.js"))
     }
