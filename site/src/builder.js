@@ -334,7 +334,7 @@
       el('span', {class: 'grow'}),
       state.mode === 'online' && !state.bankEdit ? el('button', {class: 'btn light sm', text: '⚙ مشخصات آزمون', onclick: openSettings}) : null,
       state.bankEdit ? el('button', {class: 'btn light sm', text: '↩ بازگشت به بانک', onclick: function () { S.go('bank'); }}) : null,
-      el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: preview}),
+      el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: function () { preview(); }}),
       el('button', {class: 'btn sm', text: state.bankEdit ? '🏦 ذخیره در بانک' : state.mode === 'print' ? '💾 ذخیره روی مرورگر' : '☁ ذخیره در سرور', onclick: save})
     ]));
     top.appendChild(state.bankEdit ? el('div', {class: 'grid3'}, [subject]) : el('div', {class: 'grid3'}, [title, subject, duration]));
@@ -364,7 +364,7 @@
         ]);
         ul.appendChild(row);
       });
-      if (!state.questions.length) ul.appendChild(el('div', {class: 'empty', style: 'padding:20px', text: 'با دکمه‌های بالا سؤال اضافه کنید.'}));
+      if (!state.questions.length) ul.appendChild(el('div', {class: 'empty', style: 'padding:20px', text: (document.getElementById('m-shell') ? 'با دکمهٔ + سؤال اضافه کنید.' : 'با دکمه‌های بالا سؤال اضافه کنید.')}));
       list.appendChild(ul);
     }
     function drawEditor() {
@@ -536,11 +536,13 @@
       } catch (e) { S.showErr(body, e); }
     }
     /* --- پیش‌نمایش --- */
-    function preview() {
+    function preview(printMode) {
       if (!state.questions.length) return toast('حداقل یک سؤال اضافه کنید.', 'err');
       var payload = S.buildPrintPayload(toServerExam(state));
-      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : '', onSnapshot: function (snap) { applySnapshot(snap); }});
+      /* V156 — printMode: 'student' | 'teacher' (FAB چاپ در گوشی، مثل منوی «چاپ آزمون/چاپ با کلید» اپ) */
+      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : '', printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
+    window.__builderPreview = preview;
     function applySnapshot(snap) {
       /* بازگشت چیدمان/قالب‌بندی پیش‌نمایش به سؤال‌ها (مثل ExamBuilderViewModel.applyLayoutSnapshot) */
       try {

@@ -547,7 +547,7 @@ img,video,canvas,iframe{max-width:100%}
 .m-mode .modal .field input,.m-mode .modal .field select,.m-mode .modal .field textarea{border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
 
 /* ---- V152: سازندهٔ آزمون در گوشی (ExamBuilderScreen) ---- */
-.m-builder{padding-bottom:calc(190px + env(safe-area-inset-bottom)) !important}
+.m-builder{padding-bottom:calc(110px + env(safe-area-inset-bottom)) !important} /* V156: بدون داک */
 .m-builder .b-top .row .btn,.m-builder .b-top .row .chip{display:none}
 .m-builder .b-top .row .code{display:inline-block}
 .m-builder .b-top .grid3{grid-template-columns:1fr}
@@ -572,11 +572,13 @@ img,video,canvas,iframe{max-width:100%}
 .m-builder .tool-btn{width:44px;height:44px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
 .m-builder .tool-btn.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff}
 .m-builder .b-rich,.m-builder .b-opt input[type=text],.m-builder .b-opt select{border:0;background:var(--m-bg);box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff;border-radius:14px}
-.m-bfab{position:fixed;bottom:calc(102px + env(safe-area-inset-bottom));inset-inline:16px;z-index:41;display:flex;justify-content:space-between;align-items:center;pointer-events:none;direction:rtl}
+.m-bfab{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));inset-inline:16px;z-index:41;display:flex;justify-content:space-between;align-items:center;pointer-events:none;direction:rtl}
 .m-bfab .m-fab{pointer-events:auto;width:56px;height:56px;border:0;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(38,49,66,.25);background:var(--m-bg);color:var(--m-ink);transition:transform .2s}
 .m-bfab .m-fab .mi{width:28px;height:28px}
 .m-bfab .m-fab.save{background:#27A86B;color:#fff}
 .m-bfab .m-fab.prev{background:#dfe4ff;color:#3c3f9e}
+.m-bfab .m-fab.print{background:#e0e7ff;color:#3730a3} /* V156 primaryContainer */
+.m-builder .b-list .empty{color:#6b7280} /* V156 */
 .m-bfab .m-fab.add .m-fab-plus{font-size:30px;line-height:1;font-weight:400;transition:transform .25s}
 .m-bfab .m-fab.add.on .m-fab-plus{transform:rotate(45deg)}
 /* در گوشی داک پنل زیر FABهای سازنده می‌ماند؛ ذخیره چپ، + راست (اپ: CenterStart / CenterEnd در RTL) */
@@ -717,3 +719,6 @@ img,video,canvas,iframe{max-width:100%}
 .m-chip{font-size:12px;border:1px solid var(--m-dark);border-radius:8px;padding:2px 10px;color:var(--m-ink)}
 .m-pcard-m{font-size:13px}
 .m-pcard-acts{display:flex;justify-content:center;gap:6px}
+
+/* V156 */
+.bal-eye{border:0;background:rgba(255,255,255,.18);color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px}

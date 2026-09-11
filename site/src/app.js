@@ -34,6 +34,26 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function fa(n) { return String(n == null ? '' : n).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
   function en(s) { return String(s == null ? '' : s).replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); }).replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }); }
+  /* V156 — آینهٔ WalletScreen.faReason اپ: هیچ کلید انگلیسی wallet_tx.reason به کاربر نشان داده نمی‌شود */
+  function faReason(r) {
+    r = String(r || '');
+    function prov(x) { x = x.split(':')[0].toLowerCase(); return x === 'zarinpal' ? ' (زرین‌پال)' : x === 'idpay' ? ' (آیدی‌پی)' : ''; }
+    if (r.indexOf('payment:') === 0) return 'شارژ از درگاه' + prov(r.slice(8));
+    if (r.indexOf('exam:create:') === 0) return 'ساخت آزمون';
+    if (r.indexOf('exam:update:') === 0) return 'ویرایش آزمون';
+    if (r.indexOf('exam:duplicate:') === 0) return 'تکثیر آزمون';
+    if (r.indexOf('exam:print:teacher') === 0) return 'چاپ آزمون با کلید';
+    if (r.indexOf('exam:print:') === 0) return 'چاپ آزمون';
+    if (r.indexOf('backup:restore') === 0) return 'بازیابی نسخهٔ پشتیبان';
+    if (r.indexOf('school_transfer_to_teacher') === 0) return 'انتقال به کیف پول معلم';
+    if (r.indexOf('school_transfer_from_manager') === 0) return 'دریافت از مدیر مدرسه';
+    if (r.indexOf('wallet_transfer') === 0) return 'انتقال کیف پول';
+    if (r.indexOf('refund') === 0) return 'بازگشت وجه';
+    if (r.indexOf('topup') === 0) return 'شارژ کیف پول';
+    if (r.indexOf('admin') === 0 || r.indexOf('manual') === 0) return 'اصلاح توسط پشتیبانی';
+    if (r.indexOf('gift') === 0 || r.indexOf('bonus') === 0) return 'هدیه / اعتبار رایگان';
+    return 'تراکنش کیف پول';
+  }
   function money(n) { n = Number(n) || 0; return fa(n.toLocaleString('en-US')) + ' تومان'; }
   function fmtDate(iso) {
     if (!iso) return '—';
@@ -367,7 +387,8 @@
         try {
           if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs) {
             w.setExamData(payload);
-            setTimeout(function () { try { w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
+            /* V156 — مثل ExamHtmlPrintDialog: printMode=student/teacher یعنی بدون توقف در پیش‌نمایش، مستقیم چاپ */
+            setTimeout(function () { try { if (opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
             return;
           }
         } catch (e) {}
@@ -1010,15 +1031,18 @@
     try {
       var w = await api.wallet();
       c.innerHTML = '';
-      c.appendChild(el('div', {class: 'balance'}, [el('div', {style: 'opacity:.85', text: 'موجودی فعلی'}), el('div', {class: 'v num', text: money(w.balance)}), el('div', {style: 'font-size:13px;opacity:.85', text: 'تعرفه: هر سؤال آزمون ' + fa('1,000') + ' تومان · شارژ کیف پول در فاز ۴ سایت (فعلاً از برنامه)'})]));
-      var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '🧾 تراکنش‌ها'})]);
-      if (!w.transactions.length) card.appendChild(emptyBox('🧾', 'تراکنشی ثبت نشده است.'));
+      /* V156 — مثل WalletScreen اپ: کارت موجودی (با چشم مخفی‌کردن)، شارژ امن، گردش‌های اخیر با شرح فارسی */
+      var hidden = false, val = el('div', {class: 'v num', text: money(w.balance)});
+      var eye = el('button', {class: 'bal-eye', 'aria-label': 'مخفی‌کردن موجودی', text: '👁', onclick: function () { hidden = !hidden; val.textContent = hidden ? '••••••••' : money(w.balance); eye.textContent = hidden ? '🙈' : '👁'; }});
+      c.appendChild(el('div', {class: 'balance'}, [el('div', {class: 'row', style: 'align-items:center'}, [el('div', {class: 'grow', style: 'opacity:.9;font-weight:700', text: '👛 موجودی کیف پول'}), eye]), val, el('div', {style: 'font-size:13px;opacity:.85', text: 'هزینه هر سؤال: ' + fa('1,000') + ' تومان'})]));
+      if (window.SiteAdmin && user.role !== 'student') c.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
+      var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '🧾 گردش‌های اخیر'})]);
+      if (!w.transactions.length) card.appendChild(emptyBox('🧾', 'هنوز تراکنشی ثبت نشده است.'));
       else card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['تاریخ', 'شرح', 'مبلغ', 'مانده'].map(function (h) { return el('th', {text: h}); }))]),
-        el('tbody', {}, w.transactions.map(function (t) { var a = Number(t.amount) || 0; return el('tr', {}, [el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(t.created_at)}), el('td', {text: t.reason || '—'}), el('td', {class: 'tx-amt ' + (a >= 0 ? 'pos' : 'neg'), text: (a >= 0 ? '+' : '−') + money(Math.abs(a))}), el('td', {text: money(t.balance_after || 0)})]); }))
+        el('tbody', {}, w.transactions.map(function (t) { var a = Number(t.amount) || 0; return el('tr', {}, [el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(t.created_at)}), el('td', {text: faReason(t.reason)}), el('td', {class: 'tx-amt ' + (a >= 0 ? 'pos' : 'neg'), text: (a >= 0 ? '+ ' : '− ') + money(Math.abs(a))}), el('td', {text: money(t.balance_after || 0)})]); }))
       ]));
       c.appendChild(card);
-      if (window.SiteAdmin && user.role !== 'student') c.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
     } catch (e) { showErr(c, e); }
   }
 

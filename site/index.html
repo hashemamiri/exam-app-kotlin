@@ -575,7 +575,7 @@ img,video,canvas,iframe{max-width:100%}
 .m-mode .modal .field input,.m-mode .modal .field select,.m-mode .modal .field textarea{border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
 
 /* ---- V152: سازندهٔ آزمون در گوشی (ExamBuilderScreen) ---- */
-.m-builder{padding-bottom:calc(190px + env(safe-area-inset-bottom)) !important}
+.m-builder{padding-bottom:calc(110px + env(safe-area-inset-bottom)) !important} /* V156: بدون داک */
 .m-builder .b-top .row .btn,.m-builder .b-top .row .chip{display:none}
 .m-builder .b-top .row .code{display:inline-block}
 .m-builder .b-top .grid3{grid-template-columns:1fr}
@@ -600,11 +600,13 @@ img,video,canvas,iframe{max-width:100%}
 .m-builder .tool-btn{width:44px;height:44px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
 .m-builder .tool-btn.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff}
 .m-builder .b-rich,.m-builder .b-opt input[type=text],.m-builder .b-opt select{border:0;background:var(--m-bg);box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff;border-radius:14px}
-.m-bfab{position:fixed;bottom:calc(102px + env(safe-area-inset-bottom));inset-inline:16px;z-index:41;display:flex;justify-content:space-between;align-items:center;pointer-events:none;direction:rtl}
+.m-bfab{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));inset-inline:16px;z-index:41;display:flex;justify-content:space-between;align-items:center;pointer-events:none;direction:rtl}
 .m-bfab .m-fab{pointer-events:auto;width:56px;height:56px;border:0;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(38,49,66,.25);background:var(--m-bg);color:var(--m-ink);transition:transform .2s}
 .m-bfab .m-fab .mi{width:28px;height:28px}
 .m-bfab .m-fab.save{background:#27A86B;color:#fff}
 .m-bfab .m-fab.prev{background:#dfe4ff;color:#3c3f9e}
+.m-bfab .m-fab.print{background:#e0e7ff;color:#3730a3} /* V156 primaryContainer */
+.m-builder .b-list .empty{color:#6b7280} /* V156 */
 .m-bfab .m-fab.add .m-fab-plus{font-size:30px;line-height:1;font-weight:400;transition:transform .25s}
 .m-bfab .m-fab.add.on .m-fab-plus{transform:rotate(45deg)}
 /* در گوشی داک پنل زیر FABهای سازنده می‌ماند؛ ذخیره چپ، + راست (اپ: CenterStart / CenterEnd در RTL) */
@@ -745,6 +747,9 @@ img,video,canvas,iframe{max-width:100%}
 .m-chip{font-size:12px;border:1px solid var(--m-dark);border-radius:8px;padding:2px 10px;color:var(--m-ink)}
 .m-pcard-m{font-size:13px}
 .m-pcard-acts{display:flex;justify-content:center;gap:6px}
+
+/* V156 */
+.bal-eye{border:0;background:rgba(255,255,255,.18);color:#fff;width:34px;height:34px;border-radius:50%;font-size:16px}
 </style>
 </head>
 <body>
@@ -787,6 +792,26 @@ img,video,canvas,iframe{max-width:100%}
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function fa(n) { return String(n == null ? '' : n).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
   function en(s) { return String(s == null ? '' : s).replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); }).replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }); }
+  /* V156 — آینهٔ WalletScreen.faReason اپ: هیچ کلید انگلیسی wallet_tx.reason به کاربر نشان داده نمی‌شود */
+  function faReason(r) {
+    r = String(r || '');
+    function prov(x) { x = x.split(':')[0].toLowerCase(); return x === 'zarinpal' ? ' (زرین‌پال)' : x === 'idpay' ? ' (آیدی‌پی)' : ''; }
+    if (r.indexOf('payment:') === 0) return 'شارژ از درگاه' + prov(r.slice(8));
+    if (r.indexOf('exam:create:') === 0) return 'ساخت آزمون';
+    if (r.indexOf('exam:update:') === 0) return 'ویرایش آزمون';
+    if (r.indexOf('exam:duplicate:') === 0) return 'تکثیر آزمون';
+    if (r.indexOf('exam:print:teacher') === 0) return 'چاپ آزمون با کلید';
+    if (r.indexOf('exam:print:') === 0) return 'چاپ آزمون';
+    if (r.indexOf('backup:restore') === 0) return 'بازیابی نسخهٔ پشتیبان';
+    if (r.indexOf('school_transfer_to_teacher') === 0) return 'انتقال به کیف پول معلم';
+    if (r.indexOf('school_transfer_from_manager') === 0) return 'دریافت از مدیر مدرسه';
+    if (r.indexOf('wallet_transfer') === 0) return 'انتقال کیف پول';
+    if (r.indexOf('refund') === 0) return 'بازگشت وجه';
+    if (r.indexOf('topup') === 0) return 'شارژ کیف پول';
+    if (r.indexOf('admin') === 0 || r.indexOf('manual') === 0) return 'اصلاح توسط پشتیبانی';
+    if (r.indexOf('gift') === 0 || r.indexOf('bonus') === 0) return 'هدیه / اعتبار رایگان';
+    return 'تراکنش کیف پول';
+  }
   function money(n) { n = Number(n) || 0; return fa(n.toLocaleString('en-US')) + ' تومان'; }
   function fmtDate(iso) {
     if (!iso) return '—';
@@ -1120,7 +1145,8 @@ img,video,canvas,iframe{max-width:100%}
         try {
           if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs) {
             w.setExamData(payload);
-            setTimeout(function () { try { w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
+            /* V156 — مثل ExamHtmlPrintDialog: printMode=student/teacher یعنی بدون توقف در پیش‌نمایش، مستقیم چاپ */
+            setTimeout(function () { try { if (opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
             return;
           }
         } catch (e) {}
@@ -1763,15 +1789,18 @@ img,video,canvas,iframe{max-width:100%}
     try {
       var w = await api.wallet();
       c.innerHTML = '';
-      c.appendChild(el('div', {class: 'balance'}, [el('div', {style: 'opacity:.85', text: 'موجودی فعلی'}), el('div', {class: 'v num', text: money(w.balance)}), el('div', {style: 'font-size:13px;opacity:.85', text: 'تعرفه: هر سؤال آزمون ' + fa('1,000') + ' تومان · شارژ کیف پول در فاز ۴ سایت (فعلاً از برنامه)'})]));
-      var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '🧾 تراکنش‌ها'})]);
-      if (!w.transactions.length) card.appendChild(emptyBox('🧾', 'تراکنشی ثبت نشده است.'));
+      /* V156 — مثل WalletScreen اپ: کارت موجودی (با چشم مخفی‌کردن)، شارژ امن، گردش‌های اخیر با شرح فارسی */
+      var hidden = false, val = el('div', {class: 'v num', text: money(w.balance)});
+      var eye = el('button', {class: 'bal-eye', 'aria-label': 'مخفی‌کردن موجودی', text: '👁', onclick: function () { hidden = !hidden; val.textContent = hidden ? '••••••••' : money(w.balance); eye.textContent = hidden ? '🙈' : '👁'; }});
+      c.appendChild(el('div', {class: 'balance'}, [el('div', {class: 'row', style: 'align-items:center'}, [el('div', {class: 'grow', style: 'opacity:.9;font-weight:700', text: '👛 موجودی کیف پول'}), eye]), val, el('div', {style: 'font-size:13px;opacity:.85', text: 'هزینه هر سؤال: ' + fa('1,000') + ' تومان'})]));
+      if (window.SiteAdmin && user.role !== 'student') c.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
+      var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '🧾 گردش‌های اخیر'})]);
+      if (!w.transactions.length) card.appendChild(emptyBox('🧾', 'هنوز تراکنشی ثبت نشده است.'));
       else card.appendChild(el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['تاریخ', 'شرح', 'مبلغ', 'مانده'].map(function (h) { return el('th', {text: h}); }))]),
-        el('tbody', {}, w.transactions.map(function (t) { var a = Number(t.amount) || 0; return el('tr', {}, [el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(t.created_at)}), el('td', {text: t.reason || '—'}), el('td', {class: 'tx-amt ' + (a >= 0 ? 'pos' : 'neg'), text: (a >= 0 ? '+' : '−') + money(Math.abs(a))}), el('td', {text: money(t.balance_after || 0)})]); }))
+        el('tbody', {}, w.transactions.map(function (t) { var a = Number(t.amount) || 0; return el('tr', {}, [el('td', {class: 'muted', style: 'font-size:12px', text: fmtDate(t.created_at)}), el('td', {text: faReason(t.reason)}), el('td', {class: 'tx-amt ' + (a >= 0 ? 'pos' : 'neg'), text: (a >= 0 ? '+ ' : '− ') + money(Math.abs(a))}), el('td', {text: money(t.balance_after || 0)})]); }))
       ]));
       c.appendChild(card);
-      if (window.SiteAdmin && user.role !== 'student') c.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
     } catch (e) { showErr(c, e); }
   }
 
@@ -2274,7 +2303,7 @@ img,video,canvas,iframe{max-width:100%}
       el('span', {class: 'grow'}),
       state.mode === 'online' && !state.bankEdit ? el('button', {class: 'btn light sm', text: '⚙ مشخصات آزمون', onclick: openSettings}) : null,
       state.bankEdit ? el('button', {class: 'btn light sm', text: '↩ بازگشت به بانک', onclick: function () { S.go('bank'); }}) : null,
-      el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: preview}),
+      el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: function () { preview(); }}),
       el('button', {class: 'btn sm', text: state.bankEdit ? '🏦 ذخیره در بانک' : state.mode === 'print' ? '💾 ذخیره روی مرورگر' : '☁ ذخیره در سرور', onclick: save})
     ]));
     top.appendChild(state.bankEdit ? el('div', {class: 'grid3'}, [subject]) : el('div', {class: 'grid3'}, [title, subject, duration]));
@@ -2304,7 +2333,7 @@ img,video,canvas,iframe{max-width:100%}
         ]);
         ul.appendChild(row);
       });
-      if (!state.questions.length) ul.appendChild(el('div', {class: 'empty', style: 'padding:20px', text: 'با دکمه‌های بالا سؤال اضافه کنید.'}));
+      if (!state.questions.length) ul.appendChild(el('div', {class: 'empty', style: 'padding:20px', text: (document.getElementById('m-shell') ? 'با دکمهٔ + سؤال اضافه کنید.' : 'با دکمه‌های بالا سؤال اضافه کنید.')}));
       list.appendChild(ul);
     }
     function drawEditor() {
@@ -2476,11 +2505,13 @@ img,video,canvas,iframe{max-width:100%}
       } catch (e) { S.showErr(body, e); }
     }
     /* --- پیش‌نمایش --- */
-    function preview() {
+    function preview(printMode) {
       if (!state.questions.length) return toast('حداقل یک سؤال اضافه کنید.', 'err');
       var payload = S.buildPrintPayload(toServerExam(state));
-      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : '', onSnapshot: function (snap) { applySnapshot(snap); }});
+      /* V156 — printMode: 'student' | 'teacher' (FAB چاپ در گوشی، مثل منوی «چاپ آزمون/چاپ با کلید» اپ) */
+      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : '', printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
+    window.__builderPreview = preview;
     function applySnapshot(snap) {
       /* بازگشت چیدمان/قالب‌بندی پیش‌نمایش به سؤال‌ها (مثل ExamBuilderViewModel.applyLayoutSnapshot) */
       try {
@@ -3316,9 +3347,9 @@ img,video,canvas,iframe{max-width:100%}
   function topUpCard(balance, refresh) {
     var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: 200000, style: 'direction:ltr'});
     var msg = el('div');
-    var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ کیف پول'}),
+    var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), el('p', {class: 'muted', style: 'font-size:13px;margin:0 0 10px', text: 'پرداخت فقط در سرور تأیید می‌شود؛ حداقل ۱۰۰٬۰۰۰ · مضرب ۱۰٬۰۰۰ · سقف موجودی ۱۰٬۰۰۰٬۰۰۰ تومان.'}),
       el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:8px'}, [100000, 200000, 500000, 1000000].map(function (v) { return el('button', {class: 'chip', style: 'cursor:pointer', text: S.money(v), onclick: function () { amt.value = v; }}); })),
-      el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'مبلغ (تومان)'}), amt]), el('div', {class: 'field'}, [el('label', {text: ' '}), el('button', {class: 'btn', text: 'پرداخت آنلاین', onclick: async function () {
+      el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'مبلغ (تومان)'}), amt]), el('div', {class: 'field'}, [el('label', {text: ' '}), el('button', {class: 'btn', text: 'رفتن به درگاه امن', onclick: async function () {
         var a = num(en(amt.value)); msg.innerHTML = '';
         try {
           if (a < MIN_TOP_UP) throw new Error('حداقل شارژ ۱۰۰٬۰۰۰ تومان است.');
@@ -3330,7 +3361,7 @@ img,video,canvas,iframe{max-width:100%}
           var u; try { u = new URL(d.url); } catch (e) { throw new Error('نشانی درگاه معتبر نیست.'); }
           var h = u.hostname.toLowerCase(), sb = new URL(S.config.url).hostname;
           if (u.protocol !== 'https:' || !(h === 'payment.zarinpal.com' || h === 'idpay.ir' || /\.idpay\.ir$/.test(h) || h === sb)) throw new Error('نشانی درگاه در فهرست مجاز نیست.');
-          msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه ' + esc(d.provider || '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
+          msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه امن' + (d.provider === 'zarinpal' ? ' زرین‌پال' : d.provider === 'idpay' ? ' آیدی‌پی' : '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
           window.open(d.url, '_blank', 'noopener');
         } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       }})])]), msg,
@@ -4685,8 +4716,17 @@ img,video,canvas,iframe{max-width:100%}
     var bar = el('div', {class: 'm-bfab', id: 'm-bfab'});
     var save = el('button', {class: 'm-fab save', 'aria-label': 'ذخیره آزمون', onclick: function () { if (saveBtn) saveBtn.click(); }}, [ic('grading')]);
     var plus = el('button', {class: 'm-fab add', 'aria-label': 'افزودن سؤال', onclick: function () { radialOpen = !radialOpen; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]);
-    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('print')]) : null;
-    bar.appendChild(save); if (prev) bar.appendChild(prev); bar.appendChild(plus);
+    /* V156 — مثل ExamBuilderScreen: در حالت چاپ FAB پیش‌نمایش (چشم) + FAB چاپ (منوی «چاپ آزمون (دانش‌آموز)» / «چاپ با کلید (پاسخ‌نامه)»)؛ آنلاین فقط ✓ و + */
+    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('eye')]) : null;
+    var printFab = isPrint && prevBtn ? el('button', {class: 'm-fab print', 'aria-label': 'چاپ آزمون', onclick: function () {
+      var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+      var body = el('div', {class: 'm-sheet'}, [el('h3', {text: 'چاپ آزمون'})]);
+      [['student', 'چاپ آزمون (دانش‌آموز)', 'print'], ['teacher', 'چاپ با کلید (پاسخ‌نامه)', 'grading']].forEach(function (o) {
+        body.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); if (window.__builderPreview) window.__builderPreview(o[0]); else prevBtn.click(); }}, [ic(o[2], 'm-row-ic'), el('div', {}, [el('b', {text: o[1]})])]));
+      });
+      bg.appendChild(body); document.body.appendChild(bg);
+    }}, [ic('print')]) : null;
+    bar.appendChild(save); if (prev) bar.appendChild(prev); if (printFab) bar.appendChild(printFab); bar.appendChild(plus);
     var radial = null;
     function drawRadial() {
       if (radial) { radial.remove(); radial = null; }
@@ -4896,8 +4936,9 @@ img,video,canvas,iframe{max-width:100%}
     var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
     if (head) shell.appendChild(head);
     shell.appendChild(content);
-    shell.appendChild(dock());
-    if (ui.addOpen) shell.appendChild(quickAdd());
+    /* V156 — مثل ExamApp.kt (page == BUILDER تمام‌صفحه و بدون bottomBar): در سازنده داک پایین نمایش داده نمی‌شود */
+    if (page !== 'builder') shell.appendChild(dock());
+    if (ui.addOpen && page !== 'builder') shell.appendChild(quickAdd());
     if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
     else if (mgr && page === 'cards') managerCards(content);
     else if (mgr) S.renderPage(content);

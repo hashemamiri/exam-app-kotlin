@@ -253,9 +253,9 @@
   function topUpCard(balance, refresh) {
     var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: 200000, style: 'direction:ltr'});
     var msg = el('div');
-    var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ کیف پول'}),
+    var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), el('p', {class: 'muted', style: 'font-size:13px;margin:0 0 10px', text: 'پرداخت فقط در سرور تأیید می‌شود؛ حداقل ۱۰۰٬۰۰۰ · مضرب ۱۰٬۰۰۰ · سقف موجودی ۱۰٬۰۰۰٬۰۰۰ تومان.'}),
       el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:8px'}, [100000, 200000, 500000, 1000000].map(function (v) { return el('button', {class: 'chip', style: 'cursor:pointer', text: S.money(v), onclick: function () { amt.value = v; }}); })),
-      el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'مبلغ (تومان)'}), amt]), el('div', {class: 'field'}, [el('label', {text: ' '}), el('button', {class: 'btn', text: 'پرداخت آنلاین', onclick: async function () {
+      el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'مبلغ (تومان)'}), amt]), el('div', {class: 'field'}, [el('label', {text: ' '}), el('button', {class: 'btn', text: 'رفتن به درگاه امن', onclick: async function () {
         var a = num(en(amt.value)); msg.innerHTML = '';
         try {
           if (a < MIN_TOP_UP) throw new Error('حداقل شارژ ۱۰۰٬۰۰۰ تومان است.');
@@ -267,7 +267,7 @@
           var u; try { u = new URL(d.url); } catch (e) { throw new Error('نشانی درگاه معتبر نیست.'); }
           var h = u.hostname.toLowerCase(), sb = new URL(S.config.url).hostname;
           if (u.protocol !== 'https:' || !(h === 'payment.zarinpal.com' || h === 'idpay.ir' || /\.idpay\.ir$/.test(h) || h === sb)) throw new Error('نشانی درگاه در فهرست مجاز نیست.');
-          msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه ' + esc(d.provider || '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
+          msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه امن' + (d.provider === 'zarinpal' ? ' زرین‌پال' : d.provider === 'idpay' ? ' آیدی‌پی' : '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
           window.open(d.url, '_blank', 'noopener');
         } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       }})])]), msg,

@@ -433,8 +433,17 @@
     var bar = el('div', {class: 'm-bfab', id: 'm-bfab'});
     var save = el('button', {class: 'm-fab save', 'aria-label': 'ذخیره آزمون', onclick: function () { if (saveBtn) saveBtn.click(); }}, [ic('grading')]);
     var plus = el('button', {class: 'm-fab add', 'aria-label': 'افزودن سؤال', onclick: function () { radialOpen = !radialOpen; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]);
-    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('print')]) : null;
-    bar.appendChild(save); if (prev) bar.appendChild(prev); bar.appendChild(plus);
+    /* V156 — مثل ExamBuilderScreen: در حالت چاپ FAB پیش‌نمایش (چشم) + FAB چاپ (منوی «چاپ آزمون (دانش‌آموز)» / «چاپ با کلید (پاسخ‌نامه)»)؛ آنلاین فقط ✓ و + */
+    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('eye')]) : null;
+    var printFab = isPrint && prevBtn ? el('button', {class: 'm-fab print', 'aria-label': 'چاپ آزمون', onclick: function () {
+      var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+      var body = el('div', {class: 'm-sheet'}, [el('h3', {text: 'چاپ آزمون'})]);
+      [['student', 'چاپ آزمون (دانش‌آموز)', 'print'], ['teacher', 'چاپ با کلید (پاسخ‌نامه)', 'grading']].forEach(function (o) {
+        body.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); if (window.__builderPreview) window.__builderPreview(o[0]); else prevBtn.click(); }}, [ic(o[2], 'm-row-ic'), el('div', {}, [el('b', {text: o[1]})])]));
+      });
+      bg.appendChild(body); document.body.appendChild(bg);
+    }}, [ic('print')]) : null;
+    bar.appendChild(save); if (prev) bar.appendChild(prev); if (printFab) bar.appendChild(printFab); bar.appendChild(plus);
     var radial = null;
     function drawRadial() {
       if (radial) { radial.remove(); radial = null; }
@@ -644,8 +653,9 @@
     var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
     if (head) shell.appendChild(head);
     shell.appendChild(content);
-    shell.appendChild(dock());
-    if (ui.addOpen) shell.appendChild(quickAdd());
+    /* V156 — مثل ExamApp.kt (page == BUILDER تمام‌صفحه و بدون bottomBar): در سازنده داک پایین نمایش داده نمی‌شود */
+    if (page !== 'builder') shell.appendChild(dock());
+    if (ui.addOpen && page !== 'builder') shell.appendChild(quickAdd());
     if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
     else if (mgr && page === 'cards') managerCards(content);
     else if (mgr) S.renderPage(content);

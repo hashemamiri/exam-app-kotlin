@@ -18831,3 +18831,10 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - **چاپ آزمون** (`ExamPrintCenterScreen`): پنل جدید `print` در پوستهٔ موبایل (`printCenter`): دکمهٔ «آزمون جدید» (سازندهٔ چاپی خالی، `fresh`) + خط‌دار «آزمون‌های آنلاین» (شیت فهرست آزمون‌ها؛ انتخاب = مثل `openPrintCopy` اپ: اگر `sourceExamId` قبلاً نسخهٔ چاپی دارد همان باز می‌شود، وگرنه سؤال‌ها با پاسخ‌نامه از `examDetail` خوانده و با `SiteBuilder.decodeQuestion` به رکورد محلی `examsite.printexams.v1` افزوده می‌شوند)؛ کارت‌های چاپی با چیپ «چاپی»، «درس: … · n سؤال»، آیکن ویرایش/حذف با تأیید. منوی «چاپ آزمون» و بازگشتِ سازندهٔ چاپی به این صفحه می‌روند.
 - **ایجاد آزمون** (`QuestionEditor`): در گوشی فهرست سؤال‌ها کارت‌های تمام‌عرض با رنگ پاستلی نوع (alpha .38 مثل اپ)، شمارهٔ دایره‌ای نئونی، نوع و بارم؛ ویرایشگر (`.b-editor`) با MutationObserver درست زیر کارت انتخاب‌شده جابه‌جا می‌شود و به‌صورت بازشونده با همان رنگ نمایش داده می‌شود (منطق builder.js دست‌نخورده؛ فقط DOM جابه‌جا می‌شود).
 - تست `V155_SiteMobilePrintCenterTest`.
+
+## §V156 — کیف پول سایت و سازندهٔ گوشی مثل اپ
+- `site/src/app.js`: `faReason(r)` (آینهٔ `WalletScreen.kt` faReason/providerFa) — همهٔ دلیل‌های تراکنش فارسی؛ `pageWallet` = کارت موجودی (چشم `.bal-eye`) + «شارژ امن کیف پول» (`SiteAdmin.topUpCard`) + «گردش‌های اخیر». `openPrintPreview(payload,{printMode:'student'|'teacher'})` مثل `ExamHtmlPrintDialog(printMode)`: مستقیم `printStudent()/printTeacher()` موتور چاپ.
+- `site/src/builder.js`: `preview(printMode)` و `window.__builderPreview` برای FAB چاپ گوشی؛ متن خالی گوشی «با دکمهٔ + سؤال اضافه کنید.».
+- `site/src/mobile.js` `builderFabs`: حالت چاپ = ✓ ذخیره، 👁 پیش‌نمایش (`ic('eye')`)، 🖨 چاپ (شیت: چاپ آزمون (دانش‌آموز)/چاپ با کلید (پاسخ‌نامه)) و +؛ آنلاین = فقط ✓ و + (مثل `ExamBuilderScreen` خطوط ۲۸۸–۴۱۰). در `paint()` داک و افزودن سریع برای `page==='builder'` رندر نمی‌شوند (مثل `ExamApp.kt:337`).
+- `site/src/site.css`: `.m-bfab` پایین صفحه (۲۰px)، `.m-fab.print`، `.m-builder` padding کمتر.
+- تست: `V156_SiteWalletBuilderFabsTest.kt`.
