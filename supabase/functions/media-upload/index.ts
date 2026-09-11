@@ -1,8 +1,13 @@
-// V144 — صدور لینک آپلود موقت (Presigned PUT) برای Cloudflare R2
-// کلاینت (سایت/اپ) پس از ورود، {kind:'image'|'audio', exam_id, ext, size} می‌فرستد و
-// {upload_url, public_url, headers} می‌گیرد؛ سپس فایل را مستقیم با PUT به R2 می‌فرستد.
-// کلیدهای R2 فقط در Secrets این تابع هستند: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
-// R2_BUCKET (پیش‌فرض azmoon-media), R2_PUBLIC_BASE (مثلاً https://media.onlineexam.ir)
+// V144/V144.1 — صدور لینک آپلود موقت (Presigned PUT) برای هر ذخیره‌ساز سازگار با S3
+// (ابر آروان، لیارا، پارس‌پک، Cloudflare R2، MinIO…). کلاینت پس از ورود
+// {kind:'image'|'audio', folder, exam_id, ext, size} می‌فرستد و {upload_url, public_url, headers} می‌گیرد؛
+// سپس فایل را مستقیم با PUT به ذخیره‌ساز می‌فرستد. کلیدها فقط در Secrets این تابع هستند:
+//   S3_ENDPOINT        مثلاً https://s3.ir-thr-at1.arvanstorage.ir  (R2: https://<account>.r2.cloudflarestorage.com)
+//   S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY
+//   S3_BUCKET          پیش‌فرض azmoon-media
+//   S3_REGION          پیش‌فرض auto (آروان: هر مقداری می‌پذیرد؛ R2: auto)
+//   S3_PUBLIC_BASE     آدرس عمومی خواندن، مثلاً https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir یا https://media.onlineexam.ir
+// (نام‌های قدیمی R2_* هم برای سازگاری خوانده می‌شوند.)
 import { createClient } from 'npm:@supabase/supabase-js@2.112.2';
 
 const CORS = {
@@ -28,17 +33,18 @@ const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 const sha256 = async (s: string) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
 async function hmac(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
-  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const raw = key instanceof Uint8Array ? key.slice().buffer as ArrayBuffer : key;
+  const k = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return crypto.subtle.sign('HMAC', k, enc.encode(data));
 }
 const encodeRfc3986 = (s: string) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
-async function presignPut(opts: { accountId: string; accessKey: string; secretKey: string; bucket: string; key: string; contentType: string; expires: number }) {
-  const host = `${opts.accountId}.r2.cloudflarestorage.com`;
+async function presignPut(opts: { endpoint: string; region: string; accessKey: string; secretKey: string; bucket: string; key: string; contentType: string; expires: number }) {
+  const host = new URL(opts.endpoint).host;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, ''); // YYYYMMDDTHHMMSSZ
   const date = amzDate.slice(0, 8);
-  const region = 'auto';
+  const region = opts.region;
   const scope = `${date}/${region}/s3/aws4_request`;
   const canonicalUri = '/' + opts.bucket + '/' + opts.key.split('/').map(encodeRfc3986).join('/');
   const signedHeaders = 'content-type;host';
@@ -66,10 +72,12 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (request.method !== 'POST') return json({ error: 'روش درخواست مجاز نیست' }, 405);
   try {
-    const accountId = env('R2_ACCOUNT_ID'), accessKey = env('R2_ACCESS_KEY_ID'), secretKey = env('R2_SECRET_ACCESS_KEY');
-    const bucket = env('R2_BUCKET') || 'azmoon-media';
-    const publicBase = env('R2_PUBLIC_BASE').replace(/\/+$/, '');
-    if (!accountId || !accessKey || !secretKey || !publicBase) return json({ error: 'r2_not_configured', message: 'ذخیره‌سازی R2 روی سرور پیکربندی نشده است.' }, 503);
+    const endpoint = (env('S3_ENDPOINT') || (env('R2_ACCOUNT_ID') ? `https://${env('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com` : '')).replace(/\/+$/, '');
+    const accessKey = env('S3_ACCESS_KEY_ID') || env('R2_ACCESS_KEY_ID'), secretKey = env('S3_SECRET_ACCESS_KEY') || env('R2_SECRET_ACCESS_KEY');
+    const bucket = env('S3_BUCKET') || env('R2_BUCKET') || 'azmoon-media';
+    const region = env('S3_REGION') || 'auto';
+    const publicBase = (env('S3_PUBLIC_BASE') || env('R2_PUBLIC_BASE')).replace(/\/+$/, '');
+    if (!/^https:\/\//.test(endpoint) || !accessKey || !secretKey || !publicBase) return json({ error: 'r2_not_configured', message: 'ذخیره‌سازی S3 روی سرور پیکربندی نشده است.' }, 503);
 
     const authorization = request.headers.get('Authorization') || '';
     if (!authorization.startsWith('Bearer ')) return json({ error: 'ابتدا وارد شوید' }, 401);
@@ -98,7 +106,7 @@ Deno.serve(async (request) => {
     const folder = FOLDERS.includes(String(body.folder || '')) ? String(body.folder) : FOLDERS[0];
     const key = `${folder}/${userId}/${examId}/${name}.${ext}`;
 
-    const uploadUrl = await presignPut({ accountId, accessKey, secretKey, bucket, key, contentType, expires: EXPIRES });
+    const uploadUrl = await presignPut({ endpoint, region, accessKey, secretKey, bucket, key, contentType, expires: EXPIRES });
     return json({ upload_url: uploadUrl, public_url: `${publicBase}/${key}`, headers: { 'Content-Type': contentType }, expires_in: EXPIRES, key });
   } catch (error) {
     console.error('media-upload', error);

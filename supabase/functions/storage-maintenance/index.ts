@@ -109,27 +109,29 @@ async function removeChunks(
   }
 }
 
-// ---------- V144: Cloudflare R2 (S3 API) — فهرست و حذف فایل‌های یتیم ----------
+// ---------- V144/V144.1: ذخیره‌ساز S3 (آروان/R2/…) — فهرست و حذف فایل‌های یتیم ----------
 const encT = new TextEncoder();
 const hexOf = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 const sha256Hex = async (s: string) => hexOf(await crypto.subtle.digest('SHA-256', encT.encode(s)));
 async function hmacRaw(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
-  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const raw = key instanceof Uint8Array ? key.slice().buffer as ArrayBuffer : key;
+  const k = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return crypto.subtle.sign('HMAC', k, encT.encode(data));
 }
 const rfc3986 = (s: string) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
-type R2Cfg = { accountId: string; accessKey: string; secretKey: string; bucket: string; publicBase: string };
+type R2Cfg = { endpoint: string; region: string; accessKey: string; secretKey: string; bucket: string; publicBase: string };
 function r2Config(): R2Cfg | null {
-  const accountId = env('R2_ACCOUNT_ID'), accessKey = env('R2_ACCESS_KEY_ID'), secretKey = env('R2_SECRET_ACCESS_KEY');
-  const publicBase = env('R2_PUBLIC_BASE').replace(/\/+$/, '');
-  if (!accountId || !accessKey || !secretKey || !publicBase) return null;
-  return { accountId, accessKey, secretKey, bucket: env('R2_BUCKET') || 'azmoon-media', publicBase };
+  const endpoint = (env('S3_ENDPOINT') || (env('R2_ACCOUNT_ID') ? `https://${env('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com` : '')).replace(/\/+$/, '');
+  const accessKey = env('S3_ACCESS_KEY_ID') || env('R2_ACCESS_KEY_ID'), secretKey = env('S3_SECRET_ACCESS_KEY') || env('R2_SECRET_ACCESS_KEY');
+  const publicBase = (env('S3_PUBLIC_BASE') || env('R2_PUBLIC_BASE')).replace(/\/+$/, '');
+  if (!/^https:\/\//.test(endpoint) || !accessKey || !secretKey || !publicBase) return null;
+  return { endpoint, region: env('S3_REGION') || 'auto', accessKey, secretKey, bucket: env('S3_BUCKET') || env('R2_BUCKET') || 'azmoon-media', publicBase };
 }
 async function r2Fetch(cfg: R2Cfg, method: string, path: string, query: Record<string, string>, body = ''): Promise<Response> {
-  const host = `${cfg.accountId}.r2.cloudflarestorage.com`;
+  const host = new URL(cfg.endpoint).host;
   const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
   const date = amzDate.slice(0, 8);
-  const scope = `${date}/auto/s3/aws4_request`;
+  const scope = `${date}/${cfg.region}/s3/aws4_request`;
   const payloadHash = await sha256Hex(body);
   const canonicalUri = '/' + cfg.bucket + (path ? '/' + path.split('/').map(rfc3986).join('/') : '');
   const q = Object.keys(query).sort().map((k) => `${rfc3986(k)}=${rfc3986(query[k])}`).join('&');
@@ -138,7 +140,7 @@ async function r2Fetch(cfg: R2Cfg, method: string, path: string, query: Record<s
   const canonicalRequest = [method, canonicalUri, q, canonicalHeaders, signedHeaders, payloadHash].join('\n');
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, await sha256Hex(canonicalRequest)].join('\n');
   let k: ArrayBuffer = await hmacRaw(encT.encode('AWS4' + cfg.secretKey), date);
-  k = await hmacRaw(k, 'auto'); k = await hmacRaw(k, 's3'); k = await hmacRaw(k, 'aws4_request');
+  k = await hmacRaw(k, cfg.region); k = await hmacRaw(k, 's3'); k = await hmacRaw(k, 'aws4_request');
   const signature = hexOf(await hmacRaw(k, stringToSign));
   const auth = `AWS4-HMAC-SHA256 Credential=${cfg.accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   return fetch(`https://${host}${canonicalUri}${q ? '?' + q : ''}`, { method, headers: { Authorization: auth, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate }, body: body || undefined });

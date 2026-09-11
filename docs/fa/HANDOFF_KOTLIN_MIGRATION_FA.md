@@ -18653,3 +18653,28 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - کش: کلودفلر پاسخ‌های دامنهٔ سفارشی R2 را کش می‌کند؛ چون نام فایل‌ها uuid و تغییرناپذیرند مشکلی نیست.
 - حذف فایل هنگام حذف سؤال/آزمون همچنان با storage-maintenance (مهلت پیش‌فرض ۷ روز) انجام می‌شود، نه لحظه‌ای.
 - هیچ کلید R2 در کلاینت نیست؛ presigned URL ۵ دقیقه اعتبار دارد و فقط برای همان کلید/نوع محتوا کار می‌کند.
+
+## V144.1 — رسانه روی ابر آروان / هر S3 (تعمیم V144)
+
+تصمیم کاربر: ارائه‌دهندهٔ ایرانی به‌جای Cloudflare R2 (R2 نیاز به کارت بین‌المللی داشت). انتخاب: **ابر آروان — فضای ابری**.
+
+### تغییر کد
+- هر دو تابع Secrets عمومی `S3_*` را می‌خوانند و در نبودشان به `R2_*` برمی‌گردند (`R2_ACCOUNT_ID` → endpoint R2 ساخته می‌شود). host امضا از `new URL(S3_ENDPOINT).host` و region از `S3_REGION` (پیش‌فرض `auto`). path-style (`/<bucket>/<key>`) — همان چیزی که آروان در مستنداتش (`use_path_style_endpoint = true`) توصیه می‌کند.
+- Endpointهای آروان (از docs.arvancloud.ir): سیمین `https://s3.ir-thr-at1.arvanstorage.ir`، شهریار `https://s3.ir-tbz-sh1.arvanstorage.ir`. آدرس عمومی پیش‌فرض هر صندوقچه: `https://<bucket>.s3.<region>.arvanstorage.ir/<key>`.
+- `hmac/hmacRaw`: کپی `Uint8Array` به `ArrayBuffer` برای رضایت type-checker Deno (`deno check` هر دو تابع سبز).
+- تأیید امضا: اسکریپت مقایسه با `@aws-sdk/s3-request-presigner` روی endpoint آروان و region `ir-thr-at1` → MATCH true.
+
+### راه‌اندازی در پنل آروان (کاربر)
+1. `accounts.arvancloud.ir` → ثبت‌نام/ورود → احراز هویت (شماره موبایل + کد ملی؛ برای فعال‌سازی سرویس‌ها لازم است) → شارژ حساب (ریالی، درگاه بانکی).
+2. پنل → محصولات → **فضای ابری** → فعال‌سازی → **ایجاد صندوقچه**: نام `azmoon-media`، منطقه **سیمین (ir-thr-at1)**، سطح دسترسی **عمومی (Public-Read)** (فقط خواندن عمومی؛ نوشتن فقط با کلید).
+3. فضای ابری → **مدیریت کلیدها (Access Keys)** → ایجاد کلید → `Access Key` و `Secret Key` را همان لحظه کپی کنید.
+4. صندوقچه → تنظیمات → **CORS**: Origin های `https://onlineexam.ir` و `https://www.onlineexam.ir`، متدهای `PUT, GET, HEAD`، هدر مجاز `Content-Type` (یا `*`)، MaxAge 3600.
+5. (اختیاری، توصیه‌شده) **دامنهٔ اختصاصی** `media.onlineexam.ir`: طبق مستند آروان باید دامنه در CDN آروان ثبت و Host Header روی `azmoon-media.s3.ir-thr-at1.arvanstorage.ir` تنظیم شود؛ چون DNS ما در کلودفلر است، ساده‌تر: فعلاً آدرس پیش‌فرض صندوقچه را به‌عنوان `S3_PUBLIC_BASE` بگذارید و دامنهٔ اختصاصی را بعداً اضافه کنید (URLهای قدیمی همچنان معتبر می‌مانند چون storage-maintenance فقط prefix فعلی را می‌شناسد — در صورت تغییر PUBLIC_BASE یک بار prefix قدیمی را هم باید به فهرست ارجاع‌ها افزود؛ یادداشت برای آینده).
+6. Supabase → Edge Functions → Secrets:
+   `S3_ENDPOINT=https://s3.ir-thr-at1.arvanstorage.ir`، `S3_REGION=ir-thr-at1`، `S3_ACCESS_KEY_ID`، `S3_SECRET_ACCESS_KEY`، `S3_BUCKET=azmoon-media`، `S3_PUBLIC_BASE=https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir`.
+7. `supabase functions deploy media-upload storage-maintenance --project-ref eazwuyrymsvdkwckdpco`
+8. تست: افزودن تصویر به سؤال در سایت → URL ذخیره‌شده با `https://azmoon-media.s3.ir-thr-at1.arvanstorage.ir/questions/` شروع شود و در مرورگر باز شود؛ سپس storage-maintenance با dry_run → `r2_enabled:true`.
+
+### نکته
+- اگر آروان خطای `SignatureDoesNotMatch` داد، اولین مظنون `S3_REGION` است؛ مقدار دقیق را از بخش «اطلاعات اتصال» صندوقچه بردارید و در Secrets بگذارید (کد هر مقداری را می‌پذیرد).
+- کلید آروان دسترسی به همهٔ صندوقچه‌های حساب دارد؛ فقط یک صندوقچه بسازید یا کلید را با سیاست محدود کنید.
