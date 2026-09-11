@@ -18929,3 +18929,5 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 **سایت:** `builder.js` → توابع `printExamsList/Get/Save/Delete`, `uploadPrintImages`, `countNewImages` (تأیید هزینه), `migrateLocalPrintExams` (پرچم `examsite.printexams.migrated.v163`). `mobile.js`: حذف `bulkDialog`/افزودن گروهی و توابع کمکی نام کاربری؛ `closeOverlays()` پیش از `go()`; اسکرول کارت آزمون به دید; `printCenter`/`printExamsSheet` از سرور. `school.js`: `studentForm(..., afterCreate)`؛ در گوشی فهرست کلاس یک دکمهٔ + (→ ×) با دو کارت «افزودن موجود»/«افزودن جدید». `site.css`: داک ۶۴px، دکمهٔ + ۴۸px، `.m-sheet-fixed`, `.m-roster-*`.
 
 **CI:** `android.yml` push باز (کد اپ تغییر کرده). تست‌ها: `V163_ServerPrintExamsTest`؛ V157/V158/V161 به‌روز شدند.
+
+**V163.1/V163.2:** تست V157 با حذف افزودن گروهی هماهنگ شد؛ در بازنویسی بخش چاپیِ `builder.js` بلوک `var state/blankState/isoToLocal/localToIso/saveDraft` به‌اشتباه حذف شده بود و برگردانده شد (خطای «blankState is not defined» در سایت دسکتاپ). درس: پس از هر بازنویسی بلوکی در JS، فهرست `function` های قبل/بعد را با `comm` مقایسه کنید.

@@ -184,6 +184,15 @@
     return card;
   }
 
+  var state = null;
+  function blankState(mode) {
+    return {mode: mode || 'online', examId: null, code: null, title: '', subject: '', duration: '', opensAt: '', closesAt: '', questions: [], shuffleQuestions: false, shuffleOptions: false, negativeMarking: '', teacherMessage: '', attemptsAllowed: 1, attemptOnTimeout: false, gradePolicy: 'last', attemptCooldown: '',
+      audienceMode: 'all', audienceClasses: [], audienceStudents: [], audienceSchools: [], availableClasses: [], availableStudents: [], availableSchools: [], selected: 0, dirty: false, printId: null, bankEdit: null};
+  }
+  function isoToLocal(iso) { if (!iso) return ''; try { var d = new Date(iso); var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); } catch (e) { return ''; } }
+  function localToIso(v) { if (!v) return null; var d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString(); }
+  function saveDraft() { if (!state || state.bankEdit) return; try { localStorage.setItem(LS_DRAFT, JSON.stringify(state)); } catch (e) {} }
+
   async function page(c, arg) {
     arg = arg || {};
     S.loading(c);
