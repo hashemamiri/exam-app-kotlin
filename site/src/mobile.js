@@ -305,11 +305,62 @@
     for (var i = 0; i < muts.length; i++) { for (var j = 0; j < muts[i].addedNodes.length; j++) { var n = muts[i].addedNodes[j]; if (n.nodeType === 1 && (n.matches && (n.matches('table.tbl') || n.querySelector('table.tbl')))) { upgradeContent(); return; } } }
   }).observe(document.documentElement, {childList: true, subtree: true});
 
+  /* ---------- V152: سازندهٔ آزمون در گوشی (ExamBuilderScreen) ----------
+     اپ: نوار بالا «ساخت آزمون/ویرایش آزمون» + بازگشت؛ دکمهٔ «مشخصات آزمون» تمام‌عرض؛ FAB سبز ✓ ذخیره (چپ) و FAB + (راست) که
+     منوی شعاعی نوع سؤال را باز می‌کند (تشریحی، چندگزینه‌ای، صحیح/غلط، جای خالی، عددی، جورکردنی، وارد کردن، بانک سؤال) با رنگ‌های پاستلی
+     QuestionDraft.pastelColor؛ در حالت چاپ FAB سوم پیش‌نمایش/چاپ. */
+  var PASTEL = {essay: '#FFD1DC', multiple: '#AEC6CF', truefalse: '#B4EEB4', fill: '#FDFD96', numeric: '#C3B1E1', matching: '#FFDAB9', import: '#98FF98', bank: '#E6E6FA'};
+  var RADIAL = [['essay', 'تشریحی', '✎'], ['multiple', 'چندگزینه‌ای', '◉'], ['truefalse', 'صحیح/غلط', '✓'], ['fill', 'جای خالی', '＿'], ['numeric', 'عددی', '۱۲'], ['matching', 'جورکردنی', '↔'], ['import', 'وارد کردن', '⇩'], ['bank', 'بانک سؤال', '▤']];
+  function builderFabs(c) {
+    var old = document.getElementById('m-bfab'); if (old) old.remove();
+    var top = c.querySelector('.b-top'); if (!top) return;
+    var btns = Array.prototype.slice.call(top.querySelectorAll('.row .btn'));
+    var saveBtn = btns.filter(function (b) { return /ذخیره/.test(b.textContent); })[0];
+    var prevBtn = btns.filter(function (b) { return /پیش‌نمایش/.test(b.textContent); })[0];
+    var setBtn = btns.filter(function (b) { return /مشخصات آزمون/.test(b.textContent); })[0];
+    var addRow = c.querySelector('.b-add');
+    var isPrint = /چاپی/.test(top.textContent);
+    /* دکمهٔ «مشخصات آزمون» تمام‌عرض زیر فیلدها (اپ: OutlinedButton fillMaxWidth) */
+    if (setBtn && !top.querySelector('.m-settings-btn')) { var sb = el('button', {class: 'm-outline m-settings-btn', text: 'مشخصات آزمون', onclick: function () { setBtn.click(); }}); top.appendChild(sb); }
+    var radialOpen = false;
+    var bar = el('div', {class: 'm-bfab', id: 'm-bfab'});
+    var save = el('button', {class: 'm-fab save', 'aria-label': 'ذخیره آزمون', onclick: function () { if (saveBtn) saveBtn.click(); }}, [ic('grading')]);
+    var plus = el('button', {class: 'm-fab add', 'aria-label': 'افزودن سؤال', onclick: function () { radialOpen = !radialOpen; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]);
+    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('print')]) : null;
+    bar.appendChild(save); if (prev) bar.appendChild(prev); bar.appendChild(plus);
+    var radial = null;
+    function drawRadial() {
+      if (radial) { radial.remove(); radial = null; }
+      plus.classList.toggle('on', radialOpen);
+      if (!radialOpen) return;
+      radial = el('div', {class: 'm-radial-bg', onclick: function (e) { if (e.target === e.currentTarget) { radialOpen = false; drawRadial(); } }});
+      var ring = el('div', {class: 'm-radial'});
+      RADIAL.forEach(function (r, i) {
+        /* دکمهٔ + در گوشهٔ راست‌پایین است؛ ربع‌دایرهٔ چپ‌بالا در دو حلقه (۴+۴) تا دایره‌ها روی هم نیفتند */
+        var ring_i = i < 4 ? 0 : 1, k = i % 4;
+        var ang = Math.PI + (Math.PI / 2) * ((k + (ring_i ? 0.5 : 0)) / 3.5);
+        var R = ring_i ? 200 : 115, x = Math.cos(ang) * R, y = Math.sin(ang) * R;
+        ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';transform:translate(' + x.toFixed(0) + 'px,' + y.toFixed(0) + 'px);animation-delay:' + (i * 30) + 'ms', onclick: function () {
+          radialOpen = false; drawRadial();
+          if (r[0] === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
+          if (r[0] === 'bank') { var bb = c.querySelector('.b-list .btn.soft'); if (bb) bb.click(); return; }
+          if (addRow) { var b = Array.prototype.filter.call(addRow.querySelectorAll('button'), function (x) { return x.title === typeLabel(r[0]); })[0]; if (b) b.click(); }
+          setTimeout(function () { var ed = c.querySelector('.b-editor'); if (ed && ed.scrollIntoView) ed.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 30);
+        }}, [el('span', {class: 'g', text: r[2]}), el('span', {class: 'l', text: r[1]})]));
+      });
+      radial.appendChild(ring); document.body.appendChild(radial);
+    }
+    document.body.appendChild(bar);
+  }
+  function typeLabel(t) { return {multiple: 'چندگزینه‌ای', truefalse: 'صحیح / غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[t]; }
+  function cleanupBuilder() { ['m-bfab'].forEach(function (id) { var n = document.getElementById(id); if (n) n.remove(); }); var r = document.querySelector('.m-radial-bg'); if (r) r.remove(); }
+
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
   var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'سازندهٔ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
   function paint() {
+    cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
     var shell = document.getElementById('m-shell');
     if (!shell) { shell = el('div', {class: 'm-shell', id: 'm-shell'}); root.innerHTML = ''; root.appendChild(shell); }
@@ -334,7 +385,14 @@
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else S.renderPage(content);
+    if (page === 'builder') content.classList.add('m-builder');
   }
+  /* سازنده: بعد از اینکه builder.js نوار بالا را ساخت، FABها اضافه می‌شوند */
+  if (window.MutationObserver) new MutationObserver(function () {
+    if (!active() || view.panel !== 'builder') return;
+    var c = document.getElementById('content'); if (!c || !c.querySelector('.b-top') || document.getElementById('m-bfab')) return;
+    builderFabs(c);
+  }).observe(document.documentElement, {childList: true, subtree: true});
 
   /* دانش‌آموز: نوار بالا (عنوان + ☰ مثل اپ)، بدون داک؛ در حین آزمون نوار حذف می‌شود (StudentExamScreen تمام‌صفحه) */
   function paintStudent(shell, page) {

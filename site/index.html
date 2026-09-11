@@ -582,6 +582,40 @@ img,video,canvas,iframe{max-width:100%}
 .m-mode .m-content .exam-grid .exam,.m-mode .m-content .g-item,.m-mode .m-content .b-q{border:0;background:var(--m-bg);box-shadow:5px 5px 12px var(--m-dark),-5px -5px 12px #fff;border-radius:18px}
 .m-mode .modal{background:var(--m-bg);border-radius:24px 24px 0 0}
 .m-mode .modal .field input,.m-mode .modal .field select,.m-mode .modal .field textarea{border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
+
+/* ---- V152: سازندهٔ آزمون در گوشی (ExamBuilderScreen) ---- */
+.m-builder{padding-bottom:calc(190px + env(safe-area-inset-bottom)) !important}
+.m-builder .b-top .row .btn,.m-builder .b-top .row .chip{display:none}
+.m-builder .b-top .row .code{display:inline-block}
+.m-builder .b-top .grid3{grid-template-columns:1fr}
+.m-settings-btn{width:100%;margin-top:6px;padding:10px;border-radius:20px}
+.m-builder .b-body{display:flex;flex-direction:column;gap:12px}
+.m-builder .b-list{order:1;position:static;max-height:none}
+.m-builder .b-editor{order:2}
+.m-builder .b-add{display:none} /* افزودن از منوی شعاعی + مثل اپ */
+.m-builder .b-list .btn.soft{display:none}
+.m-builder .b-qs{flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:4px;scrollbar-width:none}
+.m-builder .b-qs::-webkit-scrollbar{display:none}
+.m-builder .b-q{flex:0 0 auto;max-width:180px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
+.m-builder .b-q.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff;color:var(--m-acc)}
+.m-builder .b-tools{gap:8px}
+.m-builder .tool-btn{width:44px;height:44px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
+.m-builder .tool-btn.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff}
+.m-builder .b-rich,.m-builder .b-opt input[type=text],.m-builder .b-opt select{border:0;background:var(--m-bg);box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff;border-radius:14px}
+.m-bfab{position:fixed;bottom:calc(102px + env(safe-area-inset-bottom));inset-inline:16px;z-index:41;display:flex;justify-content:space-between;align-items:center;pointer-events:none;direction:rtl}
+.m-bfab .m-fab{pointer-events:auto;width:56px;height:56px;border:0;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(38,49,66,.25);background:var(--m-bg);color:var(--m-ink);transition:transform .2s}
+.m-bfab .m-fab .mi{width:28px;height:28px}
+.m-bfab .m-fab.save{background:#27A86B;color:#fff}
+.m-bfab .m-fab.prev{background:#dfe4ff;color:#3c3f9e}
+.m-bfab .m-fab.add .m-fab-plus{font-size:30px;line-height:1;font-weight:400;transition:transform .25s}
+.m-bfab .m-fab.add.on .m-fab-plus{transform:rotate(45deg)}
+/* در گوشی داک پنل زیر FABهای سازنده می‌ماند؛ ذخیره چپ، + راست (اپ: CenterStart / CenterEnd در RTL) */
+.m-radial-bg{position:fixed;inset:0;z-index:40;background:rgba(38,49,66,.28);backdrop-filter:blur(2px)}
+.m-radial{position:fixed;bottom:calc(130px + env(safe-area-inset-bottom));inset-inline-end:44px;width:0;height:0}
+.m-radial-item{position:absolute;left:-34px;top:-34px;width:68px;height:68px;border:0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#263142;box-shadow:0 8px 18px rgba(38,49,66,.28);animation:mpop .22s both}
+.m-radial-item .g{font-size:20px;line-height:1}
+.m-radial-item .l{font-size:9px;font-weight:700;white-space:nowrap}
+@media (max-width:380px){.m-radial-item{width:60px;height:60px;left:-30px;top:-30px}.m-radial-item .l{font-size:8px}}
 </style>
 </head>
 <body>
@@ -4391,11 +4425,62 @@ img,video,canvas,iframe{max-width:100%}
     for (var i = 0; i < muts.length; i++) { for (var j = 0; j < muts[i].addedNodes.length; j++) { var n = muts[i].addedNodes[j]; if (n.nodeType === 1 && (n.matches && (n.matches('table.tbl') || n.querySelector('table.tbl')))) { upgradeContent(); return; } } }
   }).observe(document.documentElement, {childList: true, subtree: true});
 
+  /* ---------- V152: سازندهٔ آزمون در گوشی (ExamBuilderScreen) ----------
+     اپ: نوار بالا «ساخت آزمون/ویرایش آزمون» + بازگشت؛ دکمهٔ «مشخصات آزمون» تمام‌عرض؛ FAB سبز ✓ ذخیره (چپ) و FAB + (راست) که
+     منوی شعاعی نوع سؤال را باز می‌کند (تشریحی، چندگزینه‌ای، صحیح/غلط، جای خالی، عددی، جورکردنی، وارد کردن، بانک سؤال) با رنگ‌های پاستلی
+     QuestionDraft.pastelColor؛ در حالت چاپ FAB سوم پیش‌نمایش/چاپ. */
+  var PASTEL = {essay: '#FFD1DC', multiple: '#AEC6CF', truefalse: '#B4EEB4', fill: '#FDFD96', numeric: '#C3B1E1', matching: '#FFDAB9', import: '#98FF98', bank: '#E6E6FA'};
+  var RADIAL = [['essay', 'تشریحی', '✎'], ['multiple', 'چندگزینه‌ای', '◉'], ['truefalse', 'صحیح/غلط', '✓'], ['fill', 'جای خالی', '＿'], ['numeric', 'عددی', '۱۲'], ['matching', 'جورکردنی', '↔'], ['import', 'وارد کردن', '⇩'], ['bank', 'بانک سؤال', '▤']];
+  function builderFabs(c) {
+    var old = document.getElementById('m-bfab'); if (old) old.remove();
+    var top = c.querySelector('.b-top'); if (!top) return;
+    var btns = Array.prototype.slice.call(top.querySelectorAll('.row .btn'));
+    var saveBtn = btns.filter(function (b) { return /ذخیره/.test(b.textContent); })[0];
+    var prevBtn = btns.filter(function (b) { return /پیش‌نمایش/.test(b.textContent); })[0];
+    var setBtn = btns.filter(function (b) { return /مشخصات آزمون/.test(b.textContent); })[0];
+    var addRow = c.querySelector('.b-add');
+    var isPrint = /چاپی/.test(top.textContent);
+    /* دکمهٔ «مشخصات آزمون» تمام‌عرض زیر فیلدها (اپ: OutlinedButton fillMaxWidth) */
+    if (setBtn && !top.querySelector('.m-settings-btn')) { var sb = el('button', {class: 'm-outline m-settings-btn', text: 'مشخصات آزمون', onclick: function () { setBtn.click(); }}); top.appendChild(sb); }
+    var radialOpen = false;
+    var bar = el('div', {class: 'm-bfab', id: 'm-bfab'});
+    var save = el('button', {class: 'm-fab save', 'aria-label': 'ذخیره آزمون', onclick: function () { if (saveBtn) saveBtn.click(); }}, [ic('grading')]);
+    var plus = el('button', {class: 'm-fab add', 'aria-label': 'افزودن سؤال', onclick: function () { radialOpen = !radialOpen; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]);
+    var prev = isPrint && prevBtn ? el('button', {class: 'm-fab prev', 'aria-label': 'پیش‌نمایش آزمون', onclick: function () { prevBtn.click(); }}, [ic('print')]) : null;
+    bar.appendChild(save); if (prev) bar.appendChild(prev); bar.appendChild(plus);
+    var radial = null;
+    function drawRadial() {
+      if (radial) { radial.remove(); radial = null; }
+      plus.classList.toggle('on', radialOpen);
+      if (!radialOpen) return;
+      radial = el('div', {class: 'm-radial-bg', onclick: function (e) { if (e.target === e.currentTarget) { radialOpen = false; drawRadial(); } }});
+      var ring = el('div', {class: 'm-radial'});
+      RADIAL.forEach(function (r, i) {
+        /* دکمهٔ + در گوشهٔ راست‌پایین است؛ ربع‌دایرهٔ چپ‌بالا در دو حلقه (۴+۴) تا دایره‌ها روی هم نیفتند */
+        var ring_i = i < 4 ? 0 : 1, k = i % 4;
+        var ang = Math.PI + (Math.PI / 2) * ((k + (ring_i ? 0.5 : 0)) / 3.5);
+        var R = ring_i ? 200 : 115, x = Math.cos(ang) * R, y = Math.sin(ang) * R;
+        ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';transform:translate(' + x.toFixed(0) + 'px,' + y.toFixed(0) + 'px);animation-delay:' + (i * 30) + 'ms', onclick: function () {
+          radialOpen = false; drawRadial();
+          if (r[0] === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
+          if (r[0] === 'bank') { var bb = c.querySelector('.b-list .btn.soft'); if (bb) bb.click(); return; }
+          if (addRow) { var b = Array.prototype.filter.call(addRow.querySelectorAll('button'), function (x) { return x.title === typeLabel(r[0]); })[0]; if (b) b.click(); }
+          setTimeout(function () { var ed = c.querySelector('.b-editor'); if (ed && ed.scrollIntoView) ed.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 30);
+        }}, [el('span', {class: 'g', text: r[2]}), el('span', {class: 'l', text: r[1]})]));
+      });
+      radial.appendChild(ring); document.body.appendChild(radial);
+    }
+    document.body.appendChild(bar);
+  }
+  function typeLabel(t) { return {multiple: 'چندگزینه‌ای', truefalse: 'صحیح / غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[t]; }
+  function cleanupBuilder() { ['m-bfab'].forEach(function (id) { var n = document.getElementById(id); if (n) n.remove(); }); var r = document.querySelector('.m-radial-bg'); if (r) r.remove(); }
+
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
   var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'سازندهٔ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
   function paint() {
+    cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
     var shell = document.getElementById('m-shell');
     if (!shell) { shell = el('div', {class: 'm-shell', id: 'm-shell'}); root.innerHTML = ''; root.appendChild(shell); }
@@ -4420,7 +4505,14 @@ img,video,canvas,iframe{max-width:100%}
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else S.renderPage(content);
+    if (page === 'builder') content.classList.add('m-builder');
   }
+  /* سازنده: بعد از اینکه builder.js نوار بالا را ساخت، FABها اضافه می‌شوند */
+  if (window.MutationObserver) new MutationObserver(function () {
+    if (!active() || view.panel !== 'builder') return;
+    var c = document.getElementById('content'); if (!c || !c.querySelector('.b-top') || document.getElementById('m-bfab')) return;
+    builderFabs(c);
+  }).observe(document.documentElement, {childList: true, subtree: true});
 
   /* دانش‌آموز: نوار بالا (عنوان + ☰ مثل اپ)، بدون داک؛ در حین آزمون نوار حذف می‌شود (StudentExamScreen تمام‌صفحه) */
   function paintStudent(shell, page) {

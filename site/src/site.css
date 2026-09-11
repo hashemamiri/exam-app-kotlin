@@ -554,3 +554,37 @@ img,video,canvas,iframe{max-width:100%}
 .m-mode .m-content .exam-grid .exam,.m-mode .m-content .g-item,.m-mode .m-content .b-q{border:0;background:var(--m-bg);box-shadow:5px 5px 12px var(--m-dark),-5px -5px 12px #fff;border-radius:18px}
 .m-mode .modal{background:var(--m-bg);border-radius:24px 24px 0 0}
 .m-mode .modal .field input,.m-mode .modal .field select,.m-mode .modal .field textarea{border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
+
+/* ---- V152: سازندهٔ آزمون در گوشی (ExamBuilderScreen) ---- */
+.m-builder{padding-bottom:calc(190px + env(safe-area-inset-bottom)) !important}
+.m-builder .b-top .row .btn,.m-builder .b-top .row .chip{display:none}
+.m-builder .b-top .row .code{display:inline-block}
+.m-builder .b-top .grid3{grid-template-columns:1fr}
+.m-settings-btn{width:100%;margin-top:6px;padding:10px;border-radius:20px}
+.m-builder .b-body{display:flex;flex-direction:column;gap:12px}
+.m-builder .b-list{order:1;position:static;max-height:none}
+.m-builder .b-editor{order:2}
+.m-builder .b-add{display:none} /* افزودن از منوی شعاعی + مثل اپ */
+.m-builder .b-list .btn.soft{display:none}
+.m-builder .b-qs{flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:4px;scrollbar-width:none}
+.m-builder .b-qs::-webkit-scrollbar{display:none}
+.m-builder .b-q{flex:0 0 auto;max-width:180px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
+.m-builder .b-q.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff;color:var(--m-acc)}
+.m-builder .b-tools{gap:8px}
+.m-builder .tool-btn{width:44px;height:44px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
+.m-builder .tool-btn.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff}
+.m-builder .b-rich,.m-builder .b-opt input[type=text],.m-builder .b-opt select{border:0;background:var(--m-bg);box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff;border-radius:14px}
+.m-bfab{position:fixed;bottom:calc(102px + env(safe-area-inset-bottom));inset-inline:16px;z-index:41;display:flex;justify-content:space-between;align-items:center;pointer-events:none;direction:rtl}
+.m-bfab .m-fab{pointer-events:auto;width:56px;height:56px;border:0;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(38,49,66,.25);background:var(--m-bg);color:var(--m-ink);transition:transform .2s}
+.m-bfab .m-fab .mi{width:28px;height:28px}
+.m-bfab .m-fab.save{background:#27A86B;color:#fff}
+.m-bfab .m-fab.prev{background:#dfe4ff;color:#3c3f9e}
+.m-bfab .m-fab.add .m-fab-plus{font-size:30px;line-height:1;font-weight:400;transition:transform .25s}
+.m-bfab .m-fab.add.on .m-fab-plus{transform:rotate(45deg)}
+/* در گوشی داک پنل زیر FABهای سازنده می‌ماند؛ ذخیره چپ، + راست (اپ: CenterStart / CenterEnd در RTL) */
+.m-radial-bg{position:fixed;inset:0;z-index:40;background:rgba(38,49,66,.28);backdrop-filter:blur(2px)}
+.m-radial{position:fixed;bottom:calc(130px + env(safe-area-inset-bottom));inset-inline-end:44px;width:0;height:0}
+.m-radial-item{position:absolute;left:-34px;top:-34px;width:68px;height:68px;border:0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:#263142;box-shadow:0 8px 18px rgba(38,49,66,.28);animation:mpop .22s both}
+.m-radial-item .g{font-size:20px;line-height:1}
+.m-radial-item .l{font-size:9px;font-weight:700;white-space:nowrap}
+@media (max-width:380px){.m-radial-item{width:60px;height:60px;left:-30px;top:-30px}.m-radial-item .l{font-size:8px}}
