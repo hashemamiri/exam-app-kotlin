@@ -406,7 +406,7 @@
       list.forEach(function (it) {
         if (used >= 24) { q.text = q.text.replace(it[0], ''); return; }
         used++;
-        jobs.push(mediaBlobUrl(it[1].src).then(function (u) { return new Promise(function (res) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }).then(function (im) {
+        jobs.push(mediaBlobUrl(it[1].src).then(function (u) { return new Promise(function (res) { var im = new Image(); if (/^https?:/i.test(u)) { im.crossOrigin = 'anonymous'; u = u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(); } im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }).then(function (im) {
           if (!im) { q.text = q.text.replace(it[0], ''); return; }
           var k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
           var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);

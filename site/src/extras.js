@@ -199,7 +199,7 @@
             (ex.questions || []).forEach(function (q) { (q.images || []).concat(q.audio ? [q.audio] : []).forEach(function (u) { if (/^https?:/i.test(u) && urls.indexOf(u) < 0 && urls.length < 6) urls.push(u); }); });
           }
           if (!urls.length) { out.textContent = 'هیچ رسانهٔ راه‌دوری در آزمون‌های شما پیدا نشد.'; return; }
-          var lines = [];
+          var lines = ['Origin این صفحه: ' + location.origin + '  (باید دقیقاً در قانون CORS صندوقچه باشد)'];
           for (var k = 0; k < urls.length; k++) {
             var u = urls[k], host = new URL(u).host, line = '[' + (k + 1) + '] ' + host + ' … ' + u.split('/').slice(-2).join('/').slice(0, 50) + '\n';
             if (S.isOwnStorageUrl(u)) {
@@ -207,7 +207,7 @@
               try { var r = await fetch(au, {headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (S.session() ? S.session().access_token : S.config.anon)}}); line += '  Storage(auth): HTTP ' + r.status + (r.ok ? ' ✓ ' + (r.headers.get('content-type') || '') : ' ✗ ' + (await r.text()).slice(0, 120)); }
               catch (e) { line += '  Storage(auth): شبکه ✗ ' + errMsg(e); }
             } else {
-              try { var r2 = await fetch(u, {mode: 'cors'}); line += '  GET(cors): HTTP ' + r2.status + (r2.ok ? ' ✓ ' + (r2.headers.get('content-type') || '') : ' ✗'); }
+              try { var r2 = await fetch(u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(), {mode: 'cors', cache: 'no-store'}); line += '  GET(cors): HTTP ' + r2.status + (r2.ok ? ' ✓ ' + (r2.headers.get('content-type') || '') : ' ✗'); }
               catch (e2) { line += '  GET(cors): ✗ ' + errMsg(e2) + '  ← احتمالاً CORS صندوقچه (Origin/GET) یا دسترسی عمومی'; }
               try { var r3 = await fetch(u, {mode: 'no-cors'}); line += '\n  GET(no-cors): ' + (r3.type === 'opaque' ? 'پاسخ رسید (opaque)' : r3.status); } catch (e3) { line += '\n  GET(no-cors): ✗ شبکه/DNS ' + errMsg(e3); }
             }

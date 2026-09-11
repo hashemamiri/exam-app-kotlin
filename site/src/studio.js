@@ -17,8 +17,11 @@
       /* V160.1 — علت واقعی در پیام (میزبان + کد HTTP / CORS) تا حدس نزنیم */
       var host = ''; try { host = /^https?:/i.test(src) ? new URL(src).host : (src.slice(0, 5) + '…'); } catch (e) { host = src.slice(0, 30); }
       var fail = function (why) { rej(new Error('تصویر قابل خواندن نیست (' + host + (why ? ' — ' + why : '') + ').')); };
+      /* V160.3 — <img> معمولی همین نشانی را بدون Origin در کش مرورگر گذاشته (بدون هدر CORS)؛ بارگذاری cors بعدی از همان کش می‌خواند و «Failed to fetch» می‌دهد.
+         راه‌حل: نسخهٔ cors با پارامتر یکتا (دور زدن کش)؛ در پیام خطا origin فعلی هم گفته می‌شود تا با قانون CORS آروان مقایسه شود. */
+      var bust = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(); };
       var go = function (u) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () {
-        if (/^https?:/i.test(u)) { fetch(u, {mode: 'cors'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = function () { fail('فرمت ناشناخته ' + (b.type || '')); }; im2.src = URL.createObjectURL(b); }).catch(function (e) { fail(e && e.message && /HTTP/.test(e.message) ? e.message : 'CORS/شبکه: ' + (e && e.message || '')); }); } else fail('data-url نامعتبر'); }; im.src = u; };
+        if (/^https?:/i.test(u)) { fetch(bust(u), {mode: 'cors', cache: 'no-store'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = function () { fail('فرمت ناشناخته ' + (b.type || '')); }; im2.src = URL.createObjectURL(b); }).catch(function (e) { fail(e && e.message && /HTTP/.test(e.message) ? e.message : 'CORS: Origin فعلی ' + location.origin + ' در قانون CORS صندوقچه مجاز نیست یا هدر Access-Control-Allow-Origin برنمی‌گردد'); }); } else fail('data-url نامعتبر'); }; im.src = /^https?:/i.test(u) && !/^blob:/.test(u) ? bust(u) : u; };
       (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, function (e) { fail(e && e.message || ''); });
     });
   }

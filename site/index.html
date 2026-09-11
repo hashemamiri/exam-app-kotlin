@@ -2059,7 +2059,7 @@ window.__HEADER_SCHEMA = {
       list.forEach(function (it) {
         if (used >= 24) { q.text = q.text.replace(it[0], ''); return; }
         used++;
-        jobs.push(mediaBlobUrl(it[1].src).then(function (u) { return new Promise(function (res) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }).then(function (im) {
+        jobs.push(mediaBlobUrl(it[1].src).then(function (u) { return new Promise(function (res) { var im = new Image(); if (/^https?:/i.test(u)) { im.crossOrigin = 'anonymous'; u = u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(); } im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }).then(function (im) {
           if (!im) { q.text = q.text.replace(it[0], ''); return; }
           var k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
           var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
@@ -3687,8 +3687,11 @@ window.__HEADER_SCHEMA = {
       /* V160.1 — علت واقعی در پیام (میزبان + کد HTTP / CORS) تا حدس نزنیم */
       var host = ''; try { host = /^https?:/i.test(src) ? new URL(src).host : (src.slice(0, 5) + '…'); } catch (e) { host = src.slice(0, 30); }
       var fail = function (why) { rej(new Error('تصویر قابل خواندن نیست (' + host + (why ? ' — ' + why : '') + ').')); };
+      /* V160.3 — <img> معمولی همین نشانی را بدون Origin در کش مرورگر گذاشته (بدون هدر CORS)؛ بارگذاری cors بعدی از همان کش می‌خواند و «Failed to fetch» می‌دهد.
+         راه‌حل: نسخهٔ cors با پارامتر یکتا (دور زدن کش)؛ در پیام خطا origin فعلی هم گفته می‌شود تا با قانون CORS آروان مقایسه شود. */
+      var bust = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(); };
       var go = function (u) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () {
-        if (/^https?:/i.test(u)) { fetch(u, {mode: 'cors'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = function () { fail('فرمت ناشناخته ' + (b.type || '')); }; im2.src = URL.createObjectURL(b); }).catch(function (e) { fail(e && e.message && /HTTP/.test(e.message) ? e.message : 'CORS/شبکه: ' + (e && e.message || '')); }); } else fail('data-url نامعتبر'); }; im.src = u; };
+        if (/^https?:/i.test(u)) { fetch(bust(u), {mode: 'cors', cache: 'no-store'}).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = function () { fail('فرمت ناشناخته ' + (b.type || '')); }; im2.src = URL.createObjectURL(b); }).catch(function (e) { fail(e && e.message && /HTTP/.test(e.message) ? e.message : 'CORS: Origin فعلی ' + location.origin + ' در قانون CORS صندوقچه مجاز نیست یا هدر Access-Control-Allow-Origin برنمی‌گردد'); }); } else fail('data-url نامعتبر'); }; im.src = /^https?:/i.test(u) && !/^blob:/.test(u) ? bust(u) : u; };
       (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, function (e) { fail(e && e.message || ''); });
     });
   }
@@ -5442,7 +5445,7 @@ window.__HEADER_SCHEMA = {
             (ex.questions || []).forEach(function (q) { (q.images || []).concat(q.audio ? [q.audio] : []).forEach(function (u) { if (/^https?:/i.test(u) && urls.indexOf(u) < 0 && urls.length < 6) urls.push(u); }); });
           }
           if (!urls.length) { out.textContent = 'هیچ رسانهٔ راه‌دوری در آزمون‌های شما پیدا نشد.'; return; }
-          var lines = [];
+          var lines = ['Origin این صفحه: ' + location.origin + '  (باید دقیقاً در قانون CORS صندوقچه باشد)'];
           for (var k = 0; k < urls.length; k++) {
             var u = urls[k], host = new URL(u).host, line = '[' + (k + 1) + '] ' + host + ' … ' + u.split('/').slice(-2).join('/').slice(0, 50) + '\n';
             if (S.isOwnStorageUrl(u)) {
@@ -5450,7 +5453,7 @@ window.__HEADER_SCHEMA = {
               try { var r = await fetch(au, {headers: {'apikey': S.config.anon, 'Authorization': 'Bearer ' + (S.session() ? S.session().access_token : S.config.anon)}}); line += '  Storage(auth): HTTP ' + r.status + (r.ok ? ' ✓ ' + (r.headers.get('content-type') || '') : ' ✗ ' + (await r.text()).slice(0, 120)); }
               catch (e) { line += '  Storage(auth): شبکه ✗ ' + errMsg(e); }
             } else {
-              try { var r2 = await fetch(u, {mode: 'cors'}); line += '  GET(cors): HTTP ' + r2.status + (r2.ok ? ' ✓ ' + (r2.headers.get('content-type') || '') : ' ✗'); }
+              try { var r2 = await fetch(u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(), {mode: 'cors', cache: 'no-store'}); line += '  GET(cors): HTTP ' + r2.status + (r2.ok ? ' ✓ ' + (r2.headers.get('content-type') || '') : ' ✗'); }
               catch (e2) { line += '  GET(cors): ✗ ' + errMsg(e2) + '  ← احتمالاً CORS صندوقچه (Origin/GET) یا دسترسی عمومی'; }
               try { var r3 = await fetch(u, {mode: 'no-cors'}); line += '\n  GET(no-cors): ' + (r3.type === 'opaque' ? 'پاسخ رسید (opaque)' : r3.status); } catch (e3) { line += '\n  GET(no-cors): ✗ شبکه/DNS ' + errMsg(e3); }
             }
