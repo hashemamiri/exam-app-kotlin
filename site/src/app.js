@@ -616,6 +616,7 @@
   var root;
   function render() {
     root = $('root');
+    document.body.classList.remove('dk');
     /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
     if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }
     document.body.classList.remove('m-mode');
@@ -884,8 +885,38 @@
     });
   }
   if (window.MutationObserver) new MutationObserver(function () { wrapTables(document); }).observe(document.documentElement, {childList: true, subtree: true});
+  /* V165 — پوستهٔ دسکتاپ به سبک «نسخهٔ یکپارچه»: ریل عمودی سمت راست (همهٔ بخش‌ها + منو)، نوار بالا با نشان و دکمهٔ ☰،
+     صفحهٔ «منو» = کارت پروفایل + شبکهٔ کارت‌ها. سایدبار/منوی پایین قدیمی فقط برای عرض ≤ 860 ساخته می‌شود (پوستهٔ گوشی جای آن را می‌گیرد). */
+  var DK_ICONS = {
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    dashboard: '<rect x="3" y="4" width="8" height="7" rx="2"/><rect x="13" y="4" width="8" height="7" rx="2"/><rect x="3" y="13" width="8" height="7" rx="2"/><rect x="13" y="13" width="8" height="7" rx="2"/>',
+    exams: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+    builder: '<path d="M12 5v14M5 12h14"/>',
+    classes: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9h6M7 12h4"/>',
+    students: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.5c2.8.2 5.5 2.3 5.5 5.5"/>',
+    bank: '<path d="M3 10l9-5 9 5H3zM5 10v7M10 10v7M14 10v7M19 10v7M3 20h18"/>',
+    reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    grading: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/>',
+    tools: '<path d="M4 20l6-6M14 4l6 6M10 14l4-4M13 3l8 8-4 4-8-8z"/>',
+    profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+    join: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M15 12v2"/>',
+    grades: '<path d="M4 4h16v13H4zM8 21h8M12 17v4M8 12l3-3 2 2 3-4"/>',
+    teachers: '<circle cx="12" cy="7" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7M3 4l4 1M21 4l-4 1"/>',
+    school: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5M22 9v6"/>',
+    logout: '<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/>',
+    back: '<path d="M15 6l-6 6 6 6"/>',
+    brand: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>'
+  };
+  var DK_SUBS = {dashboard: 'خلاصهٔ وضعیت و آمار', exams: 'فهرست و مدیریت', builder: 'ساخت آزمون آنلاین / چاپی', classes: 'فهرست و اعضا', students: 'فهرست و وضعیت', bank: 'سؤال‌های ذخیره‌شده',
+    reports: 'کارنامه و لیست نمرات', grading: 'تشریحی و نظارت', calendar: 'رویدادها و پیام‌ها', wallet: 'موجودی و شارژ', tools: 'فرمول، جدول، تناوبی', profile: 'مشخصات و امنیت حساب',
+    join: 'ورود با کد معلم', grades: 'نمرات و نتایج', teachers: 'معلم‌های مدرسه', school: 'مشخصات مدرسه'};
+  function dkIcon(name, cls) { return el('span', {class: 'dk-ic ' + (cls || ''), html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (DK_ICONS[name] || DK_ICONS.dashboard) + '</svg>'}); }
+  function dkGo(panel) { view.panel = panel; view.arg = null; closeSidebar(); render(); }
   function renderPanel() {
     var menu = MENUS[user.role] || MENUS.student;
+    document.body.classList.add('dk');
     var side = el('aside', {class: 'sidebar', id: 'sidebar'}, [
       el('div', {class: 'brand'}, [brandEl()]),
       el('div', {class: 'user'}, [
@@ -894,32 +925,54 @@
       ]),
       el('div', {class: 'menu'}, menu.map(function (it) {
         if (it === '-') return el('div', {class: 'sep'});
-        return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; closeSidebar(); render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
+        return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { dkGo(it[0]); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
       })),
       el('div', {class: 'foot'}, [el('button', {class: 'btn light', style: 'width:100%', text: 'خروج از حساب', onclick: doLogout})])
     ]);
-    var title = (menu.filter(function (x) { return x !== '-' && x[0] === view.panel; })[0] || ['', '', ''])[2];
+    var items = menu.filter(function (x) { return x !== '-'; });
+    var title = view.panel === 'menu' ? 'منو' : (items.filter(function (x) { return x[0] === view.panel; })[0] || ['', '', ''])[2];
+    /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
+    function railItem(key, label) {
+      return el('button', {class: 'dk-rail-item' + (view.panel === key ? ' active' : ''), 'aria-label': label, 'aria-current': view.panel === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
+    }
+    var rail = el('nav', {class: 'dk-rail', 'aria-label': 'نوار اصلی', style: '--n:' + (items.length + 1)}, [railItem('menu', 'منو')].concat(items.map(function (it) { return railItem(it[0], it[2]); })));
     var main = el('main', {class: 'main'}, [
-      el('div', {class: 'head'}, [
+      el('div', {class: 'head dk-top'}, [
         el('button', {class: 'icon-btn hamb', html: '☰', 'aria-label': 'منو', onclick: toggleSidebar}),
-        el('h1', {text: title}),
-        el('span', {class: 'chip brand', text: 'نسخهٔ وب · فاز ۶'})
+        el('div', {class: 'dk-title'}, [el('h1', {text: title}), el('p', {text: 'سامانه آزمون آنلاین'})]),
+        dkIcon('brand', 'dk-mark'),
+        el('button', {class: 'dk-burger' + (view.panel === 'menu' ? ' on' : ''), 'aria-label': 'منو', onclick: function () { dkGo(view.panel === 'menu' ? 'dashboard' : 'menu'); }}, [dkIcon('menu')])
       ]),
       el('div', {id: 'content'})
     ]);
     /* V146 — گوشی/تبلت: پس‌زمینهٔ سایدبار + منوی پایین (۴ مورد اول + «بیشتر» که سایدبار را باز می‌کند) */
     var sbBg = el('div', {class: 'sb-bg', id: 'sb-bg', onclick: closeSidebar});
-    var items = menu.filter(function (x) { return x !== '-'; });
     var primary = items.slice(0, 4);
     var bottom = el('nav', {class: 'bottom-nav', 'aria-label': 'منوی پایین'}, primary.map(function (it) {
       return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
     }).concat([el('button', {class: primary.some(function (it) { return it[0] === view.panel; }) ? '' : 'on', onclick: toggleSidebar}, [el('span', {class: 'i', text: '☰'}), el('span', {text: 'بیشتر'})])]));
-    root.appendChild(el('div', {class: 'app'}, [side, sbBg, main, bottom]));
+    root.appendChild(el('div', {class: 'app'}, [side, sbBg, main, bottom, rail]));
     renderPage($('content'));
+  }
+  /* V165 — صفحهٔ «منو»: کارت پروفایل (نام، نقش، ایمیل/نام کاربری) + شبکهٔ کارت‌های همهٔ بخش‌ها + خروج */
+  function pageMenu(c) {
+    c.innerHTML = '';
+    var menu = (MENUS[user.role] || MENUS.student).filter(function (x) { return x !== '-'; });
+    var sub = user.email && !/student\.exam\.local$/.test(user.email) ? user.email : (user.username || '');
+    c.appendChild(el('div', {class: 'dk-profile'}, [
+      el('div', {class: 'avatar dk-av', text: (user.name || '?').trim().charAt(0)}),
+      el('div', {class: 'dk-pinfo'}, [el('small', {text: 'پروفایل ' + ROLE_LABEL[user.role]}), el('h2', {text: user.name || ''}), el('div', {class: 'muted', text: sub})]),
+      el('button', {class: 'dk-back', 'aria-label': 'بازگشت', onclick: function () { dkGo('dashboard'); }}, [dkIcon('back')])
+    ]));
+    function mcard(key, label, subLabel, danger, on) {
+      return el('button', {class: 'dk-mcard' + (danger ? ' danger' : '') + (view.arg === key ? ' selected' : ''), onclick: on}, [el('span', {class: 'dk-mhead'}, [dkIcon(key, 'dk-mini'), el('strong', {text: label})]), el('small', {text: subLabel})]);
+    }
+    c.appendChild(el('div', {class: 'dk-grid'}, menu.map(function (it) { return mcard(it[0], it[2], DK_SUBS[it[0]] || '', false, function () { dkGo(it[0]); }); })
+      .concat([mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, doLogout)])));
   }
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
-    var pages = {dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
+    var pages = {menu: pageMenu, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
       builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
   }
@@ -943,7 +996,7 @@
         if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
         else card.appendChild(examTable(r[0].slice(0, 6), c));
         c.appendChild(card);
-        c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', text: fa(open.length) + ' آزمون هم‌اکنون باز است. برای ساخت آزمون جدید فعلاً از برنامهٔ اندروید استفاده کنید (فاز ۲ سایت).'}));
+        c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', text: fa(open.length) + ' آزمون هم‌اکنون باز است. برای ساخت آزمون جدید از بخش «آزمون جدید» استفاده کنید.'}));
       } else if (user.role === 'student') {
         var g = await api.myGrades().catch(function () { return []; });
         c.innerHTML = '';

@@ -894,3 +894,84 @@ img,video,canvas,iframe{max-width:100%}
   .lp .foot{position:static;order:3;margin-top:26px;padding:0 0 6px}
 }
 @media(prefers-reduced-motion:reduce){.lp *{transition:none!important;animation:none!important}}
+
+/* ===================== V165 — پوستهٔ دسکتاپ به سبک «نسخهٔ یکپارچه» (final-compact) =====================
+   فقط وقتی کاربر وارد شده و عرض > 860px (body.dk؛ پوستهٔ گوشی mobile.js دست‌نخورده می‌ماند).
+   پالت: زمینهٔ #eef2f5، کارت سفید گرد، سبزآبی #39758a + بنفش #715eaa، ریل عمودی سمت راست با هالهٔ نئونی. */
+body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--brand:#39758a;--brand-2:#2c5f71;--brand-soft:#e6f0f3;--danger:#bd4f5b;--danger-soft:#f6e9eb;
+  --radius:16px;--shadow:0 14px 38px rgba(33,52,66,.08);--dk-accent2:#715eaa;--dk-neon:#22c6ef;--dk-neon-ink:#0e93b8;--dk-rail-ink:#58717c;
+  background:radial-gradient(900px 500px at 8% -8%,rgba(77,190,218,.13),transparent 62%),radial-gradient(760px 460px at 100% 0%,rgba(133,108,218,.11),transparent 58%),linear-gradient(180deg,#eef6f8 0%,#edf3f6 52%,#eaf1f4 100%);letter-spacing:-.08px}
+.dk-rail{display:none}
+.dk .dk-ic{display:inline-grid;place-items:center}
+.dk .dk-ic svg{width:22px;height:22px}
+.dk .dk-mark,.dk .dk-burger{display:none}
+@media (min-width:861px){
+  /* سایدبار و منوی پایین قدیمی روی دسکتاپ نیست؛ جای آن ریل سمت راست است */
+  .dk .sidebar,.dk .sb-bg,.dk .bottom-nav,.dk .hamb{display:none !important}
+  .dk .app{display:block;min-height:100vh;overflow-x:clip}
+  .dk .main{padding:0 100px 64px 28px;max-width:1500px;margin:0 auto}
+  /* نوار بالا (topbar): نشان + عنوان + دکمهٔ ☰ (سمت راست) */
+  .dk .main .head.dk-top{position:sticky;top:0;z-index:30;display:flex;flex-direction:row-reverse;align-items:center;gap:10px;height:58px;margin:0 -28px 22px -100px;padding:8px 124px 8px 24px;
+    background:rgba(255,255,255,.84);border-bottom:1px solid rgba(210,222,228,.85);box-shadow:0 5px 22px rgba(35,57,70,.045);backdrop-filter:blur(22px) saturate(135%);-webkit-backdrop-filter:blur(22px) saturate(135%)}
+  .dk .dk-top .chip{display:none}
+  .dk .dk-top .dk-title{display:flex;flex-direction:column;justify-content:center;gap:1px;flex:1;text-align:right}
+  .dk .dk-top h1{font-size:18px;line-height:1.1;font-weight:900;letter-spacing:-.6px;margin:0;flex:none}
+  .dk .dk-top p{font-size:9px;line-height:1;color:#84919a;margin:0}
+  .dk .dk-mark{display:inline-grid;width:38px;height:38px;border-radius:12px;color:#fff;background:linear-gradient(135deg,#39758a,#6f5aaa);box-shadow:0 10px 24px rgba(57,117,138,.18)}
+  .dk .dk-burger{display:inline-grid;place-items:center;width:38px;height:38px;border:0;border-radius:12px;background:#39758a;color:#fff;box-shadow:0 6px 16px rgba(57,117,138,.2);padding:0}
+  .dk .dk-burger.on{background:#715eaa}
+  /* ریل عمودی سمت راست (bottom-dock فایل قدیمی، حالت final-compact) */
+  .dk .dk-rail{--size:52px;position:fixed;z-index:50;right:14px;top:22px;bottom:22px;width:72px;border-radius:20px;display:grid;grid-template-rows:repeat(var(--n,13),minmax(0,1fr));align-items:center;justify-items:center;padding:10px 5px;overflow:visible;direction:rtl;
+    background:linear-gradient(180deg,rgba(239,249,252,.97),rgba(211,236,245,.97));border:1px solid rgba(144,190,207,.65);box-shadow:0 18px 45px rgba(38,92,111,.15),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(14px)}
+  .dk .dk-rail-item{position:relative;display:grid;place-items:center;width:var(--size);height:var(--size);margin:0;padding:0;border:1.6px solid transparent;border-radius:16px;background:transparent;color:var(--dk-rail-ink);font:inherit;transition:background .18s,box-shadow .18s,color .18s}
+  .dk .dk-rail-item .dk-ic{width:42px;height:42px}
+  /* نام مورد: پیل سفید که به سمت چپ (داخل صفحه) باز می‌شود — مثل «منوی همبرگری» در فایل قدیمی */
+  .dk .dk-rail-item .dk-rail-label{position:absolute;top:50%;right:calc(100% + 10px);transform:translateY(-50%) translateX(8px);padding:10px 14px;border-radius:14px;background:#fff;color:#2f687c;font-size:11.5px;font-weight:850;letter-spacing:-.2px;line-height:1;white-space:nowrap;box-shadow:0 16px 34px rgba(24,54,68,.2),0 2px 8px rgba(24,54,68,.1);opacity:0;pointer-events:none;transition:opacity .16s ease,transform .24s cubic-bezier(.22,.72,.24,1)}
+  .dk .dk-rail-item:hover,.dk .dk-rail-item:focus-visible{background:#fff;color:#2f687c;box-shadow:0 10px 24px rgba(24,54,68,.16);outline:none}
+  .dk .dk-rail-item:hover .dk-rail-label,.dk .dk-rail-item:focus-visible .dk-rail-label{opacity:1;transform:translateY(-50%) translateX(0)}
+  .dk .dk-rail-item.active{color:var(--dk-neon-ink);border-color:var(--dk-neon);border-width:2px;box-shadow:0 0 0 3px rgba(34,198,239,.16),0 0 12px rgba(34,198,239,.55),inset 0 0 10px rgba(34,198,239,.2)}
+  .dk .dk-rail-item.active .dk-rail-label{font-weight:900}
+  /* صفحهٔ «منو»: کارت پروفایل + شبکهٔ ۴ستونهٔ کارت‌ها */
+  .dk .dk-profile{display:flex;align-items:center;gap:16px;min-height:104px;padding:15px 18px;margin-bottom:16px;border:1px solid #d9e1e6;border-radius:16px;background:linear-gradient(145deg,#fff,#f7fafb);box-shadow:var(--shadow)}
+  .dk .dk-profile .dk-av{width:58px;height:58px;border-radius:13px;background:#e0edf0;color:#39758a;font-size:21px;font-weight:900}
+  .dk .dk-pinfo{flex:1;min-width:0;line-height:1.4}
+  .dk .dk-pinfo small{display:block;font-size:10.5px;font-weight:850;color:#7b8993}
+  .dk .dk-pinfo h2{margin:2px 0;font-size:20px;font-weight:900;letter-spacing:-.55px}
+  .dk .dk-pinfo .muted{direction:ltr;text-align:right;font-size:13px}
+  .dk .dk-back{width:38px;height:38px;border:0;background:transparent;color:#76919d;display:grid;place-items:center;padding:0;border-radius:10px}
+  .dk .dk-back:hover{background:#e9f1f3}
+  .dk .dk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:108px;gap:9px}
+  .dk .dk-mcard{height:auto;padding:12px;text-align:right;border:1px solid #d9e1e6;border-radius:13px;background:#fff;box-shadow:none;position:relative;overflow:hidden;isolation:isolate;color:var(--ink);font:inherit;display:flex;flex-direction:column;
+    transition:transform .22s cubic-bezier(.2,.75,.2,1),box-shadow .22s ease,border-color .22s ease}
+  .dk .dk-mcard::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(108deg,transparent 18%,rgba(57,117,138,.075) 50%,transparent 82%);transform:translateX(115%);transition:transform .5s cubic-bezier(.2,.75,.2,1);pointer-events:none}
+  .dk .dk-mcard:hover{transform:translateY(-3px);border-color:#a9bdc6;box-shadow:0 12px 28px rgba(33,52,66,.1)}
+  .dk .dk-mcard:hover::after{transform:translateX(-115%)}
+  .dk .dk-mcard:active{transform:translateY(-1px) scale(.985);transition-duration:.08s}
+  .dk .dk-mhead{display:flex;align-items:center;gap:9px}
+  .dk .dk-mcard .dk-mini{width:36px;height:36px;border-radius:9px;background:#e9f1f3;color:#39758a;flex:0 0 auto;transition:transform .22s}
+  .dk .dk-mcard:hover .dk-mini{transform:translateY(-2px) scale(1.04)}
+  .dk .dk-mcard strong{font-size:13px;font-weight:800;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dk .dk-mcard small{display:block;color:var(--muted);margin-top:auto;padding-top:8px;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid #edf2f4}
+  .dk .dk-mcard.danger{background:#fbf7f8}
+  .dk .dk-mcard.danger strong{color:var(--danger)}
+  .dk .dk-mcard.danger .dk-mini{background:#f6e9eb;color:#bd4f5b}
+  .dk .dk-mcard.selected{background:#eef5f7;border-color:#9db9c3}
+  /* رنگ‌بندی بقیهٔ صفحات دسکتاپ (کارت‌ها، دکمه‌ها، فرم‌ها، جدول‌ها) با همان پالت */
+  .dk .card{border-radius:20px;border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(246,250,251,.8));box-shadow:0 10px 28px rgba(28,49,62,.065),0 2px 6px rgba(28,49,62,.035)}
+  .dk .stat .v{color:#39758a}
+  .dk .btn{border-radius:12px;box-shadow:0 8px 20px rgba(57,117,138,.16)}
+  .dk .btn.ghost,.dk .btn.soft,.dk .btn.light{box-shadow:none}
+  .dk .btn.danger{background:#fbf1f2;color:var(--danger);border-color:#e9c5ca}
+  .dk .btn.danger:hover{background:#f6e2e5}
+  .dk .icon-btn{border-radius:11px}
+  .dk .field input,.dk .field select,.dk .field textarea{border-radius:12px;border-color:#d9e1e6;background:#fff}
+  .dk .field input:focus,.dk .field select:focus,.dk .field textarea:focus{border-color:#39758a;box-shadow:0 0 0 3px rgba(57,117,138,.14)}
+  .dk table.tbl tr:hover td{background:#f4f8fa}
+  .dk .chip.brand{background:#e6f0f3;color:#39758a}
+  .dk .alert.info{background:#e6f0f3;color:#1f4f5e;border-color:#c6dbe2}
+  .dk .soon{border-color:#c6dbe2;background:#f4f8fa}
+  .dk .soon b{color:#39758a}
+  .dk a{color:#39758a}
+}
+@media (min-width:861px) and (max-width:1100px){.dk .dk-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:861px) and (max-height:760px){.dk .dk-rail{--size:44px}.dk .dk-rail-item .dk-ic{width:36px;height:36px}.dk .dk-rail-item .dk-ic svg{width:19px;height:19px}}
