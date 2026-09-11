@@ -1440,12 +1440,14 @@ label.g-item{cursor:pointer}
       try {
         var t = await http('/functions/v1/media-upload', {method: 'POST', body: {kind: kind, folder: folder, exam_id: examId, ext: ext, size: blob.size}});
         if (t && t.upload_url) {
-          var put = await fetch(t.upload_url, {method: 'PUT', headers: t.headers || {'Content-Type': contentType}, body: blob});
-          if (!put.ok) throw new Error('R2 PUT ' + put.status);
+          /* نوع محتوا باید دقیقاً همان مقدار امضاشدهٔ سرور باشد (نه blob.type که ممکن است ;codecs=… داشته باشد) */
+          var ct = (t.headers && t.headers['Content-Type']) || contentType;
+          var put = await fetch(t.upload_url, {method: 'PUT', headers: {'Content-Type': ct}, body: blob.type === ct ? blob : new Blob([blob], {type: ct})});
+          if (!put.ok) { var pt = ''; try { pt = (await put.text()).slice(0, 200); } catch (e2) {} throw new Error('S3 PUT ' + put.status + (pt ? ' ' + pt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '')); }
           return t.public_url;
         }
         if (t && t.error === 'r2_not_configured') r2Disabled = true; else throw new Error((t && (t.message || t.error)) || 'media-upload');
-      } catch (e) { if (e && e.status === 503) r2Disabled = true; else throw new Error('آپلود فایل ناموفق بود: ' + errMsg(e)); }
+      } catch (e) { if (e && e.status === 503) r2Disabled = true; else { console.error('media-upload', e); throw new Error('آپلود فایل به فضای ابری ناموفق بود: ' + errMsg(e)); } }
     }
     var path = folder + '/' + user.id + '/' + examId + '/' + uuid() + '.' + ext;
     var res = await fetch(SUPABASE_URL + '/storage/v1/object/' + MEDIA_BUCKET + '/' + path, {method: 'POST', headers: {'apikey': ANON, 'Authorization': 'Bearer ' + (session ? session.access_token : ANON), 'Content-Type': contentType, 'x-upsert': 'false'}, body: blob});

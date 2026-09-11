@@ -1,3 +1,7 @@
+V144.3 — سایت: رفع آپلود صوت روی آروان/S3 (عدم تطابق Content-Type با امضا)
+- ضبط مرورگر نوع audio/webm;codecs=opus می‌دهد ولی لینک امضاشده برای audio/webm است؛ PUT اکنون دقیقاً همان Content-Type امضاشده را می‌فرستد و در صورت نیاز Blob را با همان نوع بازبسته‌بندی می‌کند.
+- خطای واقعی S3 (کد و متن پاسخ) در پیام کاربر و Console نمایش داده می‌شود؛ fallback به Supabase فقط وقتی S3 پیکربندی نشده باشد.
+
 V144.2 — رفع شکست CI (دو تست آینهٔ سایت پس از V144) + تست جدید V144_MediaS3Test
 - V139_SiteBuilderTest و V143_SitePhase6Test هنوز آپلود مستقیم به باکت را در builder/extras می‌جستند؛ اکنون مسیر S.uploadMedia و fallback در app.js را بررسی می‌کنند.
 - تست جدید: media-upload فقط برای معلم/مدیر واردشده لینک امضاشده صادر می‌کند، Secrets S3_* خوانده می‌شوند، سایت اول S3 بعد Supabase، و storage-maintenance یتیم‌های S3 را هم پاک می‌کند.
