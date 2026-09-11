@@ -9,6 +9,7 @@ assets/formula_editor/formula.html، قلم‌ها) در یک فایل HTML تع
 اجرا (از ریشهٔ مخزن):  python3 site/build_site.py
 """
 import base64
+import hashlib
 import json
 import os
 import re
@@ -100,13 +101,25 @@ def main():
     site_css = read(os.path.join(SITE, "src", "site.css"))
     site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "studio.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
     vazir = read(os.path.join(WEB, "vazirmatn_embed.css"))
+    # V162 — سرعت: دو موتور سنگین (چاپ + فرمول ≈ ۵ مگابایت) دیگر داخل index.html نیستند؛
+    # در فایل جداگانهٔ engines.<hash>.js می‌روند که فقط هنگام نیاز (چاپ/فرمول/سازنده) بارگذاری و
+    # به‌خاطر hash در نام، برای همیشه کش می‌شود. صفحهٔ اصلی ≈ ۱ مگابایت.
     engines = "window.__ENGINES = {print: %s, formula: %s};" % (js_string(build_print_engine()), js_string(build_formula_engine()))
+    engines_b = engines.encode("utf-8")
+    engines_hash = hashlib.sha256(engines_b).hexdigest()[:12]
+    engines_name = "engines.%s.js" % engines_hash
+    for old in os.listdir(SITE):
+        if old.startswith("engines.") and old.endswith(".js") and old != engines_name:
+            os.remove(os.path.join(SITE, old))
+    with open(os.path.join(SITE, engines_name), "wb") as f:
+        f.write(engines_b)
     # V157 — همان header_settings_schema.json اپ برای پنجرهٔ «تنظیمات سربرگ» سایت (HeaderSettingsDialog)
-    engines += "\nwindow.__HEADER_SCHEMA = %s;" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
+    inline = "window.__ENGINES_URL = %s;" % json.dumps("/" + engines_name)
+    inline += "\nwindow.__HEADER_SCHEMA = %s;" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
     out = (tpl.replace("/*__SUPABASE_URL__*/", SUPABASE_URL)
               .replace("/*__VAZIR_CSS__*/", vazir)
               .replace("/*__SITE_CSS__*/", site_css)
-              .replace("/*__ENGINES_JS__*/", engines)
+              .replace("/*__ENGINES_JS__*/", inline)
               .replace("/*__SITE_JS__*/", site_js.replace("</script", "<\\/script")))
     for m in ("/*__SUPABASE_URL__*/", "/*__VAZIR_CSS__*/", "/*__SITE_CSS__*/", "/*__ENGINES_JS__*/", "/*__SITE_JS__*/"):
         if m in out:
@@ -114,7 +127,7 @@ def main():
     dest = os.path.join(SITE, "index.html")
     with open(dest, "w", encoding="utf-8") as f:
         f.write(out)
-    print("site/index.html نوشته شد: %.1f MB" % (os.path.getsize(dest) / 1048576.0))
+    print("site/index.html نوشته شد: %.1f MB — %s: %.1f MB" % (os.path.getsize(dest) / 1048576.0, engines_name, len(engines_b) / 1048576.0))
 
 
 if __name__ == "__main__":

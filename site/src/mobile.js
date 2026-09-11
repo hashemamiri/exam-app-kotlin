@@ -61,6 +61,7 @@
   var I = {
     menu: '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
     close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>',
     wallet: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/></svg>',
     exams: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
     cards: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="2"/><rect x="13" y="4" width="8" height="7" rx="2"/><rect x="3" y="13" width="8" height="7" rx="2"/><rect x="13" y="13" width="8" height="7" rx="2"/></svg>',
@@ -901,13 +902,92 @@
 
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
-  var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
-  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
+  var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات', calendar: 'تقویم', cards: 'کارت‌ها'};
+  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
   /* ================================================================ V161 — «حساب» گوشی مثل ProfileSettingsScreen اپ
      چیپ‌های بالا: پروفایل / حساب / سربرگ (معلم). پروفایل = ProfileSection (عکس محلی، نام نمایشی، مشخصات معلم، ذخیره).
      حساب = AccountSection: آکاردئون‌های «مشخصات حساب»، «پیوستن به مدرسه» (معلم)، «تغییر نام کاربری»، «تغییر ایمیل»،
      «تغییر رمز عبور» (با رمز فعلی یا کد بازیابی)، «حذف حساب». سربرگ = HeaderSection. */
   var profileTab = 'profile', accOpen = 'info';
+  /* ================================================================ V162 — «تنظیمات» مثل ProfileSettingsScreen(destination=SETTINGS):
+     چیپ‌های ظاهر / داده‌ها / درباره؛ ظاهر روی همین دستگاه ذخیره می‌شود (AppearancePreferences) */
+  var LS_APPEAR = 'examsite.appearance.v1';
+  var PALETTES = {INDIGO_MINT: ['#6C63F5', '#27C4A8', 'نیلی و سبز'], BLUE_CYAN: ['#1877D2', '#32B7C6', 'آبی و فیروزه‌ای'], PINK_ORANGE: ['#E96D8A', '#FFA14E', 'صورتی و نارنجی'], PURPLE_PINK: ['#8C5AD7', '#EC6DA7', 'بنفش و صورتی']};
+  var APPEAR_DEF = {themeMode: 'SYSTEM', fontScale: 1, appFont: 'VAZIRMATN', palette: 'INDIGO_MINT', depth: 14, persianDigits: false};
+  function appearance() { try { return Object.assign({}, APPEAR_DEF, JSON.parse(localStorage.getItem(LS_APPEAR) || '{}')); } catch (e) { return Object.assign({}, APPEAR_DEF); } }
+  function setAppearance(patch) { var a = Object.assign(appearance(), patch); try { localStorage.setItem(LS_APPEAR, JSON.stringify(a)); } catch (e) {} applyAppearance(); return a; }
+  function applyAppearance() {
+    var a = appearance(), root = document.documentElement, st = root.style;
+    var dark = a.themeMode === 'DARK' || (a.themeMode === 'SYSTEM' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    root.classList.toggle('m-dark', !!dark);
+    var pal = PALETTES[a.palette] || PALETTES.INDIGO_MINT;
+    st.setProperty('--m-acc', pal[0]); st.setProperty('--m-acc2', pal[1]);
+    var d = Math.max(8, Math.min(22, +a.depth || 14)); st.setProperty('--m-depth', d + 'px'); st.setProperty('--m-depth2', Math.round(d * 2.2) + 'px');
+    st.setProperty('--m-scale', String(Math.max(0.85, Math.min(1.3, +a.fontScale || 1))));
+    var fonts = {SYSTEM: 'Tahoma, "Segoe UI", sans-serif', VAZIRMATN: "'Vazirmatn', Tahoma, sans-serif", SHABNAM: "'Shabnam', 'Vazirmatn', Tahoma, sans-serif", SAHEL: "'Sahel', 'Vazirmatn', Tahoma, sans-serif"};
+    st.setProperty('--m-font', fonts[a.appFont] || fonts.VAZIRMATN);
+  }
+  applyAppearance();
+  try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyAppearance); } catch (e) {}
+  var settingsTab = 'appearance';
+  function chipRow(items, cur, on) { return el('div', {class: 'm-chips'}, items.map(function (it) { return el('button', {class: 'm-chip' + (cur === it[0] ? ' on' : ''), text: it[1], onclick: function () { on(it[0]); }}); })); }
+  function switchRow(title, sub, on, cb) {
+    var sw = el('button', {class: 'm-switch' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: function () { on = !on; sw.classList.toggle('on', on); sw.setAttribute('aria-pressed', on ? 'true' : 'false'); cb(on); }}, [el('i')]);
+    return el('div', {class: 'm-switch-row'}, [el('div', {class: 'grow'}, [el('div', {text: title}), sub ? el('small', {class: 'muted', text: sub}) : null]), sw]);
+  }
+  function settingsScreen(c) {
+    var u = S.user(); c.innerHTML = '';
+    var tabs = [['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['about', 'درباره']];
+    c.appendChild(chipRow(tabs, settingsTab, function (k) { settingsTab = k; settingsScreen(c); }));
+    if (settingsTab === 'appearance') return appearanceSection(c);
+    if (settingsTab === 'data') {
+      if (u.role === 'teacher') c.appendChild(SiteExtras.backupCard());
+      else if (u.role === 'manager') c.appendChild(managerBackupCard());
+      else c.appendChild(el('div', {class: 'card m-pcard', text: 'پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.'}));
+      return;
+    }
+    aboutSection(c);
+  }
+  function appearanceSection(c) {
+    var a = appearance();
+    function card(title, kids) { return el('div', {class: 'card m-pcard'}, [el('h3', {text: title})].concat(kids)); }
+    var rerun = function () { appearanceSection.__redo && appearanceSection.__redo(); };
+    appearanceSection.__redo = function () { c.innerHTML = ''; c.appendChild(chipRow([['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['about', 'درباره']], settingsTab, function (k) { settingsTab = k; settingsScreen(c); })); appearanceSection(c); };
+    c.appendChild(card('حالت نمایش', [
+      chipRow([['SYSTEM', 'دستگاه'], ['LIGHT', 'روشن'], ['DARK', 'تیره']], a.themeMode, function (v) { setAppearance({themeMode: v}); rerun(); }),
+      switchRow('اعداد فارسی در ابزارها', 'محورها، نمودارها، شکل‌ها و جدول‌ها', a.persianDigits, function (v) { setAppearance({persianDigits: v}); })
+    ]));
+    c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: گوشی'})]));
+    var palRow = el('div', {class: 'm-pal-row'}, Object.keys(PALETTES).map(function (k) { var p = PALETTES[k]; return el('button', {class: 'm-pal' + (a.palette === k ? ' on' : ''), 'aria-label': 'پالت ' + p[2], style: 'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')', onclick: function () { setAppearance({palette: k}); rerun(); }}, [a.palette === k ? ic('check') : null]); }));
+    c.appendChild(card('ظاهر نئومورفیک — پالت رنگ', [el('p', {class: 'muted', text: 'پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.'}), palRow]));
+    var dv = el('b', {style: 'color:var(--m-acc)', text: fa(Math.round(a.depth))});
+    var dr = el('input', {type: 'range', min: '8', max: '22', step: '1', value: String(a.depth), class: 'm-range'});
+    dr.addEventListener('input', function () { dv.textContent = fa(dr.value); document.documentElement.style.setProperty('--m-depth', dr.value + 'px'); document.documentElement.style.setProperty('--m-depth2', Math.round(dr.value * 2.2) + 'px'); });
+    dr.addEventListener('change', function () { setAppearance({depth: +dr.value}); });
+    c.appendChild(card('ظاهر نئومورفیک — عمق سایه', [el('div', {class: 'm-lv'}, [el('span', {text: 'عمق سایه'}), dv]), dr]));
+    c.appendChild(card('ظاهر نئومورفیک — پیش‌نمایش', [el('div', {class: 'm-pal-preview', text: 'پیش‌نمایش پالت'})]));
+    c.appendChild(card('قلم فارسی', [chipRow([['SYSTEM', 'سیستم'], ['VAZIRMATN', 'وزیرمتن'], ['SHABNAM', 'شبنم'], ['SAHEL', 'ساحل']], a.appFont, function (v) { setAppearance({appFont: v}); rerun(); }), el('p', {class: 'muted', text: 'وزیرمتن همراه سایت است؛ شبنم و ساحل در صورت نصب روی دستگاه اعمال می‌شوند.'})]));
+    var sv = el('p', {text: fa(Math.round(a.fontScale * 100)) + ' درصد'});
+    var sr = el('input', {type: 'range', min: '85', max: '130', step: '5', value: String(Math.round(a.fontScale * 100)), class: 'm-range'});
+    sr.addEventListener('input', function () { sv.textContent = fa(sr.value) + ' درصد'; document.documentElement.style.setProperty('--m-scale', String(sr.value / 100)); });
+    sr.addEventListener('change', function () { setAppearance({fontScale: sr.value / 100}); });
+    c.appendChild(card('اندازه متن', [sv, sr, el('p', {text: 'نمونه متن فارسی — آزمون ریاضی فصل یک'})]));
+    c.appendChild(el('button', {class: 'm-outline', style: 'width:100%;margin-bottom:12px', text: 'بازگردانی تنظیمات ظاهری', onclick: function () { try { localStorage.removeItem(LS_APPEAR); } catch (e) {} applyAppearance(); rerun(); }}));
+  }
+  function managerBackupCard() {
+    var msg = el('div');
+    return el('div', {class: 'card m-pcard'}, [el('h3', {text: 'پشتیبان داده‌های مدرسه'}), el('p', {class: 'muted', text: 'مدرسه‌ها، معلم‌ها، کلاس‌ها و دانش‌آموزان در یک فایل JSON ذخیره می‌شوند.'}), msg,
+      el('button', {class: 'btn', text: 'ساخت پشتیبان مدرسه', onclick: async function () { msg.innerHTML = ''; try { var raw = await S.rpcObj('native_manager_export_backup_v61', {}); if (raw && raw.error) throw new Error(String(raw.error)); SiteExtras.download('school-backup.json', JSON.stringify(raw, null, 2), 'application/json'); toast('پشتیبان مدرسه ذخیره شد.', 'ok'); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); } }})]);
+  }
+  function aboutSection(c) {
+    var b = S.config || {};
+    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'دربارهٔ آزمون‌ساز — نسخهٔ وب'}),
+      el('div', {class: 'm-lv'}, [el('span', {text: 'نشانی'}), el('b', {text: location.host || 'onlineexam.ir'})]),
+      el('div', {class: 'm-lv'}, [el('span', {text: 'حالت'}), el('b', {text: window.matchMedia('(display-mode: standalone)').matches ? 'نصب‌شده (PWA)' : 'مرورگر'})]),
+      el('p', {class: 'muted', text: 'سایت با هر انتشار خودکار به‌روز می‌شود؛ اگر پیام «نسخهٔ جدید آماده است» دیدید، صفحه را دوباره باز کنید.'}),
+      el('button', {class: 'btn light', style: 'width:100%', text: 'بررسی به‌روزرسانی (بارگذاری دوباره)', onclick: function () { location.reload(); }})]));
+    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'برنامهٔ اندروید'}), el('p', {class: 'muted', text: 'نسخهٔ اندروید همان امکانات را با تختهٔ سفید و ابزارهای بیشتر دارد.'}), el('a', {class: 'btn light', style: 'width:100%;display:block;text-align:center', href: 'https://github.com/hashemamiri/exam-app-kotlin/releases/latest', target: '_blank', rel: 'noopener', text: 'دریافت آخرین APK'})]));
+  }
   var LS_AVATAR = 'examsite.avatar.';
   function localAvatar(uid) { try { return localStorage.getItem(LS_AVATAR + uid); } catch (e) { return null; } }
   function acc(key, title, body) {
@@ -1036,12 +1116,14 @@
     if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
     else if (mgr && page === 'cards') managerCards(content);
     else if (mgr && page === 'profile') profileScreen(content);
+    else if (mgr && page === 'tools') settingsScreen(content);
     else if (mgr) S.renderPage(content);
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else if (page === 'print') printCenter(content);
     else if (page === 'students' && !mgr) studentsScreen(content);
     else if (page === 'profile') profileScreen(content);
+    else if (page === 'tools') settingsScreen(content);
     else S.renderPage(content);
     if (page === 'builder') content.classList.add('m-builder');
   }
@@ -1068,6 +1150,7 @@
     if (ui.menuOpen) content.appendChild(studentMenu());
     else if (page === 'dashboard' || page === 'join') studentHome(content);
     else if (page === 'profile') profileScreen(content);
+    else if (page === 'tools') settingsScreen(content);
     else S.renderPage(content);
   }
 

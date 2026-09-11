@@ -24,6 +24,11 @@ self.addEventListener('fetch', function (e) {
     }).catch(function () { return caches.match('/'); }));
     return;
   }
+  /* V162 — engines.<hash>.js: کش-اول (نام با هش عوض می‌شود)؛ نسخه‌های قدیمی موتور پاک می‌شوند */
+  if (/^\/engines\.[0-9a-f]+\.js$/.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { if (n.ok) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.keys().then(function (ks) { ks.forEach(function (k) { if (/\/engines\./.test(k.url) && k.url !== req.url) c.delete(k); }); }); c.put(req, copy); }); } return n; }); }));
+    return;
+  }
   if (url.pathname.indexOf('/pwa/') === 0) {
     e.respondWith(caches.match(req).then(function (r) { return r || fetch(req).then(function (n) { var copy = n.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); return n; }); }));
   }

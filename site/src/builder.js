@@ -214,7 +214,7 @@
       var f = el('iframe', {style: 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none', title: 'builder-math'});
       document.body.appendChild(f); previewFrame = f;
       f.addEventListener('load', function () { var w = f.contentWindow, tries = 0; (function go() { tries++; if (w.renderRichText && w.GeoFig) return resolve(w); if (tries < 200) setTimeout(go, 50); else resolve(null); })(); });
-      f.srcdoc = S.engineHtml('print');
+      S.engineHtml('print').then(function (h) { if (h) f.srcdoc = h; else resolve(null); });
     });
     return previewReady;
   }
@@ -668,7 +668,7 @@
         var poll = setInterval(function () { if (!d.body.contains(overlay) && false) return; var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);
       })();
     });
-    iframe.srcdoc = S.engineHtml('print');
+    S.engineHtml('print').then(function (h) { if (h) iframe.srcdoc = h; else close(); });
   }
 
   /* ================================================================ گفتار به متن (Web Speech، فارسی/انگلیسی) */

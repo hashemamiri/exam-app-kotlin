@@ -349,11 +349,29 @@
   function validatePassword(v) { if (!v || v.length < 8 || v.length > 72) throw new Error('رمز عبور باید ۸ تا ۷۲ کاراکتر باشد.'); }
 
   /* ================================================================ موتور چاپ (assets/print) و ویرایشگر فرمول — تعبیه‌شده */
-  function engineHtml(kind) {
-    var src = (window.__ENGINES || {})[kind] || '';
-    if (!src) toast('موتور ' + (kind === 'print' ? 'چاپ' : 'فرمول') + ' در این فایل تعبیه نشده است.', 'err');
-    return src;
+  /* V162 — موتورها در فایل جداگانهٔ engines.<hash>.js (کش دائمی) هستند و فقط هنگام اولین نیاز بارگذاری می‌شوند. */
+  var enginesReady = null;
+  function loadEngines() {
+    if (window.__ENGINES) return Promise.resolve(window.__ENGINES);
+    if (enginesReady) return enginesReady;
+    enginesReady = new Promise(function (resolve, reject) {
+      var url = window.__ENGINES_URL; if (!url) { reject(new Error('نشانی موتورها در این فایل نیست.')); return; }
+      var sc = document.createElement('script'); sc.src = url; sc.async = true;
+      sc.onload = function () { if (window.__ENGINES) resolve(window.__ENGINES); else reject(new Error('موتورها بارگذاری نشد.')); };
+      sc.onerror = function () { enginesReady = null; reject(new Error('دانلود موتور چاپ/فرمول ناموفق بود؛ اینترنت را بررسی کنید.')); };
+      document.head.appendChild(sc);
+    });
+    return enginesReady;
   }
+  function engineHtml(kind) {
+    return loadEngines().then(function (E) {
+      var src = E[kind] || '';
+      if (!src) toast('موتور ' + (kind === 'print' ? 'چاپ' : 'فرمول') + ' در این فایل تعبیه نشده است.', 'err');
+      return src;
+    }, function (e) { toast(errMsg(e), 'err'); return ''; });
+  }
+  /* پیش‌بارگذاری آرام بعد از ورود (پس از بیکار شدن صفحه) تا اولین چاپ/فرمول معطل نشود */
+  function prefetchEngines() { var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); }; idle(function () { loadEngines().catch(function () {}); }); }
   /* ---- پل چاپ: همان متدهای ExamPrintBridge اندروید (ExamHtmlPrintDialog.kt) در مرورگر ---- */
   var printCtx = null; // {overlay, iframe, examId, questionCount, onClosed}
   window.__printBridge = {
@@ -453,7 +471,7 @@
         if (tries < 200 || (!inlined.done && tries < 1200)) setTimeout(push, 50); else toast(inlined.done ? 'موتور چاپ آماده نشد.' : 'بارگذاری تصویرهای آزمون طول کشید.', 'err');
       })();
     });
-    iframe.srcdoc = engineHtml('print');
+    engineHtml('print').then(function (h) { if (h) iframe.srcdoc = h; else closePrintOverlay(); });
   }
   /* ---- ویرایشگر فرمول: پل ExamEditorNative (FormulaHostDialog.kt) ---- */
   var formulaCtx = null;
@@ -479,7 +497,7 @@
           if (tries < 67) setTimeout(tryBegin, 150); else { toast('ویرایشگر فرمول آماده نشد.', 'err'); window.__formulaBridge.onEditorClosed(); }
         })();
       });
-      iframe.srcdoc = engineHtml('formula');
+      engineHtml('formula').then(function (h) { if (h) iframe.srcdoc = h; else window.__formulaBridge.onEditorClosed(); });
     });
   }
 
@@ -841,6 +859,7 @@
   function afterLogin() {
     closeAuth();
     if (user && user.requiresSetup) { renderSetupGate(); return; }
+    prefetchEngines();
     view.panel = 'dashboard';
     toast('خوش آمدید، ' + (user.name || ''), 'ok');
     render();
@@ -1281,6 +1300,7 @@
     }
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();
+    if (user) prefetchEngines();
   }
   /* V144 — بارگذاری رسانه: اول R2 (لینک موقت از Edge Function media-upload)، در نبود پیکربندی → Supabase Storage */
   var MEDIA_BUCKET = 'exam-images', r2Disabled = false;
@@ -1307,7 +1327,7 @@
   }
   window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
-    localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
+    localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,
     render: render, renderPage: renderPage, printExam: printExam, logout: doLogout,
