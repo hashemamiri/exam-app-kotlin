@@ -18877,3 +18877,6 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 
 ## §V160.3 — «CORS/شبکه: Failed to fetch» آروان
 پس از V160.2، 403 رفت و خطا به CORS تبدیل شد در حالی که قانون CORS آروان (Origin ها، GET، هدر *) درست بود. علت شناخته‌شدهٔ مرورگر: `<img src>` بدون `crossorigin` همان URL را بدون هدر `Origin` درخواست و کش می‌کند؛ درخواست بعدی با `crossOrigin='anonymous'`/`fetch(cors)` از همان ورودی کش (بدون `Access-Control-Allow-Origin`) پاسخ می‌گیرد و شکست می‌خورد. رفع: در `studio.js loadImage`، `app.js inlinePrintImages` و `extras.js mediaDiagCard` نشانی با `?cors=<ts>` و `cache:'no-store'` بارگذاری می‌شود. اگر باز هم شکست: Origin چاپ‌شده در پیام/کارت عیب‌یابی را با قانون CORS مقایسه کنید (www/بدون www، http/https) و پاسخ آروان را در Network → Response Headers بررسی کنید.
+
+## §V160.4 — SignatureDoesNotMatch در APK/سایت گوشی
+V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ کلاینتی که هدر را نفرستد (APK نصب‌شدهٔ قدیمی، سایت گوشی با SW/کش قدیمی) `SignatureDoesNotMatch` می‌گیرد — دسکتاپ چون سایت تازه را داشت درست بود. رفع سازگار با عقب: `media-upload` فقط با `body.acl === 'public-read'` هدر را امضا می‌کند و در `headers`/`public_acl` برمی‌گرداند؛ سایت و `SupabaseQuestionImageUploader` این فیلد را می‌فرستند. قاعدهٔ کلی: **هر تغییر در SignedHeaders باید opt-in از سمت کلاینت باشد.**

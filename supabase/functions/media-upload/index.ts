@@ -39,7 +39,7 @@ async function hmac(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayB
 }
 const encodeRfc3986 = (s: string) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
-async function presignPut(opts: { endpoint: string; region: string; accessKey: string; secretKey: string; bucket: string; key: string; contentType: string; expires: number }) {
+async function presignPut(opts: { endpoint: string; region: string; accessKey: string; secretKey: string; bucket: string; key: string; contentType: string; expires: number; publicAcl: boolean }) {
   const host = new URL(opts.endpoint).host;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, ''); // YYYYMMDDTHHMMSSZ
@@ -49,7 +49,9 @@ async function presignPut(opts: { endpoint: string; region: string; accessKey: s
   const canonicalUri = '/' + opts.bucket + '/' + opts.key.split('/').map(encodeRfc3986).join('/');
   // V160.2 — آروان برای هر شیء ACL جداگانه دارد؛ بدون x-amz-acl: public-read شیء خصوصی می‌شود و
   // خواندنش با HTTP 403 می‌شکند (حتی وقتی صندوقچه «عمومی» است). هدر باید امضا و توسط کلاینت ارسال شود.
-  const signedHeaders = 'content-type;host;x-amz-acl';
+  // V160.4 — کلاینت‌های قدیمی (APK قبل از V160.2 / سایت کش‌شده) هدر x-amz-acl را نمی‌فرستند؛ اگر امضا شامل آن باشد
+  // SignatureDoesNotMatch می‌گیرند. فقط وقتی کلاینت اعلام کند (body.acl === 'public-read') امضا می‌شود.
+  const signedHeaders = opts.publicAcl ? 'content-type;host;x-amz-acl' : 'content-type;host';
   const query: [string, string][] = [
     ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
     ['X-Amz-Credential', `${opts.accessKey}/${scope}`],
@@ -59,7 +61,7 @@ async function presignPut(opts: { endpoint: string; region: string; accessKey: s
   ];
   query.sort((a, b) => (a[0] < b[0] ? -1 : 1));
   const canonicalQuery = query.map(([k, v]) => `${encodeRfc3986(k)}=${encodeRfc3986(v)}`).join('&');
-  const canonicalHeaders = `content-type:${opts.contentType}\nhost:${host}\nx-amz-acl:public-read\n`;
+  const canonicalHeaders = `content-type:${opts.contentType}\nhost:${host}\n` + (opts.publicAcl ? 'x-amz-acl:public-read\n' : '');
   const canonicalRequest = ['PUT', canonicalUri, canonicalQuery, canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, await sha256(canonicalRequest)].join('\n');
   let k: ArrayBuffer = await hmac(enc.encode('AWS4' + opts.secretKey), date);
@@ -108,8 +110,11 @@ Deno.serve(async (request) => {
     const folder = FOLDERS.includes(String(body.folder || '')) ? String(body.folder) : FOLDERS[0];
     const key = `${folder}/${userId}/${examId}/${name}.${ext}`;
 
-    const uploadUrl = await presignPut({ endpoint, region, accessKey, secretKey, bucket, key, contentType, expires: EXPIRES });
-    return json({ upload_url: uploadUrl, public_url: `${publicBase}/${key}`, headers: { 'Content-Type': contentType, 'x-amz-acl': 'public-read' }, expires_in: EXPIRES, key });
+    const publicAcl = String(body.acl || '') === 'public-read';
+    const uploadUrl = await presignPut({ endpoint, region, accessKey, secretKey, bucket, key, contentType, expires: EXPIRES, publicAcl });
+    const headers: Record<string, string> = { 'Content-Type': contentType };
+    if (publicAcl) headers['x-amz-acl'] = 'public-read';
+    return json({ upload_url: uploadUrl, public_url: `${publicBase}/${key}`, headers, expires_in: EXPIRES, key, public_acl: publicAcl });
   } catch (error) {
     console.error('media-upload', error);
     return json({ error: 'خطای داخلی صدور لینک آپلود' }, 500);

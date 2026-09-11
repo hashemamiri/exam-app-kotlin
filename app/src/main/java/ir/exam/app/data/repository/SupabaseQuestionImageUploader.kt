@@ -296,6 +296,7 @@ class SupabaseQuestionImageUploader(context: Context) {
                         put("exam_id", examId)
                         put("ext", extension)
                         put("size", bytes.size)
+                        put("acl", "public-read") // V160.4 — سرور فقط با این اعلام، x-amz-acl را امضا می‌کند
                     }
                 )
                 val obj: JsonObject = Json.parseToJsonElement(response.bodyAsText()).jsonObject

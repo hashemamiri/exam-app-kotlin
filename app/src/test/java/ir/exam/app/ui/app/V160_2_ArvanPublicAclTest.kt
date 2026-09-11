@@ -15,10 +15,12 @@ class V160_2_ArvanPublicAclTest {
     @Test
     fun `presigned PUT signs and returns public-read acl and clients send it`() {
         val fn = source("supabase/functions/media-upload/index.ts")
-        assertTrue("const signedHeaders = 'content-type;host;x-amz-acl';" in fn)
-        assertTrue("x-amz-acl:public-read\\n" in fn && "'x-amz-acl': 'public-read'" in fn)
-        assertTrue("var hdrs = Object.assign({}, t.headers || {}, {'Content-Type': ct});" in source("site/src/app.js"))
+        assertTrue("opts.publicAcl ? 'content-type;host;x-amz-acl' : 'content-type;host'" in fn)
+        assertTrue("String(body.acl || '') === 'public-read'" in fn && "headers['x-amz-acl'] = 'public-read'" in fn)
+        assertTrue("acl: 'public-read'}});" in source("site/src/app.js"))
         val up = source("app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt")
+        assertTrue("put(\"acl\", \"public-read\")" in up)
+        assertTrue("var hdrs = Object.assign({}, t.headers || {}, {'Content-Type': ct});" in source("site/src/app.js"))
         assertTrue("obj[\"headers\"]?.jsonObject?.forEach { (k, v) ->" in up)
         assertTrue(File("scripts/arvan_make_public.py").let { true })
     }

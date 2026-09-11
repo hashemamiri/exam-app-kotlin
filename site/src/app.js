@@ -1284,7 +1284,7 @@
   async function uploadMedia(blob, kind, folder, examId, ext, contentType) {
     if (!r2Disabled) {
       try {
-        var t = await http('/functions/v1/media-upload', {method: 'POST', body: {kind: kind, folder: folder, exam_id: examId, ext: ext, size: blob.size}});
+        var t = await http('/functions/v1/media-upload', {method: 'POST', body: {kind: kind, folder: folder, exam_id: examId, ext: ext, size: blob.size, acl: 'public-read'}});
         if (t && t.upload_url) {
           /* نوع محتوا باید دقیقاً همان مقدار امضاشدهٔ سرور باشد (نه blob.type که ممکن است ;codecs=… داشته باشد) */
           var ct = (t.headers && t.headers['Content-Type']) || contentType;
