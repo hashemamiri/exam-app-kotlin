@@ -163,7 +163,8 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
   .hamb{display:inline-flex}
   .main{padding:16px}
 }
-.sb-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39}
+.sb-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:39;display:none}
+.sb-bg.on{display:block}
 
 /* ---------- کارت آزمون ---------- */
 .exam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
@@ -500,3 +501,16 @@ img,video,canvas,iframe{max-width:100%}
 .m-card b{display:block;font-size:15px}.m-card span{font-size:12px;color:var(--m-muted);line-height:1.6}
 /* پوستهٔ موبایل فقط برای عرض کم؛ روی دسکتاپ اصلاً ساخته نمی‌شود ولی برای اطمینان */
 @media (min-width:861px){.m-shell{display:none}}
+
+/* ---- V149: دانش‌آموز در پوستهٔ موبایل + رفع کادر خاکستری دسکتاپ ---- */
+.m-head-student{justify-content:space-between}
+.m-head-student h1{flex:1;text-align:center}
+.m-head-student .m-back:last-child .mi{transform:scaleX(-1)}
+.m-student-content{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.m-student{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.m-title{font-size:22px;font-weight:800;margin:0 0 4px}
+.m-note-panel{width:100%;border-radius:22px;padding:12px 14px;text-align:right;display:flex;flex-direction:column;gap:6px;color:var(--m-ink)}
+.m-note-panel b{color:var(--m-acc);font-size:16px}.m-note-panel span{font-size:14px}
+.m-join{border-radius:26px;padding:16px}
+.m-join .card{box-shadow:none;background:transparent;padding:0;max-width:none !important}
+.m-join .card h3{display:none}

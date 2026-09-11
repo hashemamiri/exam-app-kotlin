@@ -168,6 +168,8 @@
     window.addEventListener('blur', onBlur);
     run.monitorTimer = setInterval(function () { reportMonitor(false); }, 60000);
     reportMonitor(false);
+    /* V149 — در پوستهٔ موبایل، آزمون تمام‌صفحه می‌شود (نوار بالا حذف؛ مثل StudentExamScreen اپ) */
+    if (window.SiteMobile && window.SiteMobile.active()) { window.SiteMobile.paint(); c = document.getElementById('content'); }
     c.innerHTML = ''; c.appendChild(examUI(c));
     if (resumed) toast('به آزمون نیمه‌تمام پیوستید.', 'ok');
   }

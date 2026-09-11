@@ -10,7 +10,9 @@
   var MQ = window.matchMedia('(max-width: 860px)');
   var ui = {menuOpen: false, addOpen: false, expanded: null};
 
-  function active() { return MQ.matches && S.user() && S.user().role === 'teacher'; }
+  /* V149 — معلم و دانش‌آموز (مدیر در مرحلهٔ بعد) */
+  function active() { var u = S.user(); return MQ.matches && u && (u.role === 'teacher' || u.role === 'student'); }
+  function isStudent() { return S.user() && S.user().role === 'student'; }
   /* نگاشت داک اپ → پنل‌های سایت */
   function dockSection() {
     if (ui.menuOpen) return 'menu';
@@ -170,7 +172,56 @@
     })));
   }
 
+  /* ---------- دانش‌آموز (StudentHomeScreen + منوی ۶کارتی؛ در اپ داک ندارد، نوار بالا با ☰) ---------- */
+  function studentMenu() {
+    var u = S.user();
+    var cards = [
+      ['آزمون', 'ورود با کد آزمون', 'exams', function () { go('join'); }],
+      ['نتایج من', 'پاسخ‌ها و کارنامه', 'reports', function () { go('grades'); }],
+      ['تقویم', 'رویدادها و پیام‌ها', 'calendar', function () { go('calendar'); }],
+      ['حساب', 'مشخصات و امنیت حساب', 'account', function () { go('profile'); }],
+      ['تنظیمات', 'ظاهر، داده و درباره', 'settings', function () { go('tools'); }],
+      ['خروج', 'خروج امن و تعویض حساب', 'logout', async function () { if (await S.confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) { ui.menuOpen = false; S.logout(); } }, true]
+    ];
+    var sel = {join: 'exams', grades: 'reports', calendar: 'calendar', profile: 'account', tools: 'settings'}[view.panel];
+    return el('div', {class: 'm-menu'}, [
+      el('button', {class: 'm-profile neo', onclick: function () { go('profile'); }}, [
+        el('div', {class: 'm-avatar'}, [u.avatarUrl ? el('img', {src: u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
+        el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل دانش‌آموز'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: 'حساب دانش‌آموز'})]),
+        ic('chevron', 'm-chev')
+      ]),
+      el('div', {class: 'm-grid'}, cards.map(function (c, i) {
+        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (20 + i * 18) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
+      }))
+    ]);
+  }
+  async function studentHome(c) {
+    c.innerHTML = '';
+    var wrap = el('div', {class: 'm-student'});
+    wrap.appendChild(el('h2', {class: 'm-title', text: 'داشبورد دانش‌آموز'}));
+    /* پیام‌های خوانده‌نشدهٔ تقویم — همان RPC اپ (cal_unseen_v59 / cal_mark_seen_v59) */
+    var notesBox = el('div');
+    wrap.appendChild(notesBox);
+    S.rpcObj('cal_unseen_v59', {}).then(function (u) {
+      var notes = (u && u.notes) || []; if (!notes.length) return;
+      var panel = el('button', {class: 'm-note-panel neo', onclick: function () { openNote(notes[0]); }}, [el('b', {text: 'پیام جدید دارید'}), el('span', {text: notes.length === 1 ? notes[0].title : fa(notes.length) + ' پیام خوانده‌نشده — برای مشاهده لمس کنید'})]);
+      notesBox.appendChild(panel);
+      function openNote(n) {
+        var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+        bg.appendChild(el('div', {class: 'm-sheet'}, [el('h3', {text: n.title || 'پیام'}), n.body ? el('p', {text: n.body}) : null, el('p', {class: 'm-note', style: 'text-align:right;padding:4px 0', text: 'تاریخ: ' + (n.date || '')}),
+          el('button', {class: 'btn', style: 'width:100%', text: 'خواندم', onclick: function () { bg.remove(); S.rpcObj('cal_mark_seen_v59', {p_note: n.id}).catch(function () {}); notes = notes.filter(function (x) { return x.id !== n.id; }); if (!notes.length) panel.remove(); else panel.querySelector('span').textContent = notes.length === 1 ? notes[0].title : fa(notes.length) + ' پیام خوانده‌نشده — برای مشاهده لمس کنید'; }})]));
+        document.body.appendChild(bg);
+      }
+    }).catch(function () {});
+    /* کارت «کد آزمون را وارد کنید» — خودِ صفحهٔ شرکت در آزمون سایت داخل پنل نئومورفیک */
+    var joinBox = el('div', {class: 'm-join neo'});
+    wrap.appendChild(joinBox);
+    c.appendChild(wrap);
+    if (window.SiteStudent) await window.SiteStudent.page(joinBox, view.arg);
+  }
+
   /* ---------- پوسته ---------- */
+  var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'سازندهٔ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
   function paint() {
     var root = document.getElementById('root'); if (!root) return;
@@ -178,6 +229,7 @@
     if (!shell) { shell = el('div', {class: 'm-shell', id: 'm-shell'}); root.innerHTML = ''; root.appendChild(shell); }
     shell.innerHTML = '';
     var page = ui.menuOpen ? 'menu' : view.panel;
+    if (isStudent()) { paintStudent(shell, page); return; }
     var head = null;
     if (!ui.menuOpen && page !== 'exams' && page !== 'dashboard' && page !== 'cards') {
       head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go('exams'); }}, [ic('chevron')]), el('h1', {text: TITLES[page] || ''})]);
@@ -190,6 +242,24 @@
     if (ui.menuOpen) content.appendChild(menuScreen());
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
+    else S.renderPage(content);
+  }
+
+  /* دانش‌آموز: نوار بالا (عنوان + ☰ مثل اپ)، بدون داک؛ در حین آزمون نوار حذف می‌شود (StudentExamScreen تمام‌صفحه) */
+  function paintStudent(shell, page) {
+    var inExam = window.SiteStudent && window.SiteStudent.inExam();
+    var content = el('div', {class: 'm-content m-student-content', id: 'content'});
+    if (!inExam) {
+      shell.appendChild(el('div', {class: 'm-head m-head-student'}, [
+        el('button', {class: 'm-back', 'aria-label': 'منو', onclick: function () { ui.menuOpen = !ui.menuOpen; paint(); }}, [ic(ui.menuOpen ? 'close' : 'menu')]),
+        el('h1', {text: ui.menuOpen ? 'منو' : (STUDENT_TITLES[page] || '')}),
+        (!ui.menuOpen && page !== 'dashboard' && page !== 'join') ? el('button', {class: 'm-back', 'aria-label': 'خانه', onclick: function () { go('dashboard'); }}, [ic('chevron')]) : null
+      ]));
+    }
+    shell.appendChild(content);
+    if (inExam) { if (window.SiteStudent) window.SiteStudent.page(content, view.arg); return; }
+    if (ui.menuOpen) content.appendChild(studentMenu());
+    else if (page === 'dashboard' || page === 'join') studentHome(content);
     else S.renderPage(content);
   }
 
