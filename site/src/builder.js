@@ -333,6 +333,8 @@
       state.code ? el('span', {class: 'code', text: state.code}) : null,
       el('span', {class: 'grow'}),
       state.mode === 'online' && !state.bankEdit ? el('button', {class: 'btn light sm', text: '⚙ مشخصات آزمون', onclick: openSettings}) : null,
+      /* V157 — مسیر چاپ مثل ExamBuilderScreen(printMode): «تنظیمات سربرگ» به‌جای «مشخصات آزمون» */
+      state.mode === 'print' && !state.bankEdit ? el('button', {class: 'btn light sm', text: '🏷 تنظیمات سربرگ', onclick: function () { S.openHeaderSettings(); }}) : null,
       state.bankEdit ? el('button', {class: 'btn light sm', text: '↩ بازگشت به بانک', onclick: function () { S.go('bank'); }}) : null,
       el('button', {class: 'btn soft sm', text: '👁 پیش‌نمایش / چاپ', onclick: function () { preview(); }}),
       el('button', {class: 'btn sm', text: state.bankEdit ? '🏦 ذخیره در بانک' : state.mode === 'print' ? '💾 ذخیره روی مرورگر' : '☁ ذخیره در سرور', onclick: save})

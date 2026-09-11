@@ -101,6 +101,8 @@ def main():
     site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
     vazir = read(os.path.join(WEB, "vazirmatn_embed.css"))
     engines = "window.__ENGINES = {print: %s, formula: %s};" % (js_string(build_print_engine()), js_string(build_formula_engine()))
+    # V157 — همان header_settings_schema.json اپ برای پنجرهٔ «تنظیمات سربرگ» سایت (HeaderSettingsDialog)
+    engines += "\nwindow.__HEADER_SCHEMA = %s;" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
     out = (tpl.replace("/*__SUPABASE_URL__*/", SUPABASE_URL)
               .replace("/*__VAZIR_CSS__*/", vazir)
               .replace("/*__SITE_CSS__*/", site_css)

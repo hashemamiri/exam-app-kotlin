@@ -18838,3 +18838,10 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - `site/src/mobile.js` `builderFabs`: حالت چاپ = ✓ ذخیره، 👁 پیش‌نمایش (`ic('eye')`)، 🖨 چاپ (شیت: چاپ آزمون (دانش‌آموز)/چاپ با کلید (پاسخ‌نامه)) و +؛ آنلاین = فقط ✓ و + (مثل `ExamBuilderScreen` خطوط ۲۸۸–۴۱۰). در `paint()` داک و افزودن سریع برای `page==='builder'` رندر نمی‌شوند (مثل `ExamApp.kt:337`).
 - `site/src/site.css`: `.m-bfab` پایین صفحه (۲۰px)، `.m-fab.print`، `.m-builder` padding کمتر.
 - تست: `V156_SiteWalletBuilderFabsTest.kt`.
+
+## §V157 — تنظیمات سربرگ در سازندهٔ چاپی + «دانش‌آموزان» گوشی مثل اپ
+- `site/build_site.py`: `window.__HEADER_SCHEMA` = همان `assets/print/header_settings_schema.json` اپ.
+- `site/src/app.js`: `LS_PRINTHEADER='examsite.printheader.v1'` (آینهٔ `PrintHeaderStore`)، `openHeaderSettings()` (آینهٔ `HeaderSettingsDialog`: عنوان «اطلاعات سربرگ آزمون»، «انتخاب نوع سربرگ»، فیلدهای قالب، انصراف/اعمال)؛ `buildPrintPayload` فیلدهای ذخیره‌شده را مثل `extraHeaderFields` روی `fields` می‌گذارد.
+- `site/src/builder.js`: در `state.mode==='print'` دکمهٔ «🏷 تنظیمات سربرگ» (مثل `ExamBuilderScreen` printMode خط ۴۴۰)؛ آنلاین فقط «مشخصات آزمون». `mobile.js`: `hdrBtn` → OutlinedButton تمام‌عرض.
+- `site/src/mobile.js` `studentsScreen` (آینهٔ `StudentsContent` ~۹۶۴–۱۰۹۳): نوار وسط‌چین Excel/+/🔍/فیلتر (قرمز وقتی فعال)، جست‌وجوی بازشونده، `studentCardM` (آینهٔ `StudentCard`)، `studentFilterDialog` (آینهٔ `StudentFilterDialog`؛ `applyFilter` = `applyStudentFilter`)، `bulkDialog` (آینهٔ `BulkStudentDialog` + `PersianUsernameSuggester` در `suggestUsername`)، `exportColumnsDialog` («اطلاعات ورودی اکسل»؛ ستون رمز در سایت نیست چون Vault دستگاه وجود ندارد). Excel = فیلتر → ستون‌ها → `SiteExtras.xlsx`. متادادهٔ فیلتر از `native_student_filter_meta_v61`، مدارس از `native_teacher_schools_v61`. نام پدر/پایه/رشته بعد از bulk با `native_save_student_extra_v28`.
+- `school.js` export: `classPickDlg`, `credentialDlg`. تست: `V157_SiteMobileStudentsHeaderTest.kt`.

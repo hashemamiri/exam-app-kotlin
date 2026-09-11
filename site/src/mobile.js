@@ -56,6 +56,11 @@
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
     mail: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
     eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>',
+    filter: '<svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>',
+    eyeoff: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.5 10.6A2 2 0 0 0 13.4 13.5M9.9 5.2A10 10 0 0 1 22 12a10.6 10.6 0 0 1-3.2 3.7M6.6 6.6A10.6 10.6 0 0 0 2 12s3.5 6 10 6a9.6 9.6 0 0 0 4.2-.9"/></svg>',
+    toggleon: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3" fill="currentColor"/></svg>',
+    toggleoff: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="8" cy="12" r="3"/></svg>',
     dl: '<svg viewBox="0 0 24 24"><path d="M12 4v11M8 11l4 4 4-4M5 20h14"/></svg>'
   };
   function ic(name, cls) { return el('span', {class: 'mi ' + (cls || ''), html: I[name] || ''}); }
@@ -425,10 +430,13 @@
     var saveBtn = btns.filter(function (b) { return /ذخیره/.test(b.textContent); })[0];
     var prevBtn = btns.filter(function (b) { return /پیش‌نمایش/.test(b.textContent); })[0];
     var setBtn = btns.filter(function (b) { return /مشخصات آزمون/.test(b.textContent); })[0];
+    var hdrBtn = btns.filter(function (b) { return /تنظیمات سربرگ/.test(b.textContent); })[0];
     var addRow = c.querySelector('.b-add');
     var isPrint = /چاپی/.test(top.textContent);
     /* دکمهٔ «مشخصات آزمون» تمام‌عرض زیر فیلدها (اپ: OutlinedButton fillMaxWidth) */
     if (setBtn && !top.querySelector('.m-settings-btn')) { var sb = el('button', {class: 'm-outline m-settings-btn', text: 'مشخصات آزمون', onclick: function () { setBtn.click(); }}); top.appendChild(sb); }
+    /* V157 — حالت چاپ: OutlinedButton تمام‌عرض «تنظیمات سربرگ» (ExamBuilderScreen printMode) */
+    if (hdrBtn && !top.querySelector('.m-settings-btn')) { var hb = el('button', {class: 'm-outline m-settings-btn', text: 'تنظیمات سربرگ', onclick: function () { hdrBtn.click(); }}); top.appendChild(hb); }
     var radialOpen = false;
     var bar = el('div', {class: 'm-bfab', id: 'm-bfab'});
     var save = el('button', {class: 'm-fab save', 'aria-label': 'ذخیره آزمون', onclick: function () { if (saveBtn) saveBtn.click(); }}, [ic('grading')]);
@@ -484,6 +492,183 @@
     if (list && window.MutationObserver) new MutationObserver(function () { placeEditor(); }).observe(list, {childList: true});
   }
   function typeLabel(t) { return {multiple: 'چندگزینه‌ای', truefalse: 'صحیح / غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[t]; }
+
+  /* ---------- V157: «دانش‌آموزان» در گوشی مثل StudentsContent اپ (SchoolManagementScreen.kt ~964–1093) ----------
+     نوار وسط‌چین: Excel (OutlinedButton) / + / 🔍 / فیلتر (قرمز وقتی فعال)؛ جست‌وجو بازشونده با ✕؛ StudentCard بازشونده با
+     ردیف آیکن‌ها (فعال/غیرفعال، ویرایش، افزودن به کلاس، کپی، حذف، چشم اشتراک با مدیر)؛ StudentFilterDialog با کارت‌های بخش
+     (پایه/کلاس/جنسیت/مدرسه/عضو نشده) و سطر «حذف فیلترها / اعمال فیلتر / ✕»؛ BulkStudentDialog با چیپ‌های شماره؛
+     StudentExportColumnsDialog («اطلاعات ورودی اکسل»). */
+  var STUDENT_EXPORT_COLUMNS = [['نام', function (s) { return s.full_name || ''; }], ['نام کاربری', function (s) { return s.username || ''; }], ['جنسیت', function (s) { return s.gender === 'female' ? 'دختر' : (s.gender === 'male' ? 'پسر' : ''); }], ['پایه', function (s) { return s.grade || ''; }], ['رشته', function (s) { return s.field_of_study || ''; }], ['نام پدر', function (s) { return s.father_name || ''; }], ['کلاس', function (s) { return s.class_names || ''; }], ['وضعیت', function (s) { return s.is_active !== false ? 'فعال' : 'غیرفعال'; }]];
+  var GRADES_M = ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم', 'هفتم', 'هشتم', 'نهم', 'دهم', 'یازدهم', 'دوازدهم'];
+  var FIELDS_M = ['ریاضی', 'تجربی', 'انسانی', 'فنی و حرفه‌ای', 'کاردانش', 'معارف', 'هنر', 'عمومی'];
+  var TRANSLIT_W = {'علی': 'ali', 'محمد': 'mohammad', 'رضا': 'reza', 'حسین': 'hossein', 'حسن': 'hasan', 'زهرا': 'zahra', 'فاطمه': 'fatemeh', 'مریم': 'maryam', 'احمد': 'ahmad', 'امیر': 'amir', 'سارا': 'sara', 'نرگس': 'narges', 'احمدی': 'ahmadi', 'رضایی': 'rezaei', 'محمدی': 'mohammadi', 'حسینی': 'hosseini', 'کریمی': 'karimi', 'مرادی': 'moradi', 'اکبری': 'akbari', 'جعفری': 'jafari', 'نادری': 'naderi', 'کاظمی': 'kazemi'};
+  var TRANSLIT_L = {'ا': 'a', 'آ': 'a', 'ب': 'b', 'پ': 'p', 'ت': 't', 'ث': 's', 'ج': 'j', 'چ': 'ch', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z', 'ژ': 'zh', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'z', 'ط': 't', 'ظ': 'z', 'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'gh', 'ک': 'k', 'ك': 'k', 'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'و': 'v', 'ه': 'h', 'ی': 'y', 'ي': 'y'};
+  /* آینهٔ PersianUsernameSuggester.suggest */
+  function suggestUsername(first, last, suffix) {
+    function part(raw) { var c = String(raw || '').trim().replace(/\u200c/g, ' '); if (TRANSLIT_W[c]) return TRANSLIT_W[c]; var o = ''; c.toLowerCase().split('').forEach(function (ch) { if (/[a-z0-9]/.test(ch)) o += ch; else if ('۰۱۲۳۴۵۶۷۸۹'.indexOf(ch) >= 0) o += '۰۱۲۳۴۵۶۷۸۹'.indexOf(ch); else if (ch === ' ' || ch === '-' || ch === '_') o += '_'; else o += TRANSLIT_L[ch] || ''; }); return o.replace(/_+/g, '_').replace(/^_|_$/g, ''); }
+    var base = [part(first), part(last)].filter(Boolean).join('_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 17);
+    if (base.length < 4) base = (base + '_user').slice(0, 17);
+    var tail = suffix > 0 ? '_' + String(suffix).padStart(2, '0') : '';
+    return (base.slice(0, 20 - tail.length) + tail).replace(/^_|_$/g, '');
+  }
+  function genPw(n) { var ch = 'abcdefghjkmnpqrstuvwxyz23456789', o = ''; for (var i = 0; i < (n || 10); i++) o += ch[Math.floor(Math.random() * ch.length)]; return o; }
+  function sheet(children, cls) { var bg = el('div', {class: 'm-sheet-bg m-center' + (cls ? ' ' + cls : ''), onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }}); var body = el('div', {class: 'm-sheet m-dlg'}, children); bg.appendChild(body); document.body.appendChild(bg); return bg; }
+  function chip(label, on, onclick) { return el('button', {class: 'm-fchip' + (on ? ' on' : ''), text: label, onclick: onclick}); }
+  function filterActive(f) { return !!(f.grade || f.classId || f.gender || f.unassigned || f.schoolId); }
+  /* آینهٔ applyStudentFilter */
+  function applyFilter(list, f, classes, meta) {
+    if (!filterActive(f)) return list;
+    var cn = f.classId ? (classes.filter(function (k) { return k.id === f.classId; })[0] || {}).name : null;
+    return list.filter(function (s) { var m = meta[s.id] || {}; return (!f.grade || (s.grade || '').trim() === f.grade) && (!f.gender || (s.gender || '').toLowerCase() === f.gender) && (!cn || String(s.class_names || '').indexOf(cn) >= 0) && (!f.unassigned || !String(s.class_names || '').trim()) && (!f.schoolId || (m.schools || []).indexOf(f.schoolId) >= 0); });
+  }
+  function studentFilterDialog(filter, classes, schools, meta, onApply) {
+    var draft = Object.assign({}, filter), open = null, bg;
+    var body = el('div');
+    function section(key, title, active, value, content) {
+      var card = el('div', {class: 'm-fsec neo'});
+      card.appendChild(el('button', {class: 'm-fsec-h', onclick: function () { open = open === key ? null : key; draw(); }}, [el('span', {class: 'm-fsec-t'}, [ic('filter', active ? 'red' : ''), el('b', {text: title})]), el('span', {class: 'muted', text: value})]));
+      if (open === key) card.appendChild(el('div', {class: 'm-fsec-b'}, content()));
+      return card;
+    }
+    function draw() {
+      body.innerHTML = '';
+      body.appendChild(el('div', {class: 'm-fbar'}, [
+        el('button', {class: 'm-textbtn', text: 'حذف فیلترها', onclick: function () { draft = {}; draw(); }}),
+        el('button', {class: 'btn m-btn', text: 'اعمال فیلتر', onclick: function () { bg.remove(); onApply(draft); }}),
+        el('button', {class: 'm-iconbtn red', 'aria-label': 'انصراف', onclick: function () { bg.remove(); }}, [ic('close')])
+      ]));
+      body.appendChild(section('grade', 'پایه', !!draft.grade, draft.grade || 'همه', function () { return [el('div', {class: 'm-chips'}, [chip('همه پایه‌ها', !draft.grade, function () { draft.grade = null; draw(); })].concat(GRADES_M.map(function (g) { return chip(g, draft.grade === g, function () { draft.grade = g; draw(); }); })))]; }));
+      body.appendChild(section('class', 'کلاس', !!draft.classId, (classes.filter(function (k) { return k.id === draft.classId; })[0] || {}).name || 'همه', function () { return classes.length ? classes.map(function (k) { return chip(k.name, draft.classId === k.id, function () { draft.classId = draft.classId === k.id ? null : k.id; draw(); }); }) : [el('p', {class: 'muted', text: 'کلاسی نیست.'})]; }));
+      body.appendChild(section('gender', 'جنسیت', !!draft.gender, draft.gender === 'female' ? 'دختر' : (draft.gender === 'male' ? 'پسر' : 'همه'), function () { return [el('div', {class: 'm-chips'}, [chip('دختر', draft.gender === 'female', function () { draft.gender = draft.gender === 'female' ? null : 'female'; draw(); }), chip('پسر', draft.gender === 'male', function () { draft.gender = draft.gender === 'male' ? null : 'male'; draw(); })])]; }));
+      body.appendChild(section('school', 'مدرسه', !!draft.schoolId, (schools.filter(function (x) { return x.id === draft.schoolId; })[0] || {}).name || 'همه', function () { return schools.length ? schools.map(function (x) { return chip(x.name || 'مدرسه', draft.schoolId === x.id, function () { draft.schoolId = draft.schoolId === x.id ? null : x.id; draw(); }); }) : [el('p', {class: 'muted', text: 'مدرسه‌ای یافت نشد.'})]; }));
+      body.appendChild(section('unassigned', 'عضو نشده', !!draft.unassigned, draft.unassigned ? 'فعال' : 'خیر', function () { return [chip('فقط دانش‌آموزانی که عضو هیچ کلاسی نیستند', !!draft.unassigned, function () { draft.unassigned = !draft.unassigned; draw(); })]; }));
+    }
+    draw(); bg = sheet([body]); return bg;
+  }
+  function exportColumnsDialog(students, onExport) {
+    var sel = {}; STUDENT_EXPORT_COLUMNS.forEach(function (c) { sel[c[0]] = true; });
+    var rows = STUDENT_EXPORT_COLUMNS.map(function (c) { var cb = el('input', {type: 'checkbox'}); cb.checked = true; cb.addEventListener('change', function () { sel[c[0]] = cb.checked; }); return el('label', {class: 'm-check'}, [cb, el('span', {text: c[0]})]); });
+    var bg = sheet([el('h3', {text: 'اطلاعات ورودی اکسل'}), el('p', {text: 'تعداد دانش‌آموزان گروه انتخابی: ' + fa(students.length)}), el('div', {class: 'm-checks'}, rows),
+      el('p', {class: 'muted', style: 'font-size:12px', text: 'رمز حساب‌ها روی سرور نگهداری نمی‌شود و در خروجی سایت قرار نمی‌گیرد.'}),
+      el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [el('button', {class: 'btn m-btn grow', text: 'ذخیره Excel', onclick: function () { bg.remove(); onExport(STUDENT_EXPORT_COLUMNS.filter(function (c) { return sel[c[0]]; })); }}), el('button', {class: 'm-textbtn', text: 'انصراف', onclick: function () { bg.remove(); }})])]);
+  }
+  function bulkDialog(classes, done) {
+    var rows = [newRow()], active = 0, err = '', bg;
+    function newRow() { return {first: '', last: '', username: '', password: genPw(10), pv: false, gender: '', father: '', grade: '', field: '', edited: false}; }
+    function complete(r) { return r.first.trim() && r.username.length >= 4 && r.password.length >= 8 && (r.gender === 'male' || r.gender === 'female'); }
+    function recompute() { var seen = {}; rows.forEach(function (r) { var base = suggestUsername(r.first, r.last); var n = seen[base] || 0; seen[base] = n + 1; if (!r.edited) r.username = n === 0 ? base : suggestUsername(r.first, r.last, n + 1); }); }
+    var body = el('div');
+    function fld(label, val, on, extra) { var i = el('input', Object.assign({type: 'text', value: val, placeholder: label}, extra || {})); i.addEventListener('input', function () { on(i.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), i]); }
+    async function submit() {
+      err = '';
+      try {
+        var reqs = rows.map(function (r) {
+          if (!r.first.trim()) throw new Error('نام همه ردیف‌ها لازم است.');
+          if (r.username.length < 4) throw new Error('نام کاربری همه ردیف‌ها باید حداقل ۴ نویسه باشد.');
+          if (r.password.length < 8 || r.password.length > 72) throw new Error('رمز همه ردیف‌ها باید ۸ تا ۷۲ نویسه باشد.');
+          if (r.gender !== 'male' && r.gender !== 'female') throw new Error('جنسیت همه ردیف‌ها را انتخاب کنید.');
+          return {first_name: r.first.trim(), last_name: r.last.trim(), username: r.username.toLowerCase(), password: r.password, gender: r.gender, father: r.father.trim(), grade: r.grade, field: r.field};
+        });
+        var us = reqs.map(function (r) { return r.username; }); if (us.length !== us.filter(function (u, i) { return us.indexOf(u) === i; }).length) throw new Error('نام کاربری تکراری در ردیف‌ها وجود دارد.');
+        var r = await window.SiteSchool.manageStudent({action: 'bulk', class_id: '', rows: reqs.map(function (x) { return {first_name: x.first_name, last_name: x.last_name, username: x.username, password: x.password, gender: x.gender}; })});
+        var res = Array.isArray(r.results) ? r.results : [], ok = [], fails = [];
+        res.forEach(function (x) { var q = reqs.filter(function (y) { return y.username === String(x.username || '').toLowerCase(); })[0]; if (x.ok) { ok.push({name: q ? q.first_name + ' ' + q.last_name : x.username, username: x.username, password: x.password || (q ? q.password : '')}); if (q && x.id && (q.father || q.grade || q.field)) S.rpcObj('native_save_student_extra_v28', {p_student: x.id, p_username: x.username, p_father_name: q.father, p_grade: q.grade, p_field: q.field}).catch(function () {}); } else fails.push((x.username || '') + ': ' + (x.message || 'ناموفق')); });
+        bg.remove(); done();
+        if (ok.length) window.SiteSchool.credentialDlg('نتیجه ساخت گروهی — ' + fa(ok.length) + ' حساب', ok);
+        if (fails.length) toast('ناموفق: ' + fails.join('، '), 'err');
+      } catch (e) { err = S.errMsg(e); draw(); }
+    }
+    function draw() {
+      body.innerHTML = '';
+      body.appendChild(el('div', {class: 'm-bulkbar'}, [
+        el('button', {class: 'btn m-btn green', text: '+', 'aria-label': 'ردیف جدید', disabled: rows.length >= 100 ? 'disabled' : null, onclick: function () { if (rows.length < 100) { rows.push(newRow()); recompute(); active = rows.length - 1; draw(); } }}),
+        el('button', {class: 'btn m-btn grow2', text: 'ایجاد', onclick: submit}),
+        el('button', {class: 'btn m-btn red', text: '×', 'aria-label': 'انصراف', onclick: function () { bg.remove(); }})
+      ]));
+      var nums = el('div', {class: 'm-chips nowrap'}); rows.forEach(function (r, i) { nums.appendChild(chip(fa(i + 1) + (complete(r) ? ' ✓' : ''), active === i, function () { active = i; draw(); })); }); body.appendChild(nums);
+      var r = rows[active], i = active;
+      var card = el('div', {class: 'm-fsec neo m-bulkcard'});
+      card.appendChild(el('div', {class: 'grid2'}, [fld('نام', r.first, function (v) { r.first = v.slice(0, 100); recompute(); syncU(); }), fld('نام خانوادگی', r.last, function (v) { r.last = v.slice(0, 100); recompute(); syncU(); })]));
+      var uIn = el('input', {type: 'text', value: r.username, style: 'direction:ltr'}); uIn.addEventListener('input', function () { r.username = uIn.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20); r.edited = true; });
+      function syncU() { if (!r.edited) uIn.value = r.username; }
+      card.appendChild(el('div', {class: 'grid2'}, [fld('نام پدر', r.father, function (v) { r.father = v.slice(0, 100); }), el('div', {class: 'field'}, [el('label', {text: 'نام کاربری'}), uIn])]));
+      var gsel = el('select'); gsel.appendChild(el('option', {value: '', text: 'پایه'})); GRADES_M.forEach(function (g) { gsel.appendChild(el('option', {value: g, text: g})); }); gsel.value = r.grade; gsel.addEventListener('change', function () { r.grade = gsel.value; });
+      var fsel = el('select'); fsel.appendChild(el('option', {value: '', text: 'رشته'})); FIELDS_M.forEach(function (g) { fsel.appendChild(el('option', {value: g, text: g})); }); fsel.value = r.field; fsel.addEventListener('change', function () { r.field = fsel.value; });
+      card.appendChild(el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'پایه'}), gsel]), el('div', {class: 'field'}, [el('label', {text: 'رشته'}), fsel])]));
+      var pIn = el('input', {type: r.pv ? 'text' : 'password', value: r.password, style: 'direction:ltr'}); pIn.addEventListener('input', function () { r.password = pIn.value.slice(0, 72); pCur.value = r.password; });
+      var pCur = el('input', {type: r.pv ? 'text' : 'password', value: r.password, readonly: 'readonly', style: 'direction:ltr'});
+      card.appendChild(el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'رمز'}), pIn]), el('div', {class: 'field'}, [el('label', {text: 'رمز فعلی'}), pCur])]));
+      var acts = el('div', {class: 'm-bulkacts'}, [
+        el('button', {class: 'm-iconbtn', 'aria-label': r.pv ? 'پنهان کردن رمز' : 'نمایش رمز', onclick: function () { r.pv = !r.pv; draw(); }}, [ic('eye')]),
+        el('button', {class: 'm-gchip boy' + (r.gender === 'male' ? ' on' : ''), text: 'پسر', onclick: function () { r.gender = 'male'; draw(); }}),
+        el('button', {class: 'm-gchip girl' + (r.gender === 'female' ? ' on' : ''), text: 'دختر', onclick: function () { r.gender = 'female'; draw(); }}),
+        el('button', {class: 'm-iconbtn', text: '🎲', 'aria-label': 'رمز تصادفی', onclick: function () { r.password = genPw(10); draw(); }})
+      ]);
+      if (rows.length > 1) acts.appendChild(el('button', {class: 'm-iconbtn red', 'aria-label': 'حذف ردیف', onclick: function () { rows.splice(i, 1); recompute(); active = Math.max(0, i - 1); draw(); }}, [ic('trash')]));
+      card.appendChild(acts);
+      body.appendChild(card);
+      if (err) body.appendChild(el('p', {class: 'm-err', text: err}));
+    }
+    recompute(); draw(); bg = sheet([body], 'm-bulk');
+  }
+  function studentCardM(s, classes, refresh) {
+    var open = false, canManage = s.can_manage !== false;
+    var card = el('div', {class: 'm-rowcard neo m-stcard'});
+    function draw() {
+      card.innerHTML = '';
+      var gradeField = [s.grade, s.field_of_study].filter(function (x) { return x && String(x).trim(); }).join(' ') || '—';
+      card.appendChild(el('button', {class: 'm-stcard-h', onclick: function () { open = !open; draw(); }}, [el('b', {text: s.full_name || 'بدون نام'}), el('span', {text: gradeField})]));
+      if (!open) return;
+      var b = el('div', {class: 'm-stcard-b'});
+      b.appendChild(el('div', {class: 'm-stcard-kv'}, [el('span', {text: 'نام پدر: ' + (s.father_name || '—')}), el('span', {text: 'نام کاربری: ' + (s.username || '—')})]));
+      if (s.class_names) b.appendChild(el('div', {text: 'کلاس‌ها: ' + s.class_names}));
+      var acts = el('div', {class: 'm-stcard-acts'});
+      var on = s.is_active !== false;
+      acts.appendChild(el('button', {class: 'm-iconbtn' + (on ? ' ok' : ''), 'aria-label': on ? 'فعال؛ لمس برای غیرفعال' : 'غیرفعال؛ لمس برای فعال', onclick: async function () { try { chk(await S.rpcObj('set_student_active', {p_student: s.id, p_active: !on})); refresh(); } catch (e) { toast(S.errMsg(e), 'err'); } }}, [ic(on ? 'toggleon' : 'toggleoff')]));
+      if (canManage) acts.appendChild(el('button', {class: 'm-iconbtn', 'aria-label': 'ویرایش دانش‌آموز', onclick: function () { window.SiteSchool.studentForm(s, classes, null, refresh); }}, [ic('edit')]));
+      acts.appendChild(el('button', {class: 'm-iconbtn', 'aria-label': 'افزودن به کلاس‌ها', onclick: function () { window.SiteSchool.classPickDlg(s, classes, refresh); }}, [ic('plus')]));
+      acts.appendChild(el('button', {class: 'm-iconbtn', 'aria-label': 'کپی اطلاعات دانش‌آموز', onclick: function () { var t = 'نام: ' + (s.full_name || '') + '\nنام کاربری: ' + (s.username || '') + (s.father_name ? '\nنام پدر: ' + s.father_name : '') + (s.grade ? '\nپایه: ' + s.grade : '') + (s.class_names ? '\nکلاس‌ها: ' + s.class_names : ''); try { navigator.clipboard.writeText(t); toast('کپی شد.', 'ok'); } catch (e) { toast('کپی نشد.', 'err'); } }}, [ic('copy')]));
+      if (canManage) acts.appendChild(el('button', {class: 'm-iconbtn red', 'aria-label': 'حذف حساب دانش‌آموز', onclick: async function () { if (!(await S.confirmDlg('حذف دانش‌آموز', 'حساب «' + S.esc(s.full_name || '') + '» و پاسخ‌هایش برای همیشه حذف می‌شود.', 'حذف کامل', true))) return; try { await window.SiteSchool.manageStudent({action: 'delete', id: s.id}); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(S.errMsg(e), 'err'); } }}, [ic('trash')]));
+      acts.appendChild(el('button', {class: 'm-iconbtn', 'aria-label': s.shared_with_manager ? 'اشتراک با مدیر فعال؛ لمس برای برداشتن' : 'اشتراک با مدیر', onclick: async function () { try { var r = chk(await S.rpcObj('native_teacher_share_student_v136', {p_student: s.id, p_share: !s.shared_with_manager})); var eff = r.shared != null ? String(r.shared) === 'true' : !s.shared_with_manager; toast(eff ? 'با مدیر به اشتراک گذاشته شد.' : 'اشتراک برداشته شد.', 'ok'); refresh(); } catch (e) { toast(S.errMsg(e), 'err'); } }}, [ic(s.shared_with_manager ? 'eye' : 'eyeoff')]));
+      b.appendChild(acts); card.appendChild(b);
+    }
+    draw(); return card;
+  }
+  function chk(r) { if (r && typeof r === 'object' && r.error) throw new Error(String(r.error)); return r || {}; }
+  var stUi = {query: '', searchOpen: false, filter: {}};
+  async function studentsScreen(c) {
+    S.loading(c);
+    try {
+      var r = await Promise.all([S.rpc('my_students', {}), S.rpc('native_my_classes_v28', {}), S.rpcObj('native_teacher_schools_v61', {}).catch(function () { return {}; }), S.rpcObj('native_student_filter_meta_v61', {}).catch(function () { return {}; })]);
+      var list = r[0] || [], classes = r[1] || [], schools = (r[2] && r[2].items) || [], meta = {};
+      ((r[3] && r[3].items) || []).forEach(function (m) { if (m && m.id) meta[m.id] = {schools: m.schools || [], teacherId: m.teacher_id || ''}; });
+      c.innerHTML = '';
+      function refresh() { studentsScreen(c); }
+      var listBox = el('div', {class: 'm-rows'});
+      var searchWrap = el('div', {class: 'm-stsearch'});
+      var q = el('input', {type: 'search', value: stUi.query, placeholder: 'جست‌وجوی نام، نام کاربری، پایه یا پدر'});
+      q.addEventListener('input', function () { stUi.query = q.value; draw(); });
+      searchWrap.appendChild(el('div', {class: 'field'}, [q, el('button', {class: 'm-iconbtn x', 'aria-label': 'بستن جست‌وجو', onclick: function () { stUi.query = ''; stUi.searchOpen = false; drawBar(); draw(); }}, [ic('close')])]));
+      var bar = el('div', {class: 'm-sttools'});
+      function filtered() { var s = stUi.query.trim().toLowerCase(); return applyFilter(list, stUi.filter, classes, meta).filter(function (x) { return !s || [x.full_name, x.username, x.grade, x.father_name].join(' ').toLowerCase().indexOf(s) >= 0; }); }
+      function drawBar() {
+        bar.innerHTML = '';
+        bar.appendChild(el('button', {class: 'm-outline', text: 'Excel', onclick: function () {
+          studentFilterDialog({}, classes, schools, meta, function (f) {
+            var st = applyFilter(list, f, classes, meta);
+            exportColumnsDialog(st, function (cols) { var rows = [cols.map(function (c) { return c[0]; })].concat(st.map(function (s) { return cols.map(function (c) { return c[1](s); }); })); window.SiteExtras.download('students.xlsx', window.SiteExtras.xlsx([{name: 'دانش‌آموزان', rows: rows}]), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); });
+          });
+        }}));
+        bar.appendChild(el('button', {class: 'm-iconbtn big', 'aria-label': 'افزودن گروهی دانش‌آموز', text: '+', onclick: function () { bulkDialog(classes, refresh); }}));
+        if (!stUi.searchOpen) bar.appendChild(el('button', {class: 'm-iconbtn', 'aria-label': 'جست‌وجوی دانش‌آموز', onclick: function () { stUi.searchOpen = true; drawBar(); searchWrap.style.display = ''; q.focus(); }}, [ic('search')]));
+        bar.appendChild(el('button', {class: 'm-iconbtn' + (filterActive(stUi.filter) ? ' red' : ''), 'aria-label': 'فیلتر دانش‌آموزان', onclick: function () { studentFilterDialog(stUi.filter, classes, schools, meta, function (f) { stUi.filter = f; drawBar(); draw(); }); }}, [ic('filter')]));
+        searchWrap.style.display = stUi.searchOpen ? '' : 'none';
+      }
+      function draw() { var f = filtered(); listBox.innerHTML = ''; if (!f.length) listBox.appendChild(el('p', {class: 'muted', text: 'دانش‌آموزی یافت نشد.'})); f.forEach(function (s) { listBox.appendChild(studentCardM(s, classes, refresh)); }); }
+      c.appendChild(bar); c.appendChild(searchWrap); c.appendChild(listBox); drawBar(); draw();
+    } catch (e) { S.showErr(c, e); }
+  }
+
   function cleanupBuilder() { ['m-bfab'].forEach(function (id) { var n = document.getElementById(id); if (n) n.remove(); }); var r = document.querySelector('.m-radial-bg'); if (r) r.remove(); }
 
 
@@ -662,6 +847,7 @@
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else if (page === 'print') printCenter(content);
+    else if (page === 'students' && !mgr) studentsScreen(content);
     else S.renderPage(content);
     if (page === 'builder') content.classList.add('m-builder');
   }

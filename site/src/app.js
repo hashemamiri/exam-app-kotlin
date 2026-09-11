@@ -436,6 +436,48 @@
     return 'long';
   }
   function styleTriple(s) { return s && typeof s === 'object' && Object.keys(s).length ? {bold: !!s.b, italic: !!s.i, size: s.s != null ? Number(s.s) : undefined} : null; }
+  /* ---- V157: تنظیمات سربرگ (آینهٔ PrintHeaderStore + HeaderSettingsDialog اپ؛ schema همان header_settings_schema.json) ---- */
+  var LS_PRINTHEADER = 'examsite.printheader.v1';
+  function readPrintHeader() { try { var o = JSON.parse(localStorage.getItem(LS_PRINTHEADER) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  function openHeaderSettings(onApply) {
+    var schema = window.__HEADER_SCHEMA;
+    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { confirmDlg('تنظیمات سربرگ', 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.', 'باشد'); return; }
+    var cur = readPrintHeader(), values = Object.assign({}, cur);
+    var tplId = schema.templates.some(function (t) { return t.id === cur.f_headerTemplate; }) ? cur.f_headerTemplate : schema.templates[0].id;
+    var bg = el('div', {class: 'modal-bg hdr-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var box = el('div', {class: 'modal hdr-modal'});
+    var list = el('div', {class: 'hdr-fields'});
+    var sel = el('select', {class: 'hdr-tpl'});
+    schema.templates.forEach(function (t) { sel.appendChild(el('option', {value: t.id, text: t.label})); });
+    sel.value = tplId;
+    function draw() {
+      var t = schema.templates.filter(function (x) { return x.id === tplId; })[0] || schema.templates[0];
+      list.innerHTML = '';
+      (t.fields || []).forEach(function (f) {
+        var input;
+        if (f.kind === 'select') { input = el('select'); input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; }
+        else if (f.kind === 'textarea') input = el('textarea', {rows: String(f.rows || 3), text: values[f.id] || ''});
+        else input = el('input', {type: 'text', value: values[f.id] || '', placeholder: f.placeholder || ''});
+        input.addEventListener('input', function () { values[f.id] = input.value; });
+        input.addEventListener('change', function () { values[f.id] = input.value; });
+        list.appendChild(el('div', {class: 'field' + (f.full ? ' full' : '')}, [el('label', {text: f.label}), input]));
+      });
+    }
+    sel.addEventListener('change', function () { tplId = sel.value; draw(); });
+    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'اطلاعات سربرگ آزمون', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]));
+    box.appendChild(el('div', {class: 'field'}, [el('label', {text: 'انتخاب نوع سربرگ'}), sel]));
+    box.appendChild(list);
+    box.appendChild(el('div', {class: 'row hdr-actions', style: 'margin-top:10px'}, [
+      el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }}),
+      el('button', {class: 'btn', text: 'اعمال', onclick: function () {
+        var t = schema.templates.filter(function (x) { return x.id === tplId; })[0];
+        var payload = {f_headerTemplate: tplId}; (t.fields || []).forEach(function (f) { payload[f.id] = values[f.id] || ''; });
+        try { localStorage.setItem(LS_PRINTHEADER, JSON.stringify(payload)); } catch (e) {}
+        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); if (onApply) onApply(payload);
+      }})
+    ]));
+    draw(); bg.appendChild(box); document.body.appendChild(bg);
+  }
   function buildPrintPayload(exam, opts) {
     opts = opts || {};
     var questions = Array.isArray(exam.questions) ? exam.questions : [];
@@ -483,6 +525,8 @@
       return o;
     });
     var fields = {f_headerTemplate: 'classic', f_course: exam.subject || exam.title || 'آزمون'};
+    /* V157 — مثل ExamHtmlPrintDialog: همهٔ فیلدهای خام «تنظیمات سربرگ» (PrintHeaderStore) روی پیش‌فرض‌ها می‌نشینند */
+    var savedHeader = readPrintHeader(); Object.keys(savedHeader).forEach(function (k) { if (savedHeader[k] !== '' || k === 'f_headerTemplate') fields[k] = savedHeader[k]; });
     if (exam.duration > 0) fields.f_duration = exam.duration + ' دقیقه';
     if (opts.header) { if (opts.header.school) fields.f_branch = opts.header.school; }
     return {reset: false, documentTitle: exam.title || 'آزمون', footerNote: '', totalScore: fmtScore(exam.total_score || total), includeAnswerKey: true, persianDigits: true, fields: fields, questions: out};
@@ -1198,7 +1242,7 @@
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
