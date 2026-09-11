@@ -18894,3 +18894,5 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - V153: دک مدیر در `mobile.js` با کلید `'teacher'` ساخته می‌شد (باگ واقعی: شمارندهٔ کارت معلم و مدیر مشترک بود) → `'manager'`.
 - V160: امضای `decodeImageRefBounded` در V160.1 پارامتر `strict` گرفت؛ تست به‌روز شد.
 - درس: چون CI اپ مدت‌ها بسته بود، تست‌های سایت اجرا نمی‌شدند؛ قبل از تحویل نسخه‌های سایت، حداقل تست‌های Vxxx_Site* را با `./gradlew testDebugUnitTest --tests 'ir.exam.app.ui.app.V15*'` محلی اجرا کنید یا CI را باز بگذارید.
+
+## §V160.8 — V160_CrossPlatformMediaTest خط ۱۹: فراخوانی دوم `decodeImageRefBounded(..., 2560, strict = true)` است. همهٔ لیترال‌های تست‌های V152/V153/V159/V160/V160.2 با اسکریپت در برابر سورس بررسی شد.

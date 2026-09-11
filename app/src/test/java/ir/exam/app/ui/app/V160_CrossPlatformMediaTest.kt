@@ -16,7 +16,7 @@ class V160_CrossPlatformMediaTest {
     fun `app studio and image repository open remote https images`() {
         val core = source("app/src/main/java/ir/exam/app/ui/printing/ExamImageStudioCore.kt")
         assertTrue("internal fun decodeImageRefBounded(context: android.content.Context, ref: String, maxDim: Int, strict: Boolean = false)" in core)
-        assertTrue("decodeImageRefBounded(context, ref.dataUrl, 200)" in core && "decodeImageRefBounded(context, ref.dataUrl, 2560)" in core)
+        assertTrue("decodeImageRefBounded(context, ref.dataUrl, 200)" in core && "decodeImageRefBounded(context, ref.dataUrl, 2560, strict = true)" in core)
         val repo = source("app/src/main/java/ir/exam/app/data/repository/LocalImageRepository.kt")
         assertTrue("uri.scheme.equals(\"https\", true) || uri.scheme.equals(\"http\", true)" in repo)
         assertTrue("RemoteMediaBytes.fetchOrNull(appContext, uri.toString())" in repo)
