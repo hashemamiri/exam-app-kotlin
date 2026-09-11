@@ -472,6 +472,9 @@
   var root;
   function render() {
     root = $('root');
+    /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
+    if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }
+    document.body.classList.remove('m-mode');
     root.innerHTML = '';
     if (user && !user.requiresSetup) renderPanel(); else renderLanding();
   }
@@ -805,7 +808,10 @@
       return el('button', {class: view.panel === it[0] ? 'on' : '', onclick: function () { view.panel = it[0]; view.arg = null; render(); }}, [el('span', {class: 'i', text: it[1]}), el('span', {text: it[2]})]);
     }).concat([el('button', {class: primary.some(function (it) { return it[0] === view.panel; }) ? '' : 'on', onclick: toggleSidebar}, [el('span', {class: 'i', text: '☰'}), el('span', {text: 'بیشتر'})])]));
     root.appendChild(el('div', {class: 'app'}, [side, sbBg, main, bottom]));
-    var c = $('content');
+    renderPage($('content'));
+  }
+  /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
+  function renderPage(c) {
     var pages = {dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
       builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
@@ -923,6 +929,7 @@
   /* ---- کلاس‌ها ---- */
   async function pageClasses(c) {
     loading(c);
+    if (view.arg && view.arg.create) { view.arg = null; classForm(null, function () { pageClasses(c); }); }
     try {
       var list = await api.classes();
       c.innerHTML = '';
@@ -1170,6 +1177,7 @@
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,
+    render: render, renderPage: renderPage, printExam: printExam, logout: doLogout,
     __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); } /* برای تست خودکار بدون سرور */};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
