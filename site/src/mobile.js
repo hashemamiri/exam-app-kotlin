@@ -153,7 +153,7 @@
     var sel = {calendar: 'calendar', profile: 'account', students: 'students', classes: 'classes', tools: 'settings'}[view.panel];
     return el('div', {class: 'm-menu'}, [
       el('button', {class: 'm-profile neo', onclick: function () { go('profile'); }}, [
-        el('div', {class: 'm-avatar'}, [u.avatarUrl ? el('img', {src: u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
+        el('div', {class: 'm-avatar'}, [(localAvatar(u.id) || u.avatarUrl) ? el('img', {src: localAvatar(u.id) || u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
         el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل معلم'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: u.email || 'حساب معلم'})]),
         ic('chevron', 'm-chev')
       ]),
@@ -281,7 +281,7 @@
     var sel = {join: 'exams', grades: 'reports', calendar: 'calendar', profile: 'account', tools: 'settings'}[view.panel];
     return el('div', {class: 'm-menu'}, [
       el('button', {class: 'm-profile neo', onclick: function () { go('profile'); }}, [
-        el('div', {class: 'm-avatar'}, [u.avatarUrl ? el('img', {src: u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
+        el('div', {class: 'm-avatar'}, [(localAvatar(u.id) || u.avatarUrl) ? el('img', {src: localAvatar(u.id) || u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
         el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل دانش‌آموز'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: 'حساب دانش‌آموز'})]),
         ic('chevron', 'm-chev')
       ]),
@@ -329,7 +329,7 @@
     var sel = {school: 'classes', profile: 'account', tools: 'settings', dashboard: 'dashboard'}[view.panel];
     return el('div', {class: 'm-menu'}, [
       el('button', {class: 'm-profile neo', onclick: function () { go('profile'); }}, [
-        el('div', {class: 'm-avatar'}, [u.avatarUrl ? el('img', {src: u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
+        el('div', {class: 'm-avatar'}, [(localAvatar(u.id) || u.avatarUrl) ? el('img', {src: localAvatar(u.id) || u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
         el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل مدیر/معاون'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: u.email || 'حساب مدیر/معاون'})]),
         ic('chevron', 'm-chev')
       ]),
@@ -903,6 +903,111 @@
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
   var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
+  /* ================================================================ V161 — «حساب» گوشی مثل ProfileSettingsScreen اپ
+     چیپ‌های بالا: پروفایل / حساب / سربرگ (معلم). پروفایل = ProfileSection (عکس محلی، نام نمایشی، مشخصات معلم، ذخیره).
+     حساب = AccountSection: آکاردئون‌های «مشخصات حساب»، «پیوستن به مدرسه» (معلم)، «تغییر نام کاربری»، «تغییر ایمیل»،
+     «تغییر رمز عبور» (با رمز فعلی یا کد بازیابی)، «حذف حساب». سربرگ = HeaderSection. */
+  var profileTab = 'profile', accOpen = 'info';
+  var LS_AVATAR = 'examsite.avatar.';
+  function localAvatar(uid) { try { return localStorage.getItem(LS_AVATAR + uid); } catch (e) { return null; } }
+  function acc(key, title, body) {
+    var open = accOpen === key;
+    var card = el('div', {class: 'm-acc neo' + (open ? ' open' : '')});
+    card.appendChild(el('button', {class: 'm-acc-h', onclick: function () { accOpen = open ? '' : key; paint(); }}, [el('b', {text: title}), ic('chevron', 'm-acc-chev')]));
+    if (open) card.appendChild(el('div', {class: 'm-acc-b'}, body()));
+    return card;
+  }
+  function field(label, val, opts) { opts = opts || {}; var i = el('input', Object.assign({type: opts.type || 'text', value: val || ''}, opts.attrs || {})); return {i: i, row: el('div', {class: 'field' + (opts.ltr ? ' ltr' : '')}, [el('label', {text: label}), i, opts.hint ? el('small', {class: 'muted', text: opts.hint}) : null])}; }
+  async function profileScreen(c) {
+    S.loading(c);
+    var u = S.user(), p;
+    try { p = await S.api.profile(); } catch (e) { S.showErr(c, e); return; }
+    c.innerHTML = '';
+    var tabs = [['profile', 'پروفایل'], ['account', 'حساب']]; if (p.role === 'teacher') tabs.push(['header', 'سربرگ']);
+    c.appendChild(el('div', {class: 'm-chips'}, tabs.map(function (t) { return el('button', {class: 'm-chip' + (profileTab === t[0] ? ' on' : ''), text: t[1], onclick: function () { profileTab = t[0]; paint(); }}); })));
+    var msg = el('div');
+    if (profileTab === 'profile') {
+      /* --- ProfileSection --- */
+      var av = localAvatar(p.id);
+      var avBox = el('div', {class: 'm-avatar xl'}, [av ? el('img', {src: av, alt: ''}) : el('span', {text: (p.displayName || p.fullName || '?').trim().charAt(0)})]);
+      var pick = el('button', {class: 'btn sm', text: av ? '📷 تعویض' : '📷 انتخاب عکس', onclick: async function () {
+        var f = await new Promise(function (res) { var i = el('input', {type: 'file', accept: 'image/*', style: 'display:none'}); i.addEventListener('change', function () { res(i.files && i.files[0] || null); i.remove(); }); document.body.appendChild(i); i.click(); });
+        if (!f) return;
+        var url = await new Promise(function (res) { var r = new FileReader(); r.onload = function () { res(String(r.result)); }; r.readAsDataURL(f); });
+        var im = await new Promise(function (res, rej) { var x = new Image(); x.onload = function () { res(x); }; x.onerror = rej; x.src = url; });
+        var sz = Math.min(im.width, im.height), cv = document.createElement('canvas'); cv.width = cv.height = 256; cv.getContext('2d').drawImage(im, (im.width - sz) / 2, (im.height - sz) / 2, sz, sz, 0, 0, 256, 256);
+        try { localStorage.setItem(LS_AVATAR + p.id, cv.toDataURL('image/jpeg', 0.85)); } catch (e) {}
+        toast('عکس روی همین دستگاه ذخیره شد.', 'ok'); paint();
+      }});
+      var rm = av ? el('button', {class: 'btn light sm', text: '🗑 حذف', onclick: async function () { if (await S.confirmDlg('حذف عکس پروفایل', 'عکس پروفایل از این دستگاه حذف شود؟', 'حذف', true)) { try { localStorage.removeItem(LS_AVATAR + p.id); } catch (e) {} paint(); } }}) : null;
+      c.appendChild(el('div', {class: 'card neo m-pcard center'}, [avBox, el('div', {class: 'row', style: 'justify-content:center'}, [pick, rm]), el('p', {class: 'muted', style: 'font-size:12px', text: 'عکس فقط روی همین دستگاه می‌ماند و به سرور فرستاده نمی‌شود.'})]));
+      var dn = field('نام نمایشی', p.displayName, {hint: 'خالی باشد، نام اصلی حساب نمایش داده می‌شود.'});
+      c.appendChild(el('div', {class: 'card neo m-pcard'}, [el('h3', {text: 'نام نمایشی'}), dn.row]));
+      var fn, ln, ec, ph;
+      if (p.role === 'teacher') {
+        fn = field('نام', p.firstName); ln = field('نام خانوادگی', p.lastName); ec = field('کد پرسنلی', p.employeeCode, {hint: 'اختیاری؛ حداکثر ۳۰ حرف انگلیسی یا عدد', ltr: true}); ph = field('شماره تلفن', p.phone, {hint: 'اختیاری؛ ۱۱ رقم و با 09 شروع شود', ltr: true});
+        c.appendChild(el('div', {class: 'card neo m-pcard'}, [el('h3', {text: 'مشخصات معلم'}), el('div', {class: 'grid2'}, [fn.row, ln.row]), ec.row, ph.row]));
+      }
+      var save = el('button', {class: 'btn', style: 'width:100%', text: 'ذخیره پروفایل', onclick: async function () {
+        save.disabled = true; msg.innerHTML = '';
+        try { await S.api.saveProfile({role: p.role, displayName: dn.i.value, firstName: fn ? fn.i.value : '', lastName: ln ? ln.i.value : '', employeeCode: ec ? ec.i.value : '', phone: ph ? ph.i.value : '', avatarUrl: p.avatarUrl, avatarPublic: p.avatarPublic, header: p.header || {province: '', city: '', district: '', school: '', grade: '', fieldOfStudy: ''}}); u.name = dn.i.value.trim() || p.fullName; toast('پروفایل ذخیره شد.', 'ok'); }
+        catch (e) { msg.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); }
+        save.disabled = false;
+      }});
+      c.appendChild(msg); c.appendChild(save);
+      return;
+    }
+    if (profileTab === 'header') {
+      var h = p.header || {}, hf = {};
+      var hcard = el('div', {class: 'card neo m-pcard'}, [el('h3', {text: 'اطلاعات سربرگ رسمی امتحان'}), el('p', {class: 'muted', style: 'font-size:12px', text: 'این اطلاعات در قالب چاپ رسمی استفاده می‌شود.'})]);
+      [['province', 'استان'], ['city', 'شهر'], ['district', 'منطقه'], ['school', 'مدرسه / واحد'], ['grade', 'پایه'], ['fieldOfStudy', 'رشته']].forEach(function (x) { hf[x[0]] = field(x[1], h[x[0]]); hcard.appendChild(hf[x[0]].row); });
+      var hs = el('button', {class: 'btn', style: 'width:100%', text: 'ذخیره سربرگ', onclick: async function () {
+        hs.disabled = true; msg.innerHTML = '';
+        try { var hd = {}; Object.keys(hf).forEach(function (k) { hd[k] = hf[k].i.value; }); await S.api.saveProfile({role: p.role, displayName: p.displayName, firstName: p.firstName, lastName: p.lastName, employeeCode: p.employeeCode, phone: p.phone, avatarUrl: p.avatarUrl, avatarPublic: p.avatarPublic, header: hd}); toast('سربرگ ذخیره شد.', 'ok'); }
+        catch (e) { msg.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); }
+        hs.disabled = false;
+      }});
+      c.appendChild(hcard); c.appendChild(msg); c.appendChild(hs);
+      return;
+    }
+    /* --- AccountSection --- */
+    var roleFa = p.role === 'teacher' ? 'معلم' : p.role === 'manager' ? 'مدیر/معاون' : 'دانش‌آموز';
+    function lv(l, v) { return el('div', {class: 'm-lv'}, [el('span', {class: 'muted', text: l}), el('b', {text: v || '—'})]); }
+    c.appendChild(acc('info', 'مشخصات حساب', function () { var rows = [lv('نام', p.fullName), lv('نام کاربری', p.username), lv('نقش', roleFa)]; if (p.role !== 'student') rows.push(lv('ایمیل', u.email)); return rows; }));
+    if (p.role === 'teacher' && window.SiteSchool) c.appendChild(acc('join_school', 'پیوستن به مدرسه', function () { var k = window.SiteSchool.joinSchoolCard(function () { paint(); }); k.className = ''; return [k]; }));
+    c.appendChild(acc('username', 'تغییر نام کاربری', function () {
+      if (p.role === 'student') return [el('p', {class: 'muted', text: 'تغییر نام کاربری دانش‌آموز فقط توسط معلم انجام می‌شود.'})];
+      var un = field('نام کاربری انگلیسی', p.username, {ltr: true, hint: 'ورود معلم همچنان با ایمیل انجام می‌شود.'}), m2 = el('div');
+      return [un.row, m2, el('button', {class: 'btn', style: 'width:100%', text: 'ذخیره نام کاربری', onclick: async function () { m2.innerHTML = ''; try { var v = un.i.value.trim().toLowerCase(); if (!/^[a-z][a-z0-9_]{3,19}$/.test(v)) throw new Error('نام کاربری باید ۴ تا ۲۰ حرف انگلیسی، عدد یا زیرخط باشد.'); var r = await S.api.updateUsername(v); if (r && r.error) throw new Error(r.error); u.username = v; toast('نام کاربری ذخیره شد.', 'ok'); paint(); } catch (e) { m2.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); } }})];
+    }));
+    c.appendChild(acc('email', 'تغییر ایمیل', function () {
+      if (p.role === 'student') return [el('p', {class: 'muted', text: 'ایمیل ورود دانش‌آموز توسط سامانه مدیریت می‌شود و در برنامه نمایش داده نمی‌شود.'})];
+      var em = field('ایمیل جدید', '', {ltr: true, type: 'email', hint: 'Supabase پیام تأیید می‌فرستد؛ تا تأیید، ایمیل فعلی معتبر می‌ماند.'}), m3 = el('div');
+      return [em.row, m3, el('button', {class: 'btn', style: 'width:100%', text: 'ارسال تأیید به ایمیل جدید', onclick: async function () { m3.innerHTML = ''; try { var v = em.i.value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) throw new Error('ایمیل معتبر نیست.'); await S.api.updateEmail(v); toast('پیام تأیید به ایمیل جدید ارسال شد.', 'ok'); } catch (e) { m3.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); } }})];
+    }));
+    c.appendChild(acc('password', 'تغییر رمز عبور', function () {
+      var recovery = !!accPwRecovery, m4 = el('div');
+      var cur = field('رمز فعلی', '', {type: 'password', ltr: true}), code = field('کد بازیابی ۶ تا ۸ رقم', '', {ltr: true}), n1 = field('رمز جدید ۸ تا ۷۲ کاراکتر', '', {type: 'password', ltr: true}), n2 = field('تکرار رمز جدید', '', {type: 'password', ltr: true});
+      var rows = [];
+      if (!recovery) rows.push(cur.row);
+      else rows.push(el('p', {class: 'muted', text: 'کد بازیابی به ایمیل حساب ارسال می‌شود و بدون رمز قبلی رمز تازه ثبت می‌شود.'}), el('button', {class: 'btn light', style: 'width:100%', text: 'ارسال کد بازیابی به ایمیل', onclick: async function () { m4.innerHTML = ''; try { if (!u.email) throw new Error('ایمیل حساب در دسترس نیست.'); await S.api.sendLoginOtp(u.email); toast('کد بازیابی به ایمیل حساب ارسال شد.', 'ok'); } catch (e) { m4.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); } }}), code.row);
+      rows.push(n1.row, n2.row, m4,
+        el('button', {class: 'btn', style: 'width:100%', text: recovery ? 'تأیید کد و ثبت رمز جدید' : 'تغییر رمز عبور', onclick: async function () {
+          m4.innerHTML = '';
+          try {
+            if (n1.i.value.length < 8 || n1.i.value.length > 72) throw new Error('رمز عبور باید ۸ تا ۷۲ کاراکتر باشد.');
+            if (n1.i.value !== n2.i.value) throw new Error('تکرار رمز عبور یکسان نیست.');
+            if (!recovery) { if (!cur.i.value) throw new Error('رمز فعلی را وارد کنید.'); try { await S.api.verifyCurrentPassword(u.email, cur.i.value); } catch (e) { throw new Error('رمز فعلی نادرست است.'); } }
+            else { await S.api.verifyLoginOtp(u.email, code.i.value); }
+            await S.api.changePassword(n1.i.value); toast(recovery ? 'رمز عبور بازیابی و تغییر کرد.' : 'رمز عبور با موفقیت تغییر کرد.', 'ok'); accPwRecovery = false; paint();
+          } catch (e) { m4.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); }
+        }}),
+        el('button', {class: 'btn light', style: 'width:100%', text: recovery ? 'بازگشت به تغییر با رمز فعلی' : 'رمز فعلی را فراموش کرده‌ام', onclick: function () { accPwRecovery = !recovery; paint(); }}));
+      return rows;
+    }));
+    if (p.role !== 'student' && window.SiteExtras) c.appendChild(acc('delete', 'حذف حساب', function () { var k = window.SiteExtras.deleteAccountCard(async function () { S.logout(); }); k.className = ''; return [k]; }));
+  }
+  var accPwRecovery = false;
   function paint() {
     cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
@@ -930,11 +1035,13 @@
     if (ui.addOpen && page !== 'builder') shell.appendChild(quickAdd());
     if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
     else if (mgr && page === 'cards') managerCards(content);
+    else if (mgr && page === 'profile') profileScreen(content);
     else if (mgr) S.renderPage(content);
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else if (page === 'print') printCenter(content);
     else if (page === 'students' && !mgr) studentsScreen(content);
+    else if (page === 'profile') profileScreen(content);
     else S.renderPage(content);
     if (page === 'builder') content.classList.add('m-builder');
   }
@@ -960,6 +1067,7 @@
     if (inExam) { if (window.SiteStudent) window.SiteStudent.page(content, view.arg); return; }
     if (ui.menuOpen) content.appendChild(studentMenu());
     else if (page === 'dashboard' || page === 'join') studentHome(content);
+    else if (page === 'profile') profileScreen(content);
     else S.renderPage(content);
   }
 

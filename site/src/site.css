@@ -784,3 +784,15 @@ img,video,canvas,iframe{max-width:100%}
 .studio-ex .danger-text{color:#fca5a5}
 @media (max-width:700px){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}
 .img-broken{outline:2px dashed #dc2626;min-width:48px;min-height:32px}
+/* V161 — حساب گوشی مثل ProfileSettingsScreen */
+.m-chips{display:flex;gap:6px;justify-content:center;padding:4px 0 10px}
+.m-chip{border:1px solid var(--m-dark);background:transparent;color:var(--m-ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px}
+.m-chip.on{background:var(--m-acc);border-color:var(--m-acc);color:#fff}
+.m-pcard{padding:14px 16px;margin-bottom:12px}.m-pcard h3{margin:0 0 8px;font-size:15px}.m-pcard.center{text-align:center}
+.m-avatar.xl{width:112px;height:112px;font-size:40px;margin:4px auto 10px}
+.m-acc{margin-bottom:10px;overflow:hidden}
+.m-acc-h{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border:0;background:transparent;font:inherit;color:var(--m-ink);text-align:right}
+.m-acc-h b{font-size:15px}.m-acc-chev{width:18px;height:18px;transition:transform .15s}.m-acc.open .m-acc-chev{transform:rotate(-90deg)}
+.m-acc-b{padding:0 16px 14px;display:flex;flex-direction:column;gap:10px}
+.m-acc-b .card{box-shadow:none;border:0;padding:0;margin:0;background:transparent}
+.m-lv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--m-dark)}.m-lv:last-child{border-bottom:0}

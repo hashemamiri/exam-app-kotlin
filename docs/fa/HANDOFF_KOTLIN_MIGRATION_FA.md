@@ -18896,3 +18896,11 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - درس: چون CI اپ مدت‌ها بسته بود، تست‌های سایت اجرا نمی‌شدند؛ قبل از تحویل نسخه‌های سایت، حداقل تست‌های Vxxx_Site* را با `./gradlew testDebugUnitTest --tests 'ir.exam.app.ui.app.V15*'` محلی اجرا کنید یا CI را باز بگذارید.
 
 ## §V160.8 — V160_CrossPlatformMediaTest خط ۱۹: فراخوانی دوم `decodeImageRefBounded(..., 2560, strict = true)` است. همهٔ لیترال‌های تست‌های V152/V153/V159/V160/V160.2 با اسکریپت در برابر سورس بررسی شد.
+
+## §V161 — «حساب» سایت گوشی آینهٔ `ProfileSettingsScreen`
+- `site/src/mobile.js`: `profileScreen(c)` (قبل از `paint()`): چیپ‌های `پروفایل/حساب/سربرگ` (سربرگ فقط معلم) مثل `ProfileSection/AccountSection/HeaderSection` اپ. مسیر `page === 'profile'` برای معلم، مدیر و دانش‌آموز.
+- عکس پروفایل: مثل تصمیم V137.6 هرگز آپلود نمی‌شود؛ در `localStorage` با کلید `examsite.avatar.<uid>` ذخیره و در آواتار منوها (`localAvatar(u.id)`) نمایش داده می‌شود.
+- `site/src/app.js` API تازه: `verifyCurrentPassword(email, pw)` = `POST /auth/v1/token?grant_type=password` با `auth:false` بدون جایگزینی نشست (معادل `SupabaseProfileRepository.verifyCurrentPassword`)؛ `updateEmail(email)` = `authApi.updateUser({email})`.
+- CSS: `.m-chips/.m-chip.on`, `.m-acc/.m-acc-h/.m-acc-b/.m-acc-chev`, `.m-pcard`, `.m-avatar.xl`, `.m-lv`.
+- تست: `V161_SiteMobileProfileTest` (بخش‌ها + بسته بودن CI).
+- **قاعدهٔ CI (تأکید کاربر، V161):** نسخهٔ فقط-سایت ⇒ سه خط `push:` در `android.yml` کامنت (بسته)؛ نسخهٔ با تغییر کد اپ ⇒ باز. V161 فقط سایت است ⇒ CI بسته شد. تست V161 این را چک می‌کند؛ هنگام باز کردن CI در نسخهٔ بعدی، همان تست را به‌روز کنید.

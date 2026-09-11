@@ -294,6 +294,9 @@
     sendRecoveryOtp: function (email) { return authApi.sendOtp(requireEmail(email), false); },
     verifyRecoveryOtp: async function (email, code) { await authApi.verifyOtp(requireEmail(email), cleanCode(code)); var p = await rpcObj('native_my_profile', {}); if (p && p.error) throw new Error(String(p.error)); return p && p.username ? p.username : null; },
     changePassword: async function (pw) { validatePassword(pw); await authApi.updateUser({password: pw}); },
+    /* V161 — مثل SupabaseProfileRepository.verifyCurrentPassword / changeEmail */
+    verifyCurrentPassword: async function (email, pw) { if (!email) throw new Error('نشست ورود پیدا نشد.'); await http('/auth/v1/token?grant_type=password', {method: 'POST', auth: false, body: {email: email, password: pw}}); },
+    updateEmail: function (email) { return authApi.updateUser({email: email}); },
     updateUsername: function (u) { return rpcObj('native_update_my_username_v1', {p_username: u.trim().toLowerCase()}); },
     // معلم
     exams: async function () {
