@@ -21,7 +21,7 @@
     var p = view.panel;
     if (p === 'wallet') return 'wallet';
     if (isManager()) { if (p === 'teachers') return 'exams'; if (p === 'cards' || p === 'school' || p === 'dashboard') return 'cards'; return 'none'; }
-    if (p === 'exams' || p === 'dashboard' || p === 'builder') return 'exams';
+    if (p === 'exams' || p === 'dashboard' || p === 'builder' || p === 'print') return 'exams';
     if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading') return 'cards';
     return 'none';
   }
@@ -106,7 +106,7 @@
     var u = S.user();
     var cards = [
       ['تقویم', 'رویدادها و پیام‌ها', 'calendar', function () { go('calendar'); }],
-      ['چاپ آزمون', 'اطلاعات رسمی چاپ آزمون', 'print', function () { go('builder', {mode: 'print'}); }],
+      ['چاپ آزمون', 'اطلاعات رسمی چاپ آزمون', 'print', function () { go('print'); }],
       ['دانش‌آموزان', 'فهرست و وضعیت', 'students', function () { go('students'); }],
       ['کلاس‌ها', 'فهرست و مدیریت', 'classes', function () { go('classes'); }],
       ['حساب', 'مشخصات و امنیت حساب', 'account', function () { go('profile'); }],
@@ -313,6 +313,63 @@
     cardsDeck(c, 'teacher', cards);
   }
 
+
+  /* ---------- V155: چاپ آزمون (ExamPrintCenterScreen) — «آزمون جدید» · «آزمون‌های آنلاین» + کارت‌های آزمون چاپی محلی ---------- */
+  var LS_PRINT = 'examsite.printexams.v1';
+  function printList() { try { return JSON.parse(localStorage.getItem(LS_PRINT) || '[]') || []; } catch (e) { return []; } }
+  function printCenter(c) {
+    c.innerHTML = '';
+    var wrap = el('div', {class: 'm-print'});
+    var status = el('p', {class: 'm-note', style: 'display:none;padding:4px 0'});
+    wrap.appendChild(el('div', {class: 'm-print-top'}, [
+      el('button', {class: 'btn m-btn', text: 'آزمون جدید', onclick: function () { go('builder', {mode: 'print', fresh: true}); }}),
+      el('button', {class: 'm-outline', text: 'آزمون‌های آنلاین', onclick: onlineSheet})
+    ]));
+    wrap.appendChild(status);
+    var list = printList();
+    if (!list.length) wrap.appendChild(el('p', {class: 'm-note', text: 'هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.'}));
+    list.forEach(function (r) {
+      wrap.appendChild(el('div', {class: 'm-pcard neo'}, [
+        el('div', {class: 'm-pcard-h'}, [el('b', {text: r.title || 'آزمون چاپی'}), el('span', {class: 'm-chip', text: 'چاپی'})]),
+        el('div', {class: 'm-pcard-m', text: 'درس: ' + (r.subject || '—') + ' · ' + fa((r.questions || []).length) + ' سؤال'}),
+        el('div', {class: 'm-pcard-acts'}, [
+          act('edit', 'ویرایش آزمون چاپی', function () { go('builder', {mode: 'print', printId: r.id}); }),
+          act('trash', 'حذف آزمون چاپی', async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title || 'آزمون چاپی') + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; localStorage.setItem(LS_PRINT, JSON.stringify(printList().filter(function (x) { return x.id !== r.id; }))); printCenter(c); }, true)
+        ])
+      ]));
+    });
+    c.appendChild(wrap);
+    async function onlineSheet() {
+      var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+      var body = el('div', {class: 'm-sheet'}, [el('h3', {text: 'آزمون‌های آنلاین'})]);
+      bg.appendChild(body); document.body.appendChild(bg);
+      var exams = []; try { exams = await api.exams(); } catch (e) { body.appendChild(el('p', {class: 'm-note', text: S.errMsg(e)})); }
+      if (!exams.length) body.appendChild(el('p', {class: 'm-note', text: 'آزمون آنلاینی ندارید.'}));
+      else body.appendChild(el('p', {class: 'm-note', style: 'padding:4px 0 10px', text: 'با انتخاب هر آزمون، نسخهٔ چاپی آن روی همین مرورگر ساخته و باز می‌شود.'}));
+      var local = printList();
+      exams.forEach(function (x) {
+        var has = local.some(function (r) { return r.sourceExamId === x.id; });
+        body.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); openPrintCopy(x); }}, [ic('print', 'm-row-ic'), el('div', {}, [el('b', {text: x.title || 'بدون عنوان'}), el('span', {text: 'درس: ' + (x.subject || '—') + (has ? ' · نسخهٔ چاپی دارد' : '')})])]));
+      });
+      body.appendChild(el('button', {class: 'm-outline', style: 'margin-top:12px;width:100%', text: 'بستن', onclick: function () { bg.remove(); }}));
+    }
+    /* مثل openPrintCopy اپ: اگر قبلاً نسخهٔ چاپی ساخته شده همان باز می‌شود؛ وگرنه سؤال‌ها (با پاسخ‌نامه) خوانده و به‌صورت آزمون چاپی محلی ذخیره می‌شوند */
+    async function openPrintCopy(x) {
+      var existing = printList().filter(function (r) { return r.sourceExamId === x.id; })[0];
+      if (existing) return go('builder', {mode: 'print', printId: existing.id});
+      status.style.display = ''; status.style.color = ''; status.textContent = 'در حال آماده‌سازی نسخهٔ چاپی...';
+      try {
+        var exam = await api.examDetail(x.id);
+        var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
+        var qs = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return window.SiteBuilder.decodeQuestion(q, keys[i]); });
+        if (!qs.length) throw new Error('برای نسخهٔ چاپی سؤالی در این آزمون پیدا نشد.');
+        var rec = {id: S.uuid(), title: exam.title || x.title || '', subject: exam.subject || x.subject || '', duration: exam.duration != null ? String(exam.duration) : '', questions: qs, savedAt: Date.now(), sourceExamId: x.id};
+        var l = printList(); l.unshift(rec); localStorage.setItem(LS_PRINT, JSON.stringify(l));
+        go('builder', {mode: 'print', printId: rec.id});
+      } catch (e) { status.style.color = 'var(--m-danger)'; status.textContent = S.errMsg(e); }
+    }
+  }
+
   /* ---------- V151: جدول → کارت‌های نئومورفیک (SchoolManagementScreen: Card با عنوان، خط‌های اطلاعات، ردیف عملیات وسط‌چین) ----------
      همهٔ صفحه‌های داخلی سایت (کلاس‌ها، دانش‌آموزان، معلم‌ها، کیف پول، تصحیح، آزمون‌های چاپی…) جدول‌اند؛ در پوستهٔ موبایل هر
      <table.tbl> به فهرست کارت تبدیل می‌شود. عملیات (icon-btn/btn/chip) همان گره‌های اصلی‌اند و منتقل می‌شوند، پس رفتار دست‌نخورده می‌ماند. */
@@ -403,6 +460,19 @@
       radial.appendChild(ring); document.body.appendChild(radial);
     }
     document.body.appendChild(bar);
+    /* V155 — سؤال‌ها مثل کارت‌های QuestionEditor اپ: کارت تمام‌عرض با رنگ پاستلی نوع، ویرایشگر همان سؤال درست زیر کارت انتخاب‌شده (بازشونده) */
+    var list = c.querySelector('.b-list'), edRef = c.querySelector('.b-editor');
+    function typeOf(row) { var ch = row.querySelector('.chip:not(.brand)'); var lab = ch ? ch.textContent.trim() : ''; return Object.keys(PASTEL).filter(function (k) { return typeLabel(k) === lab; })[0] || 'essay'; }
+    function tint(node, t) { var h = PASTEL[t] || '#FFFFFF', r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16); node.style.background = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',.38),rgba(' + r + ',' + g + ',' + b + ',.38)),var(--m-bg)'; }
+    function placeEditor() {
+      if (!list || !edRef) return;
+      var rows = list.querySelectorAll('.b-q'), on = null;
+      rows.forEach(function (r) { var t = typeOf(r); r.setAttribute('data-t', t); tint(r, t); if (r.classList.contains('on')) on = r; });
+      if (on) { if (on.nextSibling !== edRef) on.after(edRef); tint(edRef, on.getAttribute('data-t')); edRef.classList.add('m-open'); }
+      else if (!edRef.parentNode || edRef.parentNode === list || edRef.closest('.b-qs')) { list.after(edRef); edRef.style.background = ''; edRef.classList.remove('m-open'); }
+    }
+    placeEditor();
+    if (list && window.MutationObserver) new MutationObserver(function () { placeEditor(); }).observe(list, {childList: true});
   }
   function typeLabel(t) { return {multiple: 'چندگزینه‌ای', truefalse: 'صحیح / غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[t]; }
   function cleanupBuilder() { ['m-bfab'].forEach(function (id) { var n = document.getElementById(id); if (n) n.remove(); }); var r = document.querySelector('.m-radial-bg'); if (r) r.remove(); }
@@ -551,7 +621,7 @@
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
-  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
+  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
   function paint() {
     cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
@@ -567,8 +637,9 @@
     if (!ui.menuOpen && !noHead) {
       var ttl = (mgr ? MANAGER_TITLES : TITLES)[page] || '';
       if (page === 'builder' && view.arg && view.arg.examId) ttl = 'ویرایش آزمون';
-      if (page === 'builder' && view.arg && view.arg.mode === 'print') ttl = 'چاپ آزمون';
-      head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(home); }}, [ic('chevron')]), el('h1', {text: ttl})]);
+      if (page === 'builder' && view.arg && view.arg.mode === 'print') ttl = 'ساخت آزمون';
+      var backTo = (page === 'builder' && view.arg && view.arg.mode === 'print') ? 'print' : home;
+      head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(backTo); }}, [ic('chevron')]), el('h1', {text: ttl})]);
     }
     var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
     if (head) shell.appendChild(head);
@@ -580,6 +651,7 @@
     else if (mgr) S.renderPage(content);
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
+    else if (page === 'print') printCenter(content);
     else S.renderPage(content);
     if (page === 'builder') content.classList.add('m-builder');
   }

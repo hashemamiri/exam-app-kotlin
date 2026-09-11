@@ -557,10 +557,17 @@ img,video,canvas,iframe{max-width:100%}
 .m-builder .b-editor{order:2}
 .m-builder .b-add{display:none} /* افزودن از منوی شعاعی + مثل اپ */
 .m-builder .b-list .btn.soft{display:none}
-.m-builder .b-qs{flex-direction:row;overflow-x:auto;gap:8px;padding-bottom:4px;scrollbar-width:none}
-.m-builder .b-qs::-webkit-scrollbar{display:none}
-.m-builder .b-q{flex:0 0 auto;max-width:180px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
-.m-builder .b-q.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff;color:var(--m-acc)}
+.m-builder .b-list{background:transparent;box-shadow:none;padding:0}
+.m-builder .b-list>.row{padding:0 6px}
+.m-builder .b-qs{flex-direction:column;gap:12px}
+.m-builder .b-q{border:0;border-radius:12px;padding:12px;gap:6px;box-shadow:0 1px 3px rgba(38,49,66,.12);font-size:14px}
+.m-builder .b-q .n{min-width:37px;height:37px;background:rgba(108,99,245,.13);color:var(--m-acc);border:2px solid rgba(108,99,245,.58);font-weight:800;font-size:14px}
+.m-builder .b-q .chip:not(.brand){background:transparent;border:0;font-weight:700;color:var(--m-ink);padding:0}
+.m-builder .b-q .chip.brand{background:rgba(255,255,255,.7);color:var(--m-ink);border:1px solid rgba(38,49,66,.15);min-width:44px;text-align:center}
+.m-builder .b-q.on{border-radius:12px 12px 0 0;box-shadow:none}
+.m-builder .b-editor.m-open{margin-top:-12px;border-radius:0 0 12px 12px;box-shadow:0 1px 3px rgba(38,49,66,.12);animation:mexp2 .26s both}
+.m-builder .b-editor.m-open>.row:first-child h3{display:none}
+@keyframes mexp2{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .m-builder .b-tools{gap:8px}
 .m-builder .tool-btn{width:44px;height:44px;border:0;background:var(--m-bg);box-shadow:4px 4px 10px var(--m-dark),-4px -4px 10px #fff;border-radius:14px}
 .m-builder .tool-btn.on{box-shadow:inset 3px 3px 7px var(--m-dark),inset -3px -3px 7px #fff}
@@ -692,3 +699,21 @@ img,video,canvas,iframe{max-width:100%}
 .ice-step.cur small{color:var(--ink);font-weight:700}
 .ice-err{color:#B91C1C;font-size:13px;text-align:center;padding:4px 0}
 @media (max-width:380px){.ice-otp-b{width:34px;height:46px;font-size:18px}.ice-otp{gap:6px}}
+
+/* ---- V155: بدون زوم/کش‌آمدن؛ اسکرول فقط وقتی محتوا بلندتر است ---- */
+.m-mode,.m-mode body{overscroll-behavior:none;touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
+.m-mode .m-shell{min-height:100dvh;height:auto}
+.m-mode .m-content{overscroll-behavior:contain}
+.m-mode .m-content.no-head{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+.m-mode .m-exams,.m-mode .m-deck,.m-mode .m-menu{padding-bottom:0}
+.m-mode input,.m-mode select,.m-mode textarea{font-size:16px} /* iOS با فونت <16px هنگام فوکوس زوم می‌کند */
+.ice{overscroll-behavior:none;touch-action:pan-y}
+/* ---- V155: چاپ آزمون (ExamPrintCenterScreen) ---- */
+.m-print{display:flex;flex-direction:column;gap:10px;max-width:760px;margin:0 auto}
+.m-print-top{display:flex;justify-content:center;gap:10px}
+.m-btn{border-radius:20px;padding:10px 22px;background:var(--m-acc);color:#fff;border:0;font-weight:700}
+.m-pcard{border-radius:18px;padding:12px;text-align:right;display:flex;flex-direction:column;gap:7px}
+.m-pcard-h{display:flex;align-items:center;gap:8px}.m-pcard-h b{flex:1;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-chip{font-size:12px;border:1px solid var(--m-dark);border-radius:8px;padding:2px 10px;color:var(--m-ink)}
+.m-pcard-m{font-size:13px}
+.m-pcard-acts{display:flex;justify-content:center;gap:6px}
