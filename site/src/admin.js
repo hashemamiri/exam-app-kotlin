@@ -327,6 +327,8 @@
       var tb = el('tbody');
       function draw() { var sx = q.value.trim().toLowerCase(); tb.innerHTML = ''; students.filter(function (x) { return !sx || (x.full_name || '').toLowerCase().indexOf(sx) >= 0 || (x.username || '').toLowerCase().indexOf(sx) >= 0; }).slice(0, 300).forEach(function (x) { tb.appendChild(el('tr', {}, [el('td', {text: x.full_name || '—'}), el('td', {}, [el('span', {class: 'code', text: x.username || '—'})])])); }); }
       q.addEventListener('input', draw); draw();
+      /* V150 — کارت «دانش‌آموزان» منوی موبایل مدیر: مستقیم به بخش دانش‌آموزان مدرسه */
+      if (arg.students) setTimeout(function () { var last = c.lastElementChild; if (last && last.scrollIntoView) last.scrollIntoView({behavior: 'smooth'}); }, 50);
       c.appendChild(el('div', {class: 'card', style: 'margin-top:16px'}, [el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('h3', {class: 'grow', text: '🎓 دانش‌آموزان مدرسه (' + fa(students.length) + ')'}), q]), students.length ? el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری'].map(function (h) { return el('th', {text: h}); }))]), tb]) : S.emptyBox('🎓', 'دانش‌آموزی ثبت نشده است.')]));
     } catch (e) { S.showErr(c, e); }
   }

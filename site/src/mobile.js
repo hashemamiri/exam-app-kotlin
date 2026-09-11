@@ -11,13 +11,16 @@
   var ui = {menuOpen: false, addOpen: false, expanded: null};
 
   /* V149 — معلم و دانش‌آموز (مدیر در مرحلهٔ بعد) */
-  function active() { var u = S.user(); return MQ.matches && u && (u.role === 'teacher' || u.role === 'student'); }
+  /* V150 — هر سه نقش */
+  function active() { var u = S.user(); return MQ.matches && u && (u.role === 'teacher' || u.role === 'student' || u.role === 'manager'); }
   function isStudent() { return S.user() && S.user().role === 'student'; }
+  function isManager() { return S.user() && S.user().role === 'manager'; }
   /* نگاشت داک اپ → پنل‌های سایت */
   function dockSection() {
     if (ui.menuOpen) return 'menu';
     var p = view.panel;
     if (p === 'wallet') return 'wallet';
+    if (isManager()) { if (p === 'teachers') return 'exams'; if (p === 'cards' || p === 'school' || p === 'dashboard') return 'cards'; return 'none'; }
     if (p === 'exams' || p === 'dashboard' || p === 'builder') return 'exams';
     if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading') return 'cards';
     return 'none';
@@ -63,17 +66,20 @@
       item('منو', ui.menuOpen ? 'close' : 'menu', function () { ui.menuOpen = !ui.menuOpen; ui.addOpen = false; paint(); }, 'menu'),
       item('کیف پول', 'wallet', function () { go('wallet'); }, 'wallet'),
       el('button', {class: 'm-dock-add' + (ui.addOpen ? ' on' : ''), 'aria-label': 'افزودن سریع', onclick: function () { ui.addOpen = !ui.addOpen; ui.menuOpen = false; paint(); }}, [ic(ui.addOpen ? 'close' : 'plus')]),
-      item('آزمون‌ها', 'exams', function () { go('exams'); }, 'exams'),
+      isManager() ? item('معلم‌ها', 'students', function () { go('teachers'); }, 'exams') : item('آزمون‌ها', 'exams', function () { go('exams'); }, 'exams'),
       item('کارت‌ها', 'cards', function () { go('cards'); }, 'cards')
     ])]);
   }
 
   /* ---------- افزودن سریع (Design69QuickAddOverlay) ---------- */
   function quickAdd() {
+    var mgr = isManager();
     var items = [
-      ['آزمون جدید', 'ساخت آزمون آنلاین', 'exams', function () { go('builder', null); }],
-      ['دانش‌آموز جدید', 'افزودن به کلاس', 'students', async function () { ui.addOpen = false; paint(); if (window.SiteSchool) { var classes = await api.classes().catch(function () { return []; }); window.SiteSchool.studentForm(null, classes, null, function () { go('students'); }); } else go('students'); }],
-      ['کلاس جدید', 'ساخت کلاس', 'classes', function () { go('classes', {create: true}); }]
+      mgr ? ['دعوت معلم', 'ساخت کد دعوت برای معلم', 'students', function () { go('teachers'); }] : ['آزمون جدید', 'ساخت آزمون آنلاین', 'exams', function () { go('builder', null); }],
+      ['دانش‌آموز جدید', mgr ? 'در کلاس یکی از معلم‌ها' : 'افزودن به کلاس', 'students', async function () { if (mgr) return go('school'); ui.addOpen = false; paint(); if (window.SiteSchool) { var classes = await api.classes().catch(function () { return []; }); window.SiteSchool.studentForm(null, classes, null, function () { go('students'); }); } else go('students'); }],
+      ['کلاس جدید', mgr ? 'برای یکی از معلم‌ها' : 'ساخت کلاس', 'classes', function () { mgr ? go('school') : go('classes', {create: true}); }],
+      /* V61.5 — عمل چهارم: مدرسه جدید (مدیر می‌سازد؛ معلم با کد دعوت عضو می‌شود) */
+      ['مدرسه جدید', mgr ? 'ساخت مدرسه' : 'عضویت با کد دعوت', 'classes', function () { mgr ? go('school') : go('profile'); }]
     ];
     return el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) { ui.addOpen = false; paint(); } }}, [el('div', {class: 'm-quick'}, items.map(function (it, i) {
       return el('button', {class: 'm-quick-item', style: 'animation-delay:' + (i * 40) + 'ms', onclick: it[3]}, [ic(it[2], 'm-quick-ic'), el('div', {}, [el('b', {text: it[0]}), el('span', {text: it[1]})])]);
@@ -220,8 +226,46 @@
     if (window.SiteStudent) await window.SiteStudent.page(joinBox, view.arg);
   }
 
+  /* ---------- مدیر/معاون: منوی ۶کارتی + کارت ویژهٔ «داشبورد» (ExamApp.kt:988-1019,1059) ---------- */
+  function managerMenu() {
+    var u = S.user();
+    var cards = [
+      ['کلاس‌ها', 'فهرست و مدیریت', 'classes', function () { go('school'); }],
+      ['دانش‌آموزان', 'فهرست و مدیریت', 'students', function () { go('school', {students: true}); }],
+      ['حساب', 'مشخصات و امنیت حساب', 'account', function () { go('profile'); }],
+      ['سایت', 'onlineexam.ir', 'site', function () { ui.menuOpen = false; toast('شما هم‌اکنون در سایت هستید.', 'ok'); paint(); }],
+      ['تنظیمات', 'ظاهر، داده و درباره', 'settings', function () { go('tools'); }],
+      ['خروج', 'خروج امن و تعویض حساب', 'logout', async function () { if (await S.confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) { ui.menuOpen = false; S.logout(); } }, true]
+    ];
+    var sel = {school: 'classes', profile: 'account', tools: 'settings', dashboard: 'dashboard'}[view.panel];
+    return el('div', {class: 'm-menu'}, [
+      el('button', {class: 'm-profile neo', onclick: function () { go('profile'); }}, [
+        el('div', {class: 'm-avatar'}, [u.avatarUrl ? el('img', {src: u.avatarUrl, alt: ''}) : el('span', {text: (u.name || '?').trim().charAt(0)})]),
+        el('div', {class: 'm-profile-t'}, [el('div', {class: 'k', text: 'پروفایل مدیر/معاون'}), el('div', {class: 'n', text: u.name || 'حساب کاربری من'}), el('div', {class: 'e', text: u.email || 'حساب مدیر/معاون'})]),
+        ic('chevron', 'm-chev')
+      ]),
+      /* کارت ویژه، وسط‌چین با عرض ۵۲٪ (featuredCard) */
+      el('div', {class: 'm-featured'}, [el('button', {class: 'm-tile neo' + (sel === 'dashboard' ? ' sel' : ''), onclick: function () { go('dashboard'); }}, [ic('cards', 'm-tile-ic'), el('b', {text: 'داشبورد'}), el('span', {text: 'اطلاعات مدرسه و آمار'})])]),
+      el('div', {class: 'm-grid'}, cards.map(function (c, i) {
+        return el('button', {class: 'm-tile neo' + (sel === c[2] ? ' sel' : '') + (c[4] ? ' danger' : ''), style: 'animation-delay:' + (20 + i * 18) + 'ms', onclick: c[3]}, [ic(c[2], 'm-tile-ic'), el('b', {text: c[0]}), el('span', {text: c[1]})]);
+      }))
+    ]);
+  }
+  function managerCards(c) {
+    c.innerHTML = '';
+    var cards = [
+      ['مدارس', 'لیست مدرسه‌ها، ساخت مدرسه جدید و کلاس‌های هر مدرسه را باز می‌کند.', 'classes', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { go('school'); }],
+      ['کارنامه', 'آمار پاسخ‌ها، میانگین نمره و فعالیت معلم‌های مدرسه.', 'reports', 'linear-gradient(135deg,#2878DB,#24B8C8)', function () { go('dashboard'); }],
+      ['وضعیت', 'داشبورد مدرسه با اطلاعات، آمار کلی و پنل سریع بخش‌ها.', 'cards', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('dashboard'); }]
+    ];
+    c.appendChild(el('div', {class: 'm-cards'}, cards.map(function (k, i) {
+      return el('button', {class: 'm-card neo', style: 'animation-delay:' + (i * 30) + 'ms', onclick: k[4]}, [el('span', {class: 'm-card-ic', style: 'background:' + k[3], html: I[k[2]]}), el('div', {}, [el('b', {text: k[0]}), el('span', {text: k[1]})])]);
+    })));
+  }
+
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
+  var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};
   var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'سازندهٔ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات و ابزارها', profile: 'حساب'};
   function paint() {
     var root = document.getElementById('root'); if (!root) return;
@@ -231,15 +275,20 @@
     var page = ui.menuOpen ? 'menu' : view.panel;
     if (isStudent()) { paintStudent(shell, page); return; }
     var head = null;
-    if (!ui.menuOpen && page !== 'exams' && page !== 'dashboard' && page !== 'cards') {
-      head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go('exams'); }}, [ic('chevron')]), el('h1', {text: TITLES[page] || ''})]);
+    var mgr = isManager();
+    var home = mgr ? 'teachers' : 'exams';
+    var noHead = mgr ? (page === 'teachers' || page === 'cards') : (page === 'exams' || page === 'dashboard' || page === 'cards');
+    if (!ui.menuOpen && !noHead) {
+      head = el('div', {class: 'm-head'}, [el('button', {class: 'm-back', 'aria-label': 'بازگشت', onclick: function () { go(home); }}, [ic('chevron')]), el('h1', {text: (mgr ? MANAGER_TITLES : TITLES)[page] || ''})]);
     }
     var content = el('div', {class: 'm-content' + (head ? '' : ' no-head'), id: 'content'});
     if (head) shell.appendChild(head);
     shell.appendChild(content);
     shell.appendChild(dock());
     if (ui.addOpen) shell.appendChild(quickAdd());
-    if (ui.menuOpen) content.appendChild(menuScreen());
+    if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
+    else if (mgr && page === 'cards') managerCards(content);
+    else if (mgr) S.renderPage(content);
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else S.renderPage(content);

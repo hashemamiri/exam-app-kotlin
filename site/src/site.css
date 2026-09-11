@@ -514,3 +514,7 @@ img,video,canvas,iframe{max-width:100%}
 .m-join{border-radius:26px;padding:16px}
 .m-join .card{box-shadow:none;background:transparent;padding:0;max-width:none !important}
 .m-join .card h3{display:none}
+
+/* ---- V150: مدیر/معاون در پوستهٔ موبایل ---- */
+.m-featured{display:flex;justify-content:center;margin-top:15px}
+.m-featured .m-tile{width:52%}
