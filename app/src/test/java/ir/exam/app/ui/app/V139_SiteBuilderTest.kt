@@ -23,9 +23,11 @@ class V139_SiteBuilderTest {
         // ExamQuestionCodec: کلیدهای پاسخ در سؤال عمومی نمی‌مانند
         assertTrue("['correctOption', 'correctAnswer', 'accept', 'answer', 'tolerance', 'caseSensitive', 'matchAnswer', 'pairs']" in js)
         assertTrue("k.correctOption = q.correctIndex" in js && "k.matchAnswer = {}" in js && "k.accept = q.expectedText.split('|')" in js)
-        // آپلود تصویر: همان باکت و مسیر SupabaseQuestionImageUploader
-        assertTrue("var BUCKET = 'exam-images';" in js)
-        assertTrue("'/storage/v1/object/' + BUCKET + '/' + path" in js && "'x-upsert': 'false'" in js)
+        // آپلود تصویر (V144): از طریق S.uploadMedia — همان پوشه‌ها/باکت SupabaseQuestionImageUploader در مسیر fallback
+        assertTrue("S.uploadMedia(blob, 'image', folder, examId, 'webp', 'image/webp')" in js)
+        val app = source("site/src/app.js")
+        assertTrue("var MEDIA_BUCKET = 'exam-images'" in app)
+        assertTrue("'/storage/v1/object/' + MEDIA_BUCKET + '/' + path" in app && "'x-upsert': 'false'" in app)
         assertTrue("const val BUCKET = \"exam-images\"" in source("app/src/main/java/ir/exam/app/data/repository/SupabaseQuestionImageUploader.kt"))
         assertTrue("'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'" in js)
         // گفتار: پنجره خودش بسته نمی‌شود (V109)

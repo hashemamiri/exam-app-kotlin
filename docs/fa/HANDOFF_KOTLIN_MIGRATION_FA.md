@@ -18678,3 +18678,9 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 ### نکته
 - اگر آروان خطای `SignatureDoesNotMatch` داد، اولین مظنون `S3_REGION` است؛ مقدار دقیق را از بخش «اطلاعات اتصال» صندوقچه بردارید و در Secrets بگذارید (کد هر مقداری را می‌پذیرد).
 - کلید آروان دسترسی به همهٔ صندوقچه‌های حساب دارد؛ فقط یک صندوقچه بسازید یا کلید را با سیاست محدود کنید.
+
+## V144.2 — رفع CI پس از V144 و تست پوششی
+
+- CI (`android.yml`) پس از push V144/V144.1 با ۲ شکست افتاد: `V139_SiteBuilderTest` («var BUCKET = 'exam-images'» و مسیر `/storage/v1/object/` در builder.js) و `V143_SitePhase6Test` («'audio/' + S.user().id» در extras.js) — این رشته‌ها در V144 به `S.uploadMedia` منتقل شدند. تست‌ها به‌روز شدند تا `S.uploadMedia(...)` در builder/extras و `MEDIA_BUCKET`/مسیر Storage در app.js را بررسی کنند.
+- تست جدید `V144_MediaS3Test` (۳ مورد) قراردادهای V144/V144.1 را قفل می‌کند. Gradle در سندباکس در دسترس نبود؛ همهٔ رشته‌های assert شده یک‌به‌یک با grep روی منابع تأیید شدند.
+- درس: هر تغییر در سایت که رشته‌های «آینه» را جابه‌جا می‌کند باید تست‌های `V13x/V14x_Site*Test` را هم به‌روز کند؛ CI اندروید این تست‌ها را اجرا می‌کند.

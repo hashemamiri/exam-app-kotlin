@@ -21,7 +21,7 @@ class V143_SitePhase6Test {
         assertTrue("native_export_backup_v3" in js && "native_restore_backup_v3" in js && "p_bundle" in js && "memberships" in js)
         assertTrue("root._app !== 'exam-native'" in js && "root._kind !== 'backup'" in js && "20 * 1024 * 1024" in js)
         // audio (V135: m4a ≤ 3MB در audio/<teacher>/<exam>)
-        assertTrue("3 * 1024 * 1024" in js && "'audio/' + S.user().id + '/' + examId" in js && "MediaRecorder" in js)
+        assertTrue("3 * 1024 * 1024" in js && "S.uploadMedia(blob, 'audio', 'audio', examId" in js && "MediaRecorder" in js)
         // auth extras
         assertTrue("/auth/v1/authorize?provider=google" in js && "native_set_registration_role_v1" in js)
         assertTrue("action: 'delete_account'" in js && "عملیات ناشناخته" in js)
