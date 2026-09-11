@@ -10,6 +10,8 @@ import androidx.exifinterface.media.ExifInterface
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.header
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
@@ -27,6 +29,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import ir.exam.app.ui.builder.QuestionDraft
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -300,7 +303,7 @@ class SupabaseQuestionImageUploader(context: Context) {
                 val publicUrl = obj["public_url"]?.jsonPrimitive?.contentOrNull
                 if (!uploadUrl.isNullOrBlank() && !publicUrl.isNullOrBlank()) {
                     val signedType = obj["headers"]?.jsonObject?.get("Content-Type")?.jsonPrimitive?.contentOrNull ?: contentType
-                    val putResponse = SupabaseProvider.client.httpClient.httpClient.put(uploadUrl) {
+                    val putResponse = s3Client.put(uploadUrl) {
                         header("Content-Type", signedType)
                         setBody(bytes)
                     }
@@ -340,7 +343,7 @@ class SupabaseQuestionImageUploader(context: Context) {
         uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
     } else if (uri.scheme.equals("data", true)) {
         // V145 — data:image/... هم مثل فایل محلی آپلود می‌شود تا در سایت هم دیده شود.
-        ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let(::java.io.ByteArrayInputStream)
+        ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let { ByteArrayInputStream(it) }
     } else {
         appContext.contentResolver.openInputStream(uri)
     }
@@ -351,6 +354,8 @@ class SupabaseQuestionImageUploader(context: Context) {
     private companion object {
         /** V145 — پس از اولین پاسخ «S3 پیکربندی نشده» دیگر تلاش نمی‌کنیم (تا راه‌اندازی بعدی برنامه). */
         @Volatile private var s3Disabled = false
+        /** کلاینت ساده (بدون هدر Supabase) برای PUT مستقیم به لینک امضاشدهٔ S3. */
+        private val s3Client: HttpClient by lazy { HttpClient(OkHttp) }
         const val BUCKET = "exam-images"
         const val MAX_DIMENSION = 2200
         const val QUALITY = 90

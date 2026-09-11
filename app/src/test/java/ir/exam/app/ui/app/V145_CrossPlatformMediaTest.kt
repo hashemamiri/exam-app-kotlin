@@ -26,7 +26,7 @@ class V145_CrossPlatformMediaTest {
         assertTrue("functions.invoke(\n                    \"media-upload\"" in up)
         assertTrue("\"matching\" -> \"matching_images\"" in up)
         assertTrue("if (code == \"r2_not_configured\")" in up && "HttpStatusCode.ServiceUnavailable.value" in up)
-        assertTrue("httpClient.put(uploadUrl)" in up && "header(\"Content-Type\", signedType)" in up)
+        assertTrue("s3Client.put(uploadUrl)" in up && "header(\"Content-Type\", signedType)" in up)
         assertTrue("uploadBytes(prefix, bytes, \"m4a\", \"audio/mp4\", \"audio\")" in up)
         assertTrue("bucket.publicUrl(path)" in up)
     }

@@ -18728,3 +18728,8 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - **جدول‌ها**: `wrapTables` با `MutationObserver` هر `table.tbl` را در `.tbl-wrap` (اسکرول افقی، min-width 560) می‌پیچد — بدون تغییر ۲۱ نقطهٔ ساخت جدول در admin/school/student.
 - `template.html`: `viewport-fit=cover`، `theme-color`، `mobile-web-app-capable`؛ `build_site.py` (رندر چاپ) هم viewport-fit.
 - تست `V146_SiteMobileTest`. لایهٔ دسکتاپ دست‌نخورده (فقط media query اضافه شد). تست بصری واقعی روی دستگاه لازم است — در سندباکس مرورگر نبود.
+
+## V146.1 — رفع خطای کامپایل CI پس از V145/V146
+- `::java.io.ByteArrayInputStream` (ارجاع تابعی با نام کامل) در Kotlin معتبر نیست → `?.let { ByteArrayInputStream(it) }` در `LocalImageRepository` و `SupabaseQuestionImageUploader`.
+- `SupabaseClient.httpClient.httpClient` API داخلی supabase-kt است (خطای «This API is internal») → کلاینت مستقل `HttpClient(OkHttp)` (`s3Client`، lazy در companion) برای PUT به لینک امضاشدهٔ S3؛ بهتر هم هست چون هدرهای Supabase (apikey/Authorization) به آروان فرستاده نمی‌شوند.
+- درس: بدون Gradle محلی، از ارجاع تابعی با نام کامل و APIهای داخلی کتابخانه پرهیز شود.

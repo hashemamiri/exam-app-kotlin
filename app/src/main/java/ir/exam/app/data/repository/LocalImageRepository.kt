@@ -183,7 +183,7 @@ class LocalImageRepository(context: Context) : ImageRepository {
             uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
         } else if (uri.scheme.equals("data", true)) {
             // V145 — تصاویر data:image/...;base64 (ذخیره‌شده توسط سایت در حالت چاپ، یا استودیو/تخته/اطلس خود برنامه)
-            ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let(::java.io.ByteArrayInputStream)
+            ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let { java.io.ByteArrayInputStream(it) }
         } else {
             appContext.contentResolver.openInputStream(uri)
         }
