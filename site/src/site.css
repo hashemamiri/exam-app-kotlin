@@ -750,3 +750,7 @@ img,video,canvas,iframe{max-width:100%}
 .m-bulkacts{display:flex;justify-content:center;align-items:center;gap:5px;padding-top:6px}
 .m-gchip{border:1px solid var(--m-muted);background:transparent;border-radius:10px;padding:6px 12px;font-size:13px;color:var(--m-ink)}.m-gchip.boy.on{background:#3B9EFF;border-color:#3B9EFF;color:#fff}.m-gchip.girl.on{background:#FF5C9A;border-color:#FF5C9A;color:#fff}
 .m-err{color:#D32F2F;font-size:13px}
+
+/* V158 */
+.m-dlg-actions{gap:8px;margin-top:10px;justify-content:flex-start}.m-dlg-actions .m-btn{min-width:120px}
+.m-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}

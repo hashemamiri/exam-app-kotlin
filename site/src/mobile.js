@@ -26,6 +26,36 @@
     return 'none';
   }
   function go(panel, arg) { ui.menuOpen = false; ui.addOpen = false; S.go(panel, arg); }
+  /* ---------- V158: دکمهٔ برگشت گوشی مثل BackHandler اپ (ExamApp.kt:358–364) ----------
+     هر ناوبری در حالت گوشی یک ورودی history می‌سازد؛ برگشت: اول پنجره/شیت باز → بسته می‌شود، بعد منو/افزودن سریع،
+     بعد صفحهٔ قبلی؛ اگر صفحهٔ قبلی نبود (صفحهٔ خانه) پرسش «از سایت خارج می‌شوید؟» و با تأیید خروج از حساب. */
+  var histDepth = 0, backGuard = false;
+  function homePanel() { var u = S.user(); return !u ? 'dashboard' : (u.role === 'manager' ? 'teachers' : (u.role === 'student' ? 'dashboard' : 'exams')); }
+  function pushHist() { if (!MQ.matches || backGuard) return; try { history.pushState({m: ++histDepth}, ''); } catch (e) {} }
+  function closeTopOverlay() {
+    var sel = ['.m-sheet-bg', '.modal-bg', '.engine-bg', '.m-radial-bg', '.m-qa-bg'];
+    for (var i = 0; i < sel.length; i++) { var all = document.querySelectorAll(sel[i]); if (all.length) { var n = all[all.length - 1]; if (n.classList.contains('engine-bg')) { var x = n.querySelector('.engine-bar .btn'); if (x) x.click(); else n.remove(); } else if (n.classList.contains('m-qa-bg')) { ui.addOpen = false; paint(); } else n.remove(); return true; } }
+    return false;
+  }
+  function onBack() {
+    if (!active() && !authActive()) return;
+    if (closeTopOverlay()) { pushHist(); return; }
+    if (ui.addOpen || ui.menuOpen) { ui.addOpen = false; ui.menuOpen = false; paint(); pushHist(); return; }
+    if (window.SiteStudent && window.SiteStudent.inExam && window.SiteStudent.inExam()) { pushHist(); toast('برای خروج از آزمون از دکمهٔ پایان/خروج داخل آزمون استفاده کنید.', 'info'); return; }
+    if (view.panel === 'builder' && view.arg && view.arg.mode === 'print') { pushHist(); go('print'); return; }
+    var home = homePanel();
+    if (S.user() && view.panel !== home) { pushHist(); go(home); return; }
+    /* صفحهٔ قبلی وجود ندارد → پرسش خروج */
+    pushHist();
+    S.confirmDlg('خروج', S.user() ? 'از سایت خارج می‌شوید؟' : 'از سایت خارج می‌شوید؟', 'خروج', true).then(function (ok) {
+      if (!ok) return;
+      backGuard = true;
+      var leave = function () { try { history.go(-(histDepth + 1)); } catch (e) {} setTimeout(function () { try { window.close(); } catch (e) {} backGuard = false; }, 300); };
+      if (S.user()) { S.logout().then(leave, leave); } else leave();
+    });
+  }
+  window.addEventListener('popstate', function () { onBack(); });
+  (function () { var _go = S.go; S.go = function (panel, arg) { if (MQ.matches && (panel !== view.panel || (arg && arg.mode === 'print') || panel === 'builder')) pushHist(); return _go.apply(this, arguments); }; if (MQ.matches) { try { history.replaceState({m: 0}, ''); } catch (e) {} } })();
 
   /* ---------- آیکون‌های خطی (شبیه Design69Icons) ---------- */
   var I = {
@@ -74,7 +104,7 @@
     return el('div', {class: 'm-dock', id: 'm-dock'}, [el('div', {class: 'm-dock-panel'}, [
       item('منو', ui.menuOpen ? 'close' : 'menu', function () { ui.menuOpen = !ui.menuOpen; ui.addOpen = false; paint(); }, 'menu'),
       item('کیف پول', 'wallet', function () { go('wallet'); }, 'wallet'),
-      el('button', {class: 'm-dock-add' + (ui.addOpen ? ' on' : ''), 'aria-label': 'افزودن سریع', onclick: function () { ui.addOpen = !ui.addOpen; ui.menuOpen = false; paint(); }}, [ic(ui.addOpen ? 'close' : 'plus')]),
+      el('button', {class: 'm-dock-add' + (ui.addOpen ? ' on' : ''), 'aria-label': 'افزودن سریع', onclick: function () { ui.addOpen = !ui.addOpen; ui.menuOpen = false; if (ui.addOpen) pushHist(); paint(); }}, [ic(ui.addOpen ? 'close' : 'plus')]),
       isManager() ? item('معلم‌ها', 'students', function () { go('teachers'); }, 'exams') : item('آزمون‌ها', 'exams', function () { go('exams'); }, 'exams'),
       item('کارت‌ها', 'cards', function () { if (view.panel === 'cards' && !ui.menuOpen && !ui.addOpen) ui.cycle = true; go('cards'); }, 'cards')
     ])]);
@@ -85,10 +115,11 @@
     var mgr = isManager();
     var items = [
       mgr ? ['دعوت معلم', 'ساخت کد دعوت برای معلم', 'students', function () { go('teachers'); }] : ['آزمون جدید', 'ساخت آزمون آنلاین', 'exams', function () { go('builder', null); }],
-      ['دانش‌آموز جدید', mgr ? 'در کلاس یکی از معلم‌ها' : 'افزودن به کلاس', 'students', async function () { if (mgr) return go('school'); ui.addOpen = false; paint(); if (window.SiteSchool) { var classes = await api.classes().catch(function () { return []; }); window.SiteSchool.studentForm(null, classes, null, function () { go('students'); }); } else go('students'); }],
+      ['دانش‌آموز جدید', mgr ? 'در کلاس یکی از معلم‌ها' : 'افزودن به کلاس', 'students', async function () { ui.addOpen = false; paint(); if (mgr) return managerStudentPicker(); var classes = await S.rpc('native_my_classes_v28', {}).catch(function () { return []; }); bulkDialog(classes || [], function () { if (view.panel === 'students') paint(); }); }],
       ['کلاس جدید', mgr ? 'برای یکی از معلم‌ها' : 'ساخت کلاس', 'classes', function () { mgr ? go('school') : go('classes', {create: true}); }],
       /* V61.5 — عمل چهارم: مدرسه جدید (مدیر می‌سازد؛ معلم با کد دعوت عضو می‌شود) */
-      ['مدرسه جدید', mgr ? 'ساخت مدرسه' : 'عضویت با کد دعوت', 'classes', function () { mgr ? go('school') : go('profile'); }]
+      /* V158 — مثل SchoolLaunchAction.CREATE_SCHOOL: مدیر «ساخت مدرسه جدید»، معلم «عضویت در مدرسه جدید» با کد ۶ حرفی */
+      ['مدرسه جدید', mgr ? 'ساخت مدرسه' : 'عضویت با کد دعوت', 'classes', function () { ui.addOpen = false; paint(); mgr ? createSchoolDialog() : joinSchoolDialog(); }]
     ];
     /* V153 — چیدمان ضربدری اپ: پنل فرورفته، ۴ کارت ۸۸dp در چهار گوشه، خط‌چین از مرکز، دکمهٔ ✕ گرادیانی وسط */
     var close = function () { ui.addOpen = false; paint(); };
@@ -552,7 +583,7 @@
       el('p', {class: 'muted', style: 'font-size:12px', text: 'رمز حساب‌ها روی سرور نگهداری نمی‌شود و در خروجی سایت قرار نمی‌گیرد.'}),
       el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [el('button', {class: 'btn m-btn grow', text: 'ذخیره Excel', onclick: function () { bg.remove(); onExport(STUDENT_EXPORT_COLUMNS.filter(function (c) { return sel[c[0]]; })); }}), el('button', {class: 'm-textbtn', text: 'انصراف', onclick: function () { bg.remove(); }})])]);
   }
-  function bulkDialog(classes, done) {
+  function bulkDialog(classes, done, afterCreate) {
     var rows = [newRow()], active = 0, err = '', bg;
     function newRow() { return {first: '', last: '', username: '', password: genPw(10), pv: false, gender: '', father: '', grade: '', field: '', edited: false}; }
     function complete(r) { return r.first.trim() && r.username.length >= 4 && r.password.length >= 8 && (r.gender === 'male' || r.gender === 'female'); }
@@ -572,7 +603,7 @@
         var us = reqs.map(function (r) { return r.username; }); if (us.length !== us.filter(function (u, i) { return us.indexOf(u) === i; }).length) throw new Error('نام کاربری تکراری در ردیف‌ها وجود دارد.');
         var r = await window.SiteSchool.manageStudent({action: 'bulk', class_id: '', rows: reqs.map(function (x) { return {first_name: x.first_name, last_name: x.last_name, username: x.username, password: x.password, gender: x.gender}; })});
         var res = Array.isArray(r.results) ? r.results : [], ok = [], fails = [];
-        res.forEach(function (x) { var q = reqs.filter(function (y) { return y.username === String(x.username || '').toLowerCase(); })[0]; if (x.ok) { ok.push({name: q ? q.first_name + ' ' + q.last_name : x.username, username: x.username, password: x.password || (q ? q.password : '')}); if (q && x.id && (q.father || q.grade || q.field)) S.rpcObj('native_save_student_extra_v28', {p_student: x.id, p_username: x.username, p_father_name: q.father, p_grade: q.grade, p_field: q.field}).catch(function () {}); } else fails.push((x.username || '') + ': ' + (x.message || 'ناموفق')); });
+        res.forEach(function (x) { var q = reqs.filter(function (y) { return y.username === String(x.username || '').toLowerCase(); })[0]; if (x.ok) { ok.push({name: q ? q.first_name + ' ' + q.last_name : x.username, username: x.username, password: x.password || (q ? q.password : '')}); if (afterCreate && x.id) afterCreate(x.id); if (q && x.id && (q.father || q.grade || q.field)) S.rpcObj('native_save_student_extra_v28', {p_student: x.id, p_username: x.username, p_father_name: q.father, p_grade: q.grade, p_field: q.field}).catch(function () {}); } else fails.push((x.username || '') + ': ' + (x.message || 'ناموفق')); });
         bg.remove(); done();
         if (ok.length) window.SiteSchool.credentialDlg('نتیجه ساخت گروهی — ' + fa(ok.length) + ' حساب', ok);
         if (fails.length) toast('ناموفق: ' + fails.join('، '), 'err');
@@ -667,6 +698,62 @@
       function draw() { var f = filtered(); listBox.innerHTML = ''; if (!f.length) listBox.appendChild(el('p', {class: 'muted', text: 'دانش‌آموزی یافت نشد.'})); f.forEach(function (s) { listBox.appendChild(studentCardM(s, classes, refresh)); }); }
       c.appendChild(bar); c.appendChild(searchWrap); c.appendChild(listBox); drawBar(); draw();
     } catch (e) { S.showErr(c, e); }
+  }
+
+
+  /* ---------- V158: پنجره‌های «افزودن سریع» مثل SchoolManagementScreen ---------- */
+  function dlgBtn(text, cls, on, dis) { return el('button', {class: cls, text: text, disabled: dis ? 'disabled' : null, onclick: on}); }
+  /* آینهٔ AlertDialog «عضویت در مدرسه جدید» (SchoolManagementScreen.kt:416) */
+  function joinSchoolDialog() {
+    var code = el('input', {type: 'text', style: 'direction:ltr;text-transform:uppercase', maxlength: '6', autocomplete: 'off'});
+    var msg = el('p', {class: 'm-err'}); var bg;
+    var ok = dlgBtn('عضویت', 'btn m-btn', async function () {
+      var cd = code.value.trim().toUpperCase(); if (cd.length !== 6) return;
+      ok.disabled = true; ok.textContent = 'در حال عضویت...'; msg.textContent = '';
+      try { var r = chk(await S.rpcObj('native_join_school_v39', {p_code: cd})); bg.remove(); toast('به مدرسهٔ «' + (r.school_name || '') + '» پیوستید.', 'ok'); if (view.panel === 'profile' || view.panel === 'classes') paint(); }
+      catch (e) { msg.textContent = S.errMsg(e) || 'عضویت ناموفق بود.'; ok.disabled = false; ok.textContent = 'عضویت'; }
+    }, true);
+    code.addEventListener('input', function () { code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); ok.disabled = code.value.length !== 6; msg.textContent = ''; });
+    bg = sheet([el('h3', {text: 'عضویت در مدرسه جدید'}), el('p', {text: 'کد دعوت ۶ حرفی مدیر مدرسه را وارد کنید.'}), el('div', {class: 'field'}, [el('label', {text: 'کد دعوت مدرسه'}), code]), msg,
+      el('div', {class: 'row m-dlg-actions'}, [ok, dlgBtn('انصراف', 'm-textbtn', function () { bg.remove(); })])]);
+    setTimeout(function () { code.focus(); }, 50);
+  }
+  /* آینهٔ AlertDialog «ساخت مدرسه جدید» (SchoolManagementScreen.kt:372) */
+  function createSchoolDialog() {
+    var name = el('input', {type: 'text', maxlength: '160'}), prov = el('input', {type: 'text', maxlength: '100'}), city = el('input', {type: 'text', maxlength: '100'});
+    var msg = el('p', {class: 'm-err'}); var bg;
+    var ok = dlgBtn('ساخت مدرسه', 'btn m-btn', async function () {
+      ok.disabled = true; msg.textContent = '';
+      try { chk(await S.rpcObj('native_manager_create_school_v61', {p_name: name.value.trim(), p_province: prov.value.trim(), p_city: city.value.trim()})); bg.remove(); toast('مدرسه ساخته شد.', 'ok'); go('school'); }
+      catch (e) { msg.textContent = S.errMsg(e); ok.disabled = false; }
+    }, true);
+    name.addEventListener('input', function () { ok.disabled = name.value.trim().length < 2; });
+    bg = sheet([el('h3', {text: 'ساخت مدرسه جدید'}), el('div', {class: 'field'}, [el('label', {text: 'نام مدرسه'}), name]),
+      el('div', {class: 'grid2 m-grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'استان'}), prov]), el('div', {class: 'field'}, [el('label', {text: 'شهر'}), city])]), msg,
+      el('div', {class: 'row m-dlg-actions'}, [ok, dlgBtn('انصراف', 'm-textbtn', function () { bg.remove(); })])]);
+    setTimeout(function () { name.focus(); }, 50);
+  }
+  /* آینهٔ AlertDialog «انتخاب معلم و کلاس» مدیر (SchoolManagementScreen.kt:590) → سپس BulkStudentDialog */
+  async function managerStudentPicker() {
+    var teachers = [], classes = [], tId = null, cId = null, bg;
+    try { teachers = (chk(await S.rpcObj('native_manager_teachers_v37', {})).items || []); } catch (e) { teachers = []; }
+    var body = el('div');
+    function draw() {
+      body.innerHTML = '';
+      body.appendChild(el('p', {text: 'دانش‌آموز جدید به کلاس کدام معلم اضافه شود؟'}));
+      if (!teachers.length) body.appendChild(el('p', {class: 'muted', text: 'معلمی در مدرسه یافت نشد.'}));
+      body.appendChild(el('div', {class: 'm-chips'}, teachers.map(function (t) { return chip(t.full_name || 'معلم', tId === t.id, async function () { tId = t.id; cId = null; classes = []; draw(); try { classes = chk(await S.rpcObj('native_manager_teacher_classes_v40c', {p_teacher: t.id})).items || []; } catch (e) { classes = []; } draw(); }); })));
+      if (tId) {
+        body.appendChild(el('p', {text: 'کلاس معلم:'}));
+        if (!classes.length) body.appendChild(el('p', {class: 'muted', text: 'کلاس قابل مشاهده‌ای ندارد.'}));
+        body.appendChild(el('div', {class: 'm-chips'}, classes.map(function (k) { return chip(k.name || 'کلاس', cId === k.id, function () { cId = cId === k.id ? null : k.id; draw(); }); })));
+      }
+      body.appendChild(el('div', {class: 'row m-dlg-actions'}, [
+        dlgBtn(cId ? 'ادامه و ساخت دانش‌آموز' : 'ساخت بدون کلاس', 'btn m-btn', function () { var target = cId; bg.remove(); bulkDialog([], function () { if (view.panel === 'school') paint(); }, target ? function (id) { return S.rpcObj('native_manager_set_class_student_v40c', {p_class: target, p_student: id, p_add: true}).catch(function () {}); } : null); }),
+        dlgBtn('انصراف', 'm-textbtn', function () { bg.remove(); })
+      ]));
+    }
+    draw(); bg = sheet([el('h3', {text: 'انتخاب معلم و کلاس'}), body]);
   }
 
   function cleanupBuilder() { ['m-bfab'].forEach(function (id) { var n = document.getElementById(id); if (n) n.remove(); }); var r = document.querySelector('.m-radial-bg'); if (r) r.remove(); }
