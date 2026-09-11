@@ -18859,3 +18859,12 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - در سایت OCR نیست (Tesseract اپ آفلاین است)؛ پیام راهنما در تب «بهبود».
 - CSS: بلوک `.studio-*` انتهای site.css (z-index 70؛ بالای engine-bg 60).
 - تست: `V159_SiteImageStudioTest.kt`.
+
+## §V160 — رسانهٔ متقابل سایت ↔ برنامه (تصویر/صوت)
+گزارش کاربر: تصویرِ آزمونِ ساخته‌شده در سایت دسکتاپ، در سایت گوشی/برنامه «قابل خواندن نیست»؛ صوتِ ساخته‌شده در برنامه در سایت پخش/ویرایش نمی‌شود. ریشه‌ها (با grep، نه حدس):
+1. **برنامه** — `ExamImageStudioCore.decodeDataUrlBounded` فقط `base64,` می‌خواند و `LocalImageRepository.open` فقط file/data/content؛ تصویرهای ذخیره‌شده همیشه `https://…` هستند (آروان یا Storage) → «بازکردن تصویر ممکن نشد» / «تصویر قابل خواندن نیست». رفع: `core/media/RemoteMediaBytes.kt` (دانلود + کش `cacheDir/remote_media_cache`؛ برای `SUPABASE_URL/storage/v1/object/` هدر `Authorization`+`apikey` مثل `SupabaseAuthImageInterceptor`)، `decodeImageRefBounded(context, ref, maxDim)` در استودیو و شاخهٔ http(s) در `LocalImageRepository.open`.
+2. **سایت** — باکت `exam-images` از V75.8 خصوصی است؛ `<img src>`/`<audio src>` ساده 400 می‌گیرند (رسانهٔ آپلودشده از برنامه وقتی آروان پیکربندی نباشد، و همهٔ رسانه‌های قدیمی). رفع: `app.js` → `isOwnStorageUrl/mediaBlobUrl` (fetch با نشست از `/object/authenticated/` → `blob:`; کش در حافظه) و `el()` برای `img/audio` با src خودمان خودکار از آن استفاده می‌کند (`data-src` = نشانی اصلی). `studio.js loadImage` هم از `S.mediaBlobUrl` و `crossOrigin='anonymous'` (S3) استفاده می‌کند تا بوم tainted نشود؛ در شکست CORS، fetch→blob امتحان می‌شود.
+3. **سایت** — `audioDuration` در V144 از extras.js حذف شده بود → `ReferenceError` هنگام «ذخیره روی سؤال». برگردانده شد.
+4. **سایت** — `buildPrintPayload` تصویرهای سؤال را اصلاً به رندرر نمی‌داد. حالا توکن `%%FIG:{k:'img',src,w:420}%%` به انتهای متن (مثل `ExamHtmlImageInliner.imageToken`) و `inlinePrintImages` قبل از `setExamData` نشانی‌های https را به `data:image/jpeg` (≤۱۲۸۰px، ۸۵٪، حداکثر ۲۴) تبدیل می‌کند؛ push تا ۶۰ ثانیه منتظر می‌ماند.
+- نکتهٔ CORS آروان: برای این‌که بوم سایت بتواند تصویر S3 را بخواند/چاپ کند، در CORS صندوقچه متد `GET` و Origin سایت باید مجاز باشد (قبلاً در §V144.3 گفته شده).
+- تست: `V160_CrossPlatformMediaTest.kt`.

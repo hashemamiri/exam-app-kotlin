@@ -224,6 +224,8 @@
   }
   /* V145 — برای builder.js: تبدیل صوت data: هنگام ذخیرهٔ آزمون آنلاین */
   S.uploadAudioBlob = function (blob, examId) { return uploadAudio(blob, examId, extOf(blob)); };
+  /* V160 — این تابع در V144 سهواً حذف شده بود → ذخیرهٔ صوت در سایت همیشه با ReferenceError می‌شکست */
+  function audioDuration(blob) { return new Promise(function (res) { var a = document.createElement('audio'); a.preload = 'metadata'; a.onloadedmetadata = function () { var d = a.duration; URL.revokeObjectURL(a.src); res(isFinite(d) ? Math.round(d * 1000) : 0); }; a.onerror = function () { res(0); }; a.src = URL.createObjectURL(blob); }); }
   function extOf(blob) { var t = (blob.type || '').toLowerCase(); if (/mp4|m4a|aac/.test(t)) return 'm4a'; if (/webm/.test(t)) return 'webm'; if (/ogg|opus/.test(t)) return 'ogg'; if (/mpeg|mp3/.test(t)) return 'mp3'; if (/wav/.test(t)) return 'wav'; return 'm4a'; }
   function audioDlg(q, examId, isPrint, done) {
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var cur = el('div');

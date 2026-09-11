@@ -11,7 +11,15 @@
   var COLORS = [['🔴', '#DC2626'], ['🔵', '#2563EB'], ['⚫', '#111827'], ['🟢', '#16A34A']];
   var TABS = [['image', '🖼️ تصویر و برش'], ['draw', '✏️ طراحی و علامت'], ['enhance', '✨ بهبود'], ['deskew', '📐 صاف‌سازی']];
 
-  function loadImage(src) { return new Promise(function (res, rej) { var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { rej(new Error('تصویر قابل خواندن نیست.')); }; im.src = src; }); }
+  /* V160 — تصویرهای قبلاً ذخیره‌شده (https): Storage خصوصی با هدر نشست (S.mediaBlobUrl) و S3 عمومی با crossOrigin تا بوم آلوده (tainted) نشود */
+  function loadImage(src) {
+    return new Promise(function (res, rej) {
+      var fail = function () { rej(new Error('تصویر قابل خواندن نیست.')); };
+      var go = function (u) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () {
+        if (/^https?:/i.test(u)) { fetch(u).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) { var im2 = new Image(); im2.onload = function () { res(im2); }; im2.onerror = fail; im2.src = URL.createObjectURL(b); }).catch(fail); } else fail(); }; im.src = u; };
+      (S.mediaBlobUrl ? S.mediaBlobUrl(src) : Promise.resolve(src)).then(go, fail);
+    });
+  }
   function fileToUrl(f) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(f); }); }
   function bounded(im, maxEdge) { var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, k = Math.min(1, maxEdge / Math.max(w, h)); var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c; }
   function pick(accept, capture) { return new Promise(function (res) { var i = el('input', {type: 'file', accept: accept || 'image/*', style: 'display:none'}); if (capture) i.setAttribute('capture', 'environment'); i.addEventListener('change', function () { res(i.files && i.files[0] || null); i.remove(); }); document.body.appendChild(i); i.click(); }); }

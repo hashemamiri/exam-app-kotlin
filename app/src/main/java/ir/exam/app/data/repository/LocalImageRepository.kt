@@ -181,6 +181,9 @@ class LocalImageRepository(context: Context) : ImageRepository {
     private fun open(uri: Uri): InputStream? =
         if (uri.scheme.equals("file", true)) {
             uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
+        } else if (uri.scheme.equals("https", true) || uri.scheme.equals("http", true)) {
+            // V160 — تصویرِ قبلاً آپلودشده (سایت یا خودِ برنامه): دانلود با هدر نشست برای Storage خصوصی
+            ir.exam.app.core.media.RemoteMediaBytes.fetchOrNull(appContext, uri.toString())?.let { java.io.ByteArrayInputStream(it) }
         } else if (uri.scheme.equals("data", true)) {
             // V145 — تصاویر data:image/...;base64 (ذخیره‌شده توسط سایت در حالت چاپ، یا استودیو/تخته/اطلس خود برنامه)
             ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let { java.io.ByteArrayInputStream(it) }

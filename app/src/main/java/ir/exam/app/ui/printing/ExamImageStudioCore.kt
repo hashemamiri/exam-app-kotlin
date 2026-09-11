@@ -352,7 +352,7 @@ fun ExamImageStudioDialog(
                                     var thumb by remember(ref.dataUrl) { mutableStateOf<ImageBitmap?>(null) }
                                     LaunchedEffect(ref.dataUrl) {
                                         thumb = withContext(Dispatchers.IO) {
-                                            decodeDataUrlBounded(ref.dataUrl, 200)?.asImageBitmap()
+                                            decodeImageRefBounded(context, ref.dataUrl, 200)?.asImageBitmap()
                                         }
                                     }
                                     Card(Modifier.fillMaxWidth()) {
@@ -372,7 +372,7 @@ fun ExamImageStudioDialog(
                                             Text("تصویر " + (idx + 1), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge)
                                             TextButton(onClick = {
                                                 scope.launch {
-                                                    val bmp = withContext(Dispatchers.IO) { decodeDataUrlBounded(ref.dataUrl, 2560) }
+                                                    val bmp = withContext(Dispatchers.IO) { decodeImageRefBounded(context, ref.dataUrl, 2560) }
                                                     if (bmp != null) {
                                                         editIndex = idx
                                                         original = bmp
@@ -1647,11 +1647,26 @@ private fun encodeCropped(
 }.getOrNull()
 
 /** V76.6 — دیکدِ dataURL (تصویرِ موجودِ سؤال) با سقفِ ابعاد، برای ویرایشِ دوباره/بندانگشتی. */
+/**
+ * V160 — تصویرِ موجودِ سؤال ممکن است `data:` (تازه در همین جلسه ساخته‌شده) یا `https://` (قبلاً
+ * ذخیره‌شده از سایت/برنامه) باشد. قبلاً فقط data: خوانده می‌شد و «بازکردن تصویر ممکن نشد» می‌داد.
+ */
+internal fun decodeImageRefBounded(context: android.content.Context, ref: String, maxDim: Int): Bitmap? =
+    if (ir.exam.app.core.media.RemoteMediaBytes.isRemote(ref)) {
+        ir.exam.app.core.media.RemoteMediaBytes.fetchOrNull(context, ref)?.let { decodeBytesBounded(it, maxDim) }
+    } else {
+        decodeDataUrlBounded(ref, maxDim)
+    }
+
 internal fun decodeDataUrlBounded(dataUrl: String, maxDim: Int): Bitmap? = runCatching {
     val b64 = dataUrl.substringAfter("base64,", "")
     if (b64.isBlank()) return@runCatching null
     val bytes = android.util.Base64.decode(b64, android.util.Base64.NO_WRAP)
     if (bytes.isEmpty()) return@runCatching null
+    decodeBytesBounded(bytes, maxDim)
+}.getOrNull()
+
+internal fun decodeBytesBounded(bytes: ByteArray, maxDim: Int): Bitmap? = runCatching {
     val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
     var sample = 1

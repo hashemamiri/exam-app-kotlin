@@ -19,10 +19,25 @@
 
   /* ================================================================ ابزار */
   function $(id) { return document.getElementById(id); }
+  /* V160 — رسانهٔ Storage خصوصی (باکت exam-images از V75.8 public=false): <img src> و <audio src> ساده 400 می‌گیرند.
+     مثل SupabaseAuthImageInterceptor/QuestionAudioPlayer اپ، با هدر نشست دانلود و به blob: تبدیل می‌شود (کش در حافظه). */
+  var mediaCache = {};
+  function isOwnStorageUrl(u) { return typeof u === 'string' && SUPABASE_URL && u.indexOf(SUPABASE_URL + '/storage/v1/object/') === 0; }
+  function mediaBlobUrl(u) {
+    if (!isOwnStorageUrl(u)) return Promise.resolve(u);
+    if (mediaCache[u]) return mediaCache[u];
+    var authed = u.replace('/storage/v1/object/public/', '/storage/v1/object/authenticated/');
+    mediaCache[u] = fetch(authed, {headers: {'apikey': ANON, 'Authorization': 'Bearer ' + (session ? session.access_token : ANON)}}).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function (b) { return URL.createObjectURL(b); }).catch(function (e) { delete mediaCache[u]; console.error('media', u, e); return u; });
+    return mediaCache[u];
+  }
   function el(tag, attrs, children) {
     var e = document.createElement(tag);
     if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === 'class') e.className = attrs[k];
+      if (k === 'src' && (tag === 'img' || tag === 'audio') && isOwnStorageUrl(attrs[k])) { e.setAttribute('data-src', attrs[k]); mediaBlobUrl(attrs[k]).then(function (u) { e.src = u; }); }
+      else if (k === 'class') e.className = attrs[k];
       else if (k === 'html') e.innerHTML = attrs[k];
       else if (k === 'text') e.textContent = attrs[k];
       else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]);
@@ -379,6 +394,31 @@
     document.body.style.overflow = '';
     if (c.onClosed) c.onClosed();
   }
+  /* V160 — آینهٔ ExamHtmlImageInliner: نشانی‌های https تصویر (Storage خصوصی با هدر نشست / S3 عمومی) → data:image/jpeg
+     حداکثر ۲۴ تصویر، ضلع ≤۱۲۸۰، کیفیت ۸۵؛ شکست هر تصویر فقط همان تصویر را حذف می‌کند. */
+  function inlinePrintImages(payload) {
+    var st = {done: false}, jobs = [], used = 0, RE = /%%FIG:(\{[\s\S]*?\})%%/g;
+    (payload.questions || []).forEach(function (q) {
+      if (!q.text || q.text.indexOf('"k":"img"') < 0) return;
+      var m, list = [];
+      RE.lastIndex = 0; while ((m = RE.exec(q.text))) { try { var o = JSON.parse(m[1]); if (o.k === 'img' && /^https?:/i.test(o.src)) list.push([m[0], o]); } catch (e) {} }
+      list.forEach(function (it) {
+        if (used >= 24) { q.text = q.text.replace(it[0], ''); return; }
+        used++;
+        jobs.push(mediaBlobUrl(it[1].src).then(function (u) { return new Promise(function (res) { var im = new Image(); if (/^https?:/i.test(u)) im.crossOrigin = 'anonymous'; im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = u; }); }).then(function (im) {
+          if (!im) { q.text = q.text.replace(it[0], ''); return; }
+          var k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+          var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+          var data; try { data = c.toDataURL('image/jpeg', 0.85); } catch (e) { data = null; }
+          if (!data) { q.text = q.text.replace(it[0], ''); return; }
+          it[1].src = data; q.text = q.text.replace(it[0], ' %%FIG:' + JSON.stringify(it[1]) + '%%');
+        }).catch(function () { q.text = q.text.replace(it[0], ''); }));
+      });
+    });
+    Promise.all(jobs).then(function () { st.done = true; }, function () { st.done = true; });
+    if (!jobs.length) st.done = true;
+    return st;
+  }
   function openPrintPreview(payload, opts) {
     opts = opts || {};
     closePrintOverlay();
@@ -393,19 +433,20 @@
     document.body.style.overflow = 'hidden';
     printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
+    var inlined = inlinePrintImages(payload);
     iframe.addEventListener('load', function () {
       var w = iframe.contentWindow, tries = 0;
       (function push() {
         tries++;
         try {
-          if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs) {
+          if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs && inlined.done) {
             w.setExamData(payload);
             /* V156 — مثل ExamHtmlPrintDialog: printMode=student/teacher یعنی بدون توقف در پیش‌نمایش، مستقیم چاپ */
             setTimeout(function () { try { if (opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
             return;
           }
         } catch (e) {}
-        if (tries < 200) setTimeout(push, 50); else toast('موتور چاپ آماده نشد.', 'err');
+        if (tries < 200 || (!inlined.done && tries < 1200)) setTimeout(push, 50); else toast(inlined.done ? 'موتور چاپ آماده نشد.' : 'بارگذاری تصویرهای آزمون طول کشید.', 'err');
       })();
     });
     iframe.srcdoc = engineHtml('print');
@@ -500,7 +541,10 @@
     var out = questions.map(function (q, index) {
       q = q || {}; var key = keys[index] || {};
       var type = qType(q.type), score = Number(q.score) || 0; total += score;
-      var o = {id: index + 1, text: q.text || '', score: fmtScore(score), textAlign: q.align || 'right', fontFamily: q.font || 'default', fontSizeSp: Number(q.fontSize) || 16, bold: q.bold === true, italic: q.italic === true};
+      /* V160 — مثل ExamHtmlImageInliner: تصویرهای سؤال به‌صورت توکن %%FIG:{k:img}%% به انتهای متن؛ نشانی‌های راه‌دور در openPrintPreview درون‌خطی می‌شوند */
+      var qImgs = (Array.isArray(q.images) ? q.images : []).filter(Boolean).map(String); if (q.image && qImgs.indexOf(q.image) < 0) qImgs.unshift(q.image);
+      var imgTokens = qImgs.map(function (u) { return ' %%FIG:' + JSON.stringify({k: 'img', src: u, w: 420}) + '%%'; }).join('');
+      var o = {id: index + 1, text: (q.text || '') + imgTokens, score: fmtScore(score), textAlign: q.align || 'right', fontFamily: q.font || 'default', fontSizeSp: Number(q.fontSize) || 16, bold: q.bold === true, italic: q.italic === true};
       if (Array.isArray(q.spans) && q.spans.length) o.textSpans = q.spans.map(function (s) { return {start: s.s, end: s.e, bold: !!s.b, italic: !!s.i, underline: !!s.u, color: s.c, size: s.z, font: s.f}; });
       if (Array.isArray(q.alignSpans) && q.alignSpans.length) o.alignSpans = q.alignSpans.map(function (s) { return {start: s.s, end: s.e, align: s.a}; });
       if (q.figLayouts && typeof q.figLayouts === 'object' && Object.keys(q.figLayouts).length) o.figLayoutsJson = JSON.stringify(q.figLayouts);
@@ -1256,7 +1300,7 @@
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
   window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
-    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,
