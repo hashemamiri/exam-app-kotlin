@@ -181,6 +181,9 @@ class LocalImageRepository(context: Context) : ImageRepository {
     private fun open(uri: Uri): InputStream? =
         if (uri.scheme.equals("file", true)) {
             uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
+        } else if (uri.scheme.equals("data", true)) {
+            // V145 — تصاویر data:image/...;base64 (ذخیره‌شده توسط سایت در حالت چاپ، یا استودیو/تخته/اطلس خود برنامه)
+            ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let(::java.io.ByteArrayInputStream)
         } else {
             appContext.contentResolver.openInputStream(uri)
         }

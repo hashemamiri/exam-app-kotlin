@@ -222,6 +222,8 @@
     if (blob.size > MAX_AUDIO) throw new Error('حجم صوت حداکثر ۳ مگابایت است.');
     return S.uploadMedia(blob, 'audio', 'audio', examId, ext || 'm4a', blob.type || 'audio/mp4');
   }
+  /* V145 — برای builder.js: تبدیل صوت data: هنگام ذخیرهٔ آزمون آنلاین */
+  S.uploadAudioBlob = function (blob, examId) { return uploadAudio(blob, examId, extOf(blob)); };
   function extOf(blob) { var t = (blob.type || '').toLowerCase(); if (/mp4|m4a|aac/.test(t)) return 'm4a'; if (/webm/.test(t)) return 'webm'; if (/ogg|opus/.test(t)) return 'ogg'; if (/mpeg|mp3/.test(t)) return 'mp3'; if (/wav/.test(t)) return 'wav'; return 'm4a'; }
   function audioDlg(q, examId, isPrint, done) {
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var cur = el('div');

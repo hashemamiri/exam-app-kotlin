@@ -581,11 +581,17 @@
         var opens = localToIso(state.opensAt), closes = localToIso(state.closesAt);
         if (opens && closes && new Date(closes) < new Date(opens)) throw new Error('زمان پایان نمی‌تواند قبل از زمان شروع باشد.');
         var examId = state.examId || uuid();
-        /* تصاویر data: (اگر از حالت چاپی آمده) باید آپلود شوند */
+        /* V145 — هیچ رسانهٔ data: نباید در آزمون آنلاین ذخیره شود (برنامهٔ اندروید فقط آدرس https را باز می‌کند):
+           تصاویر سؤال/گزینه/جورکردنی و صوت (اگر از حالت چاپی آمده) همه آپلود می‌شوند */
+        var dataBlob = async function (u) { return await (await fetch(u)).blob(); };
         for (var i = 0; i < state.questions.length; i++) {
           var q = state.questions[i];
-          for (var k = 0; k < q.images.length; k++) if (/^data:/.test(q.images[k].uri)) q.images[k].uri = await uploadImage(await (await fetch(q.images[k].uri)).blob(), 'questions', examId);
-          for (var o = 0; o < q.optionImages.length; o++) if (q.optionImages[o] && /^data:/.test(q.optionImages[o])) q.optionImages[o] = await uploadImage(await (await fetch(q.optionImages[o])).blob(), 'option_images', examId);
+          for (var k = 0; k < q.images.length; k++) if (/^data:/.test(q.images[k].uri)) q.images[k].uri = await uploadImage(await dataBlob(q.images[k].uri), 'questions', examId);
+          for (var o = 0; o < q.optionImages.length; o++) if (q.optionImages[o] && /^data:/.test(q.optionImages[o])) q.optionImages[o] = await uploadImage(await dataBlob(q.optionImages[o]), 'option_images', examId);
+          var ml = q.matchingLeftImages || [], mr = q.matchingRightImages || [];
+          for (var a = 0; a < ml.length; a++) if (ml[a] && /^data:/.test(ml[a])) ml[a] = await uploadImage(await dataBlob(ml[a]), 'matching_images', examId);
+          for (var b = 0; b < mr.length; b++) if (mr[b] && /^data:/.test(mr[b])) mr[b] = await uploadImage(await dataBlob(mr[b]), 'matching_images', examId);
+          if (q.audio && /^data:/.test(q.audio) && S.uploadAudioBlob) { var ab = await dataBlob(q.audio); q.audio = await S.uploadAudioBlob(ab, examId); q.audioBytes = ab.size; }
         }
         var enc = encodeQuestions(state.questions);
         var code = state.code || genCode();

@@ -18690,3 +18690,33 @@ buildPrintPayload(exam): نگاشتِ سؤال سرور (ExamQuestionCodec: type
 - گزارش: تصویر روی آروان ذخیره می‌شد، صوت نه. علت محتمل (از کد): `uploadMedia` هدر `Content-Type` را از `t.headers` می‌گرفت (درست) ولی `body: blob` با `blob.type = "audio/webm;codecs=opus"` بود؛ مرورگر هدر صریح را می‌فرستد پس امضا باید درست باشد — اما در برخی مرورگرها/پروکسی‌ها نوع Blob غالب می‌شود → `SignatureDoesNotMatch`. اصلاح: Blob با نوع دقیق امضاشده بازبسته‌بندی می‌شود و هدر همان مقدار است. همچنین خطای S3 با وضعیت و متن (بدون XML) به کاربر نشان داده می‌شود تا تشخیص بعدی حدس نباشد.
 - اگر پس از V144.3 هنوز خطا بود، دو مظنون بعدی: (۱) CORS صندوقچه `Content-Type` را برای PUT مجاز نکرده (خطا در Console: «blocked by CORS policy» — Allowed Headers را `*` کنید)؛ (۲) آروان پسوند/نوع `webm` را در سیاست صندوقچه محدود کرده (نادر).
 - ساختار کلیدها در صندوقچه: `<folder>/<teacherUserId>/<examId>/<uuid>.<ext>` — پوشهٔ دوم شناسهٔ UUID کاربر Supabase معلم است، سوم شناسهٔ آزمون؛ عمدی است تا پاک‌سازی و تفکیک مالکیت بدون پایگاه‌داده ممکن باشد و نام معلم/آزمون (دادهٔ شخصی) در URL عمومی فاش نشود.
+
+## V145 — رسانهٔ مشترک برنامه و سایت (تصویر و صوت در یک جا) + رفع `No content provider: data:image`
+
+### گزارش کاربر
+1. صوت هنوز روی آروان ذخیره نمی‌شد (متن خطا هنوز دریافت نشده — V144.3 اجرا/دیپلوی نشده بود).
+2. اندروید هنگام افزودن تصویر به سؤالِ ساخته‌شده در سایت، خطای قرمز `No content provider: data:image/jpeg;base64,...` می‌داد.
+3. الزام: تصویر و صوتی که از اندروید افزوده می‌شود در سایت دیده شود و برعکس.
+
+### علت‌ها (از کد، بدون حدس)
+- سایت در **حالت چاپی** تصویر سؤال/گزینه و صوت را به‌صورت `data:` در `state.questions` نگه می‌داشت (`builder.js` دکمهٔ 🖼 و `extras.js` صوت) و هنگام ذخیرهٔ آنلاین فقط تصاویر سؤال/گزینه را آپلود می‌کرد، نه تصاویر جورکردنی و نه صوت؛ اگر آزمون چاپی→آنلاین می‌شد `data:` وارد Supabase می‌شد.
+- اندروید: `LocalImageRepository.open()` و `SupabaseQuestionImageUploader.openInput()` فقط `file:` و `content:` را می‌شناختند → `contentResolver.openInputStream(data:...)` همین خطا را می‌دهد. خودِ برنامه هم از استودیو/تخته/اطلس `data:` تولید می‌کند (`ExamBuilderScreen.kt`) پس این مسیر لازم بود.
+- رسانهٔ اندروید در Supabase Storage (`exam-images`) و رسانهٔ سایت در آروان می‌نشست؛ هر دو URL مطلق https هستند و در طرف مقابل نمایش داده می‌شوند، اما دو محل ذخیره یعنی دو هزینه و دو پاک‌سازی.
+
+### تغییرات
+- **اندروید**
+  - `LocalImageRepository.open` و `SupabaseQuestionImageUploader.openInput`: scheme `data:` با `DataUrlFetcher.decodeBytes` → `ByteArrayInputStream`.
+  - `SupabaseQuestionImageUploader.uploadBytes` (مسیر مشترک تصویر+صوت): ابتدا `functions.invoke("media-upload")` با `{kind, folder, exam_id, ext, size}` → PUT مستقیم به `upload_url` با همان `Content-Type` امضاشده (Ktor okhttp: `SupabaseProvider.client.httpClient.httpClient.put`) → `public_url` ذخیره می‌شود. اگر پاسخ 503/`r2_not_configured` بود، `s3Disabled = true` و تا پایان عمر فرایند به Supabase Storage (مسیر قبلی، با contentType صریح) برمی‌گردد. نگاشت پوشه: `matching` برنامه → `matching_images` سرور. پاسخ دانش‌آموز (`answers/…`) و آواتار همچنان فقط Supabase Storage (سرور برای دانش‌آموز 403 می‌دهد).
+  - تست جدید `V145_CrossPlatformMediaTest` (۳ مورد، رشته‌ای؛ تأیید با grep).
+- **سایت**
+  - `builder.js` ذخیرهٔ آنلاین: همهٔ `data:` ها آپلود می‌شوند — تصاویر سؤال، گزینه، جورکردنی چپ/راست (`matching_images`) و صوت (`S.uploadAudioBlob` که در `extras.js` روی `uploadAudio` تعریف شد).
+  - `site/index.html` بازسازی شد.
+
+### سازگاری فرمت صوت
+- اندروید m4a (`audio/mp4`) → `<audio>` مرورگر می‌خواند. سایت: `MediaRecorder` ابتدا `audio/mp4` را امتحان می‌کند (Safari/Chrome جدید)، وگرنه webm/opus یا ogg. `MediaPlayer` اندروید webm/opus را از API 21 و ogg/opus را از API 29 پشتیبانی می‌کند؛ اگر روی دستگاه خاصی پخش نشد، گام بعدی تبدیل سمت سرور یا ضبط اجباری mp4 است (فعلاً گزارش نشده).
+
+### چک‌لیست کاربر
+1. `python3 apply_v145.py` → CI اپ → نصب APK.
+2. سایت: `supabase functions deploy media-upload` لازم نیست (تغییر نکرده)؛ فقط Cloudflare Pages از push به‌روز می‌شود.
+3. تست متقابل: (الف) در اندروید تصویر+صوت به سؤال اضافه و ذخیره → در سایت باز شود؛ URL باید با `S3_PUBLIC_BASE` شروع شود. (ب) در سایت تصویر+صوت اضافه → در اندروید باز شود. (ج) آزمون سایت با تصویر `data:` قدیمی: در اندروید دیگر خطا نمی‌دهد و با ذخیره، به URL تبدیل می‌شود.
+4. اگر صوت سایت هنوز ذخیره نشد: متن قرمز زیر دکمهٔ «ذخیره» در پنجرهٔ صوت و خط `media-upload`/`S3 PUT` در Console مرورگر را بفرستید.

@@ -7,8 +7,25 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
+import io.github.jan.supabase.exceptions.RestException
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.request.header
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.isSuccess
 import ir.exam.app.data.remote.SupabaseProvider
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import ir.exam.app.ui.builder.QuestionDraft
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -136,10 +153,8 @@ class SupabaseQuestionImageUploader(context: Context) {
             val bytes = stream.toByteArray()
             check(bytes.size <= MAX_UPLOAD_BYTES) { "حجم تصویر پس از فشرده‌سازی بیش از ۸ مگابایت است." }
 
-            val path = "$prefix/${UUID.randomUUID()}.$extension"
-            val bucket = SupabaseProvider.client.storage.from(BUCKET)
-            bucket.upload(path, bytes) { upsert = false }
-            return bucket.publicUrl(path)
+            // V145 — اول ذخیره‌ساز S3 (ابر آروان) از طریق media-upload؛ اگر پیکربندی نشده بود، Supabase Storage.
+            return uploadBytes(prefix, bytes, extension, if (extension == "webp") "image/webp" else "image/jpeg", "image")
         } finally {
             bitmap.recycle()
         }
@@ -247,18 +262,85 @@ class SupabaseQuestionImageUploader(context: Context) {
         val bytes = openInput(uri)?.use { it.readBytes() } ?: error("فایل صوتی سؤال قابل خواندن نیست.")
         check(bytes.isNotEmpty()) { "فایل صوتی خالی است." }
         check(bytes.size <= MAX_AUDIO_BYTES) { "حجم فایل صوتی بیش از ۳ مگابایت است." }
-        val path = "$prefix/${UUID.randomUUID()}.m4a"
+        uploadBytes(prefix, bytes, "m4a", "audio/mp4", "audio")
+    }
+
+    /**
+     * V145 — مسیر مشترک آپلود (تصویر و صدا): ابتدا از Edge Function `media-upload` لینک PUT امضاشده برای
+     * ذخیره‌ساز S3 (ابر آروان) گرفته می‌شود و فایل مستقیم PUT می‌شود — دقیقاً همان کاری که سایت می‌کند، پس
+     * رسانهٔ برنامه و سایت در یک جا می‌نشیند و در هر دو دیده می‌شود. اگر سرور 503/`r2_not_configured`
+     * برگرداند، تا پایان عمر فرایند به Supabase Storage (باکت exam-images، مسیر قبلی) برمی‌گردیم.
+     * prefix = "<folder>/<teacherId>/<examId>" — همان قرارداد سایت و storage-maintenance.
+     */
+    private suspend fun uploadBytes(prefix: String, bytes: ByteArray, extension: String, contentType: String, kind: String): String {
+        val parts = prefix.split('/')
+        // فقط رسانهٔ سؤال معلم (سرور برای نقش دانش‌آموز/پوشه‌های دیگر 403 می‌دهد)؛ پاسخ دانش‌آموز همچنان در Supabase Storage.
+        val folder = when (parts.getOrNull(0)) {
+            "questions" -> "questions"
+            "option_images" -> "option_images"
+            "matching" -> "matching_images"
+            "audio" -> "audio"
+            else -> ""
+        }
+        val examId = parts.getOrNull(2).orEmpty()
+        if (!s3Disabled && folder.isNotBlank() && parts.size == 3 && examId.isNotBlank()) {
+            try {
+                val response: HttpResponse = SupabaseProvider.client.functions.invoke(
+                    "media-upload",
+                    body = buildJsonObject {
+                        put("kind", kind)
+                        put("folder", folder)
+                        put("exam_id", examId)
+                        put("ext", extension)
+                        put("size", bytes.size)
+                    }
+                )
+                val obj: JsonObject = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+                val uploadUrl = obj["upload_url"]?.jsonPrimitive?.contentOrNull
+                val publicUrl = obj["public_url"]?.jsonPrimitive?.contentOrNull
+                if (!uploadUrl.isNullOrBlank() && !publicUrl.isNullOrBlank()) {
+                    val signedType = obj["headers"]?.jsonObject?.get("Content-Type")?.jsonPrimitive?.contentOrNull ?: contentType
+                    val putResponse = SupabaseProvider.client.httpClient.httpClient.put(uploadUrl) {
+                        header("Content-Type", signedType)
+                        setBody(bytes)
+                    }
+                    check(putResponse.status.isSuccess()) {
+                        "آپلود به فضای ابری ناموفق بود (S3 PUT ${putResponse.status.value}): " +
+                            putResponse.bodyAsText().replace(Regex("<[^>]+>"), " ").trim().take(200)
+                    }
+                    return publicUrl
+                }
+                val code = obj["error"]?.jsonPrimitive?.contentOrNull
+                if (code == "r2_not_configured") {
+                    s3Disabled = true
+                } else {
+                    error(obj["message"]?.jsonPrimitive?.contentOrNull ?: code ?: "media-upload: پاسخ نامعتبر")
+                }
+            } catch (e: RestException) {
+                // 503 = ذخیره‌ساز S3 پیکربندی نشده → بازگشت به Supabase Storage؛ سایر خطاها واقعی‌اند.
+                if (e.statusCode == HttpStatusCode.ServiceUnavailable.value) {
+                    s3Disabled = true
+                } else {
+                    throw IllegalStateException("آپلود به فضای ابری ناموفق بود: ${e.message}", e)
+                }
+            }
+        }
+        val path = "$prefix/${UUID.randomUUID()}.$extension"
         val bucket = SupabaseProvider.client.storage.from(BUCKET)
+        val slash = contentType.indexOf('/')
         // V135.4 — نوع محتوا صریح؛ باکت باید audio/mp4 را مجاز داشته باشد (SQL_NATIVE_MEDIA_COST_V135_MIME.sql).
         bucket.upload(path, bytes) {
             upsert = false
-            contentType = io.ktor.http.ContentType("audio", "mp4")
+            this.contentType = ContentType(contentType.substring(0, slash), contentType.substring(slash + 1))
         }
-        bucket.publicUrl(path)
+        return bucket.publicUrl(path)
     }
 
     private fun openInput(uri: Uri): InputStream? = if (uri.scheme.equals("file", true)) {
         uri.path?.let(::File)?.takeIf(File::isFile)?.let(::FileInputStream)
+    } else if (uri.scheme.equals("data", true)) {
+        // V145 — data:image/... هم مثل فایل محلی آپلود می‌شود تا در سایت هم دیده شود.
+        ir.exam.app.ui.image.DataUrlFetcher.decodeBytes(uri.toString())?.let(::java.io.ByteArrayInputStream)
     } else {
         appContext.contentResolver.openInputStream(uri)
     }
@@ -267,6 +349,8 @@ class SupabaseQuestionImageUploader(context: Context) {
     private fun String.isRemoteUrl(): Boolean = startsWith("https://", true) || startsWith("http://", true)
 
     private companion object {
+        /** V145 — پس از اولین پاسخ «S3 پیکربندی نشده» دیگر تلاش نمی‌کنیم (تا راه‌اندازی بعدی برنامه). */
+        @Volatile private var s3Disabled = false
         const val BUCKET = "exam-images"
         const val MAX_DIMENSION = 2200
         const val QUALITY = 90
