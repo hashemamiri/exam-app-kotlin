@@ -1,10 +1,11 @@
 name: ساخت APK آزمایشی و Release Kotlin
-# V152 — درخواست کاربر: CI اپ فعلاً با push اجرا نشود (نسخه‌های سایت پشت‌سرهم می‌آیند و هر بار بیلد ۱۵دقیقه‌ای اپ بی‌فایده است).
-# اجرای دستی: GitHub → Actions → این workflow → Run workflow. برای فعال‌سازی دوباره، سه خط push را از کامنت درآورید.
+# V160.5 — قاعدهٔ کاربر: وقتی نسخه فقط سایت را تغییر می‌دهد، CI اپ بسته (سه خط push کامنت) باشد؛
+# وقتی کد اپ تغییر می‌کند (مثل V160.x: RemoteMediaBytes، x-amz-acl) باز شود تا APK جدید ساخته شود.
+# اجرای دستی همیشه: GitHub → Actions → این workflow → Run workflow.
 on:
-  # push:
-  #   branches: [main]
-  #   paths-ignore: ['site/**', 'docs/**', 'text/**', '.github/workflows/site.yml']
+  push:
+    branches: [main]
+    paths-ignore: ['site/**', 'docs/**', 'text/**', '.github/workflows/site.yml']
   workflow_dispatch:
 
 permissions:
