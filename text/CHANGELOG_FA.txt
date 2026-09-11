@@ -1,3 +1,5 @@
+V160.7 — رفع سه تست ناموفق CI (تست CI-بسته V152، کلید دک مدیر V153، امضای decodeImageRefBounded V160)
+
 V160.6 — رفع خطای کامپایل CI (import auth در RemoteMediaBytes)
 
 V160.5 — باز شدن CI اپ برای ساخت APK با رفع‌های V160 (تصویر https در استودیو، آپلود عمومی آروان)

@@ -18888,3 +18888,9 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - V160.5: باز شد (APK باید V160–V160.4 را بگیرد: بازکردن تصویر https در استودیو، ارسال acl/x-amz-acl).
 
 ## §V160.6 — CI: `Unresolved reference 'auth'` در RemoteMediaBytes.kt → افزودن `import io.github.jan.supabase.auth.auth` (همان الگوی SupabaseAuthImageInterceptor). درس: هر فایل Kotlin جدید که `client.auth` می‌زند این import را می‌خواهد.
+
+## §V160.7 — تست‌های ناموفق CI
+- V152: تست «CI فقط دستی» با قاعدهٔ جدید (باز/بسته بر اساس نوع نسخه) در تضاد بود → حالا فقط `workflow_dispatch` و `paths-ignore: ['site/**'` را می‌سنجد.
+- V153: دک مدیر در `mobile.js` با کلید `'teacher'` ساخته می‌شد (باگ واقعی: شمارندهٔ کارت معلم و مدیر مشترک بود) → `'manager'`.
+- V160: امضای `decodeImageRefBounded` در V160.1 پارامتر `strict` گرفت؛ تست به‌روز شد.
+- درس: چون CI اپ مدت‌ها بسته بود، تست‌های سایت اجرا نمی‌شدند؛ قبل از تحویل نسخه‌های سایت، حداقل تست‌های Vxxx_Site* را با `./gradlew testDebugUnitTest --tests 'ir.exam.app.ui.app.V15*'` محلی اجرا کنید یا CI را باز بگذارید.
