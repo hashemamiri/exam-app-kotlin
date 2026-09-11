@@ -3036,7 +3036,8 @@ window.__HEADER_SCHEMA = {
       else if (arg.examId) state = await loadOnline(arg.examId);
       else if (arg.printId) { var rec = printExams().filter(function (x) { return x.id === arg.printId; })[0]; if (!rec) throw new Error('آزمون چاپی پیدا نشد.'); state = blankState('print'); state.printId = rec.id; state.title = rec.title || ''; state.subject = rec.subject || ''; state.duration = rec.duration || ''; state.questions = (rec.questions || []).map(function (q) { return q; }); }
       else if (arg.mode === 'print') state = blankState('print');
-      else if (draft && draft.dirty && !arg.fresh && (await S.confirmDlg('پیش‌نویس ذخیره‌نشده', 'یک پیش‌نویس آزمون از قبل در این مرورگر مانده است («' + esc(draft.title || 'بدون عنوان') + '»، ' + fa((draft.questions || []).length) + ' سؤال). ادامه می‌دهید؟', 'ادامهٔ پیش‌نویس'))) state = draft;
+      /* V158.1 — پیش‌نویس فقط وقتی برمی‌گردد که همان مسیر (آنلاین) باشد؛ پیش‌نویس چاپی نباید «آزمون جدید» آنلاین را به سازندهٔ چاپی ببرد (ExamApp.createExam: builderCameFromPrint=false) */
+      else if (draft && draft.dirty && draft.mode !== 'print' && !draft.bankEdit && !arg.fresh && (await S.confirmDlg('پیش‌نویس ذخیره‌نشده', 'یک پیش‌نویس آزمون از قبل در این مرورگر مانده است («' + esc(draft.title || 'بدون عنوان') + '»، ' + fa((draft.questions || []).length) + ' سؤال). ادامه می‌دهید؟', 'ادامهٔ پیش‌نویس'))) state = draft;
       else state = blankState('online');
       if (state.mode === 'online' && !state.availableClasses.length) await loadOptions(state);
       c.innerHTML = ''; c.appendChild(buildUI(c));

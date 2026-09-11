@@ -25,6 +25,8 @@ class V158_SiteMobileBackQuickAddTest {
     fun `quick add opens app-like dialogs`() {
         val m = source("site/src/mobile.js")
         assertTrue("['آزمون جدید', 'ساخت آزمون آنلاین', 'exams', function () { go('builder', null); }]" in m)
+        // V158.1 — پیش‌نویس چاپی نباید «آزمون جدید» آنلاین را به سازندهٔ چاپی ببرد
+        assertTrue("draft && draft.dirty && draft.mode !== 'print' && !draft.bankEdit && !arg.fresh" in source("site/src/builder.js"))
         assertTrue("if (mgr) return managerStudentPicker(); var classes = await S.rpc('native_my_classes_v28', {})" in m && "bulkDialog(classes || []" in m)
         assertTrue("mgr ? createSchoolDialog() : joinSchoolDialog()" in m)
         assertTrue("text: 'عضویت در مدرسه جدید'" in m && "'کد دعوت ۶ حرفی مدیر مدرسه را وارد کنید.'" in m && "'native_join_school_v39'" in m)
