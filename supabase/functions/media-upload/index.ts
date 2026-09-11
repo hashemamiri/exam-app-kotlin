@@ -47,7 +47,9 @@ async function presignPut(opts: { endpoint: string; region: string; accessKey: s
   const region = opts.region;
   const scope = `${date}/${region}/s3/aws4_request`;
   const canonicalUri = '/' + opts.bucket + '/' + opts.key.split('/').map(encodeRfc3986).join('/');
-  const signedHeaders = 'content-type;host';
+  // V160.2 — آروان برای هر شیء ACL جداگانه دارد؛ بدون x-amz-acl: public-read شیء خصوصی می‌شود و
+  // خواندنش با HTTP 403 می‌شکند (حتی وقتی صندوقچه «عمومی» است). هدر باید امضا و توسط کلاینت ارسال شود.
+  const signedHeaders = 'content-type;host;x-amz-acl';
   const query: [string, string][] = [
     ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
     ['X-Amz-Credential', `${opts.accessKey}/${scope}`],
@@ -57,7 +59,7 @@ async function presignPut(opts: { endpoint: string; region: string; accessKey: s
   ];
   query.sort((a, b) => (a[0] < b[0] ? -1 : 1));
   const canonicalQuery = query.map(([k, v]) => `${encodeRfc3986(k)}=${encodeRfc3986(v)}`).join('&');
-  const canonicalHeaders = `content-type:${opts.contentType}\nhost:${host}\n`;
+  const canonicalHeaders = `content-type:${opts.contentType}\nhost:${host}\nx-amz-acl:public-read\n`;
   const canonicalRequest = ['PUT', canonicalUri, canonicalQuery, canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, await sha256(canonicalRequest)].join('\n');
   let k: ArrayBuffer = await hmac(enc.encode('AWS4' + opts.secretKey), date);
@@ -107,7 +109,7 @@ Deno.serve(async (request) => {
     const key = `${folder}/${userId}/${examId}/${name}.${ext}`;
 
     const uploadUrl = await presignPut({ endpoint, region, accessKey, secretKey, bucket, key, contentType, expires: EXPIRES });
-    return json({ upload_url: uploadUrl, public_url: `${publicBase}/${key}`, headers: { 'Content-Type': contentType }, expires_in: EXPIRES, key });
+    return json({ upload_url: uploadUrl, public_url: `${publicBase}/${key}`, headers: { 'Content-Type': contentType, 'x-amz-acl': 'public-read' }, expires_in: EXPIRES, key });
   } catch (error) {
     console.error('media-upload', error);
     return json({ error: 'خطای داخلی صدور لینک آپلود' }, 500);

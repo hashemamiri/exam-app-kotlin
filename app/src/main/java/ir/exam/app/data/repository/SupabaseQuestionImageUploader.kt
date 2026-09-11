@@ -305,6 +305,10 @@ class SupabaseQuestionImageUploader(context: Context) {
                     val signedType = obj["headers"]?.jsonObject?.get("Content-Type")?.jsonPrimitive?.contentOrNull ?: contentType
                     val putResponse = s3Client.put(uploadUrl) {
                         header("Content-Type", signedType)
+                        // V160.2 — هدرهای امضاشدهٔ دیگر (x-amz-acl: public-read) — بدون آن شیء در آروان خصوصی می‌شود (403)
+                        obj["headers"]?.jsonObject?.forEach { (k, v) ->
+                            if (!k.equals("Content-Type", true)) v.jsonPrimitive.contentOrNull?.let { header(k, it) }
+                        }
                         setBody(bytes)
                     }
                     check(putResponse.status.isSuccess()) {

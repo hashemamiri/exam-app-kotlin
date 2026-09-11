@@ -2941,7 +2941,9 @@ window.__HEADER_SCHEMA = {
         if (t && t.upload_url) {
           /* نوع محتوا باید دقیقاً همان مقدار امضاشدهٔ سرور باشد (نه blob.type که ممکن است ;codecs=… داشته باشد) */
           var ct = (t.headers && t.headers['Content-Type']) || contentType;
-          var put = await fetch(t.upload_url, {method: 'PUT', headers: {'Content-Type': ct}, body: blob.type === ct ? blob : new Blob([blob], {type: ct})});
+          /* V160.2 — همهٔ هدرهای امضاشدهٔ سرور (Content-Type + x-amz-acl: public-read) عیناً ارسال می‌شوند */
+          var hdrs = Object.assign({}, t.headers || {}, {'Content-Type': ct});
+          var put = await fetch(t.upload_url, {method: 'PUT', headers: hdrs, body: blob.type === ct ? blob : new Blob([blob], {type: ct})});
           if (!put.ok) { var pt = ''; try { pt = (await put.text()).slice(0, 200); } catch (e2) {} throw new Error('S3 PUT ' + put.status + (pt ? ' ' + pt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '')); }
           return t.public_url;
         }
