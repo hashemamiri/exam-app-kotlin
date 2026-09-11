@@ -263,6 +263,48 @@
     })));
   }
 
+  /* ---------- V151: جدول → کارت‌های نئومورفیک (SchoolManagementScreen: Card با عنوان، خط‌های اطلاعات، ردیف عملیات وسط‌چین) ----------
+     همهٔ صفحه‌های داخلی سایت (کلاس‌ها، دانش‌آموزان، معلم‌ها، کیف پول، تصحیح، آزمون‌های چاپی…) جدول‌اند؛ در پوستهٔ موبایل هر
+     <table.tbl> به فهرست کارت تبدیل می‌شود. عملیات (icon-btn/btn/chip) همان گره‌های اصلی‌اند و منتقل می‌شوند، پس رفتار دست‌نخورده می‌ماند. */
+  function tableToCards(t) {
+    if (!t.tHead || t.dataset.mCards) return;
+    var heads = Array.prototype.map.call(t.tHead.rows[0] ? t.tHead.rows[0].cells : [], function (th) { return th.textContent.trim(); });
+    var rows = t.tBodies[0] ? Array.prototype.slice.call(t.tBodies[0].rows) : [];
+    if (!rows.length) return;
+    var list = el('div', {class: 'm-rows'});
+    rows.forEach(function (tr, ri) {
+      var cells = Array.prototype.slice.call(tr.cells);
+      var card = el('div', {class: 'm-rowcard neo', style: 'animation-delay:' + Math.min(ri, 12) * 25 + 'ms'});
+      var head = el('div', {class: 'm-rowcard-h'}), body = el('div', {class: 'm-rowcard-b'}), acts = el('div', {class: 'm-rowcard-acts'});
+      cells.forEach(function (td, i) {
+        var h = heads[i] || '';
+        var hasActs = td.querySelector('.acts, .icon-btn, .btn');
+        if (hasActs && (!h || i === cells.length - 1)) { while (td.firstChild) acts.appendChild(td.firstChild); return; }
+        if (i === 0) { while (td.firstChild) head.appendChild(td.firstChild); return; }
+        if (!td.textContent.trim() && !td.firstElementChild) return;
+        var line = el('div', {class: 'm-kv'}, [el('span', {class: 'k', text: h ? h + ':' : ''})]);
+        var v = el('span', {class: 'v'}); while (td.firstChild) v.appendChild(td.firstChild); line.appendChild(v);
+        body.appendChild(line);
+      });
+      card.appendChild(head); if (body.childNodes.length) card.appendChild(body); if (acts.childNodes.length) card.appendChild(acts);
+      if (tr.onclick) card.onclick = tr.onclick;
+      list.appendChild(card);
+    });
+    t.dataset.mCards = '1';
+    t.style.display = 'none';
+    t.parentNode.insertBefore(list, t.nextSibling);
+  }
+  function upgradeContent() {
+    if (!active()) return;
+    var c = document.getElementById('content'); if (!c) return;
+    c.querySelectorAll('table.tbl').forEach(tableToCards);
+    /* آزمون‌ها/کارت‌ها/منو خودشان بومی‌اند؛ بقیهٔ صفحه‌ها: نوار ابزار بالای صفحه به سبک اپ (دکمهٔ اصلی پهن) */
+    c.querySelectorAll('.card > .row:first-child, #content > .row').forEach(function (r) { r.classList.add('m-toolbar'); });
+  }
+  if (window.MutationObserver) new MutationObserver(function (muts) {
+    for (var i = 0; i < muts.length; i++) { for (var j = 0; j < muts[i].addedNodes.length; j++) { var n = muts[i].addedNodes[j]; if (n.nodeType === 1 && (n.matches && (n.matches('table.tbl') || n.querySelector('table.tbl')))) { upgradeContent(); return; } } }
+  }).observe(document.documentElement, {childList: true, subtree: true});
+
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات و ابزارها', calendar: 'تقویم', cards: 'کارت‌ها'};

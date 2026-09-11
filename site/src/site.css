@@ -518,3 +518,39 @@ img,video,canvas,iframe{max-width:100%}
 /* ---- V150: مدیر/معاون در پوستهٔ موبایل ---- */
 .m-featured{display:flex;justify-content:center;margin-top:15px}
 .m-featured .m-tile{width:52%}
+
+/* ---- V151: صفحه‌های داخلی موبایل به سبک اپ — جدول → کارت ---- */
+.m-mode .m-content .tbl-wrap{overflow:visible}
+.m-rows{display:flex;flex-direction:column;gap:10px}
+.m-rowcard{border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;animation:mpop .22s both;box-shadow:6px 6px 14px var(--m-dark),-6px -6px 14px #fff}
+.m-rowcard:active{transform:none;box-shadow:6px 6px 14px var(--m-dark),-6px -6px 14px #fff}
+.m-rowcard-h{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.m-rowcard-h .muted{font-weight:500;font-size:12px}
+.m-rowcard-b{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px}
+.m-kv{display:inline-flex;gap:4px;align-items:center}
+.m-kv .k{color:var(--m-muted)}
+.m-kv .v{font-weight:600}
+.m-rowcard-acts{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;padding-top:6px;border-top:1px dashed rgba(123,135,152,.3);margin-top:2px}
+.m-rowcard-acts .acts{display:contents}
+.m-mode .m-content .icon-btn{width:40px;height:40px;border-radius:12px;background:var(--m-bg);border:0;box-shadow:3px 3px 7px var(--m-dark),-3px -3px 7px #fff;color:var(--m-ink)}
+.m-mode .m-content .icon-btn:active{box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
+.m-mode .m-content .icon-btn.danger{color:var(--m-danger)}
+.m-mode .m-content .btn{border-radius:14px;background:var(--m-acc);box-shadow:0 6px 14px rgba(108,99,245,.3)}
+.m-mode .m-content .btn.light,.m-mode .m-content .btn.ghost{background:var(--m-bg);color:var(--m-acc);border:1px solid var(--m-muted);box-shadow:none}
+.m-mode .m-content .card{padding:14px}
+.m-mode .m-content .card h3{font-size:16px}
+.m-mode .m-content .m-toolbar{gap:8px;margin-bottom:12px}
+.m-mode .m-content .m-toolbar .btn:not(.light):not(.ghost):not(.sm){flex:2 1 auto;justify-content:center}
+.m-mode .m-content .m-toolbar .btn.light{flex:1 1 auto;justify-content:center}
+.m-mode .m-content .m-toolbar input[type=search],.m-mode .m-content .m-toolbar select{flex:1 1 100%;min-width:0;border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff;padding:10px 14px}
+.m-mode .m-content .field input,.m-mode .m-content .field select,.m-mode .m-content .field textarea,.m-mode .m-content .st-input{border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
+.m-mode .m-content .chip{border-radius:999px}
+.m-mode .m-content .alert{border-radius:14px}
+.m-mode .m-content .balance{border-radius:26px;background:linear-gradient(135deg,var(--m-acc),var(--m-acc2));box-shadow:0 12px 26px rgba(108,99,245,.35)}
+.m-mode .m-content .stat{border-radius:18px}
+.m-mode .m-content .stat .v{color:var(--m-acc)}
+.m-mode .m-content .tabs{background:var(--m-bg);box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff;border-radius:16px}
+.m-mode .m-content .tabs button.on{background:var(--m-bg);box-shadow:3px 3px 7px var(--m-dark),-3px -3px 7px #fff;color:var(--m-acc)}
+.m-mode .m-content .exam-grid .exam,.m-mode .m-content .g-item,.m-mode .m-content .b-q{border:0;background:var(--m-bg);box-shadow:5px 5px 12px var(--m-dark),-5px -5px 12px #fff;border-radius:18px}
+.m-mode .modal{background:var(--m-bg);border-radius:24px 24px 0 0}
+.m-mode .modal .field input,.m-mode .modal .field select,.m-mode .modal .field textarea{border-radius:14px;background:var(--m-bg);border:0;box-shadow:inset 3px 3px 6px var(--m-dark),inset -3px -3px 6px #fff}
