@@ -1,6 +1,7 @@
 package ir.exam.app.core.media
 
 import android.content.Context
+import io.github.jan.supabase.auth.auth
 import ir.exam.app.BuildConfig
 import ir.exam.app.data.remote.SupabaseProvider
 import java.io.File

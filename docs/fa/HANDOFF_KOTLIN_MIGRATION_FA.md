@@ -18886,3 +18886,5 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - نسخه‌ای که **فقط سایت/مستندات** را تغییر می‌دهد → همان سه خط را **کامنت** کنید (CI اپ بسته) تا بیلد ۱۵دقیقه‌ای بی‌فایده اجرا نشود.
 - این تغییر باید در همان installer نسخه باشد؛ در پیام تحویل صریح بگویید «CI اپ باز/بسته است».
 - V160.5: باز شد (APK باید V160–V160.4 را بگیرد: بازکردن تصویر https در استودیو، ارسال acl/x-amz-acl).
+
+## §V160.6 — CI: `Unresolved reference 'auth'` در RemoteMediaBytes.kt → افزودن `import io.github.jan.supabase.auth.auth` (همان الگوی SupabaseAuthImageInterceptor). درس: هر فایل Kotlin جدید که `client.auth` می‌زند این import را می‌خواهد.
