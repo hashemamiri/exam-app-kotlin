@@ -18964,3 +18964,7 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - `MENUS.teacher` فقط ۶ مورد (ریل)؛ `MENUS.teacherMenu` = کارت‌های صفحهٔ «منو» با فیلد چهارم (توضیح). `pageMenu` برای معلم از teacherMenu استفاده می‌کند؛ عنوان نوار بالا از اجتماع هر دو فهرست پیدا می‌شود (پنل‌هایی مثل print/calendar در ریل نیستند).
 - `pagePrint(c)` (پنل `print`) = دکمهٔ «آزمون چاپی جدید» (builder با `{mode:'print', fresh:true}`) + `SiteBuilder.printExamsSection`. پنل‌های reports/grading/bank/calendar/students/classes همچنان از «کارت‌ها»/«منو» باز می‌شوند (renderPage دست‌نخورده).
 - تست: `V168_SiteDesktopMenuTest`.
+
+## V169 — کارت پروفایل هم‌اندازه؛ «پروفایل» خارج از ریل
+
+- `pageMenu`: `profileCard` (`button.dk-mcard.dk-mcard-profile`) اولین عضو `.dk-grid`؛ `.dk-profile/.dk-back` حذف شدند. `MENUS.teacher` بدون `profile` و بدون جداکننده.

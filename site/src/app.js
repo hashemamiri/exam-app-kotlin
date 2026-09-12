@@ -839,7 +839,7 @@
   /* ---------------- پنل ---------------- */
   var MENUS = {
     teacher: [
-      ['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها'], '-', ['profile', '👤', 'پروفایل']
+      ['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']
     ],
     /* V168 — صفحهٔ «منو»ی دسکتاپ معلم = منوی همبرگری اپ/گوشی (menuScreen در mobile.js) */
     teacherMenu: [['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['print', '🖨', 'چاپ آزمون', 'آزمون‌های چاپی و برگه'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و وضعیت'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['profile', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['tools', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
@@ -962,15 +962,15 @@
     c.innerHTML = '';
     var menu = user.role === 'teacher' ? MENUS.teacherMenu : (MENUS[user.role] || MENUS.student).filter(function (x) { return x !== '-'; });
     var sub = user.email && !/student\.exam\.local$/.test(user.email) ? user.email : (user.username || '');
-    c.appendChild(el('div', {class: 'dk-profile'}, [
-      el('div', {class: 'avatar dk-av', text: (user.name || '?').trim().charAt(0)}),
-      el('div', {class: 'dk-pinfo'}, [el('small', {text: 'پروفایل ' + ROLE_LABEL[user.role]}), el('h2', {text: user.name || ''}), el('div', {class: 'muted', text: sub})]),
-      el('button', {class: 'dk-back', 'aria-label': 'بازگشت', onclick: function () { dkGo('dashboard'); }}, [dkIcon('back')])
-    ]));
+    /* V169 — کارت پروفایل هم‌اندازهٔ بقیهٔ کارت‌ها (اولین کارت شبکه) */
+    var profileCard = el('button', {class: 'dk-mcard dk-mcard-profile', onclick: function () { dkGo('profile'); }}, [
+      el('span', {class: 'dk-mhead'}, [el('span', {class: 'avatar dk-av', text: (user.name || '?').trim().charAt(0)}), el('span', {class: 'dk-pinfo'}, [el('small', {text: 'پروفایل ' + ROLE_LABEL[user.role]}), el('strong', {text: user.name || ''})])]),
+      el('small', {text: sub})
+    ]);
     function mcard(key, label, subLabel, danger, on) {
       return el('button', {class: 'dk-mcard' + (danger ? ' danger' : '') + (view.arg === key ? ' selected' : ''), onclick: on}, [el('span', {class: 'dk-mhead'}, [dkIcon(key, 'dk-mini'), el('strong', {text: label})]), el('small', {text: subLabel})]);
     }
-    c.appendChild(el('div', {class: 'dk-grid'}, menu.map(function (it) { return mcard(it[0], it[2], it[3] || DK_SUBS[it[0]] || '', false, function () { dkGo(it[0]); }); })
+    c.appendChild(el('div', {class: 'dk-grid'}, [profileCard].concat(menu.map(function (it) { return mcard(it[0], it[2], it[3] || DK_SUBS[it[0]] || '', false, function () { dkGo(it[0]); }); }))
       .concat([mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, doLogout)])));
   }
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */

@@ -17,7 +17,7 @@ class V167_SiteDesktopCardsTest {
     @Test
     fun `teacher menu has cards instead of tools and cards page mirrors phone deck`() {
         val a = source("site/src/app.js")
-        assertTrue("['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها'], '-', ['profile', '👤', 'پروفایل']" in a)
+        assertTrue("['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']" in a)
         assertFalse("['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']\n    ]," in a)
         assertTrue("function pageCards(c)" in a && "cards: pageCards" in a && "M.teacherCards().forEach(function (k)" in a && "class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]" in a)
         val m = source("site/src/mobile.js")

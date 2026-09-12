@@ -21,8 +21,10 @@ class V165_SiteDesktopRailTest {
         assertTrue("function railItem(key, label)" in a && "[railItem('menu', 'منو')].concat(items.map(" in a)
         assertTrue("class: 'dk-rail', 'aria-label': 'نوار اصلی'" in a && "'--n:' + (items.length + 1)" in a)
         assertTrue("class: 'head dk-top'" in a && "dkIcon('brand', 'dk-mark')" in a && "dkGo(view.panel === 'menu' ? 'dashboard' : 'menu')" in a)
-        assertTrue("function pageMenu(c)" in a && "var pages = {menu: pageMenu, dashboard: pageDashboard" in a)
-        assertTrue("class: 'dk-profile'" in a && "'پروفایل ' + ROLE_LABEL[user.role]" in a && "mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, doLogout)" in a)
+        assertTrue("function pageMenu(c)" in a && "var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, dashboard: pageDashboard" in a)
+        // V169 — کارت پروفایل هم‌اندازهٔ بقیه (dk-mcard-profile) و «پروفایل» در ریل نیست
+        assertTrue("class: 'dk-mcard dk-mcard-profile'" in a && "'پروفایل ' + ROLE_LABEL[user.role]" in a && "mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, doLogout)" in a)
+        assertTrue("[profileCard].concat(menu.map(" in a)
         assertTrue("[side, sbBg, main, bottom, rail]" in a)
         for (k in listOf("dashboard", "exams", "builder", "classes", "students", "bank", "reports", "grading", "calendar", "wallet", "tools", "profile", "join", "grades", "teachers", "school", "logout", "menu", "back", "brand"))
             assertTrue("icon $k", "    $k: '<" in a)

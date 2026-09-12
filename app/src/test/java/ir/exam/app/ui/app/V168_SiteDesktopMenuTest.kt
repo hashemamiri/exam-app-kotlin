@@ -16,7 +16,7 @@ class V168_SiteDesktopMenuTest {
     @Test
     fun `teacher rail and hamburger menu mirror the app`() {
         val a = source("site/src/app.js")
-        assertTrue("['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها'], '-', ['profile', '👤', 'پروفایل']\n    ]," in a)
+        assertTrue("['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']\n    ]," in a)
         assertTrue("teacherMenu: [['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['print', '🖨', 'چاپ آزمون', 'آزمون‌های چاپی و برگه'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و وضعیت'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['profile', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['tools', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]" in a)
         assertTrue("var menu = user.role === 'teacher' ? MENUS.teacherMenu : (MENUS[user.role] || MENUS.student)" in a)
         assertTrue("items.concat(MENUS.teacherMenu).filter(" in a)
