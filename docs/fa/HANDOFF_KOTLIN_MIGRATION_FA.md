@@ -18958,3 +18958,9 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 
 - `MENUS.teacher`: `tools` → `cards`. `pageCards(c)` در app.js از `window.SiteMobile.teacherCards()` (فهرست مشترک با `cardsScreen` گوشی: [عنوان، توضیح، آیکون، گرادیان، onclick]) و `SiteMobile.icons` استفاده می‌کند؛ ظاهر `.dk-gcard` = همان `.m-deck-card`. صفحهٔ «ابزارها» (`pageTools`) هنوز برای دانش‌آموز/مدیر در منو هست.
 - تست: `V167_SiteDesktopCardsTest`.
+
+## V168 — ریل دسکتاپ کوتاه‌تر + «منو» = منوی همبرگری اپ
+
+- `MENUS.teacher` فقط ۶ مورد (ریل)؛ `MENUS.teacherMenu` = کارت‌های صفحهٔ «منو» با فیلد چهارم (توضیح). `pageMenu` برای معلم از teacherMenu استفاده می‌کند؛ عنوان نوار بالا از اجتماع هر دو فهرست پیدا می‌شود (پنل‌هایی مثل print/calendar در ریل نیستند).
+- `pagePrint(c)` (پنل `print`) = دکمهٔ «آزمون چاپی جدید» (builder با `{mode:'print', fresh:true}`) + `SiteBuilder.printExamsSection`. پنل‌های reports/grading/bank/calendar/students/classes همچنان از «کارت‌ها»/«منو» باز می‌شوند (renderPage دست‌نخورده).
+- تست: `V168_SiteDesktopMenuTest`.
