@@ -515,17 +515,19 @@
   /* ---- V157: تنظیمات سربرگ (آینهٔ PrintHeaderStore + HeaderSettingsDialog اپ؛ schema همان header_settings_schema.json) ---- */
   var LS_PRINTHEADER = 'examsite.printheader.v1';
   function readPrintHeader() { try { var o = JSON.parse(localStorage.getItem(LS_PRINTHEADER) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
-  function openHeaderSettings(onApply) {
+  /* V173 — فرم سربرگ مشترک: پنجرهٔ بازشو (openHeaderSettings) و ستون راست سازندهٔ چاپی دسکتاپ (headerSettingsForm؛ ذخیرهٔ خودکار) */
+  function headerSettingsForm(box, opts) {
+    opts = opts || {};
     var schema = window.__HEADER_SCHEMA;
-    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { confirmDlg('تنظیمات سربرگ', 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.', 'باشد'); return; }
+    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { box.appendChild(el('p', {class: 'muted', text: 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.'})); return null; }
     var cur = readPrintHeader(), values = Object.assign({}, cur);
     var tplId = schema.templates.some(function (t) { return t.id === cur.f_headerTemplate; }) ? cur.f_headerTemplate : schema.templates[0].id;
-    var bg = el('div', {class: 'modal-bg hdr-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
-    var box = el('div', {class: 'modal hdr-modal'});
     var list = el('div', {class: 'hdr-fields'});
     var sel = el('select', {class: 'hdr-tpl'});
     schema.templates.forEach(function (t) { sel.appendChild(el('option', {value: t.id, text: t.label})); });
     sel.value = tplId;
+    function payload() { var t = schema.templates.filter(function (x) { return x.id === tplId; })[0]; var p = {f_headerTemplate: tplId}; ((t && t.fields) || []).forEach(function (f) { p[f.id] = values[f.id] || ''; }); return p; }
+    function persist() { try { localStorage.setItem(LS_PRINTHEADER, JSON.stringify(payload())); } catch (e) {} }
     function draw() {
       var t = schema.templates.filter(function (x) { return x.id === tplId; })[0] || schema.templates[0];
       list.innerHTML = '';
@@ -534,25 +536,32 @@
         if (f.kind === 'select') { input = el('select'); input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; }
         else if (f.kind === 'textarea') input = el('textarea', {rows: String(f.rows || 3), text: values[f.id] || ''});
         else input = el('input', {type: 'text', value: values[f.id] || '', placeholder: f.placeholder || ''});
-        input.addEventListener('input', function () { values[f.id] = input.value; });
-        input.addEventListener('change', function () { values[f.id] = input.value; });
+        input.addEventListener('input', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
+        input.addEventListener('change', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
         list.appendChild(el('div', {class: 'field' + (f.full ? ' full' : '')}, [el('label', {text: f.label}), input]));
       });
     }
-    sel.addEventListener('change', function () { tplId = sel.value; draw(); });
-    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'اطلاعات سربرگ آزمون', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]));
+    sel.addEventListener('change', function () { tplId = sel.value; draw(); if (opts.autosave) persist(); });
     box.appendChild(el('div', {class: 'field'}, [el('label', {text: 'انتخاب نوع سربرگ'}), sel]));
     box.appendChild(list);
+    draw();
+    return {payload: payload, persist: persist};
+  }
+  function openHeaderSettings(onApply) {
+    var schema = window.__HEADER_SCHEMA;
+    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { confirmDlg('تنظیمات سربرگ', 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.', 'باشد'); return; }
+    var bg = el('div', {class: 'modal-bg hdr-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var box = el('div', {class: 'modal hdr-modal'});
+    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'اطلاعات سربرگ آزمون', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]));
+    var form = headerSettingsForm(box);
     box.appendChild(el('div', {class: 'row hdr-actions', style: 'margin-top:10px'}, [
       el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }}),
       el('button', {class: 'btn', text: 'اعمال', onclick: function () {
-        var t = schema.templates.filter(function (x) { return x.id === tplId; })[0];
-        var payload = {f_headerTemplate: tplId}; (t.fields || []).forEach(function (f) { payload[f.id] = values[f.id] || ''; });
-        try { localStorage.setItem(LS_PRINTHEADER, JSON.stringify(payload)); } catch (e) {}
-        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); if (onApply) onApply(payload);
+        if (form) form.persist();
+        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); if (onApply) onApply(form ? form.payload() : readPrintHeader());
       }})
     ]));
-    draw(); bg.appendChild(box); document.body.appendChild(bg);
+    bg.appendChild(box); document.body.appendChild(bg);
   }
   function buildPrintPayload(exam, opts) {
     opts = opts || {};
@@ -1380,7 +1389,7 @@
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},

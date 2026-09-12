@@ -1046,6 +1046,24 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .b-rail-num:hover{background:#fff}
   .dk .b-rail-num.active{color:#0e93b8;border-color:#22c6ef;border-width:2px;box-shadow:0 0 0 3px rgba(34,198,239,.16),0 0 12px rgba(34,198,239,.55),inset 0 0 10px rgba(34,198,239,.2)}
   .dk .main{padding-left:100px}
+  /* V173 — ستون مشخصات/سربرگ بدون نوار اسکرول نمایان؛ ریل فشرده نمی‌شود: دکمه‌ها ثابت، شمارهٔ سؤال‌ها اسکرول می‌شود */
+  .dk .b-settings{scrollbar-width:none;-ms-overflow-style:none}
+  .dk .b-settings::-webkit-scrollbar{display:none}
+  .dk .b-settings.b-hdr .hdr-fields{grid-template-columns:1fr;max-height:none;overflow:visible}
+  .dk .b-rail{overflow:hidden}
+  .dk .b-rail-btn,.dk .b-rail-sep{flex:0 0 auto}
+  .dk .b-rail-nums{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;width:100%;scrollbar-width:none;padding:2px 0}
+  .dk .b-rail-nums::-webkit-scrollbar{display:none}
+  .dk .b-rail-num{flex:0 0 44px}
+  .b-sp-modal{max-width:620px}
+  .b-sp-body{max-height:70vh;overflow:auto}
+  .b-sp-card{display:flex;flex-direction:column;gap:9px}
+  .b-sp-num{color:var(--brand,#0e93b8);font-weight:700;font-size:13px}
+  .b-sp-text{font-size:16px;line-height:1.9}
+  .b-sp-img{max-width:100%;border-radius:10px}
+  .b-sp-card .st-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+  .b-sp-card .st-ml{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .b-sp-card .st-chips{display:flex;gap:6px;flex-wrap:wrap}
 }
 
 /* ===================== V167 — «کارت‌ها»ی دسکتاپ (همان کارت‌های گرادیانی گوشی، به‌صورت شبکه) ===================== */
@@ -2419,17 +2437,19 @@ window.__HEADER_SCHEMA = {
   /* ---- V157: تنظیمات سربرگ (آینهٔ PrintHeaderStore + HeaderSettingsDialog اپ؛ schema همان header_settings_schema.json) ---- */
   var LS_PRINTHEADER = 'examsite.printheader.v1';
   function readPrintHeader() { try { var o = JSON.parse(localStorage.getItem(LS_PRINTHEADER) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
-  function openHeaderSettings(onApply) {
+  /* V173 — فرم سربرگ مشترک: پنجرهٔ بازشو (openHeaderSettings) و ستون راست سازندهٔ چاپی دسکتاپ (headerSettingsForm؛ ذخیرهٔ خودکار) */
+  function headerSettingsForm(box, opts) {
+    opts = opts || {};
     var schema = window.__HEADER_SCHEMA;
-    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { confirmDlg('تنظیمات سربرگ', 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.', 'باشد'); return; }
+    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { box.appendChild(el('p', {class: 'muted', text: 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.'})); return null; }
     var cur = readPrintHeader(), values = Object.assign({}, cur);
     var tplId = schema.templates.some(function (t) { return t.id === cur.f_headerTemplate; }) ? cur.f_headerTemplate : schema.templates[0].id;
-    var bg = el('div', {class: 'modal-bg hdr-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
-    var box = el('div', {class: 'modal hdr-modal'});
     var list = el('div', {class: 'hdr-fields'});
     var sel = el('select', {class: 'hdr-tpl'});
     schema.templates.forEach(function (t) { sel.appendChild(el('option', {value: t.id, text: t.label})); });
     sel.value = tplId;
+    function payload() { var t = schema.templates.filter(function (x) { return x.id === tplId; })[0]; var p = {f_headerTemplate: tplId}; ((t && t.fields) || []).forEach(function (f) { p[f.id] = values[f.id] || ''; }); return p; }
+    function persist() { try { localStorage.setItem(LS_PRINTHEADER, JSON.stringify(payload())); } catch (e) {} }
     function draw() {
       var t = schema.templates.filter(function (x) { return x.id === tplId; })[0] || schema.templates[0];
       list.innerHTML = '';
@@ -2438,25 +2458,32 @@ window.__HEADER_SCHEMA = {
         if (f.kind === 'select') { input = el('select'); input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; }
         else if (f.kind === 'textarea') input = el('textarea', {rows: String(f.rows || 3), text: values[f.id] || ''});
         else input = el('input', {type: 'text', value: values[f.id] || '', placeholder: f.placeholder || ''});
-        input.addEventListener('input', function () { values[f.id] = input.value; });
-        input.addEventListener('change', function () { values[f.id] = input.value; });
+        input.addEventListener('input', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
+        input.addEventListener('change', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
         list.appendChild(el('div', {class: 'field' + (f.full ? ' full' : '')}, [el('label', {text: f.label}), input]));
       });
     }
-    sel.addEventListener('change', function () { tplId = sel.value; draw(); });
-    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'اطلاعات سربرگ آزمون', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]));
+    sel.addEventListener('change', function () { tplId = sel.value; draw(); if (opts.autosave) persist(); });
     box.appendChild(el('div', {class: 'field'}, [el('label', {text: 'انتخاب نوع سربرگ'}), sel]));
     box.appendChild(list);
+    draw();
+    return {payload: payload, persist: persist};
+  }
+  function openHeaderSettings(onApply) {
+    var schema = window.__HEADER_SCHEMA;
+    if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { confirmDlg('تنظیمات سربرگ', 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.', 'باشد'); return; }
+    var bg = el('div', {class: 'modal-bg hdr-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var box = el('div', {class: 'modal hdr-modal'});
+    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'اطلاعات سربرگ آزمون', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]));
+    var form = headerSettingsForm(box);
     box.appendChild(el('div', {class: 'row hdr-actions', style: 'margin-top:10px'}, [
       el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }}),
       el('button', {class: 'btn', text: 'اعمال', onclick: function () {
-        var t = schema.templates.filter(function (x) { return x.id === tplId; })[0];
-        var payload = {f_headerTemplate: tplId}; (t.fields || []).forEach(function (f) { payload[f.id] = values[f.id] || ''; });
-        try { localStorage.setItem(LS_PRINTHEADER, JSON.stringify(payload)); } catch (e) {}
-        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); if (onApply) onApply(payload);
+        if (form) form.persist();
+        bg.remove(); toast('سربرگ ذخیره شد.', 'ok'); if (onApply) onApply(form ? form.payload() : readPrintHeader());
       }})
     ]));
-    draw(); bg.appendChild(box); document.body.appendChild(bg);
+    bg.appendChild(box); document.body.appendChild(bg);
   }
   function buildPrintPayload(exam, opts) {
     opts = opts || {};
@@ -3284,7 +3311,7 @@ window.__HEADER_SCHEMA = {
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
@@ -3689,12 +3716,14 @@ window.__HEADER_SCHEMA = {
     wrap.appendChild(top);
 
     /* --- بدنه: فهرست سؤال‌ها + ویرایشگر --- */
-    var body = el('div', {class: 'b-body' + (state.mode === 'online' && !state.bankEdit ? ' has-settings' : '')});
+    var body = el('div', {class: 'b-body' + (!state.bankEdit && (state.mode === 'online' || (state.mode === 'print' && S.headerSettingsForm)) ? ' has-settings' : '')});
     var list = el('div', {class: 'b-list card'});
     var editor = el('div', {class: 'b-editor card'});
     /* V166 — دسکتاپ (body.dk): ستون راست «مشخصات آزمون» همیشه باز + ریل چپ (افزودن/بعدی/ذخیره/چاپ/پیش‌نمایش + شمارهٔ سؤال‌ها)؛ فهرست b-list فقط در گوشی/تبلت */
     var settings = null;
     if (state.mode === 'online' && !state.bankEdit) { settings = el('aside', {class: 'b-settings card'}, [el('h3', {text: 'مشخصات آزمون'})]); settingsForm(settings); settings.addEventListener('input', syncMeta); }
+    /* V173 — سازندهٔ چاپی دسکتاپ مثل آنلاین: ستون راست = «تنظیمات سربرگ» (ExamBuilderScreen printMode) با ذخیرهٔ خودکار */
+    else if (state.mode === 'print' && !state.bankEdit && S.headerSettingsForm) { settings = el('aside', {class: 'b-settings b-hdr card'}, [el('h3', {text: 'تنظیمات سربرگ'})]); S.headerSettingsForm(settings, {autosave: true}); }
     var rail = el('nav', {class: 'b-rail', 'aria-label': 'ابزار سازنده'});
     if (settings) body.appendChild(settings);
     body.appendChild(list); body.appendChild(editor); wrap.appendChild(body); wrap.appendChild(rail);
@@ -3706,14 +3735,54 @@ window.__HEADER_SCHEMA = {
       document.body.appendChild(menu);
       setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
     }
+    /* V173 — منوی دکمهٔ چاپ ریل (V97 اپ: «چاپ آزمون (دانش‌آموز)» / «چاپ با کلید (پاسخ‌نامه)») */
+    function printMenu(anchor) {
+      var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
+      var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, [
+        el('button', {class: 'btn light sm', text: '🖨 چاپ آزمون (دانش‌آموز)', onclick: function () { menu.remove(); preview('student'); }}),
+        el('button', {class: 'btn light sm', text: '✅ چاپ با کلید (پاسخ‌نامه)', onclick: function () { menu.remove(); preview('teacher'); }})
+      ]);
+      var r = anchor.getBoundingClientRect(); menu.style.top = r.top + 'px'; menu.style.left = (r.right + 10) + 'px';
+      document.body.appendChild(menu);
+      setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
+    }
+    /* V173 — پیش‌نمایش دانش‌آموزی سؤال جاری (StudentQuestionPreviewDialog اپ): فقط نمایشی و غیرفعال */
+    function studentPreview() {
+      var q = state.questions[state.selected]; if (!q) return toast('ابتدا یک سؤال اضافه کنید.', 'err');
+      var n = state.selected + 1;
+      var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+      var card = el('div', {class: 'card b-sp-card'});
+      card.appendChild(el('div', {class: 'b-sp-num', text: 'سؤال ' + fa(n) + ' (' + fa(S.fmtScore(q.score)) + ' نمره)'}));
+      var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
+      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; });
+      (q.images || []).forEach(function (u) { card.appendChild(el('img', {src: u, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
+      var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
+      if (q.type === 'multiple') (q.options || []).forEach(function (o, i) { card.appendChild(el('label', {class: 'st-opt'}, [el('input', {type: 'radio', disabled: 'disabled'}), el('span', {class: 'st-optlabel', text: (AB[i] || fa(i + 1)) + ')'}), el('span', {class: 'grow', text: o || ('گزینه ' + fa(i + 1))}), q.optionImages && q.optionImages[i] ? el('img', {src: q.optionImages[i], class: 'thumb'}) : null])); });
+      else if (q.type === 'truefalse') card.appendChild(el('div', {class: 'row'}, [el('button', {class: 'btn light', text: '✓ صحیح', disabled: 'disabled'}), el('button', {class: 'btn light', text: '✗ غلط', disabled: 'disabled'})]));
+      else if (q.type === 'fill' || q.type === 'numeric') card.appendChild(el('input', {type: 'text', class: 'st-input', disabled: 'disabled', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی'}));
+      else if (q.type === 'matching') {
+        (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'ستون راست')}), el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
+      } else card.appendChild(el('textarea', {class: 'st-input', rows: 5, disabled: 'disabled', placeholder: 'پاسخ تشریحی'}));
+      var box = el('div', {class: 'modal b-sp-modal'}, [
+        el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'پیش‌نمایش دانش‌آموز', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]),
+        el('div', {class: 'b-sp-body'}, [card]),
+        el('div', {class: 'row', style: 'margin-top:10px;justify-content:flex-start'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])
+      ]);
+      bg.appendChild(box); document.body.appendChild(bg);
+    }
     function drawRail() {
       rail.innerHTML = '';
       function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>', 'سؤال بعدی', function () { if (!state.questions.length) return; state.selected = (state.selected + 1) % state.questions.length; drawList(); drawEditor(); }));
+      /* V173 — مثل FABهای ExamBuilderScreen: آنلاین = ذخیره + چشم (پیش‌نمایش دانش‌آموزی سؤال، V62.7)؛ چاپی = ذخیره + چشم (پیش‌نمایش برگه) + چاپ (منوی چاپ آزمون/چاپ با کلید) */
+      var EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok'));
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ', function () { preview('teacher'); }));
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>', 'پیش‌نمایش', function () { preview(); }));
+      if (state.mode === 'print') {
+        rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }));
+        rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ آزمون', function (e) { printMenu(e.currentTarget); }));
+      } else {
+        rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }));
+      }
       rail.appendChild(el('span', {class: 'b-rail-sep'}));
       var nums = el('div', {class: 'b-rail-nums'});
       state.questions.forEach(function (q, i) { nums.appendChild(el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})); });
@@ -4807,7 +4876,7 @@ window.__HEADER_SCHEMA = {
   /* هشدار خروج هنگام آزمون باز */
   window.addEventListener('beforeunload', function (e) { if (run && !run.finished) { e.preventDefault(); e.returnValue = ''; } });
 
-  window.SiteStudent = {page: page, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
+  window.SiteStudent = {page: page, richHtml: richHtml, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
 })();
 
 /* V141 — فاز ۴ سایت: تصحیح و بازخورد، حضور/وضعیت زنده، گزارش نظارتی، تحلیل سؤال، شارژ کیف پول،

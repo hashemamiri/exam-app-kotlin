@@ -392,12 +392,14 @@
     wrap.appendChild(top);
 
     /* --- بدنه: فهرست سؤال‌ها + ویرایشگر --- */
-    var body = el('div', {class: 'b-body' + (state.mode === 'online' && !state.bankEdit ? ' has-settings' : '')});
+    var body = el('div', {class: 'b-body' + (!state.bankEdit && (state.mode === 'online' || (state.mode === 'print' && S.headerSettingsForm)) ? ' has-settings' : '')});
     var list = el('div', {class: 'b-list card'});
     var editor = el('div', {class: 'b-editor card'});
     /* V166 — دسکتاپ (body.dk): ستون راست «مشخصات آزمون» همیشه باز + ریل چپ (افزودن/بعدی/ذخیره/چاپ/پیش‌نمایش + شمارهٔ سؤال‌ها)؛ فهرست b-list فقط در گوشی/تبلت */
     var settings = null;
     if (state.mode === 'online' && !state.bankEdit) { settings = el('aside', {class: 'b-settings card'}, [el('h3', {text: 'مشخصات آزمون'})]); settingsForm(settings); settings.addEventListener('input', syncMeta); }
+    /* V173 — سازندهٔ چاپی دسکتاپ مثل آنلاین: ستون راست = «تنظیمات سربرگ» (ExamBuilderScreen printMode) با ذخیرهٔ خودکار */
+    else if (state.mode === 'print' && !state.bankEdit && S.headerSettingsForm) { settings = el('aside', {class: 'b-settings b-hdr card'}, [el('h3', {text: 'تنظیمات سربرگ'})]); S.headerSettingsForm(settings, {autosave: true}); }
     var rail = el('nav', {class: 'b-rail', 'aria-label': 'ابزار سازنده'});
     if (settings) body.appendChild(settings);
     body.appendChild(list); body.appendChild(editor); wrap.appendChild(body); wrap.appendChild(rail);
@@ -409,14 +411,54 @@
       document.body.appendChild(menu);
       setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
     }
+    /* V173 — منوی دکمهٔ چاپ ریل (V97 اپ: «چاپ آزمون (دانش‌آموز)» / «چاپ با کلید (پاسخ‌نامه)») */
+    function printMenu(anchor) {
+      var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
+      var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, [
+        el('button', {class: 'btn light sm', text: '🖨 چاپ آزمون (دانش‌آموز)', onclick: function () { menu.remove(); preview('student'); }}),
+        el('button', {class: 'btn light sm', text: '✅ چاپ با کلید (پاسخ‌نامه)', onclick: function () { menu.remove(); preview('teacher'); }})
+      ]);
+      var r = anchor.getBoundingClientRect(); menu.style.top = r.top + 'px'; menu.style.left = (r.right + 10) + 'px';
+      document.body.appendChild(menu);
+      setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
+    }
+    /* V173 — پیش‌نمایش دانش‌آموزی سؤال جاری (StudentQuestionPreviewDialog اپ): فقط نمایشی و غیرفعال */
+    function studentPreview() {
+      var q = state.questions[state.selected]; if (!q) return toast('ابتدا یک سؤال اضافه کنید.', 'err');
+      var n = state.selected + 1;
+      var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+      var card = el('div', {class: 'card b-sp-card'});
+      card.appendChild(el('div', {class: 'b-sp-num', text: 'سؤال ' + fa(n) + ' (' + fa(S.fmtScore(q.score)) + ' نمره)'}));
+      var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
+      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; });
+      (q.images || []).forEach(function (u) { card.appendChild(el('img', {src: u, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
+      var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
+      if (q.type === 'multiple') (q.options || []).forEach(function (o, i) { card.appendChild(el('label', {class: 'st-opt'}, [el('input', {type: 'radio', disabled: 'disabled'}), el('span', {class: 'st-optlabel', text: (AB[i] || fa(i + 1)) + ')'}), el('span', {class: 'grow', text: o || ('گزینه ' + fa(i + 1))}), q.optionImages && q.optionImages[i] ? el('img', {src: q.optionImages[i], class: 'thumb'}) : null])); });
+      else if (q.type === 'truefalse') card.appendChild(el('div', {class: 'row'}, [el('button', {class: 'btn light', text: '✓ صحیح', disabled: 'disabled'}), el('button', {class: 'btn light', text: '✗ غلط', disabled: 'disabled'})]));
+      else if (q.type === 'fill' || q.type === 'numeric') card.appendChild(el('input', {type: 'text', class: 'st-input', disabled: 'disabled', placeholder: q.type === 'numeric' ? 'پاسخ عددی' : 'پاسخ جای خالی'}));
+      else if (q.type === 'matching') {
+        (q.matchingLeft || []).forEach(function (l, li) { card.appendChild(el('div', {class: 'st-ml'}, [el('span', {class: 'grow', text: fa(li + 1) + '. ' + (l || 'ستون راست')}), el('div', {class: 'st-chips'}, (q.matchingRight || []).map(function (_, ri) { return el('button', {class: 'chip', text: AB[ri] || fa(ri + 1), disabled: 'disabled'}); }))])); });
+      } else card.appendChild(el('textarea', {class: 'st-input', rows: 5, disabled: 'disabled', placeholder: 'پاسخ تشریحی'}));
+      var box = el('div', {class: 'modal b-sp-modal'}, [
+        el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'پیش‌نمایش دانش‌آموز', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]),
+        el('div', {class: 'b-sp-body'}, [card]),
+        el('div', {class: 'row', style: 'margin-top:10px;justify-content:flex-start'}, [el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])
+      ]);
+      bg.appendChild(box); document.body.appendChild(bg);
+    }
     function drawRail() {
       rail.innerHTML = '';
       function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>', 'سؤال بعدی', function () { if (!state.questions.length) return; state.selected = (state.selected + 1) % state.questions.length; drawList(); drawEditor(); }));
+      /* V173 — مثل FABهای ExamBuilderScreen: آنلاین = ذخیره + چشم (پیش‌نمایش دانش‌آموزی سؤال، V62.7)؛ چاپی = ذخیره + چشم (پیش‌نمایش برگه) + چاپ (منوی چاپ آزمون/چاپ با کلید) */
+      var EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
       rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok'));
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ', function () { preview('teacher'); }));
-      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>', 'پیش‌نمایش', function () { preview(); }));
+      if (state.mode === 'print') {
+        rail.appendChild(rb(EYE, 'پیش‌نمایش آزمون', function () { preview(); }));
+        rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ آزمون', function (e) { printMenu(e.currentTarget); }));
+      } else {
+        rail.appendChild(rb(EYE, 'پیش‌نمایش دانش‌آموز', function () { studentPreview(); }));
+      }
       rail.appendChild(el('span', {class: 'b-rail-sep'}));
       var nums = el('div', {class: 'b-rail-nums'});
       state.questions.forEach(function (q, i) { nums.appendChild(el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})); });

@@ -18990,3 +18990,10 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - `extras.js reportsPage(c, arg)`: `section==='grades'` → فقط «کارنامه و لیست نمرات» (گزارش کلاس)؛ `stats` → خلاصه + کارت «تحلیل پیشرفته کیفیت سؤال» (چیپ آزمون → `SiteAdmin.questionAnalysis` که همان `tabAnalysis` تصحیح است، RPC `native_question_analysis_v1`).
 - `school.js managerRequestsCard(alwaysShow)`: با `true` کارت در حالت خالی مخفی نمی‌شود. `mobile.js`: کارت «درخواست‌ها» → `go('requests')`؛ داک `requests` را زیر «کارت‌ها» می‌داند؛ `TITLES.requests`.
 - تأیید jsdom (۷ کارت): reports/stats «آمار»، reports/grades «کارنامه»، bank، grading (بدون فیلتر/pending/graded) با عنوان‌های تصحیح/مانده/پاسخ، requests «درخواست‌ها». تست: `V172_SiteCardsTargetsTest`.
+
+## V173 — ریل سازندهٔ دسکتاپ = FABهای اپ
+
+- `builder.js drawRail`: «سؤال بعدی» و «چاپ» (آنلاین) حذف شد. آنلاین: افزودن / ذخیره / چشم → `studentPreview()` (پنجرهٔ «پیش‌نمایش دانش‌آموز» = `StudentQuestionPreviewDialog` V62.7: شماره+بارم، متن با `SiteStudent.richHtml`، تصاویر، گزینه‌ها/صحیح‌غلط/جای‌خالی/عددی/جورکردنی/تشریحی غیرفعال). چاپی: افزودن / ذخیره / چشم → `preview()` (پیش‌نمایش برگه، مثل V86.8/V97) / چاپ → `printMenu()` (منوی «چاپ آزمون (دانش‌آموز)» و «چاپ با کلید (پاسخ‌نامه)»؛ همان `b-addmenu`).
+- سازندهٔ چاپی دسکتاپ حالا `has-settings` دارد: `aside.b-settings.b-hdr` با `S.headerSettingsForm(box, {autosave:true})` (فرم سربرگ مشترک، از `openHeaderSettings` جدا شد؛ ذخیرهٔ خودکار در `LS_PRINTHEADER`). پنجرهٔ بازشوی سربرگ (گوشی/تبلت) همان فرم را با دکمهٔ «اعمال» نشان می‌دهد.
+- CSS: `.dk .b-settings` بدون اسکرول‌بار؛ `.dk .b-rail{overflow:hidden}` + دکمه‌ها `flex:0 0 auto` و `.b-rail-nums` اسکرول‌شونده (`flex:1 1 auto;min-height:0`) تا افزودن سؤال ریل را فشرده نکند. `student.js` `richHtml` را بیرون می‌دهد.
+- تأیید jsdom: online → ستون «مشخصات آزمون»، ریل افزودن/ذخیره/پیش‌نمایش دانش‌آموز، چشم پنجرهٔ دانش‌آموزی با گزینه‌ها؛ print → ستون «تنظیمات سربرگ» (۱۵ فیلد، ذخیرهٔ خودکار)، ریل افزودن/ذخیره/پیش‌نمایش آزمون/چاپ آزمون، چشم پیش‌نمایش چاپ، منوی چاپ دو گزینه. تست: `V173_SiteDesktopBuilderRailTest`.

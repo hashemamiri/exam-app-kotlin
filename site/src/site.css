@@ -1018,6 +1018,24 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .b-rail-num:hover{background:#fff}
   .dk .b-rail-num.active{color:#0e93b8;border-color:#22c6ef;border-width:2px;box-shadow:0 0 0 3px rgba(34,198,239,.16),0 0 12px rgba(34,198,239,.55),inset 0 0 10px rgba(34,198,239,.2)}
   .dk .main{padding-left:100px}
+  /* V173 — ستون مشخصات/سربرگ بدون نوار اسکرول نمایان؛ ریل فشرده نمی‌شود: دکمه‌ها ثابت، شمارهٔ سؤال‌ها اسکرول می‌شود */
+  .dk .b-settings{scrollbar-width:none;-ms-overflow-style:none}
+  .dk .b-settings::-webkit-scrollbar{display:none}
+  .dk .b-settings.b-hdr .hdr-fields{grid-template-columns:1fr;max-height:none;overflow:visible}
+  .dk .b-rail{overflow:hidden}
+  .dk .b-rail-btn,.dk .b-rail-sep{flex:0 0 auto}
+  .dk .b-rail-nums{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;width:100%;scrollbar-width:none;padding:2px 0}
+  .dk .b-rail-nums::-webkit-scrollbar{display:none}
+  .dk .b-rail-num{flex:0 0 44px}
+  .b-sp-modal{max-width:620px}
+  .b-sp-body{max-height:70vh;overflow:auto}
+  .b-sp-card{display:flex;flex-direction:column;gap:9px}
+  .b-sp-num{color:var(--brand,#0e93b8);font-weight:700;font-size:13px}
+  .b-sp-text{font-size:16px;line-height:1.9}
+  .b-sp-img{max-width:100%;border-radius:10px}
+  .b-sp-card .st-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+  .b-sp-card .st-ml{display:flex;flex-direction:column;gap:6px;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .b-sp-card .st-chips{display:flex;gap:6px;flex-wrap:wrap}
 }
 
 /* ===================== V167 — «کارت‌ها»ی دسکتاپ (همان کارت‌های گرادیانی گوشی، به‌صورت شبکه) ===================== */
