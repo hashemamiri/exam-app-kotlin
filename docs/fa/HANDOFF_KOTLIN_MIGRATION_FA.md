@@ -19009,3 +19009,7 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 ## V176 — روشن ماندن «منو» در ریل
 
 - `renderPanel`: `railActive = view.panel` اگر در ریل باشد وگرنه `'menu'`؛ کلاس `active` و `aria-current` از آن استفاده می‌کنند. بررسی jsdom: ۱۶ پنل معلم، ۷ مدیر، ۷ دانش‌آموز همه رندر می‌شوند و بدون خطای JS هستند. تست: `V176_SiteRailActiveTest`.
+
+## V177 — هم‌ارتفاعی کادر سؤال
+
+- `height:100%` روی فرزندان grid با `align-items:stretch` در ویرایشگر (که کارت `margin` داشت) کوتاه‌تر می‌شد؛ حالا `b-body{grid-template-rows:minmax(0,1fr)}` و `b-settings/b-editor{height:auto;min-height:0;align-self:stretch;margin:0}`. تست V175 به‌روز شد.

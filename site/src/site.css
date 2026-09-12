@@ -1025,9 +1025,10 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   /* V175 — سازنده: هر ۴ بخش (ریل راست، مشخصات/سربرگ، ویرایشگر، ریل چپ) هم‌ارتفاع و ثابت؛ فقط داخل هر بخش اسکرول می‌شود */
   .dk .builder{position:fixed;top:22px;bottom:22px;left:100px;right:100px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
   .dk .builder .b-top{flex:0 0 auto;margin-bottom:10px}
-  .dk .builder .b-body{flex:1 1 auto;min-height:0;margin:0;align-items:stretch}
-  .dk .builder .b-settings{position:static;top:auto;max-height:none;height:100%;overflow:auto;box-sizing:border-box}
-  .dk .builder .b-editor{height:100%;overflow:auto;box-sizing:border-box;scrollbar-width:none}
+  .dk .builder .b-body{flex:1 1 auto;min-height:0;margin:0;align-items:stretch;grid-template-rows:minmax(0,1fr)}
+  /* V177 — ارتفاع دقیقاً برابر ردیف شبکه (کشش)، نه درصد؛ ویرایشگر و ستون مشخصات هم‌ارتفاع ریل‌ها */
+  .dk .builder .b-settings{position:static;top:auto;max-height:none;height:auto;min-height:0;align-self:stretch;overflow:auto;box-sizing:border-box;margin:0}
+  .dk .builder .b-editor{height:auto;min-height:0;align-self:stretch;overflow:auto;box-sizing:border-box;scrollbar-width:none;margin:0}
   .dk .builder .b-editor::-webkit-scrollbar{display:none}
   .dk .b-rail,.dk .dk-rail{top:22px;bottom:22px}
   .dk .main:has(.builder){padding-bottom:0}
