@@ -1032,6 +1032,13 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .builder .b-editor::-webkit-scrollbar{display:none}
   .dk .b-rail,.dk .dk-rail{top:22px;bottom:22px}
   .dk .main:has(.builder){padding-bottom:0}
+  /* V178 — منوی شعاعی دسکتاپ: روی سازندهٔ ثابت (z 20) و ریل‌ها (45/50)، تار شدن پس‌زمینه مثل اپ */
+  .dk .m-radial-bg{z-index:70;background:rgba(38,49,66,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .dk .m-radial-item{width:78px;height:78px;left:-39px;top:-39px;border-radius:50%;background:#fff !important;box-shadow:0 12px 30px rgba(20,30,45,.25)}
+  .dk .m-radial-item .g{font-size:20px}
+  .dk .m-radial-item .l{font-size:10px}
+  .dk .m-radial-ring{display:none}
+  .dk .m-radial-x{width:76px;height:76px;left:-38px;top:-38px;box-shadow:0 0 0 6px rgba(229,72,77,.25),0 12px 30px rgba(20,30,45,.3)}
   /* V173 — ستون مشخصات/سربرگ بدون نوار اسکرول نمایان؛ ریل فشرده نمی‌شود: دکمه‌ها ثابت، شمارهٔ سؤال‌ها اسکرول می‌شود */
   .dk .b-settings{scrollbar-width:none;-ms-overflow-style:none}
   .dk .b-settings::-webkit-scrollbar{display:none}

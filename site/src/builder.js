@@ -404,6 +404,16 @@
     if (settings) body.appendChild(settings);
     body.appendChild(list); body.appendChild(editor); wrap.appendChild(body); wrap.appendChild(rail);
     function addMenu(anchor) {
+      /* V178 — دسکتاپ: همان منوی شعاعی اپ (BuilderRadialMenuOverlay) به‌جای فهرست کوچک */
+      if (window.SiteMobile && window.SiteMobile.radialMenu) {
+        if (document.querySelector('.m-radial-bg')) { document.querySelector('.m-radial-bg').remove(); return; }
+        window.SiteMobile.radialMenu(function (key) {
+          if (key === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
+          if (key === 'bank') { if (state.mode === 'online') openBank(); else toast('بانک سؤال فقط در آزمون آنلاین در دسترس است.', 'err'); return; }
+          state.questions.push(newQuestion(key)); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor();
+        }, null, {cls: 'dk-radial', emoji: true});
+        return;
+      }
       var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
       var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, TYPES.map(function (t) { return el('button', {class: 'btn light sm', text: t[2] + ' ' + t[1], onclick: function () { menu.remove(); state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }}); })
         .concat(state.mode === 'online' ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال', onclick: function () { menu.remove(); openBank(); }})] : []));

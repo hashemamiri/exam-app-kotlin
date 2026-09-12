@@ -473,6 +473,28 @@
      منوی شعاعی نوع سؤال را باز می‌کند (تشریحی، چندگزینه‌ای، صحیح/غلط، جای خالی، عددی، جورکردنی، وارد کردن، بانک سؤال) با رنگ‌های پاستلی
      QuestionDraft.pastelColor؛ در حالت چاپ FAB سوم پیش‌نمایش/چاپ. */
   var PASTEL = {essay: '#FFD1DC', multiple: '#AEC6CF', truefalse: '#B4EEB4', fill: '#FDFD96', numeric: '#C3B1E1', matching: '#FFDAB9', import: '#98FF98', bank: '#E6E6FA'};
+  /* V178 — منوی شعاعی مشترک گوشی و دسکتاپ (BuilderRadialMenuOverlay اپ): دایرهٔ کامل وسط صفحه، شعاع ۳۱٪ عرض (۱۰۴..۱۳۸)، حلقهٔ خط‌چین، ۸ مربع گوشه‌گرد ۶۶dp از ساعت ۱۲ هر ۴۵°، ✕ قرمز در مرکز.
+     onPick(key) بعد از بستن صدا زده می‌شود؛ onClose هنگام بستن با ✕/پس‌زمینه. برمی‌گرداند: عنصر پس‌زمینه (برای remove). */
+  function radialMenu(onPick, onClose, opts) {
+    opts = opts || {};
+    var bg = el('div', {class: 'm-radial-bg' + (opts.cls ? ' ' + opts.cls : '')});
+    function close() { bg.remove(); if (onClose) onClose(); }
+    bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
+    var R = Math.max(104, Math.min(138, window.innerWidth * 0.31));
+    var ring = el('div', {class: 'm-radial', style: '--r:' + R + 'px'});
+    ring.appendChild(el('span', {class: 'm-radial-ring'}));
+    ring.appendChild(el('button', {class: 'm-radial-x', 'aria-label': 'بستن', onclick: close}, [el('span', {class: 'm-fab-plus', text: '+'})]));
+    var items = opts.items || RADIAL;
+    var EMOJI = {essay: '📝', multiple: '🔘', truefalse: '❌✅', fill: '✏️', numeric: '🔢', matching: '🔗', import: '📥', bank: '🏦'};
+    var LBL = {import: 'وارد کردن آزمون'};
+    items.forEach(function (r, i) {
+      var ang = (-90 + i * 360 / items.length) * Math.PI / 180;
+      var x = Math.cos(ang) * R, y = Math.sin(ang) * R;
+      ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';--tx:' + x.toFixed(0) + 'px;--ty:' + y.toFixed(0) + 'px;animation-delay:' + (i * 30) + 'ms', onclick: function () { bg.remove(); if (onClose) onClose(); onPick(r[0]); }}, [el('span', {class: 'g', text: opts.emoji ? (EMOJI[r[0]] || r[2]) : r[2]}), el('span', {class: 'l', text: opts.emoji ? (LBL[r[0]] || r[1]) : r[1]})]));
+    });
+    bg.appendChild(ring); document.body.appendChild(bg);
+    return bg;
+  }
   var RADIAL = [['essay', 'تشریحی', '✎'], ['multiple', 'چندگزینه‌ای', '◉'], ['truefalse', 'صحیح/غلط', '✓'], ['fill', 'جای خالی', '＿'], ['numeric', 'عددی', '۱۲'], ['matching', 'جورکردنی', '↔'], ['import', 'وارد کردن', '⇩'], ['bank', 'بانک سؤال', '▤']];
   function builderFabs(c) {
     var old = document.getElementById('m-bfab'); if (old) old.remove();
@@ -508,24 +530,12 @@
       if (radial) { radial.remove(); radial = null; }
       plus.classList.toggle('on', radialOpen); bar.classList.toggle('radial-open', radialOpen);
       if (!radialOpen) return;
-      radial = el('div', {class: 'm-radial-bg', onclick: function (e) { if (e.target === e.currentTarget) { radialOpen = false; drawRadial(); } }});
-      /* V153 — مثل BuilderRadialMenuOverlay: دایرهٔ کامل وسط صفحه، شعاع ۳۱٪ عرض (۱۰۴..۱۳۸)، حلقهٔ خط‌چین، ۸ مربع گوشه‌گرد ۶۶dp از ساعت ۱۲ هر ۴۵°، دکمهٔ ✕ گرادیانی→قرمز در مرکز */
-      var R = Math.max(104, Math.min(138, window.innerWidth * 0.31));
-      var ring = el('div', {class: 'm-radial', style: '--r:' + R + 'px'});
-      ring.appendChild(el('span', {class: 'm-radial-ring'}));
-      ring.appendChild(el('button', {class: 'm-radial-x', 'aria-label': 'بستن', onclick: function () { radialOpen = false; drawRadial(); }}, [el('span', {class: 'm-fab-plus', text: '+'})]));
-      RADIAL.forEach(function (r, i) {
-        var ang = (-90 + i * 45) * Math.PI / 180;
-        var x = Math.cos(ang) * R, y = Math.sin(ang) * R;
-        ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';--tx:' + x.toFixed(0) + 'px;--ty:' + y.toFixed(0) + 'px;animation-delay:' + (i * 30) + 'ms', onclick: function () {
-          radialOpen = false; drawRadial();
-          if (r[0] === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
-          if (r[0] === 'bank') { var bb = c.querySelector('.b-list .btn.soft'); if (bb) bb.click(); return; }
-          if (addRow) { var b = Array.prototype.filter.call(addRow.querySelectorAll('button'), function (x) { return x.title === typeLabel(r[0]); })[0]; if (b) b.click(); }
-          setTimeout(function () { var ed = c.querySelector('.b-editor'); if (ed && ed.scrollIntoView) ed.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 30);
-        }}, [el('span', {class: 'g', text: r[2]}), el('span', {class: 'l', text: r[1]})]));
-      });
-      radial.appendChild(ring); document.body.appendChild(radial);
+      radial = radialMenu(function (key) {
+        if (key === 'import') { if (window.SiteExtras) window.SiteExtras.importExam(); return; }
+        if (key === 'bank') { var bb = c.querySelector('.b-list .btn.soft'); if (bb) bb.click(); return; }
+        if (addRow) { var b = Array.prototype.filter.call(addRow.querySelectorAll('button'), function (x) { return x.title === typeLabel(key); })[0]; if (b) b.click(); }
+        setTimeout(function () { var ed = c.querySelector('.b-editor'); if (ed && ed.scrollIntoView) ed.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 30);
+      }, function () { radialOpen = false; drawRadial(); });
     }
     document.body.appendChild(bar);
     /* V155 — سؤال‌ها مثل کارت‌های QuestionEditor اپ: کارت تمام‌عرض با رنگ پاستلی نوع، ویرایشگر همان سؤال درست زیر کارت انتخاب‌شده (بازشونده) */
@@ -1109,7 +1119,7 @@
   /* اتصال: app.js در render() اگر active() بود paint() را صدا می‌زند؛ تغییر عرض → رندر دوباره */
   var rerender = function () { if (S.user()) S.render(); };
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
-  window.SiteMobile = {paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
+  window.SiteMobile = {radialMenu: radialMenu, paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
     profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }};
 })();

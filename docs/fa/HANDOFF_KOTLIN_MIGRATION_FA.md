@@ -19013,3 +19013,9 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 ## V177 — هم‌ارتفاعی کادر سؤال
 
 - `height:100%` روی فرزندان grid با `align-items:stretch` در ویرایشگر (که کارت `margin` داشت) کوتاه‌تر می‌شد؛ حالا `b-body{grid-template-rows:minmax(0,1fr)}` و `b-settings/b-editor{height:auto;min-height:0;align-self:stretch;margin:0}`. تست V175 به‌روز شد.
+
+## V178 — منوی شعاعی دسکتاپ
+
+- `mobile.js`: منوی شعاعی به تابع مشترک `radialMenu(onPick, onClose, opts)` درآمد (گوشی همان را استفاده می‌کند؛ `opts.emoji` آیکون‌های ایموجی و برچسب «وارد کردن آزمون» را می‌دهد، `opts.cls` کلاس اضافه). در `SiteMobile` بیرون داده می‌شود.
+- `builder.js addMenu`: اگر `SiteMobile.radialMenu` باشد، منوی شعاعی با `{cls:'dk-radial', emoji:true}` باز می‌شود؛ انتخاب نوع → `newQuestion`؛ `import` → `SiteExtras.importExam`؛ `bank` → `openBank` (فقط آنلاین). فهرست قدیمی `b-addmenu` فقط fallback (و همچنان برای منوی چاپ).
+- CSS `.dk .m-radial-*`: z-index 70، پس‌زمینهٔ تار .55 + blur 6px، آیتم‌های دایره‌ای سفید ۷۸px، ✕ ۷۶px با هالهٔ قرمز، بدون حلقهٔ خط‌چین (مطابق اسکرین‌شات کاربر از اپ). تأیید jsdom: باز شدن، ۸ آیتم، انتخاب «عددی» → سؤال جدید، ✕ می‌بندد. تست: `V178_SiteDesktopRadialMenuTest`.
