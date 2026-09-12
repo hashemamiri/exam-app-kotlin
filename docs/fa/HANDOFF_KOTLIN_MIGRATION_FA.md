@@ -19044,3 +19044,15 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 p_exam text — همان قرارداد `local-…` اپ)؛ فقط کاربر واردنشده (صفحهٔ نمونه) بدون کسر چاپ می‌کند؛ متن پنجره = اپ. `confirmDlg` وقتی
 `.engine-bg` باز است کلاس `over-engine` می‌گیرد؛ `site.css`: `.modal-bg.over-engine{z-index:65}`. `builder.js`: پیش‌نمایش چاپی
 `examId: state.printId || 'local'`؛ کارت‌های چاپی `examId: r.id`. تست `V180_SitePrintCostDialogTest`.
+
+## §V180.1 — رفع حلقهٔ پنجرهٔ هزینهٔ چاپ
+
+**گزارش:** «پس از پرداخت، صفحه رفرش می‌شود و پنجرهٔ کسر هزینه دوباره باز می‌شود.»
+
+**علت (از کد):** `doNative` در `__printBridge.print` بعد از `Window.prototype.print.call(w)` یک fallback `w.print()` داشت؛ ولی
+`webhost.js` خودِ `window.print` موتور را به `requestPrint → callBridge('print')` بازنویسی کرده — یعنی fallback دوباره به همین پل و
+پنجرهٔ هزینه برمی‌گشت. «رفرش» همان `restorePreview → renderPreview` است. پیش از V180 برای آزمون‌های چاپی این مسیر اصلاً اجرا نمی‌شد.
+
+**رفع (`site/src/app.js`):** fallback حذف؛ `ctx.busy` (یک درخواست در جریان)؛ `ctx.paid[mode]` = پیش‌پرداختِ همان نسخه در همان
+پیش‌نمایش (معادل `printPrepaid` اپ) → چاپ دوباره بدون کسر؛ اگر `load` iframe دوباره رخ دهد (`again`) چاپ خودکار `printMode` تکرار نمی‌شود.
+شبیه‌سازی jsdom: دو درخواست هم‌زمان → یک پنجره؛ پرداخت → یک RPC + یک print؛ همان نسخه دوباره → بدون پنجره/کسر؛ نسخهٔ دیگر → پنجره.

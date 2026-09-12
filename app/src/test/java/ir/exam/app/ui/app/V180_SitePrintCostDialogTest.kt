@@ -20,6 +20,10 @@ class V180_SitePrintCostDialogTest {
         assertFalse("if (!printCtx.examId) { doNative(); return; }" in a)
         assertTrue("var examRef = printCtx.examId || 'local';" in a)
         assertTrue("api.chargePrint(examRef, n, mode)" in a)
+        /* V180.1 — بدون حلقه: fallback به w.print() (که به همین پل برمی‌گردد) حذف؛ قفل busy؛ پیش‌پرداخت هر نسخه در همان پیش‌نمایش */
+        assertFalse("try { w.print(); } catch (e2) {}" in a)
+        assertTrue("if (ctx.busy) return;" in a && "if (ctx.paid[mode]) { doNative(); return; }" in a && "ctx.paid[mode] = true;" in a)
+        assertTrue("var again = loadedOnce; loadedOnce = true;" in a && "if (!again && opts.printMode === 'teacher'" in a)
         assertTrue("'مبلغ قابل کسر از کیف پول: '" in a && "'پرداخت و چاپ'" in a)
         assertTrue("class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')" in a)
         assertTrue(".modal-bg.over-engine{z-index:65}" in source("site/src/site.css"))

@@ -2338,22 +2338,31 @@ window.__HEADER_SCHEMA = {
     },
     print: function (mode) {
       if (!printCtx) return;
-      var w = printCtx.iframe.contentWindow;
+      var ctx = printCtx, w = ctx.iframe.contentWindow;
       var doNative = function () {
-        try { w.focus(); w.Window.prototype.print.call(w); } catch (e) { try { w.print(); } catch (e2) {} }
-        setTimeout(function () { try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} }, 400);
+        ctx.busy = true;
+        /* V180.1 — فقط چاپ بومی مرورگر؛ w.print() موتور دوباره به همین پل برمی‌گشت (حلقهٔ پنجرهٔ هزینه) */
+        try { w.focus(); w.Window.prototype.print.call(w); } catch (e) { console.warn('print', e); }
+        setTimeout(function () { ctx.busy = false; try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} }, 400);
       };
-      var restore = function () { try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
+      var restore = function () { ctx.busy = false; try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
+      /* V180.1 — یک درخواست در جریان (پنجرهٔ هزینه باز / چاپ بومی) → درخواست دوباره نادیده گرفته می‌شود */
+      if (ctx.busy) return;
       /* V180 — مثل PrintCostConfirmDialog اپ: هر چاپی (آنلاین، چاپی، محلی) اول پنجرهٔ هزینه؛ فقط مهمانِ صفحهٔ نمونه بدون کسر */
       if (!user) { doNative(); return; }
-      var examRef = printCtx.examId || 'local';
+      /* V180.1 — مثل printPrepaid اپ: هزینهٔ این نسخه در همین پنجرهٔ پیش‌نمایش یک‌بار پرداخت شده → چاپ دوباره بدون کسر */
+      ctx.paid = ctx.paid || {};
+      if (ctx.paid[mode]) { doNative(); return; }
+      ctx.busy = true;
+      var examRef = ctx.examId || 'local';
       /* V132 — هزینهٔ چاپ: ۱۰۰۰ تومان به‌ازای هر سؤال، تأیید پیش از پنجرهٔ چاپ */
-      var n = printCtx.questionCount || 0, cost = n * PRINT_COST_PER_Q;
+      var n = ctx.questionCount || 0, cost = n * PRINT_COST_PER_Q;
       confirmDlg(mode === 'teacher' ? 'چاپ با کلید (پاسخ‌نامه)' : 'چاپ آزمون', 'هزینهٔ چاپ: ' + fa(PRINT_COST_PER_Q) + ' تومان به‌ازای هر سؤال<br>تعداد سؤال: ' + fa(n) + '<br><b>مبلغ قابل کسر از کیف پول: ' + money(cost) + '</b>', 'پرداخت و چاپ').then(function (ok) {
         if (!ok) { restore(); return; }
         api.chargePrint(examRef, n, mode).then(function (r) {
+          ctx.paid[mode] = true;
           toast('کسر ' + money(r.cost || cost) + ' با موفقیت انجام شد.', 'ok');
-          doNative();
+          if (printCtx === ctx) doNative(); else ctx.busy = false;
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
       });
     }
@@ -2406,7 +2415,10 @@ window.__HEADER_SCHEMA = {
     printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
     var inlined = inlinePrintImages(payload);
+    var loadedOnce = false;
     iframe.addEventListener('load', function () {
+      /* V180.1 — اگر مرورگر iframe را دوباره بارگذاری کند (مثلاً پس از پنجرهٔ چاپ)، داده دوباره تزریق می‌شود ولی چاپِ خودکار (printMode) تکرار نمی‌شود */
+      var again = loadedOnce; loadedOnce = true;
       var w = iframe.contentWindow, tries = 0;
       (function push() {
         tries++;
@@ -2414,7 +2426,7 @@ window.__HEADER_SCHEMA = {
           if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs && inlined.done) {
             w.setExamData(payload);
             /* V156 — مثل ExamHtmlPrintDialog: printMode=student/teacher یعنی بدون توقف در پیش‌نمایش، مستقیم چاپ */
-            setTimeout(function () { try { if (opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
+            setTimeout(function () { try { if (!again && opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (!again && opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
             return;
           }
         } catch (e) {}
