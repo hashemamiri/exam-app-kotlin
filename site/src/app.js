@@ -842,9 +842,12 @@
       ['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']
     ],
     /* V168 — صفحهٔ «منو»ی دسکتاپ معلم = منوی همبرگری اپ/گوشی (menuScreen در mobile.js) */
-    teacherMenu: [['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['print', '🖨', 'چاپ آزمون', 'آزمون‌های چاپی و برگه'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و وضعیت'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['profile', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['tools', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
+    teacherMenu: [['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['print', '🖨', 'چاپ آزمون', 'آزمون‌های چاپی و برگه'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و وضعیت'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
     student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['calendar', '📅', 'تقویم و پیام‌ها'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']],
-    manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']]
+    manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']],
+    /* V171 — صفحهٔ «منو»ی مدیر و دانش‌آموز = منوی همبرگری اپ (ExamApp.kt:995-1060) */
+    managerMenu: [['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت', 'school'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و مدیریت', 'school', {students: true}], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['site', '🌐', 'سایت', 'onlineexam.ir'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
+    studentMenu: [['join', '🔑', 'آزمون', 'ورود با کد آزمون'], ['grades', '📊', 'نتایج من', 'پاسخ‌ها و کارنامه'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]
   };
   var ROLE_LABEL = {teacher: 'معلم', student: 'دانش‌آموز', manager: 'مدیر / معاون'};
   /* V147 — PWA: ثبت Service Worker، پیشنهاد نصب (اندروید/کروم) و راهنمای iOS؛ اعلان نسخهٔ جدید */
@@ -898,6 +901,7 @@
     bank: '<path d="M3 10l9-5 9 5H3zM5 10v7M10 10v7M14 10v7M19 10v7M3 20h18"/>',
     reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     grading: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>',
+    site: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/>',
     tools: '<path d="M4 20l6-6M14 4l6 6M10 14l4-4M13 3l8 8-4 4-8-8z"/>',
@@ -907,6 +911,8 @@
     grades: '<path d="M4 4h16v13H4zM8 21h8M12 17v4M8 12l3-3 2 2 3-4"/>',
     teachers: '<circle cx="12" cy="7" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7M3 4l4 1M21 4l-4 1"/>',
     school: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5M22 9v6"/>',
+    account: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     print: '<path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/>',
     logout: '<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/>',
     back: '<path d="M15 6l-6 6 6 6"/>',
@@ -933,7 +939,7 @@
       el('div', {class: 'foot'}, [el('button', {class: 'btn light', style: 'width:100%', text: 'خروج از حساب', onclick: doLogout})])
     ]);
     var items = menu.filter(function (x) { return x !== '-'; });
-    var title = view.panel === 'menu' ? 'منو' : (items.concat(MENUS.teacherMenu).filter(function (x) { return x[0] === view.panel; })[0] || ['', '', ''])[2];
+    var title = view.panel === 'menu' ? 'منو' : ((MENUS[user.role + 'Menu'] || []).concat(items, MENUS.teacherMenu).filter(function (x) { return x[0] === view.panel; })[0] || ['', '', ''])[2];
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
     function railItem(key, label) {
       return el('button', {class: 'dk-rail-item' + (view.panel === key ? ' active' : ''), 'aria-label': label, 'aria-current': view.panel === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
@@ -960,22 +966,22 @@
   /* V165 — صفحهٔ «منو»: کارت پروفایل (نام، نقش، ایمیل/نام کاربری) + شبکهٔ کارت‌های همهٔ بخش‌ها + خروج */
   function pageMenu(c) {
     c.innerHTML = '';
-    var menu = user.role === 'teacher' ? MENUS.teacherMenu : (MENUS[user.role] || MENUS.student).filter(function (x) { return x !== '-'; });
+    var menu = MENUS[user.role + 'Menu'] || MENUS.teacherMenu;
     var sub = user.email && !/student\.exam\.local$/.test(user.email) ? user.email : (user.username || '');
     /* V169 — کارت پروفایل هم‌اندازهٔ بقیهٔ کارت‌ها (اولین کارت شبکه) */
-    var profileCard = el('button', {class: 'dk-mcard dk-mcard-profile', onclick: function () { dkGo('profile'); }}, [
+    var profileCard = el('button', {class: 'dk-mcard dk-mcard-profile', onclick: function () { view.panel = 'account'; view.arg = {tab: 'profile'}; render(); }}, [
       el('span', {class: 'dk-mhead'}, [el('span', {class: 'avatar dk-av', text: (user.name || '?').trim().charAt(0)}), el('span', {class: 'dk-pinfo'}, [el('small', {text: 'پروفایل ' + ROLE_LABEL[user.role]}), el('strong', {text: user.name || ''})])]),
       el('small', {text: sub})
     ]);
     function mcard(key, label, subLabel, danger, on) {
       return el('button', {class: 'dk-mcard' + (danger ? ' danger' : '') + (view.arg === key ? ' selected' : ''), onclick: on}, [el('span', {class: 'dk-mhead'}, [dkIcon(key, 'dk-mini'), el('strong', {text: label})]), el('small', {text: subLabel})]);
     }
-    c.appendChild(el('div', {class: 'dk-grid'}, [profileCard].concat(menu.map(function (it) { return mcard(it[0], it[2], it[3] || DK_SUBS[it[0]] || '', false, function () { dkGo(it[0]); }); }))
-      .concat([mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, doLogout)])));
+    c.appendChild(el('div', {class: 'dk-grid'}, [profileCard].concat(menu.map(function (it) { return mcard(it[0], it[2], it[3] || DK_SUBS[it[0]] || '', false, function () { if (it[0] === 'account') { view.panel = 'account'; view.arg = {tab: 'account'}; render(); } else if (it[0] === 'site') { toast('شما هم‌اکنون در سایت هستید.', 'ok'); } else if (it[4]) { view.panel = it[4]; view.arg = it[5] || null; render(); } else dkGo(it[0]); }); }))
+      .concat([mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, async function () { if (await confirmDlg('خروج از حساب', 'از حساب خارج می‌شوید؟', 'خروج', true)) doLogout(); })])));
   }
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
-    var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
+    var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, account: pageAccount, settings: pageSettings, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
       builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
   }
@@ -1224,6 +1230,10 @@
     c.appendChild(el('div', {class: 'row', style: 'margin-bottom:6px'}, [el('button', {class: 'btn', text: '➕ آزمون چاپی جدید', onclick: function () { view.panel = 'builder'; view.arg = {mode: 'print', fresh: true}; render(); }})]));
     if (window.SiteBuilder) c.appendChild(window.SiteBuilder.printExamsSection(function () { pagePrint(c); }));
   }
+
+  /* V170 — «حساب» و «تنظیمات» دسکتاپ = دقیقاً همان صفحه‌های گوشی/اپ (ProfileSettingsScreen با مقصد ACCOUNT / SETTINGS) */
+  function pageAccount(c) { var M = window.SiteMobile; if (!M || !M.profileScreen) return pageProfile(c); c.innerHTML = ''; var w = el('div', {class: 'dk-mwrap m-mode'}); c.appendChild(w); if (view.arg && view.arg.tab) { M.setProfileTab(view.arg.tab); view.arg = null; } M.profileScreen(w); }
+  function pageSettings(c) { var M = window.SiteMobile; if (!M || !M.settingsScreen) return pageTools(c); c.innerHTML = ''; var w = el('div', {class: 'dk-mwrap m-mode'}); c.appendChild(w); M.settingsScreen(w); }
 
   /* ---- پروفایل ---- */
   async function pageProfile(c) {

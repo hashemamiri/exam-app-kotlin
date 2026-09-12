@@ -18968,3 +18968,17 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 ## V169 — کارت پروفایل هم‌اندازه؛ «پروفایل» خارج از ریل
 
 - `pageMenu`: `profileCard` (`button.dk-mcard.dk-mcard-profile`) اولین عضو `.dk-grid`؛ `.dk-profile/.dk-back` حذف شدند. `MENUS.teacher` بدون `profile` و بدون جداکننده.
+
+## V170 — کارت‌های منو = صفحه‌های اپ
+
+- `MENUS.teacherMenu`: کلیدها `account` و `settings` (به‌جای `profile`/`tools`). `pages` شامل `account: pageAccount, settings: pageSettings`.
+- `pageAccount`/`pageSettings`: داخل `div.dk-mwrap.m-mode` همان `SiteMobile.profileScreen` / `SiteMobile.settingsScreen` را می‌سازند (تب از `view.arg.tab`: کارت پروفایل → `profile`، کارت حساب → `account`). fallback: `pageProfile`/`pageTools`.
+- `mobile.js`: `paint()` وقتی دسکتاپ است و `#m-shell` نیست فقط `S.render()` را صدا می‌زند (تا کلیک روی چیپ‌ها صفحهٔ دسکتاپ را نشکند)؛ `window.SiteMobile` حالا `profileScreen`, `settingsScreen`, `setProfileTab` را هم بیرون می‌دهد؛ `paint` صفحهٔ `account`/`settings` را می‌شناسد.
+- `site.css`: بلوک `.dk .dk-mwrap` (حداکثر ۷۶۰px، کارت‌های سفید، چیپ فعال).
+- «خروج»: `confirmDlg('خروج از حساب', …)` قبل از `doLogout`. تست: `V170_SiteDesktopMenuTargetsTest`.
+
+## V171 — منوی دسکتاپ مدیر و دانش‌آموز = اپ
+
+- `MENUS.managerMenu` / `MENUS.studentMenu` (app.js) از `ExamApp.kt:995-1060` گرفته شده؛ فرمت هر مورد `[key, emoji, label, sub, panelOverride?, arg?]`: «کلاس‌ها»→`school`، «دانش‌آموزان»→`school {students:true}` (اسکرول به بخش دانش‌آموزان)، «سایت»→فقط toast، «حساب»→`account` تب `account`، «تنظیمات»→`settings`.
+- `pageMenu`: `menu = MENUS[user.role + 'Menu'] || MENUS.teacherMenu`. عنوان `dk-top` اول از منوی نقش خوانده می‌شود (تا «نتایج من»/«تقویم» مثل اپ باشد). آیکون `site` به `DK_ICONS` اضافه شد.
+- تأیید با jsdom برای سه نقش: هر کارت → پنل/عنوان/چیپ درست. تست: `V171_SiteDesktopRoleMenusTest`.

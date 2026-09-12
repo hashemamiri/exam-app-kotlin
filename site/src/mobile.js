@@ -1041,6 +1041,8 @@
   function paint() {
     cleanupBuilder();
     var root = document.getElementById('root'); if (!root) return;
+    /* V170 — وقتی صفحه‌های حساب/تنظیمات روی دسکتاپ (بدون پوستهٔ گوشی) استفاده می‌شوند، بازنقاشی = رندر پنل دسکتاپ */
+    if (!MQ.matches && !document.getElementById('m-shell')) { S.render(); return; }
     var shell = document.getElementById('m-shell');
     if (!shell) { shell = el('div', {class: 'm-shell', id: 'm-shell'}); root.innerHTML = ''; root.appendChild(shell); }
     shell.innerHTML = '';
@@ -1065,15 +1067,15 @@
     if (ui.addOpen && page !== 'builder') shell.appendChild(quickAdd());
     if (ui.menuOpen) content.appendChild(mgr ? managerMenu() : menuScreen());
     else if (mgr && page === 'cards') managerCards(content);
-    else if (mgr && page === 'profile') profileScreen(content);
-    else if (mgr && page === 'tools') settingsScreen(content);
+    else if (mgr && (page === 'profile' || page === 'account')) profileScreen(content);
+    else if (mgr && (page === 'tools' || page === 'settings')) settingsScreen(content);
     else if (mgr) S.renderPage(content);
     else if (page === 'exams' || page === 'dashboard') examsScreen(content);
     else if (page === 'cards') cardsScreen(content);
     else if (page === 'print') printCenter(content);
     else if (page === 'students' && !mgr) studentsScreen(content);
-    else if (page === 'profile') profileScreen(content);
-    else if (page === 'tools') settingsScreen(content);
+    else if (page === 'profile' || page === 'account') profileScreen(content);
+    else if (page === 'tools' || page === 'settings') settingsScreen(content);
     else S.renderPage(content);
     if (page === 'builder') content.classList.add('m-builder');
   }
@@ -1099,13 +1101,15 @@
     if (inExam) { if (window.SiteStudent) window.SiteStudent.page(content, view.arg); return; }
     if (ui.menuOpen) content.appendChild(studentMenu());
     else if (page === 'dashboard' || page === 'join') studentHome(content);
-    else if (page === 'profile') profileScreen(content);
-    else if (page === 'tools') settingsScreen(content);
+    else if (page === 'profile' || page === 'account') profileScreen(content);
+    else if (page === 'tools' || page === 'settings') settingsScreen(content);
     else S.renderPage(content);
   }
 
   /* اتصال: app.js در render() اگر active() بود paint() را صدا می‌زند؛ تغییر عرض → رندر دوباره */
   var rerender = function () { if (S.user()) S.render(); };
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
-  window.SiteMobile = {paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth, teacherCards: teacherCards, icons: I};
+  window.SiteMobile = {paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
+    /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
+    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }};
 })();

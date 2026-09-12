@@ -1030,3 +1030,8 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 .dk-gcard .m-deck-top small{font-size:11px;opacity:.72}
 .dk-gcard b{font-size:22px;font-weight:800;margin-top:auto}
 .dk-gcard .dk-gdesc{font-size:13px;line-height:1.7;opacity:.88}
+
+/* V170 — «حساب»/«تنظیمات» دسکتاپ با همان کارت‌های گوشی (m-pcard) در یک ستون وسط */
+.dk .dk-mwrap{background:transparent;max-width:760px;margin:0 auto;font-size:15px}
+.dk .dk-mwrap .m-pcard,.dk .dk-mwrap .card{background:#fff;border:1px solid var(--line);box-shadow:0 10px 28px rgba(28,49,62,.065)}
+.dk .dk-mwrap .m-chip.on{background:#e6f0f3;border-color:#39758a;color:#1f4f5e}
