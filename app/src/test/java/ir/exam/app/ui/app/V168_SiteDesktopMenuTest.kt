@@ -18,8 +18,8 @@ class V168_SiteDesktopMenuTest {
         val a = source("site/src/app.js")
         assertTrue("['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']\n    ]," in a)
         assertTrue("teacherMenu: [['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['print', '🖨', 'چاپ آزمون', 'آزمون‌های چاپی و برگه'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و وضعیت'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]" in a)
-        assertTrue("var menu = user.role === 'teacher' ? MENUS.teacherMenu : (MENUS[user.role] || MENUS.student)" in a)
-        assertTrue("items.concat(MENUS.teacherMenu).filter(" in a)
+        assertTrue("var menu = MENUS[user.role + 'Menu'] || MENUS.teacherMenu;" in a) // V171
+        assertTrue("concat(items, MENUS.teacherMenu).filter(" in a)
         assertTrue("function pagePrint(c)" in a && "print: pagePrint" in a && "window.SiteBuilder.printExamsSection(function () { pagePrint(c); })" in a && "view.arg = {mode: 'print', fresh: true}; render();" in a)
     }
 }

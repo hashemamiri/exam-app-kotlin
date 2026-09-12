@@ -33,7 +33,7 @@ class V164_SiteLoginPageTest {
         assertFalse("class: 'hero'" in a || "class: 'roles'" in a)
         assertTrue("'ورود با کد ایمیل'" in a && "'فراموشی رمز'" in a && "googleButton('teacher')" in a)
         // V164.1 — بدون پانویس و دموها (درخواست کاربر)
-        assertFalse("class: 'demos'" in a || "class: 'foot'" in a)
+        assertFalse("class: 'demos'" in a || "class: 'land-foot'" in a || "class: 'landing-foot'" in a)
         assertTrue("'دانش‌آموزان نیازی به ثبت‌نام ندارند؛ معلم برایشان حساب می‌سازد.'" in a)
         val css = source("site/src/site.css")
         assertTrue(".lp{--bg:#E9EEF5" in css && ".m-dark .lp{--bg:#1F2530" in css && "--cta1:#5B52E8;--cta2:#0A8571" in css && ".lp .eye{" in css)

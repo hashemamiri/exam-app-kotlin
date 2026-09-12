@@ -19,7 +19,7 @@ class V166_SiteDesktopBuilderTest {
         assertTrue("function settingsForm(m_)" in b && "settingsForm(m);" in b && "settingsForm(settings);" in b)
         assertTrue("class: 'b-settings card'" in b && "settings.addEventListener('input', syncMeta)" in b && "function syncMeta()" in b)
         assertTrue("class: 'b-rail', 'aria-label': 'ابزار سازنده'" in b && "function drawRail()" in b && "function addMenu(anchor)" in b)
-        assertTrue("'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'" in b && "'سؤال بعدی'" in b && "preview('teacher'); }" in b)
+        assertTrue("'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'" in b && "'سؤال بعدی'" !in b && "preview('teacher'); }" in b)
         assertTrue("class: 'b-rail-num' + (i === state.selected ? ' active' : '')" in b)
         assertTrue("class: 'b-types'" in b && "function changeType(q, t)" in b && "changeType(q, t[0]); mark(); drawList(); drawEditor();" in b)
         assertTrue("' has-settings'" in b && "wrap.appendChild(rail);" in b)

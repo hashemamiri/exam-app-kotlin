@@ -33,7 +33,7 @@ class V162_SiteSpeedSettingsTest {
     @Test
     fun `mobile settings screen mirrors AppearanceSection`() {
         val m = source("site/src/mobile.js")
-        assertTrue("function settingsScreen(" in m && "page === 'tools') settingsScreen(content)" in m)
+        assertTrue("function settingsScreen(" in m && "page === 'tools' || page === 'settings') settingsScreen(content)" in m)
         for (t in listOf("حالت نمایش", "چیدمان دستگاه", "ظاهر نئومورفیک — پالت رنگ", "ظاهر نئومورفیک — عمق سایه", "ظاهر نئومورفیک — پیش‌نمایش", "قلم فارسی", "اندازه متن", "بازگردانی تنظیمات ظاهری", "native_manager_export_backup_v61")) assertTrue(t, t in m)
         assertTrue("'#6C63F5', '#27C4A8'" in m && "'#1877D2', '#32B7C6'" in m && "'#E96D8A', '#FFA14E'" in m && "'#8C5AD7', '#EC6DA7'" in m)
         val css = source("site/src/site.css")

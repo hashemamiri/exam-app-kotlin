@@ -33,7 +33,7 @@ class V142_SitePhase5Test {
         val app = source("site/src/app.js")
         assertTrue("SiteSchool.studentsPage" in app && "SiteSchool.rosterDlg" in app && "SiteSchool.classShareChip" in app)
         assertTrue("SiteSchool.joinSchoolCard" in app && "SiteSchool.managerRequestsCard" in app && "SiteSchool.bankPage" in app)
-        assertTrue("['bank', '🏦', 'بانک سؤال']" in app)
+        assertTrue("bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }" in app) // V167: بانک از کارت‌ها باز می‌شود
         assertTrue("school.js" in source("site/build_site.py"))
         assertTrue("window.SiteSchool" in source("site/index.html"))
     }

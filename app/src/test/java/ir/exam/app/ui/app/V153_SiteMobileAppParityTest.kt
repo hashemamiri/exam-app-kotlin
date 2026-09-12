@@ -25,7 +25,7 @@ class V153_SiteMobileAppParityTest {
     @Test
     fun `management cards are a swipeable deck like TeacherManagementCardsScreen`() {
         val m = source("site/src/mobile.js")
-        assertTrue("function cardsDeck(c, key, cards)" in m && "Math.abs(dx) > 52" in m && "cardsDeck(c, 'teacher', cards)" in m && "cardsDeck(c, 'manager', cards)" in m)
+        assertTrue("function cardsDeck(c, key, cards)" in m && "Math.abs(dx) > 52" in m && "cardsDeck(c, 'teacher', teacherCards())" in m && "cardsDeck(c, 'manager', cards)" in m)
         assertTrue("ui.cycle = true" in m)
         for (g in listOf("#E0587F,#7D6CF4", "#4D5B74,#273247", "#7D6CF4,#E0587F", "#0EA5E9,#6366F1", "#2878DB,#24B8C8", "#25BFA4,#45D7BD")) assertTrue(g, "linear-gradient(135deg,$g)" in m)
         val css = source("site/src/site.css")
@@ -36,7 +36,7 @@ class V153_SiteMobileAppParityTest {
     @Test
     fun `builder radial menu is a full circle centred like BuilderRadialMenuOverlay`() {
         val m = source("site/src/mobile.js")
-        assertTrue("Math.max(104, Math.min(138, window.innerWidth * 0.31))" in m && "(-90 + i * 45) * Math.PI / 180" in m && "class: 'm-radial-x'" in m)
+        assertTrue("Math.max(104, Math.min(138, window.innerWidth * 0.31))" in m && "(-90 + i * 360 / items.length) * Math.PI / 180" in m && "class: 'm-radial-x'" in m)
         assertTrue("builder: 'ساخت آزمون'" in m && "ttl = 'ویرایش آزمون'" in m)
         val css = source("site/src/site.css")
         assertTrue(".m-radial{position:fixed;left:50%;top:50%" in css && "border:2px dashed" in css && "#E5484D,#B91C35" in css && ".m-bfab.radial-open .m-fab.add{visibility:hidden}" in css)

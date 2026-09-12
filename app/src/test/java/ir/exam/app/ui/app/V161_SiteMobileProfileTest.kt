@@ -18,7 +18,7 @@ class V161_SiteMobileProfileTest {
         assertTrue("async function profileScreen(" in m && "class: 'm-chip" in m && "function acc(" in m)
         for (t in listOf("مشخصات حساب", "پیوستن به مدرسه", "تغییر نام کاربری", "تغییر ایمیل", "تغییر رمز عبور", "حذف حساب")) assertTrue(t, t in m)
         assertTrue("localStorage" in m && "examsite.avatar." in m && "localAvatar(u.id)" in m)
-        assertTrue("page === 'profile') profileScreen(content)" in m)
+        assertTrue("page === 'profile' || page === 'account') profileScreen(content)" in m)
         val a = source("site/src/app.js")
         assertTrue("verifyCurrentPassword:" in a && "grant_type=password" in a && "updateEmail:" in a)
         val css = source("site/src/site.css")

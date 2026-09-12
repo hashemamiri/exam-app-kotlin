@@ -20,7 +20,7 @@ class V146_SiteMobileTest {
         assertTrue(".field input,.field select,.field textarea{font-size:16px}" in css)
         val app = source("site/src/app.js")
         assertTrue("function toggleSidebar()" in app && "function closeSidebar()" in app && "function wrapTables(rootEl)" in app)
-        assertTrue("el('nav', {class: 'bottom-nav'" in app && "[side, sbBg, main, bottom]" in app)
+        assertTrue("el('nav', {class: 'bottom-nav'" in app && "[side, sbBg, main, bottom, rail]" in app)
         assertTrue("viewport-fit=cover" in source("site/src/template.html"))
     }
 }

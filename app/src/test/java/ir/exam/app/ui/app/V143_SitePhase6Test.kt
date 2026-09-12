@@ -35,7 +35,7 @@ class V143_SitePhase6Test {
         val app = source("site/src/app.js")
         assertTrue("SiteExtras.reportsPage" in app && "SiteExtras.exportExamDlg" in app && "SiteExtras.importExam" in app)
         assertTrue("SiteExtras.backupCard" in app && "SiteExtras.deleteAccountCard" in app && "SiteExtras.googleButton" in app && "SiteExtras.recoveryFlow" in app && "SiteExtras.handleOAuthReturn" in app)
-        assertTrue("['reports', '📈', 'گزارش‌ها']" in app)
+        assertTrue("reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c, view.arg); }" in app) // V172
         assertTrue("verifyRecoveryOtp: async function" in app && "native_my_profile" in app)
         val b = source("site/src/builder.js")
         assertTrue("arg.importPkg" in b && "SiteExtras.audioDlg" in b)
