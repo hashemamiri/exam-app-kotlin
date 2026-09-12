@@ -19096,3 +19096,14 @@ p_exam text — همان قرارداد `local-…` اپ)؛ فقط کاربر و
 - بزرگ‌ترین بار باقی‌مانده: `engines.<hash>.js` ۵٫۳ MB (math_host.js ۱٫۴۶ MB + main.css ۱٫۸ MB درون‌خطی + قلم‌ها). یک‌بار دانلود و
   immutable کش می‌شود؛ کوچک‌سازی آن نیازمند minify/gzip در Pages است (Cloudflare خودش br/gzip می‌دهد؛ ~۱٫۲ MB روی سیم).
 تست: `V181_SiteAuditTest`.
+
+## §V182 — minify خروجی سایت
+
+`site/build_site.py`: `sys.path` ← `site/tools` (rjsmin 1.2.5 / rcssmin 1.2.2، Apache-2.0، فایل مجوز کنار آن‌ها؛ pure-python بدون
+وابستگی، CI بدون pip اضافه). `min_js/min_css` روی: CSS و JS هر فایل موتور چاپ (داخل `build_print_engine`)، `site.css`، JS ترکیبی سایت.
+`SITE_NO_MINIFY=1` برای اشکال‌زدایی خروجی خوانا. فرمول (formula.html) دست‌نخورده (HTML آماده). نتیجه: index 686k→557k (gzip 143k)،
+engines 5.59M→5.35M (gzip 1.66M). چرا بیشتر نه: ۹۶۰k از math_host.js رشته‌های CSS/HTML درون‌خطی‌اند و ۱۳۵k قلم base64 موتور — minifier
+به داخل رشته دست نمی‌زند؛ کاهش واقعی بعدی فقط با بازنویسی موتور فرمول است. تأیید: jsdom harness (۶ حالت، ~۲۰۰۰ کلیک، صفر خطا) +
+موتور print (setExamData/showPreview/برگه) و formula روی نسخهٔ minify‌شده. جای‌نگهدار anon key در ۴k اول index حفظ می‌شود (site.yml).
+هشدار: تست‌هایی که رشته‌ای را در `site/index.html` می‌جویند باید با نسخهٔ minify‌شده سازگار باشند (فاصله/کامنت حذف می‌شود)؛ رشته‌های
+فعلی (window.SiteSchool/SiteExtras/SiteAdmin, cal_month) سالم‌اند. تست: `V182_SiteMinifyTest`.

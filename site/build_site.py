@@ -14,6 +14,12 @@ import json
 import os
 import re
 import sys
+# V182 — کوچک‌سازی (rjsmin/rcssmin، Apache-2.0، در site/tools): فقط خروجی سایت؛ دارایی‌های اپ دست‌نخورده
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+import rjsmin, rcssmin
+MINIFY = os.environ.get("SITE_NO_MINIFY") != "1"
+def min_js(src): return rjsmin.jsmin(src) if MINIFY else src
+def min_css(src): return rcssmin.cssmin(src) if MINIFY else src
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "app", "src", "main", "assets")
@@ -72,12 +78,12 @@ def build_print_engine():
         css = read(os.path.join(WEB, name))
         for url, path in fonts.items():
             css = css.replace('url("%s")' % url, 'url("%s")' % font_data_url(path))
-        parts.append("<style>%s</style>" % css)
+        parts.append("<style>%s</style>" % min_css(css))
     parts.append("</head><body>")
     for name in js_files:
         js = read(os.path.join(WEB, name))
         js = js.replace("'/figure_atlas/", "'" + ATLAS_BASE)
-        parts.append("<script>%s</script>" % js)
+        parts.append("<script>%s</script>" % min_js(js))
         if name == "host_dom.js":
             parts.append("<script>document.write(window.__APP_HOST_DOM);</script>")
     parts.append("</body></html>")
@@ -121,9 +127,9 @@ def main():
     inline += "\nwindow.__HEADER_SCHEMA = %s;" % read(os.path.join(ASSETS, "print", "header_settings_schema.json")).strip()
     out = (tpl.replace("/*__SUPABASE_URL__*/", SUPABASE_URL)
               .replace("/*__VAZIR_CSS__*/", vazir)
-              .replace("/*__SITE_CSS__*/", site_css)
+              .replace("/*__SITE_CSS__*/", min_css(site_css))
               .replace("/*__ENGINES_JS__*/", inline)
-              .replace("/*__SITE_JS__*/", site_js.replace("</script", "<\\/script")))
+              .replace("/*__SITE_JS__*/", min_js(site_js).replace("</script", "<\\/script")))
     for m in ("/*__SUPABASE_URL__*/", "/*__VAZIR_CSS__*/", "/*__SITE_CSS__*/", "/*__ENGINES_JS__*/", "/*__SITE_JS__*/"):
         if m in out:
             sys.exit("جای‌نگهدار جایگزین نشد: " + m)
