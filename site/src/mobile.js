@@ -264,7 +264,8 @@
     c.appendChild(el('div', {class: 'm-deck'}, [stage, dots, info]));
   }
   /* ---------- کارت‌ها (TeacherManagementCardsScreen) ---------- */
-  function cardsScreen(c) {
+  /* V167 — فهرست کارت‌ها مشترک با صفحهٔ «کارت‌ها»ی دسکتاپ (app.js → pageCards) */
+  function teacherCards() {
     var cards = [
       ['آمار', 'نمودارها، میانگین‌ها و تحلیل کیفیت سؤال‌های آزمون را نشان می‌دهد.', 'reports', 'linear-gradient(135deg,#6C63F5,#27C4A8)', function () { go('reports', {section: 'stats'}); }],
       ['کارنامه', 'کارنامه و لیست نمرات کلاس؛ انتخاب آزمون‌ها و خروجی Excel یا PDF.', 'reports', 'linear-gradient(135deg,#0EA5E9,#6366F1)', function () { go('reports', {section: 'grades'}); }],
@@ -274,8 +275,9 @@
       ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#4D5B74,#273247)', function () { go('grading', {filter: 'graded'}); }],
       ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('dashboard', {requests: true}); }]
     ];
-    cardsDeck(c, 'teacher', cards);
+    return cards;
   }
+  function cardsScreen(c) { cardsDeck(c, 'teacher', teacherCards()); }
 
   /* ---------- دانش‌آموز (StudentHomeScreen + منوی ۶کارتی؛ در اپ داک ندارد، نوار بالا با ☰) ---------- */
   function studentMenu() {
@@ -1105,5 +1107,5 @@
   /* اتصال: app.js در render() اگر active() بود paint() را صدا می‌زند؛ تغییر عرض → رندر دوباره */
   var rerender = function () { if (S.user()) S.render(); };
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
-  window.SiteMobile = {paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth};
+  window.SiteMobile = {paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth, teacherCards: teacherCards, icons: I};
 })();

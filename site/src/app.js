@@ -840,7 +840,7 @@
   var MENUS = {
     teacher: [
       ['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['bank', '🏦', 'بانک سؤال'], ['reports', '📈', 'گزارش‌ها'],
-      ['grading', '✅', 'تصحیح'], ['calendar', '📅', 'تقویم و پیام‌ها'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']
+      ['grading', '✅', 'تصحیح'], ['calendar', '📅', 'تقویم و پیام‌ها'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها'], '-', ['profile', '👤', 'پروفایل']
     ],
     student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['calendar', '📅', 'تقویم و پیام‌ها'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']],
     manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول'], ['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']]
@@ -900,6 +900,7 @@
     calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18M16 14h2"/>',
     tools: '<path d="M4 20l6-6M14 4l6 6M10 14l4-4M13 3l8 8-4 4-8-8z"/>',
+    cards: '<rect x="4" y="6" width="11" height="15" rx="2" transform="rotate(-8 9.5 13.5)"/><rect x="10" y="4" width="11" height="15" rx="2" transform="rotate(8 15.5 11.5)"/>',
     profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
     join: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M15 12v2"/>',
     grades: '<path d="M4 4h16v13H4zM8 21h8M12 17v4M8 12l3-3 2 2 3-4"/>',
@@ -910,7 +911,7 @@
     brand: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>'
   };
   var DK_SUBS = {dashboard: 'خلاصهٔ وضعیت و آمار', exams: 'فهرست و مدیریت', builder: 'ساخت آزمون آنلاین / چاپی', classes: 'فهرست و اعضا', students: 'فهرست و وضعیت', bank: 'سؤال‌های ذخیره‌شده',
-    reports: 'کارنامه و لیست نمرات', grading: 'تشریحی و نظارت', calendar: 'رویدادها و پیام‌ها', wallet: 'موجودی و شارژ', tools: 'فرمول، جدول، تناوبی', profile: 'مشخصات و امنیت حساب',
+    reports: 'کارنامه و لیست نمرات', grading: 'تشریحی و نظارت', calendar: 'رویدادها و پیام‌ها', wallet: 'موجودی و شارژ', tools: 'فرمول، جدول، تناوبی', cards: 'آمار، کارنامه، بانک، تصحیح، درخواست‌ها', profile: 'مشخصات و امنیت حساب',
     join: 'ورود با کد معلم', grades: 'نمرات و نتایج', teachers: 'معلم‌های مدرسه', school: 'مشخصات مدرسه'};
   function dkIcon(name, cls) { return el('span', {class: 'dk-ic ' + (cls || ''), html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (DK_ICONS[name] || DK_ICONS.dashboard) + '</svg>'}); }
   function dkGo(panel) { view.panel = panel; view.arg = null; closeSidebar(); render(); }
@@ -972,7 +973,7 @@
   }
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
-    var pages = {menu: pageMenu, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
+    var pages = {menu: pageMenu, cards: pageCards, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
       builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
   }
@@ -1199,6 +1200,20 @@
     ta.addEventListener('input', function () { setLocalState({formulaDraft: ta.value}); });
     c.appendChild(el('div', {class: 'card formula-demo'}, [el('h3', {text: '🧮 ویرایشگر فرمول و پیش‌نمایش چاپ'}), el('p', {class: 'muted', text: 'همان دو موتور برنامهٔ اندروید (formula.html و exam_print_renderer) این‌جا اجرا می‌شوند. متن با فرمول را بنویسید، در پیش‌نمایش ببینید و چاپ بگیرید.'}), ta, el('div', {class: 'row', style: 'margin-top:12px'}, [b, p]), out]));
     c.appendChild(el('div', {class: 'card'}, [el('h3', {text: '🖨 نمونهٔ آزمون چاپی'}), el('p', {class: 'muted', text: 'یک آزمون نمونه با همهٔ انواع سؤال برای آشنایی با موتور صفحه‌بندی، سربرگ‌ها و تنظیمات کاغذ.'}), el('button', {class: 'btn light', text: 'باز کردن نمونه', onclick: demoPrint})]));
+  }
+
+  /* V167 — «کارت‌ها»ی دسکتاپ: همان ۷ کارت گرادیانی گوشی (SiteMobile.teacherCards) به‌صورت شبکه؛ کلیک = همان مقصد */
+  function pageCards(c) {
+    c.innerHTML = '';
+    var M = window.SiteMobile; if (!M || !M.teacherCards) { c.appendChild(el('div', {class: 'alert error', text: 'پوستهٔ کارت‌ها بارگذاری نشد.'})); return; }
+    var grid = el('div', {class: 'dk-cards'});
+    M.teacherCards().forEach(function (k) {
+      grid.appendChild(el('button', {class: 'dk-gcard', style: 'background:' + k[3], onclick: k[4]}, [
+        el('div', {class: 'm-deck-top'}, [el('span', {class: 'm-deck-ic', html: M.icons[k[2]] || ''}), el('small', {text: 'آزمون آنلاین'})]),
+        el('b', {text: k[0]}), el('span', {class: 'dk-gdesc', text: k[1]})
+      ]));
+    });
+    c.appendChild(grid);
   }
 
   /* ---- پروفایل ---- */

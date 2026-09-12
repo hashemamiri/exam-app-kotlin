@@ -18953,3 +18953,8 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - **builder.js:** `settingsForm(m_)` فرم مشخصات آزمون را می‌سازد و هم در `openSettings()` (پنجرهٔ بازشو — گوشی/تبلت) و هم در `aside.b-settings` (ستون راست دسکتاپ) استفاده می‌شود؛ `syncMeta()` خط b-meta را به‌روز می‌کند. `rail` (`nav.b-rail`) با `drawRail()` بعد از هر `drawList()` بازسازی می‌شود؛ `addMenu(anchor)` منوی شناور نوع سؤال کنار دکمهٔ + است. `changeType(q, t)` نوع سؤال را با حفظ متن/بارم/تصاویر عوض می‌کند (فیلدهای نوع از `newQuestion`). تراشه‌ها: `div.b-types`.
 - **site.css:** بلوک V166 در انتها؛ خارج از `.dk`، `.b-rail/.b-types/.b-settings` نمایش داده نمی‌شوند (گوشی مثل قبل). روی دسکتاپ `.b-list` و نوار بالای سازنده (به‌جز کد آزمون/هشدارها) پنهان است؛ `b-body.has-settings` = دو ستون ۲۹۰px + ویرایشگر.
 - تست: `V166_SiteDesktopBuilderTest`.
+
+## V167 — ریل دسکتاپ: «کارت‌ها» به‌جای «ابزارها»
+
+- `MENUS.teacher`: `tools` → `cards`. `pageCards(c)` در app.js از `window.SiteMobile.teacherCards()` (فهرست مشترک با `cardsScreen` گوشی: [عنوان، توضیح، آیکون، گرادیان، onclick]) و `SiteMobile.icons` استفاده می‌کند؛ ظاهر `.dk-gcard` = همان `.m-deck-card`. صفحهٔ «ابزارها» (`pageTools`) هنوز برای دانش‌آموز/مدیر در منو هست.
+- تست: `V167_SiteDesktopCardsTest`.

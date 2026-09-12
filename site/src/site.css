@@ -1021,3 +1021,14 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .b-rail-num.active{color:#0e93b8;border-color:#22c6ef;border-width:2px;box-shadow:0 0 0 3px rgba(34,198,239,.16),0 0 12px rgba(34,198,239,.55),inset 0 0 10px rgba(34,198,239,.2)}
   .dk .main{padding-left:100px}
 }
+
+/* ===================== V167 — «کارت‌ها»ی دسکتاپ (همان کارت‌های گرادیانی گوشی، به‌صورت شبکه) ===================== */
+.dk-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;max-width:1320px}
+.dk-gcard{min-height:190px;border:0;border-radius:29px;padding:22px;color:#fff;text-align:right;display:flex;flex-direction:column;gap:8px;box-shadow:0 14px 30px rgba(38,49,66,.22);cursor:pointer;font:inherit;transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s}
+.dk-gcard:hover{transform:translateY(-4px);box-shadow:0 22px 44px rgba(38,49,66,.28)}
+.dk-gcard .m-deck-top{display:flex;justify-content:space-between;align-items:center;width:100%}
+.dk-gcard .m-deck-ic{width:48px;height:48px;border-radius:16px;background:rgba(255,255,255,.18);display:inline-flex;align-items:center;justify-content:center;padding:11px}
+.dk-gcard .m-deck-ic svg{width:100%;height:100%;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dk-gcard .m-deck-top small{font-size:11px;opacity:.72}
+.dk-gcard b{font-size:22px;font-weight:800;margin-top:auto}
+.dk-gcard .dk-gdesc{font-size:13px;line-height:1.7;opacity:.88}
