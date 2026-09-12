@@ -2844,6 +2844,8 @@ window.__HEADER_SCHEMA = {
     ]);
     var items = menu.filter(function (x) { return x !== '-'; });
     var title = view.panel === 'menu' ? 'منو' : ((MENUS[user.role + 'Menu'] || []).concat(items, MENUS.teacherMenu).filter(function (x) { return x[0] === view.panel; })[0] || ['', '', ''])[2];
+    /* V172 — عنوان صفحه‌های کارت‌ها مثل اپ (ExamApp.kt:381,1220,1226) */
+    if (!title) { var a = view.arg || {}; title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''; }
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
     function railItem(key, label) {
       return el('button', {class: 'dk-rail-item' + (view.panel === key ? ' active' : ''), 'aria-label': label, 'aria-current': view.panel === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
@@ -2886,7 +2888,7 @@ window.__HEADER_SCHEMA = {
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
     var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, account: pageAccount, settings: pageSettings, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
-      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
+      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c, view.arg); }, requests: pageRequests, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
   }
   function soon(title, phase) { return function (c) { c.appendChild(el('div', {class: 'soon', html: '<div style="font-size:40px">🚧</div><h3>' + esc(title) + '</h3>این بخش در <b>' + esc(phase) + '</b> سایت فعال می‌شود. فعلاً از برنامهٔ اندروید استفاده کنید.'})); }; }
@@ -3128,6 +3130,12 @@ window.__HEADER_SCHEMA = {
     c.appendChild(grid);
   }
 
+  /* V172 — کارت «درخواست‌ها» → صفحهٔ مستقل (TeacherManagerRequestsScreen اپ)، نه داشبورد */
+  async function pageRequests(c) {
+    c.innerHTML = '';
+    if (!window.SiteSchool) return;
+    c.appendChild(await window.SiteSchool.managerRequestsCard(true));
+  }
   /* V168 — «چاپ آزمون» دسکتاپ: فهرست آزمون‌های چاپی روی سرور + ساخت آزمون چاپی جدید (همان printExamsSection) */
   function pagePrint(c) {
     c.innerHTML = '';
@@ -5289,7 +5297,7 @@ window.__HEADER_SCHEMA = {
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {gradingPage: gradingPage, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
+  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
 })();
 
 /* ===================================================================
@@ -5581,7 +5589,7 @@ window.__HEADER_SCHEMA = {
   }
 
   /* ---------------- درخواست‌های مدیر (داشبورد معلم) ---------------- */
-  async function managerRequestsCard() {
+  async function managerRequestsCard(alwaysShow) {
     var card = el('div', {class: 'card'}, [el('h3', {text: '📩 درخواست‌های مدیر'})]);
     var body = el('div'); card.appendChild(body);
     var STATUS = {pending: 'در انتظار', approved: 'تأیید‌شده', rejected: 'رد‌شده', expired: 'منقضی', applied: 'اعمال‌شده'};
@@ -5591,7 +5599,7 @@ window.__HEADER_SCHEMA = {
         var r = chk(await S.rpcObj('native_teacher_manager_requests_v41', {}));
         var items = r.items || [];
         body.innerHTML = '';
-        if (!items.length) { body.appendChild(el('p', {class: 'muted', text: 'درخواست در انتظار تأیید ندارید.'})); card.style.display = 'none'; return; }
+        if (!items.length) { body.appendChild(el('p', {class: 'muted', text: 'درخواست در انتظار تأیید ندارید.'})); if (!alwaysShow) card.style.display = 'none'; return; }
         card.style.display = '';
         items.forEach(function (it) {
           var pending = it.status === 'pending' || !it.status;
@@ -5599,7 +5607,7 @@ window.__HEADER_SCHEMA = {
             it.expires_at ? el('div', {class: 'muted', style: 'font-size:12px', text: 'مهلت: ' + S.fmtDate(it.expires_at)}) : null,
             pending ? el('div', {class: 'row', style: 'margin-top:6px'}, [el('button', {class: 'btn sm', text: 'تأیید', onclick: function () { decide(it.id, true); }}), el('button', {class: 'btn light sm', text: 'رد', onclick: function () { decide(it.id, false); }})]) : null]));
         });
-      } catch (e) { body.innerHTML = ''; body.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'درخواست‌های مدیر در دسترس نیست.'})); card.style.display = 'none'; }
+      } catch (e) { body.innerHTML = ''; body.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'درخواست‌های مدیر در دسترس نیست.'})); if (!alwaysShow) card.style.display = 'none'; }
     }
     async function decide(id, ok) { try { chk(await S.rpcObj('native_teacher_decide_manager_request_v41', {p_request: id, p_approve: ok})); toast(ok ? 'تأیید شد.' : 'رد شد.', 'ok'); load(); } catch (e) { toast(errMsg(e), 'err'); } }
     load();
@@ -5741,7 +5749,9 @@ window.__HEADER_SCHEMA = {
   function csv(rows) { return '\uFEFF' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n'); }
 
   /* ================================================================ گزارش کلاس (ReportsScreen) */
-  async function reportsPage(c) {
+  /* V172 — مثل ReportsScreen اپ: section 'stats' (کارت «آمار») = خلاصه + تحلیل کیفیت سؤال؛ 'grades' (کارت «کارنامه») = فقط گزارش کلاس */
+  async function reportsPage(c, arg) {
+    var section = (arg && arg.section === 'grades') ? 'grades' : 'stats', statsOnly = section === 'stats', gradesOnly = section === 'grades';
     S.loading(c);
     try {
       var r = await Promise.all([S.select('exams', 'select=id,title,subject,total_score,created_at&teacher_id=eq.' + S.user().id + '&order=created_at.desc'), S.rpc('native_my_classes_v28', {})]);
@@ -5750,7 +5760,8 @@ window.__HEADER_SCHEMA = {
       var st = {classId: '', selected: {}, rows: null, roster: []};
       exams.forEach(function (e) { st.selected[e.id] = true; });
       /* خلاصهٔ کلی (analytics) */
-      var summary = el('div', {class: 'grid4'}); c.appendChild(summary);
+      c.appendChild(el('h2', {class: 'rp-title', text: gradesOnly ? 'کارنامه و لیست نمرات' : 'آمار و تحلیل آزمون‌ها'}));
+      var summary = el('div', {class: 'grid4'}); if (statsOnly) c.appendChild(summary);
       var answersByExam = {};
       (async function () {
         try {
@@ -5765,6 +5776,15 @@ window.__HEADER_SCHEMA = {
         } catch (e) { summary.innerHTML = ''; summary.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       })();
       if (!exams.length) { c.appendChild(el('div', {class: 'card'}, [S.emptyBox('📈', 'هنوز آزمونی ندارید.')])); return; }
+      if (statsOnly) {
+        /* تحلیل پیشرفتهٔ کیفیت سؤال (ReportsScreen.kt:74-110): انتخاب آزمون → native_question_analysis_v1 */
+        var an = el('div', {class: 'card'}, [el('h3', {text: '📊 تحلیل پیشرفته کیفیت سؤال'})]);
+        var anChips = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:10px'}), anBody = el('div'), anSel = null;
+        function drawAn() { anChips.innerHTML = ''; exams.forEach(function (e) { anChips.appendChild(el('button', {class: 'chip ' + (anSel === e.id ? 'brand' : 'off'), text: e.title.slice(0, 18), onclick: function () { anSel = e.id; drawAn(); if (window.SiteAdmin) window.SiteAdmin.questionAnalysis(anBody, e.id); }})); }); }
+        drawAn(); anBody.appendChild(el('p', {class: 'muted', text: 'یک آزمون را انتخاب کنید تا تحلیل سؤال‌های آن نمایش داده شود.'}));
+        an.appendChild(anChips); an.appendChild(anBody); c.appendChild(an);
+        return;
+      }
       /* انتخاب کلاس و آزمون‌ها */
       var csel = el('select'); csel.appendChild(el('option', {value: '', text: '— انتخاب کلاس —'})); classes.forEach(function (k) { csel.appendChild(el('option', {value: k.id, text: k.name})); });
       var exBox = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px'});
@@ -6064,7 +6084,7 @@ window.__HEADER_SCHEMA = {
     if (p === 'wallet') return 'wallet';
     if (isManager()) { if (p === 'teachers') return 'exams'; if (p === 'cards' || p === 'school' || p === 'dashboard') return 'cards'; return 'none'; }
     if (p === 'exams' || p === 'dashboard' || p === 'builder' || p === 'print') return 'exams';
-    if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading') return 'cards';
+    if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading' || p === 'requests') return 'cards';
     return 'none';
   }
   /* V163 — با باز شدن منوی همبرگری، هر پنجره/شیت باز (modal-bg, m-sheet-bg) بسته می‌شود تا منو زیر آن نماند */
@@ -6315,7 +6335,7 @@ window.__HEADER_SCHEMA = {
       ['تصحیح', 'همه پاسخ‌ها، حضور، بازخورد و ثبت یا اصلاح نمره را باز می‌کند.', 'grading', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('grading'); }],
       ['مانده', 'فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.', 'cards', 'linear-gradient(135deg,#E0587F,#7D6CF4)', function () { go('grading', {filter: 'pending'}); }],
       ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#4D5B74,#273247)', function () { go('grading', {filter: 'graded'}); }],
-      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('dashboard', {requests: true}); }]
+      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('requests'); }]
     ];
     return cards;
   }
@@ -6895,7 +6915,7 @@ window.__HEADER_SCHEMA = {
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات', calendar: 'تقویم', cards: 'کارت‌ها'};
-  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
+  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', requests: 'درخواست‌ها', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
   /* ================================================================ V161 — «حساب» گوشی مثل ProfileSettingsScreen اپ
      چیپ‌های بالا: پروفایل / حساب / سربرگ (معلم). پروفایل = ProfileSection (عکس محلی، نام نمایشی، مشخصات معلم، ذخیره).
      حساب = AccountSection: آکاردئون‌های «مشخصات حساب»، «پیوستن به مدرسه» (معلم)، «تغییر نام کاربری»، «تغییر ایمیل»،

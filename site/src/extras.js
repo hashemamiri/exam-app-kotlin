@@ -72,7 +72,9 @@
   function csv(rows) { return '\uFEFF' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n'); }
 
   /* ================================================================ گزارش کلاس (ReportsScreen) */
-  async function reportsPage(c) {
+  /* V172 — مثل ReportsScreen اپ: section 'stats' (کارت «آمار») = خلاصه + تحلیل کیفیت سؤال؛ 'grades' (کارت «کارنامه») = فقط گزارش کلاس */
+  async function reportsPage(c, arg) {
+    var section = (arg && arg.section === 'grades') ? 'grades' : 'stats', statsOnly = section === 'stats', gradesOnly = section === 'grades';
     S.loading(c);
     try {
       var r = await Promise.all([S.select('exams', 'select=id,title,subject,total_score,created_at&teacher_id=eq.' + S.user().id + '&order=created_at.desc'), S.rpc('native_my_classes_v28', {})]);
@@ -81,7 +83,8 @@
       var st = {classId: '', selected: {}, rows: null, roster: []};
       exams.forEach(function (e) { st.selected[e.id] = true; });
       /* خلاصهٔ کلی (analytics) */
-      var summary = el('div', {class: 'grid4'}); c.appendChild(summary);
+      c.appendChild(el('h2', {class: 'rp-title', text: gradesOnly ? 'کارنامه و لیست نمرات' : 'آمار و تحلیل آزمون‌ها'}));
+      var summary = el('div', {class: 'grid4'}); if (statsOnly) c.appendChild(summary);
       var answersByExam = {};
       (async function () {
         try {
@@ -96,6 +99,15 @@
         } catch (e) { summary.innerHTML = ''; summary.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       })();
       if (!exams.length) { c.appendChild(el('div', {class: 'card'}, [S.emptyBox('📈', 'هنوز آزمونی ندارید.')])); return; }
+      if (statsOnly) {
+        /* تحلیل پیشرفتهٔ کیفیت سؤال (ReportsScreen.kt:74-110): انتخاب آزمون → native_question_analysis_v1 */
+        var an = el('div', {class: 'card'}, [el('h3', {text: '📊 تحلیل پیشرفته کیفیت سؤال'})]);
+        var anChips = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:10px'}), anBody = el('div'), anSel = null;
+        function drawAn() { anChips.innerHTML = ''; exams.forEach(function (e) { anChips.appendChild(el('button', {class: 'chip ' + (anSel === e.id ? 'brand' : 'off'), text: e.title.slice(0, 18), onclick: function () { anSel = e.id; drawAn(); if (window.SiteAdmin) window.SiteAdmin.questionAnalysis(anBody, e.id); }})); }); }
+        drawAn(); anBody.appendChild(el('p', {class: 'muted', text: 'یک آزمون را انتخاب کنید تا تحلیل سؤال‌های آن نمایش داده شود.'}));
+        an.appendChild(anChips); an.appendChild(anBody); c.appendChild(an);
+        return;
+      }
       /* انتخاب کلاس و آزمون‌ها */
       var csel = el('select'); csel.appendChild(el('option', {value: '', text: '— انتخاب کلاس —'})); classes.forEach(function (k) { csel.appendChild(el('option', {value: k.id, text: k.name})); });
       var exBox = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px'});

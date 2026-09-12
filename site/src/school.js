@@ -287,7 +287,7 @@
   }
 
   /* ---------------- درخواست‌های مدیر (داشبورد معلم) ---------------- */
-  async function managerRequestsCard() {
+  async function managerRequestsCard(alwaysShow) {
     var card = el('div', {class: 'card'}, [el('h3', {text: '📩 درخواست‌های مدیر'})]);
     var body = el('div'); card.appendChild(body);
     var STATUS = {pending: 'در انتظار', approved: 'تأیید‌شده', rejected: 'رد‌شده', expired: 'منقضی', applied: 'اعمال‌شده'};
@@ -297,7 +297,7 @@
         var r = chk(await S.rpcObj('native_teacher_manager_requests_v41', {}));
         var items = r.items || [];
         body.innerHTML = '';
-        if (!items.length) { body.appendChild(el('p', {class: 'muted', text: 'درخواست در انتظار تأیید ندارید.'})); card.style.display = 'none'; return; }
+        if (!items.length) { body.appendChild(el('p', {class: 'muted', text: 'درخواست در انتظار تأیید ندارید.'})); if (!alwaysShow) card.style.display = 'none'; return; }
         card.style.display = '';
         items.forEach(function (it) {
           var pending = it.status === 'pending' || !it.status;
@@ -305,7 +305,7 @@
             it.expires_at ? el('div', {class: 'muted', style: 'font-size:12px', text: 'مهلت: ' + S.fmtDate(it.expires_at)}) : null,
             pending ? el('div', {class: 'row', style: 'margin-top:6px'}, [el('button', {class: 'btn sm', text: 'تأیید', onclick: function () { decide(it.id, true); }}), el('button', {class: 'btn light sm', text: 'رد', onclick: function () { decide(it.id, false); }})]) : null]));
         });
-      } catch (e) { body.innerHTML = ''; body.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'درخواست‌های مدیر در دسترس نیست.'})); card.style.display = 'none'; }
+      } catch (e) { body.innerHTML = ''; body.appendChild(el('p', {class: 'muted', style: 'font-size:12px', text: 'درخواست‌های مدیر در دسترس نیست.'})); if (!alwaysShow) card.style.display = 'none'; }
     }
     async function decide(id, ok) { try { chk(await S.rpcObj('native_teacher_decide_manager_request_v41', {p_request: id, p_approve: ok})); toast(ok ? 'تأیید شد.' : 'رد شد.', 'ok'); load(); } catch (e) { toast(errMsg(e), 'err'); } }
     load();

@@ -22,7 +22,7 @@
     if (p === 'wallet') return 'wallet';
     if (isManager()) { if (p === 'teachers') return 'exams'; if (p === 'cards' || p === 'school' || p === 'dashboard') return 'cards'; return 'none'; }
     if (p === 'exams' || p === 'dashboard' || p === 'builder' || p === 'print') return 'exams';
-    if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading') return 'cards';
+    if (p === 'cards' || p === 'reports' || p === 'bank' || p === 'grading' || p === 'requests') return 'cards';
     return 'none';
   }
   /* V163 — با باز شدن منوی همبرگری، هر پنجره/شیت باز (modal-bg, m-sheet-bg) بسته می‌شود تا منو زیر آن نماند */
@@ -273,7 +273,7 @@
       ['تصحیح', 'همه پاسخ‌ها، حضور، بازخورد و ثبت یا اصلاح نمره را باز می‌کند.', 'grading', 'linear-gradient(135deg,#25BFA4,#45D7BD)', function () { go('grading'); }],
       ['مانده', 'فقط پاسخ‌های در انتظار تصحیح و پیگیری را نمایش می‌دهد.', 'cards', 'linear-gradient(135deg,#E0587F,#7D6CF4)', function () { go('grading', {filter: 'pending'}); }],
       ['پاسخ', 'فقط پاسخ‌های تصحیح‌شده دارای نمره و بازخورد نهایی را نمایش می‌دهد.', 'grading', 'linear-gradient(135deg,#4D5B74,#273247)', function () { go('grading', {filter: 'graded'}); }],
-      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('dashboard', {requests: true}); }]
+      ['درخواست‌ها', 'درخواست‌های ویرایش یا حذف مدیر را مشاهده، تأیید یا رد کنید.', 'account', 'linear-gradient(135deg,#7D6CF4,#E0587F)', function () { go('requests'); }]
     ];
     return cards;
   }
@@ -853,7 +853,7 @@
   /* ---------- پوسته ---------- */
   var STUDENT_TITLES = {dashboard: 'خانه دانش‌آموز', join: 'خانه دانش‌آموز', grades: 'نتایج من', calendar: 'تقویم و پیام‌ها', profile: 'حساب', tools: 'تنظیمات'};
   var MANAGER_TITLES = {teachers: 'معلم‌ها', dashboard: 'داشبورد', school: 'مدرسه', wallet: 'کیف پول', profile: 'حساب', tools: 'تنظیمات', calendar: 'تقویم', cards: 'کارت‌ها'};
-  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
+  var TITLES = {exams: 'آزمون‌ها', dashboard: 'آزمون‌ها', wallet: 'کیف پول', cards: 'کارت‌ها', builder: 'ساخت آزمون', print: 'چاپ آزمون', classes: 'کلاس‌ها', students: 'دانش‌آموزان', bank: 'بانک سؤال', reports: 'گزارش‌ها', grading: 'تصحیح', requests: 'درخواست‌ها', calendar: 'تقویم و پیام‌ها', tools: 'تنظیمات', profile: 'حساب'};
   /* ================================================================ V161 — «حساب» گوشی مثل ProfileSettingsScreen اپ
      چیپ‌های بالا: پروفایل / حساب / سربرگ (معلم). پروفایل = ProfileSection (عکس محلی، نام نمایشی، مشخصات معلم، ذخیره).
      حساب = AccountSection: آکاردئون‌های «مشخصات حساب»، «پیوستن به مدرسه» (معلم)، «تغییر نام کاربری»، «تغییر ایمیل»،

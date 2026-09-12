@@ -18982,3 +18982,11 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - `MENUS.managerMenu` / `MENUS.studentMenu` (app.js) از `ExamApp.kt:995-1060` گرفته شده؛ فرمت هر مورد `[key, emoji, label, sub, panelOverride?, arg?]`: «کلاس‌ها»→`school`، «دانش‌آموزان»→`school {students:true}` (اسکرول به بخش دانش‌آموزان)، «سایت»→فقط toast، «حساب»→`account` تب `account`، «تنظیمات»→`settings`.
 - `pageMenu`: `menu = MENUS[user.role + 'Menu'] || MENUS.teacherMenu`. عنوان `dk-top` اول از منوی نقش خوانده می‌شود (تا «نتایج من»/«تقویم» مثل اپ باشد). آیکون `site` به `DK_ICONS` اضافه شد.
 - تأیید با jsdom برای سه نقش: هر کارت → پنل/عنوان/چیپ درست. تست: `V171_SiteDesktopRoleMenusTest`.
+
+## V172 — کارت‌های مدیریتی = صفحه‌های اپ
+
+- گزارش کاربر: برخی کارت‌های صفحهٔ «کارت‌ها» داشبورد را باز می‌کردند. با jsdom بررسی شد: فقط «درخواست‌ها» (`go('dashboard', {requests:true})`) به داشبورد می‌رفت؛ «آمار» و «کارنامه» هم یک صفحهٔ مشترک بدون عنوان باز می‌کردند و عنوان `dk-top` خالی بود که شبیه داشبورد به نظر می‌رسید.
+- `app.js`: پنل جدید `requests` → `pageRequests` (`SiteSchool.managerRequestsCard(true)` = همیشه نمایان، مثل `TeacherManagerRequestsScreen`). `reports` حالا `view.arg` را می‌دهد. عنوان پنل‌های بدون ورودی منو: آمار/کارنامه (section)، تصحیح/مانده/پاسخ (filter)، بانک سؤال، درخواست‌ها (`ExamApp.kt:381,1220,1226`).
+- `extras.js reportsPage(c, arg)`: `section==='grades'` → فقط «کارنامه و لیست نمرات» (گزارش کلاس)؛ `stats` → خلاصه + کارت «تحلیل پیشرفته کیفیت سؤال» (چیپ آزمون → `SiteAdmin.questionAnalysis` که همان `tabAnalysis` تصحیح است، RPC `native_question_analysis_v1`).
+- `school.js managerRequestsCard(alwaysShow)`: با `true` کارت در حالت خالی مخفی نمی‌شود. `mobile.js`: کارت «درخواست‌ها» → `go('requests')`؛ داک `requests` را زیر «کارت‌ها» می‌داند؛ `TITLES.requests`.
+- تأیید jsdom (۷ کارت): reports/stats «آمار»، reports/grades «کارنامه»، bank، grading (بدون فیلتر/pending/graded) با عنوان‌های تصحیح/مانده/پاسخ، requests «درخواست‌ها». تست: `V172_SiteCardsTargetsTest`.

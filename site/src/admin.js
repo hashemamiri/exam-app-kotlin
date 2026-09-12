@@ -485,5 +485,5 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {gradingPage: gradingPage, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
+  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
 })();

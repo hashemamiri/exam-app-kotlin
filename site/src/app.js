@@ -940,6 +940,8 @@
     ]);
     var items = menu.filter(function (x) { return x !== '-'; });
     var title = view.panel === 'menu' ? 'منو' : ((MENUS[user.role + 'Menu'] || []).concat(items, MENUS.teacherMenu).filter(function (x) { return x[0] === view.panel; })[0] || ['', '', ''])[2];
+    /* V172 — عنوان صفحه‌های کارت‌ها مثل اپ (ExamApp.kt:381,1220,1226) */
+    if (!title) { var a = view.arg || {}; title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''; }
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
     function railItem(key, label) {
       return el('button', {class: 'dk-rail-item' + (view.panel === key ? ' active' : ''), 'aria-label': label, 'aria-current': view.panel === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
@@ -982,7 +984,7 @@
   /* V148 — رندر محتوای پنل جاری در هر ظرفی (پنل دسکتاپ یا پوستهٔ موبایل) */
   function renderPage(c) {
     var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, account: pageAccount, settings: pageSettings, dashboard: pageDashboard, exams: pageExams, classes: pageClasses, students: pageStudents, wallet: pageWallet, tools: pageTools, profile: pageProfile, grades: pageGrades, teachers: pageTeachers,
-      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c); }, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
+      builder: function (c) { if (window.SiteBuilder) window.SiteBuilder.page(c, view.arg); else soon('سازندهٔ آزمون', 'فاز ۲')(c); }, bank: function (c) { if (window.SiteSchool) window.SiteSchool.bankPage(c); }, reports: function (c) { if (window.SiteExtras) window.SiteExtras.reportsPage(c, view.arg); }, requests: pageRequests, grading: function (c) { if (window.SiteAdmin) window.SiteAdmin.gradingPage(c, view.arg); else soon('تصحیح', 'فاز ۴')(c); }, calendar: function (c) { if (window.SiteAdmin) window.SiteAdmin.calendarPage(c, view.arg); }, join: function (c) { if (window.SiteStudent) window.SiteStudent.page(c, view.arg); else soon('شرکت در آزمون', 'فاز ۳')(c); }, school: function (c) { if (window.SiteAdmin) window.SiteAdmin.managerSchoolPage(c, view.arg); else soon('مدرسه', 'فاز ۴')(c); }};
     (pages[view.panel] || pageDashboard)(c);
   }
   function soon(title, phase) { return function (c) { c.appendChild(el('div', {class: 'soon', html: '<div style="font-size:40px">🚧</div><h3>' + esc(title) + '</h3>این بخش در <b>' + esc(phase) + '</b> سایت فعال می‌شود. فعلاً از برنامهٔ اندروید استفاده کنید.'})); }; }
@@ -1224,6 +1226,12 @@
     c.appendChild(grid);
   }
 
+  /* V172 — کارت «درخواست‌ها» → صفحهٔ مستقل (TeacherManagerRequestsScreen اپ)، نه داشبورد */
+  async function pageRequests(c) {
+    c.innerHTML = '';
+    if (!window.SiteSchool) return;
+    c.appendChild(await window.SiteSchool.managerRequestsCard(true));
+  }
   /* V168 — «چاپ آزمون» دسکتاپ: فهرست آزمون‌های چاپی روی سرور + ساخت آزمون چاپی جدید (همان printExamsSection) */
   function pagePrint(c) {
     c.innerHTML = '';
