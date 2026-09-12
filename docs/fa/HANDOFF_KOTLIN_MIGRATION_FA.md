@@ -18997,3 +18997,7 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - سازندهٔ چاپی دسکتاپ حالا `has-settings` دارد: `aside.b-settings.b-hdr` با `S.headerSettingsForm(box, {autosave:true})` (فرم سربرگ مشترک، از `openHeaderSettings` جدا شد؛ ذخیرهٔ خودکار در `LS_PRINTHEADER`). پنجرهٔ بازشوی سربرگ (گوشی/تبلت) همان فرم را با دکمهٔ «اعمال» نشان می‌دهد.
 - CSS: `.dk .b-settings` بدون اسکرول‌بار؛ `.dk .b-rail{overflow:hidden}` + دکمه‌ها `flex:0 0 auto` و `.b-rail-nums` اسکرول‌شونده (`flex:1 1 auto;min-height:0`) تا افزودن سؤال ریل را فشرده نکند. `student.js` `richHtml` را بیرون می‌دهد.
 - تأیید jsdom: online → ستون «مشخصات آزمون»، ریل افزودن/ذخیره/پیش‌نمایش دانش‌آموز، چشم پنجرهٔ دانش‌آموزی با گزینه‌ها؛ print → ستون «تنظیمات سربرگ» (۱۵ فیلد، ذخیرهٔ خودکار)، ریل افزودن/ذخیره/پیش‌نمایش آزمون/چاپ آزمون، چشم پیش‌نمایش چاپ، منوی چاپ دو گزینه. تست: `V173_SiteDesktopBuilderRailTest`.
+
+## V174 — حذف هدر دسکتاپ
+
+- `site.css` (media ≥861px): `.dk .main .head.dk-top{display:none}`، `.dk .main{padding-top:24px}`، `.dk .b-settings{top:24px;…}`. عنصر `dk-top` در `renderPanel` هنوز ساخته می‌شود (برای گوشی/تبلت لازم است: ☰ و عنوان) ولی روی دسکتاپ نمایش داده نمی‌شود. تست: `V174_SiteDesktopNoHeaderTest`.

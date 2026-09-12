@@ -1018,6 +1018,10 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .b-rail-num:hover{background:#fff}
   .dk .b-rail-num.active{color:#0e93b8;border-color:#22c6ef;border-width:2px;box-shadow:0 0 0 3px rgba(34,198,239,.16),0 0 12px rgba(34,198,239,.55),inset 0 0 10px rgba(34,198,239,.2)}
   .dk .main{padding-left:100px}
+  /* V174 — هدر بالای دسکتاپ کامل حذف شد (منو از ریل باز می‌شود)؛ محتوا از بالا فاصله می‌گیرد */
+  .dk .main .head.dk-top{display:none}
+  .dk .main{padding-top:24px}
+  .dk .b-settings{top:24px;max-height:calc(100vh - 48px)}
   /* V173 — ستون مشخصات/سربرگ بدون نوار اسکرول نمایان؛ ریل فشرده نمی‌شود: دکمه‌ها ثابت، شمارهٔ سؤال‌ها اسکرول می‌شود */
   .dk .b-settings{scrollbar-width:none;-ms-overflow-style:none}
   .dk .b-settings::-webkit-scrollbar{display:none}
