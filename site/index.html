@@ -2343,7 +2343,14 @@ window.__HEADER_SCHEMA = {
         ctx.busy = true;
         /* V180.1 — فقط چاپ بومی مرورگر؛ w.print() موتور دوباره به همین پل برمی‌گشت (حلقهٔ پنجرهٔ هزینه) */
         try { w.focus(); w.Window.prototype.print.call(w); } catch (e) { console.warn('print', e); }
-        setTimeout(function () { ctx.busy = false; try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} }, 400);
+        setTimeout(function () {
+          ctx.busy = false;
+          /* V180.2 — مثل ExamHtmlPrintDialog: چاپ مستقیم (printMode از منوی چاپ بیلدر) پس از پنجرهٔ چاپ بسته می‌شود؛
+             وگرنه برگه به پیش‌نمایش برمی‌گردد و اگر بینندهٔ PGS باز نبود دوباره باز می‌شود (پیش‌تر صفحهٔ خاکستری خالی می‌ماند) */
+          if (ctx.direct) { if (printCtx === ctx) closePrintOverlay(); return; }
+          try { w.ExamPrintRenderer.restorePreview(); } catch (e) {}
+          try { if (!(w.isPreviewOpen && w.isPreviewOpen())) w.ExamPrintRenderer.showPreview(); } catch (e) {}
+        }, 400);
       };
       var restore = function () { ctx.busy = false; try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
       /* V180.1 — یک درخواست در جریان (پنجرهٔ هزینه باز / چاپ بومی) → درخواست دوباره نادیده گرفته می‌شود */
@@ -2412,7 +2419,7 @@ window.__HEADER_SCHEMA = {
     var iframe = el('iframe', {class: 'with-bar', title: 'print-engine'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open'); /* V179 */
-    printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
+    printCtx = {overlay: overlay, iframe: iframe, direct: opts.printMode === 'student' || opts.printMode === 'teacher', examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
     var inlined = inlinePrintImages(payload);
     var loadedOnce = false;
