@@ -118,7 +118,6 @@
   /* ================================================================ V163 — آزمون‌های چاپی روی سرور (print_exams، جدا از exams)
      قبلاً فقط در localStorage همین مرورگر بودند؛ حالا در جدول print_exams تا اپ/دسکتاپ/گوشی یکی باشند.
      رکورد سرور: {id,title,subject,duration,questions:[public+key ادغام‌شده],source_exam_id,saved_at}. هزینه فقط هر تصویر جدید ۱۰۰۰ تومان. */
-  var LS_PRINT = 'examsite.printexams.v1';
   var LS_PRINT_MIGRATED = 'examsite.printexams.migrated.v163';
   function combinedQuestions(list) { var enc = encodeQuestions(list); return enc.publicQuestions.map(function (q, i) { var c = Object.assign({}, q, enc.answerKey[i] || {}); delete c.i; return c; }); }
   function draftsFromCombined(arr) { return (Array.isArray(arr) ? arr : []).map(function (q) { return decodeQuestion(q, q); }); }
@@ -350,7 +349,9 @@
       livePreview(live, raw);
     });
     ['keyup', 'mouseup', 'focus'].forEach(function (ev) { rich.addEventListener(ev, caretToRaw); });
-    document.addEventListener('selectionchange', function () { if (document.activeElement === rich) caretToRaw(); });
+    /* V181 — یک شنوندهٔ سراسری به‌جای یکی برای هر بار رندر ویرایشگر (نشت: با هر جابه‌جایی سؤال یکی اضافه می‌شد و تایپ کند می‌شد) */
+    if (!window.__bRichSel) { window.__bRichSel = function () { var a = document.activeElement; if (a && a.__caretToRaw && a.classList.contains('b-rich')) a.__caretToRaw(); }; document.addEventListener('selectionchange', window.__bRichSel); }
+    rich.__caretToRaw = caretToRaw;
     rich.addEventListener('paste', function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
     /* کلیک روی تراشهٔ فرمول → ویرایش همان فرمول */
     rich.addEventListener('click', function (e) {

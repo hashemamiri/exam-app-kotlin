@@ -19074,3 +19074,25 @@ p_exam text — همان قرارداد `local-…` اپ)؛ فقط کاربر و
 با fallback `w.print()` پوشانده می‌شد (که همان حلقهٔ پنجرهٔ هزینه بود). **رفع:** در سرآیند موتور چاپِ سایت (`build_site.py`) پیش از
 بارگذاری `webhost.js` (که `window.print` را به پل بازمی‌نویسد) `window.__nativePrint = window.print` ذخیره می‌شود؛ `doNative` آن را
 با `.call(w)` صدا می‌زند؛ در نبودش پیام خطا. تست V180 به‌روز شد. (اپ: مسیر PrintManager است و این مشکل را ندارد.)
+
+## §V181 — ممیزی سایت (درخواست: «کد به کد بگرد و باگ‌ها و لگ‌ها را پیدا کن»)
+
+**روش:** ۱) `node --check` + ESLint (no-undef, no-dupe-keys, no-redeclare, no-unreachable…) روی `site/src/*.js`؛ ۲) شبیه‌سازی jsdom
+با backend جعلی: ورود با نقش‌های teacher/student/manager × دسکتاپ/گوشی، باز کردن همهٔ پنل‌ها (`pages` در app.js + صفحه‌های mobile.js)
+و کلیک روی همهٔ دکمه‌های غیرمخرب (~۵۰۰ کلیک) با ثبت window.error/unhandledrejection/console.error/toast خطا → **صفر خطا**؛
+۳) شمارش شنونده‌های document/window در سازنده هنگام جابه‌جایی سؤال‌ها و تایپ؛ ۴) اندازهٔ index.html و بلوک‌های موتور چاپ.
+
+**یافته‌ها و رفع:**
+- **نشت واقعی (لگ سازنده):** `tokenTextarea` (builder.js) در هر رندر ویرایشگر سؤال `document.addEventListener('selectionchange')`
+  می‌گذاشت و هرگز حذف نمی‌کرد؛ اندازه‌گیری: ۳۰ جابه‌جایی سؤال → ۴۰ شنونده؛ هر حرکت مکان‌نما ۴۰ بار Range/cloneContents اجرا می‌شد.
+  رفع: یک شنوندهٔ سراسری `window.__bRichSel` که `activeElement.__caretToRaw` را صدا می‌زند (پس از رفع: ۱).
+- ESLint: `no-dupe-keys` در mobile.js (کلید `lock` دو بار، دومی حذف)؛ `no-redeclare` `LS_PRINT` در builder.js (تعریف V163 حذف).
+- index.html: `/*__VAZIR_CSS__*/` هنوز `vazirmatn_embed.css` (۱۳۵k base64) را تزریق می‌کرد در حالی که از V164 قلم از `site/fonts/*.woff2`
+  می‌آید → حذف؛ اندازه ۰٫۸ → ۰٫۷ MB. (موتور چاپ همچنان نسخهٔ embed را دارد چون داخل srcdoc به `/fonts/` دسترسی ندارد.)
+- بررسی‌شده و سالم: توکن‌های refresh، لایهٔ z-index، تایمرهای student.js با stopAll پاک می‌شوند، Escape/Back، شنونده‌های scroll
+  در موتور چاپ با rAF/passive، `renderPreview` فقط schedulePaginate. مورد باقی‌مانده (بدون تغییر، ریسک‌پذیرفته): صفحه‌های async
+  (`pageDashboard` و مانند آن) پس از ناوبری سریع ممکن است در container قدیمی بنویسند — چون render() هر بار #content تازه می‌سازد،
+  فقط چند میلی‌ثانیه کار هدر می‌رود و روی صفحه دیده نمی‌شود.
+- بزرگ‌ترین بار باقی‌مانده: `engines.<hash>.js` ۵٫۳ MB (math_host.js ۱٫۴۶ MB + main.css ۱٫۸ MB درون‌خطی + قلم‌ها). یک‌بار دانلود و
+  immutable کش می‌شود؛ کوچک‌سازی آن نیازمند minify/gzip در Pages است (Cloudflare خودش br/gzip می‌دهد؛ ~۱٫۲ MB روی سیم).
+تست: `V181_SiteAuditTest`.
