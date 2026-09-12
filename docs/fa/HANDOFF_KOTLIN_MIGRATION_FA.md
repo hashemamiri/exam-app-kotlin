@@ -19029,3 +19029,18 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 ## V179.1 — تست‌های آینهٔ سایت
 
 - CI اپ (که در V179 باز شد) ۱۲ تست قدیمی سایت را قرمز کرد چون رشته‌هایشان در V164–V178 عوض شده بود: V142 (`['bank',…]` در ریل نیست → `bank: function`), V143 (`reports` با `view.arg`), V146 (`[side, sbBg, main, bottom, rail]`), V153 (زاویه `360 / items.length`؛ `cardsDeck(c,'teacher',teacherCards())`), V161/V162 (`page === 'profile' || page === 'account'` / `'tools' || 'settings'`), V164 (`class:'foot'` سایدبار قدیمی؛ حالا `land-foot/landing-foot`), V165 (`pages` با account/settings؛ خروج با `confirmDlg`), V166 (`'سؤال بعدی'` نباید باشد), V167 (`icons: I,`), V168 (`MENUS[user.role + 'Menu']`). **قاعده:** قبل از باز کردن CI، همهٔ `V1xx_Site*Test` را با `grep` مقابل کد فعلی بررسی کنید.
+
+## §V180 — سایت: پنجرهٔ هزینهٔ چاپ برای همهٔ چاپ‌ها + بالای موتور چاپ
+
+**گزارش کاربر:** «دکمهٔ چاپ باید ابتدا پنجرهٔ کسر هزینه را باز کند» (مقایسه با اپ).
+
+**بررسی (بدون حدس):** در اپ `ExamHtmlPrintDialog.onPrint` هر چاپی (بیلدر، FAB، نوار PGS) را از `PrintCostConfirmDialog`
+می‌گذراند و `printExamId = state.examId ?: "local"` — یعنی آزمون‌های چاپی/محلی هم هزینه دارند. در سایت `__printBridge.print`
+دو نقص داشت: ۱) `if (!printCtx.examId) { doNative(); return; }` → آزمون‌های چاپی (builder mode=print، کارت‌های «آزمون‌های چاپی»)
+بدون پرسش چاپ می‌شدند؛ ۲) `confirmDlg` با `.modal-bg{z-index:50}` زیر `.engine-bg{z-index:60}` ساخته می‌شد → برای آزمون‌های
+آنلاین پنجره ساخته می‌شد ولی دیده نمی‌شد (کاربر فکر می‌کرد پنجره‌ای نیست). شبیه‌سازی jsdom تأیید کرد.
+
+**تغییرات:** `site/src/app.js`: حذف میان‌بر examId؛ `examRef = printCtx.examId || 'local'` (RPC `native_charge_print_v1`
+p_exam text — همان قرارداد `local-…` اپ)؛ فقط کاربر واردنشده (صفحهٔ نمونه) بدون کسر چاپ می‌کند؛ متن پنجره = اپ. `confirmDlg` وقتی
+`.engine-bg` باز است کلاس `over-engine` می‌گیرد؛ `site.css`: `.modal-bg.over-engine{z-index:65}`. `builder.js`: پیش‌نمایش چاپی
+`examId: state.printId || 'local'`؛ کارت‌های چاپی `examId: r.id`. تست `V180_SitePrintCostDialogTest`.

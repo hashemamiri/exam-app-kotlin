@@ -162,6 +162,7 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 .modal.wide{max-width:760px}
 .modal h2{font-size:20px;margin-bottom:16px}
 .modal .x{position:absolute;top:14px;left:14px;border:0;background:#f1f3f8;border-radius:8px;width:32px;height:32px;color:var(--muted)}
+.modal-bg.over-engine{z-index:65} /* V180 — بالای .engine-bg */
 .toast-wrap{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center}
 .toast{background:#1c2333;color:#fff;border-radius:10px;padding:10px 18px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:fade .25s}
 .toast.ok{background:var(--ok)}.toast.err{background:var(--danger)}
@@ -2052,7 +2053,8 @@ window.__HEADER_SCHEMA = {
   }
   function confirmDlg(title, body, okLabel, danger) {
     return new Promise(function (resolve) {
-      var bg = el('div', {class: 'modal-bg'});
+      /* V180 — روی موتور چاپ/فرمول (z-index 60) هم دیده شود؛ پیش از این پنجرهٔ هزینهٔ چاپ پشتِ پیش‌نمایش پنهان می‌ماند */
+      var bg = el('div', {class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')});
       var m = el('div', {class: 'modal'}, [
         el('h2', {text: title}),
         el('p', {class: 'muted', html: body}),
@@ -2342,12 +2344,14 @@ window.__HEADER_SCHEMA = {
         setTimeout(function () { try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} }, 400);
       };
       var restore = function () { try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
-      if (!printCtx.examId) { doNative(); return; }
+      /* V180 — مثل PrintCostConfirmDialog اپ: هر چاپی (آنلاین، چاپی، محلی) اول پنجرهٔ هزینه؛ فقط مهمانِ صفحهٔ نمونه بدون کسر */
+      if (!user) { doNative(); return; }
+      var examRef = printCtx.examId || 'local';
       /* V132 — هزینهٔ چاپ: ۱۰۰۰ تومان به‌ازای هر سؤال، تأیید پیش از پنجرهٔ چاپ */
       var n = printCtx.questionCount || 0, cost = n * PRINT_COST_PER_Q;
-      confirmDlg('هزینهٔ چاپ', 'چاپ نسخهٔ ' + (mode === 'teacher' ? 'استاد (با پاسخ‌نامه)' : 'دانش‌آموز') + ' با ' + fa(n) + ' سؤال، مبلغ <b>' + money(cost) + '</b> از کیف پول شما کسر می‌کند. ادامه می‌دهید؟', 'پرداخت و چاپ').then(function (ok) {
+      confirmDlg(mode === 'teacher' ? 'چاپ با کلید (پاسخ‌نامه)' : 'چاپ آزمون', 'هزینهٔ چاپ: ' + fa(PRINT_COST_PER_Q) + ' تومان به‌ازای هر سؤال<br>تعداد سؤال: ' + fa(n) + '<br><b>مبلغ قابل کسر از کیف پول: ' + money(cost) + '</b>', 'پرداخت و چاپ').then(function (ok) {
         if (!ok) { restore(); return; }
-        api.chargePrint(printCtx.examId, n, mode).then(function (r) {
+        api.chargePrint(examRef, n, mode).then(function (r) {
           toast('کسر ' + money(r.cost || cost) + ' با موفقیت انجام شد.', 'ok');
           doNative();
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
@@ -3525,7 +3529,7 @@ window.__HEADER_SCHEMA = {
             return el('tr', {}, [el('td', {html: '<b>' + esc(r.title || 'بدون عنوان') + '</b>'}), el('td', {text: r.subject || '—'}), el('td', {text: fa(r.question_count || 0)}), el('td', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(new Date(r.saved_at || Date.now()).toISOString())}),
               el('td', {}, [el('div', {class: 'acts'}, [
                 el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
-                el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title}); } catch (e) { toast(errMsg(e), 'err'); } }}),
+                el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title, examId: r.id}); } catch (e) { toast(errMsg(e), 'err'); } }}),
                 el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})
               ])])]);
           }))
@@ -4048,7 +4052,7 @@ window.__HEADER_SCHEMA = {
       if (!state.questions.length) return toast('حداقل یک سؤال اضافه کنید.', 'err');
       var payload = S.buildPrintPayload(toServerExam(state));
       /* V156 — printMode: 'student' | 'teacher' (FAB چاپ در گوشی، مثل منوی «چاپ آزمون/چاپ با کلید» اپ) */
-      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : '', printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
+      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : (state.printId || 'local'), printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
     window.__builderPreview = preview;
     function applySnapshot(snap) {

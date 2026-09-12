@@ -106,7 +106,8 @@
   }
   function confirmDlg(title, body, okLabel, danger) {
     return new Promise(function (resolve) {
-      var bg = el('div', {class: 'modal-bg'});
+      /* V180 — روی موتور چاپ/فرمول (z-index 60) هم دیده شود؛ پیش از این پنجرهٔ هزینهٔ چاپ پشتِ پیش‌نمایش پنهان می‌ماند */
+      var bg = el('div', {class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')});
       var m = el('div', {class: 'modal'}, [
         el('h2', {text: title}),
         el('p', {class: 'muted', html: body}),
@@ -396,12 +397,14 @@
         setTimeout(function () { try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} }, 400);
       };
       var restore = function () { try { w.ExamPrintRenderer.restorePreview(); } catch (e) {} };
-      if (!printCtx.examId) { doNative(); return; }
+      /* V180 — مثل PrintCostConfirmDialog اپ: هر چاپی (آنلاین، چاپی، محلی) اول پنجرهٔ هزینه؛ فقط مهمانِ صفحهٔ نمونه بدون کسر */
+      if (!user) { doNative(); return; }
+      var examRef = printCtx.examId || 'local';
       /* V132 — هزینهٔ چاپ: ۱۰۰۰ تومان به‌ازای هر سؤال، تأیید پیش از پنجرهٔ چاپ */
       var n = printCtx.questionCount || 0, cost = n * PRINT_COST_PER_Q;
-      confirmDlg('هزینهٔ چاپ', 'چاپ نسخهٔ ' + (mode === 'teacher' ? 'استاد (با پاسخ‌نامه)' : 'دانش‌آموز') + ' با ' + fa(n) + ' سؤال، مبلغ <b>' + money(cost) + '</b> از کیف پول شما کسر می‌کند. ادامه می‌دهید؟', 'پرداخت و چاپ').then(function (ok) {
+      confirmDlg(mode === 'teacher' ? 'چاپ با کلید (پاسخ‌نامه)' : 'چاپ آزمون', 'هزینهٔ چاپ: ' + fa(PRINT_COST_PER_Q) + ' تومان به‌ازای هر سؤال<br>تعداد سؤال: ' + fa(n) + '<br><b>مبلغ قابل کسر از کیف پول: ' + money(cost) + '</b>', 'پرداخت و چاپ').then(function (ok) {
         if (!ok) { restore(); return; }
-        api.chargePrint(printCtx.examId, n, mode).then(function (r) {
+        api.chargePrint(examRef, n, mode).then(function (r) {
           toast('کسر ' + money(r.cost || cost) + ' با موفقیت انجام شد.', 'ok');
           doNative();
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
