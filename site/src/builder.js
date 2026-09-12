@@ -392,10 +392,36 @@
     wrap.appendChild(top);
 
     /* --- بدنه: فهرست سؤال‌ها + ویرایشگر --- */
-    var body = el('div', {class: 'b-body'});
+    var body = el('div', {class: 'b-body' + (state.mode === 'online' && !state.bankEdit ? ' has-settings' : '')});
     var list = el('div', {class: 'b-list card'});
     var editor = el('div', {class: 'b-editor card'});
-    body.appendChild(list); body.appendChild(editor); wrap.appendChild(body);
+    /* V166 — دسکتاپ (body.dk): ستون راست «مشخصات آزمون» همیشه باز + ریل چپ (افزودن/بعدی/ذخیره/چاپ/پیش‌نمایش + شمارهٔ سؤال‌ها)؛ فهرست b-list فقط در گوشی/تبلت */
+    var settings = null;
+    if (state.mode === 'online' && !state.bankEdit) { settings = el('aside', {class: 'b-settings card'}, [el('h3', {text: 'مشخصات آزمون'})]); settingsForm(settings); settings.addEventListener('input', syncMeta); }
+    var rail = el('nav', {class: 'b-rail', 'aria-label': 'ابزار سازنده'});
+    if (settings) body.appendChild(settings);
+    body.appendChild(list); body.appendChild(editor); wrap.appendChild(body); wrap.appendChild(rail);
+    function addMenu(anchor) {
+      var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
+      var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, TYPES.map(function (t) { return el('button', {class: 'btn light sm', text: t[2] + ' ' + t[1], onclick: function () { menu.remove(); state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }}); })
+        .concat(state.mode === 'online' ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال', onclick: function () { menu.remove(); openBank(); }})] : []));
+      var r = anchor.getBoundingClientRect(); menu.style.top = r.top + 'px'; menu.style.left = (r.right + 10) + 'px';
+      document.body.appendChild(menu);
+      setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
+    }
+    function drawRail() {
+      rail.innerHTML = '';
+      function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>', 'سؤال بعدی', function () { if (!state.questions.length) return; state.selected = (state.selected + 1) % state.questions.length; drawList(); drawEditor(); }));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok'));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ', function () { preview('teacher'); }));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>', 'پیش‌نمایش', function () { preview(); }));
+      rail.appendChild(el('span', {class: 'b-rail-sep'}));
+      var nums = el('div', {class: 'b-rail-nums'});
+      state.questions.forEach(function (q, i) { nums.appendChild(el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})); });
+      rail.appendChild(nums);
+    }
 
     function drawList() {
       list.innerHTML = '';
@@ -416,13 +442,14 @@
       });
       if (!state.questions.length) ul.appendChild(el('div', {class: 'empty', style: 'padding:20px', text: (document.getElementById('m-shell') ? 'با دکمهٔ + سؤال اضافه کنید.' : 'با دکمه‌های بالا سؤال اضافه کنید.')}));
       list.appendChild(ul);
+      drawRail();
     }
     function drawEditor() {
       editor.innerHTML = '';
       var q = state.questions[state.selected];
-      if (!q) { editor.appendChild(el('div', {class: 'empty'}, [el('div', {class: 'big', text: '✎'}), el('div', {text: 'سؤالی انتخاب نشده است.'})])); return; }
+      if (!q) { editor.appendChild(el('div', {class: 'empty'}, [el('div', {class: 'big', text: '✎'}), el('div', {text: 'سؤالی انتخاب نشده است. با دکمهٔ + سؤال اضافه کنید.'})])); return; }
       var i = state.selected;
-      editor.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [
+      editor.appendChild(el('div', {class: 'row b-qhead', style: 'margin-bottom:10px'}, [
         el('h3', {class: 'grow', text: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type]}),
         el('button', {class: 'icon-btn', title: 'بالا', html: '↑', onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
         el('button', {class: 'icon-btn', title: 'پایین', html: '↓', onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
@@ -456,6 +483,8 @@
       ]);
       var tt = tokenTextarea(ta);
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
+      /* V166 — تغییر نوع سؤال با تراشه‌ها (مثل QuestionTypeChips اپ) */
+      editor.appendChild(el('div', {class: 'b-types'}, TYPES.map(function (t) { return el('button', {class: 'chip' + (q.type === t[0] ? ' on' : ''), text: t[1], onclick: function () { if (q.type === t[0]) return; changeType(q, t[0]); mark(); drawList(); drawEditor(); }}); })));
       if (q.images.length) {
         var ig = el('div', {class: 'b-imgs'});
         q.images.forEach(function (m, k) { ig.appendChild(el('div', {class: 'b-img'}, [el('img', {src: m.uri}), el('button', {class: 'x', text: '✕', onclick: function () { q.images.splice(k, 1); mark(); drawEditor(); }})])); });
@@ -491,6 +520,13 @@
         ]));
       }
       function drawListSoft() { var rows = list.querySelectorAll('.b-q'); var r = rows[state.selected]; if (r) { r.querySelector('.t').textContent = (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]').replace(/\$[^$]*\$/g, '[فرمول]').slice(0, 60) || '— بدون متن —'; r.querySelector('.chip.brand').textContent = fa(S.fmtScore(q.score)); } }
+    }
+    /* V166 — تغییر نوع بدون از دست رفتن متن/بارم/تصاویر؛ فیلدهای نوع مثل newQuestion */
+    function changeType(q, t) {
+      var fresh = newQuestion(t);
+      q.type = t; q.options = fresh.options; q.optionImages = fresh.optionImages; q.correctIndex = null; q.expectedText = fresh.expectedText; q.expectedNumber = ''; q.matchingPairs = {};
+      if (t === 'matching' && (!q.matchingLeft || q.matchingLeft.length < 2)) { q.matchingLeft = ['', '']; q.matchingRight = ['', '']; }
+      if (t === 'essay' && !(q.answerLines > 2)) q.answerLines = 5;
     }
     function swap(a, b) { var t = state.questions[a]; state.questions[a] = state.questions[b]; state.questions[b] = t; state.selected = b; mark(); drawList(); drawEditor(); }
     function typeSection(q) {
@@ -536,17 +572,14 @@
       return box;
     }
     /* --- مشخصات آزمون (آنلاین) --- */
-    function openSettings() {
-      var bg = el('div', {class: 'modal-bg'});
-      var m = el('div', {class: 'modal wide'});
-      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }}));
-      m.appendChild(el('h2', {text: '⚙ مشخصات آزمون'}));
-      m.appendChild(el('div', {class: 'grid3'}, [
+    /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
+    function settingsForm(m_) {
+      m_.appendChild(el('div', {class: 'grid3'}, [
         inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); }),
         inp('درس', state.subject, function (v) { state.subject = v; mark(); }),
         inp('مدت (دقیقه)', state.duration, function (v) { state.duration = en(v); mark(); }, 'number')
       ]));
-      m.appendChild(el('div', {class: 'grid2'}, [
+      m_.appendChild(el('div', {class: 'grid2'}, [
         inp('زمان شروع (اختیاری)', state.opensAt, function (v) { state.opensAt = v; mark(); }, 'datetime-local'),
         inp('زمان پایان (اختیاری)', state.closesAt, function (v) { state.closesAt = v; mark(); }, 'datetime-local'),
         inp('نمرهٔ منفی (۰ تا ۱)', state.negativeMarking, function (v) { state.negativeMarking = en(v); mark(); }, 'number'),
@@ -554,11 +587,11 @@
         sel('نمرهٔ نهایی', state.gradePolicy, [['last', 'آخرین تلاش'], ['best', 'بهترین تلاش'], ['all', 'همهٔ تلاش‌ها']], function (v) { state.gradePolicy = v; mark(); }),
         inp('فاصلهٔ بین تلاش‌ها (دقیقه)', state.attemptCooldown, function (v) { state.attemptCooldown = en(v); mark(); }, 'number')
       ]));
-      m.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
+      m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
-      m.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
+      m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
       /* مخاطبان */
-      m.appendChild(el('h3', {text: '👥 مخاطبان آزمون'}));
+      m_.appendChild(el('h3', {text: '👥 مخاطبان آزمون'}));
       var aud = el('div');
       function drawAud() {
         aud.innerHTML = '';
@@ -571,10 +604,18 @@
         src.forEach(function (o) { var c = el('input', {type: 'checkbox'}); c.checked = sel_.indexOf(o.id) >= 0; c.addEventListener('change', function () { var ix = sel_.indexOf(o.id); if (c.checked && ix < 0) sel_.push(o.id); if (!c.checked && ix >= 0) sel_.splice(ix, 1); mark(); }); box.appendChild(el('label', {class: 'row', style: 'gap:6px'}, [c, o.name + (o.classNames ? ' (' + o.classNames + ')' : '') + (o.city ? ' — ' + o.city : '')])); });
         aud.appendChild(box);
       }
-      drawAud(); m.appendChild(aud);
-      m.appendChild(el('div', {class: 'row', style: 'margin-top:14px'}, [el('button', {class: 'btn', text: 'بستن', onclick: function () { bg.remove(); }})]));
+      drawAud(); m_.appendChild(aud);
+    }
+    function openSettings() {
+      var bg = el('div', {class: 'modal-bg'});
+      var m = el('div', {class: 'modal wide'});
+      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); syncMeta(); }}));
+      m.appendChild(el('h2', {text: '⚙ مشخصات آزمون'}));
+      settingsForm(m);
+      m.appendChild(el('div', {class: 'row', style: 'margin-top:14px'}, [el('button', {class: 'btn', text: 'بستن', onclick: function () { bg.remove(); syncMeta(); }})]));
       bg.appendChild(m); document.body.appendChild(bg);
     }
+    function syncMeta() { var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }
     /* --- بانک سؤال --- */
     async function openBank() {
       var bg = el('div', {class: 'modal-bg'});

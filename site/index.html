@@ -1003,6 +1003,52 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 }
 @media (min-width:861px) and (max-width:1100px){.dk .dk-grid{grid-template-columns:repeat(3,1fr)}}
 @media (min-width:861px) and (max-height:760px){.dk .dk-rail{--size:44px}.dk .dk-rail-item .dk-ic{width:36px;height:36px}.dk .dk-rail-item .dk-ic svg{width:19px;height:19px}}
+
+/* ===================== V166 — سازندهٔ آزمون دسکتاپ به سبک «نسخهٔ یکپارچه» (سه‌ستونه + ریل چپ) ===================== */
+.b-rail,.b-types,.b-settings{display:none}
+.b-addmenu{position:fixed;z-index:80;display:grid;gap:6px;padding:10px;min-width:180px;border-radius:14px}
+.b-addmenu .btn{justify-content:flex-start}
+@media (min-width:861px){
+  .dk .builder .b-top .row .btn,.dk .builder .b-top .row .chip{display:none}
+  .dk .builder .b-top .row .code{display:inline-block}
+  .dk .builder .b-top .row:not(:has(.code)),.dk .builder .b-top .b-meta{display:none}
+  .dk .builder .b-top:not(:has(.code)):not(:has(.alert)){display:none}
+  .dk .b-body{grid-template-columns:1fr;margin:0}
+  .dk .b-body.has-settings{grid-template-columns:290px minmax(0,1fr)}
+  .dk .b-settings{display:block;grid-column:1;grid-row:1;position:sticky;top:76px;max-height:calc(100vh - 100px);overflow:auto;padding:18px}
+  .dk .b-settings h3{font-size:16px;margin-bottom:12px}
+  .dk .b-settings .grid2,.dk .b-settings .grid3{grid-template-columns:1fr}
+  .dk .b-settings .row{flex-direction:column;align-items:flex-start;gap:8px}
+  .dk .b-settings .tabs{flex-wrap:wrap}
+  .dk .b-settings .tabs button{flex:1 1 45%;font-size:12px;padding:6px}
+  .dk .b-settings .b-aud{grid-template-columns:1fr;max-height:200px}
+  .dk .b-list{display:none}
+  .dk .b-editor{grid-column:auto;grid-row:1;min-width:0}
+  .dk .b-body:not(.has-settings) .b-editor{grid-column:1}
+  .dk .b-types{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;margin:6px 0 14px}
+  .dk .b-types .chip{height:40px;padding:0 16px;border-radius:14px;font-size:13px;background:#fff;border:1px solid var(--line);color:var(--ink);cursor:pointer}
+  .dk .b-types .chip.on{background:#e6f0f3;border-color:#39758a;color:#1f4f5e;box-shadow:inset 0 0 0 1px #39758a}
+  .dk .b-tools{justify-content:flex-start;gap:10px}
+  .dk .tool-btn{width:56px;height:56px;border-radius:16px;font-size:24px;border:0;box-shadow:0 4px 14px rgba(33,52,66,.08)}
+  .dk .tool-btn:nth-child(1){background:#ece8ff;color:#6a4ee6}.dk .tool-btn:nth-child(2){background:#e6f0ff;color:#2f6fe6}.dk .tool-btn:nth-child(3){background:#e3f7f0;color:#0f9a6b}
+  .dk .tool-btn:nth-child(4){background:#ffe8ef;color:#d6336c}.dk .tool-btn:nth-child(5){background:#fff0e0;color:#e8590c}.dk .tool-btn:nth-child(6){background:#e7f1ff;color:#1c7ed6}
+  .dk .tool-btn:nth-child(7){background:#e6f9ec;color:#2b8a3e}.dk .tool-btn:nth-child(8){background:#eef2f5;color:#39758a}.dk .tool-btn:nth-child(9){background:#f1eefc;color:#7048e8}
+  .dk .tool-btn:hover{transform:translateY(-2px)}
+  .dk .b-qhead .icon-btn{width:40px;height:40px;border-radius:12px}
+  /* ریل چپ */
+  .dk .b-rail{display:flex;flex-direction:column;align-items:center;gap:8px;position:fixed;left:14px;top:22px;bottom:22px;width:60px;padding:10px 6px;border-radius:20px;z-index:45;overflow:auto;
+    background:linear-gradient(180deg,rgba(239,249,252,.97),rgba(211,236,245,.97));border:1px solid rgba(144,190,207,.65);box-shadow:0 18px 45px rgba(38,92,111,.15),inset 0 1px 0 rgba(255,255,255,.8);backdrop-filter:blur(14px)}
+  .dk .b-rail-btn{width:44px;height:44px;border:1.6px solid transparent;border-radius:14px;background:transparent;color:#58717c;display:grid;place-items:center;padding:0;transition:background .18s,color .18s}
+  .dk .b-rail-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .dk .b-rail-btn:hover{background:#fff;color:#2f687c;box-shadow:0 10px 24px rgba(24,54,68,.16)}
+  .dk .b-rail-btn.add{color:#1d2935}.dk .b-rail-btn.ok{color:#1aa37a}
+  .dk .b-rail-sep{width:32px;height:1px;background:rgba(88,113,124,.3);margin:4px 0}
+  .dk .b-rail-nums{display:flex;flex-direction:column;gap:8px;align-items:center}
+  .dk .b-rail-num{width:44px;height:44px;border:1.6px solid transparent;border-radius:14px;background:transparent;color:#58717c;font:inherit;font-weight:800;font-size:14px;padding:0}
+  .dk .b-rail-num:hover{background:#fff}
+  .dk .b-rail-num.active{color:#0e93b8;border-color:#22c6ef;border-width:2px;box-shadow:0 0 0 3px rgba(34,198,239,.16),0 0 12px rgba(34,198,239,.55),inset 0 0 10px rgba(34,198,239,.2)}
+  .dk .main{padding-left:100px}
+}
 </style>
 </head>
 <body>
@@ -3587,10 +3633,36 @@ window.__HEADER_SCHEMA = {
     wrap.appendChild(top);
 
     /* --- بدنه: فهرست سؤال‌ها + ویرایشگر --- */
-    var body = el('div', {class: 'b-body'});
+    var body = el('div', {class: 'b-body' + (state.mode === 'online' && !state.bankEdit ? ' has-settings' : '')});
     var list = el('div', {class: 'b-list card'});
     var editor = el('div', {class: 'b-editor card'});
-    body.appendChild(list); body.appendChild(editor); wrap.appendChild(body);
+    /* V166 — دسکتاپ (body.dk): ستون راست «مشخصات آزمون» همیشه باز + ریل چپ (افزودن/بعدی/ذخیره/چاپ/پیش‌نمایش + شمارهٔ سؤال‌ها)؛ فهرست b-list فقط در گوشی/تبلت */
+    var settings = null;
+    if (state.mode === 'online' && !state.bankEdit) { settings = el('aside', {class: 'b-settings card'}, [el('h3', {text: 'مشخصات آزمون'})]); settingsForm(settings); settings.addEventListener('input', syncMeta); }
+    var rail = el('nav', {class: 'b-rail', 'aria-label': 'ابزار سازنده'});
+    if (settings) body.appendChild(settings);
+    body.appendChild(list); body.appendChild(editor); wrap.appendChild(body); wrap.appendChild(rail);
+    function addMenu(anchor) {
+      var old = document.getElementById('b-addmenu'); if (old) { old.remove(); return; }
+      var menu = el('div', {class: 'b-addmenu card', id: 'b-addmenu'}, TYPES.map(function (t) { return el('button', {class: 'btn light sm', text: t[2] + ' ' + t[1], onclick: function () { menu.remove(); state.questions.push(newQuestion(t[0])); state.selected = state.questions.length - 1; mark(); drawList(); drawEditor(); }}); })
+        .concat(state.mode === 'online' ? [el('button', {class: 'btn soft sm', text: '🏦 از بانک سؤال', onclick: function () { menu.remove(); openBank(); }})] : []));
+      var r = anchor.getBoundingClientRect(); menu.style.top = r.top + 'px'; menu.style.left = (r.right + 10) + 'px';
+      document.body.appendChild(menu);
+      setTimeout(function () { document.addEventListener('click', function h(e) { if (!menu.contains(e.target) && e.target !== anchor) { menu.remove(); document.removeEventListener('click', h); } }); }, 0);
+    }
+    function drawRail() {
+      rail.innerHTML = '';
+      function rb(icon, label, on, cls) { return el('button', {class: 'b-rail-btn ' + (cls || ''), title: label, 'aria-label': label, html: icon, onclick: on}); }
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>', 'افزودن سؤال', function (e) { addMenu(e.currentTarget); }, 'add'));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>', 'سؤال بعدی', function () { if (!state.questions.length) return; state.selected = (state.selected + 1) % state.questions.length; drawList(); drawEditor(); }));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>', state.bankEdit ? 'ذخیره در بانک' : 'ذخیره', save, 'ok'));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/></svg>', 'چاپ', function () { preview('teacher'); }));
+      rail.appendChild(rb('<svg viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>', 'پیش‌نمایش', function () { preview(); }));
+      rail.appendChild(el('span', {class: 'b-rail-sep'}));
+      var nums = el('div', {class: 'b-rail-nums'});
+      state.questions.forEach(function (q, i) { nums.appendChild(el('button', {class: 'b-rail-num' + (i === state.selected ? ' active' : ''), title: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type], text: fa(i + 1), onclick: function () { state.selected = i; drawList(); drawEditor(); }})); });
+      rail.appendChild(nums);
+    }
 
     function drawList() {
       list.innerHTML = '';
@@ -3611,13 +3683,14 @@ window.__HEADER_SCHEMA = {
       });
       if (!state.questions.length) ul.appendChild(el('div', {class: 'empty', style: 'padding:20px', text: (document.getElementById('m-shell') ? 'با دکمهٔ + سؤال اضافه کنید.' : 'با دکمه‌های بالا سؤال اضافه کنید.')}));
       list.appendChild(ul);
+      drawRail();
     }
     function drawEditor() {
       editor.innerHTML = '';
       var q = state.questions[state.selected];
-      if (!q) { editor.appendChild(el('div', {class: 'empty'}, [el('div', {class: 'big', text: '✎'}), el('div', {text: 'سؤالی انتخاب نشده است.'})])); return; }
+      if (!q) { editor.appendChild(el('div', {class: 'empty'}, [el('div', {class: 'big', text: '✎'}), el('div', {text: 'سؤالی انتخاب نشده است. با دکمهٔ + سؤال اضافه کنید.'})])); return; }
       var i = state.selected;
-      editor.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [
+      editor.appendChild(el('div', {class: 'row b-qhead', style: 'margin-bottom:10px'}, [
         el('h3', {class: 'grow', text: 'سؤال ' + fa(i + 1) + ' — ' + TYPE_LABEL[q.type]}),
         el('button', {class: 'icon-btn', title: 'بالا', html: '↑', onclick: function () { if (i > 0) { swap(i, i - 1); } }}),
         el('button', {class: 'icon-btn', title: 'پایین', html: '↓', onclick: function () { if (i < state.questions.length - 1) swap(i, i + 1); }}),
@@ -3651,6 +3724,8 @@ window.__HEADER_SCHEMA = {
       ]);
       var tt = tokenTextarea(ta);
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
+      /* V166 — تغییر نوع سؤال با تراشه‌ها (مثل QuestionTypeChips اپ) */
+      editor.appendChild(el('div', {class: 'b-types'}, TYPES.map(function (t) { return el('button', {class: 'chip' + (q.type === t[0] ? ' on' : ''), text: t[1], onclick: function () { if (q.type === t[0]) return; changeType(q, t[0]); mark(); drawList(); drawEditor(); }}); })));
       if (q.images.length) {
         var ig = el('div', {class: 'b-imgs'});
         q.images.forEach(function (m, k) { ig.appendChild(el('div', {class: 'b-img'}, [el('img', {src: m.uri}), el('button', {class: 'x', text: '✕', onclick: function () { q.images.splice(k, 1); mark(); drawEditor(); }})])); });
@@ -3686,6 +3761,13 @@ window.__HEADER_SCHEMA = {
         ]));
       }
       function drawListSoft() { var rows = list.querySelectorAll('.b-q'); var r = rows[state.selected]; if (r) { r.querySelector('.t').textContent = (q.text || '').replace(/%%FIG:[\s\S]*?%%/g, '[شکل]').replace(/\$[^$]*\$/g, '[فرمول]').slice(0, 60) || '— بدون متن —'; r.querySelector('.chip.brand').textContent = fa(S.fmtScore(q.score)); } }
+    }
+    /* V166 — تغییر نوع بدون از دست رفتن متن/بارم/تصاویر؛ فیلدهای نوع مثل newQuestion */
+    function changeType(q, t) {
+      var fresh = newQuestion(t);
+      q.type = t; q.options = fresh.options; q.optionImages = fresh.optionImages; q.correctIndex = null; q.expectedText = fresh.expectedText; q.expectedNumber = ''; q.matchingPairs = {};
+      if (t === 'matching' && (!q.matchingLeft || q.matchingLeft.length < 2)) { q.matchingLeft = ['', '']; q.matchingRight = ['', '']; }
+      if (t === 'essay' && !(q.answerLines > 2)) q.answerLines = 5;
     }
     function swap(a, b) { var t = state.questions[a]; state.questions[a] = state.questions[b]; state.questions[b] = t; state.selected = b; mark(); drawList(); drawEditor(); }
     function typeSection(q) {
@@ -3731,17 +3813,14 @@ window.__HEADER_SCHEMA = {
       return box;
     }
     /* --- مشخصات آزمون (آنلاین) --- */
-    function openSettings() {
-      var bg = el('div', {class: 'modal-bg'});
-      var m = el('div', {class: 'modal wide'});
-      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }}));
-      m.appendChild(el('h2', {text: '⚙ مشخصات آزمون'}));
-      m.appendChild(el('div', {class: 'grid3'}, [
+    /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
+    function settingsForm(m_) {
+      m_.appendChild(el('div', {class: 'grid3'}, [
         inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); }),
         inp('درس', state.subject, function (v) { state.subject = v; mark(); }),
         inp('مدت (دقیقه)', state.duration, function (v) { state.duration = en(v); mark(); }, 'number')
       ]));
-      m.appendChild(el('div', {class: 'grid2'}, [
+      m_.appendChild(el('div', {class: 'grid2'}, [
         inp('زمان شروع (اختیاری)', state.opensAt, function (v) { state.opensAt = v; mark(); }, 'datetime-local'),
         inp('زمان پایان (اختیاری)', state.closesAt, function (v) { state.closesAt = v; mark(); }, 'datetime-local'),
         inp('نمرهٔ منفی (۰ تا ۱)', state.negativeMarking, function (v) { state.negativeMarking = en(v); mark(); }, 'number'),
@@ -3749,11 +3828,11 @@ window.__HEADER_SCHEMA = {
         sel('نمرهٔ نهایی', state.gradePolicy, [['last', 'آخرین تلاش'], ['best', 'بهترین تلاش'], ['all', 'همهٔ تلاش‌ها']], function (v) { state.gradePolicy = v; mark(); }),
         inp('فاصلهٔ بین تلاش‌ها (دقیقه)', state.attemptCooldown, function (v) { state.attemptCooldown = en(v); mark(); }, 'number')
       ]));
-      m.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
+      m_.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [chk('به‌هم‌ریختن سؤال‌ها', state.shuffleQuestions, function (v) { state.shuffleQuestions = v; mark(); }), chk('به‌هم‌ریختن گزینه‌ها', state.shuffleOptions, function (v) { state.shuffleOptions = v; mark(); }), chk('ثبت خودکار با پایان زمان', state.attemptOnTimeout, function (v) { state.attemptOnTimeout = v; mark(); })]));
       var tm = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px'}); tm.value = state.teacherMessage; tm.addEventListener('input', function () { state.teacherMessage = tm.value; mark(); });
-      m.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
+      m_.appendChild(el('div', {class: 'field'}, [el('label', {text: 'پیام معلم به دانش‌آموز (اختیاری)'}), tm]));
       /* مخاطبان */
-      m.appendChild(el('h3', {text: '👥 مخاطبان آزمون'}));
+      m_.appendChild(el('h3', {text: '👥 مخاطبان آزمون'}));
       var aud = el('div');
       function drawAud() {
         aud.innerHTML = '';
@@ -3766,10 +3845,18 @@ window.__HEADER_SCHEMA = {
         src.forEach(function (o) { var c = el('input', {type: 'checkbox'}); c.checked = sel_.indexOf(o.id) >= 0; c.addEventListener('change', function () { var ix = sel_.indexOf(o.id); if (c.checked && ix < 0) sel_.push(o.id); if (!c.checked && ix >= 0) sel_.splice(ix, 1); mark(); }); box.appendChild(el('label', {class: 'row', style: 'gap:6px'}, [c, o.name + (o.classNames ? ' (' + o.classNames + ')' : '') + (o.city ? ' — ' + o.city : '')])); });
         aud.appendChild(box);
       }
-      drawAud(); m.appendChild(aud);
-      m.appendChild(el('div', {class: 'row', style: 'margin-top:14px'}, [el('button', {class: 'btn', text: 'بستن', onclick: function () { bg.remove(); }})]));
+      drawAud(); m_.appendChild(aud);
+    }
+    function openSettings() {
+      var bg = el('div', {class: 'modal-bg'});
+      var m = el('div', {class: 'modal wide'});
+      m.appendChild(el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); syncMeta(); }}));
+      m.appendChild(el('h2', {text: '⚙ مشخصات آزمون'}));
+      settingsForm(m);
+      m.appendChild(el('div', {class: 'row', style: 'margin-top:14px'}, [el('button', {class: 'btn', text: 'بستن', onclick: function () { bg.remove(); syncMeta(); }})]));
       bg.appendChild(m); document.body.appendChild(bg);
     }
+    function syncMeta() { var meta = top.querySelector('.b-meta'); if (meta) meta.textContent = [state.title, state.subject, state.duration ? fa(state.duration) + ' دقیقه' : ''].filter(Boolean).join(' · ') || 'عنوان، درس و مدت را در «مشخصات آزمون» وارد کنید.'; }
     /* --- بانک سؤال --- */
     async function openBank() {
       var bg = el('div', {class: 'modal-bg'});
