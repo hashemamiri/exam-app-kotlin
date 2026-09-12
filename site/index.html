@@ -213,7 +213,10 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 .tx-amt.neg{color:var(--danger);font-weight:700}
 
 /* ---------- موتور چاپ / فرمول (روکش تمام‌صفحه) ---------- */
-.engine-bg{position:fixed;inset:0;z-index:60;background:#1c2333}
+.engine-bg{position:fixed;inset:0;z-index:60;background:#1c2333;contain:strict}
+/* V179 — کارایی: تا وقتی موتور چاپ/فرمول باز است، پوستهٔ سنگین سایت (سازندهٔ ثابت، ریل‌های تار) نقاشی نمی‌شود */
+body.engine-open > #root{visibility:hidden;pointer-events:none}
+body.engine-open > #root .m-radial-bg{display:none}
 .engine-bg iframe{border:0;width:100%;height:100%;background:#fff}
 .engine-bar{position:absolute;top:0;inset-inline:0;height:44px;background:#0f172a;color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:14px;z-index:2}
 .engine-bar .btn{padding:5px 12px;font-size:13px}
@@ -1107,7 +1110,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 <body>
 <div id="root"><div class="loading" style="padding-top:120px"><span class="spinner"></span> در حال بارگذاری…</div></div>
 <div class="toast-wrap" id="toasts"></div>
-<script>window.__ENGINES_URL = "/engines.3ecb68637da4.js";
+<script>window.__ENGINES_URL = "/engines.713a9050d5a7.js";
 window.__HEADER_SCHEMA = {
  "templates": [
   {
@@ -2356,7 +2359,7 @@ window.__HEADER_SCHEMA = {
     var c = printCtx; printCtx = null;
     if (c.onSnapshot) { try { var w = c.iframe.contentWindow; var snap = w.ExamPrintRenderer && w.ExamPrintRenderer.layoutSnapshot ? w.ExamPrintRenderer.layoutSnapshot() : '{}'; if (snap && snap !== '{}') c.onSnapshot(snap); } catch (e) {} }
     try { c.overlay.remove(); } catch (e) {}
-    document.body.style.overflow = '';
+    document.body.style.overflow = ''; document.body.classList.remove('engine-open');
     if (c.onClosed) c.onClosed();
   }
   /* V160 — آینهٔ ExamHtmlImageInliner: نشانی‌های https تصویر (Storage خصوصی با هدر نشست / S3 عمومی) → data:image/jpeg
@@ -2395,7 +2398,7 @@ window.__HEADER_SCHEMA = {
     ]);
     var iframe = el('iframe', {class: 'with-bar', title: 'print-engine'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open'); /* V179 */
     printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
     var inlined = inlinePrintImages(payload);
@@ -2420,7 +2423,7 @@ window.__HEADER_SCHEMA = {
   var formulaCtx = null;
   window.__formulaBridge = {
     onTextChanged: function (v) { if (formulaCtx) formulaCtx.text = String(v == null ? '' : v); },
-    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; c.resolve(c.text); },
+    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; document.body.classList.remove('engine-open'); c.resolve(c.text); },
     onError: function (code) { console.warn('formula editor:', code); }
   };
   function openFormulaEditor(text, selStart, selEnd) {
@@ -2429,7 +2432,7 @@ window.__HEADER_SCHEMA = {
       var overlay = el('div', {class: 'engine-bg'});
       var iframe = el('iframe', {title: 'formula-editor'});
       overlay.appendChild(iframe); document.body.appendChild(overlay);
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open');
       formulaCtx = {overlay: overlay, iframe: iframe, text: text || '', resolve: resolve};
       var s = selStart == null ? (text || '').length : selStart, e = selEnd == null ? s : selEnd;
       iframe.addEventListener('load', function () {

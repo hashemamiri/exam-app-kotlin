@@ -724,7 +724,10 @@
     tObs = setTimeout(function () { tObs = null; installAll(); }, 120);
   }
   try {
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    /* V179 — کارایی: تغییرات داخل بینندهٔ پیش‌نمایش/بندانگشتی‌ها (صفحه‌بندی، clone برگه‌ها) ربطی به ابزار تصویر ندارند */
+    new MutationObserver(function (ms) {
+      for (var i = 0; i < ms.length; i++) { var t = ms[i].target; if (!(t && t.closest && t.closest('#pgsViewer, #previewArea, .pgs-thumbs'))) { schedule(); return; } }
+    }).observe(document.body, { childList: true, subtree: true });
   } catch (e) {}
   document.addEventListener('DOMContentLoaded', installAll);
   window.addEventListener('load', installAll);

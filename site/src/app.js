@@ -413,7 +413,7 @@
     var c = printCtx; printCtx = null;
     if (c.onSnapshot) { try { var w = c.iframe.contentWindow; var snap = w.ExamPrintRenderer && w.ExamPrintRenderer.layoutSnapshot ? w.ExamPrintRenderer.layoutSnapshot() : '{}'; if (snap && snap !== '{}') c.onSnapshot(snap); } catch (e) {} }
     try { c.overlay.remove(); } catch (e) {}
-    document.body.style.overflow = '';
+    document.body.style.overflow = ''; document.body.classList.remove('engine-open');
     if (c.onClosed) c.onClosed();
   }
   /* V160 — آینهٔ ExamHtmlImageInliner: نشانی‌های https تصویر (Storage خصوصی با هدر نشست / S3 عمومی) → data:image/jpeg
@@ -452,7 +452,7 @@
     ]);
     var iframe = el('iframe', {class: 'with-bar', title: 'print-engine'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open'); /* V179 */
     printCtx = {overlay: overlay, iframe: iframe, examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
     var inlined = inlinePrintImages(payload);
@@ -477,7 +477,7 @@
   var formulaCtx = null;
   window.__formulaBridge = {
     onTextChanged: function (v) { if (formulaCtx) formulaCtx.text = String(v == null ? '' : v); },
-    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; c.resolve(c.text); },
+    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; document.body.classList.remove('engine-open'); c.resolve(c.text); },
     onError: function (code) { console.warn('formula editor:', code); }
   };
   function openFormulaEditor(text, selStart, selEnd) {
@@ -486,7 +486,7 @@
       var overlay = el('div', {class: 'engine-bg'});
       var iframe = el('iframe', {title: 'formula-editor'});
       overlay.appendChild(iframe); document.body.appendChild(overlay);
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open');
       formulaCtx = {overlay: overlay, iframe: iframe, text: text || '', resolve: resolve};
       var s = selStart == null ? (text || '').length : selStart, e = selEnd == null ? s : selEnd;
       iframe.addEventListener('load', function () {

@@ -29,6 +29,6 @@ class V161_SiteMobileProfileTest {
     fun `site-only version keeps android ci closed`() {
         val y = source(".github/workflows/android.yml")
         // V164 — نسخهٔ فقط-سایت: CI بسته (قاعدهٔ V160.5)
-        assertTrue("workflow_dispatch:" in y && "\n  # push:" in y && "\n  push:" !in y)
+        assertTrue("workflow_dispatch:" in y && "\n  push:" in y) // V179: assets/print تغییر کرد → CI اپ باز
     }
 }

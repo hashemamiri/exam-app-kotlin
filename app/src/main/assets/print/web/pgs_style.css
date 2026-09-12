@@ -267,7 +267,11 @@ body.pgs-viewer-open{overflow:hidden;}
   display:flex;flex-direction:column;gap:12px;align-items:center;
 }
 .pgs-thumbs.hidden{display:none;}
-.pgs-thumb{position:relative;cursor:pointer;border:2px solid transparent;border-radius:4px;}
+.pgs-thumb{position:relative;cursor:pointer;border:2px solid transparent;border-radius:4px;content-visibility:auto;contain-intrinsic-size:138px 195px;}
+/* V179 — کارایی: هر برگه و بندانگشتی جداگانه نقاشی می‌شود (اسکرول/زوم روان‌تر) */
+#pgsViewer .pgs-sheet{contain:paint;}
+.pgs-thumb-sizer{contain:strict;}
+.pgs-canvas{will-change:transform;}
 .pgs-thumb.active{border-color:#6ea8fe;}
 .pgs-thumb-sizer{overflow:hidden;background:#fff;border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
 .pgs-thumb-cap{

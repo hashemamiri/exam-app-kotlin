@@ -188,7 +188,11 @@
   /* پشتیبان: بعد از هر تغییر DOM رادیکال‌ها دوباره اندازه بگیرند (خطِ رویین تک‌مسیر است) */
   if (window.MutationObserver) {
     var __fitT = null;
-    var __fitMo = new MutationObserver(function () {
+    var __fitMo = new MutationObserver(function (ms) {
+      /* V179 — کارایی: بندانگشتی‌ها clone برگه‌های آماده‌اند؛ نیازی به اندازه‌گیری دوباره ندارند */
+      var relevant = false;
+      for (var i = 0; i < ms.length; i++) { var t = ms[i].target; if (!(t && t.closest && t.closest('.pgs-thumbs'))) { relevant = true; break; } }
+      if (!relevant) return;
       clearTimeout(__fitT);
       __fitT = setTimeout(function () {
         try { if (window.mbFitAllSurds) mbFitAllSurds(document); } catch (e) {}

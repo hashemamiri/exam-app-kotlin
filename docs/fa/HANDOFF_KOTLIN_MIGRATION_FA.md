@@ -19019,3 +19019,9 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 - `mobile.js`: منوی شعاعی به تابع مشترک `radialMenu(onPick, onClose, opts)` درآمد (گوشی همان را استفاده می‌کند؛ `opts.emoji` آیکون‌های ایموجی و برچسب «وارد کردن آزمون» را می‌دهد، `opts.cls` کلاس اضافه). در `SiteMobile` بیرون داده می‌شود.
 - `builder.js addMenu`: اگر `SiteMobile.radialMenu` باشد، منوی شعاعی با `{cls:'dk-radial', emoji:true}` باز می‌شود؛ انتخاب نوع → `newQuestion`؛ `import` → `SiteExtras.importExam`؛ `bank` → `openBank` (فقط آنلاین). فهرست قدیمی `b-addmenu` فقط fallback (و همچنان برای منوی چاپ).
 - CSS `.dk .m-radial-*`: z-index 70، پس‌زمینهٔ تار .55 + blur 6px، آیتم‌های دایره‌ای سفید ۷۸px، ✕ ۷۶px با هالهٔ قرمز، بدون حلقهٔ خط‌چین (مطابق اسکرین‌شات کاربر از اپ). تأیید jsdom: باز شدن، ۸ آیتم، انتخاب «عددی» → سؤال جدید، ✕ می‌بندد. تست: `V178_SiteDesktopRadialMenuTest`.
+
+## V179 — کارایی پیش‌نمایش چاپ (سایت + اپ)
+
+- علت لگ: (۱) `qimg_uploader.js` با `MutationObserver` روی کل `body` هر تغییر (صفحه‌بندی PGS، clone بندانگشتی‌ها) را به `installAll()` می‌فرستاد؛ (۲) `ui_v2_runtime.js` بعد از هر تغییر `mbFitAllSurds(document)` را روی همهٔ سند (شامل clone بندانگشتی‌ها) اجرا می‌کرد؛ (۳) در سایت، زیر iframe موتور، سازندهٔ ثابت با `backdrop-filter` ریل‌ها همچنان نقاشی می‌شد.
+- رفع: هر دو ناظر تغییرات داخل `#pgsViewer/#previewArea/.pgs-thumbs` را نادیده می‌گیرند؛ `pgs_style.css`: `#pgsViewer .pgs-sheet{contain:paint}`, `.pgs-thumb{content-visibility:auto;contain-intrinsic-size}`, `.pgs-thumb-sizer{contain:strict}`, `.pgs-canvas{will-change:transform}`؛ سایت: `body.engine-open > #root{visibility:hidden}` هنگام باز بودن `engine-bg` چاپ/فرمول (`openPrintPreview/closePrintOverlay/openFormulaEditor/onEditorClosed`)، `.engine-bg{contain:strict}`.
+- چون `app/src/main/assets/print/web` تغییر کرد، `android.yml` push باز شد (قاعدهٔ V161؛ تست V161 به‌روز). تست: `V179_PrintPreviewPerfTest`.
