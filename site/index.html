@@ -1050,6 +1050,15 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .main .head.dk-top{display:none}
   .dk .main{padding-top:24px}
   .dk .b-settings{top:24px;max-height:calc(100vh - 48px)}
+  /* V175 — سازنده: هر ۴ بخش (ریل راست، مشخصات/سربرگ، ویرایشگر، ریل چپ) هم‌ارتفاع و ثابت؛ فقط داخل هر بخش اسکرول می‌شود */
+  .dk .builder{position:fixed;top:22px;bottom:22px;left:100px;right:100px;display:flex;flex-direction:column;overflow:hidden;z-index:20}
+  .dk .builder .b-top{flex:0 0 auto;margin-bottom:10px}
+  .dk .builder .b-body{flex:1 1 auto;min-height:0;margin:0;align-items:stretch}
+  .dk .builder .b-settings{position:static;top:auto;max-height:none;height:100%;overflow:auto;box-sizing:border-box}
+  .dk .builder .b-editor{height:100%;overflow:auto;box-sizing:border-box;scrollbar-width:none}
+  .dk .builder .b-editor::-webkit-scrollbar{display:none}
+  .dk .b-rail,.dk .dk-rail{top:22px;bottom:22px}
+  .dk .main:has(.builder){padding-bottom:0}
   /* V173 — ستون مشخصات/سربرگ بدون نوار اسکرول نمایان؛ ریل فشرده نمی‌شود: دکمه‌ها ثابت، شمارهٔ سؤال‌ها اسکرول می‌شود */
   .dk .b-settings{scrollbar-width:none;-ms-overflow-style:none}
   .dk .b-settings::-webkit-scrollbar{display:none}
@@ -2878,8 +2887,11 @@ window.__HEADER_SCHEMA = {
     /* V172 — عنوان صفحه‌های کارت‌ها مثل اپ (ExamApp.kt:381,1220,1226) */
     if (!title) { var a = view.arg || {}; title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''; }
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
+    /* V176 — صفحه‌هایی که از «منو» باز می‌شوند (چاپ، تقویم، حساب، تنظیمات، …) در ریل، «منو» را روشن نگه می‌دارند */
+    var railKeys = ['menu'].concat(items.map(function (it) { return it[0]; }));
+    var railActive = railKeys.indexOf(view.panel) >= 0 ? view.panel : 'menu';
     function railItem(key, label) {
-      return el('button', {class: 'dk-rail-item' + (view.panel === key ? ' active' : ''), 'aria-label': label, 'aria-current': view.panel === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
+      return el('button', {class: 'dk-rail-item' + (railActive === key ? ' active' : ''), 'aria-label': label, 'aria-current': railActive === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
     }
     var rail = el('nav', {class: 'dk-rail', 'aria-label': 'نوار اصلی', style: '--n:' + (items.length + 1)}, [railItem('menu', 'منو')].concat(items.map(function (it) { return railItem(it[0], it[2]); })));
     var main = el('main', {class: 'main'}, [

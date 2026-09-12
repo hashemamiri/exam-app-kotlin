@@ -19001,3 +19001,11 @@ V160.2 امضای presigned را همیشه با `x-amz-acl` می‌ساخت؛ �
 ## V174 — حذف هدر دسکتاپ
 
 - `site.css` (media ≥861px): `.dk .main .head.dk-top{display:none}`، `.dk .main{padding-top:24px}`، `.dk .b-settings{top:24px;…}`. عنصر `dk-top` در `renderPanel` هنوز ساخته می‌شود (برای گوشی/تبلت لازم است: ☰ و عنوان) ولی روی دسکتاپ نمایش داده نمی‌شود. تست: `V174_SiteDesktopNoHeaderTest`.
+
+## V175 — بخش‌های ثابت سازندهٔ دسکتاپ
+
+- `site.css` (≥861px): `.dk .builder{position:fixed;top/bottom:22px;left/right:100px;flex column}`؛ `b-top` ثابت بالا، `b-body` `flex:1;min-height:0`؛ `b-settings` و `b-editor` `height:100%;overflow:auto` (ویرایشگر بدون اسکرول‌بار نمایان). ریل‌ها هم `top/bottom:22px` → هر چهار بخش هم‌ارتفاع. z-index سازنده ۲۰ (زیر modal 50 / engine 60 / addmenu 80). تست: `V175_SiteBuilderFixedPanelsTest`.
+
+## V176 — روشن ماندن «منو» در ریل
+
+- `renderPanel`: `railActive = view.panel` اگر در ریل باشد وگرنه `'menu'`؛ کلاس `active` و `aria-current` از آن استفاده می‌کنند. بررسی jsdom: ۱۶ پنل معلم، ۷ مدیر، ۷ دانش‌آموز همه رندر می‌شوند و بدون خطای JS هستند. تست: `V176_SiteRailActiveTest`.
