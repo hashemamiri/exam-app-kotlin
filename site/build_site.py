@@ -65,7 +65,9 @@ def build_print_engine():
              '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">',
              '<title>آزمون‌ساز - پیش‌نمایش و چاپ</title>',
              # همان پرچم میزبانِ برنامه + پلِ چاپ از صفحهٔ والد (ExamPrintBridge اندروید → JS)
-             '<script>window.__appHost = true; try { window.ExamPrintBridge = window.parent.__printBridge || null; } catch (e) {}</script>']
+             '<script>window.__appHost = true; try { window.ExamPrintBridge = window.parent.__printBridge || null; } catch (e) {}'
+             # V180.4 — چاپ بومی مرورگر پیش از آنکه webhost.js window.print را به پلِ سایت بازنویسی کند (Window.prototype.print در Chrome وجود ندارد)
+             'window.__nativePrint = window.print;</script>']
     for name in css_files:
         css = read(os.path.join(WEB, name))
         for url, path in fonts.items():

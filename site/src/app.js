@@ -395,7 +395,8 @@
       var doNative = function () {
         ctx.busy = true;
         /* V180.1 — فقط چاپ بومی مرورگر؛ w.print() موتور دوباره به همین پل برمی‌گشت (حلقهٔ پنجرهٔ هزینه) */
-        try { w.focus(); w.Window.prototype.print.call(w); } catch (e) { console.warn('print', e); }
+        /* V180.4 — __nativePrint در سرآیند موتور (build_site.py) پیش از بازنویسی webhost.js ذخیره شده؛ Window.prototype.print در Chrome وجود ندارد */
+        try { w.focus(); if (typeof w.__nativePrint === 'function') w.__nativePrint.call(w); else if (w.Window && typeof w.Window.prototype.print === 'function') w.Window.prototype.print.call(w); else throw new Error('چاپ بومی مرورگر در دسترس نیست'); } catch (e) { console.warn('print', e); toast('پنجرهٔ چاپ مرورگر باز نشد.', 'err'); }
         setTimeout(function () {
           ctx.busy = false;
           /* V180.2 — مثل ExamHtmlPrintDialog: چاپ مستقیم (printMode از منوی چاپ بیلدر) پس از پنجرهٔ چاپ بسته می‌شود؛

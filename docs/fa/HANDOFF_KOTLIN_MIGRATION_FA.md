@@ -19067,3 +19067,10 @@ p_exam text — همان قرارداد `local-…` اپ)؛ فقط کاربر و
 `closePrintOverlay()`؛ در غیر این صورت `restorePreview` + اگر `isPreviewOpen()` false بود `showPreview()`.
 
 ## §V180.3 — CI: تست V180 با دو رشتهٔ کهنه (printCtx.examId → ctx.examId پس از V180.1؛ «'مبلغ…» → «<b>مبلغ…») اصلاح شد. درس: بعد از هر ویرایش app.js، همهٔ رشته‌های تست همان نسخه را دوباره grep کن (اسکریپت آدیت V179.1).
+
+## §V180.4 — TypeError: Cannot read properties of undefined (reading 'call') در doNative
+
+**علت:** `w.Window.prototype.print` در Chrome undefined است (print ویژگیِ خودِ شیء window است، نه prototype). پیش از V180.1 خطا
+با fallback `w.print()` پوشانده می‌شد (که همان حلقهٔ پنجرهٔ هزینه بود). **رفع:** در سرآیند موتور چاپِ سایت (`build_site.py`) پیش از
+بارگذاری `webhost.js` (که `window.print` را به پل بازمی‌نویسد) `window.__nativePrint = window.print` ذخیره می‌شود؛ `doNative` آن را
+با `.call(w)` صدا می‌زند؛ در نبودش پیام خطا. تست V180 به‌روز شد. (اپ: مسیر PrintManager است و این مشکل را ندارد.)

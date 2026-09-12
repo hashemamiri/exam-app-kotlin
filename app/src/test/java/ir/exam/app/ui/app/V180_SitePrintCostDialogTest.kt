@@ -22,6 +22,9 @@ class V180_SitePrintCostDialogTest {
         assertTrue("api.chargePrint(examRef, n, mode)" in a)
         /* V180.1 — بدون حلقه: fallback به w.print() (که به همین پل برمی‌گردد) حذف؛ قفل busy؛ پیش‌پرداخت هر نسخه در همان پیش‌نمایش */
         assertFalse("try { w.print(); } catch (e2) {}" in a)
+        /* V180.4 — چاپ بومی از __nativePrint (ذخیره‌شده پیش از بازنویسی webhost.js)؛ Window.prototype.print در Chrome نیست */
+        assertTrue("w.__nativePrint.call(w)" in a)
+        assertTrue("window.__nativePrint = window.print;" in source("site/build_site.py"))
         assertTrue("if (ctx.busy) return;" in a && "if (ctx.paid[mode]) { doNative(); return; }" in a && "ctx.paid[mode] = true;" in a)
         /* V180.2 — پس از پنجرهٔ چاپ: چاپ مستقیم → بستن؛ وگرنه بازگشت به پیش‌نمایش (نه صفحهٔ خالی) */
         assertTrue("if (ctx.direct) { if (printCtx === ctx) closePrintOverlay(); return; }" in a)

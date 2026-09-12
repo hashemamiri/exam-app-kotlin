@@ -1111,7 +1111,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 <body>
 <div id="root"><div class="loading" style="padding-top:120px"><span class="spinner"></span> در حال بارگذاری…</div></div>
 <div class="toast-wrap" id="toasts"></div>
-<script>window.__ENGINES_URL = "/engines.713a9050d5a7.js";
+<script>window.__ENGINES_URL = "/engines.4f17113e5d2c.js";
 window.__HEADER_SCHEMA = {
  "templates": [
   {
@@ -2342,7 +2342,8 @@ window.__HEADER_SCHEMA = {
       var doNative = function () {
         ctx.busy = true;
         /* V180.1 — فقط چاپ بومی مرورگر؛ w.print() موتور دوباره به همین پل برمی‌گشت (حلقهٔ پنجرهٔ هزینه) */
-        try { w.focus(); w.Window.prototype.print.call(w); } catch (e) { console.warn('print', e); }
+        /* V180.4 — __nativePrint در سرآیند موتور (build_site.py) پیش از بازنویسی webhost.js ذخیره شده؛ Window.prototype.print در Chrome وجود ندارد */
+        try { w.focus(); if (typeof w.__nativePrint === 'function') w.__nativePrint.call(w); else if (w.Window && typeof w.Window.prototype.print === 'function') w.Window.prototype.print.call(w); else throw new Error('چاپ بومی مرورگر در دسترس نیست'); } catch (e) { console.warn('print', e); toast('پنجرهٔ چاپ مرورگر باز نشد.', 'err'); }
         setTimeout(function () {
           ctx.busy = false;
           /* V180.2 — مثل ExamHtmlPrintDialog: چاپ مستقیم (printMode از منوی چاپ بیلدر) پس از پنجرهٔ چاپ بسته می‌شود؛
