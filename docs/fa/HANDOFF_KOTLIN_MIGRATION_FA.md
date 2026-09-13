@@ -19107,3 +19107,6 @@ engines 5.59M→5.35M (gzip 1.66M). چرا بیشتر نه: ۹۶۰k از math_ho
 موتور print (setExamData/showPreview/برگه) و formula روی نسخهٔ minify‌شده. جای‌نگهدار anon key در ۴k اول index حفظ می‌شود (site.yml).
 هشدار: تست‌هایی که رشته‌ای را در `site/index.html` می‌جویند باید با نسخهٔ minify‌شده سازگار باشند (فاصله/کامنت حذف می‌شود)؛ رشته‌های
 فعلی (window.SiteSchool/SiteExtras/SiteAdmin, cal_month) سالم‌اند. تست: `V182_SiteMinifyTest`.
+
+## §V183 — ریل و حساب دانش‌آموز (دسکتاپ)
+`MENUS.student` (app.js) بدون `tools`/`profile`؛ در `accountPage` mobile.js سه آکاردئون username/email/password داخل `if (p.role !== 'student')` (پیش‌تر برای دانش‌آموز فقط پیام «توسط معلم انجام می‌شود» نشان می‌دادند). صفحهٔ منو (`studentMenu`) همچنان «حساب» و «تنظیمات» را دارد. تست: `V183_SiteStudentRailAccountTest`.

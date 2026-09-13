@@ -1014,6 +1014,8 @@
     function lv(l, v) { return el('div', {class: 'm-lv'}, [el('span', {class: 'muted', text: l}), el('b', {text: v || '—'})]); }
     c.appendChild(acc('info', 'مشخصات حساب', function () { var rows = [lv('نام', p.fullName), lv('نام کاربری', p.username), lv('نقش', roleFa)]; if (p.role !== 'student') rows.push(lv('ایمیل', u.email)); return rows; }));
     if (p.role === 'teacher' && window.SiteSchool) c.appendChild(acc('join_school', 'پیوستن به مدرسه', function () { var k = window.SiteSchool.joinSchoolCard(function () { paint(); }); k.className = ''; return [k]; }));
+    /* V183 — دانش‌آموز: بدون «تغییر نام کاربری/ایمیل/رمز عبور» (این‌ها را معلم/سامانه مدیریت می‌کند) */
+    if (p.role !== 'student') {
     c.appendChild(acc('username', 'تغییر نام کاربری', function () {
       if (p.role === 'student') return [el('p', {class: 'muted', text: 'تغییر نام کاربری دانش‌آموز فقط توسط معلم انجام می‌شود.'})];
       var un = field('نام کاربری انگلیسی', p.username, {ltr: true, hint: 'ورود معلم همچنان با ایمیل انجام می‌شود.'}), m2 = el('div');
@@ -1044,6 +1046,7 @@
         el('button', {class: 'btn light', style: 'width:100%', text: recovery ? 'بازگشت به تغییر با رمز فعلی' : 'رمز فعلی را فراموش کرده‌ام', onclick: function () { accPwRecovery = !recovery; paint(); }}));
       return rows;
     }));
+    }
     if (p.role !== 'student' && window.SiteExtras) c.appendChild(acc('delete', 'حذف حساب', function () { var k = window.SiteExtras.deleteAccountCard(async function () { S.logout(); }); k.className = ''; return [k]; }));
   }
   var accPwRecovery = false;
