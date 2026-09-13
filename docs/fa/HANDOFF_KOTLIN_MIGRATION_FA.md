@@ -19110,3 +19110,6 @@ engines 5.59M→5.35M (gzip 1.66M). چرا بیشتر نه: ۹۶۰k از math_ho
 
 ## §V183 — ریل و حساب دانش‌آموز (دسکتاپ)
 `MENUS.student` (app.js) بدون `tools`/`profile`؛ در `accountPage` mobile.js سه آکاردئون username/email/password داخل `if (p.role !== 'student')` (پیش‌تر برای دانش‌آموز فقط پیام «توسط معلم انجام می‌شود» نشان می‌دادند). صفحهٔ منو (`studentMenu`) همچنان «حساب» و «تنظیمات» را دارد. تست: `V183_SiteStudentRailAccountTest`.
+
+## §V184 — ریل مدیر/معاون (دسکتاپ)
+`MENUS.manager` بدون `tools`/`profile` (مثل V183 برای دانش‌آموز). تست در `V183_SiteStudentRailAccountTest`.
