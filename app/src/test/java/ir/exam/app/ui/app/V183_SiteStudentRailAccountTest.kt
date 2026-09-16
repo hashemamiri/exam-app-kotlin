@@ -19,6 +19,8 @@ class V183_SiteStudentRailAccountTest {
         val a = source("site/src/app.js")
         assertTrue("student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['calendar', '📅', 'تقویم و پیام‌ها']]," in a)
         assertFalse("['tools', '🧮', 'ابزارها'], '-', ['profile', '👤', 'پروفایل']" in a)
+        /* V185 — داشبورد معلم بدون پیام «… آزمون هم‌اکنون باز است» */
+        assertFalse("آزمون هم‌اکنون باز است" in a)
         /* V184 — ریل مدیر/معاون هم بدون ابزارها/پروفایل */
         assertTrue("manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول']]," in a)
     }

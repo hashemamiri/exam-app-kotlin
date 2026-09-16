@@ -19113,3 +19113,6 @@ engines 5.59M→5.35M (gzip 1.66M). چرا بیشتر نه: ۹۶۰k از math_ho
 
 ## §V184 — ریل مدیر/معاون (دسکتاپ)
 `MENUS.manager` بدون `tools`/`profile` (مثل V183 برای دانش‌آموز). تست در `V183_SiteStudentRailAccountTest`.
+
+## §V185 — داشبورد معلم
+alert info «N آزمون هم‌اکنون باز است…» در `pageDashboard` (app.js) حذف شد. تست در `V183_SiteStudentRailAccountTest`.

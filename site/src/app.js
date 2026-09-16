@@ -1039,12 +1039,10 @@
         c.innerHTML = '';
         if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());
         c.appendChild(el('div', {class: 'grid4'}, [statCard(fa(r[0].length), 'آزمون'), statCard(fa(r[1].length), 'کلاس'), statCard(fa(r[2].length), 'دانش‌آموز'), statCard(money(r[3].balance), 'موجودی کیف پول')]));
-        var open = r[0].filter(function (x) { return x.is_open; });
         var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
         if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
         else card.appendChild(examTable(r[0].slice(0, 6), c));
         c.appendChild(card);
-        c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', text: fa(open.length) + ' آزمون هم‌اکنون باز است. برای ساخت آزمون جدید از بخش «آزمون جدید» استفاده کنید.'}));
       } else if (user.role === 'student') {
         var g = await api.myGrades().catch(function () { return []; });
         c.innerHTML = '';
