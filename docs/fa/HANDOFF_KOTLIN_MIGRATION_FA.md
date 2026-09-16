@@ -19116,3 +19116,6 @@ engines 5.59M→5.35M (gzip 1.66M). چرا بیشتر نه: ۹۶۰k از math_ho
 
 ## §V185 — داشبورد معلم
 alert info «N آزمون هم‌اکنون باز است…» در `pageDashboard` (app.js) حذف شد. تست در `V183_SiteStudentRailAccountTest`.
+
+## §V186 — داشبورد دسکتاپ
+`statCard(v, l, target)` → با target یک `<button class="card stat stat-link">` که `view.panel` را عوض می‌کند؛ CSS `min-height:112px` + `justify-content:center` برای هم‌اندازگی (مقدار پول با ellipsis). `examActions` کلاس `acts-text` و هر دکمه `<i>آیکن</i><span>متن</span>`؛ در `.dk` آیکن پنهان و متن نمایان، در گوشی برعکس (سازگار با m-rowcard). تست: `V186_SiteDashboardCardsTest`.

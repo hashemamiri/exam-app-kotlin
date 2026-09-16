@@ -1028,7 +1028,12 @@
   function loading(c) { c.innerHTML = '<div class="loading"><span class="spinner"></span> در حال دریافت…</div>'; }
   function showErr(c, e) { c.innerHTML = ''; c.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
   function emptyBox(icon, text) { return el('div', {class: 'empty'}, [el('div', {class: 'big', text: icon}), el('div', {text: text})]); }
-  function statCard(v, l) { return el('div', {class: 'card stat'}, [el('div', {class: 'v num', text: v}), el('div', {class: 'l', text: l})]); }
+  /* V186 — کارت آمار: هم‌اندازه (min-height در CSS) و در صورت داشتن مقصد، کلیک‌پذیر (button) */
+  function statCard(v, l, target) {
+    var kids = [el('div', {class: 'v num', text: v}), el('div', {class: 'l', text: l})];
+    if (!target) return el('div', {class: 'card stat'}, kids);
+    return el('button', {class: 'card stat stat-link', type: 'button', 'aria-label': l, onclick: function () { view.panel = target.panel; view.arg = target.arg || null; render(); }}, kids);
+  }
 
   /* ---- داشبورد ---- */
   async function pageDashboard(c) {
@@ -1038,7 +1043,7 @@
         var r = await Promise.all([api.exams().catch(function () { return []; }), api.classes().catch(function () { return []; }), api.students().catch(function () { return []; }), api.wallet().catch(function () { return {balance: 0}; })]);
         c.innerHTML = '';
         if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());
-        c.appendChild(el('div', {class: 'grid4'}, [statCard(fa(r[0].length), 'آزمون'), statCard(fa(r[1].length), 'کلاس'), statCard(fa(r[2].length), 'دانش‌آموز'), statCard(money(r[3].balance), 'موجودی کیف پول')]));
+        c.appendChild(el('div', {class: 'grid4'}, [statCard(fa(r[0].length), 'آزمون', {panel: 'exams'}), statCard(fa(r[1].length), 'کلاس', {panel: 'classes'}), statCard(fa(r[2].length), 'دانش‌آموز', {panel: 'students'}), statCard(money(r[3].balance), 'موجودی کیف پول', {panel: 'wallet'})]));
         var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
         if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
         else card.appendChild(examTable(r[0].slice(0, 6), c));
@@ -1048,14 +1053,14 @@
         c.innerHTML = '';
         var graded = g.filter(function (x) { return x.graded_at; });
         var avg = graded.length ? graded.reduce(function (s, x) { return s + (Number(x.total_score) ? Number(x.total_grade) / Number(x.total_score) * 100 : 0); }, 0) / graded.length : 0;
-        c.appendChild(el('div', {class: 'grid3'}, [statCard(fa(g.length), 'آزمون شرکت‌کرده'), statCard(fa(graded.length), 'تصحیح‌شده'), statCard(fa(Math.round(avg)) + '٪', 'میانگین درصد')]));
+        c.appendChild(el('div', {class: 'grid3'}, [statCard(fa(g.length), 'آزمون شرکت‌کرده', {panel: 'grades'}), statCard(fa(graded.length), 'تصحیح‌شده', {panel: 'grades'}), statCard(fa(Math.round(avg)) + '٪', 'میانگین درصد', {panel: 'grades'})]));
         c.appendChild(el('div', {class: 'alert info', style: 'margin-top:16px', html: 'برای شرکت در آزمون، کد معلم را در بخش <b>شرکت در آزمون</b> وارد کنید.'}));
         c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn', text: '🔑 شرکت در آزمون', onclick: function () { view.panel = 'join'; view.arg = null; render(); }}), (window.SiteStudent && window.SiteStudent.hasActive()) ? el('span', {class: 'chip warn', text: 'آزمون نیمه‌تمام دارید'}) : null]));
       } else {
         var s = await api.managerSummary();
         c.innerHTML = '';
         c.appendChild(el('div', {class: 'card'}, [el('h3', {text: '🏫 ' + (s.school_name || 'مدرسه')}), el('div', {class: 'muted', text: [s.province, s.city].filter(Boolean).join('، ')})]));
-        c.appendChild(el('div', {class: 'grid4', style: 'margin-top:16px'}, [statCard(fa(s.teachers || 0), 'معلم'), statCard(fa(s.students || 0), 'دانش‌آموز'), statCard(fa(s.classes || 0), 'کلاس'), statCard(fa(s.exams || 0), 'آزمون')]));
+        c.appendChild(el('div', {class: 'grid4', style: 'margin-top:16px'}, [statCard(fa(s.teachers || 0), 'معلم', {panel: 'teachers'}), statCard(fa(s.students || 0), 'دانش‌آموز', {panel: 'students'}), statCard(fa(s.classes || 0), 'کلاس', {panel: 'classes'}), statCard(fa(s.exams || 0), 'آزمون', {panel: 'teachers'})]));
         c.appendChild(el('div', {class: 'grid3', style: 'margin-top:16px'}, [statCard(fa(s.answers || 0), 'پاسخ ثبت‌شده'), statCard(fa(Math.round(Number(s.average_percent) || 0)) + '٪', 'میانگین مدرسه'), statCard(money(s.distributed_toman || 0), 'اعتبار توزیع‌شده')]));
         var acts = s.teacher_activity || [];
         if (acts.length) {
@@ -1078,19 +1083,20 @@
       }))
     ]);
   }
+  /* V186 — دسکتاپ: دکمه‌های عملیات آزمون با متن (نه آیکن)؛ گوشی همان آیکن‌ها */
   function examActions(x, refresh) {
-    var wrap = el('div', {class: 'acts'});
-    wrap.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { view.panel = 'builder'; view.arg = {examId: x.id}; render(); }}));
-    wrap.appendChild(el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: function () { printExam(x); }}));
-    wrap.appendChild(el('button', {class: 'icon-btn', title: x.is_open ? 'بستن آزمون' : 'بازکردن آزمون', html: x.is_open ? '🔒' : '🔓', onclick: async function () {
+    var wrap = el('div', {class: 'acts acts-text'});
+    wrap.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '<i>✎</i><span>ویرایش</span>', onclick: function () { view.panel = 'builder'; view.arg = {examId: x.id}; render(); }}));
+    wrap.appendChild(el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '<i>🖨</i><span>چاپ</span>', onclick: function () { printExam(x); }}));
+    wrap.appendChild(el('button', {class: 'icon-btn', title: x.is_open ? 'بستن آزمون' : 'بازکردن آزمون', html: x.is_open ? '<i>🔒</i><span>بستن</span>' : '<i>🔓</i><span>بازکردن</span>', onclick: async function () {
       try { await api.setExamOpen(x.id, !x.is_open); toast(x.is_open ? 'آزمون بسته شد.' : 'آزمون باز شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
-    if (window.SiteExtras) wrap.appendChild(el('button', {class: 'icon-btn', title: 'صدور فایل آزمون', html: '📤', onclick: function () { window.SiteExtras.exportExamDlg(x); }}));
-    wrap.appendChild(el('button', {class: 'icon-btn', title: 'کپی آزمون', html: '⧉', onclick: async function () {
+    if (window.SiteExtras) wrap.appendChild(el('button', {class: 'icon-btn', title: 'صدور فایل آزمون', html: '<i>📤</i><span>صدور</span>', onclick: function () { window.SiteExtras.exportExamDlg(x); }}));
+    wrap.appendChild(el('button', {class: 'icon-btn', title: 'کپی آزمون', html: '<i>⧉</i><span>کپی</span>', onclick: async function () {
       if (!(await confirmDlg('کپی آزمون', 'از «' + esc(x.title) + '» یک نسخهٔ جدید ساخته می‌شود (هزینهٔ سؤال‌ها طبق تعرفه کسر می‌شود).', 'کپی'))) return;
       try { var r = await api.duplicateExam(x.id); toast('کپی شد؛ کد جدید: ' + (r.code || '') + (r.cost ? ' · هزینه ' + money(r.cost) : ''), 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
-    wrap.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () {
+    wrap.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف', html: '<i>🗑</i><span>حذف</span>', onclick: async function () {
       if (!(await confirmDlg('حذف آزمون', 'آزمون «' + esc(x.title) + '» و پاسخ‌های آن برای همیشه حذف می‌شود.', 'حذف', true))) return;
       try { await api.deleteExam(x.id); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));

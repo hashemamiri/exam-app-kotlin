@@ -1078,3 +1078,17 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 .dk .dk-mwrap{background:transparent;max-width:760px;margin:0 auto;font-size:15px}
 .dk .dk-mwrap .m-pcard,.dk .dk-mwrap .card{background:#fff;border:1px solid var(--line);box-shadow:0 10px 28px rgba(28,49,62,.065)}
 .dk .dk-mwrap .m-chip.on{background:#e6f0f3;border-color:#39758a;color:#1f4f5e}
+
+/* ===== V186 — داشبورد دسکتاپ: کارت‌های آمار هم‌اندازه و کلیک‌پذیر؛ عملیات آزمون با متن ===== */
+.grid4 .stat,.grid3 .stat{min-height:112px;justify-content:center}
+.stat .v{font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.stat{font:inherit;text-align:right;cursor:pointer;border:1px solid transparent;transition:transform .15s,box-shadow .15s}
+button.stat:hover{transform:translateY(-2px)}
+button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.acts-text .icon-btn i{font-style:normal}
+.acts-text .icon-btn span{display:none}
+.dk .acts-text .icon-btn{width:auto;height:34px;padding:0 12px;border-radius:10px;font-size:12.5px;font-weight:700;color:#2f5566;gap:0;white-space:nowrap}
+.dk .acts-text .icon-btn i{display:none}
+.dk .acts-text .icon-btn span{display:inline}
+.dk .acts-text .icon-btn.danger{color:#b42318}
+.dk .acts-text .icon-btn:hover{background:#eef4f7}
