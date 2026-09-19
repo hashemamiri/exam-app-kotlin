@@ -19119,3 +19119,14 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ## §V186 — داشبورد دسکتاپ
 `statCard(v, l, target)` → با target یک `<button class="card stat stat-link">` که `view.panel` را عوض می‌کند؛ CSS `min-height:112px` + `justify-content:center` برای هم‌اندازگی (مقدار پول با ellipsis). `examActions` کلاس `acts-text` و هر دکمه `<i>آیکن</i><span>متن</span>`؛ در `.dk` آیکن پنهان و متن نمایان، در گوشی برعکس (سازگار با m-rowcard). تست: `V186_SiteDashboardCardsTest`.
+
+## §V187 — پلِ IP ثابت برای زرین‌پال
+
+**مسئله:** شاپرک ایجاد تراکنش را فقط از IPهای ثبت‌شدهٔ پذیرنده می‌پذیرد؛ Cloudflare Pages/Supabase Edge IP ثابت ندارند.
+**طرح:** `relay/pay_relay.py` (stdlib، ThreadingHTTPServer روی 127.0.0.1:8787، پشت Caddy با HTTPS خودکار) روی VPS ایرانی؛ فقط
+`POST /request` و `POST /verify` با هدر `X-Relay-Token` (compare_digest) به دو URL ثابت زرین‌پال؛ بدنه ≤16k؛ لاگ بدون داده.
+`wallet-payment/index.ts`: `zarinpalPost(path, payload)` → اگر `PAY_RELAY_URL`+`PAY_RELAY_TOKEN` باشد از پل، وگرنه مستقیم
+(sandbox/idpay بی‌تغییر؛ callback همچنان به خود Edge Function برمی‌گردد — IP ورودی مهم نیست). فایل‌ها: `relay/pay-relay.service`,
+`relay/Caddyfile`, `relay/README_FA.md` (راهنمای کاربر). Secrets جدید: `PAY_RELAY_URL`, `PAY_RELAY_TOKEN` (هرگز در گیت/چت).
+پس از نصب: `supabase functions deploy wallet-payment --no-verify-jwt`. تست: `V187_PayRelayTest`. Deno در sandbox نبود؛ TS فقط
+با بازبینی دستی (الگوی fetch یکسان با قبل).

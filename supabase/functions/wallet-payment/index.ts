@@ -29,6 +29,27 @@ type GatewayResult = { ok: true; authority: string; url: string } | { ok: false;
 type VerifyResult = { ok: true; refId: string } | { ok: false; message: string; code: string };
 
 const env = (name: string) => (Deno.env.get(name) || '').trim();
+
+// V187 — پلِ IP ثابت (relay/pay_relay.py روی سرور ایرانی): شاپرک فقط از IPهای ثبت‌شده تراکنش می‌پذیرد و
+// Edge Functionها IP ثابت ندارند. اگر PAY_RELAY_URL تنظیم باشد، دو فراخوانی زرین‌پال از آن عبور می‌کند؛
+// وگرنه مثل قبل مستقیم (sandbox/idpay بدون تغییر).
+async function zarinpalPost(path: 'request' | 'verify', payload: unknown): Promise<Response> {
+  const relay = env('PAY_RELAY_URL').replace(/\/+$/, '');
+  const token = env('PAY_RELAY_TOKEN');
+  const body = JSON.stringify(payload);
+  if (relay && token) {
+    return await fetch(`${relay}/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Relay-Token': token },
+      body,
+    });
+  }
+  return await fetch(`https://payment.zarinpal.com/pg/v4/payment/${path}.json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body,
+  });
+}
 const sandboxAllowed = () => env('PAY_ALLOW_SANDBOX').toLowerCase() === 'true';
 
 function safeProvider(): Provider {
@@ -86,17 +107,13 @@ async function requestGateway(provider: Provider, order: Order, callback: string
     if (!/^[0-9a-f-]{36}$/i.test(merchant)) {
       return { ok: false, code: 'zarinpal_not_configured', message: 'مرچنت زرین‌پال پیکربندی نشده است.' };
     }
-    const response = await fetch('https://payment.zarinpal.com/pg/v4/payment/request.json', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        merchant_id: merchant,
-        amount: order.amount_rial,
-        currency: 'IRR',
-        description: `شارژ کیف پول سامانه آزمون - سفارش ${order.id}`,
-        callback_url: callback,
-        metadata: { order_id: String(order.id) },
-      }),
+    const response = await zarinpalPost('request', {
+      merchant_id: merchant,
+      amount: order.amount_rial,
+      currency: 'IRR',
+      description: `شارژ کیف پول سامانه آزمون - سفارش ${order.id}`,
+      callback_url: callback,
+      metadata: { order_id: String(order.id) },
     });
     const body = await response.json().catch(() => ({}));
     if (response.ok && body?.data?.code === 100 && typeof body?.data?.authority === 'string') {
@@ -140,11 +157,7 @@ async function verifyGateway(provider: Provider, order: Order, params: URLSearch
 
   if (provider === 'zarinpal') {
     const merchant = env('PAY_ZARINPAL_MERCHANT');
-    const response = await fetch('https://payment.zarinpal.com/pg/v4/payment/verify.json', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ merchant_id: merchant, amount: order.amount_rial, authority: order.authority }),
-    });
+    const response = await zarinpalPost('verify', { merchant_id: merchant, amount: order.amount_rial, authority: order.authority });
     const body = await response.json().catch(() => ({}));
     const code = Number(body?.data?.code);
     if (response.ok && (code === 100 || code === 101) && body?.data?.ref_id != null) {

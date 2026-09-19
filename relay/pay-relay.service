@@ -1,0 +1,17 @@
+[Unit]
+Description=Exam pay relay (Zarinpal fixed-IP bridge)
+After=network-online.target
+
+[Service]
+User=relay
+EnvironmentFile=/etc/pay-relay.env
+ExecStart=/usr/bin/python3 /opt/pay-relay/pay_relay.py
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

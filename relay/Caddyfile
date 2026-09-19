@@ -1,0 +1,4 @@
+# جایگزین pay.onlineexam.ir با زیردامنهٔ خودتان (رکورد A → IP سرور، در Cloudflare «DNS only / ابر خاکستری»)
+pay.onlineexam.ir {
+    reverse_proxy 127.0.0.1:8787
+}
