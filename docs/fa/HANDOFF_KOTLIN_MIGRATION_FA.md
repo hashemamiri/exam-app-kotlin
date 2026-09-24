@@ -19171,3 +19171,10 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 ### V193.1 — پین‌های کهنه و check_test_pins.py
 تست‌های آینهٔ سایت رشته‌های دقیق کد را پین می‌کنند؛ سه بار (V189.1، V191، V193) با تغییر کد، پین قدیمی در همان فایل تست فراموش شد و CI شکست.
 قانون جدید: قبل از هر کامیت `python3 scripts/check_test_pins.py` اجرا شود (نصاب هم آن را اجرا می‌کند). الگوهای ساده `assertTrue("…" in x)` با `val x = source("…")` (به‌ترتیب خطوط) بررسی می‌شوند؛ رشته‌های دارای `$` نادیده گرفته می‌شوند. خروجی غیرصفر = CI قرمز خواهد شد.
+
+## §V194 — دستگیرهٔ کشیدن، منوی اطلس، تصویر خودم
+
+- `tokenTextarea`: در دسکتاپ `div.b-grip` زیر `.b-rich` با pointer events ارتفاع را تغییر می‌دهد؛ `resize:none` روی کادر.
+- `atlasMenu(anchor, ta, q)`: پاپ‌آور سه‌گزینه‌ای. `pickPhotoForAtlas`: `<input type=file>` → canvas (حداکثر ۱۴۰۰px، JPEG .86، اگر >۹۰۰KB → .7) → `insertFigure('anatomy', ta, q, null, presetSpec)`.
+- `insertFigure(kind, ta, q, editTok, presetSpec)`: با `presetSpec` → `api.open(spec, null)` و پنهان‌کردن `#anCats,#anShapes,.an-split>.gf-types` (فهرست شکل‌های آناتومی) + تغییر عنوان مودال. ویرایشگر آناتومیِ موتور خودش فلش‌گذاری (mousedown/کشیدن روی `an-frame`، حداکثر ۱۲ نشانه)، فیلد نام هر شماره (`#anAnswerFields`) و گزینهٔ `blank` را دارد؛ `mountSvg` برای `t='photo'` از `X.img` (data-URL) استفاده می‌کند — همان مدل اپ (`AtlasEditorDialog`، `FigureSpec` با `PHOTO_TYPE`).
+- ویرایش مجدد توکن photo: `editFigure` → همان مسیر + پنهان‌کردن فهرست وقتی `"t":"photo"`.

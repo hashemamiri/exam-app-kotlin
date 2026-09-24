@@ -385,6 +385,18 @@
     ta.addEventListener('input', function () { if (fromRich) return; var p = ta.selectionStart; render(ta.value); rich.focus(); placeCaret(p == null ? ta.value.length : p); livePreview(live, ta.value); });
     render(ta.value); livePreview(live, ta.value);
     wrap.appendChild(ta); wrap.appendChild(rich);
+    /* V194 — دستگیرهٔ کشیدن سفارشی (به‌جای resizer مرورگر که در RTL شکل خوبی ندارد): نوار باریک زیر کادر، کشیدن = تغییر ارتفاع */
+    if (WYSIWYG) {
+      var grip = el('div', {class: 'b-grip', title: 'برای تغییر ارتفاع بکشید', html: '<i></i>'});
+      grip.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); grip.setPointerCapture(e.pointerId);
+        var y0 = e.clientY, h0 = rich.getBoundingClientRect().height, minH = parseFloat(getComputedStyle(rich).minHeight) || 120;
+        function mv(ev) { rich.style.height = Math.max(minH, h0 + (ev.clientY - y0)) + 'px'; }
+        function up() { grip.removeEventListener('pointermove', mv); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up); }
+        grip.addEventListener('pointermove', mv); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+      });
+      wrap.appendChild(grip);
+    }
     return {wrap: wrap, live: live, sync: function () { render(ta.value); }};
   }
   function buildUI(container) {
@@ -541,8 +553,7 @@
         el('button', {class: 'tool-btn is-gra', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', text: '📈', onclick: function () { insertFigure('graph', ta, q); }}),
         el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', text: '▦', onclick: function () { insertFigure('table', ta, q); }}),
         el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', text: '⚛', onclick: function () { insertFigure('periodic', ta, q); }}),
-        el('button', {class: 'tool-btn is-ana', title: 'آناتومی', 'aria-label': 'آناتومی', text: '🫀', onclick: function () { insertFigure('anatomy', ta, q); }}),
-        el('button', {class: 'tool-btn is-sci', title: 'علوم', 'aria-label': 'علوم', text: '🔬', onclick: function () { insertFigure('science', ta, q); }}),
+        el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک و شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', text: '🫀', onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
         /* V159 — استودیوی ویرایش و تصویر (ExamImageStudioDialog)؛ dataURL برمی‌گرداند؛ در مسیر آنلاین هنگام ذخیره آپلود می‌شود */
         el('button', {class: 'tool-btn is-img', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', text: '🖼', onclick: function () {
           var addImg = function (u) { return {uri: u, xMm: 20, yMm: 30, widthMm: 55}; };
@@ -803,6 +814,37 @@
 
   /* ================================================================ درج شکل با ویرایشگرهای وب (داخل iframe موتور چاپ) */
   var figFrame = null;
+  /* V194 — مثل اپ: یک دکمهٔ «اطلس» با سه گزینه؛ «تصویر خودم» = انتخاب فایل → data-URL فشرده → ویرایشگر آناتومی با t='photo' (فلش‌گذاری و جای نام) */
+  function atlasMenu(anchor, ta, q) {
+    var old = document.querySelector('.b-atlas-menu'); if (old) old.remove();
+    var m = el('div', {class: 'b-atlas-menu'}, [
+      el('button', {type: 'button', html: '<b>🫀</b><span>آناتومی</span><small>بدن، اندام‌ها، سلول، سه‌بعدی</small>', onclick: function () { m.remove(); insertFigure('anatomy', ta, q); }}),
+      el('button', {type: 'button', html: '<b>🔬</b><span>فیزیک و شیمی</span><small>مدار، آزمایشگاه، مولکول‌ها</small>', onclick: function () { m.remove(); insertFigure('science', ta, q); }}),
+      el('button', {type: 'button', html: '<b>🖼</b><span>تصویر خودم + فلش‌گذاری</span><small>عکس دلخواه؛ روی آن شماره بگذارید تا دانش‌آموز نام‌گذاری کند</small>', onclick: function () { m.remove(); pickPhotoForAtlas(ta, q); }})
+    ]);
+    var r = anchor.getBoundingClientRect(); m.style.top = (r.bottom + 6 + window.scrollY) + 'px'; m.style.right = (document.documentElement.clientWidth - r.right + window.scrollX) + 'px';
+    document.body.appendChild(m);
+    setTimeout(function () { document.addEventListener('pointerdown', function h(e) { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('pointerdown', h); } }); }, 0);
+  }
+  function pickPhotoForAtlas(ta, q) {
+    var inp = el('input', {type: 'file', accept: 'image/*', style: 'display:none'});
+    inp.addEventListener('change', function () {
+      var f = inp.files && inp.files[0]; inp.remove(); if (!f) return;
+      var url = URL.createObjectURL(f), im = new Image();
+      im.onload = function () {
+        URL.revokeObjectURL(url);
+        var MAX = 1400, s = Math.min(1, MAX / Math.max(im.naturalWidth, im.naturalHeight));
+        var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * s)); c.height = Math.max(1, Math.round(im.naturalHeight * s));
+        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+        var data = c.toDataURL('image/jpeg', 0.86);
+        if (data.length > 900000) { data = c.toDataURL('image/jpeg', 0.7); }
+        insertFigure('anatomy', ta, q, null, {k: 'a', t: 'photo', X: {img: data, title: '', lab: '1', marks: [], blank: '1', mkName: '0'}});
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); toast('این فایل تصویر خوانا نیست.', 'err'); };
+      im.src = url;
+    });
+    document.body.appendChild(inp); inp.click();
+  }
   /* V191 — ویرایش شیء موجود: همان ویرایشگر موتور با openFromEl (GeoFig بر اساس k به نمودار/جدول/تناوبی/آناتومی/علوم می‌فرستد) */
   function editFigure(ta, tok) {
     var m = /^%%FIG:(\{[\s\S]*\})%%$/.exec(tok); if (!m) return;
@@ -810,9 +852,9 @@
     var kind = {g: 'graph', t: 'table', p: 'periodic', a: 'anatomy', s: 'science', c: 'science'}[spec.k] || 'geo';
     insertFigure(kind, ta, null, tok);
   }
-  function insertFigure(kind, ta, q, editTok) {
+  function insertFigure(kind, ta, q, editTok, presetSpec) {
     var overlay = el('div', {class: 'engine-bg'});
-    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
+    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : presetSpec ? '🖼 تصویر خودم — روی تصویر بکشید (کلیک و کشیدن) تا فلش و شماره اضافه شود؛ نام هر شماره را در ستون کنار بنویسید' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
     var iframe = el('iframe', {class: 'with-bar'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
@@ -842,7 +884,13 @@
             ta.selectionStart = ta.selectionEnd = idx + nt.length; ta.dispatchEvent(new Event('input')); setTimeout(close, 150);
           }).observe(fig, {attributes: true, attributeFilter: ['data-fig']});
           if (!w.GeoFig.openFromEl(fig)) { toast('ویرایشگر این شیء در دسترس نیست.', 'err'); return close(); }
+        } else if (presetSpec) {
+          /* حالت تصویر خودم: فهرست شکل‌های آناتومی پنهان؛ فقط پیش‌نمایش (فلش‌گذاری)، عنوان، جای خالی */
+          var st2 = d.createElement('style'); st2.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st2);
+          api.open(presetSpec, null);
+          var h3 = d.querySelector('#anOverlay h3'); if (h3) h3.textContent = 'تصویر خودم — فلش‌گذاری برای نام‌گذاری';
         } else api.open(null, null);
+        if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
         /* بستن روکش وب بدون درج → بستن ما */
         var ovId = {geo: 'gfOverlay', graph: 'grOverlay', table: 'tbOverlay'}[kind];
         var poll = setInterval(function () { if (!d.body.contains(overlay) && false) return; var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);

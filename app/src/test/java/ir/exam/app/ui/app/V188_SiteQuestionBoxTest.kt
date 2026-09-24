@@ -69,4 +69,18 @@ class V188_SiteQuestionBoxTest {
         assertTrue(".dk .b-editor .b-rich{min-height:9.5em;max-height:none;height:9.5em;overflow-y:auto;resize:vertical;" in css)
         assertTrue(".dk .b-editor .b-rich{max-height:none!important;min-height:9.5em!important}" in css)
     }
+
+    @Test
+    fun `desktop grip handle, atlas menu with own photo, larger student preview`() {
+        val b = source("site/src/builder.js")
+        assertTrue("var grip = el('div', {class: 'b-grip'" in b && "rich.style.height = Math.max(minH, h0 + (ev.clientY - y0)) + 'px';" in b)
+        assertTrue("function atlasMenu(anchor, ta, q)" in b && "function pickPhotoForAtlas(ta, q)" in b)
+        assertTrue("{k: 'a', t: 'photo', X: {img: data, title: '', lab: '1', marks: [], blank: '1', mkName: '0'}}" in b)
+        assertTrue("function insertFigure(kind, ta, q, editTok, presetSpec)" in b && "api.open(presetSpec, null);" in b)
+        assertFalse("class: 'tool-btn is-sci'" in b)
+        val css = source("site/src/site.css")
+        assertTrue(".dk .b-editor .b-rich{resize:none!important}" in css && ".b-grip{" in css && ".b-atlas-menu{" in css)
+        assertTrue(".dk .b-sp-modal{max-width:min(1100px,94vw)}" in css)
+        assertFalse("::-webkit-resizer" in css)
+    }
 }
