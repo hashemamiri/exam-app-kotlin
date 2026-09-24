@@ -5,7 +5,8 @@ name: ساخت APK آزمایشی و Release Kotlin
 on:
   push:
     branches: [main]
-    paths-ignore: ['site/**', 'docs/**', 'text/**', '.github/workflows/site.yml']
+    # V189 — تغییرات فقط-سایت (منبع سایت، تست‌های آینهٔ سایت، پل پرداخت، توابع Supabase، مستندات) CI اپ را اجرا نمی‌کنند
+    paths-ignore: ['site/**', 'docs/**', 'text/**', 'relay/**', 'supabase/**', '.github/workflows/site.yml', 'app/src/test/**/V1*_Site*Test.kt', 'app/src/test/**/V1*_Pay*Test.kt', 'app/src/test/**/V1*_Print*Test.kt']
   workflow_dispatch:
 
 permissions:

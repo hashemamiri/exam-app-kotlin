@@ -1115,3 +1115,11 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .b-sp-text img,.b-sp-text svg{max-width:100%;height:auto}
 .b-sp-text .mathx,.b-sp-text .math-inline{display:inline-block;vertical-align:middle;max-width:100%;overflow-x:auto}
 .b-sp-card .st-input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px}
+
+/* ===== V189 — دسکتاپ: کادر متن سؤال WYSIWYG (فرمول/شکل داخل خود کادر رندر می‌شود؛ پیش‌نمایش جداگانه لازم نیست) ===== */
+.b-chip.live{background:transparent;color:inherit;padding:0 2px;font-weight:inherit;font-size:inherit;white-space:normal;vertical-align:middle;display:inline-block;max-width:100%}
+.b-chip.live:hover{outline:2px solid var(--brand);border-radius:6px}
+.b-chip.live img,.b-chip.live svg{max-width:100%;max-height:160px;height:auto;vertical-align:middle}
+.b-chip.live .mathx,.b-chip.live .math-inline{display:inline-block;vertical-align:middle}
+.b-chip.live .qmf-fig,.b-chip.live .interactive-figure{display:inline-block;margin:4px 0}
+.dk .b-editor .b-live{display:none!important}

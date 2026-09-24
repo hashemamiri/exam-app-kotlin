@@ -31,4 +31,16 @@ class V188_SiteQuestionBoxTest {
         assertTrue("var card = el('div', {class: 'card b-sp-card'}); previewCss();" in b)
         assertTrue(".b-sp-text{white-space:pre-wrap;word-break:break-word" in source("site/src/site.css"))
     }
+
+    @Test
+    fun `desktop question box renders tokens inline and site-only commits skip app CI`() {
+        val b = source("site/src/builder.js")
+        assertTrue("var WYSIWYG = document.body.classList.contains('dk');" in b)
+        assertTrue("if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) c.innerHTML = h; } catch (e) {} });" in b)
+        assertTrue(",.b-rich ' + x.trim(); }).join(',')" in b)
+        val css = source("site/src/site.css")
+        assertTrue(".b-chip.live{background:transparent" in css && ".dk .b-editor .b-live{display:none!important}" in css)
+        val ci = source(".github/workflows/android.yml")
+        assertTrue("'relay/**', 'supabase/**'" in ci && "'app/src/test/**/V1*_Site*Test.kt'" in ci)
+    }
 }

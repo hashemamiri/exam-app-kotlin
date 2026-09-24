@@ -19139,3 +19139,11 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 **پیش‌نمایش دانش‌آموز (V173) دو باگ داشت:** ۱) قواعد ریاضی/شکل فقط با پیشوند `.b-live` (سازنده) و `.st-exam` (صفحهٔ آزمون) تزریق می‌شد و
 `.b-sp-card` هیچ‌کدام را نداشت → mathx/mfrac بدون استایل؛ حالا `previewCss` هر قاعده را برای `.b-live` و `.b-sp-card` می‌نویسد و
 `studentPreview` آن را صدا می‌زند. ۲) `q.images` آرایهٔ `{uri,xMm,…}` است ولی مستقیم به `src` می‌رفت → `[object Object]`. تست: `V188_SiteQuestionBoxTest`.
+
+## §V189 — کادر WYSIWYG و CI
+
+`tokenTextarea.chip()` در حالت دسکتاپ (`body.dk`) کلاس `live` می‌گیرد و پس از آماده‌شدن iframe موتور (`ensurePreviewFrame`) محتوای
+تراشه با `renderRichText(tok)` پر می‌شود؛ `data-tok` همچنان منبع حقیقت `serialize()` است، پس متن خام تغییری نمی‌کند. قواعد ریاضی
+با پیشوند `.b-rich` هم تزریق می‌شوند. `.b-live` در `.dk .b-editor` پنهان. گوشی مثل قبل (برچسب ⟦فرمول⟧ + پیش‌نمایش زیر کادر).
+`android.yml` `paths-ignore` گسترش یافت (relay/**, supabase/**, تست‌های `V1*_Site*`, `V1*_Pay*`, `V1*_Print*`) — این تست‌ها در اجرای بعدیِ
+ناشی از تغییر اپ همچنان اجرا می‌شوند. تست: `V188_SiteQuestionBoxTest` (تست سوم).

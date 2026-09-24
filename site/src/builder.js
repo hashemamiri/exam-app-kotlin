@@ -270,7 +270,7 @@
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {
-          if (r.type === 1 && r.selectorText && keep.test(r.selectorText) && !/^(html|body|\*)/.test(r.selectorText)) out.push(r.selectorText.split(',').map(function (x) { return '.b-live ' + x.trim() + ',.b-sp-card ' + x.trim(); }).join(',') + '{' + r.style.cssText + '}');
+          if (r.type === 1 && r.selectorText && keep.test(r.selectorText) && !/^(html|body|\*)/.test(r.selectorText)) out.push(r.selectorText.split(',').map(function (x) { return '.b-live ' + x.trim() + ',.b-sp-card ' + x.trim() + ',.b-rich ' + x.trim(); }).join(',') + '{' + r.style.cssText + '}');
           else if (r.type === 5 && /math|mfrac|frac/i.test(r.cssText)) out.push(r.cssText);
         });
       });
@@ -296,7 +296,14 @@
     previewCss();
     ta.style.display = 'none';
     var TOKEN_RE = /%%FIG:(\{[\s\S]*?\})%%|\$([^$]+)\$/g;
-    function chip(tok, label, cls) { var c = el('span', {class: 'b-chip ' + cls, contenteditable: 'false', title: cls === 'tex' ? tok.slice(1, -1) : label, text: '⟦' + label + '⟧'}); c.setAttribute('data-tok', tok); return c; }
+    /* V189 — WYSIWYG: تراشه همان فرمول/شکل رندرشده را نشان می‌دهد (موتور چاپ)؛ تا آماده شدن، برچسب موقت */
+    var WYSIWYG = document.body.classList.contains('dk');
+    function chip(tok, label, cls) {
+      var c = el('span', {class: 'b-chip ' + cls + (WYSIWYG ? ' live' : ''), contenteditable: 'false', title: cls === 'tex' ? tok.slice(1, -1) : label, text: '⟦' + label + '⟧'});
+      c.setAttribute('data-tok', tok);
+      if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) c.innerHTML = h; } catch (e) {} });
+      return c;
+    }
     function render(raw) {
       rich.innerHTML = ''; var last = 0, m; TOKEN_RE.lastIndex = 0;
       while ((m = TOKEN_RE.exec(raw))) {
