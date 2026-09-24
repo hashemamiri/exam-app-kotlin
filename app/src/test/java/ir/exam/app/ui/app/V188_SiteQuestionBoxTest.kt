@@ -54,12 +54,12 @@ class V188_SiteQuestionBoxTest {
     @Test
     fun `desktop question box edits objects on second click and simplifies atlas figures`() {
         val b = source("site/src/builder.js")
-        assertTrue("function simplifyFigs(root)" in b)
+        assertTrue("function simplifyFigs(root)" in source("site/src/student.js") && "window.SiteStudent.simplifyFigs(root)" in b)
         assertTrue("if (c.classList.contains('sel')) { c.classList.remove('sel'); openTokEditor(c); } else selectChip(c);" in b)
         assertTrue("function editFigure(ta, tok)" in b && "insertFigure(kind, ta, null, tok);" in b)
         assertTrue("if (!w.GeoFig.openFromEl(fig)) {" in b && "attributeFilter: ['data-fig']" in b)
-        assertTrue("c.innerHTML = h; simplifyFigs(c);" in b && "txt.innerHTML = h; simplifyFigs(txt);" in b)
+        assertTrue("c.innerHTML = h; simplifyFigs(c);" in b && "simplifyFigs(t.content); return t.innerHTML;" in source("site/src/student.js"))
         val css = source("site/src/site.css")
-        assertTrue(".b-chip.sel{outline:2px solid var(--brand)" in css && ".b-fig-simple img{" in css)
+        assertTrue(".b-chip.sel{outline:2px solid var(--brand)" in css && ".b-fig-frame svg.an-ov{position:absolute" in css && ".b-fig-af .an-af-box{" in css)
     }
 }

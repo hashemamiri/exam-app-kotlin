@@ -277,23 +277,8 @@
       var st = document.createElement('style'); st.id = 'bMathCss'; st.textContent = out.join('\n'); document.head.appendChild(st);
     });
   }
-  /* V191 — شکل‌های تصویری موتور (آناتومی/فیزیک/شیمی/تصویر) در سند اصلی CSS صفحهٔ چاپ را ندارند (an-plate/an-stage با height:0)
-     → به یک تصویر ساده + عنوان تبدیل می‌شوند. آدرس تصویر: X.img (data: یا http) یا src خود <img> موتور. */
-  function simplifyFigs(root) {
-    if (!root || !root.querySelectorAll) return;
-    Array.prototype.forEach.call(root.querySelectorAll('.qmf-fig'), function (f) {
-      var plate = f.querySelector('.an-plate, .an-frame, img.an-svg, img.sc-svg'); if (!plate) return;
-      var spec = null; try { spec = JSON.parse(f.getAttribute('data-fig') || '{}'); } catch (e) { spec = {}; }
-      var X = (spec && spec.X) || {}, src = '';
-      if (typeof X.img === 'string' && /^(data:image\/|https?:\/\/|blob:)/.test(X.img)) src = X.img;
-      if (!src) { var im = f.querySelector('img.an-svg, img.sc-svg, img'); if (im) src = im.getAttribute('src') || ''; }
-      if (!src || /^anatomy\/photo\.svg$/.test(src)) return;
-      var cap = f.querySelector('.tbx-cap'); var title = cap ? cap.textContent : (X.title || '');
-      f.innerHTML = ''; f.classList.add('b-fig-simple');
-      var img = document.createElement('img'); img.src = src; img.alt = title || 'شکل'; img.loading = 'lazy'; img.draggable = false; f.appendChild(img);
-      if (title) { var t = document.createElement('div'); t.className = 'b-fig-cap'; t.textContent = title; f.appendChild(t); }
-    });
-  }
+  /* V191/V192 — شکل‌های تصویری موتور (آناتومی/فیزیک/شیمی/تصویر) → SiteStudent.simplifyFigs (مشترک با صفحهٔ آزمون) */
+  function simplifyFigs(root) { if (window.SiteStudent && window.SiteStudent.simplifyFigs) window.SiteStudent.simplifyFigs(root); }
   var previewTimer = null;
   function livePreview(box, text) {
     clearTimeout(previewTimer);
@@ -477,7 +462,7 @@
       var card = el('div', {class: 'card b-sp-card'}); previewCss();
       card.appendChild(el('div', {class: 'b-sp-num', text: 'سؤال ' + fa(n) + ' (' + fa(S.fmtScore(q.score)) + ' نمره)'}));
       var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
-      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; simplifyFigs(txt); });
+      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; });
       /* V188 — تصاویر سؤال شیء {uri,…} هستند (پیش‌تر [object Object] می‌شد) */
       (q.images || []).forEach(function (u) { var src = u && typeof u === 'object' ? u.uri : u; if (src) card.appendChild(el('img', {src: src, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
       var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];

@@ -14,3 +14,7 @@ release/
 .env.*
 app/keystore.properties
 supabase/.temp/
+
+# V192
+__pycache__/
+*.pyc

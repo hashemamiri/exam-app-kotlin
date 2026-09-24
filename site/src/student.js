@@ -114,7 +114,31 @@
   async function richHtml(text) {
     var w = await ensureMathFrame();
     if (!w) return esc(text).replace(/\n/g, '<br>');
-    try { return w.renderRichText(String(text || ''), null); } catch (e) { return esc(text).replace(/\n/g, '<br>'); }
+    try { var t = document.createElement('template'); t.innerHTML = w.renderRichText(String(text || ''), null); simplifyFigs(t.content); return t.innerHTML; } catch (e) { return esc(text).replace(/\n/g, '<br>'); }
+  }
+  /* V192 — شکل‌های تصویری موتور (آناتومی/فیزیک/شیمی/تصویر کاربر) خارج از صفحهٔ چاپ CSS قاب‌هایشان را ندارند (an-stage با height:0)
+     → بازسازی مثل AtlasBitmapRenderer اپ: عنوان، تصویر با فلش‌ها و شماره‌ها (مختصات درصدی روی خودِ تصویر)، و زیر آن ردیف‌های
+     «شماره + خط‌چین» برای نوشتن نام هر قسمت (وقتی X.blank≠'0'). آدرس تصویر: X.img (data:/http) یا src خود <img> موتور. */
+  function simplifyFigs(root) {
+    if (!root || !root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll('.qmf-fig'), function (f) {
+      if (!f.querySelector('.an-plate, .an-frame, img.an-svg, img.sc-svg')) return;
+      var spec = null; try { spec = JSON.parse(f.getAttribute('data-fig') || '{}'); } catch (e) { spec = {}; }
+      var X = (spec && spec.X) || {}, src = '';
+      if (typeof X.img === 'string' && /^(data:image\/|https?:\/\/|blob:)/.test(X.img)) src = X.img;
+      if (!src) { var im = f.querySelector('img.an-svg, img.sc-svg, img'); if (im) src = im.getAttribute('src') || ''; }
+      if (!src || /^anatomy\/photo\.svg$/.test(src)) return;
+      var cap = f.querySelector('.tbx-cap'); var title = cap ? cap.textContent : '';
+      var ov = f.querySelector('svg.an-ov'); var pins = f.querySelectorAll('.an-num, .an-tail'); var af = f.querySelector('.an-af');
+      var frame = document.createElement('span'); frame.className = 'b-fig-frame';
+      var img = document.createElement('img'); img.src = src; img.alt = title || 'شکل'; img.draggable = false; frame.appendChild(img);
+      if (ov) frame.appendChild(ov);
+      Array.prototype.forEach.call(pins, function (p) { frame.appendChild(p); });
+      f.innerHTML = ''; f.classList.add('b-fig-simple'); f.classList.remove('qmf-sc'); /* qmf-sc در موتور zoom:.42 دارد */
+      if (title) { var t = document.createElement('div'); t.className = 'b-fig-cap'; t.textContent = title; f.appendChild(t); }
+      f.appendChild(frame);
+      if (af) { af.className = 'b-fig-af'; f.appendChild(af); }
+    });
   }
   function mathCss() {
     /* فقط قواعد ریاضی/شکل موتور چاپ، محدود به ناحیهٔ سؤال (تا با استایل سایت تداخل نکند) */
@@ -442,5 +466,5 @@
   /* هشدار خروج هنگام آزمون باز */
   window.addEventListener('beforeunload', function (e) { if (run && !run.finished) { e.preventDefault(); e.returnValue = ''; } });
 
-  window.SiteStudent = {page: page, richHtml: richHtml, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
+  window.SiteStudent = {page: page, richHtml: richHtml, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
 })();
