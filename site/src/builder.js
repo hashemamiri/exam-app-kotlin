@@ -277,6 +277,23 @@
       var st = document.createElement('style'); st.id = 'bMathCss'; st.textContent = out.join('\n'); document.head.appendChild(st);
     });
   }
+  /* V191 — شکل‌های تصویری موتور (آناتومی/فیزیک/شیمی/تصویر) در سند اصلی CSS صفحهٔ چاپ را ندارند (an-plate/an-stage با height:0)
+     → به یک تصویر ساده + عنوان تبدیل می‌شوند. آدرس تصویر: X.img (data: یا http) یا src خود <img> موتور. */
+  function simplifyFigs(root) {
+    if (!root || !root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll('.qmf-fig'), function (f) {
+      var plate = f.querySelector('.an-plate, .an-frame, img.an-svg, img.sc-svg'); if (!plate) return;
+      var spec = null; try { spec = JSON.parse(f.getAttribute('data-fig') || '{}'); } catch (e) { spec = {}; }
+      var X = (spec && spec.X) || {}, src = '';
+      if (typeof X.img === 'string' && /^(data:image\/|https?:\/\/|blob:)/.test(X.img)) src = X.img;
+      if (!src) { var im = f.querySelector('img.an-svg, img.sc-svg, img'); if (im) src = im.getAttribute('src') || ''; }
+      if (!src || /^anatomy\/photo\.svg$/.test(src)) return;
+      var cap = f.querySelector('.tbx-cap'); var title = cap ? cap.textContent : (X.title || '');
+      f.innerHTML = ''; f.classList.add('b-fig-simple');
+      var img = document.createElement('img'); img.src = src; img.alt = title || 'شکل'; img.loading = 'lazy'; img.draggable = false; f.appendChild(img);
+      if (title) { var t = document.createElement('div'); t.className = 'b-fig-cap'; t.textContent = title; f.appendChild(t); }
+    });
+  }
   var previewTimer = null;
   function livePreview(box, text) {
     clearTimeout(previewTimer);
@@ -284,7 +301,7 @@
     box.style.display = '';
     previewTimer = setTimeout(async function () {
       var w = await ensurePreviewFrame(); if (!w) { box.style.display = 'none'; return; }
-      try { box.innerHTML = w.renderRichText(String(text), null); } catch (e) { box.style.display = 'none'; }
+      try { box.innerHTML = w.renderRichText(String(text), null); simplifyFigs(box); } catch (e) { box.style.display = 'none'; }
     }, 200);
   }
   /* ویرایشگر تراشه‌ای (همیشه، حتی حین تایپ، توکن‌ها تراشه‌اند — مثل VisualTransformation اپ).
@@ -301,7 +318,7 @@
     function chip(tok, label, cls) {
       var c = el('span', {class: 'b-chip ' + cls + (WYSIWYG ? ' live' : ''), contenteditable: 'false', title: cls === 'tex' ? tok.slice(1, -1) : label, text: '⟦' + label + '⟧'});
       c.setAttribute('data-tok', tok);
-      if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) c.innerHTML = h; } catch (e) {} });
+      if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); } } catch (e) {} });
       return c;
     }
     function render(raw) {
@@ -361,12 +378,24 @@
     rich.__caretToRaw = caretToRaw;
     rich.addEventListener('paste', function (e) { e.preventDefault(); var t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
     /* کلیک روی تراشهٔ فرمول → ویرایش همان فرمول */
-    rich.addEventListener('click', function (e) {
-      var c = e.target.closest && e.target.closest('[data-tok]'); if (!c) return;
+    /* V191 — مثل اپ: کلیک اول = انتخاب شیء (با دستگیره‌نما)، کلیک دوم (یا دوبار کلیک) = ویرایشگر همان شیء (فرمول/شکل/جدول/…) */
+    function openTokEditor(c) {
       var tok = c.getAttribute('data-tok'); var raw = ta.value; var idx = raw.indexOf(tok); if (idx < 0) return;
       if (c.classList.contains('tex')) { S.openFormulaEditor(raw, idx, idx + tok.length).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.selectionStart = ta.selectionEnd = idx; ta.dispatchEvent(new Event('input')); } }); }
-      else { var r = document.createRange(); r.selectNode(c); var sel = document.getSelection(); sel.removeAllRanges(); sel.addRange(r); caretToRaw(); }
+      else if (typeof editFigure === 'function') editFigure(ta, tok);
+    }
+    function selectChip(c) {
+      Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { if (x !== c) x.classList.remove('sel'); });
+      c.classList.add('sel');
+      var r = document.createRange(); r.selectNode(c); var sel = document.getSelection(); sel.removeAllRanges(); sel.addRange(r); caretToRaw();
+    }
+    rich.addEventListener('click', function (e) {
+      var c = e.target.closest && e.target.closest('[data-tok]');
+      if (!c) { Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { x.classList.remove('sel'); }); return; }
+      e.preventDefault();
+      if (c.classList.contains('sel')) { c.classList.remove('sel'); openTokEditor(c); } else selectChip(c);
     });
+    rich.addEventListener('dblclick', function (e) { var c = e.target.closest && e.target.closest('[data-tok]'); if (!c) return; e.preventDefault(); c.classList.remove('sel'); openTokEditor(c); });
     /* تغییر برنامه‌ای متن (ابزارها) → بازسازی نما */
     ta.addEventListener('input', function () { if (fromRich) return; var p = ta.selectionStart; render(ta.value); rich.focus(); placeCaret(p == null ? ta.value.length : p); livePreview(live, ta.value); });
     render(ta.value); livePreview(live, ta.value);
@@ -448,7 +477,7 @@
       var card = el('div', {class: 'card b-sp-card'}); previewCss();
       card.appendChild(el('div', {class: 'b-sp-num', text: 'سؤال ' + fa(n) + ' (' + fa(S.fmtScore(q.score)) + ' نمره)'}));
       var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
-      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; });
+      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; simplifyFigs(txt); });
       /* V188 — تصاویر سؤال شیء {uri,…} هستند (پیش‌تر [object Object] می‌شد) */
       (q.images || []).forEach(function (u) { var src = u && typeof u === 'object' ? u.uri : u; if (src) card.appendChild(el('img', {src: src, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
       var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
@@ -789,9 +818,16 @@
 
   /* ================================================================ درج شکل با ویرایشگرهای وب (داخل iframe موتور چاپ) */
   var figFrame = null;
-  function insertFigure(kind, ta, q) {
+  /* V191 — ویرایش شیء موجود: همان ویرایشگر موتور با openFromEl (GeoFig بر اساس k به نمودار/جدول/تناوبی/آناتومی/علوم می‌فرستد) */
+  function editFigure(ta, tok) {
+    var m = /^%%FIG:(\{[\s\S]*\})%%$/.exec(tok); if (!m) return;
+    var spec = null; try { spec = JSON.parse(m[1]); } catch (e) { return toast('مشخصات شکل خوانا نیست.', 'err'); }
+    var kind = {g: 'graph', t: 'table', p: 'periodic', a: 'anatomy', s: 'science', c: 'science'}[spec.k] || 'geo';
+    insertFigure(kind, ta, null, tok);
+  }
+  function insertFigure(kind, ta, q, editTok) {
     var overlay = el('div', {class: 'engine-bg'});
-    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
+    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
     var iframe = el('iframe', {class: 'with-bar'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
@@ -807,10 +843,21 @@
         hidden.value = ta.value; d.body.appendChild(hidden);
         try { hidden.setSelectionRange(ta.selectionStart, ta.selectionEnd); } catch (e) {}
         w.__qmfActiveField = hidden;
-        hidden.addEventListener('input', function () { ta.value = hidden.value; q.text = hidden.value; ta.dispatchEvent(new Event('input')); setTimeout(close, 150); });
+        hidden.addEventListener('input', function () { ta.value = hidden.value; if (q) q.text = hidden.value; ta.dispatchEvent(new Event('input')); setTimeout(close, 150); });
         /* استایل: روکش‌ها باید روی زمینهٔ خالی دیده شوند */
         var st = d.createElement('style'); st.textContent = 'body{background:#eef1f6}#printContent,#previewArea{display:none}'; d.head.appendChild(st);
-        api.open(null, null);
+        if (editTok) {
+          /* عنصر شکل ساختگی با data-fig؛ ویرایشگر با «اعمال تغییرات» data-fig آن را عوض می‌کند → توکن در متن جایگزین می‌شود */
+          var fig = d.createElement('span'); fig.className = 'qmf-fig'; fig.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+          var json = editTok.slice(6, -2); fig.setAttribute('data-fig', json); fig.dataset.fig = json; d.body.appendChild(fig);
+          new w.MutationObserver(function () {
+            var nj = fig.getAttribute('data-fig'); if (!nj || nj === json) return;
+            var idx = ta.value.indexOf(editTok); if (idx < 0) return close();
+            var nt = '%%FIG:' + nj + '%%'; ta.value = ta.value.slice(0, idx) + nt + ta.value.slice(idx + editTok.length);
+            ta.selectionStart = ta.selectionEnd = idx + nt.length; ta.dispatchEvent(new Event('input')); setTimeout(close, 150);
+          }).observe(fig, {attributes: true, attributeFilter: ['data-fig']});
+          if (!w.GeoFig.openFromEl(fig)) { toast('ویرایشگر این شیء در دسترس نیست.', 'err'); return close(); }
+        } else api.open(null, null);
         /* بستن روکش وب بدون درج → بستن ما */
         var ovId = {geo: 'gfOverlay', graph: 'grOverlay', table: 'tbOverlay'}[kind];
         var poll = setInterval(function () { if (!d.body.contains(overlay) && false) return; var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);

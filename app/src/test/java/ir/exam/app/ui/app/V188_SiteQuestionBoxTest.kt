@@ -50,4 +50,16 @@ class V188_SiteQuestionBoxTest {
         assertTrue(".dk .exam .acts.acts-text{display:flex;flex-wrap:wrap" in css)
         assertTrue(".dk .exam .acts.acts-text .icon-btn{flex:1 1 0;min-width:max-content" in css)
     }
+
+    @Test
+    fun `desktop question box edits objects on second click and simplifies atlas figures`() {
+        val b = source("site/src/builder.js")
+        assertTrue("function simplifyFigs(root)" in b)
+        assertTrue("if (c.classList.contains('sel')) { c.classList.remove('sel'); openTokEditor(c); } else selectChip(c);" in b)
+        assertTrue("function editFigure(ta, tok)" in b && "insertFigure(kind, ta, null, tok);" in b)
+        assertTrue("if (!w.GeoFig.openFromEl(fig)) {" in b && "attributeFilter: ['data-fig']" in b)
+        assertTrue("c.innerHTML = h; simplifyFigs(c);" in b && "txt.innerHTML = h; simplifyFigs(txt);" in b)
+        val css = source("site/src/site.css")
+        assertTrue(".b-chip.sel{outline:2px solid var(--brand)" in css && ".b-fig-simple img{" in css)
+    }
 }

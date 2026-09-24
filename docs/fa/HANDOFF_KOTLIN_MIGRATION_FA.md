@@ -19153,3 +19153,10 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ## §V190 — دکمه‌های کارت آزمون دسکتاپ
 `.dk .exam .acts.acts-text` → `flex-wrap:wrap`، هر دکمه `flex:1 1 0;min-width:max-content`، «حذف» `flex:0 0 auto`؛ `.dk .exam{overflow:hidden}`. قبلاً `.exam .acts` بدون wrap بود و «حذف» بیرون کارت می‌افتاد.
+
+## §V191 — ویرایش اشیاء و شکل‌های تصویری در کادر متن
+
+- `tokenTextarea`: کلیک روی تراشه → `selectChip` (کلاس `sel`)؛ کلیک دوم/دوبار کلیک → `openTokEditor`: فرمول → `S.openFormulaEditor`، شکل → `editFigure(ta, tok)`.
+- `editFigure` → `insertFigure(kind, ta, null, editTok)`: در iframe موتور یک `span.qmf-fig[data-fig]` نامرئی می‌سازد، `GeoFig.openFromEl(fig)` را صدا می‌زند (زنجیرهٔ openFromEl هر ویرایشگر بر اساس `k` مسیر می‌دهد) و با `MutationObserver` روی `data-fig` توکن قدیمی را در `ta.value` با توکن جدید عوض می‌کند. همهٔ ویرایشگرها در `apply()` برای `replaceEl` مقدار `dataset.fig` را می‌نویسند (بررسی‌شده در engines).
+- `simplifyFigs(root)`: هر `.qmf-fig` با `an-plate/an-frame/img.an-svg/img.sc-svg` → `<img src>` + عنوان (`.b-fig-simple`). آدرس: `X.img` (data:/http/blob) یا `src` تصویر موتور. علت: CSS موتور (`.an-stage{height:0}` و…) در سند اصلی نیست و کپی‌کردن جزئی آن شکننده است. در `chip`، `livePreview` و `studentPreview` اعمال می‌شود.
+- اطلس: تصاویر از `raw.githubusercontent.com/hashemamiri/exam-app-kotlin/main/app/src/main/assets/figure_atlas/…` (build_site.py `ATLAS_BASE`).
