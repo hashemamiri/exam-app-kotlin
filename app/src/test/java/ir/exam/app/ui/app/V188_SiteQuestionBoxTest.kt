@@ -62,4 +62,11 @@ class V188_SiteQuestionBoxTest {
         val css = source("site/src/site.css")
         assertTrue(".b-chip.sel{outline:2px solid var(--brand)" in css && ".b-fig-frame svg.an-ov{position:absolute" in css && ".b-fig-af .an-af-box{" in css)
     }
+
+    @Test
+    fun `desktop question box is user-resizable`() {
+        val css = source("site/src/site.css")
+        assertTrue(".dk .b-editor .b-rich{min-height:9.5em;max-height:none;height:9.5em;overflow-y:auto;resize:vertical;" in css)
+        assertTrue(".dk .b-editor .b-rich{max-height:none!important;min-height:9.5em!important}" in css)
+    }
 }

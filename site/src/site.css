@@ -1094,7 +1094,7 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .dk .acts-text .icon-btn:hover{background:#eef4f7}
 
 /* ===== V188 — دسکتاپ: کادر متن سؤال و نوار ابزار مثل فایل مرجع (final-compact) ===== */
-.dk .b-editor .b-rich{min-height:9.5em;max-height:9.5em;height:9.5em;overflow-y:auto;resize:vertical;line-height:1.9;font-size:15px;padding:13px 14px;border:1px solid #c4d0d6;border-radius:12px;background:#fbfdfe;box-shadow:inset 0 1px 2px rgba(30,55,70,.025);transition:border-color .15s,box-shadow .15s,background .15s}
+.dk .b-editor .b-rich{min-height:9.5em;max-height:none;height:9.5em;overflow-y:auto;resize:vertical;line-height:1.9;font-size:15px;padding:13px 14px;border:1px solid #c4d0d6;border-radius:12px;background:#fbfdfe;box-shadow:inset 0 1px 2px rgba(30,55,70,.025);transition:border-color .15s,box-shadow .15s,background .15s}
 .dk .b-editor .b-rich:focus{background:#fff;border-color:#39758a;box-shadow:0 0 0 4px rgba(57,117,138,.095)}
 .dk .b-editor .field>label{font-size:12.5px;font-weight:700;color:#667386}
 .dk .b-editor .b-tools{display:flex;align-items:stretch;flex-wrap:wrap;gap:10px;margin:8px 0 10px}
@@ -1150,3 +1150,7 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .b-chip.live .b-fig-af{display:none}
 .b-chip.live .b-fig-simple:after{content:'+ جای نوشتن نام قسمت‌ها زیر شکل';display:block;font-size:11px;color:#64748b;margin-top:4px;line-height:1.4}
 .b-chip.live .b-fig-simple:not(:has(.b-fig-af)):after{content:none}
+
+/* ===== V193 — کادر متن سؤال دسکتاپ با دستگیرهٔ کشیدن قابل استفاده (max-height سقف کشیدن را می‌بست) ===== */
+.dk .b-editor .b-rich{max-height:none!important;min-height:9.5em!important}
+.dk .b-editor .b-rich::-webkit-resizer{border-width:8px;border-style:solid;border-color:transparent #9fb3bc #9fb3bc transparent;border-radius:0 0 10px 0}

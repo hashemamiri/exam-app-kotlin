@@ -19164,3 +19164,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 ## §V192 — فلش‌ها و جای نام قسمت‌ها
 
 `simplifyFigs` به `student.js` منتقل شد (`SiteStudent.simplifyFigs`) و `richHtml` آن را روی `template.content` اعمال می‌کند → صفحهٔ آزمون دانش‌آموز و پیش‌نمایش دانش‌آموز هم پوشش داده می‌شوند؛ builder فقط delegate می‌کند. ساختار خروجی: `.qmf-fig.b-fig-simple > .b-fig-cap? + .b-fig-frame(img + svg.an-ov + .an-num/.an-tail) + .b-fig-af(.an-af-row × n)`. قاب `inline-block` با `line-height:0` و `img{display:block}` است تا اندازهٔ قاب = اندازهٔ تصویر و مختصات درصدی فلش‌ها درست باشد. کلاس `qmf-sc` حذف می‌شود چون قاعدهٔ موتور `.qmf-sc{zoom:.42}` از طریق keep-regex (`.qmf-fig` در همان selector) به سند اصلی نشت می‌کند. معادل اپ: `AtlasBitmapRenderer` (عنوان + تصویر + ردیف‌های blank با `X.blank≠'0'`).
+
+## §V193 — کشیدن کادر متن سؤال
+`resize:vertical` بود ولی `max-height:9.5em` (کپی از مرجع) اجازهٔ بزرگ‌شدن نمی‌داد → `max-height:none`، `min-height:9.5em`، ارتفاع اولیه `9.5em`. دستگیرهٔ `::-webkit-resizer` بزرگ‌تر شد.
