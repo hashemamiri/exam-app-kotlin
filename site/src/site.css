@@ -1168,3 +1168,8 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .dk .b-sp-modal{max-width:min(1100px,94vw)}
 .dk .b-sp-body{max-height:82vh}
 .dk .b-sp-text{font-size:17px}
+
+/* ===== V195 — ضربدر حذف روی شیء انتخاب‌شده در کادر متن ===== */
+.b-chip-x{position:absolute;top:-12px;left:-12px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#d92d20;color:#fff;font:800 13px/22px Vazirmatn,Tahoma,sans-serif;text-align:center;padding:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:5}
+.b-chip-x:hover{background:#b42318;transform:scale(1.08)}
+.b-chip.live.sel:after{right:auto;left:20px}

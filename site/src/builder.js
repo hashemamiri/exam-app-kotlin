@@ -369,16 +369,25 @@
       if (c.classList.contains('tex')) { S.openFormulaEditor(raw, idx, idx + tok.length).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.selectionStart = ta.selectionEnd = idx; ta.dispatchEvent(new Event('input')); } }); }
       else if (typeof editFigure === 'function') editFigure(ta, tok);
     }
+    function deleteTok(c) {
+      var tok = c.getAttribute('data-tok'); var raw = ta.value; var idx = raw.indexOf(tok); if (idx < 0) return;
+      var end = idx + tok.length; if (raw.charAt(end) === '\n') end++; /* خط اضافهٔ بعد از توکن شکل هم برداشته شود */
+      ta.value = raw.slice(0, idx) + raw.slice(end); ta.selectionStart = ta.selectionEnd = idx; ta.dispatchEvent(new Event('input'));
+    }
     function selectChip(c) {
-      Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { if (x !== c) x.classList.remove('sel'); });
+      Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { if (x !== c) { x.classList.remove('sel'); var ox = x.querySelector('.b-chip-x'); if (ox) ox.remove(); } });
       c.classList.add('sel');
+      /* V195 — ضربدر حذف روی شیء انتخاب‌شده (دسکتاپ) */
+      if (WYSIWYG && !c.querySelector('.b-chip-x')) c.appendChild(el('button', {type: 'button', class: 'b-chip-x', title: 'حذف این شیء', 'aria-label': 'حذف', text: '✕'}));
       var r = document.createRange(); r.selectNode(c); var sel = document.getSelection(); sel.removeAllRanges(); sel.addRange(r); caretToRaw();
     }
     rich.addEventListener('click', function (e) {
+      var xb = e.target.closest && e.target.closest('.b-chip-x');
+      if (xb) { e.preventDefault(); e.stopPropagation(); deleteTok(xb.closest('[data-tok]')); return; }
       var c = e.target.closest && e.target.closest('[data-tok]');
-      if (!c) { Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { x.classList.remove('sel'); }); return; }
+      if (!c) { Array.prototype.forEach.call(rich.querySelectorAll('.b-chip.sel'), function (x) { x.classList.remove('sel'); var ox = x.querySelector('.b-chip-x'); if (ox) ox.remove(); }); return; }
       e.preventDefault();
-      if (c.classList.contains('sel')) { c.classList.remove('sel'); openTokEditor(c); } else selectChip(c);
+      if (c.classList.contains('sel')) { c.classList.remove('sel'); var ox2 = c.querySelector('.b-chip-x'); if (ox2) ox2.remove(); openTokEditor(c); } else selectChip(c);
     });
     rich.addEventListener('dblclick', function (e) { var c = e.target.closest && e.target.closest('[data-tok]'); if (!c) return; e.preventDefault(); c.classList.remove('sel'); openTokEditor(c); });
     /* تغییر برنامه‌ای متن (ابزارها) → بازسازی نما */
@@ -553,7 +562,7 @@
         el('button', {class: 'tool-btn is-gra', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', text: '📈', onclick: function () { insertFigure('graph', ta, q); }}),
         el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', text: '▦', onclick: function () { insertFigure('table', ta, q); }}),
         el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', text: '⚛', onclick: function () { insertFigure('periodic', ta, q); }}),
-        el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک و شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', text: '🫀', onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
+        el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', text: '🫀', onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
         /* V159 — استودیوی ویرایش و تصویر (ExamImageStudioDialog)؛ dataURL برمی‌گرداند؛ در مسیر آنلاین هنگام ذخیره آپلود می‌شود */
         el('button', {class: 'tool-btn is-img', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', text: '🖼', onclick: function () {
           var addImg = function (u) { return {uri: u, xMm: 20, yMm: 30, widthMm: 55}; };
@@ -819,7 +828,8 @@
     var old = document.querySelector('.b-atlas-menu'); if (old) old.remove();
     var m = el('div', {class: 'b-atlas-menu'}, [
       el('button', {type: 'button', html: '<b>🫀</b><span>آناتومی</span><small>بدن، اندام‌ها، سلول، سه‌بعدی</small>', onclick: function () { m.remove(); insertFigure('anatomy', ta, q); }}),
-      el('button', {type: 'button', html: '<b>🔬</b><span>فیزیک و شیمی</span><small>مدار، آزمایشگاه، مولکول‌ها</small>', onclick: function () { m.remove(); insertFigure('science', ta, q); }}),
+      el('button', {type: 'button', html: '<b>⚡</b><span>فیزیک</span><small>مدار، نور، مکانیک، الکتریسیته</small>', onclick: function () { m.remove(); insertFigure('physics', ta, q); }}),
+      el('button', {type: 'button', html: '<b>🧪</b><span>شیمی</span><small>آزمایشگاه، مولکول‌ها، واکنش‌ها</small>', onclick: function () { m.remove(); insertFigure('chemistry', ta, q); }}),
       el('button', {type: 'button', html: '<b>🖼</b><span>تصویر خودم + فلش‌گذاری</span><small>عکس دلخواه؛ روی آن شماره بگذارید تا دانش‌آموز نام‌گذاری کند</small>', onclick: function () { m.remove(); pickPhotoForAtlas(ta, q); }})
     ]);
     var r = anchor.getBoundingClientRect(); m.style.top = (r.bottom + 6 + window.scrollY) + 'px'; m.style.right = (document.documentElement.clientWidth - r.right + window.scrollX) + 'px';
@@ -863,7 +873,8 @@
       var w = iframe.contentWindow, d = iframe.contentDocument, tries = 0;
       (function go() {
         tries++;
-        var api = {geo: w.GeoFig, graph: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig}[kind];
+        var api = {geo: w.GeoFig, graph: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig, physics: w.ScienceFig, chemistry: w.ScienceFig}[kind];
+        var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null; /* V195 — ScienceFig.open(spec, el, dom) */
         if (!api || typeof api.open !== 'function' || !w.renderPreview) { if (tries < 100) return setTimeout(go, 60); toast('ویرایشگر شکل آماده نشد.', 'err'); return close(); }
         /* textarea هدفِ ویرایشگرهای وب: یک textarea مخفی که متنِ سؤال ما را دارد */
         var hidden = d.createElement('textarea'); hidden.id = 'qTxt_main'; hidden.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
@@ -889,7 +900,7 @@
           var st2 = d.createElement('style'); st2.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st2);
           api.open(presetSpec, null);
           var h3 = d.querySelector('#anOverlay h3'); if (h3) h3.textContent = 'تصویر خودم — فلش‌گذاری برای نام‌گذاری';
-        } else api.open(null, null);
+        } else api.open(null, null, sciDom);
         if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
         /* بستن روکش وب بدون درج → بستن ما */
         var ovId = {geo: 'gfOverlay', graph: 'grOverlay', table: 'tbOverlay'}[kind];

@@ -55,7 +55,7 @@ class V188_SiteQuestionBoxTest {
     fun `desktop question box edits objects on second click and simplifies atlas figures`() {
         val b = source("site/src/builder.js")
         assertTrue("function simplifyFigs(root)" in source("site/src/student.js") && "window.SiteStudent.simplifyFigs(root)" in b)
-        assertTrue("if (c.classList.contains('sel')) { c.classList.remove('sel'); openTokEditor(c); } else selectChip(c);" in b)
+        assertTrue("if (c.classList.contains('sel')) { c.classList.remove('sel'); var ox2 = c.querySelector('.b-chip-x'); if (ox2) ox2.remove(); openTokEditor(c); } else selectChip(c);" in b)
         assertTrue("function editFigure(ta, tok)" in b && "insertFigure(kind, ta, null, tok);" in b)
         assertTrue("if (!w.GeoFig.openFromEl(fig)) {" in b && "attributeFilter: ['data-fig']" in b)
         assertTrue("c.innerHTML = h; simplifyFigs(c);" in b && "simplifyFigs(t.content); return t.innerHTML;" in source("site/src/student.js"))
@@ -82,5 +82,14 @@ class V188_SiteQuestionBoxTest {
         assertTrue(".dk .b-editor .b-rich{resize:none!important}" in css && ".b-grip{" in css && ".b-atlas-menu{" in css)
         assertTrue(".dk .b-sp-modal{max-width:min(1100px,94vw)}" in css)
         assertFalse("::-webkit-resizer" in css)
+    }
+
+    @Test
+    fun `physics and chemistry are separate and selected objects get a delete cross`() {
+        val b = source("site/src/builder.js")
+        assertTrue("insertFigure('physics', ta, q)" in b && "insertFigure('chemistry', ta, q)" in b)
+        assertTrue("var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null;" in b && "api.open(null, null, sciDom);" in b)
+        assertTrue("function deleteTok(c)" in b && "class: 'b-chip-x'" in b && "deleteTok(xb.closest('[data-tok]'))" in b)
+        assertTrue(".b-chip-x{position:absolute" in source("site/src/site.css"))
     }
 }

@@ -19178,3 +19178,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 - `atlasMenu(anchor, ta, q)`: پاپ‌آور سه‌گزینه‌ای. `pickPhotoForAtlas`: `<input type=file>` → canvas (حداکثر ۱۴۰۰px، JPEG .86، اگر >۹۰۰KB → .7) → `insertFigure('anatomy', ta, q, null, presetSpec)`.
 - `insertFigure(kind, ta, q, editTok, presetSpec)`: با `presetSpec` → `api.open(spec, null)` و پنهان‌کردن `#anCats,#anShapes,.an-split>.gf-types` (فهرست شکل‌های آناتومی) + تغییر عنوان مودال. ویرایشگر آناتومیِ موتور خودش فلش‌گذاری (mousedown/کشیدن روی `an-frame`، حداکثر ۱۲ نشانه)، فیلد نام هر شماره (`#anAnswerFields`) و گزینهٔ `blank` را دارد؛ `mountSvg` برای `t='photo'` از `X.img` (data-URL) استفاده می‌کند — همان مدل اپ (`AtlasEditorDialog`، `FigureSpec` با `PHOTO_TYPE`).
 - ویرایش مجدد توکن photo: `editFigure` → همان مسیر + پنهان‌کردن فهرست وقتی `"t":"photo"`.
+
+## §V195 — فیزیک/شیمی جدا و ضربدر حذف
+`ScienceFig.open(spec, el, dom)` با `dom='phys'|'chem'` فهرست و عنوان را تعیین می‌کند؛ `insertFigure` kind‌های `physics`/`chemistry` → `sciDom`. در `selectChip` دکمهٔ `button.b-chip-x` داخل تراشه (contenteditable=false) اضافه می‌شود؛ کلیک آن → `deleteTok` توکن را از `ta.value` حذف می‌کند (serialize بر پایهٔ data-tok است، پس دکمهٔ اضافه در متن نمی‌آید).
