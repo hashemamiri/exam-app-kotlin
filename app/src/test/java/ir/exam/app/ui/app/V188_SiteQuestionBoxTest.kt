@@ -19,7 +19,7 @@ class V188_SiteQuestionBoxTest {
         assertTrue("placeholder: 'متن سؤال را بنویسید؛ برای فرمول از دکمهٔ ∑ استفاده کنید'" in b)
         assertTrue("class: 'tool-btn is-fx'" in b && "class: 'tool-btn is-fig'" in b && "class: 'tool-btn is-mic'" in b)
         val css = source("site/src/site.css")
-        assertTrue(".dk .b-editor .b-rich{min-height:9.5em;max-height:9.5em" in css && "resize:vertical" in css)
+        assertTrue(".dk .b-editor .b-rich{min-height:9.5em;max-height:none;height:9.5em" in css && "resize:vertical" in css)
         assertTrue(".dk .b-editor .tool-btn{width:52px;height:52px;border:0;border-radius:16px" in css && ".dk .b-editor .tool-btn.is-fx{background:#eef2ff;color:#5b52e0}" in css)
     }
 
@@ -36,7 +36,7 @@ class V188_SiteQuestionBoxTest {
     fun `desktop question box renders tokens inline and site-only commits skip app CI`() {
         val b = source("site/src/builder.js")
         assertTrue("var WYSIWYG = document.body.classList.contains('dk');" in b)
-        assertTrue("if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) c.innerHTML = h; } catch (e) {} });" in b)
+        assertTrue("if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); } } catch (e) {} });" in b)
         assertTrue(",.b-rich ' + x.trim(); }).join(',')" in b)
         val css = source("site/src/site.css")
         assertTrue(".b-chip.live{background:transparent" in css && ".dk .b-editor .b-live{display:none!important}" in css)
