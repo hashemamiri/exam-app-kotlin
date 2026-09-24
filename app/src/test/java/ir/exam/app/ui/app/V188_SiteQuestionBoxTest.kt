@@ -26,7 +26,7 @@ class V188_SiteQuestionBoxTest {
     @Test
     fun `student preview gets math css scope and image uri`() {
         val b = source("site/src/builder.js")
-        assertTrue("return '.b-live ' + x.trim() + ',.b-sp-card ' + x.trim(); }).join(',')" in b)
+        assertTrue("return '.b-live ' + x.trim() + ',.b-sp-card ' + x.trim() + ',.b-rich ' + x.trim(); }).join(',')" in b)
         assertTrue("var src = u && typeof u === 'object' ? u.uri : u;" in b)
         assertTrue("var card = el('div', {class: 'card b-sp-card'}); previewCss();" in b)
         assertTrue(".b-sp-text{white-space:pre-wrap;word-break:break-word" in source("site/src/site.css"))
