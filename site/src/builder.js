@@ -270,7 +270,7 @@
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {
-          if (r.type === 1 && r.selectorText && keep.test(r.selectorText) && !/^(html|body|\*)/.test(r.selectorText)) out.push(r.selectorText.split(',').map(function (x) { return '.b-live ' + x.trim(); }).join(',') + '{' + r.style.cssText + '}');
+          if (r.type === 1 && r.selectorText && keep.test(r.selectorText) && !/^(html|body|\*)/.test(r.selectorText)) out.push(r.selectorText.split(',').map(function (x) { return '.b-live ' + x.trim() + ',.b-sp-card ' + x.trim(); }).join(',') + '{' + r.style.cssText + '}');
           else if (r.type === 5 && /math|mfrac|frac/i.test(r.cssText)) out.push(r.cssText);
         });
       });
@@ -438,11 +438,12 @@
       var q = state.questions[state.selected]; if (!q) return toast('ابتدا یک سؤال اضافه کنید.', 'err');
       var n = state.selected + 1;
       var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
-      var card = el('div', {class: 'card b-sp-card'});
+      var card = el('div', {class: 'card b-sp-card'}); previewCss();
       card.appendChild(el('div', {class: 'b-sp-num', text: 'سؤال ' + fa(n) + ' (' + fa(S.fmtScore(q.score)) + ' نمره)'}));
       var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
       if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; });
-      (q.images || []).forEach(function (u) { card.appendChild(el('img', {src: u, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
+      /* V188 — تصاویر سؤال شیء {uri,…} هستند (پیش‌تر [object Object] می‌شد) */
+      (q.images || []).forEach(function (u) { var src = u && typeof u === 'object' ? u.uri : u; if (src) card.appendChild(el('img', {src: src, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
       var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
       if (q.type === 'multiple') (q.options || []).forEach(function (o, i) { card.appendChild(el('label', {class: 'st-opt'}, [el('input', {type: 'radio', disabled: 'disabled'}), el('span', {class: 'st-optlabel', text: (AB[i] || fa(i + 1)) + ')'}), el('span', {class: 'grow', text: o || ('گزینه ' + fa(i + 1))}), q.optionImages && q.optionImages[i] ? el('img', {src: q.optionImages[i], class: 'thumb'}) : null])); });
       else if (q.type === 'truefalse') card.appendChild(el('div', {class: 'row'}, [el('button', {class: 'btn light', text: '✓ صحیح', disabled: 'disabled'}), el('button', {class: 'btn light', text: '✗ غلط', disabled: 'disabled'})]));
@@ -510,19 +511,19 @@
         el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'سؤال ' + fa(i + 1) + ' حذف شود؟', 'حذف', true))) return; state.questions.splice(i, 1); state.selected = Math.max(0, Math.min(i, state.questions.length - 1)); mark(); drawList(); drawEditor(); }})
       ]));
       /* متن سؤال + ابزار درج */
-      var ta = el('textarea', {rows: 4, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px', placeholder: 'متن سؤال… (فرمول‌ها بین $…$، شکل‌ها به‌صورت %%FIG:{…}%%)'});
+      var ta = el('textarea', {rows: 4, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px', placeholder: 'متن سؤال را بنویسید؛ برای فرمول از دکمهٔ ∑ استفاده کنید'});
       ta.value = q.text;
       ta.addEventListener('input', function () { q.text = ta.value; mark(); drawListSoft(); });
       var tools = el('div', {class: 'b-tools'}, [
-        el('button', {class: 'tool-btn', title: 'فرمول', 'aria-label': 'فرمول', text: '🧮', onclick: function () { var s = ta.selectionStart, e = ta.selectionEnd; S.openFormulaEditor(ta.value, s, e).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }}),
-        el('button', {class: 'tool-btn', title: 'شکل هندسی', 'aria-label': 'شکل هندسی', text: '📐', onclick: function () { insertFigure('geo', ta, q); }}),
-        el('button', {class: 'tool-btn', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', text: '📈', onclick: function () { insertFigure('graph', ta, q); }}),
-        el('button', {class: 'tool-btn', title: 'جدول', 'aria-label': 'جدول', text: '▦', onclick: function () { insertFigure('table', ta, q); }}),
-        el('button', {class: 'tool-btn', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', text: '⚛', onclick: function () { insertFigure('periodic', ta, q); }}),
-        el('button', {class: 'tool-btn', title: 'آناتومی', 'aria-label': 'آناتومی', text: '🫀', onclick: function () { insertFigure('anatomy', ta, q); }}),
-        el('button', {class: 'tool-btn', title: 'علوم', 'aria-label': 'علوم', text: '🔬', onclick: function () { insertFigure('science', ta, q); }}),
+        el('button', {class: 'tool-btn is-fx', title: 'فرمول', 'aria-label': 'فرمول', text: '🧮', onclick: function () { var s = ta.selectionStart, e = ta.selectionEnd; S.openFormulaEditor(ta.value, s, e).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }}),
+        el('button', {class: 'tool-btn is-fig', title: 'شکل هندسی', 'aria-label': 'شکل هندسی', text: '📐', onclick: function () { insertFigure('geo', ta, q); }}),
+        el('button', {class: 'tool-btn is-gra', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', text: '📈', onclick: function () { insertFigure('graph', ta, q); }}),
+        el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', text: '▦', onclick: function () { insertFigure('table', ta, q); }}),
+        el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', text: '⚛', onclick: function () { insertFigure('periodic', ta, q); }}),
+        el('button', {class: 'tool-btn is-ana', title: 'آناتومی', 'aria-label': 'آناتومی', text: '🫀', onclick: function () { insertFigure('anatomy', ta, q); }}),
+        el('button', {class: 'tool-btn is-sci', title: 'علوم', 'aria-label': 'علوم', text: '🔬', onclick: function () { insertFigure('science', ta, q); }}),
         /* V159 — استودیوی ویرایش و تصویر (ExamImageStudioDialog)؛ dataURL برمی‌گرداند؛ در مسیر آنلاین هنگام ذخیره آپلود می‌شود */
-        el('button', {class: 'tool-btn', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', text: '🖼', onclick: function () {
+        el('button', {class: 'tool-btn is-img', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', text: '🖼', onclick: function () {
           var addImg = function (u) { return {uri: u, xMm: 20, yMm: 30, widthMm: 55}; };
           window.SiteStudio.open({existing: q.images,
             onInsert: function (u) { q.images.push(addImg(u)); mark(); drawEditor(); toast('تصویر افزوده شد.', 'ok'); },
@@ -531,7 +532,7 @@
             onSplitToSame: function (urls) { urls.forEach(function (u) { q.images.push(addImg(u)); }); mark(); drawEditor(); toast(fa(urls.length) + ' تصویر افزوده شد.', 'ok'); },
             onSplitToQuestions: function (urls) { urls.forEach(function (u, j) { if (j === 0) { q.images.push(addImg(u)); return; } var nq = newQuestion(q.type); nq.images.push(addImg(u)); state.questions.splice(i + j, 0, nq); }); mark(); drawList(); drawEditor(); toast(fa(urls.length) + ' سؤال ساخته شد.', 'ok'); }});
         }}),
-        el('button', {class: 'tool-btn', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', text: '🎤', onclick: function () { dictate(ta, q); }}),
+        el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', text: '🎤', onclick: function () { dictate(ta, q); }}),
         window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', text: '🎙', onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
       ]);
       var tt = tokenTextarea(ta);

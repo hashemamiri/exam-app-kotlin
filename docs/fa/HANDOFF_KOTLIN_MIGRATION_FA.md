@@ -19130,3 +19130,12 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 `relay/Caddyfile`, `relay/README_FA.md` (راهنمای کاربر). Secrets جدید: `PAY_RELAY_URL`, `PAY_RELAY_TOKEN` (هرگز در گیت/چت).
 پس از نصب: `supabase functions deploy wallet-payment --no-verify-jwt`. تست: `V187_PayRelayTest`. Deno در sandbox نبود؛ TS فقط
 با بازبینی دستی (الگوی fetch یکسان با قبل).
+
+## §V188 — کادر متن سؤال دسکتاپ مثل فایل مرجع + رفع پیش‌نمایش دانش‌آموز
+
+مرجع: `uploads/00000000000000000000000000000.html` (نسخهٔ یکپارچهٔ قدیمی، `final-compact`): `textarea[id^=qTxt_]{min-height:9.5em;max-height:9.5em;overflow-y:auto;resize:vertical;line-height:1.9}`،
+`.final-compact .input{border:1px solid #c4d0d6;border-radius:12px;background:#fbfdfe;…}`، focus `#39758a` + ring، `.q-tool-btn{52px;radius 16px;is-fx/is-fig/is-gra/is-tab…}`.
+ویرایشگر تراشه‌ای (`.b-rich`, V143.3) حفظ شد؛ فقط ظاهرش در `.dk .b-editor` به همان مقادیر رسید؛ `tool-btn` کلاس‌های `is-*` گرفت.
+**پیش‌نمایش دانش‌آموز (V173) دو باگ داشت:** ۱) قواعد ریاضی/شکل فقط با پیشوند `.b-live` (سازنده) و `.st-exam` (صفحهٔ آزمون) تزریق می‌شد و
+`.b-sp-card` هیچ‌کدام را نداشت → mathx/mfrac بدون استایل؛ حالا `previewCss` هر قاعده را برای `.b-live` و `.b-sp-card` می‌نویسد و
+`studentPreview` آن را صدا می‌زند. ۲) `q.images` آرایهٔ `{uri,xMm,…}` است ولی مستقیم به `src` می‌رفت → `[object Object]`. تست: `V188_SiteQuestionBoxTest`.
