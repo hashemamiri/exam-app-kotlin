@@ -43,4 +43,11 @@ class V188_SiteQuestionBoxTest {
         val ci = source(".github/workflows/android.yml")
         assertTrue("'relay/**', 'supabase/**'" in ci && "'app/src/test/**/V1*_Site*Test.kt'" in ci)
     }
+
+    @Test
+    fun `desktop exam card actions wrap inside card`() {
+        val css = source("site/src/site.css")
+        assertTrue(".dk .exam .acts.acts-text{display:flex;flex-wrap:wrap" in css)
+        assertTrue(".dk .exam .acts.acts-text .icon-btn{flex:1 1 0;min-width:max-content" in css)
+    }
 }

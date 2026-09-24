@@ -19150,3 +19150,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ### V189.1
 تست دوم `V188_SiteQuestionBoxTest` رشتهٔ قدیمی previewCss (بدون `.b-rich`) را می‌خواست و در CI شکست؛ به‌روز شد. V189 خودش CI اپ را اجرا کرد چون `android.yml` تغییر کرده بود؛ از این پس تغییرات فقط-سایت آن را اجرا نمی‌کنند.
+
+## §V190 — دکمه‌های کارت آزمون دسکتاپ
+`.dk .exam .acts.acts-text` → `flex-wrap:wrap`، هر دکمه `flex:1 1 0;min-width:max-content`، «حذف» `flex:0 0 auto`؛ `.dk .exam{overflow:hidden}`. قبلاً `.exam .acts` بدون wrap بود و «حذف» بیرون کارت می‌افتاد.
