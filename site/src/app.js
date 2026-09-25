@@ -1064,7 +1064,7 @@
     school: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5M22 9v6"/>',
     account: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
-    print: '<path d="M7 8V4h10v4M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z"/>',
+    print: '<path d="M7 9V4.5A1.5 1.5 0 0 1 8.5 3h7A1.5 1.5 0 0 1 17 4.5V9"/><rect x="3" y="9" width="18" height="8.5" rx="2.2"/><path d="M7 14.5h10V21H7z"/><path d="M9.5 17.3h5M9.5 19.2h3.5"/><circle cx="17.2" cy="12.2" r="0.9" fill="currentColor" stroke="none"/>',
     logout: '<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/>',
     back: '<path d="M15 6l-6 6 6 6"/>',
     brand: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 4h6v3H9zM8.5 13l2.5 2.5 4.5-4.5"/>'
@@ -1095,12 +1095,15 @@
     if (!title) { var a = view.arg || {}; title = {reports: a.section === 'grades' ? 'کارنامه' : 'آمار', grading: a.filter === 'pending' ? 'مانده' : (a.filter === 'graded' ? 'پاسخ' : 'تصحیح'), bank: 'بانک سؤال', requests: 'درخواست‌ها'}[view.panel] || ''; }
     /* V165 — ریل عمودی: «منو» + همهٔ بخش‌های نقش؛ نام هر مورد با نگه‌داشتن ماوس باز می‌شود */
     /* V176 — صفحه‌هایی که از «منو» باز می‌شوند (چاپ، تقویم، حساب، تنظیمات، …) در ریل، «منو» را روشن نگه می‌دارند */
-    var railKeys = ['menu'].concat(items.map(function (it) { return it[0]; }));
+    /* V197 — ریل دسکتاپ معلم: «چاپ آزمون» بالای «کیف پول» (فقط ریل؛ منوی پایین گوشی/تبلت بدون تغییر) */
+    var railItems = items.slice();
+    if (user.role === 'teacher' && !railItems.some(function (it) { return it[0] === 'print'; })) { var wi = railItems.findIndex(function (it) { return it[0] === 'wallet'; }); railItems.splice(wi < 0 ? railItems.length : wi, 0, ['print', '🖨', 'چاپ آزمون']); }
+    var railKeys = ['menu'].concat(railItems.map(function (it) { return it[0]; }));
     var railActive = railKeys.indexOf(view.panel) >= 0 ? view.panel : 'menu';
     function railItem(key, label) {
       return el('button', {class: 'dk-rail-item' + (railActive === key ? ' active' : ''), 'aria-label': label, 'aria-current': railActive === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
     }
-    var rail = el('nav', {class: 'dk-rail', 'aria-label': 'نوار اصلی', style: '--n:' + (items.length + 1)}, [railItem('menu', 'منو')].concat(items.map(function (it) { return railItem(it[0], it[2]); })));
+    var rail = el('nav', {class: 'dk-rail', 'aria-label': 'نوار اصلی', style: '--n:' + (railItems.length + 1)}, [railItem('menu', 'منو')].concat(railItems.map(function (it) { return railItem(it[0], it[2]); })));
     var main = el('main', {class: 'main'}, [
       el('div', {class: 'head dk-top'}, [
         el('button', {class: 'icon-btn hamb', html: '☰', 'aria-label': 'منو', onclick: toggleSidebar}),

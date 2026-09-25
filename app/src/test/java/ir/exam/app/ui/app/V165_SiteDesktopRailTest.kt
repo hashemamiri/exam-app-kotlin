@@ -18,8 +18,8 @@ class V165_SiteDesktopRailTest {
     fun `desktop panel renders rail topbar and menu page`() {
         val a = source("site/src/app.js")
         assertTrue("function renderPanel()" in a && "document.body.classList.add('dk')" in a && "document.body.classList.remove('dk')" in a)
-        assertTrue("function railItem(key, label)" in a && "[railItem('menu', 'منو')].concat(items.map(" in a)
-        assertTrue("class: 'dk-rail', 'aria-label': 'نوار اصلی'" in a && "'--n:' + (items.length + 1)" in a)
+        assertTrue("function railItem(key, label)" in a && "[railItem('menu', 'منو')].concat(railItems.map(" in a) // V197: railItems
+        assertTrue("class: 'dk-rail', 'aria-label': 'نوار اصلی'" in a && "'--n:' + (railItems.length + 1)" in a)
         assertTrue("class: 'head dk-top'" in a && "dkIcon('brand', 'dk-mark')" in a && "dkGo(view.panel === 'menu' ? 'dashboard' : 'menu')" in a)
         assertTrue("function pageMenu(c)" in a && "var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, account: pageAccount, settings: pageSettings, dashboard: pageDashboard" in a)
         // V169 — کارت پروفایل هم‌اندازهٔ بقیه (dk-mcard-profile) و «پروفایل» در ریل نیست

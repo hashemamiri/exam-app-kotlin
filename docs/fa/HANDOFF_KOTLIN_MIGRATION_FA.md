@@ -19189,3 +19189,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 - builder `jdt(label, get, on, minGet)` جایگزین `datetime-local`؛ ذخیره همان رشتهٔ محلی `YYYY-MM-DDTHH:mm` (localToIso بدون تغییر). تغییر شروع به بعد از پایان → پایان پاک می‌شود و `redrawSettings()`.
 - headerSettingsForm: فیلدهای `examDate|gradesDate|examDay` → date (examDay نام روز هفته می‌نویسد)، `examTime|startTime` → time؛ مقدار به‌صورت متن فارسی `۱۴۰۵/۰۷/۰۳` / `۰۸:۰۰` در همان فیلد متنی سربرگ.
 - بررسی: 2026-09-25 = 1405/07/03 جمعه؛ اسفند 1403 = 30 روز.
+
+## §V197 — چاپگر در ریل
+`renderPanel`: `railItems = items` + درج `['print','🖨','چاپ آزمون']` قبل از `wallet` فقط برای معلم و فقط در ریل دسکتاپ (`MENUS.teacher` دست‌نخورده تا منوی پایین گوشی/تبلت تغییر نکند). `DK_ICONS.print` بازطراحی شد. صفحهٔ مقصد همان `pagePrint`.

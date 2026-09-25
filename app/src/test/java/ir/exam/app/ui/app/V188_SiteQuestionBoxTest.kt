@@ -106,4 +106,14 @@ class V188_SiteQuestionBoxTest {
         val css = source("site/src/site.css")
         assertTrue(".jdp-d.dis,.jdp-d:disabled{" in css && ".dk .cal-d{min-height:64px" in css && ".jdt-btn{" in css)
     }
+
+    @Test
+    fun `desktop teacher rail has print above wallet`() {
+        val a = source("site/src/app.js")
+        assertTrue("railItems.splice(wi < 0 ? railItems.length : wi, 0, ['print', '🖨', 'چاپ آزمون']);" in a)
+        assertTrue("[railItem('menu', 'منو')].concat(railItems.map(" in a)
+        assertTrue("<rect x=\"3\" y=\"9\" width=\"18\" height=\"8.5\" rx=\"2.2\"/>" in a)
+        // منوی گوشی/تبلت بدون تغییر
+        assertTrue("['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']" in a)
+    }
 }
