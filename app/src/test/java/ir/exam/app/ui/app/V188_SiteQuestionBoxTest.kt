@@ -126,5 +126,6 @@ class V188_SiteQuestionBoxTest {
         assertFalse("if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());" in a)
         val css = source("site/src/site.css")
         assertTrue(".grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}" in css && ".grid5 .stat{min-height:112px;justify-content:center}" in css)
+        assertTrue(".grid2 .card+.card,.grid3 .card+.card,.grid4 .card+.card,.grid5 .card+.card{margin-top:0}" in css)
     }
 }

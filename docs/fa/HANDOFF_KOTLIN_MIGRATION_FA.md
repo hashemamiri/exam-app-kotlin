@@ -19195,3 +19195,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ## §V198 — پنج کارت داشبورد
 `pageDashboard` (معلم): `rpcObj('native_teacher_manager_requests_v41')` همراه بقیه؛ `statCard(..., {onclick})` (statCard اکنون `target.onclick` می‌پذیرد) → `openManagerRequests()` مودال با `SiteSchool.managerRequestsCard(true)` (کلاس `mr-embed` ظاهر کارت داخلی را حذف می‌کند؛ بستن مودال داشبورد را دوباره می‌سازد تا شمارنده به‌روز شود). `.grid5` → ۵/۳/۲ ستون بر حسب عرض. `stat-attn` وقتی درخواست در انتظار هست.
+
+### V198.1
+علت ناهم‌شکلی کارت «آزمون»: `.card + .card{margin-top:16px}` (site.css خط ~73) در گرید هم اعمال می‌شد. اصلاح: `.gridN .card+.card{margin-top:0}` برای grid2..5 و `.grid5>.stat{height:100%}`.

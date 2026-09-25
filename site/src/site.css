@@ -1213,6 +1213,9 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 /* ===== V198 — داشبورد معلم: پنج کارت هم‌شکل (+ درخواست‌های مدیر) ===== */
 .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 .grid5 .stat{min-height:112px;justify-content:center}
+/* V198.1 — قانون عمومی «.card + .card{margin-top}» داخل گرید کارت‌های ۲ تا ۵ را پایین می‌کشید و فقط کارت اول (آزمون) بلند می‌ماند */
+.grid2 .card+.card,.grid3 .card+.card,.grid4 .card+.card,.grid5 .card+.card{margin-top:0}
+.grid5>.stat{height:100%;box-sizing:border-box}
 @media (max-width:1100px){.grid5{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:600px){.grid5{grid-template-columns:1fr 1fr}}
 .stat.stat-attn .v{color:#c2410c}
