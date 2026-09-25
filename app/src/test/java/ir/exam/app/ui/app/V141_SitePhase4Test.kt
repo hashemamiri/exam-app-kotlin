@@ -25,8 +25,9 @@ class V141_SitePhase4Test {
         assertTrue("native_manager_teachers_v37" in js && "native_manager_transfer_wallet_v38" in js && "p_operation" in js)
         assertTrue("native_manager_teacher_classes_v40c" in js && "native_manager_class_roster_v40c" in js && "native_manager_set_class_student_v40c" in js)
         assertTrue("native_manager_change_teacher_class_v41" in js && "approval_required" in js)
-        // الگوریتم جلالی (jalaali-js)
-        assertTrue("[-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178]" in js)
+        // الگوریتم جلالی (jalaali-js) — V196: به app.js منتقل شد (SiteJalali)
+        assertTrue("[-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178]" in source("site/src/app.js"))
+        assertTrue("var J = window.SiteJalali;" in js)
     }
 
     @Test

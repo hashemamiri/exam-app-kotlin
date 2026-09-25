@@ -669,14 +669,15 @@
     /* --- مشخصات آزمون (آنلاین) --- */
     /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
     function settingsForm(m_) {
+      function redrawSettings() { var y = m_.scrollTop; m_.innerHTML = ''; settingsForm(m_); m_.scrollTop = y; }
       m_.appendChild(el('div', {class: 'grid3'}, [
         inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); }),
         inp('درس', state.subject, function (v) { state.subject = v; mark(); }),
         inp('مدت (دقیقه)', state.duration, function (v) { state.duration = en(v); mark(); }, 'number')
       ]));
       m_.appendChild(el('div', {class: 'grid2'}, [
-        inp('زمان شروع (اختیاری)', state.opensAt, function (v) { state.opensAt = v; mark(); }, 'datetime-local'),
-        inp('زمان پایان (اختیاری)', state.closesAt, function (v) { state.closesAt = v; mark(); }, 'datetime-local'),
+        jdt('زمان شروع (اختیاری)', function () { return state.opensAt; }, function (v) { state.opensAt = v; if (v && state.closesAt && new Date(state.closesAt) < new Date(v)) { state.closesAt = ''; toast('زمان پایان چون قبل از شروع جدید بود پاک شد.', 'err'); } mark(); redrawSettings(); }),
+        jdt('زمان پایان (اختیاری)', function () { return state.closesAt; }, function (v) { state.closesAt = v; mark(); redrawSettings(); }, function () { return state.opensAt; }),
         inp('نمرهٔ منفی (۰ تا ۱)', state.negativeMarking, function (v) { state.negativeMarking = en(v); mark(); }, 'number'),
         sel('تعداد دفعات مجاز', String(state.attemptsAllowed), [['1', '۱'], ['2', '۲'], ['3', '۳'], ['4', '۴'], ['5', '۵']], function (v) { state.attemptsAllowed = Number(v); mark(); }),
         sel('نمرهٔ نهایی', state.gradePolicy, [['last', 'آخرین تلاش'], ['best', 'بهترین تلاش'], ['all', 'همهٔ تلاش‌ها']], function (v) { state.gradePolicy = v; mark(); }),
@@ -932,6 +933,17 @@
   }
 
   /* ================================================================ ابزارهای فرم */
+  /* V196 — فیلد تاریخ/ساعت شمسی (معادل JalaliDateTimeField اپ): دکمه با نمایش شمسی؛ کلیک → تقویم شمسی؛ minGet = حداقل مجاز (پایان ≥ شروع) */
+  function localStr(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  function jdt(label, get, on, minGet) {
+    var cur = get() ? new Date(get()) : null, has = cur && !isNaN(cur);
+    var b = el('button', {type: 'button', class: 'jdt-btn' + (has ? ' set' : ''), html: '<b>' + (has ? S.jalaliDisplay(cur) : 'تعیین نشده') + '</b><small>' + (has ? 'برای تغییر کلیک کنید' : 'برای انتخاب کلیک کنید') + '</small>'});
+    b.addEventListener('click', function () {
+      var mn = minGet && minGet() ? new Date(minGet()) : null;
+      S.jalaliPicker({mode: 'datetime', title: label.replace(/\s*\(اختیاری\)/, ''), value: has ? cur : null, min: mn && !isNaN(mn) ? mn : null, canClear: !!has}).then(function (r) { if (r === null) return; on(r === '' ? '' : localStr(r)); });
+    });
+    return el('div', {class: 'field'}, [el('label', {text: label}), b]);
+  }
   function inp(label, val, on, type) { var i = el('input', {type: type || 'text', value: val == null ? '' : val}); i.addEventListener('input', function () { on(i.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), i]); }
   function sel(label, val, opts, on) { var s = el('select'); opts.forEach(function (o) { var op = el('option', {value: o[0], text: o[1]}); if (o[0] === val) op.selected = true; s.appendChild(op); }); s.addEventListener('change', function () { on(s.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), s]); }
   function chk(label, val, on) { var c = el('input', {type: 'checkbox'}); c.checked = !!val; c.addEventListener('change', function () { on(c.checked); }); return el('label', {class: 'row', style: 'gap:6px;font-size:14px'}, [c, label]); }

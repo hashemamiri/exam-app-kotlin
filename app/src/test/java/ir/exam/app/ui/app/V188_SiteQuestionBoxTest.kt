@@ -92,4 +92,18 @@ class V188_SiteQuestionBoxTest {
         assertTrue("function deleteTok(c)" in b && "class: 'b-chip-x'" in b && "deleteTok(xb.closest('[data-tok]'))" in b)
         assertTrue(".b-chip-x{position:absolute" in source("site/src/site.css"))
     }
+
+    @Test
+    fun `jalali picker shared, exam settings and header dates use it, desktop calendar compact`() {
+        val a = source("site/src/app.js")
+        assertTrue("window.SiteJalali = J;" in a && "function jalaliPicker(o)" in a && "function jalaliDisplay(d, withTime)" in a)
+        assertTrue("err.textContent = 'زمان پایان نمی‌تواند قبل از زمان شروع باشد (' + jalaliDisplay(minD) + ').'" in a)
+        assertTrue("var pk = /examDate|gradesDate|examDay/i.test(f.id) ? 'date' : /examTime|startTime/i.test(f.id) ? 'time' : null;" in a)
+        assertTrue("var J = window.SiteJalali;" in source("site/src/admin.js"))
+        val b = source("site/src/builder.js")
+        assertTrue("function jdt(label, get, on, minGet)" in b && "jdt('زمان پایان (اختیاری)'" in b && "function () { return state.opensAt; })" in b)
+        assertFalse("'datetime-local'" in b)
+        val css = source("site/src/site.css")
+        assertTrue(".jdp-d.dis,.jdp-d:disabled{" in css && ".dk .cal-d{min-height:64px" in css && ".jdt-btn{" in css)
+    }
 }

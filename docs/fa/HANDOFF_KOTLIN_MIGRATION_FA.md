@@ -19181,3 +19181,11 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ## §V195 — فیزیک/شیمی جدا و ضربدر حذف
 `ScienceFig.open(spec, el, dom)` با `dom='phys'|'chem'` فهرست و عنوان را تعیین می‌کند؛ `insertFigure` kind‌های `physics`/`chemistry` → `sciDom`. در `selectChip` دکمهٔ `button.b-chip-x` داخل تراشه (contenteditable=false) اضافه می‌شود؛ کلیک آن → `deleteTok` توکن را از `ta.value` حذف می‌کند (serialize بر پایهٔ data-tok است، پس دکمهٔ اضافه در متن نمی‌آید).
+
+## §V196 — تقویم شمسی مشترک
+
+- الگوریتم جلالی (`J`) از admin.js به app.js منتقل شد: `window.SiteJalali` (+ `picker`, `display`, `WEEKDAYS`); admin.js `var J = window.SiteJalali`.
+- `jalaliPicker({mode:'datetime'|'date'|'time', title, value:Date, selected:{jy,jm,jd}, hour, minute, min:Date, canClear})` → Promise: `null` انصراف، `''` پاک‌کردن، وگرنه Date / {jy,jm,jd} / {h,m}. روزهای قبل از `min` غیرفعال و زمان نهایی هم با `min` مقایسه می‌شود (پیام خطا).
+- builder `jdt(label, get, on, minGet)` جایگزین `datetime-local`؛ ذخیره همان رشتهٔ محلی `YYYY-MM-DDTHH:mm` (localToIso بدون تغییر). تغییر شروع به بعد از پایان → پایان پاک می‌شود و `redrawSettings()`.
+- headerSettingsForm: فیلدهای `examDate|gradesDate|examDay` → date (examDay نام روز هفته می‌نویسد)، `examTime|startTime` → time؛ مقدار به‌صورت متن فارسی `۱۴۰۵/۰۷/۰۳` / `۰۸:۰۰` در همان فیلد متنی سربرگ.
+- بررسی: 2026-09-25 = 1405/07/03 جمعه؛ اسفند 1403 = 30 روز.

@@ -538,6 +538,105 @@
   /* ---- V157: تنظیمات سربرگ (آینهٔ PrintHeaderStore + HeaderSettingsDialog اپ؛ schema همان header_settings_schema.json) ---- */
   var LS_PRINTHEADER = 'examsite.printheader.v1';
   function readPrintHeader() { try { var o = JSON.parse(localStorage.getItem(LS_PRINTHEADER) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  /* ================================================================ تقویم شمسی (JalaliCalendar — الگوریتم جلالی استاندارد) */
+  var J = (function () {
+    /* الگوریتم jalaali-js (Behrooz Kamali) */
+    function div(a, b) { return ~~(a / b); }
+    function mod(a, b) { return a - ~~(a / b) * b; }
+    var breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+    function jalCal(jy) {
+      var bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump, leap, n, i;
+      for (i = 1; i < bl; i += 1) { jm = breaks[i]; jump = jm - jp; if (jy < jm) break; leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4); jp = jm; }
+      n = jy - jp;
+      leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+      if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+      var leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
+      var march = 20 + leapJ - leapG;
+      if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+      leap = mod(mod(n + 1, 33) - 1, 4); if (leap === -1) leap = 4;
+      return {leap: leap, gy: gy, march: march};
+    }
+    function g2d(gy, gm, gd) { var d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408; d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752; return d; }
+    function d2g(jdn) { var j = 4 * jdn + 139361631; j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908; var i = div(mod(j, 1461), 4) * 5 + 308; var gd = div(mod(i, 153), 5) + 1, gm = mod(div(i, 153), 12) + 1, gy = div(j, 1461) - 100100 + div(8 - gm, 6); return {gy: gy, gm: gm, gd: gd}; }
+    function j2d(jy, jm, jd) { var r = jalCal(jy); return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1; }
+    function d2j(jdn) { var gy = d2g(jdn).gy, jy = gy - 621, r = jalCal(jy), jdn1f = g2d(gy, 3, r.march), jd, jm, k; k = jdn - jdn1f; if (k >= 0) { if (k <= 185) { jm = 1 + div(k, 31); jd = mod(k, 31) + 1; return {jy: jy, jm: jm, jd: jd}; } else k -= 186; } else { jy -= 1; k += 179; if (r.leap === 1) k += 1; } jm = 7 + div(k, 30); jd = mod(k, 30) + 1; return {jy: jy, jm: jm, jd: jd}; }
+    var jdnToG = d2g;
+    return {
+      isLeap: function (jy) { return jalCal(jy).leap === 0; },
+      monthLength: function (jy, jm) { return jm <= 6 ? 31 : jm <= 11 ? 30 : (jalCal(jy).leap === 0 ? 30 : 29); },
+      toGregorian: function (jy, jm, jd) { var g = jdnToG(j2d(jy, jm, jd)); return new Date(Date.UTC(g.gy, g.gm - 1, g.gd)); },
+      fromGregorian: function (d) { return d2j(g2d(d.getFullYear(), d.getMonth() + 1, d.getDate())); },
+      iso: function (jy, jm, jd) { return J.toGregorian(jy, jm, jd).toISOString().slice(0, 10); },
+      MONTHS: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'],
+      DAYS: ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
+    };
+  })();
+  window.SiteJalali = J;
+  /* V196 — انتخابگر تاریخ/ساعت شمسی مشترک (معادل JalaliDateTimeDialog اپ): ماه‌گردی، شبکهٔ روزها با حداقل تاریخ، ساعت/دقیقه، «اکنون»، پاک‌کردن.
+     mode: 'datetime' → Date | 'date' → {jy,jm,jd} | 'time' → {h,m}.  min: Date (فقط datetime/date). resolve(null) = انصراف؛ resolve('') = پاک‌کردن */
+  function jalaliPicker(o) {
+    o = o || {}; var mode = o.mode || 'datetime';
+    return new Promise(function (resolve) {
+      var now = new Date(), init = o.value instanceof Date && !isNaN(o.value) ? o.value : null;
+      var base = init || now, jt = J.fromGregorian(base), vy = jt.jy, vm = jt.jm;
+      var selDay = init ? {jy: jt.jy, jm: jt.jm, jd: jt.jd} : (o.selected || null);
+      var hh = init ? base.getHours() : (o.hour != null ? o.hour : now.getHours()), mm = init ? base.getMinutes() : (o.minute != null ? o.minute : 0);
+      var minD = o.min instanceof Date && !isNaN(o.min) ? o.min : null, minJ = minD ? J.fromGregorian(minD) : null;
+      var bg = el('div', {class: 'modal-bg jdp-bg', onclick: function (e) { if (e.target === bg) done(null); }});
+      var box = el('div', {class: 'modal jdp'}), err = el('div', {class: 'jdp-err'});
+      function done(v) { bg.remove(); resolve(v); }
+      function cmpDay(a, b) { return (a.jy - b.jy) || (a.jm - b.jm) || (a.jd - b.jd); }
+      function dayDisabled(d) { return minJ && cmpDay({jy: vy, jm: vm, jd: d}, minJ) < 0; }
+      var head = el('div', {class: 'jdp-head'}), grid = el('div', {class: 'jdp-grid'});
+      function draw() {
+        head.innerHTML = ''; grid.innerHTML = '';
+        head.appendChild(el('button', {type: 'button', class: 'jdp-nav', 'aria-label': 'ماه قبل', text: '›', onclick: function () { vm--; if (vm < 1) { vm = 12; vy--; } draw(); }}));
+        head.appendChild(el('div', {class: 'jdp-title', text: J.MONTHS[vm - 1] + ' ' + fa(vy)}));
+        head.appendChild(el('button', {type: 'button', class: 'jdp-nav', 'aria-label': 'ماه بعد', text: '‹', onclick: function () { vm++; if (vm > 12) { vm = 1; vy++; } draw(); }}));
+        J.DAYS.forEach(function (d) { grid.appendChild(el('div', {class: 'jdp-h', text: d})); });
+        var first = J.toGregorian(vy, vm, 1), off = (first.getUTCDay() + 1) % 7, len = J.monthLength(vy, vm), today = J.fromGregorian(new Date());
+        for (var i = 0; i < off; i++) grid.appendChild(el('div', {class: 'jdp-d empty'}));
+        for (var d = 1; d <= len; d++) (function (d) {
+          var cls = 'jdp-d' + (selDay && selDay.jy === vy && selDay.jm === vm && selDay.jd === d ? ' sel' : '') + (today.jy === vy && today.jm === vm && today.jd === d ? ' today' : '') + (((off + d - 1) % 7) === 6 ? ' fri' : '') + (dayDisabled(d) ? ' dis' : '');
+          grid.appendChild(el('button', {type: 'button', class: cls, text: fa(d), disabled: dayDisabled(d) ? 'disabled' : null, onclick: function () { selDay = {jy: vy, jm: vm, jd: d}; err.textContent = ''; draw(); }}));
+        })(d);
+      }
+      var hIn = el('input', {type: 'text', inputmode: 'numeric', class: 'jdp-t', value: fa(String(hh).padStart(2, '0')), 'aria-label': 'ساعت'});
+      var mIn = el('input', {type: 'text', inputmode: 'numeric', class: 'jdp-t', value: fa(String(mm).padStart(2, '0')), 'aria-label': 'دقیقه'});
+      [hIn, mIn].forEach(function (x) { x.addEventListener('focus', function () { x.select(); }); x.addEventListener('input', function () { x.value = fa(en(x.value).replace(/\D/g, '').slice(0, 2)); }); });
+      function readTime() { var h = parseInt(en(hIn.value), 10), m = parseInt(en(mIn.value), 10); if (isNaN(h) || h < 0 || h > 23 || isNaN(m) || m < 0 || m > 59) return null; return {h: h, m: m}; }
+      function confirm() {
+        if (mode === 'time') { var t0 = readTime(); if (!t0) { err.textContent = 'ساعت باید ۰ تا ۲۳ و دقیقه ۰ تا ۵۹ باشد.'; return; } return done(t0); }
+        if (!selDay) { err.textContent = 'یک روز را انتخاب کنید.'; return; }
+        if (mode === 'date') return done(selDay);
+        var t = readTime(); if (!t) { err.textContent = 'ساعت باید ۰ تا ۲۳ و دقیقه ۰ تا ۵۹ باشد.'; return; }
+        var g = J.toGregorian(selDay.jy, selDay.jm, selDay.jd), dt = new Date(g.getUTCFullYear(), g.getUTCMonth(), g.getUTCDate(), t.h, t.m, 0, 0);
+        if (minD && dt.getTime() < minD.getTime()) { err.textContent = 'زمان پایان نمی‌تواند قبل از زمان شروع باشد (' + jalaliDisplay(minD) + ').'; return; }
+        done(dt);
+      }
+      box.appendChild(el('div', {class: 'row', style: 'margin-bottom:6px'}, [el('h2', {class: 'grow', text: o.title || 'انتخاب تاریخ', style: 'margin:0;font-size:17px'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { done(null); }})]));
+      if (mode !== 'time') { box.appendChild(head); box.appendChild(grid); draw(); }
+      if (mode !== 'date') box.appendChild(el('div', {class: 'jdp-time'}, [el('label', {text: 'ساعت'}), hIn, el('span', {class: 'jdp-colon', text: ':'}), mIn, el('label', {text: 'دقیقه'})]));
+      if (minD && mode !== 'time') box.appendChild(el('div', {class: 'muted', style: 'font-size:12px', text: 'زودتر از ' + jalaliDisplay(minD) + ' قابل انتخاب نیست.'}));
+      box.appendChild(err);
+      var acts = el('div', {class: 'jdp-acts'});
+      acts.appendChild(el('button', {type: 'button', class: 'btn', text: 'تأیید', onclick: confirm}));
+      acts.appendChild(el('button', {type: 'button', class: 'btn light', text: 'اکنون', onclick: function () { var n = new Date(), jn = J.fromGregorian(n); selDay = {jy: jn.jy, jm: jn.jm, jd: jn.jd}; vy = jn.jy; vm = jn.jm; hIn.value = fa(String(n.getHours()).padStart(2, '0')); mIn.value = fa(String(n.getMinutes()).padStart(2, '0')); err.textContent = ''; if (mode !== 'time') draw(); }}));
+      if (o.canClear) acts.appendChild(el('button', {type: 'button', class: 'btn light danger-text', text: 'پاک‌کردن', onclick: function () { done(''); }}));
+      acts.appendChild(el('span', {class: 'grow'}));
+      acts.appendChild(el('button', {type: 'button', class: 'btn light', text: 'انصراف', onclick: function () { done(null); }}));
+      box.appendChild(acts);
+      bg.appendChild(box); document.body.appendChild(bg);
+    });
+  }
+  function jalaliDisplay(d, withTime) {
+    if (!(d instanceof Date) || isNaN(d)) return '';
+    var j = J.fromGregorian(d), s = fa(j.jy) + '/' + fa(String(j.jm).padStart(2, '0')) + '/' + fa(String(j.jd).padStart(2, '0'));
+    if (withTime === false) return s;
+    return s + ' ' + fa(String(d.getHours()).padStart(2, '0')) + ':' + fa(String(d.getMinutes()).padStart(2, '0'));
+  }
+  window.SiteJalali.picker = jalaliPicker; window.SiteJalali.display = jalaliDisplay;
+  window.SiteJalali.WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
   /* V173 — فرم سربرگ مشترک: پنجرهٔ بازشو (openHeaderSettings) و ستون راست سازندهٔ چاپی دسکتاپ (headerSettingsForm؛ ذخیرهٔ خودکار) */
   function headerSettingsForm(box, opts) {
     opts = opts || {};
@@ -559,6 +658,24 @@
         if (f.kind === 'select') { input = el('select'); input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; }
         else if (f.kind === 'textarea') input = el('textarea', {rows: String(f.rows || 3), text: values[f.id] || ''});
         else input = el('input', {type: 'text', value: values[f.id] || '', placeholder: f.placeholder || ''});
+        /* V196 — مثل اپ: کلیک روی تاریخ‌ها تقویم شمسی و روی ساعت‌ها انتخابگر ساعت باز می‌کند (تایپ دستی همچنان آزاد است) */
+        var pk = /examDate|gradesDate|examDay/i.test(f.id) ? 'date' : /examTime|startTime/i.test(f.id) ? 'time' : null;
+        if (pk && input.tagName === 'INPUT') {
+          input.classList.add('has-picker'); input.title = pk === 'date' ? 'برای انتخاب از تقویم شمسی کلیک کنید' : 'برای انتخاب ساعت کلیک کنید';
+          input.addEventListener('click', function () {
+            var cur = null;
+            if (pk === 'date') { var m = /^(\d{4})\/(\d{1,2})\/(\d{1,2})/.exec(en(input.value || '')); if (m) cur = {jy: +m[1], jm: +m[2], jd: +m[3]}; }
+            var hm = pk === 'time' ? /^(\d{1,2}):(\d{2})/.exec(en(input.value || '')) : null;
+            window.SiteJalali.picker({mode: pk, title: f.label.replace(/[:：]\s*$/, ''), selected: cur, hour: hm ? +hm[1] : 8, minute: hm ? +hm[2] : 0, canClear: !!input.value}).then(function (r) {
+              if (r === null) return;
+              if (r === '') input.value = '';
+              else if (pk === 'time') input.value = fa(String(r.h).padStart(2, '0')) + ':' + fa(String(r.m).padStart(2, '0'));
+              else if (/examDay/i.test(f.id)) { var g = window.SiteJalali.toGregorian(r.jy, r.jm, r.jd); input.value = window.SiteJalali.WEEKDAYS[(g.getUTCDay() + 1) % 7]; }
+              else input.value = fa(r.jy) + '/' + fa(String(r.jm).padStart(2, '0')) + '/' + fa(String(r.jd).padStart(2, '0'));
+              values[f.id] = input.value; if (opts.autosave) persist(); input.dispatchEvent(new Event('change'));
+            });
+          });
+        }
         input.addEventListener('input', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
         input.addEventListener('change', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
         list.appendChild(el('div', {class: 'field' + (f.full ? ' full' : '')}, [el('label', {text: f.label}), input]));
@@ -1421,7 +1538,7 @@
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  window.ExamSite = {jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
