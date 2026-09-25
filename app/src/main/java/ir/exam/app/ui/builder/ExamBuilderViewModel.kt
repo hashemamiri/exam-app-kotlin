@@ -717,7 +717,11 @@ class ExamBuilderViewModel(
     /** V163 — پس از ذخیرهٔ آزمون چاپی روی سرور: شناسه و سؤال‌های با URL جایگزین می‌شوند. */
     fun applyPrintSaved(id: String, questions: List<QuestionDraft>) {
         _state.update { it.copy(examId = id, questions = questions) }
+        cleanDraftFingerprint = draftFingerprint(_state.value)
     }
+
+    /** V199 — تغییر ذخیره‌نشده نسبت به آخرین بار/ذخیره (برای منع چاپ آزمون چاپیِ ذخیره‌نشده). */
+    fun hasUnsavedChanges(): Boolean = cleanDraftFingerprint != null && draftFingerprint(_state.value) != cleanDraftFingerprint
 
     fun save() = viewModelScope.launch {
         val saveState = state.value

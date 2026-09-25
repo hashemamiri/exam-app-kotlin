@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.AlertDialog
@@ -70,13 +72,23 @@ fun ExamPrintCenterScreen(
     var localExams by remember { mutableStateOf<List<ir.exam.app.data.repository.SupabasePrintExamRepository.Summary>>(emptyList()) }
     var localLoading by remember { mutableStateOf(true) }
     var localError by remember { mutableStateOf<String?>(null) }
+    // V199 — وضعیت پرداخت چاپ هر آزمون چاپی برای سربرگ فعلی دستگاه (چاپگر قرمز = بدهی دارد، سبز = پرداخت‌شده)
+    var payStatus by remember { mutableStateOf<Map<String, ir.exam.app.data.repository.SupabasePrintExamRepository.PayStatus>>(emptyMap()) }
+    suspend fun reloadPayStatus() {
+        payStatus = runCatching { printRepo.payStatus(PrintPayFingerprint.current(context)) }.getOrDefault(emptyMap())
+    }
     suspend fun reloadLocal() {
         localLoading = true
         runCatching { printRepo.list() }
             .onSuccess { localExams = it; localError = null }
             .onFailure { localError = sanitizePrintError(it) }
         localLoading = false
+        reloadPayStatus()
     }
+    // V199 — پنجرهٔ پرداخت هزینهٔ چاپ (آیکون کیف پول روی کارت): برآورد سرور → تأیید → کسر
+    var payQuote by remember { mutableStateOf<ir.exam.app.data.repository.SupabasePrintExamRepository.PayQuote?>(null) }
+    var payTitle by remember { mutableStateOf("") }
+    var payBusy by remember { mutableStateOf(false) }
     // V129 — آزمونی که کاربر روی سطلش زده و منتظر تأیید حذف است (id، عنوان).
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     var printStatus by remember { mutableStateOf<String?>(null) }
@@ -182,6 +194,29 @@ fun ExamPrintCenterScreen(
         if (localExams.isEmpty() && !state.loading && !localLoading) {
             Text("هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.")
         }
+        payQuote?.let { q ->
+            PrintPayDialog(
+                quote = q,
+                title = payTitle,
+                busy = payBusy,
+                onCancel = { if (!payBusy) payQuote = null },
+                onPay = {
+                    payBusy = true
+                    scope.launch {
+                        runCatching { printRepo.pay(q.id, PrintPayFingerprint.current(context)) }
+                            .onSuccess { r ->
+                                printStatusIsError = false
+                                printStatus = "کسر " + "%,d".format(r.costToman) + " تومان از کیف پول با موفقیت انجام شد" +
+                                    (r.balanceToman?.let { " (موجودی: " + "%,d".format(it) + " تومان)" } ?: "")
+                                payQuote = null
+                                reloadPayStatus()
+                            }
+                            .onFailure { printStatusIsError = true; printStatus = sanitizePrintError(it); payQuote = null }
+                        payBusy = false
+                    }
+                }
+            )
+        }
         pendingDelete?.let { (delId, delTitle) ->
             AlertDialog(
                 onDismissRequest = { pendingDelete = null },
@@ -232,8 +267,40 @@ fun ExamPrintCenterScreen(
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            // V107 — آیکن پرینتر از کارت حذف شد؛ چاپ فقط از
-                            // داخلِ آزمون‌ساز (پیش‌نمایش / دکمهٔ چاپ) انجام می‌شود.
+                            // V199 — کیف پول: پرداخت هزینهٔ چاپ همین آزمون (سؤال/تصویر، یک‌بار برای هر دو نسخه)
+                            IconButton(onClick = {
+                                scope.launch {
+                                    runCatching { printRepo.quote(rec.id, PrintPayFingerprint.current(context)) }
+                                        .onSuccess { q ->
+                                            if (q.paid) { printStatusIsError = false; printStatus = "هزینهٔ چاپ این آزمون قبلاً پرداخت شده است."; reloadPayStatus() }
+                                            else { payTitle = rec.title; payQuote = q }
+                                        }
+                                        .onFailure { printStatusIsError = true; printStatus = sanitizePrintError(it) }
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Outlined.AccountBalanceWallet,
+                                    contentDescription = "پرداخت هزینهٔ چاپ این آزمون",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            // V199 — چاپگر: قرمز تا پرداخت نشده، سبز پس از پرداخت؛ لمس → آزمون‌ساز چاپی (چاپ از پیش‌نمایش همان‌جا)
+                            val st = payStatus[rec.id]
+                            IconButton(onClick = { onOpenLocalPrintExam(rec.id) }) {
+                                Icon(
+                                    imageVector = androidx.compose.material.icons.Icons.Outlined.Print,
+                                    contentDescription = when {
+                                        st == null -> "پیش‌نمایش و چاپ"
+                                        st.paid -> "پرداخت‌شده — پیش‌نمایش و چاپ"
+                                        else -> "پرداخت‌نشده — پیش‌نمایش و چاپ"
+                                    },
+                                    tint = when {
+                                        st == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        st.paid -> androidx.compose.ui.graphics.Color(0xFF16A34A)
+                                        else -> androidx.compose.ui.graphics.Color(0xFFDC2626)
+                                    }
+                                )
+                            }
                             // V129 — حذف فقط بعد از تأیید کاربر (پنجرهٔ پرسش).
                             IconButton(onClick = { pendingDelete = rec.id to rec.title }) {
                                 Icon(
@@ -285,6 +352,33 @@ fun ExamPrintCenterScreen(
             confirmButton = { TextButton(onClick = { onlineOpen = false }) { Text("بستن") } }
         )
     }
+}
+
+/** V199 — پنجرهٔ پرداخت هزینهٔ چاپ آزمون چاپی (همان متن سایت: printDueText). */
+@Composable
+internal fun PrintPayDialog(
+    quote: ir.exam.app.data.repository.SupabasePrintExamRepository.PayQuote,
+    title: String,
+    busy: Boolean,
+    onCancel: () -> Unit,
+    onPay: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("پرداخت هزینهٔ چاپ" + (if (title.isNotBlank()) " — $title" else "")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (quote.headerChanged) Text("سربرگ تغییر کرده → کل آزمون دوباره محاسبه می‌شود")
+                else if (quote.neverPaid) Text("این آزمون هنوز پرداخت نشده است")
+                Text("سؤال: ${quote.questionsDue} × 1,000 تومان")
+                Text("تصویر: ${quote.imagesDue} × 1,000 تومان")
+                Text("مبلغ قابل کسر از کیف پول: " + "%,d".format(quote.dueToman) + " تومان", style = MaterialTheme.typography.titleMedium)
+                if (busy) Text("در حال پرداخت…")
+            }
+        },
+        confirmButton = { TextButton(enabled = !busy, onClick = onPay) { Text("پرداخت") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onCancel) { Text("انصراف") } }
+    )
 }
 
 /** پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */

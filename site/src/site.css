@@ -1222,3 +1222,14 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .stat.stat-attn{box-shadow:0 0 0 2px rgba(194,65,12,.18),0 10px 28px rgba(28,49,62,.065)}
 .mr-embed{box-shadow:none;border:0;padding:0;background:transparent}
 .mr-embed>h3{display:none}
+
+/* ===== V199 — کارت آزمون چاپی: کیف پول (پرداخت) و چاپگر قرمز/سبز ===== */
+.icon-btn.pay-btn{color:#39758a}
+.icon-btn.pay-btn:hover{background:#e8f3f6;border-color:#bcd8e0;color:#25596b}
+.icon-btn.print-btn.unpaid{color:#dc2626;border-color:#f5c2bd;background:#fff5f4}
+.icon-btn.print-btn.unpaid:hover{background:#fee2e2;color:#b91c1c;border-color:#f5c2bd}
+.icon-btn.print-btn.paid{color:#16a34a;border-color:#bbe5c8;background:#f1faf4}
+.icon-btn.print-btn.paid:hover{background:#dcfce7;color:#15803d;border-color:#bbe5c8}
+.icon-btn.pay-btn svg,.icon-btn.print-btn svg{width:20px;height:20px}
+.m-act.unpaid{color:#dc2626}
+.m-act.paid{color:#16a34a}

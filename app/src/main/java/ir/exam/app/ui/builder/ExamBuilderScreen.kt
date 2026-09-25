@@ -626,7 +626,7 @@ fun ExamBuilderScreen(
     // V86.8 — نام‌گذاری و ذخیرهٔ محلیِ آزمونِ چاپی.
     if (printMode && askPrintName) {
         val nameContext = androidx.compose.ui.platform.LocalContext.current
-        // V163 — روی سرور (print_exams) ذخیره می‌شود؛ فقط تصاویر جدید ۱۰۰۰ تومان.
+        // V163 — روی سرور (print_exams) ذخیره می‌شود. V199 — ذخیره رایگان؛ هزینه فقط هنگام چاپ.
         val printRepo = remember { ir.exam.app.data.repository.SupabasePrintExamRepository(nameContext) }
         var printSaving by remember { mutableStateOf(false) }
         var printSaveErr by remember { mutableStateOf<String?>(null) }
@@ -643,10 +643,8 @@ fun ExamBuilderScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("این آزمون در حساب شما (سرور) ذخیره می‌شود و در اپ و سایت، بخش «چاپ آزمون»، دیده خواهد شد.")
-                    if (pendingImages > 0) Text(
-                        "این آزمون $pendingImages تصویر جدید دارد؛ هزینهٔ آپلود هر تصویر ۱۰۰۰ تومان (جمعاً ${pendingImages * 1000} تومان) از کیف پول کم می‌شود.",
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    // V199 — ذخیره رایگان است؛ هزینه فقط هنگام چاپ (هر سؤال و هر تصویر ۱۰۰۰ تومان) کسر می‌شود
+                    Text("ذخیره رایگان است؛ هزینهٔ چاپ (هر سؤال و هر تصویر ۱۰۰۰ تومان) فقط هنگام چاپ از کیف پول کسر می‌شود." + (if (pendingImages > 0) " ($pendingImages تصویر جدید آپلود می‌شود.)" else ""))
                     printSaveErr?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (printSaving) Text("در حال ذخیره…")
                     OutlinedTextField(
@@ -706,7 +704,10 @@ fun ExamBuilderScreen(
             // تا موقعیت‌ها در بازِ بعدی (و در چاپ) ریست نشوند.
             onFigLayouts = { viewModel.applyFigLayouts(it) },
             // V132 — شناسهٔ آزمون برای ثبتِ تراکنشِ هزینهٔ چاپ در کیف پول
-            printExamId = state.examId ?: "local"
+            printExamId = state.examId ?: "local",
+            // V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ بدون ذخیره یا با تغییرات ذخیره‌نشده چاپ نمی‌شود
+            printPayExamId = if (printMode) state.examId.orEmpty() else null,
+            printPayDirty = printMode && viewModel.hasUnsavedChanges()
         )
     }
 

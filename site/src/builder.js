@@ -117,7 +117,7 @@
 
   /* ================================================================ V163 — آزمون‌های چاپی روی سرور (print_exams، جدا از exams)
      قبلاً فقط در localStorage همین مرورگر بودند؛ حالا در جدول print_exams تا اپ/دسکتاپ/گوشی یکی باشند.
-     رکورد سرور: {id,title,subject,duration,questions:[public+key ادغام‌شده],source_exam_id,saved_at}. هزینه فقط هر تصویر جدید ۱۰۰۰ تومان. */
+     رکورد سرور: {id,title,subject,duration,questions:[public+key ادغام‌شده],source_exam_id,saved_at}. V199: ذخیره رایگان؛ هزینه فقط هنگام چاپ (native_print_pay_v199). */
   var LS_PRINT_MIGRATED = 'examsite.printexams.migrated.v163';
   function combinedQuestions(list) { var enc = encodeQuestions(list); return enc.publicQuestions.map(function (q, i) { var c = Object.assign({}, q, enc.answerKey[i] || {}); delete c.i; return c; }); }
   function draftsFromCombined(arr) { return (Array.isArray(arr) ? arr : []).map(function (q) { return decodeQuestion(q, q); }); }
@@ -139,7 +139,8 @@
   async function printExamSave(rec, opts) {
     opts = opts || {};
     var newImgs = countNewImages(rec.questions);
-    if (newImgs > 0 && !opts.silent) { if (!(await S.confirmDlg('هزینهٔ تصاویر', fa(newImgs) + ' تصویر جدید در این آزمون چاپی هست؛ برای ذخیره روی سرور، به‌ازای هر تصویر ' + fa('1,000') + ' تومان (جمعاً ' + S.money(newImgs * 1000) + ') از کیف پول کسر می‌شود. سؤال‌ها و خود ذخیره رایگان است.', 'تأیید و ذخیره'))) return null; }
+    /* V199 — ذخیرهٔ آزمون چاپی رایگان است (سرور هم هزینهٔ تصویر را کسر نمی‌کند)؛ هزینه فقط هنگام چاپ */
+    void newImgs;
     await uploadPrintImages(rec.questions, rec.id);
     var payload = {id: rec.id, operation_id: S.uuid(), title: rec.title || '', subject: rec.subject || '', duration: parseInt(rec.duration, 10) || 0, questions: combinedQuestions(rec.questions), source_exam_id: rec.sourceExamId || null};
     var raw = await S.rpcObj('native_print_exam_save_v163', {p_payload: payload});
@@ -158,6 +159,9 @@
     if (n) toast(fa(n) + ' آزمون چاپی این مرورگر به سرور منتقل شد.', 'ok');
     return n;
   }
+  /* V199 — آیکون‌های خطی کارت آزمون چاپی (کیف پول = پرداخت، چاپگر = قرمز/سبز) */
+  var PAY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a1 1 0 0 1 1 1v2"/><path d="M4 7.5V17a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5z"/><circle cx="16" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>';
+  var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V4.5h10V8"/><rect x="4" y="8" width="16" height="8" rx="2"/><path d="M7 13.5h10V20H7z" fill="#fff"/><path d="M9.5 16.2h5M9.5 18.2h3.5"/><circle cx="17" cy="11" r=".9" fill="currentColor" stroke="none"/></svg>';
   function printExamsSection(refresh) {
     var card = el('div', {class: 'card', style: 'margin-top:20px'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🖨 آزمون‌های چاپی'}), el('button', {class: 'btn soft sm', text: '➕ آزمون چاپی جدید', onclick: function () { S.go('builder', {mode: 'print'}); }})])]);
     var body = el('div'); card.appendChild(body); S.loading(body);
@@ -165,6 +169,9 @@
       try {
         await migrateLocalPrintExams();
         var list = await printExamsList();
+        /* V199 — وضعیت پرداخت چاپ هر آزمون برای سربرگ فعلی: چاپگر قرمز (بدهی دارد) / سبز (پرداخت‌شده)؛ آیکون کیف پول = پرداخت همین آزمون */
+        var payMap = {};
+        try { var stl = await S.api.printPayStatus(S.printHeaderFp()); if (Array.isArray(stl)) stl.forEach(function (x) { payMap[x.id] = x; }); } catch (e) {}
         body.innerHTML = '';
         if (!list.length) { body.appendChild(S.emptyBox('🖨', 'آزمون چاپی ذخیره نشده است. آزمون چاپی بدون کد و بدون مخاطب است و برای چاپ برگه ساخته می‌شود؛ روی سرور ذخیره می‌شود و در اپ و سایت یکی است.')); return; }
         body.appendChild(el('table', {class: 'tbl'}, [
@@ -173,7 +180,8 @@
             return el('tr', {}, [el('td', {html: '<b>' + esc(r.title || 'بدون عنوان') + '</b>'}), el('td', {text: r.subject || '—'}), el('td', {text: fa(r.question_count || 0)}), el('td', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(new Date(r.saved_at || Date.now()).toISOString())}),
               el('td', {}, [el('div', {class: 'acts'}, [
                 el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
-                el('button', {class: 'icon-btn', title: 'پیش‌نمایش و چاپ', html: '🖨', onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title, examId: r.id}); } catch (e) { toast(errMsg(e), 'err'); } }}),
+                el('button', {class: 'icon-btn pay-btn', title: 'پرداخت هزینهٔ چاپ این آزمون', html: PAY_ICON, onclick: async function () { try { var res = await S.ensurePrintPaid(r.id, S.printHeaderFp(), r.title); if (res.paid) { if (!res.cost) toast('هزینهٔ چاپ این آزمون قبلاً پرداخت شده است.', 'ok'); refresh(); } } catch (e) { toast(S.errMsg(e), 'err'); } }}),
+                el('button', {class: 'icon-btn print-btn ' + (payMap[r.id] ? (payMap[r.id].paid ? 'paid' : 'unpaid') : ''), title: payMap[r.id] ? (payMap[r.id].paid ? 'پرداخت‌شده — پیش‌نمایش و چاپ' : 'پرداخت‌نشده (' + S.money(payMap[r.id].due) + ') — پیش‌نمایش و چاپ') : 'پیش‌نمایش و چاپ', html: PRINT_ICON, onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title, examId: r.id, printExam: r.id}); } catch (e) { toast(errMsg(e), 'err'); } }}),
                 el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})
               ])])]);
           }))
@@ -741,7 +749,8 @@
       if (!state.questions.length) return toast('حداقل یک سؤال اضافه کنید.', 'err');
       var payload = S.buildPrintPayload(toServerExam(state));
       /* V156 — printMode: 'student' | 'teacher' (FAB چاپ در گوشی، مثل منوی «چاپ آزمون/چاپ با کلید» اپ) */
-      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : (state.printId || 'local'), printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
+      /* V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ بدون ذخیره (printId) یا با تغییرات ذخیره‌نشده چاپ نمی‌شود */
+      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : (state.printId || 'local'), printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.dirty, printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
     window.__builderPreview = preview;
     function applySnapshot(snap) {
@@ -776,7 +785,7 @@
         if (state.mode === 'print') {
           /* V159 — مثل پنجرهٔ «ذخیره آزمون چاپی» اپ (askPrintName): نام آزمون پرسیده می‌شود */
           var suggested = (state.title || '').trim() || (state.subject || '').trim() || 'آزمون چاپی';
-          var name = await S.promptDlg('ذخیره آزمون چاپی', 'این آزمون روی سرور ذخیره می‌شود و در بخش چاپ آزمونِ اپ و سایت دیده خواهد شد. فقط تصاویر جدید هزینه دارند (هر تصویر ۱۰۰۰ تومان).', 'نام آزمون', suggested, 'ذخیره');
+          var name = await S.promptDlg('ذخیره آزمون چاپی', 'این آزمون روی سرور ذخیره می‌شود و در بخش چاپ آزمونِ اپ و سایت دیده خواهد شد. ذخیره رایگان است؛ هزینه فقط هنگام چاپ (هر سؤال و هر تصویر ۱۰۰۰ تومان) کسر می‌شود.', 'نام آزمون', suggested, 'ذخیره');
           if (name == null || !name.trim()) return;
           state.title = name.trim();
           var id = state.printId || uuid(); state.printId = id;

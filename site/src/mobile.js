@@ -376,14 +376,22 @@
     S.loading(listBox);
     var list = [];
     try { await window.SiteBuilder.migrateLocalPrintExams(); list = await window.SiteBuilder.printExamsList(); } catch (e) { S.showErr(listBox, e); return; }
+    /* V199 — وضعیت پرداخت چاپ (سربرگ فعلی): چاپگر قرمز/سبز؛ کیف پول = پرداخت همین آزمون */
+    var payMap = {};
+    try { var stl = await api.printPayStatus(S.printHeaderFp()); if (Array.isArray(stl)) stl.forEach(function (x) { payMap[x.id] = x; }); } catch (e) {}
     listBox.innerHTML = '';
     if (!list.length) listBox.appendChild(el('p', {class: 'm-note', text: 'هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.'}));
     list.forEach(function (r) {
+      var ps = payMap[r.id];
+      var printAct = act('print', ps ? (ps.paid ? 'پرداخت‌شده — پیش‌نمایش و چاپ' : 'پرداخت‌نشده — پیش‌نمایش و چاپ') : 'پیش‌نمایش و چاپ', async function () { try { var full = await window.SiteBuilder.printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: window.SiteBuilder.draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(window.SiteBuilder.toServerExam(st)), {title: full.title, examId: r.id, printExam: r.id}); } catch (e) { toast(S.errMsg(e), 'err'); } });
+      printAct.classList.add(ps && ps.paid ? 'paid' : 'unpaid');
       listBox.appendChild(el('div', {class: 'm-pcard neo'}, [
         el('div', {class: 'm-pcard-h'}, [el('b', {text: r.title || 'آزمون چاپی'}), el('span', {class: 'm-chip', text: 'چاپی'})]),
         el('div', {class: 'm-pcard-m', text: 'درس: ' + (r.subject || '—') + ' · ' + fa(r.question_count || 0) + ' سؤال'}),
         el('div', {class: 'm-pcard-acts'}, [
           act('edit', 'ویرایش آزمون چاپی', function () { go('builder', {mode: 'print', printId: r.id}); }),
+          act('wallet', 'پرداخت هزینهٔ چاپ این آزمون', async function () { try { var res = await S.ensurePrintPaid(r.id, S.printHeaderFp(), r.title); if (res.paid) { if (!res.cost) toast('هزینهٔ چاپ این آزمون قبلاً پرداخت شده است.', 'ok'); printCenter(c); } } catch (e) { toast(S.errMsg(e), 'err'); } }),
+          printAct,
           act('trash', 'حذف آزمون چاپی', async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title || 'آزمون چاپی') + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { await window.SiteBuilder.printExamDelete(r.id); printCenter(c); } catch (e) { toast(S.errMsg(e), 'err'); } }, true)
         ])
       ]));

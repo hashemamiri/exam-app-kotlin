@@ -26,7 +26,8 @@ import kotlinx.serialization.json.put
  * V163 — آزمون‌های چاپی روی سرور (جدول print_exams، جدا از exams) تا اپ، سایت دسکتاپ و
  * سایت گوشی همان فهرست را ببینند. سؤال‌ها مثل بستهٔ .azmoon (public + key ادغام‌شده)
  * ذخیره می‌شوند و با ExamQuestionCodec.decode(combined, combined) برمی‌گردند.
- * هزینه: فقط هر تصویر جدید ۱۰۰۰ تومان (سرور می‌شمارد)؛ خود ذخیره رایگان.
+ * V199 — ذخیره کاملاً رایگان است؛ هزینه فقط هنگام چاپ (quote/pay/payStatus: هر سؤال و هر تصویر ۱۰۰۰ تومان،
+ * یک پرداخت مشترک برای نسخهٔ دانش‌آموز و کلید؛ تغییر سربرگ = کل هزینه، تغییر سؤال/تصویر = فقط همان).
  * آزمون‌های چاپی قدیمیِ SharedPreferences (PrintExamStore) یک‌بار به سرور منتقل می‌شوند.
  */
 class SupabasePrintExamRepository(context: Context) {
@@ -44,6 +45,70 @@ class SupabasePrintExamRepository(context: Context) {
     )
 
     data class SaveResult(val id: String, val billedImages: Int, val costToman: Long, val balanceToman: Long?)
+
+    /** V199 — برآورد بدهی چاپ یک آزمون چاپی برای سربرگ فعلی. */
+    data class PayQuote(
+        val id: String,
+        val dueToman: Long,
+        val questionsDue: Int,
+        val imagesDue: Int,
+        val headerChanged: Boolean,
+        val neverPaid: Boolean
+    ) { val paid: Boolean get() = dueToman <= 0 }
+
+    data class PayResult(val costToman: Long, val balanceToman: Long?)
+
+    data class PayStatus(val id: String, val dueToman: Long, val paid: Boolean)
+
+    private fun JsonObject.failIfError() {
+        this["error"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { msg ->
+            val required = this["required"]?.jsonPrimitive?.longOrNull
+            val balance = this["balance"]?.jsonPrimitive?.longOrNull
+            error(if (required != null && balance != null) "$msg (لازم: $required تومان، موجودی: $balance تومان)" else msg)
+        }
+    }
+
+    suspend fun quote(id: String, headerFingerprint: String): PayQuote {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_print_quote_v199",
+            buildJsonObject { put("p_id", id); put("p_header", headerFingerprint) }
+        ).decodeAs<JsonObject>()
+        raw.failIfError()
+        return PayQuote(
+            id = raw["id"]?.jsonPrimitive?.contentOrNull ?: id,
+            dueToman = raw["due"]?.jsonPrimitive?.longOrNull ?: 0L,
+            questionsDue = raw["questions_due"]?.jsonPrimitive?.intOrNull ?: 0,
+            imagesDue = raw["images_due"]?.jsonPrimitive?.intOrNull ?: 0,
+            headerChanged = raw["header_changed"]?.jsonPrimitive?.contentOrNull == "true",
+            neverPaid = raw["never_paid"]?.jsonPrimitive?.contentOrNull == "true"
+        )
+    }
+
+    suspend fun pay(id: String, headerFingerprint: String): PayResult {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_print_pay_v199",
+            buildJsonObject { put("p_id", id); put("p_operation", UUID.randomUUID().toString()); put("p_header", headerFingerprint) }
+        ).decodeAs<JsonObject>()
+        raw.failIfError()
+        return PayResult(
+            costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0L,
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+        )
+    }
+
+    /** وضعیت پرداخت همهٔ آزمون‌های چاپی معلم برای سربرگ فعلی (کارت‌ها: چاپگر قرمز/سبز). */
+    suspend fun payStatus(headerFingerprint: String): Map<String, PayStatus> {
+        val raw = SupabaseProvider.client.postgrest.rpc(
+            "native_print_pay_status_v199",
+            buildJsonObject { put("p_header", headerFingerprint) }
+        ).decodeAs<JsonElement>()
+        (raw as? JsonObject)?.failIfError()
+        return (raw as? JsonArray ?: JsonArray(emptyList())).mapNotNull { e ->
+            val o = e as? JsonObject ?: return@mapNotNull null
+            val id = o["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            PayStatus(id, o["due"]?.jsonPrimitive?.longOrNull ?: 0L, o["paid"]?.jsonPrimitive?.contentOrNull == "true")
+        }.associateBy { it.id }
+    }
 
     private fun uid(): String = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: error("ابتدا وارد شوید.")
 

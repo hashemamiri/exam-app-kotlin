@@ -760,6 +760,8 @@
     window.closePreviewWindow = wrapped;
     return true;
   }
+  /* V199 — وضعیت پرداخت چاپ از میزبان (سایت/اپ): دکمهٔ «چاپ» قرمز تا پرداخت نشده، سبز پس از پرداخت (pgs_style.css) */
+  window.setPrintPaid = function (paid) { try { document.body.classList.toggle('print-paid', !!paid); document.body.classList.add('print-pay-known'); } catch (e) {} return true; };
   function installPrintOverrides() {
     /* دکمه‌های نوارِ PGS (چاپ دانشجو/استاد، دیالوگِ چاپ) و Ctrl+P → پلِ بومی. */
     window.pgsPrintNow = function (mode) { var m = $('pgsPrintMenu'); if (m) m.classList.remove('open'); requestPrint(mode || 'student'); };

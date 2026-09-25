@@ -231,6 +231,11 @@ body.pgs-viewer-open{overflow:hidden;}
 .pgs-btn:active{transform:scale(.97);}
 .pgs-btn.primary{background:#2563eb;color:#fff;}
 .pgs-btn.primary:hover{background:#3b82f6;}
+/* V199 — پرداخت چاپ: قرمز = پرداخت‌نشده، سبز = پرداخت‌شده (setPrintPaid در webhost.js) */
+body.print-pay-known .pgs-btn.primary{background:#dc2626;}
+body.print-pay-known .pgs-btn.primary:hover{background:#ef4444;}
+body.print-pay-known.print-paid .pgs-btn.primary{background:#16a34a;}
+body.print-pay-known.print-paid .pgs-btn.primary:hover{background:#22c55e;}
 .pgs-btn.on{background:#16a34a;color:#fff;}
 .pgs-btn.icon{padding:7px 9px;}
 .pgs-btn:disabled{opacity:.4;cursor:default;}

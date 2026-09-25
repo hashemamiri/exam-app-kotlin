@@ -315,6 +315,10 @@
     deleteExam: function (id) { return rpcObj('native_delete_exam', {p_exam: id}); },
     duplicateExam: function (id) { return rpcObj('native_duplicate_exam_v2', {p_exam: id, p_operation: uuid()}); },
     chargePrint: function (examId, count, mode) { return rpcObj('native_charge_print_v1', {p_exam: examId, p_operation: uuid(), p_questions: count, p_mode: mode}); },
+    /* V199 — پرداخت چاپ آزمون چاپی: برآورد / کسر / وضعیت کارت‌ها (سربرگ = اثر انگشت فیلدهای f_*) */
+    printQuote: function (id, header) { return rpcObj('native_print_quote_v199', {p_id: id, p_header: header || ''}); },
+    printPay: function (id, header) { return rpcObj('native_print_pay_v199', {p_id: id, p_operation: uuid(), p_header: header || ''}); },
+    printPayStatus: function (header) { return rpcObj('native_print_pay_status_v199', {p_header: header || ''}); },
     classes: function () { return rpc('native_my_classes_v28', {}); },
     saveClass: function (id, name, grade, field) { if (!name.trim()) throw new Error('نام کلاس را وارد کنید.'); return rpcObj('native_save_class_v28', {p_class: id || null, p_name: name.trim(), p_grade: grade.trim(), p_field: field.trim()}); },
     deleteClass: function (id) { return rpcObj('delete_class', {p_class: id}); },
@@ -373,6 +377,34 @@
   }
   /* پیش‌بارگذاری آرام بعد از ورود (پس از بیکار شدن صفحه) تا اولین چاپ/فرمول معطل نشود */
   function prefetchEngines() { var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); }; idle(function () { loadEngines().catch(function () {}); }); }
+  /* V199 — اثر انگشت سربرگ: فیلدهای f_* پیش‌نمایش، مرتب، بدون خالی‌ها؛ عیناً مثل PrintPayFingerprint.kt اپ (سرور md5 می‌کند) */
+  function headerFingerprint(fields) {
+    fields = fields && typeof fields === 'object' ? fields : {};
+    /* f_course/f_duration از خود آزمون چاپی می‌آیند؛ سرور درس/مدت را خودش به هش می‌افزاید (native_print_header_hash_v199) */
+    return Object.keys(fields).filter(function (k) { return k.indexOf('f_') === 0 && k !== 'f_course' && k !== 'f_duration' && String(fields[k] == null ? '' : fields[k]).trim() !== ''; }).sort().map(function (k) { return k + '=' + String(fields[k]).trim(); }).join('\n');
+  }
+  /* اثر انگشت سربرگ فعلی (همان فیلدهای buildPrintPayload بدون سؤال‌ها؛ برای همهٔ آزمون‌های چاپی یکی است) */
+  function printHeaderFp() { return headerFingerprint(buildPrintPayload({title: '', subject: '', duration: 0, questions: []}).fields); }
+  function printDueText(q) {
+    var parts = [];
+    if (q.header_changed) parts.push('سربرگ تغییر کرده → کل آزمون دوباره محاسبه می‌شود');
+    else if (q.never_paid) parts.push('این آزمون هنوز پرداخت نشده است');
+    parts.push('سؤال: ' + fa(q.questions_due || 0) + ' × ' + fa(1000) + ' تومان');
+    parts.push('تصویر: ' + fa(q.images_due || 0) + ' × ' + fa(1000) + ' تومان');
+    parts.push('<b>مبلغ قابل کسر از کیف پول: ' + money(q.due || 0) + '</b>');
+    return parts.join('<br>');
+  }
+  /* برآورد → (در صورت بدهی) تأیید → کسر. resolve(true) یعنی پرداخت‌شده/چاپ مجاز؛ false یعنی انصراف یا خطا (پیام داده شده) */
+  async function ensurePrintPaid(printId, headerFp, title) {
+    var q = await api.printQuote(printId, headerFp);
+    if (q && q.error) throw new Error(String(q.error));
+    if (!q.due) return {paid: true, cost: 0};
+    if (!(await confirmDlg('پرداخت هزینهٔ چاپ' + (title ? ' — ' + esc(title) : ''), printDueText(q), 'پرداخت'))) return {paid: false};
+    var r = await api.printPay(printId, headerFp);
+    if (r && r.error) { var m = String(r.error); if (r.balance != null && r.required != null) m += '؛ موجودی ' + money(r.balance) + ' و مبلغ لازم ' + money(r.required) + ' است.'; throw new Error(m); }
+    toast('کسر ' + money(r.cost || q.due) + ' با موفقیت انجام شد.', 'ok');
+    return {paid: true, cost: r.cost || q.due};
+  }
   /* ---- پل چاپ: همان متدهای ExamPrintBridge اندروید (ExamHtmlPrintDialog.kt) در مرورگر ---- */
   var printCtx = null; // {overlay, iframe, examId, questionCount, onClosed}
   window.__printBridge = {
@@ -414,6 +446,18 @@
       /* V180.1 — مثل printPrepaid اپ: هزینهٔ این نسخه در همین پنجرهٔ پیش‌نمایش یک‌بار پرداخت شده → چاپ دوباره بدون کسر */
       ctx.paid = ctx.paid || {};
       if (ctx.paid[mode]) { doNative(); return; }
+      /* V199 — آزمون چاپی: هزینه به‌ازای سؤال/تصویر روی سرور (print_exam_payments)؛ یک پرداخت برای هر دو نسخه؛ تا پرداخت نشده چاپ نمی‌شود */
+      if (ctx.printExam !== undefined) {
+        if (!ctx.printExam) { toast('برای چاپ، ابتدا آزمون چاپی را ذخیره کنید.', 'err'); restore(); return; }
+        if (ctx.printDirty) { toast('تغییرات ذخیره نشده است؛ ابتدا آزمون چاپی را ذخیره کنید.', 'err'); restore(); return; }
+        ctx.busy = true;
+        ensurePrintPaid(ctx.printExam, headerFingerprint(ctx.payload && ctx.payload.fields), ctx.title).then(function (r) {
+          if (!r.paid) { restore(); return; }
+          ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);
+          if (printCtx === ctx) doNative(); else ctx.busy = false;
+        }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
+        return;
+      }
       ctx.busy = true;
       var examRef = ctx.examId || 'local';
       /* V132 — هزینهٔ چاپ: ۱۰۰۰ تومان به‌ازای هر سؤال، تأیید پیش از پنجرهٔ چاپ */
@@ -428,6 +472,12 @@
       });
     }
   };
+  /* V199 — رنگ دکمهٔ چاپ پیش‌نمایش: قرمز تا پرداخت نشده، سبز پس از پرداخت (webhost.js: setPrintPaid) */
+  function setPreviewPaid(ctx, paid) { try { var w = ctx.iframe.contentWindow; if (w && typeof w.setPrintPaid === 'function') w.setPrintPaid(!!paid); } catch (e) {} }
+  function refreshPreviewPaid(ctx) {
+    if (!ctx.printExam || ctx.printDirty) { setPreviewPaid(ctx, false); return; }
+    api.printQuote(ctx.printExam, headerFingerprint(ctx.payload && ctx.payload.fields)).then(function (q) { if (printCtx !== ctx) return; var paid = !!(q && !q.error && !q.due); if (paid) ctx.paid = {student: true, teacher: true}; setPreviewPaid(ctx, paid); }).catch(function () {});
+  }
   function closePrintOverlay() {
     if (!printCtx) return;
     var c = printCtx; printCtx = null;
@@ -473,7 +523,8 @@
     var iframe = el('iframe', {class: 'with-bar', title: 'print-engine'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open'); /* V179 */
-    printCtx = {overlay: overlay, iframe: iframe, direct: opts.printMode === 'student' || opts.printMode === 'teacher', examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot};
+    printCtx = {overlay: overlay, iframe: iframe, direct: opts.printMode === 'student' || opts.printMode === 'teacher', examId: opts.examId || '', questionCount: (payload.questions || []).length, onClosed: opts.onClosed, onSnapshot: opts.onSnapshot,
+      payload: payload, title: opts.title || '', printExam: opts.printExam, printDirty: !!opts.printDirty}; /* V199 */
     try { var ps = localStorage.getItem(LS_PAGESETUP); if (ps && payload.pageSetup === undefined) payload.pageSetup = JSON.parse(ps); } catch (e) {}
     var inlined = inlinePrintImages(payload);
     var loadedOnce = false;
@@ -486,6 +537,7 @@
         try {
           if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs && inlined.done) {
             w.setExamData(payload);
+            if (printCtx && printCtx.iframe === iframe && printCtx.printExam !== undefined) { setPreviewPaid(printCtx, false); refreshPreviewPaid(printCtx); } /* V199 */
             /* V156 — مثل ExamHtmlPrintDialog: printMode=student/teacher یعنی بدون توقف در پیش‌نمایش، مستقیم چاپ */
             setTimeout(function () { try { if (!again && opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (!again && opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
             return;
@@ -1554,7 +1606,7 @@
     if (!res.ok) { var tx = await res.text(); throw new Error('آپلود فایل ناموفق بود: ' + tx.slice(0, 120)); }
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
-  window.ExamSite = {jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
+  window.ExamSite = {headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},

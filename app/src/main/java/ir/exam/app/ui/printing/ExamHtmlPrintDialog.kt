@@ -99,7 +99,14 @@ fun ExamHtmlPrintDialog(
      * پیش از پنلِ چاپِ اندروید، پنجرهٔ تأیید هزینه و کسر از کیف پول انجام می‌شود.
      */
     printExamId: String = "",
-    printPrepaid: Boolean = false
+    printPrepaid: Boolean = false,
+    /**
+     * V199 — آزمون چاپی: شناسهٔ رکورد print_exams (null = مسیر قدیمی V132؛ "" = هنوز ذخیره نشده → چاپ ممنوع).
+     * هزینه روی سرور به‌ازای سؤال/تصویر (native_print_quote/pay_v199)، یک پرداخت برای هر دو نسخه؛
+     * دکمهٔ چاپ پیش‌نمایش قرمز تا پرداخت نشده و سبز پس از پرداخت (setPrintPaid).
+     */
+    printPayExamId: String? = null,
+    printPayDirty: Boolean = false
 ) {
     var loading by remember { mutableStateOf(true) }
     // V132 — درخواستِ چاپِ در انتظارِ تأیید هزینه: (mode, اجرای واقعی چاپ, بازگشت به پیش‌نمایش)
@@ -109,6 +116,15 @@ fun ExamHtmlPrintDialog(
     var jsError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    // V199 — برآورد در انتظار تأیید پرداخت (آزمون چاپی)
+    var pendingPrintPay by remember { mutableStateOf<PendingPrintPay?>(null) }
+    var printPayPaid by remember { mutableStateOf(false) }
+    var printPayBusy by remember { mutableStateOf(false) }
+    val printPayRepo = remember(context.applicationContext) { ir.exam.app.data.repository.SupabasePrintExamRepository(context.applicationContext) }
+    fun pushPaid(view: WebView?, paid: Boolean) {
+        printPayPaid = paid
+        view?.evaluateJavascript("try{window.setPrintPaid&&window.setPrintPaid(" + (if (paid) "true" else "false") + ")}catch(e){}", null)
+    }
     // V119 — تصاویرِ سؤال (data-URL استودیو یا نشانیِ Supabase) پیش از ساختِ WebView
     // به توکنِ %%FIG:img%% تبدیل می‌شوند؛ از V107 این مرحله در مسیرِ آزمون‌ساز
     // فراخوانی نمی‌شد و تصویرِ آپلودشده در پیش‌نمایش/چاپ نبود.
@@ -253,6 +269,14 @@ fun ExamHtmlPrintDialog(
                                 // خودِ تابع پیش از این فراخوانی، چاپ را شلیک کرده است.
                                 onPageReady = {
                                     loading = false
+                                    // V199 — رنگ دکمهٔ چاپ: قرمز تا پرداخت نشده؛ برآورد سرور اگر پرداخت‌شده باشد سبز می‌کند
+                                    if (printPayExamId != null) {
+                                        pushPaid(webViewRef, false)
+                                        if (printPayExamId.isNotBlank() && !printPayDirty) chargeScope.launch {
+                                            runCatching { printPayRepo.quote(printPayExamId, PrintPayFingerprint.current(context)) }
+                                                .onSuccess { q -> if (q.paid) pushPaid(webViewRef, true) }
+                                        }
+                                    }
                                     if (initialPreview) {
                                         previewOpen = true
                                         webViewRef?.evaluateJavascript(
@@ -291,8 +315,29 @@ fun ExamHtmlPrintDialog(
                                                 }.onFailure { restore() }
                                                 Unit
                                             }
+                                            // V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ تا پرداخت نشده چاپ نمی‌شود
+                                            if (printPayExamId != null) {
+                                                when {
+                                                    printPayExamId.isBlank() -> { barStatusOk = false; barStatus = "برای چاپ، ابتدا آزمون چاپی را ذخیره کنید."; restore() }
+                                                    printPayDirty -> { barStatusOk = false; barStatus = "تغییرات ذخیره نشده است؛ ابتدا آزمون چاپی را ذخیره کنید."; restore() }
+                                                    printPayPaid -> fire()
+                                                    printPayBusy -> restore()
+                                                    else -> {
+                                                        printPayBusy = true
+                                                        chargeScope.launch {
+                                                            runCatching { printPayRepo.quote(printPayExamId, PrintPayFingerprint.current(ctx)) }
+                                                                .onSuccess { q ->
+                                                                    if (q.paid) { pushPaid(view, true); fire() }
+                                                                    else pendingPrintPay = PendingPrintPay(q, fire) { restore() }
+                                                                }
+                                                                .onFailure { e -> barStatusOk = false; barStatus = e.message?.takeIf { it.isNotBlank() } ?: "برآورد هزینهٔ چاپ ناموفق بود."; restore() }
+                                                            printPayBusy = false
+                                                        }
+                                                    }
+                                                }
+                                            }
                                             // V132 — اول تأیید هزینه (۱۰۰۰ تومان/سؤال) و کسر از کیف پول، بعد پنلِ چاپ.
-                                            if (prepaidOnce) { prepaidOnce = false; fire() }
+                                            else if (prepaidOnce) { prepaidOnce = false; fire() }
                                             else pendingPrintCharge = PendingPrintCharge(mode, fire) { restore() }
                                         }
                                     }
@@ -422,6 +467,37 @@ fun ExamHtmlPrintDialog(
                     )
                 }
 
+                // V199 — پنجرهٔ پرداخت هزینهٔ چاپ آزمون چاپی (همان PrintPayDialog کارت‌ها)
+                pendingPrintPay?.let { req ->
+                    PrintPayDialog(
+                        quote = req.quote,
+                        title = printable?.documentTitle.orEmpty(),
+                        busy = printPayBusy,
+                        onCancel = { if (!printPayBusy) { pendingPrintPay = null; req.restore() } },
+                        onPay = {
+                            printPayBusy = true
+                            chargeScope.launch {
+                                runCatching { printPayRepo.pay(req.quote.id, PrintPayFingerprint.current(context)) }
+                                    .onSuccess { r ->
+                                        pendingPrintPay = null
+                                        barStatusOk = true
+                                        barStatus = "کسر " + formatToman(r.costToman) + " تومان از کیف پول با موفقیت انجام شد" +
+                                            (r.balanceToman?.let { " (موجودی: " + formatToman(it) + " تومان)" } ?: "")
+                                        pushPaid(webViewRef, true)
+                                        req.fire()
+                                    }
+                                    .onFailure { e ->
+                                        pendingPrintPay = null
+                                        barStatusOk = false
+                                        val msg = e.message?.takeIf { it.isNotBlank() } ?: "کسر هزینهٔ چاپ ناموفق بود."
+                                        barStatus = if (msg.contains("کافی نیست")) "موجودی ناکافی — " + msg else msg
+                                        req.restore()
+                                    }
+                                printPayBusy = false
+                            }
+                        }
+                    )
+                }
                 // V132 — پنجرهٔ تأیید هزینهٔ چاپ
                 pendingPrintCharge?.let { req ->
                     val count = printable?.questions?.size ?: 0
@@ -790,6 +866,8 @@ internal fun formatToman(value: Long): String =
     java.text.NumberFormat.getIntegerInstance(java.util.Locale("fa", "IR")).format(value)
 
 internal class PendingPrintCharge(val mode: String, val fire: () -> Unit, val restore: () -> Unit)
+/** V199 — برآورد پرداخت چاپ آزمون چاپی در انتظار تأیید. */
+internal class PendingPrintPay(val quote: ir.exam.app.data.repository.SupabasePrintExamRepository.PayQuote, val fire: () -> Unit, val restore: () -> Unit)
 
 /** V132 — هزینهٔ چاپ به‌ازای هر سؤال (تومان). */
 const val PRINT_COST_PER_QUESTION_TOMAN = 1000L
