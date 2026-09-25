@@ -1152,18 +1152,31 @@
   function statCard(v, l, target) {
     var kids = [el('div', {class: 'v num', text: v}), el('div', {class: 'l', text: l})];
     if (!target) return el('div', {class: 'card stat'}, kids);
-    return el('button', {class: 'card stat stat-link', type: 'button', 'aria-label': l, onclick: function () { view.panel = target.panel; view.arg = target.arg || null; render(); }}, kids);
+    return el('button', {class: 'card stat stat-link', type: 'button', 'aria-label': l, onclick: function () { if (typeof target.onclick === 'function') return target.onclick(); view.panel = target.panel; view.arg = target.arg || null; render(); }}, kids);
   }
 
   /* ---- داشبورد ---- */
+  async function openManagerRequests() {
+    if (!window.SiteSchool) return;
+    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) close(); }});
+    var box = el('div', {class: 'modal', style: 'max-width:640px'});
+    function close() { bg.remove(); render(); }
+    box.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h2', {class: 'grow', text: 'درخواست‌های مدیر', style: 'margin:0'}), el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: close})]));
+    var card = await window.SiteSchool.managerRequestsCard(true); card.classList.add('mr-embed');
+    box.appendChild(card); bg.appendChild(box); document.body.appendChild(bg);
+  }
   async function pageDashboard(c) {
     loading(c);
     try {
       if (user.role === 'teacher') {
-        var r = await Promise.all([api.exams().catch(function () { return []; }), api.classes().catch(function () { return []; }), api.students().catch(function () { return []; }), api.wallet().catch(function () { return {balance: 0}; })]);
+        var r = await Promise.all([api.exams().catch(function () { return []; }), api.classes().catch(function () { return []; }), api.students().catch(function () { return []; }), api.wallet().catch(function () { return {balance: 0}; }),
+          rpcObj('native_teacher_manager_requests_v41', {}).then(function (x) { return x && !x.error ? x : null; }).catch(function () { return null; })]);
         c.innerHTML = '';
-        if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());
-        c.appendChild(el('div', {class: 'grid4'}, [statCard(fa(r[0].length), 'آزمون', {panel: 'exams'}), statCard(fa(r[1].length), 'کلاس', {panel: 'classes'}), statCard(fa(r[2].length), 'دانش‌آموز', {panel: 'students'}), statCard(money(r[3].balance), 'موجودی کیف پول', {panel: 'wallet'})]));
+        /* V198 — «درخواست‌های مدیر» کارت پنجم هم‌شکل بقیه (تعداد در انتظار)؛ کلیک → پنجرهٔ فهرست با تأیید/رد */
+        var reqs = (r[4] && r[4].items) || [], pendingN = reqs.filter(function (it) { return it.status === 'pending' || !it.status; }).length;
+        var reqCard = statCard(r[4] ? fa(pendingN) : '—', 'درخواست مدیر', {onclick: function () { openManagerRequests(); }});
+        if (pendingN) reqCard.classList.add('stat-attn');
+        c.appendChild(el('div', {class: 'grid5'}, [statCard(fa(r[0].length), 'آزمون', {panel: 'exams'}), statCard(fa(r[1].length), 'کلاس', {panel: 'classes'}), statCard(fa(r[2].length), 'دانش‌آموز', {panel: 'students'}), statCard(money(r[3].balance), 'موجودی کیف پول', {panel: 'wallet'}), reqCard]));
         var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
         if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
         else card.appendChild(examTable(r[0].slice(0, 6), c));

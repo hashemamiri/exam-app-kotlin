@@ -116,4 +116,15 @@ class V188_SiteQuestionBoxTest {
         // منوی گوشی/تبلت بدون تغییر
         assertTrue("['dashboard', '🏠', 'داشبورد'], ['exams', '📝', 'آزمون‌ها'], ['builder', '➕', 'آزمون جدید'], ['wallet', '👛', 'کیف پول'], ['cards', '🃏', 'کارت‌ها']" in a)
     }
+
+    @Test
+    fun `teacher dashboard has five uniform stat cards including manager requests`() {
+        val a = source("site/src/app.js")
+        assertTrue("var reqCard = statCard(r[4] ? fa(pendingN) : '—', 'درخواست مدیر', {onclick: function () { openManagerRequests(); }});" in a)
+        assertTrue("c.appendChild(el('div', {class: 'grid5'}, [statCard(fa(r[0].length), 'آزمون', {panel: 'exams'})" in a)
+        assertTrue("async function openManagerRequests()" in a && "managerRequestsCard(true)" in a)
+        assertFalse("if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());" in a)
+        val css = source("site/src/site.css")
+        assertTrue(".grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}" in css && ".grid5 .stat{min-height:112px;justify-content:center}" in css)
+    }
 }
