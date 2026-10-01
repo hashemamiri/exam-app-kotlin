@@ -19213,3 +19213,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ### V200.2 — داک پایین اپ
 `TeacherBottomDock.kt`: Box بیرونی ۹۲dp (قبلاً ۱۰۲)، پنل ۷۲dp (۸۲)، `DockItem` = Column(آیکون‌باکس ۳۸dp + Text ۱۰sp)؛ آیکون ۲۲dp؛ دکمهٔ + ۵۲dp. `Design69QuickAddOverlay` padding پایین ۹۲dp. پین‌های TeacherBottomDockTest به‌روز شدند (check_test_pins پین‌های داخل listOf را نمی‌بیند).
+
+### V200.3
+CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import در V188_SiteQuestionBoxTest شکست؛ import اضافه شد. درس: هر تست جدید/ویرایش‌شده را با `grep assertX` در برابر importها چک کن.
