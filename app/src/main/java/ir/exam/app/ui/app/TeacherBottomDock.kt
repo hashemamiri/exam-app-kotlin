@@ -95,17 +95,18 @@ fun TeacherBottomDock(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(102.dp)
-                .padding(horizontal = 14.dp, vertical = 8.dp)
+                // V200.2 — داک کوتاه‌تر (۱۰۲→۹۲) و نام هر دکمه زیر آیکونش (به‌جز +)، مثل سایت گوشی
+                .height(92.dp)
+                .padding(horizontal = 14.dp, vertical = 7.dp)
         ) {
             NeumorphicPanel(
-                modifier = Modifier.fillMaxWidth().height(82.dp),
+                modifier = Modifier.fillMaxWidth().height(72.dp),
                 radius = 28.dp,
                 depth = LocalNeumorphic69Depth.current + 2.dp,
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    Modifier.fillMaxWidth().height(82.dp).padding(horizontal = 8.dp),
+                    Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     DockItem(
@@ -183,7 +184,7 @@ private fun DockItem(
     val p = motionProgress.value
     val wave = sin(PI.toFloat() * p)
     val iconModifier = Modifier
-        .size(24.dp)
+        .size(22.dp)
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
@@ -201,7 +202,7 @@ private fun DockItem(
 
     Box(
         modifier
-            .height(62.dp)
+            .height(66.dp)
             .semantics {
                 this.selected = selected
                 contentDescription = label
@@ -220,10 +221,13 @@ private fun DockItem(
             },
         contentAlignment = Alignment.Center
     ) {
+        androidx.compose.foundation.layout.Column(
+            Modifier.offset { IntOffset(0, lift.roundToPx()) },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Box(
             Modifier
-                .offset { IntOffset(0, lift.roundToPx()) }
-                .size(44.dp)
+                .size(38.dp)
                 .then(
                     if (selected || pressed) {
                         Modifier.neumorphic69(colors, 14.dp, neoDepth(6.dp), pressed = true)
@@ -234,7 +238,7 @@ private fun DockItem(
         ) {
             val ripple = rippleProgress.value
             if (ripple < 1f) {
-                Canvas(Modifier.size(44.dp)) {
+                Canvas(Modifier.size(38.dp)) {
                     drawCircle(
                         color = colors.accent.copy(alpha = .22f * (1f - ripple)),
                         radius = size.minDimension * (.12f + .62f * ripple),
@@ -255,15 +259,17 @@ private fun DockItem(
                 )
             }
         }
-        if (selected) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 2.dp)
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(colors.accent)
-            )
+        // V200.2 — نام دکمه زیر آیکون (پیش‌تر فقط نقطهٔ انتخاب بود)
+        androidx.compose.material3.Text(
+            label,
+            color = if (selected) colors.accent else colors.muted,
+            fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp),
+            lineHeight = androidx.compose.ui.unit.TextUnit(11f, androidx.compose.ui.unit.TextUnitType.Sp),
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(top = 1.dp)
+        )
         }
     }
 }
@@ -277,12 +283,12 @@ private fun CenterAddAction(
     val colors = neumorphic69Colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    Box(modifier.height(82.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.height(72.dp), contentAlignment = Alignment.Center) {
         if (!expanded) {
             Box(
                 Modifier
-                    .size(58.dp)
-                    .neumorphic69(colors, 29.dp, neoDepth(if (pressed) 8.dp else 11.dp))
+                    .size(52.dp)
+                    .neumorphic69(colors, 26.dp, neoDepth(if (pressed) 8.dp else 11.dp))
                     .graphicsLayer {
                         shape = CircleShape
                         clip = true

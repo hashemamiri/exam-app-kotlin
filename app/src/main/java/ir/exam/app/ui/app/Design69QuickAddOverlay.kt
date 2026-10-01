@@ -106,7 +106,7 @@ fun Design69QuickAddOverlay(
             Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(top = 74.dp, bottom = 102.dp)
+                .padding(top = 74.dp, bottom = 92.dp) // V200.2 — هم‌ارتفاع داک جدید
         ) {
             // V62.4 — پوشانندهٔ محتوای زیر پنجرهٔ + با همان پس‌زمینهٔ یخی بدون موج.
             ir.exam.app.ui.auth.IceAppBackdrop(Modifier.fillMaxSize(), waves = false)

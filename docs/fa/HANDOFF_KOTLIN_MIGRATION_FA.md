@@ -19210,3 +19210,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ### V200.1 — داک پایین گوشی
 فقط site.css (بلوک V200.1): `.m-dock-panel` ۵۶px، `.m-dock-item span` نمایش صریح (برچسب‌ها از قبل در mobile.js `dock()` بودند)، آیکون ۲۰px، دکمهٔ + ۴۴px، `.m-content` padding-bottom ۸۰px.
+
+### V200.2 — داک پایین اپ
+`TeacherBottomDock.kt`: Box بیرونی ۹۲dp (قبلاً ۱۰۲)، پنل ۷۲dp (۸۲)، `DockItem` = Column(آیکون‌باکس ۳۸dp + Text ۱۰sp)؛ آیکون ۲۲dp؛ دکمهٔ + ۵۲dp. `Design69QuickAddOverlay` padding پایین ۹۲dp. پین‌های TeacherBottomDockTest به‌روز شدند (check_test_pins پین‌های داخل listOf را نمی‌بیند).

@@ -27,8 +27,9 @@ class TeacherBottomDockTest {
             "Design69Icons.Cards",
             "rotationY = 180f * wave",
             "rippleProgress.animateTo(1f, tween(520))",
-            ".size(44.dp)",
-            ".size(58.dp)",
+            ".size(38.dp)", // V200.2
+            ".size(52.dp)", // V200.2
+            "androidx.compose.material3.Text(\n            label,", // V200.2 — نام زیر آیکون
             "if (!expanded)",
             "LayoutDirection.Rtl"
         ).forEach { assertTrue("missing dock behavior $it", it in dock) }
