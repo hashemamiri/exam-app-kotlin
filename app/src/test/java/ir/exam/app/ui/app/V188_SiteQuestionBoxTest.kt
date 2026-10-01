@@ -128,4 +128,11 @@ class V188_SiteQuestionBoxTest {
         assertTrue(".grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}" in css && ".grid5 .stat{min-height:112px;justify-content:center}" in css)
         assertTrue(".grid2 .card+.card,.grid3 .card+.card,.grid4 .card+.card,.grid5 .card+.card{margin-top:0}" in css)
     }
+
+    @Test
+    fun `desktop rail shows label under every icon`() {
+        val css = source("site/src/site.css")
+        assertTrue(".dk .dk-rail-item .dk-rail-label{position:static;transform:none;opacity:1;" in css)
+        assertTrue(".dk .dk-rail-item{width:68px;height:auto;min-height:var(--size);grid-template-rows:auto auto;" in css)
+    }
 }
