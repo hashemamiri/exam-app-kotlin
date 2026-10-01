@@ -150,8 +150,8 @@ class Neumorphic69IntegrationTest {
             assertFalse("removed hamburger item returned: $it", it in teacherMenu)
         }
         assertFalse("removed profile sentence returned", "مشاهده و ویرایش حساب و تنظیمات" in menu)
-        assertTrue(".size(44.dp)" in dock)
-        assertTrue(".size(58.dp)" in dock)
+        assertTrue(".size(38.dp)" in dock) // V200.2
+        assertTrue(".size(52.dp)" in dock) // V200.2
         assertTrue("if (!expanded)" in dock)
         listOf("SettingsSection.APPEARANCE", "SettingsSection.ABOUT").forEach {
             assertTrue("missing settings section $it", it in profile)

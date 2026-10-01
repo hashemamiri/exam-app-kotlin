@@ -19216,3 +19216,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ### V200.3
 CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import در V188_SiteQuestionBoxTest شکست؛ import اضافه شد. درس: هر تست جدید/ویرایش‌شده را با `grep assertX` در برابر importها چک کن.
+
+### V200.4
+`Neumorphic69IntegrationTest` هم `.size(44.dp)/.size(58.dp)` داک را پین کرده بود (خارج از دید check_test_pins) → به ۳۸/۵۲ به‌روز شد. درس: پس از تغییر عدد در یک فایل اصلی، `grep -rn` همان عدد در app/src/test.
