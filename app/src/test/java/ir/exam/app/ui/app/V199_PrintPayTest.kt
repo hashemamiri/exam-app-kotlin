@@ -39,7 +39,7 @@ class V199_PrintPayTest {
     fun `site cards have wallet and red-green printer, save is free`() {
         val b = source("site/src/builder.js")
         assertTrue("class: 'icon-btn pay-btn'" in b && "class: 'icon-btn print-btn ' + (payMap[r.id] ? (payMap[r.id].paid ? 'paid' : 'unpaid') : '')" in b)
-        assertTrue("printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.dirty" in b)
+        assertTrue("printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.printDirty" in b) // V201
         assertFalse("S.confirmDlg('هزینهٔ تصاویر'" in b)
         val m = source("site/src/mobile.js")
         assertTrue("act('wallet', 'پرداخت هزینهٔ چاپ این آزمون'" in m && "printAct.classList.add(ps && ps.paid ? 'paid' : 'unpaid')" in m)
@@ -68,5 +68,18 @@ class V199_PrintPayTest {
         assertTrue("create table if not exists public.print_exam_payments" in sql)
         assertTrue("v_cost := 0; -- V199" in sql)
         assertEquals(sql, source("sql/manual/SQL_NATIVE_PRINT_PAY_V199.sql"))
+    }
+
+    @Test
+    fun `v201 header hash from server profile and layout changes do not block print`() {
+        val sql = source("supabase/migrations/20260926_native_print_header_hash_v201.sql")
+        assertTrue("from public.profiles p where p.id = p_exam.teacher_id" in sql && "hdr_field" in sql)
+        assertEquals(sql, source("sql/manual/SQL_NATIVE_PRINT_HEADER_HASH_V201.sql"))
+        val vm = source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderViewModel.kt")
+        assertTrue("fun hasUnsavedChanges(): Boolean = cleanPrintFingerprint != null && printFingerprint(_state.value) != cleanPrintFingerprint" in vm)
+        assertTrue("it.copy(figLayoutsJson = \"\", sepExtraPx = 0, textSpans = emptyList(), alignSpans = emptyList())" in vm)
+        val b = source("site/src/builder.js")
+        assertTrue("function mark() { state.dirty = true; state.printDirty = true; saveDraft(); }" in b)
+        assertTrue("state.dirty = true; saveDraft(); /* V201" in b && "printDirty: state.mode === 'print' && !!state.printDirty" in b)
     }
 }

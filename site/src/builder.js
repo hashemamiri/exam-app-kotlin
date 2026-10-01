@@ -419,7 +419,8 @@
   function buildUI(container) {
     var wrap = el('div', {class: 'builder'});
     var msg = el('div');
-    function mark() { state.dirty = true; saveDraft(); }
+    /* V201 — printDirty: تغییر محتوایی (سؤال/متن/تصویر) که چاپ آزمون چاپی را تا ذخیرهٔ بعدی می‌بندد؛ چیدمان/قالب‌بندی پیش‌نمایش آن را نمی‌بندد */
+    function mark() { state.dirty = true; state.printDirty = true; saveDraft(); }
     /* --- نوار بالا --- */
     var top = el('div', {class: 'card b-top'});
     var title = inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); });
@@ -750,7 +751,7 @@
       var payload = S.buildPrintPayload(toServerExam(state));
       /* V156 — printMode: 'student' | 'teacher' (FAB چاپ در گوشی، مثل منوی «چاپ آزمون/چاپ با کلید» اپ) */
       /* V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ بدون ذخیره (printId) یا با تغییرات ذخیره‌نشده چاپ نمی‌شود */
-      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : (state.printId || 'local'), printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.dirty, printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
+      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : (state.printId || 'local'), printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.printDirty, printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
     window.__builderPreview = preview;
     function applySnapshot(snap) {
@@ -763,7 +764,7 @@
           q.alignSpans = (e.alignSpans || []).map(function (x) { return {s: x.start, e: x.end, a: x.align}; });
           q.raw = q.raw || {}; if (e.figLayouts && Object.keys(e.figLayouts).length) q.raw.figLayouts = e.figLayouts; if (e.sepExtraPx) q.raw.sepExtraPx = e.sepExtraPx;
         });
-        mark();
+        state.dirty = true; saveDraft(); /* V201 — فقط dirty، نه printDirty */
       } catch (e) {}
     }
     /* --- ذخیره --- */
@@ -791,7 +792,7 @@
           var id = state.printId || uuid(); state.printId = id;
           var pr = await printExamSave({id: id, title: state.title, subject: (state.subject || '').trim(), duration: state.duration, questions: state.questions, sourceExamId: state.sourceExamId || null});
           if (!pr) return;
-          state.dirty = false; saveDraft(); toast('آزمون «' + state.title + '» ذخیره شد ✓' + (pr.cost ? ' · هزینهٔ تصاویر: ' + S.money(pr.cost) : ''), 'ok'); return;
+          state.dirty = false; state.printDirty = false; saveDraft(); toast('آزمون «' + state.title + '» ذخیره شد ✓' + (pr.cost ? ' · هزینهٔ تصاویر: ' + S.money(pr.cost) : ''), 'ok'); return;
         }
         if (state.audienceMode === 'classes' && !state.audienceClasses.length) throw new Error('حداقل یک کلاس انتخاب کنید.');
         if (state.audienceMode === 'students' && !state.audienceStudents.length) throw new Error('حداقل یک دانش‌آموز انتخاب کنید.');

@@ -42,6 +42,8 @@ class ExamBuilderViewModel(
     /** در تکرار پس از قطع پاسخ شبکه همان شناسه می‌ماند تا سرور دوباره پول کم نکند. */
     private var saveOperationId: String = UUID.randomUUID().toString()
     private var cleanDraftFingerprint: Int? = null
+    /** V201 — اثر انگشت محتوایی برای منع چاپ آزمون چاپیِ ذخیره‌نشده (بدون چیدمان/قالب‌بندی پیش‌نمایش). */
+    private var cleanPrintFingerprint: Int? = null
     private var savedDraftFingerprint: Int? = null
 
     init {
@@ -82,7 +84,7 @@ class ExamBuilderViewModel(
                 _state.update { current ->
                     current.copy(questions = current.questions.map(QuestionDraft::ensureEditorIds))
                 }
-                cleanDraftFingerprint = draftFingerprint(_state.value)
+                cleanDraftFingerprint = draftFingerprint(_state.value); cleanPrintFingerprint = printFingerprint(_state.value)
                 // V68.5 — پیش‌نویس فقط هنگام «ایجاد» آزمون پیشنهاد می‌شود؛ هنگام
                 // ویرایش، فقط خودِ آزمونِ مورد ویرایش باز می‌شود (درخواست کاربر).
                 if (initialImport == null && initialExamId == null && ownerUserId.isNotBlank()) {
@@ -144,7 +146,7 @@ class ExamBuilderViewModel(
     fun discardDraft() = viewModelScope.launch {
         if (ownerUserId.isNotBlank()) draftStore.clear(ownerUserId)
         _state.update { it.copy(recoverableDraft = null) }
-        cleanDraftFingerprint = draftFingerprint(_state.value)
+        cleanDraftFingerprint = draftFingerprint(_state.value); cleanPrintFingerprint = printFingerprint(_state.value)
     }
 
     fun setTitle(value: String) { _state.update { it.copy(title = value, error = null) } }
@@ -717,11 +719,11 @@ class ExamBuilderViewModel(
     /** V163 — پس از ذخیرهٔ آزمون چاپی روی سرور: شناسه و سؤال‌های با URL جایگزین می‌شوند. */
     fun applyPrintSaved(id: String, questions: List<QuestionDraft>) {
         _state.update { it.copy(examId = id, questions = questions) }
-        cleanDraftFingerprint = draftFingerprint(_state.value)
+        cleanDraftFingerprint = draftFingerprint(_state.value); cleanPrintFingerprint = printFingerprint(_state.value)
     }
 
-    /** V199 — تغییر ذخیره‌نشده نسبت به آخرین بار/ذخیره (برای منع چاپ آزمون چاپیِ ذخیره‌نشده). */
-    fun hasUnsavedChanges(): Boolean = cleanDraftFingerprint != null && draftFingerprint(_state.value) != cleanDraftFingerprint
+    /** V199/V201 — تغییر محتواییِ ذخیره‌نشده (سؤال/متن/تصویر/عنوان/درس)؛ جابه‌جایی شکل یا قالب‌بندی در پیش‌نمایش حساب نمی‌شود. */
+    fun hasUnsavedChanges(): Boolean = cleanPrintFingerprint != null && printFingerprint(_state.value) != cleanPrintFingerprint
 
     fun save() = viewModelScope.launch {
         val saveState = state.value
@@ -741,12 +743,20 @@ class ExamBuilderViewModel(
                     uploadProgress = null
                 )
             }
-            cleanDraftFingerprint = draftFingerprint(_state.value)
+            cleanDraftFingerprint = draftFingerprint(_state.value); cleanPrintFingerprint = printFingerprint(_state.value)
         }.onFailure { error ->
             _state.update { it.copy(saving = false, uploadProgress = null, error = safeBuilderError(error)) }
         }
     }
 }
+
+/** V201 — فقط محتوا: چیدمان شکل‌ها، فاصلهٔ جداکننده و span های قالب‌بندی/تراز (که از پیش‌نمایش برمی‌گردند) حذف می‌شوند. */
+private fun printFingerprint(state: ExamBuilderState): Int = listOf(
+    state.examId,
+    state.title,
+    state.subject,
+    state.questions.map { it.copy(figLayoutsJson = "", sepExtraPx = 0, textSpans = emptyList(), alignSpans = emptyList()) }
+).hashCode()
 
 private fun draftFingerprint(state: ExamBuilderState): Int = listOf(
     state.examId,

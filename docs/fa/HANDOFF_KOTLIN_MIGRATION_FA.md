@@ -19219,3 +19219,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ### V200.4
 `Neumorphic69IntegrationTest` هم `.size(44.dp)/.size(58.dp)` داک را پین کرده بود (خارج از دید check_test_pins) → به ۳۸/۵۲ به‌روز شد. درس: پس از تغییر عدد در یک فایل اصلی، `grep -rn` همان عدد در app/src/test.
+
+## §V201
+- SQL `20260926_native_print_header_hash_v201.sql`: `native_print_header_hash_v199` حالا `stable security definer` و از `profiles.hdr_*` (province/city/district/school/grade/field) + subject/duration آزمون می‌سازد؛ `p_header` نادیده (کلاینت‌ها همچنان می‌فرستند؛ `PrintPayFingerprint`/`headerFingerprint` فقط سازگاری). پس تغییر سربرگ = تغییر فیلدهای سربرگ پروفایل (حساب → سربرگ چاپ) یا درس/مدت.
+- اپ: `ExamBuilderViewModel.printFingerprint` (بدون figLayoutsJson/sepExtraPx/textSpans/alignSpans) و `cleanPrintFingerprint` هم‌زمان با `cleanDraftFingerprint` ست می‌شود؛ `hasUnsavedChanges()` روی آن است.
+- سایت: `state.printDirty` در `mark()`؛ `applySnapshot` فقط `dirty`؛ `preview()` `printDirty: state.printDirty`؛ ذخیرهٔ چاپی هر دو را false می‌کند.
