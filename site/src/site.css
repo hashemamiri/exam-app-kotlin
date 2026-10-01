@@ -1249,3 +1249,13 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
   .dk .dk-rail-item .dk-ic svg{width:16px;height:16px}
   .dk .dk-rail-item .dk-rail-label{font-size:9.5px}
 }
+
+/* ===== V200.1 — داک پایین گوشی: نام زیر هر آیکون (به‌جز +) و ارتفاع کمتر ===== */
+.m-dock{padding:4px 14px calc(4px + env(safe-area-inset-bottom))}
+.m-dock-panel{height:56px;border-radius:20px}
+.m-dock-item{gap:1px;padding:2px 0;font-size:10px;line-height:1.1}
+.m-dock-item .mi{width:20px;height:20px}
+.m-dock-item span{display:block;font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.m-dock-item.on{transform:translateY(-2px)}
+.m-dock-add .mi{width:44px;height:44px;padding:11px}
+.m-content{padding-bottom:calc(80px + env(safe-area-inset-bottom))}

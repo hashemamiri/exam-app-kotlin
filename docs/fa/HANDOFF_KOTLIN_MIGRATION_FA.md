@@ -19207,3 +19207,6 @@ alert info «N آزمون هم‌اکنون باز است…» در `pageDashboa
 
 ## §V200 — برچسب زیر آیکون‌های ریل
 فقط site.css (بلوک V200): `.dk-rail-label` از پیلِ هاور (absolute/opacity 0) به متن ثابت زیر آیکون تبدیل شد؛ آیتم ریل ۶۸px عرض، دو ردیف (آیکون ۳۴px + برچسب ۱۰.۵px)؛ ریل ۷۸px. app.js تغییر نکرد (همان `railItem` با span.dk-rail-label).
+
+### V200.1 — داک پایین گوشی
+فقط site.css (بلوک V200.1): `.m-dock-panel` ۵۶px، `.m-dock-item span` نمایش صریح (برچسب‌ها از قبل در mobile.js `dock()` بودند)، آیکون ۲۰px، دکمهٔ + ۴۴px، `.m-content` padding-bottom ۸۰px.

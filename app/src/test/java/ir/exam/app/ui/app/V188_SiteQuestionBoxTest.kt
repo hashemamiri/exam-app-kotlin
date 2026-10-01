@@ -135,4 +135,13 @@ class V188_SiteQuestionBoxTest {
         assertTrue(".dk .dk-rail-item .dk-rail-label{position:static;transform:none;opacity:1;" in css)
         assertTrue(".dk .dk-rail-item{width:68px;height:auto;min-height:var(--size);grid-template-rows:auto auto;" in css)
     }
+
+    @Test
+    fun `mobile dock shows labels and is shorter`() {
+        val css = source("site/src/site.css")
+        assertTrue(".m-dock-panel{height:56px;border-radius:20px}" in css)
+        assertTrue(".m-dock-item span{display:block;font-size:10px;" in css)
+        val m = source("site/src/mobile.js")
+        assertTrue("[ic(icon), el('span', {text: label})]" in m)
+    }
 }
