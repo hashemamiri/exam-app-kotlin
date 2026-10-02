@@ -729,6 +729,11 @@
 
   /* ---------- V154: ورود/ثبت‌نام به سبک SignInScreen اپ (پوستهٔ یخی AuthIceComponents) ---------- */
   function authActive() { return MQ.matches && !S.user(); }
+  /* V202.6 — دروازهٔ صفحهٔ اول: حتی با نشست فعال، در هر بار بازشدن سایت (هر تب) اول صفحهٔ اول می‌آید؛ «ورود به سامانه» کاربرِ واردشده را مستقیم به سامانه می‌برد */
+  function entered() { try { return sessionStorage.getItem('m-entered') === '1'; } catch (e) { return true; } }
+  function enter() { try { sessionStorage.setItem('m-entered', '1'); } catch (e) {} }
+  function gateActive() { return MQ.matches && !!S.user() && !entered(); }
+  var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]; /* = tiles صفحهٔ دسکتاپ (app.js renderLanding) — V202.5 (قبلاً داخل paintAuth بعد از فراخوانی landing() تعریف شده بود → undefined → صفحهٔ خالی) */
   var A = {screen: 'landing', tab: 1, regTab: 0, email: '', step: 'form', fullName: '', username: null};
   function paintAuth(root) {
     var recovery = A.screen === 'recovery' || (A.screen === 'otp' && A.otpKind === 'recovery');
@@ -740,7 +745,7 @@
     var msg = el('div', {class: 'ice-err', style: 'display:none'});
     function setMsg(t) { msg.style.display = t ? '' : 'none'; msg.textContent = t ? 'خطا: ' + t : ''; }
     function busy(b, on) { b.disabled = on; b.classList.toggle('loading', !!on); }
-    if (A.screen === 'landing') wrap.appendChild(landing());
+    if (A.screen === 'landing' || S.user()) wrap.appendChild(landing());
     else { var card = el('div', {class: 'ice-card'}); wrap.appendChild(card); ({login: loginPane, register: registerPane, otp: otpPane, setup: setupPane, recovery: recoveryPane})[A.screen](card); }
     wrap.appendChild(msg);
     root.appendChild(shell);
@@ -759,7 +764,6 @@
     function google(role, label) { if (!window.SiteExtras) return null; var g = window.SiteExtras.googleButton(role); g.className = 'ice-btn outline ice-google'; g.style.marginTop = ''; var t = g.childNodes[g.childNodes.length - 1]; if (t && t.nodeType === 3) t.textContent = ' ' + label; return g; }
     function otpBoxes(onChange) { var n = 6, hidden = el('input', {type: 'tel', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 8, class: 'ice-otp-hidden'}); var row = el('div', {class: 'ice-otp', onclick: function () { hidden.focus(); }}); function draw() { var v = hidden.value.replace(/\D/g, '').slice(0, 8); hidden.value = v; var count = Math.max(6, Math.min(8, v.length + (v.length >= 6 ? 1 : 0))); row.innerHTML = ''; for (var i = 0; i < count; i++) row.appendChild(el('span', {class: 'ice-otp-b' + (i === v.length ? ' focus' : '') + (v[i] ? ' filled' : ''), text: v[i] ? fa(v[i]) : ''})); onChange(v); } hidden.addEventListener('input', draw); draw(); var w = el('div', {}, [hidden, row]); w.value = function () { return hidden.value; }; w.focus = function () { hidden.focus(); }; return w; }
 
-    var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]; /* = tiles صفحهٔ دسکتاپ (app.js renderLanding) */
     function landing() {
       var apkBtn = btn('دریافت برنامه', function () {});
       apkBtn.disabled = true;
@@ -774,9 +778,9 @@
         stag(2, el('div', {class: 'ice-sub', text: 'به سامانهٔ آزمون و ارزشیابی خوش آمدید'})),
         /* V202.5 — صفحهٔ اول: «دریافت برنامه» (دانلود مستقیم APK از app_version) + «ورود به سامانه» + کاشی‌های معرفی سایت دسکتاپ */
         stag(3, apkBtn),
-        stag(4, outline('ورود به سامانه', function () { goA('login', {tab: 1}); })),
+        stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام', function () { if (S.user()) { enter(); S.render(); } else goA('login', {tab: 1}); })),
         stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
-        stag(6, link('ساخت حساب جدید (معلم / مدیر)', function () { goA('register', {regTab: 0, step: 'form'}); })),
+        stag(6, S.user() ? null : link('ساخت حساب جدید (معلم / مدیر)', function () { goA('register', {regTab: 0, step: 'form'}); })),
         stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
       ]);
     }
@@ -1148,7 +1152,7 @@
   /* اتصال: app.js در render() اگر active() بود paint() را صدا می‌زند؛ تغییر عرض → رندر دوباره */
   var rerender = function () { if (S.user()) S.render(); };
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
-  window.SiteMobile = {radialMenu: radialMenu, paint: paint, active: active, ui: ui, authActive: authActive, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
+  window.SiteMobile = {radialMenu: radialMenu, paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
     profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }};
 })();

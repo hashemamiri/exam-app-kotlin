@@ -860,6 +860,8 @@
     root = $('root');
     document.body.classList.remove('dk');
     /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
+    /* V202.6 — گوشی: با نشست فعال هم اول صفحهٔ اول (دریافت برنامه / ورود به سامانه) تا کاربر «ورود به سامانه» بزند */
+    if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.gateActive()) { document.body.classList.remove('m-mode'); closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }
     if (user && !user.requiresSetup && window.SiteMobile && window.SiteMobile.active()) { document.body.classList.add('m-mode'); window.SiteMobile.paint(); return; }
     document.body.classList.remove('m-mode');
     /* V154 — ورود/ثبت‌نام در گوشی به سبک SignInScreen اپ (پوستهٔ یخی) */
@@ -1061,6 +1063,7 @@
   }
   function afterLogin() {
     closeAuth();
+    if (window.SiteMobile && window.SiteMobile.enter) window.SiteMobile.enter(); /* V202.6 — پس از ورود، دروازهٔ صفحهٔ اول در این نشست بسته است */
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     prefetchEngines();
     view.panel = 'dashboard';

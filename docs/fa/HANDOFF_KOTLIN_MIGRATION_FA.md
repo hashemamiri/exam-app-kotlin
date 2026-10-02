@@ -19251,3 +19251,7 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
+
+## §V202.6
+- باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.

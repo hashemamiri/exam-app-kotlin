@@ -166,7 +166,14 @@ class V199_PrintPayTest {
         val m = source("site/src/mobile.js")
         assertTrue("var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]" in m)
         assertTrue("var tiles = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]" in source("site/src/app.js"))
-        assertTrue("stag(3, apkBtn)," in m && "stag(4, outline('ورود به سامانه'" in m && "el('div', {class: 'ice-tiles'}" in m)
+        assertTrue("stag(3, apkBtn)," in m && "stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام'" in m && "el('div', {class: 'ice-tiles'}" in m)
+        // V202.6 — LANDING_TILES باید پیش از paintAuth تعریف شود (نه داخل آن پس از فراخوانی landing)
+        assertTrue(m.indexOf("var LANDING_TILES = ") in 0 until m.indexOf("function paintAuth(root)"))
+        assertTrue("function gateActive() { return MQ.matches && !!S.user() && !entered(); }" in m)
+        assertTrue("if (S.user()) { enter(); S.render(); } else goA('login', {tab: 1}); }" in m)
+        val a = source("site/src/app.js")
+        assertTrue("window.SiteMobile.gateActive()) { document.body.classList.remove('m-mode'); closeAuth(); root.innerHTML = ''; window.SiteMobile.paintAuth(root); return; }" in a)
+        assertTrue("if (window.SiteMobile && window.SiteMobile.enter) window.SiteMobile.enter();" in a)
         assertTrue(".ice-tiles{display:grid;grid-template-columns:repeat(3,1fr)" in source("site/src/site.css"))
     }
 }
