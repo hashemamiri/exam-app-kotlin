@@ -145,4 +145,15 @@ class V199_PrintPayTest {
         assertTrue(".lp .pw input{padding-right:50px;padding-left:14px}" in css && ".lp .eye{position:absolute;right:4px;left:auto;" in css)
         assertTrue("w.classList.add('has-eye')" in source("site/src/mobile.js"))
     }
+
+    @Test
+    fun `v202_3 mobile about page downloads the apk directly from app_version like the app`() {
+        val a = source("site/src/app.js")
+        assertTrue("latestApk: async function ()" in a)
+        assertTrue("/rest/v1/app_version?select=version_code,version_name,apk_url,apk_size_bytes&is_active=eq.true&order=version_code.desc&limit=1" in a)
+        val m = source("site/src/mobile.js")
+        assertFalse("https://github.com/hashemamiri/exam-app-kotlin/releases/latest" in m)
+        assertTrue("api.latestApk().then(function (v) {" in m)
+        assertTrue("el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'})" in m)
+    }
 }

@@ -953,7 +953,15 @@
       el('div', {class: 'm-lv'}, [el('span', {text: 'حالت'}), el('b', {text: window.matchMedia('(display-mode: standalone)').matches ? 'نصب‌شده (PWA)' : 'مرورگر'})]),
       el('p', {class: 'muted', text: 'سایت با هر انتشار خودکار به‌روز می‌شود؛ اگر پیام «نسخهٔ جدید آماده است» دیدید، صفحه را دوباره باز کنید.'}),
       el('button', {class: 'btn light', style: 'width:100%', text: 'بررسی به‌روزرسانی (بارگذاری دوباره)', onclick: function () { location.reload(); }})]));
-    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'برنامهٔ اندروید'}), el('p', {class: 'muted', text: 'نسخهٔ اندروید همان امکانات را با تختهٔ سفید و ابزارهای بیشتر دارد.'}), el('a', {class: 'btn light', style: 'width:100%;display:block;text-align:center', href: 'https://github.com/hashemamiri/exam-app-kotlin/releases/latest', target: '_blank', rel: 'noopener', text: 'دریافت آخرین APK'})]));
+    var apkBtn = el('button', {class: 'btn light', style: 'width:100%;display:block;text-align:center', disabled: true, text: 'در حال یافتن آخرین نسخه…'});
+    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'برنامهٔ اندروید'}), el('p', {class: 'muted', text: 'نسخهٔ اندروید همان امکانات را با تختهٔ سفید و ابزارهای بیشتر دارد.'}), apkBtn]));
+    /* V202.3 — مثل اپ: نشانی مستقیم APK از جدول app_version؛ لمس دکمه = دانلود مستقیم (نه صفحهٔ گیت‌هاب) */
+    api.latestApk().then(function (v) {
+      if (!v) { apkBtn.textContent = 'نسخهٔ اندروید در دسترس نیست'; apkBtn.disabled = true; return; }
+      apkBtn.textContent = 'دریافت آخرین APK (نسخهٔ ' + S.fa(v.name) + (v.size ? ' · ' + S.fa(Math.round(v.size / 1048576)) + ' مگابایت' : '') + ')';
+      apkBtn.disabled = false;
+      apkBtn.onclick = function () { var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'}); document.body.appendChild(a); a.click(); a.remove(); toast('دانلود APK آغاز شد.', 'ok'); };
+    }).catch(function () { apkBtn.textContent = 'دریافت APK ممکن نشد'; apkBtn.disabled = true; });
   }
   var LS_AVATAR = 'examsite.avatar.';
   function localAvatar(uid) { try { return localStorage.getItem(LS_AVATAR + uid); } catch (e) { return null; } }

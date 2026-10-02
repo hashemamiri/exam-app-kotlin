@@ -315,6 +315,12 @@
     /* V161 — مثل SupabaseProfileRepository.verifyCurrentPassword / changeEmail */
     verifyCurrentPassword: async function (email, pw) { if (!email) throw new Error('نشست ورود پیدا نشد.'); await http('/auth/v1/token?grant_type=password', {method: 'POST', auth: false, body: {email: email, password: pw}}); },
     updateEmail: function (email) { return authApi.updateUser({email: email}); },
+    /* V202.3 — همان منبع اپ (جدول عمومی app_version، بدون نیاز به نشست): آخرین نسخهٔ فعال با نشانی مستقیم APK */
+    latestApk: async function () {
+      var rows = await http('/rest/v1/app_version?select=version_code,version_name,apk_url,apk_size_bytes&is_active=eq.true&order=version_code.desc&limit=1', {auth: false});
+      var r = Array.isArray(rows) && rows[0]; if (!r || !/^https:\/\//i.test(String(r.apk_url || ''))) return null;
+      return {code: r.version_code, name: r.version_name, url: String(r.apk_url).trim(), size: Number(r.apk_size_bytes) || 0};
+    },
     updateUsername: function (u) { return rpcObj('native_update_my_username_v1', {p_username: u.trim().toLowerCase()}); },
     // معلم
     exams: async function () {

@@ -19242,3 +19242,6 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - اپ: `AuthIceComponents.IceField` داخل `CompositionLocalProvider(LocalLayoutDirection provides Ltr)` (آیکون انتهایی = راست)، `textStyle` با `TextDirection.Ltr`/`TextAlign.Left`؛ placeholder و supportingText با LayoutDirection اصلی و `TextAlign.Right`. همهٔ فیلدهای SignInScreen از IceField می‌گذرند.
 - سایت: `site.css` — `.lp .field input` و `.ice-field input` → `direction:ltr;text-align:left` (placeholder rtl/راست)؛ چشم رمز `right:4px|8px; left:auto`؛ padding-right 50px (`.lp .pw input`، `.ice-field.has-eye input`). mobile.js: `field()` کلاس `has-eye` را به wrapper رمز می‌افزاید.
 - تست: `v202_2 …` در V199_PrintPayTest.
+
+## §V202.3
+- سایت: `api.latestApk()` در app.js (GET بدون نشست `app_version?is_active=eq.true&order=version_code.desc&limit=1`، فقط https) — همان منبع `SupabaseAppUpdateRepository` اپ. mobile.js › aboutScreen: دکمهٔ APK ابتدا غیرفعال («در حال یافتن…»)، سپس متن نسخه/حجم و onclick = ساخت `<a download>` موقت و click (دانلود مستقیم؛ بدون GitHub). فقط فایل‌های سایت → CI اپ اجرا نمی‌شود.
