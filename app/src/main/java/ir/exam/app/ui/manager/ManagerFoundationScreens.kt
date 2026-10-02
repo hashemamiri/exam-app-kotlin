@@ -81,6 +81,7 @@ fun ManagerTeachersScreen(
     var expandedTeacher by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var transferDone by remember { mutableStateOf<String?>(null) } // V202
     var loading by remember { mutableStateOf(true) }
     var inviteMode by remember { mutableStateOf(false) }
     var inviteCountDialog by remember { mutableStateOf(false) }
@@ -290,6 +291,9 @@ fun ManagerTeachersScreen(
             dismissButton = { androidx.compose.material3.TextButton(onClick = { inviteCountDialog = false }) { Text("انصراف") } }
         )
     }
+    transferDone?.let { msg ->
+        ir.exam.app.ui.common.CostDeductedDialog(message = msg, onConfirm = { transferDone = null })
+    }
     transferTarget?.let { teacher ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { transferTarget = null },
@@ -311,7 +315,8 @@ fun ManagerTeachersScreen(
                     onClick = {
                         scope.launch {
                             repository.transferWallet(teacher.id, amount ?: 0).onSuccess { result ->
-                                message = "${"%,d".format(java.util.Locale.US, result.amountToman)} تومان منتقل شد."
+                                /* V202 — پیام کسر وسط صفحه؛ فقط با «تأیید» بسته می‌شود */
+                                transferDone = "کسر ${"%,d".format(java.util.Locale.US, result.amountToman)} تومان از کیف پول شما با موفقیت انجام شد و به ${teacher.fullName} منتقل شد."
                                 transferTarget = null; reloadTeachers()
                             }.onFailure { error = safeManagerError(it); transferTarget = null }
                         }

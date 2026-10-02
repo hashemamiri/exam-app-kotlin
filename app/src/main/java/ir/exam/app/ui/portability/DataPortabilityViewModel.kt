@@ -20,7 +20,9 @@ data class DataPortabilityState(
     val options: RestoreOptions = RestoreOptions(),
     val maintenance: StorageMaintenanceSummary? = null,
     val error: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    /** V202 — پیام کسر هزینهٔ بازیابی؛ پنجرهٔ وسط صفحه، فقط با «تأیید» بسته می‌شود. */
+    val costDialog: String? = null
 )
 
 class DataPortabilityViewModel(
@@ -67,13 +69,15 @@ class DataPortabilityViewModel(
                     it.copy(
                         loading = false,
                         preview = null,
-                        message = "بازیابی شد: ${summary.examsCreated} آزمون، ${summary.classesCreated} کلاس، " +
-                            "${summary.membershipsRestored} عضویت؛ هزینه ${summary.chargedToman} تومان."
+                        costDialog = "بازیابی شد: ${summary.examsCreated} آزمون، ${summary.classesCreated} کلاس، " +
+                            "${summary.membershipsRestored} عضویت.\nکسر ${"%,d".format(java.util.Locale.US, summary.chargedToman)} تومان از کیف پول با موفقیت انجام شد."
                     )
                 }
             }
             .onFailure(::fail)
     }
+
+    fun dismissCostDialog() = _state.update { it.copy(costDialog = null) }
 
     fun checkStorage() = runMaintenance(true)
     fun cleanStorage() = runMaintenance(false)

@@ -93,6 +93,7 @@ fun ExamPrintCenterScreen(
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     var printStatus by remember { mutableStateOf<String?>(null) }
     var printStatusIsError by remember { mutableStateOf(false) }
+    var costDone by remember { mutableStateOf<String?>(null) } // V202
     val scope = rememberCoroutineScope()
     // V107 — چاپِ مستقیم از کارت‌ها حذف شد؛ چاپ فقط از داخلِ آزمون‌ساز
     // (ExamHtmlPrintDialog) انجام می‌شود؛ چاپگرِ بدون‌صفحه دیگر اینجا نیست.
@@ -194,6 +195,9 @@ fun ExamPrintCenterScreen(
         if (localExams.isEmpty() && !state.loading && !localLoading) {
             Text("هنوز آزمون چاپی‌ای نیست. «آزمون جدید» بزنید یا از «آزمون‌های آنلاین» نسخهٔ چاپی بسازید.")
         }
+        costDone?.let { msg ->
+            ir.exam.app.ui.common.CostDeductedDialog(message = msg, onConfirm = { costDone = null })
+        }
         payQuote?.let { q ->
             PrintPayDialog(
                 quote = q,
@@ -205,9 +209,8 @@ fun ExamPrintCenterScreen(
                     scope.launch {
                         runCatching { printRepo.pay(q.id, PrintPayFingerprint.current(context)) }
                             .onSuccess { r ->
-                                printStatusIsError = false
-                                printStatus = "کسر " + "%,d".format(r.costToman) + " تومان از کیف پول با موفقیت انجام شد" +
-                                    (r.balanceToman?.let { " (موجودی: " + "%,d".format(it) + " تومان)" } ?: "")
+                                /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */
+                                costDone = ir.exam.app.ui.common.costDeductedMessage(r.costToman, r.balanceToman)
                                 payQuote = null
                                 reloadPayStatus()
                             }

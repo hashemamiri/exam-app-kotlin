@@ -21,7 +21,9 @@ data class TeacherDashboardState(
     val exportFile: PortableFile? = null,
     val importDraft: ExamImportDraft? = null,
     val error: String? = null,
-    val message: String? = null
+    val message: String? = null,
+    /** V202 — پیام کسر هزینهٔ تکثیر؛ در پنجرهٔ وسط صفحه نشان داده می‌شود و فقط با «تأیید» پاک می‌شود. */
+    val costDialog: String? = null
 )
 
 class TeacherDashboardViewModel(
@@ -50,17 +52,19 @@ class TeacherDashboardViewModel(
             .onSuccess { result ->
                 duplicateOperations.remove(exam.id)
                 val exams = repository.getMyExams().getOrThrow()
-                val balance = result.balanceToman?.let { " · مانده ${formatToman(it)} تومان" }.orEmpty()
+                val balance = result.balanceToman?.let { " (موجودی: ${formatToman(it)} تومان)" }.orEmpty()
                 _state.update {
                     it.copy(
                         actionLoading = false,
                         exams = exams,
-                        message = "کپی با کد ${result.code} ساخته شد · کسر ${formatToman(result.costToman)} تومان$balance"
+                        costDialog = "کپی با کد ${result.code} ساخته شد.\nکسر ${formatToman(result.costToman)} تومان از کیف پول با موفقیت انجام شد$balance"
                     )
                 }
             }
             .onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeDashboardError(error)) } }
     }
+
+    fun dismissCostDialog() = _state.update { it.copy(costDialog = null) }
 
     fun delete(exam: ExamDashboardDto) = action("آزمون و داده‌های وابسته حذف شد.") {
         repository.deleteExam(exam.id).getOrThrow()

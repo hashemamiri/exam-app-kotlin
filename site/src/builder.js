@@ -824,7 +824,8 @@
         if (raw && raw.error) { var m = String(raw.error); if (raw.balance != null && raw.required != null) m += '؛ موجودی ' + fa(raw.balance) + ' تومان و مبلغ لازم ' + fa(raw.required) + ' تومان است.'; throw new Error(m); }
         state.examId = examId; state.code = (raw && raw.code) || code; state.dirty = false; saveDraft();
         msg.appendChild(el('div', {class: 'alert ok', html: '✅ ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>' + (raw && raw.cost ? ' · هزینه: ' + S.money(raw.cost) : '') + (raw && raw.balance != null ? ' · موجودی: ' + S.money(raw.balance) : '')}));
-        toast('آزمون ذخیره شد.', 'ok');
+        /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */
+        await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null, 'آزمون ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>');
       } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
     }
     drawList(); drawEditor();

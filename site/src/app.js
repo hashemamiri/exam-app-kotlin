@@ -119,6 +119,23 @@
       bg.appendChild(m); document.body.appendChild(bg);
     });
   }
+  /* V202 — پیام یکسانِ «کسر هزینه» برای همهٔ مسیرهای کسر از کیف پول: وسط صفحه، فقط با دکمهٔ «تأیید» محو می‌شود (نه toast) */
+  function infoDlg(title, body, okLabel) {
+    return new Promise(function (resolve) {
+      var bg = el('div', {class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')});
+      var m = el('div', {class: 'modal'}, [
+        el('h2', {text: title}),
+        el('p', {class: 'muted', html: body}),
+        el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [
+          el('button', {class: 'btn', text: okLabel || 'تأیید', onclick: function () { bg.remove(); resolve(true); }})
+        ])
+      ]);
+      bg.appendChild(m); document.body.appendChild(bg);
+    });
+  }
+  function costDoneDlg(cost, balance, extra) {
+    return infoDlg('کسر هزینه انجام شد', 'کسر <b>' + money(cost || 0) + '</b> از کیف پول با موفقیت انجام شد.' + (balance != null ? '<br>موجودی: ' + money(balance) : '') + (extra ? '<br>' + extra : ''));
+  }
   function localState() { try { return JSON.parse(localStorage.getItem(LS_LOCALSTATE) || '{}') || {}; } catch (e) { return {}; } }
   function setLocalState(patch) { var s = localState(); Object.keys(patch).forEach(function (k) { s[k] = patch[k]; }); try { localStorage.setItem(LS_LOCALSTATE, JSON.stringify(s)); } catch (e) {} }
 
@@ -402,7 +419,7 @@
     if (!(await confirmDlg('پرداخت هزینهٔ چاپ' + (title ? ' — ' + esc(title) : ''), printDueText(q), 'پرداخت'))) return {paid: false};
     var r = await api.printPay(printId, headerFp);
     if (r && r.error) { var m = String(r.error); if (r.balance != null && r.required != null) m += '؛ موجودی ' + money(r.balance) + ' و مبلغ لازم ' + money(r.required) + ' است.'; throw new Error(m); }
-    toast('کسر ' + money(r.cost || q.due) + ' با موفقیت انجام شد.', 'ok');
+    await costDoneDlg(r.cost || q.due, r.balance);
     return {paid: true, cost: r.cost || q.due};
   }
   /* ---- پل چاپ: همان متدهای ExamPrintBridge اندروید (ExamHtmlPrintDialog.kt) در مرورگر ---- */
@@ -466,8 +483,8 @@
         if (!ok) { restore(); return; }
         api.chargePrint(examRef, n, mode).then(function (r) {
           ctx.paid[mode] = true;
-          toast('کسر ' + money(r.cost || cost) + ' با موفقیت انجام شد.', 'ok');
-          if (printCtx === ctx) doNative(); else ctx.busy = false;
+          /* V202 — پیام کسر وسط صفحه؛ چاپ پس از «تأیید» */
+          return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) doNative(); else ctx.busy = false; });
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
       });
     }
@@ -1279,7 +1296,7 @@
     if (window.SiteExtras) wrap.appendChild(el('button', {class: 'icon-btn', title: 'صدور فایل آزمون', html: '<i>📤</i><span>صدور</span>', onclick: function () { window.SiteExtras.exportExamDlg(x); }}));
     wrap.appendChild(el('button', {class: 'icon-btn', title: 'کپی آزمون', html: '<i>⧉</i><span>کپی</span>', onclick: async function () {
       if (!(await confirmDlg('کپی آزمون', 'از «' + esc(x.title) + '» یک نسخهٔ جدید ساخته می‌شود (هزینهٔ سؤال‌ها طبق تعرفه کسر می‌شود).', 'کپی'))) return;
-      try { var r = await api.duplicateExam(x.id); toast('کپی شد؛ کد جدید: ' + (r.code || '') + (r.cost ? ' · هزینه ' + money(r.cost) : ''), 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
+      try { var r = await api.duplicateExam(x.id); await costDoneDlg(r.cost || 0, r.balance, 'کپی ساخته شد؛ کد جدید: <b class="code">' + esc(r.code || '') + '</b>'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
     wrap.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف', html: '<i>🗑</i><span>حذف</span>', onclick: async function () {
       if (!(await confirmDlg('حذف آزمون', 'آزمون «' + esc(x.title) + '» و پاسخ‌های آن برای همیشه حذف می‌شود.', 'حذف', true))) return;
@@ -1607,7 +1624,7 @@
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
   window.ExamSite = {headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
-    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,

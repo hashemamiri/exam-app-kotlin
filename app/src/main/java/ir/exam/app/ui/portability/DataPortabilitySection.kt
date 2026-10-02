@@ -169,6 +169,9 @@ fun DataPortabilitySection(onImportExam: (ExamImportDraft) -> Unit = {}) {
         )
     }
 
+    state.costDialog?.let { msg ->
+        ir.exam.app.ui.common.CostDeductedDialog(message = msg, onConfirm = viewModel::dismissCostDialog)
+    }
     if (confirmCleanup) {
         AlertDialog(
             onDismissRequest = { confirmCleanup = false },

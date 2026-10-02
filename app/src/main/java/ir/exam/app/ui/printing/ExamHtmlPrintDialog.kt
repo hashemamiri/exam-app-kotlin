@@ -142,6 +142,8 @@ fun ExamHtmlPrintDialog(
     var barStatus by remember { mutableStateOf<String?>(null) }
     // V134 — رنگِ پیامِ وضعیت: null = خنثی (تیره)، true = موفق (سبز)، false = خطا (قرمز)
     var barStatusOk by remember { mutableStateOf<Boolean?>(null) }
+    // V202 — پیام «کسر هزینه» وسط صفحه؛ پس از «تأیید» چاپ آغاز می‌شود (پیش از این نوارِ سبزِ خودمحوشونده بود)
+    var costDone by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
     var previewOpen by remember { mutableStateOf(initialPreview) }
     LaunchedEffect(barStatus) {
         if (barStatus != null) {
@@ -480,11 +482,8 @@ fun ExamHtmlPrintDialog(
                                 runCatching { printPayRepo.pay(req.quote.id, PrintPayFingerprint.current(context)) }
                                     .onSuccess { r ->
                                         pendingPrintPay = null
-                                        barStatusOk = true
-                                        barStatus = "کسر " + formatToman(r.costToman) + " تومان از کیف پول با موفقیت انجام شد" +
-                                            (r.balanceToman?.let { " (موجودی: " + formatToman(it) + " تومان)" } ?: "")
                                         pushPaid(webViewRef, true)
-                                        req.fire()
+                                        costDone = ir.exam.app.ui.common.costDeductedMessage(r.costToman, r.balanceToman) to { req.fire() }
                                     }
                                     .onFailure { e ->
                                         pendingPrintPay = null
@@ -497,6 +496,9 @@ fun ExamHtmlPrintDialog(
                             }
                         }
                     )
+                }
+                costDone?.let { (msg, next) ->
+                    ir.exam.app.ui.common.CostDeductedDialog(message = msg, onConfirm = { costDone = null; next() })
                 }
                 // V132 — پنجرهٔ تأیید هزینهٔ چاپ
                 pendingPrintCharge?.let { req ->
@@ -511,11 +513,8 @@ fun ExamHtmlPrintDialog(
                                 val result = ir.exam.app.data.repository.SupabaseBillingRepository()
                                     .chargePrint(printExamId.ifBlank { printable?.documentTitle.orEmpty() }, java.util.UUID.randomUUID().toString(), count, req.mode)
                                 result.onSuccess { charged ->
-                                    /* V134 — کادرِ سبز: «کسر ۱٬۰۰۰ تومان با موفقیت» */
-                                    barStatusOk = true
-                                    barStatus = "کسر " + formatToman(charged.costToman) + " تومان از کیف پول با موفقیت انجام شد" +
-                                        (charged.balanceToman?.let { " (موجودی: " + formatToman(it) + " تومان)" } ?: "")
-                                    req.fire()
+                                    /* V202 — پنجرهٔ وسط صفحه: «کسر ۱٬۰۰۰ تومان با موفقیت»؛ چاپ پس از «تأیید» */
+                                    costDone = ir.exam.app.ui.common.costDeductedMessage(charged.costToman, charged.balanceToman) to { req.fire() }
                                 }
                                     .onFailure { e ->
                                         /* V134 — کادرِ قرمز: «موجودی ناکافی» یا خطای واقعیِ سرور */

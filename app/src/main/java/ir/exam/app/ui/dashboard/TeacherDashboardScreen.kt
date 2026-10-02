@@ -237,6 +237,10 @@ fun TeacherDashboardScreen(
         }
     }
 
+    // V202 — نتیجهٔ تکثیر (کسر هزینه) وسط صفحه، فقط با «تأیید» بسته می‌شود.
+    state.costDialog?.let { msg ->
+        ir.exam.app.ui.common.CostDeductedDialog(message = msg, onConfirm = viewModel::dismissCostDialog)
+    }
     duplicateCandidate?.let { exam ->
         AlertDialog(
             onDismissRequest = { duplicateCandidate = null },

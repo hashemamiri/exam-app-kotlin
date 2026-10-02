@@ -82,4 +82,32 @@ class V199_PrintPayTest {
         assertTrue("function mark() { state.dirty = true; state.printDirty = true; saveDraft(); }" in b)
         assertTrue("state.dirty = true; saveDraft(); /* V201" in b && "printDirty: state.mode === 'print' && !!state.printDirty" in b)
     }
+
+    @Test
+    fun `v202 every wallet debit confirms first and shows centered cost dialog with confirm button`() {
+        val dlg = source("app/src/main/java/ir/exam/app/ui/common/CostDeductedDialog.kt")
+        assertTrue("dismissOnBackPress = false, dismissOnClickOutside = false" in dlg)
+        assertTrue("confirmLabel: String = \"تأیید\"" in dlg)
+        // اپ: تکثیر، انتقال مدیر، بازیابی، چاپ V132/V199، پرداخت کارت چاپ
+        listOf(
+            "app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardScreen.kt",
+            "app/src/main/java/ir/exam/app/ui/manager/ManagerFoundationScreens.kt",
+            "app/src/main/java/ir/exam/app/ui/portability/DataPortabilitySection.kt",
+            "app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt",
+            "app/src/main/java/ir/exam/app/ui/printing/ExamPrintCenterScreen.kt"
+        ).forEach { assertTrue(it, "ir.exam.app.ui.common.CostDeductedDialog(" in source(it)) }
+        val pd = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
+        assertTrue("costDone = ir.exam.app.ui.common.costDeductedMessage(r.costToman, r.balanceToman) to { req.fire() }" in pd)
+        assertFalse("barStatus = \"کسر \"" in pd)
+        // سایت: infoDlg/costDoneDlg به‌جای toast
+        val a = source("site/src/app.js")
+        assertTrue("function infoDlg(title, body, okLabel)" in a)
+        assertTrue("await costDoneDlg(r.cost || q.due, r.balance);" in a)
+        assertTrue("return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) doNative(); else ctx.busy = false; });" in a)
+        assertFalse("toast('کسر '" in a)
+        assertTrue("await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null" in source("site/src/builder.js"))
+        assertTrue("await S.costDoneDlg(r.cost || 0, r.balance, 'کپی ساخته شد" in source("site/src/mobile.js"))
+        assertTrue("await S.costDoneDlg(raw.amount || a, raw.manager_balance" in source("site/src/admin.js"))
+        assertTrue("text: 'تأیید', onclick: function () { bg2.remove(); S.go('dashboard'); }" in source("site/src/extras.js"))
+    }
 }
