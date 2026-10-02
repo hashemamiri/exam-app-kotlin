@@ -74,6 +74,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.sin
@@ -446,21 +450,40 @@ internal fun IceField(
     trailingIcon: (@Composable () -> Unit)? = null,
     enabled: Boolean = true
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled,
-        singleLine = true,
-        shape = RoundedCornerShape(14.dp),
-        placeholder = { Text(hint, color = IceHint, fontSize = 14.sp) },
-        supportingText = supporting?.let { { Text(it, color = IceTextSecondary) } },
-        visualTransformation = visualTransformation,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        trailingIcon = trailingIcon,
-        colors = iceFieldColors(),
-        textStyle = LocalTextStyle.current.copy(color = IceInk, fontSize = 14.sp)
-    )
+    /* V202.2 — فیلدهای ورود/ثبت‌نام همیشه چپ‌به‌راست تایپ می‌شوند؛ چیدمان خودِ فیلد LTR است تا
+       آیکونِ انتهایی (چشمِ رمز) سمت راست بنشیند و متن از چپ شروع شود و هرگز روی آیکون نیفتد.
+       راهنمای فارسی (hint) و متن کمکی همچنان راست‌چین نمایش داده می‌شوند. */
+    val rtl = LocalLayoutDirection.current
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier.fillMaxWidth(),
+            enabled = enabled,
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            placeholder = {
+                CompositionLocalProvider(LocalLayoutDirection provides rtl) {
+                    Text(hint, color = IceHint, fontSize = 14.sp, textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            supportingText = supporting?.let {
+                {
+                    CompositionLocalProvider(LocalLayoutDirection provides rtl) {
+                        Text(it, color = IceTextSecondary, textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+            visualTransformation = visualTransformation,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            trailingIcon = trailingIcon,
+            colors = iceFieldColors(),
+            textStyle = LocalTextStyle.current.copy(
+                color = IceInk, fontSize = 14.sp,
+                textDirection = TextDirection.Ltr, textAlign = TextAlign.Left
+            )
+        )
+    }
 }
 
 /** دکمهٔ اصلی ماژول (پر از رنگ اکسنت، ۵۲dp) با حالت Loading. */

@@ -19237,3 +19237,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - اپ: `BillingRepository.quotePrint` + `chargePrint(..., content)` + `printContentKey(texts)`; `ExamHtmlPrintDialog`: در onPageReady برای آزمون غیرچاپی quote → pushPaid؛ در onPrint اول quote (paid ⇒ fire بدون پنجره)؛ پس از کسر `already_paid` ⇒ fire بدون پیام. `ExamBuilderScreen.printExamId` با تغییرات ذخیره‌نشده = "local".
 - سایت: `api.chargePrint(examId, count, mode, content)` (v2) و `api.printChargeQuote`; `printContentKey(payload)`؛ پل چاپ اول quote؛ `refreshPreviewPaid` برای آزمون آنلاین/محلی هم اجرا می‌شود (دکمهٔ چاپ قرمز/سبز)؛ builder.js: examId آنلاین با dirty = 'local'.
 - پین‌ها: V138 (`native_charge_print_v2`)، V180 (`api.chargePrint(examRef, n, mode, content)`)، تست `v202_1 …` در V199_PrintPayTest.
+
+## §V202.2
+- اپ: `AuthIceComponents.IceField` داخل `CompositionLocalProvider(LocalLayoutDirection provides Ltr)` (آیکون انتهایی = راست)، `textStyle` با `TextDirection.Ltr`/`TextAlign.Left`؛ placeholder و supportingText با LayoutDirection اصلی و `TextAlign.Right`. همهٔ فیلدهای SignInScreen از IceField می‌گذرند.
+- سایت: `site.css` — `.lp .field input` و `.ice-field input` → `direction:ltr;text-align:left` (placeholder rtl/راست)؛ چشم رمز `right:4px|8px; left:auto`؛ padding-right 50px (`.lp .pw input`، `.ice-field.has-eye input`). mobile.js: `field()` کلاس `has-eye` را به wrapper رمز می‌افزاید.
+- تست: `v202_2 …` در V199_PrintPayTest.

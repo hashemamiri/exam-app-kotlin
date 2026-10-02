@@ -132,4 +132,17 @@ class V199_PrintPayTest {
         assertTrue("if (printCtx && printCtx.iframe === iframe) { setPreviewPaid(printCtx, false); refreshPreviewPaid(printCtx); }" in a)
         assertTrue("(state.dirty || !state.examId) ? 'local' : state.examId" in source("site/src/builder.js"))
     }
+
+    @Test
+    fun `v202_2 auth fields type left to right and never overlap the eye icon`() {
+        val k = source("app/src/main/java/ir/exam/app/ui/auth/AuthIceComponents.kt")
+        assertTrue("CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr)" in k)
+        assertTrue("textDirection = TextDirection.Ltr, textAlign = TextAlign.Left" in k)
+        val css = source("site/src/site.css")
+        assertTrue(".ice-field input{direction:ltr;text-align:left}" in css)
+        assertTrue(".ice-field.has-eye input{padding-right:50px}" in css && ".ice-eye{position:absolute;right:8px;left:auto;" in css)
+        assertTrue(".lp .field input{direction:ltr;text-align:left}" in css)
+        assertTrue(".lp .pw input{padding-right:50px;padding-left:14px}" in css && ".lp .eye{position:absolute;right:4px;left:auto;" in css)
+        assertTrue("w.classList.add('has-eye')" in source("site/src/mobile.js"))
+    }
 }
