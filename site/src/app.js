@@ -1019,14 +1019,14 @@
     function input(label, ph, type, ltr) {
       var inp = el('input', {type: type || 'text', placeholder: ph || '', autocomplete: type === 'password' ? 'current-password' : 'on'});
       var f = el('div', {class: 'field' + (ltr ? ' ltr' : '') + (type === 'password' ? ' pw' : '')}, [el('label', {text: label}), inp]);
-      if (type === 'password') f.appendChild(eyeButton(inp));
+      if (type === 'password') { inp.style.cssText += ';direction:ltr;text-align:left;padding-right:50px;padding-left:14px'; f.appendChild(eyeButton(inp)); } /* V202.4 — مستقل از cascade */
       return f;
     }
     draw();
   }
   /* V164 — دکمهٔ نمایش/پنهان رمز */
   function eyeButton(inp) {
-    var b = el('button', {type: 'button', class: 'eye', 'aria-label': 'نمایش رمز عبور', 'aria-pressed': 'false', html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.7"/></svg>'});
+    var b = el('button', {type: 'button', class: 'eye', style: 'position:absolute;right:4px;left:auto;bottom:4px', 'aria-label': 'نمایش رمز عبور', 'aria-pressed': 'false', html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.7"/></svg>'});
     b.addEventListener('click', function () { var show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', String(show)); b.setAttribute('aria-label', show ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'); inp.focus(); });
     return b;
   }
@@ -1057,7 +1057,7 @@
       b.disabled = false;
     });
     container.appendChild(b);
-    function fld(label, val, ltr, type) { var inp = el('input', {type: type || 'text', value: val || ''}); var f = el('div', {class: 'field' + (ltr ? ' ltr' : '') + (type === 'password' ? ' pw' : '')}, [el('label', {text: label}), inp]); if (type === 'password') f.appendChild(eyeButton(inp)); return f; }
+    function fld(label, val, ltr, type) { var inp = el('input', {type: type || 'text', value: val || ''}); var f = el('div', {class: 'field' + (ltr ? ' ltr' : '') + (type === 'password' ? ' pw' : '')}, [el('label', {text: label}), inp]); if (type === 'password') { inp.style.cssText += ';direction:ltr;text-align:left;padding-right:50px;padding-left:14px'; f.appendChild(eyeButton(inp)); } return f; }
   }
   function afterLogin() {
     closeAuth();

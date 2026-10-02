@@ -140,9 +140,13 @@ class V199_PrintPayTest {
         assertTrue("textDirection = TextDirection.Ltr, textAlign = TextAlign.Left" in k)
         val css = source("site/src/site.css")
         assertTrue(".ice-field input{direction:ltr;text-align:left}" in css)
-        assertTrue(".ice-field.has-eye input{padding-right:50px}" in css && ".ice-eye{position:absolute;right:8px;left:auto;" in css)
+        assertTrue(".ice-field.has-eye input{padding-right:50px!important" in css && ".ice-eye{position:absolute;right:8px;left:auto;" in css)
         assertTrue(".lp .field input{direction:ltr;text-align:left}" in css)
-        assertTrue(".lp .pw input{padding-right:50px;padding-left:14px}" in css && ".lp .eye{position:absolute;right:4px;left:auto;" in css)
+        assertTrue(".lp .pw input{padding-right:50px!important;padding-left:14px!important" in css && ".lp .eye{position:absolute;right:4px;left:auto;" in css)
+        // V202.4 — مستقل از cascade: استایل درون‌خطی روی خودِ ورودی و دکمهٔ چشم
+        assertEquals(2, Regex(Regex.escape("padding-right:50px;padding-left:14px'; f.appendChild(eyeButton(inp))")).findAll(source("site/src/app.js")).count())
+        assertTrue("style: 'position:absolute;right:4px;left:auto;bottom:4px'" in source("site/src/app.js"))
+        assertTrue("::-ms-reveal" in css)
         assertTrue("w.classList.add('has-eye')" in source("site/src/mobile.js"))
     }
 

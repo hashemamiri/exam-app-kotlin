@@ -702,7 +702,7 @@ img,video,canvas,iframe{max-width:100%}
 /* V202.2 — ورود/ثبت‌نام گوشی: همهٔ فیلدها چپ‌به‌راست؛ چشمِ رمز سمت راست با فاصلهٔ داخلی تا متن روی آیکون نیفتد */
 .ice-field input{direction:ltr;text-align:left}
 .ice-field input::placeholder{direction:rtl;text-align:right}
-.ice-field.has-eye input{padding-right:50px}
+.ice-field.has-eye input{padding-right:50px!important;direction:ltr!important;text-align:left!important}
 .ice-eye{position:absolute;right:8px;left:auto;width:36px;height:36px;border:0;background:transparent;color:var(--sec);display:flex;align-items:center;justify-content:center}
 .ice-eye.on{color:var(--acc)}
 .ice-eye .mi{width:20px;height:20px}
@@ -870,7 +870,8 @@ img,video,canvas,iframe{max-width:100%}
 /* V202.2 — ورود/ثبت‌نام دسکتاپ: همهٔ فیلدها چپ‌به‌راست؛ چشمِ رمز سمت راست با فاصلهٔ داخلی تا متن روی آیکون نیفتد */
 .lp .field input{direction:ltr;text-align:left}
 .lp .field input::placeholder{direction:rtl;text-align:right}
-.lp .pw{position:relative}.lp .pw input{padding-right:50px;padding-left:14px}
+.lp .pw{position:relative}.lp .pw input{padding-right:50px!important;padding-left:14px!important;direction:ltr!important;text-align:left!important}
+.lp .pw input::-ms-reveal,.lp .pw input::-ms-clear,.ice-field input::-ms-reveal,.ice-field input::-ms-clear{display:none} /* V202.4 — چشمِ خودِ Edge روی چشمِ ما نیفتد */
 .lp .eye{position:absolute;right:4px;left:auto;bottom:4px;width:40px;height:40px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:10px;display:grid;place-items:center}
 .lp .eye:hover{color:var(--ink)}
 .lp .alert{border-radius:12px;padding:11px 13px;font-size:12.5px;font-weight:800;margin:0 0 14px;line-height:1.7;border:0}
