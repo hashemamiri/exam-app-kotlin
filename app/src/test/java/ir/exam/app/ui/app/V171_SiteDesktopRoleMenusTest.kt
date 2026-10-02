@@ -16,7 +16,7 @@ class V171_SiteDesktopRoleMenusTest {
     @Test
     fun `manager and student menu cards mirror the app`() {
         val a = source("site/src/app.js")
-        assertTrue("managerMenu: [['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت', 'school'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و مدیریت', 'school', {students: true}], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['site', '🌐', 'سایت', 'onlineexam.ir'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]" in a)
+        assertTrue("managerMenu: [['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و مدیریت'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['site', '🌐', 'سایت', 'onlineexam.ir'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]" in a)
         assertTrue("studentMenu: [['join', '🔑', 'آزمون', 'ورود با کد آزمون'], ['grades', '📊', 'نتایج من', 'پاسخ‌ها و کارنامه'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]" in a)
         assertTrue("var menu = MENUS[user.role + 'Menu'] || MENUS.teacherMenu;" in a)
         assertTrue("else if (it[0] === 'site') { toast('شما هم‌اکنون در سایت هستید.', 'ok'); } else if (it[4]) { view.panel = it[4]; view.arg = it[5] || null; render(); }" in a)

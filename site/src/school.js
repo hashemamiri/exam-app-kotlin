@@ -370,5 +370,5 @@
     } catch (e) { S.showErr(c, e); }
   }
 
-  window.SiteSchool = {studentsPage: studentsPage, rosterDlg: rosterDlg, classShareChip: classShareChip, joinSchoolCard: joinSchoolCard, managerRequestsCard: managerRequestsCard, bankPage: bankPage, studentForm: studentForm, bulkForm: bulkForm, manageStudent: manageStudent, classPickDlg: classPickDlg, credentialDlg: credentialDlg};
+  window.SiteSchool = {studentsPage: studentsPage, studentForm: studentForm, bulkForm: bulkForm, credentialDlg: credentialDlg, manageStudent: manageStudent, /* V203 — برای پنل مدیر دسکتاپ */ rosterDlg: rosterDlg, classShareChip: classShareChip, joinSchoolCard: joinSchoolCard, managerRequestsCard: managerRequestsCard, bankPage: bankPage, studentForm: studentForm, bulkForm: bulkForm, manageStudent: manageStudent, classPickDlg: classPickDlg, credentialDlg: credentialDlg};
 })();

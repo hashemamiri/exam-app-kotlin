@@ -317,8 +317,12 @@
       var r = await Promise.all([S.rpcObj('native_manager_school_summary_v36', {}).catch(function () { return {}; }), S.rpcObj('native_manager_teachers_v37', {}), S.rpcObj('native_manager_school_students_v40c', {}).catch(function () { return {items: []}; })]);
       var s = r[0] || {}, teachers = chk(r[1]).items || [], students = r[2].items || [];
       c.innerHTML = '';
-      c.appendChild(el('div', {class: 'card'}, [el('h3', {text: '🏫 ' + (s.school_name || 'مدرسه')}), el('div', {class: 'muted', text: [s.province, s.city].filter(Boolean).join('، ')})]));
+      /* V203 — مثل اپ: مدرسه‌های مدیر، ساخت مدرسهٔ جدید، پشتیبان مدرسه، میان‌بر کلاس‌ها/دانش‌آموزان */
+      var schools = await S.rpcObj('native_teacher_schools_v61', {}).then(function (x) { return (x && x.items) || []; }).catch(function () { return []; });
+      c.appendChild(el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🏫 ' + (s.school_name || 'مدرسه')}), el('button', {class: 'btn light sm', text: '🗄 پشتیبان مدرسه', onclick: managerBackup}), el('button', {class: 'btn sm', text: '➕ مدرسهٔ جدید', onclick: function () { createSchoolDlg(function () { managerSchoolPage(c, arg); }); }})]), el('div', {class: 'muted', text: [s.province, s.city].filter(Boolean).join('، ')}),
+        schools.length > 1 ? el('div', {class: 'muted', style: 'margin-top:6px;font-size:12px', text: 'مدرسه‌های شما: ' + schools.map(function (x) { return x.name; }).join('، ')}) : null]));
       c.appendChild(el('div', {class: 'grid4', style: 'margin-top:16px'}, [stat(fa(teachers.length), 'معلم'), stat(fa(students.length || s.students || 0), 'دانش‌آموز'), stat(fa(s.classes || 0), 'کلاس'), stat(fa(s.exams || 0), 'آزمون')]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn light', text: '🏫 همهٔ کلاس‌ها', onclick: function () { S.go('classes'); }}), el('button', {class: 'btn light', text: '🎓 دانش‌آموزان مدرسه', onclick: function () { S.go('students'); }})]));
       var tc = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '👩‍🏫 کلاس‌های معلم‌ها'})]);
       if (!teachers.length) tc.appendChild(S.emptyBox('👩‍🏫', 'معلمی وجود ندارد.'));
       else tc.appendChild(el('div', {class: 'exam-grid'}, teachers.map(function (t) { return el('div', {class: 'exam-card', style: 'cursor:pointer', onclick: function () { S.go('school', {teacherId: t.id, teacherName: t.full_name}); }}, [el('b', {text: t.full_name || '—'}), el('div', {class: 'muted', style: 'font-size:12px', text: '@' + (t.username || '—')}), el('div', {style: 'margin-top:6px'}, [el('span', {class: 'chip brand', text: 'مدیریت کلاس‌ها ←'})])]); })));
@@ -363,7 +367,10 @@
       var roster = chk(r[0]), all = chk(r[1]).items || [], inClass = roster.items || [], ids = {}; inClass.forEach(function (x) { ids[x.id] = true; });
       c.innerHTML = '';
       var refresh = function () { managerRoster(c, arg); };
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ کلاس‌ها', onclick: function () { S.go('school', {teacherId: arg.teacherId, teacherName: arg.teacherName}); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: 'دانش‌آموزان کلاس ' + (roster.class_name || arg.className || '')})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ کلاس‌ها', onclick: function () { S.go('school', {teacherId: arg.teacherId, teacherName: arg.teacherName}); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: 'دانش‌آموزان کلاس ' + (roster.class_name || arg.className || '')}),
+        /* V203 — مثل اپ (ManagerTeacherClassScreen «افزودن جدید»): ساخت حساب دانش‌آموز داخل همین کلاس */
+        window.SiteSchool ? el('button', {class: 'btn light sm', text: '👥 افزودن گروهی', onclick: function () { window.SiteSchool.bulkForm([{id: arg.classId, name: roster.class_name || arg.className || 'این کلاس'}], arg.classId, refresh); }}) : null,
+        window.SiteSchool ? el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { window.SiteSchool.studentForm(null, [{id: arg.classId, name: roster.class_name || arg.className || 'این کلاس'}], arg.classId, refresh); }}) : null]));
       var q = el('input', {type: 'search', placeholder: 'جست‌وجو برای افزودن…', style: 'border:1px solid var(--line);border-radius:10px;padding:8px 12px;flex:1'});
       var addList = el('div', {class: 'b-aud'});
       function drawAdd() { var sx = q.value.trim().toLowerCase(); addList.innerHTML = ''; all.filter(function (x) { return !ids[x.id] && (!sx || (x.full_name || '').toLowerCase().indexOf(sx) >= 0 || (x.username || '').toLowerCase().indexOf(sx) >= 0); }).slice(0, 60).forEach(function (x) { addList.appendChild(el('div', {class: 'row'}, [el('span', {class: 'grow', text: (x.full_name || '—') + ' (' + (x.username || '') + ')'}), el('button', {class: 'btn light sm', text: '➕', onclick: async function () { try { chk(await S.rpcObj('native_manager_set_class_student_v40c', {p_class: arg.classId, p_student: x.id, p_add: true})); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])); }); if (!addList.children.length) addList.appendChild(el('div', {class: 'muted', text: 'موردی نیست.'})); }
@@ -373,6 +380,114 @@
         el('div', {class: 'card'}, [el('h3', {text: '👥 اعضای کلاس (' + fa(inClass.length) + ')'}), inClass.length ? el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', ''].map(function (h) { return el('th', {text: h}); }))]), el('tbody', {}, inClass.map(function (x) { return el('tr', {}, [el('td', {text: x.full_name || '—'}), el('td', {}, [el('span', {class: 'code', text: x.username || '—'})]), el('td', {}, [el('button', {class: 'icon-btn danger', title: 'حذف از کلاس', html: '✕', onclick: async function () { try { chk(await S.rpcObj('native_manager_set_class_student_v40c', {p_class: arg.classId, p_student: x.id, p_add: false})); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])]); }))]) : S.emptyBox('👥', 'کلاس خالی است.')])
       ]));
     } catch (e) { S.showErr(c, e); }
+  }
+
+  /* ================================================================ V203 — پنل مدیر دسکتاپ هم‌تراز اپ (SchoolManagementScreen با managerTeacherPicker) */
+  /* همهٔ کلاس‌های مدرسه: برای هر معلم native_manager_teacher_classes_v40c (مثل اپ؛ کلاس خصوصیِ معلم فقط با اشتراک/تأیید دیده می‌شود) */
+  async function allSchoolClasses(teachers) {
+    teachers = teachers || (chk(await S.rpcObj('native_manager_teachers_v37', {})).items || []);
+    var per = await Promise.all(teachers.map(function (t) { return S.rpcObj('native_manager_teacher_classes_v40c', {p_teacher: t.id}).then(function (r) { return (r && r.items) || []; }).catch(function () { return []; }); }));
+    var out = [];
+    teachers.forEach(function (t, i) { per[i].forEach(function (k) { out.push(Object.assign({}, k, {teacher_id: t.id, teacher_name: t.full_name || '—', label: (k.name || '') + ' — ' + (t.full_name || '')})); }); });
+    return {teachers: teachers, classes: out};
+  }
+  function newClassDlg(teachers, presetTeacher, refresh) {
+    var bg = el('div', {class: 'modal-bg'}); var msg = el('div');
+    var ts = el('select'); teachers.forEach(function (t) { ts.appendChild(el('option', {value: t.id, text: t.full_name || '—'})); }); if (presetTeacher) ts.value = presetTeacher;
+    var name = el('input', {type: 'text'}), grade = el('input', {type: 'text', placeholder: 'مثلاً دهم'}), field = el('input', {type: 'text', placeholder: 'مثلاً ریاضی'});
+    var m = el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: 'کلاس جدید'}), msg,
+      el('div', {class: 'field'}, [el('label', {text: 'معلم کلاس'}), ts]),
+      el('div', {class: 'field'}, [el('label', {text: 'نام کلاس'}), name]),
+      el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'پایه'}), grade]), el('div', {class: 'field'}, [el('label', {text: 'رشته'}), field])]),
+      el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'ساخت کلاس', onclick: async function () { msg.innerHTML = ''; if (!ts.value) return msg.appendChild(el('div', {class: 'alert error', text: 'معلم را انتخاب کنید.'})); if (!name.value.trim()) return msg.appendChild(el('div', {class: 'alert error', text: 'نام کلاس را وارد کنید.'})); try { chk(await S.rpcObj('native_manager_save_teacher_class_v40c', {p_teacher: ts.value, p_name: name.value.trim(), p_grade: grade.value.trim(), p_field: field.value.trim()})); bg.remove(); toast('کلاس ساخته شد.', 'ok'); refresh(); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]);
+    bg.appendChild(m); document.body.appendChild(bg);
+  }
+  /* پنل «کلاس‌ها»ی مدیر: همهٔ کلاس‌های مدرسه + ساخت کلاس برای معلم */
+  async function managerClassesPage(c) {
+    S.loading(c);
+    try {
+      var d = await allSchoolClasses();
+      var teachers = d.teachers, classes = d.classes;
+      c.innerHTML = '';
+      var refresh = function () { managerClassesPage(c); };
+      var q = el('input', {type: 'search', placeholder: 'جست‌وجوی کلاس یا معلم…', style: 'min-width:240px'});
+      var tsel = el('select'); tsel.appendChild(el('option', {value: '', text: 'همهٔ معلم‌ها'})); teachers.forEach(function (t) { tsel.appendChild(el('option', {value: t.id, text: t.full_name || '—'})); });
+      var box = el('div', {class: 'card'}); var cnt = el('span', {class: 'muted'});
+      function draw() {
+        var sx = q.value.trim().toLowerCase();
+        var f = classes.filter(function (k) { return (!tsel.value || k.teacher_id === tsel.value) && (!sx || [k.name, k.teacher_name, k.grade, k.field_of_study].join(' ').toLowerCase().indexOf(sx) >= 0); });
+        cnt.textContent = fa(f.length) + ' از ' + fa(classes.length) + ' کلاس';
+        box.innerHTML = '';
+        if (!f.length) { box.appendChild(S.emptyBox('🏫', teachers.length ? 'کلاسی برای نمایش نیست؛ کلاس‌های خصوصی معلم فقط با اشتراک‌گذاری یا تأیید او دیده می‌شوند. با «کلاس جدید» برای یک معلم کلاس بسازید.' : 'هنوز معلمی عضو مدرسه نیست؛ ابتدا از بخش «معلم‌ها» دعوت کنید.')); return; }
+        box.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام کلاس', 'معلم', 'پایه', 'رشته', 'دانش‌آموز', ''].map(function (h) { return el('th', {text: h}); }))]),
+          el('tbody', {}, f.map(function (k) { return el('tr', {}, [el('td', {html: '<b>' + esc(k.name || '') + '</b>'}), el('td', {text: k.teacher_name}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.total || 0)}), el('td', {}, [el('div', {class: 'acts'}, [
+            el('button', {class: 'icon-btn', title: 'فهرست دانش‌آموزان', html: '👥', onclick: function () { S.go('school', {teacherId: k.teacher_id, teacherName: k.teacher_name, classId: k.id, className: k.name}); }}),
+            el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { classDlg(k, async function (v) { var r = chk(await S.rpcObj('native_manager_change_teacher_class_v41', {p_class: k.id, p_action: 'edit', p_payload: {name: v.name, grade: v.grade, field: v.field}})); if (r.approval_required) throw new Error('درخواست ویرایش برای تأیید معلم ارسال شد.'); refresh(); }); }}),
+            el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف کلاس', 'کلاس «' + esc(k.name) + '» حذف شود؟', 'حذف', true))) return; try { var r = chk(await S.rpcObj('native_manager_change_teacher_class_v41', {p_class: k.id, p_action: 'delete', p_payload: {}})); toast(r.approval_required ? 'درخواست حذف برای تأیید معلم ارسال شد.' : 'حذف شد.', r.approval_required ? '' : 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])])]); }))]));
+      }
+      q.addEventListener('input', draw); tsel.addEventListener('change', draw);
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('span', {class: 'grow'}), cnt, el('button', {class: 'btn', text: '➕ کلاس جدید', onclick: function () { if (!teachers.length) return toast('ابتدا معلمی به مدرسه دعوت کنید.', 'err'); newClassDlg(teachers, tsel.value || '', refresh); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, tsel]));
+      c.appendChild(box); draw();
+    } catch (e) { S.showErr(c, e); }
+  }
+  /* پنل «دانش‌آموزان» مدیر: دانش‌آموزان مدرسه (همهٔ معلم‌ها) + ساخت تکی/گروهی + افزودن به کلاس؛ ویرایش/رمز/حذف برای حساب‌هایی که خودِ مدیر ساخته (بقیه با درخواست تأیید معلم از همان پنجره) */
+  async function managerStudentsPage(c, arg) {
+    arg = arg || {};
+    S.loading(c);
+    try {
+      var r = await Promise.all([S.rpcObj('native_manager_school_students_v40c', {}), S.rpc('my_students', {}).catch(function () { return []; }), allSchoolClasses()]);
+      var school = chk(r[0]).items || [], mine = r[1] || [], classes = r[2].classes, teachers = r[2].teachers;
+      var own = {}; mine.forEach(function (x) { own[x.id] = x; });
+      var list = school.map(function (x) { return own[x.id] ? Object.assign({}, own[x.id], x) : x; });
+      mine.forEach(function (x) { if (!school.some(function (y) { return y.id === x.id; })) list.push(x); });
+      var clsOpts = classes.map(function (k) { return {id: k.id, name: k.label}; });
+      c.innerHTML = '';
+      var refresh = function () { managerStudentsPage(c, arg); };
+      var q = el('input', {type: 'search', placeholder: 'جست‌وجوی نام یا نام کاربری…', style: 'min-width:260px'});
+      var box = el('div', {class: 'card'}); var cnt = el('span', {class: 'muted'});
+      function addToClassDlg(s) {
+        var bg = el('div', {class: 'modal-bg'}); var sel = el('select'); clsOpts.forEach(function (k) { sel.appendChild(el('option', {value: k.id, text: k.name})); }); var msg = el('div');
+        bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: 'افزودن «' + (s.full_name || '') + '» به کلاس'}), msg, clsOpts.length ? el('div', {class: 'field'}, [el('label', {text: 'کلاس'}), sel]) : el('div', {class: 'alert warn', text: 'کلاسی در دسترس نیست؛ ابتدا از بخش «کلاس‌ها» کلاس بسازید.'}),
+          el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'افزودن', disabled: clsOpts.length ? null : 'disabled', onclick: async function () { try { chk(await S.rpcObj('native_manager_set_class_student_v40c', {p_class: sel.value, p_student: s.id, p_add: true})); bg.remove(); toast('به کلاس افزوده شد.', 'ok'); refresh(); } catch (e) { msg.innerHTML = ''; msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
+        document.body.appendChild(bg);
+      }
+      function draw() {
+        var sx = q.value.trim().toLowerCase();
+        var f = list.filter(function (x) { return !sx || [x.full_name, x.username].join(' ').toLowerCase().indexOf(sx) >= 0; });
+        cnt.textContent = fa(f.length) + ' از ' + fa(list.length) + ' دانش‌آموز';
+        box.innerHTML = '';
+        if (!f.length) { box.appendChild(S.emptyBox('🎓', 'دانش‌آموزی ثبت نشده است. با «دانش‌آموز جدید» یا «افزودن گروهی» حساب بسازید.')); return; }
+        box.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'کلاس‌ها', 'سازنده', ''].map(function (h) { return el('th', {text: h}); }))]),
+          el('tbody', {}, f.slice(0, 500).map(function (s) {
+            var isMine = !!own[s.id], SS = window.SiteSchool;
+            var acts = el('div', {class: 'acts'}, [el('button', {class: 'icon-btn', title: 'افزودن به کلاس', html: '🏫', onclick: function () { addToClassDlg(s); }})]);
+            if (SS && isMine) {
+              acts.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { SS.studentForm(own[s.id], clsOpts, null, refresh); }}));
+              acts.appendChild(el('button', {class: 'icon-btn', title: 'رمز جدید', html: '🔑', onclick: async function () { var np = Math.random().toString(36).slice(2, 8) + Math.floor(100 + Math.random() * 900); if (!(await S.confirmDlg('رمز جدید', 'رمز جدید برای «' + esc(s.full_name || '') + '» ساخته شود؟ رمز قبلی از کار می‌افتد.', 'بساز'))) return; try { await SS.manageStudent({action: 'reset_password', id: s.id, password: np}); SS.credentialDlg('رمز جدید دانش‌آموز', [{name: s.full_name, username: s.username, password: np}]); } catch (e) { toast(errMsg(e), 'err'); } }}));
+              acts.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف حساب', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف حساب دانش‌آموز', 'حساب «' + esc(s.full_name || '') + '» و پاسخ‌هایش برای همیشه حذف می‌شود.', 'حذف کامل', true))) return; try { await SS.manageStudent({action: 'delete', id: s.id}); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
+            }
+            return el('tr', {}, [el('td', {html: '<b>' + esc(s.full_name || '') + '</b>'}), el('td', {}, [el('span', {class: 'code', text: s.username || '—'})]), el('td', {class: 'muted', text: s.class_names || '—'}), el('td', {text: isMine ? 'مدیر' : 'معلم'}), el('td', {}, [acts])]);
+          }))]));
+      }
+      q.addEventListener('input', draw);
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('span', {class: 'grow'}), cnt,
+        window.SiteSchool ? el('button', {class: 'btn light', text: '👥 افزودن گروهی', onclick: function () { window.SiteSchool.bulkForm(clsOpts, null, refresh); }}) : null,
+        window.SiteSchool ? el('button', {class: 'btn', text: '➕ دانش‌آموز جدید', onclick: function () { window.SiteSchool.studentForm(null, clsOpts, null, refresh); }}) : null]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q]));
+      c.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:8px', text: 'حساب‌هایی که مدیر می‌سازد زیر نام مدیر ثبت می‌شوند و با «افزودن به کلاس» به کلاس هر معلم می‌روند (مثل اپ). ویرایش حساب دانش‌آموزِ معلم، درخواست تأیید برای همان معلم می‌فرستد.'}));
+      c.appendChild(box); draw();
+    } catch (e) { S.showErr(c, e); }
+  }
+  /* ساخت مدرسهٔ جدید (V61 اپ؛ در سایت فقط گوشی داشت) و پشتیبان مدرسه */
+  function createSchoolDlg(refresh) {
+    var bg = el('div', {class: 'modal-bg'}); var msg = el('div'); var name = el('input', {type: 'text'}), prov = el('input', {type: 'text'}), city = el('input', {type: 'text'});
+    bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏫 مدرسهٔ جدید'}), msg, el('div', {class: 'field'}, [el('label', {text: 'نام مدرسه'}), name]), el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'استان'}), prov]), el('div', {class: 'field'}, [el('label', {text: 'شهر'}), city])]),
+      el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'ساخت مدرسه', onclick: async function () { msg.innerHTML = ''; if (!name.value.trim()) return msg.appendChild(el('div', {class: 'alert error', text: 'نام مدرسه را وارد کنید.'})); try { chk(await S.rpcObj('native_manager_create_school_v61', {p_name: name.value.trim(), p_province: prov.value.trim(), p_city: city.value.trim()})); bg.remove(); toast('مدرسه ساخته شد.', 'ok'); refresh(); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
+    document.body.appendChild(bg);
+  }
+  async function managerBackup() {
+    try { var raw = await S.rpcObj('native_manager_export_backup_v61', {}); if (raw && raw.error) throw new Error(String(raw.error)); if (window.SiteExtras) window.SiteExtras.download('school-backup.json', JSON.stringify(raw, null, 2), 'application/json'); toast('پشتیبان مدرسه ذخیره شد.', 'ok'); } catch (e) { toast(errMsg(e), 'err'); }
   }
 
   /* V196 — الگوریتم جلالی به app.js منتقل شد (SiteJalali) */
@@ -454,5 +569,5 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
+  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
 })();

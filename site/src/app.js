@@ -1091,9 +1091,9 @@
     /* V183 — ریل دانش‌آموز بدون «ابزارها» و «پروفایل» (حساب از صفحهٔ منو) */
     student: [['dashboard', '🏠', 'داشبورد'], ['join', '🔑', 'شرکت در آزمون'], ['grades', '📊', 'کارنامه'], ['calendar', '📅', 'تقویم و پیام‌ها']],
     /* V184 — ریل مدیر/معاون بدون «ابزارها» و «پروفایل» */
-    manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['wallet', '👛', 'کیف پول']],
+    manager: [['dashboard', '🏠', 'داشبورد'], ['teachers', '👩‍🏫', 'معلم‌ها'], ['school', '🏫', 'مدرسه'], ['classes', '🏫', 'کلاس‌ها'], ['students', '🎓', 'دانش‌آموزان'], ['calendar', '📅', 'تقویم'], ['wallet', '👛', 'کیف پول']], /* V203 — هم‌تراز اپ: کلاس‌ها، دانش‌آموزان، تقویم */
     /* V171 — صفحهٔ «منو»ی مدیر و دانش‌آموز = منوی همبرگری اپ (ExamApp.kt:995-1060) */
-    managerMenu: [['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت', 'school'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و مدیریت', 'school', {students: true}], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['site', '🌐', 'سایت', 'onlineexam.ir'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
+    managerMenu: [['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و مدیریت'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['site', '🌐', 'سایت', 'onlineexam.ir'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']],
     studentMenu: [['join', '🔑', 'آزمون', 'ورود با کد آزمون'], ['grades', '📊', 'نتایج من', 'پاسخ‌ها و کارنامه'], ['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]
   };
   var ROLE_LABEL = {teacher: 'معلم', student: 'دانش‌آموز', manager: 'مدیر / معاون'};
@@ -1369,6 +1369,8 @@
 
   /* ---- کلاس‌ها ---- */
   async function pageClasses(c) {
+    /* V203 — مدیر: همهٔ کلاس‌های مدرسه + ساخت کلاس برای معلم (admin.js) */
+    if (user && user.role === 'manager' && window.SiteAdmin && window.SiteAdmin.managerClassesPage) return window.SiteAdmin.managerClassesPage(c);
     loading(c);
     if (view.arg && view.arg.create) { view.arg = null; classForm(null, function () { pageClasses(c); }); }
     try {
@@ -1428,6 +1430,8 @@
     ]);
   }
   async function pageStudents(c) {
+    /* V203 — مدیر: دانش‌آموزان مدرسه + ساخت تکی/گروهی + افزودن به کلاس (admin.js) */
+    if (user && user.role === 'manager' && window.SiteAdmin && window.SiteAdmin.managerStudentsPage) return window.SiteAdmin.managerStudentsPage(c, view.arg);
     if (window.SiteSchool) return window.SiteSchool.studentsPage(c);
     loading(c);
     try {
