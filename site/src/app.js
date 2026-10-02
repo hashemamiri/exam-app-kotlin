@@ -331,7 +331,9 @@
     setExamOpen: function (id, open) { return rpcObj('native_set_exam_open_v1', {p_exam: id, p_open: !!open}); },
     deleteExam: function (id) { return rpcObj('native_delete_exam', {p_exam: id}); },
     duplicateExam: function (id) { return rpcObj('native_duplicate_exam_v2', {p_exam: id, p_operation: uuid()}); },
-    chargePrint: function (examId, count, mode) { return rpcObj('native_charge_print_v1', {p_exam: examId, p_operation: uuid(), p_questions: count, p_mode: mode}); },
+    /* V202.1 — v2: پرداخت چاپ آزمون آنلاین/محلی روی سرور ثبت می‌شود؛ همان محتوا در اپ/سایت دسکتاپ/سایت گوشی دوباره کسر نمی‌شود */
+    chargePrint: function (examId, count, mode, content) { return rpcObj('native_charge_print_v2', {p_exam: examId, p_operation: uuid(), p_questions: count, p_mode: mode, p_content: content || ''}); },
+    printChargeQuote: function (examId, count, content) { return rpcObj('native_charge_print_quote_v2', {p_exam: examId, p_questions: count, p_content: content || ''}); },
     /* V199 — پرداخت چاپ آزمون چاپی: برآورد / کسر / وضعیت کارت‌ها (سربرگ = اثر انگشت فیلدهای f_*) */
     printQuote: function (id, header) { return rpcObj('native_print_quote_v199', {p_id: id, p_header: header || ''}); },
     printPay: function (id, header) { return rpcObj('native_print_pay_v199', {p_id: id, p_operation: uuid(), p_header: header || ''}); },
@@ -478,20 +480,36 @@
       ctx.busy = true;
       var examRef = ctx.examId || 'local';
       /* V132 — هزینهٔ چاپ: ۱۰۰۰ تومان به‌ازای هر سؤال، تأیید پیش از پنجرهٔ چاپ */
-      var n = ctx.questionCount || 0, cost = n * PRINT_COST_PER_Q;
+      var n = ctx.questionCount || 0, cost = n * PRINT_COST_PER_Q, content = printContentKey(ctx.payload);
+      /* V202.1 — اول برآورد سرور: اگر همین محتوا قبلاً (اپ/سایت) پرداخت شده، بدون کسر دوباره چاپ می‌شود */
+      api.printChargeQuote(examRef, n, content).then(function (q) {
+        if (q && q.paid) { ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true); if (printCtx === ctx) doNative(); else ctx.busy = false; return; }
+        return askAndCharge();
+      }).catch(function () { return askAndCharge(); });
+      function askAndCharge() {
       confirmDlg(mode === 'teacher' ? 'چاپ با کلید (پاسخ‌نامه)' : 'چاپ آزمون', 'هزینهٔ چاپ: ' + fa(PRINT_COST_PER_Q) + ' تومان به‌ازای هر سؤال<br>تعداد سؤال: ' + fa(n) + '<br><b>مبلغ قابل کسر از کیف پول: ' + money(cost) + '</b>', 'پرداخت و چاپ').then(function (ok) {
         if (!ok) { restore(); return; }
-        api.chargePrint(examRef, n, mode).then(function (r) {
-          ctx.paid[mode] = true;
+        api.chargePrint(examRef, n, mode, content).then(function (r) {
+          ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);
+          if (r && r.already_paid) { if (printCtx === ctx) doNative(); else ctx.busy = false; return; }
           /* V202 — پیام کسر وسط صفحه؛ چاپ پس از «تأیید» */
           return costDoneDlg(r.cost || cost, r.balance).then(function () { if (printCtx === ctx) doNative(); else ctx.busy = false; });
         }).catch(function (e) { restore(); toast(errMsg(e), 'err'); });
       });
+      }
     }
   };
+  /* V202.1 — کلید محتوا برای هش پیش‌نویس محلی (اپ: printContentKey در BillingRepository.kt — متن سؤال‌ها با خط جدید) */
+  function printContentKey(payload) { return ((payload && payload.questions) || []).map(function (q) { return String((q && q.text) || '').trim(); }).join('\n'); }
   /* V199 — رنگ دکمهٔ چاپ پیش‌نمایش: قرمز تا پرداخت نشده، سبز پس از پرداخت (webhost.js: setPrintPaid) */
   function setPreviewPaid(ctx, paid) { try { var w = ctx.iframe.contentWindow; if (w && typeof w.setPrintPaid === 'function') w.setPrintPaid(!!paid); } catch (e) {} }
   function refreshPreviewPaid(ctx) {
+    if (!ctx.printExam && !ctx.direct) {
+      /* V202.1 — آزمون آنلاین/محلی: اگر همین محتوا قبلاً پرداخت شده، دکمهٔ چاپ از ابتدا سبز */
+      setPreviewPaid(ctx, false);
+      api.printChargeQuote(ctx.examId || 'local', ctx.questionCount || 0, printContentKey(ctx.payload)).then(function (q) { if (printCtx !== ctx) return; if (q && q.paid) { ctx.paid = {student: true, teacher: true}; setPreviewPaid(ctx, true); } }).catch(function () {});
+      return;
+    }
     if (!ctx.printExam || ctx.printDirty) { setPreviewPaid(ctx, false); return; }
     api.printQuote(ctx.printExam, headerFingerprint(ctx.payload && ctx.payload.fields)).then(function (q) { if (printCtx !== ctx) return; var paid = !!(q && !q.error && !q.due); if (paid) ctx.paid = {student: true, teacher: true}; setPreviewPaid(ctx, paid); }).catch(function () {});
   }
@@ -554,7 +572,7 @@
         try {
           if (typeof w.setExamData === 'function' && w.renderPreview && w.renderPreview.__pgs && inlined.done) {
             w.setExamData(payload);
-            if (printCtx && printCtx.iframe === iframe && printCtx.printExam !== undefined) { setPreviewPaid(printCtx, false); refreshPreviewPaid(printCtx); } /* V199 */
+            if (printCtx && printCtx.iframe === iframe) { setPreviewPaid(printCtx, false); refreshPreviewPaid(printCtx); } /* V199 / V202.1 */
             /* V156 — مثل ExamHtmlPrintDialog: printMode=student/teacher یعنی بدون توقف در پیش‌نمایش، مستقیم چاپ */
             setTimeout(function () { try { if (!again && opts.printMode === 'teacher' && typeof w.printTeacher === 'function') w.printTeacher(); else if (!again && opts.printMode === 'student' && typeof w.printStudent === 'function') w.printStudent(); else w.ExamPrintRenderer.showPreview(); } catch (e) { console.warn(e); } }, 120);
             return;

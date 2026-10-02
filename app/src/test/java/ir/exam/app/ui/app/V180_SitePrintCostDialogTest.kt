@@ -19,13 +19,13 @@ class V180_SitePrintCostDialogTest {
         val a = source("site/src/app.js")
         assertFalse("if (!printCtx.examId) { doNative(); return; }" in a)
         assertTrue("var examRef = ctx.examId || 'local';" in a)
-        assertTrue("api.chargePrint(examRef, n, mode)" in a)
+        assertTrue("api.chargePrint(examRef, n, mode, content)" in a)
         /* V180.1 — بدون حلقه: fallback به w.print() (که به همین پل برمی‌گردد) حذف؛ قفل busy؛ پیش‌پرداخت هر نسخه در همان پیش‌نمایش */
         assertFalse("try { w.print(); } catch (e2) {}" in a)
         /* V180.4 — چاپ بومی از __nativePrint (ذخیره‌شده پیش از بازنویسی webhost.js)؛ Window.prototype.print در Chrome نیست */
         assertTrue("w.__nativePrint.call(w)" in a)
         assertTrue("window.__nativePrint = window.print;" in source("site/build_site.py"))
-        assertTrue("if (ctx.busy) return;" in a && "if (ctx.paid[mode]) { doNative(); return; }" in a && "ctx.paid[mode] = true;" in a)
+        assertTrue("if (ctx.busy) return;" in a && "if (ctx.paid[mode]) { doNative(); return; }" in a && "ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true);" in a)
         /* V180.2 — پس از پنجرهٔ چاپ: چاپ مستقیم → بستن؛ وگرنه بازگشت به پیش‌نمایش (نه صفحهٔ خالی) */
         assertTrue("if (ctx.direct) { if (printCtx === ctx) closePrintOverlay(); return; }" in a)
         assertTrue("if (!(w.isPreviewOpen && w.isPreviewOpen())) w.ExamPrintRenderer.showPreview();" in a)
@@ -34,7 +34,7 @@ class V180_SitePrintCostDialogTest {
         assertTrue("class: 'modal-bg' + (document.querySelector('.engine-bg') ? ' over-engine' : '')" in a)
         assertTrue(".modal-bg.over-engine{z-index:65}" in source("site/src/site.css"))
         val b = source("site/src/builder.js")
-        assertTrue("examId: state.mode === 'online' ? state.examId : (state.printId || 'local')" in b)
+        assertTrue("examId: state.mode === 'online' ? ((state.dirty || !state.examId) ? 'local' : state.examId) : (state.printId || 'local')" in b)
         assertTrue("{title: full.title, examId: r.id, printExam: r.id}" in b) // V199
         /* همان مقادیر اپ */
         val k = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")

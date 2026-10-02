@@ -751,7 +751,7 @@
       var payload = S.buildPrintPayload(toServerExam(state));
       /* V156 — printMode: 'student' | 'teacher' (FAB چاپ در گوشی، مثل منوی «چاپ آزمون/چاپ با کلید» اپ) */
       /* V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ بدون ذخیره (printId) یا با تغییرات ذخیره‌نشده چاپ نمی‌شود */
-      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? state.examId : (state.printId || 'local'), printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.printDirty, printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
+      S.openPrintPreview(payload, {title: state.title || 'آزمون', examId: state.mode === 'online' ? ((state.dirty || !state.examId) ? 'local' : state.examId) : (state.printId || 'local'), printExam: state.mode === 'print' ? (state.printId || '') : undefined, printDirty: state.mode === 'print' && !!state.printDirty, printMode: typeof printMode === 'string' ? printMode : '', onSnapshot: function (snap) { applySnapshot(snap); }});
     }
     window.__builderPreview = preview;
     function applySnapshot(snap) {

@@ -110,4 +110,26 @@ class V199_PrintPayTest {
         assertTrue("await S.costDoneDlg(raw.amount || a, raw.manager_balance" in source("site/src/admin.js"))
         assertTrue("text: 'تأیید', onclick: function () { bg2.remove(); S.go('dashboard'); }" in source("site/src/extras.js"))
     }
+
+    @Test
+    fun `v202_1 online print payment is remembered on the server and shared by app and both sites`() {
+        val sql = source("supabase/migrations/20260927_native_charge_print_v202.sql")
+        assertTrue("create table if not exists public.exam_print_payments" in sql)
+        assertTrue("create or replace function public.native_charge_print_v2(" in sql)
+        assertTrue("create or replace function public.native_charge_print_quote_v2(" in sql)
+        assertTrue("'already_paid', true" in sql)
+        assertEquals(sql, source("sql/manual/SQL_NATIVE_CHARGE_PRINT_V202.sql"))
+        val repo = source("app/src/main/java/ir/exam/app/data/repository/SupabaseBillingRepository.kt")
+        assertTrue("rpc(\"native_charge_print_v2\"" in repo && "rpc(\"native_charge_print_quote_v2\"" in repo)
+        val pd = source("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintDialog.kt")
+        assertTrue("if (q?.paid == true) { pushPaid(view, true); fire() }" in pd)
+        assertTrue("if (charged.alreadyPaid) req.fire()" in pd)
+        assertTrue("\"local\" else state.examId ?: \"local\"" in source("app/src/main/java/ir/exam/app/ui/builder/ExamBuilderScreen.kt"))
+        val a = source("site/src/app.js")
+        assertTrue("printChargeQuote: function (examId, count, content)" in a)
+        assertTrue("if (q && q.paid) { ctx.paid.student = ctx.paid.teacher = true; setPreviewPaid(ctx, true); if (printCtx === ctx) doNative(); else ctx.busy = false; return; }" in a)
+        assertTrue("if (r && r.already_paid) { if (printCtx === ctx) doNative(); else ctx.busy = false; return; }" in a)
+        assertTrue("if (printCtx && printCtx.iframe === iframe) { setPreviewPaid(printCtx, false); refreshPreviewPaid(printCtx); }" in a)
+        assertTrue("(state.dirty || !state.examId) ? 'local' : state.examId" in source("site/src/builder.js"))
+    }
 }

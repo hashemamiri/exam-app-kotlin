@@ -13,10 +13,13 @@ import ir.exam.app.domain.model.WalletSnapshot
 import ir.exam.app.domain.model.WalletTransaction
 import ir.exam.app.domain.repository.BillingRepository
 import ir.exam.app.domain.repository.PrintChargeResult
+import ir.exam.app.domain.repository.PrintQuoteResult
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import java.net.URI
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -65,12 +68,14 @@ class SupabaseBillingRepository : BillingRepository {
     }
 
     // V132 — هزینهٔ چاپ: rpc native_charge_print_v1 (همان الگوی native_duplicate_exam_v2).
-    override suspend fun chargePrint(examId: String, operationId: String, questionCount: Int, mode: String): Result<PrintChargeResult> = runCatching {
-        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_print_v1", buildJsonObject {
+    override suspend fun chargePrint(examId: String, operationId: String, questionCount: Int, mode: String, content: String): Result<PrintChargeResult> = runCatching {
+        /* V202.1 — v2: پرداخت روی سرور ثبت می‌شود؛ همان محتوا در اپ/سایت دوباره کسر نمی‌شود */
+        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_print_v2", buildJsonObject {
             put("p_exam", examId)
             put("p_operation", operationId)
             put("p_questions", questionCount)
             put("p_mode", mode)
+            put("p_content", content)
         }).decodeAs()
         raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { message ->
             val required = raw["required"]?.jsonPrimitive?.longOrNull
@@ -79,7 +84,22 @@ class SupabaseBillingRepository : BillingRepository {
         }
         PrintChargeResult(
             costToman = raw["cost"]?.jsonPrimitive?.longOrNull ?: 0,
-            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull
+            balanceToman = raw["balance"]?.jsonPrimitive?.longOrNull,
+            alreadyPaid = raw["already_paid"]?.jsonPrimitive?.booleanOrNull ?: false
+        )
+    }
+
+    override suspend fun quotePrint(examId: String, questionCount: Int, content: String): Result<PrintQuoteResult> = runCatching {
+        val raw: JsonObject = SupabaseProvider.client.postgrest.rpc("native_charge_print_quote_v2", buildJsonObject {
+            put("p_exam", examId)
+            put("p_questions", questionCount)
+            put("p_content", content)
+        }).decodeAs()
+        raw["error"]?.jsonPrimitive?.contentOrNull?.takeIf(String::isNotBlank)?.let { error(it) }
+        PrintQuoteResult(
+            paid = raw["paid"]?.jsonPrimitive?.booleanOrNull ?: false,
+            dueToman = raw["due"]?.jsonPrimitive?.longOrNull ?: 0,
+            questions = raw["questions"]?.jsonPrimitive?.intOrNull ?: questionCount
         )
     }
 

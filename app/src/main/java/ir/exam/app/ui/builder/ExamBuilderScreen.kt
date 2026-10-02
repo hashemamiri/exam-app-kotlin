@@ -704,7 +704,8 @@ fun ExamBuilderScreen(
             // تا موقعیت‌ها در بازِ بعدی (و در چاپ) ریست نشوند.
             onFigLayouts = { viewModel.applyFigLayouts(it) },
             // V132 — شناسهٔ آزمون برای ثبتِ تراکنشِ هزینهٔ چاپ در کیف پول
-            printExamId = state.examId ?: "local",
+            // V202.1 — با تغییرات ذخیره‌نشده «local» تا هش سرور (نسخهٔ ذخیره‌شده) اشتباهاً «پرداخت‌شده» حساب نشود
+            printExamId = if (!printMode && viewModel.hasUnsavedChanges()) "local" else state.examId ?: "local",
             // V199 — آزمون چاپی: پرداخت سؤال/تصویر روی سرور؛ بدون ذخیره یا با تغییرات ذخیره‌نشده چاپ نمی‌شود
             printPayExamId = if (printMode) state.examId.orEmpty() else null,
             printPayDirty = printMode && viewModel.hasUnsavedChanges()

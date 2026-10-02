@@ -19,7 +19,7 @@ class V138_SiteSkeletonTest {
             "native_ensure_profile_v1", "native_my_registration_state_v1", "native_staff_login_email_v1",
             "native_complete_teacher_registration_v1", "native_complete_teacher_registration_v37", "native_join_school_v39",
             "native_complete_manager_registration_v36", "native_update_my_username_v1",
-            "native_set_exam_open_v1", "native_delete_exam", "native_duplicate_exam_v2", "native_charge_print_v1",
+            "native_set_exam_open_v1", "native_delete_exam", "native_duplicate_exam_v2", "native_charge_print_v2",
             "native_my_classes_v28", "native_save_class_v28", "delete_class", "my_students", "class_roster",
             "native_wallet_snapshot", "native_my_profile", "native_save_profile_v28", "native_my_teacher_details_v40",
             "native_save_teacher_details_v40", "my_grades", "native_my_answers_v1",

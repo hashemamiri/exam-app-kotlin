@@ -278,6 +278,14 @@ fun ExamHtmlPrintDialog(
                                             runCatching { printPayRepo.quote(printPayExamId, PrintPayFingerprint.current(context)) }
                                                 .onSuccess { q -> if (q.paid) pushPaid(webViewRef, true) }
                                         }
+                                    } else if (!prepaidOnce) {
+                                        /* V202.1 — آزمون آنلاین/محلی: اگر همین محتوا قبلاً در اپ یا سایت پرداخت شده، دکمهٔ چاپ سبز */
+                                        pushPaid(webViewRef, false)
+                                        chargeScope.launch {
+                                            ir.exam.app.data.repository.SupabaseBillingRepository()
+                                                .quotePrint(printExamId.ifBlank { "local" }, printable?.questions?.size ?: 0, printContentOf(printable))
+                                                .onSuccess { q -> if (q.paid) pushPaid(webViewRef, true) }
+                                        }
                                     }
                                     if (initialPreview) {
                                         previewOpen = true
@@ -340,7 +348,16 @@ fun ExamHtmlPrintDialog(
                                             }
                                             // V132 — اول تأیید هزینه (۱۰۰۰ تومان/سؤال) و کسر از کیف پول، بعد پنلِ چاپ.
                                             else if (prepaidOnce) { prepaidOnce = false; fire() }
-                                            else pendingPrintCharge = PendingPrintCharge(mode, fire) { restore() }
+                                            else {
+                                                /* V202.1 — برآورد از سرور: اگر همین محتوا قبلاً در اپ/سایت پرداخت شده، بدون کسر دوباره چاپ می‌شود */
+                                                chargeScope.launch {
+                                                    val q = ir.exam.app.data.repository.SupabaseBillingRepository()
+                                                        .quotePrint(printExamId.ifBlank { "local" }, printable?.questions?.size ?: 0, printContentOf(printable))
+                                                        .getOrNull()
+                                                    if (q?.paid == true) { pushPaid(view, true); fire() }
+                                                    else pendingPrintCharge = PendingPrintCharge(mode, fire) { restore() }
+                                                }
+                                            }
                                         }
                                     }
                                 },
@@ -511,10 +528,12 @@ fun ExamHtmlPrintDialog(
                             pendingPrintCharge = null
                             chargeScope.launch {
                                 val result = ir.exam.app.data.repository.SupabaseBillingRepository()
-                                    .chargePrint(printExamId.ifBlank { printable?.documentTitle.orEmpty() }, java.util.UUID.randomUUID().toString(), count, req.mode)
+                                    .chargePrint(printExamId.ifBlank { "local" }, java.util.UUID.randomUUID().toString(), count, req.mode, printContentOf(printable))
                                 result.onSuccess { charged ->
+                                    pushPaid(webViewRef, true)
                                     /* V202 — پنجرهٔ وسط صفحه: «کسر ۱٬۰۰۰ تومان با موفقیت»؛ چاپ پس از «تأیید» */
-                                    costDone = ir.exam.app.ui.common.costDeductedMessage(charged.costToman, charged.balanceToman) to { req.fire() }
+                                    if (charged.alreadyPaid) req.fire()
+                                    else costDone = ir.exam.app.ui.common.costDeductedMessage(charged.costToman, charged.balanceToman) to { req.fire() }
                                 }
                                     .onFailure { e ->
                                         /* V134 — کادرِ قرمز: «موجودی ناکافی» یا خطای واقعیِ سرور */
@@ -861,6 +880,10 @@ internal fun createExamPrintWebView(
 
 /** V132 — درخواستِ چاپِ منتظرِ تأیید هزینه. */
 /** V134 — عددِ تومان با جداکنندهٔ هزارگان و ارقام فارسی. */
+/** V202.1 — کلید محتوا برای هش پیش‌نویس محلی (سرور برای آزمون سروری خودش هش می‌سازد) */
+internal fun printContentOf(printable: OfficialExamPrintable?): String =
+    ir.exam.app.domain.repository.printContentKey(printable?.questions?.map { it.text }.orEmpty())
+
 internal fun formatToman(value: Long): String =
     java.text.NumberFormat.getIntegerInstance(java.util.Locale("fa", "IR")).format(value)
 
