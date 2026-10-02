@@ -759,14 +759,25 @@
     function google(role, label) { if (!window.SiteExtras) return null; var g = window.SiteExtras.googleButton(role); g.className = 'ice-btn outline ice-google'; g.style.marginTop = ''; var t = g.childNodes[g.childNodes.length - 1]; if (t && t.nodeType === 3) t.textContent = ' ' + label; return g; }
     function otpBoxes(onChange) { var n = 6, hidden = el('input', {type: 'tel', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 8, class: 'ice-otp-hidden'}); var row = el('div', {class: 'ice-otp', onclick: function () { hidden.focus(); }}); function draw() { var v = hidden.value.replace(/\D/g, '').slice(0, 8); hidden.value = v; var count = Math.max(6, Math.min(8, v.length + (v.length >= 6 ? 1 : 0))); row.innerHTML = ''; for (var i = 0; i < count; i++) row.appendChild(el('span', {class: 'ice-otp-b' + (i === v.length ? ' focus' : '') + (v[i] ? ' filled' : ''), text: v[i] ? fa(v[i]) : ''})); onChange(v); } hidden.addEventListener('input', draw); draw(); var w = el('div', {}, [hidden, row]); w.value = function () { return hidden.value; }; w.focus = function () { hidden.focus(); }; return w; }
 
+    var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]; /* = tiles صفحهٔ دسکتاپ (app.js renderLanding) */
     function landing() {
+      var apkBtn = btn('دریافت برنامه', function () {});
+      apkBtn.disabled = true;
+      api.latestApk().then(function (v) {
+        if (!v) { apkBtn.textContent = 'نسخهٔ اندروید در دسترس نیست'; return; }
+        apkBtn.textContent = 'دریافت برنامه (اندروید · نسخهٔ ' + S.fa(v.name) + ')'; apkBtn.disabled = false;
+        apkBtn.onclick = function () { var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'}); document.body.appendChild(a); a.click(); a.remove(); toast('دانلود برنامه آغاز شد.', 'ok'); };
+      }).catch(function () { apkBtn.textContent = 'دریافت برنامه ممکن نشد'; });
       return el('div', {class: 'ice-landing'}, [
         stag(0, el('div', {class: 'ice-hero'}, [ic('school')])),
         stag(1, el('div', {class: 'ice-title', text: 'آزمون آنلاین'})),
         stag(2, el('div', {class: 'ice-sub', text: 'به سامانهٔ آزمون و ارزشیابی خوش آمدید'})),
-        stag(3, btn('ورود به حساب', function () { goA('login', {tab: 1}); })),
-        stag(4, outline('ساخت حساب جدید', function () { goA('register', {regTab: 0, step: 'form'}); })),
-        stag(5, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
+        /* V202.5 — صفحهٔ اول: «دریافت برنامه» (دانلود مستقیم APK از app_version) + «ورود به سامانه» + کاشی‌های معرفی سایت دسکتاپ */
+        stag(3, apkBtn),
+        stag(4, outline('ورود به سامانه', function () { goA('login', {tab: 1}); })),
+        stag(5, el('div', {class: 'ice-tiles'}, LANDING_TILES.map(function (t) { return el('div', {class: 'ice-tile'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))),
+        stag(6, link('ساخت حساب جدید (معلم / مدیر)', function () { goA('register', {regTab: 0, step: 'form'}); })),
+        stag(7, el('p', {class: 'ice-note', text: 'حساب دانش‌آموز را معلم می‌سازد؛ نام کاربری و رمز را از معلم خود دریافت کنید.'}))
       ]);
     }
     function loginPane(card) {

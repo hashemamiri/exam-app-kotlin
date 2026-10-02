@@ -19248,3 +19248,6 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.4
 - گزارش کاربر: در دسکتاپ رمز هنوز روی چشم می‌افتاد (CSS نسخهٔ V202.2 روی onlineexam.ir موجود بود). رفع مقاوم: app.js `input()`/`fld()` برای رمز `inp.style.cssText += direction:ltr;text-align:left;padding-right:50px;padding-left:14px` و `eyeButton` با style درون‌خطی `right:4px;left:auto;bottom:4px`؛ mobile.js `field()` همین‌طور (`right:8px`). site.css: `!important` روی `.lp .pw input` و `.ice-field.has-eye input`؛ `::-ms-reveal/::-ms-clear` پنهان.
+
+## §V202.5
+- mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.

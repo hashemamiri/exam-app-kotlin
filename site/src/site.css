@@ -679,6 +679,12 @@ img,video,canvas,iframe{max-width:100%}
 .ice-sub.right{text-align:right}
 .ice-landing .ice-sub{margin-bottom:26px}
 .ice-landing .ice-btn+.ice-btn{margin-top:10px}
+/* V202.5 — کاشی‌های معرفی در صفحهٔ اول گوشی (همان ۶ کاشی دسکتاپ) */
+.ice-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin-top:22px}
+.ice-tile{padding:12px 6px;border-radius:14px;background:var(--fbg);border:1px solid var(--stroke);font-size:11.5px;font-weight:800;color:var(--ink);text-align:center}
+.ice-tile i{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;margin:0 auto 8px;font-style:normal;font-size:20px;background:linear-gradient(135deg,var(--acc),var(--accl));color:#fff}
+.ice-tile:nth-child(even) i{background:linear-gradient(135deg,var(--accl),var(--acc))}
+.ice-landing .ice-link{margin-top:8px}
 .ice-note{font-size:11.5px;color:var(--sec);text-align:center;line-height:20px;margin:18px 0 0}
 .ice-card .ice-note{margin:0}
 .ice-brand{font-size:18px;font-weight:800;text-align:center}

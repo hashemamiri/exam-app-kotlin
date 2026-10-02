@@ -160,4 +160,13 @@ class V199_PrintPayTest {
         assertTrue("api.latestApk().then(function (v) {" in m)
         assertTrue("el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'})" in m)
     }
+
+    @Test
+    fun `v202_5 mobile landing shows download app, login and the desktop intro tiles`() {
+        val m = source("site/src/mobile.js")
+        assertTrue("var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]" in m)
+        assertTrue("var tiles = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]" in source("site/src/app.js"))
+        assertTrue("stag(3, apkBtn)," in m && "stag(4, outline('ورود به سامانه'" in m && "el('div', {class: 'ice-tiles'}" in m)
+        assertTrue(".ice-tiles{display:grid;grid-template-columns:repeat(3,1fr)" in source("site/src/site.css"))
+    }
 }
