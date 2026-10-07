@@ -11,9 +11,10 @@ for t in sorted(glob.glob('app/src/test/java/ir/exam/app/**/*Test.kt', recursive
     src = open(t, encoding='utf-8').read()
     vars_ = {}
     for line in src.splitlines():
-        for m in re.finditer(r'val (\w+) = source\("([^"]+)"\)', line): vars_[m.group(1)] = m.group(2)
+        # V204.7 — نام کمکی source( یا src( هر دو شناخته می‌شوند
+        for m in re.finditer(r'val (\w+) = (?:source|src)\("([^"]+)"\)', line): vars_[m.group(1)] = m.group(2)
         if 'assertTrue(' not in line or 'assertFalse(' in line: continue
-        for m in re.finditer(r'"((?:[^"\\]|\\.)*)" in (\w+|source\("([^"]+)"\))', line):
+        for m in re.finditer(r'"((?:[^"\\]|\\.)*)" in (\w+|(?:source|src)\("([^"]+)"\))', line):
             lit = m.group(1)
             if '$' in lit: continue
             path = m.group(3) or vars_.get(m.group(2))

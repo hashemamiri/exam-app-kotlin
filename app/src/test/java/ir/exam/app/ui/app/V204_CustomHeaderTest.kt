@@ -56,7 +56,7 @@ class V204_CustomHeaderTest {
         assertTrue("\"c_logo\", \"c_logoData\", \"c_r1\"" in src("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt"))
         val ph = src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt")
         assertTrue("\"image\" -> FieldImage(f, values) { values[f.id] = it }" in ph)
-        assertTrue("items(template.fields.filter { it.isVisible(values) }, key = { it.id })" in ph)
+        assertTrue("items(groups, key = { it.first().id })" in ph && "groupHeaderFields(template.fields).filter { g -> g.any { it.isVisible(values) } }" in ph)
         val app = src("site/src/app.js")
         assertTrue("function visible(f) { return !f.showIf || (f.showIf['in'] || []).indexOf(values[f.showIf.field] || '') >= 0; }" in app)
         assertTrue("else if (f.kind === 'image') {" in app)

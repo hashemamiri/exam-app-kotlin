@@ -19252,6 +19252,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V204.7
+- CI: `V204_CustomHeaderTest.renderer_and_clients_support_custom_header` خط ۵۹ — پین `items(template.fields.filter { it.isVisible(values) }…)` که در V204.4 به `items(groups, …)` تغییر کرده بود. کامپایل Kotlin موفق بود؛ فقط تست.
+- چرا `check_test_pins.py` نگرفت: فقط `source("…")` را می‌شناخت و تست V204 از `src("…")` استفاده می‌کند. اسکریپت هر دو نام را می‌پذیرد. قاعده برای بعد: در تست‌های پین از `source(` استفاده کن یا مطمئن شو check_test_pins آن را می‌بیند.
+
 ## §V204.6
 - کاربر: «ستون‌ها زیر هم باشند». در اپ Row بیرونی → Column (بلوک هر ستون fillMaxWidth)؛ در سایت `hdr-group` با `grid-template-columns:1fr`. بقیهٔ منطق V204.5 (col/colLabel، خانهٔ غیرفعال «لوگو») بدون تغییر. بررسی تصویری فرم دسکتاپ انجام شد.
 
