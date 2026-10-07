@@ -8,6 +8,23 @@
   var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg, uuid = S.uuid;
   var LS_PRINT = 'examsite.printexams.v1';
   var LS_DRAFT = 'examsite.builderdraft.v1';
+  /* V205 — آیکن‌های نوار ابزار سؤال عیناً از اپ (QuestionToolIcons.kt: مسیرهای برداری ۲۴×۲۴؛ Mic/PhotoCamera/MusicNote متریال outlined در QuestionMediaEditor) */
+  function toolSvg(kind) {
+    var S_ = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+    var body = {
+      fx: '<path ' + S_.replace('1.8', '1.95') + ' d="M3.4 11.2 6.1 18.6 10.4 4.6h10.2"/>',
+      fig: '<rect ' + S_ + ' x="2.6" y="12.2" width="8.2" height="8.2" rx="1.3"/><circle ' + S_ + ' cx="16.8" cy="16.3" r="4.15"/><path ' + S_ + ' d="M12 2.8 7.35 11.1h9.3z"/>',
+      graph: '<path ' + S_ + ' d="M4.2 19.4V5.2M4.2 19.4h15.6"/><path fill="currentColor" d="M6.4 11.2h3v6.4h-3zM10.8 7.4h3v10.2h-3zM15.2 9.4h3v8.2h-3z"/>',
+      axis: '<path ' + S_ + ' d="M3 17h18M18.5 14.5 21 17l-2.5 2.5M7 21V3M4.5 5.5 7 3l2.5 2.5M11 15.8v2.4M15 15.8v2.4M5.8 13h2.4M5.8 9h2.4"/>',
+      table: '<path ' + S_ + ' d="M3.4 4.2h17.2v15.6H3.4zM3.4 9.2h17.2M3.4 14.2h17.2M10 4.2v15.6"/>',
+      gallery: '<path ' + S_ + ' d="M3.5 5.5h17v13h-17zM3.5 16.5 9 11l4 4 2.5-2.5 5 5"/><circle ' + S_ + ' cx="16" cy="9" r="1.6"/>',
+      periodic: '<path fill="currentColor" d="' + [[2,2.2],[18.9,2.2],[2,6],[5.4,6],[15.5,6],[18.9,6],[2,9.8],[5.4,9.8],[8.8,9.8],[12.2,9.8],[15.5,9.8],[18.9,9.8],[2,13.6],[5.4,13.6],[8.8,13.6],[12.2,13.6],[15.5,13.6],[18.9,13.6]].map(function (c) { return 'M' + c[0] + ' ' + c[1] + 'h3.1v3.1h-3.1z'; }).join('') + 'M8.8 18.4h13.2v2.4H8.8z"/>',
+      img: '<path fill="currentColor" d="M20 5h-3.17L15 3H9L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 14H4V7h4.05l1.83-2h4.24l1.83 2H20v12zM12 8c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>',
+      mic: '<path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>',
+      audio: '<path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6zm-2 16c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>'
+    }[kind] || '';
+    return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' + body + '</svg>';
+  }
   var TYPES = [['multiple', 'چندگزینه‌ای', '◉'], ['truefalse', 'صحیح / غلط', '✓'], ['fill', 'جای‌خالی', '▁'], ['numeric', 'عددی', '#'], ['matching', 'جورکردنی', '⇄'], ['essay', 'تشریحی', '✎']];
   var TYPE_LABEL = {}; TYPES.forEach(function (t) { TYPE_LABEL[t[0]] = t[1]; });
 
@@ -566,14 +583,14 @@
       ta.value = q.text;
       ta.addEventListener('input', function () { q.text = ta.value; mark(); drawListSoft(); });
       var tools = el('div', {class: 'b-tools'}, [
-        el('button', {class: 'tool-btn is-fx', title: 'فرمول', 'aria-label': 'فرمول', text: '🧮', onclick: function () { var s = ta.selectionStart, e = ta.selectionEnd; S.openFormulaEditor(ta.value, s, e).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }}),
-        el('button', {class: 'tool-btn is-fig', title: 'شکل هندسی', 'aria-label': 'شکل هندسی', text: '📐', onclick: function () { insertFigure('geo', ta, q); }}),
-        el('button', {class: 'tool-btn is-gra', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', text: '📈', onclick: function () { insertFigure('graph', ta, q); }}),
-        el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', text: '▦', onclick: function () { insertFigure('table', ta, q); }}),
-        el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', text: '⚛', onclick: function () { insertFigure('periodic', ta, q); }}),
-        el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', text: '🫀', onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
+        el('button', {class: 'tool-btn is-fx', title: 'فرمول', 'aria-label': 'فرمول', html: toolSvg('fx'), onclick: function () { var s = ta.selectionStart, e = ta.selectionEnd; S.openFormulaEditor(ta.value, s, e).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }}),
+        el('button', {class: 'tool-btn is-fig', title: 'شکل هندسی', 'aria-label': 'شکل هندسی', html: toolSvg('fig'), onclick: function () { insertFigure('geo', ta, q); }}),
+        el('button', {class: 'tool-btn is-gra', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', html: toolSvg('graph'), onclick: function () { insertFigure('graph', ta, q); }}),
+        el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', html: toolSvg('table'), onclick: function () { insertFigure('table', ta, q); }}),
+        el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', html: toolSvg('periodic'), onclick: function () { insertFigure('periodic', ta, q); }}),
+        el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', html: toolSvg('gallery'), onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
         /* V159 — استودیوی ویرایش و تصویر (ExamImageStudioDialog)؛ dataURL برمی‌گرداند؛ در مسیر آنلاین هنگام ذخیره آپلود می‌شود */
-        el('button', {class: 'tool-btn is-img', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', text: '🖼', onclick: function () {
+        el('button', {class: 'tool-btn is-img', title: 'استودیوی ویرایش و تصویر', 'aria-label': 'استودیوی ویرایش و تصویر', html: toolSvg('img'), onclick: function () {
           var addImg = function (u) { return {uri: u, xMm: 20, yMm: 30, widthMm: 55}; };
           window.SiteStudio.open({existing: q.images,
             onInsert: function (u) { q.images.push(addImg(u)); mark(); drawEditor(); toast('تصویر افزوده شد.', 'ok'); },
@@ -582,8 +599,8 @@
             onSplitToSame: function (urls) { urls.forEach(function (u) { q.images.push(addImg(u)); }); mark(); drawEditor(); toast(fa(urls.length) + ' تصویر افزوده شد.', 'ok'); },
             onSplitToQuestions: function (urls) { urls.forEach(function (u, j) { if (j === 0) { q.images.push(addImg(u)); return; } var nq = newQuestion(q.type); nq.images.push(addImg(u)); state.questions.splice(i + j, 0, nq); }); mark(); drawList(); drawEditor(); toast(fa(urls.length) + ' سؤال ساخته شد.', 'ok'); }});
         }}),
-        el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', text: '🎤', onclick: function () { dictate(ta, q); }}),
-        window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', text: '🎙', onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
+        el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
+        window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
       ]);
       var tt = tokenTextarea(ta);
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
