@@ -237,8 +237,8 @@ object ExamHtmlPrintPayloadBuilder {
         "h6_duration", "h6_pageCount", "h6_pageNumber", "h6_intro",
         "h7_name", "h7_family", "h7_father", "h7_course", "h7_examDate", "h7_duration", "h7_grade",
         "h7_major", "h7_ministry", "h7_generalOffice", "h7_districtOffice", "h7_schoolName", "h7_intro",
-        // V204 — سربرگ ۸ (ایجاد سربرگ: سه ستون × پنج ردیف + لوگو)
-        "c_logo", "c_logoData", "c_r1", "c_m1", "c_l1", "c_r2", "c_m2", "c_l2", "c_r3", "c_m3", "c_l3", "c_r4", "c_m4", "c_l4", "c_r5", "c_m5", "c_l5", "c_intro",
+        // V204/V204.4 — سربرگ ۸ (ایجاد سربرگ: سه ستون × چهار ردیف + لوگو)
+        "c_logo", "c_logoData", "c_r1", "c_m1", "c_l1", "c_r2", "c_m2", "c_l2", "c_r3", "c_m3", "c_l3", "c_r4", "c_m4", "c_l4", "c_intro",
         "opt_footerText"
     )
 }

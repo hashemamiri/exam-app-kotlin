@@ -22,8 +22,11 @@ class V204_CustomHeaderTest {
     @Test fun schema_has_custom_template_with_15_cells_and_conditional_fields() {
         val schema = json.decodeFromString(HeaderSchema.serializer(), src("app/src/main/assets/print/header_settings_schema.json"))
         val t = schema.templates.first { it.id == "custom" }
-        val cells = t.fields.filter { Regex("c_[rml][1-5]").matches(it.id) }
-        assertEquals(15, cells.size)
+        val cells = t.fields.filter { Regex("c_[rml][1-4]").matches(it.id) }
+        assertEquals(12, cells.size)
+        assertTrue(cells.all { it.group != null } && cells.count { it.group == "row1" } == 3)
+        // c_logo, c_logoData, row1..row4 (۳ تایی), c_intro
+        assertEquals(listOf(1, 1, 3, 3, 3, 3, 1), groupSizes(t.fields))
         assertEquals("select", t.fields.first { it.id == "c_logo" }.kind)
         assertEquals("image", t.fields.first { it.id == "c_logoData" }.kind)
         val m1 = t.fields.first { it.id == "c_m1" }
@@ -35,11 +38,14 @@ class V204_CustomHeaderTest {
         assertTrue(t.fields.any { it.id == "c_intro" && it.kind == "textarea" })
     }
 
+    private fun groupSizes(f: List<ir.exam.app.ui.printing.HeaderField>) = ir.exam.app.ui.printing.groupHeaderFields(f).map { it.size }
+
     @Test fun renderer_and_clients_support_custom_header() {
         val ms = src("app/src/main/assets/print/web/mainscript.js")
         assertTrue("if (t === 'custom') return buildCustomHeader();" in ms)
         assertTrue("<div class=\"c8-logo\"><img class=\"c8-logo-img\"" in ms)
         assertTrue("if (logo) mid += " in ms && "else mid += line('c_m1') + line('c_m2');" in ms)
+        assertTrue("for (let i = 1; i <= 4; i++) h += line(prefix + i);" in ms && "for (let i = 3; i <= 4; i++) mid += line('c_m' + i);" in ms)
         assertFalse("<table class=\"exam-header exam-header8\">" in ms)
         assertTrue("(currentHeaderTemplate() === 'custom' ? 'c_intro' : 'f_intro')" in ms)
         assertTrue("<option value=\\\"custom\\\">" in src("app/src/main/assets/print/web/host_dom.js"))
@@ -54,5 +60,7 @@ class V204_CustomHeaderTest {
         val app = src("site/src/app.js")
         assertTrue("function visible(f) { return !f.showIf || (f.showIf['in'] || []).indexOf(values[f.showIf.field] || '') >= 0; }" in app)
         assertTrue("else if (f.kind === 'image') {" in app)
+        assertTrue("if (f.group && last && last[0].group === f.group) last.push(f); else groups.push([f]);" in app)
+        assertTrue("if (g.size == 1) {" in src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"))
     }
 }

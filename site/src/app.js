@@ -749,7 +749,16 @@
       /* V204 — فیلد شرطی (showIf: فقط وقتی مقدار فیلد کنترل‌کننده در فهرست باشد؛ همان HeaderField.isVisible اپ) */
       function visible(f) { return !f.showIf || (f.showIf['in'] || []).indexOf(values[f.showIf.field] || '') >= 0; }
       var hasCond = (t.fields || []).some(function (f) { return !!f.showIf; });
-      (t.fields || []).filter(visible).forEach(function (f) {
+      /* V204.4 — فیلدهای پشت‌سرهم با group یکسان (ردیف‌های سربرگ ۸) کنار هم در یک ردیف؛ جای فیلد پنهان خالی می‌ماند */
+      var groups = []; (t.fields || []).forEach(function (f) { var last = groups[groups.length - 1]; if (f.group && last && last[0].group === f.group) last.push(f); else groups.push([f]); });
+      var target = list;
+      groups.forEach(function (g) {
+        if (!g.some(visible)) return;
+        if (g.length > 1) { target = el('div', {class: 'hdr-group', style: 'grid-column:1/-1;display:grid;grid-template-columns:repeat(' + g.length + ',1fr);gap:8px'}); list.appendChild(target); }
+        else target = list;
+        g.forEach(function (f) { if (!visible(f)) { if (g.length > 1) target.appendChild(el('div')); return; } drawField(f, target); });
+      });
+      function drawField(f, list) {
         var input;
         if (f.kind === 'select') { input = el('select'); if (!(f.options || []).some(function (o) { return o.v === ''; })) input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; if (hasCond) input.addEventListener('change', function () { values[f.id] = input.value; if (opts.autosave) persist(); draw(); }); }
         else if (f.kind === 'image') {
@@ -796,7 +805,7 @@
         input.addEventListener('input', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
         input.addEventListener('change', function () { values[f.id] = input.value; if (opts.autosave) persist(); });
         list.appendChild(el('div', {class: 'field' + (f.full ? ' full' : '')}, [el('label', {text: f.label}), input]));
-      });
+      }
     }
     sel.addEventListener('change', function () { tplId = sel.value; draw(); if (opts.autosave) persist(); });
     box.appendChild(el('div', {class: 'field'}, [el('label', {text: 'انتخاب نوع سربرگ'}), sel]));

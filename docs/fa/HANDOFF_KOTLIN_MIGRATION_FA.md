@@ -19252,6 +19252,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V204.4
+- خواسته: «ردیف‌ها ۴تایی باشند و ردیف‌ها در بخش ایجاد سربرگ کنار هم باشند».
+- شِما: `c_[rml]1..4` (c_*5 حذف)، برچسب «ردیف n — راست/وسط/چپ:»، ویژگی جدید **`group: "rowN"`** روی سه خانهٔ هر ردیف. قاعدهٔ مشترک: فیلدهای پشت‌سرهم با group یکسان در یک ردیف افقی؛ فیلد پنهان (showIf) جایش خالی می‌ماند.
+- اپ: `HeaderField.group`، `groupHeaderFields(fields)`، `HeaderFieldEditor(f, values, modifier)`؛ LazyColumn روی گروه‌ها (Row با weight(1f)، Spacer برای پنهان‌ها).
+- سایت `headerSettingsForm`: گروه‌بندی + `div.hdr-group` (grid با n ستون، grid-column:1/-1)، `drawField(f, target)`.
+- موتور: `buildCustomHeader` حلقه‌ها ۱..۴؛ `host_dom.js` inputهای c_*5 حذف؛ `ExamHtmlPrintPayload.HEADER_FIELD_IDS` به‌روز.
+- بررسی تصویری headless: خروجی چاپ (۴ ردیف + لوگو) و فرم دسکتاپ (سه خانه کنار هم) درست است. تست V204 به‌روز (۱۲ خانه، اندازهٔ گروه‌ها 1,1,3,3,3,3,1).
+
 ## §V204.3
 - گزارش: «لوگو روی کادر بالا قرار می‌گیرد». با Playwright/Chromium headless (موتور چاپ ساخته‌شده با `build_site.build_print_engine()` + `setExamData` + `ExamPrintRenderer.showPreview()` و اسکرین‌شات `.pgs-sheet`) بازتولید شد: `.exam-header8` بدون padding بالا شروع می‌شد و چون برخلاف سربرگ‌های ۱–۷ کادر خودش را ندارد، لوگو به خط کادر صفحه می‌چسبید. `main.css`: `padding:8px 0 4px`. تأیید تصویری برای هر سه حالت لوگو.
 - روش تست بصری موتور چاپ (قابل تکرار در سندباکس): `pip install playwright && python3 -m playwright install chromium && apt-get install libnspr4 libnss3 …` سپس اسکریپت مشابه /tmp/render.py (در handoff ذکر شده؛ فایل نگه‌داری نمی‌شود).

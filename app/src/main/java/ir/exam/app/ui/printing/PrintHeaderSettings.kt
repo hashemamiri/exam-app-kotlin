@@ -62,8 +62,20 @@ data class HeaderField(
     val rows: Int = 2,
     val options: List<HeaderFieldOption> = emptyList(),
     /** V204 — نمایش شرطی: فقط وقتی مقدار فیلد `field` یکی از `in` باشد (مثل لوگوی دلخواه سربرگ ۸). */
-    val showIf: HeaderShowIf? = null
+    val showIf: HeaderShowIf? = null,
+    /** V204.4 — فیلدهای هم‌گروهِ پشت‌سرهم کنار هم (یک ردیف) نمایش داده می‌شوند؛ مثل ردیف‌های سربرگ ۸. */
+    val group: String? = null
 )
+
+/** V204.4 — فیلدهای پشت‌سرهم با `group` یکسان را در یک گروه می‌گذارد (فیلد بدون group = گروه تک‌عضوی). */
+fun groupHeaderFields(fields: List<HeaderField>): List<List<HeaderField>> {
+    val out = ArrayList<MutableList<HeaderField>>()
+    fields.forEach { f ->
+        val last = out.lastOrNull()
+        if (f.group != null && last != null && last.first().group == f.group) last.add(f) else out.add(mutableListOf(f))
+    }
+    return out
+}
 
 @Serializable
 data class HeaderShowIf(val field: String, val `in`: List<String> = emptyList())
@@ -175,18 +187,19 @@ fun HeaderSettingsDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // V204 — فیلدهای شرطی (showIf) با تغییر مقدار فیلد کنترل‌کننده پنهان/آشکار می‌شوند
-                    items(template.fields.filter { it.isVisible(values) }, key = { it.id }) { f ->
-                        when (f.kind) {
-                            "select" -> FieldSelect(f, values) { values[f.id] = it }
-                            "image" -> FieldImage(f, values) { values[f.id] = it }
-                            "textarea" -> OutlinedTextField(
-                                value = values[f.id].orEmpty(),
-                                onValueChange = { values[f.id] = it },
-                                label = { Text(f.label) },
-                                minLines = f.rows,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            else -> FieldInput(f, values) { values[f.id] = it }
+                    // V204.4 — فیلدهای هم‌گروه (ردیف‌های سربرگ ۸) کنار هم؛ جای فیلد پنهان خالی می‌ماند تا ستون‌ها تراز بمانند
+                    val groups = groupHeaderFields(template.fields).filter { g -> g.any { it.isVisible(values) } }
+                    items(groups, key = { it.first().id }) { g ->
+                        if (g.size == 1) {
+                            val f = g.first()
+                            HeaderFieldEditor(f, values, Modifier.fillMaxWidth())
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                g.forEach { f ->
+                                    if (f.isVisible(values)) HeaderFieldEditor(f, values, Modifier.weight(1f))
+                                    else Spacer(Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
                 }
@@ -217,6 +230,24 @@ private fun FieldInput(f: HeaderField, values: Map<String, String>, onChange: (S
         placeholder = f.placeholder?.let { p -> { Text(p, maxLines = 1) } },
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+private fun HeaderFieldEditor(f: HeaderField, values: androidx.compose.runtime.snapshots.SnapshotStateMap<String, String>, modifier: Modifier) {
+    Box(modifier) {
+        when (f.kind) {
+            "select" -> FieldSelect(f, values) { values[f.id] = it }
+            "image" -> FieldImage(f, values) { values[f.id] = it }
+            "textarea" -> OutlinedTextField(
+                value = values[f.id].orEmpty(),
+                onValueChange = { values[f.id] = it },
+                label = { Text(f.label) },
+                minLines = f.rows,
+                modifier = Modifier.fillMaxWidth()
+            )
+            else -> FieldInput(f, values) { values[f.id] = it }
+        }
+    }
 }
 
 /** V204 — انتخاب تصویر لوگو از گالری (محلی؛ data-URL داخل همان نقشهٔ مقادیر سربرگ). */

@@ -28,7 +28,7 @@ window.SITE_CONFIG = { SUPABASE_URL: "https://eazwuyrymsvdkwckdpco.supabase.co",
 <body>
 <div id="root"><div class="loading" style="padding-top:120px"><span class="spinner"></span> در حال بارگذاری…</div></div>
 <div class="toast-wrap" id="toasts"></div>
-<script>window.__ENGINES_URL = "/engines.6c2118f03a75.js";
+<script>window.__ENGINES_URL = "/engines.d59e314b14d2.js";
 window.__HEADER_SCHEMA = {
  "templates": [
   {
@@ -862,7 +862,7 @@ window.__HEADER_SCHEMA = {
   },
   {
    "id": "custom",
-   "label": "سربرگ ۸ - ایجاد سربرگ (سه ستون × پنج ردیف)",
+   "label": "سربرگ ۸ - ایجاد سربرگ (سه ستون × چهار ردیف)",
    "fields": [
     {
      "id": "c_logo",
@@ -910,19 +910,21 @@ window.__HEADER_SCHEMA = {
     },
     {
      "id": "c_r1",
-     "label": "ستون راست — ردیف ۱:",
+     "label": "ردیف ۱ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row1"
     },
     {
      "id": "c_m1",
-     "label": "ستون وسط — ردیف ۱:",
+     "label": "ردیف ۱ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)",
+     "placeholder": "متن دلخواه",
+     "group": "row1",
      "showIf": {
       "field": "c_logo",
       "in": [
@@ -932,27 +934,30 @@ window.__HEADER_SCHEMA = {
     },
     {
      "id": "c_l1",
-     "label": "ستون چپ — ردیف ۱:",
+     "label": "ردیف ۱ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row1"
     },
     {
      "id": "c_r2",
-     "label": "ستون راست — ردیف ۲:",
+     "label": "ردیف ۲ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row2"
     },
     {
      "id": "c_m2",
-     "label": "ستون وسط — ردیف ۲:",
+     "label": "ردیف ۲ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)",
+     "placeholder": "متن دلخواه",
+     "group": "row2",
      "showIf": {
       "field": "c_logo",
       "in": [
@@ -962,83 +967,66 @@ window.__HEADER_SCHEMA = {
     },
     {
      "id": "c_l2",
-     "label": "ستون چپ — ردیف ۲:",
+     "label": "ردیف ۲ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row2"
     },
     {
      "id": "c_r3",
-     "label": "ستون راست — ردیف ۳:",
+     "label": "ردیف ۳ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row3"
     },
     {
      "id": "c_m3",
-     "label": "ستون وسط — ردیف ۳:",
+     "label": "ردیف ۳ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row3"
     },
     {
      "id": "c_l3",
-     "label": "ستون چپ — ردیف ۳:",
+     "label": "ردیف ۳ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row3"
     },
     {
      "id": "c_r4",
-     "label": "ستون راست — ردیف ۴:",
+     "label": "ردیف ۴ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row4"
     },
     {
      "id": "c_m4",
-     "label": "ستون وسط — ردیف ۴:",
+     "label": "ردیف ۴ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row4"
     },
     {
      "id": "c_l4",
-     "label": "ستون چپ — ردیف ۴:",
+     "label": "ردیف ۴ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
-    },
-    {
-     "id": "c_r5",
-     "label": "ستون راست — ردیف ۵:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
-    },
-    {
-     "id": "c_m5",
-     "label": "ستون وسط — ردیف ۵:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
-    },
-    {
-     "id": "c_l5",
-     "label": "ستون چپ — ردیف ۵:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row4"
     },
     {
      "id": "c_intro",
@@ -1170,12 +1158,13 @@ window.SiteJalali.picker=jalaliPicker;window.SiteJalali.display=jalaliDisplay;wi
 var cur=readPrintHeader(),values=Object.assign({},cur);var tplId=schema.templates.some(function(t){return t.id===cur.f_headerTemplate;})?cur.f_headerTemplate:schema.templates[0].id;var list=el('div',{class:'hdr-fields'});var sel=el('select',{class:'hdr-tpl'});schema.templates.forEach(function(t){sel.appendChild(el('option',{value:t.id,text:t.label}));});sel.value=tplId;function payload(){var t=schema.templates.filter(function(x){return x.id===tplId;})[0];var p={f_headerTemplate:tplId};((t&&t.fields)||[]).forEach(function(f){p[f.id]=values[f.id]||'';});return p;}
 function persist(){try{localStorage.setItem(LS_PRINTHEADER,JSON.stringify(payload()));}catch(e){}}
 function draw(){var t=schema.templates.filter(function(x){return x.id===tplId;})[0]||schema.templates[0];list.innerHTML='';function visible(f){return!f.showIf||(f.showIf['in']||[]).indexOf(values[f.showIf.field]||'')>=0;}
-var hasCond=(t.fields||[]).some(function(f){return!!f.showIf;});(t.fields||[]).filter(visible).forEach(function(f){var input;if(f.kind==='select'){input=el('select');if(!(f.options||[]).some(function(o){return o.v==='';}))input.appendChild(el('option',{value:'',text:'—'}));(f.options||[]).forEach(function(o){input.appendChild(el('option',{value:o.v,text:o.t}));});input.value=values[f.id]||'';if(hasCond)input.addEventListener('change',function(){values[f.id]=input.value;if(opts.autosave)persist();draw();});}
+var hasCond=(t.fields||[]).some(function(f){return!!f.showIf;});var groups=[];(t.fields||[]).forEach(function(f){var last=groups[groups.length-1];if(f.group&&last&&last[0].group===f.group)last.push(f);else groups.push([f]);});var target=list;groups.forEach(function(g){if(!g.some(visible))return;if(g.length>1){target=el('div',{class:'hdr-group',style:'grid-column:1/-1;display:grid;grid-template-columns:repeat('+g.length+',1fr);gap:8px'});list.appendChild(target);}
+else target=list;g.forEach(function(f){if(!visible(f)){if(g.length>1)target.appendChild(el('div'));return;}drawField(f,target);});});function drawField(f,list){var input;if(f.kind==='select'){input=el('select');if(!(f.options||[]).some(function(o){return o.v==='';}))input.appendChild(el('option',{value:'',text:'—'}));(f.options||[]).forEach(function(o){input.appendChild(el('option',{value:o.v,text:o.t}));});input.value=values[f.id]||'';if(hasCond)input.addEventListener('change',function(){values[f.id]=input.value;if(opts.autosave)persist();draw();});}
 else if(f.kind==='image'){var file=el('input',{type:'file',accept:'image/*',style:'display:none'});var img=el('img',{style:'max-height:56px;max-width:140px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:2px;background:#fff'+(values[f.id]?'':';display:none')});if(values[f.id])img.src=values[f.id];var pick=el('button',{type:'button',class:'btn light sm',text:values[f.id]?'تغییر':'انتخاب تصویر',onclick:function(){file.click();}});var rm=el('button',{type:'button',class:'btn light sm',text:'حذف',style:values[f.id]?'':'display:none',onclick:function(){values[f.id]='';if(opts.autosave)persist();draw();}});file.addEventListener('change',function(){var fl=file.files&&file.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){var m=320,sc=Math.min(1,m/Math.max(im.width,im.height,1));var cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(im.width*sc));cv.height=Math.max(1,Math.round(im.height*sc));cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);values[f.id]=cv.toDataURL('image/png');if(opts.autosave)persist();draw();};im.onerror=function(){toast('فایل تصویر خوانده نشد.','err');};im.src=String(rd.result);};rd.readAsDataURL(fl);});input=el('div',{class:'row',style:'gap:8px;align-items:center'},[img,pick,rm,file]);list.appendChild(el('div',{class:'field full'},[el('label',{text:f.label}),input]));return;}
 else if(f.kind==='textarea')input=el('textarea',{rows:String(f.rows||3),text:values[f.id]||''});else input=el('input',{type:'text',value:values[f.id]||'',placeholder:f.placeholder||''});var pk=/examDate|gradesDate|examDay/i.test(f.id)?'date':/examTime|startTime/i.test(f.id)?'time':null;if(pk&&input.tagName==='INPUT'){input.classList.add('has-picker');input.title=pk==='date'?'برای انتخاب از تقویم شمسی کلیک کنید':'برای انتخاب ساعت کلیک کنید';input.addEventListener('click',function(){var cur=null;if(pk==='date'){var m=/^(\d{4})\/(\d{1,2})\/(\d{1,2})/.exec(en(input.value||''));if(m)cur={jy:+m[1],jm:+m[2],jd:+m[3]};}
 var hm=pk==='time'?/^(\d{1,2}):(\d{2})/.exec(en(input.value||'')):null;window.SiteJalali.picker({mode:pk,title:f.label.replace(/[:：]\s*$/,''),selected:cur,hour:hm?+hm[1]:8,minute:hm?+hm[2]:0,canClear:!!input.value}).then(function(r){if(r===null)return;if(r==='')input.value='';else if(pk==='time')input.value=fa(String(r.h).padStart(2,'0'))+':'+fa(String(r.m).padStart(2,'0'));else if(/examDay/i.test(f.id)){var g=window.SiteJalali.toGregorian(r.jy,r.jm,r.jd);input.value=window.SiteJalali.WEEKDAYS[(g.getUTCDay()+1)%7];}
 else input.value=fa(r.jy)+'/'+fa(String(r.jm).padStart(2,'0'))+'/'+fa(String(r.jd).padStart(2,'0'));values[f.id]=input.value;if(opts.autosave)persist();input.dispatchEvent(new Event('change'));});});}
-input.addEventListener('input',function(){values[f.id]=input.value;if(opts.autosave)persist();});input.addEventListener('change',function(){values[f.id]=input.value;if(opts.autosave)persist();});list.appendChild(el('div',{class:'field'+(f.full?' full':'')},[el('label',{text:f.label}),input]));});}
+input.addEventListener('input',function(){values[f.id]=input.value;if(opts.autosave)persist();});input.addEventListener('change',function(){values[f.id]=input.value;if(opts.autosave)persist();});list.appendChild(el('div',{class:'field'+(f.full?' full':'')},[el('label',{text:f.label}),input]));}}
 sel.addEventListener('change',function(){tplId=sel.value;draw();if(opts.autosave)persist();});box.appendChild(el('div',{class:'field'},[el('label',{text:'انتخاب نوع سربرگ'}),sel]));box.appendChild(list);draw();return{payload:payload,persist:persist};}
 function openHeaderSettings(onApply){var schema=window.__HEADER_SCHEMA;if(!schema||!Array.isArray(schema.templates)||!schema.templates.length){confirmDlg('تنظیمات سربرگ','قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.','باشد');return;}
 var bg=el('div',{class:'modal-bg hdr-bg',onclick:function(e){if(e.target===bg)bg.remove();}});var box=el('div',{class:'modal hdr-modal'});box.appendChild(el('div',{class:'row',style:'margin-bottom:8px'},[el('h2',{class:'grow',text:'اطلاعات سربرگ آزمون',style:'margin:0'}),el('button',{class:'x',text:'✕','aria-label':'بستن',onclick:function(){bg.remove();}})]));var form=headerSettingsForm(box);box.appendChild(el('div',{class:'row hdr-actions',style:'margin-top:10px'},[el('button',{class:'btn light',text:'انصراف',onclick:function(){bg.remove();}}),el('button',{class:'btn',text:'اعمال',onclick:function(){if(form)form.persist();bg.remove();toast('سربرگ ذخیره شد.','ok');if(onApply)onApply(form?form.payload():readPrintHeader());}})]));bg.appendChild(box);document.body.appendChild(bg);}

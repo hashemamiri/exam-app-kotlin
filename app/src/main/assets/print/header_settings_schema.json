@@ -831,7 +831,7 @@
   },
   {
    "id": "custom",
-   "label": "سربرگ ۸ - ایجاد سربرگ (سه ستون × پنج ردیف)",
+   "label": "سربرگ ۸ - ایجاد سربرگ (سه ستون × چهار ردیف)",
    "fields": [
     {
      "id": "c_logo",
@@ -879,19 +879,21 @@
     },
     {
      "id": "c_r1",
-     "label": "ستون راست — ردیف ۱:",
+     "label": "ردیف ۱ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row1"
     },
     {
      "id": "c_m1",
-     "label": "ستون وسط — ردیف ۱:",
+     "label": "ردیف ۱ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)",
+     "placeholder": "متن دلخواه",
+     "group": "row1",
      "showIf": {
       "field": "c_logo",
       "in": [
@@ -901,27 +903,30 @@
     },
     {
      "id": "c_l1",
-     "label": "ستون چپ — ردیف ۱:",
+     "label": "ردیف ۱ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row1"
     },
     {
      "id": "c_r2",
-     "label": "ستون راست — ردیف ۲:",
+     "label": "ردیف ۲ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row2"
     },
     {
      "id": "c_m2",
-     "label": "ستون وسط — ردیف ۲:",
+     "label": "ردیف ۲ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)",
+     "placeholder": "متن دلخواه",
+     "group": "row2",
      "showIf": {
       "field": "c_logo",
       "in": [
@@ -931,83 +936,66 @@
     },
     {
      "id": "c_l2",
-     "label": "ستون چپ — ردیف ۲:",
+     "label": "ردیف ۲ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row2"
     },
     {
      "id": "c_r3",
-     "label": "ستون راست — ردیف ۳:",
+     "label": "ردیف ۳ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row3"
     },
     {
      "id": "c_m3",
-     "label": "ستون وسط — ردیف ۳:",
+     "label": "ردیف ۳ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row3"
     },
     {
      "id": "c_l3",
-     "label": "ستون چپ — ردیف ۳:",
+     "label": "ردیف ۳ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row3"
     },
     {
      "id": "c_r4",
-     "label": "ستون راست — ردیف ۴:",
+     "label": "ردیف ۴ — راست:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row4"
     },
     {
      "id": "c_m4",
-     "label": "ستون وسط — ردیف ۴:",
+     "label": "ردیف ۴ — وسط:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row4"
     },
     {
      "id": "c_l4",
-     "label": "ستون چپ — ردیف ۴:",
+     "label": "ردیف ۴ — چپ:",
      "full": false,
      "kind": "input",
      "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
-    },
-    {
-     "id": "c_r5",
-     "label": "ستون راست — ردیف ۵:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
-    },
-    {
-     "id": "c_m5",
-     "label": "ستون وسط — ردیف ۵:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
-    },
-    {
-     "id": "c_l5",
-     "label": "ستون چپ — ردیف ۵:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه (خالی = خط خالی)"
+     "placeholder": "متن دلخواه",
+     "group": "row4"
     },
     {
      "id": "c_intro",
