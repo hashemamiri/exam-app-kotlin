@@ -24,9 +24,9 @@ class V204_CustomHeaderTest {
         val t = schema.templates.first { it.id == "custom" }
         val cells = t.fields.filter { Regex("c_[rml][1-4]").matches(it.id) }
         assertEquals(12, cells.size)
-        assertTrue(cells.all { it.group != null } && cells.count { it.group == "row1" } == 3)
-        // c_logo, c_logoData, row1..row4 (۳ تایی), c_intro
-        assertEquals(listOf(1, 1, 3, 3, 3, 3, 1), groupSizes(t.fields))
+        assertTrue(cells.all { it.group == "cells" } && cells.count { it.col == "r" } == 4 && cells.map { it.id } == listOf("c_r1", "c_r2", "c_r3", "c_r4", "c_m1", "c_m2", "c_m3", "c_m4", "c_l1", "c_l2", "c_l3", "c_l4"))
+        // c_logo, c_logoData, cells (۱۲ خانه در سه ستون), c_intro
+        assertEquals(listOf(1, 1, 12, 1), groupSizes(t.fields))
         assertEquals("select", t.fields.first { it.id == "c_logo" }.kind)
         assertEquals("image", t.fields.first { it.id == "c_logoData" }.kind)
         val m1 = t.fields.first { it.id == "c_m1" }
@@ -61,6 +61,7 @@ class V204_CustomHeaderTest {
         assertTrue("function visible(f) { return !f.showIf || (f.showIf['in'] || []).indexOf(values[f.showIf.field] || '') >= 0; }" in app)
         assertTrue("else if (f.kind === 'image') {" in app)
         assertTrue("if (f.group && last && last[0].group === f.group) last.push(f); else groups.push([f]);" in app)
-        assertTrue("if (g.size == 1) {" in src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"))
+        assertTrue("val cols = g.groupBy { it.col ?: it.id }" in src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"))
+        assertTrue("var key = f.col || f.id;" in app)
     }
 }

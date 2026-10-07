@@ -754,9 +754,17 @@
       var target = list;
       groups.forEach(function (g) {
         if (!g.some(visible)) return;
-        if (g.length > 1) { target = el('div', {class: 'hdr-group', style: 'grid-column:1/-1;display:grid;grid-template-columns:repeat(' + g.length + ',1fr);gap:8px'}); list.appendChild(target); }
-        else target = list;
-        g.forEach(function (f) { if (!visible(f)) { if (g.length > 1) target.appendChild(el('div')); return; } drawField(f, target); });
+        if (g.length === 1) { if (visible(g[0])) drawField(g[0], list); return; }
+        /* V204.5 — ستون‌ها کنار هم؛ ردیف‌های هر ستون زیر هم (col/colLabel)؛ جای خانهٔ پنهان (لوگو) فیلد غیرفعال «لوگو» */
+        var cols = []; g.forEach(function (f) { var key = f.col || f.id; var c = cols.filter(function (x) { return x.key === key; })[0]; if (!c) { c = {key: key, label: f.colLabel || '', fields: []}; cols.push(c); } c.fields.push(f); });
+        var wrap = el('div', {class: 'hdr-group', style: 'grid-column:1/-1;display:grid;grid-template-columns:repeat(' + cols.length + ',1fr);gap:8px;align-items:start'});
+        cols.forEach(function (c) {
+          var colBox = el('div', {style: 'display:grid;gap:8px'});
+          if (c.label) colBox.appendChild(el('div', {style: 'font-weight:700;font-size:13px', text: c.label}));
+          c.fields.forEach(function (f) { if (visible(f)) drawField(f, colBox); else colBox.appendChild(el('div', {class: 'field'}, [el('label', {text: f.label}), el('input', {type: 'text', value: 'لوگو', disabled: 'disabled'})])); });
+          wrap.appendChild(colBox);
+        });
+        list.appendChild(wrap);
       });
       function drawField(f, list) {
         var input;

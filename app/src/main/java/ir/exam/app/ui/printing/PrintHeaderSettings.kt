@@ -64,7 +64,10 @@ data class HeaderField(
     /** V204 — نمایش شرطی: فقط وقتی مقدار فیلد `field` یکی از `in` باشد (مثل لوگوی دلخواه سربرگ ۸). */
     val showIf: HeaderShowIf? = null,
     /** V204.4 — فیلدهای هم‌گروهِ پشت‌سرهم کنار هم (یک ردیف) نمایش داده می‌شوند؛ مثل ردیف‌های سربرگ ۸. */
-    val group: String? = null
+    val group: String? = null,
+    /** V204.5 — داخل گروه: ستون (فیلدهای هم‌ستون زیر هم، ستون‌ها کنار هم) و عنوان ستون. */
+    val col: String? = null,
+    val colLabel: String? = null
 )
 
 /** V204.4 — فیلدهای پشت‌سرهم با `group` یکسان را در یک گروه می‌گذارد (فیلد بدون group = گروه تک‌عضوی). */
@@ -194,10 +197,17 @@ fun HeaderSettingsDialog(
                             val f = g.first()
                             HeaderFieldEditor(f, values, Modifier.fillMaxWidth())
                         } else {
+                            // V204.5 — ستون‌ها کنار هم، ردیف‌های هر ستون زیر هم (راست: ۱..۴، سپس وسط، سپس چپ)
+                            val cols = g.groupBy { it.col ?: it.id }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                g.forEach { f ->
-                                    if (f.isVisible(values)) HeaderFieldEditor(f, values, Modifier.weight(1f))
-                                    else Spacer(Modifier.weight(1f))
+                                cols.values.forEach { colFields ->
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        colFields.first().colLabel?.let { Text(it, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
+                                        colFields.forEach { f ->
+                                            if (f.isVisible(values)) HeaderFieldEditor(f, values, Modifier.fillMaxWidth())
+                                            else OutlinedTextField(value = "لوگو", onValueChange = {}, enabled = false, label = { Text(f.label) }, modifier = Modifier.fillMaxWidth())
+                                        }
+                                    }
                                 }
                             }
                         }

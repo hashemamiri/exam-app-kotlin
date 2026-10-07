@@ -879,54 +879,58 @@
     },
     {
      "id": "c_r1",
-     "label": "ردیف ۱ — راست:",
+     "label": "ردیف ۱:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row1"
-    },
-    {
-     "id": "c_m1",
-     "label": "ردیف ۱ — وسط:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "row1",
-     "showIf": {
-      "field": "c_logo",
-      "in": [
-       ""
-      ]
-     }
-    },
-    {
-     "id": "c_l1",
-     "label": "ردیف ۱ — چپ:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "row1"
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
     },
     {
      "id": "c_r2",
-     "label": "ردیف ۲ — راست:",
+     "label": "ردیف ۲:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row2"
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
     },
     {
-     "id": "c_m2",
-     "label": "ردیف ۲ — وسط:",
+     "id": "c_r3",
+     "label": "ردیف ۳:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row2",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_r4",
+     "label": "ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_m1",
+     "label": "ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط",
      "showIf": {
       "field": "c_logo",
       "in": [
@@ -935,67 +939,87 @@
      }
     },
     {
-     "id": "c_l2",
-     "label": "ردیف ۲ — چپ:",
+     "id": "c_m2",
+     "label": "ردیف ۲:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row2"
-    },
-    {
-     "id": "c_r3",
-     "label": "ردیف ۳ — راست:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "row3"
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       ""
+      ]
+     }
     },
     {
      "id": "c_m3",
-     "label": "ردیف ۳ — وسط:",
+     "label": "ردیف ۳:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row3"
-    },
-    {
-     "id": "c_l3",
-     "label": "ردیف ۳ — چپ:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "row3"
-    },
-    {
-     "id": "c_r4",
-     "label": "ردیف ۴ — راست:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "row4"
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط"
     },
     {
      "id": "c_m4",
-     "label": "ردیف ۴ — وسط:",
+     "label": "ردیف ۴:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row4"
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط"
+    },
+    {
+     "id": "c_l1",
+     "label": "ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_l2",
+     "label": "ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_l3",
+     "label": "ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
     },
     {
      "id": "c_l4",
-     "label": "ردیف ۴ — چپ:",
+     "label": "ردیف ۴:",
      "full": false,
      "kind": "input",
      "type": "text",
      "placeholder": "متن دلخواه",
-     "group": "row4"
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
     },
     {
      "id": "c_intro",
