@@ -19252,6 +19252,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V204.3
+- گزارش: «لوگو روی کادر بالا قرار می‌گیرد». با Playwright/Chromium headless (موتور چاپ ساخته‌شده با `build_site.build_print_engine()` + `setExamData` + `ExamPrintRenderer.showPreview()` و اسکرین‌شات `.pgs-sheet`) بازتولید شد: `.exam-header8` بدون padding بالا شروع می‌شد و چون برخلاف سربرگ‌های ۱–۷ کادر خودش را ندارد، لوگو به خط کادر صفحه می‌چسبید. `main.css`: `padding:8px 0 4px`. تأیید تصویری برای هر سه حالت لوگو.
+- روش تست بصری موتور چاپ (قابل تکرار در سندباکس): `pip install playwright && python3 -m playwright install chromium && apt-get install libnspr4 libnss3 …` سپس اسکریپت مشابه /tmp/render.py (در handoff ذکر شده؛ فایل نگه‌داری نمی‌شود).
+
 ## §V204.2
 - باگ گزارش‌شده: سربرگ ۸ در پیش‌نمایش/چاپ سایت دسکتاپ خالی بود. علت: `assets/print/web/webhost.js applyFields` فقط idهای `/^(f_|h[2-7]_|opt_footerText$)/` را روی DOM می‌نشاند؛ `c_*` حذف می‌شد (قالب انتخاب می‌شد ولی همهٔ خانه‌ها خالی). الگو به `(f_|h[2-7]_|c_|opt_footerText$)` تغییر کرد. همین مسیر در اپ (ExamHtmlPrintDialog → setExamData) هم استفاده می‌شود، پس اپ هم رفع شد. پین در V204_CustomHeaderTest.
 - درس: هنگام افزودن پیشوند فیلد جدید به شِمای سربرگ، سه جا باید هم‌زمان به‌روز شود: `ExamHtmlPrintPayload.HEADER_FIELD_IDS` (اپ)، `webhost.js applyFields` (موتور)، `host_dom.js` (inputها).

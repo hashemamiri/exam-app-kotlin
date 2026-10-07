@@ -45,7 +45,7 @@ class V204_CustomHeaderTest {
         assertTrue("<option value=\\\"custom\\\">" in src("app/src/main/assets/print/web/host_dom.js"))
         assertTrue("if (!/^(f_|h[2-7]_|c_|opt_footerText$)/.test(id)) return;" in src("app/src/main/assets/print/web/webhost.js"))
         val css = src("app/src/main/assets/print/web/main.css")
-        assertTrue(".exam-header8 .c8-logo-img" in css && ".exam-header8 { display:flex;" in css)
+        assertTrue(".exam-header8 .c8-logo-img" in css && ".exam-header8 { display:flex;" in css && "padding:8px 0 4px; border-bottom:1px solid #000;" in css)
         assertTrue("Modifier\n                .matchParentSize()\n                .clickable { open = true }" in src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"))
         assertTrue("\"c_logo\", \"c_logoData\", \"c_r1\"" in src("app/src/main/java/ir/exam/app/ui/printing/ExamHtmlPrintPayload.kt"))
         val ph = src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt")
