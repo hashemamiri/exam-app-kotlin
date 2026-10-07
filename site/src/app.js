@@ -746,9 +746,33 @@
     function draw() {
       var t = schema.templates.filter(function (x) { return x.id === tplId; })[0] || schema.templates[0];
       list.innerHTML = '';
-      (t.fields || []).forEach(function (f) {
+      /* V204 — فیلد شرطی (showIf: فقط وقتی مقدار فیلد کنترل‌کننده در فهرست باشد؛ همان HeaderField.isVisible اپ) */
+      function visible(f) { return !f.showIf || (f.showIf['in'] || []).indexOf(values[f.showIf.field] || '') >= 0; }
+      var hasCond = (t.fields || []).some(function (f) { return !!f.showIf; });
+      (t.fields || []).filter(visible).forEach(function (f) {
         var input;
-        if (f.kind === 'select') { input = el('select'); input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; }
+        if (f.kind === 'select') { input = el('select'); if (!(f.options || []).some(function (o) { return o.v === ''; })) input.appendChild(el('option', {value: '', text: '—'})); (f.options || []).forEach(function (o) { input.appendChild(el('option', {value: o.v, text: o.t})); }); input.value = values[f.id] || ''; if (hasCond) input.addEventListener('change', function () { values[f.id] = input.value; if (opts.autosave) persist(); draw(); }); }
+        else if (f.kind === 'image') {
+          /* V204 — لوگوی دلخواه سربرگ ۸: فایل محلی → کوچک‌سازی تا ۳۲۰px → data-URL PNG (فقط در مرورگر ذخیره می‌شود، آپلود نمی‌شود) */
+          var file = el('input', {type: 'file', accept: 'image/*', style: 'display:none'});
+          var img = el('img', {style: 'max-height:56px;max-width:140px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:2px;background:#fff' + (values[f.id] ? '' : ';display:none')}); if (values[f.id]) img.src = values[f.id];
+          var pick = el('button', {type: 'button', class: 'btn light sm', text: values[f.id] ? 'تغییر' : 'انتخاب تصویر', onclick: function () { file.click(); }});
+          var rm = el('button', {type: 'button', class: 'btn light sm', text: 'حذف', style: values[f.id] ? '' : 'display:none', onclick: function () { values[f.id] = ''; if (opts.autosave) persist(); draw(); }});
+          file.addEventListener('change', function () {
+            var fl = file.files && file.files[0]; if (!fl) return;
+            var rd = new FileReader();
+            rd.onload = function () {
+              var im = new Image();
+              im.onload = function () { var m = 320, sc = Math.min(1, m / Math.max(im.width, im.height, 1)); var cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(im.width * sc)); cv.height = Math.max(1, Math.round(im.height * sc)); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); values[f.id] = cv.toDataURL('image/png'); if (opts.autosave) persist(); draw(); };
+              im.onerror = function () { toast('فایل تصویر خوانده نشد.', 'err'); };
+              im.src = String(rd.result);
+            };
+            rd.readAsDataURL(fl);
+          });
+          input = el('div', {class: 'row', style: 'gap:8px;align-items:center'}, [img, pick, rm, file]);
+          list.appendChild(el('div', {class: 'field full'}, [el('label', {text: f.label}), input]));
+          return;
+        }
         else if (f.kind === 'textarea') input = el('textarea', {rows: String(f.rows || 3), text: values[f.id] || ''});
         else input = el('input', {type: 'text', value: values[f.id] || '', placeholder: f.placeholder || ''});
         /* V196 — مثل اپ: کلیک روی تاریخ‌ها تقویم شمسی و روی ساعت‌ها انتخابگر ساعت باز می‌کند (تایپ دستی همچنان آزاد است) */

@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -59,8 +60,36 @@ data class HeaderField(
     val type: String = "text",
     val placeholder: String? = null,
     val rows: Int = 2,
-    val options: List<HeaderFieldOption> = emptyList()
+    val options: List<HeaderFieldOption> = emptyList(),
+    /** V204 — نمایش شرطی: فقط وقتی مقدار فیلد `field` یکی از `in` باشد (مثل لوگوی دلخواه سربرگ ۸). */
+    val showIf: HeaderShowIf? = null
 )
+
+@Serializable
+data class HeaderShowIf(val field: String, val `in`: List<String> = emptyList())
+
+/** V204 — فیلد با توجه به مقدار فعلی بقیهٔ فیلدها دیده شود؟ (مشترک اپ و سایت: همان قاعدهٔ headerSettingsForm) */
+fun HeaderField.isVisible(values: Map<String, String>): Boolean {
+    val c = showIf ?: return true
+    return c.`in`.contains(values[c.field].orEmpty())
+}
+
+/** V204 — لوگوی دلخواه سربرگ ۸: کوچک‌سازی تا ۳۲۰ پیکسل و PNG (شفافیت حفظ می‌شود) به‌صورت data-URL محلی؛ هرگز آپلود نمی‌شود. */
+fun encodeHeaderLogoDataUrl(bytes: ByteArray, maxEdge: Int = 320): String? {
+    if (bytes.isEmpty()) return null
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxEdge * 2) sample *= 2
+    val raw = android.graphics.BitmapFactory.decodeByteArray(
+        bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+    ) ?: return null
+    val scale = minOf(1f, maxEdge.toFloat() / maxOf(raw.width, raw.height).coerceAtLeast(1))
+    val bmp = if (scale < 1f) android.graphics.Bitmap.createScaledBitmap(raw, (raw.width * scale).toInt().coerceAtLeast(1), (raw.height * scale).toInt().coerceAtLeast(1), true) else raw
+    val bos = java.io.ByteArrayOutputStream()
+    bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bos)
+    return "data:image/png;base64," + android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP)
+}
 
 @Serializable
 data class HeaderTemplate(val id: String, val label: String, val fields: List<HeaderField> = emptyList())
@@ -145,9 +174,11 @@ fun HeaderSettingsDialog(
                         .height(420.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(template.fields, key = { it.id }) { f ->
+                    // V204 — فیلدهای شرطی (showIf) با تغییر مقدار فیلد کنترل‌کننده پنهان/آشکار می‌شوند
+                    items(template.fields.filter { it.isVisible(values) }, key = { it.id }) { f ->
                         when (f.kind) {
                             "select" -> FieldSelect(f, values) { values[f.id] = it }
+                            "image" -> FieldImage(f, values) { values[f.id] = it }
                             "textarea" -> OutlinedTextField(
                                 value = values[f.id].orEmpty(),
                                 onValueChange = { values[f.id] = it },
@@ -186,6 +217,41 @@ private fun FieldInput(f: HeaderField, values: Map<String, String>, onChange: (S
         placeholder = f.placeholder?.let { p -> { Text(p, maxLines = 1) } },
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+/** V204 — انتخاب تصویر لوگو از گالری (محلی؛ data-URL داخل همان نقشهٔ مقادیر سربرگ). */
+@Composable
+private fun FieldImage(f: HeaderField, values: Map<String, String>, onChange: (String) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val current = values[f.id].orEmpty()
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            val data = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }?.let { encodeHeaderLogoDataUrl(it) }
+            }.getOrNull()
+            if (data != null) onChange(data)
+        }
+    }
+    val bitmap = remember(current) {
+        if (current.startsWith("data:image/")) runCatching {
+            val bytes = android.util.Base64.decode(current.substringAfter("base64,"), android.util.Base64.DEFAULT)
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull() else null
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Text(f.label, style = MaterialTheme.typography.labelLarge)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            if (bitmap != null) {
+                androidx.compose.foundation.Image(bitmap, contentDescription = "لوگو", modifier = Modifier.height(56.dp))
+            } else {
+                Text("تصویری انتخاب نشده", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            }
+            OutlinedButton(onClick = { picker.launch("image/*") }) { Text(if (bitmap != null) "تغییر" else "انتخاب تصویر") }
+            if (bitmap != null) TextButton(onClick = { onChange("") }) { Text("حذف") }
+        }
+    }
 }
 
 @Composable

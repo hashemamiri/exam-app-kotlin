@@ -828,6 +828,195 @@
      "placeholder": "مثلاً موفق باشید – دکتر نمازی – دانشگاه آزاد اسلامی واحد تهران مرکز"
     }
    ]
+  },
+  {
+   "id": "custom",
+   "label": "سربرگ ۸ - ایجاد سربرگ (سه ستون × پنج ردیف)",
+   "fields": [
+    {
+     "id": "c_logo",
+     "label": "لوگو (ستون وسط، ردیف ۱ و ۲):",
+     "full": true,
+     "kind": "select",
+     "options": [
+      {
+       "v": "",
+       "t": "بدون لوگو"
+      },
+      {
+       "v": "azad",
+       "t": "دانشگاه آزاد اسلامی"
+      },
+      {
+       "v": "formal",
+       "t": "آرم اداره امتحانات"
+      },
+      {
+       "v": "sama",
+       "t": "آموزشکده سما"
+      },
+      {
+       "v": "ministry",
+       "t": "نشان وزارت آموزش و پرورش"
+      },
+      {
+       "v": "custom",
+       "t": "لوگوی دلخواه (انتخاب تصویر)"
+      }
+     ]
+    },
+    {
+     "id": "c_logoData",
+     "label": "تصویر لوگوی دلخواه:",
+     "full": true,
+     "kind": "image",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       "custom"
+      ]
+     }
+    },
+    {
+     "id": "c_r1",
+     "label": "ستون راست — ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_m1",
+     "label": "ستون وسط — ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       ""
+      ]
+     }
+    },
+    {
+     "id": "c_l1",
+     "label": "ستون چپ — ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_r2",
+     "label": "ستون راست — ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_m2",
+     "label": "ستون وسط — ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       ""
+      ]
+     }
+    },
+    {
+     "id": "c_l2",
+     "label": "ستون چپ — ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_r3",
+     "label": "ستون راست — ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_m3",
+     "label": "ستون وسط — ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_l3",
+     "label": "ستون چپ — ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_r4",
+     "label": "ستون راست — ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_m4",
+     "label": "ستون وسط — ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_l4",
+     "label": "ستون چپ — ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_r5",
+     "label": "ستون راست — ردیف ۵:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_m5",
+     "label": "ستون وسط — ردیف ۵:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_l5",
+     "label": "ستون چپ — ردیف ۵:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه (خالی = خط خالی)"
+    },
+    {
+     "id": "c_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 3
+    }
+   ]
   }
  ]
 }

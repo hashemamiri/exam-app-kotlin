@@ -685,7 +685,8 @@ function updateHeaderSettingsVisibility() {
     school: 'اطلاعات اختصاصی سربرگ ۴',
     edu: 'اطلاعات اختصاصی سربرگ ۵',
     'detailed-school': 'اطلاعات اختصاصی سربرگ ۶',
-    ministry: 'اطلاعات اختصاصی سربرگ ۷'
+    ministry: 'اطلاعات اختصاصی سربرگ ۷',
+    custom: 'اطلاعات اختصاصی سربرگ ۸'
   };
   const hint = document.getElementById('activeHeaderHint');
   if (hint) hint.textContent = hintMap[selected] || 'اطلاعات اختصاصی سربرگ';
@@ -700,7 +701,38 @@ function buildHeader() {
   if (t === 'edu') return buildEduHeader();
   if (t === 'detailed-school') return buildDetailedSchoolHeader();
   if (t === 'ministry') return buildMinistryHeader();
+  if (t === 'custom') return buildCustomHeader();
   return buildClassicHeader();
+}
+
+/* V204 — سربرگ ۸ «ایجاد سربرگ»: سه ستون مجازی × پنج ردیف، متن آزاد در هر خانه؛
+   اگر لوگو انتخاب شود در ستون وسط جای ردیف ۱ و ۲ می‌نشیند (rowspan=2). لوگوی دلخواه = data-URL محلی در c_logoData. */
+function customHeaderLogoSrc() {
+  const sel = document.getElementById('c_logo');
+  const kind = sel ? sel.value : '';
+  if (kind === 'azad') return LOGO_IMG;
+  if (kind === 'formal') return LOGO_IMG_FORMAL;
+  if (kind === 'sama') return LOGO_IMG_SAMA;
+  if (kind === 'ministry') return LOGO_IMG_MINISTRY;
+  if (kind === 'custom') {
+    const d = document.getElementById('c_logoData');
+    const src = d ? String(d.value || '').trim() : '';
+    if (/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(src)) return src;
+  }
+  return '';
+}
+function buildCustomHeader() {
+  const logo = customHeaderLogoSrc();
+  const cell = (id, cls) => `<td class="c8-cell ${cls}">${v(id) || '&nbsp;'}</td>`;
+  let rows = '';
+  for (let i = 1; i <= 5; i++) {
+    let mid;
+    if (logo && i === 1) mid = `<td class="c8-cell c8-logo" rowspan="2"><img class="c8-logo-img" src="${logo}" alt="لوگو"></td>`;
+    else if (logo && i === 2) mid = '';
+    else mid = cell('c_m' + i, 'c8-mid');
+    rows += `<tr>${cell('c_r' + i, 'c8-right')}${mid}${cell('c_l' + i, 'c8-left')}</tr>`;
+  }
+  return `<table class="exam-header exam-header8">${rows}</table>`;
 }
 
 function buildClassicHeader() {
@@ -1662,7 +1694,7 @@ function renderPreview() {
   const gap = opts.spacing === 'compact' ? 6 : (opts.spacing === 'open' ? 20 : 12);
   const pad = opts.spacing === 'compact' ? 5 : (opts.spacing === 'open' ? 16 : 10);
   let html = buildHeader();
-  const introId = currentHeaderTemplate() === 'formal' ? 'h2_intro' : (currentHeaderTemplate() === 'sama' ? 'h3_intro' : (currentHeaderTemplate() === 'school' ? 'h4_intro' : (currentHeaderTemplate() === 'edu' ? 'h5_intro' : (currentHeaderTemplate() === 'detailed-school' ? 'h6_intro' : (currentHeaderTemplate() === 'ministry' ? 'h7_intro' : 'f_intro')))));
+  const introId = currentHeaderTemplate() === 'formal' ? 'h2_intro' : (currentHeaderTemplate() === 'sama' ? 'h3_intro' : (currentHeaderTemplate() === 'school' ? 'h4_intro' : (currentHeaderTemplate() === 'edu' ? 'h5_intro' : (currentHeaderTemplate() === 'detailed-school' ? 'h6_intro' : (currentHeaderTemplate() === 'ministry' ? 'h7_intro' : (currentHeaderTemplate() === 'custom' ? 'c_intro' : 'f_intro'))))));
   const introEl = document.getElementById(introId);
   if (introEl && introEl.value.trim()) {
     html += `<div class="exam-intro">${plainTextHtml(introEl.value)}</div>`;
@@ -1745,8 +1777,8 @@ function renderPreview() {
     html += `</table><div style="text-align:center;margin-top:6px;font-weight:800;">جمع بارم: ${formatScore(calcTotalScore())}</div></div>`;
   }
   const t = currentHeaderTemplate();
-  const footerProfessor = t === 'formal' ? val('h2_professor') : (t === 'sama' ? val('h3_professor') : (t === 'school' ? val('h4_schoolName') : (t === 'edu' ? val('h5_schoolName') : (t === 'detailed-school' ? val('h6_schoolName') : (t === 'ministry' ? val('h7_schoolName') : val('f_professor'))))));
-  const footerOrg = t === 'formal' ? 'دانشگاه آزاد اسلامی واحد ' + val('h2_branch') : (t === 'sama' ? val('h3_unit') : (t === 'school' ? val('h4_educationOffice') : (t === 'edu' ? val('h5_generalOffice') : (t === 'detailed-school' ? val('h6_educationOffice') : (t === 'ministry' ? val('h7_generalOffice') : 'دانشگاه آزاد اسلامی واحد ' + val('f_branch'))))));
+  const footerProfessor = t === 'formal' ? val('h2_professor') : (t === 'sama' ? val('h3_professor') : (t === 'school' ? val('h4_schoolName') : (t === 'edu' ? val('h5_schoolName') : (t === 'detailed-school' ? val('h6_schoolName') : (t === 'ministry' ? val('h7_schoolName') : (t === 'custom' ? val('c_m3') : val('f_professor')))))));
+  const footerOrg = t === 'formal' ? 'دانشگاه آزاد اسلامی واحد ' + val('h2_branch') : (t === 'sama' ? val('h3_unit') : (t === 'school' ? val('h4_educationOffice') : (t === 'edu' ? val('h5_generalOffice') : (t === 'detailed-school' ? val('h6_educationOffice') : (t === 'ministry' ? val('h7_generalOffice') : (t === 'custom' ? val('c_m4') : 'دانشگاه آزاد اسلامی واحد ' + val('f_branch')))))));
   const footerInput = document.getElementById('opt_footerText');
   const footerText = footerInput && footerInput.value.trim() ? footerInput.value.trim() : `موفق باشید – ${footerProfessor} – ${footerOrg}`;
   html += `<div style="margin-top:20px;text-align:center;font-size:9pt;color:#555;padding-top:6px;">

@@ -25,7 +25,7 @@ class PrintHeaderSettingsTest {
             schemaFile.readText()
         )
         assertEquals(
-            listOf("classic", "formal", "sama", "school", "edu", "detailed-school", "ministry"),
+            listOf("classic", "formal", "sama", "school", "edu", "detailed-school", "ministry", "custom"),
             schema.templates.map { it.id }
         )
         assertTrue(schema.templates.all { it.fields.isNotEmpty() })
