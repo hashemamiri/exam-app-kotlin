@@ -385,7 +385,9 @@
   }
 
   /* ================================================================ تختهٔ سفید (رسم آزاد → تصویر پاسخ؛ چند صفحه؛ زمینه: خالی/شطرنجی/محور) */
-  function openWhiteboard(q, onDone) {
+  /* V206 — opts (اختیاری؛ سازندهٔ معلم): {title, doneLabel, prev:[dataURL]} — بدون opts همان تختهٔ دانش‌آموز است */
+  function openWhiteboard(q, onDone, opts) {
+    opts = opts || null;
     var W = 1400, H = 1000;
     var bg = el('div', {class: 'engine-bg wb'});
     var pages = [], cur = 0, tool = 'pen', color = '#1a237e', size = 3, grid = 'blank', undo = [], drawing = false, last = null, startPt = null, snapshotImg = null;
@@ -432,7 +434,7 @@
     var colorIn = el('input', {type: 'color', value: color, class: 'wb-color', title: 'رنگ'}); colorIn.addEventListener('input', function () { color = colorIn.value; });
     var sizeIn = el('input', {type: 'range', min: 1, max: 12, value: size, class: 'wb-size', title: 'ضخامت'}); sizeIn.addEventListener('input', function () { size = Number(sizeIn.value); });
     var bar = el('div', {class: 'engine-bar wb-bar'}, [
-      el('span', {text: '🖍 تختهٔ سفید — سؤال ' + fa(run.exam.questions.indexOf(q) + 1)}),
+      el('span', {text: opts && opts.title ? '🖍 ' + opts.title : '🖍 تختهٔ سفید — سؤال ' + fa(run.exam.questions.indexOf(q) + 1)}),
       tb('pen', '✏️', 'قلم'), tb('eraser', '🧽', 'پاک‌کن'), tb('line', '╱', 'خط'), tb('arrow', '➚', 'پیکان'), tb('rect', '▭', 'مستطیل'), tb('circle', '◯', 'دایره'), tb('text', 'T', 'متن'),
       colorIn, sizeIn, gridSel,
       el('button', {class: 'wb-tool', text: '↶', title: 'برگرداندن', onclick: function () { var d = undo.pop(); if (!d) return; var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = d; }}),
@@ -440,15 +442,15 @@
       el('span', {class: 'grow'}), status,
       el('button', {class: 'btn light sm', text: '◀', title: 'صفحهٔ قبل', onclick: function () { if (cur > 0) { savePage(); loadPage(cur - 1); } }}),
       el('button', {class: 'btn light sm', text: '▶', title: 'صفحهٔ بعد', onclick: function () { savePage(); if (cur < pages.length - 1) loadPage(cur + 1); else if (pages.length < WHITEBOARD_MAX_PAGES) { pages.push(newPage()); loadPage(pages.length - 1); } else toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err'); }}),
-      el('button', {class: 'btn sm', text: '✅ ثبت به‌عنوان پاسخ', onclick: function () { savePage(); var out = pages.filter(function (p) { return p.data; }).map(function (p) { return p.data; }); close(); if (out.length) onDone(out); }}),
+      el('button', {class: 'btn sm', text: '✅ ' + (opts && opts.doneLabel ? opts.doneLabel : 'ثبت به‌عنوان پاسخ'), onclick: function () { savePage(); var out = pages.filter(function (p) { return p.data; }).map(function (p) { return p.data; }); close(); if (out.length) onDone(out); }}),
       el('button', {class: 'btn light sm', text: '✕', title: 'بستن بدون ثبت', onclick: function () { if (confirm('تخته بدون ثبت بسته شود؟')) close(); }})
     ]);
     function close() { window.removeEventListener('pointerup', up); bg.remove(); document.body.style.overflow = ''; }
     var area = el('div', {class: 'wb-area'}, [canvas]);
     bg.appendChild(bar); bg.appendChild(area); document.body.appendChild(bg); document.body.style.overflow = 'hidden';
     /* صفحه‌های قبلی تخته (اگر پاسخ فعلی از تخته آمده) بارگذاری می‌شوند */
-    var prev = (run.images[q.id] || []).filter(function (u) { return /^data:/.test(u); });
-    if (prev.length && q.maxAnswerImages <= 0) prev.forEach(function (d) { var p = newPage(); p.data = d; pages.push(p); }); else pages.push(newPage());
+    var prev = opts ? (opts.prev || []) : (run.images[q.id] || []).filter(function (u) { return /^data:/.test(u); });
+    if (prev.length && (opts || q.maxAnswerImages <= 0)) prev.forEach(function (d) { var p = newPage(); p.data = d; pages.push(p); }); else pages.push(newPage());
     loadPage(0);
   }
 
@@ -466,5 +468,5 @@
   /* هشدار خروج هنگام آزمون باز */
   window.addEventListener('beforeunload', function (e) { if (run && !run.finished) { e.preventDefault(); e.returnValue = ''; } });
 
-  window.SiteStudent = {page: page, richHtml: richHtml, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
+  window.SiteStudent = {page: page, richHtml: richHtml, openWhiteboard: openWhiteboard, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
 })();

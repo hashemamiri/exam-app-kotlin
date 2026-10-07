@@ -21,6 +21,7 @@
       periodic: '<path fill="currentColor" d="' + [[2,2.2],[18.9,2.2],[2,6],[5.4,6],[15.5,6],[18.9,6],[2,9.8],[5.4,9.8],[8.8,9.8],[12.2,9.8],[15.5,9.8],[18.9,9.8],[2,13.6],[5.4,13.6],[8.8,13.6],[12.2,13.6],[15.5,13.6],[18.9,13.6]].map(function (c) { return 'M' + c[0] + ' ' + c[1] + 'h3.1v3.1h-3.1z'; }).join('') + 'M8.8 18.4h13.2v2.4H8.8z"/>',
       img: '<path fill="currentColor" d="M20 5h-3.17L15 3H9L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 14H4V7h4.05l1.83-2h4.24l1.83 2H20v12zM12 8c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z"/>',
       mic: '<path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>',
+      board: '<path fill="currentColor" d="M18.85 10.39l1.06-1.06c.78-.78.78-2.05 0-2.83L18.5 5.09c-.78-.78-2.05-.78-2.83 0l-1.06 1.06 4.24 4.24zm-4.24 1.42L7.41 19H6v-1.41l7.19-7.19 1.42 1.41zm-1.42-4.25L4 16.76V21h4.24l9.19-9.19-4.24-4.25zM19 17.5c0 2.19-2.54 3.5-5 3.5-.55 0-1-.45-1-1s.45-1 1-1c1.54 0 3-.73 3-1.5 0-.47-.48-.87-1.23-1.2l1.48-1.48c1.07.63 1.75 1.47 1.75 2.68zM4.58 13.35C3.61 12.79 3 12.06 3 11c0-1.8 1.89-2.63 3.56-3.36C7.59 7.18 9 6.56 9 6c0-.41-.78-1-2-1-1.26 0-1.8.61-1.83.64-.35.41-.98.46-1.4.12-.41-.34-.49-.95-.15-1.38C3.73 4.24 4.76 3 7 3c2.24 0 4 1.32 4 3 0 1.87-1.93 2.72-3.64 3.47C6.42 9.88 5 10.5 5 11c0 .31.43.6 1.07.86l-1.49 1.49z"/>',
       audio: '<path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6zm-2 16c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>'
     }[kind] || '';
     return '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' + body + '</svg>';
@@ -585,7 +586,9 @@
       var tools = el('div', {class: 'b-tools'}, [
         el('button', {class: 'tool-btn is-fx', title: 'فرمول', 'aria-label': 'فرمول', html: toolSvg('fx'), onclick: function () { var s = ta.selectionStart, e = ta.selectionEnd; S.openFormulaEditor(ta.value, s, e).then(function (t) { if (t != null && t !== ta.value) { ta.value = t; ta.dispatchEvent(new Event('input')); } }); }}),
         el('button', {class: 'tool-btn is-fig', title: 'شکل هندسی', 'aria-label': 'شکل هندسی', html: toolSvg('fig'), onclick: function () { insertFigure('geo', ta, q); }}),
-        el('button', {class: 'tool-btn is-gra', title: 'نمودار / محور', 'aria-label': 'نمودار / محور', html: toolSvg('graph'), onclick: function () { insertFigure('graph', ta, q); }}),
+        el('button', {class: 'tool-btn is-gra', title: 'نمودار', 'aria-label': 'نمودار', html: toolSvg('graph'), onclick: function () { insertFigure('graph', ta, q); }}),
+        /* V206 — آیکن محور کنار نمودار (مثل اپ، V136): ویرایشگر نمودار در حالت «درج محور» با ۶ محور پایه */
+        el('button', {class: 'tool-btn is-axis', title: 'محور', 'aria-label': 'محور', html: toolSvg('axis'), onclick: function () { insertFigure('axis', ta, q); }}),
         el('button', {class: 'tool-btn is-tab', title: 'جدول', 'aria-label': 'جدول', html: toolSvg('table'), onclick: function () { insertFigure('table', ta, q); }}),
         el('button', {class: 'tool-btn is-pt', title: 'جدول تناوبی', 'aria-label': 'جدول تناوبی', html: toolSvg('periodic'), onclick: function () { insertFigure('periodic', ta, q); }}),
         el('button', {class: 'tool-btn is-ana', title: 'اطلس تصویری: آناتومی، فیزیک، شیمی، تصویر خودم با فلش‌گذاری', 'aria-label': 'اطلس تصویری', html: toolSvg('gallery'), onclick: function (e) { atlasMenu(e.currentTarget, ta, q); }}),
@@ -598,6 +601,14 @@
             onDelete: function (k) { q.images.splice(k, 1); mark(); drawEditor(); },
             onSplitToSame: function (urls) { urls.forEach(function (u) { q.images.push(addImg(u)); }); mark(); drawEditor(); toast(fa(urls.length) + ' تصویر افزوده شد.', 'ok'); },
             onSplitToQuestions: function (urls) { urls.forEach(function (u, j) { if (j === 0) { q.images.push(addImg(u)); return; } var nq = newQuestion(q.type); nq.images.push(addImg(u)); state.questions.splice(i + j, 0, nq); }); mark(); drawList(); drawEditor(); toast(fa(urls.length) + ' سؤال ساخته شد.', 'ok'); }});
+        }}),
+        /* V206 — تختهٔ سفید معلم (مثل اپ: Icons.Outlined.Draw در QuestionMediaEditor → StudentWhiteboardDialog با teacherMode)؛ صفحه‌ها به تصاویر سؤال اضافه می‌شوند */
+        el('button', {class: 'tool-btn is-board', title: 'تختهٔ سفید: کشیدن شکل برای سؤال', 'aria-label': 'تختهٔ سفید', html: toolSvg('board'), onclick: function () {
+          if (!window.SiteStudent || !window.SiteStudent.openWhiteboard) return toast('تخته در دسترس نیست.', 'err');
+          window.SiteStudent.openWhiteboard(q, function (pages) {
+            pages.forEach(function (u) { q.images.push({uri: u, xMm: 20, yMm: 30, widthMm: 55}); });
+            mark(); drawEditor(); toast(fa(pages.length) + ' تصویر تخته به سؤال افزوده شد.', 'ok');
+          }, {title: 'تختهٔ سفید — سؤال ' + fa(i + 1), doneLabel: 'افزودن تصویر تخته به سؤال', prev: []});
         }}),
         el('button', {class: 'tool-btn is-mic', title: 'گفتار به متن', 'aria-label': 'گفتار به متن', html: toolSvg('mic'), onclick: function () { dictate(ta, q); }}),
         window.SiteExtras ? el('button', {class: 'tool-btn' + (q.audio ? ' on' : ''), title: q.audio ? 'صوت سؤال (دارد)' : 'صوت سؤال', 'aria-label': 'صوت سؤال', html: toolSvg('audio'), onclick: function () { window.SiteExtras.audioDlg(q, state.examId || (state.examId = uuid()), state.mode === 'print', function () { mark(); drawEditor(); }); }}) : null
@@ -893,7 +904,7 @@
   }
   function insertFigure(kind, ta, q, editTok, presetSpec) {
     var overlay = el('div', {class: 'engine-bg'});
-    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : presetSpec ? '🖼 تصویر خودم — روی تصویر بکشید (کلیک و کشیدن) تا فلش و شماره اضافه شود؛ نام هر شماره را در ستون کنار بنویسید' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
+    var bar = el('div', {class: 'engine-bar'}, [el('span', {text: editTok ? '✏️ ویرایش شیء درج‌شده' : kind === 'axis' ? '📐 درج محور در سؤال' : presetSpec ? '🖼 تصویر خودم — روی تصویر بکشید (کلیک و کشیدن) تا فلش و شماره اضافه شود؛ نام هر شماره را در ستون کنار بنویسید' : '📐 درج شکل در سؤال'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '✕ بستن', onclick: close})]);
     var iframe = el('iframe', {class: 'with-bar'});
     overlay.appendChild(bar); overlay.appendChild(iframe); document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
@@ -902,7 +913,7 @@
       var w = iframe.contentWindow, d = iframe.contentDocument, tries = 0;
       (function go() {
         tries++;
-        var api = {geo: w.GeoFig, graph: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig, physics: w.ScienceFig, chemistry: w.ScienceFig}[kind];
+        var api = {geo: w.GeoFig, graph: w.GraphFig, axis: w.GraphFig, table: w.TableFig, periodic: w.PeriodicFig, anatomy: w.AnatomyFig, science: w.ScienceFig, physics: w.ScienceFig, chemistry: w.ScienceFig}[kind];
         var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null; /* V195 — ScienceFig.open(spec, el, dom) */
         if (!api || typeof api.open !== 'function' || !w.renderPreview) { if (tries < 100) return setTimeout(go, 60); toast('ویرایشگر شکل آماده نشد.', 'err'); return close(); }
         /* textarea هدفِ ویرایشگرهای وب: یک textarea مخفی که متنِ سؤال ما را دارد */
@@ -929,10 +940,10 @@
           var st2 = d.createElement('style'); st2.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st2);
           api.open(presetSpec, null);
           var h3 = d.querySelector('#anOverlay h3'); if (h3) h3.textContent = 'تصویر خودم — فلش‌گذاری برای نام‌گذاری';
-        } else api.open(null, null, sciDom);
+        } else api.open(null, null, kind === 'axis' ? 'axis' : sciDom); /* V206 — 'axis' → GraphFig در حالت محور */
         if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
         /* بستن روکش وب بدون درج → بستن ما */
-        var ovId = {geo: 'gfOverlay', graph: 'grOverlay', table: 'tbOverlay'}[kind];
+        var ovId = {geo: 'gfOverlay', graph: 'grOverlay', axis: 'grOverlay', table: 'tbOverlay'}[kind];
         var poll = setInterval(function () { if (!d.body.contains(overlay) && false) return; var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);
       })();
     });

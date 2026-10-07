@@ -89,7 +89,7 @@ class V188_SiteQuestionBoxTest {
     fun `physics and chemistry are separate and selected objects get a delete cross`() {
         val b = source("site/src/builder.js")
         assertTrue("insertFigure('physics', ta, q)" in b && "insertFigure('chemistry', ta, q)" in b)
-        assertTrue("var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null;" in b && "api.open(null, null, sciDom);" in b)
+        assertTrue("var sciDom = kind === 'physics' ? 'phys' : kind === 'chemistry' ? 'chem' : null;" in b && "api.open(null, null, kind === 'axis' ? 'axis' : sciDom);" in b)
         assertTrue("function deleteTok(c)" in b && "class: 'b-chip-x'" in b && "deleteTok(xb.closest('[data-tok]'))" in b)
         assertTrue(".b-chip-x{position:absolute" in source("site/src/site.css"))
     }

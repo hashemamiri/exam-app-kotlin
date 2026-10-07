@@ -1119,11 +1119,13 @@ button.stat:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .dk .b-editor .tool-btn.is-fx{background:#eef2ff;color:#5b52e0}
 .dk .b-editor .tool-btn.is-fig{background:#ecfdf5;color:#0f766e}
 .dk .b-editor .tool-btn.is-gra{background:#eff6ff;color:#2563eb}
+.dk .b-editor .tool-btn.is-axis{background:#f0f9ff;color:#0369a1}
 .dk .b-editor .tool-btn.is-tab{background:#fff7ed;color:#c2410c}
 .dk .b-editor .tool-btn.is-pt{background:#fdf4ff;color:#a21caf}
 .dk .b-editor .tool-btn.is-ana{background:#fff1f2;color:#be123c}
 .dk .b-editor .tool-btn.is-sci{background:#f0fdfa;color:#0f766e}
 .dk .b-editor .tool-btn.is-img{background:#f8fafc;color:#334155}
+.dk .b-editor .tool-btn.is-board{background:#fdf2f8;color:#be185d}
 .dk .b-editor .tool-btn.is-mic{background:#fefce8;color:#a16207}
 /* پیش‌نمایش دانش‌آموز: متن با فرمول/شکل مثل صفحهٔ آزمون (قواعد ریاضی با .b-sp-card هم تزریق می‌شود) */
 .b-sp-text{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}

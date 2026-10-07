@@ -209,6 +209,18 @@
   var AXIS_EXT = ['axnumpts', 'axnumint', 'axnumineq', 'axnumfrac', 'axnumdec', 'axnumblank', 'axnumlog', 'axnumtwo',
     'axxypts', 'axxyline', 'axxyvec', 'axxycirc', 'axxynogrid', 'axxyquads', 'axxyblank', 'axdual',
     'axlog', 'axloglog', 'axtime', 'axpolpts', 'ax3dpt'];
+  // V206 — حالت «درج محور» در ویرایشگر وب (سایت): همان ۶ محور پایهٔ AXIS_FIGURES اپ (FigureGallery.kt)
+  // با پیش‌فرض‌های یکسان. در اپ، انتخاب محور بومی است و این فهرست فقط وقتی open(…,'axis') یا
+  // توکنی با نوع محور باز شود نمایش داده می‌شود؛ فهرست «نوع نمودار» دست‌نخورده می‌ماند.
+  var AXIS_TYPES = [
+    { id: 'axnum', name: 'محور اعداد', X: { xmin: '-5', xmax: '5', step: '1' } },
+    { id: 'axxy', name: 'محور مختصات (۴ ربع)', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1' } },
+    { id: 'axq1', name: 'ربع اول', X: { xmax: '10', ymax: '8', step: '1' } },
+    { id: 'axgrid', name: 'شبکهٔ شطرنجی', X: { xmax: '10', ymax: '8' } },
+    { id: 'axpol', name: 'محور قطبی', X: { xmax: '4' } },
+    { id: 'ax3d', name: 'سه‌بعدی (x,y,z)', X: { xmax: '4', step: '1' } }
+  ];
+  function isAxisType(t) { return /^ax/.test(String(t || '')); }
   function svgOf(spec) {
     spec = spec || {};
     var t = spec.t || 'line';
@@ -1853,13 +1865,27 @@
       hmap: '<rect x="6" y="6" width="7" height="7" fill="currentColor" opacity=".3"/><rect x="15" y="6" width="7" height="7" fill="currentColor" opacity=".7"/><rect x="24" y="6" width="7" height="7" fill="currentColor"/><rect x="6" y="15" width="7" height="7" fill="currentColor" opacity=".8"/><rect x="15" y="15" width="7" height="7" fill="currentColor" opacity=".4"/><rect x="24" y="15" width="7" height="7" fill="currentColor" opacity=".55"/>',
       calh: '<rect x="6" y="8" width="4" height="4" fill="currentColor" opacity=".3"/><rect x="12" y="8" width="4" height="4" fill="currentColor"/><rect x="18" y="8" width="4" height="4" fill="currentColor" opacity=".6"/><rect x="24" y="8" width="4" height="4" fill="currentColor" opacity=".2"/><rect x="6" y="14" width="4" height="4" fill="currentColor" opacity=".8"/><rect x="12" y="14" width="4" height="4" fill="currentColor" opacity=".4"/><rect x="18" y="14" width="4" height="4" fill="currentColor"/><rect x="24" y="14" width="4" height="4" fill="currentColor" opacity=".5"/>',
       rose: '<path d="M18,15 L18,5 A10,10 0 0 1 26,12 Z M18,15 L26,18 A10,10 0 0 1 16,25 Z M18,15 L10,18 A10,10 0 0 1 12,7 Z" fill="currentColor" opacity=".75"/>',
-      word: '<text x="4" y="14" font-size="9" fill="currentColor">Aa</text><text x="16" y="22" font-size="7" fill="currentColor">کلمه</text>'
+      word: '<text x="4" y="14" font-size="9" fill="currentColor">Aa</text><text x="16" y="22" font-size="7" fill="currentColor">کلمه</text>',
+      // V206 — محورها
+      axnum: '<path d="M3,15 L33,15 M30,12 L33,15 L30,18 M8,12 L8,18 M14,12 L14,18 M20,12 L20,18 M26,12 L26,18" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+      axxy: '<path d="M3,15 L33,15 M30,12 L33,15 L30,18 M18,28 L18,3 M15,6 L18,3 L21,6" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+      axq1: '<path d="M6,26 L33,26 M30,23 L33,26 L30,29 M6,26 L6,3 M3,6 L6,3 L9,6" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+      axgrid: '<path d="M4,4 H32 V26 H4 Z M11,4 V26 M18,4 V26 M25,4 V26 M4,11 H32 M4,19 H32" stroke="currentColor" stroke-width="1.2" fill="none"/>',
+      axpol: '<circle cx="18" cy="15" r="11" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="18" cy="15" r="6" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7,15 H29 M18,4 V26 M10,7 L26,23 M26,7 L10,23" stroke="currentColor" stroke-width="1" fill="none"/>',
+      ax3d: '<path d="M18,27 L18,5 M15,8 L18,5 L21,8 M18,27 L33,27 M30,24 L33,27 L30,30 M18,27 L5,17 M9,17 L5,17 L6,21" stroke="currentColor" stroke-width="1.6" fill="none"/>'
     };
     return '<svg viewBox="0 0 36 30" aria-hidden="true">' + (m[id] || m.plot) + '</svg>';
   }
 
   function fieldsFor(t) {
     var common = [['X.title', 'عنوان نمودار']];
+    if (t === 'axnum') return [['X.title', 'عنوان'], ['X.xmin', 'کمترین'], ['X.xmax', 'بیشترین'], ['X.step', 'گام']];
+    if (t === 'axxy') return [['X.title', 'عنوان'], ['X.xmin', 'x min'], ['X.xmax', 'x max'], ['X.ymin', 'y min'], ['X.ymax', 'y max'], ['X.step', 'گام']];
+    if (t === 'axq1') return [['X.title', 'عنوان'], ['X.xmax', 'x max'], ['X.ymax', 'y max'], ['X.step', 'گام']];
+    if (t === 'axgrid') return [['X.title', 'عنوان'], ['X.xmax', 'تعداد ستون'], ['X.ymax', 'تعداد ردیف']];
+    if (t === 'axpol') return [['X.title', 'عنوان'], ['X.xmax', 'بیشترین شعاع']];
+    if (t === 'ax3d') return [['X.title', 'عنوان'], ['X.xmax', 'بیشترین مقدار'], ['X.step', 'گام']];
+    if (isAxisType(t)) return [['X.title', 'عنوان']];
     if (t === 'line') return common.concat([['X.m', 'شیب m'], ['X.b', 'عرض از مبدأ b'], ['X.xmin', 'x min'], ['X.xmax', 'x max'], ['X.ymin', 'y min'], ['X.ymax', 'y max']]);
     if (t === 'quad') return common.concat([['X.a', 'a'], ['X.b', 'b'], ['X.c', 'c'], ['X.xmin', 'x min'], ['X.xmax', 'x max'], ['X.ymin', 'y min'], ['X.ymax', 'y max']]);
     if (t === 'sine') return common.concat([['X.A', 'دامنه A'], ['X.w', 'ω'], ['X.ph', 'فاز'], ['X.xmin', 'x min'], ['X.xmax', 'x max'], ['X.ymin', 'y min'], ['X.ymax', 'y max']]);
@@ -1925,6 +1951,12 @@
       }
     };
   }
+  // V206 — پیش‌فرض محورها (هم‌ارز JSON قالب‌های FigureGallery.kt).
+  function defAxis(t) {
+    var d = { k: 'g', t: t, X: { title: '' } }, i;
+    for (i = 0; i < AXIS_TYPES.length; i++) if (AXIS_TYPES[i].id === t) { Object.keys(AXIS_TYPES[i].X).forEach(function (k) { d.X[k] = AXIS_TYPES[i].X[k]; }); break; }
+    return d;
+  }
 
   var state = def('col');
   var replaceEl = null;
@@ -1963,10 +1995,18 @@
   }
   function setType(id) {
     var prev = state;
-    state = def(id);
-    Object.keys(prev.X || {}).forEach(function (k) {
-      if (prev.X[k] != null && prev.X[k] !== '') state.X[k] = prev.X[k];
-    });
+    if (isAxisType(id)) {
+      // V206 — محور: فقط کلیدهای همان محور از حالت قبلی می‌ماند (ویرایش توکن مقدارها را حفظ می‌کند).
+      state = defAxis(id);
+      Object.keys(state.X).forEach(function (k) {
+        if (prev.X && prev.X[k] != null && prev.X[k] !== '') state.X[k] = prev.X[k];
+      });
+    } else {
+      state = def(id);
+      Object.keys(prev.X || {}).forEach(function (k) {
+        if (prev.X[k] != null && prev.X[k] !== '') state.X[k] = prev.X[k];
+      });
+    }
     state.t = id; state.k = 'g';
     document.querySelectorAll('#grShapes .gf-shape').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-t') === id);
@@ -1976,6 +2016,25 @@
       var onG = document.querySelector('#grShapes .gf-shape.on');
       if (onG && onG.scrollIntoView) onG.scrollIntoView({ block: 'nearest' });
     } catch (e) {}
+  }
+  // V206 — فهرست نوع‌ها: نمودارها یا (در حالت محور) ۶ محور پایه؛ عنوان پنجره هم عوض می‌شود.
+  var shapesMode = null;
+  function fillShapes(axis) {
+    axis = !!axis;
+    if (shapesMode === axis) return;
+    shapesMode = axis;
+    var host = $('grShapes'); if (!host) return;
+    host.innerHTML = '';
+    (axis ? AXIS_TYPES : TYPES).forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'gf-shape'; b.setAttribute('data-t', s.id);
+      b.innerHTML = iconOf(s.id) + '<span>' + s.name + '</span>';
+      b.addEventListener('click', function () { setType(s.id); });
+      host.appendChild(b);
+    });
+    var h3 = document.querySelector('#grOverlay .gf-head h3'); if (h3) h3.textContent = axis ? 'درج محور' : 'درج نمودار';
+    var th = document.querySelector('#grOverlay .gf-types-h'); if (th) th.textContent = axis ? 'نوع محور' : 'نوع نمودار';
+    var md = document.querySelector('#grOverlay .gf-modal'); if (md) md.setAttribute('aria-label', axis ? 'درج محور' : 'درج نمودار');
   }
   function ensureModal() {
     if ($('grOverlay')) return;
@@ -1994,13 +2053,7 @@
         '<button type="button" class="gf-btn ok" id="grApply">درج در سؤال</button></div>' +
       '</div>';
     document.body.appendChild(ov);
-    TYPES.forEach(function (s) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'gf-shape'; b.setAttribute('data-t', s.id);
-      b.innerHTML = iconOf(s.id) + '<span>' + s.name + '</span>';
-      b.addEventListener('click', function () { setType(s.id); });
-      $('grShapes').appendChild(b);
-    });
+    fillShapes(false);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     $('grClose').onclick = close;
     $('grCancel').onclick = close;
@@ -2041,14 +2094,16 @@
     } else insertToken(tokenOf(state));
     close();
   }
-  function open(spec, el) {
+  function open(spec, el, mode) {
     replaceEl = el || null;
-    try { state = spec ? JSON.parse(JSON.stringify(spec)) : def('col'); }
-    catch (e) { state = def('col'); }
+    var axis = mode === 'axis' || !!(spec && isAxisType(spec.t));
+    try { state = spec ? JSON.parse(JSON.stringify(spec)) : (axis ? defAxis('axnum') : def('col')); }
+    catch (e) { state = axis ? defAxis('axnum') : def('col'); }
     state.k = 'g';
-    if (!state.t) state.t = 'col';
-    if (!state.X) state.X = def(state.t).X;
+    if (!state.t) state.t = axis ? 'axnum' : 'col';
+    if (!state.X) state.X = (isAxisType(state.t) ? defAxis(state.t) : def(state.t)).X;
     ensureModal();
+    fillShapes(axis);
     $('grOverlay').classList.add('open');
     var ok = $('grApply');
     if (ok) ok.textContent = replaceEl ? 'اعمال تغییرات' : 'درج در سؤال';
