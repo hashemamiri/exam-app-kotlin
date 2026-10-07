@@ -998,10 +998,8 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
 .b-addmenu{position:fixed;z-index:80;display:grid;gap:6px;padding:10px;min-width:180px;border-radius:14px}
 .b-addmenu .btn{justify-content:flex-start}
 @media (min-width:861px){
-  .dk .builder .b-top .row .btn,.dk .builder .b-top .row .chip{display:none}
-  .dk .builder .b-top .row .code{display:inline-block}
-  .dk .builder .b-top .row:not(:has(.code)),.dk .builder .b-top .b-meta{display:none}
-  .dk .builder .b-top:not(:has(.code)):not(:has(.alert)){display:none}
+  /* V207 — دسکتاپ: کادر بالای سازنده (که فقط کد آزمون را نشان می‌داد) کلاً حذف شد؛ کد آزمون در پیام ذخیره و کارت آزمون هست */
+  .dk .builder .b-top{display:none}
   .dk .b-body{grid-template-columns:1fr;margin:0}
   .dk .b-body.has-settings{grid-template-columns:290px minmax(0,1fr)}
   .dk .b-settings{display:block;grid-column:1;grid-row:1;position:sticky;top:76px;max-height:calc(100vh - 100px);overflow:auto;padding:18px}
