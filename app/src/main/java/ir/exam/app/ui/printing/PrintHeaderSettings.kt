@@ -265,8 +265,13 @@ private fun FieldSelect(f: HeaderField, values: Map<String, String>, onChange: (
             onValueChange = {},
             readOnly = true,
             label = { Text(f.label) },
-            modifier = Modifier
-                .fillMaxWidth()
+            trailingIcon = { TextButton(onClick = { open = true }) { Text("تغییر") } },
+            modifier = Modifier.fillMaxWidth()
+        )
+        // V204.1 — OutlinedTextField خودش لمس را می‌بلعد و clickable روی آن اجرا نمی‌شد (انتخاب لوگو ممکن نبود)؛ لایهٔ شفاف روی فیلد
+        Box(
+            Modifier
+                .matchParentSize()
                 .clickable { open = true }
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

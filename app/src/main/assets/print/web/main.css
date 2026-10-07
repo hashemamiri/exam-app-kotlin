@@ -469,12 +469,15 @@
   .h7-val.med { min-width:125px; }
   .h7-val.long { min-width:185px; }
 
-  /* V204 — سربرگ ۸ (ایجاد سربرگ): سه ستون مساوی × پنج ردیف، لوگو در ستون وسط ردیف ۱–۲ */
-  .exam-header8 td { width: 33.33%; text-align: center; padding: 2px 6px; height: 22px; }
-  .exam-header8 .c8-right { text-align: right; padding-right: 10px; }
-  .exam-header8 .c8-left { text-align: left; padding-left: 10px; direction: rtl; }
-  .exam-header8 .c8-logo { text-align: center; vertical-align: middle; padding: 2px; }
-  .exam-header8 .c8-logo-img { max-height: 46px; max-width: 110px; object-fit: contain; display: inline-block; }
+  /* V204/V204.1 — سربرگ ۸ (ایجاد سربرگ): بدون جدول؛ سه ستون مساوی × پنج خط، لوگو در ستون وسط به‌جای خط ۱ و ۲ */
+  .exam-header8 { display:flex; flex-direction:row; width:100%; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #000; font-size:10pt; font-weight:700; direction:rtl; }
+  .exam-header8 .c8-col { flex:1 1 0; min-width:0; display:flex; flex-direction:column; }
+  .exam-header8 .c8-line { height:22px; line-height:22px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 6px; }
+  .exam-header8 .c8-right .c8-line { text-align:right; }
+  .exam-header8 .c8-mid .c8-line { text-align:center; }
+  .exam-header8 .c8-left .c8-line { text-align:right; }
+  .exam-header8 .c8-logo { height:44px; display:flex; align-items:center; justify-content:center; }
+  .exam-header8 .c8-logo-img { max-height:44px; max-width:120px; object-fit:contain; }
 
   /* ===== COMPACT EXACT HEADER (half height) ===== */
   .exam-header {

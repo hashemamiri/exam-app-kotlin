@@ -722,17 +722,15 @@ function customHeaderLogoSrc() {
   return '';
 }
 function buildCustomHeader() {
+  /* V204.1 — بدون جدول و خط: سه ستون کنار هم (راست/وسط/چپ)، هر ستون پنج خط هم‌ارتفاع؛ لوگو = ارتفاع دو خط در ستون وسط */
   const logo = customHeaderLogoSrc();
-  const cell = (id, cls) => `<td class="c8-cell ${cls}">${v(id) || '&nbsp;'}</td>`;
-  let rows = '';
-  for (let i = 1; i <= 5; i++) {
-    let mid;
-    if (logo && i === 1) mid = `<td class="c8-cell c8-logo" rowspan="2"><img class="c8-logo-img" src="${logo}" alt="لوگو"></td>`;
-    else if (logo && i === 2) mid = '';
-    else mid = cell('c_m' + i, 'c8-mid');
-    rows += `<tr>${cell('c_r' + i, 'c8-right')}${mid}${cell('c_l' + i, 'c8-left')}</tr>`;
-  }
-  return `<table class="exam-header exam-header8">${rows}</table>`;
+  const line = (id) => `<div class="c8-line">${v(id) || '&nbsp;'}</div>`;
+  const col = (prefix, cls) => { let h = ''; for (let i = 1; i <= 5; i++) h += line(prefix + i); return `<div class="c8-col ${cls}">${h}</div>`; };
+  let mid = '';
+  if (logo) mid += `<div class="c8-logo"><img class="c8-logo-img" src="${logo}" alt="لوگو"></div>`;
+  else mid += line('c_m1') + line('c_m2');
+  for (let i = 3; i <= 5; i++) mid += line('c_m' + i);
+  return `<div class="exam-header8">${col('c_r', 'c8-right')}<div class="c8-col c8-mid">${mid}</div>${col('c_l', 'c8-left')}</div>`;
 }
 
 function buildClassicHeader() {

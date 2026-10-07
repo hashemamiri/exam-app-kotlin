@@ -19252,6 +19252,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V204.1
+- بازخورد کاربر: «ایجاد سربرگ جدول‌بندی نباشد»، «در اپ امکان انتخاب لوگو نیست»، «باگ نمایش دارد».
+- `mainscript.js buildCustomHeader`: دیگر `<table>` نیست؛ `div.exam-header8` فلکس سه ستونه (`c8-col c8-right/c8-mid/c8-left`)، هر ستون پنج `div.c8-line` (۲۲px، nowrap/ellipsis)، لوگو `div.c8-logo` (۴۴px = دو خط) به‌جای خط ۱ و ۲ ستون وسط. `main.css`: فقط border-bottom نازک؛ بدون کادر/خط بین خانه‌ها. چون کلاس `exam-header` حذف شد، قاعده‌های عرض ۴mm+ چاپ شامل آن نمی‌شود (درست است چون کادر ندارد).
+- اپ: `FieldSelect` با `Modifier.clickable` روی `OutlinedTextField(readOnly)` کار نمی‌کرد (TextField لمس را می‌بلعد) → همهٔ selectهای سربرگ (نوع امتحان، لوگو…) باز نمی‌شدند. حالا `Box(Modifier.matchParentSize().clickable)` روی فیلد + دکمهٔ «تغییر» در trailingIcon.
+- تست V204 به‌روز شد (پین‌های div-محور و overlay).
+
 ## §V204
 - خواستهٔ کاربر: گزینهٔ «ایجاد سربرگ» در گزینه‌های سربرگ با سه ستون مجازی × پنج ردیف؛ اگر لوگو انتخاب شد در ستون وسط جای ردیف ۱ و ۲. پاسخ‌های کاربر: محتوای خانه‌ها متن آزاد؛ لوگو = آماده‌ها + آپلود دلخواه (محلی)؛ هر سه کلاینت؛ بدون لوگو ردیف ۱ و ۲ وسط خانهٔ معمولی و بدون «بسمه تعالی» خودکار.
 - شِما (`assets/print/header_settings_schema.json`, فرمت indent=1 حفظ شد): قالب هشتم `custom` با فیلدهای `c_logo` (select: ''/azad/formal/sama/ministry/custom)، `c_logoData` (kind جدید `image`, `showIf:{field:'c_logo',in:['custom']}`)، `c_r1..5`, `c_m1..5`, `c_l1..5` (c_m1/c_m2 با `showIf:{c_logo in ['']}`)، `c_intro` (textarea). قاعدهٔ showIf مشترک: فیلد وقتی دیده می‌شود که مقدار فعلی فیلد کنترل‌کننده در فهرست `in` باشد.
