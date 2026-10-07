@@ -757,7 +757,8 @@
         if (g.length === 1) { if (visible(g[0])) drawField(g[0], list); return; }
         /* V204.5 — ستون‌ها کنار هم؛ ردیف‌های هر ستون زیر هم (col/colLabel)؛ جای خانهٔ پنهان (لوگو) فیلد غیرفعال «لوگو» */
         var cols = []; g.forEach(function (f) { var key = f.col || f.id; var c = cols.filter(function (x) { return x.key === key; })[0]; if (!c) { c = {key: key, label: f.colLabel || '', fields: []}; cols.push(c); } c.fields.push(f); });
-        var wrap = el('div', {class: 'hdr-group', style: 'grid-column:1/-1;display:grid;grid-template-columns:repeat(' + cols.length + ',1fr);gap:8px;align-items:start'});
+        /* V204.6 — بلوک‌های ستون زیر هم (نه کنار هم) */
+        var wrap = el('div', {class: 'hdr-group', style: 'grid-column:1/-1;display:grid;grid-template-columns:1fr;gap:12px'});
         cols.forEach(function (c) {
           var colBox = el('div', {style: 'display:grid;gap:8px'});
           if (c.label) colBox.appendChild(el('div', {style: 'font-weight:700;font-size:13px', text: c.label}));

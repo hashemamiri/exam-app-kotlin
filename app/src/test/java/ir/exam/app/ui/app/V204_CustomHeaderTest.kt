@@ -62,6 +62,7 @@ class V204_CustomHeaderTest {
         assertTrue("else if (f.kind === 'image') {" in app)
         assertTrue("if (f.group && last && last[0].group === f.group) last.push(f); else groups.push([f]);" in app)
         assertTrue("val cols = g.groupBy { it.col ?: it.id }" in src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"))
-        assertTrue("var key = f.col || f.id;" in app)
+        assertTrue("var key = f.col || f.id;" in app && "grid-template-columns:1fr;gap:12px" in app)
+        assertTrue("Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {\n                                cols.values.forEach" in src("app/src/main/java/ir/exam/app/ui/printing/PrintHeaderSettings.kt"))
     }
 }

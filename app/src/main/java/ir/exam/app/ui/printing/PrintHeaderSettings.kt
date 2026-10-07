@@ -197,11 +197,11 @@ fun HeaderSettingsDialog(
                             val f = g.first()
                             HeaderFieldEditor(f, values, Modifier.fillMaxWidth())
                         } else {
-                            // V204.5 — ستون‌ها کنار هم، ردیف‌های هر ستون زیر هم (راست: ۱..۴، سپس وسط، سپس چپ)
+                            // V204.5/V204.6 — بلوک‌های ستون زیر هم (اول ستون راست با ردیف‌های ۱..۴، بعد وسط، بعد چپ)
                             val cols = g.groupBy { it.col ?: it.id }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                                 cols.values.forEach { colFields ->
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         colFields.first().colLabel?.let { Text(it, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold) }
                                         colFields.forEach { f ->
                                             if (f.isVisible(values)) HeaderFieldEditor(f, values, Modifier.fillMaxWidth())
