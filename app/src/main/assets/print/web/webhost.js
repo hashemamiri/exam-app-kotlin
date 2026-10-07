@@ -210,7 +210,8 @@
   function applyFields(fields) {
     fields = asObject(fields);
     Object.keys(fields).forEach(function (id) {
-      if (!/^(f_|h[2-7]_|opt_footerText$)/.test(id)) return;
+      /* V204.2 — c_* = سربرگ ۸ «ایجاد سربرگ» (قبلاً فیلتر می‌شد و سربرگ خالی می‌ماند) */
+      if (!/^(f_|h[2-7]_|c_|opt_footerText$)/.test(id)) return;
       var el = $(id); if (!el) return;
       el.value = text(fields[id]);
     });
