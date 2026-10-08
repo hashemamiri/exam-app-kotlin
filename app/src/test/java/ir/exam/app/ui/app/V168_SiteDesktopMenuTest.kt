@@ -62,4 +62,22 @@ class V223_SiteDesktopPrintButtonsTest {
         val b = src("site/src/builder.js")
         assertTrue("title: 'ویرایش', html: EDIT_ICON," in b && "title: 'حذف', html: TRASH_ICON," in b)
     }
+
+    @Test
+    fun v224StudentsDesktopLikeApp() {
+        val sc = src("site/src/school.js")
+        assertTrue("function newStudentsDialog(classes, defaultClass, done, afterCreate) {" in sc)
+        assertTrue("if (!isEdit) return newStudentsDialog(classes, defaultClass, done, afterCreate);" in sc)
+        assertTrue("function suggestUsername(first, last, suffix) {" in sc)
+        assertTrue("var acts = el('div', {class: 'acts acts-text-btns'});" in sc)
+        assertTrue("el('button', {class: 'btn light sm', text: 'افزودن به کلاس'," in sc)
+        assertFalse("text: '👥 افزودن گروهی'" in sc)
+        assertFalse("text: '👥 گروهی'" in sc)
+        assertTrue("M.studentFilterDialog(stFilter, classes, schools, meta, function (f) {" in sc)
+        assertTrue("M.studentFilterDialog(aeFilter, aeClasses, [], aeMeta, function (f) {" in sc)
+        val ad = src("site/src/admin.js")
+        assertFalse("text: '👥 افزودن گروهی'" in ad)
+        val m = src("site/src/mobile.js")
+        assertTrue("studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive" in m)
+    }
 }

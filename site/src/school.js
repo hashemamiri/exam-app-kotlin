@@ -41,8 +41,120 @@
   }
 
   /* ---------------- فرم دانش‌آموز (ساخت / ویرایش) ---------------- */
+  /* V224 — آینهٔ PersianUsernameSuggester اپ: پیشنهاد قابل‌ویرایش نام کاربری از نام فارسی */
+  var UN_WORDS = {'علی': 'ali', 'محمد': 'mohammad', 'رضا': 'reza', 'حسین': 'hossein', 'حسن': 'hasan', 'زهرا': 'zahra', 'فاطمه': 'fatemeh', 'مریم': 'maryam', 'احمد': 'ahmad', 'امیر': 'amir', 'سارا': 'sara', 'نرگس': 'narges', 'احمدی': 'ahmadi', 'رضایی': 'rezaei', 'محمدی': 'mohammadi', 'حسینی': 'hosseini', 'کریمی': 'karimi', 'مرادی': 'moradi', 'اکبری': 'akbari', 'جعفری': 'jafari', 'نادری': 'naderi', 'کاظمی': 'kazemi'};
+  var UN_LETTERS = {'ا': 'a', 'آ': 'a', 'ب': 'b', 'پ': 'p', 'ت': 't', 'ث': 's', 'ج': 'j', 'چ': 'ch', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ذ': 'z', 'ر': 'r', 'ز': 'z', 'ژ': 'zh', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'z', 'ط': 't', 'ظ': 'z', 'ع': 'a', 'غ': 'gh', 'ف': 'f', 'ق': 'gh', 'ک': 'k', 'ك': 'k', 'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'و': 'v', 'ه': 'h', 'ی': 'y', 'ي': 'y'};
+  function translitPart(raw) {
+    var clean = String(raw || '').trim().replace(/\u200c/g, ' ');
+    if (UN_WORDS[clean]) return UN_WORDS[clean];
+    var out = '', pd = '۰۱۲۳۴۵۶۷۸۹';
+    clean.toLowerCase().split('').forEach(function (ch) {
+      if (/[a-z0-9]/.test(ch)) out += ch;
+      else if (pd.indexOf(ch) >= 0) out += pd.indexOf(ch);
+      else if (ch === ' ' || ch === '-' || ch === '_') out += '_';
+      else out += UN_LETTERS[ch] || '';
+    });
+    return out.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+  }
+  function suggestUsername(first, last, suffix) {
+    var base = [first, last].map(translitPart).filter(Boolean).join('_').replace(/_+/g, '_').replace(/^_+|_+$/g, '').slice(0, 17);
+    if (base.length < 4) base = (base + '_user').slice(0, 17);
+    var tail = suffix > 0 ? '_' + String(suffix).padStart(2, '0') : '';
+    return (base.slice(0, 20 - tail.length) + tail).replace(/^_+|_+$/g, '');
+  }
+  function genPassword10() { var a = 'abcdefghjkmnpqrstuvwxyz23456789', out = ''; for (var i = 0; i < 10; i++) out += a[Math.floor(Math.random() * a.length)]; return out; }
+  var EYE_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6A3 3 0 0 0 13.4 13.4M9.9 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.2 6.2A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.3-1"/></svg>';
+  var TRASH_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
+  /* V224 — «دانش‌آموز جدید» دقیقاً مثل BulkStudentDialog اپ: ردیف «+ / ایجاد / ×»، چیپ شمارهٔ کارت‌ها، یک کارت فعال
+     (نام|نام خانوادگی، نام پدر|نام کاربری پیشنهادی، پایه|رشته، رمز|رمز فعلی، ردیف وسط: چشم، پسر، دختر، تاس، سطل). بدون فیلد کلاس؛
+     اگر از داخل کلاس باز شود (defaultClass) همهٔ کارت‌ها به همان کلاس می‌روند (V131). */
+  function newStudentsDialog(classes, defaultClass, done, afterCreate) {
+    function blank() { return {first: '', last: '', username: '', password: genPassword10(), pwVisible: false, gender: '', father: '', grade: '', field: '', usernameEdited: false}; }
+    var rows = [blank()], active = 0, error = '';
+    var bg = el('div', {class: 'modal-bg'}); var modal = el('div', {class: 'modal st-new'}); bg.appendChild(modal); document.body.appendChild(bg);
+    function recompute() {
+      var seen = {};
+      rows.forEach(function (r) { var base = suggestUsername(r.first, r.last); var n = seen[base] || 0; seen[base] = n + 1; if (!r.usernameEdited) r.username = n === 0 ? base : suggestUsername(r.first, r.last, n + 1); });
+    }
+    var busy = false;
+    async function submit() {
+      error = '';
+      try {
+        var reqs = rows.map(function (r) {
+          if (!r.first.trim()) throw new Error('نام همه ردیف‌ها لازم است.');
+          if (r.username.length < 4) throw new Error('نام کاربری همه ردیف‌ها باید حداقل ۴ نویسه باشد.');
+          if (!USERNAME_RE.test(r.username)) throw new Error('نام کاربری باید ۴ تا ۲۰ کاراکتر انگلیسی، عدد یا _ باشد.');
+          if (r.password.length < 8 || r.password.length > 72) throw new Error('رمز همه ردیف‌ها باید ۸ تا ۷۲ نویسه باشد.');
+          if (r.gender !== 'male' && r.gender !== 'female') throw new Error('جنسیت همه ردیف‌ها را انتخاب کنید.');
+          return r;
+        });
+        var uns = {}; reqs.forEach(function (r) { if (uns[r.username]) throw new Error('نام کاربری تکراری در ردیف‌ها وجود دارد.'); uns[r.username] = 1; });
+      } catch (e) { error = errMsg(e); draw(); return; }
+      busy = true; draw();
+      var made = [], failed = [];
+      for (var i = 0; i < reqs.length; i++) {
+        var r = reqs[i];
+        try {
+          var res = await manageStudent({action: 'create', first_name: r.first.trim(), last_name: r.last.trim(), username: r.username, password: r.password, gender: r.gender, class_id: defaultClass || ''});
+          if (!res.id) throw new Error('شناسه دانش‌آموز از سرور دریافت نشد.');
+          await saveExtra(res.id, r.username, r.father.trim(), r.grade.trim(), r.field.trim());
+          if (afterCreate) { try { await afterCreate(res.id); } catch (e2) { console.warn(e2); } }
+          made.push({name: (r.first + ' ' + r.last).trim(), username: r.username, password: r.password});
+        } catch (e) { failed.push(r.username + ': ' + errMsg(e)); }
+      }
+      busy = false;
+      if (made.length) { toast(fa(made.length) + ' حساب ساخته شد.', 'ok'); }
+      if (failed.length && made.length) { rows = rows.filter(function (r) { return failed.some(function (f) { return f.indexOf(r.username + ':') === 0; }); }); active = 0; error = failed.join(' | '); draw(); if (done) done(); if (made.length) credentialDlg('اطلاعات ورود دانش‌آموزان', made); return; }
+      if (failed.length) { error = failed.join(' | '); draw(); return; }
+      bg.remove(); if (done) done(); credentialDlg('اطلاعات ورود دانش‌آموزان', made);
+    }
+    function field(label, value, oninput, extra) { var i = el('input', Object.assign({type: 'text', value: value}, extra || {})); i.addEventListener('input', function () { oninput(i.value); }); return el('div', {class: 'field'}, [el('label', {text: label}), i]); }
+    function draw() {
+      modal.innerHTML = '';
+      var r = rows[active];
+      modal.appendChild(el('div', {class: 'row st-new-bar'}, [
+        el('button', {class: 'btn', text: '+', title: 'کارت تازه', disabled: rows.length >= 100 || busy ? 'disabled' : null, onclick: function () { rows.push(blank()); recompute(); active = rows.length - 1; draw(); }}),
+        el('button', {class: 'btn', text: busy ? 'در حال ایجاد…' : 'ایجاد', disabled: busy ? 'disabled' : null, onclick: submit}),
+        el('button', {class: 'btn', text: '×', title: 'بستن', onclick: function () { bg.remove(); }})
+      ]));
+      modal.appendChild(el('div', {class: 'st-new-chips'}, rows.map(function (_, i) { return el('button', {class: 'chip ' + (i === active ? 'brand' : 'off'), text: fa(i + 1), onclick: function () { active = i; draw(); }}); })));
+      var card = el('div', {class: 'card st-new-card'});
+      card.appendChild(el('div', {class: 'grid2'}, [
+        field('نام', r.first, function (v) { r.first = v.slice(0, 100); recompute(); syncUn(); }),
+        field('نام خانوادگی', r.last, function (v) { r.last = v.slice(0, 100); recompute(); syncUn(); })
+      ]));
+      var unInp = el('input', {type: 'text', value: r.username, style: 'direction:ltr'}); unInp.addEventListener('input', function () { r.username = unInp.value.trim().toLowerCase().slice(0, 20); r.usernameEdited = true; });
+      function syncUn() { if (!r.usernameEdited) unInp.value = r.username; }
+      card.appendChild(el('div', {class: 'grid2'}, [
+        field('نام پدر', r.father, function (v) { r.father = v.slice(0, 100); }),
+        el('div', {class: 'field'}, [el('label', {text: 'نام کاربری'}), unInp])
+      ]));
+      var gsel = selectOf(GRADES, r.grade, 'بدون پایه'); gsel.addEventListener('change', function () { r.grade = gsel.value; });
+      var fsel = selectOf(FIELDS, r.field, 'بدون رشته'); fsel.addEventListener('change', function () { r.field = fsel.value; });
+      card.appendChild(el('div', {class: 'grid2'}, [fld('پایه', gsel), fld('رشته', fsel)]));
+      var pw = el('input', {type: r.pwVisible ? 'text' : 'password', value: r.password, style: 'direction:ltr'});
+      var pwNow = el('input', {type: r.pwVisible ? 'text' : 'password', value: r.password, readonly: 'readonly', style: 'direction:ltr'});
+      pw.addEventListener('input', function () { r.password = pw.value.slice(0, 72); pwNow.value = r.password; });
+      card.appendChild(el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'رمز'}), pw]), el('div', {class: 'field'}, [el('label', {text: 'رمز فعلی'}), pwNow])]));
+      var mid = el('div', {class: 'st-new-mid'}, [
+        el('button', {class: 'icon-btn flat', title: r.pwVisible ? 'پنهان کردن رمز' : 'نمایش رمز', html: r.pwVisible ? EYE_OFF_SVG : EYE_SVG, onclick: function () { r.pwVisible = !r.pwVisible; draw(); }}),
+        el('button', {class: 'chip gen-m' + (r.gender === 'male' ? ' on' : ''), text: 'پسر', onclick: function () { r.gender = 'male'; draw(); }}),
+        el('button', {class: 'chip gen-f' + (r.gender === 'female' ? ' on' : ''), text: 'دختر', onclick: function () { r.gender = 'female'; draw(); }}),
+        el('button', {class: 'icon-btn flat', title: 'رمز تصادفی', text: '🎲', onclick: function () { r.password = genPassword10(); draw(); }}),
+        rows.length > 1 ? el('button', {class: 'icon-btn flat red', title: 'حذف ردیف', html: TRASH_SVG, onclick: function () { rows.splice(active, 1); recompute(); active = Math.max(0, active - 1); draw(); }}) : null
+      ]);
+      card.appendChild(mid);
+      modal.appendChild(card);
+      if (error) modal.appendChild(el('div', {class: 'alert error', style: 'margin-top:8px', text: error}));
+    }
+    draw();
+    return bg;
+  }
+
   async function studentForm(s, classes, defaultClass, done, afterCreate) {
     var isEdit = !!s;
+    if (!isEdit) return newStudentsDialog(classes, defaultClass, done, afterCreate); /* V224 — فرم ساخت = پنجرهٔ اپ */
     var bg = el('div', {class: 'modal-bg'}); var msg = el('div');
     var first = inp({value: s ? (s.first_name || '') : ''}), last = inp({value: s ? (s.last_name || '') : ''});
     if (isEdit && !s.first_name && s.full_name) { var parts = s.full_name.trim().split(/\s+/); first.value = parts.shift() || ''; last.value = parts.join(' '); }
@@ -150,15 +262,20 @@
     var head = el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('button', {class: 'btn light', style: 'color:#c62828', text: 'انصراف', onclick: function () { bg.remove(); }}), el('h2', {class: 'grow', style: 'margin:0;text-align:center;font-size:16px', text: 'افزودن به ' + k.name}), add]);
     bg.appendChild(el('div', {class: 'modal wide'}, [head, body])); document.body.appendChild(bg);
     try {
-      var r = await Promise.all([S.rpc('my_students', {}), S.rpc('class_roster', {p_class: k.id})]);
+      var r = await Promise.all([S.rpc('my_students', {}), S.rpc('class_roster', {p_class: k.id}), S.rpc('native_my_classes_v28', {}).catch(function () { return []; }), S.rpcObj('native_student_filter_meta_v61', {}).catch(function () { return {}; })]);
+      var aeClasses = r[2] || [], aeMeta = {}; ((r[3] && r[3].items) || []).forEach(function (m) { if (m && m.id) aeMeta[m.id] = {schools: m.schools || [], teacherId: m.teacher_id || ''}; });
       var inClass = {}; (r[1] || []).forEach(function (s) { inClass[s.id] = true; });
       var all = (r[0] || []).filter(function (s) { return !inClass[s.id]; });
       var q = el('input', {type: 'search', placeholder: 'جست‌وجو…', style: 'flex:1'}); var gsel = selectOf(['', 'پسر', 'دختر'], '', 'جنسیت'), grsel = selectOf(GRADES, '', 'پایه'), fsel = selectOf(FIELDS, '', 'رشته');
+      /* V224 — مثل اپ (V136 header انصراف/فیلتر/افزودن): دکمهٔ فیلتر وسط سربرگ، همان StudentFilterDialog */
+      var aeFilter = {}; var fbtn = el('button', {class: 'btn light', text: '⚲ فیلتر', onclick: function () { var M = window.SiteMobile; if (!M || !M.studentFilterDialog) return; M.studentFilterDialog(aeFilter, aeClasses, [], aeMeta, function (f) { aeFilter = f; fbtn.classList.toggle('filter-on', M.filterActive(f)); draw(); }); }});
+      head.insertBefore(fbtn, head.children[1]);
       var lst = el('div', {class: 'g-list', style: 'max-height:55vh'}); var cnt = el('span', {class: 'muted'});
       function draw() {
         var s = q.value.trim().toLowerCase(), g = gsel.value === 'پسر' ? 'male' : (gsel.value === 'دختر' ? 'female' : '');
         lst.innerHTML = '';
-        var f = all.filter(function (x) { return (!s || [x.full_name, x.username, x.class_names].join(' ').toLowerCase().indexOf(s) >= 0) && (!g || x.gender === g) && (!grsel.value || x.grade === grsel.value) && (!fsel.value || x.field_of_study === fsel.value); });
+        var M2 = window.SiteMobile, base2 = (M2 && M2.applyStudentFilter) ? M2.applyStudentFilter(all, aeFilter, aeClasses, aeMeta) : all;
+        var f = base2.filter(function (x) { return (!s || [x.full_name, x.username, x.class_names].join(' ').toLowerCase().indexOf(s) >= 0) && (!g || x.gender === g) && (!grsel.value || x.grade === grsel.value) && (!fsel.value || x.field_of_study === fsel.value); });
         if (!f.length) lst.appendChild(S.emptyBox('🎓', 'دانش‌آموزی برای افزودن نیست.'));
         f.forEach(function (x) { var c = el('input', {type: 'checkbox'}); c.checked = !!picked[x.id]; c.addEventListener('change', function () { if (c.checked) picked[x.id] = true; else delete picked[x.id]; cnt.textContent = fa(Object.keys(picked).length) + ' انتخاب'; }); lst.appendChild(el('label', {class: 'g-item'}, [c, el('span', {class: 'grow', text: x.full_name}), el('span', {class: 'muted', style: 'font-size:12px', text: [x.username, x.grade, x.class_names].filter(Boolean).join(' · ')})])); });
       }
@@ -179,17 +296,18 @@
       el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'جنسیت', 'پایه', 'رشته', 'کلاس‌ها', 'وضعیت', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
       el('tbody', {}, list.map(function (s) {
         var canManage = s.can_manage !== false;
-        var acts = el('div', {class: 'acts'});
-        if (canManage) acts.appendChild(el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { studentForm(s, classes, null, ctx.refresh); }}));
-        acts.appendChild(el('button', {class: 'icon-btn', title: 'کلاس‌ها', html: '🏫', onclick: function () { classPickDlg(s, classes, ctx.refresh); }}));
-        if (canManage) acts.appendChild(el('button', {class: 'icon-btn', title: 'رمز جدید', html: '🔑', onclick: async function () {
+        var acts = el('div', {class: 'acts acts-text-btns'});
+        /* V224 — دسکتاپ: دکمه‌های متنی به‌جای آیکون */
+        if (canManage) acts.appendChild(el('button', {class: 'btn light sm', text: 'ویرایش', onclick: function () { studentForm(s, classes, null, ctx.refresh); }}));
+        acts.appendChild(el('button', {class: 'btn light sm', text: 'افزودن به کلاس', onclick: function () { classPickDlg(s, classes, ctx.refresh); }}));
+        if (canManage) acts.appendChild(el('button', {class: 'btn light sm', text: 'رمز جدید', onclick: async function () {
           var np = genPassword(); if (!(await S.confirmDlg('رمز جدید', 'رمز جدید برای «' + esc(s.full_name || '') + '» ساخته شود؟ رمز قبلی از کار می‌افتد.', 'بساز'))) return;
           try { await manageStudent({action: 'reset_password', id: s.id, password: np}); credentialDlg('رمز جدید دانش‌آموز', [{name: s.full_name, username: s.username, password: np}]); } catch (e) { toast(errMsg(e), 'err'); }
         }}));
-        acts.appendChild(el('button', {class: 'icon-btn', title: s.is_active !== false ? 'غیرفعال کردن' : 'فعال کردن', html: s.is_active !== false ? '⏸' : '▶', onclick: async function () { try { chk(await S.rpcObj('set_student_active', {p_student: s.id, p_active: s.is_active === false})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        if (ctx.classId) acts.appendChild(el('button', {class: 'icon-btn danger', title: 'خروج از این کلاس', html: '➖', onclick: async function () { if (!(await S.confirmDlg('حذف از کلاس', '«' + esc(s.full_name || '') + '» از این کلاس خارج شود؟ حساب حفظ می‌ماند.', 'خروج', true))) return; try { chk(await S.rpcObj('remove_student_from_class', {p_class: ctx.classId, p_student: s.id})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        if (ctx.classId && s.in_my_list === false) acts.appendChild(el('button', {class: 'icon-btn', title: 'افزودن به فهرست من', html: '➕', onclick: async function () { try { chk(await S.rpcObj('native_teacher_add_class_student_to_list_v43', {p_class: ctx.classId, p_student: s.id})); toast('به فهرست شما افزوده شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
-        if (canManage) acts.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف حساب', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف حساب دانش‌آموز', 'حساب «' + esc(s.full_name || '') + '» و پاسخ‌هایش برای همیشه حذف می‌شود.', 'حذف کامل', true))) return; try { await manageStudent({action: 'delete', id: s.id}); toast('حذف شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
+        acts.appendChild(el('button', {class: 'btn light sm', text: s.is_active !== false ? 'غیرفعال کردن' : 'فعال کردن', onclick: async function () { try { chk(await S.rpcObj('set_student_active', {p_student: s.id, p_active: s.is_active === false})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
+        if (ctx.classId) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'خروج از کلاس', onclick: async function () { if (!(await S.confirmDlg('حذف از کلاس', '«' + esc(s.full_name || '') + '» از این کلاس خارج شود؟ حساب حفظ می‌ماند.', 'خروج', true))) return; try { chk(await S.rpcObj('remove_student_from_class', {p_class: ctx.classId, p_student: s.id})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
+        if (ctx.classId && s.in_my_list === false) acts.appendChild(el('button', {class: 'btn light sm', text: 'افزودن به فهرست من', onclick: async function () { try { chk(await S.rpcObj('native_teacher_add_class_student_to_list_v43', {p_class: ctx.classId, p_student: s.id})); toast('به فهرست شما افزوده شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
+        if (canManage) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'حذف حساب', onclick: async function () { if (!(await S.confirmDlg('حذف حساب دانش‌آموز', 'حساب «' + esc(s.full_name || '') + '» و پاسخ‌هایش برای همیشه حذف می‌شود.', 'حذف کامل', true))) return; try { await manageStudent({action: 'delete', id: s.id}); toast('حذف شد.', 'ok'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
         var shareBtn = el('button', {class: 'chip ' + (s.shared_with_manager ? 'ok' : 'off'), text: s.shared_with_manager ? 'بله' : 'خیر', title: 'تغییر اشتراک با مدیر', onclick: async function () { try { var r = chk(await S.rpcObj('native_teacher_share_student_v136', {p_student: s.id, p_share: !s.shared_with_manager})); var eff = r.shared != null ? String(r.shared) === 'true' : !s.shared_with_manager; toast(eff ? 'با مدیر به اشتراک گذاشته شد.' : 'اشتراک برداشته شد.', 'ok'); if (r.message) toast(String(r.message), 'info'); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }});
         return el('tr', {}, [el('td', {html: '<b>' + esc(s.full_name || ((s.first_name || '') + ' ' + (s.last_name || ''))) + '</b>' + (s.father_name ? '<div class="muted" style="font-size:11px">فرزند ' + esc(s.father_name) + '</div>' : '')}), el('td', {}, [el('span', {class: 'code', text: s.username || '—'})]),
           el('td', {text: s.gender === 'male' ? 'پسر' : (s.gender === 'female' ? 'دختر' : '—')}), el('td', {text: s.grade || '—'}), el('td', {text: s.field_of_study || '—'}), el('td', {class: 'muted', text: s.class_names || '—'}),
@@ -202,22 +320,26 @@
   async function studentsPage(c) {
     S.loading(c);
     try {
-      var r = await Promise.all([S.rpc('my_students', {}), S.rpc('native_my_classes_v28', {})]);
-      var list = r[0] || [], classes = r[1] || [];
+      var r = await Promise.all([S.rpc('my_students', {}), S.rpc('native_my_classes_v28', {}), S.rpcObj('native_teacher_schools_v61', {}).catch(function () { return {}; }), S.rpcObj('native_student_filter_meta_v61', {}).catch(function () { return {}; })]);
+      var list = r[0] || [], classes = r[1] || [], schools = (r[2] && r[2].items) || [], meta = {};
+      ((r[3] && r[3].items) || []).forEach(function (m) { if (m && m.id) meta[m.id] = {schools: m.schools || [], teacherId: m.teacher_id || ''}; });
+      var stFilter = studentsPage.__filter || {};
       c.innerHTML = '';
       var q = el('input', {type: 'search', placeholder: 'جست‌وجوی نام، نام کاربری، پایه یا کلاس…', style: 'min-width:260px'});
-      var gsel = selectOf(['', 'پسر', 'دختر'], '', 'همه (جنسیت)'), grsel = selectOf(GRADES, '', 'همهٔ پایه‌ها'), csel = el('select'); csel.appendChild(el('option', {value: '', text: 'همهٔ کلاس‌ها'})); classes.forEach(function (k) { csel.appendChild(el('option', {value: k.name, text: k.name})); });
       var box = el('div', {class: 'card'}); var cnt = el('span', {class: 'muted'});
       function refresh() { studentsPage(c); }
       function draw() {
-        var s = q.value.trim().toLowerCase(), g = gsel.value === 'پسر' ? 'male' : (gsel.value === 'دختر' ? 'female' : '');
-        var f = list.filter(function (x) { return (!s || [x.full_name, x.username, x.class_names, x.grade].join(' ').toLowerCase().indexOf(s) >= 0) && (!g || x.gender === g) && (!grsel.value || x.grade === grsel.value) && (!csel.value || String(x.class_names || '').indexOf(csel.value) >= 0); });
+        var s = q.value.trim().toLowerCase(); studentsPage.__filter = stFilter;
+        var M = window.SiteMobile, base = (M && M.applyStudentFilter) ? M.applyStudentFilter(list, stFilter, classes, meta) : list;
+        var f = base.filter(function (x) { return (!s || [x.full_name, x.username, x.class_names, x.grade].join(' ').toLowerCase().indexOf(s) >= 0); });
         cnt.textContent = fa(f.length) + ' از ' + fa(list.length) + ' دانش‌آموز';
         box.innerHTML = ''; box.appendChild(studentTable(f, classes, {refresh: refresh}));
       }
-      [q, gsel, grsel, csel].forEach(function (x) { x.addEventListener('input', draw); x.addEventListener('change', draw); });
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '👥 افزودن گروهی', onclick: function () { bulkForm(classes, null, refresh); }}), el('button', {class: 'btn', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, null, refresh); }})]));
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, gsel, grsel, csel]));
+      q.addEventListener('input', draw);
+      /* V224 — «افزودن گروهی» حذف شد (پنجرهٔ دانش‌آموز جدید چندکارتی است)؛ فیلتر مثل اپ (StudentFilterDialog) به‌جای سه select */
+      var filterBtn = el('button', {class: 'btn light', text: '⚲ فیلتر', title: 'فیلتر دانش‌آموزان', onclick: function () { var M = window.SiteMobile; if (!M || !M.studentFilterDialog) return; M.studentFilterDialog(stFilter, classes, schools, meta, function (f) { stFilter = f; filterBtn.classList.toggle('filter-on', M.filterActive(f)); draw(); }); }});
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('span', {class: 'grow'}), cnt, filterBtn, el('button', {class: 'btn', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, null, refresh); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q]));
       c.appendChild(box); draw();
     } catch (e) { S.showErr(c, e); }
   }
@@ -248,7 +370,7 @@
           drawAdd();
           body.appendChild(el('div', {class: 'row', style: 'margin-bottom:6px'}, [el('span', {class: 'muted', text: fa((r[0] || []).length) + ' نفر'})]));
           body.appendChild(addWrap);
-        } else body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'muted', text: fa((r[0] || []).length) + ' نفر'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '📋 افزودن موجود', onclick: function () { addExistingDlg(k, load); }}), el('button', {class: 'btn light sm', text: '👥 گروهی', onclick: function () { bulkForm(classes, k.id, load); }}), el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, k.id, load); }})]));
+        } else body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'muted', text: fa((r[0] || []).length) + ' نفر'}), el('span', {class: 'grow'}), el('button', {class: 'btn light sm', text: '📋 افزودن موجود', onclick: function () { addExistingDlg(k, load); }}), el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, k.id, load); }})]));
         body.appendChild(studentTable(r[0] || [], classes, {classId: k.id, refresh: load}));
       } catch (e) { S.showErr(body, e); }
     }

@@ -1412,3 +1412,24 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .dk .m-sheet-dk .m-row{width:calc(50% - 6px);margin:0}
 .dk .m-sheet-dk .m-note,.dk .m-sheet-dk .loading,.dk .m-sheet-dk>div>p{width:100%;display:block}
 .dk .m-sheet-dk>.m-outline{width:auto !important;align-self:flex-start;margin-top:12px !important;padding:10px 22px}
+
+/* V224 — دسکتاپ: دکمه‌های متنی جدول دانش‌آموزان، پنجرهٔ «دانش‌آموز جدید» مثل اپ، دکمهٔ فیلتر */
+.acts-text-btns{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start}
+.acts-text-btns .btn.sm{padding:5px 10px;font-size:12px;white-space:nowrap}
+.btn.danger-text{color:var(--danger);border-color:#f0c9cd}
+.btn.filter-on{color:#d32f2f;border-color:#d32f2f}
+.modal.st-new{max-width:620px}
+.st-new-bar{justify-content:center;gap:8px;margin-bottom:8px}
+.st-new-bar .btn{min-width:64px}
+.st-new-chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.st-new-chips::-webkit-scrollbar{display:none}
+.st-new-card{padding:14px}
+.st-new-card .grid2{gap:8px}
+.st-new-mid{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px}
+.icon-btn.flat{border:0;background:transparent;width:40px;height:40px}
+.icon-btn.flat.red{color:#d32f2f}
+.chip.gen-m,.chip.gen-f{border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 14px;cursor:pointer}
+.chip.gen-m.on{background:#3B9EFF;border-color:#3B9EFF;color:#fff}
+.chip.gen-f.on{background:#FF5C9A;border-color:#FF5C9A;color:#fff}
+.dk .m-sheet-bg{--m-bg:#E9EEF5;--m-ink:#263142;--m-muted:#7B8798;--m-dark:#ABB7C7;--m-light:#fff;--m-danger:#C85B6B}
+.m-dark.dk .m-sheet-bg,.m-dark .dk .m-sheet-bg{--m-bg:#1F2530;--m-ink:#E6EAF2;--m-muted:#9AA5B8;--m-dark:#141920;--m-light:#2C3542}

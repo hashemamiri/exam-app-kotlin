@@ -19423,7 +19423,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
-- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V223 — دسکتاپ: جدایی آزمون‌ها / چاپ آزمون مثل اپ (فقط سایت)
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V224 — دسکتاپ: دانش‌آموزان مثل اپ (فقط سایت)
+- `school.js studentTable`: `.acts.acts-text-btns` با `btn light sm` متنی (ویرایش، افزودن به کلاس، رمز جدید، فعال/غیرفعال کردن، خروج از کلاس، افزودن به فهرست من، حذف حساب).
+- `school.js newStudentsDialog(classes, defaultClass, done, afterCreate)` = آینهٔ `BulkStudentDialog` اپ (ردیف + / ایجاد / ×؛ چیپ شمارهٔ کارت‌ها؛ کارت فعال؛ `suggestUsername` = PersianUsernameSuggester؛ `genPassword10`؛ ایجاد ترتیبی با `manageStudent create` + `saveExtra`؛ کارت‌های ناموفق می‌مانند). `studentForm(null, …)` به آن واگذار می‌کند؛ ویرایش بدون تغییر. «افزودن گروهی» از `studentsPage`، `rosterDlg` و `admin.js` حذف شد (تابع `bulkForm` برای پین V203 مانده).
+- فیلتر: `studentsPage` سه select را با دکمهٔ «⚲ فیلتر» (قرمز وقتی فعال) جایگزین کرد → `SiteMobile.studentFilterDialog/applyStudentFilter/filterActive` (صادرشده در V224)؛ داده: `native_teacher_schools_v61` + `native_student_filter_meta_v61`. `addExistingDlg` هم دکمهٔ فیلتر وسط سربرگ (انصراف/فیلتر/افزودن مثل V136 اپ).
+- CSS: متغیرهای `--m-*` روی `.dk .m-sheet-bg` (پنجره‌های گوشی روی دسکتاپ پس‌زمینه داشته باشند؛ حالت تیره هم)، `.modal.st-new`, `.st-new-*`, `.chip.gen-m/.gen-f`, `.icon-btn.flat`.
+- تست: `v224StudentsDesktopLikeApp` در `V168_SiteDesktopMenuTest.kt`.
+
+### V223 — دسکتاپ: جدایی آزمون‌ها / چاپ آزمون مثل اپ (فقط سایت)
 - `app.js pageExams`: `printExamsSection` حذف؛ دکمهٔ «🖨 آزمون‌های چاپی» (→ `view.panel='print'`) کنار «➕ آزمون جدید».
 - `app.js pagePrint`: ردیف «➕ آزمون چاپی جدید» + «📝 آزمون‌های آنلاین» → `SiteMobile.printOnlineSheet(list, status)`؛ کارت با `{noNewButton: true}`.
 - `builder.js printExamsSection(refresh, opts)`: `opts.noNewButton` دکمهٔ داخل کارت را حذف می‌کند.

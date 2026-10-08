@@ -369,7 +369,7 @@
       var refresh = function () { managerRoster(c, arg); };
       c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ کلاس‌ها', onclick: function () { S.go('school', {teacherId: arg.teacherId, teacherName: arg.teacherName}); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: 'دانش‌آموزان کلاس ' + (roster.class_name || arg.className || '')}),
         /* V203 — مثل اپ (ManagerTeacherClassScreen «افزودن جدید»): ساخت حساب دانش‌آموز داخل همین کلاس */
-        window.SiteSchool ? el('button', {class: 'btn light sm', text: '👥 افزودن گروهی', onclick: function () { window.SiteSchool.bulkForm([{id: arg.classId, name: roster.class_name || arg.className || 'این کلاس'}], arg.classId, refresh); }}) : null,
+        /* V224 — «افزودن گروهی» حذف شد؛ پنجرهٔ «دانش‌آموز جدید» چندکارتی است */
         window.SiteSchool ? el('button', {class: 'btn sm', text: '➕ دانش‌آموز جدید', onclick: function () { window.SiteSchool.studentForm(null, [{id: arg.classId, name: roster.class_name || arg.className || 'این کلاس'}], arg.classId, refresh); }}) : null]));
       var q = el('input', {type: 'search', placeholder: 'جست‌وجو برای افزودن…', style: 'border:1px solid var(--line);border-radius:10px;padding:8px 12px;flex:1'});
       var addList = el('div', {class: 'b-aud'});
@@ -472,7 +472,6 @@
       }
       q.addEventListener('input', draw);
       c.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('span', {class: 'grow'}), cnt,
-        window.SiteSchool ? el('button', {class: 'btn light', text: '👥 افزودن گروهی', onclick: function () { window.SiteSchool.bulkForm(clsOpts, null, refresh); }}) : null,
         window.SiteSchool ? el('button', {class: 'btn', text: '➕ دانش‌آموز جدید', onclick: function () { window.SiteSchool.studentForm(null, clsOpts, null, refresh); }}) : null]));
       c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q]));
       c.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:8px', text: 'حساب‌هایی که مدیر می‌سازد زیر نام مدیر ثبت می‌شوند و با «افزودن به کلاس» به کلاس هر معلم می‌روند (مثل اپ). ویرایش حساب دانش‌آموزِ معلم، درخواست تأیید برای همان معلم می‌فرستد.'}));
