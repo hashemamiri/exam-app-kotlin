@@ -308,6 +308,28 @@
       el('div', {class: 'row'}, [el('button', {class: 'btn', text: 'انتقال', onclick: async function () { var a = num(en(amt.value)); msg.innerHTML = ''; if (!(a > 0 && a % 1000 === 0)) return msg.appendChild(el('div', {class: 'alert error', text: 'مبلغ انتقال باید مثبت و مضرب ۱٬۰۰۰ تومان باشد.'})); try { var raw = chk(await S.rpcObj('native_manager_transfer_wallet_v38', {p_teacher: t.id, p_amount_toman: a, p_operation: uuid()})); /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */ bg.remove(); await S.costDoneDlg(raw.amount || a, raw.manager_balance, 'به ' + esc(t.full_name || 'معلم') + ' منتقل شد · موجودی معلم: ' + S.money(raw.teacher_balance || 0)); refresh(); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); } }}), el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])]);
     bg.appendChild(m); document.body.appendChild(bg);
   }
+  /* V230 — جدول مقایسهٔ کلاس‌ها + روند ۶ ماه + پرتکرارترین آزمون‌ها؛ دکمهٔ «ذخیرهٔ PDF» */
+  function classCompare(d) {
+    var box = el('div');
+    var classes = d.classes || [], months = d.months || [], top = d.top_exams || [];
+    var head = el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('h3', {class: 'grow', text: '📊 مقایسهٔ کلاس‌ها'}), el('button', {class: 'btn light sm no-print', text: '🖨 ذخیرهٔ PDF', onclick: function () { S.printSection('مقایسهٔ کلاس‌ها', box); }})]);
+    box.appendChild(head);
+    if (!classes.length) { box.appendChild(S.emptyBox('📊', 'هنوز کلاسی با پاسخ تصحیح‌شده وجود ندارد.')); return box; }
+    function pctCell(v) { if (v == null) return el('td', {text: '—'}); var n = Number(v); return el('td', {}, [el('div', {class: 'cmp-bar'}, [el('span', {class: n >= 70 ? 'g' : n >= 50 ? 'y' : 'r', style: 'width:' + Math.max(2, Math.min(100, n)) + '%'}), el('b', {text: fa(n.toFixed(1)) + '٪'})])]); }
+    box.appendChild(el('table', {class: 'tbl cmp-tbl'}, [el('thead', {}, [el('tr', {}, ['کلاس', 'معلم', 'دانش‌آموز', 'آزمون', 'پاسخ', 'میانگین درصد', 'پراکندگی', 'زیر ۵۰٪'].map(function (h) { return el('th', {text: h}); }))]),
+      el('tbody', {}, classes.map(function (k) { return el('tr', {}, [el('td', {text: k.name + (k.grade ? ' · ' + k.grade : '')}), el('td', {text: k.teacher || '—'}), el('td', {text: fa(k.students || 0)}), el('td', {text: fa(k.exams || 0)}), el('td', {text: fa(k.graded || 0) + ' / ' + fa(k.answers || 0)}), pctCell(k.average_percent), el('td', {text: k.spread_percent == null ? '—' : '±' + fa(k.spread_percent)}), el('td', {text: fa(k.below_half || 0)})]); }))]));
+    if (months.length) {
+      var mx = Math.max.apply(null, months.map(function (m) { return Number(m.answers) || 0; }).concat([1]));
+      box.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin:14px 0 6px', text: 'روند ۶ ماه اخیر (ستون: تعداد پاسخ تصحیح‌شده، عدد بالا: میانگین درصد)'}));
+      box.appendChild(el('div', {class: 'cmp-months'}, months.map(function (m) { return el('div', {class: 'cmp-m'}, [el('b', {text: m.average_percent == null ? '—' : fa(m.average_percent) + '٪'}), el('i', {style: 'height:' + Math.max(4, Math.round(70 * (Number(m.answers) || 0) / mx)) + 'px'}), el('small', {text: S.jalaliDisplay(m.month + '-15T00:00:00Z').slice(0, 7)})]); })));
+    }
+    if (top.length) {
+      box.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin:14px 0 6px', text: 'آزمون‌های با بیشترین شرکت‌کننده'}));
+      box.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['آزمون', 'معلم', 'پاسخ', 'میانگین درصد'].map(function (h) { return el('th', {text: h}); }))]),
+        el('tbody', {}, top.map(function (t) { return el('tr', {}, [el('td', {text: t.title || ''}), el('td', {text: t.teacher || '—'}), el('td', {text: fa(t.answers || 0)}), pctCell(t.average_percent)]); }))]));
+    }
+    return box;
+  }
   async function managerSchoolPage(c, arg) {
     arg = arg || {};
     if (arg.classId) return managerRoster(c, arg);
@@ -323,6 +345,14 @@
         schools.length > 1 ? el('div', {class: 'muted', style: 'margin-top:6px;font-size:12px', text: 'مدرسه‌های شما: ' + schools.map(function (x) { return x.name; }).join('، ')}) : null]));
       c.appendChild(el('div', {class: 'grid4', style: 'margin-top:16px'}, [stat(fa(teachers.length), 'معلم'), stat(fa(students.length || s.students || 0), 'دانش‌آموز'), stat(fa(s.classes || 0), 'کلاس'), stat(fa(s.exams || 0), 'آزمون')]));
       c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn light', text: '🏫 همهٔ کلاس‌ها', onclick: function () { S.go('classes'); }}), el('button', {class: 'btn light', text: '🎓 دانش‌آموزان مدرسه', onclick: function () { S.go('students'); }})]));
+      /* V230 — داشبورد مقایسه‌ای کلاس‌ها (RPC native_manager_class_stats_v1؛ اگر SQL اجرا نشده باشد، راهنما) */
+      var cmp = el('div', {class: 'card', style: 'margin-top:16px'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 مقایسهٔ کلاس‌ها'})]), el('p', {class: 'muted', text: 'در حال دریافت…'})]);
+      c.appendChild(cmp);
+      S.api.managerClassStats().then(function (d) { cmp.innerHTML = ''; cmp.appendChild(classCompare(d)); }).catch(function (e) {
+        cmp.innerHTML = ''; cmp.appendChild(el('h3', {text: '📊 مقایسهٔ کلاس‌ها'}));
+        var m = String(e && e.message || '');
+        cmp.appendChild(el('div', {class: 'alert warn', text: /does not exist|not find the function|PGRST202|404/i.test(m) ? 'این بخش هنوز روی سرور فعال نشده است (فایل SQL نسخهٔ V230 باید یک بار اجرا شود).' : errMsg(e)}));
+      });
       var tc = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '👩‍🏫 کلاس‌های معلم‌ها'})]);
       if (!teachers.length) tc.appendChild(S.emptyBox('👩‍🏫', 'معلمی وجود ندارد.'));
       else tc.appendChild(el('div', {class: 'exam-grid'}, teachers.map(function (t) { return el('div', {class: 'exam-card', style: 'cursor:pointer', onclick: function () { S.go('school', {teacherId: t.id, teacherName: t.full_name}); }}, [el('b', {text: t.full_name || '—'}), el('div', {class: 'muted', style: 'font-size:12px', text: '@' + (t.username || '—')}), el('div', {style: 'margin-top:6px'}, [el('span', {class: 'chip brand', text: 'مدیریت کلاس‌ها ←'})])]); })));

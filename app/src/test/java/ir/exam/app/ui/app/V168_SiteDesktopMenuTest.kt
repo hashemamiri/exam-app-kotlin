@@ -175,4 +175,20 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(st.contains("/auth/v1/health") && st.contains("/rest/v1/") && st.contains("/storage/v1/status") && st.contains("info@onlineexam.ir"))
         assertTrue(src(".github/workflows/site.yml").contains("cp site/status.html site_out/status.html"))
     }
+
+    @Test
+    fun v230ManagerCompareExcelImportSchoolBankPdf() {
+        val admin = src("site/src/admin.js")
+        assertTrue(admin.contains("function classCompare(d) {") && admin.contains("S.api.managerClassStats().then(function (d) { cmp.innerHTML = ''; cmp.appendChild(classCompare(d)); })"))
+        val app = src("site/src/app.js")
+        assertTrue(app.contains("managerClassStats: function () { return rpcObj('native_manager_class_stats_v1', {}); }") && app.contains("function printSection(title, node) {") && app.contains("printSection: printSection,"))
+        val school = src("site/src/school.js")
+        assertTrue(school.contains("async function readSpreadsheet(file) {") && school.contains("new DecompressionStream('deflate-raw')") && school.contains("function rowsToStudents(rows) {") && school.contains("text: '📥 از اکسل'"))
+        assertTrue(school.contains("S.rpcObj('native_bank_set_shared_v1', {p_id: it.id, p_shared: !it.shared})") && school.contains("S.rpcObj('native_school_bank_v1', {})") && school.contains("S.rpcObj('native_bank_copy_from_school_v1', {p_id: it.id})") && school.contains("text: '🏫 بانک مدرسه'"))
+        assertTrue(src("site/src/extras.js").contains("if (S.printSection) S.printSection(cls ? 'گزارش کلاس ' + cls.name : 'گزارش کلاس', out)"))
+        val css = src("site/src/site.css")
+        assertTrue(css.contains("body.printing>*:not(#print-root){display:none!important}") && css.contains(".cmp-months{"))
+        val sql = src("supabase/migrations/20261009_native_manager_class_stats_school_bank_v230.sql")
+        listOf("native_manager_class_stats_v1()", "add column if not exists shared_school boolean", "native_bank_set_shared_v1(bigint,boolean)", "native_school_bank_v1()", "native_bank_copy_from_school_v1(bigint)", "'shared',q.shared_school").forEach { assertTrue(it, sql.contains(it)) }
+    }
 }

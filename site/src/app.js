@@ -399,8 +399,20 @@
     myAnswers: async function () { var d = await rpcObj('native_my_answers_v1', {}); return d.items || []; },
     // مدیر
     managerSummary: function () { return rpcObj('native_manager_school_summary_v36', {}); },
-    managerTeachers: async function () { var d = await rpcObj('native_manager_teachers_v37', {}); return d.items || []; }
+    managerTeachers: async function () { var d = await rpcObj('native_manager_teachers_v37', {}); return d.items || []; },
+    managerClassStats: function () { return rpcObj('native_manager_class_stats_v1', {}); } /* V230 */
   };
+  /* V230 — «ذخیرهٔ PDF» بدون پاپ‌آپ: نسخه‌ای از بخش داخل #print-root می‌رود، بقیهٔ صفحه با CSS چاپ پنهان می‌شود و پنجرهٔ چاپ مرورگر (گزینهٔ «ذخیره به‌صورت PDF») باز می‌شود */
+  function printSection(title, node) {
+    var old = document.getElementById('print-root'); if (old) old.remove();
+    var root = el('div', {id: 'print-root'}, [el('h1', {text: title}), el('div', {class: 'muted', style: 'font-size:12px;margin-bottom:10px', text: 'سامانهٔ آزمون آنلاین · ' + jalaliDisplay(new Date().toISOString())}), node.cloneNode(true)]);
+    root.querySelectorAll('button,input[type=search],.no-print').forEach(function (b) { b.remove(); });
+    document.body.appendChild(root); document.body.classList.add('printing');
+    var done = function () { document.body.classList.remove('printing'); root.remove(); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(function () { try { window.print(); } catch (e) { done(); toast('چاپ در این مرورگر ممکن نشد.', 'err'); } }, 60);
+    setTimeout(function () { if (document.body.classList.contains('printing')) done(); }, 60000);
+  }
   function requireEmail(v) { var c = String(v || '').trim().toLowerCase(); if (!EMAIL_RE.test(c)) throw new Error('ایمیل معتبر وارد کنید.'); return c; }
   function cleanCode(c) { var d = en(c).replace(/\D/g, ''); if (d.length < 6 || d.length > 8) throw new Error('کد یک‌بارمصرف باید ۶ تا ۸ رقم باشد.'); return d; }
   function validatePassword(v) { if (!v || v.length < 8 || v.length > 72) throw new Error('رمز عبور باید ۸ تا ۷۲ کاراکتر باشد.'); }
@@ -1867,7 +1879,7 @@
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,
-    render: render, renderPage: renderPage, printExam: printExam, logout: doLogout,
+    render: render, renderPage: renderPage, printExam: printExam, logout: doLogout, printSection: printSection, /* V230 */
     __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); },
     auth: {keyReady: KEY_READY, login: function (u) { user = u; afterLogin(); }, currentProfile: currentProfile, requireEmail: requireEmail, drawCompletion: drawCompletion, logout: doLogout} /* برای تست خودکار بدون سرور */};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

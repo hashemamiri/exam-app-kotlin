@@ -71,6 +71,70 @@
   /* V224 — «دانش‌آموز جدید» دقیقاً مثل BulkStudentDialog اپ: ردیف «+ / ایجاد / ×»، چیپ شمارهٔ کارت‌ها، یک کارت فعال
      (نام|نام خانوادگی، نام پدر|نام کاربری پیشنهادی، پایه|رشته، رمز|رمز فعلی، ردیف وسط: چشم، پسر، دختر، تاس، سطل). بدون فیلد کلاس؛
      اگر از داخل کلاس باز شود (defaultClass) همهٔ کارت‌ها به همان کلاس می‌روند (V131). */
+  /* V230 — خواندن فایل اکسل (.xlsx) یا CSV در خود مرورگر، بدون کتابخانه: xlsx = zip → DecompressionStream('deflate-raw') → XML شیت اول + sharedStrings */
+  async function readSpreadsheet(file) {
+    var name = String(file.name || '').toLowerCase();
+    if (/\.(csv|txt)$/.test(name)) {
+      var txt = await file.text(); if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
+      var sep = txt.indexOf('\t') >= 0 ? '\t' : (txt.split(';').length > txt.split(',').length ? ';' : ',');
+      return txt.split(/\r?\n/).filter(function (l) { return l.trim(); }).map(function (l) { return l.split(sep).map(function (v) { return v.replace(/^"|"$/g, '').trim(); }); });
+    }
+    if (!/\.xlsx$/.test(name)) throw new Error('فقط فایل اکسل (.xlsx) یا CSV پذیرفته می‌شود.');
+    if (typeof DecompressionStream === 'undefined') throw new Error('مرورگر شما از خواندن اکسل پشتیبانی نمی‌کند؛ فایل را به CSV تبدیل کنید یا مرورگر را به‌روز کنید.');
+    var buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+    var eocd = -1; for (var i = buf.length - 22; i >= Math.max(0, buf.length - 70000); i--) { if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
+    if (eocd < 0) throw new Error('فایل اکسل معتبر نیست.');
+    var n = dv.getUint16(eocd + 10, true), off = dv.getUint32(eocd + 16, true), entries = {}, td = new TextDecoder();
+    for (var k = 0; k < n; k++) {
+      if (dv.getUint32(off, true) !== 0x02014b50) break;
+      var method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true), nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true), lho = dv.getUint32(off + 42, true);
+      var fname = td.decode(buf.subarray(off + 46, off + 46 + nlen));
+      entries[fname] = {method: method, csize: csize, lho: lho}; off += 46 + nlen + elen + clen;
+    }
+    async function read(fname) {
+      var e = entries[fname]; if (!e) return '';
+      var nl = dv.getUint16(e.lho + 26, true), xl = dv.getUint16(e.lho + 28, true), start = e.lho + 30 + nl + xl, data = buf.subarray(start, start + e.csize);
+      if (e.method === 0) return td.decode(data);
+      var ds = new DecompressionStream('deflate-raw'); var w = ds.writable.getWriter(); w.write(data); w.close();
+      return new Response(ds.readable).text();
+    }
+    var sheetName = Object.keys(entries).filter(function (f) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(f); }).sort()[0];
+    if (!sheetName) throw new Error('شیتی در فایل پیدا نشد.');
+    var ssXml = await read('xl/sharedStrings.xml'), shXml = await read(sheetName), dp = new DOMParser(), shared = [];
+    if (ssXml) Array.prototype.forEach.call(dp.parseFromString(ssXml, 'application/xml').getElementsByTagName('si'), function (si) { shared.push(Array.prototype.map.call(si.getElementsByTagName('t'), function (t) { return t.textContent; }).join('')); });
+    var rows = [];
+    Array.prototype.forEach.call(dp.parseFromString(shXml, 'application/xml').getElementsByTagName('row'), function (r) {
+      var out = [];
+      Array.prototype.forEach.call(r.getElementsByTagName('c'), function (cell) {
+        var ref = cell.getAttribute('r') || '', col = 0, m = /^[A-Z]+/.exec(ref); if (m) for (var j = 0; j < m[0].length; j++) col = col * 26 + (m[0].charCodeAt(j) - 64); col = Math.max(0, col - 1);
+        var t = cell.getAttribute('t'), v = cell.getElementsByTagName('v')[0], val = '';
+        if (t === 's') val = shared[Number(v ? v.textContent : -1)] || '';
+        else if (t === 'inlineStr') val = Array.prototype.map.call(cell.getElementsByTagName('t'), function (x) { return x.textContent; }).join('');
+        else val = v ? v.textContent : '';
+        out[col] = String(val).trim();
+      });
+      for (var z = 0; z < out.length; z++) if (out[z] == null) out[z] = '';
+      if (out.some(function (x) { return x; })) rows.push(out);
+    });
+    return rows;
+  }
+  /* ردیف‌های شیت → کارت‌های دانش‌آموز؛ سطر اول اگر عنوان باشد (نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری، رمز) نگاشت می‌شود، وگرنه ترتیب همین است */
+  function rowsToStudents(rows) {
+    var H = {first: /^(نام|first)/, last: /(خانوادگی|last)/, father: /پدر|father/, grade: /پایه|grade/, field: /رشته|field/, gender: /جنسیت|gender/, username: /کاربری|user/, password: /رمز|pass/};
+    var map = null, head = rows[0] || [];
+    if (head.some(function (h) { return /خانوادگی|نام|جنسیت|پایه/.test(h); })) {
+      map = {}; head.forEach(function (h, i) { Object.keys(H).forEach(function (k) { if (map[k] == null && H[k].test(String(h).toLowerCase())) map[k] = i; }); });
+      if (map.first != null && map.last != null && map.first === map.last) map.first = null;
+      if (map.first == null) map.first = head.findIndex(function (h) { return /^نام$/.test(h.trim()); });
+      rows = rows.slice(1);
+    } else map = {first: 0, last: 1, father: 2, grade: 3, field: 4, gender: 5, username: 6, password: 7};
+    function g(r, k) { return map[k] == null || map[k] < 0 ? '' : String(r[map[k]] || '').trim(); }
+    return rows.map(function (r) {
+      var gen = g(r, 'gender').toLowerCase(); gen = /پسر|مرد|male|^m$|^1$/.test(gen) && !/female/.test(gen) ? 'male' : /دختر|زن|female|^f$|^2$/.test(gen) ? 'female' : '';
+      var u = en(g(r, 'username')).toLowerCase().replace(/[^a-z0-9_]/g, ''), pw = en(g(r, 'password'));
+      return {first: g(r, 'first'), last: g(r, 'last'), father: g(r, 'father'), grade: g(r, 'grade'), field: g(r, 'field'), gender: gen, username: u, usernameEdited: !!u, password: pw.length >= 8 ? pw : genPassword10(), pwVisible: false};
+    }).filter(function (r) { return r.first || r.last; });
+  }
   function newStudentsDialog(classes, defaultClass, done, afterCreate) {
     function blank() { return {first: '', last: '', username: '', password: genPassword10(), pwVisible: false, gender: '', father: '', grade: '', field: '', usernameEdited: false}; }
     var rows = [blank()], active = 0, error = '';
@@ -118,6 +182,21 @@
       modal.appendChild(el('div', {class: 'row st-new-bar'}, [
         el('button', {class: 'btn', text: '+', title: 'کارت تازه', disabled: rows.length >= 100 || busy ? 'disabled' : null, onclick: function () { rows.push(blank()); recompute(); active = rows.length - 1; draw(); }}),
         el('button', {class: 'btn', text: busy ? 'در حال ایجاد…' : 'ایجاد', disabled: busy ? 'disabled' : null, onclick: submit}),
+        /* V230 — ورود از اکسل/CSV: ردیف‌های فایل به کارت‌ها تبدیل می‌شوند (حداکثر ۱۰۰) */
+        el('button', {class: 'btn light', text: '📥 از اکسل', title: 'ستون‌ها: نام، نام خانوادگی، نام پدر، پایه، رشته، جنسیت، نام کاربری (اختیاری)، رمز (اختیاری)', disabled: busy ? 'disabled' : null, onclick: function () {
+          var f = el('input', {type: 'file', accept: '.xlsx,.csv,.txt', style: 'display:none'});
+          f.addEventListener('change', async function () {
+            var file = f.files && f.files[0]; if (!file) return;
+            try {
+              var list = rowsToStudents(await readSpreadsheet(file));
+              if (!list.length) throw new Error('ردیفی با نام پیدا نشد. ستون اول باید «نام» و ستون دوم «نام خانوادگی» باشد.');
+              var keep = rows.filter(function (r) { return r.first || r.last; });
+              rows = keep.concat(list).slice(0, 100); recompute(); active = keep.length; error = list.length > 100 - keep.length ? 'فقط ۱۰۰ کارت در هر نوبت ممکن است؛ بقیه وارد نشد.' : ''; draw();
+              toast(fa(Math.min(list.length, 100 - keep.length)) + ' دانش‌آموز از فایل خوانده شد؛ پیش از «ایجاد» بررسی کنید.', 'ok');
+            } catch (e) { error = errMsg(e); draw(); }
+          });
+          document.body.appendChild(f); f.click(); setTimeout(function () { f.remove(); }, 60000);
+        }}),
         el('button', {class: 'btn', text: '×', title: 'بستن', onclick: function () { bg.remove(); }})
       ]));
       /* V224.2 — شمارهٔ کارت فعلی رنگ متمایز دارد، با افزودن/انتخاب خودکار به دید می‌آید و چرخ ماوس روی نوار آن را افقی اسکرول می‌کند */
@@ -528,6 +607,8 @@
           var qq = it.question || {};
           lst.appendChild(el('div', {class: 'b-bank-item'}, [el('div', {class: 'grow'}, [el('div', {text: String(qq.text || '').replace(/\$/g, '').slice(0, 160)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE[S.qType(qq.type)] || '', it.subject, (it.cat_names || []).join('، '), it.created_at ? S.fmtDate(it.created_at) : ''].filter(Boolean).join(' · ')})]),
             el('div', {class: 'acts'}, [
+              /* V230 — اشتراک با همکاران مدرسه (فقط خواندن/کپی) */
+              el('button', {class: 'icon-btn' + (it.shared ? ' on' : ''), title: it.shared ? 'اشتراک با مدرسه فعال است — لغو اشتراک' : 'اشتراک با همکاران مدرسه', html: it.shared ? '🏫' : '🔒', onclick: async function () { try { chk(await S.rpcObj('native_bank_set_shared_v1', {p_id: it.id, p_shared: !it.shared})); it.shared = !it.shared; toast(it.shared ? 'با همکاران مدرسه به اشتراک گذاشته شد.' : 'اشتراک لغو شد.', 'ok'); draw(); } catch (e) { toast(/does not exist|PGRST202/i.test(String(e.message)) ? 'اشتراک بانک هنوز روی سرور فعال نشده است (SQL نسخهٔ V230).' : errMsg(e), 'err'); } }}),
               el('button', {class: 'icon-btn', title: 'دسته‌ها', html: '🏷', onclick: function () { catPick(it); }}),
               el('button', {class: 'icon-btn', title: 'ویرایش در سازنده', html: '✎', onclick: function () { if (!B) return toast('سازندهٔ آزمون در دسترس نیست.', 'err'); S.go('builder', {bankEdit: {id: it.id, subject: it.subject || '', cats: it.cat_ids || [], question: qq}}); }}),
               el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف سؤال', 'این سؤال از بانک حذف شود؟', 'حذف', true))) return; try { chk(await S.rpcObj('native_bank_delete_question_v1', {p_id: it.id})); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])]));
@@ -557,8 +638,27 @@
           el('div', {class: 'row', style: 'margin-top:10px'}, [nm, el('button', {class: 'btn sm', text: 'افزودن', onclick: async function () { if (!nm.value.trim()) return; try { chk(await S.rpcObj('native_bank_category_add_v1', {p_name: nm.value.trim()})); bg.remove(); toast('دسته افزوده شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})])]));
         document.body.appendChild(bg);
       }
+      /* V230 — بانک مدرسه: سؤال‌های به‌اشتراک‌گذاشتهٔ همکاران همان مدرسه؛ «افزودن به بانک من» کپی می‌کند */
+      async function schoolBank() {
+        var bg = el('div', {class: 'modal-bg'}); var body = el('div'); S.loading(body);
+        bg.appendChild(el('div', {class: 'modal wide'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: '🏫 بانک سؤال مدرسه'}), el('p', {class: 'muted', text: 'سؤال‌هایی که همکاران مدرسهٔ شما به اشتراک گذاشته‌اند. با «افزودن به بانک من» نسخه‌ای در بانک شما ساخته می‌شود.'}), body]));
+        document.body.appendChild(bg);
+        try {
+          var d = chk(await S.rpcObj('native_school_bank_v1', {})), its = d.items || [];
+          var sq = el('input', {type: 'search', placeholder: 'جست‌وجو…', style: 'width:100%;margin-bottom:8px'}); var lst2 = el('div', {class: 'b-bank'});
+          function draw2() {
+            var s = sq.value.trim().toLowerCase(); lst2.innerHTML = '';
+            var f = its.filter(function (it) { var qq = it.question || {}; return !s || String(qq.text || '').toLowerCase().indexOf(s) >= 0 || String(it.subject || '').toLowerCase().indexOf(s) >= 0 || String(it.teacher || '').indexOf(s) >= 0; });
+            if (!f.length) { lst2.appendChild(S.emptyBox('🏫', its.length ? 'موردی پیدا نشد.' : 'هنوز همکاری سؤالی به اشتراک نگذاشته است. شما هم می‌توانید با آیکن 🔒 کنار سؤال‌هایتان اشتراک را روشن کنید.')); return; }
+            f.forEach(function (it) { var qq = it.question || {}; lst2.appendChild(el('div', {class: 'b-bank-item'}, [el('div', {class: 'grow'}, [el('div', {text: String(qq.text || '').replace(/\$/g, '').slice(0, 160)}), el('div', {class: 'muted', style: 'font-size:12px', text: [TYPE[S.qType(qq.type)] || '', it.subject, it.teacher ? 'از ' + it.teacher : ''].filter(Boolean).join(' · ')})]),
+              el('div', {class: 'acts'}, [it.already ? el('span', {class: 'muted', style: 'font-size:12px', text: 'در بانک شماست'}) : el('button', {class: 'btn sm', text: '➕ افزودن به بانک من', onclick: async function () { try { chk(await S.rpcObj('native_bank_copy_from_school_v1', {p_id: it.id})); it.already = true; toast('به بانک شما افزوده شد.', 'ok'); draw2(); } catch (e) { toast(errMsg(e), 'err'); } }})])])); });
+          }
+          sq.addEventListener('input', draw2); body.innerHTML = ''; body.appendChild(sq); body.appendChild(lst2); draw2();
+          bg.addEventListener('click', function (ev) { if (ev.target === bg) { bg.remove(); if (its.some(function (x) { return x.already; })) refresh(); } });
+        } catch (e) { body.innerHTML = ''; body.appendChild(el('div', {class: 'alert warn', text: /does not exist|PGRST202/i.test(String(e.message)) ? 'بانک مدرسه هنوز روی سرور فعال نشده است (فایل SQL نسخهٔ V230 باید یک بار اجرا شود).' : errMsg(e)})); }
+      }
       q.addEventListener('input', draw); cs.addEventListener('change', draw);
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, cs, el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '🏷 دسته‌ها', onclick: manageCats}), el('button', {class: 'btn', text: '➕ سؤال جدید در بانک', onclick: function () { S.go('builder', {bankEdit: {id: null, subject: '', cats: [], question: null}}); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q, cs, el('span', {class: 'grow'}), cnt, el('button', {class: 'btn light', text: '🏫 بانک مدرسه', onclick: schoolBank}), el('button', {class: 'btn light', text: '🏷 دسته‌ها', onclick: manageCats}), el('button', {class: 'btn', text: '➕ سؤال جدید در بانک', onclick: function () { S.go('builder', {bankEdit: {id: null, subject: '', cats: [], question: null}}); }})]));
       c.appendChild(lst); draw();
     } catch (e) { S.showErr(c, e); }
   }
