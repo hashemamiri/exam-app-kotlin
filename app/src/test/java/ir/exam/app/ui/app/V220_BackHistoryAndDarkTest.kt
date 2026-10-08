@@ -17,7 +17,7 @@ class V220_BackHistoryAndDarkTest {
         val app = src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
         assertTrue("BackHandler(enabled = !menuOpen && !quickAddOpen) {" in app)
         assertTrue("val previous = pageHistory.removeLastOrNull()" in app)
-        assertFalse("page != roleHomePage" in app)
+        assertTrue("target == null && page != roleHomePage -> { backPopInProgress = true; page = roleHomePage }" in app)
     }
 
     @Test

@@ -389,16 +389,15 @@ private fun AuthenticatedExamApp(
             lastSeenPage = page.name
         }
     }
+    val roleHomePage = if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR
     BackHandler(enabled = !menuOpen && !quickAddOpen) {
         val previous = pageHistory.removeLastOrNull()
-        if (previous != null) {
-            val target = runCatching { MainPage.valueOf(previous) }.getOrNull()
-            if (target != null && target != page) {
-                backPopInProgress = true
-                page = target
-            }
+        val target = previous?.let { runCatching { MainPage.valueOf(it) }.getOrNull() }
+        when {
+            target != null && target != page -> { backPopInProgress = true; page = target }
+            // تاریخچه خالی (مثلاً پس از بازیابی وضعیت): به صفحهٔ خانهٔ نقش؛ در خودِ خانه رویداد مصرف می‌شود تا برنامه بسته نشود.
+            target == null && page != roleHomePage -> { backPopInProgress = true; page = roleHomePage }
         }
-        // تاریخچه خالی: رویداد مصرف می‌شود تا برنامه بسته نشود.
     }
 
     AuthenticatedShell(

@@ -19423,7 +19423,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
-- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V220.1 — ریشه‌یابی خطاهای CI این دوره و قاعدهٔ پیش‌پرواز (§11.1)
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V220.2 — شکست CI در V220 (Neumorphic69IntegrationTest:143)
+- علت: تست قدیمی عبارت `if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR` را در ExamApp.kt پین کرده بود و در V220 با حذف `roleHomePage` از بین رفت؛ check_test_pins آن را ندید چون آن تست فایل را با `File(root, "…").readText()` می‌خواند (نه `source("…")`). اکنون این الگو (و `root.resolve(...)`) هم شناخته می‌شود: ۱۵۱۰ پین (قبلاً ۱۳۵۵).
+- رفع: `roleHomePage` برگشت و معنا دارد: وقتی تاریخچه خالی است و صفحه خانه نیست → خانه؛ در خانه رویداد مصرف می‌شود (بدون خروج).
+
+### V220.1 — ریشه‌یابی خطاهای CI این دوره و قاعدهٔ پیش‌پرواز (§11.1)
 علت‌های واقعی شکست CI در V215/V218/V220 (از لاگ‌ها):
 1. **V215**: کد اپ تغییر کرد ولی پین‌های متنی تست‌های قدیمی (V214، فایل ساخت) به‌روز نشدند؛ check_test_pins اجرا نشده بود.
 2. **V218**: تست جدید `siteDesktopDarkPalette` با `!css.contains("background:#fff;")` نوشته شد، در حالی که `background:#fff !important` و قاعدهٔ تیرهٔ خودِ همان نسخه در site.css مانده بود. `check_test_pins` فقط `assertTrue("…" in x)` را می‌فهمید و **assertFalse / !contains / Regex را رد می‌کرد** → خطای خودساخته دیده نشد. در این محیط Gradle/Kotlin نیست، پس تست‌ها فقط با همین اسکریپت قابل پیش‌بینی‌اند.

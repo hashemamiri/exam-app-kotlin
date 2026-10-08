@@ -27,6 +27,9 @@ for t in files:
     vars_ = {}
     for line in src.splitlines():
         for m in re.finditer(r'val (\w+) = (?:source|src)\("([^"]+)"\)', line): vars_[m.group(1)] = m.group(2)
+        # V220.2 — الگوهای دیگر خواندن فایل در تست‌های قدیمی (Neumorphic69IntegrationTest و …)
+        for m in re.finditer(r'val (\w+) = File\(root(?:\(\))?, "([^"]+)"\)\.readText\(\)', line): vars_[m.group(1)] = m.group(2)
+        for m in re.finditer(r'val (\w+) = root(?:\(\))?\.resolve\("([^"]+)"\)\.readText\(\)', line): vars_[m.group(1)] = m.group(2)
         s = line.strip()
         if not (s.startswith('assertTrue(') or s.startswith('assertFalse(')): continue
         neg_all = s.startswith('assertFalse(')
