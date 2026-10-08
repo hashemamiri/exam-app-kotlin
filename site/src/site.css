@@ -1317,6 +1317,13 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .m-dark .dk .tool-btn{filter:brightness(.82) saturate(.9)}
 .m-dark .b-rich{background:var(--card);color:var(--ink)}
 .m-dark .dk .b-settings,.m-dark .dk .b-editor{color:var(--ink)}
+/* V220 — ریل کناری دسکتاپ و ریل چپ سازندهٔ آزمون در حالت تیره (گرادیان روشنِ ثابت داشتند) */
+.m-dark .dk .dk-rail,.m-dark .dk .b-rail{background:linear-gradient(180deg,rgba(38,47,59,.97),rgba(30,38,49,.97));border-color:rgba(95,176,200,.28);box-shadow:0 18px 45px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)}
+.m-dark .dk .b-rail-btn,.m-dark .dk .b-rail-num{color:#AEB9C8}
+.m-dark .dk .b-rail-btn:hover,.m-dark .dk .b-rail-num:hover{background:#2F3A49;color:#BFE3EE}
+.m-dark .dk .b-rail-btn.add{color:#E6EAF2}
+.m-dark .dk .b-rail-sep{background:rgba(174,185,200,.3)}
+.m-dark .dk .b-rail-num.active,.m-dark .dk .dk-rail-item.active{color:#5FD3F5}
 /* V218.2-AUTO — تولید خودکار (scripts/site_dark_auto.py): متن‌های ثابتِ تیرهٔ خاکستری و زمینه‌های سفید بیرون از پوستهٔ موبایل در حالت تیره → متغیرهای پالت */
 .m-dark .btn.light:hover{background:var(--card)}
 .m-dark .alert.ok{color:var(--ink)}

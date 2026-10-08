@@ -50,7 +50,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -363,9 +366,39 @@ private fun AuthenticatedExamApp(
     BackHandler(enabled = menuOpen && !quickAddOpen) {
         menuOpen = false
     }
-    val roleHomePage = if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR
-    BackHandler(enabled = !menuOpen && !quickAddOpen && page != roleHomePage) {
-        page = roleHomePage
+    // V220 — دکمهٔ برگشت دستگاه به صفحهٔ قبلی (تاریخچهٔ صفحات) برمی‌گردد و هرگز از برنامه خارج نمی‌کند؛
+    // قبلاً مستقیم به صفحهٔ خانه می‌رفت و از خانه برنامه بسته می‌شد.
+    val pageHistory = rememberSaveable(
+        user.id,
+        saver = listSaver<SnapshotStateList<String>, String>(
+            save = { it.toList() },
+            restore = { mutableStateListOf<String>().apply { addAll(it) } }
+        )
+    ) { mutableStateListOf<String>() }
+    var lastSeenPage by rememberSaveable(user.id) { mutableStateOf(page.name) }
+    var backPopInProgress by remember { mutableStateOf(false) }
+    LaunchedEffect(page) {
+        if (page.name != lastSeenPage) {
+            if (backPopInProgress) {
+                backPopInProgress = false
+            } else {
+                pageHistory.remove(page.name)
+                pageHistory.add(lastSeenPage)
+                while (pageHistory.size > 24) pageHistory.removeAt(0)
+            }
+            lastSeenPage = page.name
+        }
+    }
+    BackHandler(enabled = !menuOpen && !quickAddOpen) {
+        val previous = pageHistory.removeLastOrNull()
+        if (previous != null) {
+            val target = runCatching { MainPage.valueOf(previous) }.getOrNull()
+            if (target != null && target != page) {
+                backPopInProgress = true
+                page = target
+            }
+        }
+        // تاریخچه خالی: رویداد مصرف می‌شود تا برنامه بسته نشود.
     }
 
     AuthenticatedShell(

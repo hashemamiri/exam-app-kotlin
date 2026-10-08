@@ -33,31 +33,24 @@
      بعد صفحهٔ قبلی؛ اگر صفحهٔ قبلی نبود (صفحهٔ خانه) پرسش «از سایت خارج می‌شوید؟» و با تأیید خروج از حساب. */
   var histDepth = 0, backGuard = false;
   function homePanel() { var u = S.user(); return !u ? 'dashboard' : (u.role === 'manager' ? 'teachers' : (u.role === 'student' ? 'dashboard' : 'exams')); }
-  function pushHist() { if (!MQ.matches || backGuard) return; try { history.pushState({m: ++histDepth}, ''); } catch (e) {} }
+  /* V220 — در همهٔ چیدمان‌ها (دسکتاپ هم) */
+  function pushHist() { if (backGuard) return; try { history.pushState({m: ++histDepth}, ''); } catch (e) {} }
   function closeTopOverlay() {
     var sel = ['.m-sheet-bg', '.modal-bg', '.engine-bg', '.m-radial-bg', '.m-qa-bg'];
     for (var i = 0; i < sel.length; i++) { var all = document.querySelectorAll(sel[i]); if (all.length) { var n = all[all.length - 1]; if (n.classList.contains('engine-bg')) { var x = n.querySelector('.engine-bar .btn'); if (x) x.click(); else n.remove(); } else if (n.classList.contains('m-qa-bg')) { ui.addOpen = false; paint(); } else n.remove(); return true; } }
     return false;
   }
   function onBack() {
-    if (!active() && !authActive()) return;
+    if (!S.user() && !authActive()) { pushHist(); return; }
     if (closeTopOverlay()) { pushHist(); return; }
-    if (ui.addOpen || ui.menuOpen) { ui.addOpen = false; ui.menuOpen = false; paint(); pushHist(); return; }
+    if (ui.addOpen || ui.menuOpen) { ui.addOpen = false; ui.menuOpen = false; if (active()) paint(); pushHist(); return; }
     if (window.SiteStudent && window.SiteStudent.inExam && window.SiteStudent.inExam()) { pushHist(); toast('برای خروج از آزمون از دکمهٔ پایان/خروج داخل آزمون استفاده کنید.', 'info'); return; }
-    if (view.panel === 'builder' && view.arg && view.arg.mode === 'print') { pushHist(); go('print'); return; }
-    var home = homePanel();
-    if (S.user() && view.panel !== home) { pushHist(); go(home); return; }
-    /* صفحهٔ قبلی وجود ندارد → پرسش خروج */
+    /* V220 — صفحهٔ قبلی از تاریخچهٔ پنل‌ها (app.js navStack)؛ اگر نبود، همین‌جا می‌مانیم و هرگز از سایت خارج نمی‌شویم */
+    if (S.navBack && S.navBack()) { pushHist(); return; }
     pushHist();
-    S.confirmDlg('خروج', S.user() ? 'از سایت خارج می‌شوید؟' : 'از سایت خارج می‌شوید؟', 'خروج', true).then(function (ok) {
-      if (!ok) return;
-      backGuard = true;
-      var leave = function () { try { history.go(-(histDepth + 1)); } catch (e) {} setTimeout(function () { try { window.close(); } catch (e) {} backGuard = false; }, 300); };
-      if (S.user()) { S.logout().then(leave, leave); } else leave();
-    });
   }
   window.addEventListener('popstate', function () { onBack(); });
-  (function () { var _go = S.go; S.go = function (panel, arg) { if (MQ.matches && (panel !== view.panel || (arg && arg.mode === 'print') || panel === 'builder')) pushHist(); return _go.apply(this, arguments); }; if (MQ.matches) { try { history.replaceState({m: 0}, ''); } catch (e) {} } })();
+  (function () { try { history.replaceState({m: 0}, ''); } catch (e) {} pushHist(); })();
 
   /* ---------- آیکون‌های خطی (شبیه Design69Icons) ---------- */
   var I = {

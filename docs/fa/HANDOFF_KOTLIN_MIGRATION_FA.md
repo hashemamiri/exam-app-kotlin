@@ -19423,7 +19423,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
-- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V219 — رفع‌های V218 (1.01.09)
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V220 — برگشت + حالت تیره (1.01.10)
+- ریشهٔ متن‌های سیاه در حالت تیره: ریشهٔ برنامه `Surface` ندارد و `Scaffold(containerColor = Transparent)` رنگ محتوا را از `LocalContentColor` (پیش‌فرض سیاه) می‌گیرد → در `ExamAppTheme` بعد از `MaterialTheme`، `CompositionLocalProvider(LocalContentColor provides colors.onBackground)`.
+- اپ: `ExamApp.kt` — `pageHistory` (SnapshotStateList ذخیره‌شونده) + `lastSeenPage` + `backPopInProgress`؛ `LaunchedEffect(page)` تغییر صفحه را ثبت می‌کند؛ `BackHandler` همیشه فعال (جز منو/افزودن سریع): pop → صفحهٔ قبلی؛ تاریخچهٔ خالی → مصرف رویداد (بدون خروج). BackHandlerهای داخلی (سازنده، آزمون دانش‌آموز، منوی شعاعی) اولویت دارند.
+- سایت: `app.js` `navTrack()` در ابتدای `render()` هر تغییر `view.panel/arg` را در `navStack` ثبت و `history.pushState` می‌کند؛ `S.navBack()`؛ `mobile.js` `onBack` در همهٔ چیدمان‌ها (pushHist بدون شرط MQ): اول overlay، بعد منو، بعد `S.navBack()`، وگرنه ماندن (دیالوگ «از سایت خارج می‌شوید؟» حذف شد).
+- site.css: بلوک V220 برای `.dk-rail`/`.b-rail` در `.m-dark`.
+- تست: `V220_BackHistoryAndDarkTest`.
+
+### V219 — رفع‌های V218 (1.01.09)
 - خط کسر: قواعد `.qmf-atom .mathx .mfrac{align-items:stretch}` و `>.mnum/.mden{width:100%}` موتور (tools_styles.css) فقط داخل `.qmf-atom` اعمال می‌شدند؛ builder.js/student.js همان‌ها را با پیشوند `.b-rich`/`.st-exam` به CSS کپی‌شده اضافه می‌کنند.
 - حالت تیرهٔ دسکتاپ: `body.dk{--bg…}` همهٔ متغیرهای پالت را بازتعریف می‌کرد و `:root.m-dark` را خنثی می‌کرد → بلوک `.m-dark body.dk{…}` + قواعد مکمل `.m-dark .dk …` و یک بلوک خودکار `/* V218.2-AUTO */` در انتهای site.css (متن‌های خاکستری‌تیرهٔ ثابت → `var(--ink)`، زمینه‌های سفید → `var(--card)`; تولید با اسکریپت موقت؛ در صورت تغییر site.css می‌توان بلوک را دوباره ساخت). `.wb-canvas`, `.engine-bg iframe`, `.studio-ex img` عمداً `#FFFFFF`.
 - اپ: `QuestionTextWebSection` → `BasicTextField` رنگ `LocalContentColor` را نمی‌گیرد؛ `textStyle.copy(color = onSurface)`.

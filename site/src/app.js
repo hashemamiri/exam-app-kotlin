@@ -941,8 +941,27 @@
   /* ================================================================ UI: وضعیت و مسیریابی */
   var view = {page: 'landing', panel: 'dashboard'};
   var root;
+  /* V220 — تاریخچهٔ صفحات برای دکمهٔ برگشت (دسکتاپ و گوشی): هر تغییر پنل در render ثبت می‌شود؛
+     برگشت = صفحهٔ قبلی (نه خانه) و هرگز خروج از سایت. mobile.js روی popstate، S.navBack را صدا می‌زند. */
+  var navStack = [], navLast = null, navPopping = false;
+  function navKey() { var a = null; try { a = JSON.stringify(view.arg || null); } catch (e) { a = String(view.arg); } return view.panel + '|' + a; }
+  function navTrack() {
+    if (!user) { navLast = null; navStack = []; return; }
+    var k = navKey();
+    if (navLast && k !== navLast.key) {
+      if (navPopping) navPopping = false;
+      else { navStack.push(navLast); if (navStack.length > 30) navStack.shift(); try { history.pushState({nav: 1}, ''); } catch (e) {} }
+    }
+    navLast = {key: k, panel: view.panel, arg: view.arg};
+  }
+  function navBack() {
+    var prev = navStack.pop();
+    if (!prev) return false;
+    navPopping = true; view.panel = prev.panel; view.arg = prev.arg; render(); return true;
+  }
   function render() {
     root = $('root');
+    navTrack();
     document.body.classList.remove('dk');
     /* V148 — پوستهٔ موبایل (mobile.js) در حالت گوشی/معلم جای پنل دسکتاپ را می‌گیرد */
     /* V202.6 — گوشی: با نشست فعال هم اول صفحهٔ اول (دریافت برنامه / ورود به سامانه) تا کاربر «ورود به سامانه» بزند */
@@ -1743,7 +1762,7 @@
     el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
-    go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, view: view, examActions: examActions,
+    go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,
     render: render, renderPage: renderPage, printExam: printExam, logout: doLogout,
     __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); },
     auth: {keyReady: KEY_READY, login: function (u) { user = u; afterLogin(); }, currentProfile: currentProfile, requireEmail: requireEmail, drawCompletion: drawCompletion, logout: doLogout} /* برای تست خودکار بدون سرور */};

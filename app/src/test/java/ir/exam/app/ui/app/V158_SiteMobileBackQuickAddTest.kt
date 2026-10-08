@@ -17,8 +17,9 @@ class V158_SiteMobileBackQuickAddTest {
         val m = source("site/src/mobile.js")
         assertTrue("window.addEventListener('popstate', function () { onBack(); });" in m)
         assertTrue("function closeTopOverlay()" in m && "if (closeTopOverlay()) { pushHist(); return; }" in m)
-        assertTrue("if (S.user() && view.panel !== home) { pushHist(); go(home); return; }" in m)
-        assertTrue("'از سایت خارج می‌شوید؟', 'خروج', true)" in m && "S.logout().then(leave, leave)" in m)
+        // V220 — برگشت به صفحهٔ قبلی از تاریخچه (navStack) و بدون پرسش خروج
+        assertTrue("if (S.navBack && S.navBack()) { pushHist(); return; }" in m)
+        assertTrue(!m.contains("از سایت خارج می‌شوید؟"))
     }
 
     @Test

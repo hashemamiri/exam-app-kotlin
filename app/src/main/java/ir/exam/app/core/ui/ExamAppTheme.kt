@@ -3,6 +3,7 @@ package ir.exam.app.core.ui
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -81,9 +82,15 @@ fun ExamAppTheme(
         MaterialTheme(
             colorScheme = colors,
             typography = appTypography(fontFamily),
-            shapes = NeumorphicShapes,
-            content = content
-        )
+            shapes = NeumorphicShapes
+        ) {
+            // V220 — ریشهٔ برنامه Surface ندارد و Scaffold با containerColor شفاف رنگ محتوا را از
+            // LocalContentColor (پیش‌فرض: سیاه) می‌گیرد؛ در حالت تیره همهٔ متن‌های بدون رنگ صریح سیاه می‌ماندند.
+            CompositionLocalProvider(
+                LocalContentColor provides colors.onBackground,
+                content = content
+            )
+        }
     }
 }
 
