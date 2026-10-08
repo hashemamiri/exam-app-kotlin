@@ -20,7 +20,7 @@ class V165_SiteDesktopRailTest {
         assertTrue("function renderPanel()" in a && "document.body.classList.add('dk')" in a && "document.body.classList.remove('dk')" in a)
         assertTrue("function railItem(key, label)" in a && "[railItem('menu', 'منو')].concat(railItems.map(" in a) // V197: railItems
         assertTrue("class: 'dk-rail', 'aria-label': 'نوار اصلی'" in a && "'--n:' + (railItems.length + 1)" in a)
-        assertTrue("class: 'head dk-top'" in a && "dkIcon('brand', 'dk-mark')" in a && "dkGo(view.panel === 'menu' ? 'dashboard' : 'menu')" in a)
+        assertTrue("class: 'head dk-top'" in a && "el('span', {class: 'dk-mark', html: APP_MARK_SVG})" in a && "dkGo(view.panel === 'menu' ? 'dashboard' : 'menu')" in a)
         assertTrue("function pageMenu(c)" in a && "var pages = {menu: pageMenu, cards: pageCards, print: pagePrint, account: pageAccount, settings: pageSettings, dashboard: pageDashboard" in a)
         // V169 — کارت پروفایل هم‌اندازهٔ بقیه (dk-mcard-profile) و «پروفایل» در ریل نیست
         assertTrue("class: 'dk-mcard dk-mcard-profile'" in a && "'پروفایل ' + ROLE_LABEL[user.role]" in a && "mcard('logout', 'خروج', 'خروج امن و تعویض حساب', true, async function () { if (await confirmDlg(" in a)
@@ -43,5 +43,33 @@ class V165_SiteDesktopRailTest {
         assertTrue(".dk .app{display:block;min-height:100vh;overflow-x:clip}" in css)
         // پوستهٔ گوشی (V149–V161) دست‌نخورده
         assertTrue(".m-mode{--m-bg:#E9EEF5;" in css && ".m-dock-panel{pointer-events:auto;height:64px" in css)
+    }
+}
+
+// V222 — در همین فایل (الگوی V1*_Site*Test در paths-ignore اندروید) تا تغییر فقط-سایت، CI اپ را اجرا نکند.
+/** V222 — سایت: فیلدهای ورود بدون مثال، آیکون کاربر در نام کاربری، آیکون سایت = آیکون اپ. */
+class V222_SiteLoginFieldsBrandTest {
+    private fun root(): File = listOf(File("."), File("..")).first {
+        File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
+    }
+    private fun src(rel: String): String = File(root(), rel).readText()
+
+    @Test
+    fun loginFieldsHaveNoExamplesAndUserIcon() {
+        val a = src("site/src/app.js")
+        assertTrue("var id = input('نام کاربری یا ایمیل', '', 'text', true); id.classList.add('with-ico');" in a)
+        assertTrue("var pw = input('رمز عبور', '', 'password', true);" in a)
+        assertFalse("'ali_1385'" in a)
+        val css = src("site/src/site.css")
+        assertTrue(".field.with-ico .fld-ico{" in css)
+    }
+
+    @Test
+    fun siteBrandMatchesAppIcon() {
+        val a = src("site/src/app.js")
+        assertTrue("var APP_MARK_SVG = '<svg viewBox=\"0 0 108 108\"" in a)
+        assertTrue("fill=\"#5B3FA3\"" in a && "fill=\"#2E7D32\"" in a)
+        assertTrue("el('span', {class: 'mark', html: APP_MARK_SVG})" in a)
+        assertFalse("el('span', {class: 'mark', text: '✎'})" in a)
     }
 }

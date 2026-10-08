@@ -995,7 +995,8 @@
     if (keyWarn) page.appendChild(keyWarn);
     root.appendChild(page);
   }
-  function brandEl() { return el('div', {class: 'logo'}, [el('span', {class: 'mark', text: '✎'}), el('span', {text: 'آزمون‌ساز'})]); }
+  var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" fill="#5B3FA3"/><rect x="20" y="24" width="68" height="60" rx="8" fill="#fff"/><path fill="#5B3FA3" d="M32 38h30v6H32zM32 52h44v6H32zM32 66h34v6H32z"/><path fill="#2E7D32" d="M69 35l5 5 10-11 4 4-14 15-9-9z"/></svg>'; /* V222 — همان آیکون اپ اندروید (ic_exam_app) */
+  function brandEl() { return el('div', {class: 'logo'}, [el('span', {class: 'mark', html: APP_MARK_SVG}), el('span', {text: 'آزمون‌ساز'})]); }
 
   function demoFormula() {
     openFormulaEditor('مساحت دایره برابر است با $\\pi r^2$ و ', null, null).then(function (t) { if (t != null) toast('متن نهایی: ' + String(t).slice(0, 80)); });
@@ -1041,9 +1042,9 @@
     function drawLogin() {
       m.appendChild(msg); setMsg('');
       if (!state.otpMode) {
-        var id = input('نام کاربری یا ایمیل', 'ali_1385', 'text', true);
+        var id = input('نام کاربری یا ایمیل', '', 'text', true); id.classList.add('with-ico'); id.appendChild(el('span', {class: 'fld-ico', 'aria-hidden': 'true', html: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6"/></svg>'})); /* V222 — بدون مثال، با آیکون کاربر */
         id.querySelector('input').setAttribute('autocomplete', 'username'); id.querySelector('input').setAttribute('inputmode', 'email');
-        var pw = input('رمز عبور', '••••••••', 'password', true);
+        var pw = input('رمز عبور', '', 'password', true);
         var b = el('button', {class: 'btn', text: 'ورود', 'data-label': 'ورود', style: 'width:100%'});
         b.addEventListener('click', async function () {
           setMsg(''); busy(b, true);
@@ -1308,7 +1309,7 @@
       el('div', {class: 'head dk-top'}, [
         el('button', {class: 'icon-btn hamb', html: '☰', 'aria-label': 'منو', onclick: toggleSidebar}),
         el('div', {class: 'dk-title'}, [el('h1', {text: title}), el('p', {text: 'سامانه آزمون آنلاین'})]),
-        dkIcon('brand', 'dk-mark'),
+        el('span', {class: 'dk-mark', html: APP_MARK_SVG}),
         el('button', {class: 'dk-burger' + (view.panel === 'menu' ? ' on' : ''), 'aria-label': 'منو', onclick: function () { dkGo(view.panel === 'menu' ? 'dashboard' : 'menu'); }}, [dkIcon('menu')])
       ]),
       el('div', {id: 'content'})

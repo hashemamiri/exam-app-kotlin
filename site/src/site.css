@@ -1394,3 +1394,11 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .m-dark .icon-btn.print-btn.unpaid{background:var(--card)}
 .m-dark .icon-btn.print-btn.unpaid:hover{background:var(--card)}
 .m-dark .icon-btn.print-btn.paid{background:var(--card)}
+
+/* V222 — آیکون سایت = آیکون اپ؛ آیکون کاربر در فیلد نام کاربری */
+.logo .mark,.lp .logo .mark{background:none;box-shadow:none;overflow:hidden;padding:0}
+.logo .mark svg,.lp .logo .mark svg,.dk .dk-mark svg{display:block;width:100%;height:100%;border-radius:inherit}
+.dk .dk-mark{background:none;overflow:hidden}
+.field.with-ico{position:relative}
+.field.with-ico input{padding-left:44px}
+.field.with-ico .fld-ico{position:absolute;left:14px;bottom:12px;color:#8a90a6;display:inline-flex;pointer-events:none}
