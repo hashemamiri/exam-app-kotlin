@@ -544,7 +544,7 @@
         function drawCats() {
           body.innerHTML = '';
           if (!cats.length) body.appendChild(el('p', {class: 'muted', text: 'هنوز دسته‌ای نساخته‌اید.'}));
-          cats.forEach(function (k) { body.appendChild(el('div', {class: 'g-item'}, [el('span', {class: 'grow', text: k.name}), el('span', {class: 'muted', style: 'font-size:12px', text: fa(k.count || 0) + ' سؤال'}), el('button', {class: 'icon-btn danger', html: '🗑', onclick: async function () {
+          cats.forEach(function (k) { body.appendChild(el('div', {class: 'g-item'}, [el('span', {class: 'grow', text: k.name}), el('span', {class: 'muted', style: 'font-size:12px', text: fa(k.count || 0) + ' سؤال'}), el('button', {class: 'icon-btn danger', html: '🗑', title: 'حذف دسته', onclick: async function () {
             var delQ = false;
             if ((k.count || 0) > 0) { var r = await S.confirmDlg('حذف دسته', 'دستهٔ «' + esc(k.name) + '» ' + fa(k.count) + ' سؤال دارد. سؤال‌ها هم حذف شوند؟ (با «فقط دسته» سؤال‌ها بدون دسته می‌مانند)', 'حذف با سؤال‌ها', true); if (r) delQ = true; else if (!(await S.confirmDlg('حذف دسته', 'فقط خودِ دسته حذف شود؟', 'فقط دسته'))) return; }
             else if (!(await S.confirmDlg('حذف دسته', 'دستهٔ «' + esc(k.name) + '» حذف شود؟', 'حذف', true))) return;

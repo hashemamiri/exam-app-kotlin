@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>وضعیت سرویس — سامانهٔ آزمون آنلاین</title>
+<meta name="robots" content="noindex">
+<style>
+body{margin:0;font-family:Vazirmatn,Tahoma,sans-serif;background:#eef3f8;color:#1F2530;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+.card{background:#fff;border-radius:22px;box-shadow:0 14px 40px rgba(31,59,87,.12);padding:24px 22px;max-width:520px;width:100%}
+h1{font-size:20px;margin:0 0 6px}p{margin:0 0 14px;color:#5b6675;font-size:14px;line-height:1.8}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #edf1f5}.row:last-of-type{border-bottom:0}
+.dot{width:14px;height:14px;border-radius:50%;background:#c3ccd6;flex:none;box-shadow:0 0 0 4px rgba(0,0,0,.04)}
+.ok .dot{background:#22c55e}.bad .dot{background:#ef4444}.wait .dot{animation:p 1s infinite alternate}
+@keyframes p{from{opacity:.3}to{opacity:1}}
+.t{flex:1}.t b{display:block;font-size:15px}.t small{color:#5b6675}
+.sum{margin-top:16px;padding:12px 14px;border-radius:14px;background:#f3f6fa;font-size:14px;line-height:1.9}
+.sum.ok{background:#e9f9ef;color:#166534}.sum.bad{background:#fdecec;color:#991b1b}
+button{margin-top:14px;width:100%;border:0;border-radius:14px;padding:12px;font:inherit;font-weight:700;background:#2B8FD6;color:#fff;cursor:pointer}
+a{color:#2B8FD6}
+@media (prefers-color-scheme:dark){body{background:#1F2530;color:#E6EAF2}.card{background:#2A3242}.row{border-color:#374151}.sum{background:#1f2937;color:#e5e7eb}p,.t small{color:#aab4c3}}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>وضعیت سرویس آزمون آنلاین</h1>
+<p>اگر در اپ یا سایت مشکلی دارید، این صفحه نشان می‌دهد مشکل از اینترنت شماست یا از سرورها.</p>
+<div id="rows">
+<div class="row wait" id="r-net"><span class="dot"></span><div class="t"><b>اینترنت شما</b><small id="s-net">در حال بررسی…</small></div></div>
+<div class="row wait" id="r-site"><span class="dot"></span><div class="t"><b>سایت onlineexam.ir</b><small id="s-site">در حال بررسی…</small></div></div>
+<div class="row wait" id="r-auth"><span class="dot"></span><div class="t"><b>سرور ورود و حساب‌ها</b><small id="s-auth">در حال بررسی…</small></div></div>
+<div class="row wait" id="r-db"><span class="dot"></span><div class="t"><b>سرور داده‌ها (آزمون‌ها، کلاس‌ها، پاسخ‌ها)</b><small id="s-db">در حال بررسی…</small></div></div>
+<div class="row wait" id="r-st"><span class="dot"></span><div class="t"><b>سرور فایل‌ها (تصاویر و صداها)</b><small id="s-st">در حال بررسی…</small></div></div>
+</div>
+<div class="sum" id="sum">در حال بررسی…</div>
+<button onclick="run()">بررسی دوباره</button>
+<p style="margin:12px 0 0;text-align:center"><a href="/">بازگشت به سایت</a> · پشتیبانی: info@onlineexam.ir</p>
+</div>
+<script>
+var BASE = 'https://eazwuyrymsvdkwckdpco.supabase.co';
+function fa(n){return String(n).replace(/\d/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'[d];});}
+function set(id, ok, msg){var r=document.getElementById('r-'+id);r.className='row '+(ok?'ok':'bad');document.getElementById('s-'+id).textContent=msg;}
+function wait(id){document.getElementById('r-'+id).className='row wait';document.getElementById('s-'+id).textContent='در حال بررسی…';}
+async function ping(url, okStatuses){
+  var t0=Date.now();
+  try{var ctl=new AbortController();var tm=setTimeout(function(){ctl.abort();},8000);
+    var r=await fetch(url,{cache:'no-store',signal:ctl.signal});clearTimeout(tm);
+    var ms=Date.now()-t0;
+    return {ok: okStatuses.indexOf(r.status)>=0, ms: ms, status: r.status};
+  }catch(e){return {ok:false, ms: Date.now()-t0, err: true};}
+}
+function txt(p){return p.ok ? 'در دسترس · ' + fa(p.ms) + ' میلی‌ثانیه' : (p.err ? 'در دسترس نیست' : 'پاسخ غیرعادی (' + fa(p.status) + ')');}
+async function run(){
+  ['net','site','auth','db','st'].forEach(wait);
+  document.getElementById('sum').className='sum';document.getElementById('sum').textContent='در حال بررسی…';
+  var online = navigator.onLine !== false;
+  set('net', online, online ? 'متصل' : 'مرورگر می‌گوید آفلاین هستید');
+  var res = await Promise.all([
+    ping(location.origin + '/?ping=' + Date.now(), [200, 304]),
+    ping(BASE + '/auth/v1/health', [200]),
+    ping(BASE + '/rest/v1/', [200, 401]),
+    ping(BASE + '/storage/v1/status', [200, 401, 404])
+  ]);
+  set('site', res[0].ok, txt(res[0])); set('auth', res[1].ok, txt(res[1])); set('db', res[2].ok, txt(res[2])); set('st', res[3].ok, txt(res[3]));
+  var s=document.getElementById('sum');
+  var allOk = res.every(function(p){return p.ok;});
+  var noneOk = res.every(function(p){return !p.ok;});
+  if (allOk) { s.className='sum ok'; s.textContent='همهٔ سرویس‌ها در دسترس‌اند. اگر همچنان مشکل دارید، یک بار از حساب خارج و دوباره وارد شوید یا اپ را به آخرین نسخه به‌روز کنید.'; }
+  else if (noneOk || !online) { s.className='sum bad'; s.textContent='به نظر می‌رسد مشکل از اینترنت شماست (هیچ سروری پاسخ نداد). اتصال، VPN یا فیلترشکن را بررسی کنید.'; }
+  else { s.className='sum bad'; s.textContent='بخشی از سرورها در دسترس نیستند. تیم فنی معمولاً در جریان است؛ چند دقیقهٔ دیگر دوباره تلاش کنید. اگر بیش از ۳۰ دقیقه ادامه داشت به info@onlineexam.ir اطلاع دهید.'; }
+}
+run();
+</script>
+</body>
+</html>

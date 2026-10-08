@@ -36,6 +36,7 @@ jobs:
           PY
           # V147 — PWA: مانیفست، آیکون‌ها و Service Worker (نسخهٔ SW = هش index.html تا هر انتشار کش قدیمی را دور بریزد)
           cp -r site/pwa site_out/pwa
+          cp site/status.html site_out/status.html  # V228 — صفحهٔ وضعیت سرویس
           # V162 — موتورهای چاپ/فرمول در فایل جداگانه با hash در نام (کش دائمی)
           cp site/engines.*.js site_out/
           # V164 — قلم وزیرمتن (woff2) — کش یک‌ساله

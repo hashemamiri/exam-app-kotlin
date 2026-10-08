@@ -19425,6 +19425,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V228 — بستهٔ ۱ از ۴ پیشنهادها (فقط سایت)
+- **قالب تنظیمات آزمون** (`builder.js settingsForm`): localStorage `examsite.examTemplates.v1` = `[{name, v:{duration,negativeMarking,attemptsAllowed,gradePolicy,attemptCooldown,shuffleQuestions,shuffleOptions,attemptOnTimeout,teacherMessage}}]` حداکثر ۲۰؛ ردیف `.b-tpl` بالای فرم (select + اعمال/ذخیره/حذف). فقط همین مرورگر؛ نسخهٔ سروری نیاز به جدول جدید دارد (SQL کاربر).
+- **ورود**: `state.fails` در loginPage؛ ≥۳ پیام + یادآوری «فراموشی رمز»؛ ≥۵ دکمه ۳۰ ثانیه غیرفعال با شمارش معکوس (فقط مرورگر؛ محدودیت واقعی سمت Supabase Auth است).
+- **پرکنتراست**: `appearance.highContrast` → کلاس `m-hc` روی `<html>`؛ CSS متغیرها را سیاه/سفید می‌کند، کادر ۲px، focus نارنجی، زبرای جدول خاموش. اپ (Kotlin) در بستهٔ بعدی.
+- **aria**: `el()` برای `button` با `title` خودکار `aria-label` می‌گذارد؛ `class:'x'` → «بستن». سه دکمهٔ بی‌عنوان title گرفتند.
+- **وضعیت سرویس**: `site/status.html` ایستا (بدون کلید؛ `/auth/v1/health`، `/rest/v1/` (۴۰۱ = در دسترس)، `/storage/v1/status`، origin خود سایت)؛ `site.yml` آن را به `site_out/` کپی می‌کند؛ پیوند در «درباره» (mobile.js aboutSection).
+- باقی‌ماندهٔ برنامه: بستهٔ ۲ (اپ: پرکنتراست + تست UI بازخوانی + کندی پیش‌نمایش چاپ V179)، بستهٔ ۳ (مدیر: داشبورد مقایسه‌ای، ورود از اکسل، بانک مشترک مدرسه، PDF)، بستهٔ ۴ (آفلاین دانش‌آموز). ۳/۶/۷ منتظر کلیدها.
+
 ### V227.3 — ردیف‌ها یکی‌درمیان فیروزه‌ای/زرشکی (فقط سایت)
 - CSS `.dk table.tbl{--zc;--zm}`؛ `tr:nth-child(odd){--zb:var(--zc)}` فیروزه‌ای، `even` زرشکی؛ همهٔ ردیف‌ها هاله دارند. کلاس `tbl-cyan` دیگر اثری ندارد (باقی مانده، بی‌ضرر).
 

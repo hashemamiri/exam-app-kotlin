@@ -159,4 +159,20 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(css.contains(".dk table.tbl tbody tr:nth-child(odd){--zb:var(--zc)}") && css.contains(".dk table.tbl tbody tr:nth-child(even){--zb:var(--zm)}"))
         assertTrue(css.contains(".dk table.tbl tbody tr td{background:rgba(var(--zb),.09)"))
     }
+
+    @Test
+    fun v228TemplatesLoginHintsContrastStatus() {
+        val b = src("site/src/builder.js")
+        assertTrue(b.contains("var TPL_KEY = 'examsite.examTemplates.v1'") && b.contains("text: 'ذخیره به‌عنوان قالب'") && b.contains("text: 'اعمال قالب'"))
+        val app = src("site/src/app.js")
+        assertTrue(app.contains("if (state.fails >= 3) m += ' — اگر رمز را فراموش کرده‌اید") && app.contains("if (state.fails >= 5) { b.disabled = true;"))
+        assertTrue(app.contains("if (attrs.title && !attrs['aria-label']) e.setAttribute('aria-label', attrs.title)"))
+        val m = src("site/src/mobile.js")
+        assertTrue(m.contains("root.classList.toggle('m-hc', !!a.highContrast)") && m.contains("switchRow('حالت پرکنتراست'") && m.contains("href: '/status.html'"))
+        val css = src("site/src/site.css")
+        assertTrue(css.contains(".m-hc{--ink:#000;") && css.contains(".m-hc :focus-visible{outline:3px solid #ff9800!important"))
+        val st = src("site/status.html")
+        assertTrue(st.contains("/auth/v1/health") && st.contains("/rest/v1/") && st.contains("/storage/v1/status") && st.contains("info@onlineexam.ir"))
+        assertTrue(src(".github/workflows/site.yml").contains("cp site/status.html site_out/status.html"))
+    }
 }

@@ -721,7 +721,7 @@
           var s = el('select'); s.appendChild(el('option', {value: '', text: '— جفت —'}));
           q.matchingRight.forEach(function (_, j) { var o = el('option', {value: String(j), text: 'چپ ' + fa(j + 1)}); if (q.matchingPairs[k] === j) o.selected = true; s.appendChild(o); });
           s.addEventListener('change', function () { if (s.value === '') delete q.matchingPairs[k]; else q.matchingPairs[k] = Number(s.value); mark(); });
-          box.appendChild(el('div', {class: 'b-opt'}, [l, s, r, el('button', {class: 'icon-btn danger', html: '✕', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
+          box.appendChild(el('div', {class: 'b-opt'}, [l, s, r, el('button', {class: 'icon-btn danger', html: '✕', title: 'حذف ردیف', onclick: function () { if (n <= 2) return; q.matchingLeft.splice(k, 1); q.matchingRight.splice(k, 1); q.matchingPairs = {}; mark(); redraw(); }})]));
         })(k);
         box.appendChild(el('button', {class: 'btn light sm', text: '➕ ردیف', onclick: function () { q.matchingLeft.push(''); q.matchingRight.push(''); mark(); redraw(); }}));
       } else {
@@ -733,6 +733,31 @@
     /* V166 — فرم «مشخصات آزمون» مشترک: پنجرهٔ بازشو (گوشی/تبلت) و ستون راست سازندهٔ دسکتاپ */
     function settingsForm(m_) {
       function redrawSettings() { var y = m_.scrollTop; m_.innerHTML = ''; settingsForm(m_); m_.scrollTop = y; }
+      /* V228 — قالب‌های تنظیمات آزمون (مدت، نمرهٔ منفی، دفعات، سیاست نمره، فاصله، به‌هم‌ریختن، ثبت خودکار، پیام معلم) در همین مرورگر ذخیره می‌شوند */
+      var TPL_KEY = 'examsite.examTemplates.v1', TPL_FIELDS = ['duration', 'negativeMarking', 'attemptsAllowed', 'gradePolicy', 'attemptCooldown', 'shuffleQuestions', 'shuffleOptions', 'attemptOnTimeout', 'teacherMessage'];
+      function tplLoad() { try { var l = JSON.parse(localStorage.getItem(TPL_KEY) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+      function tplSave(l) { try { localStorage.setItem(TPL_KEY, JSON.stringify(l)); } catch (e) {} }
+      var tpls = tplLoad(), tsel = el('select'); tsel.appendChild(el('option', {value: '', text: tpls.length ? '— انتخاب قالب —' : 'هنوز قالبی ذخیره نکرده‌اید'}));
+      tpls.forEach(function (t, i) { tsel.appendChild(el('option', {value: String(i), text: t.name})); });
+      var tplRow = el('div', {class: 'b-tpl'}, [
+        el('div', {class: 'field grow'}, [el('label', {text: 'قالب تنظیمات'}), tsel]),
+        el('button', {class: 'btn light sm', text: 'اعمال قالب', onclick: function () {
+          var t = tpls[Number(tsel.value)]; if (!t) { S.toast('ابتدا یک قالب انتخاب کنید.', 'err'); return; }
+          TPL_FIELDS.forEach(function (k) { if (k in t.v) state[k] = t.v[k]; }); mark(); redrawSettings(); S.toast('قالب «' + t.name + '» اعمال شد.');
+        }}),
+        el('button', {class: 'btn light sm', text: 'ذخیره به‌عنوان قالب', onclick: async function () {
+          var name = await S.promptDlg('ذخیرهٔ قالب تنظیمات', 'مدت، نمرهٔ منفی، دفعات مجاز، سیاست نمره، به‌هم‌ریختن و پیام معلم با این نام ذخیره می‌شوند (فقط در همین مرورگر).', 'نام قالب', state.subject || '', 'ذخیره');
+          if (!name || !name.trim()) return;
+          var v = {}; TPL_FIELDS.forEach(function (k) { v[k] = state[k]; });
+          var list = tplLoad().filter(function (t) { return t.name !== name.trim(); }); list.unshift({name: name.trim(), v: v}); tplSave(list.slice(0, 20)); redrawSettings(); S.toast('قالب ذخیره شد.');
+        }}),
+        tpls.length ? el('button', {class: 'btn light sm danger', text: 'حذف قالب', onclick: async function () {
+          var t = tpls[Number(tsel.value)]; if (!t) { S.toast('ابتدا یک قالب انتخاب کنید.', 'err'); return; }
+          if (!(await S.confirmDlg('حذف قالب', 'قالب «' + S.esc(t.name) + '» حذف شود؟', 'حذف', true))) return;
+          tplSave(tplLoad().filter(function (x) { return x.name !== t.name; })); redrawSettings();
+        }}) : null
+      ]);
+      m_.appendChild(tplRow);
       m_.appendChild(el('div', {class: 'grid3'}, [
         inp('عنوان آزمون', state.title, function (v) { state.title = v; mark(); }),
         inp('درس', state.subject, function (v) { state.subject = v; mark(); }),

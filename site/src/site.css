@@ -1528,3 +1528,15 @@ body.lp-body{background:#D6ECFC}
 .m-dark .dk table.tbl{--zm:220,120,150}
 .m-dark .dk table.tbl tbody tr td{background:rgba(var(--zb),.12)}
 .m-dark .dk table.tbl tbody tr:hover td{background:rgba(var(--zb),.2)}
+/* ===== V228 — قالب تنظیمات آزمون + حالت پرکنتراست ===== */
+.b-tpl{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;border-radius:14px;background:rgba(var(--brand-rgb,108,99,245),.06)}
+.b-tpl .grow{flex:1;min-width:180px;margin:0}
+.b-tpl .btn.danger{color:#c0392b}
+.m-hc{--ink:#000;--muted:#333;--line:#000;--card:#fff;--bg:#fff}
+.m-hc.m-dark{--ink:#fff;--muted:#ddd;--line:#fff;--card:#000;--bg:#000}
+.m-hc body,.m-hc .card,.m-hc .modal{box-shadow:none!important}
+.m-hc .card,.m-hc .modal,.m-hc input,.m-hc select,.m-hc textarea,.m-hc .btn,.m-hc .icon-btn,.m-hc .chip,.m-hc .m-chip{border:2px solid var(--line)!important}
+.m-hc a{text-decoration:underline}
+.m-hc :focus-visible{outline:3px solid #ff9800!important;outline-offset:2px}
+.m-hc .muted{color:var(--muted)!important}
+.m-hc .dk table.tbl tbody tr td{background:transparent!important;box-shadow:inset 0 -2px 0 var(--line)!important}

@@ -905,13 +905,14 @@
      چیپ‌های ظاهر / داده‌ها / درباره؛ ظاهر روی همین دستگاه ذخیره می‌شود (AppearancePreferences) */
   var LS_APPEAR = 'examsite.appearance.v1';
   var PALETTES = {INDIGO_MINT: ['#6C63F5', '#27C4A8', 'نیلی و سبز'], BLUE_CYAN: ['#1877D2', '#32B7C6', 'آبی و فیروزه‌ای'], PINK_ORANGE: ['#E96D8A', '#FFA14E', 'صورتی و نارنجی'], PURPLE_PINK: ['#8C5AD7', '#EC6DA7', 'بنفش و صورتی']};
-  var APPEAR_DEF = {themeMode: 'SYSTEM', fontScale: 1, appFont: 'VAZIRMATN', palette: 'INDIGO_MINT', depth: 14, persianDigits: false};
+  var APPEAR_DEF = {themeMode: 'SYSTEM', fontScale: 1, appFont: 'VAZIRMATN', palette: 'INDIGO_MINT', depth: 14, persianDigits: false, highContrast: false}; /* V228 highContrast */
   function appearance() { try { return Object.assign({}, APPEAR_DEF, JSON.parse(localStorage.getItem(LS_APPEAR) || '{}')); } catch (e) { return Object.assign({}, APPEAR_DEF); } }
   function setAppearance(patch) { var a = Object.assign(appearance(), patch); try { localStorage.setItem(LS_APPEAR, JSON.stringify(a)); } catch (e) {} applyAppearance(); return a; }
   function applyAppearance() {
     var a = appearance(), root = document.documentElement, st = root.style;
     var dark = a.themeMode === 'DARK' || (a.themeMode === 'SYSTEM' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     root.classList.toggle('m-dark', !!dark);
+    root.classList.toggle('m-hc', !!a.highContrast); /* V228 — پرکنتراست */
     var pal = PALETTES[a.palette] || PALETTES.INDIGO_MINT;
     st.setProperty('--m-acc', pal[0]); st.setProperty('--m-acc2', pal[1]);
     var d = Math.max(8, Math.min(22, +a.depth || 14)); st.setProperty('--m-depth', d + 'px'); st.setProperty('--m-depth2', Math.round(d * 2.2) + 'px');
@@ -947,7 +948,8 @@
     appearanceSection.__redo = function () { c.innerHTML = ''; c.appendChild(chipRow([['appearance', 'ظاهر'], ['data', 'داده‌ها'], ['about', 'درباره']], settingsTab, function (k) { settingsTab = k; settingsScreen(c); })); appearanceSection(c); };
     c.appendChild(card('حالت نمایش', [
       chipRow([['SYSTEM', 'دستگاه'], ['LIGHT', 'روشن'], ['DARK', 'تیره']], a.themeMode, function (v) { setAppearance({themeMode: v}); rerun(); }),
-      switchRow('اعداد فارسی در ابزارها', 'محورها، نمودارها، شکل‌ها و جدول‌ها', a.persianDigits, function (v) { setAppearance({persianDigits: v}); })
+      switchRow('اعداد فارسی در ابزارها', 'محورها، نمودارها، شکل‌ها و جدول‌ها', a.persianDigits, function (v) { setAppearance({persianDigits: v}); }),
+      switchRow('حالت پرکنتراست', 'متن پررنگ‌تر، کادرهای مشخص‌تر و تمرکز واضح‌تر برای کم‌بینایان', a.highContrast, function (v) { setAppearance({highContrast: v}); })
     ]));
     c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: گوشی'})]));
     var palRow = el('div', {class: 'm-pal-row'}, Object.keys(PALETTES).map(function (k) { var p = PALETTES[k]; return el('button', {class: 'm-pal' + (a.palette === k ? ' on' : ''), 'aria-label': 'پالت ' + p[2], style: 'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')', onclick: function () { setAppearance({palette: k}); rerun(); }}, [a.palette === k ? ic('check') : null]); }));
@@ -994,6 +996,7 @@
     c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'تماس با ما و نظرات'}),
       el('p', {class: 'muted', text: 'پیشنهاد، گزارش اشکال یا هر نظری دارید، برای ما بنویسید؛ همهٔ پیام‌ها خوانده می‌شوند.'}),
       el('div', {class: 'm-lv'}, [el('span', {text: 'ایمیل'}), el('a', {href: 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون‌ساز'), text: mail, style: 'direction:ltr;font-weight:800'})]),
+      el('div', {class: 'm-lv'}, [el('span', {text: 'وضعیت سرویس'}), el('a', {href: '/status.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/status.html', style: 'direction:ltr;font-weight:800'})]), /* V228 */
       el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [
         el('button', {class: 'btn', style: 'flex:1', text: 'ارسال ایمیل', onclick: function () { location.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون‌ساز'); }}),
         el('button', {class: 'btn light', style: 'flex:1', text: 'کپی نشانی', onclick: function () { (navigator.clipboard ? navigator.clipboard.writeText(mail) : Promise.reject()).then(function () { toast('نشانی ایمیل کپی شد.', 'ok'); }, function () { toast(mail, 'info'); }); }})])]));

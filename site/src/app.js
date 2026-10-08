@@ -44,6 +44,8 @@
       else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]);
       else if (attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
     });
+    /* V228 — دسترس‌پذیری: دکمه‌های آیکنی با title به‌طور خودکار aria-label می‌گیرند؛ دکمهٔ بستن (✕) برچسب «بستن» */
+    if (tag === 'button' && attrs) { if (attrs.title && !attrs['aria-label']) e.setAttribute('aria-label', attrs.title); else if (attrs['class'] === 'x' && !attrs['aria-label']) e.setAttribute('aria-label', 'بستن'); }
     (children || []).forEach(function (c) { if (c == null) return; e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
     return e;
   }
@@ -1057,8 +1059,15 @@
         var b = el('button', {class: 'btn', text: 'ورود', 'data-label': 'ورود', style: 'width:100%'});
         b.addEventListener('click', async function () {
           setMsg(''); busy(b, true);
-          try { user = await api.signInWithPassword(id.querySelector('input').value, pw.querySelector('input').value); afterLogin(); }
-          catch (e) { setMsg(errMsg(e)); }
+          try { user = await api.signInWithPassword(id.querySelector('input').value, pw.querySelector('input').value); state.fails = 0; afterLogin(); }
+          catch (e) {
+            /* V228 — پس از ۳ تلاش ناموفق: یادآوری «فراموشی رمز»؛ پس از ۵ تلاش: ۳۰ ثانیه مکث (فقط سمت مرورگر) */
+            state.fails = (state.fails || 0) + 1;
+            var m = errMsg(e);
+            if (state.fails >= 3) m += ' — اگر رمز را فراموش کرده‌اید، از «فراموشی رمز» پایین صفحه استفاده کنید.';
+            setMsg(m);
+            if (state.fails >= 5) { b.disabled = true; var left = 30, t0 = b.textContent; var iv = setInterval(function () { left--; b.textContent = 'لطفاً ' + fa(left) + ' ثانیه صبر کنید'; if (left <= 0) { clearInterval(iv); b.disabled = false; b.textContent = t0; state.fails = 3; } }, 1000); b.textContent = 'لطفاً ' + fa(left) + ' ثانیه صبر کنید'; }
+          }
           busy(b, false);
         });
         pw.querySelector('input').addEventListener('keydown', function (e) { if (e.key === 'Enter') b.click(); });
