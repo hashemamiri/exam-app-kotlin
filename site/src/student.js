@@ -82,6 +82,54 @@
   function draftGet(examId) { try { return JSON.parse(localStorage.getItem(LS_DRAFT + examId) || 'null') || {answers: {}, images: {}}; } catch (e) { return {answers: {}, images: {}}; } }
   function draftSet(examId, d) { try { localStorage.setItem(LS_DRAFT + examId, JSON.stringify(d)); } catch (e) {} }
   function draftClear(examId) { localStorage.removeItem(LS_DRAFT + examId); }
+  /* V231 — صف ارسال آفلاین (آینهٔ PendingAction اپ): اگر ارسال نهایی به‌خاطر قطع اینترنت شکست بخورد، بستهٔ کامل
+     (همان p_operation برای جلوگیری از دوبار ثبت) در localStorage می‌ماند و با رویداد online / باز شدن صفحه / دکمهٔ «ارسال اکنون» دوباره فرستاده می‌شود. */
+  var LS_QUEUE = 'examsite.student.queue.v1';
+  function queueAll() { try { var l = JSON.parse(localStorage.getItem(LS_QUEUE) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+  function queueMine() { var u = S.user(); return queueAll().filter(function (q) { return u && q.owner === u.id; }); }
+  function queueSave(list) { try { localStorage.setItem(LS_QUEUE, JSON.stringify(list)); return true; } catch (e) { return false; } }
+  function queuePut(item) { var l = queueAll().filter(function (q) { return q.operation !== item.operation; }); l.push(item); return queueSave(l); }
+  function queueDrop(op) { queueSave(queueAll().filter(function (q) { return q.operation !== op; })); }
+  function isNetErr(e) { var m = String(e && e.message || e || '').toLowerCase(); return !navigator.onLine || /failed to fetch|networkerror|network request failed|load failed|timed? ?out|connection|err_internet|اینترنت/.test(m); }
+  var flushing = false;
+  async function flushQueue(manual) {
+    if (flushing) return; var items = queueMine(); if (!items.length) return;
+    if (!navigator.onLine) { if (manual) toast('هنوز اینترنت وصل نیست.', 'err'); return; }
+    flushing = true; var sent = 0, lastErr = null;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      try {
+        var images = {};
+        var qids = Object.keys(it.images || {});
+        for (var a = 0; a < qids.length; a++) { var list = it.images[qids[a]] || []; images[qids[a]] = []; for (var k = 0; k < list.length; k++) { var url = await uploadAnswerImage(list[k], it.exam, qids[a]); images[qids[a]].push(url); list[k] = url; } }
+        queuePut(it); /* آدرس تصاویر آپلودشده ذخیره شود تا در تلاش بعدی دوباره آپلود نشوند */
+        if (it.report) await S.rpcObj('native_monitor_upsert_v1', {p_exam: it.exam, p_report: it.report}).catch(function () {});
+        var raw = await S.rpcObj('native_submit_queued_answer_v1', {p_operation: it.operation, p_exam: it.exam, p_responses: it.responses, p_images: images, p_meta: Object.assign({}, it.meta, {flushed_at_epoch_ms: Date.now(), queued_offline: true})});
+        if (raw && raw.error && !/قبلاً|تکراری|already|duplicate/i.test(String(raw.error))) throw new Error(String(raw.error));
+        queueDrop(it.operation); draftClear(it.exam); sent++;
+      } catch (e) { lastErr = e; it.attempts = (it.attempts || 0) + 1; it.lastError = errMsg(e); queuePut(it); if (isNetErr(e)) break; }
+    }
+    flushing = false;
+    if (sent) toast(fa(sent) + ' پاسخ صف‌شده ارسال شد.', 'ok');
+    else if (manual && lastErr) toast('ارسال نشد: ' + errMsg(lastErr), 'err');
+    if (sent && typeof S.render === 'function' && S.view && S.view.panel === 'exam' && !(run && !run.finished)) S.render();
+  }
+  window.addEventListener('online', function () { setTimeout(function () { flushQueue(false); }, 1500); });
+  setInterval(function () { if (queueMine().length) flushQueue(false); }, 60000);
+  function queueBanner() {
+    var items = queueMine(); if (!items.length) return null;
+    return el('div', {class: 'alert warn', style: 'max-width:520px;margin:0 auto 12px'}, [el('b', {text: fa(items.length) + ' پاسخ در صف ارسال است. '}),
+      el('span', {text: navigator.onLine ? 'با اتصال اینترنت خودکار ارسال می‌شود.' : 'اینترنت قطع است؛ به‌محض اتصال خودکار ارسال می‌شود.'}),
+      items[0].lastError ? el('div', {class: 'muted', style: 'font-size:12px;margin-top:4px', text: 'آخرین خطا: ' + items[0].lastError}) : null,
+      el('div', {style: 'margin-top:8px'}, [el('button', {class: 'btn sm', text: 'ارسال اکنون', onclick: function () { flushQueue(true); }})])]);
+  }
+  /* نوار وضعیت اتصال داخل آزمون */
+  function netBanner() {
+    var b = el('div', {class: 'alert error st-net', style: 'display:' + (navigator.onLine ? 'none' : 'block'), text: 'اینترنت قطع است. نگران نباشید: پاسخ‌ها روی همین دستگاه ذخیره می‌شوند و زمان‌سنج ادامه دارد؛ ارسال نهایی هم در صورت قطعی، صف می‌شود و با اتصال خودکار فرستاده می‌شود.'});
+    var on = function () { b.style.display = 'none'; }, off = function () { b.style.display = 'block'; };
+    window.addEventListener('online', on); window.addEventListener('offline', off);
+    return b;
+  }
 
   async function joinByCode(code) {
     var raw = await S.rpcObj('get_exam_for_student', {p_code: code.trim()});
@@ -170,6 +218,8 @@
     c.innerHTML = '';
     if (run && !run.finished) { c.appendChild(examUI(c)); return; }
     var pending = restoreActive();
+    var qb = queueBanner(); if (qb) c.appendChild(qb); /* V231 */
+    if (navigator.onLine && queueMine().length) setTimeout(function () { flushQueue(false); }, 300);
     var card = el('div', {class: 'card', style: 'max-width:520px;margin:0 auto'});
     card.appendChild(el('h3', {text: '🔑 شرکت در آزمون'}));
     if (pending) {
@@ -234,6 +284,7 @@
   function examUI(c) {
     var ex = run.exam;
     var wrap = el('div', {class: 'st-exam'});
+    wrap.appendChild(netBanner()); /* V231 — نوار قطع اینترنت */
     var timerEl = el('span', {class: 'st-timer'});
     var head = el('div', {class: 'card st-head'}, [
       el('div', {}, [el('b', {text: ex.title}), el('div', {class: 'muted', style: 'font-size:12px', text: [ex.subject, 'کد ' + ex.code, ex.attemptNumber ? 'تلاش ' + fa(ex.attemptNumber) + ' از ' + fa(ex.attemptsAllowed) : ''].filter(Boolean).join(' · ')})]),
@@ -384,7 +435,22 @@
         auto ? el('p', {class: 'muted', text: 'زمان آزمون به پایان رسید و پاسخ‌ها به‌صورت خودکار ارسال شد.'}) : null,
         el('div', {class: 'row', style: 'justify-content:center;margin-top:12px'}, [el('button', {class: 'btn', text: 'کارنامه', onclick: function () { run = null; S.go('grades'); }}), el('button', {class: 'btn light', text: 'آزمون دیگر', onclick: function () { run = null; S.go('join'); }})])]));
     } catch (e) {
-      ov.remove(); run.submitting = false;
+      ov.remove();
+      /* V231 — قطع اینترنت (یا پایان زمان بدون اینترنت): بستهٔ کامل صف می‌شود؛ آزمون برای دانش‌آموز تمام‌شده است */
+      if ((isNetErr(e) || auto) && responses) {
+        var op = uuid();
+        var ok = queuePut({operation: op, owner: S.user().id, exam: ex.id, title: ex.title, code: ex.code, responses: responses, images: run.images || {}, report: monitorReport(true), meta: {native: true, queued: true, created_at_epoch_ms: Date.now(), web: true}, createdAt: Date.now(), attempts: 0});
+        if (ok) {
+          run.finished = true; stopAll(); activeSet(null);
+          c.innerHTML = '';
+          c.appendChild(el('div', {class: 'card', style: 'max-width:520px;margin:0 auto;text-align:center'}, [el('div', {style: 'font-size:48px', text: '📦'}), el('h3', {text: 'پاسخ‌ها در صف ارسال قرار گرفت'}),
+            el('p', {class: 'muted', text: 'اینترنت در دسترس نبود. پاسخ‌های شما روی همین مرورگر ذخیره شد و به‌محض اتصال، خودکار ارسال می‌شود. این صفحه یا سایت را از مرورگر پاک نکنید.'}),
+            auto ? el('p', {class: 'muted', text: 'زمان آزمون به پایان رسید.'}) : null,
+            el('div', {class: 'row', style: 'justify-content:center;margin-top:12px'}, [el('button', {class: 'btn', text: 'تلاش برای ارسال اکنون', onclick: function () { flushQueue(true); }}), el('button', {class: 'btn light', text: 'بازگشت', onclick: function () { run = null; S.go('exam'); }})])]));
+          return;
+        }
+      }
+      run.submitting = false;
       toast(errMsg(e), 'err');
       c.innerHTML = ''; c.appendChild(examUI(c));
       c.insertBefore(el('div', {class: 'alert error', text: 'ارسال ناموفق بود: ' + errMsg(e) + ' — پاسخ‌ها روی مرورگر ذخیره‌اند؛ دوباره تلاش کنید.'}), c.firstChild);

@@ -1561,3 +1561,5 @@ body.lp-body{background:#D6ECFC}
   body.printing #print-root .cmp-bar{border:1px solid #999}
   body.printing #print-root .cmp-bar span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+/* ===== V231 — آفلاین دانش‌آموز: نوار قطع اینترنت داخل آزمون ===== */
+.st-net{margin:0 0 10px;font-size:13px;line-height:1.8}

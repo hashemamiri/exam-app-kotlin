@@ -191,4 +191,13 @@ class V223_SiteDesktopPrintButtonsTest {
         val sql = src("supabase/migrations/20261009_native_manager_class_stats_school_bank_v230.sql")
         listOf("native_manager_class_stats_v1()", "add column if not exists shared_school boolean", "native_bank_set_shared_v1(bigint,boolean)", "native_school_bank_v1()", "native_bank_copy_from_school_v1(bigint)", "'shared',q.shared_school").forEach { assertTrue(it, sql.contains(it)) }
     }
+
+    @Test
+    fun v231StudentOfflineQueue() {
+        val st = src("site/src/student.js")
+        listOf("var LS_QUEUE = 'examsite.student.queue.v1'", "async function flushQueue(manual) {", "window.addEventListener('online', function () { setTimeout(function () { flushQueue(false); }, 1500); });",
+            "if ((isNetErr(e) || auto) && responses) {", "p_operation: it.operation, p_exam: it.exam, p_responses: it.responses, p_images: images", "wrap.appendChild(netBanner());",
+            "var qb = queueBanner(); if (qb) c.appendChild(qb);").forEach { assertTrue(it, st.contains(it)) }
+        assertTrue(src("site/src/site.css").contains(".st-net{"))
+    }
 }
