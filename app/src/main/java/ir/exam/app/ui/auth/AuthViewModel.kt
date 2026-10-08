@@ -1,5 +1,6 @@
 package ir.exam.app.ui.auth
 
+import ir.exam.app.core.cache.ExamListCache
 import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
@@ -285,6 +286,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     fun signOut() = request {
         repository.signOut().getOrThrow()
         SessionCache.clear() // V212
+        ExamListCache.clearDisk() // V213
         _state.value = AuthUiState(isRestoringSession = false)
     }
 

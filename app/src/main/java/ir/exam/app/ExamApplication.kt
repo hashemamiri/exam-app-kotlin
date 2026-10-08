@@ -11,5 +11,6 @@ class ExamApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         SupabaseProvider.attach(this)
+        ir.exam.app.core.cache.ExamListCache.attach(this) // V213 — فهرست آزمون‌ها روی دیسک
     }
 }

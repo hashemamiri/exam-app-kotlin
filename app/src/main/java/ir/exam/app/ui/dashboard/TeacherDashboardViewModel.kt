@@ -3,7 +3,7 @@ package ir.exam.app.ui.dashboard
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ir.exam.app.core.cache.SessionCache
+import ir.exam.app.core.cache.ExamListCache
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
@@ -38,10 +38,11 @@ class TeacherDashboardViewModel(
 
     fun load() = viewModelScope.launch {
         // V212 — اول فهرست قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود، بعد نسخهٔ تازه از سرور جایگزین می‌شود.
-        val cached = SessionCache.get<List<ExamDashboardDto>>(CACHE_EXAMS)
+        // V213 — نسخهٔ قبلی از RAM یا دیسک (بعد از بستن کامل برنامه هم فوری)
+        val cached = ExamListCache.read()
         _state.update { it.copy(loading = cached == null, exams = cached ?: it.exams, error = null) }
         repository.getMyExams()
-            .onSuccess { exams -> SessionCache.put(CACHE_EXAMS, exams); _state.update { it.copy(loading = false, exams = exams) } }
+            .onSuccess { exams -> ExamListCache.write(exams); _state.update { it.copy(loading = false, exams = exams) } }
             .onFailure { error -> _state.update { it.copy(loading = false, error = if (cached == null) safeDashboardError(error) else null) } }
     }
 
@@ -115,8 +116,6 @@ class TeacherDashboardViewModel(
             .onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeDashboardError(error)) } }
     }
 }
-
-private const val CACHE_EXAMS = "dashboard.exams" // V212
 
 private fun formatToman(value: Long): String = ir.exam.app.core.calendar.PersianDigits.convert(
     "%,d".format(java.util.Locale.US, value)

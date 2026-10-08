@@ -5,6 +5,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.dto.AnswerDto
+import ir.exam.app.data.dto.AnswerStatDto
 import ir.exam.app.data.dto.AttendanceDto
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.dto.ExamDetailDto

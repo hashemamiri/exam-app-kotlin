@@ -19252,6 +19252,17 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V213
+- سرعت فاز ۲ (کاربر: «ادامه بده»). نسخه 1.01.03.
+- `core/cache/ExamListCache` (object): لایهٔ دیسکیِ فهرست آزمون‌ها (`List<ExamDashboardDto>`، kotlinx Json، `files/list_cache/exams-<uid>.json`، نوشتن اتمیک با .tmp) روی `SessionCache` (کلید `exams.list`). `attach(context)` در `ExamApplication.onCreate`. `read()` = RAM → دیسک (IO)؛ `write()` = RAM + دیسک؛ `clearDisk()` در `AuthViewModel.signOut`.
+- TeacherDashboardViewModel.load: `ExamListCache.read()/write()` به‌جای SessionCache مستقیم. GradingViewModel.load: اگر بستهٔ `grading.bundle` نبود، فهرست از `ExamListCache.read()` فوراً نشان داده می‌شود؛ پس از دریافت، `ExamListCache.write(exams)`.
+- چرا فقط فهرست آزمون‌ها: تنها DTO فهرستیِ `@Serializable` با حجم کوچک و بیشترین دفعات باز شدن؛ WalletSnapshot/FeedbackPhrase/SchoolClass مدل دامنه‌اند (serializable نیستند) و روی دیسک نمی‌روند.
+- بررسی‌شده و رد شده: اندازه‌دهی تصاویر در AsyncImage — Coil Compose خودش بر اساس ابعاد composable اندازه می‌گیرد؛ تنها استثنا `allowHardware(false)` در تختهٔ سفید که عمدی است. StudentHome فقط `unseenNotes` را می‌خواند (سبک). باقی‌مانده: V179 (پیش‌نمایش چاپ) و Baseline Profile واقعی با Macrobenchmark.
+- تست V212_PerformanceTest به‌روز شد (پین ExamListCache در داشبورد).
+
+## §V212.1
+- CI: `SupabaseGradingRepository.kt: Unresolved reference 'AnswerStatDto'` (و خطاهای زنجیره‌ای در GradingViewModel) — import `ir.exam.app.data.dto.AnswerStatDto` جا افتاده بود. رفع شد. نسخه 1.01.02 نگه داشته شد چون ساخت قبلی منتشر نشده بود (در جدول app_version نیست). درس: برای هر DTO/کلاس جدید، import در همهٔ فایل‌های مصرف‌کننده را جداگانه بررسی کن (اسکریپت سادهٔ مقایسهٔ شناسه‌های جدید با importها).
+
 ## §V212
 - خواسته: «سرعت اپ بیشتر شود» — بررسی کد و اجرای ۵ مورد تأییدشده. نسخه 1.01.02.
 - **ستون‌ها:** `ExamDashboardDto.COLUMNS` = `id,title,subject,duration,code,is_open,total_score,created_at`؛ `SupabaseTeacherDashboardRepository.getMyExams` و `SupabaseGradingRepository.getExams` با `select(Columns.raw(ExamDashboardDto.COLUMNS))` (قبلاً `select()` بدون ستون = دانلود `questions` برای همهٔ آزمون‌ها). `getAnswerStats(examId)` جدید (`id,student_id,graded` → `AnswerStatDto`) فقط برای شمارش کارت‌های تصحیح. بقیهٔ `select`ها (ExamDetailDto، AnswerDto کامل، کلیدها) عمداً کامل می‌مانند چون به همهٔ ستون‌ها نیاز دارند.

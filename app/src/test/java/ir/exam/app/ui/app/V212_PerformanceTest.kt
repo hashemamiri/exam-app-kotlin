@@ -31,8 +31,10 @@ class V212_PerformanceTest {
 
     @Test
     fun screensShowCachedDataFirst() {
+        val dash = src("app/src/main/java/ir/exam/app/ui/dashboard/TeacherDashboardViewModel.kt")
+        assertTrue("ExamListCache.read()" in dash && "ExamListCache.write(exams)" in dash) // V213 — RAM + دیسک
         listOf(
-            "ui/dashboard/TeacherDashboardViewModel.kt", "ui/grading/GradingViewModel.kt", "ui/reports/ReportsViewModel.kt",
+            "ui/grading/GradingViewModel.kt", "ui/reports/ReportsViewModel.kt",
             "ui/billing/BillingViewModel.kt", "ui/reports/StudentResultsViewModel.kt", "ui/classes/ClassesViewModel.kt"
         ).forEach { rel ->
             val s = src("app/src/main/java/ir/exam/app/$rel")

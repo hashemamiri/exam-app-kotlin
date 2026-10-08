@@ -1,5 +1,6 @@
 package ir.exam.app.ui.grading
 
+import ir.exam.app.core.cache.ExamListCache
 import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
@@ -89,11 +90,16 @@ class GradingViewModel(
         // V212 — فهرست و آمار کارت‌های قبلی (حافظهٔ موقت) فوراً نشان داده می‌شوند؛ نسخهٔ تازه جایگزین می‌شود.
         val cached = SessionCache.get<GradingCache>(CACHE_KEY)
         if (cached != null) _state.update { it.copy(loading = false, exams = cached.exams, feedbackBank = cached.feedback, cardStats = cached.cardStats, error = null) }
-        else _state.update { it.copy(loading = true, error = null) }
+        else {
+            // V213 — بدون بستهٔ تصحیح، دست‌کم فهرست آزمون‌ها از RAM/دیسک فوراً نشان داده می‌شود
+            val diskExams = ExamListCache.read()
+            _state.update { it.copy(loading = diskExams == null, exams = diskExams ?: it.exams, error = null) }
+        }
         val exams = repository.getExams().getOrElse { if (cached == null) fail(it); return@launch }
         val feedback = repository.feedbackBank().getOrDefault(cached?.feedback ?: emptyList())
         _state.update { it.copy(loading = false, exams = exams, feedbackBank = feedback) }
         SessionCache.put(CACHE_KEY, GradingCache(exams, feedback, state.value.cardStats))
+        ExamListCache.write(exams) // V213
         loadCardStats(exams.map { it.id })
     }
 
