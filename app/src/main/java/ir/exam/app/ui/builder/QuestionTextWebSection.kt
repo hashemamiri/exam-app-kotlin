@@ -235,7 +235,8 @@ fun QuestionTextWebSection(
                                             selectedPartIndex = null
                                         }
                                     },
-                                textStyle = MaterialTheme.typography.bodyLarge,
+                                // V218.2 — BasicTextField رنگ LocalContentColor را نمی‌گیرد؛ بدون این، متن سؤال در حالت تیره سیاه می‌ماند.
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                                 // V130 — علامتِ $ (فرمولِ بسته‌نشده/نصفه) هرگز در کادرِ متن دیده نشود؛ مقدارِ واقعی دست نمی‌خورد.
                                 visualTransformation = DollarHidingTransformation,
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),

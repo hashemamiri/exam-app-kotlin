@@ -190,7 +190,7 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 /* V179 — کارایی: تا وقتی موتور چاپ/فرمول باز است، پوستهٔ سنگین سایت (سازندهٔ ثابت، ریل‌های تار) نقاشی نمی‌شود */
 body.engine-open > #root{visibility:hidden;pointer-events:none}
 body.engine-open > #root .m-radial-bg{display:none}
-.engine-bg iframe{border:0;width:100%;height:100%;background:var(--card)}
+.engine-bg iframe{border:0;width:100%;height:100%;background:#FFFFFF}
 .engine-bar{position:absolute;top:0;inset-inline:0;height:44px;background:#0f172a;color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:14px;z-index:2}
 .engine-bar .btn{padding:5px 12px;font-size:13px}
 .engine-bg iframe.with-bar{height:calc(100% - 44px);margin-top:44px}
@@ -270,7 +270,7 @@ code.k{background:#f1f3f8;border-radius:6px;padding:1px 6px;font-size:13px;direc
 .wb-color{width:34px;height:34px;border:0;background:transparent;padding:0;cursor:pointer}
 .wb-size{width:90px}
 .wb-area{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:12px}
-.wb-canvas{background:var(--card);box-shadow:0 6px 30px rgba(0,0,0,.15);max-width:100%;max-height:100%;touch-action:none;cursor:crosshair}
+.wb-canvas{background:#FFFFFF;box-shadow:0 6px 30px rgba(0,0,0,.15);max-width:100%;max-height:100%;touch-action:none;cursor:crosshair}
 
 /* ---- فاز ۴: تصحیح / مدیر / تقویم ---- */
 .g-wrap{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}
@@ -815,7 +815,7 @@ img,video,canvas,iframe{max-width:100%}
 .studio-pick h3{text-align:center;margin:0 0 6px}
 .studio-src{height:56px;font-size:16px}
 .studio-ex{display:flex;align-items:center;gap:8px;background:#1f2937;border-radius:12px;padding:6px}
-.studio-ex img{width:64px;height:48px;object-fit:cover;border-radius:8px;background:var(--card)}
+.studio-ex img{width:64px;height:48px;object-fit:cover;border-radius:8px;background:#FFFFFF}
 .studio-ex .danger-text{color:#fca5a5}
 @media (max-width:700px){.studio-tools{max-height:48vh}.studio-tab{font-size:12px;padding:5px 9px}}
 .img-broken{outline:2px dashed #dc2626;min-width:48px;min-height:32px}
@@ -1292,3 +1292,98 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 :root.m-dark input,:root.m-dark select,:root.m-dark textarea{background:#252D3A;color:var(--ink);border-color:var(--line)}
 :root.m-dark .b-rich:empty::before{color:#7F8A9C}
 :root.m-dark .b-fig-frame{background:#FFFFFF;border-radius:6px}
+
+/* V218.2 — حالت تیرهٔ پوستهٔ دسکتاپ: body.dk همهٔ متغیرهای پالت را دوباره تعریف می‌کند و :root.m-dark را خنثی می‌کرد */
+.m-dark body.dk{--bg:#1B222C;--card:#262F3B;--ink:#E6EAF2;--muted:#9AA5B8;--line:#3A4454;--brand:#5FB0C8;--brand-2:#7FC6DA;--brand-soft:#243744;--danger:#E07A88;--danger-soft:#3F2628;
+  --shadow:0 14px 38px rgba(0,0,0,.35);--dk-rail-ink:#AEB9C8;--dk-neon-ink:#5FD3F5;
+  background:radial-gradient(900px 500px at 8% -8%,rgba(77,190,218,.10),transparent 62%),radial-gradient(760px 460px at 100% 0%,rgba(133,108,218,.12),transparent 58%),linear-gradient(180deg,#1C232E 0%,#1A2029 52%,#181E27 100%)}
+.m-dark .dk .card{background:linear-gradient(145deg,rgba(38,47,59,.96),rgba(32,40,51,.92))}
+.m-dark .dk .dk-mcard{border-color:var(--line)}
+.m-dark .dk .dk-mcard small{border-top-color:var(--line)}
+.m-dark .dk .dk-mcard.danger{background:#2F2429}
+.m-dark .dk .dk-mcard.selected{background:#22303A;border-color:#4E7A8A}
+.m-dark .dk .dk-mcard-profile{background:linear-gradient(135deg,#243039,#1F2A33)}
+.m-dark .dk .dk-mcard-profile .dk-av,.m-dark .dk .dk-mcard .dk-mini{background:#2E4654;color:#8FD0E3}
+.m-dark .dk .dk-mcard.danger .dk-mini{background:#4A2A31;color:#E07A88}
+.m-dark .dk .dk-pinfo small,.m-dark .dk .dk-top p{color:var(--muted)}
+.m-dark .dk .dk-top{background:transparent}
+.m-dark .dk .dk-rail-item .dk-rail-label,.m-dark .dk .dk-rail-item:hover,.m-dark .dk .dk-rail-item:focus-visible{color:#BFE3EE}
+.m-dark .dk .stat .v,.m-dark .dk a,.m-dark .dk .soon b,.m-dark .dk .chip.brand{color:var(--brand)}
+.m-dark .dk .chip.brand,.m-dark .dk .alert.info,.m-dark .dk .soon{background:var(--brand-soft);border-color:#2F4A58;color:#BFE3EE}
+.m-dark .dk .field input,.m-dark .dk .field select,.m-dark .dk .field textarea{border-color:var(--line);background:#1F2733;color:var(--ink)}
+.m-dark .dk table.tbl tr:hover td{background:#2A3441}
+.m-dark .dk .btn.danger{background:#3A262B;border-color:#5A3740}
+.m-dark .dk .btn.ghost,.m-dark .dk .btn.soft,.m-dark .dk .btn.light{color:var(--brand);border-color:var(--line);background:transparent}
+.m-dark .dk .tool-btn{filter:brightness(.82) saturate(.9)}
+.m-dark .b-rich{background:var(--card);color:var(--ink)}
+.m-dark .dk .b-settings,.m-dark .dk .b-editor{color:var(--ink)}
+/* V218.2-AUTO — تولید خودکار (scripts/site_dark_auto.py): متن‌های ثابتِ تیرهٔ خاکستری و زمینه‌های سفید بیرون از پوستهٔ موبایل در حالت تیره → متغیرهای پالت */
+.m-dark .btn.light:hover{background:var(--card)}
+.m-dark .alert.ok{color:var(--ink)}
+.m-dark .chip{background:var(--card)}
+.m-dark .chip.off{background:var(--card)}
+.m-dark .tabs{background:var(--card)}
+.m-dark table.tbl tr:hover td{background:var(--card)}
+.m-dark .sheet{color:var(--ink)}
+.m-dark .sheet .line{background:var(--card)}
+.m-dark .modal .x{background:var(--card)}
+.m-dark .menu button:hover{background:var(--card)}
+.m-dark .exam .code{background:var(--card)}
+.m-dark .soon{background:var(--card)}
+.m-dark code.k{background:var(--card)}
+.m-dark .engine-bg.wb{background:var(--card)}
+.m-dark .wb-tool.on{color:var(--ink)}
+.m-dark .ok-t{color:var(--ink)}
+.m-dark .chip.ok{color:var(--ink)}
+.m-dark .b-live{background:var(--card)}
+.m-dark .studio-tab.on{color:var(--ink)}
+.m-dark .dk .dk-mcard-profile .dk-av{background:var(--card)}
+.m-dark .dk .dk-mcard .dk-mini{background:var(--card)}
+.m-dark .dk .dk-mcard.danger{background:var(--card)}
+.m-dark .dk .dk-mcard.danger .dk-mini{background:var(--card)}
+.m-dark .dk .dk-mcard.selected{background:var(--card)}
+.m-dark .dk .btn.danger{background:var(--card)}
+.m-dark .dk .btn.danger:hover{background:var(--card)}
+.m-dark .dk .field input,.m-dark .dk .field select,.m-dark .dk .field textarea{border-color:var(--line)}
+.m-dark .dk table.tbl tr:hover td{background:var(--card)}
+.m-dark .dk .chip.brand{background:var(--card)}
+.m-dark .dk .alert.info{background:var(--card);border-color:var(--line);color:var(--ink)}
+.m-dark .dk .soon{background:var(--card);border-color:var(--line)}
+.m-dark .dk .tool-btn:nth-child(1){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(2){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(3){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(4){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(6){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(7){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(8){background:var(--card)}
+.m-dark .dk .tool-btn:nth-child(9){background:var(--card)}
+.m-dark .dk .b-rail-btn.add{color:var(--ink)}
+.m-dark .dk .acts-text .icon-btn{color:var(--ink)}
+.m-dark .dk .acts-text .icon-btn:hover{background:var(--card)}
+.m-dark .dk .b-editor .b-rich{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn{color:var(--ink)}
+.m-dark .dk .b-editor .tool-btn.is-fx{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-fig{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-gra{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-axis{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-tab{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-pt{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-ana{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-sci{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-img{background:var(--card);color:var(--ink)}
+.m-dark .dk .b-editor .tool-btn.is-board{background:var(--card)}
+.m-dark .dk .b-editor .tool-btn.is-mic{background:var(--card)}
+.m-dark .b-fig-simple .b-fig-cap{color:var(--ink)}
+.m-dark .b-atlas-menu button:hover{background:var(--card)}
+.m-dark .b-atlas-menu button span{color:var(--ink)}
+.m-dark .jdp-title{color:var(--ink)}
+.m-dark .jdp-nav:hover{background:var(--card)}
+.m-dark .jdp-d{background:var(--card);color:var(--ink)}
+.m-dark .jdp-d:hover{background:var(--card)}
+.m-dark .jdp-d.dis,.m-dark .jdp-d:disabled{background:var(--card)}
+.m-dark .jdt-btn{background:var(--card)}
+.m-dark .jdt-btn.set{background:var(--card)}
+.m-dark .icon-btn.pay-btn:hover{background:var(--card);color:var(--ink)}
+.m-dark .icon-btn.print-btn.unpaid{background:var(--card)}
+.m-dark .icon-btn.print-btn.unpaid:hover{background:var(--card)}
+.m-dark .icon-btn.print-btn.paid{background:var(--card)}

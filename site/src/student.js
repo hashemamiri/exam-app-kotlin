@@ -158,6 +158,8 @@
           else if (r.type === 5 && /math|mfrac|frac/i.test(r.cssText)) out.push(r.cssText);
         });
       });
+      /* V218.2 — همان قواعد .qmf-atom موتور چاپ (tools_styles.css): خط کسر به عرض کامل صورت/مخرج و رادیکال کشیده؛ بیرون از .qmf-atom اعمال نمی‌شدند */
+      out.push('.st-exam .mathx .mfrac{align-items:stretch !important}.st-exam .mathx .mfrac>.mnum,.st-exam .mathx .mfrac>.mden{width:100%;box-sizing:border-box;text-align:center}.st-exam .msqrt{overflow:visible;align-items:stretch}');
       var st = document.createElement('style'); st.id = 'stMathCss'; st.textContent = out.join('\n'); document.head.appendChild(st);
     });
   }
