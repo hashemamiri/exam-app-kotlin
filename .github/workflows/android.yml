@@ -1,4 +1,4 @@
-name: ساخت APK آزمایشی و Release Kotlin
+name: آزمون آنلاین
 # V160.5 — قاعدهٔ کاربر: وقتی نسخه فقط سایت را تغییر می‌دهد، CI اپ بسته (سه خط push کامنت) باشد؛
 # وقتی کد اپ تغییر می‌کند (مثل V160.x: RemoteMediaBytes، x-amz-acl) باز شود تا APK جدید ساخته شود.
 # اجرای دستی همیشه: GitHub → Actions → این workflow → Run workflow.
@@ -70,11 +70,14 @@ jobs:
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_ANON_KEY"
-          NOW_UTC="$(date -u +%s)"
-          EPOCH_2020=1577836800
-          APP_VERSION_CODE=$((NOW_UTC - EPOCH_2020))
-          APP_VERSION_NAME="$(date -u +'%Y.%m.%d.%H%M%S')-native"
-          test "$APP_VERSION_CODE" -gt 0
+          # V210 — شمارهٔ نسخه از فایل text/APP_VERSION.txt (قالب a.bb.cc مثل 1.01.01؛ هر آپدیت عدد آخر یکی زیاد می‌شود).
+          # versionCode باید همیشه از نسخه‌های قبلی (زمان‌محور، ~۲۱۰ میلیون) بزرگ‌تر باشد وگرنه اندروید نصب روی نسخهٔ قبلی را رد می‌کند:
+          # code = 1000000000 + a*1000000 + bb*10000 + cc*100  → 1.01.01 = 1001010100
+          APP_VERSION_NAME="$(tr -d '[:space:]' < text/APP_VERSION.txt)"
+          echo "$APP_VERSION_NAME" | grep -Eq '^[0-9]{1,2}\.[0-9]{2}\.[0-9]{2}$' || { echo "قالب نسخه در text/APP_VERSION.txt نادرست است: $APP_VERSION_NAME"; exit 1; }
+          V_A="$(echo "$APP_VERSION_NAME" | cut -d. -f1)"; V_B="$(echo "$APP_VERSION_NAME" | cut -d. -f2)"; V_C="$(echo "$APP_VERSION_NAME" | cut -d. -f3)"
+          APP_VERSION_CODE=$((1000000000 + 10#$V_A * 1000000 + 10#$V_B * 10000 + 10#$V_C * 100))
+          test "$APP_VERSION_CODE" -gt 1000000000
           test "$APP_VERSION_CODE" -le 2100000000
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAPP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$APP_VERSION_CODE" "$APP_VERSION_NAME" \
@@ -85,7 +88,7 @@ jobs:
           fi
           printf 'APP_VERSION_CODE=%s\nAPP_VERSION_NAME=%s\n' \
             "$APP_VERSION_CODE" "$APP_VERSION_NAME" >> "$GITHUB_ENV"
-          echo "Building automatic version $APP_VERSION_NAME ($APP_VERSION_CODE)"
+          echo "Building version $APP_VERSION_NAME ($APP_VERSION_CODE)"
       - name: بررسی امن اتصال عمومی Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -99,6 +102,15 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ANON_KEY")
           echo "Supabase app_version public status: $STATUS"
           test "$STATUS" = "200"
+          # V210 — هر نسخه فقط یک بار منتشر می‌شود؛ اگر این شماره قبلاً هست، باید text/APP_VERSION.txt یکی زیاد شود.
+          EXISTING=$(curl -sS \
+            "$SUPABASE_URL/rest/v1/app_version?select=version_code&version_code=eq.$APP_VERSION_CODE&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          if [ "$EXISTING" != "[]" ]; then
+            echo "نسخهٔ $APP_VERSION_NAME (کد $APP_VERSION_CODE) قبلاً منتشر شده است؛ شماره را در text/APP_VERSION.txt یکی زیاد کنید."
+            exit 1
+          fi
           # RPC جانبی check_app_update فقط برای کلاینت‌های دیگر است و نباید CI را بلاک کند.
           RPC_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
             -X POST "$SUPABASE_URL/rest/v1/rpc/check_app_update" \
@@ -161,7 +173,7 @@ jobs:
           SOURCE_APK="app/build/outputs/apk/release/app-release.apk"
           test -f "$SOURCE_APK"
           mkdir -p release
-          APK_FILE="exam-app-${APP_VERSION_NAME}-${APP_VERSION_CODE}.apk"
+          APK_FILE="azmoon-online-${APP_VERSION_NAME}.apk"
           cp "$SOURCE_APK" "release/$APK_FILE"
           APK_SHA256="$(sha256sum "release/$APK_FILE" | awk '{print $1}')"
           APK_SIZE_BYTES="$(stat -c%s "release/$APK_FILE")"

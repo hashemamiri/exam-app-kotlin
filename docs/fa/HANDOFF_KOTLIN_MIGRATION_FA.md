@@ -19252,6 +19252,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V210
+- خواسته: نام گردش کار «آزمون آنلاین»؛ نسخهٔ برنامه 1.01.01 و هر آپدیت +۱.
+- `text/APP_VERSION.txt` = منبع واحد نسخه (قالب `a.bb.cc`). `android.yml`: `name: آزمون آنلاین`؛ `APP_VERSION_NAME` از فایل (regex بررسی می‌شود)؛ `APP_VERSION_CODE = 1000000000 + a*1e6 + bb*1e4 + cc*100` (1.01.01 → 1001010100) تا همیشه از کدهای زمان‌محور قبلی (~۲۱۰ میلیون) بزرگ‌تر باشد (اندروید و `publish_native_app_release_v1` هر دو به کد صعودی نیاز دارند)؛ نام APK `azmoon-online-<نسخه>.apk`؛ گام «بررسی امن اتصال» اگر همین version_code قبلاً در `app_version` باشد با پیام فارسی CI را متوقف می‌کند (RPC انتشار insert بدون on conflict است). `app/build.gradle.kts` پیش‌فرض محلی هم از همین فایل می‌خواند.
+- **قاعدهٔ تحویل از این پس:** هر نصابی که CI اپ را اجرا می‌کند (تغییر Kotlin/assets/workflow) باید `text/APP_VERSION.txt` را یکی زیاد کند (`python3 scripts/bump_app_version.py`) و فایل را در PAYLOAD بگذارد؛ تغییرات فقط‌سایت نسخه را عوض نمی‌کنند. V210 خودش 1.01.01 است.
+
 ## §V209.1
 - CI: `ImageEditorViewModel.kt:49 Expecting ')'` — جایگزینی جزئی رشته (`error.message ?: "ویرایش تصویر نا` → `UserFacingError.of(error, "ویرایش تصویر نا`) پرانتز بستهٔ پایان عبارت را نداشت. رفع شد؛ همهٔ خط‌های دارای UserFacingError با شمارش پرانتز/آکولاد بازبینی شدند. درس: هنگام patch با پیشوندِ رشته، همیشه کل عبارت تا انتهای خط را جایگزین کن.
 

@@ -23,7 +23,7 @@ val appVersionCode = localProperties.getProperty("APP_VERSION_CODE")
 val appVersionName = localProperties.getProperty("APP_VERSION_NAME")
     ?.trim()
     ?.takeIf { it.isNotEmpty() }
-    ?: "1.1.1-native"
+    ?: rootProject.file("text/APP_VERSION.txt").takeIf { it.exists() }?.readText()?.trim()?.takeIf { it.isNotEmpty() } ?: "1.01.01"
 
 val signingProperties = Properties()
 val signingPropertiesFile = rootProject.file("app/keystore.properties")
