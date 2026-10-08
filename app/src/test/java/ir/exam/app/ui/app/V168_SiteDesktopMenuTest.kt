@@ -34,7 +34,11 @@ class V223_SiteDesktopPrintButtonsTest {
     fun examsPageLinksToPrintCenterInsteadOfEmbedding() {
         val a = src("site/src/app.js")
         assertFalse("printExamsSection(function () { pageExams(c); })" in a)
-        assertTrue("el('button', {class: 'btn light', text: '🖨 آزمون‌های چاپی', onclick: function () { view.panel = 'print'; view.arg = null; render(); }})" in a)
+        assertTrue("text: '🖨 آزمون‌های چاپی', onclick: function () { var M = window.SiteMobile; if (M && M.printExamsSheet) M.printExamsSheet({online: true});" in a)
+        val b = src("site/src/builder.js")
+        assertTrue("else if (arg.fromPrintId) { var prec = await printExamGet(arg.fromPrintId); state = blankState('online');" in b)
+        val m = src("site/src/mobile.js")
+        assertTrue("if (opts.online) go('builder', {fromPrintId: r.id, fresh: true}); else go('builder', {mode: 'print', printId: r.id});" in m)
     }
 
     @Test

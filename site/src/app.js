@@ -1468,7 +1468,7 @@
         });
       }
       q.addEventListener('input', draw);
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [q, el('span', {class: 'grow'}), el('span', {class: 'muted', text: fa(list.length) + ' آزمون'}), window.SiteExtras ? el('button', {class: 'btn light', text: '📥 وارد کردن', onclick: window.SiteExtras.importExam}) : null, el('button', {class: 'btn', text: '➕ آزمون جدید', onclick: function () { view.panel = 'builder'; view.arg = null; render(); }}), el('button', {class: 'btn light', text: '🖨 آزمون‌های چاپی', onclick: function () { view.panel = 'print'; view.arg = null; render(); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [q, el('span', {class: 'grow'}), el('span', {class: 'muted', text: fa(list.length) + ' آزمون'}), window.SiteExtras ? el('button', {class: 'btn light', text: '📥 وارد کردن', onclick: window.SiteExtras.importExam}) : null, el('button', {class: 'btn', text: '➕ آزمون جدید', onclick: function () { view.panel = 'builder'; view.arg = null; render(); }}), el('button', {class: 'btn light', text: '🖨 آزمون‌های چاپی', onclick: function () { var M = window.SiteMobile; if (M && M.printExamsSheet) M.printExamsSheet({online: true}); else { view.panel = 'print'; view.arg = null; render(); } }}) /* V223.1 — مثل اپ: فهرست آزمون‌های چاپی → سازندهٔ آنلاین */]));
       c.appendChild(grid); draw();
     } catch (e) { showErr(c, e); }
     /* V223 — آزمون‌های چاپی دیگر زیر فهرست آزمون‌ها نیست؛ دکمهٔ «آزمون‌های چاپی» کنار «آزمون جدید» به بخش «چاپ آزمون» می‌رود */

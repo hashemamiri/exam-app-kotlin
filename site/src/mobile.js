@@ -196,7 +196,9 @@
     if (ui.scrollTo) { var tgt = wrap.querySelector('[data-exam="' + ui.scrollTo + '"]'); ui.scrollTo = null; if (tgt) requestAnimationFrame(function () { tgt.scrollIntoView({block: 'nearest', behavior: 'smooth'}); }); }
   }
   function act(icon, label, on, danger) { return el('button', {class: 'm-act' + (danger ? ' danger' : ''), title: label, 'aria-label': label, onclick: on}, [ic(icon)]); }
-  function printExamsSheet() {
+  /* V223.1 — opts.online (دسکتاپ): انتخاب آزمون چاپی → سازندهٔ آنلاین (انتشار آنلاین)، مثل اپ */
+  function printExamsSheet(opts) {
+    opts = opts || {};
     var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
     var body = el('div', {class: 'm-sheet'}, [el('h3', {text: 'آزمون‌های چاپی'})]);
     var box = el('div'); body.appendChild(box); S.loading(box);
@@ -207,8 +209,8 @@
         var list = await window.SiteBuilder.printExamsList(); box.innerHTML = '';
         if (!list.length) box.appendChild(el('p', {class: 'm-note', text: 'هنوز آزمون چاپی‌ای ذخیره نشده است. از بخش «چاپ آزمون» بسازید.'}));
         else {
-          box.appendChild(el('p', {class: 'm-note', text: 'با انتخاب هر آزمون، ویرایشگر آن باز می‌شود.'}));
-          list.forEach(function (r) { box.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); go('builder', {mode: 'print', printId: r.id}); }}, [ic('print', 'm-row-ic'), el('div', {}, [el('b', {text: r.title || 'آزمون چاپی'}), el('span', {text: (r.subject || 'بدون درس') + ' · ' + fa(r.question_count || 0) + ' سؤال'})])])); });
+          box.appendChild(el('p', {class: 'm-note', text: opts.online ? 'با انتخاب هر آزمون، نسخهٔ آنلاین آن در سازندهٔ آزمون باز می‌شود تا تنظیم و منتشر کنید؛ آزمون چاپی دست‌نخورده می‌ماند.' : 'با انتخاب هر آزمون، ویرایشگر آن باز می‌شود.'}));
+          list.forEach(function (r) { box.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); if (opts.online) go('builder', {fromPrintId: r.id, fresh: true}); else go('builder', {mode: 'print', printId: r.id}); }}, [ic('print', 'm-row-ic'), el('div', {}, [el('b', {text: r.title || 'آزمون چاپی'}), el('span', {text: (r.subject || 'بدون درس') + ' · ' + fa(r.question_count || 0) + ' سؤال'})])])); });
         }
       } catch (e) { box.innerHTML = ''; box.appendChild(el('p', {class: 'm-note', text: S.errMsg(e)})); }
     })();
@@ -1160,5 +1162,5 @@
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
   window.SiteMobile = {radialMenu: radialMenu, paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
-    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, printOnlineSheet: printOnlineSheet /* V223 */};
+    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */};
 })();
