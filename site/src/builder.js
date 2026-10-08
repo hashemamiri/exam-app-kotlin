@@ -617,7 +617,7 @@
       ]);
       var tt = tokenTextarea(ta);
       editor.appendChild(el('div', {class: 'field'}, [el('label', {text: 'متن سؤال'}), tt.wrap, tools, tt.live]));
-      /* V166 — تغییر نوع سؤال با تراشه‌ها (مثل QuestionTypeChips اپ) */
+      /* V166 — تغییر نوع سؤال با تراشه‌ها (مثل QuestionTypeChips اپ)؛ V211: در دسکتاپ نمایش داده نمی‌شود */
       editor.appendChild(el('div', {class: 'b-types'}, TYPES.map(function (t) { return el('button', {class: 'chip' + (q.type === t[0] ? ' on' : ''), text: t[1], onclick: function () { if (q.type === t[0]) return; changeType(q, t[0]); mark(); drawList(); drawEditor(); }}); })));
       if (q.images.length) {
         var ig = el('div', {class: 'b-imgs'});

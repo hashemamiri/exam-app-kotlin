@@ -19252,6 +19252,13 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V211
+- خواسته: نشانگر موس اختصاصی برای سایت دسکتاپ (کاربر از ۱۵ نمونه ست ۱ «کلاسیک نئومورفیک — نیلی و سبز» را انتخاب کرد) + حذف تراشه‌های نوع سؤال زیر آیکن‌های ابزار در آزمون‌ساز دسکتاپ.
+- `site/src/site.css` انتهای فایل: `@media (pointer:fine){ body:not(.m-mode){--cur-arrow/--cur-text/--cur-hand: url("data:image/svg+xml;utf8,…") x y, fallback; cursor:var(--cur-arrow)} … }` — SVG ۳۲×۳۲ به‌صورت data-URI (فلش hotspot 6 3، تایپ 16 16، دست 13 5). دکمه/پیوند/select/label[for]/.btn/.chip/.tool-btn/چک‌باکس… → دست؛ input متنی/textarea/contenteditable → تایپ؛ غیرفعال → فلش. همهٔ `cursor:pointer` و `cursor:default` موجود در site.css و استایل‌های درون‌خطی admin.js به `var(--cur-hand,pointer)` / `var(--cur-arrow,default)` تبدیل شدند تا قاعده‌های اختصاصی‌تر نشانگر را به پیش‌فرض برنگردانند (crosshair/zoom-in/not-allowed/ns-resize دست‌نخورده). فقط `pointer:fine` ⇒ گوشی/تبلت لمسی بدون تغییر؛ `.m-mode` (پوستهٔ گوشی) مستثناست.
+- تراشه‌های `.b-types` (V166) در دسکتاپ: سه قاعدهٔ `.dk .b-types…` حذف شد؛ قاعدهٔ سراسری `.b-types{display:none}` (خط ~997) آن را پنهان می‌کند. عنصر هنوز در DOM ساخته می‌شود (builder.js خط ~621) تا منطق تغییر نوع برای آینده بماند.
+- فقط سایت (`site/**`, `text/**`, `docs/**` در paths-ignore) ⇒ CI اپ اجرا نمی‌شود؛ APP_VERSION بدون تغییر (1.01.01). index.html rebuild؛ engines بدون تغییر.
+- نمونه‌ها (۱۵ ست) در چت ساخته شد و در مخزن نیست؛ برای تغییر ست، سه data-URI در بلوک V211 عوض می‌شود.
+
 ## §V210
 - خواسته: نام گردش کار «آزمون آنلاین»؛ نسخهٔ برنامه 1.01.01 و هر آپدیت +۱.
 - `text/APP_VERSION.txt` = منبع واحد نسخه (قالب `a.bb.cc`). `android.yml`: `name: آزمون آنلاین`؛ `APP_VERSION_NAME` از فایل (regex بررسی می‌شود)؛ `APP_VERSION_CODE = 1000000000 + a*1e6 + bb*1e4 + cc*100` (1.01.01 → 1001010100) تا همیشه از کدهای زمان‌محور قبلی (~۲۱۰ میلیون) بزرگ‌تر باشد (اندروید و `publish_native_app_release_v1` هر دو به کد صعودی نیاز دارند)؛ نام APK `azmoon-online-<نسخه>.apk`؛ گام «بررسی امن اتصال» اگر همین version_code قبلاً در `app_version` باشد با پیام فارسی CI را متوقف می‌کند (RPC انتشار insert بدون on conflict است). `app/build.gradle.kts` پیش‌فرض محلی هم از همین فایل می‌خواند.
