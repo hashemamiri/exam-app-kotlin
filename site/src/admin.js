@@ -127,7 +127,7 @@
       });
       var fb = el('textarea', {rows: 2, style: 'width:100%;border:1px solid var(--line);border-radius:10px;padding:8px', placeholder: 'بازخورد به دانش‌آموز (اختیاری)'}); fb.value = a.feedback || '';
       var fbBank = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:4px;margin:6px 0'});
-      S.rpc('fb_list', {}).then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:var(--cur-hand,pointer)', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
+      S.rpc('fb_list', {}).then(function (list) { (list || []).slice(0, 12).forEach(function (p) { fbBank.appendChild(el('button', {class: 'chip', style: 'cursor:pointer', text: p.text, onclick: function () { fb.value = (fb.value ? fb.value + ' ' : '') + p.text; }})); }); }).catch(function () {});
       var total = el('b');
       function sum() { var s = 0; inputs.forEach(function (x) { s += num(x.value); }); total.textContent = 'جمع: ' + fa(S.fmtScore(s)) + ' از ' + fa(S.fmtScore(ctx.exam.total_score)); }
       inputs.forEach(function (x) { x.addEventListener('input', sum); }); sum();
@@ -195,7 +195,7 @@
         det.appendChild(el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px'}, Object.keys(ev).map(function (k) { return el('span', {class: 'chip warn', text: (EV[k] || k) + ': ' + fa(ev[k])}); })));
         det.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin:6px 0', text: 'ورود: ' + S.fmtDate(new Date(num(rep.entered_at_epoch_ms)).toISOString()) + ' · آخرین فعالیت: ' + S.fmtDate(new Date(num(rep.left_at_epoch_ms)).toISOString()) + (rep.submitted ? ' · ارسال‌شده' : '')}));
         if (qrows.length) det.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['سؤال', 'مدت پاسخ‌گویی', 'بازدید'].map(function (h) { return el('th', {text: h}); }))]), el('tbody', {}, qrows.map(function (id) { var ms = num(times[id]); return el('tr', {}, [el('td', {text: fa(labels[id] || '?')}), el('td', {text: fa(Math.floor(ms / 60000)) + ':' + fa(String(Math.floor(ms % 60000 / 1000)).padStart(2, '0'))}), el('td', {text: fa(visits[id] || 0)})]); }))]));
-        body.appendChild(el('div', {class: 'card', style: 'margin-bottom:8px'}, [el('div', {class: 'row', style: 'cursor:var(--cur-hand,pointer)', onclick: function () { det.style.display = det.style.display === 'none' ? '' : 'none'; }}, [el('b', {class: 'grow', text: row.student_name || 'دانش‌آموز'}), el('span', {class: 'chip ' + (score ? 'warn' : 'ok'), text: score ? fa(score) + ' رویداد مشکوک' : 'بدون تخلف'}), el('span', {class: 'muted', text: '▾'})]), det]));
+        body.appendChild(el('div', {class: 'card', style: 'margin-bottom:8px'}, [el('div', {class: 'row', style: 'cursor:pointer', onclick: function () { det.style.display = det.style.display === 'none' ? '' : 'none'; }}, [el('b', {class: 'grow', text: row.student_name || 'دانش‌آموز'}), el('span', {class: 'chip ' + (score ? 'warn' : 'ok'), text: score ? fa(score) + ' رویداد مشکوک' : 'بدون تخلف'}), el('span', {class: 'muted', text: '▾'})]), det]));
       });
     } catch (e) { S.showErr(body, e); }
   }
@@ -254,7 +254,7 @@
     var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: 200000, style: 'direction:ltr'});
     var msg = el('div');
     var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), el('p', {class: 'muted', style: 'font-size:13px;margin:0 0 10px', text: 'پرداخت فقط در سرور تأیید می‌شود؛ حداقل ۱۰۰٬۰۰۰ · مضرب ۱۰٬۰۰۰ · سقف موجودی ۱۰٬۰۰۰٬۰۰۰ تومان.'}),
-      el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:8px'}, [100000, 200000, 500000, 1000000].map(function (v) { return el('button', {class: 'chip', style: 'cursor:var(--cur-hand,pointer)', text: S.money(v), onclick: function () { amt.value = v; }}); })),
+      el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:8px'}, [100000, 200000, 500000, 1000000].map(function (v) { return el('button', {class: 'chip', style: 'cursor:pointer', text: S.money(v), onclick: function () { amt.value = v; }}); })),
       el('div', {class: 'grid2'}, [el('div', {class: 'field'}, [el('label', {text: 'مبلغ (تومان)'}), amt]), el('div', {class: 'field'}, [el('label', {text: ' '}), el('button', {class: 'btn', text: 'رفتن به درگاه امن', onclick: async function () {
         var a = num(en(amt.value)); msg.innerHTML = '';
         try {
@@ -325,7 +325,7 @@
       c.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn light', text: '🏫 همهٔ کلاس‌ها', onclick: function () { S.go('classes'); }}), el('button', {class: 'btn light', text: '🎓 دانش‌آموزان مدرسه', onclick: function () { S.go('students'); }})]));
       var tc = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '👩‍🏫 کلاس‌های معلم‌ها'})]);
       if (!teachers.length) tc.appendChild(S.emptyBox('👩‍🏫', 'معلمی وجود ندارد.'));
-      else tc.appendChild(el('div', {class: 'exam-grid'}, teachers.map(function (t) { return el('div', {class: 'exam-card', style: 'cursor:var(--cur-hand,pointer)', onclick: function () { S.go('school', {teacherId: t.id, teacherName: t.full_name}); }}, [el('b', {text: t.full_name || '—'}), el('div', {class: 'muted', style: 'font-size:12px', text: '@' + (t.username || '—')}), el('div', {style: 'margin-top:6px'}, [el('span', {class: 'chip brand', text: 'مدیریت کلاس‌ها ←'})])]); })));
+      else tc.appendChild(el('div', {class: 'exam-grid'}, teachers.map(function (t) { return el('div', {class: 'exam-card', style: 'cursor:pointer', onclick: function () { S.go('school', {teacherId: t.id, teacherName: t.full_name}); }}, [el('b', {text: t.full_name || '—'}), el('div', {class: 'muted', style: 'font-size:12px', text: '@' + (t.username || '—')}), el('div', {style: 'margin-top:6px'}, [el('span', {class: 'chip brand', text: 'مدیریت کلاس‌ها ←'})])]); })));
       c.appendChild(tc);
       var q = el('input', {type: 'search', placeholder: 'جست‌وجوی دانش‌آموز…', style: 'border:1px solid var(--line);border-radius:10px;padding:8px 12px;flex:1'});
       var tb = el('tbody');

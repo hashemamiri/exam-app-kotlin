@@ -17,6 +17,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +55,9 @@ fun FormulaHostDialog(
     var loading by remember { mutableStateOf(true) }
     // V54.5 — خطای واقعی JS (پاک‌سازی‌شده در asset؛ بدون URL/Token) برای نمایش امن.
     var jsError by remember { mutableStateOf<String?>(null) }
+    // V217 — حالت تیرهٔ برنامه ⇒ ویرایشگر فرمول هم با تم تیرهٔ خودش باز می‌شود (پوستهٔ روشن میزبان خاموش).
+    val darkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val shellColor = if (darkTheme) ComposeColor(0xFF0F0C29) else ComposeColor(0xFFE9EEF5)
 
     Dialog(
         onDismissRequest = { onResult(latestText); onDismiss() },
@@ -62,13 +67,14 @@ fun FormulaHostDialog(
         )
     ) {
         // پس‌زمینه همان رنگ صفحهٔ مرجع تا هیچ فریم سفید/ناهماهنگی دیده نشود.
-        Surface(Modifier.fillMaxSize(), color = ComposeColor(0xFFE9EEF5)) {
+        Surface(Modifier.fillMaxSize(), color = shellColor) {
             Box(Modifier.fillMaxSize()) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { context ->
                         // V216 — WebView «گرم» (از قبل ساخته و parse شده) یا در نبودش، نمونهٔ تازه.
                         val view = FormulaEditorPool.acquire(context)
+                        view.setBackgroundColor(shellColor.toArgb())
                         FormulaEditorPool.session = FormulaEditorPool.Session(
                             onText = { latestText = it },
                             onJsError = { message -> view.post { jsError = message; loading = false } },
@@ -83,7 +89,9 @@ fun FormulaHostDialog(
                             if (FormulaEditorPool.current !== view) return
                             attempts++
                             view.evaluateJavascript(
-                                "(function(){if(window.ExamFormulaHost){ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
+                                "(function(){if(window.ExamFormulaHost){" +
+                                    (if (darkTheme) "if(window.__mathHostTheme){__mathHostTheme.off();}" else "") +
+                                    "ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
                             ) { result ->
                                 when {
                                     result?.contains("ok") == true -> loading = false
