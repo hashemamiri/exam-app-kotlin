@@ -42,6 +42,8 @@ class V218_MathRenderDarkTest {
     fun siteDesktopDarkPalette() {
         val css = src("site/src/site.css")
         assertTrue(":root.m-dark{--bg:#1F2530;--card:#2A3242;--ink:#E6EAF2" in css)
-        assertTrue(!css.contains("background:#fff;") && !css.contains("background:#fff}"))
+        // تنها سفیدِ ثابتِ مجاز: قاب تصویرِ شکل در حالت تیره (#FFFFFF)؛ بقیه باید var(--card) باشند.
+        val white = Regex("background:#fff\\b").findAll(css).count()
+        assertTrue("hard-coded white backgrounds left: $white", white == 0)
     }
 }

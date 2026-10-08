@@ -1049,7 +1049,7 @@ body.dk{--bg:#eef2f5;--card:#fff;--ink:#1d2935;--muted:#6c7985;--line:#d9e1e6;--
   .dk .main:has(.builder){padding-bottom:0}
   /* V178 — منوی شعاعی دسکتاپ: روی سازندهٔ ثابت (z 20) و ریل‌ها (45/50)، تار شدن پس‌زمینه مثل اپ */
   .dk .m-radial-bg{z-index:70;background:rgba(38,49,66,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-  .dk .m-radial-item{width:78px;height:78px;left:-39px;top:-39px;border-radius:50%;background:#fff !important;box-shadow:0 12px 30px rgba(20,30,45,.25)}
+  .dk .m-radial-item{width:78px;height:78px;left:-39px;top:-39px;border-radius:50%;background:var(--card) !important;box-shadow:0 12px 30px rgba(20,30,45,.25)}
   .dk .m-radial-item .g{font-size:20px}
   .dk .m-radial-item .l{font-size:10px}
   .dk .m-radial-ring{display:none}
@@ -1291,4 +1291,4 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 :root.m-dark{--bg:#1F2530;--card:#2A3242;--ink:#E6EAF2;--muted:#9AA5B8;--line:#39424F;--brand-soft:#2B3550;--ok-soft:#1F3A2E;--warn-soft:#3D3020;--danger-soft:#3F2628;--shadow:0 6px 24px rgba(0,0,0,.35)}
 :root.m-dark input,:root.m-dark select,:root.m-dark textarea{background:#252D3A;color:var(--ink);border-color:var(--line)}
 :root.m-dark .b-rich:empty::before{color:#7F8A9C}
-:root.m-dark img.b-fig-frame,:root.m-dark .b-fig-frame{background:#fff;border-radius:6px}
+:root.m-dark .b-fig-frame{background:#FFFFFF;border-radius:6px}
