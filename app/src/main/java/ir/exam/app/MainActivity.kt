@@ -1,5 +1,6 @@
 package ir.exam.app
 
+import ir.exam.app.ui.printing.warmUpExamPrintWebView
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
@@ -18,7 +19,7 @@ class MainActivity : FragmentActivity() {
         // V214 — گرم کردن موتور WebView (Chromium) چند ثانیه پس از شروع، در زمان بیکاری: اولین باز شدن
         // پیش‌نمایش چاپ/ویرایشگر فرمول دیگر هزینهٔ راه‌اندازی WebView (~۰٫۵ تا ۱ ثانیه) را نمی‌پردازد.
         window.decorView.postDelayed({
-            if (!isFinishing && !isDestroyed) runCatching { android.webkit.WebView(this).destroy() }
+            if (!isFinishing && !isDestroyed) warmUpExamPrintWebView(this)
         }, WEBVIEW_WARMUP_DELAY_MS)
         setContent {
             val appearancePreferences = remember { AppearancePreferences(applicationContext) }

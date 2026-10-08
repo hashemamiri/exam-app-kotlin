@@ -53,7 +53,7 @@ android {
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
             // V215 — فقط هنگام تولید Baseline Profile روی شبیه‌ساز x86_64 (گردش کار baseline-profile.yml)
-            if (project.hasProperty("baselineAbi")) abiFilters += "x86_64"
+            if (project.hasProperty("baselineAbi")) abiFilters += project.property("baselineAbi").toString()
         }
     }
 

@@ -27,7 +27,8 @@ class V215_PerformancePhase4Test {
         assertTrue("id(\"androidx.baselineprofile\")" in gradle)
         assertTrue("automaticGenerationDuringBuild = false" in gradle)
         assertTrue("\"baselineProfile\"(project(\":baselineprofile\"))" in gradle)
-        assertTrue("if (project.hasProperty(\"baselineAbi\")) abiFilters += \"x86_64\"" in gradle)
+        assertTrue("if (project.hasProperty(\"baselineAbi\")) abiFilters += project.property(\"baselineAbi\").toString()" in gradle)
+        assertFalse("\"x86_64\"" in gradle)
         assertTrue("include(\":baselineprofile\")" in src("settings.gradle.kts"))
         assertTrue("id(\"androidx.baselineprofile\") version \"1.3.4\" apply false" in src("build.gradle.kts"))
         val module = src("baselineprofile/build.gradle.kts")
@@ -41,7 +42,7 @@ class V215_PerformancePhase4Test {
         assertTrue("workflow_dispatch:" in wf)
         assertFalse("push:" in wf)
         assertTrue(":app:generateReleaseBaselineProfile" in wf)
-        assertTrue("-PbaselineAbi=true" in wf)
+        assertTrue("-PbaselineAbi=x86_64" in wf)
         assertTrue("scripts/bump_app_version.py" in wf)
         assertTrue("gh workflow run android.yml --ref main" in wf)
         // پروفایل دستی فاز ۱ هم‌چنان همراه برنامه است

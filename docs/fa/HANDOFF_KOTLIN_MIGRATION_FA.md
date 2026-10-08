@@ -19252,6 +19252,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V215.1
+- CI نسخهٔ V215: کامپایل Kotlin با Compose BOM 2025.06.01 **موفق** (فقط deprecation warning)؛ ۸۱۳ تست، ۲ ناموفق — هر دو پین تست قدیمی:
+  1. `Neumorphic69IntegrationTest`: «android.webkit» در هیچ فایل main جز سه فایل مجاز نباید باشد؛ گرم‌کردن WebView در V214 در MainActivity بود ⇒ به تابع `warmUpExamPrintWebView(context)` در `ExamHtmlPrintDialog.kt` (فایل مجاز) منتقل شد و MainActivity فقط آن را صدا می‌زند.
+  2. `ImageStudioEraserAndAbiTest`: رشتهٔ `"x86_64"` نباید در `app/build.gradle.kts` باشد ⇒ `abiFilters += project.property("baselineAbi").toString()` و گردش کار `-PbaselineAbi=x86_64` می‌فرستد.
+- پین‌های V214/V215 به‌روز شدند. نسخه همان 1.01.05 (V215 منتشر نشده بود). درس: قبل از افزودن WebView/ABI به فایل‌های main، این دو تست را grep کن (در check_test_pins نیستند چون بر «نبودن» رشته‌اند).
+
 ## §V215
 - سرعت فاز ۴ (موارد ۳ و ۴ از برنامهٔ V212). نسخه 1.01.05.
 - **مورد ۴ — Compose BOM:** `2024.12.01` → `2025.06.01` (Compose 1.8.3، Material3 1.3.2، icons 1.7.8). انتخاب عمدی: آخرین BOMی که با compileSdk 35 / AGP 8.7.3 / Kotlin 2.0.21 سازگار است. BOM‌های ۲۰۲۵.۰۸ به بعد (Compose 1.9+) compileSdk 36 و Compose 1.12 (BOM 2026.08.00) compileSdk 37 + AGP ≥9.1.1 می‌خواهند؛ آن پرش بزرگ (AGP 9، Kotlin 2.3، KSP جدید) بدون کامپایلر در سندباکس پرخطر است و جداگانه باید انجام شود. اگر CI روی API منسوخ خطا داد: Compose 1.8 فقط deprecation warning می‌دهد (allWarningsAsErrors نداریم).
