@@ -86,6 +86,7 @@ import ir.exam.app.data.repository.SupabaseSchoolJoinRepository
 import ir.exam.app.domain.model.ImageEditRequest
 import ir.exam.app.domain.model.NativeProfile
 import ir.exam.app.domain.model.UserRole
+import ir.exam.app.ui.common.SettingsAccordionCard
 import ir.exam.app.ui.common.FieldOfStudyPicker
 import ir.exam.app.ui.common.GradeOdometerPicker
 import ir.exam.app.ui.common.PasswordVisibilityButton
@@ -274,6 +275,9 @@ fun ProfileSettingsScreen(
 private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSettingsViewModel) {
     // V56.1 — تبلت: کارت‌های تنظیمات ظاهر وسط صفحه با سقف پهنا.
     val tabletAppearance = ir.exam.app.core.ui.LocalTabletLayout.current
+    // V208 — هر بخش «ظاهر» یک کارت بازشونده مثل «حساب»
+    var expanded by remember { mutableStateOf<String?>(null) }
+    fun toggle(key: String) { expanded = if (expanded == key) null else key }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -285,208 +289,187 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("حالت نمایش", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(
-                            ThemeMode.SYSTEM to "دستگاه",
-                            ThemeMode.LIGHT to "روشن",
-                            ThemeMode.DARK to "تیره"
-                        ).forEach { (mode, label) ->
-                            FilterChip(
-                                selected = settings.themeMode == mode,
-                                onClick = { viewModel.setTheme(mode) },
-                                label = { Text(label) }
-                            )
-                        }
+            SettingsAccordionCard(title = "حالت نمایش", expanded = expanded == "ap1", onToggle = { toggle("ap1") }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        ThemeMode.SYSTEM to "دستگاه",
+                        ThemeMode.LIGHT to "روشن",
+                        ThemeMode.DARK to "تیره"
+                    ).forEach { (mode, label) ->
+                        FilterChip(
+                            selected = settings.themeMode == mode,
+                            onClick = { viewModel.setTheme(mode) },
+                            label = { Text(label) }
+                        )
                     }
-                    // V137.5 — اعداد فارسی روی ابزارها/محورها/نمودارها/شکل‌ها/جدول‌ها
+                }
+                // V137.5 — اعداد فارسی روی ابزارها/محورها/نمودارها/شکل‌ها/جدول‌ها
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("اعداد فارسی در ابزارها")
+                        Text("خط‌کش و نقالهٔ تخته، محورها، نمودارها، شکل‌ها و جدول‌ها", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(settings.persianDigits, viewModel::setPersianDigits)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("اعداد فارسی در ابزارها")
-                            Text("خط‌کش و نقالهٔ تخته، محورها، نمودارها، شکل‌ها و جدول‌ها", style = MaterialTheme.typography.bodySmall)
+                            Text("رنگ‌های پویا")
+                            Text("هماهنگ با رنگ‌بندی گوشی", style = MaterialTheme.typography.bodySmall)
                         }
-                        Switch(settings.persianDigits, viewModel::setPersianDigits)
+                        Switch(settings.dynamicColors, viewModel::setDynamicColors)
                     }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("رنگ‌های پویا")
-                                Text("هماهنگ با رنگ‌بندی گوشی", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        item {
+            SettingsAccordionCard(title = "چیدمان دستگاه", expanded = expanded == "ap2", onToggle = { toggle("ap2") }) {
+                Text(
+                    "در حالت خودکار، برنامه از روی اندازهٔ صفحه تشخیص می‌دهد که چیدمان گوشی یا تبلت را نمایش دهد.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        DeviceLayoutMode.AUTO to "خودکار",
+                        DeviceLayoutMode.PHONE to "گوشی",
+                        DeviceLayoutMode.TABLET to "تبلت"
+                    ).forEach { (mode, label) ->
+                        FilterChip(
+                            selected = settings.deviceLayoutMode == mode,
+                            onClick = { viewModel.setDeviceLayoutMode(mode) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                val tabletNow = resolveTabletLayout(settings.deviceLayoutMode)
+                Text(
+                    if (tabletNow) "چیدمان فعلی: تبلت — ستون‌های بیشتر و پهنای بهینه"
+                    else "چیدمان فعلی: گوشی",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        item {
+            // V137.2 — «ظاهر نئومورفیک» (بدون ۶۹) و هر بخش در کارت جداگانه: پالت / عمق سایه / پیش‌نمایش.
+            SettingsAccordionCard(title = "ظاهر نئومورفیک — پالت رنگ", expanded = expanded == "ap7", onToggle = { toggle("ap7") }) {
+                Text(
+                    "پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf(
+                        NeumorphicPalette.INDIGO_MINT to "نیلی و سبز",
+                        NeumorphicPalette.BLUE_CYAN to "آبی و فیروزه‌ای",
+                        NeumorphicPalette.PINK_ORANGE to "صورتی و نارنجی",
+                        NeumorphicPalette.PURPLE_PINK to "بنفش و صورتی"
+                    ).forEach { (palette, label) ->
+                        val (first, second) = palette.accentColors()
+                        val selected = settings.neumorphicPalette == palette
+                        Box(
+                            Modifier
+                                .size(if (selected) 44.dp else 38.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(first, second)))
+                                .clickable { viewModel.setNeumorphicPalette(palette) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selected) {
+                                Icon(
+                                    Icons.Outlined.CheckCircle,
+                                    contentDescription = "پالت انتخاب‌شده: $label",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
-                            Switch(settings.dynamicColors, viewModel::setDynamicColors)
                         }
                     }
                 }
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("چیدمان دستگاه", style = MaterialTheme.typography.titleMedium)
+            SettingsAccordionCard(title = "ظاهر نئومورفیک — عمق سایه", expanded = expanded == "ap3", onToggle = { toggle("ap3") }) {
+                // V131 — لغزنده‌ها هنگام کشیدن هر فریم در DataStore نوشته می‌شدند و مقدار با تأخیر
+                // برمی‌گشت → لغزنده می‌پرید/برنمی‌گشت. حالا مقدار محلی است و در پایان کشیدن ذخیره می‌شود.
+                var depthDraft by remember(settings.neumorphicDepth) { mutableStateOf(settings.neumorphicDepth) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("عمق سایه")
                     Text(
-                        "در حالت خودکار، برنامه از روی اندازهٔ صفحه تشخیص می‌دهد که چیدمان گوشی یا تبلت را نمایش دهد.",
+                        PersianDigits.convert(depthDraft.toInt()),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Slider(
+                    value = depthDraft,
+                    onValueChange = { depthDraft = it },
+                    onValueChangeFinished = { viewModel.setNeumorphicDepth(depthDraft) },
+                    valueRange = 8f..22f,
+                    steps = 13
+                )
+            }
+        }
+        item {
+            SettingsAccordionCard(title = "ظاهر نئومورفیک — پیش‌نمایش", expanded = expanded == "ap4", onToggle = { toggle("ap4") }) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                        .background(
+                            Brush.linearGradient(
+                                settings.neumorphicPalette.accentColors().let { listOf(it.first, it.second) }
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("پیش‌نمایش پالت", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                if (settings.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Text(
+                        "رنگ‌های پویای دستگاه اکنون بر پالت ثابت اولویت دارند؛ برای رنگ دقیق انتخابی، آن گزینه را خاموش کنید.",
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+            }
+        }
+        item {
+            SettingsAccordionCard(title = "قلم فارسی", expanded = expanded == "ap5", onToggle = { toggle("ap5") }) {
+                listOf(
+                    AppFont.SYSTEM to "سیستم",
+                    AppFont.VAZIRMATN to "وزیرمتن",
+                    AppFont.SHABNAM to "شبنم",
+                    AppFont.SAHEL to "ساحل"
+                ).chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(
-                            DeviceLayoutMode.AUTO to "خودکار",
-                            DeviceLayoutMode.PHONE to "گوشی",
-                            DeviceLayoutMode.TABLET to "تبلت"
-                        ).forEach { (mode, label) ->
+                        row.forEach { (font, label) ->
                             FilterChip(
-                                selected = settings.deviceLayoutMode == mode,
-                                onClick = { viewModel.setDeviceLayoutMode(mode) },
+                                selected = settings.appFont == font,
+                                onClick = { viewModel.setAppFont(font) },
                                 label = { Text(label) }
                             )
                         }
                     }
-                    val tabletNow = resolveTabletLayout(settings.deviceLayoutMode)
-                    Text(
-                        if (tabletNow) "چیدمان فعلی: تبلت — ستون‌های بیشتر و پهنای بهینه"
-                        else "چیدمان فعلی: گوشی",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
                 }
+                Text("سه قلم فارسی همراه برنامه و با مجوز OFL ذخیره شده‌اند.", style = MaterialTheme.typography.bodySmall)
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // V137.2 — «ظاهر نئومورفیک» (بدون ۶۹) و هر بخش در کارت جداگانه: پالت / عمق سایه / پیش‌نمایش.
-                    Text("ظاهر نئومورفیک — پالت رنگ", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        listOf(
-                            NeumorphicPalette.INDIGO_MINT to "نیلی و سبز",
-                            NeumorphicPalette.BLUE_CYAN to "آبی و فیروزه‌ای",
-                            NeumorphicPalette.PINK_ORANGE to "صورتی و نارنجی",
-                            NeumorphicPalette.PURPLE_PINK to "بنفش و صورتی"
-                        ).forEach { (palette, label) ->
-                            val (first, second) = palette.accentColors()
-                            val selected = settings.neumorphicPalette == palette
-                            Box(
-                                Modifier
-                                    .size(if (selected) 44.dp else 38.dp)
-                                    .clip(CircleShape)
-                                    .background(Brush.linearGradient(listOf(first, second)))
-                                    .clickable { viewModel.setNeumorphicPalette(palette) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (selected) {
-                                    Icon(
-                                        Icons.Outlined.CheckCircle,
-                                        contentDescription = "پالت انتخاب‌شده: $label",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("ظاهر نئومورفیک — عمق سایه", style = MaterialTheme.typography.titleMedium)
-                    // V131 — لغزنده‌ها هنگام کشیدن هر فریم در DataStore نوشته می‌شدند و مقدار با تأخیر
-                    // برمی‌گشت → لغزنده می‌پرید/برنمی‌گشت. حالا مقدار محلی است و در پایان کشیدن ذخیره می‌شود.
-                    var depthDraft by remember(settings.neumorphicDepth) { mutableStateOf(settings.neumorphicDepth) }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("عمق سایه")
-                        Text(
-                            PersianDigits.convert(depthDraft.toInt()),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Slider(
-                        value = depthDraft,
-                        onValueChange = { depthDraft = it },
-                        onValueChangeFinished = { viewModel.setNeumorphicDepth(depthDraft) },
-                        valueRange = 8f..22f,
-                        steps = 13
-                    )
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("ظاهر نئومورفیک — پیش‌نمایش", style = MaterialTheme.typography.titleMedium)
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(54.dp)
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    settings.neumorphicPalette.accentColors().let { listOf(it.first, it.second) }
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("پیش‌نمایش پالت", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                    if (settings.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Text(
-                            "رنگ‌های پویای دستگاه اکنون بر پالت ثابت اولویت دارند؛ برای رنگ دقیق انتخابی، آن گزینه را خاموش کنید.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("قلم فارسی", style = MaterialTheme.typography.titleMedium)
-                    listOf(
-                        AppFont.SYSTEM to "سیستم",
-                        AppFont.VAZIRMATN to "وزیرمتن",
-                        AppFont.SHABNAM to "شبنم",
-                        AppFont.SAHEL to "ساحل"
-                    ).chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            row.forEach { (font, label) ->
-                                FilterChip(
-                                    selected = settings.appFont == font,
-                                    onClick = { viewModel.setAppFont(font) },
-                                    label = { Text(label) }
-                                )
-                            }
-                        }
-                    }
-                    Text("سه قلم فارسی همراه برنامه و با مجوز OFL ذخیره شده‌اند.", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("اندازه متن", style = MaterialTheme.typography.titleMedium)
-                    var scaleDraft by remember(settings.fontScale) { mutableStateOf(settings.fontScale) }
-                    Text("${PersianDigits.convert((scaleDraft * 100).toInt())} درصد")
-                    Slider(
-                        value = scaleDraft,
-                        onValueChange = { scaleDraft = it },
-                        onValueChangeFinished = { viewModel.setFontScale(scaleDraft) },
-                        valueRange = 0.85f..1.30f,
-                        steps = 8
-                    )
-                    Text("نمونه متن فارسی — آزمون ریاضی فصل یک", style = MaterialTheme.typography.bodyLarge)
-                }
+            SettingsAccordionCard(title = "اندازه متن", expanded = expanded == "ap6", onToggle = { toggle("ap6") }) {
+                var scaleDraft by remember(settings.fontScale) { mutableStateOf(settings.fontScale) }
+                Text("${PersianDigits.convert((scaleDraft * 100).toInt())} درصد")
+                Slider(
+                    value = scaleDraft,
+                    onValueChange = { scaleDraft = it },
+                    onValueChangeFinished = { viewModel.setFontScale(scaleDraft) },
+                    valueRange = 0.85f..1.30f,
+                    steps = 8
+                )
+                Text("نمونه متن فارسی — آزمون ریاضی فصل یک", style = MaterialTheme.typography.bodyLarge)
             }
         }
         item {
@@ -935,33 +918,7 @@ private fun AccountAccordionCard(
     expanded: Boolean,
     onToggle: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
-) {
-    Card(Modifier.fillMaxWidth()) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                    contentDescription = if (expanded) "بستن $title" else "بازکردن $title"
-                )
-            }
-            AnimatedVisibility(
-                visible = expanded,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    content = content
-                )
-            }
-        }
-    }
-}
+) = SettingsAccordionCard(title = title, expanded = expanded, onToggle = onToggle, content = content)
 
 @Composable
 private fun HeaderSection(
@@ -1120,43 +1077,42 @@ private fun ManagerBackupSection() {
         }
         pendingJson = null
     }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text("پشتیبان داده‌های مدرسه", style = MaterialTheme.typography.titleMedium)
-            Text("مدرسه‌ها، معلم‌ها، کلاس‌ها و دانش‌آموزان در یک فایل JSON ذخیره می‌شوند.")
-            Text(
-                "رمز دانش‌آموز، token و کلیدها عمداً وارد فایل نمی‌شوند.",
-                color = MaterialTheme.colorScheme.primary
-            )
-            Button(
-                enabled = !loading,
-                onClick = {
-                    loading = true
-                    error = null
-                    message = null
-                    scope.launch {
-                        runCatching {
-                            val raw = ir.exam.app.data.remote.SupabaseProvider.client
-                                .postgrest.rpc("native_manager_export_backup_v61")
-                                .decodeAs<kotlinx.serialization.json.JsonObject>()
-                            ((raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content)
-                                ?.takeIf(String::isNotBlank)?.let { throw IllegalStateException(it) }
-                            raw.toString()
-                        }.onSuccess { json ->
-                            loading = false
-                            pendingJson = json
-                            createFile.launch("school-backup.json")
-                        }.onFailure { throwable ->
-                            loading = false
-                            error = throwable.message?.take(200) ?: "ساخت پشتیبان ناموفق بود."
-                        }
+    // V208 — کارت بازشونده مثل «حساب»
+    var expanded by remember { mutableStateOf(true) }
+    SettingsAccordionCard(title = "پشتیبان داده‌های مدرسه", expanded = expanded, onToggle = { expanded = !expanded }) {
+        Text("مدرسه‌ها، معلم‌ها، کلاس‌ها و دانش‌آموزان در یک فایل JSON ذخیره می‌شوند.")
+        Text(
+            "رمز دانش‌آموز، token و کلیدها عمداً وارد فایل نمی‌شوند.",
+            color = MaterialTheme.colorScheme.primary
+        )
+        Button(
+            enabled = !loading,
+            onClick = {
+                loading = true
+                error = null
+                message = null
+                scope.launch {
+                    runCatching {
+                        val raw = ir.exam.app.data.remote.SupabaseProvider.client
+                            .postgrest.rpc("native_manager_export_backup_v61")
+                            .decodeAs<kotlinx.serialization.json.JsonObject>()
+                        ((raw["error"] as? kotlinx.serialization.json.JsonPrimitive)?.content)
+                            ?.takeIf(String::isNotBlank)?.let { throw IllegalStateException(it) }
+                        raw.toString()
+                    }.onSuccess { json ->
+                        loading = false
+                        pendingJson = json
+                        createFile.launch("school-backup.json")
+                    }.onFailure { throwable ->
+                        loading = false
+                        error = throwable.message?.take(200) ?: "ساخت پشتیبان ناموفق بود."
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("ساخت پشتیبان مدرسه") }
-            if (loading) CircularProgressIndicator()
-            message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("ساخت پشتیبان مدرسه") }
+        if (loading) CircularProgressIndicator()
+        message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }

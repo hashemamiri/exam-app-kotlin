@@ -13,10 +13,10 @@
    ============================================================================ */
 (function () {
   'use strict';
-  var HOST_KEYS = ['paper','orient','customW','customH','mT','mB','mR','mL','border','pageNumbers','repeatHeader','font','spacing','showScores'];
+  var HOST_KEYS = ['paper','orient','customW','customH','mT','mB','mR','mL','border','pageNumbers','repeatHeader','font','spacing','showScores','optionsLayout'];
   var OPT_OF = {paper:'opt_paper', orient:'opt_orientation', customW:'opt_customW', customH:'opt_customH',
     mT:'opt_mT', mB:'opt_mB', mR:'opt_mR', mL:'opt_mL', border:'opt_pageBorder', pageNumbers:'opt_showPageNumbers',
-    repeatHeader:'opt_repeatHeader', font:'opt_baseFont', spacing:'opt_questionSpacing', showScores:'opt_showScores'};
+    repeatHeader:'opt_repeatHeader', font:'opt_baseFont', spacing:'opt_questionSpacing', showScores:'opt_showScores', optionsLayout:'opt_optionsLayout'};
   var PAPERS = {a4:1, a5:1, b5:1, letter:1, f4:1, legal:1, custom:1};
 
   function $(id) { return document.getElementById(id); }
@@ -65,6 +65,7 @@
     out.orient = out.orient === 'landscape' ? 'landscape' : 'portrait';
     ['customW','customH','mT','mB','mR','mL','font'].forEach(function (k) { out[k] = num(out[k], k === 'customW' ? 210 : (k === 'customH' ? 297 : (k === 'font' ? 10.5 : 10))); });
     if (['compact','normal','open'].indexOf(out.spacing) < 0) out.spacing = 'normal';
+    if (['1row','2rows','4rows'].indexOf(out.optionsLayout) < 0) out.optionsLayout = '2rows'; /* V208 */
     return out;
   }
   function writePageSetup(value) {
@@ -88,7 +89,7 @@
      select‌های «اندازهٔ کاغذ / جهت / حاشیه‌ها / فاصلهٔ بین سؤالات» پنهان و به‌جایشان دکمه‌ای می‌نشیند که
      پنجرهٔ بومی (ExamPrintBridge.pickOption) را باز می‌کند؛ نتیجه با ExamPrintRenderer.setOption برمی‌گردد
      و روی همان select با رویدادِ change اعمال می‌شود (saveSetup/pageSetupChanged/preset حاشیه مثل قبل). */
-  var NATIVE_SELECTS = ['opt_paper', 'opt_orientation', 'opt_marginPreset', 'opt_questionSpacing'];
+  var NATIVE_SELECTS = ['opt_paper', 'opt_orientation', 'opt_marginPreset', 'opt_questionSpacing', 'opt_optionsLayout'];
   function selectOptions(sel) {
     return Array.prototype.map.call(sel.options, function (o) { return {value: o.value, label: o.textContent}; });
   }
@@ -193,7 +194,8 @@
     if (type === 'multiple' || type === 'truefalse') {
       q.options = (Array.isArray(src.options) ? src.options : []).map(optionOf);
       if (type === 'truefalse' && q.options.length !== 2) q.options = [{text: 'صحیح', correct: false}, {text: 'غلط', correct: false}];
-      q.optionsLayout = ['1row','2rows','4rows'].indexOf(text(src.optionsLayout)) >= 0 ? text(src.optionsLayout) : '2rows';
+      /* V208 — خالی = پیش‌فرضِ آزمون (opt_optionsLayout در تنظیمات صفحه) */
+      q.optionsLayout = ['1row','2rows','4rows'].indexOf(text(src.optionsLayout)) >= 0 ? text(src.optionsLayout) : '';
     } else if (type === 'matching') {
       q.pairs = (Array.isArray(src.pairs) ? src.pairs : []).map(function (p) { p = asObject(p); return {left: text(p.left), right: text(p.right)}; });
     } else {

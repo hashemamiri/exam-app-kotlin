@@ -265,6 +265,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import re
           from pathlib import Path
 
           metadata = {}
@@ -277,11 +278,20 @@ jobs:
           payload_notes = []
           changelog_path = Path("text/CHANGELOG_FA.txt")
           if changelog_path.is_file():
-              payload_notes = [
-                  line.strip().removeprefix("-").removeprefix("•").strip()
-                  for line in changelog_path.read_text(encoding="utf-8").splitlines()
-                  if line.strip()
-              ][:12]
+              # V208 — سطرها خام می‌مانند (عنوان «Vxxx — …» و تیترهای «- …») تا اپ خودش بلوک‌های نسخه را بسازد؛
+              # تا سه نسخهٔ آخر (حداکثر ۴۰ سطر).
+              payload_notes = []
+              headers = 0
+              for line in changelog_path.read_text(encoding="utf-8").splitlines():
+                  if not line.strip():
+                      continue
+                  if re.match(r"^V\d", line.strip()):
+                      headers += 1
+                      if headers > 3:
+                          break
+                  payload_notes.append(line.strip())
+                  if len(payload_notes) >= 40:
+                      break
           if not payload_notes:
               payload_notes = [
                   f"انتشار خودکار نسخه {metadata['APP_VERSION_NAME']}",

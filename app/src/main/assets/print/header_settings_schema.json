@@ -1,8 +1,306 @@
 {
  "templates": [
   {
+   "id": "custom",
+   "label": "سربرگ ۱ - ایجاد سربرگ",
+   "fields": [
+    {
+     "id": "c_logo",
+     "label": "لوگو (ستون وسط، جای ردیف ۱ و ۲):",
+     "full": true,
+     "kind": "select",
+     "options": [
+      {
+       "v": "",
+       "t": "بدون لوگو"
+      },
+      {
+       "v": "azad",
+       "t": "دانشگاه آزاد اسلامی"
+      },
+      {
+       "v": "formal",
+       "t": "آرم اداره امتحانات"
+      },
+      {
+       "v": "sama",
+       "t": "آموزشکده سما"
+      },
+      {
+       "v": "ministry",
+       "t": "نشان وزارت آموزش و پرورش"
+      },
+      {
+       "v": "custom",
+       "t": "لوگوی دلخواه (انتخاب تصویر)"
+      }
+     ]
+    },
+    {
+     "id": "c_logoData",
+     "label": "تصویر لوگوی دلخواه:",
+     "full": true,
+     "kind": "image",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       "custom"
+      ]
+     }
+    },
+    {
+     "id": "c_font",
+     "label": "فونت سربرگ:",
+     "full": false,
+     "kind": "select",
+     "options": [
+      {
+       "v": "",
+       "t": "پیش‌فرض (وزیرمتن)"
+      },
+      {
+       "v": "Vazirmatn",
+       "t": "وزیرمتن"
+      },
+      {
+       "v": "Shabnam",
+       "t": "شبنم"
+      },
+      {
+       "v": "Sahel",
+       "t": "ساحل"
+      },
+      {
+       "v": "BNazanin",
+       "t": "ب نازنین"
+      },
+      {
+       "v": "Tahoma",
+       "t": "تاهوما"
+      },
+      {
+       "v": "serif",
+       "t": "سریف"
+      }
+     ]
+    },
+    {
+     "id": "c_gap",
+     "label": "فاصلهٔ ردیف‌ها:",
+     "full": false,
+     "kind": "select",
+     "options": [
+      {
+       "v": "0",
+       "t": "بدون فاصله"
+      },
+      {
+       "v": "3",
+       "t": "کم"
+      },
+      {
+       "v": "6",
+       "t": "معمولی"
+      },
+      {
+       "v": "10",
+       "t": "زیاد"
+      },
+      {
+       "v": "16",
+       "t": "خیلی زیاد"
+      }
+     ]
+    },
+    {
+     "id": "c_r1",
+     "label": "ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_r2",
+     "label": "ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_r3",
+     "label": "ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_r4",
+     "label": "ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_r5",
+     "label": "ردیف ۵:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "r",
+     "colLabel": "ستون راست"
+    },
+    {
+     "id": "c_m1",
+     "label": "ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       ""
+      ]
+     }
+    },
+    {
+     "id": "c_m2",
+     "label": "ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط",
+     "showIf": {
+      "field": "c_logo",
+      "in": [
+       ""
+      ]
+     }
+    },
+    {
+     "id": "c_m3",
+     "label": "ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط"
+    },
+    {
+     "id": "c_m4",
+     "label": "ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط"
+    },
+    {
+     "id": "c_m5",
+     "label": "ردیف ۵:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "m",
+     "colLabel": "ستون وسط"
+    },
+    {
+     "id": "c_l1",
+     "label": "ردیف ۱:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_l2",
+     "label": "ردیف ۲:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_l3",
+     "label": "ردیف ۳:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_l4",
+     "label": "ردیف ۴:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_l5",
+     "label": "ردیف ۵:",
+     "full": false,
+     "kind": "input",
+     "type": "text",
+     "placeholder": "متن دلخواه",
+     "group": "cells",
+     "col": "l",
+     "colLabel": "ستون چپ"
+    },
+    {
+     "id": "c_intro",
+     "label": "توضیحات آغاز آزمون:",
+     "full": true,
+     "kind": "textarea",
+     "rows": 3
+    }
+   ]
+  },
+  {
    "id": "classic",
-   "label": "سربرگ ۱ - قالب قبلی دانشگاه آزاد",
+   "label": "سربرگ ۲ - قالب قبلی دانشگاه آزاد",
    "fields": [
     {
      "id": "f_name",
@@ -135,7 +433,7 @@
   },
   {
    "id": "formal",
-   "label": "سربرگ ۲ - قالب بسمه تعالی / اداره امتحانات",
+   "label": "سربرگ ۳ - قالب بسمه تعالی / اداره امتحانات",
    "fields": [
     {
      "id": "h2_branch",
@@ -249,7 +547,7 @@
   },
   {
    "id": "sama",
-   "label": "سربرگ ۳ - قالب آموزشکده سما",
+   "label": "سربرگ ۴ - قالب آموزشکده سما",
    "fields": [
     {
      "id": "h3_unit",
@@ -363,7 +661,7 @@
   },
   {
    "id": "school",
-   "label": "سربرگ ۴ - قالب آموزش و پرورش / مدرسه",
+   "label": "سربرگ ۵ - قالب آموزش و پرورش / مدرسه",
    "fields": [
     {
      "id": "h4_page",
@@ -481,7 +779,7 @@
   },
   {
    "id": "edu",
-   "label": "سربرگ ۵ - قالب اداره کل آموزش و پرورش",
+   "label": "سربرگ ۶ - قالب اداره کل آموزش و پرورش",
    "fields": [
     {
      "id": "h5_firstName",
@@ -602,7 +900,7 @@
   },
   {
    "id": "detailed-school",
-   "label": "سربرگ ۶ - قالب مدیریت آموزش و پرورش / مصحح",
+   "label": "سربرگ ۷ - قالب مدیریت آموزش و پرورش / مصحح",
    "fields": [
     {
      "id": "h6_name",
@@ -722,7 +1020,7 @@
   },
   {
    "id": "ministry",
-   "label": "سربرگ ۷ - قالب وزارت آموزش و پرورش",
+   "label": "سربرگ ۸ - قالب وزارت آموزش و پرورش",
    "fields": [
     {
      "id": "h7_name",
@@ -826,207 +1124,6 @@
      "kind": "input",
      "type": "text",
      "placeholder": "مثلاً موفق باشید – دکتر نمازی – دانشگاه آزاد اسلامی واحد تهران مرکز"
-    }
-   ]
-  },
-  {
-   "id": "custom",
-   "label": "سربرگ ۸ - ایجاد سربرگ (سه ستون × چهار ردیف)",
-   "fields": [
-    {
-     "id": "c_logo",
-     "label": "لوگو (ستون وسط، ردیف ۱ و ۲):",
-     "full": true,
-     "kind": "select",
-     "options": [
-      {
-       "v": "",
-       "t": "بدون لوگو"
-      },
-      {
-       "v": "azad",
-       "t": "دانشگاه آزاد اسلامی"
-      },
-      {
-       "v": "formal",
-       "t": "آرم اداره امتحانات"
-      },
-      {
-       "v": "sama",
-       "t": "آموزشکده سما"
-      },
-      {
-       "v": "ministry",
-       "t": "نشان وزارت آموزش و پرورش"
-      },
-      {
-       "v": "custom",
-       "t": "لوگوی دلخواه (انتخاب تصویر)"
-      }
-     ]
-    },
-    {
-     "id": "c_logoData",
-     "label": "تصویر لوگوی دلخواه:",
-     "full": true,
-     "kind": "image",
-     "showIf": {
-      "field": "c_logo",
-      "in": [
-       "custom"
-      ]
-     }
-    },
-    {
-     "id": "c_r1",
-     "label": "ردیف ۱:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "r",
-     "colLabel": "ستون راست"
-    },
-    {
-     "id": "c_r2",
-     "label": "ردیف ۲:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "r",
-     "colLabel": "ستون راست"
-    },
-    {
-     "id": "c_r3",
-     "label": "ردیف ۳:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "r",
-     "colLabel": "ستون راست"
-    },
-    {
-     "id": "c_r4",
-     "label": "ردیف ۴:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "r",
-     "colLabel": "ستون راست"
-    },
-    {
-     "id": "c_m1",
-     "label": "ردیف ۱:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "m",
-     "colLabel": "ستون وسط",
-     "showIf": {
-      "field": "c_logo",
-      "in": [
-       ""
-      ]
-     }
-    },
-    {
-     "id": "c_m2",
-     "label": "ردیف ۲:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "m",
-     "colLabel": "ستون وسط",
-     "showIf": {
-      "field": "c_logo",
-      "in": [
-       ""
-      ]
-     }
-    },
-    {
-     "id": "c_m3",
-     "label": "ردیف ۳:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "m",
-     "colLabel": "ستون وسط"
-    },
-    {
-     "id": "c_m4",
-     "label": "ردیف ۴:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "m",
-     "colLabel": "ستون وسط"
-    },
-    {
-     "id": "c_l1",
-     "label": "ردیف ۱:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "l",
-     "colLabel": "ستون چپ"
-    },
-    {
-     "id": "c_l2",
-     "label": "ردیف ۲:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "l",
-     "colLabel": "ستون چپ"
-    },
-    {
-     "id": "c_l3",
-     "label": "ردیف ۳:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "l",
-     "colLabel": "ستون چپ"
-    },
-    {
-     "id": "c_l4",
-     "label": "ردیف ۴:",
-     "full": false,
-     "kind": "input",
-     "type": "text",
-     "placeholder": "متن دلخواه",
-     "group": "cells",
-     "col": "l",
-     "colLabel": "ستون چپ"
-    },
-    {
-     "id": "c_intro",
-     "label": "توضیحات آغاز آزمون:",
-     "full": true,
-     "kind": "textarea",
-     "rows": 3
     }
    ]
   }

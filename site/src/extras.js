@@ -95,17 +95,25 @@
           var avg = pct.length ? pct.reduce(function (s, x) { return s + x; }, 0) / pct.length : null;
           summary.innerHTML = '';
           [[fa(exams.length), 'آزمون'], [fa((all || []).length), 'پاسخ'], [fa(graded.length), 'تصحیح‌شده'], [avg == null ? '—' : fa(avg.toFixed(1)) + '٪', 'میانگین درصد']].forEach(function (x) { summary.appendChild(el('div', {class: 'card stat'}, [el('div', {class: 'v', text: x[0]}), el('div', {class: 'l', text: x[1]})])); });
-          st.answersLoaded = true; if (st.classId) compute();
+          st.answersLoaded = true; st.allAnswers = all || []; if (st.onAnswers) st.onAnswers(st.allAnswers); if (st.classId) compute();
         } catch (e) { summary.innerHTML = ''; summary.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
       })();
       if (!exams.length) { c.appendChild(el('div', {class: 'card'}, [S.emptyBox('📈', 'هنوز آزمونی ندارید.')])); return; }
       if (statsOnly) {
-        /* تحلیل پیشرفتهٔ کیفیت سؤال (ReportsScreen.kt:74-110): انتخاب آزمون → native_question_analysis_v1 */
-        var an = el('div', {class: 'card'}, [el('h3', {text: '📊 تحلیل پیشرفته کیفیت سؤال'})]);
-        var anChips = el('div', {class: 'row', style: 'flex-wrap:wrap;gap:6px;margin-bottom:10px'}), anBody = el('div'), anSel = null;
-        function drawAn() { anChips.innerHTML = ''; exams.forEach(function (e) { anChips.appendChild(el('button', {class: 'chip ' + (anSel === e.id ? 'brand' : 'off'), text: e.title.slice(0, 18), onclick: function () { anSel = e.id; drawAn(); if (window.SiteAdmin) window.SiteAdmin.questionAnalysis(anBody, e.id); }})); }); }
-        drawAn(); anBody.appendChild(el('p', {class: 'muted', text: 'یک آزمون را انتخاب کنید تا تحلیل سؤال‌های آن نمایش داده شود.'}));
-        an.appendChild(anChips); an.appendChild(anBody); c.appendChild(an);
+        /* V208 — «تحلیل پیشرفته کیفیت سؤال» حذف شد؛ به‌جایش نمودار خوانای وضعیت پاسخ‌ها (مثل AnswerStatusCard اپ) */
+        var stCard = el('div', {class: 'card rp-status'}, [el('h3', {text: 'وضعیت پاسخ‌ها'}), el('p', {class: 'muted', text: 'در حال دریافت…'})]);
+        c.appendChild(stCard);
+        st.onAnswers = function (all) {
+          var total = all.length, graded = all.filter(function (a) { return a.graded; }).length, pending = total - graded;
+          function pct(n) { return total ? Math.round(n * 100 / total) : 0; }
+          stCard.innerHTML = '';
+          stCard.appendChild(el('h3', {text: 'وضعیت پاسخ‌ها'}));
+          stCard.appendChild(el('p', {class: 'muted', text: 'از مجموع ' + fa(total) + ' پاسخ دریافتی'}));
+          stCard.appendChild(el('div', {class: 'rp-bar'}, [el('span', {class: 'g', style: 'width:' + pct(graded) + '%'}), el('span', {class: 'p', style: 'width:' + pct(pending) + '%'})]));
+          stCard.appendChild(el('div', {class: 'rp-legend'}, [el('i', {class: 'g'}), el('span', {text: 'تصحیح‌شده'}), el('b', {text: fa(graded) + ' پاسخ · ' + fa(pct(graded)) + '٪'})]));
+          stCard.appendChild(el('div', {class: 'rp-legend'}, [el('i', {class: 'p'}), el('span', {text: 'در انتظار تصحیح'}), el('b', {text: fa(pending) + ' پاسخ · ' + fa(pct(pending)) + '٪'})]));
+        };
+        if (st.allAnswers) st.onAnswers(st.allAnswers);
         return;
       }
       /* انتخاب کلاس و آزمون‌ها */
@@ -135,8 +143,8 @@
           el('button', {class: 'btn light sm', text: '📄 CSV', onclick: function () { download('گزارش-' + safeName(cls ? cls.name : 'کلاس') + '.csv', csv(tableRows()), 'text/csv;charset=utf-8'); }}),
           el('button', {class: 'btn light sm', text: '🖨 چاپ / PDF', onclick: function () { printTable((cls ? 'گزارش کلاس ' + cls.name : 'گزارش کلاس'), tableRows()); }})]));
         if (!rows.length) { out.appendChild(S.emptyBox('🎓', 'این کلاس دانش‌آموزی ندارد.')); return; }
-        out.appendChild(el('div', {style: 'overflow:auto'}, [el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, header.map(function (h) { return el('th', {text: h}); }))]),
-          el('tbody', {}, rows.map(function (r) { return el('tr', {}, [el('td', {html: '<b>' + esc(r.name) + '</b>'})].concat(sel.map(function (e) { return el('td', {text: r.scores[e.id] != null ? fa(S.fmtScore(r.scores[e.id])) : '—'}); }), [el('td', {}, [r.avg == null ? el('span', {class: 'muted', text: '—'}) : el('span', {class: 'chip ' + (r.avg >= 50 ? 'ok' : 'danger'), text: fa(r.avg.toFixed(1)) + '٪'})])])); }))])]));
+        out.appendChild(el('div', {style: 'overflow:auto'}, [el('table', {class: 'tbl rp-grades'}, [el('thead', {}, [el('tr', {}, header.map(function (h, i) { return el('th', {text: h, class: i ? 'num' : 'name'}); }))]),
+          el('tbody', {}, rows.map(function (r) { return el('tr', {}, [el('td', {class: 'name', html: '<b>' + esc(r.name) + '</b>'})].concat(sel.map(function (e) { return el('td', {class: 'num', text: r.scores[e.id] != null ? fa(S.fmtScore(r.scores[e.id])) : '—'}); }), [el('td', {class: 'num'}, [r.avg == null ? el('span', {class: 'muted', text: '—'}) : el('span', {class: 'chip ' + (r.avg >= 50 ? 'ok' : 'danger'), text: fa(r.avg.toFixed(1)) + '٪'})])])); }))])]));
         /* نمودار سادهٔ توزیع */
         var buckets = [0, 0, 0, 0, 0]; rows.forEach(function (r) { if (r.avg != null) buckets[Math.min(4, Math.floor(r.avg / 20))]++; });
         var mx = Math.max.apply(null, buckets.concat([1]));

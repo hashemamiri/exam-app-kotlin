@@ -243,7 +243,8 @@ fun ExamPrintCenterScreen(
             // اشتباه نشوند. حذف هم دارند، وگرنه راهی برای پاک‌کردنشان نیست.
             items(localExams, key = { "local-" + it.id }) { rec ->
                 Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    // V208 — کارت جمع‌وجور: بدون برچسب «چاپی»؛ عنوان + درس + تعداد سؤال در یک ردیف
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -254,11 +255,16 @@ fun ExamPrintCenterScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f, fill = false)
                             )
-                            AssistChip(onClick = {}, label = { Text("چاپی") })
+                            Text(
+                                "${rec.subject.ifBlank { "—" }} · ${rec.questionCount} سؤال",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
-                        Text("درس: ${rec.subject.ifBlank { "—" }} · ${rec.questionCount} سؤال")
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)

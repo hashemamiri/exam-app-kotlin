@@ -57,7 +57,7 @@ class ReportsViewModel(
                     selectedAnalysisExamId = exams.firstOrNull()?.id
                 )
             }
-            exams.firstOrNull()?.let { loadQuestionAnalysis(it.id) }
+            // V208 — تحلیل کیفیت سؤال از صفحهٔ آمار حذف شد؛ بارگیری خودکار آن هم لازم نیست.
         }.onFailure(::fail)
     }
 

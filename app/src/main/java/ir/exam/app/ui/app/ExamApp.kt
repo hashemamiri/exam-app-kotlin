@@ -789,7 +789,8 @@ private fun AuthenticatedExamApp(
     }?.let { remote ->
         UpdatePromptDialog(
             remoteName = remote.name,
-            notes = remote.notesFa.take(3),
+            // V208 — فقط تیترهای نسخهٔ جدید (نه سه نسخهٔ اخیر)
+            notes = ir.exam.app.core.update.ReleaseNotes.latestBullets(remote.notesFa).ifEmpty { remote.notesFa.take(3) },
             downloading = updateState.downloading,
             downloadFraction = updateState.downloadFraction,
             progressText = updateState.progressText,

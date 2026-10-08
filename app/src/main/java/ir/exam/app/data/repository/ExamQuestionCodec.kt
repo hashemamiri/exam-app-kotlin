@@ -172,6 +172,7 @@ internal object ExamQuestionCodec {
                 answerLines = (obj["answerLines"]?.asInt() ?: if (type == QuestionType.ESSAY) 5 else 2).coerceIn(0, 12),
                 answerLineStyle = obj["answerLineStyle"]?.asString()?.takeIf { it in setOf("lined", "blank", "grid") } ?: "lined",
                 answerLineSpacingCm = ((obj["answerLineSpacingCm"] as? JsonPrimitive)?.floatOrNull ?: 1.0f).coerceIn(0.5f, 2.0f),
+                optionsLayout = obj["optionsLayout"]?.asString()?.takeIf { it in setOf("1row", "2rows", "4rows") } ?: "",
                 // V135 — صوت سؤال
                 audioUri = obj["audio"]?.asString()?.takeIf(String::isNotBlank),
                 audioBytes = (obj["audioBytes"] as? JsonPrimitive)?.longOrNull ?: 0L,
@@ -219,6 +220,8 @@ internal object ExamQuestionCodec {
             values["answerLines"] = JsonPrimitive(question.answerLines.coerceIn(0, 12))
             values["answerLineStyle"] = JsonPrimitive(question.answerLineStyle)
             values["answerLineSpacingCm"] = JsonPrimitive(question.answerLineSpacingCm.coerceIn(0.5f, 2.0f))
+            // V208 — فقط وقتی سؤال چیدمان خودش را دارد نوشته می‌شود (خالی = پیش‌فرض آزمون)
+            if (question.optionsLayout.isNotBlank()) values["optionsLayout"] = JsonPrimitive(question.optionsLayout)
             // V68.3.1 — استایل تکه‌ای متن برای «هر نوع سؤال» نوشته می‌شود (در
             // V68.0 اشتباهاً داخل شاخهٔ MATCHING بود و roundtrip شکست می‌خورد).
             encodeSpans(question.textSpans)?.let { values["spans"] = it }

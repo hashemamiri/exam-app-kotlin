@@ -151,8 +151,17 @@ fun AboutScreen(
             }
         }
         // V132 — لیست تغییرات نسخهٔ جدید زیرِ دکمه‌های بررسی/دریافت (همیشه دیده می‌شود؛ چه قبل از دانلود چه بعد از آن).
+        // V208 — سه نسخهٔ آخر، هر کدام با تیترهای کوتاه (بلوک اول = نسخهٔ جدید).
         state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
-            item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
+            val blocks = ir.exam.app.core.update.ReleaseNotes.lastVersions(remote.notesFa, 3)
+            if (blocks.isEmpty()) {
+                item { ChangeListCard("تغییرات نسخه ${remote.name}", remote.notesFa) }
+            } else {
+                blocks.forEachIndexed { index, block ->
+                    val title = if (block.version.isBlank()) "تغییرات نسخه ${remote.name}" else if (index == 0) "تغییرات نسخه ${block.version} (جدید)" else "نسخه ${block.version}"
+                    item { ChangeListCard(title, block.bullets) }
+                }
+            }
         }
     }
 }

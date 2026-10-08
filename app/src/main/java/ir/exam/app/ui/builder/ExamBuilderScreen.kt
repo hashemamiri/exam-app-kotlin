@@ -11,6 +11,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -1294,6 +1296,10 @@ private fun QuestionEditor(
                 if (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.NUMERIC) {
                     PrintAnswerSpaceControls(question = question, viewModel = viewModel)
                 }
+                // V208 — چیدمان گزینه‌های چهارگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه» پیش‌نمایش)
+                if (question.type == QuestionType.MULTIPLE_CHOICE) {
+                    PrintOptionsLayoutControls(question = question, viewModel = viewModel)
+                }
             } else {
             Text("تصویر پاسخ دانش‌آموز")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1857,6 +1863,24 @@ private fun PrintAnswerSpaceControls(question: QuestionDraft, viewModel: ExamBui
             steps = 14,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+/** V208 — چیدمان گزینه‌ها در چاپ: پیش‌فرض آزمون / یک ردیف / دو ردیف / هر گزینه یک ردیف. */
+@Composable
+private fun PrintOptionsLayoutControls(question: QuestionDraft, viewModel: ExamBuilderViewModel) {
+    Text("چیدمان گزینه‌ها در چاپ", style = MaterialTheme.typography.labelLarge)
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        listOf("" to "پیش‌فرض آزمون", "1row" to "یک ردیف", "2rows" to "دو ردیف", "4rows" to "هر گزینه یک ردیف").forEach { (value, label) ->
+            FilterChip(
+                selected = question.optionsLayout == value,
+                onClick = { viewModel.setOptionsLayout(question.id, value) },
+                label = { Text(label) }
+            )
+        }
     }
 }
 

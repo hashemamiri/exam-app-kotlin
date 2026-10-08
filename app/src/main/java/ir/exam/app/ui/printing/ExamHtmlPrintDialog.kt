@@ -1126,6 +1126,7 @@ private fun printOptionTitle(id: String): String = when (id) {
     "opt_orientation" -> "جهت کاغذ"
     "opt_marginPreset" -> "حاشیه‌ها"
     "opt_questionSpacing" -> "فاصلهٔ بین سؤالات"
+    "opt_optionsLayout" -> "چیدمان گزینه‌های چهارگزینه‌ای"
     else -> "انتخاب"
 }
 

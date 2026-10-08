@@ -69,7 +69,7 @@
   function saveSetup() {
     try {
       var ids = ['opt_paper','opt_customW','opt_customH','opt_orientation','opt_mT','opt_mB','opt_mR','opt_mL',
-                 'opt_pageBorder','opt_showPageNumbers','opt_repeatHeader','opt_showScores','opt_questionSpacing','opt_baseFont'];
+                 'opt_pageBorder','opt_showPageNumbers','opt_repeatHeader','opt_showScores','opt_questionSpacing','opt_optionsLayout','opt_baseFont'];
       var data = {};
       ids.forEach(function (id) {
         var el = $(id); if (!el) return;
@@ -124,6 +124,10 @@
         '</div>' +
         '<div class="field pgs-setup-full"><label>فاصلهٔ بین سؤالات:</label><select id="opt_questionSpacing">' +
           '<option value="compact">فشرده</option><option value="normal" selected>معمولی</option><option value="open">باز</option>' +
+        '</select></div>' +
+        /* V208 — پیش‌فرضِ چیدمان گزینه‌های چهارگزینه‌ای برای کل آزمون (هر سؤال می‌تواند جداگانه عوض کند) */
+        '<div class="field pgs-setup-full"><label>چیدمان گزینه‌های چهارگزینه‌ای:</label><select id="opt_optionsLayout">' +
+          '<option value="1row">همهٔ گزینه‌ها در یک ردیف</option><option value="2rows" selected>دو ردیف (دو گزینه در هر ردیف)</option><option value="4rows">هر گزینه در یک ردیف</option>' +
         '</select></div>' +
         '<div class="pgs-setup-hint">💡 این تنظیمات هم روی پیش‌نمایش اعمال می‌شوند هم روی چاپ — خروجی چاپ دقیقاً همان چیزی است که در پیش‌نمایش می‌بینید. با «💾 ذخیره آزمون (JSON)» همراه آزمون ذخیره می‌شوند.</div>' +
       '</div>' +
@@ -213,7 +217,7 @@
       if (el) el.addEventListener('input', function () { if (preset) preset.value = 'custom'; });
     });
     ['opt_customW','opt_customH','opt_orientation','opt_baseFont','opt_pageBorder','opt_showPageNumbers',
-     'opt_repeatHeader','opt_showScores','opt_questionSpacing'].forEach(function (id) {
+     'opt_repeatHeader','opt_showScores','opt_questionSpacing','opt_optionsLayout'].forEach(function (id) {
       var el = $(id);
       if (el) { el.addEventListener('change', saveSetup); el.addEventListener('input', saveSetup); }
     });

@@ -29,17 +29,20 @@ data class PrintPageSetup(
     val repeatHeader: Boolean = false,
     val font: Int = 10,
     val spacing: String = "normal",
-    val showScores: Boolean = true
+    val showScores: Boolean = true,
+    /** V208 — پیش‌فرض چیدمان گزینه‌های چهارگزینه‌ای: 1row / 2rows / 4rows. */
+    val optionsLayout: String = "2rows"
 ) {
     /** JSON برای رندرر (همهٔ مقادیر اعتبارسنجی‌شده‌اند؛ رشته‌ها فقط از فهرستِ ثابت). */
     fun toJson(): String {
         val p = if (paper in PAPERS.keys || paper == "custom") paper else "a4"
         val o = if (orient == "landscape") "landscape" else "portrait"
         val sp = if (spacing in SPACINGS) spacing else "normal"
+        val ol = if (optionsLayout in OPTION_LAYOUTS) optionsLayout else "2rows"
         return "{\"paper\":\"$p\",\"orient\":\"$o\",\"customW\":${customW.coerceIn(60, 600)},\"customH\":${customH.coerceIn(60, 600)}," +
             "\"mT\":${mT.coerceIn(0, 80)},\"mB\":${mB.coerceIn(0, 80)},\"mR\":${mR.coerceIn(0, 80)},\"mL\":${mL.coerceIn(0, 80)}," +
             "\"border\":$border,\"pageNumbers\":$pageNumbers,\"repeatHeader\":$repeatHeader,\"font\":${font.coerceIn(6, 20)}," +
-            "\"spacing\":\"$sp\",\"showScores\":$showScores}"
+            "\"spacing\":\"$sp\",\"showScores\":$showScores,\"optionsLayout\":\"$ol\"}"
     }
 
     /** اندازهٔ کاغذ به میلی‌متر با درنظرگرفتنِ جهت. */
@@ -79,6 +82,7 @@ data class PrintPageSetup(
             "a4" to "A4", "a5" to "A5", "b5" to "B5", "letter" to "Letter", "f4" to "F4", "legal" to "Legal", "custom" to "سفارشی"
         )
         val SPACINGS = listOf("compact", "normal", "open")
+        val OPTION_LAYOUTS = listOf("1row", "2rows", "4rows")
 
         /**
          * V126 — خواندنِ JSONِ پنلِ «تنظیمات صفحه»ی خودِ موتورِ وب (همان کلیدهای [toJson]).
@@ -103,7 +107,8 @@ data class PrintPageSetup(
                 repeatHeader = bool("repeatHeader", d.repeatHeader),
                 font = int("font", d.font).coerceIn(6, 20),
                 spacing = str("spacing")?.takeIf { it in SPACINGS } ?: d.spacing,
-                showScores = bool("showScores", d.showScores)
+                showScores = bool("showScores", d.showScores),
+                optionsLayout = str("optionsLayout")?.takeIf { it in OPTION_LAYOUTS } ?: d.optionsLayout
             )
         }
     }
@@ -126,7 +131,8 @@ class PrintPageSetupStore(context: Context) {
             repeatHeader = getBoolean("repeatHeader", d.repeatHeader),
             font = getInt("font", d.font),
             spacing = getString("spacing", d.spacing) ?: d.spacing,
-            showScores = getBoolean("showScores", d.showScores)
+            showScores = getBoolean("showScores", d.showScores),
+            optionsLayout = getString("optionsLayout", d.optionsLayout)?.takeIf { it in OPTION_LAYOUTS } ?: d.optionsLayout
         )
     }
 
@@ -138,6 +144,7 @@ class PrintPageSetupStore(context: Context) {
             .putBoolean("border", s.border).putBoolean("pageNumbers", s.pageNumbers)
             .putBoolean("repeatHeader", s.repeatHeader).putInt("font", s.font)
             .putString("spacing", s.spacing).putBoolean("showScores", s.showScores)
+            .putString("optionsLayout", s.optionsLayout)
             .apply()
     }
 

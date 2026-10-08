@@ -99,7 +99,7 @@ class V27DataImageOptionsTest {
         val profile = source("app/src/main/java/ir/exam/app/ui/profile/ProfileSettingsScreen.kt")
         val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
         assertTrue("fillMaxSize().verticalScroll(rememberScrollState())" in data)
-        assertTrue("Text(\"وارد کردن آزمون\"" in data)
+        assertTrue("SettingsAccordionCard(title = \"وارد کردن آزمون\"" in data) // V208 — کارت بازشونده
         assertTrue("ExamPackageCodec.decode(raw)" in data)
         assertTrue("importExam.launch" in data)
         assertTrue("onImportExam = onImportExam" in profile)

@@ -678,15 +678,15 @@ function updateHeaderSettingsVisibility() {
   document.querySelectorAll('.header-fields').forEach(box => {
     box.classList.toggle('hidden', box.dataset.headerFields !== selected);
   });
-  const hintMap = {
-    classic: 'اطلاعات اختصاصی سربرگ ۱',
-    formal: 'اطلاعات اختصاصی سربرگ ۲',
-    sama: 'اطلاعات اختصاصی سربرگ ۳',
-    school: 'اطلاعات اختصاصی سربرگ ۴',
-    edu: 'اطلاعات اختصاصی سربرگ ۵',
-    'detailed-school': 'اطلاعات اختصاصی سربرگ ۶',
-    ministry: 'اطلاعات اختصاصی سربرگ ۷',
-    custom: 'اطلاعات اختصاصی سربرگ ۸'
+  const hintMap = { /* V208 — ایجاد سربرگ = سربرگ ۱ */
+    custom: 'اطلاعات اختصاصی سربرگ ۱',
+    classic: 'اطلاعات اختصاصی سربرگ ۲',
+    formal: 'اطلاعات اختصاصی سربرگ ۳',
+    sama: 'اطلاعات اختصاصی سربرگ ۴',
+    school: 'اطلاعات اختصاصی سربرگ ۵',
+    edu: 'اطلاعات اختصاصی سربرگ ۶',
+    'detailed-school': 'اطلاعات اختصاصی سربرگ ۷',
+    ministry: 'اطلاعات اختصاصی سربرگ ۸'
   };
   const hint = document.getElementById('activeHeaderHint');
   if (hint) hint.textContent = hintMap[selected] || 'اطلاعات اختصاصی سربرگ';
@@ -705,7 +705,7 @@ function buildHeader() {
   return buildClassicHeader();
 }
 
-/* V204 — سربرگ ۸ «ایجاد سربرگ»: سه ستون مجازی × پنج ردیف، متن آزاد در هر خانه؛
+/* V204 — سربرگ «ایجاد سربرگ» (V208: سربرگ ۱): سه ستون مجازی × پنج ردیف، متن آزاد در هر خانه؛
    اگر لوگو انتخاب شود در ستون وسط جای ردیف ۱ و ۲ می‌نشیند (rowspan=2). لوگوی دلخواه = data-URL محلی در c_logoData. */
 function customHeaderLogoSrc() {
   const sel = document.getElementById('c_logo');
@@ -722,16 +722,30 @@ function customHeaderLogoSrc() {
   return '';
 }
 function buildCustomHeader() {
-  /* V204.1 — بدون جدول و خط: سه ستون کنار هم (راست/وسط/چپ)، هر ستون چهار خط هم‌ارتفاع؛ لوگو = ارتفاع دو خط در ستون وسط */
+  /* V204.1 — بدون جدول و خط: سه ستون کنار هم (راست/وسط/چپ)؛ لوگو = ارتفاع دو خط در ستون وسط.
+     V208 — پنج ردیف در هر ستون، ارتفاعِ منعطف (فقط تا آخرین ردیفِ پرشده)، فاصلهٔ ردیف‌ها (c_gap، پیکسل)
+     و فونت (c_font) انتخابی؛ با لوگو، فاصله بین ردیف ۱ و ۲ ستون وسط اعمال نمی‌شود (لوگو یکپارچه می‌ماند). */
   const logo = customHeaderLogoSrc();
-  const line = (id) => `<div class="c8-line">${v(id) || '&nbsp;'}</div>`;
-  /* V204.4 — چهار ردیف */
-  const col = (prefix, cls) => { let h = ''; for (let i = 1; i <= 4; i++) h += line(prefix + i); return `<div class="c8-col ${cls}">${h}</div>`; };
+  const ROWS = 5;
+  const gapRaw = parseInt(v('c_gap'), 10);
+  const gap = isFinite(gapRaw) ? Math.max(0, Math.min(40, gapRaw)) : 0;
+  const font = String(v('c_font') || '').trim();
+  const fontCss = !font ? '' : (font === 'serif' ? 'serif' : `'${font.replace(/[^A-Za-z0-9 _-]/g, '')}', Vazirmatn, Tahoma, sans-serif`);
+  const filled = (id) => String(v(id) || '').replace(/&nbsp;/g, '').trim() !== '';
+  const lastFilled = (prefix) => { let n = 0; for (let i = 1; i <= ROWS; i++) if (filled(prefix + i)) n = i; return n; };
+  let rows = Math.max(lastFilled('c_r'), lastFilled('c_l'), lastFilled('c_m'), logo ? 2 : 0, 1);
+  if (logo) rows = Math.max(rows, 2);
+  const style = (i) => (gap && i < rows) ? ` style="margin-bottom:${gap}px"` : '';
+  const line = (id, i) => `<div class="c8-line"${style(i)}>${v(id) || '&nbsp;'}</div>`;
+  const col = (prefix, cls) => { let h = ''; for (let i = 1; i <= rows; i++) h += line(prefix + i, i); return `<div class="c8-col ${cls}">${h}</div>`; };
   let mid = '';
-  if (logo) mid += `<div class="c8-logo"><img class="c8-logo-img" src="${logo}" alt="لوگو"></div>`;
-  else mid += line('c_m1') + line('c_m2');
-  for (let i = 3; i <= 4; i++) mid += line('c_m' + i);
-  return `<div class="exam-header8">${col('c_r', 'c8-right')}<div class="c8-col c8-mid">${mid}</div>${col('c_l', 'c8-left')}</div>`;
+  if (logo) {
+    /* لوگو جای ردیف ۱ و ۲ (و فاصلهٔ بینشان) را می‌گیرد تا ستون‌ها تراز بمانند؛ خودِ تصویر ۴۴px می‌ماند */
+    mid += `<div class="c8-logo" style="height:${44 + gap}px${(gap && rows > 2) ? ';margin-bottom:' + gap + 'px' : ''}"><img class="c8-logo-img" src="${logo}" alt="لوگو"></div>`;
+  } else mid += line('c_m1', 1) + (rows >= 2 ? line('c_m2', 2) : '');
+  for (let i = 3; i <= rows; i++) mid += line('c_m' + i, i);
+  const hdrStyle = fontCss ? ` style="font-family:${fontCss}"` : '';
+  return `<div class="exam-header8"${hdrStyle}>${col('c_r', 'c8-right')}<div class="c8-col c8-mid">${mid}</div>${col('c_l', 'c8-left')}</div>`;
 }
 
 function buildClassicHeader() {
@@ -1038,7 +1052,7 @@ function buildMinistryHeader() {
 function addQuestion(type) {
   qIdCounter++;
   const q = { id: qIdCounter, type, text: '', score: '', options: [] };
-  if (type === 'multiple') { q.options = [{text:'',correct:false},{text:'',correct:false},{text:'',correct:false},{text:'',correct:false}]; q.optionsLayout = '2rows'; }
+  if (type === 'multiple') { q.options = [{text:'',correct:false},{text:'',correct:false},{text:'',correct:false},{text:'',correct:false}]; q.optionsLayout = ''; }
   else if (type === 'truefalse') q.options = [{text:'صحیح',correct:false},{text:'غلط',correct:false}];
   else if (type === 'long') { q.answerLines = 6; q.answerStyle = 'lined'; q.answerLineHeightCm = 0.75; }
   else if (type === 'fill') { q.answerLines = 2; q.answerStyle = 'lined'; q.answerLineHeightCm = 0.6; }
@@ -1098,9 +1112,10 @@ function renderEditor() {
         <span class="q-type-badge">${labels[q.type]}</span>
         <input type="text" class="q-score" placeholder="نمره" value="${escapeAttr(q.score)}" oninput="updateQ(${q.id},'score',this.value)">
         ${q.type==='multiple' ? `<select class="q-layout-select" title="چیدمان گزینه‌ها" onchange="updateQ(${q.id},'optionsLayout',this.value)">
-          <option value="1row" ${(q.optionsLayout||'2rows')==='1row'?'selected':''}>گزینه‌ها در یک سطر</option>
-          <option value="2rows" ${(q.optionsLayout||'2rows')==='2rows'?'selected':''}>گزینه‌ها در دو سطر</option>
-          <option value="4rows" ${(q.optionsLayout||'2rows')==='4rows'?'selected':''}>گزینه‌ها در چهار سطر</option>
+          <option value="" ${!q.optionsLayout?'selected':''}>چیدمان پیش‌فرض آزمون</option>
+          <option value="1row" ${q.optionsLayout==='1row'?'selected':''}>گزینه‌ها در یک سطر</option>
+          <option value="2rows" ${q.optionsLayout==='2rows'?'selected':''}>گزینه‌ها در دو سطر</option>
+          <option value="4rows" ${q.optionsLayout==='4rows'?'selected':''}>هر گزینه در یک سطر</option>
         </select>` : ''}
         ${(q.type==='long'||q.type==='fill') ? `<div class="q-answer-config">
           <span>فضای پاسخ:</span>
@@ -1239,7 +1254,8 @@ function getExamOptions() {
     showScores: document.getElementById('opt_showScores')?.checked !== false,
     showSeparators: document.getElementById('opt_showSeparators')?.checked !== false,
     showPageNumbers: document.getElementById('opt_showPageNumbers')?.checked !== false,
-    spacing: document.getElementById('opt_questionSpacing')?.value || 'normal'
+    spacing: document.getElementById('opt_questionSpacing')?.value || 'normal',
+    optionsLayout: document.getElementById('opt_optionsLayout')?.value || '2rows' /* V208 */
   };
 }
 function syncTotalScore() {
@@ -1717,8 +1733,10 @@ function renderPreview() {
     html += `<div class="q-rich-content" style="margin-bottom:6px;line-height:1.7;">${q.text ? renderRichText(q.text, q) : '.........'}</div>`;
     if (q.type === 'multiple' || q.type === 'truefalse') {
       const letters = q.type === 'multiple' ? ['الف','ب','ج','د','ه','و','ز','ح'] : ['صحیح','غلط'];
+      /* V208 — چیدمان هر سؤال، وگرنه پیش‌فرض آزمون (تنظیمات صفحه)؛ «یک ردیف» به تعداد گزینه‌ها ستون می‌سازد */
+      const optLayout = q.optionsLayout || opts.optionsLayout || '2rows';
       const choiceColumns = q.type === 'multiple'
-        ? ((q.optionsLayout || '2rows') === '1row' ? 'repeat(4, 1fr)' : ((q.optionsLayout || '2rows') === '4rows' ? '1fr' : 'repeat(2, 1fr)'))
+        ? (optLayout === '1row' ? `repeat(${Math.max(1, q.options.length)}, 1fr)` : (optLayout === '4rows' ? '1fr' : 'repeat(2, 1fr)'))
         : 'repeat(2, 1fr)';
       html += `<div style="margin-right:18px;display:grid;grid-template-columns:${choiceColumns};gap:3px 20px;line-height:1.7;">`;
       q.options.forEach((o,i) => {

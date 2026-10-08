@@ -274,7 +274,7 @@ try:
     schema = json.loads(read(SCHEMA))
     ids = [item.get("id") for item in schema.get("templates", [])]
     require(
-        ids == ["classic", "formal", "sama", "school", "edu", "detailed-school", "ministry", "custom"],  # V204
+        ids == ["custom", "classic", "formal", "sama", "school", "edu", "detailed-school", "ministry"],  # V204/V208 (ایجاد سربرگ = سربرگ ۱)
         "header schema template ids changed or are incomplete",
     )
     require(all(template.get("fields") for template in schema.get("templates", [])), "a header template has no fields")

@@ -33,7 +33,7 @@
   function newQuestion(type) {
     var q = {id: uuid(), type: type || 'multiple', text: '', score: 1, options: ['', '', '', ''], optionImages: [null, null, null, null], correctIndex: null, expectedText: '', expectedNumber: '', tolerance: '0', caseSensitive: false,
       matchingLeft: ['', ''], matchingRight: ['', ''], matchingPairs: {}, images: [], answerImageMode: 'no', allowAnswerGraph: false, maxAnswerImages: 1,
-      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}};
+      textAlign: 'right', imagePosition: 'below', fontFamily: 'default', fontSizeSp: 16, bold: false, italic: false, answerLines: type === 'essay' ? 5 : 2, answerLineStyle: 'lined', optionsLayout: '', answerLineSpacingCm: 1.0, spans: [], alignSpans: [], raw: {}, rawKey: {}};
     if (type === 'truefalse') { q.options = []; q.optionImages = []; q.expectedText = 'true'; }
     if (type === 'fill' || type === 'numeric' || type === 'essay') { q.options = []; q.optionImages = []; }
     return q;
@@ -66,6 +66,7 @@
     q.answerLines = obj.answerLines != null ? Number(obj.answerLines) : (type === 'essay' ? 5 : 2);
     q.answerLineStyle = ['lined', 'blank', 'grid'].indexOf(obj.answerLineStyle) >= 0 ? obj.answerLineStyle : 'lined';
     q.answerLineSpacingCm = obj.answerLineSpacingCm != null ? Number(obj.answerLineSpacingCm) : 1.0;
+    q.optionsLayout = ['1row', '2rows', '4rows'].indexOf(obj.optionsLayout) >= 0 ? obj.optionsLayout : ''; /* V208 */
     q.audio = obj.audio || null; q.audioBytes = obj.audioBytes; q.audioMs = obj.audioMs;
     q.raw = obj; q.rawKey = key;
     return q;
@@ -84,6 +85,7 @@
       v.allowImages = q.answerImageMode; v.allowAnswerGraph = !!q.allowAnswerGraph; v.maxImages = q.answerImageMode === 'no' ? 0 : Math.max(1, Math.min(10, Number(q.maxAnswerImages) || 1));
       v.align = q.textAlign; v.imgPos = q.imagePosition; v.font = q.fontFamily; v.fontSize = Math.max(8, Math.min(40, Number(q.fontSizeSp) || 16)); v.bold = !!q.bold; v.italic = !!q.italic;
       v.answerLines = Math.max(0, Math.min(12, Number(q.answerLines) || 0)); v.answerLineStyle = q.answerLineStyle; v.answerLineSpacingCm = Math.max(0.5, Math.min(2, Number(q.answerLineSpacingCm) || 1));
+      if (q.optionsLayout) v.optionsLayout = q.optionsLayout; else delete v.optionsLayout; /* V208 — خالی = پیش‌فرض آزمون */
       if (q.spans && q.spans.length) v.spans = q.spans; else delete v.spans;
       if (q.alignSpans && q.alignSpans.length) v.alignSpans = q.alignSpans; else delete v.alignSpans;
       if (q.type === 'multiple') { v.options = q.options.slice(); v.optionImages = q.options.map(function (_, i) { return q.optionImages[i] || ''; }); if (q.optionStyles) v.optionStyles = q.optionStyles; }
@@ -640,6 +642,13 @@
           inp('تعداد خط', String(q.answerLines), function (v) { q.answerLines = Math.max(0, Math.min(12, parseInt(en(v), 10) || 0)); mark(); }, 'number'),
           sel('نوع خط', q.answerLineStyle, [['lined', 'خط‌دار'], ['blank', 'ساده'], ['grid', 'شطرنجی']], function (v) { q.answerLineStyle = v; mark(); }),
           inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
+        ]));
+      }
+      /* V208 — چیدمان گزینه‌های چهارگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
+      if (state.mode === 'print' && q.type === 'multiple') {
+        editor.appendChild(el('h4', {text: 'چیدمان گزینه‌ها در برگهٔ چاپی', style: 'margin-top:14px'}));
+        editor.appendChild(el('div', {class: 'grid3'}, [
+          sel('چیدمان', q.optionsLayout || '', [['', 'پیش‌فرض آزمون'], ['1row', 'همه در یک ردیف'], ['2rows', 'دو ردیف'], ['4rows', 'هر گزینه یک ردیف']], function (v) { q.optionsLayout = v; mark(); })
         ]));
       }
       /* پاسخ تصویری (آنلاین) */

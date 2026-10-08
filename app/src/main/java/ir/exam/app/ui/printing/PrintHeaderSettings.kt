@@ -133,7 +133,7 @@ fun HeaderSettingsDialog(
     var templateId by remember(currentValues) {
         mutableStateOf(
             currentValues["f_headerTemplate"]?.takeIf { saved -> schema.templates.any { it.id == saved } }
-                ?: schema.templates.firstOrNull()?.id ?: "classic"
+                ?: schema.templates.firstOrNull { it.id == "classic" }?.id ?: schema.templates.firstOrNull()?.id ?: "classic"
         )
     }
     // نقشهٔ observable — وگرنه تایپ در فیلدها بازسازی نمی‌شود

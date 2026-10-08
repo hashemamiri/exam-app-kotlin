@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.ui.builder.ExamImportDraft
+import ir.exam.app.ui.common.SettingsAccordionCard
 import java.io.ByteArrayOutputStream
 
 @Composable
@@ -73,72 +74,63 @@ fun DataPortabilitySection(onImportExam: (ExamImportDraft) -> Unit = {}) {
         state.exportFile?.let { createFile.launch(it.fileName) }
     }
 
+    // V208 — هر بخش «داده‌ها» یک کارت بازشونده مثل «حساب»
+    var expanded by remember { mutableStateOf<String?>("d1") }
+    fun toggle(key: String) { expanded = if (expanded == key) null else key }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("وارد کردن آزمون", style = MaterialTheme.typography.titleMedium)
-                Text("فایل استاندارد آزمون را بررسی و مستقیماً در آزمون‌ساز Native باز کنید.")
-                Button(
-                    onClick = {
-                        importExam.launch(arrayOf("application/octet-stream", "application/json", "text/plain"))
-                    },
-                    enabled = !state.loading,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("انتخاب و وارد کردن آزمون") }
-            }
+        SettingsAccordionCard(title = "وارد کردن آزمون", expanded = expanded == "d1", onToggle = { toggle("d1") }) {
+            Text("فایل استاندارد آزمون را بررسی و مستقیماً در آزمون‌ساز Native باز کنید.")
+            Button(
+                onClick = {
+                    importExam.launch(arrayOf("application/octet-stream", "application/json", "text/plain"))
+                },
+                enabled = !state.loading,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("انتخاب و وارد کردن آزمون") }
         }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("پشتیبان کامل Native", style = MaterialTheme.typography.titleMedium)
-                Text("آزمون‌ها و کلیدها، کلاس‌ها، عضویت‌ها و سربرگ در JSON نسخه‌دار ذخیره می‌شوند.")
-                Text(
-                    "رمز دانش‌آموز، token، کلید API و plain_password عمداً وارد فایل نمی‌شوند.",
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = viewModel::exportBackup, enabled = !state.loading) { Text("ساخت پشتیبان") }
-                    OutlinedButton(
-                        enabled = !state.loading,
-                        onClick = { openFile.launch(arrayOf("application/json", "text/plain")) }
-                    ) { Text("بازیابی") }
-                }
-                if (state.loading) CircularProgressIndicator()
-                state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            }
-        }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("قانون بازیابی", style = MaterialTheme.typography.titleMedium)
-                Text("داده موجود پاک نمی‌شود؛ آزمون‌ها با شناسه و کد تازه ساخته می‌شوند.")
-                Text("ساخت آزمون‌های بازیابی‌شده طبق کیف پول V9 و به‌صورت اتمیک محاسبه می‌شود.")
-                Text("عضویت فقط برای دانش‌آموزانی بازیابی می‌شود که اکنون با همان نام کاربری زیر حساب شما وجود دارند.")
-            }
-        }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("نگهداری امن Storage", style = MaterialTheme.typography.titleMedium)
-                Text("ابتدا فقط بررسی کنید. حذف واقعی نیازمند دو Secret مدیریتی و شناسه حساب مجاز در Edge Function است.")
+        SettingsAccordionCard(title = "پشتیبان کامل Native", expanded = expanded == "d2", onToggle = { toggle("d2") }) {
+            Text("آزمون‌ها و کلیدها، کلاس‌ها، عضویت‌ها و سربرگ در JSON نسخه‌دار ذخیره می‌شوند.")
+            Text(
+                "رمز دانش‌آموز، token، کلید API و plain_password عمداً وارد فایل نمی‌شوند.",
+                color = MaterialTheme.colorScheme.primary
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = viewModel::exportBackup, enabled = !state.loading) { Text("ساخت پشتیبان") }
                 OutlinedButton(
-                    onClick = viewModel::checkStorage,
                     enabled = !state.loading,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("بررسی بدون حذف") }
-                Button(
-                    onClick = { confirmCleanup = true },
-                    enabled = !state.loading,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("پاک‌سازی مجاز") }
-                state.maintenance?.let { result ->
-                    Text(
-                        "فایل آزمون اسکن‌شده: ${result.scannedExamObjects} · orphan: ${result.orphanCandidates} · " +
-                            "APK اسکن‌شده: ${result.scannedApks} · قدیمی: ${result.apkCandidates} · " +
-                            "حذف‌شده: ${result.deletedObjects + result.deletedApks}"
-                    )
-                }
+                    onClick = { openFile.launch(arrayOf("application/json", "text/plain")) }
+                ) { Text("بازیابی") }
+            }
+            if (state.loading) CircularProgressIndicator()
+            state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
+        SettingsAccordionCard(title = "قانون بازیابی", expanded = expanded == "d3", onToggle = { toggle("d3") }) {
+            Text("داده موجود پاک نمی‌شود؛ آزمون‌ها با شناسه و کد تازه ساخته می‌شوند.")
+            Text("ساخت آزمون‌های بازیابی‌شده طبق کیف پول V9 و به‌صورت اتمیک محاسبه می‌شود.")
+            Text("عضویت فقط برای دانش‌آموزانی بازیابی می‌شود که اکنون با همان نام کاربری زیر حساب شما وجود دارند.")
+        }
+        SettingsAccordionCard(title = "نگهداری امن Storage", expanded = expanded == "d4", onToggle = { toggle("d4") }) {
+            Text("ابتدا فقط بررسی کنید. حذف واقعی نیازمند دو Secret مدیریتی و شناسه حساب مجاز در Edge Function است.")
+            OutlinedButton(
+                onClick = viewModel::checkStorage,
+                enabled = !state.loading,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("بررسی بدون حذف") }
+            Button(
+                onClick = { confirmCleanup = true },
+                enabled = !state.loading,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("پاک‌سازی مجاز") }
+            state.maintenance?.let { result ->
+                Text(
+                    "فایل آزمون اسکن‌شده: ${result.scannedExamObjects} · orphan: ${result.orphanCandidates} · " +
+                        "APK اسکن‌شده: ${result.scannedApks} · قدیمی: ${result.apkCandidates} · " +
+                        "حذف‌شده: ${result.deletedObjects + result.deletedApks}"
+                )
             }
         }
     }

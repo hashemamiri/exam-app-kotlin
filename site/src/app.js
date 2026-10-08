@@ -736,7 +736,7 @@
     var schema = window.__HEADER_SCHEMA;
     if (!schema || !Array.isArray(schema.templates) || !schema.templates.length) { box.appendChild(el('p', {class: 'muted', text: 'قالب‌های سربرگ خوانده نشد. لطفاً دوباره تلاش کنید.'})); return null; }
     var cur = readPrintHeader(), values = Object.assign({}, cur);
-    var tplId = schema.templates.some(function (t) { return t.id === cur.f_headerTemplate; }) ? cur.f_headerTemplate : schema.templates[0].id;
+    var tplId = schema.templates.some(function (t) { return t.id === cur.f_headerTemplate; }) ? cur.f_headerTemplate : 'classic'; /* V208 — «ایجاد سربرگ» اول فهرست است ولی پیش‌فرضِ بدون ذخیره همان classic می‌ماند */
     var list = el('div', {class: 'hdr-fields'});
     var sel = el('select', {class: 'hdr-tpl'});
     schema.templates.forEach(function (t) { sel.appendChild(el('option', {value: t.id, text: t.label})); });
@@ -863,7 +863,8 @@
         var optStyles = Array.isArray(q.optionStyles) ? q.optionStyles : [];
         o.type = 'multiple';
         o.options = (q.options || []).map(function (t, i) { var st = styleTriple(optStyles[i]); var r = {text: String(t == null ? '' : t), correct: i === ci}; if (st) { r.bold = st.bold; r.italic = st.italic; if (st.size) r.size = st.size; } return r; });
-        o.optionsLayout = o.options.length > 2 ? '2rows' : '1row';
+        /* V208 — چیدمان خودِ سؤال؛ خالی → پیش‌فرض آزمون (تنظیمات صفحه)؛ دو گزینه‌ای مثل قبل یک ردیف */
+        o.optionsLayout = ['1row', '2rows', '4rows'].indexOf(q.optionsLayout) >= 0 ? q.optionsLayout : (o.options.length <= 2 ? '1row' : '');
         if (ci >= 0 && q.options && q.options[ci] != null) o.answer = String(q.options[ci]);
       } else if (type === 'truefalse') {
         var t = key.correctAnswer === true || key.correctAnswer === 'true';

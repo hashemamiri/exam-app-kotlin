@@ -81,6 +81,7 @@ object PrintableFromDrafts {
             answerLines = question.answerLines,
             answerLineStyle = question.answerLineStyle,
             answerLineSpacingCm = question.answerLineSpacingCm,
+            optionsLayout = question.optionsLayout,
             textAlign = question.textAlign,
             imagePosition = question.imagePosition,
             fontFamily = question.fontFamily,

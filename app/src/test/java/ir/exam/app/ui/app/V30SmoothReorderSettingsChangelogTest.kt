@@ -120,7 +120,8 @@ class V30SmoothReorderSettingsChangelogTest {
     fun `workflow publishes real Persian notes from the changelog file`() {
         val workflow = source(".github/workflows/android.yml")
         assertTrue("text/CHANGELOG_FA.txt" in workflow)
-        assertTrue("removeprefix(\"-\")" in workflow)
+        // V208 — سطرها خام می‌مانند تا اپ بلوک نسخه/تیترها را بسازد (ReleaseNotes)
+        assertTrue("if headers > 3:" in workflow)
         assertTrue("p_notes_fa" in workflow)
         val changelog = source("text/CHANGELOG_FA.txt")
         assertTrue("جابه‌جایی" in changelog)
