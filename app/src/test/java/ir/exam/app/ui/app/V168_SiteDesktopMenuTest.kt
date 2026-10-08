@@ -80,4 +80,16 @@ class V223_SiteDesktopPrintButtonsTest {
         val m = src("site/src/mobile.js")
         assertTrue("studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive" in m)
     }
+
+    @Test
+    fun v224_1EditStudentDialogLikeApp() {
+        val js = File("site/src/school.js").readText()
+        val css = File("site/src/site.css").readText()
+        assertTrue(js.contains("function editStudentDialog(s, done)"))
+        assertTrue(js.contains("return editStudentDialog(s, done);"))
+        assertTrue(js.contains("'رمز جدید اختیاری'") && js.contains("'رمز فعلی'"))
+        assertTrue(js.contains("function rememberPw(creds)"))
+        assertTrue(js.contains("class: 'st-sq red'") && js.contains("class: 'st-sq ok'"))
+        assertTrue(css.contains(".st-sq.red{background:#E5484D}") && css.contains(".st-sq.ok{background:#25A86B}"))
+    }
 }

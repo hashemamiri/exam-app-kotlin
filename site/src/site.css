@@ -1433,3 +1433,6 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .chip.gen-f.on{background:#FF5C9A;border-color:#FF5C9A;color:#fff}
 .dk .m-sheet-bg{--m-bg:#E9EEF5;--m-ink:#263142;--m-muted:#7B8798;--m-dark:#ABB7C7;--m-light:#fff;--m-danger:#C85B6B}
 .m-dark.dk .m-sheet-bg,.m-dark .dk .m-sheet-bg{--m-bg:#1F2530;--m-ink:#E6EAF2;--m-muted:#9AA5B8;--m-dark:#141920;--m-light:#2C3542}
+/* V224.1 — پنجرهٔ ویرایش دانش‌آموز: مربع‌های ✕ قرمز و ✓ سبز مثل اپ */
+.st-sq{width:44px;height:44px;border:0;border-radius:12px;color:#fff;display:inline-grid;place-items:center;cursor:pointer}
+.st-sq.red{background:#E5484D}.st-sq.ok{background:#25A86B}.st-sq:disabled{opacity:.45;cursor:default}
