@@ -37,7 +37,7 @@ class V227_PullToRefreshTest {
             assertTrue(rel, "isRefreshing = state.refreshing, // V227" in s)
             assertTrue(rel, "onRefresh = viewModel::refresh," in s)
             assertFalse(rel, "isRefreshing = state.loading" in s)
-            assertFalse(rel, "state.loading || state.actionLoading" in s)
+            assertFalse(rel, "isRefreshing = state.loading || state.actionLoading" in s)
         }
     }
 

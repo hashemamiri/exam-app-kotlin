@@ -165,7 +165,7 @@ class V199_PrintPayTest {
     fun `v202_5 mobile landing shows download app, login and the desktop intro tiles`() {
         val m = source("site/src/mobile.js")
         assertTrue("var LANDING_TILES = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]" in m)
-        assertTrue("var tiles = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']]" in source("site/src/app.js"))
+        assertTrue("var tiles = [['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی'], ['formula', 'ویرایشگر فرمول'], ['periodic', 'جدول تناوبی'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']]" in source("site/src/app.js")) // V226 — کاشی‌های آیکن خطی
         assertTrue("stag(3, apkBtn)," in m && "stag(4, outline(S.user() ? 'ورود به سامانه' : 'ورود / ثبت‌نام'" in m && "el('div', {class: 'ice-tiles'}" in m)
         // V202.6 — LANDING_TILES باید پیش از paintAuth تعریف شود (نه داخل آن پس از فراخوانی landing)
         assertTrue(m.indexOf("var LANDING_TILES = ") in 0 until m.indexOf("function paintAuth(root)"))

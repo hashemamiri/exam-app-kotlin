@@ -83,8 +83,8 @@ class V223_SiteDesktopPrintButtonsTest {
 
     @Test
     fun v224_1EditStudentDialogLikeApp() {
-        val js = File("site/src/school.js").readText()
-        val css = File("site/src/site.css").readText()
+        val js = src("site/src/school.js")
+        val css = src("site/src/site.css")
         assertTrue(js.contains("function editStudentDialog(s, done)"))
         assertTrue(js.contains("return editStudentDialog(s, done);"))
         assertTrue(js.contains("'رمز جدید اختیاری'") && js.contains("'رمز فعلی'"))
@@ -95,8 +95,8 @@ class V223_SiteDesktopPrintButtonsTest {
 
     @Test
     fun v224_2PasswordVaultAndCardNumbers() {
-        val js = File("site/src/school.js").readText()
-        val css = File("site/src/site.css").readText()
+        val js = src("site/src/school.js")
+        val css = src("site/src/site.css")
         assertTrue(js.contains("var PW_VAULT_KEY = 'st-pw-vault';"))
         assertTrue(js.contains("function knownPasswordOf(s)") && js.contains("var current = knownPasswordOf(s);"))
         assertTrue(js.contains("made.push({id: res.id,"))
@@ -107,10 +107,10 @@ class V223_SiteDesktopPrintButtonsTest {
 
     @Test
     fun v225RailQuickAddAndCredentialDialog() {
-        val app = File("site/src/app.js").readText()
-        val mobile = File("site/src/mobile.js").readText()
-        val school = File("site/src/school.js").readText()
-        val css = File("site/src/site.css").readText()
+        val app = src("site/src/app.js")
+        val mobile = src("site/src/mobile.js")
+        val school = src("site/src/school.js")
+        val css = src("site/src/site.css")
         assertTrue(app.contains("class: 'dk-rail-item dk-rail-plus'") && app.contains("function dkQuickAdd(anchor)"))
         assertTrue(app.contains("window.SiteMobile.quickAddItems({withPrint: true})"))
         assertTrue(mobile.contains("function quickAddItems(opts)") && mobile.contains("quickAddItems: quickAddItems"))
@@ -121,16 +121,16 @@ class V223_SiteDesktopPrintButtonsTest {
 
     @Test
     fun v225_1StudentsSearchInToolbarRow() {
-        val js = File("site/src/school.js").readText()
+        val js = src("site/src/school.js")
         assertTrue(js.contains("class: 'row st-toolbar'"))
         assertTrue(js.contains("[q, el('span', {class: 'grow'}), cnt, filterBtn, el('button', {class: 'btn', text: '➕ دانش‌آموز جدید'"))
     }
 
     @Test
     fun v226RadialQuickAddAndSkyLogin() {
-        val app = File("site/src/app.js").readText()
-        val mobile = File("site/src/mobile.js").readText()
-        val css = File("site/src/site.css").readText()
+        val app = src("site/src/app.js")
+        val mobile = src("site/src/mobile.js")
+        val css = src("site/src/site.css")
         // منوی افزودن سریع دسکتاپ = radialMenu (طرح ۱۷۱) با رنگ‌های پاستلی و کارت‌های بزرگ‌تر
         assertTrue(app.contains("cls: 'dk-qa-radial'") && app.contains("window.SiteMobile.radialMenu(function (key)"))
         assertTrue(mobile.contains("(opts.colors && opts.colors[r[0]]) || PASTEL[r[0]]"))
@@ -145,9 +145,9 @@ class V223_SiteDesktopPrintButtonsTest {
 
     @Test
     fun v227SchoolsButtonAndZebraRows() {
-        val app = File("site/src/app.js").readText()
-        val mobile = File("site/src/mobile.js").readText()
-        val css = File("site/src/site.css").readText()
+        val app = src("site/src/app.js")
+        val mobile = src("site/src/mobile.js")
+        val css = src("site/src/site.css")
         assertTrue(app.contains("text: '🏫 مدارس', onclick: function () { pageSchools(c); }"))
         assertTrue(app.contains("async function pageSchools(c)") && app.contains("async function pageSchoolClasses(c, school)"))
         assertTrue(app.contains("rpcObj('native_teacher_schools_v61', {})") && app.contains("rpc('native_teacher_school_classes_v61', {p_school: school.id})"))
