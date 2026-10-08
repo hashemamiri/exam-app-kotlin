@@ -8,7 +8,11 @@ import java.io.File
 
 /** V208 — پنجرهٔ بروزرسانی فقط تیترهای نسخهٔ جدید؛ «درباره» سه نسخهٔ آخر با تیتر. */
 class V208_ReleaseNotesTest {
-    private fun src(path: String): String = File(path).readText()
+    private fun root(): File = listOf(File("."), File("..")).first {
+        File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile
+    }
+
+    private fun src(path: String): String = File(root(), path).readText()
 
     @Test
     fun parsesNewFormatAndOldParagraphs() {

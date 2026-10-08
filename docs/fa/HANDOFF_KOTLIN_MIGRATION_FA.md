@@ -19252,6 +19252,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V208.3
+- CI سوم: ۸۰۲ تست، فقط ۲ تست `V208_ReleaseNotesTest` با `FileNotFoundException` — تست‌های واحد با cwd = `app/` اجرا می‌شوند؛ تست‌های دیگر `root()` (File(".") یا File("..")) دارند. همان الگو اضافه شد. قاعده: هر تست منبع‌خوان جدید باید `root()` داشته باشد.
+
 ## §V208.1
 - CI اول: کامپایل. CI دوم (لاگ ناقص، فقط warning کامپایل دیده شد؛ شکست در compileDebugUnitTestKotlin/تست‌ها بود): (الف) `V204_CustomHeaderTest` رشته‌های `${logo}` و `${44 + gap}` به‌صورت template کاتلین تفسیر می‌شدند → `${'$'}{…}`؛ (ب) `V208_ReleaseNotesTest` حداقل تیتر ۲ بود و بلوک V208.1 یکی داشت → ۱..۶؛ (ج) `V24ComprehensiveUxTest` بدنهٔ `AccountAccordionCard` (AnimatedVisibility/ExpandLess) را بعد از `AccountSection` می‌خواهد → بدنهٔ کامل برگشت (SettingsAccordionCard جدا می‌ماند)؛ (د) `V27DataImageOptionsTest` regex «چهار.?گزینه» در کل کد اصلی ممنوع است → متن‌های V208 به «چندگزینه‌ای» (کاتلین + pgs_engine/builder.js؛ سایت rebuild → engines.7e13f1212180.js). درس: قبل از تحویل، همهٔ تست‌های regex/شمارشی مرتبط با فایل‌های تغییرکرده را هم بخوان، نه فقط پین‌های literal.
 - CI: `PrintPageSetupStore.kt:135 Unresolved reference OPTION_LAYOUTS` — ثابت در companion کلاس `PrintPageSetup` است ولی `read()` در کلاس `PrintPageSetupStore` بود → `PrintPageSetup.OPTION_LAYOUTS`. درس: در سندباکس Kotlin کامپایل نمی‌شود؛ ارجاع به ثابت‌های companion را با نام کلاس بنویس.
