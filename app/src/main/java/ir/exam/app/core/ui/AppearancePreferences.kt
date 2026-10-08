@@ -31,7 +31,9 @@ data class AppearanceSettings(
     val neumorphicDepth: Float = 14f,
     val deviceLayoutMode: DeviceLayoutMode = DeviceLayoutMode.AUTO,
     /** V137.5 — اعداد فارسی روی ابزارهای تخته، محورها، نمودارها، شکل‌ها و جدول‌ها. */
-    val persianDigits: Boolean = false
+    val persianDigits: Boolean = false,
+    /** V229 — حالت پرکنتراست: متن سیاه/سفید خالص، کادرها و خطوط پررنگ، بدون رنگ‌های ملایم (کم‌بینایان). */
+    val highContrast: Boolean = false
 )
 
 /** تنظیمات ظاهر فقط روی دستگاه ذخیره می‌شوند و هیچ دادهٔ حساب یا token در آن نیست. */
@@ -55,7 +57,8 @@ class AppearancePreferences(context: Context) {
                 deviceLayoutMode = values[DEVICE_LAYOUT]?.let {
                     runCatching { DeviceLayoutMode.valueOf(it) }.getOrNull()
                 } ?: DeviceLayoutMode.AUTO,
-                persianDigits = values[PERSIAN_DIGITS] ?: false
+                persianDigits = values[PERSIAN_DIGITS] ?: false,
+                highContrast = values[HIGH_CONTRAST] ?: false
             )
         }
         .catch { emit(AppearanceSettings()) }
@@ -92,6 +95,10 @@ class AppearancePreferences(context: Context) {
         store.edit { it[PERSIAN_DIGITS] = enabled }
     }
 
+    suspend fun setHighContrast(enabled: Boolean) {
+        store.edit { it[HIGH_CONTRAST] = enabled }
+    }
+
     suspend fun reset() {
         store.edit { it.clear() }
     }
@@ -110,5 +117,6 @@ class AppearancePreferences(context: Context) {
         private val NEUMORPHIC_DEPTH = floatPreferencesKey("neumorphic_depth")
         private val DEVICE_LAYOUT = stringPreferencesKey("device_layout")
         private val PERSIAN_DIGITS = booleanPreferencesKey("persian_digits")
+        private val HIGH_CONTRAST = booleanPreferencesKey("high_contrast")
     }
 }

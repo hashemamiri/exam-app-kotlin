@@ -312,6 +312,14 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                     }
                     Switch(settings.persianDigits, viewModel::setPersianDigits)
                 }
+                // V229 — حالت پرکنتراست (آینهٔ کلید سایت)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("حالت پرکنتراست")
+                        Text("متن سیاه/سفید خالص، کادرها و خطوط پررنگ‌تر برای کم‌بینایان", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(settings.highContrast, viewModel::setHighContrast)
+                }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {

@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V229 — بستهٔ ۲ از ۴ (اپ؛ نسخه 1.01.13)
+- **پرکنتراست اپ**: `AppearanceSettings.highContrast` (کلید DataStore `high_contrast`، `setHighContrast`)؛ `ExamAppTheme`: `highContrastColorScheme(base, dark)` روی خروجی هر پالت/پویا (`background/surface*/containers` سفید یا سیاه خالص، `on*`/`outline*` سیاه یا سفید)؛ کلید در `ProfileSettingsScreen` زیر «اعداد فارسی». آینهٔ `m-hc` سایت (V228).
+- **PullRefreshGate** (`core/ui/PullRefreshGate.kt`، بدون Android): `run(setRefreshing, load): Boolean`؛ `now` تزریق‌پذیر برای زمان مجازی؛ `finally` پرچم را خاموش می‌کند. پنج ViewModel (داشبورد، کیف پول، کلاس‌ها، بانک، تقویم) به `private val refreshGate = PullRefreshGate(viewModelScope)` تبدیل شدند؛ `V227_PullToRefreshTest` به‌روز؛ تست جدید `core/ui/V229_PullRefreshGateTest` (runTest + testScheduler.currentTime).
+- V179 (کندی پیش‌نمایش چاپ) قبلاً انجام شده بود (MutationObserver/contain)؛ باز نگه‌داشتنش در یادداشت‌ها اشتباه بود — بسته.
+- تست UI ابزاری (androidTest) اضافه نشد: CI فقط testDebugUnitTest دارد و شبیه‌ساز ندارد؛ رفتار در سطح منطق پوشش داده شد.
+
 ### V228 — بستهٔ ۱ از ۴ پیشنهادها (فقط سایت)
 - **قالب تنظیمات آزمون** (`builder.js settingsForm`): localStorage `examsite.examTemplates.v1` = `[{name, v:{duration,negativeMarking,attemptsAllowed,gradePolicy,attemptCooldown,shuffleQuestions,shuffleOptions,attemptOnTimeout,teacherMessage}}]` حداکثر ۲۰؛ ردیف `.b-tpl` بالای فرم (select + اعمال/ذخیره/حذف). فقط همین مرورگر؛ نسخهٔ سروری نیاز به جدول جدید دارد (SQL کاربر).
 - **ورود**: `state.fails` در loginPage؛ ≥۳ پیام + یادآوری «فراموشی رمز»؛ ≥۵ دکمه ۳۰ ثانیه غیرفعال با شمارش معکوس (فقط مرورگر؛ محدودیت واقعی سمت Supabase Auth است).

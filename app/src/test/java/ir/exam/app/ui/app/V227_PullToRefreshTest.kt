@@ -46,11 +46,10 @@ class V227_PullToRefreshTest {
         viewModels.forEach { rel ->
             val s = src(rel)
             assertTrue(rel, "val refreshing: Boolean = false, // V227" in s)
-            assertTrue(rel, "private var refreshJob: Job? = null" in s)
-            assertTrue(rel, "if (refreshJob?.isActive == true) return" in s)
-            assertTrue(rel, "_state.update { it.copy(refreshing = true) }" in s)
-            assertTrue(rel, "val rest = 500L - (System.currentTimeMillis() - started)" in s)
-            assertTrue(rel, "_state.update { it.copy(refreshing = false) }" in s)
+            // V229 — منطق مشترک به PullRefreshGate منتقل شد (رفتار در V229_PullRefreshGateTest آزمایش می‌شود)
+            assertTrue(rel, "private val refreshGate = PullRefreshGate(viewModelScope)" in s)
+            assertTrue(rel, "refreshGate.run({ r -> _state.update { it.copy(refreshing = r) } })" in s)
+            assertFalse(rel, "private var refreshJob: Job? = null" in s)
         }
         assertTrue("private fun loadMonth(): Job {" in src("app/src/main/java/ir/exam/app/ui/calendar/CalendarViewModel.kt"))
     }

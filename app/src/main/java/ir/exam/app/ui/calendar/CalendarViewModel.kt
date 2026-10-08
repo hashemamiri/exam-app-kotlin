@@ -1,6 +1,7 @@
 package ir.exam.app.ui.calendar
 
 import ir.exam.app.core.cache.SessionCache
+import ir.exam.app.core.ui.PullRefreshGate
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 
 data class CalendarState(
     val year: Int,
@@ -53,17 +53,10 @@ class CalendarViewModel(
 
     // V227 — بازخوانی با کشیدن صفحه: پرچم جداگانهٔ refreshing (نه loading که با حافظهٔ موقت false می‌ماند و نه actionLoading)؛
     // یک بازخوانی هم‌زمان، حداقل ۵۰۰ms نمایش تا نشانگر Material3 بین حالت‌ها گیر نکند.
-    private var refreshJob: Job? = null
+    // V229 — منطق مشترک در PullRefreshGate (تست واحد V229_PullRefreshGateTest)
+    private val refreshGate = PullRefreshGate(viewModelScope)
     fun refresh() {
-        if (refreshJob?.isActive == true) return
-        refreshJob = viewModelScope.launch {
-            _state.update { it.copy(refreshing = true) }
-            val started = System.currentTimeMillis()
-            runCatching { loadMonth().join() }
-            val rest = 500L - (System.currentTimeMillis() - started)
-            if (rest > 0) delay(rest)
-            _state.update { it.copy(refreshing = false) }
-        }
+        refreshGate.run({ r -> _state.update { it.copy(refreshing = r) } }) { loadMonth().join() }
     }
 
 

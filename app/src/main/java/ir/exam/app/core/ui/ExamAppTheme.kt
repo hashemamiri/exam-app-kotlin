@@ -7,6 +7,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -45,12 +46,14 @@ fun ExamAppTheme(
         ThemeMode.DARK -> true
     }
     val (accent, accent2) = appearance.neumorphicPalette.accentColors()
-    val colors = when {
+    val baseColors = when {
         appearance.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dark -> dynamicDarkColorScheme(context)
         appearance.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
         dark -> neumorphicDarkColorScheme(accent, accent2)
         else -> neumorphicLightColorScheme(accent, accent2)
     }
+    // V229 — پرکنتراست: روی هر پالت/حالت اعمال می‌شود (آینهٔ کلاس m-hc سایت)
+    val colors = if (appearance.highContrast) highContrastColorScheme(baseColors, dark) else baseColors
     val density = LocalDensity.current
     val scaledDensity = Density(
         density = density.density,
@@ -92,6 +95,22 @@ fun ExamAppTheme(
             )
         }
     }
+}
+
+/** V229 — نسخهٔ پرکنتراست یک ColorScheme: زمینه و کارت‌ها سفید/سیاه خالص، متن‌ها سیاه/سفید، خطوط پررنگ. */
+internal fun highContrastColorScheme(base: ColorScheme, dark: Boolean): ColorScheme {
+    val ink = if (dark) Color.White else Color.Black
+    val paper = if (dark) Color.Black else Color.White
+    return base.copy(
+        background = paper, onBackground = ink,
+        surface = paper, onSurface = ink,
+        surfaceVariant = paper, onSurfaceVariant = ink,
+        surfaceContainer = paper, surfaceContainerLow = paper, surfaceContainerLowest = paper,
+        surfaceContainerHigh = paper, surfaceContainerHighest = paper,
+        outline = ink, outlineVariant = ink,
+        onPrimaryContainer = ink, onSecondaryContainer = ink, onTertiaryContainer = ink,
+        primaryContainer = paper, secondaryContainer = paper, tertiaryContainer = paper
+    )
 }
 
 private val NeumorphicShapes = Shapes(
