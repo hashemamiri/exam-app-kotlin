@@ -1400,5 +1400,5 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .logo .mark svg,.lp .logo .mark svg,.dk .dk-mark svg{display:block;width:100%;height:100%;border-radius:inherit}
 .dk .dk-mark{background:none;overflow:hidden}
 .field.with-ico{position:relative}
-.field.with-ico input{padding-left:44px}
-.field.with-ico .fld-ico{position:absolute;left:14px;bottom:12px;color:#8a90a6;display:inline-flex;pointer-events:none}
+.field.with-ico input{padding-right:50px;padding-left:14px}
+.field.with-ico .fld-ico{position:absolute;right:14px;left:auto;bottom:12px;color:#8a90a6;display:inline-flex;pointer-events:none} /* V222.1 — هم‌سمت با آیکون چشم رمز */

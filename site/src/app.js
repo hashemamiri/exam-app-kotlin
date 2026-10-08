@@ -1066,7 +1066,7 @@
         m.appendChild(el('div', {class: 'lk', style: 'justify-content:center'}, [el('a', {href: '#', text: '← بازگشت به ورود با رمز', onclick: function (e) { e.preventDefault(); state.otpMode = false; state.step = 'form'; draw(); }})]));
       } else {
         if (state.step === 'form') {
-          var em = input('ایمیل', 'name@example.com', 'email', true);
+          var em = input('ایمیل', '', 'email', true);
           var b1 = el('button', {class: 'btn', text: 'ارسال کد', 'data-label': 'ارسال کد', style: 'width:100%'});
           b1.addEventListener('click', async function () {
             setMsg(''); busy(b1, true);
@@ -1098,7 +1098,7 @@
       m.appendChild(msg); setMsg('');
       if (state.step === 'form') {
         var name = input('نام و نام خانوادگی', '', 'text', false);
-        var em = input('ایمیل', 'name@example.com', 'email', true);
+        var em = input('ایمیل', '', 'email', true);
         var b1 = el('button', {class: 'btn', text: 'ارسال کد تأیید', 'data-label': 'ارسال کد تأیید', style: 'width:100%'});
         b1.addEventListener('click', async function () {
           setMsg(''); busy(b1, true);

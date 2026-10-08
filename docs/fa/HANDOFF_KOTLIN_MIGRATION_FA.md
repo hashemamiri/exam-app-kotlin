@@ -19427,6 +19427,7 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - `app.js` ورود: `input('نام کاربری یا ایمیل', '', …)` + `.with-ico` و `<span class="fld-ico">` (آیکون کاربر، سمت چپ فیلد LTR)؛ رمز بدون placeholder.
 - `APP_MARK_SVG` در `app.js` = بازسازی `ic_exam_app.xml` (مربع #5B3FA3، کارت سفید، سه خط، تیک #2E7D32)؛ در `brandEl()` (.mark) و نوار بالای دسکتاپ (`.dk-mark`) استفاده می‌شود. `site/pwa/*.png` با همان طرح بازتولید شد (PIL).
 - تست: کلاس `V222_SiteLoginFieldsBrandTest` داخل فایل `V165_SiteDesktopRailTest.kt` گذاشته شد تا با الگوی `V1*_Site*Test.kt` در `paths-ignore` اندروید بماند و CI اپ اجرا نشود؛ در نسخهٔ بعدیِ اپ، الگوی `V2*_Site*Test.kt` به `android.yml` اضافه و کلاس به فایل خودش منتقل شود. پین `dkIcon('brand', 'dk-mark')` در V165 به‌روز شد.
+- V222.1: placeholder ایمیل (`name@example.com`) در ورود/ثبت‌نام/extras حذف شد؛ `.fld-ico` به راست (هم‌سمت `.eye`)؛ `manifest.webmanifest` و `template.html` آیکون‌ها با `?v=222` و `theme_color` = `#5B3FA3` تا آیکون PWA/افزونهٔ نصب‌شده نو شود (لینک manifest بدون query چون V147 آن را پین کرده).
 - بدون تغییر نسخهٔ اپ (1.01.11).
 
 ### V221 — حذف رسانه از سرور، «تماس با ما»، کارت واحد ظاهر (نسخهٔ 1.01.11)

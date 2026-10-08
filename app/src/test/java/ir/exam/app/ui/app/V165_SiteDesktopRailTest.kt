@@ -61,7 +61,8 @@ class V222_SiteLoginFieldsBrandTest {
         assertTrue("var pw = input('رمز عبور', '', 'password', true);" in a)
         assertFalse("'ali_1385'" in a)
         val css = src("site/src/site.css")
-        assertTrue(".field.with-ico .fld-ico{" in css)
+        assertTrue(".field.with-ico .fld-ico{position:absolute;right:14px;left:auto;" in css) /* V222.1 — هم‌سمت با چشم رمز */
+        assertFalse("name@example.com" in a)
     }
 
     @Test

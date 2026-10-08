@@ -356,7 +356,7 @@
     function draw() {
       box.innerHTML = '';
       if (st.step === 'email') {
-        var em = el('input', {type: 'email', placeholder: 'name@example.com', style: 'direction:ltr'});
+        var em = el('input', {type: 'email', style: 'direction:ltr'});
         var b = el('button', {class: 'btn', text: 'ارسال کد بازیابی', style: 'width:100%'});
         b.addEventListener('click', async function () { setMsg(''); busy(b, true); try { st.email = em.value.trim(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.email)) throw new Error('ایمیل معتبر وارد کنید.'); await api.sendRecoveryOtp(st.email); st.step = 'code'; draw(); } catch (e) { setMsg(errMsg(e)); } busy(b, false); });
         box.appendChild(el('div', {class: 'field'}, [el('label', {text: 'ایمیل حساب'}), em])); box.appendChild(b);
