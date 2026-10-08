@@ -58,8 +58,8 @@ fun QuestionBankScreen(
     var deleteCategory by remember { mutableStateOf<BankCategoryOption?>(null) }
 
     PullToRefreshBox(
-        isRefreshing = state.loading || state.actionLoading,
-        onRefresh = viewModel::load,
+        isRefreshing = state.refreshing, // V227
+        onRefresh = viewModel::refresh,
         modifier = Modifier.fillMaxSize()
     ) {
     // V56.1 — تبلت: فهرست بانک سؤال وسط صفحه با سقف پهنا.

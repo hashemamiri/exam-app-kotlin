@@ -1505,7 +1505,8 @@
     try {
       var list = await api.classes();
       c.innerHTML = '';
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [el('span', {class: 'muted', text: fa(list.length) + ' کلاس'}), el('span', {class: 'grow'}), el('button', {class: 'btn', text: '➕ کلاس جدید', onclick: function () { classForm(null, function () { pageClasses(c); }); }})]));
+      /* V227 — مثل ClassesContent اپ: «ساخت کلاس جدید» + «مدارس» کنار هم؛ «مدارس» نمای مدرسه → کلاس‌های مدرسه → دانش‌آموزان را باز می‌کند */
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [el('span', {class: 'muted', text: fa(list.length) + ' کلاس'}), el('span', {class: 'grow'}), el('button', {class: 'btn light', text: '🏫 مدارس', onclick: function () { pageSchools(c); }}), el('button', {class: 'btn', text: '➕ کلاس جدید', onclick: function () { classForm(null, function () { pageClasses(c); }); }})]));
       if (!list.length) { c.appendChild(el('div', {class: 'card'}, [emptyBox('🏫', 'هنوز کلاسی نساخته‌اید.')])); return; }
       c.appendChild(el('div', {class: 'card'}, [el('table', {class: 'tbl'}, [
         el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'پسر', 'دختر', 'کل', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
@@ -1522,6 +1523,46 @@
             ])])]);
         }))
       ])]));
+    } catch (e) { showErr(c, e); }
+  }
+  /* V227 — نمای «مدارس» معلم (SchoolsContent اپ): ردیف «پیوستن به مدرسه» / «بازگشت به کلاس‌ها»؛ کارت هر مدرسه (نام، استان · شهر، تعداد کلاس‌های من)؛
+     لمس کارت → کلاس‌های من در آن مدرسه (SchoolClassesContent: نام، پایه · رشته، اعضا/پسر/دختر؛ «بازگشت به مدارس»)؛ لمس کلاس → دانش‌آموزان همان کلاس */
+  async function pageSchools(c) {
+    loading(c);
+    try {
+      var r = await rpcObj('native_teacher_schools_v61', {});
+      if (r && r.error) throw new Error(r.error);
+      var schools = (r && r.items) || [];
+      c.innerHTML = '';
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [
+        el('button', {class: 'btn', text: 'پیوستن به مدرسه', onclick: function () { if (window.SiteMobile && window.SiteMobile.joinSchoolDialog) window.SiteMobile.joinSchoolDialog(); }}),
+        el('span', {class: 'grow'}),
+        el('button', {class: 'btn light', text: 'بازگشت به کلاس‌ها', onclick: function () { pageClasses(c); }})
+      ]));
+      if (!schools.length) { c.appendChild(el('div', {class: 'card'}, [emptyBox('🏫', 'هنوز عضو مدرسه‌ای نیستید. با کد دعوت مدیر به مدرسه بپیوندید.')])); return; }
+      c.appendChild(el('div', {class: 'school-cards'}, schools.map(function (s) {
+        return el('div', {class: 'card school-card', role: 'button', tabindex: '0', onclick: function () { pageSchoolClasses(c, s); }}, [
+          el('h3', {text: s.name || 'مدرسه'}),
+          el('p', {class: 'muted', text: [s.province, s.city].filter(Boolean).join(' · ') || '—'}),
+          el('p', {text: 'کلاس‌های من در این مدرسه: ' + fa(s.classes || 0)})
+        ]);
+      })));
+    } catch (e) { showErr(c, e); }
+  }
+  async function pageSchoolClasses(c, school) {
+    loading(c);
+    try {
+      var list = await rpc('native_teacher_school_classes_v61', {p_school: school.id});
+      list = list || [];
+      c.innerHTML = '';
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [el('h3', {style: 'margin:0', text: 'کلاس‌های ' + (school.name || 'مدرسه')}), el('span', {class: 'grow'}), el('button', {class: 'btn light', text: 'بازگشت به مدارس', onclick: function () { pageSchools(c); }})]));
+      if (!list.length) { c.appendChild(el('div', {class: 'card'}, [emptyBox('🏫', 'در این مدرسه کلاسی ندارید.')])); return; }
+      c.appendChild(el('div', {class: 'school-cards'}, list.map(function (k) {
+        return el('div', {class: 'card school-card', role: 'button', tabindex: '0', onclick: function () { rosterDlg(k); }}, [
+          el('div', {class: 'row'}, [el('h3', {class: 'grow', style: 'margin:0', text: k.name || '—'}), el('span', {class: 'muted', text: 'پایه: ' + (k.grade || '—') + (k.field_of_study ? ' · ' + k.field_of_study : '')})]),
+          el('p', {text: 'اعضا: ' + fa(k.total || 0) + ' نفر · پسر: ' + fa(k.boys || 0) + ' · دختر: ' + fa(k.girls || 0)})
+        ]);
+      })));
     } catch (e) { showErr(c, e); }
   }
   function classForm(k, done) {

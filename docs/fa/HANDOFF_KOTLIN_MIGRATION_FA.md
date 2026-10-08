@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V227 — رفع «کشیدن برای بازخوانی» اپ + «مدارس» و ردیف‌های هاله‌دار دسکتاپ (نسخهٔ 1.01.12)
+- علت: از V212–V214 `loading = cached == null` → هنگام کشیدن صفحه `isRefreshing` هرگز true نمی‌شد (یا در کلاس‌ها/بانک با `actionLoading` قاطی می‌شد) و نشانگر Material3 بین animateToHidden/animateToThreshold گیر می‌کرد. راه‌حل: فیلد `refreshing` در State و `refresh()` تک‌اجرایی با حداقل ۵۰۰ms در TeacherDashboard/Billing/Classes/QuestionBank/Calendar ViewModel؛ صفحه‌ها `isRefreshing = state.refreshing, onRefresh = viewModel::refresh`. `CalendarViewModel.loadMonth(): Job`.
+- سایت `app.js`: `pageSchools(c)` / `pageSchoolClasses(c, school)` (rpc `native_teacher_schools_v61`، `native_teacher_school_classes_v61`) + دکمهٔ «🏫 مدارس» کنار «کلاس جدید»؛ `SiteMobile.joinSchoolDialog/createSchoolDialog` صادر شد. CSS `.school-cards/.school-card`.
+- CSS `.dk table.tbl`: `border-spacing:0 4px`، بدون border-bottom، ردیف زوج با پس‌زمینهٔ فیروزه‌ای کم‌رنگ + حلقهٔ داخلی و گوشه‌های گرد (هاله)؛ تاریک هم.
+- تست: `V227_PullToRefreshTest`، `V168_SiteDesktopMenuTest.v227SchoolsButtonAndZebraRows`.
+
 ### V226 — منوی دایره‌ای افزودن سریع + ورود آسمانی (فقط سایت)
 - `app.js dkQuickAdd`: به‌جای منوی بادبزنی V225، `SiteMobile.radialMenu(onPick, onClose, {items, colors, cls:'dk-qa-radial'})` با ۵ مورد `quickAddItems({withPrint:true})`؛ `DK_QA_STYLE` (کلید/ایموجی/رنگ پاستلی). `mobile.js radialMenu` حالا `opts.colors` و `--pc` را پشتیبانی می‌کند. CSS: `.dk .m-radial-bg.dk-qa-radial .m-radial-item` ۱۰۴px، شعاع ۳۰px، حلقهٔ خط‌چین فعال، متن چندخطی ۱۱px. کلاس `.dk-qa-*` بادبزنی حذف شد.
 - صفحهٔ ورود (`renderLanding`): `.lp.lp-sky` + چهار `.cloud`؛ کاشی‌ها با `LP_ICO` (SVG خطی) و ترتیب تصویر مرجع؛ CSS در انتهای site.css (روشن + `.m-dark` آسمان شب). ساختار DOM/رفتار فرم بدون تغییر.

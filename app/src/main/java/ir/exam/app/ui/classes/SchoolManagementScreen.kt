@@ -247,8 +247,8 @@ fun SchoolManagementScreen(
     }
 
     PullToRefreshBox(
-        isRefreshing = state.loading || state.actionLoading,
-        onRefresh = viewModel::load,
+        isRefreshing = state.refreshing, // V227
+        onRefresh = viewModel::refresh,
         modifier = Modifier.fillMaxSize()
     ) {
     Column(

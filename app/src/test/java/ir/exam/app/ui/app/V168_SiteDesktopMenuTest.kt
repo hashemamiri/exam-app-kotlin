@@ -142,4 +142,18 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(app.contains("var tiles = [['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی'], ['formula', 'ویرایشگر فرمول'], ['periodic', 'جدول تناوبی'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']];"))
         assertTrue(css.contains(".lp.lp-sky{") && css.contains(".lp.lp-sky .card{background:rgba(255,255,255,.42)") && css.contains(".m-dark .lp.lp-sky{"))
     }
+
+    @Test
+    fun v227SchoolsButtonAndZebraRows() {
+        val app = File("site/src/app.js").readText()
+        val mobile = File("site/src/mobile.js").readText()
+        val css = File("site/src/site.css").readText()
+        assertTrue(app.contains("text: '🏫 مدارس', onclick: function () { pageSchools(c); }"))
+        assertTrue(app.contains("async function pageSchools(c)") && app.contains("async function pageSchoolClasses(c, school)"))
+        assertTrue(app.contains("rpcObj('native_teacher_schools_v61', {})") && app.contains("rpc('native_teacher_school_classes_v61', {p_school: school.id})"))
+        assertTrue(app.contains("text: 'پیوستن به مدرسه'") && app.contains("text: 'بازگشت به کلاس‌ها'") && app.contains("text: 'بازگشت به مدارس'"))
+        assertTrue(mobile.contains("joinSchoolDialog: joinSchoolDialog, createSchoolDialog: createSchoolDialog"))
+        assertTrue(css.contains(".dk table.tbl td{border-bottom:0;background:transparent}"))
+        assertTrue(css.contains(".dk table.tbl tbody tr:nth-child(even) td{background:rgba(34,198,239,.09)"))
+    }
 }

@@ -122,7 +122,7 @@ class Neumorphic69IntegrationTest {
         assertTrue("cards[activeIndex].subtitle" in cards)
         assertFalse("management cards must not repeat as buttons", "cards.forEachIndexed" in cards)
         assertTrue("PullToRefreshBox(" in dashboard)
-        assertTrue("onRefresh = viewModel::load" in dashboard)
+        assertTrue("onRefresh = viewModel::refresh" in dashboard) // V227 — بازخوانی با پرچم جداگانه
         assertFalse("manual dashboard refresh button returned", "به‌روزرسانی" in dashboard)
         assertTrue("dashboardRefreshKey += 1" in app)
         assertTrue("walletRefreshKey += 1" in app)

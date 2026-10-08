@@ -73,7 +73,7 @@ fun CalendarScreen(role: UserRole) {
     val selectedDay = state.monthData?.days?.firstOrNull { it.jalaliDate == state.selectedDate }
 
     PullToRefreshBox(
-        isRefreshing = state.loading,
+        isRefreshing = state.refreshing, // V227
         onRefresh = viewModel::refresh,
         modifier = Modifier.fillMaxSize()
     ) {

@@ -1172,7 +1172,7 @@
   /* اتصال: app.js در render() اگر active() بود paint() را صدا می‌زند؛ تغییر عرض → رندر دوباره */
   var rerender = function () { if (S.user()) S.render(); };
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
-  window.SiteMobile = {radialMenu: radialMenu, quickAddItems: quickAddItems, paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
+  window.SiteMobile = {radialMenu: radialMenu, quickAddItems: quickAddItems, joinSchoolDialog: joinSchoolDialog, createSchoolDialog: createSchoolDialog, /* V227 */ paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
     profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */, studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive /* V224 */};
 })();

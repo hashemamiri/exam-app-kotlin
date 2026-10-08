@@ -120,8 +120,8 @@ fun TeacherDashboardScreen(
     // state.printExam هیچ‌وقت مقداردهی نمی‌شد (preparePrint حذف شد، رجوع
     // کنید به TeacherDashboardViewModel) — کدِ کاملاً بدونِ اثر بود.
     PullToRefreshBox(
-        isRefreshing = state.loading,
-        onRefresh = viewModel::load,
+        isRefreshing = state.refreshing, // V227
+        onRefresh = viewModel::refresh,
         modifier = Modifier.fillMaxSize()
     ) {
         // V56.1 — تبلت: فهرست آزمون‌ها وسط صفحه با سقف پهنا.

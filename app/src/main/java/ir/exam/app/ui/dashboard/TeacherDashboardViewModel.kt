@@ -14,9 +14,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 data class TeacherDashboardState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false, // V227 — فقط برای نشانگر «کشیدن برای بازخوانی»
     val actionLoading: Boolean = false,
     val exams: List<ExamDashboardDto> = emptyList(),
     val portabilityLoading: Boolean = false,
@@ -35,6 +38,21 @@ class TeacherDashboardViewModel(
     private val _state = MutableStateFlow(TeacherDashboardState())
     val state = _state.asStateFlow()
     private val duplicateOperations = mutableMapOf<String, String>()
+
+    // V227 — بازخوانی با کشیدن صفحه: پرچم جداگانهٔ refreshing (نه loading که با حافظهٔ موقت false می‌ماند و نه actionLoading)؛
+    // یک بازخوانی هم‌زمان، حداقل ۵۰۰ms نمایش تا نشانگر Material3 بین حالت‌ها گیر نکند.
+    private var refreshJob: Job? = null
+    fun refresh() {
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
+            _state.update { it.copy(refreshing = true) }
+            val started = System.currentTimeMillis()
+            runCatching { load().join() }
+            val rest = 500L - (System.currentTimeMillis() - started)
+            if (rest > 0) delay(rest)
+            _state.update { it.copy(refreshing = false) }
+        }
+    }
 
     fun load() = viewModelScope.launch {
         // V212 — اول فهرست قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود، بعد نسخهٔ تازه از سرور جایگزین می‌شود.

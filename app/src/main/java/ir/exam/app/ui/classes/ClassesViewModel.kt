@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 /** V61.0 — مدرسهٔ عضو معلم برای نمای «مدارس» بخش کلاس‌ها. */
 data class TeacherSchoolItem(
@@ -36,6 +38,7 @@ data class TeacherSchoolItem(
 
 data class ClassesState(
     val loading: Boolean = true,
+    val refreshing: Boolean = false, // V227 — فقط برای نشانگر «کشیدن برای بازخوانی»
     val actionLoading: Boolean = false,
     val classes: List<SchoolClass> = emptyList(),
     val students: List<StudentProfile> = emptyList(),
@@ -102,6 +105,21 @@ class ClassesViewModel(
     private val noteDao=context?.applicationContext?.let{NativeDatabaseProvider.get(it).studentNoteDao()}
     private val _state = MutableStateFlow(ClassesState())
     val state = _state.asStateFlow()
+
+    // V227 — بازخوانی با کشیدن صفحه: پرچم جداگانهٔ refreshing (نه loading که با حافظهٔ موقت false می‌ماند و نه actionLoading)؛
+    // یک بازخوانی هم‌زمان، حداقل ۵۰۰ms نمایش تا نشانگر Material3 بین حالت‌ها گیر نکند.
+    private var refreshJob: Job? = null
+    fun refresh() {
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
+            _state.update { it.copy(refreshing = true) }
+            val started = System.currentTimeMillis()
+            runCatching { load().join() }
+            val rest = 500L - (System.currentTimeMillis() - started)
+            if (rest > 0) delay(rest)
+            _state.update { it.copy(refreshing = false) }
+        }
+    }
 
     fun load() = viewModelScope.launch {
         // V212 — کلاس‌ها/دانش‌آموزان قبلی فوراً نشان داده می‌شوند؛ دو درخواست هم‌زمان و نتیجهٔ تازه جایگزین می‌شود.

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 data class CalendarState(
     val year: Int,
@@ -29,6 +30,7 @@ data class CalendarState(
     val schools: List<CalendarAudienceOption> = emptyList(),
     val editor: CalendarEditor? = null,
     val loading: Boolean = true,
+    val refreshing: Boolean = false, // V227 — فقط برای نشانگر «کشیدن برای بازخوانی»
     val editorLoading: Boolean = false,
     val saving: Boolean = false,
     val error: String? = null,
@@ -49,7 +51,21 @@ class CalendarViewModel(
         loadMonth()
     }
 
-    fun refresh() = loadMonth()
+    // V227 — بازخوانی با کشیدن صفحه: پرچم جداگانهٔ refreshing (نه loading که با حافظهٔ موقت false می‌ماند و نه actionLoading)؛
+    // یک بازخوانی هم‌زمان، حداقل ۵۰۰ms نمایش تا نشانگر Material3 بین حالت‌ها گیر نکند.
+    private var refreshJob: Job? = null
+    fun refresh() {
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
+            _state.update { it.copy(refreshing = true) }
+            val started = System.currentTimeMillis()
+            runCatching { loadMonth().join() }
+            val rest = 500L - (System.currentTimeMillis() - started)
+            if (rest > 0) delay(rest)
+            _state.update { it.copy(refreshing = false) }
+        }
+    }
+
 
     fun previousMonth() = shift(-1)
     fun nextMonth() = shift(1)
@@ -170,7 +186,7 @@ class CalendarViewModel(
             .onFailure { error -> _state.update { it.copy(error = safeCalendarError(error)) } }
     }
 
-    private fun loadMonth() {
+    private fun loadMonth(): Job {
         monthJob?.cancel()
         val targetYear = state.value.year
         val targetMonth = state.value.month
@@ -189,6 +205,7 @@ class CalendarViewModel(
                 }
                 .onFailure { error -> _state.update { it.copy(loading = false, error = if (cached == null) safeCalendarError(error) else null) } }
         }
+        return monthJob!!
     }
 
     private fun loadAudienceOptions() {

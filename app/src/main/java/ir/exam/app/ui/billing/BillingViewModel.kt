@@ -13,12 +13,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 data class BillingState(
     val wallet: WalletSnapshot? = null,
     val topUpAmount: String = WalletRules.MIN_TOP_UP_TOMAN.toString(),
     val payment: PaymentLaunch? = null,
     val loading: Boolean = true,
+    val refreshing: Boolean = false, // V227 — فقط برای نشانگر «کشیدن برای بازخوانی»
     val startingPayment: Boolean = false,
     val error: String? = null,
     val message: String? = null
@@ -31,6 +34,21 @@ class BillingViewModel(
     val state = _state.asStateFlow()
 
     init { load() }
+
+    // V227 — بازخوانی با کشیدن صفحه: پرچم جداگانهٔ refreshing (نه loading که با حافظهٔ موقت false می‌ماند و نه actionLoading)؛
+    // یک بازخوانی هم‌زمان، حداقل ۵۰۰ms نمایش تا نشانگر Material3 بین حالت‌ها گیر نکند.
+    private var refreshJob: Job? = null
+    fun refresh() {
+        if (refreshJob?.isActive == true) return
+        refreshJob = viewModelScope.launch {
+            _state.update { it.copy(refreshing = true) }
+            val started = System.currentTimeMillis()
+            runCatching { load().join() }
+            val rest = 500L - (System.currentTimeMillis() - started)
+            if (rest > 0) delay(rest)
+            _state.update { it.copy(refreshing = false) }
+        }
+    }
 
     fun load() = viewModelScope.launch {
         // V212 — کیف پول قبلی فوراً نشان داده می‌شود؛ موجودی تازه در پس‌زمینه جایگزین می‌شود.
