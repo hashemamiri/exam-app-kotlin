@@ -19428,6 +19428,7 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - `APP_MARK_SVG` در `app.js` = بازسازی `ic_exam_app.xml` (مربع #5B3FA3، کارت سفید، سه خط، تیک #2E7D32)؛ در `brandEl()` (.mark) و نوار بالای دسکتاپ (`.dk-mark`) استفاده می‌شود. `site/pwa/*.png` با همان طرح بازتولید شد (PIL).
 - تست: کلاس `V222_SiteLoginFieldsBrandTest` داخل فایل `V165_SiteDesktopRailTest.kt` گذاشته شد تا با الگوی `V1*_Site*Test.kt` در `paths-ignore` اندروید بماند و CI اپ اجرا نشود؛ در نسخهٔ بعدیِ اپ، الگوی `V2*_Site*Test.kt` به `android.yml` اضافه و کلاس به فایل خودش منتقل شود. پین `dkIcon('brand', 'dk-mark')` در V165 به‌روز شد.
 - V222.1: placeholder ایمیل (`name@example.com`) در ورود/ثبت‌نام/extras حذف شد؛ `.fld-ico` به راست (هم‌سمت `.eye`)؛ `manifest.webmanifest` و `template.html` آیکون‌ها با `?v=222` و `theme_color` = `#5B3FA3` تا آیکون PWA/افزونهٔ نصب‌شده نو شود (لینک manifest بدون query چون V147 آن را پین کرده).
+- V222.2: `manifest.webmanifest` name/short_name = «سامانهٔ آزمون آنلاین»/«آزمون آنلاین»، آیکون‌ها در `site/pwa/v2/` (مسیر تازه ⇒ کروم آیکون نصب‌شده را عوض می‌کند)؛ `sw.js` SHELL و `template.html` (title، apple-title، favicon) هم‌راستا. `brandEl(label)` و در لندینگ `brandEl('آزمون آنلاین')`؛ سایدبار همچنان «آزمون‌ساز». فایل‌های قدیمی `site/pwa/*.png` برای کش‌های قدیمی نگه داشته شدند.
 - بدون تغییر نسخهٔ اپ (1.01.11).
 
 ### V221 — حذف رسانه از سرور، «تماس با ما»، کارت واحد ظاهر (نسخهٔ 1.01.11)

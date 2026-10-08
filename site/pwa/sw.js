@@ -2,7 +2,7 @@
    نسخه در build (CI) با هش index.html جایگزین می‌شود تا هر انتشار، کش قدیمی را دور بریزد. */
 var VERSION = '__SW_VERSION__';
 var CACHE = 'azmoon-shell-' + VERSION;
-var SHELL = ['/', '/pwa/manifest.webmanifest', '/pwa/icon-192.png', '/pwa/icon-512.png'];
+var SHELL = ['/', '/pwa/manifest.webmanifest', '/pwa/v2/icon-192.png', '/pwa/v2/icon-512.png']; /* V222.2 */
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
 });

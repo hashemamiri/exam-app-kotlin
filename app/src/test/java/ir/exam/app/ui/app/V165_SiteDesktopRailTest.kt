@@ -72,5 +72,10 @@ class V222_SiteLoginFieldsBrandTest {
         assertTrue("fill=\"#5B3FA3\"" in a && "fill=\"#2E7D32\"" in a)
         assertTrue("el('span', {class: 'mark', html: APP_MARK_SVG})" in a)
         assertFalse("el('span', {class: 'mark', text: '✎'})" in a)
+        // V222.2 — نام صفحهٔ ورود دسکتاپ و PWA
+        assertTrue("brandEl('آزمون آنلاین')" in a)
+        val mf = src("site/pwa/manifest.webmanifest")
+        assertTrue("\"name\": \"سامانهٔ آزمون آنلاین\"" in mf && "/pwa/v2/icon-512.png" in mf)
+        assertTrue("/pwa/v2/icon-192.png" in src("site/pwa/sw.js"))
     }
 }

@@ -980,7 +980,7 @@
     var keyWarn = KEY_READY ? null : el('div', {class: 'warn-key', html: '⚠️ کلید اتصال (<code class="k">SUPABASE_ANON_KEY</code>) هنوز در بالای فایل <code class="k">index.html</code> وارد نشده است؛ تا آن زمان ورود و ثبت‌نام کار نمی‌کند.'});
     var tiles = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']];
     var left = el('div', {class: 'lp-l'}, [
-      brandEl(),
+      brandEl('آزمون آنلاین'), /* V222.2 — نام در صفحهٔ ورود دسکتاپ */
       el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
       el('p', {text: 'فرمول ریاضی، شکل هندسی، تختهٔ سفید و چاپ رسمی A4 — یک حساب برای اپ اندروید و وب.'}),
       el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))
@@ -996,7 +996,7 @@
     root.appendChild(page);
   }
   var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" fill="#5B3FA3"/><rect x="20" y="24" width="68" height="60" rx="8" fill="#fff"/><path fill="#5B3FA3" d="M32 38h30v6H32zM32 52h44v6H32zM32 66h34v6H32z"/><path fill="#2E7D32" d="M69 35l5 5 10-11 4 4-14 15-9-9z"/></svg>'; /* V222 — همان آیکون اپ اندروید (ic_exam_app) */
-  function brandEl() { return el('div', {class: 'logo'}, [el('span', {class: 'mark', html: APP_MARK_SVG}), el('span', {text: 'آزمون‌ساز'})]); }
+  function brandEl(label) { return el('div', {class: 'logo'}, [el('span', {class: 'mark', html: APP_MARK_SVG}), el('span', {text: label || 'آزمون‌ساز'})]); }
 
   function demoFormula() {
     openFormulaEditor('مساحت دایره برابر است با $\\pi r^2$ و ', null, null).then(function (t) { if (t != null) toast('متن نهایی: ' + String(t).slice(0, 80)); });
