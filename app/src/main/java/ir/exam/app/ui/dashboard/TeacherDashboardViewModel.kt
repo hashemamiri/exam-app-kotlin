@@ -3,6 +3,7 @@ package ir.exam.app.ui.dashboard
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.repository.SupabasePortabilityRepository
 import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
@@ -36,10 +37,12 @@ class TeacherDashboardViewModel(
     private val duplicateOperations = mutableMapOf<String, String>()
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
+        // V212 — اول فهرست قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود، بعد نسخهٔ تازه از سرور جایگزین می‌شود.
+        val cached = SessionCache.get<List<ExamDashboardDto>>(CACHE_EXAMS)
+        _state.update { it.copy(loading = cached == null, exams = cached ?: it.exams, error = null) }
         repository.getMyExams()
-            .onSuccess { exams -> _state.update { it.copy(loading = false, exams = exams) } }
-            .onFailure { error -> _state.update { it.copy(loading = false, error = safeDashboardError(error)) } }
+            .onSuccess { exams -> SessionCache.put(CACHE_EXAMS, exams); _state.update { it.copy(loading = false, exams = exams) } }
+            .onFailure { error -> _state.update { it.copy(loading = false, error = if (cached == null) safeDashboardError(error) else null) } }
     }
 
     fun setOpen(exam: ExamDashboardDto) = action(if (exam.isOpen) "آزمون بسته شد." else "آزمون باز شد.") {
@@ -112,6 +115,8 @@ class TeacherDashboardViewModel(
             .onFailure { error -> _state.update { it.copy(actionLoading = false, error = safeDashboardError(error)) } }
     }
 }
+
+private const val CACHE_EXAMS = "dashboard.exams" // V212
 
 private fun formatToman(value: Long): String = ir.exam.app.core.calendar.PersianDigits.convert(
     "%,d".format(java.util.Locale.US, value)

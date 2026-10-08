@@ -3,6 +3,7 @@ package ir.exam.app.data.repository
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.data.remote.SupabaseProvider
 import kotlinx.serialization.json.JsonObject
@@ -17,7 +18,8 @@ data class ManagerApprovalItem(val id: String, val targetType: String, val actio
 class SupabaseTeacherDashboardRepository {
     suspend fun getMyExams(): Result<List<ExamDashboardDto>> = runCatching {
         val userId = currentTeacherId()
-        SupabaseProvider.client.from("exams").select {
+        // V212 — فقط ستون‌های کارت (بدون questions)
+        SupabaseProvider.client.from("exams").select(Columns.raw(ExamDashboardDto.COLUMNS)) {
             filter { eq("teacher_id", userId) }
         }.decodeList<ExamDashboardDto>()
             // V137 — تازه‌ترین آزمون بالای فهرست؛ ردیف‌های بدون تاریخ (قدیمی) در انتها.

@@ -1,5 +1,6 @@
 package ir.exam.app.ui.classes
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -17,6 +18,8 @@ import ir.exam.app.domain.model.StudentCredential
 import ir.exam.app.domain.model.StudentProfile
 import ir.exam.app.domain.model.UpdateStudentRequest
 import ir.exam.app.domain.repository.SchoolRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -87,6 +90,10 @@ data class StudentListFilter(
             unassigned || inSchool || schoolId != null || teacherId != null
 }
 
+/** V212 — بستهٔ حافظهٔ موقت کلاس‌ها */
+private data class ClassesCache(val classes: List<SchoolClass>, val students: List<StudentProfile>)
+private const val CACHE_KEY = "classes.bundle"
+
 class ClassesViewModel(
     private val repository: SchoolRepository = SupabaseSchoolRepository(),
     context:Context?=null
@@ -97,9 +104,20 @@ class ClassesViewModel(
     val state = _state.asStateFlow()
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
-        val classes = repository.getClasses().getOrElse { return@launch failLoad(it) }
-        val students = repository.getStudents().getOrElse { return@launch failLoad(it) }
+        // V212 — کلاس‌ها/دانش‌آموزان قبلی فوراً نشان داده می‌شوند؛ دو درخواست هم‌زمان و نتیجهٔ تازه جایگزین می‌شود.
+        val cached = SessionCache.get<ClassesCache>(CACHE_KEY)
+        if (cached != null && state.value.classes.isEmpty() && state.value.students.isEmpty()) {
+            _state.update { it.copy(loading = false, classes = cached.classes, students = cached.students, error = null) }
+        } else _state.update { it.copy(loading = cached == null, error = null) }
+        val loaded = runCatching {
+            coroutineScope {
+                val c = async { repository.getClasses().getOrThrow() }
+                val s = async { repository.getStudents().getOrThrow() }
+                c.await() to s.await()
+            }
+        }.getOrElse { if (cached == null) failLoad(it) else _state.update { s -> s.copy(loading = false) }; return@launch }
+        val (classes, students) = loaded
+        SessionCache.put(CACHE_KEY, ClassesCache(classes, students))
         val notes=if(noteDao!=null&&ownerId.isNotBlank())noteDao.list(ownerId).associate{it.studentId to it.note}else emptyMap()
         _state.update { old ->
             val selected = old.selectedClass?.id?.let { id -> classes.firstOrNull { it.id == id } }

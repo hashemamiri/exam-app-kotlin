@@ -1,5 +1,6 @@
 package ir.exam.app.ui.billing
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,10 +33,12 @@ class BillingViewModel(
     init { load() }
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null, message = null) }
+        // V212 — کیف پول قبلی فوراً نشان داده می‌شود؛ موجودی تازه در پس‌زمینه جایگزین می‌شود.
+        val cached = SessionCache.get<WalletSnapshot>(CACHE_WALLET)
+        _state.update { it.copy(loading = cached == null, wallet = cached ?: it.wallet, error = null, message = null) }
         repository.wallet()
-            .onSuccess { wallet -> _state.update { it.copy(loading = false, wallet = wallet) } }
-            .onFailure { error -> _state.update { it.copy(loading = false, error = safeBillingError(error)) } }
+            .onSuccess { wallet -> SessionCache.put(CACHE_WALLET, wallet); _state.update { it.copy(loading = false, wallet = wallet) } }
+            .onFailure { error -> _state.update { it.copy(loading = false, error = if (cached == null) safeBillingError(error) else null) } }
     }
 
     fun setTopUpAmount(value: String) {
@@ -88,5 +91,7 @@ class BillingViewModel(
         _state.update { it.copy(payment = null) }
     }
 }
+
+private const val CACHE_WALLET = "billing.wallet" // V212
 
 private fun safeBillingError(error: Throwable): String = UserFacingError.of(error, "عملیات کیف پول ناموفق بود.") // V209 — بدون متن فنی

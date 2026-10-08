@@ -13,4 +13,12 @@ data class ExamDashboardDto(
     @SerialName("is_open") val isOpen: Boolean = false,
     @SerialName("total_score") val totalScore: Double = 0.0,
     @SerialName("created_at") val createdAt: String? = null
-)
+) {
+    companion object {
+        /**
+         * V212 — فهرست آزمون‌ها فقط همین ستون‌ها را از سرور می‌خواند؛ قبلاً `select()` بدون ستون
+         * برای هر آزمون ستون سنگین `questions` (کل سؤال‌ها) را هم دانلود می‌کرد.
+         */
+        const val COLUMNS = "id,title,subject,duration,code,is_open,total_score,created_at"
+    }
+}

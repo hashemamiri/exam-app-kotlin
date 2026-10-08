@@ -1,11 +1,14 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseGradingRepository
 import ir.exam.app.domain.model.StudentAnswerReview
 import ir.exam.app.domain.model.StudentAnswerSummary
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -36,6 +39,10 @@ data class StudentResultsState(
     val error: String? = null
 )
 
+/** V212 — بستهٔ حافظهٔ موقت نتایج دانش‌آموز */
+private data class StudentResultsCache(val grades: List<StudentGradeCard>, val answers: List<StudentAnswerSummary>)
+private const val CACHE_KEY = "student.results"
+
 class StudentResultsViewModel(
     private val repository: SupabaseGradingRepository = SupabaseGradingRepository()
 ) : ViewModel() {
@@ -43,15 +50,21 @@ class StudentResultsViewModel(
     val state = _state.asStateFlow()
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
+        // V212 — نتایج قبلی فوراً نشان داده می‌شوند؛ دو درخواست هم‌زمان و نتیجهٔ تازه جایگزین می‌شود.
+        val cached = SessionCache.get<StudentResultsCache>(CACHE_KEY)
+        if (cached != null) _state.value = StudentResultsState(loading = false, grades = cached.grades, answers = cached.answers)
+        else _state.update { it.copy(loading = true, error = null) }
         runCatching {
-            val grades = repository.myGrades().getOrThrow().mapNotNull(::parseGrade)
-            val answers = repository.myAnswerSummaries().getOrThrow()
-            grades to answers
+            coroutineScope {
+                val grades = async { repository.myGrades().getOrThrow().mapNotNull(::parseGrade) }
+                val answers = async { repository.myAnswerSummaries().getOrThrow() }
+                grades.await() to answers.await()
+            }
         }.onSuccess { (grades, answers) ->
+            SessionCache.put(CACHE_KEY, StudentResultsCache(grades, answers))
             _state.value = StudentResultsState(loading = false, grades = grades, answers = answers)
         }.onFailure { error ->
-            _state.update { it.copy(loading = false, error = safeResultError(error)) }
+            _state.update { it.copy(loading = false, error = if (cached == null) safeResultError(error) else null) }
         }
     }
 

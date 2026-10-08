@@ -1,0 +1,34 @@
+# V212 — Baseline Profile (قالب متنی؛ AGP آن را هنگام ساخت release به پروفایل باینری تبدیل می‌کند).
+# کلاس‌ها/متدهای پرکاربرد از قبل روی دستگاه کامپایل (AOT) می‌شوند تا شروع برنامه و پیمایش
+# صفحه‌ها بدون JIT اولیه روان‌تر باشد. الگوها عمداً گسترده‌اند (کل بستهٔ برنامه + هستهٔ Compose).
+# H = hot, S = startup, P = post-startup.
+HSPLir/exam/app/**->**(**)**
+Lir/exam/app/**;
+HSPLandroidx/compose/runtime/**->**(**)**
+Landroidx/compose/runtime/**;
+HSPLandroidx/compose/ui/**->**(**)**
+Landroidx/compose/ui/**;
+HSPLandroidx/compose/foundation/**->**(**)**
+Landroidx/compose/foundation/**;
+HSPLandroidx/compose/animation/**->**(**)**
+Landroidx/compose/animation/**;
+HSPLandroidx/compose/material3/**->**(**)**
+Landroidx/compose/material3/**;
+HSPLandroidx/lifecycle/**->**(**)**
+Landroidx/lifecycle/**;
+HSPLandroidx/activity/**->**(**)**
+Landroidx/activity/**;
+HSPLkotlinx/coroutines/**->**(**)**
+Lkotlinx/coroutines/**;
+HSPLkotlinx/serialization/**->**(**)**
+Lkotlinx/serialization/**;
+HSPLio/github/jan/supabase/**->**(**)**
+Lio/github/jan/supabase/**;
+HSPLio/ktor/**->**(**)**
+Lio/ktor/**;
+HSPLokhttp3/**->**(**)**
+Lokhttp3/**;
+HSPLcoil/**->**(**)**
+Lcoil/**;
+HSPLandroidx/room/**->**(**)**
+Landroidx/room/**;

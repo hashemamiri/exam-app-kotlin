@@ -1,5 +1,6 @@
 package ir.exam.app.ui.grading
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +11,10 @@ import ir.exam.app.domain.model.FeedbackPhrase
 import ir.exam.app.domain.model.GradingExam
 import ir.exam.app.domain.model.GradingSubmission
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,6 +74,10 @@ data class GradingUiState(
     val cardStats: Map<String, ExamCardStats> = emptyMap()
 )
 
+/** V212 — بستهٔ حافظهٔ موقت صفحهٔ تصحیح */
+private data class GradingCache(val exams: List<ExamDashboardDto>, val feedback: List<FeedbackPhrase>, val cardStats: Map<String, ExamCardStats>)
+private const val CACHE_KEY = "grading.bundle"
+
 class GradingViewModel(
     private val repository: SupabaseGradingRepository = SupabaseGradingRepository()
 ) : ViewModel() {
@@ -77,27 +86,44 @@ class GradingViewModel(
     private var liveJob:Job?=null
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
-        val exams = repository.getExams().getOrElse { return@launch fail(it) }
-        val feedback = repository.feedbackBank().getOrDefault(emptyList())
+        // V212 — فهرست و آمار کارت‌های قبلی (حافظهٔ موقت) فوراً نشان داده می‌شوند؛ نسخهٔ تازه جایگزین می‌شود.
+        val cached = SessionCache.get<GradingCache>(CACHE_KEY)
+        if (cached != null) _state.update { it.copy(loading = false, exams = cached.exams, feedbackBank = cached.feedback, cardStats = cached.cardStats, error = null) }
+        else _state.update { it.copy(loading = true, error = null) }
+        val exams = repository.getExams().getOrElse { if (cached == null) fail(it); return@launch }
+        val feedback = repository.feedbackBank().getOrDefault(cached?.feedback ?: emptyList())
         _state.update { it.copy(loading = false, exams = exams, feedbackBank = feedback) }
+        SessionCache.put(CACHE_KEY, GradingCache(exams, feedback, state.value.cardStats))
         loadCardStats(exams.map { it.id })
     }
 
-    /** V130 — آمارِ هر آزمون (پاسخ‌ها + فهرستِ حضور) برای رنگِ کارت‌های پاسخ/تصحیح/مانده. */
+    /**
+     * V130 — آمارِ هر آزمون (پاسخ‌ها + فهرستِ حضور) برای رنگِ کارت‌های پاسخ/تصحیح/مانده.
+     * V212 — به‌جای ۲×N درخواستِ پشت سر هم، حداکثر ۴ آزمون هم‌زمان؛ پاسخ‌ها فقط با سه ستون سبک (id, student_id, graded).
+     */
     private fun loadCardStats(examIds: List<String>) = viewModelScope.launch {
-        examIds.forEach { id ->
-            val answers = repository.getAnswers(id).getOrDefault(emptyList())
-            val roster = repository.attendance(id).getOrDefault(emptyList())
-            val byStudent = answers.filter { it.studentId != null }.distinctBy { it.studentId }.size
-            val stats = ExamCardStats(
-                totalStudents = roster.size,
-                answered = if (roster.isNotEmpty()) roster.count { it.status == "submitted" || it.submittedAt != null }.coerceAtLeast(byStudent.coerceAtMost(roster.size)) else byStudent,
-                graded = answers.count { it.graded },
-                pending = answers.count { !it.graded }
-            )
-            _state.update { it.copy(cardStats = it.cardStats + (id to stats)) }
+        val gate = Semaphore(4)
+        coroutineScope {
+            examIds.forEach { id ->
+                launch {
+                    gate.withPermit {
+                        val answersDeferred = async { repository.getAnswerStats(id).getOrDefault(emptyList()) }
+                        val rosterDeferred = async { repository.attendance(id).getOrDefault(emptyList()) }
+                        val answers = answersDeferred.await()
+                        val roster = rosterDeferred.await()
+                        val byStudent = answers.filter { it.studentId != null }.distinctBy { it.studentId }.size
+                        val stats = ExamCardStats(
+                            totalStudents = roster.size,
+                            answered = if (roster.isNotEmpty()) roster.count { it.status == "submitted" || it.submittedAt != null }.coerceAtLeast(byStudent.coerceAtMost(roster.size)) else byStudent,
+                            graded = answers.count { it.graded },
+                            pending = answers.count { !it.graded }
+                        )
+                        _state.update { it.copy(cardStats = it.cardStats + (id to stats)) }
+                    }
+                }
+            }
         }
+        SessionCache.get<GradingCache>(CACHE_KEY)?.let { SessionCache.put(CACHE_KEY, it.copy(cardStats = state.value.cardStats)) }
     }
 
     /** V58.0 — بازکردن گزارش‌های نظارتی آزمون از روی کارت (کنار ورود به تصحیح). */

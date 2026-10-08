@@ -21,6 +21,8 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -49,7 +51,7 @@ class SupabasePortabilityRepository {
             JsonArray(emptyList())
         }
         val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
-        val questions = ExamQuestionCodec.decode(exam.questions, key)
+        val questions = withContext(Dispatchers.Default) { ExamQuestionCodec.decode(exam.questions, key) }
         val content = ExamPackageCodec.encode(
             ExamPackageCodec.ExportedExam(
                 title = exam.title,
@@ -104,7 +106,7 @@ class SupabasePortabilityRepository {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
         val profile = SupabaseProvider.client.postgrest.rpc("native_my_profile").decodeAs<NativeProfileDto>()
-        val questions = ExamQuestionCodec.decode(exam.questions, key)
+        val questions = withContext(Dispatchers.Default) { ExamQuestionCodec.decode(exam.questions, key) }
         OfficialExamPrintable(
             documentTitle = exam.title,
             header = headerOverride ?: OfficialPrintHeader(

@@ -14,6 +14,10 @@ import ir.exam.app.domain.model.AppUser
 import ir.exam.app.domain.model.UserRole
 import ir.exam.app.domain.repository.AuthRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +33,8 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
     private val auth get() = SupabaseProvider.client.auth
     private val userCache = AuthUserCache(context)
     private val _currentUser = MutableStateFlow<AppUser?>(null)
+    /** V212 — تازه‌سازی پس‌زمینهٔ پروفایل در شروع (مستقل از چرخهٔ عمر صفحه) */
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     override val currentUser: Flow<AppUser?> = _currentUser.asStateFlow()
 
     /**
@@ -45,6 +51,18 @@ class SupabaseAuthRepository(context: Context) : AuthRepository {
         }
 
         val cachedUser = userCache.read(sessionUser.id)
+        // V212 — شروع سریع: اگر پروفایل همین کاربر از قبل روی دستگاه هست، بلافاصله با آن وارد می‌شویم و
+        // تازه‌سازی نشست/پروفایل در پس‌زمینه انجام می‌شود (نتیجه از طریق currentUser به UI می‌رسد).
+        // قبلاً حتی با پروفایل ذخیره‌شده تا ۵ ثانیه منتظر سرور می‌ماندیم.
+        if (cachedUser != null) {
+            backgroundScope.launch {
+                runCatching {
+                    auth.refreshCurrentSession()
+                    currentProfile()
+                }.onSuccess { fresh -> if (auth.currentUserOrNull()?.id == fresh.id) persistUser(fresh) }
+            }
+            return@runCatching persistUser(cachedUser)
+        }
         val refreshedProfile = withTimeoutOrNull(PROFILE_REFRESH_TIMEOUT_MS) {
             try {
                 auth.refreshCurrentSession()

@@ -102,6 +102,8 @@ kotlin {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.core:core-ktx:1.15.0")
+    // V212 — نصب Baseline Profile روی دستگاه‌های نصبِ مستقیم (بدون Play) برای شروع و پیمایش سریع‌تر
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")

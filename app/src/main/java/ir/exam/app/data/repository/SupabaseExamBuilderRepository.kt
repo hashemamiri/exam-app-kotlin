@@ -29,6 +29,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -89,6 +91,8 @@ class SupabaseExamBuilderRepository(context: Context) {
             val key = keyDeferred.await()
             val audience = audienceDeferred.await()
             val audienceSchools = audienceSchoolsDeferred.await()
+            // V212 — رمزگشایی JSON سؤال‌ها خارج از نخ اصلی (آزمون‌های بزرگ UI را نگه نمی‌دارند)
+            val decodedQuestions = withContext(Dispatchers.Default) { ExamQuestionCodec.decode(exam.questions, key) }
 
             ExamBuilderState(
                 examId = exam.id,
@@ -98,7 +102,7 @@ class SupabaseExamBuilderRepository(context: Context) {
                 durationMinutes = exam.duration?.toString().orEmpty(),
                 opensAtIso = exam.opensAt,
                 closesAtIso = exam.closesAt,
-                questions = ExamQuestionCodec.decode(exam.questions, key),
+                questions = decodedQuestions,
                 shuffleQuestions = exam.shuffleQuestions,
                 shuffleOptions = exam.shuffleOptions,
                 negativeMarking = exam.negativeMarking.toString(),

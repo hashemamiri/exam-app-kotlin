@@ -2,6 +2,7 @@ package ir.exam.app.data.repository
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.postgrest
 import ir.exam.app.data.dto.AnswerDto
 import ir.exam.app.data.dto.AttendanceDto
@@ -22,6 +23,8 @@ import ir.exam.app.domain.model.StudentAnswerReview
 import ir.exam.app.domain.model.StudentAnswerReviewQuestion
 import ir.exam.app.domain.model.StudentAnswerSummary
 import ir.exam.app.ui.builder.QuestionDraft
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -40,7 +43,8 @@ import kotlinx.serialization.json.put
 class SupabaseGradingRepository {
     suspend fun getExams(): Result<List<ExamDashboardDto>> = runCatching {
         val uid = currentTeacherId()
-        SupabaseProvider.client.from("exams").select {
+        // V212 — فقط ستون‌های کارت (بدون questions)
+        SupabaseProvider.client.from("exams").select(Columns.raw(ExamDashboardDto.COLUMNS)) {
             filter { eq("teacher_id", uid) }
         }.decodeList<ExamDashboardDto>().sortedByDescending { it.createdAt.orEmpty() }
     }
@@ -53,7 +57,8 @@ class SupabaseGradingRepository {
         val key = SupabaseProvider.client.from("exam_keys").select {
             filter { eq("exam_id", examId) }
         }.decodeList<ExamKeyDto>().firstOrNull()?.answers ?: JsonArray(emptyList())
-        val questions = ExamQuestionCodec.decode(exam.questions, key).map(QuestionDraft::toGradingQuestion)
+        // V212 — رمزگشایی JSON سؤال‌ها خارج از نخ اصلی
+        val questions = withContext(Dispatchers.Default) { ExamQuestionCodec.decode(exam.questions, key).map(QuestionDraft::toGradingQuestion) }
         GradingExam(exam.id, exam.title, exam.subject, exam.totalScore, questions)
     }
 
@@ -61,6 +66,16 @@ class SupabaseGradingRepository {
         SupabaseProvider.client.from("answers").select {
             filter { eq("exam_id", examId) }
         }.decodeList<AnswerDto>().map(AnswerDto::toDomain)
+    }
+
+    /**
+     * V212 — فقط برای شمارش کارت‌های تصحیح: به‌جای دانلود کل پاسخ‌ها (responses/response_images)
+     * فقط سه ستون سبک خوانده می‌شود.
+     */
+    suspend fun getAnswerStats(examId: String): Result<List<AnswerStatDto>> = runCatching {
+        SupabaseProvider.client.from("answers").select(Columns.raw("id,student_id,graded")) {
+            filter { eq("exam_id", examId) }
+        }.decodeList<AnswerStatDto>()
     }
 
     suspend fun saveGrade(answerId: String, grades: List<Double>, feedback: String): Result<Unit> = runCatching {

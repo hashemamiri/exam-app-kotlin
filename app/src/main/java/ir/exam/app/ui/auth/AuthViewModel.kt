@@ -1,5 +1,6 @@
 package ir.exam.app.ui.auth
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,7 +66,18 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
     private var restoreJob: Job? = null
 
-    init { restoreSession() }
+    init {
+        restoreSession()
+        // V212 — پروفایل تازه‌شده در پس‌زمینه (شروع سریع با پروفایل ذخیره‌شده) جایگزین نسخهٔ قبلی همان کاربر می‌شود.
+        viewModelScope.launch {
+            repository.currentUser.collect { fresh ->
+                val shown = _state.value.user
+                if (fresh != null && shown != null && fresh.id == shown.id && fresh != shown && !fresh.requiresTeacherSetup) {
+                    _state.update { it.copy(user = fresh) }
+                }
+            }
+        }
+    }
 
     fun retrySessionRestore() = restoreSession()
 
@@ -272,10 +284,13 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
 
     fun signOut() = request {
         repository.signOut().getOrThrow()
+        SessionCache.clear() // V212
         _state.value = AuthUiState(isRestoringSession = false)
     }
 
     private fun acceptAuthenticatedUser(user: AppUser) {
+        // V212 — ورود کاربر دیگر: حافظهٔ موقت فهرست‌ها پاک می‌شود
+        if (_state.value.user?.id != user.id) SessionCache.clear()
         if (user.requiresTeacherSetup) {
             _state.update {
                 it.copy(

@@ -1,5 +1,6 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** V212 — بستهٔ حافظهٔ موقت صفحهٔ آمار */
+private data class ReportsCache(val analytics: AnalyticsSummary, val exams: List<ExamDashboardDto>, val classes: List<SchoolClass>)
+private const val CACHE_KEY = "reports.bundle"
 
 data class ReportsState(
     val loading: Boolean = true,
@@ -41,25 +46,35 @@ class ReportsViewModel(
     val state = _state.asStateFlow()
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
+        // V212 — دادهٔ قبلی فوراً نشان داده می‌شود؛ سه درخواست هم‌زمان (نه پشت سر هم) و نتیجه جایگزین می‌شود.
+        val cached = SessionCache.get<ReportsCache>(CACHE_KEY)
+        if (cached != null && state.value.exams.isEmpty()) applyLoaded(cached.analytics, cached.exams, cached.classes)
+        _state.update { it.copy(loading = cached == null && it.exams.isEmpty(), error = null) }
         runCatching {
-            val analytics = grading.analytics().getOrThrow()
-            val exams = grading.getExams().getOrThrow()
-            val classes = school.getClasses().getOrThrow()
-            Triple(analytics, exams, classes)
-        }.onSuccess { (analytics, exams, classes) ->
-            _state.update {
-                it.copy(
-                    loading = false,
-                    analytics = analytics,
-                    exams = exams,
-                    classes = classes,
-                    selectedExamIds = exams.mapTo(linkedSetOf(), ExamDashboardDto::id),
-                    selectedAnalysisExamId = exams.firstOrNull()?.id
-                )
+            coroutineScope {
+                val analytics = async { grading.analytics().getOrThrow() }
+                val exams = async { grading.getExams().getOrThrow() }
+                val classes = async { school.getClasses().getOrThrow() }
+                Triple(analytics.await(), exams.await(), classes.await())
             }
+        }.onSuccess { (analytics, exams, classes) ->
+            SessionCache.put(CACHE_KEY, ReportsCache(analytics, exams, classes))
+            applyLoaded(analytics, exams, classes)
             // V208 — تحلیل کیفیت سؤال از صفحهٔ آمار حذف شد؛ بارگیری خودکار آن هم لازم نیست.
-        }.onFailure(::fail)
+        }.onFailure { if (cached == null) fail(it) else _state.update { s -> s.copy(loading = false) } }
+    }
+
+    private fun applyLoaded(analytics: AnalyticsSummary, exams: List<ExamDashboardDto>, classes: List<SchoolClass>) {
+        _state.update {
+            it.copy(
+                loading = false,
+                analytics = analytics,
+                exams = exams,
+                classes = classes,
+                selectedExamIds = exams.mapTo(linkedSetOf(), ExamDashboardDto::id),
+                selectedAnalysisExamId = exams.firstOrNull()?.id
+            )
+        }
     }
 
     fun loadQuestionAnalysis(examId: String) = viewModelScope.launch {
