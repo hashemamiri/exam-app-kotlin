@@ -30,7 +30,7 @@ data class PrintPageSetup(
     val font: Int = 10,
     val spacing: String = "normal",
     val showScores: Boolean = true,
-    /** V208 — پیش‌فرض چیدمان گزینه‌های چهارگزینه‌ای: 1row / 2rows / 4rows. */
+    /** V208 — پیش‌فرض چیدمان گزینه‌های چندگزینه‌ای: 1row / 2rows / 4rows. */
     val optionsLayout: String = "2rows"
 ) {
     /** JSON برای رندرر (همهٔ مقادیر اعتبارسنجی‌شده‌اند؛ رشته‌ها فقط از فهرستِ ثابت). */

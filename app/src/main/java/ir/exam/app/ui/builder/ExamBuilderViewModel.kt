@@ -576,7 +576,7 @@ class ExamBuilderViewModel(
     fun setAnswerLineStyle(id: String, value: String) { if (value in setOf("lined","blank","grid")) update(id) { it.copy(answerLineStyle=value) } }
     /** V107 — فاصلهٔ سطرِ فضای پاسخ (سانتی‌متر)، با گردکردن به ۰٫۱. */
     fun setAnswerLineSpacingCm(id: String, value: Float) { update(id) { it.copy(answerLineSpacingCm = (Math.round(value.coerceIn(0.5f, 2.0f) * 10f) / 10f)) } }
-    /** V208 — چیدمان گزینه‌های چهارگزینه‌ای در چاپ ("" = پیش‌فرض آزمون). */
+    /** V208 — چیدمان گزینه‌های چندگزینه‌ای در چاپ ("" = پیش‌فرض آزمون). */
     fun setOptionsLayout(id: String, value: String) { if (value in setOf("", "1row", "2rows", "4rows")) update(id) { it.copy(optionsLayout = value) } }
     fun setTrueFalse(id: String, value: Boolean) { update(id) { it.copy(expectedText = value.toString()) } }
     fun updateExpectedText(id: String, value: String) { update(id) { it.copy(expectedText = value) } }

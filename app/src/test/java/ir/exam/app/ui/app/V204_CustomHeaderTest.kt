@@ -49,11 +49,11 @@ class V204_CustomHeaderTest {
     @Test fun renderer_and_clients_support_custom_header() {
         val ms = src("app/src/main/assets/print/web/mainscript.js")
         assertTrue("if (t === 'custom') return buildCustomHeader();" in ms)
-        assertTrue("<img class=\"c8-logo-img\" src=\"${logo}\" alt=\"لوگو\">" in ms)
+        assertTrue("<img class=\"c8-logo-img\" src=\"${'$'}{logo}\" alt=\"لوگو\">" in ms)
         assertTrue("if (logo) {" in ms && "} else mid += line('c_m1', 1) + (rows >= 2 ? line('c_m2', 2) : '');" in ms)
         assertTrue("for (let i = 1; i <= rows; i++) h += line(prefix + i, i);" in ms && "for (let i = 3; i <= rows; i++) mid += line('c_m' + i, i);" in ms)
         assertTrue("const ROWS = 5;" in ms && "let rows = Math.max(lastFilled('c_r'), lastFilled('c_l'), lastFilled('c_m'), logo ? 2 : 0, 1);" in ms)
-        assertTrue("style=\"height:${44 + gap}px" in ms && "const font = String(v('c_font') || '').trim();" in ms)
+        assertTrue("style=\"height:${'$'}{44 + gap}px" in ms && "const font = String(v('c_font') || '').trim();" in ms)
         assertFalse("<table class=\"exam-header exam-header8\">" in ms)
         assertTrue("(currentHeaderTemplate() === 'custom' ? 'c_intro' : 'f_intro')" in ms)
         assertTrue("<option value=\\\"custom\\\">" in src("app/src/main/assets/print/web/host_dom.js"))

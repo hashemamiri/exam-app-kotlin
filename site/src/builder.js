@@ -644,7 +644,7 @@
           inp('فاصلهٔ خط (cm)', String(q.answerLineSpacingCm), function (v) { q.answerLineSpacingCm = Math.max(0.5, Math.min(2, parseFloat(en(v)) || 1)); mark(); }, 'number')
         ]));
       }
-      /* V208 — چیدمان گزینه‌های چهارگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
+      /* V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه»ی پیش‌نمایش) */
       if (state.mode === 'print' && q.type === 'multiple') {
         editor.appendChild(el('h4', {text: 'چیدمان گزینه‌ها در برگهٔ چاپی', style: 'margin-top:14px'}));
         editor.appendChild(el('div', {class: 'grid3'}, [

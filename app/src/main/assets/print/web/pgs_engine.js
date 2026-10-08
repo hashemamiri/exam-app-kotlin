@@ -125,8 +125,8 @@
         '<div class="field pgs-setup-full"><label>فاصلهٔ بین سؤالات:</label><select id="opt_questionSpacing">' +
           '<option value="compact">فشرده</option><option value="normal" selected>معمولی</option><option value="open">باز</option>' +
         '</select></div>' +
-        /* V208 — پیش‌فرضِ چیدمان گزینه‌های چهارگزینه‌ای برای کل آزمون (هر سؤال می‌تواند جداگانه عوض کند) */
-        '<div class="field pgs-setup-full"><label>چیدمان گزینه‌های چهارگزینه‌ای:</label><select id="opt_optionsLayout">' +
+        /* V208 — پیش‌فرضِ چیدمان گزینه‌های چندگزینه‌ای برای کل آزمون (هر سؤال می‌تواند جداگانه عوض کند) */
+        '<div class="field pgs-setup-full"><label>چیدمان گزینه‌های چندگزینه‌ای:</label><select id="opt_optionsLayout">' +
           '<option value="1row">همهٔ گزینه‌ها در یک ردیف</option><option value="2rows" selected>دو ردیف (دو گزینه در هر ردیف)</option><option value="4rows">هر گزینه در یک ردیف</option>' +
         '</select></div>' +
         '<div class="pgs-setup-hint">💡 این تنظیمات هم روی پیش‌نمایش اعمال می‌شوند هم روی چاپ — خروجی چاپ دقیقاً همان چیزی است که در پیش‌نمایش می‌بینید. با «💾 ذخیره آزمون (JSON)» همراه آزمون ذخیره می‌شوند.</div>' +

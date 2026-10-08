@@ -1296,7 +1296,7 @@ private fun QuestionEditor(
                 if (question.type == QuestionType.ESSAY || question.type == QuestionType.FILL_BLANK || question.type == QuestionType.NUMERIC) {
                     PrintAnswerSpaceControls(question = question, viewModel = viewModel)
                 }
-                // V208 — چیدمان گزینه‌های چهارگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه» پیش‌نمایش)
+                // V208 — چیدمان گزینه‌های چندگزینه‌ای در برگهٔ چاپی (پیش‌فرض آزمون در «تنظیمات صفحه» پیش‌نمایش)
                 if (question.type == QuestionType.MULTIPLE_CHOICE) {
                     PrintOptionsLayoutControls(question = question, viewModel = viewModel)
                 }

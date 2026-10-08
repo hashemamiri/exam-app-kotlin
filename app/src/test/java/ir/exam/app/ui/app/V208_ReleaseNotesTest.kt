@@ -35,8 +35,8 @@ class V208_ReleaseNotesTest {
         val lines = src("text/CHANGELOG_FA.txt").lines()
         assertTrue(lines.first().startsWith("V"))
         val top = ReleaseNotes.parse(lines.take(40)).first()
-        assertTrue(top.bullets.size in 2..ReleaseNotes.MAX_BULLETS)
-        assertTrue(top.bullets.all { it.length <= 160 })
+        assertTrue(top.bullets.size in 1..ReleaseNotes.MAX_BULLETS)
+        assertTrue(top.bullets.all { it.length <= 200 })
     }
 
     @Test

@@ -104,7 +104,7 @@ class V27DataImageOptionsTest {
         assertTrue("importExam.launch" in data)
         assertTrue("onImportExam = onImportExam" in profile)
         assertTrue("onImportExam = { draft ->" in app)
-        val storage = data.substringAfter("Text(\"نگهداری امن Storage\"")
+        val storage = data.substringAfter("SettingsAccordionCard(title = \"نگهداری امن Storage\"")
         assertTrue(storage.split("modifier = Modifier.fillMaxWidth()").size - 1 >= 2)
     }
 
