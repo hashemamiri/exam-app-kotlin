@@ -24,9 +24,8 @@ class V214_PerformancePhase3Test {
         assertTrue("withContext(Dispatchers.Default)" in inliner)
         assertTrue("Semaphore(PARALLEL_DOWNLOADS)" in inliner)
         val main = src("app/src/main/java/ir/exam/app/MainActivity.kt")
-        assertTrue("warmUpExamPrintWebView(this)" in main)
+        assertTrue("FormulaEditorPool.prepare(this)" in main)
         assertFalse("android.webkit" in main)
-        assertTrue("fun warmUpExamPrintWebView(context: Context)" in dialog)
     }
 
     @Test

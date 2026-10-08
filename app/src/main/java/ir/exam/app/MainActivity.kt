@@ -1,6 +1,6 @@
 package ir.exam.app
 
-import ir.exam.app.ui.printing.warmUpExamPrintWebView
+import ir.exam.app.ui.math.FormulaEditorPool
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.fragment.app.FragmentActivity
@@ -16,10 +16,10 @@ import ir.exam.app.ui.app.ExamApp
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // V214 — گرم کردن موتور WebView (Chromium) چند ثانیه پس از شروع، در زمان بیکاری: اولین باز شدن
-        // پیش‌نمایش چاپ/ویرایشگر فرمول دیگر هزینهٔ راه‌اندازی WebView (~۰٫۵ تا ۱ ثانیه) را نمی‌پردازد.
+        // V214/V216 — چند ثانیه پس از شروع، WebView ویرایشگر فرمول از قبل ساخته و بارگذاری می‌شود (Chromium هم
+        // گرم می‌شود): باز شدن ویرایشگر فرمول و اولین پیش‌نمایش چاپ دیگر هزینهٔ راه‌اندازی/parse را نمی‌پردازند.
         window.decorView.postDelayed({
-            if (!isFinishing && !isDestroyed) warmUpExamPrintWebView(this)
+            if (!isFinishing && !isDestroyed) FormulaEditorPool.prepare(this)
         }, WEBVIEW_WARMUP_DELAY_MS)
         setContent {
             val appearancePreferences = remember { AppearancePreferences(applicationContext) }
@@ -30,6 +30,17 @@ class MainActivity : FragmentActivity() {
                 ExamApp(appearance = appearance)
             }
         }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // V216 — در کمبود حافظه، WebView پارک‌شدهٔ ویرایشگر فرمول آزاد می‌شود (دفعهٔ بعد مثل قبل تازه ساخته می‌شود).
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) FormulaEditorPool.release()
+    }
+
+    override fun onDestroy() {
+        FormulaEditorPool.release()
+        super.onDestroy()
     }
 }
 

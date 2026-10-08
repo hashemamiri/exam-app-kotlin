@@ -1181,11 +1181,3 @@ internal fun PrintOptionPickerDialog(
         }
     )
 }
-
-/**
- * V215 — گرم کردن موتور WebView (Chromium) در زمان بیکاری پس از شروع برنامه (از MainActivity صدا زده می‌شود).
- * اینجا قرار دارد چون این فایل تنها مسیر مجاز WebView برای چاپ است (قاعدهٔ Neumorphic69IntegrationTest).
- */
-fun warmUpExamPrintWebView(context: Context) {
-    runCatching { android.webkit.WebView(context).destroy() }
-}

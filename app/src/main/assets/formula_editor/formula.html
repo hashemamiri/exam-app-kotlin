@@ -15592,7 +15592,9 @@ window.openMath = function () {
            onPageFinished قبل از پایان parse برسد؛ تا آماده‌شدن openMath و باز شدن
            واقعی مودال، هر ۱۲۰ms تلاش می‌کنیم (حداکثر ۱۰ ثانیه). */
         var tries = 0;
-        var opener = setInterval(function () {
+        /* V216 — اولین تلاش بلافاصله (نه ۱۲۰ms بعد): در حالت «گرم» مودال همان لحظه باز می‌شود. */
+        var opener = setInterval(function () { tick(); }, 120);
+        function tick() {
           tries++;
           try {
             var modal = document.getElementById('mfModal');
@@ -15623,7 +15625,8 @@ window.openMath = function () {
               }
             } catch (err) {}
           }
-        }, 120);
+        }
+        tick();
       }
     };
     /* Kotlin برای اطمینان از آماده‌بودن پل، این پرچم را می‌خواند. */

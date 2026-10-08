@@ -8,6 +8,7 @@ import base64, gzip, io, os, pathlib, subprocess, sys, tarfile
 VERSION = 'VXX'
 COMMIT_MSG = 'VXX — ...'
 FILES = []
+REMOVE = []  # فایل‌هایی که در این نسخه حذف شده‌اند (مثل engines قدیمی سایت)
 PAYLOAD = """"""
 
 
@@ -29,6 +30,10 @@ def main():
             if n.startswith('/') or '..' in n.split('/'):
                 print('مسیر نامعتبر در بسته:', n); sys.exit(1)
         tar.extractall(root)
+    for f in REMOVE:
+        fp = root / f
+        if fp.is_file():
+            fp.unlink(); print('حذف شد:', f)
     missing = [f for f in FILES if not (root / f).is_file()]
     if missing:
         print('خطا: این فایل‌ها استخراج نشدند:', missing); sys.exit(1)

@@ -1,6 +1,8 @@
 package ir.exam.app.ui.math
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.view.ViewGroup
 import android.graphics.Color
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -39,7 +41,6 @@ import org.json.JSONObject
  * انتخاب دریافتی باز می‌شود. خروجی، متن کامل به‌روزشده است که پس از بسته‌شدن
  * ویرایشگر (تأیید یا انصراف مرجع) به Native برمی‌گردد.
  */
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun FormulaHostDialog(
     initialText: String,
@@ -66,111 +67,41 @@ fun FormulaHostDialog(
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { context ->
-                        WebView(context).apply {
-                            // V55.3 — پس‌زمینهٔ «مات» به‌جای شفاف: WebView شفاف + backdrop-filter
-                            // فایل مرجع روی برخی دستگاه‌ها لایهٔ کامپوزیت خالی می‌سازد (مودال باز
-                            // ولی محتوا paint نمی‌شود — همان «صفحهٔ سفید» N55.2). رنگ همان --bg1 است.
-                            setBackgroundColor(Color.parseColor("#E9EEF5"))
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            // این صفحات کاملاً از asset محلی می‌آیند؛ cache دیسک WebView
-                            // فقط IO و نگهداری دادهٔ تکراری ایجاد می‌کند.
-                            settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
-                            settings.allowFileAccess = false
-                            settings.allowContentAccess = false
-                            @Suppress("DEPRECATION")
-                            settings.allowFileAccessFromFileURLs = false
-                            @Suppress("DEPRECATION")
-                            settings.allowUniversalAccessFromFileURLs = false
-                            settings.setSupportZoom(false)
-                            addJavascriptInterface(
-                                FormulaHostBridge(
-                                    onText = { latestText = it },
-                                    onJsError = { message -> post { jsError = message; loading = false } },
-                                    // V55 — فایل مستقل رویداد صریح onEditorClosed دارد؛
-                                    // بستن (✕ یا درج فرمول) متن نهایی را برمی‌گرداند.
-                                    onClosed = { post { onResult(latestText); onDismiss() } }
-                                ),
-                                "ExamEditorNative"
-                            )
-                            webViewClient = object : WebViewClient() {
-                                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                                    // V54.5 — فقط ناوبری خارجی «صفحهٔ اصلی» مسدود می‌شود. WebView برخلاف
-                                    // مرورگر دسکتاپ، ناوبری داخلی iframe ویرایشگر فرمول (about:blank /
-                                    // document.open) را هم از این مسیر عبور می‌دهد؛ true برگرداندن برای آن،
-                                    // boot ویرایشگر مرجع را بی‌صدا می‌شکست.
-                                    if (!request.isForMainFrame) return false
-                                    val url = request.url
-                                    val isLocal = url.host == "exam-editor.local" || url.scheme == "about"
-                                    return !isLocal
-                                }
-                                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                                    val path = request.url.path ?: return emptyResponse()
-                                    // V54.4/V55 — فقط asset محلی ویرایشگر فرمول؛ بقیه پاسخ خالی امن.
-                                    if (!path.startsWith("/formula-editor/")) return emptyResponse()
-                                    val assetPath = path.removePrefix("/formula-editor/")
-                                    if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
-                                    return try {
-                                        val stream = view.context.assets.open("formula_editor/$assetPath")
-                                        val mime = when {
-                                            assetPath.endsWith(".html") -> "text/html"
-                                            assetPath.endsWith(".css") -> "text/css"
-                                            assetPath.endsWith(".js") -> "application/javascript"
-                                            assetPath.endsWith(".json") -> "application/json"
-                                            else -> "application/octet-stream"
-                                        }
-                                        WebResourceResponse(mime, "UTF-8", stream)
-                                    } catch (_: IOException) { emptyResponse() }
-                                }
-
-                                private fun emptyResponse(): WebResourceResponse =
-                                    WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
-                                override fun onPageFinished(view: WebView, url: String) {
-                                    // V55.1 — onPageFinished در WebView می‌تواند قبل از پایان parse
-                                    // اسکریپت بزرگ برسد؛ تا تعریف‌شدن پل، begin هر 150ms تکرار می‌شود.
-                                    val text = JSONObject.quote(initialText)
-                                    var attempts = 0
-                                    fun tryBegin() {
-                                        attempts++
-                                        view.evaluateJavascript(
-                                            "(function(){if(window.ExamFormulaHost){ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
-                                        ) { result ->
-                                            when {
-                                                result?.contains("ok") == true -> Unit
-                                                attempts < 67 -> view.postDelayed({ tryBegin() }, 150)
-                                                // V55.2 — پل هرگز تعریف نشد: خطای صریح به‌جای سکوت.
-                                                else -> post {
-                                                    jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.6 not loaded?)"
-                                                    loading = false
-                                                }
-                                            }
-                                        }
+                        // V216 — WebView «گرم» (از قبل ساخته و parse شده) یا در نبودش، نمونهٔ تازه.
+                        val view = FormulaEditorPool.acquire(context)
+                        FormulaEditorPool.session = FormulaEditorPool.Session(
+                            onText = { latestText = it },
+                            onJsError = { message -> view.post { jsError = message; loading = false } },
+                            // V55 — فایل مستقل رویداد صریح onEditorClosed دارد؛
+                            // بستن (✕ یا درج فرمول) متن نهایی را برمی‌گرداند.
+                            onClosed = { view.post { onResult(latestText); onDismiss() } }
+                        )
+                        // V55.1/V216 — تا تعریف‌شدن پل (صفحهٔ گرم: همان لحظه)، begin هر 150ms تکرار می‌شود.
+                        val text = JSONObject.quote(initialText)
+                        var attempts = 0
+                        fun tryBegin() {
+                            if (FormulaEditorPool.current !== view) return
+                            attempts++
+                            view.evaluateJavascript(
+                                "(function(){if(window.ExamFormulaHost){ExamFormulaHost.begin($text, $selectionStart, $selectionEnd);return 'ok';}return 'wait';})();"
+                            ) { result ->
+                                when {
+                                    result?.contains("ok") == true -> loading = false
+                                    attempts < 67 -> view.postDelayed({ tryBegin() }, 150)
+                                    // V55.2 — پل هرگز تعریف نشد: خطای صریح به‌جای سکوت.
+                                    else -> {
+                                        jsError = "BRIDGE_NOT_READY after $attempts tries (asset v55.6 not loaded?)"
+                                        loading = false
                                     }
-                                    tryBegin()
-                                    post { loading = false }
                                 }
                             }
-                            // V54.5 — WebChromeClient خطاهای console را امن گزارش می‌کند؛
-                            // نبودن آن، خطاهای boot ویرایشگر را بی‌صدا گم می‌کرد.
-                            webChromeClient = object : android.webkit.WebChromeClient() {
-                                override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                                    if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
-                                        val safe = message.message().replace(Regex("https?://\\S+"), "[url]").take(300)
-                                        post { jsError = "CONSOLE: $safe"; loading = false }
-                                    }
-                                    return true
-                                }
-                            }
-                            // V55 — پنجرهٔ فرمول فایل مستقل formula.html است (پاک‌سازی V74.0:
-                            // asset قدیمی question_editor حذف شد). auto-open مرجع خودش پنجره را باز می‌کند.
-                            loadUrl("https://exam-editor.local/formula-editor/formula.html")
                         }
+                        tryBegin()
+                        view
                     },
                     onRelease = { view ->
-                        view.stopLoading()
-                        view.loadUrl("about:blank")
-                        view.removeAllViews()
-                        view.destroy()
+                        // V216 — به‌جای destroy، به استخر برمی‌گردد و در پس‌زمینه برای دفعهٔ بعد بازنشانی می‌شود.
+                        FormulaEditorPool.recycle(view)
                     }
                 )
                 if (loading) {
@@ -186,6 +117,156 @@ fun FormulaHostDialog(
                 }
             }
         }
+    }
+}
+
+/**
+ * V216 — استخر WebView ویرایشگر فرمول (سرعت: کاربر «ویرایشگر فرمول خیلی کند است، مخصوصاً در اپ»).
+ * اندازه‌گیری در Chromium: تعامل داخل ویرایشگر long task ندارد؛ هزینهٔ اصلی هر باز شدن، ساخت WebView
+ * و parse فایل ۱٫۸MB `formula.html` بود (~۱ ثانیه با CPU ۴× کندتر؛ روی گوشی بیشتر). راه‌حل: یک WebView
+ * از قبل ساخته و بارگذاری شده (پس از شروع برنامه، در بیکاری) که هر بار فقط به Dialog وصل می‌شود؛ پس از
+ * بستن، همان نمونه در پس‌زمینه دوباره بارگذاری می‌شود تا برای دفعهٔ بعد تازه و آماده باشد.
+ * قاعدهٔ WebView فقط در این فایل (Neumorphic69IntegrationTest) رعایت شده است.
+ */
+@SuppressLint("SetJavaScriptEnabled")
+object FormulaEditorPool {
+    class Session(
+        val onText: (String) -> Unit,
+        val onJsError: (String) -> Unit,
+        val onClosed: () -> Unit
+    )
+
+    private const val EDITOR_URL = "https://exam-editor.local/formula-editor/formula.html"
+
+    /** جلسهٔ فعال Dialog؛ رویدادهای JS فقط به آن می‌رسند (در حالت گرم/پارک‌شده null). */
+    @Volatile
+    var session: Session? = null
+
+    /** WebView در اختیار Dialog فعلی (برای توقف پولینگ begin پس از بستن). */
+    @Volatile
+    var current: WebView? = null
+        private set
+
+    private var parked: WebView? = null
+
+    /** از MainActivity پس از شروع (در بیکاری) صدا زده می‌شود؛ ساخت WebView، Chromium را هم گرم می‌کند. */
+    fun prepare(context: Context) {
+        if (parked != null || current != null) return
+        parked = create(context)
+    }
+
+    fun acquire(context: Context): WebView {
+        val view = parked?.takeIf { it.context === context || it.context.applicationContext === context.applicationContext }
+            ?: create(context)
+        parked = null
+        (view.parent as? ViewGroup)?.removeView(view)
+        view.onResume()
+        current = view
+        return view
+    }
+
+    fun recycle(view: WebView) {
+        session = null
+        if (current === view) current = null
+        (view.parent as? ViewGroup)?.removeView(view)
+        if (parked != null) { destroy(view); return }
+        // بازنشانی وضعیت صفحه برای جلسهٔ بعد (parse در پس‌زمینه، نه هنگام باز شدن)
+        view.stopLoading()
+        view.loadUrl(EDITOR_URL)
+        parked = view
+    }
+
+    /** آزادسازی کامل (کمبود حافظه یا پایان Activity). */
+    fun release() {
+        parked?.let { destroy(it) }
+        parked = null
+    }
+
+    private fun destroy(view: WebView) {
+        runCatching {
+            view.stopLoading()
+            view.loadUrl("about:blank")
+            view.removeAllViews()
+            view.destroy()
+        }
+    }
+
+    private fun create(context: Context): WebView = WebView(context).apply {
+        // V55.3 — پس‌زمینهٔ «مات» به‌جای شفاف: WebView شفاف + backdrop-filter
+        // فایل مرجع روی برخی دستگاه‌ها لایهٔ کامپوزیت خالی می‌سازد (مودال باز
+        // ولی محتوا paint نمی‌شود — همان «صفحهٔ سفید» N55.2). رنگ همان --bg1 است.
+        setBackgroundColor(Color.parseColor("#E9EEF5"))
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        // این صفحات کاملاً از asset محلی می‌آیند؛ cache دیسک WebView
+        // فقط IO و نگهداری دادهٔ تکراری ایجاد می‌کند.
+        settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
+        @Suppress("DEPRECATION")
+        settings.allowFileAccessFromFileURLs = false
+        @Suppress("DEPRECATION")
+        settings.allowUniversalAccessFromFileURLs = false
+        settings.setSupportZoom(false)
+        addJavascriptInterface(
+            FormulaHostBridge(
+                onText = { text -> session?.onText?.invoke(text) },
+                onJsError = { message -> session?.onJsError?.invoke(message) },
+                onClosed = { session?.onClosed?.invoke() }
+            ),
+            "ExamEditorNative"
+        )
+        webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                // V54.5 — فقط ناوبری خارجی «صفحهٔ اصلی» مسدود می‌شود. WebView برخلاف
+                // مرورگر دسکتاپ، ناوبری داخلی iframe ویرایشگر فرمول (about:blank /
+                // document.open) را هم از این مسیر عبور می‌دهد؛ true برگرداندن برای آن،
+                // boot ویرایشگر مرجع را بی‌صدا می‌شکست.
+                if (!request.isForMainFrame) return false
+                val url = request.url
+                val isLocal = url.host == "exam-editor.local" || url.scheme == "about"
+                return !isLocal
+            }
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                val path = request.url.path ?: return emptyResponse()
+                // V54.4/V55 — فقط asset محلی ویرایشگر فرمول؛ بقیه پاسخ خالی امن.
+                if (!path.startsWith("/formula-editor/")) return emptyResponse()
+                val assetPath = path.removePrefix("/formula-editor/")
+                if (assetPath.isBlank() || assetPath.contains("..")) return emptyResponse()
+                return try {
+                    val stream = view.context.assets.open("formula_editor/$assetPath")
+                    val mime = when {
+                        assetPath.endsWith(".html") -> "text/html"
+                        assetPath.endsWith(".css") -> "text/css"
+                        assetPath.endsWith(".js") -> "application/javascript"
+                        assetPath.endsWith(".json") -> "application/json"
+                        else -> "application/octet-stream"
+                    }
+                    WebResourceResponse(mime, "UTF-8", stream)
+                } catch (_: IOException) { emptyResponse() }
+            }
+
+            private fun emptyResponse(): WebResourceResponse =
+                WebResourceResponse("text/plain", "UTF-8", java.io.ByteArrayInputStream(ByteArray(0)))
+            override fun onPageFinished(view: WebView, url: String) {
+                // V216 — نمونهٔ پارک‌شده پس از پایان بارگذاری، تایمرها/انیمیشن‌هایش متوقف می‌شود (بدون مصرف CPU در پس‌زمینه).
+                if (parked === view) view.onPause()
+            }
+        }
+        // V54.5 — WebChromeClient خطاهای console را امن گزارش می‌کند؛
+        // نبودن آن، خطاهای boot ویرایشگر را بی‌صدا گم می‌کرد.
+        webChromeClient = object : android.webkit.WebChromeClient() {
+            override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
+                if (message.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR) {
+                    val safe = message.message().replace(Regex("https?://\\S+"), "[url]").take(300)
+                    session?.onJsError?.invoke("CONSOLE: $safe")
+                }
+                return true
+            }
+        }
+        // V55 — پنجرهٔ فرمول فایل مستقل formula.html است (پاک‌سازی V74.0:
+        // asset قدیمی question_editor حذف شد). auto-open مرجع خودش پنجره را باز می‌کند.
+        loadUrl(EDITOR_URL)
     }
 }
 

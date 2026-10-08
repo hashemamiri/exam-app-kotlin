@@ -426,7 +426,7 @@
     }, function (e) { toast(errMsg(e), 'err'); return ''; });
   }
   /* پیش‌بارگذاری آرام بعد از ورود (پس از بیکار شدن صفحه) تا اولین چاپ/فرمول معطل نشود */
-  function prefetchEngines() { var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); }; idle(function () { loadEngines().catch(function () {}); }); }
+  function prefetchEngines() { var idle = window.requestIdleCallback || function (f) { setTimeout(f, 2500); }; idle(function () { loadEngines().then(function () { prewarmFormula(); /* V216 */ }).catch(function () {}); }); }
   /* V199 — اثر انگشت سربرگ: فیلدهای f_* پیش‌نمایش، مرتب، بدون خالی‌ها؛ عیناً مثل PrintPayFingerprint.kt اپ (سرور md5 می‌کند) */
   function headerFingerprint(fields) {
     fields = fields && typeof fields === 'object' ? fields : {};
@@ -618,27 +618,44 @@
   var formulaCtx = null;
   window.__formulaBridge = {
     onTextChanged: function (v) { if (formulaCtx) formulaCtx.text = String(v == null ? '' : v); },
-    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; document.body.classList.remove('engine-open'); c.resolve(c.text); },
+    onEditorClosed: function () { if (!formulaCtx) return; var c = formulaCtx; formulaCtx = null; try { c.overlay.remove(); } catch (e) {} document.body.style.overflow = ''; document.body.classList.remove('engine-open'); c.resolve(c.text); prewarmFormula(); /* V216 */ },
     onError: function (code) { console.warn('formula editor:', code); }
   };
+  /* V216 — ویرایشگر فرمول «گرم»: فایل ۱٫۸MB ویرایشگر یک بار در iframe پنهان parse می‌شود و هر باز شدن
+     فقط overlay را نشان می‌دهد و begin را صدا می‌زند؛ پس از بستن، iframe بعدی در بیکاری آماده می‌شود. */
+  var warmFormula = null;
+  function makeFormulaOverlay() {
+    var overlay = el('div', {class: 'engine-bg'}); overlay.style.display = 'none';
+    var iframe = el('iframe', {title: 'formula-editor'});
+    overlay.appendChild(iframe); document.body.appendChild(overlay);
+    var w = {overlay: overlay, iframe: iframe, loaded: false, failed: false};
+    iframe.addEventListener('load', function () { w.loaded = true; });
+    engineHtml('formula').then(function (h) { if (h) iframe.srcdoc = h; else w.failed = true; });
+    return w;
+  }
+  function prewarmFormula() {
+    if (warmFormula || formulaCtx || !user || user.role === 'student') return;
+    var idle = window.requestIdleCallback || function (f) { setTimeout(f, 1500); };
+    idle(function () { if (!warmFormula && !formulaCtx) warmFormula = makeFormulaOverlay(); });
+  }
   function openFormulaEditor(text, selStart, selEnd) {
     return new Promise(function (resolve) {
       if (formulaCtx) { try { formulaCtx.overlay.remove(); } catch (e) {} }
-      var overlay = el('div', {class: 'engine-bg'});
-      var iframe = el('iframe', {title: 'formula-editor'});
-      overlay.appendChild(iframe); document.body.appendChild(overlay);
+      var w = warmFormula && !warmFormula.failed ? warmFormula : makeFormulaOverlay();
+      warmFormula = null;
+      var overlay = w.overlay, iframe = w.iframe;
+      overlay.style.display = '';
       document.body.style.overflow = 'hidden'; document.body.classList.add('engine-open');
       formulaCtx = {overlay: overlay, iframe: iframe, text: text || '', resolve: resolve};
       var s = selStart == null ? (text || '').length : selStart, e = selEnd == null ? s : selEnd;
-      iframe.addEventListener('load', function () {
-        var w = iframe.contentWindow, tries = 0;
-        (function tryBegin() {
-          tries++;
-          try { if (w.ExamFormulaHost && typeof w.ExamFormulaHost.begin === 'function') { w.ExamFormulaHost.begin(text || '', s, e); return; } } catch (er) {}
-          if (tries < 67) setTimeout(tryBegin, 150); else { toast('ویرایشگر فرمول آماده نشد.', 'err'); window.__formulaBridge.onEditorClosed(); }
-        })();
-      });
-      engineHtml('formula').then(function (h) { if (h) iframe.srcdoc = h; else window.__formulaBridge.onEditorClosed(); });
+      var tries = 0;
+      (function tryBegin() {
+        tries++;
+        if (formulaCtx && formulaCtx.iframe !== iframe) return;
+        try { var cw = iframe.contentWindow; if (w.loaded && cw && cw.ExamFormulaHost && typeof cw.ExamFormulaHost.begin === 'function') { cw.ExamFormulaHost.begin(text || '', s, e); return; } } catch (er) {}
+        if (w.failed || tries > 134) { toast('ویرایشگر فرمول آماده نشد.', 'err'); window.__formulaBridge.onEditorClosed(); return; }
+        setTimeout(tryBegin, w.loaded ? 150 : 75);
+      })();
     });
   }
 
