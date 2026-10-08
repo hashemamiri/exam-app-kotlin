@@ -1430,7 +1430,7 @@
 
   /* ---- آزمون‌ها ---- */
   function examTable(list, c) {
-    return el('table', {class: 'tbl'}, [
+    return el('table', {class: 'tbl tbl-cyan'}, [
       el('thead', {}, [el('tr', {}, ['عنوان', 'درس', 'کد', 'وضعیت', 'بارم', 'تاریخ', ''].map(function (h) { return el('th', {text: h}); }))]),
       el('tbody', {}, list.map(function (x) {
         return el('tr', {}, [el('td', {html: '<b>' + esc(x.title || 'بدون عنوان') + '</b>'}), el('td', {text: x.subject || '—'}), el('td', {}, [el('span', {class: 'code', text: x.code || '—'})]),
@@ -1508,7 +1508,7 @@
       /* V227 — مثل ClassesContent اپ: «ساخت کلاس جدید» + «مدارس» کنار هم؛ «مدارس» نمای مدرسه → کلاس‌های مدرسه → دانش‌آموزان را باز می‌کند */
       c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [el('span', {class: 'muted', text: fa(list.length) + ' کلاس'}), el('span', {class: 'grow'}), el('button', {class: 'btn light', text: '🏫 مدارس', onclick: function () { pageSchools(c); }}), el('button', {class: 'btn', text: '➕ کلاس جدید', onclick: function () { classForm(null, function () { pageClasses(c); }); }})]));
       if (!list.length) { c.appendChild(el('div', {class: 'card'}, [emptyBox('🏫', 'هنوز کلاسی نساخته‌اید.')])); return; }
-      c.appendChild(el('div', {class: 'card'}, [el('table', {class: 'tbl'}, [
+      c.appendChild(el('div', {class: 'card'}, [el('table', {class: 'tbl tbl-cyan'}, [
         el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'پسر', 'دختر', 'کل', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, list.map(function (k) {
           return el('tr', {}, [el('td', {html: '<b>' + esc(k.name) + '</b>'}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.boys || 0)}), el('td', {text: fa(k.girls || 0)}), el('td', {text: fa(k.total || 0)}),
@@ -1590,7 +1590,7 @@
   }
   function studentTable(list) {
     if (!list || !list.length) return emptyBox('🎓', 'دانش‌آموزی ثبت نشده است.');
-    return el('table', {class: 'tbl'}, [
+    return el('table', {class: 'tbl tbl-cyan'}, [
       el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'جنسیت', 'پایه', 'رشته', 'کلاس‌ها', 'وضعیت'].map(function (h) { return el('th', {text: h}); }))]),
       el('tbody', {}, list.map(function (s) {
         return el('tr', {}, [el('td', {html: '<b>' + esc(s.full_name || ((s.first_name || '') + ' ' + (s.last_name || ''))) + '</b>'}), el('td', {}, [el('span', {class: 'code', text: s.username || '—'})]),

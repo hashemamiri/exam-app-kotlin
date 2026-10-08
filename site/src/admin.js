@@ -346,7 +346,7 @@
       c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px'}, [el('button', {class: 'btn light sm', text: '→ مدرسه', onclick: function () { S.go('school'); }}), el('h2', {class: 'grow', style: 'margin:0;font-size:18px', text: 'کلاس‌های ' + (raw.teacher_name || arg.teacherName || 'معلم')}), el('button', {class: 'btn sm', text: '➕ کلاس جدید', onclick: function () { classDlg(null, async function (v) { chk(await S.rpcObj('native_manager_save_teacher_class_v40c', {p_teacher: arg.teacherId, p_name: v.name, p_grade: v.grade, p_field: v.field})); refresh(); }); }})]));
       var card = el('div', {class: 'card'});
       if (!items.length) card.appendChild(S.emptyBox('🏫', 'این معلم هنوز کلاسی ندارد.'));
-      else card.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'دانش‌آموز', ''].map(function (h) { return el('th', {text: h}); }))]),
+      else card.appendChild(el('table', {class: 'tbl tbl-cyan'}, [el('thead', {}, [el('tr', {}, ['نام کلاس', 'پایه', 'رشته', 'دانش‌آموز', ''].map(function (h) { return el('th', {text: h}); }))]),
         el('tbody', {}, items.map(function (k) { return el('tr', {}, [el('td', {html: '<b>' + esc(k.name || '') + '</b>'}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.total || 0)}), el('td', {}, [el('div', {class: 'acts'}, [
           el('button', {class: 'icon-btn', title: 'فهرست دانش‌آموزان', html: '👥', onclick: function () { S.go('school', {teacherId: arg.teacherId, teacherName: arg.teacherName, classId: k.id, className: k.name}); }}),
           el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { classDlg(k, async function (v) { var r = chk(await S.rpcObj('native_manager_change_teacher_class_v41', {p_class: k.id, p_action: 'edit', p_payload: {name: v.name, grade: v.grade, field: v.field}})); if (r.approval_required) throw new Error(r.message || 'نیاز به تأیید معلم دارد.'); refresh(); }); }}),
@@ -419,7 +419,7 @@
         cnt.textContent = fa(f.length) + ' از ' + fa(classes.length) + ' کلاس';
         box.innerHTML = '';
         if (!f.length) { box.appendChild(S.emptyBox('🏫', teachers.length ? 'کلاسی برای نمایش نیست؛ کلاس‌های خصوصی معلم فقط با اشتراک‌گذاری یا تأیید او دیده می‌شوند. با «کلاس جدید» برای یک معلم کلاس بسازید.' : 'هنوز معلمی عضو مدرسه نیست؛ ابتدا از بخش «معلم‌ها» دعوت کنید.')); return; }
-        box.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام کلاس', 'معلم', 'پایه', 'رشته', 'دانش‌آموز', ''].map(function (h) { return el('th', {text: h}); }))]),
+        box.appendChild(el('table', {class: 'tbl tbl-cyan'}, [el('thead', {}, [el('tr', {}, ['نام کلاس', 'معلم', 'پایه', 'رشته', 'دانش‌آموز', ''].map(function (h) { return el('th', {text: h}); }))]),
           el('tbody', {}, f.map(function (k) { return el('tr', {}, [el('td', {html: '<b>' + esc(k.name || '') + '</b>'}), el('td', {text: k.teacher_name}), el('td', {text: k.grade || '—'}), el('td', {text: k.field_of_study || '—'}), el('td', {text: fa(k.total || 0)}), el('td', {}, [el('div', {class: 'acts'}, [
             el('button', {class: 'icon-btn', title: 'فهرست دانش‌آموزان', html: '👥', onclick: function () { S.go('school', {teacherId: k.teacher_id, teacherName: k.teacher_name, classId: k.id, className: k.name}); }}),
             el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { classDlg(k, async function (v) { var r = chk(await S.rpcObj('native_manager_change_teacher_class_v41', {p_class: k.id, p_action: 'edit', p_payload: {name: v.name, grade: v.grade, field: v.field}})); if (r.approval_required) throw new Error('درخواست ویرایش برای تأیید معلم ارسال شد.'); refresh(); }); }}),
@@ -458,7 +458,7 @@
         cnt.textContent = fa(f.length) + ' از ' + fa(list.length) + ' دانش‌آموز';
         box.innerHTML = '';
         if (!f.length) { box.appendChild(S.emptyBox('🎓', 'دانش‌آموزی ثبت نشده است. با «دانش‌آموز جدید» یا «افزودن گروهی» حساب بسازید.')); return; }
-        box.appendChild(el('table', {class: 'tbl'}, [el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'کلاس‌ها', 'سازنده', ''].map(function (h) { return el('th', {text: h}); }))]),
+        box.appendChild(el('table', {class: 'tbl tbl-cyan'}, [el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'کلاس‌ها', 'سازنده', ''].map(function (h) { return el('th', {text: h}); }))]),
           el('tbody', {}, f.slice(0, 500).map(function (s) {
             var isMine = !!own[s.id], SS = window.SiteSchool;
             var acts = el('div', {class: 'acts'}, [el('button', {class: 'icon-btn', title: 'افزودن به کلاس', html: '🏫', onclick: function () { addToClassDlg(s); }})]);

@@ -154,6 +154,10 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(app.contains("text: 'پیوستن به مدرسه'") && app.contains("text: 'بازگشت به کلاس‌ها'") && app.contains("text: 'بازگشت به مدارس'"))
         assertTrue(mobile.contains("joinSchoolDialog: joinSchoolDialog, createSchoolDialog: createSchoolDialog"))
         assertTrue(css.contains(".dk table.tbl td{border-bottom:0;background:transparent}"))
-        assertTrue(css.contains(".dk table.tbl tbody tr:nth-child(even) td{background:rgba(34,198,239,.09)"))
+        // V227.2 — هالهٔ پیش‌فرض زرشکی کم‌رنگ (--zb)؛ کلاس‌ها/دانش‌آموزان/آزمون‌ها با .tbl-cyan فیروزه‌ای
+        assertTrue(css.contains(".dk table.tbl{--zb:148,40,78;") && css.contains(".dk table.tbl.tbl-cyan{--zb:34,198,239}"))
+        assertTrue(css.contains(".dk table.tbl tbody tr:nth-child(even) td{background:rgba(var(--zb),.09)"))
+        val school = src("site/src/school.js")
+        assertTrue(app.contains("function examTable(list, c) {\n    return el('table', {class: 'tbl tbl-cyan'}") && school.contains("return el('table', {class: 'tbl tbl-cyan'}"))
     }
 }

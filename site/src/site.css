@@ -1513,16 +1513,19 @@ body.lp-body{background:#D6ECFC}
 .school-card{cursor:pointer;transition:transform .15s,box-shadow .15s}
 .school-card:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(24,54,68,.14)}
 .school-card h3{margin:0 0 6px;font-size:16px}.school-card p{margin:4px 0;font-size:13px}
-/* ===== V227 — جدول‌های دسکتاپ (کلاس‌ها، دانش‌آموزان، آزمون‌ها): بدون خط بین ردیف‌ها؛ ردیف‌های زوج با هالهٔ نرم ===== */
-.dk table.tbl{border-collapse:separate;border-spacing:0 4px}
+/* ===== V227/V227.2 — جدول‌های دسکتاپ: بدون خط بین ردیف‌ها؛ ردیف‌های زوج با هالهٔ نرم و گوشهٔ گرد.
+   رنگ هاله: --zb (پیش‌فرض زرشکی کم‌رنگ برای همهٔ جدول‌ها)؛ کلاس‌ها/دانش‌آموزان/آزمون‌ها با .tbl-cyan فیروزه‌ای ===== */
+.dk table.tbl{--zb:148,40,78;border-collapse:separate;border-spacing:0 4px}
+.dk table.tbl.tbl-cyan{--zb:34,198,239}
 .dk table.tbl th{border-bottom:0;padding-bottom:4px}
 .dk table.tbl td{border-bottom:0;background:transparent}
-.dk table.tbl tbody tr:nth-child(even) td{background:rgba(34,198,239,.09);box-shadow:inset 0 0 0 1px rgba(34,198,239,.14)}
+.dk table.tbl tbody tr:nth-child(even) td{background:rgba(var(--zb),.09);box-shadow:inset 0 1px 0 rgba(var(--zb),.14),inset 0 -1px 0 rgba(var(--zb),.14)}
 .dk table.tbl tbody tr td:first-child{border-start-start-radius:14px;border-end-start-radius:14px}
 .dk table.tbl tbody tr td:last-child{border-start-end-radius:14px;border-end-end-radius:14px}
-.dk table.tbl tbody tr:nth-child(even) td:not(:first-child){box-shadow:inset 0 1px 0 rgba(34,198,239,.14),inset 0 -1px 0 rgba(34,198,239,.14)}
-.dk table.tbl tbody tr:nth-child(even) td:first-child{box-shadow:inset 1px 1px 0 rgba(34,198,239,.14),inset 0 -1px 0 rgba(34,198,239,.14)}
-.dk table.tbl tbody tr:nth-child(even) td:last-child{box-shadow:inset -1px 1px 0 rgba(34,198,239,.14),inset 0 -1px 0 rgba(34,198,239,.14)}
-.dk table.tbl tbody tr:hover td{background:rgba(34,198,239,.16)}
-.m-dark .dk table.tbl tbody tr:nth-child(even) td{background:rgba(34,198,239,.10)}
-.m-dark .dk table.tbl tbody tr:hover td{background:rgba(34,198,239,.18)}
+.dk table.tbl tbody tr:nth-child(even) td:first-child{box-shadow:inset 1px 1px 0 rgba(var(--zb),.14),inset 0 -1px 0 rgba(var(--zb),.14)}
+.dk table.tbl tbody tr:nth-child(even) td:last-child{box-shadow:inset -1px 1px 0 rgba(var(--zb),.14),inset 0 -1px 0 rgba(var(--zb),.14)}
+.dk table.tbl tbody tr:hover td{background:rgba(var(--zb),.16)}
+.m-dark .dk table.tbl{--zb:220,120,150}
+.m-dark .dk table.tbl.tbl-cyan{--zb:34,198,239}
+.m-dark .dk table.tbl tbody tr:nth-child(even) td{background:rgba(var(--zb),.12)}
+.m-dark .dk table.tbl tbody tr:hover td{background:rgba(var(--zb),.2)}

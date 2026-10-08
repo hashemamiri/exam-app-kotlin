@@ -19425,6 +19425,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V227.2 — هالهٔ ردیف‌ها برای همهٔ جدول‌ها (فقط سایت)
+- CSS: `.dk table.tbl{--zb:148,40,78}` (زرشکی کم‌رنگ، پیش‌فرض) و `.tbl-cyan{--zb:34,198,239}`؛ همهٔ رنگ‌ها `rgba(var(--zb),…)`؛ تاریک `--zb:220,120,150`. کلاس `tbl tbl-cyan` روی examTable/studentTable/جدول کلاس‌ها (app.js)، studentTable (school.js)، جدول‌های کلاس‌ها/دانش‌آموزان مدیر (admin.js 349/422/461).
+
 ### V227.1 — رفع CI: ۹ تست
 - `V168_SiteDesktopMenuTest` (کلاس V223_SiteDesktopPrintButtonsTest): `File("site/...")` → `src("site/...")` (CWD تست = app/). `V199_PrintPayTest` پین کاشی‌های ورود (V226). `V227_PullToRefreshTest` assertFalse دقیق‌تر (`isRefreshing = state.loading || …`؛ QuestionBankScreen:119 مجاز). `V218` (بدون `background:#fff` در site.css): `.cred-val` و `.lp-sky .logo .mark` → `var(--card)`. درس: پیش از تحویل، تست‌های Kotlin که فایل می‌خوانند باید از helper ریشه استفاده کنند؛ check_test_pins فقط `src(...)`/`source(...)` را می‌فهمد.
 

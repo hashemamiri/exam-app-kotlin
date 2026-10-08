@@ -362,7 +362,7 @@
   function studentTable(list, classes, ctx) {
     /* ctx: {classId?, refresh} */
     if (!list || !list.length) return S.emptyBox('🎓', 'دانش‌آموزی ثبت نشده است.');
-    return el('table', {class: 'tbl'}, [
+    return el('table', {class: 'tbl tbl-cyan'}, [
       el('thead', {}, [el('tr', {}, ['نام', 'نام کاربری', 'جنسیت', 'پایه', 'رشته', 'کلاس‌ها', 'وضعیت', 'اشتراک با مدیر', ''].map(function (h) { return el('th', {text: h}); }))]),
       el('tbody', {}, list.map(function (s) {
         var canManage = s.can_manage !== false;
