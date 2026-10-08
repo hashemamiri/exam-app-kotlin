@@ -28,9 +28,9 @@
   /* V163 — با باز شدن منوی همبرگری، هر پنجره/شیت باز (modal-bg, m-sheet-bg) بسته می‌شود تا منو زیر آن نماند */
   function closeOverlays() { document.querySelectorAll('.modal-bg, .m-sheet-bg, .m-radial-bg').forEach(function (n) { n.remove(); }); document.body.style.overflow = ''; }
   function go(panel, arg) { ui.menuOpen = false; ui.addOpen = false; S.go(panel, arg); }
-  /* ---------- V158: دکمهٔ برگشت گوشی مثل BackHandler اپ (ExamApp.kt:358–364) ----------
-     هر ناوبری در حالت گوشی یک ورودی history می‌سازد؛ برگشت: اول پنجره/شیت باز → بسته می‌شود، بعد منو/افزودن سریع،
-     بعد صفحهٔ قبلی؛ اگر صفحهٔ قبلی نبود (صفحهٔ خانه) پرسش «از سایت خارج می‌شوید؟» و با تأیید خروج از حساب. */
+  /* ---------- V158/V220: دکمهٔ برگشت دستگاه مثل BackHandler اپ ----------
+     هر ناوبری (در همهٔ چیدمان‌ها) یک ورودی history می‌سازد؛ برگشت: اول پنجره/شیت باز → بسته می‌شود، بعد منو/افزودن سریع،
+     بعد صفحهٔ قبلی از تاریخچهٔ پنل‌ها (app.js navStack)؛ اگر صفحهٔ قبلی نبود همین‌جا می‌مانیم و هرگز از سایت خارج نمی‌شویم. */
   var histDepth = 0, backGuard = false;
   function homePanel() { var u = S.user(); return !u ? 'dashboard' : (u.role === 'manager' ? 'teachers' : (u.role === 'student' ? 'dashboard' : 'exams')); }
   /* V220 — در همهٔ چیدمان‌ها (دسکتاپ هم) */

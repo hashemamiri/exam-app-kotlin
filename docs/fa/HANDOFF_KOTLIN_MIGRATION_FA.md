@@ -19423,7 +19423,18 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
-- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V220 — برگشت + حالت تیره (1.01.10)
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V220.1 — ریشه‌یابی خطاهای CI این دوره و قاعدهٔ پیش‌پرواز (§11.1)
+علت‌های واقعی شکست CI در V215/V218/V220 (از لاگ‌ها):
+1. **V215**: کد اپ تغییر کرد ولی پین‌های متنی تست‌های قدیمی (V214، فایل ساخت) به‌روز نشدند؛ check_test_pins اجرا نشده بود.
+2. **V218**: تست جدید `siteDesktopDarkPalette` با `!css.contains("background:#fff;")` نوشته شد، در حالی که `background:#fff !important` و قاعدهٔ تیرهٔ خودِ همان نسخه در site.css مانده بود. `check_test_pins` فقط `assertTrue("…" in x)` را می‌فهمید و **assertFalse / !contains / Regex را رد می‌کرد** → خطای خودساخته دیده نشد. در این محیط Gradle/Kotlin نیست، پس تست‌ها فقط با همین اسکریپت قابل پیش‌بینی‌اند.
+3. **V220 (قبل از ارسال گرفته شد)**: `assertFalse("از سایت خارج می‌شوید؟" in mobile.js)` در حالی که همان عبارت در یک **کامنت** mobile.js مانده بود. assertFalseها روی کل فایل (کامنت‌ها هم) اعمال می‌شوند.
+4. پین‌های قدیمی‌ای که به سطر تغییرکردهٔ همان نسخه اشاره می‌کنند (V188 در V218) — تنها با اجرای check_test_pins روی **همهٔ** تست‌ها دیده می‌شوند.
+5. کامیت‌های محلی محیط دستیار بین نوبت‌ها حفظ نمی‌شوند → نصاب از اجتماع فایل‌های تغییرکرده نسبت به آخرین کامیت پایدار (de260a5) ساخته و در کلون تازه مقایسه می‌شود.
+
+قاعدهٔ جدید (§11.1): پیش از ساخت هر `apply_vXX.py` حتماً `python3 scripts/preflight.py <تست‌های جدید>` باید PASS بدهد:
+check_test_pins بهبودیافته (assertTrue/assertFalse/contains/!contains/Regex، ۱۳۵۵ پین) + `--strict` برای تست‌های جدید (هر assert غیرقابل‌تحلیل را «UNPARSED» گزارش می‌کند تا دستی چک شود) + verify_native_final + build_site و تازه‌بودن index.html + `git diff --check` + نسخه در خط اول CHANGELOG. برای assertFalse همیشه ابتدا `grep -n` روی فایل مقصد (شامل کامنت‌ها).
+
+### V220 — برگشت + حالت تیره (1.01.10)
 - ریشهٔ متن‌های سیاه در حالت تیره: ریشهٔ برنامه `Surface` ندارد و `Scaffold(containerColor = Transparent)` رنگ محتوا را از `LocalContentColor` (پیش‌فرض سیاه) می‌گیرد → در `ExamAppTheme` بعد از `MaterialTheme`، `CompositionLocalProvider(LocalContentColor provides colors.onBackground)`.
 - اپ: `ExamApp.kt` — `pageHistory` (SnapshotStateList ذخیره‌شونده) + `lastSeenPage` + `backPopInProgress`؛ `LaunchedEffect(page)` تغییر صفحه را ثبت می‌کند؛ `BackHandler` همیشه فعال (جز منو/افزودن سریع): pop → صفحهٔ قبلی؛ تاریخچهٔ خالی → مصرف رویداد (بدون خروج). BackHandlerهای داخلی (سازنده، آزمون دانش‌آموز، منوی شعاعی) اولویت دارند.
 - سایت: `app.js` `navTrack()` در ابتدای `render()` هر تغییر `view.panel/arg` را در `navStack` ثبت و `history.pushState` می‌کند؛ `S.navBack()`؛ `mobile.js` `onBack` در همهٔ چیدمان‌ها (pushHist بدون شرط MQ): اول overlay، بعد منو، بعد `S.navBack()`، وگرنه ماندن (دیالوگ «از سایت خارج می‌شوید؟» حذف شد).
