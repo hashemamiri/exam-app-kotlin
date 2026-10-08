@@ -92,4 +92,16 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(js.contains("class: 'st-sq red'") && js.contains("class: 'st-sq ok'"))
         assertTrue(css.contains(".st-sq.red{background:#E5484D}") && css.contains(".st-sq.ok{background:#25A86B}"))
     }
+
+    @Test
+    fun v224_2PasswordVaultAndCardNumbers() {
+        val js = File("site/src/school.js").readText()
+        val css = File("site/src/site.css").readText()
+        assertTrue(js.contains("var PW_VAULT_KEY = 'st-pw-vault';"))
+        assertTrue(js.contains("function knownPasswordOf(s)") && js.contains("var current = knownPasswordOf(s);"))
+        assertTrue(js.contains("made.push({id: res.id,"))
+        assertTrue(js.contains("class: 'chip st-num' + (i === active ? ' cur' : '')"))
+        assertTrue(js.contains("strip.addEventListener('wheel'") && js.contains("scrollIntoView({block: 'nearest', inline: 'center'"))
+        assertTrue(css.contains(".chip.st-num.cur{background:#F59E0B"))
+    }
 }

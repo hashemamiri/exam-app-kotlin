@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V224.2 — رمز فعلی ماندگار + نوار شمارهٔ کارت‌ها (فقط سایت)
+- `school.js`: `PW_VAULT_KEY='st-pw-vault'` در localStorage (معادل StudentPasswordVault اپ، کلید = شناسهٔ دانش‌آموز؛ بدون رمزنگاری چون مرورگر Keystore ندارد)؛ `rememberPw` حالا `id` می‌گیرد (ساخت گروهی، ویرایش، بازنشانی)؛ `knownPasswordOf(s)`.
+- `newStudentsDialog`: نوار `.st-new-chips` با چیپ‌های `.chip.st-num` (فعلی `.cur` نارنجی #F59E0B)، `scrollIntoView` پس از هر draw، شنوندهٔ `wheel` برای اسکرول افقی (جهت RTL لحاظ شده).
+- تست: `V168_SiteDesktopMenuTest.v224_2PasswordVaultAndCardNumbers`.
+
 ### V224.1 — ویرایش دانش‌آموز دسکتاپ = اپ (فقط سایت)
 - `site/src/school.js`: `editStudentDialog(s, done)` جایگزین شاخهٔ ویرایش `studentForm` (پورت `StudentEditDialog` اپ: نوار ✕ قرمز/👁/✓ سبز، ردیف‌های نام|نام خانوادگی، نام پدر|نام کاربری، پایه|رشته، رمز جدید اختیاری|رمز فعلی، چیپ‌های دختر/پسر + 🎲 وسط‌چین). `knownPw`/`rememberPw` رمزهای ساخته/بازنشانی‌شدهٔ همین نشست را برای «رمز فعلی» نگه می‌دارد (فقط حافظه، مثل knownPasswords اپ).
 - `site/src/site.css`: `.st-sq` (مربع قرمز/سبز). تست: `V168_SiteDesktopMenuTest.v224_1EditStudentDialogLikeApp`.

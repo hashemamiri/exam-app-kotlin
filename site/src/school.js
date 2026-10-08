@@ -100,7 +100,7 @@
           if (!res.id) throw new Error('شناسه دانش‌آموز از سرور دریافت نشد.');
           await saveExtra(res.id, r.username, r.father.trim(), r.grade.trim(), r.field.trim());
           if (afterCreate) { try { await afterCreate(res.id); } catch (e2) { console.warn(e2); } }
-          made.push({name: (r.first + ' ' + r.last).trim(), username: r.username, password: r.password});
+          made.push({id: res.id, name: (r.first + ' ' + r.last).trim(), username: r.username, password: r.password});
         } catch (e) { failed.push(r.username + ': ' + errMsg(e)); }
       }
       busy = false;
@@ -118,7 +118,11 @@
         el('button', {class: 'btn', text: busy ? 'در حال ایجاد…' : 'ایجاد', disabled: busy ? 'disabled' : null, onclick: submit}),
         el('button', {class: 'btn', text: '×', title: 'بستن', onclick: function () { bg.remove(); }})
       ]));
-      modal.appendChild(el('div', {class: 'st-new-chips'}, rows.map(function (_, i) { return el('button', {class: 'chip ' + (i === active ? 'brand' : 'off'), text: fa(i + 1), onclick: function () { active = i; draw(); }}); })));
+      /* V224.2 — شمارهٔ کارت فعلی رنگ متمایز دارد، با افزودن/انتخاب خودکار به دید می‌آید و چرخ ماوس روی نوار آن را افقی اسکرول می‌کند */
+      var strip = el('div', {class: 'st-new-chips'}, rows.map(function (_, i) { return el('button', {class: 'chip st-num' + (i === active ? ' cur' : ''), text: fa(i + 1), onclick: function () { active = i; draw(); }}); }));
+      strip.addEventListener('wheel', function (ev) { if (ev.deltaY && strip.scrollWidth > strip.clientWidth) { ev.preventDefault(); strip.scrollLeft += (ev.deltaY > 0 ? 1 : -1) * 60 * (document.dir === 'rtl' || getComputedStyle(strip).direction === 'rtl' ? -1 : 1); } }, {passive: false});
+      modal.appendChild(strip);
+      requestAnimationFrame(function () { var c = strip.children[active]; if (c && c.scrollIntoView) c.scrollIntoView({block: 'nearest', inline: 'center', behavior: 'smooth'}); });
       var card = el('div', {class: 'card st-new-card'});
       card.appendChild(el('div', {class: 'grid2'}, [
         field('نام', r.first, function (v) { r.first = v.slice(0, 100); recompute(); syncUn(); }),
@@ -154,13 +158,21 @@
 
   /* V224.1 — رمزهای شناخته‌شدهٔ همین نشست (مثل knownPasswords اپ) برای فیلد «رمز فعلی» پنجرهٔ ویرایش */
   var knownPw = {};
-  function rememberPw(creds) { (creds || []).forEach(function (c) { if (c && c.username) knownPw[String(c.username).toLowerCase()] = c.password || ''; }); }
+  /* V224.2 — مثل StudentPasswordVault اپ: رمزها فقط روی همین دستگاه (localStorage مرورگر) و با شناسهٔ دانش‌آموز ذخیره می‌شوند تا بعد از بستن مرورگر هم «رمز فعلی» نشان داده شود. */
+  var PW_VAULT_KEY = 'st-pw-vault';
+  function vaultRead() { try { return JSON.parse(localStorage.getItem(PW_VAULT_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function rememberPw(creds) {
+    var v = vaultRead();
+    (creds || []).forEach(function (c) { if (!c) return; if (c.username) knownPw[String(c.username).toLowerCase()] = c.password || ''; if (c.id) v[c.id] = c.password || ''; });
+    try { localStorage.setItem(PW_VAULT_KEY, JSON.stringify(v)); } catch (e) { /* حافظهٔ مرورگر پر یا غیرفعال */ }
+  }
+  function knownPasswordOf(s) { return (s && s.id && vaultRead()[s.id]) || knownPw[String((s && s.username) || '').toLowerCase()] || ''; }
   /* V224.1 — «ویرایش دانش‌آموز» دقیقاً مثل StudentEditDialog اپ: نوار بالا (✕ قرمز، چشم مشترک رمزها، ✓ سبز)؛ کارت:
      نام|نام خانوادگی، نام پدر|نام کاربری، پایه|رشته، رمز جدید اختیاری|رمز فعلی، ردیف وسط: دختر، پسر، تاس. */
   function editStudentDialog(s, done) {
     var st = {first: s.first_name || '', last: s.last_name || '', username: s.username || '', gender: s.gender || '', father: s.father_name || '', grade: s.grade || '', field: s.field_of_study || '', newPw: '', pwVisible: false};
     if (!st.first && s.full_name) { var parts = s.full_name.trim().split(/\s+/); st.first = parts.shift() || ''; st.last = parts.join(' '); }
-    var current = knownPw[String(s.username || '').toLowerCase()] || '';
+    var current = knownPasswordOf(s);
     var error = '', busy = false;
     var bg = el('div', {class: 'modal-bg'}); var modal = el('div', {class: 'modal st-new'}); bg.appendChild(modal); document.body.appendChild(bg);
     function valid() { return st.first.trim() && st.username.length >= 4 && (st.gender === 'male' || st.gender === 'female') && (!st.newPw || (st.newPw.length >= 8 && st.newPw.length <= 72)); }
@@ -173,7 +185,7 @@
         await manageStudent({action: 'update', id: s.id, first_name: st.first.trim(), last_name: st.last.trim(), username: u, gender: st.gender, password: st.newPw || ''});
         chk(await S.rpcObj('native_save_student_extra_v28', {p_student: s.id, p_username: u, p_father_name: st.father.trim(), p_grade: st.grade.trim(), p_field: st.field.trim()}));
         bg.remove(); toast('ذخیره شد.', 'ok');
-        if (st.newPw) { var cr = [{name: (st.first + ' ' + st.last).trim(), username: u, password: st.newPw}]; rememberPw(cr); credentialDlg('رمز جدید دانش‌آموز', cr); }
+        if (st.newPw) { var cr = [{id: s.id, name: (st.first + ' ' + st.last).trim(), username: u, password: st.newPw}]; rememberPw(cr); credentialDlg('رمز جدید دانش‌آموز', cr); }
         done();
       } catch (e) { busy = false; error = errMsg(e); draw(); }
     }
@@ -358,7 +370,7 @@
         acts.appendChild(el('button', {class: 'btn light sm', text: 'افزودن به کلاس', onclick: function () { classPickDlg(s, classes, ctx.refresh); }}));
         if (canManage) acts.appendChild(el('button', {class: 'btn light sm', text: 'رمز جدید', onclick: async function () {
           var np = genPassword(); if (!(await S.confirmDlg('رمز جدید', 'رمز جدید برای «' + esc(s.full_name || '') + '» ساخته شود؟ رمز قبلی از کار می‌افتد.', 'بساز'))) return;
-          try { await manageStudent({action: 'reset_password', id: s.id, password: np}); rememberPw([{username: s.username, password: np}]); credentialDlg('رمز جدید دانش‌آموز', [{name: s.full_name, username: s.username, password: np}]); } catch (e) { toast(errMsg(e), 'err'); }
+          try { await manageStudent({action: 'reset_password', id: s.id, password: np}); rememberPw([{id: s.id, username: s.username, password: np}]); credentialDlg('رمز جدید دانش‌آموز', [{name: s.full_name, username: s.username, password: np}]); } catch (e) { toast(errMsg(e), 'err'); }
         }}));
         acts.appendChild(el('button', {class: 'btn light sm', text: s.is_active !== false ? 'غیرفعال کردن' : 'فعال کردن', onclick: async function () { try { chk(await S.rpcObj('set_student_active', {p_student: s.id, p_active: s.is_active === false})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));
         if (ctx.classId) acts.appendChild(el('button', {class: 'btn light sm danger-text', text: 'خروج از کلاس', onclick: async function () { if (!(await S.confirmDlg('حذف از کلاس', '«' + esc(s.full_name || '') + '» از این کلاس خارج شود؟ حساب حفظ می‌ماند.', 'خروج', true))) return; try { chk(await S.rpcObj('remove_student_from_class', {p_class: ctx.classId, p_student: s.id})); ctx.refresh(); } catch (e) { toast(errMsg(e), 'err'); } }}));

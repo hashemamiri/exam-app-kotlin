@@ -1436,3 +1436,9 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 /* V224.1 — پنجرهٔ ویرایش دانش‌آموز: مربع‌های ✕ قرمز و ✓ سبز مثل اپ */
 .st-sq{width:44px;height:44px;border:0;border-radius:12px;color:#fff;display:inline-grid;place-items:center;cursor:pointer}
 .st-sq.red{background:#E5484D}.st-sq.ok{background:#25A86B}.st-sq:disabled{opacity:.45;cursor:default}
+/* V224.2 — شماره‌های کارت پنجرهٔ دانش‌آموز جدید: شمارهٔ فعلی نارنجی متمایز */
+.st-new-chips{scroll-behavior:smooth;cursor:default}
+.chip.st-num{background:var(--m-chip,#eef1f6);color:var(--m-fg,#334);border:1px solid transparent;flex:0 0 auto}
+.chip.st-num.cur{background:#F59E0B;color:#fff;border-color:#D97706;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,.4)}
+.m-dark .chip.st-num{background:#2a2f3a;color:#dde3ee}
+.m-dark .chip.st-num.cur{background:#F59E0B;color:#1a1a1a}
