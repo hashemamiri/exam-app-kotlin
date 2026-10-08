@@ -19252,6 +19252,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V208.1
+- CI: `PrintPageSetupStore.kt:135 Unresolved reference OPTION_LAYOUTS` — ثابت در companion کلاس `PrintPageSetup` است ولی `read()` در کلاس `PrintPageSetupStore` بود → `PrintPageSetup.OPTION_LAYOUTS`. درس: در سندباکس Kotlin کامپایل نمی‌شود؛ ارجاع به ثابت‌های companion را با نام کلاس بنویس.
+
 ## §V208
 - هشت درخواست کاربر (اپ + سایت). CI اپ اجرا می‌شود (فایل‌های Kotlin/assets/workflow تغییر کرده‌اند).
 - **(۱) چیدمان گزینه‌های تستی در چاپ**: مقدارهای `1row | 2rows | 4rows`. پیش‌فرض آزمون = `opt_optionsLayout` در «تنظیمات صفحه»ی پیش‌نمایش (`pgs_engine.js`: select جدید + کلید `optionsLayout` در `HOST_KEYS`/نگاشت `PrintPageSetupStore.kt` که مقدار نامعتبر را به `2rows` برمی‌گرداند؛ `webhost.js NATIVE_SELECTS`). هر سؤال: `QuestionDraft.optionsLayout` («"" = پیش‌فرض آزمون»؛ `ExamQuestionCodec` فقط وقتی ناخالی است می‌نویسد)؛ اپ `ExamBuilderScreen` (انتخاب در ویرایش سؤال تستی چاپی) و `ExamBuilderViewModel`/`PrintableFromDrafts`/`OfficialPrintModels`؛ `webhost.js toWebQuestion` خالی را نگه می‌دارد تا پیش‌فرض آزمون اعمال شود. سایت `builder.js`: فیلد `optionsLayout` در مدل سؤال + select «چیدمان گزینه‌ها در برگهٔ چاپی» فقط در حالت print برای سؤال `multiple`.

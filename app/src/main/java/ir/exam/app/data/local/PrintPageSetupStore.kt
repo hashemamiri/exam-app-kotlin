@@ -132,7 +132,7 @@ class PrintPageSetupStore(context: Context) {
             font = getInt("font", d.font),
             spacing = getString("spacing", d.spacing) ?: d.spacing,
             showScores = getBoolean("showScores", d.showScores),
-            optionsLayout = getString("optionsLayout", d.optionsLayout)?.takeIf { it in OPTION_LAYOUTS } ?: d.optionsLayout
+            optionsLayout = getString("optionsLayout", d.optionsLayout)?.takeIf { it in PrintPageSetup.OPTION_LAYOUTS } ?: d.optionsLayout
         )
     }
 
