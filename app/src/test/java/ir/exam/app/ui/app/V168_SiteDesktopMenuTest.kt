@@ -118,4 +118,11 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(school.contains("class: 'modal cred-modal'") && school.contains("class: 'cred-card'"))
         assertTrue(css.contains(".dk-qa-item{") && css.contains("@keyframes dkQaIn") && css.contains(".cred-val{"))
     }
+
+    @Test
+    fun v225_1StudentsSearchInToolbarRow() {
+        val js = File("site/src/school.js").readText()
+        assertTrue(js.contains("class: 'row st-toolbar'"))
+        assertTrue(js.contains("[q, el('span', {class: 'grow'}), cnt, filterBtn, el('button', {class: 'btn', text: '➕ دانش‌آموز جدید'"))
+    }
 }

@@ -19425,6 +19425,10 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V225.1 — جست‌وجوی دانش‌آموزان هم‌ردیف (فقط سایت)
+- `school.js studentsPage`: یک `.row.st-toolbar` = [جست‌وجو (flex 1، حداکثر 420px)، grow، شمارنده، فیلتر، دانش‌آموز جدید]. تست: `v225_1StudentsSearchInToolbarRow`.
+- خارج از مخزن: `/home/user/plus_animations.html` (۲۰ گزینهٔ انیمیشن دکمهٔ +) منتظر انتخاب کاربر.
+
 ### V225 — + ریل دسکتاپ با منوی بادبزنی + پنجرهٔ اطلاعات ورود (فقط سایت)
 - `mobile.js`: `quickAddItems(opts)` فهرست اعمال افزودن سریع (همان Design69QuickAddOverlay: آزمون جدید/دعوت معلم، دانش‌آموز جدید، کلاس جدید، مدرسه جدید) + با `withPrint` «آزمون چاپی جدید» (`S.go('builder',{mode:'print',fresh:true})`)؛ صادرشده در `SiteMobile`. `quickAdd()` گوشی از همان استفاده می‌کند (۴ مورد، بدون تغییر).
 - `app.js`: `railItem('builder')` معلم → `.dk-rail-plus` بدون `.dk-rail-label`؛ `dkQuickAdd(anchor)` منوی `.dk-qa-bg/.dk-qa/.dk-qa-item` کنار دکمه (انیمیشن پلکانی `dkQaIn`، Esc/کلیک بیرون می‌بندد، جابه‌جایی داخل صفحه).

@@ -408,8 +408,9 @@
       q.addEventListener('input', draw);
       /* V224 — «افزودن گروهی» حذف شد (پنجرهٔ دانش‌آموز جدید چندکارتی است)؛ فیلتر مثل اپ (StudentFilterDialog) به‌جای سه select */
       var filterBtn = el('button', {class: 'btn light', text: '⚲ فیلتر', title: 'فیلتر دانش‌آموزان', onclick: function () { var M = window.SiteMobile; if (!M || !M.studentFilterDialog) return; M.studentFilterDialog(stFilter, classes, schools, meta, function (f) { stFilter = f; filterBtn.classList.toggle('filter-on', M.filterActive(f)); draw(); }); }});
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:8px'}, [el('span', {class: 'grow'}), cnt, filterBtn, el('button', {class: 'btn', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, null, refresh); }})]));
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:12px;flex-wrap:wrap'}, [q]));
+      /* V225.1 — جست‌وجو هم‌ردیف دکمه‌ها (راست: جست‌وجو، چپ: شمارنده/فیلتر/دانش‌آموز جدید) */
+      q.style.minWidth = '0'; q.style.flex = '1 1 260px'; q.style.maxWidth = '420px';
+      c.appendChild(el('div', {class: 'row st-toolbar', style: 'margin-bottom:12px;gap:8px;flex-wrap:wrap'}, [q, el('span', {class: 'grow'}), cnt, filterBtn, el('button', {class: 'btn', text: '➕ دانش‌آموز جدید', onclick: function () { studentForm(null, classes, null, refresh); }})]));
       c.appendChild(box); draw();
     } catch (e) { S.showErr(c, e); }
   }
