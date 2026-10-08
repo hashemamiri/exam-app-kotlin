@@ -19252,6 +19252,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V209.1
+- CI: `ImageEditorViewModel.kt:49 Expecting ')'` — جایگزینی جزئی رشته (`error.message ?: "ویرایش تصویر نا` → `UserFacingError.of(error, "ویرایش تصویر نا`) پرانتز بستهٔ پایان عبارت را نداشت. رفع شد؛ همهٔ خط‌های دارای UserFacingError با شمارش پرانتز/آکولاد بازبینی شدند. درس: هنگام patch با پیشوندِ رشته، همیشه کل عبارت تا انتهای خط را جایگزین کن.
+
 ## §V209
 - گزارش کاربر: کیف پول پیام خام «HTTP request to (POST) failed with message: Unable to resolve host "…supabase.co"» را نشان داد (DNS/اینترنت گوشی). خواسته: هیچ‌جا چنین متنی دیده نشود؛ به‌جایش «خطا در سرور؛ از اتصال به اینترنت مطمئن شوید».
 - **اپ**: `core/network/UserFacingError.kt` — `of(error, fallback)` / `fromText(raw, fallback)`: (۱) `NetworkFailureClassifier.isNetworkFailure` یا کلیدواژه‌های شبکه → `NETWORK` («خطا در ارتباط با سرور؛ از اتصال به اینترنت مطمئن شوید و دوباره تلاش کنید.»)؛ (۲) متن بدون حرف فارسی، یا با نشانهٔ فنی (http request, exception, supabase.co, pgrst, jwt, timeout, …) یا ≥۴۰٪ حروف لاتین → `SERVER` («خطا در سرور؛ …»)؛ متن فارسی با دنبالهٔ فنی («آپلود ناموفق بود: HTTP 500») → فقط بخش قبل از «:»؛ (۳) بقیه (پیام فارسی معنادار) عیناً (≤۲۶۰). `sanitize` همان حذف URL:/Headers:/authorization/apikey/bearer/آدرس‌ها.

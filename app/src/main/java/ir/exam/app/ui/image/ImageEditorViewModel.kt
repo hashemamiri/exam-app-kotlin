@@ -46,7 +46,7 @@ class ImageEditorViewModel(private val repository: ImageRepository) : ViewModel(
             _state.update { it.copy(loading = true, error = null) }
             repository.prepare(request)
                 .onSuccess { image -> _state.update { it.copy(loading = false, result = image) } }
-                .onFailure { error -> _state.update { it.copy(loading = false, error = UserFacingError.of(error, "ویرایش تصویر ناموفق بود") } }
+                .onFailure { error -> _state.update { it.copy(loading = false, error = UserFacingError.of(error, "ویرایش تصویر ناموفق بود.")) } }
         }
     }
 
