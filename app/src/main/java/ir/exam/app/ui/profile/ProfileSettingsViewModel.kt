@@ -1,5 +1,6 @@
 package ir.exam.app.ui.profile
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -222,10 +223,4 @@ class ProfileSettingsViewModel(
     }
 }
 
-private fun safeProfileError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .take(260)
-    .ifBlank { "عملیات پروفایل ناموفق بود." }
+private fun safeProfileError(error: Throwable): String = UserFacingError.of(error, "عملیات پروفایل ناموفق بود.") // V209 — بدون متن فنی

@@ -389,8 +389,10 @@ fun ExamImageStudioDialog(
                                                         note = null
                                                     } else {
                                                         // V160.1 — علت واقعی (HTTP/شبکه/فرمت) به‌جای پیام کلی
-                                                        val host = runCatching { android.net.Uri.parse(ref.dataUrl).host }.getOrNull() ?: ref.dataUrl.take(12)
-                                                        note = "بازکردن تصویر ممکن نشد ($host" + (if (why.isNotBlank()) " — $why" else "") + ")"
+                                                        // V209 — بدون متن فنی/آدرس سرور
+                                                        note = if (why.isNotBlank() && ir.exam.app.core.network.UserFacingError.fromText(why, "") == ir.exam.app.core.network.UserFacingError.NETWORK)
+                                                            "بازکردن تصویر ممکن نشد؛ از اتصال به اینترنت مطمئن شوید."
+                                                        else "بازکردن تصویر ممکن نشد."
                                                     }
                                                 }
                                             }) { Text("✏️ ویرایش") }

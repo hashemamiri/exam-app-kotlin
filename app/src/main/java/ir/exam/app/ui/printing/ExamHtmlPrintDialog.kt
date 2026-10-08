@@ -1,5 +1,6 @@
 package ir.exam.app.ui.printing
 
+import ir.exam.app.core.network.UserFacingError
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
@@ -340,7 +341,7 @@ fun ExamHtmlPrintDialog(
                                                                     if (q.paid) { pushPaid(view, true); fire() }
                                                                     else pendingPrintPay = PendingPrintPay(q, fire) { restore() }
                                                                 }
-                                                                .onFailure { e -> barStatusOk = false; barStatus = e.message?.takeIf { it.isNotBlank() } ?: "برآورد هزینهٔ چاپ ناموفق بود."; restore() }
+                                                                .onFailure { e -> barStatusOk = false; barStatus = UserFacingError.of(e, "برآورد هزینهٔ چاپ ناموفق بود."); restore() }
                                                             printPayBusy = false
                                                         }
                                                     }
@@ -505,7 +506,7 @@ fun ExamHtmlPrintDialog(
                                     .onFailure { e ->
                                         pendingPrintPay = null
                                         barStatusOk = false
-                                        val msg = e.message?.takeIf { it.isNotBlank() } ?: "کسر هزینهٔ چاپ ناموفق بود."
+                                        val msg = UserFacingError.of(e, "کسر هزینهٔ چاپ ناموفق بود.")
                                         barStatus = if (msg.contains("کافی نیست")) "موجودی ناکافی — " + msg else msg
                                         req.restore()
                                     }
@@ -538,7 +539,7 @@ fun ExamHtmlPrintDialog(
                                     .onFailure { e ->
                                         /* V134 — کادرِ قرمز: «موجودی ناکافی» یا خطای واقعیِ سرور */
                                         barStatusOk = false
-                                        val msg = e.message?.takeIf { it.isNotBlank() } ?: "کسر هزینهٔ چاپ ناموفق بود."
+                                        val msg = UserFacingError.of(e, "کسر هزینهٔ چاپ ناموفق بود.")
                                         barStatus = if (msg.contains("کافی نیست")) "موجودی ناکافی — " + msg else msg
                                         req.restore()
                                     }

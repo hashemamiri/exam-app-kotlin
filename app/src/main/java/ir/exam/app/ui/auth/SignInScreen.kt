@@ -1,5 +1,6 @@
 package ir.exam.app.ui.auth
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -682,7 +683,7 @@ private fun GoogleAuthButton(
                 } catch (cancel: androidx.credentials.exceptions.GetCredentialCancellationException) {
                     // بستن پنجره توسط کاربر خطا نیست.
                 } catch (error: Throwable) {
-                    viewModel.reportGoogleError(error.message ?: "ورود گوگل ناموفق بود.")
+                    viewModel.reportGoogleError(UserFacingError.of(error, "ورود گوگل ناموفق بود."))
                 }
             }
         },

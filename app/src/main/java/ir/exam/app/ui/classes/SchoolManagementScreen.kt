@@ -1,5 +1,6 @@
 package ir.exam.app.ui.classes
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -446,7 +447,7 @@ fun SchoolManagementScreen(
                                 }
                                 .onFailure { error ->
                                     joinLoading = false
-                                    joinMessage = error.message ?: "عضویت ناموفق بود."
+                                    joinMessage = UserFacingError.of(error, "عضویت ناموفق بود.")
                                 }
                         }
                     }
@@ -1956,7 +1957,7 @@ private fun BulkStudentDialog(
             }
             requests
         }.onSuccess { onCreate(it) }
-            .onFailure { error = it.message }
+            .onFailure { error = UserFacingError.of(it, "عملیات ناموفق بود.") }
     }
 
     // پنجره گروهی دقیقاً مانند پنجره تکی: هم‌عرض ۶۲۰dp، از بالا، بدون کشیدن به کل ارتفاع.

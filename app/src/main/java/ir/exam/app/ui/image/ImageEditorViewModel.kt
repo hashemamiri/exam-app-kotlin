@@ -1,5 +1,6 @@
 package ir.exam.app.ui.image
 
+import ir.exam.app.core.network.UserFacingError
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -45,7 +46,7 @@ class ImageEditorViewModel(private val repository: ImageRepository) : ViewModel(
             _state.update { it.copy(loading = true, error = null) }
             repository.prepare(request)
                 .onSuccess { image -> _state.update { it.copy(loading = false, result = image) } }
-                .onFailure { error -> _state.update { it.copy(loading = false, error = error.message ?: "ویرایش تصویر ناموفق بود") } }
+                .onFailure { error -> _state.update { it.copy(loading = false, error = UserFacingError.of(error, "ویرایش تصویر ناموفق بود") } }
         }
     }
 

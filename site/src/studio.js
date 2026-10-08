@@ -16,7 +16,8 @@
     return new Promise(function (res, rej) {
       /* V160.1 — علت واقعی در پیام (میزبان + کد HTTP / CORS) تا حدس نزنیم */
       var host = ''; try { host = /^https?:/i.test(src) ? new URL(src).host : (src.slice(0, 5) + '…'); } catch (e) { host = src.slice(0, 30); }
-      var fail = function (why) { rej(new Error('تصویر قابل خواندن نیست (' + host + (why ? ' — ' + why : '') + ').')); };
+      /* V209 — جزئیات فنی فقط در کنسول؛ پیام کاربر بدون آدرس/متن فنی */
+      var fail = function (why) { try { console.warn('image load failed', host, why); } catch (e) {} rej(new Error('تصویر قابل خواندن نیست؛ از اتصال به اینترنت مطمئن شوید.')); };
       /* V160.3 — <img> معمولی همین نشانی را بدون Origin در کش مرورگر گذاشته (بدون هدر CORS)؛ بارگذاری cors بعدی از همان کش می‌خواند و «Failed to fetch» می‌دهد.
          راه‌حل: نسخهٔ cors با پارامتر یکتا (دور زدن کش)؛ در پیام خطا origin فعلی هم گفته می‌شود تا با قانون CORS آروان مقایسه شود. */
       var bust = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'cors=' + Date.now(); };

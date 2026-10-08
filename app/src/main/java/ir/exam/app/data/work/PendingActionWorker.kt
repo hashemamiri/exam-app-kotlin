@@ -1,5 +1,6 @@
 package ir.exam.app.data.work
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -92,11 +93,4 @@ class PendingActionWorker(
     }
 }
 
-private fun safeWorkerError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .replace(Regex("https?://\\S+"), "")
-    .take(220)
-    .ifBlank { "ارسال پس‌زمینه ناموفق بود." }
+private fun safeWorkerError(error: Throwable): String = UserFacingError.of(error, "ارسال پس‌زمینه ناموفق بود.") // V209 — بدون متن فنی

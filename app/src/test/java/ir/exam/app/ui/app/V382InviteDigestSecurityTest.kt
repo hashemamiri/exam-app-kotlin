@@ -20,10 +20,13 @@ class V382InviteDigestSecurityTest {
         assertTrue("extensions.digest(convert_to(v_token,'UTF8'),'sha256')" in migration)
         assertTrue("extensions.digest(convert_to(btrim(coalesce(p_invite_code,'')),'UTF8'),'sha256')" in migration)
         assertFalse("encode(digest(" in migration)
-        assertTrue("substringBefore(\"URL:\")" in manager)
-        assertTrue("substringBefore(\"Headers:\")" in manager)
-        assertTrue("authorization" in manager.lowercase())
-        assertTrue("apikey" in manager.lowercase())
-        assertTrue("bearer\\\\s+" in manager.lowercase())
+        // V209 — پاک‌سازی به UserFacingError منتقل شد (همان قواعد: URL/Headers/authorization/apikey/bearer)
+        assertTrue("UserFacingError.of(error" in manager)
+        val ufe = File(root, "app/src/main/java/ir/exam/app/core/network/UserFacingError.kt").readText()
+        assertTrue("substringBefore(\"URL:\")" in ufe)
+        assertTrue("substringBefore(\"Headers:\")" in ufe)
+        assertTrue("authorization" in ufe.lowercase())
+        assertTrue("apikey" in ufe.lowercase())
+        assertTrue("bearer\\\\s+" in ufe.lowercase())
     }
 }

@@ -1,5 +1,7 @@
 package ir.exam.app.ui.update
 
+import ir.exam.app.core.network.NetworkFailureClassifier
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.core.update.ApkUpdateManager
@@ -158,13 +160,12 @@ private fun safeUpdateError(error: Throwable): String {
     return when {
         "jwt expired" in lower ->
             "نشست شبکه در حال تازه‌سازی است؛ چند لحظه بعد دوباره بررسی کنید."
-        "unable to resolve host" in lower || "failed to connect" in lower ->
+        "unable to resolve host" in lower || "failed to connect" in lower || NetworkFailureClassifier.isNetworkFailure(error) ->
             "اتصال اینترنت برقرار نیست یا سرور بروزرسانی در دسترس نیست."
         "app_version" in lower && ("404" in lower || "does not exist" in lower) ->
             "جدول نسخه برنامه هنوز در Supabase راه‌اندازی نشده است."
         "permission" in lower || "اجازه" in lower ->
-            raw.ifBlank { "مجوز لازم برای ادامه عملیات داده نشده است." }
-        raw.isNotBlank() -> raw
-        else -> "بررسی یا دریافت بروزرسانی ناموفق بود؛ دوباره تلاش کنید."
+            UserFacingError.fromText(raw, "مجوز لازم برای ادامه عملیات داده نشده است.")
+        else -> UserFacingError.fromText(raw, "بررسی یا دریافت بروزرسانی ناموفق بود؛ دوباره تلاش کنید.") // V209 — بدون متن فنی
     }
 }

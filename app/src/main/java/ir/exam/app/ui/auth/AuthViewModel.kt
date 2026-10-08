@@ -1,5 +1,6 @@
 package ir.exam.app.ui.auth
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.jan.supabase.auth.auth
@@ -419,7 +420,6 @@ private fun safeAuthError(raw: String?): String {
         "email not confirmed" in text -> "ایمیل کاربر تأیید نشده است."
         "invalid login credentials" in text -> "ایمیل/نام کاربری یا رمز عبور نادرست است."
         "user not found" in text -> "اطلاعات حساب پیدا نشد."
-        clean.isNotBlank() -> clean
-        else -> "عملیات ورود کامل نشد. دوباره تلاش کنید."
+        else -> UserFacingError.fromText(clean, "عملیات ورود کامل نشد. دوباره تلاش کنید.") // V209 — بدون متن فنی
     }
 }

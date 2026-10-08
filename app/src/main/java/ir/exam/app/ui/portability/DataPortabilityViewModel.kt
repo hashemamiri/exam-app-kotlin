@@ -1,5 +1,6 @@
 package ir.exam.app.ui.portability
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabasePortabilityRepository
@@ -99,11 +100,7 @@ class DataPortabilityViewModel(
     }
 
     private fun fail(error: Throwable) {
-        val safe = error.message.orEmpty()
-            .substringBefore("URL:").substringBefore("Headers:")
-            .replace(Regex("(?i)authorization[^,\n]*"), "")
-            .replace(Regex("(?i)apikey[^,\n]*"), "")
-            .take(260).ifBlank { "عملیات پشتیبان ناموفق بود." }
+        val safe = UserFacingError.of(error, "عملیات پشتیبان ناموفق بود.") // V209 — بدون متن فنی
         _state.update { it.copy(loading = false, error = safe) }
     }
 }

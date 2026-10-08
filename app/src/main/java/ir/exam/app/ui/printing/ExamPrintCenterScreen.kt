@@ -1,5 +1,6 @@
 package ir.exam.app.ui.printing
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -391,10 +392,4 @@ internal fun PrintPayDialog(
 }
 
 /** پاک‌سازی خطاها پیش از نمایش (بدون درز کلید/URL سرور). */
-private fun sanitizePrintError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\\n]*"), "")
-    .take(240)
-    .ifBlank { "چاپ ناموفق بود." }
+private fun sanitizePrintError(error: Throwable): String = UserFacingError.of(error, "چاپ ناموفق بود.") // V209 — بدون متن فنی

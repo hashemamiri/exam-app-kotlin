@@ -1,5 +1,6 @@
 package ir.exam.app.ui.dashboard
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.dto.ExamDashboardDto
@@ -116,10 +117,4 @@ private fun formatToman(value: Long): String = ir.exam.app.core.calendar.Persian
     "%,d".format(java.util.Locale.US, value)
 )
 
-private fun safeDashboardError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .take(240)
-    .ifBlank { "عملیات آزمون ناموفق بود." }
+private fun safeDashboardError(error: Throwable): String = UserFacingError.of(error, "عملیات آزمون ناموفق بود.") // V209 — بدون متن فنی

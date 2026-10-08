@@ -1,5 +1,6 @@
 package ir.exam.app.ui.audio
 
+import ir.exam.app.core.network.UserFacingError
 import android.media.MediaPlayer
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -127,7 +128,7 @@ fun QuestionAudioEditorDialog(
             r.onSuccess { (i, w) ->
                 if (i.durationMs <= 0) { error = "مدت این فایل صوتی خوانده نشد."; return@onSuccess }
                 info = i; wave = w; startMs = 0L; endMs = i.durationMs
-            }.onFailure { error = it.message ?: "این فایل صوتی پشتیبانی نمی‌شود." }
+            }.onFailure { error = UserFacingError.of(it, "این فایل صوتی پشتیبانی نمی‌شود.") }
         }
     }
 
@@ -251,7 +252,7 @@ fun QuestionAudioEditorDialog(
                                 res.file.delete()
                                 error = "حجم فایل پس از فشرده‌سازی ${AudioTranscoder.formatMb(res.bytes)} مگابایت است؛ سقف ۳ مگابایت. بازهٔ کوتاه‌تری انتخاب کنید."
                             } else onApply(res.file.toURI().toString(), res.bytes, res.durationMs)
-                        }.onFailure { error = it.message ?: "فشرده‌سازی ناموفق بود." }
+                        }.onFailure { error = UserFacingError.of(it, "فشرده‌سازی ناموفق بود.") }
                     }
                 }
             ) { Text("برش و افزودن به سؤال") }

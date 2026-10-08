@@ -1,5 +1,6 @@
 package ir.exam.app.ui.builder
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -679,7 +680,7 @@ fun ExamBuilderScreen(
                                     printSavedNote = "آزمون «" + printExamName.trim() + "» ذخیره شد ✓" +
                                         (if (r.costToman > 0) "\n${r.billedImages} تصویر جدید، ${r.costToman} تومان از کیف پول کم شد." else "")
                                 }
-                                .onFailure { printSaveErr = it.message ?: "ذخیره ناموفق بود." }
+                                .onFailure { printSaveErr = UserFacingError.of(it, "ذخیره ناموفق بود.") }
                             printSaving = false
                         }
                     }

@@ -1,5 +1,6 @@
 package ir.exam.app.ui.calendar
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.core.calendar.JalaliCalendar
@@ -209,10 +210,4 @@ class CalendarViewModel(
 
 private fun Set<String>.toggle(id: String): Set<String> = if (id in this) this - id else this + id
 
-private fun safeCalendarError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .take(260)
-    .ifBlank { "دریافت تقویم ناموفق بود." }
+private fun safeCalendarError(error: Throwable): String = UserFacingError.of(error, "دریافت تقویم ناموفق بود.") // V209 — بدون متن فنی

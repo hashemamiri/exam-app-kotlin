@@ -1,5 +1,6 @@
 package ir.exam.app.ui.dashboard
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -283,7 +284,7 @@ fun TeacherDashboardScreen(
         var printExams by remember(printExamsOpen) { mutableStateOf<List<ir.exam.app.data.repository.SupabasePrintExamRepository.Summary>?>(null) }
         var printErr by remember(printExamsOpen) { mutableStateOf<String?>(null) }
         LaunchedEffect(printExamsOpen) {
-            runCatching { printRepo.list() }.onSuccess { printExams = it }.onFailure { printErr = it.message; printExams = emptyList() }
+            runCatching { printRepo.list() }.onSuccess { printExams = it }.onFailure { printErr = UserFacingError.of(it, "دریافت آزمون‌های چاپی ناموفق بود."); printExams = emptyList() }
         }
         AlertDialog(
             onDismissRequest = { printExamsOpen = false },

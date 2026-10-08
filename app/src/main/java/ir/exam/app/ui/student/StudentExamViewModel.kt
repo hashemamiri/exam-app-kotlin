@@ -1,5 +1,6 @@
 package ir.exam.app.ui.student
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.PendingActionRepository
@@ -552,11 +553,4 @@ class StudentExamViewModel(
     }
 }
 
-private fun safeStudentError(error: Throwable, fallback: String): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .replace(Regex("https?://\\S+"), "")
-    .take(260)
-    .ifBlank { fallback }
+private fun safeStudentError(error: Throwable, fallback: String): String = UserFacingError.of(error, fallback) // V209 — بدون متن فنی

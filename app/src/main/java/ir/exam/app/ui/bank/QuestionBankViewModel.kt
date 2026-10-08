@@ -1,5 +1,6 @@
 package ir.exam.app.ui.bank
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -114,10 +115,4 @@ class QuestionBankViewModel(
     }
 }
 
-private fun safeBankError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .take(260)
-    .ifBlank { "عملیات بانک سؤال ناموفق بود." }
+private fun safeBankError(error: Throwable): String = UserFacingError.of(error, "عملیات بانک سؤال ناموفق بود.") // V209 — بدون متن فنی

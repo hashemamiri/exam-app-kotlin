@@ -1,5 +1,6 @@
 package ir.exam.app.ui.image
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -114,7 +115,7 @@ fun QuestionMediaEditor(
                 uris.forEach { uri ->
                     repository.prepare(ImageEditRequest(uri))
                         .onSuccess { safeUris += it.uri.toString() }
-                        .onFailure { if (firstError == null) firstError = it.message }
+                        .onFailure { if (firstError == null) firstError = UserFacingError.of(it, "افزودن تصویر ناموفق بود.") }
                 }
                 imageError = firstError
                 processing = false

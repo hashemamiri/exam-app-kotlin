@@ -1,5 +1,6 @@
 package ir.exam.app.ui.dashboard
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,13 +40,13 @@ fun TeacherManagerRequestsScreen() {
         loading = true
         repository.managerRequests()
             .onSuccess { requests = it; error = null }
-            .onFailure { error = it.message }
+            .onFailure { error = UserFacingError.of(it, "دریافت درخواست‌ها ناموفق بود.") }
         loading = false
     }
     fun decide(id: String, approve: Boolean) = scope.launch {
         repository.decideManagerRequest(id, approve)
             .onSuccess { load() }
-            .onFailure { error = it.message }
+            .onFailure { error = UserFacingError.of(it, "عملیات ناموفق بود.") }
     }
 
     LaunchedEffect(Unit) { load() }

@@ -1,5 +1,6 @@
 package ir.exam.app.ui.manager
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -578,11 +579,4 @@ private fun rememberManagerSummary(): ManagerSummaryState {
     return state
 }
 
-internal fun safeManagerError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .replace(Regex("(?i)bearer\\s+[A-Za-z0-9._-]+"), "")
-    .take(240)
-    .ifBlank { "عملیات مدیریت مدرسه ناموفق بود." }
+internal fun safeManagerError(error: Throwable): String = UserFacingError.of(error, "عملیات مدیریت مدرسه ناموفق بود.") // V209 — بدون متن فنی

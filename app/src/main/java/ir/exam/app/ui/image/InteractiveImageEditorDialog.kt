@@ -1,5 +1,6 @@
 package ir.exam.app.ui.image
 
+import ir.exam.app.core.network.UserFacingError
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.foundation.BorderStroke
@@ -110,7 +111,7 @@ fun InteractiveImageEditorDialog(
             }
             .onFailure {
                 safeSource = null
-                error = it.message ?: "آماده‌سازی امن تصویر انجام نشد."
+                error = UserFacingError.of(it, "آماده‌سازی امن تصویر انجام نشد.")
                 preparing = false
             }
     }
@@ -162,7 +163,7 @@ fun InteractiveImageEditorDialog(
                                         ImageEditRequest(preparedSource, crop, rotation, forceSquare)
                                     ).onSuccess { onDone(it.uri) }
                                         .onFailure {
-                                            error = it.message
+                                            error = UserFacingError.of(it, "ویرایش تصویر ناموفق بود.")
                                             busy = false
                                         }
                                 }

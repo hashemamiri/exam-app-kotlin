@@ -1,5 +1,6 @@
 package ir.exam.app.ui.billing
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseBillingRepository
@@ -88,11 +89,4 @@ class BillingViewModel(
     }
 }
 
-private fun safeBillingError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .replace(Regex("""https?://\S+"""), "")
-    .take(260)
-    .ifBlank { "عملیات کیف پول ناموفق بود." }
+private fun safeBillingError(error: Throwable): String = UserFacingError.of(error, "عملیات کیف پول ناموفق بود.") // V209 — بدون متن فنی

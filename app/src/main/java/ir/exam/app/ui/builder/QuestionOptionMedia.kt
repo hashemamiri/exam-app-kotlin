@@ -1,5 +1,6 @@
 package ir.exam.app.ui.builder
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -90,7 +91,7 @@ fun SingleImagePicker(
             scope.launch {
                 repository.prepare(ImageEditRequest(uri))
                     .onSuccess { editing = Uri.parse(it.uri.toString()) }
-                    .onFailure { imageError = it.message }
+                    .onFailure { imageError = UserFacingError.of(it, "افزودن تصویر ناموفق بود.") }
                 processing = false
             }
         }

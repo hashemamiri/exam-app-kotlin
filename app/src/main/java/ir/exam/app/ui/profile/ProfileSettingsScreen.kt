@@ -1,5 +1,6 @@
 package ir.exam.app.ui.profile
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -138,7 +139,7 @@ fun ProfileSettingsScreen(
             imageScope.launch {
                 imageRepository.prepare(ImageEditRequest(uri))
                     .onSuccess { avatarEditing = it.uri }
-                    .onFailure { avatarPrepareError = it.message }
+                    .onFailure { avatarPrepareError = UserFacingError.of(it, "آماده‌سازی تصویر ناموفق بود.") }
                 avatarPreparing = false
             }
         }
@@ -669,7 +670,7 @@ private fun AccountSection(
                                     schoolJoinScope.launch {
                                         schoolJoinRepository.preview(schoolCode)
                                             .onSuccess { schoolPreview = it; schoolJoinMessage = null }
-                                            .onFailure { schoolJoinMessage = it.message.orEmpty().substringBefore("URL:").substringBefore("Headers:") }
+                                            .onFailure { schoolJoinMessage = UserFacingError.of(it, "پیوستن به مدرسه ناموفق بود.") }
                                         schoolJoinLoading = false
                                     }
                                 }
@@ -692,7 +693,7 @@ private fun AccountSection(
                                 schoolJoinScope.launch {
                                     schoolJoinRepository.join(schoolCode)
                                         .onSuccess { schoolJoinMessage = "عضویت در مدرسه «$it» انجام شد."; schoolPreview = null }
-                                        .onFailure { schoolJoinMessage = it.message.orEmpty().substringBefore("URL:").substringBefore("Headers:") }
+                                        .onFailure { schoolJoinMessage = UserFacingError.of(it, "پیوستن به مدرسه ناموفق بود.") }
                                     schoolJoinLoading = false
                                 }
                             },
@@ -1132,7 +1133,7 @@ private fun ManagerBackupSection() {
                         createFile.launch("school-backup.json")
                     }.onFailure { throwable ->
                         loading = false
-                        error = throwable.message?.take(200) ?: "ساخت پشتیبان ناموفق بود."
+                        error = UserFacingError.of(throwable, "ساخت پشتیبان ناموفق بود.")
                     }
                 }
             },

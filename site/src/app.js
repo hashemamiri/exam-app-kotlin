@@ -86,10 +86,35 @@
     wrap.appendChild(t);
     setTimeout(function () { t.style.opacity = '0'; t.style.transition = '.3s'; setTimeout(function () { t.remove(); }, 350); }, 3200);
   }
+  /* V209 — همان قاعدهٔ اپ (UserFacingError): هیچ متن فنی (Failed to fetch، HTTP 5xx، JSON خام، آدرس سرور) به کاربر نشان داده نمی‌شود؛
+     خطای شبکه → پیام اینترنت؛ متن غیرفارسی/فنی → پیام عمومی سرور؛ فقط پیام‌های فارسی معنادار عیناً می‌مانند. */
+  var ERR_NETWORK = 'خطا در ارتباط با سرور؛ از اتصال به اینترنت مطمئن شوید و دوباره تلاش کنید.';
+  var ERR_SERVER = 'خطا در سرور؛ از اتصال به اینترنت مطمئن شوید و دوباره تلاش کنید.';
+  var ERR_TECH = ['http request', 'failed to fetch', 'networkerror', 'load failed', 'failed with message', 'unable to resolve', 'exception', 'supabase.co', 'supabase.in',
+    'timeout', 'timed out', 'connection', 'ssl', 'socket', 'pgrst', 'jwt', 'postgrest', 'status code', 'internal server error', 'bad gateway', 'service unavailable',
+    'gateway timeout', 'cloudflare', 'typeerror', 'undefined', 'null', '{', '}', '<html'];
+  function errText(raw) {
+    var t = String(raw == null ? '' : raw).replace(/https?:\/\/\S+/g, '').trim();
+    if (!t) return '';
+    var lower = t.toLowerCase();
+    if (/failed to fetch|networkerror|network request failed|load failed|unable to resolve|timed? ?out|connection (reset|refused)|err_internet|err_name_not_resolved/.test(lower)) return ERR_NETWORK;
+    var hasFa = /[\u0600-\u06FF]/.test(t);
+    var tech = !hasFa || ERR_TECH.some(function (k) { return lower.indexOf(k) >= 0; });
+    if (!tech) {
+      var letters = (t.match(/[A-Za-z\u0600-\u06FF]/g) || []).length, latin = (t.match(/[A-Za-z]/g) || []).length;
+      tech = letters > 0 && latin * 100 / letters >= 40;
+    }
+    if (!tech) return t.slice(0, 260);
+    var head = t.split(':')[0].trim();
+    if (head && /[\u0600-\u06FF]/.test(head) && !ERR_TECH.some(function (k) { return head.toLowerCase().indexOf(k) >= 0; })) return head.slice(0, 260);
+    return ERR_SERVER;
+  }
   function errMsg(e) {
-    if (!e) return 'خطای ناشناخته';
-    if (typeof e === 'string') return e;
-    return e.message || e.error_description || e.msg || e.error || e.hint || JSON.stringify(e);
+    if (!e) return ERR_SERVER;
+    if (typeof e === 'string') return errText(e) || ERR_SERVER;
+    var raw = e.message || e.error_description || e.msg || e.error || e.hint || e.details || '';
+    if (typeof raw !== 'string') raw = '';
+    return errText(raw) || ERR_SERVER;
   }
   /* V159 — پنجرهٔ ورودی متن (AlertDialog با OutlinedTextField در اپ) */
   function promptDlg(title, body, label, value, okLabel) {

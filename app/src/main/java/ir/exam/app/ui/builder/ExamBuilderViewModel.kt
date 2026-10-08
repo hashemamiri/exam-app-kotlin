@@ -1,5 +1,6 @@
 package ir.exam.app.ui.builder
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -810,10 +811,4 @@ private fun List<String?>.pad(size: Int): List<String?> = if (this.size >= size)
 private fun List<OptionStyle?>.padStyles(size: Int): List<OptionStyle?> =
     take(size) + List((size - this.size).coerceAtLeast(0)) { null }
 
-private fun safeBuilderError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .take(260)
-    .ifBlank { "ذخیره آزمون ناموفق بود." }
+private fun safeBuilderError(error: Throwable): String = UserFacingError.of(error, "ذخیره آزمون ناموفق بود.") // V209 — بدون متن فنی

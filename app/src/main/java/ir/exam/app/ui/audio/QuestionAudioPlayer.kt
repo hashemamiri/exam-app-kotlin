@@ -76,8 +76,10 @@ fun QuestionAudioPlayer(url: String, durationMs: Long, modifier: Modifier = Modi
             val fetched = withContext(Dispatchers.IO) { runCatching { cachedAudioFile(context, url) } }
             val local = fetched.getOrNull()
             if (local == null) {
-                val why = fetched.exceptionOrNull()?.message?.takeIf { it.isNotBlank() } ?: "نامشخص"
-                error = "دانلود فایل صوتی ممکن نشد ($why)"; preparing = false; runCatching { mp.release() }; return@launch
+                // V209 — بدون متن فنی: خطای شبکه → پیام اینترنت؛ در غیر این صورت پیام کوتاه فارسی
+                val ex = fetched.exceptionOrNull()
+                error = if (ex != null && ir.exam.app.core.network.NetworkFailureClassifier.isNetworkFailure(ex)) ir.exam.app.core.network.UserFacingError.NETWORK
+                    else "دانلود فایل صوتی ممکن نشد؛ از اتصال به اینترنت مطمئن شوید."; preparing = false; runCatching { mp.release() }; return@launch
             }
             runCatching {
             mp.setDataSource(local.absolutePath)

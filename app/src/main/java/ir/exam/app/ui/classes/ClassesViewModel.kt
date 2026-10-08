@@ -1,5 +1,6 @@
 package ir.exam.app.ui.classes
 
+import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -513,12 +514,4 @@ class ClassesViewModel(
     }
 }
 
-private fun safeSchoolError(error: Throwable): String {
-    val raw = error.message.orEmpty()
-        .substringBefore("URL:")
-        .substringBefore("Headers:")
-        .replace(Regex("(?i)authorization[^,\n]*"), "")
-        .replace(Regex("(?i)apikey[^,\n]*"), "")
-        .take(240)
-    return raw.ifBlank { "عملیات کلاس و دانش‌آموز ناموفق بود." }
-}
+private fun safeSchoolError(error: Throwable): String = UserFacingError.of(error, "عملیات کلاس و دانش‌آموز ناموفق بود.") // V209 — بدون متن فنی

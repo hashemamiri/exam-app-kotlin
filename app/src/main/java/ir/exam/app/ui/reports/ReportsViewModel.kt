@@ -1,5 +1,6 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.core.export.XlsxSheet
@@ -67,7 +68,7 @@ class ReportsViewModel(
         }
         grading.questionAnalysis(examId)
             .onSuccess { analysis -> _state.update { it.copy(analysisLoading = false, questionAnalysis = analysis) } }
-            .onFailure { error -> _state.update { it.copy(analysisLoading = false, error = error.message?.take(240)) } }
+            .onFailure { error -> _state.update { it.copy(analysisLoading = false, error = UserFacingError.of(error, "تحلیل ناموفق بود.")) } }
     }
 
     fun selectClass(item: SchoolClass) {
@@ -146,6 +147,6 @@ class ReportsViewModel(
     fun reportError(error: Throwable) = fail(error)
 
     private fun fail(error: Throwable) {
-        _state.update { it.copy(loading = false, error = error.message?.take(240) ?: "گزارش‌گیری ناموفق بود.") }
+        _state.update { it.copy(loading = false, error = UserFacingError.of(error, "گزارش‌گیری ناموفق بود.")) }
     }
 }

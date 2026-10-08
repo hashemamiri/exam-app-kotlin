@@ -71,7 +71,7 @@ class OfficialPdfPrintAdapter(
             if (cancellationSignal.isCanceled) callback.onWriteCancelled()
             else callback.onWriteFinished(written.toTypedArray())
         } catch (error: Throwable) {
-            callback.onWriteFailed(error.message ?: "ساخت PDF ناموفق بود.")
+            callback.onWriteFailed(ir.exam.app.core.network.UserFacingError.of(error, "ساخت PDF ناموفق بود."))
         }
     }
 

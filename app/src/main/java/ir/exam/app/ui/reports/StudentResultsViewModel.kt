@@ -1,5 +1,6 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ir.exam.app.data.repository.SupabaseGradingRepository
@@ -82,14 +83,7 @@ class StudentResultsViewModel(
     }
 }
 
-private fun safeResultError(error: Throwable): String = error.message.orEmpty()
-    .substringBefore("URL:")
-    .substringBefore("Headers:")
-    .replace(Regex("(?i)authorization[^,\n]*"), "")
-    .replace(Regex("(?i)apikey[^,\n]*"), "")
-    .replace(Regex("https?://\\S+"), "")
-    .take(260)
-    .ifBlank { "دریافت نتایج ناموفق بود." }
+private fun safeResultError(error: Throwable): String = UserFacingError.of(error, "دریافت نتایج ناموفق بود.") // V209 — بدون متن فنی
 
 private fun JsonObject.text(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 private fun JsonObject.number(key: String): Double? = this[key]?.jsonPrimitive?.doubleOrNull
