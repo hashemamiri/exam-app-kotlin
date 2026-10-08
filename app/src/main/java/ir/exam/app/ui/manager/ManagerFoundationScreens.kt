@@ -1,5 +1,6 @@
 package ir.exam.app.ui.manager
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -545,7 +546,9 @@ private data class ManagerSummaryState(
 
 @Composable
 private fun rememberManagerSummary(): ManagerSummaryState {
-    var state by remember { mutableStateOf(ManagerSummaryState()) }
+    // V214 — خلاصهٔ قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود؛ نسخهٔ تازه جایگزین می‌شود.
+    val cachedSummary = remember { SessionCache.get<ManagerSummary>(MANAGER_SUMMARY_CACHE) }
+    var state by remember { mutableStateOf(ManagerSummaryState(loading = cachedSummary == null, summary = cachedSummary)) }
     LaunchedEffect(Unit) {
         runCatching {
             val raw = SupabaseProvider.client.postgrest.rpc("native_manager_school_summary_v36")
@@ -573,10 +576,12 @@ private fun rememberManagerSummary(): ManagerSummaryState {
                     )
                 }
             )
-        }.onSuccess { state = ManagerSummaryState(loading = false, summary = it) }
-            .onFailure { state = ManagerSummaryState(loading = false, error = safeManagerError(it)) }
+        }.onSuccess { SessionCache.put(MANAGER_SUMMARY_CACHE, it); state = ManagerSummaryState(loading = false, summary = it) }
+            .onFailure { state = if (cachedSummary == null) ManagerSummaryState(loading = false, error = safeManagerError(it)) else state.copy(loading = false) }
     }
     return state
 }
+
+private const val MANAGER_SUMMARY_CACHE = "manager.summary" // V214
 
 internal fun safeManagerError(error: Throwable): String = UserFacingError.of(error, "عملیات مدیریت مدرسه ناموفق بود.") // V209 — بدون متن فنی

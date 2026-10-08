@@ -1,0 +1,97 @@
+name: تولید Baseline Profile
+# V215 — مورد ۳ سرعت: اندازه‌گیری واقعیِ مسیر شروع برنامه روی شبیه‌ساز مدیریت‌شدهٔ Gradle (Pixel 6 / API 34)
+# و ثبت نتیجه در app/src/release/generated/baselineProfiles/. فقط دستی اجرا می‌شود:
+# GitHub → Actions → «تولید Baseline Profile» → Run workflow.
+# پس از موفقیت، فایل پروفایل + یک شمارهٔ نسخهٔ جدید + بلوک CHANGELOG به main کامیت می‌شود؛ سپس CI عادی اپ
+# («آزمون آنلاین») نسخهٔ جدید را با پروفایل تازه می‌سازد و منتشر می‌کند.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write # برای اجرای CI اپ پس از کامیت (push با توکن خودکار، CI را خودبه‌خود اجرا نمی‌کند)
+
+concurrency:
+  group: baseline-profile
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: دریافت سورس
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: فعال‌سازی KVM برای شبیه‌ساز
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: آماده‌سازی Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: آماده‌سازی Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: پذیرش مجوزهای SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: تولید پروفایل روی شبیه‌ساز مدیریت‌شده
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          ./gradlew :app:generateReleaseBaselineProfile \
+            -PbaselineAbi=true \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            -Pandroid.experimental.testOptions.managedDevices.emulator.showKernelLogging=true \
+            --stacktrace
+      - name: بررسی خروجی
+        id: check
+        run: |
+          set -Eeuo pipefail
+          F=app/src/release/generated/baselineProfiles/baseline-prof.txt
+          test -s "$F"
+          echo "خطوط پروفایل: $(wc -l < "$F")"
+          S=app/src/release/generated/baselineProfiles/startup-prof.txt
+          [ -s "$S" ] && echo "خطوط startup-prof: $(wc -l < "$S")" || true
+          if git status --porcelain -- app/src/release/generated/baselineProfiles | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "پروفایل تغییری نکرد؛ کامیتی انجام نمی‌شود."
+          fi
+      - name: نگه‌داری پروفایل به‌عنوان Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-profile
+          path: app/src/release/generated/baselineProfiles/
+          if-no-files-found: error
+      - name: افزایش شمارهٔ نسخه و کامیت
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -Eeuo pipefail
+          OLD=$(tr -d ' \n' < text/APP_VERSION.txt)
+          python3 scripts/bump_app_version.py
+          NEW=$(tr -d ' \n' < text/APP_VERSION.txt)
+          DATE=$(date -u +%Y-%m-%d)
+          python3 - "$NEW" "$DATE" <<'PY'
+          import sys, pathlib
+          new, date = sys.argv[1], sys.argv[2]
+          p = pathlib.Path('text/CHANGELOG_FA.txt')
+          block = (f"V{new} — پروفایل شروع برنامه (Baseline Profile) با اندازه‌گیری واقعی به‌روز شد ({date}).\n"
+                   "- شروع برنامه و باز شدن صفحهٔ اول پس از نصب/به‌روزرسانی سریع‌تر می‌شود؛ بدون تغییر در امکانات.\n\n")
+          p.write_text(block + p.read_text(encoding='utf-8'), encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/release/generated/baselineProfiles text/APP_VERSION.txt text/CHANGELOG_FA.txt
+          git commit -m "Baseline Profile اندازه‌گیری‌شده (نسخهٔ $OLD → $NEW)"
+          git push origin HEAD:main
+      - name: اجرای CI اپ برای ساخت و انتشار نسخهٔ جدید
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run android.yml --ref main

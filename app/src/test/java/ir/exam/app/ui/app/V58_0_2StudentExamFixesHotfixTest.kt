@@ -96,7 +96,7 @@ class V58_0_2StudentExamFixesHotfixTest {
             .substringBefore("private fun StudentWhiteboardEntry(")
         assertFalse("FilterChip(" in strip)
         assertTrue("combinedClickable(" in strip)
-        assertTrue("onLongClick = { onToggleFlag(q.id) }" in strip)
+        assertTrue("onLongClick = { onToggleFlag(questionId) }" in strip) // V214
     }
 
     @Test

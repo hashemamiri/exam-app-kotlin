@@ -1,5 +1,6 @@
 package ir.exam.app.ui.calendar
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -174,15 +175,19 @@ class CalendarViewModel(
         val targetYear = state.value.year
         val targetMonth = state.value.month
         monthJob = viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null) }
+            // V214 — ماهِ دیده‌شدهٔ قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود؛ نسخهٔ تازه جایگزین می‌شود.
+            val cacheKey = "calendar.month.$targetYear.$targetMonth"
+            val cached = SessionCache.get<CalendarMonth>(cacheKey)
+            _state.update { it.copy(loading = cached == null, monthData = cached ?: it.monthData, error = null) }
             repository.loadMonth(targetYear, targetMonth)
                 .onSuccess { month ->
+                    SessionCache.put(cacheKey, month)
                     _state.update { current ->
                         if (current.year != targetYear || current.month != targetMonth) current
                         else current.copy(loading = false, monthData = month)
                     }
                 }
-                .onFailure { error -> _state.update { it.copy(loading = false, error = safeCalendarError(error)) } }
+                .onFailure { error -> _state.update { it.copy(loading = false, error = if (cached == null) safeCalendarError(error) else null) } }
         }
     }
 

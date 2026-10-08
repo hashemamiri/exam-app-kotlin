@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.data.repository.ManagerApprovalItem
 import ir.exam.app.data.repository.SupabaseTeacherDashboardRepository
 import ir.exam.app.ui.app.NeumorphicPanel
@@ -37,10 +38,13 @@ fun TeacherManagerRequestsScreen() {
     var error by remember { mutableStateOf<String?>(null) }
 
     fun load() = scope.launch {
-        loading = true
+        // V214 — فهرست قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود؛ نسخهٔ تازه جایگزین می‌شود.
+        val cached = SessionCache.get<List<ManagerApprovalItem>>(MANAGER_REQUESTS_CACHE)
+        if (cached != null) requests = cached
+        loading = cached == null
         repository.managerRequests()
-            .onSuccess { requests = it; error = null }
-            .onFailure { error = UserFacingError.of(it, "دریافت درخواست‌ها ناموفق بود.") }
+            .onSuccess { SessionCache.put(MANAGER_REQUESTS_CACHE, it); requests = it; error = null }
+            .onFailure { if (cached == null) error = UserFacingError.of(it, "دریافت درخواست‌ها ناموفق بود.") }
         loading = false
     }
     fun decide(id: String, approve: Boolean) = scope.launch {
@@ -86,3 +90,5 @@ private fun String.toPersianRequestStatus() = when (this) {
     "executed" -> "اجرا شده"
     else -> this
 }
+
+private const val MANAGER_REQUESTS_CACHE = "manager.requests" // V214

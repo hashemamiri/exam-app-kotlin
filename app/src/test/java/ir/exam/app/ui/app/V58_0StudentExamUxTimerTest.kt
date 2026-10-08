@@ -61,7 +61,7 @@ class V58_0StudentExamUxTimerTest {
         assertTrue("OutlinedButton(onClick = { showExit = true }) { Text(\"خروج\") }" in student)
         assertTrue("ExamCountdownText(" in student)
         // نگه‌داشتن ۲ ثانیه‌ای برای علامت مرور؛ دکمهٔ متنی حذف
-        assertTrue("onLongClick = { onToggleFlag(q.id) }" in student)
+        assertTrue("onLongClick = { onToggleFlag(questionId) }" in student) // V214
         assertFalse("Text(\"برداشتن علامت\")" in student)
         assertFalse("OutlinedButton(onClick={onToggleFlag(question.id)})" in student)
     }

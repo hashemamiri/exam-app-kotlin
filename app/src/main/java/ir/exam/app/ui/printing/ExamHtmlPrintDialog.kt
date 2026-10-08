@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +79,8 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 
 /** نشانی ثابت سند اصلی تا callbackهای WebView فقط یک‌بار داده را تزریق کنند. */
+/** V214 — حداکثر انتظار برای آماده شدن تصاویر پیش از تزریق داده به موتور چاپ */
+internal const val PENDING_WAIT_MS = 90_000L
 internal const val MAIN_PAGE_URL = "https://exam-print.local/print/exam_print_renderer.html"
 
 
@@ -257,15 +260,20 @@ fun ExamHtmlPrintDialog(
                 // V126 — هیچ هدر/نوارِ بومی روی پیش‌نمایش نیست: بینندهٔ موتورِ وب (PGS)
                 // نوارِ کاملِ خودش را دارد (بستن، چاپ، زوم، تنظیمات صفحه 📐، بندانگشتی).
                 Box(Modifier.fillMaxSize().weight(1f)) {
-                    val readyPrintable = inlinedPrintable
-                    if (readyPrintable != null || printable == null) AndroidView(
+                    // V214 — WebView بلافاصله ساخته می‌شود تا بارگذاری ~۲٫۵MB اسکریپت موتور با دانلود/آماده‌سازی
+                    // تصاویر (ExamHtmlImageInliner) هم‌زمان پیش برود؛ تزریق داده وقتی هر دو آماده شدند (pendingReady).
+                    // قبلاً WebView فقط پس از پایان inliner ساخته می‌شد و دو انتظار پشت‌سرهم بودند.
+                    val inlinedRef = rememberUpdatedState(inlinedPrintable)
+                    AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
                             // V101 — راه‌اندازیِ کامل در تابعِ مشترک (همان موتور
                             // چاپِ مستقیمِ بدون‌صفحه از اینجا استفاده می‌کند).
                             createExamPrintWebView(
                                 context = ctx,
-                                printable = readyPrintable,
+                                printable = null,
+                                pendingPrintable = { inlinedRef.value },
+                                pendingReady = { printable == null || inlinedRef.value != null },
                                 printMode = initialPrintMode,
                                 // تزریقِ داده کامل شد: فقط در حالتِ پیش‌نمایش
                                 // پنجرهٔ پیش‌نمایش باز می‌شود؛ در چاپِ مستقیم
@@ -716,7 +724,11 @@ internal fun createExamPrintWebView(
     // V130 — پنجره‌های بومیِ «اندازه» و «فونت» برای نوارِ قالب‌بندیِ پیش‌نمایش (kind = "size" | "font")
     onPickFormat: (String) -> Unit = { },
     // V131 — پنجرهٔ بومیِ گزینه‌های پنلِ 📐
-    onPickOption: (PrintOptionPickRequest) -> Unit = { }
+    onPickOption: (PrintOptionPickRequest) -> Unit = { },
+    // V214 — تزریق تأخیری: اگر pendingReady() هنوز false باشد (تصاویر در حال آماده‌سازی)، صفحه بارگذاری می‌شود
+    // ولی تزریق داده تا آماده شدن (حداکثر PENDING_WAIT_MS) به تعویق می‌افتد؛ داده از pendingPrintable خوانده می‌شود.
+    pendingPrintable: (() -> OfficialExamPrintable?)? = null,
+    pendingReady: () -> Boolean = { true }
 ): WebView = WebView(context).apply {
     setBackgroundColor(android.graphics.Color.parseColor("#E8ECF1"))
     settings.javaScriptEnabled = true
@@ -768,6 +780,7 @@ internal fun createExamPrintWebView(
         "ExamPrintBridge"
     )
 
+    val pageStartedAt = android.os.SystemClock.uptimeMillis()
     webViewClient = object : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
@@ -819,8 +832,15 @@ internal fun createExamPrintWebView(
             // V80.0 — onPageFinished برای «هر فریم» صدا زده می‌شود، نه فقط
             // فریمِ اصلی. فقط به پایانِ لودِ سندِ اصلی واکنش نشان بده.
             if (url != MAIN_PAGE_URL) return
+            // V214 — انتظار برای آماده شدن داده (تصاویر) بدون نگه داشتن بارگذاری موتور
+            val waitedMs = android.os.SystemClock.uptimeMillis() - pageStartedAt
+            if (!pendingReady()) {
+                if (waitedMs < PENDING_WAIT_MS) { view.postDelayed({ onPageFinished(view, url) }, 100); return }
+                view.post { onError("آماده‌سازی تصاویر برگه بیش از حد طول کشید.") }
+                return
+            }
             val payload = ExamHtmlPrintPayloadBuilder.build(
-                printable,
+                pendingPrintable?.invoke() ?: printable,
                 // V86.8 — میدان‌های سربرگِ ذخیره‌شده روی دستگاه
                 ir.exam.app.data.local.PrintHeaderStore(context).read(),
                 // V121 — تنظیمات صفحهٔ موتور چاپ (کاغذ/جهت/حاشیه/…)

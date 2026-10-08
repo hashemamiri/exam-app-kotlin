@@ -1,5 +1,6 @@
 package ir.exam.app.ui.bank
 
+import ir.exam.app.core.cache.SessionCache
 import ir.exam.app.core.network.UserFacingError
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -34,6 +35,10 @@ data class QuestionBankUiState(
         }
 }
 
+/** V214 — بستهٔ حافظهٔ موقت بانک سؤال */
+private data class BankCache(val questions: List<BankQuestionOption>, val categories: List<BankCategoryOption>)
+private const val CACHE_KEY = "bank.snapshot"
+
 class QuestionBankViewModel(
     context: Context,
     private val repository: SupabaseExamBuilderRepository =
@@ -45,9 +50,12 @@ class QuestionBankViewModel(
     init { load() }
 
     fun load() = viewModelScope.launch {
-        _state.update { it.copy(loading = true, error = null) }
+        // V214 — بانک قبلی (حافظهٔ موقت) فوراً نشان داده می‌شود؛ نسخهٔ تازه جایگزین می‌شود.
+        val cached = SessionCache.get<BankCache>(CACHE_KEY)
+        _state.update { it.copy(loading = cached == null, questions = cached?.questions ?: it.questions, categories = cached?.categories ?: it.categories, error = null) }
         repository.refreshBank()
             .onSuccess { snapshot ->
+                SessionCache.put(CACHE_KEY, BankCache(snapshot.questions, snapshot.categories))
                 _state.update {
                     it.copy(
                         loading = false,
@@ -57,7 +65,7 @@ class QuestionBankViewModel(
                 }
             }
             .onFailure { error ->
-                _state.update { it.copy(loading = false, error = safeBankError(error)) }
+                _state.update { it.copy(loading = false, error = if (cached == null) safeBankError(error) else null) }
             }
     }
 

@@ -284,11 +284,16 @@ fun StudentExamContent(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(exam.questions.size) { i ->
+                        // V214 — کلید پایدار + فقط سه مقدار ساده به هر تراشه: با هر تایپ پاسخ، تراشه‌های نوار
+                        // دیگر بازترکیب نمی‌شوند (قبلاً کل state به هر تراشه می‌رفت).
+                        items(exam.questions.size, key = { i -> exam.questions[i].id }) { i ->
+                            val qid = exam.questions[i].id
                             StripChipCell(
                                 index = i,
-                                state = state,
-                                exam = exam,
+                                questionId = qid,
+                                answered = state.answers.containsKey(qid),
+                                flagged = qid in state.flaggedQuestionIds,
+                                selectedChip = i == state.questionIndex,
                                 onGoTo = onGoTo,
                                 onToggleFlag = onToggleFlag
                             )
@@ -562,15 +567,13 @@ private fun ResponseImages(
 @Composable
 private fun StripChipCell(
     index: Int,
-    state: StudentExamUiState,
-    exam: ir.exam.app.domain.model.Exam,
+    questionId: String,
+    answered: Boolean,
+    flagged: Boolean,
+    selectedChip: Boolean,
     onGoTo: (Int) -> Unit,
     onToggleFlag: (String) -> Unit
 ) {
-    val q = exam.questions[index]
-    val answered = state.answers.containsKey(q.id)
-    val flagged = q.id in state.flaggedQuestionIds
-    val selectedChip = index == state.questionIndex
     androidx.compose.material3.Surface(
         shape = MaterialTheme.shapes.small,
         color = if (selectedChip) MaterialTheme.colorScheme.secondaryContainer
@@ -578,7 +581,7 @@ private fun StripChipCell(
         modifier = Modifier.combinedClickable(
             onClick = { onGoTo(index) },
             // نگه‌داشتن شمارهٔ سؤال = علامت/برداشتن علامت مرور
-            onLongClick = { onToggleFlag(q.id) }
+            onLongClick = { onToggleFlag(questionId) }
         )
     ) {
         Text(

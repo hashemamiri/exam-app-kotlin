@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "ExamAppNative"
 include(":app")
+include(":baselineprofile") // V215 — تولید Baseline Profile (فقط گردش کار دستی)

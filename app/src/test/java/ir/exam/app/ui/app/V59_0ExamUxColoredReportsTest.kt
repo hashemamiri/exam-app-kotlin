@@ -47,7 +47,7 @@ class V59_0ExamUxColoredReportsTest {
         val chip = student.substringAfter("private fun StripChipCell(")
             .substringBefore("private fun StudentWhiteboardEntry(")
         assertTrue("combinedClickable(" in chip)
-        assertTrue("onLongClick = { onToggleFlag(q.id) }" in chip)
+        assertTrue("onLongClick = { onToggleFlag(questionId) }" in chip) // V214 — تراشه فقط شناسه را می‌گیرد
         assertFalse("FilterChip(" in chip)
     }
 

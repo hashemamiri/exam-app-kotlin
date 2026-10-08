@@ -9,6 +9,13 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import ir.exam.app.domain.model.OfficialExamPrintable
 import ir.exam.app.ui.image.PrivateImageLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -34,6 +41,7 @@ object ExamHtmlImageInliner {
     private const val MAX_EDGE = 1280
     private const val JPEG_QUALITY = 85
     private const val MAX_TOTAL_CHARS = 14_000_000L
+    private const val PARALLEL_DOWNLOADS = 4 // V214
 
     /**
      * توکن تصویر درون‌متنیِ قرارداد رندرر:
@@ -53,9 +61,20 @@ object ExamHtmlImageInliner {
     // نداشتند، مثلاً باگ برنامه‌نویسی) با `getOrDefault(printable)` بی‌صدا
     // بلعیده می‌شد و آزمون بدون هیچ تصویری (و بدون هیچ پیام خطایی) چاپ
     // می‌شد. حالا حداقل با Log.w قابل‌ردیابی است.
-    suspend fun inline(context: Context, printable: OfficialExamPrintable): OfficialExamPrintable =
+    // V214 — (۱) کل کار روی Dispatchers.Default (قبلاً دیکد/فشرده‌سازی/base64 روی نخ اصلی اجرا می‌شد و UI را
+    // نگه می‌داشت)؛ (۲) دانلود/دیکد تصاویر هم‌زمان (حداکثر ۴ تا) به‌جای پشت‌سرهم؛ ترتیب، سقف تعداد و بودجهٔ حجم
+    // دقیقاً مثل قبل و به ترتیب سؤال‌ها اعمال می‌شود (فقط MAX_IMAGES تصویر اول اصلاً دانلود می‌شوند).
+    suspend fun inline(context: Context, printable: OfficialExamPrintable): OfficialExamPrintable = withContext(Dispatchers.Default) {
         runCatching {
             val loader = PrivateImageLoader.create(context)
+            val gate = Semaphore(PARALLEL_DOWNLOADS)
+            // فقط تا سقف تعداد تصویر دانلود می‌شود (به ترتیب سؤال‌ها)
+            val wanted = printable.questions.flatMap { q -> q.imageUrls }.take(MAX_IMAGES)
+            val loaded: Map<String, String?> = coroutineScope {
+                wanted.distinct().map { url ->
+                    async { url to gate.withPermit { loadBitmapDataUrl(loader, url, context) } }
+                }.awaitAll().toMap()
+            }
             var used = 0
             var budget = MAX_TOTAL_CHARS
             printable.copy(
@@ -66,7 +85,7 @@ object ExamHtmlImageInliner {
                         val tokens = StringBuilder()
                         for (url in question.imageUrls) {
                             if (used >= MAX_IMAGES || budget <= 0) break
-                            val dataUrl = loadBitmapDataUrl(loader, url, context)
+                            val dataUrl = loaded[url]
                             if (dataUrl == null) {
                                 Log.w(TAG, "بارگذاریِ تصویرِ سؤال برای چاپ ناموفق بود و از برگه حذف می‌شود: $url")
                                 continue
@@ -82,6 +101,7 @@ object ExamHtmlImageInliner {
         }.onFailure { error ->
             Log.e(TAG, "آماده‌سازیِ تصاویرِ چاپ کاملاً ناموفق بود؛ آزمون بدون هیچ تصویرِ درون‌متنی چاپ می‌شود.", error)
         }.getOrDefault(printable)
+    }
 
     private suspend fun loadBitmapDataUrl(loader: ImageLoader, url: String, appContext: Context): String? =
         runCatching {
