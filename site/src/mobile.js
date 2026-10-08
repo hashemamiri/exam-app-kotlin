@@ -506,7 +506,8 @@
     items.forEach(function (r, i) {
       var ang = (-90 + i * 360 / items.length) * Math.PI / 180;
       var x = Math.cos(ang) * R, y = Math.sin(ang) * R;
-      ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + PASTEL[r[0]] + ';--tx:' + x.toFixed(0) + 'px;--ty:' + y.toFixed(0) + 'px;animation-delay:' + (i * 30) + 'ms', onclick: function () { bg.remove(); if (onClose) onClose(); onPick(r[0]); }}, [el('span', {class: 'g', text: opts.emoji ? (EMOJI[r[0]] || r[2]) : r[2]}), el('span', {class: 'l', text: opts.emoji ? (LBL[r[0]] || r[1]) : r[1]})]));
+      var pc = (opts.colors && opts.colors[r[0]]) || PASTEL[r[0]]; /* V226 — رنگ سفارشی برای منوی افزودن سریع */
+      ring.appendChild(el('button', {class: 'm-radial-item', style: 'background:' + pc + ';--pc:' + pc + ';--tx:' + x.toFixed(0) + 'px;--ty:' + y.toFixed(0) + 'px;animation-delay:' + (i * 30) + 'ms', onclick: function () { bg.remove(); if (onClose) onClose(); onPick(r[0]); }}, [el('span', {class: 'g', text: opts.emoji ? (EMOJI[r[0]] || r[2]) : r[2]}), el('span', {class: 'l', text: opts.emoji ? (LBL[r[0]] || r[1]) : r[1]})]));
     });
     bg.appendChild(ring); document.body.appendChild(bg);
     return bg;

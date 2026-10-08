@@ -978,18 +978,27 @@
   function renderLanding(mode) {
     document.body.classList.add('lp-body');
     var keyWarn = KEY_READY ? null : el('div', {class: 'warn-key', html: '⚠️ کلید اتصال (<code class="k">SUPABASE_ANON_KEY</code>) هنوز در بالای فایل <code class="k">index.html</code> وارد نشده است؛ تا آن زمان ورود و ثبت‌نام کار نمی‌کند.'});
-    var tiles = [['🧮', 'ویرایشگر فرمول'], ['🖨', 'چاپ رسمی'], ['📊', 'کارنامهٔ خودکار'], ['🏫', 'مدیریت مدرسه'], ['🎨', 'تختهٔ سفید'], ['⚗️', 'جدول تناوبی']];
+    /* V226 — طرح ۲۶ «آسمانی و ابری»: کاشی‌های شیشه‌ای با آیکن خطی آبی (ترتیب تصویر مرجع) */
+    var LP_ICO = {
+      report: '<path d="M4 20h16"/><rect x="6" y="11" width="3" height="7" rx="1"/><rect x="11" y="7" width="3" height="11" rx="1"/><rect x="16" y="13" width="3" height="5" rx="1"/><circle cx="17.5" cy="6.5" r="3"/><path d="M16.3 7.7l2.4-2.4"/>',
+      print: '<path d="M7 3h8l4 4v8H7z"/><path d="M15 3v4h4"/><path d="M9 10h5M9 13h5"/><rect x="5" y="17" width="10" height="4" rx="1"/><path d="M8 17v-2M12 17v-2"/>',
+      formula: '<path d="M4 4v16h16"/><path d="M8 7h5M10.5 7l-3 10"/><path d="M13 9.5l3 3M16 9.5l-3 3"/><path d="M12 15h5"/>',
+      periodic: '<path d="M4 20h16"/><path d="M5 20V9h3v11M8 13h3v7M11 11h3v9M14 13h3v7M17 9h3v11"/><path d="M5 9V5h2v4M18 9V5h2v4"/>',
+      board: '<path d="M4 6l12-2v12L4 18z"/><path d="M4 18l4 3M16 16l4 2"/><path d="M8 12l4-1.2"/>',
+      school: '<path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M12 5V3M12 3h3"/><rect x="10" y="15" width="4" height="6"/><path d="M8 12h2M14 12h2"/>'
+    };
+    var tiles = [['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی'], ['formula', 'ویرایشگر فرمول'], ['periodic', 'جدول تناوبی'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']];
     var left = el('div', {class: 'lp-l'}, [
       brandEl('آزمون آنلاین'), /* V222.2 — نام در صفحهٔ ورود دسکتاپ */
       el('h1', {html: 'آزمون بسازید،<br><span>هوشمند برگزار کنید.</span>'}),
       el('p', {text: 'فرمول ریاضی، شکل هندسی، تختهٔ سفید و چاپ رسمی A4 — یک حساب برای اپ اندروید و وب.'}),
-      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', text: t[0]}), el('span', {text: t[1]})]); }))
+      el('div', {class: 'tiles'}, tiles.map(function (t) { return el('div', {class: 'tile neo'}, [el('i', {'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + LP_ICO[t[0]] + '</svg>'}), el('span', {text: t[1]})]); }))
     ]);
     var card = el('div', {class: 'card neo'});
     drawAuthInto(card, mode || 'login');
     var right = el('div', {class: 'lp-r'}, [card]);
-    var page = el('div', {class: 'lp'}, [
-      el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}),
+    var page = el('div', {class: 'lp lp-sky'}, [
+      el('div', {class: 'glow g1'}), el('div', {class: 'glow g2'}), el('div', {class: 'cloud c1'}), el('div', {class: 'cloud c2'}), el('div', {class: 'cloud c3'}), el('div', {class: 'cloud c4'}),
       left, right
     ]);
     if (keyWarn) page.appendChild(keyWarn);
@@ -1275,23 +1284,16 @@
     join: 'ورود با کد معلم', grades: 'نمرات و نتایج', teachers: 'معلم‌های مدرسه', school: 'مشخصات مدرسه'};
   function dkIcon(name, cls) { return el('span', {class: 'dk-ic ' + (cls || ''), html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (DK_ICONS[name] || DK_ICONS.dashboard) + '</svg>'}); }
   function dkGo(panel) { view.panel = panel; view.arg = null; closeSidebar(); render(); }
-  /* V225 — منوی بادبزنی «افزودن سریع» دسکتاپ کنار دکمهٔ + ریل؛ اعمال = SiteMobile.quickAddItems (همان اپ) + آزمون چاپی جدید */
-  var DK_QA_ICON = {'آزمون جدید': 'exams', 'دعوت معلم': 'teachers', 'دانش‌آموز جدید': 'students', 'کلاس جدید': 'classes', 'مدرسه جدید': 'school', 'آزمون چاپی جدید': 'print'};
+  /* V226 — «افزودن سریع» دسکتاپ = منوی دایره‌ای وسط صفحه مثل انواع سؤال (radialMenu اپ/سایت)؛ ۵ کارت پاستلی بزرگ‌تر حول حلقهٔ خط‌چین؛
+     اعمال = SiteMobile.quickAddItems (همان Design69QuickAddOverlay اپ) + «آزمون چاپی جدید» */
+  var DK_QA_STYLE = {'آزمون جدید': ['exam', '📝', '#AEC6CF'], 'دعوت معلم': ['invite', '✉️', '#AEC6CF'], 'دانش‌آموز جدید': ['student', '🎓', '#B4EEB4'], 'کلاس جدید': ['class', '🏫', '#FDFD96'], 'مدرسه جدید': ['school', '🏛', '#C3B1E1'], 'آزمون چاپی جدید': ['print', '🖨', '#FFDAB9']};
   function dkQuickAdd(anchor) {
-    var old = document.querySelector('.dk-qa-bg'); if (old) { old.remove(); return; }
-    if (!window.SiteMobile || !window.SiteMobile.quickAddItems) return dkGo('builder');
+    var open = document.querySelector('.m-radial-bg.dk-qa-radial'); if (open) { open.remove(); return; }
+    if (!window.SiteMobile || !window.SiteMobile.quickAddItems || !window.SiteMobile.radialMenu) return dkGo('builder');
     var items = window.SiteMobile.quickAddItems({withPrint: true});
-    var bg = el('div', {class: 'dk-qa-bg'});
-    var r = anchor.getBoundingClientRect();
-    var menu = el('div', {class: 'dk-qa', role: 'menu', style: 'top:' + Math.round(r.top + r.height / 2) + 'px;right:' + Math.round(window.innerWidth - r.left + 12) + 'px'});
-    function close() { bg.classList.add('out'); setTimeout(function () { bg.remove(); }, 180); }
-    items.forEach(function (it, i) {
-      menu.appendChild(el('button', {class: 'dk-qa-item', role: 'menuitem', style: '--i:' + i, onclick: function () { close(); setTimeout(it[3], 60); }}, [dkIcon(DK_QA_ICON[it[0]] || 'builder'), el('span', {class: 'dk-qa-txt'}, [el('b', {text: it[0]}), el('small', {text: it[1]})])]));
-    });
-    bg.appendChild(menu); bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
-    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
-    document.body.appendChild(bg);
-    requestAnimationFrame(function () { var mr = menu.getBoundingClientRect(); var over = mr.bottom - window.innerHeight + 12; if (over > 0) menu.style.top = (parseInt(menu.style.top, 10) - over) + 'px'; if (mr.top < 12) menu.style.top = (parseInt(menu.style.top, 10) + (12 - mr.top)) + 'px'; });
+    var byKey = {}, colors = {}, radialItems = items.map(function (it, i) { var st = DK_QA_STYLE[it[0]] || ['k' + i, '➕', '#E6E6FA']; byKey[st[0]] = it[3]; colors[st[0]] = st[2]; return [st[0], it[0], st[1]]; });
+    if (anchor) anchor.classList.add('on');
+    window.SiteMobile.radialMenu(function (key) { if (byKey[key]) byKey[key](); }, function () { if (anchor) anchor.classList.remove('on'); }, {items: radialItems, colors: colors, cls: 'dk-qa-radial'});
   }
   function renderPanel() {
     var menu = MENUS[user.role] || MENUS.student;

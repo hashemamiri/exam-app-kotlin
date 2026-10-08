@@ -19425,6 +19425,11 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V226 — منوی دایره‌ای افزودن سریع + ورود آسمانی (فقط سایت)
+- `app.js dkQuickAdd`: به‌جای منوی بادبزنی V225، `SiteMobile.radialMenu(onPick, onClose, {items, colors, cls:'dk-qa-radial'})` با ۵ مورد `quickAddItems({withPrint:true})`؛ `DK_QA_STYLE` (کلید/ایموجی/رنگ پاستلی). `mobile.js radialMenu` حالا `opts.colors` و `--pc` را پشتیبانی می‌کند. CSS: `.dk .m-radial-bg.dk-qa-radial .m-radial-item` ۱۰۴px، شعاع ۳۰px، حلقهٔ خط‌چین فعال، متن چندخطی ۱۱px. کلاس `.dk-qa-*` بادبزنی حذف شد.
+- صفحهٔ ورود (`renderLanding`): `.lp.lp-sky` + چهار `.cloud`؛ کاشی‌ها با `LP_ICO` (SVG خطی) و ترتیب تصویر مرجع؛ CSS در انتهای site.css (روشن + `.m-dark` آسمان شب). ساختار DOM/رفتار فرم بدون تغییر.
+- تست: `V168_SiteDesktopMenuTest.v226RadialQuickAddAndSkyLogin` (v225 به‌روز شد).
+
 ### V225.1 — جست‌وجوی دانش‌آموزان هم‌ردیف (فقط سایت)
 - `school.js studentsPage`: یک `.row.st-toolbar` = [جست‌وجو (flex 1، حداکثر 420px)، grow، شمارنده، فیلتر، دانش‌آموز جدید]. تست: `v225_1StudentsSearchInToolbarRow`.
 - خارج از مخزن: `/home/user/plus_animations.html` (۲۰ گزینهٔ انیمیشن دکمهٔ +) منتظر انتخاب کاربر.

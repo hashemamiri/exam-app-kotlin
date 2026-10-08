@@ -1454,23 +1454,57 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .m-dark .cred-val{background:#1f232b;color:#e8ecf3}
 .icon-btn.flat.sm{width:30px;height:30px;font-size:16px}
 .cred-modal .row{justify-content:flex-start;gap:8px}
-/* ===== V225 — دکمهٔ + ریل بدون متن + منوی بادبزنی افزودن سریع ===== */
+/* ===== V225/V226 — دکمهٔ + ریل بدون متن ===== */
 .dk .dk-rail-plus{grid-template-rows:auto;padding:0}
 .dk .dk-rail-plus .dk-ic{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--dk-neon,#22c6ef),#5b8cff);color:#fff;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
 .dk .dk-rail-plus .dk-ic svg{width:22px;height:22px;stroke-width:2.4}
-.dk .dk-rail-plus:hover .dk-ic{transform:rotate(90deg) scale(1.08)}
-.dk-qa-bg{position:fixed;inset:0;z-index:1200;background:rgba(20,40,52,.18);backdrop-filter:blur(2px);animation:dkQaFade .18s ease}
-.dk-qa-bg.out{opacity:0;transition:opacity .18s}
-.dk-qa-bg.out .dk-qa-item{opacity:0;transform:translateX(-14px) scale(.96);transition:all .16s}
-@keyframes dkQaFade{from{opacity:0}to{opacity:1}}
-.dk-qa{position:fixed;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;min-width:230px}
-.dk-qa-item{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border:0;border-radius:16px;background:var(--card,#fff);color:inherit;font:inherit;text-align:right;cursor:pointer;box-shadow:0 12px 30px rgba(24,54,68,.18),0 2px 6px rgba(24,54,68,.08);opacity:0;transform:translateX(-26px) scale(.92);animation:dkQaIn .42s cubic-bezier(.34,1.4,.64,1) forwards;animation-delay:calc(var(--i) * 55ms)}
-@keyframes dkQaIn{to{opacity:1;transform:none}}
-.dk-qa-item:hover{background:var(--dk-neon,#22c6ef);color:#fff}
-.dk-qa-item .dk-ic{width:38px;height:38px;flex:0 0 auto;border-radius:12px;background:rgba(34,198,239,.12);display:grid;place-items:center}
-.dk-qa-item:hover .dk-ic{background:rgba(255,255,255,.22)}
-.dk-qa-item .dk-ic svg{width:20px;height:20px}
-.dk-qa-txt{display:flex;flex-direction:column;line-height:1.3}
-.dk-qa-txt b{font-size:14px;font-weight:800}
-.dk-qa-txt small{font-size:11px;opacity:.7}
-.m-dark .dk-qa-item{background:#262b35;color:#e8ecf3}
+.dk .dk-rail-plus:hover .dk-ic,.dk .dk-rail-plus.on .dk-ic{transform:rotate(135deg) scale(1.08)}
+/* V226 — منوی دایره‌ای افزودن سریع دسکتاپ (طرح ۱۷۱): مربع‌های گوشه‌گرد پاستلی بزرگ‌تر + حلقهٔ خط‌چین؛ متن داخل کارت می‌ماند */
+.dk .m-radial-bg.dk-qa-radial .m-radial-ring{display:block;border-color:rgba(108,99,245,.55)}
+.dk .m-radial-bg.dk-qa-radial .m-radial-item{width:104px;height:104px;left:-52px;top:-52px;border-radius:30px;background:var(--pc) !important;color:#37474F;box-shadow:6px 6px 14px rgba(38,49,66,.28),-4px -4px 10px rgba(255,255,255,.6);gap:4px;padding:0 6px;transition:transform .15s}
+.dk .m-radial-bg.dk-qa-radial .m-radial-item:hover{transform:translate(var(--tx),var(--ty)) scale(1.07)}
+.dk .m-radial-bg.dk-qa-radial .m-radial-item .g{font-size:26px}
+.dk .m-radial-bg.dk-qa-radial .m-radial-item .l{font-size:11px;font-weight:800;white-space:normal;line-height:1.25;text-align:center}
+/* ===== V226 — صفحهٔ ورود دسکتاپ، طرح ۲۶ «آسمانی و ابری»: آسمان آبی روشن با ابرهای نرم، کارت شیشه‌ای، کاشی‌های شیشه‌ای با آیکن خطی آبی ===== */
+.lp.lp-sky{--bg:#DDF0FD;--ink:#1F3B57;--muted:#4A6A86;--link:#2B8FD6;--cta1:#7CC0EE;--cta2:#5FAEE6;--dark:rgba(80,140,190,.22);--light:rgba(255,255,255,.95);--grad-t1:#2B8FD6;--grad-t2:#2B8FD6;--errbg:rgba(220,70,80,.12);--err:#B23A48;
+  background:linear-gradient(180deg,#BFE1FA 0%,#D6ECFC 45%,#EAF5FE 100%);overflow:hidden}
+body.lp-body{background:#D6ECFC}
+.lp.lp-sky .glow{display:none}
+.lp.lp-sky .cloud{position:absolute;pointer-events:none;background:rgba(255,255,255,.82);border-radius:50%;filter:blur(26px);opacity:.9}
+.lp.lp-sky .cloud::before,.lp.lp-sky .cloud::after{content:'';position:absolute;background:inherit;border-radius:50%}
+.lp.lp-sky .c1{width:420px;height:150px;top:4%;right:6%}.lp.lp-sky .c1::before{width:220px;height:220px;top:-110px;left:70px}.lp.lp-sky .c1::after{width:160px;height:160px;top:-70px;left:230px}
+.lp.lp-sky .c2{width:520px;height:170px;bottom:-40px;right:22%}.lp.lp-sky .c2::before{width:260px;height:260px;top:-130px;left:120px}.lp.lp-sky .c2::after{width:180px;height:180px;top:-80px;left:330px}
+.lp.lp-sky .c3{width:380px;height:140px;top:30%;left:-60px}.lp.lp-sky .c3::before{width:200px;height:200px;top:-100px;left:90px}
+.lp.lp-sky .c4{width:300px;height:110px;bottom:12%;left:28%;opacity:.7}.lp.lp-sky .c4::before{width:150px;height:150px;top:-70px;left:70px}
+.lp.lp-sky .lp-l,.lp.lp-sky .lp-r{position:relative;z-index:1}
+.lp.lp-sky .logo{color:#1F3B57}.lp.lp-sky .logo .mark{background:#fff;color:#2B8FD6;box-shadow:0 8px 20px rgba(43,143,214,.18)}
+.lp.lp-sky h1{color:#2B8FD6}.lp.lp-sky h1 span{background:none;color:#2B8FD6}
+.lp.lp-sky .lp-l>p{color:#2E4D6B}
+.lp.lp-sky .tile{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 30px rgba(60,120,170,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#1F3B57;border-radius:22px}
+.lp.lp-sky .tile i,.lp.lp-sky .tile:nth-child(even) i{width:52px;height:52px;background:transparent;box-shadow:none;color:#2B6FA8;margin-bottom:8px}
+.lp.lp-sky .tile i svg{width:44px;height:44px}
+.lp.lp-sky .card{background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.95);box-shadow:0 20px 60px rgba(60,120,170,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:28px}
+.lp.lp-sky .card h2{color:#2B8FD6}.lp.lp-sky .card p.s{color:#2E4D6B}
+.lp.lp-sky .tabs{background:rgba(255,250,240,.9);box-shadow:inset 0 1px 3px rgba(0,0,0,.06)}
+.lp.lp-sky .tabs button{color:#2E4D6B}.lp.lp-sky .tabs button.on{background:linear-gradient(135deg,#8CC8F0,#6DB5E8);box-shadow:0 6px 14px rgba(93,170,230,.35)}
+.lp.lp-sky .field label{color:#1F3B57}
+.lp.lp-sky .field input{background:rgba(255,255,255,.9);box-shadow:0 2px 10px rgba(60,120,170,.08);border:1px solid rgba(255,255,255,.9)}
+.lp.lp-sky .field input:focus{box-shadow:0 2px 10px rgba(60,120,170,.08),0 0 0 2px #7CC0EE}
+.lp.lp-sky .btn{background:linear-gradient(135deg,#7CC0EE,#5FAEE6);box-shadow:0 10px 24px rgba(93,170,230,.35)}
+.lp.lp-sky .btn.light,.lp.lp-sky .btn.soft,.lp.lp-sky .btn.ghost{background:rgba(255,255,255,.85);color:#1F3B57;box-shadow:0 4px 14px rgba(60,120,170,.1);border:1px solid rgba(255,255,255,.9)}
+.lp.lp-sky .sep{color:#4A6A86}.lp.lp-sky .sep:before,.lp.lp-sky .sep:after{background:#9CC6E6;opacity:1}
+.lp.lp-sky .lk a,.lp.lp-sky .foot a{color:#2B8FD6}
+.lp.lp-sky .hint,.lp.lp-sky .foot{color:#2E4D6B}
+.lp.lp-sky .alert.info{background:rgba(43,143,214,.12);color:#1F6FB0}
+.lp.lp-sky .eye{color:#4A6A86}
+/* حالت تاریک: آسمان شب */
+.m-dark .lp.lp-sky{--ink:#E6F1FA;--muted:#A9C4DA;background:linear-gradient(180deg,#0F2238 0%,#16304A 50%,#1B3A58 100%)}
+.m-dark body.lp-body{background:#16304A}
+.m-dark .lp.lp-sky .cloud{background:rgba(255,255,255,.10)}
+.m-dark .lp.lp-sky .logo,.m-dark .lp.lp-sky .lp-l>p,.m-dark .lp.lp-sky .hint,.m-dark .lp.lp-sky .foot,.m-dark .lp.lp-sky .card p.s,.m-dark .lp.lp-sky .field label,.m-dark .lp.lp-sky .tabs button{color:#E6F1FA}
+.m-dark .lp.lp-sky h1,.m-dark .lp.lp-sky h1 span,.m-dark .lp.lp-sky .card h2{color:#8CC8F0}
+.m-dark .lp.lp-sky .tile,.m-dark .lp.lp-sky .card{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#E6F1FA}
+.m-dark .lp.lp-sky .tile i{color:#8CC8F0}
+.m-dark .lp.lp-sky .tabs{background:rgba(255,255,255,.08)}
+.m-dark .lp.lp-sky .field input{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);color:#E6F1FA}
+.m-dark .lp.lp-sky .btn.light,.m-dark .lp.lp-sky .btn.soft,.m-dark .lp.lp-sky .btn.ghost{background:rgba(255,255,255,.1);color:#E6F1FA;border-color:rgba(255,255,255,.18)}

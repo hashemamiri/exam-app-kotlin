@@ -116,7 +116,7 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(mobile.contains("function quickAddItems(opts)") && mobile.contains("quickAddItems: quickAddItems"))
         assertTrue(mobile.contains("items.push(['آزمون چاپی جدید'"))
         assertTrue(school.contains("class: 'modal cred-modal'") && school.contains("class: 'cred-card'"))
-        assertTrue(css.contains(".dk-qa-item{") && css.contains("@keyframes dkQaIn") && css.contains(".cred-val{"))
+        assertTrue(css.contains(".cred-val{"))
     }
 
     @Test
@@ -124,5 +124,22 @@ class V223_SiteDesktopPrintButtonsTest {
         val js = File("site/src/school.js").readText()
         assertTrue(js.contains("class: 'row st-toolbar'"))
         assertTrue(js.contains("[q, el('span', {class: 'grow'}), cnt, filterBtn, el('button', {class: 'btn', text: '➕ دانش‌آموز جدید'"))
+    }
+
+    @Test
+    fun v226RadialQuickAddAndSkyLogin() {
+        val app = File("site/src/app.js").readText()
+        val mobile = File("site/src/mobile.js").readText()
+        val css = File("site/src/site.css").readText()
+        // منوی افزودن سریع دسکتاپ = radialMenu (طرح ۱۷۱) با رنگ‌های پاستلی و کارت‌های بزرگ‌تر
+        assertTrue(app.contains("cls: 'dk-qa-radial'") && app.contains("window.SiteMobile.radialMenu(function (key)"))
+        assertTrue(mobile.contains("(opts.colors && opts.colors[r[0]]) || PASTEL[r[0]]"))
+        assertTrue(css.contains(".dk .m-radial-bg.dk-qa-radial .m-radial-item{width:104px;height:104px"))
+        assertTrue(css.contains(".dk .m-radial-bg.dk-qa-radial .m-radial-item .l{font-size:11px;font-weight:800;white-space:normal"))
+        assertFalse(app.contains("dk-qa-bg"))
+        // صفحهٔ ورود طرح ۲۶ «آسمانی و ابری»
+        assertTrue(app.contains("class: 'lp lp-sky'") && app.contains("class: 'cloud c1'"))
+        assertTrue(app.contains("var tiles = [['report', 'کارنامهٔ خودکار'], ['print', 'چاپ رسمی'], ['formula', 'ویرایشگر فرمول'], ['periodic', 'جدول تناوبی'], ['board', 'تختهٔ سفید'], ['school', 'مدیریت مدرسه']];"))
+        assertTrue(css.contains(".lp.lp-sky{") && css.contains(".lp.lp-sky .card{background:rgba(255,255,255,.42)") && css.contains(".m-dark .lp.lp-sky{"))
     }
 }
