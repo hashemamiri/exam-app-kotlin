@@ -140,12 +140,17 @@
       if (af) { af.className = 'b-fig-af'; f.appendChild(af); }
     });
   }
+  /* V218 — اندازه‌دهی علامت √ و جداکننده‌های کشسان موتور پس از درج در DOM (بدون آن رادیکال نمایش داده نمی‌شد) */
+  function fitMath(root) {
+    if (!root || !mathFrame || !mathFrame.contentWindow) return;
+    try { var w = mathFrame.contentWindow; if (typeof w.fitMathStretchers === 'function') w.fitMathStretchers(root); } catch (e) {}
+  }
   function mathCss() {
     /* فقط قواعد ریاضی/شکل موتور چاپ، محدود به ناحیهٔ سؤال (تا با استایل سایت تداخل نکند) */
     if (document.getElementById('stMathCss')) return;
     ensureMathFrame().then(function (w) {
       if (!w) return; var out = [];
-      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+)\b/;
+      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|msurd|surd-svg|root-line|mrad|mrad-empty|mrootidx|msym|mvar|mfun|mtext|mgrp|msfrac|mslash|mbrk|mbrk-[a-z]+|mbigop|mbigsym|mdelim|mdelim-glyph|mmatrix|mmatrix-[lr]|mmixed|mword|mparbox|mpar-body|moverset|moverset-t|mhspace|mubrace|mubrace-[a-z]+|mb-delim-svg|mbb|mcal|mm-w|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+)\b/;
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {
@@ -258,7 +263,7 @@
       var txt = el('div', {class: 'st-qtext', style: 'text-align:' + p.align + ';font-size:' + p.fontSize + 'px;' + (p.bold ? 'font-weight:700;' : '') + (p.italic ? 'font-style:italic;' : '') + (p.font && p.font !== 'default' ? 'font-family:' + p.font + ',Vazirmatn;' : ''), html: esc(q.text).replace(/\n/g, '<br>')});
       body.appendChild(el('div', {class: 'row', style: 'margin-bottom:10px'}, [el('span', {class: 'chip brand', text: 'سؤال ' + fa(run.index + 1)}), el('span', {class: 'chip', text: 'بارم ' + fa(S.fmtScore(q.score))}), el('span', {class: 'chip', text: {multiple: 'چندگزینه‌ای', truefalse: 'صحیح/غلط', fill: 'جای‌خالی', numeric: 'عددی', matching: 'جورکردنی', essay: 'تشریحی'}[q.type] || ''})]));
       body.appendChild(txt);
-      richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) txt.innerHTML = h; });
+      richHtml(q.text).then(function (h) { if (ex.questions[run.index] === q) { txt.innerHTML = h; fitMath(txt); } });
       if (p.audio) body.appendChild(el('audio', {controls: 'controls', src: p.audio, style: 'width:100%;margin:8px 0'}));
       if (q.images.length) body.appendChild(el('div', {class: 'st-imgs'}, q.images.map(function (u) { return el('img', {src: u, onclick: function () { lightbox(u); }}); })));
       body.appendChild(answerArea(q));
@@ -273,7 +278,7 @@
           var r = el('input', {type: 'radio', name: 'st_' + q.id}); r.checked = a === oi; r.addEventListener('change', function () { set(oi); });
           var lab = el('label', {class: 'st-opt' + (a === oi ? ' on' : '')}, [r, el('span', {class: 'st-optlabel', text: 'ابجد'.split('')[di] ? ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'][di] + ')' : fa(di + 1) + ')'}), el('span', {class: 'grow', html: esc(o)}), q.optionImages[di] ? el('img', {src: q.optionImages[di], class: 'thumb', onclick: function (e) { e.preventDefault(); lightbox(q.optionImages[di]); }}) : null]);
           lab.addEventListener('click', function () { setTimeout(function () { Array.prototype.forEach.call(box.querySelectorAll('.st-opt'), function (x) { x.classList.toggle('on', x.querySelector('input').checked); }); }, 0); });
-          richHtml(o).then(function (h) { lab.querySelector('.grow').innerHTML = h; });
+          richHtml(o).then(function (h) { var g = lab.querySelector('.grow'); g.innerHTML = h; fitMath(g); });
           box.appendChild(lab);
         });
       } else if (q.type === 'truefalse') {
@@ -288,7 +293,7 @@
         q.leftItems.forEach(function (l, li) {
           var row = el('div', {class: 'st-ml'}, [el('span', {class: 'grow', html: '<b>' + fa(li + 1) + '.</b> ' + esc(l)}), q.leftImages[li] ? el('img', {src: q.leftImages[li], class: 'thumb'}) : null,
             el('div', {class: 'st-chips'}, q.rightItems.map(function (_, di) { var oi = q.rightOriginalIndices[di] != null ? q.rightOriginalIndices[di] : di; return el('button', {class: 'chip' + (cur[li] === oi ? ' brand' : ''), text: fa(di + 1), onclick: function () { cur = Object.assign({}, cur); cur[li] = oi; set(cur); box.replaceWith(answerArea(q)); }}); }))]);
-          richHtml(l).then(function (h) { row.querySelector('.grow').innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; });
+          richHtml(l).then(function (h) { var g = row.querySelector('.grow'); g.innerHTML = '<b>' + fa(li + 1) + '.</b> ' + h; fitMath(g); });
           box.appendChild(row);
         });
       } else {
@@ -468,5 +473,5 @@
   /* هشدار خروج هنگام آزمون باز */
   window.addEventListener('beforeunload', function (e) { if (run && !run.finished) { e.preventDefault(); e.returnValue = ''; } });
 
-  window.SiteStudent = {page: page, richHtml: richHtml, openWhiteboard: openWhiteboard, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
+  window.SiteStudent = {page: page, richHtml: richHtml, fitMath: fitMath, openWhiteboard: openWhiteboard, simplifyFigs: simplifyFigs, decodeExam: decodeExam, stableShuffle: stableShuffle, sanitize: sanitize, hasActive: function () { return !!restoreActive(); }, inExam: function () { return !!(run && !run.finished); }};
 })();

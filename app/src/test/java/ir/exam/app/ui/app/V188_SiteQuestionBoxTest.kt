@@ -37,7 +37,7 @@ class V188_SiteQuestionBoxTest {
     fun `desktop question box renders tokens inline and site-only commits skip app CI`() {
         val b = source("site/src/builder.js")
         assertTrue("var WYSIWYG = document.body.classList.contains('dk');" in b)
-        assertTrue("if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); } } catch (e) {} });" in b)
+        assertTrue("if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); fitMath(w, c); } } catch (e) {} });" in b)
         assertTrue(",.b-rich ' + x.trim(); }).join(',')" in b)
         val css = source("site/src/site.css")
         assertTrue(".b-chip.live{background:transparent" in css && ".dk .b-editor .b-live{display:none!important}" in css)

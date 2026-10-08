@@ -4,6 +4,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.round
 
 /** محدودهٔ دقیق یک خانهٔ قابل لمس در دستگاه مختصات SVG. */
@@ -399,15 +400,22 @@ object NativeMathSvgRenderer {
             )
         }
         // V133 — توان: بالایش حدود .38em بالاتر از سقفِ پایه؛ اندیس: پایه‌اش حدود .22em زیرِ خطِ کرسی
-        val upperLift = if (upper != null) (upper.height - base.baseline * .55f).coerceAtLeast(0f) else 0f
-        val baseY = upperLift
+        // V218 — قاعدهٔ TeX برای توان‌های بلند (کسر/رادیکال در توان، مثل توزیع نرمال): خطِ کرسیِ توان
+        // حداکثر به‌اندازهٔ لازم بالا می‌رود که کفِ توان ~.16em بالای خطِ کرسیِ پایه بماند؛ قبلاً کل توان
+        // بر اساس ارتفاعش بالا می‌رفت و توان‌های بلند «خیلی بالا» می‌نشستند (برخلاف ویرایشگر فرمول).
+        val supShift = upper?.let { max(size * .42f, (it.height - it.baseline) + size * .16f) } ?: 0f
+        val upperTopRel = upper?.let { -(supShift + it.baseline) } ?: 0f
+        val baseTopRel = -base.baseline
+        val minTop = min(upperTopRel, baseTopRel)
+        val baseY = baseTopRel - minTop
+        val upperY = upperTopRel - minTop
         val scriptX = base.width + size * .02f
         val lowerY = baseY + base.baseline + size * .22f - (lower?.baseline ?: 0f)
         val width = base.width + max(upper?.width ?: 0f, lower?.width ?: 0f) + size * .03f
         val height = max(baseY + base.height, lowerY + (lower?.height ?: 0f))
         val body = buildString {
             append(translate(base.body, 0f, baseY))
-            upper?.let { append(translate(it.body, scriptX, 0f)) }
+            upper?.let { append(translate(it.body, scriptX, upperY)) }
             lower?.let { append(translate(it.body, scriptX, lowerY)) }
         }
         return Layout(
@@ -416,10 +424,10 @@ object NativeMathSvgRenderer {
             baseY + base.baseline,
             body,
             base.boxes.map { it.moved(0f, baseY) } +
-                upper?.boxes.orEmpty().map { it.moved(scriptX, 0f) } +
+                upper?.boxes.orEmpty().map { it.moved(scriptX, upperY) } +
                 lower?.boxes.orEmpty().map { it.moved(scriptX, lowerY) },
             base.radicalBars.map { it.moved(0f, baseY) } +
-                upper?.radicalBars.orEmpty().map { it.moved(scriptX, 0f) } +
+                upper?.radicalBars.orEmpty().map { it.moved(scriptX, upperY) } +
                 lower?.radicalBars.orEmpty().map { it.moved(scriptX, lowerY) }
         )
     }

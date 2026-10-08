@@ -19423,4 +19423,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
-- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V218 — فرمول در جعبهٔ سؤال + حالت تیره (1.01.08)
+- `NativeMathSvgRenderer.script()`: قاعدهٔ TeX برای توان: `supShift = max(.42em, عمقِ توان + .16em)`؛ بالای پایه/توان با `minTop` هم‌تراز؛ جعبه‌ها و خطوط رادیکالِ توان با `upperY` جابه‌جا می‌شوند. `NativeMathCanvasRenderer` (چاپ PDF) دست نخورده.
+- `QuestionTextWebSection.kt`: رنگ فرمول از `colorScheme.onSurface` (قبلاً ثابت `#111111` → در حالت تیره نامرئی).
+- سایت: علامت √ موتور چاپ یک svg با اندازهٔ صفر است که فقط با `fitMathStretchers` (math_host.js) بعد از درج در DOM اندازه می‌گیرد. `builder.js` (`fitMath(w, root)` بعد از چیپ و پیش‌نمایش زنده) و `student.js` (`fitMath(root)`، در `SiteStudent.fitMath` هم هست و پیش‌نمایش دانش‌آموزِ سازنده آن را صدا می‌زند). regex `keep` در هر دو فایل همهٔ کلاس‌های CSS ریاضی موتور (msurd, surd-svg, root-line, mrad, mdelim, …) را نگه می‌دارد.
+- `site.css`: همهٔ `background:#fff` → `var(--card)`؛ بلوک `:root.m-dark{…}` در انتها (کلاس `m-dark` را mobile.js از تنظیمات ظاهر/`prefers-color-scheme` روی `<html>` می‌گذارد؛ قبلاً فقط `.m-mode` موبایل و `.lp` ورود تیره می‌شدند).
+- تست نگهبان: `V218_MathRenderDarkTest`.

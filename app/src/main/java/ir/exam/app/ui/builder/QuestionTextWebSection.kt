@@ -41,6 +41,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -249,8 +250,13 @@ fun QuestionTextWebSection(
                             val mathFontSize = 18.sp
                             val mathPx = with(density) { mathFontSize.toPx() }
                             // اندازهٔ طبیعی فرمول برای تصمیم درجا/اسکرول؛ رندر نهایی همان اندازه را می‌گیرد.
-                            val doc = remember(part.tex, mathPx) {
-                                NativeMathSvgRenderer.render(tex = part.tex, fontSizePx = mathPx)
+                            // V218 — رنگ فرمول از تم (در حالت تیره سفید)؛ قبلاً همیشه #111111 بود و روی زمینهٔ تیره دیده نمی‌شد.
+                            val mathColorHex = run {
+                                val argb = MaterialTheme.colorScheme.onSurface.toArgb()
+                                String.format(java.util.Locale.US, "#%06X", argb and 0xFFFFFF)
+                            }
+                            val doc = remember(part.tex, mathPx, mathColorHex) {
+                                NativeMathSvgRenderer.render(tex = part.tex, fontSizePx = mathPx, color = mathColorHex)
                             }
                             val naturalWidth = with(density) { doc.widthPx.toDp() }
                             val naturalHeight = with(density) { doc.heightPx.toDp() }

@@ -290,11 +290,17 @@
     });
     return previewReady;
   }
+  /* V218 — علامت √ موتور چاپ یک svg با اندازهٔ صفر است که فقط با mbFitSurd (fitMathStretchers) پس از درج در DOM اندازه می‌گیرد؛
+     بدون این فراخوانی رادیکال در جعبهٔ سؤال دسکتاپ دیده نمی‌شد. گره باید داخل DOM باشد (getBoundingClientRect). */
+  function fitMath(w, root) {
+    if (!w || !root) return;
+    try { if (typeof w.fitMathStretchers === 'function') w.fitMathStretchers(root); } catch (e) {}
+  }
   function previewCss() {
     if (document.getElementById('bMathCss')) return;
     ensurePreviewFrame().then(function (w) {
       if (!w) return; var out = [];
-      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+)\b/;
+      var keep = /\.(mathx|mfrac|mnum|mden|msqrt|mroot|msup|msub|mrow|mtable|mtr|mtd|mover|munder|mo|mi|mn|msurd|surd-svg|root-line|mrad|mrad-empty|mrootidx|msym|mvar|mfun|mtext|mgrp|msfrac|mslash|mbrk|mbrk-[a-z]+|mbigop|mbigsym|mdelim|mdelim-glyph|mmatrix|mmatrix-[lr]|mmixed|mword|mparbox|mpar-body|moverset|moverset-t|mhspace|mubrace|mubrace-[a-z]+|mb-delim-svg|mbb|mcal|mm-w|math-[a-z-]+|qmf-fig|fig-[a-z-]+|interactive-figure|vt-[a-z-]+|tf-[a-z-]+|gf-svg|pt-[a-z-]+)\b/;
       Array.prototype.forEach.call(w.document.styleSheets, function (sh) {
         var rules; try { rules = sh.cssRules; } catch (e) { return; }
         Array.prototype.forEach.call(rules, function (r) {
@@ -314,7 +320,7 @@
     box.style.display = '';
     previewTimer = setTimeout(async function () {
       var w = await ensurePreviewFrame(); if (!w) { box.style.display = 'none'; return; }
-      try { box.innerHTML = w.renderRichText(String(text), null); simplifyFigs(box); } catch (e) { box.style.display = 'none'; }
+      try { box.innerHTML = w.renderRichText(String(text), null); simplifyFigs(box); fitMath(w, box); } catch (e) { box.style.display = 'none'; }
     }, 200);
   }
   /* ویرایشگر تراشه‌ای (همیشه، حتی حین تایپ، توکن‌ها تراشه‌اند — مثل VisualTransformation اپ).
@@ -331,7 +337,7 @@
     function chip(tok, label, cls) {
       var c = el('span', {class: 'b-chip ' + cls + (WYSIWYG ? ' live' : ''), contenteditable: 'false', title: cls === 'tex' ? tok.slice(1, -1) : label, text: '⟦' + label + '⟧'});
       c.setAttribute('data-tok', tok);
-      if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); } } catch (e) {} });
+      if (WYSIWYG) ensurePreviewFrame().then(function (w) { if (!w) return; try { var h = w.renderRichText(tok, null); if (h) { c.innerHTML = h; simplifyFigs(c); fitMath(w, c); } } catch (e) {} });
       return c;
     }
     function render(raw) {
@@ -512,7 +518,7 @@
       var card = el('div', {class: 'card b-sp-card'}); previewCss();
       card.appendChild(el('div', {class: 'b-sp-num', text: 'سؤال ' + fa(n) + ' (' + fa(S.fmtScore(q.score)) + ' نمره)'}));
       var txt = el('div', {class: 'b-sp-text', html: esc(q.text || 'متن سؤال').replace(/\n/g, '<br>')}); card.appendChild(txt);
-      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; });
+      if (window.SiteStudent && window.SiteStudent.richHtml) window.SiteStudent.richHtml(q.text || 'متن سؤال').then(function (h) { txt.innerHTML = h; if (window.SiteStudent.fitMath) window.SiteStudent.fitMath(txt); });
       /* V188 — تصاویر سؤال شیء {uri,…} هستند (پیش‌تر [object Object] می‌شد) */
       (q.images || []).forEach(function (u) { var src = u && typeof u === 'object' ? u.uri : u; if (src) card.appendChild(el('img', {src: src, alt: 'تصویر سؤال', class: 'b-sp-img'})); });
       var AB = ['الف', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
