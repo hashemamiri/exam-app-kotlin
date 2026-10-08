@@ -51,4 +51,15 @@ class V223_SiteDesktopPrintButtonsTest {
         val m = src("site/src/mobile.js")
         assertTrue("async function printOnlineSheet(list, status) {" in m && "printOnlineSheet: printOnlineSheet" in m)
     }
+
+    @Test
+    fun desktopSheetsAreCenteredTwoColumnAndIconsAreVector() {
+        val css = src("site/src/site.css")
+        assertTrue(".dk .m-sheet-bg.dkc{align-items:center;" in css && ".dk .m-sheet-dk{border-radius:24px;max-width:820px;" in css)
+        assertTrue(".dk .m-sheet-dk .m-row{width:calc(50% - 6px);" in css)
+        val m = src("site/src/mobile.js")
+        assertTrue("var dkc = document.body.classList.contains('dk') ? ' dkc' : '';" in m)
+        val b = src("site/src/builder.js")
+        assertTrue("title: 'ویرایش', html: EDIT_ICON," in b && "title: 'حذف', html: TRASH_ICON," in b)
+    }
 }

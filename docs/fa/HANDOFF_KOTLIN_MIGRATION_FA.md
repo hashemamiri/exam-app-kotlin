@@ -19429,6 +19429,7 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - `builder.js printExamsSection(refresh, opts)`: `opts.noNewButton` دکمهٔ داخل کارت را حذف می‌کند.
 - `mobile.js`: `onlineSheet/openPrintCopy` از داخل `printCenter` بیرون آمدند → `printOnlineSheet(list, status)` و `openPrintCopy(x, list, status)` سطح ماژول؛ روی `SiteMobile` (آخر شیء، چون V178 ابتدای شیء را پین کرده). رفتار گوشی تغییری نکرده.
 - V223.1 — دکمهٔ «آزمون‌های چاپی» در «آزمون‌ها» مثل اپ (V113.2): `SiteMobile.printExamsSheet({online: true})` → انتخاب → `go('builder', {fromPrintId, fresh: true})`؛ `builder.js` شاخهٔ `arg.fromPrintId`: پیش‌نویس آنلاین تازه از رکورد چاپی (عنوان/درس/مدت/سؤال‌ها با idهای نو، dirty)؛ رکورد چاپی دست‌نخورده. گوشی بدون `opts.online` همان رفتار قبلی.
+- V223.2 — `mobile.js printExamsSheet/printOnlineSheet`: اگر `body.dk` → کلاس `dkc` روی پس‌زمینه و `m-sheet-dk` روی پنجره؛ CSS `.dk .m-sheet-bg.dkc` (وسط) و `.dk .m-sheet-dk` (گرد ۲۴px، ۸۲۰px، ارتفاع min(84dvh,760px)، جعبهٔ داخلی flex-wrap دو ستونه، scrollbar مخفی). `builder.js` EDIT_ICON/TRASH_ICON به‌جای ✎/🗑 در جدول آزمون‌های چاپی. پنجره‌های دیگر و گوشی بدون تغییر.
 - تست: `V223_SiteDesktopPrintButtonsTest` داخل `V168_SiteDesktopMenuTest.kt` (paths-ignore).
 
 ### V222 — سایت: فیلدهای ورود و آیکون (فقط سایت)

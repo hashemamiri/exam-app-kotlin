@@ -199,8 +199,9 @@
   /* V223.1 — opts.online (دسکتاپ): انتخاب آزمون چاپی → سازندهٔ آنلاین (انتشار آنلاین)، مثل اپ */
   function printExamsSheet(opts) {
     opts = opts || {};
-    var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
-    var body = el('div', {class: 'm-sheet'}, [el('h3', {text: 'آزمون‌های چاپی'})]);
+    var dkc = document.body.classList.contains('dk') ? ' dkc' : ''; /* V223.2 — دسکتاپ: پنجرهٔ وسط، گرد، دو ستونه */
+    var bg = el('div', {class: 'm-sheet-bg' + dkc, onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+    var body = el('div', {class: 'm-sheet' + (dkc ? ' m-sheet-dk' : '')}, [el('h3', {text: 'آزمون‌های چاپی'})]);
     var box = el('div'); body.appendChild(box); S.loading(box);
     body.appendChild(el('button', {class: 'm-outline', style: 'margin-top:12px;width:100%', text: 'بستن', onclick: function () { bg.remove(); }}));
     bg.appendChild(body); document.body.appendChild(bg);
@@ -396,9 +397,10 @@
   /* V163 — پنجرهٔ آزمون‌های آنلاین بدون پرش: ارتفاع ثابت از ابتدا، بارگذاری داخل همان جعبه، فهرست یک‌باره ساخته می‌شود */
   /* V223 — مشترک گوشی و دسکتاپ: list = آزمون‌های چاپی فعلی، status = عنصر پیام (اختیاری) */
   async function printOnlineSheet(list, status) {
-    var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+    var dkc = document.body.classList.contains('dk') ? ' dkc' : ''; /* V223.2 */
+    var bg = el('div', {class: 'm-sheet-bg' + dkc, onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
     var box = el('div', {class: 'm-sheet-box'}); S.loading(box);
-    var body = el('div', {class: 'm-sheet m-sheet-fixed'}, [el('h3', {text: 'آزمون‌های آنلاین'}), box, el('button', {class: 'm-outline', style: 'margin-top:12px;width:100%', text: 'بستن', onclick: function () { bg.remove(); }})]);
+    var body = el('div', {class: 'm-sheet m-sheet-fixed' + (dkc ? ' m-sheet-dk' : '')}, [el('h3', {text: 'آزمون‌های آنلاین'}), box, el('button', {class: 'm-outline', style: 'margin-top:12px;width:100%', text: 'بستن', onclick: function () { bg.remove(); }})]);
     bg.appendChild(body); document.body.appendChild(bg);
     var exams = [], err = null; try { exams = await api.exams(); } catch (e) { err = e; }
     var frag = document.createDocumentFragment();

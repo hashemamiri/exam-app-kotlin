@@ -182,6 +182,9 @@
   /* V199 — آیکون‌های خطی کارت آزمون چاپی (کیف پول = پرداخت، چاپگر = قرمز/سبز) */
   var PAY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a1 1 0 0 1 1 1v2"/><path d="M4 7.5V17a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5z"/><circle cx="16" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>';
   var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V4.5h10V8"/><rect x="4" y="8" width="16" height="8" rx="2"/><path d="M7 13.5h10V20H7z" fill="#fff"/><path d="M9.5 16.2h5M9.5 18.2h3.5"/><circle cx="17" cy="11" r=".9" fill="currentColor" stroke="none"/></svg>';
+  /* V223.2 — آیکون‌های برداری هم‌اندازه با PAY/PRINT تا ردیف عملیات هم‌راستا باشد (قبلاً ایموجی ✎/🗑) */
+  var EDIT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>';
+  var TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
   function printExamsSection(refresh, opts) {
     opts = opts || {};
     /* V223 — opts.noNewButton: در «چاپ آزمون» دکمهٔ «آزمون چاپی جدید» بالای صفحه هست؛ داخل کارت تکرار نمی‌شود */
@@ -201,10 +204,10 @@
           el('tbody', {}, list.map(function (r) {
             return el('tr', {}, [el('td', {html: '<b>' + esc(r.title || 'بدون عنوان') + '</b>'}), el('td', {text: r.subject || '—'}), el('td', {text: fa(r.question_count || 0)}), el('td', {class: 'muted', style: 'font-size:12px', text: S.fmtDate(new Date(r.saved_at || Date.now()).toISOString())}),
               el('td', {}, [el('div', {class: 'acts'}, [
-                el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
+                el('button', {class: 'icon-btn', title: 'ویرایش', html: EDIT_ICON, onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
                 el('button', {class: 'icon-btn pay-btn', title: 'پرداخت هزینهٔ چاپ این آزمون', html: PAY_ICON, onclick: async function () { try { var res = await S.ensurePrintPaid(r.id, S.printHeaderFp(), r.title); if (res.paid) { if (!res.cost) toast('هزینهٔ چاپ این آزمون قبلاً پرداخت شده است.', 'ok'); refresh(); } } catch (e) { toast(S.errMsg(e), 'err'); } }}),
                 el('button', {class: 'icon-btn print-btn ' + (payMap[r.id] ? (payMap[r.id].paid ? 'paid' : 'unpaid') : ''), title: payMap[r.id] ? (payMap[r.id].paid ? 'پرداخت‌شده — پیش‌نمایش و چاپ' : 'پرداخت‌نشده (' + S.money(payMap[r.id].due) + ') — پیش‌نمایش و چاپ') : 'پیش‌نمایش و چاپ', html: PRINT_ICON, onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title, examId: r.id, printExam: r.id}); } catch (e) { toast(errMsg(e), 'err'); } }}),
-                el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { var recM = null; try { recM = await printExamGet(r.id); } catch (e0) {} await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); if (recM && S.deleteMedia && S.mediaUrlsIn) S.deleteMedia(S.mediaUrlsIn(recM.questions || [])); } catch (e) { toast(errMsg(e), 'err'); } }})
+                el('button', {class: 'icon-btn danger', title: 'حذف', html: TRASH_ICON, onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { var recM = null; try { recM = await printExamGet(r.id); } catch (e0) {} await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); if (recM && S.deleteMedia && S.mediaUrlsIn) S.deleteMedia(S.mediaUrlsIn(recM.questions || [])); } catch (e) { toast(errMsg(e), 'err'); } }})
               ])])]);
           }))
         ]));

@@ -1402,3 +1402,13 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .field.with-ico{position:relative}
 .field.with-ico input{padding-right:50px;padding-left:14px}
 .field.with-ico .fld-ico{position:absolute;right:14px;left:auto;bottom:12px;color:#8a90a6;display:inline-flex;pointer-events:none} /* V222.1 — هم‌سمت با آیکون چشم رمز */
+
+/* V223.2 — دسکتاپ: پنجره‌های «آزمون‌های چاپی» (آزمون‌ها) و «آزمون‌های آنلاین» (چاپ آزمون) وسط صفحه، چهار گوشه گرد، بلندتر و پهن‌تر (دو ستون)، بدون نوار اسکرول */
+.dk .m-sheet-bg.dkc{align-items:center;padding:24px}
+.dk .m-sheet-dk{border-radius:24px;max-width:820px;height:min(84dvh,760px);max-height:84dvh;display:flex;flex-direction:column;padding:20px 22px;box-shadow:0 18px 50px rgba(0,0,0,.22);scrollbar-width:none}
+.dk .m-sheet-dk::-webkit-scrollbar{display:none}
+.dk .m-sheet-dk>div:not(.row),.dk .m-sheet-dk .m-sheet-box{flex:1;overflow:auto;min-height:120px;scrollbar-width:none;display:flex;flex-wrap:wrap;gap:12px;align-content:flex-start}
+.dk .m-sheet-dk>div::-webkit-scrollbar,.dk .m-sheet-dk .m-sheet-box::-webkit-scrollbar{display:none}
+.dk .m-sheet-dk .m-row{width:calc(50% - 6px);margin:0}
+.dk .m-sheet-dk .m-note,.dk .m-sheet-dk .loading,.dk .m-sheet-dk>div>p{width:100%;display:block}
+.dk .m-sheet-dk>.m-outline{width:auto !important;align-self:flex-start;margin-top:12px !important;padding:10px 22px}
