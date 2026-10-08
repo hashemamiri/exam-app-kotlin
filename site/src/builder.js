@@ -202,7 +202,7 @@
                 el('button', {class: 'icon-btn', title: 'ویرایش', html: '✎', onclick: function () { S.go('builder', {mode: 'print', printId: r.id}); }}),
                 el('button', {class: 'icon-btn pay-btn', title: 'پرداخت هزینهٔ چاپ این آزمون', html: PAY_ICON, onclick: async function () { try { var res = await S.ensurePrintPaid(r.id, S.printHeaderFp(), r.title); if (res.paid) { if (!res.cost) toast('هزینهٔ چاپ این آزمون قبلاً پرداخت شده است.', 'ok'); refresh(); } } catch (e) { toast(S.errMsg(e), 'err'); } }}),
                 el('button', {class: 'icon-btn print-btn ' + (payMap[r.id] ? (payMap[r.id].paid ? 'paid' : 'unpaid') : ''), title: payMap[r.id] ? (payMap[r.id].paid ? 'پرداخت‌شده — پیش‌نمایش و چاپ' : 'پرداخت‌نشده (' + S.money(payMap[r.id].due) + ') — پیش‌نمایش و چاپ') : 'پیش‌نمایش و چاپ', html: PRINT_ICON, onclick: async function () { try { var full = await printExamGet(r.id); var st = {title: full.title, subject: full.subject, duration: full.duration, questions: draftsFromCombined(full.questions)}; S.openPrintPreview(S.buildPrintPayload(toServerExam(st)), {title: full.title, examId: r.id, printExam: r.id}); } catch (e) { toast(errMsg(e), 'err'); } }}),
-                el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); } }})
+                el('button', {class: 'icon-btn danger', title: 'حذف', html: '🗑', onclick: async function () { if (!(await S.confirmDlg('حذف آزمون چاپی', 'آزمون «' + esc(r.title) + '» برای همیشه حذف شود؟ این کار برگشت‌پذیر نیست.', 'حذف', true))) return; try { var recM = null; try { recM = await printExamGet(r.id); } catch (e0) {} await printExamDelete(r.id); toast('حذف شد.', 'ok'); refresh(); if (recM && S.deleteMedia && S.mediaUrlsIn) S.deleteMedia(S.mediaUrlsIn(recM.questions || [])); } catch (e) { toast(errMsg(e), 'err'); } }})
               ])])]);
           }))
         ]));
@@ -234,6 +234,8 @@
       else if (draft && draft.dirty && draft.mode !== 'print' && !draft.bankEdit && !arg.fresh && (await S.confirmDlg('پیش‌نویس ذخیره‌نشده', 'یک پیش‌نویس آزمون از قبل در این مرورگر مانده است («' + esc(draft.title || 'بدون عنوان') + '»، ' + fa((draft.questions || []).length) + ' سؤال). ادامه می‌دهید؟', 'ادامهٔ پیش‌نویس'))) state = draft;
       else state = blankState('online');
       if (state.mode === 'online' && !state.availableClasses.length) await loadOptions(state);
+      /* V221 — عکس لحظهٔ بارگذاری از آدرس‌های رسانه برای تشخیص فایل‌های حذف‌شده هنگام ذخیره */
+      state.persistedMedia = (state.examId || state.printId) && S.mediaUrlsIn ? S.mediaUrlsIn(state.questions) : [];
       c.innerHTML = ''; c.appendChild(buildUI(c));
     } catch (e) { S.showErr(c, e); }
   }
@@ -868,6 +870,8 @@
         var raw = await S.rpc('native_save_exam_v2', {p_payload: payload});
         if (raw && raw.error) { var m = String(raw.error); if (raw.balance != null && raw.required != null) m += '؛ موجودی ' + fa(raw.balance) + ' تومان و مبلغ لازم ' + fa(raw.required) + ' تومان است.'; throw new Error(m); }
         state.examId = examId; state.code = (raw && raw.code) || code; state.dirty = false; saveDraft();
+        /* V221 — فایل‌هایی که در نسخهٔ ذخیره‌شدهٔ قبلی بودند و اکنون نیستند، از فضای ابری پاک می‌شوند */
+        try { var nowUrls = S.mediaUrlsIn ? S.mediaUrlsIn(state.questions) : []; var gone = (state.persistedMedia || []).filter(function (u) { return nowUrls.indexOf(u) < 0; }); state.persistedMedia = nowUrls; if (gone.length && S.deleteMedia) S.deleteMedia(gone); } catch (eM) {}
         msg.appendChild(el('div', {class: 'alert ok', html: '✅ ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>' + (raw && raw.cost ? ' · هزینه: ' + S.money(raw.cost) : '') + (raw && raw.balance != null ? ' · موجودی: ' + S.money(raw.balance) : '')}));
         /* V202 — پیام کسر وسط صفحه، فقط با «تأیید» بسته می‌شود */
         await S.costDoneDlg((raw && raw.cost) || 0, raw ? raw.balance : null, 'آزمون ذخیره شد. کد آزمون: <b class="code">' + esc(state.code) + '</b>');

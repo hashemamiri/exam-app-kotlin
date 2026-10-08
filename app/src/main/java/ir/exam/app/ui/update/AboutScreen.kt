@@ -150,6 +150,8 @@ fun AboutScreen(
                 }
             }
         }
+        // V221 — «تماس با ما و نظرات»: ایمیل پشتیبانی (آینه در سایت: mobile.js aboutSection).
+        item { ContactCard(onError = viewModel::reportInstallError) }
         // V132 — لیست تغییرات نسخهٔ جدید زیرِ دکمه‌های بررسی/دریافت (همیشه دیده می‌شود؛ چه قبل از دانلود چه بعد از آن).
         // V208 — سه نسخهٔ آخر، هر کدام با تیترهای کوتاه (بلوک اول = نسخهٔ جدید).
         state.update?.takeIf { it.notesFa.isNotEmpty() }?.let { remote ->
@@ -161,6 +163,45 @@ fun AboutScreen(
                     val title = if (block.version.isBlank()) "تغییرات نسخه ${remote.name}" else if (index == 0) "تغییرات نسخه ${block.version} (جدید)" else "نسخه ${block.version}"
                     item { ChangeListCard(title, block.bullets) }
                 }
+            }
+        }
+    }
+}
+
+const val SUPPORT_EMAIL = "info@onlineexam.ir"
+
+@Composable
+private fun ContactCard(onError: (Throwable) -> Unit) {
+    val context = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("تماس با ما و نظرات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "پیشنهاد، گزارش اشکال یا هر نظری دارید، برای ما بنویسید؛ همهٔ پیام‌ها خوانده می‌شوند.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(SUPPORT_EMAIL, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$SUPPORT_EMAIL"))
+                                    .putExtra(Intent.EXTRA_SUBJECT, "نظر دربارهٔ آزمون‌ساز")
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }.onFailure {
+                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(SUPPORT_EMAIL))
+                            onError(IllegalStateException("برنامهٔ ایمیل پیدا نشد؛ نشانی کپی شد."))
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("ارسال ایمیل") }
+                OutlinedButton(
+                    onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(SUPPORT_EMAIL)) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("کپی نشانی") }
             }
         }
     }

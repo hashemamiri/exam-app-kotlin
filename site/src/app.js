@@ -1431,7 +1431,9 @@
     }}));
     wrap.appendChild(el('button', {class: 'icon-btn danger', title: 'حذف', html: '<i>🗑</i><span>حذف</span>', onclick: async function () {
       if (!(await confirmDlg('حذف آزمون', 'آزمون «' + esc(x.title) + '» و پاسخ‌های آن برای همیشه حذف می‌شود.', 'حذف', true))) return;
-      try { await api.deleteExam(x.id); toast('حذف شد.', 'ok'); refresh(); } catch (e) { toast(errMsg(e), 'err'); }
+      /* V221 — قبل از حذف آزمون، آدرس رسانه‌هایش گرفته و پس از حذف از فضای ابری پاک می‌شود (best-effort) */
+      var mediaUrls = []; try { var mr = await rpcObj('native_exam_media_urls_v221', {p_exam: x.id}); if (mr && Array.isArray(mr.urls)) mediaUrls = mr.urls; } catch (e0) { try { var mr2 = await rpcObj('native_exam_image_paths_v59', {p_exam: x.id}); if (mr2 && Array.isArray(mr2.urls)) mediaUrls = mr2.urls; } catch (e1) {} }
+      try { await api.deleteExam(x.id); toast('حذف شد.', 'ok'); refresh(); deleteMedia(mediaUrls); } catch (e) { toast(errMsg(e), 'err'); }
     }}));
     return wrap;
   }
@@ -1737,6 +1739,29 @@
   }
   /* V144 — بارگذاری رسانه: اول R2 (لینک موقت از Edge Function media-upload)، در نبود پیکربندی → Supabase Storage */
   var MEDIA_BUCKET = 'exam-images', r2Disabled = false;
+  /* V221 — حذف فایل‌های آپلودشده از فضای ابری وقتی کاربر آن‌ها را حذف می‌کند (آینهٔ StorageImageCleaner اپ):
+     آدرس‌های باکت سوپابیس و S3/R2 با مسیر <پوشه>/<کاربر>/… به تابع لبهٔ media-upload (action=delete) می‌روند؛
+     اگر تابع در دسترس نبود، آدرس‌های سوپابیس مستقیم با توکن کاربر حذف می‌شوند (policy مالک). best-effort. */
+  var OWNED_MEDIA_RE = /^https:\/\/[^\s"']+\/(questions|option_images|matching_images|audio|answers|profiles)\/[0-9a-fA-F-]{36}\/[^\s"']+$/;
+  function isOwnedMediaUrl(u) { if (typeof u !== 'string') return false; u = u.split('?')[0]; return isOwnStorageUrl(u) || OWNED_MEDIA_RE.test(u); }
+  function mediaUrlsIn(value) {
+    var out = {}; (function walk(v) { if (typeof v === 'string') { if (isOwnedMediaUrl(v)) out[v.split('?')[0]] = 1; else if (v.indexOf('https://') >= 0) (v.match(/https:\/\/[^"'\s,)\]\\]+/g) || []).forEach(function (u) { if (isOwnedMediaUrl(u)) out[u.split('?')[0]] = 1; }); }
+      else if (Array.isArray(v)) v.forEach(walk); else if (v && typeof v === 'object') Object.keys(v).forEach(function (k) { walk(v[k]); }); })(value);
+    return Object.keys(out);
+  }
+  async function deleteMedia(urls) {
+    urls = (urls || []).filter(isOwnedMediaUrl).map(function (u) { return u.split('?')[0]; }).filter(function (u, i, a) { return a.indexOf(u) === i; });
+    if (!urls.length || !session) return 0;
+    var done = 0;
+    for (var i = 0; i < urls.length; i += 50) {
+      var chunk = urls.slice(i, i + 50);
+      try { var r = await http('/functions/v1/media-upload', {method: 'POST', body: {action: 'delete', urls: chunk}}); if (r && typeof r.deleted === 'number') { done += r.deleted; continue; } } catch (e) { console.warn('media-delete', e); }
+      /* بازگشت: فقط آدرس‌های سوپابیس، مستقیم */
+      for (var j = 0; j < chunk.length; j++) { var u = chunk[j]; if (!isOwnStorageUrl(u)) continue; var m = u.indexOf('/storage/v1/object/public/'); var rel = u.slice(m + '/storage/v1/object/public/'.length);
+        try { var res = await fetch(SUPABASE_URL + '/storage/v1/object/' + rel, {method: 'DELETE', headers: {'apikey': ANON, 'Authorization': 'Bearer ' + session.access_token}}); if (res.ok || res.status === 404) done++; } catch (e2) {} }
+    }
+    return done;
+  }
   async function uploadMedia(blob, kind, folder, examId, ext, contentType) {
     if (!r2Disabled) {
       try {
@@ -1759,7 +1784,7 @@
     return SUPABASE_URL + '/storage/v1/object/public/' + MEDIA_BUCKET + '/' + path;
   }
   window.ExamSite = {headerFingerprint: headerFingerprint, printHeaderFp: printHeaderFp, ensurePrintPaid: ensurePrintPaid, jalaliPicker: jalaliPicker, jalaliDisplay: jalaliDisplay, openFormulaEditor: openFormulaEditor, openHeaderSettings: openHeaderSettings, headerSettingsForm: headerSettingsForm, readPrintHeader: readPrintHeader, faReason: faReason, uploadMedia: uploadMedia, openPrintPreview: openPrintPreview, buildPrintPayload: buildPrintPayload, api: api, demoPrint: demoPrint,
-    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
+    el: el, esc: esc, fa: fa, en: en, toast: toast, confirmDlg: confirmDlg, infoDlg: infoDlg, costDoneDlg: costDoneDlg, promptDlg: promptDlg, mediaBlobUrl: mediaBlobUrl, isOwnStorageUrl: isOwnStorageUrl, deleteMedia: deleteMedia, mediaUrlsIn: mediaUrlsIn, isOwnedMediaUrl: isOwnedMediaUrl, rpc: rpc, rpcObj: rpcObj, select: select, http: http, uuid: uuid, fmtScore: fmtScore, fmtDate: fmtDate, money: money, errMsg: errMsg,
     localState: localState, setLocalState: setLocalState, loading: loading, showErr: showErr, emptyBox: emptyBox, qType: qType, engineHtml: engineHtml, loadEngines: loadEngines,
     user: function () { return user; }, session: function () { return session; }, config: {url: SUPABASE_URL, anon: ANON},
     go: function (panel, arg) { view.panel = panel; view.arg = arg; render(); }, navBack: navBack, view: view, examActions: examActions,

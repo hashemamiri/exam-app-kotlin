@@ -86,6 +86,7 @@ class ExamBuilderViewModel(
                     current.copy(questions = current.questions.map(QuestionDraft::ensureEditorIds))
                 }
                 cleanDraftFingerprint = draftFingerprint(_state.value); cleanPrintFingerprint = printFingerprint(_state.value)
+                persistedStorageUrls = storageUrlsOf(_state.value)
                 // V68.5 — پیش‌نویس فقط هنگام «ایجاد» آزمون پیشنهاد می‌شود؛ هنگام
                 // ویرایش، فقط خودِ آزمونِ مورد ویرایش باز می‌شود (درخواست کاربر).
                 if (initialImport == null && initialExamId == null && ownerUserId.isNotBlank()) {
@@ -747,10 +748,20 @@ class ExamBuilderViewModel(
                 )
             }
             cleanDraftFingerprint = draftFingerprint(_state.value); cleanPrintFingerprint = printFingerprint(_state.value)
+            // V221 — هر فایلی (تصویر/صدا/تصویر شکل) که در نسخهٔ ذخیره‌شدهٔ قبلی بود و اکنون نیست، از فضای ابری هم پاک می‌شود.
+            val nowUrls = storageUrlsOf(_state.value)
+            val orphans = (persistedStorageUrls - nowUrls).toList()
+            persistedStorageUrls = nowUrls
+            if (orphans.isNotEmpty()) ir.exam.app.data.repository.StorageImageCleaner.removeByPublicUrls(orphans)
         }.onFailure { error ->
             _state.update { it.copy(saving = false, uploadProgress = null, error = safeBuilderError(error)) }
         }
     }
+
+    /** V221 — آدرس‌های فضای ابری که در وضعیت ذخیره‌شدهٔ فعلی آزمون ارجاع دارند (لحظهٔ بارگذاری و پس از هر ذخیره). */
+    private var persistedStorageUrls: Set<String> = emptySet()
+    private fun storageUrlsOf(state: ExamBuilderState): Set<String> =
+        ir.exam.app.data.repository.StorageImageCleaner.urlsInText(state.questions.toString()).toSet()
 }
 
 /** V201 — فقط محتوا: چیدمان شکل‌ها، فاصلهٔ جداکننده و span های قالب‌بندی/تراز (که از پیش‌نمایش برمی‌گردند) حذف می‌شوند. */

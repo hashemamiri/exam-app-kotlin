@@ -37,7 +37,9 @@ class SupabaseTeacherDashboardRepository {
         // V59.3 — قبل از حذف آزمون، تصاویر آن از استوریج پاک می‌شوند
         // (best-effort؛ شکست پاک‌سازی حذف آزمون را بلاک نمی‌کند).
         runCatching {
-            val raw = rpcObject("native_exam_image_paths_v59", buildJsonObject { put("p_exam", examId) })
+            // V221 — تابع جدید آدرس‌های S3/R2 را هم می‌دهد؛ اگر هنوز اجرا نشده باشد، به v59 برمی‌گردیم.
+            val raw = runCatching { rpcObject("native_exam_media_urls_v221", buildJsonObject { put("p_exam", examId) }) }
+                .getOrElse { rpcObject("native_exam_image_paths_v59", buildJsonObject { put("p_exam", examId) }) }
             val urls = (raw["urls"] as? kotlinx.serialization.json.JsonArray).orEmpty()
                 .mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull }
             StorageImageCleaner.removeByPublicUrls(urls)

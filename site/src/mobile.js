@@ -934,13 +934,15 @@
     ]));
     c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: گوشی'})]));
     var palRow = el('div', {class: 'm-pal-row'}, Object.keys(PALETTES).map(function (k) { var p = PALETTES[k]; return el('button', {class: 'm-pal' + (a.palette === k ? ' on' : ''), 'aria-label': 'پالت ' + p[2], style: 'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')', onclick: function () { setAppearance({palette: k}); rerun(); }}, [a.palette === k ? ic('check') : null]); }));
-    c.appendChild(card('ظاهر نئومورفیک — پالت رنگ', [el('p', {class: 'muted', text: 'پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.'}), palRow]));
     var dv = el('b', {style: 'color:var(--m-acc)', text: fa(Math.round(a.depth))});
     var dr = el('input', {type: 'range', min: '8', max: '22', step: '1', value: String(a.depth), class: 'm-range'});
     dr.addEventListener('input', function () { dv.textContent = fa(dr.value); document.documentElement.style.setProperty('--m-depth', dr.value + 'px'); document.documentElement.style.setProperty('--m-depth2', Math.round(dr.value * 2.2) + 'px'); });
     dr.addEventListener('change', function () { setAppearance({depth: +dr.value}); });
-    c.appendChild(card('ظاهر نئومورفیک — عمق سایه', [el('div', {class: 'm-lv'}, [el('span', {text: 'عمق سایه'}), dv]), dr]));
-    c.appendChild(card('ظاهر نئومورفیک — پیش‌نمایش', [el('div', {class: 'm-pal-preview', text: 'پیش‌نمایش پالت'})]));
+    /* V221 — پالت رنگ، عمق سایه و پیش‌نمایش در یک کارت (آینهٔ اپ) */
+    c.appendChild(card('ظاهر نئومورفیک', [el('div', {class: 'm-pal-preview', text: 'پیش‌نمایش پالت'}),
+      el('p', {style: 'font-weight:800;margin:10px 0 4px', text: 'پالت رنگ'}), palRow,
+      el('div', {class: 'm-lv', style: 'margin-top:10px'}, [el('span', {text: 'عمق سایه'}), dv]), dr,
+      el('p', {class: 'muted', text: 'پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.'})]));
     c.appendChild(card('قلم فارسی', [chipRow([['SYSTEM', 'سیستم'], ['VAZIRMATN', 'وزیرمتن'], ['SHABNAM', 'شبنم'], ['SAHEL', 'ساحل']], a.appFont, function (v) { setAppearance({appFont: v}); rerun(); }), el('p', {class: 'muted', text: 'وزیرمتن همراه سایت است؛ شبنم و ساحل در صورت نصب روی دستگاه اعمال می‌شوند.'})]));
     var sv = el('p', {text: fa(Math.round(a.fontScale * 100)) + ' درصد'});
     var sr = el('input', {type: 'range', min: '85', max: '130', step: '5', value: String(Math.round(a.fontScale * 100)), class: 'm-range'});
@@ -970,6 +972,14 @@
       apkBtn.disabled = false;
       apkBtn.onclick = function () { var a = el('a', {href: v.url, download: 'exam-app-' + v.name + '.apk'}); document.body.appendChild(a); a.click(); a.remove(); toast('دانلود APK آغاز شد.', 'ok'); };
     }).catch(function () { apkBtn.textContent = 'دریافت APK ممکن نشد'; apkBtn.disabled = true; });
+    /* V221 — تماس با ما و نظرات (آینهٔ AboutSection اپ) */
+    var mail = 'info@onlineexam.ir';
+    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'تماس با ما و نظرات'}),
+      el('p', {class: 'muted', text: 'پیشنهاد، گزارش اشکال یا هر نظری دارید، برای ما بنویسید؛ همهٔ پیام‌ها خوانده می‌شوند.'}),
+      el('div', {class: 'm-lv'}, [el('span', {text: 'ایمیل'}), el('a', {href: 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون‌ساز'), text: mail, style: 'direction:ltr;font-weight:800'})]),
+      el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [
+        el('button', {class: 'btn', style: 'flex:1', text: 'ارسال ایمیل', onclick: function () { location.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون‌ساز'); }}),
+        el('button', {class: 'btn light', style: 'flex:1', text: 'کپی نشانی', onclick: function () { (navigator.clipboard ? navigator.clipboard.writeText(mail) : Promise.reject()).then(function () { toast('نشانی ایمیل کپی شد.', 'ok'); }, function () { toast(mail, 'info'); }); }})])]));
   }
   var LS_AVATAR = 'examsite.avatar.';
   function localAvatar(uid) { try { return localStorage.getItem(LS_AVATAR + uid); } catch (e) { return null; } }

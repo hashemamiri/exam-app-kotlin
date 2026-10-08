@@ -191,11 +191,14 @@ class SupabasePrintExamRepository(context: Context) {
     }
 
     suspend fun delete(id: String) {
+        // V221 — رسانه‌های آزمون چاپی (تصاویر/صدا در فضای ابری) همراه رکورد پاک می‌شوند (best-effort).
+        val mediaUrls = runCatching { get(id)?.let { StorageImageCleaner.urlsInText(it.toString()) } }.getOrNull().orEmpty()
         val raw = SupabaseProvider.client.postgrest.rpc(
             "native_print_exam_delete_v163",
             buildJsonObject { put("p_id", id) }
         ).decodeAs<JsonObject>()
         raw["error"]?.jsonPrimitive?.contentOrNull?.let { error(it) }
+        if (mediaUrls.isNotEmpty()) StorageImageCleaner.removeByPublicUrls(mediaUrls)
     }
 
     /** انتقال یک‌بارهٔ رکوردهای قدیمی دستگاه به سرور؛ شناسه‌های «local-…» به uuid تبدیل می‌شوند. */

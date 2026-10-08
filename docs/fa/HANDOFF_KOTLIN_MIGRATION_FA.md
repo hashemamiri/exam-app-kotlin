@@ -19423,7 +19423,14 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 
 ## §V202.6
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
-- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V220.2 — شکست CI در V220 (Neumorphic69IntegrationTest:143)
+- دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.### V221 — حذف رسانه از سرور، «تماس با ما»، کارت واحد ظاهر (نسخهٔ 1.01.11)
+- **حذف از سرور**: تابع لبهٔ `media-upload` شاخهٔ `action:'delete'` گرفت (≤۶۰ URL؛ فقط مسیرهای `questions|option_images|matching_images|audio|answers|profiles/<uid>/…` که بخش دوم مسیر = کاربر؛ URLهای S3 با SigV4 DELETE، URLهای Supabase با storage API). اپ: `StorageImageCleaner.removeByPublicUrls` (مستقیم برای Supabase، در دسته‌های ۵۰تایی به تابع لبه برای آروان)؛ `ExamBuilderViewModel` در ذخیره، تفاضل `persistedStorageUrls`؛ `deleteExam` با rpc `native_exam_media_urls_v221` (fallback به `v59`)؛ `SupabasePrintExamRepository.delete` رسانه را بعد از حذف پاک می‌کند. سایت: `app.js` → `isOwnedMediaUrl/mediaUrlsIn/deleteMedia` (روی S)؛ حذف آزمون و ذخیرهٔ سازنده (`state.persistedMedia`) و حذف آزمون چاپی.
+- **کارهای دستی کاربر**: ۱) `supabase functions deploy media-upload` ۲) اجرای `supabase/migrations/20261008_native_exam_media_urls_v221.sql` در SQL Editor.
+- **تماس با ما**: `AboutScreen.kt` → `ContactCard` با `SUPPORT_EMAIL`؛ `mobile.js aboutSection` کارت هم‌نام (mailto + کپی).
+- **ظاهر**: کارت‌های ap7/ap3/ap4 در `ProfileSettingsScreen.kt` یکی شدند (`"ظاهر نئومورفیک"`, کلید `ap7`)؛ `mobile.js` آینه. پین‌های `V162_SiteSpeedSettingsTest` به‌روز شد.
+- تست نگهبان: `V221_MediaCleanupContactAppearanceTest.kt`.
+
+### V220.2 — شکست CI در V220 (Neumorphic69IntegrationTest:143)
 - علت: تست قدیمی عبارت `if (user.role == UserRole.MANAGER) MainPage.HOME else MainPage.CALENDAR` را در ExamApp.kt پین کرده بود و در V220 با حذف `roleHomePage` از بین رفت؛ check_test_pins آن را ندید چون آن تست فایل را با `File(root, "…").readText()` می‌خواند (نه `source("…")`). اکنون این الگو (و `root.resolve(...)`) هم شناخته می‌شود: ۱۵۱۰ پین (قبلاً ۱۳۵۵).
 - رفع: `roleHomePage` برگشت و معنا دارد: وقتی تاریخچه خالی است و صفحه خانه نیست → خانه؛ در خانه رویداد مصرف می‌شود (بدون خروج).
 

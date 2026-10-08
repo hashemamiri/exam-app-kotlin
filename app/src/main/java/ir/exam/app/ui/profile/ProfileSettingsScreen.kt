@@ -352,12 +352,23 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
             }
         }
         item {
-            // V137.2 — «ظاهر نئومورفیک» (بدون ۶۹) و هر بخش در کارت جداگانه: پالت / عمق سایه / پیش‌نمایش.
-            SettingsAccordionCard(title = "ظاهر نئومورفیک — پالت رنگ", expanded = expanded == "ap7", onToggle = { toggle("ap7") }) {
-                Text(
-                    "پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
-                    style = MaterialTheme.typography.bodySmall
-                )
+            // V221 — پالت رنگ، عمق سایه و پیش‌نمایش در یک کارت «ظاهر نئومورفیک» (قبلاً سه کارت جدا: V137.2).
+            SettingsAccordionCard(title = "ظاهر نئومورفیک", expanded = expanded == "ap7", onToggle = { toggle("ap7") }) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+                        .background(
+                            Brush.linearGradient(
+                                settings.neumorphicPalette.accentColors().let { listOf(it.first, it.second) }
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("پیش‌نمایش پالت", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Text("پالت رنگ", fontWeight = FontWeight.SemiBold)
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -390,15 +401,11 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                         }
                     }
                 }
-            }
-        }
-        item {
-            SettingsAccordionCard(title = "ظاهر نئومورفیک — عمق سایه", expanded = expanded == "ap3", onToggle = { toggle("ap3") }) {
                 // V131 — لغزنده‌ها هنگام کشیدن هر فریم در DataStore نوشته می‌شدند و مقدار با تأخیر
                 // برمی‌گشت → لغزنده می‌پرید/برنمی‌گشت. حالا مقدار محلی است و در پایان کشیدن ذخیره می‌شود.
                 var depthDraft by remember(settings.neumorphicDepth) { mutableStateOf(settings.neumorphicDepth) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("عمق سایه")
+                    Text("عمق سایه", fontWeight = FontWeight.SemiBold)
                     Text(
                         PersianDigits.convert(depthDraft.toInt()),
                         color = MaterialTheme.colorScheme.primary,
@@ -412,24 +419,10 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                     valueRange = 8f..22f,
                     steps = 13
                 )
-            }
-        }
-        item {
-            SettingsAccordionCard(title = "ظاهر نئومورفیک — پیش‌نمایش", expanded = expanded == "ap4", onToggle = { toggle("ap4") }) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
-                        .background(
-                            Brush.linearGradient(
-                                settings.neumorphicPalette.accentColors().let { listOf(it.first, it.second) }
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("پیش‌نمایش پالت", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                Text(
+                    "پالت و عمق سایه در دستگاه ذخیره می‌شوند و پس از اجرای دوباره باقی می‌مانند.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 if (settings.dynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     Text(
                         "رنگ‌های پویای دستگاه اکنون بر پالت ثابت اولویت دارند؛ برای رنگ دقیق انتخابی، آن گزینه را خاموش کنید.",
