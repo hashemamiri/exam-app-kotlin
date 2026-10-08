@@ -1468,10 +1468,10 @@
         });
       }
       q.addEventListener('input', draw);
-      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [q, el('span', {class: 'grow'}), el('span', {class: 'muted', text: fa(list.length) + ' آزمون'}), window.SiteExtras ? el('button', {class: 'btn light', text: '📥 وارد کردن', onclick: window.SiteExtras.importExam}) : null, el('button', {class: 'btn', text: '➕ آزمون جدید', onclick: function () { view.panel = 'builder'; view.arg = null; render(); }})]));
+      c.appendChild(el('div', {class: 'row', style: 'margin-bottom:16px'}, [q, el('span', {class: 'grow'}), el('span', {class: 'muted', text: fa(list.length) + ' آزمون'}), window.SiteExtras ? el('button', {class: 'btn light', text: '📥 وارد کردن', onclick: window.SiteExtras.importExam}) : null, el('button', {class: 'btn', text: '➕ آزمون جدید', onclick: function () { view.panel = 'builder'; view.arg = null; render(); }}), el('button', {class: 'btn light', text: '🖨 آزمون‌های چاپی', onclick: function () { view.panel = 'print'; view.arg = null; render(); }})]));
       c.appendChild(grid); draw();
     } catch (e) { showErr(c, e); }
-    if (window.SiteBuilder) c.appendChild(window.SiteBuilder.printExamsSection(function () { pageExams(c); }));
+    /* V223 — آزمون‌های چاپی دیگر زیر فهرست آزمون‌ها نیست؛ دکمهٔ «آزمون‌های چاپی» کنار «آزمون جدید» به بخش «چاپ آزمون» می‌رود */
   }
 
   /* ---- کلاس‌ها ---- */
@@ -1616,8 +1616,14 @@
   /* V168 — «چاپ آزمون» دسکتاپ: فهرست آزمون‌های چاپی روی سرور + ساخت آزمون چاپی جدید (همان printExamsSection) */
   function pagePrint(c) {
     c.innerHTML = '';
-    c.appendChild(el('div', {class: 'row', style: 'margin-bottom:6px'}, [el('button', {class: 'btn', text: '➕ آزمون چاپی جدید', onclick: function () { view.panel = 'builder'; view.arg = {mode: 'print', fresh: true}; render(); }})]));
-    if (window.SiteBuilder) c.appendChild(window.SiteBuilder.printExamsSection(function () { pagePrint(c); }));
+    /* V223 — مثل اپ: «آزمون چاپی جدید» + «آزمون‌های آنلاین» (ساخت نسخهٔ چاپی از آزمون آنلاین)؛ دکمهٔ تکراری داخل کارت حذف شد */
+    var status = el('p', {class: 'm-note', style: 'display:none;padding:4px 0'});
+    c.appendChild(el('div', {class: 'row', style: 'margin-bottom:6px'}, [
+      el('button', {class: 'btn', text: '➕ آزمون چاپی جدید', onclick: function () { view.panel = 'builder'; view.arg = {mode: 'print', fresh: true}; render(); }}),
+      el('button', {class: 'btn light', text: '📝 آزمون‌های آنلاین', onclick: async function () { var M = window.SiteMobile; if (!M || !M.printOnlineSheet) { view.panel = 'exams'; view.arg = null; return render(); } var list = []; try { list = await window.SiteBuilder.printExamsList(); } catch (e) {} M.printOnlineSheet(list, status); }})
+    ]));
+    c.appendChild(status);
+    if (window.SiteBuilder) c.appendChild(window.SiteBuilder.printExamsSection(function () { pagePrint(c); }, {noNewButton: true}));
   }
 
   /* V170 — «حساب» و «تنظیمات» دسکتاپ = دقیقاً همان صفحه‌های گوشی/اپ (ProfileSettingsScreen با مقصد ACCOUNT / SETTINGS) */

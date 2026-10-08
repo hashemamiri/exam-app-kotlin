@@ -182,8 +182,10 @@
   /* V199 — آیکون‌های خطی کارت آزمون چاپی (کیف پول = پرداخت، چاپگر = قرمز/سبز) */
   var PAY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a1 1 0 0 1 1 1v2"/><path d="M4 7.5V17a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5z"/><circle cx="16" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>';
   var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V4.5h10V8"/><rect x="4" y="8" width="16" height="8" rx="2"/><path d="M7 13.5h10V20H7z" fill="#fff"/><path d="M9.5 16.2h5M9.5 18.2h3.5"/><circle cx="17" cy="11" r=".9" fill="currentColor" stroke="none"/></svg>';
-  function printExamsSection(refresh) {
-    var card = el('div', {class: 'card', style: 'margin-top:20px'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🖨 آزمون‌های چاپی'}), el('button', {class: 'btn soft sm', text: '➕ آزمون چاپی جدید', onclick: function () { S.go('builder', {mode: 'print'}); }})])]);
+  function printExamsSection(refresh, opts) {
+    opts = opts || {};
+    /* V223 — opts.noNewButton: در «چاپ آزمون» دکمهٔ «آزمون چاپی جدید» بالای صفحه هست؛ داخل کارت تکرار نمی‌شود */
+    var card = el('div', {class: 'card', style: 'margin-top:20px'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '🖨 آزمون‌های چاپی'}), opts.noNewButton ? null : el('button', {class: 'btn soft sm', text: '➕ آزمون چاپی جدید', onclick: function () { S.go('builder', {mode: 'print'}); }})])]);
     var body = el('div'); card.appendChild(body); S.loading(body);
     (async function () {
       try {

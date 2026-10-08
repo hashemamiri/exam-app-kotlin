@@ -1,5 +1,6 @@
 package ir.exam.app.ui.app
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -20,6 +21,30 @@ class V168_SiteDesktopMenuTest {
         assertTrue("teacherMenu: [['calendar', '📅', 'تقویم', 'رویدادها و پیام‌ها'], ['print', '🖨', 'چاپ آزمون', 'آزمون‌های چاپی و برگه'], ['students', '🎓', 'دانش‌آموزان', 'فهرست و وضعیت'], ['classes', '🏫', 'کلاس‌ها', 'فهرست و مدیریت'], ['account', '👤', 'حساب', 'مشخصات و امنیت حساب'], ['settings', '⚙', 'تنظیمات', 'ظاهر، داده و درباره']]" in a)
         assertTrue("var menu = MENUS[user.role + 'Menu'] || MENUS.teacherMenu;" in a) // V171
         assertTrue("concat(items, MENUS.teacherMenu).filter(" in a)
-        assertTrue("function pagePrint(c)" in a && "print: pagePrint" in a && "window.SiteBuilder.printExamsSection(function () { pagePrint(c); })" in a && "view.arg = {mode: 'print', fresh: true}; render();" in a)
+        assertTrue("function pagePrint(c)" in a && "print: pagePrint" in a && "window.SiteBuilder.printExamsSection(function () { pagePrint(c); }, {noNewButton: true})" in a && "view.arg = {mode: 'print', fresh: true}; render();" in a)
+    }
+}
+
+// V223 — در همین فایل (الگوی V1*_Site*Test در paths-ignore اندروید)
+/** V223 — دسکتاپ: آزمون‌های چاپی از «آزمون‌ها» حذف؛ دکمهٔ «آزمون‌های چاپی» کنار «آزمون جدید»؛ در «چاپ آزمون» دکمهٔ «آزمون‌های آنلاین» و حذف دکمهٔ تکراری داخل کارت. */
+class V223_SiteDesktopPrintButtonsTest {
+    private fun src(rel: String): String = File(listOf(File("."), File("..")).first { File(it, "app/src/main/java/ir/exam/app/ui/app/ExamApp.kt").isFile }, rel).readText()
+
+    @Test
+    fun examsPageLinksToPrintCenterInsteadOfEmbedding() {
+        val a = src("site/src/app.js")
+        assertFalse("printExamsSection(function () { pageExams(c); })" in a)
+        assertTrue("el('button', {class: 'btn light', text: '🖨 آزمون‌های چاپی', onclick: function () { view.panel = 'print'; view.arg = null; render(); }})" in a)
+    }
+
+    @Test
+    fun printPageHasOnlineExamsAndNoDuplicateNewButton() {
+        val a = src("site/src/app.js")
+        assertTrue("text: '📝 آزمون‌های آنلاین'" in a && "M.printOnlineSheet(list, status);" in a)
+        assertTrue("printExamsSection(function () { pagePrint(c); }, {noNewButton: true})" in a)
+        val b = src("site/src/builder.js")
+        assertTrue("opts.noNewButton ? null : el('button', {class: 'btn soft sm', text: '➕ آزمون چاپی جدید'" in b)
+        val m = src("site/src/mobile.js")
+        assertTrue("async function printOnlineSheet(list, status) {" in m && "printOnlineSheet: printOnlineSheet" in m)
     }
 }

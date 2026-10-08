@@ -362,7 +362,7 @@
     var status = el('p', {class: 'm-note', style: 'display:none;padding:4px 0'});
     wrap.appendChild(el('div', {class: 'm-print-top'}, [
       el('button', {class: 'btn m-btn', text: 'آزمون جدید', onclick: function () { go('builder', {mode: 'print', fresh: true}); }}),
-      el('button', {class: 'm-outline', text: 'آزمون‌های آنلاین', onclick: onlineSheet})
+      el('button', {class: 'm-outline', text: 'آزمون‌های آنلاین', onclick: function () { printOnlineSheet(list, status); }})
     ]));
     wrap.appendChild(status);
     var listBox = el('div'); wrap.appendChild(listBox); c.appendChild(wrap);
@@ -389,41 +389,44 @@
         ])
       ]));
     });
-    /* V163 — پنجرهٔ آزمون‌های آنلاین بدون پرش: ارتفاع ثابت از ابتدا، بارگذاری داخل همان جعبه، فهرست یک‌باره ساخته می‌شود */
-    async function onlineSheet() {
-      var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
-      var box = el('div', {class: 'm-sheet-box'}); S.loading(box);
-      var body = el('div', {class: 'm-sheet m-sheet-fixed'}, [el('h3', {text: 'آزمون‌های آنلاین'}), box, el('button', {class: 'm-outline', style: 'margin-top:12px;width:100%', text: 'بستن', onclick: function () { bg.remove(); }})]);
-      bg.appendChild(body); document.body.appendChild(bg);
-      var exams = [], err = null; try { exams = await api.exams(); } catch (e) { err = e; }
-      var frag = document.createDocumentFragment();
-      if (err) frag.appendChild(el('p', {class: 'm-note', text: S.errMsg(err)}));
-      else if (!exams.length) frag.appendChild(el('p', {class: 'm-note', text: 'آزمون آنلاینی ندارید.'}));
-      else {
-        frag.appendChild(el('p', {class: 'm-note', style: 'padding:4px 0 10px', text: 'با انتخاب هر آزمون، نسخهٔ چاپی آن ساخته و باز می‌شود (روی سرور؛ در اپ و سایت یکی است).'}));
-        exams.forEach(function (x) {
-          var has = list.some(function (r) { return r.source_exam_id === x.id; });
-          frag.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); openPrintCopy(x); }}, [ic('print', 'm-row-ic'), el('div', {}, [el('b', {text: x.title || 'بدون عنوان'}), el('span', {text: 'درس: ' + (x.subject || '—') + (has ? ' · نسخهٔ چاپی دارد' : '')})])]));
-        });
-      }
-      box.innerHTML = ''; box.appendChild(frag);
+  }
+
+  /* V163 — پنجرهٔ آزمون‌های آنلاین بدون پرش: ارتفاع ثابت از ابتدا، بارگذاری داخل همان جعبه، فهرست یک‌باره ساخته می‌شود */
+  /* V223 — مشترک گوشی و دسکتاپ: list = آزمون‌های چاپی فعلی، status = عنصر پیام (اختیاری) */
+  async function printOnlineSheet(list, status) {
+    var bg = el('div', {class: 'm-sheet-bg', onclick: function (e) { if (e.target === e.currentTarget) bg.remove(); }});
+    var box = el('div', {class: 'm-sheet-box'}); S.loading(box);
+    var body = el('div', {class: 'm-sheet m-sheet-fixed'}, [el('h3', {text: 'آزمون‌های آنلاین'}), box, el('button', {class: 'm-outline', style: 'margin-top:12px;width:100%', text: 'بستن', onclick: function () { bg.remove(); }})]);
+    bg.appendChild(body); document.body.appendChild(bg);
+    var exams = [], err = null; try { exams = await api.exams(); } catch (e) { err = e; }
+    var frag = document.createDocumentFragment();
+    if (err) frag.appendChild(el('p', {class: 'm-note', text: S.errMsg(err)}));
+    else if (!exams.length) frag.appendChild(el('p', {class: 'm-note', text: 'آزمون آنلاینی ندارید.'}));
+    else {
+      frag.appendChild(el('p', {class: 'm-note', style: 'padding:4px 0 10px', text: 'با انتخاب هر آزمون، نسخهٔ چاپی آن ساخته و باز می‌شود (روی سرور؛ در اپ و سایت یکی است).'}));
+      exams.forEach(function (x) {
+        var has = list.some(function (r) { return r.source_exam_id === x.id; });
+        frag.appendChild(el('button', {class: 'm-row neo', onclick: function () { bg.remove(); openPrintCopy(x, list, status); }}, [ic('print', 'm-row-ic'), el('div', {}, [el('b', {text: x.title || 'بدون عنوان'}), el('span', {text: 'درس: ' + (x.subject || '—') + (has ? ' · نسخهٔ چاپی دارد' : '')})])]));
+      });
     }
-    /* مثل openPrintCopy اپ: اگر قبلاً نسخهٔ چاپی ساخته شده همان باز می‌شود؛ وگرنه سؤال‌ها (با پاسخ‌نامه) خوانده و به‌صورت آزمون چاپی روی سرور ذخیره می‌شوند */
-    async function openPrintCopy(x) {
-      var existing = list.filter(function (r) { return r.source_exam_id === x.id; })[0];
-      if (existing) return go('builder', {mode: 'print', printId: existing.id});
-      status.style.display = ''; status.style.color = ''; status.textContent = 'در حال آماده‌سازی نسخهٔ چاپی...';
-      try {
-        var exam = await api.examDetail(x.id);
-        var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
-        var qs = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return window.SiteBuilder.decodeQuestion(q, keys[i]); });
-        if (!qs.length) throw new Error('برای نسخهٔ چاپی سؤالی در این آزمون پیدا نشد.');
-        var rec = {id: S.uuid(), title: exam.title || x.title || '', subject: exam.subject || x.subject || '', duration: exam.duration != null ? String(exam.duration) : '', questions: qs, sourceExamId: x.id};
-        var pr = await window.SiteBuilder.printExamSave(rec, {silent: true}); /* تصاویر آنلاین قبلاً URL هستند → هزینهٔ تازه‌ای ندارد */
-        if (!pr) { status.style.display = 'none'; return; }
-        go('builder', {mode: 'print', printId: rec.id});
-      } catch (e) { status.style.color = 'var(--m-danger)'; status.textContent = S.errMsg(e); }
-    }
+    box.innerHTML = ''; box.appendChild(frag);
+  }
+  /* مثل openPrintCopy اپ: اگر قبلاً نسخهٔ چاپی ساخته شده همان باز می‌شود؛ وگرنه سؤال‌ها (با پاسخ‌نامه) خوانده و به‌صورت آزمون چاپی روی سرور ذخیره می‌شوند */
+  async function openPrintCopy(x, list, status) {
+    status = status || el('p');
+    var existing = list.filter(function (r) { return r.source_exam_id === x.id; })[0];
+    if (existing) return go('builder', {mode: 'print', printId: existing.id});
+    status.style.display = ''; status.style.color = ''; status.textContent = 'در حال آماده‌سازی نسخهٔ چاپی...';
+    try {
+      var exam = await api.examDetail(x.id);
+      var keys = {}; (Array.isArray(exam.__answers) ? exam.__answers : []).forEach(function (k, i) { if (k && typeof k === 'object') keys[k.i != null ? k.i : i] = k; });
+      var qs = (Array.isArray(exam.questions) ? exam.questions : []).map(function (q, i) { return window.SiteBuilder.decodeQuestion(q, keys[i]); });
+      if (!qs.length) throw new Error('برای نسخهٔ چاپی سؤالی در این آزمون پیدا نشد.');
+      var rec = {id: S.uuid(), title: exam.title || x.title || '', subject: exam.subject || x.subject || '', duration: exam.duration != null ? String(exam.duration) : '', questions: qs, sourceExamId: x.id};
+      var pr = await window.SiteBuilder.printExamSave(rec, {silent: true}); /* تصاویر آنلاین قبلاً URL هستند → هزینهٔ تازه‌ای ندارد */
+      if (!pr) { status.style.display = 'none'; return; }
+      go('builder', {mode: 'print', printId: rec.id});
+    } catch (e) { status.style.color = 'var(--m-danger)'; status.textContent = S.errMsg(e); }
   }
 
   /* ---------- V151: جدول → کارت‌های نئومورفیک (SchoolManagementScreen: Card با عنوان، خط‌های اطلاعات، ردیف عملیات وسط‌چین) ----------
@@ -1157,5 +1160,5 @@
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
   window.SiteMobile = {radialMenu: radialMenu, paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
-    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }};
+    profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, printOnlineSheet: printOnlineSheet /* V223 */};
 })();
