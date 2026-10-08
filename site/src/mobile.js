@@ -106,7 +106,9 @@
   }
 
   /* ---------- افزودن سریع (Design69QuickAddOverlay) ---------- */
-  function quickAdd() {
+  /* V225 — فهرست اعمال افزودن سریع (مشترک گوشی/دسکتاپ؛ همان Design69QuickAddOverlay اپ) */
+  function quickAddItems(opts) {
+    opts = opts || {};
     var mgr = isManager();
     var items = [
       mgr ? ['دعوت معلم', 'ساخت کد دعوت برای معلم', 'students', function () { go('teachers'); }] : ['آزمون جدید', 'ساخت آزمون آنلاین', 'exams', function () { go('builder', null); }],
@@ -115,7 +117,14 @@
       /* V61.5 — عمل چهارم: مدرسه جدید (مدیر می‌سازد؛ معلم با کد دعوت عضو می‌شود) */
       /* V158 — مثل SchoolLaunchAction.CREATE_SCHOOL: مدیر «ساخت مدرسه جدید»، معلم «عضویت در مدرسه جدید» با کد ۶ حرفی */
       ['مدرسه جدید', mgr ? 'ساخت مدرسه' : 'عضویت با کد دعوت', 'classes', function () { ui.addOpen = false; paint(); mgr ? createSchoolDialog() : joinSchoolDialog(); }]
+      /* V225 — عمل پنجم فقط دسکتاپ: آزمون چاپی جدید (همان دکمهٔ «آزمون چاپی جدید» بخش چاپ) */
     ];
+    if (opts.withPrint && !mgr) items.push(['آزمون چاپی جدید', 'ساخت برگهٔ چاپی', 'print', function () { S.go('builder', {mode: 'print', fresh: true}); }]);
+    return items;
+  }
+  function quickAdd() {
+    var mgr = isManager();
+    var items = quickAddItems();
     /* V153 — چیدمان ضربدری اپ: پنل فرورفته، ۴ کارت ۸۸dp در چهار گوشه، خط‌چین از مرکز، دکمهٔ ✕ گرادیانی وسط */
     var close = function () { ui.addOpen = false; paint(); };
     var pos = [[1, -1], [-1, -1], [1, 1], [-1, 1]]; /* x: راست/چپ (RTL: مثبت = راست)، y: بالا/پایین */
@@ -1162,7 +1171,7 @@
   /* اتصال: app.js در render() اگر active() بود paint() را صدا می‌زند؛ تغییر عرض → رندر دوباره */
   var rerender = function () { if (S.user()) S.render(); };
   MQ.addEventListener ? MQ.addEventListener('change', rerender) : MQ.addListener(rerender);
-  window.SiteMobile = {radialMenu: radialMenu, paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
+  window.SiteMobile = {radialMenu: radialMenu, quickAddItems: quickAddItems, paint: paint, active: active, ui: ui, authActive: authActive, gateActive: gateActive, enter: enter, paintAuth: paintAuth, teacherCards: teacherCards, icons: I,
     /* V170 — همان صفحه‌های اپ برای دسکتاپ: «حساب» = profileScreen با تب حساب، «تنظیمات» = settingsScreen */
     profileScreen: profileScreen, settingsScreen: settingsScreen, setProfileTab: function (t) { profileTab = t; }, printOnlineSheet: printOnlineSheet /* V223 */, printExamsSheet: printExamsSheet /* V223.1 */, studentFilterDialog: studentFilterDialog, applyStudentFilter: applyFilter, filterActive: filterActive /* V224 */};
 })();

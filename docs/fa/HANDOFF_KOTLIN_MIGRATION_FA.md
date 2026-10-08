@@ -19425,6 +19425,12 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V225 — + ریل دسکتاپ با منوی بادبزنی + پنجرهٔ اطلاعات ورود (فقط سایت)
+- `mobile.js`: `quickAddItems(opts)` فهرست اعمال افزودن سریع (همان Design69QuickAddOverlay: آزمون جدید/دعوت معلم، دانش‌آموز جدید، کلاس جدید، مدرسه جدید) + با `withPrint` «آزمون چاپی جدید» (`S.go('builder',{mode:'print',fresh:true})`)؛ صادرشده در `SiteMobile`. `quickAdd()` گوشی از همان استفاده می‌کند (۴ مورد، بدون تغییر).
+- `app.js`: `railItem('builder')` معلم → `.dk-rail-plus` بدون `.dk-rail-label`؛ `dkQuickAdd(anchor)` منوی `.dk-qa-bg/.dk-qa/.dk-qa-item` کنار دکمه (انیمیشن پلکانی `dkQaIn`، Esc/کلیک بیرون می‌بندد، جابه‌جایی داخل صفحه).
+- `school.js credentialDlg`: `.cred-modal/.cred-list/.cred-card/.cred-cell/.cred-val` + کپی هر مقدار؛ دکمهٔ «کپی اطلاعات» همهٔ خطوط را کپی می‌کند.
+- تست: `V168_SiteDesktopMenuTest.v225RailQuickAddAndCredentialDialog`.
+
 ### V224.2 — رمز فعلی ماندگار + نوار شمارهٔ کارت‌ها (فقط سایت)
 - `school.js`: `PW_VAULT_KEY='st-pw-vault'` در localStorage (معادل StudentPasswordVault اپ، کلید = شناسهٔ دانش‌آموز؛ بدون رمزنگاری چون مرورگر Keystore ندارد)؛ `rememberPw` حالا `id` می‌گیرد (ساخت گروهی، ویرایش، بازنشانی)؛ `knownPasswordOf(s)`.
 - `newStudentsDialog`: نوار `.st-new-chips` با چیپ‌های `.chip.st-num` (فعلی `.cur` نارنجی #F59E0B)، `scrollIntoView` پس از هر draw، شنوندهٔ `wheel` برای اسکرول افقی (جهت RTL لحاظ شده).

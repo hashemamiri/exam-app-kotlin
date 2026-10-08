@@ -1442,3 +1442,35 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
 .chip.st-num.cur{background:#F59E0B;color:#fff;border-color:#D97706;font-weight:700;box-shadow:0 2px 8px rgba(245,158,11,.4)}
 .m-dark .chip.st-num{background:#2a2f3a;color:#dde3ee}
 .m-dark .chip.st-num.cur{background:#F59E0B;color:#1a1a1a}
+/* ===== V225 — پنجرهٔ اطلاعات ورود مرتب ===== */
+.cred-modal{max-width:460px}
+.cred-modal .alert{font-size:13px;line-height:1.8}
+.cred-list{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow:auto;margin:10px 0 14px}
+.cred-card{border-radius:14px;padding:10px 12px;background:var(--bg,#f3f5f9);border:1px solid rgba(0,0,0,.05)}
+.cred-name{font-weight:800;margin-bottom:6px;font-size:14px}
+.cred-cell{display:grid;grid-template-columns:72px 1fr auto;align-items:center;gap:8px;padding:3px 0}
+.cred-lbl{font-size:12px;color:var(--muted,#6b7280)}
+.cred-val{direction:ltr;text-align:left;font:600 15px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.4px;background:#fff;border-radius:8px;padding:5px 10px;overflow-wrap:anywhere;user-select:all}
+.m-dark .cred-val{background:#1f232b;color:#e8ecf3}
+.icon-btn.flat.sm{width:30px;height:30px;font-size:16px}
+.cred-modal .row{justify-content:flex-start;gap:8px}
+/* ===== V225 — دکمهٔ + ریل بدون متن + منوی بادبزنی افزودن سریع ===== */
+.dk .dk-rail-plus{grid-template-rows:auto;padding:0}
+.dk .dk-rail-plus .dk-ic{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--dk-neon,#22c6ef),#5b8cff);color:#fff;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.dk .dk-rail-plus .dk-ic svg{width:22px;height:22px;stroke-width:2.4}
+.dk .dk-rail-plus:hover .dk-ic{transform:rotate(90deg) scale(1.08)}
+.dk-qa-bg{position:fixed;inset:0;z-index:1200;background:rgba(20,40,52,.18);backdrop-filter:blur(2px);animation:dkQaFade .18s ease}
+.dk-qa-bg.out{opacity:0;transition:opacity .18s}
+.dk-qa-bg.out .dk-qa-item{opacity:0;transform:translateX(-14px) scale(.96);transition:all .16s}
+@keyframes dkQaFade{from{opacity:0}to{opacity:1}}
+.dk-qa{position:fixed;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;min-width:230px}
+.dk-qa-item{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border:0;border-radius:16px;background:var(--card,#fff);color:inherit;font:inherit;text-align:right;cursor:pointer;box-shadow:0 12px 30px rgba(24,54,68,.18),0 2px 6px rgba(24,54,68,.08);opacity:0;transform:translateX(-26px) scale(.92);animation:dkQaIn .42s cubic-bezier(.34,1.4,.64,1) forwards;animation-delay:calc(var(--i) * 55ms)}
+@keyframes dkQaIn{to{opacity:1;transform:none}}
+.dk-qa-item:hover{background:var(--dk-neon,#22c6ef);color:#fff}
+.dk-qa-item .dk-ic{width:38px;height:38px;flex:0 0 auto;border-radius:12px;background:rgba(34,198,239,.12);display:grid;place-items:center}
+.dk-qa-item:hover .dk-ic{background:rgba(255,255,255,.22)}
+.dk-qa-item .dk-ic svg{width:20px;height:20px}
+.dk-qa-txt{display:flex;flex-direction:column;line-height:1.3}
+.dk-qa-txt b{font-size:14px;font-weight:800}
+.dk-qa-txt small{font-size:11px;opacity:.7}
+.m-dark .dk-qa-item{background:#262b35;color:#e8ecf3}

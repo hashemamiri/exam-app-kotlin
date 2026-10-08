@@ -1275,6 +1275,24 @@
     join: 'ورود با کد معلم', grades: 'نمرات و نتایج', teachers: 'معلم‌های مدرسه', school: 'مشخصات مدرسه'};
   function dkIcon(name, cls) { return el('span', {class: 'dk-ic ' + (cls || ''), html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (DK_ICONS[name] || DK_ICONS.dashboard) + '</svg>'}); }
   function dkGo(panel) { view.panel = panel; view.arg = null; closeSidebar(); render(); }
+  /* V225 — منوی بادبزنی «افزودن سریع» دسکتاپ کنار دکمهٔ + ریل؛ اعمال = SiteMobile.quickAddItems (همان اپ) + آزمون چاپی جدید */
+  var DK_QA_ICON = {'آزمون جدید': 'exams', 'دعوت معلم': 'teachers', 'دانش‌آموز جدید': 'students', 'کلاس جدید': 'classes', 'مدرسه جدید': 'school', 'آزمون چاپی جدید': 'print'};
+  function dkQuickAdd(anchor) {
+    var old = document.querySelector('.dk-qa-bg'); if (old) { old.remove(); return; }
+    if (!window.SiteMobile || !window.SiteMobile.quickAddItems) return dkGo('builder');
+    var items = window.SiteMobile.quickAddItems({withPrint: true});
+    var bg = el('div', {class: 'dk-qa-bg'});
+    var r = anchor.getBoundingClientRect();
+    var menu = el('div', {class: 'dk-qa', role: 'menu', style: 'top:' + Math.round(r.top + r.height / 2) + 'px;right:' + Math.round(window.innerWidth - r.left + 12) + 'px'});
+    function close() { bg.classList.add('out'); setTimeout(function () { bg.remove(); }, 180); }
+    items.forEach(function (it, i) {
+      menu.appendChild(el('button', {class: 'dk-qa-item', role: 'menuitem', style: '--i:' + i, onclick: function () { close(); setTimeout(it[3], 60); }}, [dkIcon(DK_QA_ICON[it[0]] || 'builder'), el('span', {class: 'dk-qa-txt'}, [el('b', {text: it[0]}), el('small', {text: it[1]})])]));
+    });
+    bg.appendChild(menu); bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } });
+    document.body.appendChild(bg);
+    requestAnimationFrame(function () { var mr = menu.getBoundingClientRect(); var over = mr.bottom - window.innerHeight + 12; if (over > 0) menu.style.top = (parseInt(menu.style.top, 10) - over) + 'px'; if (mr.top < 12) menu.style.top = (parseInt(menu.style.top, 10) + (12 - mr.top)) + 'px'; });
+  }
   function renderPanel() {
     var menu = MENUS[user.role] || MENUS.student;
     document.body.classList.add('dk');
@@ -1302,6 +1320,8 @@
     var railKeys = ['menu'].concat(railItems.map(function (it) { return it[0]; }));
     var railActive = railKeys.indexOf(view.panel) >= 0 ? view.panel : 'menu';
     function railItem(key, label) {
+      /* V225 — دکمهٔ «+» ریل بدون متن زیر خود؛ لمس آن منوی بادبزنی ۵ عمل (آزمون/دانش‌آموز/مدرسه/کلاس/آزمون چاپی جدید) را باز می‌کند */
+      if (key === 'builder' && user.role === 'teacher') return el('button', {class: 'dk-rail-item dk-rail-plus' + (railActive === key ? ' active' : ''), 'aria-label': 'افزودن', 'aria-haspopup': 'menu', onclick: function (ev) { dkQuickAdd(ev.currentTarget); }}, [dkIcon(key)]);
       return el('button', {class: 'dk-rail-item' + (railActive === key ? ' active' : ''), 'aria-label': label, 'aria-current': railActive === key ? 'page' : null, onclick: function () { dkGo(key); }}, [dkIcon(key), el('span', {class: 'dk-rail-label', text: label})]);
     }
     var rail = el('nav', {class: 'dk-rail', 'aria-label': 'نوار اصلی', style: '--n:' + (railItems.length + 1)}, [railItem('menu', 'منو')].concat(railItems.map(function (it) { return railItem(it[0], it[2]); })));

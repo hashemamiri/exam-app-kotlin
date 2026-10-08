@@ -104,4 +104,18 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(js.contains("strip.addEventListener('wheel'") && js.contains("scrollIntoView({block: 'nearest', inline: 'center'"))
         assertTrue(css.contains(".chip.st-num.cur{background:#F59E0B"))
     }
+
+    @Test
+    fun v225RailQuickAddAndCredentialDialog() {
+        val app = File("site/src/app.js").readText()
+        val mobile = File("site/src/mobile.js").readText()
+        val school = File("site/src/school.js").readText()
+        val css = File("site/src/site.css").readText()
+        assertTrue(app.contains("class: 'dk-rail-item dk-rail-plus'") && app.contains("function dkQuickAdd(anchor)"))
+        assertTrue(app.contains("window.SiteMobile.quickAddItems({withPrint: true})"))
+        assertTrue(mobile.contains("function quickAddItems(opts)") && mobile.contains("quickAddItems: quickAddItems"))
+        assertTrue(mobile.contains("items.push(['آزمون چاپی جدید'"))
+        assertTrue(school.contains("class: 'modal cred-modal'") && school.contains("class: 'cred-card'"))
+        assertTrue(css.contains(".dk-qa-item{") && css.contains("@keyframes dkQaIn") && css.contains(".cred-val{"))
+    }
 }

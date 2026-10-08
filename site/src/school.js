@@ -34,8 +34,10 @@
   function credentialDlg(title, creds) {
     var bg = el('div', {class: 'modal-bg'});
     var lines = creds.map(function (c) { return (c.name ? c.name + ' — ' : '') + 'نام کاربری: ' + c.username + '  رمز: ' + c.password; });
-    var box = el('pre', {class: 'code', style: 'direction:ltr;text-align:left;white-space:pre-wrap;padding:12px;border-radius:10px;background:var(--bg);font-size:14px', text: lines.join('\n')});
-    bg.appendChild(el('div', {class: 'modal'}, [el('h2', {text: title}), el('div', {class: 'alert warn', text: 'رمز فقط همین یک بار نمایش داده می‌شود و روی سرور به‌صورت خوانا ذخیره نیست. آن را کپی کنید و به دانش‌آموز بدهید.'}), box,
+    /* V225 — به‌جای متن درهم: برای هر دانش‌آموز یک کارت مرتب (نام، نام کاربری، رمز) با دکمهٔ کپی کنار هر مقدار */
+    function cell(label, value) { return el('div', {class: 'cred-cell'}, [el('span', {class: 'cred-lbl', text: label}), el('code', {class: 'cred-val', text: value}), el('button', {class: 'icon-btn flat sm', title: 'کپی', text: '⧉', onclick: function () { copyText(value); }})]); }
+    var box = el('div', {class: 'cred-list'}, creds.map(function (c) { return el('div', {class: 'cred-card'}, [c.name ? el('div', {class: 'cred-name', text: c.name}) : null, cell('نام کاربری', c.username), cell('رمز', c.password)]); }));
+    bg.appendChild(el('div', {class: 'modal cred-modal'}, [el('h2', {text: title}), el('div', {class: 'alert warn', text: 'رمز فقط همین یک بار نمایش داده می‌شود و روی سرور به‌صورت خوانا ذخیره نیست. آن را کپی کنید و به دانش‌آموز بدهید.'}), box,
       el('div', {class: 'row'}, [el('button', {class: 'btn', text: '📋 کپی اطلاعات', onclick: function () { copyText(lines.join('\n')); }}), el('button', {class: 'btn light', text: 'بستن', onclick: function () { bg.remove(); }})])]));
     document.body.appendChild(bg);
   }
