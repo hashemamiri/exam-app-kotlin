@@ -153,11 +153,10 @@ class V223_SiteDesktopPrintButtonsTest {
         assertTrue(app.contains("rpcObj('native_teacher_schools_v61', {})") && app.contains("rpc('native_teacher_school_classes_v61', {p_school: school.id})"))
         assertTrue(app.contains("text: 'پیوستن به مدرسه'") && app.contains("text: 'بازگشت به کلاس‌ها'") && app.contains("text: 'بازگشت به مدارس'"))
         assertTrue(mobile.contains("joinSchoolDialog: joinSchoolDialog, createSchoolDialog: createSchoolDialog"))
-        assertTrue(css.contains(".dk table.tbl td{border-bottom:0;background:transparent}"))
-        // V227.2 — هالهٔ پیش‌فرض زرشکی کم‌رنگ (--zb)؛ کلاس‌ها/دانش‌آموزان/آزمون‌ها با .tbl-cyan فیروزه‌ای
-        assertTrue(css.contains(".dk table.tbl{--zb:148,40,78;") && css.contains(".dk table.tbl.tbl-cyan{--zb:34,198,239}"))
-        assertTrue(css.contains(".dk table.tbl tbody tr:nth-child(even) td{background:rgba(var(--zb),.09)"))
-        val school = src("site/src/school.js")
-        assertTrue(app.contains("function examTable(list, c) {\n    return el('table', {class: 'tbl tbl-cyan'}") && school.contains("return el('table', {class: 'tbl tbl-cyan'}"))
+        assertTrue(css.contains(".dk table.tbl td{border-bottom:0}"))
+        // V227.3 — ردیف‌ها یکی‌درمیان: فرد فیروزه‌ای کم‌رنگ، زوج زرشکی کم‌رنگ (همهٔ جدول‌ها)
+        assertTrue(css.contains(".dk table.tbl{--zc:34,198,239;--zm:148,40,78;"))
+        assertTrue(css.contains(".dk table.tbl tbody tr:nth-child(odd){--zb:var(--zc)}") && css.contains(".dk table.tbl tbody tr:nth-child(even){--zb:var(--zm)}"))
+        assertTrue(css.contains(".dk table.tbl tbody tr td{background:rgba(var(--zb),.09)"))
     }
 }
