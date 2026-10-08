@@ -19252,6 +19252,9 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 ## §V202.5
 - mobile.js `landing()`: `apkBtn` (btn غیرفعال تا `api.latestApk()` برگردد → متن «دریافت برنامه (اندروید · نسخهٔ …)» و دانلود مستقیم با `<a download>`)، `outline('ورود به سامانه')`، `.ice-tiles` از `LANDING_TILES` (کپی `tiles` در app.js renderLanding — هر دو را با هم تغییر دهید؛ تست v202_5 هر دو را پین می‌کند)، سپس `link('ساخت حساب جدید (معلم / مدیر)')` و یادداشت دانش‌آموز. CSS: `.ice-tiles/.ice-tile`. پین V154 به‌روز شد.
 
+## §V213.1
+- CI: `V208_ReleaseNotesTest.changelogTopBlockHasHeadlineBullets` — بولت اول بلوک V213 در CHANGELOG بیش از ۲۰۰ نویسه بود. قاعدهٔ دائمی: هر بولت بلوک بالای `text/CHANGELOG_FA.txt` ≤ ۲۰۰ نویسه و حداکثر ۶ بولت (ReleaseNotes.MAX_BULLETS). متن کوتاه شد؛ بدون تغییر کد.
+
 ## §V213
 - سرعت فاز ۲ (کاربر: «ادامه بده»). نسخه 1.01.03.
 - `core/cache/ExamListCache` (object): لایهٔ دیسکیِ فهرست آزمون‌ها (`List<ExamDashboardDto>`، kotlinx Json، `files/list_cache/exams-<uid>.json`، نوشتن اتمیک با .tmp) روی `SessionCache` (کلید `exams.list`). `attach(context)` در `ExamApplication.onCreate`. `read()` = RAM → دیسک (IO)؛ `write()` = RAM + دیسک؛ `clearDisk()` در `AuthViewModel.signOut`.
