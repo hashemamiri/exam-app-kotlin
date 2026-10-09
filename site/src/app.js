@@ -209,16 +209,24 @@
     if (/Password should be at least/i.test(m)) return 'رمز عبور باید حداقل ۸ کاراکتر باشد.';
     return m;
   }
-  async function ensureFreshSession() {
-    if (!session || !session.refresh_token) return;
+  /* V250 — تازه‌سازی نشست: (۱) درخواست‌های هم‌زمان یک تازه‌سازی مشترک دارند (refresh_token یک‌بارمصرف است)؛
+     (۲) قطع اینترنت/خطای سرور دیگر کاربر را خارج نمی‌کند — فقط پاسخ ۴۰۰/۴۰۱/۴۰۳ (توکن نامعتبر) نشست را پاک می‌کند. */
+  var refreshing = null;
+  function ensureFreshSession() {
+    if (!session || !session.refresh_token) return Promise.resolve();
     var exp = Number(session.expires_at || 0) * 1000;
-    if (exp && exp - Date.now() > 60 * 1000) return;
-    try {
-      var res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})});
-      var data = await res.json();
-      if (!res.ok) throw new Error(data.msg || data.error_description || 'refresh failed');
-      saveSession(data);
-    } catch (e) { saveSession(null); }
+    if (exp && exp - Date.now() > 60 * 1000) return Promise.resolve();
+    if (refreshing) return refreshing;
+    refreshing = (async function () {
+      try {
+        var res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {method: 'POST', headers: {'apikey': ANON, 'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})});
+        var data = null; try { data = await res.json(); } catch (e) { data = null; }
+        if (res.ok && data && data.access_token) saveSession(data);
+        else if (res.status === 400 || res.status === 401 || res.status === 403) saveSession(null);
+      } catch (e) { /* شبکه: نشست می‌ماند؛ درخواست بعدی دوباره تلاش می‌کند */ }
+      finally { refreshing = null; }
+    })();
+    return refreshing;
   }
   function rpc(name, params) { return http('/rest/v1/rpc/' + name, {method: 'POST', body: params || {}}); }
   async function rpcObj(name, params) {
@@ -1951,5 +1959,10 @@
   window.addEventListener('resize', ddClose); window.addEventListener('scroll', function (e) { if (ddOpen && ddOpen.menu.contains(e.target)) return; ddClose(); }, true); /* V241 — اسکرول داخل فهرست آن را نمی‌بندد */
   var ddTimer = null;
   new MutationObserver(function () { if (ddTimer) return; ddTimer = setTimeout(function () { ddTimer = null; ddEnhanceAll(); }, 30); }).observe(document.documentElement, {childList: true, subtree: true});
+  /* V250 — تور ایمنی: خطای پیش‌بینی‌نشده (Promise بدون catch یا استثنای همگام) به‌جای سکوت، یک پیام کوتاه فارسی؛ حداکثر یکی در ۴ ثانیه */
+  var lastErrToast = 0;
+  function softErr(e) { var now = Date.now(); if (now - lastErrToast < 4000) return; lastErrToast = now; try { toast(errMsg(e), 'err'); } catch (x) {} }
+  window.addEventListener('unhandledrejection', function (ev) { softErr(ev && ev.reason); });
+  window.addEventListener('error', function (ev) { if (ev && ev.error) softErr(ev.error); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

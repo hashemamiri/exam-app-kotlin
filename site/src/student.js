@@ -107,9 +107,9 @@
         var raw = await S.rpcObj('native_submit_queued_answer_v1', {p_operation: it.operation, p_exam: it.exam, p_responses: it.responses, p_images: images, p_meta: Object.assign({}, it.meta, {flushed_at_epoch_ms: Date.now(), queued_offline: true})});
         if (raw && raw.error && !/قبلاً|تکراری|already|duplicate/i.test(String(raw.error))) throw new Error(String(raw.error));
         queueDrop(it.operation); draftClear(it.exam); sent++;
-      } catch (e) { lastErr = e; it.attempts = (it.attempts || 0) + 1; it.lastError = errMsg(e); queuePut(it); if (isNetErr(e)) break; }
+      } catch (e) { lastErr = e; it.attempts = (it.attempts || 0) + 1; it.lastError = errMsg(e); try { queuePut(it); } catch (x) {} if (isNetErr(e)) break; }
     }
-    flushing = false;
+    flushing = false; /* V250 — هر خطای پیش‌بینی‌نشده هم flushing را قفل نمی‌کند (queuePut در try) */
     if (sent) toast(fa(sent) + ' پاسخ صف‌شده ارسال شد.', 'ok');
     else if (manual && lastErr) toast('ارسال نشد: ' + errMsg(lastErr), 'err');
     if (sent && typeof S.render === 'function' && S.view && S.view.panel === 'exam' && !(run && !run.finished)) S.render();
@@ -504,7 +504,7 @@
     var toolBtns = {};
     function tb(id, label, title) { var b = el('button', {class: 'wb-tool' + (tool === id ? ' on' : ''), text: label, title: title, onclick: function () { tool = id; Object.keys(toolBtns).forEach(function (k) { toolBtns[k].classList.toggle('on', k === id); }); }}); toolBtns[id] = b; return b; }
     var gridSel = el('select', {class: 'wb-sel', title: 'زمینه'}); [['blank', 'خالی'], ['lined', 'خط‌دار'], ['grid', 'شطرنجی'], ['line', 'محور اعداد'], ['quad', 'محور ۴ ناحیه'], ['first', 'ناحیهٔ اول'], ['polar', 'قطبی']].forEach(function (o) { gridSel.appendChild(el('option', {value: o[0], text: o[1]})); });
-    gridSel.addEventListener('change', function () { if (!confirm('تغییر زمینه، رسم‌های این صفحه را پاک می‌کند. ادامه؟')) { gridSel.value = grid; return; } grid = gridSel.value; blank(); });
+    gridSel.addEventListener('change', async function () { if (!(await S.confirmDlg('تغییر زمینه', 'تغییر زمینه، رسم‌های این صفحه را پاک می‌کند. ادامه؟', 'ادامه', true))) { gridSel.value = grid; return; } grid = gridSel.value; blank(); }); /* V250 — بدون confirm مرورگر */
     var colorIn = el('input', {type: 'color', value: color, class: 'wb-color', title: 'رنگ'}); colorIn.addEventListener('input', function () { color = colorIn.value; });
     var sizeIn = el('input', {type: 'range', min: 1, max: 12, value: size, class: 'wb-size', title: 'ضخامت'}); sizeIn.addEventListener('input', function () { size = Number(sizeIn.value); });
     var bar = el('div', {class: 'engine-bar wb-bar'}, [
@@ -512,12 +512,12 @@
       tb('pen', '✏️', 'قلم'), tb('eraser', '🧽', 'پاک‌کن'), tb('line', '╱', 'خط'), tb('arrow', '➚', 'پیکان'), tb('rect', '▭', 'مستطیل'), tb('circle', '◯', 'دایره'), tb('text', 'T', 'متن'),
       colorIn, sizeIn, gridSel,
       el('button', {class: 'wb-tool', text: '↶', title: 'برگرداندن', onclick: function () { var d = undo.pop(); if (!d) return; var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = d; }}),
-      el('button', {class: 'wb-tool', text: '🗑', title: 'پاک کردن صفحه', onclick: function () { if (confirm('کل این صفحه پاک شود؟')) { push(); blank(); } }}),
+      el('button', {class: 'wb-tool', text: '🗑', title: 'پاک کردن صفحه', onclick: async function () { if (await S.confirmDlg('پاک کردن صفحه', 'کل این صفحه پاک شود؟', 'پاک شود', true)) { push(); blank(); } }}),
       el('span', {class: 'grow'}), status,
       el('button', {class: 'btn light sm', text: '◀', title: 'صفحهٔ قبل', onclick: function () { if (cur > 0) { savePage(); loadPage(cur - 1); } }}),
       el('button', {class: 'btn light sm', text: '▶', title: 'صفحهٔ بعد', onclick: function () { savePage(); if (cur < pages.length - 1) loadPage(cur + 1); else if (pages.length < WHITEBOARD_MAX_PAGES) { pages.push(newPage()); loadPage(pages.length - 1); } else toast('حداکثر ' + fa(WHITEBOARD_MAX_PAGES) + ' صفحه.', 'err'); }}),
       el('button', {class: 'btn sm', text: '✅ ' + (opts && opts.doneLabel ? opts.doneLabel : 'ثبت به‌عنوان پاسخ'), onclick: function () { savePage(); var out = pages.filter(function (p) { return p.data; }).map(function (p) { return p.data; }); close(); if (out.length) onDone(out); }}),
-      el('button', {class: 'btn light sm', text: '✕', title: 'بستن بدون ثبت', onclick: function () { if (confirm('تخته بدون ثبت بسته شود؟')) close(); }})
+      el('button', {class: 'btn light sm', text: '✕', title: 'بستن بدون ثبت', onclick: async function () { if (await S.confirmDlg('بستن تخته', 'تخته بدون ثبت بسته شود؟', 'بستن', true)) close(); }})
     ]);
     function close() { window.removeEventListener('pointerup', up); bg.remove(); document.body.style.overflow = ''; }
     var area = el('div', {class: 'wb-area'}, [canvas]);

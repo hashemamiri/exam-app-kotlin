@@ -986,7 +986,7 @@
         if (editTok && /"t":"photo"/.test(editTok)) { var st3 = d.createElement('style'); st3.textContent = '#anCats,#anShapes,.an-split>.gf-types{display:none!important}'; d.head.appendChild(st3); }
         /* بستن روکش وب بدون درج → بستن ما */
         var ovId = {geo: 'gfOverlay', graph: 'grOverlay', axis: 'grOverlay', table: 'tbOverlay'}[kind];
-        var poll = setInterval(function () { if (!d.body.contains(overlay) && false) return; var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);
+        var poll = setInterval(function () { var anyOpen = Array.prototype.some.call(d.querySelectorAll('[id$="Overlay"], .gf-overlay'), function (o) { return o.classList.contains('open'); }); if (!anyOpen && tries > 1) { clearInterval(poll); if (document.body.contains(overlay)) close(); } tries++; }, 300);
       })();
     });
     S.engineHtml('print').then(function (h) { if (h) iframe.srcdoc = h; else close(); });

@@ -9,7 +9,7 @@
 (function () {
   var S = window.ExamSite;
   if (!S) return;
-  var el = S.el, esc = S.esc, fa = S.fa, toast = S.toast, errMsg = S.errMsg;
+  var el = S.el, esc = S.esc, fa = S.fa, en = S.en, toast = S.toast, errMsg = S.errMsg; /* V250 — en نبود → ReferenceError در ورود اکسل */
   function chk(r) { if (r && typeof r === 'object' && r.error) throw new Error(String(r.error)); return r || {}; }
   function fld(label, input, hint) { return el('div', {class: 'field'}, [el('label', {text: label}), input, hint ? el('div', {class: 'muted', style: 'font-size:12px', text: hint}) : null]); }
   function inp(attrs) { return el('input', Object.assign({type: 'text'}, attrs || {})); }
@@ -304,52 +304,6 @@
     var isEdit = !!s;
     if (!isEdit) return newStudentsDialog(classes, defaultClass, done, afterCreate); /* V224 — فرم ساخت = پنجرهٔ اپ */
     return editStudentDialog(s, done); /* V224.1 — فرم ویرایش = پنجرهٔ اپ */
-    var bg = el('div', {class: 'modal-bg'}); var msg = el('div');
-    var first = inp({value: s ? (s.first_name || '') : ''}), last = inp({value: s ? (s.last_name || '') : ''});
-    if (isEdit && !s.first_name && s.full_name) { var parts = s.full_name.trim().split(/\s+/); first.value = parts.shift() || ''; last.value = parts.join(' '); }
-    var un = inp({value: s ? (s.username || '') : '', style: 'direction:ltr', placeholder: 'a-z 0-9 _ (۴ تا ۲۰)'});
-    var pw = inp({value: isEdit ? '' : genPassword(), style: 'direction:ltr', placeholder: isEdit ? 'خالی = بدون تغییر' : ''});
-    var gen = el('div', {class: 'row', style: 'gap:6px'}); var gender = s ? (s.gender || '') : '';
-    function drawGen() { gen.innerHTML = ''; [['male', 'پسر'], ['female', 'دختر']].forEach(function (g) { gen.appendChild(el('button', {type: 'button', class: 'chip ' + (gender === g[0] ? 'brand' : 'off'), text: g[1], onclick: function () { gender = g[0]; drawGen(); }})); }); }
-    drawGen();
-    var father = inp({value: s ? (s.father_name || '') : ''}), grade = selectOf(GRADES, s ? s.grade : ''), field = selectOf(FIELDS, s ? s.field_of_study : '');
-    var cls = el('select'); cls.appendChild(el('option', {value: '', text: '— بدون کلاس —'})); (classes || []).forEach(function (k) { cls.appendChild(el('option', {value: k.id, text: k.name})); }); if (defaultClass) cls.value = defaultClass;
-    var b = el('button', {class: 'btn', text: isEdit ? 'ذخیره' : 'ساخت حساب'});
-    b.addEventListener('click', async function () {
-      msg.innerHTML = '';
-      try {
-        var u = un.value.trim().toLowerCase();
-        if (!first.value.trim()) throw new Error('نام دانش‌آموز را وارد کنید.');
-        if (!USERNAME_RE.test(u)) throw new Error('نام کاربری باید ۴ تا ۲۰ کاراکتر انگلیسی، عدد یا _ باشد.');
-        if (!isEdit && (pw.value.length < 8 || pw.value.length > 72)) throw new Error('رمز عبور باید بین ۸ تا ۷۲ کاراکتر باشد.');
-        if (isEdit && pw.value && (pw.value.length < 8 || pw.value.length > 72)) throw new Error('رمز جدید باید بین ۸ تا ۷۲ کاراکتر باشد.');
-        if (gender !== 'male' && gender !== 'female') throw new Error('جنسیت را انتخاب کنید.');
-        b.disabled = true;
-        if (isEdit) {
-          await manageStudent({action: 'update', id: s.id, first_name: first.value.trim(), last_name: last.value.trim(), username: u, gender: gender, password: pw.value || ''});
-          chk(await S.rpcObj('native_save_student_extra_v28', {p_student: s.id, p_username: u, p_father_name: father.value.trim(), p_grade: grade.value.trim(), p_field: field.value.trim()}));
-          bg.remove(); toast('ذخیره شد.', 'ok');
-          if (pw.value) credentialDlg('رمز جدید دانش‌آموز', [{name: first.value.trim() + ' ' + last.value.trim(), username: u, password: pw.value}]);
-        } else {
-          var r = await manageStudent({action: 'create', first_name: first.value.trim(), last_name: last.value.trim(), username: u, password: pw.value, gender: gender, class_id: cls.value || ''});
-          if (!r.id) throw new Error('شناسه دانش‌آموز از سرور دریافت نشد.');
-          await saveExtra(r.id, u, father.value.trim(), grade.value.trim(), field.value.trim());
-          if (afterCreate) { try { await afterCreate(r.id); } catch (e2) { console.warn(e2); } }
-          bg.remove(); toast('حساب ساخته شد.', 'ok');
-          credentialDlg('اطلاعات ورود دانش‌آموز', [{name: first.value.trim() + ' ' + last.value.trim(), username: u, password: pw.value}]);
-        }
-        done();
-      } catch (e) { msg.innerHTML = ''; msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
-      b.disabled = false;
-    });
-    bg.appendChild(el('div', {class: 'modal'}, [el('button', {class: 'x', text: '✕', onclick: function () { bg.remove(); }}), el('h2', {text: isEdit ? 'ویرایش دانش‌آموز' : 'دانش‌آموز جدید'}), msg,
-      el('div', {class: 'grid2'}, [fld('نام', first), fld('نام خانوادگی', last)]),
-      el('div', {class: 'grid2'}, [fld('نام کاربری', un), fld(isEdit ? 'رمز جدید (اختیاری)' : 'رمز عبور', el('div', {class: 'row', style: 'gap:6px'}, [pw, el('button', {type: 'button', class: 'btn light sm', text: '🎲', title: 'رمز تصادفی', onclick: function () { pw.value = genPassword(); }})]))]),
-      fld('جنسیت', gen),
-      el('div', {class: 'grid3'}, [fld('نام پدر (اختیاری)', father), fld('پایه', grade), fld('رشته', field)]),
-      isEdit ? null : fld('کلاس', cls),
-      el('div', {class: 'row', style: 'margin-top:8px'}, [b, el('button', {class: 'btn light', text: 'انصراف', onclick: function () { bg.remove(); }})])]));
-    document.body.appendChild(bg);
   }
 
   /* ---------------- افزودن گروهی ---------------- */
@@ -663,5 +617,5 @@
     } catch (e) { S.showErr(c, e); }
   }
 
-  window.SiteSchool = {studentsPage: studentsPage, studentForm: studentForm, bulkForm: bulkForm, credentialDlg: credentialDlg, manageStudent: manageStudent, /* V203 — برای پنل مدیر دسکتاپ */ rosterDlg: rosterDlg, classShareChip: classShareChip, joinSchoolCard: joinSchoolCard, managerRequestsCard: managerRequestsCard, bankPage: bankPage, studentForm: studentForm, bulkForm: bulkForm, manageStudent: manageStudent, classPickDlg: classPickDlg, credentialDlg: credentialDlg};
+  window.SiteSchool = {studentsPage: studentsPage, studentForm: studentForm, bulkForm: bulkForm, credentialDlg: credentialDlg, manageStudent: manageStudent, /* V203 — برای پنل مدیر دسکتاپ */ rosterDlg: rosterDlg, classShareChip: classShareChip, joinSchoolCard: joinSchoolCard, managerRequestsCard: managerRequestsCard, bankPage: bankPage, classPickDlg: classPickDlg};
 })();

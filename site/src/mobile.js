@@ -933,7 +933,7 @@
     c.appendChild(chipRow(tabs, settingsTab, function (k) { settingsTab = k; settingsScreen(c); }));
     if (settingsTab === 'appearance') return appearanceSection(c);
     if (settingsTab === 'data') {
-      if (u.role === 'teacher') c.appendChild(SiteExtras.backupCard());
+      if (u.role === 'teacher') c.appendChild(window.SiteExtras.backupCard());
       else if (u.role === 'manager') c.appendChild(managerBackupCard());
       else c.appendChild(el('div', {class: 'card m-pcard', text: 'پشتیبان کامل داده‌ها فقط برای کادر مدرسه در دسترس است.'}));
       return;
@@ -976,7 +976,7 @@
   function managerBackupCard() {
     var msg = el('div');
     return el('div', {class: 'card m-pcard'}, [el('h3', {text: 'پشتیبان داده‌های مدرسه'}), el('p', {class: 'muted', text: 'مدرسه‌ها، معلم‌ها، کلاس‌ها و دانش‌آموزان در یک فایل JSON ذخیره می‌شوند.'}), msg,
-      el('button', {class: 'btn', text: 'ساخت پشتیبان مدرسه', onclick: async function () { msg.innerHTML = ''; try { var raw = await S.rpcObj('native_manager_export_backup_v61', {}); if (raw && raw.error) throw new Error(String(raw.error)); SiteExtras.download('school-backup.json', JSON.stringify(raw, null, 2), 'application/json'); toast('پشتیبان مدرسه ذخیره شد.', 'ok'); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); } }})]);
+      el('button', {class: 'btn', text: 'ساخت پشتیبان مدرسه', onclick: async function () { msg.innerHTML = ''; try { var raw = await S.rpcObj('native_manager_export_backup_v61', {}); if (raw && raw.error) throw new Error(String(raw.error)); window.SiteExtras.download('school-backup.json', JSON.stringify(raw, null, 2), 'application/json'); toast('پشتیبان مدرسه ذخیره شد.', 'ok'); } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: S.errMsg(e)})); } }})]);
   }
   function aboutSection(c) {
     var b = S.config || {};

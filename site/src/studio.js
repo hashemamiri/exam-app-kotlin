@@ -109,7 +109,7 @@
     var bar = el('div', {class: 'studio-bar'}), stage = el('div', {class: 'studio-stage'}), tools = el('div', {class: 'studio-tools'});
     root.appendChild(bar); root.appendChild(stage); root.appendChild(tools); document.body.appendChild(root);
     document.body.style.overflow = 'hidden';
-    function close() { root.remove(); document.body.style.overflow = ''; }
+    function close() { root.remove(); document.body.style.overflow = ''; try { window.removeEventListener('resize', paintStage); } catch (e) {} } /* V250 — نشت شنوندهٔ resize */
 
     /* --- تصویر پایه (چرخش + صاف‌سازی + قرینه) --- */
     var baseCache = null;
@@ -168,7 +168,7 @@
       if (!st.orig) return; e.preventDefault(); var p = norm(e);
       if (st.split) { var hit = -1; st.boxes.forEach(function (b, i) { if (p.x >= b.l && p.x <= b.r && p.y >= b.t && p.y <= b.b) hit = i; }); if (hit >= 0) { st.selBox = hit; var b0 = st.boxes[hit]; var nearBR = Math.abs(p.x - b0.r) < 0.05 && Math.abs(p.y - b0.b) < 0.05; drag = {kind: nearBR ? 'boxsize' : 'boxmove', p: p, b: Object.assign({}, b0)}; } paintStage(); return; }
       if (st.tab === 'draw' && st.draw !== 'none') {
-        if (st.draw === 'text') { var t = prompt('متن:'); if (t) { push({kind: 'text', x1: clamp01(p.x), y1: clamp01(p.y), x2: p.x, y2: p.y, color: st.color, text: t}); } return; }
+        if (st.draw === 'text') { S.promptDlg('متن روی تصویر', '', 'متن', '').then(function (t) { if (t && t.trim()) { push({kind: 'text', x1: clamp01(p.x), y1: clamp01(p.y), x2: p.x, y2: p.y, color: st.color, text: t.trim()}); } }); return; } /* V250 — بدون prompt مرورگر */
         if (st.draw === 'eraser') { var hi = hitShape(st.shapes, p.x, p.y); if (hi >= 0) { st.redo = []; st.shapes.splice(hi, 1); st.sel = -1; invalidateShapes(); } return; }
         if (st.draw === 'eyedropper') { var b = base(), d = b.getContext('2d').getImageData(Math.round(clamp01(p.x) * (b.width - 1)), Math.round(clamp01(p.y) * (b.height - 1)), 1, 1).data; st.color = '#' + [d[0], d[1], d[2]].map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join(''); drawTools(); toast('رنگ برداشته شد.', 'ok'); return; }
         drag = {kind: 'shape', sp: {kind: st.draw, x1: p.x, y1: p.y, x2: p.x, y2: p.y, color: st.color, pts: st.draw === 'free' ? [[p.x, p.y]] : null}}; return;
