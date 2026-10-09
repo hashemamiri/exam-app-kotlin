@@ -1626,3 +1626,13 @@ input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var
 .dk .wallet-top>.balance{grid-column:2;grid-row:1;display:flex;flex-direction:column;justify-content:center}
 .dk .wallet-top>.card{grid-column:1;grid-row:1}
 .dk .wallet-top .balance .v{font-size:30px}
+/* ===== V245 — کارت شارژ دسکتاپ: ستون تعرفه سمت چپ ===== */
+.topup-card{position:relative}
+.tariff{display:none}
+.dk .topup-card{display:grid;grid-template-columns:1fr 230px;grid-template-rows:auto;column-gap:18px;align-items:start}
+.dk .topup-card>h3{grid-column:1}
+.dk .topup-card>.tariff{display:flex;flex-direction:column;gap:4px;grid-column:2;grid-row:1/span 5;border-right:1px solid var(--line);padding-right:16px;align-self:stretch;justify-content:center}
+.dk .topup-card>.topup-chips,.dk .topup-card>.topup-row,.dk .topup-card>div:not(.tariff){grid-column:1}
+.tariff-h{font-weight:800;font-size:13px;color:var(--brand,#39758a);margin-bottom:4px}
+.tariff-r{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.tariff-r b{color:var(--ink);font-weight:700;white-space:nowrap}

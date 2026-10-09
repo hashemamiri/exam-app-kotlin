@@ -253,7 +253,12 @@
   function topUpCard(balance, refresh) {
     var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: 200000, style: 'direction:ltr'});
     var msg = el('div');
-    var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), el('p', {class: 'muted', style: 'font-size:13px;margin:0 0 10px', text: 'پرداخت فقط در سرور تأیید می‌شود؛ حداقل ۱۰۰٬۰۰۰ · مضرب ۱۰٬۰۰۰ · سقف موجودی ۱۰٬۰۰۰٬۰۰۰ تومان.'}),
+    /* V245 — بدون متن‌های راهنما؛ ستون تعرفه سمت چپ (همان نرخ‌های سرور: سؤال ۱۰۰۰، تصویر ۱۰۰۰، صوت ۲/۴/۶ هزار، چاپ ۱۰۰۰+۱۰۰۰ تصویر، بازیابی ۱۰۰۰/سؤال) */
+    var tariff = el('div', {class: 'tariff'}, [el('div', {class: 'tariff-h', text: 'تعرفه‌ها'})].concat([
+      ['هر سؤال آزمون آنلاین', '۱٬۰۰۰'], ['هر تصویر (سؤال/گزینه)', '۱٬۰۰۰'], ['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰'], ['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰'], ['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰'],
+      ['چاپ: هر سؤال', '۱٬۰۰۰'], ['چاپ: هر تصویر', '۱٬۰۰۰'], ['بازیابی پشتیبان: هر سؤال', '۱٬۰۰۰']
+    ].map(function (r) { return el('div', {class: 'tariff-r'}, [el('span', {text: r[0]}), el('b', {text: r[1] + ' تومان'})]); })));
+    var card = el('div', {class: 'card topup-card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), tariff,
       /* V243 — چیدمان جمع‌وجور: چیپ‌های مبلغ (انتخاب‌شده رنگی) + فیلد کوتاه + دکمهٔ معمولی در یک ردیف */
       el('div', {class: 'row topup-chips'}, [100000, 200000, 500000, 1000000].map(function (v) { var b = el('button', {class: 'chip topup-chip' + (num(amt.value) === v ? ' on' : ''), type: 'button', text: S.money(v), onclick: function () { amt.value = v; card.querySelectorAll('.topup-chip').forEach(function (x) { x.classList.toggle('on', x === b); }); }}); return b; })),
       el('div', {class: 'row topup-row'}, [el('label', {class: 'topup-lbl', text: 'مبلغ (تومان)'}), amt, el('button', {class: 'btn topup-go', text: 'رفتن به درگاه امن', onclick: async function () {
@@ -271,8 +276,7 @@
           msg.appendChild(el('div', {class: 'alert info', html: 'سفارش ' + fa(d.order_id) + ' ثبت شد؛ در حال انتقال به درگاه امن' + (d.provider === 'zarinpal' ? ' زرین‌پال' : d.provider === 'idpay' ? ' آیدی‌پی' : '') + (d.sandbox ? ' (آزمایشی)' : '') + '… <a href="' + esc(d.url) + '" target="_blank" rel="noopener">اگر منتقل نشدید اینجا بزنید</a>'}));
           window.open(d.url, '_blank', 'noopener');
         } catch (e) { msg.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
-      }})]), msg,
-      el('p', {class: 'muted', style: 'font-size:12px;margin:8px 0 0', text: 'پس از بازگشت از درگاه، این صفحه را نوسازی کنید تا موجودی به‌روز شود. هر سؤال آزمون آنلاین ۱٬۰۰۰ تومان.'})]);
+      }})]), msg]);
     amt.classList.add('topup-amt'); amt.addEventListener('input', function () { card.querySelectorAll('.topup-chip').forEach(function (x) { x.classList.toggle('on', num(en(x.textContent)) === num(en(amt.value))); }); });
     return card;
   }
