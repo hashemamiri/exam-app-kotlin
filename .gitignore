@@ -18,3 +18,4 @@ supabase/.temp/
 # V192
 __pycache__/
 *.pyc
+app/google-services.json

@@ -777,6 +777,17 @@ private fun AuthenticatedExamApp(
     val updateState by updateViewModel.state.collectAsState()
     var updatePromptDismissed by rememberSaveable(user.id) { mutableStateOf(false) }
     LaunchedEffect(user.id) { updateViewModel.check(BuildConfig.VERSION_CODE) }
+    // V232 — اعلان‌ها: ثبت توکن FCM برای این کاربر + درخواست مجوز اعلان (اندروید ۱۳+) فقط یک بار
+    val pushContext = LocalContext.current
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(user.id) {
+        if (!ir.exam.app.core.push.PushRegistrar.available) return@LaunchedEffect
+        ir.exam.app.core.push.PushMessagingService.ensureChannel(pushContext)
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(pushContext, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        ir.exam.app.core.push.PushRegistrar.sync(pushContext, user.id)
+    }
 
     val latestApkPath by rememberUpdatedState(updateState.downloadedApkPath)
     fun openInstaller(path: String) {

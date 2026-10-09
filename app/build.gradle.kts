@@ -9,6 +9,11 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// V232 — پلاگین google-services فقط وقتی فایل google-services.json هست (در CI از Secret GOOGLE_SERVICES_JSON_B64 ساخته می‌شود؛
+// بدون آن، اپ کامپایل می‌شود ولی اعلان‌ها خاموش می‌مانند).
+val hasGoogleServices = file("google-services.json").exists()
+if (hasGoogleServices) apply(plugin = "com.google.gms.google-services")
+
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -45,6 +50,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("Boolean", "PUSH_ENABLED", "$hasGoogleServices") // V232
 
         // V78.2 — کتابخانهٔ بومیِ OCR برای هر چهار ABI ساخته می‌شود و ~۱۲٫۲MB
         // به APK اضافه می‌کرد. گوشی‌های واقعی همگی ARM هستند؛ x86/x86_64 فقط
@@ -147,6 +153,8 @@ dependencies {
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0")) // V232
+    implementation("com.google.firebase:firebase-messaging") // V232 — اعلان‌ها
     implementation("io.ktor:ktor-client-okhttp:3.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")

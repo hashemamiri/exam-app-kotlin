@@ -67,9 +67,12 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
         run: |
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_ANON_KEY"
+          # V232 — اعلان‌ها: google-services.json از Secret (اگر خالی باشد، اپ بدون اعلان ساخته می‌شود)
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json && python3 -c "import json;json.load(open('app/google-services.json'))" && echo "google-services.json آماده شد"; else echo "GOOGLE_SERVICES_JSON_B64 خالی است؛ اعلان‌ها غیرفعال"; fi
           # V210 — شمارهٔ نسخه از فایل text/APP_VERSION.txt (قالب a.bb.cc مثل 1.01.01؛ هر آپدیت عدد آخر یکی زیاد می‌شود).
           # versionCode باید همیشه از نسخه‌های قبلی (زمان‌محور، ~۲۱۰ میلیون) بزرگ‌تر باشد وگرنه اندروید نصب روی نسخهٔ قبلی را رد می‌کند:
           # code = 1000000000 + a*1000000 + bb*10000 + cc*100  → 1.01.01 = 1001010100

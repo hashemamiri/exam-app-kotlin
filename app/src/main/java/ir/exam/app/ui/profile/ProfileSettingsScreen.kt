@@ -312,6 +312,22 @@ private fun AppearanceSection(settings: AppearanceSettings, viewModel: ProfileSe
                     }
                     Switch(settings.persianDigits, viewModel::setPersianDigits)
                 }
+                // V232 — اعلان‌ها (فقط وقتی اپ با FCM ساخته شده)
+                if (ir.exam.app.core.push.PushRegistrar.available) {
+                    val pushCtx = LocalContext.current
+                    val pushScope = rememberCoroutineScope()
+                    var pushOn by remember { mutableStateOf(ir.exam.app.core.push.PushRegistrar.isEnabled(pushCtx)) }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("اعلان‌ها")
+                            Text("نمرهٔ جدید، باز شدن آزمون و درخواست‌های مدیر", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Switch(pushOn, { on ->
+                            pushOn = on
+                            pushScope.launch { ir.exam.app.core.push.PushRegistrar.setEnabled(pushCtx, on, viewModel.currentUserId()) }
+                        })
+                    }
+                }
                 // V229 — حالت پرکنتراست (آینهٔ کلید سایت)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

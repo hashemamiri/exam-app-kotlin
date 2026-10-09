@@ -1,6 +1,7 @@
 package ir.exam.app.ui.profile
 
 import ir.exam.app.core.network.UserFacingError
+import io.github.jan.supabase.auth.auth
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -178,6 +179,8 @@ class ProfileSettingsViewModel(
     }
     fun setPersianDigits(enabled: Boolean) = viewModelScope.launch { appearance.setPersianDigits(enabled) }
     fun setHighContrast(enabled: Boolean) = viewModelScope.launch { appearance.setHighContrast(enabled) }
+    /** V232 — شناسهٔ کاربر فعلی برای ثبت توکن اعلان (null اگر نشستی نیست) */
+    fun currentUserId(): String? = runCatching { ir.exam.app.data.remote.SupabaseProvider.client.auth.currentUserOrNull()?.id }.getOrNull()
     fun resetAppearance() = viewModelScope.launch { appearance.reset() }
 
     private fun saveProfile(profile: NativeProfile, message: String) = viewModelScope.launch {
