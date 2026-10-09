@@ -980,7 +980,7 @@
   }
   function aboutSection(c) {
     var b = S.config || {};
-    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'دربارهٔ آزمون‌ساز — نسخهٔ وب'}),
+    c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'دربارهٔ آزمون آنلاین — نسخهٔ وب'}),
       el('div', {class: 'm-lv'}, [el('span', {text: 'نشانی'}), el('b', {text: location.host || 'onlineexam.ir'})]),
       el('div', {class: 'm-lv'}, [el('span', {text: 'حالت'}), el('b', {text: window.matchMedia('(display-mode: standalone)').matches ? 'نصب‌شده (PWA)' : 'مرورگر'})]),
       el('p', {class: 'muted', text: 'سایت با هر انتشار خودکار به‌روز می‌شود؛ اگر پیام «نسخهٔ جدید آماده است» دیدید، صفحه را دوباره باز کنید.'}),
@@ -998,10 +998,10 @@
     var mail = 'info@onlineexam.ir';
     c.appendChild(el('div', {class: 'card m-pcard'}, [el('h3', {text: 'تماس با ما و نظرات'}),
       el('p', {class: 'muted', text: 'پیشنهاد، گزارش اشکال یا هر نظری دارید، برای ما بنویسید؛ همهٔ پیام‌ها خوانده می‌شوند.'}),
-      el('div', {class: 'm-lv'}, [el('span', {text: 'ایمیل'}), el('a', {href: 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون‌ساز'), text: mail, style: 'direction:ltr;font-weight:800'})]),
+      el('div', {class: 'm-lv'}, [el('span', {text: 'ایمیل'}), el('a', {href: 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون آنلاین'), text: mail, style: 'direction:ltr;font-weight:800'})]),
       el('div', {class: 'm-lv'}, [el('span', {text: 'وضعیت سرویس'}), el('a', {href: '/status.html', target: '_blank', rel: 'noopener', text: 'onlineexam.ir/status.html', style: 'direction:ltr;font-weight:800'})]), /* V228 */
       el('div', {class: 'row', style: 'gap:8px;margin-top:8px'}, [
-        el('button', {class: 'btn', style: 'flex:1', text: 'ارسال ایمیل', onclick: function () { location.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون‌ساز'); }}),
+        el('button', {class: 'btn', style: 'flex:1', text: 'ارسال ایمیل', onclick: function () { location.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('نظر دربارهٔ آزمون آنلاین'); }}),
         el('button', {class: 'btn light', style: 'flex:1', text: 'کپی نشانی', onclick: function () { (navigator.clipboard ? navigator.clipboard.writeText(mail) : Promise.reject()).then(function () { toast('نشانی ایمیل کپی شد.', 'ok'); }, function () { toast(mail, 'info'); }); }})])]));
   }
   var LS_AVATAR = 'examsite.avatar.';

@@ -1019,7 +1019,7 @@
     root.appendChild(page);
   }
   var APP_MARK_SVG = '<svg viewBox="0 0 108 108" width="100%" height="100%" aria-hidden="true"><rect x="0" y="0" width="108" height="108" fill="#5B3FA3"/><rect x="20" y="24" width="68" height="60" rx="8" fill="#fff"/><path fill="#5B3FA3" d="M32 38h30v6H32zM32 52h44v6H32zM32 66h34v6H32z"/><path fill="#2E7D32" d="M69 35l5 5 10-11 4 4-14 15-9-9z"/></svg>'; /* V222 — همان آیکون اپ اندروید (ic_exam_app) */
-  function brandEl(label) { return el('div', {class: 'logo'}, [el('span', {class: 'mark', html: APP_MARK_SVG}), el('span', {text: label || 'آزمون‌ساز'})]); }
+  function brandEl(label) { return el('div', {class: 'logo'}, [el('span', {class: 'mark', html: APP_MARK_SVG}), el('span', {text: label || 'آزمون آنلاین'})]); }
 
   function demoPrint() {
     var exam = {title: 'آزمون نمونه', subject: 'ریاضی', duration: 60, total_score: 6,
@@ -1255,7 +1255,7 @@
     var ios = !deferredInstall;
     var bar = el('div', {class: 'pwa-bar', id: 'pwa-bar'}, [
       el('img', {src: '/pwa/icon-192.png', alt: ''}),
-      el('div', {class: 't'}, [el('b', {text: 'نصب آزمون‌ساز روی گوشی'}), el('span', {text: ios ? 'در Safari دکمهٔ «اشتراک» و سپس «Add to Home Screen» را بزنید.' : 'مثل یک برنامه، تمام‌صفحه و با آیکون روی صفحهٔ اصلی.'})]),
+      el('div', {class: 't'}, [el('b', {text: 'نصب آزمون آنلاین روی گوشی'}), el('span', {text: ios ? 'در Safari دکمهٔ «اشتراک» و سپس «Add to Home Screen» را بزنید.' : 'مثل یک برنامه، تمام‌صفحه و با آیکون روی صفحهٔ اصلی.'})]),
       ios ? null : el('button', {class: 'btn', text: 'نصب', onclick: function () { if (!deferredInstall) return; deferredInstall.prompt(); deferredInstall.userChoice.then(function () { deferredInstall = null; bar.remove(); }); }}),
       el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bar.remove(); try { localStorage.setItem('pwa.dismiss', String(Date.now())); } catch (e) {} }})
     ].filter(Boolean));
