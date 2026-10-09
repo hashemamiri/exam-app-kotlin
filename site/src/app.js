@@ -1931,10 +1931,13 @@
         menu.appendChild(it);
       });
       document.body.appendChild(menu);
-      var r = btn.getBoundingClientRect(), mh = Math.min(menu.scrollHeight, 320), below = window.innerHeight - r.bottom;
-      menu.style.minWidth = Math.max(r.width, 140) + 'px'; menu.style.maxHeight = '320px';
+      var r = btn.getBoundingClientRect(), below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+      var maxH = Math.min(360, Math.max(below, above)); /* V241 — ارتفاع بر اساس جای واقعی؛ بقیه با اسکرول */
+      menu.style.minWidth = Math.max(r.width, 140) + 'px'; menu.style.maxHeight = maxH + 'px';
+      var mh = Math.min(menu.scrollHeight, maxH);
       menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 160) - 8)) + 'px';
-      if (below < mh + 12 && r.top > mh + 12) { menu.style.top = (r.top - mh - 6) + 'px'; menu.classList.add('up'); } else menu.style.top = (r.bottom + 6) + 'px';
+      if (below < mh && above > below) { menu.style.top = Math.max(8, r.top - mh - 6) + 'px'; menu.classList.add('up'); } else menu.style.top = (r.bottom + 6) + 'px';
+      menu.addEventListener('wheel', function (ev) { ev.stopPropagation(); }, {passive: true});
       btn.classList.add('open'); ddOpen = {s: s, btn: btn, menu: menu};
       var on = menu.querySelector('.dd-item.on'); if (on) on.scrollIntoView({block: 'nearest'});
     });
@@ -1942,7 +1945,7 @@
   function ddEnhanceAll(root) { if (document.body.classList.contains('m-mode')) return; (root || document).querySelectorAll('select').forEach(ddEnhance); }
   document.addEventListener('click', function (e) { if (ddOpen && !ddOpen.menu.contains(e.target)) ddClose(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') ddClose(); });
-  window.addEventListener('resize', ddClose); window.addEventListener('scroll', ddClose, true);
+  window.addEventListener('resize', ddClose); window.addEventListener('scroll', function (e) { if (ddOpen && ddOpen.menu.contains(e.target)) return; ddClose(); }, true); /* V241 — اسکرول داخل فهرست آن را نمی‌بندد */
   var ddTimer = null;
   new MutationObserver(function () { if (ddTimer) return; ddTimer = setTimeout(function () { ddTimer = null; ddEnhanceAll(); }, 30); }).observe(document.documentElement, {childList: true, subtree: true});
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

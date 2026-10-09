@@ -1593,7 +1593,9 @@ html body:not(.m-mode) select.dd-native{position:absolute!important;opacity:0!im
 .dd-btn.open{box-shadow:0 0 0 3px var(--brand-soft,#e6f0f3)}
 .dd-btn:disabled{opacity:.55;cursor:default}
 .dd-btn.empty{color:var(--muted)}
-.dd-menu{position:fixed;z-index:200;display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 16px 40px rgba(60,120,170,.18);overflow:auto;direction:rtl;animation:ddIn .12s ease-out}
+.dd-menu{position:fixed;z-index:200;display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 16px 40px rgba(60,120,170,.18);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;direction:rtl;animation:ddIn .12s ease-out;scrollbar-width:none;-ms-overflow-style:none}
+.dd-menu::-webkit-scrollbar{display:none;width:0;height:0} /* V241 — اسکرول با چرخ/کشیدن، بدون نوار اسکرول */
+.dd-item{flex:none}
 @keyframes ddIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .dd-item{font:inherit;color:var(--ink);text-align:right;border:1px solid transparent;border-radius:999px;padding:8px 14px;background:transparent;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s}
 .dd-item:hover{background:#eef1f6}
