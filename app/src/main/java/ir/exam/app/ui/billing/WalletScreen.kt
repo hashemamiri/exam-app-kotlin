@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -66,7 +68,7 @@ import ir.exam.app.ui.app.neumorphic69Colors
 import java.time.Instant
 import java.time.ZoneId
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun WalletScreen(refreshKey: Int = 0) {
     val context = LocalContext.current
@@ -141,11 +143,14 @@ fun WalletScreen(refreshKey: Int = 0) {
                     )
                     Spacer(Modifier.weight(1f))
                     // V247 — مثل سایت: به‌جای «هزینه هر سؤال»، دکمهٔ «تعرفه‌ها» (پنجرهٔ ۸ ردیفی)
+                    // V247.1 — سمت چپ کارت (End در RTL) و کوتاه‌تر (۳۰dp)
                     TextButton(
                         onClick = { tariffOpen = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         modifier = Modifier
+                            .align(Alignment.End)
+                            .height(30.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White.copy(alpha = .18f))
                     ) { Text("تعرفه‌ها", fontWeight = FontWeight.Bold) }
@@ -174,8 +179,9 @@ fun WalletScreen(refreshKey: Int = 0) {
                         label = { Text("مبلغ به تومان") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(100_000L, 250_000L, 500_000L).forEach { amount ->
+                    // V247.1 — پیشنهاد ۱٬۰۰۰٬۰۰۰ هم اضافه شد؛ FlowRow تا در گوشی باریک به سطر بعد برود
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(100_000L, 250_000L, 500_000L, 1_000_000L).forEach { amount ->
                             FilterChip(
                                 selected = state.topUpAmount.toLongOrNull() == amount,
                                 onClick = { viewModel.selectPreset(amount) },
