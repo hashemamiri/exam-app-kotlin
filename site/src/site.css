@@ -1634,3 +1634,10 @@ input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var
 .balance .bal-tariff{align-self:flex-start;margin-top:10px;padding:6px 16px;font-size:12px;border-radius:999px;background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.45);box-shadow:none;width:auto}
 .balance .bal-tariff:hover{background:rgba(255,255,255,.32)}
 :root.m-dark .tariff-r{background:#252D3A}
+
+/* V247 — پنجرهٔ تعرفه‌ها: عنوان و ✕ قرمز در یک ردیف، بدون دکمهٔ بستن */
+.tariff-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tariff-head h2{margin:0}
+.modal .x.tariff-x{position:static;background:#fde8ec;color:#d6336c;font-weight:800}
+.modal .x.tariff-x:hover{background:#d6336c;color:#fff}
+:root.m-dark .modal .x.tariff-x{background:rgba(214,51,108,.18);color:#ff7a9c}

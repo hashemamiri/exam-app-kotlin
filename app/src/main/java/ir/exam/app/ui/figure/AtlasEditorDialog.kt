@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import ir.exam.app.core.figure.AtlasCatalog
@@ -103,7 +105,7 @@ fun AtlasTypePickerDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("درج $pickerTitle", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                     TextButton(onClick = onDismiss) { Text("✕") }

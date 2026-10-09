@@ -33,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import ir.exam.app.core.figure.FigureSpec
 import ir.exam.app.core.figure.FigureTemplate
 import ir.exam.app.core.ui.LocalTabletLayout
@@ -63,7 +65,7 @@ fun FigureTypePickerDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         if (geometry) "📐 درج شکل" else if (axis) "📏 درج محور" else "📈 درج نمودار",
@@ -176,7 +178,7 @@ fun FigurePickerDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { // V247 — زیر نوار وضعیت نرود
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         if (resolvedKind == GEOMETRY) "✏️ ویرایش شکل" else if (resolvedKind == FigureKind.AXIS) "✏️ ویرایش محور" else "✏️ ویرایش نمودار",

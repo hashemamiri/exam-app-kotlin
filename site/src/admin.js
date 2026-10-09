@@ -254,9 +254,9 @@
   function tariffDlg() {
     var rows = [['هر سؤال آزمون آنلاین', '۱٬۰۰۰'], ['هر تصویر (سؤال/گزینه)', '۱٬۰۰۰'], ['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰'], ['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰'], ['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰'], ['چاپ: هر سؤال', '۱٬۰۰۰'], ['چاپ: هر تصویر', '۱٬۰۰۰'], ['بازیابی پشتیبان: هر سؤال', '۱٬۰۰۰']];
     var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
-    var m = el('div', {class: 'modal tariff-modal'}, [el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), el('h2', {text: 'تعرفه‌ها'}),
-      el('div', {class: 'tariff'}, rows.map(function (r) { return el('div', {class: 'tariff-r'}, [el('span', {text: r[0]}), el('b', {text: r[1] + ' تومان'})]); })),
-      el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [el('button', {class: 'btn', text: 'بستن', onclick: function () { bg.remove(); }})])]);
+    // V247 — بدون دکمهٔ «بستن»؛ ✕ قرمز هم‌ردیف عنوان
+    var m = el('div', {class: 'modal tariff-modal'}, [el('div', {class: 'tariff-head'}, [el('h2', {text: 'تعرفه‌ها'}), el('button', {class: 'x tariff-x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }})]),
+      el('div', {class: 'tariff'}, rows.map(function (r) { return el('div', {class: 'tariff-r'}, [el('span', {text: r[0]}), el('b', {text: r[1] + ' تومان'})]); }))]);
     bg.appendChild(m); document.body.appendChild(bg);
   }
   function topUpCard(balance, refresh) {

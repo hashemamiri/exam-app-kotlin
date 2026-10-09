@@ -218,9 +218,163 @@
     { id: 'axq1', name: 'ربع اول', X: { xmax: '10', ymax: '8', step: '1' } },
     { id: 'axgrid', name: 'شبکهٔ شطرنجی', X: { xmax: '10', ymax: '8' } },
     { id: 'axpol', name: 'محور قطبی', X: { xmax: '4' } },
-    { id: 'ax3d', name: 'سه‌بعدی (x,y,z)', X: { xmax: '4', step: '1' } }
+    { id: 'ax3d', name: 'سه‌بعدی (x,y,z)', X: { xmax: '4', step: '1' } },
+    // V247 — ۲۱ محور V137.2 (پیش‌فرض‌ها عیناً FigureGallery.kt)
+    { id: 'axnumpts', name: 'محور اعداد با نقطه', X: { xmin: '-5', xmax: '5', step: '1', pts: '-2,1.5,4' } },
+    { id: 'axnumint', name: 'بازه روی محور', X: { xmin: '-5', xmax: '5', step: '1', lo: '-2', hi: '3', lc: '1', hc: '0' } },
+    { id: 'axnumineq', name: 'نامعادله روی محور', X: { xmin: '-5', xmax: '5', step: '1', x0: '1', dir: '1', cl: '0' } },
+    { id: 'axnumfrac', name: 'محور اعداد کسری', X: { xmin: '0', xmax: '3', step: '1', den: '4' } },
+    { id: 'axnumdec', name: 'محور اعداد اعشاری', X: { xmin: '0', xmax: '1', step: '0.1' } },
+    { id: 'axnumblank', name: 'محور اعداد بی‌عدد', X: { xmin: '-5', xmax: '5', step: '1' } },
+    { id: 'axnumlog', name: 'محور لگاریتمی', X: { xmax: '4' } },
+    { id: 'axnumtwo', name: 'دو محور موازی (تبدیل)', X: { xmin: '0', xmax: '10', step: '1', m: '2', b: '0', s1: 'A', s2: 'B' } },
+    { id: 'axxypts', name: 'مختصات با نقطه‌ها', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1', pts: '1,2;-3,1;2,-2' } },
+    { id: 'axxyline', name: 'مختصات با خط y=mx+b', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1', m: '1', b: '1' } },
+    { id: 'axxyvec', name: 'مختصات با بردار', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1', x1: '0', y1: '0', x2: '3', y2: '2' } },
+    { id: 'axxycirc', name: 'مختصات با دایره', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1', cx: '1', cy: '1', r: '2' } },
+    { id: 'axxynogrid', name: 'مختصات بدون شبکه', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1' } },
+    { id: 'axxyquads', name: 'مختصات با نام ربع‌ها', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1' } },
+    { id: 'axxyblank', name: 'مختصات بی‌عدد', X: { xmin: '-5', xmax: '5', ymin: '-4', ymax: '4', step: '1' } },
+    { id: 'axdual', name: 'دو محور y (چپ/راست)', X: { xmin: '0', xmax: '10', ymin: '0', ymax: '100', lo: '0', hi: '10', s1: 'y₁', s2: 'y₂' } },
+    { id: 'axlog', name: 'نیم‌لگاریتمی', X: { xmax: '10', ymax: '3' } },
+    { id: 'axloglog', name: 'تمام‌لگاریتمی', X: { xmax: '3', ymax: '3' } },
+    { id: 'axtime', name: 'محور زمان', X: { labs: '۸:۰۰,۹:۰۰,۱۰:۰۰,۱۱:۰۰,۱۲:۰۰', s1: 't' } },
+    { id: 'axpolpts', name: 'قطبی با نقطه‌ها', X: { xmax: '4', pts: '2,30;3,120' } },
+    { id: 'ax3dpt', name: 'سه‌بعدی با نقطه', X: { xmax: '4', step: '1', x1: '3', y1: '2', z1: '2' } }
   ];
   function isAxisType(t) { return /^ax/.test(String(t || '')); }
+  // V247 — پورت یک‌به‌یک ۲۱ محور تازهٔ AxisSvgRenderer.kt (V137.2) برای سایت (بدون پل بومی).
+  function axisExSvg(t, X, title) {
+    var AL = 40, AT = 26, AR = 336, AB = 246, ST = '#2c3a50', GR = '#d5dce6', MU = '#4a5870', PT = '#d6336c';
+    function f2(v) { return String(Math.round(v * 100) / 100); }
+    function ln(x1, y1, x2, y2, c, w, dash) { return '<line x1="' + f2(x1) + '" y1="' + f2(y1) + '" x2="' + f2(x2) + '" y2="' + f2(y2) + '" stroke="' + c + '" stroke-width="' + w + '"' + (dash ? ' stroke-dasharray="4 3"' : '') + '/>'; }
+    function tx(x, y, s, c, an, bold, sz) { if (s == null || String(s).trim() === '') return ''; return '<text x="' + f2(x) + '" y="' + f2(y) + '" font-family="sans-serif" font-size="' + (sz || 11) + '"' + (bold ? ' font-weight="700"' : '') + ' fill="' + c + '" text-anchor="' + an + '" style="font:' + (bold ? '700 ' : '400 ') + (sz || 11) + 'px sans-serif">' + esc(s) + '</text>'; }
+    function poly(pts, c) { return '<polygon points="' + pts + '" fill="' + c + '"/>'; }
+    function arR(x, y, c) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x - 8) + ',' + f2(y - 4.5) + ' ' + f2(x - 8) + ',' + f2(y + 4.5), c || ST); }
+    function arL(x, y) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x + 8) + ',' + f2(y - 4.5) + ' ' + f2(x + 8) + ',' + f2(y + 4.5), ST); }
+    function arU(x, y, c) { return poly(f2(x) + ',' + f2(y) + ' ' + f2(x - 4.5) + ',' + f2(y + 8) + ' ' + f2(x + 4.5) + ',' + f2(y + 8), c || ST); }
+    function nm(v) { return (v === Math.round(v)) ? String(v) : v.toFixed(1); }
+    function stepOf(span) { var st = num(X.step, 0); if (st > 0) return st; return span <= 12 ? 1 : span <= 30 ? 2 : span <= 60 ? 5 : 10; }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function xs(k, fb) { var v = X[k]; return (v == null || String(v).trim() === '') ? (fb || '') : String(v); }
+    function xl(k) { return xs(k, '').split(/[,،;؛\n]+/).map(function (s) { return s.trim(); }).filter(Boolean); }
+    function pairs(s) { var out = [], re = /(-?\d+(?:\.\d+)?)\s*[,،]\s*(-?\d+(?:\.\d+)?)/g, m; while ((m = re.exec(s))) out.push([parseFloat(m[1]), parseFloat(m[2])]); return out; }
+    function dot(x, y, c, r) { return '<circle cx="' + f2(x) + '" cy="' + f2(y) + '" r="' + f2(r || 4) + '" fill="' + (c || PT) + '" stroke="#fff" stroke-width="1.2"/>'; }
+    function oDot(x, y) { return '<circle cx="' + f2(x) + '" cy="' + f2(y) + '" r="4.5" fill="#fff" stroke="' + PT + '" stroke-width="1.8"/>'; }
+    function gcd(a, b) { return b === 0 ? Math.abs(a) : gcd(b, a % b); }
+    var s = title ? tx(180, 14, title, '#1a2433', 'middle', true, 13) : '';
+    var i, k, d, v, x, y;
+    function numberBase(xmin, xmax, step, yy, labels, den, decimals) {
+      var px = function (q) { return AL + (q - xmin) / (xmax - xmin) * (AR - AL); };
+      s += ln(AL - 12, yy, AR + 12, yy, ST, 2) + arR(AR + 12, yy) + arL(AL - 12, yy);
+      for (v = Math.ceil(xmin / step - 1e-4) * step; v <= xmax + 1e-4; v += step) {
+        x = px(v); var z = Math.abs(v) < 1e-4;
+        s += ln(x, yy - (z ? 10 : 7), x, yy + (z ? 10 : 7), ST, z ? 2 : 1.4);
+        if (labels) s += tx(x, yy + 24, decimals >= 0 ? v.toFixed(decimals) : nm(v), MU, 'middle', false, 11);
+        if (den > 1) for (k = 1; k < den; k++) { var fx = v + step * k / den; if (fx > xmax + 1e-4) break; var xx = px(fx); s += ln(xx, yy - 4, xx, yy + 4, ST, 1); if (labels) { var g = gcd(k, den), base = Math.round(v); s += tx(xx, yy + 21, (base === 0 ? '' : base + ' ') + (k / g) + '/' + (den / g), MU, 'middle', false, 8); } }
+      }
+      return px;
+    }
+    function cartBase(xmin, xmax, ymin, ymax, sx, sy, grid, labels, quads) {
+      var px = function (q) { return AL + (q - xmin) / (xmax - xmin) * (AR - AL); }, py = function (q) { return AB - (q - ymin) / (ymax - ymin) * (AB - AT); };
+      var ox = clamp(px(0), AL, AR), oy = clamp(py(0), AT, AB), g;
+      if (grid) { for (g = Math.ceil(xmin / sx) * sx; g <= xmax + 1e-4; g += sx) s += ln(px(g), AT, px(g), AB, GR, 0.8); for (g = Math.ceil(ymin / sy) * sy; g <= ymax + 1e-4; g += sy) s += ln(AL, py(g), AR, py(g), GR, 0.8); }
+      s += ln(AL - 8, oy, AR + 8, oy, ST, 1.8) + arR(AR + 8, oy) + ln(ox, AB + 8, ox, AT - 8, ST, 1.8) + arU(ox, AT - 8);
+      s += tx(AR + 4, oy - 8, 'x', ST, 'end', true, 12) + tx(ox + 8, AT - 2, 'y', ST, 'start', true, 12);
+      for (g = Math.ceil(xmin / sx) * sx; g <= xmax + 1e-4; g += sx) if (Math.abs(g) > 1e-4) { s += ln(px(g), oy - 4, px(g), oy + 4, ST, 1.2); if (labels) s += tx(px(g), oy + 15, nm(g), MU, 'middle', false, 10); }
+      for (g = Math.ceil(ymin / sy) * sy; g <= ymax + 1e-4; g += sy) if (Math.abs(g) > 1e-4) { s += ln(ox - 4, py(g), ox + 4, py(g), ST, 1.2); if (labels) s += tx(ox - 7, py(g) + 4, nm(g), MU, 'end', false, 10); }
+      if (labels) s += tx(ox - 6, oy + 14, '0', MU, 'end', false, 10);
+      if (quads) { s += tx((ox + AR) / 2, (AT + oy) / 2, 'I', '#8a94a6', 'middle', true, 22) + tx((AL + ox) / 2, (AT + oy) / 2, 'II', '#8a94a6', 'middle', true, 22) + tx((AL + ox) / 2, (oy + AB) / 2, 'III', '#8a94a6', 'middle', true, 22) + tx((ox + AR) / 2, (oy + AB) / 2, 'IV', '#8a94a6', 'middle', true, 22); }
+      return [px, py];
+    }
+    if (t === 'axnumpts' || t === 'axnumint' || t === 'axnumineq' || t === 'axnumfrac' || t === 'axnumdec' || t === 'axnumblank') {
+      var dec = t === 'axnumdec', xmin = num(X.xmin, dec ? 0 : -5), xmax = num(X.xmax, dec ? 1 : 5); if (xmax <= xmin) xmax = xmin + (dec ? 0.5 : 2);
+      var step = dec ? (num(X.step, 0) > 0 ? num(X.step, 0) : 0.1) : stepOf(xmax - xmin), yy = 140;
+      var px = numberBase(xmin, xmax, step, yy, t !== 'axnumblank', t === 'axnumfrac' ? clamp(Math.floor(num(X.den, 4)), 2, 12) : 0, dec ? 1 : -1);
+      var labs = xl('labs');
+      if (t === 'axnumpts') { var pts = xl('pts'); if (!pts.length) pts = ['-2', '1.5', '4']; pts.forEach(function (p, j) { var q = parseFloat(p); if (isFinite(q) && q >= xmin && q <= xmax) s += dot(px(q), yy) + tx(px(q), yy - 14, labs[j] || nm(q), PT, 'middle', true, 11); }); }
+      else if (t === 'axnumint') { var lo = clamp(num(X.lo, -2), xmin, xmax), hi = clamp(num(X.hi, 3), xmin, xmax), lc = num(X.lc, 1) > 0, hc = num(X.hc, 0) > 0; s += ln(px(lo), yy, px(hi), yy, PT, 4) + (lc ? dot(px(lo), yy) : oDot(px(lo), yy)) + (hc ? dot(px(hi), yy) : oDot(px(hi), yy)); s += tx((px(lo) + px(hi)) / 2, yy - 16, xs('labs') || ((lc ? '[' : '(') + nm(lo) + ' , ' + nm(hi) + (hc ? ']' : ')')), PT, 'middle', true, 11); }
+      else if (t === 'axnumineq') { var x0 = clamp(num(X.x0, 1), xmin, xmax), right = num(X.dir, 1) >= 0, closed = num(X.cl, 0) > 0; s += ln(px(x0), yy, right ? AR + 12 : AL - 12, yy, PT, 4) + (closed ? dot(px(x0), yy) : oDot(px(x0), yy)); s += tx(px(x0), yy - 16, xs('labs') || ((right ? (closed ? 'x ≥ ' : 'x > ') : (closed ? 'x ≤ ' : 'x < ')) + nm(x0)), PT, 'middle', true, 11); }
+      return wrap(s);
+    }
+    if (t === 'axnumlog') {
+      var nDec = clamp(Math.floor(num(X.xmax, 4)), 1, 8), y1 = 140, decW = (AR - AL) / nDec;
+      s += ln(AL - 12, y1, AR + 12, y1, ST, 2) + arR(AR + 12, y1);
+      for (d = 0; d <= nDec; d++) { x = AL + d * decW; s += ln(x, y1 - 9, x, y1 + 9, ST, 1.8) + tx(x, y1 + 26, '10', MU, 'middle', false, 11) + tx(x + 8, y1 + 20, String(d), MU, 'start', false, 8); if (d < nDec) for (k = 2; k <= 9; k++) { var lx = x + decW * Math.log10(k); s += ln(lx, y1 - 4, lx, y1 + 4, ST, 0.9); } }
+      return wrap(s);
+    }
+    if (t === 'axnumtwo') {
+      var txmin = num(X.xmin, 0), txmax = num(X.xmax, 10); if (txmax <= txmin) txmax = txmin + 2;
+      var tst = stepOf(txmax - txmin), m = num(X.m, 2), b = num(X.b, 0);
+      var tpx = numberBase(txmin, txmax, tst, 105, true, 0, -1);
+      s += tx(AL - 14, 92, xs('s1', 'A'), ST, 'end', true, 11);
+      var y2 = 185; s += ln(AL - 12, y2, AR + 12, y2, ST, 2) + arR(AR + 12, y2) + arL(AL - 12, y2);
+      for (v = Math.ceil(txmin / tst - 1e-4) * tst; v <= txmax + 1e-4; v += tst) { x = tpx(v); s += ln(x, y2 - 7, x, y2 + 7, ST, 1.4) + tx(x, y2 + 24, nm(m * v + b), MU, 'middle', false, 11) + ln(x, 117, x, y2 - 12, GR, 0.8); }
+      s += tx(AL - 14, y2 - 13, xs('s2', 'B'), ST, 'end', true, 11);
+      return wrap(s);
+    }
+    if (t === 'axxypts' || t === 'axxyline' || t === 'axxyvec' || t === 'axxycirc' || t === 'axxynogrid' || t === 'axxyquads' || t === 'axxyblank') {
+      var cxmin = num(X.xmin, -5), cxmax = num(X.xmax, 5); if (cxmax <= cxmin) cxmax = cxmin + 2;
+      var cymin = num(X.ymin, -4), cymax = num(X.ymax, 4); if (cymax <= cymin) cymax = cymin + 2;
+      var csx = stepOf(cxmax - cxmin), csy = stepOf(cymax - cymin);
+      var pp = cartBase(cxmin, cxmax, cymin, cymax, csx, csy, t !== 'axxynogrid', t !== 'axxyblank', t === 'axxyquads'), cpx = pp[0], cpy = pp[1];
+      if (t === 'axxypts') { var pl = xl('labs'); pairs(xs('pts', '1,2;-3,1;2,-2')).forEach(function (p, j) { if (p[0] >= cxmin && p[0] <= cxmax && p[1] >= cymin && p[1] <= cymax) s += dot(cpx(p[0]), cpy(p[1])) + tx(cpx(p[0]) + 6, cpy(p[1]) - 6, pl[j] || ('(' + nm(p[0]) + ', ' + nm(p[1]) + ')'), PT, 'start', true, 10); }); }
+      else if (t === 'axxyline') { var lm = num(X.m, 1), lb = num(X.b, 1), ptsS = ''; for (i = 0; i <= 120; i++) { x = cxmin + (cxmax - cxmin) * i / 120; var yv = lm * x + lb; if (yv >= cymin && yv <= cymax) ptsS += f2(cpx(x)) + ',' + f2(cpy(yv)) + ' '; } s += '<polyline points="' + ptsS.trim() + '" fill="none" stroke="' + PT + '" stroke-width="2"/>'; s += tx(AR - 4, AT + 12, xs('labs') || ('y = ' + nm(lm) + 'x ' + (lb < 0 ? '− ' + nm(-lb) : '+ ' + nm(lb))), PT, 'end', true, 11); }
+      else if (t === 'axxyvec') { var vx1 = num(X.x1, 0), vy1 = num(X.y1, 0), vx2 = num(X.x2, 3), vy2 = num(X.y2, 2), ax = cpx(vx1), ay = cpy(vy1), bx = cpx(vx2), by = cpy(vy2); s += ln(ax, ay, bx, by, PT, 2.2); var ang = Math.atan2(by - ay, bx - ax); s += poly(f2(bx) + ',' + f2(by) + ' ' + f2(bx - 10 * Math.cos(ang - 0.45)) + ',' + f2(by - 10 * Math.sin(ang - 0.45)) + ' ' + f2(bx - 10 * Math.cos(ang + 0.45)) + ',' + f2(by - 10 * Math.sin(ang + 0.45)), PT) + dot(ax, ay, PT, 3); s += tx(bx + 8, by - 4, xs('labs') || ('v = (' + nm(vx2 - vx1) + ', ' + nm(vy2 - vy1) + ')'), PT, 'start', true, 11); }
+      else if (t === 'axxycirc') { var ccx = num(X.cx, 1), ccy = num(X.cy, 1), cr = Math.max(0.1, num(X.r, 2)), rx = cr / (cxmax - cxmin) * (AR - AL), ry = cr / (cymax - cymin) * (AB - AT); s += '<ellipse cx="' + f2(cpx(ccx)) + '" cy="' + f2(cpy(ccy)) + '" rx="' + f2(rx) + '" ry="' + f2(ry) + '" fill="rgba(214,51,108,.08)" stroke="' + PT + '" stroke-width="2"/>' + dot(cpx(ccx), cpy(ccy), PT, 3) + ln(cpx(ccx), cpy(ccy), cpx(ccx) + rx, cpy(ccy), PT, 1.2, true) + tx(cpx(ccx) + rx / 2, cpy(ccy) - 6, 'r = ' + nm(cr), PT, 'middle', true, 10); }
+      return wrap(s);
+    }
+    if (t === 'axdual') {
+      var dxmin = num(X.xmin, 0), dxmax = num(X.xmax, 10); if (dxmax <= dxmin) dxmax = dxmin + 2;
+      var dymin = num(X.ymin, 0), dymax = num(X.ymax, 100); if (dymax <= dymin) dymax = dymin + 2;
+      var dlo = num(X.lo, 0), dhi = num(X.hi, 10); if (dhi <= dlo) dhi = dlo + 2;
+      var dsx = stepOf(dxmax - dxmin), ny = 5, l = AL + 10, r = AR - 10, dpx = function (q) { return l + (q - dxmin) / (dxmax - dxmin) * (r - l); };
+      for (i = 0; i <= ny; i++) { y = AB - (AB - AT) * i / ny; s += ln(l, y, r, y, GR, 0.8) + tx(l - 6, y + 4, nm(dymin + (dymax - dymin) * i / ny), '#2563eb', 'end', false, 10) + tx(r + 6, y + 4, nm(dlo + (dhi - dlo) * i / ny), '#dc2626', 'start', false, 10); }
+      s += ln(l, AB, r, AB, ST, 1.8) + ln(r, AB, r + 8, AB, ST, 1.8) + arR(r + 8, AB);
+      s += ln(l, AB, l, AT - 8, '#2563eb', 1.8) + arU(l, AT - 8, '#2563eb') + ln(r, AB, r, AT - 8, '#dc2626', 1.8) + arU(r, AT - 8, '#dc2626');
+      for (v = Math.ceil(dxmin / dsx) * dsx; v <= dxmax + 1e-4; v += dsx) s += ln(dpx(v), AB - 4, dpx(v), AB + 4, ST, 1.2) + tx(dpx(v), AB + 15, nm(v), MU, 'middle', false, 10);
+      s += tx(l + 6, AT - 2, xs('s1', 'y₁'), '#2563eb', 'start', true, 11) + tx(r - 6, AT - 2, xs('s2', 'y₂'), '#dc2626', 'end', true, 11) + tx(r + 8, AB - 8, 'x', ST, 'end', true, 12);
+      return wrap(s);
+    }
+    if (t === 'axlog' || t === 'axloglog') {
+      var both = t === 'axloglog', lny = clamp(Math.floor(num(X.ymax, 3)), 1, 6), lnx = both ? clamp(Math.floor(num(X.xmax, 3)), 1, 6) : Math.max(1, num(X.xmax, 10));
+      s += '<rect x="' + AL + '" y="' + AT + '" width="' + (AR - AL) + '" height="' + (AB - AT) + '" fill="none" stroke="' + ST + '" stroke-width="1.4"/>';
+      var decH = (AB - AT) / lny;
+      for (d = 0; d <= lny; d++) { y = AB - d * decH; s += ln(AL, y, AR, y, ST, 1) + tx(AL - 6, y + 4, '10', MU, 'end', false, 10) + tx(AL - 5, y - 3, String(d), MU, 'start', false, 7); if (d < lny) for (k = 2; k <= 9; k++) { var ly = y - decH * Math.log10(k); s += ln(AL, ly, AR, ly, GR, 0.7); } }
+      if (both) { var dW = (AR - AL) / lnx; for (d = 0; d <= lnx; d++) { x = AL + d * dW; s += ln(x, AT, x, AB, ST, 1) + tx(x, AB + 16, '10', MU, 'middle', false, 10) + tx(x + 7, AB + 11, String(d), MU, 'start', false, 7); if (d < lnx) for (k = 2; k <= 9; k++) { var lxx = x + dW * Math.log10(k); s += ln(lxx, AT, lxx, AB, GR, 0.7); } } }
+      else { var lsx = stepOf(lnx); for (v = 0; v <= lnx + 1e-4; v += lsx) { x = AL + v / lnx * (AR - AL); s += ln(x, AT, x, AB, GR, 0.8) + tx(x, AB + 16, nm(v), MU, 'middle', false, 10); } }
+      s += tx(AR, AB + 30, 'x', ST, 'end', true, 12) + tx(AL - 24, AT - 8, 'y', ST, 'start', true, 12);
+      return wrap(s);
+    }
+    if (t === 'axtime') {
+      var tl = xl('labs'); if (!tl.length) tl = ['۸:۰۰', '۹:۰۰', '۱۰:۰۰', '۱۱:۰۰', '۱۲:۰۰'];
+      var ty = 140, n = tl.length; s += ln(AL - 6, ty, AR + 12, ty, ST, 2) + arR(AR + 12, ty);
+      tl.forEach(function (lab, j) { var xx = n === 1 ? AL : AL + (AR - AL) * j / (n - 1); s += ln(xx, ty - 8, xx, ty + 8, ST, 1.5) + tx(xx, ty + 24, lab, MU, 'middle', false, 10); if (j < n - 1) for (k = 1; k <= 3; k++) { var mx = xx + (AR - AL) / (n - 1) * k / 4; s += ln(mx, ty - 3, mx, ty + 3, ST, 0.9); } });
+      s += tx(AR + 12, ty - 10, xs('s1', 't'), ST, 'end', true, 12);
+      return wrap(s);
+    }
+    if (t === 'axpolpts') {
+      var rings = clamp(Math.floor(num(X.xmax, 4)), 1, 12), pcx = 180, pcy = (AT + AB) / 2, rMax = Math.min(AR - AL, AB - AT) / 2 - 6;
+      for (i = 1; i <= rings; i++) { var rr = rMax * i / rings; s += '<circle cx="' + pcx + '" cy="' + f2(pcy) + '" r="' + f2(rr) + '" fill="none" stroke="' + GR + '" stroke-width="0.9"/>' + tx(pcx + rr + 2, pcy - 3, String(i), MU, 'start', false, 9); }
+      var labels = ['0°', '30°', '60°', '90°', '120°', '150°', '180°', '210°', '240°', '270°', '300°', '330°'];
+      for (k = 0; k < 12; k++) { var a = k * Math.PI / 6; s += ln(pcx, pcy, pcx + rMax * Math.cos(a), pcy - rMax * Math.sin(a), k % 3 === 0 ? ST : GR, k % 3 === 0 ? 1.4 : 0.8) + tx(pcx + (rMax + 13) * Math.cos(a), pcy - (rMax + 13) * Math.sin(a) + 3, labels[k], MU, 'middle', false, 9); }
+      s += arR(pcx + rMax, pcy);
+      var plabs = xl('labs'); pairs(xs('pts', '2,30;3,120')).forEach(function (p, j) { var prr = clamp(p[0] / rings * rMax, 0, rMax + 20), pa = p[1] * Math.PI / 180, qx = pcx + prr * Math.cos(pa), qy = pcy - prr * Math.sin(pa); s += ln(pcx, pcy, qx, qy, PT, 1.2) + dot(qx, qy) + tx(qx + 6, qy - 6, plabs[j] || ('(' + nm(p[0]) + ', ' + nm(p[1]) + '°)'), PT, 'start', true, 10); });
+      return wrap(s);
+    }
+    if (t === 'ax3dpt') {
+      var cx = 170, cy = 150, len = 100, zx = cx - len * 0.62, zy = cy + len * 0.62;
+      s += ln(cx - 30, cy, cx + len, cy, ST, 1.8) + arR(cx + len, cy) + ln(cx, cy + 30, cx, cy - len, ST, 1.8) + arU(cx, cy - len) + ln(cx + 20, cy - 20, zx, zy, ST, 1.8) + poly(f2(zx) + ',' + f2(zy) + ' ' + f2(zx + 9) + ',' + f2(zy - 1) + ' ' + f2(zx + 2) + ',' + f2(zy - 9), ST);
+      s += tx(cx + len + 4, cy + 4, 'x', ST, 'start', true, 12) + tx(cx + 6, cy - len - 2, 'y', ST, 'start', true, 12) + tx(zx - 4, zy + 12, 'z', ST, 'end', true, 12) + tx(cx - 6, cy + 14, 'O', MU, 'end', false, 10);
+      var st3 = Math.max(0.5, num(X.step, 1)), n3 = clamp(Math.floor(num(X.xmax, 4)), 1, 10);
+      for (i = 1; i <= n3; i++) { d = len * i / (n3 + 0.6); s += ln(cx + d, cy - 3, cx + d, cy + 3, ST, 1.1) + tx(cx + d, cy + 13, nm(i * st3), MU, 'middle', false, 9) + ln(cx - 3, cy - d, cx + 3, cy - d, ST, 1.1) + tx(cx - 6, cy - d + 3, nm(i * st3), MU, 'end', false, 9); var t3x = cx - d * 0.62, t3y = cy + d * 0.62; s += ln(t3x - 2.5, t3y - 2.5, t3x + 2.5, t3y + 2.5, ST, 1.1); }
+      var unit = len / (n3 + 0.6) / st3, p3x = num(X.x1, 3) * unit, p3y = num(X.y1, 2) * unit, p3z = num(X.z1, 2) * unit, b3x = cx + p3x - p3z * 0.62, b3y = cy + p3z * 0.62, q3x = b3x, q3y = b3y - p3y;
+      s += ln(cx + p3x, cy, b3x, b3y, PT, 1, true) + ln(cx - p3z * 0.62, cy + p3z * 0.62, b3x, b3y, PT, 1, true) + ln(b3x, b3y, q3x, q3y, PT, 1, true) + ln(cx, cy - p3y, q3x, q3y, PT, 1, true) + ln(cx, cy, q3x, q3y, PT, 1.6) + dot(q3x, q3y);
+      s += tx(q3x + 7, q3y - 6, xs('labs') || ('P(' + nm(num(X.x1, 3)) + ', ' + nm(num(X.y1, 2)) + ', ' + nm(num(X.z1, 2)) + ')'), PT, 'start', true, 10);
+      return wrap(s);
+    }
+    return null;
+  }
   function svgOf(spec) {
     spec = spec || {};
     var t = spec.t || 'line';
@@ -250,6 +404,8 @@
           }
         }
       } catch (_e) {}
+      // V247 — بدون پل (سایت): همان رندر، پورت‌شده به JS
+      try { var exSvg = axisExSvg(t, X, title); if (exSvg) return exSvg; } catch (_x) {}
       t = t.indexOf('axnum') === 0 ? 'axnum' : t === 'axpolpts' ? 'axpol' : t === 'ax3dpt' ? 'ax3d' : t === 'axtime' ? 'axnum' : 'axxy';
     }
 
@@ -1874,7 +2030,20 @@
       axpol: '<circle cx="18" cy="15" r="11" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="18" cy="15" r="6" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M7,15 H29 M18,4 V26 M10,7 L26,23 M26,7 L10,23" stroke="currentColor" stroke-width="1" fill="none"/>',
       ax3d: '<path d="M18,27 L18,5 M15,8 L18,5 L21,8 M18,27 L33,27 M30,24 L33,27 L30,30 M18,27 L5,17 M9,17 L5,17 L6,21" stroke="currentColor" stroke-width="1.6" fill="none"/>'
     };
-    return '<svg viewBox="0 0 36 30" aria-hidden="true">' + (m[id] || m.plot) + '</svg>';
+    // V247 — آیکن ۲۱ محور تازه: آیکن پایه + نشانهٔ کوچک
+    var DOT = '<circle cx="23" cy="15" r="2.6" fill="currentColor"/>';
+    var AXI = {
+      axnumpts: m.axnum + DOT, axnumint: m.axnum + '<path d="M11,15 H23" stroke="currentColor" stroke-width="3.5"/>', axnumineq: m.axnum + '<path d="M14,15 H31" stroke="currentColor" stroke-width="3.5"/><circle cx="14" cy="15" r="2.6" fill="#fff" stroke="currentColor" stroke-width="1.4"/>',
+      axnumfrac: m.axnum + '<path d="M11,19 V21 M17,19 V21 M23,19 V21" stroke="currentColor" stroke-width="1"/>', axnumdec: m.axnum + '<circle cx="18" cy="22" r="1.3" fill="currentColor"/>', axnumblank: m.axnum, axnumlog: m.axnum + '<path d="M22,12 V18 M24,12 V18 M25.5,12 V18" stroke="currentColor" stroke-width="1"/>',
+      axnumtwo: '<path d="M3,10 L33,10 M30,7 L33,10 L30,13 M3,21 L33,21 M30,18 L33,21 L30,24 M10,7 V13 M20,7 V13 M10,18 V24 M20,18 V24" stroke="currentColor" stroke-width="1.5" fill="none"/>',
+      axxypts: m.axxy + DOT + '<circle cx="12" cy="20" r="2.6" fill="currentColor"/>', axxyline: m.axxy + '<path d="M7,24 L29,6" stroke="currentColor" stroke-width="1.6"/>', axxyvec: m.axxy + '<path d="M18,15 L28,8 M25,8 L28,8 L28,11" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+      axxycirc: m.axxy + '<circle cx="22" cy="11" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/>', axxynogrid: m.axxy, axxyquads: m.axxy + '<text x="25" y="10" font-size="7" fill="currentColor" style="font:700 7px sans-serif">I</text>', axxyblank: m.axxy,
+      axdual: '<path d="M6,26 H30 M6,26 V3 M3,6 L6,3 L9,6 M30,26 V3 M27,6 L30,3 L33,6" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+      axlog: m.axgrid + '<path d="M4,22 H32 M4,24 H32" stroke="currentColor" stroke-width="0.8"/>', axloglog: m.axgrid + '<path d="M4,22 H32 M4,24 H32 M28,4 V26 M30,4 V26" stroke="currentColor" stroke-width="0.8"/>',
+      axtime: m.axnum + '<circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8,6 V8 H10" stroke="currentColor" stroke-width="1" fill="none"/>',
+      axpolpts: m.axpol + DOT, ax3dpt: m.ax3d + DOT
+    };
+    return '<svg viewBox="0 0 36 30" aria-hidden="true">' + (m[id] || AXI[id] || m.plot) + '</svg>';
   }
 
   function fieldsFor(t) {
@@ -1885,6 +2054,31 @@
     if (t === 'axgrid') return [['X.title', 'عنوان'], ['X.xmax', 'تعداد ستون'], ['X.ymax', 'تعداد ردیف']];
     if (t === 'axpol') return [['X.title', 'عنوان'], ['X.xmax', 'بیشترین شعاع']];
     if (t === 'ax3d') return [['X.title', 'عنوان'], ['X.xmax', 'بیشترین مقدار'], ['X.step', 'گام']];
+    // V247 — فیلدهای ۲۱ محور V137.2 (عیناً FigurePickerDialog.kt)
+    var AXF = {
+      axnumpts: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام'], ['pts', 'نقطه‌ها (با ویرگول)'], ['labs', 'نام نقطه‌ها']],
+      axnumint: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام'], ['lo', 'ابتدای بازه'], ['hi', 'انتهای بازه'], ['lc', 'ابتدا بسته؟ (۱/۰)'], ['hc', 'انتها بسته؟ (۱/۰)'], ['labs', 'برچسب']],
+      axnumineq: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام'], ['x0', 'نقطهٔ مرز'], ['dir', 'جهت (۱ راست، -۱ چپ)'], ['cl', 'بسته؟ (۱/۰)'], ['labs', 'برچسب']],
+      axnumfrac: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام'], ['den', 'مخرج']],
+      axnumdec: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام اعشاری']],
+      axnumblank: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام']],
+      axnumlog: [['xmax', 'تعداد دهه']],
+      axnumtwo: [['xmin', 'کمینه'], ['xmax', 'بیشینه'], ['step', 'گام'], ['m', 'ضریب'], ['b', 'عرض از مبدأ'], ['s1', 'نام محور بالا'], ['s2', 'نام محور پایین']],
+      axxypts: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام'], ['pts', 'نقطه‌ها (x,y;x,y)'], ['labs', 'نام نقطه‌ها']],
+      axxyline: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام'], ['m', 'شیب m'], ['b', 'عرض از مبدأ b'], ['labs', 'برچسب']],
+      axxyvec: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام'], ['x1', 'x ابتدا'], ['y1', 'y ابتدا'], ['x2', 'x انتها'], ['y2', 'y انتها'], ['labs', 'برچسب']],
+      axxycirc: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام'], ['cx', 'x مرکز'], ['cy', 'y مرکز'], ['r', 'شعاع']],
+      axxynogrid: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام']],
+      axxyquads: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام']],
+      axxyblank: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y min'], ['ymax', 'y max'], ['step', 'گام']],
+      axdual: [['xmin', 'x min'], ['xmax', 'x max'], ['ymin', 'y چپ min'], ['ymax', 'y چپ max'], ['lo', 'y راست min'], ['hi', 'y راست max'], ['s1', 'نام محور چپ'], ['s2', 'نام محور راست']],
+      axlog: [['xmax', 'x max'], ['ymax', 'تعداد دههٔ y']],
+      axloglog: [['xmax', 'تعداد دههٔ x'], ['ymax', 'تعداد دههٔ y']],
+      axtime: [['labs', 'زمان‌ها (با ویرگول)'], ['s1', 'نام محور']],
+      axpolpts: [['xmax', 'تعداد حلقه'], ['pts', 'نقطه‌ها (r,θ;r,θ)'], ['labs', 'نام نقطه‌ها']],
+      ax3dpt: [['xmax', 'تعداد تیک'], ['step', 'گام'], ['x1', 'x نقطه'], ['y1', 'y نقطه'], ['z1', 'z نقطه'], ['labs', 'نام نقطه']]
+    };
+    if (AXF[t]) return [['X.title', 'عنوان']].concat(AXF[t].map(function (f) { return ['X.' + f[0], f[1]]; }));
     if (isAxisType(t)) return [['X.title', 'عنوان']];
     if (t === 'line') return common.concat([['X.m', 'شیب m'], ['X.b', 'عرض از مبدأ b'], ['X.xmin', 'x min'], ['X.xmax', 'x max'], ['X.ymin', 'y min'], ['X.ymax', 'y max']]);
     if (t === 'quad') return common.concat([['X.a', 'a'], ['X.b', 'b'], ['X.c', 'c'], ['X.xmin', 'x min'], ['X.xmax', 'x max'], ['X.ymin', 'y min'], ['X.ymax', 'y max']]);

@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.systemBarsPadding
 
 /**
  * V57.0 — پنجرهٔ زوم تمام‌صفحه برای شکل/نمودار/تصویر سمت دانش‌آموز:
@@ -55,7 +56,7 @@ fun ZoomableFigureDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().systemBarsPadding()) { // V247
                 Row(
                     Modifier
                         .fillMaxWidth()

@@ -20,10 +20,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -70,6 +75,8 @@ fun WalletScreen(refreshKey: Int = 0) {
     val neo = neumorphic69Colors
     val balanceTilt = remember { Animatable(0f) }
     var balanceVisible by rememberSaveable { mutableStateOf(true) }
+    var tariffOpen by rememberSaveable { mutableStateOf(false) }
+    if (tariffOpen) TariffDialog(onDismiss = { tariffOpen = false })
 
     LaunchedEffect(refreshKey) {
         if (refreshKey > 0) {
@@ -133,11 +140,15 @@ fun WalletScreen(refreshKey: Int = 0) {
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.weight(1f))
-                    Text(
-                        "هزینه هر سؤال: ${formatToman(WalletRules.QUESTION_COST_TOMAN)} تومان",
-                        color = Color.White.copy(alpha = .80f),
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    // V247 — مثل سایت: به‌جای «هزینه هر سؤال»، دکمهٔ «تعرفه‌ها» (پنجرهٔ ۸ ردیفی)
+                    TextButton(
+                        onClick = { tariffOpen = true },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = .18f))
+                    ) { Text("تعرفه‌ها", fontWeight = FontWeight.Bold) }
                     if (state.loading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp).align(Alignment.End),
@@ -157,12 +168,10 @@ fun WalletScreen(refreshKey: Int = 0) {
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("شارژ امن کیف پول", style = MaterialTheme.typography.titleMedium)
-                    Text("پرداخت فقط در Edge Function تأیید می‌شود؛ برنامه اجازه شارژ مستقیم موجودی را ندارد.")
                     OutlinedTextField(
                         value = PersianDigits.convert(state.topUpAmount),
                         onValueChange = { viewModel.setTopUpAmount(PersianDigits.latin(it)) },
                         label = { Text("مبلغ به تومان") },
-                        supportingText = { Text("حداقل ۱۰۰٬۰۰۰ · مضرب ۱۰٬۰۰۰ · سقف موجودی ۱۰٬۰۰۰٬۰۰۰") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -200,7 +209,6 @@ fun WalletScreen(refreshKey: Int = 0) {
                     }
                     state.message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    Text("پس از بازگشت از درگاه، صفحه را به پایین بکشید تا موجودی بروزرسانی شود.", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -269,4 +277,42 @@ private fun providerFa(raw: String): String = when (raw.substringBefore(':').low
     "zarinpal" -> " (زرین‌پال)"
     "idpay" -> " (آیدی‌پی)"
     else -> ""
+}
+
+/** V247 — پنجرهٔ تعرفه‌ها؛ همان ۸ ردیف سایت (WalletRules، audioChargeForBytes، چاپ V199، بازیابی پشتیبان). */
+@Composable
+private fun TariffDialog(onDismiss: () -> Unit) {
+    val rows = listOf(
+        "هر سؤال آزمون آنلاین" to WalletRules.QUESTION_COST_TOMAN,
+        "هر تصویر (سؤال/گزینه)" to 1_000L,
+        "صوت سؤال تا ۱ مگابایت" to 2_000L,
+        "صوت سؤال تا ۲ مگابایت" to 4_000L,
+        "صوت سؤال تا ۳ مگابایت" to 6_000L,
+        "چاپ: هر سؤال" to 1_000L,
+        "چاپ: هر تصویر" to 1_000L,
+        "بازیابی پشتیبان: هر سؤال" to 1_000L
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        title = {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("تعرفه‌ها", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Outlined.Close, contentDescription = "بستن", tint = Color(0xFFD6336C))
+                }
+            }
+        },
+        text = {
+            Column {
+                rows.forEachIndexed { i, (label, cost) ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        Text("${formatToman(cost)} تومان", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (i < rows.lastIndex) HorizontalDivider()
+                }
+            }
+        }
+    )
 }
