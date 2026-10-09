@@ -351,6 +351,7 @@ private fun AuthenticatedExamApp(
             "exam" -> when (user.role) { UserRole.STUDENT, UserRole.TEACHER -> MainPage.HOME; else -> null }
             "requests" -> when (user.role) { UserRole.TEACHER -> MainPage.REQUESTS; UserRole.MANAGER -> MainPage.CARDS; else -> null }
             "calendar" -> if (user.role == UserRole.MANAGER) null else MainPage.CALENDAR
+            "grading" -> if (user.role == UserRole.TEACHER) MainPage.GRADING else null
             else -> null
         } ?: return@LaunchedEffect
         closeTransientNavigation()

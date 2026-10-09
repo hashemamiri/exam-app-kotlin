@@ -50,6 +50,13 @@ class V232_PushNotificationsTest {
         assertTrue(app.contains("\"grades\" -> when (user.role) { UserRole.STUDENT -> MainPage.STUDENT_RESULTS; UserRole.TEACHER -> MainPage.GRADING; else -> null }"))
         assertTrue(app.contains("\"requests\" -> when (user.role) { UserRole.TEACHER -> MainPage.REQUESTS; UserRole.MANAGER -> MainPage.CARDS; else -> null }"))
         assertTrue(src("app/src/main/java/ir/exam/app/core/push/PushNavigation.kt").contains("intent.removeExtra(\"push_page\")"))
+        // V232.7 — اندروید data-only (اعلان همیشه توسط سرویس خودمان ساخته می‌شود)؛ کلید page از اعلان سیستمی هم پذیرفته می‌شود
+        val fn = src("supabase/functions/push-dispatch/index.ts")
+        assertTrue(fn.contains("if (platform === 'android') {") && fn.contains("delete message.notification;") && fn.contains("message.data = { ...data, title: row.title, body: row.body };"))
+        assertTrue(src("app/src/main/java/ir/exam/app/core/push/PushNavigation.kt").contains("intent?.getStringExtra(\"push_page\") ?: intent?.getStringExtra(\"page\")"))
+        assertTrue(app.contains("\"grading\" -> if (user.role == UserRole.TEACHER) MainPage.GRADING else null"))
+        val sql = src("supabase/migrations/20261009_push_calendar_submit_v232_7.sql")
+        listOf("private.push_calendar_audience(p_note uuid)", "private.push_enqueue_calendar_notes()", "private.push_enqueue_calendar_reminders()", "time '07:00'", "push_on_answer_submitted", "'page','grading'", "'page','calendar'").forEach { assertTrue(it, sql.contains(it)) }
     }
 
     @Test

@@ -57,6 +57,12 @@ async function sendOne(sa: ServiceAccount, bearer: string, token: string, platfo
     webpush: { headers: { Urgency: 'high', TTL: '86400' }, notification: { title: row.title, body: row.body, icon: '/pwa/v2/icon-192.png', dir: 'rtl', lang: 'fa' }, fcm_options: { link: '/' } },
   };
   if (platform !== 'web') delete message.webpush;
+  // V232.7 — اندروید: data-only؛ با بلوک notification، در پس‌زمینه خودِ FCM اعلان را می‌ساخت و extras مقصد (push_page) نمی‌رسید.
+  if (platform === 'android') {
+    delete message.notification;
+    message.android = { priority: 'high' };
+    message.data = { ...data, title: row.title, body: row.body };
+  }
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
     method: 'POST', headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message }),
   });
