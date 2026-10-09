@@ -639,11 +639,21 @@ function mEsc(e) {
     '.mb-delim-svg{display:block}.mb-delim-svg path{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}\n';
 
   const SURD_BAR_PX = 1.5; // FIX-EXAM-THIN-RADICAL (باریک‌تر: 1.5px): ضخامت خط بالا (هم‌ضخامت stroke علامت √)
+  /* V249 — ضریب بزرگ‌نمایی CSS (transform: scale) روی اجداد: getBoundingClientRect مقیاس‌شده است ولی اندازه‌های style به px چیدمان
+     (پیش از مقیاس) اعمال می‌شوند؛ در پیش‌نمایش چاپ (pgsCanvas با zoom≠۱) رادیکال/پرانتز z برابر بزرگ یا کوچک می‌شد. */
+  function mbScaleOf(el) {
+    try {
+      const r = el.getBoundingClientRect(); const ow = el.offsetWidth || 0;
+      if (r.width > 0 && ow > 0) { const k = r.width / ow; if (k > 0.05 && k < 20) return k; }
+    } catch (e) {}
+    return 1;
+  }
   function mbFitSurd(svg) {
     const msqrt = svg && svg.closest ? svg.closest('.msqrt') : null;
     const msurd = svg && svg.parentNode;
     if (!msqrt || !svg || !msurd) return;
-    const H = msqrt.getBoundingClientRect().height;
+    const K = mbScaleOf(msqrt);
+    const H = msqrt.getBoundingClientRect().height / K;
     if (H <= 2) return;
     const W = H * 0.5;
     svg.style.height = H.toFixed(1) + 'px';
@@ -677,7 +687,7 @@ function mEsc(e) {
         d.appendChild(g);
       }
       let h = 0;
-      try { h = (d.parentElement || d).getBoundingClientRect().height || 0; } catch (e) { h = 0; }
+      try { const pe = d.parentElement || d; h = (pe.getBoundingClientRect().height || 0) / mbScaleOf(pe); } catch (e) { h = 0; } /* V249 — بدون اثر zoom */
       if (h < 18) h = 18;
       const wrap = d.closest('.mparbox');
       const kind = wrap ? (wrap.getAttribute('data-kind') || 'paren') : 'paren';
