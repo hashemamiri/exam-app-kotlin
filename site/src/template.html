@@ -20,7 +20,10 @@
    هرگز کلید service_role را این‌جا نگذارید.
    ============================================================================ */
 var SUPABASE_ANON_KEY = "…";
-window.SITE_CONFIG = { SUPABASE_URL: "/*__SUPABASE_URL__*/", SUPABASE_ANON_KEY: SUPABASE_ANON_KEY };
+/* V232.9 — اعلان وب: پیکربندی عمومی فایربیس و کلید VAPID در CI از Secrets تزریق می‌شود؛ خالی = اعلان وب خاموش */
+var FIREBASE_WEB_CONFIG = null;
+var FIREBASE_VAPID_KEY = "";
+window.SITE_CONFIG = { SUPABASE_URL: "/*__SUPABASE_URL__*/", SUPABASE_ANON_KEY: SUPABASE_ANON_KEY, FIREBASE_WEB: FIREBASE_WEB_CONFIG, FIREBASE_VAPID_KEY: FIREBASE_VAPID_KEY };
 </script>
 <style>/*__VAZIR_CSS__*/</style>
 <style>/*__SITE_CSS__*/</style>

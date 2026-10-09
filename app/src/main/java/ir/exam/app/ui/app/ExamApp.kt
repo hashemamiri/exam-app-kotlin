@@ -356,6 +356,12 @@ private fun AuthenticatedExamApp(
         } ?: return@LaunchedEffect
         closeTransientNavigation()
         if (page != destination) page = destination
+        // V232.9 — «آزمون باز شد» با کد آزمون: دانش‌آموز مستقیم به همان آزمون می‌پیوندد
+        val code = target.code?.uppercase()?.filter { c -> c in 'A'..'Z' || c.isDigit() }?.take(12).orEmpty()
+        if (target.page == "exam" && user.role == UserRole.STUDENT && code.length in 4..12) {
+            studentExamCode = code
+            studentJoinRequestKey += 1
+        }
     }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {

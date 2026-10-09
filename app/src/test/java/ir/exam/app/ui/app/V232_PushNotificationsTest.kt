@@ -55,6 +55,10 @@ class V232_PushNotificationsTest {
         assertTrue(fn.contains("if (platform === 'android') {") && fn.contains("delete message.notification;") && fn.contains("message.data = { ...data, title: row.title, body: row.body };"))
         assertTrue(src("app/src/main/java/ir/exam/app/core/push/PushNavigation.kt").contains("intent.getStringExtra(\"push_page\") ?: intent.getStringExtra(\"page\")"))
         assertTrue(app.contains("\"grading\" -> if (user.role == UserRole.TEACHER) MainPage.GRADING else null"))
+        // V232.9 — کد آزمون در اعلان «آزمون باز شد» → پیوستن مستقیم
+        assertTrue(src("app/src/main/java/ir/exam/app/core/push/PushNavigation.kt").contains("data class PushTarget(val page: String, val examId: String?, val code: String? = null)"))
+        assertTrue(app.contains("if (target.page == \"exam\" && user.role == UserRole.STUDENT && code.length in 4..12) {"))
+        assertTrue(src("supabase/migrations/20261009_push_exam_code_v232_9.sql").contains("jsonb_build_object('exam_id',r.id,'page','exam','code',coalesce(r.code,''))"))
         val sql = src("supabase/migrations/20261009_push_calendar_submit_v232_7.sql")
         listOf("private.push_calendar_audience(p_note uuid)", "private.push_enqueue_calendar_notes()", "private.push_enqueue_calendar_reminders()", "time '07:00'", "push_on_answer_submitted", "'page','grading'", "'page','calendar'").forEach { assertTrue(it, sql.contains(it)) }
     }

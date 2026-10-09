@@ -12,6 +12,26 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 self.addEventListener('message', function (e) { if (e.data === 'skipWaiting') self.skipWaiting(); });
+/* V232.9 — اعلان وب: پیام data-only از FCM → نمایش؛ ضربه → تمرکز روی پنجرهٔ باز (پیام push-nav) یا باز کردن /?page=… */
+self.addEventListener('push', function (e) {
+  var p = {}; try { p = e.data ? e.data.json() : {}; } catch (x) { p = {}; }
+  var d = p.data || p; var n = p.notification || {};
+  var title = d.title || n.title || 'آزمون آنلاین'; var body = d.body || n.body || '';
+  var data = {page: d.page || '', exam_id: d.exam_id || '', code: d.code || ''};
+  e.waitUntil(self.registration.showNotification(title, {body: body, icon: '/pwa/v2/icon-192.png', badge: '/pwa/v2/icon-192.png', dir: 'rtl', lang: 'fa', tag: d.outbox_id ? 'ox-' + d.outbox_id : undefined, data: data}));
+});
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var d = e.notification.data || {};
+  var q = d.page ? '?page=' + encodeURIComponent(d.page) + (d.exam_id ? '&exam_id=' + encodeURIComponent(d.exam_id) : '') + (d.code ? '&code=' + encodeURIComponent(d.code) : '') : '';
+  e.waitUntil(self.clients.matchAll({type: 'window', includeUncontrolled: true}).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (new URL(c.url).origin === self.location.origin) { c.postMessage({type: 'push-nav', page: d.page, exam_id: d.exam_id, code: d.code}); return c.focus(); }
+    }
+    return self.clients.openWindow('/' + q);
+  }));
+});
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return;

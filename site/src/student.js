@@ -227,6 +227,7 @@
         el('div', {style: 'margin-top:8px'}, [el('button', {class: 'btn sm', text: 'پیوستن به آزمون', onclick: function () { startExam(c, pending, true); }}), ' ', el('button', {class: 'btn light sm', text: 'انصراف از این آزمون', onclick: function () { activeSet(null); page(c); }})])]));
     }
     var inp = el('input', {type: 'text', placeholder: 'کد ۶ حرفی آزمون', maxlength: 8, style: 'text-align:center;letter-spacing:4px;font-size:22px;direction:ltr;text-transform:uppercase'});
+    if (arg && arg.code) inp.value = String(arg.code); /* V232.9 — از اعلان «آزمون باز شد» */
     var msg = el('div');
     var btn = el('button', {class: 'btn', style: 'width:100%', text: 'ورود به آزمون', onclick: async function () {
       var code = en(inp.value).trim().toUpperCase(); if (code.length < 4) return toast('کد آزمون را وارد کنید.', 'err');

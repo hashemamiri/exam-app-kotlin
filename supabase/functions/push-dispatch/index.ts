@@ -63,6 +63,12 @@ async function sendOne(sa: ServiceAccount, bearer: string, token: string, platfo
     message.android = { priority: 'high' };
     message.data = { ...data, title: row.title, body: row.body };
   }
+  // V232.9 — وب هم data-only: Service Worker سایت (pwa/sw.js) خودش اعلان را می‌سازد و مقصد (page/exam_id/code) را نگه می‌دارد
+  if (platform === 'web') {
+    delete message.notification;
+    message.webpush = { headers: { Urgency: 'high', TTL: '86400' } };
+    message.data = { ...data, title: row.title, body: row.body };
+  }
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
     method: 'POST', headers: { Authorization: `Bearer ${bearer}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message }),
   });

@@ -23,6 +23,8 @@ jobs:
       - name: Build index.html with anon key
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          FIREBASE_WEB_CONFIG_JSON: ${{ secrets.FIREBASE_WEB_CONFIG_JSON }}
+          FIREBASE_VAPID_KEY: ${{ secrets.FIREBASE_VAPID_KEY }}
         run: |
           test -n "$SUPABASE_ANON_KEY" || { echo "SUPABASE_ANON_KEY secret is missing"; exit 1; }
           python3 site/build_site.py
@@ -32,7 +34,20 @@ jobs:
           h = open('site/index.html', encoding='utf-8').read()
           old = 'var SUPABASE_ANON_KEY = "…";'
           assert h.count(old) == 1, 'placeholder not found'
-          open('site_out/index.html', 'w', encoding='utf-8').write(h.replace(old, 'var SUPABASE_ANON_KEY = "%s";' % os.environ['SUPABASE_ANON_KEY']))
+          h = h.replace(old, 'var SUPABASE_ANON_KEY = "%s";' % os.environ['SUPABASE_ANON_KEY'])
+          # V232.9 — اعلان وب: پیکربندی عمومی فایربیس (apiKey/projectId/appId/messagingSenderId) + کلید VAPID؛ اگر Secret نبود خاموش می‌ماند
+          import json
+          fbc = (os.environ.get('FIREBASE_WEB_CONFIG_JSON') or '').strip(); vapid = (os.environ.get('FIREBASE_VAPID_KEY') or '').strip()
+          if fbc and vapid:
+              cfg = json.loads(fbc); cfg = {k: cfg[k] for k in ('apiKey', 'projectId', 'appId', 'messagingSenderId') if k in cfg}
+              assert cfg.get('apiKey') and cfg.get('projectId') and cfg.get('appId'), 'FIREBASE_WEB_CONFIG_JSON incomplete'
+              o1 = 'var FIREBASE_WEB_CONFIG = null;'; o2 = 'var FIREBASE_VAPID_KEY = "";'
+              assert h.count(o1) == 1 and h.count(o2) == 1, 'firebase placeholders not found'
+              h = h.replace(o1, 'var FIREBASE_WEB_CONFIG = %s;' % json.dumps(cfg)).replace(o2, 'var FIREBASE_VAPID_KEY = %s;' % json.dumps(vapid))
+              print('web push: enabled')
+          else:
+              print('web push: disabled (secrets missing)')
+          open('site_out/index.html', 'w', encoding='utf-8').write(h)
           PY
           # V147 — PWA: مانیفست، آیکون‌ها و Service Worker (نسخهٔ SW = هش index.html تا هر انتشار کش قدیمی را دور بریزد)
           cp -r site/pwa site_out/pwa

@@ -39,6 +39,7 @@ class PushMessagingService : FirebaseMessagingService() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra("push_page", message.data["page"] ?: "")
             putExtra("push_exam_id", message.data["exam_id"] ?: "")
+            putExtra("push_code", message.data["code"] ?: "") // V232.9 — کد آزمون برای «آزمون باز شد»
         }
         val id = (message.data["outbox_id"]?.toIntOrNull() ?: (System.currentTimeMillis() % Int.MAX_VALUE).toInt())
         val pending = PendingIntent.getActivity(this, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

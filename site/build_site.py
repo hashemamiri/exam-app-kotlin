@@ -107,7 +107,7 @@ def build_formula_engine():
 def main():
     tpl = read(os.path.join(SITE, "src", "template.html"))
     site_css = read(os.path.join(SITE, "src", "site.css"))
-    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "studio.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js"))
+    site_js = read(os.path.join(SITE, "src", "app.js")) + "\n" + read(os.path.join(SITE, "src", "builder.js")) + "\n" + read(os.path.join(SITE, "src", "studio.js")) + "\n" + read(os.path.join(SITE, "src", "student.js")) + "\n" + read(os.path.join(SITE, "src", "admin.js")) + "\n" + read(os.path.join(SITE, "src", "school.js")) + "\n" + read(os.path.join(SITE, "src", "extras.js")) + "\n" + read(os.path.join(SITE, "src", "mobile.js")) + "\n" + read(os.path.join(SITE, "src", "push.js"))
     # V181 — قلم وزیرمتن فقط از site/fonts/*.woff2 (V164، کش immutable)؛ نسخهٔ base64 (۱۳۵k) دیگر داخل index.html تکرار نمی‌شود
     vazir = "/* Vazirmatn: site/fonts/*.woff2 (see site.css) */"
     # V162 — سرعت: دو موتور سنگین (چاپ + فرمول ≈ ۵ مگابایت) دیگر داخل index.html نیستند؛

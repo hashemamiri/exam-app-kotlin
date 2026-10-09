@@ -951,6 +951,10 @@
       switchRow('اعداد فارسی در ابزارها', 'محورها، نمودارها، شکل‌ها و جدول‌ها', a.persianDigits, function (v) { setAppearance({persianDigits: v}); }),
       switchRow('حالت پرکنتراست', 'متن پررنگ‌تر، کادرهای مشخص‌تر و تمرکز واضح‌تر برای کم‌بینایان', a.highContrast, function (v) { setAppearance({highContrast: v}); })
     ]));
+    /* V232.9 — اعلان‌های وب (فقط وقتی پیکربندی فایربیس در سایت هست) */
+    if (window.SitePush && window.SitePush.available()) c.appendChild(card('اعلان‌ها', [
+      switchRow('اعلان‌ها', 'نمرهٔ جدید، باز شدن آزمون، پیام تقویم و درخواست‌های مدیر', window.SitePush.isEnabled(), function (v) { (v ? window.SitePush.enable() : window.SitePush.disable()).then(function () { rerun(); }); })
+    ]));
     c.appendChild(card('چیدمان دستگاه', [el('p', {class: 'muted', text: 'در وب، چیدمان گوشی/دسکتاپ از روی پهنای صفحه تشخیص داده می‌شود؛ روی تبلت مرورگر را عریض‌تر کنید تا نمای دسکتاپ نمایش داده شود.'}), el('p', {class: 'muted', style: 'color:var(--m-acc)', text: 'چیدمان فعلی: گوشی'})]));
     var palRow = el('div', {class: 'm-pal-row'}, Object.keys(PALETTES).map(function (k) { var p = PALETTES[k]; return el('button', {class: 'm-pal' + (a.palette === k ? ' on' : ''), 'aria-label': 'پالت ' + p[2], style: 'background:linear-gradient(135deg,' + p[0] + ',' + p[1] + ')', onclick: function () { setAppearance({palette: k}); rerun(); }}, [a.palette === k ? ic('check') : null]); }));
     var dv = el('b', {style: 'color:var(--m-acc)', text: fa(Math.round(a.depth))});
