@@ -1647,8 +1647,11 @@
       /* V156 — مثل WalletScreen اپ: کارت موجودی (با چشم مخفی‌کردن)، شارژ امن، گردش‌های اخیر با شرح فارسی */
       var hidden = false, val = el('div', {class: 'v num', text: money(w.balance)});
       var eye = el('button', {class: 'bal-eye', 'aria-label': 'مخفی‌کردن موجودی', text: '👁', onclick: function () { hidden = !hidden; val.textContent = hidden ? '••••••••' : money(w.balance); eye.textContent = hidden ? '🙈' : '👁'; }});
-      c.appendChild(el('div', {class: 'balance'}, [el('div', {class: 'row', style: 'align-items:center'}, [el('div', {class: 'grow', style: 'opacity:.9;font-weight:700', text: '👛 موجودی کیف پول'}), eye]), val, el('div', {style: 'font-size:13px;opacity:.85', text: 'هزینه هر سؤال: ' + fa('1,000') + ' تومان'})]));
-      if (window.SiteAdmin && user.role !== 'student') c.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
+      /* V244 — دسکتاپ: موجودی (یک‌سوم) و شارژ (دو‌سوم) در یک ردیف؛ گوشی زیر هم */
+      var balBox = el('div', {class: 'balance'}, [el('div', {class: 'row', style: 'align-items:center'}, [el('div', {class: 'grow', style: 'opacity:.9;font-weight:700', text: '👛 موجودی کیف پول'}), eye]), val, el('div', {style: 'font-size:13px;opacity:.85', text: 'هزینه هر سؤال: ' + fa('1,000') + ' تومان'})]);
+      var topRow = el('div', {class: 'wallet-top'}, [balBox]);
+      if (window.SiteAdmin && user.role !== 'student') topRow.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
+      c.appendChild(topRow);
       var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '🧾 گردش‌های اخیر'})]);
       if (!w.transactions.length) card.appendChild(emptyBox('🧾', 'هنوز تراکنشی ثبت نشده است.'));
       else card.appendChild(el('table', {class: 'tbl'}, [

@@ -1619,3 +1619,10 @@ input.topup-amt{width:170px;max-width:100%;direction:ltr;text-align:left;border:
 input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var(--brand-soft,#e6f0f3)}
 .btn.topup-go{padding:9px 18px;font-size:13px;width:auto;flex:none}
 :root.m-dark input.topup-amt{background:#1F2733;border-color:var(--line);color:var(--ink)}
+/* ===== V244 — کیف پول دسکتاپ: موجودی ۱/۳ + شارژ ۲/۳ در یک ردیف ===== */
+.wallet-top{display:grid;grid-template-columns:1fr;gap:16px;align-items:stretch}
+.wallet-top>.card{margin-top:0!important}
+.dk .wallet-top{grid-template-columns:2fr 1fr}
+.dk .wallet-top>.balance{grid-column:2;grid-row:1;display:flex;flex-direction:column;justify-content:center}
+.dk .wallet-top>.card{grid-column:1;grid-row:1}
+.dk .wallet-top .balance .v{font-size:30px}
