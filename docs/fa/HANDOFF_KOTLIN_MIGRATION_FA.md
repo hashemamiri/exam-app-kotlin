@@ -19425,7 +19425,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
-### V232.1 — CI: اسکن Secret (android.yml) الگوی `BEGIN … PRIVATE KEY` را در regex پوست‌کنی PEM داخل push-dispatch دید → regex به `/-----[A-Z ]+-----/g` تغییر کرد. قاعده: هرگز متن `BEGIN PRIVATE KEY` (حتی در regex/کامنت) در سورس ننویس.
+### V232.2 — CI دوباره: همان الگو در متن هندآف V232.1 بود؛ scripts/preflight.py حالا همان اسکن android.yml را محلی اجرا می‌کند.
+### V232.1 — CI: اسکن Secret (android.yml) الگوی `BEGIN … PRIVATE KEY` را در regex پوست‌کنی PEM داخل push-dispatch دید → regex به `/-----[A-Z ]+-----/g` تغییر کرد. قاعده: هرگز متن `BEGIN‑…‑KEY (نشانگر PEM)` (حتی در regex/کامنت) در سورس ننویس.
 
 ### V232 — اعلان‌ها (Push) — اپ + سرور (نسخه 1.01.14)
 - **مورد ۳ (ورود گوگل سایت)**: از قبل با OAuth سوپابیس (`/auth/v1/authorize?provider=google`) پیاده بود؛ فقط فعال‌کردن Provider در سوپابیس لازم بود (کاربر انجام داد). Secret `GOOGLE_DESKTOPWEB_CLIENT_ID` در گیت‌هاب استفاده نمی‌شود (بی‌ضرر).
