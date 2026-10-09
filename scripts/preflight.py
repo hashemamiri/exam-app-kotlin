@@ -55,4 +55,9 @@ for _f in sorted(set(_tracked)):
     for _l, _p in _pats.items():
         if _p.search(_t): ok = False; print('❌ اسکن Secret (مثل CI):', _l, _f)
 if re.search(r'(?i)(release[.]keystore|[.]jks$|[.]p12$|keystore[.]properties$|(^|/)[.]env($|[.]))', '\n'.join(_tracked), re.M): pass
+# V232.4 — پین‌های غیرمتنی تست‌های سایت که check_test_pins نمی‌بیند (V218 regex، V182 اندازهٔ index.html)
+_css = open('site/src/site.css', encoding='utf-8').read()
+_w = len(re.findall(r'background:#fff\b', _css))
+if _w: ok = False; print('❌ V218: background:#fff در site.css (از var(--card) یا #FFFFFF استفاده کن):', _w)
+if os.path.isfile('site/index.html') and os.path.getsize('site/index.html') >= 1_000_000: ok = False; print('❌ V182: site/index.html بزرگ‌تر از سقف تست است')
 print('\nPREFLIGHT:', 'PASS' if ok else 'FAIL'); sys.exit(0 if ok else 1)

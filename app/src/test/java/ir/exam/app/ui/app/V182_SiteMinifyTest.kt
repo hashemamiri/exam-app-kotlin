@@ -22,7 +22,7 @@ class V182_SiteMinifyTest {
         assertTrue(File(root(), "site/tools/rjsmin.py").isFile && File(root(), "site/tools/rcssmin.py").isFile && File(root(), "site/tools/LICENSE-rjsmin-rcssmin.txt").isFile)
         val index = File(root(), "site/index.html")
         if (index.isFile) {
-            assertTrue(index.length() < 700_000)
+            assertTrue(index.length() < 1_000_000) // V232.4 — سقف پس از V229–V231 (آفلاین، PDF، مقایسهٔ کلاس‌ها) بالا رفت
             assertTrue("var SUPABASE_ANON_KEY = \"…\";" in index.readText().take(4000))
         }
     }

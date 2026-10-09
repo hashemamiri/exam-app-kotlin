@@ -1,6 +1,5 @@
 package ir.exam.app.ui.app
 
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -21,7 +20,7 @@ class V232_PushNotificationsTest {
         assertTrue(gradle.contains("buildConfigField(\"Boolean\", \"PUSH_ENABLED\", \"\$pushEnabledDebug\")") && gradle.contains("buildConfigField(\"Boolean\", \"PUSH_ENABLED\", \"\$pushEnabledRelease\")"))
         assertTrue(gradle.contains("val pushEnabledDebug = \"ir.exam.app.native\" in googleServicesPackages") && gradle.contains("it.name.endsWith(\"GoogleServices\")"))
         assertTrue(gradle.contains("implementation(\"com.google.firebase:firebase-messaging\")"))
-        assertFalse(File(root(), "app/google-services.json").exists())
+        // فایل google-services.json در CI از Secret ساخته می‌شود؛ فقط باید ردیابی نشود (gitignore)
         assertTrue(src(".gitignore").contains("app/google-services.json"))
         assertTrue(src(".github/workflows/android.yml").contains("GOOGLE_SERVICES_JSON_B64: \${{ secrets.GOOGLE_SERVICES_JSON_B64 }}"))
     }
