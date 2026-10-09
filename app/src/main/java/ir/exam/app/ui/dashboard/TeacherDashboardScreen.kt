@@ -98,6 +98,15 @@ fun TeacherDashboardScreen(
     // V75.4 — پیش از صدور، معلم باید روشن کند که پاسخنامه همراه فایل باشد یا نه.
     var exportCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
     var expandedExamId by remember { mutableStateOf<String?>(null) }
+    // V235 — جست‌وجو/فیلتر آزمون‌ها (مثل دانش‌آموزان)
+    var examSearchOpen by remember { mutableStateOf(false) }
+    var examQuery by remember { mutableStateOf("") }
+    var examFilter by remember { mutableStateOf(ir.exam.app.core.ui.ExamListFilter()) }
+    val visibleExams = state.exams.filter { e ->
+        ir.exam.app.core.ui.examMatches(examQuery, e.title, e.subject, e.code) &&
+            (examFilter.subject == null || e.subject == examFilter.subject) &&
+            (examFilter.status == null || (examFilter.status == "open") == e.isOpen)
+    }
     // V113 — پنجرهٔ کارت‌های آزمون‌های چاپی (ذخیره‌شده روی دستگاه)
     var printExamsOpen by remember { mutableStateOf(false) }
     // V163 — از سرور (print_exams) خوانده می‌شود
@@ -145,8 +154,11 @@ fun TeacherDashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(onClick = { printExamsOpen = true }) { Text("آزمون‌های چاپی") }
-                    FilledIconButton(onClick = onCreateExam) {
-                        Icon(Icons.Outlined.Add, contentDescription = "ساخت آزمون جدید")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FilledIconButton(onClick = onCreateExam) {
+                            Icon(Icons.Outlined.Add, contentDescription = "ساخت آزمون جدید")
+                        }
+                        ir.exam.app.core.ui.ExamSearchIcon(open = examSearchOpen, onOpen = { examSearchOpen = true }) // V235
                     }
                     OutlinedButton(
                         enabled = !state.portabilityLoading,
@@ -157,6 +169,14 @@ fun TeacherDashboardScreen(
                         }
                     ) { Text("واردکردن") }
                 }
+            }
+            item {
+                ir.exam.app.core.ui.ExamSearchField(
+                    open = examSearchOpen, query = examQuery, onQuery = { examQuery = it }, onClose = { examSearchOpen = false },
+                    filter = examFilter, onFilter = { examFilter = it },
+                    subjects = state.exams.mapNotNull { it.subject?.takeIf(String::isNotBlank) }.distinct().sorted(),
+                    showStatus = true
+                )
             }
             if (state.actionLoading || state.portabilityLoading) {
                 item { CircularProgressIndicator() }
@@ -174,7 +194,10 @@ fun TeacherDashboardScreen(
                 state.exams.isEmpty() -> {
                     item { Text("هنوز آزمونی برای نمایش وجود ندارد.") }
                 }
-                else -> items(state.exams, key = { it.id }) { exam ->
+                visibleExams.isEmpty() -> {
+                    item { Text("آزمونی با این جست‌وجو/فیلتر پیدا نشد.") }
+                }
+                else -> items(visibleExams, key = { it.id }) { exam ->
                     NeumorphicPanel(
                         modifier = Modifier
                             .fillMaxWidth()

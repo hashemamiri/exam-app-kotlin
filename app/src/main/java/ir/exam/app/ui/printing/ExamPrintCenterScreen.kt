@@ -106,6 +106,10 @@ fun ExamPrintCenterScreen(
     var copyLoading by remember { mutableStateOf(false) }
     // V113 — پنجرهٔ «آزمون‌های آنلاین»
     var onlineOpen by remember { mutableStateOf(false) }
+    // V235 — جست‌وجو/فیلتر آزمون‌های چاپی
+    var printSearchOpen by remember { mutableStateOf(false) }
+    var printQuery by remember { mutableStateOf("") }
+    var printFilter by remember { mutableStateOf(ir.exam.app.core.ui.ExamListFilter()) }
 
     LaunchedEffect(Unit) {
         viewModel.load()
@@ -179,7 +183,14 @@ fun ExamPrintCenterScreen(
             OutlinedButton(onClick = { onlineOpen = true }, enabled = !copyLoading) {
                 Text("آزمون‌های آنلاین")
             }
+            ir.exam.app.core.ui.ExamSearchIcon(open = printSearchOpen, onOpen = { printSearchOpen = true }) // V235 — سمت چپ «آزمون‌های آنلاین»
         }
+        ir.exam.app.core.ui.ExamSearchField(
+            open = printSearchOpen, query = printQuery, onQuery = { printQuery = it }, onClose = { printSearchOpen = false },
+            filter = printFilter, onFilter = { printFilter = it },
+            subjects = localExams.map { it.subject }.filter { it.isNotBlank() }.distinct().sorted(),
+            showStatus = false
+        )
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         printStatus?.let {
             Text(
@@ -242,7 +253,8 @@ fun ExamPrintCenterScreen(
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // V86.8 — آزمون‌های چاپیِ محلی، با نشانهٔ «چاپی» تا با آزمونِ سرور
             // اشتباه نشوند. حذف هم دارند، وگرنه راهی برای پاک‌کردنشان نیست.
-            items(localExams, key = { "local-" + it.id }) { rec ->
+            val shownExams = localExams.filter { r -> ir.exam.app.core.ui.examMatches(printQuery, r.title, r.subject) && (printFilter.subject == null || r.subject == printFilter.subject) } // V235
+            items(shownExams, key = { "local-" + it.id }) { rec ->
                 Card(Modifier.fillMaxWidth()) {
                     // V208 — کارت جمع‌وجور: بدون برچسب «چاپی»؛ عنوان + درس + تعداد سؤال در یک ردیف
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
