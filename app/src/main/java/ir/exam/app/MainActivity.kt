@@ -16,6 +16,8 @@ import ir.exam.app.ui.app.ExamApp
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // V232.6 — ضربه روی اعلان: مقصد از اینتنت خوانده می‌شود (هم شروع تازه، هم onNewIntent با singleTop)
+        ir.exam.app.core.push.PushNavigation.consumeIntent(intent)
         // V214/V216 — چند ثانیه پس از شروع، WebView ویرایشگر فرمول از قبل ساخته و بارگذاری می‌شود (Chromium هم
         // گرم می‌شود): باز شدن ویرایشگر فرمول و اولین پیش‌نمایش چاپ دیگر هزینهٔ راه‌اندازی/parse را نمی‌پردازند.
         window.decorView.postDelayed({
@@ -30,6 +32,12 @@ class MainActivity : FragmentActivity() {
                 ExamApp(appearance = appearance)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        ir.exam.app.core.push.PushNavigation.consumeIntent(intent)
     }
 
     override fun onTrimMemory(level: Int) {

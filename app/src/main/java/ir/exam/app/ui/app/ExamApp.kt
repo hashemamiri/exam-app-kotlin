@@ -341,6 +341,21 @@ private fun AuthenticatedExamApp(
             }
         }
     }
+    // V232.6 — ضربه روی اعلان: به صفحهٔ مقصد می‌رود (بر اساس نقش)؛ مقصد یک‌بار مصرف می‌شود.
+    val pushTarget by ir.exam.app.core.push.PushNavigation.pending.collectAsState()
+    LaunchedEffect(pushTarget, user.id) {
+        val target = pushTarget ?: return@LaunchedEffect
+        ir.exam.app.core.push.PushNavigation.clear()
+        val destination = when (target.page) {
+            "grades" -> when (user.role) { UserRole.STUDENT -> MainPage.STUDENT_RESULTS; UserRole.TEACHER -> MainPage.GRADING; else -> null }
+            "exam" -> when (user.role) { UserRole.STUDENT, UserRole.TEACHER -> MainPage.HOME; else -> null }
+            "requests" -> when (user.role) { UserRole.TEACHER -> MainPage.REQUESTS; UserRole.MANAGER -> MainPage.CARDS; else -> null }
+            "calendar" -> if (user.role == UserRole.MANAGER) null else MainPage.CALENDAR
+            else -> null
+        } ?: return@LaunchedEffect
+        closeTransientNavigation()
+        if (page != destination) page = destination
+    }
 
     if (page == MainPage.BUILDER && user.role == UserRole.TEACHER) {
         val builderViewModel = remember(user.id, editingExamId, importedExam) {

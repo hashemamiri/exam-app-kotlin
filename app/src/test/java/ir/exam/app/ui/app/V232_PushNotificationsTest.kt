@@ -40,6 +40,19 @@ class V232_PushNotificationsTest {
     }
 
     @Test
+    fun tapOnNotificationNavigates() {
+        // V232.6 — ضربه روی اعلان: singleTop + onNewIntent → PushNavigation → صفحهٔ مقصد بر اساس نقش
+        assertTrue(src("app/src/main/AndroidManifest.xml").contains("android:launchMode=\"singleTop\""))
+        val main = src("app/src/main/java/ir/exam/app/MainActivity.kt")
+        assertTrue(main.contains("override fun onNewIntent(intent: android.content.Intent)") && main.contains("PushNavigation.consumeIntent(intent)"))
+        val app = src("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
+        assertTrue(app.contains("LaunchedEffect(pushTarget, user.id)"))
+        assertTrue(app.contains("\"grades\" -> when (user.role) { UserRole.STUDENT -> MainPage.STUDENT_RESULTS; UserRole.TEACHER -> MainPage.GRADING; else -> null }"))
+        assertTrue(app.contains("\"requests\" -> when (user.role) { UserRole.TEACHER -> MainPage.REQUESTS; UserRole.MANAGER -> MainPage.CARDS; else -> null }"))
+        assertTrue(src("app/src/main/java/ir/exam/app/core/push/PushNavigation.kt").contains("intent.removeExtra(\"push_page\")"))
+    }
+
+    @Test
     fun serverSideContracts() {
         val sql = src("supabase/migrations/20261009_native_push_notifications_v232.sql")
         listOf("create table if not exists public.push_tokens(", "create table if not exists public.push_outbox(", "native_push_register_v1(p_token text, p_platform text)",
