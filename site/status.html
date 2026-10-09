@@ -59,7 +59,7 @@ async function run(){
   set('net', online, online ? 'متصل' : 'مرورگر می‌گوید آفلاین هستید');
   var res = await Promise.all([
     ping(location.origin + '/?ping=' + Date.now(), [200, 304]),
-    ping(BASE + '/auth/v1/health', [200]),
+    ping(BASE + '/auth/v1/health', [200, 401]), /* V248.1 — دروازهٔ Supabase بدون apikey به health هم 401 می‌دهد؛ 401 یعنی سرور پاسخگوست */
     ping(BASE + '/rest/v1/', [200, 401]),
     ping(BASE + '/storage/v1/status', [200, 401, 404])
   ]);
