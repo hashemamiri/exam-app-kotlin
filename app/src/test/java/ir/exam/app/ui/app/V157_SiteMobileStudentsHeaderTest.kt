@@ -35,6 +35,6 @@ class V157_SiteMobileStudentsHeaderTest {
         // V163 — افزودن گروهی (bulkDialog و suggestUsername) از سایت گوشی حذف شد؛ فقط ذخیرهٔ Excel مانده است
         assertTrue("'ذخیره Excel'" in m && "function suggestUsername(" !in m && "bulkDialog" !in m)
         for (name in listOf("نام", "نام کاربری", "جنسیت", "پایه", "رشته", "نام پدر", "کلاس", "وضعیت")) assertTrue("['$name', function" in m)
-        assertTrue("classPickDlg: classPickDlg, credentialDlg: credentialDlg" in source("site/src/school.js"))
+        assertTrue("credentialDlg: credentialDlg" in source("site/src/school.js") && "classPickDlg: classPickDlg" in source("site/src/school.js"))
     }
 }

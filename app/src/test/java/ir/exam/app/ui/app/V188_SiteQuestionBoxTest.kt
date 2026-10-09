@@ -122,7 +122,7 @@ class V188_SiteQuestionBoxTest {
     fun `teacher dashboard has five uniform stat cards including manager requests`() {
         val a = source("site/src/app.js")
         assertTrue("var reqCard = statCard(r[4] ? fa(pendingN) : '—', 'درخواست مدیر', {onclick: function () { openManagerRequests(); }});" in a)
-        assertTrue("c.appendChild(el('div', {class: 'grid5'}, [statCard(fa(r[0].length), 'آزمون', {panel: 'exams'})" in a)
+        assertTrue("c.appendChild(el('div', {class: 'grid5'}, [statCard(cnt(r[0]), 'آزمون', {panel: 'exams'})" in a)
         assertTrue("async function openManagerRequests()" in a && "managerRequestsCard(true)" in a)
         assertFalse("if (window.SiteSchool) c.appendChild(await window.SiteSchool.managerRequestsCard());" in a)
         val css = source("site/src/site.css")

@@ -100,7 +100,7 @@ class V27DataImageOptionsTest {
         val app = source("app/src/main/java/ir/exam/app/ui/app/ExamApp.kt")
         assertTrue("fillMaxSize().verticalScroll(rememberScrollState())" in data)
         assertTrue("SettingsAccordionCard(title = \"وارد کردن آزمون\"" in data) // V208 — کارت بازشونده
-        assertTrue("ExamPackageCodec.decode(raw)" in data)
+        assertTrue(".mapCatching(ExamPackageCodec::decode)" in data /* V252 — DocumentIo */)
         assertTrue("importExam.launch" in data)
         assertTrue("onImportExam = onImportExam" in profile)
         assertTrue("onImportExam = { draft ->" in app)

@@ -483,7 +483,7 @@
     }
     function push() { undo.push(canvas.toDataURL('image/png')); if (undo.length > 30) undo.shift(); }
     function pos(e) { var r = canvas.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return {x: (t.clientX - r.left) * W / r.width, y: (t.clientY - r.top) * H / r.height}; }
-    function down(e) { e.preventDefault(); drawing = true; last = startPt = pos(e); push(); if (tool !== 'pen' && tool !== 'eraser') { snapshotImg = new Image(); snapshotImg.src = canvas.toDataURL(); } if (tool === 'text') { drawing = false; var t = prompt('متن:'); if (t) { ctx.fillStyle = color; ctx.font = (size * 6 + 10) + 'px Vazirmatn, sans-serif'; ctx.direction = 'rtl'; ctx.fillText(t, last.x, last.y); } } }
+    function down(e) { e.preventDefault(); drawing = true; last = startPt = pos(e); push(); if (tool !== 'pen' && tool !== 'eraser') { snapshotImg = new Image(); snapshotImg.src = canvas.toDataURL(); } if (tool === 'text') { drawing = false; var at = last; S.promptDlg('متن روی تخته', '', 'متن', '').then(function (t) { if (t && t.trim()) { ctx.fillStyle = color; ctx.font = (size * 6 + 10) + 'px Vazirmatn, sans-serif'; ctx.direction = 'rtl'; ctx.fillText(t.trim(), at.x, at.y); } }); } }
     function move(e) {
       if (!drawing) return; e.preventDefault(); var p = pos(e);
       if (tool === 'pen' || tool === 'eraser') { ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = tool === 'eraser' ? '#fff' : color; ctx.lineWidth = tool === 'eraser' ? size * 8 : size; ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.restore(); last = p; }

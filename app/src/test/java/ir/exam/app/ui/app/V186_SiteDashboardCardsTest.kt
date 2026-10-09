@@ -17,7 +17,7 @@ class V186_SiteDashboardCardsTest {
     fun `stat cards are buttons with targets and equal height`() {
         val a = source("site/src/app.js")
         assertTrue("function statCard(v, l, target)" in a && "class: 'card stat stat-link', type: 'button'" in a)
-        assertTrue("statCard(fa(r[0].length), 'آزمون', {panel: 'exams'})" in a && "'موجودی کیف پول', {panel: 'wallet'}" in a)
+        assertTrue("statCard(cnt(r[0]), 'آزمون', {panel: 'exams'})" in a && "'موجودی کیف پول', {panel: 'wallet'}" in a)
         val css = source("site/src/site.css")
         assertTrue(".grid4 .stat,.grid3 .stat{min-height:112px" in css && "button.stat{font:inherit" in css)
     }
