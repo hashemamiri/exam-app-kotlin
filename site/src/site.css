@@ -1565,3 +1565,21 @@ body.lp-body{background:#D6ECFC}
 }
 /* ===== V231 — آفلاین دانش‌آموز: نوار قطع اینترنت داخل آزمون ===== */
 .st-net{margin:0 0 10px;font-size:13px;line-height:1.8}
+/* ===== V239 — دسکتاپ: تیک‌ها «تراشه‌ای» و منوهای کشویی «کروی» (کل سایت، به‌جز پوستهٔ موبایل) ===== */
+html body:not(.m-mode) label:has(> input[type=checkbox]){display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:7px 14px 7px 12px;background:#eef1f6;color:var(--muted);font-weight:600;cursor:pointer;border:1px solid transparent;transition:background .15s,color .15s,border-color .15s,box-shadow .15s;user-select:none;line-height:1.4;width:auto;max-width:100%}
+html body:not(.m-mode) label:has(> input[type=checkbox]):hover{box-shadow:0 2px 10px rgba(60,120,170,.12)}
+html body:not(.m-mode) label:has(> input[type=checkbox]:checked){background:var(--brand-soft,#e6f0f3);color:var(--brand,#39758a);border-color:var(--brand,#39758a)}
+html body:not(.m-mode) label:has(> input[type=checkbox]) > input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin:0;border-radius:50%;border:2px solid #b8c2cc;background:var(--card,#fff);display:inline-grid;place-content:center;flex:none;cursor:pointer;transition:.15s;position:relative}
+html body:not(.m-mode) label:has(> input[type=checkbox]) > input[type=checkbox]:checked{background:var(--brand,#39758a);border-color:var(--brand,#39758a)}
+html body:not(.m-mode) label:has(> input[type=checkbox]) > input[type=checkbox]:checked::after{content:'';width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+html body:not(.m-mode) label:has(> input[type=checkbox]) > input[type=checkbox]:focus-visible{outline:2px solid var(--brand,#39758a);outline-offset:2px}
+html body:not(.m-mode) label:has(> input[type=checkbox]:disabled){opacity:.55;cursor:default}
+:root.m-dark body:not(.m-mode) label:has(> input[type=checkbox]){background:#252D3A;color:var(--ink)}
+:root.m-dark body:not(.m-mode) label:has(> input[type=checkbox]:checked){background:var(--brand-soft,#243744);color:var(--brand,#5FB0C8)}
+:root.m-dark body:not(.m-mode) label:has(> input[type=checkbox]) > input[type=checkbox]{border-color:#4A5563;background:#1F2733}
+/* منوهای کشویی: گوشه‌های کاملاً گرد، فلش سفارشی سمت چپ (RTL)، بدون مستطیل خام مرورگر */
+html body:not(.m-mode) select:not([multiple]):not([size]){appearance:none;-webkit-appearance:none;-moz-appearance:none;border-radius:999px;border:1px solid var(--line);background-color:var(--card);padding:9px 16px 9px 38px;min-height:40px;line-height:1.4;cursor:pointer;box-shadow:0 2px 8px rgba(60,120,170,.08);transition:border-color .15s,box-shadow .15s;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2339758a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:left 14px center;background-size:16px}
+html body:not(.m-mode) select:not([multiple]):not([size]):hover{border-color:var(--brand,#39758a)}
+html body:not(.m-mode) select:not([multiple]):not([size]):focus{outline:none;border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var(--brand-soft,#e6f0f3)}
+html body:not(.m-mode) .field select:not([multiple]):not([size]){width:100%}
+:root.m-dark body:not(.m-mode) select:not([multiple]):not([size]){background-color:#1F2733;border-color:var(--line);color:var(--ink);box-shadow:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235FB0C8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>")}
