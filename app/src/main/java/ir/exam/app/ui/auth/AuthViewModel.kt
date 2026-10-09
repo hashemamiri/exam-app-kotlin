@@ -40,6 +40,9 @@ enum class AuthScreen {
     RECOVERY_PASSWORD
 }
 
+/** V237 — پیام + برچسب دکمهٔ ورود برای حساب گوگلِ از قبل ثبت‌شده. */
+data class RoleChoice(val message: String, val loginLabel: String, val user: AppUser)
+
 data class AuthUiState(
     val screen: AuthScreen = AuthScreen.SIGN_IN,
     val email: String = "",
@@ -59,7 +62,9 @@ data class AuthUiState(
     val isRestoringSession: Boolean = true,
     val user: AppUser? = null,
     val error: String? = null,
-    val restoreError: String? = null
+    val restoreError: String? = null,
+    /** V237 — حساب گوگلِ موجود: پرسش «ورود به‌عنوان …» / «انصراف» (ثبت‌نام تکراری یا نقشِ متفاوت). */
+    val roleChoice: RoleChoice? = null
 )
 
 class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
@@ -364,7 +369,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
      * request است تا isLoading/error درست مدیریت شود و پس از موفقیت user در
      * state بنشیند (AuthGate خودکار وارد برنامه می‌شود).
      */
-    fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String) = request {
+    fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String, registering: Boolean = false) = request {
         ir.exam.app.data.remote.SupabaseProvider.client.auth.signInWith(IDToken) {
             this.idToken = idToken
             provider = Google
@@ -383,11 +388,49 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         (roleResult?.get("error") as? kotlinx.serialization.json.JsonPrimitive)
             ?.content?.takeIf(String::isNotBlank)?.let(::error)
         val user = repository.refreshCurrentUser().getOrThrow()
-        // V132 — ایمیلِ گوگلِ مدیر در پنلِ معلم (و برعکس): پیامِ روشن به‌جای ورودِ خاموش به پنلِ دیگر.
+        // V237 — حساب کاملِ موجود: به‌جای خطا، پنجرهٔ «ورود به‌عنوان …» / «انصراف»
+        // (ثبت‌نام با ایمیلِ قبلاً ثبت‌شده با همان نقش یا نقش دیگر؛ ورود با نقش دیگر).
+        roleChoiceFor(user, role, registering)?.let { choice ->
+            _state.update { it.copy(roleChoice = choice) }
+            return@request
+        }
+        // V132 — حساب دانش‌آموز در پنل کادر: پیامِ روشن به‌جای ورودِ خاموش.
         guardPanelRole(user, role)
         // V60.2 — مسیر مشترک: حساب تازه به صفحهٔ تکمیل ثبت‌نام (معلم/مدیر بر
         // اساس pendingRegistrationRole) می‌رود؛ حساب کامل مستقیم وارد می‌شود.
         acceptAuthenticatedUser(user)
+    }
+
+    /** V237 — تشخیص حساب موجود برای پنجرهٔ انتخاب نقش؛ null = ادامهٔ عادی. */
+    private fun roleChoiceFor(user: AppUser, pane: String, registering: Boolean): RoleChoice? {
+        if (user.requiresTeacherSetup) return null
+        val actual = user.role
+        val actualPane = when (actual) {
+            ir.exam.app.domain.model.UserRole.MANAGER -> "manager"
+            ir.exam.app.domain.model.UserRole.TEACHER -> "teacher"
+            else -> return null
+        }
+        if (pane != "teacher" && pane != "manager") return null
+        val actualName = if (actualPane == "manager") "مدیر/معاون" else "معلم"
+        val loginLabel = if (actualPane == "manager") "ورود به‌عنوان مدیر" else "ورود به‌عنوان معلم"
+        return when {
+            actualPane != pane -> RoleChoice("این ایمیل قبلاً به‌عنوان «$actualName» ثبت‌نام شده است.", loginLabel, user)
+            registering -> RoleChoice("این ایمیل قبلاً به‌عنوان «$actualName» ثبت‌نام شده است و نیازی به ثبت‌نام دوباره نیست.", loginLabel, user)
+            else -> null
+        }
+    }
+
+    /** V237 — «ورود به‌عنوان …» در پنجرهٔ انتخاب نقش. */
+    fun confirmRoleChoice() {
+        val choice = _state.value.roleChoice ?: return
+        _state.update { it.copy(roleChoice = null) }
+        acceptAuthenticatedUser(choice.user)
+    }
+
+    /** V237 — «انصراف»: نشست گوگل بسته می‌شود و کاربر همان‌جا می‌ماند. */
+    fun cancelRoleChoice() {
+        _state.update { it.copy(roleChoice = null) }
+        viewModelScope.launch { runCatching { repository.signOut() } }
     }
 
     /** V60.0 — نمایش خطای جریان گوگل (بستن توسط کاربر خطا نیست). */

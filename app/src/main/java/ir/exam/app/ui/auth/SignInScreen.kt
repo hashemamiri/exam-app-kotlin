@@ -62,6 +62,16 @@ private val RecoverySteps = listOf("ایمیل", "کد بازیابی", "رمز 
 @Composable
 fun SignInScreen(viewModel: AuthViewModel) {
     val state by viewModel.state.collectAsState()
+    // V237 — حساب گوگلِ موجود: «ورود به‌عنوان …» / «انصراف»
+    state.roleChoice?.let { choice ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = viewModel::cancelRoleChoice,
+            title = { Text("حساب از قبل وجود دارد") },
+            text = { Text(choice.message) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = viewModel::confirmRoleChoice) { Text(choice.loginLabel) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = viewModel::cancelRoleChoice) { Text("انصراف") } }
+        )
+    }
 
     // V62.0 — پوستهٔ «یخی قطبی»: گرادیان با هاله و موج سه‌لایه، کارت شیشه‌ای،
     // برف در جریان بازیابی رمز.
@@ -257,7 +267,15 @@ private fun StaffLoginPane(state: AuthUiState, viewModel: AuthViewModel, manager
             color = IceInk
         )
     }
+    // V61.0 — ورود با گوگل؛ همان جریان Credential Manager ثبت‌نام (idToken). V237 — بالای فرم.
     StaggeredItem(3) {
+        GoogleAuthButton(
+            state = state,
+            viewModel = viewModel,
+            role = if (managerRole) "manager" else "teacher"
+        ) { Text("ورود با گوگل") }
+    }
+    StaggeredItem(4) {
         IceField(
             value = state.email,
             onValueChange = viewModel::setEmail,
@@ -267,8 +285,8 @@ private fun StaffLoginPane(state: AuthUiState, viewModel: AuthViewModel, manager
             keyboardType = KeyboardType.Email
         )
     }
-    StaggeredItem(4) { PasswordField("رمز عبور", state.password, viewModel::setPassword) }
-    StaggeredItem(5) {
+    StaggeredItem(5) { PasswordField("رمز عبور", state.password, viewModel::setPassword) }
+    StaggeredItem(6) {
         IceButton(
             text = "ورود با رمز عبور",
             onClick = viewModel::signIn,
@@ -276,20 +294,12 @@ private fun StaffLoginPane(state: AuthUiState, viewModel: AuthViewModel, manager
             loading = state.isLoading
         )
     }
-    StaggeredItem(6) {
+    StaggeredItem(7) {
         IceOutlinedButton(
             text = "ورود با کد ایمیل",
             onClick = viewModel::sendLoginOtp,
             enabled = !state.isLoading && '@' in state.email
         )
-    }
-    // V61.0 — ورود با گوگل؛ همان جریان Credential Manager ثبت‌نام (idToken).
-    StaggeredItem(7) {
-        GoogleAuthButton(
-            state = state,
-            viewModel = viewModel,
-            role = if (managerRole) "manager" else "teacher"
-        ) { Text("ورود با گوگل") }
     }
     StaggeredItem(8) {
         LinkTextButton("رمز را فراموش کرده‌ام", onClick = viewModel::showRecovery, enabled = !state.isLoading)
@@ -367,11 +377,13 @@ private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
             lineHeight = 22.sp
         )
     }
-    StaggeredItem(4) { IceField(state.fullName, viewModel::setFullName, hint = "نام و نام خانوادگی") }
-    StaggeredItem(5) {
+    // V60.0 — ثبت‌نام با گوگل: انتخاب جیمیل ثبت‌شده روی گوشی (Credential Manager). V237 — بالای فرم.
+    StaggeredItem(4) { GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher") }
+    StaggeredItem(5) { IceField(state.fullName, viewModel::setFullName, hint = "نام و نام خانوادگی") }
+    StaggeredItem(6) {
         IceField(state.email, viewModel::setEmail, hint = "ایمیل معلم", keyboardType = KeyboardType.Email)
     }
-    StaggeredItem(6) {
+    StaggeredItem(7) {
         IceButton(
             text = "ارسال کد تأیید",
             onClick = viewModel::sendTeacherRegistrationOtp,
@@ -379,8 +391,6 @@ private fun TeacherRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
             loading = state.isLoading
         )
     }
-    // V60.0 — ثبت‌نام با گوگل: انتخاب جیمیل ثبت‌شده روی گوشی (Credential Manager).
-    StaggeredItem(7) { GoogleRegisterButton(state = state, viewModel = viewModel, role = "teacher") }
     StaggeredItem(8) { BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading) }
 }
 
@@ -442,11 +452,13 @@ private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
             lineHeight = 22.sp
         )
     }
-    StaggeredItem(4) { IceField(state.fullName, viewModel::setFullName, hint = "نام و نام خانوادگی") }
-    StaggeredItem(5) {
+    // V60.0 — ثبت‌نام با گوگل برای مدیر/معاون. V237 — بالای فرم.
+    StaggeredItem(4) { GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager") }
+    StaggeredItem(5) { IceField(state.fullName, viewModel::setFullName, hint = "نام و نام خانوادگی") }
+    StaggeredItem(6) {
         IceField(state.email, viewModel::setEmail, hint = "ایمیل مدیر/معاون", keyboardType = KeyboardType.Email)
     }
-    StaggeredItem(6) {
+    StaggeredItem(7) {
         IceButton(
             text = "ارسال کد تأیید",
             onClick = viewModel::sendManagerRegistrationOtp,
@@ -454,8 +466,6 @@ private fun ManagerRegistrationPane(state: AuthUiState, viewModel: AuthViewModel
             loading = state.isLoading
         )
     }
-    // V60.0 — ثبت‌نام با گوگل برای مدیر/معاون.
-    StaggeredItem(7) { GoogleRegisterButton(state = state, viewModel = viewModel, role = "manager") }
     StaggeredItem(8) { BackButtonRow(onBack = viewModel::showSignIn, enabled = !state.isLoading) }
 }
 
@@ -630,7 +640,7 @@ private fun PasswordField(label: String, value: String, onChange: (String) -> Un
  */
 @Composable
 private fun GoogleRegisterButton(state: AuthUiState, viewModel: AuthViewModel, role: String) {
-    GoogleAuthButton(state = state, viewModel = viewModel, role = role) {
+    GoogleAuthButton(state = state, viewModel = viewModel, role = role, registering = true) {
         Text("ثبت‌نام با گوگل")
     }
 }
@@ -645,6 +655,7 @@ private fun GoogleAuthButton(
     state: AuthUiState,
     viewModel: AuthViewModel,
     role: String,
+    registering: Boolean = false, // V237
     label: @Composable () -> Unit
 ) {
     if (ir.exam.app.BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
@@ -679,7 +690,7 @@ private fun GoogleAuthButton(
                     val googleCredential =
                         com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
                             .createFrom(result.credential.data)
-                    viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)
+                    viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role, registering)
                 } catch (cancel: androidx.credentials.exceptions.GetCredentialCancellationException) {
                     // بستن پنجره توسط کاربر خطا نیست.
                 } catch (error: Throwable) {

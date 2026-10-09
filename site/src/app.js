@@ -1135,7 +1135,7 @@
           busy(b1, false);
         });
         /* V234 — ثبت‌نام با گوگل (همان OAuth ورود؛ نقش انتخاب‌شده ذخیره می‌شود)؛ V236 — بالای فرم */
-        if (window.SiteExtras) { var gb = window.SiteExtras.googleButton(state.role || 'teacher'); gb.innerHTML = gb.innerHTML.replace('ورود با گوگل', 'ثبت‌نام با گوگل'); gb.style.marginTop = '0'; m.appendChild(gb); m.appendChild(el('div', {class: 'sep', text: 'یا'})); }
+        if (window.SiteExtras) { var gb = window.SiteExtras.googleButton(state.role || 'teacher', true); gb.innerHTML = gb.innerHTML.replace('ورود با گوگل', 'ثبت‌نام با گوگل'); gb.style.marginTop = '0'; m.appendChild(gb); m.appendChild(el('div', {class: 'sep', text: 'یا'})); }
         m.appendChild(name); m.appendChild(em); m.appendChild(b1);
         m.appendChild(el('p', {class: 'hint', text: 'دانش‌آموزان نیازی به ثبت‌نام ندارند؛ معلم برایشان حساب می‌سازد.'}));
       } else if (state.step === 'code') {
@@ -1823,6 +1823,19 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeAuth(); if (formulaCtx) return; if (printCtx) closePrintOverlay(); } });
     if (session && KEY_READY) {
       try { user = await currentProfile(); } catch (e) { user = null; if (/نشست|JWT|401/.test(errMsg(e))) saveSession(null); else setTimeout(function () { toast(errMsg(e), 'err'); }, 300); }
+    }
+    /* V237 — بازگشت از گوگل با حساب کاملِ موجود: اگر نقش با پنل انتخابی فرق دارد یا در حال «ثبت‌نام» بود،
+       پنجرهٔ «ورود به‌عنوان …» / «انصراف» (انصراف = خروج از نشست گوگل و ماندن در صفحهٔ ورود) */
+    var gr = window.__googleReturn; window.__googleReturn = null;
+    if (gr && user && !user.requiresSetup && (user.role === 'teacher' || user.role === 'manager')) {
+      var actualName = user.role === 'manager' ? 'مدیر/معاون' : 'معلم';
+      var ask = user.role !== gr.role ? 'این ایمیل قبلاً به‌عنوان «' + actualName + '» ثبت‌نام شده است.' : (gr.mode === 'register' ? 'این ایمیل قبلاً به‌عنوان «' + actualName + '» ثبت‌نام شده است و نیازی به ثبت‌نام دوباره نیست.' : '');
+      if (ask) {
+        var pendingUser = user; user = null; render(); /* پشت پنجره، صفحهٔ ورود */
+        var go = await confirmDlg('حساب از قبل وجود دارد', ask, pendingUser.role === 'manager' ? 'ورود به‌عنوان مدیر' : 'ورود به‌عنوان معلم');
+        if (!go) { try { await http('/auth/v1/logout', {method: 'POST'}); } catch (e) {} saveSession(null); user = null; render(); return; }
+        user = pendingUser;
+      }
     }
     if (user && user.requiresSetup) { renderSetupGate(); return; }
     render();

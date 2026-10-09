@@ -30,13 +30,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
 
 /**
  * V235 — جست‌وجو و فیلتر فهرست آزمون‌ها (آزمون‌های آنلاین و چاپی)، آینهٔ فیلد جست‌وجوی دانش‌آموزان:
  * آیکن ذره‌بین → فیلد باز می‌شود؛ یک سمت فیلد «✕» (بستن + پاک کردن) و سمت دیگر آیکن فیلتر (فعال = قرمز).
  */
-data class ExamListFilter(val subject: String? = null, val status: String? = null) { // status: open | closed | null
-    val isActive: Boolean get() = subject != null || status != null
+data class ExamListFilter(val subjects: Set<String> = emptySet(), val status: String? = null) { // status: open | closed | null
+    val isActive: Boolean get() = subjects.isNotEmpty() || status != null
+    /** V237 — خالی = همهٔ درس‌ها. */
+    fun matchesSubject(subject: String?): Boolean = subjects.isEmpty() || (subject != null && subject in subjects)
 }
 
 @Composable
@@ -82,6 +92,15 @@ fun ExamSearchField(
     }
     if (filterOpen) {
         var draft by remember(filter) { mutableStateOf(filter) }
+        var subjectPickerOpen by remember { mutableStateOf(false) }
+        if (subjectPickerOpen) {
+            SubjectPickerDialog(
+                subjects = subjects,
+                selected = draft.subjects,
+                onDismiss = { subjectPickerOpen = false },
+                onApply = { draft = draft.copy(subjects = it); subjectPickerOpen = false }
+            )
+        }
         AlertDialog(
             onDismissRequest = { filterOpen = false },
             title = { Text("فیلتر آزمون‌ها") },
@@ -96,17 +115,17 @@ fun ExamSearchField(
                         }
                     }
                     if (subjects.isNotEmpty()) {
+                        // V237 — «همه» + دکمهٔ «انتخاب درس» → پنجرهٔ چیپ‌های وسط‌چین با انتخاب چندتایی
                         Text("درس", modifier = Modifier.padding(top = 4.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(selected = draft.subject == null, onClick = { draft = draft.copy(subject = null) }, label = { Text("همه") })
+                            FilterChip(selected = draft.subjects.isEmpty(), onClick = { draft = draft.copy(subjects = emptySet()) }, label = { Text("همه") })
+                            FilterChip(
+                                selected = draft.subjects.isNotEmpty(),
+                                onClick = { subjectPickerOpen = true },
+                                label = { Text(if (draft.subjects.isEmpty()) "انتخاب درس" else "انتخاب درس (${draft.subjects.size})", maxLines = 1) }
+                            )
                         }
-                        subjects.chunked(2).forEach { pair ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                pair.forEach { s ->
-                                    FilterChip(selected = draft.subject == s, onClick = { draft = draft.copy(subject = s) }, label = { Text(s, maxLines = 1) })
-                                }
-                            }
-                        }
+                        if (draft.subjects.isNotEmpty()) Text(draft.subjects.sorted().joinToString("، "), style = MaterialTheme.typography.bodySmall)
                     }
                     if (!showStatus && subjects.isEmpty()) Text("فعلاً درسی برای فیلتر وجود ندارد.")
                 }
@@ -115,6 +134,41 @@ fun ExamSearchField(
             dismissButton = { TextButton(onClick = { onFilter(ExamListFilter()); filterOpen = false }) { Text("پاک کردن") } }
         )
     }
+}
+
+/** V237 — پنجرهٔ انتخاب چند درس: چیپ‌های وسط‌چین؛ لمس = انتخاب/لغو. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SubjectPickerDialog(
+    subjects: List<String>,
+    selected: Set<String>,
+    onDismiss: () -> Unit,
+    onApply: (Set<String>) -> Unit
+) {
+    var picked by remember(selected) { mutableStateOf(selected) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("انتخاب درس", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+        text = {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    subjects.forEach { s ->
+                        FilterChip(
+                            selected = s in picked,
+                            onClick = { picked = if (s in picked) picked - s else picked + s },
+                            label = { Text(s, maxLines = 1) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onApply(picked) }) { Text(if (picked.isEmpty()) "همهٔ درس‌ها" else "تأیید (${picked.size})") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }
 
 /** تطبیق متن جست‌وجو با عنوان/درس/کد (بدون حساسیت به بزرگی حروف و فاصله‌های اضافی). */

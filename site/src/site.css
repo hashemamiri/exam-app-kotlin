@@ -1471,8 +1471,9 @@ table.rp-grades td.num .chip{min-width:64px;justify-content:center}
   background:linear-gradient(180deg,#BFE1FA 0%,#D6ECFC 45%,#EAF5FE 100%);overflow:hidden}
 body.lp-body{background:#D6ECFC}
 .lp.lp-sky .glow{display:none}
-.lp.lp-sky .cloud{position:absolute;pointer-events:none;background:rgba(255,255,255,.82);border-radius:50%;filter:blur(26px);opacity:.9}
-.lp.lp-sky .cloud::before,.lp.lp-sky .cloud::after{content:'';position:absolute;background:inherit;border-radius:50%}
+/* V237 — سرعت بار اول: ابرها بدون filter:blur (گرادیان شعاعی نرم؛ هر فریم دوباره محاسبه نمی‌شود) */
+.lp.lp-sky .cloud{position:absolute;pointer-events:none;border-radius:50%;opacity:.95;background:radial-gradient(ellipse at center,rgba(255,255,255,.95) 0%,rgba(255,255,255,.75) 45%,rgba(255,255,255,0) 72%);contain:strict}
+.lp.lp-sky .cloud::before,.lp.lp-sky .cloud::after{content:'';position:absolute;background:radial-gradient(circle at center,rgba(255,255,255,.95) 0%,rgba(255,255,255,.7) 40%,rgba(255,255,255,0) 70%);border-radius:50%}
 .lp.lp-sky .c1{width:420px;height:150px;top:4%;right:6%}.lp.lp-sky .c1::before{width:220px;height:220px;top:-110px;left:70px}.lp.lp-sky .c1::after{width:160px;height:160px;top:-70px;left:230px}
 .lp.lp-sky .c2{width:520px;height:170px;bottom:-40px;right:22%}.lp.lp-sky .c2::before{width:260px;height:260px;top:-130px;left:120px}.lp.lp-sky .c2::after{width:180px;height:180px;top:-80px;left:330px}
 .lp.lp-sky .c3{width:380px;height:140px;top:30%;left:-60px}.lp.lp-sky .c3::before{width:200px;height:200px;top:-100px;left:90px}
@@ -1481,10 +1482,10 @@ body.lp-body{background:#D6ECFC}
 .lp.lp-sky .logo{color:#1F3B57}.lp.lp-sky .logo .mark{background:var(--card,#ffffff);color:#2B8FD6;box-shadow:0 8px 20px rgba(43,143,214,.18)}
 .lp.lp-sky h1{color:#2B8FD6}.lp.lp-sky h1 span{background:none;color:#2B8FD6}
 .lp.lp-sky .lp-l>p{color:#2E4D6B}
-.lp.lp-sky .tile{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 30px rgba(60,120,170,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#1F3B57;border-radius:22px}
+.lp.lp-sky .tile{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 30px rgba(60,120,170,.12);color:#1F3B57;border-radius:22px}/* V237 — بدون backdrop-filter (۶ کاشی × blur = کندی بار اول) */
 .lp.lp-sky .tile i,.lp.lp-sky .tile:nth-child(even) i{width:52px;height:52px;background:transparent;box-shadow:none;color:#2B6FA8;margin-bottom:8px}
 .lp.lp-sky .tile i svg{width:44px;height:44px}
-.lp.lp-sky .card{background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.95);box-shadow:0 20px 60px rgba(60,120,170,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:28px}
+.lp.lp-sky .card{background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.95);box-shadow:0 20px 60px rgba(60,120,170,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:28px}
 .lp.lp-sky .card h2{color:#2B8FD6}.lp.lp-sky .card p.s{color:#2E4D6B}
 .lp.lp-sky .tabs{background:rgba(255,250,240,.9);box-shadow:inset 0 1px 3px rgba(0,0,0,.06)}
 .lp.lp-sky .tabs button{color:#2E4D6B}.lp.lp-sky .tabs button.on{background:linear-gradient(135deg,#8CC8F0,#6DB5E8);box-shadow:0 6px 14px rgba(93,170,230,.35)}
@@ -1501,7 +1502,7 @@ body.lp-body{background:#D6ECFC}
 /* حالت تاریک: آسمان شب */
 .m-dark .lp.lp-sky{--ink:#E6F1FA;--muted:#A9C4DA;background:linear-gradient(180deg,#0F2238 0%,#16304A 50%,#1B3A58 100%)}
 .m-dark body.lp-body{background:#16304A}
-.m-dark .lp.lp-sky .cloud{background:rgba(255,255,255,.10)}
+.m-dark .lp.lp-sky .cloud{background:radial-gradient(ellipse at center,rgba(255,255,255,.12) 0%,rgba(255,255,255,0) 72%)}.m-dark .lp.lp-sky .cloud::before,.m-dark .lp.lp-sky .cloud::after{background:radial-gradient(circle at center,rgba(255,255,255,.12) 0%,rgba(255,255,255,0) 70%)}
 .m-dark .lp.lp-sky .logo,.m-dark .lp.lp-sky .lp-l>p,.m-dark .lp.lp-sky .hint,.m-dark .lp.lp-sky .foot,.m-dark .lp.lp-sky .card p.s,.m-dark .lp.lp-sky .field label,.m-dark .lp.lp-sky .tabs button{color:#E6F1FA}
 .m-dark .lp.lp-sky h1,.m-dark .lp.lp-sky h1 span,.m-dark .lp.lp-sky .card h2{color:#8CC8F0}
 .m-dark .lp.lp-sky .tile,.m-dark .lp.lp-sky .card{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18);color:#E6F1FA}

@@ -326,9 +326,9 @@
   }
 
   /* ================================================================ ورود با گوگل (OAuth مرورگر) + بازیابی رمز + حذف حساب */
-  function googleButton(role) {
+  function googleButton(role, registering) { /* V237 — registering: ثبت‌نام (برای پرسش «حساب از قبل هست») */
     return el('button', {class: 'btn light', style: 'width:100%;margin-top:8px', html: '<svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:-4px;margin-left:6px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.8l-7.7-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.3 0-11.6-3.9-13.5-9.3l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg> ورود با گوگل', onclick: function () {
-      try { sessionStorage.setItem('examsite.google.role', role || 'teacher'); } catch (e) {}
+      try { sessionStorage.setItem('examsite.google.role', role || 'teacher'); sessionStorage.setItem('examsite.google.mode', registering ? 'register' : 'login'); } catch (e) {}
       var redirect = location.href.split('#')[0];
       if (/^file:/.test(redirect)) { toast('ورود با گوگل فقط وقتی سایت روی یک آدرس اینترنتی (https) باشد کار می‌کند، نه از روی فایل محلی.', 'err'); return; }
       /* V236 — همیشه صفحهٔ انتخاب حساب گوگل نشان داده شود (نه ورود خودکار با حساب قبلی) */
@@ -347,7 +347,9 @@
     /* hash فقط توکن دارد؛ کاربر را از سرور بگیر (currentProfile به session.user نیاز دارد) */
     try { session.user = await S.http('/auth/v1/user', {method: 'GET'}); S.__setSession(session); }
     catch (e) { S.__setSession(null); toast('ورود با گوگل ناتمام ماند: ' + errMsg(e), 'err'); return false; }
-    var role = 'teacher'; try { role = sessionStorage.getItem('examsite.google.role') || 'teacher'; sessionStorage.removeItem('examsite.google.role'); } catch (e) {}
+    var role = 'teacher', mode = 'login'; try { role = sessionStorage.getItem('examsite.google.role') || 'teacher'; mode = sessionStorage.getItem('examsite.google.mode') || 'login'; sessionStorage.removeItem('examsite.google.role'); sessionStorage.removeItem('examsite.google.mode'); } catch (e) {}
+    /* V237 — برای پرسش «ورود به‌عنوان …»/«انصراف» پس از خواندن پروفایل (در boot) */
+    window.__googleReturn = {role: role, mode: mode};
     try { var rr = await S.rpcObj('native_set_registration_role_v1', {p_role: role}); if (rr && rr.error) throw new Error(String(rr.error)); } catch (e) { if (!/function|not found|404|PGRST202/i.test(errMsg(e))) toast(errMsg(e), 'err'); }
     return true;
   }

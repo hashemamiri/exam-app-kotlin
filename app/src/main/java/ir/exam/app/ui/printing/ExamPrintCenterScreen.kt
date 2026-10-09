@@ -253,7 +253,7 @@ fun ExamPrintCenterScreen(
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // V86.8 — آزمون‌های چاپیِ محلی، با نشانهٔ «چاپی» تا با آزمونِ سرور
             // اشتباه نشوند. حذف هم دارند، وگرنه راهی برای پاک‌کردنشان نیست.
-            val shownExams = localExams.filter { r -> ir.exam.app.core.ui.examMatches(printQuery, r.title, r.subject) && (printFilter.subject == null || r.subject == printFilter.subject) } // V235
+            val shownExams = localExams.filter { r -> ir.exam.app.core.ui.examMatches(printQuery, r.title, r.subject) && printFilter.matchesSubject(r.subject) } // V235
             items(shownExams, key = { "local-" + it.id }) { rec ->
                 Card(Modifier.fillMaxWidth()) {
                     // V208 — کارت جمع‌وجور: بدون برچسب «چاپی»؛ عنوان + درس + تعداد سؤال در یک ردیف

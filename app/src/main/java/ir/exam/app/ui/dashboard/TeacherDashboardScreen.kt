@@ -104,7 +104,7 @@ fun TeacherDashboardScreen(
     var examFilter by remember { mutableStateOf(ir.exam.app.core.ui.ExamListFilter()) }
     val visibleExams = state.exams.filter { e ->
         ir.exam.app.core.ui.examMatches(examQuery, e.title, e.subject, e.code) &&
-            (examFilter.subject == null || e.subject == examFilter.subject) &&
+            examFilter.matchesSubject(e.subject) &&
             (examFilter.status == null || (examFilter.status == "open") == e.isOpen)
     }
     // V113 — پنجرهٔ کارت‌های آزمون‌های چاپی (ذخیره‌شده روی دستگاه)
