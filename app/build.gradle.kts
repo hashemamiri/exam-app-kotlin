@@ -13,6 +13,12 @@ plugins {
 // بدون آن، اپ کامپایل می‌شود ولی اعلان‌ها خاموش می‌مانند).
 val hasGoogleServices = file("google-services.json").exists()
 if (hasGoogleServices) apply(plugin = "com.google.gms.google-services")
+// V232.3 — بستهٔ debug پسوند «.native» دارد؛ اگر آن نام در google-services.json ثبت نشده باشد، پردازش فایل برای آن variant
+// خاموش می‌شود و PUSH_ENABLED همان variant false است (به‌جای شکست build با «No matching client found»).
+val googleServicesPackages: Set<String> = if (hasGoogleServices)
+    Regex("\"package_name\"\\s*:\\s*\"([^\"]+)\"").findAll(file("google-services.json").readText()).map { it.groupValues[1] }.toSet() else emptySet()
+val pushEnabledRelease = "ir.exam.app" in googleServicesPackages
+val pushEnabledDebug = "ir.exam.app.native" in googleServicesPackages
 
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
@@ -50,7 +56,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
-        buildConfigField("Boolean", "PUSH_ENABLED", "$hasGoogleServices") // V232
+        buildConfigField("Boolean", "PUSH_ENABLED", "false") // V232 — در buildTypes بر اساس google-services.json مقدار می‌گیرد
 
         // V78.2 — کتابخانهٔ بومیِ OCR برای هر چهار ABI ساخته می‌شود و ~۱۲٫۲MB
         // به APK اضافه می‌کرد. گوشی‌های واقعی همگی ARM هستند؛ x86/x86_64 فقط
@@ -81,8 +87,12 @@ android {
     }
 
     buildTypes {
-        getByName("debug") { applicationIdSuffix = ".native" }
+        getByName("debug") {
+            applicationIdSuffix = ".native"
+            buildConfigField("Boolean", "PUSH_ENABLED", "$pushEnabledDebug") // V232.3
+        }
         getByName("release") {
+            buildConfigField("Boolean", "PUSH_ENABLED", "$pushEnabledRelease") // V232.3
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
@@ -159,4 +169,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+}
+
+// V232.3 — پردازش google-services فقط برای variantهایی که نام بسته‌شان در فایل هست
+if (hasGoogleServices) {
+    tasks.matching { it.name.startsWith("process") && it.name.endsWith("GoogleServices") }.configureEach {
+        val debugTask = name.contains("Debug")
+        enabled = if (debugTask) pushEnabledDebug else pushEnabledRelease
+    }
 }

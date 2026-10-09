@@ -19425,6 +19425,7 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V232.3 — CI: `processDebugGoogleServices` با «No matching client found for package name 'ir.exam.app.native'» شکست (debug پسوند `.native` دارد؛ در فایربیس فقط `ir.exam.app` ثبت شده). راه‌حل در app/build.gradle.kts: `googleServicesPackages` از `package_name`های فایل؛ `pushEnabledDebug/Release`؛ `buildConfigField PUSH_ENABLED` در هر buildType؛ taskهای `process*GoogleServices` برای variant بی‌بسته `enabled=false`. اگر روزی اعلان در debug لازم شد: در فایربیس اپ اندروید دوم با بستهٔ `ir.exam.app.native` اضافه و json جدید را در Secret بگذار.
 ### V232.2 — CI دوباره: همان الگو در متن هندآف V232.1 بود؛ scripts/preflight.py حالا همان اسکن android.yml را محلی اجرا می‌کند.
 ### V232.1 — CI: اسکن Secret (android.yml) الگوی `BEGIN … PRIVATE KEY` را در regex پوست‌کنی PEM داخل push-dispatch دید → regex به `/-----[A-Z ]+-----/g` تغییر کرد. قاعده: هرگز متن `BEGIN‑…‑KEY (نشانگر PEM)` (حتی در regex/کامنت) در سورس ننویس.
 
