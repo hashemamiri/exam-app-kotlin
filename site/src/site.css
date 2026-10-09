@@ -1593,7 +1593,7 @@ html body:not(.m-mode) select.dd-native{position:absolute!important;opacity:0!im
 .dd-btn.open{box-shadow:0 0 0 3px var(--brand-soft,#e6f0f3)}
 .dd-btn:disabled{opacity:.55;cursor:default}
 .dd-btn.empty{color:var(--muted)}
-.dd-menu{position:fixed;z-index:200;display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 16px 40px rgba(60,120,170,.18);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;direction:rtl;animation:ddIn .12s ease-out;scrollbar-width:none;-ms-overflow-style:none}
+.dd-menu{position:fixed;z-index:1300;display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 16px 40px rgba(60,120,170,.18);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;direction:rtl;animation:ddIn .12s ease-out;scrollbar-width:none;-ms-overflow-style:none}
 .dd-menu::-webkit-scrollbar{display:none;width:0;height:0} /* V241 — اسکرول با چرخ/کشیدن، بدون نوار اسکرول */
 .dd-item{flex:none}
 @keyframes ddIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
@@ -1605,3 +1605,6 @@ html body:not(.m-mode) select.dd-native{position:absolute!important;opacity:0!im
 :root.m-dark .dd-menu{background:#1F2733;border-color:var(--line)}
 :root.m-dark .dd-item{color:var(--ink)}
 :root.m-dark .dd-item:hover{background:#252D3A}
+/* ===== V242 — دسکتاپ: ستون «تنظیمات سربرگ» سازندهٔ چاپی و پنجره‌های بازشو اسکرول می‌شوند ولی نوار اسکرول ندارند ===== */
+.dk .b-settings,.dk .modal,.dk .hdr-modal,.dk .b-aud,body:not(.m-mode) .modal-bg .modal{scrollbar-width:none;-ms-overflow-style:none}
+.dk .b-settings::-webkit-scrollbar,.dk .modal::-webkit-scrollbar,.dk .hdr-modal::-webkit-scrollbar,.dk .b-aud::-webkit-scrollbar,body:not(.m-mode) .modal-bg .modal::-webkit-scrollbar{display:none;width:0;height:0}

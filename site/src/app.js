@@ -1937,7 +1937,7 @@
       var mh = Math.min(menu.scrollHeight, maxH);
       menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 160) - 8)) + 'px';
       if (below < mh && above > below) { menu.style.top = Math.max(8, r.top - mh - 6) + 'px'; menu.classList.add('up'); } else menu.style.top = (r.bottom + 6) + 'px';
-      menu.addEventListener('wheel', function (ev) { ev.stopPropagation(); }, {passive: true});
+      menu.addEventListener('wheel', function (ev) { ev.stopPropagation(); if (menu.scrollHeight <= menu.clientHeight) ev.preventDefault(); }, {passive: false}); /* V242 — چرخ روی فهرست، صفحهٔ پشت را نمی‌لغزاند (و فهرست بسته نمی‌شود) */
       btn.classList.add('open'); ddOpen = {s: s, btn: btn, menu: menu};
       var on = menu.querySelector('.dd-item.on'); if (on) on.scrollIntoView({block: 'nearest'});
     });
