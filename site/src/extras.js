@@ -331,7 +331,8 @@
       try { sessionStorage.setItem('examsite.google.role', role || 'teacher'); } catch (e) {}
       var redirect = location.href.split('#')[0];
       if (/^file:/.test(redirect)) { toast('ورود با گوگل فقط وقتی سایت روی یک آدرس اینترنتی (https) باشد کار می‌کند، نه از روی فایل محلی.', 'err'); return; }
-      location.href = S.config.url + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(redirect);
+      /* V236 — همیشه صفحهٔ انتخاب حساب گوگل نشان داده شود (نه ورود خودکار با حساب قبلی) */
+      location.href = S.config.url + '/auth/v1/authorize?provider=google&prompt=select_account&redirect_to=' + encodeURIComponent(redirect);
     }});
   }
   /* پس از بازگشت از گوگل: توکن‌ها در hash هستند */

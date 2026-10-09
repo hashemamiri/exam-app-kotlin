@@ -1080,12 +1080,13 @@
           busy(b, false);
         });
         pw.querySelector('input').addEventListener('keydown', function (e) { if (e.key === 'Enter') b.click(); });
+        /* V236 — «ورود با گوگل» بالای فرم */
+        if (window.SiteExtras) { var gbl = window.SiteExtras.googleButton('teacher'); gbl.style.marginTop = '0'; m.appendChild(gbl); m.appendChild(el('div', {class: 'sep', text: 'یا'})); }
         m.appendChild(id); m.appendChild(pw); m.appendChild(b);
         m.appendChild(el('div', {class: 'lk'}, [
           el('a', {href: '#', text: 'ورود با کد ایمیل', onclick: function (e) { e.preventDefault(); state.otpMode = true; state.step = 'form'; draw(); }}),
           el('a', {href: '#', text: 'فراموشی رمز', onclick: function (e) { e.preventDefault(); state.otpMode = 'recovery'; draw(); }})
         ]));
-        if (window.SiteExtras) { m.appendChild(el('div', {class: 'sep', text: 'یا'})); m.appendChild(window.SiteExtras.googleButton('teacher')); }
         m.appendChild(el('p', {class: 'hint', text: 'دانش‌آموزان با نام کاربری و رمزی که معلم داده وارد می‌شوند.'}));
       } else if (state.otpMode === 'recovery' && window.SiteExtras) {
         m.appendChild(el('p', {class: 'muted', style: 'font-size:13px', text: 'بازیابی رمز عبور با ایمیل حساب. پس از تأیید کد، رمز جدید بگذارید.'}));
@@ -1133,9 +1134,9 @@
           catch (e) { setMsg(errMsg(e)); }
           busy(b1, false);
         });
+        /* V234 — ثبت‌نام با گوگل (همان OAuth ورود؛ نقش انتخاب‌شده ذخیره می‌شود)؛ V236 — بالای فرم */
+        if (window.SiteExtras) { var gb = window.SiteExtras.googleButton(state.role || 'teacher'); gb.innerHTML = gb.innerHTML.replace('ورود با گوگل', 'ثبت‌نام با گوگل'); gb.style.marginTop = '0'; m.appendChild(gb); m.appendChild(el('div', {class: 'sep', text: 'یا'})); }
         m.appendChild(name); m.appendChild(em); m.appendChild(b1);
-        /* V234 — ثبت‌نام با گوگل (همان OAuth ورود؛ نقش انتخاب‌شده ذخیره می‌شود) */
-        if (window.SiteExtras) { m.appendChild(el('div', {class: 'sep', text: 'یا'})); var gb = window.SiteExtras.googleButton(state.role || 'teacher'); gb.innerHTML = gb.innerHTML.replace('ورود با گوگل', 'ثبت‌نام با گوگل'); m.appendChild(gb); }
         m.appendChild(el('p', {class: 'hint', text: 'دانش‌آموزان نیازی به ثبت‌نام ندارند؛ معلم برایشان حساب می‌سازد.'}));
       } else if (state.step === 'code') {
         m.appendChild(el('div', {class: 'alert info', text: 'کد تأیید به ' + state.email + ' فرستاده شد.'}));
