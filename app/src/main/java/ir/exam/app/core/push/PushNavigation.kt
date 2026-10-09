@@ -16,7 +16,8 @@ object PushNavigation {
 
     /** اگر اینتنت از اعلان آمده باشد، مقصد ثبت و extras پاک می‌شوند تا با چرخش صفحه دوباره اجرا نشود. */
     fun consumeIntent(intent: Intent?) {
-        val page = (intent?.getStringExtra("push_page") ?: intent?.getStringExtra("page"))?.takeIf { it.isNotBlank() } ?: return
+        if (intent == null) return
+        val page = (intent.getStringExtra("push_page") ?: intent.getStringExtra("page"))?.takeIf { it.isNotBlank() } ?: return
         val examId = (intent.getStringExtra("push_exam_id") ?: intent.getStringExtra("exam_id"))?.takeIf { it.isNotBlank() }
         intent.removeExtra("push_page"); intent.removeExtra("push_exam_id"); intent.removeExtra("page"); intent.removeExtra("exam_id")
         _pending.value = PushTarget(page, examId)
