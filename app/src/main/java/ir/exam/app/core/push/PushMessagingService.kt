@@ -8,6 +8,8 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import ir.exam.app.MainActivity
@@ -49,7 +51,11 @@ class PushMessagingService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pending)
             .build()
-        runCatching { NotificationManagerCompat.from(this).notify(id, notification) }
+        // V232.5 — lint MissingPermission: در اندروید ۱۳+ بدون مجوز POST_NOTIFICATIONS اعلان نشان داده نمی‌شود
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+        try { NotificationManagerCompat.from(this).notify(id, notification) } catch (_: SecurityException) { }
     }
 
     companion object {
