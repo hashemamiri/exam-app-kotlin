@@ -1608,3 +1608,14 @@ html body:not(.m-mode) select.dd-native{position:absolute!important;opacity:0!im
 /* ===== V242 — دسکتاپ: ستون «تنظیمات سربرگ» سازندهٔ چاپی و پنجره‌های بازشو اسکرول می‌شوند ولی نوار اسکرول ندارند ===== */
 .dk .b-settings,.dk .modal,.dk .hdr-modal,.dk .b-aud,body:not(.m-mode) .modal-bg .modal{scrollbar-width:none;-ms-overflow-style:none}
 .dk .b-settings::-webkit-scrollbar,.dk .modal::-webkit-scrollbar,.dk .hdr-modal::-webkit-scrollbar,.dk .b-aud::-webkit-scrollbar,body:not(.m-mode) .modal-bg .modal::-webkit-scrollbar{display:none;width:0;height:0}
+/* ===== V243 — کیف پول دسکتاپ: «شارژ امن کیف پول» جمع‌وجور ===== */
+.topup-chips{flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.topup-chip{cursor:pointer;border:1px solid transparent;font-size:12px;padding:5px 12px;transition:.15s}
+.topup-chip:hover{box-shadow:0 2px 8px rgba(60,120,170,.12)}
+.topup-chip.on{background:var(--brand-soft,#e6f0f3);color:var(--brand,#39758a);border-color:var(--brand,#39758a)}
+.topup-row{align-items:center;gap:10px;flex-wrap:wrap}
+.topup-lbl{font-size:13px;color:var(--muted);font-weight:600}
+input.topup-amt{width:170px;max-width:100%;direction:ltr;text-align:left;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;background:var(--card);outline:none}
+input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var(--brand-soft,#e6f0f3)}
+.btn.topup-go{padding:9px 18px;font-size:13px;width:auto;flex:none}
+:root.m-dark input.topup-amt{background:#1F2733;border-color:var(--line);color:var(--ink)}
