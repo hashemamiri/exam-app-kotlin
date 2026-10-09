@@ -1,5 +1,8 @@
 package ir.exam.app.ui.student
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import ir.exam.app.core.network.UserFacingError
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -68,6 +71,22 @@ class StudentExamViewModel(
     private var timer: Job? = null
     private var draftObserver: Job? = null
     private var draftSaveJob: Job? = null
+
+    /**
+     * V252 — این ViewModel با `remember` ساخته می‌شود (نه ViewModelProvider)، پس onCleared هرگز صدا زده نمی‌شد و پس از
+     * بازسازی صفحه (چرخش/تغییر پیکربندی پیش از V252، یا تعویض صفحه) نسخهٔ قدیمی با تایمر و حلقهٔ ۲۰ثانیه‌ای زنده می‌ماند
+     * و در پایان مهلت، پاسخ‌های کهنهٔ خودش را به سرور می‌فرستاد (ارسال دوم «قبلاً ارسال شده» می‌شد). صفحه هنگام خروج
+     * این متد را صدا می‌زند: پیش‌نویسِ در صف فوراً ذخیره و همهٔ کارهای این نمونه لغو می‌شوند.
+     */
+    fun release() {
+        val pendingDraft = if (draftSaveJob?.isActive == true) state.value.exam?.let { exam ->
+            exam.id to StudentDraft(state.value.answers, state.value.responseImages, state.value.flaggedQuestionIds, state.value.questionIndex)
+        } else null
+        viewModelScope.cancel()
+        if (pendingDraft != null) {
+            CoroutineScope(Dispatchers.IO).launch { runCatching { drafts.save(pendingDraft.first, pendingDraft.second) } }
+        }
+    }
 
     init {
         if (pending != null && ownerUserId.isNotBlank()) {
@@ -309,6 +328,11 @@ class StudentExamViewModel(
         draftObserver?.cancel()
         draftObserver = viewModelScope.launch {
             drafts.observe(examId).collect { draft ->
+                // V252 — ریشهٔ «حرف تایپ‌شده می‌پرید»: Room پس از هر ذخیره، همان پیش‌نویس را دوباره می‌فرستاد و اگر دانش‌آموز
+                // در همان لحظه حرف تازه‌ای زده بود، پاسخ تازه با نسخهٔ ذخیره‌شدهٔ قبلی جایگزین می‌شد. حالا پژواکِ ذخیرهٔ خودمان
+                // و هر emission وقتی ذخیره‌ای در صف است نادیده گرفته می‌شود (وضعیت حافظه همیشه تازه‌تر است).
+                val echo = lastSavedDraft?.let { it.answers == draft.answers && it.responseImages == draft.responseImages && it.flaggedQuestionIds == draft.flaggedQuestionIds } == true
+                if (echo || draftSaveJob?.isActive == true) return@collect
                 if (state.value.exam?.id == examId && !state.value.finished) {
                     _state.update { it.copy(
                         answers = draft.answers,
@@ -393,16 +417,17 @@ class StudentExamViewModel(
         saveDraft(exam.id, state.value.answers, images)
     }
 
+    private var lastSavedDraft: StudentDraft? = null
     private fun saveDraft(examId: String, answers: Map<String, StudentAnswer>, images: Map<String, List<String>>) {
         // جلوگیری از صف‌شدن یک ذخیرهٔ Room برای هر کاراکتر تایپ‌شده.
         draftSaveJob?.cancel()
         val current = state.value
         draftSaveJob = viewModelScope.launch {
             delay(500L)
-            drafts.save(
-                examId,
-                StudentDraft(answers, images, current.flaggedQuestionIds, current.questionIndex)
-            )
+            val draft = StudentDraft(answers, images, current.flaggedQuestionIds, current.questionIndex)
+            lastSavedDraft = draft
+            // V252 — خطای پایگاه‌دادهٔ محلی (حافظهٔ پر/خراب) نباید وسط آزمون برنامه را ببندد؛ وضعیت در حافظه می‌ماند
+            runCatching { drafts.save(examId, draft) }
         }
     }
 
@@ -457,7 +482,7 @@ class StudentExamViewModel(
                     runCatching { exams.clearActiveExam(exam.id).getOrThrow() }
                     when (outcome) {
                         is SubmissionOutcome.Sent -> {
-                            drafts.clear(exam.id)
+                            runCatching { drafts.clear(exam.id) } /* V252 */
                             _state.update {
                                 it.copy(
                                     submitting = false,

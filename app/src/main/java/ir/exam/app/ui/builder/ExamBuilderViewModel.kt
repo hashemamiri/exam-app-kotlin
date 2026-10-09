@@ -109,8 +109,8 @@ class ExamBuilderViewModel(
                 if (!current.loading && !current.saving && current.savedCode == null &&
                     current.recoverableDraft == null && fingerprint != cleanDraftFingerprint &&
                     fingerprint != savedDraftFingerprint) {
-                    draftStore.save(ownerUserId, current)
-                    savedDraftFingerprint = fingerprint
+                    // V252 — خطای Room (حافظهٔ پر) نباید آزمون‌ساز را حین تایپ ببندد
+                    runCatching { draftStore.save(ownerUserId, current) }.onSuccess { savedDraftFingerprint = fingerprint }
                 }
             }
         }

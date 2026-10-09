@@ -1,5 +1,6 @@
 package ir.exam.app.ui.classes
 
+import ir.exam.app.core.io.DocumentIo
 import ir.exam.app.core.network.UserFacingError
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -182,7 +183,7 @@ fun SchoolManagementScreen(
         }
     }
     var pendingXlsx by remember { mutableStateOf<ByteArray?>(null) }
-    val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->context.contentResolver.openOutputStream(uri)?.use{it.write(bytes)}};pendingXlsx=null}
+    val xlsxLauncher=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")){uri->if(uri!=null)pendingXlsx?.let{bytes->pickerScope.launch{DocumentIo.writeBytes(context,uri,bytes).onFailure{DocumentIo.toast(context,it)}}};pendingXlsx=null} /* V252 — نخ IO + مدیریت خطا */
     // V62.5 — خروجی اکسل دومرحله‌ای: مرحلهٔ ۱ انتخاب گروه (فیلتر)، مرحلهٔ ۲ انتخاب ستون‌ها.
     var exportStep by remember { mutableStateOf(0) }
     var exportFilter by remember { mutableStateOf(StudentListFilter()) }

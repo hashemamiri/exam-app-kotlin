@@ -1,5 +1,8 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.io.DocumentIo
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -49,12 +52,13 @@ import kotlinx.serialization.json.jsonPrimitive
 fun StudentResultsScreen(viewModel: StudentResultsViewModel = remember { StudentResultsViewModel() }) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val ioScope = rememberCoroutineScope()
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
         if (uri != null) {
             val rows=mutableListOf<List<Any?>>(listOf("آزمون","درس","نمره","از","درصد","بازخورد"))
             state.grades.forEach{rows+=listOf(it.title,it.subject,it.grade,it.total,it.percent,it.feedback)}
-            val bytes=XlsxWorkbook.build(listOf(XlsxSheet("کارنامه",rows)))
-            context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+            /* V252 — نوشتن روی نخ IO؛ خطا به‌جای بستن برنامه پیام می‌دهد */
+            ioScope.launch { runCatching { XlsxWorkbook.build(listOf(XlsxSheet("کارنامه",rows))) }.fold({ bytes -> DocumentIo.writeBytes(context, uri, bytes) }, { Result.failure<Unit>(it) }).onFailure { DocumentIo.toast(context, it) } }
         }
     }
     LaunchedEffect(Unit) { viewModel.load() }

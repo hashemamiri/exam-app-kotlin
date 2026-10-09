@@ -1,5 +1,6 @@
 package ir.exam.app.ui.builder
 
+import ir.exam.app.core.io.DocumentIo
 import ir.exam.app.core.network.UserFacingError
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -123,7 +124,6 @@ import ir.exam.app.ui.math.QuestionEditorFieldController
 import ir.exam.app.ui.math.NativeMathText
 import ir.exam.app.core.math.FormulaTextCodec
 import ir.exam.app.core.text.RichTextSplitter
-import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -171,15 +171,16 @@ fun ExamBuilderScreen(
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use(::readBuilderImportLimited)
-                    ?: error("فایل آزمون خوانده نشد.")
-            }.mapCatching(ExamPackageCodec::decode)
-                .onSuccess { imported ->
-                    viewModel.applyImport(imported)
-                    expandedQuestionId = imported.questions.firstOrNull()?.id
-                }
-                .onFailure(viewModel::reportError)
+            /* V252 — خواندن و رمزگشایی فایل روی نخ IO (قبلاً روی نخ اصلی؛ فایل‌های بزرگ رابط را یخ می‌زدند) */
+            scope.launch {
+                DocumentIo.readText(context, uri, 8 * 1024 * 1024, "حجم فایل آزمون بیش از ۸ مگابایت است.")
+                    .mapCatching(ExamPackageCodec::decode)
+                    .onSuccess { imported ->
+                        viewModel.applyImport(imported)
+                        expandedQuestionId = imported.questions.firstOrNull()?.id
+                    }
+                    .onFailure(viewModel::reportError)
+            }
         }
     }
 
@@ -1969,19 +1970,4 @@ private fun QuestionType.faLabel(): String = when (this) {
     QuestionType.FILL_BLANK -> "جای خالی"
     QuestionType.NUMERIC -> "عددی"
     QuestionType.MATCHING -> "جورکردنی"
-}
-
-
-private fun readBuilderImportLimited(input: java.io.InputStream): String {
-    val output = ByteArrayOutputStream()
-    val buffer = ByteArray(8192)
-    var total = 0
-    while (true) {
-        val read = input.read(buffer)
-        if (read < 0) break
-        total += read
-        require(total <= 8 * 1024 * 1024) { "حجم فایل آزمون بیش از ۸ مگابایت است." }
-        output.write(buffer, 0, read)
-    }
-    return output.toString(Charsets.UTF_8.name())
 }

@@ -1,5 +1,8 @@
 package ir.exam.app.ui.portability
 
+import ir.exam.app.core.io.DocumentIo
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.data.repository.ExamPackageCodec
 import ir.exam.app.ui.builder.ExamImportDraft
 import ir.exam.app.ui.common.SettingsAccordionCard
-import java.io.ByteArrayOutputStream
 
 @Composable
 fun DataPortabilitySection(onImportExam: (ExamImportDraft) -> Unit = {}) {
@@ -41,33 +43,34 @@ fun DataPortabilitySection(onImportExam: (ExamImportDraft) -> Unit = {}) {
     val viewModel = remember { DataPortabilityViewModel() }
     val state by viewModel.state.collectAsState()
     var confirmCleanup by remember { mutableStateOf(false) }
+    val ioScope = rememberCoroutineScope()
     val createFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         val file = state.exportFile
         if (uri != null && file != null) {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(file.content) }
+            /* V252 — پشتیبان تا ۲۰ مگابایت روی نخ IO نوشته می‌شود و خطای فراهم‌کنندهٔ فایل دیگر برنامه را نمی‌بندد */
+            ioScope.launch { DocumentIo.writeText(context, uri, file.content).onFailure(viewModel::reportError) }
         }
         viewModel.consumeExport()
     }
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use { readUtf8Limited(it, 20 * 1024 * 1024) }
-                    ?: error("فایل پشتیبان خوانده نشد.")
-            }.onSuccess(viewModel::parseBackup)
-                .onFailure(viewModel::reportError)
+            ioScope.launch {
+                DocumentIo.readText(context, uri, 20 * 1024 * 1024, "حجم فایل پشتیبان بیش از ۲۰ مگابایت است.")
+                    .onSuccess(viewModel::parseBackup)
+                    .onFailure(viewModel::reportError)
+            }
         }
     }
     val importExam = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching {
-                val raw = context.contentResolver.openInputStream(uri)
-                    ?.use { readUtf8Limited(it, 8 * 1024 * 1024) }
-                    ?: error("فایل آزمون خوانده نشد.")
-                ExamPackageCodec.decode(raw)
-            }.onSuccess(onImportExam)
-                .onFailure(viewModel::reportError)
+            ioScope.launch {
+                DocumentIo.readText(context, uri, 8 * 1024 * 1024, "حجم فایل آزمون بیش از ۸ مگابایت است.")
+                    .mapCatching(ExamPackageCodec::decode)
+                    .onSuccess(onImportExam)
+                    .onFailure(viewModel::reportError)
+            }
         }
     }
     LaunchedEffect(state.exportFile) {
@@ -183,18 +186,4 @@ private fun OptionRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         Text(label, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange)
     }
-}
-
-private fun readUtf8Limited(input: java.io.InputStream, maxBytes: Int): String {
-    val output = ByteArrayOutputStream()
-    val buffer = ByteArray(8192)
-    var total = 0
-    while (true) {
-        val read = input.read(buffer)
-        if (read < 0) break
-        total += read
-        require(total <= maxBytes) { "حجم فایل پشتیبان بیش از ۲۰ مگابایت است." }
-        output.write(buffer, 0, read)
-    }
-    return output.toString(Charsets.UTF_8.name())
 }

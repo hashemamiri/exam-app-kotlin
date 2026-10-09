@@ -1,5 +1,8 @@
 package ir.exam.app.ui.dashboard
 
+import ir.exam.app.core.io.DocumentIo
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import ir.exam.app.core.network.UserFacingError
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import ir.exam.app.data.dto.ExamDashboardDto
 import ir.exam.app.ui.app.NeumorphicPanel
 import ir.exam.app.ui.builder.ExamImportDraft
-import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,12 +75,14 @@ fun TeacherDashboardScreen(
     val context = LocalContext.current
     val viewModel = remember { TeacherDashboardViewModel() }
     val state by viewModel.state.collectAsState()
+    val ioScope = rememberCoroutineScope()
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
         val file = state.exportFile
         if (uri != null && file != null) {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(file.content) }
+            /* V252 — نوشتن روی نخ IO و با مدیریت خطا (قبلاً خطای فراهم‌کنندهٔ فایل برنامه را می‌بست) */
+            ioScope.launch { DocumentIo.writeText(context, uri, file.content).onFailure(viewModel::reportError) }
         }
         viewModel.consumeExport()
     }
@@ -86,11 +90,12 @@ fun TeacherDashboardScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use { readExamFileLimited(it) }
-                    ?: error("فایل آزمون خوانده نشد.")
-            }.onSuccess(viewModel::importExam)
-                .onFailure(viewModel::reportError)
+            /* V252 — خواندن فایل (تا ۸ مگابایت، گاهی از درایو ابری) روی نخ IO؛ قبلاً نخ اصلی را یخ می‌زد */
+            ioScope.launch {
+                DocumentIo.readText(context, uri, 8 * 1024 * 1024, "حجم فایل آزمون بیش از ۸ مگابایت است.")
+                    .onSuccess(viewModel::importExam)
+                    .onFailure(viewModel::reportError)
+            }
         }
     }
     var deleteCandidate by remember { mutableStateOf<ExamDashboardDto?>(null) }
@@ -344,19 +349,6 @@ fun TeacherDashboardScreen(
     }
 }
 
-private fun readExamFileLimited(input: java.io.InputStream): String {
-    val output = ByteArrayOutputStream()
-    val buffer = ByteArray(8192)
-    var total = 0
-    while (true) {
-        val read = input.read(buffer)
-        if (read < 0) break
-        total += read
-        require(total <= 8 * 1024 * 1024) { "حجم فایل آزمون بیش از ۸ مگابایت است." }
-        output.write(buffer, 0, read)
-    }
-    return output.toString(Charsets.UTF_8.name())
-}
 
 /** V132 — یک عملِ کارتِ آزمون: آیکن + برچسبِ کوچک زیرش (همه در یک سطر). */
 @Composable

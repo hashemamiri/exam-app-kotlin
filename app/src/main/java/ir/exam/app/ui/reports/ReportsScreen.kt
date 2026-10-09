@@ -1,5 +1,6 @@
 package ir.exam.app.ui.reports
 
+import ir.exam.app.core.io.DocumentIo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -58,7 +59,8 @@ fun ReportsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val xlsxLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
-        if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(viewModel.xlsx()) }
+        /* V252 — ساخت و نوشتن اکسل روی نخ IO با مدیریت خطا */
+        if (uri != null) scope.launch { runCatching { viewModel.xlsx() }.fold({ bytes -> DocumentIo.writeBytes(context, uri, bytes) }, { Result.failure<Unit>(it) }).onFailure(viewModel::reportError) }
     }
     LaunchedEffect(Unit) { viewModel.load() }
 

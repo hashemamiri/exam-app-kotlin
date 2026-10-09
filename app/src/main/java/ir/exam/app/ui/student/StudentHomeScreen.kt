@@ -1,5 +1,6 @@
 package ir.exam.app.ui.student
 
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,12 +51,14 @@ fun StudentHomeScreen(
         val remote = SupabaseStudentExamRepository(appContext)
         StudentExamViewModel(
             exams = QueuedExamRepository(remote, NetworkMonitor(appContext), pending),
-            drafts = RoomAnswerDraftRepository(database.answerDraftDao()),
+            drafts = RoomAnswerDraftRepository(database.answerDraftDao(), userId), /* V252 — پیش‌نویس مخصوص همین حساب */
             pending = pending,
             ownerUserId = userId
         )
     }
     val state by viewModel.state.collectAsState()
+    // V252 — با رفتن صفحه از ترکیب، تایمر/حلقه‌های نمونهٔ قبلی لغو می‌شوند (نه این‌که در پس‌زمینه زنده بمانند)
+    DisposableEffect(viewModel) { onDispose { viewModel.release() } }
     // آزمون فعال (بعد از شروع و پیش از پایان) → هدر پوسته پنهان شود.
     val examActive = state.exam != null && !state.showPreview && !state.finished
     LaunchedEffect(examActive) { onExamActiveChanged(examActive) }
