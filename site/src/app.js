@@ -1904,5 +1904,46 @@
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, function () { legacyCopy(code); done(); }); else { legacyCopy(code); done(); }
   });
   function legacyCopy(text) { var ta = el('textarea', {style: 'position:fixed;opacity:0', value: text}); document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (x) {} ta.remove(); }
+  /* V240 — منوهای کشویی دسکتاپ: فهرست بازشو هم کروی/تراشه‌ای. <select> بومی پنهان می‌ماند (مقدار، change، disabled همان است)
+     و یک دکمهٔ گرد + فهرست چیپ‌ها جایش را می‌گیرد. پوستهٔ موبایل (m-mode) و select چندانتخابی دست‌نخورده. */
+  var ddOpen = null;
+  function ddClose() { if (ddOpen) { ddOpen.menu.remove(); ddOpen.btn.classList.remove('open'); ddOpen = null; } }
+  function ddEnhance(s) {
+    if (s.dataset.dd || s.multiple || s.size > 1 || document.body.classList.contains('m-mode')) return;
+    s.dataset.dd = '1';
+    var wrap = el('span', {class: 'dd-wrap'}), btn = el('button', {type: 'button', class: 'dd-btn', 'aria-haspopup': 'listbox'});
+    s.parentNode.insertBefore(wrap, s); wrap.appendChild(s); wrap.appendChild(btn); s.classList.add('dd-native');
+    function label() { var o = s.options[s.selectedIndex]; btn.textContent = o ? o.text : '\u00a0'; btn.disabled = s.disabled; btn.classList.toggle('empty', !o || !o.value); }
+    label();
+    s.addEventListener('change', label);
+    new MutationObserver(label).observe(s, {childList: true, subtree: true, attributes: true});
+    btn.addEventListener('mouseenter', label);
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation(); label();
+      if (ddOpen && ddOpen.s === s) { ddClose(); return; }
+      ddClose();
+      var menu = el('div', {class: 'dd-menu', role: 'listbox'});
+      Array.prototype.forEach.call(s.options, function (o, i) {
+        if (o.hidden) return;
+        var it = el('button', {type: 'button', class: 'dd-item' + (i === s.selectedIndex ? ' on' : ''), text: o.text, role: 'option'});
+        it.disabled = o.disabled;
+        it.addEventListener('click', function (ev) { ev.stopPropagation(); s.selectedIndex = i; s.dispatchEvent(new Event('change', {bubbles: true})); label(); ddClose(); });
+        menu.appendChild(it);
+      });
+      document.body.appendChild(menu);
+      var r = btn.getBoundingClientRect(), mh = Math.min(menu.scrollHeight, 320), below = window.innerHeight - r.bottom;
+      menu.style.minWidth = Math.max(r.width, 140) + 'px'; menu.style.maxHeight = '320px';
+      menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 160) - 8)) + 'px';
+      if (below < mh + 12 && r.top > mh + 12) { menu.style.top = (r.top - mh - 6) + 'px'; menu.classList.add('up'); } else menu.style.top = (r.bottom + 6) + 'px';
+      btn.classList.add('open'); ddOpen = {s: s, btn: btn, menu: menu};
+      var on = menu.querySelector('.dd-item.on'); if (on) on.scrollIntoView({block: 'nearest'});
+    });
+  }
+  function ddEnhanceAll(root) { if (document.body.classList.contains('m-mode')) return; (root || document).querySelectorAll('select').forEach(ddEnhance); }
+  document.addEventListener('click', function (e) { if (ddOpen && !ddOpen.menu.contains(e.target)) ddClose(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') ddClose(); });
+  window.addEventListener('resize', ddClose); window.addEventListener('scroll', ddClose, true);
+  var ddTimer = null;
+  new MutationObserver(function () { if (ddTimer) return; ddTimer = setTimeout(function () { ddTimer = null; ddEnhanceAll(); }, 30); }).observe(document.documentElement, {childList: true, subtree: true});
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
