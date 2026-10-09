@@ -277,17 +277,6 @@
     if (k === 't') return 'جدول'; if (k === 'p') return 'جدول تناوبی'; if (k === 'a') return spec.t === 'photo' ? 'تصویر' : 'آناتومی'; if (k === 's') return 'فیزیک/شیمی';
     return (X.title && String(X.title).trim()) || 'شکل/نمودار';
   }
-  function maskedHtml(text) {
-    var out = '', last = 0, re = /%%FIG:(\{[\s\S]*?\})%%|\$([^$]+)\$/g, m;
-    while ((m = re.exec(text))) {
-      out += esc(text.slice(last, m.index));
-      if (m[1] != null) out += '<span class="b-chip fig">⟦' + esc(figChipLabel(m[1])) + '⟧</span>';
-      else out += '<span class="b-chip tex" title="' + esc(m[2]) + '">⟦فرمول⟧</span>';
-      last = m.index + m[0].length;
-    }
-    out += esc(text.slice(last));
-    return out.replace(/\n/g, '<br>') + (/\n$/.test(text) ? '&nbsp;' : '');
-  }
   var previewFrame = null, previewReady = null;
   function ensurePreviewFrame() {
     if (previewReady) return previewReady;

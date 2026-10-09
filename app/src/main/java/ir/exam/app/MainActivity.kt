@@ -42,8 +42,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        // V216 — در کمبود حافظه، WebView پارک‌شدهٔ ویرایشگر فرمول آزاد می‌شود (دفعهٔ بعد مثل قبل تازه ساخته می‌شود).
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) FormulaEditorPool.release()
+        // V216/V233 — وقتی اپ از دید خارج شد یا حافظه کم است، WebView پارک‌شدهٔ ویرایشگر فرمول آزاد می‌شود
+        // (دفعهٔ بعد تازه ساخته می‌شود). TRIM_MEMORY_RUNNING_LOW در API 34 منسوخ شد؛ UI_HIDDEN همچنان معتبر است.
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) FormulaEditorPool.release()
     }
 
     override fun onDestroy() {

@@ -125,6 +125,28 @@ jobs:
 
       - name: اجرای تست‌ها و Lint
         run: ./gradlew testDebugUnitTest lintDebug
+      # V233 — حتی در شکست: خلاصهٔ هشدارهای Lint در لاگ + گزارش‌های کامل Lint/تست به‌عنوان Artifact (۱۴ روز)
+      - name: خلاصهٔ Lint و تست‌های ناموفق
+        if: always()
+        run: |
+          f=app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+          if [ -f "$f" ]; then echo "== Lint: تعداد به تفکیک نوع =="; grep -oE '\[[A-Za-z]+\]$' "$f" | sort | uniq -c | sort -rn; else echo "گزارش متنی Lint پیدا نشد"; fi
+          for x in app/build/test-results/testDebugUnitTest/*.xml; do
+            [ -f "$x" ] || continue
+            if grep -q '<failure' "$x"; then echo "== تست ناموفق: $(basename "$x" .xml) =="; grep -oE 'message="[^"]{0,300}' "$x" | head -5; fi
+          done
+      - name: بایگانی گزارش‌های Lint و تست
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ github.run_number }}
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.txt
+            app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: آماده‌سازی امضای Release
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

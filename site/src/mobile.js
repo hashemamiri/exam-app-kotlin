@@ -32,7 +32,6 @@
      هر ناوبری (در همهٔ چیدمان‌ها) یک ورودی history می‌سازد؛ برگشت: اول پنجره/شیت باز → بسته می‌شود، بعد منو/افزودن سریع،
      بعد صفحهٔ قبلی از تاریخچهٔ پنل‌ها (app.js navStack)؛ اگر صفحهٔ قبلی نبود همین‌جا می‌مانیم و هرگز از سایت خارج نمی‌شویم. */
   var histDepth = 0, backGuard = false;
-  function homePanel() { var u = S.user(); return !u ? 'dashboard' : (u.role === 'manager' ? 'teachers' : (u.role === 'student' ? 'dashboard' : 'exams')); }
   /* V220 — در همهٔ چیدمان‌ها (دسکتاپ هم) */
   function pushHist() { if (backGuard) return; try { history.pushState({m: ++histDepth}, ''); } catch (e) {} }
   function closeTopOverlay() {

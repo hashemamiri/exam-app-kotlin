@@ -228,7 +228,7 @@ class OfficialPrintLayoutEngine(private val context: Context) {
                                 add(RenderBlock(
                                     image=bmp,
                                     imageWidthMm=PrintFigureMetrics.figureWidthMm(rich.spec),
-                                    imagePosition=if (figPos != null) "free" else "below",
+                                    imagePosition="free", // V233 — این شاخه فقط با figPos != null اجرا می‌شود
                                     imageXmm=figPos.first,
                                     imageYmm=figPos.second - flowPt * (210f / PAGE_WIDTH)
                                 ))
