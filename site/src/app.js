@@ -1648,7 +1648,7 @@
       var hidden = false, val = el('div', {class: 'v num', text: money(w.balance)});
       var eye = el('button', {class: 'bal-eye', 'aria-label': 'مخفی‌کردن موجودی', text: '👁', onclick: function () { hidden = !hidden; val.textContent = hidden ? '••••••••' : money(w.balance); eye.textContent = hidden ? '🙈' : '👁'; }});
       /* V244 — دسکتاپ: موجودی (یک‌سوم) و شارژ (دو‌سوم) در یک ردیف؛ گوشی زیر هم */
-      var balBox = el('div', {class: 'balance'}, [el('div', {class: 'row', style: 'align-items:center'}, [el('div', {class: 'grow', style: 'opacity:.9;font-weight:700', text: '👛 موجودی کیف پول'}), eye]), val]); /* V245 — بدون سطر «هزینه هر سؤال» (تعرفه در کارت شارژ) */
+      var balBox = el('div', {class: 'balance'}, [el('div', {class: 'row', style: 'align-items:center'}, [el('div', {class: 'grow', style: 'opacity:.9;font-weight:700', text: '👛 موجودی کیف پول'}), eye]), val, el('button', {class: 'btn light bal-tariff', text: 'تعرفه‌ها', onclick: function () { if (window.SiteAdmin && window.SiteAdmin.tariffDlg) window.SiteAdmin.tariffDlg(); }})]); /* V246 — دکمهٔ تعرفه‌ها زیر عدد */
       var topRow = el('div', {class: 'wallet-top'}, [balBox]);
       if (window.SiteAdmin && user.role !== 'student') topRow.appendChild(window.SiteAdmin.topUpCard(w.balance, function () { pageWallet(c); }));
       c.appendChild(topRow);

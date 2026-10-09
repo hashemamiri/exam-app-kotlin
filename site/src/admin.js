@@ -250,15 +250,19 @@
 
   /* ================================================================ شارژ کیف پول (Edge Function wallet-payment) */
   var MIN_TOP_UP = 100000, STEP = 10000, MAX_BALANCE = 10000000;
+  /* V246 — پنجرهٔ تعرفه‌ها (همان نرخ‌های سرور: سؤال ۱۰۰۰، تصویر ۱۰۰۰، صوت ۲/۴/۶ هزار، چاپ ۱۰۰۰+۱۰۰۰ تصویر، بازیابی ۱۰۰۰/سؤال) */
+  function tariffDlg() {
+    var rows = [['هر سؤال آزمون آنلاین', '۱٬۰۰۰'], ['هر تصویر (سؤال/گزینه)', '۱٬۰۰۰'], ['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰'], ['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰'], ['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰'], ['چاپ: هر سؤال', '۱٬۰۰۰'], ['چاپ: هر تصویر', '۱٬۰۰۰'], ['بازیابی پشتیبان: هر سؤال', '۱٬۰۰۰']];
+    var bg = el('div', {class: 'modal-bg', onclick: function (e) { if (e.target === bg) bg.remove(); }});
+    var m = el('div', {class: 'modal tariff-modal'}, [el('button', {class: 'x', text: '✕', 'aria-label': 'بستن', onclick: function () { bg.remove(); }}), el('h2', {text: 'تعرفه‌ها'}),
+      el('div', {class: 'tariff'}, rows.map(function (r) { return el('div', {class: 'tariff-r'}, [el('span', {text: r[0]}), el('b', {text: r[1] + ' تومان'})]); })),
+      el('div', {class: 'row', style: 'justify-content:flex-start;margin-top:14px'}, [el('button', {class: 'btn', text: 'بستن', onclick: function () { bg.remove(); }})])]);
+    bg.appendChild(m); document.body.appendChild(bg);
+  }
   function topUpCard(balance, refresh) {
     var amt = el('input', {type: 'number', step: STEP, min: MIN_TOP_UP, value: 200000, style: 'direction:ltr'});
     var msg = el('div');
-    /* V245 — بدون متن‌های راهنما؛ ستون تعرفه سمت چپ (همان نرخ‌های سرور: سؤال ۱۰۰۰، تصویر ۱۰۰۰، صوت ۲/۴/۶ هزار، چاپ ۱۰۰۰+۱۰۰۰ تصویر، بازیابی ۱۰۰۰/سؤال) */
-    var tariff = el('div', {class: 'tariff'}, [el('div', {class: 'tariff-h', text: 'تعرفه‌ها'})].concat([
-      ['هر سؤال آزمون آنلاین', '۱٬۰۰۰'], ['هر تصویر (سؤال/گزینه)', '۱٬۰۰۰'], ['صوت سؤال تا ۱ مگابایت', '۲٬۰۰۰'], ['صوت سؤال تا ۲ مگابایت', '۴٬۰۰۰'], ['صوت سؤال تا ۳ مگابایت', '۶٬۰۰۰'],
-      ['چاپ: هر سؤال', '۱٬۰۰۰'], ['چاپ: هر تصویر', '۱٬۰۰۰'], ['بازیابی پشتیبان: هر سؤال', '۱٬۰۰۰']
-    ].map(function (r) { return el('div', {class: 'tariff-r'}, [el('span', {text: r[0]}), el('b', {text: r[1] + ' تومان'})]); })));
-    var card = el('div', {class: 'card topup-card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), tariff,
+    var card = el('div', {class: 'card topup-card', style: 'margin-top:16px'}, [el('h3', {text: '💳 شارژ امن کیف پول'}), /* V246 — تعرفه‌ها به پنجرهٔ کارت موجودی رفت */
       /* V243 — چیدمان جمع‌وجور: چیپ‌های مبلغ (انتخاب‌شده رنگی) + فیلد کوتاه + دکمهٔ معمولی در یک ردیف */
       el('div', {class: 'row topup-chips'}, [100000, 200000, 500000, 1000000].map(function (v) { var b = el('button', {class: 'chip topup-chip' + (num(amt.value) === v ? ' on' : ''), type: 'button', text: S.money(v), onclick: function () { amt.value = v; card.querySelectorAll('.topup-chip').forEach(function (x) { x.classList.toggle('on', x === b); }); }}); return b; })),
       el('div', {class: 'row topup-row'}, [el('label', {class: 'topup-lbl', text: 'مبلغ (تومان)'}), amt, el('button', {class: 'btn topup-go', text: 'رفتن به درگاه امن', onclick: async function () {
@@ -604,5 +608,5 @@
     bg.appendChild(m); document.body.appendChild(bg);
   }
 
-  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
+  window.SiteAdmin = {gradingPage: gradingPage, questionAnalysis: function (body, examId) { return tabAnalysis(body, {examId: examId}); }, answerDetail: answerDetail, topUpCard: topUpCard, tariffDlg: tariffDlg, managerTeachersPage: managerTeachersPage, managerSchoolPage: managerSchoolPage, managerClassesPage: managerClassesPage, managerStudentsPage: managerStudentsPage, managerBackup: managerBackup, calendarPage: calendarPage, J: J, autoScore: autoScore, correctText: correctText};
 })();
