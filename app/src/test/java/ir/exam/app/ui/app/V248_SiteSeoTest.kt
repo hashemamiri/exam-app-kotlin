@@ -24,6 +24,6 @@ class V248_SiteSeoTest {
     fun `robots and sitemap exist and are deployed`() {
         assertTrue("Sitemap: https://onlineexam.ir/sitemap.xml" in source("site/robots.txt"))
         assertTrue("<loc>https://onlineexam.ir/</loc>" in source("site/sitemap.xml"))
-        assertTrue("cp site/robots.txt site/sitemap.xml site_out/" in source(".github/workflows/site.yml"))
+        assertTrue("cp site/robots.txt site/sitemap.xml site/favicon.ico site_out/" in source(".github/workflows/site.yml"))
     }
 }
