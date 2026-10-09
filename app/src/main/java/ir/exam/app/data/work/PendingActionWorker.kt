@@ -56,13 +56,13 @@ class PendingActionWorker(
             try {
                 remote.sendPrepared(payload)
                 dao.delete(action.id)
-                clearDraft(action.ownerUserId, payload.examId)
+                clearDraft(database.answerDraftDao(), action.ownerUserId, payload.examId)
                 media.clear(payload.operationId)
             } catch (error: Throwable) {
                 when {
                     NetworkFailureClassifier.isAlreadySubmitted(error) -> {
                         dao.delete(action.id)
-                        clearDraft(action.ownerUserId, payload.examId)
+                        clearDraft(database.answerDraftDao(), action.ownerUserId, payload.examId)
                         media.clear(payload.operationId)
                     }
                     NetworkFailureClassifier.isAuthFailure(error) -> dao.markState(
@@ -93,10 +93,10 @@ class PendingActionWorker(
     }
 
     /** V252 — پیش‌نویس با کلید کاربر (و سطر قدیمی بدون کاربر) پاک می‌شود */
-    private suspend fun clearDraft(ownerUserId: String, examId: String) {
+    private suspend fun clearDraft(drafts: ir.exam.app.data.local.AnswerDraftDao, ownerUserId: String, examId: String) {
         runCatching {
-            database.answerDraftDao().delete(ir.exam.app.data.repository.RoomAnswerDraftRepository.draftKey(ownerUserId, examId))
-            database.answerDraftDao().delete(examId)
+            drafts.delete(ir.exam.app.data.repository.RoomAnswerDraftRepository.draftKey(ownerUserId, examId))
+            drafts.delete(examId)
         }
     }
 }

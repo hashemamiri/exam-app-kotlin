@@ -39,7 +39,7 @@ class V252_AppAuditTest {
         assertTrue("if (ownerUserId.isBlank()) examId else \"\$ownerUserId|\$examId\"" in repo)
         assertTrue("RoomAnswerDraftRepository(database.answerDraftDao(), userId)" in source("app/src/main/java/ir/exam/app/ui/student/StudentHomeScreen.kt"))
         val worker = source("app/src/main/java/ir/exam/app/data/work/PendingActionWorker.kt")
-        assertTrue("clearDraft(action.ownerUserId, payload.examId)" in worker)
+        assertTrue("clearDraft(database.answerDraftDao(), action.ownerUserId, payload.examId)" in worker)
         assertFalse("database.answerDraftDao().delete(payload.examId)" in worker)
     }
 
