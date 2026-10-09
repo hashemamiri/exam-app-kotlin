@@ -260,7 +260,7 @@ fun ExamBuilderScreen(
             title = { Text("ذخیره شد") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("کد آزمون: $code")
+                    ir.exam.app.core.ui.CopyableExamCode(code, prefix = "کد آزمون: ", suffix = "  (ضربه = کپی)", style = MaterialTheme.typography.bodyMedium) // V234
                     Text(
                         "مبلغ کسرشده: ${state.chargedToman.asToman()} تومان" +
                             (state.walletBalanceToman?.let { " · مانده: ${it.asToman()} تومان" } ?: "")

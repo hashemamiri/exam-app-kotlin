@@ -176,6 +176,7 @@ footer{border-top:1px solid var(--line);padding:26px 20px;color:var(--muted);fon
 .exam{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px}
 .exam .t{font-weight:800;font-size:16px}
 .exam .meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.code{cursor:pointer}.code:hover{filter:brightness(.92)}
 .exam .code{font-family:monospace;font-size:14px;letter-spacing:1px;background:#f1f3f8;border-radius:6px;padding:1px 8px;direction:ltr;display:inline-block}
 .exam .acts{display:flex;gap:6px;margin-top:6px;justify-content:flex-start}
 

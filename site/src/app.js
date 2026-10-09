@@ -1134,6 +1134,8 @@
           busy(b1, false);
         });
         m.appendChild(name); m.appendChild(em); m.appendChild(b1);
+        /* V234 — ثبت‌نام با گوگل (همان OAuth ورود؛ نقش انتخاب‌شده ذخیره می‌شود) */
+        if (window.SiteExtras) { m.appendChild(el('div', {class: 'sep', text: 'یا'})); var gb = window.SiteExtras.googleButton(state.role || 'teacher'); gb.innerHTML = gb.innerHTML.replace('ورود با گوگل', 'ثبت‌نام با گوگل'); m.appendChild(gb); }
         m.appendChild(el('p', {class: 'hint', text: 'دانش‌آموزان نیازی به ثبت‌نام ندارند؛ معلم برایشان حساب می‌سازد.'}));
       } else if (state.step === 'code') {
         m.appendChild(el('div', {class: 'alert info', text: 'کد تأیید به ' + state.email + ' فرستاده شد.'}));
@@ -1879,5 +1881,14 @@
     render: render, renderPage: renderPage, printExam: printExam, logout: doLogout, printSection: printSection, /* V230 */
     __setSession: function (s) { saveSession(s); }, __setUser: function (u) { user = u; view.page = 'panel'; render(); },
     auth: {keyReady: KEY_READY, login: function (u) { user = u; afterLogin(); }, currentProfile: currentProfile, requireEmail: requireEmail, drawCompletion: drawCompletion, logout: doLogout} /* برای تست خودکار بدون سرور */};
+  /* V234 — کلیک روی هر کد آزمون (.code) در سراسر سایت = کپی در حافظهٔ موقت */
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('.code') : null;
+    if (!t || t.closest('input,textarea,button,a')) return;
+    var code = (t.textContent || '').trim(); if (!code || code === '—') return;
+    var done = function () { toast('کد آزمون ' + code + ' کپی شد.', 'ok'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, function () { legacyCopy(code); done(); }); else { legacyCopy(code); done(); }
+  });
+  function legacyCopy(text) { var ta = el('textarea', {style: 'position:fixed;opacity:0', value: text}); document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (x) {} ta.remove(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

@@ -203,12 +203,18 @@ fun TeacherDashboardScreen(
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
-                            Text(
-                                "${exam.subject ?: "بدون درس"} · ${exam.code ?: "—"} · ${exam.duration ?: 0} دقیقه · بارم ${exam.totalScore}",
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            // V234 — کد آزمون جداگانه و قابل کپی با ضربه
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("${exam.subject ?: "بدون درس"} · ", style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                                ir.exam.app.core.ui.CopyableExamCode(exam.code)
+                                Text(
+                                    " · ${exam.duration ?: 0} دقیقه · بارم ${exam.totalScore}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
                             AnimatedVisibility(
                                 visible = expandedExamId == exam.id,
                                 enter = fadeIn() + expandVertically(),
