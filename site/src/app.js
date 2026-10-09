@@ -1399,6 +1399,13 @@
   function soon(title, phase) { return function (c) { c.appendChild(el('div', {class: 'soon', html: '<div style="font-size:40px">🚧</div><h3>' + esc(title) + '</h3>این بخش در <b>' + esc(phase) + '</b> سایت فعال می‌شود. فعلاً از برنامهٔ اندروید استفاده کنید.'})); }; }
   function loading(c) { c.innerHTML = '<div class="loading"><span class="spinner"></span> در حال دریافت…</div>'; }
   function showErr(c, e) { c.innerHTML = ''; c.appendChild(el('div', {class: 'alert error', text: errMsg(e)})); }
+  /* V251 — هشدار بالای داشبورد وقتی بخشی از داده‌ها نیامده + دکمهٔ «تلاش دوباره» */
+  function dashRetryAlert(failed, c) {
+    var names = failed.map(function (f) { return f.label; }).join('، ');
+    return el('div', {class: 'alert warn row', style: 'margin-bottom:12px;align-items:center;gap:10px'}, [
+      el('span', {class: 'grow', text: 'بخشی از اطلاعات (' + names + ') بارگذاری نشد: ' + errMsg(failed[0].e)}),
+      el('button', {class: 'btn light sm', text: 'تلاش دوباره', onclick: function () { pageDashboard(c); }})]);
+  }
   function emptyBox(icon, text) { return el('div', {class: 'empty'}, [el('div', {class: 'big', text: icon}), el('div', {text: text})]); }
   /* V186 — کارت آمار: هم‌اندازه (min-height در CSS) و در صورت داشتن مقصد، کلیک‌پذیر (button) */
   function statCard(v, l, target) {
@@ -1421,20 +1428,28 @@
     loading(c);
     try {
       if (user.role === 'teacher') {
-        var r = await Promise.all([api.exams().catch(function () { return []; }), api.classes().catch(function () { return []; }), api.students().catch(function () { return []; }), api.wallet().catch(function () { return {balance: 0}; }),
+        /* V251 — خطای سرور/اینترنت دیگر «۰ آزمون / ۰ تومان» نشان نمی‌دهد: اگر همهٔ فراخوانی‌های اصلی شکست بخورند پیام خطا؛
+           اگر بعضی شکست بخورند، همان کارت «—» می‌شود و هشدار «تلاش دوباره» بالای داشبورد می‌آید */
+        var failed = [];
+        function soft(pr, label) { return pr.catch(function (e) { failed.push({label: label, e: e}); return null; }); }
+        var r = await Promise.all([soft(api.exams(), 'آزمون‌ها'), soft(api.classes(), 'کلاس‌ها'), soft(api.students(), 'دانش‌آموزان'), soft(api.wallet(), 'کیف پول'),
           rpcObj('native_teacher_manager_requests_v41', {}).then(function (x) { return x && !x.error ? x : null; }).catch(function () { return null; })]);
+        if (failed.length === 4) throw failed[0].e;
         c.innerHTML = '';
+        if (failed.length) c.appendChild(dashRetryAlert(failed, c));
+        function cnt(x) { return Array.isArray(x) ? fa(x.length) : '—'; }
         /* V198 — «درخواست‌های مدیر» کارت پنجم هم‌شکل بقیه (تعداد در انتظار)؛ کلیک → پنجرهٔ فهرست با تأیید/رد */
         var reqs = (r[4] && r[4].items) || [], pendingN = reqs.filter(function (it) { return it.status === 'pending' || !it.status; }).length;
         var reqCard = statCard(r[4] ? fa(pendingN) : '—', 'درخواست مدیر', {onclick: function () { openManagerRequests(); }});
         if (pendingN) reqCard.classList.add('stat-attn');
-        c.appendChild(el('div', {class: 'grid5'}, [statCard(fa(r[0].length), 'آزمون', {panel: 'exams'}), statCard(fa(r[1].length), 'کلاس', {panel: 'classes'}), statCard(fa(r[2].length), 'دانش‌آموز', {panel: 'students'}), statCard(money(r[3].balance), 'موجودی کیف پول', {panel: 'wallet'}), reqCard]));
+        c.appendChild(el('div', {class: 'grid5'}, [statCard(cnt(r[0]), 'آزمون', {panel: 'exams'}), statCard(cnt(r[1]), 'کلاس', {panel: 'classes'}), statCard(cnt(r[2]), 'دانش‌آموز', {panel: 'students'}), statCard(r[3] ? money(r[3].balance) : '—', 'موجودی کیف پول', {panel: 'wallet'}), reqCard]));
         var card = el('div', {class: 'card', style: 'margin-top:16px'}, [el('h3', {text: '📝 آخرین آزمون‌ها'})]);
-        if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
+        if (!Array.isArray(r[0])) card.appendChild(el('div', {class: 'alert error', text: failed.length ? errMsg(failed[0].e) : 'فهرست آزمون‌ها دریافت نشد.'}));
+        else if (!r[0].length) card.appendChild(emptyBox('📄', 'هنوز آزمونی نساخته‌اید.'));
         else card.appendChild(examTable(r[0].slice(0, 6), c));
         c.appendChild(card);
       } else if (user.role === 'student') {
-        var g = await api.myGrades().catch(function () { return []; });
+        var g = (await api.myGrades()) || []; /* V251 — خطا به catch پایین می‌رود و پیام می‌دهد؛ نه «۰ آزمون شرکت‌کرده» */
         c.innerHTML = '';
         var graded = g.filter(function (x) { return x.graded_at; });
         var avg = graded.length ? graded.reduce(function (s, x) { return s + (Number(x.total_score) ? Number(x.total_grade) / Number(x.total_score) * 100 : 0); }, 0) / graded.length : 0;
@@ -1787,8 +1802,9 @@
   async function pageGrades(c) {
     loading(c);
     try {
-      var r = await Promise.all([api.myGrades().catch(function () { return []; }), api.myAnswers().catch(function () { return []; })]);
-      var grades = r[0], answers = r[1];
+      /* V251 — خطای نمرات به کاربر گفته می‌شود (نه «هنوز نمره‌ای ثبت نشده»)؛ پاسخ‌ها اختیاری می‌مانند */
+      var r = await Promise.all([api.myGrades(), api.myAnswers().catch(function () { return []; })]);
+      var grades = r[0] || [], answers = r[1] || [];
       c.innerHTML = '';
       var card = el('div', {class: 'card'}, [el('div', {class: 'row'}, [el('h3', {class: 'grow', text: '📊 نمرات'}), window.SiteExtras && grades.length ? window.SiteExtras.gradesExcelButton(grades) : null])]);
       if (!grades.length) card.appendChild(emptyBox('📊', 'هنوز نمره‌ای ثبت نشده است.'));
