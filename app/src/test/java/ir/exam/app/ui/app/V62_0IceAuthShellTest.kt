@@ -55,7 +55,7 @@ class V62_0IceAuthShellTest {
         assertTrue("OtpBoxes(\n            value = state.otp,\n            onValueChange = viewModel::setOtp," in signIn)
         assertTrue("state.otp.length in 6..8" in signIn)
         // منطق گوگل/دعوت دست‌نخورده (اسپات‌چک؛ needleهای کامل در تست‌های V60/V61)
-        assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)
+        assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role, registering)" in signIn)
         assertTrue("اگر مدیر مدرسه کد ۶ حرفی یا کد TCH داده است، آن را اینجا وارد کنید." in signIn)
     }
 }

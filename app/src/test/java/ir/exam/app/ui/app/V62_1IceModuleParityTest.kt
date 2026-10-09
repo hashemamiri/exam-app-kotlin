@@ -84,7 +84,7 @@ class V62_1IceModuleParityTest {
             .substringBefore("internal fun OtpBoxes(")
         assertTrue("indication = null" in tabs)
         // مغز همان است: گوگل Credential Manager و قواعد سرور
-        assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)
+        assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role, registering)" in signIn)
         assertTrue("state.newPassword.length >= 8" in signIn)
         assertTrue("state.otp.length in 6..8" in signIn)
     }

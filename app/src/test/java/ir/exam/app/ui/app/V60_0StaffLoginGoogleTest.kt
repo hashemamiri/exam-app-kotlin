@@ -56,7 +56,7 @@ class V60_0StaffLoginGoogleTest {
 
     @Test
     fun `google flow registers the chosen role then refreshes the account`() {
-        assertTrue("fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String)" in authVm)
+        assertTrue("fun signInWithGoogleIdToken(idToken: String, rawNonce: String, role: String, registering: Boolean = false)" in authVm)
         assertTrue("native_set_registration_role_v1" in authVm)
         // V60.1 — user باید در state بنشیند تا AuthGate وارد برنامه شود.
         assertTrue("val user = repository.refreshCurrentUser().getOrThrow()" in authVm)

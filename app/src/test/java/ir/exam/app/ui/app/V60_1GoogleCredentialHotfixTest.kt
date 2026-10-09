@@ -36,7 +36,7 @@ class V60_1GoogleCredentialHotfixTest {
         // nonce خام به Supabase و hash آن به گوگل می‌رود (قرارداد رسمی).
         assertTrue("MessageDigest.getInstance(\"SHA-256\")" in signIn)
         assertTrue(".setNonce(hashedNonce)" in signIn)
-        assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role)" in signIn)
+        assertTrue("viewModel.signInWithGoogleIdToken(googleCredential.idToken, rawNonce, role, registering)" in signIn)
         // لغو توسط کاربر خطا نیست
         assertTrue("GetCredentialCancellationException" in signIn)
     }
