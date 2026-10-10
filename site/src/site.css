@@ -1671,3 +1671,4 @@ input.topup-amt:focus{border-color:var(--brand,#39758a);box-shadow:0 0 0 3px var
 .dk .stat .v svg.ico,.dk h3 svg.ico,.dk h2 svg.ico{width:1.2em;height:1.2em}
 .dk .m-radial-item .g svg.ico,.dk .m-qa-item .m-qa-ic svg.ico{width:30px;height:30px;stroke-width:1.7}
 .dk .chip svg.ico{width:1em;height:1em;margin-inline-end:.3em}
+.dk .cal-nav .btn svg.ico:last-child{margin-inline-end:0;margin-inline-start:.25em}
