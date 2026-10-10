@@ -33,7 +33,7 @@ class V259_TableCssBankCardsOptionEditorTest {
         assertTrue("comb.examTitle = (state.title || '').trim();" in b)
         val k = source("app/src/main/java/ir/exam/app/ui/bank/QuestionBankScreen.kt")
         assertTrue("Icons.Outlined.Visibility" in k && "contentDescription = \"نمایش محتوای سؤال\"" in k)
-        assertTrue("private fun BankQuestionContent(q: QuestionDraft)" in k)
+        assertTrue("fun BankQuestionContent(q: QuestionDraft)" in k) // V260: internal (در پنجرهٔ بانکِ سازنده هم استفاده می‌شود)
         assertTrue("Text(item.examTitle.orEmpty().ifBlank { \"—\" }" in k)
         val repo = source("app/src/main/java/ir/exam/app/data/repository/SupabaseExamBuilderRepository.kt")
         assertTrue("(\"examTitle\" to kotlinx.serialization.json.JsonPrimitive(examTitle.trim()))" in repo)
