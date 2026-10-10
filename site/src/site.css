@@ -431,7 +431,7 @@ img,video,canvas,iframe{max-width:100%}
 .pwa-bar .t b{display:block}
 .pwa-bar .btn{padding:7px 12px;font-size:13px}
 .pwa-bar .x{border:0;background:transparent;color:#fff;font-size:18px;padding:0 4px}
-@media (min-width:861px){.pwa-bar{bottom:20px;inset-inline:auto;inset-inline-start:20px;max-width:380px}}
+@media (min-width:861px){.pwa-bar{bottom:auto;top:16px;inset-inline:0;margin-inline:auto;width:max-content;max-width:min(560px,calc(100vw - 240px))}} /* V253.2 — در دسکتاپ وسطِ بالا */
 @media (display-mode:standalone){.topbar .in .btn.pwa-hide{display:none}}
 
 /* ---- V148: پوستهٔ موبایل معلم — آینهٔ Design69/Neumorphic اپ ---- */

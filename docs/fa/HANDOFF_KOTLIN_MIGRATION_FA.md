@@ -19425,6 +19425,8 @@ CI: `compileDebugUnitTestKotlin` به‌خاطر `assertFalse` بدون import �
 - باگ V202.5: `var LANDING_TILES` داخل `paintAuth` بعد از خطی که `landing()` را صدا می‌زد تعریف شده بود → به‌خاطر hoisting مقدارش undefined و `.map` خطا می‌داد → صفحهٔ اول خالی. حالا کنار `authActive` در سطح ماژول است (تست ترتیب را پین می‌کند).
 - دروازهٔ صفحهٔ اول: mobile.js `entered()/enter()` با `sessionStorage['m-entered']`، `gateActive() = MQ && user && !entered`؛ app.js `render()` پیش از m-mode اگر gateActive → paintAuth (landing حتی با user). دکمه: user ⇒ `enter(); S.render()`؛ وگرنه `goA('login')`؛ پیوند ثبت‌نام فقط بدون user. `afterLogin()` → `SiteMobile.enter()`.
 
+### V253.2 — (فقط سایت) `.pwa-bar` در دسکتاپ از پایین‌چپ به وسطِ بالا (`top:16px; margin-inline:auto; width:max-content`).
+
 ### V253.1 — (فقط سایت) `.st-head` چسبان با `top:64px` برای هدر موبایل بود؛ در دسکتاپ (هدر حذف‌شده از V174) ۴۰px پایین می‌آمد و روی `.st-nav` می‌افتاد → `.dk .st-head{top:12px}`. برچسب ریل دسکتاپ از `nowrap+ellipsis` به `white-space:normal` (دوخطی) تغییر کرد. تست در V253_NewLogoTest.
 
 ### V253 — لوگوی جدید (نسخه 1.01.31)

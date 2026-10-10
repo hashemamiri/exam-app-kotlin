@@ -34,6 +34,7 @@ class V253_NewLogoTest {
         assertTrue(".dk .st-head{top:12px}" in css && ".dk .st-nav{position:relative;z-index:1" in css)
         assertTrue("white-space:normal;max-width:66px;text-align:center;overflow:visible" in css)
         assertFalse("white-space:nowrap;max-width:66px;overflow:hidden;text-overflow:ellipsis" in css)
+        assertTrue(".pwa-bar{bottom:auto;top:16px;inset-inline:0;margin-inline:auto;width:max-content" in css) // V253.2
     }
 
     @Test
