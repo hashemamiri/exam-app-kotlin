@@ -38,6 +38,16 @@ class V253_NewLogoTest {
     }
 
     @Test
+    fun `desktop calendar shows month on one half and day messages on the other`() {
+        val a = source("site/src/admin.js")
+        assertTrue("c.appendChild(el('div', {class: 'cal-wrap'}, [el('div', {class: 'card'}, [grid]), side]));" in a)
+        assertTrue("if (isDk()) showDay(d); else dayDlg(iso, y, m, d, ns, hs, isTeacher" in a)
+        assertTrue("showDay(arg.d || (today.jy === y && today.jm === m ? today.jd : 1));" in a)
+        val css = source("site/src/site.css")
+        assertTrue(".cal-side{display:none}" in css && ".dk .cal-wrap{display:grid;grid-template-columns:1fr 1fr" in css && ".dk .cal-side{display:block" in css)
+    }
+
+    @Test
     fun `site brand favicon and pwa use v3 icons`() {
         for (f in listOf("icon-192", "icon-512", "maskable-192", "maskable-512", "apple-touch-icon", "favicon-48", "mark-256")) assertTrue(exists("site/pwa/v3/$f.png"))
         assertFalse("/pwa/v2/" in source("site/src/template.html") || "/pwa/v2/" in source("site/pwa/manifest.webmanifest") || "/pwa/v2/" in source("site/pwa/sw.js"))

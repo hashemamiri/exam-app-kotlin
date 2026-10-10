@@ -551,13 +551,30 @@
       for (var i = 0; i < off; i++) grid.appendChild(el('div', {class: 'cal-d empty'}));
       for (var d = 1; d <= J.monthLength(y, m); d++) (function (d) {
         var iso = J.iso(y, m, d), ns = byDate[iso] || [], hs = hols[y + '-' + m + '-' + d] || [], isHol = hs.some(function (h) { return h.holiday !== false; }) || (off + d - 1) % 7 === 6;
-        var cell = el('div', {class: 'cal-d' + (isHol ? ' hol' : '') + (today.jy === y && today.jm === m && today.jd === d ? ' today' : ''), onclick: function () { dayDlg(iso, y, m, d, ns, hs, isTeacher, function () { S.go('calendar', {y: y, m: m}); }); }}, [el('div', {class: 'n', text: fa(d)})]);
+        var cell = el('div', {class: 'cal-d' + (isHol ? ' hol' : '') + (today.jy === y && today.jm === m && today.jd === d ? ' today' : ''), 'data-d': String(d), onclick: function () { if (isDk()) showDay(d); else dayDlg(iso, y, m, d, ns, hs, isTeacher, function () { S.go('calendar', {y: y, m: m}); }); }}, [el('div', {class: 'n', text: fa(d)})]);
         hs.slice(0, 1).forEach(function (h) { cell.appendChild(el('div', {class: 'cal-ev hol', text: h.title})); });
         ns.slice(0, 2).forEach(function (n) { cell.appendChild(el('div', {class: 'cal-ev', text: n.title})); });
         if (ns.length > 2) cell.appendChild(el('div', {class: 'muted', style: 'font-size:11px', text: '+' + fa(ns.length - 2)}));
         grid.appendChild(cell);
       })(d);
-      c.appendChild(el('div', {class: 'card'}, [grid]));
+      /* V253.3 — دسکتاپ: تقویم در نیمهٔ راست، پیام‌های روزِ انتخاب‌شده در نیمهٔ چپ (در گوشی همان پنجرهٔ روز) */
+      var side = el('div', {class: 'card cal-side'});
+      function isDk() { return document.body.classList.contains('dk'); }
+      function showDay(d) {
+        var iso = J.iso(y, m, d), ns = byDate[iso] || [], hs = hols[y + '-' + m + '-' + d] || [];
+        grid.querySelectorAll('.cal-d.sel').forEach(function (x) { x.classList.remove('sel'); });
+        var cell = grid.querySelector('.cal-d[data-d="' + d + '"]'); if (cell) cell.classList.add('sel');
+        side.innerHTML = '';
+        side.appendChild(el('h3', {style: 'margin:0 0 10px', text: fa(d) + ' ' + J.MONTHS[m - 1] + ' ' + fa(y)}));
+        hs.forEach(function (h) { side.appendChild(el('div', {class: 'alert ' + (h.holiday !== false ? 'error' : 'info'), text: (h.holiday !== false ? '🔴 تعطیل: ' : '📌 ') + h.title})); });
+        if (!ns.length) side.appendChild(el('p', {class: 'muted', text: 'پیامی برای این روز نیست.'}));
+        ns.forEach(function (n) {
+          side.appendChild(el('div', {class: 'g-q'}, [el('div', {class: 'row'}, [el('b', {class: 'grow', text: n.title}), isTeacher ? el('button', {class: 'icon-btn', html: '✎', title: 'ویرایش', onclick: async function () { try { var full = await S.rpcObj('cal_day', {p_id: n.id}); noteDlg(chk(full), function () { S.go('calendar', {y: y, m: m, d: d}); }); } catch (e) { S.toast(S.errMsg(e)); } }}) : null].filter(Boolean)), n.body ? el('div', {class: 'muted', style: 'white-space:pre-wrap;margin-top:4px', text: n.body}) : null].filter(Boolean)));
+        });
+        if (isTeacher) side.appendChild(el('div', {class: 'row', style: 'margin-top:12px'}, [el('button', {class: 'btn sm', text: '➕ پیام برای این روز', onclick: function () { noteDlg({on_date: iso}, function () { S.go('calendar', {y: y, m: m, d: d}); }); }})]));
+      }
+      c.appendChild(el('div', {class: 'cal-wrap'}, [el('div', {class: 'card'}, [grid]), side]));
+      showDay(arg.d || (today.jy === y && today.jm === m ? today.jd : 1));
       if (hol && hol.years && hol.years[String(y)] === false) c.appendChild(el('div', {class: 'alert warn', style: 'margin-top:10px', text: 'تعطیلات رسمی این سال تقریبی است.'}));
       if (!hol) c.appendChild(el('div', {class: 'muted', style: 'font-size:12px;margin-top:8px', text: 'اطلاعات تعطیلات رسمی در دسترس نیست.'}));
       if (!isTeacher) S.rpcObj('cal_unseen_v59', {}).then(function (u) { (u.notes || []).forEach(function (n) { S.rpcObj('cal_mark_seen_v59', {p_note: n.id}).catch(function () {}); }); }).catch(function () {});
