@@ -17,12 +17,14 @@ class V257_BankCardsRailDragTest {
     fun `desktop rail is wider and has hold-to-drag grips`() {
         val css = source("site/src/site.css")
         assertTrue("position:fixed;left:14px;top:22px;bottom:22px;width:84px;" in css)
-        assertTrue(".dk .builder{position:fixed;top:22px;bottom:22px;left:124px;right:100px;" in css)
+        assertTrue(".dk .builder{position:fixed;top:22px;bottom:22px;left:122px;right:116px;" in css)
         assertTrue(".dk .b-rail-grip{" in css && ".dk .b-rail-row.dragging{" in css)
         val b = source("site/src/builder.js")
         assertTrue("function railDrag(grip, row, nums, index) {" in b)
-        assertTrue("var timer = setTimeout(function () { timer = null; start(ev); }, 220);" in b)
-        assertTrue("if (cur !== from) { var q = state.questions.splice(from, 1)[0]; state.questions.splice(cur, 0, q); state.selected = cur; mark(); }" in b)
+        assertTrue("var timer = setTimeout(function () { timer = null; start(ev); }, 180);" in b)
+        assertTrue("var group = railPicked[index] ? Object.keys(railPicked).map(Number)" in b)
+        assertTrue("if (r === row) order = order.concat(group); else if (group.indexOf(k) < 0) order.push(k);" in b)
+        assertTrue(".dk .builder .b-body.has-settings{column-gap:24px}" in css && ".dk .b-settings>h3{text-align:center}" in css)
     }
 
     @Test
